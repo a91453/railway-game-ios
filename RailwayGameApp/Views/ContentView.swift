@@ -34,6 +34,9 @@ struct ContentView: View {
     /// The height of the row under the status pill (the layer strip, the
     /// follow bar), without its margin.
     @State private var stripHeight: CGFloat = 0
+    /// The night skip's full width (decision 469), measured even while it
+    /// shows only its icon.
+    @State private var nightSkipWidth: CGFloat = 0
     /// How far Undo and Redo reach from the leading edge beside the tools
     /// column, with the column (decision 226).
     @State private var editsWidth: CGFloat = 0
@@ -495,16 +498,27 @@ struct ContentView: View {
                         // reach up to the pill (the follow bar alone then).
                         let trailing = sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                         let leading = showsRail ? (toolsColumn ? dockSize.width : BuildToolRail.width + margin) : 0
+                        let rowWidth = max(0, proxy.size.width - leading - trailing - 2 * margin)
+                        // Decision 469: on a narrow screen the strip folds
+                        // to one button, then the next step goes, then the
+                        // night skip keeps its icon alone.
+                        let nightSkips = session.nightSkipRun != nil || session.nightSkipOffer != nil
+                        let nextSteps = session.screenFacts.nextSteps
+                        let row = MapTopRow.arrange(
+                            width: Double(rowWidth), showsLayers: showsLayerStrip,
+                            nightSkipWidth: nightSkips ? Double(max(nightSkipWidth, CGFloat(MapTopRow.nightSkipIconWidth))) : 0,
+                            nextStep: nextSteps?.current != nil, follows: followed != nil
+                        )
                         HStack(alignment: .center, spacing: margin) {
                             if showsLayerStrip {
                                 // Decision 305: under the speed, a night with
                                 // no train to skip.
-                                NightSkipChip(session: session)
-                                MapQuickLayerStrip(language: session.language) {
+                                NightSkipChip(session: session, iconOnly: row.nightSkip == .icon) { nightSkipWidth = $0 }
+                                MapQuickLayerStrip(language: session.language, folded: row.layers == .button) {
                                     screen.panel = .mapLayers
                                 }
                                 // CTM study M2: a free game's next step.
-                                if let steps = session.screenFacts.nextSteps {
+                                if row.showsNextStep, let steps = nextSteps {
                                     NextStepChip(steps: steps, language: session.language) {
                                         screen.panel = .goals
                                     }
@@ -526,7 +540,8 @@ struct ContentView: View {
                                 .transition(.card(from: .top, reduceMotion: reduceMotion))
                             }
                         }
-                        .frame(maxWidth: max(0, proxy.size.width - leading - trailing - 2 * margin), alignment: .leading)
+                        .frame(maxWidth: rowWidth, alignment: .leading)
+                        .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: row)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stripHeight = $0 }
                         .padding(.top, pillDepth)
                         .padding([.top, .leading], margin)
@@ -539,7 +554,7 @@ struct ContentView: View {
                         BuildToolRail(session: session, maxHeight: railHeight)
                             .padding(.top, pillDepth)
                             .padding([.top, .leading], margin)
-                            .transition(.move(edge: .leading).combined(with: .opacity))
+                            .transition(.card(from: .leading, reduceMotion: reduceMotion))
                     }
                 }
                 .overlay(alignment: .bottomLeading) {
@@ -574,7 +589,7 @@ struct ContentView: View {
                     // Decision 226: faded while a finger draws under them.
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.toolsFrame = $0 }
                     .opacity(screen.isDrawingUnderTools ? 0.4 : 1)
-                    .animation(.easeInOut(duration: 0.15), value: screen.isDrawingUnderTools)
+                    .animation(MotionRule.change.running(reduceMotion: reduceMotion)?.animation, value: screen.isDrawingUnderTools)
                     // A drag whose end the map never sees (the tool or the
                     // panel changed under the finger) must not leave them faded.
                     .onChange(of: session.tool) { _, _ in endDrawingUnderTools() }
@@ -657,7 +672,7 @@ struct ContentView: View {
                             // Beside the tools column, above the station
                             // master, who stands at its foot.
                             .padding(.bottom, strip + dockBottom + 2 * margin)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                     }
                 }
                 .overlay(alignment: .trailing) {
@@ -672,7 +687,6 @@ struct ContentView: View {
                             .hudFrameMark("hud.panel")
                             // The tutorial's card keeps clear of it.
                             .tutorialTarget(.sidePanel)
-                            .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
                             // Under the status pill, which it would cover
                             // on a phone.
                             .padding(.top, pillDepth)
@@ -1379,8 +1393,9 @@ private struct RouteHintCard: ViewModifier {
 
     @ViewBuilder private func timedBody(content: Content) -> some View {
         content
-            .onChange(of: seen ? nil : RouteHintWatch(world: session.world), initial: true) { _, watch in
-                if watch != nil { session.watchRouteHint() }
+            // Decision 465: looked for off the main actor.
+            .task(id: seen ? nil : RouteHintWatch(world: session.world)) {
+                if !seen { await session.watchRouteHintOffTheMainActor() }
             }
             .alert(
                 Text(verbatim: RouteHint.title(in: session.language)),

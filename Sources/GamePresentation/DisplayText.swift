@@ -921,4 +921,29 @@ extension LineColor {
         let digits = String(rgb, radix: 16, uppercase: true)
         return "#" + String(repeating: "0", count: max(0, 6 - digits.count)) + digits
     }
+
+    /// The colour's name for the colour menus and VoiceOver: "Blue",
+    /// "藍". Each of ``presets`` has a name of its own; any other colour
+    /// is named by its hue (``LineBadge/automaticCode(rgb:)``).
+    public func nameText(in language: DisplayLanguage) -> String {
+        let name = Self.presetNames[rgb] ?? Self.hueNames[LineBadge.automaticCode(rgb: rgb)] ?? ("Colour", "顏色")
+        return language.text(name.english, name.chinese)
+    }
+
+    static let presetNames: [Int: (english: String, chinese: String)] = [
+        0xF5F5F5: ("White", "白"), 0xEF5350: ("Red", "紅"), 0xFF7043: ("Orange", "橘"),
+        0xFFD54F: ("Pale yellow", "淡黃"), 0xAED581: ("Light green", "淺綠"), 0x66BB6A: ("Green", "綠"),
+        0x26A69A: ("Teal", "藍綠"), 0x4DD0E1: ("Light blue", "淺藍"), 0x42A5F5: ("Blue", "藍"),
+        0x5C6BC0: ("Indigo", "靛藍"), 0xAB47BC: ("Purple", "紫"), 0xEC407A: ("Pink", "粉紅"),
+        0xFF80AB: ("Light pink", "淺粉紅"), 0xA1887F: ("Brown", "棕"), 0x78909C: ("Grey", "灰"),
+        0xFFCC02: ("Yellow", "黃"), 0xFF6E40: ("Bright orange", "亮橘"), 0x00E5FF: ("Cyan", "青"),
+        0x69F0AE: ("Mint", "薄荷綠"), 0xEEFF41: ("Lime", "萊姆綠"),
+    ]
+
+    static let hueNames: [String: (english: String, chinese: String)] = [
+        "W": ("White", "白"), "K": ("Black", "黑"), "GY": ("Grey", "灰"), "R": ("Red", "紅"),
+        "O": ("Orange", "橘"), "BR": ("Brown", "棕"), "Y": ("Yellow", "黃"), "G": ("Green", "綠"),
+        "LG": ("Light green", "淺綠"), "T": ("Teal", "藍綠"), "LB": ("Light blue", "淺藍"),
+        "BL": ("Blue", "藍"), "IN": ("Indigo", "靛藍"), "P": ("Purple", "紫"), "PK": ("Pink", "粉紅"),
+    ]
 }

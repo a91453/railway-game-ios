@@ -18,12 +18,12 @@ final class BuildingSessionTests: XCTestCase {
 
         XCTAssertTrue(session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000)))
         XCTAssertEqual(session.world.placedBuildings.map(\.kind), [.house])
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built house #1."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built house."))
         XCTAssertEqual(session.placedBuildingsText, "1 building placed")
 
         session.buildingKind = .office
         XCTAssertTrue(session.placeBuilding(at: PlanPoint(x: 10_000, y: 10_000)))
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built office block #2."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built office block."))
         XCTAssertEqual(session.placedBuildingsText, "2 buildings placed")
 
         // GameCore refuses ground already built on, and nothing changes.
@@ -92,7 +92,7 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .english) }, ["House", "Shop", "Office block", "Wharf", "Marina", "Department store", "Hotel", "Amusement park", "Park", "Temple", "School", "Hospital", "Night market"])
         session.buildingKind = .shop
         session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000))
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好商店 #1。"))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好商店。"))
         XCTAssertEqual(session.placedBuildingsText, "已蓋 1 棟")
         session.placeBuilding(at: PlanPoint(x: 100, y: 5_000))
         XCTAssertEqual(session.message?.kind, .failure)
@@ -117,7 +117,7 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.buildingPreviewText, "Building $ 20,480 + land $ 2,560")
         XCTAssertTrue(session.confirmBuilding())
         XCTAssertNil(session.buildingSite, "built: the site is cleared")
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built house #1 for $ 23,040."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built house for $ 23,040."))
         XCTAssertEqual(session.world.economy.balance, 100_000_000 - 2_304_000)
         // Empty, so no rent; upkeep 2 bp of 2,048,000 is 410 cents, tax
         // 1 bp of 256,000 is 26.
@@ -131,7 +131,7 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tap one of your buildings to demolish it."))
         XCTAssertEqual(session.world, before)
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_900, y: 5_000), reach: 500))
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Demolished house #1 for $ 2,304."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Demolished house for $ 2,304."))
         XCTAssertTrue(session.world.placedBuildings.isEmpty)
         XCTAssertEqual(session.world.economy.balance, 100_000_000 - 2_304_000 - 230_400)
         XCTAssertNil(session.buildingEconomyText)
@@ -147,13 +147,13 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(BuildingToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["建造", "拆除", "出售", "分區"])
         XCTAssertNil(session.buildingQuoteText, "free play builds for nothing")
         session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000))
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好小住宅 #1。"))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好小住宅。"))
         XCTAssertNil(session.buildingEconomyText)
         session.buildingMode = .demolish
         XCTAssertFalse(session.tapBuildingTool(at: PlanPoint(x: 15_000, y: 15_000), reach: 0))
         XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "請點選要拆除的建物。"))
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 0))
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "拆除小住宅 #1。"))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "拆除小住宅。"))
         XCTAssertEqual(session.world.economy.balance, 10_000, "free")
     }
 
@@ -344,7 +344,7 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertTrue(overlay.siteIsBuildable)
         XCTAssertEqual(overlay.boughtOut, [PlanRect(minX: 21_248, minY: 21_248, maxX: 23_808, maxY: 23_808)])
         XCTAssertTrue(session.confirmBuilding())
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built office block #1 for $ 3,312,640, pulling down 1 city building."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built office block for $ 3,312,640, pulling down 1 city building."))
         XCTAssertNil(session.world.land.cell(row: 5, column: 5))
 
         // A site where it cannot stand says why, and cannot be built.
@@ -402,7 +402,7 @@ final class BuildingSessionTests: XCTestCase {
         session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
         XCTAssertEqual(session.buildingPreviewText, "拆除城市建物 1 棟")
         session.confirmBuilding()
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好辦公大樓 #1，拆除城市建物 1 棟。"))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好辦公大樓，拆除城市建物 1 棟。"))
         // Nothing in the way: nothing to say.
         session.buildingKind = .house
         session.tapBuildingTool(at: PlanPoint(x: 60_000, y: 60_000), reach: 0)

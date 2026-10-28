@@ -114,6 +114,11 @@ public struct NetworkPreview: Hashable, Sendable {
     /// The rest of a traced stretch after it stops, drawn as one that
     /// cannot be built.
     public var unbuilt: [WorldCoordinate] = []
+    /// Decision 468: the track already laid that a traced stretch joins
+    /// and skips, drawn as already there; and the new track's pieces
+    /// between it (``points`` runs through both).
+    public var existing: [[WorldCoordinate]] = []
+    public var newPieces: [[WorldCoordinate]] = []
 }
 
 /// What a stretch of track the network tool would build costs, part by

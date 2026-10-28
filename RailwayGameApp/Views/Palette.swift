@@ -178,6 +178,16 @@ enum Palette {
         return colors[abs(Int(id.rawValue)) % colors.count]
     }
 
+    /// What a mark on a line's colour (``lineColor(_:custom:)``) is drawn
+    /// in: navy on the light colours, else white (decision 216's badges do
+    /// the same).
+    static func lineMark(_ id: LineID, custom: LineColor? = nil) -> Color {
+        let line = LinePalette.current == .colourBlindSafe
+            ? LinePalette.safeColor(for: custom?.rgb ?? LineBadge.automaticColor(of: id))
+            : custom?.rgb ?? LineBadge.automaticColor(of: id)
+        return LineBadge.wantsDarkMark(on: line) ? rgb(0x262C57) : .white
+    }
+
     /// Decision 182: what a train is drawn in. A line's train in its line's
     /// colour, a freight line's in ``freightTrain``, one on no line in
     /// ``train``; all of them in ``train`` while the passenger load layer

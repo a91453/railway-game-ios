@@ -1,3 +1,4 @@
+import Accessibility
 import Charts
 import GameCore
 import GamePresentation
@@ -9,11 +10,13 @@ import SwiftUI
 /// given a ``FinanceHistory`` and draws it; the numbers and the sentences
 /// are `GamePresentation`'s (and tested there).
 ///
-/// Colours follow the dataviz palette (categorical slots 1 to 3 for the
-/// revenue sources, the app's success and error colours for profit and
-/// loss, primary ink for the cost line), each with a dark variant. Colour
-/// is never the only cue: the sources have a legend, a loss sits below the
-/// zero rule, and touching a bar reads its numbers out in words.
+/// Colours are the theme's chart colours (``Theme/chartBlue`` and the
+/// others for the revenue sources, the app's success and error colours for
+/// profit and loss, primary ink for the dashed cost line). Colour is never
+/// the only cue: the sources and the cost line have a legend, a loss sits
+/// below the zero rule, and touching a bar reads its numbers out in words.
+/// Each chart's series, names and axis are ``ChartSpec``'s, which VoiceOver
+/// also plays as an audio graph (``ChartAudioGraph``).
 struct FinanceTrendCharts: View {
     let history: FinanceHistory
     let language: DisplayLanguage
@@ -78,9 +81,9 @@ struct FinanceTrendCharts: View {
     /// any in the window.
     private var sources: [Source] {
         let all = [
-            Source(name: language.text("Fares", "票價收入"), color: Self.blue, value: \.fareRevenue),
-            Source(name: language.text("Freight", "貨運收入"), color: Self.orange, value: \.freightRevenue),
-            Source(name: language.text("Rent", "物業租金"), color: Self.aqua, value: \.propertyRevenue),
+            Source(name: language.text("Fares", "票價收入"), color: Theme.chartBlue, value: \.fareRevenue),
+            Source(name: language.text("Freight", "貨運收入"), color: Theme.chartOrange, value: \.freightRevenue),
+            Source(name: language.text("Rent", "物業租金"), color: Theme.chartAqua, value: \.propertyRevenue),
         ]
         return all.enumerated().filter { index, source in
             index == 0 || history.points.contains { source.value($0) != .zero }
@@ -90,6 +93,7 @@ struct FinanceTrendCharts: View {
     // MARK: - Charts
 
     private var revenueChart: some View {
+        let spec = history.revenueChart(in: language)
         let costName = language.text("Cost", "成本")
         return Chart {
             ForEach(sources) { source in
@@ -101,16 +105,21 @@ struct FinanceTrendCharts: View {
             }
             ForEach(history.points) { point in
                 LineMark(x: .value("Period", key(point)), y: .value(costName, dollars(point.cost)), series: .value("Series", costName))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(by: .value("Source", costName))
                     .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 3]))
             }
         }
-        .chartForegroundStyleScale(domain: sources.map(\.name), range: sources.map(\.color))
-        .chartLegend(position: .bottom, alignment: .leading)
+        // The cost line in the legend too (UI health check 3-7), drawn
+        // dashed there as on the chart.
+        .chartForegroundStyleScale(domain: spec.legendNames, range: sources.map(\.color) + [Theme.textPrimary])
+        .chartLegend(position: .bottom, alignment: .leading) {
+            ChartLegend(names: spec.legendNames, colors: sources.map(\.color) + [Theme.textPrimary], dashedLast: true)
+        }
         .modifier(TrendAxes(ticks: tickKeys, selection: $selected))
         .frame(height: 170)
         .accessibilityLabel(Text(verbatim: language.text("Revenue and cost chart", "收入與成本圖")))
         .accessibilityValue(Text(verbatim: history.summaryText(in: language)))
+        .accessibilityChartDescriptor(ChartAudioGraph(spec: spec))
         .accessibilityIdentifier("economy.trend.revenue")
     }
 
@@ -128,24 +137,19 @@ struct FinanceTrendCharts: View {
         .modifier(TrendAxes(ticks: tickKeys, selection: $selected))
         .frame(height: 130)
         .accessibilityLabel(Text(verbatim: language.text("Net profit chart", "淨利圖")))
-        .accessibilityValue(Text(verbatim: profitSummary))
+        .accessibilityValue(Text(verbatim: history.profitChart(in: language).summary))
+        .accessibilityChartDescriptor(ChartAudioGraph(spec: history.profitChart(in: language)))
         .accessibilityIdentifier("economy.trend.profit")
-    }
-
-    private var profitSummary: String {
-        let losses = history.points.filter { $0.netProfit < .zero }.count
-        let total = history.points.count
-        return language.text("\(total - losses) of \(total) periods in profit", "\(total) 段期間中 \(total - losses) 段獲利")
     }
 
     private var tripsChart: some View {
         Chart(history.points) { point in
             if let trips = point.trips {
                 LineMark(x: .value("Period", key(point)), y: .value("Passengers", trips))
-                    .foregroundStyle(Self.blue)
+                    .foregroundStyle(Theme.chartBlue)
                     .lineStyle(StrokeStyle(lineWidth: 2))
                 PointMark(x: .value("Period", key(point)), y: .value("Passengers", trips))
-                    .foregroundStyle(Self.blue)
+                    .foregroundStyle(Theme.chartBlue)
                     .symbolSize(selected == key(point) ? 70 : 24)
             }
         }
@@ -153,6 +157,7 @@ struct FinanceTrendCharts: View {
         .frame(height: 110)
         .accessibilityLabel(Text(verbatim: language.text("Passengers chart", "旅客數圖")))
         .accessibilityValue(Text(verbatim: history.summaryText(in: language)))
+        .accessibilityChartDescriptor(ChartAudioGraph(spec: history.tripsChart(in: language)))
         .accessibilityIdentifier("economy.trend.trips")
     }
 
@@ -161,19 +166,6 @@ struct FinanceTrendCharts: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(Theme.textPrimary)
             .accessibilityAddTraits(.isHeader)
-    }
-
-    // MARK: - Colours (dataviz categorical slots 1 to 3, light and dark)
-
-    private static let blue = adaptive(light: (0x2A, 0x78, 0xD6), dark: (0x39, 0x87, 0xE5))
-    private static let orange = adaptive(light: (0xEB, 0x68, 0x34), dark: (0xD9, 0x59, 0x26))
-    private static let aqua = adaptive(light: (0x1B, 0xAF, 0x7A), dark: (0x19, 0x9E, 0x70))
-
-    private static func adaptive(light: (Int, Int, Int), dark: (Int, Int, Int)) -> Color {
-        func ui(_ c: (Int, Int, Int)) -> UIColor {
-            UIColor(red: CGFloat(c.0) / 255, green: CGFloat(c.1) / 255, blue: CGFloat(c.2) / 255, alpha: 1)
-        }
-        return Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? ui(dark) : ui(light) })
     }
 }
 
@@ -205,11 +197,12 @@ private struct TrendAxes: ViewModifier {
     }
 }
 
-/// A line's last days (decision 179): riders as bars with the day's profit
-/// as a line over them, and a second chart of profit against the zero rule.
-/// The numbers and sentences are ``LineReport``'s, tested in
-/// `GamePresentation`; colours are the finance charts' (blue for riders,
-/// the app's success and error colours for profit and loss).
+/// A line's last days (decision 179): riders as bars, and a second chart
+/// of profit against the zero rule. The profit is not drawn on the riders'
+/// chart: its scale is people, not dollars (UI health check 3-7). The
+/// numbers and sentences are ``LineReport``'s, tested in `GamePresentation`
+/// (``LineReport/ridersChart(in:)``); colours are the finance charts' (blue
+/// for riders, the app's success and error colours for profit and loss).
 struct LineOperatingCharts: View {
     let report: LineReport
     let language: DisplayLanguage
@@ -226,11 +219,11 @@ struct LineOperatingCharts: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityIdentifier("line.operations.summary")
             if !report.days.isEmpty {
-                Text(verbatim: language.text("Riders and profit", "運量與損益"))
+                Text(verbatim: report.ridersChart(in: language).title)
                     .font(.caption.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
                 ridersChart
-                Text(verbatim: language.text("Profit by day", "每日損益"))
+                Text(verbatim: report.profitChart(in: language).title)
                     .font(.caption.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
                 profitChart
@@ -250,33 +243,19 @@ struct LineOperatingCharts: View {
     }
 
     private var ridersChart: some View {
-        let ridersName = language.text("Riders", "人次")
-        let profitName = language.text("Profit", "損益")
+        let spec = report.ridersChart(in: language)
         return Chart {
             ForEach(report.days) { day in
-                BarMark(x: .value(Self.dayAxis, day.day + 1), y: .value(ridersName, day.riders))
-                    .foregroundStyle(Color.accentColor.opacity(selected == nil || selected == day.day ? 0.9 : 0.4))
-            }
-            ForEach(report.days) { day in
-                LineMark(x: .value(Self.dayAxis, day.day + 1), y: .value(profitName, dollars(day.profit) / profitScale), series: .value("Series", profitName))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 3]))
+                BarMark(x: .value(Self.dayAxis, day.day + 1), y: .value(spec.series[0].name, day.riders))
+                    .foregroundStyle(Theme.chartBlue.opacity(selected == nil || selected == day.day ? 1 : 0.45))
             }
         }
         .modifier(DayAxes(selection: $selected, offset: 1))
         .frame(height: 130)
-        .accessibilityLabel(Text(verbatim: language.text("Riders and profit chart", "運量與損益圖")))
+        .accessibilityLabel(Text(verbatim: language.text("Riders by day chart", "每日運量圖")))
         .accessibilityValue(Text(verbatim: report.summaryText(in: language)))
+        .accessibilityChartDescriptor(ChartAudioGraph(spec: spec))
         .accessibilityIdentifier("line.operations.riders")
-    }
-
-    /// The profit line shares the riders' axis: dollars scaled so the
-    /// largest profit or loss reaches the tallest bar. The legend's words
-    /// name it; the exact figures are in the sentence above.
-    private var profitScale: Double {
-        let money = report.days.map { abs(dollars($0.profit)) }.max() ?? 0
-        let riders = Double(report.days.map(\.riders).max() ?? 0)
-        return money > 0 && riders > 0 ? money / riders : 1
     }
 
     private var profitChart: some View {
@@ -295,6 +274,7 @@ struct LineOperatingCharts: View {
         .frame(height: 110)
         .accessibilityLabel(Text(verbatim: language.text("Profit by day chart", "每日損益圖")))
         .accessibilityValue(Text(verbatim: report.summaryText(in: language)))
+        .accessibilityChartDescriptor(ChartAudioGraph(spec: report.profitChart(in: language)))
         .accessibilityIdentifier("line.operations.profit")
     }
 }
@@ -323,5 +303,60 @@ private struct DayAxes: ViewModifier {
                     }
                 }
             }
+    }
+}
+
+/// A legend of the charts' series: a swatch and a name each, the last a
+/// dashed line when `dashedLast` (the revenue chart's cost).
+private struct ChartLegend: View {
+    let names: [String]
+    let colors: [Color]
+    var dashedLast = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(names.indices, id: \.self) { index in
+                HStack(spacing: 4) {
+                    if dashedLast, index == names.count - 1 {
+                        Path { path in
+                            path.move(to: CGPoint(x: 0, y: 4))
+                            path.addLine(to: CGPoint(x: 14, y: 4))
+                        }
+                        .stroke(colors[index], style: StrokeStyle(lineWidth: 2, dash: [4, 2]))
+                        .frame(width: 14, height: 8)
+                    } else {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(colors[index])
+                            .frame(width: 10, height: 10)
+                    }
+                    Text(verbatim: names[index])
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+        }
+    }
+}
+
+/// A finance chart as VoiceOver's audio graph (Apple's Audio Graphs): the
+/// periods or days along x, dollars or people up y, one series each. The
+/// data is the chart's ``ChartSpec``.
+private struct ChartAudioGraph: AXChartDescriptorRepresentable {
+    let spec: ChartSpec
+
+    func makeChartDescriptor() -> AXChartDescriptor {
+        let spec = spec
+        let x = AXCategoricalDataAxisDescriptor(title: spec.xTitle, categoryOrder: spec.xLabels)
+        let y = AXNumericDataAxisDescriptor(title: spec.yTitle, range: spec.valueRange, gridlinePositions: []) { spec.valueText($0) }
+        let series = spec.series.map { series in
+            AXDataSeriesDescriptor(
+                name: series.name,
+                isContinuous: series.mark != .bars,
+                dataPoints: zip(spec.xLabels, series.values).compactMap { label, value in
+                    value.map { AXDataPoint(x: label, y: $0) }
+                }
+            )
+        }
+        return AXChartDescriptor(title: spec.title, summary: spec.summary, xAxis: x, yAxis: y, additionalAxes: [], series: series)
     }
 }

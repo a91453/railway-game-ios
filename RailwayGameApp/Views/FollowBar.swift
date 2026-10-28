@@ -189,16 +189,19 @@ struct FollowBar: View {
                     Image(systemName: "xmark")
                         .font(.caption.weight(.heavy))
                         .frame(width: 26, height: 26)
-                        .background(Theme.error, in: Circle())
+                        .background(Theme.chip, in: Circle())
+                        .overlay(Circle().strokeBorder(Theme.panelBorder, lineWidth: 1))
                 } else {
                     Text(verbatim: unfollowText)
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 9)
                         .padding(.vertical, 3)
-                        .background(Theme.error, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .background(Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.panelBorder, lineWidth: 1))
                 }
             }
-            .foregroundStyle(Theme.onError)
+            // Stopping following loses nothing, so it is not red (UI health check O).
+            .foregroundStyle(Theme.textPrimary)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }

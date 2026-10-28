@@ -26,4 +26,18 @@ final class RenameSessionTests: XCTestCase {
         XCTAssertEqual(LineColor(rgb: 0x00E5FF)?.hexText, "#00E5FF")
         XCTAssertEqual(LineColor(rgb: 0)?.hexText, "#000000")
     }
+
+    /// The colour menus name each colour: every preset a name of its own,
+    /// any other colour by its hue.
+    func testLineColourNames() {
+        XCTAssertEqual(LineColor.presets[8].nameText(in: .english), "Blue")
+        XCTAssertEqual(LineColor.presets[8].nameText(in: .traditionalChinese), "藍")
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            let names = LineColor.presets.map { $0.nameText(in: language) }
+            XCTAssertEqual(Set(names).count, names.count, "\(language): \(names)")
+            XCTAssertFalse(names.contains { $0.contains("#") })
+        }
+        XCTAssertEqual(LineColor(rgb: 0x1273E0)?.nameText(in: .traditionalChinese), "藍")
+        XCTAssertEqual(LineColor(rgb: 0)?.nameText(in: .english), "Black")
+    }
 }

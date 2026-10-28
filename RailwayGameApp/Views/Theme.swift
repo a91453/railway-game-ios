@@ -58,6 +58,15 @@ enum Theme {
     /// Text and icons on ``error`` (5.62:1 light, 6.59:1 dark).
     static let onError = dynamic(light: 0xFFFFFF, dark: 0x262C57)
 
+    // The finance charts' series (the dataviz categorical slots 1 to 3):
+    // marks, never text, each at least 3:1 on ``panel`` (WCAG 1.4.11).
+    /// Fares and passengers (4.42:1 light, 3.07:1 dark).
+    static let chartBlue = dynamic(light: 0x2A78D6, dark: 0x3987E5)
+    /// Freight (3.20:1, 3.49:1).
+    static let chartOrange = dynamic(light: 0xEB6834, dark: 0xEB6834)
+    /// Rent (3.33:1, 3.28:1).
+    static let chartAqua = dynamic(light: 0x18A070, dark: 0x199E70)
+
     private static func dynamic(
         light: UInt32,
         dark: UInt32,

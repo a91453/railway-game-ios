@@ -80,6 +80,7 @@ struct LinesPanel: View {
     @AppStorage(RouteHint.seenKey) private var routeHintSeen = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -154,7 +155,7 @@ struct LinesPanel: View {
                     guard let target = key.target else { return }
                     Task { @MainActor in
                         await Task.yield()
-                        withAnimation { proxy.scrollTo(target, anchor: .center) }
+                        withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
                     }
                 }
                 // Decision 299: the first station added (or picking begun)
@@ -165,7 +166,7 @@ struct LinesPanel: View {
                     guard was, !now else { return }
                     Task { @MainActor in
                         await Task.yield()
-                        withAnimation { proxy.scrollTo(Self.draftAnchor, anchor: .center) }
+                        withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(Self.draftAnchor, anchor: .center) }
                     }
                 }
             }
@@ -290,7 +291,7 @@ struct LinesPanel: View {
     private var newLineRow: some View {
         Section {
             Button {
-                withAnimation { showsNewLine.toggle() }
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { showsNewLine.toggle() }
             } label: {
                 Label {
                     Text(verbatim: session.language.text("New Line…", "新路線…"))
@@ -836,7 +837,7 @@ struct LinesPanel: View {
                                 session.setSelectedLineColor(color)
                             } label: {
                                 Label {
-                                    Text(verbatim: color.hexText)
+                                    Text(verbatim: color.nameText(in: language))
                                 } icon: {
                                     Image(systemName: line.color == color ? "checkmark.circle.fill" : "circle.fill")
                                 }
@@ -1005,6 +1006,7 @@ struct LinesPanel: View {
             RouteStrip(
                 names: line.stops.map { name(of: $0) },
                 color: Palette.lineColor(line.id, custom: line.color),
+                mark: Palette.lineMark(line.id, custom: line.color),
                 trains: session.world.lineTrainDots(line.id)
             )
             // Decision 206: the line's train diagram, view only.

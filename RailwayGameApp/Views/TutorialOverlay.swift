@@ -687,7 +687,6 @@ private struct FoldedTutorialCard: View {
                 .strokeBorder(Theme.panelBorder, lineWidth: 1)
                 .allowsHitTesting(false)
         }
-        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
         // As tall as it needs, and as wide up to the width the placement
         // offers (``TutorialCardPlacement``), never wider than the screen:
         // with a long title and large text the title is cut short.
