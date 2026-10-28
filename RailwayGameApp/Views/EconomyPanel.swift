@@ -165,7 +165,13 @@ struct EconomyPanel: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("economy.trend.range")
-            FinanceTrendCharts(history: FinanceHistory.make(trendRange, world: session.world), language: session.language)
+            // Decision 471: the charts drawn again only when what they are
+            // made from changes, not at every tick.
+            let source = FinanceHistory.Source(trendRange, world: session.world)
+            let language = session.language
+            TickStable(StableKey(source, language)) {
+                FinanceTrendCharts(history: source.history(), language: language)
+            }
         } header: {
             Text(verbatim: session.language.text("Trends", "趨勢"))
         }
@@ -581,12 +587,14 @@ struct EconomyPanel: View {
 
     private var ledgerSection: some View {
         Section("Ledger") {
-            let entries = session.world.recentLedgerEntries()
-            if entries.isEmpty {
+            let rows = session.world.recentLedgerRows()
+            if rows.isEmpty {
                 Text("No rows yet.")
                     .foregroundStyle(Theme.textSecondary)
             }
-            ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
+            // Decision 471: each row keeps its ID as newer rows come in above it.
+            ForEach(rows) { row in
+                let entry = row.entry
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
                         Text(entry.kind.displayName(in: session.language))

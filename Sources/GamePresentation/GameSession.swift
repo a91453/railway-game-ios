@@ -41,6 +41,7 @@ public final class GameSession {
             if !isLogging { log(.unrecorded("world")) }
             refreshScreenFacts()
             refreshMapMarks()
+            refreshFollowBar()
         }
     }
     /// Decision 367: what the screen's frame shows of the world, changed
@@ -52,6 +53,13 @@ public final class GameSession {
     /// Decision 377: what the map's sight marks show, apart from the
     /// bubbles, whose waiting counts change at most ticks.
     public internal(set) var mapSights: [MapMarks.Sight] = []
+    /// Decision 471: what the follow bar shows of the followed train,
+    /// `nil` while no train is followed (``FollowBarFacts``), changed only
+    /// when it changes.
+    public internal(set) var followBar: FollowBarFacts?
+    /// Decision 471: the followed train's trip progress, in thousandths
+    /// (``FollowBarFacts/progress(of:)``), apart from ``followBar``.
+    public internal(set) var followProgress: Double = 0
     /// Decision 377: the game hour the station master's corner last looked
     /// at (``stationMasterRefreshKey``), changed only when a new hour
     /// begins, so the corner is not told to look again at every tick.
@@ -307,7 +315,10 @@ public final class GameSession {
     /// train with ``clearSelection()``), or when the train leaves the track,
     /// stops existing or its line is removed.
     public private(set) var followedTrainID: TrainID? {
-        didSet { if followedTrainID != oldValue { updateMap3DSpeedCap() } }
+        didSet {
+            if followedTrainID != oldValue { updateMap3DSpeedCap() }
+            refreshFollowBar()
+        }
     }
 
     /// The way the selected train faces when it is placed: along its
@@ -986,6 +997,7 @@ public final class GameSession {
         refreshNightSkipOffer()
         refreshScreenFacts()
         refreshMapMarks()
+        refreshFollowBar()
     }
 
     // MARK: - Selection

@@ -224,6 +224,22 @@ extension GameWorld {
         Array(accounts.entries.suffix(count).reversed())
     }
 
+    /// Decision 471 (UI health check K, 3-21): the last `count` ledger
+    /// rows, newest first, each with an ID that stays the row's while newer
+    /// rows come in above it (``LedgerRow/ID``), so the economy panel's
+    /// list keeps each row, and VoiceOver's place in it, when one is added.
+    public func recentLedgerRows(_ count: Int = 12) -> [LedgerRow] {
+        // How many rows of each time and kind came before.
+        var before: [LedgerRow.ID: Int] = [:]
+        let rows = accounts.entries.map { entry -> LedgerRow in
+            let first = LedgerRow.ID(time: entry.time, kind: entry.kind, ordinal: 0)
+            let ordinal = before[first, default: 0]
+            before[first] = ordinal + 1
+            return LedgerRow(id: LedgerRow.ID(time: entry.time, kind: entry.kind, ordinal: ordinal), entry: entry)
+        }
+        return Array(rows.suffix(count).reversed())
+    }
+
     /// Who waits at station `id`, by line and the way they go, such as
     /// ["Main to Gamma · 120", "Main to Alpha · 30"]: lines by ID, outbound
     /// first. Empty if nobody waits.
@@ -395,4 +411,20 @@ extension CompanyAccounts {
             "營利事業所得稅：每天的稅前淨利超過 \(taxFreeProfit.moneyText) 的部分課 \(taxPercent)%，午夜支付"
         )
     }
+}
+
+/// A ledger row with a stable ID (``GameWorld/recentLedgerRows(_:)``).
+public struct LedgerRow: Identifiable, Hashable, Sendable {
+    /// The row's time and kind, and how many kept rows of the same time and
+    /// kind come before it (several demolitions in one moment). Rows are
+    /// written in time order and only the oldest are let go, so a row's ID
+    /// changes only if a row of its own time and kind is let go before it.
+    public struct ID: Hashable, Sendable {
+        public let time: GameTime
+        public let kind: LedgerEntry.Kind
+        public let ordinal: Int
+    }
+
+    public let id: ID
+    public let entry: LedgerEntry
 }

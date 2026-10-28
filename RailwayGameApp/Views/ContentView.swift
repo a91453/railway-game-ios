@@ -461,7 +461,9 @@ struct ContentView: View {
             // Decision 226 (2026-10-15, the owner): the follow bar beside
             // the strip, in the row under the pill, rather than squeezed
             // between the tools and the card lower down.
-            let followed = session.followedTrain
+            // Decision 471: what the session keeps of the followed train,
+            // not the train itself, which is read from the world.
+            let followed = session.followBar
             let showsTopRow = showsLayerStrip || followed != nil
             // The map's top column (its banner, the construction readout)
             // starts under that row, not behind it.
@@ -528,7 +530,7 @@ struct ContentView: View {
                                 // Decision 333: the same train from behind
                                 // in 3D, over where the 2D map follows it
                                 // (not in the tutorial or with 3D off, as the map's 3D button).
-                                FollowBar(train: followed, session: session, open3D: session.tutorial == nil && map3DQuality.shows3D ? {
+                                FollowBar(facts: followed, session: session, open3D: session.tutorial == nil && map3DQuality.shows3D ? {
                                     screen.map3DHandoff = nil
                                     screen.map3DOpenedAt = mapCamera.map {
                                         Map3DHandoff.Plan(x: $0.centerX, y: $0.centerY, referenceSize: $0.referenceSize)
@@ -729,7 +731,7 @@ struct ContentView: View {
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: toolsColumn)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: sidePanel)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.lineDraft.count >= 2)
-                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followBar?.train)
         }
     }
 
