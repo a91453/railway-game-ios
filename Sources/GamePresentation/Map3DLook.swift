@@ -143,6 +143,20 @@ public enum Map3DLook {
         }
     }
 
+    /// Decision 455: the boxes' faces in the look as ``restyle(_:keeping:strength:)``
+    /// changes their vertices.
+    static func restyle(_ boxes: inout [Map3DBoxInstance], keeping: Set<UInt32> = [], strength: Strength = city) {
+        var known: [UInt32: UInt32] = [:]
+        let plain = Int16(Map3DVertex.plain), road = Int16(Map3DVertex.road)
+        for index in boxes.indices {
+            boxes[index].restyle { from, layer in
+                let to = known[from] ?? (keeping.contains(from) ? from : colour(from, strength: strength))
+                known[from] = to
+                return (to, layer == plain && roads.contains(from | 0xFF00_0000) ? road : layer)
+            }
+        }
+    }
+
     /// `model` in the look (the street furniture's models).
     static func restyle(_ model: Map3DModelPack.Model) -> Map3DModelPack.Model {
         Map3DModelPack.Model(name: model.name, vertices: model.vertices.map { vertex in

@@ -32,6 +32,9 @@ public struct Map3DScene: Sendable {
         /// the rest of ``mesh`` when the chunk is far from the camera
         /// (``Map3DCamera/wantsDetail(minimum:maximum:)``).
         public let far: Map3DMesh
+        /// Decision 455: the simplified city's boxes, drawn with ``far``
+        /// as instances of one box (``Map3DBoxInstance``).
+        public let farBoxes: [Map3DBoxInstance]
         /// Decision 267: the city's smallest things, drawn only close up
         /// (``Map3DCamera/wantsClose(minimum:maximum:wasClose:)``) on top
         /// of the full mesh.
@@ -62,6 +65,20 @@ public struct Map3DScene: Sendable {
         /// camera looked), so drawn simplified, as from afar, until it is
         /// built again in full (``Map3DStreaming/Window``).
         public let coarse: Bool
+
+        /// Decision 455: ``far`` and ``farBoxes`` as one mesh, the boxes as
+        /// the app's shader draws them.
+        public var farWithBoxes: Map3DMesh {
+            var mesh = far
+            mesh.append(Map3DBoxInstance.mesh(farBoxes))
+            return mesh
+        }
+
+        /// The triangles of ``far`` and ``farBoxes``.
+        public var farTriangleCount: Int { far.triangleCount + farBoxes.reduce(0) { $0 + $1.triangleCount } }
+
+        /// Whether it has no simplified city.
+        public var farIsEmpty: Bool { far.isEmpty && farBoxes.isEmpty }
     }
 
     /// The side of a chunk, in metres.
@@ -274,10 +291,12 @@ public struct Map3DScene: Sendable {
     /// units), built as the public initializer builds it. Decision 359:
     /// with `trackCover`, or the network's own when `nil`. Decision 368:
     /// with `detail`, the city in full only within ``detailRadius`` of it.
+    /// Decision 455: the city's lots' simplified boxes as instances, or
+    /// as vertices without `instancingBoxes` (as before it, for the tests).
     init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
          baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
          lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
-         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil) {
+         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, instancingBoxes: Bool = true) {
         (region, originX, originY) = frame
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
@@ -401,8 +420,12 @@ public struct Map3DScene: Sendable {
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
         if let footprints { builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints) }
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
+        // Decision 455: the city's lots' boxes as instances; the real
+        // buildings' shapes above stay vertices.
+        builder.instancingBoxes = instancingBoxes
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
                         besideRoads: taken.byRoads)
+        builder.instancingBoxes = false
         builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()
@@ -675,6 +698,9 @@ extension Map3DScene {
         /// ``Map3DLook``'s own (the lines' bands).
         var keptColours = Set<UInt32>()
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 455: whether the simplified city's boxes are kept as
+        /// instances (the city's lots), not vertices.
+        var instancingBoxes = false
         var closeMeshes: [ChunkKey: Map3DMesh] = [:]
         var standInMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
@@ -812,7 +838,9 @@ extension Map3DScene {
             switch target {
             case .base: build(&meshes[key, default: Map3DMesh()])
             case .near: build(&nearMeshes[key, default: Map3DMesh()])
-            case .far: build(&farMeshes[key, default: Map3DMesh()])
+            case .far:
+                farMeshes[key, default: Map3DMesh()].collectsBoxes = instancingBoxes
+                build(&farMeshes[key, default: Map3DMesh()])
             case .close, .wires: build(&closeMeshes[key, default: Map3DMesh()])
             case .standIn: build(&standInMeshes[key, default: Map3DMesh()])
             }
@@ -837,11 +865,15 @@ extension Map3DScene {
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
                 var far = farMeshes[key] ?? Map3DMesh(), close = closeMeshes[key] ?? Map3DMesh(), standIn = standInMeshes[key] ?? Map3DMesh()
+                var farBoxes = far.boxes
+                far.boxes = []
+                far.collectsBoxes = false
                 let shadows = shadows[key] ?? Map3DMesh()
                 // Decision 370: the city in the model look; decision 451:
                 // its closest detail nearer its own colours.
                 Map3DLook.restyle(&mesh, keeping: keptColours)
                 Map3DLook.restyle(&far, keeping: keptColours)
+                Map3DLook.restyle(&farBoxes, keeping: keptColours)
                 Map3DLook.restyle(&close, keeping: keptColours, strength: Map3DLook.close)
                 Map3DLook.restyle(&standIn, keeping: keptColours)
                 // The props too: the renderer leaves out a chunk whose box
@@ -853,13 +885,15 @@ extension Map3DScene {
                         (Map3DPoint(min($0.min.x, $1.x), min($0.min.y, $1.y), min($0.min.z, $1.z)), Map3DPoint(max($0.max.x, $1.x), max($0.max.y, $1.y), max($0.max.z, $1.z)))
                     }
                 }
-                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds, standIn.bounds].compactMap { $0 } + propBoxes + signBoxes
+                let boxes = [mesh.bounds, far.bounds, shadows.bounds, close.bounds, standIn.bounds].compactMap { $0 } + farBoxes.map(\.bounds)
+                    + propBoxes + signBoxes
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
-                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, close: close, standIn: standIn, shadows: shadows,
-                             props: props[key] ?? [], minimum: low, maximum: high,
-                             cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0), (standIn, 0)]),
+                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, farBoxes: farBoxes, close: close,
+                             standIn: standIn, shadows: shadows, props: props[key] ?? [], minimum: low, maximum: high,
+                             cityTops: Map3DSeeThrough.tops(column: key.column, row: key.row, of: [(mesh, baseIndexCount), (far, 0), (standIn, 0)],
+                                                            boxes: farBoxes),
                              signs: signs[key] ?? [], coarse: isCoarse(key))
             }
         }

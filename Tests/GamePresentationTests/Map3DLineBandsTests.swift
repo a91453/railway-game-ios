@@ -111,6 +111,7 @@ final class Map3DLineBandsTests: XCTestCase {
         let plain = Map3DScene(world: world), banded = Map3DScene(world: world, lineBands: bands)
         XCTAssertGreaterThan(banded.triangleCount, plain.triangleCount)
         XCTAssertEqual(banded.chunks.map(\.far.vertices), plain.chunks.map(\.far.vertices))
+        XCTAssertEqual(banded.chunks.map(\.farBoxes), plain.chunks.map(\.farBoxes))
         XCTAssertEqual(banded.chunks.map(\.close.vertices), plain.chunks.map(\.close.vertices))
 
         let colour = Map3DColor.rgb(0x123456)

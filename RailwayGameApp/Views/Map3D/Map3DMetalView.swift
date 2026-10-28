@@ -798,9 +798,12 @@ final class Map3DMetalView: MTKView {
         if let shadowVertices = makeBuffer(chunk.shadows.vertices), let shadowIndices = makeBuffer(chunk.shadows.indices) {
             shadows = (shadowVertices, shadowIndices, chunk.shadows.indices.count)
         }
+        // Decision 455: the simplified city's boxes made into vertices here,
+        // as the shader will make them of its instances.
         var far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-        if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
-            far = (farVertices, farIndices, chunk.far.indices.count)
+        let farMesh = chunk.farWithBoxes
+        if let farVertices = makeBuffer(farMesh.vertices), let farIndices = makeBuffer(farMesh.indices) {
+            far = (farVertices, farIndices, farMesh.indices.count)
         }
         var close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         if let closeVertices = makeBuffer(chunk.close.vertices), let closeIndices = makeBuffer(chunk.close.indices) {

@@ -126,7 +126,7 @@ final class Map3DPlacedBuildingKitsTests: XCTestCase {
         for chunk in scene.chunks where !chunk.standIn.isEmpty {
             // The models close up; their boxes apart, the same as from afar.
             XCTAssertFalse(chunk.close.isEmpty)
-            XCTAssertEqual(chunk.standIn.triangleCount, chunk.far.triangleCount)
+            XCTAssertEqual(chunk.standIn.triangleCount, chunk.farWithBoxes.triangleCount)
         }
         XCTAssertEqual(scene.chunks.filter { !$0.standIn.isEmpty }.count, 2)
     }

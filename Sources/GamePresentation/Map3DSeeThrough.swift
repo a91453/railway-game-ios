@@ -121,9 +121,9 @@ public struct Map3DSeeThrough: Equatable, Sendable {
     static let step: Float = 16
 
     /// The highest point of the triangles of each mesh from its index
-    /// given on, in each square of chunk (`column`, `row`)
-    /// (``Map3DScene/Chunk/cityTops``).
-    static func tops(column: Int, row: Int, of meshes: [(mesh: Map3DMesh, first: Int)]) -> [Float] {
+    /// given on, and of `boxes` (decision 455), in each square of chunk
+    /// (`column`, `row`) (``Map3DScene/Chunk/cityTops``).
+    static func tops(column: Int, row: Int, of meshes: [(mesh: Map3DMesh, first: Int)], boxes: [Map3DBoxInstance] = []) -> [Float] {
         var tops = [Float](repeating: -.infinity, count: cells * cells)
         let side = Map3DScene.chunkSize, square = side / Float(cells)
         let west = Float(column) * side, north = Float(row) * side
@@ -133,6 +133,13 @@ public struct Map3DSeeThrough: Equatable, Sendable {
                 let x = min(max(Int(((vertex.x - west) / square).rounded(.down)), 0), cells - 1)
                 let z = min(max(Int(((vertex.z - north) / square).rounded(.down)), 0), cells - 1)
                 tops[z * cells + x] = max(tops[z * cells + x], vertex.y)
+            }
+        }
+        for box in boxes {
+            for corner in box.topCorners {
+                let x = min(max(Int(((corner.x - west) / square).rounded(.down)), 0), cells - 1)
+                let z = min(max(Int(((corner.z - north) / square).rounded(.down)), 0), cells - 1)
+                tops[z * cells + x] = max(tops[z * cells + x], corner.y)
             }
         }
         return tops
