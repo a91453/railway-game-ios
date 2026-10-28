@@ -7,7 +7,7 @@
 ## 檔案
 
 - `Map3DPreviewDump.swift.txt`：一個 XCTest，蓋好場景後寫出頂點、索引、陰影與鏡頭。不是測試，所以不放在 `Tests/` 裡；要用時複製過去，用完刪掉。
-- `index.html`：WebGL 頁，讀上面寫出的檔。
+- `index.html`：WebGL 頁，讀上面寫出的檔。決策 455：遠景城市的方塊以實例寫在 `<前綴>.boxes`（每個 88 bytes），頁面照 `map3dBoxVertex` 的算式展開。
 - `render.cjs`：用 Playwright 開那一頁，每個鏡頭拍兩張（有、沒有陰影）。檔案由本機 127.0.0.1 的一個小 HTTP 伺服器給（決策 385）：用 `page.route` 回應時，超過 100 MB 的場景會讓 DevTools 的管道斷掉。
 - `render.sh`：把上面串起來。
 

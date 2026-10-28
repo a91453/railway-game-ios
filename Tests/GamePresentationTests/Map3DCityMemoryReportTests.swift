@@ -49,6 +49,13 @@ final class Map3DCityMemoryReportTests: XCTestCase {
             print("  \(label): \(layer.vertices) vertices, \(layer.indices / 3) triangles, \(mb(layer.bytes))")
         }
         print("  city simplified's boxes (decision 455): \(boxes) instances, \(boxTriangles) triangles, \(mb(boxBytes))")
+        // Decision 455: the simplified city's Metal buffers, its boxes as
+        // instances (the app now) and made into vertices (before, as
+        // `farWithBoxes`).
+        let expanded = scene.chunks.reduce(0) { sum, chunk in
+            sum + chunk.farBoxes.reduce(0) { $0 + ($1.capped == 1 ? 20 : 16) * MemoryLayout<Map3DVertex>.stride + $1.triangleCount * 3 * 4 }
+        }
+        print("  city simplified on the GPU: \(mb(far.bytes + boxBytes)) as instances, \(mb(far.bytes + expanded)) made into vertices")
         print("  props \(props) instances (\(mb(props * 80))), signs \(signs)")
         frame(scene)
     }
@@ -67,7 +74,10 @@ final class Map3DCityMemoryReportTests: XCTestCase {
                 let count = detailed ? chunk.mesh.indices.count : chunk.baseIndexCount
                 if count > 0 { draws += 1; triangles += count / 3 }
                 if detailed { cityTriangles += (chunk.mesh.indices.count - chunk.baseIndexCount) / 3 }
-                if !detailed, !chunk.farIsEmpty { draws += 1; triangles += chunk.farTriangleCount; farTriangles += chunk.farTriangleCount }
+                // Decision 455: its simplified city's vertices and its boxes'
+                // instances, a draw each.
+                if !detailed { draws += (chunk.far.isEmpty ? 0 : 1) + (chunk.farBoxes.isEmpty ? 0 : 1) }
+                if !detailed, !chunk.farIsEmpty { triangles += chunk.farTriangleCount; farTriangles += chunk.farTriangleCount }
             }
             var sun = "no sun map"
             let lighting = Map3DLighting(minute: 10 * 60)
@@ -78,7 +88,8 @@ final class Map3DCityMemoryReportTests: XCTestCase {
                     let count = detailed ? chunk.mesh.indices.count : chunk.baseIndexCount
                     if count > 0 { sunDraws += 1; sunTriangles += count / 3 }
                     if detailed { sunCity += (chunk.mesh.indices.count - chunk.baseIndexCount) / 3 }
-                    if !detailed, !chunk.farIsEmpty { sunDraws += 1; sunTriangles += chunk.farTriangleCount; sunCity += chunk.farTriangleCount }
+                    if !detailed { sunDraws += (chunk.far.isEmpty ? 0 : 1) + (chunk.farBoxes.isEmpty ? 0 : 1) }
+                    if !detailed, !chunk.farIsEmpty { sunTriangles += chunk.farTriangleCount; sunCity += chunk.farTriangleCount }
                 }
                 sun = "sun map \(sunDraws) draws, \(sunTriangles) triangles (city \(sunCity))"
             }

@@ -144,7 +144,8 @@ final class Map3DFrameCostReportTests: XCTestCase {
                 under.triangles += chunk.baseIndexCount / 3
                 under.draws += chunk.baseIndexCount > 0 ? 1 : 0
                 all.triangles += detailed ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.farTriangleCount
-                all.draws += 1 + (detailed || chunk.farIsEmpty ? 0 : 1)
+                // Decision 455: the simplified city's vertices and its boxes, a draw each.
+                all.draws += 1 + (detailed ? 0 : (chunk.far.isEmpty ? 0 : 1) + (chunk.farBoxes.isEmpty ? 0 : 1))
                 if closeUp, !chunk.close.isEmpty { all.triangles += chunk.close.triangleCount; all.draws += 1 }
                 if detailed, !closeUp, !chunk.standIn.isEmpty { all.triangles += chunk.standIn.triangleCount; all.draws += 1 }
                 if detailed {

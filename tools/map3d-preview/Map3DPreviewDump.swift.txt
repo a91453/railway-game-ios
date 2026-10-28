@@ -89,6 +89,7 @@ final class Map3DPreviewDump: XCTestCase {
         }
         var floats: [Float] = []
         var indices: [UInt32] = []
+        var boxes: [Map3DBoxInstance] = []
         // MAP3D_DETAIL=far: each chunk as the app draws it from afar
         // (decision 238): its ground and track, then its city simplified.
         let detailFar = ProcessInfo.processInfo.environment["MAP3D_DETAIL"] == "far"
@@ -115,8 +116,11 @@ final class Map3DPreviewDump: XCTestCase {
         for chunk in chunks {
             // The vertices of both; the indices of the base and of the
             // simplified city (afar), or all of the full mesh (near).
-            // Decision 455: the simplified city's boxes as the shader draws them.
-            let far = detailFar ? chunk.farWithBoxes : Map3DMesh()
+            // Decision 455: the simplified city's boxes go out as they are
+            // (`.boxes`), for the page to make into vertices as the shader
+            // does.
+            let far = detailFar ? chunk.far : Map3DMesh()
+            if detailFar { boxes += chunk.farBoxes }
             let vertices = detailFar ? chunk.mesh.vertices + far.vertices : chunk.mesh.vertices
             let chunkIndices = detailFar
                 ? Array(chunk.mesh.indices.prefix(chunk.baseIndexCount)) + far.indices.map { $0 + UInt32(chunk.mesh.vertices.count) }
@@ -217,6 +221,7 @@ final class Map3DPreviewDump: XCTestCase {
         let signFloats = detailFar || ProcessInfo.processInfo.environment["MAP3D_SIGNS"] == "0" ? [] : chunks.flatMap(\.signs).flatMap(\.floats)
         try signFloats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".signs")) }
         try floats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".vertices")) }
+        try boxes.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".boxes")) }
         try indices.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".indices")) }
         // Stations, to aim the camera.
         let stations = world.stations.map { s -> [String: Any] in

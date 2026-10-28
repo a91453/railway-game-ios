@@ -501,6 +501,77 @@ vertex float4 map3dSunDepthInstancedVertex(Map3DVertexIn in [[stage_in]], consta
     return sun * (instances[instance].transform * float4(in.position, 1.0));
 }
 
+// Decision 455: the simplified city's boxes, each an instance of one box,
+// as Map3DBoxInstance in GamePresentation lays them out (fourteen floats,
+// five colours, six shorts, 88 bytes) and makes them into vertices
+// (`vertex(face:corner:)`, which the tests hold to what addBox laid): a
+// vertex's number its face (top, front, right, back, left) and corner.
+struct Map3DBoxInstance {
+    float x, y, z;
+    float alongX, alongZ;
+    float length, width, height;
+    float topWidth, topHeight;
+    float frontU, frontV, flankU, flankV;
+    uint colors[5];
+    short layers[5];
+    short capped;
+};
+
+// Each corner of the template: which end (+1 front, -1 back), which side
+// (+1 right, -1 left), whether at the top; its texture place's u and v as
+// 0 or 1 of the face's (Map3DBoxInstance.faceCorners).
+constant float4 boxCorners[20] = {
+    {1, -1, 1, 0}, {-1, -1, 1, 0}, {-1, 1, 1, 0}, {1, 1, 1, 0},
+    {1, 1, 0, 0}, {1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0},
+    {-1, 1, 0, 0}, {1, 1, 0, 1}, {1, 1, 1, 1}, {-1, 1, 1, 0},
+    {-1, -1, 0, 0}, {-1, 1, 0, 1}, {-1, 1, 1, 1}, {-1, -1, 1, 0},
+    {1, -1, 0, 0}, {-1, -1, 0, 1}, {-1, -1, 1, 1}, {1, -1, 1, 0},
+};
+
+// Where the corner falls: its place, and with no top (another box stands
+// on it) the top's four corners at one point, so its two triangles cover
+// nothing.
+static float3 map3dBoxCorner(Map3DBoxInstance box, uint face, float4 corner) {
+    if (face == 0 && box.capped == 0) { return float3(box.x, box.y, box.z); }
+    float3 along = float3(box.alongX, 0.0, box.alongZ), across = float3(-box.alongZ, 0.0, box.alongX);
+    return float3(box.x, box.y, box.z) + along * (corner.x * box.length * 0.5) + across * (corner.y * box.width * 0.5)
+        + float3(0.0, corner.z * box.height, 0.0);
+}
+
+vertex Map3DVertexOut map3dBoxVertex(uint index [[vertex_id]], uint instance [[instance_id]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                                     const device Map3DBoxInstance *boxes [[buffer(2)]]) {
+    Map3DBoxInstance box = boxes[instance];
+    uint face = index / 4;
+    float4 corner = boxCorners[index];
+    float3 world = map3dBoxCorner(box, face, corner);
+    float3 along = float3(box.alongX, 0.0, box.alongZ), across = float3(-box.alongZ, 0.0, box.alongX);
+    float3 normal = face == 0 ? float3(0.0, 1.0, 0.0) : face == 1 ? along : face == 2 ? across : face == 3 ? -along : -across;
+    // The top's texture laid in the scene's metres; the sides' 0 to their
+    // u and v (the v of the template's fourth row is whether at the top).
+    float2 place;
+    if (face == 0) {
+        place = box.topWidth > 0.0 ? float2(world.x / box.topWidth, world.z / box.topHeight) : float2(0.0);
+    } else {
+        float2 reach = (face == 1 || face == 3) ? float2(box.frontU, box.frontV) : float2(box.flankU, box.flankV);
+        place = float2(corner.w, corner.z) * reach;
+    }
+    Map3DVertexOut out;
+    out.position = uniforms.viewProjection * float4(world, 1.0);
+    out.color = unpack_unorm4x8_to_float(box.colors[face]).rgb;
+    out.normal = normal;
+    out.world = world;
+    out.surfaceAt = place;
+    out.layer = float(box.layers[face]);
+    out.plane = dot(world, normal);
+    return out;
+}
+
+vertex float4 map3dSunDepthBoxVertex(uint index [[vertex_id]], uint instance [[instance_id]], constant float4x4 &sun [[buffer(1)]],
+                                     const device Map3DBoxInstance *boxes [[buffer(2)]]) {
+    Map3DBoxInstance box = boxes[instance];
+    return sun * float4(map3dBoxCorner(box, index / 4, boxCorners[index]), 1.0);
+}
+
 // Decision 232: the soft shadows on the ground, drawn last over what is
 // already drawn, their darkness in the vertex's alpha. A cool dark tint
 // rather than black, faded with the fog like everything else.
