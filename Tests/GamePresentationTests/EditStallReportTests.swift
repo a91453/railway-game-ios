@@ -59,6 +59,8 @@ final class EditStallReportTests: XCTestCase {
             ("open a line", .edit(.createLine(name: "New", stops: Array(line.stops.prefix(3)), targets: nil))),
             ("change the times", .edit(.setLineWindow(line.id, line.window == .allDay ? .standard : .allDay))),
         ] + (Self.newStation(in: world, session: session).map { [("build a station", $0)] } ?? [])
+        let memos = (LinePanelMemo(), LineLossMemo(), LineSatisfactionMemo())
+        Self.readLinesPanel(line.id, of: session, memos: memos)
         for (name, command) in edits {
             var outcome: PlayerCommand.Outcome?
             let edit = clock.measure { outcome = session.perform(command) { _, _, _ in "" } }
@@ -68,12 +70,45 @@ final class EditStallReportTests: XCTestCase {
             let steps = clock.measure { _ = session.nextSteps }
             let rank = clock.measure { _ = CompanyRank(world: session.world) }
             let traffic = clock.measure { _ = session.trafficOverlay }
+            let panel = clock.measure { Self.readLinesPanel(line.id, of: session, memos: memos) }
+            let hint = clock.measure { session.watchRouteHint() }
             var finish = Duration.zero
             let first = try await tick(session) { finish = $0 }
             print("\(name.padding(toLength: 18, withPad: " ", startingAt: 0)): edit \(ms(edit)), advice \(ms(advice)), "
-                + "alerts \(ms(alerts)), next steps \(ms(steps)), rank \(ms(rank)), traffic \(ms(traffic)), "
+                + "alerts \(ms(alerts)), next steps \(ms(steps)), rank \(ms(rank)), traffic \(ms(traffic)), lines panel \(ms(panel)), route hint \(ms(hint)), "
                 + "first tick off the main actor \(ms(first)), finishing it \(ms(finish))")
         }
+    }
+
+    /// What the lines panel's body reads with line `id` selected
+    /// (`LinesPanel`): its memos start again after every command.
+    static func readLinesPanel(
+        _ id: LineID, of session: GameSession, memos: (LinePanelMemo, LineLossMemo, LineSatisfactionMemo)
+    ) {
+        let (memo, loss, satisfaction) = memos
+        let world = session.world
+        for report in world.lineReports(sortedBy: .name) {
+            _ = world.lineStatusText(report.line, at: world.clock.now, in: session.language)
+        }
+        guard let line = world.line(id: id) else { return }
+        _ = memo.serviceSummaries(id, of: session)
+        _ = memo.journeyText(id, of: session)
+        _ = memo.trackCountTexts(id, of: session)
+        for level in ServiceLevel.allCases { _ = memo.coverageText(id, at: level, of: session) }
+        _ = memo.capacityWarning(id, of: session)
+        let calls = Array(line.stops.indices)
+        let order = line.isRing ? calls + [0] + (calls + [0]).dropLast().reversed() : calls + calls.dropLast().reversed()
+        for (from, to) in zip(order, order.dropFirst()) {
+            _ = memo.routeChoices(id, from: from, to: to, pattern: nil, of: session)
+        }
+        _ = memo.headwayChange(id, headway: 600, of: session)
+        _ = memo.trainShortfall(id, of: session)
+        _ = memo.runningHeadway(id, of: session)
+        _ = memo.staffingPlan(id, headway: 600, type: nil, cars: 4, of: session)
+        _ = loss.diagnosis(id, of: session)
+        _ = loss.fixes(id, of: session)
+        _ = satisfaction.satisfaction(id, of: session)
+        _ = satisfaction.fix(id, of: session)
     }
 
     /// One game loop tick; returns how long its work took off the main
