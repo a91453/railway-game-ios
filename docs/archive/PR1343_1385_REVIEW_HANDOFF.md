@@ -123,7 +123,7 @@ P1 候選 1 個（K2-2）、P2 2 個（K2-1、K2-3）、P3 6 個（K2-4 到 K2-9
 - **玩家看到**：天黑後地圖上所有列車（玩家的車、真實時刻表的車）都沒有頭燈、尾燈，客室窗也不亮，比 #1383 之前還暗。決策 449 在 App 裡完全看不到。
 - **查證**：子代理在 Linux、cdb5bba 寫臨時測試：`Map3DModelPack.standard.replacing(<公車模型>)` 後，`lights` 從 220 變 0（`headSigns` 24 → 24，不受影響）。Linux 的測試都用 `.standard`，所以抓不到。
 - **修法**：`replacing` 裡加 `pack.lights = lights`。換掉的只是公車、貨車，不是列車，模型索引不變。回歸測試：`standard.replacing(公車)` 後 `lights` 不是空的。
-- **已通知**：2026-10-28 用 send_message 告訴規劃，92 的 What to Test 若寫了夜燈，要決定發版前修，或先拿掉那一項。
+- **已通知、已派**：2026-10-28 告訴規劃。規劃在 main 上核對成立，決定 92 發版前修：派工單 BA（session_01YGNNumD9tgN3Jrf65GEox9，branch `claude/train-lights-replacing`），加 Linux 回歸測試。What to Test 的夜燈項目保留。
 
 ### K2-2（#1385）分岔搜尋每個暫停點都留一份整個搜尋的複本，尖峰記憶體隨車站數暴增：P1 候選（實機未驗）
 
@@ -150,6 +150,7 @@ P1 候選 1 個（K2-2）、P2 2 個（K2-1、K2-3）、P3 6 個（K2-4 到 K2-9
   1. 用作者那局（`PASSENGER_ROUTE_SAVE`）加印 `ru_maxrss`。
   2. 再量一張車站更多的地圖。
   3. 過大就退回 #1385，或照下面的修法先修。
+- **已派**：規劃派工單 BB（session_01YGNNuqBhweBkD7Em8wPZwr）用作者那局量新舊尖峰記憶體。多出來就修成有上限、仍逐位元相同的版本；兩小時內修不出來，就退回 #1385 再發。92 等 BB 的結果。
 - **修法方向**（保持逐位元相同）：
   - 只在 `paused` 留下會被禁用的停靠點的複本，也就是第一條路線經過的那些，不是每一個停靠點。
   - 或在起點的禁用邊用完後丟掉 `searches`。
