@@ -31,6 +31,77 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-28",
+            items: [
+                Line(
+                    english: "At night the 3D trains light up: headlights, tail lights and lit windows.",
+                    chinese: "夜裡 3D 的列車會亮燈：車頭燈、車尾紅燈和車廂窗。"
+                ),
+                Line(
+                    english: "Train windows reflect the sky, and stainless steel cars shine like metal.",
+                    chinese: "列車車窗會反光，不鏽鋼車身有金屬光澤。"
+                ),
+                Line(
+                    english: "The 3D map's pale tint is softer; traffic lights and level crossings keep their own colours.",
+                    chinese: "3D 地圖的淡色調更柔；紅綠燈和平交道仍保留原色。"
+                ),
+                Line(
+                    english: "Scooters on 3D streets ride like Taipei's: three kinds, side by side, parked in a row under arcades.",
+                    chinese: "3D 街上多了台北那樣的機車：三種車、並排騎、騎樓前停一排。"
+                ),
+                Line(
+                    english: "3D crossings have zebra crossings, scooter waiting boxes, hook-turn boxes and red and yellow kerb lines, as in Taiwan.",
+                    chinese: "3D 路口照台灣的做法畫斑馬線、機車停等區、待轉區和紅黃線。"
+                ),
+                Line(
+                    english: "Lanes have marked footpaths, and arcade widths follow the road's class.",
+                    chinese: "巷子有標線畫出的人行道，騎樓也依道路等級調整寬度。"
+                ),
+                Line(
+                    english: "3D crossings show pedestrian signals: the green man and the countdown.",
+                    chinese: "3D 路口有行人號誌：小綠人和倒數。"
+                ),
+                Line(
+                    english: "3D depots have maintenance sheds, and the Changhua roundhouse has its turntable.",
+                    chinese: "3D 機廠多了檢修庫，彰化的扇形車庫有轉車台。"
+                ),
+                Line(
+                    english: "3D platforms have stop markers, edge lights, bins and train destination boards.",
+                    chinese: "3D 月台多了停車位置標、月台邊燈、回收桶和車頭方向幕。"
+                ),
+                Line(
+                    english: "A garbage truck makes its rounds in the evening.",
+                    chinese: "傍晚街上會有垃圾車。"
+                ),
+                Line(
+                    english: "City buses run on roads you lay yourself.",
+                    chinese: "市區公車可以走自己鋪的路。"
+                ),
+                Line(
+                    english: "Real-world Taiwan maps that give all the land now have roads and buses too, including old games, the demo and the Pingxi Line challenge.",
+                    chinese: "土地全給的台灣實景地圖也有道路與公車（舊存檔、實景示範、平溪線挑戰）。"
+                ),
+                Line(
+                    english: "A new real-world game can start at a place in each of Taiwan's 22 counties and cities.",
+                    chinese: "實景新局：台灣 22 個縣市各有一個地點可選。"
+                ),
+                Line(
+                    english: "Passenger route searches are much faster, so games with many lines run smoother.",
+                    chinese: "乘客的路線搜尋快了很多，線多的存檔更順。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Changing the game speed no longer drops the work in progress; the timeline no longer stalls with many trains.",
+                    chinese: "改遊戲速度時不再丟掉正在算的進度；車多時時間軸不再卡住。"
+                ),
+                Line(
+                    english: "Train showcase: tap the screen after hiding the buttons and they come back.",
+                    chinese: "列車展示：隱藏按鈕後點畫面，按鈕會回來。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-27",
             items: [
                 Line(
@@ -108,45 +179,6 @@ public enum WhatsNew {
                 Line(
                     english: "In Business and Group count only department stores, hotels and amusement parks.",
                     chinese: "成就「多角經營」「企業集團」只算百貨公司、飯店、遊樂園。"
-                ),
-            ]
-        ),
-        Entry(
-            id: "2026-10-25",
-            items: [
-                Line(
-                    english: "Idle Mode, beside Settings in the game menu: the camera follows your trains and looks over your stations and lines by itself. Tap to come back.",
-                    chinese: "遊戲選單「設定」旁的「放空模式」：鏡頭自己跟著列車、看車站和路線，碰一下就回來。"
-                ),
-                Line(
-                    english: "Metro lines can be bought, as light rail could: the Xinbeitou and Xiaobitan branches too.",
-                    chinese: "捷運路線可以收購了，和輕軌一樣；新北投、小碧潭支線也可以。"
-                ),
-                Line(
-                    english: "You can build your own schools, hospitals and night markets: they help the town round them grow.",
-                    chinese: "可以自己蓋學校、醫院和夜市了，周圍的城鎮會長得更好。"
-                ),
-                Line(
-                    english: "Each achievement has its own picture.",
-                    chinese: "每個成就都有自己的圖。"
-                ),
-                Line(
-                    english: "The EMU3000 in 3D has a new look, closer to the real train.",
-                    chinese: "3D 的 EMU3000 外型重做，更像真的車。"
-                ),
-            ],
-            fixes: [
-                Line(
-                    english: "The high-speed rail demo opens without a long wait.",
-                    chinese: "高鐵示範打開時不再卡很久。"
-                ),
-                Line(
-                    english: "In 3D, the back half of the N700S-G faces the right way, and the end of long trains stays on the track.",
-                    chinese: "3D 的 N700S-G 後半列方向對了；長編組的車尾不再飄離軌道。"
-                ),
-                Line(
-                    english: "A high-speed viaduct changes its look as soon as it is built.",
-                    chinese: "高鐵高架蓋好就馬上換樣子。"
                 ),
             ]
         ),
