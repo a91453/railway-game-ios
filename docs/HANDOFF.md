@@ -44,7 +44,7 @@
 - 新功能的實作 session 同時最多 3–4 個，照 NEXT_PRIORITIES §22 的順序一件一件開；開著的 PR 也不要多，免得一直解衝突。
   - 作者 2026-10-25：「你先派好了 好像3～4個session沒關係 沒有撞到相同的部分」：3–4 個可以同時派，條件是它們不改同一批檔案；改同一塊的（例如都動 LineAcquisition）照順序一個合了再派下一個。
 - PR 審查比新功能優先。上一輪是 #786–#872（§7.1）。
-- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 J（#1229–#1287，含審查 I 沒看的 #1229、#1230、#1232、#1239；35 個程式 PR、38 點，分三段：J1 一個 P2 已修（#1290）、J2 一個 P3 交出去，[`archive/PR1242_1287_REVIEW_HANDOFF.md`](archive/PR1242_1287_REVIEW_HANDOFF.md)）；下一輪從 #1288 起數（#1287 之後下一個合併的程式 PR）。
+- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 K（#1288–#1385，分兩段：K1 #1288–#1340，23 個程式 PR、24 點，[`archive/PR1288_1340_REVIEW_HANDOFF.md`](archive/PR1288_1340_REVIEW_HANDOFF.md)；K2 #1343–#1385，24 個程式 PR、26 點，[`archive/PR1343_1385_REVIEW_HANDOFF.md`](archive/PR1343_1385_REVIEW_HANDOFF.md)；K2-1 由 #1393 修、K2-2 由 #1394 修，K1-1、K2-3～K2-9 交出去）；下一輪從 #1386 起數。再上一輪是審查 J（#1229–#1287，[`archive/PR1242_1287_REVIEW_HANDOFF.md`](archive/PR1242_1287_REVIEW_HANDOFF.md)）。
   - 量的（2026-10-22，main 最近 60 個合併，約 10 小時）：文件 13、只有素材／測試 6、程式 41（其中 GameCore 5）。#962–#1017 共 51 個 PR、37 個程式、41 點：已經超過，下一個空位先開審查 D。
   - 為什麼 30 點：一個審查 session 看 30 個程式 PR（每個 diff 約 5–10 千 token）大約 15–30 萬，在第一次壓縮（約 32 萬）之前看完；上一輪 #873–#944 一次 72 個，A6–A11 到現在還開著。
   - 五方（權重照 NEXT_PRIORITIES §19；選項：A 每 30 個 PR、B 每 50 個 PR、C 每 30 點、D 每天一次、E 每 60 點）：
@@ -409,6 +409,13 @@
   - Meshy 約 49 點在 11/4 前用掉；TDX 11/1 重置。
   - 實機：E500 推拉、普悠瑪、AE 之後舊存檔的公車與道路、平溪線開局的延遲、AH 之後的機廠。
   - 玩家 1 的公車路線預覽截圖、91 的 fps 回報。
+
+**第二十三任中途記錄（2026-10-28 約 05:00 UTC，session_01YGNNupfaTiuQSAJ5tsf5a4，壓縮 2 次）**：和下面不同時以這段為準。
+- 本任合的：#1387（92 的 What to Test）、#1388（`-ui-testing-paused` 在 `-tutorial-step` 之後仍有效）、#1389（`rest` shard 重新分配）、#1390、#1392（審查 K2、K1）、#1391（素材改放 railway-assets-private）、#1393（BA，換公車模型後列車夜燈不亮，K2-1）。
+- TestFlight 92：作者說 BA、BB 擋發版。BB 是 #1394（K2-2，#1385 乘客路線搜尋的記憶體上限）；合了之後在 main HEAD 手動跑完整 `ci.yml` 與 full lane，都綠才告訴作者「可以發」，作者說「發」才按 `testflight.yml`（§1.2）。
+- #1394 留下的低優先（不擋發版，有玩家回報大路網卡頓再做）：合成 200 站比 #1385 的 main 慢約 40%（282 → 394 秒，仍比 #1385 之前的 1,061 秒快），記在 §5 AQ 那一列；Linux debug 下作者那局慢約 17%（53 → 62 秒，release 不變），原因多半是每次禁用搜尋都重新加總標籤數，改成逐次累加即可。
+- **下一任規劃由作者在 claude.ai 手動開**（作者 10-28：「下一個遊戲規劃讓我自己手動開 因為我要把railway assets privacy 加入」「但只限下一次 加入後 後面規劃一樣照原本第7或8再給我就好」）：只有下一任這一次，因為 `create_session` 只能帶一個 repository，要讓新任一開始就有 railway-game-ios、railway-reference-private、railway-assets-private 三個。之後照 §1 換手，規劃自己用 `create_session` 開，到第 7 層才請作者開。
+- 發版後要派：K2-3～K2-9、K1-1（審查交接檔）、資產盤點（不含發佈板）、免費素材（Kenney／KayKit／Quaternius）試做。
 
 **第二十三次換手（2026-10-28 約 00:20 UTC，session_01YGNNunBu1rxrPwN6bsA7g2 壓縮第 2 次後 → 本任用 `create_session` 開的新規劃 session_01YGNNupfaTiuQSAJ5tsf5a4，第 3 層）**
 
@@ -1117,9 +1124,11 @@
 **預覽圖放哪裡（2026-10-22，session_011DWN98Fo4KePt7PLmgsV9e，遊戲規劃派工）**：遊戲不讀的預覽圖、截圖放私有庫 `a91453/railway-reference-private` 的 `Railway/game-art-previews/`，路徑和這裡一樣（`docs/art/<資料夾>/`、`tools/cityview-benchmark/examples/`）。這次從 main 01956db 搬了 138 個檔、約 31.7 MB（逐檔 SHA-256 核對，清單是私有庫的 `Railway/game-art-previews/MOVED_2026-10-22.sha256.txt`）；每個資料夾留 README（開頭一行寫其他圖在哪）、一張總覽圖、文字紀錄（`.md`、`.json`、`.html`、`.svg`）和測試讀的 `meshy-city-bus-2026-10-18/city-bus.glb`、`city-bus.m3dmodel`。**以後的規則**：PR 只把 README、一張總覽圖和小的紀錄放進 `docs/art/`，其他圖先在私有庫開 PR；各 kit 的 `rebuild.sh` 本來就拒絕寫進公開 checkout，`Web/CityView/tools/town-preview/preview.cjs` 改成一定要給輸出資料夾。git 歷史裡的舊檔沒有改寫，`.git` 不會變小。
 
 **素材放哪裡（2026-10-28，派工單 AZ，作者：「建好了 railway-assets-private」）**：私庫 `a91453/railway-reference-private` 約 3.6 GB（GitHub 建議 1 GB 以下），作者另開了私有的 `a91453/railway-assets-private` 放大的二進位素材。
-- 放新庫：遊戲不讀的預覽圖與完整素材包（原 `Railway/game-art-previews/`，路徑改成新庫的 `game-art-previews/docs/art/`）、Meshy 批次（`meshy-batch-2026-10/`）、產出的模型包。舊文件寫的 `Railway/game-art-previews/...` 照樣讀得到（舊庫的檔案先不刪，搬走後刪檔要作者點頭），新的一律放新庫。
+- 放新庫：遊戲不讀的預覽圖與完整素材包（原 `Railway/game-art-previews/`，路徑改成新庫的 `game-art-previews/docs/art/`）、Meshy 批次（`meshy-batch-2026-10/`）、產出的模型包。搬完後作者點頭刪了舊庫的那些檔案（私庫 #113，留下 `Railway/ASSETS_MOVED_2026-10-28.md` 寫新位置），舊文件寫的 `Railway/game-art-previews/...` 要改到新庫的同名路徑讀；新的一律放新庫。
 - 留舊庫：參考網站原始碼與資料快照（CLAUDE.md 列的那些）。
 - 新庫規則：每個外部素材資料夾附自己的授權與來源檔；Quaternius、Polyfork 的檔案不得公開轉載；Meshy 照它的條款；單檔不超過 100 MB；沒有授權檔。細節見新庫的 README。
+- 新庫的防護（新庫 #7、#9）：`AGENTS.md` 的 8 條規則（Codex 與 Claude 都讀）、`tools/asset_guard.py` 與 `.github/workflows/asset-guard.yml`（PR 時檢查單檔大小、`history/`、整包 ZIP、被取代輪次留下的模型；只用標準函式庫、不 checkout，一次約 1 分鐘的私庫 Actions 額度）。新庫 #8、#10 刪了 `history/` 與重複的 ZIP（含 TEMU1000、TEMU2000 的 `asset-package.zip`）；內容還在 git 歷史裡，歷史先不清（作者 10-28）。
+- 發佈板（Releases）的 vehicle-source-pack-2nd、vehicle-source-pack-3rd、Tai 不動（作者：「發佈板那邊的都不動」）；Release 檔不算進 repository 大小。
 - 不改寫歷史、不 force-push：刪檔不會縮小舊庫在 GitHub 上的大小，只讓 session 的淺層 clone 變小。
 
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
