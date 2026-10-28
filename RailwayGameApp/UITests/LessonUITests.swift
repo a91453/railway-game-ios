@@ -517,6 +517,7 @@ final class LessonUITests: XCTestCase {
         let middle = CGPoint(x: map.frame.midX, y: map.frame.midY)
         let clear = CGRect(x: middle.x - 130, y: middle.y - 60, width: 260, height: 120)
         var at = project(point, from: known)
+        var stuck = 0
         for _ in 0..<16 {
             if clear.contains(at) { return at }
             let destination = CGPoint(x: middle.x + max(-140, min(140, middle.x - at.x)),
@@ -524,12 +525,18 @@ final class LessonUITests: XCTestCase {
             coordinate(middle).press(forDuration: 0.1, thenDragTo: coordinate(destination),
                                      withVelocity: XCUIGestureVelocity(rawValue: 200), thenHoldForDuration: 0.3)
             let moved = project(point, from: known)
-            if zoomIfClamped, hypot(moved.x - at.x, moved.y - at.y) < 4 {
+            stuck = hypot(moved.x - at.x, moved.y - at.y) < 4 ? stuck + 1 : 0
+            // A slow Simulator can drop one drag (e17eb67's full lane: the
+            // first drag after pausing moved nothing, the test zoomed in
+            // three times and ran out of drags), so only a second drag in a
+            // row that moves nothing means the camera is clamped.
+            if zoomIfClamped, stuck >= 2 {
                 // Near the world's edge, the current zoom has no more room
                 // to pan. A closer view gives the camera room to move.
                 let zoom = app.buttons["Zoom in"]
                 XCTAssertTrue(zoom.isEnabled, "Cannot move the map point clear of the controls")
                 tap(zoom)
+                stuck = 0
                 at = project(point, from: known)
             } else {
                 at = moved
