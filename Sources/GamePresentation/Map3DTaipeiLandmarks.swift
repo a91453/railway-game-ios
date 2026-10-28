@@ -28,18 +28,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: 25.033946307135494
         case .taipeiMainStation: 25.0477174
         case .kaohsiungMainStation: 22.6394462
-        case .chiangKaiShekMemorialHall: 25.0347
-        case .libertySquareGate: 25.0367
-        case .nationalTheater: 25.0353
-        case .nationalConcertHall: 25.037
-        case .presidentialOffice: 25.04
-        case .ximenRedHouse: 25.0421
-        case .sunYatSenMemorialHall: 25.04
-        case .grandHotel: 25.0786
-        case .northGate: 25.0477
-        case .eastGate: 25.039
-        case .southGate: 25.0351
-        case .smallSouthGate: 25.0369
+        case .chiangKaiShekMemorialHall: 25.0346856
+        case .libertySquareGate: 25.0366529
+        case .nationalTheater: 25.0353161
+        case .nationalConcertHall: 25.0369989
+        case .presidentialOffice: 25.0399911
+        case .ximenRedHouse: 25.0420801
+        case .sunYatSenMemorialHall: 25.0400042
+        case .grandHotel: 25.0785629
+        case .northGate: 25.0477291
+        case .eastGate: 25.0390241
+        case .southGate: 25.0351268
+        case .smallSouthGate: 25.0369095
         }
     }
     var longitude: Double {
@@ -47,18 +47,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: 121.56455513294843
         case .taipeiMainStation: 121.51711425
         case .kaohsiungMainStation: 120.3025654
-        case .chiangKaiShekMemorialHall: 121.522
-        case .libertySquareGate: 121.518
-        case .nationalTheater: 121.518
-        case .nationalConcertHall: 121.519
-        case .presidentialOffice: 121.512
-        case .ximenRedHouse: 121.507
-        case .sunYatSenMemorialHall: 121.56
-        case .grandHotel: 121.526
-        case .northGate: 121.511
-        case .eastGate: 121.518
-        case .southGate: 121.515
-        case .smallSouthGate: 121.508
+        case .chiangKaiShekMemorialHall: 121.5217163
+        case .libertySquareGate: 121.5177174
+        case .nationalTheater: 121.5182223
+        case .nationalConcertHall: 121.5192192
+        case .presidentialOffice: 121.5119850
+        case .ximenRedHouse: 121.5065053
+        case .sunYatSenMemorialHall: 121.5602918
+        case .grandHotel: 121.5262637
+        case .northGate: 121.5112235
+        case .eastGate: 121.5176769
+        case .southGate: 121.5150213
+        case .smallSouthGate: 121.5080853
         }
     }
     var rotation: Float {

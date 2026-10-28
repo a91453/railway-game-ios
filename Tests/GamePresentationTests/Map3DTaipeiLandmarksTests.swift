@@ -182,6 +182,20 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertLessThanOrEqual(landmark.model(full: false).indices.count / 3, 2_500, "\(landmark)")
         }
         XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 3)
+        // Each stands within 2 m of its way's minimum box's middle.
+        let middles: [Map3DTaipeiLandmark: (Double, Double)] = [
+            .chiangKaiShekMemorialHall: (25.03468, 121.52172), .libertySquareGate: (25.03665, 121.51772),
+            .nationalTheater: (25.03532, 121.51822), .nationalConcertHall: (25.03700, 121.51922),
+            .presidentialOffice: (25.03999, 121.51198), .ximenRedHouse: (25.04208, 121.50651),
+            .sunYatSenMemorialHall: (25.04000, 121.56029), .grandHotel: (25.07856, 121.52626),
+            .northGate: (25.04773, 121.51122), .eastGate: (25.03902, 121.51768),
+            .southGate: (25.03513, 121.51502), .smallSouthGate: (25.03691, 121.50809),
+        ]
+        XCTAssertEqual(Set(middles.keys), Set(plans.keys))
+        for (landmark, (latitude, longitude)) in middles {
+            XCTAssertEqual(landmark.latitude, latitude, accuracy: 2 / 110_774, "\(landmark)")
+            XCTAssertEqual(landmark.longitude, longitude, accuracy: 2 / 100_870, "\(landmark)")
+        }
         // None in Taipei Main Station's wall colour, which the tests below
         // count the station by.
         for landmark in plans.keys {
