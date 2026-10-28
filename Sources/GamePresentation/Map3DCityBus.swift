@@ -87,12 +87,13 @@ public enum Map3DCityBus {
 
 extension Map3DModelPack {
     /// This pack with `model` in place of the one of the same name, at its
-    /// index; unchanged when it has none of that name.
+    /// index; unchanged when it has none of that name. The trains keep their
+    /// indices, so their lamps and windows (decision 449) come along.
     public func replacing(_ model: Model) -> Map3DModelPack {
         guard let index = index(of: model.name) else { return self }
         var models = models
         models[index] = model
-        var pack = Map3DModelPack(models: models)
+        var pack = Map3DModelPack(models: models, lights: lights)
         pack.locked = locked
         return pack
     }

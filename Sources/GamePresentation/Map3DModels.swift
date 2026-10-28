@@ -145,8 +145,9 @@ public struct Map3DModelPack: Sendable {
         headSigns = Map3DHeadSign.anchors(in: models)
     }
 
-    init(models: [Model]) {
+    init(models: [Model], lights: [Int: Map3DTrainLights.Car] = [:]) {
         self.models = models
+        self.lights = lights
         headSigns = Map3DHeadSign.anchors(in: models)
     }
 
