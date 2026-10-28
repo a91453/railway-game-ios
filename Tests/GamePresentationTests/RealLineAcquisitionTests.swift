@@ -161,6 +161,96 @@ final class RealLineAcquisitionTests: XCTestCase {
         }
     }
 
+    /// Decision 462: the Liujia and Neiwan Lines part at Zhuzhong, the
+    /// Liujia Line's platforms up on its viaduct and the Neiwan Line's on
+    /// the ground. Either is bought after the other, in either order: one
+    /// station of both, its riders changing between them, each line with
+    /// platforms of its own, the Liujia Line's at least the clearance of
+    /// crossing track over the Neiwan Line's, and both run their day.
+    /// Before, the second was refused, its track crossing the first's
+    /// level at Zhuzhong.
+    func testTheLiujiaAndNeiwanLinesAreBothBoughtThroughZhuzhong() throws {
+        for order in [["LIUJIA", "NEIWAN"], ["NEIWAN", "LIUJIA"]] {
+            let session = try game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
+            var platformsOf: [String: [TrackPlatform]] = [:]
+            for network in order {
+                let line = try line(network, in: session)
+                let offer = session.realLineOffer(for: line)
+                XCTAssertNil(offer.problem, "\(order): \(network)")
+                XCTAssertTrue(session.acquireRealLine(offer), "\(order): \(network): \(session.message?.text ?? "")")
+                // Each line runs from its terminal to Zhuzhong, its junction.
+                let bought = try XCTUnwrap(session.world.acquisition(of: line.id), "\(order): \(network)")
+                let zhuzhong = try XCTUnwrap(session.world.line(id: try XCTUnwrap(bought.line))?.stops.last)
+                let before = platformsOf.values.joined()
+                platformsOf[network] = session.world.trackPlatforms(of: zhuzhong).filter { !before.contains($0) }
+                XCTAssertEqual(platformsOf[network]?.count, 2, "\(order): \(network)'s own two platforms at Zhuzhong")
+            }
+            var world = session.world
+            let lines = try order.map { network in
+                try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: "tra:\(network)")?.line)))
+            }
+            XCTAssertEqual(lines[0].stops.last, lines[1].stops.last, "\(order): one Zhuzhong of both lines")
+            func heights(_ network: String) -> [Int64] {
+                (platformsOf[network] ?? []).compactMap { platform in
+                    world.network.edge(platform.edge).flatMap { edge in [edge.from, edge.to].compactMap { world.network.node($0)?.position.z }.min() }
+                }
+            }
+            let liujia = try XCTUnwrap(heights("LIUJIA").min()), neiwan = try XCTUnwrap(heights("NEIWAN").max())
+            XCTAssertGreaterThanOrEqual(liujia - neiwan, TrackStructure.clearance, "\(order): the Liujia Line's platforms over the Neiwan Line's")
+
+            try world.advance(ticks: 2 * 24 * 60)
+            let today = world.clock.now.seconds / GameTime.secondsPerDay
+            for (network, line) in zip(order, lines) {
+                let runs = try XCTUnwrap(world.line(id: line.id))
+                let missed = zip(runs.runs, runs.runDays).filter { run, day in
+                    run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
+                }
+                XCTAssertEqual(missed.count, 0, "\(order): \(network): runs not sent out yesterday: \(missed.count) of \(runs.runs.count)")
+            }
+        }
+    }
+
+    /// Decision 462: a save from before, its Liujia Line bought with its
+    /// Zhuzhong platforms on the ground, buys the Neiwan Line too: laid
+    /// over the Liujia Line's there, at the station both share, and both
+    /// run their day.
+    func testASaveOfBeforeWithTheLiujiaLineBuysTheNeiwanLine() throws {
+        let session = try game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .simple)
+        let before = session.realLineOffer(for: try line("LIUJIA", in: session), raising: .none).offer
+        XCTAssertTrue(session.acquireRealLine(before), session.message?.text ?? "")
+        let liujia = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: "tra:LIUJIA")?.line)))
+        let zhuzhong = try XCTUnwrap(liujia.stops.last)
+        let groundPlatforms = session.world.trackPlatforms(of: zhuzhong)
+
+        let neiwan = try line("NEIWAN", in: session)
+        XCTAssertTrue(session.realLineOffer(for: neiwan, raising: .viaducts).crossesTrack, "the Neiwan Line on the ground meets the Liujia Line's")
+        let offer = session.realLineOffer(for: neiwan)
+        XCTAssertNil(offer.problem)
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        var world = session.world
+        let bought = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: "tra:NEIWAN")?.line)))
+        XCTAssertEqual(bought.stops.last, zhuzhong, "one Zhuzhong of both lines")
+        func lowest(_ platforms: [TrackPlatform]) -> [Int64] {
+            platforms.compactMap { platform in
+                world.network.edge(platform.edge).flatMap { edge in [edge.from, edge.to].compactMap { world.network.node($0)?.position.z }.min() }
+            }
+        }
+        let raised = world.trackPlatforms(of: zhuzhong).filter { !groundPlatforms.contains($0) }
+        XCTAssertEqual(raised.count, 2)
+        let over = try XCTUnwrap(lowest(raised).min()) - XCTUnwrap(lowest(groundPlatforms).max())
+        XCTAssertGreaterThanOrEqual(over, TrackStructure.clearance)
+
+        try world.advance(ticks: 2 * 24 * 60)
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        for id in [liujia.id, bought.id] {
+            let runs = try XCTUnwrap(world.line(id: id))
+            let missed = zip(runs.runs, runs.runDays).filter { run, day in
+                run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 && (day ?? -1) < today - 1
+            }
+            XCTAssertEqual(missed.count, 0, "\(runs.name): runs not sent out yesterday: \(missed.count) of \(runs.runs.count)")
+        }
+    }
+
     /// Decision 400 (10j-2, 10j-3): Danhai's Blue Coast Line, the Xinbeitou
     /// and Xiaobitan Branch Lines are on sale beside
     /// the branch lines, each bought as one command, its two tracks laid

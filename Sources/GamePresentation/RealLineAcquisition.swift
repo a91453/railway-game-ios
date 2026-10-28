@@ -276,6 +276,28 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// How far a real station may be from its line's centre line.
     static let stationReach = 150 * metre
 
+    /// Decision 462: how far over the ground a station on a viaduct stands
+    /// at least: as high as a station on the ground beside it may, and
+    /// the clearance of track crossing over track (``TrackStructure/clearance``)
+    /// above that.
+    static let raisedStation = RealWorldDemo.stationReach + Double(TrackStructure.clearance)
+
+    /// Decision 462: whether a station `at` along a line's path, its
+    /// neighbours `before` and `after` (`nil` at an end), stands on the
+    /// real line's viaduct: a bridge at least ``TrackRise/shortestCarried``
+    /// long under it carries the line on at least that far toward each
+    /// neighbour. A station beside another line's viaduct, which its path
+    /// runs along only a little way (the Neiwan Line's at Zhuzhong, beside
+    /// the Liujia Line's), stays on the ground.
+    static func isRaised(at: Double, before: Double?, after: Double?, carried: [TrackRise.Carried]) -> Bool {
+        let reach = TrackRise.shortestCarried
+        return carried.contains { stretch in
+            stretch.kind == .bridge && stretch.range.contains(at)
+                && before.map { stretch.range.lowerBound <= at - min(reach, at - $0) } ?? true
+                && after.map { stretch.range.upperBound >= at + min(reach, $0 - at) } ?? true
+        }
+    }
+
     /// Decision 401: `tiles` in an order the company can buy them, each
     /// beside one owned or bought before it (``GameWorld/buyMapTile(_:passingMilestone:)``),
     /// by row and then column among those it could buy next; `nil` when
@@ -478,11 +500,38 @@ extension GameSession {
     /// the purchase, or why it cannot be made here (track in the way, land
     /// not bought, a grade too steep). Want of cash is not a problem here:
     /// the card weighs the price against the balance.
+    ///
+    /// Decision 462: a station on its line's real viaduct stands up on it
+    /// (``RealLineAcquisition/isRaised(at:before:after:carried:)``). Where
+    /// the track still meets another's at one level, the line is laid once
+    /// more with the stations it shares with the company's raised too: a
+    /// line bought before decision 462 lies on the ground at Zhuzhong
+    /// whichever it was.
     public func realLineOffer(for line: RealBranchLine) -> RealLineOffer {
-        func refused(_ english: String, _ chinese: String) -> RealLineOffer {
-            RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese))
+        let laid = realLineOffer(for: line, raising: .viaducts)
+        guard laid.crossesTrack else { return laid.offer }
+        let raised = realLineOffer(for: line, raising: .viaductsAndShared)
+        return raised.offer.problem == nil ? raised.offer : laid.offer
+    }
+
+    /// Which of a line's stations stand raised (decision 462).
+    enum StationRaising {
+        /// None, as before decision 462 (the layout old saves hold).
+        case none
+        /// Those on the real line's viaduct.
+        case viaducts
+        /// Those, and those whose station the company already has.
+        case viaductsAndShared
+    }
+
+    /// The offer of `line` with its stations raised as `raising` says, and
+    /// whether GameCore refused it for its track meeting another's at one
+    /// level (``GameError/trackConflict(_:)``).
+    func realLineOffer(for line: RealBranchLine, raising: StationRaising) -> (offer: RealLineOffer, crossesTrack: Bool) {
+        func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool) {
+            (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false)
         }
-        func refusedForLand() -> RealLineOffer {
+        func refusedForLand() -> (offer: RealLineOffer, crossesTrack: Bool) {
             refused(
                 "The land this line crosses does not touch yours. Use Expand Map to buy up to the line first, then buy it.",
                 "這條線經過的地和你的地不相連。先用「擴建地圖」買到這條線旁邊，再收購。"
@@ -572,6 +621,21 @@ extension GameSession {
         var zones: [ClosedRange<Double>] = []
         var spans: [ClosedRange<Double>] = []
         var loopSpans: [(stop: Int, a: Double, b: Double, offset: Double, ramp: Double)] = []
+        // The stations: the company's own by the junction, if it has one;
+        // and, decision 400, any other by its real name within 450 m (a
+        // transfer to the company's line, or the line bought before): the
+        // line's platforms join it.
+        let junctionStation = world.stations
+            .filter { (WorldVector($0.location) - points[0]).length <= RealLineAcquisition.junctionReach }
+            .min { (WorldVector($0.location) - points[0]).length < (WorldVector($1.location) - points[0]).length }
+        func sameName(_ index: Int) -> StationID? {
+            let real = railways.stations.first { $0.id == "\(line.system)|\(runs.stops[index])" }
+            let names = Set([runs.stops[index], real?.name(in: language)].compactMap { $0 })
+            return world.stations
+                .filter { !$0.isDepot && names.contains($0.name) && (WorldVector($0.location) - points[index]).length <= RealLineAcquisition.junctionReach }
+                .min { (WorldVector($0.location) - points[index]).length < (WorldVector($1.location) - points[index]).length }?.id
+        }
+        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system) ?? []
         for (index, name) in runs.stops.enumerated() {
             let at = along[index].along
             let zone = (at - half)...(at + half)
@@ -604,7 +668,19 @@ extension GameSession {
             spans.append(span)
             forced += [span.lowerBound, span.upperBound]
             let height = ground(path.point(at: at))
-            levels.append(TrackRise.Level(span, from: height - RealWorldDemo.stationReach, to: height + RealWorldDemo.stationReach))
+            // Decision 462: a station on its line's real viaduct stands up
+            // on it, clear over a station on the ground beside it (the
+            // Liujia Line's platforms at Zhuzhong over the Neiwan Line's).
+            let shared = (index == 0 ? junctionStation?.id : sameName(index)) != nil
+            let raised = switch raising {
+            case .none: false
+            case .viaducts, .viaductsAndShared:
+                (raising == .viaductsAndShared && shared) || RealLineAcquisition.isRaised(
+                    at: at, before: index > 0 ? along[index - 1].along : nil, after: index < along.count - 1 ? along[index + 1].along : nil, carried: carried
+                )
+            }
+            let low = raised ? height + RealLineAcquisition.raisedStation : height - RealWorldDemo.stationReach
+            levels.append(TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach))
         }
         // A double track's second track, for the trains toward the
         // terminal, on their left (Taiwan's trains keep left, and the
@@ -623,7 +699,6 @@ extension GameSession {
             forced += [a, a + ramp, b - ramp, b]
             second = (a, b)
         }
-        let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system) ?? []
         guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, carried: carried) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
@@ -694,20 +769,6 @@ extension GameSession {
             )
         }
 
-        // The stations: the company's own by the junction, if it has one;
-        // and, decision 400, any other by its real name within 450 m (a
-        // transfer to the company's line, or the line bought before): the
-        // line's platforms join it.
-        let junctionStation = world.stations
-            .filter { (WorldVector($0.location) - points[0]).length <= RealLineAcquisition.junctionReach }
-            .min { (WorldVector($0.location) - points[0]).length < (WorldVector($1.location) - points[0]).length }
-        func sameName(_ index: Int) -> StationID? {
-            let real = railways.stations.first { $0.id == "\(line.system)|\(runs.stops[index])" }
-            let names = Set([runs.stops[index], real?.name(in: language)].compactMap { $0 })
-            return world.stations
-                .filter { !$0.isDepot && names.contains($0.name) && (WorldVector($0.location) - points[index]).length <= RealLineAcquisition.junctionReach }
-                .min { (WorldVector($0.location) - points[index]).length < (WorldVector($1.location) - points[index]).length }?.id
-        }
         let stops = runs.stops.enumerated().map { index, name in
             let at = path.point(at: along[index].along).plan
             let real = railways.stations.first { $0.id == "\(line.system)|\(name)" }
@@ -775,14 +836,15 @@ extension GameSession {
             var probe = world.pricingCopy()
             do throws(GameError) {
                 let price = try build(bought, in: &probe)
-                return RealLineOffer(line: line, acquisition: bought, price: price, problem: nil)
+                return (RealLineOffer(line: line, acquisition: bought, price: price, problem: nil), false)
             } catch {
                 if case .mapTileNotOwned(let tile) = error, let owned = world.mapExpansion?.owned, !tiles.contains(tile) {
                     guard let order = RealLineAcquisition.buyingOrder(of: Set(tiles + [tile]), owned: owned) else { return refusedForLand() }
                     tiles = order
                     continue
                 }
-                return RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language))
+                let crosses = if case .trackConflict = error { true } else { false }
+                return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses)
             }
         }
     }
