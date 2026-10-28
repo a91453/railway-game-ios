@@ -269,13 +269,14 @@ final class LessonUITests: XCTestCase {
         app.segmentedControls.buttons[name].firstMatch
     }
 
-    private func launch(stars: String? = nil, step: String? = nil) {
+    private func launch(stars: String? = nil, step: String? = nil, paused: Bool = false) {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         if let stars { app.launchArguments += ["-lesson-stars", stars] }
         if let step { app.launchArguments += ["-tutorial-step", step] }
+        if paused { app.launchArguments += ["-ui-testing-paused"] }
         app.launch()
     }
 
@@ -549,7 +550,12 @@ final class LessonUITests: XCTestCase {
     // MARK: - Passing lesson 1 through the UI
 
     private func passFirstLesson() {
-        launch(step: "line.open")
+        // Paused at midnight from launch. Left running until `pause()`, the
+        // line opened as late as 09:04 on a slow runner, day 0 carried too
+        // few riders, and the lesson paused at midnight for its link goal
+        // alone, with no result card (main f70a4cb's full lane, run
+        // 40592891253; `LessonTests.testTheUITestsFirstLessonPassesOnDayZero`).
+        launch(step: "line.open", paused: true)
         dismissGuide()
         pause()
         let middle = WorldBounds.standard.width / 2
@@ -586,7 +592,14 @@ final class LessonUITests: XCTestCase {
 
         openControls()
         tap(mode("Platform"))
-        tapMap(project(PlanPoint(x: site.x, y: site.y), from: known))
+        let platform = project(PlanPoint(x: site.x, y: site.y), from: known)
+        tapMap(platform)
+        // The touch on the map can be cancelled (the app's trace: "touch
+        // cancelled at (336, 288)" on MapGestureView, run 40592891253), and
+        // no platform is proposed. Tap once more if no confirm came.
+        if !app.buttons["map.build.confirm"].appears(within: 10) {
+            tapMap(platform)
+        }
         tap(app.buttons["map.build.confirm"])
         XCTAssertTrue(app.buttons["map.build.confirm"].disappears(within: 5))
         XCTAssertEqual(stationPoints().count, 3, "Build the second town's station")
