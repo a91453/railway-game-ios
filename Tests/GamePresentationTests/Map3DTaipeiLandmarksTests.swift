@@ -96,10 +96,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         }
         // Pin Taipei 101 and Taipei Main Station triangle counts so adding
         // new landmarks never alters them; check Kaohsiung's budget.
-        XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: true).indices.count / 3, 4_732)
+        XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: true).indices.count / 3, 5_804)
         XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: false).indices.count / 3, 2_580)
-        XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: true).indices.count / 3, 5_458)
-        XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: false).indices.count / 3, 2_070)
+        XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: true).indices.count / 3, 4_194)
+        XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: false).indices.count / 3, 902)
         let kaohsiungFull = Map3DTaipeiLandmark.kaohsiungMainStation.model(full: true)
         let kaohsiungFar = Map3DTaipeiLandmark.kaohsiungMainStation.model(full: false)
         XCTAssertLessThanOrEqual(kaohsiungFull.indices.count / 3, 6_000)
@@ -129,6 +129,15 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
                 }
             }
         }
+        // Decision 457 (later): the flat-topped roof (盝頂) leaves its
+        // middle open, with a ridge round it at the full height.
+        for full in [true, false] {
+            var mesh = LandmarkMesh(full: full)
+            mesh.chineseRoof(9, 6, eaves: 4, over: 1.5, rise: 3.5, sweep: 0.8, kind: .flat(x: 5, y: 3), colours: colours)
+            XCTAssertEqual(mesh.vertices.map(\.z).max() ?? 0, 7.5, accuracy: 0.001)
+            XCTAssertFalse(mesh.vertices.contains { abs($0.x) < 4.9 && abs($0.y) < 2.9 })
+            XCTAssertTrue(mesh.vertices.allSatisfy { abs($0.x) <= 9 + 1.5 + 0.4 && abs($0.y) <= 6 + 1.5 + 0.4 })
+        }
     }
 
     /// Decision 457: each part chosen on its own, the colours paled
@@ -139,7 +148,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             return (0.2126 * Float(c & 0xFF) + 0.7152 * Float((c >> 8) & 0xFF) + 0.0722 * Float((c >> 16) & 0xFF)) / 255
         }
         for order in [["goldTile", "hallRed", "hallColumn", "bracket"], ["goldTile", "hallGlass", "column", "bracket"],
-                      ["hallWhite", "blueTile", "doorway"], ["podium", "hallRed"]] {
+                      ["hallWhite", "blueTile", "doorway"], ["podium", "hallRed"],
+                      // Decision 457 (later): the station's trim, walls and
+                      // tiles; 101's frame, upper and lower glass.
+                      ["trim", "wall", "stationRoof"], ["frame", "glassTop", "glass"]] {
             for (lighter, darker) in zip(order, order.dropFirst()) {
                 XCTAssertGreaterThan(lightness(lighter), lightness(darker), "\(lighter) over \(darker)")
             }
