@@ -1868,10 +1868,13 @@ public final class GameSession {
         func work() async -> Result<TickStep, GameError> {
             let tick = self
             return await Task.detached(priority: .userInitiated) {
+                // Decision 470: the routes of a new passenger plan worked
+                // out first, on every core.
+                let world = await PassengerRoutesAhead.given(to: tick.world)
                 // Decision 328: timed for the map's frame readout.
-                FrameCostMeter.shared.measure(.step) {
+                return FrameCostMeter.shared.measure(.step) {
                     Result { () throws(GameError) in
-                        var step = try GameSession.advanced(tick.world, by: 1, listening: tick.listening)
+                        var step = try GameSession.advanced(world, by: 1, listening: tick.listening)
                         if tick.readsTraffic {
                             step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
                         }

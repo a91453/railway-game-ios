@@ -9,8 +9,7 @@ final class PassengerPlanKeyTests: XCTestCase {
     /// A grid of `columns × rows` stations, 64 m apart: a line along every
     /// row and every column, each station on one row line and one column
     /// line, so most pairs need a transfer.
-    private static func grid(columns: Int, rows: Int) throws -> GameWorld {
-        let spacing: Int64 = 4_096
+    private static func grid(columns: Int, rows: Int, spacing: Int64 = 4_096) throws -> GameWorld {
         // From 07:00, when every kind of station sends passengers.
         var world = GameWorld(bounds: try WorldBounds(width: spacing * Int64(columns + 1), height: spacing * Int64(rows + 1)),
                               economy: GameEconomy(balance: 100_000_000, costs: testCosts),
@@ -232,17 +231,144 @@ final class PassengerPlanKeyTests: XCTestCase {
         XCTAssertFalse(choices.isEmpty)
         var memo = PassengerRouteMemo()
         memo.use(day)
-        memo.choices[pair] = choices
+        memo[pair] = choices
         memo.use(PassengerRouteGraph(paths: []))
-        XCTAssertTrue(memo.choices.isEmpty, "the night's graph has routes of its own")
+        XCTAssertNil(memo[pair], "the night's graph has routes of its own")
         memo.use(day)
-        XCTAssertEqual(memo.choices[pair], choices, "the day's routes are kept through the night")
+        XCTAssertEqual(memo[pair], choices, "the day's routes are kept through the night")
         XCTAssertEqual(memo.graph, day)
-        // Only the graph before: a third one drops the day's.
-        memo.use(PassengerRouteGraph(paths: []))
-        memo.use(PassengerRouteGraph(paths: Array(day.paths.prefix(1))))
+        // Kept for the graphs before it; more drop the day's.
+        for _ in 0..<PassengerRouteMemo.generations {
+            memo.use(PassengerRouteGraph(paths: []))
+            memo.use(PassengerRouteGraph(paths: Array(day.paths.prefix(1))))
+        }
         memo.use(day)
-        XCTAssertNil(memo.choices[pair])
+        XCTAssertNil(memo[pair])
+    }
+
+    /// Decision 470: the routes from a station depend only on the part of
+    /// the graph it is joined to, and not on the trains' daily capacity, so
+    /// a change elsewhere or to the capacity keeps them.
+    func testAChangeElsewhereKeepsAPartsRoutes() throws {
+        let ids = (1...6).map { StationID(rawValue: $0) }
+        func path(_ line: Int, _ stations: ArraySlice<StationID>, headway: Int64 = 600, capacity: Int64 = 0) -> PassengerRouteGraph.ServicePath {
+            PassengerRouteGraph.ServicePath(line: LineID(rawValue: line), pattern: nil, direction: .outbound,
+                                            stations: Array(stations), runSeconds: Array(repeating: 120, count: stations.count - 1),
+                                            headway: headway, isRing: false, dailyCapacity: capacity)
+        }
+        let north = path(1, ids[0..<3]), south = path(2, ids[3..<6])
+        let graph = PassengerRouteGraph(paths: [north, south])
+        XCTAssertEqual(PassengerRouteMemo.components(of: graph).parts.count, 2)
+        let up = PassengerRouteMemo.Pair(origin: ids[0], destination: ids[2])
+        let down = PassengerRouteMemo.Pair(origin: ids[3], destination: ids[5])
+        let found = [PassengerRouteChoice(route: PassengerRoute(legs: [], rideMinutes: 4, waitMinutes: 5, transferSeconds: 0, walkSeconds: 0), weight: 1)]
+        var memo = PassengerRouteMemo()
+        memo.use(graph)
+        memo[up] = found
+        memo[down] = found
+        memo.use(PassengerRouteGraph(paths: [north, path(2, ids[3..<6], headway: 300)]))
+        XCTAssertNotNil(memo[up], "the north line's part is unchanged")
+        XCTAssertNil(memo[down], "the south line's headway changed")
+        memo.use(PassengerRouteGraph(paths: [path(1, ids[0..<3], capacity: 9_000), south]))
+        XCTAssertNotNil(memo[up], "a daily capacity is not read by a search")
+        XCTAssertNotNil(memo[down], "the first graph's south part is kept")
+        // Joined into one part, both are worked out again.
+        memo.use(PassengerRouteGraph(paths: [north, south, path(3, ids[2..<4])]))
+        XCTAssertNil(memo[up])
+        XCTAssertNil(memo[down])
+        // Another memo's routes are taken in for the parts it worked out.
+        var other = PassengerRouteMemo()
+        other.use(graph)
+        other[up] = found
+        var taker = PassengerRouteMemo()
+        taker.use(graph)
+        taker.absorb(other)
+        XCTAssertEqual(taker[up], other[up])
+        XCTAssertNil(taker[down])
+    }
+
+    /// Decision 470: a world whose routes are kept part by part through
+    /// edits to one of two separate networks is the world whose routes are
+    /// worked out afresh at every tick.
+    func testRoutesKeptThroughEditsElsewhereGiveTheSameWorld() throws {
+        // 640 m apart: too far to walk between the rows.
+        var kept = try Self.grid(columns: 4, rows: 3, spacing: 40_960)
+        // Only the rows run: three networks apart.
+        for line in kept.lines where line.name.hasPrefix("Column") {
+            try kept.removeLine(line.id)
+        }
+        let rows = kept.lines.map(\.id)
+        XCTAssertEqual(rows.count, 3)
+        var fresh = kept
+        var reused = 0
+        let stations = kept.lines.map { $0.stops }
+        var changed = 0
+        for tick in 0..<120 {
+            if tick % 20 == 10 {
+                // An edit to one row's trains changes its headways.
+                let before = PassengerRouteMemo.components(of: PassengerRouteGraph(world: kept)).parts
+                let trains = TrainsInService(peak: 1 + tick / 20 % 2, offPeak: 1 + tick / 20 % 2, low: 1)
+                try kept.setLineTrainsInService(rows[tick / 20 % 3], to: trains)
+                try fresh.setLineTrainsInService(rows[tick / 20 % 3], to: trains)
+                let after = PassengerRouteMemo.components(of: PassengerRouteGraph(world: kept)).parts
+                XCTAssertEqual(after.count, 3)
+                changed += zip(before, after).filter { $0 != $1 }.count
+            }
+            try kept.advance(ticks: 1)
+            if tick % 20 == 10 {
+                // The rows not edited kept their routes.
+                let other = stations[(tick / 20 + 1) % 3]
+                if kept.passengerRouteMemo[PassengerRouteMemo.Pair(origin: other[0], destination: other[3])] != nil { reused += 1 }
+            }
+            fresh.passengerPlan = GameWorld.PassengerPlanCache()
+            fresh.passengerRouteMemo = PassengerRouteMemo()
+            try fresh.advance(ticks: 1)
+        }
+        XCTAssertGreaterThan(changed, 0)
+        XCTAssertEqual(PassengerRouteMemo.components(of: PassengerRouteGraph(world: kept)).parts.count, 3)
+        XCTAssertEqual(reused, 6)
+        XCTAssertGreaterThan(kept.passengers.reduce(Int64(0)) { $0 + $1.released }, 0)
+        XCTAssertEqual(kept, fresh)
+        XCTAssertEqual(kept.passengers, fresh.passengers)
+        XCTAssertEqual(kept.riders, fresh.riders)
+    }
+
+    /// Decision 470: the routes of the plan a tick works out when it
+    /// crosses 06:00, worked out before the tick on the graph of that
+    /// minute, give the same world, and the tick works out none itself.
+    func testRoutesWorkedOutAheadOfTheMorningGiveTheSameWorld() throws {
+        var world = try Self.grid(columns: 4, rows: 3)
+        for line in world.lines {
+            try world.setLineServiceWindow(line.id, to: .standard)
+        }
+        // Three seconds off the minutes, as 92.1's game was: the ticks
+        // after cross each whole minute partway.
+        world.setSpeed(.x10)
+        try world.advance(ticks: 3)
+        world.setSpeed(.fast)
+        var found: PassengerRoutesToWorkOut?
+        for _ in 0..<(2 * 144) {
+            // The day's routes are kept through the night: none to work out.
+            world.passengerRouteMemo = PassengerRouteMemo()
+            if let work = world.passengerRoutesToWorkOut(), work.time.seconds > world.clock.now.seconds {
+                found = work
+                break
+            }
+            try world.advance(ticks: 1)
+        }
+        let work = try XCTUnwrap(found, "a tick that crosses the morning")
+        XCTAssertEqual(work.time.seconds % GameTime.secondsPerDay % GameTime.secondsPerHour, 0)
+        var given = world
+        given.takePassengerRoutes(world.workingOutPassengerRoutes(work))
+        let pairs = given.passengerRouteCache.pairs
+        try world.advance(ticks: 1)
+        try given.advance(ticks: 1)
+        XCTAssertEqual(given, world)
+        XCTAssertEqual(given.passengers, world.passengers)
+        XCTAssertEqual(given.riders, world.riders)
+        XCTAssertEqual(given.passengerRouteCache.pairs, pairs, "the tick worked out no route itself")
+        XCTAssertGreaterThan(pairs, 0)
+        XCTAssertEqual(world.passengerRouteCache.pairs, pairs, "the plain tick worked out the same routes")
     }
 
     /// The same world, its routes kept through nights or worked out afresh
