@@ -410,6 +410,43 @@
   - 實機：E500 推拉、普悠瑪、AE 之後舊存檔的公車與道路、平溪線開局的延遲、AH 之後的機廠。
   - 玩家 1 的公車路線預覽截圖、91 的 fps 回報。
 
+**第二十五次換手（2026-10-28 約 08:25 UTC，session_01YGNNupX9CPMXwaBoNU5tma 壓縮第 2 次、約 300k → 本任用 `create_session` 開的新規劃，第 1 層）**：和下面不同時以這段為準。
+
+新任開工：
+- 讀第 1 節與這一段。
+- `create_session` 只帶得進 railway-game-ios，所以先用 `add_repo` 加 railway-reference-private 與 railway-assets-private。
+- #1041 從「session_01YGNNupX9CPMXwaBoNU5tma 壓縮第 2 次」往後讀。狀態快照在 #1041 comment 6464024607。
+
+**本任合的**（照 §1.2，記在 #1041）：#1404（ひと駅複查）、#1405（BJ Kenney 報告）、#1396（BD，full lane 時限）、#1406（BG，標線、人行道、小綠人）、#1403（BF，模型包瘦身）、#1400（BH，速度不倒回、示範背景讀道路）、#1407（BM，`run.sh --night-lights`）、#1411（NEXT_PRIORITIES 7c、7d）。main `ci.yml` 與 full lane 綠到 `8be2242`；#1400、#1407 這批（`12b5013`）合完還沒看到 `ci.yml` 結果，新任先看它綠了再合下一批。TestFlight 92 已發，出口合規已答。
+
+**在跑的 session**（新任用 `send_message` 告訴它們改向新任回報；共同規則：不動 #1342、私庫 #103，壓縮 1 次不接新工作、2 次停）：
+- **BK**（session_01YGNNun8RfEVUbCYxFcr7kV，決策 454，92.1 實景 81 站卡頓）：已找到
+  1. 06:00 停 12–14 秒：`PassengerRouteMemo` 只記一張圖，凌晨的空圖把白天的圖擠掉。修法是多記上一張，結果逐位元相同，預計 1 秒內。PR 還沒開，請它先推。
+  2. 6000× 時模擬 tick 平均 0.24 秒（預算 0.1 秒）：不在這次修，寫進 HANDOFF。
+  3. 主執行緒 500 ms 停頓：`StationMasterView` 在主執行緒重算建議、舊世界副本在主執行緒釋放，還在量。
+  綠了照 §1.2 合，把 2、3 的結論轉告作者，然後封存。
+- **台北地標**（作者開的 session_01YGNNupg9BaQswnXKhfrkdv，決策 457，#1409 draft；私庫 #115、素材庫 #13 由作者合）：作者要「你分別挑呈現出最好的…挑完再融合淡色」。第 3 版四欄對照（第 1 輪／Blender／上一版結合／新版）出來後用 `SendUserFile` 給作者看；作者滿意才 ready、合。之後同一路線更新既有的台北車站、101、高雄車站（決策 457「後來」），圖也要給作者看。
+- **遠景方塊 instancing**（作者開的 session_01YGNNunmjyoeMSdTvYbyZJm，決策 455）：#1408（第一步）、#1410（第二步 Metal），都是 draft。ready 且綠就照 §1.2 合，#1408 先。
+- **BL**（session_01YGNNuqUpKkygZmLQmiFyYw，素材庫與私庫照盤點刪檔 D1–D4、J2、J3、J10）：卡在要作者批准 `add_repo`（railway-game-ios、railway-reference-private）。請作者批准或回它；私庫的刪檔 PR 由作者合。
+
+**等前一項合併再派**：
+- Kenney 三件（針葉樹、灌木、儲槽）接進 `Map3DModelPack`：#1408 合併後。
+- J7：`site_archive_clean` 的路徑改到 `taiwan-rail-reference-clean`（Sonnet）：BK 合併後。
+- 7d（NEXT_PRIORITIES §22.2）：`Map3DChineseRoof` 接進 civic-kit、residential-kit，把「zip 屋頂＋blender-buildings-v1 比例＋OSM 外框」寫進兩個 SKILL.md，補 §c.12 小口磚雙色、雨遮、冷氣室外機（Opus）：決策 457 合併後。
+- 7c 第一批（Opus），有 Blender 參考的車站：臺中、新竹、花蓮、臺東、板橋、南港；高鐵桃園、新竹、台中含新烏日、台南、左營。作者看過台北這輪滿意才派；第二批（基隆、嘉義、臺南與老站、林鐵糖鐵站）最後。作者 10-28「好 照你的建議排」。
+- 6000× 模擬效能：照 BK 寫進 HANDOFF 的那段。
+
+**還要看的**：
+- BH 跑 only_testing 時 `RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner` 紅過一次、重跑綠。下一輪 full lane 又紅就派人查。
+- 下一版 What to Test 要放：#1403（第一次開 3D、記憶體）、#1406（標線、人行道、小綠人）、#1400（速度不倒回、示範不頓）。
+- 審查點數從 #1386 起算，目前 11 點（docs PR 不算），滿 30 開下一輪審查。
+- 編號：存檔 75 是 main 上最新；決策檔到 451，452–457 在 #1041 有預約（454 BK、455 遠景方塊、457 台北地標），新號取 #1041 未釋出預約的最大＋1。
+
+**排程**：
+- 本任的 `send_later` 巡邏在交接時刪掉，新任自己排（約 45 分鐘一次）。
+- Threads 排程綁本任（`trig_0189X2fiQbWqxG8CCat2Lzbb`）。新任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉這個。
+- 新任是第 1 層，之後照 §1 自己用 `create_session` 開下一任。
+
 **第二十四次換手（2026-10-28 約 05:15 UTC，session_01YGNNupfaTiuQSAJ5tsf5a4 壓縮第 3 次後 → 作者在 claude.ai 手動開的新規劃）**：和下面不同時以這段為準。
 
 新任開工：
