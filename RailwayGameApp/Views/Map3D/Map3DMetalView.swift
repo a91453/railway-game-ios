@@ -113,6 +113,8 @@ final class Map3DMetalView: MTKView {
     /// as the 3D look, Low Power Mode or the phone's heat say
     /// (``Map3DQuality``).
     private var load = Map3DLoadGovernor()
+    /// Decision 460: what is left to the app, looked at every half second.
+    private var memoryWatch = Map3DMemoryWatch()
     private var level: Map3DLoadLevel? { quality.tier(device: deviceTier) == nil ? nil : load.level }
     private var drawsFewerPixels = false
     /// Decision 238's later note: the 3D look chosen in Settings.
@@ -402,7 +404,7 @@ final class Map3DMetalView: MTKView {
         // Decision 342: reversed depth, 0 the farthest.
         clearDepth = 0
         preferredFramesPerSecond = 60
-        deviceTier = Map3DDeviceTier.forGPUFamily(Self.appleFamily(of: device))
+        deviceTier = Map3DDeviceTier.forGPU(family: Self.appleFamily(of: device), name: device.name)
         // Decision 417: memory running short steps down on any look.
         NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil)
@@ -416,12 +418,14 @@ final class Map3DMetalView: MTKView {
     nonisolated static let rungKey = "map3DLoadRung"
 
     /// Decision 417: starts on the rung the 3D look and this device start
-    /// on (``Map3DLoadGovernor/start(for:device:remembered:)``).
+    /// on (``Map3DLoadGovernor/start(for:device:remembered:memory:)``,
+    /// decision 460: lower with little memory).
     private func startClimbing() {
         let system = UIDevice.current.systemVersion
         let remembered = Map3DLoadGovernor.remembered(UserDefaults.standard.string(forKey: Self.rungKey), quality: quality, system: system)
         let top = quality.tier(device: deviceTier).map(Map3DLoadLevel.top(of:)) ?? 0
-        load = Map3DLoadGovernor(top: top, start: Map3DLoadGovernor.start(for: quality, device: deviceTier, remembered: remembered))
+        load = Map3DLoadGovernor(top: top, start: Map3DLoadGovernor.start(for: quality, device: deviceTier, remembered: remembered,
+                                                                          memory: FrameTimeRecorder.memoryTier))
         rememberRung()
     }
 
@@ -697,7 +701,8 @@ final class Map3DMetalView: MTKView {
         super.layoutSubviews()
         // 2026-10-21 (decision 238's later note): fewer pixels once the GPU
         // keeps over its budget.
-        let scale = CGFloat(Map3DDrawScale.scale(display: Double(traitCollection.displayScale), lowered: drawsFewerPixels))
+        let scale = CGFloat(Map3DDrawScale.scale(display: Double(traitCollection.displayScale), lowered: drawsFewerPixels,
+                                                 points: Double(bounds.width * bounds.height)))
         if scale > 0, contentScaleFactor != scale { contentScaleFactor = scale }
         camera.viewport = (Float(max(bounds.width, 1)), Float(max(bounds.height, 1)))
     }
@@ -1356,6 +1361,12 @@ final class Map3DMetalView: MTKView {
         if load.record(Map3DLoadGovernor.Sample(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond),
                                                 cpuMilliseconds: stats.cpuMilliseconds, gpuMilliseconds: stats.gpuMilliseconds,
                                                 drawingStreets: lastLife.people + lastLife.vehicles > 0)) {
+            rememberRung()
+        }
+        // Decision 460: a step down when little memory is left, before the
+        // system's warning.
+        if memoryWatch.record(available: UInt64(os_proc_available_memory())) {
+            load.relieve()
             rememberRung()
         }
         // Low Power Mode and the heat change while the map is open.

@@ -860,6 +860,9 @@ public final class GameSession {
         maximumElapsed: GameSession.maximumStepDuration
     )
     @ObservationIgnored private var gameLoop: Task<Void, Never>?
+    /// Decision 460: how the game loop paces itself on this device, set by
+    /// the app from its CPU and how hot it runs.
+    public static var tickPace = TickPace()
 
     // MARK: - Watching speed (decision 195)
 
@@ -1957,10 +1960,11 @@ public final class GameSession {
         gameLoop = Task { [weak self] in
             let clock = ContinuousClock()
             var last = clock.now
+            var rest = GameSession.tickInterval
             while true {
                 // Sleeping only paces the loop; the ticks come from measured time.
                 do {
-                    try await Task.sleep(for: GameSession.tickInterval, clock: clock)
+                    try await Task.sleep(for: rest, clock: clock)
                 } catch {
                     return
                 }
@@ -1990,6 +1994,9 @@ public final class GameSession {
                 }
                 // Decision 195: how fast the game really ran.
                 self.noteRealTime(elapsed)
+                // Decision 460: the rest before the next step, longer when
+                // its ticks took longer than the device's share.
+                rest = GameSession.tickPace.rest(afterWorking: clock.now - now, interval: GameSession.tickInterval)
             }
         }
     }

@@ -1506,8 +1506,10 @@ struct MapView: View {
     private func buildAheadIfResting(near pinched: PlanCamera) {
         buildAhead?.cancel()
         buildAhead = nil
-        // Decision 365: with 3D off, nothing is built for it.
-        guard map3DQuality.shows3D, Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
+        // Decision 365: with 3D off, nothing is built for it. Decision 460:
+        // nor on a device of little memory, which builds it on opening.
+        guard map3DQuality.shows3D, FrameTimeRecorder.memoryTier.keepsSceneBuilt,
+              Map3DHandoff.buildsAhead(referenceSize: pinched.referenceSize) else { return }
         buildAhead = Task {
             try? await Task.sleep(for: .seconds(Map3DHandoff.buildsAfterResting))
             guard !Task.isCancelled, !screen.showsMap3D, map3DQuality.shows3D,

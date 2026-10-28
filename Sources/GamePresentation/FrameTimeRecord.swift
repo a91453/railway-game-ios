@@ -53,13 +53,18 @@ public struct FrameTimeContext: Codable, Hashable, Sendable {
     /// Decision 417: the 3D look and the rung it climbed to
     /// (``Map3DLoadGovernor/report(_:)``), or `nil`.
     public var map3D: String?
+    /// Decision 460: the device's memory and CPU tiers and the game loop's
+    /// pace (``deviceLoadSummary(memory:physical:limit:pace:)``), or `nil`.
+    public var device: String?
 
-    public init(screen: FrameTimeScreen, speed: String? = nil, stations: Int = 0, lines: Int = 0, map3D: String? = nil) {
+    public init(screen: FrameTimeScreen, speed: String? = nil, stations: Int = 0, lines: Int = 0, map3D: String? = nil,
+                device: String? = nil) {
         self.screen = screen
         self.speed = speed
         self.stations = stations
         self.lines = lines
         self.map3D = map3D
+        self.device = device
     }
 
     /// What starts a new stretch when it changes.
@@ -70,6 +75,7 @@ public struct FrameTimeContext: Codable, Hashable, Sendable {
         if let speed { parts.append(GameSpeed(rawValue: speed).map { $0.label(in: language) } ?? speed) }
         parts.append(language.text("\(stations) stations, \(lines) lines", "\(stations) 站、\(lines) 線"))
         if screen.isPresented, let map3D { parts.append(language.text("look \(map3D)", "畫質 \(map3D)")) }
+        if let device { parts.append(language.text("device \(device)", "裝置 \(device)")) }
         return parts.joined(separator: " · ")
     }
 }

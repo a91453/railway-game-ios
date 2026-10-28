@@ -254,6 +254,9 @@ struct Map3DPreviewScreen: View {
         .onDisappear {
             session.setMap3DOpen(false)
             FrameTimeRecorder.shared.show3D(false)
+            // Decision 460: a device of little memory does not keep the
+            // scene once the 3D map closes.
+            if !FrameTimeRecorder.memoryTier.keepsSceneBuilt { Map3DSceneCache.shared.clear() }
             feed.garbageTruckSound = nil
             audio?.setGarbageTruck(nil)
         }
