@@ -9,7 +9,7 @@ final class Map3DC341Tests: XCTestCase {
             XCTAssertLessThanOrEqual(m.triangleCount,15000)
             XCTAssertEqual(m.minimum.z,0,accuracy:0.00001)
             XCTAssertGreaterThan(m.length,23)
-            XCTAssertNotNil(pack.index(of:m.name))
+            XCTAssertNotNil(Map3DModelPack.studies.index(of:m.name), "K1-1: in the tools' pack")
         }
         XCTAssertEqual(Map3DC341.arrangement.count,6)
         XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name,Map3DLowFloorBus.routeModel().name)

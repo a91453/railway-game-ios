@@ -84,6 +84,11 @@ struct Map3DRoadMarkings {
         let width: Double
         /// Review H6: whether its road is a bridge's (on its deck).
         var onDeck = false
+        /// Review K2-3: a point on its line its road's segment starts
+        /// from, so it is cut near a raised road where the road is
+        /// (``Map3DScene/Builder/raisedCuts(from:to:anchor:along:onDeck:)``);
+        /// `nil`, its far end back.
+        var anchor: Map3DBaseMap.Point?
     }
 
     /// A signal at an approach's kerb: its foot, the way the traffic it
@@ -276,11 +281,28 @@ struct Map3DRoadMarkings {
         way.x * 0.94 - way.z * 0.34 >= 0 ? 1 : -1
     }
 
+    /// Review K2-5: which side of `road`, as its points run, its painted
+    /// walkway is on (1 its right, −1 its left): ``walkwaySide(_:)`` of
+    /// the way from its first point to its last, once for the whole road,
+    /// so a lane bending through a heading near the dividing one keeps its
+    /// band on one side; of its first segment's way when it ends where it
+    /// starts.
+    static func walkwaySide(of road: Map3DBaseMap.Road) -> Double {
+        guard let first = road.points.first, let last = road.points.last else { return 1 }
+        var dx = last.x - first.x, dz = last.z - first.z
+        if (dx * dx + dz * dz).squareRoot() < 1,
+           let (a, b) = zip(road.points, road.points.dropFirst()).first(where: { distance($0.0, $0.1) > 0.01 }) {
+            (dx, dz) = (b.x - a.x, b.z - a.z)
+        }
+        return walkwaySide(Map3DBaseMap.Point(x: dx, z: dz))
+    }
+
     /// Decision 447 (continued): `road`'s painted walkway, segment by
     /// segment, left out across the mouths of the roads meeting it.
     private mutating func addWalkway(_ road: Map3DBaseMap.Road, number: Int, lengths sums: [Double]) {
         let cut = kerbCuts[number] ?? []
         let half = Double(road.kind.width(ramp: false)) / 2
+        let side = Self.walkwaySide(of: road)
         let outer = half - Self.walkwayInset - Self.walkwayLine / 2, inner = outer - Self.walkwayLine - Self.walkwayBand
         let band = (outer + inner) / 2
         for (index, (a, b)) in zip(road.points, road.points.dropFirst()).enumerated() {
@@ -294,15 +316,19 @@ struct Map3DRoadMarkings {
             var piece = 0.0
             while piece + Self.kerbPiece < length { piece += Self.kerbPiece; stops.append(piece) }
             stops.sort()
-            let way = Map3DBaseMap.Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length), side = Self.walkwaySide(way)
+            let way = Map3DBaseMap.Point(x: (b.x - a.x) / length, z: (b.z - a.z) / length)
             let right = Map3DBaseMap.Point(x: -way.z * side, z: way.x * side)
             for (from, to) in zip(stops, stops.dropFirst()) where to - from > 0.5 {
                 let centre = Map3DBaseMap.Point(x: a.x + way.x * (from + to) / 2, z: a.z + way.z * (from + to) / 2)
                 guard !cut.contains(where: { $0.contains(start + (from + to) / 2) }), Self.inside(centre, road.bounds) else { continue }
-                func at(_ by: Double) -> Map3DBaseMap.Point { Map3DBaseMap.Point(x: centre.x + right.x * by, z: centre.z + right.z * by) }
-                marks.append(Mark(kind: .walkway(line: false), centre: at(band), along: way, length: to - from, width: Self.walkwayBand))
+                func at(_ by: Double, from p: Map3DBaseMap.Point = centre) -> Map3DBaseMap.Point {
+                    Map3DBaseMap.Point(x: p.x + right.x * by, z: p.z + right.z * by)
+                }
+                marks.append(Mark(kind: .walkway(line: false), centre: at(band), along: way, length: to - from, width: Self.walkwayBand,
+                                  anchor: at(band, from: a)))
                 for edge in [outer, inner] {
-                    marks.append(Mark(kind: .walkway(line: true), centre: at(edge), along: way, length: to - from, width: Self.walkwayLine))
+                    marks.append(Mark(kind: .walkway(line: true), centre: at(edge), along: way, length: to - from, width: Self.walkwayLine,
+                                      anchor: at(edge, from: a)))
                 }
             }
         }
@@ -358,7 +384,8 @@ struct Map3DRoadMarkings {
                 let isRed = allRed || red.contains { $0.contains(middle) }
                 for side in [1.0, -1.0] {
                     marks.append(Mark(kind: .kerb(red: isRed), centre: Map3DBaseMap.Point(x: centre.x + right.x * side * offset, z: centre.z + right.z * side * offset),
-                                      along: way, length: to - from, width: Self.kerbWidth))
+                                      along: way, length: to - from, width: Self.kerbWidth,
+                                      anchor: Map3DBaseMap.Point(x: a.x + right.x * side * offset, z: a.z + right.z * side * offset)))
                 }
             }
         }
@@ -562,10 +589,6 @@ extension Map3DScene.Builder {
     private mutating func addMark(_ mark: Map3DRoadMarkings.Mark, colour: UInt32, layer: Float, u: (Double, Double), v: (Double, Double)) {
         let along = mark.along, right = Map3DBaseMap.Point(x: -along.z, z: along.x)
         let halfLength = mark.length / 2, halfWidth = mark.width / 2
-        let corners = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map { a, b in
-            Map3DBaseMap.Point(x: mark.centre.x + right.x * a * halfWidth + along.x * b * halfLength,
-                               z: mark.centre.z + right.z * a * halfWidth + along.z * b * halfLength)
-        }
         func texture(_ p: Map3DBaseMap.Point) -> (Float, Float) {
             let dx = p.x - mark.centre.x, dz = p.z - mark.centre.z
             let across = (dx * right.x + dz * right.z) / mark.width + 0.5
@@ -575,11 +598,38 @@ extension Map3DScene.Builder {
         // Decision 391: none on a bridge's deck (a junction there is rare),
         // at the road's height on a ramp; decision 375: none where the road
         // gives way to a trench. Review H6: on its own road's deck only, not
-        // one over it.
+        // one over it. Review K2-3: a long one (a kerb line, a walkway) cut
+        // where the road's rise bends, as the road is
+        // (``addStrip(_:bounds:width:lift:color:paint:water:raised:onDeck:taking:)``),
+        // each piece's ends at the road's height there and each piece left
+        // out on its own.
         let way = (mark.along.x, mark.along.z)
-        let raised = roadRise(at: mark.centre, along: way, onDeck: mark.onDeck)
-        guard !raised.onBridge, !givesWay(at: mark.centre, along: way) else { return }
-        let lift = Self.centreLineLift + raised.rise
+        let back = Map3DBaseMap.Point(x: mark.centre.x - along.x * halfLength, z: mark.centre.z - along.z * halfLength)
+        let front = Map3DBaseMap.Point(x: mark.centre.x + along.x * halfLength, z: mark.centre.z + along.z * halfLength)
+        func at(_ t: Double) -> Map3DBaseMap.Point { Map3DBaseMap.Point(x: back.x + (front.x - back.x) * t, z: back.z + (front.z - back.z) * t) }
+        let cuts = merged([0, 1], raisedCuts(from: back, to: front, anchor: mark.anchor ?? back, along: way, onDeck: mark.onDeck))
+        for (t0, t1) in zip(cuts, cuts.dropFirst()) where t1 - t0 > 1e-9 {
+            let middle = at((t0 + t1) / 2)
+            guard !roadRise(at: middle, along: way, onDeck: mark.onDeck).onBridge, !givesWay(at: middle, along: way) else { continue }
+            let riseA = roadRise(at: at(t0), along: way, onDeck: mark.onDeck).rise, riseB = roadRise(at: at(t1), along: way, onDeck: mark.onDeck).rise
+            let from = (t0 - 0.5) * mark.length, to = (t1 - 0.5) * mark.length
+            let corners = [(-1.0, from), (1.0, from), (1.0, to), (-1.0, to)].map { a, b in
+                Map3DBaseMap.Point(x: mark.centre.x + right.x * a * halfWidth + along.x * b,
+                                   z: mark.centre.z + right.z * a * halfWidth + along.z * b)
+            }
+            // The rise at a point of the piece, from its back end's to its front's.
+            func lift(_ p: Map3DBaseMap.Point) -> Float {
+                let share = to - from > 1e-9 ? (((p.x - mark.centre.x) * along.x + (p.z - mark.centre.z) * along.z) - from) / (to - from) : 0
+                return Self.centreLineLift + riseA + (riseB - riseA) * Float(min(1, max(0, share)))
+            }
+            addMarkPiece(corners, colour: colour, layer: layer, texture: texture, lift: lift)
+        }
+    }
+
+    /// The quadrilateral `corners` of a mark laid on the drawn ground,
+    /// `lift(p)` over it, cut at the ground's grid lines and diagonals.
+    private mutating func addMarkPiece(_ corners: [Map3DBaseMap.Point], colour: UInt32, layer: Float,
+                                       texture: (Map3DBaseMap.Point) -> (Float, Float), lift: (Map3DBaseMap.Point) -> Float) {
         for row in gridCell(corners.map(\.z).min()!, origin: originY)...gridCell(corners.map(\.z).max()!, origin: originY) {
             let top = gridLine(row, origin: originY), bottom = gridLine(row + 1, origin: originY)
             for column in gridCell(corners.map(\.x).min()!, origin: originX)...gridCell(corners.map(\.x).max()!, origin: originX) {
@@ -590,7 +640,7 @@ extension Map3DScene.Builder {
                     guard let ring = piece.first, ring.count >= 3 else { continue }
                     let points = ring.map { p -> Map3DVertex in
                         let x = Float(p.x), z = Float(p.z), (tu, tv) = texture(p)
-                        return Map3DVertex(Map3DPoint(x, drawnGround(x: x, z: z) + lift, z), normal: .up, color: colour, u: tu, v: tv, layer: layer)
+                        return Map3DVertex(Map3DPoint(x, drawnGround(x: x, z: z) + lift(p), z), normal: .up, color: colour, u: tu, v: tv, layer: layer)
                     }
                     let middle = Map3DPoint(Float((west + east) / 2), 0, Float((top + bottom) / 2))
                     mesh(at: middle) { mesh in

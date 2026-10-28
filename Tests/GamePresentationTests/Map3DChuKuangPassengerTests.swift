@@ -20,6 +20,6 @@ final class Map3DChuKuangPassengerTests: XCTestCase {
         let names=Set(Map3DModelPack.standard.models.map(\.name))
         XCTAssertTrue(!names.contains("chukuang-standard"))
         XCTAssertTrue(names.contains("set-E500CK-car"))
-        XCTAssertTrue(names.contains("pp-ppt1000"))
+        XCTAssertTrue(Map3DModelPack.studies.index(of: "pp-ppt1000") != nil)
     }
 }

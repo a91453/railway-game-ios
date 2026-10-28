@@ -32,7 +32,9 @@ final class Map3DPPIntegrationTests: XCTestCase {
             XCTAssertEqual(payload(try model(set.middleName)), payload(Map3DPPPassenger.model(.ppt1000, far: far)))
             for role in Map3DPPPassenger.roles {
                 let standalone = Map3DPPPassenger.model(role, far: far)
-                XCTAssertEqual(payload(try model(standalone.name)), payload(standalone))
+                // K1-1: the static roles are the tools' pack's.
+                let study = Map3DModelPack.unbakedStudies
+                XCTAssertEqual(payload(study.models[try XCTUnwrap(study.index(of: standalone.name), standalone.name)]), payload(standalone))
                 XCTAssertNil(Map3DTrainSet.named(standalone.name), "special roles are static assets, not new operating types")
             }
         }

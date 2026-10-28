@@ -232,9 +232,12 @@ final class Map3DC341IntegrationTests: XCTestCase {
         }
         XCTAssertEqual(Map3DC341.formation().triangleCount, 21_036)
         XCTAssertEqual(hash(Map3DC341.formation()), "d7474750ed37008f")
-        // The four static units are still in the pack, and nothing else of the C341's: the sets' cars are their own models.
-        for unit in Map3DC341.Unit.allCases { XCTAssertNotNil(pack.index(of: "c341-" + unit.rawValue), "\(unit)") }
-        XCTAssertNil(pack.index(of: "c341-dm-far"))
+        // The four static units are in the tools' pack (K1-1), and nothing else of the C341's: the sets' cars are their own models.
+        for unit in Map3DC341.Unit.allCases {
+            XCTAssertNotNil(Map3DModelPack.studies.index(of: "c341-" + unit.rawValue), "\(unit)")
+            XCTAssertNil(pack.index(of: "c341-" + unit.rawValue), "\(unit)")
+        }
+        XCTAssertNil(Map3DModelPack.studies.index(of: "c341-dm-far"))
         XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name, Map3DLowFloorBus.routeModel().name, "the route bus is still the last model")
     }
 

@@ -516,6 +516,12 @@ final class LessonUITests: XCTestCase {
     private func bringMapPointIntoView(_ point: PlanPoint, from known: PlanPoint, zoomIfClamped: Bool = false) -> CGPoint {
         let middle = CGPoint(x: map.frame.midX, y: map.frame.midY)
         let clear = CGRect(x: middle.x - 130, y: middle.y - 60, width: 260, height: 120)
+        // How far the point is from the clear area: a drag that brings it
+        // no closer has hit the world's edge, even while it slides the
+        // point along that edge.
+        func gap(_ p: CGPoint) -> Double {
+            Double(hypot(max(clear.minX - p.x, 0, p.x - clear.maxX), max(clear.minY - p.y, 0, p.y - clear.maxY)))
+        }
         var at = project(point, from: known)
         for _ in 0..<16 {
             if clear.contains(at) { return at }
@@ -524,7 +530,11 @@ final class LessonUITests: XCTestCase {
             coordinate(middle).press(forDuration: 0.1, thenDragTo: coordinate(destination),
                                      withVelocity: XCUIGestureVelocity(rawValue: 200), thenHoldForDuration: 0.3)
             let moved = project(point, from: known)
-            if zoomIfClamped, hypot(moved.x - at.x, moved.y - at.y) < 4 {
+            // e17eb67's full lane: with the point level with the clear area
+            // but left of it, each drag slid it 9 points up or down and none
+            // came closer, so "moved less than 4 points" did not see the
+            // edge and the zoom came too late for the 16 drags.
+            if zoomIfClamped, gap(at) - gap(moved) < 4 {
                 // Near the world's edge, the current zoom has no more room
                 // to pan. A closer view gives the camera room to move.
                 let zoom = app.buttons["Zoom in"]

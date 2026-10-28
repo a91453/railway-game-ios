@@ -49,12 +49,12 @@ final class Map3DPedestrianSignalTests: XCTestCase {
         // road, 11 m) at 1 m/s.
         XCTAssertEqual(Signal.flashing, 11)
         let c = clock(0) // the main road: 32 s left
-        XCTAssertNotEqual(Signal.face(.main, group: 0, clock: c, time: 10.7, reduceMotion: false).figure, .dark, "32 s left: steady")
+        XCTAssertNotEqual(Signal.face(.main, group: 0, clock: c, time: 10.7, pace: .init(), reduceMotion: false).figure, .dark, "32 s left: steady")
         let late = clock(25) // 7 s left
         // Article 233: once a second, half on, half off.
-        XCTAssertEqual(Signal.face(.main, group: 0, clock: late, time: 10.7, reduceMotion: false).figure, .dark)
-        XCTAssertNotEqual(Signal.face(.main, group: 0, clock: late, time: 10.2, reduceMotion: false).figure, .dark)
-        XCTAssertEqual(Signal.face(.main, group: 0, clock: late, time: 10.7, reduceMotion: false).count, 7, "the countdown stays")
+        XCTAssertEqual(Signal.face(.main, group: 0, clock: late, time: 10.7, pace: .init(), reduceMotion: false).figure, .dark)
+        XCTAssertNotEqual(Signal.face(.main, group: 0, clock: late, time: 10.2, pace: .init(), reduceMotion: false).figure, .dark)
+        XCTAssertEqual(Signal.face(.main, group: 0, clock: late, time: 10.7, pace: .init(), reduceMotion: false).count, 7, "the countdown stays")
     }
 
     func testTheLittleGreenManWalksFasterAsTheGreenRunsOut() {
@@ -68,30 +68,79 @@ final class Map3DPedestrianSignalTests: XCTestCase {
         }
         // Through all seven frames, in turn.
         let c = clock(0)
-        let frames = (0..<Signal.frames).map { Signal.face(.main, group: 0, clock: c, time: (Double($0) + 0.5) * 0.45, reduceMotion: false).figure }
+        var pace = Signal.Pace()
+        pace.advance(to: 1_000, clock: c, reduceMotion: false)
+        // (Frames of the screen a twentieth of a second apart.)
+        let frames = (0..<Signal.frames).map { frame -> Signal.Face.Figure in
+            let time = 1_000 + (Double(frame) + 0.5) * 0.45
+            while (pace.last ?? 0) + 0.05 < time { pace.advance(to: (pace.last ?? 0) + 0.05, clock: c, reduceMotion: false) }
+            pace.advance(to: time, clock: c, reduceMotion: false)
+            return Signal.face(.main, group: 0, clock: c, time: time, pace: pace, reduceMotion: false).figure
+        }
         XCTAssertEqual(frames, (0..<Signal.frames).map { .walk($0) })
         // Red: the standing figure, no countdown.
-        XCTAssertEqual(Signal.face(.cross, group: 0, clock: c, time: 3, reduceMotion: false), .init(figure: .stop, count: nil))
+        XCTAssertEqual(Signal.face(.cross, group: 0, clock: c, time: 3, pace: .init(), reduceMotion: false), .init(figure: .stop, count: nil))
         // Each junction's group a quarter cycle on: group 1 is at 17 s.
-        XCTAssertEqual(Signal.face(.main, group: 1, clock: c, time: 0, reduceMotion: false).count, 15)
+        XCTAssertEqual(Signal.face(.main, group: 1, clock: c, time: 0, pace: .init(), reduceMotion: false).count, 15)
+    }
+
+    /// Review K2-6: the screen's clock is the seconds since the device
+    /// started (10⁵ and more); dividing it by a step that shortens each
+    /// second jumped the figure to any frame once a second. Walked on
+    /// from frame to frame, it starts its green at its first frame and
+    /// only ever steps on to the next, through a whole cycle at 60 frames
+    /// a second, faster at the end.
+    func testTheLittleGreenManStepsOnWithoutJumping() {
+        var pace = Signal.Pace()
+        let start = 123_456.7, fps = 60.0
+        var previous: Int?, changes: [Int64: Int] = [:]
+        for tick in 0..<Int(Double(Timing.cycle) * fps) {
+            let time = start + Double(tick) / fps
+            let c = clock(Int64(Double(tick) / fps))
+            pace.advance(to: time, clock: c, reduceMotion: false)
+            guard let left = Signal.left(.main, at: c.second) else {
+                previous = nil
+                continue
+            }
+            let frame = pace.frame(.main, group: 0)
+            if let previous {
+                XCTAssertTrue(frame == previous || frame == (previous + 1) % Signal.frames, "\(previous) → \(frame) at \(c.second) s")
+                if frame != previous { changes[left, default: 0] += 1 }
+            } else {
+                XCTAssertEqual(frame, 0, "the green starts at the first frame")
+            }
+            previous = frame
+            // The face shows that frame while it is not flashing off.
+            let face = Signal.face(.main, group: 0, clock: c, time: time, pace: pace, reduceMotion: false)
+            if face.figure != .dark { XCTAssertEqual(face.figure, .walk(frame)) }
+        }
+        // Some two steps a second as the green starts, near eight at its end.
+        XCTAssertEqual(Double(changes[31] ?? 0), 2, accuracy: 1)
+        XCTAssertEqual(Double(changes[1] ?? 0), 8, accuracy: 1)
+        // Red, paused or with Reduce Motion: back to the first frame.
+        pace.advance(to: start + 100, clock: clock(40), reduceMotion: false)
+        XCTAssertEqual(pace.frame(.main, group: 0), 0)
+        pace.advance(to: start + 101, clock: clock(10), reduceMotion: false)
+        pace.advance(to: start + 101.2, clock: clock(10), reduceMotion: true)
+        XCTAssertEqual(pace.frame(.main, group: 0), 0)
     }
 
     func testStillWithReduceMotionPausedOrTooFast() {
         let late = clock(25)
         // Reduce Motion: no steps, no flashing; the countdown still shows.
         for time in stride(from: 0.0, to: 3, by: 0.1) {
-            XCTAssertEqual(Signal.face(.main, group: 0, clock: late, time: time, reduceMotion: true), .init(figure: .walk(0), count: 7))
+            XCTAssertEqual(Signal.face(.main, group: 0, clock: late, time: time, pace: .init(), reduceMotion: true), .init(figure: .walk(0), count: 7))
         }
         // Paused: the same.
         let paused = clock(25, paused: true)
         for time in stride(from: 0.0, to: 3, by: 0.1) {
-            XCTAssertEqual(Signal.face(.main, group: 0, clock: paused, time: time, reduceMotion: false), .init(figure: .walk(0), count: 7))
+            XCTAssertEqual(Signal.face(.main, group: 0, clock: paused, time: time, pace: .init(), reduceMotion: false), .init(figure: .walk(0), count: 7))
         }
         // Too fast for the lights to change, or no clock: as the traffic
         // signals stand (the main road green), with no countdown.
         for c in [clock(50, speed: .fast), nil] {
-            XCTAssertEqual(Signal.face(.main, group: 2, clock: c, time: 1.7, reduceMotion: false), .init(figure: .walk(0), count: nil))
-            XCTAssertEqual(Signal.face(.cross, group: 2, clock: c, time: 1.7, reduceMotion: false), .init(figure: .stop, count: nil))
+            XCTAssertEqual(Signal.face(.main, group: 2, clock: c, time: 1.7, pace: .init(), reduceMotion: false), .init(figure: .walk(0), count: nil))
+            XCTAssertEqual(Signal.face(.cross, group: 2, clock: c, time: 1.7, pace: .init(), reduceMotion: false), .init(figure: .stop, count: nil))
         }
     }
 
@@ -101,7 +150,7 @@ final class Map3DPedestrianSignalTests: XCTestCase {
         let placed = models.placed
         func name(_ model: Int?) -> String? { model.map { pack.models[$0].name } }
         func shown(_ model: Int, _ group: Int, _ c: Timing.Clock?, _ time: Double = 0.1) -> String? {
-            name(models.model(model, group: group, clock: c, time: time, reduceMotion: false))
+            name(models.model(model, group: group, clock: c, time: time, pace: .init(), reduceMotion: false))
         }
         // Beside the main road at 0 s: walking, 32 left.
         let main = Signal.group(0, road: .main), cross = Signal.group(0, road: .cross)
@@ -120,7 +169,7 @@ final class Map3DPedestrianSignalTests: XCTestCase {
         XCTAssertNil(shown(placed.ones, cross, clock(0)))
         // Any other model is drawn as it is.
         let tree = try XCTUnwrap(pack.index(of: Map3DProp.tree.modelName))
-        XCTAssertEqual(models.model(tree, group: 0, clock: clock(0), time: 0, reduceMotion: false), tree)
+        XCTAssertEqual(models.model(tree, group: 0, clock: clock(0), time: 0, pace: .init(), reduceMotion: false), tree)
         XCTAssertFalse(models.places(tree))
         // The budget counts each signal's most: a face and two digits.
         let runs = Map3DPropRuns([placed.head, placed.tens, placed.ones, placed.head, placed.tens, placed.ones, tree].map {

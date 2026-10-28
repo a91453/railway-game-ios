@@ -1,3 +1,5 @@
+> Codex C371／C381雙車續修（公開draft #1342／工作#1341）：[現版／main格式核對](art/c371-c381-2026-10-27/README.md)、[接手／重建](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。兩型外觀均待驗收，先前推定C371已接受撤回。修肩部曲面／圓角燈腔／鼻下設備；T/M裸模型與原屋頂／輪組位置保護。已整合main8be22423的studies，standard529模型／3,127,704頂點不增加。新railway-assets-private各車獨立revision-1，各19PNG／最新模型與viewer，不新增history或ZIP；完整真前包仍在舊reference-private #103固定63b44693／素材e791fdb7。原#103只作前版交接，新素材draft互鏈見#1342。無營運映射／GameCore／存檔／fixtures變更；不合併／auto-merge／TestFlight。
+
 > 共用做車工具與新 skill（派工單 AC）：`tools/train-models/`（匯出、預算與雜湊檢查、七向圖用模型光、離線預覽，[README](../tools/train-models/README.md)）、`.claude/skills/rolling-stock/SKILL.md` 已改成原生做法，新車只用這個工具。列車畫面四項的第 1–3 項（夜間亮燈、遮蔽烘焙、車窗反光）等 10/31 公開測試之後由規劃派，用同一個工具拍改前／改後（`renderer.js` 的 `features` 旗標是接口）。
 
 > Codex C341（issue [#1322](https://github.com/a91453/railway-game-ios/issues/1322)，公開draft [#1323](https://github.com/a91453/railway-game-ios/pull/1323)）：[來源／外觀／重建與整合範圍](art/c341-2026-10-27/README.md)。四附件與Blair C341外觀原圖已看；獨立DM/T/M/反向DM，六輛21,036三角用合法原生組裝，不寫超限M3DM。完整素材／真第一至第三版／viewer／ZIP在私庫同名分支新目錄。僅四單元靜態註冊，沒有C341專用營運映射，合併不會自動換遊戲車輛。已保留新合併EMU800註冊及route bus末項；GameCore／存檔／fixtures不動。工程尺寸／單元方向與隱藏設備仍資料不足，真機Metal／效能／動畫與完整碰撞未驗；最新CI、衝突及私有互鏈見issue，不合併／auto-merge／TestFlight。
@@ -409,6 +411,43 @@
   - Meshy 約 49 點在 11/4 前用掉；TDX 11/1 重置。
   - 實機：E500 推拉、普悠瑪、AE 之後舊存檔的公車與道路、平溪線開局的延遲、AH 之後的機廠。
   - 玩家 1 的公車路線預覽截圖、91 的 fps 回報。
+
+**第二十五次換手（2026-10-28 約 08:25 UTC，session_01YGNNupX9CPMXwaBoNU5tma 壓縮第 2 次、約 300k → 本任用 `create_session` 開的新規劃，第 1 層）**：和下面不同時以這段為準。
+
+新任開工：
+- 讀第 1 節與這一段。
+- `create_session` 只帶得進 railway-game-ios，所以先用 `add_repo` 加 railway-reference-private 與 railway-assets-private。
+- #1041 從「session_01YGNNupX9CPMXwaBoNU5tma 壓縮第 2 次」往後讀。狀態快照在 #1041 comment 6464024607。
+
+**本任合的**（照 §1.2，記在 #1041）：#1404（ひと駅複查）、#1405（BJ Kenney 報告）、#1396（BD，full lane 時限）、#1406（BG，標線、人行道、小綠人）、#1403（BF，模型包瘦身）、#1400（BH，速度不倒回、示範背景讀道路）、#1407（BM，`run.sh --night-lights`）、#1411（NEXT_PRIORITIES 7c、7d）。main `ci.yml` 與 full lane 綠到 `8be2242`；#1400、#1407 這批（`12b5013`）合完還沒看到 `ci.yml` 結果，新任先看它綠了再合下一批。TestFlight 92 已發，出口合規已答。
+
+**在跑的 session**（新任用 `send_message` 告訴它們改向新任回報；共同規則：不動 #1342、私庫 #103，壓縮 1 次不接新工作、2 次停）：
+- **BK**（session_01YGNNun8RfEVUbCYxFcr7kV，決策 454，92.1 實景 81 站卡頓）：已找到
+  1. 06:00 停 12–14 秒：`PassengerRouteMemo` 只記一張圖，凌晨的空圖把白天的圖擠掉。修法是多記上一張，結果逐位元相同，預計 1 秒內。PR 還沒開，請它先推。
+  2. 6000× 時模擬 tick 平均 0.24 秒（預算 0.1 秒）：不在這次修，寫進 HANDOFF。
+  3. 主執行緒 500 ms 停頓：`StationMasterView` 在主執行緒重算建議、舊世界副本在主執行緒釋放，還在量。
+  綠了照 §1.2 合，把 2、3 的結論轉告作者，然後封存。
+- **台北地標**（作者開的 session_01YGNNupg9BaQswnXKhfrkdv，決策 457，#1409 draft；私庫 #115、素材庫 #13 由作者合）：作者要「你分別挑呈現出最好的…挑完再融合淡色」。第 3 版四欄對照（第 1 輪／Blender／上一版結合／新版）出來後用 `SendUserFile` 給作者看；作者滿意才 ready、合。之後同一路線更新既有的台北車站、101、高雄車站（決策 457「後來」），圖也要給作者看。
+- **遠景方塊 instancing**（作者開的 session_01YGNNunmjyoeMSdTvYbyZJm，決策 455）：#1408（第一步）、#1410（第二步 Metal），都是 draft。ready 且綠就照 §1.2 合，#1408 先。
+- **BL**（session_01YGNNuqUpKkygZmLQmiFyYw，素材庫與私庫照盤點刪檔 D1–D4、J2、J3、J10）：卡在要作者批准 `add_repo`（railway-game-ios、railway-reference-private）。請作者批准或回它；私庫的刪檔 PR 由作者合。
+
+**等前一項合併再派**：
+- Kenney 三件（針葉樹、灌木、儲槽）接進 `Map3DModelPack`：#1408 合併後。
+- J7：`site_archive_clean` 的路徑改到 `taiwan-rail-reference-clean`（Sonnet）：BK 合併後。
+- 7d（NEXT_PRIORITIES §22.2）：`Map3DChineseRoof` 接進 civic-kit、residential-kit，把「zip 屋頂＋blender-buildings-v1 比例＋OSM 外框」寫進兩個 SKILL.md，補 §c.12 小口磚雙色、雨遮、冷氣室外機（Opus）：決策 457 合併後。
+- 7c 第一批（Opus），有 Blender 參考的車站：臺中、新竹、花蓮、臺東、板橋、南港；高鐵桃園、新竹、台中含新烏日、台南、左營。作者看過台北這輪滿意才派；第二批（基隆、嘉義、臺南與老站、林鐵糖鐵站）最後。作者 10-28「好 照你的建議排」。
+- 6000× 模擬效能：照 BK 寫進 HANDOFF 的那段。
+
+**還要看的**：
+- BH 跑 only_testing 時 `RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner` 紅過一次、重跑綠。下一輪 full lane 又紅就派人查。
+- 下一版 What to Test 要放：#1403（第一次開 3D、記憶體）、#1406（標線、人行道、小綠人）、#1400（速度不倒回、示範不頓）。
+- 審查點數從 #1386 起算，目前 11 點（docs PR 不算），滿 30 開下一輪審查。
+- 編號：存檔 75 是 main 上最新；決策檔到 451，452–457 在 #1041 有預約（454 BK、455 遠景方塊、457 台北地標），新號取 #1041 未釋出預約的最大＋1。
+
+**排程**：
+- 本任的 `send_later` 巡邏在交接時刪掉，新任自己排（約 45 分鐘一次）。
+- Threads 排程綁本任（`trig_0189X2fiQbWqxG8CCat2Lzbb`）。新任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉這個。
+- 新任是第 1 層，之後照 §1 自己用 `create_session` 開下一任。
 
 **第二十四次換手（2026-10-28 約 05:15 UTC，session_01YGNNupfaTiuQSAJ5tsf5a4 壓縮第 3 次後 → 作者在 claude.ai 手動開的新規劃）**：和下面不同時以這段為準。
 
@@ -2057,7 +2096,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | `ci.yml` 的 rest shard 撞 20 分上限（2026-10-23，session_01KcZCRGFREEAx22ncMXAMwJ，`claude/rest-shard-under-limit`）：main 43852fa 的 rest 有 953 s 測試、469 類，沒有一類特別大（最慢 5 類共 172 s）。6 s 以上的 GamePresentation 類別與 25 s 以上的 4 個 GameCore 類別（共 33 類、約 466 s）搬到 campaigns-16／-6／-15／-12（PR #1087），rest 在 PR 的 run 上 510 s；不加 shard、不改 timeout。campaigns-7 自己的兩個 campaign 一次 354 s、一次 603 s，搖擺很大，不要再往裡面放東西。**之後**：rest 再長，照 `swift-shards.sh` 的時間表註解再搬（run 摘要的「Slowest classes」只列 5 類，要整份 job log 才看得到每類時間）；小的 GameCore 類別不要搬，campaign shard 點名的類別在 `pr_plan` 會被當成「改到的 campaign」，讓改它的 PR 跑全套 | `swift-shards.sh` 2026-10-23 later 的註解 |
 | campaign shard 再平衡（2026-10-23，session_01KcZCRGFREEAx22ncMXAMwJ，`claude/campaign-shards-under-limit`）：#1087 合併後 main 4d2c8ce 的 run 39932184002 上 campaigns-10 job 19.0 分（測試 891 s）、-11 812 s、-15 793 s。只搬 GamePresentation 類別（不改任何 PR 的 tier）：TRADemo → -3、RealWorldDemo → -4、Map3DStreetLife／StationCommerceCard／Map3D／LineLossDiagnosis → -6、RealRailwayTracing／Map3DStreaming → -13、NetworkPostcard／NewGameSaveProperty 回 rest；FlexDispatchPropertyTests（GameCore、自我測試用到）不動。不加 shard、不改 timeout。**之後**：同一組類別在不同 runner 上可差到 1.9 倍（campaigns-1 一次 384 s、一次 738 s），看分片空間要用它最長的那次；campaigns-1、-2、-14 最長已 12.3–13.5 分測試，不要再放 | `swift-shards.sh` 2026-10-23 after #1087 的註解 |
 | rest 再次撞 20 分上限與分片容量（2026-10-24，session_016VsuVC61edGEaS3rfsHJkS，#1184 與決策 404）：main 82fffc7 的 rest 被取消（15m03s 測試，新的 Map3DPlatformClearanceTests 113 s 沒被點名）；Map3DSceneMemoryTests 實際 274 s，權重卻寫 57。#1184 把 5 個 GamePresentation 類別搬到 -11／-1／-4／-12／-8，rest 剩 9m19s 測試。決策 404 讓分片的 job 用到 15 分時印警告、到 18 分 30 秒印出最慢的類別，權重錯了也會警告。#1186 加了第 18 個分片（全綠，-11 的 job 19m33s）。決策 404 的 PR（#1189）試了每片 `swift test --parallel`：本機 4 核把 839 s 的分片縮到 423 s，但 CI 的 full-ci run 40106343236 裡 -11 逾時、-17 與 rest 變慢（每個測試在自己的 process 裡，類別的 `static let` fixture 每個測試重建一次），所以 `SWIFT_TEST_WORKERS` 退回 1（session_01PGYZVEDnKApav7UJwBzzRT 接手）。**之後**：以類別為單位的平行與分片合併，寫在決策 404「下一步」，沒排 | `docs/decisions/404.md` |
-| full lane 的餘裕（2026-10-23，session_01GaPJUuAAMyqKsvxJjpnhEf，PR #1140）：main b6ca9af2 的 full lane（ios-build.yml run 40020950220）紅了三個，判為慢 runner。(1) 「UI tests, second」撞 50 分上限：三次都有跑的 40 個測試合計 09640f5（run 39957090683）28.1 分 → 0149127（run 39992945211）34.6 分 → b6ca9af 46.4 分；測試數沒變，先跑的（20:53–21:16）慢了 2–5 倍，後面的持平，暖機也從 1.5 分變 3.6–5.3 分。正常要 41–44 分，離上限不到 10 分。(2) `ShellLayoutUITests/testTheStatusBarKeepsItsWidthAsTheDaysGoBy`：在 main ff8e4dd 用 only_testing 重跑（run 40032432984）綠，但 6000× 的觀察迴圈用了 65 s（0149127 是 28 s），換日來得晚，餘裕小；#1139 的 G1 會減少 6000× 的 CPU 負擔。(3) 同一晚 ff8e4dd 的 nightly（run 40026341039）紅的兩個 SettingsUITests（音效開關與音量、回報問題附存檔的開關）**不是**慢 runner：在 main 6b28e76 用 only_testing 重跑（run 40044073708）一樣紅在同幾行。原因是決策 381 在設定最上面加了語言區、說明下加了資料來源，手機橫放時音量列和附存檔開關落到更下面，List 還沒捲近就不建那一列；畫面拖動的 24 次也不夠。修法（分支 `claude/settings-tests-landscape`）：附存檔開關多拖幾次（`dragUntilWhollyOnScreen` 新增 `drags:`，這裡給 40），音效開關先切換再往下找音量；拖 List 自己左緣在橫放時捲不動，不用。綠（run 40047802171）。(4) 2026-10-24（session_01VZJVMsPVmSxC3WeNiv9Yuw，PR #1150）：從 09640f5 到 584bddd 六次 full lane 的 log 逐類加總，`RealWorldMapUITests`（13.9 分，慢 runner 11.7）從 second 搬到 build job，second 的 UI 步驟上限 50 → 55（跟 lessons 一樣；job 上限仍 75）。分支上跑一次 full lane（run 40055148286，d0c0376）：second UI 步驟 27.1 分／55、lessons 38.1／55、build 60.0／75（RealWorldMapUITests 在裡面 15.3 分；job 71.8／95），三個都留 10 分以上；build 唯一的紅是 main 上本來就紅的 HUDAlignment `menu.more`，不是逾時。**之後**：加新的 UI 測試類別先看三個 job 誰在 b6ca9af 那種慢 runner 上還留 10 分（數字在 `FULL_LANE_SECOND_JOB` 上方註解），放那裡；都放不下就用 `Class/testMethod` 把大類別（MapInteractionTests、LessonUITests、StartSaveFlowSmokeTests）按方法拆到別的 job，再不夠才問規劃要不要第四個 job；狀態列測試在正常 runner 上再紅，先看 6000× 主執行緒的負擔，不要放寬門檻 | `ios-build.yml` 的 `FULL_LANE_SECOND_JOB` 註解；PR #1140、#1150 說明 |
+| full lane 的餘裕（2026-10-23，session_01GaPJUuAAMyqKsvxJjpnhEf，PR #1140）：main b6ca9af2 的 full lane（ios-build.yml run 40020950220）紅了三個，判為慢 runner。(1) 「UI tests, second」撞 50 分上限：三次都有跑的 40 個測試合計 09640f5（run 39957090683）28.1 分 → 0149127（run 39992945211）34.6 分 → b6ca9af 46.4 分；測試數沒變，先跑的（20:53–21:16）慢了 2–5 倍，後面的持平，暖機也從 1.5 分變 3.6–5.3 分。正常要 41–44 分，離上限不到 10 分。(2) `ShellLayoutUITests/testTheStatusBarKeepsItsWidthAsTheDaysGoBy`：在 main ff8e4dd 用 only_testing 重跑（run 40032432984）綠，但 6000× 的觀察迴圈用了 65 s（0149127 是 28 s），換日來得晚，餘裕小；#1139 的 G1 會減少 6000× 的 CPU 負擔。(3) 同一晚 ff8e4dd 的 nightly（run 40026341039）紅的兩個 SettingsUITests（音效開關與音量、回報問題附存檔的開關）**不是**慢 runner：在 main 6b28e76 用 only_testing 重跑（run 40044073708）一樣紅在同幾行。原因是決策 381 在設定最上面加了語言區、說明下加了資料來源，手機橫放時音量列和附存檔開關落到更下面，List 還沒捲近就不建那一列；畫面拖動的 24 次也不夠。修法（分支 `claude/settings-tests-landscape`）：附存檔開關多拖幾次（`dragUntilWhollyOnScreen` 新增 `drags:`，這裡給 40），音效開關先切換再往下找音量；拖 List 自己左緣在橫放時捲不動，不用。綠（run 40047802171）。(4) 2026-10-24（session_01VZJVMsPVmSxC3WeNiv9Yuw，PR #1150）：從 09640f5 到 584bddd 六次 full lane 的 log 逐類加總，`RealWorldMapUITests`（13.9 分，慢 runner 11.7）從 second 搬到 build job，second 的 UI 步驟上限 50 → 55（跟 lessons 一樣；job 上限仍 75）。分支上跑一次 full lane（run 40055148286，d0c0376）：second UI 步驟 27.1 分／55、lessons 38.1／55、build 60.0／75（RealWorldMapUITests 在裡面 15.3 分；job 71.8／95），三個都留 10 分以上；build 唯一的紅是 main 上本來就紅的 HUDAlignment `menu.more`，不是逾時。**之後**：加新的 UI 測試類別先看三個 job 誰在 b6ca9af 那種慢 runner 上還留 10 分（數字在 `FULL_LANE_SECOND_JOB` 上方註解），放那裡；都放不下就用 `Class/testMethod` 把大類別（MapInteractionTests、LessonUITests、StartSaveFlowSmokeTests）按方法拆到別的 job，再不夠才問規劃要不要第四個 job；狀態列測試在正常 runner 上再紅，先看 6000× 主執行緒的負擔，不要放寬門檻。(5) 2026-10-28（派工單 BD，session_01YGNNukhJnBuFzBv2ipaCEu）：`4d08067` 的 full lane（run 40616551940）second 撞 55 分，停在 SettingsUITests 拖找 `settings.report.attach` 的中途（那支才跑 43 秒），不是卡住：同一批 49 個測試比 `f70a4cb` 慢 1.67 倍（1914 → 3198 秒），同一 commit 的 lessons、build 都正常，是那台 runner 慢。smoke 的紅是第一支 `CoverageShortcutUITests` 的 App 啟動（Xcode launch）66 秒逾時，App 一行都還沒跑，其他 7 個 job 的第一次啟動都在 25 秒內。second、lessons 的 UI 步驟上限 55 → 75、job 75 → 95（和 build job 一樣）；之後加測試仍照上面「留 10 分」的規則放 | `ios-build.yml` 的 `FULL_LANE_SECOND_JOB` 註解；PR #1140、#1150 說明 |
 | 86.1 的 full lane（2026-10-24，session_01NDDS2s5myyGvhD26ZW26zB，`claude/full-lane-86-1-fix`）：main 584bddd 的 run 40051175469 紅四個，都不是 App 的退步。`HUDAlignmentUITests` 的說明測試還在點決策 383 拿掉的 `menu.more`（292db69 也紅），改成直接點 `menu.help`；其餘三個是慢 runner 上測試太緊：`StartSaveFlowSmokeTests` 的列車選單選好 Train 5 後收起，2 秒前列出的那一列再讀就失敗（`touchable` 改讀 snapshot），`MapInteractionTests` 改名欄一次查詢要 4 秒、5 秒只看了一次（等 20 秒，仍然不點欄位），`LessonUITests` 第 5 課的「略過」在卡片滑入時按空（還在就再按一次）。**再後來**（同一 session，`claude/lesson-pause-retry`）：#1153 分支的 full lane（run 40060038516）第 8 課的 `pause()` 按了 Pause、5 秒沒看到 Resume（按空），改成時鐘還在走才再按（最多 3 次，每次等 10 秒），`showGuide()` 也不再只給卡片 2 秒。**之後**：同一類「元素在列出與讀取之間消失」的失敗，照 `touchable` 用 `try? snapshot()`，不要加長等待 | 這個 PR 的說明 |
 | TDX（運輸資料流通服務）查資料：`.github/workflows/tdx-check.yml`——#850 已合併。Actions → Check TDX API → Run workflow，`path` 填 `/api/basic/` 或 `/api/advanced/` 開頭的 API 路徑與查詢（預設台鐵第一個車站），回答在 run 的 artifact `tdx-response`（保留 7 天）。session 用 GitHub 工具觸發（`actions_run_trigger`，`tdx-check.yml`，ref `main`）再下載 artifact。金鑰是 repository secrets `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`，只有這個 workflow 讀得到；不要貼在對話、不要存進 repository。TDX 有票價、時刻、站表、路線色，沒有各站運量 | #850、決策 298 |
 
@@ -2160,6 +2199,17 @@ TEMU1000 原生外形（Codex，初版 issue #1228／公開 #1230／私庫 #78 �
 
 EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車頭、下裙／連結器、輪架與遊戲配色。真8ebfd9fd第一版完整包保持；新revision-2，罩面沿實際殼曲線、圓裙凹槽與折面排障器，車身用既有D3D4DA、玻璃shade0.62，綠松／藏青保持；輪胎與屋頂設備原三角保護。另補#1041前版漏做的light介面，頭2188／中868–1092三角，36單元與近59448／遠33800／light12056十輛展示及18全payload pins。最新main b7710cb7 C341整合保持；只靜態註冊，無營運自動換用。全量重出／真前後／驗證與固定producer、下載SHA、最新同head CI見自有README及issue，外觀自檢不等於使用者接受，人工Simulator／真機Metal效能與動畫仍未驗。不改GameCore／存檔／fixtures／玩法，不合併／auto-merge／TestFlight。
 
+### 2026-10-27 Codex C371／C381 原生靜態素材
+
+本次製作各自 DM/T/M/反向端車與原廠六輛 DM1–T–M2＋M2–T–DM1。台灣車輛官網規格及兩張已開啟的 Commons 實車照片、兩張使用者插畫來源與缺口詳見 [製作紀錄](art/c371-c381-2026-10-27/README.md)。真第一版與最終版原生、GLB、預覽及同相機比較保留於互鏈私庫 draft。只在 Map3DModels 註冊單元；`metroC381` 是含其他路線及 C371/C381 性能的共用營運接點，沒有更動，合併後不會自動出現在營運列車。外觀仍待改善 C381 圓鼻、兩款車頂與設備精度；真機 Metal／動畫／效能／完整碰撞未驗。技術、ZIP、producer 和最新 CI 以本次 issue 及私包紀錄為準。不動 GameCore、存檔、Golden／Replay／Save fixtures、玩法，不合併、不啟動 TestFlight。
+
+**C371／C381 外觀修訂（Codex，同 #1341／公開 draft #1342／私有 draft #103）**：使用者明確指出兩款第一交付很醜，撤回任何外觀合格推斷。重新開啟 C371 月台前斜及 C381 近正實車照片，重做兩車頭圓罩、駕駛／逃生窗、燈組與雨刷，C381 另有前下 V 形藍分色、側主藍帶；屋頂補低矮格柵與肋條。原廠尺寸／六輛編組與營運映射不變。真正先前私包 `df3f041a` 將完整保留於新包 `history/true-v4/`；同相機比較和新來源、獨立驗證以私包／issue 最新紀錄為準。黑罩曲率、燈腔、設備站位仍有比例推估，不代表已獲外觀接受。只靜態註冊，合併不會自動出現在營運列車。
+
+**C371 優先修訂（Codex，同 PR／issue）**：使用者又提供三張實車照片，要求先以 C341 的完成度標準修 C371。三張均直接目視，原始檔與授權未取得；銀灰側殼、連續低矮肋條、黑色直立前罩與小型下緣設備的目視依據和限制見[製作紀錄](art/c371-c381-2026-10-27/README.md)。前一次完整交付含 ZIP 原樣保留於私包 `history/true-v5/`；本輪只改 C371 配方與共用 builder 的 C371 分支，C381 10 個原生／GLB 檔案逐 bytes 相同。C371 六車 14,816 三角，低於 15,000 單檔上限；C341 和其他車模型幾何未取用。外觀自檢有進步但設備精確站位、真機 Metal 與使用者接受仍未驗證；仍只靜態素材註冊，合併後不會自動出現在營運列車。
+
+**C371 方框再修（Codex，同 PR／issue）**：使用者仍嫌正面方框，並要求用已合併的 PR #1357。從最新 main 取得 rolling-stock skill 與 `tools/train-models/`，共用工具拍 C371 日夜七向並檢 FNV 鎖；原生編組／GLB／ZIP 仍由自有專用驗收製作。圓角銀色端面有厚度並重疊支承，黑罩與前窗圓角加大，側窗／門框變薄；試作末段漸縮在正面露出藍色方塊，撤回而非出貨。真前版全包在私庫 `history/true-v6/`，目前 C371 六車 14,936 三角；C381 原生／GLB 仍應逐 bytes 核對。新外觀與測試、CI 以自有製作紀錄及 #1341 最新狀態為準，尚無使用者外觀接受或真機驗證。靜態註冊依舊不會自動替換營運列車。
+
+**跨帳戶續作（Codex，同 #1341）**：使用者要由另一個帳戶的 Codex 接手 C371 查實車圖、修原生幾何並更新既有兩個 draft PR。接手起點、可跨帳戶開啟的原圖、現存可見缺陷、真前版與完整 ZIP、分支權限及重建驗證步驟見 [C371 跨帳戶交接](art/c371-c381-2026-10-27/CROSS_ACCOUNT_HANDOFF.md)。本對話的內嵌照片不會自動出現在另一帳戶，不能寫成接手者已查看。C371 方框感仍待修；C381 本輪未修形、未獲外觀接受。
 ### 2026-10-27 Codex 台北捷運610（#1359）
 
 [專用來源／角色／重建與驗收](art/taipei610-2026-10-27/README.md)。使用者命名台北捷運610，環狀線第一階段正常白黃塗裝，獨立A-C-D-B四動車，三級12單元與合法assembly；沒有同車型獨立原生前版，私庫Q比例y100不套殼，接入前顯示只取真wenhu並明標。最新373註冊＋3直接比較完整payload保持（包含最新月台整合新增項）；已接受E500v3／EMU3000v5及EMU900第二版、其他既有包不動。私庫E1000#88合在PP分支而非main祖先，不能只因merged宣稱main已有素材。沒有610獨占營運接點（BR/Y共用wenhu），本批尚未接入營運，合併不會有營運車自動換用；解鎖／列車包／fallback保持。外觀自檢與使用者接受分開，未經使用者接受；Linux幾何／WebGL／Swift6.4與ZIP證據及互鏈draft見#1359。人工Simulator／真機Metal效能／動畫與完整動態碰撞未驗。只追加自有配方與必要通用匯出適配，不改GameCore／存檔／fixtures；不合併、不推main／auto-merge／TestFlight。

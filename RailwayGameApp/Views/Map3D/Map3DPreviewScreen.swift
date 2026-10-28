@@ -45,6 +45,9 @@ struct Map3DPreviewScreen: View {
     @State private var built: Map3DBuiltScene?
     private var scene: Map3DScene? { built?.scene }
     @State private var sceneVersion = 0
+    /// K1-1, K2-4: whether ``Map3DView/models`` is made, off the main
+    /// thread, before the view shows the first scene.
+    @State private var modelsReady = false
     @State private var stats: Map3DMetalView.Stats?
     @State private var showsDetails = false
     @State private var feed = Map3DTrainFeed()
@@ -77,7 +80,7 @@ struct Map3DPreviewScreen: View {
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: ambient?.view3D ?? followView) },
-                      departure: departure, world: session.world,
+                      departure: departure, world: session.world, modelsReady: modelsReady,
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
@@ -86,7 +89,7 @@ struct Map3DPreviewScreen: View {
                 .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
                 .ignoresSafeArea()
-            if built == nil {
+            if built == nil || !modelsReady {
                 ProgressView()
                     .controlSize(.large)
             }
@@ -220,6 +223,12 @@ struct Map3DPreviewScreen: View {
             guard !Task.isCancelled else { return }
             self.built = built
             sceneVersion &+= 1
+        }
+        .task {
+            // K1-1, K2-4: the train models (and their baked shade), made
+            // once on another thread, as the train showcase makes them.
+            _ = await Task.detached(priority: .userInitiated) { Map3DView.models?.models.count }.value
+            modelsReady = true
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             feed.update(world: session.world, palette: linePalette)
@@ -712,6 +721,8 @@ private struct Map3DView: UIViewRepresentable {
     /// flown to at its platform, in `world`.
     let departure: Map3DNextDeparture?
     let world: GameWorld
+    /// Whether ``models`` is made; the first scene waits for it.
+    let modelsReady: Bool
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -720,8 +731,9 @@ private struct Map3DView: UIViewRepresentable {
 
     /// Decision 230: the train models, made in code once.
     // The city bus and the evening trucks (decision 437) from their
-    // files, or the box-built ones.
-    static let models: Map3DModelPack? = Map3DGarbageTruck.pack(
+    // files, or the box-built ones. K1-1, K2-4: made off the main thread
+    // (the screen's `modelsReady`), never first read in `makeUIView`.
+    nonisolated static let models: Map3DModelPack? = Map3DGarbageTruck.pack(
         Map3DCityBus.pack(file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension)),
         files: Map3DGarbageTruck.fileNames.compactMapValues { Bundle.main.url(forResource: $0, withExtension: Map3DGarbageTruck.fileExtension) })
 
@@ -741,9 +753,6 @@ private struct Map3DView: UIViewRepresentable {
         context.coordinator.streamer.view = view
         view.onCamera = { [weak coordinator = context.coordinator] camera, time in coordinator?.streamer.step(camera, at: time) }
         view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
-        if let models = Self.models {
-            view.useModels(models)
-        }
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
@@ -788,8 +797,11 @@ private struct Map3DView: UIViewRepresentable {
                 }
             }
         }
-        guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
+        guard let scene, modelsReady, context.coordinator.shownVersion != sceneVersion else { return }
         let first = context.coordinator.shownVersion == nil
+        if first, let models = Self.models {
+            view.useModels(models)
+        }
         context.coordinator.shownVersion = sceneVersion
         // Decision 358: the chunks built ahead that the scene built anew
         // round the same place does not hold, kept until built again.

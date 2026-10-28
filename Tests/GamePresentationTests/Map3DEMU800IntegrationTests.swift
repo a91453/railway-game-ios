@@ -307,7 +307,7 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
         XCTAssertEqual(hash(Map3DEMU500.formation()), "6c52052f859d9cd1")
         XCTAssertEqual(Map3DEMU500.model(.emc).vertices, Map3DEMU500.model(.emc, far: false).vertices)
         XCTAssertEqual(Map3DEMU500.formation().triangleCount, Map3DEMU500.order.reduce(0) { $0 + Map3DEMU500.model($1).triangleCount })
-        XCTAssertNotNil(pack.index(of: "emu500-formation"))
+        XCTAssertNotNil(Map3DModelPack.unbakedStudies.index(of: "emu500-formation"), "K1-1: in the tools' pack")
         XCTAssertEqual(pack.models.last?.name, Map3DLowFloorBus.routeModel().name, "the route bus is still the last model")
     }
 

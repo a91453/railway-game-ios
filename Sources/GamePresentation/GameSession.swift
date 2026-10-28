@@ -1352,7 +1352,7 @@ public final class GameSession {
 
     /// Puts ``heldSpeed`` in place, after the tick that held it: logged
     /// after that tick, as it took effect. A pause since stays.
-    private func applyHeldSpeed() {
+    func applyHeldSpeed() {
         guard let speed = heldSpeed else { return }
         heldSpeed = nil
         let paused = world.clock.isPaused

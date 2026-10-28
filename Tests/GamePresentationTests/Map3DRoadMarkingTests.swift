@@ -310,6 +310,32 @@ final class Map3DRoadMarkingTests: XCTestCase {
         XCTAssertTrue(Map3DRoadMarkings([road(.service, [(0, 0), (0, 200)])]).marks.isEmpty)
     }
 
+    /// Review K2-5: a lane bending through the heading the sides divide at
+    /// (some 20° east of south) keeps its band on one side all the way,
+    /// drawn either way; each stretch deciding for itself turned it over
+    /// at the bend.
+    func testABendingLaneKeepsItsWalkwayOnOneSide() {
+        let points = [(0.0, 0.0), (30.0, 95.0), (68.0, 188.0)]
+        // Either side of the dividing heading, each stretch on its own.
+        XCTAssertEqual(Map3DRoadMarkings.walkwaySide(Point(x: 30, z: 95)), -1)
+        XCTAssertEqual(Map3DRoadMarkings.walkwaySide(Point(x: 38, z: 93)), 1)
+        // Which side of the lane, as `points` run, each piece of band is on.
+        func sides(_ lane: [(Double, Double)]) -> Set<Double> {
+            let bands = Map3DRoadMarkings([road(.minor, lane)]).marks.filter { $0.kind == .walkway(line: false) }
+            XCTAssertEqual(bands.map(\.length).reduce(0, +), hypot(95, 30) + hypot(93, 38), accuracy: 1e-6)
+            return Set(bands.map { band in
+                let (a, b) = zip(points, points.dropFirst()).first { a, b in
+                    let length = hypot(b.0 - a.0, b.1 - a.1)
+                    return abs(abs(band.along.x * (b.0 - a.0) + band.along.z * (b.1 - a.1)) / length - 1) < 1e-9
+                }!
+                let cross = (b.0 - a.0) * (band.centre.z - a.1) - (b.1 - a.1) * (band.centre.x - a.0)
+                return cross > 0 ? 1 : -1
+            })
+        }
+        XCTAssertEqual(sides(points).count, 1, "on one side")
+        XCTAssertEqual(sides(points), sides(points.reversed()), "drawn the other way")
+    }
+
     /// Decision 447 (continued): Taipei's arcade, 3.64 m from the road's
     /// line (臺北市建築管理自治條例第 7 條).
     func testTheArcadeIsTaipeisDepth() {

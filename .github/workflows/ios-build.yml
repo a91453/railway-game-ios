@@ -148,6 +148,21 @@ permissions:
 # 3.9-4.6 to lessons (at most 37.7 + 4.6 = 42.3 of 55): the build job's
 # slowest UI step would have been about 60.6 of 75. All three keep ten
 # minutes or more.
+#
+# 2026-10-28: second's UI step ran out its 55 minutes on 4d08067
+# (40616551940): 49 of its 54 tests in 53.3 minutes, the last one
+# (SettingsUITests' report switch, 43 s in) cut mid-drag. Not a hang nor a
+# slower app: the same commit's lessons job took 34.7 minutes (2079.7 s;
+# 39.8 on 4d5c799, 40530426324) and the build job's 52.8 (3165 s; 54.1 on
+# 4d5c799), but that one runner took 1.67 times as long for the same 49
+# tests as f70a4cb's (40592891253; 1914 -> 3198 s, MapInteractionTests
+# 1027 -> 1921 s), its accessibility queries 5-14 s instead of under one.
+# Second's tests took 35.7 (f70a4cb) and 46.5 (4d5c799) minutes on normal
+# runners and about 60 on that one; lessons' 34.7-51.5 (51.5 on f70a4cb's,
+# 40592891253). On a slow runner neither fits in 55, and the build job's
+# 52.8-54.1 of 75 has no class to spare, so second and lessons got the
+# build job's limits: 75 for the UI step, 95 for the job. A hung test is
+# still stopped by its own 8 (at most 10) minutes.
 env:
   FULL_LANE_SECOND_JOB: "MapInteractionTests SettingsUITests HUDAlignmentUITests LineDraftSummaryUITests"
   FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests LineRoutePreferenceUITests"
@@ -723,8 +738,9 @@ jobs:
     env:
       PARTITION: ${{ matrix.partition }}
     # Build (about 8 minutes on a slow runner), boot (14 at most), warm-up
-    # (5) and the tests (45).
-    timeout-minutes: 75
+    # (5) and the tests (75): 95, as the build job's. On 4d08067 the steps
+    # before the tests took 12.2 minutes.
+    timeout-minutes: 95
     steps:
       - uses: actions/checkout@v7
 
@@ -790,7 +806,10 @@ jobs:
         # The job still has its 75-minute cap. Second got 55 too on
         # 2026-10-24: about 43.5 minutes on a runner as slow as b6ca9af's
         # (see FULL_LANE_SECOND_JOB), and some 58 for the whole job.
-        timeout-minutes: 55
+        # 2026-10-28: 75 for both, as the build job's UI step: a runner as
+        # slow as 4d08067's second took some 60 minutes (see
+        # FULL_LANE_SECOND_JOB).
+        timeout-minutes: 75
         run: |
           case "$PARTITION" in
             second) classes="$FULL_LANE_SECOND_JOB" ;;

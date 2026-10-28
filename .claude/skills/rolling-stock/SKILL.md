@@ -21,7 +21,7 @@ CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-p
 
 ## 2. 配方放哪
 
-- **模型包**：`Map3DModelPack.standard`（`Map3DModels.swift`）。每個模型有名字、`vertices`（三個一組，各帶這個三角形自己的平面法線）、`minimum`／`maximum`。座標：**+x 車頭、+y 左、+z 上、軌面 z = 0、公尺、車廂中心 x = 0**。
+- **模型包**：`Map3DModelPack.standard`（`Map3DModels.swift`）。App 第一次開 3D 前把它整包建好、CPU 與 GPU 各留一份，所以**遊戲不畫的靜態展示模型**（單元、整列、角色，沒有 set 接它們）放 `Map3DModelPack.studies`，只給工具與 `hashes.lock.json` 讀（審查 K1-1）。`standard` 的模型數與總頂點數由 `Map3DModelPackSizeTests` 釘住：加進 `standard` 的車要改那兩個數，並在 PR 寫多了多少。每個模型有名字、`vertices`（三個一組，各帶這個三角形自己的平面法線）、`minimum`／`maximum`。座標：**+x 車頭、+y 左、+z 上、軌面 z = 0、公尺、車廂中心 x = 0**。
 - **程式放樣的車**：`Map3DTrainShell`（`Map3DTrainStyle` 的 cab／car／panto）。每款專用車有自己的配方檔：`Map3DEMU800`、`Map3DEMU900`、`Map3DEMU500`、`Map3DEMU3000`、`Map3DTEMU1000`／`2000`、`Map3DC341`、`Map3DE500`、`Map3DN700SG`、`Map3DTrainShapeRefresh`（700T、E200）…
 - **編組**：`Map3DTrainSet`（`Map3DTrainSets.swift`）。一個 set 有 key、近景的 head／middle／tail／panto／centre／single、`far`（遠景 set 的 key）、`ownLengths`、`cycle`（中間車的循環）。模型名字照 `set-<key>-<單元>`，遠景 `set-<key>Far-<單元>`。`Map3DTrainSet.byKey` 是全部。
 - **接進營運**：`Map3DModelPack.modelIndex(forType:carIndex:count:)`、`layout(forType:count:)`；`Map3DTrains` 擺實例。只加模型、沒接 set，合併後不會在遊戲裡出現。
