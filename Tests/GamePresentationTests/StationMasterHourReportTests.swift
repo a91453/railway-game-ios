@@ -31,25 +31,25 @@ final class StationMasterHourReportTests: XCTestCase {
             world = saved.world
         } else {
             let side = Int(environment["STATION_MASTER_GRID"] ?? "") ?? 9
-            world = try Self.grid(side: side)
+            world = try Self.grid(side: side, trains: Int(environment["STATION_MASTER_TRAINS"] ?? "") ?? 8)
         }
         let session = GameSession(world: world)
         session.setSpeed(.fast)
         let clock = ContinuousClock()
         var before = Duration.zero, now = Duration.zero, release = Duration.zero, releases = 0
-        var slowestBefore = Duration.zero, slowestNow = Duration.zero, slowestRelease = Duration.zero
+        var slowestBefore = Duration.zero, slowestNow = Duration.zero, slowestRelease = Duration.zero, slowestReleaseAt: Int64 = 0
         var lastHour = session.adviceHour, seen = 0
         print("stations \(world.stations.count), lines \(world.lines.count), trains \(world.trains.count)")
         while seen < hours {
-            var stale: GameWorld? = session.world
-            let tick = try XCTUnwrap(session.beginLoopTick())
-            let outcome = await tick.work()
-            XCTAssertTrue(session.finish(tick, with: outcome))
-            let let_go = clock.measure { stale = nil }
-            XCTAssertNil(stale)
+            var tick = session.beginLoopTick()
+            let outcome = try await XCTUnwrap(tick).work()
+            XCTAssertTrue(session.finish(try XCTUnwrap(tick), with: outcome))
+            // What the game loop let go of on the main actor before
+            // decision 459, which it now lets go of off it.
+            let let_go = clock.measure { tick = nil }
             release += let_go
             releases += 1
-            slowestRelease = max(slowestRelease, let_go)
+            if let_go > slowestRelease { slowestRelease = let_go; slowestReleaseAt = session.world.clock.now.seconds }
             guard session.adviceHour != lastHour else { continue }
             lastHour = session.adviceHour
             seen += 1
@@ -72,12 +72,14 @@ final class StationMasterHourReportTests: XCTestCase {
         }
         print("hours \(hours): before \(ms(before / hours)) an hour (slowest \(ms(slowestBefore))), "
             + "now \(ms(now / hours)) (slowest \(ms(slowestNow))), worked out on the main actor \(session.stationMasterAdviceWorkedOut)")
-        print("letting go of the world a tick replaced: \(ms(release / releases)) a tick (slowest \(ms(slowestRelease))), \(releases) ticks")
+        print("letting go of the world a tick replaced: \(ms(release / releases)) a tick (slowest \(ms(slowestRelease)) at \(slowestReleaseAt) s), \(releases) ticks")
     }
 
     /// A grid of `side × side` stations, 1 km apart, a line along every row
-    /// and every column with three trains, running all day from 07:00.
-    static func grid(side: Int) throws -> GameWorld {
+    /// and every column with `trains` trains of four cars, running all day
+    /// from 07:00 (9 × 9 and 8: 81 stations, 18 lines, 144 trains, near
+    /// 92.1's game).
+    static func grid(side: Int, trains: Int) throws -> GameWorld {
         let spacing = 1_000 * WorldCoordinate.unitsPerMetre
         var world = GameWorld(bounds: try WorldBounds(width: spacing * Int64(side + 1), height: spacing * Int64(side + 1)),
                               economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
@@ -115,7 +117,11 @@ final class StationMasterHourReportTests: XCTestCase {
         lines += try (0..<side).map { x in try world.createLine(named: "Column \(x)", stops: stations.map { $0[x] }).id }
         for line in lines {
             try world.setLineServiceWindow(line, to: .allDay)
-            try world.setLineTrainsInService(line, to: TrainsInService(peak: 3, offPeak: 2, low: 1))
+            for index in 0..<trains {
+                let train = try world.purchaseTrain(named: "\(line.rawValue)-\(index)").id
+                try world.setTrainCars(train, to: 4)
+                try world.assignTrain(train, to: line)
+            }
         }
         let kinds: [StationDemandKind] = [.residential, .office, .shopping, .scenic]
         for (index, id) in stations.joined().enumerated() {

@@ -1979,9 +1979,12 @@ public final class GameSession {
                     guard !Task.isCancelled else { return }
                     self.finish(tick, with: outcome)
                     // Decision 330: the world the tick replaced is let go
-                    // here, timed for the map's frame readout.
+                    // here, timed for the map's frame readout. Decision
+                    // 459: off the main actor, where the tick holds the
+                    // last of it (92.1's game: up to tens of ms a tick).
                     let releasing = ContinuousClock.now
-                    _ = consume tick
+                    let replaced = consume tick
+                    Task.detached(priority: .utility) { _ = consume replaced }
                     FrameCostMeter.shared.record(.release, since: releasing)
                     if case .failure = outcome { break }
                 }
