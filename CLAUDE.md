@@ -386,7 +386,7 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   a91453/railway-assets-private, `game-art-previews/docs/art/`
   (owner, 2026-10-21; moved from `a91453/railway-reference-private`,
   `Railway/game-art-previews/docs/art/`, on 2026-10-28 because that
-  repository passed 3 GB; its old copy stays readable); the pull request keeps one overview image, the
+  repository passed 3 GB; the old copy was deleted, so read the same path in the new repository); the pull request keeps one overview image, the
   README and the images code or docs link to. There, only the newest
   round of a model keeps its models and its viewer (which opens offline,
   so no ZIP of the folder's own files); a round it replaces keeps only its
