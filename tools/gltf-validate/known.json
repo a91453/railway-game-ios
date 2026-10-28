@@ -1,0 +1,25 @@
+{
+  "comment": "Decision 467: errors the validator finds in files kept as they came, each with why it stays. A new error, in these files or any other, fails the run.",
+  "files": {
+    "Web/CityView/public/models/town/nature/tree_default.glb": {
+      "errors": ["SCENE_NON_ROOT_NODE"],
+      "why": "Kenney Nature Kit (CC0) as it came; three.js and the tools read it."
+    },
+    "Web/CityView/public/models/town/nature/tree_oak.glb": {
+      "errors": ["SCENE_NON_ROOT_NODE"],
+      "why": "Kenney Nature Kit (CC0) as it came; three.js and the tools read it."
+    },
+    "Web/CityView/public/models/town/nature/tree_simple.glb": {
+      "errors": ["SCENE_NON_ROOT_NODE"],
+      "why": "Kenney Nature Kit (CC0) as it came; three.js and the tools read it."
+    },
+    "tools/glb-to-m3dmodel/fixtures/tiny.glb": {
+      "errors": ["MESH_PRIMITIVE_POSITION_ACCESSOR_WITHOUT_BOUNDS"],
+      "why": "The converter's smallest test file, written by make-fixture.mjs without accessor bounds; the converter does not need them."
+    },
+    "tools/kenney-props/source/detail-tank.glb": {
+      "errors": ["ACCESSOR_VECTOR3_NON_UNIT"],
+      "why": "Kenney City Kit (Industrial) (CC0) as it came: six zero normals on triangles with no area, which the converter leaves out."
+    }
+  }
+}

@@ -718,10 +718,25 @@ extension Map3DScene.Builder {
                         Map3DBaseMap.Point(x: centre.x + left.x * by * side + along.x * ahead, z: centre.z + left.z * by * side + along.z * ahead)
                     }
                     let seed = (Int32(truncatingIfNeeded: Int(((centre.x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((centre.z + south) * 2).rounded())))
-                    if pavement >= 2.5, let model = Self.propModels[.busStop] {
+                    let sheltered = pavement >= 2.5
+                    if sheltered, let model = Self.propModels[.busStop] {
                         // The shelter stands back from the kerb.
                         place(model, at: out(width / 2 + pavement - 1.05), forward: forward, clearing: 3, tint: Map3DColor.rgb(0xFFFFFF),
                               onDeck: road.bridgeLevel > 0)
+                    } else if !sheltered, let model = Self.sceneryModels[.busStopPole] {
+                        // Decision 467: the sign alone, by the kerb.
+                        place(model, at: out(width / 2 + 0.45, ahead: -1.5), forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF),
+                              onDeck: road.bridgeLevel > 0)
+                    }
+                    // Decision 467: post boxes by some of the stops, at the
+                    // back of the pavement, clear of the shelter's sign
+                    // (2.75 m along it) on the other side from the vending
+                    // machine.
+                    if map3DRandom(seed.0, seed.1, salt: 358) < Self.postBoxShare, let model = Self.sceneryModels[.postBoxes] {
+                        place(model, at: out(width / 2 + pavement - 0.4, ahead: sheltered ? -3.6 : -3), forward: forward, clearing: 1.2,
+                              tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
+                    }
+                    if sheltered {
                         guard map3DRandom(seed.0, seed.1, salt: 356) < 0.4 else { continue }
                     }
                     if let model = Self.propModels[.vending] {
@@ -750,6 +765,10 @@ extension Map3DScene.Builder {
 
     /// No stop this near a marked junction (its crossing and its signals).
     static let stopClearOfJunctions = 30.0
+
+    /// Decision 467: how many of the stops have a pair of post boxes by
+    /// them.
+    static let postBoxShare: Float = 0.3
 
     /// The vending machines' bodies (props.js `VENDING_BODY`), in the
     /// palette's softer tones: white, red, blue, cream.

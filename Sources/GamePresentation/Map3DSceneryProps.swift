@@ -12,6 +12,13 @@ import GameCore
 // in ``Map3DModelPack/standard``, drawn where its file cannot be read;
 // both are drawn as instances near the camera, as the street furniture
 // (``Map3DProp``).
+//
+// Decision 467: a pair of post boxes, red and green, and a bus stop's sign
+// on its own pole, the first of the owner's Meshy street props
+// (`meshy-batch-2026-10`, text-to-3D, so the data-source page says they
+// are generated), simplified and recoloured by `tools/meshy-props/`; the
+// app bundles them as `Resources/Models/meshy-*.m3dmodel`, read as the
+// Kenney ones.
 
 /// A piece of scenery and its model.
 public enum Map3DSceneryProp: String, CaseIterable, Sendable {
@@ -27,11 +34,19 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
     case bushesLarge
     /// A horizontal storage tank on its saddles and pad.
     case tank
+    /// Decision 467: Taiwan's post boxes by a bus stop, red (prompt mail)
+    /// and green (ordinary mail) side by side, their slots toward the road.
+    case postBoxes
+    /// Decision 467: a bus stop's sign on its own pole, where the pavement
+    /// has no room for a shelter, its face along the street.
+    case busStopPole
 
     /// The conifers, for the woods (``Map3DScene/Builder/addConifers()``).
     public static let conifers: [Map3DSceneryProp] = [.pineTall, .pine, .pineYoung]
     /// The bush clumps.
     public static let bushClumps: [Map3DSceneryProp] = [.bushes, .bushesLarge]
+    /// Decision 467: the small things by a bus stop.
+    public static let streetFurniture: [Map3DSceneryProp] = [.postBoxes, .busStopPole]
 
     /// The model's name in ``Map3DModelPack``.
     public var modelName: String { "scenery-" + rawValue }
@@ -45,14 +60,16 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
         case .bushes: "kenney-bushes"
         case .bushesLarge: "kenney-bushes-large"
         case .tank: "kenney-tank"
+        case .postBoxes: "meshy-post-boxes"
+        case .busStopPole: "meshy-bus-stop-pole"
         }
     }
 
     public static let fileExtension = "m3dmodel"
 
     /// Its size, metres: along its +x, across (+y) and up, the size the
-    /// file's model comes in (`tools/kenney-props/`), which both it and
-    /// the stand-in are fitted to.
+    /// file's model comes in (`tools/kenney-props/`, `tools/meshy-props/`),
+    /// which both it and the stand-in are fitted to.
     public var size: (length: Float, width: Float, height: Float) {
         switch self {
         case .pineTall: (3.1, 3.14, 12.48)
@@ -61,8 +78,20 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
         case .bushes: (2.4, 1.7, 1.0)
         case .bushesLarge: (3.22, 2.68, 1.25)
         case .tank: (9.76, 4.4, 3.26)
+        case .postBoxes: (1.04, 0.43, 1.15)
+        case .busStopPole: (0.59, 0.58, 2.8)
         }
     }
+
+    /// Decision 467: the colours `tools/meshy-props/` writes and the
+    /// stand-ins use (the post boxes' red and green, their slot and feet;
+    /// the sign's face, frame and post).
+    static let postRed = Map3DColor.rgb(0xC8382E)
+    static let postGreen = Map3DColor.rgb(0x2E8B4E)
+    static let postFoot = Map3DColor.rgb(0x4A4F57)
+    static let signWhite = Map3DColor.rgb(0xF2F3F1)
+    static let signFrame = Map3DColor.rgb(0x3F6FA8)
+    static let poleSteel = Map3DColor.rgb(0x9AA0A8)
 
     /// The colour of the file's leaves, which takes the instance's colour
     /// (alpha 0), so each tree and clump is its own green: the conifers'
@@ -108,6 +137,23 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
             }
             mesh.addBox(base: Map3DPoint(0, 0.5, 0), forward: Map3DPoint(1, 0, 0), length: size.length * 0.85, width: 2.8, height: size.height - 0.5,
                         top: Map3DPalette.tankWhite, side: Map3DPalette.tankWhite)
+        case .postBoxes:
+            // Two pillars on dark feet, a dark slot on each one's front
+            // (toward the road, scene −z).
+            for (x, body) in [(Float(-0.3), Self.postRed), (0.3, Self.postGreen)] {
+                mesh.addCylinder(base: Map3DPoint(x, 0, 0), radius: 0.21, height: 0.1, sides: 8, top: Self.postFoot, side: Self.postFoot)
+                mesh.addCylinder(base: Map3DPoint(x, 0.1, 0), radius: 0.19, height: 1.05, sides: 8, top: body, side: body)
+                mesh.addBox(base: Map3DPoint(x, 0.78, -0.19), forward: Map3DPoint(1, 0, 0), length: 0.2, width: 0.04, height: 0.04,
+                            top: Self.postFoot, side: Self.postFoot)
+            }
+        case .busStopPole:
+            // A post on a round foot, the tall board on it.
+            mesh.addCylinder(base: .zero, radius: 0.29, height: 0.08, sides: 8, top: Self.poleSteel, side: Self.poleSteel)
+            mesh.addCylinder(base: Map3DPoint(0, 0.08, 0), radius: 0.05, height: 0.5, sides: 6, top: Self.poleSteel, side: Self.poleSteel)
+            mesh.addBox(base: Map3DPoint(0, 0.55, 0), forward: Map3DPoint(1, 0, 0), length: 0.12, width: 0.5, height: size.height - 0.55,
+                        top: Self.signFrame, side: Self.signFrame)
+            mesh.addBox(base: Map3DPoint(0, 0.65, 0), forward: Map3DPoint(1, 0, 0), length: 0.14, width: 0.42, height: size.height - 0.75,
+                        top: Self.signFrame, side: Self.signWhite)
         }
         return Self.fitted(Map3DModelPack.Model.flat(named: modelName, from: mesh), to: size, named: modelName)
     }

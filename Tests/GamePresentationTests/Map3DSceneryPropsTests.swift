@@ -4,7 +4,8 @@ import Foundation
 import XCTest
 
 /// Decision 458: the Kenney conifers, bush clumps and tank, their files in
-/// the app and their stand-ins in the pack, and where the scene puts them.
+/// the app and their stand-ins in the pack, and where the scene puts them;
+/// decision 467: the Meshy post boxes and stop pole.
 final class Map3DSceneryPropsTests: XCTestCase {
     private static let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
@@ -47,12 +48,14 @@ final class Map3DSceneryPropsTests: XCTestCase {
 
     /// Read from the app's files, each piece takes its stand-in's place, at
     /// its index and in its box, with the triangles `tools/kenney-props/`
-    /// wrote and its leaves the instance's colour; the tank's are its own.
+    /// (and `tools/meshy-props/`) wrote and its leaves the instance's
+    /// colour; the tank's, post boxes' and pole's colours are their own.
     func testTheFilesTakeTheStandInsPlaces() throws {
         let standard = Map3DModelPack.standard
         let pack = Map3DSceneryProp.pack(standard, files: Self.files)
         XCTAssertEqual(pack.models.count, standard.models.count)
-        let triangles: [Map3DSceneryProp: Int] = [.pineTall: 136, .pine: 88, .pineYoung: 64, .bushes: 120, .bushesLarge: 180, .tank: 332]
+        let triangles: [Map3DSceneryProp: Int] = [.pineTall: 136, .pine: 88, .pineYoung: 64, .bushes: 120, .bushesLarge: 180, .tank: 332,
+                                                     .postBoxes: 1724, .busStopPole: 300]
         for prop in Map3DSceneryProp.allCases {
             let index = try XCTUnwrap(standard.index(of: prop.modelName))
             let model = pack.models[index]
@@ -64,8 +67,8 @@ final class Map3DSceneryPropsTests: XCTestCase {
             XCTAssertEqual(model.vertices.map(\.position.z).max() ?? 0, size.height, accuracy: 0.01, prop.rawValue)
             XCTAssertEqual(model.vertices.map(\.position.x).max() ?? 0, size.length / 2, accuracy: 0.01, prop.rawValue)
             let tinted = model.vertices.filter { $0.color >> 24 == 0 }.count
-            if prop == .tank {
-                XCTAssertEqual(tinted, 0)
+            if prop == .tank || Map3DSceneryProp.streetFurniture.contains(prop) {
+                XCTAssertEqual(tinted, 0, prop.rawValue)
             } else {
                 // Leaves, and a trunk or nothing else.
                 XCTAssertGreaterThan(tinted, model.vertices.count / 2, prop.rawValue)
@@ -91,14 +94,14 @@ final class Map3DSceneryPropsTests: XCTestCase {
         XCTAssertEqual(Map3DScene.Builder.coniferShare(atHeight: 3000), 0.85, accuracy: 0.0001)
     }
 
-    /// The saving quality leaves the bush clumps out with the small street
-    /// furniture; the conifers and tanks stay.
+    /// The saving quality leaves the bush clumps, post boxes and stop poles
+    /// out with the small street furniture; the conifers and tanks stay.
     func testSavingLeavesTheBushesOut() throws {
         let pack = Map3DModelPack.standard
         let left = Map3DProp.modelsLeftOut(.saving)
         for prop in Map3DSceneryProp.allCases {
             let index = try XCTUnwrap(pack.index(of: prop.modelName))
-            XCTAssertEqual(left.contains(index), Map3DSceneryProp.bushClumps.contains(prop), prop.rawValue)
+            XCTAssertEqual(left.contains(index), (Map3DSceneryProp.bushClumps + Map3DSceneryProp.streetFurniture).contains(prop), prop.rawValue)
         }
     }
 

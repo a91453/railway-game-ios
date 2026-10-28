@@ -112,7 +112,7 @@ final class Map3DMeshSimplifierTests: XCTestCase {
 
     func testTheSameModelGivesTheSameTriangles() {
         let model = Map3DModelPack.standard.models[0]
-        let first = model.simplified(to: [0.5, 0.25]), second = model.simplified(to: [0.5, 0.25])
+        let first = model.simplified(to: [0.8, 0.5]), second = model.simplified(to: [0.8, 0.5])
         for (a, b) in zip(first, second) {
             XCTAssertEqual(a.vertices, b.vertices)
         }
@@ -123,11 +123,13 @@ final class Map3DMeshSimplifierTests: XCTestCase {
         let pack = Map3DModelPack.unbaked
         for name in ["commuter-cab", "express-car"] {
             let model = pack.models[pack.index(of: name)!]
-            let half = model.simplified(to: 0.5)
+            // Decision 467: its outlines' corners and the limit keep about
+            // three fifths of its triangles.
+            let half = model.simplified(to: 0.5, maxError: Map3DMeshSimplifier.recommendedMaxError)
             XCTAssertEqual(half.name, model.name)
             XCTAssertEqual(half.minimum, model.minimum)
             XCTAssertEqual(half.maximum, model.maximum)
-            XCTAssertLessThanOrEqual(half.triangleCount, (model.triangleCount + 1) / 2)
+            XCTAssertLessThanOrEqual(half.triangleCount, model.triangleCount * 2 / 3)
             XCTAssertEqual(Set(half.vertices.map(\.color)), Set(model.vertices.map(\.color)), name)
             assertWhole(half.vertices)
         }
@@ -153,5 +155,61 @@ final class Map3DMeshSimplifierTests: XCTestCase {
             corners += [middle, rim[k], rim[(k + 1) % 3]].map { Map3DVertex($0, normal: n, color: colour) }
         }
         XCTAssertEqual(Map3DMeshSimplifier.simplify(corners, targets: [3, 1, 0]), [corners, corners, corners])
+    }
+
+    // MARK: - Decision 467
+
+    /// The area of each colour of `corners`, square metres.
+    private func areas(_ corners: [Map3DVertex]) -> [UInt32: Float] {
+        var out: [UInt32: Float] = [:]
+        for t in triangles(corners) { out[t[0].color, default: 0] += area(t) }
+        return out
+    }
+
+    func testAOneSidedPanelKeepsItsCorners() {
+        // A sign: one 2 × 1 m panel of 8 × 4 squares, open all round. Its
+        // edge is a seam; its four corners stay, so it keeps its area
+        // however few triangles are asked for.
+        var corners: [Map3DVertex] = []
+        let n = Map3DPoint(0, 0, 1)
+        for i in 0..<8 {
+            for j in 0..<4 {
+                let x = Float(i) * 0.25, y = Float(j) * 0.25
+                let a = Map3DPoint(x, y, 0), b = Map3DPoint(x + 0.25, y, 0), c = Map3DPoint(x + 0.25, y + 0.25, 0), d = Map3DPoint(x, y + 0.25, 0)
+                corners += [a, b, c, a, c, d].map { Map3DVertex($0, normal: n, color: red) }
+            }
+        }
+        let level = Map3DMeshSimplifier.simplify(corners, targets: [1])[0]
+        XCTAssertLessThan(level.count, corners.count / 4)
+        XCTAssertEqual(areas(level)[red] ?? 0, 2, accuracy: 1e-4)
+        for corner in [Map3DPoint(0, 0, 0), Map3DPoint(2, 0, 0), Map3DPoint(2, 1, 0), Map3DPoint(0, 1, 0)] {
+            XCTAssertTrue(level.contains { $0.position == corner }, "lost the corner \(corner)")
+        }
+        assertWhole(level)
+    }
+
+    func testTheBusKeepsItsSidesAtAQuarter() {
+        // Decision 420 saw the low-floor bus's white sides vanish at a
+        // quarter of its triangles (954 left, 0.2 % of the white).
+        let pack = Map3DModelPack.standard
+        let bus = pack.models[pack.index(of: Map3DStreetModel.lowFloorBus.modelName)!]
+        let white = areas(bus.vertices).max { $0.value < $1.value }!
+        let quarter = bus.simplified(to: 0.25, maxError: 0.005)
+        XCTAssertLessThan(quarter.triangleCount, bus.triangleCount * 2 / 3)
+        XCTAssertGreaterThan(areas(quarter.vertices)[white.key] ?? 0, white.value / 2)
+        assertWhole(quarter.vertices)
+    }
+
+    func testTheLimitKeepsTheSurfaceNear() {
+        let ball = sphere()
+        let free = Map3DMeshSimplifier.simplify(ball, targets: [20])[0]
+        let held = Map3DMeshSimplifier.simplify(ball, targets: [20], maxError: 0.01)[0]
+        XCTAssertGreaterThan(held.count, free.count * 3)
+        // Every triangle's middle stays near the unit sphere.
+        let nearest = triangles(held).map { (($0[0].position + $0[1].position + $0[2].position) * (1 / 3)).length }.min() ?? 0
+        XCTAssertGreaterThan(nearest, 0.95)
+        assertWhole(held)
+        // A limit nothing reaches changes nothing.
+        XCTAssertEqual(Map3DMeshSimplifier.simplify(ball, targets: [200], maxError: 10)[0], Map3DMeshSimplifier.simplify(ball, targets: [200])[0])
     }
 }
