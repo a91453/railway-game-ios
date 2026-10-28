@@ -97,16 +97,16 @@ extension LandmarkMesh {
 
     /// A double eave's lower roof (重簷): from walls of half sides `hx`,
     /// `hy` at `z1` out `over` and down to its eaves at `z0`, corners swept
-    /// up `sweep`; its edge and underside.
-    mutating func skirtRoof(_ hx: Float, _ hy: Float, eaves z0: Float, wall z1: Float, over: Float, sweep: Float,
+    /// up `sweep`; its edge `lip` thick and underside.
+    mutating func skirtRoof(_ hx: Float, _ hy: Float, eaves z0: Float, wall z1: Float, over: Float, sweep: Float, lip: Float = 0.45,
                             tile: UInt32, edge: UInt32, underside: UInt32) {
         let perSide = full ? (hx + over > 20 ? 10 : 6) : 4
         let (ringIn, nearIn) = Self.rectRing(hx, hy, perSide: perSide)
         let ringOut = ringIn.map { (x: $0.x * (hx + over) / hx, y: $0.y * (hy + over) / hy) }
         let up = nearIn.map { n -> Float in let t = 1 - min(n, 0.3) / 0.3; return sweep * t * t }
         band(ringOut, up.map { z0 + $0 }, ringIn, up.map { _ in z1 }, tile, Self.tiles)
-        band(ringOut, up.map { z0 - 0.45 + $0 }, ringOut, up.map { z0 + $0 }, edge, Self.plain)
-        band(ringIn, up.map { _ in z0 - 0.45 }, ringOut, up.map { z0 - 0.45 + $0 }, underside, Self.plain)
+        band(ringOut, up.map { z0 - lip + $0 }, ringOut, up.map { z0 + $0 }, edge, Self.plain)
+        band(ringIn, up.map { _ in z0 - lip }, ringOut, up.map { z0 - lip + $0 }, underside, Self.plain)
     }
 
     /// A Chinese roof of `tiers` eaves over walls of half sides `hx`, `hy`:
@@ -116,15 +116,15 @@ extension LandmarkMesh {
     /// the top roof rising `rise` from its eave, so the whole is
     /// `z0 + (tiers - 1) * tierRise + rise` high. Corners swept up `sweep`
     /// (the skirts 0.8 of it), the front and back eaves' middles `arch`
-    /// higher. Nothing in it belongs to one building: sizes and colours are
+    /// higher; the skirts' edges `lip` thick. Nothing in it belongs to one building: sizes and colours are
     /// the caller's.
     mutating func chineseRoof(_ hx: Float, _ hy: Float, eaves z0: Float, over: Float, rise: Float, sweep: Float,
                               kind: RoofKind = .hipped, arch: Float = 0, tiers: Int = 1, tierRise: Float = 0, tierInset: Float = 0,
-                              colours: ChineseRoofColours) {
+                              lip: Float = 0.45, colours: ChineseRoofColours) {
         precondition(tiers >= 1 && hx - Float(tiers - 1) * tierInset > 0 && hy - Float(tiers - 1) * tierInset > 0)
         for k in 0..<(tiers - 1) {
             let ix = hx - Float(k) * tierInset, iy = hy - Float(k) * tierInset, z = z0 + Float(k) * tierRise
-            skirtRoof(ix, iy, eaves: z, wall: z + tierRise * 0.7, over: over, sweep: sweep * 0.8, tile: colours.tile,
+            skirtRoof(ix, iy, eaves: z, wall: z + tierRise * 0.7, over: over, sweep: sweep * 0.8, lip: lip, tile: colours.tile,
                       edge: colours.ridge, underside: colours.underside)
             let jx = ix - tierInset, jy = iy - tierInset
             box(-jx, -jy, z + 0.5, jx, jy, z + tierRise, colours.wall, Self.plain)

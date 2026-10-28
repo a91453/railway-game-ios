@@ -131,6 +131,26 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         }
     }
 
+    /// Decision 457: each part chosen on its own, the colours paled
+    /// together; every hall keeps its parts' order of light to dark.
+    func testThePaleColoursKeepTheirOrder() {
+        func lightness(_ name: String) -> Float {
+            let c = Map3DTaipeiLandmark.palette[name]!
+            return (0.2126 * Float(c & 0xFF) + 0.7152 * Float((c >> 8) & 0xFF) + 0.0722 * Float((c >> 16) & 0xFF)) / 255
+        }
+        for order in [["goldTile", "hallRed", "hallColumn", "bracket"], ["goldTile", "hallGlass", "column", "bracket"],
+                      ["hallWhite", "blueTile", "doorway"], ["podium", "hallRed"]] {
+            for (lighter, darker) in zip(order, order.dropFirst()) {
+                XCTAssertGreaterThan(lightness(lighter), lightness(darker), "\(lighter) over \(darker)")
+            }
+        }
+        XCTAssertGreaterThan(lightness("bracket"), 0.5)
+        var thick = LandmarkMesh(full: true)
+        thick.chineseRoof(9, 6, eaves: 4, over: 1.5, rise: 3.5, sweep: 0.8, tiers: 2, tierRise: 2, tierInset: 1.2, lip: 1.2,
+                          colours: ChineseRoofColours(tile: 1, ridge: 2, underside: 3, gable: nil, wall: 4))
+        XCTAssertEqual(thick.vertices.map(\.z).min() ?? 0, 4 - 1.2, accuracy: 0.001)
+    }
+
     /// Decision 457: central Taipei's landmarks stand on OpenStreetMap's
     /// plans (the minimum box of each way, ODbL), within 2 m at the
     /// ground; each within the landmark budget.

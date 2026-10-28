@@ -137,14 +137,14 @@ extension LandmarkMesh {
         // white drum, the upper roof to its peak, the finial.
         let sides = 8
         let phase = Float.pi / 8
-        let lowOut = Self.polygon(sides, 38, 0, cy, phase: phase), lowIn = Self.polygon(sides, 27.5, 0, cy, phase: phase)
+        let lowOut = Self.polygon(sides, 38, 0, cy, phase: phase), lowIn = Self.polygon(sides, 22, 0, cy, phase: phase)
         wallBand(lowOut, 37.9, lowOut, 38.5, ridge, Self.plain)
         band(lowOut, [Float](repeating: 38.5, count: sides), lowIn, [Float](repeating: 43.5, count: sides), blue, Self.tiles)
         cap(lowOut.reversed(), 37.9, colour("blueRidge"), Self.plain)
-        let drum = Self.polygon(sides, 25.5, 0, cy, phase: phase)
+        let drum = Self.polygon(sides, 21, 0, cy, phase: phase)
         wallBand(drum, 43.5, drum, 48.5, hall, Self.plain)
         cap(lowIn, 43.5, blue, Self.plain)
-        let upOut = Self.polygon(sides, 31, 0, cy, phase: phase)
+        let upOut = Self.polygon(sides, 27.7, 0, cy, phase: phase)
         wallBand(upOut, 48, upOut, 48.5, ridge, Self.plain)
         cap(upOut.reversed(), 48, ridge, Self.plain)
         pyramidRoof(upOut, 0, cy, from: 48.5, to: 66, steps: full ? 5 : 3, blue)
@@ -153,7 +153,7 @@ extension LandmarkMesh {
         wallBand(foot, 65.9, tip, 70, colour("finial"), Self.plain)
         cap(tip, 70, colour("finial"), Self.plain)
         if full {
-            for (r, z) in [(Float(31), Float(48.5)), (38, 38.5)] {
+            for (r, z) in [(Float(27.7), Float(48.5)), (38, 38.5)] {
                 for p in Self.polygon(8, r, 0, cy, phase: phase) {
                     box(p.x - 0.6, p.y - 0.6, z, p.x + 0.6, p.y + 0.6, z + 1.4, ridge, Self.plain)
                 }
@@ -205,20 +205,23 @@ extension LandmarkMesh {
     /// hip-and-gable (歇山); broad steps up the front (-y), toward the
     /// square.
     mutating func performingArtsHall(_ hx: Float, _ hy: Float, kind: RoofKind) {
-        let stone = colour("stone"), red = colour("vermilion"), gold = colour("goldTile"), goldRidge = colour("goldRidge")
-        box(-hx, -hy, 0, hx, hy, 3, stone, Self.plain, top: colour("plinth"))
-        box(-hx + 4, -hy + 4, 3, hx - 4, hy - 4, 6, stone, Self.plain, top: colour("plinth"))
+        let stone = colour("stone"), red = colour("hallColumn"), gold = colour("goldTile"), goldRidge = colour("goldRidge")
+        let podium = colour("podium"), bracket = colour("bracket")
+        box(-hx, -hy, 0, hx, hy, 3, podium, Self.plain, top: colour("plinth"))
+        box(-hx + 4, -hy + 4, 3, hx - 4, hy - 4, 6, podium, Self.plain, top: colour("plinth"))
         stairs(width: 34, from: -hy - 6, to: -hy + 4, height: 6, stone)
         // The hall behind a gallery 4 m deep, 14 m to the lower eave.
         let wx = hx - 15, wy = hy - 15
         box(-wx, -wy, 6, wx, wy, 20, colour("hallRed"), Self.floors)
         colonnade(hx - 11, hy - 11, 6, 20, step: 6, size: 1.6, red)
         let deck: [P2] = [(-(hx - 10), -(hy - 10)), (hx - 10, -(hy - 10)), (hx - 10, hy - 10), (-(hx - 10), hy - 10)]
-        wallBand(deck, 19, deck, 20, colour("bracket"), Self.plain)
-        // The double eave 9 m out past the columns, a red clerestory
-        // between, the upper eave over the columns.
+        wallBand(deck, 18.8, deck, 20, red, Self.plain)
+        // The double eave 9 m out past the columns, its lower edge heavy, a
+        // red clerestory between dotted with green-painted brackets at its
+        // foot, the upper eave over the columns.
+        colonnade(hx - 17.5, hy - 17.5, 22.2, 23.4, step: 6, size: 2.2, bracket)
         chineseRoof(hx - 8.5, hy - 8.5, eaves: 20, over: 6.5, rise: 11, sweep: 2.4, kind: kind, tiers: 2, tierRise: 6, tierInset: 9,
-                    colours: ChineseRoofColours(tile: gold, ridge: goldRidge, underside: colour("bracket"), gable: red, wall: red))
+                    lip: 1.2, colours: ChineseRoofColours(tile: gold, ridge: goldRidge, underside: bracket, gable: red, wall: red))
         // The plan with its steps, as OSM's, round the origin.
         shift(from: 0, by: (0, 3))
     }
@@ -326,7 +329,7 @@ extension LandmarkMesh {
     // MARK: Sun Yat-sen Memorial Hall and the Grand Hotel
 
     /// Sun Yat-sen Memorial Hall (OSM way 189788192, 30 m, its roof 10 m):
-    /// on a low white platform, grey columns round a cream hall under a
+    /// on a low white platform, grey columns round a glass hall under a
     /// gold roof whose corners sweep high and whose front and back eaves
     /// rise in the middle.
     mutating func sunYatSenMemorialHall() {
@@ -344,7 +347,7 @@ extension LandmarkMesh {
             }
         }
         let wx = hx - 12, wy = hy - 12
-        box(-wx, -wy, 2, wx, wy, 19, colour("cream"), Self.floors)
+        box(-wx, -wy, 2, wx, wy, 19, colour("hallGlass"), Self.floors)
         colonnade(hx - 7, hy - 7, 2, 19, step: 6.5, size: 1.6, colour("column"))
         let deck: [P2] = [(-(hx - 6), -(hy - 6)), (hx - 6, -(hy - 6)), (hx - 6, hy - 6), (-(hx - 6), hy - 6)]
         wallBand(deck, 18.6, deck, 19.5, colour("bracket"), Self.plain)

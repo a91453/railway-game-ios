@@ -136,7 +136,10 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         "stone": 0xF1EFEA, "hallWhite": 0xF8F7F3, "blueTile": 0x9DB4D6, "blueRidge": 0x86A0C6, "opening": 0xADAAA6,
         "finial": 0xE6C47A, "vermilion": 0xDC968A, "goldTile": 0xEACB80, "goldRidge": 0xD9B76C, "hallWall": 0xF0E8DD,
         "brick": 0xDDA996, "brickTrim": 0xF6F3EC, "slate": 0xAEB5BD, "cream": 0xF2EAD8,
-        "column": 0xCBC9C5, "gateStone": 0xD9D2C6, "greenRidge": 0x98C4AE, "hallRed": 0xD08A7E, "bracket": 0x9CC2BC, "doorway": 0x8E979C,
+        "column": 0xB5B6B2, "gateStone": 0xD9D2C6, "greenRidge": 0x98C4AE, "hallRed": 0xE8B9AE, "bracket": 0x70A09A, "doorway": 0x5E676D,
+        // Each hall's parts keep their order of light to dark: roof, wall,
+        // columns, brackets (the memorial hall: wall, roof, doorway).
+        "hallColumn": 0xD08A7E, "hallGlass": 0xC0CBCC, "podium": 0xE0D8CA,
     ].mapValues(Map3DColor.rgb)
 
     /// The model, in full close by, or without its small parts from afar.
