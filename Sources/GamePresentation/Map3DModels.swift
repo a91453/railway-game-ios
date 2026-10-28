@@ -150,6 +150,10 @@ public struct Map3DModelPack: Sendable {
             models.append(Map3DTaipei610.model(role, far: true))
             models.append(Map3DTaipei610.model(role, light: true))
         }
+        for unit in Map3DSanying.Unit.allCases {
+            models.append(Map3DSanying.model(unit))
+            models.append(Map3DSanying.model(unit, far: true))
+        }
         self.init(recipes: models, baked: baked)
     }
 
