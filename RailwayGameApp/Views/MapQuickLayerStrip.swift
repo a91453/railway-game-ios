@@ -10,6 +10,9 @@ import SwiftUI
 /// shows what the other changed.
 struct MapQuickLayerStrip: View {
     let language: DisplayLanguage
+    /// Decision 469: on a narrow screen only the button that opens the
+    /// full list, named for the layers.
+    var folded = false
     let openList: () -> Void
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
@@ -29,28 +32,11 @@ struct MapQuickLayerStrip: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            ForEach(MapQuickLayer.allCases, id: \.self) { layer in
-                let isOn = layer.isOn(in: layers)
-                Button {
-                    store(layer.toggled(layers))
-                } label: {
-                    cell(symbol: layer.symbolName, title: layer.title(in: language), isOn: isOn)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(verbatim: layer.title(in: language)))
-                .accessibilityAddTraits(isOn ? .isSelected : [])
-                .accessibilityIdentifier("map.quickLayer.\(layer)")
+            if folded {
+                more(title: language.text("Layers", "圖層"))
+            } else {
+                cells
             }
-            Rectangle()
-                .fill(Theme.panelBorder)
-                .frame(width: 1, height: 26)
-                .padding(.horizontal, 2)
-            Button(action: openList) {
-                cell(symbol: "square.3.layers.3d", title: language.text("More", "更多"), isOn: false)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: language.text("All map layers", "全部地圖圖層")))
-            .accessibilityIdentifier("map.quickLayer.more")
         }
         .padding(3)
         // Glass, as the status pill above it and the tools (decision 226,
@@ -58,6 +44,38 @@ struct MapQuickLayerStrip: View {
         // left on the map.
         .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .hudFrameMark("map.quickLayer.strip")
+    }
+
+    @ViewBuilder
+    private var cells: some View {
+        ForEach(MapQuickLayer.allCases, id: \.self) { layer in
+            let isOn = layer.isOn(in: layers)
+            Button {
+                store(layer.toggled(layers))
+            } label: {
+                cell(symbol: layer.symbolName, title: layer.title(in: language), isOn: isOn)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: layer.title(in: language)))
+            .accessibilityAddTraits(isOn ? .isSelected : [])
+            .accessibilityIdentifier("map.quickLayer.\(layer)")
+        }
+        Rectangle()
+            .fill(Theme.panelBorder)
+            .frame(width: 1, height: 26)
+            .padding(.horizontal, 2)
+        more(title: language.text("More", "更多"))
+    }
+
+    /// The button that opens the full layer list, the same id folded or
+    /// not.
+    private func more(title: String) -> some View {
+        Button(action: openList) {
+            cell(symbol: "square.3.layers.3d", title: title, isOn: false)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: language.text("All map layers", "全部地圖圖層")))
+        .accessibilityIdentifier("map.quickLayer.more")
     }
 
     /// An icon over its name: teal on a light teal ground inside a teal

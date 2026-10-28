@@ -58,6 +58,15 @@ enum Theme {
     /// Text and icons on ``error`` (5.62:1 light, 6.59:1 dark).
     static let onError = dynamic(light: 0xFFFFFF, dark: 0x262C57)
 
+    // The finance charts' series (the dataviz categorical slots 1 to 3):
+    // marks, never text, each at least 3:1 on ``panel`` (WCAG 1.4.11).
+    /// Fares and passengers (4.42:1 light, 3.07:1 dark).
+    static let chartBlue = dynamic(light: 0x2A78D6, dark: 0x3987E5)
+    /// Freight (3.20:1, 3.49:1).
+    static let chartOrange = dynamic(light: 0xEB6834, dark: 0xEB6834)
+    /// Rent (3.33:1, 3.28:1).
+    static let chartAqua = dynamic(light: 0x18A070, dark: 0x199E70)
+
     private static func dynamic(
         light: UInt32,
         dark: UInt32,
@@ -254,5 +263,35 @@ extension AnyTransition {
     static func pop(from scale: CGFloat = 0.8, anchor: UnitPoint = .center, reduceMotion: Bool) -> AnyTransition {
         if reduceMotion { return .opacity.animation(MotionRule.pop.reduced?.animation) }
         return .scale(scale: scale, anchor: anchor).combined(with: .opacity).animation(MotionRule.pop.animation)
+    }
+}
+
+extension View {
+    /// Asks before a removal one tap would otherwise make from a panel
+    /// (UI review 2026-10-28, A): Undo is emptied by the next tick, and the
+    /// panels leave the game running. The removing button is the
+    /// destructive one, named for what it does; Cancel keeps everything.
+    func removalConfirmation(
+        _ removal: RemovalConfirmation,
+        isPresented: Binding<Bool>,
+        language: DisplayLanguage,
+        perform: @escaping @MainActor () -> Void
+    ) -> some View {
+        confirmationDialog(
+            Text(verbatim: removal.title(in: language)), isPresented: isPresented, titleVisibility: .visible
+        ) {
+            Button(role: .destructive) {
+                perform()
+            } label: {
+                Text(verbatim: removal.button(in: language))
+            }
+            Button(role: .cancel) {} label: {
+                Text(verbatim: language.text("Cancel", "取消"))
+            }
+        } message: {
+            if let message = removal.message(in: language) {
+                Text(verbatim: message)
+            }
+        }
     }
 }

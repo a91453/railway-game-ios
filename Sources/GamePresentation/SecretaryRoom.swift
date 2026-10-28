@@ -370,6 +370,44 @@ extension GameSession {
     }
 }
 
+/// What the station master's corner shows after a change (decision 465):
+/// the advice and the title over it.
+public struct StationMasterLook: Sendable {
+    public let advice: StationMasterAdvice?
+    public let title: StationMasterTitle?
+}
+
+extension GameSession {
+    /// ``stationMasterAdvice`` and the corner's title
+    /// (``StationMasterTitle``), worked out off the main actor (decision
+    /// 465): after an edit the advice kept for the hour no longer answers,
+    /// and working it out again on the main actor (some 60 ms on the real
+    /// map of 78 stations, the title 12 more) added to everything else an
+    /// edit asks of the screen. The same advice, kept for the hour as
+    /// ``stationMasterAdvice`` keeps it; `nil` when the task is cancelled,
+    /// as a newer change looks again.
+    public func stationMasterLook() async -> StationMasterLook? {
+        let world = world, revision = commandRevision
+        let hour = world.clock.now.seconds / GameTime.secondsPerHour
+        let kept = hourAdvice.flatMap { $0.hour == hour && $0.revision == revision ? $0 : nil }
+        // An hour of `nil` is never the world's: the probe always works it out.
+        let probe = kept == nil ? AdviceProbe(hour: nil, leader: lineLossLeaderMemo.kept(atRevision: revision)) : nil
+        let (worked, title) = await Task.detached(priority: .userInitiated) {
+            let title = StationMasterTitle.isShown(in: world) ? StationMasterTitle(rank: CompanyRank(world: world)) : nil
+            return (probe?.advice(of: world), title)
+        }.value
+        guard !Task.isCancelled else { return nil }
+        guard let worked else { return StationMasterLook(advice: kept?.advice, title: title) }
+        if commandRevision == revision {
+            if let leader = worked.leader { lineLossLeaderMemo.keep(leader, atRevision: revision) }
+            if hourAdvice?.hour != hour || hourAdvice?.revision != revision {
+                hourAdvice = HourAdvice(hour: hour, revision: revision, advice: worked.advice)
+            }
+        }
+        return StationMasterLook(advice: worked.advice, title: title)
+    }
+}
+
 /// Decision 459: the station master's advice kept for game hour `hour`
 /// and ``GameSession/commandRevision`` `revision`.
 struct HourAdvice: Sendable {

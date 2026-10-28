@@ -237,7 +237,7 @@ private struct HUDCash: View {
                 if let days = session.world.insolvencyCountdown {
                     Text(verbatim: insolvencyCountdownText(days, in: session.language))
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.onError)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(Theme.error))
@@ -414,7 +414,7 @@ private struct HUDNewsBell: View {
                     if unread > 0 {
                         Text(verbatim: unread > 99 ? "99+" : "\(unread)")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.onError)
                             .padding(.horizontal, 4)
                             .background(Capsule().fill(Theme.error))
                             .offset(x: 4, y: -2)

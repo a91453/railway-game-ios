@@ -118,11 +118,14 @@ struct StationMasterCorner: View {
                 corner
             }
         }
-        .onChange(of: session.stationMasterRefreshKey, initial: true) {
+        // Decision 465: the advice and the title worked out off the main
+        // actor.
+        .task(id: session.stationMasterRefreshKey) {
+            guard let look = await session.stationMasterLook() else { return }
             // The advice first: a goal's cheer the story waits for.
-            refreshAdvice()
+            advice = ModeShiftHint.advice(look.advice, hint: modeShiftHint)
             lookForStory()
-            title = StationMasterTitle.isShown(in: session.world) ? StationMasterTitle(rank: CompanyRank(world: session.world)) : nil
+            title = look.title
         }
         .onChange(of: modeShiftHint) { refreshAdvice() }
         .task(id: modeShiftHintDay) { await workOutModeShiftHint(modeShiftHintDay) }

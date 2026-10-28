@@ -354,6 +354,34 @@ final class LineLossFixesTests: XCTestCase {
         XCTAssertEqual(looped.worstLosingLine, looped.world.worstLosingLine())
     }
 
+    /// Decision 465: after an edit the station master's corner works its
+    /// advice and title out off the main actor (``GameSession/stationMasterLook()``):
+    /// the advice is the one worked out on the main actor before, kept for
+    /// the hour so the news and the corner read it without working it out
+    /// again, and the main actor works nothing out.
+    func testTheCornerLooksAgainOffTheMainActorAfterAnEdit() async throws {
+        var world = try tooManyTrains()
+        world.setSpeed(.normal)
+        let session = GameSession(world: world)
+        let reference = GameSession(world: world)
+        for colour in LineColor.presets[1...3] {
+            for each in [session, reference] {
+                each.selectLine(Self.line)
+                each.setSelectedLineColor(colour)
+            }
+            let looked = await session.stationMasterLook()
+            let look = try XCTUnwrap(looked)
+            XCTAssertEqual(look.advice, reference.stationMasterAdvice)
+            XCTAssertEqual(look.advice, StationMasterAdvice(world: session.world))
+            let title = StationMasterTitle.isShown(in: session.world) ? StationMasterTitle(rank: CompanyRank(world: session.world)) : nil
+            XCTAssertEqual(look.title, title)
+            XCTAssertEqual(session.stationMasterAdvice, look.advice)
+            XCTAssertEqual(session.stationMasterAdviceWorkedOut, 0, "nothing worked out on the main actor")
+            XCTAssertEqual(session.worstLosingLine, reference.worstLosingLine)
+        }
+        XCTAssertNotNil(session.stationMasterAdvice, "a line losing money is advice")
+    }
+
     /// Decision 459: the station master's corner reads the advice the
     /// news worked out for the hour (off the main actor in the game loop)
     /// instead of working it out again on the main actor, and it is the

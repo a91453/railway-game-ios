@@ -12,55 +12,27 @@ struct MapConstructionHUD: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            HStack(spacing: 12) {
-                // Length
-                HStack(spacing: 4) {
-                    Image(systemName: "ruler")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Theme.primary)
-                    Text(NetworkBuilding.lengthText(preview.length, in: language))
-                        .font(.subheadline.weight(.semibold))
-                        .monospacedDigit()
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(text("Length: \(NetworkBuilding.lengthText(preview.length, in: language))", "長度：\(NetworkBuilding.lengthText(preview.length, in: language))"))
-
-                Divider()
-                    .frame(height: 14)
-
-                // Height profile
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.up.and.down")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Theme.primary)
-                    if preview.startHeight == preview.endHeight {
-                        Text(NetworkBuilding.lengthText(preview.startHeight, in: language))
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                    } else {
-                        Text(verbatim: "\(NetworkBuilding.lengthText(preview.startHeight, in: language)) → \(NetworkBuilding.lengthText(preview.endHeight, in: language))")
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                    }
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(heightAccessibilityLabel)
-
-                // Cost (if buildable and costed)
-                if let cost = preview.cost {
+            // Decision 469 (UI review 2-22): one line where it fits, the
+            // figures one under another where it does not (a small phone
+            // at the largest text).
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    lengthFigure
                     Divider()
                         .frame(height: 14)
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "banknote")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Theme.success)
-                        Text(cost.moneyText)
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
+                    heightFigure
+                    if let cost = preview.cost {
+                        Divider()
+                            .frame(height: 14)
+                        costFigure(cost)
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.moneyText)"))
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    lengthFigure
+                    heightFigure
+                    if let cost = preview.cost {
+                        costFigure(cost)
+                    }
                 }
             }
 
@@ -104,6 +76,51 @@ struct MapConstructionHUD: View {
         .accessibilityIdentifier("map.constructionHUD")
     }
 
+    private var lengthFigure: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "ruler")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.primary)
+            Text(NetworkBuilding.lengthText(preview.length, in: language))
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(text("Length: \(NetworkBuilding.lengthText(preview.length, in: language))", "長度：\(NetworkBuilding.lengthText(preview.length, in: language))"))
+    }
+
+    private var heightFigure: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.up.and.down")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.primary)
+            if preview.startHeight == preview.endHeight {
+                Text(NetworkBuilding.lengthText(preview.startHeight, in: language))
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+            } else {
+                Text(verbatim: "\(NetworkBuilding.lengthText(preview.startHeight, in: language)) → \(NetworkBuilding.lengthText(preview.endHeight, in: language))")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(heightAccessibilityLabel)
+    }
+
+    private func costFigure(_ cost: Money) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "banknote")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.success)
+            Text(cost.moneyText)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.moneyText)"))
+    }
+
     /// `english` or `chinese` for the session's language. GamePresentation's
     /// own `DisplayLanguage.text` is internal to that module, so the app
     /// picks by the public enum, as the line panel does.
@@ -113,9 +130,9 @@ struct MapConstructionHUD: View {
 
     private var continuityText: String {
         switch (preview.joinsStart, preview.joinsEnd) {
-        case (true, true): return text("joins track at both ends", "兩端均與軌道相接")
-        case (true, false): return text("continues existing track", "延續既有軌道")
-        case (false, true): return text("joins track at end", "終點與軌道相接")
+        case (true, true): return text("Joins track at both ends", "兩端均與軌道相接")
+        case (true, false): return text("Continues existing track", "延續既有軌道")
+        case (false, true): return text("Joins track at end", "終點與軌道相接")
         case (false, false): return ""
         }
     }
