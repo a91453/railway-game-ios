@@ -883,6 +883,11 @@ public final class GameSession {
     /// nothing observed.
     private var shownViewingSpeed = ViewingSpeed(speed: .paused, permille: nil, trainKilometresPerHour: nil)
     @ObservationIgnored private var speedMeter = GameSpeedMeter()
+    /// Decision 464: when the status board tells the player the device
+    /// cannot keep up with the speed; screen state, not saved.
+    @ObservationIgnored private var speedLagWatch = SpeedLagWatch()
+    /// The hint beside the speed, while there is one.
+    public private(set) var speedLagHint: SpeedLagHint?
     @ObservationIgnored private var trainSpeedometer = TrainSpeedometer()
     /// Decision 224: which platforms had a train standing at them over the
     /// last game hour, for the station's operations page.
@@ -898,15 +903,33 @@ public final class GameSession {
     private func noteRealTime(_ elapsed: Duration) {
         if world.clock.isPaused {
             speedMeter.reset()
+            speedLagWatch.pause()
         } else {
             realTimeRun += max(elapsed, .zero)
             speedMeter.record(real: realTimeRun, ticks: ticksRun, speed: world.clock.speed)
+            speedLagWatch.record(real: realTimeRun, speed: world.clock.speed, permille: speedMeter.permilleOfSpeed, heat: Self.tickPace.heat)
         }
+        if speedLagWatch.hint != speedLagHint { speedLagHint = speedLagWatch.hint }
         let shown = ViewingSpeed(
             speed: world.clock.speed, permille: speedMeter.permilleOfSpeed,
             trainKilometresPerHour: followedTrainID == nil ? nil : trainSpeedometer.kilometresPerHour
         )
         if shown != shownViewingSpeed { shownViewingSpeed = shown }
+    }
+
+    /// The player dismissed the speed hint: none again this game
+    /// (decision 464).
+    public func dismissSpeedLagHint() {
+        speedLagWatch.dismiss()
+        speedLagHint = nil
+    }
+
+    /// The player took the hint's speed (decision 464).
+    public func acceptSpeedLagHint() {
+        guard let speed = speedLagHint?.suggestedSpeed else { return dismissSpeedLagHint() }
+        speedLagWatch.pause()
+        speedLagHint = nil
+        setSpeed(speed)
     }
 
     /// A managed company's stations without ridership get the city's
@@ -2012,6 +2035,8 @@ public final class GameSession {
         tickAccumulator.reset()
         // The time away is not time the game failed to run.
         speedMeter.reset()
+        speedLagWatch.pause()
+        speedLagHint = nil
     }
 
     // MARK: - Trains

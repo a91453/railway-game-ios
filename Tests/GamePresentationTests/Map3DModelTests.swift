@@ -15,7 +15,8 @@ final class Map3DModelTests: XCTestCase {
         // studies (TEMU2000; the PP display roles, near and far, and the
         // E1000; the EMU800 study's roles, the EMU500 study's units and
         // formation, the C341 study's units, the EMU900 study's roles and
-        // the 610 study's four roles at three LODs) are the tools' pack's.
+        // the 610 study's four roles at three LODs, and the Sanying study's
+        // two roles at two LODs) are the tools' pack's.
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
         let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
         let temu1000Models = Map3DTEMU1000.Unit.allCases.count + 1
@@ -29,7 +30,8 @@ final class Map3DModelTests: XCTestCase {
         let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
         // Decision 449: and after them, the running cars' windows.
         XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest)
-        XCTAssertEqual(Map3DModelPack.studies.models.count, temu2000Models + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count + Map3DTaichungGreen.Role.allCases.count * 2)
+        XCTAssertEqual(Map3DModelPack.studies.models.count, temu2000Models + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models + Map3DSanying.Unit.allCases.count * 2 + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count + Map3DTaichungGreen.Role.allCases.count * 2)
+
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }

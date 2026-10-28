@@ -1,0 +1,33 @@
+{
+  "origin": "Original project Swift procedural geometry adapted from its own Taipei Circular Line 610 rounded cab recipe at the user's request; Sanying two-car assembly, dimensions and livery are derived from the cited operator data and photographs. No third-party image or mesh embedded.",
+  "date": "2026-10-28",
+  "license": "Project copyright; reference photographs are observation-only and retain their owners' rights.",
+  "public_use": "Project-owned procedural recipe and citations only; reference photos and private Q-proportion mesh are not redistributed.",
+  "references": [
+    {
+      "url": "https://www.ntmetro.com.tw/basic/?mode=detail&node=864",
+      "author": "New Taipei Metro Corporation",
+      "type": "operator specifications",
+      "use": "2-car formation, 35 x 2.6 x 3.8 m, steel wheel, 750 V DC third rail"
+    },
+    {
+      "url": "https://www.ntpc.gov.tw/ch/home.jsp?dataserno=202308100011&id=28",
+      "author": "New Taipei City Government",
+      "type": "official report and real train photographs",
+      "use": "17.7 m car, three doors per side, sloped nose and blue wave"
+    }
+  ],
+  "estimated": [
+    "bogie centres",
+    "wheel radius",
+    "roof equipment placement",
+    "exact window widths",
+    "collector shoe shape"
+  ],
+  "private_reference": {
+    "path": "railway-reference-private/Railway/taiwan-rail-reference-clean/source/rail-3d/assets/garage-blender-v1/sanying.json",
+    "finding": "Illustrative Q-proportions model, 9.208 m long, engineeringDimensionsM null; inspected metadata only and did not reuse geometry or dimensions."
+  },
+  "revision_2_feedback": "User rejected revision-1 appearance and requested a Circular Line-inspired two-car Sanying redesign on 2026-10-28.",
+  "revision_3_feedback": "User asked whether revision-2 looked like five supplied real-train photographs. Visual inspection found an incorrect dark upper body, an oval windscreen and a pale lower cab. Revision-3 corrects those cues; the references remain observation-only."
+}

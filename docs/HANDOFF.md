@@ -1836,6 +1836,11 @@
 - **等作者在 TestFlight 看**（UNVERIFIED）：4 GB 的 iPhone 開關 3D、在台北拖動時有沒有閃退、回報裡的「記憶體最高／最少剩」與「裝置」；`tight` 每次開 3D 要等多久；6000× 大地圖上 A14 以前的手機畫面順不順、燙不燙、實際倍速；M1 iPad 的 `MTLDevice.name` 是否以「Apple M」開頭、升級後順不順，iPad 降像素後的清晰度。
 - **下一步**（沒派）：3D 場景上傳 GPU 後放掉 App 留著的那份（tw3d `gpu-residency.js` 的做法，所有機型省 370–520 MB），見決策 460「下一步」。
 
+### 4.16 跑不到設定倍速時的一次性提示（決策 464，session_01YGNNumnQtaMdPM5echyBfu，派工單 BV，2026-10-28）
+
+- 做了的在 [決策 464](decisions/464.md)：連續 20 秒低於設定的 70% 時，倍速旁的點自動打開一次 popover（「這張地圖在這台裝置上大約只跑得到 ×N」＋改成最近跑得到的一檔＋知道了；發燙時只說「裝置有點燙，遊戲先放慢」）。規則在 `SpeedLagHint.swift`，Linux 測試 `SpeedLagHintTests`。
+- **等作者在 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：舊 iPhone／iPad (A16) 在大地圖 6000× 時 20 秒後有沒有跳、popover 擋不擋操作、「改成」那一檔順不順；70%／20 秒是不是剛好（太吵就調 `SpeedLagWatch.lowPermille`／`sustained`）。沒有新的 UI 測試。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
@@ -2292,3 +2297,7 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 台中綠線交付補記：公開draft[#1430](https://github.com/a91453/railway-game-ios/pull/1430)↔素材draft[railway-assets-private#21](https://github.com/a91453/railway-assets-private/pull/21)，固定producer ebf978be；[完整證據](art/taichung-green/verification.json)。680舊原生逐bytes不變、14成品獨立重建一致、20私庫PNG＋1公開總覽、最終viewer真下載已驗。額外相容性測試發現Map3DModelTests的studies計數漏四件，已只補本型×2。最新head CI與記憶體報告見自有README及PR，不把測試通過當外觀接受。
 
 台中綠線第二版收尾：最後實看發現風琴間隙，僅延伸實際風琴至共同連結面並新增縮回100mm反例；最終producer `e525a29a`／素材`61084334` revision-2。真正前版公開`ebf978be`／素材`d90867d7`可重建，第一輪重檔已在同PR移除、保留PNG／README／來源。最終12項Swift通過，另啟用記憶體報告的13項通過、standard仍583模型／133.3MB；技術／來源／viewer下載SHA及兩庫draft仍見自有README。外觀接受／營運／裝置仍UNVERIFIED。
+
+### 2026-10-28 Codex 三鶯線原生靜態模型
+
+三鶯線兩節車靜態模型的重建入口與來源在 [SANYING_MODEL.md](art/native-vehicle-modeling/SANYING_MODEL.md)。使用者否定第一版外觀，又指出第二版與實車照片不夠像；第三版修白色側板／門柱、獨立深色窗、藍色車頭與銀色橫飾帶。使用者於 2026-10-28 回覆「可以」，僅第三版 producer `495468fe0bef6bf9e56b4543e1db5642bf0328c1` 記外觀接受。前版由 git producer 恢復；營運映射、真機仍未驗，公開／私有 draft PR 見本輪 #1041 登記。
