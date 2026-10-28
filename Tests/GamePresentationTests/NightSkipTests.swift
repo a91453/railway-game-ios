@@ -290,6 +290,23 @@ final class NightSkipTests: XCTestCase {
         }
     }
 
+    /// A speed chosen while a loop tick was worked out is the speed the
+    /// skip gives back, not the one before it.
+    @MainActor
+    func testASpeedHeldForATickIsTheOneTheSkipGivesBack() async throws {
+        let session = GameSession(world: try world())
+        session.setSpeed(.normal)
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        _ = await tick.work()
+        session.setSpeed(.double)
+        XCTAssertEqual(session.heldSpeed, .double)
+        session.skipToMorning()
+        XCTAssertNil(session.heldSpeed)
+        _ = runSkip(session)
+        XCTAssertNil(session.nightSkipRun)
+        XCTAssertEqual(session.world.clock.speed, .double, "back at the speed chosen last")
+    }
+
     /// Ten more minutes after the stop, the train leaves as it would have.
     func testTheMorningGoesOnAsItWouldHave() throws {
         let start = try world()

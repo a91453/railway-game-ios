@@ -219,6 +219,9 @@ extension GameSession {
     /// 305); does nothing when there is nothing to skip.
     public func skipToMorning() {
         guard !isLayingDemoRealLines, let skip = nightSkip else { return }
+        // A speed chosen while a tick was worked out is the speed to come
+        // back to, not the one before it (``heldSpeed``).
+        applyHeldSpeed()
         let clock = world.clock
         isPausedForEvent = false
         nightSkipRun = NightSkipRun(
