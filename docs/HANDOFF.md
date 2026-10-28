@@ -432,7 +432,7 @@
 - **BL**（session_01YGNNuqUpKkygZmLQmiFyYw，素材庫與私庫照盤點刪檔 D1–D4、J2、J3、J10）：卡在要作者批准 `add_repo`（railway-game-ios、railway-reference-private）。請作者批准或回它；私庫的刪檔 PR 由作者合。
 
 **等前一項合併再派**：
-- Kenney 三件（針葉樹、灌木、儲槽）接進 `Map3DModelPack`：派工單 BN 做了（決策 458，`claude/kenney-trees-tanks`）；glTF-Validator 進 repo／CI 是加依賴，由作者決定（規劃另外問）。
+- Kenney 三件（針葉樹、灌木、儲槽）接進 `Map3DModelPack`：派工單 BN 做了（決策 458，`claude/kenney-trees-tanks`，PR #1417）；glTF-Validator 進 repo／CI 是加依賴，由作者決定（規劃另外問）。實作 session 壓縮兩次後停在這裡：#1417 若 CI 綠了還是 draft，由規劃（或接手的 session）改 ready、在 #1041 留「可合併」；七向圖在素材庫 PR a91453/railway-assets-private#17，作者合。
 - J7：`site_archive_clean` 的路徑改到 `taiwan-rail-reference-clean`（Sonnet）：BK 合併後。
 - 7d（NEXT_PRIORITIES §22.2）：`Map3DChineseRoof` 接進 civic-kit、residential-kit，把「zip 屋頂＋blender-buildings-v1 比例＋OSM 外框」寫進兩個 SKILL.md，補 §c.12 小口磚雙色、雨遮、冷氣室外機（Opus）：決策 457 合併後。
 - 7c 第一批（Opus），有 Blender 參考的車站：臺中、新竹、花蓮、臺東、板橋、南港；高鐵桃園、新竹、台中含新烏日、台南、左營。作者看過台北這輪滿意才派；第二批（基隆、嘉義、臺南與老站、林鐵糖鐵站）最後。作者 10-28「好 照你的建議排」。
