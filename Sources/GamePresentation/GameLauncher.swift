@@ -526,12 +526,12 @@ public final class GameLauncher {
                 ))
                 return
             }
-            begin(
-                PingxiChallenge.make(
+            beginReadingRoads(
+                of: PingxiChallenge.make(
                     in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor),
                     steep: steep(at: RealWorldDemo.anchor)
                 ),
-                keepingAutosave: true
+                place: language.text("Pingxi Line", "平溪線"), isDemo: false
             )
         case .liuMingchuan:
             // Decision 153: the map from Keelung to Hsinchu, its towns read
@@ -714,14 +714,41 @@ public final class GameLauncher {
     /// Opens ``RealWorldDemo``: Taiwan's Yilan, Western Trunk, Pingxi and
     /// Shenao Lines built on `railways` over the ground of the app's
     /// heights (decision 132) and running over Apple's map.
-    public func openRealWorldDemo(railways: RealRailways) {
-        begin(
-            RealWorldDemo.make(
+    @discardableResult
+    public func openRealWorldDemo(railways: RealRailways) -> Task<Void, Never>? {
+        beginReadingRoads(
+            of: RealWorldDemo.make(
                 in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor),
                 steep: steep(at: RealWorldDemo.anchor), heights: heights
             ),
-            keepingAutosave: true, isDemo: true
+            place: language.text("Real-World Demo", "實景示範"), isDemo: true
         )
+    }
+
+    /// Whether ``beginReadingRoads(of:place:isDemo:)`` is reading a game's
+    /// roads before it begins.
+    private var isReadingRoadsToBegin = false
+
+    /// Plays `world` once its roads are read off the main actor
+    /// (``readingRoads(of:baseMap:)``), the start screen showing meanwhile:
+    /// the real-world demo and the Pingxi challenge give their land all at
+    /// once, and reading its roads in ``begin`` held the main thread. The
+    /// game that begins is the same one. Returns the task, or `nil` while
+    /// a demo or another such game is being built. A game the player
+    /// starts meanwhile stays.
+    @discardableResult
+    private func beginReadingRoads(of world: GameWorld, place: String, isDemo: Bool) -> Task<Void, Never>? {
+        guard !isOpeningADemo, !isReadingRoadsToBegin, realWorldLoading == nil else { return nil }
+        isReadingRoadsToBegin = true
+        realWorldLoading = RealWorldLoading(place: place)
+        let (baseMap, playing) = (baseMap, session)
+        return Task {
+            let world = await Task.detached(priority: .userInitiated) { Self.readingRoads(of: world, baseMap: baseMap) }.value
+            isReadingRoadsToBegin = false
+            realWorldLoading = nil
+            guard session === playing else { return }
+            begin(world, keepingAutosave: true, isDemo: isDemo)
+        }
     }
 
     /// Whether ``openHighSpeedDemo(railways:)`` is building its game.
@@ -729,7 +756,7 @@ public final class GameLauncher {
 
     /// Whether either demo is being built: one at a time, so the one that
     /// opens is the one the player chose.
-    public var isOpeningADemo: Bool { isOpeningHighSpeedDemo || isOpeningTRADemo }
+    public var isOpeningADemo: Bool { isOpeningHighSpeedDemo || isOpeningTRADemo || isReadingRoadsToBegin }
 
     /// Opens ``HighSpeedDemo`` (decision 170): the Taiwan High Speed Rail,
     /// Nangang to Zuoying, built on its real alignment over the whole of

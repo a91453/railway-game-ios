@@ -278,6 +278,7 @@ extension GameSession {
         // clock stopped meanwhile, so no tick splits the one Undo, and
         // running again as it was after.
         let tool = (height: networkHeight, structure: networkStructure)
+        applyHeldSpeed()
         let speed = world.clock.isPaused ? nil : world.clock.speed
         if speed != nil { changeSpeed(.paused) }
         networkHeight = 0

@@ -53,6 +53,22 @@ final class DemoRealLinesTests: XCTestCase {
         }
     }
 
+    /// A speed chosen while a loop tick was worked out is the speed the
+    /// laying gives back, not the one before it.
+    @MainActor
+    func testASpeedHeldForATickIsTheOneLayingGivesBack() async throws {
+        let (session, view) = try taipei()
+        session.setSpeed(.normal)
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        _ = await tick.work()
+        session.setSpeed(.double)
+        XCTAssertEqual(session.heldSpeed, .double)
+        let laid = await session.layDemoRealLines(in: view)
+        XCTAssertNotNil(laid)
+        XCTAssertNil(session.heldSpeed)
+        XCTAssertEqual(session.world.clock.speed, .double, "running again at the speed chosen last")
+    }
+
     /// One tap: real lines with their stations in view, a line calling at
     /// them in the real line's colour, trains running it; one Undo takes
     /// it all back.
