@@ -341,13 +341,16 @@ public struct Map3DLoadGovernor: Equatable, Sendable {
     /// least: its fewest on the streets, the player's trains and buses in
     /// full), or where it got to last time (`remembered`,
     /// ``remembered(_:quality:system:)``); on Battery Saver and High
-    /// Quality its tier's full.
-    public static func start(for quality: Map3DQuality, device: Map3DDeviceTier?, remembered: Int? = nil) -> Int {
+    /// Quality its tier's full. Decision 460: on Automatic a device of
+    /// little `memory` (``DeviceMemoryTier/startsLower``) starts a rung
+    /// lower still when it keeps no rung from last time.
+    public static func start(for quality: Map3DQuality, device: Map3DDeviceTier?, remembered: Int? = nil,
+                             memory: DeviceMemoryTier = .ample) -> Int {
         guard let tier = quality.tier(device: device) else { return 0 }
         let top = Map3DLoadLevel.top(of: tier)
         guard quality == .automatic else { return top }
         if let remembered { return min(max(remembered, 0), top) }
-        return tier == .lower ? 0 : top - 1
+        return max((tier == .lower ? 0 : top - 1) - (memory.startsLower ? 1 : 0), 0)
     }
 
     /// The rung kept on the device in `stored` (``remembering(_:quality:system:)``),

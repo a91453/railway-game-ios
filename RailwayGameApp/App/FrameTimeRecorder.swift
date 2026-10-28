@@ -3,6 +3,7 @@
 @preconcurrency import Darwin
 import Foundation
 import GamePresentation
+import Metal
 import os
 import QuartzCore
 import UIKit
@@ -31,8 +32,19 @@ final class FrameTimeRecorder: NSObject {
     private var lastLook: CFTimeInterval = 0
     private var observers: [NSObjectProtocol] = []
 
+    /// Decision 460: the device's memory: how much it has, and the most the
+    /// system lets the app use (what it uses and what is left to it, read
+    /// once; `nil` on the Simulator, which tells nothing left).
+    static let physicalMemory = ProcessInfo.processInfo.physicalMemory
+    static let memoryLimit = DeviceMemoryTier.limit(footprint: footprint(), available: UInt64(os_proc_available_memory()))
+    static let memoryTier = DeviceMemoryTier.of(physical: physicalMemory, limit: memoryLimit)
+    /// Decision 460: the device's CPU, by its chip and cores.
+    static let cpuTier = DeviceCPUTier.of(gpuFamily: MTLCreateSystemDefaultDevice().map(Map3DMetalView.appleFamily(of:)) ?? 0,
+                                          cores: ProcessInfo.processInfo.activeProcessorCount)
+
     private override init() {
         super.init()
+        GameSession.tickPace = TickPace(cpu: Self.cpuTier, heat: Self.heatLevel())
         let center = NotificationCenter.default
         observers = [
             center.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: .main) { _ in
@@ -129,11 +141,15 @@ final class FrameTimeRecorder: NSObject {
         let world = session?.world
         let context = FrameTimeContext(
             screen: screen, speed: world?.clock.speed.rawValue, stations: world?.stations.count ?? 0, lines: world?.lines.count ?? 0,
-            map3D: Map3DLoadGovernor.report(UserDefaults.standard.string(forKey: Map3DMetalView.rungKey))
+            map3D: Map3DLoadGovernor.report(UserDefaults.standard.string(forKey: Map3DMetalView.rungKey)),
+            device: deviceLoadSummary(memory: Self.memoryTier, physical: Self.physicalMemory, limit: Self.memoryLimit, pace: GameSession.tickPace)
         )
         Self.store.add(Self.meter.update(context, at: now, wall: Date().timeIntervalSince1970))
         Self.meter.memory(footprint: Self.footprint(), available: UInt64(os_proc_available_memory()))
         Self.meter.thermal(Self.heat(ProcessInfo.processInfo.thermalState))
+        // Decision 460: the game loop rests more while the phone runs hot.
+        let heat = Self.heatLevel()
+        if GameSession.tickPace.heat != heat { GameSession.tickPace.heat = heat }
     }
 
     private func startBeat() {
@@ -168,6 +184,10 @@ final class FrameTimeRecorder: NSObject {
             }
         }
         return result == KERN_SUCCESS ? info.phys_footprint : nil
+    }
+
+    private static func heatLevel() -> Map3DQuality.Heat {
+        Map3DQuality.Heat(rawValue: ProcessInfo.processInfo.thermalState.rawValue) ?? .critical
     }
 
     private static func heat(_ state: ProcessInfo.ThermalState) -> String {
