@@ -53,6 +53,10 @@ public enum WhatsNew {
                     english: "3D quality follows each device's memory and chip: larger iPads look sharper, and phones with less memory stay steady.",
                     chinese: "3D 的畫質照每台裝置的記憶體與晶片調整：大 iPad 更清楚，記憶體小的手機更穩。"
                 ),
+                Line(
+                    english: "When your device can't keep up with the speed you set, a tip says how fast this map really runs and offers to switch to that speed.",
+                    chinese: "裝置跑不到設定的倍速時，會跳一次提示，告訴你這張地圖實際跑得到多快，並可一鍵改成那一檔。"
+                ),
             ],
             fixes: [
                 Line(
