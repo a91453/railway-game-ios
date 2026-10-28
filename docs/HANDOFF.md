@@ -1116,6 +1116,12 @@
 
 **預覽圖放哪裡（2026-10-22，session_011DWN98Fo4KePt7PLmgsV9e，遊戲規劃派工）**：遊戲不讀的預覽圖、截圖放私有庫 `a91453/railway-reference-private` 的 `Railway/game-art-previews/`，路徑和這裡一樣（`docs/art/<資料夾>/`、`tools/cityview-benchmark/examples/`）。這次從 main 01956db 搬了 138 個檔、約 31.7 MB（逐檔 SHA-256 核對，清單是私有庫的 `Railway/game-art-previews/MOVED_2026-10-22.sha256.txt`）；每個資料夾留 README（開頭一行寫其他圖在哪）、一張總覽圖、文字紀錄（`.md`、`.json`、`.html`、`.svg`）和測試讀的 `meshy-city-bus-2026-10-18/city-bus.glb`、`city-bus.m3dmodel`。**以後的規則**：PR 只把 README、一張總覽圖和小的紀錄放進 `docs/art/`，其他圖先在私有庫開 PR；各 kit 的 `rebuild.sh` 本來就拒絕寫進公開 checkout，`Web/CityView/tools/town-preview/preview.cjs` 改成一定要給輸出資料夾。git 歷史裡的舊檔沒有改寫，`.git` 不會變小。
 
+**素材放哪裡（2026-10-28，派工單 AZ，作者：「建好了 railway-assets-private」）**：私庫 `a91453/railway-reference-private` 約 3.6 GB（GitHub 建議 1 GB 以下），作者另開了私有的 `a91453/railway-assets-private` 放大的二進位素材。
+- 放新庫：遊戲不讀的預覽圖與完整素材包（原 `Railway/game-art-previews/`，路徑改成新庫的 `game-art-previews/docs/art/`）、Meshy 批次（`meshy-batch-2026-10/`）、產出的模型包。舊文件寫的 `Railway/game-art-previews/...` 照樣讀得到（舊庫的檔案先不刪，搬走後刪檔要作者點頭），新的一律放新庫。
+- 留舊庫：參考網站原始碼與資料快照（CLAUDE.md 列的那些）。
+- 新庫規則：每個外部素材資料夾附自己的授權與來源檔；Quaternius、Polyfork 的檔案不得公開轉載；Meshy 照它的條款；單檔不超過 100 MB；沒有授權檔。細節見新庫的 README。
+- 不改寫歷史、不 force-push：刪檔不會縮小舊庫在 GitHub 上的大小，只讓 session 的淺層 clone 變小。
+
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
 
 | 事項 | 狀態 | 在哪裡 |
