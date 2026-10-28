@@ -1666,7 +1666,7 @@
 預覽工具：參考庫 `scripts/Map3DPreviewDump.patch`（`MAP3D_PLAY` 放列車與標籤位置），用法在那裡的 README。
 
 **台北市中心的地標與城門**（決策 457，session_01YGNNupg9BaQswnXKhfrkdv）：中正紀念堂、自由廣場牌樓、兩廳院、總統府、西門紅樓、國父紀念館、圓山大飯店、四座城門做進 `Map3DTaipeiLandmark`；中式屋頂（廡殿、歇山、重簷、起翹）是獨立的零件 `chineseRoof`（`Map3DChineseRoof.swift`）。還沒做的：
-- ~~台北車站、101、高雄車站照第三輪的流程逐件更新~~：session_01YGNNumg2QcGW9DMPVNbA8L 做了（決策 457「後來」）；剩下高雄車站旁兩棟 OSM 沒高度的商業大樓（ways 1298938833、1298938834）沒加；
+- ~~台北車站、101、高雄車站照第三輪的流程逐件更新~~：session_01YGNNumg2QcGW9DMPVNbA8L 做了（決策 457「後來」）；作者選了台北車站、101 的第四欄；高雄車站旁的聯合開發大樓（OSM ways 1298938833、1298938834）OSM 沒有樓層與高度，沒加：完工、OSM 有 `building:levels` 或 `height` 後照樓層（每層約 3.5 m）加成一般大樓；
 - 讓 civic-kit（廟宇、古蹟）與 residential-kit（三合院、傳統街屋）的配方共用 `chineseRoof`（遊戲規劃在這張合併後派）；
 - 101 夜裡照星期換色（§22.12 第 3 項的另一半）；
 - 其他大廟改用 `chineseRoof`（§22.12 第 15 名「廟放到真實廟址」）；
