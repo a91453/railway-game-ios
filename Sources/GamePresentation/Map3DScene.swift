@@ -378,7 +378,14 @@ public struct Map3DScene: Sendable {
         builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building or a landmark stands).
+        // Decision 458: the conifers of the high woods, before the props
+        // where the track, a station or a landmark is are taken away.
+        builder.addConifers(clearOf: builder.realTrackCells)
         builder.removeProps(on: stations.union(landmarkCells).union(turntable))
+        // Decision 458: the bushes on the stations' plazas and the grass
+        // beside the line.
+        builder.addStationBushes()
+        builder.addBushesBesideTrack(cleared.union(builder.realTrackCells), clearOf: stations.union(landmarkCells).union(turntable))
         // Decision 229 續: the street lights' pools, seen at night.
         builder.addLampPools()
         // Decision 239: on a real-world map, the real buildings round
@@ -666,6 +673,13 @@ extension Map3DScene {
         /// by the 64 m cell, each area's rings cut to the cell; where the
         /// railway crosses one, it is on a truss.
         var waterCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        /// Decision 458: the base map's woods and grass the same way, for
+        /// the conifers and the bushes beside the line.
+        var woodCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        var grassCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        /// Decision 458: each station building's middle, the way its
+        /// front faces, its depth and width, for the bushes on its plaza.
+        var stationFronts: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float)] = []
         /// Decision 407: the player's track a high-speed line runs on.
         var highSpeedEdges: Set<TrackEdgeID>?
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]

@@ -1437,6 +1437,30 @@
       "hash" : "480933673ebeadc8",
       "triangles" : 5512
     },
+    "scenery-bushes" : {
+      "hash" : "9a6c6ddad8ed8cce",
+      "triangles" : 40
+    },
+    "scenery-bushesLarge" : {
+      "hash" : "358666eecf84c0f3",
+      "triangles" : 60
+    },
+    "scenery-pine" : {
+      "hash" : "6dceff20a8a24fa4",
+      "triangles" : 52
+    },
+    "scenery-pineTall" : {
+      "hash" : "9044b2c554b041ec",
+      "triangles" : 76
+    },
+    "scenery-pineYoung" : {
+      "hash" : "17471054d7dfed49",
+      "triangles" : 40
+    },
+    "scenery-tank" : {
+      "hash" : "2d6d09ff2fa2f42c",
+      "triangles" : 50
+    },
     "set-BLUE-car" : {
       "hash" : "cdaf3d84d3d86c31",
       "triangles" : 1528

@@ -730,12 +730,16 @@ private struct Map3DView: UIViewRepresentable {
     }
 
     /// Decision 230: the train models, made in code once.
-    // The city bus and the evening trucks (decision 437) from their
-    // files, or the box-built ones. K1-1, K2-4: made off the main thread
-    // (the screen's `modelsReady`), never first read in `makeUIView`.
-    nonisolated static let models: Map3DModelPack? = Map3DGarbageTruck.pack(
+    // The city bus, the evening trucks (decision 437) and the conifers,
+    // bushes and tanks (decision 458) from their files, or the code-made
+    // ones. K1-1, K2-4: made off the main thread (the screen's
+    // `modelsReady`), never first read in `makeUIView`.
+    nonisolated static let models: Map3DModelPack? = Map3DSceneryProp.pack(Map3DGarbageTruck.pack(
         Map3DCityBus.pack(file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension)),
-        files: Map3DGarbageTruck.fileNames.compactMapValues { Bundle.main.url(forResource: $0, withExtension: Map3DGarbageTruck.fileExtension) })
+        files: Map3DGarbageTruck.fileNames.compactMapValues { Bundle.main.url(forResource: $0, withExtension: Map3DGarbageTruck.fileExtension) }),
+        files: Dictionary(uniqueKeysWithValues: Map3DSceneryProp.allCases.compactMap { prop in
+            Bundle.main.url(forResource: prop.fileName, withExtension: Map3DSceneryProp.fileExtension).map { (prop, $0) }
+        }))
 
     func makeUIView(context: Context) -> UIView {
         guard let view = Map3DMetalView.make(samples: quality.samplesPerPixel) else {
