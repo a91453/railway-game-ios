@@ -1626,6 +1626,12 @@
 
 預覽工具：參考庫 `scripts/Map3DPreviewDump.patch`（`MAP3D_PLAY` 放列車與標籤位置），用法在那裡的 README。
 
+**台北市中心的地標與城門**（決策 457，session_01YGNNupg9BaQswnXKhfrkdv）：中正紀念堂、自由廣場牌樓、兩廳院、總統府、西門紅樓、國父紀念館、圓山大飯店、四座城門做進 `Map3DTaipeiLandmark`；中式屋頂（廡殿、歇山、重簷、起翹）在 `Map3DTaipeiPalaces.swift`。還沒做的：
+- 101 夜裡照星期換色（§22.12 第 3 項的另一半）；
+- 其他大廟改用 `palaceRoof`（§22.12 第 15 名「廟放到真實廟址」）；
+- 實機看台北開局多出的約 1.6 萬個近看三角形的幀數；
+- 城門只有十幾公尺，卻清掉整格 64 m 的城市；要縮小就改 `addTaipeiLandmarks` 的清場，照 `clearing` 的矩形清，不清整格。
+
 ### 4.7 鐵路低於地面的路塹（決策 375，session_01AEq1bFjyAS1nyPmCs6wW7p）
 
 作者 84.1 的回報（駕駛室前面只有路、白色平面切進山）：道床低於 64 m 的地面的地方，現在挖一條溝（`Map3DTrench.swift`），地面、底圖、道路、標線、街上的車都讓開，深溝上的跨路留成橋。還沒做的：

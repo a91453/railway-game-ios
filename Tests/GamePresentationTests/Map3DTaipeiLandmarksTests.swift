@@ -4,7 +4,8 @@ import GameCore
 import XCTest
 
 /// Decision 370 (step 2): Taipei 101 and Taipei Main Station in the model
-/// look, where they stand.
+/// look, where they stand; decision 431's Kaohsiung Main Station and
+/// decision 457's central Taipei.
 final class Map3DTaipeiLandmarksTests: XCTestCase {
     /// Taipei Main Station: the middle of the map, so of the scene; 101 is
     /// 4.8 km off, outside a new game's scene.
@@ -53,6 +54,16 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             case .taipei101: 508
             case .taipeiMainStation: 30
             case .kaohsiungMainStation: Self.kaohsiungCanopyHeight
+            case .chiangKaiShekMemorialHall: 70
+            case .libertySquareGate, .sunYatSenMemorialHall: 30
+            case .nationalTheater, .nationalConcertHall: 37
+            case .presidentialOffice: 60
+            case .ximenRedHouse: 17.5
+            case .grandHotel: 87
+            case .northGate: 15.2
+            case .eastGate: 16.5
+            case .southGate: 19
+            case .smallSouthGate: 14.5
             }
             for model in [full, far] {
                 let top = model.vertices.map(\.z).max() ?? 0
@@ -74,6 +85,12 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             case .taipei101: [Map3DVertex.curtainGlass, Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
             case .taipeiMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles]
             case .kaohsiungMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines]
+            case .chiangKaiShekMemorialHall, .libertySquareGate, .northGate, .eastGate, .southGate, .smallSouthGate:
+                [Map3DVertex.plain, Map3DVertex.roofTiles]
+            case .nationalTheater, .nationalConcertHall, .sunYatSenMemorialHall, .grandHotel:
+                [Map3DVertex.roofTiles, Map3DVertex.floorLines]
+            case .presidentialOffice: [Map3DVertex.floorLines, Map3DVertex.floodlit]
+            case .ximenRedHouse: [Map3DVertex.floorLines, Map3DVertex.roofTiles]
             }
             XCTAssertTrue(used.isSuperset(of: expectedLayers), "\(landmark)")
         }
@@ -88,6 +105,44 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertLessThanOrEqual(kaohsiungFull.indices.count / 3, 6_000)
         XCTAssertLessThanOrEqual(kaohsiungFar.indices.count / 3, 2_500)
         XCTAssertLessThan(kaohsiungFar.indices.count, kaohsiungFull.indices.count)
+    }
+
+    /// Decision 457: central Taipei's landmarks stand on OpenStreetMap's
+    /// plans (the minimum box of each way, ODbL), within 2 m at the
+    /// ground; each within the landmark budget.
+    func testCentralTaipeiOnOSMsPlans() {
+        let plans: [Map3DTaipeiLandmark: (x: Float, y: Float)] = [
+            .chiangKaiShekMemorialHall: (124.4, 147.4), // way 1052759757
+            .libertySquareGate: (74.7, 17.0), // way 1052759782
+            .nationalTheater: (107.9, 103.3), // way 1052759776
+            .nationalConcertHall: (102.9, 103.3), // way 1052759775
+            .presidentialOffice: (131.9, 92.9), // relation 206817, way 39239021
+            .ximenRedHouse: (91.7, 47.8), // way 222080307
+            .sunYatSenMemorialHall: (108.7, 112.5), // way 189788192
+            .grandHotel: (109.8, 74.2), // way 25202548
+            .northGate: (15.1, 11.4), // way 238316480
+            .eastGate: (17.7, 13.5), // way 209580573
+            .southGate: (33.8, 19.6), // way 245993047
+            .smallSouthGate: (13.5, 12.5), // way 246651384
+        ]
+        for (landmark, plan) in plans {
+            for model in [landmark.model(full: true), landmark.model(full: false)] {
+                let ground = model.vertices.filter { $0.z < 0.01 }
+                let xs = ground.map(\.x), ys = ground.map(\.y)
+                XCTAssertEqual((xs.max() ?? 0) - (xs.min() ?? 0), plan.x, accuracy: 2, "\(landmark)")
+                XCTAssertEqual((ys.max() ?? 0) - (ys.min() ?? 0), plan.y, accuracy: 2, "\(landmark)")
+                XCTAssertEqual(((xs.max() ?? 0) + (xs.min() ?? 0)) / 2, 0, accuracy: 2, "\(landmark)")
+                XCTAssertEqual(((ys.max() ?? 0) + (ys.min() ?? 0)) / 2, 0, accuracy: 2, "\(landmark)")
+            }
+            XCTAssertLessThanOrEqual(landmark.model(full: true).indices.count / 3, 6_000, "\(landmark)")
+            XCTAssertLessThanOrEqual(landmark.model(full: false).indices.count / 3, 2_500, "\(landmark)")
+        }
+        XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 3)
+        // None in Taipei Main Station's wall colour, which the tests below
+        // count the station by.
+        for landmark in plans.keys {
+            XCTAssertFalse(landmark.model(full: true).vertices.contains { $0.color == Self.wall }, "\(landmark)")
+        }
     }
 
     /// Decision 431: Kaohsiung Main Station's canopy (OSM relation 14940189,
@@ -141,19 +196,23 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         var builder = builder(world)
         let built = builder.addTaipeiLandmarks(frame: frame)
         let station = Map3DTaipeiLandmark.taipeiMainStation
-        XCTAssertEqual(Set(built.keys), [station])
+        // With it, decision 457's central Taipei within the scene; 101,
+        // the Sun Yat-sen Memorial Hall and the Grand Hotel are not.
+        XCTAssertTrue(Set(built.keys).isSuperset(of: [station, .northGate, .presidentialOffice, .chiangKaiShekMemorialHall]))
+        XCTAssertTrue(built.keys.allSatisfy { ![.taipei101, .sunYatSenMemorialHall, .grandHotel, .kaohsiungMainStation].contains($0) })
         let taken = try XCTUnwrap(built[station])
-        XCTAssertEqual(triangles(builder.nearMeshes), station.model(full: true).indices.count / 3)
-        XCTAssertEqual(triangles(builder.farMeshes), station.model(full: false).indices.count / 3)
+        XCTAssertEqual(triangles(builder.nearMeshes), built.keys.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
+        XCTAssertEqual(triangles(builder.farMeshes), built.keys.reduce(0) { $0 + $1.model(full: false).indices.count / 3 })
         XCTAssertTrue(builder.closeMeshes.isEmpty)
         XCTAssertTrue(builder.keptColours.contains(Self.wall))
         // Its 184 m by 160 m of ground: three 64 m cells each way at least.
         XCTAssertGreaterThanOrEqual(taken.count, 9)
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         XCTAssertTrue(taken.contains(builder.chunk(of: middle)))
-        let bounds = try XCTUnwrap(builder.nearMeshes.values.first?.bounds)
-        XCTAssertEqual((bounds.min.x + bounds.max.x) / 2, middle.x, accuracy: 15)
-        XCTAssertEqual((bounds.min.z + bounds.max.z) / 2, middle.z, accuracy: 15)
+        let walls = builder.nearMeshes.values.flatMap(\.vertices).filter { $0.color == Self.wall }
+        let xs = walls.map(\.x), zs = walls.map(\.z)
+        XCTAssertEqual(((xs.min() ?? 0) + (xs.max() ?? 0)) / 2, middle.x, accuracy: 15)
+        XCTAssertEqual(((zs.min() ?? 0) + (zs.max() ?? 0)) / 2, middle.z, accuracy: 15)
     }
 
     /// Track on the ground through it: not built. Under it, in a tunnel as
@@ -165,15 +224,15 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-300), through: 300, by: 2).map { middle + Map3DPoint($0, 0, 30) }
         builder.trackLines = [(line, .surface)]
-        XCTAssertTrue(builder.addTaipeiLandmarks(frame: frame).isEmpty)
-        XCTAssertTrue(builder.nearMeshes.isEmpty)
+        XCTAssertNil(builder.addTaipeiLandmarks(frame: frame)[.taipeiMainStation])
+        XCTAssertFalse(builder.nearMeshes.values.contains { $0.vertices.contains { $0.color == Self.wall } })
         var under = self.builder(world)
         under.trackLines = [(line, .tunnel)]
-        XCTAssertFalse(under.addTaipeiLandmarks(frame: frame).isEmpty)
+        XCTAssertNotNil(under.addTaipeiLandmarks(frame: frame)[.taipeiMainStation])
         // 120 m off, clear of it.
         var beside = self.builder(world)
         beside.trackLines = [(line.map { $0 + Map3DPoint(0, 0, 90) }, .surface)]
-        XCTAssertFalse(beside.addTaipeiLandmarks(frame: frame).isEmpty)
+        XCTAssertNotNil(beside.addTaipeiLandmarks(frame: frame)[.taipeiMainStation])
     }
 
     /// A station of the player's beside it is built as Taipei Main
@@ -196,7 +255,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         // stations' 3 km off.
         var kit = builder
         let all = kit.addStations(snapshot, frame: frame)
-        XCTAssertEqual(Set(builder.addTaipeiLandmarks(frame: frame).keys), [.taipeiMainStation])
+        XCTAssertNotNil(builder.addTaipeiLandmarks(frame: frame)[.taipeiMainStation])
         let others = builder.addStations(snapshot, frame: frame, drawnElsewhere: [.taipei])
         XCTAssertTrue(others.isStrictSubset(of: all))
         let middle = builder.chunk(of: builder.point(x: frame.middleX, y: frame.middleY, height: 0))

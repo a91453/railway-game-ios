@@ -114,7 +114,13 @@ exist; start with its `00_READ_ME_FIRST.md` and `DATA_USE_NOTICES.json`),
 `Railway/tdx-bus-history-2026-10/` (added 2026-10-27; samples of Taipei and
 Kaohsiung city bus positions and stop events, a weekday and a rest day each,
 cut at `$top` because the historical API cannot filter by route; start with
-its `00_READ_ME_FIRST.md`), and `city_map_reference_clean/`
+its `00_READ_ME_FIRST.md`), `Railway/slop-taipei-reference-clean/` (added
+2026-10-28; the two slop-taipei clean packages, both slop-newyork (MIT)
+turned into Taipei: shwang1979's central Taipei with hand-built landmarks
+and hebe13579's Taipei basin with a sourced streetscape spec and data
+tools; start with its `00_READ_ME_FIRST.md`; compared in
+`docs/research/NEXT_PRIORITIES_2026-10-12.md` §22.19, its landmarks
+rebuilt in decision 457), and `city_map_reference_clean/`
 and `power_grid_reference_clean/` at the repository root (start with their
 `REFERENCE_COMPARISON.md` and `SANITIZATION_REPORT.md`). The Meshy
 text-to-3D street and railway props (`meshy-batch-2026-10/`, added

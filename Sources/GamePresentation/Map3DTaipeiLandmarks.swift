@@ -12,10 +12,13 @@ import GameCore
 // (`PALETTES[1.0]`), in the reference repository's
 // `Railway/game-art-previews/docs/art/map3d-mapbox-look-2026-10-23/scripts/`.
 
-/// Decision 370, 431: the landmarks, each built in its own metres (x right,
+/// Decision 370, 431, 457: the landmarks, each built in its own metres (x right,
 /// y back, z up, its middle at the origin), then stood where it is.
 enum Map3DTaipeiLandmark: CaseIterable, Sendable {
     case taipei101, taipeiMainStation, kaohsiungMainStation
+    // Decision 457: central Taipei's palace-style landmarks and old gates.
+    case chiangKaiShekMemorialHall, libertySquareGate, nationalTheater, nationalConcertHall, presidentialOffice, ximenRedHouse
+    case sunYatSenMemorialHall, grandHotel, northGate, eastGate, southGate, smallSouthGate
 
     /// Where the landmark's middle stands (`placement.json`), and how far
     /// it is turned about the up axis, degrees east of north as the
@@ -25,6 +28,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: 25.033946307135494
         case .taipeiMainStation: 25.0477174
         case .kaohsiungMainStation: 22.6394462
+        case .chiangKaiShekMemorialHall: 25.0347
+        case .libertySquareGate: 25.0367
+        case .nationalTheater: 25.0353
+        case .nationalConcertHall: 25.037
+        case .presidentialOffice: 25.04
+        case .ximenRedHouse: 25.0421
+        case .sunYatSenMemorialHall: 25.04
+        case .grandHotel: 25.0786
+        case .northGate: 25.0477
+        case .eastGate: 25.039
+        case .southGate: 25.0351
+        case .smallSouthGate: 25.0369
         }
     }
     var longitude: Double {
@@ -32,6 +47,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: 121.56455513294843
         case .taipeiMainStation: 121.51711425
         case .kaohsiungMainStation: 120.3025654
+        case .chiangKaiShekMemorialHall: 121.522
+        case .libertySquareGate: 121.518
+        case .nationalTheater: 121.518
+        case .nationalConcertHall: 121.519
+        case .presidentialOffice: 121.512
+        case .ximenRedHouse: 121.507
+        case .sunYatSenMemorialHall: 121.56
+        case .grandHotel: 121.526
+        case .northGate: 121.511
+        case .eastGate: 121.518
+        case .southGate: 121.515
+        case .smallSouthGate: 121.508
         }
     }
     var rotation: Float {
@@ -39,6 +66,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: 89
         case .taipeiMainStation: 169.5
         case .kaohsiungMainStation: 0
+        case .chiangKaiShekMemorialHall: 242
+        case .libertySquareGate: 242
+        case .nationalTheater: 152
+        case .nationalConcertHall: 332
+        case .presidentialOffice: 84
+        case .ximenRedHouse: 165
+        case .sunYatSenMemorialHall: 358
+        case .grandHotel: 338
+        case .northGate: 165
+        case .eastGate: 75
+        case .southGate: 352
+        case .smallSouthGate: 335
         }
     }
     /// Half the length and width of the ground it clears of the city
@@ -50,6 +89,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: (82, 82)
         case .taipeiMainStation: (92, 80)
         case .kaohsiungMainStation: (336, 170)
+        case .chiangKaiShekMemorialHall: (66, 76)
+        case .libertySquareGate: (39.5, 10.5)
+        case .nationalTheater: (55, 52.5)
+        case .nationalConcertHall: (52.5, 52.5)
+        case .presidentialOffice: (67, 47.5)
+        case .ximenRedHouse: (47.5, 25.5)
+        case .sunYatSenMemorialHall: (56, 57.5)
+        case .grandHotel: (57.5, 39)
+        case .northGate: (8.1, 6.2)
+        case .eastGate: (9.4, 7.3)
+        case .southGate: (17.4, 10.3)
+        case .smallSouthGate: (7.3, 6.8)
         }
     }
     var body: (x: Float, y: Float) {
@@ -57,6 +108,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: (65.4, 69.2)
         case .taipeiMainStation: (78.4, 66.8)
         case .kaohsiungMainStation: (162, 142)
+        case .chiangKaiShekMemorialHall: (62.2, 73.8)
+        case .libertySquareGate: (37.4, 8.5)
+        case .nationalTheater: (54, 51.7)
+        case .nationalConcertHall: (51.5, 51.7)
+        case .presidentialOffice: (65.9, 46.5)
+        case .ximenRedHouse: (45.8, 23.9)
+        case .sunYatSenMemorialHall: (54.4, 56.3)
+        case .grandHotel: (55, 38.5)
+        case .northGate: (7.6, 5.7)
+        case .eastGate: (8.9, 6.8)
+        case .southGate: (16.9, 9.8)
+        case .smallSouthGate: (6.8, 6.3)
         }
     }
 
@@ -68,6 +131,12 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         "ridge": 0xF3EFE8, "wellWall": 0xF0EBE2, "skylight": 0xD8E2EA, "plinth": 0xE4E2DE, "groundGlass": 0xC9D8E2,
         "soffit": 0xE9E4DB, "stripGlass": 0xD3DEE6, "flatRoof": 0xE6E4E0, "plant": 0xDCDCDA,
         "canopyGrass": 0xCFE0C8, "canopyLawn": 0xDCE8D6, "crownRoof": 0xC6CFD6,
+        // Decision 457: marble and blue tile, gold tile and red columns,
+        // brick and slate, gate stone, in the same pale look.
+        "stone": 0xF1EFEA, "hallWhite": 0xF8F7F3, "blueTile": 0x9DB4D6, "blueRidge": 0x86A0C6, "opening": 0xADAAA6,
+        "finial": 0xEDE3C4, "vermilion": 0xDC968A, "goldTile": 0xEACB80, "goldRidge": 0xD9B76C, "hallWall": 0xF0E8DD,
+        "beam": 0xD6BEAE, "brick": 0xDDA996, "brickTrim": 0xF6F3EC, "slate": 0xAEB5BD, "cream": 0xF2EAD8,
+        "column": 0xCBC9C5, "gateStone": 0xD9D2C6, "greenRidge": 0x98C4AE,
     ].mapValues(Map3DColor.rgb)
 
     /// The model, in full close by, or without its small parts from afar.
@@ -77,6 +146,18 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipei101: mesh.taipei101()
         case .taipeiMainStation: mesh.station()
         case .kaohsiungMainStation: mesh.kaohsiungMainStation()
+        case .chiangKaiShekMemorialHall: mesh.chiangKaiShekMemorialHall()
+        case .libertySquareGate: mesh.libertySquareGate()
+        case .nationalTheater: mesh.performingArtsHall(53.95, 48.65, kind: .hipped)
+        case .nationalConcertHall: mesh.performingArtsHall(51.45, 48.65, kind: .hipGable)
+        case .presidentialOffice: mesh.presidentialOffice()
+        case .ximenRedHouse: mesh.ximenRedHouse()
+        case .sunYatSenMemorialHall: mesh.sunYatSenMemorialHall()
+        case .grandHotel: mesh.grandHotel()
+        case .northGate: mesh.cityGate(7.55, 5.7, base: 7, top: 15.2, closed: true, double: false)
+        case .eastGate: mesh.cityGate(8.85, 6.75, base: 7, top: 16.5, closed: false, double: true)
+        case .southGate: mesh.cityGate(16.9, 9.8, base: 7.5, top: 19, closed: false, double: true)
+        case .smallSouthGate: mesh.cityGate(6.75, 6.25, base: 6.5, top: 14.5, closed: false, double: false)
         }
         return mesh
     }
