@@ -68,6 +68,8 @@ final class Map3DStreamingTests: XCTestCase {
             XCTAssertEqual(chunk.mesh.indices, same.mesh.indices, "\(key)")
             XCTAssertEqual(chunk.baseIndexCount, same.baseIndexCount, "\(key)")
             XCTAssertEqual(chunk.far.vertices, same.far.vertices, "\(key)")
+            // Decision 455: and the simplified city's boxes.
+            XCTAssertEqual(chunk.farBoxes, same.farBoxes, "\(key)")
             XCTAssertEqual(chunk.shadows.vertices, same.shadows.vertices, "\(key)")
             XCTAssertEqual(chunk.props.map(\.floats), same.props.map(\.floats), "\(key)")
             XCTAssertEqual(chunk.signs, same.signs, "\(key)")

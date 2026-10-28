@@ -22,6 +22,7 @@ final class Map3DSceneMemoryTests: XCTestCase {
             for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.standIn, chunk.shadows] {
                 bytes += mesh.vertices.count * MemoryLayout<Map3DVertex>.stride + mesh.indices.count * MemoryLayout<UInt32>.stride
             }
+            bytes += chunk.farBoxes.count * MemoryLayout<Map3DBoxInstance>.stride
         }
         XCTAssertLessThan(bytes, 1_000_000_000)
         let coarse = scene.chunks.filter { $0.coarse }
@@ -177,10 +178,11 @@ final class Map3DSceneMemoryTests: XCTestCase {
             var near = 0, far = 0, bytes = 0
             for chunk in scene.chunks {
                 near += chunk.mesh.triangleCount
-                far += chunk.far.triangleCount
+                far += chunk.far.triangleCount + chunk.farBoxes.reduce(0) { $0 + $1.triangleCount }
                 for mesh in [chunk.mesh, chunk.far, chunk.close, chunk.standIn, chunk.shadows] {
                     bytes += mesh.vertices.count * MemoryLayout<Map3DVertex>.stride + mesh.indices.count * MemoryLayout<UInt32>.stride
                 }
+                bytes += chunk.farBoxes.count * MemoryLayout<Map3DBoxInstance>.stride
             }
             return (near, far, bytes)
         }

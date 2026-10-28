@@ -115,9 +115,11 @@ final class Map3DPreviewDump: XCTestCase {
         for chunk in chunks {
             // The vertices of both; the indices of the base and of the
             // simplified city (afar), or all of the full mesh (near).
-            let vertices = detailFar ? chunk.mesh.vertices + chunk.far.vertices : chunk.mesh.vertices
+            // Decision 455: the simplified city's boxes as the shader draws them.
+            let far = detailFar ? chunk.farWithBoxes : Map3DMesh()
+            let vertices = detailFar ? chunk.mesh.vertices + far.vertices : chunk.mesh.vertices
             let chunkIndices = detailFar
-                ? Array(chunk.mesh.indices.prefix(chunk.baseIndexCount)) + chunk.far.indices.map { $0 + UInt32(chunk.mesh.vertices.count) }
+                ? Array(chunk.mesh.indices.prefix(chunk.baseIndexCount)) + far.indices.map { $0 + UInt32(chunk.mesh.vertices.count) }
                 : chunk.mesh.indices
             let base = UInt32(floats.count / 12)
             for v in vertices {
@@ -285,7 +287,7 @@ final class Map3DPreviewDump: XCTestCase {
             drawn[name] = scene.chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: camera.viewProjection) }
                 .reduce(0) { total, chunk in
                     total + (camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum)
-                        ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.far.triangleCount)
+                        ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.farTriangleCount)
                         + (camera.wantsClose(minimum: chunk.minimum, maximum: chunk.maximum) ? chunk.close.triangleCount : 0)
                 }
         }

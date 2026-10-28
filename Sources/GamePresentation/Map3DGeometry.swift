@@ -319,6 +319,11 @@ public struct Map3DMesh: Sendable {
     public private(set) var vertices: [Map3DVertex] = []
     /// Three to a triangle, counter-clockwise seen from outside.
     public private(set) var indices: [UInt32] = []
+    /// Decision 455: the boxes ``addBox(base:forward:length:width:height:top:side:topPaint:frontPaint:flankPaint:capped:)``
+    /// kept as instances of one box instead of as vertices, while
+    /// ``collectsBoxes`` (the simplified city's, ``Map3DScene/Chunk/farBoxes``).
+    var boxes: [Map3DBoxInstance] = []
+    var collectsBoxes = false
 
     public init() {}
 
@@ -363,6 +368,7 @@ public struct Map3DMesh: Sendable {
         let base = UInt32(vertices.count)
         vertices += other.vertices
         indices += other.indices.map { $0 + base }
+        boxes += other.boxes
     }
 
     /// Decision 321: `other` built with +x its front, +y up and +z its
@@ -460,14 +466,21 @@ public struct Map3DMesh: Sendable {
     /// not `capped` (a lower part another box stands on). Decision 231:
     /// painted on top with `topPaint`, on the front and back (facing along
     /// `forward`) with `frontPaint`, and on the two flanks with
-    /// `flankPaint`.
+    /// `flankPaint`. Decision 455: every side in `side` itself when not
+    /// `shaded` (a real building's walls).
     public mutating func addBox(
         base: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), length: Float, width: Float, height: Float,
         top: UInt32, side: UInt32, topPaint: Map3DPaint? = nil, frontPaint: Map3DPaint? = nil, flankPaint: Map3DPaint? = nil,
-        capped: Bool = true
+        capped: Bool = true, shaded: Bool = true
     ) {
         guard length > 0, width > 0, height > 0,
               let along = Map3DPoint(forward.x, 0, forward.z).normalized else { return }
+        if collectsBoxes, let box = Map3DBoxInstance(base: base, along: along, length: length, width: width, height: height, top: top, side: side,
+                                                     topPaint: topPaint, frontPaint: frontPaint, flankPaint: flankPaint, capped: capped,
+                                                     shaded: shaded) {
+            boxes.append(box)
+            return
+        }
         let across = Map3DPoint(-along.z, 0, along.x) // to the right of `along`, seen from above
         let f = along * (length / 2), r = across * (width / 2), h = Map3DPoint(0, height, 0)
         let corners = [base + f - r, base + f + r, base - f + r, base - f - r] // front left, front right, back right, back left
@@ -476,7 +489,7 @@ public struct Map3DMesh: Sendable {
         // Each side, counter-clockwise from outside: ground, ground, top, top.
         let sides: [(Int, Int, Float)] = [(1, 0, 0.92), (2, 1, 0.80), (3, 2, 0.70), (0, 3, 0.86)]
         for (index, (from, to, shade)) in sides.enumerated() {
-            addQuad(corners[from], corners[to], up[to], up[from], color: Map3DColor.shaded(side, shade),
+            addQuad(corners[from], corners[to], up[to], up[from], color: shaded ? Map3DColor.shaded(side, shade) : side,
                     paint: index.isMultiple(of: 2) ? frontPaint : flankPaint)
         }
     }

@@ -43,6 +43,7 @@ final class Map3DCoarseChunkTests: XCTestCase {
             XCTAssertFalse(whole.coarse)
             XCTAssertEqual(chunk.coarse, Map3DStreaming.distance(of: key, to: corner) > Map3DScene.detailRadius, "\(key)")
             XCTAssertEqual(chunk.far.vertices, whole.far.vertices, "\(key)")
+            XCTAssertEqual(chunk.farBoxes, whole.farBoxes, "\(key)")
             XCTAssertEqual(chunk.baseIndexCount, whole.baseIndexCount, "\(key)")
             XCTAssertEqual(Array(chunk.mesh.indices.prefix(chunk.baseIndexCount)), Array(whole.mesh.indices.prefix(whole.baseIndexCount)), "\(key)")
             if chunk.coarse {

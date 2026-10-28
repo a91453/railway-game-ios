@@ -79,7 +79,8 @@ final class Map3DFrameCostReportTests: XCTestCase {
                     let all = Self.pixels(chunk.mesh, upTo: chunk.mesh.indices.count, through: matrix)
                     add("city (full)", chunk.mesh.triangleCount - chunk.baseIndexCount / 3, all - base, 1)
                 } else {
-                    add("city (far)", chunk.far.triangleCount, Self.pixels(chunk.far, upTo: chunk.far.indices.count, through: matrix), 1)
+                    let far = chunk.farWithBoxes
+                    add("city (far)", far.triangleCount, Self.pixels(far, upTo: far.indices.count, through: matrix), 1)
                 }
                 if detailed, !closeUp, !chunk.standIn.isEmpty {
                     add("kit buildings' boxes", chunk.standIn.triangleCount, Self.pixels(chunk.standIn, upTo: chunk.standIn.indices.count, through: matrix), 1)
@@ -142,8 +143,8 @@ final class Map3DFrameCostReportTests: XCTestCase {
                 let closeUp = camera.drawsClose(minimum: chunk.minimum, maximum: chunk.maximum, detailed: detailed, coarse: chunk.coarse)
                 under.triangles += chunk.baseIndexCount / 3
                 under.draws += chunk.baseIndexCount > 0 ? 1 : 0
-                all.triangles += (detailed ? chunk.mesh.indices.count : chunk.baseIndexCount + chunk.far.indices.count) / 3
-                all.draws += 1 + (detailed || chunk.far.isEmpty ? 0 : 1)
+                all.triangles += detailed ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.farTriangleCount
+                all.draws += 1 + (detailed || chunk.farIsEmpty ? 0 : 1)
                 if closeUp, !chunk.close.isEmpty { all.triangles += chunk.close.triangleCount; all.draws += 1 }
                 if detailed, !closeUp, !chunk.standIn.isEmpty { all.triangles += chunk.standIn.triangleCount; all.draws += 1 }
                 if detailed {
@@ -186,7 +187,7 @@ final class Map3DFrameCostReportTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
         let plain = try Self.taipeiScene(bands: false), banded = try Self.taipeiScene()
         func near(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.mesh.triangleCount - $1.baseIndexCount / 3 } }
-        func far(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.baseIndexCount / 3 + $1.far.triangleCount } }
+        func far(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.baseIndexCount / 3 + $1.farTriangleCount } }
         print("bands: near \(near(plain)) → \(near(banded)) triangles (+\(near(banded) - near(plain))), far \(far(plain)) → \(far(banded))")
         XCTAssertEqual(far(plain), far(banded))
     }
@@ -314,7 +315,7 @@ final class Map3DFrameCostReportTests: XCTestCase {
                 closeUp[index] = detailed[index] && camera.wantsClose(minimum: chunk.minimum, maximum: chunk.maximum, wasClose: closeUp[index])
                 if Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: matrix) {
                     visible += 1
-                    drawn += (detailed[index] ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.far.triangleCount)
+                    drawn += (detailed[index] ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.farTriangleCount)
                 }
             }
         }

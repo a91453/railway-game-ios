@@ -213,7 +213,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
     }
 
     private func walls(_ scene: Map3DScene) -> Int {
-        scene.chunks.reduce(0) { $0 + ($1.mesh.vertices + $1.far.vertices).filter { $0.color == Self.wall }.count }
+        scene.chunks.reduce(0) { $0 + ($1.mesh.vertices + $1.farWithBoxes.vertices).filter { $0.color == Self.wall }.count }
     }
 
     /// The scene draws it on a real-world map, its colours as they are

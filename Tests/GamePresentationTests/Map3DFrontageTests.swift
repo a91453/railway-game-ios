@@ -191,7 +191,7 @@ final class Map3DFrontageTests: XCTestCase {
             }
             // Decision 391: not the raised roads (the terminal's
             // departure deck), their girders or piers.
-            return scene.chunks.flatMap { [$0.mesh, $0.far] }.reduce(0) { total, mesh in
+            return scene.chunks.flatMap { [$0.mesh, $0.farWithBoxes] }.reduce(0) { total, mesh in
                 total + mesh.vertices.filter { $0.y > 2.5 && !Self.raisedRoad.contains($0.color) && Map3DScene.Builder.NoBuild.inside($0.x, $0.z, ring) }.count
             }
         }
