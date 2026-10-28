@@ -417,12 +417,13 @@ public struct Map3DScene: Sendable {
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
                         besideRoads: taken.byRoads)
         builder.target = .far
+        // Decision 455: the city's boxes as instances: the lots', the real
+        // buildings' on rectangles and their roofs'; the other real
+        // outlines stay vertices.
+        builder.instancingBoxes = instancingBoxes
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: stations.union(landmarkCells)) }
         if let footprints { builder.addFootprints(footprints, clearOf: stations.union(landmarkCells), takenBy: beforeFootprints) }
         if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
-        // Decision 455: the city's lots' boxes as instances; the real
-        // buildings' shapes above stay vertices.
-        builder.instancingBoxes = instancingBoxes
         builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
                         besideRoads: taken.byRoads)
         builder.instancingBoxes = false

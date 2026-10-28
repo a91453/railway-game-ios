@@ -199,9 +199,28 @@ extension Map3DScene.Builder {
             upperPaint = nil
         }
         let far = isFar
+        // Decision 455: afar, an outline of four corners each within
+        // ``rectangleReach`` of the box round it is drawn as that box (as
+        // an instance, ``Map3DBoxInstance``): its walls, their bands and
+        // its roof painted as below.
+        let rectangle = far && !canopy && !hipped && polygons.count == 1 && polygons[0].count == 1 && Self.isRectangle(outline, box)
 
         mesh(at: centre) { mesh in
-            for polygon in polygons {
+            if rectangle {
+                // Its front faces along, as wide as the box; its flanks as
+                // long. A face under 2 m is left plain, as a wall is.
+                let front = box.width < 2, flank = box.length < 2
+                var bottom = Map3DPoint(box.centre.x, ground, box.centre.z), upper = height
+                if groundFloor > 0 {
+                    mesh.addBox(base: bottom, forward: box.along, length: box.length, width: box.width, height: groundFloor, top: roof, side: wall,
+                                frontPaint: front ? nil : groundPaint, flankPaint: flank ? nil : groundPaint, capped: false, shaded: false)
+                    bottom.y += groundFloor
+                    upper -= groundFloor
+                }
+                mesh.addBox(base: bottom, forward: box.along, length: box.length, width: box.width, height: upper, top: roof, side: wall,
+                            topPaint: roofPaint, frontPaint: front ? nil : upperPaint, flankPaint: flank ? nil : upperPaint, shaded: false)
+            }
+            for polygon in polygons where !rectangle {
                 for (index, ring) in polygon.enumerated() where ring.count >= 3 {
                     // Outlines counter-clockwise and holes clockwise in x
                     // and z, so every wall faces away from the building.
@@ -321,6 +340,24 @@ extension Map3DScene.Builder {
 
     /// The box round `ring` turned along its longest side: its middle,
     /// that side's direction, and its length along and width across.
+    /// Decision 455: how far a corner of an outline drawn afar as its box
+    /// may lie from the box's, in metres: under 1.5 steps of the real
+    /// footprints' own grid (``FootprintTiles``, 4,096 to a tile of zoom
+    /// 16, some 0.135 m in Taiwan) and a tenth of a pixel from where the
+    /// city is drawn simplified.
+    static let rectangleReach: Float = 0.2
+
+    /// Decision 455: whether `ring` has four corners, each within
+    /// ``rectangleReach`` of a different corner of `box`, its
+    /// ``orientedBox(_:)``.
+    static func isRectangle(_ ring: [Map3DPoint], _ box: (centre: Map3DPoint, along: Map3DPoint, length: Float, width: Float)) -> Bool {
+        guard ring.count == 4 else { return false }
+        let corners = Map3DBoxInstance.corners(base: box.centre, along: box.along, length: box.length, width: box.width, height: 0).ground
+        func distance(_ a: Map3DPoint, _ b: Map3DPoint) -> Float { Map3DPoint(a.x - b.x, 0, a.z - b.z).length }
+        let nearest = ring.map { point in corners.indices.min { distance(point, corners[$0]) < distance(point, corners[$1]) } ?? 0 }
+        return Set(nearest).count == 4 && zip(ring, nearest).allSatisfy { distance($0, corners[$1]) <= rectangleReach }
+    }
+
     static func orientedBox(_ ring: [Map3DPoint]) -> (centre: Map3DPoint, along: Map3DPoint, length: Float, width: Float) {
         var along = Map3DPoint(1, 0, 0), longest: Float = 0
         for (at, a) in ring.enumerated() {

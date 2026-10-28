@@ -63,7 +63,7 @@ public struct Map3DBoxInstance: Hashable, Sendable {
     /// front and back (or its flanks) would not take the same texture
     /// places (a count of bays rounding apart): that box stays vertices.
     init?(base: Map3DPoint, along: Map3DPoint, length: Float, width: Float, height: Float, top: UInt32, side: UInt32,
-          topPaint: Map3DPaint?, frontPaint: Map3DPaint?, flankPaint: Map3DPaint?, capped: Bool) {
+          topPaint: Map3DPaint?, frontPaint: Map3DPaint?, flankPaint: Map3DPaint?, capped: Bool, shaded: Bool = true) {
         guard length > 0, width > 0, height > 0, along.y == 0 else { return nil }
         let (corners, up) = Self.corners(base: base, along: along, length: length, width: width, height: height)
         // Each side's texture places as addQuad works them out: (0, 0) at
@@ -98,10 +98,11 @@ public struct Map3DBoxInstance: Hashable, Sendable {
         (frontU, frontV) = front
         (flankU, flankV) = right
         topColor = top
-        frontColor = Map3DColor.shaded(side, Self.shades[0])
-        rightColor = Map3DColor.shaded(side, Self.shades[1])
-        backColor = Map3DColor.shaded(side, Self.shades[2])
-        leftColor = Map3DColor.shaded(side, Self.shades[3])
+        let shades = shaded ? Self.shades : [1, 1, 1, 1]
+        frontColor = Map3DColor.shaded(side, shades[0])
+        rightColor = Map3DColor.shaded(side, shades[1])
+        backColor = Map3DColor.shaded(side, shades[2])
+        leftColor = Map3DColor.shaded(side, shades[3])
         func layer(_ paint: Map3DPaint?) -> Int16 { Int16(paint?.layer ?? Map3DVertex.plain) }
         topLayer = layer(topPaint)
         frontLayer = layer(frontPaint)

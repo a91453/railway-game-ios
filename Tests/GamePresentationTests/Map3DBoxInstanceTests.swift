@@ -110,6 +110,22 @@ final class Map3DBoxInstanceTests: XCTestCase {
                                       topPaint: nil, frontPaint: nil, flankPaint: nil, capped: true))
     }
 
+    /// Decision 455: afar, a real outline of four corners each within
+    /// 0.2 m of the box round it is drawn as that box; any other stays
+    /// its own shape.
+    func testARealOutlineIsABoxOnlyWhenItIsARectangle() {
+        let turn: Float = 0.47, along = Map3DPoint(cos(turn), 0, sin(turn)), across = Map3DPoint(-along.z, 0, along.x)
+        let centre = Map3DPoint(120, 0, -45)
+        func outline(_ corners: [(Float, Float)]) -> [Map3DPoint] { corners.map { centre + along * $0.0 + across * $0.1 } }
+        func isRectangle(_ ring: [Map3DPoint]) -> Bool { Map3DScene.Builder.isRectangle(ring, Map3DScene.Builder.orientedBox(ring)) }
+        XCTAssertTrue(isRectangle(outline([(-9, -4), (9, -4), (9, 4), (-9, 4)])))
+        // The footprints' grid, some 0.135 m a step, a corner off by one.
+        XCTAssertTrue(isRectangle(outline([(-9, -4), (9.12, -4), (9, 4.1), (-9, 4)])))
+        XCTAssertFalse(isRectangle(outline([(-9, -4), (9, -4), (9.5, 4), (-9, 4)])), "a trapezium")
+        XCTAssertFalse(isRectangle(outline([(-9, -4), (9, -4), (9, 4), (0, 4), (-9, 4)])), "five corners")
+        XCTAssertFalse(isRectangle(outline([(-9, -4), (9, -4), (9, 0), (0, 4)])), "a corner cut off")
+    }
+
     /// The same box from the same arguments, every time; and the layout
     /// the app's shader reads: 88 bytes, fourteen floats, five colours and
     /// six shorts in that order.
