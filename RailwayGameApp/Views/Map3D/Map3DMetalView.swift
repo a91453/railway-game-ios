@@ -136,6 +136,9 @@ final class Map3DMetalView: MTKView {
     /// Decision 445: the pedestrian signals' faces and countdowns in
     /// `models`, drawn close up as `signalClock` shows.
     private var walkModels: Map3DPedestrianSignal.Models?
+    /// Review K2-6: how far their little green men have walked, carried
+    /// from frame to frame.
+    private var walkPace = Map3DPedestrianSignal.Pace()
     var onStats: (@MainActor (Stats) -> Void)?
     /// Decision 358: the camera each frame, once it has moved, and when.
     var onCamera: (@MainActor (Map3DCamera, CFTimeInterval) -> Void)?
@@ -1069,6 +1072,7 @@ final class Map3DMetalView: MTKView {
         // moves). Decision 445: the pedestrian signals close up, their
         // figure walking and flashing with the screen's clock (still with
         // Reduce Motion or paused).
+        walkPace.advance(to: start, clock: signalClock, reduceMotion: reduceMotion)
         if let models, !below {
             encoder.setRenderPipelineState(instancedPipeline)
             let leftOut = Map3DProp.modelsLeftOut(quality, in: models.pack)
@@ -1081,7 +1085,8 @@ final class Map3DMetalView: MTKView {
                         // its face and countdown as the clock shows (a
                         // blank digit not at all).
                         guard drawsWalks, chunk.walksClose,
-                              let shown = walkModels.model(run.model, group: run.group, clock: signalClock, time: start, reduceMotion: reduceMotion)
+                              let shown = walkModels.model(run.model, group: run.group, clock: signalClock, time: start, pace: walkPace,
+                                                                reduceMotion: reduceMotion)
                         else { continue }
                         drawn = shown
                     } else {
