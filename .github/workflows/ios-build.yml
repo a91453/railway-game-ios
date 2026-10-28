@@ -163,9 +163,23 @@ permissions:
 # 52.8-54.1 of 75 has no class to spare, so second and lessons got the
 # build job's limits: 75 for the UI step, 95 for the job. A hung test is
 # still stopped by its own 8 (at most 10) minutes.
+#
+# 2026-10-28 (dispatch BR): the build job's smoke step took 65.5 of 75
+# minutes on 97badad (40656903835; 74.4 on f70a4cb's nightly, 40592891253),
+# less than the ten minutes spare. Class minutes summed from the UI steps of
+# five full lanes (573c574 40559683307, f70a4cb 40592891253, 4d08067
+# 40616551940, e17eb67 40634118390, 97badad 40656903835), at most / mean:
+# build job 62.8 / 54.5 (RealWorldMapUITests 13.7-19.0,
+# StartSaveFlowSmokeTests 12.5-16.3, the rest 26-27), second 53.3 / 45.6,
+# lessons 51.5 / 41.6. StartSaveFlowSmokeTests is split by test method:
+# its four 66-125 s tests (English and Traditional Chinese start-save flow,
+# the two build-and-keep ones) went to lessons (+6.2 minutes), the train and
+# type menus test and two short ones to second (+3.1), and the other five
+# stay in the build job (-9.3: at most 53.5, mean 45.2). Expected worst
+# cases (UI step, of 75): build about 56, second about 60, lessons about 62.
 env:
-  FULL_LANE_SECOND_JOB: "MapInteractionTests SettingsUITests HUDAlignmentUITests LineDraftSummaryUITests"
-  FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests LineRoutePreferenceUITests"
+  FULL_LANE_SECOND_JOB: "MapInteractionTests SettingsUITests HUDAlignmentUITests LineDraftSummaryUITests StartSaveFlowSmokeTests/testTheTrainAndTypeMenusStayStillAndChooseWhileTheClockRuns StartSaveFlowSmokeTests/testAnUnreadableSaveCanBeDeleted StartSaveFlowSmokeTests/testLanguageOpensTheGamesLanguageMenu"
+  FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests LineRoutePreferenceUITests StartSaveFlowSmokeTests/testEnglishStartSaveFlow StartSaveFlowSmokeTests/testTraditionalChineseStartSaveFlow StartSaveFlowSmokeTests/testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing StartSaveFlowSmokeTests/testCellsZonedByADragAreKeptBySavingAndContinuing"
 
 # A newer push to a pull request cancels its older run. Every other run (the
 # full lane: started after a merge, nightly or by hand) has its own group
