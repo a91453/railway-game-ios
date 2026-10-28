@@ -158,6 +158,10 @@ extension Map3DScene.Builder {
             }
         }
         shadows.append((hall, hallLength, hallWidth))
+        if kind < 2 {
+            // Decision 458: tanks in the yard beside the shed.
+            addYardTanks(base: base, forward: forward, free: across * (r(7) < 0.5 ? 1 : -1), room: lot - hallWidth - 2, lot: lot, share: r(20))
+        }
         for (centre, length, width) in shadows {
             addShadow(centre: centre, forward: forward, length: length, width: width, spread: 3, darkness: 0.3)
         }

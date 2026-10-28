@@ -964,16 +964,24 @@ struct PassengerRouteMemo: Equatable, Sendable {
 
     var graph: PassengerRouteGraph?
     var choices: [Pair: [PassengerRouteChoice]] = [:]
+    /// The graph before ``graph`` and its choices (派工單 BK: a plan worked
+    /// out at night, when no line runs, has a graph of its own, and the
+    /// day's choices were dropped for it every night, so every 06:00 worked
+    /// out each route again: 14 s in 92.1's game of 81 stations).
+    private var previous: (graph: PassengerRouteGraph, choices: [Pair: [PassengerRouteChoice]])?
 
     static func == (_: Self, _: Self) -> Bool {
         true
     }
 
-    /// Keeps the choices only if `graph` is the one they were worked out on.
+    /// Keeps the choices worked out on `graph`, if they are the current or
+    /// the previous graph's, and the current ones as the previous.
     mutating func use(_ graph: PassengerRouteGraph) {
         guard self.graph != graph else { return }
+        let kept = previous?.graph == graph ? previous?.choices : nil
+        previous = self.graph.map { ($0, choices) }
         self.graph = graph
-        choices = [:]
+        choices = kept ?? [:]
     }
 }
 
@@ -1016,7 +1024,7 @@ public enum PassengerTransferRules {
 
     /// Stations strictly closer than this walk to each other: 450 m, the
     /// `Railway/` site's transfer rule
-    /// (`Railway/site_archive_clean/data/station_transfers.json`,
+    /// (`Railway/taiwan-rail-reference-clean/source/data/station_transfers.json`,
     /// `criteria.maxDistanceM`, `haversine_meters < maxDistanceM`), here on
     /// the world's plane. (The `Ci/` reference links stations beyond a
     /// passage only through a transfer group the player sets up; game

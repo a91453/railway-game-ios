@@ -72,6 +72,8 @@ public struct Map3DModelPack: Sendable {
         // Decision 370: in the model look, as the city round them; the
         // signals keeping their colours (decision 451).
         models += Map3DProp.allCases.map { Map3DLook.restyle($0.model()) }
+        // Decision 458: and the conifers, bushes and tanks' stand-ins.
+        models += Map3DSceneryProp.allCases.map { Map3DLook.restyle($0.model()) }
         // Decision 445: and the pedestrian signals' faces and countdowns.
         models += Map3DPedestrianSignal.models()
         // Decision 259: and the people, scooters and cars.

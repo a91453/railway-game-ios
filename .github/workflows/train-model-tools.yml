@@ -1,0 +1,29 @@
+name: Train model tools
+on:
+  pull_request:
+    paths:
+      - 'tools/train-models/**'
+      - 'tools/station-kit/package.mjs'
+      - 'tools/emu900-native/scene.js'
+      - '.github/workflows/train-model-tools.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/train-models/**'
+      - 'tools/station-kit/package.mjs'
+      - 'tools/emu900-native/scene.js'
+      - '.github/workflows/train-model-tools.yml'
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install existing PNG tooling dependency
+        run: python3 -m pip install 'Pillow==11.3.0'
+      - run: node --test tools/train-models/test.mjs
+      - run: python3 -m unittest discover -s tools/train-models -p 'test_*.py'

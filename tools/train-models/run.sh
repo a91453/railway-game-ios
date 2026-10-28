@@ -11,6 +11,16 @@ swift --version | head -1 | grep -q "Swift version 6.4" || exit 1
 swift build --target GamePresentation -Xswiftc -warnings-as-errors -j 4 >&2
 bin="$(swift build --show-bin-path)"
 out="$1"; shift
+# Generic formation definitions are consumed after the Swift unit export.
+# --assembly taipei610 remains a legacy compatibility path; new vehicles use
+# --assembly-spec FILE without adding a vehicle-specific Swift branch.
+assembly_spec=""
+previous=""
+for argument in "$@"; do
+  if [ "$previous" = "--assembly-spec" ]; then assembly_spec="$argument"; fi
+  previous="$argument"
+done
+if [ "$previous" = "--assembly-spec" ]; then echo 'missing --assembly-spec file' >&2; exit 2; fi
 mkdir -p "$out"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -25,6 +35,8 @@ else
   coreobjects="${coremodules%/Modules/GameCore.swiftmodule}"
   swiftc -swift-version 6 -warnings-as-errors -I "$objects/Modules" -I "$coreobjects/Modules" tools/train-models/export.swift "$objects"/*.o "$objects"/Modules/*.o "$coreobjects"/*.o "$coreobjects"/Modules/*.o -o "$work/export"
   "$work/export" "$@"
+  if [ -n "$assembly_spec" ]; then node tools/train-models/assemble.mjs "$out" "$assembly_spec"; fi
   exit
 fi
 "$work/export" "$out" "$@"
+if [ -n "$assembly_spec" ]; then node tools/train-models/assemble.mjs "$out" "$assembly_spec"; fi

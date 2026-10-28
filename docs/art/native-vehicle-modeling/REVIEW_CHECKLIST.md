@@ -96,10 +96,12 @@
 - [ ] 使用新車合適的距離門檻，不盲用其他車的 120mm／750mm 等示例。
 - [ ] GLB 用獨立 importer 匯入，核對軸向／bounds／三角／色彩／材質。
 - [ ] 每件七向 PNG 完整解碼、RGBA／透明、非空、留白不裁邊。
-- [ ] viewer 實際載入、切方向、旋轉、縮放；下載 native／GLB／PNG／ZIP 實際 hash 正確。
+- [ ] viewer 實際載入、切方向、旋轉、縮放；下載 native／GLB／PNG 實際 hash 正確。
 - [ ] 缺件、JS 錯誤、外部網路請求與手機寬度有檢查。
-- [ ] ZIP 完整解壓／CRC／檔案集合／逐檔 bytes 正確。
-- [ ] producer 是真 commit，程式、模型、圖、viewer、ZIP 的來源能互相核對。
+- [ ] 資產放 railway-assets-private；不新增 ZIP／history／old／backup，前版 producer 可恢復。
+- [ ] 每輪 PNG ≤21 張且各≤2MiB、單檔≤50MiB、PR新增≤200MiB；asset_guard 已跑。
+- [ ] 僅最新輪次保留重檔，被取代輪次的重檔在同一PR移除，PNG／README／來源保留。
+- [ ] producer 是真 commit，程式、模型、圖、viewer 的來源能互相核對。
 - [ ] 私有來源、原始 mesh／貼圖、商標／個資沒有混進公開庫或外部服務。
 
 ## H. 結論必須分開
@@ -140,3 +142,5 @@
     結論：可交付本次範圍／先修上述主要問題／缺少必要證據
 
 不要用沒有校準的「相似度 95%」「品質 9 分」取代上述證據。若要報面積、比例或距離，寫清楚量測對象、方法、單位與用途，尤其區分模型量測與照片／工程資料。
+
+- [ ] status.json 分別記素材技術、明確producer的外觀接受、營運接入、裝置驗證；各自附證據，未驗為UNVERIFIED。

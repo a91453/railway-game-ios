@@ -18,7 +18,7 @@ python3 tools/real-railways/match_osm.py taiwan.pbf \
 
 ## 怎麼對到 OSM
 
-照參考庫 `Railway/site_archive_clean/rail-3d/physical/topology.js` 的原則：軌道靠共用的節點相接，不靠座標接近合併。
+照參考庫 `Railway/taiwan-rail-reference-clean/source/rail-3d/physical/topology.js` 的原則：軌道靠共用的節點相接，不靠座標接近合併。
 
 1. **軌道**：OSM 的 `railway=rail|subway|light_rail|monorail|tram|narrow_gauge`，不含側線、站場、支線、渡線（`service=siding|yard|spur|crossover`），也不含名字寫著已崩塌、已廢的線。每條軌道用參考的 `railwaySystem`（營運者、路網、名稱、軌距）判斷屬於哪個系統；沒有標的月台線（參考也說「月台線常省略 operator/gauge」）同種類的系統都能用。
 2. **錨點**：沿原線每 2 km 一個，吸到 80 m 內的軌道上（軌道每 20 m 補一點，隧道裡 OSM 的節點常相隔一百多公尺）。

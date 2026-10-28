@@ -13,7 +13,7 @@ import GameCore
 // stay about 5 m apart round a curve. An end beside an existing node joins
 // it: drawing on from the last stretch, the parallel carries on from the
 // last parallel. The reference has the offset only as rendering
-// (`Railway/site_archive_clean/rail-3d/integration/rail-structures.js`,
+// (`Railway/taiwan-rail-reference-clean/source/rail-3d/integration/rail-structures.js`,
 // `edge(p, ux, uy)`, the normal (-dy, dx) of each segment); the tool is
 // this project's own.
 

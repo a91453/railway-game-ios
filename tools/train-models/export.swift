@@ -187,7 +187,7 @@ func light(_ minute: Double) -> [String: Any] {
             "zenith": v(Map3DSky(l).zenith), "sunShown": Map3DSky(l).sunShown,
             "glint": Array(Map3DReflection.rows(sky: Map3DSky(l), sunLight: l.sunLight, quality: .high, seconds: 0, reduceMotion: true)[8..<11])]
 }
-let manifest: [String: Any] = ["schema_version": 1, "tag": tag, "model_count": records.count, "models": records, "sets": sets,
+let manifest: [String: Any] = ["schema_version": 1, "tag": tag, "model_count": records.count, "models": records, "sets": sets, "night_lights": nightLights,
                                "lighting": ["day": light(14 * 60), "night": light(23 * 60)],
                                "palette": option("--assembly") == "taipei610" ? ["glass":Map3DTaipei610.glass,"hardware":Map3DTaipei610.rubber] : [:],
                                "native_coordinates": "metres; +x front, +y left, +z up; alpha 0 = the line's colour"]

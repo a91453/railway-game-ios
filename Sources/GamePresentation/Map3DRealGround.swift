@@ -298,6 +298,13 @@ extension Map3DScene.Builder {
                 if area.cover == .water && covered > 0 {
                     waterCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
                 }
+                // Decision 458: where the conifers and bushes may stand.
+                if area.cover == .wood && covered > 0 {
+                    woodCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
+                }
+                if area.cover == .grass && covered > 0 {
+                    grassCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
+                }
             }
         }
     }
@@ -734,7 +741,13 @@ extension Map3DScene.Builder {
     /// (its areas, not the narrow waterways' lines): inside an odd number
     /// of one area's rings in its cell.
     func isOverWater(_ p: Map3DPoint) -> Bool {
-        guard let areas = waterCells[Map3DScene.ChunkKey(column: gridCell(Double(p.x), origin: originX), row: gridCell(Double(p.z), origin: originY))]
+        isInside(p, waterCells)
+    }
+
+    /// Decision 458: whether scene point `p` is inside one of `cells`'
+    /// areas (``waterCells``, ``woodCells``, ``grassCells``).
+    func isInside(_ p: Map3DPoint, _ cells: [Map3DScene.ChunkKey: [[[Map3DBaseMap.Point]]]]) -> Bool {
+        guard let areas = cells[Map3DScene.ChunkKey(column: gridCell(Double(p.x), origin: originX), row: gridCell(Double(p.z), origin: originY))]
         else { return false }
         let x = Double(p.x), z = Double(p.z)
         return areas.contains { rings in

@@ -9,7 +9,7 @@
 //   then adds 0.2 to every boost (`E(e) = e + .2`), which is the flight
 //   game's own and is left out here;
 // - Taiwan's row there has no national day and no 228 Peace Memorial Day,
-//   which `Railway/site_archive_clean/index.html`'s `TW_DAYTYPE` (Taiwan's
+//   which `Railway/taiwan-rail-reference-clean/source/main-reference.js`'s `TW_DAYTYPE` (Taiwan's
 //   public holidays of 2026 and 2027) has, and its Qingming is one day where
 //   `TW_DAYTYPE` has the four of Children's Day and Tomb Sweeping Day: this
 //   project's Taiwan follows `TW_DAYTYPE` (a deliberate change, decision
