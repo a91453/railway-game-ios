@@ -104,6 +104,57 @@ struct ThemeSelectableButtonStyle: ButtonStyle {
     }
 }
 
+/// A plain icon button, dimmed while pressed, touched over at least 44
+/// by 44 points while drawn at `size`. The touch area belongs to the
+/// style's body: one set inside a button's label was not used (run
+/// 38333522943: a tap 4 points under the drawn bell missed it).
+struct TouchTargetButtonStyle: ButtonStyle {
+    let size: CGSize
+    /// The most the touch area reaches past `size` on any side: half the
+    /// space to the nearest other button, so neighbours never share one.
+    var reach: CGFloat = .infinity
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.5 : 1)
+            .touchTarget(around: size, reach: reach)
+    }
+}
+
+/// ``ThemeSelectableButtonStyle`` drawn at `size` (its label and the
+/// style's 4 points above and below), touched over at least 44 by 44.
+struct ThemeSelectableTouchTargetButtonStyle: ButtonStyle {
+    let isActive: Bool
+    let size: CGSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        ThemeSelectableButtonStyle(isActive: isActive)
+            .makeBody(configuration: configuration)
+            .touchTarget(around: size)
+    }
+}
+
+extension View {
+    /// Touched over at least 44 by 44 points (Apple's smallest target)
+    /// while drawn and laid out at `size`, so what holds it keeps its
+    /// size: the touch area reaches into the margins and the spaces
+    /// between controls, and two neighbours' areas never meet (on the
+    /// status pill, the bell's 5 and the menu's 3 points in at least 10
+    /// between them, the pause button's 3 in the 4 before the speed menu).
+    /// Set in a button style's body, not its label (``TouchTargetButtonStyle``).
+    /// Never more than `reach` past `size` on a side, where other buttons
+    /// are closer than 44 points allow: less than 44 rather than shared.
+    func touchTarget(around size: CGSize, reach: CGFloat = .infinity) -> some View {
+        let dx = min(reach, max(0, (44 - size.width) / 2))
+        let dy = min(reach, max(0, (44 - size.height) / 2))
+        return padding(.horizontal, dx)
+            .padding(.vertical, dy)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -dx)
+            .padding(.vertical, -dy)
+    }
+}
+
 /// A screen's main action, flat and filled: ``Theme/primary``, or
 /// ``Theme/error`` for one that removes something, or ``Theme/accent``
 /// for a purchase that is not building; a quiet fill while it

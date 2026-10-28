@@ -239,6 +239,19 @@ private struct QuickEntries: View {
     }
 }
 
+/// Undo and Redo as drawn: 40 by 40 and the style's 4 points above and
+/// below. Touched over 44 wide, 2 points each side: the two meet, never
+/// cross, in the 4 between them.
+enum EditButtonSize {
+    static let drawn = CGSize(width: 40, height: 48)
+}
+
+/// A status message's button, as drawn (a caption and 5 points above and
+/// below), touched over 44 points high.
+private enum BannerChip {
+    static let size = CGSize(width: 44, height: 26)
+}
+
 /// Takes back the last edit (ARCHITECTURE decision 82, MapBuilder's undo
 /// button). Disabled while there is nothing to take back: before any edit,
 /// and once game time has moved on since, so in practice while paused.
@@ -254,7 +267,7 @@ private struct UndoButton: View {
                 .frame(width: 40, height: 40)
                 .opacity(session.canUndo ? 1 : 0.4)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .buttonStyle(ThemeSelectableTouchTargetButtonStyle(isActive: false, size: EditButtonSize.drawn))
         .disabled(!session.canUndo)
         .accessibilityLabel("Undo")
         .accessibilityHint("Takes back the last edit, refunding what it cost. Only until game time moves on.")
@@ -277,7 +290,7 @@ private struct RedoButton: View {
                 .frame(width: 40, height: 40)
                 .opacity(session.canRedo ? 1 : 0.4)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .buttonStyle(ThemeSelectableTouchTargetButtonStyle(isActive: false, size: EditButtonSize.drawn))
         .disabled(!session.canRedo)
         .accessibilityLabel(Text(verbatim: session.language.text("Redo", "重做")))
         .accessibilityHint(Text(verbatim: session.language.text(
@@ -1129,7 +1142,9 @@ struct StatusBanner: View {
                     .padding(.vertical, 5)
                     .background(Theme.chip, in: Capsule())
                 }
-                .buttonStyle(.plain)
+                // About 26 points high, touched over 44: the message may
+                // go away before a finger finds a smaller one.
+                .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
                 .foregroundStyle(Theme.textPrimary)
                 .accessibilityIdentifier("banner.sellTrain")
             }
@@ -1145,7 +1160,7 @@ struct StatusBanner: View {
                         .padding(.vertical, 5)
                         .background(Theme.chip, in: Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
                 .foregroundStyle(Theme.textPrimary)
                 .accessibilityIdentifier("banner.expandMap")
             }
@@ -1157,7 +1172,9 @@ struct StatusBanner: View {
                     .frame(width: 26, height: 26)
                     .background(Theme.panelBorder, in: Circle())
             }
-            .buttonStyle(.plain)
+            // 9 points round it, within the 10 before it and the
+            // message's 14 after.
+            .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 26, height: 26)))
             .foregroundStyle(Theme.textSecondary)
             .accessibilityLabel("Dismiss message")
         }

@@ -460,9 +460,9 @@ private struct TutorialCard: View {
                     Image(systemName: "chevron.down")
                         .font(.footnote.weight(.bold))
                         .frame(width: 32, height: 32)
-                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                // 6 points round it: 8 before it, the card's edge after.
+                .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 32, height: 32)))
                 .foregroundStyle(Theme.primary)
                 .background(Theme.primary.opacity(0.14), in: Circle())
                 .accessibilityLabel(Text(verbatim: session.language.text("Minimize Tutorial", "收合教學")))

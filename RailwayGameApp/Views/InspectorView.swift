@@ -135,7 +135,7 @@ struct InspectorView: View {
             .clipShape(Capsule())
             .fixedSize()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(Self.chipStyle)
         .accessibilityIdentifier(id)
     }
 
@@ -161,9 +161,14 @@ struct InspectorView: View {
             .clipShape(Capsule())
             .fixedSize()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(Self.chipStyle)
         .accessibilityIdentifier("inspector.train.follow")
     }
+
+    /// The card's capsules, about 21 points high, touched past their edge
+    /// by half the 6 between them: wrapped rows stand closer than 44
+    /// points allow, and two areas never meet.
+    private static let chipStyle = TouchTargetButtonStyle(size: CGSize(width: 44, height: 21), reach: 3)
 
     /// A chip for each of `lines` that opens the line's details; with
     /// `opens`, its name says so in words (decision 383).

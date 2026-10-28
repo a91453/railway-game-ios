@@ -66,8 +66,7 @@ struct MiniMapView: View {
                     .frame(width: 22, height: 22)
                     .background(.thinMaterial, in: Circle())
             }
-            .buttonStyle(.plain)
-            .padding(3)
+            .buttonStyle(CornerFoldButtonStyle())
             .accessibilityLabel(Text(verbatim: language.text("Hide the overview map", "收起小地圖")))
             .accessibilityIdentifier("map.minimap.fold")
         }
@@ -94,6 +93,21 @@ struct MiniMapView: View {
         .disabled(map == nil)
         .accessibilityLabel(Text(verbatim: language.text("Show the overview map", "顯示小地圖")))
         .accessibilityIdentifier("map.minimap.open")
+    }
+}
+
+/// The fold button, drawn 22 points round 3 in from the small map's
+/// corner, touched over the corner's 44 by 44: the map clips anything
+/// past its edge, so the area reaches only inward, over the map a drag
+/// would move.
+private struct CornerFoldButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.5 : 1)
+            .padding(3)
+            .padding([.leading, .bottom], 16)
+            .contentShape(Rectangle())
+            .padding([.leading, .bottom], -16)
     }
 }
 
