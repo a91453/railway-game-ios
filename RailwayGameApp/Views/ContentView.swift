@@ -870,8 +870,12 @@ private struct ControlDetailsToggle: View {
                 icon.frame(minWidth: 40, minHeight: 40)
             }
         }
-        // As wide as Undo and Redo beside it, touched over 44.
-        .buttonStyle(ThemeSelectableTouchTargetButtonStyle(isActive: isOpen, size: EditButtonSize.drawn))
+        // As wide as Undo and Redo beside it, touched over 44. In the
+        // column it is already as wide as the tools under it, and touched
+        // over no more than they are: a wider area made it 52 points to
+        // VoiceOver and the UI tests beside their 48 (main d657300).
+        .buttonStyle(ThemeSelectableTouchTargetButtonStyle(
+            isActive: isOpen, size: column == nil ? EditButtonSize.drawn : CGSize(width: 44, height: 44)))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
         .accessibilityIdentifier("controls.toggle")
     }
