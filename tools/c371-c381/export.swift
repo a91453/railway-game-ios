@@ -12,7 +12,24 @@ var units:[String:String]=[:]
         let placements=zip(arrangement,centres).map { ["unit":$0.0,"translation":[$0.1,Float(0),Float(0)]] as [String:Any] }
         let scene:[String:Any]=["format":"M3DAssembly","version":1,"units":units,"placements":placements]
         let name="models/"+id+".m3dscene.json"
-        try JSONSerialization.data(withJSONObject:scene,options:[.sortedKeys]).write(to:output.appendingPathComponent(name))
+        var sceneData=try JSONSerialization.data(withJSONObject:scene,options:[.sortedKeys])
+        if id == "c371-formation",CommandLine.arguments.count>2,!CommandLine.arguments[2].isEmpty {
+            let frozen=try Data(contentsOf:URL(fileURLWithPath:CommandLine.arguments[2]))
+            guard let previous=try JSONSerialization.jsonObject(with:frozen) as? [String:Any],
+                  previous["format"] as? String == "M3DAssembly",
+                  let oldUnits=previous["units"] as? [String:String],
+                  let oldPlacements=previous["placements"] as? [[String:Any]],oldPlacements.count==arrangement.count else {fatalError("invalid protected C371 assembly")}
+            for (i,unit) in arrangement.enumerated() {
+                guard oldUnits[unit]==units[unit],oldPlacements[i]["unit"] as? String==unit,
+                      let p=oldPlacements[i]["translation"] as? [NSNumber],p.count==3,
+                      p[0].floatValue==centres[i],p[1].floatValue==0,p[2].floatValue==0 else {fatalError("protected C371 unit or placement changed")}
+            }
+            // The accepted assembly contains unused legacy C381 entries.
+            // Preserve its complete bytes; validate every referenced C371
+            // unit/placement here and the expanded Swift payload in package.mjs.
+            sceneData=frozen
+        }
+        try sceneData.write(to:output.appendingPathComponent(name))
         // Raw expected triangle payload, never an over-limit M3DM file.
         let expectedDirectory=output.appendingPathComponent("verification",isDirectory:true)
         try FileManager.default.createDirectory(at:expectedDirectory,withIntermediateDirectories:true)

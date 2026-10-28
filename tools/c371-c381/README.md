@@ -1,3 +1,7 @@
+目前為C381照片修訂：C371第五輪外觀已接受、全部模型bytes保護。詳見 [本輪查證](../../docs/art/c371-c381-2026-10-27/C381_REFERENCE_RECHECK.md)。
+
+`export.sh OUT PROTECTED_C371_SCENE` 必須傳入真正前包 `history/true-v9/models/c371-formation.m3dscene.json`，保留舊C371容器未引用的C381記錄；核引用單元／站位及Swift整列payload，沒有偷偷替換新C381。`c381-audit.py OLD OUT`核C371所有檔案bytes、C381屋頂／輪組位置、正面玻璃射線、V帶與實際支架接地板及故障反例。舊protected-payload.py只適用歷史C371輪次，本輪不用；front-visibility.py／underframe-contact.py仍核受保護C371。當前真前版是true-v9，下文v7／第五輪敘述為歷史。
+
 C371／C381 靜態原生模型工具。先讀 docs/art/c371-c381-2026-10-27/README.md。
 已合併 PR #1357 的 `tools/train-models/` 是單元原生匯出、日夜七向、FNV 鎖與遊戲光線的共用入口；本資料夾保留完整編組、GLB、真正前後、白模／剪影、故障注入及 ZIP/viewer 專用驗收。
 `export.sh OUT` 以 Swift 6.4 輸出原生及 GLB；`render.mjs OUT` 實際從原生顯示七向；`clay.mjs OUT` 產生白模／剪影；`standalone.mjs OUT` 產生離線檢視器。

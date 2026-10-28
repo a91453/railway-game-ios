@@ -9,7 +9,7 @@ struct MetroStudyGeometry {
     let length: Float
     let body: UInt32
     let blue: UInt32
-    var ink: UInt32 { curved ? Map3DPalette.playerRim : Map3DColor.shaded(Map3DPalette.tankStand,0.42) }
+    var ink: UInt32 { curved ? Map3DColor.shaded(Map3DPalette.tankStand,0.38) : Map3DColor.shaded(Map3DPalette.tankStand,0.42) }
     let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.62)
     let steel = StationKitBuilder.steel
     var half: Float { length / 2 - 0.18 }
@@ -29,7 +29,7 @@ struct MetroStudyGeometry {
             // blending over the last 320 mm into the unchanged roof section.
             let brow = !curved && cab ? max(0, (x-(half-0.32))/0.32) : 0
             let drop = h > 3.29 ? brow * 0.11 * min(1,abs(z)/1.52) : 0
-            return Map3DPoint(x,h-taper*0.11-drop,max(-1.59,min(1.59,z*(1-taper*0.095))))
+            return Map3DPoint(curved ? x-taper*0.12 : x,h-taper*(curved ? 0.04 : 0.11)-drop,max(-1.59,min(1.59,z*(1-taper*(curved ? 0.025 : 0.095)))))
         }
     }
     mutating func panel(_ x:Float,_ bottom:Float,_ width:Float,_ height:Float,_ color:UInt32,_ depth:Float=0.018) {
@@ -129,7 +129,7 @@ struct MetroStudyGeometry {
         kit.box(0,0.92,0,length-0.25,2.45,0.12,steel)
         // Four double leaf doors, each with a separate pair of glass panes.
         let doors: [Float] = [-7.8,-2.6,2.6,7.8]
-        let doorEdge = curved ? ink : Map3DColor.shaded(body,0.70)
+        let doorEdge = Map3DColor.shaded(body,curved ? 0.76 : 0.70)
         for d in doors {
             panel(d,1.12,1.48,2.03,doorEdge,0.019)
             for leaf:Float in [-1,1] {
@@ -138,22 +138,21 @@ struct MetroStudyGeometry {
             }
         }
         for x:Float in [-10.05,-6.18,-4.25,-0.96,0.96,4.25,6.18] {
-            panel(x,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? ink : steel)
+            panel(x,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? Map3DColor.shaded(body,0.72) : steel)
             panel(x,curved ? 2.23 : 2.20,curved ? 1.40 : 1.36,curved ? 0.78 : 0.84,glass,0.027)
         }
         if !cab {
-            panel(10.05,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? ink : steel)
+            panel(10.05,curved ? 2.19 : 2.17,curved ? 1.48 : 1.42,curved ? 0.86 : 0.92,curved ? Map3DColor.shaded(body,0.72) : steel)
             panel(10.05,curved ? 2.23 : 2.20,curved ? 1.40 : 1.36,curved ? 0.78 : 0.84,glass,0.027)
         }
         else {
-            panel(9.58,1.18,0.60,1.96,curved ? ink : doorEdge)
+            panel(9.58,1.18,0.60,1.96,doorEdge)
             panel(9.58,2.24,0.40,0.73,glass,0.030)
             panel(10.44,2.18,0.66,0.92,glass,0.031)
         }
         // C371 has one waist stripe. C381's two fine lines run below the windows.
         if curved {
-            panel(0,1.43,length-0.10,0.30,blue,0.046)
-            panel(0,1.17,length-0.10,0.065,blue,0.046)
+            c381SideBands()
         } else { panel(0,1.43,length-0.10,0.30,blue,0.047) }
         panel(0,3.16,length-0.35,0.035,steel,0.018)
         for bx:Float in [-8.25,8.25] {
@@ -208,23 +207,7 @@ struct MetroStudyGeometry {
             // The two fascia profiles are separate, supported solids. C381 bends
             // 220 mm toward the centre; C371 is nearly vertical at the face.
             if curved {
-                frontPatch(roundRect(-1.48,1.48,1.85,3.47,0.22),ink)
-                for sign:Float in [-1,1] {
-                    let l:Float = sign < 0 ? -1.35 : 0.45
-                    let r:Float = sign < 0 ? -0.45 : 1.35
-                    frontPatch(roundRect(l,r,2.10,3.22,0.13),glass,lift:0.026)
-                }
-                // The evacuation door has its own window and visible surround.
-                frontPatch(roundRect(-0.40,0.40,1.94,3.29,0.10),steel,lift:0.024)
-                frontPatch(roundRect(-0.34,0.34,2.03,3.19,0.085),glass,lift:0.044)
-                // Real-world logo omitted; broad blue wings dip at the centre.
-                let wing: [(Float,Float,Float)] = [(-1.48,1.49,1.71),(-1.12,1.49,1.71),(-0.72,1.35,1.55),(0,1.21,1.42),(0.72,1.35,1.55),(1.12,1.49,1.71),(1.48,1.49,1.71)]
-                for i in 0..<(wing.count-1) {
-                    let a=wing[i],b=wing[i+1]
-                    frontPatch([(a.1,a.0),(b.1,b.0),(b.2,b.0),(a.2,a.0)],blue,lift:0.047)
-                }
-                frontPatch([(0.68,-1.40),(0.68,1.40),(0.99,1.40),(0.99,-1.40)],body,lift:0.044)
-                frontPatch([(0.99,-1.43),(0.99,1.43),(1.055,1.43),(1.055,-1.43)],ink,lift:0.062)
+                buildC381Cab()
             } else {
                 // A shallow rounded silver end cap gives the fascia real
                 // shoulders and a curved chin instead of a square slab.
@@ -276,7 +259,7 @@ struct MetroStudyGeometry {
                 kit.box(half+0.20,0.56,0,0.16,0.29,0.13,steel)
             }
             // Distinct headlamp pods; two visible lenses per side and supported wipers.
-            for sign:Float in [-1,1] {
+            for sign:Float in [-1,1] where !curved {
                 let x=half+(curved ? 0.225 : 0.12)
                 let z=sign*1.05
                 if curved {
@@ -300,7 +283,6 @@ struct MetroStudyGeometry {
                     kit.beam(Map3DPoint(footX,1.99,sign*1.06),Map3DPoint(tipX,2.46,sign*0.61),0.018,ink)
                 }
             }
-            if curved { kit.box(half+0.10,3.31,0,0.035,0.35,0.11,ink) }
         }
     }
 }

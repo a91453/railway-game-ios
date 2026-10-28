@@ -66,19 +66,19 @@
       "triangles" : 2188
     },
     "c381-dm" : {
-      "hash" : "cc8deda8abfcda4d",
-      "triangles" : 2648
+      "hash" : "530e9511a7d3d256",
+      "triangles" : 6252
     },
     "c381-m" : {
-      "hash" : "9a8ee43df736528e",
+      "hash" : "a5b4388e5b466b48",
       "triangles" : 1816
     },
     "c381-rear" : {
-      "hash" : "b17096222e8d607f",
-      "triangles" : 2648
+      "hash" : "5fa0404e8b655690",
+      "triangles" : 6252
     },
     "c381-t" : {
-      "hash" : "b5b41dd8f74e391d",
+      "hash" : "2720a9350981375",
       "triangles" : 1804
     },
     "commuter-cab" : {
