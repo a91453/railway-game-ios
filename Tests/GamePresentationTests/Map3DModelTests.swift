@@ -11,23 +11,25 @@ final class Map3DModelTests: XCTestCase {
         // Decision 244: and the street furniture after the trains (decision
         // 445: the pedestrian signals' after it);
         // decision 259: then the people and vehicles; decision 318: then the
-        // sets'; decision 400, 10i-6: then the route bus; finally the
-        // independent PP passenger-car display roles, near and far; then the
-        // EMU800 study's roles, the EMU500 study's units and formation, the
-        // C341 study's units, and the 610 study's four roles at three LODs.
+        // sets'; decision 400, 10i-6: then the route bus. K1-1: the static
+        // studies (TEMU2000; the PP display roles, near and far, and the
+        // E1000; the EMU800 study's roles, the EMU500 study's units and
+        // formation, the C341 study's units, the EMU900 study's roles and
+        // the 610 study's four roles at three LODs) are the tools' pack's.
         let pantoStyles = Map3DTrainStyle.all.filter { !$0.pantographCars.isEmpty }.count
         let sets = Map3DTrainSet.all.map { $0.models().count }.reduce(0, +)
         let temu1000Models = Map3DTEMU1000.Unit.allCases.count + 1
         let baseModels = Map3DTrainStyle.all.count * 2 + pantoStyles + Map3DProp.allCases.count + Map3DPedestrianSignal.modelCount + Map3DStreetModel.allCases.count + sets
         let temu2000Models = Map3DTEMU2000.Unit.allCases.count + 1
-        let shortSets = Map3DGreenTram.Section.allCases.count + 1 + Map3DGreenCommuter.Unit.allCases.count + 1 + temu1000Models + temu2000Models
+        let shortSets = Map3DGreenTram.Section.allCases.count + 1 + Map3DGreenCommuter.Unit.allCases.count + 1 + temu1000Models
         let longSets = Map3DThreeCarUrban.Unit.allCases.count + 1 + Map3DFiveSectionLRT.Unit.allCases.count + 1 + Map3DSevenSectionLRT.Unit.allCases.count + 1
         let rest = Map3DFourCarMetro.Unit.allCases.count + 1 + Map3DSevenCarBlue.Unit.allCases.count + 1 + Map3DDuplexSteam.Unit.allCases.count + 1 + Map3DSteamTender.Unit.allCases.count + 1 + Map3DTrainShapeRefresh.ids.count + 1
         let ppDisplayModels = Map3DPPPassenger.roles.count * 2 + 2 // E1000 near/far
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
         let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
         // Decision 449: and after them, the running cars' windows.
-        XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models)
+        XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest)
+        XCTAssertEqual(Map3DModelPack.studies.models.count, temu2000Models + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models)
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
             if !style.pantographCars.isEmpty { names.append(style.name + "-panto") }

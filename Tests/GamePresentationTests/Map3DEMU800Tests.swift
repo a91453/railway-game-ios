@@ -41,7 +41,9 @@ final class Map3DEMU800Tests: XCTestCase {
     }
     func testStaticRegistrationKeepsTheOperatingMappingAndLastBus() {
         let pack=Map3DModelPack.standard
-        XCTAssertNotNil(pack.models.first {$0.name=="emu800-ed"})
+        // K1-1: the static roles are the tools' pack's, not the game's.
+        XCTAssertNotNil(Map3DModelPack.studies.models.first {$0.name=="emu800-ed"})
+        XCTAssertNil(pack.models.first {$0.name=="emu800-ed"})
         XCTAssertEqual(pack.models.last(where: { !$0.name.hasPrefix(Map3DTrainLights.prefix) })?.name,Map3DLowFloorBus.routeModel().name)
         // Decision 432: the operating key now runs these units (Map3DEMU800IntegrationTests).
         XCTAssertEqual(Map3DTrainSet.byKey["emu800"]?.ownLengths,true)

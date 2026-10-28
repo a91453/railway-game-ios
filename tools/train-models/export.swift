@@ -26,6 +26,15 @@ guard let outputPath = arguments.first, !outputPath.hasPrefix("--") else { fatal
 let tag = option("--tag") ?? "after"
 let nightLights = arguments.contains("--night-lights")
 let pack = Map3DModelPack.standard
+/// K1-1: the static studies the game does not draw, in their own pack; the
+/// lock and `--ids` read them with the standard pack's models.
+let studies = Map3DModelPack.studies
+/// The model called `name` and, when it is the standard pack's, its index
+/// there (its lights are the standard pack's).
+func find(_ name: String) -> (model: Map3DModelPack.Model, index: Int?)? {
+    if let at = pack.index(of: name) { return (pack.models[at], at) }
+    return studies.index(of: name).map { (studies.models[$0], nil) }
+}
 
 /// Every vertex field, FNV-1a: the function the pinning tests use
 /// (Map3DEMU800IntegrationTests `hash`), so a hash here is one a test can pin.
@@ -46,8 +55,8 @@ func json(_ object: Any) throws -> Data {
 
 if let lock = option("--lock") {
     var entries: [String: Any] = [:]
-    for model in pack.models { entries[model.name] = ["triangles": model.triangleCount, "hash": hash(model)] }
-    try json(["comment": "FNV-1a of every vertex field of every model in Map3DModelPack.standard (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.", "models": entries]).write(to: URL(fileURLWithPath: lock))
+    for model in pack.models + studies.models { entries[model.name] = ["triangles": model.triangleCount, "hash": hash(model)] }
+    try json(["comment": "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.", "models": entries]).write(to: URL(fileURLWithPath: lock))
     print("locked \(entries.count) models in \(lock)")
     exit(0)
 }
@@ -104,7 +113,7 @@ func lit(_ model: Map3DModelPack.Model, index: Int) -> Map3DModelPack.Model {
 var wanted: [String]
 if let ids = option("--ids") {
     wanted = ids.split(separator: ",").map(String.init)
-    for id in wanted where pack.index(of: id) == nil { fatalError("no model \(id) in Map3DModelPack.standard") }
+    for id in wanted where find(id) == nil { fatalError("no model \(id) in Map3DModelPack.standard or .studies") }
 } else {
     wanted = pack.models.map(\.name).filter { $0.hasPrefix("set-") || $0.hasPrefix("style-") }
 }
@@ -133,8 +142,8 @@ func box(_ m: Map3DModelPack.Model) -> [String: Any] {
 var records: [[String: Any]] = []
 let farNames = Set(farOf.values)
 for id in wanted {
-    let model = pack.models[pack.index(of: id)!]
-    try nativeFile(nightLights ? lit(model, index: pack.index(of: id)!) : model).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
+    let (model, index) = find(id)!
+    try nativeFile(nightLights && index != nil ? lit(model, index: index!) : model).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
     var record: [String: Any] = ["id": id, "native": "models/\(id).m3dmodel", "triangles": model.triangleCount, "hash": hash(model),
                                  "role": farNames.contains(id) ? "far" : "near", "category":"section", "glowTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0..<$0 + 3].contains { $0.glows } }.count,
                                  "glassTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { [Map3DVertex.trainGlass, Map3DVertex.trainGlassLit].contains(model.vertices[$0].layer) }.count,

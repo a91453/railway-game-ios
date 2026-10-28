@@ -1,6 +1,6 @@
 # 共用做車工具（`tools/train-models/`）
 
-一個車型 id（`Map3DModelPack.standard` 裡的名字，如 `set-emu800-head`）進去，出來的是：原生 `.m3dmodel`、七向圖（用遊戲的模型光）、三角形預算結果、雜湊對照、一頁離線預覽。以後新車只用這個工具；`.claude/skills/rolling-stock/SKILL.md` 說怎麼做車，這裡說怎麼量與怎麼拍。
+一個車型 id（`Map3DModelPack.standard` 或只給工具的 `Map3DModelPack.studies` 裡的名字，如 `set-emu800-head`）進去，出來的是：原生 `.m3dmodel`、七向圖（用遊戲的模型光）、三角形預算結果、雜湊對照、一頁離線預覽。以後新車只用這個工具；`.claude/skills/rolling-stock/SKILL.md` 說怎麼做車，這裡說怎麼量與怎麼拍。
 
 ![日／夜各一張的頭車](../../docs/art/train-model-kit-2026-10-27/overview.png)
 
@@ -28,7 +28,7 @@ python3 -I tools/train-models/overview.py OUT overview.png --time both set-emu80
 
 - **光**：`render.mjs` 的光照是 `map3dLit(…, soft: true)`（決策 370 的模型光：`0.85 − 0.05·lights + 0.02·朝上 + 0.15·太陽`，冷到暖的色，乘 `(天空光 + 0.5·太陽光) / (0.925, 0.871, 0.806)`）。天空光、太陽光、太陽方向與 `lights` 由 `export.swift` 從 `Map3DLighting(minute:)` 寫進 manifest 的 `lighting`：`day` 是 14:00，`night` 是 23:00（路燈亮、發光三角形加 `1.3·lights`）。假設列車朝東；沒有霧、太陽陰影、`map3dFinish`。`--features 1` 畫決策 450 的車窗反光與不鏽鋼光澤（天空從霧色到天頂色、太陽亮點；沒有 `u` 的遮蔽），不加就沒有。WebGL 是預覽，不代表 iPhone 的 Metal。alpha 0 的頂點（塗裝帶）用 `--line` 的顏色。
 - **預算**（`budgets.json`，每一條寫了決策）：近景一節 ≤ 20,000（決策 417，超過要另做中間版）；十二節一列近景 ≤ 240,000（417 的 lower 級 250,000 要留空間）、遠景一列 ≤ 120,000；遠景一節要少於近景的一半（決策 420、432 的測試）且在近景的框裡（長度 0.1 m、頂 0.05 m、貼地 0.1 m）；精細車（一節 ≥ 8,000）用 `--new-set` 時一定要有遠景版（417 規則 1）。第一天 main 上已經違反的 set 記在 `grandfathered`（`check.mjs --grandfather-write` 只在這一天用過一次）：新車不准加進去。
-- **雜湊**：`hashes.lock.json` 是 `Map3DModelPack.standard` 全部模型（決策 449 起含 `light-*` 窗模型）的三角形數與 FNV-1a（每個頂點所有欄位，同 `Map3DEMU800IntegrationTests.hash`，所以雜湊可以直接貼進釘模型的測試）。模型變了就紅；新模型要把它加進鎖（`run.sh OUT --lock tools/train-models/hashes.lock.json`），刻意改的用 `--allow` 並在 PR 說明。
+- **雜湊**：`hashes.lock.json` 是 `Map3DModelPack.standard` 與 `Map3DModelPack.studies`（遊戲不畫的靜態展示模型，K1-1 起從 `standard` 搬出）全部模型（決策 449 起含 `light-*` 窗模型）的三角形數與 FNV-1a（每個頂點所有欄位，同 `Map3DEMU800IntegrationTests.hash`，所以雜湊可以直接貼進釘模型的測試）。模型變了就紅；新模型要把它加進鎖（`run.sh OUT --lock tools/train-models/hashes.lock.json`），刻意改的用 `--allow` 並在 PR 說明。
 
 ## 之後的「改前／改後」（路線圖第 1–3 項，這次沒做）
 
