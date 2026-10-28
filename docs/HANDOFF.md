@@ -1842,6 +1842,12 @@
 - 做了的在 [決策 464](decisions/464.md)：連續 20 秒低於設定的 70% 時，倍速旁的點自動打開一次 popover（「這張地圖在這台裝置上大約只跑得到 ×N」＋改成最近跑得到的一檔＋知道了；發燙時只說「裝置有點燙，遊戲先放慢」）。規則在 `SpeedLagHint.swift`，Linux 測試 `SpeedLagHintTests`。
 - **等作者在 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：舊 iPhone／iPad (A16) 在大地圖 6000× 時 20 秒後有沒有跳、popover 擋不擋操作、「改成」那一檔順不順；70%／20 秒是不是剛好（太吵就調 `SpeedLagWatch.lowPermille`／`sustained`）。沒有新的 UI 測試。
 
+### 4.17 描線接上已有軌道、真實路線讓位給玩家（決策 468，session_01YGNNun7niN3kzJtkLN8GL6，派工單 BZ，2026-10-28）
+
+- 做了的在 [決策 468](decisions/468.md)：沿真實路線描線碰到同一條線上已鋪的軌道（自己的、收購的、示範的）就略過、不收錢、兩端自動接上繼續描，仍是一個 `buildTrackChain`；玩家軌道蓋住的那段真實路線不畫，那段上的真實列車不畫；車站過半是玩家同名車站的線整條不跑真實列車。規則在 `TraceOverlap.swift`、`RealRailwayYield.swift`，Linux 測試 `TraceOverlapTests`、`RealRailwayYieldTests`。
+- **等作者在 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：預覽的虛線＋光暈好不好認；真實路線切掉的地方對不對齊玩家軌道。
+- **下一步**（沒派）：3D 地圖還沒讓位；接上時的複線；「可以直接收購」提示。見決策 468「下一步」。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
