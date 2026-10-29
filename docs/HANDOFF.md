@@ -2614,3 +2614,17 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 2026-10-29 高雄第三版正面塗裝（Codex）
 
 使用者「側面可以了」僅接受R2 producer `3874b425`側面，正面偏方續修；最新producer `bd57e163391bfdf7492cc408c7697451578ae8e1`，真前版素材`1f73fb1`。本輪只改實體殼上的正面分色：黑罩上緣淺弧／肩部收角與U帶細分，不改中央逃生門等硬體或曲面。逐三角形原生52bytes護住X≤9m直側，T近遠整檔保持；兩producer白殼雙向交集驗車頭覆蓋不變。最新main`fd91b75c`的696他車實際bytes/FNV、所有他車鎖保持；只動本型四DM鎖，28繼承差異不消。近三車13892／遠6356；18成品從producer獨立重建相同，15 Swift6.4 WAE、8 GLB、真故障、224PNG／192同尺度前後、24真下載SHA與最終viewer已驗。沿用draft#1454 ↔ 素材draft#22，revision-3為完整包，revision-2重檔同PR刪除留PNG／README／來源。具體資料、預覽、重建及四狀態見[自有交接](art/kaohsiung/README.md)。後續使用者在第三版收尾建議後明確回覆「就這樣」；已據此把producer `bd57e163`的studies整體外觀接受記為VERIFIED，停止外觀修改。營運接入與裝置視覺／真機Metal效能動畫仍UNVERIFIED。交付程式head `cd92b3c6`之Swift gate／六selected分片及Xcode均SUCCESS；公開#1454與素材#22皆由其他流程合併，接受metadata從最新main另開互鏈draft補記（素材#24），模型／20PNG不變。studies、krtc→metroGeneric三車、其他保護範圍不變，不merge／auto-merge／TestFlight。
+
+
+### Codex：高雄輕軌兩現役車型（CAF／Citadis，2026-10-29）
+
+兩款各自五角色近遠景與完整靜態組裝，首次交付，沒有真正前版；
+[查證、模組、保護範圍與交接](art/kaohsiung-light-rail/README.md)、
+[重建／驗收工具](../tools/kaohsiung-light-rail/README.md)。
+素材在 assets-private 的 kaohsiung-light-rail-phase1／phase2 revision-1，
+明確 producer、互鏈 draft PR 與最終證據見該頁 verification.json。
+只註冊 studies；既有解鎖 fiveSectionLRT／鎖定 greenTram 的營運映射未動，
+沒有兩款選用／配屬契約，不應宣稱合併即在遊戲出現。高雄紅橘線與全部既有
+payload 保護；32 舊鎖差異與 TEMU2000 舊整列預算失敗另記，不改 gate。
+兩款使用者外觀接受、營運接入及裝置狀態各為 UNVERIFIED；
+Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 main、未合併或啟動 TestFlight。

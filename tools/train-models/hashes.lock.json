@@ -433,6 +433,86 @@
       "hash" : "96d0027eb76a51f",
       "triangles" : 984
     },
+    "klrt-caf-c1" : {
+      "hash" : "7befe08055d77dfa",
+      "triangles" : 14100
+    },
+    "klrt-caf-c1-far" : {
+      "hash" : "1fdc2252ba3330a7",
+      "triangles" : 6340
+    },
+    "klrt-caf-c2" : {
+      "hash" : "452e21a3b6380984",
+      "triangles" : 13932
+    },
+    "klrt-caf-c2-far" : {
+      "hash" : "7b82ce10a6c6bb01",
+      "triangles" : 6268
+    },
+    "klrt-caf-r" : {
+      "hash" : "26df89e79225d033",
+      "triangles" : 2996
+    },
+    "klrt-caf-r-far" : {
+      "hash" : "cfd961db3527b322",
+      "triangles" : 1356
+    },
+    "klrt-caf-s1" : {
+      "hash" : "d7c395fcbc4c763b",
+      "triangles" : 4304
+    },
+    "klrt-caf-s1-far" : {
+      "hash" : "91462930078b9da3",
+      "triangles" : 1496
+    },
+    "klrt-caf-s2" : {
+      "hash" : "c6e6891650156a4b",
+      "triangles" : 4352
+    },
+    "klrt-caf-s2-far" : {
+      "hash" : "11fed8f960104d34",
+      "triangles" : 1544
+    },
+    "klrt-citadis-m1" : {
+      "hash" : "ba24efcaf13d73ff",
+      "triangles" : 8252
+    },
+    "klrt-citadis-m1-far" : {
+      "hash" : "938cfb1dedb25a8a",
+      "triangles" : 4088
+    },
+    "klrt-citadis-m2" : {
+      "hash" : "dde60b268ce190fe",
+      "triangles" : 8060
+    },
+    "klrt-citadis-m2-far" : {
+      "hash" : "88899abe4fe72453",
+      "triangles" : 4016
+    },
+    "klrt-citadis-np" : {
+      "hash" : "733f3463a002baf0",
+      "triangles" : 3104
+    },
+    "klrt-citadis-np-far" : {
+      "hash" : "937532be0f80684",
+      "triangles" : 1344
+    },
+    "klrt-citadis-sc1" : {
+      "hash" : "574cde43b353bea4",
+      "triangles" : 4460
+    },
+    "klrt-citadis-sc1-far" : {
+      "hash" : "7d7d4f566cc64ff5",
+      "triangles" : 1484
+    },
+    "klrt-citadis-sc2" : {
+      "hash" : "d82038ccb6d436f1",
+      "triangles" : 4748
+    },
+    "klrt-citadis-sc2-far" : {
+      "hash" : "f3fcf5c90a3e2485",
+      "triangles" : 1436
+    },
     "life-bus" : {
       "hash" : "3a6e83a36058bb8d",
       "triangles" : 130
