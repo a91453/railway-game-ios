@@ -456,10 +456,11 @@ final class PromoMaterialTests: XCTestCase {
         app.launch()
         // An iPad Simulator held upright by the test before stayed upright
         // when turned only before the launch (UI audit, run 40946830836).
-        if XCUIDevice.shared.orientation != orientation {
-            XCUIDevice.shared.orientation = orientation
-            settle()
-        }
+        // Turned away and back: the device may already say it is turned.
+        XCUIDevice.shared.orientation = orientation == .portrait ? .landscapeLeft : .portrait
+        settle(seconds: 1)
+        XCUIDevice.shared.orientation = orientation
+        settle()
         return app
     }
 
