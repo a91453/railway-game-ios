@@ -488,6 +488,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Before adding or changing any animation or transition in the app, read
   `.claude/skills/motion/SKILL.md`: the motion rules (`MotionRule`, decision
   253) and what Reduce Motion does.
+- Before adding or changing a screen, panel, list or chart in the app, read
+  `.claude/skills/ui-review/SKILL.md`, and before marking its pull request
+  ready, take its screenshot review (`website-screenshots.yml`, one run at
+  a time; the game-planning session merges only after seeing the
+  screenshots; decision 482).
 - Prefer small, minimal changes. Avoid speculative architecture, abstractions
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,

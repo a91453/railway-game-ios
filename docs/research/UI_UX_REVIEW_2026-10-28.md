@@ -389,6 +389,8 @@
 
 ## 4. 哪些規則值得搬進 `.claude/skills/`（只建議，不搬）
 
+> **後來**（2026-10-29，決策 482）：§4.1 建成 `.claude/skills/ui-review/SKILL.md`（另加 SwiftUI 效能一節），§4.2 補進 `docs/UI_THEME.md`「玩家看的文字」第 7 條；§4.3 還沒做，寫在決策 482 的下一步。
+
 ### 4.1 建議搬：新的 `ui-review` skill
 
 **時機**：做或審任何畫面之前讀，像 `motion` 的做法。

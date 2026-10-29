@@ -180,20 +180,24 @@ extension GameSession {
     /// How long ``situationAlerts`` keeps its bubbles while game time runs
     /// and no command changes the world: ten game minutes, a second at the
     /// normal speed.
-    static let situationAlertsPeriod: Int64 = 10 * 60
+    nonisolated static let situationAlertsPeriod: Int64 = 10 * 60
 
     /// ``GameWorld/situationAlerts()``, as the map draws them: worked out
     /// again after a command (``commandRevision``) and every
     /// ``situationAlertsPeriod`` of game time, not at every tick and every
     /// read. The deadlock search behind a stuck train's bubble asks a route
     /// of every waiting train: tens of milliseconds a time on the
-    /// real-world demo, read twice a frame and ten frames a second.
+    /// real-world demo, read twice a frame and ten frames a second. The
+    /// game loop's tick works them out off the main actor with the world
+    /// it made (``GameSession/LoopTick/work()``): the bought Sanying
+    /// Line's took some 70–100 ms in Linux release, at every tick at 6000×.
     public var situationAlerts: [MapAlert] {
         let period = world.clock.now.seconds / Self.situationAlertsPeriod
         if let memo = situationAlertsMemo, memo.revision == commandRevision, memo.period == period {
             return memo.alerts
         }
         let alerts = world.situationAlerts()
+        situationAlertsWorkedOut += 1
         situationAlertsMemo = SituationAlertsMemo(revision: commandRevision, period: period, alerts: alerts)
         return alerts
     }
