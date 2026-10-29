@@ -71,10 +71,12 @@ public struct ChartSpec: Hashable, Sendable {
         }
     }
 
-    /// The lowest and highest values, with zero in the range.
+    /// The lowest and highest values, with zero in the range (and the
+    /// seats, 100%, on a chart of percent).
     public var valueRange: ClosedRange<Double> {
         let values = series.flatMap { $0.values.compactMap { $0 } }
-        let low = min(0, values.min() ?? 0), high = max(0, values.max() ?? 0)
+        let floor: Double = axis == .percent ? 100 : 0
+        let low = min(0, values.min() ?? 0), high = max(floor, values.max() ?? 0)
         return low...(high > low ? high : low + 1)
     }
 }

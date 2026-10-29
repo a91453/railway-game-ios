@@ -259,6 +259,52 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("passenger-load", app)
     }
 
+    /// Decision 478's load charts on the freight scene: a passenger line's
+    /// fullest train by day and its riders between stops, then a section's
+    /// riders hour by hour in the flow report.
+    func testLoadCharts() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A passenger line's row comes into view")
+        report.tap()
+        let peak = app.descendants(matching: .any)["line.operations.peakLoad"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(peak, in: list), "The fullest train by day comes into view")
+        settle()
+        keep("line-peak-load", app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["line.load.chart"].firstMatch, in: list),
+                      "The riders between stops come into view")
+        // Worked out in the background.
+        settle(seconds: 3)
+        keep("line-load-profile", app)
+
+        let flow = app.buttons["lines.networkFlow"]
+        XCTAssertTrue(flow.becomesHittable(within: 5), "The flow report's button is there")
+        flow.tap()
+        let page = app.segmentedControls["networkFlow.page"]
+        XCTAssertTrue(page.appears(within: 10), "The flow report opens")
+        page.buttons.element(boundBy: 1).tap()
+        // Below decision 472's ranking: the list builds it as it scrolls
+        // in. Its summary first, then a little further for the chart, which
+        // is taller than the band dragUntilWhollyOnScreen keeps clear.
+        let summary = app.descendants(matching: .any)["networkFlow.hourly.summary"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(summary), "A section's riders hour by hour show")
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+        from.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        settle()
+        keep("section-hourly", app)
+    }
+
     /// The secretary's room (decision 175) on a blank new game: the
     /// forecast of the next seven days under the clock.
     func testForecast() {
