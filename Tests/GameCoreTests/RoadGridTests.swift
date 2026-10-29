@@ -151,6 +151,36 @@ final class RoadGridTests: XCTestCase {
 
     // MARK: - The player's roads (decision 438)
 
+    /// Decision 487: on a real-world map the city's road cells are not
+    /// drawn (the base map draws its streets), so a road drawn over them
+    /// takes them as the player's too, for nothing, and is laid as drawn.
+    func testOnARealWorldMapARoadTakesTheCitysCellsItCrossesForNothing() throws {
+        var world = try world()
+        world.geoAnchor = try XCTUnwrap(GeoAnchor(latitude: 238_600_000, longitude: 1_205_800_000))
+        let balance = world.economy.balance
+        let path = [CellPosition(row: 8, column: 11), CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 13), CellPosition(row: 7, column: 14)]
+        let quote = try world.roadQuote(along: path)
+        XCTAssertEqual(quote.cells, Array(path.dropFirst()))
+        XCTAssertEqual(quote.taken, [CellPosition(row: 8, column: 11)])
+        XCTAssertEqual(quote.price, Money(1_090_000), "the price as on a blank map")
+        try world.buildRoad(along: path)
+        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
+        XCTAssertEqual(world.roads?.built, Set(path))
+        XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11), "the city's roads as they were")
+        // Wholly along the city's road: taken, for nothing.
+        let along = [CellPosition(row: 9, column: 9), CellPosition(row: 9, column: 10)]
+        let free = try world.buildRoad(along: along)
+        XCTAssertEqual(free.cells, [])
+        XCTAssertEqual(free.taken, along)
+        XCTAssertEqual(free.price, .zero)
+        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
+        XCTAssertEqual(world.roads?.built, Set(path + along))
+        // Taken up, the city's road stays.
+        try world.removeRoads(along)
+        XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11))
+        XCTAssertEqual(try world.roadQuote(along: path.reversed()).taken, [], "all the player's already")
+    }
+
     func testThePlayerBuildsARoadAlongTheCells() throws {
         var world = try world()
         let balance = world.economy.balance
@@ -159,6 +189,7 @@ final class RoadGridTests: XCTestCase {
         let path = [CellPosition(row: 8, column: 11), CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 13), CellPosition(row: 7, column: 14)]
         let quote = try world.roadQuote(along: path)
         XCTAssertEqual(quote.cells, Array(path.dropFirst()))
+        XCTAssertEqual(quote.taken, [], "a blank map draws the city's roads: they stay the city's")
         XCTAssertEqual(quote.metres, 218)
         XCTAssertEqual(quote.price, Money(1_090_000))
         XCTAssertEqual(try world.buildRoad(along: path), quote)
