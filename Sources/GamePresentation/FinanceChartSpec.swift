@@ -13,7 +13,7 @@ public enum ChartAxis: Hashable, Sendable {
     case money
     /// Passengers or riders.
     case people
-    /// Percent of the seats (decision 478): a train's or a section's load.
+    /// A whole percent of seats (decision 472's fullest sections).
     case percent
 }
 
@@ -57,7 +57,7 @@ public struct ChartSpec: Hashable, Sendable {
         switch axis {
         case .money: language.text("Dollars", "金額")
         case .people: language.text("People", "人數")
-        case .percent: language.text("Percent of the seats", "座位的百分比")
+        case .percent: language.text("Percent full", "滿載率")
         }
     }
 

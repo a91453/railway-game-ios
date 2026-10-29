@@ -5,7 +5,7 @@
 - **第一類**：資料已經在 GameCore 或 GamePresentation 裡，畫圖只動畫法。
 - **第二類**：GameCore 要開始記歷史才畫得出來。這一類會動存檔，只寫進決策 478 的「下一步」。
 
-盤點的基準是 main `58c6c2b`。行號是那個版本的。
+盤點的基準是 main `58c6c2b`。行號是那個版本的。之後合併的 #1467（CJ，決策 472，main `d2a2b0a`）已經畫了幾張圖，列在下面「已經有的圖」，表裡不重算。
 
 ## 已經有的圖（不重做）
 
@@ -13,7 +13,9 @@
 | --- | --- | --- |
 | 財務趨勢：收入與成本、淨利、旅客 | `FinanceTrendCharts.swift`（`FinanceTrendCharts`） | 決策 176；UI 健檢 3-7 的兩件都已修：利潤另成一張圖，成本虛線已列在圖例 |
 | 路線每日運量、每日損益 | `FinanceTrendCharts.swift`（`LineOperatingCharts`） | 決策 179 |
-| 車站進出站每小時 | `StationPanel.swift`（`HourlyBarChart`） | CJ #1467（決策 472）在改，這次不碰 |
+| 車站各時段進出 | `StationPanel.swift`、`StatisticsCharts.swift`（`StationFlow.chart`） | #1467（決策 472）改成 Swift Charts，標出尖峰時段 |
+| 路線清單：運量迷你走勢線、最滿列車條 | `LinesPanel.swift`、`StatisticsCharts.swift`（`LineReport.sparkline`、`loadGauge`） | #1467（決策 472）；只有昨天一班最滿的，沒有逐日 |
+| 路網流量：最擠區間排行 | `NetworkFlowSheet.swift`（`SectionRankingChart`）、`NetworkFlowReport.rankedSections` | #1467（決策 472）；每段只看最擠的那個小時 |
 | 縱斷面、運行圖 | `NetworkControls.swift`（`LongSectionView`）、`TrainDiagramView.swift` | — |
 | 已經是手畫長條的 | 路線虧損卡、滿意度卡（`LinesPanel.swift:2017`、`:2166`），路網流量的路線頁（`NetworkFlowSheet.swift:74`），列車運用表（`TrainRosterView.swift:244`），目標（`GoalsPanel.swift:112`），公司等級（`PromotionLineView.swift:67`），站長稱號、成就 | 已經算是圖。要換成 Swift Charts 只是一致性問題，排在最後 |
 
@@ -24,8 +26,8 @@
 | # | 畫面 | 檔案:行號 | 現在怎麼顯示 | 資料從哪來 | 畫成什麼圖 | 玩家能多看懂什麼 | 玩／鐵／開／美／音 | 合計 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | **路線：各站間載客** | 沒有。路線面板只有站序與 `RouteStrip`（`LinesPanel.swift:1006`） | 沒有顯示 | 乘客計畫 `plannedPassengerLegFlows()`，以 `SectionFlow.segments`、`capacities` 分到每一段（`SectionFlow.swift:224`） | 每段一列，左右對開的橫條：一個方向向右，另一個方向向左 | 哪一段最擠、哪個方向；要加車或加區間車該加在哪 | 5／5／4／4／1 | **19，做了** |
-| 2 | **路網流量：區間各時段** | `NetworkFlowSheet.swift:142–181` | 每個區間只寫最擠那個小時：「08:00 · 載客／運能（%）」 | `SectionFlow.Section.loads[24]`、`capacities[24]`；報表原本只留最擠的一小時 | 24 小時長條，座位畫成虛線階梯 | 尖峰有多長；離峰是不是空跑；超過座位的有幾個小時 | 4／5／5／4／1 | **19，做了** |
-| 3 | **路線營運：每日最擠的一班** | `LinesPanel.swift:681`（列表那行字的「尖峰 87%」）；`LineOperatingCharts` 沒有這張 | 只有昨天一個數字 | `LineOperatingDay.peakLoadPercent`（`LineReportText.swift:37`），最多 30 天 | 折線，100% 畫一條「座位」線 | 是不是天天都擠、哪幾天超過座位 | 4／4／5／4／1 | **18，做了** |
+| 2 | **路網流量：區間各時段** | `NetworkFlowSheet.swift:142–181` | 每個區間只寫最擠那個小時：「08:00 · 載客／運能（%）」（#1467 把它畫成排行，仍是一段一個小時） | `SectionFlow.Section.loads[24]`、`capacities[24]`；報表原本只留最擠的一小時 | 24 小時長條，座位畫成虛線階梯 | 尖峰有多長；離峰是不是空跑；超過座位的有幾個小時 | 4／5／5／4／1 | **19，做了** |
+| 3 | **路線營運：每日最擠的一班** | `LinesPanel.swift:681`（列表那行字的「尖峰 87%」，#1467 加了昨天的最滿列車條）；`LineOperatingCharts` 沒有這張 | 只有昨天一個數字 | `LineOperatingDay.peakLoadPercent`（`LineReportText.swift:37`），最多 30 天 | 折線，100% 畫一條「座位」線 | 是不是天天都擠、哪幾天超過座位 | 4／4／5／4／1 | **18，做了** |
 | 4 | 經濟：票價距離級距 | `EconomyPanel.swift:385–393` | 一段說明文字 | `FareRules.distanceBands`（`Fares.swift:31`） | 階梯線：距離對票價 | 多搭一站會貴多少 | 3／4／5／3／1 | 16 |
 | 5 | 車隊總覽：各列車滿載率 | `FleetOverviewSheet.swift:339` | 每列一條小載客條 | `trainLoadInfo(of:)`（`EconomyText.swift:293`） | 依滿載率排的橫條，100% 一條線；或分布直方圖 | 哪幾列太擠、哪幾列空跑 | 4／3／4／3／1 | 15（SHOT 在改這個檔，之後再做） |
 | 6 | 公車路線 30 天 | `ControlPanel.swift:591`、`StationPanel.swift:855` | 只寫一行今天的數字 | `BusRoute.days`（`BusRoute.swift:143`），30 天的乘客、票收、成本 | 照 `LineOperatingCharts` 的每日乘客與損益 | 公車線有沒有在長、是不是在賠 | 4／2／4／3／1 | 14（ROAD #1469 在改公車；StationPanel 是 CJ 的） |
@@ -40,7 +42,7 @@
 | 15 | 年報、資產負債表 | `YearEndReport.swift:81–97`、`EconomyPanel.swift:538–586` | 數字格子：今年對去年 | `accounts.years`（最多 50 年，含期末資產負債表） | 各年資產分類堆疊對貸款；各年淨利長條 | 公司是在長還是在借錢撐 | 3／2／3／3／1 | 12 |
 | 16 | 地圖圖例：服務涵蓋 | `PopulationLegendView.swift:233–240` | 一行字 | `CoverageSummary`（`CoverageSummary.swift:15`） | 進度條：涵蓋人口對總人口 | 還有多少人沒被服務 | 2／1／5／3／1 | 12 |
 | 17 | 經濟：上一小時 | `EconomyPanel.swift:468–486` | 每項一行 | `recentLedgerTotals()`（`EconomyText.swift:208`） | 每項一條橫條 | 哪一項花最多 | 2／1／5／2／1 | 11 |
-| 18 | 車站：去哪裡、乘客去向、昨日進出、土地 | `StationPanel.swift:1070–1379` | 文字與數字行 | `StationRidership.pairs`、`passengerLedgerRows` 等 | 進出成對橫條、乘客去向堆疊 | — | — | CJ #1467（決策 472）正在把車站統計畫成圖，不重複 |
+| 18 | 車站：去哪裡、乘客去向、昨日進出、土地 | `StationPanel.swift:1070–1379` | 文字與數字行 | `StationRidership.pairs`、`passengerLedgerRows` 等 | 進出成對橫條、乘客去向堆疊 | — | — | 車站面板是 #1467（決策 472）的範圍，那邊的下一步再看 |
 | 19 | 車站營運：月台忙碌、天氣預報 | `StationOperationsView.swift:101–219` | 小條與 % | `StationOperations` | 小長條 | 不多 | 2／2／4／2／1 | 11 |
 
 這次做 1、2、3：分數最高的三張，都在講「擠不擠」，鐵道迷看斷面運量與時段的習慣，三張一起看得出要加車加在哪段、哪個時段、是不是天天如此。第 4 名的票價級距（16 分）與它們不相干，留給下一張。第 5、6 名的檔案別的 session 正在改（SHOT、ROAD、CJ），等它們合併後再做。

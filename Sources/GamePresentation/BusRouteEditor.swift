@@ -428,6 +428,8 @@ struct BusPathMemo {
     let station: PlanPoint?
     /// Whether it follows the base map's roads (else the road cells).
     let onRoads: Bool
+    /// The player's roads it was found over (``BusRoads/ownVersion``).
+    var ownRoads = 0
     let points: [PlanPoint]
     /// Where the stops lie on the way.
     let pins: [PlanPoint]
@@ -451,10 +453,16 @@ extension GameSession {
     /// cells. Decision 438: `nil` too where the base map has no roads (a map
     /// outside Taiwan, whose roads are all the player's own).
     public var busRoads: BusRoads? {
-        guard let baseMap, world.roads != nil, let frame = RealWorldFrame(world: world), let anchor = world.geoAnchor else { return nil }
-        if let known = busRoadsMemo, known.frame == frame { return known.roads }
-        let roads = RoadsOffer.baseMapHasRoads(at: anchor) ? BusRoads(tiles: baseMap, frame: frame) : nil
-        busRoadsMemo = (frame, roads)
+        guard let baseMap, let grid = world.roads, let frame = RealWorldFrame(world: world), let anchor = world.geoAnchor else { return nil }
+        let roads: BusRoads?
+        if let known = busRoadsMemo, known.frame == frame {
+            roads = known.roads
+        } else {
+            roads = RoadsOffer.baseMapHasRoads(at: anchor) ? BusRoads(tiles: baseMap, frame: frame) : nil
+            busRoadsMemo = (frame, roads)
+        }
+        // Decision 476's sequel: the player's own roads are bus roads too.
+        roads?.useOwnRoads(grid.built)
         return roads
     }
 }
@@ -938,20 +946,14 @@ extension GameSession {
         if station != nil || busDraft.city, !busDraft.stops.isEmpty, let roads = world.roads {
             let cells = roads.allCells
             if let onRoads = busRoads {
-                // Decision 424: the way along the base map's roads, and its
-                // legs' metres for GameCore; a leg no road joins is not
-                // drawn as a straight line, and cannot open.
+                // Decision 424: the way along the base map's roads (and,
+                // decision 476's sequel, the player's own), and its legs'
+                // metres for GameCore; a leg no road joins is not drawn as a
+                // straight line, and cannot open.
                 let way = onRoads.way(stops: busDraft.corePoints, station: station)
-                if way.firstBroken != nil, !roads.built.isEmpty, BusRoadPath.joins(stops: busDraft.coreStops, station: station, roads: cells) {
-                    // Decision 438: the player's own roads, which the base
-                    // map does not have: along the road cells, as GameCore
-                    // finds the way.
-                    busDraftPath = BusRoadPath.points(stops: busDraft.coreStops, station: station, roads: cells).reversed()
-                } else {
-                    busDraft.legMetres = way.legMetres
-                    broken = way.firstBroken
-                    busDraftPath = way.points.reversed()
-                }
+                busDraft.legMetres = way.legMetres
+                broken = way.firstBroken
+                busDraftPath = way.points.reversed()
             } else {
                 busDraftPath = BusRoadPath.points(stops: busDraft.coreStops, station: station, roads: cells).reversed()
             }
@@ -972,16 +974,17 @@ extension GameSession {
             guard route.station == nil || station != nil, let first = route.stops.first else { continue }
             let at = station?.location
             let memo: BusPathMemo
-            if let known = busPathMemo[route.id], known.stops == route.stops, known.station == at, known.onRoads == (onRoads != nil) {
+            let ownRoads = onRoads?.ownVersion ?? 0
+            if let known = busPathMemo[route.id], known.stops == route.stops, known.station == at, known.onRoads == (onRoads != nil),
+               known.ownRoads == ownRoads {
                 memo = known
             } else {
-                let way = onRoads?.way(ofSaved: route.stops, station: at)
-                if let way, way.firstBroken == nil || roads.built.isEmpty
-                    || !BusRoadPath.joins(stops: route.stops, station: at, roads: roads.allCells) {
+                if let way = onRoads?.way(ofSaved: route.stops, station: at) {
                     // Decision 474: a leg no bus road joins is drawn broken,
-                    // never straight across the blocks; only the player's
-                    // own roads (decision 438) take the way along the cells.
-                    memo = BusPathMemo(stops: route.stops, station: at, onRoads: true, points: way.points,
+                    // never straight across the blocks. Decision 476's
+                    // sequel: the player's own roads are among the bus
+                    // roads, so no way is taken along the cells any more.
+                    memo = BusPathMemo(stops: route.stops, station: at, onRoads: true, ownRoads: ownRoads, points: way.points,
                                        pins: at == nil ? way.stops : Array(way.stops.dropLast()), broken: way.broken)
                 } else {
                     memo = BusPathMemo(

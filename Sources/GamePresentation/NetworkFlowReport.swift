@@ -119,10 +119,10 @@ public struct NetworkFlowReport: Equatable, Sendable {
         /// Its passengers all day.
         public let dailyLoad: Int64
         /// Its passengers in each hour of the day (24 entries; decision
-        /// 478's chart).
-        public let loads: [Int64]
+        /// 478's chart; empty when a row is built without them).
+        public var loads: [Int64] = []
         /// What its trains carry in each hour (24 entries).
-        public let capacities: [Int64]
+        public var capacities: [Int64] = []
 
         public var id: Int { section }
         /// Whether more ride it than its trains carry.

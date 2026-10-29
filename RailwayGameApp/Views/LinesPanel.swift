@@ -1,3 +1,4 @@
+import Charts
 import GameCore
 import GamePresentation
 import SwiftUI
@@ -685,6 +686,10 @@ struct LinesPanel: View {
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(report.yesterday.map { $0.profit < .zero } == true ? Theme.error : Theme.textSecondary)
                         .accessibilityIdentifier("line.report.\(line.id.rawValue)")
+                    // Decision 472: its riders over the last days and its
+                    // fullest train, at a glance.
+                    LineTrendStrip(report: report, language: session.language)
+                        .accessibilityIdentifier("line.trend.\(line.id.rawValue)")
                 }
             }
             Spacer(minLength: 8)
@@ -2534,5 +2539,65 @@ struct LineModeShiftKey: Equatable {
     init(world: GameWorld, line: LineID) {
         self.line = line
         inputs = RidershipInputs(world: world)
+    }
+}
+
+/// Decision 472: a line's row's small trend line of riders over its last
+/// days, beside a bar of how full its fullest train was (the trains' load
+/// bar: ink, red only over 100%), and the week's change in words. The
+/// trend line is a picture of the words beside it, so VoiceOver reads the
+/// words; the selected line's charts below have the audio graph.
+private struct LineTrendStrip: View {
+    let report: LineReport
+    let language: DisplayLanguage
+
+    /// Not literals: a literal here would be a string to translate.
+    private static let dayAxis = "Day"
+    private static let ridersAxis = "Riders"
+
+    var body: some View {
+        let sparkline = report.sparkline
+        let gauge = report.loadGauge
+        if !sparkline.isEmpty || gauge != nil {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 10) {
+                    if !sparkline.isEmpty {
+                        Chart(Array(sparkline.enumerated()), id: \.offset) { day in
+                            LineMark(x: .value(Self.dayAxis, day.offset), y: .value(Self.ridersAxis, day.element))
+                                .foregroundStyle(Theme.chartBlue)
+                                .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                                .interpolationMethod(.monotone)
+                        }
+                        .chartXAxis(.hidden)
+                        .chartYAxis(.hidden)
+                        .chartYScale(domain: 0...Double(max(sparkline.max() ?? 0, 1)))
+                        .frame(width: 64, height: 18)
+                        .accessibilityHidden(true)
+                    }
+                    if let gauge {
+                        GeometryReader { proxy in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(Theme.panelBorder)
+                                Capsule()
+                                    .fill(gauge.isOverload ? Theme.error : Theme.textPrimary)
+                                    .frame(width: proxy.size.width * gauge.fraction)
+                            }
+                        }
+                        .frame(height: 5)
+                        .frame(maxWidth: 120)
+                        .accessibilityHidden(true)
+                    }
+                }
+                let words = [report.trendText(in: language), gauge?.text(in: language)].compactMap { $0 }
+                if !words.isEmpty {
+                    Text(verbatim: words.joined(separator: " · "))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .accessibilityElement(children: .combine)
+        }
     }
 }

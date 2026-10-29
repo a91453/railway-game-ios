@@ -148,7 +148,7 @@ final class LoadChartTests: XCTestCase {
                                 days: [day(10, peak: 800), day(11, peak: 1_320), day(12, peak: 1_050)])
         let chart = report.peakLoadChart(in: .english)
         XCTAssertEqual(chart.axis, .percent)
-        XCTAssertEqual(chart.yTitle, "Percent of the seats")
+        XCTAssertEqual(chart.yTitle, "Percent full")
         XCTAssertEqual(chart.valueText(116), "116%")
         XCTAssertEqual(chart.series.first?.values, [80, 132, 105])
         XCTAssertTrue(chart.valueRange.contains(100), "the seats' rule is always in view")
