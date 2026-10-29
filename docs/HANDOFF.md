@@ -2422,3 +2422,17 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 使用者指出第三版正面塗裝奇怪，重看官方與Blair原圖確認少了接肩部／燈座的深色兩頰；第四版只補正面分色、上肩綠色與相接肩帶，保留車殼／玻璃／燈／設備。producer `498d85ef`，真前版`0b6d26df`／素材`1adbab9f`；新素材`e9c8de91`的revision-4與原公開draft[#1437](https://github.com/a91453/railway-game-ios/pull/1437)↔素材draft[#21](https://github.com/a91453/railway-assets-private/pull/21)互鏈。第三輪重檔同PR刪除，保留PNG／README／來源／授權。近4804／遠2208、兩車9608／4416；20私庫PNG＋1公開小總覽，asset_guard通過，PR新增13.3MB。
 
 本機Swift6.4 warnings-as-errors與最終12測試通過；前臉第一可見材質／實際塗白故障反例拒收、真第三版四單元拒收，逐三角驗分色包絡外幾何與車頭後方頂點色保持（相鄰車頭烘焙遮蔽可變）。既有六模型幾何／玻璃／八輪／支承反例、Blender、Swift42072頂點編組、170PNG與六下載PNG完整解碼、最終七向配色白模剪影目視、viewer18下載SHA通過；14檔獨立producer重建bytes相同，684其他原生與FNV保持。本型四鎖正確，分支繼承28他車舊鎖差異不擅改。詳見[交接／來源／重建／驗證](art/taichung-green/README.md)；最終CI見本輪PR checks及#1041。真實綠藍柔和過渡簡化成乾淨色塊，第四版外觀接受／營運接入／Simulator與真機Metal效能動畫仍UNVERIFIED。仍studies、tmrt映射不動，不合併／auto-merge／TestFlight。
+
+### 2026-10-29 Codex 高雄紅／橘線現役西門子 studies
+
+[來源／交接／重建／狀態](art/kaohsiung/README.md)：producer `62c2da42`，獨立DM1/T/DM2近遠六單元與三車assembly，只有studies，krtc→metroGeneric三車保持。原始高捷PDF、市府實車圖、Siemens SF3000原圖錄及可靠實拍已下載開啟；兩線共用一般銀／綠松塗裝，不另造紅橘車。近9924／遠4788三角，18成品獨立producer逐bytes相同；688他車實際payload/FNV保持，28既有鎖差異不改。四狀態、簡化與資料缺口、最終驗證及互鏈draft見自有README。使用者外觀接受、營運接入、Simulator／真機Metal效能動畫UNVERIFIED；不合併／auto-merge／TestFlight，不動GameCore／存檔／fixtures／玩法。
+
+高雄交付互鏈：公開draft[#1454](https://github.com/a91453/railway-game-ios/pull/1454) ↔ 素材draft[#22](https://github.com/a91453/railway-assets-private/pull/22)，素材revision-1 `10f8abc`；兩庫base main。15項最終Swift＋啟用記憶體報告1項通過（standard585／133.3MB），最終交付viewer24實際下載SHA及20PNG／完整SHA清單通過；asset_guard11.6MB綠。最新CI看兩PR同head checks，不宣稱外觀／真機接受。
+
+### 2026-10-29 高雄第二版續修（Codex）
+
+使用者要求「依實車對照繼續修」。同公開draft#1454 ↔ 素材draft#22，producer `3874b425`，真前版`62c2da42`／素材`10f8abc`。撤回第一輪顯示幕側別及車頭細節的過寬自評：改觀者左側顯示幕、橫向圓弧與風擋／圓角中央門、雙燈共同座、雨刷、下裙與真凹孔連結器。T近遠完整payload、X≤9m後方硬體幾何／flags及其他688模型實際bytes/FNV保持。近三車12148／遠5476，18成品獨立producer重建相同；15項Swift6.4及八件GLB／故障反例／固定尺度真前後／最終viewer下載檢查見自有README和verification。revision-1重檔同PR刪除，留PNG／README／來源；revision-2為最新完整包，沒有ZIP/history。仍studies，營運映射保持；外觀接受／接入／Simulator與真機UNVERIFIED，不merge／auto-merge／TestFlight。
+
+### 2026-10-29 高雄第三版正面塗裝（Codex）
+
+使用者「側面可以了」僅接受R2 producer `3874b425`側面，正面偏方續修；最新producer `bd57e163391bfdf7492cc408c7697451578ae8e1`，真前版素材`1f73fb1`。本輪只改實體殼上的正面分色：黑罩上緣淺弧／肩部收角與U帶細分，不改中央逃生門等硬體或曲面。逐三角形原生52bytes護住X≤9m直側，T近遠整檔保持；兩producer白殼雙向交集驗車頭覆蓋不變。最新main`fd91b75c`的696他車實際bytes/FNV、所有他車鎖保持；只動本型四DM鎖，28繼承差異不消。近三車13892／遠6356；18成品從producer獨立重建相同，15 Swift6.4 WAE、8 GLB、真故障、224PNG／192同尺度前後、24真下載SHA與最終viewer已驗。沿用draft#1454 ↔ 素材draft#22，revision-3為完整包，revision-2重檔同PR刪除留PNG／README／來源。具體資料、預覽、重建及四狀態見[自有交接](art/kaohsiung/README.md)。下一步先檢視此producer正／斜前預覽並記明確回覆，不能把R2側面接受擴張成全車R3接受；外觀正面／整體、營運接入、Simulator／真機Metal效能動畫仍UNVERIFIED。studies、krtc→metroGeneric三車、其他保護範圍不變，不merge／auto-merge／TestFlight。

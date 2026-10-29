@@ -1,0 +1,26 @@
+{
+  "asset": {
+    "status": "VERIFIED",
+    "evidence": "Final native/GLB geometry and actual faults, protected accepted side / T / bow and696 existing payloads, independent producer rebuild, Blender4.3.2, PNG decode and delivered viewer/download SHA. See public verification.json."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "accepted_producer": null,
+    "accepted_sections": [
+      {
+        "section": "side",
+        "producer": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+        "evidence": "User: 側面可以了 只是正面塗裝是不是有點方 還要調整嗎"
+      }
+    ],
+    "evidence": "Revision2 side accepted only. Revision3 front remains producer self-review; no whole-model appearance acceptance."
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "studies only; krtc metroGeneric3-car mapping protected."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "Linux WebGL/Blender, no new Simulator/device Metal/performance/animation check. file:// blocked by browser policy, localhost tested."
+  }
+}

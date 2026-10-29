@@ -1,0 +1,1891 @@
+{
+  "revision": 3,
+  "producer": "bd57e163391bfdf7492cc408c7697451578ae8e1",
+  "previous_producer": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+  "previous_asset_commit": "1f73fb1cdba56ce99e0e3cdc3313175915d0ac92",
+  "latest_main_baseline": "fd91b75c250f63d19331d87f33e502ef72a1daf8",
+  "platform": "Linux Swift6.4.0 warnings-as-errors; Blender4.3.2; Node24.19; Chromium software WebGL",
+  "swift_tests": {
+    "status": "VERIFIED",
+    "count": 15,
+    "classes": [
+      "Map3DKaohsiungTests",
+      "Map3DModelTests",
+      "Map3DModelPackSizeTests",
+      "Map3DTaichungGreenTests"
+    ]
+  },
+  "png": {
+    "final_native_full_decodes": 224,
+    "fixed_comparison_native_pngs": 192,
+    "delivered_pngs": 20,
+    "public_overview": 1,
+    "downloaded_png_full_decodes": 8
+  },
+  "limits": "Side acceptance belongs to revision2 producer only. Overall appearance/front/integration/device UNVERIFIED. Display probes, not engineering or exhaustive collision proof. Browser file:// blocked; localhost tested.",
+  "geometry": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "balanced_edges": 7525,
+        "positive_components": 148,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "balanced_edges": 3404,
+        "positive_components": 103,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "balanced_edges": 7525,
+        "positive_components": 148,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "balanced_edges": 3469,
+        "positive_components": 92,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "balanced_edges": 1476,
+        "positive_components": 67,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "balanced_edges": 3469,
+        "positive_components": 92,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "balanced_edges": 18446,
+        "positive_components": 397,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "balanced_edges": 8406,
+        "positive_components": 249,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      }
+    ],
+    "limits": [
+      "GLB is checked against the shared writer; run an independent importer separately.",
+      "No vehicle-specific glass visibility, equipment support, tyre/rail or clearance proof.",
+      "No exhaustive intersections, engineering precision, appearance acceptance or device performance.",
+      "Assembly payload is a JS expansion check; independently compare a Swift formation when available."
+    ]
+  },
+  "specific": {
+    "protected_previous": [
+      {
+        "id": "kaohsiung-dm1",
+        "unchanged_geometry_flags_triangles_x_le_9m": 2225,
+        "trailer_full_bytes_unchanged": false
+      },
+      {
+        "id": "kaohsiung-t",
+        "unchanged_geometry_flags_triangles_x_le_9m": 2203,
+        "trailer_full_bytes_unchanged": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "unchanged_geometry_flags_triangles_x_le_9m": 2225,
+        "trailer_full_bytes_unchanged": false
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "unchanged_geometry_flags_triangles_x_le_9m": 945,
+        "trailer_full_bytes_unchanged": false
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "unchanged_geometry_flags_triangles_x_le_9m": 923,
+        "trailer_full_bytes_unchanged": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "unchanged_geometry_flags_triangles_x_le_9m": 945,
+        "trailer_full_bytes_unchanged": false
+      }
+    ],
+    "true_r2_front_paint_rejected": [
+      "kaohsiung-dm1",
+      "kaohsiung-dm2",
+      "kaohsiung-dm1-far",
+      "kaohsiung-dm2-far"
+    ],
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "glass_visibility_and_backing": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true,
+        "cab_front_bury_float_socket_cap_and_wrong_side_destination_rejected": true,
+        "actual_flat_crown_repaint_rejected": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "glass_visibility_and_backing": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true,
+        "cab_front_bury_float_socket_cap_and_wrong_side_destination_rejected": false,
+        "actual_flat_crown_repaint_rejected": false
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "glass_visibility_and_backing": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true,
+        "cab_front_bury_float_socket_cap_and_wrong_side_destination_rejected": true,
+        "actual_flat_crown_repaint_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "glass_visibility_and_backing": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true,
+        "cab_front_bury_float_socket_cap_and_wrong_side_destination_rejected": true,
+        "actual_flat_crown_repaint_rejected": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "glass_visibility_and_backing": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true,
+        "cab_front_bury_float_socket_cap_and_wrong_side_destination_rejected": false,
+        "actual_flat_crown_repaint_rejected": false
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "glass_visibility_and_backing": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true,
+        "cab_front_bury_float_socket_cap_and_wrong_side_destination_rejected": true,
+        "actual_flat_crown_repaint_rejected": true
+      }
+    ],
+    "limits": "Triangle-centroid exterior glass rays, 8 tyre envelopes and roof central support samples; no exhaustive self-intersection or engineering/appearance/device acceptance."
+  },
+  "paint_protection": {
+    "status": "VERIFIED",
+    "true_previous_producer": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+    "accepted_side_producer": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "outside_front_paint_slab_geometry_flags_equal": true,
+        "front_shell": {
+          "projected_front_area_m2": 7.91300051961683,
+          "max_triangle_coverage_residual_m2": 3.6881291368140445e-08,
+          "coplanar_bow_tolerance_m": 3e-05
+        },
+        "accepted_straight_side_full_native_vertex_fields_equal": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "trailer_full_bytes_equal": true,
+        "accepted_straight_side_full_native_vertex_fields_equal": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "outside_front_paint_slab_geometry_flags_equal": true,
+        "front_shell": {
+          "projected_front_area_m2": 7.91300051961683,
+          "max_triangle_coverage_residual_m2": 3.6881291368140445e-08,
+          "coplanar_bow_tolerance_m": 3e-05
+        },
+        "accepted_straight_side_full_native_vertex_fields_equal": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "outside_front_paint_slab_geometry_flags_equal": true,
+        "front_shell": {
+          "projected_front_area_m2": 7.913000197529698,
+          "max_triangle_coverage_residual_m2": 8.683722045599307e-08,
+          "coplanar_bow_tolerance_m": 3e-05
+        },
+        "accepted_straight_side_full_native_vertex_fields_equal": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "trailer_full_bytes_equal": true,
+        "accepted_straight_side_full_native_vertex_fields_equal": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "outside_front_paint_slab_geometry_flags_equal": true,
+        "front_shell": {
+          "projected_front_area_m2": 7.913000197529698,
+          "max_triangle_coverage_residual_m2": 8.683722045599307e-08,
+          "coplanar_bow_tolerance_m": 3e-05
+        },
+        "accepted_straight_side_full_native_vertex_fields_equal": true
+      }
+    ],
+    "limits": "Exact sampled triangle intersection coverage on the same piecewise-planar bow; Float32/clip tolerance stated. Internal paint partitions may differ. Frontal paint projects into nose/oblique views; no claim that every side-camera nose pixel or adjacent baked shade is unchanged."
+  },
+  "independent_glb": {
+    "importer": "4.3.2",
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "triangles": 5790,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "triangles": 2312,
+        "minimum": [
+          -10.779999732971191,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.779999732971191,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "triangles": 5790,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "triangles": 2686,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "triangles": 984,
+        "minimum": [
+          -10.779999732971191,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.779999732971191,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "triangles": 2686,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "triangles": 13892,
+        "minimum": [
+          -32.724998474121094,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          32.724998474121094,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "triangles": 6356,
+        "minimum": [
+          -32.724998474121094,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          32.724998474121094,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      }
+    ]
+  },
+  "independent_rebuild": {
+    "status": "VERIFIED",
+    "producer": "bd57e163391bfdf7492cc408c7697451578ae8e1",
+    "independent_checkout": true,
+    "files": [
+      {
+        "file": "models/kaohsiung-dm1-far.glb",
+        "bytes": 259056,
+        "sha256": "91379803e12f033fbbfb3b20dff75db55ccb383ecaef2f422d6b7ae66736d6a6"
+      },
+      {
+        "file": "models/kaohsiung-dm1-far.m3dmodel",
+        "bytes": 139732,
+        "sha256": "9c068df5b35d6f6356c860c6185226a1f13254991aab9227acb83094d04ce442"
+      },
+      {
+        "file": "models/kaohsiung-dm1.glb",
+        "bytes": 557044,
+        "sha256": "d58f6a809abe85d6ff29e88d5b0bdb99b296171e6d60411c6a5e9fad4ec78a00"
+      },
+      {
+        "file": "models/kaohsiung-dm1.m3dmodel",
+        "bytes": 301136,
+        "sha256": "b7b458f0fb03eed0b9a1b5f767541525c1313e3712f560f4769c5dc2383b9d96"
+      },
+      {
+        "file": "models/kaohsiung-dm2-far.glb",
+        "bytes": 259056,
+        "sha256": "092df23a657c170c0836dfab81078e48314366fd720142b5555dd0b10cde979a"
+      },
+      {
+        "file": "models/kaohsiung-dm2-far.m3dmodel",
+        "bytes": 139732,
+        "sha256": "fac123584362728dfc117f7c15dcdc3eee8115c416f61018be014db7d8f6066e"
+      },
+      {
+        "file": "models/kaohsiung-dm2.glb",
+        "bytes": 557044,
+        "sha256": "55c7f6cd8ccd5b9fbb278afdc7a5064a053c1d374f0ab7cee630ca3db026a794"
+      },
+      {
+        "file": "models/kaohsiung-dm2.m3dmodel",
+        "bytes": 301136,
+        "sha256": "788c35dd89841865ab24a6b7e97c2ea39da5498bab29f77bd613ced98b68bd0c"
+      },
+      {
+        "file": "models/kaohsiung-formation-far.glb",
+        "bytes": 611344,
+        "sha256": "442e685a34cefa00031a3ffcd7f5bd30b1702d3b1e33561800adcb1e37972305"
+      },
+      {
+        "file": "models/kaohsiung-formation-far.m3dscene.json",
+        "bytes": 441527,
+        "sha256": "738ef07d16f1072c2688fef55c6610ab8293cd4fbd94bb313c63788847443b54"
+      },
+      {
+        "file": "models/kaohsiung-formation-far.triangles.bin",
+        "bytes": 330512,
+        "sha256": "61ab37441e4cf5c16f2602b71ad070f7b205e103833d5956ad39e600657e34ec"
+      },
+      {
+        "file": "models/kaohsiung-formation.glb",
+        "bytes": 1334804,
+        "sha256": "3221d976def2084f4cef98c2e91ceab004a979a3856a12effc53484581e52969"
+      },
+      {
+        "file": "models/kaohsiung-formation.m3dscene.json",
+        "bytes": 963979,
+        "sha256": "8043c32e1afd00215b40663b8c513a50fbfae696d579b45768b112ef07f8266d"
+      },
+      {
+        "file": "models/kaohsiung-formation.triangles.bin",
+        "bytes": 722384,
+        "sha256": "61f8613c9d855624e7c868b9a867df7dc6bff60e7905be4bf7e2474863753cff"
+      },
+      {
+        "file": "models/kaohsiung-t-far.glb",
+        "bytes": 95660,
+        "sha256": "aec66d6d76336ed530969e0afc4d8eb7c7c875c34c0cb420fe670b32e5d83f63"
+      },
+      {
+        "file": "models/kaohsiung-t-far.m3dmodel",
+        "bytes": 51224,
+        "sha256": "fd3991f6cbe11276475c774f2540f1017b34456e591e53946ff8ef6ac4705873"
+      },
+      {
+        "file": "models/kaohsiung-t.glb",
+        "bytes": 223148,
+        "sha256": "c2b89eae31ac0f3ad8413f45a47616148918271b0cbd42961c0e101730131d99"
+      },
+      {
+        "file": "models/kaohsiung-t.m3dmodel",
+        "bytes": 120276,
+        "sha256": "a943ed5e33f2e7b0dfb9daf78e629b5c922b1bfca60babd036bddaec22fae074"
+      }
+    ]
+  },
+  "protected_existing": {
+    "status": "VERIFIED",
+    "protected_models": 696,
+    "native_bytes_equal": true,
+    "all_vertex_fields_FNV_equal": true,
+    "ids": [
+      "blue-seven-formation",
+      "blue-seven-leading",
+      "blue-seven-middleFive",
+      "blue-seven-middleFour",
+      "blue-seven-middleOne",
+      "blue-seven-middleThree",
+      "blue-seven-middleTwo",
+      "blue-seven-trailing",
+      "c341-dm",
+      "c341-m",
+      "c341-rear",
+      "c341-t",
+      "c371-dm",
+      "c371-m",
+      "c371-rear",
+      "c371-t",
+      "c381-dm",
+      "c381-m",
+      "c381-rear",
+      "c381-t",
+      "commuter-cab",
+      "commuter-car",
+      "duplex-formation",
+      "duplex-locomotive",
+      "duplex-tender",
+      "e1000",
+      "e1000-far",
+      "emu500-em",
+      "emu500-emc",
+      "emu500-ep",
+      "emu500-et",
+      "emu500-formation",
+      "emu800-ed",
+      "emu800-ed-far",
+      "emu800-ed-reverse",
+      "emu800-ed-reverse-far",
+      "emu800-ema",
+      "emu800-ema-far",
+      "emu800-ema-reverse",
+      "emu800-ema-reverse-far",
+      "emu800-emb",
+      "emu800-emb-far",
+      "emu800-emb-reverse",
+      "emu800-emb-reverse-far",
+      "emu800-ep",
+      "emu800-ep-far",
+      "emu800-ep-reverse",
+      "emu800-ep-reverse-far",
+      "emu900-ed",
+      "emu900-ed-far",
+      "emu900-ed-light",
+      "emu900-ed-reverse",
+      "emu900-ed-reverse-far",
+      "emu900-ed-reverse-light",
+      "emu900-emCrew",
+      "emu900-emCrew-far",
+      "emu900-emCrew-light",
+      "emu900-emCrew-reverse",
+      "emu900-emCrew-reverse-far",
+      "emu900-emCrew-reverse-light",
+      "emu900-emSIV",
+      "emu900-emSIV-far",
+      "emu900-emSIV-light",
+      "emu900-emSIV-reverse",
+      "emu900-emSIV-reverse-far",
+      "emu900-emSIV-reverse-light",
+      "emu900-emToilet",
+      "emu900-emToilet-far",
+      "emu900-emToilet-light",
+      "emu900-emToilet-reverse",
+      "emu900-emToilet-reverse-far",
+      "emu900-emToilet-reverse-light",
+      "emu900-epAccessible",
+      "emu900-epAccessible-far",
+      "emu900-epAccessible-light",
+      "emu900-epAccessible-reverse",
+      "emu900-epAccessible-reverse-far",
+      "emu900-epAccessible-reverse-light",
+      "emu900-epCompressor",
+      "emu900-epCompressor-far",
+      "emu900-epCompressor-light",
+      "emu900-epCompressor-reverse",
+      "emu900-epCompressor-reverse-far",
+      "emu900-epCompressor-reverse-light",
+      "express-cab",
+      "express-car",
+      "green-commuter-formation",
+      "green-commuter-leading",
+      "green-commuter-trailing",
+      "green-tram-formation",
+      "green-tram-head",
+      "green-tram-middle",
+      "green-tram-tail",
+      "highSpeed-cab",
+      "highSpeed-car",
+      "highSpeed-panto",
+      "life-bus",
+      "life-car",
+      "life-coachBus",
+      "life-deliveryScooter",
+      "life-electricScooter",
+      "life-garbageTruck",
+      "life-lowFloorBus",
+      "life-lowFloorBus-route",
+      "life-midiBus",
+      "life-recyclingTruck",
+      "life-scooter",
+      "life-scooterPair",
+      "life-shuttleBus",
+      "life-standing",
+      "life-stepScooter",
+      "life-stepScooterPair",
+      "life-van",
+      "life-walking",
+      "light-commuter-cab",
+      "light-commuter-car",
+      "light-express-cab",
+      "light-express-car",
+      "light-highSpeed-cab",
+      "light-highSpeed-car",
+      "light-highSpeed-panto",
+      "light-metro-cab",
+      "light-metro-car",
+      "light-peopleMover-cab",
+      "light-peopleMover-car",
+      "light-set-BLUE-car",
+      "light-set-BLUE-head",
+      "light-set-BLUE-tail",
+      "light-set-blueSeven-car",
+      "light-set-blueSeven-head",
+      "light-set-blueSeven-tail",
+      "light-set-circular610-car",
+      "light-set-circular610-carBack",
+      "light-set-circular610-head",
+      "light-set-circular610-tail",
+      "light-set-circular610Far-car",
+      "light-set-circular610Far-carBack",
+      "light-set-circular610Far-head",
+      "light-set-circular610Far-tail",
+      "light-set-dieselExpress-car",
+      "light-set-dieselExpress-head",
+      "light-set-dieselExpress-tail",
+      "light-set-dieselRailcar-car",
+      "light-set-dieselRailcar-head",
+      "light-set-dieselRailcar-single",
+      "light-set-dieselRailcar-tail",
+      "light-set-E200CK-car",
+      "light-set-E200CK-tail",
+      "light-set-E200CKFar-car",
+      "light-set-E200CKFar-tail",
+      "light-set-E500CK-car",
+      "light-set-E500CK-tail",
+      "light-set-E500CKFar-car",
+      "light-set-E500CKFar-tail",
+      "light-set-emu500-car",
+      "light-set-emu500-carBack",
+      "light-set-emu500-centre",
+      "light-set-emu500-centreBack",
+      "light-set-emu500-head",
+      "light-set-emu500-panto",
+      "light-set-emu500-pantoBack",
+      "light-set-emu500-tail",
+      "light-set-emu500Far-car",
+      "light-set-emu500Far-carBack",
+      "light-set-emu500Far-centre",
+      "light-set-emu500Far-centreBack",
+      "light-set-emu500Far-head",
+      "light-set-emu500Far-panto",
+      "light-set-emu500Far-pantoBack",
+      "light-set-emu500Far-tail",
+      "light-set-emu800-car",
+      "light-set-emu800-carBack",
+      "light-set-emu800-centre",
+      "light-set-emu800-centreBack",
+      "light-set-emu800-head",
+      "light-set-emu800-panto",
+      "light-set-emu800-pantoBack",
+      "light-set-emu800-tail",
+      "light-set-emu800Far-car",
+      "light-set-emu800Far-carBack",
+      "light-set-emu800Far-centre",
+      "light-set-emu800Far-centreBack",
+      "light-set-emu800Far-head",
+      "light-set-emu800Far-panto",
+      "light-set-emu800Far-pantoBack",
+      "light-set-emu800Far-tail",
+      "light-set-emu900-car",
+      "light-set-emu900-carBack",
+      "light-set-emu900-centre",
+      "light-set-emu900-centreBack",
+      "light-set-emu900-fourth",
+      "light-set-emu900-fourthBack",
+      "light-set-emu900-head",
+      "light-set-emu900-panto",
+      "light-set-emu900-pantoBack",
+      "light-set-emu900-tail",
+      "light-set-emu900Far-car",
+      "light-set-emu900Far-carBack",
+      "light-set-emu900Far-centre",
+      "light-set-emu900Far-centreBack",
+      "light-set-emu900Far-fourth",
+      "light-set-emu900Far-fourthBack",
+      "light-set-emu900Far-head",
+      "light-set-emu900Far-panto",
+      "light-set-emu900Far-pantoBack",
+      "light-set-emu900Far-tail",
+      "light-set-emu3000-car",
+      "light-set-emu3000-em6",
+      "light-set-emu3000-ep7",
+      "light-set-emu3000-ep10",
+      "light-set-emu3000-et",
+      "light-set-emu3000-head",
+      "light-set-emu3000-panto",
+      "light-set-emu3000-tail",
+      "light-set-emu3000Far-car",
+      "light-set-emu3000Far-em6",
+      "light-set-emu3000Far-ep7",
+      "light-set-emu3000Far-ep10",
+      "light-set-emu3000Far-et",
+      "light-set-emu3000Far-head",
+      "light-set-emu3000Far-panto",
+      "light-set-emu3000Far-tail",
+      "light-set-fiveSectionLRT-head",
+      "light-set-fiveSectionLRT-tail",
+      "light-set-fourCarMetro-car",
+      "light-set-fourCarMetro-head",
+      "light-set-fourCarMetro-tail",
+      "light-set-greenCommuter-car",
+      "light-set-greenCommuter-head",
+      "light-set-greenCommuter-tail",
+      "light-set-greenTram-car",
+      "light-set-greenTram-head",
+      "light-set-greenTram-single",
+      "light-set-greenTram-tail",
+      "light-set-highSpeed-car",
+      "light-set-highSpeed-head",
+      "light-set-highSpeed-panto",
+      "light-set-highSpeed-tail",
+      "light-set-highSpeedFar-car",
+      "light-set-highSpeedFar-head",
+      "light-set-highSpeedFar-panto",
+      "light-set-highSpeedFar-tail",
+      "light-set-metroC341-car",
+      "light-set-metroC341-centre",
+      "light-set-metroC341-head",
+      "light-set-metroC341-tail",
+      "light-set-metroC341Far-car",
+      "light-set-metroC341Far-centre",
+      "light-set-metroC341Far-head",
+      "light-set-metroC341Far-tail",
+      "light-set-metroC371-car",
+      "light-set-metroC371-centre",
+      "light-set-metroC371-head",
+      "light-set-metroC371-tail",
+      "light-set-metroC371Far-car",
+      "light-set-metroC371Far-centre",
+      "light-set-metroC371Far-head",
+      "light-set-metroC371Far-tail",
+      "light-set-metroC381-car",
+      "light-set-metroC381-centre",
+      "light-set-metroC381-head",
+      "light-set-metroC381-tail",
+      "light-set-metroC381Far-car",
+      "light-set-metroC381Far-centre",
+      "light-set-metroC381Far-head",
+      "light-set-metroC381Far-tail",
+      "light-set-metroGeneric-car",
+      "light-set-metroGeneric-head",
+      "light-set-metroGeneric-tail",
+      "light-set-MINGRI-car",
+      "light-set-MINGRI-tail",
+      "light-set-MINGRIFar-car",
+      "light-set-MINGRIFar-tail",
+      "light-set-n700sG-car",
+      "light-set-n700sG-carBack",
+      "light-set-n700sG-head",
+      "light-set-n700sG-panto",
+      "light-set-n700sG-pantoBack",
+      "light-set-n700sG-tail",
+      "light-set-n700sGFar-car",
+      "light-set-n700sGFar-carBack",
+      "light-set-n700sGFar-head",
+      "light-set-n700sGFar-panto",
+      "light-set-n700sGFar-pantoBack",
+      "light-set-n700sGFar-tail",
+      "light-set-pushPull-car",
+      "light-set-pushPullE1000-car",
+      "light-set-pushPullE1000Far-car",
+      "light-set-pushPullFar-car",
+      "light-set-puyuma-car",
+      "light-set-puyuma-centre",
+      "light-set-puyuma-head",
+      "light-set-puyuma-panto",
+      "light-set-puyuma-pantoBack",
+      "light-set-puyuma-tail",
+      "light-set-puyumaFar-car",
+      "light-set-puyumaFar-centre",
+      "light-set-puyumaFar-head",
+      "light-set-puyumaFar-panto",
+      "light-set-puyumaFar-pantoBack",
+      "light-set-puyumaFar-tail",
+      "light-set-R100CK-car",
+      "light-set-R100CK-tail",
+      "light-set-R100CKFar-car",
+      "light-set-R100CKFar-tail",
+      "light-set-R200CK-car",
+      "light-set-R200CK-head",
+      "light-set-R200CK-tail",
+      "light-set-R200CKFar-car",
+      "light-set-R200CKFar-head",
+      "light-set-R200CKFar-tail",
+      "light-set-sanying-head",
+      "light-set-sanying-tail",
+      "light-set-sanyingFar-head",
+      "light-set-sanyingFar-tail",
+      "light-set-sevenSectionLRT-car",
+      "light-set-sevenSectionLRT-head",
+      "light-set-sevenSectionLRT-tail",
+      "light-set-STAR-car",
+      "light-set-STAR-tail",
+      "light-set-STARFar-car",
+      "light-set-STARFar-tail",
+      "light-set-STEAM-car",
+      "light-set-STEAM-head",
+      "light-set-STEAM-tail",
+      "light-set-SUMMER-car",
+      "light-set-SUMMER-tail",
+      "light-set-SUMMERFar-car",
+      "light-set-SUMMERFar-tail",
+      "light-set-taroko-car",
+      "light-set-taroko-head",
+      "light-set-taroko-panto",
+      "light-set-taroko-tail",
+      "light-set-tarokoFar-car",
+      "light-set-tarokoFar-head",
+      "light-set-tarokoFar-panto",
+      "light-set-tarokoFar-tail",
+      "light-set-threeCarUrban-car",
+      "light-set-threeCarUrban-head",
+      "light-set-threeCarUrban-tail",
+      "light-set-wenhu-car",
+      "light-set-wenhu-head",
+      "light-set-wenhu-tail",
+      "lrt-five-formation",
+      "lrt-five-leading",
+      "lrt-five-middle",
+      "lrt-five-suspendedFront",
+      "lrt-five-suspendedRear",
+      "lrt-five-trailing",
+      "lrt-seven-formation",
+      "lrt-seven-leading",
+      "lrt-seven-middleFront",
+      "lrt-seven-middleRear",
+      "lrt-seven-suspendedCentre",
+      "lrt-seven-suspendedFront",
+      "lrt-seven-suspendedRear",
+      "lrt-seven-trailing",
+      "metro-cab",
+      "metro-car",
+      "metro-four-formation",
+      "metro-four-leading",
+      "metro-four-middleFront",
+      "metro-four-middleRear",
+      "metro-four-trailing",
+      "peopleMover-cab",
+      "peopleMover-car",
+      "pp-ppc1400",
+      "pp-ppc1400-far",
+      "pp-pph1300",
+      "pp-pph1300-far",
+      "pp-ppm2500",
+      "pp-ppm2500-far",
+      "pp-ppt1000",
+      "pp-ppt1000-far",
+      "prop-busStop",
+      "prop-lamp",
+      "prop-pole",
+      "prop-signalAmber",
+      "prop-signalGo",
+      "prop-signalStop",
+      "prop-tree",
+      "prop-vending",
+      "refresh-700t-cab",
+      "refresh-700t-middle",
+      "refresh-700t-panto",
+      "refresh-700t-tail",
+      "refresh-e200",
+      "sanying-a",
+      "sanying-a-far",
+      "sanying-b",
+      "sanying-b-far",
+      "scenery-bushes",
+      "scenery-bushesLarge",
+      "scenery-pine",
+      "scenery-pineTall",
+      "scenery-pineYoung",
+      "scenery-tank",
+      "set-BLUE-car",
+      "set-BLUE-head",
+      "set-BLUE-tail",
+      "set-blueSeven-car",
+      "set-blueSeven-head",
+      "set-blueSeven-tail",
+      "set-circular610-car",
+      "set-circular610-carBack",
+      "set-circular610-head",
+      "set-circular610-tail",
+      "set-circular610Far-car",
+      "set-circular610Far-carBack",
+      "set-circular610Far-head",
+      "set-circular610Far-tail",
+      "set-dieselExpress-car",
+      "set-dieselExpress-head",
+      "set-dieselExpress-tail",
+      "set-dieselRailcar-car",
+      "set-dieselRailcar-head",
+      "set-dieselRailcar-single",
+      "set-dieselRailcar-tail",
+      "set-E200CK-car",
+      "set-E200CK-head",
+      "set-E200CK-tail",
+      "set-E200CKFar-car",
+      "set-E200CKFar-head",
+      "set-E200CKFar-tail",
+      "set-E500CK-car",
+      "set-E500CK-head",
+      "set-E500CK-tail",
+      "set-E500CKFar-car",
+      "set-E500CKFar-head",
+      "set-E500CKFar-tail",
+      "set-emu500-car",
+      "set-emu500-carBack",
+      "set-emu500-centre",
+      "set-emu500-centreBack",
+      "set-emu500-head",
+      "set-emu500-panto",
+      "set-emu500-pantoBack",
+      "set-emu500-tail",
+      "set-emu500Far-car",
+      "set-emu500Far-carBack",
+      "set-emu500Far-centre",
+      "set-emu500Far-centreBack",
+      "set-emu500Far-head",
+      "set-emu500Far-panto",
+      "set-emu500Far-pantoBack",
+      "set-emu500Far-tail",
+      "set-emu800-car",
+      "set-emu800-carBack",
+      "set-emu800-centre",
+      "set-emu800-centreBack",
+      "set-emu800-head",
+      "set-emu800-panto",
+      "set-emu800-pantoBack",
+      "set-emu800-tail",
+      "set-emu800Far-car",
+      "set-emu800Far-carBack",
+      "set-emu800Far-centre",
+      "set-emu800Far-centreBack",
+      "set-emu800Far-head",
+      "set-emu800Far-panto",
+      "set-emu800Far-pantoBack",
+      "set-emu800Far-tail",
+      "set-emu900-car",
+      "set-emu900-carBack",
+      "set-emu900-centre",
+      "set-emu900-centreBack",
+      "set-emu900-fourth",
+      "set-emu900-fourthBack",
+      "set-emu900-head",
+      "set-emu900-panto",
+      "set-emu900-pantoBack",
+      "set-emu900-tail",
+      "set-emu900Far-car",
+      "set-emu900Far-carBack",
+      "set-emu900Far-centre",
+      "set-emu900Far-centreBack",
+      "set-emu900Far-fourth",
+      "set-emu900Far-fourthBack",
+      "set-emu900Far-head",
+      "set-emu900Far-panto",
+      "set-emu900Far-pantoBack",
+      "set-emu900Far-tail",
+      "set-emu3000-car",
+      "set-emu3000-em6",
+      "set-emu3000-ep7",
+      "set-emu3000-ep10",
+      "set-emu3000-et",
+      "set-emu3000-head",
+      "set-emu3000-panto",
+      "set-emu3000-tail",
+      "set-emu3000Far-car",
+      "set-emu3000Far-em6",
+      "set-emu3000Far-ep7",
+      "set-emu3000Far-ep10",
+      "set-emu3000Far-et",
+      "set-emu3000Far-head",
+      "set-emu3000Far-panto",
+      "set-emu3000Far-tail",
+      "set-fiveSectionLRT-head",
+      "set-fiveSectionLRT-tail",
+      "set-fourCarMetro-car",
+      "set-fourCarMetro-head",
+      "set-fourCarMetro-tail",
+      "set-greenCommuter-car",
+      "set-greenCommuter-head",
+      "set-greenCommuter-tail",
+      "set-greenTram-car",
+      "set-greenTram-head",
+      "set-greenTram-single",
+      "set-greenTram-tail",
+      "set-highSpeed-car",
+      "set-highSpeed-head",
+      "set-highSpeed-panto",
+      "set-highSpeed-tail",
+      "set-highSpeedFar-car",
+      "set-highSpeedFar-head",
+      "set-highSpeedFar-panto",
+      "set-highSpeedFar-tail",
+      "set-metroC341-car",
+      "set-metroC341-centre",
+      "set-metroC341-head",
+      "set-metroC341-tail",
+      "set-metroC341Far-car",
+      "set-metroC341Far-centre",
+      "set-metroC341Far-head",
+      "set-metroC341Far-tail",
+      "set-metroC371-car",
+      "set-metroC371-centre",
+      "set-metroC371-head",
+      "set-metroC371-tail",
+      "set-metroC371Far-car",
+      "set-metroC371Far-centre",
+      "set-metroC371Far-head",
+      "set-metroC371Far-tail",
+      "set-metroC381-car",
+      "set-metroC381-centre",
+      "set-metroC381-head",
+      "set-metroC381-tail",
+      "set-metroC381Far-car",
+      "set-metroC381Far-centre",
+      "set-metroC381Far-head",
+      "set-metroC381Far-tail",
+      "set-metroGeneric-car",
+      "set-metroGeneric-head",
+      "set-metroGeneric-tail",
+      "set-MINGRI-car",
+      "set-MINGRI-head",
+      "set-MINGRI-tail",
+      "set-MINGRIFar-car",
+      "set-MINGRIFar-head",
+      "set-MINGRIFar-tail",
+      "set-n700sG-car",
+      "set-n700sG-carBack",
+      "set-n700sG-head",
+      "set-n700sG-panto",
+      "set-n700sG-pantoBack",
+      "set-n700sG-tail",
+      "set-n700sGFar-car",
+      "set-n700sGFar-carBack",
+      "set-n700sGFar-head",
+      "set-n700sGFar-panto",
+      "set-n700sGFar-pantoBack",
+      "set-n700sGFar-tail",
+      "set-pushPull-car",
+      "set-pushPull-head",
+      "set-pushPullE1000-car",
+      "set-pushPullE1000-head",
+      "set-pushPullE1000Far-car",
+      "set-pushPullE1000Far-head",
+      "set-pushPullFar-car",
+      "set-pushPullFar-head",
+      "set-puyuma-car",
+      "set-puyuma-centre",
+      "set-puyuma-head",
+      "set-puyuma-panto",
+      "set-puyuma-pantoBack",
+      "set-puyuma-tail",
+      "set-puyumaFar-car",
+      "set-puyumaFar-centre",
+      "set-puyumaFar-head",
+      "set-puyumaFar-panto",
+      "set-puyumaFar-pantoBack",
+      "set-puyumaFar-tail",
+      "set-R100CK-car",
+      "set-R100CK-head",
+      "set-R100CK-tail",
+      "set-R100CKFar-car",
+      "set-R100CKFar-head",
+      "set-R100CKFar-tail",
+      "set-R200CK-car",
+      "set-R200CK-head",
+      "set-R200CK-tail",
+      "set-R200CKFar-car",
+      "set-R200CKFar-head",
+      "set-R200CKFar-tail",
+      "set-sanying-head",
+      "set-sanying-tail",
+      "set-sanyingFar-head",
+      "set-sanyingFar-tail",
+      "set-sevenSectionLRT-car",
+      "set-sevenSectionLRT-head",
+      "set-sevenSectionLRT-tail",
+      "set-STAR-car",
+      "set-STAR-head",
+      "set-STAR-tail",
+      "set-STARFar-car",
+      "set-STARFar-head",
+      "set-STARFar-tail",
+      "set-STEAM-car",
+      "set-STEAM-head",
+      "set-STEAM-tail",
+      "set-STEAM-tender",
+      "set-SUMMER-car",
+      "set-SUMMER-head",
+      "set-SUMMER-tail",
+      "set-SUMMER-tender",
+      "set-SUMMERFar-car",
+      "set-SUMMERFar-head",
+      "set-SUMMERFar-tail",
+      "set-SUMMERFar-tender",
+      "set-taroko-car",
+      "set-taroko-head",
+      "set-taroko-panto",
+      "set-taroko-tail",
+      "set-tarokoFar-car",
+      "set-tarokoFar-head",
+      "set-tarokoFar-panto",
+      "set-tarokoFar-tail",
+      "set-threeCarUrban-car",
+      "set-threeCarUrban-head",
+      "set-threeCarUrban-tail",
+      "set-wenhu-car",
+      "set-wenhu-head",
+      "set-wenhu-tail",
+      "steam-formation",
+      "steam-locomotive",
+      "steam-tender",
+      "taichung-green-dm1",
+      "taichung-green-dm1-far",
+      "taichung-green-dm2",
+      "taichung-green-dm2-far",
+      "taipei610-a",
+      "taipei610-a-far",
+      "taipei610-a-light",
+      "taipei610-b",
+      "taipei610-b-far",
+      "taipei610-b-light",
+      "taipei610-c",
+      "taipei610-c-far",
+      "taipei610-c-light",
+      "taipei610-d",
+      "taipei610-d-far",
+      "taipei610-d-light",
+      "temu1000-formation",
+      "temu1000-leading",
+      "temu1000-middle",
+      "temu1000-pantograph",
+      "temu1000-trailing",
+      "temu2000-formation",
+      "temu2000-leading",
+      "temu2000-tema",
+      "temu2000-temb",
+      "temu2000-tep",
+      "temu2000-trailing",
+      "urban-three-formation",
+      "urban-three-leading",
+      "urban-three-middle",
+      "urban-three-trailing",
+      "walk-0",
+      "walk-1",
+      "walk-2",
+      "walk-3",
+      "walk-4",
+      "walk-5",
+      "walk-6",
+      "walk-dark",
+      "walk-ones-0",
+      "walk-ones-1",
+      "walk-ones-2",
+      "walk-ones-3",
+      "walk-ones-4",
+      "walk-ones-5",
+      "walk-ones-6",
+      "walk-ones-7",
+      "walk-ones-8",
+      "walk-ones-9",
+      "walk-stop",
+      "walk-tens-1",
+      "walk-tens-2",
+      "walk-tens-3",
+      "walk-tens-4",
+      "walk-tens-5",
+      "walk-tens-6",
+      "walk-tens-7",
+      "walk-tens-8",
+      "walk-tens-9"
+    ]
+  },
+  "viewer": {
+    "status": "VERIFIED",
+    "transport": "loopback HTTP",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      }
+    ],
+    "orbit_zoom_changed_pixels": true,
+    "mobile_width": 390,
+    "file_protocol": {
+      "status": "UNVERIFIED",
+      "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+    },
+    "errors": [],
+    "external_requests": 0,
+    "limits": [
+      "Browser WebGL only; no device Metal, animation or appearance acceptance."
+    ]
+  },
+  "actual_downloads": {
+    "status": "VERIFIED",
+    "rows": [
+      {
+        "id": "kaohsiung-dm1",
+        "kind": "native",
+        "bytes": 301136,
+        "sha256": "b7b458f0fb03eed0b9a1b5f767541525c1313e3712f560f4769c5dc2383b9d96",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1",
+        "kind": "glb",
+        "bytes": 557044,
+        "sha256": "d58f6a809abe85d6ff29e88d5b0bdb99b296171e6d60411c6a5e9fad4ec78a00",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1",
+        "kind": "PNG",
+        "bytes": 48375,
+        "sha256": "a8bf3a6d082491e85a30158d829c86dcff8eda070b13838f2e64667513c54122",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "kind": "native",
+        "bytes": 120276,
+        "sha256": "a943ed5e33f2e7b0dfb9daf78e629b5c922b1bfca60babd036bddaec22fae074",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "kind": "glb",
+        "bytes": 223148,
+        "sha256": "c2b89eae31ac0f3ad8413f45a47616148918271b0cbd42961c0e101730131d99",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "kind": "PNG",
+        "bytes": 35561,
+        "sha256": "70559216001b9476e28aa61bb7a24ceaf85322a2ed78978db56a5da6129442a9",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "kind": "native",
+        "bytes": 301136,
+        "sha256": "788c35dd89841865ab24a6b7e97c2ea39da5498bab29f77bd613ced98b68bd0c",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "kind": "glb",
+        "bytes": 557044,
+        "sha256": "55c7f6cd8ccd5b9fbb278afdc7a5064a053c1d374f0ab7cee630ca3db026a794",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "kind": "PNG",
+        "bytes": 48375,
+        "sha256": "a8bf3a6d082491e85a30158d829c86dcff8eda070b13838f2e64667513c54122",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "kind": "native",
+        "bytes": 139732,
+        "sha256": "9c068df5b35d6f6356c860c6185226a1f13254991aab9227acb83094d04ce442",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "kind": "glb",
+        "bytes": 259056,
+        "sha256": "91379803e12f033fbbfb3b20dff75db55ccb383ecaef2f422d6b7ae66736d6a6",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "kind": "PNG",
+        "bytes": 42185,
+        "sha256": "7beb16c4434478bdcbbdd4b6f19adf3c35c1a771745d7e99caebf7f3b255e918",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "kind": "native",
+        "bytes": 51224,
+        "sha256": "fd3991f6cbe11276475c774f2540f1017b34456e591e53946ff8ef6ac4705873",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "kind": "glb",
+        "bytes": 95660,
+        "sha256": "aec66d6d76336ed530969e0afc4d8eb7c7c875c34c0cb420fe670b32e5d83f63",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "kind": "PNG",
+        "bytes": 32366,
+        "sha256": "815b7706684d40e116d228ad27999fbedcbdbc8d2f1dd32fe6986c7ac8ab34fb",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "kind": "native",
+        "bytes": 139732,
+        "sha256": "fac123584362728dfc117f7c15dcdc3eee8115c416f61018be014db7d8f6066e",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "kind": "glb",
+        "bytes": 259056,
+        "sha256": "092df23a657c170c0836dfab81078e48314366fd720142b5555dd0b10cde979a",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "kind": "PNG",
+        "bytes": 42185,
+        "sha256": "7beb16c4434478bdcbbdd4b6f19adf3c35c1a771745d7e99caebf7f3b255e918",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "kind": "native",
+        "bytes": 963979,
+        "sha256": "8043c32e1afd00215b40663b8c513a50fbfae696d579b45768b112ef07f8266d",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "kind": "glb",
+        "bytes": 1334804,
+        "sha256": "3221d976def2084f4cef98c2e91ceab004a979a3856a12effc53484581e52969",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "kind": "PNG",
+        "bytes": 46736,
+        "sha256": "d1c283274c15687f12a7d45c2119bc74dbf96357e207f321069d85bc0ef2bb11",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "kind": "native",
+        "bytes": 441527,
+        "sha256": "738ef07d16f1072c2688fef55c6610ab8293cd4fbd94bb313c63788847443b54",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "kind": "glb",
+        "bytes": 611344,
+        "sha256": "442e685a34cefa00031a3ffcd7f5bd30b1702d3b1e33561800adcb1e37972305",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "kind": "PNG",
+        "bytes": 41053,
+        "sha256": "dbc09539b70cd50314257d61139d348b098a2bb75f6f95f7cecd614294e144ee",
+        "matches_expected_bytes": true
+      }
+    ]
+  },
+  "fixed_camera": {
+    "before": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+    "after": "bd57e163391bfdf7492cc408c7697451578ae8e1",
+    "frames": [
+      {
+        "id": "kaohsiung-dm1",
+        "minimum": [
+          -10.9725,
+          -1.618,
+          0
+        ],
+        "maximum": [
+          10.9725,
+          1.618,
+          3.7680001
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      },
+      {
+        "id": "kaohsiung-t",
+        "minimum": [
+          -10.78,
+          -1.618,
+          0
+        ],
+        "maximum": [
+          10.78,
+          1.618,
+          3.7680001
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "minimum": [
+          -10.9725,
+          -1.618,
+          0
+        ],
+        "maximum": [
+          10.9725,
+          1.618,
+          3.7680001
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "minimum": [
+          -10.9725,
+          -1.618,
+          0
+        ],
+        "maximum": [
+          10.9725,
+          1.618,
+          3.7680001
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "minimum": [
+          -10.78,
+          -1.618,
+          0
+        ],
+        "maximum": [
+          10.78,
+          1.618,
+          3.7680001
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "minimum": [
+          -10.9725,
+          -1.618,
+          0
+        ],
+        "maximum": [
+          10.9725,
+          1.618,
+          3.7680001
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      },
+      {
+        "id": "kaohsiung-formation",
+        "minimum": [
+          -32.724998474121094,
+          -1.6180000305175781,
+          0
+        ],
+        "maximum": [
+          32.724998474121094,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "minimum": [
+          -32.724998474121094,
+          -1.6180000305175781,
+          0
+        ],
+        "maximum": [
+          32.724998474121094,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "light": "after manifest day",
+        "projection": "shared orthographic centre/extent; radius=projectedExtent*1.14; front640x480/other1200x480"
+      }
+    ]
+  },
+  "inherited_main_lock_mismatches": [
+    {
+      "id": "light-set-emu3000-head",
+      "lock": {
+        "hash": "a46d46de986590d8",
+        "triangles": 496
+      },
+      "actual": {
+        "hash": "93a55abbf3d3973d",
+        "triangles": 496
+      }
+    },
+    {
+      "id": "light-set-emu3000-tail",
+      "lock": {
+        "hash": "ea82a910238c66dd",
+        "triangles": 506
+      },
+      "actual": {
+        "hash": "35e74169de55d2c4",
+        "triangles": 506
+      }
+    },
+    {
+      "id": "set-E200CK-car",
+      "lock": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-E200CK-tail",
+      "lock": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-E500CK-car",
+      "lock": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-E500CK-tail",
+      "lock": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-emu3000-car",
+      "lock": {
+        "hash": "a11a65f68fd83180",
+        "triangles": 5592
+      },
+      "actual": {
+        "hash": "4d2fe71ec0e677cf",
+        "triangles": 5592
+      }
+    },
+    {
+      "id": "set-emu3000-em6",
+      "lock": {
+        "hash": "a0925ea90550d424",
+        "triangles": 5456
+      },
+      "actual": {
+        "hash": "74048dfbcdfbca5b",
+        "triangles": 5456
+      }
+    },
+    {
+      "id": "set-emu3000-ep7",
+      "lock": {
+        "hash": "e772f6b09e38a521",
+        "triangles": 5832
+      },
+      "actual": {
+        "hash": "98b9dbdd1939afc6",
+        "triangles": 5832
+      }
+    },
+    {
+      "id": "set-emu3000-ep10",
+      "lock": {
+        "hash": "f1ef266dc8369346",
+        "triangles": 5968
+      },
+      "actual": {
+        "hash": "e453b796347d7319",
+        "triangles": 5968
+      }
+    },
+    {
+      "id": "set-emu3000-et",
+      "lock": {
+        "hash": "18a66070e97c408c",
+        "triangles": 5704
+      },
+      "actual": {
+        "hash": "2971ac0d17033c43",
+        "triangles": 5704
+      }
+    },
+    {
+      "id": "set-emu3000-head",
+      "lock": {
+        "hash": "b519a5bc93e4527",
+        "triangles": 8962
+      },
+      "actual": {
+        "hash": "a861643f224f49cf",
+        "triangles": 8962
+      }
+    },
+    {
+      "id": "set-emu3000-panto",
+      "lock": {
+        "hash": "434011a058dfb0a5",
+        "triangles": 5832
+      },
+      "actual": {
+        "hash": "e5f0588393f5c66a",
+        "triangles": 5832
+      }
+    },
+    {
+      "id": "set-emu3000-tail",
+      "lock": {
+        "hash": "aec24e038833fb97",
+        "triangles": 8962
+      },
+      "actual": {
+        "hash": "3c2182d899c09503",
+        "triangles": 8962
+      }
+    },
+    {
+      "id": "set-emu3000Far-car",
+      "lock": {
+        "hash": "309559e60aefc529",
+        "triangles": 2560
+      },
+      "actual": {
+        "hash": "cc63c05ba12288b1",
+        "triangles": 2560
+      }
+    },
+    {
+      "id": "set-emu3000Far-em6",
+      "lock": {
+        "hash": "75fc73c42f1c2572",
+        "triangles": 2472
+      },
+      "actual": {
+        "hash": "271b8144c5b340d3",
+        "triangles": 2472
+      }
+    },
+    {
+      "id": "set-emu3000Far-ep7",
+      "lock": {
+        "hash": "d822ebfa063f4964",
+        "triangles": 2688
+      },
+      "actual": {
+        "hash": "79fc5e4e22551c79",
+        "triangles": 2688
+      }
+    },
+    {
+      "id": "set-emu3000Far-ep10",
+      "lock": {
+        "hash": "625333991309e9e1",
+        "triangles": 2776
+      },
+      "actual": {
+        "hash": "b8b9aac7aca0fa5d",
+        "triangles": 2776
+      }
+    },
+    {
+      "id": "set-emu3000Far-et",
+      "lock": {
+        "hash": "f19e1d848782a42e",
+        "triangles": 2624
+      },
+      "actual": {
+        "hash": "8e97cd296034f2ee",
+        "triangles": 2624
+      }
+    },
+    {
+      "id": "set-emu3000Far-head",
+      "lock": {
+        "hash": "c029467de7e9018e",
+        "triangles": 3834
+      },
+      "actual": {
+        "hash": "662e1aff98e262dc",
+        "triangles": 3834
+      }
+    },
+    {
+      "id": "set-emu3000Far-panto",
+      "lock": {
+        "hash": "7a098677d8cec03c",
+        "triangles": 2688
+      },
+      "actual": {
+        "hash": "33a204c793707ee9",
+        "triangles": 2688
+      }
+    },
+    {
+      "id": "set-emu3000Far-tail",
+      "lock": {
+        "hash": "e7032f429defc8aa",
+        "triangles": 3834
+      },
+      "actual": {
+        "hash": "8b2a43ae19b24984",
+        "triangles": 3834
+      }
+    },
+    {
+      "id": "set-R100CK-car",
+      "lock": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-R100CK-tail",
+      "lock": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-R200CK-car",
+      "lock": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-R200CK-tail",
+      "lock": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-SUMMER-car",
+      "lock": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-SUMMER-tail",
+      "lock": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    }
+  ],
+  "common_contracts": {
+    "node": 5,
+    "python": 6,
+    "status": "VERIFIED"
+  },
+  "independent_swift_assembly": {
+    "status": "VERIFIED",
+    "vertices": 60744,
+    "maximum_position_error_m": 1.9073486e-06,
+    "all_colors_equal": true
+  },
+  "human_review": {
+    "status": "VERIFIED",
+    "scope": "Producer visual review only; 8 units/assemblies ×7 views in color/clay/silhouette, final front/side/top/oblique beside original real photographs locally; fixed camera R2/R3 color/clay/silhouette4views. No raw photos redistributed.",
+    "matched": "Softer crown corners and U boundary continuity; accepted straight side and physical shell preserved.",
+    "not_matched": "Simplified glazing, lamp/door corners and far sample density; no real optical materials/logos.",
+    "insufficient_data": "No true orthographic/full roof engineering source; photo-estimated curves and unknown hidden DM equipment order."
+  },
+  "delivery": {
+    "asset_commit": "5ee6fe9ceafb07ea8d137ad01d413182f8b74484",
+    "revision": "game-art-previews/docs/art/kaohsiung/revision-3",
+    "staged_and_committed_asset_guard": "VERIFIED;95 new PR files/17.1MB unique blobs; no breaches",
+    "public_png_count": 1,
+    "private_revision_png_count": 20
+  }
+}

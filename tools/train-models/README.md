@@ -101,3 +101,5 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 [新車通用prompt](../../docs/art/VEHICLE_ASSET_HANDOFF_PROMPT.md)；[三鶯線prompt](../../docs/art/native-vehicle-modeling/SANYING_PROMPT.md)。單元測試：`node --test tools/train-models/test.mjs`、`python3 -m unittest discover -s tools/train-models -p 'test_*.py'`；實際匯出／browser／Blender驗證另跑，不把fixture測試當實車驗收。
 
 台中捷運綠線的玻璃／八輪／屋頂接觸與反例、獨立GLB匯入、Swift編組對照：[`tools/taichung-green`](../taichung-green/README.md)。只提供本型資料與驗收，匯出／交付沿用本共用工具。
+
+高雄紅／橘線現役西門子 studies 專用編組與幾何反例：[tools/kaohsiung](../kaohsiung/README.md)。

@@ -1,0 +1,107 @@
+{
+  "origin": "Original native procedural recipe; prototype observations only",
+  "date": "2026-10-29",
+  "license": "Project LICENSE.md for original recipe; no third-party image redistribution",
+  "public_use": true,
+  "sources": [
+    {
+      "file": "krtc-2006.pdf",
+      "origin": "https://web.archive.org/web/20160601000000id_/http://www.finance.nsysu.edu.tw/hsilin/KRTC/kclass/95k02.pdf",
+      "author": "高雄捷運公司開發事業處",
+      "date": "2006-10-27",
+      "sha256": "2618d1e3e36e7710d97fb6a25cd07cd9e1e9f4e6b684089e315fabf959da235e",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "siemens-bogies.pdf",
+      "origin": "https://web.archive.org/web/20190722230416id_/https://www.mobility.siemens.com/mobility/global/SiteCollectionDocuments/en/rail-solutions/components-and-systems/bogies-catalog-en.pdf",
+      "author": "Siemens",
+      "date": "2008-09-08",
+      "sha256": "d3ff47a69ab1b0ccd83da3ad08faad5b1ca82c02a76965de2bdb4c3d7a7c9521",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "20240320105304616.jpg",
+      "origin": "https://mtbu.kcg.gov.tw/FileContent/GetFile?fileDictionary=Activities%2FNotSet&fileName=20240320105304616.jpg",
+      "author": "高雄市政府捷運工程局",
+      "date": "2024-03-20",
+      "sha256": "cf966717dcdffd2a688ef0af67e588cd59bbc6f70fbdc6fd910332953c41a8f3",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "krtc-escape.jpg",
+      "origin": "https://www.krtc.com.tw/ReadFile/?n=cad92cd1aeb64dae81edb216aed782d5.jpg&p=SafetyGuide",
+      "author": "高雄捷運公司",
+      "date": "頁面未註明",
+      "sha256": "f5ea60dc573d4e72240e165f12e10baa3da15818e32894f479be69b94b939d37",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "63b-c101tw.jpg",
+      "origin": "https://2427junction.com/63b-c101tw.jpg",
+      "author": "2427junction",
+      "date": "頁面未註明",
+      "sha256": "d504d062a6986fa5faf6f50a912f9d023a776fc354696d316a21fe7fd9c3bc83",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "63b-c102tw.jpg",
+      "origin": "https://2427junction.com/63b-c102tw.jpg",
+      "author": "2427junction",
+      "date": "頁面未註明",
+      "sha256": "bd42a89eb61fbddbfc4624c0446b3b7427a7cfef86aec4e494d728c21407655b",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "63b-c103tw.jpg",
+      "origin": "https://2427junction.com/63b-c103tw.jpg",
+      "author": "2427junction",
+      "date": "頁面未註明",
+      "sha256": "1abbe667f19d7b9b21cbab210f1f02437cd7403ea1f74b7b6e871b038606d74a",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "63b-c105tw.jpg",
+      "origin": "https://2427junction.com/63b-c105tw.jpg",
+      "author": "2427junction",
+      "date": "頁面未註明",
+      "sha256": "4eb32ecaaeb5e4807060864309b907483d67c893991f76434fd3c897bc19e691",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    },
+    {
+      "file": "63b-c107tw.jpg",
+      "origin": "https://2427junction.com/63b-c107tw.jpg",
+      "author": "2427junction",
+      "date": "頁面未註明",
+      "sha256": "b3a54f260e2496b37ac841b7c5f5b315030899531b239f40b7cfd06598eb6add",
+      "license": "未見開放再散布授權；僅觀察，不包含原圖",
+      "public_use": false,
+      "viewed": true
+    }
+  ],
+  "excluded": [
+    "使用者附圖第一張：K.Y.Chung/Nanyue Express, CC BY-NC-ND 4.0 illustration; not engineering or redistributed",
+    "Blair downloaded first thumbnails include unrelated Taipei painted train; excluded",
+    "New Hyundai Rotem extension trains, Yellow Line Stadler, circular LRT and special wraps excluded"
+  ],
+  "revision": 3,
+  "previous_producer": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+  "previous_asset_commit": "1f73fb1cdba56ce99e0e3cdc3313175915d0ac92",
+  "review": "Reopened original KRTC/MTBU/Siemens/2427junction images and verified9 downloaded SHA unchanged. Front paint partitions only: more finely sampled U band and arched crown/black-mask border with eased outer shoulders. Same physical bow; accepted straight side and complete T payload protected against revision2. No third-party original images redistributed."
+}
