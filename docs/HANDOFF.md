@@ -1,4 +1,4 @@
-> Codex 45DR1000 靜態 studies：`docs/art/45dr1000-2026-10-29/README.md` 與 sources.json 記 DRC1025 2006–08 版本、來源和推估。公開 recipe 只加 studies 近遠景；現有 dieselRailcar 營運映射不變。素材、外觀接受、整合與裝置狀態見互鏈 draft PR；不得以 Linux viewer 當真機驗收。
+> Codex 45DR1000 靜態 studies（公開 draft #1530 ↔ 私庫 draft #33，producer `5ad973d5`）：`docs/art/45dr1000-2026-10-29/README.md` 與 sources.json 記 DRC1025 2006–08 版本、來源和推估。公開 recipe 只加 studies 近遠景；現有 dieselRailcar 營運映射不變。素材、外觀接受、整合與裝置狀態見互鏈 draft PR；不得以 Linux viewer 當真機驗收。
 
 > Codex E200 鳴日號風格塗裝（2026-10-29）：[基準／單元／選用限制與重建](art/e200-mingri-style/README.md)。只新增既有 E200CK 機車及標準／尾客車的近遠 studies，原車／共用車／營運映射保持。沒有獨立玩家塗裝選用機制，合併不會自動出現在遊戲；使用者外觀接受、營運接入及真機仍UNVERIFIED。公開 [PR #1480](https://github.com/a91453/railway-game-ios/pull/1480) 仍 OPEN／ready；素材 [PR #25](https://github.com/a91453/railway-assets-private/pull/25) 已合併，實際 producer 與驗證見自有文件。
 
