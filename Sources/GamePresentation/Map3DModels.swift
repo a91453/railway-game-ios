@@ -162,6 +162,7 @@ public struct Map3DModelPack: Sendable {
 
         }
         for far in [false, true] { models += Map3DKaohsiung.Unit.allCases.map { Map3DKaohsiung.model($0, far: far) } }
+        for far in [false, true] { models += Map3DE200MingriStyle.Role.allCases.map { Map3DE200MingriStyle.model($0, far: far) } }
         self.init(recipes: models, baked: baked)
     }
 
@@ -172,7 +173,9 @@ public struct Map3DModelPack: Sendable {
             // Decision 449: the running cars' lamps lit each frame at the
             // train's ends, and their windows' models, last.
             let lit = Map3DTrainLights.split(Map3DTrainOcclusion.baked(Map3DTrainMaterial.marked(models)), recipes: models)
-            self.models = lit.models
+            // This paint study compares stored operating units: retain the same
+            // bake-then-unlight order without registering another running set.
+            self.models = lit.models.map { $0.name.hasPrefix("e200mingri-style-") ? Map3DTrainLights.unlit($0) : $0 }
             lights = lit.cars
         } else {
             self.models = models
