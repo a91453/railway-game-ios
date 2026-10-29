@@ -380,6 +380,11 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第三十一任接手（2026-10-29 約 07:30 UTC，session_01YGNNukxseY7eMCvXhjtc4X，作者在 claude.ai 開，第 1 層）**：第 30 任 session_01YGNNuq4nxQrJ1jQ182c4Yz 沒掛到 repo、拿不到 GitHub 權限，已改名「【舊・已換手】」並封存，由本任照下面兩段接。
+- 排程改綁本任：Threads `trig_01SRe5chbpKMHHWobCAKky9A`、95.1 截止後步驟 `trig_01SoyLas1SRJJ7kXE2Anw5La`（10:05 UTC）、巡查 `trig_01T8BqMeAidkdpVvhHfFhNzA`（之後約 45 分一次）；第 30 任的三個已刪。下面「第三十次換手」列的排程 id 都已不在。
+- **95.1 之後的待辦（作者 10/29 交代）**：資料工具輸出 GeoJSON，給 geolibre.app 檢查站點、路線、機廠的位置，不放進遊戲。由 Sonnet session 做，三步：(1) 盤點 `tools/` 與打包資料裡哪些有座標、是什麼格式，結果寫在 PR 裡；(2) 挑 2–3 層輸出成 GeoJSON：車站點、路線、機廠範圍；(3) 附 README，寫怎麼跑、怎麼把檔案拖進 geolibre.app 打開。不加依賴；從 OSM 來的資料標 ODbL 出處（照 `DataSourceCredits`）。取代下面「作者問過、答了、沒有要做的」裡「等作者說」那句。
+- WEB：私庫 PR #116 作者已在 07:23 UTC 自己合了（只換「實景示範」1 張）；官網要作者按 Deploy website 才會換。其他圖等新截圖出來，WEB 另開新的 draft PR。
+
 **第三十次換手（2026-10-29 約 07:30 UTC，session_01YGNNunHRtNkV8GUzm1ppB7 壓縮 2 次、用量約 200k → 本任用 `create_session` 開的新規劃，第 6 層）**：作者說「發版前先換手」。照下一段「第二十九任做到哪」接。
 - 新規劃先讀第 1 節、本段與下一段，再讀 #1041 從「遊戲規劃第 29 任（session_01YGNNunHRtNkV8GUzm1ppB7）壓縮第 1 次」往後（那則應為第 2 次，後面有更正），然後在 #1041 留言接手。
 - **排程**：舊規劃綁的三個排程交接時刪掉，新規劃用下一段的內容自己重建：巡查 `trig_013c3pyZ1Qe5jjHewLeFhjFR`、send_later `trig_01Bd29roNgtBwevFHqupTZ2F`、截止後步驟 `trig_01K55gV9iJnxVzHyHJ9QECha`（10:05 UTC）。Threads 排程 `trig_01QgYcPfTjYME47gSRMSQ6mA`（每天台灣 21:43）也綁舊規劃：新規劃用 `get_trigger` 讀它的 prompt，建一個綁自己的，再刪掉舊的。
