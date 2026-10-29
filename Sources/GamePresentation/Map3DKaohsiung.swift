@@ -26,8 +26,20 @@ private struct KaohsiungRecipe {
     // Body ends are shorter than coupling pitch. Dimensions in builder x/up/right.
     var end: Float { half - 0.24 }
     let section: [(Float,Float)] = [(1.04,-1.48),(1.13,-1.575),(1.45,-1.575),(1.77,-1.575),(3.14,-1.575),(3.35,-1.52),(3.51,-1.34),(3.59,-1.02),(3.60,0),(3.59,1.02),(3.51,1.34),(3.35,1.52),(3.14,1.575),(1.77,1.575),(1.45,1.575),(1.13,1.575),(1.04,1.48)]
+    var frontWidths: [Float] { far ? [-1.575,-1.02,0,1.02,1.575] : [-1.575,-1.34,-1.02,-0.55,0,0.55,1.02,1.34,1.575] }
+    let frontHeights: [Float] = [0.78,1.18,1.95,3.26,3.6]
+    func interpolate(_ x: Float,_ ks: [Float],_ vs: [Float]) -> Float {
+        if x<=ks[0] { return vs[0] }
+        for i in 0..<(ks.count-1) where x<=ks[i+1] {
+            return vs[i]+(vs[i+1]-vs[i])*(x-ks[i])/(ks[i+1]-ks[i])
+        }
+        return vs.last!
+    }
     func bow(_ h: Float,_ w: Float) -> Float {
-        end - 0.12 * powf(abs(w)/1.575,2) - max(0,h-1.8)*0.19
+        let lateral = far ? interpolate(abs(w),[0,1.02,1.575],[0,-0.07,-0.34])
+            : interpolate(abs(w),[0,0.55,1.02,1.34,1.575],[0,-0.016,-0.07,-0.17,-0.34])
+        let rake = interpolate(h,frontHeights,[-0.12,-0.04,0,-0.16,-0.34])
+        return end+lateral+rake
     }
     mutating func face(_ p: [Map3DPoint],_ inside: Map3DPoint,_ color: UInt32) {
         var n = Map3DPoint.zero
@@ -66,20 +78,29 @@ private struct KaohsiungRecipe {
         return clean
     }
     mutating func panel(_ p: [(Float,Float)],_ color: UInt32,_ lift: Float = 0,_ depth: Float = 0.014) {
-        let ws: [Float] = far ? [-1.575,0,1.575] : [-1.575,-1.34,-1.02,-0.55,0,0.55,1.02,1.34,1.575]
+        let ws=frontWidths
         for i in 0..<(ws.count-1) {
-          for (low,high): (Float,Float) in [(1.04,1.8),(1.8,3.6)] {
-            let q=clip(clip(clip(clip(p,1,ws[i],true),1,ws[i+1],false),0,low,true),0,high,false)
+          for j in 0..<(frontHeights.count-1) {
+            let q=clip(clip(clip(clip(p,1,ws[i],true),1,ws[i+1],false),0,frontHeights[j],true),0,frontHeights[j+1],false)
             if q.count<3 { continue }
             prism(q.map { Map3DPoint(bow($0.0,$0.1)+lift,$0.0,$0.1) }, q.map { Map3DPoint(bow($0.0,$0.1)+lift-depth,$0.0,$0.1) },color)
           }
         }
     }
+    func frontPoint(_ h: Float,_ w: Float,_ lift: Float) -> Map3DPoint { Map3DPoint(bow(h,w)+lift,h,w) }
+    mutating func lineOnBow(_ a: (Float,Float),_ b: (Float,Float),_ width: Float,_ color: UInt32,_ lift: Float) {
+        let dz=b.0-a.0,dw=b.1-a.1,length=sqrtf(dz*dz+dw*dw)
+        let z=dw/length*width/2,w = -dz/length*width/2
+        panel([(a.0+z,a.1+w),(b.0+z,b.1+w),(b.0-z,b.1-w),(a.0-z,a.1-w)],color,lift,width/2)
+    }
+    func rounded(_ low: Float,_ high: Float,_ left: Float,_ right: Float,_ radius: Float) -> [(Float,Float)] {
+        [(low,left+radius),(low,right-radius),(low+radius,right),(high-radius,right),(high,right-radius),(high,left+radius),(high-radius,left),(low+radius,left)]
+    }
     mutating func shell(details: Bool) {
         let rear=section.map { Map3DPoint(-end,$0.0,$0.1) }
         let shoulder=section.map { Map3DPoint(cab ? 9.0 : end,$0.0,$0.1) }
         let front=section.map { h,w -> Map3DPoint in
-            let z = cab && (h == 1.45 || h == 1.77) ? h+0.25 : h
+            let z = cab && (h == 1.45 || h == 1.77) ? h+0.30 : h
             return Map3DPoint(cab ? bow(z,w)-0.12 : end,z,w)
         }
         let inside=Map3DPoint(0,2.2,0)
@@ -95,12 +116,12 @@ private struct KaohsiungRecipe {
         }
         if cab {
             // Each slab is the actual shell, not a floating livery decal.
-            let ws: [Float] = [-1.575,-1.34,-1.02,-0.55,0,0.55,1.02,1.34,1.575]
+            let ws=frontWidths
             for i in 0..<(ws.count-1) {
                 let lo=ws[i],hi=ws[i+1]
-                func smile(_ w: Float) -> Float { 1.89+0.25*powf(abs(w)/1.575,1.5) }
+                func smile(_ w: Float) -> Float { 1.95+0.24*powf(abs(w)/1.575,2) }
                 let a=smile(lo),b=smile(hi)
-                let strips: [[(Float,Float)]] = [ [(1.04,lo),(1.04,hi),(b-0.43,hi),(a-0.43,lo)], [(a-0.43,lo),(b-0.43,hi),(b-0.12,hi),(a-0.12,lo)], [(a-0.12,lo),(b-0.12,hi),(b,hi),(a,lo)], [(a,lo),(b,hi),(3.32,hi),(3.32,lo)], [(3.32,lo),(3.32,hi),(3.6,hi),(3.6,lo)] ]
+                let strips: [[(Float,Float)]] = [ [(1.04,lo),(1.04,hi),(b-0.44,hi),(a-0.44,lo)], [(a-0.44,lo),(b-0.44,hi),(b-0.12,hi),(a-0.12,lo)], [(a-0.12,lo),(b-0.12,hi),(b,hi),(a,lo)], [(a,lo),(b,hi),(3.26,hi),(3.26,lo)], [(3.26,lo),(3.26,hi),(3.6,hi),(3.6,lo)] ]
                 let colors=[silver,teal,white,dark,teal]
                 for s in strips.indices {
                     var p=strips[s]
@@ -128,6 +149,81 @@ private struct KaohsiungRecipe {
         let p: [(Float,Float)] = [(-width/2+r,0),(width/2-r,0),(width/2,r),(width/2,height-r),(width/2-r,height),(-width/2+r,height),(-width/2,height-r),(-width/2,r)]
         prism(p.map { Map3DPoint(x+$0.0,z+$0.1,side*1.602) },p.map { Map3DPoint(x+$0.0,z+$0.1,side*1.618) },glass)
     }
+    mutating func cabDetails() {
+        for sign: Float in [-1,1] {
+            // Two independent windshields; the central evacuation door stays opaque.
+            let frame: [(Float,Float)] = [(2.18,sign*0.64),(2.23,sign*1.42),(3.17,sign*1.42),(3.27,sign*0.64)]
+            let pane: [(Float,Float)] = [(2.22,sign*0.68),(2.27,sign*1.38),(3.14,sign*1.38),(3.23,sign*0.68)]
+            if !far { panel(frame,dark,0.018,0.018) }
+            panel(pane,glass,0.026,0.012)
+            // Each pair sits in a single rounded casting, not four isolated dots.
+            var housing: [(Float,Float)] = []
+            let n=far ? 6 : 12
+            for i in 0...n {
+                let a = -Float.pi/2+Float(i)*Float.pi/Float(n)
+                housing.append((1.84+0.12*sinf(a),sign*(1.22+0.12*cosf(a))))
+            }
+            for i in 0...n {
+                let a=Float.pi/2+Float(i)*Float.pi/Float(n)
+                housing.append((1.84+0.12*sinf(a),sign*(0.96+0.12*cosf(a))))
+            }
+            panel(housing,steel,0.030,0.030)
+            if !far {
+                let inset=housing.map { v in (Float(1.84)+(v.0-1.84)*0.79,sign*1.09+(v.1-sign*1.09)*0.90) }
+                panel(inset,dark,0.035,0.012)
+            }
+            for (w,c): (Float,UInt32) in [(0.96,Map3DTrainStyle.headlamp),(1.22,Map3DStreetModel.tailLamp)] {
+                let sides=far ? 8 : 16
+                let lens: [(Float,Float)] = (0..<sides).map { i in
+                    let a=Float(i)*2*Float.pi/Float(sides)
+                    return (Float(1.84)+0.067*sinf(a),sign*w+0.067*cosf(a))
+                }
+                panel(lens,c,0.043,0.012)
+            }
+            if !far {
+                // Blade and arm are physically anchored at the lower windshield.
+                let a=frontPoint(2.29,sign*1.28,0.049),b=frontPoint(2.70,sign*1.20,0.049)
+                k.beam(a,b,0.022,steel)
+                k.beam(frontPoint(2.27,sign*0.99,0.050),b,0.018,steel)
+                k.beam(frontPoint(2.29,sign*1.28,0.026),a,0.035,steel)
+            }
+        }
+        let marker: [(Float,Float)] = (0..<(far ? 8 : 16)).map { i in
+            let a=Float(i)*2*Float.pi/Float(far ? 8 : 16)
+            return (Float(3.48)+0.074*sinf(a),Float(0.074)*cosf(a))
+        }
+        panel(marker,steel,0.025,0.02)
+        panel(marker.map { v in (Float(3.48)+(v.0-3.48)*0.74,v.1*0.74) },Map3DTrainStyle.headlamp,0.034,0.010)
+        // Rounded evacuation door seam continues through the white and teal belt.
+        let door=rounded(1.16,3.43,-0.54,0.54,0.08)
+        for i in door.indices { lineOnBow(door[i],door[(i+1)%door.count],far ? 0.020 : 0.025,dark,0.024) }
+        // Driver-right destination display = observer-left. Revision1 had it reversed.
+        panel(rounded(2.96,3.20,0.72,1.34,0.025),dark,0.042,0.014)
+        if !far { for h: Float in [3.045,3.115] { for w: Float in [0.79,0.91,1.03,1.15,1.27] {
+            panel([(h,w),(h,w+0.035),(h+0.018,w+0.035),(h+0.018,w)],Map3DPalette.lantern,0.049,0.008)
+        } } }
+        // Lower silver cheeks continue the real shell, leaving the coupler notch open.
+        for sign: Float in [-1,1] {
+            panel([(0.85,sign*0.43),(0.90,sign*1.46),(1.12,sign*1.53),(1.12,sign*0.43)],silver,0,0.12)
+            if !far { lineOnBow((1.075,sign*0.45),(1.075,sign*1.48),0.035,steel,0.010) }
+        }
+        // Fixed mount, drawbar, shaped Scharfenberg head and separate dark socket.
+        k.box(end-0.24,0.67,0,0.35,0.26,0.34,steel)
+        k.beam(Map3DPoint(end-0.25,0.78,0),Map3DPoint(half-0.12,0.78,0),0.12,steel)
+        let outline: [(Float,Float)] = [(0.65,-0.18),(0.65,0.18),(0.70,0.24),(0.87,0.24),(0.92,0.15),(0.92,-0.15),(0.87,-0.24),(0.70,-0.24)]
+        let inner: [(Float,Float)] = outline.map { v in (Float(0.785)+(v.0-0.785)*0.62,v.1*0.62) }
+        for i in outline.indices {
+            let j=(i+1)%outline.count
+            let rim=[outline[i],outline[j],inner[j],inner[i]]
+            prism(rim.map { Map3DPoint(half,$0.0,$0.1) },rim.map { Map3DPoint(half-0.14,$0.0,$0.1) },silver)
+        }
+        prism(inner.map { Map3DPoint(half-0.045,$0.0,$0.1) },inner.map { Map3DPoint(half-0.065,$0.0,$0.1) },dark)
+        if !far {
+            for sign: Float in [-1,1] {
+                k.beam(Map3DPoint(half-0.1,0.70,sign*0.20),Map3DPoint(half-0.1,0.91,sign*0.18),0.025,steel)
+            }
+        }
+    }
     mutating func build(details: Bool) {
         shell(details: details)
         if !details { return }
@@ -146,33 +242,7 @@ private struct KaohsiungRecipe {
             }
             if cab { k.box(9.45,2.13,side*1.59,0.65,0.028,0.94,glass) }
         }
-        if cab {
-            for sign: Float in [-1,1] {
-                panel([(2.26,sign*0.59),(2.26,sign*1.40),(3.23,sign*1.40),(3.30,sign*0.59)],glass,0.020,0.012)
-                // Individually circular lenses, mounted on the true bow.
-                for (w,c) in [(Float(0.96),Map3DTrainStyle.headlamp),(1.25,Map3DStreetModel.tailLamp)] {
-                    let wc=sign*w,h: Float=1.69+0.11*abs(wc)
-                    let n=far ? 8 : 12
-                    var ring: [(Float,Float)] = []
-                    for i in 0..<n { let a=Float(i)*2*Float.pi/Float(n); ring.append((h+0.085*sinf(a),wc+0.085*cosf(a))) }
-                    if !far { panel(ring,steel,0.025,0.025) }
-                    let lens: [(Float,Float)] = ring.map { p in (h+(p.0-h)*Float(0.72),wc+(p.1-wc)*Float(0.72)) }
-                    panel(lens,c,0.030,0.010)
-                }
-            }
-            let marker: [(Float,Float)] = (0..<12).map { i in
-                let a=Float(i)*2*Float.pi/12
-                return (Float(3.49)+0.065*sinf(a),Float(0.065)*cosf(a))
-            }
-            panel(marker,Map3DTrainStyle.headlamp,0.025,0.02)
-            // Central evacuation door perimeter. No trademark or textual destination.
-            for w: Float in (far ? [] : [-0.55,0.55]) { panel([(1.20,w-0.012),(1.20,w+0.012),(3.42,w+0.012),(3.42,w-0.012)],dark,0.022,0.014) }
-            if !far { panel([(3.39,-0.55),(3.39,0.55),(3.42,0.55),(3.42,-0.55)],dark,0.022) }
-            panel([(2.97,-1.36),(2.97,-0.65),(3.20,-0.65),(3.20,-1.36)],dark,0.038)
-            if !far { for x: Float in [-1.25,-1.08,-0.91,-0.74] { panel([(3.06,x),(3.06,x+0.06),(3.09,x+0.06),(3.09,x)],Map3DPalette.lantern,0.045) } }
-            k.box(end-0.18,0.56,0,0.25,0.34,0.48,steel)
-            k.box(half-0.16,0.62,0,0.32,0.44,0.21,silver)
-        }
+        if cab { cabDetails() }
         // Distinct DM and T equipment. Unknown hidden plumbing is omitted.
         for x: Float in [-6.9,6.9] {
             k.box(x,3.60,0,2.90,1.78,0.15,silver)

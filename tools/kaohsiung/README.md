@@ -29,3 +29,14 @@ roof HVAC base3.60m, exterior glass centroid rays, gangway coupling planes.
 Reject actual pane burial150mm, wheel lift35mm and HVAC lift80mm.
 Common audit separately rejects deleted/reversed triangles and assembly shift100mm.
 These are display-model thresholds, not engineering tolerances or exhaustive collision.
+
+Revision2: `audit.py OUT --previous TRUE_REVISION1` additionally rejects the real
+R1 solid coupler and reversed-side destination, actual socket cap triangles,
+front-pane burial150mm and float90mm, and destination solids moved to the wrong side.
+Glass rays retain all shell/frame faces and exclude only actual thin wiper rods
+inside their precise mechanism envelope; backing must exist within55mm.
+Near/far each run independently. These display tolerances are not engineering dimensions.
+
+`compare-fixed.mjs TRUE_BEFORE AFTER OUTPUT` uses the shared native renderer,
+fixed union bounds/centre/orthographic metre scale and the same light for each pair,
+colour/clay/silhouette front/left/top/isometric, all units and assemblies.
