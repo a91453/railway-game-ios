@@ -2025,6 +2025,14 @@
 - **截圖驗收暫緩**（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」）：#1467（決策 472）圖表的驗收沒拍。拍照的測試 `testStatisticsCharts`、`testTrainLooks` 已在 `WebsiteScreenshotTests`，發版前在那個分支跑一次 `website-screenshots.yml`（一次只跑一個），照 skill 第 3 節看，寫成決策 472「472 截圖驗收」；路線清單列的問題給 LP（決策 481）。
 - **鐵道味建議**（只列不改）：決策 482 續篇的表，規劃決定要不要派。
 
+### 4.24 宣傳影片素材（決策 475，session_01YGNNukoWqi8apoMDtJNZ3x，派工單 VID，2026-10-29）
+
+- 做了的：`PromoMaterialTests` 與 `website-screenshots.yml` 的 `kind=promo`（[決策 475](decisions/475.md)，#1461 已合併）。一次 iPhone 17 Pro 深色跑（run 40825762656，commit d3cd9db）：230 張 PNG、16 支影片。影片轉橫、裁 20 秒、壓縮後逐格檢查，沒有超過 0.1 秒的卡頓。
+- 素材不在這個 repo：在 `a91453/railway-assets-private` 的 `promo-material/2026-10-29/`，三個草稿 PR（#27 影片＋README＋三城市、#28 四城市、#29 各場景），等作者合併。影片也直接傳給作者了。
+- 還沒做：iPad、淺色（作者：發佈前再拍，他自己也能截圖，所以不再跑 `website-screenshots.yml`）；實機 3D 影片由作者自錄，放 README 的「實機素材」。
+- 沒解決的：「車隊總覽」清單（SwiftUI `List`）在 XCUITest 的拖曳、滑動、邊緣拖曳都不捲動，原因未知，不確定是不是真的 bug（UNVERIFIED，需要在實機試）。`testFreight` 因此在抓不到「跟隨」按鈕時略過「貨運列車」那張截圖。
+- 版面問題（截圖照實呈現，沒改）：地圖擴建的星等標籤蓋住鎖頭與價格、吉祥物蓋住價格、教學文字框蓋住「南站」標籤。
+
 ### 4.23 三張載客圖與資料視覺化盤點（決策 478，session_01YGNNuosyKEgJgsVUGFPhbW，派工單 VIZ，#1472，2026-10-29）
 
 - **做了的**在[決策 478](decisions/478.md)，共三張圖：
