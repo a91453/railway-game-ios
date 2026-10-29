@@ -28,8 +28,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
+        let panel = app.descendants(matching: .any).matching(identifier: "station.operations").firstMatch
+        XCTAssertTrue(panel.appears(within: 10), "A tap on a bubble opens its station's panel")
+        // The materials line sits lower in the form; bring it into view
+        // when the form has it, without failing the shot if it stays below.
         let materials = app.descendants(matching: .any)["station.materials"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(materials), "A tap on a bubble opens its station's panel")
+        _ = app.dragUntilWhollyOnScreen(materials, drags: 8)
         settle()
         keep("freight-station", app)
         let done = app.buttons["完成"].firstMatch
