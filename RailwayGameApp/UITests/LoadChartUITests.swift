@@ -26,8 +26,14 @@ final class LoadChartUITests: XCTestCase {
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A passenger line's row comes into view")
         report.tap()
+        // Decision 481: on the line's own page.
+        let linePage = app.collectionViews["line.detail"].firstMatch
+        XCTAssertTrue(linePage.appears(within: 10), "The line's page opens")
         let chart = app.descendants(matching: .any)["line.load.chart"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(chart, in: list), "The line's riders between stops come into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(chart, in: linePage), "The line's riders between stops come into view")
+        // The flow report's button is on the list's bar.
+        app.navigationBars.firstMatch.buttons.firstMatch.tap()
+        XCTAssertTrue(linePage.disappears(within: 10), "Back to the list")
 
         // The network's flow report, its sections page: a section hour by
         // hour.

@@ -82,7 +82,7 @@ struct NetworkFlowSheet: View {
         Section {
             ForEach(rows) { row in
                 Button {
-                    session.selectLine(row.line)
+                    session.openLine(row.line)
                     screen.panel = .lines
                 } label: {
                     lineRow(row, largest: largest)
