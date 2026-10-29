@@ -383,6 +383,7 @@
 **第三十一任接手（2026-10-29 約 07:30 UTC，session_01YGNNukxseY7eMCvXhjtc4X，作者在 claude.ai 開，第 1 層）**：第 30 任 session_01YGNNuq4nxQrJ1jQ182c4Yz 沒掛到 repo、拿不到 GitHub 權限，已改名「【舊・已換手】」並封存，由本任照下面兩段接。
 - 排程改綁本任：Threads `trig_01SRe5chbpKMHHWobCAKky9A`、95.1 截止後步驟 `trig_01SoyLas1SRJJ7kXE2Anw5La`（10:05 UTC）、巡查 `trig_01T8BqMeAidkdpVvhHfFhNzA`（之後約 45 分一次）；第 30 任的三個已刪。下面「第三十次換手」列的排程 id 都已不在。
 - **95.1 之後的待辦（作者 10/29 交代）**：資料工具輸出 GeoJSON，給 geolibre.app 檢查站點、路線、機廠的位置，不放進遊戲。由 Sonnet session 做：先盤點 `tools/` 下有座標的資料，挑 2–3 層輸出（例如站點、路線、機廠），不加依賴，附 README（怎麼跑、怎麼在 geolibre.app 開），OSM 來源寫 ODbL 出處（照 `DataSourceCredits`）。取代下面「作者問過、答了、沒有要做的」裡「等作者說」那句。
+- WEB：私庫 PR #116 作者已在 07:23 UTC 自己合了（只換「實景示範」1 張）；官網要作者按 Deploy website 才會換。其他圖等新截圖出來，WEB 另開新的 draft PR。
 
 **第三十次換手（2026-10-29 約 07:30 UTC，session_01YGNNunHRtNkV8GUzm1ppB7 壓縮 2 次、用量約 200k → 本任用 `create_session` 開的新規劃，第 6 層）**：作者說「發版前先換手」。照下一段「第二十九任做到哪」接。
 - 新規劃先讀第 1 節、本段與下一段，再讀 #1041 從「遊戲規劃第 29 任（session_01YGNNunHRtNkV8GUzm1ppB7）壓縮第 1 次」往後（那則應為第 2 次，後面有更正），然後在 #1041 留言接手。
