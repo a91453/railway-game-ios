@@ -656,6 +656,52 @@ final class NightSkipTests: XCTestCase {
         XCTAssertFalse(memo.covers(GameTime(seconds: now.seconds - 6), revision: 3))
     }
 
+    /// The demo map at 600×: its four trains all stand still between two
+    /// trips every eight minutes, day and night, and each time the run
+    /// ahead found a train leaving that minute after a tick at the fastest
+    /// speed (main 82ea188's full lane: the demo drew some 5 frames a
+    /// second). A minute's tick now finds it; the first move is the one the
+    /// run ahead at the fastest speed finds, at every such moment of the
+    /// first four hours.
+    func testATrainLeavingThisMinuteIsFoundAsTheFastestRunAheadFindsIt() throws {
+        var world = DemoWorld.make(in: .english)
+        world.setSpeed(.normal)
+        var moments = 0
+        for _ in 0..<240 {
+            try world.advance(ticks: 1)
+            guard !world.trains.contains(where: NightSkip.isRunning) else { continue }
+            moments += 1
+            let firstMove = NightSkip.firstMove(after: world)
+            XCTAssertEqual(firstMove, Self.fastestFirstMove(after: world), "at \(world.clock.now.clockText)")
+            XCTAssertEqual(firstMove, world.clock.now, "a train leaves that minute, at \(world.clock.now.clockText)")
+        }
+        XCTAssertGreaterThan(moments, 20, "the demo's trains all stand still every eight minutes")
+    }
+
+    /// ``NightSkip/firstMove(after:)`` without its minute's tick first:
+    /// ticks at the fastest speed, then a minute at a time.
+    private static func fastestFirstMove(after world: GameWorld) -> GameTime? {
+        func rest(_ world: GameWorld) -> [TrainID: TrainPosition?] {
+            Dictionary(uniqueKeysWithValues: world.trains.map { ($0.id, $0.position) })
+        }
+        let still = rest(world)
+        var probe = world, quiet = world
+        probe.setSpeed(.fast)
+        while probe.clock.now.seconds - world.clock.now.seconds < NightSkip.horizon {
+            quiet = probe
+            guard (try? probe.advance(ticks: 1)) != nil else { return nil }
+            guard rest(probe) == still, !probe.trains.contains(where: NightSkip.isRunning) else {
+                quiet.setSpeed(.normal)
+                while true {
+                    let before = quiet.clock.now
+                    guard (try? quiet.advance(ticks: 1)) != nil else { return nil }
+                    if rest(quiet) != still || quiet.trains.contains(where: NightSkip.isRunning) { return before }
+                }
+            }
+        }
+        return nil
+    }
+
     // MARK: - Text
 
     func testTheTextSaysWhatItDoesInBothLanguages() throws {
