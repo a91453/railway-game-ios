@@ -300,6 +300,8 @@ struct InspectorView: View {
             }
             if session.selectedStation != nil {
                 Button {
+                    // The tutorial's ridership step: at the riders it speaks of.
+                    screen.stationFocus = StationPanelGroup.opening(for: session.tutorial?.step)
                     screen.panel = .station
                 } label: {
                     HStack(spacing: 4) {

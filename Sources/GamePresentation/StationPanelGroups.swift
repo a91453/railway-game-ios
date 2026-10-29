@@ -61,6 +61,14 @@ public enum StationPanelGroup: String, CaseIterable, Hashable, Sendable, Identif
     /// `nil` for the panel's top: a town short of materials at its freight
     /// group, whose first row says what the town is short of and whose
     /// yard brings them.
+    /// The group the panel opens at from the details card's Station… while
+    /// tutorial step `step` is shown: the riders, for the step whose card
+    /// speaks of trips by the hour and who is waiting (their rows are under
+    /// Riders, below the operations the panel opens on).
+    public static func opening(for step: TutorialStep?) -> StationPanelGroup? {
+        step?.id == "station.ridership" ? .riders : nil
+    }
+
     public static func answering(_ alert: MapAlert.Kind) -> StationPanelGroup? {
         switch alert {
         case .materialsShort: .freight
