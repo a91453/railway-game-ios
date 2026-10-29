@@ -2043,6 +2043,16 @@
   - 固定在上方的四段篩選會不會太擠。
   - 組標題按鈕的大小。
   - 見決策 481「下一步」。
+- **沒修好、交給下一個 session：`LineRoutePreferenceUITests` 兩支在合併後的 main 是紅的**（只在 full lane 跑，`FULL_LANE_LESSONS_JOB`；PR 的 gate 不跑）。本 session 已壓縮 3 次，照規則停手，沒有修。
+  - 證據：手動 `ios-build.yml`（`only_testing: LineRoutePreferenceUITests`，iPhone）run 40844553127 與 40855808395。後者在 9573aea，程式碼與 main aa2fc49 相同。
+  - `testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay` 紅在 `ToolbarSmokeTests.swift:284`：「lines.advanced Switch never lay wholly on screen」。
+    - 剛開面板時，`setAdvanced` 的 8 次 swipeDown 都沒讓開關出現，但一次短拖（清單 0.9→0.75）就出現了。
+    - 從線頁按返回後（約 80 秒處），8 次 swipeDown 加 16 次短拖都沒讓開關出現。
+    - 疑點：返回時的 `returningTo` 捲回、或 `safeAreaInset(edge: .top)` 固定的篩選列（橫向 272pt 高的面板裡約佔 130pt）把「進階」那列擋住或捲不到。下一步先在 `setAdvanced` 裡印 `app.debugDescription`，看開關那列在不在樹上、frame 在哪。
+  - `testALineLegCanSelectAPhysicalPlatform` 紅在 `ToolbarSmokeTests.swift:106`：選單點「Automatic route」後，`line.route.-1.0.1` 按鈕找不到，等「Automatic route」字樣逾時。
+    - 在 68bde52 綠過、40844553127 也綠，只在 40855808395 紅。
+    - 疑點：#1472 合進來的 `loadSection`（載客圖）讓線頁變長、選單關掉後頁面重排或捲動；也可能是偶發。先在 main 上用 `only_testing` 單跑一次確認。
+  - 修法只動測試（`ToolbarSmokeTests.swift` 的 `setAdvanced` 與這兩支），用 `only_testing` 一次跑一支驗證。
 
 ### 4.23 三張載客圖與資料視覺化盤點（決策 478，session_01YGNNuosyKEgJgsVUGFPhbW，派工單 VIZ，#1472，2026-10-29）
 
