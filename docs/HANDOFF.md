@@ -1,3 +1,5 @@
+> Codex 45DR1000 靜態 studies：`docs/art/45dr1000-2026-10-29/README.md` 與 sources.json 記 DRC1025 2006–08 版本、來源和推估。公開 recipe 只加 studies 近遠景；現有 dieselRailcar 營運映射不變。素材、外觀接受、整合與裝置狀態見互鏈 draft PR；不得以 Linux viewer 當真機驗收。
+
 > Codex E200 鳴日號風格塗裝（2026-10-29）：[基準／單元／選用限制與重建](art/e200-mingri-style/README.md)。只新增既有 E200CK 機車及標準／尾客車的近遠 studies，原車／共用車／營運映射保持。沒有獨立玩家塗裝選用機制，合併不會自動出現在遊戲；使用者外觀接受、營運接入及真機仍UNVERIFIED。公開 [PR #1480](https://github.com/a91453/railway-game-ios/pull/1480) 仍 OPEN／ready；素材 [PR #25](https://github.com/a91453/railway-assets-private/pull/25) 已合併，實際 producer 與驗證見自有文件。
 
 > Codex 普悠瑪 TEMU2000 studies 外觀續修（[公開 draft #1456](https://github.com/a91453/railway-game-ios/pull/1456)，2026-10-29，revision-2 producer `2cb46a3660bb500549e81098c66421e8163ee479`）：[公開查證／重建／外觀自檢](art/temu2000-2026-10-29/README.md)、[素材 draft #23](https://github.com/a91453/railway-assets-private/pull/23)。使用者明確否定 revision-1 `02d61687` 的歪燈與塗裝；revision-2 左右燈位、下燈座、風擋雨刷及加寬雙紅線已修，使用者對此新 producer 外觀接受仍 UNVERIFIED。10 個近遠單元、2 個八車 assembly、私庫每輪 20 張 PNG；舊版重檔在同 PR 刪除。營運 `puyuma`／`puyumaFar` 全頂點欄位雜湊不變，沒有替換映射；技術 VERIFIED，iOS Metal／動畫／效能 UNVERIFIED。車側大幅圖形、白頰曲率與屋頂設備仍待改善。無 GameCore、存檔、fixtures、購車、班表變更。

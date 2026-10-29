@@ -105,3 +105,6 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 高雄紅／橘線現役西門子 studies 專用編組與幾何反例：[tools/kaohsiung](../kaohsiung/README.md)。
 
 高雄輕軌 CAF／Citadis 兩款獨立五段 studies 的關節、懸浮段、玻璃、走行與獨立 Swift 組裝驗收：[tools/kaohsiung-light-rail](../kaohsiung-light-rail/README.md)。沿用共用匯出／GLB／渲染／交付，未更動舊車幾何或營運映射。
+
+45DR1000 DRC1025 static study: [`tools/45dr1000/formation.json`](../45dr1000/formation.json) supplies a three-car generic assembly; source and visual evidence are in `docs/art/45dr1000-2026-10-29/`.
+45DR1000-specific envelope, near/far, glazing and four fault examples: `node tools/45dr1000/verify.mjs OUT`.
