@@ -207,6 +207,38 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("passenger-load", app)
     }
 
+    /// The lines panel in two levels (decision 481) on the freight scene's
+    /// second morning: the short list with its pinned controls, a line's
+    /// own page, and the whole network's page.
+    func testLinesListAndLinePage() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        keep("lines-list", app)
+
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(row.appears(within: 10), "A line's row shows")
+        row.tap()
+        XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
+        settle(seconds: 2)
+        keep("line-page", app)
+
+        app.navigationBars.firstMatch.buttons.firstMatch.tap()
+        XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "Back to the list")
+        let network = app.buttons["lines.network"]
+        XCTAssertTrue(network.appears(within: 10), "The whole network's row shows")
+        network.tap()
+        settle(seconds: 2)
+        keep("lines-network", app)
+    }
+
     /// The secretary's room (decision 175) on a blank new game: the
     /// forecast of the next seven days under the clock.
     func testForecast() {
