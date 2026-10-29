@@ -177,7 +177,7 @@ public struct Map3DTrainSet: Sendable {
             // Taichung); it was `metroC381` before.
             multipleUnit("metroGeneric", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
-            // Decision 426: the Puyuma as #1292's TEMU2000, and its light
+            // Decisions 426, 484: the Puyuma as #1456's TEMU2000, and its light
             // version from 500 m out.
             temu2000(),
             temu2000(far: true),
@@ -543,26 +543,20 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 426: #1292's TEMU2000 units in the operating Puyuma set,
-    /// in the static formation's order (TED, TEMA, TEP, TEMB, TEMB, TEP,
+    /// Decision 426: the TEMU2000 units in the operating Puyuma set, in
+    /// the static formation's order (TED, TEMA, TEP, TEMB, TEMB, TEP,
     /// TEMA, TED): the pantographs on cars 3 and 6 (the second TEP turned
-    /// round, ``Map3DTEMU2000/rotations``), each cab's lamps lit at its real
-    /// end, white at the front and red at the back. `far`, the light units
-    /// (``Map3DTEMU2000/model(_:far:)``) drawn car for car from 500 m out.
+    /// round, ``Map3DTEMU2000/rotations``). Decision 484: the units are
+    /// #1456's revision-2 (the old recipe deleted), each cab car's own
+    /// lamp lenses lit (``Map3DTEMU2000/model(_:far:lamps:)``) for
+    /// decision 449's lights. `far`, the light units drawn car for car
+    /// from 500 m out.
     static func temu2000(far: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: far ? "puyumaFar" : "puyuma", pantographCars: [2, 5], centreCars: [3, 4], ownLengths: true, fixedCars: 8,
                       far: far ? nil : "puyumaFar") {
             func part(_ unit: Map3DTEMU2000.Unit) -> Map3DModelPack.Model { Map3DTEMU2000.model(unit, far: far) }
-            func cab(_ unit: Map3DTEMU2000.Unit, front: Bool) -> Map3DModelPack.Model {
-                let model = Map3DTEMU2000.model(unit, far: far)
-                var builder = StationKitBuilder()
-                builder.add(model, at: .zero)
-                builder.cabLamps(atX: front ? model.maximum.x + 0.02 : model.minimum.x - 0.02,
-                                 colour: front ? Map3DTrainStyle.headlamp : Map3DPalette.lantern,
-                                 height: 1.10, across: 0.30, width: 0.20, tall: 0.14)
-                return .flat(named: "puyuma-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
-            }
-            return Cars(head: cab(.leading, front: true), middle: part(.tema), tail: cab(.trailing, front: false), single: nil,
+            func cab(_ unit: Map3DTEMU2000.Unit) -> Map3DModelPack.Model { Map3DTEMU2000.model(unit, far: far, lamps: true) }
+            return Cars(head: cab(.leading), middle: part(.tema), tail: cab(.trailing), single: nil,
                         pantograph: part(.tep).turned, centre: part(.temb), pantographBack: part(.tep))
         }
     }
