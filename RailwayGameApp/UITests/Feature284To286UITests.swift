@@ -59,6 +59,8 @@ final class Feature284To286UITests: XCTestCase {
         defer { app?.terminate() }
         launch("catalog")
         tap(app.buttons["entry.lines"])
+        // Decision 481: the line's trains are on its own page.
+        app.openLinePage()
         let catalog = app.buttons["line.staff.catalog"]
         reveal(catalog)
         tap(catalog)
