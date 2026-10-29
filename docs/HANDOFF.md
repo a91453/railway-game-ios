@@ -31,6 +31,8 @@
 
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
+> 收支組成甜甜圈圖（派工單 DONUT，[決策 480](decisions/480.md)，#1474，`claude/finance-composition-donut`）：截圖驗收照作者 2026-10-29「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」延到發版前。留下的：發版前在分支或 main 手動跑 `website-screenshots.yml`（`WebsiteScreenshotTests.testFinanceComposition` 拍日收入、日支出、選住票價、週支出四張；橫拿、深色、繁中），照 `docs/research/UI_UX_REVIEW_2026-10-28.md` §5 只看截圖答七題、每輪修最嚴重三個、最多三輪；淺色與 iPhone SE 寬沒有自動拍，要實機看。設計預覽在 `docs/art/finance-composition-2026-10-29/`，不要刪。
+
 ## 怎麼用這份
 
 - **開工前**：讀第 1、2、3 節，確認要做的事沒有人在做，作者也沒有說「先不要動」。然後照 CLAUDE.md 在工作登記 #1041 登記。
@@ -377,6 +379,49 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第三十次換手（2026-10-29 約 07:30 UTC，session_01YGNNunHRtNkV8GUzm1ppB7 壓縮 2 次、用量約 200k → 本任用 `create_session` 開的新規劃，第 6 層）**：作者說「發版前先換手」。照下一段「第二十九任做到哪」接。
+- 新規劃先讀第 1 節、本段與下一段，再讀 #1041 從「遊戲規劃第 29 任（session_01YGNNunHRtNkV8GUzm1ppB7）壓縮第 1 次」往後（那則應為第 2 次，後面有更正），然後在 #1041 留言接手。
+- **排程**：舊規劃綁的三個排程交接時刪掉，新規劃用下一段的內容自己重建：巡查 `trig_013c3pyZ1Qe5jjHewLeFhjFR`、send_later `trig_01Bd29roNgtBwevFHqupTZ2F`、截止後步驟 `trig_01K55gV9iJnxVzHyHJ9QECha`（10:05 UTC）。Threads 排程 `trig_01QgYcPfTjYME47gSRMSQ6mA`（每天台灣 21:43）也綁舊規劃：新規劃用 `get_trigger` 讀它的 prompt，建一個綁自己的，再刪掉舊的。
+- 在跑的 session（下一段的表）已被告知改向新規劃回報。
+- 新規劃是第 6 層，還能再開一任（第 7 層）；再下一任由作者在 claude.ai 開（§1.1）。
+
+**第二十九任（session_01YGNNunHRtNkV8GUzm1ppB7，2026-10-29）做到哪**：和下面不同時以這段為準。
+- **95.1 今晚發**（作者 10/29 14:30：「我趕在晚上再發95.1好了」）：
+  - 合併截止從 10/30 04:00 UTC 提前到 **10/29 10:00 UTC（台灣 18:00）**，已在 #1041 公告。截止前綠而且 ready 的 PR 照常合，之後只合 95.1 的 What's New，其他留到下一版。
+  - 截止後的步驟：
+    1. 派 Sonnet session 把 `.github/testflight-whats-new.md` 與 `WhatsNew.swift` 最前面那則（id `2026-10-29-94`）改成 95.1，只寫 94（`cd93d78`）之後合的，綠了合進 main。
+    2. main HEAD 跑一次 `website-screenshots.yml`（可和 full lane 同時跑），或請作者自己拍（作者：「我自己也可以截圖」）。照片不刪。
+    3. main HEAD 用 `workflow_dispatch` 跑完整 `ci.yml` 與 `ios-build.yml` full lane（full lane 約 1.5–2.5 小時）。
+    4. 都綠了，給作者健檢紅綠燈表。作者在**新規劃這一任**的對話說「發」，才按 `testflight.yml`，只按一次、用 main HEAD。
+  - 預計：台灣 18:45 起跑檢查，21:00–22:00 給健檢表。
+- **作者 10/29 的新規則**：
+  - 「不用再管你合就合」：綠的就合，照 §1.2 一批 3–5 個，main 綠了再合下一批。
+  - 「壞了就修 好了就封存」。
+  - 「記得先交接再封存，照片不要刪」：session 把沒做完的寫進本檔、在 #1041 說了才封存；已拍的截圖、預覽、宣傳素材、Actions artifact 都不刪。
+  - 「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」：PR 不跑 `website-screenshots.yml`、不等截圖驗收（ui-review §3 已寫暫緩，#1475），發版前再拍。
+  - 「修補的都繼續 不要擋道macOS runner都行」：每個 PR 同時最多一個手動 `only_testing`；PR 自己的 iOS App Build 在跑時不重複手動跑。
+  - iOS 最低版本維持 17（作者：「太複雜就先算了」），不升 18。
+  - HUD 不加圖表（作者：「Hud 畫面的 還是目前不需要」）。
+- **本任合的**（記在 #1041）：#1463（BUS）、#1460（M）、#1454 與 #1468（Codex 高雄）、#1465（FL94）、#1469（ROAD PR 2）、#1467（CJ）、#1470（SY 三鶯線卡住，作者已被告知修好）、#1473（UIREV ui-review skill）、#1474（DONUT）、#1475（UIREV 續篇）。最後一批 #1474、#1475 合完，main `286d7a2` 的 push `ci.yml` 在跑，綠了才合下一批。main `d2a2b0a` 的 full lane（run 40823424641）全綠。
+- **在跑的 session**：
+
+  | 代號 | session | 做什麼 | 合的時機 |
+  | --- | --- | --- | --- |
+  | SHOT | session_01YGNNumMhqmw96pGQJnVgtY | #1471（決策 477）：地圖標籤避開站名、車隊清單拖得動、全台入口 | 截止前綠就合 |
+  | VIZ | session_01YGNNuosyKEgJgsVUGFPhbW | #1472（決策 478）：三張載客圖。要先併 main、用 XcodeGen 重產 xcodeproj（#1474 已合） | 截止前綠就合 |
+  | LP | session_01YGNNunF7F1xm5bcPAv9pcL | #1476（決策 481）：路線頁拆成清單＋每條線的頁、分組、「需要注意」篩選。HANDOFF 改用 §4.22 | 截止前綠就合；#1472 先合的話它併 main，把載客圖搬到路線頁 |
+  | SY | session_01YGNNum2FZBg4ueDbGp3gEf | #1477（決策 479）：收購三鶯線時一起蓋三峽機廠。只動 GamePresentation。已壓縮 2 次，做完就停 | 截止前綠就合 |
+  | VID | session_01YGNNukoWqi8apoMDtJNZ3x | #1461 宣傳素材（draft）。在跑的 promo run 40825762656 讓它跑完，之後不再開截圖 run | 素材齊了再合 |
+  | WEB | session_01YGNNunk52JnVx6sBsWD3uS | 官網截圖，私庫 PR #116（draft），等新截圖 | 截圖補齊後請作者合私庫 PR 並 Deploy website |
+
+  不碰：#1342、私庫 PR #103、Codex 的 draft（#1456 等）。
+- **HANDOFF §4 重號**：#1472 用 §4.20，#1475 已合的是 §4.21，#1476 改用 §4.22。之後加 §4 小節的 PR，合 main 前先看最大號。
+- **號碼**：決策 477 SHOT、478 VIZ、479 SY 機廠、480 DONUT、481 LP、482 UIREV；下一個是 483（先看 #1041）。存檔 76、77 照上一段的保留。
+- **之後要寫進規劃文件的**：
+  - 決策 476（ROAD）的下一步 3、4 在 HANDOFF 加一行指過去。
+  - ui-review 第 10 節「列車：圖標還是車型」已在 #1475；圖表的鐵道味建議只列不改，最滿列車條改成一節車廂的填滿度那條，LP 決定先不做（決策 481 第 9 項）。
+- **作者問過、答了、沒有要做的**：geolibre.app（MIT，網頁 GIS）可以拿來檢查資料位置，不放進遊戲。要不要讓資料工具多輸出 GeoJSON 給它看，等作者說；不急，排在 95.1 之後。
 
 **第二十九次換手（2026-10-29 約 04:10 UTC，session_01YGNNumk6UqdBm6JrBhsdZY 壓縮第 3 次 → 本任用 `create_session` 開的新規劃，第 5 層）**：照下一段「第二十八任做到哪」接。
 - 新規劃先讀第 1 節、本段與下一段、#1041 從「session_01YGNNumk6UqdBm6JrBhsdZY 壓縮第 3 次」往後，然後在 #1041 留言接手。
@@ -1956,6 +2001,12 @@
 - **修之前的截圖**（不要刪）：網站截圖 artifact `website-screenshots`，run 40805756457（VID）；宣傳影片截圖 run 40812436549（WEB）。都在 a91453/railway-game-ios 的 Actions，保留到 GitHub 的期限。
 - **等 TestFlight 看**（UNVERIFIED）：iPhone SE 開始畫面不必捲就看得到「新遊戲」是估算，CI 是 iPhone 17 Pro；地名「空位」在各縮放下有沒有把地名推得太遠。
 
+### 4.21 畫面的 ui-review skill、截圖驗收暫緩（決策 482，session_01YGNNuoinesWfV5nQhzCYuV，派工單 UIREV，2026-10-29）
+
+- 做了的在 [決策 482](decisions/482.md)：`.claude/skills/ui-review/`（改畫面前讀；第 3 節截圖驗收、第 10 節列車用圖標還是車型）、UI_THEME「玩家看的文字」第 7 條。
+- **截圖驗收暫緩**（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」）：#1467（決策 472）圖表的驗收沒拍。拍照的測試 `testStatisticsCharts`、`testTrainLooks` 已在 `WebsiteScreenshotTests`，發版前在那個分支跑一次 `website-screenshots.yml`（一次只跑一個），照 skill 第 3 節看，寫成決策 472「472 截圖驗收」；路線清單列的問題給 LP（決策 481）。
+- **鐵道味建議**（只列不改）：決策 482 續篇的表，規劃決定要不要派。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
@@ -1966,7 +2017,7 @@
 | 編輯後的主執行緒停頓：91.1 iPhone 15 Plus 蓋車站、開路線、買列車、改時刻後卡住；92.1 iPad15,7 連接轉乘站時卡住，回報的心跳在 84 站、5 線的局最高 704.9 ms／727.6 ms，幾乎都在「其他」 | 派工單 BP-2，session_01YGNNumsbvdDUbdhhgfgCkW（`claude/edit-stall-465`，#1434，決策 465） | **部分修好，待合併**：量法 `EditStallReportTests`（`EDIT_STALL_SAVE=<存檔>`，release）。站長建議、公司評等、路線提示已改在背景算（每次編輯主執行緒少約 65–120 ms）。剩下的寫在決策 465「下一步」：路線面板開著時每次編輯 70–100 ms（軌道數、路線選擇、人力）、車流開著時 `PassingLoopCards` 的 `trafficOverlay`（沒量到）、連接轉乘／改時段後乘客路線重算讓列車停約 6 秒（GameCore，另派）、其他沒計時的畫面工作。實機改善要 TestFlight 確認 |
 | ~~高鐵 demo 第一次開地圖時畫面卡住：CI 的 iPhone 模擬器上主執行緒 28–58 秒沒有回應（app trace 最長 57540 ms）~~ | #1257（session_01ATrwF1t4xfwDoTrLvMvRAY，2026-10-25） | **修了**（`claude/hsr-first-map-stall`，session_01NmGg4SVeqcXXqTpHPxnVP6）：不在畫地圖，在 `begin` 的 `readLandRoundStations`：示範建好時沒拿底圖，它的 2,489 個街區的道路（決策 400 的續，00ecb5f）留到 `begin` 在主執行緒讀，Linux debug 11.5 s。改成和建世界一起在背景讀（`GameLauncher.readingRoads`，高鐵與宜蘭線示範），主執行緒上剩 5 ms；開局在主執行緒上的其他工作合計約 0.25 s（`HSR_FIRST_MAP_REPORT=1` 跑 `HighSpeedFirstMapReportTests`）。回歸：`HighSpeedDemoTests.testTheLauncherBuildsAndOpensIt` 檢查遊戲開始時道路已讀。剩下：資料晚到時 `install` 在主執行緒對開著的遊戲 `readLandRoundStations`（只有道路還沒讀的舊存檔會多讀）→ 改到背景讀（session_01YTRwthhkJVsLn8wkaagJ8p，決策 400「續篇：讀檔的兩件小修」）；`begin` 讀檔也搬到背景（決策 419） |
 | 輕軌收購（決策 400 10j-2）剩下的：(1) 安坑輕軌：第二條正線在急彎上離第一條不到 4 m（`trackTooClose`）；`RealLineAcquisition.swift` 裡第二條的偏移改成 8 m 時鋪得下，但從 06:12 起列車停住（307 班 179 班沒發），還沒查是靠左（決策 202）選錯路還是待避線方向保護；查好後把 `ntalrt:K` 加回 `extract_metro_runs.py` 的 `LINES`、重跑、在測試加回。(2) 淡海綠山線：終點站要 6–7 條過夜軌道，要 GameCore 的停車場或回送機廠。(3) 轉乘站併站（450 m 內同名車站）程式在、沒有測試。(4) $800 萬的價格目標：10j-3 定了輕軌每位旅客 $70，淡水開局的藍海線 $796 萬 | session_011Aw4FB9UV6Nx5P2kPZUH2E（10j-2，壓縮兩次後停下） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-2 |
-| 捷運收購（決策 400 10j-3）剩下的：(1) 三鶯線（`sanying:LB`）：**派工單 BY 做了**（`claude/sanying-line`，10/31 後合）：停住的原因是工具把 4 組車晚上送到中間站時停在反方向的正線上，擋住當晚最後幾班；工具改了（`extract_branch_runs.facing`），開放收購，兩天的真實班次一般、寫實規則都全部發出。還剩**號誌的效能**：白天一個遊戲小時約 10 s（debug，藍海線 0.6 s），51 小時一般規則 365 s、寫實 229–243 s，CI 因此把它拆成兩個測試類別（`SanyingLineSimpleDayTests`、`SanyingLineRealisticDayTests`）。gdb 取樣：約四成在被擋住的車估等多久（`secondsUntilARouteFrees` → `reservingDeparture` → `alternativeRoute` → `networkPath`／`TrainRoute.shortest`），其餘在 `trafficPlan`、`planTrafficOvertakes`、`moveTrains`；把 `runTrip` 記住沒有用（量過）。要做是 GameCore、要逐位元不變的另一件，沒派。(2) 其他捷運線的終點站要 6–25 條過夜軌道（數字在 `tools/real-timetables/README.md`），要 GameCore 的停車場或回送機廠，和淡海綠山線同一件；中和新蘆線的共用主線也在它之後。(3) 臺中、高雄的實景開局沒有一條線在 $800 萬以內（地圖框裡沒有可收購的線；臺北、新北、桃園有） | session_012tPPoF95rAooSb1w8yot6q（10j-3） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-3 |
+| 捷運收購（決策 400 10j-3）剩下的：(1) 三鶯線（`sanying:LB`）：**派工單 BY 做了**（`claude/sanying-line`，10/31 後合）：停住的原因是工具把 4 組車晚上送到中間站時停在反方向的正線上，擋住當晚最後幾班；工具改了（`extract_branch_runs.facing`），開放收購，兩天的真實班次一般、寫實規則都全部發出。還剩**號誌的效能**：白天一個遊戲小時約 10 s（debug，藍海線 0.6 s），51 小時一般規則 365 s、寫實 229–243 s，CI 因此把它拆成兩個測試類別（`SanyingLineSimpleDayTests`、`SanyingLineRealisticDayTests`）。gdb 取樣：約四成在被擋住的車估等多久（`secondsUntilARouteFrees` → `reservingDeparture` → `alternativeRoute` → `networkPath`／`TrainRoute.shortest`），其餘在 `trafficPlan`、`planTrafficOvertakes`、`moveTrains`；把 `runTrip` 記住沒有用（量過）。2026-10-29 派工單 SY（作者 94 實機「收購完會卡住」）：地圖的卡車泡泡改在背景 tick 算（`SanyingLineFreezeTests`），主執行緒不再每個 tick 搜死結；**還沒修**的是早上 6 點起的死結：國華、長壽山、永吉公園晚上各停 1 列在正線上（那幾站沒有側線），直通車開到就被擋，平日 06:32–06:54 的回送開走才解開（週末沒有這幾班回送）。要嘛在這幾站鋪一條過夜側線讓車停在那裡，要嘛改資料工具，沒派。要做是 GameCore、要逐位元不變的另一件，沒派。(2) 其他捷運線的終點站要 6–25 條過夜軌道（數字在 `tools/real-timetables/README.md`），要 GameCore 的停車場或回送機廠，和淡海綠山線同一件；中和新蘆線的共用主線也在它之後。(3) 臺中、高雄的實景開局沒有一條線在 $800 萬以內（地圖框裡沒有可收購的線；臺北、新北、桃園有） | session_012tPPoF95rAooSb1w8yot6q（10j-3） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-3 |
 | 路網分析（決策 416）剩下的：GameCore 只記每站開局以來的滿站走掉、等到停駛走掉與被滿車留下，沒有每天、也沒有分到站對，所以「流失」只列汽機車與票價；沒有路線連的站對沒有 GameCore 的需求數字，用分配規則估；沒有車站的聚落沒列進來；等不到車固定 30 分；沒有 UI 測試；路線面板標題列在手機橫放時擠不擠要實機看 | session_01695GDiVgssy47EmyircfE4（§22.2 第 22 名） | 沒派；做法在 [決策 416](decisions/416.md)「下一步」 |
 | 分享路網（決策 409）剩下的：車站設計的分享（等 10d）、只看時在遊戲裡直接改成開新局、檔案 App 裡顯示明信片縮圖（Quick Look 縮圖延伸）；LINE、AirDrop、檔案 App 點了用遊戲開與分享面板的預覽都是 UNVERIFIED，要 TestFlight 實機 | session_01RarzebNWdkEundHGJDzTBf（10k） | 沒派；做法在 [決策 409](decisions/409.md)「下一步」與「沒有驗證的」 |
 | 實景地圖的道路格子（決策 400，10i-1 剩下的）：GameCore 的 `RoadGrid` 與 `setRoads(_:in:)` 已在，空白地圖會長路、能鋪站前路；實景地圖還沒從底圖的 `transportation` 層算出道路格子，所以實景開局不開道路 | session_018gwb44aL5MFmY8312pE3hD（10i-1） | 沒派；做法在 [決策 400](decisions/400.md)「量到的」10i-1 的最後一點 |

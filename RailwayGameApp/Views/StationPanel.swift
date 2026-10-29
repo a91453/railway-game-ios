@@ -1419,6 +1419,7 @@ struct StationPanel: View {
         let now = session.world.clock.now.minuteOfDay / 60
         return Section {
             HourlyBarChart(title: "Entries", spec: flow.chart(.entries, in: session.language), hours: flow.entries, now: now, language: session.language)
+                .accessibilityIdentifier("station.flow.entries")
             HourlyBarChart(title: "Exits", spec: flow.chart(.exits, in: session.language), hours: flow.exits, now: now, language: session.language)
         } header: {
             Text("Trips by hour")

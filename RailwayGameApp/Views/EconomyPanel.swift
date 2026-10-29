@@ -524,6 +524,10 @@ struct EconomyPanel: View {
                     ),
                 currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
             )
+            // Decision 480: the period's income and costs by kind.
+            FinanceCompositionChart(
+                composition: FinanceComposition(report.current, hasRecords: !accounts.days.isEmpty), language: session.language
+            )
         } header: {
             Text("Report")
         } footer: {

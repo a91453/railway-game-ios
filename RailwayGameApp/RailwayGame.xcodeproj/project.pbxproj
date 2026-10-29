@@ -74,6 +74,7 @@
 		481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 05F7A5F3105B96C3E70DF1AA /* tmrt_ridership.json */; };
 		4850EFE156B582D7BA6FD80E /* recycling-truck.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 9BA4B300768652735C9F8702 /* recycling-truck.m3dmodel */; };
 		4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92B62C199B3DE4F7602175F /* MapArt.swift */; };
+		495E531EE2BE994A5D26A414 /* FinanceCompositionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1B6E1724E03C51A9EEB2DD /* FinanceCompositionUITests.swift */; };
 		4AC759850C82A45A974174C0 /* RealWorldLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148B6BCCE51E5F5D112B8C8D /* RealWorldLoadingView.swift */; };
 		4BD9A2C2F541EB4CE36CA67B /* sanying.json in Resources */ = {isa = PBXBuildFile; fileRef = 92FBF87A0B909AF9C100FC70 /* sanying.json */; };
 		4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */ = {isa = PBXBuildFile; fileRef = CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */; };
@@ -161,6 +162,7 @@
 		9EA1EEFC5B90497C518B4A03 /* SharedNetworkViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DEE960E35A07A7E3B307632 /* SharedNetworkViews.swift */; };
 		9F2A0CB036624C7848B09486 /* kenney-pine.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 4353DE6A285346A08373E79A /* kenney-pine.m3dmodel */; };
 		A081D0BA7AD605EAA7BCC85A /* LineDraftSummaryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */; };
+		A2BFEF656FC4D11FDE388C6D /* FinanceCompositionChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC33070865431E53CA5C950 /* FinanceCompositionChart.swift */; };
 		A3960BFF1A41CEBA47C4ADE1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C0B07BD9AF82071392AB20 /* SettingsView.swift */; };
 		A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */ = {isa = PBXBuildFile; fileRef = F04BA3646C6BDB8801CF770B /* station_transfers.json */; };
 		A46A996AC7AD764908BEE31C /* ntdlrt_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 0FD517F96914B0874A416907 /* ntdlrt_ridership.json */; };
@@ -393,6 +395,7 @@
 		8B993B082EC252253EFE5F5A /* meshy-post-boxes.m3dmodel */ = {isa = PBXFileReference; path = "meshy-post-boxes.m3dmodel"; sourceTree = "<group>"; };
 		8DBD0CD0D1C1450DD0CFFE9A /* real_buses_PingtungCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_PingtungCounty.json; sourceTree = "<group>"; };
 		8DD7AC937959CBAB6BEAEB18 /* real_buses_MiaoliCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_MiaoliCounty.json; sourceTree = "<group>"; };
+		8E1B6E1724E03C51A9EEB2DD /* FinanceCompositionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceCompositionUITests.swift; sourceTree = "<group>"; };
 		903982CCE649E985E784BE87 /* HUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDView.swift; sourceTree = "<group>"; };
 		905E65E0102E822A86C5ECF8 /* trtc_codes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc_codes.json; sourceTree = "<group>"; };
 		9066371AFA922B8308EA3748 /* tymc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tymc.json; sourceTree = "<group>"; };
@@ -440,6 +443,7 @@
 		B9E396F04F921CD6475423B8 /* ticket-issued.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "ticket-issued.wav"; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
 		BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLineChips.swift; sourceTree = "<group>"; };
+		BCC33070865431E53CA5C950 /* FinanceCompositionChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceCompositionChart.swift; sourceTree = "<group>"; };
 		BDC928DD3917E8959E2930DD /* track_stations.geojson */ = {isa = PBXFileReference; path = track_stations.geojson; sourceTree = "<group>"; };
 		BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListSearchField.swift; sourceTree = "<group>"; };
 		BE5F9CA2A582C25F505C6761 /* ntalrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntalrt_times.json; sourceTree = "<group>"; };
@@ -644,6 +648,7 @@
 				40A496FD2BF3857D45FD0B8E /* DemoRealLinesButton.swift */,
 				C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */,
 				BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */,
+				BCC33070865431E53CA5C950 /* FinanceCompositionChart.swift */,
 				787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */,
 				611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */,
 				10CD1930FBBEEDFCB26CC5A3 /* FollowBar.swift */,
@@ -846,6 +851,7 @@
 				36F48CC81ACC3C48AD1B45BE /* BaseMapProjectionUITests.swift */,
 				41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */,
 				00A3435B9D12725EEF9D3FA3 /* Feature284To286UITests.swift */,
+				8E1B6E1724E03C51A9EEB2DD /* FinanceCompositionUITests.swift */,
 				7A45FAC99BF6E52A26A750C5 /* HUDAlignmentUITests.swift */,
 				C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */,
 				091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */,
@@ -1125,6 +1131,7 @@
 				647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */,
 				0E4EC2F54A6F330F9C0427F6 /* FeatureUITestWorld.swift in Sources */,
 				823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */,
+				A2BFEF656FC4D11FDE388C6D /* FinanceCompositionChart.swift in Sources */,
 				02612154E68649C32252E2AF /* FinanceTrendCharts.swift in Sources */,
 				DC0C16D1A36913B68ED98526 /* FleetOverviewSheet.swift in Sources */,
 				4D8F006CF3A45F2966A0F276 /* FollowBar.swift in Sources */,
@@ -1215,6 +1222,7 @@
 				56401A53DAC1CA098177160A /* BaseMapProjectionUITests.swift in Sources */,
 				866964714A9713149D8697CD /* CoverageShortcutUITests.swift in Sources */,
 				E0AAF4F80FFB96017A1C7714 /* Feature284To286UITests.swift in Sources */,
+				495E531EE2BE994A5D26A414 /* FinanceCompositionUITests.swift in Sources */,
 				298500257AB33E58BA58A158 /* HUDAlignmentUITests.swift in Sources */,
 				0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */,
 				A081D0BA7AD605EAA7BCC85A /* LineDraftSummaryUITests.swift in Sources */,
