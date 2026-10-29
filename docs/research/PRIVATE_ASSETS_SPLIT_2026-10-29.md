@@ -56,7 +56,7 @@
     - **git 歷史裡已經有的檔案照樣拿得到**（第 5 節）：現在的全部資料都在歷史裡，搬家只保護以後的新版本。
 - **作者要做的**（第 4 節）：建私庫、產生一把 deploy key、把公鑰加到私庫、把私鑰存成公開 repo 的 Actions secret、讓 Claude 的 session 也能掛上這個私庫。約 10 分鐘。
 - **PR 數**：私庫 1 個，公開 repo 3 個；另有 1 個選做的 PR，把最大的網格資料表從 Swift 換成資源檔。第 9 節。
-- **C 案**：照最近 7 天的用量換算，改私人每月約 USD __C_MONTHLY__（macOS 佔大部分），第 7 節。
+- **C 案**：照最近 7 天的用量換算，改私人每月約 USD 10,200（macOS 佔大部分），第 7 節。
 
 ## 1. 編出能玩的 App 一定要用的非程式檔案
 
@@ -286,15 +286,17 @@ GamePresentation 全部 7.0 MB，其中 Map3D 開頭的 2.8 MB。
 
 公開 repo 的 Actions 不收費；改成私人後，每分鐘照標準價計（2026-01-01 起的價格，GitHub 文件 `billing/reference/actions-runner-pricing`）：Linux 2 核 USD 0.006，macOS USD 0.062（約 10 倍）。作者帳號每月內含 USD 12（Free）或 USD 18（Pro）。
 
-最近 7 天（2026-10-22 08:00 到 10-29 08:00 UTC）的用量：從 Actions API 讀 __RUNS__ 次執行的每個 job，以開始與結束時間計，每個 job 無條件進位到整分鐘：
+最近 7 天（2026-10-22 08:00 到 10-29 08:00 UTC）的用量：從 Actions API 讀 5,171 次執行的每個 job，以開始與結束時間計，每個 job 無條件進位到整分鐘：
 
 | | 7 天（分鐘） | 換算 30 天（分鐘） | 單價 | 每月 |
 | --- | --: | --: | --: | --: |
-| Linux | __LIN7__ | __LIN30__ | USD 0.006 | USD __LINUSD__ |
-| macOS | __MAC7__ | __MAC30__ | USD 0.062 | USD __MACUSD__ |
-| 合計 | | | | **USD __TOTALUSD__**（扣掉 Pro 內含 USD 18 約 USD __NETUSD__） |
+| Linux | 100,866 | 432,283 | USD 0.006 | USD 2,594 |
+| macOS | 28,769 | 123,296 | USD 0.062 | USD 7,644 |
+| 合計 | | | | **USD 10,238**（扣掉 Pro 內含 USD 18 約 USD 10,220） |
 
-用最多的 workflow：__TOPW__。
+用最多的 workflow：`ci.yml`（Linux 98,483 分鐘）、`ios-build.yml`（macOS 27,078）、`release-archive.yml`（macOS 1,157）；其餘都在 600 分鐘以下。
+
+照現在的 CI 量，C 案每月約一萬美元，是內含額度的五百多倍。除非把 CI 砍到現在的幾十分之一，C 案不可行。
 
 C 案的其他代價：
 - 私人的免費方案同時最多 20 個 job（macOS 5 個），比現在的 40 個少一半。CI 一個完整層就 22 個 job，排隊會變長。
