@@ -10,10 +10,39 @@
 # request that changed the screenshot tests, their scenes or this file also
 # ran it, holding one of the account's five macOS runners for 13 to 24
 # minutes a run (decision 187).
+#
+# Input `kind` = promo (decision 475) takes the material for a promotional
+# video instead: RailwayGameUITests/PromoMaterialTests, one test at a time,
+# the Simulator's screen recorded around each (`simctl io recordVideo`,
+# H.264), screenshots at the device's own size, on an iPhone or an iPad
+# (`device`), dark and/or light (`appearance`; the recording only in the
+# first). It is one artifact, `promo-material`, with PNGs under
+# <appearance>/, MP4s under video/ and a manifest. Press it on a branch of
+# your own, one run at a time: the macOS runners are shared.
 name: Website screenshots
 
 on:
   workflow_dispatch:
+    inputs:
+      kind:
+        description: "website: the website's screenshots; promo: material for a promotional video"
+        type: choice
+        options: [website, promo]
+        default: website
+      device:
+        description: "promo only: iphone or ipad"
+        type: choice
+        options: [iphone, ipad]
+        default: iphone
+      appearance:
+        description: "promo only: dark, light or both (the recording is of the first)"
+        type: choice
+        options: [dark, light, both]
+        default: dark
+      tests:
+        description: "promo only: PromoMaterialTests methods, separated by spaces or commas (empty: all)"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -24,32 +53,38 @@ concurrency:
 
 jobs:
   screenshots:
-    name: Website screenshots (iOS Simulator)
+    name: Screenshots (iOS Simulator)
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.kind == 'promo' && 340 || 60 }}
     steps:
       - uses: actions/checkout@v7
 
       # The website's screenshots are from an iPhone Pro (2622 × 1206 on
       # its side): the first available Pro that is not a Max, else the first
       # iPhone.
-      - name: Select an iPhone Simulator
+      - name: Select a Simulator
+        env:
+          PROMO_DEVICE: ${{ inputs.kind == 'promo' && inputs.device || 'iphone' }}
         run: |
           xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
           python3 - <<'PY'
           import json, os
           from pathlib import Path
           devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
+          kind = "iPad" if os.environ["PROMO_DEVICE"] == "ipad" else "iPhone"
           iphones = [device for runtime, group in devices.items()
                      if ".iOS-" in runtime for device in group
-                     if device["isAvailable"] and device["name"].startswith("iPhone")]
+                     if device["isAvailable"] and device["name"].startswith(kind)]
           if not iphones:
-              raise SystemExit("No available iPhone Simulator")
-          pros = [d for d in iphones if d["name"].endswith(" Pro")]
+              raise SystemExit(f"No available {kind} Simulator")
+          # An iPhone Pro that is not a Max; an iPad Pro (the largest).
+          pros = [d for d in iphones if d["name"].endswith(" Pro")] if kind == "iPhone" \
+              else [d for d in iphones if d["name"].startswith("iPad Pro")]
           device = (pros or iphones)[-1]
           print(f"Selected {device['name']} ({device['udid']})")
           with open(os.environ["GITHUB_ENV"], "a") as env:
               env.write(f"SIMULATOR_UDID={device['udid']}\n")
+              env.write(f"SIMULATOR_NAME={device['name']}\n")
           PY
 
       - name: Build for testing
@@ -74,6 +109,7 @@ jobs:
 
       - name: Take the screenshots
         id: screenshots
+        if: inputs.kind != 'promo'
         timeout-minutes: 30
         run: |
           xcodebuild test-without-building \
@@ -92,7 +128,7 @@ jobs:
 
       # Each kept attachment as <name>.png, whether or not every test passed.
       - name: Export the screenshots
-        if: always() && steps.screenshots.outcome != 'skipped'
+        if: always() && inputs.kind != 'promo' && steps.screenshots.outcome != 'skipped'
         run: |
           out="$RUNNER_TEMP/attachments"
           mkdir -p "$out" "$RUNNER_TEMP/website-screenshots"
@@ -131,7 +167,7 @@ jobs:
           ls -l "$RUNNER_TEMP/website-screenshots"
 
       - name: Upload the screenshots
-        if: always() && steps.screenshots.outcome != 'skipped'
+        if: always() && inputs.kind != 'promo' && steps.screenshots.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
           overwrite: true
@@ -141,7 +177,7 @@ jobs:
           retention-days: 14
 
       - name: Upload the result bundle
-        if: failure()
+        if: failure() && inputs.kind != 'promo'
         uses: actions/upload-artifact@v7
         with:
           overwrite: true
@@ -149,3 +185,155 @@ jobs:
           path: ${{ runner.temp }}/screenshots.xcresult
           if-no-files-found: warn
           retention-days: 7
+
+      # Decision 475. One xcodebuild run per test, so that each test has a
+      # recording of its own; a test that fails (a screen that moved) keeps
+      # the pictures it already took, and the next test still runs.
+      - name: Take the promo material
+        id: promo
+        if: inputs.kind == 'promo'
+        timeout-minutes: 320
+        env:
+          PROMO_TESTS: ${{ inputs.tests }}
+          PROMO_APPEARANCE: ${{ inputs.appearance }}
+        run: |
+          set -u
+          root="$RUNNER_TEMP/promo"
+          mkdir -p "$root/video" "$root/bundles" "$root/logs"
+          if [[ -n "$PROMO_TESTS" ]]; then
+            IFS=', ' read -r -a tests <<<"$PROMO_TESTS"
+          else
+            tests=($(grep -oE 'func test[A-Za-z0-9]+\(' RailwayGameApp/UITests/PromoMaterialTests.swift | sed -E 's/func (.*)\(/\1/'))
+          fi
+          if [[ "$PROMO_APPEARANCE" == both ]]; then appearances=(dark light); else appearances=("$PROMO_APPEARANCE"); fi
+          echo "Tests: ${tests[*]}; appearances: ${appearances[*]}"
+          first="${appearances[0]}"
+          for appearance in "${appearances[@]}"; do
+            xcrun simctl ui "$SIMULATOR_UDID" appearance "$appearance"
+            for test in "${tests[@]}"; do
+              name="${test#test}"
+              bundle="$root/bundles/$appearance-$name.xcresult"
+              log="$root/logs/$appearance-$name.log"
+              video="$root/video/$name.mp4"
+              recording=""
+              if [[ "$appearance" == "$first" ]]; then
+                xcrun simctl io "$SIMULATOR_UDID" recordVideo --codec=h264 --force "$video" >"$root/logs/$name-record.log" 2>&1 &
+                recording=$!
+                sleep 3
+                echo "$(date +%s)" >"$root/logs/$name.recording-start"
+              fi
+              echo "::group::$appearance $test"
+              xcodebuild test-without-building \
+                -project RailwayGameApp/RailwayGame.xcodeproj \
+                -scheme RailwayGame \
+                -configuration Debug \
+                -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+                -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+                -resultBundlePath "$bundle" \
+                -only-testing:RailwayGameUITests/PromoMaterialTests/$test \
+                -parallel-testing-enabled NO \
+                -test-timeouts-enabled YES \
+                -default-test-execution-time-allowance 1500 \
+                -maximum-test-execution-time-allowance 1800 \
+                CODE_SIGN_IDENTITY=- 2>&1 | tee "$log" | tail -n 40 || echo "::warning::$appearance $test did not pass"
+              echo "::endgroup::"
+              if [[ -n "$recording" ]]; then
+                kill -INT "$recording" 2>/dev/null || true
+                wait "$recording" 2>/dev/null || true
+              fi
+              # Free the disk between tests: the pictures are exported below
+              # from the bundles, which stay.
+            done
+          done
+
+      # Each kept attachment as <appearance>/<test>/<name>.png. The display's
+      # screenshot is upright: a device on its side comes out turned a
+      # quarter, turned back here (sips turns clockwise).
+      - name: Export the promo material
+        if: always() && inputs.kind == 'promo' && steps.promo.outcome != 'skipped'
+        run: |
+          root="$RUNNER_TEMP/promo"
+          out="$RUNNER_TEMP/promo-material"
+          mkdir -p "$out"
+          for bundle in "$root"/bundles/*.xcresult; do
+            [[ -e "$bundle" ]] || continue
+            key=$(basename "$bundle" .xcresult)
+            raw="$RUNNER_TEMP/attachments-$key"
+            mkdir -p "$raw"
+            xcrun xcresulttool export attachments --path "$bundle" --output-path "$raw" || continue
+            BUNDLE_KEY="$key" RAW="$raw" OUT="$out" python3 - <<'PY' || echo "::warning::Could not name the pictures of $key"
+          import json, os, re, shutil
+          from pathlib import Path
+          raw = Path(os.environ["RAW"])
+          appearance, _, test = os.environ["BUNDLE_KEY"].partition("-")
+          dest = Path(os.environ["OUT"], appearance, test)
+          dest.mkdir(parents=True, exist_ok=True)
+          manifest = json.loads((raw / "manifest.json").read_text())
+          pattern = re.compile(r"^([a-z0-9-]+)_\d+_")
+          for item in manifest:
+              for attachment in item.get("attachments", []):
+                  exported = attachment["exportedFileName"]
+                  match = pattern.match(attachment.get("suggestedHumanReadableName", ""))
+                  if match and exported.endswith(".png"):
+                      shutil.copy(raw / exported, dest / f"{match.group(1)}.png")
+          PY
+            rm -rf "$raw"
+          done
+          for shot in "$out"/*/*/*.png; do
+            [[ -e "$shot" ]] || continue
+            width=$(sips -g pixelWidth "$shot" | awk '/pixelWidth/ { print $2 }')
+            height=$(sips -g pixelHeight "$shot" | awk '/pixelHeight/ { print $2 }')
+            if (( width < height )); then sips -r 270 "$shot" >/dev/null; fi
+          done
+          mkdir -p "$out/video"
+          cp "$root"/video/*.mp4 "$out/video/" 2>/dev/null || true
+          # Where each recording's action starts: the test prints
+          # "[promo] action-start <epoch>"; the recording began a moment
+          # after the epoch kept in <test>.recording-start.
+          {
+            echo "simulator: ${SIMULATOR_NAME:-?} ($SIMULATOR_UDID)"
+            echo "commit: $GITHUB_SHA"
+            echo "inputs: device=${{ inputs.device }} appearance=${{ inputs.appearance }}"
+            for start in "$root"/logs/*.recording-start; do
+              [[ -e "$start" ]] || continue
+              name=$(basename "$start" .recording-start)
+              began=$(cat "$start")
+              mark=$(grep -ho '\[promo\] action-start [0-9.]*' "$root"/logs/*-"$name".log 2>/dev/null | head -1 | awk '{print $3}')
+              if [[ -n "$mark" ]]; then
+                offset=$(python3 -c "print(max(0, round(float('$mark') - $began, 1)))")
+                echo "video/$name.mp4: camera work starts about ${offset}s in"
+              else
+                echo "video/$name.mp4: no action marker in the log"
+              fi
+            done
+          } >"$out/MANIFEST.txt"
+          for video in "$out"/video/*.mp4; do
+            [[ -e "$video" ]] || continue
+            mdls -name kMDItemDurationSeconds -name kMDItemPixelWidth -name kMDItemPixelHeight "$video" | tr '\n' ' ' >>"$out/MANIFEST.txt" || true
+            echo >>"$out/MANIFEST.txt"
+          done
+          cat "$out/MANIFEST.txt"
+          find "$out" -type f | sort | sed "s|$out/||"
+          du -sh "$out"
+
+      - name: Upload the promo material
+        if: always() && inputs.kind == 'promo' && steps.promo.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: promo-material
+          path: ${{ runner.temp }}/promo-material
+          if-no-files-found: warn
+          retention-days: 7
+          # PNGs and H.264 do not compress further.
+          compression-level: 0
+
+      - name: Upload the promo result bundles
+        if: failure() && inputs.kind == 'promo'
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: promo-xcresult
+          path: ${{ runner.temp }}/promo/bundles
+          if-no-files-found: warn
+          retention-days: 3
