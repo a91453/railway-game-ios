@@ -40,3 +40,8 @@ Near/far each run independently. These display tolerances are not engineering di
 `compare-fixed.mjs TRUE_BEFORE AFTER OUTPUT` uses the shared native renderer,
 fixed union bounds/centre/orthographic metre scale and the same light for each pair,
 colour/clay/silhouette front/left/top/isometric, all units and assemblies.
+
+`curate.py RUN FIXED_COMPARISON CLEAN_PRODUCER_CHECKOUT PRODUCER` generates the
+transparent native-only before/after sheet, updated source/status and delivery.json,
+selecting20 PNGs total. It does not copy the prototype photos. Run deliver.py with
+that spec; retain one additional public overview PNG only.
