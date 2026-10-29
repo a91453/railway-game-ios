@@ -214,6 +214,10 @@ public struct Map3DTrainSet: Sendable {
             // its light cars.
             circular610(),
             circular610(far: true),
+            // Decision 466: the Sanying line's two-car train (#1422's
+            // study), from 500 m out its light cars.
+            sanying(),
+            sanying(far: true),
             // The DR1000 railcar and the DR3100 diesel express: silver, a thin
             // orange band, yellow-orange faces (the reference's `dr1000`,
             // `dr3100`) on #900's curved fronts.
@@ -282,7 +286,7 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 435: and the EMU900 (its far set), 9,300 a cab car.
     /// Decision 461: and the C371, C381 and 610 (their far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610"]
+                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -677,6 +681,22 @@ public struct Map3DTrainSet: Sendable {
                         middleBack: part(.d))
         }
     }
+
+    /// Decision 466: the Sanying line's two cars (#1422's study): cab A at
+    /// the front and cab B turned round at the back
+    /// (`tools/sanying/assembly.json`), always two whatever the train's
+    /// count, each its own length, the lamps lit (white at the front, red
+    /// at the back). `far`: ``Map3DSanying/model(_:far:)``'s light cars.
+    static func sanying(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "sanyingFar" : "sanying", ownLengths: true, fixedCars: 2, far: far ? nil : "sanyingFar") {
+            Cars(head: lit(Map3DSanying.model(.a, far: far), front: true), middle: nil,
+                 tail: lit(Map3DSanying.model(.b, far: far).turned, front: false), single: nil)
+        }
+    }
+
+    /// Decision 466: the key of ``sanying(far:)``, the Sanying line's real
+    /// trains and the trains of one bought.
+    static let sanyingKey = "sanying"
 
     /// Decision 422: `far`, the light cars of the same recipe
     /// (``Map3DTrainShapeRefresh/model(_:far:)``), lit the same.

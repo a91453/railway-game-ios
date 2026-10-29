@@ -56,6 +56,8 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertEqual(try formation("trtc", "G_XBT"), .init(key: "metroC371", cars: 3))
         XCTAssertEqual(try formation("trtc", "Y"), .init(key: "circular610", cars: 4))
         XCTAssertEqual(try formation("trtc", "BR"), .init(key: "wenhu", cars: 4))
+        // Decision 466: the Sanying line its own two cars.
+        XCTAssertEqual(try formation("sanying", "LB"), .init(key: "sanying", cars: 2))
         XCTAssertEqual(try formation("krtc", "KR"), .init(key: "metroGeneric", cars: 3))
         // Decision 331: the light rail as the green tram.
         for (system, id) in [("ntdlrt", "V"), ("ntalrt", "K"), ("krtc", "C")] {
