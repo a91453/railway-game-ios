@@ -1,11 +1,11 @@
 {
-  "producer": "80b58f6ec28b0846f1157e4502c011a2b22e3b33",
+  "producer": "cfeed799260b609b6765ab44404d9ab095c48f94",
   "previous_caf_producer": null,
   "previous_citadis_producer": null,
   "first_delivery_both": true,
   "public_draft": "https://github.com/a91453/railway-game-ios/pull/1506",
   "assets_draft": "https://github.com/a91453/railway-assets-private/pull/31",
-  "assets_commit": "ca6a8bc1d92eb065a7050a132be852a9e73238d9",
+  "assets_commit": "1a1adcc0420f8151c0a074ed4c242fa2aa63a648",
   "base_main": "7fd5c47bea80884992f86d457a8617755a47d4a4",
   "latest_main_checked": "f017cc6202b5b57f42241aef534e99bbb4058145",
   "checks": {
@@ -33,11 +33,12 @@
       "every_byte_equal": true,
       "fixed_metre_PNGs": 368,
       "selected_PNGs": 40,
-      "every_PNG_byte_equal": true
+      "every_PNG_byte_equal": true,
+      "ten_near_native_units_unchanged_from_same_round_superseded": true
     },
     "native_readback": "VERIFIED through real Map3DModelFile loader; no loader/format/gate change",
-    "geometry": "VERIFIED shared finite/degenerate/balanced edges/winding/positive volume + dedicated actual glass visibility/backing, wheel rail/clearance, roof mounting/position, four joint cross sections, actual sequence/rotation/translation and embedded unit bytes",
-    "negative_probes": "VERIFIED actual glass bury/float80mm, wheel lift35mm, missing/reversed triangle, roof lift80mm/position150mm, wrong order/reverse/100mm placement, old native payload/full-field hash mutation. Actual former far-LOD shoulder gap also rejected.",
+    "geometry": "VERIFIED shared finite/degenerate/balanced edges/winding/positive volume + dedicated actual glass visibility/backing, wheel rail/clearance, roof mounting/position, four joint cross sections, actual sequence/rotation/translation and embedded unit bytes; actual opaque dark inter-window posts stay distinct from glass in both LODs",
+    "negative_probes": "VERIFIED actual glass bury/float80mm, wheel lift35mm, missing/reversed triangle, roof lift80mm/position150mm, wrong order/reverse/100mm placement, old native payload/full-field hash mutation. Actual former far-LOD shoulder gap also rejected. Actual old80b white far-post output rejected; actual white vertex-color and continuous-glass-strip mutations rejected.",
     "independent_GLB": "VERIFIED Blender4.3.2 independent importer, all24 outputs; not the exporter reading itself",
     "PNG": {
       "status": "VERIFIED",
@@ -89,13 +90,14 @@
       "status": "VERIFIED",
       "main": "f017cc6202b5b57f42241aef534e99bbb4058145",
       "models": 735,
-      "native_every_byte_and_all_vertex_fields_equal_base_and_producer": true
+      "native_every_byte_and_all_vertex_fields_equal_base_and_producer": true,
+      "final_producer_matches_same_735_baseline_outputs": true
     },
     "asset_guard": {
       "status": "VERIFIED",
       "staged_tree_and_committed_tree": true,
-      "files": 158,
-      "added_MiB": 78.3,
+      "files": 160,
+      "added_MiB": 79.2,
       "largest_file_MiB": 23,
       "private_PNGs_per_fleet": 20,
       "public_shared_PNGs": 1
@@ -120,7 +122,7 @@
     },
     "photos_are_not_calibrated_cameras": true,
     "redistributed_source_photo_pixels": false,
-    "true_previous_version": "None for either new fleet; old greenTram/fiveSectionLRT are protected OTHER models, shown with identical native cameras/frames/light and explicitly not predecessors",
+    "true_previous_version": "No accepted prior delivery for either new vehicle. Actual same-round superseded80b58f6e / assets ca6a8bc1 is compared at identical camera/metre/light in existing-style-comparison.png, clearly not a claimed accepted prior round.",
     "user_acceptance": "UNVERIFIED separately for each producer; see status-caf.json/status-citadis.json"
   },
   "operating": {
@@ -150,9 +152,9 @@
       "status": "VERIFIED",
       "single_native_format_max": 15000,
       "near_module_max": 14100,
-      "far_module_max": 6340,
+      "far_module_max": 6540,
       "assembly_near_triangles": 39684,
-      "assembly_far_triangles": 17004,
+      "assembly_far_triangles": 17608,
       "common_train_ceiling_near": 240000,
       "common_train_ceiling_far": 120000,
       "assembly_far_below_half_near": true,
@@ -185,9 +187,9 @@
       "status": "VERIFIED",
       "single_native_format_max": 15000,
       "near_module_max": 8252,
-      "far_module_max": 4088,
+      "far_module_max": 3996,
       "assembly_near_triangles": 28624,
-      "assembly_far_triangles": 12368,
+      "assembly_far_triangles": 12556,
       "common_train_ceiling_near": 240000,
       "common_train_ceiling_far": 120000,
       "assembly_far_below_half_near": true,
@@ -219,10 +221,13 @@
     "both": "Module lengths,600mm shell gaps, axle bases, wheel diameters and exact equipment stations photo-estimated. No claim of engineering reproduction."
   },
   "downloaded_source_records": 44,
-  "public_overview_sha256": "f4223470479c3dd82e385f6a27041223d260fd6a96fc61a22ea5fd98f64db5db",
+  "public_overview_sha256": "f83afed9a90ec943a8bb7a13ddca5e8cbb2a8525fd4880d037aada424ebd9b5f",
   "CI_skips": {
     "full_UI_partitions": "Existing workflow if github.event_name != pull_request; this is a pull_request. Full lane not requested or triggered.",
     "iPad_tutorial": "Existing path detector: no iPad tutorial/App files changed, outputs.ipad=false. Build was not skipped by passed-cache in producer run.",
     "producer_checks_may_be_superseded": "Final metadata head automatically starts fresh checks under existing concurrency; only newest head is reported at delivery. No gate/workflow change."
-  }
+  },
+  "same_round_superseded_producer": "80b58f6ec28b0846f1157e4502c011a2b22e3b33",
+  "same_round_superseded_asset_commit": "ca6a8bc1d92eb065a7050a132be852a9e73238d9",
+  "same_round_superseded_user_acceptance": "UNVERIFIED"
 }

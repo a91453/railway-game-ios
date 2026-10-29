@@ -1,7 +1,7 @@
 {
   "asset": {
     "status": "VERIFIED",
-    "evidence": "Producer 80b58f6ec28b0846f1157e4502c011a2b22e3b33; clean-checkout rebuild, output geometry/fault probes, native/GLB/PNG/browser download checks passed. See verification.json and assets PR #31; file:// remains UNVERIFIED due administrator policy."
+    "evidence": "Final producer cfeed799260b609b6765ab44404d9ab095c48f94 independently rebuilt52 native/scene/payload/GLB and40 PNG bytes; geometry/color/opacity/LOD/fault probes, Swift readback assembly, Blender, PNG complete decodes and actual browser downloads passed. See verification.json; file protocol blocked remains UNVERIFIED."
   },
   "appearance": {
     "status": "UNVERIFIED",

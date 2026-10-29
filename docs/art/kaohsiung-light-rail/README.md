@@ -97,13 +97,13 @@ Linux原生／Blender／Chromium檢查不代表人工Simulator外觀、iOS Metal
 ## 本輪交付連結與重建
 
 公開 draft [#1506](https://github.com/a91453/railway-game-ios/pull/1506) ⇄ 素材 draft [#31](https://github.com/a91453/railway-assets-private/pull/31)，兩張base均main，保持draft。
-Producer `80b58f6ec28b0846f1157e4502c011a2b22e3b33`；文件head與producer分開。
+Producer `cfeed799260b609b6765ab44404d9ab095c48f94`；文件head與producer分開。
 
 - [一期完整素材／模組表／近遠整列／CAF viewer](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-light-rail-two-fleets/game-art-previews/docs/art/kaohsiung-light-rail-phase1/revision-1)
 - [二期完整素材／模組表／近遠整列／Citadis viewer](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-light-rail-two-fleets/game-art-previews/docs/art/kaohsiung-light-rail-phase2/revision-1)
 
-兩款各20張私庫PNG＋公開共用1張，整個素材PR約78.3MiB。各資料夾有manifest、SHA、原生／GLB、完整單元配置、讀回／故障反例、Blender、PNG與viewer真下載紀錄、三個乾淨checkout的保護證據。
-整列近／遠：CAF39,684／17,004；Citadis28,624／12,368。每個M3DM≤15,000，完整組裝另外核對240,000／120,000既有整列上限及far<half；不把組裝總數塞進超限單檔，不把studies預算當營運驗證。
+兩款各20張私庫PNG＋公開共用1張，整個素材PR約79.2MiB。各資料夾有manifest、SHA、原生／GLB、完整單元配置、讀回／故障反例、Blender、PNG與viewer真下載紀錄、三個乾淨checkout的保護證據。
+整列近／遠：CAF39,684／17,608；Citadis28,624／12,556。每個M3DM≤15,000，完整組裝另外核對240,000／120,000既有整列上限及far<half；不把組裝總數塞進超限單檔，不把studies預算當營運驗證。
 
 在producer乾淨checkout，設定Swift6.4／Node22+／Python NumPy與Pillow／Playwright Chromium／Blender：
 
@@ -112,7 +112,7 @@ tools/kaohsiung-light-rail/build.sh /absolute/RUN
 # BASE來自未改main獨立checkout的實際export，至少有這兩個其他舊模型
 # tools/train-models/run.sh /absolute/BASE --ids lrt-five-formation,green-tram-formation
 node tools/kaohsiung-light-rail/review.mjs /absolute/RUN /absolute/FIXED /absolute/BASE
-python3 tools/kaohsiung-light-rail/curate.py /absolute/RUN /absolute/FIXED "$PWD" 80b58f6ec28b0846f1157e4502c011a2b22e3b33
+python3 tools/kaohsiung-light-rail/curate.py /absolute/RUN /absolute/FIXED "$PWD" cfeed799260b609b6765ab44404d9ab095c48f94 /absolute/PRIOR_FIXED 80b58f6ec28b0846f1157e4502c011a2b22e3b33
 python3 tools/train-models/deliver.py /absolute/RUN/caf /absolute/RUN/caf/delivery.json /absolute/NEW/kaohsiung-light-rail-phase1/revision-1
 python3 tools/train-models/deliver.py /absolute/RUN/citadis /absolute/RUN/citadis/delivery.json /absolute/NEW/kaohsiung-light-rail-phase2/revision-1
 ```
@@ -123,4 +123,10 @@ python3 tools/train-models/deliver.py /absolute/RUN/citadis /absolute/RUN/citadi
 
 viewer已在本機HTTP真載入、旋轉／縮放、下載核SHA、PNG完整解碼，零外部請求；本環境禁止file://，該項**UNVERIFIED**。被略過的iOS UI／iPad job依既有workflow路徑規則及PR精簡lane記錄於PR，不把skipped當作裝置通過。
 
-素材commit：[`ca6a8bc1d92eb065a7050a132be852a9e73238d9`](https://github.com/a91453/railway-assets-private/commit/ca6a8bc1d92eb065a7050a132be852a9e73238d9)。
+素材commit：[`1a1adcc0420f8151c0a074ed4c242fa2aa63a648`](https://github.com/a91453/railway-assets-private/commit/1a1adcc0420f8151c0a074ed4c242fa2aa63a648)。
+
+## 同PR中間producer的真實比較
+
+最終遠景修正兩款窗列之間的色界，保留深色不透明窗柱與逐窗玻璃；以平面端蓋簡化、遠景省略細雨刷及確實共面的區域合併維持far<half，未改共同gate、格式或外輪廓。新增實際頂點色／不透明柱probe，可拒收舊白柱與玻璃帶吞窗反例。
+
+同一PR中實際被取代producer `80b58f6ec28b0846f1157e4502c011a2b22e3b33`、素材commit `ca6a8bc1d92eb065a7050a132be852a9e73238d9` 為本輪未接受中間版本，不虛構成前輪。兩款的既有比較PNG已加入它與最終far的同相機／公尺／光線旁置，仍各20張。`PRIOR_FIXED`由該producer的相同review命令重出；當前資料夾只保留最新模型／viewer。近景10原生單元與該中間producer每個byte相同，最終producer全部重新讀回／GLB／PNG／viewer下載與SHA再驗。
