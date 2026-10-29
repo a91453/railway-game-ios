@@ -35,6 +35,8 @@
 
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
+> iPad 直拿的兩站比較卡（派工單 SPD，[決策 491](decisions/491.md)，`claude/station-pair-drawer-portrait`）：路線面板開著時比較卡改站到地圖右下角按鈕上方、讓開建設工具列；橫拿不變。截圖驗收暫緩；發版前在 iPad 直拿新增路線點兩站看（下一步見決策 491）。Linux `StationPairDrawerLayoutTests` VERIFIED；實機 UNVERIFIED。
+
 > 鋪路畫的和鋪好的不同（派工單 RDW，[決策 487](decisions/487.md)，`claude/road-draw-preview-mismatch`）：實景地圖上拖過城市道路格子的段落，現在也鋪成玩家的路（不收錢）。作者暫停截圖驗收；發版前在實機看：彰化田中大社路旁（或任何實景地圖的巷弄旁）用「建設 → 公車 → 道路」拖一個方框和一條帶圈的路，鋪好後的線要和預覽一樣；點底圖沒路的地方，要說「在地圖上拖過要鋪路的地方」，不是「城市的路」；整段沿現有的路拖，按鈕寫「沿現有的路 X，不用錢」。Linux 測試 `RoadDrawRealMapTests`、`RoadGridTests` VERIFIED；實機 UNVERIFIED。
 
 > 乘客需求模型對照（派工單 DEM，研究，`claude/demand-model-research`）：[`research/DEMAND_MODEL_COMPARISON_2026-10-29.md`](research/DEMAND_MODEL_COMPARISON_2026-10-29.md)。用北捷 2025 各站進站與 2025-10 完整 OD 量過現行模型；建議方案 A（居民與工作分開給權重，GameCore 開關、升存檔），B（起訖距離衰減）排在 A 之後；轉運站（台北車站、板橋）轉乘點數上限另外量。實作都還沒派，順序見該文件 §6。

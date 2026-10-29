@@ -117,4 +117,112 @@ final class StationPairDrawerLayoutTests: XCTestCase {
         XCTAssertEqual(placed.y, 150)
         XCTAssertFalse(BuildConfirmLayout.overlaps(x: placed.x, y: placed.y, width: 120, height: 50, wall))
     }
+
+    // Decision 491 (TestFlight 95.1): iPads held upright, a new line's
+    // stations picked with the line panel open beside the map. The panel
+    // takes half the width (``SidePanelWidth``), the map's coverage, 3D and
+    // zoom buttons stand beside it at the foot of the map, and the
+    // building tools run down the leading edge.
+    private struct Upright {
+        let name: String
+        let width: Double, height: Double
+        /// The map's corner column, measured from the screen's trailing
+        /// and bottom edges: the three buttons in a row and their margins,
+        /// or with a layer's key over them.
+        let corner: Double, cornerHeight: Double
+    }
+
+    private let uprights = [
+        Upright(name: "iPad Air 11-inch", width: 820, height: 1180, corner: 3 * 44 + 2 * 10, cornerHeight: 90 + 44 + 2 * 10),
+        Upright(name: "iPad Air 11-inch, a layer's key", width: 820, height: 1180, corner: 260 + 2 * 10, cornerHeight: 90 + 44 + 160 + 2 * 10),
+        Upright(name: "iPad Pro 13-inch", width: 1032, height: 1376, corner: 3 * 44 + 2 * 10, cornerHeight: 90 + 44 + 2 * 10),
+    ]
+    /// The dock along the bottom (not a tools column), 80 tall, and the
+    /// drawer's foot above it as ContentView lays it out.
+    private let dockHeight = 80.0
+    private var uprightBottom: Double { dockHeight + 2 * margin }
+    private var railEnd: Double { margin + ToolColumn.railWidth }
+
+    private func uprightInsets(_ ipad: Upright) -> (panel: Double, insets: StationPairDrawerLayout.Insets?) {
+        let panel = SidePanelWidth.panel(screenWidth: ipad.width, compactHeight: false) + margin
+        let insets = StationPairDrawerLayout.insets(
+            screenWidth: ipad.width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+            panel: panel, card: 0, corner: panel + ipad.corner, cornerHeight: ipad.cornerHeight, bottom: uprightBottom
+        )
+        return (panel, insets)
+    }
+
+    func testOnAnUprightIPadTheBandBesideTheCornerButtonsIsTooNarrow() {
+        // Before: the drawer's band ended at the corner buttons beside the
+        // panel, narrower than its top line and bars, or none at all.
+        for ipad in uprights where ipad.width < 1000 {
+            let panel = SidePanelWidth.panel(screenWidth: ipad.width, compactHeight: false) + margin
+            let trailing = StationPairDrawerLayout.trailingInset(panel: panel, card: 0, corner: panel + ipad.corner)
+            let before = StationPairDrawerLayout.frame(
+                size: ScreenSize(width: 460, height: 130), screenWidth: ipad.width, screenHeight: ipad.height,
+                leading: 0, trailing: trailing, bottom: uprightBottom, margin: margin
+            )
+            XCTAssertLessThan(before.width, StationPairDrawerLayout.minimumWidth, "\(ipad.name): \(before)")
+            XCTAssertLessThan(before.x, railEnd, "\(ipad.name): over the building tools")
+        }
+    }
+
+    func testOnAnUprightIPadTheDrawerStandsAboveTheCornerButtons() {
+        for ipad in uprights {
+            let (panel, found) = uprightInsets(ipad)
+            guard let insets = found else { return XCTFail("\(ipad.name): the drawer shows") }
+            let size = ScreenSize(width: 460, height: 130)
+            let drawer = StationPairDrawerLayout.frame(
+                size: size, screenWidth: ipad.width, screenHeight: ipad.height,
+                leading: insets.leading, trailing: insets.trailing, bottom: insets.bottom, margin: margin
+            )
+            XCTAssertGreaterThanOrEqual(drawer.width, StationPairDrawerLayout.minimumWidth, ipad.name)
+            XCTAssertGreaterThanOrEqual(drawer.x, 0, "\(ipad.name): on the screen")
+            XCTAssertLessThanOrEqual(drawer.x + drawer.width, ipad.width - panel, "\(ipad.name): clear of the panel")
+            let cornerButtons = ScreenFrame(
+                x: ipad.width - panel - ipad.corner, y: ipad.height - ipad.cornerHeight, width: ipad.corner, height: ipad.cornerHeight
+            )
+            XCTAssertFalse(overlaps(drawer, cornerButtons), "\(ipad.name): \(drawer) and \(cornerButtons)")
+            let dock = ScreenFrame(x: 0, y: ipad.height - dockHeight, width: ipad.width, height: dockHeight)
+            XCTAssertFalse(overlaps(drawer, dock), "\(ipad.name): over the dock")
+            if insets.bottom > uprightBottom {
+                // Raised along the leading edge, past the building tools.
+                XCTAssertGreaterThanOrEqual(drawer.x, railEnd + margin, "\(ipad.name): clear of the building tools")
+            }
+        }
+    }
+
+    func testOnAnIPadOnItsSideTheDrawerStaysWhereItWas() {
+        // Landscape keeps decision 384's band beside the corner buttons.
+        let width = 1180.0
+        let panel = SidePanelWidth.panel(screenWidth: width, compactHeight: false) + margin
+        for corner in [0, panel + 152] {
+            let insets = StationPairDrawerLayout.insets(
+                screenWidth: width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+                panel: panel, card: 0, corner: corner, cornerHeight: 154, bottom: uprightBottom
+            )
+            XCTAssertEqual(insets, StationPairDrawerLayout.Insets(
+                leading: 0, trailing: StationPairDrawerLayout.trailingInset(panel: panel, card: 0, corner: corner), bottom: uprightBottom
+            ))
+        }
+        // And with nothing beside the map, upright too.
+        XCTAssertEqual(
+            StationPairDrawerLayout.insets(
+                screenWidth: 820, margin: margin, leading: 0, rail: 0, panel: 0, card: 0, corner: 162, cornerHeight: 300, bottom: uprightBottom
+            ),
+            StationPairDrawerLayout.Insets(leading: 0, trailing: 162, bottom: uprightBottom)
+        )
+    }
+
+    func testWithNoRoomEvenBesideThePanelTheDrawerStaysAway() {
+        // An iPad mini held upright: beside its panel and the building
+        // tools, less than the drawer needs; the ✓ pill's words still give
+        // the line's length and time.
+        let width = 744.0
+        let panel = SidePanelWidth.panel(screenWidth: width, compactHeight: false) + margin
+        XCTAssertNil(StationPairDrawerLayout.insets(
+            screenWidth: width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+            panel: panel, card: 0, corner: panel + 152, cornerHeight: 154, bottom: uprightBottom
+        ))
+    }
 }
