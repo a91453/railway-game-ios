@@ -31,7 +31,7 @@ struct StationLineChips: View {
     private func chip(_ line: ServiceLine, codes: [LineID: String]) -> some View {
         let color = Palette.lineColor(line.id, custom: line.color)
         return Button {
-            session.selectLine(line.id)
+            session.openLine(line.id)
             screen.panel = .lines
         } label: {
             HStack(spacing: 6) {

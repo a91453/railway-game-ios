@@ -419,6 +419,11 @@ public final class GameSession {
     /// Read the line itself through ``selectedLine``.
     public private(set) var selectedLineID: LineID?
 
+    /// Decision 481: the line whose own page the lines panel shows over its
+    /// list, or `nil` for the list. Only UI state, never saved; read the
+    /// line through ``openedLine``.
+    public internal(set) var openedLineID: LineID?
+
     /// The real line just bought (decision 315), for the card that says
     /// so; the card clears it when closed.
     public var lastLineAcquired: RealLineAcquired?
@@ -2395,6 +2400,9 @@ public final class GameSession {
     public func selectLine(_ id: LineID) {
         guard id != selectedLineID, world.line(id: id) != nil else { return }
         selectedLineID = id
+        // Decision 481: a line's page open shows the line selected, whose
+        // commands its controls give.
+        if openedLineID != nil { openedLineID = id }
         message = nil
     }
 
@@ -2566,6 +2574,8 @@ public final class GameSession {
             }
             if let created = made?.line?.id {
                 selectedLineID = created
+                // Decision 481: the new line's own page, where its trains are.
+                openedLineID = created
                 clearLineDraft()
             }
             return
@@ -2586,6 +2596,7 @@ public final class GameSession {
         }
         if let created = made?.line?.id {
             selectedLineID = created
+            openedLineID = created
             clearLineDraft()
         }
     }
@@ -2610,6 +2621,8 @@ public final class GameSession {
             updateFollowSounds()
         }
         selectedLineID = world.lines.first?.id
+        // Decision 481: back to the list the removed line's page came from.
+        if removed != nil { openedLineID = nil }
     }
 
     /// One directed leg of the selected service: replace or clear its
@@ -3372,6 +3385,7 @@ public final class GameSession {
         if let id = tappedTrainID, world.train(id: id) == nil { tappedTrainID = nil }
         endFollowIfGone()
         if let id = selectedLineID, world.line(id: id) == nil { selectedLineID = nil }
+        if let id = openedLineID, world.line(id: id) == nil { openedLineID = nil }
         if let id = selectedTrackEdge, world.network.edge(id) == nil { selectedTrackEdge = nil }
         // Undo gives a building's ID out again: the next one is not this.
         if let id = selectedBuildingID, world.placedBuilding(id: id) == nil { selectedBuildingID = nil }

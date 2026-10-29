@@ -7,10 +7,11 @@ user-rejected revision-1 lamp layout and side paint. Revision-1 producer
 `02d61687481ebdd832edc5c11685af51eca05362` is the actual prior
 export used for fixed-camera comparison. See the review record for limits.
 
-The current delivery uses `Map3DTEMU2000.studyModel` and the shared
-`tools/train-models` exporter. The operating `Map3DTEMU2000.model` remains
-the earlier payload. The five near and five far units are registered only in
-`Map3DModelPack.studies`; their complete eight-car formations are generic
+The current delivery uses `Map3DTEMU2000.model` and the shared
+`tools/train-models` exporter. Since decision 484 the operating Puyuma
+(`set-puyuma*`) is made of the same units (its cab cars' lamp lenses lit);
+the earlier operating recipe is deleted. The five near and five far units are
+registered in `Map3DModelPack.studies`; their complete eight-car formations are generic
 M3DAssembly scenes from [`assembly-spec.json`](assembly-spec.json). The near
 scene exceeds the 15,000-triangle *single M3DM* limit, so it is never used as
 one native unit file. See [the research and review record](../../docs/art/temu2000-2026-10-29/README.md).

@@ -58,6 +58,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
                     // Decision 466: #1422's Sanying cabs, 4,306 each.
                     : set.key == "sanying" ? 4_200...4_400
+                    // Decision 484: #1456's revision-2 Puyuma cabs, 6,980 and 6,932.
+                    : set.key == "puyuma" && [set.headName, set.tailName].contains(name) ? 6_900...7_000
                     // Decision 483: #1454's Kaohsiung cabs, 5,790 each; #1437's Taichung Green cabs, 4,804.
                     : set.key == "kaohsiung" && [set.headName, set.tailName].contains(name) ? 5_700...5_900
                     : set.key == "taichungGreen" ? 4_700...4_900

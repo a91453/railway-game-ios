@@ -51,8 +51,8 @@ final class ListSearchTests: XCTestCase {
 
     func testTheFilters() throws {
         var world = try world()
-        XCTAssertEqual(world.lineFilters, [.all, .losing], "no freight line")
-        XCTAssertEqual(try self.world(accounts: false).lineFilters, [.all])
+        XCTAssertEqual(world.lineFilters, [.all, .attention, .losing], "no freight line")
+        XCTAssertEqual(try self.world(accounts: false).lineFilters, [.all, .attention])
         XCTAssertEqual(world.lines(world.lines, matching: ListSearch(), filter: .losing), [], "no record of yesterday yet")
         XCTAssertEqual(world.lines(world.lines, matching: ListSearch(), filter: .freight), [])
 

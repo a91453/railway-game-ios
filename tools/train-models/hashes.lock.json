@@ -1230,52 +1230,52 @@
       "triangles" : 428
     },
     "light-set-puyuma-car" : {
-      "hash" : "736e66c1bf88556d",
-      "triangles" : 128
+      "hash" : "491ef31cb7c59d31",
+      "triangles" : 264
     },
     "light-set-puyuma-centre" : {
-      "hash" : "736e66c1bf88556d",
-      "triangles" : 128
+      "hash" : "491ef31cb7c59d31",
+      "triangles" : 264
     },
     "light-set-puyuma-head" : {
-      "hash" : "41ba5e0af8522ba6",
-      "triangles" : 108
+      "hash" : "b723336d97efb28e",
+      "triangles" : 220
     },
     "light-set-puyuma-panto" : {
-      "hash" : "672c4d5df043936d",
-      "triangles" : 128
+      "hash" : "c9ccb5b1c2d76317",
+      "triangles" : 274
     },
     "light-set-puyuma-pantoBack" : {
-      "hash" : "736e66c1bf88556d",
-      "triangles" : 128
+      "hash" : "26e8f1b3ca45f417",
+      "triangles" : 274
     },
     "light-set-puyuma-tail" : {
-      "hash" : "ef517689cd27191e",
-      "triangles" : 100
+      "hash" : "d519aa1af0067ad6",
+      "triangles" : 196
     },
     "light-set-puyumaFar-car" : {
-      "hash" : "a5d6ca1e9e6f55f1",
-      "triangles" : 8
+      "hash" : "d5a39485d8ab3829",
+      "triangles" : 24
     },
     "light-set-puyumaFar-centre" : {
-      "hash" : "a5d6ca1e9e6f55f1",
-      "triangles" : 8
+      "hash" : "d5a39485d8ab3829",
+      "triangles" : 24
     },
     "light-set-puyumaFar-head" : {
-      "hash" : "c13443e3c8ab181a",
-      "triangles" : 12
+      "hash" : "d7bd46b62ab9b362",
+      "triangles" : 28
     },
     "light-set-puyumaFar-panto" : {
-      "hash" : "b6f5b33e4fac42f1",
-      "triangles" : 8
+      "hash" : "62c08945e3450a61",
+      "triangles" : 28
     },
     "light-set-puyumaFar-pantoBack" : {
-      "hash" : "a5d6ca1e9e6f55f1",
-      "triangles" : 8
+      "hash" : "32d881f9812c1161",
+      "triangles" : 28
     },
     "light-set-puyumaFar-tail" : {
-      "hash" : "2bf27a4a04ea1652",
-      "triangles" : 20
+      "hash" : "1c976984794eefba",
+      "triangles" : 36
     },
     "light-set-R100CK-car" : {
       "hash" : "2d6cad0d4d66cb7",
@@ -2398,52 +2398,52 @@
       "triangles" : 3992
     },
     "set-puyuma-car" : {
-      "hash" : "818f0102d995d964",
-      "triangles" : 1624
+      "hash" : "6fdd0e9eade525e6",
+      "triangles" : 1800
     },
     "set-puyuma-centre" : {
-      "hash" : "349d340d24a08b7b",
-      "triangles" : 1636
+      "hash" : "be4628237761e6b1",
+      "triangles" : 1812
     },
     "set-puyuma-head" : {
-      "hash" : "79367f3be5983db5",
-      "triangles" : 2418
+      "hash" : "a10251f760132eef",
+      "triangles" : 6980
     },
     "set-puyuma-panto" : {
-      "hash" : "f829076941cc01f4",
-      "triangles" : 1776
+      "hash" : "5f6f962a74ffac64",
+      "triangles" : 1952
     },
     "set-puyuma-pantoBack" : {
-      "hash" : "bbe8d856188692e0",
-      "triangles" : 1776
+      "hash" : "1f07f53c90fd85e1",
+      "triangles" : 1952
     },
     "set-puyuma-tail" : {
-      "hash" : "f0a8eb8e35d4449b",
-      "triangles" : 2370
+      "hash" : "26077da8d54f3731",
+      "triangles" : 6932
     },
     "set-puyumaFar-car" : {
-      "hash" : "21d773ce5b0d3925",
-      "triangles" : 560
+      "hash" : "de0122b9399c7fa1",
+      "triangles" : 760
     },
     "set-puyumaFar-centre" : {
-      "hash" : "8cede3fd244803d8",
-      "triangles" : 572
+      "hash" : "564b267821f66b50",
+      "triangles" : 772
     },
     "set-puyumaFar-head" : {
-      "hash" : "d83d1d7c23b3802e",
-      "triangles" : 962
+      "hash" : "97a39b52a37ef611",
+      "triangles" : 2812
     },
     "set-puyumaFar-panto" : {
-      "hash" : "102ced1701ae4a78",
-      "triangles" : 632
+      "hash" : "455a8a3e8f2503fc",
+      "triangles" : 832
     },
     "set-puyumaFar-pantoBack" : {
-      "hash" : "68cce74c846ce2c8",
-      "triangles" : 632
+      "hash" : "4aa2908037cb6d90",
+      "triangles" : 832
     },
     "set-puyumaFar-tail" : {
-      "hash" : "26190409a1012ce1",
-      "triangles" : 1010
+      "hash" : "494e6375b0930991",
+      "triangles" : 2860
     },
     "set-R100CK-car" : {
       "hash" : "9f2aebebb2477e4b",
