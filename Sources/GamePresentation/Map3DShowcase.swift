@@ -109,14 +109,18 @@ public enum Map3DShowcase {
         // Metro: the Wenhu line's car in its brown, as its band takes a
         // line's colour. Decision 461: the Circular line's 610 and the
         // C371, the C381 as its own model, and the generic car the other
-        // cities' metros are drawn as, in Kaohsiung's red line's red.
+        // cities' metros are drawn as, in a red line's red.
         Entry("circular610", "Taipei Metro Circular line 610", "台北捷運環狀線 610", .metro, cars: 4, fixed: true),
         Entry("metroC341", "Taipei Metro C341", "台北捷運 C341", .metro, cars: 6),
         Entry("metroC381", "Taipei Metro C381", "台北捷運 C381", .metro, cars: 6),
         Entry("metroC371", "Taipei Metro C371", "台北捷運 C371", .metro, cars: 6),
         // Decision 466: the Sanying line's two cars.
         Entry("sanying", "New Taipei Metro Sanying line", "新北捷運三鶯線", .metro, cars: 2, fixed: true),
-        Entry("metroGeneric", "Metro train (Kaohsiung, Taoyuan, Taichung)", "捷運列車（高雄、桃園、台中）", .metro, cars: 3, most: 6, stripe: 0xE3002C),
+        // Decision 483: Kaohsiung's Siemens three cars and the Taichung
+        // Green line's two; the generic car is Taoyuan's now.
+        Entry("kaohsiung", "Kaohsiung Metro Red and Orange lines", "高雄捷運紅線、橘線", .metro, cars: 3, fixed: true),
+        Entry("taichungGreen", "Taichung Metro Green line", "台中捷運綠線", .metro, cars: 2, fixed: true),
+        Entry("metroGeneric", "Metro train (Taoyuan)", "捷運列車（桃園）", .metro, cars: 3, most: 6, stripe: 0xE3002C),
         Entry("wenhu", "Taipei Metro Wenhu line", "台北捷運文湖線", .metro, cars: 4, stripe: 0xC48C31),
         Entry("fourCarMetro", "Four-car metro", "四節捷運列車", .metro, cars: 4, most: 6),
         // Light rail.

@@ -2082,6 +2082,14 @@
   - Linux 預覽：`tools/train-models/run.sh OUT --night-lights --ids set-puyuma-head,set-puyuma-tail`，再 `render.mjs OUT --time both`。
 - **TestFlight 的幀數**：近景一列從 14,860 三角變 25,040，在預算內。幀數如果變差，照決策 417 加中間版或降面。
 
+### 4.26 高雄紅橘線、台中綠線、鳴日號的車接進營運（決策 483，session_01YGNNumwzbuZGqTqwGDGEzX，派工單 TRN，2026-10-29）
+
+- **做了的**在[決策 483](decisions/483.md)：實景高雄紅橘線改畫 #1454 的西門子三節車，台中綠線改畫 #1437 的兩節車，鳴日號改畫 #1480 的 E200 鳴日號風格，近景與遠景都接；列車展示多兩列。盤點表（最近兩天交付的每一款車、營運用哪個配方、接入要改哪裡、作者接受的紀錄）也在決策 483。
+- **沒做、留給別人的**：
+  - 普悠瑪紅色塗裝：派工單 PUY 的 #1487（決策 484，§4.25）。
+  - 高雄車要不要算不鏽鋼（`Map3DTrainMaterial.stainlessSets`）：作者看過真機再定。
+  - 實機：兩款近景的幀數、500 m 換遠景、台中第四版與鳴日號的外觀（作者，TestFlight，UNVERIFIED）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
