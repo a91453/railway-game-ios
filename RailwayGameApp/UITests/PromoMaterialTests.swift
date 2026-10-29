@@ -201,7 +201,13 @@ final class PromoMaterialTests: XCTestCase {
             lines.tap()
             settle(seconds: 3)
             keep("\(prefix)-lines", app)
-            let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'line.report.'")).firstMatch
+            // The first line's row, under the rows over the list.
+            let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'line.trainsRow.'")).firstMatch
+            for _ in 0..<4 where !(row.exists && row.isHittable) {
+                app.collectionViews.firstMatch.swipeUp(velocity: .slow)
+                settle(seconds: 1)
+            }
+            keep("\(prefix)-lines-scrolled", app)
             if row.exists, row.isHittable {
                 row.tap()
                 settle(seconds: 3)
@@ -243,12 +249,6 @@ final class PromoMaterialTests: XCTestCase {
         closeSheetIfAny(in: app)
         openFromGameMenu("menu.settings", as: "\(prefix)-settings", in: app)
         closeSheetIfAny(in: app)
-        tapIfThere("hud.time", in: app)
-        if app.descendants(matching: .any)["hud.forecast"].firstMatch.appears(within: 5) {
-            settle()
-            keep("\(prefix)-forecast", app)
-        }
-        closeSheetIfAny(in: app)
 
         // The building tools, each in turn.
         let build = app.buttons["dock.build"]
@@ -277,6 +277,13 @@ final class PromoMaterialTests: XCTestCase {
             keep("\(prefix)-map3d", app)
             tapIfThere("map3D.close", in: app)
             settle()
+        }
+
+        // The week's weather, last: its popover stays over the dock.
+        tapIfThere("hud.time", in: app)
+        if app.descendants(matching: .any)["hud.forecast"].firstMatch.appears(within: 5) {
+            settle()
+            keep("\(prefix)-forecast", app)
         }
     }
 
