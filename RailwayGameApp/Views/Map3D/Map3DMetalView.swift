@@ -29,6 +29,12 @@ final class Map3DMetalView: MTKView {
         /// screen's pace, not the frame's work (2026-10-21).
         var waitMilliseconds: Double
         var gpuMilliseconds: Double
+        /// Decision 485: the main thread's busy time a frame (everything
+        /// it ran between waits, the frame's own work and SwiftUI's and the
+        /// game loop's), and the longest busy stretch: a tick's work on the
+        /// main thread shows here, not in ``cpuMilliseconds``.
+        var mainMilliseconds: Double
+        var mainLongestMilliseconds: Double
         var drawCalls: Int
         var triangles: Int
         /// Decision 259: the figures and vehicles drawn, and how much
@@ -241,6 +247,11 @@ final class Map3DMetalView: MTKView {
     private var lastStats = CACurrentMediaTime()
     private var lastCounts = (drawCalls: 0, triangles: 0)
     private var lastLife = (people: 0, vehicles: 0)
+    /// Decision 485: the main run loop's busy stretches, from waking to
+    /// waiting again, over the last half second.
+    private var mainBusy = (total: 0.0, longest: 0.0)
+    private var mainAwake: CFTimeInterval?
+    private var mainObservers: [CFRunLoopObserver] = []
 
     /// The view, or `nil` where the device has no Metal or the shaders do
     /// not load.
@@ -1329,6 +1340,29 @@ final class Map3DMetalView: MTKView {
             + Map3DSunShadow.rows(sun, lighting: shown)
     }
 
+    /// Decision 485: watches the main run loop while the view is in a
+    /// window: first after it wakes, last before it waits.
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        for observer in mainObservers { CFRunLoopObserverInvalidate(observer) }
+        mainObservers = []
+        mainAwake = nil
+        guard window != nil else { return }
+        let woke = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.afterWaiting.rawValue, true, CFIndex.min) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.mainAwake = CACurrentMediaTime() }
+        }
+        let waits = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.max) { [weak self] _, _ in
+            MainActor.assumeIsolated {
+                guard let self, let awake = self.mainAwake else { return }
+                self.mainAwake = nil
+                let busy = CACurrentMediaTime() - awake
+                self.mainBusy = (self.mainBusy.total + busy, max(self.mainBusy.longest, busy))
+            }
+        }
+        mainObservers = [woke, waits].compactMap { $0 }
+        for observer in mainObservers { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
+    }
+
     private func record(cpu: Double, wait: Double, drawCalls: Int, triangles: Int) {
         frames += 1
         cpuTimes.append(cpu)
@@ -1346,6 +1380,8 @@ final class Map3DMetalView: MTKView {
             cpuMilliseconds: Self.median(cpuTimes) * 1_000,
             waitMilliseconds: Self.median(waitTimes) * 1_000,
             gpuMilliseconds: Self.median(gpu) * 1_000,
+            mainMilliseconds: frames > 0 ? mainBusy.total / Double(frames) * 1_000 : 0,
+            mainLongestMilliseconds: mainBusy.longest * 1_000,
             drawCalls: lastCounts.drawCalls,
             triangles: lastCounts.triangles,
             people: lastLife.people,
@@ -1374,6 +1410,7 @@ final class Map3DMetalView: MTKView {
         frames = 0
         cpuTimes.removeAll()
         waitTimes.removeAll()
+        mainBusy = (0, 0)
         lastStats = now
         onStats?(stats)
     }

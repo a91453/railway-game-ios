@@ -2144,6 +2144,10 @@
 - **留到發版前**：截圖驗收（決策 482 暫緩）。`WebsiteScreenshotTests.testLinesListAndLinePage` 的 `lines-list` 那張就是橫放的清單，看：控制列是一列、往下捲看得到 3 列以上、名稱與「1 列 · 每 60 分」「昨日 … 人次」沒有「…」。前後對照的示意在 `docs/art/lines-panel-486-2026-10-29/overview.png`（示意圖，不是截圖）。
 - **等實機看**：iPhone SE 寬的面板控制列是否一列放得下；放大鏡打開搜尋欄時鍵盤是否擋住結果。
 
+### 4.29 3D 跟車 10× 的主執行緒工作（決策 485，session_01YGNNuphxaPGPV7TDzRjjop，派工單 FPS，2026-10-29）
+
+3D 地圖的列車滑行與車身高度改從 tick（主執行緒外）拿，3D 面板多一行 `main X ms · longest Y ms`。留下的：實機（3D、駕駛室、集集線、10×）看 fps 回到 60 沒有；`longest` 若仍常超過 30 ms，照 [決策 485](decisions/485.md) 的下一步用 Instruments 找剩下的。截圖驗收照作者 2026-10-29 的指示延到發版前（看 3D 面板展開的那張）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
