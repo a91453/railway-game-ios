@@ -140,6 +140,49 @@ final class PromoMaterialTests: XCTestCase {
     func testCityKaohsiung() { city("tra-kaohsiung", name: "kaohsiung") }
     func testCityHualien() { city("tra-hualien", name: "hualien") }
 
+    // MARK: - The new trains in the train showcase
+
+    /// The new Puyuma, the Ming-Ri, Kaohsiung's and Taichung Green's trains
+    /// side by side in the demo mode's train showcase (decision 434): its
+    /// three camera views, then the turntable going round them by day, at
+    /// dusk and at night with the buttons hidden. The 3D quality is the
+    /// saving one, so the Simulator's software drawing keeps up.
+    func testTrainShowcaseNewTrains() {
+        let app = launch(extra: ["-\(Self.qualityKey)", "saving"])
+        defer { app.terminate() }
+        guard openTrainShowcase(in: app) else { return }
+        pickShowcaseTrains(off: ["emu3000", "emu800", "highSpeed", "metroC341"],
+                           on: ["MINGRI", "kaohsiung", "taichungGreen"], in: app)
+        waitForPicture(in: app, timeout: 120)
+        settle(seconds: 3)
+        markAction()
+        keep("showcase-front", app)
+        for view in ["side", "overhead", "closeUp"] {
+            tapIfThere("trainShowcase.camera.\(view)", in: app)
+            settle(seconds: 5)
+            keep("showcase-\(view)", app)
+        }
+        // A toggle in the button style: read as a button or a switch.
+        let turntable = app.descendants(matching: .any)["trainShowcase.turntable"].firstMatch
+        if turntable.appears(within: 5), turntable.isHittable { turntable.tap() }
+        for (light, name) in [("白天", "day"), ("黃昏", "dusk"), ("夜晚", "night")] {
+            let segment = app.segmentedControls["trainShowcase.light"].buttons[light]
+            if !app.buttons["trainShowcase.hide"].exists {
+                let reveal = app.descendants(matching: .any)["trainShowcase.reveal"].firstMatch
+                if reveal.exists { reveal.tap() }
+                _ = app.buttons["trainShowcase.hide"].appears(within: 5)
+            }
+            if segment.appears(within: 5), segment.isHittable { segment.tap() }
+            settle(seconds: 2)
+            tapIfThere("trainShowcase.hide", in: app)
+            // The turntable goes round while the picture is held.
+            settle(seconds: 6)
+            keep("showcase-turn-\(name)", app)
+            settle(seconds: 12)
+            keep("showcase-turn-\(name)-later", app)
+        }
+    }
+
     // MARK: - Scenes
 
     /// The simple demo opened at `time`: the clock runs on from there.
@@ -296,6 +339,49 @@ final class PromoMaterialTests: XCTestCase {
             }
         }
     }
+
+    /// Opens the train showcase from the settings: the version row tapped
+    /// five times shows the demo mode's rows (as `TrainShowcaseUITests`).
+    private func openTrainShowcase(in app: XCUIApplication) -> Bool {
+        let settings = app.buttons["start.settings"]
+        guard settings.appears(within: 30) else { XCTFail("No start screen"); return false }
+        settings.tap()
+        guard app.switches["settings.music"].appears(within: 10) else { XCTFail("No settings"); return false }
+        let version = app.descendants(matching: .any)["settings.version"].firstMatch
+        guard app.dragUntilWhollyOnScreen(version, clearOf: .slider) else { XCTFail("No version row"); return false }
+        let showcase = app.buttons["settings.trainShowcase"]
+        let demoSwitch = app.switches["settings.demoMode"]
+        for _ in 0..<4 where !showcase.exists && !demoSwitch.exists {
+            for _ in 0..<5 { version.tap() }
+            _ = showcase.appears(within: 3) || demoSwitch.appears(within: 1)
+        }
+        guard app.dragUntilWhollyOnScreen(showcase, clearOf: .slider) else { XCTFail("No train showcase row"); return false }
+        showcase.tap()
+        guard app.buttons["trainShowcase.pick"].appears(within: 60) else { XCTFail("The showcase did not open"); return false }
+        return true
+    }
+
+    /// Takes the trains `off` the showcase and puts the ones `on` on it, in
+    /// the picker's order.
+    private func pickShowcaseTrains(off: [String], on: [String], in app: XCUIApplication) {
+        let pick = app.buttons["trainShowcase.pick"]
+        guard pick.becomesHittable(within: 10) else { return }
+        pick.tap()
+        let list = app.collectionViews.containing(.any, identifier: "trainShowcase.cars.puyuma").firstMatch
+        guard list.appears(within: 10) else { return }
+        for key in Self.pickerOrder where off.contains(key) || on.contains(key) {
+            let row = app.buttons["trainShowcase.pick.\(key)"]
+            if app.scrollUntilShown(row, in: list), row.isEnabled { row.tap() }
+        }
+        tapIfThere("trainShowcase.pick.done", in: app)
+        _ = app.buttons["trainShowcase.pick.done"].disappears(within: 10)
+    }
+
+    /// The 3D quality setting's key (`Map3DQuality.key`).
+    private static let qualityKey = "map3D.quality"
+    /// The picker's rows that the showcase scene touches, in the picker's
+    /// order (`Map3DShowcase.catalog`).
+    private static let pickerOrder = ["emu3000", "emu800", "puyuma", "MINGRI", "highSpeed", "metroC341", "kaohsiung", "taichungGreen"]
 
     // MARK: - Helpers
 
