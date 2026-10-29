@@ -51,4 +51,6 @@ main基準50437249。逐張查#1357/#1416/#1342/#1422/#1424/#1437皆MERGED。既
 
 外觀自檢與實拍逐視角對照已做，但使用者尚未接受此producer。`file://`由瀏覽器管理政策阻擋，獨立記UNVERIFIED；localhost載入／旋轉／縮放／下載成功。不把Linux WebGL或Blender當Simulator、真機Metal／效能／動畫。
 
-素材draft：[railway-assets-private#22](https://github.com/a91453/railway-assets-private/pull/22)；[完整revision-1](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-1)，含自含viewer／原生／GLB／20PNG／來源／SHA。公開PR稍後互鏈。
+素材draft：[railway-assets-private#22](https://github.com/a91453/railway-assets-private/pull/22)；[完整revision-1](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-1)，含自含viewer／原生／GLB／20PNG／來源／SHA。公開draft：[railway-game-ios#1454](https://github.com/a91453/railway-game-ios/pull/1454)。
+
+啟用MOTION_BUDGET_REPORT=1另跑記憶體報告測試通過；standard585模型／133.3MB，靜態studies不入常駐包。最新CI以#1454同head checks為準；素材#22同head guard另查。

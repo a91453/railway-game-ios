@@ -647,5 +647,12 @@
         "matches_expected_bytes": true
       }
     ]
+  },
+  "memory_report": {
+    "status": "VERIFIED",
+    "command": "MOTION_BUDGET_REPORT=1 swift test --skip-build --filter Map3DMotionBudgetTests.testWhatTheMapKeepsInMemory",
+    "standard_models": 585,
+    "model_buffers_MB": 133.3,
+    "tests": 1
   }
 }

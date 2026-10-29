@@ -2384,3 +2384,5 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 2026-10-29 Codex 高雄紅／橘線現役西門子 studies
 
 [來源／交接／重建／狀態](art/kaohsiung/README.md)：producer `62c2da42`，獨立DM1/T/DM2近遠六單元與三車assembly，只有studies，krtc→metroGeneric三車保持。原始高捷PDF、市府實車圖、Siemens SF3000原圖錄及可靠實拍已下載開啟；兩線共用一般銀／綠松塗裝，不另造紅橘車。近9924／遠4788三角，18成品獨立producer逐bytes相同；688他車實際payload/FNV保持，28既有鎖差異不改。四狀態、簡化與資料缺口、最終驗證及互鏈draft見自有README。使用者外觀接受、營運接入、Simulator／真機Metal效能動畫UNVERIFIED；不合併／auto-merge／TestFlight，不動GameCore／存檔／fixtures／玩法。
+
+高雄交付互鏈：公開draft[#1454](https://github.com/a91453/railway-game-ios/pull/1454) ↔ 素材draft[#22](https://github.com/a91453/railway-assets-private/pull/22)，素材revision-1 `10f8abc`；兩庫base main。15項最終Swift＋啟用記憶體報告1項通過（standard585／133.3MB），最終交付viewer24實際下載SHA及20PNG／完整SHA清單通過；asset_guard11.6MB綠。最新CI看兩PR同head checks，不宣稱外觀／真機接受。
