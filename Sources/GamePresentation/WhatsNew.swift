@@ -31,6 +31,57 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-30-96",
+            items: [
+                Line(
+                    english: "You can buy the Danhai LRT Green Mountain Line; the Danhai depot past Kanding is built with it, and its trains rest there overnight.",
+                    chinese: "淡海輕軌綠山線可以買了，崁頂後面的淡海機廠一起蓋，車晚上收在機廠。"
+                ),
+                Line(
+                    english: "Settings has a new Garage, where everyone can look at the trains.",
+                    chinese: "設定裡多了「車庫」，每個人都能看列車展示。"
+                ),
+                Line(
+                    english: "The tutorial's step to see who rides opens the station's Riders group at once.",
+                    chinese: "教學「點車站看誰在搭車」那一步，直接打開車站的「旅客與運量」。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Following a train on the 3D map at 10x speed is smoother.",
+                    chinese: "3D 地圖跟著列車、開 10 倍速時更順。"
+                ),
+                Line(
+                    english: "The 3D garbage and recycling trucks no longer have holes, and no black triangles show through at night.",
+                    chinese: "3D 的垃圾車和資源回收車不再破洞，晚上不再透出黑色三角。"
+                ),
+                Line(
+                    english: "In the bus tool, stop names no longer pile up with your own stops or a same-named stop across the road, and zooming out is smoother.",
+                    chinese: "公車工具的站名不再和你的站牌、對面同名站疊在一起；拉遠看也更順。"
+                ),
+                Line(
+                    english: "Dragging a building to find its place is smoother.",
+                    chinese: "拖著建築找位置時更順。"
+                ),
+                Line(
+                    english: "A line bought in the daytime starts with the next morning's first train, and riders no longer wait all day for it, so trains no longer stall at Zhuzhong.",
+                    chinese: "白天買的線隔天首班車才開，開之前旅客不再先去等，列車不再卡在竹中。"
+                ),
+                Line(
+                    english: "Holding an iPad or phone upright while adding a line, the two-station card sits above the corner buttons and no longer runs off the screen.",
+                    chinese: "iPad 與手機直拿新增路線時，兩站比較卡移到角落按鈕上方，不再超出螢幕。"
+                ),
+                Line(
+                    english: "Jumping to a group from a station panel's menu stops at the start of that group.",
+                    chinese: "車站面板從選單跳組，會停在那一組的開頭。"
+                ),
+                Line(
+                    english: "Rain on the maps is redrawn less often, saving battery and running smoother.",
+                    chinese: "下雨時地圖少重畫，更省電也更順。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-30-95",
             items: [
                 Line(
