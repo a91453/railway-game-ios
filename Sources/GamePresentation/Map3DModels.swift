@@ -117,10 +117,11 @@ public struct Map3DModelPack: Sendable {
     /// models are. Only the tools and the model hashes read them.
     init(studiesBaked baked: Bool) {
         var models: [Model] = []
-        // Static TEMU2000 study; operating Puyuma mapping is a separate step.
-        models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.studyModel($0) }
-        models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.studyModel($0, far: true) }
-        models.append(Map3DTEMU2000.studyFormation())
+        // Static TEMU2000 units and formation; the operating Puyuma
+        // (`set-puyuma…`, decision 484) is made of the same units.
+        models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0) }
+        models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0, far: true) }
+        models.append(Map3DTEMU2000.formation())
         // Independent PP roles, near and far. The E500-hauled display
         // assembly is exported separately; it exceeds the per-file limit.
         for far in [false, true] {

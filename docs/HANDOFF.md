@@ -2074,6 +2074,14 @@
 - 沒解決的：「車隊總覽」清單（SwiftUI `List`）在 XCUITest 的拖曳、滑動、邊緣拖曳都不捲動，原因未知，不確定是不是真的 bug（UNVERIFIED，需要在實機試）。`testFreight` 因此在抓不到「跟隨」按鈕時略過「貨運列車」那張截圖。
 - 版面問題（截圖照實呈現，沒改）：地圖擴建的星等標籤蓋住鎖頭與價格、吉祥物蓋住價格、教學文字框蓋住「南站」標籤。
 
+### 4.25 營運的普悠瑪改用 TEMU2000 revision-2（決策 484，session_01YGNNuoy1fcM99AJFAieNat，派工單 PUY，2026-10-29）
+
+- **做了的**在[決策 484](decisions/484.md)：營運 `puyuma`／`puyumaFar` 改用 #1456 的 revision-2 近遠景，頭尾車用自己的燈鏡片發光；舊的營運配方刪掉（git 歷史在 main `197f642`）。studies 的 `temu2000-*` 不變。
+- **留到發版前：截圖驗收**（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」）。
+  - 看普悠瑪的白天、夜裡（頭燈在前、尾燈在後，燈在燈座上不是浮在車鼻前），以及 500 m 換遠景時有沒有跳。`WebsiteScreenshotTests.testTrainLooks` 或實機都可以。
+  - Linux 預覽：`tools/train-models/run.sh OUT --night-lights --ids set-puyuma-head,set-puyuma-tail`，再 `render.mjs OUT --time both`。
+- **TestFlight 的幀數**：近景一列從 14,860 三角變 25,040，在預算內。幀數如果變差，照決策 417 加中間版或降面。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
