@@ -92,6 +92,28 @@ final class FinanceCompositionTests: XCTestCase {
         XCTAssertTrue(costsOnly.income.isEmpty)
     }
 
+    func testTheSharesAddUpToAHundred() {
+        // Thirds: 33.3% each, rounded down to 99; the first takes the point.
+        let thirds = FinanceComposition(summary(fares: 100, freight: 100, rent: 100)).income
+        XCTAssertEqual(thirds.slices.map { thirds.percentText(of: $0) }, ["34%", "33%", "33%"])
+        let costs = FinanceComposition(summary(
+            operating: 382_206_00, maintenance: 7_000_00, energy: 6_000_00, staff: 5_000_00, interest: 4_955_88, tax: 91_014_00
+        )).costs
+        XCTAssertEqual(costs.percents.reduce(0, +), 100)
+        XCTAssertEqual(FinanceComposition.wholePercents(of: []), [])
+        XCTAssertEqual(FinanceComposition.wholePercents(of: [.zero, .zero]), [0, 0])
+    }
+
+    func testNoAccountsReadsADashNotZero() {
+        let none = FinanceComposition(summary(), hasRecords: false)
+        XCTAssertEqual(none.income.totalText, "—")
+        XCTAssertEqual(none.costs.summaryText(in: .english), "No accounts yet")
+        XCTAssertEqual(none.costs.summaryText(in: .traditionalChinese), "還沒有帳目")
+        let zero = FinanceComposition(summary())
+        XCTAssertEqual(zero.income.totalText, "$ 0")
+        XCTAssertEqual(zero.costs.summaryText(in: .traditionalChinese), "本期沒有支出")
+    }
+
     func testColoursFollowTheKindNotItsRank() {
         let a = FinanceComposition(summary(fares: 100, freight: 900)).income
         let b = FinanceComposition(summary(fares: 900, freight: 100)).income

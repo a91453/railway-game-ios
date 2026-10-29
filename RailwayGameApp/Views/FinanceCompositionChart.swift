@@ -25,9 +25,7 @@ struct FinanceCompositionChart: View {
                 .foregroundStyle(Theme.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             ForEach([composition.income, composition.costs], id: \.side) { ring in
-                if !ring.isEmpty {
-                    CompositionRing(ring: ring, language: language)
-                }
+                CompositionRing(ring: ring, language: language)
             }
         }
         .accessibilityElement(children: .contain)
@@ -49,7 +47,8 @@ struct FinanceCompositionChart: View {
     }
 }
 
-/// One donut and its slices listed beside it.
+/// One donut and its slices listed beside it; an empty ring keeps its
+/// place with its total ($ 0, or "—" with no accounts yet) and no ring.
 private struct CompositionRing: View {
     let ring: FinanceComposition.Ring
     let language: DisplayLanguage
@@ -88,7 +87,33 @@ private struct CompositionRing: View {
         }
     }
 
-    private var donut: some View {
+    @ViewBuilder private var donut: some View {
+        if ring.isEmpty {
+            centre
+                .frame(width: 136, height: 136)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(identifier)
+        } else {
+            chart
+        }
+    }
+
+    /// The ring's name and total, in its middle.
+    private var centre: some View {
+        VStack(spacing: 2) {
+            Text(verbatim: ring.title(in: language))
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+            Text(verbatim: ring.totalText)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+    }
+
+    private var chart: some View {
         let spec = ring.chart(in: language)
         return Chart(ring.slices) { slice in
             SectorMark(
@@ -106,18 +131,8 @@ private struct CompositionRing: View {
             GeometryReader { geometry in
                 if let frame = proxy.plotFrame {
                     let plot = geometry[frame]
-                    VStack(spacing: 2) {
-                        Text(verbatim: ring.title(in: language))
-                            .font(.caption2)
-                            .foregroundStyle(Theme.textSecondary)
-                        Text(verbatim: ring.totalText)
-                            .font(.callout.weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                    }
-                    .frame(width: plot.width * 0.56)
+                    centre
+                        .frame(width: plot.width * 0.56)
                     .position(x: plot.midX, y: plot.midY)
                 }
             }

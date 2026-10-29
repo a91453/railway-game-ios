@@ -75,8 +75,15 @@ public struct FinanceComposition: Hashable, Sendable {
         public let slices: [Slice]
         /// The slices together: every category of the side.
         public let total: Money
+        /// Each slice's share in whole percent, in slice order, adding up
+        /// to 100 (``wholePercents(of:)``).
+        public let percents: [Int64]
+        /// Whether the company keeps any accounts yet: without, an empty
+        /// ring reads "—", not $ 0 (zero and no data are not the same).
+        public let hasRecords: Bool
 
-        /// Nothing earned (or spent): the ring is not drawn.
+        /// Nothing earned (or spent): no ring is drawn, only its total and
+        /// a sentence in its place.
         public var isEmpty: Bool { total == .zero }
 
         public func title(in language: DisplayLanguage) -> String {
@@ -86,11 +93,11 @@ public struct FinanceComposition: Hashable, Sendable {
             }
         }
 
-        /// A slice's share of the ring in whole percent, rounded half up;
-        /// "<1%" for a slice too small to show as 1%.
+        /// A slice's share of the ring in whole percent, the shares adding
+        /// up to 100; "<1%" for a slice too small to show as 1%.
         public func percentText(of slice: Slice) -> String {
-            guard total > .zero else { return "0%" }
-            let percent = (200 * slice.amount.amount + total.amount) / (2 * total.amount)
+            guard let index = slices.firstIndex(of: slice) else { return "0%" }
+            let percent = percents[index]
             return percent == 0 && slice.amount > .zero ? "<1%" : "\(percent)%"
         }
 
@@ -105,8 +112,9 @@ public struct FinanceComposition: Hashable, Sendable {
             return nil
         }
 
-        /// What the centre says under the title: the total.
-        public var totalText: String { total.moneyText }
+        /// What the centre says under the title: the total, or "—" while
+        /// there are no accounts.
+        public var totalText: String { hasRecords ? total.moneyText : "—" }
 
         /// A touched slice, spelled out: "Fares · $ 12,000 · 72%"; for
         /// "Other", the kinds in it after its name.
@@ -122,6 +130,7 @@ public struct FinanceComposition: Hashable, Sendable {
         /// The sentence before the slices: the total and the largest slice.
         public func summaryText(in language: DisplayLanguage) -> String {
             guard let first = slices.first else {
+                guard hasRecords else { return language.text("No accounts yet", "還沒有帳目") }
                 return side == .income
                     ? language.text("No income this period", "本期沒有收入")
                     : language.text("No costs this period", "本期沒有支出")
@@ -152,7 +161,7 @@ public struct FinanceComposition: Hashable, Sendable {
     public let income: Ring
     public let costs: Ring
 
-    /// Both rings empty: nothing to draw.
+    /// Both rings empty.
     public var isEmpty: Bool { income.isEmpty && costs.isEmpty }
 
     /// A slice under this share of its ring, in thousandths, folds into
@@ -164,13 +173,14 @@ public struct FinanceComposition: Hashable, Sendable {
     /// `summary`'s income and costs. The gain or loss on buildings sold is
     /// not in either (it is neither earned nor spent in running the
     /// company, decision 130), and a kind below zero counts as nothing.
-    public init(_ summary: FinanceSummary) {
-        income = Self.ring(.income, [
+    /// `hasRecords`: whether the company keeps any accounts yet.
+    public init(_ summary: FinanceSummary, hasRecords: Bool = true) {
+        income = Self.ring(.income, hasRecords: hasRecords, [
             (.fares, summary.fareRevenue),
             (.freight, summary.freightRevenue),
             (.sideBusiness, summary.propertyRevenue),
         ])
-        costs = Self.ring(.costs, [
+        costs = Self.ring(.costs, hasRecords: hasRecords, [
             (.operating, summary.operatingCost),
             (.maintenance, summary.maintenanceCost),
             (.energy, summary.energyCost),
@@ -182,7 +192,7 @@ public struct FinanceComposition: Hashable, Sendable {
         ])
     }
 
-    static func ring(_ side: Side, _ amounts: [(Category, Money)]) -> Ring {
+    static func ring(_ side: Side, hasRecords: Bool, _ amounts: [(Category, Money)]) -> Ring {
         let parts = amounts.filter { $0.1 > .zero }
         let total = parts.reduce(Money.zero) { $0 + $1.1 }
         // Largest first; equal amounts in category order (stable sort).
@@ -211,6 +221,23 @@ public struct FinanceComposition: Hashable, Sendable {
             let folded = small.map(\.0).sorted { order.firstIndex(of: $0)! < order.firstIndex(of: $1)! }
             slices.append(Slice(category: .other, amount: small.reduce(Money.zero) { $0 + $1.1 }, folded: folded))
         }
-        return Ring(side: side, slices: slices, total: total)
+        return Ring(side: side, slices: slices, total: total, percents: wholePercents(of: slices.map(\.amount)), hasRecords: hasRecords)
+    }
+
+    /// `amounts`' shares in whole percent, adding up to 100 (none when
+    /// they add up to nothing): each rounded down, then the points left
+    /// to the largest remainders, the first on a tie (Hamilton's method),
+    /// so the listed shares add up as the ring does.
+    static func wholePercents(of amounts: [Money]) -> [Int64] {
+        let total = amounts.reduce(Int64(0)) { $0 + $1.amount }
+        guard total > 0 else { return amounts.map { _ in 0 } }
+        var percents = amounts.map { 100 * $0.amount / total }
+        let remainders = amounts.map { 100 * $0.amount % total }
+        let left = 100 - percents.reduce(0, +)
+        let order = remainders.indices.sorted { remainders[$0] == remainders[$1] ? $0 < $1 : remainders[$0] > remainders[$1] }
+        for index in order.prefix(Int(left)) {
+            percents[index] += 1
+        }
+        return percents
     }
 }

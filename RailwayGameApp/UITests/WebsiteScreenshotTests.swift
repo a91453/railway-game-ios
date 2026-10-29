@@ -46,6 +46,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("freight-train", app)
     }
 
+    /// Decision 480: the economy panel's income and cost donuts in the
+    /// freight scene, the day's and the week's (its tax and "Other"), and a
+    /// slice picked. For the screenshot review of the pull request that
+    /// made them, not the website.
+    func testFinanceComposition() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars["經濟明細"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        XCTAssertTrue(app.revealFinanceComposition(in: list, below: bar.frame.maxY), "The income donut comes into reach")
+        settle()
+        keep("finance-composition-day-income", app)
+
+        let costs = app.descendants(matching: .any)["economy.composition.costs"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY), "The cost donut comes into reach")
+        settle()
+        keep("finance-composition-day-costs", app)
+
+        let fares = app.buttons["economy.composition.income.fares"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, below: bar.frame.maxY), "The fares row comes into reach")
+        fares.tap()
+        settle(seconds: 1)
+        keep("finance-composition-picked", app)
+
+        // The week: the first midnight's tax, and the small costs as "Other".
+        let week = app.buttons["週"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(week, in: list, below: bar.frame.maxY), "The period picker comes into reach")
+        week.tap()
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY), "The week's cost donut comes into reach")
+        settle()
+        keep("finance-composition-week-costs", app)
+    }
+
     /// A blank new game's map expansion: the tiles that can be bought,
     /// their prices, and the locked ones.
     func testMapExpansion() {

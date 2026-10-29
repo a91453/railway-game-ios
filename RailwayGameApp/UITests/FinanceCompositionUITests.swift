@@ -25,15 +25,7 @@ final class FinanceCompositionUITests: XCTestCase {
         // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
 
-        // A game of simple rules keeps the reports folded away at first.
-        let reports = app.buttons["economy.reports"]
-        if reports.exists, reports.label.hasPrefix("More") {
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY), "The reports toggle comes into reach")
-            reports.tap()
-        }
-
-        let income = app.descendants(matching: .any)["economy.composition.income"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY), "The income donut comes into reach")
+        XCTAssertTrue(app.revealFinanceComposition(in: list, below: bar.frame.maxY), "The income donut comes into reach")
         XCTAssertTrue(app.descendants(matching: .any)["economy.composition.costs"].firstMatch.exists, "The cost donut shows")
 
         let detail = app.staticTexts["economy.composition.income.detail"]
@@ -45,5 +37,24 @@ final class FinanceCompositionUITests: XCTestCase {
         XCTAssertTrue(detail.label.hasPrefix("Fares · $"), "The tapped slice is spelled out: \(detail.label)")
         fares.tap()
         XCTAssertTrue(detail.label.hasPrefix("Income $"), "A second tap lets it go: \(detail.label)")
+    }
+}
+
+extension XCUIApplication {
+    /// Brings the economy panel's income donut (decision 480) wholly into
+    /// `list`, below `below`; whether it came. A game of simple rules keeps
+    /// the reports folded away under a toggle at the list's foot, and the
+    /// reports open above it, so after the toggle the list goes back to its
+    /// top first.
+    func revealFinanceComposition(in list: XCUIElement?, below: CGFloat) -> Bool {
+        let income = descendants(matching: .any)["economy.composition.income"].firstMatch
+        if dragUntilWhollyOnScreen(income, in: list, below: below, drags: 25) { return true }
+        let reports = buttons["economy.reports"]
+        guard reports.exists, reports.isHittable else { return false }
+        reports.tap()
+        for _ in 0..<12 where !income.exists {
+            (list ?? self).swipeDown(velocity: .fast)
+        }
+        return dragUntilWhollyOnScreen(income, in: list, below: below)
     }
 }
