@@ -85,6 +85,7 @@ struct Map3DPreviewScreen: View {
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             Map3DRainLayer(rain: Map3DRain(MapWeather(world: session.world)), detail: stats?.streetDetail ?? .full,
+                           aim: stats?.aim ?? 60,
                            night: Map3DLighting(at: session.world.clock.now).night, underground: stats?.underground ?? false)
                 .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
@@ -1101,6 +1102,8 @@ final class Map3DTrainLabelState {
 private struct Map3DRainLayer: View, Equatable {
     let rain: Map3DRain
     let detail: Map3DStreetDetail
+    /// PERF (2026-10-30): the frames a second the 3D map aims for.
+    let aim: Int
     /// How far the day's light has gone (``Map3DLighting/night``).
     let night: Float
     /// Decision 394: the cab deep in a tunnel, where no rain falls.
@@ -1108,7 +1111,7 @@ private struct Map3DRainLayer: View, Equatable {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     nonisolated static func == (lhs: Map3DRainLayer, rhs: Map3DRainLayer) -> Bool {
-        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.night == rhs.night && lhs.underground == rhs.underground
+        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.aim == rhs.aim && lhs.night == rhs.night && lhs.underground == rhs.underground
     }
 
     var body: some View {
@@ -1118,8 +1121,8 @@ private struct Map3DRainLayer: View, Equatable {
                            blue: Double(look.colour & 0xFF) / 255, opacity: look.opacity)
         return Group {
             if rain.amount > 0, !reduceMotion, !underground {
-                // At most 60 a second: the rain looks no smoother faster.
-                TimelineView(.animation(minimumInterval: 1.0 / 60)) { timeline in
+                // No more often than the map under it, 60 a second at most.
+                TimelineView(.animation(minimumInterval: Map3DRain.minimumInterval(aim: aim))) { timeline in
                     Canvas { context, size in
                         let time = timeline.date.timeIntervalSinceReferenceDate
                         var streaks = Path()

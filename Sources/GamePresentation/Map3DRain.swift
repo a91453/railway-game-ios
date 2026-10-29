@@ -49,6 +49,15 @@ public struct Map3DRain: Hashable, Sendable {
     public static let referenceSlant = 0.12
     /// The streaks' line width, in points.
     public static let lineWidth = 0.7
+
+    /// PERF (2026-10-30): the shortest time between two drawings of the
+    /// streaks, on the main thread, when the 3D map under them aims for
+    /// `aim` frames a second: no more often than the map (30 on Battery
+    /// Saver, in Low Power Mode or with the phone hot), and 60 at most,
+    /// as before (the rain looks no smoother faster).
+    public static func minimumInterval(aim: Int) -> Double {
+        1 / Double(min(max(aim, 1), 60))
+    }
     /// The streaks' colour and opacity at night (the reference's) and by
     /// day (the 2D map's rain, light on dark turned dark on light).
     public static let nightColour: UInt32 = 0xC6D7E4
