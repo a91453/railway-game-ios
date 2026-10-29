@@ -6,7 +6,7 @@ import XCTest
 /// no triangle without area, every triangle wound the way its neighbours
 /// are, and the whole facing out. The map draws both sides of a triangle
 /// but lights it by its winding, so one wound the wrong way shows its
-/// inside (2026-10-29: the garbage truck's remesh had holes and turned
+/// inside (2026-10-29: the trucks' Meshy models had holes and turned
 /// faces, black on the device at night; the Kenney tank was inside out).
 final class Map3DBundledModelFilesTests: XCTestCase {
     static let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -44,11 +44,11 @@ final class Map3DBundledModelFilesTests: XCTestCase {
             let corners = triangles.map { $0.map(Corner.init) }
             var faces: [Set<Corner>: Int] = [:]
             for c in corners { faces[Set(c), default: 0] += 1 }
-            var walks: [Set<Corner>: [(Corner, Corner)]] = [:]
-            for c in corners where faces[Set(c)] == 1 {
-                for k in 0..<3 { walks[[c[k], c[(k + 1) % 3]], default: []].append((c[k], c[(k + 1) % 3])) }
+            var walks: [Set<Corner>: [(from: Corner, to: Corner, single: Bool)]] = [:]
+            for c in corners {
+                for k in 0..<3 { walks[[c[k], c[(k + 1) % 3]], default: []].append((c[k], c[(k + 1) % 3], faces[Set(c)] == 1)) }
             }
-            return walks.values.filter { $0.count == 2 && $0[0] == $0[1] }.count
+            return walks.values.filter { $0.count == 2 && $0[0].single && $0[1].single && $0[0].from == $0[1].from }.count
         }
 
         /// The volume the triangles wind round, cubic metres: below 0 when
@@ -82,15 +82,17 @@ final class Map3DBundledModelFilesTests: XCTestCase {
         }
     }
 
-    /// The garbage truck's body has no holes the night shows through: the
-    /// rims of its open edges come to less than its length (Meshy's remesh
-    /// had 31 m of them, round holes in the cab and the box).
-    func testTheGarbageTruckIsClosed() throws {
-        let mesh = try Mesh(Self.folder.appendingPathComponent("garbage-truck.\(Map3DGarbageTruck.fileExtension)"))
-        let extent = mesh.triangles.joined().reduce((low: Map3DPoint(.infinity, .infinity, .infinity), high: Map3DPoint(-.infinity, -.infinity, -.infinity))) {
-            (Map3DPoint(min($0.low.x, $1.x), min($0.low.y, $1.y), min($0.low.z, $1.z)), Map3DPoint(max($0.high.x, $1.x), max($0.high.y, $1.y), max($0.high.z, $1.z)))
+    /// The trucks' bodies have no holes the night shows through: the rims
+    /// of their open edges come to less than their length (Meshy's own
+    /// models had 31 m of them on the garbage truck, round holes in the
+    /// cab and the box, and 37 m on the recycling truck, along its bed and
+    /// in its cab's side).
+    func testTheTrucksAreClosed() throws {
+        for name in Map3DGarbageTruck.fileNames.values.sorted() {
+            let mesh = try Mesh(Self.folder.appendingPathComponent("\(name).\(Map3DGarbageTruck.fileExtension)"))
+            let xs = mesh.triangles.joined().map(\.x)
+            XCTAssertLessThan(mesh.openEdges, xs.max()! - xs.min()!, name)
         }
-        XCTAssertLessThan(mesh.openEdges, extent.high.x - extent.low.x)
     }
 
     /// The checks find what they are for: a triangle turned round, and a

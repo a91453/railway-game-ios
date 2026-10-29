@@ -30,6 +30,8 @@ const colours = {
   // them when the app reads the file: the body its yellow, the windows
   // the vehicles' glass, the tyres and the dark trim their own.
   truckBody: 0xF2C94C, truckGlass: 0x9CC7E0, truckTyre: 0x1C1D20, truckTrim: 0x3A3D42,
+  // The recycling truck's cab: the parks' green, as the app draws it.
+  truckGreen: 0x8DC27A,
 };
 
 function hsl([r, g, b]) {
@@ -89,6 +91,22 @@ const recipes = [
       const hue = r >= g && g >= b && r > b ? 60 * (g - b) / (r - b) : -1;
       if (hue >= 30 && sat > 0.35 && light >= 0.3) return 'truckBody';
       return 'truckTrim';
+    },
+  },
+  {
+    // The recycling truck that follows it, the same way: Meshy's
+    // smart-topology model (1,316 triangles) had a hole the length of
+    // the bed and an open cab side the night showed its inside through.
+    // Its grille is dark slats edge-on to the cab's front: a big face
+    // over them takes the dark only where two thirds of it is.
+    id: 'recycling-truck', source: 'recycling-truck', front: '-x', height: 2.6, triangles: 1500, maxError: 0.06, outward: true,
+    edge: { truckTrim: true, truckTyre: true },
+    classify(c) {
+      const { light, sat } = hsl(c), [r, g, b] = c;
+      if (light < 0.16) return 'truckTyre';
+      if (light > 0.5 && b > r + 15 && b >= g - 10) return 'truckGlass';
+      if (g > r + 15 && g > b + 15) return 'truckGreen';
+      return sat < 0.15 && light >= 0.3 ? 'steel' : 'truckTrim';
     },
   },
 ];
@@ -200,7 +218,17 @@ function normal([a, b, c]) {
 // colour vote's points' say).
 function windOutward(triangles) {
   const key = p => p.map(v => Math.round(v * 1e5)).join(','), edges = new Map();
-  triangles.forEach((t, i) => t.points.forEach((p, k) => {
+  // A thin plate's two sides fold onto the same three corners: the first
+  // face over them is wound with its neighbours and the others as it is
+  // (drawn in the same place, lit alike, or they would flicker), and only
+  // the first counts in its edges, or the plate's edges, shared by three
+  // or four, would stop the walk.
+  const first = new Map(), twin = triangles.map((t, i) => {
+    const corners = t.points.map(key).sort().join('|');
+    if (!first.has(corners)) first.set(corners, i);
+    return first.get(corners);
+  });
+  triangles.forEach((t, i) => twin[i] === i && t.points.forEach((p, k) => {
     const a = key(p), b = key(t.points[(k + 1) % 3]), e = a < b ? a + '|' + b : b + '|' + a;
     if (!edges.has(e)) edges.set(e, []);
     edges.get(e).push({ i, forward: a < b });
@@ -215,7 +243,7 @@ function windOutward(triangles) {
   }
   const turned = new Array(triangles.length).fill(null);
   for (let start = 0; start < triangles.length; start++) {
-    if (turned[start] !== null) continue;
+    if (turned[start] !== null || twin[start] !== start) continue;
     turned[start] = false;
     const piece = [start];
     for (let at = 0; at < piece.length; at++) {
@@ -227,6 +255,11 @@ function windOutward(triangles) {
       if (turned[i] !== say < 0) { const p = triangles[i].points; [p[1], p[2]] = [p[2], p[1]]; }
     }
   }
+  triangles.forEach((t, i) => {
+    if (twin[i] === i) return;
+    const [a, b] = triangles[twin[i]].points.map(key), at = t.points.map(key).indexOf(a);
+    if (key(t.points[(at + 1) % 3]) !== b) { const p = t.points; [p[1], p[2]] = [p[2], p[1]]; }
+  });
 }
 
 async function simplify(triangles, recipe) {
