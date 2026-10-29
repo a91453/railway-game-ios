@@ -1171,13 +1171,19 @@ enum MapArt {
         // The real stops near the route's station: faint dots, under the rest.
         var faint: [(centre: CGPoint, name: String)] = []
         if let real = buses.realStops, pointsPerMetre >= 0.15 {
+            // Names are left off a stop a numbered pin already carries and
+            // off the second of one name close by (a road's two sides).
+            var pins: [(point: PlanPoint, name: String?)] = []
+            for route in buses.routes where buses.showsLabels { pins += zip(route.stops, route.labels).map { ($0, $1.name) } }
+            if let draft = buses.draft { pins += zip(draft.stops, draft.labels).map { ($0, $1.name) } }
+            let named = Set(real.faintLabels(in: projection.visibleRegion, pins: pins))
             for stop in real.stops(in: projection.visibleRegion).prefix(600) {
                 let centre = cgPoint(projection.screenPoint(of: stop.point))
                 guard view.insetBy(dx: -4, dy: -4).contains(centre) else { continue }
                 let circle = Path(ellipseIn: CGRect(x: centre.x - 3, y: centre.y - 3, width: 6, height: 6))
                 context.fill(circle, with: .color(Palette.markerFill.opacity(0.75)))
                 context.stroke(circle, with: .color(Palette.ink.opacity(0.4)), lineWidth: 1)
-                faint.append((centre, stop.name))
+                if named.contains(stop) { faint.append((centre, stop.name)) }
             }
         }
         for route in buses.routes {

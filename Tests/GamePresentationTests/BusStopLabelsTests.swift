@@ -199,6 +199,21 @@ final class BusStopLabelsTests: XCTestCase {
         XCTAssertEqual(real.stops(in: region).map(\.name), ["B"])
     }
 
+    /// 95.1: a road's two sides carry one name 30 m apart, and the player's
+    /// pin sits on one of them: the map wrote 自立新村 three times.
+    func testFaintNamesSkipThePinsAndTheSecondSideOfARoad() {
+        let real = stops([("自立新村", 100, 100), ("自立新村", 100, 130), ("三民路", 100, 160), ("自立新村", 900, 100)])
+        let everywhere = WorldRegion(minX: 0, minY: 0, maxX: Double(plan(2_000, 2_000).x), maxY: Double(plan(2_000, 2_000).y))
+        XCTAssertEqual(real.faintLabels(in: everywhere, pins: []).map(\.name), ["自立新村", "三民路", "自立新村"],
+                       "no pin: one name for the two sides, the far stop of that name keeps its own")
+        let pinned = real.faintLabels(in: everywhere, pins: [(plan(100, 100), "自立新村")])
+        XCTAssertEqual(pinned.map(\.name), ["三民路", "自立新村"], "the pin carries the name for both sides")
+        XCTAssertEqual(pinned.last?.point, plan(900, 100))
+        XCTAssertEqual(real.faintLabels(in: everywhere, pins: [(plan(100, 100), nil), (plan(100, 100), "別的名")]).count, 3,
+                       "a pin with another name or none hides nothing")
+        XCTAssertEqual(real.stops.count, 4, "every stop keeps its dot")
+    }
+
     /// A real bus file of one route through `points` (name, latitude,
     /// longitude), the way the tool writes it: degrees in 1e-5, the shape
     /// after the first point as steps.
