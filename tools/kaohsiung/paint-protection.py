@@ -4,9 +4,9 @@ Coordinates are Float32 display samples, not engineering tolerances.
 """
 from pathlib import Path
 from collections import Counter,defaultdict
-import json,sys
+import json,sys,struct
 import numpy as np
-from audit import read,colors
+from audit import read
 
 EPS=3e-5
 
@@ -17,6 +17,11 @@ def bow(t,far):
 
 def signature(t,f,selected,c=None):
  return Counter((tuple(np.round(q.flatten()*1e5).astype(int)),int(flag),int(color)) for q,flag,color in zip(t[selected],f[selected],c[selected] if c is not None else np.zeros(selected.sum(),dtype=int)))
+
+def native_signature(path,selected):
+ b=path.read_bytes();n,size=struct.unpack_from('<II',b,8);o=16+(size+3)//4*4
+ assert n==len(selected)
+ return Counter(b[o+i*52:o+(i+1)*52] for i in np.flatnonzero(selected))
 
 def cross2(a,b):return a[0]*b[1]-a[1]*b[0]
 
@@ -64,8 +69,8 @@ def coverage(a,b):
 before,after,before_shell,after_shell=map(Path,sys.argv[1:5]);m=json.loads((after/'manifest.json').read_text());rows=[]
 for r in m['models']:
  if r.get('native_kind')=='assembly':continue
- old,of=read(before/r['native']);new,nf=read(after/r['native']);oc=colors(before/r['native']);nc=colors(after/r['native']);far=r['id'].endswith('-far');trailer='-t' in r['id']
- assert signature(old,of,(old[:,:,0]<=9).all(axis=1),oc)==signature(new,nf,(new[:,:,0]<=9).all(axis=1),nc),'accepted body colours/geometry changed'
+ old,of=read(before/r['native']);new,nf=read(after/r['native']);far=r['id'].endswith('-far');trailer='-t' in r['id']
+ assert native_signature(before/r['native'],(old[:,:,0]<=9).all(axis=1))==native_signature(after/r['native'],(new[:,:,0]<=9).all(axis=1)),'accepted body colours/geometry changed'
  if trailer:
   assert (before/r['native']).read_bytes()==(after/r['native']).read_bytes(),'T changed'
   row={'id':r['id'],'trailer_full_bytes_equal':True}
