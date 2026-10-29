@@ -1193,13 +1193,20 @@ final class MapInteractionTests: XCTestCase {
         // The bell, 32 points tall: 20 below its centre.
         let bell = app.buttons["hud.news"]
         XCTAssertTrue(bell.appears(within: 5))
+        bell.waitUntilSettled()
         tap(bell, below: 20)
         let news = app.navigationBars["News"]
         XCTAssertTrue(news.appears(within: 5), "A tap 4 points below the drawn bell opens the news")
+        // Done is touched once the sheet has come to rest, and again if the
+        // sheet stays: on main 6ff5ffe (run 40866617267) Done was touched
+        // as the sheet slid up and the app's trace shows the touch on it
+        // cancelled 182 ms later, so the news never closed. Only Done is
+        // retried; the touches beside the icons this test is about are not.
         let done = app.buttons["news.done"]
-        XCTAssertTrue(done.appears(within: 5))
+        done.waitUntilSettled()
         done.tap()
-        XCTAssertTrue(news.disappears(within: 5))
+        if !news.disappears(within: 5), done.exists { done.tap() }
+        XCTAssertTrue(news.disappears(within: 5), "Done closes the news")
 
         // The menu, 32 points tall: 20 above its centre.
         let menu = app.buttons["hud.menu"]
