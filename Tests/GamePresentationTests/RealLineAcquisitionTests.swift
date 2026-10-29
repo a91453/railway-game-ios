@@ -257,9 +257,10 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// along the real line, and a day of its real timetable run, every run
     /// sent out, under simple and realistic rules (decision 258); the
     /// Sanying Line too, in classes of its own (`SanyingLineSimpleDayTests`,
-    /// `SanyingLineRealisticDayTests`), its two days the longest. Not on
-    /// sale: the Green Mountain Line and the other metro lines, whose ends
-    /// stand more trains at once than the game lays tracks
+    /// `SanyingLineRealisticDayTests`), its two days the longest; the Green
+    /// Mountain Line with its depot too (`DanhaiDepotTests`, decision 489).
+    /// Not on sale: the other metro lines, whose ends stand more trains at
+    /// once than the game lays tracks
     /// (`extract_metro_runs.py`); the Ankeng LRT, not yet
     /// (docs/HANDOFF.md); Kaohsiung's Circular Light Rail, which runs one
     /// way round its loop; and the Wenhu Line, its curves too tight.
@@ -279,7 +280,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// on sale is offered, and every run of the second day was sent out.
     static func buyAndRunRealDay(_ id: String, type: TrainType, tier: LineAcquisition.Tier, rules: NewGameRules) throws {
         let absent = [
-            "ntdlrt:V", "ntalrt:K", "krtc:C", "trtc:BR", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
+            "ntalrt:K", "krtc:C", "trtc:BR", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
             "tymc:A", "krtc:KR", "krtc:KO", "tmrt:TG",
         ]
         let session = try game(round: id, side: 1 << 21, heights: true, rules: rules)

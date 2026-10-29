@@ -66,7 +66,8 @@ struct SettingsView: View {
     /// the taps on the version row that show it.
     @AppStorage(DemoMode.switchKey) private var demoModeOn = false
     @State private var demoModeReveal = DemoMode.Reveal()
-    /// Decision 434: whether the demo mode's train showcase is open.
+    /// Decision 434: whether the train showcase (decision 492: the
+    /// garage, for every player) is open.
     @State private var showsTrainShowcase = false
 
     var body: some View {
@@ -83,6 +84,7 @@ struct SettingsView: View {
                 if let session {
                     map3DSection(session)
                 }
+                garageSection
                 previewSection
                 if TestBuild.isTest {
                     testSection
@@ -437,6 +439,29 @@ struct SettingsView: View {
         }
     }
 
+    /// Decision 492: the garage, decision 434's train showcase open to
+    /// every player, from the start screen and from a game alike.
+    private var garageSection: some View {
+        let language = DisplayLanguage.app
+        return Section {
+            Button {
+                showsTrainShowcase = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Train Garage", "車庫"))
+                } icon: {
+                    Image(systemName: "tram.fill")
+                }
+            }
+            .accessibilityIdentifier("settings.trainGarage")
+        } footer: {
+            Text(verbatim: language.text(
+                "See the game's trains up close: turn them round, change the time of day and take photos.",
+                "近看遊戲裡的列車：轉著看、換時段、拍照。"
+            ))
+        }
+    }
+
     /// Decision 152: the 3D city view, a preview of what the game's 3D may
     /// look like (``CityView3D``); decision 161 adds Taichung Station, where
     /// the trains run on a viaduct.
@@ -583,17 +608,6 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("settings.frameTimeBench")
-                // Decision 434: the trains on open ground, to photograph.
-                Button {
-                    showsTrainShowcase = true
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Train Showcase", "列車展示"))
-                    } icon: {
-                        Image(systemName: "tram.fill")
-                    }
-                }
-                .accessibilityIdentifier("settings.trainShowcase")
             }
             ProblemReportRows(game: game, session: session, lessons: lessons)
             Button {

@@ -3,16 +3,28 @@ import GamePresentation
 import SwiftUI
 import UIKit
 
-/// Decision 434: the demo mode's train showcase, full screen: the trains
+/// Decision 434: the train showcase, full screen: the trains
 /// picked laid side by side on open ground (``Map3DShowcase``), to turn
 /// round, come close to and photograph. One finger turns the camera round
 /// them, a pinch comes closer, two fingers move it; the camera's ready
 /// views, the time of day, near or far models and a turntable are under
 /// the picture, and "Hide Buttons" leaves only the trains until the
 /// picture is tapped. Its photos are the 3D map's (decision 403, 續二).
+/// Decision 492: open to every player as the garage, from the settings;
+/// the train pack's trains are listed only once it is unlocked.
 struct TrainShowcaseScreen: View {
     let close: () -> Void
-    @State private var selection = Map3DShowcase.Selection()
+    @State private var selection: Map3DShowcase.Selection
+
+    init(close: @escaping () -> Void) {
+        self.close = close
+        // Decision 492: the pack's sets as the 3D map reads them
+        // (``Map3DPreviewScreen``), when the garage opens.
+        let defaults = UserDefaults.standard
+        let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest, switchOn: defaults.bool(forKey: TrainPack.testUnlockKey))
+        let locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: defaults.bool(forKey: TrainPack.pushPullE1000Key))
+        _selection = State(initialValue: Map3DShowcase.Selection(hiding: locked))
+    }
     @State private var far = false
     @State private var light = Map3DShowcase.Light.day
     /// The ready view asked for last, and how many times one was asked
@@ -197,7 +209,7 @@ struct TrainShowcaseScreen: View {
     private func takePhoto() {
         guard let view = cameraLink.view else { return }
         let language = DisplayLanguage.app
-        let title = language.text("Train Showcase", "列車展示")
+        let title = language.text("Train Garage", "車庫")
         let credit = Map3DShowcase.photoCredit(in: language)
         let photo = photo
         view.capture { image in
@@ -362,12 +374,15 @@ private struct TrainShowcasePicker: View {
                                                  "一次最多展示 \(Map3DShowcase.mostRows) 列。要加別的車，先取消一列。"))
                 }
                 ForEach(Map3DShowcase.Category.allCases, id: \.self) { category in
-                    Section {
-                        ForEach(Map3DShowcase.catalog.filter { $0.category == category }) { entry in
-                            pickRow(entry)
+                    let entries = selection.offered.filter { $0.category == category }
+                    if !entries.isEmpty {
+                        Section {
+                            ForEach(entries) { entry in
+                                pickRow(entry)
+                            }
+                        } header: {
+                            Text(verbatim: category.name(in: language))
                         }
-                    } header: {
-                        Text(verbatim: category.name(in: language))
                     }
                 }
             }
