@@ -20,9 +20,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Decision 467 added the post boxes' and stop pole's stand-ins (498
         // vertices; the app swaps in their files' 6,072). Decision 483
         // added the Kaohsiung and Taichung Green sets, near and far (20
-        // models, 107,856 vertices).
+        // models, 107,856 vertices), and made the Ming-Ri #1480's E200
+        // and Chu-Kuang coaches (37,716 more vertices than its E500 and
+        // generic coaches).
         XCTAssertEqual(pack.models.count, 613)
-        XCTAssertEqual(vertices, 3_482_460)
+        XCTAssertEqual(vertices, 3_520_176)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
