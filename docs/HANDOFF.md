@@ -1948,6 +1948,12 @@
 - **等 macOS CI 與 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：條與按鈕的位置、按下取消後回到的畫面。
 - **下一步**（沒派）：依量到的時間給每步權重；GameCore 建世界加檢查點讓取消能在步驟中間停；第一次開 3D 地圖的等待。見決策 473「下一步」。
 
+### 4.20 畫面的 ui-review skill、截圖驗收暫緩（決策 482，session_01YGNNuoinesWfV5nQhzCYuV，派工單 UIREV，2026-10-29）
+
+- 做了的在 [決策 482](decisions/482.md)：`.claude/skills/ui-review/`（改畫面前讀；第 3 節截圖驗收、第 10 節列車用圖標還是車型）、UI_THEME「玩家看的文字」第 7 條。
+- **截圖驗收暫緩**（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」）：#1467（決策 472）圖表的驗收沒拍。拍照的測試 `testStatisticsCharts`、`testTrainLooks` 已在 `WebsiteScreenshotTests`，發版前在那個分支跑一次 `website-screenshots.yml`（一次只跑一個），照 skill 第 3 節看，寫成決策 472「472 截圖驗收」；路線清單列的問題給 LP（決策 481）。
+- **鐵道味建議**（只列不改）：決策 482 續篇的表，規劃決定要不要派。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

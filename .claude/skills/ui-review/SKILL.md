@@ -63,7 +63,9 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 
 ## 3. 截圖驗收（必做；作者要求，避免畫面做醜）
 
-**改畫面的 PR 轉 ready 之前一定要做**。方法改寫自 taste-skill `critique.md` 與 `app-screens.md` §2.7（研究第 5 節）。
+**改畫面的 PR 轉 ready 之前一定要做**。
+
+> **暫緩（作者 2026-10-29）**：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」。在作者說恢復之前，改畫面的 PR 不必自己跑 `website-screenshots.yml`；截圖驗收改在發版前做，或由作者自己拍，PR 寫「截圖驗收暫緩」與要看的畫面。下面的方法照舊用在那時候。方法改寫自 taste-skill `critique.md` 與 `app-screens.md` §2.7（研究第 5 節）。
 
 **拍**：
 
