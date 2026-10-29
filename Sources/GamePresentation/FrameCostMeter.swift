@@ -75,6 +75,9 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
     case hudBody
     /// The station master in the corner.
     case stationMasterBody
+    /// Decision 488: the building tool's preview worked out afresh (a new
+    /// site, at each step of a drag), wherever it is read.
+    case buildingPreview
 
     /// The part this one is a piece of, when it is one: its time is in
     /// the parent's too.
@@ -129,6 +132,7 @@ public enum FrameCostPart: String, CaseIterable, Hashable, Sendable {
         case .screenBody: language.text("screen", "畫面框架")
         case .hudBody: language.text("status bar", "狀態列")
         case .stationMasterBody: language.text("station master", "站長")
+        case .buildingPreview: language.text("building preview", "建物預覽")
         }
     }
 }
