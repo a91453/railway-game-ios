@@ -68,9 +68,11 @@ private struct KaohsiungRecipe {
     mutating func panel(_ p: [(Float,Float)],_ color: UInt32,_ lift: Float = 0,_ depth: Float = 0.014) {
         let ws: [Float] = far ? [-1.575,0,1.575] : [-1.575,-1.34,-1.02,-0.55,0,0.55,1.02,1.34,1.575]
         for i in 0..<(ws.count-1) {
-            let q=clip(clip(p,1,ws[i],true),1,ws[i+1],false)
+          for (low,high): (Float,Float) in [(1.04,1.8),(1.8,3.6)] {
+            let q=clip(clip(clip(clip(p,1,ws[i],true),1,ws[i+1],false),0,low,true),0,high,false)
             if q.count<3 { continue }
             prism(q.map { Map3DPoint(bow($0.0,$0.1)+lift,$0.0,$0.1) }, q.map { Map3DPoint(bow($0.0,$0.1)+lift-depth,$0.0,$0.1) },color)
+          }
         }
     }
     mutating func shell(details: Bool) {
@@ -175,7 +177,7 @@ private struct KaohsiungRecipe {
         for x: Float in [-6.9,6.9] {
             k.box(x,3.60,0,2.90,1.78,0.15,silver)
             k.box(x,3.75,0,2.72,1.64,0.005,steel)
-            if far { k.box(x,3.756,0,2.72,1.58,0.012,silver) }
+            if far { k.box(x,3.756,0,2.72,1.58,0.012,steel) }
             if !far { for dx: Float in [-0.85,0,0.85] { k.box(x+dx,3.756,0,0.06,1.58,0.012,silver) } }
         }
         for x: Float in [-3.5,0,3.5] { for w: Float in [-0.62,0.62] { k.box(x,3.60,w,0.48,0.38,0.055,silver) } }
