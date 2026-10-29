@@ -104,7 +104,10 @@ struct MapAlertBubbles: View {
                 // Decision 250: at that sight's row.
                 screen.sightFocus = sight
                 screen.panel = .tourism
-            case .materialsShort where alert.station != nil: screen.panel = .station
+            // Decision 477: at the freight group, where its materials are.
+            case .materialsShort where alert.station != nil:
+                screen.stationFocus = StationPanelGroup.answering(alert.kind)
+                screen.panel = .station
             case .insolvency: screen.panel = .economy
             default: break
             }

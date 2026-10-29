@@ -1644,7 +1644,7 @@ final class MapInteractionTests: XCTestCase {
         let alerts = app.buttons.matching(identifier: "map.alert")
         XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
         alerts.allElementsBoundByIndex.first(where: \.isHittable)?.tap()
-        let panel = app.descendants(matching: .any).matching(identifier: "station.operations").firstMatch
+        let panel = app.descendants(matching: .any).matching(identifier: "station.materials").firstMatch
         XCTAssertTrue(panel.appears(within: 10), "A tap on a bubble opens its station's panel")
         let done = app.buttons["Done"].firstMatch
         if done.appears(within: 3), done.isHittable {
