@@ -372,7 +372,8 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle()
         }
 
-        // The lines' rows, each with its trend and its fullest train.
+        // The lines' rows, each with its trend (decision 481: the fullest
+        // train is on the line's own page).
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
@@ -434,11 +435,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
         if app.dragUntilWhollyOnScreen(report, in: list) {
+            // Decision 481: a row opens the line's own page.
             report.tap()
+            let page = app.collectionViews["line.detail"]
+            _ = page.appears(within: 10)
             settle()
             keep("trains-line-details", app)
             let catalog = app.buttons["line.staff.catalog"]
-            if app.dragUntilWhollyOnScreen(catalog, in: list) {
+            if app.dragUntilWhollyOnScreen(catalog, in: page.exists ? page : list) {
                 catalog.tap()
                 let cancel = app.buttons["catalog.cancel"]
                 if cancel.appears(within: 10) {
