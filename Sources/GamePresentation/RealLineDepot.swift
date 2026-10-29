@@ -17,6 +17,13 @@ import GameCore
 // their way, so the wye's second arm, toward the junction, and the two
 // crossovers that bring a train from the other track to the wye and back
 // are the game's own.
+//
+// Decision 489: the Danhai Light Rail's Green Mountain Line ends its day
+// with all thirteen trains at Kanding, where the line runs on past the
+// station into the Danhai depot; the game's ends lay at most seven
+// tracks, so it was not on sale. It is bought with that depot: a lead on
+// from the line's end past Kanding, turning into the real yard, and a
+// siding for each train the real depot stables overnight.
 
 /// A real depot a line is bought with: where its leads leave the line and
 /// where its yard runs, from OpenStreetMap (ODbL).
@@ -29,6 +36,15 @@ struct RealLineDepotSite: Sendable {
     /// The yard's near end and its far end.
     let yard: (start: (latitude: Double, longitude: Double), end: (latitude: Double, longitude: Double))
     let sidings: Int
+    /// Decision 489: the end station the leads go on from, past the
+    /// line's end, as the real line runs on into its depot; `nil` for
+    /// leads leaving the line between its ends. A line with such a depot
+    /// is not bought without it: its end has no room for its trains.
+    let beyond: String?
+    /// Decision 489: a light rail's yard, its sidings either side of the
+    /// lead on short turnouts (``RealLineDepotLayout/Ladder/lightRail``),
+    /// as tight as its real one; otherwise the depot tool's ladder.
+    let compact: Bool
 
     /// The Sanxia depot (三峽機廠, way 619043484): the crossover of its
     /// leads (way 1156270818), its sidings' near ends (ways 1136774767 and
@@ -39,11 +55,26 @@ struct RealLineDepotSite: Sendable {
         line: "sanying:LB", english: "Sanxia Depot", chinese: "三峽機廠",
         junction: (24.937315, 121.388084),
         yard: ((24.936919, 121.385823), (24.934964, 121.383852)),
-        sidings: 4
+        sidings: 4, beyond: nil, compact: false
+    )
+
+    /// The Danhai depot (淡海機廠, way 651032395) of the Danhai Light
+    /// Rail, past Kanding: where the line's two tracks end and its leads
+    /// begin (ways 605463606 and 658195694), and the middle of its yard
+    /// tracks' near ends and of their far ends (the eleven through its
+    /// shed, ways 690355135 to 690377825; `tools/rail-depots`). The real
+    /// depot stables nine of the Green Mountain Line's thirteen trains
+    /// overnight (the rest at Hongshulin); the game's sidings hold one
+    /// each.
+    static let danhai = RealLineDepotSite(
+        line: "ntdlrt:V", english: "Danhai Depot", chinese: "淡海機廠",
+        junction: (25.202117, 121.435233),
+        yard: ((25.202594, 121.434160), (25.203085, 121.432866)),
+        sidings: 9, beyond: "崁頂", compact: true
     )
 
     static func site(of line: String) -> RealLineDepotSite? {
-        [sanxia].first { $0.line == line }
+        [sanxia, danhai].first { $0.line == line }
     }
 
     func name(in language: DisplayLanguage) -> String {
@@ -71,11 +102,37 @@ enum RealLineDepotLayout {
         return [j - gap - ramp, j - gap, j, j + 2 * armReach, j + 2 * armReach + gap, j + 2 * armReach + gap + ramp]
     }
 
-    /// Siding `k` (from 0) leaves siding `k − 1` this far along the yard,
-    /// as the depot tool lays them (``DepotYard``).
-    static func turnout(_ k: Int) -> Double {
-        let straight = Double(DepotYard.straight), reach = Double(DepotYard.reach)
-        return straight + Double(k - 1) * (reach + straight)
+    /// How a yard's sidings leave the lead: siding 0 is the lead straight
+    /// on, and each other siding leaves the one inside it on its side
+    /// (`parent`) `turnout` along the yard, `reach` before it is
+    /// `offset` sidings' spacing off the lead.
+    struct Ladder {
+        let reach: Double
+        let straight: Double
+        let bothSides: Bool
+
+        /// As the depot tool lays them (``DepotYard``): all to one side.
+        static let depotTool = Ladder(reach: Double(DepotYard.reach), straight: Double(DepotYard.straight), bothSides: false)
+        /// Decision 489: a light rail's, either side in turn, on turnouts
+        /// 25 m long (a curve of some 30 m radius) 15 m apart.
+        static let lightRail = Ladder(reach: 25 * metre, straight: 15 * metre, bothSides: true)
+
+        func offset(_ k: Int) -> Int {
+            guard bothSides else { return k }
+            return k % 2 == 1 ? (k + 1) / 2 : -(k / 2)
+        }
+
+        func parent(_ k: Int) -> Int {
+            guard bothSides else { return k - 1 }
+            return k <= 2 ? 0 : k - 2
+        }
+
+        func turnout(_ k: Int) -> Double {
+            let level = Double(abs(offset(k)))
+            // The second side's turnouts a straight after the first's.
+            let first = offset(k) < 0 ? 2 * straight : straight
+            return first + (level - 1) * (reach + straight)
+        }
     }
 }
 
@@ -109,59 +166,23 @@ extension RealLineDepotLayout {
         let up = node(marks[2]), down = node(marks[3])
         let middle = j + armReach
         let foot = path.point(at: middle) + path.tangent(at: middle).normal * (-HighSpeedDemo.trackOffset - armReach)
-        let yard = points[1], way = (points[2] - points[1]).unit
-        let lead = (yard - foot).unit
-        // The heights: the foot within the grade of both turnouts, the
-        // yard within it of the foot; each as near the ground as that
-        // lets it (the chord, shorter than the track, keeps the grade
-        // under).
+        let lead = (points[1] - foot).unit
+        // The foot's height within the grade of both turnouts, as near
+        // the ground as that lets it (the chord, shorter than the track,
+        // keeps the grade under); the yard's as ``yard`` sets it.
         func within(_ ranges: [(from: Int64, over: Double)], _ point: WorldVector) -> Int64? {
             let low = ranges.map { Double($0.from) - grade * $0.over }.max()!
             let high = ranges.map { Double($0.from) + grade * $0.over }.min()!
             guard low <= high else { return nil }
             return Int64(max(low, min(high, ground(point))).rounded())
         }
-        guard let footHeight = within([(up.height, (foot - up.point).length), (down.height, (foot - down.point).length)], foot),
-              let yardHeight = within([(footHeight, (yard - foot).length)], yard)
-        else { return nil }
-
-        let count = site.sidings
-        let spacing = Double(DepotYard.spacing), reach = Double(DepotYard.reach)
-        // The sidings fan out toward the junction.
-        let fan = way.normal.dot(path.tangent(at: j)) < 0 ? way.normal : way.normal.reversed
-        func at(_ distance: Double, _ siding: Int) -> WorldVector { yard + way * distance + fan * (Double(siding) * spacing) }
-        // The platforms past the outer siding's bend, clear of its node.
-        let start = (count > 1 ? turnout(count - 1) + reach : Double(DepotYard.straight)) + RealWorldDemo.platformMargin
-        let far = start + Double(length) + RealWorldDemo.platformMargin
-
-        func coordinate(_ point: WorldVector, _ height: Int64) -> WorldCoordinate {
-            let plan = point.plan
-            return WorldCoordinate(x: plan.x, y: plan.y, z: height)
-        }
-        func cubic(_ a: WorldVector, leaving: WorldVector, _ b: WorldVector, arriving: WorldVector, handle: Double) -> TrackCurve {
-            .cubic((a + leaving * handle).plan, (b - arriving * handle).plan)
-        }
-        func piece(
-            _ points: [WorldCoordinate], _ curves: [TrackCurve], start: RealLineAcquisition.NodeAt?, end: RealLineAcquisition.NodeAt? = nil
-        ) -> RealLineAcquisition.Piece {
-            var distances = [0.0]
-            for (a, b) in zip(points, points.dropFirst()) {
-                distances.append(distances[distances.count - 1] + (WorldVector(b.plan) - WorldVector(a.plan)).length)
-            }
-            let ground = curves.indices.flatMap { index -> [PlanPoint] in
-                let surveyed = TrackGeometry(from: points[index], to: points[index + 1], curve: curves[index]).map(NetworkBuilding.surveyedPoints(of:)) ?? []
-                return [points[index].plan, points[index + 1].plan] + surveyed
-            }
-            return RealLineAcquisition.Piece(
-                nodes: points, start: start, end: end, curves: curves, distances: distances, structure: .automatic, together: true, ground: ground
-            )
-        }
+        guard let footHeight = within([(up.height, (foot - up.point).length), (down.height, (foot - down.point).length)], foot) else { return nil }
 
         // The wye: an arm leaving the second track along the line from
         // each turnout, both reaching the foot along the lead.
         let handle = 0.55 * armReach
         let footNode = RealLineAcquisition.NodeAt(piece: first, node: 1)
-        var pieces = [
+        let pieces = [
             piece(
                 [coordinate(up.point, up.height), coordinate(foot, footHeight)],
                 [cubic(up.point, leaving: up.direction, foot, arriving: lead, handle: handle)],
@@ -173,10 +194,64 @@ extension RealLineDepotLayout {
                 start: RealLineAcquisition.NodeAt(piece: 1, node: marks[3].second), end: footNode
             ),
         ]
+        guard let laid = yard(
+            site, points: points, foot: foot, height: footHeight, at: footNode, leaving: lead, toward: path.tangent(at: j),
+            first: first + pieces.count, length: length, ground: ground, in: language
+        ) else { return nil }
+        return (pieces + laid.pieces, laid.depot)
+    }
+
+    /// Decision 489: the depot's pieces, from piece `first` on, and the
+    /// depot, its yard straight on from the line's end node `end` (its
+    /// point, height and the line's way there, out past the end, which
+    /// the line has turned into the real yard's).
+    static func lay(
+        _ site: RealLineDepotSite, beyond end: (at: RealLineAcquisition.NodeAt, point: WorldVector, height: Int64, way: WorldVector),
+        first: Int, length: Int64, ground: (WorldVector) -> Double, in language: DisplayLanguage
+    ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
+        guard site.sidings > 0 else { return nil }
+        let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
+        let yard = end.point + end.way * ladder.straight
+        return self.yard(
+            site, points: [end.point, yard, yard + end.way * ladder.reach], foot: end.point, height: end.height, at: end.at, leaving: end.way,
+            toward: end.way, first: first, length: length, ground: ground, in: language
+        )
+    }
+
+    /// The lead from `foot` (its height, its node `at`), leaving it along
+    /// `leaving`, down to the real yard, and the sidings fanning out along
+    /// it toward the side `toward` (the line's way at the junction) points
+    /// away from, each with a platform `length` long at the same place:
+    /// pieces from `first` on, and the depot.
+    private static func yard(
+        _ site: RealLineDepotSite, points: [WorldVector], foot: WorldVector, height footHeight: Int64, at footNode: RealLineAcquisition.NodeAt,
+        leaving lead: WorldVector, toward: WorldVector, first: Int, length: Int64, ground: (WorldVector) -> Double, in language: DisplayLanguage
+    ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
+        let yard = points[1], way = (points[2] - points[1]).unit
+        // The yard within the grade of the foot, as near the ground as
+        // that lets it.
+        let low = Double(footHeight) - grade * (yard - foot).length, high = Double(footHeight) + grade * (yard - foot).length
+        let yardHeight = Int64(max(low, min(high, ground(yard))).rounded())
+
+        let count = site.sidings
+        let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
+        let spacing = Double(DepotYard.spacing), reach = ladder.reach
+        // The sidings fan out toward the junction.
+        let fan = way.normal.dot(toward) < 0 ? way.normal : way.normal.reversed
+        func at(_ distance: Double, _ siding: Int) -> WorldVector { yard + way * distance + fan * (Double(ladder.offset(siding)) * spacing) }
+        // The platforms past the outermost siding's bend, clear of its node.
+        let start = (count > 1 ? (1..<count).map { ladder.turnout($0) + reach }.max()! : ladder.straight) + RealWorldDemo.platformMargin
+        let far = start + Double(length) + RealWorldDemo.platformMargin
+        // The sidings leaving each one, in order along it.
+        let children = (0..<count).map { k in (1..<max(1, count)).filter { ladder.parent($0) == k } }
+
         // The lead and the first siding straight on from it; each other
-        // siding off the one inside it, as the depot tool lays them.
+        // siding off the one inside it, as `ladder` lays them.
         let third = (yard - foot).length / 3
+        var pieces: [RealLineAcquisition.Piece] = []
         var sidingStarts: [RealLineAcquisition.PieceAt] = []
+        // Where each siding's turnout stands on the siding it leaves.
+        var branches: [Int: RealLineAcquisition.NodeAt] = [:]
         for siding in 0..<count {
             var points: [WorldCoordinate], curves: [TrackCurve], from: RealLineAcquisition.NodeAt, before: Double
             if siding == 0 {
@@ -185,25 +260,54 @@ extension RealLineDepotLayout {
                 from = footNode
                 before = (yard - foot).length
             } else {
-                let branch = at(turnout(siding), siding - 1), bend = at(turnout(siding) + reach, siding)
+                let turnout = ladder.turnout(siding)
+                let branch = at(turnout, ladder.parent(siding)), bend = at(turnout + reach, siding)
                 let scale = 4_096.0
                 let tangent = PlanVector(dx: Int64((way.x * scale).rounded()), dy: Int64((way.y * scale).rounded()))
-                guard let curve = NetworkBuilding.curve(from: branch.plan, leaving: tangent, to: bend.plan, leaving: tangent.reversed) else { return nil }
+                guard let curve = NetworkBuilding.curve(from: branch.plan, leaving: tangent, to: bend.plan, leaving: tangent.reversed),
+                      let node = branches[siding] else { return nil }
                 points = [coordinate(branch, yardHeight), coordinate(bend, yardHeight)]
                 curves = [curve]
-                from = RealLineAcquisition.NodeAt(piece: first + 1 + siding, node: 2)
-                before = (bend - branch).length - (turnout(siding) + reach)
+                from = node
+                before = (bend - branch).length - (turnout + reach)
             }
-            if siding < count - 1 {
-                points.append(coordinate(at(turnout(siding + 1), siding), yardHeight))
+            for child in children[siding] {
+                branches[child] = RealLineAcquisition.NodeAt(piece: first + siding, node: points.count)
+                points.append(coordinate(at(ladder.turnout(child), siding), yardHeight))
                 curves.append(.straight)
             }
             points.append(coordinate(at(far, siding), yardHeight))
             curves.append(.straight)
             pieces.append(piece(points, curves, start: from))
-            sidingStarts.append(RealLineAcquisition.PieceAt(piece: first + 2 + siding, distance: before + start))
+            sidingStarts.append(RealLineAcquisition.PieceAt(piece: first + siding, distance: before + start))
         }
-        let station = at((start + far) / 2, 0) + fan * (Double(count - 1) * spacing / 2)
+        let offsets = (0..<count).map(ladder.offset)
+        let station = at((start + far) / 2, 0) + fan * (Double(offsets.max()! + offsets.min()!) * spacing / 2)
         return (pieces, RealLineAcquisition.Depot(name: site.name(in: language), at: station.plan, platforms: sidingStarts, length: length))
+    }
+
+    private static func coordinate(_ point: WorldVector, _ height: Int64) -> WorldCoordinate {
+        let plan = point.plan
+        return WorldCoordinate(x: plan.x, y: plan.y, z: height)
+    }
+
+    private static func cubic(_ a: WorldVector, leaving: WorldVector, _ b: WorldVector, arriving: WorldVector, handle: Double) -> TrackCurve {
+        .cubic((a + leaving * handle).plan, (b - arriving * handle).plan)
+    }
+
+    private static func piece(
+        _ points: [WorldCoordinate], _ curves: [TrackCurve], start: RealLineAcquisition.NodeAt?, end: RealLineAcquisition.NodeAt? = nil
+    ) -> RealLineAcquisition.Piece {
+        var distances = [0.0]
+        for (a, b) in zip(points, points.dropFirst()) {
+            distances.append(distances[distances.count - 1] + (WorldVector(b.plan) - WorldVector(a.plan)).length)
+        }
+        let ground = curves.indices.flatMap { index -> [PlanPoint] in
+            let surveyed = TrackGeometry(from: points[index], to: points[index + 1], curve: curves[index]).map(NetworkBuilding.surveyedPoints(of:)) ?? []
+            return [points[index].plan, points[index + 1].plan] + surveyed
+        }
+        return RealLineAcquisition.Piece(
+            nodes: points, start: start, end: end, curves: curves, distances: distances, structure: .automatic, together: true, ground: ground
+        )
     }
 }

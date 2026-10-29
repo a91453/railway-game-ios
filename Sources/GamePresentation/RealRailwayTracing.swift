@@ -121,11 +121,11 @@ struct RealRailwayTraces: Sendable {
     }
 
     /// The place on any line nearest `point` within `reach` world units,
-    /// on a line of group `group` when one is given, and of `system` (a
-    /// site system's ID) when one is given.
-    func snap(_ point: WorldVector, within reach: Double, group: Int? = nil, system: String? = nil) -> Snap? {
+    /// on a line of group `group` when one is given, of `system` (a site
+    /// system's ID) when one is given, and on line `only` when one is.
+    func snap(_ point: WorldVector, within reach: Double, group: Int? = nil, system: String? = nil, only: Int? = nil) -> Snap? {
         var best: Snap?
-        for line in lines where (group == nil || groups[line.id] == group) && (system == nil || line.system == system) {
+        for line in lines where (group == nil || groups[line.id] == group) && (system == nil || line.system == system) && (only == nil || line.id == only) {
             guard point.x >= line.minX - reach, point.x <= line.maxX + reach,
                   point.y >= line.minY - reach, point.y <= line.maxY + reach else { continue }
             guard let found = Self.nearest(to: point, on: line, within: best?.distance ?? reach) else { continue }
