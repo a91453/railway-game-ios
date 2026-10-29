@@ -69,11 +69,12 @@ struct StationPanel: View {
             Form {
                 if let station = session.selectedStation {
                     // Decision 472 (UI health check N): the sections in
-                    // four groups, the everyday ones first, each folded by
-                    // its heading and reached from the buttons on top.
-                    groupJumpSection(proxy)
+                    // four groups, the everyday ones first. The first has
+                    // no heading, so the panel opens on the same rows as
+                    // before; the others fold by their headings and are
+                    // reached from the toolbar's menu.
                     ForEach(StationPanelGroup.allCases) { group in
-                        groupHeader(group)
+                        if group.isFoldable { groupHeader(group) }
                         if !folds.isFolded(group) {
                             ForEach(group.parts, id: \.self) { part in
                                 self.part(part, of: station)
@@ -100,6 +101,13 @@ struct StationPanel: View {
                 Task { @MainActor in
                     await Task.yield()
                     withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
+                }
+            }
+            .toolbar {
+                if session.selectedStation != nil {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        groupJumpMenu(proxy)
+                    }
                 }
             }
             }
@@ -184,56 +192,31 @@ struct StationPanel: View {
         }
     }
 
-    /// A button a group, on top of the panel: it unfolds the group and
-    /// scrolls to its heading. Four in a row, or a menu when they do not
-    /// fit (a phone at the larger text sizes).
-    private func groupJumpSection(_ proxy: ScrollViewProxy) -> some View {
+    /// The toolbar's menu of the folding groups: each unfolds its group
+    /// and scrolls to its heading.
+    private func groupJumpMenu(_ proxy: ScrollViewProxy) -> some View {
         let language = session.language
-        return Section {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
-                    ForEach(StationPanelGroup.allCases) { group in
-                        Button {
-                            jump(to: group, proxy)
-                        } label: {
-                            VStack(spacing: 2) {
-                                Image(systemName: group.systemImage)
-                                    .font(.body.weight(.semibold))
-                                Text(verbatim: group.title(in: language))
-                                    .font(.caption2)
-                                    .lineLimit(1)
-                                    .fixedSize()
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-                        .accessibilityLabel(Text(verbatim: language.text("Go to \(group.title(in: language))", "跳到\(group.title(in: language))")))
-                        .accessibilityIdentifier("station.jump.\(group.rawValue)")
-                    }
-                }
-                Menu {
-                    ForEach(StationPanelGroup.allCases) { group in
-                        Button {
-                            jump(to: group, proxy)
-                        } label: {
-                            Label {
-                                Text(verbatim: group.title(in: language))
-                            } icon: {
-                                Image(systemName: group.systemImage)
-                            }
-                        }
-                    }
+        return Menu {
+            ForEach(StationPanelGroup.allCases.filter(\.isFoldable)) { group in
+                Button {
+                    jump(to: group, proxy)
                 } label: {
                     Label {
-                        Text(verbatim: language.text("Go to…", "跳到…"))
+                        Text(verbatim: group.title(in: language))
                     } icon: {
-                        Image(systemName: "list.bullet")
+                        Image(systemName: group.systemImage)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
-                .accessibilityIdentifier("station.jump")
+                .accessibilityIdentifier("station.jump.\(group.rawValue)")
+            }
+        } label: {
+            Label {
+                Text(verbatim: language.text("Go to…", "跳到…"))
+            } icon: {
+                Image(systemName: "list.bullet")
             }
         }
+        .accessibilityIdentifier("station.jump")
     }
 
     /// A group's heading: its name, and a chevron that folds or unfolds it.

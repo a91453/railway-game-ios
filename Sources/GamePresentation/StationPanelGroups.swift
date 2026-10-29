@@ -1,7 +1,7 @@
 // The station panel's groups (decision 472, UI health check N, 3-28): the
 // panel's twenty-odd sections in four groups, the everyday ones first,
-// each folded or unfolded by its heading and reached from the row of
-// group buttons at the panel's top. Which section sits in which group,
+// each but the first folded or unfolded by its heading and reached from
+// the toolbar's menu. Which section sits in which group,
 // and which group a tutorial step's button is in, is decided here so a
 // Linux test can hold it; the app draws the sections in this order.
 
@@ -37,6 +37,13 @@ public enum StationPanelGroup: String, CaseIterable, Hashable, Sendable, Identif
         case .area: "building.2.fill"
         case .freight: "shippingbox.fill"
         }
+    }
+
+    /// Whether it has a heading that folds it. The first group has none:
+    /// the panel opens on its rows exactly as before the groups, so a
+    /// short panel (a phone on its side) still shows them at once.
+    public var isFoldable: Bool {
+        self != .operations
     }
 
     /// Its sections, in the order the panel shows them.
@@ -93,7 +100,7 @@ public struct StationPanelFolds: Hashable, Sendable {
 
     /// Read from its stored text; a name it does not know is left out.
     public init(stored: String) {
-        folded = Set(stored.split(separator: ",").compactMap { StationPanelGroup(rawValue: String($0)) })
+        folded = Set(stored.split(separator: ",").compactMap { StationPanelGroup(rawValue: String($0)) }.filter(\.isFoldable))
     }
 
     /// The text it is stored as, in the groups' order.
@@ -106,6 +113,7 @@ public struct StationPanelFolds: Hashable, Sendable {
     }
 
     public mutating func toggle(_ group: StationPanelGroup) {
+        guard group.isFoldable else { return }
         if folded.contains(group) { folded.remove(group) } else { folded.insert(group) }
     }
 
