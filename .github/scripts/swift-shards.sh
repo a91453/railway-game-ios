@@ -512,26 +512,49 @@ set -euo pipefail
 # about 1.24 times that on CI), too long together for one shard's 20
 # minutes. The simple one goes to campaigns-9 and the realistic one to
 # campaigns-2, two of the shortest jobs above (8m39s and 9m07s).
+# 2026-10-29: rest timed out at 20 minutes on main 6ff5ffe (run
+# 40866614287, in ViewingSpeedTests with every earlier test passed); its job
+# had taken 12.5, 15.5, 13 and 17.7 minutes on the nights before, as the
+# Sanying Line's classes (SanyingDepot 40 s, BusOneWayAndTunnelRealMap 27,
+# SanyingLineFreeze 27) and others landed there. On each class's slowest of
+# runs 40586990177, 40775591241 and 40866614287 (the last one's rest log was
+# lost with the cancel, so the new classes count at the seconds its job
+# showed), rest added up to about 907 s (787 s on the nightly 40775591241).
+# 20 GamePresentation classes move (no pull request's tier changes), seconds
+# of tests on those runs, the destination's before -> after:
+#   campaigns-6   578 -> about 698 (SanyingDepot, BusOneWayAndTunnelRealMap,
+#                 SanyingLineFreeze, Map3DSceneryProps: 120)
+#   campaigns-18  642 -> about 698 (Achievements, RealWorldDemoRoads,
+#                 TrainNightLightsReadBack, RealBuses: 56)
+#   campaigns-14  652 -> about 698 (Map3DRealTracks, Map3DEMU3000, MapMarks,
+#                 Map3DC341Integration, Map3DBoxInstance: 46)
+#   campaigns-17  664 -> about 696 (Map3DTaipeiLandmarks, TrainPack,
+#                 Map3DParks, Map3DSceneKit: 32)
+#   campaigns-1   683 -> about 698 (Map3DTrainLabels, Map3DRealTrains: 15)
+#   campaigns-10  683 -> about 690 (Map3DEMU900Integration: 7)
+#   rest          907 -> about 631 (787 -> about 511 on the nightly)
+# campaigns-2, -4, -5, -7 and -9 were already above 700 on their slowest
+# runs (Sanying Line's two real days sit in -2 and -9); they take nothing.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests" ;;
+    campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests" ;;
     campaigns-2) echo "ServicePropertyTests ScheduledOvertakeTrackMiddlePropertyTests Map3DOpenEveryStartTests SingleTrackCapacityPropertyTests RealWorldDemoTests SanyingLineRealisticDayTests" ;;
     campaigns-3) echo "ServiceRepeatingPropertyTests TRADemoTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests" ;;
     campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests Map3DBusLayerTests Map3DRealBuildingsTests Map3DModelTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests NetworkPostcardTests SharedNetworkTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests" ;;
-    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests" ;;
+    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests SanyingDepotTests BusOneWayAndTunnelRealMapTests SanyingLineFreezeTests Map3DSceneryPropsTests" ;;
     campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests Map3DBusesTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests" ;;
     campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests" ;;
-    campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests" ;;
+    campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests" ;;
     campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests" ;;
     campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests Map3DCoarseChunkTests TurnbackPropertyTests LoadJourneyCacheTests Map3DStreamingTests LineLossFixesTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests IdleTrainDeadlockTests NetworkSectionPropertyTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests IdleTrainDeadlockTests NetworkSectionPropertyTests Map3DRealTracksTests Map3DEMU3000Tests MapMarksTests Map3DC341IntegrationTests Map3DBoxInstanceTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackPropertyTests Map3DStreetsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests Map3DShadowTests RealWorldExpansionTests ShortTurnCardTests" ;;
     campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests ScheduledOvertakeTrackFinalPropertyTests Map3DSurfaceTests NewsSessionTests Map3DPropsTests Map3DNightAndGroundTests DemoAtTests SeededStreetPlanTests Map3DBuildingsTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests AutoServiceTests Map3DHandoffTests Map3DDetailTests" ;;
-    campaigns-17) echo "PassengerPlanKeyTests EconomyPropertyTests TurnbackTests LessonGuideTests" ;;
-    campaigns-18) echo "HighSpeedDemoTests TRADemoDayTests DemoRealLinesTrackTests" ;;
+    campaigns-17) echo "PassengerPlanKeyTests EconomyPropertyTests TurnbackTests LessonGuideTests Map3DTaipeiLandmarksTests TrainPackTests Map3DParksTests Map3DSceneKitTests" ;;
+    campaigns-18) echo "HighSpeedDemoTests TRADemoDayTests DemoRealLinesTrackTests AchievementsTests RealWorldDemoRoadsTests TrainNightLightsReadBackTests RealBusesTests" ;;
     *) return 1 ;;
   esac
 }
