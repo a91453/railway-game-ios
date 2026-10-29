@@ -2380,3 +2380,7 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 使用者指出第三版正面塗裝奇怪，重看官方與Blair原圖確認少了接肩部／燈座的深色兩頰；第四版只補正面分色、上肩綠色與相接肩帶，保留車殼／玻璃／燈／設備。producer `498d85ef`，真前版`0b6d26df`／素材`1adbab9f`；新素材`e9c8de91`的revision-4與原公開draft[#1437](https://github.com/a91453/railway-game-ios/pull/1437)↔素材draft[#21](https://github.com/a91453/railway-assets-private/pull/21)互鏈。第三輪重檔同PR刪除，保留PNG／README／來源／授權。近4804／遠2208、兩車9608／4416；20私庫PNG＋1公開小總覽，asset_guard通過，PR新增13.3MB。
 
 本機Swift6.4 warnings-as-errors與最終12測試通過；前臉第一可見材質／實際塗白故障反例拒收、真第三版四單元拒收，逐三角驗分色包絡外幾何與車頭後方頂點色保持（相鄰車頭烘焙遮蔽可變）。既有六模型幾何／玻璃／八輪／支承反例、Blender、Swift42072頂點編組、170PNG與六下載PNG完整解碼、最終七向配色白模剪影目視、viewer18下載SHA通過；14檔獨立producer重建bytes相同，684其他原生與FNV保持。本型四鎖正確，分支繼承28他車舊鎖差異不擅改。詳見[交接／來源／重建／驗證](art/taichung-green/README.md)；最終CI見本輪PR checks及#1041。真實綠藍柔和過渡簡化成乾淨色塊，第四版外觀接受／營運接入／Simulator與真機Metal效能動畫仍UNVERIFIED。仍studies、tmrt映射不動，不合併／auto-merge／TestFlight。
+
+### 2026-10-29 Codex 高雄紅／橘線現役西門子 studies
+
+[來源／交接／重建／狀態](art/kaohsiung/README.md)：producer `62c2da42`，獨立DM1/T/DM2近遠六單元與三車assembly，只有studies，krtc→metroGeneric三車保持。原始高捷PDF、市府實車圖、Siemens SF3000原圖錄及可靠實拍已下載開啟；兩線共用一般銀／綠松塗裝，不另造紅橘車。近9924／遠4788三角，18成品獨立producer逐bytes相同；688他車實際payload/FNV保持，28既有鎖差異不改。四狀態、簡化與資料缺口、最終驗證及互鏈draft見自有README。使用者外觀接受、營運接入、Simulator／真機Metal效能動畫UNVERIFIED；不合併／auto-merge／TestFlight，不動GameCore／存檔／fixtures／玩法。

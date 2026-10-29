@@ -2752,6 +2752,30 @@
     "walk-tens-9" : {
       "hash" : "e8db78b1b62aa73c",
       "triangles" : 12
+    },
+    "kaohsiung-dm1" : {
+      "hash" : "34b04b1dd94fbc57",
+      "triangles" : 3806
+    },
+    "kaohsiung-dm1-far" : {
+      "hash" : "7e38a937bb91a1b0",
+      "triangles" : 1902
+    },
+    "kaohsiung-dm2" : {
+      "hash" : "34b04b1dd94fbc57",
+      "triangles" : 3806
+    },
+    "kaohsiung-dm2-far" : {
+      "hash" : "7e38a937bb91a1b0",
+      "triangles" : 1902
+    },
+    "kaohsiung-t" : {
+      "hash" : "3b2bd1b30358d963",
+      "triangles" : 2312
+    },
+    "kaohsiung-t-far" : {
+      "hash" : "96d0027eb76a51f",
+      "triangles" : 984
     }
   }
 }

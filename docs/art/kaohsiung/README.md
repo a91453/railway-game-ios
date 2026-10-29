@@ -38,3 +38,17 @@ main基準50437249。逐張查#1357/#1416/#1342/#1422/#1424/#1437皆MERGED。既
 私有參考庫查得一份高雄示意網格，自標illustrative且engineeringDimensionsM=null；不拿它當工程證據或搬幾何。高捷原PDF與Siemens圖錄補上尺寸與台車；未需要新增第三方程式依賴。私有來源原檔與內部路徑不公開。
 
 五方理由：玩家—兩線共用可辨識車型；鐵道迷—以原始DM/T及第三軌資料約束；開發—studies不增standard常駐負擔、共用匯出工具；美術—既有綠松／銀／藏青霧面頂點色；音樂—無音訊變動。
+
+驗收過程另外抓到studies註冊誤落standard初始化；`testStudiesOnlyAndProtectedOperatingMapping`實際失敗後已移回studies，不以模型輸出成功當註冊正確。完成後將重跑模型包總數／記憶體及全舊payload保護。首次底箱／玻璃驗收漏洞、頂燈裁切近重複頂點及近遠包絡差異皆由實際輸出反例檢查，不改共用gate。
+
+四向實拍對照方法：front旁置主管機關既有列車近正斜照及2427junction正斜照；left旁置2427junction整列斜側及台車近照（無全車正交側照）；top旁置其大寮俯斜照（非無透視正俯視）；isometric旁置同來源斜前。比較圖只留本機，原圖授權未開放再散布。正面確認兩側獨立窗、中央門和U帶，但本模型門框／玻璃角較方；側面確認4門與雙客窗，但未還原所有檢修縫；俯斜確認兩端空調和中段三對通風件，精細頂肋省略。這些限制不因測試通過而撤回。
+
+## 本輪技術交付
+
+最終producer：`62c2da42bf7edb3ef2e359befe206782fbaaf29b`。六獨立近遠單元、兩個完整三車assembly；DM近3806/遠1902，T近2312/遠984，三車近9924/遠4788三角。共18模型／GLB／assembly payload由獨立乾淨worktree重建逐bytes相同。最終15項Swift、5 Node/6 Python工具契約、八件GLB獨立Blender4.3.2匯入、224最終PNG完整解碼、最終viewer互動／24真下載及8下載PNG完整解碼通過。[完整量測與限制](verification.json)、[四種狀態](status.json)。
+
+688他車原生bytes及全部頂點欄位FNV與main50437249相同。本型六鎖正確；main既有28項舊鎖不符名單在verification，不改他車鎖消紅，不能宣稱全包鎖綠。
+
+外觀自檢與實拍逐視角對照已做，但使用者尚未接受此producer。`file://`由瀏覽器管理政策阻擋，獨立記UNVERIFIED；localhost載入／旋轉／縮放／下載成功。不把Linux WebGL或Blender當Simulator、真機Metal／效能／動畫。
+
+素材draft：[railway-assets-private#22](https://github.com/a91453/railway-assets-private/pull/22)；[完整revision-1](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-1)，含自含viewer／原生／GLB／20PNG／來源／SHA。公開PR稍後互鏈。

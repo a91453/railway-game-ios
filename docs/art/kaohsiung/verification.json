@@ -1,0 +1,651 @@
+{
+  "producer": "62c2da42bf7edb3ef2e359befe206782fbaaf29b",
+  "platform": "Linux; Swift6.4.0 warnings-as-errors; Blender4.3.2; Node24.19; Chromium WebGL software",
+  "png": {
+    "final_native_full_decodes": 224,
+    "shell_full_decodes": 84,
+    "delivered_pngs": 20,
+    "public_overview_pngs": 1,
+    "downloaded_png_full_decodes": 8
+  },
+  "swift_tests": {
+    "status": "VERIFIED",
+    "count": 15,
+    "command": "swift build --build-tests -Xswiftc -warnings-as-errors; swift test --skip-build --filter Map3DKaohsiungTests|Map3DModelTests|Map3DModelPackSizeTests|Map3DTaichungGreenTests"
+  },
+  "common_contracts": {
+    "node": 5,
+    "python": 6,
+    "status": "VERIFIED"
+  },
+  "geometry": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "balanced_edges": 5195,
+        "positive_components": 118,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "balanced_edges": 3404,
+        "positive_components": 103,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "balanced_edges": 5195,
+        "positive_components": 118,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "balanced_edges": 2520,
+        "positive_components": 77,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "balanced_edges": 1476,
+        "positive_components": 67,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "balanced_edges": 2520,
+        "positive_components": 77,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "balanced_edges": 13786,
+        "positive_components": 337,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "balanced_edges": 6508,
+        "positive_components": 219,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      }
+    ],
+    "limits": [
+      "GLB is checked against the shared writer; run an independent importer separately.",
+      "No vehicle-specific glass visibility, equipment support, tyre/rail or clearance proof.",
+      "No exhaustive intersections, engineering precision, appearance acceptance or device performance.",
+      "Assembly payload is a JS expansion check; independently compare a Swift formation when available."
+    ]
+  },
+  "specific": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "glass_visibility": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "glass_visibility": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "glass_visibility": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "glass_visibility": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "glass_visibility": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "glass_visibility": true,
+        "eight_wheels_rail_and_clearance": true,
+        "roof_contact": true,
+        "gangway_plane": true,
+        "actual_glass_bury_150mm_wheel_lift_35mm_roof_lift_80mm_rejected": true
+      }
+    ],
+    "limits": "Triangle-centroid exterior glass rays, 8 tyre envelopes and roof central support samples; no exhaustive self-intersection or engineering/appearance/device acceptance."
+  },
+  "independent_glb": {
+    "importer": "4.3.2",
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "triangles": 3806,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "triangles": 2312,
+        "minimum": [
+          -10.779999732971191,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.779999732971191,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "triangles": 3806,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "triangles": 1902,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "triangles": 984,
+        "minimum": [
+          -10.779999732971191,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.779999732971191,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "triangles": 1902,
+        "minimum": [
+          -10.97249984741211,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          10.97249984741211,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "triangles": 9924,
+        "minimum": [
+          -32.724998474121094,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          32.724998474121094,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "triangles": 4788,
+        "minimum": [
+          -32.724998474121094,
+          -1.6180000305175781,
+          0.0
+        ],
+        "maximum": [
+          32.724998474121094,
+          1.6180000305175781,
+          3.7680001258850098
+        ],
+        "vertex_colors": true
+      }
+    ]
+  },
+  "independent_rebuild": {
+    "status": "VERIFIED",
+    "producer": "62c2da42bf7edb3ef2e359befe206782fbaaf29b",
+    "independent_checkout": "fresh Swift6.4 build in detached producer worktree",
+    "models": [
+      {
+        "file": "models/kaohsiung-dm1-far.glb",
+        "bytes": 183792,
+        "sha256": "b7571dbc4e02692ddd696d7214d398e4598d9b633916b880c175cf1efb25ce04"
+      },
+      {
+        "file": "models/kaohsiung-dm1-far.m3dmodel",
+        "bytes": 98964,
+        "sha256": "eca6fe60203a5f5ae74ef98f9863ddc0f7da24d3b74fd322b344b93ef47349ef"
+      },
+      {
+        "file": "models/kaohsiung-dm1.glb",
+        "bytes": 366580,
+        "sha256": "34aff9ff939b82493fdec5db975e31dc68ef5ef96731fe35c33e59538b82c3ba"
+      },
+      {
+        "file": "models/kaohsiung-dm1.m3dmodel",
+        "bytes": 197968,
+        "sha256": "c535cd040dc97ba2c2a8ca3a15c5cfae46347a91e78a1f54590015e55423952a"
+      },
+      {
+        "file": "models/kaohsiung-dm2-far.glb",
+        "bytes": 183792,
+        "sha256": "80fdd5cc898af7111935a92b2cbf49a88b87a1cd40dfcb1839a98b2ff629346e"
+      },
+      {
+        "file": "models/kaohsiung-dm2-far.m3dmodel",
+        "bytes": 98964,
+        "sha256": "4cb104ad899985055f04371f60fd8b7ac133a3a1e7a8b57335da51e677fb3de2"
+      },
+      {
+        "file": "models/kaohsiung-dm2.glb",
+        "bytes": 366580,
+        "sha256": "d767440230b9f414a78547a0801d4d13d2b2539493beebe3c4b73c12acd38b61"
+      },
+      {
+        "file": "models/kaohsiung-dm2.m3dmodel",
+        "bytes": 197968,
+        "sha256": "2a19de40a165ba6e373546ba706669e929886bb11cb08ac7119e5246fb39bf2f"
+      },
+      {
+        "file": "models/kaohsiung-formation-far.glb",
+        "bytes": 460816,
+        "sha256": "cd7e1634b14aea809f20d728594687fc737582dfd0a3feec9765207e0dd2b901"
+      },
+      {
+        "file": "models/kaohsiung-formation-far.m3dscene.json",
+        "bytes": 332807,
+        "sha256": "427d8a8d5317528e58298fbd8118f6e8d394d9eb00274f697bd17465b96e35ed"
+      },
+      {
+        "file": "models/kaohsiung-formation-far.triangles.bin",
+        "bytes": 248976,
+        "sha256": "57ac9536b2d4cc9225011d9b8b153110a31b765ac669bb6c4a2c0957efd9256a"
+      },
+      {
+        "file": "models/kaohsiung-formation.glb",
+        "bytes": 953876,
+        "sha256": "68025f1bcb5be012b006a07e76626a51133c3f9244cecb8020459eb1c88fb972"
+      },
+      {
+        "file": "models/kaohsiung-formation.m3dscene.json",
+        "bytes": 688867,
+        "sha256": "98ca61c527cb0b172fe3e68a1331ebd48e763941dc1630c71f1af702aaf05575"
+      },
+      {
+        "file": "models/kaohsiung-formation.triangles.bin",
+        "bytes": 516048,
+        "sha256": "a9b111cc5c26737db3bfe8a7bdc04a8051391807afba150500c1e18f80231d15"
+      },
+      {
+        "file": "models/kaohsiung-t-far.glb",
+        "bytes": 95660,
+        "sha256": "aec66d6d76336ed530969e0afc4d8eb7c7c875c34c0cb420fe670b32e5d83f63"
+      },
+      {
+        "file": "models/kaohsiung-t-far.m3dmodel",
+        "bytes": 51224,
+        "sha256": "fd3991f6cbe11276475c774f2540f1017b34456e591e53946ff8ef6ac4705873"
+      },
+      {
+        "file": "models/kaohsiung-t.glb",
+        "bytes": 223148,
+        "sha256": "c2b89eae31ac0f3ad8413f45a47616148918271b0cbd42961c0e101730131d99"
+      },
+      {
+        "file": "models/kaohsiung-t.m3dmodel",
+        "bytes": 120276,
+        "sha256": "a943ed5e33f2e7b0dfb9daf78e629b5c922b1bfca60babd036bddaec22fae074"
+      }
+    ]
+  },
+  "protected_existing": {
+    "status": "VERIFIED",
+    "base_commit": "50437249",
+    "protected_models": 688,
+    "all_native_bytes_equal": true,
+    "all_vertex_fields_FNV_equal": true,
+    "existing_main_lock_mismatches": [
+      "light-set-emu3000-head",
+      "light-set-emu3000-tail",
+      "set-E200CK-car",
+      "set-E200CK-tail",
+      "set-E500CK-car",
+      "set-E500CK-tail",
+      "set-emu3000-car",
+      "set-emu3000-em6",
+      "set-emu3000-ep7",
+      "set-emu3000-ep10",
+      "set-emu3000-et",
+      "set-emu3000-head",
+      "set-emu3000-panto",
+      "set-emu3000-tail",
+      "set-emu3000Far-car",
+      "set-emu3000Far-em6",
+      "set-emu3000Far-ep7",
+      "set-emu3000Far-ep10",
+      "set-emu3000Far-et",
+      "set-emu3000Far-head",
+      "set-emu3000Far-panto",
+      "set-emu3000Far-tail",
+      "set-R100CK-car",
+      "set-R100CK-tail",
+      "set-R200CK-car",
+      "set-R200CK-tail",
+      "set-SUMMER-car",
+      "set-SUMMER-tail"
+    ],
+    "lock_mismatch_count": 28
+  },
+  "viewer": {
+    "status": "VERIFIED",
+    "transport": "loopback HTTP",
+    "models": [
+      {
+        "id": "kaohsiung-dm1",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      }
+    ],
+    "orbit_zoom_changed_pixels": true,
+    "mobile_width": 390,
+    "file_protocol": {
+      "status": "UNVERIFIED",
+      "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+    },
+    "errors": [],
+    "external_requests": 0,
+    "limits": [
+      "Browser WebGL only; no device Metal, animation or appearance acceptance."
+    ]
+  },
+  "actual_downloads": {
+    "status": "VERIFIED",
+    "rows": [
+      {
+        "id": "kaohsiung-dm1",
+        "kind": "native",
+        "bytes": 197968,
+        "sha256": "c535cd040dc97ba2c2a8ca3a15c5cfae46347a91e78a1f54590015e55423952a",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1",
+        "kind": "glb",
+        "bytes": 366580,
+        "sha256": "34aff9ff939b82493fdec5db975e31dc68ef5ef96731fe35c33e59538b82c3ba",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1",
+        "kind": "PNG",
+        "bytes": 47043,
+        "sha256": "a3b353fde62f260405307102b5a082d15557bbbedc603b329bbc7db8f00f21da",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "kind": "native",
+        "bytes": 120276,
+        "sha256": "a943ed5e33f2e7b0dfb9daf78e629b5c922b1bfca60babd036bddaec22fae074",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "kind": "glb",
+        "bytes": 223148,
+        "sha256": "c2b89eae31ac0f3ad8413f45a47616148918271b0cbd42961c0e101730131d99",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t",
+        "kind": "PNG",
+        "bytes": 35561,
+        "sha256": "70559216001b9476e28aa61bb7a24ceaf85322a2ed78978db56a5da6129442a9",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "kind": "native",
+        "bytes": 197968,
+        "sha256": "2a19de40a165ba6e373546ba706669e929886bb11cb08ac7119e5246fb39bf2f",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "kind": "glb",
+        "bytes": 366580,
+        "sha256": "d767440230b9f414a78547a0801d4d13d2b2539493beebe3c4b73c12acd38b61",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2",
+        "kind": "PNG",
+        "bytes": 47043,
+        "sha256": "a3b353fde62f260405307102b5a082d15557bbbedc603b329bbc7db8f00f21da",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "kind": "native",
+        "bytes": 98964,
+        "sha256": "eca6fe60203a5f5ae74ef98f9863ddc0f7da24d3b74fd322b344b93ef47349ef",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "kind": "glb",
+        "bytes": 183792,
+        "sha256": "b7571dbc4e02692ddd696d7214d398e4598d9b633916b880c175cf1efb25ce04",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm1-far",
+        "kind": "PNG",
+        "bytes": 40900,
+        "sha256": "9df193c69db565e55571fa4d4b2725cdf2d41cdd7f00dbff81dd24cb1bd3e26f",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "kind": "native",
+        "bytes": 51224,
+        "sha256": "fd3991f6cbe11276475c774f2540f1017b34456e591e53946ff8ef6ac4705873",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "kind": "glb",
+        "bytes": 95660,
+        "sha256": "aec66d6d76336ed530969e0afc4d8eb7c7c875c34c0cb420fe670b32e5d83f63",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-t-far",
+        "kind": "PNG",
+        "bytes": 32366,
+        "sha256": "815b7706684d40e116d228ad27999fbedcbdbc8d2f1dd32fe6986c7ac8ab34fb",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "kind": "native",
+        "bytes": 98964,
+        "sha256": "4cb104ad899985055f04371f60fd8b7ac133a3a1e7a8b57335da51e677fb3de2",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "kind": "glb",
+        "bytes": 183792,
+        "sha256": "80fdd5cc898af7111935a92b2cbf49a88b87a1cd40dfcb1839a98b2ff629346e",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-dm2-far",
+        "kind": "PNG",
+        "bytes": 40900,
+        "sha256": "9df193c69db565e55571fa4d4b2725cdf2d41cdd7f00dbff81dd24cb1bd3e26f",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "kind": "native",
+        "bytes": 688867,
+        "sha256": "98ca61c527cb0b172fe3e68a1331ebd48e763941dc1630c71f1af702aaf05575",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "kind": "glb",
+        "bytes": 953876,
+        "sha256": "68025f1bcb5be012b006a07e76626a51133c3f9244cecb8020459eb1c88fb972",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation",
+        "kind": "PNG",
+        "bytes": 46545,
+        "sha256": "f4ef923df05803d13159367af8b3b3cc93ba647fc8ee55bbf3627f96d4fd70f2",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "kind": "native",
+        "bytes": 332807,
+        "sha256": "427d8a8d5317528e58298fbd8118f6e8d394d9eb00274f697bd17465b96e35ed",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "kind": "glb",
+        "bytes": 460816,
+        "sha256": "cd7e1634b14aea809f20d728594687fc737582dfd0a3feec9765207e0dd2b901",
+        "matches_expected_bytes": true
+      },
+      {
+        "id": "kaohsiung-formation-far",
+        "kind": "PNG",
+        "bytes": 40861,
+        "sha256": "20e672b6078b54eee2365196b5a1a40866e1102930e5876bd6e175b4d1a2b3d7",
+        "matches_expected_bytes": true
+      }
+    ]
+  }
+}

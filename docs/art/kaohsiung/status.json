@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "VERIFIED",
+    "evidence": "Final native/GLB geometry, specific destructive faults, Blender4.3.2, complete PNG decoding, inspector interaction and download bytes; see public verification.json. File protocol separately UNVERIFIED."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "accepted_producer": null,
+    "evidence": "Producer self-review only; no user acceptance of this producer. Shape, frame and coupler simplifications documented."
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "studies only; krtc remains metroGeneric 3 cars; no operating integration."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "Linux WebGL/Blender only. Simulator/Metal/performance/animation not tested."
+  }
+}
