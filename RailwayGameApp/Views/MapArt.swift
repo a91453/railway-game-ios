@@ -1182,6 +1182,13 @@ enum MapArt {
             let colour = route.line.map { Palette.lineColor($0, custom: route.color) } ?? Palette.ink
             let opacity = route.runs ? 1 : 0.4
             stroke(path(route.points), colour: colour, opacity: opacity)
+            // A saved leg no road joins any more: a red dash, as the draft's.
+            if route.broken.count == 2 {
+                context.stroke(
+                    path(route.broken), with: .color(Palette.metroRed),
+                    style: StrokeStyle(lineWidth: width, lineCap: .butt, dash: [max(3, width * 2), max(2, width * 1.5)])
+                )
+            }
             if buses.showsLabels {
                 for item in route.arrows(every: spacing) { arrow(item, colour: colour, opacity: opacity) }
             } else {

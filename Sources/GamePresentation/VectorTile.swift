@@ -39,6 +39,11 @@ struct VectorTile: Sendable {
             return nil
         }
 
+        func number(_ key: String) -> Double? {
+            if case .number(let value) = properties[key] { return value }
+            return nil
+        }
+
         /// A polygon's parts as polygons: each exterior ring (clockwise as
         /// drawn, y down: a positive area) with the interior rings after it.
         var polygons: [[[Point]]] {

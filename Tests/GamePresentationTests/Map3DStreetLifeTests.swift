@@ -255,7 +255,10 @@ final class Map3DStreetLifeTests: XCTestCase {
         let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
         let life = Map3DScene(world: world, baseMap: tiles).streetLife
         XCTAssertGreaterThan(life.lanes.count, 500)
-        XCTAssertGreaterThan(life.spots.filter { $0.kind == .sidewalk }.count, 100)
+        // 98 pieces of pavement on the 2026-10-29 base map (112 before):
+        // one-way lines joined head to tail are longer, the pavement is not
+        // less (54 km, 906 people; 49 km, 814 before; decision 474).
+        XCTAssertGreaterThan(life.spots.filter { $0.kind == .sidewalk }.count, 90)
         XCTAssertTrue(life.lanes.contains { !$0.scooters }, "the motorway's")
         XCTAssertNil(Map3DScene.Builder.traffic(.service), "no traffic in a yard")
         let frame = life.frame(target: .zero, distance: 400, time: 0, detail: .full, activity: .init())

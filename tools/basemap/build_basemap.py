@@ -25,7 +25,8 @@ OpenFreeMap's tiles outside Taiwan alike:
   where the game reads in no zones, is not blank.
 - `park` (class national_park, nature_reserve, park).
 - `transportation` (class motorway … service; ramp, brunnel, layer on
-  bridges of layer 2 and up) and
+  bridges of layer 2 and up; oneway 1 on a road traffic takes one way
+  only, its line drawn that way, decision 474) and
   `transportation_name` (name, ref, class): no railways (the game draws
   the real ones), paths, tracks or parking aisles.
 - `place` (class city … hamlet, island; name) and `boundary` (admin_level
@@ -345,9 +346,18 @@ def read(path):
                             props['layer'] = level
                     elif tags.get('tunnel') not in (None, 'no') or tags.get('covered') == 'yes':
                         props['brunnel'] = 'tunnel'
+                    # Decision 474: a one-way road's line runs the way
+                    # traffic goes (OSM's `oneway=-1` turned round), so the
+                    # buses' road network keeps to it.
+                    ends = (obj.nodes[0].ref, obj.nodes[-1].ref)
+                    way = osm_oneway(tags)
+                    if way:
+                        props['oneway'] = 1
+                        if way < 0:
+                            points, ends = points[::-1], ends[::-1]
                     f = line_feature('transportation', zoom, props, points)
                     if f:
-                        f.append(('road', obj.nodes[0].ref, obj.nodes[-1].ref))
+                        f.append(('road', *ends))
                         features.append(f)
                     label = names(tags)
                     if tags.get('ref'):
@@ -434,9 +444,29 @@ def osm_layer(value):
         return 0
 
 
+def osm_oneway(tags):
+    """Which way a road's traffic goes (decision 474): 1 along its nodes,
+    -1 against them, 0 both. A road buses may take both ways
+    (`oneway:bus` or `oneway:psv` `no`) and one that changes its way
+    through the day (`alternating`, `reversible`) are both ways; a
+    roundabout is one way unless it says otherwise."""
+    if tags.get('oneway:bus') == 'no' or tags.get('oneway:psv') == 'no':
+        return 0
+    value = tags.get('oneway')
+    if value in ('yes', 'true', '1'):
+        return 1
+    if value in ('-1', 'reverse'):
+        return -1
+    if value is None and tags.get('junction') in ('roundabout', 'circular'):
+        return 1
+    return 0
+
+
 def merge_lines(features):
     """Join lines of one layer and the same fields end to end where exactly
-    two meet, so a road is a few long lines rather than many short ones."""
+    two meet, so a road is a few long lines rather than many short ones. A
+    one-way road's lines are joined only head to tail, never turned round
+    (decision 474)."""
     groups, out = {}, []
     for f in features:
         if f[1] == 2 and len(f) > 7:
@@ -456,6 +486,7 @@ def merge_lines(features):
             used[i] = True
             coords = list(f[5][0])
             first, last = f[7][1], f[7][2]
+            oneway = f[4].get('oneway') == 1
             for forward in (True, False):
                 while True:
                     node = last if forward else first
@@ -463,9 +494,11 @@ def merge_lines(features):
                     if len(ends.get(node, [])) != 2 or len(nxt) != 1:
                         break
                     j = nxt[0]
+                    a, b = group[j][7][1], group[j][7][2]
+                    if oneway and (a if forward else b) != node:
+                        break
                     used[j] = True
                     other = list(group[j][5][0])
-                    a, b = group[j][7][1], group[j][7][2]
                     if forward:
                         if a != node:
                             other, a, b = reverse(other), b, a
@@ -1015,7 +1048,7 @@ def main(extract, out):
             {'id': 'park', 'fields': {'class': 'String', 'name': 'String'}, 'minzoom': 6, 'maxzoom': MAX_ZOOM},
             {'id': 'waterway', 'fields': {'class': 'String', 'name': 'String', 'brunnel': 'String'}, 'minzoom': 8, 'maxzoom': MAX_ZOOM},
             {'id': 'boundary', 'fields': {'admin_level': 'Number', 'maritime': 'Number'}, 'minzoom': 5, 'maxzoom': MAX_ZOOM},
-            {'id': 'transportation', 'fields': {'class': 'String', 'ramp': 'Number', 'brunnel': 'String', 'layer': 'Number'}, 'minzoom': 5, 'maxzoom': MAX_ZOOM},
+            {'id': 'transportation', 'fields': {'class': 'String', 'ramp': 'Number', 'brunnel': 'String', 'layer': 'Number', 'oneway': 'Number'}, 'minzoom': 5, 'maxzoom': MAX_ZOOM},
             {'id': 'transportation_name', 'fields': {'class': 'String', 'name': 'String', 'ref': 'String'}, 'minzoom': 10, 'maxzoom': MAX_ZOOM},
             {'id': 'place', 'fields': {'class': 'String', 'name': 'String'}, 'minzoom': 4, 'maxzoom': MAX_ZOOM},
         ],

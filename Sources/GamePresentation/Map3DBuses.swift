@@ -8,8 +8,12 @@ import GameCore
 //
 // Decision 424: on a real-world map with a base map the way follows the
 // base map's own roads (``BusRoadNetwork``), the bus stopping at the stops
-// as they lie on them; a saved route none of whose way the roads join falls
-// back to the following.
+// as they lie on them. Decision 474: a bus comes back along the way back
+// (``BusRoads/wayBack(stops:station:)``), which a one-way road can make
+// another way, and is not drawn while in a tunnel; a route a leg of whose
+// way no road joins has no bus (not one driving straight across the
+// blocks), unless the player's own roads join it (decision 438), when it
+// follows the following.
 //
 // The way follows the road cells GameCore finds the route's length on
 // (``BusRoadPath``). On a map with no base map the streets run along the
@@ -61,6 +65,13 @@ public struct Map3DBuses: Sendable {
         /// The way kept to the right, going out and coming back.
         let out: Map3DStreetLife.Path
         let back: Map3DStreetLife.Path
+        /// The stops' and the station's distances along the way back's
+        /// middle, from where it starts (decision 474); in the stops' order.
+        let backStops: [Double]
+        let backLength: Float
+        /// The shares of each way (0–1) in a tunnel, where no bus is drawn.
+        var outHidden: [ClosedRange<Float>] = []
+        var backHidden: [ClosedRange<Float>] = []
         let tint: UInt32
     }
 
@@ -92,34 +103,70 @@ public struct Map3DBuses: Sendable {
             routes = []
             return
         }
-        var laid: [(BusMotion, [PlanPoint], [Int], PlanPoint?, UInt32)] = []
+        var laid: [(BusMotion, Plan, Plan?, PlanPoint?, UInt32)] = []
         for route in world.busRoutes {
             let station = route.station.flatMap { world.station(id: $0) }
             guard let motion = BusMotion(route), route.station == nil || station != nil, let last = route.stops.last else { continue }
-            let way: (points: [PlanPoint], stops: [Int])
-            if world.geoAnchor != nil, let saved = onRoads?.way(ofSaved: route.stops, station: station?.location) {
-                way = (saved.points, saved.marks)
+            var way: Plan
+            var back: Plan?
+            let saved = world.geoAnchor == nil ? nil : onRoads?.way(ofSaved: route.stops, station: station?.location)
+            if let saved, let onRoads, saved.firstBroken == nil {
+                way = Plan(points: saved.points, stops: saved.marks, tunnels: saved.tunnels)
+                let home = Array(saved.stops.dropLast(station == nil ? 0 : 1))
+                let return_ = onRoads.wayBack(stops: home, station: station?.location)
+                if return_.firstBroken == nil {
+                    back = Plan(points: return_.points, stops: return_.marks, tunnels: return_.tunnels)
+                }
+            } else if saved != nil, roads.built.isEmpty
+                        || !BusRoadPath.joins(stops: route.stops, station: station?.location, roads: roads.allCells) {
+                // Decision 474: no road joins a leg, and the player's own
+                // roads do not either: no bus rather than one across the blocks.
+                continue
             } else if let station {
-                way = Self.way(stops: route.stops, station: station.location, roads: roads.allCells, alongEdges: world.geoAnchor == nil)
+                way = Plan(Self.way(stops: route.stops, station: station.location, roads: roads.allCells, alongEdges: world.geoAnchor == nil))
             } else {
                 // Decision 438: a city route, its last stop where a
                 // station would be.
-                way = Self.way(stops: Array(route.stops.dropLast()), station: last.middle, roads: roads.allCells, alongEdges: world.geoAnchor == nil)
+                way = Plan(Self.way(stops: Array(route.stops.dropLast()), station: last.middle, roads: roads.allCells, alongEdges: world.geoAnchor == nil))
             }
             let colour = station.flatMap { world.lines(callingAt: $0.id).first?.color }
             let tint = colour.map { Map3DColor.rgb(UInt32(palette.color(for: $0.rgb))) } ?? Map3DLowFloorBus.accentColor
-            laid.append((motion, way.points, way.stops, station?.location, tint))
+            laid.append((motion, way, back, station?.location, tint))
         }
         let roadIndex = RoadIndex(lanes: scene.streetLife.lanes,
-                                  near: laid.flatMap(\.1).map { scene.point(worldX: Double($0.x), worldY: Double($0.y), height: 0) })
+                                  near: laid.flatMap(\.1.points).map { scene.point(worldX: Double($0.x), worldY: Double($0.y), height: 0) })
         var routes: [Route] = []
-        for (motion, plan, stops, station, tint) in laid {
-            if let route = Self.lay(motion, plan: plan, stops: stops, station: station, tint: tint, in: scene, roads: roadIndex,
+        for (motion, plan, back, station, tint) in laid {
+            if let route = Self.lay(motion, plan: plan, back: back, station: station, tint: tint, in: scene, roads: roadIndex,
                                     snaps: world.geoAnchor != nil) {
                 routes.append(route)
             }
         }
         self.routes = routes
+    }
+
+    /// A way on the plan: its points, the index of each stop and last the
+    /// station (a city route's last stop), and for each piece whether it
+    /// runs in a tunnel.
+    struct Plan {
+        let points: [PlanPoint]
+        let stops: [Int]
+        let tunnels: [Bool]
+
+        init(points: [PlanPoint], stops: [Int], tunnels: [Bool]) {
+            self.points = points
+            self.stops = stops
+            self.tunnels = tunnels
+        }
+
+        init(_ way: (points: [PlanPoint], stops: [Int])) {
+            self.init(points: way.points, stops: way.stops, tunnels: Array(repeating: false, count: max(way.points.count - 1, 0)))
+        }
+
+        /// The same way gone the other way round.
+        var reversed: Plan {
+            Plan(points: points.reversed(), stops: stops.map { points.count - 1 - $0 }.reversed(), tunnels: tunnels.reversed())
+        }
     }
 
     /// Whether it was laid from `signature` in `scene`.
@@ -221,17 +268,61 @@ public struct Map3DBuses: Sendable {
 
     /// `plan`'s way in `scene`, on its roads' height, kept to the right;
     /// short of its station, when it has one (a city route, decision 438,
-    /// ends at its last stop).
-    static func lay(_ motion: BusMotion, plan: [PlanPoint], stops: [Int], station: PlanPoint?, tint: UInt32, in scene: Map3DScene,
+    /// ends at its last stop). Decision 474: the bus comes back along
+    /// `back` (from the station to the first stop) when given, else the
+    /// way out the other way round, and is not drawn in a tunnel.
+    static func lay(_ motion: BusMotion, plan: Plan, back: Plan? = nil, station: PlanPoint?, tint: UInt32, in scene: Map3DScene,
                     roads: RoadIndex, snaps: Bool) -> Route? {
-        var corners = plan.map { scene.point(worldX: Double($0.x), worldY: Double($0.y), height: 0) }
+        guard let way = ground(plan, station: station, in: scene, roads: roads, snaps: snaps) else { return nil }
+        // The way back, laid from the first stop as the way out is, and
+        // gone the other way round.
+        let home = back.flatMap { ground($0.reversed, station: station, in: scene, roads: roads, snaps: snaps) } ?? way
+        // As the cars keep to the right of the roads they share.
+        let halves = way.halves + (back == nil ? [] : home.halves)
+        let half = halves.isEmpty ? 3 : halves.sorted()[halves.count / 2]
+        let side = max(half * 0.5, 1.2)
+        guard let out = Map3DStreetLife.Path(way.points)?.shifted(side), let backPath = Map3DStreetLife.Path(home.points.reversed())?.shifted(side)
+        else { return nil }
+        let length = way.length, backLength = home.length
+        return Route(
+            motion: motion, stops: plan.stops.map { way.distances[way.marks[$0]] }, length: Float(length), out: out, back: backPath,
+            backStops: (back?.reversed ?? plan).stops.map { backLength - home.distances[home.marks[$0]] },
+            backLength: Float(backLength),
+            outHidden: way.hidden.map { Float($0.lowerBound / length)...Float($0.upperBound / length) },
+            backHidden: home.hidden.map { Float((backLength - $0.upperBound) / backLength)...Float((backLength - $0.lowerBound) / backLength) },
+            tint: tint
+        )
+    }
+
+    /// A way laid on the ground of a scene.
+    struct Ground {
+        let points: [Map3DPoint]
+        /// Each point's distance along it, from its first.
+        let distances: [Double]
+        /// The point of each of the plan's points.
+        let marks: [Int]
+        /// The distances along it in a tunnel.
+        let hidden: [ClosedRange<Double>]
+        /// The half widths of the roads it was put on.
+        let halves: [Float]
+
+        var length: Double { distances.last ?? 0 }
+    }
+
+    /// `plan` in `scene`, on its roads' height, short of its station when
+    /// it has one; `nil` when no road is near it or it is too short.
+    static func ground(_ plan: Plan, station: PlanPoint?, in scene: Map3DScene, roads: RoadIndex, snaps: Bool) -> Ground? {
+        var corners = plan.points.map { scene.point(worldX: Double($0.x), worldY: Double($0.y), height: 0) }
         var halves: [Float] = []
+        // Whether the piece before point `index` is in a tunnel.
+        func underground(_ index: Int) -> Bool { index > 0 && index - 1 < plan.tunnels.count && plan.tunnels[index - 1] }
         // On a real-world map each point on its nearest road, and from one
         // to the next along the roads where they join within three times
-        // the straight way (and 200 m).
+        // the straight way (and 200 m). A point inside a tunnel is not put
+        // on the road over it (decision 474).
         var snapped: [RoadIndex.Snap?] = Array(repeating: nil, count: corners.count)
         if snaps {
-            for index in corners.indices {
+            for index in corners.indices where !(underground(index) && underground(index + 1)) {
                 guard let road = roads.nearest(to: corners[index], within: snapReach) else { continue }
                 halves.append(road.half)
                 snapped[index] = road
@@ -239,20 +330,25 @@ public struct Map3DBuses: Sendable {
             }
         }
         // Every ``step`` metres at most, so the way keeps to the ground.
-        var points: [Map3DPoint] = [], marks: [Int] = []
-        func straight(to corner: Map3DPoint) {
+        var points: [Map3DPoint] = [], marks: [Int] = [], tunnel: [Bool] = []
+        func straight(to corner: Map3DPoint, under: Bool) {
             if let last = points.last {
                 let span = Map3DPoint(corner.x - last.x, 0, corner.z - last.z), steps = max(1, Int((span.length / step).rounded(.up)))
-                for part in 1..<steps { points.append(last + span * (Float(part) / Float(steps))) }
+                for part in 1..<steps {
+                    points.append(last + span * (Float(part) / Float(steps)))
+                    tunnel.append(under)
+                }
             }
             points.append(Map3DPoint(corner.x, 0, corner.z))
+            tunnel.append(under)
         }
         for (index, corner) in corners.enumerated() {
-            if index > 0, let from = snapped[index - 1], let to = snapped[index],
+            let under = underground(index)
+            if index > 0, !under, let from = snapped[index - 1], let to = snapped[index],
                let way = roads.way(from: from, to: to, longest: 3 * (corner - corners[index - 1]).length + 200) {
-                for point in way.dropFirst() { straight(to: point) }
+                for point in way.dropFirst() { straight(to: point, under: false) }
             } else {
-                straight(to: corner)
+                straight(to: corner, under: under)
             }
             marks.append(points.count - 1)
         }
@@ -261,10 +357,12 @@ public struct Map3DBuses: Sendable {
             let station = scene.point(worldX: Double(station.x), worldY: Double(station.y), height: 0)
             while points.count > 2, let end = points.last, Map3DPoint(end.x - station.x, 0, end.z - station.z).length < stationClearance {
                 points.removeLast()
+                tunnel.removeLast()
             }
             // And where the street drawn stops short of it.
             while points.count > 2, let end = points.last, (roads.nearest(to: end, within: roadEnd)?.distance ?? .infinity) >= roadEnd {
                 points.removeLast()
+                tunnel.removeLast()
             }
             marks = marks.map { min($0, points.count - 1) }
         }
@@ -285,12 +383,16 @@ public struct Map3DBuses: Sendable {
             distances.append(distances[index - 1] + Double(Map3DPoint(ground[index].x - ground[index - 1].x, 0, ground[index].z - ground[index - 1].z).length))
         }
         guard let length = distances.last, length >= 1 else { return nil }
-        // As the cars keep to the right of the roads they share.
-        let half = halves.isEmpty ? 3 : halves.sorted()[halves.count / 2]
-        let side = max(half * 0.5, 1.2)
-        guard let out = Map3DStreetLife.Path(ground)?.shifted(side), let back = Map3DStreetLife.Path(ground.reversed())?.shifted(side)
-        else { return nil }
-        return Route(motion: motion, stops: stops.map { distances[marks[$0]] }, length: Float(length), out: out, back: back, tint: tint)
+        // The stretches whose pieces are in a tunnel.
+        var hidden: [ClosedRange<Double>] = []
+        for index in 1..<ground.count where tunnel[index] {
+            if let open = hidden.last, open.upperBound == distances[index - 1] {
+                hidden[hidden.count - 1] = open.lowerBound...distances[index]
+            } else {
+                hidden.append(distances[index - 1]...distances[index])
+            }
+        }
+        return Ground(points: ground, distances: distances, marks: marks, hidden: hidden, halves: halves)
     }
 
     /// The traffic lanes near a way (not the motorways' or the ramps',
@@ -489,9 +591,12 @@ public struct Map3DBuses: Sendable {
         var seen: [(away: Float, instance: Map3DInstance, clear: (point: Map3DPoint, along: Map3DPoint))] = []
         for route in routes where route.out.boxDistance(to: target) < reach {
             for bus in route.motion.buses(at: second) {
-                let along = Float(bus.distance(along: route.stops)) / route.length
+                // Decision 474: each way's own distances, and none in a tunnel.
+                let along = bus.outbound ? Float(bus.distance(along: route.stops)) / route.length
+                    : Float(bus.distance(along: route.backStops)) / route.backLength
+                guard !(bus.outbound ? route.outHidden : route.backHidden).contains(where: { $0.contains(along) }) else { continue }
                 let path = bus.outbound ? route.out : route.back
-                let place = path.at((bus.outbound ? along : 1 - along) * path.length)
+                let place = path.at(along * path.length)
                 let away = Map3DPoint(place.point.x - target.x, 0, place.point.z - target.z).length
                 let size = Map3DStreetLife.fade(away, reach: reach) * Float(bus.scale)
                 guard size > 0 else { continue }

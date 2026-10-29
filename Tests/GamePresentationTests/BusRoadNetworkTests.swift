@@ -5,10 +5,12 @@ import XCTest
 
 /// Decision 424: the player's bus routes follow the base map's roads. A
 /// network made of a few streets laid in vector tiles by hand: a bus takes
-/// `primary` to `minor` roads (not service roads, freeways or tunnels), a
+/// `primary` to `minor` roads (not service roads or freeways), a
 /// stop is put on the nearest road within 25 m, the way between two stops
 /// runs along the streets, a road cut at a tile's edge still joins, and two
-/// streets no road joins give no way, not a straight line.
+/// streets no road joins give no way, not a straight line. Decision 474: a
+/// one-way road is taken its way only, and a tunnel is taken but holds no
+/// stop.
 final class BusRoadNetworkTests: XCTestCase {
     private typealias Point = BusRoadNetwork.Point
 
@@ -21,11 +23,12 @@ final class BusRoadNetworkTests: XCTestCase {
     /// A line of `kind` through `points` (metres of the world) as tile
     /// `column`, `row` holds it.
     private func feature(
-        _ kind: String, _ points: [(x: Double, y: Double)], column: Int, row: Int, brunnel: String? = nil
+        _ kind: String, _ points: [(x: Double, y: Double)], column: Int, row: Int, brunnel: String? = nil, oneway: Double? = nil
     ) -> VectorTile.Feature {
         let (west, north, scale) = projection.place(column: column, row: row, extent: 4096)
         var properties: [String: VectorTile.Value] = ["class": .string(kind)]
         if let brunnel { properties["brunnel"] = .string(brunnel) }
+        if let oneway { properties["oneway"] = .number(oneway) }
         let part = points.map { VectorTile.Point(x: Int32((($0.x - west) / scale).rounded()), y: Int32((($0.y - north) / scale).rounded())) }
         return VectorTile.Feature(kind: .line, properties: properties, parts: [part])
     }
@@ -196,7 +199,7 @@ final class BusRoadNetworkTests: XCTestCase {
 
     // MARK: - What a bus takes
 
-    func testServiceRoadsFreewaysAndTunnelsAreNotTaken() throws {
+    func testServiceRoadsAndFreewaysAreNotTaken() throws {
         let (column, row) = tile
         let (west, north, _) = projection.place(column: column, row: row, extent: 4096)
         let x0 = west + 500, y0 = north + 500
@@ -204,17 +207,96 @@ final class BusRoadNetworkTests: XCTestCase {
             feature("service", [(x0, y0), (x0 + 100, y0)], column: column, row: row),
             feature("motorway", [(x0, y0 + 20), (x0 + 100, y0 + 20)], column: column, row: row),
             feature("trunk", [(x0, y0 + 40), (x0 + 100, y0 + 40)], column: column, row: row),
-            feature("primary", [(x0, y0 + 60), (x0 + 100, y0 + 60)], column: column, row: row, brunnel: "tunnel"),
             feature("rail", [(x0, y0 + 80), (x0 + 100, y0 + 80)], column: column, row: row),
             feature("path", [(x0, y0 + 100), (x0 + 100, y0 + 100)], column: column, row: row),
         ])
         XCTAssertTrue(roads(everything, column: column, row: row).isEmpty)
-        // A bridge is a road a bus takes; each class from primary to minor.
+        // A bridge is a road a bus takes, and decision 474, a tunnel too;
+        // each class from primary to minor.
         let taken = layer(["primary", "secondary", "tertiary", "minor"].enumerated().map { index, kind in
             feature(kind, [(x0, y0 + Double(index) * 30), (x0 + 100, y0 + Double(index) * 30)], column: column, row: row,
-                    brunnel: kind == "primary" ? "bridge" : nil)
+                    brunnel: kind == "primary" ? "bridge" : kind == "secondary" ? "tunnel" : nil)
         })
-        XCTAssertEqual(roads(taken, column: column, row: row).count, 4)
+        let read = roads(taken, column: column, row: row)
+        XCTAssertEqual(read.count, 4)
+        XCTAssertEqual(read.map(\.tunnel), [false, true, false, false])
+    }
+
+    // MARK: - One-way roads and tunnels (decision 474)
+
+    /// The two streets of ``streets()``, the north one one way: east, or
+    /// with `against` drawn west to east but taken west (`oneway` -1).
+    private func oneWayStreets(against: Bool = false) -> (network: BusRoadNetwork, x0: Double, y0: Double) {
+        let (column, row) = tile
+        let (west, north, _) = projection.place(column: column, row: row, extent: 4096)
+        let x0 = west + 500, y0 = north + 500
+        let network = BusRoadNetwork(roads: roads(layer([
+            feature("secondary", [(x0, y0), (x0 + 400, y0)], column: column, row: row, oneway: against ? -1 : 1),
+            feature("tertiary", [(x0, y0 + 200), (x0 + 400, y0 + 200)], column: column, row: row),
+            feature("minor", [(x0 + 400, y0), (x0 + 400, y0 + 200)], column: column, row: row),
+            feature("minor", [(x0, y0), (x0, y0 + 200)], column: column, row: row),
+        ]), column: column, row: row))
+        return (network, x0, y0)
+    }
+
+    func testAOneWayStreetIsTakenItsWayOnly() throws {
+        let (network, x0, y0) = oneWayStreets()
+        let west = try XCTUnwrap(place(network, x0 + 100, y0)), east = try XCTUnwrap(place(network, x0 + 300, y0))
+        XCTAssertTrue(network.isOneway(west))
+        // East, its way: straight along it.
+        XCTAssertEqual(length(try XCTUnwrap(network.way(from: west, to: east))), 200, accuracy: 2)
+        // West, against it: round the block, 100 + 200 + 400 + 200 + 100 m.
+        let back = try XCTUnwrap(network.way(from: east, to: west))
+        XCTAssertEqual(length(back), 1_000, accuracy: 4)
+        XCTAssertTrue(back.contains { $0.y > y0 + 150 }, "by the south street")
+        // Drawn the other way round, taken west: the other way about.
+        let (turned, _, _) = oneWayStreets(against: true)
+        let a = try XCTUnwrap(place(turned, x0 + 100, y0)), b = try XCTUnwrap(place(turned, x0 + 300, y0))
+        XCTAssertEqual(length(try XCTUnwrap(turned.way(from: b, to: a))), 200, accuracy: 2)
+        XCTAssertEqual(length(try XCTUnwrap(turned.way(from: a, to: b))), 1_000, accuracy: 4)
+    }
+
+    func testOnADividedRoadTheOtherCarriagewayIsFoundFacingTheOtherWay() throws {
+        let (column, row) = tile
+        let (west, north, _) = projection.place(column: column, row: row, extent: 4096)
+        let x0 = west + 500, y0 = north + 500
+        // Two carriageways 12 m apart, the north one east, the south one west.
+        let network = BusRoadNetwork(roads: roads(layer([
+            feature("primary", [(x0, y0), (x0 + 400, y0)], column: column, row: row, oneway: 1),
+            feature("primary", [(x0 + 400, y0 + 12), (x0, y0 + 12)], column: column, row: row, oneway: 1),
+        ]), column: column, row: row))
+        let nearer = try XCTUnwrap(place(network, x0 + 200, y0 + 4))
+        XCTAssertEqual(nearer.point.y, y0, accuracy: 1)
+        let other = try XCTUnwrap(network.nearest(to: Point(x: x0 + 200, y: y0 + 4), within: 25, facing: network.direction(of: nearer.segment)))
+        XCTAssertEqual(other.point.y, y0 + 12, accuracy: 1)
+        let back = try XCTUnwrap(network.nearest(to: Point(x: x0 + 200, y: y0 + 4), within: 25, facing: network.direction(of: other.segment)))
+        XCTAssertEqual(back.point.y, y0, accuracy: 1, "facing the south one's way: the north one")
+    }
+
+    func testATunnelIsTakenButHoldsNoStop() throws {
+        let (column, row) = tile
+        let (west, north, _) = projection.place(column: column, row: row, extent: 4096)
+        let x0 = west + 500, y0 = north + 500
+        // A road, 300 m of it in a tunnel through a hill, and the long way
+        // round the hill.
+        let network = BusRoadNetwork(roads: roads(layer([
+            feature("secondary", [(x0, y0), (x0 + 100, y0)], column: column, row: row),
+            feature("secondary", [(x0 + 100, y0), (x0 + 400, y0)], column: column, row: row, brunnel: "tunnel"),
+            feature("secondary", [(x0 + 400, y0), (x0 + 500, y0)], column: column, row: row),
+            feature("minor", [(x0 + 100, y0), (x0 + 100, y0 + 300), (x0 + 400, y0 + 300), (x0 + 400, y0)], column: column, row: row),
+        ]), column: column, row: row))
+        let a = try XCTUnwrap(place(network, x0 + 50, y0)), b = try XCTUnwrap(place(network, x0 + 450, y0))
+        let route = try XCTUnwrap(network.route(from: a, to: b))
+        XCTAssertEqual(length(route.points), 400, accuracy: 2, "through the tunnel, not round the hill")
+        XCTAssertEqual(route.tunnels.count, route.points.count - 1)
+        let inside = zip(zip(route.points, route.points.dropFirst()), route.tunnels).filter(\.1).reduce(0.0) { $0 + $1.0.0.distance(to: $1.0.1) }
+        XCTAssertEqual(inside, 300, accuracy: 2)
+        // A tap over the tunnel puts no stop in it.
+        XCTAssertNil(place(network, x0 + 250, y0 + 5))
+        // The way drawn keeps which pieces are in the tunnel.
+        let way = BusWay(legs: [(route.points.map(\.plan), route.tunnels)], stops: nil)
+        XCTAssertEqual(way.tunnels.count, way.points.count - 1)
+        XCTAssertTrue(way.tunnels.contains(true))
     }
 
     func testTwoStreetsOnlyAServiceRoadJoinsGiveNoWayAndNoStraightLine() throws {
