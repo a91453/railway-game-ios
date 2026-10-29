@@ -166,6 +166,17 @@ final class LineRoutePreferenceUITests: XCTestCase {
     /// kept between launches, so a test sets the one it needs.
     private func setAdvanced(_ shown: Bool, in app: XCUIApplication) {
         let toggle = app.switches["lines.advanced"]
+        // Decision 481: back from a line's page the list stands at that
+        // line, below the switch, and a list builds no row off screen; the
+        // drags below only go down while the switch does not exist (run
+        // 40835715436), so swipe back up to it first.
+        let bar = app.navigationBars["Lines"].firstMatch
+        if !toggle.exists, bar.exists,
+           let list = app.collectionViews.allElementsBoundByIndex.first(where: { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }) {
+            for _ in 0..<8 where !toggle.exists {
+                list.swipeDown()
+            }
+        }
         bringIntoView(toggle, in: app)
         guard (toggle.value as? String == "1") != shown else { return }
         // The switch itself sits at the row's trailing edge, some 51 points
