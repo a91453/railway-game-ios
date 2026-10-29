@@ -184,6 +184,30 @@ final class Map3DBusesTests: XCTestCase {
 
     /// Decision 424: given the base map's bus roads, the way is the roads'
     /// own, put on each stop from its cell's middle, not the cells'.
+    /// BH4: a way back that cannot be laid in the scene (no road near it,
+    /// or too short) is the way out gone the other way round, its stops
+    /// too; its own stops counted points the way out does not have, and
+    /// the 3D map stopped on an index out of range.
+    func testAWayBackThatCannotBeLaidIsTheWayOutWithItsStops() throws {
+        let (world, route) = try world(buses: 2)
+        let station = try XCTUnwrap(world.station(id: XCTUnwrap(route.station)))
+        let scene = Map3DScene(world: world)
+        let cells = try XCTUnwrap(world.roads?.allCells)
+        let plan = Map3DBuses.Plan(Map3DBuses.way(stops: route.stops, station: station.location, roads: cells, alongEdges: true))
+        let index = Map3DBuses.RoadIndex(lanes: scene.streetLife.lanes,
+                                         near: plan.points.map { scene.point(worldX: Double($0.x), worldY: Double($0.y), height: 0) })
+        let motion = try XCTUnwrap(BusMotion(route))
+        // More points than the way out, all at one spot: nothing to lay.
+        let spot = plan.points[plan.points.count / 2], count = plan.points.count * 4
+        let back = Map3DBuses.Plan(points: Array(repeating: spot, count: count), stops: [0, count / 2, count - 1],
+                                   tunnels: Array(repeating: false, count: count - 1))
+        let laid = try XCTUnwrap(Map3DBuses.lay(motion, plan: plan, back: back, station: station.location, tint: 0, in: scene,
+                                                roads: index, snaps: false))
+        let alone = try XCTUnwrap(Map3DBuses.lay(motion, plan: plan, station: station.location, tint: 0, in: scene, roads: index, snaps: false))
+        XCTAssertEqual(laid.backStops, alone.backStops)
+        XCTAssertEqual(laid.backLength, alone.backLength)
+    }
+
     func testOnARealMapGivenItsBusRoadsTheWayFollowsThem() throws {
         let tiles = try Self.tiles.get()
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170))

@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "VERIFIED",
+    "evidence": "Final producer cfeed799260b609b6765ab44404d9ab095c48f94 independently rebuilt52 native/scene/payload/GLB and40 PNG bytes; geometry/color/opacity/LOD/fault probes, Swift readback assembly, Blender, PNG complete decodes and actual browser downloads passed. See verification.json; file protocol blocked remains UNVERIFIED."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "First delivery. No explicit user acceptance of this producer; maker visual self-review is separate.",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Studies only; shared greenTram/fiveSectionLRT operating mapping, train pack and Red/Orange Siemens untouched. No per-fleet selection contract."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No manual Simulator/Metal/device/FPS/memory/animation/curve validation. Linux WebGL is not a device."
+  }
+}
