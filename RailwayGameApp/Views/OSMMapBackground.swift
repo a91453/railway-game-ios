@@ -40,6 +40,9 @@ struct OSMMapBackground: UIViewRepresentable {
     /// The screen's safe area (decision 120): the map reaches the screen's
     /// edges, and the credit and attribution button keep inside this.
     let safeArea: EdgeInsets
+    /// Decision 477: what floats over the map's edges (the top bar, the
+    /// tools, a card), whose bands the map's place names keep out of.
+    var covered = EdgeInsets()
     /// Told where the attribution button and the credit are
     /// (``AppleMapBackground/onAttributionFrames``).
     let onAttributionFrames: @MainActor ([CGRect]) -> Void
@@ -76,6 +79,7 @@ struct OSMMapBackground: UIViewRepresentable {
         map.credit.onTap = onCredit
         map.stations = stations
         map.screenSafeArea = safeArea
+        map.covered = covered
         map.onAttributionFrames = onAttributionFrames
         map.allowsTilt = allowsTilt
         map.follow(realWorld, camera: camera)
@@ -126,6 +130,16 @@ final class FollowingMapLibreView: MLNMapView {
         }
     }
     private var clearedFor: [OSMMapBackground.StationMark]?
+    /// Decision 477: what floats over the map's edges.
+    var covered = EdgeInsets() {
+        didSet {
+            if covered != oldValue { cover() }
+        }
+    }
+    /// The covered bands' room, as last given to the style, and the sizes
+    /// of their images.
+    private var coveredRoom: [CLLocationCoordinate2D]?
+    private var coveredImages: [String: CGSize] = [:]
     /// The credit without and with the railways.
     private var creditTexts = (map: "", railways: "")
     /// MapLibre's delegate, which the map view holds weakly.
@@ -207,6 +221,7 @@ final class FollowingMapLibreView: MLNMapView {
     override func layoutSubviews() {
         super.layoutSubviews()
         apply()
+        cover()
         placeAttributionButton()
         placeCredit()
         reportAttribution()
@@ -290,6 +305,7 @@ final class FollowingMapLibreView: MLNMapView {
             || abs(centerCoordinate.longitude - centre.longitude) > 1e-7
         else { return }
         setCenter(centre, zoomLevel: view.zoom, animated: false)
+        cover()
     }
 
     private func styleDidLoad() {
@@ -298,6 +314,8 @@ final class FollowingMapLibreView: MLNMapView {
         labelled = nil
         drawn = nil
         clearedFor = nil
+        coveredRoom = nil
+        coveredImages = [:]
         railwayLayers = []
         railwaySources = []
         decorate()
@@ -318,6 +336,7 @@ final class FollowingMapLibreView: MLNMapView {
             clearedFor = stations
             makeWay(for: stations, in: style)
         }
+        cover()
     }
 
     // MARK: - Room for the game's station names
@@ -362,6 +381,63 @@ final class FollowingMapLibreView: MLNMapView {
         layer.textOpacity = NSExpression(forConstantValue: 0)
         layer.textAllowsOverlap = NSExpression(forConstantValue: true)
         layer.textIgnoresPlacement = NSExpression(forConstantValue: false)
+        style.addLayer(layer)
+    }
+
+    // MARK: - Room under what floats over the map (decision 477)
+
+    private static let coveredRoomLayer = "game.covered.room"
+
+    /// The map's place names under the top bar showed only what stuck out
+    /// of it (the last character of 基隆市, in the website's screenshots).
+    /// An invisible icon as large as each band of the map that the top
+    /// bar, the tools or a card covers (``MapLabelPlacement/coveredBands``),
+    /// above every other label layer as the stations' room is
+    /// (``makeWay(for:in:)``), keeps the map's labels out of it: a place's
+    /// name goes beside its place, out from under the bar, or, with no
+    /// room, waits until the map moves.
+    private func cover() {
+        guard styleLoaded, let style, bounds.width > 0, bounds.height > 0 else { return }
+        let bands = MapLabelPlacement.coveredBands(
+            width: Double(bounds.width), height: Double(bounds.height),
+            top: Double(covered.top), leading: Double(covered.leading), bottom: Double(covered.bottom), trailing: Double(covered.trailing)
+        )
+        var points: [MLNPointFeature] = []
+        var middles: [CLLocationCoordinate2D] = []
+        for (index, band) in bands.enumerated() {
+            let name = "\(Self.coveredRoomLayer).\(index)"
+            let size = CGSize(width: ceil(band.maxX - band.minX), height: ceil(band.maxY - band.minY))
+            if coveredImages[name] != size {
+                coveredImages[name] = size
+                let format = UIGraphicsImageRendererFormat()
+                format.opaque = false
+                format.scale = 1
+                style.setImage(UIGraphicsImageRenderer(size: size, format: format).image { _ in }, forName: name)
+            }
+            let middle = convert(CGPoint(x: (band.minX + band.maxX) / 2, y: (band.minY + band.maxY) / 2), toCoordinateFrom: self)
+            let point = MLNPointFeature()
+            point.coordinate = middle
+            point.attributes = ["room": name]
+            points.append(point)
+            middles.append(middle)
+        }
+        guard coveredRoom.map({ old in
+            old.count != middles.count || zip(old, middles).contains { abs($0.latitude - $1.latitude) > 1e-9 || abs($0.longitude - $1.longitude) > 1e-9 }
+        }) ?? true else { return }
+        coveredRoom = middles
+        let shape = MLNShapeCollectionFeature(shapes: points)
+        if let source = style.source(withIdentifier: Self.coveredRoomLayer) as? MLNShapeSource {
+            source.shape = shape
+            return
+        }
+        let source = MLNShapeSource(identifier: Self.coveredRoomLayer, shape: shape, options: nil)
+        style.addSource(source)
+        let layer = MLNSymbolStyleLayer(identifier: Self.coveredRoomLayer, source: source)
+        layer.iconImageName = NSExpression(forKeyPath: "room")
+        layer.iconRotationAlignment = NSExpression(forConstantValue: "viewport")
+        layer.iconOpacity = NSExpression(forConstantValue: 0)
+        layer.iconAllowsOverlap = NSExpression(forConstantValue: true)
+        layer.iconIgnoresPlacement = NSExpression(forConstantValue: false)
         style.addLayer(layer)
     }
 

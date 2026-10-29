@@ -74,6 +74,26 @@ final class RealWorldMapUITests: XCTestCase {
     /// failed fix, `-ui-test-location`, not the Simulator's location), the
     /// map stays where it was, and the line stays, press after press. Full lane only (decision
     /// 199): when the line goes is `MyLocationStartTests` on Linux.
+    /// Decision 477: the whole of Taiwan leads the place list, shown as it
+    /// opens, not after Taiwan's 22 places, where a list that makes its
+    /// rows as they scroll in had not even made it.
+    func testTheWholeOfTaiwanIsOfferedFirst() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        tappable(app.buttons.matching(identifier: "start.newGame"), name: "start.newGame").tap()
+        tappable(app.buttons.matching(identifier: "newGame.realWorld"), name: "newGame.realWorld").tap()
+        let wholeTaiwan = app.buttons.matching(identifier: "realWorld.wholeTaiwan").firstMatch
+        XCTAssertTrue(wholeTaiwan.appears(within: 15), "The whole of Taiwan is in the list as it opens")
+        let taipei = app.buttons.matching(identifier: "place.tra-taipei").firstMatch
+        if taipei.exists {
+            XCTAssertLessThan(wholeTaiwan.frame.maxY, taipei.frame.minY, "The whole of Taiwan is above Taiwan's places")
+        }
+    }
+
     func testUseMyLocationLeavesTheMapAndSaysWhyItFoundNothing() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft

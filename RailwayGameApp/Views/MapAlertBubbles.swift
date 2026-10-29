@@ -48,24 +48,43 @@ struct MapAlertBubbles: View {
     }
 
     /// The alerts on screen: each over its station (or train, or sight),
-    /// the second at a place over the first.
+    /// or, decision 477, beside it where that covers another station's
+    /// name (``MapLabelPlacement/placeBubbles(_:stations:lift:radius:)``).
     private var placed: [PlacedAlert] {
-        var perStation: [PlanPoint: Int] = [:]
         guard session.tool == .select else { return [] }
         // Decision 210: over the waiting count's pill (and a crowded
         // station's ring) where the map draws them, not on it.
-        let lift = MapProblems.level(referenceSize: camera.referenceSize) == .hidden ? 14 : MapArt.stationRadius(camera) + 30
+        let radius = MapArt.stationRadius(camera)
+        let lift = MapProblems.level(referenceSize: camera.referenceSize) == .hidden ? 14 : radius + 30
         // Decision 377: as the session keeps them, not read from the world,
         // so a tick that leaves them as they were rebuilds nothing here.
-        return session.mapBubbles.compactMap { bubble in
-            let alert = bubble.alert
-            let at = camera.screenPoint(of: alert.location)
+        let shown: [(bubble: MapMarks.Bubble, at: ScreenPoint)] = session.mapBubbles.compactMap { bubble in
+            let at = camera.screenPoint(of: bubble.alert.location)
             guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
                   at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom)
             else { return nil }
-            let index = perStation[alert.location, default: 0]
-            perStation[alert.location] = index + 1
-            return PlacedAlert(bubble: bubble, point: CGPoint(x: at.x, y: at.y - lift - Double(index) * 46))
+            return (bubble, at)
+        }
+        guard !shown.isEmpty else { return [] }
+        let points = MapLabelPlacement.placeBubbles(
+            shown.map { item in
+                MapLabelPlacement.Bubble(
+                    x: item.at.x, y: item.at.y,
+                    text: item.bubble.alert.text(in: session.language, lineName: item.bubble.lineName, subject: subject(of: item.bubble)),
+                    hasReason: item.bubble.waitReason != nil
+                )
+            },
+            stations: stationsOnScreen, lift: lift, radius: radius
+        )
+        return zip(shown, points).map { PlacedAlert(bubble: $0.bubble, point: CGPoint(x: $1.x, y: $1.y)) }
+    }
+
+    /// The stations whose names a bubble could cover.
+    private var stationsOnScreen: [MapLabelPlacement.Station] {
+        session.world.stations.compactMap { station in
+            let at = camera.screenPoint(of: station.location)
+            guard at.x > -80, at.x < viewport.width + 80, at.y > -80, at.y < viewport.height + 80 else { return nil }
+            return MapLabelPlacement.Station(x: at.x, y: at.y, name: station.name)
         }
     }
 
@@ -85,7 +104,10 @@ struct MapAlertBubbles: View {
                 // Decision 250: at that sight's row.
                 screen.sightFocus = sight
                 screen.panel = .tourism
-            case .materialsShort where alert.station != nil: screen.panel = .station
+            // Decision 477: at the freight group, where its materials are.
+            case .materialsShort where alert.station != nil:
+                screen.stationFocus = StationPanelGroup.answering(alert.kind)
+                screen.panel = .station
             case .insolvency: screen.panel = .economy
             default: break
             }

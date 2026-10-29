@@ -1283,6 +1283,10 @@ final class GameScreenState {
     /// the map opened the sights panel, which scrolls to it; `nil` from the
     /// menu.
     var sightFocus: AttractionID?
+    /// Decision 477: the station panel's group a map bubble opened it at
+    /// (``StationPanelGroup/answering(_:)``), unfolded and scrolled to,
+    /// then cleared; `nil` opens it at the top.
+    var stationFocus: StationPanelGroup?
     /// Decision 229, later: whether this game's 3D map is open, from the
     /// map's 3D button.
     var showsMap3D = false

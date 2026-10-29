@@ -103,6 +103,13 @@ struct StationPanel: View {
                     withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
                 }
             }
+            // Decision 477: a map bubble's group (a town short of
+            // materials: freight), as the toolbar's menu goes to it.
+            .onChange(of: screen.stationFocus, initial: true) { _, focus in
+                guard let focus else { return }
+                screen.stationFocus = nil
+                jump(to: focus, proxy)
+            }
             .toolbar {
                 if session.selectedStation != nil {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -1412,6 +1419,7 @@ struct StationPanel: View {
         let now = session.world.clock.now.minuteOfDay / 60
         return Section {
             HourlyBarChart(title: "Entries", spec: flow.chart(.entries, in: session.language), hours: flow.entries, now: now, language: session.language)
+                .accessibilityIdentifier("station.flow.entries")
             HourlyBarChart(title: "Exits", spec: flow.chart(.exits, in: session.language), hours: flow.exits, now: now, language: session.language)
         } header: {
             Text("Trips by hour")
