@@ -138,14 +138,33 @@ extension StationKitBuilder {
         let cabRoofB=cabRoofA.map { Map3DPoint(-3.10,$0.y,$0.z) }
         g12Prism(cabRoofA,cabRoofB,dark)
         // Short hood beyond the cab. It has its own end face and lamp arrangement.
-        g12LowerPanel(-6.64,cabRear,1.50,2.27,orange,1.01)
-        g12TaperedBand(-6.64,cabRear,1.50,2.27,0.09,1.01,white)
-        let shortA=[Map3DPoint(-6.64,1.59,-1.01),Map3DPoint(-6.64,1.59,1.01),
+        g12LowerPanel(-6.64,cabRear,2.15,2.27,orange,1.01)
+        g12TaperedBand(-6.64,cabRear,2.15,2.27,0.09,1.01,white)
+        let shortA=[Map3DPoint(-6.64,2.24,-1.01),Map3DPoint(-6.64,2.24,1.01),
                     Map3DPoint(-6.64,3.23,1.01),Map3DPoint(-6.64,3.23,-1.01)]
         let shortB=[Map3DPoint(cabRear,2.36,-1.01),Map3DPoint(cabRear,2.36,1.01),
                     Map3DPoint(cabRear,3.23,1.01),Map3DPoint(cabRear,3.23,-1.01)]
         g12Prism(shortA,shortB,orange)
         g12Section(3.23,3.34,-6.64,cabRear,0.98,dark)
+        // The short-end white stripe makes a V across an actual end-closure
+        // plate. Its outer edges meet the side band's 2.15–2.24 m height.
+        // The long-end end face stays horizontal, as in its separate photos.
+        let nosePanels=far ? 6:14
+        for i in 0..<nosePanels {
+            let z0:Float = -1.01+2.02*Float(i)/Float(nosePanels)
+            let z1:Float = -1.01+2.02*Float(i+1)/Float(nosePanels)
+            let y0:Float = 1.50+0.65*abs(z0)/1.01
+            let y1:Float = 1.50+0.65*abs(z1)/1.01
+            func nosePanel(_ lower0:Float,_ lower1:Float,_ upper0:Float,_ upper1:Float,_ color:UInt32) {
+                let rear=[Map3DPoint(-6.646,lower0,z0),Map3DPoint(-6.646,lower1,z1),
+                          Map3DPoint(-6.646,upper1,z1),Map3DPoint(-6.646,upper0,z0)]
+                let front=rear.map { Map3DPoint(-6.676,$0.y,$0.z) }
+                g12Prism(rear,front,color)
+            }
+            nosePanel(1.42,1.42,y0,y1,orange)
+            nosePanel(y0,y1,y0+0.09,y1+0.09,white)
+            nosePanel(y0+0.09,y1+0.09,3.23,3.23,orange)
+        }
         // Integral underframe, two distinct triple-axle bogies and centre fuel tank.
         box(0,0.88,0,13.70,2.48,0.42,dark)
         box(0.12,0.62,0,2.72,1.42,0.56,dark)
@@ -257,7 +276,7 @@ extension StationKitBuilder {
             civicTube(Map3DPoint(-6.67,3.26,side*0.80),Map3DPoint(-6.73,3.26,side*0.80),radius:0.087,color:Map3DColor.rgb(0xA24E44),sides:8)
         }
         if !far {
-            for y:Float in [1.64,1.99,2.29] {
+            for y:Float in [2.00,2.37] {
                 beam(Map3DPoint(-6.689,y,-0.32),Map3DPoint(-6.689,y,0.32),0.028,white)
                 for side:Float in [-1,1] {
                     beam(Map3DPoint(-6.67,y-0.07,side*0.32),Map3DPoint(-6.689,y,side*0.32),0.023,white)

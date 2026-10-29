@@ -39,9 +39,20 @@ function checkDrawGear(shift=0) {
     Math.abs(v.position[1])<0.28 && v.position[2]>0.5 && v.position[2]<0.9),
     'end draw gear absent');
 }
-checkWheelContact();checkLamps();checkGlass();checkDrawGear();
+function checkShortEndV(shift=0) {
+  // Occlusion bakes a darker copy of the original warm white into the pack.
+  const white=v => v.color[2]>125 && v.color[0]-v.color[2]<35;
+  for (const [lateral,height] of [[0,1.50],[0.94,2.10]]) {
+    assert(vertices.some(v => v.position[0]<-6.67 && v.position[0]>-6.70 &&
+      Math.abs(Math.abs(v.position[1])-lateral)<0.08 &&
+      Math.abs(v.position[2]-height-shift)<0.07 && white(v)),
+    'short-end white V misses shell-band junction');
+  }
+}
+checkWheelContact();checkLamps();checkGlass();checkDrawGear();checkShortEndV();
 assert.throws(() => checkWheelContact(0.10),/misses rail/);
 assert.throws(() => checkLamps(0.20),/lamp/);
 assert.throws(() => checkGlass(0.20),/glazing/);
 assert.throws(() => checkDrawGear(0.40),/draw gear/);
-console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears; four shifted counterexamples rejected');
+assert.throws(() => checkShortEndV(0.25),/white V/);
+console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears, short-end V; five shifted counterexamples rejected');
