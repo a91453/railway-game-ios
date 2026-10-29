@@ -64,6 +64,10 @@ public struct RoadPreview: Hashable, Sendable {
     public let problem: String?
     /// The cell on water or too steep, when that is why.
     public let refused: CellPosition?
+    /// The metres of the drawn road on road already there (the city's
+    /// streets or the player's own), which it joins and does not lay again
+    /// (decision 476's sequel).
+    public var joined: Int64 = 0
 
     /// Whether the action button lays it: no problem, and a cell to lay.
     public var canBuild: Bool {
@@ -79,7 +83,14 @@ public struct RoadPreview: Hashable, Sendable {
             if quote.price > .zero, !world.economy.canAfford(quote.price) {
                 problem = GameError.insufficientFunds(required: quote.price, available: world.economy.balance).playerMessage(in: language)
             }
-            return RoadPreview(laid: quote.cells, metres: quote.metres, price: quote.price, problem: problem, refused: nil)
+            var joined: Int64 = 0
+            if let roads = world.roads {
+                var seen = Set<CellPosition>()
+                for (index, cell) in draft.cells.enumerated() where roads.contains(cell) && seen.insert(cell).inserted {
+                    joined += index == 0 ? RoadGrid.straightMetres : RoadGrid.metres(from: draft.cells[index - 1], to: cell)
+                }
+            }
+            return RoadPreview(laid: quote.cells, metres: quote.metres, price: quote.price, problem: problem, refused: nil, joined: joined)
         } catch {
             var refused: CellPosition?
             var problem = error.playerMessage(in: language)
@@ -95,13 +106,18 @@ public struct RoadPreview: Hashable, Sendable {
     }
 
     /// The line the bus tool shows: how much new road, and what is road
-    /// already.
+    /// already (joined, free).
     public func line(in language: DisplayLanguage) -> String? {
         guard problem == nil else { return nil }
         guard !laid.isEmpty else {
             return language.text("There's a road here already.", "這裡已經有路了。")
         }
-        return language.text("\(BusRouteText.distance(metres, in: language)) of new road", "新鋪 \(BusRouteText.distance(metres, in: language))")
+        let new = language.text("\(BusRouteText.distance(metres, in: language)) of new road", "新鋪 \(BusRouteText.distance(metres, in: language))")
+        guard joined > 0 else { return new }
+        return language.text(
+            "\(new); joins \(BusRouteText.distance(joined, in: language)) of road already there, free",
+            "\(new)，接上現有的路 \(BusRouteText.distance(joined, in: language))，這段不用錢"
+        )
     }
 }
 
@@ -318,7 +334,7 @@ extension GameSession {
                     for dr in -1...1 {
                         for dc in -1...1 {
                             let beside = CellPosition(row: cell.row + dr, column: cell.column + dc)
-                            if roads.contains(beside) { near.insert(beside) }
+                            if real ? roads.built.contains(beside) : roads.contains(beside) { near.insert(beside) }
                         }
                     }
                 }

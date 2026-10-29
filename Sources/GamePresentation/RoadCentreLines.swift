@@ -17,20 +17,7 @@ public enum RoadCentreLines {
     /// line runs from an end or a fork to the next; the corners rounded
     /// (``rounded(_:)``).
     public static func lines(of cells: Set<CellPosition>, touching: Set<CellPosition>? = nil) -> [[PlanPoint]] {
-        var joined: [CellPosition: [CellPosition]] = [:]
-        for cell in cells.sorted() {
-            for (dr, dc) in [(0, 1), (1, -1), (1, 0), (1, 1)] {
-                let near = CellPosition(row: cell.row + dr, column: cell.column + dc)
-                guard cells.contains(near) else { continue }
-                if dr != 0, dc != 0 {
-                    guard !cells.contains(CellPosition(row: cell.row + dr, column: cell.column)),
-                          !cells.contains(CellPosition(row: cell.row, column: cell.column + dc)) else { continue }
-                }
-                if let touching, !touching.contains(cell), !touching.contains(near) { continue }
-                joined[cell, default: []].append(near)
-                joined[near, default: []].append(cell)
-            }
-        }
+        let joined = joins(of: cells, touching: touching)
         struct Join: Hashable { let a: CellPosition, b: CellPosition }
         func join(_ a: CellPosition, _ b: CellPosition) -> Join { a < b ? Join(a: a, b: b) : Join(a: b, b: a) }
         var walked: Set<Join> = []
@@ -60,6 +47,34 @@ public enum RoadCentreLines {
             lines.append([cell.middle])
         }
         return lines
+    }
+
+    /// Each cell of `cells` and the cells it is joined to (``lines(of:touching:)``'s
+    /// rule).
+    static func joins(of cells: Set<CellPosition>, touching: Set<CellPosition>? = nil) -> [CellPosition: [CellPosition]] {
+        var joined: [CellPosition: [CellPosition]] = [:]
+        for cell in cells.sorted() {
+            for (dr, dc) in [(0, 1), (1, -1), (1, 0), (1, 1)] {
+                let near = CellPosition(row: cell.row + dr, column: cell.column + dc)
+                guard cells.contains(near) else { continue }
+                if dr != 0, dc != 0 {
+                    guard !cells.contains(CellPosition(row: cell.row + dr, column: cell.column)),
+                          !cells.contains(CellPosition(row: cell.row, column: cell.column + dc)) else { continue }
+                }
+                if let touching, !touching.contains(cell), !touching.contains(near) { continue }
+                joined[cell, default: []].append(near)
+                joined[near, default: []].append(cell)
+            }
+        }
+        return joined
+    }
+
+    /// The middles of the cells of `cells` where a road ends: joined to one
+    /// other cell or to none (476's sequel: where a player's road meets the
+    /// city's).
+    static func ends(of cells: Set<CellPosition>) -> [PlanPoint] {
+        let joined = joins(of: cells)
+        return cells.sorted().filter { (joined[$0]?.count ?? 0) <= 1 }.map(\.middle)
     }
 
     /// How far before a corner the road starts to turn: a quarter of a
