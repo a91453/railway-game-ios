@@ -14,6 +14,8 @@
 
 # 交接
 
+> Codex G12／R21 原生 studies（`codex/g12-native-study`）：只用 1960 首批臺鐵 R20 型 EMD G12 的 R21 橘色時期；實車原圖來源、估算界線、外觀核對、producer、重建與四種狀態見 [G12 交接](art/g12-2026-10-29/README.md) 及兩庫互鏈 draft PR。公開只放配方、工具、來源與一張總覽，完整近遠景與 viewer 在私庫 `g12/revision-1/`。現有 SceneKit R20 與全部營運映射不變，合併後不會自動換車；使用者對此 producer 的外觀接受、營運接入、iOS Metal／真機均 **UNVERIFIED**。不合併／auto-merge／TestFlight。
+
 > Codex E1000雙端PP（#1294）：[來源／外觀／營運／重建](art/e1000-pp-2026-10-26/README.md)。獨立E1000近遠配方，以未合併PP #1291固定61c6969c為stacked base，私庫#87固定1f81f7c。只換pushPull機車，PP客車/E500/EMU與其他服務payload保護；兩端E1000、後機180°、後端貫通道相接。官方規格16.5/17.211m、寬2.885/車高3.904m；輪徑與軸距推估。完整包私有、公開一張總覽。兩PR皆合併並重建才改App，靜態展示不代表推拉控制/真機/動畫。CI看本輪同head，不合併/auto-merge/TestFlight。
 
 > Codex PP客車（#1282）：[來源／外觀／營運與重建交接](art/pp-coaches-2026-10-26/README.md)。四種PP近遠獨立配方及雙端已接受E500第三版＋12客車完整靜態展示（更正11a70d3c漏尾機，尾端同原生旋轉180°）。只有原`pushPull`接點中間客車改PPT1000，E1000兩端、可變節數、列車包／classic／解鎖與回退保持；PPH/PPC/PPM未逐車接營運，E500＋PP未接E500營運。E500CK/MINGRI/STAR客車與既有模型實際payload保護。公開唯一總覽，完整素材／viewer／ZIP在互鏈私有draft；最新同提交CI看PR，不以Linux靜態驗證當真機／動畫／推拉控制。GameCore、存檔與fixtures不動，不合併／auto-merge／TestFlight。
