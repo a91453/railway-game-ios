@@ -144,6 +144,15 @@ extension GameWorld {
     /// station it stands at (see ``spareStandingAside(in:memo:)``), where
     /// its next run starts.
     func isSpare(_ train: Train) -> Bool {
+        var memo = DispatchMemo()
+        return isSpare(train, memo: &memo)
+    }
+
+    /// ``isSpare(_:)`` with `memo` kept across the trains asked about in
+    /// one look at the world, so each line's capacity layout and journeys
+    /// are worked out once rather than once a train (BH9: on a 120-station
+    /// single track in deadlock, 16 trains, the search took 320 ms).
+    func isSpare(_ train: Train, memo: inout DispatchMemo) -> Bool {
         guard train.execution == nil, train.movement.rate > 0, standingPoint(of: train) != nil,
               let line = lines.first(where: { assignedLine(of: train.id) == $0.id })
         else { return false }
@@ -153,7 +162,6 @@ extension GameWorld {
         guard line.window.contains(minuteOfDay: clock.now.minuteOfDay),
               let stream = line.dispatchStream(of: train.id)
         else { return false }
-        var memo = DispatchMemo()
         return !isDispatchDue(line, stream, at: clock.now, deadhead: true, memo: &memo)
     }
 
@@ -216,7 +224,8 @@ extension GameWorld {
         for train in trains {
             if let request = waitingRoute(of: train, memo: &memo) { waiting[train.id] = request }
         }
-        let spares = waiting.isEmpty ? [] : Set(trains.lazy.filter { waiting[$0.id] == nil && self.isSpare($0) }.map(\.id))
+        var dispatch = DispatchMemo()
+        let spares = waiting.isEmpty ? [] : Set(trains.filter { waiting[$0.id] == nil && isSpare($0, memo: &dispatch) }.map(\.id))
         var changed = true
         while changed {
             changed = false
@@ -348,7 +357,8 @@ extension GameWorld {
     /// until its line sends it out.
     func spareStandingAside(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DirectionMemo) -> Train? {
         guard isTrafficControlEnabled, !stuck.isEmpty else { return nil }
-        for spare in trains where isSpare(spare) {
+        var dispatch = DispatchMemo()
+        for spare in trains where isSpare(spare, memo: &dispatch) {
             guard let place = spare.placement else { continue }
             let own = held(spare)
             let waiting = stuck.keys.sorted().filter { network.fouls(own, routeEnvelope(of: stuck[$0]!.candidate).resources) }
