@@ -68,10 +68,15 @@ public struct RoadPreview: Hashable, Sendable {
     /// streets or the player's own), which it joins and does not lay again
     /// (decision 476's sequel).
     public var joined: Int64 = 0
+    /// On a real-world map, the cells of the city's road it takes as the
+    /// player's, for nothing (decision 487): the base map draws its own
+    /// streets, not those cells, so the road is laid as drawn.
+    public var taken: [CellPosition] = []
 
-    /// Whether the action button lays it: no problem, and a cell to lay.
+    /// Whether the action button lays it: no problem, and a cell to lay or
+    /// take.
     public var canBuild: Bool {
-        problem == nil && !laid.isEmpty
+        problem == nil && !(laid.isEmpty && taken.isEmpty)
     }
 
     /// `draft` quoted in `world`; `nil` with no cell.
@@ -90,7 +95,9 @@ public struct RoadPreview: Hashable, Sendable {
                     joined += index == 0 ? RoadGrid.straightMetres : RoadGrid.metres(from: draft.cells[index - 1], to: cell)
                 }
             }
-            return RoadPreview(laid: quote.cells, metres: quote.metres, price: quote.price, problem: problem, refused: nil, joined: joined)
+            return RoadPreview(
+                laid: quote.cells, metres: quote.metres, price: quote.price, problem: problem, refused: nil, joined: joined, taken: quote.taken
+            )
         } catch {
             var refused: CellPosition?
             var problem = error.playerMessage(in: language)
@@ -110,7 +117,11 @@ public struct RoadPreview: Hashable, Sendable {
     public func line(in language: DisplayLanguage) -> String? {
         guard problem == nil else { return nil }
         guard !laid.isEmpty else {
-            return language.text("There's a road here already.", "這裡已經有路了。")
+            guard !taken.isEmpty else { return language.text("There's a road here already.", "這裡已經有路了。") }
+            return language.text(
+                "Along \(BusRouteText.distance(joined, in: language)) of road already there, free",
+                "沿現有的路 \(BusRouteText.distance(joined, in: language))，不用錢"
+            )
         }
         let new = language.text("\(BusRouteText.distance(metres, in: language)) of new road", "新鋪 \(BusRouteText.distance(metres, in: language))")
         guard joined > 0 else { return new }
@@ -214,13 +225,24 @@ extension GameSession {
             ))
             return
         }
+        // Decision 487: a real-world map does not draw the city's road
+        // cells (the base map draws its streets), so a tap on one is told
+        // how to draw a road, not that it is the city's.
+        let real = world.geoAnchor != nil
         guard roads.built.contains(cell) else {
+            if real {
+                message = StatusMessage(kind: .failure, text: language.text(
+                    "Drag across the map to lay a road. Tap one of your roads to take it up.",
+                    "在地圖上拖過要鋪路的地方。點自己鋪的路可以拆掉。"
+                ))
+                return
+            }
             message = StatusMessage(kind: .failure, text: language.text(
                 "This is the city's road; it can't be taken up.", "這是城市的路，不能拆。"
             ))
             return
         }
-        let stretch = Self.ownStretch(at: cell, in: roads)
+        let stretch = Self.ownStretch(at: cell, in: roads, real: real)
         var problem: String?
         var copy = world
         do throws(GameError) {
@@ -242,17 +264,19 @@ extension GameSession {
     /// side or corner to corner), the nearest first, at most
     /// ``RoadGrid/longestBuiltRoad``: it goes on through the player's cells
     /// the city has no road in, so a stretch ends where it meets the city's
-    /// roads.
-    static func ownStretch(at cell: CellPosition, in roads: RoadGrid) -> [CellPosition] {
+    /// roads; on a real-world map (`real`), whose city road cells are not
+    /// drawn, through all the player's cells (decision 487).
+    static func ownStretch(at cell: CellPosition, in roads: RoadGrid, real: Bool = false) -> [CellPosition] {
         var found = [cell], seen: Set<CellPosition> = [cell], next = 0
+        let city = real ? [] : roads.cells
         while next < found.count, found.count < RoadGrid.longestBuiltRoad {
             let at = found[next]
             next += 1
-            guard at == cell || !roads.cells.contains(at) else { continue }
+            guard at == cell || !city.contains(at) else { continue }
             for dr in -1...1 {
                 for dc in -1...1 where dr != 0 || dc != 0 {
                     let near = CellPosition(row: at.row + dr, column: at.column + dc)
-                    guard roads.built.contains(near), !roads.cells.contains(near), seen.insert(near).inserted,
+                    guard roads.built.contains(near), !city.contains(near), seen.insert(near).inserted,
                           found.count < RoadGrid.longestBuiltRoad else { continue }
                     found.append(near)
                 }
@@ -278,7 +302,9 @@ extension GameSession {
         let done = perform(.buildRoad(along: roadDraft.cells.map(PlayerCommand.Edit.BusStop.init))) { _, _, after in
             // Decision 476: the price the button showed, also with
             // unlimited funds, where the cash does not go down.
-            after.economy.unlimitedFunds
+            preview.price == .zero
+                ? language.text("The road is built, along road already there: free.", "路鋪好了，沿現有的路，不用錢。")
+                : after.economy.unlimitedFunds
                 ? language.text(
                     "The road is built. It cost \(preview.price.moneyText); with unlimited funds nothing is paid.",
                     "路鋪好了。造價 \(preview.price.moneyText)，資金無限不扣錢。"

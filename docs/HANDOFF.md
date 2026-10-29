@@ -35,6 +35,8 @@
 
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
+> 鋪路畫的和鋪好的不同（派工單 RDW，[決策 487](decisions/487.md)，`claude/road-draw-preview-mismatch`）：實景地圖上拖過城市道路格子的段落，現在也鋪成玩家的路（不收錢）。作者暫停截圖驗收；發版前在實機看：彰化田中大社路旁（或任何實景地圖的巷弄旁）用「建設 → 公車 → 道路」拖一個方框和一條帶圈的路，鋪好後的線要和預覽一樣；點底圖沒路的地方，要說「在地圖上拖過要鋪路的地方」，不是「城市的路」；整段沿現有的路拖，按鈕寫「沿現有的路 X，不用錢」。Linux 測試 `RoadDrawRealMapTests`、`RoadGridTests` VERIFIED；實機 UNVERIFIED。
+
 > 乘客需求模型對照（派工單 DEM，研究，`claude/demand-model-research`）：[`research/DEMAND_MODEL_COMPARISON_2026-10-29.md`](research/DEMAND_MODEL_COMPARISON_2026-10-29.md)。用北捷 2025 各站進站與 2025-10 完整 OD 量過現行模型；建議方案 A（居民與工作分開給權重，GameCore 開關、升存檔），B（起訖距離衰減）排在 A 之後；轉運站（台北車站、板橋）轉乘點數上限另外量。實作都還沒派，順序見該文件 §6。
 
 > 收支組成甜甜圈圖（派工單 DONUT，[決策 480](decisions/480.md)，#1474，`claude/finance-composition-donut`）：截圖驗收照作者 2026-10-29「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」延到發版前。留下的：發版前在分支或 main 手動跑 `website-screenshots.yml`（`WebsiteScreenshotTests.testFinanceComposition` 拍日收入、日支出、選住票價、週支出四張；橫拿、深色、繁中），照 `docs/research/UI_UX_REVIEW_2026-10-28.md` §5 只看截圖答七題、每輪修最嚴重三個、最多三輪；淺色與 iPhone SE 寬沒有自動拍，要實機看。設計預覽在 `docs/art/finance-composition-2026-10-29/`，不要刪。
@@ -388,7 +390,7 @@
 
 **第三十一任接手（2026-10-29 約 07:30 UTC，session_01YGNNukxseY7eMCvXhjtc4X，作者在 claude.ai 開，第 1 層）**：第 30 任 session_01YGNNuq4nxQrJ1jQ182c4Yz 沒掛到 repo、拿不到 GitHub 權限，已改名「【舊・已換手】」並封存，由本任照下面兩段接。
 - 排程改綁本任：Threads `trig_01SRe5chbpKMHHWobCAKky9A`、95.1 截止後步驟 `trig_01SoyLas1SRJJ7kXE2Anw5La`（10:05 UTC）、巡查 `trig_01T8BqMeAidkdpVvhHfFhNzA`（之後約 45 分一次）；第 30 任的三個已刪。下面「第三十次換手」列的排程 id 都已不在。
-- **95.1 之後的待辦（作者 10/29 交代）**：資料工具輸出 GeoJSON，給 geolibre.app 檢查站點、路線、機廠的位置，不放進遊戲。由 Sonnet session 做，三步：(1) 盤點 `tools/` 與打包資料裡哪些有座標、是什麼格式，結果寫在 PR 裡；(2) 挑 2–3 層輸出成 GeoJSON：車站點、路線、機廠範圍；(3) 附 README，寫怎麼跑、怎麼把檔案拖進 geolibre.app 打開。不加依賴；從 OSM 來的資料標 ODbL 出處（照 `DataSourceCredits`）。取代下面「作者問過、答了、沒有要做的」裡「等作者說」那句。
+- **GeoJSON 輸出（派工單 GEO，已做，作者 10/29 交代）**：`tools/geojson-export/` 輸出車站、路線、機廠、底圖道路和遊戲 64 m 道路格子，作者拖進 geolibre.app 檢查位置；怎麼跑與怎麼打開見該資料夾 README。不在遊戲裡，沒動 App 與 GameCore。
 - **防搬（作者 10/29：有人 clone 公開 repo 重新打包成 App）**，95.1 之後做：
   - A 案盤點：派工單 PRIV（session_01YGNNuow8p93HA9KfQDJLmf）在寫 `docs/research/PRIVATE_ASSETS_SPLIT_2026-10-29.md`。內容是把編 App 必需的美術、模型、資料移到私庫，CI 建置時再拉進來。計畫要作者點頭才動手。
     - 盤點已寫好（重開的 PRIV，session_01YGNNunCs4CpTF415GeYCpT）：[`research/PRIVATE_ASSETS_SPLIT_2026-10-29.md`](research/PRIVATE_ASSETS_SPLIT_2026-10-29.md)。**結論：建議先不搬**。原因有三：今天的資料全在 git 歷史裡，一行 checkout 就能放回最新程式；Swift 裡的 3D 美術搬不走；CI 和每個 session 要長期付代價。改成先做陷阱資料與非正式版標示。真的要搬時照該文件第 1–9 節做：私庫 `railway-game-data-private`、deploy key、疊回原路徑，作者的步驟在第 4 節。作者點頭前什麼都不搬。
@@ -439,7 +441,7 @@
 - **之後要寫進規劃文件的**：
   - 決策 476（ROAD）的下一步 3、4 在 HANDOFF 加一行指過去。
   - ui-review 第 10 節「列車：圖標還是車型」已在 #1475；圖表的鐵道味建議只列不改，最滿列車條改成一節車廂的填滿度那條，LP 決定先不做（決策 481 第 9 項）。
-- **作者問過、答了、沒有要做的**：geolibre.app（MIT，網頁 GIS）可以拿來檢查資料位置，不放進遊戲。要不要讓資料工具多輸出 GeoJSON 給它看，等作者說；不急，排在 95.1 之後。
+- **作者問過、答了、已做**：geolibre.app（MIT，網頁 GIS）可以拿來檢查資料位置，不放進遊戲。資料工具的 GeoJSON 輸出已做（`tools/geojson-export/`，見上面）。
 
 **第二十九次換手（2026-10-29 約 04:10 UTC，session_01YGNNumk6UqdBm6JrBhsdZY 壓縮第 3 次 → 本任用 `create_session` 開的新規劃，第 5 層）**：照下一段「第二十八任做到哪」接。
 - 新規劃先讀第 1 節、本段與下一段、#1041 從「session_01YGNNumk6UqdBm6JrBhsdZY 壓縮第 3 次」往後，然後在 #1041 留言接手。
@@ -2120,7 +2122,13 @@
   - 為第二版開的 #1492（`PromoMaterialTests.testTrainShowcaseNewTrains`）與它的錄影 run 40863314600 已用不到：錄影取消了，#1492 由遊戲規劃決定關掉或留著。
 - **還要作者確認的**：片尾「10/31 開放測試」；iPad 與淺色版要不要做（作者說過發佈前自己也能截圖）。
 
-### 4.28 3D 跟車 10× 的主執行緒工作（決策 485，session_01YGNNuphxaPGPV7TDzRjjop，派工單 FPS，2026-10-29）
+### 4.28 手機橫放時路線清單的控制收成一列（決策 486，session_01YGNNuokuACFK12zJPuZVJc，派工單 LPS，2026-10-29）
+
+- 做了的在 [決策 486](decisions/486.md)：橫放時搜尋（放大鏡按鈕）、篩選（選單）、排序收成一列，跟著清單捲走；路線列放不下時改成多行，不截字。直向與 iPad 不變。
+- **留到發版前**：截圖驗收（決策 482 暫緩）。`WebsiteScreenshotTests.testLinesListAndLinePage` 的 `lines-list` 那張就是橫放的清單，看：控制列是一列、往下捲看得到 3 列以上、名稱與「1 列 · 每 60 分」「昨日 … 人次」沒有「…」。前後對照的示意在 `docs/art/lines-panel-486-2026-10-29/overview.png`（示意圖，不是截圖）。
+- **等實機看**：iPhone SE 寬的面板控制列是否一列放得下；放大鏡打開搜尋欄時鍵盤是否擋住結果。
+
+### 4.29 3D 跟車 10× 的主執行緒工作（決策 485，session_01YGNNuphxaPGPV7TDzRjjop，派工單 FPS，2026-10-29）
 
 3D 地圖的列車滑行與車身高度改從 tick（主執行緒外）拿，3D 面板多一行 `main X ms · longest Y ms`。留下的：實機（3D、駕駛室、集集線、10×）看 fps 回到 60 沒有；`longest` 若仍常超過 30 ms，照 [決策 485](decisions/485.md) 的下一步用 Instruments 找剩下的。截圖驗收照作者 2026-10-29 的指示延到發版前（看 3D 面板展開的那張）。
 
