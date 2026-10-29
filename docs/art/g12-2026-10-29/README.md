@@ -29,20 +29,20 @@
 | 側面格柵、散熱 | 駕駛室前小格柵與長端大型散熱區、側門分件 | 大格柵位置近似；反側資料不足 |
 | 屋頂與排煙 | 深灰連續罩頂、排煙凸件 | 位置推估；俯視原圖不足 |
 | 台車與燃油箱 | 兩台三軸 A1A，中央油箱、軸箱／側梁 | 六輪與位置近似；輪徑與軸距推估 |
-| 踏板、扶手、連結器 | 兩端皆有端平台、扶手、踏板及連結器 | revision-3 前端扶手增亮並有端板／防撞板支承；管路細節簡化 |
-| 橘白塗裝 | 長罩側帶下降到端面下緣；短罩側帶接到短端兩側，再在結構端板形成 V | revision-3 長端白帶在端面降到防撞板上緣；短端 V 保留；門板曲率仍近似 |
+| 踏板、扶手、連結器 | 兩端皆有端平台、扶手、踏板及連結器 | revision-4 保留前端扶手增亮並有端板／防撞板支承；管路細節簡化 |
+| 橘白塗裝 | 長罩側帶下降到端面下緣；短罩側帶接到短端兩側，再在結構端板形成 V | revision-4 長端白帶可見地降到防撞板上緣；短端 V 保留；門板曲率仍近似 |
 
 這是靜態 studies 的原生霧面頂點色近／遠景配方。`Map3DModelPack.standard`、SceneKit R20 `05_TRA_classic_3x2-05`、莒光 `R100CK`／`R200CK` 等營運映射完全不變；合併後玩家不會在營運列車看到這版。無商標、無照片貼圖。
 
-使用者否定 revision-1 producer `b073c6c600bae8280cda31695aa28b0b413ee10f` 的整體外觀，又明確指出 revision-2 producer `69de18da3a8864b94e3bdc8f85d30b12c630a92c` 的正面「超怪」；兩版均不得寫成外觀已接受。revision-3 保留已核對的中央上下雙燈、號碼牌和短端白 V，重看 2021 扇形車庫長端正面與 2014 短端斜面原圖後，修正長端白帶停得太高、白帶下大片黑框、防撞板中央黃黑 V 反向、過窄的防撞板、幾乎看不見的扶手和暗到消失的排障器。長端白帶沿同一車殼側帶降到端面防撞板上緣，短端 V 仍由端板本體分色。端面板縫是細實體線，扶手有外側端板支承；沒有照片貼圖或浮貼色片。原圖沒有提供正交工程量尺，以上高度與寬度仍是按比例推估。
+使用者否定 revision-1 producer `b073c6c600bae8280cda31695aa28b0b413ee10f` 的整體外觀，又指出 revision-2 producer `69de18da3a8864b94e3bdc8f85d30b12c630a92c` 的正面「超怪」。revision-3 `501f339a6c8180f3924b337eb805737b2d5786b7` 已修正低白帶、黃黑 V、扶手及排障器，但最後實看正面 PNG 仍發現白帶被底架端板遮住；撤回該版白帶已符合的自評。revision-4 把底架前緣頂面從 1.30 m 降到 1.20 m，使同一車殼的白帶在正面完整可見。現版保留已核對的中央上下雙燈、號碼牌、短端白 V 及防撞板中央黃 V，沒有照片貼圖或浮貼色片。這些高度與寬度仍是按照片比例推估，非工程尺寸。
 
-最終輸出近景 6,228 三角、遠景 2,764 三角（44.4%），兩者原生邊界皆 `[-7.11, 7.11] × [-1.37, 1.37] × [0, 3.63] m`。固定相機和遊戲模型光的七向日夜圖、GLB、原生模型、可旋轉／縮放／下載的 inspector 在私庫 `game-art-previews/docs/art/g12/revision-3/`。revision-1、revision-2 均只留 PNG、README、來源紀錄以追溯真前版；重檔由各自 producer 重建。公開總覽僅 [overview.png](overview.png)。照片並排圖只存工作區 `/workspace/scratch/g12-r3-private-comparison.jpg`，原圖不再散布；照片透視不等於固定正交相機。正面並排觀察：長端白帶與防撞板接縫、中央黃黑 V、兩側扶手和排障器層次比 revision-2 更接近照片；簡化的橘色平面、燈座、端面角部圓角和管線仍有差異。側、俯、斜視圖保持同尺度重看；大型散熱網、轉向架細形與屋頂設備仍有資料不足或簡化處。
+最終輸出近景 6,228 三角、遠景 2,764 三角（44.4%），兩者原生邊界皆 `[-7.11, 7.11] × [-1.37, 1.37] × [0, 3.63] m`。固定相機和遊戲模型光的七向日夜圖、GLB、原生模型、可旋轉／縮放／下載的 inspector 在私庫 `game-art-previews/docs/art/g12/revision-4/`。revision-1 至 revision-3 只留 PNG、README、來源紀錄以追溯真前版；重檔由各自 producer 重建。公開總覽僅 [overview.png](overview.png)。照片並排圖只存工作區 `/workspace/scratch/g12-r4-private-comparison.jpg`，原圖不再散布；照片透視不等於固定正交相機。長端白帶與防撞板在實際正面渲染中已相接，中央雙燈／車號牌與兩側扶手位置更接近原圖；燈座、端面角部圓角、防撞板細斜紋與管線仍簡化。側、俯、斜視圖保持同尺度重看；大型散熱網、轉向架細形與屋頂設備仍有資料不足或簡化處。
 
-Producer `501f339a6c8180f3924b337eb805737b2d5786b7`（真前版 `69de18da3a8864b94e3bdc8f85d30b12c630a92c`）。在獨立 `/workspace/g12-rebuild` checkout 執行 `tools/train-models/run.sh OUT --ids g12-r21,g12-r21-far` 與 `node tools/train-models/package.mjs OUT`，四個成品（兩個 `.m3dmodel`、兩個 `.glb`）逐 bytes 比對交付前匯出；SHA 詳見私庫 `manifest.json`。共用 `check.mjs`、`audit.mjs` 及 `g12-verify.mjs` 通過；六個輪位貼軌、兩端燈高、玻璃外露、兩端連結器、短端白 V、長端低白帶、防撞板頂中央黃 V、端扶手與七個位移故障反例已驗，且新版驗收拒收 revision-2 的長端白帶。Blender 4.3.2 獨立匯入近遠兩 GLB，分別 6,228／2,764 三角；56 張本地 PNG 完整解碼。Swift 6.4 `warnings-as-errors` 建置與相關測試另見本輪 PR 檢查。最終交付 viewer 本機 loopback 載入、旋轉、縮放、native／GLB／PNG 下載 byte 與 390px 視窗驗證通過；`file://` 因本機瀏覽器管理設定擋下，**UNVERIFIED**。這些檢查不等於 Metal 或動態碰撞。
+Producer `aa1fb2c882d9ee16bb2664db8f7be8431e656c5f`（真前版 `501f339a6c8180f3924b337eb805737b2d5786b7`）。在獨立 `/workspace/g12-rebuild` checkout 執行 `tools/train-models/run.sh OUT --ids g12-r21,g12-r21-far` 與 `node tools/train-models/package.mjs OUT`，四個成品（兩個 `.m3dmodel`、兩個 `.glb`）逐 bytes 比對交付前匯出；SHA 詳見私庫 `manifest.json`。共用 `check.mjs`、`audit.mjs` 及 `g12-verify.mjs` 通過；六輪貼軌、兩端燈高、玻璃外露、兩端連結器、短端白 V、長端低白帶、防撞板頂中央黃 V、端扶手、前端白帶可見淨空與八個位移／故障反例已驗，且新版驗收拒收 revision-3 的遮蔽底架。Blender 4.3.2 獨立匯入近遠兩 GLB，分別 6,228／2,764 三角；56 張本地 PNG 完整解碼。Swift 6.4 `warnings-as-errors` 建置與相關測試另見本輪 PR 檢查。最終交付 viewer 本機 loopback 載入、旋轉、縮放、native／GLB／PNG 下載 byte 與 390px 視窗驗證通過；`file://` 因本機瀏覽器管理設定擋下，**UNVERIFIED**。這些檢查不等於 Metal 或動態碰撞。
 
 ## 狀態
 
-- 素材技術：**VERIFIED**，限上述原生／GLB／渲染／viewer 技術驗收；`file://` 及工程量測未驗，見私庫 revision-3 的 `status.json`。
-- 此 producer 使用者外觀接受：**UNVERIFIED**。revision-1 整體、revision-2 正面均被否定；revision-3 尚無使用者明確接受。
+- 素材技術：**VERIFIED**，限上述原生／GLB／渲染／viewer 技術驗收；`file://` 及工程量測未驗，見私庫 revision-4 的 `status.json`。
+- 此 producer 使用者外觀接受：**UNVERIFIED**。revision-1 整體、revision-2 正面均被否定；revision-3 自檢撤回；revision-4 尚無使用者明確接受。
 - 營運接入：**UNVERIFIED**，僅 studies；既有 SceneKit R20 與全部營運映射不變。
 - 裝置：**UNVERIFIED**，無 iOS Metal／Simulator／真機驗證。
