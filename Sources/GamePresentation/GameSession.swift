@@ -1511,6 +1511,13 @@ public final class GameSession {
     /// held it then goes on when continued, as the player left it running.
     public var worldToSave: GameWorld {
         var saved = world
+        // Decision 305: a night being skipped is saved at the speed before
+        // the skip, paused if it was, as ending the skip leaves it; a game
+        // loaded has no skip to bring the speed down again.
+        if let run = nightSkipRun {
+            saved.setSpeed(run.speed)
+            if run.wasPaused { saved.pause() }
+        }
         if let heldSpeed {
             let paused = saved.clock.isPaused
             saved.setSpeed(heldSpeed)

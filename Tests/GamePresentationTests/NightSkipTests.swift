@@ -371,6 +371,39 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(session.world.clock.speed, .normal)
     }
 
+    /// A game saved while the night is skipped (the autosave on leaving
+    /// the app, too) is saved at the speed before the skip, paused if it
+    /// was, and loads at it, not at the skip's own; a game saved when no
+    /// skip runs is saved as it was (BH2 P2-1).
+    @MainActor
+    func testASaveDuringTheSkipKeepsTheSpeedBefore() throws {
+        for (speed, paused) in [(GameSpeed.normal, false), (.x60, false), (.x10, true)] {
+            var start = try world()
+            start.setSpeed(speed)
+            if paused { start.pause() }
+            let session = GameSession(world: start)
+            session.skipToMorning()
+            session.advance(ticks: 3)
+            XCTAssertNotNil(session.nightSkipRun)
+            XCTAssertNotEqual(session.world.clock.speed, speed, "the skip runs at its own speed")
+            let loaded = try SaveLibrary.decode(SaveLibrary.encode(session.worldToSave, at: Date(timeIntervalSince1970: 0)))
+            XCTAssertEqual(loaded.clock.runningSpeed, speed, "\(speed)")
+            XCTAssertEqual(loaded.clock.isPaused, paused, "\(speed)")
+            var expected = session.world
+            expected.setSpeed(speed)
+            if paused { expected.pause() }
+            XCTAssertEqual(loaded, expected, "only the speed differs from the world being skipped")
+        }
+
+        // No skip: the world as it is (the JSON's key order is not fixed,
+        // so the worlds are compared, not the bytes).
+        let session = GameSession(world: try world())
+        session.advance(ticks: 3)
+        XCTAssertNil(session.nightSkipRun)
+        XCTAssertEqual(session.worldToSave, session.world)
+        XCTAssertEqual(try SaveLibrary.decode(SaveLibrary.encode(session.worldToSave, at: Date(timeIntervalSince1970: 0))), session.world)
+    }
+
     // MARK: - Music (decision 372)
 
     /// The music goes down while the night is skipped and comes back when
