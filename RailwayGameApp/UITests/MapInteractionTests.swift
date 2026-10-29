@@ -1623,4 +1623,41 @@ final class MapInteractionTests: XCTestCase {
         while drawer.exists && !lineCard.exists && Date() < deadline { Thread.sleep(forTimeInterval: 0.25) }
         XCTAssertTrue(!drawer.exists || lineCard.exists, "The ✓ opens the line")
     }
+
+    /// Decision 477: the fleet list scrolls from a drag that starts on a
+    /// train's card. On a phone on its side the sheet stands full height,
+    /// and a drag there resized the sheet (to the larger height it already
+    /// had) instead of moving the list: the website's screenshots never
+    /// reached the fifth train (runs 40812436549, 40819608742).
+    func testTheFleetListScrollsFromADragOnACard() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-screenshot-scene", "freight", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The freight scene opens")
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let fleet = app.buttons["train.fleetOverview"]
+        XCTAssertTrue(fleet.appears(within: 10))
+        if !fleet.becomesHittable(within: 1) { app.swipeUp() }
+        fleet.tap()
+        let first = app.buttons["fleet.follow.Train 1"]
+        XCTAssertTrue(first.appears(within: 20), "The fleet list shows Train 1")
+        first.waitUntilSettled()
+        let before = first.frame
+        // On Train 1's card, left of its Follow button, well clear of it.
+        let window = app.windows.firstMatch.frame
+        let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: window.width * 0.3, dy: before.midY + 30))
+        let end = start.withOffset(CGVector(dx: 0, dy: -160))
+        start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+        Thread.sleep(forTimeInterval: 0.5)
+        let after = first.exists ? first.frame.minY : -.infinity
+        XCTAssertLessThan(after, before.minY - 60, "A drag up on a card moves the list up (from \(before.minY) to \(after))")
+    }
 }
