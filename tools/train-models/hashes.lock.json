@@ -2634,28 +2634,48 @@
       "triangles" : 2738
     },
     "temu2000-formation" : {
-      "hash" : "b94816423a4a90ab",
-      "triangles" : 14812
+      "hash" : "8bea2ce8e427a819",
+      "triangles" : 25040
     },
     "temu2000-leading" : {
-      "hash" : "bf52039b3a25bfd1",
-      "triangles" : 2394
+      "hash" : "f0450d3a69c625a8",
+      "triangles" : 6980
+    },
+    "temu2000-leading-far" : {
+      "hash" : "884a3de3bbfe3d62",
+      "triangles" : 2812
     },
     "temu2000-tema" : {
-      "hash" : "818f0102d995d964",
-      "triangles" : 1624
+      "hash" : "6fdd0e9eade525e6",
+      "triangles" : 1800
+    },
+    "temu2000-tema-far" : {
+      "hash" : "de0122b9399c7fa1",
+      "triangles" : 760
     },
     "temu2000-temb" : {
-      "hash" : "349d340d24a08b7b",
-      "triangles" : 1636
+      "hash" : "be4628237761e6b1",
+      "triangles" : 1812
+    },
+    "temu2000-temb-far" : {
+      "hash" : "564b267821f66b50",
+      "triangles" : 772
     },
     "temu2000-tep" : {
-      "hash" : "bbe8d856188692e0",
-      "triangles" : 1776
+      "hash" : "1f07f53c90fd85e1",
+      "triangles" : 1952
+    },
+    "temu2000-tep-far" : {
+      "hash" : "4aa2908037cb6d90",
+      "triangles" : 832
     },
     "temu2000-trailing" : {
-      "hash" : "aaf063333528a259",
-      "triangles" : 2346
+      "hash" : "151b8384e4c993c2",
+      "triangles" : 6932
+    },
+    "temu2000-trailing-far" : {
+      "hash" : "14ce08a5f6af2d84",
+      "triangles" : 2860
     },
     "urban-three-formation" : {
       "hash" : "4bd45bdc4d152ed3",
