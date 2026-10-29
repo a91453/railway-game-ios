@@ -385,6 +385,7 @@
 - **95.1 之後的待辦（作者 10/29 交代）**：資料工具輸出 GeoJSON，給 geolibre.app 檢查站點、路線、機廠的位置，不放進遊戲。由 Sonnet session 做，三步：(1) 盤點 `tools/` 與打包資料裡哪些有座標、是什麼格式，結果寫在 PR 裡；(2) 挑 2–3 層輸出成 GeoJSON：車站點、路線、機廠範圍；(3) 附 README，寫怎麼跑、怎麼把檔案拖進 geolibre.app 打開。不加依賴；從 OSM 來的資料標 ODbL 出處（照 `DataSourceCredits`）。取代下面「作者問過、答了、沒有要做的」裡「等作者說」那句。
 - **防搬（作者 10/29：有人 clone 公開 repo 重新打包成 App）**，95.1 之後做：
   - A 案盤點：派工單 PRIV（session_01YGNNuow8p93HA9KfQDJLmf）在寫 `docs/research/PRIVATE_ASSETS_SPLIT_2026-10-29.md`。內容是把編 App 必需的美術、模型、資料移到私庫，CI 建置時再拉進來。計畫要作者點頭才動手。
+    - 盤點已寫好（重開的 PRIV，session_01YGNNunCs4CpTF415GeYCpT）：[`research/PRIVATE_ASSETS_SPLIT_2026-10-29.md`](research/PRIVATE_ASSETS_SPLIT_2026-10-29.md)。建議另開私庫 `railway-game-data-private`，用 deploy key 拉，把檔案疊回原路徑；作者要做的在第 4 節，PR 順序在第 9 節。作者點頭前什麼都不搬。
   - 陷阱資料與非正式版標示（作者：「也一起排」）：95.1 發完再派一個 session（避免和發版檢查搶 macOS runner），不動 GameCore、存檔、golden。
     - 陷阱資料：在打包資料或程式裡放一兩筆只有本專案有、玩家看不出來的小東西，被整包照搬時可以當證據。不能讓鐵道資料變錯（鐵道迷）。哪幾筆是陷阱只寫在私庫，不寫在公開 repo。
     - 非正式版標示：自己編的 App 顯示「不是正式版本」。CLAUDE.md 規定 app ID 不寫進 repository，所以要用發版時注入的值來判斷（例如 `testflight.yml` 現有的變數），不在程式裡寫死 ID。Simulator 的 UI 測試和官網截圖不能被這個標示擋住。玩家看的文字只說「請從 App Store 下載正式版」，不說原因。
