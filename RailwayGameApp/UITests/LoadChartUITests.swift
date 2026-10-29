@@ -37,7 +37,12 @@ final class LoadChartUITests: XCTestCase {
         let page = app.segmentedControls["networkFlow.page"]
         XCTAssertTrue(page.appears(within: 10), "The flow report opens")
         page.buttons.element(boundBy: 1).tap()
-        XCTAssertTrue(app.descendants(matching: .any)["networkFlow.hourly.chart"].firstMatch.appears(within: 30),
+        // Below decision 472's ranking of the fullest sections: a list
+        // builds a row only as it is scrolled to.
+        // The chart is taller than the band a phone on its side leaves:
+        // its summary line is brought in.
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["networkFlow.hourly.summary"].firstMatch),
                       "A section's riders hour by hour show")
+        XCTAssertTrue(app.descendants(matching: .any)["networkFlow.hourly.chart"].firstMatch.exists, "Its chart is there")
     }
 }

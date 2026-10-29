@@ -241,9 +241,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         let page = app.segmentedControls["networkFlow.page"]
         XCTAssertTrue(page.appears(within: 10), "The flow report opens")
         page.buttons.element(boundBy: 1).tap()
-        let hourly = app.descendants(matching: .any)["networkFlow.hourly.chart"].firstMatch
-        XCTAssertTrue(hourly.appears(within: 30), "A section's riders hour by hour show")
-        _ = app.dragUntilWhollyOnScreen(hourly)
+        // Below decision 472's ranking: the list builds it as it scrolls
+        // in. Its summary first, then a little further for the chart, which
+        // is taller than the band dragUntilWhollyOnScreen keeps clear.
+        let summary = app.descendants(matching: .any)["networkFlow.hourly.summary"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(summary), "A section's riders hour by hour show")
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+        from.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
         settle()
         keep("section-hourly", app)
     }
