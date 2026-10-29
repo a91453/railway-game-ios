@@ -113,11 +113,26 @@ struct FareFloatMarks: View {
             let at = camera.screenPoint(of: location)
             return (at.x - middle.x) * (at.x - middle.x) + (at.y - middle.y) * (at.y - middle.y)
         }
+        // Decision 477: over the station, or beside it where that covers
+        // another station's name or another fare.
+        let points = floats.isEmpty ? [] : MapLabelPlacement.placeFares(
+            floats.map { float in
+                let at = camera.screenPoint(of: float.location)
+                return (x: at.x, y: at.y, text: float.text)
+            },
+            stations: session.world.stations.compactMap { station in
+                let at = camera.screenPoint(of: station.location)
+                guard at.x > -80, at.x < camera.viewport.width + 80, at.y > -80, at.y < camera.viewport.height + 80 else { return nil }
+                return MapLabelPlacement.Station(x: at.x, y: at.y, name: station.name)
+            },
+            radius: MapArt.stationRadius(camera)
+        )
+        let placed = Dictionary(uniqueKeysWithValues: zip(floats.map(\.id), points))
         ZStack(alignment: .topLeading) {
             ForEach(floats) { float in
-                let at = camera.screenPoint(of: float.location)
+                let at = placed[float.id] ?? camera.screenPoint(of: float.location)
                 FareFloatLabel(text: float.text)
-                    .position(x: at.x, y: at.y - 22)
+                    .position(x: at.x, y: at.y)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

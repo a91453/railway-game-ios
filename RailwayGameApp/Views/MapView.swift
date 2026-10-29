@@ -394,6 +394,13 @@ struct MapView: View {
                             network: networkOverlay,
                             building: buildingOverlay,
                             expansion: expansionOverlay,
+                            // Decision 477: the tiles' prices keep out from
+                            // under the top bar, its column and the cards.
+                            expansionClear: expansionOverlay == nil ? nil : MapLabelPlacement.Box(
+                                x: Double(clear.leading), y: Double(max(clear.top, topColumnDepth)),
+                                width: viewport.width - Double(clear.leading + clear.trailing),
+                                height: viewport.height - Double(max(clear.top, topColumnDepth) + clear.bottom)
+                            ),
                             traffic: traffic,
                             camera: projection,
                             edges: edges,
@@ -893,7 +900,10 @@ struct MapView: View {
                 // Decision 174, later: the sights while building, faint
                 // and under the flags below.
                 .overlay(alignment: .topLeading) {
-                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear, isPassive: true)
+                    MapAttractionMarks(
+                        session: session, camera: projection, viewport: viewport, insets: clear, isPassive: true,
+                        clearTop: max(clear.top, topColumnDepth)
+                    )
                 }
                 // Decision 295: the real stations, choosing where a
                 // platform goes on a real-world map; under the flags.
@@ -1021,6 +1031,7 @@ struct MapView: View {
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
                                 safeArea: safeArea,
+                                covered: clear,
                                 onAttributionFrames: { attributionFrames = $0 },
                                 onCredit: { screen.panel = .dataSources }
                             )
@@ -2198,6 +2209,8 @@ private struct MapCanvas: View, Equatable {
     let building: BuildingOverlay?
     /// The tiles of the map owned and for sale (decision 160).
     let expansion: MapExpansionOverlay?
+    /// Decision 477: where on the map the tiles' prices can be seen.
+    var expansionClear: MapLabelPlacement.Box?
     let traffic: TrafficOverlay
     let camera: PlanCamera
     let edges: [TrackEdgeID: MapEdgeDrawing]
@@ -2250,7 +2263,7 @@ private struct MapCanvas: View, Equatable {
         func railwayChange() -> MapRedrawReason? {
             if !MapRedraw.sameRailway(lhs.world, rhs.world) { return .railway }
             if lhs.network != rhs.network { return .networkTool }
-            if lhs.expansion != rhs.expansion { return .expansion }
+            if lhs.expansion != rhs.expansion || lhs.expansionClear != rhs.expansionClear { return .expansion }
             if lhs.edges != rhs.edges { return .edges }
             if lhs.lines != rhs.lines { return .lines }
             if lhs.routePreview != rhs.routePreview { return .routePreview }
@@ -2296,7 +2309,7 @@ private struct MapCanvas: View, Equatable {
     var body: some View {
         let lights = lights, lineCodes = lineCodes
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
-        let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
+        let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, expansionClear = expansionClear, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
         let buses = buses, roads = roads
@@ -2313,6 +2326,7 @@ private struct MapCanvas: View, Equatable {
                     network: network,
                     building: building,
                     expansion: expansion,
+                    expansionClear: expansionClear,
                     traffic: traffic,
                     projection: camera,
                     edges: edges,

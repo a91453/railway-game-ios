@@ -426,6 +426,34 @@ struct RealWorldPicker: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
             }
+            // Decision 88: one map of the whole of Taiwan, for lines from
+            // one end of it to the other. Decision 477: first of the
+            // places, not after Taiwan's 22, where it was found last.
+            Section {
+                Button {
+                    dismiss()
+                    launcher.startWholeTaiwan()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "map.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: launcher.language.text("The whole of Taiwan", "全台灣"))
+                                .font(.body)
+                                .foregroundStyle(Theme.textPrimary)
+                            Text(verbatim: launcher.language.text(
+                                "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
+                                "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
+                            ))
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+                .disabled(launcher.population == nil)
+                .accessibilityIdentifier("realWorld.wholeTaiwan")
+            }
             // Decision 262: by country where a country has many places, by
             // region for the rest; Taiwan's open, the others closed.
             ForEach(RealWorldPlace.groups) { group in
@@ -443,36 +471,6 @@ struct RealWorldPicker: View {
                             "\(group.name(in: launcher.language))（\(group.places.count)）"
                         ))
                         .accessibilityIdentifier("placeGroup.\(group.id)")
-                    }
-                }
-                // Decision 88: one map of the whole of Taiwan, for lines from
-                // one end of it to the other, after Taiwan's places (which
-                // the UI tests tap without scrolling).
-                if group.kind == .country("TW") {
-                    Section {
-                        Button {
-                            dismiss()
-                            launcher.startWholeTaiwan()
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "map.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Theme.primary)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(verbatim: launcher.language.text("The whole of Taiwan", "全台灣"))
-                                        .font(.body)
-                                        .foregroundStyle(Theme.textPrimary)
-                                    Text(verbatim: launcher.language.text(
-                                        "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
-                                        "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
-                                    ))
-                                    .font(.footnote)
-                                    .foregroundStyle(Theme.textSecondary)
-                                }
-                            }
-                        }
-                        .disabled(launcher.population == nil)
-                        .accessibilityIdentifier("realWorld.wholeTaiwan")
                     }
                 }
                 if group.kind == .country("TW"), let railways = launcher.railways {

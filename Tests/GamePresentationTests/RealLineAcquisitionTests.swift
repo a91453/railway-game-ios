@@ -293,7 +293,10 @@ final class RealLineAcquisitionTests: XCTestCase {
         let offer = session.realLineOffer(for: line)
         XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
         let acquisition = try XCTUnwrap(offer.acquisition, id)
-        XCTAssertEqual(acquisition.runs.count, runs.runs.count, id)
+        // Bought with its depot (decision 479), the depot sends its trains
+        // out and takes them in, not the timetable's positioning runs.
+        let sold = runs.runs.filter { acquisition.depot == nil || !($0.positioning || $0.train == "回送") }
+        XCTAssertEqual(acquisition.runs.count, sold.count, id)
         XCTAssertEqual(acquisition.trains.count, runs.overnight.values.reduce(0, +), id)
         XCTAssertEqual(acquisition.trainType, type, id)
         XCTAssertEqual(acquisition.tier, tier, id)

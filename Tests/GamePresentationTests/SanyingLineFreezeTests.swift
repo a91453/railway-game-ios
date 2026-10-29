@@ -9,13 +9,16 @@ import XCTest
 /// train bubbles asks a route of every waiting train: some 70–100 ms in
 /// Linux release on the bought line, ten times the Blue Coast Line's, at
 /// every tick at 6000×, on the main actor. The tick works the bubbles out
-/// off the main actor with the world it made.
+/// off the main actor with the world it made. Bought without its depot
+/// (decision 479), the line as it was on 94.
 @MainActor
 final class SanyingLineFreezeTests: XCTestCase {
     func testTheBoughtSanyingLinesStuckTrainsAreWorkedOutOffTheMainActor() async throws {
         let session = try RealLineAcquisitionTests.game(round: "sanying:LB", side: 1 << 21, heights: true)
         let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "sanying:LB" })
-        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let offer = session.realLineOffer(for: line, raising: .viaducts, depot: false).offer
+        XCTAssertNil(offer.acquisition?.depot)
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
         session.setSpeed(.fast)
         let before = session.situationAlertsWorkedOut
         var stuck = 0
