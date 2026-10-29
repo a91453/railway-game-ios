@@ -11,6 +11,8 @@ import XCTest
 /// scene that changes does not lose the others' pictures.
 @MainActor
 final class PromoMaterialTests: XCTestCase {
+    private var marked = false
+
     // MARK: - The demo maps, by day, at dusk and at night
 
     func testSimpleDemoDay() { demo(at: "10:00", name: "simple-day") }
@@ -186,7 +188,7 @@ final class PromoMaterialTests: XCTestCase {
     /// log (the workflow turns it into an offset).
     private func showcase(_ name: String, in app: XCUIApplication) {
         keep("\(name)-map", app)
-        print("[promo] action-start \(Date().timeIntervalSince1970)")
+        markAction()
         let zoomIn = app.buttons["放大"]
         let zoomOut = app.buttons["縮小"]
         if zoomIn.appears(within: 5) {
@@ -219,18 +221,29 @@ final class PromoMaterialTests: XCTestCase {
         open3D.tap()
         let close = app.buttons["map3D.close"]
         guard close.appears(within: 60) else { return }
-        settle(seconds: 8)
+        markAction()
+        // The Simulator draws the 3D map in software and takes up to a
+        // minute to show it: a picture of the spinner is 180 KB, one of the
+        // map 1.9 MB or more.
+        waitForPicture(in: app, timeout: 120)
+        settle(seconds: 3)
         keep("\(name)-3d-far", app)
         let view = app.descendants(matching: .any)["map3D.view"].firstMatch
         let target = view.exists ? view : app
-        // Turn the camera round, slowly, then bring it in close.
+        // Pinching in tilts the map, two fingers turn it, a drag moves it.
+        target.pinch(withScale: 1.8, velocity: 0.6)
+        settle(seconds: 4)
+        keep("\(name)-3d-tilt", app)
+        target.rotate(CGFloat.pi / 3, withVelocity: 0.4)
+        settle(seconds: 3)
+        keep("\(name)-3d-turn", app)
         target.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5))
             .press(forDuration: 0.2, thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.5)),
                    withVelocity: .slow, thenHoldForDuration: 0.5)
         settle(seconds: 3)
-        keep("\(name)-3d-turn", app)
-        target.pinch(withScale: 2.2, velocity: 0.6)
-        settle(seconds: 4)
+        keep("\(name)-3d-move", app)
+        target.pinch(withScale: 2.0, velocity: 0.6)
+        settle(seconds: 5)
         keep("\(name)-3d-near", app)
         target.pinch(withScale: 1.8, velocity: 0.6)
         settle(seconds: 8)
@@ -247,6 +260,7 @@ final class PromoMaterialTests: XCTestCase {
     /// Follows the freight scene's first train in the fleet list and shows it
     /// from the 3D map when the follow bar offers that.
     private func followFirstTrain(prefix: String, in app: XCUIApplication) {
+        markAction()
         let build = app.buttons["dock.build"]
         guard build.appears(within: 10), build.becomesHittable(within: 5) else { return }
         build.tap()
@@ -293,6 +307,24 @@ final class PromoMaterialTests: XCTestCase {
         let appeared = app.descendants(matching: .any)["map"].firstMatch.appears(within: timeout)
         if !appeared { XCTFail("The map never opened") }
         return appeared
+    }
+
+    /// Prints where the recording's camera work starts, once a test: the
+    /// workflow turns it into an offset in MANIFEST.txt.
+    private func markAction() {
+        guard !marked else { return }
+        marked = true
+        print("[promo] action-start \(Date().timeIntervalSince1970)")
+    }
+
+    /// Waits until the screen holds a picture: a screenshot of the 3D
+    /// map's spinner is small, one of the map large.
+    private func waitForPicture(in app: XCUIApplication, timeout: TimeInterval) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if XCUIScreen.main.screenshot().pngRepresentation.count > 600_000 { return }
+            Thread.sleep(forTimeInterval: 2)
+        }
     }
 
     private func settle(seconds: TimeInterval = 2) {
