@@ -151,12 +151,22 @@ public enum Map3DShowcase {
     public static let mostRows = 8
 
     /// The trains picked, in the order picked, and each one's cars.
+    /// Decision 492: never one of `hidden`, the train pack's sets while
+    /// it is locked (``TrainPack/locked(unlocked:pushPullE1000:)``), so the
+    /// garage open to every player shows only the trains they have.
     public struct Selection: Equatable, Sendable {
         public private(set) var keys: [String]
         public private(set) var cars: [String: Int] = [:]
+        public let hidden: Set<String>
 
-        public init(keys: [String] = Map3DShowcase.defaultKeys) {
-            self.keys = Array(keys.filter { Map3DShowcase.entry($0) != nil }.prefix(Map3DShowcase.mostRows))
+        public init(keys: [String] = Map3DShowcase.defaultKeys, hiding hidden: Set<String> = []) {
+            self.hidden = hidden
+            self.keys = Array(keys.filter { Map3DShowcase.entry($0) != nil && !hidden.contains($0) }.prefix(Map3DShowcase.mostRows))
+        }
+
+        /// The catalog's entries that can be picked, in its order.
+        public var offered: [Entry] {
+            Map3DShowcase.catalog.filter { !hidden.contains($0.key) }
         }
 
         public var isFull: Bool { keys.count >= Map3DShowcase.mostRows }
@@ -169,7 +179,7 @@ public enum Map3DShowcase {
                 keys.remove(at: index)
                 return true
             }
-            guard !isFull, Map3DShowcase.entry(key) != nil else { return false }
+            guard !isFull, !hidden.contains(key), Map3DShowcase.entry(key) != nil else { return false }
             keys.append(key)
             return true
         }
