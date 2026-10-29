@@ -2754,20 +2754,20 @@
       "triangles" : 12
     },
     "kaohsiung-dm1" : {
-      "hash" : "34b04b1dd94fbc57",
-      "triangles" : 3806
+      "hash" : "c2cdfa4dc756c3ee",
+      "triangles" : 4918
     },
     "kaohsiung-dm1-far" : {
-      "hash" : "7e38a937bb91a1b0",
-      "triangles" : 1902
+      "hash" : "7d1e41be6bf2d31a",
+      "triangles" : 2246
     },
     "kaohsiung-dm2" : {
-      "hash" : "34b04b1dd94fbc57",
-      "triangles" : 3806
+      "hash" : "c2cdfa4dc756c3ee",
+      "triangles" : 4918
     },
     "kaohsiung-dm2-far" : {
-      "hash" : "7e38a937bb91a1b0",
-      "triangles" : 1902
+      "hash" : "7d1e41be6bf2d31a",
+      "triangles" : 2246
     },
     "kaohsiung-t" : {
       "hash" : "3b2bd1b30358d963",

@@ -1,5 +1,13 @@
 # 高雄捷運紅／橘線現役西門子原生 studies
 
+**目前交付第二版**：producer `3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c`，沿用公開draft[#1454](https://github.com/a91453/railway-game-ios/pull/1454) ↔ 素材draft[#22](https://github.com/a91453/railway-assets-private/pull/22)。[完整revision-2／viewer／原生／GLB／20PNG／SHA](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-2)。[實際真前後預覽](overview.png)。
+
+真前版producer `62c2da42bf7edb3ef2e359befe206782fbaaf29b`／素材commit `10f8abc615a84638e121e58b71bbfc1343a20a72`。第一輪的顯示幕放反側、車頭／燈座／連結器過度簡化，撤回其對應「已符合」自評。使用者要求依實車繼續修，尚未接受第二版外觀。第一輪重檔在同素材PR移除，保留PNG、README、來源／授權與狀態；用真commit恢復，不新增history或ZIP。
+
+第二輪改了：車頭橫向退縮／肩部弧面、梯形獨立風擋、沿真曲面連續的圓角中央門縫、觀看正面左側的目的地幕、共同雙燈座、頂部燈圈／有支點雨刷、下裙兩頰與連結器缺口、45mm真凹孔。直側色帶至車頭接點同步對齊。T近遠兩件完整bytes及車頭後方X≤9m的幾何與flags保持；車頭鄰近烘焙陰影可變，不宣稱全車所有色值／像素不變。
+
+本輪：DM近4918／遠2246、T近2312／遠984，三車近12148／遠5476三角。六單元與兩完整編組共18成品由明確producer獨立worktree重建bytes相同；15項最終Swift6.4 warnings-as-errors測試通過。所有驗證、固定相機／公尺尺度及實際下載SHA見[verification.json](verification.json)。素材技術、外觀、接入、裝置各自看[status.json](status.json)。
+
 本輪獨立重建高雄捷運高運量電聯車（Siemens Modular Metro），一般銀色／綠松塗裝，共用同型車，不依路線另造幾何或紅橘塗裝。靜態展示，不替換營運。使用者外觀接受、營運接入、Simulator／真機均 **UNVERIFIED**。
 
 實際 producer 與交付／驗證連結在本頁後續紀錄；重建入口 [工具](../../../tools/kaohsiung/README.md)，原始來源逐檔 SHA／日期／授權在 [source-record.json](source-record.json)。初版沒有已交付前版，不把過程試作當真前版。
@@ -27,7 +35,7 @@
 
 已符合：銀色直側四門、雙客窗、獨立駕駛側窗、綠松頂冠及淺U白／綠帶、第三軌台車、兩端空調、三車內端風琴。最終原生多視角旁置實拍，供製作者自檢，不等同使用者接受。
 
-仍不符合：前罩曲率用少量平面，風擋／門角及裙邊較實車方；連結器與輪架細件偏簡、目的地文字用抽象短段，不模仿真實標誌；未作實車屋頂密集細肋或雨刷機構。資料不足：無透視正投影／全俯視照片，另一側及DM1/DM2完整車底箱序、管線、精確殼曲率與支架尺寸。照片推估不冒稱工程精度。
+仍不符合（第二輪）：前罩仍以有限平面近似，風擋圓角／斜率與小型燈座有照片推估；輪架、連結器管線與機構仍簡化，目的地用抽象短段、不模仿商標；屋頂密集細肋省略。雨刷已補有支點的靜態機構，非動畫。資料不足：無透視正投影／全俯視照片，另一側及DM1/DM2完整車底箱序、管線、精確殼曲率與支架尺寸。照片推估不冒稱工程精度。
 
 ## 保護及前置
 
@@ -43,7 +51,7 @@ main基準50437249。逐張查#1357/#1416/#1342/#1422/#1424/#1437皆MERGED。既
 
 四向實拍對照方法：front旁置主管機關既有列車近正斜照及2427junction正斜照；left旁置2427junction整列斜側及台車近照（無全車正交側照）；top旁置其大寮俯斜照（非無透視正俯視）；isometric旁置同來源斜前。比較圖只留本機，原圖授權未開放再散布。正面確認兩側獨立窗、中央門和U帶，但本模型門框／玻璃角較方；側面確認4門與雙客窗，但未還原所有檢修縫；俯斜確認兩端空調和中段三對通風件，精細頂肋省略。這些限制不因測試通過而撤回。
 
-## 本輪技術交付
+## 第一輪技術交付（歷史，已由第二輪取代）
 
 最終producer：`62c2da42bf7edb3ef2e359befe206782fbaaf29b`。六獨立近遠單元、兩個完整三車assembly；DM近3806/遠1902，T近2312/遠984，三車近9924/遠4788三角。共18模型／GLB／assembly payload由獨立乾淨worktree重建逐bytes相同。最終15項Swift、5 Node/6 Python工具契約、八件GLB獨立Blender4.3.2匯入、224最終PNG完整解碼、最終viewer互動／24真下載及8下載PNG完整解碼通過。[完整量測與限制](verification.json)、[四種狀態](status.json)。
 
@@ -54,3 +62,14 @@ main基準50437249。逐張查#1357/#1416/#1342/#1422/#1424/#1437皆MERGED。既
 素材draft：[railway-assets-private#22](https://github.com/a91453/railway-assets-private/pull/22)；[完整revision-1](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-1)，含自含viewer／原生／GLB／20PNG／來源／SHA。公開draft：[railway-game-ios#1454](https://github.com/a91453/railway-game-ios/pull/1454)。
 
 啟用MOTION_BUDGET_REPORT=1另跑記憶體報告測試通過；standard585模型／133.3MB，靜態studies不入常駐包。最新CI以#1454同head checks為準；素材#22同head guard另查。
+
+
+## 第二輪獨立驗收與外觀對照
+
+共用拓樸及刪面／反面／編組移位仍通過，新增實際前玻璃埋入150mm／外浮90mm、封住凹孔的真面片及反移目的地幕的真三角形反例，近遠各自拒收。真第一輪四個DM原生也分別被「反側顯示幕／實心連結器」拒收。玻璃保留所有殼／框遮擋，只辨識雨刷範圍內的實際細桿；每個抽樣玻璃外表面55mm內有實體背板。屋頂／八輪／淨空／風琴照實際輸出重驗。
+
+固定比較由producer中的`tools/kaohsiung/compare-fixed.mjs TRUE_R1 FINAL OUT`產生，使用每單元／編組兩版共同bounds中心、正交公尺尺度、相同日光／背景／材質，四向配色／白模／剪影。前後各自auto-fit未用來比比例。原生全近遠及編組七向、白模／剪影均重看，最終前／側／俯／斜與有來源實拍旁置；無真正正投影／全俯視來源的方向保留資料不足。
+
+已符合：顯示幕改到實拍所見觀者左側；兩側獨立風擋、圓角中央逃生門與曲面分色連續；共同燈座、頂燈圈、雨刷支點、下裙缺口及連結器凹孔可見。仍不符合及資料不足如前述，不用技術通過推斷已獲外觀接受。
+
+Siemens SF3000原圖錄的設備產品圖未註明是攝影或渲染，本輪將它與尺寸／工程圖分開記，不冒稱已證實為實車攝影。原高捷簡報同時含實拍與示意圖，也只依各自性質使用。

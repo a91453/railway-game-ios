@@ -99,5 +99,9 @@
     "使用者附圖第一張：K.Y.Chung/Nanyue Express, CC BY-NC-ND 4.0 illustration; not engineering or redistributed",
     "Blair downloaded first thumbnails include unrelated Taipei painted train; excluded",
     "New Hyundai Rotem extension trains, Yellow Line Stadler, circular LRT and special wraps excluded"
-  ]
+  ],
+  "revision": 2,
+  "previous_producer": "62c2da42bf7edb3ef2e359befe206782fbaaf29b",
+  "previous_asset_commit": "10f8abc615a84638e121e58b71bbfc1343a20a72",
+  "review": "Reopened original KRTC/MTBU/Siemens/2427junction images and verified9 downloaded SHA unchanged. Corrected the observer-left destination, bow, windshield/door seams, lamp casting and lower coupler. No third-party original images redistributed."
 }

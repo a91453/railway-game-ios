@@ -1,19 +1,19 @@
 {
   "asset": {
     "status": "VERIFIED",
-    "evidence": "Final native/GLB geometry, specific destructive faults, Blender4.3.2, complete PNG decoding, inspector interaction and download bytes; see public verification.json. File protocol separately UNVERIFIED."
+    "evidence": "Final native/GLB geometry and actual faults, protectedT/hardware and688 existing payloads, independent producer rebuild, Blender4.3.2, PNG decode and delivered viewer/download SHA. See public verification.json."
   },
   "appearance": {
     "status": "UNVERIFIED",
     "accepted_producer": null,
-    "evidence": "Producer self-review only; no user acceptance of this producer. Shape, frame and coupler simplifications documented."
+    "evidence": "Producer visual self-review only. User authorized further corrections, not appearance acceptance of this revision."
   },
   "integration": {
     "status": "UNVERIFIED",
-    "evidence": "studies only; krtc remains metroGeneric 3 cars; no operating integration."
+    "evidence": "studies only; krtc metroGeneric3-car mapping protected."
   },
   "device": {
     "status": "UNVERIFIED",
-    "evidence": "Linux WebGL/Blender only. Simulator/Metal/performance/animation not tested."
+    "evidence": "Linux WebGL/Blender, no new Simulator/device Metal/performance/animation check. file:// blocked by browser policy, localhost tested."
   }
 }
