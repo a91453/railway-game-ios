@@ -46,3 +46,17 @@ E200只改既有白色主殼、綠松車殼帶、白門葉與既有V形塗裝線
 素材技術、明確producer的使用者外觀接受、營運接入、裝置驗證分開記錄在 status.json。後三者 **UNVERIFIED**；Linux WebGL／Blender或CI成功不代表裝置／外觀接受。無GameCore、存檔、fixtures、購車、班表、動畫修改，不合併／auto-merge／TestFlight。
 
 重建與驗收：[專用工具](../../../tools/e200-mingri-style/README.md)。完整素材、viewer與互鏈draft PR連結待交付補入。
+
+## 實際交付與驗證
+
+![最終原生模型與原／新整列比較](overview.png)
+
+- 模型 producer：`85f505e2a39c4a791b6730859e2e5b1d7b451a51`，先提交，再從獨立 checkout 實跑重建，十二原／新單元 native bytes 相符。
+- [完整素材與README](https://github.com/a91453/railway-assets-private/tree/codex/e200-mingri-style-2026-10-29/game-art-previews/docs/art/e200-mingri-style/revision-1)；[自含viewer（下載HTML）](https://github.com/a91453/railway-assets-private/blob/codex/e200-mingri-style-2026-10-29/game-art-previews/docs/art/e200-mingri-style/revision-1/index.html)；[來源與SHA](https://github.com/a91453/railway-assets-private/blob/codex/e200-mingri-style-2026-10-29/game-art-previews/docs/art/e200-mingri-style/revision-1/source-record.json)。20張私有PNG＋本頁1張公開總覽；沒有ZIP或舊輪次備份。
+- [完整驗證摘要](verification.json)：六單元頂點／三角序／法向／flags及保護色保持；702個既有鎖定模型實際payload與全部頂點FNV保持；移殼／玻璃／燈色／共用車移位與編組錯位等故障反例拒收。
+- VERIFIED Linux Swift6.4 warnings-as-errors、10項相關XCTest；16個原／新單元及編組幾何與獨立Blender4.3.2讀入；221張暫存PNG完整解碼透明／非空／不裁邊；64對同相機白模／剪影像素相同；最終八模型viewer真載入、七向／日夜、旋轉／縮放、native/GLB/PNG實際下載／SHA及390px。file://因管理政策未驗，未宣稱OS雙擊或真機可用。
+- 本批獨立單元最大6500三角<15000格式上限，八車近50868、遠33592，在完整場景240000／120000預算內。原E200近遠同模型、客車遠景4008/6476（未低於一半）保留。
+- **全量鎖檔gate未通過**：28項差異在未改main的實際輸出同樣重現，沒有新增失敗；不改他車、不重寫原鎖、不改gate。本批只新增六鎖項。素材技術整體狀態因此仍UNVERIFIED，不能把通過的局部驗證冒充全量gate已綠。
+- 已符合：六單元與近遠整列四向可辨橘黑主區、門窗與灰屋頂，原造型保持。仍不是真車復刻：E200原尖V、對稱端面與直線側帶保持，沒有E405彎曲／不對稱分色；遊戲霧面橘較實拍柔和。資料不足：官方E200鳴日證據、可確認來源的校準俯視照、原車至producer的接受證據及真機結果。
+
+原客車第二版重檔已被素材清理，這次從已合併素材commit `6b16d40b7fbba474265b7777fa58fa674b9f3eb0` 還原，SHA與當時manifest一致。對實際歷史原生與main比對：E200位置／順序bytes相同；客車位置數值／順序相同，48個記錄僅signed-zero表示差異，未宣稱整份歷史bytes相同。本輪原／新與受保護main payload的嚴格bytes／FNV證據另見驗證。
