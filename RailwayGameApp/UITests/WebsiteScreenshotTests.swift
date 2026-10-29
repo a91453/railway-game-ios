@@ -107,6 +107,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-demo-day", app)
     }
 
+    /// New game → real world (decision 477): the whole of Taiwan first,
+    /// above the places.
+    func testRealWorldPicker() {
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
+        settle()
+        keep("real-world-picker", app)
+    }
+
     // MARK: - What the game gained after those (decisions 167 to 186)
 
     /// The High Speed Rail demo (decision 170): Nangang to Zuoying on the
@@ -238,7 +253,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         newGame.tap()
         // Decision 316: the real-world map is on the new game's page.
         tapButton("newGame.realWorld", in: app, timeout: 60)
-        // The whole of Taiwan is offered below Taiwan's places, in a list
+        // The whole of Taiwan is offered first (decision 477), in a list
         // that builds a row as it is scrolled to, and is enabled once the
         // population is read. The list is found by its first row, which it
         // drops once scrolled away from, so a second swipe found no list:
