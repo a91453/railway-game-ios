@@ -1820,6 +1820,7 @@ public final class GameSession {
         let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
         let timeBefore = world.clock.now
         let worldBefore = world
+        let revisionBefore = worldRevision
         meter.measure(.stepWorld) {
             // The map's bubbles the tick worked out, in place before the
             // new world's marks read them (``situationAlerts``).
@@ -1842,8 +1843,13 @@ public final class GameSession {
                 motion.source = worldRevision
                 return (worldRevision, glide.from, motion)
             }
-            // Decision 485: likewise, the 3D map's train heights.
-            if let heights = step.trainHeights { trainHeightsMemo = (worldRevision, heights) }
+            // Decision 485: likewise, the 3D map's train heights, or the
+            // last ones kept on when the tick moved no train.
+            if let heights = step.trainHeights {
+                trainHeightsMemo = (worldRevision, heights)
+            } else if let memo = trainHeightsMemo, memo.revision == revisionBefore, step.world.trains == worldBefore.trains {
+                trainHeightsMemo = (worldRevision, memo.heights)
+            }
             // Decision 330: likewise, for this world only.
             workedAdvice = step.advice.map { (worldRevision, $0) }
             // Game time moved on: no edit before it can be undone. Emptied

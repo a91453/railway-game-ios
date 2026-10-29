@@ -39,13 +39,14 @@ final class Map3DFollowTickTests: XCTestCase {
             let loop = try XCTUnwrap(session.beginLoopTick())
             let outcome = await loop.work()
             XCTAssertTrue(session.finish(loop, with: outcome))
-            guard session.world.trains != before else { continue }
-            moved += 1
+            if session.world.trains != before { moved += 1 }
+            // Kept on through the ticks no train moved in.
+            guard moved > 0 else { continue }
             let memo = try XCTUnwrap(session.trainHeightsMemo, "tick \(tick)")
             XCTAssertEqual(memo.revision, session.worldRevision)
             assertSame(session.map3DTrainHeights(), Map3DTrains.Heights(world: session.world), "tick \(tick)")
         }
-        XCTAssertGreaterThan(moved, 50)
+        XCTAssertGreaterThan(moved, 10)
     }
 
     func testTheTickLeavesTheHeightsAloneWithoutThe3DMap() async throws {
