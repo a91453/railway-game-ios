@@ -37,6 +37,8 @@
 
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
 
+> 公測前抓蟲：貨運、挑戰與劇本、分享與 Game Center（派工單 BH5，`claude/bughunt-freight-challenges`，2026-10-30）：[`research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md`](research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md)。沒找到 P1。留下 P2-1（從朋友的路網開新局會帶過朋友未領的市府補助、星等與貨運未入帳收入）與 P3-1～P3-8，公測後由規劃照該文件 §4 的順序派，P2-1 最先（只動 GamePresentation）。
+
 > 新手教學盤點（派工單 TUT，`claude/tutorial-review-2026-10-30`，2026-10-30）：[`research/TUTORIAL_REVIEW_2026-10-30.md`](research/TUTORIAL_REVIEW_2026-10-30.md)。公測前只修了 A1（「點『車站…』看誰在搭車」打開在「旅客與運量」組）；其餘步驟對照 main 都指得到、按鈕字都對。留下的是該文件 §4 的 B1–B7（教學的路線面板和平常不同、實景地圖沒教、iPad 直拿沒走過教學、錢的事沒教等），公測後由規劃照順序派；B3 發版前要在 iPad 直拿實機走一次第 1 關。
 
 > 公測前效能盤點（派工單 PERF，`claude/perf-tiers`，決策號不動）：[`research/PERF_TIERS_2026-10-30.md`](research/PERF_TIERS_2026-10-30.md)。這輪只修了兩層雨的重畫次數（3D 跟地圖的格數、2D 限每秒 30 次）。留下的：「自動」在「少像素」之後再加「少陰影與反光」「穩定 30 格」兩步，主執行緒造成的掉格不降畫面（§4 丙，公測後拿實機回報再做）；其餘依 §5 的順序。實機要看的數字在 §6。
