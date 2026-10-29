@@ -2043,10 +2043,17 @@
   - 固定在上方的四段篩選會不會太擠。
   - 組標題按鈕的大小。
   - 見決策 481「下一步」。
-- **合併後 `LineRoutePreferenceUITests` 兩支在 main 紅**（只在 full lane 跑，`FULL_LANE_LESSONS_JOB`；PR 的 gate 不跑）。LP 已壓縮 3 次，照規則停手，交接寫在 #1490；派工單 LPF（session_01YGNNunFRqKWjsexshYKzgD）修好，見下。
+- **沒修好、交給下一個 session：`LineRoutePreferenceUITests` 兩支在合併後的 main 是紅的**（只在 full lane 跑，`FULL_LANE_LESSONS_JOB`；PR 的 gate 不跑）。本 session 已壓縮 3 次，照規則停手，沒有修。
   - 證據：手動 `ios-build.yml`（`only_testing: LineRoutePreferenceUITests`，iPhone）run 40844553127 與 40855808395。後者在 9573aea，程式碼與 main aa2fc49 相同。
-  - `testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay` 紅在 `ToolbarSmokeTests.swift:284`：「lines.advanced Switch never lay wholly on screen」。從線頁按返回後，8 次 swipeDown 加 16 次短拖都沒讓開關出現。
-  - `testALineLegCanSelectAPhysicalPlatform` 紅在 `ToolbarSmokeTests.swift:106`：選單點「Automatic route」後，路段的字一直沒變回「Automatic route」，等待逾時。在 68bde52 和 run 40844553127 都綠過。
+  - `testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay` 紅在 `ToolbarSmokeTests.swift:284`：「lines.advanced Switch never lay wholly on screen」。
+    - 剛開面板時，`setAdvanced` 的 8 次 swipeDown 都沒讓開關出現，但一次短拖（清單 0.9→0.75）就出現了。
+    - 從線頁按返回後（約 80 秒處），8 次 swipeDown 加 16 次短拖都沒讓開關出現。
+    - 疑點：返回時的 `returningTo` 捲回、或 `safeAreaInset(edge: .top)` 固定的篩選列（橫向 272pt 高的面板裡約佔 130pt）把「進階」那列擋住或捲不到。下一步先在 `setAdvanced` 裡印 `app.debugDescription`，看開關那列在不在樹上、frame 在哪。
+  - `testALineLegCanSelectAPhysicalPlatform` 紅在 `ToolbarSmokeTests.swift:106`：選單點「Automatic route」後，`line.route.-1.0.1` 按鈕找不到，等「Automatic route」字樣逾時。
+    - 在 68bde52 綠過、40844553127 也綠，只在 40855808395 紅。
+    - 疑點：#1472 合進來的 `loadSection`（載客圖）讓線頁變長、選單關掉後頁面重排或捲動；也可能是偶發。先在 main 上用 `only_testing` 單跑一次確認。
+  - 修法只動測試（`ToolbarSmokeTests.swift` 的 `setAdvanced` 與這兩支），用 `only_testing` 一次跑一支驗證。
+- **已修好（派工單 LPF，session_01YGNNunFRqKWjsexshYKzgD，分支 `claude/lines-route-tests-fix`）**：上面兩支都是測試的問題，App 沒有玩家點不到的東西。
   - **原因（LPF 看 40855808395 的結果包與 App 的 trace）**，兩支都是測試的問題，App 沒有玩家點不到的東西：
     - 進階開關：手機橫放時面板只有 270 點寬、272 點高，上方固定的篩選與排序到 y=213，列只剩約 130 點。`swipeDown()` 從清單正中間（667, 206）開始拖，正好落在排序鈕上，清單一動也不動（失敗時捲軸在 100%，清單停在最底）。之後的短拖與 `bringIntoView` 都是往下捲，開關在上面，永遠到不了。玩家在列上拖可以正常捲回上面。
     - 選路線：第二次開選單、點「Automatic route」時，點的位置正確（選單項中心 593, 94），但 App 的 trace 寫著這次觸控開始後 164 毫秒被取消，選單沒關、選擇沒生效。這和 `setAdvanced` 註解裡 run 39781136910 的「觸控被取消」是同一類：偶發，玩家再點一次就好。#1472 的 `loadSection` 沒讓頁面重排（路段列在兩次失敗前後的位置相同）。
@@ -2097,6 +2104,14 @@
   - 看普悠瑪的白天、夜裡（頭燈在前、尾燈在後，燈在燈座上不是浮在車鼻前），以及 500 m 換遠景時有沒有跳。`WebsiteScreenshotTests.testTrainLooks` 或實機都可以。
   - Linux 預覽：`tools/train-models/run.sh OUT --night-lights --ids set-puyuma-head,set-puyuma-tail`，再 `render.mjs OUT --time both`。
 - **TestFlight 的幀數**：近景一列從 14,860 三角變 25,040，在預算內。幀數如果變差，照決策 417 加中間版或降面。
+
+### 4.26 高雄紅橘線、台中綠線、鳴日號的車接進營運（決策 483，session_01YGNNumwzbuZGqTqwGDGEzX，派工單 TRN，2026-10-29）
+
+- **做了的**在[決策 483](decisions/483.md)：實景高雄紅橘線改畫 #1454 的西門子三節車，台中綠線改畫 #1437 的兩節車，鳴日號改畫 #1480 的 E200 鳴日號風格，近景與遠景都接；列車展示多兩列。盤點表（最近兩天交付的每一款車、營運用哪個配方、接入要改哪裡、作者接受的紀錄）也在決策 483。
+- **沒做、留給別人的**：
+  - 普悠瑪紅色塗裝：派工單 PUY 的 #1487（決策 484，§4.25）。
+  - 高雄車要不要算不鏽鋼（`Map3DTrainMaterial.stainlessSets`）：作者看過真機再定。
+  - 實機：兩款近景的幀數、500 m 換遠景、台中第四版與鳴日號的外觀（作者，TestFlight，UNVERIFIED）。
 
 ## 5. 已知、還沒派的待辦
 

@@ -1,30 +1,6 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
-    "e200mingri-style-head" : {
-      "hash" : "d14da19f3555a811",
-      "triangles" : 5512
-    },
-    "e200mingri-style-car" : {
-      "hash" : "89c4ac3b30d3f0fc",
-      "triangles" : 6476
-    },
-    "e200mingri-style-tail" : {
-      "hash" : "2d86c51a3177c38d",
-      "triangles" : 6500
-    },
-    "e200mingri-style-head-far" : {
-      "hash" : "340dca9e69735d43",
-      "triangles" : 5512
-    },
-    "e200mingri-style-car-far" : {
-      "hash" : "8ad68743d657b0d3",
-      "triangles" : 4008
-    },
-    "e200mingri-style-tail-far" : {
-      "hash" : "239b493d71d5c3d7",
-      "triangles" : 4032
-    },
     "blue-seven-formation" : {
       "hash" : "875bb3a96fcc5147",
       "triangles" : 13968
@@ -124,6 +100,30 @@
     "duplex-tender" : {
       "hash" : "ae80ba8d3e863fc",
       "triangles" : 3048
+    },
+    "e200mingri-style-car" : {
+      "hash" : "6247d707c1bfdf2c",
+      "triangles" : 6476
+    },
+    "e200mingri-style-car-far" : {
+      "hash" : "8ad68743d657b0d3",
+      "triangles" : 4008
+    },
+    "e200mingri-style-head" : {
+      "hash" : "d14da19f3555a811",
+      "triangles" : 5512
+    },
+    "e200mingri-style-head-far" : {
+      "hash" : "340dca9e69735d43",
+      "triangles" : 5512
+    },
+    "e200mingri-style-tail" : {
+      "hash" : "46f6e3705b72555",
+      "triangles" : 6500
+    },
+    "e200mingri-style-tail-far" : {
+      "hash" : "239b493d71d5c3d7",
+      "triangles" : 4032
     },
     "e1000" : {
       "hash" : "d539e4059a242a12",
@@ -408,6 +408,30 @@
     "highSpeed-panto" : {
       "hash" : "7622291740d112b7",
       "triangles" : 1883
+    },
+    "kaohsiung-dm1" : {
+      "hash" : "c884a073b1305a2b",
+      "triangles" : 5790
+    },
+    "kaohsiung-dm1-far" : {
+      "hash" : "c901072501eb589f",
+      "triangles" : 2686
+    },
+    "kaohsiung-dm2" : {
+      "hash" : "c884a073b1305a2b",
+      "triangles" : 5790
+    },
+    "kaohsiung-dm2-far" : {
+      "hash" : "c901072501eb589f",
+      "triangles" : 2686
+    },
+    "kaohsiung-t" : {
+      "hash" : "3b2bd1b30358d963",
+      "triangles" : 2312
+    },
+    "kaohsiung-t-far" : {
+      "hash" : "96d0027eb76a51f",
+      "triangles" : 984
     },
     "life-bus" : {
       "hash" : "3a6e83a36058bb8d",
@@ -993,6 +1017,30 @@
       "hash" : "b9c7c2cce134ba65",
       "triangles" : 56
     },
+    "light-set-kaohsiung-car" : {
+      "hash" : "bf2f15b7a50a4971",
+      "triangles" : 336
+    },
+    "light-set-kaohsiung-head" : {
+      "hash" : "bf2f15b7a50a4971",
+      "triangles" : 336
+    },
+    "light-set-kaohsiung-tail" : {
+      "hash" : "d4fa491739e53471",
+      "triangles" : 336
+    },
+    "light-set-kaohsiungFar-car" : {
+      "hash" : "d2348ee7e1b95e5",
+      "triangles" : 112
+    },
+    "light-set-kaohsiungFar-head" : {
+      "hash" : "d2348ee7e1b95e5",
+      "triangles" : 112
+    },
+    "light-set-kaohsiungFar-tail" : {
+      "hash" : "8b20f552bf3567e5",
+      "triangles" : 112
+    },
     "light-set-metroC341-car" : {
       "hash" : "68e8e62fb8955961",
       "triangles" : 384
@@ -1102,20 +1150,20 @@
       "triangles" : 612
     },
     "light-set-MINGRI-car" : {
-      "hash" : "16dd39ef4f1d9938",
-      "triangles" : 472
+      "hash" : "2d6cad0d4d66cb7",
+      "triangles" : 836
     },
     "light-set-MINGRI-tail" : {
-      "hash" : "5334d881abcefe8f",
-      "triangles" : 356
+      "hash" : "606b3e2de27fa1ef",
+      "triangles" : 688
     },
     "light-set-MINGRIFar-car" : {
-      "hash" : "16dd39ef4f1d9938",
-      "triangles" : 472
+      "hash" : "2ed73f0bb6b6d6ff",
+      "triangles" : 468
     },
     "light-set-MINGRIFar-tail" : {
-      "hash" : "5334d881abcefe8f",
-      "triangles" : 356
+      "hash" : "63557037382901ab",
+      "triangles" : 384
     },
     "light-set-n700sG-car" : {
       "hash" : "60aebedbf2ea42ae",
@@ -1340,6 +1388,22 @@
     "light-set-SUMMERFar-tail" : {
       "hash" : "63557037382901ab",
       "triangles" : 384
+    },
+    "light-set-taichungGreen-head" : {
+      "hash" : "dc02d74dcf3acf61",
+      "triangles" : 96
+    },
+    "light-set-taichungGreen-tail" : {
+      "hash" : "a15778a8e4ae9b61",
+      "triangles" : 96
+    },
+    "light-set-taichungGreenFar-head" : {
+      "hash" : "c030858f73a7173d",
+      "triangles" : 72
+    },
+    "light-set-taichungGreenFar-tail" : {
+      "hash" : "86fbb61023c7ef3d",
+      "triangles" : 72
     },
     "light-set-taroko-car" : {
       "hash" : "433516c8d791225",
@@ -2097,6 +2161,30 @@
       "hash" : "fefa5371ab57b1c8",
       "triangles" : 1208
     },
+    "set-kaohsiung-car" : {
+      "hash" : "3b2bd1b30358d963",
+      "triangles" : 2312
+    },
+    "set-kaohsiung-head" : {
+      "hash" : "45262f320071af6d",
+      "triangles" : 5790
+    },
+    "set-kaohsiung-tail" : {
+      "hash" : "edecd2172a2b7c13",
+      "triangles" : 5790
+    },
+    "set-kaohsiungFar-car" : {
+      "hash" : "96d0027eb76a51f",
+      "triangles" : 984
+    },
+    "set-kaohsiungFar-head" : {
+      "hash" : "5233d2452d6cb2e",
+      "triangles" : 2686
+    },
+    "set-kaohsiungFar-tail" : {
+      "hash" : "c880afd63b0a1f76",
+      "triangles" : 2686
+    },
     "set-metroC341-car" : {
       "hash" : "f29076fc0b214434",
       "triangles" : 3306
@@ -2206,28 +2294,28 @@
       "triangles" : 2360
     },
     "set-MINGRI-car" : {
-      "hash" : "2333fa0b56c3e132",
-      "triangles" : 1528
+      "hash" : "6247d707c1bfdf2c",
+      "triangles" : 6476
     },
     "set-MINGRI-head" : {
-      "hash" : "9d353f82e67127b0",
-      "triangles" : 9964
+      "hash" : "d14da19f3555a811",
+      "triangles" : 5512
     },
     "set-MINGRI-tail" : {
-      "hash" : "d5957b8ad1504236",
-      "triangles" : 1588
+      "hash" : "46f6e3705b72555",
+      "triangles" : 6500
     },
     "set-MINGRIFar-car" : {
-      "hash" : "a117e6b8a427e1c1",
-      "triangles" : 1528
+      "hash" : "8ad68743d657b0d3",
+      "triangles" : 4008
     },
     "set-MINGRIFar-head" : {
-      "hash" : "2041320d054d3e50",
-      "triangles" : 3992
+      "hash" : "340dca9e69735d43",
+      "triangles" : 5512
     },
     "set-MINGRIFar-tail" : {
-      "hash" : "581f98581d71059f",
-      "triangles" : 1588
+      "hash" : "239b493d71d5c3d7",
+      "triangles" : 4032
     },
     "set-n700sG-car" : {
       "hash" : "fe277683a96a6eb9",
@@ -2504,6 +2592,22 @@
     "set-SUMMERFar-tender" : {
       "hash" : "be29b5ea75e0c329",
       "triangles" : 4000
+    },
+    "set-taichungGreen-head" : {
+      "hash" : "6233fc09ae3711ed",
+      "triangles" : 4804
+    },
+    "set-taichungGreen-tail" : {
+      "hash" : "65402e169cd0132f",
+      "triangles" : 4804
+    },
+    "set-taichungGreenFar-head" : {
+      "hash" : "60e14c7b697d4a53",
+      "triangles" : 2208
+    },
+    "set-taichungGreenFar-tail" : {
+      "hash" : "97949a087872292a",
+      "triangles" : 2208
     },
     "set-taroko-car" : {
       "hash" : "3a30e36fba09fb86",
@@ -2828,30 +2932,6 @@
     "walk-tens-9" : {
       "hash" : "e8db78b1b62aa73c",
       "triangles" : 12
-    },
-    "kaohsiung-dm1" : {
-      "hash" : "c884a073b1305a2b",
-      "triangles" : 5790
-    },
-    "kaohsiung-dm1-far" : {
-      "hash" : "c901072501eb589f",
-      "triangles" : 2686
-    },
-    "kaohsiung-dm2" : {
-      "hash" : "c884a073b1305a2b",
-      "triangles" : 5790
-    },
-    "kaohsiung-dm2-far" : {
-      "hash" : "c901072501eb589f",
-      "triangles" : 2686
-    },
-    "kaohsiung-t" : {
-      "hash" : "3b2bd1b30358d963",
-      "triangles" : 2312
-    },
-    "kaohsiung-t-far" : {
-      "hash" : "96d0027eb76a51f",
-      "triangles" : 984
     }
   }
 }
