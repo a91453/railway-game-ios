@@ -1948,6 +1948,28 @@
 - **等 macOS CI 與 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：條與按鈕的位置、按下取消後回到的畫面。
 - **下一步**（沒派）：依量到的時間給每步權重；GameCore 建世界加檢查點讓取消能在步驟中間停；第一次開 3D 地圖的等待。見決策 473「下一步」。
 
+### 4.20 三張載客圖與資料視覺化盤點（決策 478，session_01YGNNuosyKEgJgsVUGFPhbW，派工單 VIZ，#1472，2026-10-29）
+
+- **做了的**在[決策 478](decisions/478.md)，共三張圖：
+  - 路線面板的「各站間載客」。
+  - 路線營運段的「每日最擠的一班」。
+  - 路網流量區間頁的「各時段」。
+- 規則在 `LoadCharts.swift`，Linux 測試是 `LoadChartTests`。
+- 盤點表在 `docs/research/DATA_VIZ_AUDIT_2026-10-29.md`。
+- **留到發版前：截圖驗收**。作者 2026-10-29 說「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」，所以這張沒有拍。
+  - 截圖測試 `WebsiteScreenshotTests.testLoadCharts` 已經寫好，拍 `line-peak-load`、`line-load-profile`、`section-hourly` 三張。
+  - 發版前在 main 手動跑 `website-screenshots.yml` 就有。它只拍深色，淺色要實機看。
+  - 照 `docs/research/UI_UX_REVIEW_2026-10-28.md` §5 看：七個問題，最多三輪。
+- **截圖與預覽放在哪**（都不刪）：
+  - 沒採用的畫法預覽在 `docs/art/data-viz-2026-10-29/overview.png`。
+  - 產生它的腳本沒有進 repo。
+  - Actions 沒有留下這張的截圖 artifact：兩次 `website-screenshots.yml`（run 27、29）都在拍之前取消。
+- **下一步**（沒派）：
+  - 盤點表第一類的下一張是票價距離級距的階梯線。
+  - 第二類要 GameCore 記歷史，會動存檔。
+  - 規劃提的收支組成甜甜圈與可捲動長趨勢。
+  - 以上都見決策 478「下一步」。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
