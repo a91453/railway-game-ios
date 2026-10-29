@@ -425,25 +425,20 @@ extension Map3DScene.Builder {
     }
 
     /// Decision 438: on a real-world map, the player's own roads, which the
-    /// base map does not have: from each of their cells' middle to each
-    /// beside it (corner to corner too), laid as the base map's minor
-    /// roads.
+    /// base map does not have, laid as the base map's minor roads
+    /// (``RoadCentreLines``).
     mutating func addOwnRoads() {
         guard let built = world.roads?.built, !built.isEmpty else { return }
         let bounds = Map3DBaseMap.Bounds(minX: (region.minX - originX) / Self.metre, minZ: (region.minY - originY) / Self.metre,
                                          maxX: (region.maxX - originX) / Self.metre, maxZ: (region.maxY - originY) / Self.metre)
-        func point(_ cell: CellPosition) -> Map3DBaseMap.Point {
-            Map3DBaseMap.Point(x: (Double(cell.middle.x) - originX) / Self.metre, z: (Double(cell.middle.y) - originY) / Self.metre)
+        // Decision 476: each road one lane through its cells' middles,
+        // its corners rounded, as the 2D map draws it.
+        func scene(_ point: PlanPoint) -> Map3DBaseMap.Point {
+            Map3DBaseMap.Point(x: (Double(point.x) - originX) / Self.metre, z: (Double(point.y) - originY) / Self.metre)
         }
-        var roads: [Map3DBaseMap.Road] = []
-        for cell in built.sorted() {
-            // Each pair once: to the cells after it, row by row.
-            for (dr, dc) in [(0, 1), (1, -1), (1, 0), (1, 1)] {
-                let near = CellPosition(row: cell.row + dr, column: cell.column + dc)
-                guard built.contains(near),
-                      contains(x: Double(cell.middle.x + near.middle.x) / 2, y: Double(cell.middle.y + near.middle.y) / 2) else { continue }
-                roads.append(Map3DBaseMap.Road(kind: .minor, isRamp: false, points: [point(cell), point(near)], bounds: bounds))
-            }
+        let roads = RoadCentreLines.lines(of: built).compactMap { line -> Map3DBaseMap.Road? in
+            guard line.count >= 2, line.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { return nil }
+            return Map3DBaseMap.Road(kind: .minor, isRamp: false, points: line.map(scene), bounds: bounds)
         }
         var taken = Set<Map3DScene.ChunkKey>()
         addRoads(roads, taking: &taken)

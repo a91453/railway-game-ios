@@ -116,25 +116,24 @@ public struct RoadRemoval: Hashable, Sendable {
     public var canRemove: Bool { problem == nil }
 }
 
-/// The player's roads and the road drawn, for the 2D map (decision 438).
+/// The player's roads and the road drawn, for the 2D map (decision 438;
+/// decision 476: drawn as the base map's lanes are, each road one line
+/// through its cells' middles, ``RoadCentreLines``).
 public struct RoadMapOverlay: Hashable, Sendable {
-    /// The player's road cells, outlined while the roads mode is open so
-    /// that the roads that can be taken up show.
-    public var own: [CellPosition] = []
     /// On a real-world map, whose base map does not have them, the player's
-    /// roads as streets: a line between each two cells side by side or
-    /// corner to corner.
+    /// roads as streets.
     public var streets: [[PlanPoint]] = []
-    /// The road drawn: its cells' middles, the cells it lays, and the
-    /// cells that are road already.
-    public var draft: [PlanPoint] = []
-    public var laid: [CellPosition] = []
-    public var existing: [CellPosition] = []
-    /// The cell a road can't go on, drawn dashed red.
+    /// While the roads mode is open, the player's roads, marked along their
+    /// middle so that the roads that can be taken up show.
+    public var own: [[PlanPoint]] = []
+    /// The road drawn, as it would be laid (with its joins to the roads
+    /// beside it), drawn faint.
+    public var draft: [[PlanPoint]] = []
+    /// The cell a road can't go on, ringed dashed red.
     public var refused: CellPosition?
     public var isBuildable = false
     /// The stretch picked to take up.
-    public var removal: [CellPosition] = []
+    public var removal: [[PlanPoint]] = []
 }
 
 extension GameSession {
@@ -259,10 +258,16 @@ extension GameSession {
             clearRoadDraft()
             return true
         }
-        guard roadPreview?.canBuild == true else { return false }
-        let done = perform(.buildRoad(along: roadDraft.cells.map(PlayerCommand.Edit.BusStop.init))) { _, before, after in
-            let price = before.economy.balance - after.economy.balance
-            return language.text("The road is built, for \(price.moneyText).", "路鋪好了，花費 \(price.moneyText)。")
+        guard let preview = roadPreview, preview.canBuild else { return false }
+        let done = perform(.buildRoad(along: roadDraft.cells.map(PlayerCommand.Edit.BusStop.init))) { _, _, after in
+            // Decision 476: the price the button showed, also with
+            // unlimited funds, where the cash does not go down.
+            after.economy.unlimitedFunds
+                ? language.text(
+                    "The road is built. It cost \(preview.price.moneyText); with unlimited funds nothing is paid.",
+                    "路鋪好了。造價 \(preview.price.moneyText)，資金無限不扣錢。"
+                )
+                : language.text("The road is built, for \(preview.price.moneyText).", "路鋪好了，花費 \(preview.price.moneyText)。")
         }
         guard done != nil else { return false }
         clearRoadDraft()
@@ -300,25 +305,28 @@ extension GameSession {
         let real = world.geoAnchor != nil
         guard inMode || (real && !roads.built.isEmpty) else { return nil }
         var overlay = RoadMapOverlay()
-        let own = roads.built.sorted()
-        if inMode { overlay.own = own }
-        if real {
-            for cell in own {
-                // Each pair once: to the cells after it, row by row.
-                for (dr, dc) in [(0, 1), (1, -1), (1, 0), (1, 1)] {
-                    let near = CellPosition(row: cell.row + dr, column: cell.column + dc)
-                    if roads.built.contains(near) { overlay.streets.append([cell.middle, near.middle]) }
-                }
-            }
-        }
+        let own = RoadCentreLines.lines(of: roads.built)
+        if real { overlay.streets = own }
         if inMode {
-            overlay.draft = roadDraft.cells.map(\.middle)
-            let laid = Set(roadPreview?.laid ?? [])
-            overlay.laid = roadDraft.cells.filter { laid.contains($0) }
-            overlay.existing = roadDraft.cells.filter { roads.contains($0) }
+            overlay.own = own
+            let drawn = Set(roadDraft.cells)
+            if !drawn.isEmpty {
+                // With the roads beside it, which it joins (only those: the
+                // whole map's would be slow to go through every frame).
+                var near = drawn
+                for cell in drawn {
+                    for dr in -1...1 {
+                        for dc in -1...1 {
+                            let beside = CellPosition(row: cell.row + dr, column: cell.column + dc)
+                            if roads.contains(beside) { near.insert(beside) }
+                        }
+                    }
+                }
+                overlay.draft = RoadCentreLines.lines(of: near, touching: drawn)
+            }
             overlay.refused = roadPreview?.refused
             overlay.isBuildable = roadPreview?.canBuild ?? false
-            overlay.removal = roadRemoval?.cells ?? []
+            if let removal = roadRemoval?.cells { overlay.removal = RoadCentreLines.lines(of: Set(removal)) }
         }
         return overlay
     }

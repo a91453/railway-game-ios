@@ -69,7 +69,7 @@ enum MapArt {
         if part != .trafficAndStations {
             drawRailway(world, network: overlay, expansion: expansion, projection: projection, edges: edges, layers: layers, lines: lines,
                         routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
-                        journeyProgress: journeyProgress, buses: buses, roads: roads, in: context)
+                        journeyProgress: journeyProgress, buses: buses, roads: roads, latitude: latitude, in: context)
         }
         if part != .railway {
             drawTrafficAndStations(
@@ -110,6 +110,7 @@ enum MapArt {
         journeyProgress: Double,
         buses: BusMapOverlay?,
         roads: RoadMapOverlay?,
+        latitude: Double,
         in context: GraphicsContext
     ) {
         let bounds = WorldRegion(bounds: world.bounds)
@@ -153,7 +154,7 @@ enum MapArt {
         // Decision 438: the player's own roads and the road drawn, under
         // the bus routes that run on them (docs/MAP_LAYERS.md, 24.7).
         if let roads {
-            drawRoads(roads, projection: projection, in: context)
+            drawRoads(roads, latitude: latitude, projection: projection, in: context)
         }
         // Decision 400 (10i-5): the bus routes along the roads, over the
         // lines and under the transfers (docs/MAP_LAYERS.md, 24.8).
@@ -1211,65 +1212,61 @@ enum MapArt {
     }
 
     /// Decision 438: on a map with a base map, the player's roads as
-    /// streets between the cells; while the bus tool lays roads, the
-    /// player's cells outlined, the road drawn through its cells (those it
-    /// lays filled, those with a road already faint, the one refused
-    /// dashed red), and the stretch picked to take up in red.
-    private static func drawRoads(_ roads: RoadMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
+    /// streets; while the bus tool lays roads, the player's roads marked
+    /// along their middle, the road drawn faint, the cell it can't go on
+    /// ringed dashed red, and the stretch picked to take up in red.
+    /// Decision 476: every road one line through its cells' middles
+    /// (``RoadCentreLines``), as wide as the base map's lanes at this zoom,
+    /// white over the pale casing; no cells drawn.
+    private static func drawRoads(_ roads: RoadMapOverlay, latitude: Double, projection: some MapProjection, in context: GraphicsContext) {
         let view = context.clipBoundingRect
-        let cell = Double(Land.cellLength)
-        let width = max(2, cell * projection.pointsPerUnit * 0.35)
-        func rect(_ position: CellPosition) -> CGRect {
-            screenRect(
-                minX: Double(position.column) * cell, minY: Double(position.row) * cell,
-                maxX: Double(position.column + 1) * cell, maxY: Double(position.row + 1) * cell, projection
-            )
+        let zoom = StationLabels.zoom(pointsPerUnit: projection.pointsPerUnit, latitude: latitude)
+        let width = RoadCentreLines.width(zoom: zoom), casing = RoadCentreLines.width(zoom: zoom, casing: true)
+        func paths(_ lines: [[PlanPoint]]) -> (lines: Path, dots: Path) {
+            var path = Path(), dots = Path()
+            for line in lines {
+                guard let first = line.first else { continue }
+                let start = cgPoint(projection.screenPoint(of: first))
+                if line.count == 1 {
+                    dots.addEllipse(in: CGRect(x: start.x - casing / 2, y: start.y - casing / 2, width: casing, height: casing))
+                    continue
+                }
+                var one = Path()
+                one.move(to: start)
+                for point in line.dropFirst() { one.addLine(to: cgPoint(projection.screenPoint(of: point))) }
+                guard one.boundingRect.insetBy(dx: -casing, dy: -casing).intersects(view) else { continue }
+                path.addPath(one)
+            }
+            return (path, dots)
         }
-        func line(_ points: [PlanPoint]) -> Path {
-            var path = Path()
-            guard let first = points.first else { return path }
-            path.move(to: cgPoint(projection.screenPoint(of: first)))
-            for point in points.dropFirst() { path.addLine(to: cgPoint(projection.screenPoint(of: point))) }
-            return path
+        func road(_ lines: [[PlanPoint]], in context: GraphicsContext) {
+            let (path, dots) = paths(lines)
+            context.stroke(path, with: .color(Palette.roadCasing), style: StrokeStyle(lineWidth: casing, lineCap: .round, lineJoin: .round))
+            context.fill(dots, with: .color(Palette.roadCasing))
+            context.stroke(path, with: .color(Palette.road), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
         }
-        for street in roads.streets {
-            let path = line(street)
-            guard path.boundingRect.insetBy(dx: -width, dy: -width).intersects(view) else { continue }
-            context.stroke(path, with: .color(Palette.roadCasing), style: StrokeStyle(lineWidth: width + 2, lineCap: .round))
-            context.stroke(path, with: .color(Palette.road), style: StrokeStyle(lineWidth: width, lineCap: .round))
+        road(roads.streets, in: context)
+        if !roads.own.isEmpty {
+            context.stroke(paths(roads.own).lines, with: .color(Palette.ink.opacity(0.5)),
+                           style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, dash: [3, 3]))
         }
-        for position in roads.own {
-            let shape = rect(position)
-            guard shape.intersects(view) else { continue }
-            context.stroke(Path(shape), with: .color(Palette.ink.opacity(0.45)), lineWidth: 1)
-        }
-        for position in roads.existing {
-            let shape = rect(position)
-            guard shape.intersects(view) else { continue }
-            context.fill(Path(shape), with: .color(Palette.ink.opacity(0.12)))
-        }
-        let colour = roads.isBuildable ? Palette.metroGreen : Palette.ink
-        for position in roads.laid {
-            let shape = rect(position)
-            guard shape.intersects(view) else { continue }
-            context.fill(Path(shape), with: .color(colour.opacity(0.4)))
-        }
-        if roads.draft.count >= 2 {
-            let path = line(roads.draft)
-            context.stroke(path, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-            context.stroke(path, with: .color(Palette.markerFill), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-        } else if let only = roads.draft.first {
-            let centre = cgPoint(projection.screenPoint(of: only))
-            context.fill(Path(ellipseIn: CGRect(x: centre.x - 4, y: centre.y - 4, width: 8, height: 8)), with: .color(Palette.ink))
+        if !roads.draft.isEmpty {
+            // The road drawn, as it would be laid, faint; fainter still
+            // while it can't be laid.
+            var faint = context
+            faint.opacity = roads.isBuildable ? 0.7 : 0.4
+            faint.drawLayer { layer in road(roads.draft, in: layer) }
         }
         if let refused = roads.refused {
-            context.stroke(Path(rect(refused)), with: .color(Palette.metroRed), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+            let centre = cgPoint(projection.screenPoint(of: refused.middle))
+            let radius = max(8, Double(Land.cellLength) * projection.pointsPerUnit / 2)
+            context.stroke(Path(ellipseIn: CGRect(x: centre.x - radius, y: centre.y - radius, width: 2 * radius, height: 2 * radius)),
+                           with: .color(Palette.metroRed), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
         }
-        for position in roads.removal {
-            let shape = rect(position)
-            guard shape.intersects(view) else { continue }
-            context.fill(Path(shape), with: .color(Palette.metroRed.opacity(0.35)))
-            context.stroke(Path(shape), with: .color(Palette.metroRed), lineWidth: 1.5)
+        if !roads.removal.isEmpty {
+            let (path, dots) = paths(roads.removal)
+            context.stroke(path, with: .color(Palette.metroRed), style: StrokeStyle(lineWidth: casing + 2, lineCap: .round, lineJoin: .round))
+            context.fill(dots, with: .color(Palette.metroRed))
         }
     }
 
