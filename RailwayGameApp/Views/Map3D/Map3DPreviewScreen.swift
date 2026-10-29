@@ -231,7 +231,7 @@ struct Map3DPreviewScreen: View {
             modelsReady = true
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
-            feed.update(world: session.world, palette: linePalette)
+            feed.update(session: session, palette: linePalette)
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
             // Decision 339: the real trains glide with the game clock.
@@ -340,6 +340,9 @@ struct Map3DPreviewScreen: View {
             if showsDetails {
                 Group {
                     Text(verbatim: String(format: "CPU %.1f ms · GPU %.1f ms", stats.cpuMilliseconds, stats.gpuMilliseconds))
+                    // Decision 485: the main thread's busy time a frame
+                    // and its longest stretch, the game loop's ticks with it.
+                    Text(verbatim: String(format: "main %.1f ms · longest %.0f ms", stats.mainMilliseconds, stats.mainLongestMilliseconds))
                     // The CPU waiting for the screen, apart from its work
                     // (the far view's 16.6 ms, 2026-10-21), and the pixels a
                     // point drawn (Map3DDrawScale).
@@ -634,9 +637,13 @@ final class Map3DTrainFeed {
     /// acts only on a change), `nil` when there is none near.
     var garbageTruckSound: ((Map3DGarbageTruck.Sound?) -> Void)?
 
-    func update(world: GameWorld, palette: LinePalette) {
-        motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
-        heights = Map3DTrains.Heights(world: world)
+    /// Decision 485: the glide and the heights the tick worked out off
+    /// the main actor (the glide shared with the 2D map under this one),
+    /// not worked out again here at every tick.
+    func update(session: GameSession, palette: LinePalette) {
+        let world = session.world
+        motion = session.trainMotion(after: motion, at: Date().timeIntervalSinceReferenceDate)
+        heights = session.map3DTrainHeights()
         self.palette = palette
         activity = Map3DStreetLife.Activity(world: world)
         labels = Map3DTrainLabels(world: world)
