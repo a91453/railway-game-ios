@@ -225,4 +225,80 @@ final class StationPairDrawerLayoutTests: XCTestCase {
             panel: panel, card: 0, corner: panel + 152, cornerHeight: 154, bottom: uprightBottom
         ))
     }
+
+    // Decision 491, revised (#1513 REV-2): an iPhone held upright takes the
+    // same rule. Its map's corner column (the small map over the coverage,
+    // 3D and zoom buttons, 188 wide with its margin as in the screenshot
+    // on its side) leaves less than the drawer needs beside it, so before
+    // 491 the drawer ran off the screen there too. The building tools run
+    // down the leading edge while a line is drawn; the dock is along the
+    // bottom.
+    private let phones: [(name: String, width: Double, height: Double)] = [
+        ("iPhone SE / 13 mini", 375, 647), ("iPhone 16", 393, 759), ("iPhone 17 Pro", 402, 778), ("iPhone 17 Pro Max", 440, 862),
+    ]
+    private let phoneCorner = 10.0 + 188
+    private var phoneCornerHeight: Double { dockHeight + margin + 174 + margin }
+
+    func testOnAnUprightIPhoneTheDrawerStandsAboveTheSmallMap() {
+        for phone in phones {
+            // Before: the band beside the small map was too narrow.
+            let before = StationPairDrawerLayout.frame(
+                size: ScreenSize(width: 460, height: 130), screenWidth: phone.width, screenHeight: phone.height,
+                leading: 0, trailing: StationPairDrawerLayout.trailingInset(panel: 0, card: 0, corner: phoneCorner),
+                bottom: uprightBottom, margin: margin
+            )
+            XCTAssertLessThan(before.width, StationPairDrawerLayout.minimumWidth, "\(phone.name): \(before)")
+            let insets = StationPairDrawerLayout.insets(
+                screenWidth: phone.width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+                panel: 0, card: 0, corner: phoneCorner, cornerHeight: phoneCornerHeight, bottom: uprightBottom
+            )
+            guard phone.width - (ToolColumn.railWidth + margin) - 2 * margin >= StationPairDrawerLayout.minimumWidth else {
+                // The narrowest phones: no room beside the building tools
+                // either; the ✓ pill's words give the line's length and time.
+                XCTAssertNil(insets, phone.name)
+                continue
+            }
+            guard let insets else { return XCTFail("\(phone.name): the drawer shows") }
+            XCTAssertEqual(insets, StationPairDrawerLayout.Insets(
+                leading: ToolColumn.railWidth + margin, trailing: 0, bottom: phoneCornerHeight + margin
+            ), phone.name)
+            for height in [StationPairDrawerLayout.foldedHeight, 130] {
+                let drawer = StationPairDrawerLayout.frame(
+                    size: ScreenSize(width: 460, height: height), screenWidth: phone.width, screenHeight: phone.height,
+                    leading: insets.leading, trailing: insets.trailing, bottom: insets.bottom, margin: margin
+                )
+                XCTAssertGreaterThanOrEqual(drawer.width, StationPairDrawerLayout.minimumWidth, phone.name)
+                XCTAssertGreaterThanOrEqual(drawer.x, railEnd + margin, "\(phone.name): clear of the building tools")
+                XCTAssertLessThanOrEqual(drawer.x + drawer.width, phone.width - margin, "\(phone.name): on the screen")
+                let corner = ScreenFrame(x: phone.width - phoneCorner, y: phone.height - phoneCornerHeight, width: phoneCorner - margin, height: 174)
+                XCTAssertFalse(overlaps(drawer, corner), "\(phone.name): \(drawer) over the small map \(corner)")
+                XCTAssertGreaterThan(drawer.y, phone.height / 3, "\(phone.name): in the lower part of the map, under the ✓ pill")
+            }
+        }
+    }
+
+    func testOnAnUprightIPhoneBesideTheLinesPanelTheDrawerStaysAway() {
+        // The panel takes half the width and the corner column stands
+        // beside it: no band is wide enough, so the drawer does not show
+        // rather than run off the screen.
+        for phone in phones {
+            let panel = SidePanelWidth.panel(screenWidth: phone.width, compactHeight: false) + margin
+            XCTAssertNil(StationPairDrawerLayout.insets(
+                screenWidth: phone.width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+                panel: panel, card: 0, corner: panel + phoneCorner, cornerHeight: phoneCornerHeight, bottom: uprightBottom
+            ), phone.name)
+        }
+    }
+
+    func testOnAPhoneOnItsSideTheDrawerRidesInThePillAndKeepsItsBand() {
+        XCTAssertTrue(StationPairDrawerLayout.ridesInPill(compactHeight: true))
+        // Its band, were it laid out over the dock, is decision 384's.
+        let insets = StationPairDrawerLayout.insets(
+            screenWidth: width, margin: margin, leading: leading, rail: 0,
+            panel: 0, card: 0, corner: width - corner.x, cornerHeight: height - corner.y, bottom: bottom
+        )
+        XCTAssertEqual(insets, StationPairDrawerLayout.Insets(
+            leading: leading, trailing: StationPairDrawerLayout.trailingInset(panel: 0, card: 0, corner: width - corner.x), bottom: bottom
+        ))
+    }
 }
