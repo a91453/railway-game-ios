@@ -263,6 +263,71 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("tourism-panel", app)
     }
 
+    // MARK: - Screenshot review of decision 472's charts (ui-review skill)
+
+    /// Decision 472's charts on the freight scene's second morning, for
+    /// their screenshot review: a station's trips by hour with its rush,
+    /// the lines' rows with their trend and fullest train, and the flow
+    /// report's most crowded sections.
+    func testStatisticsCharts() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        // A bubble picks its station; the tag's pencil opens the station's
+        // panel with the rename alert over it, which is cancelled.
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(alert, "A bubble is on screen")
+        alert?.tap()
+        let pencil = app.buttons["map.stationTag.edit"]
+        XCTAssertTrue(pencil.appears(within: 5), "A tap on a bubble picks its station")
+        XCTAssertTrue(pencil.becomesHittable(within: 5))
+        pencil.tap()
+        let rename = app.alerts.firstMatch
+        XCTAssertTrue(rename.appears(within: 5), "The station's panel opens with the rename alert")
+        rename.buttons["取消"].tap()
+        XCTAssertTrue(rename.disappears(within: 5))
+        settle()
+        keep("chart-station-panel", app)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        let entries = app.descendants(matching: .any)["station.flow.entries"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(entries, in: list), "The trips by hour come into view")
+        settle()
+        keep("chart-station-hourly", app)
+        let done = app.navigationBars.buttons["完成"].firstMatch
+        if done.exists, done.isHittable {
+            done.tap()
+            settle()
+        }
+
+        // The lines' rows, each with its trend and its fullest train.
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        let linesList = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: linesList), "A line's row comes into view")
+        settle()
+        keep("chart-line-rows", app)
+
+        // The flow report's most crowded sections, ranked.
+        let flow = app.buttons["lines.networkFlow"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(flow, in: linesList), "The flow report's button comes into view")
+        flow.tap()
+        let page = app.segmentedControls["networkFlow.page"]
+        XCTAssertTrue(page.appears(within: 10), "The flow report opens")
+        page.buttons.element(boundBy: 1).tap()
+        let ranking = app.descendants(matching: .any)["networkFlow.ranking"].firstMatch
+        XCTAssertTrue(ranking.appears(within: 30), "The ranking is worked out")
+        settle()
+        keep("chart-section-ranking", app)
+    }
+
     // MARK: - Helpers
 
     private func launch(extra: [String] = []) -> XCUIApplication {
