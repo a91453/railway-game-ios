@@ -79,6 +79,10 @@ public enum WhatsNew {
                     english: "Rain on the maps is redrawn less often, saving battery and running smoother.",
                     chinese: "下雨時地圖少重畫，更省電也更順。"
                 ),
+                Line(
+                    english: "Last month's report can be opened again from Data after it is closed.",
+                    chinese: "月報關掉之後，在「資料」還能再打開上個月的那一份。"
+                ),
             ]
         ),
         Entry(
