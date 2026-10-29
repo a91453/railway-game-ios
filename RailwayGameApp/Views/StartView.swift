@@ -389,8 +389,10 @@ private struct DemoPicker: View {
                     .disabled(launcher.railways == nil)
                     .accessibilityIdentifier("demo.realWorld")
                     // Decision 170: the Taiwan High Speed Rail, built on its
-                    // real alignment. It takes seconds to build, so the
-                    // sheet stays up, saying so, until the game begins.
+                    // real alignment. It takes seconds to build; since
+                    // decision 473 the sheet closes at once, so the loading
+                    // screen, with its steps and its way back, is not
+                    // drawn under it.
                     StartButton(
                         title: String(localized: "High-Speed Rail Demo"),
                         detail: launcher.isOpeningHighSpeedDemo
@@ -402,10 +404,8 @@ private struct DemoPicker: View {
                         tone: .accent
                     ) {
                         if let railways = launcher.railways {
-                            Task { @MainActor in
-                                await launcher.openHighSpeedDemo(railways: railways)?.value
-                                dismiss()
-                            }
+                            dismiss()
+                            launcher.openHighSpeedDemo(railways: railways)
                         }
                     }
                     .disabled(launcher.railways == nil || launcher.isOpeningADemo)
@@ -433,10 +433,8 @@ private struct DemoPicker: View {
                         tone: .accent
                     ) {
                         if let railways = launcher.railways {
-                            Task { @MainActor in
-                                await launcher.openTRADemo(railways: railways)?.value
-                                dismiss()
-                            }
+                            dismiss()
+                            launcher.openTRADemo(railways: railways)
                         }
                     }
                     .disabled(launcher.railways == nil || launcher.isOpeningADemo)
