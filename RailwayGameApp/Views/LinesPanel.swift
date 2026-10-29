@@ -111,6 +111,7 @@ struct LinesPanel: View {
                             stopsSection(line)
                             lineSection(line)
                             operatingSection(line)
+                            loadSection(line)
                             servicesSections(line)
                         }
                         if showsAdvanced {
@@ -137,6 +138,7 @@ struct LinesPanel: View {
                             depotSection(line)
                             lineSection(line)
                             operatingSection(line)
+                            loadSection(line)
                             stopsSection(line)
                             servicesSections(line)
                         }
@@ -791,6 +793,24 @@ struct LinesPanel: View {
                 Text(verbatim: session.language.text(
                     "Profit is this line's fares less its own running costs, before interest, buildings and tax.",
                     "損益是這條線的票收減去它自己的營運成本，不含利息、建物與稅。"
+                ))
+            }
+        }
+    }
+
+    /// Decision 478: the selected line's riders between each pair of its
+    /// stops, both ways.
+    @ViewBuilder
+    private func loadSection(_ line: ServiceLine) -> some View {
+        if !line.isFreight {
+            Section {
+                LineLoadProfileChart(session: session, line: line)
+            } header: {
+                Text(verbatim: session.language.text("Riders between stops", "各站間載客"))
+            } footer: {
+                Text(verbatim: session.language.text(
+                    "Riders a day on each stretch, both ways. Tap a row for its fullest hour.",
+                    "每一段一天的乘客，兩個方向。點一列看它最擠的時段。"
                 ))
             }
         }

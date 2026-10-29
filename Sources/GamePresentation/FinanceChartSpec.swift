@@ -13,6 +13,8 @@ public enum ChartAxis: Hashable, Sendable {
     case money
     /// Passengers or riders.
     case people
+    /// Percent of the seats (decision 478): a train's or a section's load.
+    case percent
 }
 
 /// One series of a chart: one value per x, `nil` where there is none.
@@ -55,6 +57,7 @@ public struct ChartSpec: Hashable, Sendable {
         switch axis {
         case .money: language.text("Dollars", "金額")
         case .people: language.text("People", "人數")
+        case .percent: language.text("Percent of the seats", "座位的百分比")
         }
     }
 
@@ -64,13 +67,16 @@ public struct ChartSpec: Hashable, Sendable {
         switch axis {
         case .money: return Money(whole * 100).moneyText
         case .people: return language.text("\(Money(whole).displayText) people", "\(Money(whole).displayText) 人")
+        case .percent: return "\(whole)%"
         }
     }
 
-    /// The lowest and highest values, with zero in the range.
+    /// The lowest and highest values, with zero in the range (and the
+    /// seats, 100%, on a chart of percent).
     public var valueRange: ClosedRange<Double> {
         let values = series.flatMap { $0.values.compactMap { $0 } }
-        let low = min(0, values.min() ?? 0), high = max(0, values.max() ?? 0)
+        let floor: Double = axis == .percent ? 100 : 0
+        let low = min(0, values.min() ?? 0), high = max(floor, values.max() ?? 0)
         return low...(high > low ? high : low + 1)
     }
 }

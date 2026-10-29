@@ -118,6 +118,11 @@ public struct NetworkFlowReport: Equatable, Sendable {
         public let percent: Int?
         /// Its passengers all day.
         public let dailyLoad: Int64
+        /// Its passengers in each hour of the day (24 entries; decision
+        /// 478's chart).
+        public let loads: [Int64]
+        /// What its trains carry in each hour (24 entries).
+        public let capacities: [Int64]
 
         public var id: Int { section }
         /// Whether more ride it than its trains carry.
@@ -316,7 +321,7 @@ extension NetworkFlowReport {
             rows.append((best.ratio, SectionRow(
                 section: index, from: section.from, to: section.to, lines: section.lines, hour: best.hour,
                 load: section.loads[best.hour], capacity: section.capacities[best.hour], percent: reading?.percent,
-                dailyLoad: section.loads.reduce(0, +))))
+                dailyLoad: section.loads.reduce(0, +), loads: section.loads, capacities: section.capacities)))
         }
         rows.sort { a, b in
             if a.ratio != b.ratio { return a.ratio > b.ratio }
