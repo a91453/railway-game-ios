@@ -30,8 +30,8 @@ Reject actual pane burial150mm, wheel lift35mm and HVAC lift80mm.
 Common audit separately rejects deleted/reversed triangles and assembly shift100mm.
 These are display-model thresholds, not engineering tolerances or exhaustive collision.
 
-Revision2: `audit.py OUT --previous TRUE_REVISION1` additionally rejects the real
-R1 solid coupler and reversed-side destination, actual socket cap triangles,
+Revision3: `audit.py OUT --previous TRUE_REVISION2` additionally rejects the real
+R2 flat crown paint and a real flattening colour mutation, actual socket cap triangles,
 front-pane burial150mm and float90mm, and destination solids moved to the wrong side.
 Glass rays retain all shell/frame faces and exclude only actual thin wiper rods
 inside their precise mechanism envelope; backing must exist within55mm.
@@ -45,3 +45,21 @@ colour/clay/silhouette front/left/top/isometric, all units and assemblies.
 transparent native-only before/after sheet, updated source/status and delivery.json,
 selecting20 PNGs total. It does not copy the prototype photos. Run deliver.py with
 that spec; retain one additional public overview PNG only.
+
+Revision3 preserves the physical bow, side and hardware recipe. Front paint is
+partitioned on that same shell, with finer U-band samples and an arched crown
+border/eased corners; no overlapping colour plates. The central escape-door
+frame remains straight where seen in source photos.
+
+```sh
+# Export shellOnly from each actual producer, after building GamePresentation.
+tools/kaohsiung/shell.sh SHELL_OUT
+python3 tools/kaohsiung/paint-protection.py TRUE_REVISION2 FINAL TRUE_R2_SHELL FINAL_SHELL
+```
+
+Protection compares accepted straight-side triangles (X≤9m) including every native
+vertex field, complete T native bytes, off-front-slab geometry/flags, and exact
+triangle intersection coverage within each unchanged piecewise-planar bow cell.
+Float32 plane tolerance30µm, coverage tolerance1e-7+area×2e-4m²; these are display
+verification tolerances. Changed paint may change nose pixels in side/oblique views
+and nearby baked shading. Acceptance belongs to R2 side only, not the whole R3.

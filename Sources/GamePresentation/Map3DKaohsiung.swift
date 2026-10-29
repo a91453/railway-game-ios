@@ -116,12 +116,21 @@ private struct KaohsiungRecipe {
         }
         if cab {
             // Each slab is the actual shell, not a floating livery decal.
-            let ws=frontWidths
+            // Paint samples subdivide the same physical bow planes; they never move
+            // the accepted side silhouette, glass or equipment.
+            let ws: [Float] = far ? [-1.575,-1.34,-1.02,-0.55,0,0.55,1.02,1.34,1.575]
+                : [-1.575,-1.48,-1.34,-1.20,-1.02,-0.80,-0.55,-0.30,0,0.30,0.55,0.80,1.02,1.20,1.34,1.48,1.575]
             for i in 0..<(ws.count-1) {
                 let lo=ws[i],hi=ws[i+1]
                 func smile(_ w: Float) -> Float { 1.95+0.24*powf(abs(w)/1.575,2) }
-                let a=smile(lo),b=smile(hi)
-                let strips: [[(Float,Float)]] = [ [(1.04,lo),(1.04,hi),(b-0.44,hi),(a-0.44,lo)], [(a-0.44,lo),(b-0.44,hi),(b-0.12,hi),(a-0.12,lo)], [(a-0.12,lo),(b-0.12,hi),(b,hi),(a,lo)], [(a,lo),(b,hi),(3.26,hi),(3.26,lo)], [(3.26,lo),(3.26,hi),(3.6,hi),(3.6,lo)] ]
+                func crown(_ w: Float) -> Float {
+                    let q=abs(w)/1.575
+                    let corner=max(0,min(1,(abs(w)-1.26)/0.315))
+                    let eased=corner*corner*(3-2*corner)
+                    return 3.32-0.06*q*q-0.12*eased
+                }
+                let a=smile(lo),b=smile(hi),u=crown(lo),v=crown(hi)
+                let strips: [[(Float,Float)]] = [ [(1.04,lo),(1.04,hi),(b-0.44,hi),(a-0.44,lo)], [(a-0.44,lo),(b-0.44,hi),(b-0.12,hi),(a-0.12,lo)], [(a-0.12,lo),(b-0.12,hi),(b,hi),(a,lo)], [(a,lo),(b,hi),(v,hi),(u,lo)], [(u,lo),(v,hi),(3.6,hi),(3.6,lo)] ]
                 let colors=[silver,teal,white,dark,teal]
                 for s in strips.indices {
                     var p=strips[s]
