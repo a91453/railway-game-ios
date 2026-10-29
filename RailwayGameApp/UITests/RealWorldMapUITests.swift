@@ -216,6 +216,30 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")).firstMatch.appears(within: 30))
     }
 
+    /// Decision 473: while the High Speed Rail is built (minutes in the
+    /// Simulator), the loading screen shows its step and a button back to
+    /// the start screen, which goes there at once; no game opens. Full lane
+    /// only (not in the pull request gate).
+    func testTheLoadingScreenGoesBackToTheStartScreen() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        app.openDemo("demo.highSpeed")
+        let cancel = app.buttons["loading.cancel"]
+        XCTAssertTrue(cancel.appears(within: 30), "The loading screen has its button")
+        XCTAssertTrue(app.descendants(matching: .any)["loading.progress"].exists, "and says which step it is on")
+        XCTAssertTrue(cancel.becomesHittable(within: 5))
+        cancel.tap()
+        XCTAssertTrue(cancel.disappears(within: 10), "The loading screen goes")
+        XCTAssertTrue(app.buttons["start.newGame"].appears(within: 10), "back on the start screen")
+        // The build that was running is thrown away: no game opens later.
+        XCTAssertFalse(app.descendants(matching: .any)["map"].firstMatch.appears(within: 5))
+    }
+
     /// Whether ``record(_:)`` lets a timed-out look go, and how many it has.
     /// Set and read on the main thread, where a look's issue is recorded.
     nonisolated(unsafe) private var toleratesStalledQueries = false
