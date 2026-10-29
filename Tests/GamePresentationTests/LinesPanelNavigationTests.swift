@@ -143,4 +143,44 @@ final class LinesPanelNavigationTests: XCTestCase {
         XCTAssertEqual(NetworkSwitches.forSaleTitle(count: 2, in: .traditionalChinese), "可收購的真實路線（2）")
         XCTAssertEqual(NetworkSwitches.forSaleTitle(count: 0, in: .english), "Real lines for sale")
     }
+
+    // MARK: - Groups and lines that need a look (decision 481, later)
+
+    func testALongListGroupsItsLinesByKindInAFixedOrder() throws {
+        let session = try session()
+        var world = session.world
+        world.enableFreight()
+        try world.createLine(named: "Freight", stops: [StationID(rawValue: 1), StationID(rawValue: 4)])
+        let freight = try XCTUnwrap(world.lines.last).id
+        try world.setLineFreight(freight, to: true)
+        try world.setLinePerformance(Self.second, to: .highSpeed)
+        let groups = world.lineGroups(world.lines.reversed())
+        XCTAssertEqual(groups.map(\.group), [.own, .highSpeed, .freight], "the list's order, empty groups left out")
+        XCTAssertEqual(groups.map { $0.lines.map(\.name) }, [["Main"], ["Short"], ["Freight"]])
+        XCTAssertEqual(LineGroup.highSpeed.title(in: .traditionalChinese), "高鐵")
+        XCTAssertEqual(LineGroup.acquired.title(in: .traditionalChinese), "收購的路線")
+
+        XCTAssertEqual(LineGroup.folded(from: "freight,nonsense,own"), [.own, .freight], "an unknown name is left out")
+        XCTAssertEqual(LineGroup.stored([.freight, .own]), "own,freight")
+        XCTAssertEqual(LineGroup.folded(from: ""), [])
+    }
+
+    func testALineWithoutTrainsOrLosingMoneyNeedsALook() throws {
+        var world = try session().world
+        let main = try XCTUnwrap(world.line(id: Self.first))
+        XCTAssertEqual(world.lineAttention(main), [.noTrains])
+        XCTAssertEqual(world.lines(world.lines, matching: ListSearch(), filter: .attention).map(\.name), ["Main", "Short"])
+
+        // A day on: still no trains, so no fares, and both lose money.
+        try world.advance(ticks: 1_440 + 120)
+        let reasons = world.lineAttention(try XCTUnwrap(world.line(id: Self.first)))
+        XCTAssertEqual(reasons.first, .noTrains)
+        if world.lineAccounts != nil {
+            XCTAssertEqual(reasons, [.noTrains, .losing])
+        }
+        XCTAssertEqual(LineAttention.label([.noTrains, .losing], in: .traditionalChinese), "需要注意：沒有列車、昨日虧損")
+        XCTAssertEqual(LineAttention.label([.overfull], in: .english), "Needs attention: a train was over full")
+        XCTAssertNil(LineAttention.label([], in: .english))
+        XCTAssertEqual(LineFilter.attention.displayName(in: .traditionalChinese), "需要注意")
+    }
 }

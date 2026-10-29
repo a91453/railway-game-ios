@@ -81,6 +81,12 @@ struct LinesPanel: View {
     /// Decision 481: the pages over the list of lines; the line page
     /// follows ``GameSession/openedLine``.
     @State private var path: [LinesPanelPage] = []
+    /// Decision 481, later: the line whose page was left, for the list to
+    /// scroll back to it.
+    @State private var returningTo: LineID?
+    /// Decision 481, later: the groups of a long list folded away
+    /// (``LineGroup/stored(_:)``); all open at first.
+    @AppStorage("linesPanel.foldedGroups") private var storedFoldedGroups = ""
     /// Decision 206: whether the selected line's train diagram is open.
     @State private var showsDiagram = false
     /// Decision 196, later: the player's choice for the "Advanced" switch,
@@ -114,7 +120,7 @@ struct LinesPanel: View {
                         if showsNewLine {
                             draftSection
                         }
-                        linesSection
+                        listedLines
                     } else {
                         // Decision 100: a new line first, where the panel beside
                         // the map (decision 106) shows it while stations are
@@ -159,6 +165,21 @@ struct LinesPanel: View {
                     Task { @MainActor in
                         await Task.yield()
                         withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
+                    }
+                }
+                // Decision 481, later: Back from a line's page leaves the
+                // list where that line is, its group unfolded.
+                .onChange(of: returningTo) { _, line in
+                    guard let line else { return }
+                    returningTo = nil
+                    if let group = session.world.line(id: line).map({ session.world.lineGroup(of: $0) }), foldedGroups.contains(group) {
+                        var folded = foldedGroups
+                        folded.remove(group)
+                        storedFoldedGroups = LineGroup.stored(folded)
+                    }
+                    Task { @MainActor in
+                        await Task.yield()
+                        proxy.scrollTo(Self.rowAnchor(line), anchor: .center)
                     }
                 }
                 // Decision 299: the first station added (or picking begun)
@@ -229,8 +250,12 @@ struct LinesPanel: View {
             transaction.disablesAnimations = reduceMotion
             withTransaction(transaction) { path = wanted }
         }
-        .onChange(of: path) { _, now in
+        .onChange(of: path) { was, now in
+            let left = was.contains(.line) && !now.contains(.line) ? session.openedLineID : nil
             session.linesPanelPathChanged(to: now)
+            if let left {
+                returningTo = left
+            }
         }
         // Decision 481: on the panel, not its first page, which disappears
         // under a line's page.
@@ -720,23 +745,95 @@ struct LinesPanel: View {
                     ListSearchEmpty(text: session.language.text("No line matches.", "沒有符合的路線。"))
                 }
                 ForEach(shown) { line in
-                    Button {
-                        // Decision 481: a row opens the line's own page;
-                        // on the one form it selects the line below.
-                        if listsLinesFirst {
-                            session.openLine(line.id)
-                        } else {
-                            session.selectLine(line.id)
-                        }
-                    } label: {
-                        lineRow(line)
-                    }
-                    .foregroundStyle(Theme.textPrimary)
-                    .accessibilityAddTraits(line.id == session.selectedLineID ? .isSelected : [])
+                    lineButton(line)
                 }
             }
         } header: {
             Text("Lines")
+        }
+    }
+
+    /// A line's row as a button. Decision 481: it opens the line's own
+    /// page; on the one form it selects the line below.
+    private func lineButton(_ line: ServiceLine) -> some View {
+        Button {
+            if listsLinesFirst {
+                session.openLine(line.id)
+            } else {
+                session.selectLine(line.id)
+            }
+        } label: {
+            lineRow(line)
+        }
+        .foregroundStyle(Theme.textPrimary)
+        .accessibilityAddTraits(line.id == session.selectedLineID ? .isSelected : [])
+        .id(Self.rowAnchor(line.id))
+    }
+
+    /// Where the list scrolls to show line `id`'s row.
+    private static func rowAnchor(_ id: LineID) -> String {
+        "line.row.\(id.rawValue)"
+    }
+
+    /// Decision 481, later: the short list, in groups by kind (the
+    /// player's own, bought, high-speed, freight) once it is long enough
+    /// to search and holds more than one kind; else one section.
+    @ViewBuilder
+    private var listedLines: some View {
+        let groups = showsSearch ? session.world.lineGroups(shownLines) : []
+        if groups.count > 1 {
+            ForEach(groups) { rows in
+                lineGroupSection(rows)
+            }
+        } else {
+            linesSection
+        }
+    }
+
+    private var foldedGroups: Set<LineGroup> {
+        LineGroup.folded(from: storedFoldedGroups)
+    }
+
+    /// One group of the list, its heading a button that folds it away.
+    private func lineGroupSection(_ rows: LineGroupRows) -> some View {
+        let folded = foldedGroups.contains(rows.group)
+        let language = session.language
+        return Section {
+            if !folded {
+                ForEach(rows.lines) { line in
+                    lineButton(line)
+                }
+            }
+        } header: {
+            Button {
+                var groups = foldedGroups
+                if folded {
+                    groups.remove(rows.group)
+                } else {
+                    groups.insert(rows.group)
+                }
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    storedFoldedGroups = LineGroup.stored(groups)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(verbatim: rows.group.title(in: language))
+                    Text(verbatim: "\(rows.lines.count)")
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .rotationEffect(.degrees(folded ? -90 : 0))
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(Text(verbatim: folded ? language.text("Folded", "已收合") : language.text("Shown", "已展開")))
+            .accessibilityHint(Text(verbatim: language.text("Shows or hides this group's lines.", "顯示或收合這一組的路線。")))
+            .accessibilityIdentifier("lines.group.\(rows.group.rawValue)")
         }
     }
 
@@ -895,6 +992,15 @@ struct LinesPanel: View {
                         Image(systemName: "bolt.fill")
                             .font(.caption2.weight(.bold))
                             .accessibilityLabel(Text(verbatim: session.language.text("High-speed", "高鐵")))
+                    }
+                    // Decision 481, later: a line that needs a look, by a
+                    // mark and its words, not by colour alone.
+                    if let attention = LineAttention.label(session.world.lineAttention(line, report: report), in: session.language) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.warning)
+                            .accessibilityLabel(Text(verbatim: attention))
+                            .accessibilityIdentifier("line.attention.\(line.id.rawValue)")
                     }
                     Spacer(minLength: 6)
                     // TestFlight 56.1: how many trains run it, and how often.

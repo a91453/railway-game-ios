@@ -43,6 +43,8 @@ public struct ListSearch: Equatable, Sendable {
 public enum LineFilter: String, CaseIterable, Hashable, Sendable {
     /// Every line.
     case all
+    /// Lines that need a look (decision 481): ``GameWorld/lineAttention(_:)``.
+    case attention
     /// Passenger lines that lost money yesterday (decision 179's report;
     /// needs line accounts).
     case losing
@@ -52,6 +54,7 @@ public enum LineFilter: String, CaseIterable, Hashable, Sendable {
     public func displayName(in language: DisplayLanguage) -> String {
         switch self {
         case .all: language.text("All lines", "全部路線")
+        case .attention: language.text("Needs attention", "需要注意")
         case .losing: language.text("Losing money", "只看虧損")
         case .freight: language.text("Freight only", "只看貨運")
         }
@@ -70,6 +73,7 @@ extension GameWorld {
         LineFilter.allCases.filter { filter in
             switch filter {
             case .all: true
+            case .attention: !lines.isEmpty
             case .losing: lineAccounts != nil
             case .freight: lines.contains(where: \.isFreight)
             }
@@ -84,6 +88,8 @@ extension GameWorld {
             switch filter {
             case .all:
                 break
+            case .attention:
+                guard !lineAttention(line).isEmpty else { return false }
             case .losing:
                 guard !line.isFreight, let day = lineReport(line.id)?.yesterday, day.profit < .zero else { return false }
             case .freight:

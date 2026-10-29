@@ -1948,6 +1948,24 @@
 - **等 macOS CI 與 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：條與按鈕的位置、按下取消後回到的畫面。
 - **下一步**（沒派）：依量到的時間給每步權重；GameCore 建世界加檢查點讓取消能在步驟中間停；第一次開 3D 地圖的等待。見決策 473「下一步」。
 
+### 4.20 路線面板拆兩層（決策 481，session_01YGNNunF7F1xm5bcPAv9pcL，派工單 LP，2026-10-29，#1476）
+
+- 做了的在 [決策 481](decisions/481.md)，包括：
+  - 精簡清單與每條線自己的頁
+  - 線多時分組、可收合
+  - 「需要注意」篩選
+  - 從頁面返回時清單捲回那條線
+- 規則在 `LinesPanelNavigation.swift`、`LineGroups.swift`，Linux 測試在 `LinesPanelNavigationTests`。
+- **留到發版前**：截圖驗收（決策 482）。作者 2026-10-29 暫停截圖：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」。
+  - `WebsiteScreenshotTests.testLinesListAndLinePage` 已寫好，還沒跑過。它拍三張：清單（`lines-list`）、一條線的頁（`line-page`）、整個路網的頁（`lines-network`）。
+  - 規劃要的「線多一點的局，看得到分組與需要注意」還沒有：貨運場景只有幾條線。發版前跑截圖時，改用實景 demo 或收購後的局。
+  - `testStatisticsCharts`、`testTrainLooks` 也會拍到路線列：`line.report.*` 還在清單列上，`lines.networkFlow` 還在工具列。
+  - 沒有刪任何截圖：這個 PR 只有 `docs/art/lines-panel-481-2026-10-29/overview.png`（三個做法的示意圖），沒有 Actions 的截圖 artifact。
+- **等實機看**：
+  - 固定在上方的四段篩選會不會太擠。
+  - 組標題按鈕的大小。
+  - 見決策 481「下一步」。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
