@@ -1,6 +1,6 @@
 ---
 name: ui-review
-description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type）、資料畫面的數字、截圖檢查、回饋稽核表（畫面／觸覺／聲音）、Liquid Glass、審查的寫法、SwiftUI 效能。做或改任何 SwiftUI 畫面、面板、清單、圖表之前先讀，也用於審查畫面。Use before building or changing any SwiftUI screen, panel, list or chart in the app (RailwayGameApp/Views), and when reviewing a screen or a pull request's interface changes.
+description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type）、資料畫面的數字、轉 ready 前必做的截圖驗收、回饋稽核表（畫面／觸覺／聲音）、Liquid Glass、審查的寫法、SwiftUI 效能。做或改任何 SwiftUI 畫面、面板、清單、圖表之前先讀，也用於審查畫面。Use before building or changing any SwiftUI screen, panel, list or chart in the app (RailwayGameApp/Views), and when reviewing a screen or a pull request's interface changes; a screen change takes the screenshot review before it is marked ready.
 ---
 
 # 畫面的做法與審查
@@ -61,9 +61,18 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 - **清單**：總覽只列 4–6 列再加「看全部」；不用斑馬紋；手機上表格改成兩行的列。
 - **顏色只用在資料、狀態和唯一的主要動作**，而且只從 `Theme`／`Palette` 取（第 8 節）。
 
-## 3. 截圖檢查（taste-skill `critique.md`、`app-screens.md`）
+## 3. 截圖驗收（必做；作者要求，避免畫面做醜）
 
-Linux 上看不到畫面，所以這一步在有截圖時做（`website-screenshots.yml` 的 artifact、TestFlight 實機截圖；作者的截圖不進 repo）。每個主要畫面拍 iPhone SE 寬、iPhone Pro、iPad 三種，各拍淺色、深色、最大字級。
+**改畫面的 PR 轉 ready 之前一定要做**。方法改寫自 taste-skill `critique.md` 與 `app-screens.md` §2.7（研究第 5 節）。
+
+**拍**：
+
+1. 在自己的分支手動跑 `website-screenshots.yml`（Actions 分頁，選自己的分支）。它在 iPhone Pro Simulator 上橫拿、深色模式，跑 `WebsiteScreenshotTests`，PNG 在 artifact `website-screenshots`。
+2. 改的畫面沒被拍到，就在 `RailwayGameApp/UITests/WebsiteScreenshotTests.swift` 加一個 `test…` 方法：打開那個畫面，用 `keep("名字", app)` 留下來（每張匯出成 `名字.png`）。
+3. **一次只跑一個截圖 run**：macOS runner 只有五台，full lane 佔四台。別的 session 的截圖 run 還在跑就等它。
+4. 這個 workflow 只拍 iPhone Pro、橫拿、深色。iPhone SE 寬、iPad、淺色、最大字級拍不到的，在 PR 寫「沒拍到」與原因（UNVERIFIED），有實機截圖時再補。
+
+**看**（每一輪）：
 
 1. **只看截圖，不看程式**：看程式會把自己的意圖讀進去。
 2. **逐項看，一項看一次**：一秒、五秒各看一次（看到的是什麼？）；瞇眼看（應該剩兩三大塊）；數左邊的對齊線（兩三條）；留白與外框；字的大小層級；顏色比例；重複感；手機上的樣子；東西互相疊到（地圖標籤、泡泡、按鈕）。
@@ -75,8 +84,13 @@ Linux 上看不到畫面，所以這一步在有截圖時做（`website-screensh
    5. 零看起來像零、沒有資料看起來像「—」嗎？
    6. 圖例和線對得上嗎？
    7. 每一塊在手機上還能用嗎？
-4. **每輪寫最嚴重的三個問題**，附截圖與一個改法；最多三輪。
+4. **寫出最嚴重的三個問題**，各附截圖與一個改法（第 6 節的三樣），然後修掉，再拍下一輪。**最多三輪**；三輪後還有的寫進 PR 與決策的下一步。
 5. **改的順序**：想法、層次、構圖、字、圖、顏色、細節、動態。
+
+**交**：
+
+- PR 放**最後一輪的總覽圖**（幾張拼成一張），以及**每一輪發現與修掉的問題**（輪次、問題、改法、commit）。圖大於約 2 MB 時照 CLAUDE.md 放 `a91453/railway-assets-private` 的 `game-art-previews/docs/art/`，PR 只留總覽與連結。
+- **規劃看過截圖才合**。
 
 ## 4. 回饋稽核表（rshankras `feedback-audit.md`）
 
@@ -152,5 +166,5 @@ Linux 上看不到畫面，所以這一步在有截圖時做（`website-screensh
 
 1. **Linux**：畫面的邏輯在 GamePresentation 的測試裡（`swift test --skip-build --filter <Class>`）；顏色對比 `ThemeContrastTests`；動態 `InterfaceMotionTests`。
 2. **Simulator**（`ios-build.yml`，Linux 上沒有）：UI 測試只問「看得到、點得到」；要看一兩支就用 `only_testing`。
-3. **實機或截圖**：第 3 節的截圖檢查；第 4 節的聲音與觸覺。
-4. **PR 的寫法**：寫出用了這份的哪幾節、截圖檢查做了沒（沒做就寫 UNVERIFIED 與原因）、回饋表（改到回饋時）。
+3. **截圖驗收**（第 3 節，轉 ready 前必做）；**實機**：第 4 節的聲音與觸覺。
+4. **PR 的寫法**：寫出用了這份的哪幾節、截圖驗收的總覽圖與各輪問題（拍不到的寫 UNVERIFIED 與原因）、回饋表（改到回饋時）。
