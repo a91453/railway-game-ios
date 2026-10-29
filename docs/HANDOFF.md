@@ -388,6 +388,22 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第三十二次換手（2026-10-29 約 14:45 UTC，第 31 任 session_01YGNNukxseY7eMCvXhjtc4X → 第 32 任）**：第 31 任壓縮 2 次、用到約 29 萬 token，照 §1 換手。
+- **發版**：作者已自己發 95.1，testflight.yml 跑在 a7b958c（run 40862262994，綠）。和 6ff5ffe 只差 What's New 多一行「車隊清單從車卡上也拖得動」。作者 10/30 會先自己發一版測，再發一版開公測（10/31 0:00 台灣時間丟連結）。發之前要確認 main HEAD 的完整 ci.yml 和 iOS 全線都綠；作者自己按 TestFlight，或在本對話說「發」才代按。6ff5ffe 的 ci.yml 全量重跑後綠（40866614287）；iOS 全線紅（40866617267），紅的是兩支不穩的 UI 測試，#1498 已修。
+- **今天合的**：#1495（視覺技術研究，docs/research/VISUAL_TECH_RESEARCH_2026-10-29.md）、#1496（路線清單橫放收一列，決策 486）、#1497（rest shard 搬類別）、#1498（UI 測試改穩）、#1499（實景地圖鋪路照畫的鋪，決策 487）、#1500（GeoJSON 輸出給 geolibre.app）。
+- **還在做的**（綠了就用 REST 轉 ready 並合併，合了在 #1041 記、告訴作者，再封存）：
+  - #1501 FPS（session_01YGNNuphxaPGPV7TDzRjjop）：3D 跟車 10× 掉幀，決策 485，已 merge main，CI 跑中。
+  - LJB（session_01YGNNuqJftBtg8BZnJg1nrk）：先買內灣線再買六家線，六家線列車卡在竹中。作者說「修好跟我說」。
+  - GTK（session_01YGNNumjTnb7ozdTjHu7Gwv）：垃圾車和回收車的 3D 模型破圖。
+  - BLD（session_01YGNNuoJrjdfniv6NV8wn7e）：2D 放置建築時 fps 掉到 11–14。
+  - UIF（session_01YGNNuoNKMExihpF16p4VC6）：#1498 已合，等它把單支重複驗證跑完並結案。
+- 這些都合進去後，在 main HEAD 用 workflow_dispatch 跑完整 ci.yml 和 iOS 全線，綠了給作者紅綠燈表。
+- **排程**：第 31 任的巡查 `trig_01QDkvQkddhwX49C25FVXkWw`（15:04 UTC）和 Threads `trig_01SRe5chbpKMHHWobCAKky9A` 綁在第 31 任身上。新任用同樣的 prompt 建綁自己的（`get_trigger` 讀得到），再刪掉舊的。作者說 10/29 是最後一次 Threads 更新日誌，以後直接發宣傳片，所以 Threads 排程可以停掉。
+- **作者的狀態**：觸及率低，有點想放棄，也怕公測（覺得流量被另一個同類 App 吸走了）。語氣放溫和，不要催。PR 和留言都不要寫出那個 App 的名字。
+- **作者只有手機**：要看的東西給圖或結論，不要叫作者跑指令。
+- **環境**：設定腳本第 3 行把 `mcp__claude-code-remote__add_repo` 當成殼層指令執行，每次開機都 exit 127。不影響工作，已告訴作者可以去刪。
+- **95.1 之後的待辦**照舊：演示模式改成只在內部版、需求選項 A、私庫搬家等（見下面「第三十一任接手」）。
+
 **第三十一任接手（2026-10-29 約 07:30 UTC，session_01YGNNukxseY7eMCvXhjtc4X，作者在 claude.ai 開，第 1 層）**：第 30 任 session_01YGNNuq4nxQrJ1jQ182c4Yz 沒掛到 repo、拿不到 GitHub 權限，已改名「【舊・已換手】」並封存，由本任照下面兩段接。
 - 排程改綁本任：Threads `trig_01SRe5chbpKMHHWobCAKky9A`、95.1 截止後步驟 `trig_01SoyLas1SRJJ7kXE2Anw5La`（10:05 UTC）、巡查 `trig_01T8BqMeAidkdpVvhHfFhNzA`（之後約 45 分一次）；第 30 任的三個已刪。下面「第三十次換手」列的排程 id 都已不在。
 - **GeoJSON 輸出（派工單 GEO，已做，作者 10/29 交代）**：`tools/geojson-export/` 輸出車站、路線、機廠、底圖道路和遊戲 64 m 道路格子，作者拖進 geolibre.app 檢查位置；怎麼跑與怎麼打開見該資料夾 README。不在遊戲裡，沒動 App 與 GameCore。
