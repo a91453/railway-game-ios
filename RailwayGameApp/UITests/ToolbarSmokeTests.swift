@@ -169,12 +169,22 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // Decision 481: back from a line's page the list stands at that
         // line, below the switch, and a list builds no row off screen; the
         // drags below only go down while the switch does not exist (run
-        // 40835715436), so swipe back up to it first.
+        // 40835715436), so swipe back up first. On a phone on its side the
+        // pinned search, filter and sort leave the rows some 130 points,
+        // and from the top the long drags below carried the switch past
+        // them (run 40844553127): short drags down from the top instead.
         let bar = app.navigationBars["Lines"].firstMatch
         if !toggle.exists, bar.exists,
            let list = app.collectionViews.allElementsBoundByIndex.first(where: { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }) {
             for _ in 0..<8 where !toggle.exists {
                 list.swipeDown()
+            }
+            let x = (list.frame.minX + 8 - app.frame.minX) / app.frame.width
+            func point(_ y: CGFloat) -> XCUICoordinate {
+                app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: (list.frame.minY + list.frame.height * y - app.frame.minY) / app.frame.height))
+            }
+            for _ in 0..<16 where !toggle.exists {
+                point(0.9).press(forDuration: 0.1, thenDragTo: point(0.75), withVelocity: .slow, thenHoldForDuration: 0.3)
             }
         }
         bringIntoView(toggle, in: app)
