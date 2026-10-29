@@ -18,6 +18,9 @@ struct MapAttractionMarks: View {
     /// The marks shown while a building tool is chosen: faint, taking no
     /// touches. Otherwise the marks of the Select tool.
     var isPassive = false
+    /// Decision 477: where the map's clear part starts under the top bar
+    /// and its column, for the tiles' prices of the map's expansion.
+    var clearTop: CGFloat?
     @Environment(GameScreenState.self) private var screen
 
     var body: some View {
@@ -35,9 +38,17 @@ struct MapAttractionMarks: View {
                           at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) else { return nil }
                     return SightMarks.Mark(id: sight.attraction.id, stars: sight.stars, x: at.x, y: at.y)
                 })
+                // Decision 477: while the map's tiles are for sale, none
+                // over a tile's price.
+                let prices = tilePrices
                 // Only the marks shown, not every sight: the whole of Taiwan
                 // has 214, and this is worked out again as the world moves.
-                ForEach(sights.filter { shown.contains($0.attraction.id) }, id: \.attraction.id) { sight in
+                ForEach(sights.filter { sight in
+                    guard shown.contains(sight.attraction.id) else { return false }
+                    guard !prices.isEmpty else { return true }
+                    let at = camera.screenPoint(of: sight.attraction.point)
+                    return !MapLabelPlacement.coversPrice(x: at.x, y: at.y, stars: sight.starsText, prices: prices)
+                }, id: \.attraction.id) { sight in
                     let at = camera.screenPoint(of: sight.attraction.point)
                     mark(sight)
                         .opacity(isPassive ? 0.5 : 1)
@@ -52,6 +63,24 @@ struct MapAttractionMarks: View {
         // Not on this view, which covers the whole map: hidden from
         // VoiceOver it hid the map and its zoom buttons from UI tests' taps.
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
+    }
+
+    /// Where the map draws the prices of the tiles for sale (``MapArt``'s
+    /// `drawMapExpansion`), about.
+    private var tilePrices: [MapLabelPlacement.Box] {
+        guard let expansion = session.mapExpansionOverlay, !expansion.forSale.isEmpty else { return [] }
+        let top = Double(clearTop ?? insets.top)
+        let clear = MapLabelPlacement.Box(
+            x: Double(insets.leading), y: top,
+            width: viewport.width - Double(insets.leading + insets.trailing), height: viewport.height - top - Double(insets.bottom)
+        )
+        return expansion.forSale.compactMap { tile in
+            let corner = camera.screenPoint(worldX: Double(tile.area.minX), worldY: Double(tile.area.minY))
+            let far = camera.screenPoint(worldX: Double(tile.area.maxX), worldY: Double(tile.area.maxY))
+            let area = MapLabelPlacement.Box(x: min(corner.x, far.x), y: min(corner.y, far.y), width: abs(far.x - corner.x), height: abs(far.y - corner.y))
+            let width = MapLabelPlacement.priceWidth(tile.price.moneyText, locked: !tile.isUnlocked)
+            return MapLabelPlacement.tileLabel(tile: area, clear: clear, width: width, height: 18)
+        }
     }
 
     private func mark(_ fact: MapMarks.Sight) -> some View {

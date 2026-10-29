@@ -103,6 +103,13 @@ struct StationPanel: View {
                     withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
                 }
             }
+            // Decision 477: a map bubble's group (a town short of
+            // materials: freight), as the toolbar's menu goes to it.
+            .onChange(of: screen.stationFocus, initial: true) { _, focus in
+                guard let focus else { return }
+                screen.stationFocus = nil
+                jump(to: focus, proxy)
+            }
             .toolbar {
                 if session.selectedStation != nil {
                     ToolbarItem(placement: .topBarTrailing) {
