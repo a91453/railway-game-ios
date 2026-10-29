@@ -3415,6 +3415,8 @@ public final class GameSession {
         logging(action) { $0 = restored }
         editSerial &+= 1
         dropSelectionOfMissing()
+        // The road drawn is priced for the world gone back to.
+        if !roadDraft.isEmpty { refreshRoadPreview() }
         // The building shown keeps its land read in, which the undo may
         // have taken back, so its preview counts what stands there.
         if let site = buildingSite {
