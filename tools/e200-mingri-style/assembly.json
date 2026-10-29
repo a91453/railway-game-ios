@@ -1,0 +1,312 @@
+{
+  "assemblies": [
+    {
+      "id": "original-e200ck-formation",
+      "placements": [
+        {
+          "unit": "set-E200CK-head",
+          "translation": [
+            70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CK-car",
+          "translation": [
+            50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CK-car",
+          "translation": [
+            30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CK-car",
+          "translation": [
+            10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CK-car",
+          "translation": [
+            -10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CK-car",
+          "translation": [
+            -30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CK-car",
+          "translation": [
+            -50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CK-tail",
+          "translation": [
+            -70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    },
+    {
+      "id": "mingri-style-formation",
+      "placements": [
+        {
+          "unit": "e200mingri-style-head",
+          "translation": [
+            70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car",
+          "translation": [
+            50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car",
+          "translation": [
+            30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car",
+          "translation": [
+            10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car",
+          "translation": [
+            -10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car",
+          "translation": [
+            -30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car",
+          "translation": [
+            -50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-tail",
+          "translation": [
+            -70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    },
+    {
+      "id": "original-e200ck-formation-far",
+      "placements": [
+        {
+          "unit": "set-E200CKFar-head",
+          "translation": [
+            70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CKFar-car",
+          "translation": [
+            50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CKFar-car",
+          "translation": [
+            30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CKFar-car",
+          "translation": [
+            10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CKFar-car",
+          "translation": [
+            -10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CKFar-car",
+          "translation": [
+            -30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CKFar-car",
+          "translation": [
+            -50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "set-E200CKFar-tail",
+          "translation": [
+            -70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    },
+    {
+      "id": "mingri-style-formation-far",
+      "placements": [
+        {
+          "unit": "e200mingri-style-head-far",
+          "translation": [
+            70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car-far",
+          "translation": [
+            50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car-far",
+          "translation": [
+            30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car-far",
+          "translation": [
+            10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car-far",
+          "translation": [
+            -10,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car-far",
+          "translation": [
+            -30,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-car-far",
+          "translation": [
+            -50,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "e200mingri-style-tail-far",
+          "translation": [
+            -70,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    }
+  ]
+}
