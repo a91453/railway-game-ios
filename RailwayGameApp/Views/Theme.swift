@@ -66,6 +66,19 @@ enum Theme {
     static let chartOrange = dynamic(light: 0xEB6834, dark: 0xEB6834)
     /// Rent (3.33:1, 3.28:1).
     static let chartAqua = dynamic(light: 0x18A070, dark: 0x199E70)
+    // Decision 480: slots 4 to 8, for the income and cost donuts. Below 3:1
+    // on ``panel`` (yellow and magenta light, magenta and green dark), so
+    // every slice also has its name, amount and share written beside it.
+    /// Slot 4 (2.17:1, 3.64:1).
+    static let chartYellow = dynamic(light: 0xEDA100, dark: 0xC98500)
+    /// Slot 5 (2.69:1, 2.83:1).
+    static let chartMagenta = dynamic(light: 0xE87BA4, dark: 0xD55181)
+    /// Slot 6 (4.95:1, 2.26:1).
+    static let chartGreen = dynamic(light: 0x008300, dark: 0x008300)
+    /// Slot 7 (5.77:1, 3.57:1).
+    static let chartViolet = dynamic(light: 0x6250D6, dark: 0x9085E9)
+    /// Slot 8 (3.95:1, 3.46:1).
+    static let chartRed = dynamic(light: 0xE34948, dark: 0xE66767)
 
     private static func dynamic(
         light: UInt32,
