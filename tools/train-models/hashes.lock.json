@@ -369,6 +369,14 @@
       "hash" : "a94e6efe587c369b",
       "triangles" : 1748
     },
+    "g12-r21" : {
+      "hash" : "13a47db4b2497318",
+      "triangles" : 6420
+    },
+    "g12-r21-far" : {
+      "hash" : "d8120e79d1c0bdcc",
+      "triangles" : 2932
+    },
     "green-commuter-formation" : {
       "hash" : "4ffb733cbceee255",
       "triangles" : 4908
