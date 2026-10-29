@@ -13,6 +13,8 @@ public enum ChartAxis: Hashable, Sendable {
     case money
     /// Passengers or riders.
     case people
+    /// A whole percent of seats (decision 472's fullest sections).
+    case percent
 }
 
 /// One series of a chart: one value per x, `nil` where there is none.
@@ -55,6 +57,7 @@ public struct ChartSpec: Hashable, Sendable {
         switch axis {
         case .money: language.text("Dollars", "金額")
         case .people: language.text("People", "人數")
+        case .percent: language.text("Percent full", "滿載率")
         }
     }
 
@@ -64,6 +67,7 @@ public struct ChartSpec: Hashable, Sendable {
         switch axis {
         case .money: return Money(whole * 100).moneyText
         case .people: return language.text("\(Money(whole).displayText) people", "\(Money(whole).displayText) 人")
+        case .percent: return "\(whole)%"
         }
     }
 
