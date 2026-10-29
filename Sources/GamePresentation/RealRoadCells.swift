@@ -76,8 +76,10 @@ enum RealRoadCells {
 
     /// The roads of `blocks` of a world of `bounds` laid on the Earth by
     /// `frame`, from `tiles`. A tile that fails to read is left out, as
-    /// the 3D map leaves it out.
-    static func read(blocks: Set<LandBlock>, tiles: BaseMapTiles, frame: RealWorldFrame, bounds: WorldBounds) -> Cells {
+    /// the 3D map leaves it out. With a `meter` (decision 473), the share
+    /// of the tiles read is counted on it, and once it is cancelled the
+    /// read stops at the next tile, its roads not whole.
+    static func read(blocks: Set<LandBlock>, tiles: BaseMapTiles, frame: RealWorldFrame, bounds: WorldBounds, meter: LoadingMeter? = nil) -> Cells {
         var cells = Cells()
         guard !blocks.isEmpty else { return cells }
         if Thread.isMainThread { readsOnTheMainThread.add() }
@@ -92,7 +94,12 @@ enum RealRoadCells {
                 }
             }
         }
-        for tile in wanted.sorted() {
+        let sorted = wanted.sorted()
+        for (index, tile) in sorted.enumerated() {
+            if let meter {
+                guard !meter.isCancelled else { return cells }
+                meter.share = Double(index) / Double(sorted.count)
+            }
             guard let bytes = try? tiles.archive.tile(zoom: BaseMapTiles.zoom, x: tile.column, y: tile.row),
                   let decoded = try? VectorTile(bytes, layers: ["transportation"]),
                   let layer = decoded.layers["transportation"]
@@ -169,17 +176,20 @@ extension GameSession {
     /// are taken from it rather than read again: a block's road cells are
     /// the base map's in that block alone, so the world gets the same
     /// roads either way.
-    nonisolated static func readRoads(in world: inout GameWorld, baseMap: BaseMapTiles?, ahead: RoadsReadAhead? = nil) {
+    nonisolated static func readRoads(in world: inout GameWorld, baseMap: BaseMapTiles?, ahead: RoadsReadAhead? = nil, meter: LoadingMeter? = nil) {
         guard let baseMap, let roads = world.roads, let frame = RealWorldFrame(world: world) else { return }
         let wanted = roadBlocks(of: world).subtracting(roads.readBlocks)
         guard !wanted.isEmpty else { return }
         var cells: Set<CellPosition>
         if let ahead, ahead.frame == frame, ahead.bounds == world.bounds {
             cells = ahead.roads.filter { wanted.contains(LandBlock(cellRow: $0.row, column: $0.column)) }
-            cells.formUnion(RealRoadCells.read(blocks: wanted.subtracting(ahead.blocks), tiles: baseMap, frame: frame, bounds: world.bounds).roads)
+            cells.formUnion(RealRoadCells.read(blocks: wanted.subtracting(ahead.blocks), tiles: baseMap, frame: frame, bounds: world.bounds, meter: meter).roads)
         } else {
-            cells = RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds).roads
+            cells = RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds, meter: meter).roads
         }
+        // Stopped part way: the world is thrown away, so its roads are
+        // not set half read.
+        if meter?.isCancelled == true { return }
         do throws(GameError) {
             try world.setRoads(cells.sorted(), in: wanted.sorted())
         } catch {
@@ -216,7 +226,8 @@ extension GameSession {
     /// Rail's stations take seconds), so read off the main actor; `nil`
     /// when it would read none.
     nonisolated static func roadsReadAhead(
-        of world: GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid?, coverage: CoverageGrid?, baseMap: BaseMapTiles?
+        of world: GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid?, coverage: CoverageGrid?, baseMap: BaseMapTiles?,
+        meter: LoadingMeter? = nil
     ) -> RoadsReadAhead? {
         guard let baseMap, world.roads != nil, let frame = RealWorldFrame(world: world) else { return nil }
         var read = world
@@ -226,7 +237,7 @@ extension GameSession {
         guard !wanted.isEmpty else { return nil }
         return RoadsReadAhead(
             frame: frame, bounds: world.bounds, blocks: wanted,
-            roads: RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds).roads
+            roads: RealRoadCells.read(blocks: wanted, tiles: baseMap, frame: frame, bounds: world.bounds, meter: meter).roads
         )
     }
 }

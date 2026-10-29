@@ -84,7 +84,7 @@ final class RealWorldLoadingTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         launcher.placeNames = try names()
         let task = launcher.openRealWorldGame(at: jiufen)
-        XCTAssertEqual(launcher.realWorldLoading, RealWorldLoading(place: "Jiufen"))
+        XCTAssertEqual(launcher.realWorldLoading, RealWorldLoading(place: "Jiufen", steps: [.layingOutMap]), "no people or heights here")
         XCTAssertNil(launcher.openRealWorldGame(at: jiufen), "one map at a time")
         XCTAssertNil(launcher.session, "still loading")
         await task?.value
@@ -109,5 +109,144 @@ final class RealWorldLoadingTests: XCTestCase {
         await task?.value
         XCTAssertNil(launcher.realWorldLoading)
         XCTAssertEqual(launcher.session?.world, simple)
+    }
+
+    // MARK: - Steps and cancelling (decision 473)
+
+    /// The bar moves only as steps finish (and, reading roads, as its
+    /// tiles are read), never back, and says which step it is on.
+    func testTheStepsCountWhatIsDone() {
+        let start = RealWorldLoading(place: "Jiufen", steps: [.countingPeople, .layingOutMap, .shapingGround])
+        XCTAssertEqual(start.fraction, 0)
+        XCTAssertEqual(start.step, .countingPeople)
+        XCTAssertTrue(start.showsProgress)
+        XCTAssertEqual(start.stepLine(in: .english), "Step 1 of 3: Counting people and jobs")
+        XCTAssertEqual(start.stepLine(in: .traditionalChinese), "第 1 步，共 3 步：計算人口與工作")
+        let one = start.advanced()
+        XCTAssertEqual(one.fraction, 1.0 / 3, accuracy: 1e-9)
+        XCTAssertEqual(one.stepLine(in: .english), "Step 2 of 3: Laying out the map")
+        XCTAssertEqual(one.percentText(), "33%")
+        // A share of a step counts, but never goes back.
+        XCTAssertEqual(one.counting(0.5).fraction, 1.5 / 3, accuracy: 1e-9)
+        XCTAssertEqual(one.counting(0.5).counting(0.2).fraction, 1.5 / 3, accuracy: 1e-9)
+        XCTAssertEqual(one.counting(7).fraction, 2.0 / 3, accuracy: 1e-9)
+        XCTAssertEqual(one.counting(0.5).advanced().fraction, 2.0 / 3, accuracy: 1e-9, "a finished step starts the next at none")
+        let all = one.advanced().advanced().advanced()
+        XCTAssertEqual(all.fraction, 1)
+        XCTAssertEqual(all.step, .shapingGround, "the last step stays as the game opens")
+        XCTAssertEqual(all.stepLine(in: .english), "Step 3 of 3: Shaping the ground")
+        // One step: no counter, and a bar only where its share is counted.
+        let roads = RealWorldLoading(place: nil, steps: [.readingRoads])
+        XCTAssertEqual(roads.stepLine(in: .english), "Reading the roads")
+        XCTAssertTrue(roads.showsProgress)
+        XCTAssertFalse(RealWorldLoading(place: nil, steps: [.layingOutMap]).showsProgress)
+        XCTAssertNil(RealWorldLoading(place: nil).stepLine(in: .english))
+        XCTAssertEqual(RealWorldLoading(place: nil).fraction, 0)
+        // Every step says what it does in both languages.
+        for step in [LoadingStep.readingSave, .countingPeople, .layingOutMap, .layingLine, .shapingGround, .readingRoads] {
+            XCTAssertNotEqual(step.text(in: .english), step.text(in: .traditionalChinese))
+        }
+    }
+
+    func testTheButtonSaysWhereItGoesBack() {
+        XCTAssertEqual(RealWorldLoading(place: nil).cancelTitle(in: .english), "Back to Start Screen")
+        XCTAssertEqual(RealWorldLoading(place: nil).cancelTitle(in: .traditionalChinese), "回開始畫面")
+        XCTAssertEqual(RealWorldLoading(place: nil, backTo: .game).cancelTitle(in: .english), "Back to Game")
+        XCTAssertEqual(RealWorldLoading(place: nil, backTo: .game).cancelTitle(in: .traditionalChinese), "回到遊戲")
+    }
+
+    /// Cancelled, the screen goes at once, no game opens when the build
+    /// ends, and another map can be opened straight away.
+    @MainActor
+    func testCancellingLeavesTheStartScreenAsItWas() async throws {
+        let (launcher, directory) = launcher()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        launcher.cancelLoading()
+        XCTAssertNil(launcher.realWorldLoading, "nothing to cancel")
+        let task = launcher.openRealWorldGame(at: jiufen)
+        XCTAssertNotNil(launcher.realWorldLoading)
+        launcher.cancelLoading()
+        XCTAssertNil(launcher.realWorldLoading, "the screen goes at once")
+        let again = launcher.openRealWorldGame(at: jiufen)
+        XCTAssertNotNil(again, "another can be opened at once")
+        launcher.cancelLoading()
+        await task?.value
+        await again?.value
+        XCTAssertNil(launcher.session, "no game opened")
+        XCTAssertNil(launcher.realWorldLoading)
+        XCTAssertFalse(launcher.isOpeningADemo)
+        // And one not cancelled still opens.
+        await launcher.openRealWorldGame(at: jiufen)?.value
+        XCTAssertEqual(launcher.session?.world.geoAnchor, jiufen)
+    }
+
+    /// The High Speed Rail, cancelled while its line is laid: the step
+    /// shown is the one running, its flag is put back at once, and when
+    /// the step ends no game opens and nothing is said to have failed.
+    @MainActor
+    func testCancellingTheHighSpeedRailWhileItIsLaid() async throws {
+        let (launcher, directory) = launcher()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let task = launcher.openHighSpeedDemo(railways: try HighSpeedDemoTests.railways())
+        XCTAssertEqual(launcher.realWorldLoading?.steps, [.layingLine, .readingRoads])
+        XCTAssertEqual(launcher.realWorldLoading?.stepLine(in: .english), "Step 1 of 2: Laying the line and its trains")
+        XCTAssertEqual(launcher.realWorldLoading?.cancelTitle(in: .english), "Back to Start Screen")
+        launcher.cancelLoading()
+        XCTAssertFalse(launcher.isOpeningHighSpeedDemo)
+        XCTAssertNil(launcher.realWorldLoading)
+        await task?.value
+        XCTAssertNil(launcher.session, "no game opened")
+        XCTAssertNil(launcher.message, "and nothing said failed")
+        XCTAssertNil(launcher.realWorldLoading)
+    }
+
+    /// A step is marked done when its work comes back, and none runs once
+    /// the loading is stopped.
+    @MainActor
+    func testARunCountsItsStepsAndStopsWhenCancelled() async {
+        let run = GameLauncher.LoadingRun(RealWorldLoading(place: nil, steps: [.layingOutMap, .shapingGround, .readingRoads]))
+        var shown: [Int] = []
+        run.publish = { shown.append($0.done) }
+        let first = await run.step { meter in
+            meter.share = 0.5
+            return 1
+        }
+        XCTAssertEqual(first, 1)
+        XCTAssertEqual(run.loading.done, 1)
+        XCTAssertEqual(run.loading.stepShare, 0, "the next step starts at none")
+        XCTAssertEqual(shown.last, 1)
+        XCTAssertTrue(run.finishedElsewhere())
+        XCTAssertEqual(run.loading.done, 2)
+        XCTAssertEqual(shown, shown.sorted(), "it only goes forward")
+        run.meter.cancel()
+        let ran = LoadingMeter()
+        let third = await run.step { _ in
+            ran.cancel()
+            return 3
+        }
+        XCTAssertNil(third)
+        XCTAssertFalse(ran.isCancelled, "a step after cancelling does not run")
+        XCTAssertEqual(run.loading.done, 2)
+        XCTAssertFalse(run.finishedElsewhere())
+    }
+
+    /// Reading roads stops at its next tile once cancelled: none read.
+    func testReadingRoadsStopsWhenCancelled() throws {
+        let tiles = try BaseMapTiles(
+            data: Data(contentsOf: Map3DRealTrainsTests.resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped)
+        )
+        let world = GameWorld.newGame(anchor: jiufen, balance: 1_000_000, eventSeed: 1, land: [])
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        // The blocks round the middle of the map, Jiufen.
+        let middle = Int(world.bounds.width / Land.blockLength) / 2
+        let blocks = Set((middle - 1 ... middle + 1).flatMap { row in (middle - 1 ... middle + 1).map { LandBlock(row: row, column: $0) } })
+        let read = RealRoadCells.read(blocks: blocks, tiles: tiles, frame: frame, bounds: world.bounds)
+        XCTAssertFalse(read.roads.isEmpty, "Jiufen has roads")
+        let meter = LoadingMeter()
+        _ = RealRoadCells.read(blocks: blocks, tiles: tiles, frame: frame, bounds: world.bounds, meter: meter)
+        XCTAssertGreaterThan(meter.share, 0, "its share counted")
+        let stopped = LoadingMeter()
+        stopped.cancel()
+        XCTAssertTrue(RealRoadCells.read(blocks: blocks, tiles: tiles, frame: frame, bounds: world.bounds, meter: stopped).roads.isEmpty)
     }
 }
