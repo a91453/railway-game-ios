@@ -431,6 +431,8 @@ struct BusPathMemo {
     let points: [PlanPoint]
     /// Where the stops lie on the way.
     let pins: [PlanPoint]
+    /// The ends of the first leg no bus road joins (decision 474), or none.
+    var broken: [PlanPoint] = []
 }
 
 /// The reads started off the main actor for the station the bus tool was
@@ -474,6 +476,10 @@ public struct BusMapOverlay: Hashable, Sendable {
         public let runs: Bool
         /// The number and name of each stop, as ``stops``.
         public let labels: [BusStopLabel]
+        /// Decision 474: two stops (or the last and the station) no bus road
+        /// joins any more, drawn as a broken line; the way is drawn from
+        /// there on. Empty when every leg has a road.
+        public var broken: [PlanPoint] = []
 
         /// The round arrows on its way, pointing at the station, `spacing`
         /// metres apart (``BusArrows/spacing(pointsPerMetre:)``).
@@ -698,8 +704,14 @@ extension GameSession {
             // Decision 424, C2: a real bus stop within 25 m of the tap
             // is where the stop goes, when a bus road reaches it; else
             // the tap is put on the road as before.
+            // Decision 474: on a divided road, on the side the bus goes
+            // along: a route's new stop leads to the stop before it (or the
+            // station); a city route's is reached from the one before it.
+            let station = busDraft.station.flatMap { world.station(id: $0)?.location }
+            let before = busDraft.pins.last.map { BusEnd($0) } ?? station.map { BusEnd($0, isStation: true) }
             func onARoad(near point: PlanPoint) -> PlanPoint? {
-                onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: { roads.contains(CellPosition(containing: $0)) })
+                onRoads.place(near: point, within: BusRoadNetwork.snapReach, accepting: { roads.contains(CellPosition(containing: $0)) },
+                              leadingTo: busDraft.city ? nil : before, from: busDraft.city ? before : nil)
             }
             let real = realBusStops(around: busDraftCentre ?? point)?.nearest(to: point)
             if let pin = real.flatMap({ onARoad(near: $0.point) }) ?? onARoad(near: point) {
@@ -857,18 +869,19 @@ extension GameSession {
             draft.station = fed
             draft.stops = route.stops.reversed()
             draft.stopPoints = draft.stops.map(\.middle)
-            if let roads = busRoads, let station = world.station(id: fed), let saved = roads.way(ofSaved: route.stops, station: station.location) {
+            if let roads = busRoads, let station = world.station(id: fed) {
                 // Decision 424: each saved stop from its cell's middle onto the
-                // nearest bus road.
-                draft.stopPoints = saved.pins.reversed()
+                // nearest bus road (decision 474: on the side its bus goes
+                // along; a leg no road joins any more is shown broken).
+                draft.stopPoints = roads.way(ofSaved: route.stops, station: station.location).stops.dropLast().reversed()
             }
         } else {
             // Decision 438: a city route's stops, first to last.
             draft.city = true
             draft.stops = route.stops
             draft.stopPoints = route.stops.map(\.middle)
-            if let roads = busRoads, let saved = roads.way(ofSaved: route.stops, station: nil) {
-                draft.stopPoints = saved.ends
+            if let roads = busRoads {
+                draft.stopPoints = roads.way(ofSaved: route.stops, station: nil).stops
             }
         }
         draft.service = route.service
@@ -962,8 +975,14 @@ extension GameSession {
             if let known = busPathMemo[route.id], known.stops == route.stops, known.station == at, known.onRoads == (onRoads != nil) {
                 memo = known
             } else {
-                if let onRoads, let way = onRoads.way(ofSaved: route.stops, station: at) {
-                    memo = BusPathMemo(stops: route.stops, station: at, onRoads: true, points: way.points, pins: at == nil ? way.ends : way.pins)
+                let way = onRoads?.way(ofSaved: route.stops, station: at)
+                if let way, way.firstBroken == nil || roads.built.isEmpty
+                    || !BusRoadPath.joins(stops: route.stops, station: at, roads: roads.allCells) {
+                    // Decision 474: a leg no bus road joins is drawn broken,
+                    // never straight across the blocks; only the player's
+                    // own roads (decision 438) take the way along the cells.
+                    memo = BusPathMemo(stops: route.stops, station: at, onRoads: true, points: way.points,
+                                       pins: at == nil ? way.stops : Array(way.stops.dropLast()), broken: way.broken)
                 } else {
                     memo = BusPathMemo(
                         stops: route.stops, station: at, onRoads: onRoads != nil,
@@ -984,7 +1003,7 @@ extension GameSession {
             }
             overlay.routes.append(BusMapOverlay.Route(
                 id: route.id, line: line?.id, color: line?.color, points: memo.points, stops: memo.pins, runs: route.buses > 0,
-                labels: labels
+                labels: labels, broken: memo.broken
             ))
         }
         overlay.showsLabels = tool == .bus

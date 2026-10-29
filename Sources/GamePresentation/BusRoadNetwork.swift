@@ -19,6 +19,13 @@ import GameCore
 // at 1 m: the tiles' own lines meet exactly or within a tile unit). Neither
 // finds a way over road lines for a bus (gap): the rest is the project's own.
 // OSRM, Valhalla and A/B Street were read for ideas only; no code is taken.
+//
+// Decision 474: a one-way road (the base map's `oneway`, its line drawn
+// the way traffic goes) is taken that way only, so a divided road's two
+// carriageways each take one way and a stop goes on the one its bus goes
+// along; a road in a tunnel is taken, but no stop is put in it. As OSRM's
+// car profile and Valhalla's graph do: a one-way edge is a directed edge,
+// a tunnel an edge like the others (ideas only).
 
 /// The base map's bus roads as a graph, in metres east (x) and south (y) of
 /// the world's north-west corner (the plan's own axes).
@@ -51,6 +58,18 @@ struct BusRoadNetwork: Sendable {
     /// One line of the base map a bus can take.
     struct Road: Sendable {
         let points: [Point]
+        /// Whether it is taken from its first point to its last only
+        /// (decision 474).
+        var oneway = false
+        /// Whether it runs in a tunnel: taken, but no stop is put there.
+        var tunnel = false
+    }
+
+    /// A way along the roads: its points, and for each piece between two
+    /// of them whether it runs in a tunnel (decision 474).
+    struct Route: Sendable {
+        let points: [Point]
+        let tunnels: [Bool]
     }
 
     /// A point on a road, found by ``nearest(to:within:accepting:)``.
@@ -87,11 +106,21 @@ struct BusRoadNetwork: Sendable {
     private struct Link {
         let node: Int
         let metres: Double
+        let tunnel: Bool
+    }
+
+    /// A piece of road between two points of the graph.
+    private struct Segment {
+        let from: Int
+        let to: Int
+        /// Taken from `from` to `to` only.
+        var oneway: Bool
+        var tunnel: Bool
     }
 
     /// The graph's points, and for each piece of road the two it joins.
     private(set) var nodes: [Point] = []
-    private var segments: [(from: Int, to: Int)] = []
+    private var segments: [Segment] = []
     private var links: [[Link]] = []
     private var squares: [Int64: [Int]] = [:]
     private static let square = 32.0
@@ -100,7 +129,7 @@ struct BusRoadNetwork: Sendable {
     /// same graph.
     init(roads: [Road]) {
         var nodeAt: [Int64: [Int]] = [:]
-        var pieces = Set<Pair>()
+        var pieces: [Pair: Int] = [:]
         func key(_ x: Int, _ y: Int) -> Int64 { Int64(x) &* 2_000_003 &+ Int64(y) }
         func node(for point: Point) -> Int {
             let x = Int(point.x.rounded(.down)), y = Int(point.y.rounded(.down))
@@ -125,20 +154,38 @@ struct BusRoadNetwork: Sendable {
             for point in road.points.dropFirst() {
                 let next = node(for: point)
                 defer { previous = next }
-                guard next != previous, pieces.insert(Pair(previous, next)).inserted else { continue }
-                segments.append((previous, next))
+                guard next != previous else { continue }
+                Self.add(Segment(from: previous, to: next, oneway: road.oneway, tunnel: road.tunnel), to: &segments, known: &pieces)
             }
         }
         links = Array(repeating: [], count: nodes.count)
         splitAtJunctions()
         for (number, segment) in segments.enumerated() {
             let metres = nodes[segment.from].distance(to: nodes[segment.to])
-            links[segment.from].append(Link(node: segment.to, metres: metres))
-            links[segment.to].append(Link(node: segment.from, metres: metres))
+            links[segment.from].append(Link(node: segment.to, metres: metres, tunnel: segment.tunnel))
+            if !segment.oneway { links[segment.to].append(Link(node: segment.from, metres: metres, tunnel: segment.tunnel)) }
+            // Decision 474: no stop is put in a tunnel, so its pieces are
+            // not looked for.
+            guard !segment.tunnel else { continue }
             for square in Self.squares(from: nodes[segment.from], to: nodes[segment.to], reach: 0) {
                 squares[square, default: []].append(number)
             }
         }
+    }
+
+    /// Adds `segment`, or where a piece joins the same two points already,
+    /// makes that one take both ways when the two do between them, and
+    /// out of a tunnel when either is.
+    private static func add(_ segment: Segment, to segments: inout [Segment], known: inout [Pair: Int]) {
+        let pair = Pair(segment.from, segment.to)
+        guard let index = known[pair] else {
+            known[pair] = segments.count
+            segments.append(segment)
+            return
+        }
+        let other = segments[index]
+        if other.oneway, !segment.oneway || segment.from != other.from { segments[index].oneway = false }
+        if !segment.tunnel { segments[index].tunnel = false }
     }
 
     /// The tiles simplify a straight road past the points where a side
@@ -165,13 +212,13 @@ struct BusRoadNetwork: Sendable {
             }
         }
         guard !cuts.isEmpty else { return }
-        var pieces = Set<Pair>()
-        var cut: [(from: Int, to: Int)] = []
+        var pieces: [Pair: Int] = [:]
+        var cut: [Segment] = []
         for (number, segment) in segments.enumerated() {
             let through = (cuts[number] ?? []).sorted { ($0.t, $0.node) < ($1.t, $1.node) }.map(\.node)
             let chain = [segment.from] + through + [segment.to]
-            for (from, to) in zip(chain, chain.dropFirst()) where from != to && pieces.insert(Pair(from, to)).inserted {
-                cut.append((from, to))
+            for (from, to) in zip(chain, chain.dropFirst()) where from != to {
+                Self.add(Segment(from: from, to: to, oneway: segment.oneway, tunnel: segment.tunnel), to: &cut, known: &pieces)
             }
         }
         segments = cut
@@ -197,12 +244,19 @@ struct BusRoadNetwork: Sendable {
     /// reference's `snapToRoute`, over every piece near), of those
     /// `accepting` takes; of two as near, the piece found first. Where the
     /// nearest point on a piece is not accepted, the piece is looked along
-    /// for one that is.
-    func nearest(to point: Point, within reach: Double, accepting: (Point) -> Bool = { _ in true }) -> Place? {
+    /// for one that is. Never in a tunnel (decision 474). With `facing`,
+    /// only a one-way piece whose way is more against that way than along
+    /// it: the other carriageway of a divided road.
+    func nearest(to point: Point, within reach: Double, facing: (dx: Double, dy: Double)? = nil,
+                 accepting: (Point) -> Bool = { _ in true }) -> Place? {
         var best: Place?
         var seen = Set<Int>()
         for key in Self.squares(from: point, to: point, reach: reach) {
             for number in squares[key] ?? [] where seen.insert(number).inserted {
+                if let facing {
+                    let way = direction(of: number)
+                    guard segments[number].oneway, way.dx * facing.dx + way.dy * facing.dy < 0 else { continue }
+                }
                 let a = nodes[segments[number].from], b = nodes[segments[number].to]
                 guard let on = Self.closest(on: a, b, to: point, accepting: accepting) else { continue }
                 let away = on.distance(to: point)
@@ -212,6 +266,22 @@ struct BusRoadNetwork: Sendable {
             }
         }
         return best
+    }
+
+    /// The nearest point of each piece within `reach` metres of `point`
+    /// (never in a tunnel), the nearest first, then by piece; at most `most`.
+    func places(near point: Point, within reach: Double, most: Int) -> [Place] {
+        var found: [Place] = []
+        var seen = Set<Int>()
+        for key in Self.squares(from: point, to: point, reach: reach) {
+            for number in squares[key] ?? [] where seen.insert(number).inserted {
+                let a = nodes[segments[number].from], b = nodes[segments[number].to]
+                guard let on = Self.closest(on: a, b, to: point, accepting: { _ in true }) else { continue }
+                let away = on.distance(to: point)
+                if away <= reach { found.append(Place(point: on, segment: number, distance: away)) }
+            }
+        }
+        return Array(found.sorted { ($0.distance, $0.segment) < ($1.distance, $1.segment) }.prefix(most))
     }
 
     /// The point of the piece from `a` to `b` nearest `point` that
@@ -232,26 +302,54 @@ struct BusRoadNetwork: Sendable {
         return best?.point
     }
 
+    /// Whether the piece `place` lies on is taken one way only.
+    func isOneway(_ place: Place) -> Bool {
+        segments[place.segment].oneway
+    }
+
+    /// The way the piece `segment` runs, from its first point to its last,
+    /// unit long.
+    func direction(of segment: Int) -> (dx: Double, dy: Double) {
+        let a = nodes[segments[segment].from], b = nodes[segments[segment].to]
+        let length = max(a.distance(to: b), 1e-9)
+        return ((b.x - a.x) / length, (b.y - a.y) / length)
+    }
+
     // MARK: The way between two places
 
     /// The shortest way along the roads from `start` to `end`: the points
     /// from one to the other, or `nil` when no road joins them. Dijkstra's
     /// search, the nearest first and then by point, so the same roads give
-    /// the same way.
+    /// the same way. A one-way piece is taken its way only (decision 474).
     func way(from start: Place, to end: Place) -> [Point]? {
-        if start.segment == end.segment { return Self.deduplicated([start.point, end.point]) }
+        route(from: start, to: end)?.points
+    }
+
+    /// ``way(from:to:)`` with which of its pieces run in tunnels.
+    func route(from start: Place, to end: Place) -> Route? {
         let first = segments[start.segment], last = segments[end.segment]
+        if start.segment == end.segment {
+            // Along one piece: straight there, unless it is one way and the
+            // end lies behind.
+            let a = nodes[first.from]
+            if !first.oneway || a.distance(to: end.point) >= a.distance(to: start.point) {
+                let points = Self.deduplicated([start.point, end.point])
+                return Route(points: points, tunnels: Array(repeating: first.tunnel, count: max(points.count - 1, 0)))
+            }
+        }
         var best = [Double](repeating: .infinity, count: nodes.count)
         var parent = [Int](repeating: -1, count: nodes.count)
+        var parentTunnel = [Bool](repeating: false, count: nodes.count)
         var heap = Heap()
-        for node in [first.from, first.to] {
+        for node in first.oneway ? [first.to] : [first.from, first.to] {
             let metres = start.point.distance(to: nodes[node])
             if metres < best[node] {
                 best[node] = metres
                 heap.push((metres, node))
             }
         }
-        let rest = [last.from: nodes[last.from].distance(to: end.point), last.to: nodes[last.to].distance(to: end.point)]
+        var rest = [last.from: nodes[last.from].distance(to: end.point)]
+        if !last.oneway { rest[last.to] = nodes[last.to].distance(to: end.point) }
         var found: (metres: Double, node: Int)?
         var settled = 0
         while let (metres, node) = heap.pop() {
@@ -265,6 +363,7 @@ struct BusRoadNetwork: Sendable {
                 if way < best[link.node] {
                     best[link.node] = way
                     parent[link.node] = node
+                    parentTunnel[link.node] = link.tunnel
                     heap.push((way, link.node))
                 }
             }
@@ -272,7 +371,20 @@ struct BusRoadNetwork: Sendable {
         guard let found else { return nil }
         var chain = [found.node]
         while parent[chain[chain.count - 1]] >= 0 { chain.append(parent[chain[chain.count - 1]]) }
-        return Self.deduplicated([start.point] + chain.reversed().map { nodes[$0] } + [end.point])
+        chain.reverse()
+        // Each piece's tunnel: the start's and end's pieces, and between
+        // them the links taken.
+        let raw = [start.point] + chain.map { nodes[$0] } + [end.point]
+        let tunnels = [first.tunnel] + chain.dropFirst().map { parentTunnel[$0] } + [last.tunnel]
+        var points: [Point] = [], kept: [Bool] = []
+        for (index, point) in raw.enumerated() {
+            if let previous = points.last {
+                guard previous.distance(to: point) > 1e-6 else { continue }
+                kept.append(tunnels[index - 1])
+            }
+            points.append(point)
+        }
+        return Route(points: points, tunnels: kept)
     }
 
     private static func deduplicated(_ points: [Point]) -> [Point] {
@@ -321,18 +433,24 @@ struct BusRoadNetwork: Sendable {
     /// The bus roads of tile `column`, `row`'s `transportation` layer, kept
     /// to the tile (as ``Map3DBaseMap`` keeps them, so the tiles' overlap is
     /// not read twice; a road cut at the edge meets the next tile's piece
-    /// within ``mergeMetres``). Tunnels are left out.
+    /// within ``mergeMetres``). Decision 474: a tunnel is taken (no stop is
+    /// put there), and a one-way road (`oneway` 1, or -1 drawn against its
+    /// way) is taken its way only.
     static func roads(in layer: VectorTile.Layer, column: Int, row: Int, projection: RealRoadCells.Projection) -> [Road] {
         let (west, north, scale) = projection.place(column: column, row: row, extent: layer.extent)
         let size = projection.tilePoints / projection.pointsPerMetre
         let tile = Map3DBaseMap.Bounds(minX: west, minZ: north, maxX: west + size, maxZ: north + size)
         var roads: [Road] = []
         for feature in layer.features where feature.kind == .line {
-            guard let kind = Map3DBaseMap.roadKind(feature.string("class")), takes(kind), feature.string("brunnel") != "tunnel" else { continue }
+            guard let kind = Map3DBaseMap.roadKind(feature.string("class")), takes(kind) else { continue }
+            let backward = feature.number("oneway") == -1
+            let oneway = backward || feature.number("oneway") == 1
+            let tunnel = feature.string("brunnel") == "tunnel"
             for part in feature.parts where part.count >= 2 {
                 let line = part.map { Map3DBaseMap.Point(x: west + Double($0.x) * scale, z: north + Double($0.y) * scale) }
                 for run in Map3DBaseMap.parts(of: line, in: tile) {
-                    roads.append(Road(points: run.map { Point(x: $0.x, y: $0.z) }))
+                    let points = run.map { Point(x: $0.x, y: $0.z) }
+                    roads.append(Road(points: backward ? points.reversed() : points, oneway: oneway, tunnel: tunnel))
                 }
             }
         }
@@ -465,17 +583,26 @@ struct BusWay: Hashable, Sendable {
         let line: [PlanPoint]
         /// Its metres, the line's length rounded: what GameCore is given.
         let metres: Int64?
+        /// For each piece of ``line``, whether it runs in a tunnel
+        /// (decision 474).
+        let tunnels: [Bool]
     }
 
     let legs: [Leg]
     /// The way as it is drawn: the centre line of each leg after the last
-    /// that no road joins, its corners rounded (``rounded(_:keeping:)``).
+    /// that no road joins, its corners rounded (``rounded(_:keeping:tunnels:)``).
     let points: [PlanPoint]
+    /// For each piece of ``points``, whether it runs in a tunnel.
+    let tunnels: [Bool]
     /// The index in ``points`` of the first stop, of each stop after it, and
     /// last the station, for the legs drawn.
     let marks: [Int]
     /// The first leg no road joins (in GameCore's order), or `nil`.
     let firstBroken: Int?
+    /// Where every stop lies, and last the station when there is one,
+    /// whether or not a road joins them (decision 474: a saved route's
+    /// stops, for the map and the bus tool).
+    let stops: [PlanPoint]
 
     /// How big a corner's round is, in metres.
     static let cornerRadius = 8.0
@@ -491,6 +618,11 @@ struct BusWay: Hashable, Sendable {
         marks.map { points[$0] }
     }
 
+    /// The two ends of the first leg no road joins, or none.
+    var broken: [PlanPoint] {
+        firstBroken.map { Array(stops[$0...($0 + 1)]) } ?? []
+    }
+
     /// The metres of every leg, or `nil` when a leg is broken.
     var legMetres: [Int64]? {
         let metres = legs.compactMap(\.metres)
@@ -499,19 +631,27 @@ struct BusWay: Hashable, Sendable {
 
     /// The way of `lines`, one for each leg: a leg of `nil` is broken.
     init(lines: [[PlanPoint]?]) {
-        legs = lines.map { line in
-            guard let line, line.count >= 1 else { return Leg(line: [], metres: nil) }
-            return Leg(line: line, metres: Self.metres(of: line))
+        self.init(legs: lines.map { $0.map { ($0, Array(repeating: false, count: max($0.count - 1, 0))) } }, stops: nil)
+    }
+
+    /// The way of `given`, one for each leg with the tunnels of its pieces:
+    /// a leg of `nil` is broken. `stops`: the ends of the legs, when known.
+    init(legs given: [(line: [PlanPoint], tunnels: [Bool])?], stops: [PlanPoint]?) {
+        legs = given.map { leg in
+            guard let leg, leg.line.count >= 1 else { return Leg(line: [], metres: nil, tunnels: []) }
+            return Leg(line: leg.line, metres: Self.metres(of: leg.line), tunnels: leg.tunnels)
         }
         firstBroken = legs.firstIndex { $0.metres == nil }
         let drawn = (legs.lastIndex { $0.metres == nil }.map { $0 + 1 } ?? 0)..<legs.count
-        var joined: [PlanPoint] = [], keep: [Int] = []
+        var joined: [PlanPoint] = [], under: [Bool] = [], keep: [Int] = []
         for leg in legs[drawn] {
             if joined.isEmpty { keep.append(0) }
             joined += joined.isEmpty ? leg.line : Array(leg.line.dropFirst())
+            under += leg.tunnels
             keep.append(joined.count - 1)
         }
-        (points, marks) = Self.rounded(joined, keeping: keep)
+        (points, marks, tunnels) = Self.rounded(joined, keeping: keep, tunnels: under)
+        self.stops = stops ?? (legs.map { $0.line.first } + [legs.last?.line.last]).compactMap { $0 }
     }
 
     /// `line`'s length in whole metres.
@@ -527,16 +667,30 @@ struct BusWay: Hashable, Sendable {
     /// turns where a road turns. Returns the new points and where each of
     /// `keeping` went.
     static func rounded(_ points: [PlanPoint], keeping keep: [Int]) -> (points: [PlanPoint], marks: [Int]) {
-        guard points.count >= 3 else { return (points, keep) }
+        let done = rounded(points, keeping: keep, tunnels: Array(repeating: false, count: max(points.count - 1, 0)))
+        return (done.points, done.marks)
+    }
+
+    /// ``rounded(_:keeping:)``, carrying each piece's tunnel (one for each
+    /// piece of `points`): a corner's curve is in a tunnel when either
+    /// piece it joins is.
+    static func rounded(_ points: [PlanPoint], keeping keep: [Int], tunnels: [Bool]) -> (points: [PlanPoint], marks: [Int], tunnels: [Bool]) {
+        guard points.count >= 3 else { return (points, keep, tunnels) }
         let metre = Double(WorldCoordinate.unitsPerMetre)
-        var out: [PlanPoint] = [points[0]]
+        var out: [PlanPoint] = [points[0]], under: [Bool] = []
         var moved = [Int](repeating: 0, count: points.count)
         let kept = Set(keep)
+        func add(_ point: PlanPoint, tunnel: Bool) {
+            guard point != out.last else { return }
+            out.append(point)
+            under.append(tunnel)
+        }
         for index in 1..<points.count {
             defer { moved[index] = out.count - 1 }
             let here = points[index]
+            let into = tunnels[index - 1]
             guard index < points.count - 1, !kept.contains(index) else {
-                if here != out.last { out.append(here) }
+                add(here, tunnel: into)
                 continue
             }
             let before = points[index - 1], after = points[index + 1]
@@ -547,7 +701,7 @@ struct BusWay: Hashable, Sendable {
             let cosine = inLength > 0 && outLength > 0 ? (inX * outX + inY * outY) / (inLength * outLength) : -1
             let cut = min(cornerRadius, inLength / 2, outLength / 2)
             guard cosine > -0.985, cut >= 1 else {
-                if here != out.last { out.append(here) }
+                add(here, tunnel: into)
                 continue
             }
             func point(_ x: Double, _ y: Double) -> PlanPoint {
@@ -558,39 +712,68 @@ struct BusWay: Hashable, Sendable {
             // way out, the corner its control.
             for t in [0.0, 0.25, 0.5, 0.75, 1.0] {
                 let u = 1 - t
-                let candidate = point(u * u * a.x + t * t * b.x, u * u * a.y + t * t * b.y)
-                if candidate != out.last { out.append(candidate) }
+                add(point(u * u * a.x + t * t * b.x, u * u * a.y + t * t * b.y), tunnel: t == 0 ? into : into || tunnels[index])
             }
         }
-        return (out, keep.map { moved[$0] })
+        return (out, keep.map { moved[$0] }, under)
     }
 }
 
 extension BusRoads {
     /// The point on a bus road nearest `point`, within `reach` metres, of
     /// those `accepting` takes (the stop a tap puts there, decision 424).
-    func place(near point: PlanPoint, within reach: Double, accepting: (PlanPoint) -> Bool = { _ in true }) -> PlanPoint? {
+    ///
+    /// Decision 474: where that point is on a one-way road and the stop's
+    /// leg is known, `leadingTo` (the end its leg goes to: the next stop or
+    /// the station) or `from` (the end whose leg comes to it), the other
+    /// pieces within `reach` are tried too (the other carriageway of a
+    /// divided road, a ramp beside it; ``placesTried`` of them, the nearer
+    /// first), and the stop goes where the leg is shortest, the nearer of
+    /// two as short: on the side its bus goes along.
+    func place(near point: PlanPoint, within reach: Double, accepting: (PlanPoint) -> Bool = { _ in true },
+               leadingTo next: BusEnd? = nil, from previous: BusEnd? = nil) -> PlanPoint? {
         let here = BusRoadNetwork.Point(point)
-        return network(from: here, to: here)
-            .nearest(to: here, within: reach, accepting: { accepting($0.plan) })?.point.plan
+        let roads = network(from: here, to: here)
+        guard let nearest = roads.nearest(to: here, within: reach, accepting: { accepting($0.plan) }) else { return nil }
+        guard roads.isOneway(nearest), next != nil || previous != nil else { return nearest.point.plan }
+        var pins = [nearest.point.plan]
+        for other in roads.places(near: here, within: reach, most: Self.placesTried) where other.segment != nearest.segment {
+            // The piece's point the stop may go on.
+            if let pin = roads.nearest(to: other.point, within: 0.5, accepting: { accepting($0.plan) })?.point.plan, !pins.contains(pin) {
+                pins.append(pin)
+            }
+        }
+        var best: (pin: PlanPoint, metres: Int64)?
+        for pin in pins {
+            let line = if let next { leg(from: BusEnd(pin), to: next) } else { previous.flatMap { leg(from: $0, to: BusEnd(pin)) } }
+            guard let metres = line.map({ BusWay.metres(of: $0.line) }) else { continue }
+            if best.map({ metres < $0.metres }) ?? true { best = (pin, metres) }
+        }
+        return best?.pin ?? nearest.point.plan
     }
+
+    /// How many pieces round a stop on a one-way road are tried.
+    static let placesTried = 6
 
     /// The way of a saved route through `stops` (GameCore's order, cells) to
     /// `station`, or from the first stop to the last with none (a city
     /// route, decision 438): each stop put from its cell's middle on the
     /// nearest bus road (in the cell when one crosses it), the route's
-    /// metres not worked out again. `nil` when a stop has no road near or a
-    /// leg no road joins; the route is then drawn along the road cells.
-    func way(ofSaved stops: [CellPosition], station: PlanPoint?) -> BusWay? {
+    /// metres not worked out again. Decision 474: the stops are put from
+    /// the station's end back, each on the carriageway its leg goes along;
+    /// a stop no road is near stays in its cell's middle, and a leg no road
+    /// joins is broken (``BusWay/firstBroken``), never drawn straight.
+    func way(ofSaved stops: [CellPosition], station: PlanPoint?) -> BusWay {
         var pins: [PlanPoint] = []
-        for cell in stops {
-            guard let pin = place(near: cell.middle, within: BusRoadNetwork.cellReach, accepting: { CellPosition(containing: $0) == cell })
-                    ?? place(near: cell.middle, within: BusRoadNetwork.cellReach)
-            else { return nil }
-            pins.append(pin)
+        var next = station.map { BusEnd($0, isStation: true) }
+        for cell in stops.reversed() {
+            let pin = place(near: cell.middle, within: BusRoadNetwork.cellReach, accepting: { CellPosition(containing: $0) == cell }, leadingTo: next)
+                ?? place(near: cell.middle, within: BusRoadNetwork.cellReach, leadingTo: next)
+                ?? cell.middle
+            pins.insert(pin, at: 0)
+            next = BusEnd(pin)
         }
-        let way = way(stops: pins, station: station)
-        return way.firstBroken == nil ? way : nil
+        return way(stops: pins, station: station)
     }
 
     /// The way through `stops` (GameCore's order) to `station`, a leg for
@@ -601,23 +784,61 @@ extension BusRoads {
     /// ends no road joins is broken (`nil`). With no station (a city route,
     /// decision 438) the way ends at the last stop, a leg fewer.
     func way(stops: [PlanPoint], station: PlanPoint?) -> BusWay {
-        let ends = stops + (station.map { [$0] } ?? [])
-        var lines: [[PlanPoint]?] = []
-        for index in ends.indices.dropLast() {
-            lines.append(leg(from: ends[index], to: ends[index + 1], toStation: station != nil && index == stops.count - 1))
-        }
-        return BusWay(lines: lines)
+        let ends = stops.map { BusEnd($0) } + (station.map { [BusEnd($0, isStation: true)] } ?? [])
+        let legs = zip(ends, ends.dropFirst()).map { leg(from: $0, to: $1) }
+        return BusWay(legs: legs, stops: ends.map(\.point))
     }
 
-    private func leg(from start: PlanPoint, to end: PlanPoint, toStation: Bool) -> [PlanPoint]? {
-        let a = BusRoadNetwork.Point(start), b = BusRoadNetwork.Point(end)
+    /// The way back (decision 474): from `station` (or the last stop with
+    /// none) through the stops in turn to the first, each leg found again,
+    /// as a one-way road takes the bus back another way. Its legs are in
+    /// the order the bus takes them.
+    func wayBack(stops: [PlanPoint], station: PlanPoint?) -> BusWay {
+        let ends = stops.map { BusEnd($0) } + (station.map { [BusEnd($0, isStation: true)] } ?? [])
+        let back = Array(ends.reversed())
+        let legs = zip(back, back.dropFirst()).map { leg(from: $0, to: $1) }
+        return BusWay(legs: legs, stops: back.map(\.point))
+    }
+
+    /// How many pieces near each end of a leg are tried (decision 474): the
+    /// nearest may be a one-way piece no bus road leads into or out of.
+    static let endsTried = 4
+
+    /// The way along the roads from `start` to `end`, the station's end
+    /// over the short way from its road; `nil` when no road joins them.
+    /// Each end is put on its nearest piece, or where no way joins those,
+    /// the next nearest (``endsTried`` of each, the nearer first).
+    private func leg(from start: BusEnd, to end: BusEnd) -> (line: [PlanPoint], tunnels: [Bool])? {
+        let a = BusRoadNetwork.Point(start.point), b = BusRoadNetwork.Point(end.point)
         let roads = network(from: a, to: b)
-        guard let from = roads.nearest(to: a, within: BusRoadNetwork.snapReach),
-              let to = roads.nearest(to: b, within: toStation ? BusRoadNetwork.stationReach : BusRoadNetwork.snapReach),
-              let road = roads.way(from: from, to: to)
-        else { return nil }
-        var line = road.map(\.plan)
-        if toStation, line.last != end { line.append(end) }
-        return line
+        let starts = roads.places(near: a, within: start.isStation ? BusRoadNetwork.stationReach : BusRoadNetwork.snapReach, most: Self.endsTried)
+        let ends = roads.places(near: b, within: end.isStation ? BusRoadNetwork.stationReach : BusRoadNetwork.snapReach, most: Self.endsTried)
+        var tried: [(from: BusRoadNetwork.Place, to: BusRoadNetwork.Place)] = []
+        for (i, from) in starts.enumerated() {
+            for (j, to) in ends.enumerated() where i == 0 || j == 0 { tried.append((from, to)) }
+        }
+        guard let road = tried.lazy.compactMap({ roads.route(from: $0.from, to: $0.to) }).first else { return nil }
+        var line = road.points.map(\.plan), tunnels = road.tunnels
+        if start.isStation, line.first != start.point {
+            line.insert(start.point, at: 0)
+            tunnels.insert(false, at: 0)
+        }
+        if end.isStation, line.last != end.point {
+            line.append(end.point)
+            tunnels.append(false)
+        }
+        return (line, tunnels)
+    }
+}
+
+/// An end of a bus route's leg: a stop, or the station, which is put on a
+/// road from farther away (``BusRoadNetwork/stationReach``).
+struct BusEnd: Hashable, Sendable {
+    let point: PlanPoint
+    let isStation: Bool
+
+    init(_ point: PlanPoint, isStation: Bool = false) {
+        self.point = point
+        self.isStation = isStation
     }
 }
