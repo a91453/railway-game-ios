@@ -385,6 +385,30 @@
       "hash" : "7622291740d112b7",
       "triangles" : 1883
     },
+    "kaohsiung-dm1" : {
+      "hash" : "c884a073b1305a2b",
+      "triangles" : 5790
+    },
+    "kaohsiung-dm1-far" : {
+      "hash" : "c901072501eb589f",
+      "triangles" : 2686
+    },
+    "kaohsiung-dm2" : {
+      "hash" : "c884a073b1305a2b",
+      "triangles" : 5790
+    },
+    "kaohsiung-dm2-far" : {
+      "hash" : "c901072501eb589f",
+      "triangles" : 2686
+    },
+    "kaohsiung-t" : {
+      "hash" : "3b2bd1b30358d963",
+      "triangles" : 2312
+    },
+    "kaohsiung-t-far" : {
+      "hash" : "96d0027eb76a51f",
+      "triangles" : 984
+    },
     "life-bus" : {
       "hash" : "3a6e83a36058bb8d",
       "triangles" : 130
@@ -969,6 +993,30 @@
       "hash" : "b9c7c2cce134ba65",
       "triangles" : 56
     },
+    "light-set-kaohsiung-car" : {
+      "hash" : "bf2f15b7a50a4971",
+      "triangles" : 336
+    },
+    "light-set-kaohsiung-head" : {
+      "hash" : "bf2f15b7a50a4971",
+      "triangles" : 336
+    },
+    "light-set-kaohsiung-tail" : {
+      "hash" : "d4fa491739e53471",
+      "triangles" : 336
+    },
+    "light-set-kaohsiungFar-car" : {
+      "hash" : "d2348ee7e1b95e5",
+      "triangles" : 112
+    },
+    "light-set-kaohsiungFar-head" : {
+      "hash" : "d2348ee7e1b95e5",
+      "triangles" : 112
+    },
+    "light-set-kaohsiungFar-tail" : {
+      "hash" : "8b20f552bf3567e5",
+      "triangles" : 112
+    },
     "light-set-metroC341-car" : {
       "hash" : "68e8e62fb8955961",
       "triangles" : 384
@@ -1316,6 +1364,22 @@
     "light-set-SUMMERFar-tail" : {
       "hash" : "63557037382901ab",
       "triangles" : 384
+    },
+    "light-set-taichungGreen-head" : {
+      "hash" : "dc02d74dcf3acf61",
+      "triangles" : 96
+    },
+    "light-set-taichungGreen-tail" : {
+      "hash" : "a15778a8e4ae9b61",
+      "triangles" : 96
+    },
+    "light-set-taichungGreenFar-head" : {
+      "hash" : "c030858f73a7173d",
+      "triangles" : 72
+    },
+    "light-set-taichungGreenFar-tail" : {
+      "hash" : "86fbb61023c7ef3d",
+      "triangles" : 72
     },
     "light-set-taroko-car" : {
       "hash" : "433516c8d791225",
@@ -2073,6 +2137,30 @@
       "hash" : "fefa5371ab57b1c8",
       "triangles" : 1208
     },
+    "set-kaohsiung-car" : {
+      "hash" : "3b2bd1b30358d963",
+      "triangles" : 2312
+    },
+    "set-kaohsiung-head" : {
+      "hash" : "45262f320071af6d",
+      "triangles" : 5790
+    },
+    "set-kaohsiung-tail" : {
+      "hash" : "edecd2172a2b7c13",
+      "triangles" : 5790
+    },
+    "set-kaohsiungFar-car" : {
+      "hash" : "96d0027eb76a51f",
+      "triangles" : 984
+    },
+    "set-kaohsiungFar-head" : {
+      "hash" : "5233d2452d6cb2e",
+      "triangles" : 2686
+    },
+    "set-kaohsiungFar-tail" : {
+      "hash" : "c880afd63b0a1f76",
+      "triangles" : 2686
+    },
     "set-metroC341-car" : {
       "hash" : "f29076fc0b214434",
       "triangles" : 3306
@@ -2481,6 +2569,22 @@
       "hash" : "be29b5ea75e0c329",
       "triangles" : 4000
     },
+    "set-taichungGreen-head" : {
+      "hash" : "6233fc09ae3711ed",
+      "triangles" : 4804
+    },
+    "set-taichungGreen-tail" : {
+      "hash" : "65402e169cd0132f",
+      "triangles" : 4804
+    },
+    "set-taichungGreenFar-head" : {
+      "hash" : "60e14c7b697d4a53",
+      "triangles" : 2208
+    },
+    "set-taichungGreenFar-tail" : {
+      "hash" : "97949a087872292a",
+      "triangles" : 2208
+    },
     "set-taroko-car" : {
       "hash" : "3a30e36fba09fb86",
       "triangles" : 1408
@@ -2804,30 +2908,6 @@
     "walk-tens-9" : {
       "hash" : "e8db78b1b62aa73c",
       "triangles" : 12
-    },
-    "kaohsiung-dm1" : {
-      "hash" : "c884a073b1305a2b",
-      "triangles" : 5790
-    },
-    "kaohsiung-dm1-far" : {
-      "hash" : "c901072501eb589f",
-      "triangles" : 2686
-    },
-    "kaohsiung-dm2" : {
-      "hash" : "c884a073b1305a2b",
-      "triangles" : 5790
-    },
-    "kaohsiung-dm2-far" : {
-      "hash" : "c901072501eb589f",
-      "triangles" : 2686
-    },
-    "kaohsiung-t" : {
-      "hash" : "3b2bd1b30358d963",
-      "triangles" : 2312
-    },
-    "kaohsiung-t-far" : {
-      "hash" : "96d0027eb76a51f",
-      "triangles" : 984
     }
   }
 }
