@@ -114,6 +114,14 @@ public struct RealBranchLine: Hashable, Sendable {
         language.text(english, chinese)
     }
 
+    /// Decision 400: the runs of the light rail or metro `id`, from where
+    /// it parts from `after` when that is already bought; decision 493,
+    /// the whole line's where `extract_metro_runs.py` lists none from there
+    /// (the Green Mountain Line after the Blue Coast Line, laid beside it).
+    static func metroRuns(of id: String, after: String?, in railways: RealRailways) -> RealLineRuns? {
+        after.flatMap { railways.metroRuns["\(id) after \($0)"] } ?? railways.metroRuns[id]
+    }
+
     /// The lines on sale (decision 315).
     static let names: [String: (english: String, chinese: String)] = [
         "PINGXI": ("Pingxi Line", "平溪線"),
@@ -427,7 +435,7 @@ extension GameSession {
         for rail in RealBranchLine.urbanLines {
             let id = "\(RealBranchLine.dataSystem(of: rail.system)):\(rail.network)"
             let after = rail.shares.flatMap { world.acquisition(of: $0) == nil ? nil : $0 }
-            guard let runs = railways.metroRuns[after.map { "\(id) after \($0)" } ?? id] else {
+            guard let runs = RealBranchLine.metroRuns(of: id, after: after, in: railways) else {
                 if world.acquisition(of: id) != nil { sale.bought = true }
                 continue
             }
@@ -559,9 +567,8 @@ extension GameSession {
                 "這條線經過的地和你的地不相連。先用「擴建地圖」買到這條線旁邊，再收購。"
             )
         }
-        let runsKey = line.isUrban ? line.after.map { "\(line.id) after \($0)" } ?? line.id : line.network
         guard let railways, let frame = RealWorldFrame(world: world),
-              let runs = line.isUrban ? railways.metroRuns[runsKey] : railways.branchRuns[runsKey],
+              let runs = line.isUrban ? RealBranchLine.metroRuns(of: line.id, after: line.after, in: railways) : railways.branchRuns[line.network],
               let traces = realRailwayTraces else {
             return refused("This map has no real railway to buy.", "這張地圖沒有可以收購的真實鐵路。")
         }
@@ -627,23 +634,50 @@ extension GameSession {
         // whose loops and run-on lie along the other's track: it is laid
         // beside it there, on the side away from where the other turns
         // off, and back onto its own line past its first stop's loops.
-        func beside(_ laid: WorldPath, from stop: WorldVector) -> WorldPath {
+        // Decision 493: one bought whole after it (the Green Mountain Line
+        // after the Blue Coast Line) is laid beside it from its first stop
+        // to where they part.
+        let other = line.after.flatMap { RealBranchLine.metroRuns(of: $0, after: nil, in: railways)?.stops } ?? []
+        let parts = runs.stops.indices.dropLast().first { !other.contains(runs.stops[$0 + 1]) } ?? 0
+        func beside(_ laid: WorldPath, to stop: WorldVector) -> WorldPath {
             let first = laid.nearest(stop).along, full = first + RealLineAcquisition.runOn, blend = 150 * RealLineAcquisition.metre
-            var votes = 0.0
-            for node in world.network.nodes {
-                let point = WorldVector(node.position.plan)
-                guard (point - stop).length < full + blend else { continue }
-                let near = laid.nearest(point)
-                guard near.along < full + blend, near.away > 10 * RealLineAcquisition.metre, near.away < RealLineAcquisition.stationReach else { continue }
-                votes += (point - laid.point(at: near.along)).dot(laid.tangent(at: near.along).normal)
+            func vote(_ points: [PlanPoint]) -> Double {
+                points.reduce(0.0) { votes, plan in
+                    let point = WorldVector(plan)
+                    guard (point - stop).length < (parts == 0 ? full : RealLineAcquisition.runOn + RealLineAcquisition.stationReach) + blend else { return votes }
+                    let near = laid.nearest(point)
+                    guard parts == 0 || near.along > first - RealLineAcquisition.runOn, near.along < full + blend,
+                          near.away > 10 * RealLineAcquisition.metre, near.away < RealLineAcquisition.stationReach else { return votes }
+                    return votes + (point - laid.point(at: near.along)).dot(laid.tangent(at: near.along).normal)
+                }
+            }
+            var votes = vote(world.network.nodes.map(\.position.plan))
+            // Decision 493: where no node is near enough (the Blue Coast
+            // Line's lie far apart round Binhai Shalun), points along the
+            // track between them.
+            if votes == 0 {
+                votes = vote(world.network.edges.flatMap { edge -> [PlanPoint] in
+                    guard let from = world.network.node(edge.from), let to = world.network.node(edge.to),
+                          let geometry = TrackGeometry(from: from.position, to: to.position, curve: edge.curve) else { return [] }
+                    return NetworkBuilding.surveyedPoints(of: geometry)
+                })
             }
             let side = votes > 0 ? -1.0 : 1.0
-            return WorldPath(zip(laid.points, laid.distances).map { point, distance in
+            // Decision 493: along a whole shared stretch, each point moved
+            // square to the way over 50 m either side of it, so a tight bend
+            // (Binhai Shalun's) does not fold the track laid 30 m inside it.
+            let across = 50 * RealLineAcquisition.metre
+            func normal(at distance: Double) -> WorldVector {
+                guard parts > 0 else { return laid.tangent(at: distance).normal }
+                return (laid.point(at: min(distance + across, laid.length)) - laid.point(at: max(distance - across, 0))).unit.normal
+            }
+            let moved = WorldPath(zip(laid.points, laid.distances).map { point, distance in
                 let t = min(max((distance - full) / blend, 0), 1), share = 1 - t * t * (3 - 2 * t)
-                return point + laid.tangent(at: distance).normal * (side * RealLineAcquisition.besideOffset * share)
+                return point + normal(at: distance) * (side * RealLineAcquisition.besideOffset * share)
             })
+            return parts > 0 ? moved.smoothed() : moved
         }
-        let path = line.after == nil ? laid : beside(laid, from: points[0])
+        let path = line.after == nil ? laid : beside(laid, to: points[parts])
         let along = points.map { path.nearest($0) }
         guard along.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(along, along.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
             return refused("The real line's stations are not along its track here.", "真實車站不在這段鐵路上。")

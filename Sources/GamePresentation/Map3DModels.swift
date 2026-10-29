@@ -164,6 +164,10 @@ public struct Map3DModelPack: Sendable {
         }
         for far in [false, true] { models += Map3DKaohsiung.Unit.allCases.map { Map3DKaohsiung.model($0, far: far) } }
         for far in [false, true] { models += Map3DE200MingriStyle.Role.allCases.map { Map3DE200MingriStyle.model($0, far: far) } }
+        for far in [false, true] {
+            models += Map3DKaohsiungCAF.Unit.allCases.map { Map3DKaohsiungCAF.model($0, far: far) }
+            models += Map3DKaohsiungCitadis.Unit.allCases.map { Map3DKaohsiungCitadis.model($0, far: far) }
+        }
         self.init(recipes: models, baked: baked)
     }
 
