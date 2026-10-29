@@ -908,6 +908,7 @@ extension GameWorld {
         let next = (hour + 1) % 24
         let into = Int64(minute % 60)
         let plan = release.plan
+        let unopened = linesNotYetRunning(at: now)
         for index in plan.flows.indices {
             let share = (60 - into) * plan.hourly[24 * index + hour] + into * plan.hourly[24 * index + next]
             let total = release.remainders[index] + share
@@ -917,15 +918,34 @@ extension GameWorld {
                 let flow = plan.flows[index]
                 guard let record = passengers.firstIndex(where: { $0.station == flow.origin }) else { continue }
                 if flow.choices.isEmpty {
+                    guard !unopened.contains(flow.trip.line) else { continue }
                     passengers[record].release(count, to: flow.destination, along: flow.trip, at: now)
                 } else {
                     let shares = allocateRouteRelease(count, from: flow.origin, flow: flow)
-                    for (choice, share) in zip(flow.choices, shares) where share > 0 {
+                    for (choice, share) in zip(flow.choices, shares) where share > 0
+                        && (unopened.isEmpty || !choice.journey.legs.contains(where: { unopened.contains($0.line) })) {
                         passengers[record].release(share, along: choice.journey, at: now)
                     }
                 }
             }
         }
+    }
+
+    /// The lines bought today that run from tomorrow's first train
+    /// (``LineAcquisition/firstServiceDay(at:)``): every run of theirs is
+    /// marked done through today. Nobody sets out to ride one before it
+    /// runs, or a day's riders would wait at its stations for the next
+    /// morning (decision 490). Usually empty.
+    func linesNotYetRunning(at now: GameTime) -> Set<LineID> {
+        guard !acquisitions.isEmpty else { return [] }
+        let today = GameTime.floorDivide(now.seconds, GameTime.secondsPerDay)
+        var unopened: Set<LineID> = []
+        for acquisition in acquisitions where acquisition.day == today {
+            guard let id = acquisition.line, let line = line(id: id), !line.runDays.isEmpty,
+                  line.runDays.allSatisfy({ $0 == today }) else { continue }
+            unopened.insert(id)
+        }
+        return unopened
     }
 
     /// Weighted fair allocation with a saved fractional balance. It assigns
