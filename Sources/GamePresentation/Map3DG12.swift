@@ -62,6 +62,16 @@ extension StationKitBuilder {
         g12Prism(a,b,color)
     }
 
+    /// Raised end casting around the two real, vertically stacked lamps.
+    private mutating func g12LampPod(_ end: Float,_ x: Float,_ bottom: Float,_ top: Float) {
+        let outline:[(Float,Float)]=[(bottom,-0.12),(bottom,0.12),
+            (bottom+0.07,0.20),(top-0.07,0.20),(top,0.12),(top,-0.12),
+            (top-0.07,-0.20),(bottom+0.07,-0.20)]
+        let back=outline.map { Map3DPoint(x,$0.0,$0.1) }
+        let front=outline.map { Map3DPoint(x+end*0.047,$0.0,$0.1) }
+        g12Prism(back,front,Map3DColor.shaded(Map3DG12.orange,0.82))
+    }
+
     /// Rounded number board with an original, tiny geometry-only R21 reading.
     /// The registration is a vehicle number, not an operator logo or photo font.
     private mutating func g12NumberBoard(_ end: Float,_ x: Float,_ y: Float,_ z: Float,_ far: Bool) {
@@ -246,18 +256,26 @@ extension StationKitBuilder {
         // Dark exhaust stack and roof intake sit on the long hood.
         box(1.82,3.49,0,0.42,0.52,0.14,dark)
         if !far { box(3.48,3.47,0,0.90,0.62,0.13,metal) }
-        // Long-end central twin white lamps; upper red markers left and right.
+        // Long-end central twin lamps sit in one end casting; the corner
+        // markers are small dark sockets with red glass, not solid red disks.
+        g12LampPod(1,6.727,2.81,3.31)
         for y:Float in [2.96,3.18] {
-            civicTube(Map3DPoint(6.732,y,0),Map3DPoint(6.755,y,0),radius:0.143,color:metal,sides:far ? 8:12)
-            civicTube(Map3DPoint(6.74,y,0),Map3DPoint(6.80,y,0),radius:0.103,color:Map3DG12.lamp,sides:far ? 8:12)
+            civicTube(Map3DPoint(6.776,y,0),Map3DPoint(6.807,y,0),radius:0.143,color:metal,sides:far ? 8:12)
+            civicTube(Map3DPoint(6.809,y,0),Map3DPoint(6.860,y,0),radius:0.103,color:Map3DG12.lamp,sides:far ? 8:12)
         }
         for side:Float in [-1,1] {
             g12NumberBoard(1,6.72,3.09,side*0.64,far)
-            civicTube(Map3DPoint(6.74,3.31,side*0.81),Map3DPoint(6.80,3.31,side*0.81),radius:0.087,color:Map3DColor.rgb(0xA24E44),sides:8)
+            civicTube(Map3DPoint(6.74,3.31,side*0.81),Map3DPoint(6.80,3.31,side*0.81),radius:0.103,color:dark,sides:8)
+            civicTube(Map3DPoint(6.803,3.31,side*0.81),Map3DPoint(6.83,3.31,side*0.81),radius:0.051,color:Map3DColor.rgb(0x9A4A3E),sides:8)
         }
         if !far {
             beam(Map3DPoint(6.758,2.73,-0.99),Map3DPoint(6.758,2.73,0.99),
                  0.014,Map3DColor.shaded(orange,0.72))
+            // The R21 frontal photograph has a small electrical warning
+            // plate below the lamps. It is equipment with a dark rim, not
+            // a photographed sign or an operator mark.
+            box(6.768,2.42,0,0.04,0.17,0.23,dark)
+            box(6.795,2.44,0,0.018,0.13,0.19,Map3DG12.hazard)
             for y:Float in [1.62,1.97,2.27] {
                 beam(Map3DPoint(6.755,y,-0.32),Map3DPoint(6.755,y,0.32),0.028,rail)
                 for side:Float in [-1,1] {
@@ -273,13 +291,15 @@ extension StationKitBuilder {
         // R21 short-end photographs also show vertically stacked centre lamps,
         // number boards, corner markers, and three grab bars. Its hood height
         // and white-band transition remain distinct from the long end.
+        g12LampPod(-1,-6.684,2.75,3.25)
         for y:Float in [2.90,3.12] {
-            civicTube(Map3DPoint(-6.655,y,0),Map3DPoint(-6.68,y,0),radius:0.143,color:metal,sides:far ? 8:12)
-            civicTube(Map3DPoint(-6.67,y,0),Map3DPoint(-6.73,y,0),radius:0.103,color:Map3DG12.lamp,sides:far ? 8:12)
+            civicTube(Map3DPoint(-6.735,y,0),Map3DPoint(-6.764,y,0),radius:0.143,color:metal,sides:far ? 8:12)
+            civicTube(Map3DPoint(-6.766,y,0),Map3DPoint(-6.816,y,0),radius:0.103,color:Map3DG12.lamp,sides:far ? 8:12)
         }
         for side:Float in [-1,1] {
             g12NumberBoard(-1,-6.64,3.03,side*0.63,far)
-            civicTube(Map3DPoint(-6.67,3.26,side*0.80),Map3DPoint(-6.73,3.26,side*0.80),radius:0.087,color:Map3DColor.rgb(0xA24E44),sides:8)
+            civicTube(Map3DPoint(-6.67,3.26,side*0.80),Map3DPoint(-6.73,3.26,side*0.80),radius:0.103,color:dark,sides:8)
+            civicTube(Map3DPoint(-6.733,3.26,side*0.80),Map3DPoint(-6.763,3.26,side*0.80),radius:0.051,color:Map3DColor.rgb(0x9A4A3E),sides:8)
         }
         if !far {
             beam(Map3DPoint(-6.69,2.69,-0.97),Map3DPoint(-6.69,2.69,0.97),
@@ -327,7 +347,7 @@ extension StationKitBuilder {
                 }
             }
             box(end*6.89,0.68,0,0.38,0.43,0.27,metal)
-            box(end*6.96,0.64,0,0.30,0.54,0.22,dark)
+            box(end*6.96,0.64,0,0.30,0.54,0.22,Map3DColor.shaded(metal,0.72))
             // Both photographed ends carry a broad dark plow below the pilot.
             let plowBack=[Map3DPoint(end*6.92,0.19,-0.87),Map3DPoint(end*6.92,0.19,0.87),
                           Map3DPoint(end*6.92,0.53,1.04),Map3DPoint(end*6.92,0.53,-1.04)]

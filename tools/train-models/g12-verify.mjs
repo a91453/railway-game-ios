@@ -20,10 +20,10 @@ function checkWheelContact(shift=0) {
 }
 function checkLamps(offset=0) {
   for (const z of [2.96,3.18]) {
-    assert(match(6.80+offset,z).length, `long hood centre lamp at ${z} absent`);
+    assert(match(6.86+offset,z).length, `long hood centre lamp at ${z} absent`);
   }
   for (const z of [2.90,3.12]) {
-    assert(match(-6.73-offset,z).length, `short hood centre lamp at ${z} absent`);
+    assert(match(-6.816-offset,z).length, `short hood centre lamp at ${z} absent`);
   }
 }
 function checkGlass(shift=0) {
@@ -68,7 +68,13 @@ function checkFrontBandClearance(limit=1.22) {
     v.position[2]>limit && v.position[2]<1.40 && v.color[0]<90),
   'dark underframe occludes front white band');
 }
-checkWheelContact();checkLamps();checkGlass();checkDrawGear();checkShortEndV();checkFront();checkFrontBandClearance();
+function checkLongEndWarningPlate(shift=0) {
+  assert(vertices.some(v => Math.abs(v.position[0]-6.804-shift)<0.012 &&
+    Math.abs(v.position[1])<0.08 && v.position[2]>2.43 && v.position[2]<2.64 &&
+    v.color[1]>110 && v.color[2]<90),
+  'long-end warning plate absent from front skin');
+}
+checkWheelContact();checkLamps();checkGlass();checkDrawGear();checkShortEndV();checkFront();checkFrontBandClearance();checkLongEndWarningPlate();
 assert.throws(() => checkWheelContact(0.10),/misses rail/);
 assert.throws(() => checkLamps(0.20),/lamp/);
 assert.throws(() => checkGlass(0.20),/glazing/);
@@ -77,4 +83,5 @@ assert.throws(() => checkShortEndV(0.25),/white V/);
 assert.throws(() => checkFront(0.25),/white band/);
 assert.throws(() => checkFront(0,0.25),/front handrail/);
 assert.throws(() => checkFrontBandClearance(1.18),/occludes front white band/);
-console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears, short-end V, low long-end band, yellow pilot V, supported front rail and front-band clearance; eight shifted counterexamples rejected');
+assert.throws(() => checkLongEndWarningPlate(0.20),/warning plate/);
+console.log('VERIFIED R21 six wheel contacts, both-end lamp pod heights, exposed cab glass, two supported draw gears, short-end V, low long-end band, yellow pilot V, supported front rail, front-band clearance and warning plate; nine shifted counterexamples rejected');
