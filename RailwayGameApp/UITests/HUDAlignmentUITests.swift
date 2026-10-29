@@ -95,11 +95,18 @@ final class HUDAlignmentUITests: XCTestCase {
                 XCTFail("\(way): no station on the map")
                 continue
             }
-            // A hold selects the station even with a train over it.
-            app.coordinate(withNormalizedOffset: .zero)
+            // A hold selects the station even with a train over it. Held
+            // again when the panel has not opened: on main 4c2f1b3 (run
+            // 40865620118) the app's trace shows the hold's touch cancelled
+            // 4 ms after it began, while the demo was still drawing its
+            // first frames (a 1.2 s gap), and nothing was selected. A second
+            // hold on the selected station keeps it selected.
+            let operations = element("station.operations")
+            let hold = app.coordinate(withNormalizedOffset: .zero)
                 .withOffset(CGVector(dx: point.x - app.frame.minX, dy: point.y - app.frame.minY))
-                .press(forDuration: 1)
-            XCTAssertTrue(element("station.operations").appears(within: 10), "\(way): the station's panel opens")
+            hold.press(forDuration: 1)
+            if !operations.appears(within: 5) { hold.press(forDuration: 1) }
+            XCTAssertTrue(operations.appears(within: 10), "\(way): the station's panel opens")
             checkPanel("\(way) station panel", lines)
         }
     }

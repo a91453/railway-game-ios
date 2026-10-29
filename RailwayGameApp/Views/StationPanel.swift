@@ -273,6 +273,16 @@ struct StationPanel: View {
         Task { @MainActor in
             await Task.yield()
             withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(group, anchor: .top) }
+            // The form places the rows it has not drawn yet by an estimate,
+            // so the first scroll to a group far down, as the panel opens,
+            // stopped short: the Freight heading in the middle of the
+            // panel and its materials row below it, off screen, for good
+            // (full lane runs 40842224823, 40865620118 and 40866617267,
+            // `MapMarkTapUITests`; the last run's recording shows it).
+            // Once that scroll has drawn the rows on the way, a second one
+            // lands on the heading; one already there does not move.
+            try? await Task.sleep(for: .seconds(MotionRule.change.seconds))
+            withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(group, anchor: .top) }
         }
     }
 
