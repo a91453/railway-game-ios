@@ -54,18 +54,24 @@ private struct Citadis305Recipe {
             }
             regions.append((KLRTGeometry.ellipse(0,2.96,0.032,0.043,sides:8),Map3DTrainStyle.headlamp))
         }
-        if motor { regions.append(([UV(0.12,1.17),UV(0.15,1.15),UV(0.65,1.94),UV(0.62,1.96)],black)) }
+        if motor && !far { regions.append(([UV(0.12,1.17),UV(0.15,1.15),UV(0.65,1.94),UV(0.62,1.96)],black)) }
         let us: [Float] = far ? [-1,0,1] : [-1,-0.88,-0.74,-0.47,0,0.47,0.74,0.88,1]
-        for j in 0..<(hs.count-1) {for i in 0..<(us.count-1) {
-            g.surface(rect(us[i],us[i+1],hs[j],hs[j+1]),map:profile.front,inward:Map3DPoint(-0.024,0,0),base:motor ? white:black,regions:regions,backing:white)
-        }}
+        if far && !motor {
+            g.slab(hs.enumerated().map { i,h in Map3DPoint(half,h,-widths[i]) } + hs.enumerated().reversed().map { i,h in Map3DPoint(half,h,widths[i]) },inward:Map3DPoint(-0.024,0,0),color:black,backing:white)
+        } else {
+            for j in 0..<(hs.count-1) {for i in 0..<(us.count-1) {
+                // Constant-width bands are exactly coplanar at this LOD;
+                // avoid splitting their identical plane into extra prisms.
+                g.surface(rect(us[i],us[i+1],hs[j],hs[j+1]),map:profile.front,inward:Map3DPoint(-0.024,0,0),base:motor ? white:black,regions:regions,backing:white,planar:far && widths[j] == widths[j+1])
+            }}
+        }
         g.slab(hs.enumerated().map { i,h in Map3DPoint(-half,h,-widths[i]) } + hs.enumerated().reversed().map { i,h in Map3DPoint(-half,h,widths[i]) },inward:Map3DPoint(0.024,0,0),color:black,backing:white)
         for s: Float in [-1,1] {
             var sideRegions: [([UV],UInt32)] = []
             // Alstom's lower green diagonal and broad separate white panels.
             sideRegions.append(([UV(-half,0.20),UV(half,0.20),UV(half,0.36),UV(-half+1.20,1.02),UV(-half,1.02)],green))
             sideRegions.append(([UV(-half,2.87),UV(-half+0.76,2.87),UV(-half+1.22,3.20),UV(-half,3.20)],green))
-            if !far { sideRegions.append((rect(-half+0.12,motor ? 0.94:half-0.12,0.98,2.80),black)) }
+            sideRegions.append((rect(-half+0.12,motor ? 0.94:half-0.12,0.98,2.80),black))
             let windows: [(Float,Float)] = motor ? [(-2.68,1.24),(-1.27,1.25)] : sc ? [(-1.85,1.52),(1.86,1.47)] : [(-0.85,1.38),(0.78,1.35)]
             for (x,w) in windows {
                 if !far { sideRegions.append((rect(x-w/2-0.020,x+w/2+0.020,0.99,2.79),black)) }

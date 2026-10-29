@@ -65,3 +65,21 @@ Curate at most20 transparent PNGs per fleet, plus one public combined overview.
 Use common `deliver.py` and `browser-check.mjs DELIVERED --report-dir SCRATCH`,
 then the assets repository's latest `asset_guard.py` on the staged tree and HEAD.
 Do not copy all rendered PNGs, create ZIP/history, or deploy a website.
+
+Far livery is checked on real inter-window output vertices: the post stays
+opaque and dark at both LODs, while each pane remains separate. Actual white
+post and continuous-glass-strip mutations are rejected. Far flat internal
+module caps are simplified without moving their perimeter; distant wipers
+are omitted to keep every far role strictly under half the near budget.
+
+For the final same-round correction sheet, pass the real earlier producer's
+fixed frames and SHA to `curate.py` (still20 private PNGs, not another round):
+
+```sh
+python3 tools/kaohsiung-light-rail/curate.py RUN FIXED REPO PRODUCER PRIOR_FIXED 80b58f6ec28b0846f1157e4502c011a2b22e3b33
+```
+
+The supplied prior frames are the already verified same-camera/metre/light
+outputs of that actual same-PR intermediate producer (assets ca6a8bc1), not
+an accepted prior delivery. Both models remain first deliveries; preserve
+this distinction in metadata and user appearance states.

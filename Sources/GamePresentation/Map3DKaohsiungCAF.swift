@@ -59,11 +59,17 @@ private struct CAFUrbosRecipe {
             }
             frontRegions.append((KLRTGeometry.ellipse(0,3.02,0.027,0.035,sides:8),Map3DTrainStyle.headlamp))
         }
-        if cab { frontRegions.append(([UV(-0.03,1.27),UV(0.0,1.24),UV(0.49,1.78),UV(0.46,1.81)],ink)) }
+        if cab && !far { frontRegions.append(([UV(-0.03,1.27),UV(0.0,1.24),UV(0.49,1.78),UV(0.46,1.81)],ink)) }
         let us: [Float] = far ? [-1,0,1] : [-1,-0.86,-0.70,-0.44,0,0.44,0.70,0.86,1]
-        for j in 0..<(hs.count-1) {
-            for i in 0..<(us.count-1) {
-                g.surface(rect(us[i],us[i+1],hs[j],hs[j+1]),map:profile.front,inward:Map3DPoint(-0.025,0,0),base:cab ? white:ink,regions:frontRegions,backing:white)
+        if far && !cab {
+            // A flat opaque module end needs one closed cap, not a grid of
+            // identical tiny prisms. Preserve the exact perimeter in far LOD.
+            g.slab(hs.enumerated().map { i,h in Map3DPoint(half,h,-widths[i]) } + hs.enumerated().reversed().map { i,h in Map3DPoint(half,h,widths[i]) },inward:Map3DPoint(-0.025,0,0),color:ink,backing:white)
+        } else {
+            for j in 0..<(hs.count-1) {
+                for i in 0..<(us.count-1) {
+                    g.surface(rect(us[i],us[i+1],hs[j],hs[j+1]),map:profile.front,inward:Map3DPoint(-0.025,0,0),base:cab ? white:ink,regions:frontRegions,backing:white)
+                }
             }
         }
         // Back cap is a dark structural diaphragm, fully covered by the bellows in assembly.
@@ -75,7 +81,9 @@ private struct CAFUrbosRecipe {
             regions.append((rect(-half,half,0.18,0.32),green))
             regions.append(([UV(-half,0.18),UV(-half+1.90,0.18),UV(-half,1.05)],green))
             regions.append(([UV(-half,2.84),UV(-half+0.85,2.84),UV(-half+1.75,3.15),UV(-half,3.15)],green))
-            if !far { regions.append((rect(-half+0.12,cab ? 0.88:half-0.12,1.045,2.745),ink)) }
+            // Keep the real dark inter-window body field at both distances;
+            // each glass pane below remains separate, rather than one strip.
+            regions.append((rect(-half+0.12,cab ? 0.88:half-0.12,1.045,2.745),ink))
             if cab {
                 regions.append((KLRTGeometry.ellipse(2.36,1.80,1.78,1.61,sides:far ? 12:16),green))
                 regions.append((KLRTGeometry.ellipse(2.67,1.85,1.43,1.28,sides:far ? 12:16),white))

@@ -7,10 +7,26 @@ def read(p):
  b=p.read_bytes();n,size=struct.unpack_from('<II',b,8);o=16+(size+3)//4*4
  return np.array([[struct.unpack_from('<fff',b,o+i*52+4+j*16) for j in range(3)] for i in range(n)]),np.array([struct.unpack_from('<I',b,o+i*52)[0] for i in range(n)])
 
-def ray(t,o,d):
+def ray(t,o,d,indices=False):
  e=t[:,1]-t[:,0];v=t[:,2]-t[:,0];h=np.cross(np.broadcast_to(d,v.shape),v);a=np.sum(e*h,axis=1);valid=abs(a)>1e-10
  inv=np.divide(1,a,out=np.zeros_like(a),where=valid);s=o-t[:,0];u=np.sum(s*h,axis=1)*inv;q=np.cross(s,e);w=np.sum(q*d,axis=1)*inv;dist=np.sum(v*q,axis=1)*inv
- return dist[valid&(u>=-1e-7)&(w>=-1e-7)&(u+w<=1.0000001)&(dist>1e-6)]
+ mask=valid&(u>=-1e-7)&(w>=-1e-7)&(u+w<=1.0000001)&(dist>1e-6)
+ return (dist[mask],np.flatnonzero(mask)) if indices else dist[mask]
+
+def colors(p):
+ b=p.read_bytes();n,size=struct.unpack_from('<II',b,8);o=16+(size+3)//4*4
+ return np.array([struct.unpack_from('<I',b,o+i*52+16)[0] for i in range(n)],dtype=np.uint32)
+
+def window_post(t,f,c,fleet,role):
+ # The same actual inter-window post at both LODs. It must remain a dark
+ # opaque frame, not turn into white paint or one continuous glass strip.
+ x=(-1.95 if fleet=='caf' else -1.98) if role in ['c1','c2','m1','m2'] else .85 if role in ['s2','sc2'] else -.85 if role in ['s1','sc1'] else 0
+ ds,ids=ray(t,np.array([x,1.60,2.0]),np.array([0.,-1.,0.]),indices=True)
+ assert len(ds) and min(ds)<.285,'missing inter-window frame'
+ hit=ids[np.argmin(ds)];assert f[hit]&2==0,'glass strip swallowed the window post'
+ rgb=[int(c[hit])>>shift&255 for shift in [0,8,16]]
+ assert max(rgb)<123,'inter-window frame became white / LOD livery jumped'
+ return hit
 
 def glass(t,f):
  # Backing may be the adjoining frame closer than the nominal 24/25mm shell
@@ -98,6 +114,9 @@ for r in m['models']:
   rows.append({'id':r['id'],'five_units_order_orientation_actual_joints_common_rail':True,'wrong_order_rotation_and_100mm_displacement_rejected':True});continue
  t,f=read(root/r['native']);role=r['id'].split('-')[2]
  ids,n,c=glass(t,f);wheels(t,fleet,role);eq=equipment(t,fleet,role)
+ rgb=colors(root/r['native']);post=window_post(t,f,rgb,fleet,role)
+ bad=rgb.copy();bad[post]=0xFFFFFFFF;rejected(lambda:window_post(t,f,bad,fleet,role))
+ badflags=f.copy();badflags[post]|=2;rejected(lambda:window_post(t,badflags,rgb,fleet,role))
  # Actual window faces in the delivered output. White inner support stays put.
  pane=ids[(n[ids,1]>.95)&(c[ids,0]<0)]
  assert len(pane)>0
@@ -109,7 +128,7 @@ for r in m['models']:
   broken=t.copy();broken[sel,:,2]+=.035;rejected(lambda:wheels(broken,fleet,role))
  broken=t.copy();broken[eq,:,2]+=.08;rejected(lambda:equipment(broken,fleet,role))
  broken=t.copy();broken[eq,:,0]+=.15;rejected(lambda:equipment(broken,fleet,role))
- rows.append({'id':r['id'],'glass_visibility_backing':True,'actual_glass_faces_buried_and_floated_80mm_rejected':True,'wheel_or_suspended_contract':True,'roof_contact_80mm_lift_and_150mm_position_jump_rejected':True})
+ rows.append({'id':r['id'],'glass_visibility_backing':True,'dark_opaque_window_post_preserved_both_LODs':True,'actual_white_frame_color_and_continuous_glass_strip_mutations_rejected':True,'actual_glass_faces_buried_and_floated_80mm_rejected':True,'wheel_or_suspended_contract':True,'roof_contact_80mm_lift_and_150mm_position_jump_rejected':True})
 byid={r['id']:r for r in m['models']}
 # Sample the actual near skin's shoulder perimeter. Sealed individual patch
 # solids alone cannot detect daylight gaps between front and side shells.

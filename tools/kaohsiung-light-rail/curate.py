@@ -3,6 +3,9 @@ import json,sys
 from pathlib import Path
 from PIL import Image,ImageDraw,ImageFont
 run,fixed,repo=map(Path,sys.argv[1:4]);producer=sys.argv[4]
+prior=Path(sys.argv[5]) if len(sys.argv)>5 else None
+prior_producer=sys.argv[6] if prior else None
+if prior: assert len(prior_producer)==40
 font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',19)
 small=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',15)
 views=['front','left','top','isometric']
@@ -40,10 +43,15 @@ for fleet,units in roles.items():
    add(material+suffix,f'{fleet.upper()} | {material} | '+('FAR' if far else 'NEAR'),cells,columns=4,width=2200,cell_h=220)
  add('formation-clay-silhouette',fleet.upper()+' | complete formations | clay / silhouette',[(('FAR' if far else 'NEAR')+' '+mat+' '+v,shot(f'klrt-{fleet}-formation'+('-far' if far else ''),mat,v)) for mat in ['clay','silhouette'] for far in [False,True] for v in views],columns=4,width=2200,cell_h=220)
  add('two-fleets-same-metres','CAF 34.166m / Citadis 33.400m | identical metre frames',[(f.upper()+' '+v,shot(f'klrt-{f}-formation','color',v)) for f in roles for v in views],columns=2,cell_h=280)
- add('existing-style-comparison','Protected main assets (OTHER models) / new studies | NO predecessor',[(id+' '+v,shot(id,'color',v)) for id in ['lrt-five-formation','green-tram-formation',f'klrt-{fleet}-formation'] for v in views],columns=4,width=2200,cell_h=240)
+ comparison=[(id+' '+v,shot(id,'color',v)) for id in ['lrt-five-formation','green-tram-formation',f'klrt-{fleet}-formation'] for v in views]
+ if prior:
+  id=f'klrt-{fleet}-formation-far'
+  comparison += [('same-round '+prior_producer[:8]+' FAR '+v,prior/f'{id}-color-{v}.png') for v in views]
+  comparison += [('final FAR '+v,shot(id,'color',v)) for v in views]
+ add('existing-style-comparison','OTHER protected models / first delivery / same-round FAR correction',comparison,columns=4,width=2200,cell_h=240)
  add('game-scale','Both fleets at a common small display scale | static studies',[(f.upper()+' '+('FAR' if far else 'NEAR'),shot(f'klrt-{f}-formation'+('-far' if far else ''),'color',v)) for v in ['left','isometric'] for far in [False,True] for f in roles],columns=2,width=1400,cell_h=150)
  assert len(selected)==20
- source=json.loads((repo/'docs/art/kaohsiung-light-rail/sources.json').read_text());source.update(fleet=fleet,producer=producer,previous_producer=None,first_delivery=True)
+ source=json.loads((repo/'docs/art/kaohsiung-light-rail/sources.json').read_text());source.update(fleet=fleet,producer=producer,previous_producer=None,first_delivery=True,same_round_superseded_producer=prior_producer,same_round_superseded_appearance_acceptance='UNVERIFIED')
  (root/'source-record.json').write_text(json.dumps(source,ensure_ascii=False,indent=2)+'\n')
  status=json.loads((repo/'tools/train-models/status-template.json').read_text())
  status['asset']={'status':'VERIFIED','evidence':'Final producer: '+producer+'. Native readback, shared topology + fault probes, dedicated geometry, independent Swift assembly/Blender importer, PNG decoding, producer rebuild bytes and final delivered browser downloads; see public verification.json and PR for actual evidence/limits.'}
