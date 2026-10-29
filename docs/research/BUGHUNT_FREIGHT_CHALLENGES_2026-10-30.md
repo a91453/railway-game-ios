@@ -3,7 +3,7 @@
 派工單 BH5（遊戲規劃第 32 任派），分支 `claude/bughunt-freight-challenges`，對照 `main` 9fb305d。
 存檔版本、決策號、golden 都不動。
 
-**結論：沒找到 P1。** P2 一個、P3 九個，都寫在下面，公測後由規劃照順序派。
+**結論：沒找到 P1。** P2 一個、P3 九個。P2-1 照規劃第 32 任的要求，公測前在同一個 PR 修好了（只動 GamePresentation）；P3 公測後由規劃照順序派。
 
 ## 1. 怎麼找的
 
@@ -42,7 +42,21 @@
 
 ## 2. P2
 
-### P2-1 從朋友的路網開新局，會領到朋友還沒領的錢
+### P2-1 從朋友的路網開新局，會領到朋友還沒領的錢（已修）
+
+**修法（這個 PR）**：`SharedNetwork.newGameWorld` 現在多做兩件事：
+- JSON 上刪掉 `freight.pendingRevenue`。
+- 解碼後用 GameCore 的 `setCityRequests(seed:)`，以同一個種子把市府委託重來：沒領的補助、已付總額、星等、進行中與過去的委託都歸零，市府對新公司重新出題。
+
+測試 `SharedNetworkTests.testANewGameLeavesTheSendersSubsidiesAndFreightFaresBehind` 在舊程式上紅（owed $200,000、星等 2、一個進行中委託、貨運 $5,000），修後綠。VERIFIED（Linux）。
+
+逐項看過其他會帶過來的東西：
+- 各線收支歷史 `lineAccounts`：只是畫面上的紀錄，不是錢，保留。
+- 景點紀念品店、子公司、車站商業、公司建物：是蓋好的東西，照「蓋好的照原價留下」保留。
+- 挑戰進度：`scenario` 本來就清掉。
+- 帳上其他「未入帳」的錢：GameCore 裡只有 `accounts.pending`（已清）、市府 `owed`（已清）、貨運 `pendingRevenue`（已清）三處。
+
+原本的記錄：
 
 - **在哪**：`Sources/GamePresentation/SharedNetwork.swift` 的 `newGameWorld(balance:)`（約 110–120 行）。
   - 它清掉了 `economy` 和 `accounts` 的錢，但 `world` 裡還留著三樣東西：
@@ -184,8 +198,8 @@ BH9 轉來的，靜態讀過程式，UNVERIFIED。
 
 ## 4. 建議的順序
 
-1. P2-1：只改 GamePresentation，公測後第一個修。
-2. P3-1、P3-2：都在分享這條路上，可以和 P2-1 同一個 PR。
+1. P2-1：已在這個 PR 修好。
+2. P3-1、P3-2：都在分享這條路上，公測後一起修。
 3. P3-7：只改字。
 4. P3-8、P3-5：提示和文字；P3-9（新按鈕，要截圖驗收）。
 5. P3-3、P3-4：App 層的 GameKit，要實機驗。
