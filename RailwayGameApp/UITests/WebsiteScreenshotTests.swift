@@ -53,7 +53,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The freight train is the last of five: the list loads its rows
         // as they scroll in.
         let follow = app.buttons["fleet.follow.貨運列車 1"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(follow), "The freight train is in the fleet")
+        let fleetList = app.collectionViews.firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(follow, in: fleetList.exists ? fleetList : nil), "The freight train is in the fleet")
         follow.tap()
         XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 5))
         settle()
