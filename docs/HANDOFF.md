@@ -1948,7 +1948,7 @@
 - **等 macOS CI 與 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：條與按鈕的位置、按下取消後回到的畫面。
 - **下一步**（沒派）：依量到的時間給每步權重；GameCore 建世界加檢查點讓取消能在步驟中間停；第一次開 3D 地圖的等待。見決策 473「下一步」。
 
-### 4.20 路線面板拆兩層（決策 481，session_01YGNNunF7F1xm5bcPAv9pcL，派工單 LP，2026-10-29，#1476）
+### 4.22 路線面板拆兩層（決策 481，session_01YGNNunF7F1xm5bcPAv9pcL，派工單 LP，2026-10-29，#1476）
 
 - 做了的在 [決策 481](decisions/481.md)，包括：
   - 精簡清單與每條線自己的頁
