@@ -39,6 +39,8 @@ def main(base,after):
    old='set-E200CK'+('Far' if far else '')+'-'+role;new='e200mingri-style-'+role+('-far' if far else '')
    aa=read(base/next(m['native'] for m in a['models'] if m['id']==old));bb=read(after/bm[new]['native'])
    changed=compare(aa,bb,role,far)
+   assert len(bb)<=15000,'per-file format budget'
+   assert len(bb)<=20000,'independent-unit scene budget'
    def reject(mut,label):
     try:compare(aa,mut,role,far)
     except AssertionError:return label
@@ -47,6 +49,8 @@ def main(base,after):
    faults=[reject(mut,'5mm shell shift')]
    for flag,label in [(2,'glass colour'),(1,'lamp colour')]:
     choices=[i for i,t in enumerate(aa) if struct.unpack_from('<I',t)[0]&flag]
+    if not choices and flag==1 and role in ['head','tail']:
+     choices=[len(aa)-1] if role=='tail' else [i for i,t in enumerate(aa) if all(v[2]>3.68 and abs(v[0])>8.4 and abs(v[1])<.4 for v in pos(t))]
     if choices:
      mut=bb.copy();v=bytearray(mut[choices[0]]);v[16]^=1;mut[choices[0]]=bytes(v);faults.append(reject(mut,label))
    rows.append(dict(id=new,triangles=len(aa),changed_triangles=changed,geometry_flags_order_exact=True,protected_colours_exact=True,faults_rejected=faults,geometry_sha256=hashlib.sha256(b''.join(map(geometry,bb))).hexdigest()))

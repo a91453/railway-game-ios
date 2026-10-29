@@ -13,8 +13,7 @@ public enum Map3DE200MingriStyle {
         case .car: Map3DChuKuangPassenger.model(.standard, far: far)
         case .tail: Map3DTrainSet.chuKuangTail(far: far)
         }
-        // Match the operating pack's stored units; runtime lights are separate.
-        return Map3DTrainLights.unlit(raw)
+        return raw
     }
 
     /// One triangle keeps its complete original geometry and all non-colour fields.
