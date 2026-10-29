@@ -4,8 +4,8 @@
     "evidence": "Final native/GLB geometry and actual faults, protected accepted side / T / bow and696 existing payloads, independent producer rebuild, Blender4.3.2, PNG decode and delivered viewer/download SHA. See public verification.json."
   },
   "appearance": {
-    "status": "UNVERIFIED",
-    "accepted_producer": null,
+    "status": "VERIFIED",
+    "accepted_producer": "bd57e163391bfdf7492cc408c7697451578ae8e1",
     "accepted_sections": [
       {
         "section": "side",
@@ -13,7 +13,8 @@
         "evidence": "User: 側面可以了 只是正面塗裝是不是有點方 還要調整嗎"
       }
     ],
-    "evidence": "Revision2 side accepted only. Revision3 front remains producer self-review; no whole-model appearance acceptance."
+    "evidence": "User reviewed revision3, asked whether further work was needed, then replied「就這樣」after the recommendation to keep revision3. Accepted the current studies appearance at this producer; no operating integration, physical-device validation or merge authorization implied.",
+    "accepted_on": "2026-10-29"
   },
   "integration": {
     "status": "UNVERIFIED",
@@ -21,6 +22,6 @@
   },
   "device": {
     "status": "UNVERIFIED",
-    "evidence": "Linux WebGL/Blender, no new Simulator/device Metal/performance/animation check. file:// blocked by browser policy, localhost tested."
+    "evidence": "Delivered code head cd92b3c6 passed Xcode Simulator CI, but physical-device Metal/performance/animation and device visual review remain unverified. Linux WebGL/Blender are not device evidence; file:// is blocked by browser policy."
   }
 }

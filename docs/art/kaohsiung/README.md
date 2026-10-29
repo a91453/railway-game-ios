@@ -1,14 +1,14 @@
 # 高雄捷運紅／橘線現役西門子原生 studies
 
-**目前交付第三版：正面塗裝續修**。producer `bd57e163391bfdf7492cc408c7697451578ae8e1`。公開draft[#1454](https://github.com/a91453/railway-game-ios/pull/1454) ↔ 素材draft[#22](https://github.com/a91453/railway-assets-private/pull/22)。[完整revision-3／viewer／原生／GLB／20PNG／SHA](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-3)。[同相機真前後預覽](overview.png)。
+**目前交付第三版：使用者已接受外觀**。producer `bd57e163391bfdf7492cc408c7697451578ae8e1`。原交付公開[#1454](https://github.com/a91453/railway-game-ios/pull/1454) ↔ 原交付素材[#22](https://github.com/a91453/railway-assets-private/pull/22)。[完整revision-3／viewer／原生／GLB／20PNG／SHA](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-3)。[同相機真前後預覽](overview.png)。
 
-使用者：「側面可以了 只是正面塗裝是不是有點方 還要調整嗎」。接受範圍只記到第二版producer `3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c`的側面；第三版正面與整體外觀仍 **UNVERIFIED**。真前版公開head `bb67bfa14870aeaa624df4f5a1d3a9aa08db7f63`／素材commit `1f73fb1cdba56ce99e0e3cdc3313175915d0ac92`。本輪只細分正面本體分色：黑罩上緣由水平改淺弧、肩部收角漸圓，白／綠松U帶增加分段；中央逃生門保留實拍所見直邊，不把整張正面任意磨圓。
+使用者：「側面可以了 只是正面塗裝是不是有點方 還要調整嗎」。先前接受僅限第二版producer `3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c`的側面。使用者看過第三版後詢問是否還需修正，並在建議保留第三版後回覆「就這樣」；2026-10-29據此記錄第三版producer `bd57e163391bfdf7492cc408c7697451578ae8e1`的studies外觀接受 **VERIFIED**。真前版公開head `bb67bfa14870aeaa624df4f5a1d3a9aa08db7f63`／素材commit `1f73fb1cdba56ce99e0e3cdc3313175915d0ac92`。本輪只細分正面本體分色：黑罩上緣由水平改淺弧、肩部收角漸圓，白／綠松U帶增加分段；中央逃生門保留實拍所見直邊，不把整張正面任意磨圓。
 
 實體車頭曲面未動；用兩真producer的shellOnly匯出，逐原曲面平面格比較雙向三角形交集覆蓋。直側面X≤9m所有52-byte原生三角形記錄（含每個頂點座標／色值／flags）完全一致；T近遠兩件完整bytes相同。車頭外硬體幾何／flags保持；前端分色會出現在斜／側視的鼻端，鄰近烘焙陰影也可能變，不宣稱整張側視圖逐像素一致。屋頂、底盤、玻璃、門框、燈、雨刷、裙板、連結器及編組配方保持。
 
 DM近5790／遠2686、T近2312／遠984；三車近13892／遠6356三角。格式單件上限、六單元近遠及完整編組預算分開檢查。最終資料與驗證見[verification.json](verification.json)，四種狀態見[status.json](status.json)。第二版重檔在同素材PR移除，保留20PNG、README、來源／授權與狀態，以真commit恢復，不新增history或ZIP。
 
-本輪獨立重建高雄捷運高運量電聯車（Siemens Modular Metro），一般銀色／綠松塗裝，共用同型車，不依路線另造幾何或紅橘塗裝。靜態展示，不替換營運。使用者外觀接受、營運接入、Simulator／真機均 **UNVERIFIED**。
+本輪獨立重建高雄捷運高運量電聯車（Siemens Modular Metro），一般銀色／綠松塗裝，共用同型車，不依路線另造幾何或紅橘塗裝。靜態展示，不替換營運。使用者對第三版producer外觀接受 **VERIFIED**；營運接入及裝置驗證仍 **UNVERIFIED**。
 
 實際 producer 與交付／驗證連結在本頁後續紀錄；重建入口 [工具](../../../tools/kaohsiung/README.md)，原始來源逐檔 SHA／日期／授權在 [source-record.json](source-record.json)。初版沒有已交付前版，不把過程試作當真前版。
 
@@ -76,12 +76,18 @@ Siemens SF3000原圖錄的設備產品圖未註明是攝影或渲染，本輪將
 
 ## 第三輪對照與驗收
 
-最新main `fd91b75c250f63d19331d87f33e502ef72a1daf8`已含三鶯營運整合#1448與六分片CI#1455，逐張確認為MERGED後納入；不能沿用舊688件名單當最新保護證據。本輪重新匯出最新main的696模型與本分支全部模型比對，台中綠線既接受producer `498d85ef234a00345b4b024c4aa0e6783d73b933`未改。
+本輪建模基準main `fd91b75c250f63d19331d87f33e502ef72a1daf8`已含三鶯營運整合#1448與六分片CI#1455，逐張確認為MERGED後納入；不能沿用舊688件名單當最新保護證據。本輪重新匯出最新main的696模型與本分支全部模型比對，台中綠線既接受producer `498d85ef234a00345b4b024c4aa0e6783d73b933`未改。
 
 固定比較以真R2的最終單元／編組為before，同公尺尺度、相機、光線；配色／白模／剪影四向192張僅暫存，最終各單元及編組七向224張亦不整批提交。兩庫本輪只留20張私有PNG和1張公開總覽。實拍旁置四向只本機保留，未散布原照片。
 
-已符合（製作者自檢）：頂冠／黑罩收角更接近實拍弧線，U帶中央與邊角轉折較連續；側面接受範圍、T車、車頭實體曲面與硬體受保護。仍不符合：霧面風格的玻璃／門框／燈組保留低細節切角，非實車光學材質，遠景弧線刻意較少分段。資料不足：無無透視正面／全俯視工程外形，肩部與分色曲線是照片推估；隱藏的DM1／DM2設備序與連結器管線未全還原。技術通過不能當使用者已接受第三版正面。
+已符合（製作者自檢）：頂冠／黑罩收角更接近實拍弧線，U帶中央與邊角轉折較連續；側面接受範圍、T車、車頭實體曲面與硬體受保護。仍不符合：霧面風格的玻璃／門框／燈組保留低細節切角，非實車光學材質，遠景弧線刻意較少分段。資料不足：無無透視正面／全俯視工程外形，肩部與分色曲線是照片推估；隱藏的DM1／DM2設備序與連結器管線未全還原。技術通過本身不代表外觀接受；本次接受依據是使用者後續明確回覆。
 
-接手：先檢視revision-3正／斜面與同相機比較，再記使用者對此producer的明確外觀回覆。保持studies及krtc既有metroGeneric三車映射；營運接入、Simulator／真機Metal、效能與動畫均UNVERIFIED。file://依管理政策可能受阻，localhost viewer另有實測；不以瀏覽器模擬替代裝置驗證。
+接手：第三版已依「就這樣」定稿，本次只補接受狀態，不再修改外觀。保持studies及krtc既有metroGeneric三車映射；營運接入與裝置視覺／真機Metal、效能與動畫仍UNVERIFIED；交付程式的Xcode Simulator CI成功另記，不外推成裝置接受。file://依管理政策可能受阻，localhost viewer另有實測；不以瀏覽器模擬替代裝置驗證。
 
 第三輪素材commit：[`5ee6fe9ceafb07ea8d137ad01d413182f8b74484`](https://github.com/a91453/railway-assets-private/tree/5ee6fe9ceafb07ea8d137ad01d413182f8b74484/game-art-previews/docs/art/kaohsiung/revision-3)。staged tree與提交後asset_guard皆通過，本PR95新增檔案、unique blobs17.1MB；本輪20PNG及44檔SHA清單完整解碼／核對。最新CI結果另查兩PR的最新head，不沿用前版結果。
+
+## 第三版外觀接受補記
+
+2026-10-29使用者「就這樣」對應producer `bd57e163391bfdf7492cc408c7697451578ae8e1`，不是對新producer或真機的授權。本次只改狀態、交接、viewer內嵌狀態及SHA；六原生單元、兩編組、GLB和20PNG全部保持。素材原PR#22已由其他流程合併（main `e945f452`），兩庫原交付PR#1454／#22皆由其他流程合併；接受補記改由兩庫最新main的獨立draft PR交付，[素材補記#24](https://github.com/a91453/railway-assets-private/pull/24)。造型producer不變，後續接受metadata與重建配方分開；在producer重建時預設UNVERIFIED是歷史狀態，套用本次status.json才得到接受紀錄。
+
+交付程式head `cd92b3c6`實際CI：Swift40800314232 gate及六selected分片SUCCESS、Xcode40800314226 SUCCESS、工具contracts40800314233 SUCCESS；素材head `5ee6fe9` guard40800317496 SUCCESS。UI額外分片依PR計畫、iPad未觸及tutorial而SKIPPED；Superseded檢查因正常成功流程SKIPPED，沒有取消或補跑。metadata新head另查CI，不沿用舊結果當新head通過。

@@ -22,7 +22,7 @@
     "public_overview": 1,
     "downloaded_png_full_decodes": 8
   },
-  "limits": "Side acceptance belongs to revision2 producer only. Overall appearance/front/integration/device UNVERIFIED. Display probes, not engineering or exhaustive collision proof. Browser file:// blocked; localhost tested.",
+  "limits": "User accepted the studies appearance for producer bd57e163391bfdf7492cc408c7697451578ae8e1 on 2026-10-29 by replying「就這樣」. Integration/device remain UNVERIFIED. Display probes are not engineering or exhaustive collision proof. Browser file:// blocked; localhost tested.",
   "geometry": {
     "status": "VERIFIED",
     "models": [
@@ -1887,5 +1887,99 @@
     "staged_and_committed_asset_guard": "VERIFIED;95 new PR files/17.1MB unique blobs; no breaches",
     "public_png_count": 1,
     "private_revision_png_count": 20
+  },
+  "appearance_acceptance": {
+    "status": "VERIFIED",
+    "accepted_producer": "bd57e163391bfdf7492cc408c7697451578ae8e1",
+    "accepted_sections": [
+      {
+        "section": "side",
+        "producer": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+        "evidence": "User: 側面可以了 只是正面塗裝是不是有點方 還要調整嗎"
+      }
+    ],
+    "evidence": "User reviewed revision3, asked whether further work was needed, then replied「就這樣」after the recommendation to keep revision3. Accepted the current studies appearance at this producer; no operating integration, physical-device validation or merge authorization implied.",
+    "accepted_on": "2026-10-29"
+  },
+  "acceptance_amendment": {
+    "scope": "Status/docs/viewer metadata only; models and PNG unchanged. Producer remains bd57e163.",
+    "prior_delivered_code_head": "cd92b3c6b6cf9c30cabcb44e518863937ef7c333",
+    "prior_delivered_asset_head": "5ee6fe9ceafb07ea8d137ad01d413182f8b74484",
+    "ci_at_prior_code_head": "Swift gate, selected1-6, Xcode and contracts SUCCESS; UI extra partitions/iPad/Superseded planned SKIPPED. Not a claim about future amendment heads.",
+    "asset_pr": "https://github.com/a91453/railway-assets-private/pull/24",
+    "viewer": {
+      "status": "VERIFIED",
+      "transport": "loopback HTTP",
+      "models": [
+        {
+          "id": "kaohsiung-dm1",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        },
+        {
+          "id": "kaohsiung-t",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        },
+        {
+          "id": "kaohsiung-dm2",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        },
+        {
+          "id": "kaohsiung-dm1-far",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        },
+        {
+          "id": "kaohsiung-t-far",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        },
+        {
+          "id": "kaohsiung-dm2-far",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        },
+        {
+          "id": "kaohsiung-formation",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        },
+        {
+          "id": "kaohsiung-formation-far",
+          "views": 7,
+          "lights": 2,
+          "native_glb_download_bytes": true,
+          "png_download": true
+        }
+      ],
+      "orbit_zoom_changed_pixels": true,
+      "mobile_width": 390,
+      "file_protocol": {
+        "status": "UNVERIFIED",
+        "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+      },
+      "errors": [],
+      "external_requests": 0,
+      "limits": [
+        "Browser WebGL only; no device Metal, animation or appearance acceptance."
+      ]
+    },
+    "asset_guard": "VERIFIED staged tree;4 metadata changes,8.1MB; native models/GLB/assembly/20PNG unchanged"
   }
 }
