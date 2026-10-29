@@ -22,11 +22,14 @@ function checkLamps(offset=0) {
   for (const z of [2.96,3.18]) {
     assert(match(6.80+offset,z).length, `long hood centre lamp at ${z} absent`);
   }
+  for (const z of [2.90,3.12]) {
+    assert(match(-6.73-offset,z).length, `short hood centre lamp at ${z} absent`);
+  }
 }
 function checkGlass(shift=0) {
   // The native transform maps builder side ±1.211 to native lateral ±1.211.
   assert(vertices.some(v => Math.abs(v.position[0]+4.18)<0.51 &&
-    Math.abs(Math.abs(v.position[1])-1.223-shift)<0.025 &&
+    Math.abs(Math.abs(v.position[1])-1.257-shift)<0.025 &&
     v.position[2]>2.6 && v.position[2]<3.1 && v.color[2]>v.color[0]),
   'cab glazing not exposed at side');
 }
@@ -41,4 +44,4 @@ assert.throws(() => checkWheelContact(0.10),/misses rail/);
 assert.throws(() => checkLamps(0.20),/lamp/);
 assert.throws(() => checkGlass(0.20),/glazing/);
 assert.throws(() => checkDrawGear(0.40),/draw gear/);
-console.log('VERIFIED R21 six wheel contacts, long-end lamp heights, exposed cab glass, two supported draw gears; four shifted counterexamples rejected');
+console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears; four shifted counterexamples rejected');
