@@ -43,16 +43,16 @@ final class BuildingDragCostReportTests: XCTestCase {
             }
         }
         let site = try XCTUnwrap(session.buildingSite)
-        let world = session.world
+        let now = session.world
         // Before decision 488, each read placed it on a copy of the world.
         let placed = clock.measure {
             for _ in 0..<steps {
-                var draft = world.pricingCopy()
+                var draft = now.pricingCopy()
                 _ = try? draft.placeBuilding(.shop, at: site)
             }
         }
-        let tried = clock.measure { for _ in 0..<steps { _ = try? world.pricingCopy().buildingPlacement(.shop, at: site) } }
-        print("stations \(world.stations.count), edges \(world.network.edges.count), land cells \(world.land.cells.count)")
+        let tried = clock.measure { for _ in 0..<steps { _ = try? now.pricingCopy().buildingPlacement(.shop, at: site) } }
+        print("stations \(now.stations.count), edges \(now.network.edges.count), land cells \(now.land.cells.count)")
         print("| a step of the drag (\(reads) reads) | \(LongGameCostReportTests.ms(spent, per: steps)) ms |")
         print("| placeBuilding on a copy (each read before) | \(LongGameCostReportTests.ms(placed, per: steps)) ms |")
         print("| buildingPlacement (once a step now) | \(LongGameCostReportTests.ms(tried, per: steps)) ms |")

@@ -172,6 +172,11 @@ public final class GameSession {
     /// on a copy of the world), kept for the platform and the
     /// ``commandRevision`` they were worked out for.
     @ObservationIgnored var platformTrackMenuMemo: [TrackPlatform: (revision: Int, choices: [MenuChoice<PlatformTrackPlacement>])] = [:]
+    /// Decision 488: the building tool's preview (``buildingPreview``) and
+    /// what it was worked out for.
+    @ObservationIgnored var buildingPreviewMemo: (key: BuildingPreviewKey, preview: BuildingPreview)?
+    /// How many times ``buildingPreview`` was worked out (for the tests).
+    @ObservationIgnored var buildingPreviewWorkedOut = 0
     /// What traffic control shows (``trafficOverlay``,
     /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
     /// for; the game loop reads it off the main actor with each tick.
@@ -184,11 +189,6 @@ public final class GameSession {
     /// `revision`, from a glide of the trains seen in the world of
     /// revision `from` (its ``TrainMotion/source``).
     @ObservationIgnored var glideMemo: (revision: Int, from: Int, motion: TrainMotion)?
-    /// Decision 488: the building tool's preview (``buildingPreview``) and
-    /// what it was worked out for.
-    @ObservationIgnored var buildingPreviewMemo: (key: BuildingPreviewKey, preview: BuildingPreview)?
-    /// How many times ``buildingPreview`` was worked out (for the tests).
-    @ObservationIgnored var buildingPreviewWorkedOut = 0
 
     /// The language of the session's messages and suggested names, and of
     /// the text the app derives from the world (Stage L1). Set once: iOS
