@@ -259,7 +259,12 @@ final class LessonUITests: XCTestCase {
     // MARK: - Launching and reaching controls
 
     private var map: XCUIElement { element("map") }
-    private var list: XCUIElement { app.collectionViews.firstMatch }
+    /// The panel's list: a line's own page while one is open (decision
+    /// 481), else the first.
+    private var list: XCUIElement {
+        let page = app.collectionViews["line.detail"]
+        return page.exists ? page : app.collectionViews.firstMatch
+    }
 
     private func element(_ id: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: id).firstMatch
@@ -450,11 +455,20 @@ final class LessonUITests: XCTestCase {
         XCTAssertEqual(toggle.label, "Hide Controls")
     }
 
+    /// Decision 481: the line's own page. A line the tutorial's fixture
+    /// built is opened on its page already, once Skip ends the guide (the
+    /// iPad run 40835715436 found no row to scroll to); else its row in the
+    /// list opens it.
     private func openLineCard() {
         tap(app.buttons["entry.lines"])
-        let row = element("line.trainsRow.1")
-        reveal(row)
-        tap(row)
+        let page = app.collectionViews["line.detail"]
+        if !page.appears(within: 5) {
+            let row = element("line.trainsRow.1")
+            reveal(row)
+            tap(row)
+            XCTAssertTrue(page.appears(within: 10), "The line's page did not open")
+        }
+        page.waitUntilStill()
     }
 
     private func stationPoints() -> [CGPoint] {
