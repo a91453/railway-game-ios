@@ -146,6 +146,8 @@ final class PromoMaterialTests: XCTestCase {
     /// the workflow picked (`device`), to see what covers what
     /// (`docs/research/UI_AUDIT_2026-10-30.md`). The workflow turns every
     /// tall picture a quarter, so the upright ones come out on their side.
+    /// An iPhone is only ever on its side; the iPad Simulator of runs
+    /// 40946830836 and 40950923947 stayed upright for both.
     func testUIAuditPortrait() { audit(.portrait, prefix: "audit-portrait") }
     func testUIAuditLandscape() { audit(.landscapeLeft, prefix: "audit-landscape") }
 
@@ -454,13 +456,6 @@ final class PromoMaterialTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"] + extra
         app.launch()
-        // An iPad Simulator held upright by the test before stayed upright
-        // when turned only before the launch (UI audit, run 40946830836).
-        // Turned away and back: the device may already say it is turned.
-        XCUIDevice.shared.orientation = orientation == .portrait ? .landscapeLeft : .portrait
-        settle(seconds: 1)
-        XCUIDevice.shared.orientation = orientation
-        settle()
         return app
     }
 
