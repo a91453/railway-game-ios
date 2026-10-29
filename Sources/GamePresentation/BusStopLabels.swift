@@ -199,6 +199,29 @@ public final class RealBusStops: Sendable, Hashable {
         return inside
     }
 
+    /// How near a faint stop's name is to one already written, in metres, for
+    /// the second not to be written: the two sides of a road carry one name.
+    public static let labelMergeMetres = 60.0
+
+    /// The stops inside `region` whose names are worth writing faint on the
+    /// map, west to east: not one whose name a numbered pin (`pins`: where
+    /// and the name it shows) already carries within ``labelMergeMetres``,
+    /// and of several of one name within that distance of each other only
+    /// the first. Every stop keeps its dot; only the name is left off.
+    public func faintLabels(in region: WorldRegion, pins: [(point: PlanPoint, name: String?)]) -> [Stop] {
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        func near(_ a: PlanPoint, _ b: PlanPoint) -> Bool {
+            hypot(Double(a.x - b.x), Double(a.y - b.y)) / metre <= Self.labelMergeMetres
+        }
+        var written: [Stop] = []
+        for stop in stops(in: region) {
+            if pins.contains(where: { $0.name == stop.name && near($0.point, stop.point) }) { continue }
+            if written.contains(where: { $0.name == stop.name && near($0.point, stop.point) }) { continue }
+            written.append(stop)
+        }
+        return written
+    }
+
     private func firstIndex(withXAtLeast x: Int64) -> Int {
         var low = 0, high = stops.count
         while low < high {
