@@ -117,4 +117,188 @@ final class StationPairDrawerLayoutTests: XCTestCase {
         XCTAssertEqual(placed.y, 150)
         XCTAssertFalse(BuildConfirmLayout.overlaps(x: placed.x, y: placed.y, width: 120, height: 50, wall))
     }
+
+    // Decision 491 (TestFlight 95.1): iPads held upright, a new line's
+    // stations picked with the line panel open beside the map. The panel
+    // takes half the width (``SidePanelWidth``), the map's coverage, 3D and
+    // zoom buttons stand beside it at the foot of the map, and the
+    // building tools run down the leading edge.
+    private struct Upright {
+        let name: String
+        let width: Double, height: Double
+        /// The map's corner column, measured from the screen's trailing
+        /// and bottom edges: the three buttons in a row and their margins,
+        /// or with a layer's key over them.
+        let corner: Double, cornerHeight: Double
+    }
+
+    private let uprights = [
+        Upright(name: "iPad Air 11-inch", width: 820, height: 1180, corner: 3 * 44 + 2 * 10, cornerHeight: 90 + 44 + 2 * 10),
+        Upright(name: "iPad Air 11-inch, a layer's key", width: 820, height: 1180, corner: 260 + 2 * 10, cornerHeight: 90 + 44 + 160 + 2 * 10),
+        Upright(name: "iPad Pro 13-inch", width: 1032, height: 1376, corner: 3 * 44 + 2 * 10, cornerHeight: 90 + 44 + 2 * 10),
+    ]
+    /// The dock along the bottom (not a tools column), 80 tall, and the
+    /// drawer's foot above it as ContentView lays it out.
+    private let dockHeight = 80.0
+    private var uprightBottom: Double { dockHeight + 2 * margin }
+    private var railEnd: Double { margin + ToolColumn.railWidth }
+
+    private func uprightInsets(_ ipad: Upright) -> (panel: Double, insets: StationPairDrawerLayout.Insets?) {
+        let panel = SidePanelWidth.panel(screenWidth: ipad.width, compactHeight: false) + margin
+        let insets = StationPairDrawerLayout.insets(
+            screenWidth: ipad.width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+            panel: panel, card: 0, corner: panel + ipad.corner, cornerHeight: ipad.cornerHeight, bottom: uprightBottom
+        )
+        return (panel, insets)
+    }
+
+    func testOnAnUprightIPadTheBandBesideTheCornerButtonsIsTooNarrow() {
+        // Before: the drawer's band ended at the corner buttons beside the
+        // panel, narrower than its top line and bars, or none at all.
+        for ipad in uprights where ipad.width < 1000 {
+            let panel = SidePanelWidth.panel(screenWidth: ipad.width, compactHeight: false) + margin
+            let trailing = StationPairDrawerLayout.trailingInset(panel: panel, card: 0, corner: panel + ipad.corner)
+            let before = StationPairDrawerLayout.frame(
+                size: ScreenSize(width: 460, height: 130), screenWidth: ipad.width, screenHeight: ipad.height,
+                leading: 0, trailing: trailing, bottom: uprightBottom, margin: margin
+            )
+            XCTAssertLessThan(before.width, StationPairDrawerLayout.minimumWidth, "\(ipad.name): \(before)")
+            XCTAssertLessThan(before.x, railEnd, "\(ipad.name): over the building tools")
+        }
+    }
+
+    func testOnAnUprightIPadTheDrawerStandsAboveTheCornerButtons() {
+        for ipad in uprights {
+            let (panel, found) = uprightInsets(ipad)
+            guard let insets = found else { return XCTFail("\(ipad.name): the drawer shows") }
+            let size = ScreenSize(width: 460, height: 130)
+            let drawer = StationPairDrawerLayout.frame(
+                size: size, screenWidth: ipad.width, screenHeight: ipad.height,
+                leading: insets.leading, trailing: insets.trailing, bottom: insets.bottom, margin: margin
+            )
+            XCTAssertGreaterThanOrEqual(drawer.width, StationPairDrawerLayout.minimumWidth, ipad.name)
+            XCTAssertGreaterThanOrEqual(drawer.x, 0, "\(ipad.name): on the screen")
+            XCTAssertLessThanOrEqual(drawer.x + drawer.width, ipad.width - panel, "\(ipad.name): clear of the panel")
+            let cornerButtons = ScreenFrame(
+                x: ipad.width - panel - ipad.corner, y: ipad.height - ipad.cornerHeight, width: ipad.corner, height: ipad.cornerHeight
+            )
+            XCTAssertFalse(overlaps(drawer, cornerButtons), "\(ipad.name): \(drawer) and \(cornerButtons)")
+            let dock = ScreenFrame(x: 0, y: ipad.height - dockHeight, width: ipad.width, height: dockHeight)
+            XCTAssertFalse(overlaps(drawer, dock), "\(ipad.name): over the dock")
+            if insets.bottom > uprightBottom {
+                // Raised along the leading edge, past the building tools.
+                XCTAssertGreaterThanOrEqual(drawer.x, railEnd + margin, "\(ipad.name): clear of the building tools")
+            }
+        }
+    }
+
+    func testOnAnIPadOnItsSideTheDrawerStaysWhereItWas() {
+        // Landscape keeps decision 384's band beside the corner buttons.
+        let width = 1180.0
+        let panel = SidePanelWidth.panel(screenWidth: width, compactHeight: false) + margin
+        for corner in [0, panel + 152] {
+            let insets = StationPairDrawerLayout.insets(
+                screenWidth: width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+                panel: panel, card: 0, corner: corner, cornerHeight: 154, bottom: uprightBottom
+            )
+            XCTAssertEqual(insets, StationPairDrawerLayout.Insets(
+                leading: 0, trailing: StationPairDrawerLayout.trailingInset(panel: panel, card: 0, corner: corner), bottom: uprightBottom
+            ))
+        }
+        // And with nothing beside the map, upright too.
+        XCTAssertEqual(
+            StationPairDrawerLayout.insets(
+                screenWidth: 820, margin: margin, leading: 0, rail: 0, panel: 0, card: 0, corner: 162, cornerHeight: 300, bottom: uprightBottom
+            ),
+            StationPairDrawerLayout.Insets(leading: 0, trailing: 162, bottom: uprightBottom)
+        )
+    }
+
+    func testWithNoRoomEvenBesideThePanelTheDrawerStaysAway() {
+        // An iPad mini held upright: beside its panel and the building
+        // tools, less than the drawer needs; the ✓ pill's words still give
+        // the line's length and time.
+        let width = 744.0
+        let panel = SidePanelWidth.panel(screenWidth: width, compactHeight: false) + margin
+        XCTAssertNil(StationPairDrawerLayout.insets(
+            screenWidth: width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+            panel: panel, card: 0, corner: panel + 152, cornerHeight: 154, bottom: uprightBottom
+        ))
+    }
+
+    // Decision 491, revised (#1513 REV-2): an iPhone held upright takes the
+    // same rule. Its map's corner column (the small map over the coverage,
+    // 3D and zoom buttons, 188 wide with its margin as in the screenshot
+    // on its side) leaves less than the drawer needs beside it, so before
+    // 491 the drawer ran off the screen there too. The building tools run
+    // down the leading edge while a line is drawn; the dock is along the
+    // bottom.
+    private let phones: [(name: String, width: Double, height: Double)] = [
+        ("iPhone SE / 13 mini", 375, 647), ("iPhone 16", 393, 759), ("iPhone 17 Pro", 402, 778), ("iPhone 17 Pro Max", 440, 862),
+    ]
+    private let phoneCorner = 10.0 + 188
+    private var phoneCornerHeight: Double { dockHeight + margin + 174 + margin }
+
+    func testOnAnUprightIPhoneTheDrawerStandsAboveTheSmallMap() {
+        for phone in phones {
+            // Before: the band beside the small map was too narrow.
+            let before = StationPairDrawerLayout.frame(
+                size: ScreenSize(width: 460, height: 130), screenWidth: phone.width, screenHeight: phone.height,
+                leading: 0, trailing: StationPairDrawerLayout.trailingInset(panel: 0, card: 0, corner: phoneCorner),
+                bottom: uprightBottom, margin: margin
+            )
+            XCTAssertLessThan(before.width, StationPairDrawerLayout.minimumWidth, "\(phone.name): \(before)")
+            let insets = StationPairDrawerLayout.insets(
+                screenWidth: phone.width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+                panel: 0, card: 0, corner: phoneCorner, cornerHeight: phoneCornerHeight, bottom: uprightBottom
+            )
+            guard phone.width - (ToolColumn.railWidth + margin) - 2 * margin >= StationPairDrawerLayout.minimumWidth else {
+                // The narrowest phones: no room beside the building tools
+                // either; the ✓ pill's words give the line's length and time.
+                XCTAssertNil(insets, phone.name)
+                continue
+            }
+            guard let insets else { return XCTFail("\(phone.name): the drawer shows") }
+            XCTAssertEqual(insets, StationPairDrawerLayout.Insets(
+                leading: ToolColumn.railWidth + margin, trailing: 0, bottom: phoneCornerHeight + margin
+            ), phone.name)
+            for height in [StationPairDrawerLayout.foldedHeight, 130] {
+                let drawer = StationPairDrawerLayout.frame(
+                    size: ScreenSize(width: 460, height: height), screenWidth: phone.width, screenHeight: phone.height,
+                    leading: insets.leading, trailing: insets.trailing, bottom: insets.bottom, margin: margin
+                )
+                XCTAssertGreaterThanOrEqual(drawer.width, StationPairDrawerLayout.minimumWidth, phone.name)
+                XCTAssertGreaterThanOrEqual(drawer.x, railEnd + margin, "\(phone.name): clear of the building tools")
+                XCTAssertLessThanOrEqual(drawer.x + drawer.width, phone.width - margin, "\(phone.name): on the screen")
+                let corner = ScreenFrame(x: phone.width - phoneCorner, y: phone.height - phoneCornerHeight, width: phoneCorner - margin, height: 174)
+                XCTAssertFalse(overlaps(drawer, corner), "\(phone.name): \(drawer) over the small map \(corner)")
+                XCTAssertGreaterThan(drawer.y, phone.height / 3, "\(phone.name): in the lower part of the map, under the ✓ pill")
+            }
+        }
+    }
+
+    func testOnAnUprightIPhoneBesideTheLinesPanelTheDrawerStaysAway() {
+        // The panel takes half the width and the corner column stands
+        // beside it: no band is wide enough, so the drawer does not show
+        // rather than run off the screen.
+        for phone in phones {
+            let panel = SidePanelWidth.panel(screenWidth: phone.width, compactHeight: false) + margin
+            XCTAssertNil(StationPairDrawerLayout.insets(
+                screenWidth: phone.width, margin: margin, leading: 0, rail: ToolColumn.railWidth + margin,
+                panel: panel, card: 0, corner: panel + phoneCorner, cornerHeight: phoneCornerHeight, bottom: uprightBottom
+            ), phone.name)
+        }
+    }
+
+    func testOnAPhoneOnItsSideTheDrawerRidesInThePillAndKeepsItsBand() {
+        XCTAssertTrue(StationPairDrawerLayout.ridesInPill(compactHeight: true))
+        // Its band, were it laid out over the dock, is decision 384's.
+        let insets = StationPairDrawerLayout.insets(
+            screenWidth: width, margin: margin, leading: leading, rail: 0,
+            panel: 0, card: 0, corner: width - corner.x, cornerHeight: height - corner.y, bottom: bottom
+        )
+        XCTAssertEqual(insets, StationPairDrawerLayout.Insets(
+            leading: leading, trailing: StationPairDrawerLayout.trailingInset(panel: 0, card: 0, corner: width - corner.x), bottom: bottom
+        ))
+    }
 }

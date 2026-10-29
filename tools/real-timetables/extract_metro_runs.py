@@ -33,7 +33,9 @@ why.
 another (Danhai's Blue Coast Line runs Hongshulin to Binhai Shalun on the
 Green Mountain Line's track) is listed twice more, from the station where
 they part (`after`): what it lays when the other is already bought, its
-trips cut there as a branch line's are at its junction.
+trips cut there as a branch line's are at its junction. The Green Mountain
+Line is not (decision 493): after the Blue Coast Line it is bought whole,
+with its own runs.
 
 The metros (`METROS`) are read the same way, their trains named 捷運.
 A metro's evening brings trains in faster than it sends them out, so a
@@ -47,9 +49,13 @@ stations between come in from beyond them after the day's last train
 there (`extract_branch_runs.facing`); before, they stood across the
 night's last runs and the line stood still from the second day.
 
-Danhai's Green Mountain Line does not pass: its ends stand more trains
-overnight than the game lays tracks (Kanding's depot stables nine), and
-so neither does the Blue Coast Line after it. Not listed: the Ankeng LRT
+Danhai's Green Mountain Line is bought with its real depot past Kanding
+(decision 489, `DEPOT_ENDS`): its trains stand there overnight and while
+the line does not need them, so its ends are not held to the tracks the
+game lays for the trains standing overnight. Its `tracks` count only the
+trains the line needs at a station within the look ahead the game's depot
+uses (`depot_tracks`), and an end may have up to `DEPOT_END_TRACKS`, its
+loops three deep either side. Not listed: the Ankeng LRT
 (see `LINES`) and the Kaohsiung Circular Light Rail. Its trains run one way round
 the loop and come back to Lizihnei; a line of the game runs end to end and
 turns back.
@@ -65,13 +71,26 @@ DWELL = 25
 # line's own and two loops either side, one beyond the other
 # (`RealLineLayout.lightRail`).
 END_TRACKS = 5
+# Decision 489: the lines bought with a real depot past an end station
+# (`RealLineDepotSite` in Sources/GamePresentation/RealLineDepot.swift),
+# by their game id: that end station.
+DEPOT_ENDS = {"ntdlrt:V": "崁頂"}
+# The tracks such a line's end station may have: its own and loops three
+# deep either side.
+DEPOT_END_TRACKS = 7
+# How long a train waits at a station for its next run before the game
+# sends it to the depot instead (`GameWorld.runDepotLookahead`).
+LOOKAHEAD = 2 * 3600
 
 # (system, line id in `<system>.json`, the station it is bought from when
 # the line named by `after` is already the company's, `after`).
 LINES = [
     ("ntdlrt", "V", None, None),
     ("ntdlrt", "VB", None, None),
-    ("ntdlrt", "V", "濱海沙崙", "VB"),
+    # Not the Green Mountain Line from Binhai Shalun after the Blue Coast
+    # Line: it would stand eleven trains at once there. The game buys it
+    # whole instead, laid beside the Blue Coast Line to Binhai Shalun
+    # (decision 493), with the runs listed for it alone.
     ("ntdlrt", "VB", "濱海沙崙", "V"),
     # Not yet the Ankeng LRT (ntalrt:K): its trips pass here, but the
     # game's second track on its tight curves is laid only 8 m off the
@@ -175,6 +194,44 @@ def parked(tool, found, days, stops, line, prompt=True):
     return line, None
 
 
+def depot_tracks(tool, found, start, stops, depot):
+    """Decision 489: the most trainsets standing at each station at once
+    on any weekday of a line bought with a depot beside its end station
+    `depot`, played from `start` as `tool.tracks` does but with the trains
+    standing at `depot` overnight in the depot, and each train counted at
+    a station only from `LOOKAHEAD` before its next run there (till then
+    the game keeps it in the depot); one with no further run there that
+    day goes to the depot at once. The positioning runs taking the other
+    end's trains back there for the night are kept, as the game keeps
+    them."""
+    most = collections.Counter()
+    for day in range(7):
+        idle = collections.defaultdict(list)
+        for station, count in start.items():
+            if station != depot:
+                idle[station] += [0] * count
+        spans = collections.defaultdict(list)
+        for run in tool.day_of(found, day):
+            origin, leaves = run["calls"][0][0], run["calls"][0][2]
+            ready = [t for t in idle[origin] if t + tool.TURNAROUND <= leaves or t == 0]
+            if ready:
+                came = min(ready)
+                idle[origin].remove(came)
+            else:
+                came = leaves  # out of the depot, as it leaves
+            spans[origin].append((max(came, leaves - LOOKAHEAD), leaves))
+            for name, arrival, departure in run["calls"][1:-1]:
+                spans[name].append((arrival, departure))
+            idle[run["calls"][-1][0]].append(run["calls"][-1][1])
+        for station, times in spans.items():
+            standing = peak = 0
+            for _, leaving in sorted([(a, 0) for a, _ in times] + [(b, 1) for _, b in times]):
+                standing += -1 if leaving else 1
+                peak = max(peak, standing)
+            most[station] = max(most[station], peak)
+    return {s: max(1, most[s]) for s in stops}
+
+
 def main(folder, out):
     tool = branch_tool()
     result = {
@@ -193,7 +250,14 @@ def main(folder, out):
         game_id = f"{system}:{line_id}"
         label = game_id + (f" after {system}:{after}" if after else "")
         line, problem = tool.line_runs({"trains": found}, days, stops)
-        if not problem:
+        depot = DEPOT_ENDS.get(game_id)
+        if depot and not problem:
+            line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, depot)
+            ends = (stops[0], stops[-1])
+            worst = {s: n for s, n in line["tracks"].items() if n > (DEPOT_END_TRACKS if s in ends else 3)}
+            if worst:
+                problem = f"stations need more tracks than the game lays, with the depot: {worst}"
+        elif not problem:
             line, problem = parked(tool, found, days, stops, line, "spare" if metro else True)
         if problem:
             print(f"{label}: left out: {problem}")

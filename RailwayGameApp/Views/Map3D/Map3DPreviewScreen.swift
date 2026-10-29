@@ -85,6 +85,7 @@ struct Map3DPreviewScreen: View {
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
             Map3DRainLayer(rain: Map3DRain(MapWeather(world: session.world)), detail: stats?.streetDetail ?? .full,
+                           aim: stats?.aim ?? 60,
                            night: Map3DLighting(at: session.world.clock.now).night, underground: stats?.underground ?? false)
                 .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
@@ -231,7 +232,7 @@ struct Map3DPreviewScreen: View {
             modelsReady = true
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
-            feed.update(world: session.world, palette: linePalette)
+            feed.update(session: session, palette: linePalette)
         }
         .onChange(of: session.world.clock.now, initial: true) { _, _ in
             // Decision 339: the real trains glide with the game clock.
@@ -340,6 +341,9 @@ struct Map3DPreviewScreen: View {
             if showsDetails {
                 Group {
                     Text(verbatim: String(format: "CPU %.1f ms · GPU %.1f ms", stats.cpuMilliseconds, stats.gpuMilliseconds))
+                    // Decision 485: the main thread's busy time a frame
+                    // and its longest stretch, the game loop's ticks with it.
+                    Text(verbatim: String(format: "main %.1f ms · longest %.0f ms", stats.mainMilliseconds, stats.mainLongestMilliseconds))
                     // The CPU waiting for the screen, apart from its work
                     // (the far view's 16.6 ms, 2026-10-21), and the pixels a
                     // point drawn (Map3DDrawScale).
@@ -634,9 +638,13 @@ final class Map3DTrainFeed {
     /// acts only on a change), `nil` when there is none near.
     var garbageTruckSound: ((Map3DGarbageTruck.Sound?) -> Void)?
 
-    func update(world: GameWorld, palette: LinePalette) {
-        motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
-        heights = Map3DTrains.Heights(world: world)
+    /// Decision 485: the glide and the heights the tick worked out off
+    /// the main actor (the glide shared with the 2D map under this one),
+    /// not worked out again here at every tick.
+    func update(session: GameSession, palette: LinePalette) {
+        let world = session.world
+        motion = session.trainMotion(after: motion, at: Date().timeIntervalSinceReferenceDate)
+        heights = session.map3DTrainHeights()
         self.palette = palette
         activity = Map3DStreetLife.Activity(world: world)
         labels = Map3DTrainLabels(world: world)
@@ -1094,6 +1102,8 @@ final class Map3DTrainLabelState {
 private struct Map3DRainLayer: View, Equatable {
     let rain: Map3DRain
     let detail: Map3DStreetDetail
+    /// PERF (2026-10-30): the frames a second the 3D map aims for.
+    let aim: Int
     /// How far the day's light has gone (``Map3DLighting/night``).
     let night: Float
     /// Decision 394: the cab deep in a tunnel, where no rain falls.
@@ -1101,7 +1111,7 @@ private struct Map3DRainLayer: View, Equatable {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     nonisolated static func == (lhs: Map3DRainLayer, rhs: Map3DRainLayer) -> Bool {
-        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.night == rhs.night && lhs.underground == rhs.underground
+        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.aim == rhs.aim && lhs.night == rhs.night && lhs.underground == rhs.underground
     }
 
     var body: some View {
@@ -1111,8 +1121,8 @@ private struct Map3DRainLayer: View, Equatable {
                            blue: Double(look.colour & 0xFF) / 255, opacity: look.opacity)
         return Group {
             if rain.amount > 0, !reduceMotion, !underground {
-                // At most 60 a second: the rain looks no smoother faster.
-                TimelineView(.animation(minimumInterval: 1.0 / 60)) { timeline in
+                // No more often than the map under it, 60 a second at most.
+                TimelineView(.animation(minimumInterval: Map3DRain.minimumInterval(aim: aim))) { timeline in
                     Canvas { context, size in
                         let time = timeline.date.timeIntervalSinceReferenceDate
                         var streaks = Path()

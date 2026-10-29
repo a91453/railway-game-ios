@@ -50,6 +50,8 @@ final class MonthlyReportTests: XCTestCase {
 
         session.dismissMonthEnd()
         XCTAssertNil(session.monthEndReport)
+        // UI audit 2026-10-30: Data opens it again.
+        XCTAssertEqual(session.lastMonthReport?.month, 0)
     }
 
     /// Decision 175, later: a demo being looked at, or a game with its pauses
@@ -95,6 +97,7 @@ final class MonthlyReportTests: XCTestCase {
         XCTAssertNil(session.monthEndReport)
         XCTAssertFalse(session.world.clock.isPaused)
         XCTAssertTrue(session.news.items.contains { $0.category == .monthly })
+        XCTAssertEqual(session.lastMonthReport?.month, 0, "Data still opens it")
     }
 
     func testOffWritesNothing() throws {
@@ -103,6 +106,7 @@ final class MonthlyReportTests: XCTestCase {
         let tick = try XCTUnwrap(session.beginLoopTick())
         XCTAssertTrue(session.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 2 * 1_440, listening: false))))
         XCTAssertNil(session.monthEndReport)
+        XCTAssertNil(session.lastMonthReport)
         XCTAssertFalse(session.news.items.contains { $0.category == .monthly })
         XCTAssertEqual(session.news.baseline?.reportedMonth, 0, "the next report still compares with this month")
     }

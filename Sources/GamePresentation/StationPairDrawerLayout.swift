@@ -19,6 +19,54 @@ public enum StationPairDrawerLayout {
         max(panel, card, corner, 0)
     }
 
+    /// Decision 491 (TestFlight 95.1, an iPad Air held upright): the
+    /// narrowest band it is laid out in. Its top line (two names, the
+    /// distance and time, the fold button) and its bars (two figures, the
+    /// title between) need about 260 points; offered less, they ran out
+    /// of the band, past the screen's leading edge and over the building
+    /// tools, the names cut to a letter.
+    public static let minimumWidth = 280.0
+
+    /// How far it keeps from the screen's leading, trailing and bottom
+    /// edges (the margin inside the leading and trailing ones not
+    /// counted).
+    public struct Insets: Hashable, Sendable {
+        public var leading: Double
+        public var trailing: Double
+        public var bottom: Double
+
+        public init(leading: Double, trailing: Double, bottom: Double) {
+            self.leading = leading
+            self.trailing = trailing
+            self.bottom = bottom
+        }
+    }
+
+    /// Where it stands on a screen `screenWidth` wide, `nil` where it has
+    /// no room (the ✓ pill's words still give the line's length and time).
+    /// Above the dock, `bottom` up, between `leading` (the tools column
+    /// beside it) and the widest of `panel`, `card` and `corner` (as
+    /// ``trailingInset(panel:card:corner:)``), as before. Where that band
+    /// is narrower than ``minimumWidth`` (an iPad held upright, the panel
+    /// beside the map taking half of it and the map's coverage, 3D and
+    /// zoom buttons beside the panel), it stands above those buttons
+    /// instead (`cornerHeight` up from the screen's bottom edge), reaching
+    /// to the panel or the card, and clear of `rail`, the building tools
+    /// down the leading edge (with its margin, 0 without).
+    public static func insets(
+        screenWidth: Double, margin: Double, leading: Double, rail: Double,
+        panel: Double, card: Double, corner: Double, cornerHeight: Double, bottom: Double
+    ) -> Insets? {
+        func band(_ leading: Double, _ trailing: Double) -> Double { screenWidth - leading - trailing - 2 * margin }
+        let trailing = trailingInset(panel: panel, card: card, corner: corner)
+        if band(leading, trailing) >= minimumWidth {
+            return Insets(leading: leading, trailing: trailing, bottom: bottom)
+        }
+        let raisedLeading = max(leading, rail), raisedTrailing = trailingInset(panel: panel, card: card, corner: 0)
+        guard band(raisedLeading, raisedTrailing) >= minimumWidth else { return nil }
+        return Insets(leading: raisedLeading, trailing: raisedTrailing, bottom: max(bottom, cornerHeight + margin))
+    }
+
     /// Whether it rides in the map's ✕ ↶ ✓ pill, beside its words, rather
     /// than across the bottom of the map: on a short screen (a phone on its
     /// side) there was no room for the pill above or beside it, its bars

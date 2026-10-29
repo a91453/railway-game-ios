@@ -535,6 +535,42 @@ set -euo pipefail
 #   rest          907 -> about 631 (787 -> about 511 on the nightly)
 # campaigns-2, -4, -5, -7 and -9 were already above 700 on their slowest
 # runs (Sanying Line's two real days sit in -2 and -9); they take nothing.
+# 2026-10-29 (decision 489): the Danhai Light Rail's real days, a class
+# for each pair of lines: DanhaiGreenLineDayTests about 165 s locally and
+# DanhaiBothLinesDayTests about 245 s (debug, this Linux container; about
+# 1.24 times that on CI), to campaigns-11 and campaigns-13, which have
+# taken none of the late additions above; DanhaiDepotTests (some 20 s)
+# stays in rest.
+# 2026-10-30: those three and LiujiaLineTrainsTests, Map3DBusLayerTests had
+# no CLASS_WEIGHTS entry, so a pull request's tier counted them 1 s each and
+# put DanhaiBothLinesDayTests beside HighSpeedDemoDayTests: selected-3 hit
+# the 20-minute limit on main (run 40925534792) and on #1514 and #1515. The
+# weights are CI's times where a run reported them (DanhaiGreenLineDay 107,
+# LiujiaLineTrains 108, Map3DBusLayer 65) and 1.24 times the local ones
+# otherwise (DanhaiBothLinesDay 245 -> 300, DanhaiDepot 20 -> 25).
+# 2026-10-30, later: #1515's six selected jobs (head 738494a) measured
+# them again, with the classes of 10 s or more that had no weight or one
+# off by a third: RealLineAcquisition 165 -> 290, DanhaiGreenLineDay
+# 110 -> 185, Map3DBuses (none) 59, SharedNetwork (none) 47 and others,
+# and the ones that ran a third shorter there than their weight said
+# (SanyingLineSimpleDay 450 -> 192, SanyingLineRealisticDay 300 -> 226,
+# Map3DSceneMemory 310 -> 136, HighSpeedDemoBatch 146 -> 95, TRADemoDay
+# 93 -> 59): only the proportions matter, so one run's times keep them in
+# step. Dealt into seven parts by these weights, that run's classes come to
+# 658 to 738 s each (six parts by the old weights: 493 to 1,026).
+# 2026-10-29 (decision 493): the Blue Coast Line, then the Green Mountain
+# Line, a class for each rule, some 330 s each locally (debug), about 410 on
+# CI: too long together for one shard. On the full run 40917483376 (main
+# a0a4ebe, campaigns not reduced) campaigns-12 took 10 minutes and
+# campaigns-8 8, so the simple one goes to campaigns-12 and the realistic
+# one to campaigns-8 (campaigns-3, at 14 minutes there, would pass 20 with
+# about 7 more); weights 1.24 times the local times.
+# The same day, for the release's full run: RealLineAcquisitionTests (about
+# 290 s) from campaigns-9 to campaigns-7, campaigns-9 having taken 14, 17
+# and 19 minutes on the full runs 40866614287, 40910293493 and 40917483376
+# and campaigns-7 10 on the last; LiujiaLineTrainsTests (about 108 s) from
+# rest to campaigns-13, rest having taken 16 to 19 minutes on those runs and
+# campaigns-13 9 (with DanhaiBothLinesDayTests about 14 from now on).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests" ;;
@@ -543,13 +579,13 @@ classes_of() {
     campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests Map3DBusLayerTests Map3DRealBuildingsTests Map3DModelTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests NetworkPostcardTests SharedNetworkTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests SanyingDepotTests BusOneWayAndTunnelRealMapTests SanyingLineFreezeTests Map3DSceneryPropsTests" ;;
-    campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests Map3DBusesTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests" ;;
-    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests" ;;
-    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests" ;;
+    campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests Map3DBusesTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests RealLineAcquisitionTests" ;;
+    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests DanhaiBlueThenGreenRealisticDayTests" ;;
+    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests" ;;
     campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests" ;;
-    campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests" ;;
-    campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests Map3DCoarseChunkTests TurnbackPropertyTests LoadJourneyCacheTests Map3DStreamingTests LineLossFixesTests" ;;
+    campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests DanhaiGreenLineDayTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests DanhaiBlueThenGreenSimpleDayTests" ;;
+    campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests Map3DCoarseChunkTests TurnbackPropertyTests LoadJourneyCacheTests Map3DStreamingTests LineLossFixesTests DanhaiBothLinesDayTests LiujiaLineTrainsTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests IdleTrainDeadlockTests NetworkSectionPropertyTests Map3DRealTracksTests Map3DEMU3000Tests MapMarksTests Map3DC341IntegrationTests Map3DBoxInstanceTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackPropertyTests Map3DStreetsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests Map3DShadowTests RealWorldExpansionTests ShortTurnCardTests" ;;
     campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests ScheduledOvertakeTrackFinalPropertyTests Map3DSurfaceTests NewsSessionTests Map3DPropsTests Map3DNightAndGroundTests DemoAtTests SeededStreetPlanTests Map3DBuildingsTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests AutoServiceTests Map3DHandoffTests Map3DDetailTests" ;;
@@ -657,28 +693,28 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   BlockSectionsTests:4 LandDemandTests:4 HighSpeedTests:4 BoardingTests:3
   LocalPassTests:59 LongLegReplayTests:16
   HighSpeedDemoTests:400 HighSpeedDemoDayTests:328 TRADemoTests:121
-  HighSpeedDemoBatchTests:146 NewGameSavePropertyTests:92 TRADemoDayTests:93
+  HighSpeedDemoBatchTests:95 NewGameSavePropertyTests:92 TRADemoDayTests:59
   OnboardingTests:92 CommandLogTests:66 LessonGuideTests:62
-  RealLineAcquisitionTests:165 SanyingLineSimpleDayTests:450 SanyingLineRealisticDayTests:300 DemoRealLinesTrackTests:160 NetworkPostcardTests:64 Map3DSceneMemoryTests:310
+  RealLineAcquisitionTests:290 SanyingLineSimpleDayTests:192 SanyingLineRealisticDayTests:226 DemoRealLinesTrackTests:160 NetworkPostcardTests:64 Map3DSceneMemoryTests:136
   Map3DPlatformClearanceTests:113
-  NightSkipTests:57 RealWorldDemoTests:51 LineLossFixesTests:49
-  Map3DCoarseChunkTests:31 Map3DStreetLifeTests:29 RealRailwayTracingTests:29
-  DemoRealLinesTests:26 Map3DStreamingTests:25 Map3DStreetsTests:25
-  Map3DOpenEveryStartTests:23 MonthlyReportTests:19 Map3DSurfaceTests:18
-  Map3DTests:18 RealWorldDataLoadTests:18 LessonTests:17
+  NightSkipTests:57 RealWorldDemoTests:51 LineLossFixesTests:71
+  Map3DCoarseChunkTests:31 Map3DStreetLifeTests:29 RealRailwayTracingTests:43
+  DemoRealLinesTests:26 Map3DStreamingTests:25 Map3DStreetsTests:48
+  Map3DOpenEveryStartTests:23 MonthlyReportTests:19 Map3DSurfaceTests:35
+  Map3DTests:44 RealWorldDataLoadTests:18 LessonTests:17
   NewGameBalanceTests:17 NewsSessionTests:17 PolicyTests:17
-  RealWorldDemoGroundTests:17 Map3DRealBuildingsTests:15
+  RealWorldDemoGroundTests:17 Map3DRealBuildingsTests:37
   StationCommerceCardTests:14 LineConfirmationTests:13
   LineLossDiagnosisTests:13 ScreenshotSceneTests:13 DemoAtTests:12
-  MetroStructuresTests:12 AchievementsTests:11 SeededStreetPlanTests:11
-  FreightSessionTests:10 LoopLineBoardingTests:10 Map3DRealGroundTests:10
-  AutoServiceTests:9 Map3DBuildingsTests:9 MapMarksTests:9
-  PingxiChallengeTests:9 Map3DHandoffTests:8 Map3DNextDepartureTests:8
-  Map3DSignTests:8 NewGameCampaignTests:8 SparseCityLandTests:8
+  MetroStructuresTests:12 AchievementsTests:11 SeededStreetPlanTests:33
+  FreightSessionTests:10 LoopLineBoardingTests:10 Map3DRealGroundTests:24
+  AutoServiceTests:9 Map3DBuildingsTests:17 MapMarksTests:9
+  PingxiChallengeTests:9 Map3DHandoffTests:8 Map3DNextDepartureTests:21
+  Map3DSignTests:16 NewGameCampaignTests:8 SparseCityLandTests:8
   TrainSessionPropertyTests:8 TutorialSessionTests:8 CompanyRankTests:7
-  LinePanelMemoTests:7 Map3DModelTests:7 Map3DNightAndGroundTests:7
-  Map3DPropsTests:7 Map3DStationKitTests:7 Map3DDetailTests:6
-  Map3DRealTrainsTests:6 Map3DShadowTests:6 RealWorldExpansionTests:6
+  LinePanelMemoTests:7 Map3DModelTests:30 Map3DNightAndGroundTests:7
+  Map3DPropsTests:21 Map3DStationKitTests:7 Map3DDetailTests:16
+  Map3DRealTrainsTests:6 Map3DShadowTests:15 RealWorldExpansionTests:6
   ScreenFactsTests:6 StationDemandSessionTests:6 DepartureBoardTests:5
   HeadlessGameTests:5 HolidayTextTests:5 NextStepsTests:5 ShortTurnCardTests:5
   StationOperationsTests:5 BackgroundSaveTests:4 LineSatisfactionTests:4
@@ -688,7 +724,16 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   DoubleTrackUpgradeTests:3 GameLauncherTests:3 JourneyTraceTests:3
   LandImportTests:3 LineDraftSummaryTests:3 Map3DParksTests:3
   Map3DSceneKitTests:3 Map3DStationsTests:3 SimpleRulesTests:3
-  TodayAccountTests:3 TrafficOverlayTests:3"
+  TodayAccountTests:3 TrafficOverlayTests:3
+  DanhaiBothLinesDayTests:300 DanhaiGreenLineDayTests:185
+  LiujiaLineTrainsTests:108 Map3DBusLayerTests:36 DanhaiDepotTests:11
+  FrameTimeBenchTests:22 RealWorldDemoRoadsTests:12 Map3DSceneryPropsTests:26
+  Map3DTrainOcclusionTests:13 SanyingLineFreezeTests:17 SanyingDepotTests:42
+  Map3DTrainSetTests:17 BusReadAheadTests:12 RealBusesTests:11
+  Map3DBusesTests:59 SharedNetworkTests:47 Map3DFrontageTests:13
+  Map3DEMU800IntegrationTests:16 RoadsTurnOnTests:14
+  BusOneWayAndTunnelRealMapTests:12 Map3DC341IntegrationTests:10
+  DanhaiBlueThenGreenSimpleDayTests:410 DanhaiBlueThenGreenRealisticDayTests:410"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
@@ -1472,7 +1517,7 @@ path_plan() {
 #   parts=<how many jobs share it (SELECTED_PART)>
 # with one line per file on stderr: its tier and why.
 declare -A FIXTURE_PLANS=()
-PRESENTATION_PARTS=6
+PRESENTATION_PARTS=7
 pr_plan() {
   local path line tier rank best=0 tests="" edited="" plans
   code_cache
@@ -1506,6 +1551,9 @@ pr_plan() {
     # weights 450 and 300) brought the five parts to about 854 each, and
     # pull request #1448's selected-4 took 18 minutes of tests and
     # selected-5 reached the job's 20 (run 40790641310); six are about 710.
+    # Seven since 2026-10-30: #1515's six parts took 493 to 1,026 s of tests
+    # (run of 738494a), its selected-3 19.5 minutes of the job's 20, with
+    # the Danhai and Liujia classes added; seven are about 700.
     [[ " $tests " != *" GamePresentationTests.* "* ]] || parts="$PRESENTATION_PARTS"
     # An edited campaign file's class can take most of a job's 20 minutes
     # on its own (ServiceRepeatingPropertyTests 792 s of tests); two of

@@ -14,7 +14,7 @@ struct MonthlyReportSheet: View {
         let language = session.language
         NavigationStack {
             Group {
-                if let report = session.monthEndReport {
+                if let report = session.monthEndReport ?? session.lastMonthReport {
                     MonthlyReportCard(report: report, language: language)
                 } else {
                     Text(verbatim: language.text("No month has closed yet.", "還沒有完成的月報。"))

@@ -172,6 +172,11 @@ public final class GameSession {
     /// on a copy of the world), kept for the platform and the
     /// ``commandRevision`` they were worked out for.
     @ObservationIgnored var platformTrackMenuMemo: [TrackPlatform: (revision: Int, choices: [MenuChoice<PlatformTrackPlacement>])] = [:]
+    /// Decision 488: the building tool's preview (``buildingPreview``) and
+    /// what it was worked out for.
+    @ObservationIgnored var buildingPreviewMemo: (key: BuildingPreviewKey, preview: BuildingPreview)?
+    /// How many times ``buildingPreview`` was worked out (for the tests).
+    @ObservationIgnored var buildingPreviewWorkedOut = 0
     /// What traffic control shows (``trafficOverlay``,
     /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
     /// for; the game loop reads it off the main actor with each tick.
@@ -184,6 +189,11 @@ public final class GameSession {
     /// `revision`, from a glide of the trains seen in the world of
     /// revision `from` (its ``TrainMotion/source``).
     @ObservationIgnored var glideMemo: (revision: Int, from: Int, motion: TrainMotion)?
+    /// Decision 485: the trains' body heights the 3D map puts its cars at
+    /// (``map3DTrainHeights()``), kept for the ``worldRevision`` they were
+    /// read for: worked out with the tick off the main actor while the 3D
+    /// map shows.
+    @ObservationIgnored var trainHeightsMemo: (revision: Int, heights: Map3DTrains.Heights)?
 
     /// The language of the session's messages and suggested names, and of
     /// the text the app derives from the world (Stage L1). Set once: iOS
@@ -390,6 +400,11 @@ public final class GameSession {
     public func dismissMonthEnd() {
         monthEndReport = nil
     }
+
+    /// The last month that closed while the game ran, kept after its
+    /// report is closed (or only went to the news), so Data can open it
+    /// again (UI audit 2026-10-30).
+    public internal(set) var lastMonthReport: MonthlyReport?
 
     /// Whether the game pauses for typhoons, goals met, debt and a
     /// challenge's last week (the settings; kept on the device, so the app
@@ -1758,6 +1773,9 @@ public final class GameSession {
         /// Decision 379: the map's glide to ``world``, from the trains seen
         /// in the world of revision `from`, when the step worked it out.
         var glide: (from: Int, motion: TrainMotion)?
+        /// Decision 485: the 3D map's train heights of ``world``, when the
+        /// step worked them out.
+        var trainHeights: Map3DTrains.Heights?
         /// The map's bubbles of ``world`` (``GameWorld/situationAlerts()``)
         /// and the period they are for (``situationAlertsPeriod``), when the
         /// step worked them out.
@@ -1812,6 +1830,7 @@ public final class GameSession {
         let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
         let timeBefore = world.clock.now
         let worldBefore = world
+        let revisionBefore = worldRevision
         meter.measure(.stepWorld) {
             // The map's bubbles the tick worked out, in place before the
             // new world's marks read them (``situationAlerts``).
@@ -1833,6 +1852,13 @@ public final class GameSession {
                 var motion = glide.motion
                 motion.source = worldRevision
                 return (worldRevision, glide.from, motion)
+            }
+            // Decision 485: likewise, the 3D map's train heights, or the
+            // last ones kept on when the tick moved no train.
+            if let heights = step.trainHeights {
+                trainHeightsMemo = (worldRevision, heights)
+            } else if let memo = trainHeightsMemo, memo.revision == revisionBefore, step.world.trains == worldBefore.trains {
+                trainHeightsMemo = (worldRevision, memo.heights)
             }
             // Decision 330: likewise, for this world only.
             workedAdvice = step.advice.map { (worldRevision, $0) }
@@ -1909,6 +1935,9 @@ public final class GameSession {
         /// has for the world as it is (``situationAlerts``), which the tick
         /// does not work out again.
         var alertsPeriod: Int64?
+        /// Decision 485: whether the 3D map shows the trains, whose body
+        /// heights the tick then reads when it moved them.
+        var trainHeights = false
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -1937,6 +1966,11 @@ public final class GameSession {
                         step.glide = tick.glide.flatMap { previous in
                             previous.source.map { ($0, TrainMotion(world: step.world, previous: previous, time: previous.time)) }
                         }
+                        // Decision 485: the 3D map's train heights, tens of
+                        // ms with 35 trains, when the tick moved a train.
+                        if tick.trainHeights, step.world.trains != world.trains {
+                            step.trainHeights = Map3DTrains.Heights(world: step.world)
+                        }
                         // The map's bubbles, whose deadlock search took the
                         // bought Sanying Line's main actor 70–100 ms (Linux
                         // release) at every tick at 6000x.
@@ -1959,7 +1993,8 @@ public final class GameSession {
             previousTraffic: trafficMemo?.reading,
             advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision)),
             glide: world.clock.speed == .x1 ? nil : glideToGoOnFrom,
-            alertsPeriod: situationAlertsMemo.flatMap { $0.revision == commandRevision ? $0.period : nil }
+            alertsPeriod: situationAlertsMemo.flatMap { $0.revision == commandRevision ? $0.period : nil },
+            trainHeights: isMap3DOpen
         )
     }
 
@@ -1981,7 +2016,11 @@ public final class GameSession {
     /// on the map's clock): ``TrainMotion/init(world:previous:time:)``,
     /// worked out with the tick off the main actor when the tick glided on
     /// from this same `previous`, or else here.
+    /// Decision 485: the 2D map (under the 3D one) and the 3D map both
+    /// take it after a tick; the second gets the glide the first did, not
+    /// one worked out again on the main actor.
     public func trainMotion(after previous: TrainMotion, at time: Double) -> TrainMotion {
+        if let shown = shownGlide, shown.source == worldRevision { return shown }
         var motion: TrainMotion
         if let memo = glideMemo, memo.revision == worldRevision, memo.from == previous.source, world.clock.speed != .x1 {
             motion = memo.motion.seen(at: time, after: previous, speed: world.clock.speed)
@@ -1992,6 +2031,16 @@ public final class GameSession {
         glideMemo = nil
         shownGlide = motion
         return motion
+    }
+
+    /// Decision 485: the bodies' heights the 3D map puts the trains' cars
+    /// at, for the world as it is now: worked out with the tick off the
+    /// main actor when it can be, or else here, once for each world.
+    public func map3DTrainHeights() -> Map3DTrains.Heights {
+        if let memo = trainHeightsMemo, memo.revision == worldRevision { return memo.heights }
+        let heights = Map3DTrains.Heights(world: world)
+        trainHeightsMemo = (worldRevision, heights)
+        return heights
     }
 
     /// The map no longer shows the trains: the ticks stop working out

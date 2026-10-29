@@ -653,15 +653,26 @@ struct ContentView: View {
                     // bottom-trailing column too, not only of a panel: it
                     // stood over the small map and the zoom buttons
                     // (TestFlight 85.1).
-                    let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
-                    let trailing = StationPairDrawerLayout.trailingInset(
-                        panel: sidePanel != nil ? sideWidth + margin : 0,
-                        card: isOpen && besideDock ? cardWidth + margin : 0,
-                        corner: corner
+                    let global = proxy.frame(in: .global)
+                    let corner = screen.mapCornerFrame.isEmpty ? 0 : global.maxX - screen.mapCornerFrame.minX
+                    // Decision 491: on an iPad held upright, beside a
+                    // panel, above the map's corner buttons rather than
+                    // squeezed beside them off the screen (TestFlight 95.1).
+                    let insets = StationPairDrawerLayout.insets(
+                        screenWidth: Double(proxy.size.width), margin: Double(margin),
+                        leading: toolsColumn ? Double(dockSize.width) : 0,
+                        rail: showsRail && !toolsColumn ? Double(BuildToolRail.width + margin) : 0,
+                        panel: sidePanel != nil ? Double(sideWidth + margin) : 0,
+                        card: isOpen && besideDock ? Double(cardWidth + margin) : 0,
+                        corner: Double(corner),
+                        cornerHeight: screen.mapCornerFrame.isEmpty ? 0 : Double(global.maxY - screen.mapCornerFrame.minY),
+                        // Beside the tools column, above the station
+                        // master, who stands at its foot.
+                        bottom: Double(strip + dockBottom + 2 * margin)
                     )
                     // On a phone on its side it rides in the map's ✓
                     // pill instead (decision 384).
-                    if session.tutorial == nil, draft.count >= 2, !StationPairDrawerLayout.ridesInPill(compactHeight: compactHeight) {
+                    if session.tutorial == nil, draft.count >= 2, !StationPairDrawerLayout.ridesInPill(compactHeight: compactHeight), let insets {
                         StationPairDrawer(
                             session: session, from: draft[draft.count - 2], to: draft[draft.count - 1]
                         )
@@ -669,11 +680,9 @@ struct ContentView: View {
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationPairFrame = $0 }
                             .onDisappear { screen.stationPairFrame = .zero }
                             .padding(.horizontal, margin)
-                            .padding(.leading, toolsColumn ? dockSize.width : 0)
-                            .padding(.trailing, trailing)
-                            // Beside the tools column, above the station
-                            // master, who stands at its foot.
-                            .padding(.bottom, strip + dockBottom + 2 * margin)
+                            .padding(.leading, CGFloat(insets.leading))
+                            .padding(.trailing, CGFloat(insets.trailing))
+                            .padding(.bottom, CGFloat(insets.bottom))
                             .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                     }
                 }

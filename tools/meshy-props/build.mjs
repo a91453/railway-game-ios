@@ -26,6 +26,12 @@ const generated = JSON.parse(readFileSync(resolve(root, 'tools/meshy/generated.j
 const colours = {
   postGreen: 0x2E8B4E, postRed: 0xC8382E, slot: 0x1E5A34, slotRed: 0x82261F, foot: 0x4A4F57, door: 0x8C9298,
   signWhite: 0xF2F3F1, signFrame: 0x3F6FA8, steel: 0x9AA0A8,
+  // The garbage truck's parts, as Map3DGarbageTruck.colour(_:of:) sorts
+  // them when the app reads the file: the body its yellow, the windows
+  // the vehicles' glass, the tyres and the dark trim their own.
+  truckBody: 0xF2C94C, truckGlass: 0x9CC7E0, truckTyre: 0x1C1D20, truckTrim: 0x3A3D42,
+  // The recycling truck's cab: the parks' green, as the app draws it.
+  truckGreen: 0x8DC27A,
 };
 
 function hsl([r, g, b]) {
@@ -68,9 +74,44 @@ const recipes = [
       return 'steel';
     },
   },
+  {
+    // Decision 437's evening garbage truck, from the retextured
+    // high-quality model rather than Meshy's remesh to 1,374 triangles,
+    // whose faces folded into spikes, turned some faces inside out and
+    // left 129 edges shared by more than two faces (black triangles on
+    // the device, 2026-10-29). Its front is -x, as tools/meshy/models.json
+    // says; the app fits it to 6.5 × 2.3 × 2.8 m and adds its lamps.
+    // The limit stops it first, at 2,704 triangles (two thirds of them the
+    // six tyres): 8 cm left the rear opening and the windscreen ragged.
+    id: 'garbage-truck', source: 'garbage-truck', front: '-x', height: 2.8, triangles: 1500, maxError: 0.06, outward: true,
+    classify(c) {
+      const { light, sat } = hsl(c), [r, g, b] = c;
+      if (light < 0.16) return 'truckTyre';
+      if (light > 0.5 && b > r + 15 && g > r + 10) return 'truckGlass';
+      const hue = r >= g && g >= b && r > b ? 60 * (g - b) / (r - b) : -1;
+      if (hue >= 30 && sat > 0.35 && light >= 0.3) return 'truckBody';
+      return 'truckTrim';
+    },
+  },
+  {
+    // The recycling truck that follows it, the same way: Meshy's
+    // smart-topology model (1,316 triangles) had a hole the length of
+    // the bed and an open cab side the night showed its inside through.
+    // Its grille is dark slats edge-on to the cab's front: a big face
+    // over them takes the dark only where two thirds of it is.
+    id: 'recycling-truck', source: 'recycling-truck', front: '-x', height: 2.6, triangles: 1500, maxError: 0.06, outward: true,
+    edge: { truckTrim: true, truckTyre: true },
+    classify(c) {
+      const { light, sat } = hsl(c), [r, g, b] = c;
+      if (light < 0.16) return 'truckTyre';
+      if (light > 0.5 && b > r + 15 && b >= g - 10) return 'truckGlass';
+      if (g > r + 15 && g > b + 15) return 'truckGreen';
+      return sat < 0.15 && light >= 0.3 ? 'steel' : 'truckTrim';
+    },
+  },
 ];
 
-function bake(bytes) {
+function bake(bytes, front = '+x') {
   const gltf = readGlb(bytes), images = new Map(), out = [];
   for (const { primitive, matrix } of scenePrimitives(gltf)) {
     if ((primitive.mode ?? 4) !== 4) throw new Error('only triangles');
@@ -78,7 +119,7 @@ function bake(bytes) {
     const indices = accessor(gltf, primitive.indices), material = gltf.json.materials?.[primitive.material];
     for (let i = 0; i < indices.length; i += 3) {
       const ids = [indices[i][0], indices[i + 1][0], indices[i + 2][0]];
-      const points = ids.map(k => directions('+x', applyMatrix(matrix, positions[k])));
+      const points = ids.map(k => directions(front, applyMatrix(matrix, positions[k])));
       if (area(points) < 1e-14) continue;
       out.push({ points, color: triangleColor(gltf, material, ids.map(k => uvs[k]), null, images) });
     }
@@ -164,6 +205,63 @@ function grid(triangles, step) {
   };
 }
 
+function normal([a, b, c]) {
+  const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+  return [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+}
+
+// Each piece wound one way and facing out: a collapse can fold a triangle
+// over, and the game lights each triangle by its winding. Across every edge
+// two triangles share, the second is wound against the first; a piece
+// (triangles joined that way) then turns round as a whole when, area for
+// area, it faces against the original surface under it (`along`, the
+// colour vote's points' say).
+function windOutward(triangles) {
+  const key = p => p.map(v => Math.round(v * 1e5)).join(','), edges = new Map();
+  // A thin plate's two sides fold onto the same three corners: the first
+  // face over them is wound with its neighbours and the others as it is
+  // (drawn in the same place, lit alike, or they would flicker), and only
+  // the first counts in its edges, or the plate's edges, shared by three
+  // or four, would stop the walk.
+  const first = new Map(), twin = triangles.map((t, i) => {
+    const corners = t.points.map(key).sort().join('|');
+    if (!first.has(corners)) first.set(corners, i);
+    return first.get(corners);
+  });
+  triangles.forEach((t, i) => twin[i] === i && t.points.forEach((p, k) => {
+    const a = key(p), b = key(t.points[(k + 1) % 3]), e = a < b ? a + '|' + b : b + '|' + a;
+    if (!edges.has(e)) edges.set(e, []);
+    edges.get(e).push({ i, forward: a < b });
+  }));
+  const next = triangles.map(() => []);
+  for (const shared of edges.values()) {
+    if (shared.length !== 2) continue;
+    const [x, y] = shared;
+    // Walked the same way along it, one of the two is turned round.
+    next[x.i].push({ j: y.i, turn: x.forward === y.forward });
+    next[y.i].push({ j: x.i, turn: x.forward === y.forward });
+  }
+  const turned = new Array(triangles.length).fill(null);
+  for (let start = 0; start < triangles.length; start++) {
+    if (turned[start] !== null || twin[start] !== start) continue;
+    turned[start] = false;
+    const piece = [start];
+    for (let at = 0; at < piece.length; at++) {
+      const i = piece[at];
+      for (const { j, turn } of next[i]) if (turned[j] === null) { turned[j] = turned[i] !== turn; piece.push(j); }
+    }
+    const say = piece.reduce((sum, i) => sum + (turned[i] ? -1 : 1) * triangles[i].along, 0);
+    for (const i of piece) {
+      if (turned[i] !== say < 0) { const p = triangles[i].points; [p[1], p[2]] = [p[2], p[1]]; }
+    }
+  }
+  triangles.forEach((t, i) => {
+    if (twin[i] === i) return;
+    const [a, b] = triangles[twin[i]].points.map(key), at = t.points.map(key).indexOf(a);
+    if (key(t.points[(at + 1) % 3]) !== b) { const p = t.points; [p[1], p[2]] = [p[2], p[1]]; }
+  });
+}
+
 async function simplify(triangles, recipe) {
   await MeshoptSimplifier.ready;
   const index = new Map(), positions = [], corners = new Uint32Array(triangles.length * 3);
@@ -183,12 +281,15 @@ async function simplify(triangles, recipe) {
     // Points spread evenly over it (triangleColor's 21) vote for the
     // colour under them, so a long sliver takes its middle's colour, not
     // its ends'.
-    const votes = new Map();
+    const votes = new Map(), facing = normal(p);
+    let along = 0;
     for (let i = 0; i < 6; i++) for (let j = 0; j < 6 - i; j++) {
       const w = [(i + 1) / 9, (j + 1) / 9, (7 - i - j) / 9];
       const at = [0, 1, 2].map(a => w[0] * p[0][a] + w[1] * p[1][a] + w[2] * p[2][a]);
-      const cls = triangles[nearest(at)].cls;
-      votes.set(cls, (votes.get(cls) ?? 0) + 1);
+      const under = triangles[nearest(at)];
+      votes.set(under.cls, (votes.get(under.cls) ?? 0) + 1);
+      const n = normal(under.points);
+      along += Math.sign(n[0] * facing[0] + n[1] * facing[1] + n[2] * facing[2]);
     }
     let cls = [...votes].sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]))[0][0];
     // A dark part (the slot and door, a deeper shade of the body: a
@@ -197,8 +298,10 @@ async function simplify(triangles, recipe) {
     if (recipe.edge?.[cls] && votes.get(cls) < 14) {
       cls = [...votes].filter(([c]) => c !== cls).sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]))[0]?.[0] ?? cls;
     }
-    out.push({ points: p, cls });
+    out.push({ points: p, cls, along: along * Math.hypot(...facing) });
   }
+  if (recipe.outward) windOutward(out);
+  for (const t of out) delete t.along;
   return { triangles: out, error };
 }
 
@@ -224,7 +327,7 @@ function write(recipe, triangles, record) {
 
 async function build(batch, folder, recipe) {
   const bytes = readFileSync(join(batch, 'glb-hq', `${recipe.source}.glb`));
-  const { gltf, triangles } = bake(bytes);
+  const { gltf, triangles } = bake(bytes, recipe.front);
   // Sort by the raw height (Meshy's -1..1) before standing it up.
   const all = triangles.flatMap(t => t.points);
   const bottom = all.reduce((m, p) => Math.min(m, p[2]), Infinity), top = all.reduce((m, p) => Math.max(m, p[2]), -Infinity);
@@ -233,8 +336,10 @@ async function build(batch, folder, recipe) {
     t.cls = recipe.classify(t.color, (t.mid[2] - bottom) / (top - bottom));
   }
   standUp(triangles, recipe.height);
-  facing(recipe, triangles);
-  standUp(triangles, recipe.height);
+  if (recipe.face) {
+    facing(recipe, triangles);
+    standUp(triangles, recipe.height);
+  }
   const { triangles: made, error } = await simplify(triangles, recipe);
   let result = made;
   if (recipe.pair) {

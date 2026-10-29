@@ -12,6 +12,8 @@ cp <輸出資料夾>/meshy-*.m3dmodel RailwayGameApp/Resources/Models/
 |---|---|--:|--:|--:|---|
 | `meshy-post-boxes`（`postBoxes`） | `mailbox-green` | 433,504 | 1,724（一支 862，兩支） | 6 mm | 1.04 × 0.43 × 1.15 |
 | `meshy-bus-stop-pole`（`busStopPole`） | `bus-stop-pole` | 84,268 | 300 | 10 mm | 0.59 × 0.58 × 2.80 |
+| `garbage-truck`（`Map3DStreetModel.garbageTruck`，決策 437） | `garbage-truck` | 97,281 | 2,704 | 6 cm | App 讀檔時縮成 6.5 × 2.3 × 2.8 |
+| `recycling-truck`（`Map3DStreetModel.recyclingTruck`，決策 437） | `recycling-truck` | 99,059 | 2,949 | 6 cm | App 讀檔時縮成 6.5 × 2.3 × 2.6 |
 
 做法（`build.mjs`）：
 
@@ -19,7 +21,8 @@ cp <輸出資料夾>/meshy-*.m3dmodel RailwayGameApp/Resources/Models/
 2. 立起來、縮到配方的高度，轉到遊戲的方向：郵筒投信口朝 +y（馬路），站牌的薄邊沿 x（牌面朝來車方向）。
 3. 用 meshoptimizer 1.3.0（MIT，`tools/glb-to-m3dmodel/package.json` 已經釘的版本）的 `simplify`，以公尺為單位的誤差上限簡化到配方的三角形數；誤差先到上限就停（郵筒停在 862）。
 4. 每個新三角形的顏色由它面上 21 個點投票：每點取最近的原件三角形（大三角形先在面上撒點，免得被旁邊細碎的框搶走）。
-5. 郵筒複製成一對，左邊那支改紅色（一個形狀兩用）。
-6. 檔頭 provenance 記下 Meshy 的任務編號、模型、credits、原件的 SHA-256 與配方，並標明是 AI 生成（Meshy 條款 §2.4）。生成記錄另在 `tools/meshy/generated.json`、`models.json`。
+5. 兩台垃圾車隊（`outward`）：簡化會把少數三角形折反，所以沿共用邊把每片相連的面統一繞序，整片再依底下原件表面的朝向決定朝外。薄板兩面折到同樣三個角上時，只拿第一個面參加，其餘照它繞（決策 437 的 2026-10-29 修正：Meshy 的低模有破洞與反面，實機晚上看到黑三角）。配方的 `edge` 列出的深色要三分之二的點投它才算（郵筒的投信口、回收車的水箱罩）。
+6. 郵筒複製成一對，左邊那支改紅色（一個形狀兩用）。
+7. 檔頭 provenance 記下 Meshy 的任務編號、模型、credits、原件的 SHA-256 與配方，並標明是 AI 生成（Meshy 條款 §2.4）。生成記錄另在 `tools/meshy/generated.json`、`models.json`。
 
 同樣的輸入，輸出逐位元相同。列車不用 Meshy、不用這個工具（決策 467）。

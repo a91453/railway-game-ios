@@ -240,8 +240,7 @@ extension GameSession {
         for offset in Self.buildingSnapOffsets {
             let candidate = PlanPoint(x: point.x + offset.x, y: point.y + offset.y)
             guard world.bounds.contains(candidate), clears(candidate) else { continue }
-            var draft = world
-            if (try? draft.placeBuilding(kind, at: candidate)) != nil { return candidate }
+            if (try? world.buildingPlacement(kind, at: candidate)) != nil { return candidate }
             tries += 1
             if tries == 8 { break }
         }
@@ -373,18 +372,31 @@ extension GameSession {
     }
 
     /// What building on the ``buildingSite`` would do (decision 95): GameCore
-    /// places ``buildingKind`` there on a copy of the world; `nil` without a
-    /// site, or in another mode or tool.
+    /// works out placing ``buildingKind`` there without changing the world
+    /// (``GameWorld/buildingPlacement(_:at:look:)``); `nil` without a site,
+    /// or in another mode or tool. Decision 488: the map, the build card
+    /// and its button each read it several times a frame, and a drag
+    /// moves the site at every frame, so it is kept for the world, the
+    /// site, the kind and the look it was worked out for.
     public var buildingPreview: BuildingPreview? {
         guard tool == .building, buildingMode == .build, let site = buildingSite else { return nil }
-        let kind = buildingKind
+        let key = BuildingPreviewKey(revision: worldRevision, site: site, kind: buildingKind, look: buildingLook)
+        if let memo = buildingPreviewMemo, memo.key == key { return memo.preview }
+        buildingPreviewWorkedOut += 1
+        let preview = FrameCostMeter.shared.measure(.buildingPreview) { workOutBuildingPreview(at: site) }
+        buildingPreviewMemo = (key, preview)
+        return preview
+    }
+
+    /// ``buildingPreview`` worked out afresh at `site`.
+    func workOutBuildingPreview(at site: PlanPoint) -> BuildingPreview {
+        let kind = buildingKind, look = buildingLook
         // Decision 245: its whole price, weighed against the cash.
-        var draft = world.pricingCopy()
+        let draft = world.pricingCopy()
         let cost: Money?, problem: String?
         var movingIn: (residents: Int64, jobs: Int64) = (0, 0)
         do throws(GameError) {
-            let look = buildingLook
-            let placed = try draft.placeBuilding(kind, at: site, look: look)
+            let placed = try draft.buildingPlacement(kind, at: site, look: look)
             cost = placed.cost
             movingIn = (placed.residents, placed.jobs)
             problem = shortfallText(placed.cost, doing: .edit(.placeBuilding(kind, at: site, look: look == 0 ? nil : look)))
@@ -518,6 +530,14 @@ extension GameSession {
 /// What building ``GameSession/buildingKind`` on the
 /// ``GameSession/buildingSite`` would do (decision 95), as GameCore
 /// worked it out on a copy of the world.
+/// What ``GameSession/buildingPreview`` was worked out for (decision 488).
+struct BuildingPreviewKey: Hashable {
+    let revision: Int
+    let site: PlanPoint
+    let kind: PlacedBuildingKind
+    let look: Int
+}
+
 public struct BuildingPreview: Hashable, Sendable {
     public let kind: PlacedBuildingKind
     public let centre: PlanPoint

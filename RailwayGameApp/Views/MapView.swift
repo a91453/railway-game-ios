@@ -2674,7 +2674,10 @@ private struct MapWeatherLayer: View, Equatable {
 
     var body: some View {
         let weather = weather, reduceMotion = reduceMotion, typhoonStations = typhoonStations, camera = camera
-        return TimelineView(.animation(paused: reduceMotion || weather.sky == .clear)) { timeline in
+        // PERF (2026-10-30): the rain falls at the trains' glide (decision
+        // 371's 30 a second), not at every refresh of the screen (60, and
+        // 120 on a ProMotion iPad), the whole screen drawn again each time.
+        return TimelineView(.animation(minimumInterval: MapGlide.minimumInterval, paused: reduceMotion || weather.sky == .clear)) { timeline in
             Canvas { context, size in
                 FrameCostMeter.shared.measure(.weather) {
                     context.clip(to: Path(CGRect(origin: .zero, size: size)))

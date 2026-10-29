@@ -37,6 +37,18 @@
 
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
+> 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
+
+> 有功能沒按鈕、有按鈕沒功能（派工單 BH7，`claude/ui-gaps`，2026-10-30）：[`research/UI_GAPS_2026-10-30.md`](research/UI_GAPS_2026-10-30.md)。只讀程式；沒有改程式（沒找到沒接上的按鈕或漏翻）。玩家到不了的 GameCore 指令只有兩個：G1 收購真實公車路線（決策 400 的 10i-4，還沒派，公測後要新卡片）、G2 每條線停站秒數（決策 207 刻意不給）。B-1（設定裡「規則」一列點了沒反應）與 §4 的 D1–D15（補 UIA 沒列的入口步數）公測後由規劃照順序派，D6、D11、D12 跟 UIA 的 B7、B2、B6 一起做。
+
+> 新手教學盤點（派工單 TUT，`claude/tutorial-review-2026-10-30`，2026-10-30）：[`research/TUTORIAL_REVIEW_2026-10-30.md`](research/TUTORIAL_REVIEW_2026-10-30.md)。公測前只修了 A1（「點『車站…』看誰在搭車」打開在「旅客與運量」組）；其餘步驟對照 main 都指得到、按鈕字都對。留下的是該文件 §4 的 B1–B7（教學的路線面板和平常不同、實景地圖沒教、iPad 直拿沒走過教學、錢的事沒教等），公測後由規劃照順序派；B3 發版前要在 iPad 直拿實機走一次第 1 關。
+
+> 公測前效能盤點（派工單 PERF，`claude/perf-tiers`，決策號不動）：[`research/PERF_TIERS_2026-10-30.md`](research/PERF_TIERS_2026-10-30.md)。這輪只修了兩層雨的重畫次數（3D 跟地圖的格數、2D 限每秒 30 次）。留下的：「自動」在「少像素」之後再加「少陰影與反光」「穩定 30 格」兩步，主執行緒造成的掉格不降畫面（§4 丙，公測後拿實機回報再做）；其餘依 §5 的順序。實機要看的數字在 §6。
+
+> 車庫開放給所有玩家（派工單 GAR，[決策 492](decisions/492.md)，`claude/garage-train-viewer`）：設定裡「車庫」一列打開決策 434 的列車展示；列車包沒解鎖時包裡的車不列。截圖驗收暫緩；發版前在 iPhone 直橫、iPad 直橫各開一次車庫（設定 →「車庫」），看那一段與畫面能開、能關、不跑版，App Store 設定（列車包開關關著）的選車清單沒有包裡的車。Linux `Map3DShowcaseTests` VERIFIED；Simulator 與實機 UNVERIFIED（`TrainShowcaseUITests` 在 full lane）。
+
+> iPad 直拿的兩站比較卡（派工單 SPD，[決策 491](decisions/491.md)，`claude/station-pair-drawer-portrait`）：路線面板開著時比較卡改站到地圖右下角按鈕上方、讓開建設工具列；橫拿不變。截圖驗收暫緩；發版前在 iPad 直拿新增路線點兩站看（下一步見決策 491）。Linux `StationPairDrawerLayoutTests` VERIFIED；實機 UNVERIFIED。
+
 > 鋪路畫的和鋪好的不同（派工單 RDW，[決策 487](decisions/487.md)，`claude/road-draw-preview-mismatch`）：實景地圖上拖過城市道路格子的段落，現在也鋪成玩家的路（不收錢）。作者暫停截圖驗收；發版前在實機看：彰化田中大社路旁（或任何實景地圖的巷弄旁）用「建設 → 公車 → 道路」拖一個方框和一條帶圈的路，鋪好後的線要和預覽一樣；點底圖沒路的地方，要說「在地圖上拖過要鋪路的地方」，不是「城市的路」；整段沿現有的路拖，按鈕寫「沿現有的路 X，不用錢」。Linux 測試 `RoadDrawRealMapTests`、`RoadGridTests` VERIFIED；實機 UNVERIFIED。
 
 > 乘客需求模型對照（派工單 DEM，研究，`claude/demand-model-research`）：[`research/DEMAND_MODEL_COMPARISON_2026-10-29.md`](research/DEMAND_MODEL_COMPARISON_2026-10-29.md)。用北捷 2025 各站進站與 2025-10 完整 OD 量過現行模型；建議方案 A（居民與工作分開給權重，GameCore 開關、升存檔），B（起訖距離衰減）排在 A 之後；轉運站（台北車站、板橋）轉乘點數上限另外量。實作都還沒派，順序見該文件 §6。
@@ -389,6 +401,22 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第三十二次換手（2026-10-29 約 14:45 UTC，第 31 任 session_01YGNNukxseY7eMCvXhjtc4X → 第 32 任）**：第 31 任壓縮 2 次、用到約 29 萬 token，照 §1 換手。
+- **發版**：作者已自己發 95.1，testflight.yml 跑在 a7b958c（run 40862262994，綠）。和 6ff5ffe 只差 What's New 多一行「車隊清單從車卡上也拖得動」。作者 10/30 會先自己發一版測，再發一版開公測（10/31 0:00 台灣時間丟連結）。發之前要確認 main HEAD 的完整 ci.yml 和 iOS 全線都綠；作者自己按 TestFlight，或在本對話說「發」才代按。6ff5ffe 的 ci.yml 全量重跑後綠（40866614287）；iOS 全線紅（40866617267），紅的是兩支不穩的 UI 測試，#1498 已修。
+- **今天合的**：#1495（視覺技術研究，docs/research/VISUAL_TECH_RESEARCH_2026-10-29.md）、#1496（路線清單橫放收一列，決策 486）、#1497（rest shard 搬類別）、#1498（UI 測試改穩）、#1499（實景地圖鋪路照畫的鋪，決策 487）、#1500（GeoJSON 輸出給 geolibre.app）。
+- **還在做的**（綠了就用 REST 轉 ready 並合併，合了在 #1041 記、告訴作者，再封存）：
+  - #1501 FPS（session_01YGNNuphxaPGPV7TDzRjjop）：3D 跟車 10× 掉幀，決策 485，已 merge main，CI 跑中。
+  - LJB（session_01YGNNuqJftBtg8BZnJg1nrk）：先買內灣線再買六家線，六家線列車卡在竹中。作者說「修好跟我說」。
+  - GTK（session_01YGNNumjTnb7ozdTjHu7Gwv）：垃圾車和回收車的 3D 模型破圖。
+  - BLD（session_01YGNNuoJrjdfniv6NV8wn7e）：2D 放置建築時 fps 掉到 11–14。
+  - UIF（session_01YGNNuoNKMExihpF16p4VC6）：#1498 已合，等它把單支重複驗證跑完並結案。
+- 這些都合進去後，在 main HEAD 用 workflow_dispatch 跑完整 ci.yml 和 iOS 全線，綠了給作者紅綠燈表。
+- **排程**：第 31 任的巡查 `trig_01QDkvQkddhwX49C25FVXkWw`（15:04 UTC）和 Threads `trig_01SRe5chbpKMHHWobCAKky9A` 綁在第 31 任身上。新任用同樣的 prompt 建綁自己的（`get_trigger` 讀得到），再刪掉舊的。作者說 10/29 是最後一次 Threads 更新日誌，以後直接發宣傳片，所以 Threads 排程可以停掉。
+- **作者的狀態**：觸及率低，有點想放棄，也怕公測（覺得流量被另一個同類 App 吸走了）。語氣放溫和，不要催。PR 和留言都不要寫出那個 App 的名字。
+- **作者只有手機**：要看的東西給圖或結論，不要叫作者跑指令。
+- **環境**：設定腳本第 3 行把 `mcp__claude-code-remote__add_repo` 當成殼層指令執行，每次開機都 exit 127。不影響工作，已告訴作者可以去刪。
+- **95.1 之後的待辦**照舊：演示模式改成只在內部版、需求選項 A、私庫搬家等（見下面「第三十一任接手」）。
 
 **第三十一任接手（2026-10-29 約 07:30 UTC，session_01YGNNukxseY7eMCvXhjtc4X，作者在 claude.ai 開，第 1 層）**：第 30 任 session_01YGNNuq4nxQrJ1jQ182c4Yz 沒掛到 repo、拿不到 GitHub 權限，已改名「【舊・已換手】」並封存，由本任照下面兩段接。
 - 排程改綁本任：Threads `trig_01SRe5chbpKMHHWobCAKky9A`、95.1 截止後步驟 `trig_01SoyLas1SRJJ7kXE2Anw5La`（10:05 UTC）、巡查 `trig_01T8BqMeAidkdpVvhHfFhNzA`（之後約 45 分一次）；第 30 任的三個已刪。下面「第三十次換手」列的排程 id 都已不在。
@@ -2130,6 +2158,10 @@
 - **留到發版前**：截圖驗收（決策 482 暫緩）。`WebsiteScreenshotTests.testLinesListAndLinePage` 的 `lines-list` 那張就是橫放的清單，看：控制列是一列、往下捲看得到 3 列以上、名稱與「1 列 · 每 60 分」「昨日 … 人次」沒有「…」。前後對照的示意在 `docs/art/lines-panel-486-2026-10-29/overview.png`（示意圖，不是截圖）。
 - **等實機看**：iPhone SE 寬的面板控制列是否一列放得下；放大鏡打開搜尋欄時鍵盤是否擋住結果。
 
+### 4.29 3D 跟車 10× 的主執行緒工作（決策 485，session_01YGNNuphxaPGPV7TDzRjjop，派工單 FPS，2026-10-29）
+
+3D 地圖的列車滑行與車身高度改從 tick（主執行緒外）拿，3D 面板多一行 `main X ms · longest Y ms`。留下的：實機（3D、駕駛室、集集線、10×）看 fps 回到 60 沒有；`longest` 若仍常超過 30 ms，照 [決策 485](decisions/485.md) 的下一步用 Instruments 找剩下的。截圖驗收照作者 2026-10-29 的指示延到發版前（看 3D 面板展開的那張）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
@@ -2139,7 +2171,7 @@
 | 92.1「CPU 過高」與 6000× 的停頓（實景地圖、81 站、22 線、145 列車、1 條公車；第 10 日 05:59:57）：(1) 每天 06:00 的 tick 在 Linux release 約 14 秒，**每天都重做**；(2) 白天 6000× 每個 tick 平均約 0.24 秒（預算 0.1 秒），290 個 tick 有 215 個在 0.2–1 秒，推進的執行緒一直滿載，遊戲只跑約四成速度；(3) 主執行緒每個遊戲小時（6000× 下不到 1 秒一次）停約 0.4 秒，回報裡的「畫面更新 500 ms」 | 派工單 BK（session_01YGNNun8RfEVUbCYxFcr7kV，`claude/cpu-stall-0600`）；回報、command log 與作者給的存檔在私庫 branch `bug-reports/cpu-stall-0600-92-2026-10-28`（存檔是作者在對話裡直接給的，沒進私庫，要的話請作者再附） | **(1) 修了**：`PassengerRouteMemo` 只記一張圖，夜裡沒有車時算的計畫是空圖，把白天的圖換掉，所以每天 06:00 全部重搜；改成多記前一張圖，逐位元相同（同一個 binary 兩天後的世界 SHA-256 相同），第 11、12 日 06:00 從 14 秒降到 1 秒以下；載入後第一天、改了路線後的那一天仍約 14 秒。和 AQ 那局（78 站、5 線，4.4 秒）比：`shortest` 呼叫數一樣，pop 是 2.6 倍（11.1M 對 4.3M），慢在線多、圖大（44 條路徑），不是車站、列車、公車或道路；拿掉 512 個搜尋的上限、檢查點 16→64 都不變（假說推翻）。重播整份 command log（1,154 個 tick）結尾和裝置相同；修好後仍慢的是載入後第一次、玩家改路線之後那一刻（第 8 日 06:29、18:59、21:59 各 5–14 秒），以及晚上改過路線後的隔天 06:00（晚上與早上的班距不同，圖不同）。重播裡每天 02:30 的「session after」1–2 秒是無頭測試在呼叫端跑夜間快轉，App 是在背景跑（決策 369），不代表實機。剩下的照上一列 (2)–(4)；(4) 由派工單 CF 做成「tick 之前先在背景用每個核心算好路線」，見下一句。**(2) 沒修**：取樣分散在列車模擬（`dropRunsHeldUp`／`routeStretches`／`RailwayNetwork.edgeIndex`、`extendAuthorities` 複製整個 `Train`、`stepDwell` 的上下車），沒有單一熱點，要更多取樣。**(3) 已由 #1415 修**（派工單 BP，[決策 459](decisions/459.md)）：`StationMasterView` 每個遊戲小時在主執行緒重算 `StationMasterAdvice(world:)`（這局 Linux release 350–470 ms）；改成讀新聞已經算好的這一小時的建議（背景 tick 的 `AdviceProbe`），被換掉的世界也改在背景放掉；合成 81 站、144 列車主執行緒每小時 20.8 ms → 0.01 ms（release），實機 UNVERIFIED。量法：`PASSENGER_ROUTE_SAVE=<存檔> PASSENGER_ROUTE_SPEED=fast PASSENGER_ROUTE_UNTIL=174000 swift test -c release -Xswiftc -enable-testing --filter PassengerRouteSaveReportTests`；`COMMAND_LOG_SAVE=<存檔>` 跑 `CommandLogTickReportTests/testWhatTheScreenWorksOutOnTheHour`；`COMMAND_LOG_TICKS=<command-log.json>` 跑 `CommandLogTickReportTests/testTheTicksOfACommandLog`（重播整份紀錄、逐 tick 計時）。實機時間 UNVERIFIED |
 | 編輯後的主執行緒停頓：91.1 iPhone 15 Plus 蓋車站、開路線、買列車、改時刻後卡住；92.1 iPad15,7 連接轉乘站時卡住，回報的心跳在 84 站、5 線的局最高 704.9 ms／727.6 ms，幾乎都在「其他」 | 派工單 BP-2，session_01YGNNumsbvdDUbdhhgfgCkW（`claude/edit-stall-465`，#1434，決策 465） | **部分修好，待合併**：量法 `EditStallReportTests`（`EDIT_STALL_SAVE=<存檔>`，release）。站長建議、公司評等、路線提示已改在背景算（每次編輯主執行緒少約 65–120 ms）。剩下的寫在決策 465「下一步」：路線面板開著時每次編輯 70–100 ms（軌道數、路線選擇、人力）、車流開著時 `PassingLoopCards` 的 `trafficOverlay`（沒量到）、連接轉乘／改時段後乘客路線重算讓列車停約 6 秒（GameCore，另派）、其他沒計時的畫面工作。實機改善要 TestFlight 確認 |
 | ~~高鐵 demo 第一次開地圖時畫面卡住：CI 的 iPhone 模擬器上主執行緒 28–58 秒沒有回應（app trace 最長 57540 ms）~~ | #1257（session_01ATrwF1t4xfwDoTrLvMvRAY，2026-10-25） | **修了**（`claude/hsr-first-map-stall`，session_01NmGg4SVeqcXXqTpHPxnVP6）：不在畫地圖，在 `begin` 的 `readLandRoundStations`：示範建好時沒拿底圖，它的 2,489 個街區的道路（決策 400 的續，00ecb5f）留到 `begin` 在主執行緒讀，Linux debug 11.5 s。改成和建世界一起在背景讀（`GameLauncher.readingRoads`，高鐵與宜蘭線示範），主執行緒上剩 5 ms；開局在主執行緒上的其他工作合計約 0.25 s（`HSR_FIRST_MAP_REPORT=1` 跑 `HighSpeedFirstMapReportTests`）。回歸：`HighSpeedDemoTests.testTheLauncherBuildsAndOpensIt` 檢查遊戲開始時道路已讀。剩下：資料晚到時 `install` 在主執行緒對開著的遊戲 `readLandRoundStations`（只有道路還沒讀的舊存檔會多讀）→ 改到背景讀（session_01YTRwthhkJVsLn8wkaagJ8p，決策 400「續篇：讀檔的兩件小修」）；`begin` 讀檔也搬到背景（決策 419） |
-| 輕軌收購（決策 400 10j-2）剩下的：(1) 安坑輕軌：第二條正線在急彎上離第一條不到 4 m（`trackTooClose`）；`RealLineAcquisition.swift` 裡第二條的偏移改成 8 m 時鋪得下，但從 06:12 起列車停住（307 班 179 班沒發），還沒查是靠左（決策 202）選錯路還是待避線方向保護；查好後把 `ntalrt:K` 加回 `extract_metro_runs.py` 的 `LINES`、重跑、在測試加回。(2) 淡海綠山線：終點站要 6–7 條過夜軌道，要 GameCore 的停車場或回送機廠。(3) 轉乘站併站（450 m 內同名車站）程式在、沒有測試。(4) $800 萬的價格目標：10j-3 定了輕軌每位旅客 $70，淡水開局的藍海線 $796 萬 | session_011Aw4FB9UV6Nx5P2kPZUH2E（10j-2，壓縮兩次後停下） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-2 |
+| 輕軌收購（決策 400 10j-2）剩下的：(1) 安坑輕軌：第二條正線在急彎上離第一條不到 4 m（`trackTooClose`）；`RealLineAcquisition.swift` 裡第二條的偏移改成 8 m 時鋪得下，但從 06:12 起列車停住（307 班 179 班沒發），還沒查是靠左（決策 202）選錯路還是待避線方向保護；查好後把 `ntalrt:K` 加回 `extract_metro_runs.py` 的 `LINES`、重跑、在測試加回。(2) 淡海綠山線：**派工單 DHG 做了**（[決策 489](decisions/489.md)，`claude/danhai-green-depot`）：收購時一起蓋崁頂後面真實的淡海機廠，9 組晚上回廠，單買、先綠山再藍海都開放（`DanhaiDepotTests`，兩天一般與寫實規則全部發出、死結 0）。#1510 已合併。**先藍海線、再綠山線**：派工單 BLG 做了（[決策 493](decisions/493.md)，`claude/danhai-blue-then-green`）：綠山線在藍海線之後照整條（紅樹林起）連同淡海機廠收購，紅樹林到濱海沙崙鋪在藍海線旁 30 m，共用的 9 站月台併進藍海線的站；兩天一般與寫實規則見決策 493 的表。兩條線真的共用軌道（真實的樣子）還沒做，要另一套鋪法。 (3) 轉乘站併站（450 m 內同名車站）程式在、沒有測試。(4) $800 萬的價格目標：10j-3 定了輕軌每位旅客 $70，淡水開局的藍海線 $796 萬 | session_011Aw4FB9UV6Nx5P2kPZUH2E（10j-2，壓縮兩次後停下） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-2 |
 | 捷運收購（決策 400 10j-3）剩下的：(1) 三鶯線（`sanying:LB`）：**派工單 BY 做了**（`claude/sanying-line`，10/31 後合）：停住的原因是工具把 4 組車晚上送到中間站時停在反方向的正線上，擋住當晚最後幾班；工具改了（`extract_branch_runs.facing`），開放收購，兩天的真實班次一般、寫實規則都全部發出。還剩**號誌的效能**：白天一個遊戲小時約 10 s（debug，藍海線 0.6 s），51 小時一般規則 365 s、寫實 229–243 s，CI 因此把它拆成兩個測試類別（`SanyingLineSimpleDayTests`、`SanyingLineRealisticDayTests`）。gdb 取樣：約四成在被擋住的車估等多久（`secondsUntilARouteFrees` → `reservingDeparture` → `alternativeRoute` → `networkPath`／`TrainRoute.shortest`），其餘在 `trafficPlan`、`planTrafficOvertakes`、`moveTrains`；把 `runTrip` 記住沒有用（量過）。2026-10-29 派工單 SY（作者 94 實機「收購完會卡住」）：地圖的卡車泡泡改在背景 tick 算（`SanyingLineFreezeTests`），主執行緒不再每個 tick 搜死結；早上 6 點起的死結：國華、長壽山、永吉公園晚上各停 1 列在正線上（那幾站沒有側線），直通車開到就被擋，平日 06:32–06:54 的回送開走才解開（週末沒有這幾班回送）。作者要真實的機廠：[決策 479](decisions/479.md)（`claude/sanying-depot`）收購時一起蓋三峽機廠，這 4 列晚上回廠，死結沒了（`SanyingDepotTests`；實機 UNVERIFIED）。要做是 GameCore、要逐位元不變的另一件，沒派。(2) 其他捷運線的終點站要 6–25 條過夜軌道（數字在 `tools/real-timetables/README.md`），要 GameCore 的停車場或回送機廠，和淡海綠山線同一件；中和新蘆線的共用主線也在它之後。(3) 臺中、高雄的實景開局沒有一條線在 $800 萬以內（地圖框裡沒有可收購的線；臺北、新北、桃園有） | session_012tPPoF95rAooSb1w8yot6q（10j-3） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-3 |
 | 路網分析（決策 416）剩下的：GameCore 只記每站開局以來的滿站走掉、等到停駛走掉與被滿車留下，沒有每天、也沒有分到站對，所以「流失」只列汽機車與票價；沒有路線連的站對沒有 GameCore 的需求數字，用分配規則估；沒有車站的聚落沒列進來；等不到車固定 30 分；沒有 UI 測試；路線面板標題列在手機橫放時擠不擠要實機看 | session_01695GDiVgssy47EmyircfE4（§22.2 第 22 名） | 沒派；做法在 [決策 416](decisions/416.md)「下一步」 |
 | 分享路網（決策 409）剩下的：車站設計的分享（等 10d）、只看時在遊戲裡直接改成開新局、檔案 App 裡顯示明信片縮圖（Quick Look 縮圖延伸）；LINE、AirDrop、檔案 App 點了用遊戲開與分享面板的預覽都是 UNVERIFIED，要 TestFlight 實機 | session_01RarzebNWdkEundHGJDzTBf（10k） | 沒派；做法在 [決策 409](decisions/409.md)「下一步」與「沒有驗證的」 |
@@ -2182,6 +2214,7 @@
 | 實景地圖 3D 的真實股道（決策 402）：照參考的派軌（`dispatch.json`）讓每一班走它被排的股道與待避線、實機看兩條並排的高架橋面、遠景太重時鋼軌只放近景 | 決策 402「下一步」 | 沒有人接；決策 402 先用「靠左／靠右走中間那條」 |
 | ~~第 5 關第一步的卡片在時間走著時會跳：引導指的那段（`tutorialDoubleTrackStretch`，決策 378）每次都重選「現在沒有列車」的最長一段，600 倍速下在 S0、S1、S2 旁輪流換，字跟著換、卡片每幾秒就移到另一邊，玩家要點「略過」「下一步」時會點到地圖。UI 測試改成先暫停再略過（`LessonUITests`，main 12c1235 的 full lane 40085460126 的錄影）。App 的修法要選：開始這一步時記住那一段、列車在上面就叫玩家等它過去；或卡片只在擋到目標時才換位置~~ | session_01VtrfiLxZ1bP4EPrDe6FKZp 2026-10-24 | **修了**（`claude/tutorial-card-steady`）：和 `TutorialUITests.testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt` 7 天紅 2 次是同一個原因，卡片的位置每次排版都從頭算、對著目標置中，大小或要點的地方一變就整張換位置（947c23a 的 full lane 40093122899：膠囊帶著「略過這一步」量位置，步驟完成時那顆按鈕消失、膠囊變窄又置中，手指落在地圖上）。改成卡片留在原位（`TutorialCardPlacement.previous`，左上角不動），只有原位比別處差（擋到要點的地方或按鈕）才換；打開或收合時才重新放。引導指的那段照樣隨列車換（字也換），卡片不跟著跳。 |
 | Kenney（CC0）免費素材接進 3D 地圖：Nature Kit 的針葉樹（`tree_pineTallA` 等 2–3 種）、灌木（`plant_bushLarge` 等 2 種）、City Kit Industrial 的臥式儲槽（`detail-tank`），照 art-style §7 改造形狀後經 `bridge.mjs` 轉檔進 `Map3DModelPack`，放山區、站前與沿線、工業用地 | 派工單 BJ（session_01YGNNumzoGFAQMzumKPx3Ry），`docs/research/FREE_ASSETS_TRIAL_KENNEY_2026-10-28.md` §6；試做的成品與烘焙腳本在私庫 railway-assets-private `game-art-previews/docs/art/free-assets-kenney/revision-1/` | 派工單 BN 做了（決策 458，`claude/kenney-trees-tanks`）：六件改形後進 App，`tools/kenney-props/`。glTF-Validator 由決策 467 加進 CI（規劃 2026-10-28 在 #1041 定）。剩下：闊葉樹、竹林與 `wood` 以外山坡的樹沒做 |
+| 公測後再看的三件（審查 #1513 的 P3，[`archive/PR1496_1509_REVIEW_HANDOFF.md`](archive/PR1496_1509_REVIEW_HANDOFF.md)）：(1) REV-3 #1505：跳到車站面板某一組之後約一秒內，玩家自己捲會被拉回（`StationPanel.swift` 的 `settleJump`；玩家開始捲時清掉 `pendingJump`）；(2) REV-4 #1496：手機橫放時路線清單的搜尋欄在清單的一列裡，打字中捲走可能收起鍵盤；(3) REV-5 #1508：新舊版本混跑同一個網路對局會不同步（04:00 後收購那天的旅客放出不同），GameCore 沒有版本握手 | 派工單 REV，session_01YGNNuo6Fi8RzveGo8bcMk6，2026-10-29 | 沒派；有玩家回報或開放跨版本連線前再看。P2 的 REV-1、REV-2 由 `claude/rev-p2-fixes` 修了 |
 
 ## 6. 留在遠端、沒有合併的 branch
 
@@ -2618,3 +2651,21 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 2026-10-29 高雄第三版正面塗裝（Codex）
 
 使用者「側面可以了」僅接受R2 producer `3874b425`側面，正面偏方續修；最新producer `bd57e163391bfdf7492cc408c7697451578ae8e1`，真前版素材`1f73fb1`。本輪只改實體殼上的正面分色：黑罩上緣淺弧／肩部收角與U帶細分，不改中央逃生門等硬體或曲面。逐三角形原生52bytes護住X≤9m直側，T近遠整檔保持；兩producer白殼雙向交集驗車頭覆蓋不變。最新main`fd91b75c`的696他車實際bytes/FNV、所有他車鎖保持；只動本型四DM鎖，28繼承差異不消。近三車13892／遠6356；18成品從producer獨立重建相同，15 Swift6.4 WAE、8 GLB、真故障、224PNG／192同尺度前後、24真下載SHA與最終viewer已驗。沿用draft#1454 ↔ 素材draft#22，revision-3為完整包，revision-2重檔同PR刪除留PNG／README／來源。具體資料、預覽、重建及四狀態見[自有交接](art/kaohsiung/README.md)。後續使用者在第三版收尾建議後明確回覆「就這樣」；已據此把producer `bd57e163`的studies整體外觀接受記為VERIFIED，停止外觀修改。營運接入與裝置視覺／真機Metal效能動畫仍UNVERIFIED。交付程式head `cd92b3c6`之Swift gate／六selected分片及Xcode均SUCCESS；公開#1454與素材#22皆由其他流程合併，接受metadata從最新main另開互鏈draft補記（素材#24），模型／20PNG不變。studies、krtc→metroGeneric三車、其他保護範圍不變，不merge／auto-merge／TestFlight。
+
+
+### Codex：高雄輕軌兩現役車型（CAF／Citadis，2026-10-29）
+
+兩款各自五角色近遠景與完整靜態組裝，首次交付，沒有真正前版；
+[查證、模組、保護範圍與交接](art/kaohsiung-light-rail/README.md)、
+[重建／驗收工具](../tools/kaohsiung-light-rail/README.md)。
+素材在 assets-private 的 kaohsiung-light-rail-phase1／phase2 revision-1，
+明確 producer、互鏈 draft PR 與最終證據見該頁 verification.json。
+只註冊 studies；既有解鎖 fiveSectionLRT／鎖定 greenTram 的營運映射未動，
+沒有兩款選用／配屬契約，不應宣稱合併即在遊戲出現。高雄紅橘線與全部既有
+payload 保護；32 舊鎖差異與 TEMU2000 舊整列預算失敗另記，不改 gate。
+兩款使用者外觀接受、營運接入及裝置狀態各為 UNVERIFIED；
+Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 main、未合併或啟動 TestFlight。
+
+同輪補完：兩款far窗柱色界已與近景對齊，新增實際白柱／玻璃帶壞例拒收；
+最終producer `cfeed799260b609b6765ab44404d9ab095c48f94`，素材 `1a1adcc0420f8151c0a074ed4c242fa2aa63a648`。
+80b58f6e／ca6a8bc1是同PR未接受中間版，真實同相機／公尺／光線比較已合併原PNG，非虛構前輪；仍各20張＋公開共用1張、studies而已。最終CI看#1506／素材#31最新head，未把舊head綠燈當最終通過。

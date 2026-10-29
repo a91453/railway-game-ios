@@ -199,6 +199,55 @@ final class BusStopLabelsTests: XCTestCase {
         XCTAssertEqual(real.stops(in: region).map(\.name), ["B"])
     }
 
+    /// 95.1: a road's two sides carry one name 30 m apart, and the player's
+    /// pin sits on one of them: the map wrote 自立新村 three times.
+    func testFaintNamesSkipThePinsAndTheSecondSideOfARoad() {
+        let real = stops([("自立新村", 100, 100), ("自立新村", 100, 130), ("三民路", 100, 160), ("自立新村", 900, 100)])
+        let everywhere = WorldRegion(minX: 0, minY: 0, maxX: Double(plan(2_000, 2_000).x), maxY: Double(plan(2_000, 2_000).y))
+        XCTAssertEqual(real.faintLabels(in: everywhere, pins: []).map(\.name), ["自立新村", "三民路", "自立新村"],
+                       "no pin: one name for the two sides, the far stop of that name keeps its own")
+        let pinned = real.faintLabels(in: everywhere, pins: [(plan(100, 100), "自立新村")])
+        XCTAssertEqual(pinned.map(\.name), ["三民路", "自立新村"], "the pin carries the name for both sides")
+        XCTAssertEqual(pinned.last?.point, plan(900, 100))
+        XCTAssertEqual(real.faintLabels(in: everywhere, pins: [(plan(100, 100), nil), (plan(100, 100), "別的名")]).count, 3,
+                       "a pin with another name or none hides nothing")
+        XCTAssertEqual(real.stops.count, 4, "every stop keeps its dot")
+    }
+
+    /// #1513 REV-1: the names are worked out for the stops the map draws
+    /// (``RealBusStops/faintStopLimit``), each weighed only against its own
+    /// name; the result is the same as weighing each stop against every
+    /// pin and name written before it.
+    func testFaintNamesOfManyStopsAreThoseOfEveryStopBeforeThem() {
+        var seed: UInt64 = 7
+        func next(_ bound: UInt64) -> UInt64 {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return (seed >> 33) % bound
+        }
+        // 3,000 stops of 120 names on 4 km by 3 km, the two sides of many
+        // roads within 60 m of each other: Taipei's density.
+        let list = (0..<3_000).map { _ in ("站\(next(120))", Double(next(4_000)), Double(next(3_000))) }
+        let real = stops(list)
+        let pins: [(point: PlanPoint, name: String?)] = (0..<40).map { _ in (plan(Double(next(4_000)), Double(next(3_000))), "站\(next(120))") }
+        let everywhere = WorldRegion(minX: 0, minY: 0, maxX: Double(plan(4_000, 3_000).x), maxY: Double(plan(4_000, 3_000).y))
+        let drawn = Array(real.stops(in: everywhere).prefix(RealBusStops.faintStopLimit))
+        XCTAssertGreaterThan(real.stops(in: everywhere).count, RealBusStops.faintStopLimit, "more stops than the map draws")
+
+        // Every stop against every pin and every name written before it.
+        func near(_ a: PlanPoint, _ b: PlanPoint) -> Bool {
+            hypot(Double(a.x - b.x), Double(a.y - b.y)) / Double(metre) <= RealBusStops.labelMergeMetres
+        }
+        var expected: [RealBusStops.Stop] = []
+        for stop in drawn {
+            if pins.contains(where: { $0.name == stop.name && near($0.point, stop.point) }) { continue }
+            if expected.contains(where: { $0.name == stop.name && near($0.point, stop.point) }) { continue }
+            expected.append(stop)
+        }
+        XCTAssertEqual(real.faintLabels(of: drawn, pins: pins), expected)
+        XCTAssertEqual(real.faintLabels(in: everywhere, pins: pins), expected, "only the stops the map draws")
+        XCTAssertLessThan(expected.count, drawn.count, "some names left off")
+    }
+
     /// A real bus file of one route through `points` (name, latitude,
     /// longitude), the way the tool writes it: degrees in 1e-5, the shape
     /// after the first point as steps.

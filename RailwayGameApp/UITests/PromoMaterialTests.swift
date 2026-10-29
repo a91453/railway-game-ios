@@ -140,6 +140,155 @@ final class PromoMaterialTests: XCTestCase {
     func testCityKaohsiung() { city("tra-kaohsiung", name: "kaohsiung") }
     func testCityHualien() { city("tra-hualien", name: "hualien") }
 
+    // MARK: - The interface audit (UIA, 2026-10-30)
+
+    /// Every main screen held upright and on its side, on whichever device
+    /// the workflow picked (`device`), to see what covers what
+    /// (`docs/research/UI_AUDIT_2026-10-30.md`). The workflow turns every
+    /// tall picture a quarter, so the upright ones come out on their side.
+    /// An iPhone is only ever on its side; the iPad Simulator of runs
+    /// 40946830836 and 40950923947 stayed upright for both.
+    func testUIAuditPortrait() { audit(.portrait, prefix: "audit-portrait") }
+    func testUIAuditLandscape() { audit(.landscapeLeft, prefix: "audit-landscape") }
+
+    private func audit(_ orientation: UIDeviceOrientation, prefix: String) {
+        // The start screen and the new game's options.
+        var app = launch(orientation: orientation)
+        if app.buttons["start.newGame"].appears(within: 30) {
+            settle(seconds: 3)
+            keep("\(prefix)-start", app)
+            let options = app.buttons["start.newGameOptions"]
+            if options.exists, options.isHittable {
+                options.tap()
+                settle(seconds: 2)
+                keep("\(prefix)-new-game-options", app)
+            }
+        }
+        // The first lesson's card.
+        app.terminate()
+        app = launch(orientation: orientation)
+        let lessons = app.buttons["start.lessons"]
+        if lessons.appears(within: 30) {
+            lessons.tap()
+            let first = app.buttons["lesson.1.start"]
+            if first.appears(within: 10), first.becomesHittable(within: 3) {
+                first.tap()
+                if app.descendants(matching: .any)["map"].firstMatch.appears(within: 120) {
+                    settle(seconds: 4)
+                    keep("\(prefix)-lesson", app)
+                    tapIfThere("tutorial.unfold", in: app)
+                    settle()
+                    keep("\(prefix)-lesson-card", app)
+                }
+            }
+        }
+        app.terminate()
+
+        // The simple demo by day.
+        app = launch(extra: ["-demo-layout", "-demo-at", "10:00"], orientation: orientation)
+        defer { app.terminate() }
+        guard mapAppears(in: app, timeout: 300) else { return }
+        settle(seconds: 4)
+        pauseTheClock(in: app)
+        keep("\(prefix)-map", app)
+        tapIfThere("controls.toggle", in: app)
+        settle()
+        keep("\(prefix)-details-toggled", app)
+        tapIfThere("controls.toggle", in: app)
+        settle()
+
+        // The lines, one line's page, then the network.
+        let lines = app.buttons["entry.lines"]
+        if lines.appears(within: 5), lines.becomesHittable(within: 3) {
+            lines.tap()
+            settle(seconds: 3)
+            keep("\(prefix)-lines", app)
+            // The first line's row, under the rows over the list.
+            let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'line.trainsRow.'")).firstMatch
+            for _ in 0..<4 where !(row.exists && row.isHittable) {
+                app.collectionViews.firstMatch.swipeUp(velocity: .slow)
+                settle(seconds: 1)
+            }
+            keep("\(prefix)-lines-scrolled", app)
+            if row.exists, row.isHittable {
+                row.tap()
+                settle(seconds: 3)
+                keep("\(prefix)-line-page", app)
+            }
+            closeSheetIfAny(in: app)
+            closeSheetIfAny(in: app)
+        }
+
+        // A station's panel, from its tag on the map.
+        let tag = app.buttons.matching(identifier: "map.stationTag").allElementsBoundByIndex.first(where: \.isHittable)
+        if let tag {
+            tag.tap()
+            settle(seconds: 3)
+            keep("\(prefix)-station", app)
+            closeSheetIfAny(in: app)
+        }
+
+        // The layers.
+        let layers = app.buttons.matching(identifier: "map.quickLayer.more").allElementsBoundByIndex.first(where: \.isHittable)
+            ?? app.buttons.matching(identifier: "map.layers").allElementsBoundByIndex.first(where: \.isHittable)
+        if let layers {
+            layers.tap()
+            settle()
+            keep("\(prefix)-layers", app)
+            tapIfThere("layer.done", in: app)
+            settle()
+        }
+
+        // The game menu and what it opens.
+        tapIfThere("hud.menu", in: app)
+        settle()
+        keep("\(prefix)-menu", app)
+        closeSheetIfAny(in: app)
+        app.tap()
+        openFromGameMenu("menu.goals", as: "\(prefix)-goals", in: app)
+        closeSheetIfAny(in: app)
+        openFromGameMenu("menu.report", as: "\(prefix)-report", in: app)
+        closeSheetIfAny(in: app)
+        openFromGameMenu("menu.settings", as: "\(prefix)-settings", in: app)
+        closeSheetIfAny(in: app)
+
+        // The building tools, each in turn.
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 10), build.becomesHittable(within: 5) {
+            build.tap()
+            settle(seconds: 2)
+            for tool in ["network", "train", "building", "bus"] {
+                let button = app.buttons["tool.\(tool)"]
+                if button.appears(within: 3), button.isHittable {
+                    button.tap()
+                    settle(seconds: 2)
+                    keep("\(prefix)-build-\(tool)", app)
+                }
+            }
+            tapIfThere("tool.select", in: app)
+            closeSheetIfAny(in: app)
+            settle()
+        }
+
+        // The 3D map.
+        let open3D = app.buttons.matching(identifier: "map.open3D").allElementsBoundByIndex.first(where: \.isHittable)
+        if let open3D {
+            open3D.tap()
+            waitForPicture(in: app, timeout: 60)
+            settle(seconds: 4)
+            keep("\(prefix)-map3d", app)
+            tapIfThere("map3D.close", in: app)
+            settle()
+        }
+
+        // The week's weather, last: its popover stays over the dock.
+        tapIfThere("hud.time", in: app)
+        if app.descendants(matching: .any)["hud.forecast"].firstMatch.appears(within: 5) {
+            settle()
+            keep("\(prefix)-forecast", app)
+        }
+    }
+
     // MARK: - Scenes
 
     /// The simple demo opened at `time`: the clock runs on from there.
@@ -299,11 +448,11 @@ final class PromoMaterialTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func launch(extra: [String] = []) -> XCUIApplication {
+    private func launch(extra: [String] = [], orientation: UIDeviceOrientation = .landscapeLeft) -> XCUIApplication {
         // Keep going after a failed step: the pictures already kept still
         // count, and a missing screen only costs its own pictures.
         continueAfterFailure = true
-        XCUIDevice.shared.orientation = .landscapeLeft
+        XCUIDevice.shared.orientation = orientation
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"] + extra
         app.launch()

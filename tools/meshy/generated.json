@@ -67,48 +67,48 @@
         "model_type": null,
         "credits": 10,
         "finished": "2026-10-27T06:38:41Z"
+      }
+    ],
+    "credits": 45,
+    "raw_sha256": "5459e1867b9fed1613733820c28bb2e3f7c4db3b51b4a0c05a8ed18ac5d2b3c1",
+    "raw_bytes": 6881180
+  },
+  "recycling-truck": {
+    "tasks": [
+      {
+        "id": "01a17bec-6f1c-716c-a57e-9e2edb25fc17",
+        "type": "text-to-3d-preview",
+        "prompt": "Taiwan recycling collection truck, long and low: a small cab at the front and one long, completely empty, flat open cargo bed behind it with low straight side rails and a plain flat floor, six wheels, about 6.5 m long, 2.3 m wide and only 2.6 m tall. Nothing sits on the bed, no boxes, no bins, no extra parts. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": null,
+        "ai_model": "meshy-7.1",
+        "model_type": "standard",
+        "credits": 20,
+        "finished": "2026-10-27T05:54:59Z"
       },
       {
-        "id": "01a17c27-4348-73cf-a85e-f6e2776e3079",
+        "id": "01a17bed-6611-7485-95e6-f8abdfaf8dc1",
+        "type": "text-to-3d-refine",
+        "prompt": "Taiwan recycling collection truck, long and low: a small cab at the front and one long, completely empty, flat open cargo bed behind it with low straight side rails and a plain flat floor, six wheels, about 6.5 m long, 2.3 m wide and only 2.6 m tall. Nothing sits on the bed, no boxes, no bins, no extra parts. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
+        "texture_prompt": "No text, no logos, no wear or dirt. Light green cab and body, grey flat cargo bed and rails, black wheels, light blue cab windows.",
+        "ai_model": null,
+        "model_type": "standard",
+        "credits": 10,
+        "finished": "2026-10-27T05:56:51Z"
+      },
+      {
+        "id": "01a17bf5-c54c-7467-bab1-9fd3f88dd680",
         "type": "remesh",
         "prompt": null,
         "texture_prompt": null,
         "ai_model": null,
         "model_type": null,
         "credits": 5,
-        "finished": "2026-10-27T06:59:38Z"
+        "finished": "2026-10-27T06:07:21Z"
       }
     ],
-    "credits": 50,
-    "raw_sha256": "3164549a375bf35e42396c222c5186c0a00bbe66ad656c0c38f27a7358569588",
-    "raw_bytes": 9780316
-  },
-  "recycling-truck": {
-    "tasks": [
-      {
-        "id": "01a17be2-c7ed-7732-8bca-1032e8d2a880",
-        "type": "text-to-3d-preview",
-        "prompt": "Taiwan recycling collection truck, long and low: a small cab at the front and one long, completely empty, flat open cargo bed behind it with low straight side rails and a plain flat floor, six wheels, about 6.5 m long, 2.3 m wide and only 2.6 m tall. Nothing sits on the bed, no boxes, no bins, no extra parts. Single object only, low poly game asset, flat colors, clean simple shapes, no text, no logos, no base, no ground, no people.",
-        "texture_prompt": null,
-        "ai_model": "meshy-t2",
-        "model_type": "smart-topology",
-        "credits": 5,
-        "finished": "2026-10-27T05:43:52Z"
-      },
-      {
-        "id": "01a17be3-0cf2-7711-800a-cffe80381b40",
-        "type": "text-to-3d-refine",
-        "prompt": "Taiwan recycling collection truck, long and low: a small cab at the front and one long, completely empty, flat open cargo bed behind it with low straight side rails and a plain flat floor, six wheels, about 6.5 m long, 2.3 m wide and only 2.6 m tall. Nothing sits on the bed, no boxes, no bins, no extra parts. Single object only, low poly game asset, flat colors, clean simple shapes, no text, no logos, no base, no ground, no people.",
-        "texture_prompt": "Flat colours only, no text, no logos, no wear or dirt. Light green cab and body, grey flat cargo bed and rails, black wheels, light blue cab windows.",
-        "ai_model": null,
-        "model_type": "smart-topology",
-        "credits": 10,
-        "finished": "2026-10-27T05:45:25Z"
-      }
-    ],
-    "credits": 15,
-    "raw_sha256": "4441a1213c6b7d6def6eadc754ba48899364f29b9e28afd0d3c3a23d8861769a",
-    "raw_bytes": 2045828
+    "credits": 35,
+    "raw_sha256": "e9863ffe6b9c1bb3f9933221417a475c932e4e2d741fd07d2c754dc9bf9e5602",
+    "raw_bytes": 16912292
   },
   "mailbox-green": {
     "tasks": [
