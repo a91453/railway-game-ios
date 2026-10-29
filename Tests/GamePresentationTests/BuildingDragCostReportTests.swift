@@ -8,18 +8,20 @@ import XCTest
 /// with stalls of up to 1.4 s). Each step of the finger moves the
 /// ``GameSession/buildingSite``, and the map, the build card and the
 /// confirm button each read the preview again. On the real map round
-/// Miaoli with four lines of eleven stations. Run on request, in release:
+/// Miaoli with `BUILDING_DRAG_REPORT` lines of eleven stations. Run on
+/// request, in release:
 ///
-///     BUILDING_DRAG_REPORT=1 swift test -c release -Xswiftc -enable-testing \
+///     BUILDING_DRAG_REPORT=4 swift test -c release -Xswiftc -enable-testing \
 ///       --filter BuildingDragCostReportTests
 @MainActor
 final class BuildingDragCostReportTests: XCTestCase {
     func testWhatAStepOfTheDragCosts() throws {
-        guard ProcessInfo.processInfo.environment["BUILDING_DRAG_REPORT"] != nil else {
-            throw XCTSkip("set BUILDING_DRAG_REPORT=1 to time a building dragged over a 44-station map")
+        guard let value = ProcessInfo.processInfo.environment["BUILDING_DRAG_REPORT"] else {
+            throw XCTSkip("set BUILDING_DRAG_REPORT=<lines> to time a building dragged over a map of that many 11-station lines")
         }
+        let lines = try XCTUnwrap(Int(value).flatMap { (1...16).contains($0) ? $0 : nil }, "BUILDING_DRAG_REPORT is 1 to 16 lines")
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
-        var world = try MapFrameCostReportTests.miaoli(lines: 4, data: data)
+        var world = try MapFrameCostReportTests.miaoli(lines: lines, data: data)
         world.setEconomyMode(.management)
         let session = GameSession(world: world)
         session.selectTool(.building)
@@ -42,19 +44,30 @@ final class BuildingDragCostReportTests: XCTestCase {
                 _ = session.buildingPreview?.cost
             }
         }
-        let site = try XCTUnwrap(session.buildingSite)
         let now = session.world
-        // Before decision 488, each read placed it on a copy of the world.
-        let placed = clock.measure {
-            for _ in 0..<steps {
-                var draft = now.pricingCopy()
-                _ = try? draft.placeBuilding(.shop, at: site)
+        // Before decision 488, each read placed it on a copy of the world;
+        // over sites round each station, the longest and the mean.
+        var before: [Double] = [], after: [Double] = [], clears = 0
+        func ms(_ duration: Duration) -> Double {
+            Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15
+        }
+        for station in stride(from: 0, to: now.stations.count, by: max(1, now.stations.count / 11)).map({ now.stations[$0] }) {
+            for dy in stride(from: Int64(-6_000), through: 6_000, by: 2_000) where dy != 0 {
+                let site = PlanPoint(x: station.point.x + 1_000, y: station.point.y + dy)
+                before.append(ms(clock.measure {
+                    var draft = now.pricingCopy()
+                    if let placed = try? draft.placeBuilding(.shop, at: site), placed.residents + placed.jobs > 0 { clears += 1 }
+                }))
+                after.append(ms(clock.measure { _ = try? now.pricingCopy().buildingPlacement(.shop, at: site) }))
             }
         }
-        let tried = clock.measure { for _ in 0..<steps { _ = try? now.pricingCopy().buildingPlacement(.shop, at: site) } }
-        print("stations \(now.stations.count), edges \(now.network.edges.count), land cells \(now.land.cells.count)")
-        print("| a step of the drag (\(reads) reads) | \(LongGameCostReportTests.ms(spent, per: steps)) ms |")
-        print("| placeBuilding on a copy (each read before) | \(LongGameCostReportTests.ms(placed, per: steps)) ms |")
-        print("| buildingPlacement (once a step now) | \(LongGameCostReportTests.ms(tried, per: steps)) ms |")
+        func row(_ label: String, _ values: [Double]) -> String {
+            String(format: "| %@ | %.3f | %.3f |", label, values.reduce(0, +) / Double(values.count), values.max() ?? 0)
+        }
+        print("stations \(now.stations.count), edges \(now.network.edges.count), land cells \(now.land.cells.count); \(before.count) sites, \(clears) buying out")
+        print("| a step of the drag (\(reads) reads, now) | \(LongGameCostReportTests.ms(spent, per: steps)) ms |")
+        print("| | mean ms | longest ms |")
+        print(row("placeBuilding on a copy (each read before)", before))
+        print(row("buildingPlacement (once a step now)", after))
     }
 }

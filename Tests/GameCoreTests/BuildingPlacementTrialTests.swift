@@ -31,7 +31,8 @@ final class BuildingPlacementTrialTests: XCTestCase {
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 20_480, y: 30_000))
         let east = try world.buildTrackNode(at: WorldCoordinate(x: 40_960, y: 30_000))
         try world.buildTrackEdge(from: west, to: east)
-        try world.placeBuilding(.house, at: PlanPoint(x: 34_000, y: 24_000))
+        // The company's own house, where it can pay for it.
+        _ = try? world.placeBuilding(.house, at: PlanPoint(x: 34_000, y: 24_000))
         return world
     }
 
