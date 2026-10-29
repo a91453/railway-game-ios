@@ -18,6 +18,8 @@
 
 # 交接
 
+> Codex G12／R21 原生 studies（公開 draft [#1485](https://github.com/a91453/railway-game-ios/pull/1485) ↔ 私庫 draft [#26](https://github.com/a91453/railway-assets-private/pull/26)，producer `723d08f8`）：revision-1 `b073c6c6` 整體外觀、revision-2 `69de18da` 正面均遭使用者否定；revision-3 `501f339a` 自檢發現前端白帶被底架遮住而撤回，revision-4 `aa1fb2c8` 解遮擋。現版再依 R21 原圖加兩端實體燈座、角燈孔、可見連結器及長端小型警示牌；保留低白帶、正向黃黑 V、扶手與短端白 V。只用 1960 首批臺鐵 R20 型 EMD G12 的 R21 橘色時期；原圖、估算、比對、重建與四種狀態見 [G12 交接](art/g12-2026-10-29/README.md)。公開只放配方、工具、來源與一張總覽，完整近遠景與 viewer 在私庫 `g12/revision-5/`（前四輪僅留 PNG／README／來源）。現有 SceneKit R20 與全部營運映射不變；此 producer 的使用者外觀接受、營運接入、iOS Metal／真機均 **UNVERIFIED**。不合併／auto-merge／TestFlight。
+
 > Codex E1000雙端PP（#1294）：[來源／外觀／營運／重建](art/e1000-pp-2026-10-26/README.md)。獨立E1000近遠配方，以未合併PP #1291固定61c6969c為stacked base，私庫#87固定1f81f7c。只換pushPull機車，PP客車/E500/EMU與其他服務payload保護；兩端E1000、後機180°、後端貫通道相接。官方規格16.5/17.211m、寬2.885/車高3.904m；輪徑與軸距推估。完整包私有、公開一張總覽。兩PR皆合併並重建才改App，靜態展示不代表推拉控制/真機/動畫。CI看本輪同head，不合併/auto-merge/TestFlight。
 
 > Codex PP客車（#1282）：[來源／外觀／營運與重建交接](art/pp-coaches-2026-10-26/README.md)。四種PP近遠獨立配方及雙端已接受E500第三版＋12客車完整靜態展示（更正11a70d3c漏尾機，尾端同原生旋轉180°）。只有原`pushPull`接點中間客車改PPT1000，E1000兩端、可變節數、列車包／classic／解鎖與回退保持；PPH/PPC/PPM未逐車接營運，E500＋PP未接E500營運。E500CK/MINGRI/STAR客車與既有模型實際payload保護。公開唯一總覽，完整素材／viewer／ZIP在互鏈私有draft；最新同提交CI看PR，不以Linux靜態驗證當真機／動畫／推拉控制。GameCore、存檔與fixtures不動，不合併／auto-merge／TestFlight。
@@ -36,8 +38,6 @@
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
-
-> 公測前抓蟲：貨運、挑戰與劇本、分享與 Game Center（派工單 BH5，`claude/bughunt-freight-challenges`，2026-10-30）：[`research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md`](research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md)。沒找到 P1。P2-1（從朋友的路網開新局會帶過朋友未領的市府補助、星等與貨運未入帳收入）在同一個 PR 修好了；留下 P3-1～P3-9，公測後由規劃照該文件 §4 的順序派。
 
 > 公測前抓蟲「公車與車輛」（派工單 BH4，`claude/bughunt-vehicles`，2026-10-30）：[`research/BUGHUNT_VEHICLES_2026-10-30.md`](research/BUGHUNT_VEHICLES_2026-10-30.md)。修了 P1-1（3D 公車的回程鋪不上時當掉）；P3-1～P3-3（復原掉正在編輯的公車線、減少公車不退錢沒說、空白地圖鋪捷徑後 2D 公車線畫舊路）與 §5 還沒有的功能（跟公車的視角、2D 會動的公車、收購真實公車）公測後由規劃派。真實地圖上 3D 公車實機 UNVERIFIED。
 
@@ -290,7 +290,7 @@
 - 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
-- 同時最多 2 個要跑完整 tier（22 個 job：決策 405 的 21 個加決策 411 續篇的 build job）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
+- 同時最多 2 個要跑完整 tier（23 個 job：決策 405 的 21 個、決策 411 續篇的 build job 與決策 495 的 campaigns-19）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
 - session 問能不能推：當下在跑的完整 tier 不到 2 個就答可以。
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
@@ -432,6 +432,7 @@
     - 陷阱資料：在打包資料或程式裡放一兩筆只有本專案有、玩家看不出來的小東西，被整包照搬時可以當證據。不能讓鐵道資料變錯（鐵道迷）。哪幾筆是陷阱只寫在私庫，不寫在公開 repo。
     - 非正式版標示：自己編的 App 顯示「不是正式版本」。CLAUDE.md 規定 app ID 不寫進 repository，所以要用發版時注入的值來判斷（例如 `testflight.yml` 現有的變數），不在程式裡寫死 ID。Simulator 的 UI 測試和官網截圖不能被這個標示擋住。玩家看的文字只說「請從 App Store 下載正式版」，不說原因。
     - 五方各寫一行，取決策號（取號前先看 #1041）。
+    - **進度（10/30，派工單 AT）**：陷阱資料已做（決策 494；細節在私庫 `a91453/railway-reference-private` 的 `Railway/anti-copy/`，改寫或重新產生 App 打包的資料前先讀它）。非正式版標示還沒做，公測後、上 App Store 前再做。
 - WEB：私庫 PR #116 作者已在 07:23 UTC 自己合了（只換「實景示範」1 張）；官網要作者按 Deploy website 才會換。其他圖等新截圖出來，WEB 另開新的 draft PR。
 
 **第三十次換手（2026-10-29 約 07:30 UTC，session_01YGNNunHRtNkV8GUzm1ppB7 壓縮 2 次、用量約 200k → 本任用 `create_session` 開的新規劃，第 6 層）**：作者說「發版前先換手」。照下一段「第二十九任做到哪」接。
