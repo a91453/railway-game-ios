@@ -158,7 +158,8 @@ extension GameSession {
     @discardableResult
     public func holdLine(at point: PlanPoint, reach: Int64) -> LineID? {
         guard let id = lineHeld(at: point, reach: reach) else { return nil }
-        selectLine(id)
+        // Decision 481: on its own page in the panel the hold opens.
+        openLine(id)
         return id
     }
 

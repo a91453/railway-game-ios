@@ -17,6 +17,13 @@ import SwiftUI
 /// calls a `GameSession` method that applies one `GameWorld` command.
 struct LinesPanel: View {
     let session: GameSession
+
+    init(session: GameSession) {
+        self.session = session
+        // Decision 481: opened on the line's page when a line is opened,
+        // with no slide as the panel comes in.
+        _path = State(initialValue: LinesPanelPage.path([], opened: session.openedLine != nil))
+    }
     /// Closes it (decision 106: shown beside the map, not presented, so
     /// the environment's dismiss would do nothing).
     @Environment(GameScreenState.self) private var screen
@@ -71,6 +78,9 @@ struct LinesPanel: View {
     /// Decision 196: whether the new line's form shows while the lines
     /// come first.
     @State private var showsNewLine = false
+    /// Decision 481: the pages over the list of lines; the line page
+    /// follows ``GameSession/openedLine``.
+    @State private var path: [LinesPanelPage] = []
     /// Decision 206: whether the selected line's train diagram is open.
     @State private var showsDiagram = false
     /// Decision 196, later: the player's choice for the "Advanced" switch,
@@ -90,33 +100,21 @@ struct LinesPanel: View {
     private static let draftAnchor = "line.draft.anchor"
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollViewReader { proxy in
                 Form {
                     if listsLinesFirst {
                         // Decision 196 (TestFlight 54.1): with lines made and
-                        // none being picked, the lines and the selected
-                        // line's stops come first, a new line is one row,
-                        // and the switches for every line go last.
-                        // Decision 383: the switches for every line, at
-                        // the top rather than at the bottom of Advanced.
-                        networkSection
+                        // none being picked, the lines come first. Decision
+                        // 481: a short list, its search, filter and sort
+                        // pinned above it, the network's switches, Advanced,
+                        // a new line and the lines for sale as rows over
+                        // it; a line's own settings on its own page.
+                        entriesSection
+                        if showsNewLine {
+                            draftSection
+                        }
                         linesSection
-                        advancedSection
-                        newLineRow
-                        // Decision 336: not folded into the new line's form.
-                        buyableLinesSection
-                        if let line = session.selectedLine {
-                            trainsSection(line)
-                            depotSection(line)
-                            stopsSection(line)
-                            lineSection(line)
-                            operatingSection(line)
-                            servicesSections(line)
-                        }
-                        if showsAdvanced {
-                            serviceDaySection
-                        }
                     } else {
                         // Decision 100: a new line first, where the panel beside
                         // the map (decision 106) shows it while stations are
@@ -144,8 +142,12 @@ struct LinesPanel: View {
                     }
                 }
                 .hardTopScrollEdge()
-                .task(id: modeShiftKey) {
-                    await workOutModeShift(modeShiftKey)
+                // Decision 481: what finds and orders the lines stays at the
+                // top while the list scrolls under it.
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    if listsLinesFirst {
+                        listControls
+                    }
                 }
                 // The tutorial's targets in the form report their place on the
                 // screen themselves (`tutorialPanelTarget(_:)`); the overlay
@@ -182,36 +184,15 @@ struct LinesPanel: View {
             }
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
-            // Decision 206: the train diagram over the whole screen.
-            .fullScreenCover(isPresented: $showsDiagram) {
-                if let id = session.selectedLineID {
-                    TrainDiagramView(session: session, line: id)
+            // Decision 481: the selected line's alerts and diagram belong to
+            // the page that shows its sections.
+            .lineModals(of: self, active: !listsLinesFirst)
+            .navigationDestination(for: LinesPanelPage.self) { page in
+                switch page {
+                case .line: lineDetailPage
+                case .network: networkPage
+                case .forSale: forSalePage
                 }
-            }
-            // The pattern's stops are indices into the selected line's:
-            // another line starts from its own first two.
-            .onChange(of: session.selectedLineID) {
-                patternFirst = 0
-                patternLast = 1
-                patternExpress = false
-            }
-            // A stop removed from the line can leave either index past its
-            // last stop: the picker would show none, and adding the pattern
-            // would be refused.
-            .onChange(of: session.selectedLine?.stops.count) { _, count in
-                guard let count, patternFirst >= count || patternLast >= count else { return }
-                patternFirst = 0
-                patternLast = min(1, max(0, count - 1))
-            }
-            .renameAlert(
-                title: session.language.text("Rename Line", "路線更名"),
-                name: $renamingLine,
-                language: session.language
-            ) { name in
-                session.renameSelectedLine(to: name)
-            }
-            .lineCodeAlert(code: $editingCode, language: session.language) { code in
-                session.setSelectedLineCode(code)
             }
             .toolbar {
                 // Decision 416: the network's flow report, at the top of
@@ -231,33 +212,72 @@ struct LinesPanel: View {
                         .accessibilityIdentifier("lines.networkFlow")
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        screen.panel = nil
-                    }
-                }
+                doneItem
             }
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
             }
-            // Decision 196: a line made from the unfolded form folds it again.
-            .onChange(of: session.world.lines.count) { showsNewLine = false }
-            .onAppear { sortLinesNow() }
-            .onChange(of: lineSort) { sortLinesNow() }
-            // Decision 201: folding the route menus away ends their preview.
-            .onChange(of: showsAdvanced) { _, shown in
-                if !shown { session.endRoutePreviews() }
-            }
-            // Decision 376: lesson 6's guide waits for the switch.
-            .onChange(of: showsAdvanced, initial: true) { _, shown in
-                session.linesAdvancedDidChange(isShown: shown)
-            }
-            // Taps on the map select again once the panel is closed.
-            .onDisappear {
-                session.stopPickingLineStops()
-                // Decision 201: the map stops showing a leg once the
-                // menu it came from is closed.
-                session.endRoutePreviews()
+        }
+        // Decision 481: a line opened anywhere (a row, the map, a report)
+        // shows on its own page; Back to the list closes it.
+        .onChange(of: session.openedLine?.id) { _, opened in
+            let wanted = LinesPanelPage.path(path, opened: opened != nil)
+            guard wanted != path else { return }
+            // Reduce Motion: the page is there at once, with no slide
+            // (motion skill §3).
+            var transaction = Transaction()
+            transaction.disablesAnimations = reduceMotion
+            withTransaction(transaction) { path = wanted }
+        }
+        .onChange(of: path) { _, now in
+            session.linesPanelPathChanged(to: now)
+        }
+        // Decision 481: on the panel, not its first page, which disappears
+        // under a line's page.
+        .task(id: modeShiftKey) {
+            await workOutModeShift(modeShiftKey)
+        }
+        // Decision 196: a line made from the unfolded form folds it again.
+        .onChange(of: session.world.lines.count) { showsNewLine = false }
+        .onAppear { sortLinesNow() }
+        .onChange(of: lineSort) { sortLinesNow() }
+        // The pattern's stops are indices into the selected line's:
+        // another line starts from its own first two.
+        .onChange(of: session.selectedLineID) {
+            patternFirst = 0
+            patternLast = 1
+            patternExpress = false
+        }
+        // A stop removed from the line can leave either index past its
+        // last stop: the picker would show none, and adding the pattern
+        // would be refused.
+        .onChange(of: session.selectedLine?.stops.count) { _, count in
+            guard let count, patternFirst >= count || patternLast >= count else { return }
+            patternFirst = 0
+            patternLast = min(1, max(0, count - 1))
+        }
+        // Decision 201: folding the route menus away ends their preview.
+        .onChange(of: showsAdvanced) { _, shown in
+            if !shown { session.endRoutePreviews() }
+        }
+        // Decision 376: lesson 6's guide waits for the switch.
+        .onChange(of: showsAdvanced, initial: true) { _, shown in
+            session.linesAdvancedDidChange(isShown: shown)
+        }
+        // Taps on the map select again once the panel is closed.
+        .onDisappear {
+            session.stopPickingLineStops()
+            // Decision 201: the map stops showing a leg once the
+            // menu it came from is closed.
+            session.endRoutePreviews()
+        }
+    }
+
+    /// The panel's Done, on every page of its stack.
+    private var doneItem: some ToolbarContent {
+        ToolbarItem(placement: .confirmationAction) {
+            Button("Done") {
+                screen.panel = nil
             }
         }
     }
@@ -283,29 +303,177 @@ struct LinesPanel: View {
     /// new line is being picked or the tutorial leads (its steps point at
     /// the form for a new line at the top).
     private var listsLinesFirst: Bool {
-        !session.world.lines.isEmpty && !session.isPickingLineStops && session.lineDraft.isEmpty && session.tutorial == nil
+        session.linesPanelListsLinesFirst
     }
 
     /// The new line's form folded into one row while the lines come first
     /// (decision 196); picking a station puts it back at the top.
-    @ViewBuilder
-    private var newLineRow: some View {
-        Section {
-            Button {
-                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { showsNewLine.toggle() }
-            } label: {
-                Label {
-                    Text(verbatim: session.language.text("New Line…", "新路線…"))
-                } icon: {
-                    Image(systemName: showsNewLine ? "chevron.down" : "plus.circle")
-                }
+    private var newLineButton: some View {
+        Button {
+            withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { showsNewLine.toggle() }
+        } label: {
+            Label {
+                Text(verbatim: session.language.text("New Line…", "新路線…"))
+            } icon: {
+                Image(systemName: showsNewLine ? "chevron.down" : "plus.circle")
             }
-            .accessibilityIdentifier("line.new")
-            .accessibilityAddTraits(showsNewLine ? .isSelected : [])
         }
-        if showsNewLine {
-            draftSection
+        .accessibilityIdentifier("line.new")
+        .accessibilityAddTraits(showsNewLine ? .isSelected : [])
+    }
+
+    /// Decision 481: the rows over the short list, one each for what is not
+    /// a line: the network's switches and service day (their own page),
+    /// Advanced, a new line, and the real lines for sale (their own page).
+    private var entriesSection: some View {
+        Section {
+            if session.allows(UnlockableTool.lineDetails) {
+                NavigationLink(value: LinesPanelPage.network) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: NetworkSwitches.title(in: session.language))
+                            Text(verbatim: NetworkSwitches.summary(of: session.world, in: session.language))
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    } icon: {
+                        Image(systemName: "point.3.connected.trianglepath.dotted")
+                    }
+                }
+                .accessibilityIdentifier("lines.network")
+                // The network's row above says what the summary would.
+                advancedRows(summary: false)
+            }
+            newLineButton
+            if !session.buyableRealLines.isEmpty || session.realLinesForSaleNote != nil {
+                NavigationLink(value: LinesPanelPage.forSale) {
+                    Label {
+                        Text(verbatim: NetworkSwitches.forSaleTitle(count: session.buyableRealLines.count, in: session.language))
+                    } icon: {
+                        Image(systemName: "signature")
+                    }
+                }
+                .accessibilityIdentifier("lines.forSale")
+            }
         }
+    }
+
+    // MARK: - Pages over the list (decision 481)
+
+    /// The switches for every line and the service day, on a page of their
+    /// own: the service day shows here with Advanced folded too, since the
+    /// page is opened for it.
+    private var networkPage: some View {
+        Form {
+            trafficSection
+            serviceDaySection
+        }
+        .navigationTitle(Text(verbatim: NetworkSwitches.title(in: session.language)))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { doneItem }
+        .safeAreaInset(edge: .bottom) {
+            StatusBanner(session: session, announces: false)
+        }
+    }
+
+    private var forSalePage: some View {
+        Form {
+            buyableLinesSection
+        }
+        .navigationTitle(Text(verbatim: NetworkSwitches.forSaleTitle(count: 0, in: session.language)))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { doneItem }
+        .safeAreaInset(edge: .bottom) {
+            StatusBanner(session: session, announces: false)
+        }
+    }
+
+    /// The opened line's own page: what its row in the list leaves out,
+    /// the lines before and after it, then its trains, depots, stops,
+    /// settings, operations and services, in the order the one form had
+    /// them (decision 196).
+    @ViewBuilder
+    private var lineDetailPage: some View {
+        if let line = session.openedLine {
+            Form {
+                lineSummarySection(line)
+                trainsSection(line)
+                depotSection(line)
+                stopsSection(line)
+                lineSection(line)
+                operatingSection(line)
+                servicesSections(line)
+            }
+            // Another line (the arrows, the map) starts at the top.
+            .id(line.id)
+            .accessibilityIdentifier("line.detail")
+            .hardTopScrollEdge()
+            .navigationTitle(Text(verbatim: line.name))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { doneItem }
+            .safeAreaInset(edge: .bottom) {
+                StatusBanner(session: session, announces: false)
+            }
+            .lineModals(of: self, active: true)
+        }
+    }
+
+    /// The top of a line's page: its stops in full, whether it runs now,
+    /// yesterday's figures with its trend, and the lines before and after
+    /// it in the list.
+    private func lineSummarySection(_ line: ServiceLine) -> some View {
+        let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
+        let all = sortedLines.map(\.id)
+        let shown = shownLines.map(\.id)
+        let neighbours = LineNeighbours.around(line.id, shown: shown, all: all)
+        return Section {
+            Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("line.summary.stops")
+            if let report = session.world.lineReport(line.id), !line.isFreight {
+                Text(verbatim: report.rowText(in: session.language))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
+                    .accessibilityIdentifier("line.summary.report")
+                LineTrendStrip(report: report, language: session.language)
+            }
+            if neighbours.previous != nil || neighbours.next != nil {
+                HStack {
+                    neighbourButton(neighbours.previous, title: LineNeighbours.previousTitle(in: session.language),
+                                    symbol: "chevron.up", identifier: "line.previous")
+                    Spacer(minLength: 8)
+                    if let position = LineNeighbours.positionText(line.id, shown: shown, all: all, in: session.language) {
+                        Text(verbatim: position)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer(minLength: 8)
+                    neighbourButton(neighbours.next, title: LineNeighbours.nextTitle(in: session.language),
+                                    symbol: "chevron.down", identifier: "line.next")
+                }
+                // Two buttons in one row: each answers its own touch.
+                .buttonStyle(.borderless)
+            }
+        }
+    }
+
+    /// Goes to the line before or after on the same page: what the page
+    /// shows changes in place, as a tap on another line's row would, with
+    /// no slide (decision 481; the stack keeps its one page).
+    private func neighbourButton(_ id: LineID?, title: String, symbol: String, identifier: String) -> some View {
+        Button {
+            if let id { session.openLine(id) }
+        } label: {
+            Label {
+                Text(verbatim: title)
+            } icon: {
+                Image(systemName: symbol)
+            }
+            .font(.subheadline)
+        }
+        .disabled(id == nil)
+        .accessibilityIdentifier(identifier)
     }
 
     /// Decision 315: the real branch lines this map sells; decision 336:
@@ -359,36 +527,42 @@ struct LinesPanel: View {
     private var advancedSection: some View {
         if session.allows(UnlockableTool.lineDetails) {
             Section {
-                Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
-                    Label {
-                        // Decision 336, later: what it holds, in words, not
-                        // only for VoiceOver; under the switch's own name, so
-                        // the summary below stays the row after the switch.
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: session.language.text("Advanced", "進階"))
-                            Text(verbatim: AdvancedDetails.contentsText(in: session.language))
-                                .font(.caption)
-                                .foregroundStyle(Theme.textSecondary)
-                                .accessibilityIdentifier("lines.advanced.contents")
-                        }
-                    } icon: {
-                        Image(systemName: "slider.horizontal.3")
-                    }
-                }
-                .accessibilityIdentifier("lines.advanced")
-                .tutorialPanelTarget(.advancedSwitch)
-                .id(TutorialTarget.advancedSwitch)
-                .accessibilityHint(Text(verbatim: session.language.text(
-                    "Hidden, they keep working as set.",
-                    "收起時，這些設定照常運作。"
-                )))
-                if !showsAdvanced {
-                    Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
+                advancedRows(summary: true)
+            }
+        }
+    }
+
+    /// The switch and, folded, its summary.
+    @ViewBuilder
+    private func advancedRows(summary: Bool) -> some View {
+        Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
+            Label {
+                // Decision 336, later: what it holds, in words, not
+                // only for VoiceOver; under the switch's own name, so
+                // the summary below stays the row after the switch.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: session.language.text("Advanced", "進階"))
+                    Text(verbatim: AdvancedDetails.contentsText(in: session.language))
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
-                        .accessibilityIdentifier("lines.advanced.summary")
+                        .accessibilityIdentifier("lines.advanced.contents")
                 }
+            } icon: {
+                Image(systemName: "slider.horizontal.3")
             }
+        }
+        .accessibilityIdentifier("lines.advanced")
+        .tutorialPanelTarget(.advancedSwitch)
+        .id(TutorialTarget.advancedSwitch)
+        .accessibilityHint(Text(verbatim: session.language.text(
+            "Hidden, they keep working as set.",
+            "收起時，這些設定照常運作。"
+        )))
+        if summary, !showsAdvanced {
+            Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("lines.advanced.summary")
         }
     }
 
@@ -528,20 +702,18 @@ struct LinesPanel: View {
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                if session.world.lineAccounts != nil, session.world.lines.count > 1 {
-                    lineSortMenu
-                }
-                // Decision 184: a long list can be searched and filtered.
-                if session.world.lines.count >= ListSearchField.minimumRows {
-                    ListSearchField(
-                        search: $lineSearch,
-                        prompt: session.language.text("Search lines or stations", "搜尋路線或車站"),
-                        identifier: "lines.search",
-                        language: session.language
-                    )
-                }
-                if session.world.lines.count > 1, session.world.lineFilters.count > 1 {
-                    lineFilterPicker
+                // Decision 481: pinned above the list while the lines come
+                // first (``listControls``); on the one form, in it.
+                if !listsLinesFirst {
+                    if showsSort {
+                        lineSortMenu
+                    }
+                    if showsSearch {
+                        lineSearchField
+                    }
+                    if showsFilter {
+                        lineFilterPicker
+                    }
                 }
                 let shown = shownLines
                 if shown.isEmpty {
@@ -549,7 +721,13 @@ struct LinesPanel: View {
                 }
                 ForEach(shown) { line in
                     Button {
-                        session.selectLine(line.id)
+                        // Decision 481: a row opens the line's own page;
+                        // on the one form it selects the line below.
+                        if listsLinesFirst {
+                            session.openLine(line.id)
+                        } else {
+                            session.selectLine(line.id)
+                        }
                     } label: {
                         lineRow(line)
                     }
@@ -559,6 +737,50 @@ struct LinesPanel: View {
             }
         } header: {
             Text("Lines")
+        }
+    }
+
+    // Decision 184: a long list can be searched and filtered.
+    private var showsSearch: Bool { session.world.lines.count >= ListSearchField.minimumRows }
+    private var showsSort: Bool { session.world.lineAccounts != nil && session.world.lines.count > 1 }
+    private var showsFilter: Bool { session.world.lines.count > 1 && session.world.lineFilters.count > 1 }
+
+    private var lineSearchField: some View {
+        ListSearchField(
+            search: $lineSearch,
+            prompt: session.language.text("Search lines or stations", "搜尋路線或車站"),
+            identifier: "lines.search",
+            language: session.language
+        )
+    }
+
+    /// Decision 481: the search, the filter and the sort, pinned over the
+    /// short list; the filter and the sort side by side where they fit.
+    @ViewBuilder
+    private var listControls: some View {
+        if showsSearch || showsSort || showsFilter {
+            VStack(alignment: .leading, spacing: 8) {
+                if showsSearch {
+                    lineSearchField
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        if showsFilter { lineFilterPicker }
+                        if showsSort { lineSortMenu.fixedSize() }
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        if showsFilter { lineFilterPicker }
+                        if showsSort { lineSortMenu }
+                    }
+                }
+                .font(.subheadline)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(.bar)
         }
     }
 
@@ -580,7 +802,7 @@ struct LinesPanel: View {
     /// filter this world no longer offers counts as all lines.
     private var shownLines: [ServiceLine] {
         let filter = session.world.lineFilters.contains(lineFilter) ? lineFilter : .all
-        let search = session.world.lines.count >= ListSearchField.minimumRows ? lineSearch : ListSearch()
+        let search = showsSearch ? lineSearch : ListSearch()
         return session.world.lines(sortedLines, matching: search, filter: filter)
     }
 
@@ -644,9 +866,13 @@ struct LinesPanel: View {
         }
     }
 
+    /// Decision 481: a line's row in two lines. Its badge, name and
+    /// trains; then yesterday's riders and profit (red for a loss) beside
+    /// its riders' trend line. Its stops in full, fares, peak and trend in
+    /// words are on its own page.
     private func lineRow(_ line: ServiceLine) -> some View {
-        let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
         let color = Palette.lineColor(line.id, custom: line.color)
+        let report = line.isFreight ? nil : session.world.lineReport(line.id)
         return HStack(spacing: 10) {
             // Decision 216: the line's code on its badge, where a disc of
             // its colour with its number in white was (white did not read
@@ -654,11 +880,12 @@ struct LinesPanel: View {
             LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line.id] ?? "", color: color)
                 .frame(minWidth: 44, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 2) {
-                // Decision 168: a high-speed line's name carries a bolt.
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {
+                    // Decision 168: a high-speed line's name carries a bolt.
                     Text(line.name)
                         .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
                     if line.isRing {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.caption2.weight(.bold))
@@ -669,29 +896,40 @@ struct LinesPanel: View {
                             .font(.caption2.weight(.bold))
                             .accessibilityLabel(Text(verbatim: session.language.text("High-speed", "高鐵")))
                     }
+                    Spacer(minLength: 6)
+                    // TestFlight 56.1: how many trains run it, and how often.
+                    Text(verbatim: memo.trainsRowText(line.id, of: session))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .accessibilityIdentifier("line.trainsRow.\(line.id.rawValue)")
                 }
-                Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
-                // TestFlight 56.1: how many trains run it, and how often.
-                Text(verbatim: memo.trainsRowText(line.id, of: session))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(Theme.textSecondary)
-                    .accessibilityIdentifier("line.trainsRow.\(line.id.rawValue)")
-                // Decision 179: yesterday's riders, fares, profit and peak.
-                if let report = session.world.lineReport(line.id), !line.isFreight {
-                    Text(verbatim: report.rowText(in: session.language))
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(report.yesterday.map { $0.profit < .zero } == true ? Theme.error : Theme.textSecondary)
-                        .accessibilityIdentifier("line.report.\(line.id.rawValue)")
-                    // Decision 472: its riders over the last days and its
-                    // fullest train, at a glance.
-                    LineTrendStrip(report: report, language: session.language)
-                        .accessibilityIdentifier("line.trend.\(line.id.rawValue)")
+                if let report {
+                    HStack(spacing: 8) {
+                        // Decision 179: yesterday's riders and profit.
+                        Text(verbatim: report.compactRowText(in: session.language))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .accessibilityIdentifier("line.report.\(line.id.rawValue)")
+                        Spacer(minLength: 4)
+                        // Decision 472: its riders over the last days.
+                        LineSparkline(values: report.sparkline)
+                            .accessibilityIdentifier("line.trend.\(line.id.rawValue)")
+                    }
+                } else {
+                    Text(verbatim: session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language))
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
-            Spacer(minLength: 8)
-            if line.id == session.selectedLineID {
+            if listsLinesFirst {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityHidden(true)
+            } else if line.id == session.selectedLineID {
                 Image(systemName: "checkmark")
                     .foregroundStyle(Theme.primary)
                     .accessibilityHidden(true)
@@ -1925,6 +2163,12 @@ struct LinesPanel: View {
     }
 }
 
+private extension View {
+    func lineModals(of panel: LinesPanel, active: Bool) -> some View {
+        panel.modals(self, active: active)
+    }
+}
+
 /// Decision 194: a line's fares and four running costs over its report's
 /// days, as bars, and for a line that lost money why: at most two reasons,
 /// each with the figure that shows it. An equatable view of the diagnosis,
@@ -1935,6 +2179,29 @@ struct LinesPanel: View {
 /// (``LineLossFix``), asked before it is made; one the balance does not
 /// pay for is off, and says so.
 extension LinesPanel {
+    /// The selected line's rename and code alerts and its train diagram,
+    /// on the page that shows its sections (decision 481); `active` false
+    /// leaves them to the other page.
+    fileprivate func modals(_ content: some View, active: Bool) -> some View {
+        content
+            .renameAlert(
+                title: session.language.text("Rename Line", "路線更名"),
+                name: active ? $renamingLine : .constant(nil),
+                language: session.language
+            ) { name in
+                session.renameSelectedLine(to: name)
+            }
+            .lineCodeAlert(code: active ? $editingCode : .constant(nil), language: session.language) { code in
+                session.setSelectedLineCode(code)
+            }
+            // Decision 206: the train diagram over the whole screen.
+            .fullScreenCover(isPresented: active ? $showsDiagram : .constant(false)) {
+                if let id = session.selectedLineID {
+                    TrainDiagramView(session: session, line: id)
+                }
+            }
+    }
+
     /// Whether the panel removal `removal` is the one asking first.
     fileprivate func confirming(_ removal: RemovalConfirmation) -> Binding<Bool> {
         Binding(
@@ -2531,10 +2798,6 @@ private struct LineTrendStrip: View {
     let report: LineReport
     let language: DisplayLanguage
 
-    /// Not literals: a literal here would be a string to translate.
-    private static let dayAxis = "Day"
-    private static let ridersAxis = "Riders"
-
     var body: some View {
         let sparkline = report.sparkline
         let gauge = report.loadGauge
@@ -2542,17 +2805,7 @@ private struct LineTrendStrip: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 10) {
                     if !sparkline.isEmpty {
-                        Chart(Array(sparkline.enumerated()), id: \.offset) { day in
-                            LineMark(x: .value(Self.dayAxis, day.offset), y: .value(Self.ridersAxis, day.element))
-                                .foregroundStyle(Theme.chartBlue)
-                                .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                                .interpolationMethod(.monotone)
-                        }
-                        .chartXAxis(.hidden)
-                        .chartYAxis(.hidden)
-                        .chartYScale(domain: 0...Double(max(sparkline.max() ?? 0, 1)))
-                        .frame(width: 64, height: 18)
-                        .accessibilityHidden(true)
+                        LineSparkline(values: sparkline)
                     }
                     if let gauge {
                         GeometryReader { proxy in
@@ -2578,6 +2831,33 @@ private struct LineTrendStrip: View {
                 }
             }
             .accessibilityElement(children: .combine)
+        }
+    }
+}
+
+/// Decision 472: a line's riders over its last days as a small trend line,
+/// a picture of words said beside it (VoiceOver reads those); nothing with
+/// fewer than two days. Decision 481: alone on a row of the short list.
+private struct LineSparkline: View {
+    let values: [Int64]
+
+    /// Not literals: a literal here would be a string to translate.
+    private static let dayAxis = "Day"
+    private static let ridersAxis = "Riders"
+
+    var body: some View {
+        if !values.isEmpty {
+            Chart(Array(values.enumerated()), id: \.offset) { day in
+                LineMark(x: .value(Self.dayAxis, day.offset), y: .value(Self.ridersAxis, day.element))
+                    .foregroundStyle(Theme.chartBlue)
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.monotone)
+            }
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartYScale(domain: 0...Double(max(values.max() ?? 0, 1)))
+            .frame(width: 64, height: 18)
+            .accessibilityHidden(true)
         }
     }
 }

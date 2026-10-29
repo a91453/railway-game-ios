@@ -79,6 +79,8 @@ final class LineRoutePreferenceUITests: XCTestCase {
         openLinesPanel(in: app)
         // Decision 196, later: the tracks a leg takes are an advanced detail.
         setAdvanced(true, in: app)
+        // Decision 481: on the line's own page.
+        app.openLinePage()
         let route = app.buttons["line.route.-1.0.1"]
         bringIntoView(route, in: app)
         recordRouteUI("before opening route menu", in: app)
@@ -105,8 +107,8 @@ final class LineRoutePreferenceUITests: XCTestCase {
     }
 
     /// Decision 196, later: the lines panel's "Advanced" switch folds the
-    /// tracks each leg takes and the service day on a phone, says what is
-    /// folded in one line, and shows them again when turned on.
+    /// tracks each leg takes on a phone and shows them again when turned
+    /// on; decision 481: the service day is on the network's own page.
     func testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -119,16 +121,15 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let lines = app.buttons["Lines"]
         XCTAssertTrue(lines.appears(within: 10)); lines.tap()
         setAdvanced(false, in: app)
-        // Scrolled to, not only waited for: a list builds no row off screen,
-        // and the summary sits under the switch, which can be the screen's
-        // last row (main a2374a0's full lane, run 39722267769).
-        let summary = app.staticTexts["lines.advanced.summary"]
-        if !summary.appears(within: 10) { bringIntoView(summary, in: app) }
-        XCTAssertTrue(summary.exists)
-        XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
+        // Decision 481: the switch, and the service day behind "Whole
+        // network", on the list; the tracks on the line's own page.
+        XCTAssertTrue(app.buttons["lines.network"].appears(within: 10))
         XCTAssertFalse(app.buttons["Split the Longest Band"].exists)
+        app.openLinePage()
+        XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
+        app.closeLinePage()
         setAdvanced(true, in: app)
-        XCTAssertFalse(app.staticTexts["lines.advanced.summary"].exists)
+        app.openLinePage()
         bringIntoView(app.buttons["line.route.-1.0.1"], in: app)
     }
 
@@ -250,8 +251,11 @@ final class LineRoutePreferenceUITests: XCTestCase {
     /// began on the dock or the map and never moved the list (main
     /// e48285f), so the drag is made on the panel's own list.
     private func bringIntoView(_ row: XCUIElement, in app: XCUIApplication) {
-        let bar = app.navigationBars["Lines"].firstMatch
-        let list = bar.exists
+        // Decision 481: a line's page has its own list, under a bar named
+        // for the line.
+        let page = app.collectionViews["line.detail"].firstMatch
+        let bar = page.exists ? app.navigationBars.firstMatch : app.navigationBars["Lines"].firstMatch
+        let list = page.exists ? page : bar.exists
             ? app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
             : nil
         guard app.dragUntilWhollyOnScreen(row, in: list, below: bar.exists ? bar.frame.maxY : nil) else {
@@ -609,6 +613,39 @@ extension XCUIApplication {
         coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: place.midX - frame.minX, dy: place.midY - frame.minY))
             .tap()
+    }
+
+    /// Decision 481: opens a line's own page from the lines panel's list
+    /// (line `id`'s row, or the first row) and returns the page's list once
+    /// it has come to rest. The panel must be open on its list.
+    @discardableResult
+    func openLinePage(_ id: Int? = nil, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let page = collectionViews["line.detail"].firstMatch
+        if page.exists { return page }
+        // The panel's bar, in either language.
+        let bar = navigationBars.firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel is not open", file: file, line: line)
+        bar.waitUntilSettled()
+        let list = collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = id.map { descendants(matching: .any)["line.trainsRow.\($0)"].firstMatch }
+            ?? descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "The line's row must come into reach", file: file, line: line)
+        row.tap()
+        XCTAssertTrue(page.appears(within: 10), "The line's page did not open", file: file, line: line)
+        page.waitUntilStill()
+        return page
+    }
+
+    /// Decision 481: back from a line's page to the lines panel's list.
+    func closeLinePage(file: StaticString = #filePath, line: UInt = #line) {
+        let page = collectionViews["line.detail"].firstMatch
+        guard page.exists else { return }
+        // The bar's first button: titled "Lines", or only "Back" or its
+        // arrow on a narrow panel.
+        let back = navigationBars.firstMatch.buttons.element(boundBy: 0)
+        XCTAssertTrue(back.becomesHittable(within: 10), "Missing Back to the lines", file: file, line: line)
+        back.tap()
+        XCTAssertTrue(page.disappears(within: 10), "The line's page stayed", file: file, line: line)
     }
 
     /// Decision 303: under simple rules a new line's ✓ (or Create Line)

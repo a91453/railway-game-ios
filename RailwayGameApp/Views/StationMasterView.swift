@@ -238,7 +238,7 @@ struct StationMasterCorner: View {
                     if let line = advice?.line {
                         // Decision 194, later: a losing line opens in the
                         // line panel, its card saying why.
-                        session.selectLine(line)
+                        session.openLine(line)
                         screen.panel = .lines
                     } else if let target = advice?.cameraTarget {
                         session.lookAt(target)
