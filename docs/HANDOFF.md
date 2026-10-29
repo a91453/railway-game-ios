@@ -2100,6 +2100,16 @@
   - 高雄車要不要算不鏽鋼（`Map3DTrainMaterial.stainlessSets`）：作者看過真機再定。
   - 實機：兩款近景的幀數、500 m 換遠景、台中第四版與鳴日號的外觀（作者，TestFlight，UNVERIFIED）。
 
+### 4.27 宣傳影片 30 秒預告與 App Store 預覽（派工單 PV，session_01YGNNuoY1GitTFVsk8mHw6J，2026-10-29）
+
+- **第一版做完了**：`a91453/railway-assets-private` 草稿 PR #30，`promo-material/2026-10-29/trailer/`。橫式預告 1920×1080、App Store 橫式 1920×886、直式 886×1920，各有配樂版與靜音版（共約 181 MB，每支 ≤ 50 MB）。README 寫了來源、官網風格（顏色、Noto Sans TC 全字型、標語、吉祥物、圖示）、卡頓檢查（最大 0.1 秒）、重建指令與五個角度。作者的回饋都改了：「全臺灣都能選」、照 alongthelinegame.com 的風格、用作者實機錄影、配樂改用官網開頭影片的音樂（遊戲自己的音樂，決策 79、219，從第 7 秒起 30 秒）。分支歷史裡有舊版影片，PR 說明請作者 squash 合併。
+- **第二版還沒剪**（壓縮兩次停下）：加 95.1 新車（新普悠瑪、E200 鳴日號風格、高雄紅橘、台中綠）。
+  - 素材測試：#1492（只改 `RailwayGameApp/UITests/PromoMaterialTests.swift` 的 `testTrainShowcaseNewTrains`：設定版本列點 5 下開列車展示，`map3D.quality=saving`，選四款新車，拍正面、側面、俯視、近景，轉台轉著，白天／黃昏／夜晚各兩張並錄影）。iOS CI 綠了就轉 ready，不合併。
+  - 錄影只跑一次（macOS runner 共用）：`website-screenshots.yml` run 40863314600（`kind=promo`、iphone、dark、`tests=testTrainShowcaseNewTrains`，分支 `claude/promo-showcase-new-trains`）。下一個 session 先看它綠不綠；紅了修測試再跑一次。
+  - 剪法：用資產 PR #30 的 `promo-material/2026-10-29/trailer/tools/build.py`（`build.py RAW DEV SITE FONT OUT MUSIC [layouts]`，`MUSIC_START=7`；`stutter.py` 檢查卡頓）。把開頭「真實的臺灣列車」那段（作者實機 r1）之後加一到兩鏡新車轉台（3D 安全框 `3d`），總長維持 30 秒：從城市輪播（每城 0.8 秒）或 r4 夜景各扣一點。字幕只寫玩家看得到的，例如「新普悠瑪、鳴日號、高雄、臺中的列車」。作者的實機錄影保留；HDR 錄影要用 README 裡的 zscale tonemap。
+  - 交付：SendUserFile（proactive）給作者，再 `send_message` 遊戲規劃；檔案放同一個資產 PR #30 的同目錄（或新草稿 PR，每支 ≤ 50 MB、每 PR ≤ 200 MB）。
+- **還要作者確認的**：片尾「10/31 開放測試」；iPad 與淺色版要不要做（作者說過發佈前自己也能截圖）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
