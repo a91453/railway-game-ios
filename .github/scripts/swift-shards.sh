@@ -1449,7 +1449,7 @@ path_plan() {
 #   parts=<how many jobs share it (SELECTED_PART)>
 # with one line per file on stderr: its tier and why.
 declare -A FIXTURE_PLANS=()
-PRESENTATION_PARTS=5
+PRESENTATION_PARTS=6
 pr_plan() {
   local path line tier rank best=0 tests="" edited="" plans
   code_cache
@@ -1478,7 +1478,11 @@ pr_plan() {
     # 1,169 s on 2026-10-14 to about 2,450 s on 2026-10-23, when three parts
     # of up to 947 s plus about 4.5 minutes of container and build reached
     # the job's 20 minutes; five parts are about 510 s each (about 13 minutes
-    # a job). When a part nears 15 minutes again, add a part.
+    # a job). When a part nears 15 minutes again, add a part. Six since
+    # 2026-10-29: the Sanying Line's two real days (decision 400, 10j-3,
+    # weights 450 and 300) brought the five parts to about 854 each, and
+    # pull request #1448's selected-4 took 18 minutes of tests and
+    # selected-5 reached the job's 20 (run 40790641310); six are about 710.
     [[ " $tests " != *" GamePresentationTests.* "* ]] || parts="$PRESENTATION_PARTS"
     # An edited campaign file's class can take most of a job's 20 minutes
     # on its own (ServiceRepeatingPropertyTests 792 s of tests); two of
