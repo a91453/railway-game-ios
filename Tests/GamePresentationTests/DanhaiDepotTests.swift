@@ -9,9 +9,9 @@ import XCTest
 /// for; they stand in the depot overnight and run out empty for the
 /// morning's first runs, so the line is on sale: alone, and before the
 /// Blue Coast Line, which is then bought from Binhai Shalun, where they
-/// part, laid beside it there. Each played two real days under simple and
-/// realistic rules: every run sent out, no train in a deadlock and none
-/// held for long.
+/// part, laid beside it there; and after it (decision 493), bought whole
+/// beside it. Each played two real days under simple and realistic rules:
+/// every run sent out, no train in a deadlock and none held for long.
 @MainActor
 final class DanhaiDepotTests: XCTestCase {
     func testTheLineIsBoughtWithItsRealDepot() throws {
@@ -46,15 +46,34 @@ final class DanhaiDepotTests: XCTestCase {
         XCTAssertEqual(standing(at: hongshulin.id), 4)
     }
 
-    /// Not after the Blue Coast Line: bought from Binhai Shalun, where they
-    /// part, its trips cut there would stand eleven trains at once at that
-    /// end (`extract_metro_runs.py`), and the game's ends lay at most
-    /// seven tracks (docs/HANDOFF.md).
-    func testTheGreenMountainLineIsNotOnSaleAfterTheBlueCoastLine() throws {
+    /// Decision 493: after the Blue Coast Line too, bought whole from
+    /// Hongshulin with its depot, laid beside the Blue Coast Line's track
+    /// to Binhai Shalun, where they part, and its platforms at the stations
+    /// they share joining the Blue Coast Line's.
+    func testTheGreenMountainLineIsBoughtWholeAfterTheBlueCoastLine() throws {
         let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
         let coast = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:VB" })
         XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: coast)), session.message?.text ?? "")
-        XCTAssertFalse(session.buyableRealLines.contains { $0.id == "ntdlrt:V" })
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" }, "the Green Mountain Line on sale")
+        XCTAssertEqual(line.after, "ntdlrt:VB")
+        XCTAssertEqual(line.stops.first, "紅樹林")
+        let offer = session.realLineOffer(for: line)
+        let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+        XCTAssertEqual(acquisition.depot?.platforms.count, RealLineDepotSite.danhai.sidings)
+        XCTAssertEqual(acquisition.trains.count, 13)
+        let stations = session.world.stations.count
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+
+        // Nine stations shared, Hongshulin to Binhai Shalun: only the
+        // two beyond and the depot are new.
+        let world = session.world
+        XCTAssertEqual(world.stations.count, stations + 3)
+        let coastLine = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: "ntdlrt:VB")?.line)))
+        let green = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: "ntdlrt:V")?.line)))
+        XCTAssertEqual(Set(green.stops).intersection(coastLine.stops).count, 9)
+        let depot = try XCTUnwrap(world.stations.first(where: \.isDepot))
+        func standing(at id: StationID) -> Int { world.trains.count { world.stationsStoppedAt(by: $0.id).contains(id) } }
+        XCTAssertEqual(standing(at: depot.id), 9)
     }
 
     /// `ids` bought in turn on a game round the Green Mountain Line under
@@ -117,5 +136,23 @@ final class DanhaiBothLinesDayTests: XCTestCase {
         for rules in [NewGameRules.simple, .realistic] {
             try DanhaiDepotTests.buyAndRun(["ntdlrt:V", "ntdlrt:VB"], rules: rules)
         }
+    }
+}
+
+/// Decision 493: the Blue Coast Line, then the Green Mountain Line bought
+/// whole beside it, two real days under simple rules (some 330 s, debug);
+/// a class for each rule so CI can put them in two shards.
+@MainActor
+final class DanhaiBlueThenGreenSimpleDayTests: XCTestCase {
+    func testTheGreenMountainLineAfterTheBlueCoastLineRunsTwoRealDays() throws {
+        try DanhaiDepotTests.buyAndRun(["ntdlrt:VB", "ntdlrt:V"], rules: .simple)
+    }
+}
+
+/// Decision 493: the same under realistic rules.
+@MainActor
+final class DanhaiBlueThenGreenRealisticDayTests: XCTestCase {
+    func testTheGreenMountainLineAfterTheBlueCoastLineRunsTwoRealDays() throws {
+        try DanhaiDepotTests.buyAndRun(["ntdlrt:VB", "ntdlrt:V"], rules: .realistic)
     }
 }
