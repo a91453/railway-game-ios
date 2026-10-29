@@ -18,7 +18,7 @@
 
 # 交接
 
-> Codex G12／R21 原生 studies（公開 draft [#1485](https://github.com/a91453/railway-game-ios/pull/1485) ↔ 私庫 draft [#26](https://github.com/a91453/railway-assets-private/pull/26)，producer `aa1fb2c8`）：revision-1 `b073c6c6` 整體外觀、revision-2 `69de18da` 正面均遭使用者否定；revision-3 `501f339a` 自檢發現前端白帶被底架遮住，撤回該版自評。revision-4 降底架前緣讓端面白帶實際可見，保留中央雙燈、正向黃黑 V、可見扶手與短端白 V。只用 1960 首批臺鐵 R20 型 EMD G12 的 R21 橘色時期；原圖、估算、比對、重建與四種狀態見 [G12 交接](art/g12-2026-10-29/README.md)。公開只放配方、工具、來源與一張總覽，完整近遠景與 viewer 在私庫 `g12/revision-4/`（前三輪僅留 PNG／README／來源）。現有 SceneKit R20 與全部營運映射不變；此 producer 的使用者外觀接受、營運接入、iOS Metal／真機均 **UNVERIFIED**。不合併／auto-merge／TestFlight。
+> Codex G12／R21 原生 studies（公開 draft [#1485](https://github.com/a91453/railway-game-ios/pull/1485) ↔ 私庫 draft [#26](https://github.com/a91453/railway-assets-private/pull/26)，producer `723d08f8`）：revision-1 `b073c6c6` 整體外觀、revision-2 `69de18da` 正面均遭使用者否定；revision-3 `501f339a` 自檢發現前端白帶被底架遮住而撤回，revision-4 `aa1fb2c8` 解遮擋。現版再依 R21 原圖加兩端實體燈座、角燈孔、可見連結器及長端小型警示牌；保留低白帶、正向黃黑 V、扶手與短端白 V。只用 1960 首批臺鐵 R20 型 EMD G12 的 R21 橘色時期；原圖、估算、比對、重建與四種狀態見 [G12 交接](art/g12-2026-10-29/README.md)。公開只放配方、工具、來源與一張總覽，完整近遠景與 viewer 在私庫 `g12/revision-5/`（前四輪僅留 PNG／README／來源）。現有 SceneKit R20 與全部營運映射不變；此 producer 的使用者外觀接受、營運接入、iOS Metal／真機均 **UNVERIFIED**。不合併／auto-merge／TestFlight。
 
 > Codex E1000雙端PP（#1294）：[來源／外觀／營運／重建](art/e1000-pp-2026-10-26/README.md)。獨立E1000近遠配方，以未合併PP #1291固定61c6969c為stacked base，私庫#87固定1f81f7c。只換pushPull機車，PP客車/E500/EMU與其他服務payload保護；兩端E1000、後機180°、後端貫通道相接。官方規格16.5/17.211m、寬2.885/車高3.904m；輪徑與軸距推估。完整包私有、公開一張總覽。兩PR皆合併並重建才改App，靜態展示不代表推拉控制/真機/動畫。CI看本輪同head，不合併/auto-merge/TestFlight。
 

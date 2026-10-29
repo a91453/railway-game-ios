@@ -24,7 +24,7 @@
 | 部位 | 原圖觀察／模型 | 判定 |
 | --- | --- | --- |
 | 輪廓與朝向 | 長罩朝模型 +X，駕駛室與短罩在 -X；約中後方較高駕駛室 | 符合主要剪影 |
-| 前後端燈 | 長／短罩端照片各支持高處兩側標示燈、中央縱列雙燈；端面輪廓按不同高度分開建模 | 符合主要相對位置；燈座細形仍簡化 |
+| 前後端燈 | 長／短罩端照片各支持高處兩側標示燈、中央縱列雙燈；端面輪廓按不同高度分開建模 | revision-5 加兩端有厚度的中央燈座、角燈孔；相對位置符合，燈座細形仍簡化 |
 | 駕駛室窗 | 側窗與短罩前方風擋可見 | 形狀簡化 |
 | 側面格柵、散熱 | 駕駛室前小格柵與長端大型散熱區、側門分件 | 大格柵位置近似；反側資料不足 |
 | 屋頂與排煙 | 深灰連續罩頂、排煙凸件 | 位置推估；俯視原圖不足 |
@@ -34,15 +34,15 @@
 
 這是靜態 studies 的原生霧面頂點色近／遠景配方。`Map3DModelPack.standard`、SceneKit R20 `05_TRA_classic_3x2-05`、莒光 `R100CK`／`R200CK` 等營運映射完全不變；合併後玩家不會在營運列車看到這版。無商標、無照片貼圖。
 
-使用者否定 revision-1 producer `b073c6c600bae8280cda31695aa28b0b413ee10f` 的整體外觀，又指出 revision-2 producer `69de18da3a8864b94e3bdc8f85d30b12c630a92c` 的正面「超怪」。revision-3 `501f339a6c8180f3924b337eb805737b2d5786b7` 已修正低白帶、黃黑 V、扶手及排障器，但最後實看正面 PNG 仍發現白帶被底架端板遮住；撤回該版白帶已符合的自評。revision-4 把底架前緣頂面從 1.30 m 降到 1.20 m，使同一車殼的白帶在正面完整可見。現版保留已核對的中央上下雙燈、號碼牌、短端白 V 及防撞板中央黃 V，沒有照片貼圖或浮貼色片。這些高度與寬度仍是按照片比例推估，非工程尺寸。
+使用者否定 revision-1 producer `b073c6c600bae8280cda31695aa28b0b413ee10f` 的整體外觀，又指出 revision-2 producer `69de18da3a8864b94e3bdc8f85d30b12c630a92c` 的正面「超怪」。revision-3 `501f339a6c8180f3924b337eb805737b2d5786b7` 最終實看發現前端白帶被底架端板遮住，撤回該版自評；revision-4 `aa1fb2c882d9ee16bb2664db8f7be8431e656c5f` 降底架，使白帶在正面可見。revision-5 依 2021 年 R21 扇形車庫長端正面與 2014 年短端照片，將兩端縱列雙燈放入有厚度的端面燈座，把角燈改為小型深色燈孔，讓中央連結器在霧面光下可辨；長端照片支持的燈下警示牌僅以原創無字小型實體件表現。短端白 V、長端低白帶與中央黃黑 V 保留。這些高度與寬度仍是照片比例推估，非工程尺寸；無照片貼圖、真商標或浮貼色片。
 
-最終輸出近景 6,228 三角、遠景 2,764 三角（44.4%），兩者原生邊界皆 `[-7.11, 7.11] × [-1.37, 1.37] × [0, 3.63] m`。固定相機和遊戲模型光的七向日夜圖、GLB、原生模型、可旋轉／縮放／下載的 inspector 在私庫 `game-art-previews/docs/art/g12/revision-4/`。revision-1 至 revision-3 只留 PNG、README、來源紀錄以追溯真前版；重檔由各自 producer 重建。公開總覽僅 [overview.png](overview.png)。照片並排圖只存工作區 `/workspace/scratch/g12-r4-private-comparison.jpg`，原圖不再散布；照片透視不等於固定正交相機。長端白帶與防撞板在實際正面渲染中已相接，中央雙燈／車號牌與兩側扶手位置更接近原圖；燈座、端面角部圓角、防撞板細斜紋與管線仍簡化。側、俯、斜視圖保持同尺度重看；大型散熱網、轉向架細形與屋頂設備仍有資料不足或簡化處。
+最終輸出近景 6,420 三角、遠景 2,932 三角（45.7%），兩者原生邊界皆 `[-7.11, 7.11] × [-1.37, 1.37] × [0, 3.63] m`。固定相機和遊戲模型光的七向日夜圖、GLB、原生模型、可旋轉／縮放／下載的 inspector 在私庫 `game-art-previews/docs/art/g12/revision-5/`。revision-1 至 revision-4 只留 PNG、README、來源紀錄以追溯真前版；重檔由各自 producer 重建。公開總覽僅 [overview.png](overview.png)。照片並排圖只存工作區 `/workspace/scratch/g12-r5-private-comparison.jpg`，原圖不再散布；照片透視不等於固定正交相機。長端白帶與防撞板在實際正面渲染中相接，燈組、兩側號碼牌、角燈孔與扶手的位置更接近原圖；端面角部圓角、防撞板細斜紋、警示牌字樣與管線仍簡化。側、俯、斜視圖保持同尺度重看；大型散熱網、轉向架細形與屋頂設備仍有資料不足或簡化處。
 
-Producer `aa1fb2c882d9ee16bb2664db8f7be8431e656c5f`（真前版 `501f339a6c8180f3924b337eb805737b2d5786b7`）。在獨立 `/workspace/g12-rebuild` checkout 執行 `tools/train-models/run.sh OUT --ids g12-r21,g12-r21-far` 與 `node tools/train-models/package.mjs OUT`，四個成品（兩個 `.m3dmodel`、兩個 `.glb`）逐 bytes 比對交付前匯出；SHA 詳見私庫 `manifest.json`。共用 `check.mjs`、`audit.mjs` 及 `g12-verify.mjs` 通過；六輪貼軌、兩端燈高、玻璃外露、兩端連結器、短端白 V、長端低白帶、防撞板頂中央黃 V、端扶手、前端白帶可見淨空與八個位移／故障反例已驗，且新版驗收拒收 revision-3 的遮蔽底架。Blender 4.3.2 獨立匯入近遠兩 GLB，分別 6,228／2,764 三角；56 張本地 PNG 完整解碼。Swift 6.4 `warnings-as-errors` 建置與相關測試另見本輪 PR 檢查。最終交付 viewer 本機 loopback 載入、旋轉、縮放、native／GLB／PNG 下載 byte 與 390px 視窗驗證通過；`file://` 因本機瀏覽器管理設定擋下，**UNVERIFIED**。這些檢查不等於 Metal 或動態碰撞。
+Producer `723d08f830b64177357f3182bb227dfbc4b8b408`（真前版 `aa1fb2c882d9ee16bb2664db8f7be8431e656c5f`）。在獨立 `/workspace/g12-rebuild` checkout 執行 `tools/train-models/run.sh OUT --ids g12-r21,g12-r21-far` 與 `node tools/train-models/package.mjs OUT`，四個成品（兩個 `.m3dmodel`、兩個 `.glb`）逐 bytes 比對交付前匯出；SHA 詳見私庫 `manifest.json`。共用 `check.mjs`、`audit.mjs` 及 `g12-verify.mjs` 通過；六輪貼軌、兩端燈座與燈高、玻璃外露、兩端連結器、短端白 V、長端低白帶、防撞板頂中央黃 V、端扶手、前端白帶可見淨空、長端警示牌與九個位移／故障反例已驗；新版驗收拒收 revision-4 的舊燈位。Blender 4.3.2 獨立匯入近遠兩 GLB，分別 6,420／2,932 三角；56 張本地 PNG 完整解碼。Swift 6.4 `warnings-as-errors` 建置與相關測試另見本輪 PR 檢查。最終交付 viewer 本機 loopback 載入、旋轉、縮放、native／GLB／PNG 下載 byte 與 390px 視窗驗證通過；`file://` 因本機瀏覽器管理設定擋下，**UNVERIFIED**。這些檢查不等於 Metal 或動態碰撞。
 
 ## 狀態
 
-- 素材技術：**VERIFIED**，限上述原生／GLB／渲染／viewer 技術驗收；`file://` 及工程量測未驗，見私庫 revision-4 的 `status.json`。
-- 此 producer 使用者外觀接受：**UNVERIFIED**。revision-1 整體、revision-2 正面均被否定；revision-3 自檢撤回；revision-4 尚無使用者明確接受。
+- 素材技術：**VERIFIED**，限上述原生／GLB／渲染／viewer 技術驗收；`file://` 及工程量測未驗，見私庫 revision-5 的 `status.json`。
+- 此 producer 使用者外觀接受：**UNVERIFIED**。revision-1 整體、revision-2 正面均被否定；revision-3 自檢撤回；revision-4 未獲明確接受；revision-5 尚無使用者明確接受。
 - 營運接入：**UNVERIFIED**，僅 studies；既有 SceneKit R20 與全部營運映射不變。
 - 裝置：**UNVERIFIED**，無 iOS Metal／Simulator／真機驗證。
