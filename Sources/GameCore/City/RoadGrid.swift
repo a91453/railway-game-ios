@@ -162,6 +162,11 @@ public struct RoadQuote: Hashable, Sendable {
     public let cells: [CellPosition]
     public let metres: Int64
     public let price: Money
+    /// On a real-world map, the cells of the way with only the city's road
+    /// (read from the base map, which draws its own streets and not these
+    /// cells), in order: they become the player's road too, for nothing
+    /// (decision 487). None on a blank map, whose city roads are drawn.
+    public var taken: [CellPosition] = []
 }
 
 /// What a station road costs (``GameWorld/stationRoadQuote(at:)``).
@@ -300,12 +305,13 @@ extension GameWorld {
     public mutating func buildRoad(along cells: [CellPosition]) throws(GameError) -> RoadQuote {
         let quote = try roadQuote(along: cells)
         guard var grid = roads else { throw .roadsNotEnabled }
-        guard !quote.cells.isEmpty else { return quote }
-        try economy.spend(quote.price)
+        guard !quote.cells.isEmpty || !quote.taken.isEmpty else { return quote }
+        if quote.price > .zero { try economy.spend(quote.price) }
         if accounts.mode == .management {
             accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending + quote.price }
         }
         grid.built.formUnion(quote.cells)
+        grid.built.formUnion(quote.taken)
         roads = grid
         return quote
     }
@@ -343,7 +349,9 @@ extension GameWorld {
     /// ``RoadGrid/longestBuiltRoad``. The cells with no road yet are laid,
     /// each for the way into it from the cell before (a cell's side, or
     /// corner to corner; the first cell a side), at
-    /// ``RoadGrid/pricePerMetre``; those with a road cost nothing.
+    /// ``RoadGrid/pricePerMetre``; those with a road cost nothing. On a
+    /// real-world map those with only the city's road are taken as the
+    /// player's too, for nothing (``RoadQuote/taken``, decision 487).
     ///
     /// - Throws, checked in this order: ``GameError/roadsNotEnabled``;
     ///   ``GameError/invalidRoads`` for no cells, too many, two in a row
@@ -358,8 +366,12 @@ extension GameWorld {
               zip(cells, cells.dropFirst()).allSatisfy({ $0 != $1 && abs($0.row - $1.row) <= 1 && abs($0.column - $1.column) <= 1 }),
               cells.allSatisfy({ (0..<rows).contains($0.row) && (0..<columns).contains($0.column) })
         else { throw .invalidRoads }
-        var laid: [CellPosition] = [], seen = Set<CellPosition>(), metres: Int64 = 0
-        for (index, cell) in cells.enumerated() where !grid.contains(cell) && seen.insert(cell).inserted {
+        var laid: [CellPosition] = [], taken: [CellPosition] = [], seen = Set<CellPosition>(), metres: Int64 = 0
+        for (index, cell) in cells.enumerated() where !grid.built.contains(cell) && seen.insert(cell).inserted {
+            guard !grid.cells.contains(cell) else {
+                if geoAnchor != nil { taken.append(cell) }
+                continue
+            }
             if !terrain.isEmpty {
                 if terrain.isWater(row: cell.row, column: cell.column) { throw .onWater(row: cell.row, column: cell.column) }
                 if terrain.isSteep(row: cell.row, column: cell.column) { throw .roadTooSteep(row: cell.row, column: cell.column) }
@@ -367,7 +379,7 @@ extension GameWorld {
             laid.append(cell)
             metres += index == 0 ? RoadGrid.straightMetres : RoadGrid.metres(from: cells[index - 1], to: cell)
         }
-        return RoadQuote(cells: laid, metres: metres, price: Money(metres * RoadGrid.pricePerMetre.amount))
+        return RoadQuote(cells: laid, metres: metres, price: Money(metres * RoadGrid.pricePerMetre.amount), taken: taken)
     }
 
     /// The road from station `id` to the nearest road cell (the least

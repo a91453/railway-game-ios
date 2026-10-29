@@ -1193,13 +1193,20 @@ final class MapInteractionTests: XCTestCase {
         // The bell, 32 points tall: 20 below its centre.
         let bell = app.buttons["hud.news"]
         XCTAssertTrue(bell.appears(within: 5))
+        bell.waitUntilSettled()
         tap(bell, below: 20)
         let news = app.navigationBars["News"]
         XCTAssertTrue(news.appears(within: 5), "A tap 4 points below the drawn bell opens the news")
+        // Done is touched once the sheet has come to rest, and again if the
+        // sheet stays: on main 6ff5ffe (run 40866617267) Done was touched
+        // as the sheet slid up and the app's trace shows the touch on it
+        // cancelled 182 ms later, so the news never closed. Only Done is
+        // retried; the touches beside the icons this test is about are not.
         let done = app.buttons["news.done"]
-        XCTAssertTrue(done.appears(within: 5))
+        done.waitUntilSettled()
         done.tap()
-        XCTAssertTrue(news.disappears(within: 5))
+        if !news.disappears(within: 5), done.exists { done.tap() }
+        XCTAssertTrue(news.disappears(within: 5), "Done closes the news")
 
         // The menu, 32 points tall: 20 above its centre.
         let menu = app.buttons["hud.menu"]
@@ -1338,16 +1345,13 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(lines.appears(within: 10))
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["Lines"].firstMatch
-        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
-        bar.waitUntilSettled()
-        // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        let line = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.1")).firstMatch
+        let lists = app.navigationBars["Lines"].firstMatch
+        XCTAssertTrue(lists.appears(within: 10), "The lines panel opens")
+        lists.waitUntilSettled()
+        // Decision 481: line 1's own page, with its own list.
+        let list = app.openLinePage(1)
         // The list runs on under the bar (#659): a row counts as in reach only below it.
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(line, in: list, below: bar.frame.maxY), "Line 1's row must come into reach")
-        line.tap()
+        let bar = app.navigationBars.firstMatch
 
         let depots = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.depot."))
         let depot = depots.firstMatch

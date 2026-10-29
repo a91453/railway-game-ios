@@ -81,9 +81,9 @@ final class Map3DPPIntegrationTests: XCTestCase {
         // neither these coaches nor any E500 part is substituted with PP.
         // Decision 430: the E500CK's coaches are the Chu-Kuang coach's now
         // (Map3DChuKuangIntegrationTests); the Ming-Ri's and the Formosa
-        // Star's are as they were.
+        // Star's are as they were. Decision 483: the Ming-Ri is #1480's
+        // E200 and coaches (Map3DMetroSets483Tests).
         let existing: [(String, Map3DTrainSet.Coach)] = [
-            ("MINGRI", Map3DTrainSet.coach(TrainLivery.mingRi, band: 0.38...0.43)),
             ("STAR", Map3DTrainSet.coach(TrainLivery.formosaStar, band: 0.38...0.43)),
         ]
         for (key, coach) in existing {

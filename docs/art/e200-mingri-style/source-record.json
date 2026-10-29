@@ -1,0 +1,45 @@
+{
+  "origin": "Existing project recipes plus observed photographic colour layout",
+  "date": "2026-10-29",
+  "license": "Project-authored recipe; source photos observation only",
+  "public_use": "Project-authored game models only. Observation-only source images are excluded.",
+  "photos": [
+    {
+      "url": "https://www.cna.com.tw/news/ahel/202008010105.aspx",
+      "image_url": "https://imgcdn.cna.com.tw/www/WebPhotos/1024/20200801/1154x768_20200801000135.jpg",
+      "date": "2020-08-01",
+      "author": "CNA / TRA supplied; individual photographer unconfirmed",
+      "kind": "real photograph, E405 front/side",
+      "sha256": "0fb22c8991572f6f4a157f603953e630176671ae0247bd801d097d5e4f959b1f",
+      "license": "Copyright retained; no redistribution grant located",
+      "use": "visual observation only, no pixels/texture/geometry copied",
+      "public_use": false,
+      "opened": true
+    },
+    {
+      "url": "https://www.liontravel.us/zh-tw/campaign/taiwan/rail/future/",
+      "image_url": "https://static.liontech.com.tw/ConsoleAPData/PublicationStatic/lion_tw_b2c_event/zh-tw/railtour/_ModelFile/Product/3811042/d385e56a98b9468695c9f22aa0820c00.jpg",
+      "date": "UNVERIFIED",
+      "author": "Lion Travel; photographer UNVERIFIED",
+      "kind": "real photograph E405 opposite end",
+      "sha256": "85809ebdb0c1a4e5f213b531d47ffadbeec523c7484baf6a42ef58767292e606",
+      "license": "Copyright retained; no redistribution grant located",
+      "use": "visual observation only, no pixels/texture/geometry copied",
+      "public_use": false,
+      "opened": true
+    },
+    {
+      "url": "https://www.liontravel.us/zh-tw/campaign/taiwan/rail/future/",
+      "image_url": "https://d35691lr4zslyx.cloudfront.net/attachments/xexyzqbo4vvc1xyz9d9rv7p7-pic2511-000913.two-thirds.jpg",
+      "date": "UNVERIFIED",
+      "author": "Lion Travel; photographer UNVERIFIED",
+      "kind": "real photograph, coach band/roof; E500 locomotive excluded from E200 shape reference",
+      "sha256": "d5a673e9bfc334cc3a5ccbd6721fa5a2873b88f6b2b8a10872e2b2a890e570d0",
+      "license": "Copyright retained; no redistribution grant located",
+      "use": "visual observation only, no pixels/texture/geometry copied",
+      "public_use": false,
+      "opened": true
+    }
+  ],
+  "attachments": "User supplied eight photos/renderings and one CC BY-NC-ND attributed illustration. Source URL/author/date/SHA unavailable from chat attachment; UNVERIFIED, not redistributed or copied."
+}

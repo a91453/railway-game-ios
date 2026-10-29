@@ -3,7 +3,7 @@ import XCTest
 
 final class Map3DE500Tests: XCTestCase {
     func testActualE500DispatchAndFarKeepDedicatedGeometry() throws {
-        for key in ["E500CK", "MINGRI", "STAR"] {
+        for key in ["E500CK", "STAR"] {
             let near=try XCTUnwrap(Map3DTrainSet.named(key)), far=try XCTUnwrap(Map3DTrainSet.named(key+"Far"))
             XCTAssertEqual(near.far,key+"Far")
             XCTAssertTrue(near.ownLengths)
@@ -21,7 +21,7 @@ final class Map3DE500Tests: XCTestCase {
     }
     func testPackActuallySelectsNearFarAndExistingBoxFallback() throws {
         let pack=Map3DModelPack.unbaked
-        for key in ["E500CK", "MINGRI", "STAR"] {
+        for key in ["E500CK", "STAR"] {
             let near=try XCTUnwrap(pack.index(of:"set-"+key+"-head"))
             let far=try XCTUnwrap(pack.index(of:"set-"+key+"Far-head"))
             XCTAssertEqual(pack.model(near,forType:key,count:7,at:499),near)

@@ -1450,7 +1450,7 @@ private struct RouteHintCard: ViewModifier {
     private func showRoutes(_ trigger: RouteHint.Trigger) {
         if case .parallelTrack(let line) = trigger {
             storedShowsAdvanced = true
-            session.selectLine(line)
+            session.openLine(line)
             screen.panel = .lines
         }
         finish()

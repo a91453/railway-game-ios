@@ -17,6 +17,9 @@ struct NetworkFlowSheet: View {
     /// Worked out off the main thread (``NetworkFlowReport/init(world:)``);
     /// `nil` until the first one is ready.
     @State private var report: NetworkFlowReport?
+    /// The section the hour-by-hour chart shows (decision 478); the
+    /// fullest when none is picked.
+    @State private var chartSection: Int?
 
     /// The report is worked out again every ten minutes of game time, and
     /// when the lines change.
@@ -79,7 +82,7 @@ struct NetworkFlowSheet: View {
         Section {
             ForEach(rows) { row in
                 Button {
-                    session.selectLine(row.line)
+                    session.openLine(row.line)
                     screen.panel = .lines
                 } label: {
                     lineRow(row, largest: largest)
@@ -146,6 +149,27 @@ struct NetworkFlowSheet: View {
         if !report.rankedSections.isEmpty {
             Section {
                 SectionRankingChart(spec: report.rankingChart(in: session.world, language: language), rows: report.rankedSections, language: language)
+            }
+        }
+        // Decision 478: one section hour by hour.
+        if let row = report.sections.first(where: { $0.section == chartSection }) ?? report.sections.first {
+            Section {
+                Picker(selection: Binding(get: { row.section }, set: { chartSection = $0 })) {
+                    ForEach(report.sections) { choice in
+                        Text(verbatim: NetworkFlowReport.title(of: choice, in: session.world)).tag(choice.section)
+                    }
+                } label: {
+                    Text(verbatim: language.text("Section", "區間"))
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("networkFlow.hourly.section")
+                SectionHourlyChart(row: row, title: NetworkFlowReport.title(of: row, in: session.world), language: language)
+            } header: {
+                Text(verbatim: language.text("Hour by hour", "各時段"))
+            } footer: {
+                Text(verbatim: language.text(
+                    "Riders each hour against the seats its trains carry. Tap an hour for its numbers.",
+                    "每個小時的乘客對列車的座位。點一個小時看數字。"))
             }
         }
         Section {

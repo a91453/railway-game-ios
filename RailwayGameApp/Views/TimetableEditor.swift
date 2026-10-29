@@ -139,7 +139,7 @@ struct TimetableEditor: View {
     private func lineActionsSection(_ line: LineTrainTimetable) -> some View {
         Section {
             Button {
-                session.selectLine(line.line)
+                session.openLine(line.line)
                 screen.panel = .lines
             } label: {
                 Label("Edit Stops in the Lines Panel", systemImage: "point.topleft.down.to.point.bottomright.curvepath")

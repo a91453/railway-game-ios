@@ -31,6 +31,61 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-30-95",
+            items: [
+                Line(
+                    english: "The lines panel is a short list with two rows per line (yesterday's riders, profit and a trend); tap a line for a page of its own, with previous and next line.",
+                    chinese: "路線面板改成短清單，每條線兩行；點一條線進它自己的頁，有上一條與下一條。"
+                ),
+                Line(
+                    english: "Long line lists fold into groups, and a new Needs attention filter shows only the lines to look at.",
+                    chinese: "線多時分組可收合，也能只看「需要注意」的線。"
+                ),
+                Line(
+                    english: "Three new charts show how full things are: riders between stops on a line's panel, a section hour by hour, and each day's fullest train.",
+                    chinese: "三張新的載客圖：路線面板的各站間載客、區間各時段、每日最擠的一班。"
+                ),
+                Line(
+                    english: "The Finance panel shows income and costs as two donut charts.",
+                    chinese: "財務面板用兩張甜甜圈圖，看錢從哪裡來、花到哪裡去。"
+                ),
+                Line(
+                    english: "Bubbles, fares, prices and place names on the map no longer cover each other, and the whole of Taiwan comes first when you pick a real map.",
+                    chinese: "地圖上的泡泡、票價、價錢和地名不再互相蓋住；選真實地圖時，「整個臺灣」排在第一個。"
+                ),
+                Line(
+                    english: "Buying the Sanying line builds the real Sanxia depot with it, so its trains rest there overnight and start on time in the morning.",
+                    chinese: "買三鶯線時一起蓋真實的三峽機廠，車晚上收在機廠，早上準時出發。"
+                ),
+                Line(
+                    english: "Roads you lay are drawn as wide as the map's own lanes, and city buses follow one-way streets and go through tunnels.",
+                    chinese: "你鋪的路畫得和底圖的巷弄一樣寬；市區公車照單行道的方向走，也會穿過隧道。"
+                ),
+                Line(
+                    english: "The loading screen shows the steps actually done, and you can go back to the previous screen.",
+                    chinese: "載入畫面顯示實際完成的步驟，也能回到上一個畫面。"
+                ),
+                Line(
+                    english: "In a station's panel, jump between groups from the menu in the navigation bar; tapping a short-of-materials bubble opens the freight group.",
+                    chinese: "車站面板的跳組改到導覽列的選單；點「缺建材」泡泡，直接停在貨運那一組。"
+                ),
+                Line(
+                    english: "In 3D, the Puyuma is redrawn as an eight-car train with new lights and red stripes.",
+                    chinese: "3D 的普悠瑪換成新版八節車，燈與紅色雙帶重畫。"
+                ),
+                Line(
+                    english: "Kaohsiung's Red and Orange lines run three-car trains, Taichung's Green line runs the new two-car train, and the Mingri runs in the E200 Mingri style.",
+                    chinese: "高雄紅橘線跑三節車，台中綠線跑新版兩節車，鳴日號改畫 E200 鳴日號風格。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Choosing the high-speed rail or Yilan line demo closes the menu at once, and the loading screen is no longer covered.",
+                    chinese: "高鐵、宜蘭線示範按下就關掉選單，載入畫面不再被蓋住。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-29-94",
             items: [
                 Line(

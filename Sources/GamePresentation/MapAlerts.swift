@@ -214,7 +214,8 @@ extension GameSession {
             if let station = alert.station { selectStation(station) }
             return false
         case .lineWithoutTrains(let line), .lineLosingMoney(let line):
-            selectLine(line)
+            // Decision 481: on its own page in the lines panel.
+            openLine(line)
             return true
         case .trainStuck(let train):
             // As a tap on the train: the inspector shows it alone.

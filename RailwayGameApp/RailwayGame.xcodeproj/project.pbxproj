@@ -25,6 +25,7 @@
 		10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8372106A7EF953548452B15 /* MapBuildConfirm.swift */; };
 		12BB9882A54BD217BECB6F92 /* horn-metro.wav in Resources */ = {isa = PBXBuildFile; fileRef = 15F8BB42601B157F11A9F8ED /* horn-metro.wav */; };
 		1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A68301E79140AEFC540BBA0 /* TrainControls.swift */; };
+		159ECB2AA9E6B580BF425E49 /* PromoMaterialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E70549159C0EC6DAE1303D /* PromoMaterialTests.swift */; };
 		164F3A88D054D2F1AE5298C5 /* MapAttractionMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92BC83D8380E4C09D3E46DBD /* MapAttractionMarks.swift */; };
 		196DB07B71A523EE4DCE91DE /* ntdlrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = B00B0A86FFD245909EF3231A /* ntdlrt_times.json */; };
 		19E3457A000AB98921141272 /* taiwan_population.json in Resources */ = {isa = PBXBuildFile; fileRef = 6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */; };
@@ -109,6 +110,7 @@
 		6BBE1EA08A01DA211217F819 /* MapLockUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842D96D52074E3FCD6BCA749 /* MapLockUITests.swift */; };
 		6C73E74146DEDE67870F022A /* RealLineAcquisitionCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47720F48E44581B39E9D45A6 /* RealLineAcquisitionCards.swift */; };
 		6C858F97E4320832D80DC4C3 /* StationStampPassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A78EE664114638279C7BCC3A /* StationStampPassportView.swift */; };
+		6DB79EAED8748D6DC94EA8CF /* LoadChartViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F43770688B5B4F01435903D /* LoadChartViews.swift */; };
 		6FDAFF341E0A4ECA23966804 /* GameAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */; };
 		7044884A77678D3AA560B162 /* YearEndReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC5AEB0936E154EABD2610F /* YearEndReport.swift */; };
 		70A9168E29FD6A6696023F5C /* chime-tourist-motif.wav in Resources */ = {isa = PBXBuildFile; fileRef = 634F11070F2F2510BBBA5D96 /* chime-tourist-motif.wav */; };
@@ -171,6 +173,7 @@
 		A76D3CC09845C96D375B9D4B /* rain-typhoon.caf in Resources */ = {isa = PBXBuildFile; fileRef = 284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */; };
 		A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */ = {isa = PBXBuildFile; fileRef = CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */; };
 		A948AFEE87E21806376AA8C4 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B5995200C877BF409F730A8 /* WhatsNewView.swift */; };
+		A9C8A63D05F2B1DAFCCAFD07 /* LoadChartUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3F11B85E0A47AF52471E65 /* LoadChartUITests.swift */; };
 		AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */; };
 		AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */; };
 		AB388D73844CF9ACB7BB89AC /* real_buses_ChiayiCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = 571AB4781024661A3A3CF0B1 /* real_buses_ChiayiCounty.json */; };
@@ -335,6 +338,7 @@
 		47720F48E44581B39E9D45A6 /* RealLineAcquisitionCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealLineAcquisitionCards.swift; sourceTree = "<group>"; };
 		4908C3743931AF833974C7B0 /* real_buses_TaitungCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_TaitungCounty.json; sourceTree = "<group>"; };
 		4966256D18F5622FE1A080BB /* station-chime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "station-chime.wav"; sourceTree = "<group>"; };
+		4A3F11B85E0A47AF52471E65 /* LoadChartUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadChartUITests.swift; sourceTree = "<group>"; };
 		4B68167398B13543EA8C564A /* RealWorldPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldPicker.swift; sourceTree = "<group>"; };
 		4C1017DDE782DF1CF07D561E /* rail_structures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = rail_structures.json; sourceTree = "<group>"; };
 		4E5B19D3B11CAE01ADC9F0A2 /* FrameTimeBenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTimeBenchView.swift; sourceTree = "<group>"; };
@@ -353,6 +357,7 @@
 		58D2ECE334BAC4B7C9744680 /* whoosh.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = whoosh.wav; sourceTree = "<group>"; };
 		5BF4BA3F66CFC369FCBE3407 /* warning.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = warning.wav; sourceTree = "<group>"; };
 		5D13A72AB276C39B91634D86 /* real_buses_ChanghuaCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_ChanghuaCounty.json; sourceTree = "<group>"; };
+		5F43770688B5B4F01435903D /* LoadChartViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadChartViews.swift; sourceTree = "<group>"; };
 		60AD430078BC348CA2F99EFB /* ntmc_circular_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntmc_circular_ridership.json; sourceTree = "<group>"; };
 		611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetOverviewSheet.swift; sourceTree = "<group>"; };
 		6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewGameOptionsView.swift; sourceTree = "<group>"; };
@@ -373,6 +378,7 @@
 		6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionLineView.swift; sourceTree = "<group>"; };
 		70170091E76358BF8886BB8E /* Map3DSurfaces.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSurfaces.png; sourceTree = "<group>"; };
 		71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChipUITests.swift; sourceTree = "<group>"; };
+		75E70549159C0EC6DAE1303D /* PromoMaterialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoMaterialTests.swift; sourceTree = "<group>"; };
 		76E2973BBBB24FACFFCBE7AD /* RailwayGame.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RailwayGame.entitlements; sourceTree = "<group>"; };
 		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
 		782C96DBD713D96F9EADF2EE /* Map3DSigns.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSigns.png; sourceTree = "<group>"; };
@@ -661,6 +667,7 @@
 				E654E2EC7E901F3CBD452FFE /* LineDraftSummaryRow.swift */,
 				17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */,
 				BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */,
+				5F43770688B5B4F01435903D /* LoadChartViews.swift */,
 				0B4F958A2EC6D131F9218CDD /* MapAlertBubbles.swift */,
 				A92B62C199B3DE4F7602175F /* MapArt.swift */,
 				92BC83D8380E4C09D3E46DBD /* MapAttractionMarks.swift */,
@@ -855,12 +862,14 @@
 				7A45FAC99BF6E52A26A750C5 /* HUDAlignmentUITests.swift */,
 				C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */,
 				091835300676F4F4DE9D6CE3 /* LineDraftSummaryUITests.swift */,
+				4A3F11B85E0A47AF52471E65 /* LoadChartUITests.swift */,
 				58125CB8705666FD497C6E13 /* MapButtonsUITests.swift */,
 				21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */,
 				842D96D52074E3FCD6BCA749 /* MapLockUITests.swift */,
 				1CEAC255D3FFB54FF35BCF39 /* MapMarkTapUITests.swift */,
 				71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */,
 				50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */,
+				75E70549159C0EC6DAE1303D /* PromoMaterialTests.swift */,
 				464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */,
 				7E833A49B8766511EF574847 /* SettingsUITests.swift */,
 				0F94328E36B3DAA88E657B8A /* SharedNetworkUITests.swift */,
@@ -1149,6 +1158,7 @@
 				D1C3F36C8C5DBFCA1036E603 /* LineDraftSummaryRow.swift in Sources */,
 				6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */,
 				20561212C765FBDE6629645A /* ListSearchField.swift in Sources */,
+				6DB79EAED8748D6DC94EA8CF /* LoadChartViews.swift in Sources */,
 				6A899B2715257CD7BAC63CCF /* Map3DMetalView.swift in Sources */,
 				4CF789B41082623D62B5AB27 /* Map3DPreviewScreen.swift in Sources */,
 				CE4E2C27EEA4AEF2AEAB2DE0 /* Map3DShaders.metal in Sources */,
@@ -1226,12 +1236,14 @@
 				298500257AB33E58BA58A158 /* HUDAlignmentUITests.swift in Sources */,
 				0EA0D456816BC0F34F34AD3A /* LessonUITests.swift in Sources */,
 				A081D0BA7AD605EAA7BCC85A /* LineDraftSummaryUITests.swift in Sources */,
+				A9C8A63D05F2B1DAFCCAFD07 /* LoadChartUITests.swift in Sources */,
 				AF92C9C88BE3029BAAEC6A23 /* MapButtonsUITests.swift in Sources */,
 				298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */,
 				6BBE1EA08A01DA211217F819 /* MapLockUITests.swift in Sources */,
 				92F90DD1D5DAE3F80BACEB39 /* MapMarkTapUITests.swift in Sources */,
 				E6E0A7C92F1A3C01E0705817 /* NextStepChipUITests.swift in Sources */,
 				C5AE4EE9A27FB9506D2B3AB3 /* NightSkipUITests.swift in Sources */,
+				159ECB2AA9E6B580BF425E49 /* PromoMaterialTests.swift in Sources */,
 				A63CC2F5042DB04F53E77F6D /* RealWorldMapUITests.swift in Sources */,
 				5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */,
 				3395CE97AE293EF2E54A794A /* SharedNetworkUITests.swift in Sources */,

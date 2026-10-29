@@ -197,8 +197,9 @@ private struct TrendAxes: ViewModifier {
     }
 }
 
-/// A line's last days (decision 179): riders as bars, and a second chart
-/// of profit against the zero rule. The profit is not drawn on the riders'
+/// A line's last days (decision 179): riders as bars, a second chart
+/// of profit against the zero rule, and a third of the fullest train each
+/// day against its seats (decision 478). The profit is not drawn on the riders'
 /// chart: its scale is people, not dollars (UI health check 3-7). The
 /// numbers and sentences are ``LineReport``'s, tested in `GamePresentation`
 /// (``LineReport/ridersChart(in:)``); colours are the finance charts' (blue
@@ -209,6 +210,7 @@ struct LineOperatingCharts: View {
     @State private var selected: Int64?
     /// Not a literal: a literal here would be a string to translate.
     private static let dayAxis = "Day"
+    private static let seatsAxis = "Seats"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -227,6 +229,10 @@ struct LineOperatingCharts: View {
                     .font(.caption.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
                 profitChart
+                Text(verbatim: report.peakLoadChart(in: language).title)
+                    .font(.caption.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
+                peakLoadChart
             }
         }
         .accessibilityElement(children: .contain)
@@ -277,6 +283,37 @@ struct LineOperatingCharts: View {
         .accessibilityChartDescriptor(ChartAudioGraph(spec: report.profitChart(in: language)))
         .accessibilityIdentifier("line.operations.profit")
     }
+
+    /// Each day's fullest train in percent of its seats, with the seats
+    /// drawn as a rule at 100% and named beside it.
+    private var peakLoadChart: some View {
+        let spec = report.peakLoadChart(in: language)
+        return Chart {
+            ForEach(report.days) { day in
+                LineMark(x: .value(Self.dayAxis, day.day + 1), y: .value(spec.yTitle, Double(day.peakLoadPercent)))
+                    .foregroundStyle(Theme.chartBlue)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                PointMark(x: .value(Self.dayAxis, day.day + 1), y: .value(spec.yTitle, Double(day.peakLoadPercent)))
+                    .foregroundStyle(Theme.chartBlue)
+                    .symbolSize(selected == day.day ? 70 : 24)
+            }
+            RuleMark(y: .value(Self.seatsAxis, 100.0))
+                .foregroundStyle(Theme.textSecondary)
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                .annotation(position: .top, alignment: .leading) {
+                    Text(verbatim: language.text("Seats", "座位"))
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+        }
+        .chartYScale(domain: spec.valueRange)
+        .modifier(DayAxes(selection: $selected, offset: 1))
+        .frame(height: 110)
+        .accessibilityLabel(Text(verbatim: spec.title))
+        .accessibilityValue(Text(verbatim: spec.summary))
+        .accessibilityChartDescriptor(ChartAudioGraph(spec: spec))
+        .accessibilityIdentifier("line.operations.peakLoad")
+    }
 }
 
 /// Axes of a chart whose x is a day number: a few labels, a compact y scale
@@ -308,7 +345,7 @@ private struct DayAxes: ViewModifier {
 
 /// A legend of the charts' series: a swatch and a name each, the last a
 /// dashed line when `dashedLast` (the revenue chart's cost).
-private struct ChartLegend: View {
+struct ChartLegend: View {
     let names: [String]
     let colors: [Color]
     var dashedLast = false

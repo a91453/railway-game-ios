@@ -179,7 +179,7 @@ struct InspectorView: View {
                 ForEach(lines, id: \.self) { id in
                     if let line = session.world.line(id: id) {
                         Button {
-                            session.selectLine(id)
+                            session.openLine(id)
                             screen.panel = .lines
                         } label: {
                             HStack(spacing: 4) {
