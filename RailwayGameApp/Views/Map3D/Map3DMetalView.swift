@@ -51,6 +51,10 @@ final class Map3DMetalView: MTKView {
         /// Decision 394: whether the cab is deep in a tunnel, drawing only
         /// what is under the ground (``Map3DUnderground``).
         var underground: Bool
+        /// PERF (2026-10-30): the frames a second aimed for
+        /// (`preferredFramesPerSecond`), which the rain over the map
+        /// keeps to.
+        var aim: Int
     }
 
     var camera = Map3DCamera()
@@ -1389,7 +1393,8 @@ final class Map3DMetalView: MTKView {
             streetDetail: level.map { $0.streets >= .fewestOnStreets ? $0.tier.streetDetail.lowered : $0.tier.streetDetail } ?? .off,
             level: level,
             drawScale: Double(contentScaleFactor),
-            underground: underground.isUnderground
+            underground: underground.isUnderground,
+            aim: preferredFramesPerSecond
         )
         // Decision 417: a step down while the device cannot keep up, a
         // step up once it has for a while.
