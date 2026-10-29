@@ -2061,7 +2061,7 @@
     - `setAdvanced`：拖動都從固定控制項下方的列上開始（新的 `XCUIApplication.linesListTop(under:)` 算出列從哪裡開始）；先往上捲到第一列（整個路網）露出來，再用短拖往下找開關；最後把開關本身（不是整列，整列約 115 點，比列的空間高）捲進來。
     - `bringIntoView`：在清單上時，「完整顯示」要避開固定的控制項，不只導覽列。
     - 新的 `chooseMenuAction`：點選單項後讀路段的字；沒變就再點一次（選單還開著）或重開選單，最多 3 次，每次先讀字，已選好就不再點。
-  - 驗證：`only_testing: LineRoutePreferenceUITests`（iPhone）run 40860707208（結果待補）。
+  - 驗證：`only_testing: LineRoutePreferenceUITests`（iPhone）run [40860707208](https://github.com/a91453/railway-game-ios/actions/runs/40860707208)（commit 3d3b658）兩支都綠（152 秒、200 秒）。這次觸控沒被取消，`chooseMenuAction` 的重試沒用到。
   - 以後避免同類問題：
     - 面板上方有固定（`safeAreaInset`）的控制項時，不要在清單上用 `swipeUp()`／`swipeDown()`，它們從元素正中間開始，會落在固定的控制項上。拖動要從列上開始。
     - 找不在畫面上的列，要先想它在上面還是下面：`dragUntilWhollyOnScreen` 在元素不存在時只會往下捲。
