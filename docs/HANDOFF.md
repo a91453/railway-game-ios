@@ -378,6 +378,42 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第二十九次換手（2026-10-29 約 04:10 UTC，session_01YGNNumk6UqdBm6JrBhsdZY 壓縮第 3 次 → 本任用 `create_session` 開的新規劃，第 5 層）**：照下一段「第二十八任做到哪」接。
+- 新規劃先讀第 1 節、本段與下一段、#1041 從「session_01YGNNumk6UqdBm6JrBhsdZY 壓縮第 3 次」往後，然後在 #1041 留言接手。
+- **排程**：舊規劃綁的 `trig_0126L4oXAtbbCmVaPcJfyR4q`（巡查）與 `trig_01Jverg8SDc6haaSZzEUsWwm`（10/30 01:00 UTC，原 94.1 檢查，改看 95.1）交接時刪掉；Threads 每日排程 `trig_01NzMKnCRdBjC6csJMQEPJVy` 若還綁舊規劃，新規劃用 `get_trigger` 讀 prompt、建綁自己的、刪舊的。巡查自己排（約 45 分一次）。
+- 在跑的 session（下一段的表）已被告知改向新規劃回報。
+- 新規劃是第 5 層；下一任到第 7 層時改請作者在 claude.ai 開（§1.1）。
+
+**第二十八任（session_01YGNNumk6UqdBm6JrBhsdZY，2026-10-29）做到哪**：和下面不同時以這段為準。
+- **94 已發**：作者自己按的（`testflight.yml` run 40803620174，`cd93d78`，0.5.0 (94.1)），目前只作者自測。94 的 full lane（run 40802613854）紅 2 支 UI 測試，由 FL94 修（#1465）。
+- **合併截止 10/30 04:00 UTC（台灣中午）**：之前綠的 PR 都進 main，紅的規劃修；之後出 **95（95.1）**：
+  1. 截止後派人把 `.github/testflight-whats-new.md` 與 `WhatsNew.swift` 最前面那則（id `2026-10-29-94`）改成 95.1，只加 94 之後合的。
+  2. main HEAD 跑完整 `ci.yml`（`workflow_dispatch`）與 full lane。
+  3. 兩個都綠，給作者健檢報告，請作者決定發不發；作者在**本對話這一任**說「發」才按 `testflight.yml`（一次、main HEAD）。
+- **10/31 公開連結**：完整 `ci.yml` 綠、full lane 綠、兩天沒有新閃退回報、作者實機看過；用 94 或 95 由作者決定，公開連結作者自己開。
+- **作者要被告知的**：(1) 三鶯線修好（「修好跟我說」）；(2) 官網截圖補齊後一起換（「等補齊再一起換」）；(3) 94 健檢結果（已告訴：紅，FL94 修）。
+- **本任合的**（記在 #1041）：#1457（What's New 94）、#1459（PLAYER_FEEDBACK 10/29 四列）、#1458（P 稽核表）、#1462（FREEZE，50 站凍結量測）、#1464（ROAD PR 1，決策 476，main `781f881`）。#1464 合完 main 的 push `ci.yml` 在跑。
+- **在跑的 session**：
+
+  | 代號 | session | 做什麼 | 合的時機 |
+  | --- | --- | --- | --- |
+  | SY | session_01YGNNum2FZBg4ueDbGp3gEf | 三鶯線收購後列車卡在長壽山（作者回報，派車問題），最優先，PR 標「［95］」 | 綠就合，合了告訴作者 |
+  | FL94 | session_01YGNNumMEp9zTcEPv6nuiXW | 94 full lane 那 2 支（#1465，draft，等 only_testing） | 截止前綠就合 |
+  | ROAD | session_01YGNNuqCofc3bZTNaFHght7 | 玩家道路 PR 2（鋪法，只做 A），重疊照決策 468 的接法 | #1463 合後才開 |
+  | VID | session_01YGNNukoWqi8apoMDtJNZ3x | 宣傳素材 #1461（決策 475）；修 testFreight、testTourism；完成後再跑截圖並 `send_message` WEB 新 run | 94 後 |
+  | WEB | session_01YGNNunk52JnVx6sBsWD3uS | 官網截圖，私庫 PR #116（draft） | 截圖補齊後請作者合私庫 PR 並 Deploy website |
+  | M | session_01YGNNukvbEqFLMsPED4XHuY | #1460（決策 473，載入進度與取消） | 95 之後 |
+  | BUS | session_01YGNNupkE1PnsnNDofKd6rJ | #1463（決策 474，單行道、隧道） | 95 之後；不接新工作 |
+  | CJ | session_01YGNNumLcrSFbAyyoYDWRL9 | 決策 472 | 95 之後開 PR |
+
+- **號碼**：決策 472 CJ、473 M、474 BUS、475 VID、476 ROAD；下一個從 477 起（先看 #1041）。存檔版本 75；76 留給新台幣 PR-1、77 留給機廠與終點站停車場。
+- **新介紹影片**（作者：「我想給你剪片」「就是新的介紹影片」）：換掉首頁 `along-the-line-intro-16x9.mp4`（37.5 秒）。照 `Website/tools/trailer/` 的 trailer.html 樣式，iPhone 框裡放作者實機錄影＋新截圖，45–60 秒、1080p、遊戲的聲音。作者在規劃對話上傳片段（每段 10–15 秒、30 MB 以下）；片段放 railway-assets-private，剪好先給作者看，再開私庫 PR。還在等作者上傳。
+- **玩家回報**：作者轉給規劃，規劃記進 `docs/research/PLAYER_FEEDBACK.md`（不寫個資）、分類、派工，回報順序與 PR。
+- **作者說過**：「好 號誌效能94後派」→ 95 之後派 GameCore 號誌效能（Opus）；道路「五方決定對遊戲性最好的而不是為了趕工」。
+- **95 之後的合併順序**：#1463 → #1460 → CJ → ROAD PR 2，然後派號誌效能。
+- **之後補**：`tools/train-models/hashes.lock.json` 少兩個景物鎖：`scenery-busStopPole` `3bff96f2cccef641`/58、`scenery-postBoxes` `bbb71fc344060bd2`/108。
+- **10/31 後的順序**（接第二十七任那段）：公開測試的回報 → CJ → P 稽核表的 1、2、3、6 項 → M → L-3～L-7 → 跟隨公車視角 → 新台幣 PR-0、PR-1（存檔 76）→ 預覽提示可收購 → 機廠與終點站停車場（存檔 77）→ 節慶、3D 動物與無人機秀、資料來源頁補日期 → 安坑輕軌 → 環狀輕軌。
+
 **第二十八次換手（2026-10-28 約 22:00 UTC，session_01YGNNumoD1XSP8eSkjabCvp 壓縮 2 次、用量約 210k → 本任用 `create_session` 開的新規劃 session_01YGNNumk6UqdBm6JrBhsdZY，第 4 層）**：照下一段「第二十七任做到哪」接。
 - 新規劃先讀第 1 節、本段與下一段、#1041 從「session_01YGNNumoD1XSP8eSkjabCvp 壓縮第 2 次」往後，然後在 #1041 留言接手。
 - **排程**：Threads 每日排程 `trig_01NzMKnCRdBjC6csJMQEPJVy` 綁在舊規劃；新規劃用 `get_trigger` 讀它的 prompt，建一個綁自己的，再刪掉舊的。舊規劃的巡查排程交接時已刪，新規劃自己排（約 45 分一次）。
