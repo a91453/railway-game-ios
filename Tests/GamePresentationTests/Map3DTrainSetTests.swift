@@ -54,6 +54,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
                     // Decision 461: #1323's C371 and C381 cabs, 5,358 and 6,976.
                     : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
+                    // Decision 466: #1422's Sanying cabs, 4,306 each.
+                    : set.key == "sanying" ? 4_200...4_400
                     : name == set.headName && ["E200CK", "E200CKFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban

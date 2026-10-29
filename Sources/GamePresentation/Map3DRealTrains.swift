@@ -193,7 +193,8 @@ public struct Map3DRealTrains: Sendable {
         case "tmrt":
             return Formation(key: "metroGeneric", cars: 2)
         case "sanying":
-            return Formation(key: "wenhu", cars: 2)
+            // Decision 466: its own two-car train.
+            return Formation(key: Map3DTrainSet.sanyingKey, cars: 2)
         case "ntdlrt", "ntalrt":
             // Decision 331: the light rail as the green tram, two cars of
             // two sections each, about the five sections' 34 m.

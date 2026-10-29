@@ -1493,7 +1493,13 @@ final class MapInteractionTests: XCTestCase {
     func testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // Battery Saver's 30 frames and fewer pixels: the question is where
+        // a pinch leaves the map, not how it looks, and the Simulator draws
+        // the 3D map without a GPU. At 60 frames and every pixel the app
+        // had no time left to take the pinch (main d657300's full lane:
+        // "Timed out while synthesizing event" at the first pinch).
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+                               "-map3D.quality", "saving"]
         app.launch()
         defer { app.terminate() }
         app.openDemo("demo.simple")

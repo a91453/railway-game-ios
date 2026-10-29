@@ -57,6 +57,15 @@ public struct NightSkip: Hashable, Sendable {
         let placed = world.trains.filter { $0.position != nil }
         guard !placed.isEmpty, !placed.contains(where: isRunning) else { return nil }
         let rest = Rest(world)
+        // While trains run, every one stands still only between two trips,
+        // and one moves within the minute: found in a minute's tick, not a tick at
+        // the fastest speed (ten minutes) and then a minute's. The same
+        // minute as below, at a seventh of the cost (the demo map at 600×:
+        // all its trains stand still every eight minutes).
+        var minute = world
+        minute.setSpeed(.normal)
+        do { try minute.advance(ticks: 1) } catch { return nil }
+        if Rest(minute) != rest { return world.clock.now }
         let start = world.clock.now.seconds
         var probe = world
         probe.setSpeed(.fast)

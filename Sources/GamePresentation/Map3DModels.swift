@@ -150,6 +150,8 @@ public struct Map3DModelPack: Sendable {
             models.append(Map3DTaipei610.model(role, far: true))
             models.append(Map3DTaipei610.model(role, light: true))
         }
+        // Static Sanying study (`tools/sanying/verify.mjs` reads it);
+        // decision 466's `sanying` set draws its cars.
         for unit in Map3DSanying.Unit.allCases {
             models.append(Map3DSanying.model(unit))
             models.append(Map3DSanying.model(unit, far: true))
@@ -205,8 +207,9 @@ public struct Map3DModelPack: Sendable {
     /// when it has none.
     public func models(forType code: String) -> (head: Int, middle: Int)? {
         if let set = Map3DTrainSet.named(code) {
-            guard let head = index(of: set.headName), let middle = index(of: set.middleName) else { return nil }
-            return (head, middle)
+            // Decision 466: a set only ever two cars long has no middle car.
+            guard let head = index(of: set.headName) else { return nil }
+            return (head, index(of: set.middleName) ?? head)
         }
         guard let style = Self.styleByType[code], let head = index(of: style + "-cab"), let middle = index(of: style + "-car") else { return nil }
         return (head, middle)
@@ -308,7 +311,9 @@ public struct Map3DModelPack: Sendable {
     /// for a train drawn 20 m a car.
     public func layout(forType code: String, count: Int) -> [LaidCar]? {
         guard let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked), set.ownLengths,
-              let head = index(of: set.headName), let middle = index(of: set.middleName) else { return nil }
+              let head = index(of: set.headName) else { return nil }
+        // Decision 466: a set only ever two cars long has no middle car.
+        let middle = index(of: set.middleName) ?? head
         let tail = index(of: set.tailName) ?? middle
         var cars: [(model: Int, gap: Float)]
         if let tender = index(of: set.tenderName) {

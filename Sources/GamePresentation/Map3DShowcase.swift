@@ -114,6 +114,8 @@ public enum Map3DShowcase {
         Entry("metroC341", "Taipei Metro C341", "台北捷運 C341", .metro, cars: 6),
         Entry("metroC381", "Taipei Metro C381", "台北捷運 C381", .metro, cars: 6),
         Entry("metroC371", "Taipei Metro C371", "台北捷運 C371", .metro, cars: 6),
+        // Decision 466: the Sanying line's two cars.
+        Entry("sanying", "New Taipei Metro Sanying line", "新北捷運三鶯線", .metro, cars: 2, fixed: true),
         Entry("metroGeneric", "Metro train (Kaohsiung, Taoyuan, Taichung)", "捷運列車（高雄、桃園、台中）", .metro, cars: 3, most: 6, stripe: 0xE3002C),
         Entry("wenhu", "Taipei Metro Wenhu line", "台北捷運文湖線", .metro, cars: 4, stripe: 0xC48C31),
         Entry("fourCarMetro", "Four-car metro", "四節捷運列車", .metro, cars: 4, most: 6),

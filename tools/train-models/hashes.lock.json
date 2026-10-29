@@ -1,22 +1,6 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
-    "sanying-a" : {
-      "hash" : "2d13807c6e799891",
-      "triangles" : 4306
-    },
-    "sanying-b" : {
-      "hash" : "2d13807c6e799891",
-      "triangles" : 4306
-    },
-    "sanying-a-far" : {
-      "hash" : "671f68b6daa173e0",
-      "triangles" : 2058
-    },
-    "sanying-b-far" : {
-      "hash" : "671f68b6daa173e0",
-      "triangles" : 2058
-    },
     "blue-seven-formation" : {
       "hash" : "875bb3a96fcc5147",
       "triangles" : 13968
@@ -1261,6 +1245,22 @@
       "hash" : "63557037382901ab",
       "triangles" : 384
     },
+    "light-set-sanying-head" : {
+      "hash" : "35378d710506d40d",
+      "triangles" : 480
+    },
+    "light-set-sanying-tail" : {
+      "hash" : "f2a1a8e75463d80d",
+      "triangles" : 480
+    },
+    "light-set-sanyingFar-head" : {
+      "hash" : "bd7eff6247c1a625",
+      "triangles" : 160
+    },
+    "light-set-sanyingFar-tail" : {
+      "hash" : "7b9d1e33ffd16125",
+      "triangles" : 160
+    },
     "light-set-sevenSectionLRT-car" : {
       "hash" : "2e7d33ce5c1ad7f5",
       "triangles" : 72
@@ -1548,6 +1548,22 @@
     "refresh-e200" : {
       "hash" : "480933673ebeadc8",
       "triangles" : 5512
+    },
+    "sanying-a" : {
+      "hash" : "2d13807c6e799891",
+      "triangles" : 4306
+    },
+    "sanying-a-far" : {
+      "hash" : "671f68b6daa173e0",
+      "triangles" : 2058
+    },
+    "sanying-b" : {
+      "hash" : "2d13807c6e799891",
+      "triangles" : 4306
+    },
+    "sanying-b-far" : {
+      "hash" : "671f68b6daa173e0",
+      "triangles" : 2058
     },
     "scenery-bushes" : {
       "hash" : "9a6c6ddad8ed8cce",
@@ -2365,6 +2381,22 @@
       "hash" : "ef4c9712a6fa04ed",
       "triangles" : 4032
     },
+    "set-sanying-head" : {
+      "hash" : "2c0ea1320c5ba3d3",
+      "triangles" : 4306
+    },
+    "set-sanying-tail" : {
+      "hash" : "314902034e92e960",
+      "triangles" : 4306
+    },
+    "set-sanyingFar-head" : {
+      "hash" : "f1c92d38ffea1b23",
+      "triangles" : 2058
+    },
+    "set-sanyingFar-tail" : {
+      "hash" : "7bc134dbcaeb2645",
+      "triangles" : 2058
+    },
     "set-sevenSectionLRT-car" : {
       "hash" : "872b28fa7a354715",
       "triangles" : 2720
@@ -2517,6 +2549,22 @@
       "hash" : "d02788918b1635c2",
       "triangles" : 4000
     },
+    "taichung-green-dm1" : {
+      "hash" : "c1f1db74f733a500",
+      "triangles" : 4804
+    },
+    "taichung-green-dm1-far" : {
+      "hash" : "f92538680c35bd79",
+      "triangles" : 2208
+    },
+    "taichung-green-dm2" : {
+      "hash" : "eea9dc8aad6d4573",
+      "triangles" : 4804
+    },
+    "taichung-green-dm2-far" : {
+      "hash" : "a5ee8f72ee4033d4",
+      "triangles" : 2208
+    },
     "taipei610-a" : {
       "hash" : "6ee17842b70750b3",
       "triangles" : 3650
@@ -2564,22 +2612,6 @@
     "taipei610-d-light" : {
       "hash" : "eecbf60bce777858",
       "triangles" : 1252
-    },
-    "taichung-green-dm1" : {
-      "hash" : "c1f1db74f733a500",
-      "triangles" : 4804
-    },
-    "taichung-green-dm1-far" : {
-      "hash" : "f92538680c35bd79",
-      "triangles" : 2208
-    },
-    "taichung-green-dm2" : {
-      "hash" : "eea9dc8aad6d4573",
-      "triangles" : 4804
-    },
-    "taichung-green-dm2-far" : {
-      "hash" : "a5ee8f72ee4033d4",
-      "triangles" : 2208
     },
     "temu1000-formation" : {
       "hash" : "6035abce8d5e82de",
