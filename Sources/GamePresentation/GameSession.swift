@@ -401,6 +401,11 @@ public final class GameSession {
         monthEndReport = nil
     }
 
+    /// The last month that closed while the game ran, kept after its
+    /// report is closed (or only went to the news), so Data can open it
+    /// again (UI audit 2026-10-30).
+    public internal(set) var lastMonthReport: MonthlyReport?
+
     /// Whether the game pauses for typhoons, goals met, debt and a
     /// challenge's last week (the settings; kept on the device, so the app
     /// sets it).

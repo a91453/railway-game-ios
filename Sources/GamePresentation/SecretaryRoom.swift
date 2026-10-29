@@ -321,6 +321,7 @@ extension GameSession {
         }
         guard monthlyReportMode != .off, let report = MonthlyReport.make(month: month, in: world, baseline: baseline) else { return }
         news.add(day: today, .monthly) { report.newsText(in: $0) }
+        lastMonthReport = report
         // Not over the tutorial's cards, nor a demo being looked at.
         if monthlyReportMode == .openAndPause, pausesForImportantEvents, tutorial == nil, !news.isDemo {
             monthEndReport = report

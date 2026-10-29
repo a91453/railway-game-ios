@@ -135,6 +135,22 @@ struct EconomyPanel: View {
                 }
             }
             .accessibilityIdentifier("economy.fleet")
+            // UI audit 2026-10-30: the last month's report again, which
+            // otherwise only opened once, as the month closed.
+            if let report = session.lastMonthReport {
+                Button {
+                    screen.panel = .monthEnd
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text(
+                            "Month \(report.month + 1) Report…", "第 \(report.month + 1) 個月月報…"
+                        ))
+                    } icon: {
+                        Image(systemName: "doc.text.magnifyingglass")
+                    }
+                }
+                .accessibilityIdentifier("economy.monthlyReport")
+            }
         }
     }
 
