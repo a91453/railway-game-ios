@@ -300,6 +300,144 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("tourism-panel", app)
     }
 
+    // MARK: - Screenshot review of decision 472's charts (ui-review skill)
+
+    /// Decision 472's charts on the freight scene's second morning, for
+    /// their screenshot review: a station's trips by hour with its rush,
+    /// the lines' rows with their trend and fullest train, and the flow
+    /// report's most crowded sections.
+    func testStatisticsCharts() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        // A bubble picks its station; the tag's pencil opens the station's
+        // panel with the rename alert over it, which is cancelled.
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(alert, "A bubble is on screen")
+        alert?.tap()
+        let pencil = app.buttons["map.stationTag.edit"]
+        XCTAssertTrue(pencil.appears(within: 5), "A tap on a bubble picks its station")
+        XCTAssertTrue(pencil.becomesHittable(within: 5))
+        pencil.tap()
+        let rename = app.alerts.firstMatch
+        XCTAssertTrue(rename.appears(within: 5), "The station's panel opens with the rename alert")
+        rename.buttons["取消"].tap()
+        XCTAssertTrue(rename.disappears(within: 5))
+        settle()
+        keep("chart-station-panel", app)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        let entries = app.descendants(matching: .any)["station.flow.entries"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(entries, in: list), "The trips by hour come into view")
+        settle()
+        keep("chart-station-hourly", app)
+        let done = app.navigationBars.buttons["完成"].firstMatch
+        if done.exists, done.isHittable {
+            done.tap()
+            settle()
+        }
+
+        // The lines' rows, each with its trend and its fullest train.
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        let linesList = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: linesList), "A line's row comes into view")
+        settle()
+        keep("chart-line-rows", app)
+
+        // The flow report's most crowded sections, ranked.
+        let flow = app.buttons["lines.networkFlow"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(flow, in: linesList), "The flow report's button comes into view")
+        flow.tap()
+        let page = app.segmentedControls["networkFlow.page"]
+        XCTAssertTrue(page.appears(within: 10), "The flow report opens")
+        page.buttons.element(boundBy: 1).tap()
+        let ranking = app.descendants(matching: .any)["networkFlow.ranking"].firstMatch
+        XCTAssertTrue(ranking.appears(within: 30), "The ranking is worked out")
+        settle()
+        keep("chart-section-ranking", app)
+    }
+
+    /// Where trains show on the freight scene, for the ui-review skill's
+    /// icon-or-model check (decision 482, later): the map from far and
+    /// near, a line's details and its showroom, and the fleet. A screen it
+    /// cannot reach is left out rather than failing the run.
+    func testTrainLooks() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        keep("trains-map", app)
+        let zoomOut = app.buttons["縮小"], zoomIn = app.buttons["放大"]
+        if zoomOut.appears(within: 10), zoomOut.becomesHittable(within: 1) {
+            for _ in 0..<2 {
+                zoomOut.tap()
+                settle(seconds: 1)
+            }
+            settle()
+            keep("trains-map-far", app)
+        }
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 1) {
+            for _ in 0..<5 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+            settle()
+            keep("trains-map-near", app)
+        }
+
+        // A line's details, then its showroom.
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
+        if app.dragUntilWhollyOnScreen(report, in: list) {
+            report.tap()
+            settle()
+            keep("trains-line-details", app)
+            let catalog = app.buttons["line.staff.catalog"]
+            if app.dragUntilWhollyOnScreen(catalog, in: list) {
+                catalog.tap()
+                let cancel = app.buttons["catalog.cancel"]
+                if cancel.appears(within: 10) {
+                    settle()
+                    keep("trains-catalog", app)
+                    cancel.tap()
+                    _ = cancel.disappears(within: 10)
+                }
+            }
+        }
+        let done = bar.buttons["完成"]
+        if done.exists, done.isHittable {
+            done.tap()
+            settle()
+        }
+
+        // The fleet, as the freight test opens it.
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let fleet = app.buttons["train.fleetOverview"]
+        if !fleet.isHittable { app.swipeUp() }
+        if fleet.appears(within: 5) {
+            fleet.tap()
+            _ = app.buttons["fleet.done"].appears(within: 10)
+            settle()
+            keep("trains-fleet", app)
+        }
+    }
+
     // MARK: - Helpers
 
     private func launch(extra: [String] = []) -> XCUIApplication {
