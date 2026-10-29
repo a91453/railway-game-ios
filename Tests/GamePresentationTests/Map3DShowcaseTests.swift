@@ -30,6 +30,36 @@ final class Map3DShowcaseTests: XCTestCase {
         XCTAssertLessThanOrEqual(Map3DShowcase.defaultKeys.count, Map3DShowcase.mostRows)
     }
 
+    // MARK: - The train pack (decision 492)
+
+    func testALockedPacksTrainsAreNeitherOfferedNorPicked() {
+        let locked = TrainPack.locked(unlocked: false)
+        var selection = Map3DShowcase.Selection(keys: ["emu3000", "n700sG", "threeCarUrban"], hiding: locked)
+        XCTAssertEqual(selection.keys, ["emu3000"])
+        XCTAssertTrue(selection.offered.allSatisfy { !TrainPack.sets.contains($0.key) })
+        XCTAssertEqual(selection.offered.count, Map3DShowcase.catalog.count - TrainPack.sets.count)
+        for key in TrainPack.sets {
+            XCTAssertFalse(selection.toggle(key), key)
+        }
+        XCTAssertEqual(selection.keys, ["emu3000"])
+        // Every kind still has a train to pick.
+        for category in Map3DShowcase.Category.allCases {
+            XCTAssertTrue(selection.offered.contains { $0.category == category }, "\(category)")
+        }
+    }
+
+    func testTheDefaultTrainsAreFree() {
+        let selection = Map3DShowcase.Selection(hiding: TrainPack.locked(unlocked: false))
+        XCTAssertEqual(selection.keys, Map3DShowcase.defaultKeys)
+    }
+
+    func testAnUnlockedPackOffersItsTrainsButTheE1000OnlyWithItsSwitch() {
+        let unlocked = Map3DShowcase.Selection(hiding: TrainPack.locked(unlocked: true))
+        XCTAssertEqual(Set(unlocked.offered.map(\.key)), Set(Map3DShowcase.catalog.map(\.key)).subtracting(["pushPullE1000"]))
+        let all = Map3DShowcase.Selection(hiding: TrainPack.locked(unlocked: true, pushPullE1000: true))
+        XCTAssertEqual(all.offered, Map3DShowcase.catalog)
+    }
+
     // MARK: - The rows
 
     func testTwoTrainsAreTwoParallelRowsTheirHeadsLevel() {
