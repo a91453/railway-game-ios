@@ -111,7 +111,16 @@ jobs:
         id: screenshots
         if: inputs.kind != 'promo'
         timeout-minutes: 30
+        env:
+          WEBSITE_TESTS: ${{ inputs.tests }}
         run: |
+          # An empty `tests` input runs the whole class; a list of test names runs those.
+          only=(-only-testing:RailwayGameUITests/WebsiteScreenshotTests)
+          if [[ -n "$WEBSITE_TESTS" ]]; then
+            only=()
+            IFS=', ' read -r -a names <<<"$WEBSITE_TESTS"
+            for name in "${names[@]}"; do only+=("-only-testing:RailwayGameUITests/WebsiteScreenshotTests/$name"); done
+          fi
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -119,7 +128,7 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/screenshots.xcresult" \
-            -only-testing:RailwayGameUITests/WebsiteScreenshotTests \
+            "${only[@]}" \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
