@@ -753,8 +753,8 @@ jobs:
       PARTITION: ${{ matrix.partition }}
     # Build (about 8 minutes on a slow runner), boot (14 at most), warm-up
     # (5) and the tests (75): 95, as the build job's. On 4d08067 the steps
-    # before the tests took 12.2 minutes.
-    timeout-minutes: 95
+    # before the tests took 12.2 minutes. The XCTest warm-up adds its 8.
+    timeout-minutes: 103
     steps:
       - uses: actions/checkout@v7
 
@@ -811,6 +811,35 @@ jobs:
             xcrun simctl terminate "$SIMULATOR_UDID" io.github.a91453.RailwayGame || true
           else
             echo "::warning::The warm-up launch failed; the UI tests launch the app themselves."
+          fi
+
+      # The launch above does not go through XCTest, and the job's first
+      # launch that does could still time out with the app never started
+      # (main cd93d78's full lane, lessons: "Timed out while launching
+      # application via Xcode" after 67 s, nothing in the app's trace),
+      # failing whichever class came first: Feature284To286UITests there
+      # and in 0149127's (run 39992945211). In 82e1886's the launch above
+      # ran out of its 5 minutes and left the app running, and the first
+      # test hung for 11 minutes terminating it. So the app is stopped,
+      # and one short test launches it through XCTest before the tests.
+      # Like the launch above, it only helps them: a failure is a warning
+      # (the test runs in the build job's share too).
+      - name: Warm up XCTest's first launch
+        timeout-minutes: 8
+        continue-on-error: true
+        run: |
+          xcrun simctl terminate "$SIMULATOR_UDID" io.github.a91453.RailwayGame 2>/dev/null || true
+          if ! xcodebuild test-without-building \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/ui-$PARTITION-warm-up.xcresult" \
+            -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testTheAppOpensOnItsStartScreen \
+            -parallel-testing-enabled NO \
+            -disableAutomaticPackageResolution; then
+            echo "::warning::The XCTest warm-up launch failed; the UI tests launch the app themselves."
           fi
 
       - name: UI tests, ${{ matrix.partition }}

@@ -10,6 +10,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         checkFlow(language: "zh-Hant", locale: "zh_TW")
     }
 
+    /// The app opens on its start screen. Also what the full lane's second
+    /// and lessons jobs run first, on their own, to take the job's first
+    /// launch through XCTest (ios-build.yml, "Warm up XCTest's first
+    /// launch"): that one could time out with the app never started, and
+    /// the class that came first failed with it (main cd93d78's full lane,
+    /// run 40802613854: "Timed out while launching application via Xcode").
+    func testTheAppOpensOnItsStartScreen() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.buttons[StartID.settings].appears(within: 30), "The start screen did not open")
+    }
+
     /// Decision 257: Language opens the game's own menu of languages, each
     /// named in itself; since decision 381 it is the first row of
     /// Settings. Nothing is chosen, so the Simulator's app settings stay as
