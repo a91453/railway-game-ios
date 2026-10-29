@@ -53,8 +53,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The freight train is the last of five: the list loads its rows
         // as they scroll in.
         let follow = app.buttons["fleet.follow.貨運列車 1"]
-        let fleetList = app.collectionViews.firstMatch
-        let reached = app.dragUntilWhollyOnScreen(follow, in: fleetList.exists ? fleetList : nil)
+        // The sheet's list makes a row only once it scrolls in; a drag that
+        // starts on a row's card did not move it (run 40819608742), a swipe does.
+        var reached = false
+        for _ in 0..<12 {
+            if follow.exists, follow.isHittable { reached = true; break }
+            app.swipeUp(velocity: .slow)
+        }
         if !reached { keep("debug-fleet", app) }
         XCTAssertTrue(reached, "The freight train is in the fleet")
         follow.tap()

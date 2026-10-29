@@ -272,8 +272,12 @@ final class PromoMaterialTests: XCTestCase {
         guard fleet.appears(within: 5) else { return }
         fleet.tap()
         let follow = app.buttons["fleet.follow.貨運列車 1"]
-        let fleetList = app.collectionViews.firstMatch
-        guard app.dragUntilWhollyOnScreen(follow, in: fleetList.exists ? fleetList : nil) else { return }
+        var reached = false
+        for _ in 0..<12 {
+            if follow.exists, follow.isHittable { reached = true; break }
+            app.swipeUp(velocity: .slow)
+        }
+        guard reached else { return }
         follow.tap()
         guard app.buttons["train.unfollow"].appears(within: 5) else { return }
         settle(seconds: 4)
