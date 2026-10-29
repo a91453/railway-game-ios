@@ -1176,8 +1176,9 @@ enum MapArt {
             var pins: [(point: PlanPoint, name: String?)] = []
             for route in buses.routes where buses.showsLabels { pins += zip(route.stops, route.labels).map { ($0, $1.name) } }
             if let draft = buses.draft { pins += zip(draft.stops, draft.labels).map { ($0, $1.name) } }
-            let named = Set(real.faintLabels(in: projection.visibleRegion, pins: pins))
-            for stop in real.stops(in: projection.visibleRegion).prefix(600) {
+            let drawn = real.stops(in: projection.visibleRegion).prefix(RealBusStops.faintStopLimit)
+            let named = Set(real.faintLabels(of: drawn, pins: pins))
+            for stop in drawn {
                 let centre = cgPoint(projection.screenPoint(of: stop.point))
                 guard view.insetBy(dx: -4, dy: -4).contains(centre) else { continue }
                 let circle = Path(ellipseIn: CGRect(x: centre.x - 3, y: centre.y - 3, width: 6, height: 6))

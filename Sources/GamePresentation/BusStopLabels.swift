@@ -203,20 +203,38 @@ public final class RealBusStops: Sendable, Hashable {
     /// the second not to be written: the two sides of a road carry one name.
     public static let labelMergeMetres = 60.0
 
-    /// The stops inside `region` whose names are worth writing faint on the
-    /// map, west to east: not one whose name a numbered pin (`pins`: where
+    /// How many of the stops inside the map's view are drawn faint, the
+    /// westmost first: past it the map has no room to tell them apart.
+    public static let faintStopLimit = 600
+
+    /// The stops inside `region` the map draws faint (``faintStopLimit``
+    /// of them, west to east) whose names are worth writing.
+    public func faintLabels(in region: WorldRegion, pins: [(point: PlanPoint, name: String?)]) -> [Stop] {
+        faintLabels(of: stops(in: region).prefix(Self.faintStopLimit), pins: pins)
+    }
+
+    /// Of `drawn` (west to east), the stops whose names are worth writing
+    /// faint on the map: not one whose name a numbered pin (`pins`: where
     /// and the name it shows) already carries within ``labelMergeMetres``,
     /// and of several of one name within that distance of each other only
-    /// the first. Every stop keeps its dot; only the name is left off.
-    public func faintLabels(in region: WorldRegion, pins: [(point: PlanPoint, name: String?)]) -> [Stop] {
+    /// the first. Every stop keeps its dot; only the name is left off. A
+    /// stop is weighed only against the pins and stops of its own name, so
+    /// the map's every draw costs about as much as the stops it draws
+    /// (comparing each with all before it took 34 ms for 800 stops round
+    /// Taipei Main Station, Linux debug).
+    public func faintLabels(of drawn: some Sequence<Stop>, pins: [(point: PlanPoint, name: String?)]) -> [Stop] {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         func near(_ a: PlanPoint, _ b: PlanPoint) -> Bool {
             hypot(Double(a.x - b.x), Double(a.y - b.y)) / metre <= Self.labelMergeMetres
         }
+        var taken: [String: [PlanPoint]] = [:]
+        for pin in pins {
+            if let name = pin.name { taken[name, default: []].append(pin.point) }
+        }
         var written: [Stop] = []
-        for stop in stops(in: region) {
-            if pins.contains(where: { $0.name == stop.name && near($0.point, stop.point) }) { continue }
-            if written.contains(where: { $0.name == stop.name && near($0.point, stop.point) }) { continue }
+        for stop in drawn {
+            if taken[stop.name]?.contains(where: { near($0, stop.point) }) == true { continue }
+            taken[stop.name, default: []].append(stop.point)
             written.append(stop)
         }
         return written
