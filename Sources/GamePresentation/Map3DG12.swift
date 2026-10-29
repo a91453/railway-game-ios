@@ -168,7 +168,9 @@ extension StationKitBuilder {
             nosePanel(y0+0.09,y1+0.09,3.23,3.23,orange)
         }
         // Integral underframe, two distinct triple-axle bogies and centre fuel tank.
-        box(0,0.88,0,13.70,2.48,0.42,dark)
+        // Keep this frame below the end-face white band (1.24-1.33 m).
+        // Its old 1.30 m top hid nearly the entire band in the front camera.
+        box(0,0.86,0,13.70,2.48,0.34,dark)
         box(0.12,0.62,0,2.72,1.42,0.56,dark)
         for centre:Float in [-4.45,4.43] {
             box(centre,0.60,0,3.58,1.63,0.30,metal)

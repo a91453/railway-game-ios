@@ -63,7 +63,12 @@ function checkFront(bandShift=0,railShift=0) {
     Math.abs(v.position[2]-1.92)<0.04 && pale(v)),
   'front handrail misses supported outside post');
 }
-checkWheelContact();checkLamps();checkGlass();checkDrawGear();checkShortEndV();checkFront();
+function checkFrontBandClearance(limit=1.22) {
+  assert(!vertices.some(v => v.position[0]>6.84 && v.position[0]<6.86 &&
+    v.position[2]>limit && v.position[2]<1.40 && v.color[0]<90),
+  'dark underframe occludes front white band');
+}
+checkWheelContact();checkLamps();checkGlass();checkDrawGear();checkShortEndV();checkFront();checkFrontBandClearance();
 assert.throws(() => checkWheelContact(0.10),/misses rail/);
 assert.throws(() => checkLamps(0.20),/lamp/);
 assert.throws(() => checkGlass(0.20),/glazing/);
@@ -71,4 +76,5 @@ assert.throws(() => checkDrawGear(0.40),/draw gear/);
 assert.throws(() => checkShortEndV(0.25),/white V/);
 assert.throws(() => checkFront(0.25),/white band/);
 assert.throws(() => checkFront(0,0.25),/front handrail/);
-console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears, short-end V, low long-end band, yellow pilot V and supported front rail; seven shifted counterexamples rejected');
+assert.throws(() => checkFrontBandClearance(1.18),/occludes front white band/);
+console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears, short-end V, low long-end band, yellow pilot V, supported front rail and front-band clearance; eight shifted counterexamples rejected');
