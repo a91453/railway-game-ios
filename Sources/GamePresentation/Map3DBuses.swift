@@ -117,10 +117,10 @@ public struct Map3DBuses: Sendable {
                 if return_.firstBroken == nil {
                     back = Plan(points: return_.points, stops: return_.marks, tunnels: return_.tunnels)
                 }
-            } else if saved != nil, roads.built.isEmpty
-                        || !BusRoadPath.joins(stops: route.stops, station: station?.location, roads: roads.allCells) {
-                // Decision 474: no road joins a leg, and the player's own
-                // roads do not either: no bus rather than one across the blocks.
+            } else if saved != nil {
+                // Decision 474: no road joins a leg (the player's own roads
+                // are in the graph too, decision 476's sequel): no bus
+                // rather than one across the blocks.
                 continue
             } else if let station {
                 way = Plan(Self.way(stops: route.stops, station: station.location, roads: roads.allCells, alongEdges: world.geoAnchor == nil))

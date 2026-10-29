@@ -240,6 +240,19 @@ final class CityBusToolTests: XCTestCase {
         XCTAssertFalse(session.confirmRoad())
     }
 
+    /// Decision 476's sequel: a road drawn over the city's says how much of
+    /// it joins the road already there, which costs nothing.
+    func testARoadFromTheCitysRoadSaysWhatItJoinsForFree() throws {
+        let session = try session()
+        session.setBusMode(.roads)
+        session.endRoadDrag(from: at(8, 10), to: at(10, 10))
+        let preview = try XCTUnwrap(session.roadPreview)
+        XCTAssertTrue(preview.canBuild)
+        XCTAssertEqual(preview.joined, 64)
+        XCTAssertEqual(preview.line(in: .english), "\(preview.metres) m of new road; joins 64 m of road already there, free")
+        XCTAssertEqual(preview.line(in: .traditionalChinese), "新鋪 \(preview.metres) 公尺，接上現有的路 64 公尺，這段不用錢")
+    }
+
     func testARoadTheCompanyCannotPayForIsRefused() throws {
         let session = try session(balance: 1_000_000)
         session.setBusMode(.roads)

@@ -485,6 +485,12 @@ public final class BusRoads: @unchecked Sendable {
     private var read: [Tile: [BusRoadNetwork.Road]] = [:]
     private var named: [Tile: [NamedRoad]] = [:]
     private var built: [Region: BusRoadNetwork] = [:]
+    /// The player's own roads (476's sequel), each a line through its
+    /// cells' middles, and where they end.
+    private var ownCells: Set<CellPosition> = []
+    private var ownLines: [[BusRoadNetwork.Point]] = []
+    private var ownEnds: [BusRoadNetwork.Point] = []
+    private var ownChanges = 0
 
     init(tiles: BaseMapTiles, frame: RealWorldFrame) {
         self.tiles = tiles
@@ -504,6 +510,11 @@ public final class BusRoads: @unchecked Sendable {
         var lines: [BusRoadNetwork.Road] = []
         for row in region.rows {
             for column in region.columns { lines += roads(of: Tile(column: column, row: row)) }
+        }
+        if !ownLines.isEmpty {
+            // 476's sequel: the player's roads (all of them: they are few),
+            // joined to the base map's where they cross or end beside them.
+            lines += BusRoadNetwork.joining(own: ownLines, ends: ownEnds, to: lines)
         }
         if built.count >= Self.keptRegions { built.removeAll() }
         let network = BusRoadNetwork(roads: lines)
@@ -531,6 +542,27 @@ public final class BusRoads: @unchecked Sendable {
                 lock.unlock()
             }
         }
+    }
+
+    /// Takes the player's own roads (476's sequel): the networks worked out
+    /// before are let go when they changed.
+    func useOwnRoads(_ cells: Set<CellPosition>) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard cells != ownCells else { return }
+        ownCells = cells
+        ownLines = RoadCentreLines.lines(of: cells).filter { $0.count >= 2 }.map { $0.map(BusRoadNetwork.Point.init) }
+        ownEnds = RoadCentreLines.ends(of: cells).map(BusRoadNetwork.Point.init)
+        built.removeAll()
+        ownChanges += 1
+    }
+
+    /// Counts the changes of the player's roads, for the ways worked out
+    /// before (``GameSession/busMapOverlay``).
+    var ownVersion: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return ownChanges
     }
 
     /// The tiles and regions kept (for the tests).

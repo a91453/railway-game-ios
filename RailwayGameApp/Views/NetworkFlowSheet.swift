@@ -1,3 +1,4 @@
+import Charts
 import GameCore
 import GamePresentation
 import SwiftUI
@@ -141,6 +142,12 @@ struct NetworkFlowSheet: View {
     @ViewBuilder
     private func sectionsPage(_ report: NetworkFlowReport) -> some View {
         let language = session.language
+        // Decision 472: the fullest sections ranked, over the list.
+        if !report.rankedSections.isEmpty {
+            Section {
+                SectionRankingChart(spec: report.rankingChart(in: session.world, language: language), rows: report.rankedSections, language: language)
+            }
+        }
         Section {
             if report.sections.isEmpty {
                 Text(verbatim: report.hasPlan
@@ -224,5 +231,71 @@ struct NetworkFlowSheet: View {
     private func show(from a: StationID, to b: StationID) {
         session.lookOver(from: a, to: b)
         screen.panel = nil
+    }
+}
+
+/// Decision 472: the fullest sections as bars of how full each is at its
+/// fullest hour, fullest first, with a dashed rule at the trains' seats
+/// (100%). A section fuller than its seats is in the error colour and its
+/// figure says so; the bars are VoiceOver's audio graph.
+private struct SectionRankingChart: View {
+    let spec: ChartSpec
+    let rows: [NetworkFlowReport.SectionRow]
+    let language: DisplayLanguage
+
+    /// Not literals: a literal here would be a string to translate.
+    private static let sectionAxis = "Section"
+    private static let percentAxis = "Percent"
+    /// Each bar's room, growing with the text size so its label fits.
+    @ScaledMetric(relativeTo: .caption) private var rowHeight: CGFloat = 30
+
+    var body: some View {
+        let top = max(100, rows.compactMap(\.percent).max() ?? 0)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: spec.title)
+                .font(.caption.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            Chart {
+                ForEach(rows.indices, id: \.self) { index in
+                    let row = rows[index]
+                    BarMark(x: .value(Self.percentAxis, row.percent ?? 0), y: .value(Self.sectionAxis, spec.xLabels[index]))
+                        .foregroundStyle(row.isOverloaded ? Theme.error : Theme.chartBlue)
+                        .annotation(position: .trailing, alignment: .leading) {
+                            Text(verbatim: "\(row.percent ?? 0)%")
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(row.isOverloaded ? Theme.error : Theme.textSecondary)
+                        }
+                }
+                RuleMark(x: .value(Self.percentAxis, 100))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            }
+            .chartXScale(domain: 0...Double(top) * 1.15)
+            .chartXAxis {
+                AxisMarks(values: [0, 50, 100]) { value in
+                    AxisGridLine().foregroundStyle(Theme.panelBorder)
+                    AxisValueLabel {
+                        if let number = value.as(Int.self) {
+                            Text(verbatim: "\(number)%")
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+            }
+            .chartYAxis {
+                AxisMarks { _ in
+                    AxisValueLabel().foregroundStyle(Theme.textPrimary)
+                }
+            }
+            .frame(height: CGFloat(rows.count) * rowHeight + rowHeight)
+            .accessibilityLabel(Text(verbatim: spec.title))
+            .accessibilityValue(Text(verbatim: spec.summary))
+            .accessibilityChartDescriptor(ChartAudioGraph(spec: spec))
+            .accessibilityIdentifier("networkFlow.ranking")
+            Text(verbatim: spec.summary)
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
