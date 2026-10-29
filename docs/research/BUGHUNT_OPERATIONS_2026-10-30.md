@@ -2,7 +2,7 @@
 
 派工單 BH2（session_01YGNNumyVPsXrZoUxy84EdE，由遊戲規劃第 32 任派出），分支 `claude/bughunt-operations`，對照 `main` `9fb305d`（#1520 之後）。範圍：路線面板與單線頁、列車（買車、配車、時刻表、待避、折返、機廠）、車站面板、旅客、倍速與跳過夜晚、跟車與 2D 列車、新手教學與入門 10 關。BH1（建設）、BH3（經營與存檔）同時在跑。
 
-**結論：沒找到 P1。** P2 兩項、P3 三項，都留給公測後（或規劃決定要不要發版前修）；都不動 GameCore、存檔、golden、fixtures。
+**結論：沒找到 P1。** P2 兩項、P3 三項。P2-1 規劃判定等同 P1（「跳到早上」後切出 App 很常見），在這個 PR 修了；其餘留給公測後。GameCore、存檔版本、golden、fixtures 都不動。
 
 ## 1. 怎麼找的
 
@@ -23,11 +23,11 @@
 
 ## 2. P2：明顯錯但能繞過
 
-### P2-1 跳過夜晚時存檔，讀回來以 ×6000 跑
+### P2-1 跳過夜晚時存檔，讀回來以 ×6000 跑（已修，這個 PR）
 
 - **在哪**：`Sources/GamePresentation/GameSession.swift` 的 `worldToSave`（約 1512 行）。它把 `heldSpeed`、`speedBefore3D` 換回玩家的速度，但沒有看 `nightSkipRun`；跳過夜晚時世界的速度是跳過自己的（`NightSkip.speed`，通常 `.fast`）。
 - **重現**：在晚上沒有車的地圖按「跳到早上」，跳的途中切到別的 App（`GameLauncher` 的背景自動存檔）或手動存檔；關掉 App 再「繼續」。遊戲以 ×6000 跑，新的 session 沒有 `nightSkipRun`，不會降回來，早上幾秒就過完。Linux 已重現：`NightSkipTests` 的 `world()` 上 `skipToMorning()`、`advance(ticks: 3)` 之後 `worldToSave.clock.speed` 是 `fast`，不是 `normal`。
-- **建議修法**：在 `worldToSave` 的 `speedBefore3D` 那段之前加 `if let run = nightSkipRun { saved.setSpeed(run.speed); if run.wasPaused { saved.pause() } }`；`NightSkipTests` 加一個「跳的途中 `worldToSave` 是跳之前的速度」的測試（和已有的 `testFollowingIn3DDuringTheSkipGivesBackThePlayersSpeed` 同樣寫法）。四行，只動 GamePresentation，規劃要的話發版前可以修。
+- **修法（已做）**：`worldToSave` 一開頭，`nightSkipRun` 在時存成 `run.speed`（玩家按「跳到早上」之前的速度），跳之前暫停的就存成暫停，和結束跳過（`endNightSkip`）回到的狀態一樣；之後的 `heldSpeed`、`speedBefore3D` 照舊。回歸測試 `NightSkipTests.testASaveDuringTheSkipKeepsTheSpeedBefore`：跳之前 ×600、×60、×10 暫停三種，跳的途中存檔再讀回，速度與暫停都是跳之前的，除了速度和正在跳的世界相同；沒在跳時 `worldToSave` 與世界相同（存讀後也相同）。改之前紅（三種都讀回 `fast`），改之後綠。
 - **五方**：玩家：切出去再回來早上就飛過去，以為壞了，要自己調回倍速；鐵道迷：無；開發：GamePresentation 四行、一個測試，不動存檔格式；美術：無；音樂：跳過時壓低的音樂，讀回後不會再壓，但速度錯是主要的。
 
 ### P2-2 分組的路線清單，「上一條／下一條」不照畫面上的順序
@@ -70,5 +70,5 @@
 
 ## 5. 驗證
 
-- VERIFIED（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors`；第 1 節的無頭玩法（暫時的測試類，已刪）；`LESSON_REPORT=4` 的 `LessonTargetReportTests`；P2-1 的紅測試（沒提交）。
-- UNVERIFIED：實機、Simulator 的畫面（P2-2、P3-1 的畫面順序只讀程式）；P3-2 只讀程式。這個 PR 只有文件。
+- VERIFIED（Linux，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors`；第 1 節的無頭玩法（暫時的測試類，已刪）；`LESSON_REPORT=4` 的 `LessonTargetReportTests`；P2-1 修好後，讀 `worldToSave` 或存檔的測試類全過（`NightSkipTests`、`BackgroundSaveTests`、`AutosaveSlotsTests`、`SaveSyncTests`、`HeadlessGameTests`、`Map3DFollowSpeedTests`、`ReleaseUIFixesTests`、`SharedNetworkTests`、`HighSpeedFirstMapReportTests`：110 個，1 個只在要求時跑的報告略過，0 失敗）。
+- UNVERIFIED：實機、Simulator（P2-1 在實機切出 App 再繼續；P2-2、P3-1 的畫面順序只讀程式）；P3-2 只讀程式。

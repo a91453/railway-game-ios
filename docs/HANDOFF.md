@@ -37,7 +37,7 @@
 
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
 
-> 公測前抓蟲・營運（派工單 BH2，`claude/bughunt-operations`，2026-10-30）：[`research/BUGHUNT_OPERATIONS_2026-10-30.md`](research/BUGHUNT_OPERATIONS_2026-10-30.md)。沒找到 P1；P2-1（跳過夜晚途中存檔，讀回以 ×6000 跑；GamePresentation 四行）與 P2-2（分組清單的上一條／下一條順序不對）、P3 三項留給公測後，由規劃決定要不要發版前先修 P2-1。
+> 公測前抓蟲・營運（派工單 BH2，`claude/bughunt-operations`，2026-10-30）：[`research/BUGHUNT_OPERATIONS_2026-10-30.md`](research/BUGHUNT_OPERATIONS_2026-10-30.md)。沒找到 P1。P2-1（跳過夜晚途中存檔，讀回以 ×6000 跑）在同一個 PR 修了（`GameSession.worldToSave`，`NightSkipTests` 釘住），發版前在實機按「跳到早上」後切出 App、關掉再繼續，看速度是原本的；P2-2（分組清單的上一條／下一條順序不對）與 P3 三項留給公測後。
 
 > 新手教學盤點（派工單 TUT，`claude/tutorial-review-2026-10-30`，2026-10-30）：[`research/TUTORIAL_REVIEW_2026-10-30.md`](research/TUTORIAL_REVIEW_2026-10-30.md)。公測前只修了 A1（「點『車站…』看誰在搭車」打開在「旅客與運量」組）；其餘步驟對照 main 都指得到、按鈕字都對。留下的是該文件 §4 的 B1–B7（教學的路線面板和平常不同、實景地圖沒教、iPad 直拿沒走過教學、錢的事沒教等），公測後由規劃照順序派；B3 發版前要在 iPad 直拿實機走一次第 1 關。
 
