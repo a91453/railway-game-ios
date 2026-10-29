@@ -7,10 +7,12 @@ public enum Map3DG12 {
     public static let length: Float = 14.226
     public static let width: Float = 2.787
     public static let height: Float = 3.665
-    public static let orange: UInt32 = Map3DColor.rgb(0xF18B42)
+    public static let orange: UInt32 = Map3DColor.rgb(0xEF7138)
     public static let white: UInt32 = Map3DColor.rgb(0xF7F3EA)
     public static let charcoal: UInt32 = Map3DColor.rgb(0x30343A)
+    public static let plow: UInt32 = Map3DColor.rgb(0x474A4C)
     public static let steel: UInt32 = Map3DColor.rgb(0x64686B)
+    public static let handrail: UInt32 = Map3DColor.rgb(0xD2D0C8)
     public static let glass: UInt32 = Map3DPalette.glazing
     public static let lamp: UInt32 = Map3DPalette.tunnelLamp
     public static let hazard: UInt32 = Map3DColor.rgb(0xF4CC36)
@@ -53,9 +55,9 @@ extension StationKitBuilder {
 
     private mutating func g12LowerPanel(_ x0: Float,_ x1: Float,_ top0: Float,_ top1: Float,
                                         _ color: UInt32,_ half: Float = 1.08) {
-        let a=[Map3DPoint(x0,1.42,-half),Map3DPoint(x0,1.42,half),
+        let a=[Map3DPoint(x0,1.15,-half),Map3DPoint(x0,1.15,half),
                Map3DPoint(x0,top0,half),Map3DPoint(x0,top0,-half)]
-        let b=[Map3DPoint(x1,1.42,-half),Map3DPoint(x1,1.42,half),
+        let b=[Map3DPoint(x1,1.15,-half),Map3DPoint(x1,1.15,half),
                Map3DPoint(x1,top1,half),Map3DPoint(x1,top1,-half)]
         g12Prism(a,b,color)
     }
@@ -94,15 +96,15 @@ extension StationKitBuilder {
 
     mutating func g12(far: Bool) {
         let orange=Map3DG12.orange, white=Map3DG12.white
-        let dark=Map3DG12.charcoal, metal=Map3DG12.steel
+        let dark=Map3DG12.charcoal, metal=Map3DG12.steel, rail=Map3DG12.handrail
         let glass=Map3DG12.glass
         // Long hood is +X. Cab and short hood are -X; they are distinct.
         let hoodEnd:Float=6.72, cabRear:Float = -5.06
-        box(0,1.15,0,13.46,2.68,0.30,dark)
+        box(0,1.15,0,13.32,2.68,0.18,dark)
         // Long hood: orange lower panel, integrated white waist, orange upper panel,
         // and a rounded dark roof. No floating coloured decal spans a seam.
         let station:[(Float,Float)]=[(-3.18,2.27),(2.18,2.27),(2.60,2.24),
-                                      (3.02,2.12),(3.40,1.91),(3.82,1.50),(hoodEnd,1.50)]
+                                      (3.02,2.12),(3.40,1.91),(3.82,1.50),(6.25,1.50),(hoodEnd,1.24)]
         for i in 0..<(station.count-1) {
             let a=station[i], b=station[i+1]
             g12LowerPanel(a.0,b.0,a.1,b.1,orange)
@@ -161,7 +163,7 @@ extension StationKitBuilder {
                 let front=rear.map { Map3DPoint(-6.676,$0.y,$0.z) }
                 g12Prism(rear,front,color)
             }
-            nosePanel(1.42,1.42,y0,y1,orange)
+            nosePanel(1.15,1.15,y0,y1,orange)
             nosePanel(y0,y1,y0+0.09,y1+0.09,white)
             nosePanel(y0+0.09,y1+0.09,3.23,3.23,orange)
         }
@@ -231,9 +233,9 @@ extension StationKitBuilder {
             }
             // Continuous platform handrail, supported at both ends.
             for x:Float in [-6.28,6.35] {
-                beam(Map3DPoint(x,1.12,side*1.31),Map3DPoint(x,2.05,side*1.31),0.043,metal)
+                beam(Map3DPoint(x,1.12,side*1.31),Map3DPoint(x,2.05,side*1.31),0.043,rail)
             }
-            beam(Map3DPoint(-6.28,2.05,side*1.31),Map3DPoint(6.35,2.05,side*1.31),0.041,metal)
+            beam(Map3DPoint(-6.28,2.05,side*1.31),Map3DPoint(6.35,2.05,side*1.31),0.041,rail)
             for x:Float in [-6.2,6.25] {
                 box(x,0.65,side*1.16,0.44,0.42,0.095,metal)
                 if !far { box(x,0.39,side*1.19,0.29,0.34,0.075,metal) }
@@ -252,10 +254,12 @@ extension StationKitBuilder {
             civicTube(Map3DPoint(6.74,3.31,side*0.81),Map3DPoint(6.80,3.31,side*0.81),radius:0.087,color:Map3DColor.rgb(0xA24E44),sides:8)
         }
         if !far {
+            beam(Map3DPoint(6.758,2.73,-0.99),Map3DPoint(6.758,2.73,0.99),
+                 0.014,Map3DColor.shaded(orange,0.72))
             for y:Float in [1.62,1.97,2.27] {
-                beam(Map3DPoint(6.755,y,-0.32),Map3DPoint(6.755,y,0.32),0.028,white)
+                beam(Map3DPoint(6.755,y,-0.32),Map3DPoint(6.755,y,0.32),0.028,rail)
                 for side:Float in [-1,1] {
-                    beam(Map3DPoint(6.74,y-0.07,side*0.32),Map3DPoint(6.755,y,side*0.32),0.023,white)
+                    beam(Map3DPoint(6.74,y-0.07,side*0.32),Map3DPoint(6.755,y,side*0.32),0.023,rail)
                 }
             }
         }
@@ -276,10 +280,12 @@ extension StationKitBuilder {
             civicTube(Map3DPoint(-6.67,3.26,side*0.80),Map3DPoint(-6.73,3.26,side*0.80),radius:0.087,color:Map3DColor.rgb(0xA24E44),sides:8)
         }
         if !far {
+            beam(Map3DPoint(-6.69,2.69,-0.97),Map3DPoint(-6.69,2.69,0.97),
+                 0.014,Map3DColor.shaded(orange,0.72))
             for y:Float in [2.00,2.37] {
-                beam(Map3DPoint(-6.689,y,-0.32),Map3DPoint(-6.689,y,0.32),0.028,white)
+                beam(Map3DPoint(-6.689,y,-0.32),Map3DPoint(-6.689,y,0.32),0.028,rail)
                 for side:Float in [-1,1] {
-                    beam(Map3DPoint(-6.67,y-0.07,side*0.32),Map3DPoint(-6.689,y,side*0.32),0.023,white)
+                    beam(Map3DPoint(-6.67,y-0.07,side*0.32),Map3DPoint(-6.689,y,side*0.32),0.023,rail)
                 }
             }
         }
@@ -290,8 +296,8 @@ extension StationKitBuilder {
             // Clip diagonal bands into closed prisms; no square colour pixels.
             let columns=far ? 4:12
             for col in 0..<columns {
-                let z0:Float = -1.23+2.46*Float(col)/Float(columns)
-                let z1:Float = -1.23+2.46*Float(col+1)/Float(columns)
+                let z0:Float = -1.34+2.68*Float(col)/Float(columns)
+                let z1:Float = -1.34+2.68*Float(col+1)/Float(columns)
                 let sign:Float = z0+z1 < 0 ? -1:1
                 let rectangle:[(Float,Float)]=[(z0,0.645),(z1,0.645),(z1,1.195),(z0,1.195)]
                 func clip(_ input:[(Float,Float)],_ boundary:Float,_ keepAbove:Bool)->[(Float,Float)] {
@@ -315,7 +321,7 @@ extension StationKitBuilder {
                     guard p.count>=3 else { continue }
                     let a=p.map { Map3DPoint(end*6.705,$0.1,$0.0) }
                     let b=p.map { Map3DPoint(end*6.895,$0.1,$0.0) }
-                    g12Prism(a,b,band.isMultiple(of:2) ? Map3DG12.hazard:dark)
+                    g12Prism(a,b,band.isMultiple(of:2) ? dark:Map3DG12.hazard)
                 }
             }
             box(end*6.89,0.68,0,0.38,0.43,0.27,metal)
@@ -324,7 +330,17 @@ extension StationKitBuilder {
             let plowBack=[Map3DPoint(end*6.92,0.19,-0.87),Map3DPoint(end*6.92,0.19,0.87),
                           Map3DPoint(end*6.92,0.53,1.04),Map3DPoint(end*6.92,0.53,-1.04)]
             let plowFront=plowBack.map { Map3DPoint(end*7.04,$0.y,$0.z) }
-            g12Prism(plowBack,plowFront,dark)
+            g12Prism(plowBack,plowFront,Map3DG12.plow)
+            // Bright safety rails are visibly supported by the pilot, then
+            // bend inward onto the hood side rather than hovering at the edge.
+            for side:Float in [-1,1] {
+                beam(Map3DPoint(end*6.96,0.65,side*1.32),
+                     Map3DPoint(end*6.96,1.92,side*1.32),0.040,rail)
+                beam(Map3DPoint(end*6.96,1.92,side*1.32),
+                     Map3DPoint(end*6.76,2.04,side*1.08),0.040,rail)
+                beam(Map3DPoint(end*6.96,0.65,side*1.32),
+                     Map3DPoint(end*6.80,0.65,side*1.18),0.040,rail)
+            }
         }
     }
 }

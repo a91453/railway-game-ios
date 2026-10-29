@@ -49,10 +49,26 @@ function checkShortEndV(shift=0) {
     'short-end white V misses shell-band junction');
   }
 }
-checkWheelContact();checkLamps();checkGlass();checkDrawGear();checkShortEndV();
+function checkFront(bandShift=0,railShift=0) {
+  const pale=v => v.color[2]>120 && v.color[0]-v.color[2]<50;
+  assert(vertices.some(v => v.position[0]>6.70 && v.position[0]<6.75 &&
+    Math.abs(v.position[2]-1.24-bandShift)<0.02 && pale(v)),
+  'long-end white band does not meet low front face');
+  assert(vertices.some(v => v.position[0]>6.88 && v.position[0]<6.91 &&
+    Math.abs(v.position[1])<0.05 && v.position[2]>1.19 &&
+    v.color[1]>110 && v.color[2]<80),
+  'yellow pilot V does not start at top centre');
+  assert(vertices.some(v => v.position[0]>6.90 &&
+    Math.abs(Math.abs(v.position[1])-1.32-railShift)<0.05 &&
+    Math.abs(v.position[2]-1.92)<0.04 && pale(v)),
+  'front handrail misses supported outside post');
+}
+checkWheelContact();checkLamps();checkGlass();checkDrawGear();checkShortEndV();checkFront();
 assert.throws(() => checkWheelContact(0.10),/misses rail/);
 assert.throws(() => checkLamps(0.20),/lamp/);
 assert.throws(() => checkGlass(0.20),/glazing/);
 assert.throws(() => checkDrawGear(0.40),/draw gear/);
 assert.throws(() => checkShortEndV(0.25),/white V/);
-console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears, short-end V; five shifted counterexamples rejected');
+assert.throws(() => checkFront(0.25),/white band/);
+assert.throws(() => checkFront(0,0.25),/front handrail/);
+console.log('VERIFIED R21 six wheel contacts, both-end lamp heights, exposed cab glass, two supported draw gears, short-end V, low long-end band, yellow pilot V and supported front rail; seven shifted counterexamples rejected');
