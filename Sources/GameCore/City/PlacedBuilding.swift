@@ -277,6 +277,47 @@ extension GameWorld {
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint, look: Int = 0) throws(GameError) -> PlacedBuilding {
+        let plan = try placement(of: kind, at: centre, look: look)
+        let building = plan.building
+        try economy.spend(plan.quote.total)
+        nextPlacedBuildingID = plan.next
+        placedBuildings.append(building)
+        acquireAsset(.building, owner: building.id.rawValue, cost: plan.quote.total)
+        if !plan.cleared.isEmpty {
+            removeLand(at: Set(plan.cleared.map(\.position)))
+            refreshLandDemand()
+        }
+        let movers = plan.moved.filter { !$0.isLast && $0.residents + $0.jobs > 0 }
+        let whole = Set(plan.moved.filter(\.isLast).map(\.cell.position))
+        if !movers.isEmpty || !whole.isEmpty {
+            for (cell, residents, jobs, _) in movers {
+                guard let index = land.cells.firstIndex(where: { $0.position == cell.position }) else { continue }
+                land.cells[index] = cell.with(residents: cell.residents - residents, jobs: cell.jobs - jobs)
+            }
+            // A cell the company now covers whole is its own: the city
+            // keeps no land there (``isClaimedByPlacedBuilding(row:column:side:)``).
+            removeLand(at: whole)
+            refreshLandDemand()
+        }
+        return building
+    }
+
+    /// The building ``placeBuilding(_:at:look:)`` would put up, with its
+    /// price and who moves in, throwing what it would throw, without
+    /// changing the world (decision 488): the building tool's preview asks
+    /// at every step of a drag, and a copy of the world that placed it
+    /// pulled down the city's land and worked the stations' demand out
+    /// again, some 100–200 ms on a real map each time.
+    public func buildingPlacement(_ kind: PlacedBuildingKind, at centre: PlanPoint, look: Int = 0) throws(GameError) -> PlacedBuilding {
+        try placement(of: kind, at: centre, look: look).building
+    }
+
+    /// ``placeBuilding(_:at:look:)``'s checks, in their order, and what it
+    /// puts up and changes, worked out on the world as it stands.
+    private func placement(of kind: PlacedBuildingKind, at centre: PlanPoint, look: Int) throws(GameError) -> (
+        building: PlacedBuilding, quote: PlacedBuildingQuote, next: Int, cleared: [LandCell],
+        moved: [(cell: LandCell, residents: Int64, jobs: Int64, isLast: Bool)]
+    ) {
         guard (0..<kind.looks).contains(look) else { throw .invalidBuildingLook }
         let candidate = PlacedBuilding(id: PlacedBuildingID(rawValue: nextPlacedBuildingID), kind: kind, centre: centre)
         guard Self.lies(candidate, in: bounds) else { throw .outOfBounds(centre) }
@@ -303,7 +344,9 @@ extension GameWorld {
         }
         let (id, next) = try Self.allocateID(from: nextPlacedBuildingID)
         let quote = placedBuildingQuote(kind, at: centre) ?? PlacedBuildingQuote(building: .zero, land: .zero)
-        try economy.spend(quote.total)
+        guard economy.canAfford(quote.total) else {
+            throw .insufficientFunds(required: quote.total, available: economy.balance)
+        }
         var building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre, look: look)
         building.buildingCost = quote.building
         building.landCost = quote.land + quote.buyOut
@@ -322,26 +365,7 @@ extension GameWorld {
         } : []
         building.residents = min(kind.capacity.residents, cleared.reduce(0) { $0 + $1.residents } + moved.reduce(0) { $0 + $1.residents })
         building.jobs = min(kind.capacity.jobs, cleared.reduce(0) { $0 + $1.jobs } + moved.reduce(0) { $0 + $1.jobs })
-        nextPlacedBuildingID = next
-        placedBuildings.append(building)
-        acquireAsset(.building, owner: id, cost: quote.total)
-        if !cleared.isEmpty {
-            removeLand(at: Set(cleared.map(\.position)))
-            refreshLandDemand()
-        }
-        let movers = moved.filter { !$0.isLast && $0.residents + $0.jobs > 0 }
-        let whole = Set(moved.filter(\.isLast).map(\.cell.position))
-        if !movers.isEmpty || !whole.isEmpty {
-            for (cell, residents, jobs, _) in movers {
-                guard let index = land.cells.firstIndex(where: { $0.position == cell.position }) else { continue }
-                land.cells[index] = cell.with(residents: cell.residents - residents, jobs: cell.jobs - jobs)
-            }
-            // A cell the company now covers whole is its own: the city
-            // keeps no land there (``isClaimedByPlacedBuilding(row:column:side:)``).
-            removeLand(at: whole)
-            refreshLandDemand()
-        }
-        return building
+        return (building, quote, next, cleared, moved)
     }
 
     /// The building numbered `id`, or `nil`.
