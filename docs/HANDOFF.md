@@ -2025,7 +2025,7 @@
 - **截圖驗收暫緩**（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」）：#1467（決策 472）圖表的驗收沒拍。拍照的測試 `testStatisticsCharts`、`testTrainLooks` 已在 `WebsiteScreenshotTests`，發版前在那個分支跑一次 `website-screenshots.yml`（一次只跑一個），照 skill 第 3 節看，寫成決策 472「472 截圖驗收」；路線清單列的問題給 LP（決策 481）。
 - **鐵道味建議**（只列不改）：決策 482 續篇的表，規劃決定要不要派。
 
-### 4.22 宣傳影片素材（決策 475，session_01YGNNukoWqi8apoMDtJNZ3x，派工單 VID，2026-10-29）
+### 4.24 宣傳影片素材（決策 475，session_01YGNNukoWqi8apoMDtJNZ3x，派工單 VID，2026-10-29）
 
 - 做了的：`PromoMaterialTests` 與 `website-screenshots.yml` 的 `kind=promo`（[決策 475](decisions/475.md)，#1461 已合併）。一次 iPhone 17 Pro 深色跑（run 40825762656，commit d3cd9db）：230 張 PNG、16 支影片。影片轉橫、裁 20 秒、壓縮後逐格檢查，沒有超過 0.1 秒的卡頓。
 - 素材不在這個 repo：在 `a91453/railway-assets-private` 的 `promo-material/2026-10-29/`，三個草稿 PR（#27 影片＋README＋三城市、#28 四城市、#29 各場景），等作者合併。影片也直接傳給作者了。
