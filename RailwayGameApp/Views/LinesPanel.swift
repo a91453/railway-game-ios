@@ -75,6 +75,10 @@ struct LinesPanel: View {
     /// Decision 184: the name typed to find a line, and which lines show.
     @State private var lineSearch = ListSearch()
     @State private var lineFilter: LineFilter = .all
+    /// Decision 486: whether the search field is open over a short panel,
+    /// where it waits behind a button.
+    @State private var searchOpened = false
+    @FocusState private var searchFocused: Bool
     /// Decision 196: whether the new line's form shows while the lines
     /// come first.
     @State private var showsNewLine = false
@@ -120,6 +124,11 @@ struct LinesPanel: View {
                         if showsNewLine {
                             draftSection
                         }
+                        // Decision 486: on a short panel, one row over
+                        // the lines that scrolls away with them.
+                        if controlsStyle == .inline {
+                            inlineControlsSection
+                        }
                         listedLines
                     } else {
                         // Decision 100: a new line first, where the panel beside
@@ -149,11 +158,21 @@ struct LinesPanel: View {
                     }
                 }
                 .hardTopScrollEdge()
+                // Decision 486: a short panel's rows take more of its width.
+                .contentMargins(.horizontal, listsLinesFirst && controlsStyle == .inline ? 8 : nil, for: .scrollContent)
                 // Decision 481: what finds and orders the lines stays at the
-                // top while the list scrolls under it.
+                // top while the list scrolls under it; decision 486: not on
+                // a short panel, where it left one line in view.
                 .safeAreaInset(edge: .top, spacing: 0) {
-                    if listsLinesFirst {
+                    if listsLinesFirst, controlsStyle == .pinned {
                         listControls
+                    }
+                }
+                .onChange(of: searchOpened) { _, opened in
+                    guard opened else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        searchFocused = true
                     }
                 }
                 // The tutorial's targets in the form report their place on the
@@ -733,7 +752,7 @@ struct LinesPanel: View {
                 // first (``listControls``); on the one form, in it.
                 if !listsLinesFirst {
                     if showsSort {
-                        lineSortMenu
+                        lineSortMenu(short: false)
                     }
                     if showsSearch {
                         lineSearchField
@@ -769,6 +788,9 @@ struct LinesPanel: View {
         }
         .foregroundStyle(Theme.textPrimary)
         .accessibilityAddTraits(line.id == session.selectedLineID ? .isSelected : [])
+        // Decision 486: a short panel's rows closer together and wider,
+        // so three or four show.
+        .listRowInsets(listsLinesFirst && controlsStyle == .inline ? EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12) : nil)
         .id(Self.rowAnchor(line.id))
     }
 
@@ -868,11 +890,11 @@ struct LinesPanel: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         if showsFilter { lineFilterPicker }
-                        if showsSort { lineSortMenu.fixedSize() }
+                        if showsSort { lineSortMenu(short: false).fixedSize() }
                     }
                     VStack(alignment: .leading, spacing: 8) {
                         if showsFilter { lineFilterPicker }
-                        if showsSort { lineSortMenu }
+                        if showsSort { lineSortMenu(short: false) }
                     }
                 }
                 .font(.subheadline)
@@ -880,7 +902,117 @@ struct LinesPanel: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(.bar)
+            // Where the UI tests find the rows' top (decision 486).
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("lines.controls.pinned")
         }
+    }
+
+    /// Decision 486: pinned over the list, or one row in it on a panel of
+    /// compact height (a phone held sideways).
+    private var controlsStyle: LinesListControls {
+        .style(compactHeight: verticalSizeClass == .compact)
+    }
+
+    /// Decision 486: the search, the filter and the sort in one row at the
+    /// top of the list on a short panel, scrolling away with the lines;
+    /// the search field opens from its button, over that row.
+    @ViewBuilder
+    private var inlineControlsSection: some View {
+        if showsSearch || showsSort || showsFilter {
+            let language = session.language
+            let showsField = showsSearch && LinesListControls.inline.showsSearchField(opened: searchOpened, search: lineSearch)
+            Section {
+                if showsField {
+                    HStack(spacing: 8) {
+                        lineSearchField
+                            .focused($searchFocused)
+                        Button {
+                            lineSearch = ListSearch()
+                            searchFocused = false
+                            searchOpened = false
+                        } label: {
+                            Text(verbatim: LinesListControls.closeSearchTitle(in: language))
+                                .frame(minHeight: 44)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityIdentifier("lines.search.close")
+                    }
+                }
+                if showsFilter || showsSort || !showsField {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) {
+                            inlineControls(showsField: showsField)
+                        }
+                        // Large text: the sort under the rest.
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 12) {
+                                inlineSearchButton(showsField: showsField)
+                                if showsFilter { lineFilterMenu }
+                            }
+                            if showsSort { lineSortMenu(short: true) }
+                        }
+                    }
+                    .font(.subheadline)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func inlineControls(showsField: Bool) -> some View {
+        inlineSearchButton(showsField: showsField)
+        if showsFilter { lineFilterMenu }
+        Spacer(minLength: 0)
+        if showsSort { lineSortMenu(short: true) }
+    }
+
+    @ViewBuilder
+    private func inlineSearchButton(showsField: Bool) -> some View {
+        if showsSearch, !showsField {
+            Button {
+                searchOpened = true
+            } label: {
+                Label {
+                    Text(verbatim: LinesListControls.searchTitle(in: session.language))
+                } icon: {
+                    Image(systemName: "magnifyingglass")
+                }
+                .labelStyle(.iconOnly)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .accessibilityIdentifier("lines.search.open")
+        }
+    }
+
+    /// Decision 486: the filter as a menu, its choice on its label (filled
+    /// once it hides some lines).
+    private var lineFilterMenu: some View {
+        let language = session.language
+        let filter = session.world.lineFilters.contains(lineFilter) ? lineFilter : .all
+        return Menu {
+            Picker(selection: $lineFilter) {
+                ForEach(session.world.lineFilters, id: \.self) { filter in
+                    Text(verbatim: filter.displayName(in: language)).tag(filter)
+                }
+            } label: {
+                Text(verbatim: language.text("Show", "顯示"))
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label {
+                Text(verbatim: filter.displayName(in: language))
+                    .lineLimit(1)
+            } icon: {
+                Image(systemName: filter == .all ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel(Text(verbatim: LinesListControls.filterLabel(filter, in: language)))
+        .accessibilityIdentifier("lines.filter")
     }
 
     /// The lines in the order chosen (decision 179), as they were sorted
@@ -917,10 +1049,11 @@ struct LinesPanel: View {
         .accessibilityIdentifier("lines.filter")
     }
 
-    private var lineSortMenu: some View {
+    /// The sort's menu; `short`: its label only the order (decision 486).
+    private func lineSortMenu(short: Bool) -> some View {
         let language = session.language
         // Decision 184, later: a menu the ticks leave alone.
-        return TickStable(StableKey(lineSort, language)) {
+        return TickStable(StableKey(lineSort, language, short)) {
             Menu {
                 Button {
                     lineSort = nil
@@ -956,11 +1089,15 @@ struct LinesPanel: View {
                 }
             } label: {
                 Label {
-                    Text(verbatim: language.text("Sort: \(lineSort?.displayName(in: language) ?? language.text("Made order", "建立順序"))", "排序：\(lineSort?.displayName(in: language) ?? language.text("Made order", "建立順序"))"))
+                    Text(verbatim: LinesListControls.sortTitle(lineSort, short: short, in: language))
+                        .lineLimit(1)
                 } icon: {
                     Image(systemName: "arrow.up.arrow.down")
                 }
+                .frame(minHeight: short ? 44 : nil)
+                .contentShape(Rectangle())
             }
+            .accessibilityLabel(Text(verbatim: LinesListControls.sortLabel(lineSort, in: language)))
             .accessibilityIdentifier("lines.sort")
         }
     }
@@ -979,57 +1116,60 @@ struct LinesPanel: View {
             LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line.id] ?? "", color: color)
                 .frame(minWidth: 44, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 4) {
-                    // Decision 168: a high-speed line's name carries a bolt.
-                    Text(line.name)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    if line.isRing {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.caption2.weight(.bold))
-                            .accessibilityLabel(Text(verbatim: session.language.text("Ring", "環狀")))
+            // Decision 486: two lines where they fit; on a narrow panel
+            // the trains go under the name, beside the trend, and the
+            // profit under the riders, rather than cut each short.
+            ViewThatFits(in: .horizontal) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 4) {
+                        lineName(line, report: report)
+                        Spacer(minLength: 6)
+                        trainsText(line)
                     }
-                    if line.isHighSpeed {
-                        Image(systemName: "bolt.fill")
-                            .font(.caption2.weight(.bold))
-                            .accessibilityLabel(Text(verbatim: session.language.text("High-speed", "高鐵")))
+                    if let report {
+                        HStack(spacing: 8) {
+                            reportText(report, report.compactRowText(in: session.language), id: line.id)
+                            Spacer(minLength: 4)
+                            sparkline(report, id: line.id)
+                        }
+                    } else {
+                        statusText(line)
                     }
-                    // Decision 481, later: a line that needs a look, by a
-                    // mark and its words, not by colour alone.
-                    if let attention = LineAttention.label(session.world.lineAttention(line, report: report), in: session.language) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Theme.warning)
-                            .accessibilityLabel(Text(verbatim: attention))
-                            .accessibilityIdentifier("line.attention.\(line.id.rawValue)")
-                    }
-                    Spacer(minLength: 6)
-                    // TestFlight 56.1: how many trains run it, and how often.
-                    Text(verbatim: memo.trainsRowText(line.id, of: session))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .accessibilityIdentifier("line.trainsRow.\(line.id.rawValue)")
                 }
-                if let report {
-                    HStack(spacing: 8) {
-                        // Decision 179: yesterday's riders and profit.
-                        Text(verbatim: report.compactRowText(in: session.language))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .accessibilityIdentifier("line.report.\(line.id.rawValue)")
-                        Spacer(minLength: 4)
-                        // Decision 472: its riders over the last days.
-                        LineSparkline(values: report.sparkline)
-                            .accessibilityIdentifier("line.trend.\(line.id.rawValue)")
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        lineName(line, report: report)
                     }
-                } else {
-                    Text(verbatim: session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language))
-                        .font(.caption2)
-                        .foregroundStyle(Theme.textSecondary)
+                    if let report {
+                        // The trend left out before the trains are cut.
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 8) {
+                                trainsText(line)
+                                Spacer(minLength: 4)
+                                sparkline(report, id: line.id)
+                            }
+                            trainsText(line)
+                        }
+                    } else {
+                        trainsText(line)
+                    }
+                    if let report {
+                        ViewThatFits(in: .horizontal) {
+                            reportText(report, report.compactRowText(in: session.language), id: line.id)
+                            VStack(alignment: .leading, spacing: 1) {
+                                ForEach(report.compactRowParts(in: session.language), id: \.self) { part in
+                                    Text(verbatim: part)
+                                        .font(.caption2.monospacedDigit())
+                                        .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityIdentifier("line.report.\(line.id.rawValue)")
+                        }
+                    } else {
+                        statusText(line)
+                    }
                 }
             }
             if listsLinesFirst {
@@ -1043,6 +1183,64 @@ struct LinesPanel: View {
                     .accessibilityHidden(true)
             }
         }
+    }
+
+    /// A row's name and its marks: ring, high-speed, needs a look.
+    @ViewBuilder
+    private func lineName(_ line: ServiceLine, report: LineReport?) -> some View {
+        // Decision 168: a high-speed line's name carries a bolt.
+        Text(line.name)
+            .font(.subheadline.weight(.semibold))
+            .lineLimit(1)
+        if line.isRing {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.caption2.weight(.bold))
+                .accessibilityLabel(Text(verbatim: session.language.text("Ring", "環狀")))
+        }
+        if line.isHighSpeed {
+            Image(systemName: "bolt.fill")
+                .font(.caption2.weight(.bold))
+                .accessibilityLabel(Text(verbatim: session.language.text("High-speed", "高鐵")))
+        }
+        // Decision 481, later: a line that needs a look, by a
+        // mark and its words, not by colour alone.
+        if let attention = LineAttention.label(session.world.lineAttention(line, report: report), in: session.language) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.warning)
+                .accessibilityLabel(Text(verbatim: attention))
+                .accessibilityIdentifier("line.attention.\(line.id.rawValue)")
+        }
+    }
+
+    /// TestFlight 56.1: how many trains run it, and how often.
+    private func trainsText(_ line: ServiceLine) -> some View {
+        Text(verbatim: memo.trainsRowText(line.id, of: session))
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(1)
+            .accessibilityIdentifier("line.trainsRow.\(line.id.rawValue)")
+    }
+
+    /// Decision 179: yesterday's riders and profit, red for a loss.
+    private func reportText(_ report: LineReport, _ text: String, id: LineID) -> some View {
+        Text(verbatim: text)
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
+            .lineLimit(1)
+            .accessibilityIdentifier("line.report.\(id.rawValue)")
+    }
+
+    /// Decision 472: its riders over the last days.
+    private func sparkline(_ report: LineReport, id: LineID) -> some View {
+        LineSparkline(values: report.sparkline)
+            .accessibilityIdentifier("line.trend.\(id.rawValue)")
+    }
+
+    private func statusText(_ line: ServiceLine) -> some View {
+        Text(verbatim: session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language))
+            .font(.caption2)
+            .foregroundStyle(Theme.textSecondary)
     }
 
     // MARK: - The selected line
