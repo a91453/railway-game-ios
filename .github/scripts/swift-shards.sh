@@ -560,14 +560,16 @@ set -euo pipefail
 # 658 to 738 s each (six parts by the old weights: 493 to 1,026).
 # 2026-10-29 (decision 493): the Blue Coast Line, then the Green Mountain
 # Line, a class for each rule, some 330 s each locally (debug), about 410 on
-# CI: too long together for one shard. The simple one to campaigns-3 and the
-# realistic one to campaigns-8, which have taken none of the late additions
-# above; weights 1.24 times the local times.
+# CI: too long together for one shard. On the full run 40917483376 (main
+# a0a4ebe, campaigns not reduced) campaigns-12 took 10 minutes and
+# campaigns-8 8, so the simple one goes to campaigns-12 and the realistic
+# one to campaigns-8 (campaigns-3, at 14 minutes there, would pass 20 with
+# about 7 more); weights 1.24 times the local times.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests" ;;
     campaigns-2) echo "ServicePropertyTests ScheduledOvertakeTrackMiddlePropertyTests Map3DOpenEveryStartTests SingleTrackCapacityPropertyTests RealWorldDemoTests SanyingLineRealisticDayTests" ;;
-    campaigns-3) echo "ServiceRepeatingPropertyTests TRADemoTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests DanhaiBlueThenGreenSimpleDayTests" ;;
+    campaigns-3) echo "ServiceRepeatingPropertyTests TRADemoTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests" ;;
     campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests Map3DBusLayerTests Map3DRealBuildingsTests Map3DModelTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests NetworkPostcardTests SharedNetworkTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests SanyingDepotTests BusOneWayAndTunnelRealMapTests SanyingLineFreezeTests Map3DSceneryPropsTests" ;;
@@ -576,7 +578,7 @@ classes_of() {
     campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests" ;;
     campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests" ;;
     campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests DanhaiGreenLineDayTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests DanhaiBlueThenGreenSimpleDayTests" ;;
     campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests Map3DCoarseChunkTests TurnbackPropertyTests LoadJourneyCacheTests Map3DStreamingTests LineLossFixesTests DanhaiBothLinesDayTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests IdleTrainDeadlockTests NetworkSectionPropertyTests Map3DRealTracksTests Map3DEMU3000Tests MapMarksTests Map3DC341IntegrationTests Map3DBoxInstanceTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackPropertyTests Map3DStreetsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests Map3DShadowTests RealWorldExpansionTests ShortTurnCardTests" ;;
