@@ -92,8 +92,8 @@ public enum WhatsNew {
                     chinese: "深色模式下，紅底上的破產倒數和新聞數字看得清楚。"
                 ),
                 Line(
-                    english: "Small buttons on phones are 44 points to tap.",
-                    chinese: "手機上小按鈕的點擊範圍補到 44 點。"
+                    english: "Small buttons on phones are easier to tap.",
+                    chinese: "手機上的小按鈕更好點了。"
                 ),
                 Line(
                     english: "Closing 3D while it is still loading no longer wastes the work, and reopening picks it up; the speed tip shows again if it was dismissed unseen.",
