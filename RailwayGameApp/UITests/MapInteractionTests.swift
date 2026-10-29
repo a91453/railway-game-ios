@@ -1639,6 +1639,18 @@ final class MapInteractionTests: XCTestCase {
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 120), "The freight scene opens")
+        // As the screenshots went: a bubble opens its station's panel,
+        // closed again before the fleet.
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        alerts.allElementsBoundByIndex.first(where: \.isHittable)?.tap()
+        let panel = app.descendants(matching: .any).matching(identifier: "station.operations").firstMatch
+        XCTAssertTrue(panel.appears(within: 10), "A tap on a bubble opens its station's panel")
+        let done = app.buttons["Done"].firstMatch
+        if done.appears(within: 3), done.isHittable {
+            done.tap()
+            XCTAssertTrue(panel.disappears(within: 10), "The station's panel closes")
+        }
         app.buttons["dock.build"].tap()
         let trainTool = app.buttons["tool.train"]
         trainTool.waitUntilSettled()
