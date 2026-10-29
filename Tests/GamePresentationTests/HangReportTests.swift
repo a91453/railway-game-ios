@@ -30,7 +30,9 @@ final class HangReportTests: XCTestCase {
     /// ticks' cost.
     private func time(_ name: String, _ start: GameWorld, days: Int, trafficControl: Bool? = nil) throws -> [String] {
         var world = start
-        if let trafficControl { try world.setTrafficControl(trafficControl) }
+        if let trafficControl {
+            do { try world.setTrafficControl(trafficControl) } catch { return ["| \(name) | not run: \(error) |"] }
+        }
         world.setSpeed(.fast)
         let clock = ContinuousClock()
         var ticks: [(time: GameTime, ms: Double)] = []
@@ -62,6 +64,7 @@ final class HangReportTests: XCTestCase {
         let saved = try XCTUnwrap(entry)
         let load = try clock.measure { _ = try library.load(saved) }
         rows.append(String(format: "|   save %.0f ms, load %.0f ms | | | | | | | | | | | |", Self.ms(save), Self.ms(load)))
+        print(rows.joined(separator: "\n"))
         return rows
     }
 
