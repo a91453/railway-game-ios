@@ -124,12 +124,15 @@ final class LinesPanelNavigationTests: XCTestCase {
         XCTAssertEqual(report.compactRowText(in: .english), "Yesterday 12,340 riders · profit \(yesterday.profit.moneyText)")
         XCTAssertEqual(report.compactRowText(in: .traditionalChinese), "昨日 12,340 人次 · 損益 \(yesterday.profit.moneyText)")
         XCTAssertEqual(report.lostMoneyYesterday, yesterday.profit < .zero)
+        // Decision 486: a narrow row puts the profit under the riders.
+        XCTAssertEqual(report.compactRowParts(in: .traditionalChinese), ["昨日 12,340 人次", "損益 \(yesterday.profit.moneyText)"])
 
         let new = LineReport(line: Self.first, name: "Red", today: day(0, riders: 40), yesterday: nil, days: [])
         XCTAssertEqual(new.compactRowText(in: .english), "Today so far 40 riders")
         XCTAssertFalse(new.lostMoneyYesterday)
         let none = LineReport(line: Self.first, name: "Red", today: nil, yesterday: nil, days: [])
         XCTAssertEqual(none.compactRowText(in: .traditionalChinese), "昨日還沒有紀錄")
+        XCTAssertEqual(none.compactRowParts(in: .traditionalChinese).count, 1)
     }
 
     func testTheNetworkRowSaysHowItIsSet() throws {
@@ -182,5 +185,32 @@ final class LinesPanelNavigationTests: XCTestCase {
         XCTAssertEqual(LineAttention.label([.overfull], in: .english), "Needs attention: a train was over full")
         XCTAssertNil(LineAttention.label([], in: .english))
         XCTAssertEqual(LineFilter.attention.displayName(in: .traditionalChinese), "需要注意")
+    }
+
+    // MARK: - Decision 486: the controls over the list
+
+    func testAShortPanelPutsTheControlsInOneRowThatScrollsAway() {
+        XCTAssertEqual(LinesListControls.style(compactHeight: true), .inline)
+        XCTAssertEqual(LinesListControls.style(compactHeight: false), .pinned)
+    }
+
+    func testTheInlineSearchFieldShowsOnceOpenedAndWhileSomethingIsTyped() {
+        let empty = ListSearch()
+        let typed = ListSearch("Ji")
+        XCTAssertTrue(LinesListControls.pinned.showsSearchField(opened: false, search: empty))
+        XCTAssertFalse(LinesListControls.inline.showsSearchField(opened: false, search: empty))
+        XCTAssertTrue(LinesListControls.inline.showsSearchField(opened: true, search: empty))
+        // A search under way keeps its field, so the rows it hides can be
+        // brought back.
+        XCTAssertTrue(LinesListControls.inline.showsSearchField(opened: false, search: typed))
+    }
+
+    func testTheInlineSortSaysOnlyTheOrderAndVoiceOverSaysItIsTheSort() {
+        XCTAssertEqual(LinesListControls.sortTitle(nil, short: false, in: .english), "Sort: Made order")
+        XCTAssertEqual(LinesListControls.sortTitle(nil, short: true, in: .traditionalChinese), "建立順序")
+        let order = LineReportSort.allCases[0]
+        XCTAssertEqual(LinesListControls.sortTitle(order, short: true, in: .english), order.displayName(in: .english))
+        XCTAssertEqual(LinesListControls.sortLabel(order, in: .traditionalChinese), "排序：\(order.displayName(in: .traditionalChinese))")
+        XCTAssertEqual(LinesListControls.filterLabel(.losing, in: .traditionalChinese), "顯示：只看虧損")
     }
 }

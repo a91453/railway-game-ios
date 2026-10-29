@@ -100,16 +100,23 @@ extension LineReport {
     /// it paid. A new line says what it carried today so far; fares,
     /// the peak and the rest are on the line's own page (``rowText(in:)``).
     public func compactRowText(in language: DisplayLanguage) -> String {
+        compactRowParts(in: language).joined(separator: " · ")
+    }
+
+    /// Decision 486: ``compactRowText(in:)`` in its parts, riders and
+    /// profit, for a row too narrow for one line to put them one under
+    /// the other rather than cut the profit off.
+    public func compactRowParts(in language: DisplayLanguage) -> [String] {
         guard let yesterday else {
             guard let today else {
-                return language.text("No record of yesterday yet", "昨日還沒有紀錄")
+                return [language.text("No record of yesterday yet", "昨日還沒有紀錄")]
             }
-            return language.text("Today so far \(Money(today.riders).displayText) riders", "今日至今 \(Money(today.riders).displayText) 人次")
+            return [language.text("Today so far \(Money(today.riders).displayText) riders", "今日至今 \(Money(today.riders).displayText) 人次")]
         }
         return [
             language.text("Yesterday \(Money(yesterday.riders).displayText) riders", "昨日 \(Money(yesterday.riders).displayText) 人次"),
             language.text("profit \(yesterday.profit.moneyText)", "損益 \(yesterday.profit.moneyText)"),
-        ].joined(separator: " · ")
+        ]
     }
 
     /// Whether the row's text is a loss, drawn in the warning colour.
@@ -139,5 +146,61 @@ extension NetworkSwitches {
         count > 0
             ? language.text("Real lines for sale (\(count))", "可收購的真實路線（\(count)）")
             : language.text("Real lines for sale", "可收購的真實路線")
+    }
+}
+
+/// Decision 486: how the lines panel shows its search, filter and sort
+/// over the short list. On a short panel (a phone held sideways) they
+/// took half its height, leaving one line in view (95.1 on a device).
+public enum LinesListControls: Equatable, Sendable {
+    /// The search field, the filter's segments and the sort, pinned over
+    /// the list while it scrolls (decision 481).
+    case pinned
+    /// One row at the top of the list that scrolls away with it: a
+    /// search button that opens the field, the filter and the sort as
+    /// menus.
+    case inline
+
+    /// Inline on a panel of compact height, pinned on any other.
+    public static func style(compactHeight: Bool) -> Self {
+        compactHeight ? .inline : .pinned
+    }
+
+    /// Whether the search field shows: always when pinned; inline once
+    /// its button is pressed, and while anything is typed in it, so a
+    /// search never hides the field that made it.
+    public func showsSearchField(opened: Bool, search: ListSearch) -> Bool {
+        switch self {
+        case .pinned: true
+        case .inline: opened || !search.query.isEmpty
+        }
+    }
+
+    /// The sort's menu label: "Sort: Made order" pinned; inline only the
+    /// order, beside its arrows icon.
+    public static func sortTitle(_ sort: LineReportSort?, short: Bool, in language: DisplayLanguage) -> String {
+        let order = sort?.displayName(in: language) ?? language.text("Made order", "建立順序")
+        return short ? order : sortLabel(sort, in: language)
+    }
+
+    /// "Sort: Made order", what VoiceOver says for the sort either way.
+    public static func sortLabel(_ sort: LineReportSort?, in language: DisplayLanguage) -> String {
+        let order = sort?.displayName(in: language) ?? language.text("Made order", "建立順序")
+        return language.text("Sort: \(order)", "排序：\(order)")
+    }
+
+    /// "Show: Losing money", what VoiceOver says for the filter's menu.
+    public static func filterLabel(_ filter: LineFilter, in language: DisplayLanguage) -> String {
+        language.text("Show: \(filter.displayName(in: language))", "顯示：\(filter.displayName(in: language))")
+    }
+
+    /// The search button's name.
+    public static func searchTitle(in language: DisplayLanguage) -> String {
+        language.text("Search Lines", "搜尋路線")
+    }
+
+    /// The button that closes the opened field and clears its search.
+    public static func closeSearchTitle(in language: DisplayLanguage) -> String {
+        language.text("Cancel", "取消")
     }
 }

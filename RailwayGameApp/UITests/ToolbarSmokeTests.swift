@@ -678,13 +678,12 @@ extension XCUIApplication {
 
     /// Decision 481: where the lines panel's rows show, under its bar
     /// `bar` and the search, filter and sort pinned below it (each only
-    /// when the list has enough lines for it).
+    /// when the list has enough lines for it). Decision 486: a phone held
+    /// sideways has them in a row of the list instead, nothing pinned.
     func linesListTop(under bar: XCUIElement) -> CGFloat {
-        let pinned = [searchFields.firstMatch, segmentedControls["lines.filter"].firstMatch, buttons["lines.sort"].firstMatch]
-        return pinned
-            .filter { $0.exists && $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-            .map(\.frame.maxY)
-            .reduce(bar.frame.maxY, max)
+        let pinned = otherElements["lines.controls.pinned"].firstMatch
+        guard pinned.exists, pinned.frame.midX >= bar.frame.minX, pinned.frame.midX <= bar.frame.maxX else { return bar.frame.maxY }
+        return max(bar.frame.maxY, pinned.frame.maxY)
     }
 
     /// Decision 481: opens a line's own page from the lines panel's list
