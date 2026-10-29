@@ -130,9 +130,12 @@ const shrub = (across, degrees, x, z) => place(bush, { degrees, across, up: acro
 // Kenney's detail-tank: a cream vessel along x on grey saddles and legs.
 // Lengthened: everything past x 0.7 moves 2.4 m out, the vessel's long
 // sides stretching; a concrete pad and a third saddle of this project's own.
+// Its triangles are wound clockwise (every shell inside out: the game draws
+// both sides but lights each by the way it winds, so the vessel read as its
+// inside), so each is turned round.
 const tank = read('detail-tank.glb').map(t => ({
   c: t.c[0] === 255 || t.c[0] === 217 ? tankWhite : t.c,
-  p: t.p.map(([x, y, z]) => [x > 0.7 ? x + 2.4 : x, y + 0.15, z]),
+  p: [t.p[0], t.p[2], t.p[1]].map(([x, y, z]) => [x > 0.7 ? x + 2.4 : x, y + 0.15, z]),
 }));
 const tankLow = Math.min(...tank.flatMap(t => t.p.map(p => p[0]))), tankHigh = Math.max(...tank.flatMap(t => t.p.map(p => p[0])));
 const middle = (tankLow + tankHigh) / 2;

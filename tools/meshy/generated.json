@@ -67,21 +67,11 @@
         "model_type": null,
         "credits": 10,
         "finished": "2026-10-27T06:38:41Z"
-      },
-      {
-        "id": "01a17c27-4348-73cf-a85e-f6e2776e3079",
-        "type": "remesh",
-        "prompt": null,
-        "texture_prompt": null,
-        "ai_model": null,
-        "model_type": null,
-        "credits": 5,
-        "finished": "2026-10-27T06:59:38Z"
       }
     ],
-    "credits": 50,
-    "raw_sha256": "3164549a375bf35e42396c222c5186c0a00bbe66ad656c0c38f27a7358569588",
-    "raw_bytes": 9780316
+    "credits": 45,
+    "raw_sha256": "5459e1867b9fed1613733820c28bb2e3f7c4db3b51b4a0c05a8ed18ac5d2b3c1",
+    "raw_bytes": 6881180
   },
   "recycling-truck": {
     "tasks": [

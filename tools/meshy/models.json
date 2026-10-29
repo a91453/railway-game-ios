@@ -60,7 +60,7 @@
     },
     {
       "id": "garbage-truck",
-      "use": "The evening garbage truck (垃圾車) of the native 3D map's streets (decision 437); made in the owner's batch Railway/meshy-batch-2026-10 (its glb-lod remesh)",
+      "use": "The evening garbage truck (垃圾車) of the native 3D map's streets (decision 437); made in the owner's batch meshy-batch-2026-10 (its glb-hq model, simplified by tools/meshy-props/build.mjs; the glb-lod remesh had holes)",
       "prompt": "Taiwan municipal garbage collection truck (垃圾車), long and low: a small cab at the front, behind it a rear-loading compactor body no taller than 1.3 times the cab, with a wide loading opening at the very back, six wheels, about 6.5 m long, 2.3 m wide and only 2.8 m tall. Solid simple body, a small amber beacon on the cab roof. Single object only, clean simple stylised shapes, no text, no logos, no base, no ground, no people.",
       "texture_prompt": "The whole truck body is one uniform bright yellow: the cab AND the entire rear compactor box are the same solid bright yellow, flat colour with no gradient. Only the wheels and bumper are black, the cab windows light blue, a small orange beacon on the cab roof. Nothing on the box is grey. No text, no logos, no wear or dirt.",
       "target_polycount": null,
