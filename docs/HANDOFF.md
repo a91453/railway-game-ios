@@ -2100,6 +2100,13 @@
   - 高雄車要不要算不鏽鋼（`Map3DTrainMaterial.stainlessSets`）：作者看過真機再定。
   - 實機：兩款近景的幀數、500 m 換遠景、台中第四版與鳴日號的外觀（作者，TestFlight，UNVERIFIED）。
 
+### 4.27 宣傳影片 30 秒預告與 App Store 預覽（派工單 PV，session_01YGNNuoY1GitTFVsk8mHw6J，2026-10-29）
+
+- **第一版做完了**：`a91453/railway-assets-private` 草稿 PR #30，`promo-material/2026-10-29/trailer/`。橫式預告 1920×1080、App Store 橫式 1920×886、直式 886×1920，各有配樂版與靜音版（共約 181 MB，每支 ≤ 50 MB）。README 寫了來源、官網風格（顏色、Noto Sans TC 全字型、標語、吉祥物、圖示）、卡頓檢查（最大 0.1 秒）、重建指令與五個角度。作者的回饋都改了：「全臺灣都能選」、照 alongthelinegame.com 的風格、用作者實機錄影、配樂改用官網開頭影片的音樂（遊戲自己的音樂，決策 79、219，從第 7 秒起 30 秒）。分支歷史裡有舊版影片，PR 說明請作者 squash 合併。
+- **第二版不做了**（遊戲規劃 2026-10-29：作者看了覺得不好看，決定自己用 iPhone 錄）。之後作者錄好，照資產 PR #30 README 的「作者實機錄影後怎麼剪」剪：錄影放 `DEV/`，`tools/fetch_inputs.sh` 抓官網素材、字型與配樂，鏡頭表照 `tools/shots-owner-example.json` 寫，`SHOTS_JSON=… tools/build.py` 一次出預告 16:9、App Store 橫式、直式三種（各有配樂與靜音版），`tools/stutter.py` 檢查停格 ≤ 0.1 秒。
+  - 為第二版開的 #1492（`PromoMaterialTests.testTrainShowcaseNewTrains`）與它的錄影 run 40863314600 已用不到：錄影取消了，#1492 由遊戲規劃決定關掉或留著。
+- **還要作者確認的**：片尾「10/31 開放測試」；iPad 與淺色版要不要做（作者說過發佈前自己也能截圖）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
