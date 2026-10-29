@@ -83,4 +83,13 @@ final class Map3DRainTests: XCTestCase {
             XCTAssertGreaterThan(times.map(Map3DRain(weather).flash).max() ?? 0, 0)
         }
     }
+
+    /// PERF (2026-10-30): the streaks drawn no more often than the map
+    /// under them, 60 a second at most as before.
+    func testTheRainKeepsToTheMapsFrames() {
+        XCTAssertEqual(Map3DRain.minimumInterval(aim: 60), 1.0 / 60)
+        XCTAssertEqual(Map3DRain.minimumInterval(aim: 30), 1.0 / 30)
+        XCTAssertEqual(Map3DRain.minimumInterval(aim: 120), 1.0 / 60)
+        XCTAssertEqual(Map3DRain.minimumInterval(aim: 0), 1)
+    }
 }
