@@ -161,6 +161,8 @@ public struct Map3DModelPack: Sendable {
 
         }
         for far in [false, true] { models += Map3DKaohsiung.Unit.allCases.map { Map3DKaohsiung.model($0, far: far) } }
+        // R21 (first-batch EMD G12) is a static study, not an operating set.
+        models += [Map3DG12.model(), Map3DG12.model(far: true)]
         self.init(recipes: models, baked: baked)
     }
 
