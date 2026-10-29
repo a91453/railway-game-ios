@@ -15,7 +15,8 @@ public enum Map3DTEMU2000 {
     public static let navy = Map3DColor.rgb(0x262C57)
     // The studies-only TRA production palette. The operating set retains its
     // exact previous vertex payload until a separate integration change.
-    public static let studyRed = Map3DColor.rgb(0xD92E48)
+    public static let studyRed = Map3DColor.rgb(0xE64053)
+    public static let studyBand = Map3DColor.rgb(0xC92035)
     public static let studyDark = Map3DColor.rgb(0x273039)
     public static let glass = Map3DColor.rgb(0x405560)
     public static let silver = Map3DColor.rgb(0xAAB7BF)
@@ -111,10 +112,10 @@ extension StationKitBuilder {
         // separately through the cab; no TEMU1000 shell vertices are reused.
         let studySection: [(Float, Float)] = [
             (0.96,-1.17),(1.05,-1.37),(1.38,-1.45),
-            (1.43,-1.45),(1.53,-1.45),(1.59,-1.45),(1.64,-1.45),(2.53,-1.45),
+            (1.43,-1.45),(1.61,-1.45),(1.66,-1.45),(1.73,-1.45),(2.53,-1.45),
             (2.99,-1.42),(3.29,-1.30),(3.49,-1.06),(3.565,-0.66),
             (3.565,0.66),(3.49,1.06),(3.29,1.30),(2.99,1.42),
-            (2.53,1.45),(1.64,1.45),(1.59,1.45),(1.53,1.45),
+            (2.53,1.45),(1.73,1.45),(1.66,1.45),(1.61,1.45),
             (1.43,1.45),(1.38,1.45),(1.05,1.37),(0.96,1.17)
         ]
         let operatingSection: [(Float, Float)] = [
@@ -127,7 +128,12 @@ extension StationKitBuilder {
         func ring(_ x: Float, width: Float = 1, top: Float = roofHeight,
                   bottom: Float = 0.96, crown: Float = 0) -> [Map3DPoint] {
             section.map { y, lateral in
-                let t = (y - 0.96) / (3.565 - 0.96)
+                let paintTaper = far ? Float(8.82) : Float(8.35)
+                let bandEnd = study && cab != 0 && abs(abs(x)-paintTaper) < 0.015
+                    && y >= 1.43 && y <= 1.73
+                let t = bandEnd
+                    ? (1.48 + (y-1.43)*0.10-bottom)/max(0.2,top-bottom)
+                    : (y - 0.96) / (3.565 - 0.96)
                 let side = lateral * width * (1 - 0.055 * crown * sinf(Float.pi * t))
                 let centerBias = 1 - 0.16 * abs(lateral) / 1.45
                 return Map3DPoint(x + cab * crown * centerBias * sinf(Float.pi * t),
@@ -172,10 +178,15 @@ extension StationKitBuilder {
             for i in section.indices {
                 let j = (i + 1) % section.count
                 let bodySpan = cab == 0 || k == (cab > 0 ? 0 : rings.count-2)
+                let cabStripeSpan = cab != 0
+                    && max(abs(rings[k][0].x),abs(rings[k+1][0].x)) <= (far ? 8.82 : 8.35)
                 let bandHeight = (section[i].0 + section[j].0)*0.5
-                let isBand = bodySpan && ((bandHeight >= 1.43 && bandHeight < 1.53)
-                    || (bandHeight >= 1.59 && bandHeight < 1.64))
-                let shellColor = isBand ? teal : white
+                let isBand = study && (bodySpan || cabStripeSpan)
+                    ? ((bandHeight >= 1.43 && bandHeight < 1.61)
+                        || (bandHeight >= 1.66 && bandHeight < 1.73))
+                    : bodySpan && ((bandHeight >= 1.43 && bandHeight < 1.53)
+                        || (bandHeight >= 1.59 && bandHeight < 1.64))
+                let shellColor = isBand ? (study ? Map3DTEMU2000.studyBand : teal) : white
                 // Preserve one winding across every swept station. Choosing
                 // per-triangle orientation against a fixed centre flipped
                 // individual faces where the cab folds down at its lip.
@@ -246,9 +257,9 @@ extension StationKitBuilder {
                     // The door leaf is segmented at the same two paint
                     // heights as the shell; no overlapping colour plate.
                     for (base,height,color): (Float,Float,UInt32) in [
-                        (0.99,0.44,white),(1.43,0.10,teal),
-                        (1.53,0.06,white),(1.59,0.05,teal),
-                        (1.64,1.43,white)
+                        (0.99,0.44,white),(1.43,0.18,Map3DTEMU2000.studyBand),
+                        (1.61,0.05,white),(1.66,0.07,Map3DTEMU2000.studyBand),
+                        (1.73,1.34,white)
                     ] { box(x,base,side*1.455,0.86,0.010,height,color) }
                 } else {
                     box(x,0.99,side*1.455,0.86,0.010,2.08,white)
@@ -431,18 +442,33 @@ extension StationKitBuilder {
             // Carry the tapered centre field down the short blunt end cap.
             // A slight bow replaces the perfectly straight cheek-side edge;
             // the white lower lip remains exposed.
-            solidFace([
-                Map3DPoint(cab*10.925,1.51,-0.48),
-                Map3DPoint(cab*10.925,1.51,0.48),
-                Map3DPoint(cab*10.925,1.36,0.50),
-                Map3DPoint(cab*10.925,1.12,0.50),
-                Map3DPoint(cab*10.925,0.87,0.48),
-                Map3DPoint(cab*10.925,0.80,0.45),
-                Map3DPoint(cab*10.925,0.80,-0.45),
-                Map3DPoint(cab*10.925,0.87,-0.48),
-                Map3DPoint(cab*10.925,1.12,-0.50),
-                Map3DPoint(cab*10.925,1.36,-0.50)
-            ],teal)
+            if study {
+                solidFace([
+                    Map3DPoint(cab*10.925,1.51,-0.48),
+                    Map3DPoint(cab*10.925,1.51,0.48),
+                    Map3DPoint(cab*10.925,1.36,0.49),
+                    Map3DPoint(cab*10.925,1.12,0.46),
+                    Map3DPoint(cab*10.925,0.91,0.41),
+                    Map3DPoint(cab*10.925,0.80,0.33),
+                    Map3DPoint(cab*10.925,0.80,-0.33),
+                    Map3DPoint(cab*10.925,0.91,-0.41),
+                    Map3DPoint(cab*10.925,1.12,-0.46),
+                    Map3DPoint(cab*10.925,1.36,-0.49)
+                ],teal)
+            } else {
+                solidFace([
+                    Map3DPoint(cab*10.925,1.51,-0.48),
+                    Map3DPoint(cab*10.925,1.51,0.48),
+                    Map3DPoint(cab*10.925,1.36,0.50),
+                    Map3DPoint(cab*10.925,1.12,0.50),
+                    Map3DPoint(cab*10.925,0.87,0.48),
+                    Map3DPoint(cab*10.925,0.80,0.45),
+                    Map3DPoint(cab*10.925,0.80,-0.45),
+                    Map3DPoint(cab*10.925,0.87,-0.48),
+                    Map3DPoint(cab*10.925,1.12,-0.50),
+                    Map3DPoint(cab*10.925,1.36,-0.50)
+                ],teal)
+            }
             // Lens faces are laid on the swept cab skin, so their position
             // follows the forehead instead of floating above the roof.
             func lens(_ station: Float,_ lateral: Float,_ along: Float,
@@ -456,27 +482,79 @@ extension StationKitBuilder {
                 }
                 solidFace(rim,color)
             }
-            for side: Float in [-1,1] {
-                let s = side
-                // The lower paired lamps sit in compact horizontal pods.
+            if study {
+                // The lamp positions are defined in the true front elevation.
+                // Invert the swept roof at each lateral coordinate so equal
+                // front circles remain equal after they wrap onto the nose.
+                func frontPoint(_ height: Float,_ lateral: Float,_ lift: Float) -> Map3DPoint {
+                    var low: Float = 7.75, high: Float = 10.70
+                    for _ in 0..<16 {
+                        let mid = (low+high)*0.5
+                        if roofPoint(mid,lateral,0).y > height { low = mid }
+                        else { high = mid }
+                    }
+                    return roofPoint((low+high)*0.5,lateral,lift)
+                }
+                func frontDisc(_ height: Float,_ lateral: Float,_ ry: Float,
+                               _ rz: Float,_ lift: Float,_ color: UInt32) {
+                    let count = far ? 8 : 12
+                    let points = (0..<count).map { i -> Map3DPoint in
+                        let angle = Float(i)*2*Float.pi/Float(count)
+                        return frontPoint(height+ry*cosf(angle),
+                                          lateral+rz*sinf(angle),lift)
+                    }
+                    solidFace(points,color)
+                }
+                for side: Float in [-1,1] {
+                    // One smooth horizontal lamp housing on each side, with
+                    // the large outer headlamp and the smaller inner marker.
+                    let pod: [(Float,Float)] = [
+                        (0.42,2.08),(0.48,2.20),(0.60,2.25),(0.92,2.25),
+                        (1.05,2.19),(1.10,2.08),(1.06,1.95),(0.94,1.90),
+                        (0.59,1.90),(0.45,1.97)
+                    ]
+                    solidFace(pod.map { frontPoint($0.1,side*$0.0,0.170) },navy)
+                    frontDisc(2.075,side*0.86,0.112,0.112,0.194,silver)
+                    frontDisc(2.075,side*0.86,0.077,0.077,0.213,glass)
+                    frontDisc(2.075,side*0.57,0.084,0.084,0.194,silver)
+                    frontDisc(2.075,side*0.57,0.052,0.052,0.213,teal)
+                    frontDisc(3.31,side*0.70,0.143,0.143,0.168,navy)
+                    frontDisc(3.31,side*0.70,0.107,0.107,0.189,silver)
+                    frontDisc(3.31,side*0.70,0.072,0.072,0.208,glass)
+                }
                 solidFace([
-                    roofPoint(9.93,s*0.39,0.160),roofPoint(9.87,s*0.79,0.160),
-                    roofPoint(9.99,s*0.97,0.160),roofPoint(10.16,s*0.97,0.160),
-                    roofPoint(10.30,s*0.89,0.160),roofPoint(10.25,s*0.47,0.160)
+                    frontPoint(3.37,-0.22,0.170),frontPoint(3.37,0.22,0.170),
+                    frontPoint(3.24,0.22,0.170),frontPoint(3.24,-0.22,0.170)
                 ],navy)
-                lens(10.09,s*0.62,0.065,0.09,0.180,silver)
-                lens(10.12,s*0.94,0.065,0.09,0.180,silver)
-                lens(8.37,s*0.68,0.330,0.145,0.151,navy)
-                lens(8.37,s*0.68,0.245,0.100,0.169,silver)
-            }
-            solidFace([
-                roofPoint(8.30,-0.19,0.155),roofPoint(8.30,0.19,0.155),
-                roofPoint(8.60,0.19,0.155),roofPoint(8.60,-0.19,0.155)
-            ],navy)
-            for side: Float in [-1,1] {
-                civicTube(roofPoint(9.30,side*0.04,0.180),
-                          roofPoint(8.97,side*0.66,0.180),
-                          radius:0.018,color:navy,sides:far ? 4 : 6)
+                if !far {
+                    for side: Float in [-1,1] {
+                        civicTube(frontPoint(2.63,side*0.14,0.174),
+                                  frontPoint(2.67,side*0.73,0.174),
+                                  radius:0.009,color:navy,sides:6)
+                    }
+                }
+            } else {
+                for side: Float in [-1,1] {
+                    let s = side
+                    solidFace([
+                        roofPoint(9.93,s*0.39,0.160),roofPoint(9.87,s*0.79,0.160),
+                        roofPoint(9.99,s*0.97,0.160),roofPoint(10.16,s*0.97,0.160),
+                        roofPoint(10.30,s*0.89,0.160),roofPoint(10.25,s*0.47,0.160)
+                    ],navy)
+                    lens(10.09,s*0.62,0.065,0.09,0.180,silver)
+                    lens(10.12,s*0.94,0.065,0.09,0.180,silver)
+                    lens(8.37,s*0.68,0.330,0.145,0.151,navy)
+                    lens(8.37,s*0.68,0.245,0.100,0.169,silver)
+                }
+                solidFace([
+                    roofPoint(8.30,-0.19,0.155),roofPoint(8.30,0.19,0.155),
+                    roofPoint(8.60,0.19,0.155),roofPoint(8.60,-0.19,0.155)
+                ],navy)
+                for side: Float in [-1,1] {
+                    civicTube(roofPoint(9.30,side*0.04,0.180),
+                              roofPoint(8.97,side*0.66,0.180),
+                              radius:0.018,color:navy,sides:far ? 4 : 6)
+                }
             }
         }
     }

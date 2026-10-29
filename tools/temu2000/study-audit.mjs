@@ -46,6 +46,24 @@ function glassVisible(v,sign=1){
   assert(seen/sampled>=.42,`windshield buried: ${seen}/${sampled} rays frontmost`);
   return {frontmost_rays:seen,sampled};
 }
+function lampsAligned(v){
+  // The silver rings identify the actual lamp geometry in the exported
+  // model. Compare paired centroids in front elevation, not source numbers.
+  const silver=q=>{const [r,g,b]=q.color;return r>100&&g>r+5&&b>g+3};
+  const groups=[['upper',3.31,.70,.16,.16],['lower outer',2.075,.86,.14,.14],
+                ['lower marker',2.075,.57,.11,.11]];
+  for(const [name,height,lateral,vertical,horizontal] of groups){
+    const pair=[-1,1].map(side=>v.filter(q=>q.position[0]>7.5&&silver(q)
+      &&Math.abs(q.position[2]-height)<vertical
+      &&Math.abs(q.position[1]-side*lateral)<horizontal));
+    assert(pair.every(a=>a.length>=12),`${name}: lamp ring missing`);
+    const centre=a=>[a.reduce((sum,q)=>sum+Math.abs(q.position[1]),0)/a.length,
+                     a.reduce((sum,q)=>sum+q.position[2],0)/a.length];
+    const [left,right]=pair.map(centre);
+    assert(Math.abs(left[0]-right[0])<.008&&Math.abs(left[1]-right[1])<.008,
+      `${name}: paired lamps skewed in front elevation`);
+  }
+}
 const results=[];
 for(const m of units){
   const v=read(m),cab=/leading|trailing/.test(m.id),roof=cab?3.632:3.565;
@@ -55,6 +73,7 @@ for(const m of units){
   results.push(row);
 }
 const head=units.find(m=>m.id==='temu2000-leading'),v=read(head);
+lampsAligned(v);
 assert.throws(()=>wheels(v.map(q=>{
   const p=q.position;return Math.abs(p[0]+8.25)<.5&&Math.abs(p[1])>.65&&Math.abs(p[1])<.85&&p[2]<.87?{...q,position:[p[0],p[1],p[2]+.10]}:q;
 })),/tyre/);
@@ -64,6 +83,12 @@ assert.throws(()=>roofSupport(v.map(q=>{
 assert.throws(()=>glassVisible(v.map(q=>{
   const p=q.position,[r,g,b]=q.color;return p[0]>8.8&&p[2]>1.9&&r>=35&&r<90&&g>r+8&&b>g+4?{...q,position:[p[0]-.35,p[1],p[2]]}:q;
 })),/windshield/);
-const report={status:'VERIFIED',models:results,faults:['one axle raised 100 mm','cab roof housing raised 200 mm','front glass buried 350 mm'],limits:['Photographic proportions and hidden equipment remain visual review, not engineering proof.']};
+assert.throws(()=>lampsAligned(v.map(q=>{
+  const p=q.position,[r,g,b]=q.color;
+  return p[0]>7.5&&p[1]>.54&&p[1]<.85&&p[2]>3.25&&p[2]<3.55
+    &&r>100&&g>r+5&&b>g+3
+    ?{...q,position:[p[0],p[1],p[2]+.03]}:q;
+})),/skewed/);
+const report={status:'VERIFIED',models:results,faults:['one axle raised 100 mm','cab roof housing raised 200 mm','front glass buried 350 mm','right upper lamp raised 30 mm'],limits:['Photographic proportions and hidden equipment remain visual review, not engineering proof.']};
 writeFileSync(resolve(root,'temu2000-study-audit.json'),JSON.stringify(report,null,2)+'\n');
-console.log(`VERIFIED ${results.length} TEMU2000 units and 3 vehicle faults`);
+console.log(`VERIFIED ${results.length} TEMU2000 units and 4 vehicle faults`);
