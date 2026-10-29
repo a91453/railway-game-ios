@@ -30,7 +30,7 @@ final class Map3DModelTests: XCTestCase {
         let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
         // Decision 449: and after them, the running cars' windows.
         XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest)
-        XCTAssertEqual(Map3DModelPack.studies.models.count, temu2000Models + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models + Map3DSanying.Unit.allCases.count * 2 + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count + Map3DTaichungGreen.Role.allCases.count * 2 + Map3DKaohsiung.Unit.allCases.count * 2 + Map3DE200MingriStyle.Role.allCases.count * 2)
+        XCTAssertEqual(Map3DModelPack.studies.models.count, temu2000Models + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models + Map3DSanying.Unit.allCases.count * 2 + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count + Map3DTaichungGreen.Role.allCases.count * 2 + Map3DKaohsiung.Unit.allCases.count * 2 + Map3DE200MingriStyle.Role.allCases.count * 2 + Map3DKaohsiungCAF.Unit.allCases.count * 2 + Map3DKaohsiungCitadis.Unit.allCases.count * 2)
 
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]

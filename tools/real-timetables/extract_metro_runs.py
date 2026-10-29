@@ -33,7 +33,9 @@ why.
 another (Danhai's Blue Coast Line runs Hongshulin to Binhai Shalun on the
 Green Mountain Line's track) is listed twice more, from the station where
 they part (`after`): what it lays when the other is already bought, its
-trips cut there as a branch line's are at its junction.
+trips cut there as a branch line's are at its junction. The Green Mountain
+Line is not (decision 493): after the Blue Coast Line it is bought whole,
+with its own runs.
 
 The metros (`METROS`) are read the same way, their trains named 捷運.
 A metro's evening brings trains in faster than it sends them out, so a
@@ -85,7 +87,10 @@ LOOKAHEAD = 2 * 3600
 LINES = [
     ("ntdlrt", "V", None, None),
     ("ntdlrt", "VB", None, None),
-    ("ntdlrt", "V", "濱海沙崙", "VB"),
+    # Not the Green Mountain Line from Binhai Shalun after the Blue Coast
+    # Line: it would stand eleven trains at once there. The game buys it
+    # whole instead, laid beside the Blue Coast Line to Binhai Shalun
+    # (decision 493), with the runs listed for it alone.
     ("ntdlrt", "VB", "濱海沙崙", "V"),
     # Not yet the Ankeng LRT (ntalrt:K): its trips pass here, but the
     # game's second track on its tight curves is laid only 8 m off the
