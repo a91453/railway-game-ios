@@ -38,6 +38,10 @@ public enum WhatsNew {
                     chinese: "淡海輕軌綠山線可以買了，崁頂後面的淡海機廠一起蓋，車晚上收在機廠。"
                 ),
                 Line(
+                    english: "The Danhai LRT's two lines can be bought in either order: after the Blue Coast Line, the Green Mountain Line is laid beside it.",
+                    chinese: "淡海輕軌兩條線先買哪條都可以：先買藍海線，綠山線會鋪在它旁邊。"
+                ),
+                Line(
                     english: "Settings has a new Garage, where everyone can look at the trains.",
                     chinese: "設定裡多了「車庫」，每個人都能看列車展示。"
                 ),

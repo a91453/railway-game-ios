@@ -558,16 +558,21 @@ set -euo pipefail
 # 93 -> 59): only the proportions matter, so one run's times keep them in
 # step. Dealt into seven parts by these weights, that run's classes come to
 # 658 to 738 s each (six parts by the old weights: 493 to 1,026).
+# 2026-10-29 (decision 493): the Blue Coast Line, then the Green Mountain
+# Line, a class for each rule, some 330 s each locally (debug), about 410 on
+# CI: too long together for one shard. The simple one to campaigns-3 and the
+# realistic one to campaigns-8, which have taken none of the late additions
+# above; weights 1.24 times the local times.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests" ;;
     campaigns-2) echo "ServicePropertyTests ScheduledOvertakeTrackMiddlePropertyTests Map3DOpenEveryStartTests SingleTrackCapacityPropertyTests RealWorldDemoTests SanyingLineRealisticDayTests" ;;
-    campaigns-3) echo "ServiceRepeatingPropertyTests TRADemoTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests" ;;
+    campaigns-3) echo "ServiceRepeatingPropertyTests TRADemoTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests DanhaiBlueThenGreenSimpleDayTests" ;;
     campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests Map3DBusLayerTests Map3DRealBuildingsTests Map3DModelTests" ;;
     campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests NetworkPostcardTests SharedNetworkTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests SanyingDepotTests BusOneWayAndTunnelRealMapTests SanyingLineFreezeTests Map3DSceneryPropsTests" ;;
     campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests Map3DBusesTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests" ;;
-    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests" ;;
+    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests DanhaiBlueThenGreenRealisticDayTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests RealLineAcquisitionTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests" ;;
     campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests" ;;
     campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests DanhaiGreenLineDayTests" ;;
@@ -719,7 +724,8 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   Map3DTrainSetTests:17 BusReadAheadTests:12 RealBusesTests:11
   Map3DBusesTests:59 SharedNetworkTests:47 Map3DFrontageTests:13
   Map3DEMU800IntegrationTests:16 RoadsTurnOnTests:14
-  BusOneWayAndTunnelRealMapTests:12 Map3DC341IntegrationTests:10"
+  BusOneWayAndTunnelRealMapTests:12 Map3DC341IntegrationTests:10
+  DanhaiBlueThenGreenSimpleDayTests:410 DanhaiBlueThenGreenRealisticDayTests:410"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
