@@ -1,0 +1,68 @@
+{
+  "assemblies": [
+    {
+      "id": "kaohsiung-formation",
+      "placements": [
+        {
+          "unit": "kaohsiung-dm1",
+          "translation": [
+            21.7525,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "kaohsiung-t",
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "kaohsiung-dm2",
+          "translation": [
+            -21.7525,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    },
+    {
+      "id": "kaohsiung-formation-far",
+      "placements": [
+        {
+          "unit": "kaohsiung-dm1-far",
+          "translation": [
+            21.7525,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "kaohsiung-t-far",
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "kaohsiung-dm2-far",
+          "translation": [
+            -21.7525,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    }
+  ]
+}
