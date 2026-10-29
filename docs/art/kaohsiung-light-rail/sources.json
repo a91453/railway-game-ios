@@ -491,6 +491,112 @@
       "license": "Visual observation only; not redistributed",
       "public_use": false,
       "review": "Original collector photo opened"
+    },
+    {
+      "file": "citadis-appearance.html",
+      "url": "https://mtbu.kcg.gov.tw/Activities/C002100?PageType=1&id=9d430f60-418d-47f7-9fe7-e8a140d75d14",
+      "sha256": "c31e5ef208d8d63622af7e1757deb7229665f66104c5b25e47c03d5b03131d20",
+      "bytes": 80217,
+      "author": "高雄市政府捷運工程局",
+      "date": "2020-08-19",
+      "type": "official specification / appearance article",
+      "license": "Rights remain with original author/agency; no source files or pixels redistributed",
+      "public_use": false,
+      "review": "Downloaded HTML and full body read: CITADIS305, approximately34m, width2.65m, five modules, four double-leaf doors each side, white and pearl green. Not a photograph.",
+      "applicable_fleets": [
+        "citadis"
+      ]
+    },
+    {
+      "file": "citadis-spec-secondary.html",
+      "url": "https://www.travel-taiwan-rail.idv.tw/MRT/train/02KRT_train.htm",
+      "sha256": "2a6a315cf205e29ce84b3d013536fe67182bf829ee7a5980364a5d05af37ccf9",
+      "bytes": 25894,
+      "author": "Travel Taiwan Rail; individual author not identified, UNVERIFIED",
+      "date": "Undated; fetched2026-10-29",
+      "type": "secondary railway specification article",
+      "license": "Rights remain with original author/agency; no source files or pixels redistributed",
+      "public_use": false,
+      "review": "Downloaded original page decoded and full relevant section read.33.4/2.65/3.6m is secondary specification, not manufacturer engineering.",
+      "applicable_fleets": [
+        "citadis"
+      ]
+    },
+    {
+      "file": "citadis-klrt24-official.html",
+      "url": "https://takao.kcg.gov.tw/article/1154",
+      "sha256": "a3b96e32e500a01b1d3730fc8b3ca37e08bf06543ef5a89d47248a2609ae161a",
+      "bytes": 129346,
+      "author": "高雄市政府新聞局／高雄畫刊",
+      "date": "2024 winter event; article date not independently established",
+      "type": "official article identifying KLRT-24",
+      "license": "Rights remain with original author/agency; no source files or pixels redistributed",
+      "public_use": false,
+      "review": "Downloaded original HTML body read; confirms KLRT-24 identity only. Duck livery is not modeled and is not normal-livery evidence.",
+      "applicable_fleets": [
+        "citadis"
+      ]
+    },
+    {
+      "file": "fleet-official-2025.pdf",
+      "url": "https://www.ttsb.gov.tw/media/9350/3%E9%AB%98%E9%9B%84%E8%BC%95%E8%BB%8C%E5%88%97%E8%BB%8A%E8%88%87%E9%81%93%E8%B7%AF%E8%BB%8A%E8%BC%9B%E4%BA%8B%E6%95%85%E4%B9%8B%E9%A0%90%E9%98%B2%E8%88%87%E8%99%95%E7%BD%AE_%E9%AB%98%E6%8D%B7%E9%8D%BE%E4%BB%81%E6%8F%9A%E8%99%95%E9%95%B7-1204.pdf",
+      "sha256": "c556952095327adab232b9e33190287ac899d8d8f988571e8119c90a4d54d45c",
+      "bytes": 6604709,
+      "author": "高雄捷運公司工安處 鍾仁揚；國家運輸安全調查委員會 hosted",
+      "date": "2025-12-08 (cover); PDF metadata2025-12-04",
+      "type": "official operator presentation",
+      "license": "Rights remain with original author/agency; no source files or pixels redistributed",
+      "public_use": false,
+      "review": "PDF downloaded, text read, actual page3 opened.24 active sets, CAF9 / Alstom15. This is not a full numbered fleet roster.",
+      "applicable_fleets": [
+        "caf",
+        "citadis"
+      ]
+    },
+    {
+      "file": "citadis-procurement-council.pdf",
+      "url": "https://cissearch.kcc.gov.tw/Upload/Attachment/ProjectReport/91/f08f09ab-612d-4574-9a92-9327272c975c.pdf",
+      "sha256": "1f1d7ca915c1f3421a89a6058123132981997026ac874d07308cae270aa8009b",
+      "bytes": 7536864,
+      "author": "高雄市政府，市議會專案報告",
+      "date": "2019-05-02",
+      "type": "official procurement / engineering report",
+      "license": "Rights remain with original author/agency; no source files or pixels redistributed",
+      "public_use": false,
+      "review": "PDF downloaded, text read, actual physical page28 (printed25) opened. Phase2 planned15: firm11 with option4;2016-12-15 Alstom procurement contract. Current delivered15 independently confirmed by operator/manufacturer.",
+      "applicable_fleets": [
+        "citadis"
+      ]
+    },
+    {
+      "file": "caf-blair.html",
+      "url": "https://blair-bus.blogspot.com/2015/01/blog-post.html",
+      "sha256": "11188208e2b6af04a09d47f4d5beb11ee80ef0b1be8ea88aa477871b97d95b80",
+      "bytes": 82945,
+      "author": "Blair Yu",
+      "date": "2015 article with later photos",
+      "type": "railway photo article body",
+      "license": "Rights remain with original author/agency; no source files or pixels redistributed",
+      "public_use": false,
+      "review": "Downloaded full article read, separately from its original photograph files. Citadis article specifies2020-11-02 passenger start; manufacturer confirms November2020.",
+      "applicable_fleets": [
+        "caf"
+      ]
+    },
+    {
+      "file": "citadis-blair.html",
+      "url": "https://blair-bus.blogspot.com/2022/02/citadis-x-05-305.html",
+      "sha256": "074f76d1f894d6517e09e5849fb1f144f5c8792616d118554af8262996bff717",
+      "bytes": 71146,
+      "author": "Blair Yu",
+      "date": "2022-02-19 article / photos2022-02-20",
+      "type": "railway photo article body",
+      "license": "Rights remain with original author/agency; no source files or pixels redistributed",
+      "public_use": false,
+      "review": "Downloaded full article read, separately from its original photograph files. Citadis article specifies2020-11-02 passenger start; manufacturer confirms November2020.",
+      "applicable_fleets": [
+        "citadis"
+      ]
     }
   ],
   "chat_images": {
@@ -502,6 +608,17 @@
     {
       "url": "https://www.rb.gov.tw/public/upimgs/A00/112/7-鐵道車輛整車設計自主提升計畫先期研析與規劃全期成果報告.pdf",
       "result": "HTTP200 returned 212-byte HTML redirect rather than PDF; not used as downloaded engineering evidence"
+    },
+    {
+      "url": "https://www.ciaonihon.com/289875/",
+      "file_sha256": "e482a48fef03d183029fa2edf995fc8e9ce023f18649fd1d9149958e977068a1",
+      "status": "UNVERIFIED; retrieved85-character challenge page, not usable video/article content",
+      "use": "Not treated as observed KLRT10 identification. Lower fleet bound10 is explicitly inferred."
     }
-  ]
+  ],
+  "dimension_confidence": {
+    "caf": "34.166m/2.65m/3.6m and350mm floor from engineering/manufacturer documentation",
+    "citadis": "Official approximately34m and2.65m width; chosen33.4m/approximately3.6m from secondary railway specification, not manufacturer dimension drawing",
+    "both": "Module lengths,600mm shell gaps, axle bases, wheel diameters and exact equipment stations photo-estimated. No claim of engineering reproduction."
+  }
 }

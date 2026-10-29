@@ -1,0 +1,228 @@
+{
+  "producer": "80b58f6ec28b0846f1157e4502c011a2b22e3b33",
+  "previous_caf_producer": null,
+  "previous_citadis_producer": null,
+  "first_delivery_both": true,
+  "public_draft": "https://github.com/a91453/railway-game-ios/pull/1506",
+  "assets_draft": "https://github.com/a91453/railway-assets-private/pull/31",
+  "assets_commit": "ca6a8bc1d92eb065a7050a132be852a9e73238d9",
+  "base_main": "7fd5c47bea80884992f86d457a8617755a47d4a4",
+  "latest_main_checked": "f017cc6202b5b57f42241aef534e99bbb4058145",
+  "checks": {
+    "Swift6.4_warnings_as_errors_build": "VERIFIED; separate clean producer checkout",
+    "selected_Swift_tests": {
+      "status": "VERIFIED",
+      "passed": 14,
+      "failed": 0
+    },
+    "standard_memory_report": {
+      "status": "VERIFIED",
+      "tests": 1,
+      "models": 613,
+      "vertex_memory_MB": 142.6,
+      "device_memory_acceptance": "UNVERIFIED"
+    },
+    "common_tool_tests": {
+      "status": "VERIFIED",
+      "node": 5,
+      "python": 6
+    },
+    "clean_producer_rebuild": {
+      "status": "VERIFIED",
+      "native_scene_payload_GLB_files": 52,
+      "every_byte_equal": true,
+      "fixed_metre_PNGs": 368,
+      "selected_PNGs": 40,
+      "every_PNG_byte_equal": true
+    },
+    "native_readback": "VERIFIED through real Map3DModelFile loader; no loader/format/gate change",
+    "geometry": "VERIFIED shared finite/degenerate/balanced edges/winding/positive volume + dedicated actual glass visibility/backing, wheel rail/clearance, roof mounting/position, four joint cross sections, actual sequence/rotation/translation and embedded unit bytes",
+    "negative_probes": "VERIFIED actual glass bury/float80mm, wheel lift35mm, missing/reversed triangle, roof lift80mm/position150mm, wrong order/reverse/100mm placement, old native payload/full-field hash mutation. Actual former far-LOD shoulder gap also rejected.",
+    "independent_GLB": "VERIFIED Blender4.3.2 independent importer, all24 outputs; not the exporter reading itself",
+    "PNG": {
+      "status": "VERIFIED",
+      "raw_decodes": 672,
+      "selected_decodes": 40,
+      "actual_downloaded_decodes": 24,
+      "public_overview_decodes": 1,
+      "all_RGBA_transparent_nonempty_unclipped": true,
+      "selected_max_bytes": 2097152
+    },
+    "browser": {
+      "status": "VERIFIED",
+      "options": 24,
+      "views": 7,
+      "lights": 2,
+      "orbit_zoom_pixel_change": true,
+      "mobile_width": 390,
+      "external_requests": 0,
+      "native_GLB_download_bytes_and_SHA": true,
+      "actual_PNG_download_full_decode": true,
+      "file_protocol": {
+        "status": "UNVERIFIED",
+        "reason": "ERR_BLOCKED_BY_ADMINISTRATOR; same self-contained HTML actually checked via loopback HTTP"
+      }
+    },
+    "existing_models": {
+      "status": "VERIFIED",
+      "count": 735,
+      "native_every_byte_and_all_vertex_field_FNV_equal": true,
+      "already_unpinned_main_ids": [
+        "scenery-busStopPole",
+        "scenery-postBoxes"
+      ],
+      "lock_original_entries_unchanged": 733,
+      "new_lock_entries_only": 20
+    },
+    "all_model_gate": {
+      "status": "VERIFIED as baseline comparison; not an all-green claim",
+      "base_failures": 33,
+      "producer_failures": 33,
+      "exact_failure_lines_equal": true,
+      "causes": [
+        "32 inherited old hashes",
+        "existing TEMU2000 whole study classified as near car and exceeds20000"
+      ],
+      "old_hashes_or_gate_changed": false
+    },
+    "upstream_main_actual_export": {
+      "status": "VERIFIED",
+      "main": "f017cc6202b5b57f42241aef534e99bbb4058145",
+      "models": 735,
+      "native_every_byte_and_all_vertex_fields_equal_base_and_producer": true
+    },
+    "asset_guard": {
+      "status": "VERIFIED",
+      "staged_tree_and_committed_tree": true,
+      "files": 158,
+      "added_MiB": 78.3,
+      "largest_file_MiB": 23,
+      "private_PNGs_per_fleet": 20,
+      "public_shared_PNGs": 1
+    }
+  },
+  "appearance_review": {
+    "status": "VERIFIED maker inspection only",
+    "viewed": "Both fleets, every role, both LODs, front/left/right/top/isometric, color/clay/silhouette, full consists and game scale; shared physical metre frames, same game light",
+    "native_photo_pairs_local_only": {
+      "caf": [
+        "caf-blair-DSC03026.JPG",
+        "caf-blair-DSC03032.JPG",
+        "caf-blair-DSC03051.JPG",
+        "junction-03.jpg"
+      ],
+      "citadis": [
+        "citadis-blair-DSC02480.JPG",
+        "citadis-blair-DSC02487.JPG",
+        "citadis-blair-DSC02481.JPG",
+        "citadis-power-4.png"
+      ]
+    },
+    "photos_are_not_calibrated_cameras": true,
+    "redistributed_source_photo_pixels": false,
+    "true_previous_version": "None for either new fleet; old greenTram/fiveSectionLRT are protected OTHER models, shown with identical native cameras/frames/light and explicitly not predecessors",
+    "user_acceptance": "UNVERIFIED separately for each producer; see status-caf.json/status-citadis.json"
+  },
+  "operating": {
+    "both_fleets": "UNVERIFIED integration, studies only; neither appears in game on merge",
+    "existing_path": "krtc/C cars2 greenTram; unlocked fiveSectionLRT; locked greenTram fallback",
+    "no_reliable_per_fleet_selection_contract": true,
+    "standard_or_train_pack_mapping_changed": false,
+    "red_orange_and_other_trams_preserved": true,
+    "static_assembly_does_not_validate_curves_or_joint_animation": true,
+    "GameCore_saves_fixtures_purchase_unlock_timetable_controls_animation_changes": false
+  },
+  "unverified": [
+    "explicit user appearance acceptance for CAF",
+    "explicit user appearance acceptance for Citadis",
+    "operating/selection and per-fleet allocation",
+    "manual Simulator/Metal/device FPS/memory/Safari/file protocol",
+    "curves/gradients/dynamic joints/charging animation",
+    "precise manufacturer module lengths, axle bases, wheel diameters and hidden equipment",
+    "complete official Citadis roster (KLRT10-24 range inferred)",
+    "full true Citadis plan/roof photo and fully calibrated left/right views"
+  ],
+  "CI": "Read the latest actual head checks on the two interlinked draft PRs. This static record does not substitute a passed producer head for a later documentation head.",
+  "caf": {
+    "status": "status-caf.json",
+    "assets_path": "game-art-previews/docs/art/kaohsiung-light-rail-phase1/revision-1",
+    "metrics": {
+      "status": "VERIFIED",
+      "single_native_format_max": 15000,
+      "near_module_max": 14100,
+      "far_module_max": 6340,
+      "assembly_near_triangles": 39684,
+      "assembly_far_triangles": 17004,
+      "common_train_ceiling_near": 240000,
+      "common_train_ceiling_far": 120000,
+      "assembly_far_below_half_near": true,
+      "every_unit_actual_bounds_and_triangles": "manifest.json",
+      "operating_budget": "UNVERIFIED; not registered in standard or an operating set; this scene check does not establish dynamic memory/FPS"
+    },
+    "evidence_files": [
+      "verification.json",
+      "source-record.json",
+      "manifest.json",
+      "SHA256SUMS.txt",
+      "klrt-verification.json",
+      "geometry-verification.json",
+      "independent-glb.json",
+      "swift-assembly-verification.json",
+      "browser-verification.json",
+      "download-sha256.json",
+      "png-verification.json",
+      "producer-rebuild.json",
+      "preview-rebuild.json",
+      "protected-existing.json",
+      "appearance-review.json",
+      "validation/"
+    ]
+  },
+  "citadis": {
+    "status": "status-citadis.json",
+    "assets_path": "game-art-previews/docs/art/kaohsiung-light-rail-phase2/revision-1",
+    "metrics": {
+      "status": "VERIFIED",
+      "single_native_format_max": 15000,
+      "near_module_max": 8252,
+      "far_module_max": 4088,
+      "assembly_near_triangles": 28624,
+      "assembly_far_triangles": 12368,
+      "common_train_ceiling_near": 240000,
+      "common_train_ceiling_far": 120000,
+      "assembly_far_below_half_near": true,
+      "every_unit_actual_bounds_and_triangles": "manifest.json",
+      "operating_budget": "UNVERIFIED; not registered in standard or an operating set; this scene check does not establish dynamic memory/FPS"
+    },
+    "evidence_files": [
+      "verification.json",
+      "source-record.json",
+      "manifest.json",
+      "SHA256SUMS.txt",
+      "klrt-verification.json",
+      "geometry-verification.json",
+      "independent-glb.json",
+      "swift-assembly-verification.json",
+      "browser-verification.json",
+      "download-sha256.json",
+      "png-verification.json",
+      "producer-rebuild.json",
+      "preview-rebuild.json",
+      "protected-existing.json",
+      "appearance-review.json",
+      "validation/"
+    ]
+  },
+  "dimension_confidence": {
+    "caf": "34.166m/2.65m/3.6m and350mm floor from engineering/manufacturer documentation",
+    "citadis": "Official approximately34m and2.65m width; chosen33.4m/approximately3.6m from secondary railway specification, not manufacturer dimension drawing",
+    "both": "Module lengths,600mm shell gaps, axle bases, wheel diameters and exact equipment stations photo-estimated. No claim of engineering reproduction."
+  },
+  "downloaded_source_records": 44,
+  "public_overview_sha256": "f4223470479c3dd82e385f6a27041223d260fd6a96fc61a22ea5fd98f64db5db",
+  "CI_skips": {
+    "full_UI_partitions": "Existing workflow if github.event_name != pull_request; this is a pull_request. Full lane not requested or triggered.",
+    "iPad_tutorial": "Existing path detector: no iPad tutorial/App files changed, outputs.ipad=false. Build was not skipped by passed-cache in producer run.",
+    "producer_checks_may_be_superseded": "Final metadata head automatically starts fresh checks under existing concurrency; only newest head is reported at delivery. No gate/workflow change."
+  }
+}
