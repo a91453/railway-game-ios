@@ -454,6 +454,12 @@ final class PromoMaterialTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"] + extra
         app.launch()
+        // An iPad Simulator held upright by the test before stayed upright
+        // when turned only before the launch (UI audit, run 40946830836).
+        if XCUIDevice.shared.orientation != orientation {
+            XCUIDevice.shared.orientation = orientation
+            settle()
+        }
         return app
     }
 
