@@ -47,9 +47,9 @@ final class HangProbeTests: XCTestCase {
                 if !world.deadlockedTrains().isEmpty { deadlockTicks += 1 }
                 if ms > 500 { print(String(format: "[HANG]   tick %d %@: %.0f ms", tick, "\(world.clock.now.seconds)", ms)) }
             }
-            let alerts = clock.measure { _ = world.situationAlerts() }
+            let alerts = clock.measure { _ = world.deadlockedTrains() }
             let alertsMs = Double(alerts.components.seconds) * 1_000 + Double(alerts.components.attoseconds) / 1e15
-            print(String(format: "[HANG] stations %d trains %d: mean %.1f ms, longest %.1f ms, ticks in deadlock %d/144, deadlocked at end %d, situationAlerts %.1f ms", count, trains, total / 144, longest, deadlockTicks, world.deadlockedTrains().count, alertsMs))
+            print(String(format: "[HANG] stations %d trains %d: mean %.1f ms, longest %.1f ms, ticks in deadlock %d/144, deadlocked at end %d, deadlockedTrains() %.1f ms", count, trains, total / 144, longest, deadlockTicks, world.deadlockedTrains().count, alertsMs))
         }
     }
 }
