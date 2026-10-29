@@ -136,9 +136,10 @@ public struct Map3DTrainSet: Sendable {
             hauled("BLUE", locomotive: .r135,
                    coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
             // Decision 286, later: the Ming-Ri's black coaches with their
-            // orange line behind the E500.
-            e500Hauled("MINGRI", coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
-            e500Hauled("MINGRI", far: true, coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
+            // orange line; decision 483: as #1480's E200 and Chu-Kuang
+            // coaches in the Ming-Ri's black and orange, near and far.
+            mingRi(),
+            mingRi(far: true),
             // Decision 286, later (third): the Formosa Star's pink coaches
             // behind the E500.
             e500Hauled("STAR", coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
@@ -702,6 +703,19 @@ public struct Map3DTrainSet: Sendable {
         Map3DTrainSet(key: far ? "sanyingFar" : "sanying", ownLengths: true, fixedCars: 2, far: far ? nil : "sanyingFar") {
             Cars(head: lit(Map3DSanying.model(.a, far: far), front: true), middle: nil,
                  tail: lit(Map3DSanying.model(.b, far: far).turned, front: false), single: nil)
+        }
+    }
+
+    /// Decision 483: the Ming-Ri as #1480's study, the E200CK's units
+    /// (#1201's E200, its front lamps lit, and #1306's automatic-door
+    /// coaches) painted in ``TrainLivery/mingRi``'s black and orange
+    /// (``Map3DE200MingriStyle``), laid as the E200CK (no own lengths), the
+    /// last coach's end lit red. `far`: the light coaches, the same E200
+    /// (it has no light model).
+    static func mingRi(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "MINGRIFar" : "MINGRI", far: far ? nil : "MINGRIFar") {
+            Cars(head: Map3DE200MingriStyle.model(.head, far: far), middle: Map3DE200MingriStyle.model(.car, far: far),
+                 tail: Map3DE200MingriStyle.model(.tail, far: far), single: nil)
         }
     }
 

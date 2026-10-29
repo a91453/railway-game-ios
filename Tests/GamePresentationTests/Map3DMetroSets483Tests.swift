@@ -69,4 +69,22 @@ final class Map3DMetroSets483Tests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.named("taichungGreen")?.far, "taichungGreenFar")
         XCTAssertTrue(Map3DTrainSet.nearOnly.isSuperset(of: ["kaohsiung", "taichungGreen"]))
     }
+
+    /// The Ming-Ri is #1480's study: its E200 and coaches as the study's
+    /// units, the light coaches from 500 m out, the same E200.
+    func testTheMingRiIsTheE200Study() throws {
+        for far in [false, true] {
+            let set = try XCTUnwrap(Map3DTrainSet.named(far ? "MINGRIFar" : "MINGRI")).build()
+            XCTAssertEqual(set.head.vertices, Map3DE200MingriStyle.model(.head, far: far).vertices, "far \(far)")
+            XCTAssertEqual(set.middle?.vertices, Map3DE200MingriStyle.model(.car, far: far).vertices, "far \(far)")
+            XCTAssertEqual(set.tail?.vertices, Map3DE200MingriStyle.model(.tail, far: far).vertices, "far \(far)")
+        }
+        XCTAssertEqual(Map3DTrainSet.named("MINGRI")?.far, "MINGRIFar")
+        XCTAssertEqual(Map3DTrainSet.reach(of: "MINGRI"), 500)
+        let unbaked = Map3DModelPack.unbaked
+        let head = try XCTUnwrap(unbaked.index(of: "set-MINGRI-head"))
+        XCTAssertEqual(unbaked.model(head, forType: "MINGRI", count: 8, at: 499), head)
+        XCTAssertEqual(unbaked.model(head, forType: "MINGRI", count: 8, at: 500), unbaked.index(of: "set-MINGRIFar-head"))
+        XCTAssertNil(unbaked.model(head, forType: "MINGRI", count: 8, at: 900))
+    }
 }
