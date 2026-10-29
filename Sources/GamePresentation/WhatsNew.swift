@@ -31,6 +31,85 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-29-94",
+            items: [
+                Line(
+                    english: "With no bus tool chosen, tap the road and then the stops in order to open a city bus route that skips stations.",
+                    chinese: "公車工具什麼都沒選時點路面，再依序點站牌，就開一條不經過車站的市區路線。"
+                ),
+                Line(
+                    english: "The new Route | Road switch lets you drag a finger across the map to lay your own roads, and take a stretch away.",
+                    chinese: "工具上方多了「路線｜道路」切換：單指拖過地圖自己鋪路，也能拆掉一段。"
+                ),
+                Line(
+                    english: "Tracing along a real line now joins the track you or an acquisition already laid, and that stretch costs nothing.",
+                    chinese: "沿著真實路線描線，碰到自己或收購的軌道會直接接上繼續描，這一段不用再付錢。"
+                ),
+                Line(
+                    english: "Real lines give way to your own track: where your track covers one, that stretch and its real trains are not drawn, and a line mostly made of your stations runs no real trains. Take yours away and they come back.",
+                    chinese: "自己的軌道蓋住的真實路線不再畫出來，那一段的真實列車也不跑；車站大多是你的那條線，整條不跑真實列車。拆掉就回來。"
+                ),
+                Line(
+                    english: "The Sanying line can be bought, and its real timetable runs on both days; in 3D it is a two-car train.",
+                    chinese: "三鶯線可以買了，真實班次兩天都照常發車；3D 裡的三鶯線是兩節一組的車。"
+                ),
+                Line(
+                    english: "Taichung Metro's Green line trains in 3D have redrawn fronts and bodies.",
+                    chinese: "3D 的台中捷運綠線，車頭與車身重畫。"
+                ),
+                Line(
+                    english: "3D street corners have bus stop poles, and three in ten stops have a pair of red and green post boxes.",
+                    chinese: "3D 街角的公車站多了站牌，三成的站旁有一對紅綠郵筒。"
+                ),
+                Line(
+                    english: "Holding the phone sideways with the detail card open, the layers strip folds into one Layers button, and the next step and Skip night fold by width.",
+                    chinese: "手機橫拿、開著細節卡時，地圖上方空間不夠，圖層條會收成一顆「圖層」鈕，下一步與「跳過夜晚」也依寬度收起來。"
+                ),
+                Line(
+                    english: "Finance charts: a line's ridership and profit are separate charts, the income chart's legend shows costs, and all five charts can be read point by point with VoiceOver.",
+                    chinese: "財務圖表：路線的運量與損益分成兩張圖；收入與成本圖的圖例看得到成本；五張圖都能用 VoiceOver 逐點聽。"
+                ),
+                Line(
+                    english: "Removing things such as clearing a timetable, a platform or a freight yard asks to confirm first.",
+                    chinese: "清空時刻表、拆月台、拆貨運場、刪停靠站這類移除動作，先跳確認再執行。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "After loading a save or changing a route, trains stop for about a third as long.",
+                    chinese: "載入存檔和改路線之後，列車停住的那幾秒縮短到約三分之一。"
+                ),
+                Line(
+                    english: "After building a station, opening a line, renaming a station or buying a train, the screen pauses less.",
+                    chinese: "蓋車站、開路線、改站名、買列車之後，畫面少卡一截。"
+                ),
+                Line(
+                    english: "The follow bar, finance charts and ledger no longer redraw every moment, so they stay smoother while open.",
+                    chinese: "跟隨列車、財務圖表和帳目不再每個瞬間重算，開著時更順。"
+                ),
+                Line(
+                    english: "In dark mode, the bankruptcy countdown and news count on red are easy to read.",
+                    chinese: "深色模式下，紅底上的破產倒數和新聞數字看得清楚。"
+                ),
+                Line(
+                    english: "Small buttons on phones are 44 points to tap.",
+                    chinese: "手機上小按鈕的點擊範圍補到 44 點。"
+                ),
+                Line(
+                    english: "Closing 3D while it is still loading no longer wastes the work, and reopening picks it up; the speed tip shows again if it was dismissed unseen.",
+                    chinese: "3D 還在載入時關掉不會白費，重開接著用；速度提示被收掉時還會再跳一次。"
+                ),
+                Line(
+                    english: "Stop following is no longer red, and the layer notes, colour names and sell-train confirmation read more clearly.",
+                    chinese: "「取消跟隨」不再是紅色，圖層說明、顏色名稱、賣車確認的文字更清楚。"
+                ),
+                Line(
+                    english: "With Reduce Motion on, bubbles, the mini map and panels no longer bounce or slide.",
+                    chinese: "打開「減少動態效果」後，泡泡、小地圖和面板不再彈跳或滑動。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-28-93",
             items: [
                 Line(
