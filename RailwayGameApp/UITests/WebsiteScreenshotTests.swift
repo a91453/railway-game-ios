@@ -58,7 +58,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         var reached = false
         for _ in 0..<12 {
             if follow.exists, follow.isHittable { reached = true; break }
-            app.swipeUp(velocity: .slow)
+            // Start in the margin beside the cards: a drag that starts on a card did not move the list.
+            let margin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.8))
+            margin.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.03, dy: 0.3)))
         }
         if !reached { keep("debug-fleet", app) }
         XCTAssertTrue(reached, "The freight train is in the fleet")
