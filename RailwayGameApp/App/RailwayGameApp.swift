@@ -509,7 +509,7 @@ private struct RootView: View {
         // since decision 419 also of a save slow to read.
         .overlay {
             if let loading = launcher.realWorldLoading {
-                RealWorldLoadingView(loading: loading, language: launcher.language)
+                RealWorldLoadingView(loading: loading, language: launcher.language) { launcher.cancelLoading() }
                     .transition(.opacity)
             }
         }

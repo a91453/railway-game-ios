@@ -243,6 +243,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 - 列車：`Theme.accent` 圓底（直徑 28 pt）、`Theme.onAccent` 2 pt 邊與 `MapGlyph.train` 圖示（18 pt），和地圖上列車的配色同一組（onAccent 對 accent 8.69:1）。
 - 下面三行：公司名（rounded、title2、heavy、`textPrimary`），地名（headline、`Theme.primary`），「正在準備地圖…」（subheadline、`textSecondary`）。
 - 淡入 0.7 s、淡出 0.45 s（`MotionRule.loadingIn`、`loadingOut`）；減少動態時列車不動。
+- 決策 473：再下面是進度條（`ProgressView`，`Theme.primary`，最寬 240 pt，只在不只一步或正在讀道路時出現）與一行 footnote `textSecondary` 的步驟（「第 2 步，共 3 步：讀入道路」）；變化用 `MotionRule.change.layout(reduceMotion:)`。最下面是「回開始畫面」／「回到遊戲」，`ThemeSelectableButtonStyle` 外框、44 pt 高。
 
 ## 放空模式（決策 414）
 

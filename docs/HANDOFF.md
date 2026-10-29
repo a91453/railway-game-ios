@@ -1942,6 +1942,12 @@
 - **等作者在 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：預覽的虛線＋光暈好不好認；真實路線切掉的地方對不對齊玩家軌道。
 - **下一步**（沒派）：3D 地圖還沒讓位；接上時的複線；「可以直接收購」提示。見決策 468「下一步」。
 
+### 4.19 載入畫面的步驟與取消（決策 473，session_01YGNNukvbEqFLMsPED4XHuY，派工單 M，2026-10-29）
+
+- 做了的在 [決策 473](decisions/473.md)：實景新局、示範、讀存檔的載入畫面顯示實際完成的步驟與進度條，並有「回開始畫面」／「回到遊戲」。規則在 `RealWorldLoading.swift`、`GameLauncher.swift`（`LoadingRun`、`cancelLoading()`），Linux 測試 `RealWorldLoadingTests`。
+- **等 macOS CI 與 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：條與按鈕的位置、按下取消後回到的畫面。
+- **下一步**（沒派）：依量到的時間給每步權重；GameCore 建世界加檢查點讓取消能在步驟中間停；第一次開 3D 地圖的等待。見決策 473「下一步」。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

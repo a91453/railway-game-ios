@@ -7,9 +7,15 @@ import SwiftUI
 /// game's line colours with a train running back and forth on each. Where
 /// the lines and trains are is GamePresentation's (``LoadingRoutes``); with
 /// Reduce Motion the trains stand still.
+///
+/// Decision 473: under them, the step being done and a bar of the steps
+/// finished (``RealWorldLoading``), and a button back to the screen it
+/// was opened from.
 struct RealWorldLoadingView: View {
     let loading: RealWorldLoading
     let language: DisplayLanguage
+    /// Stops the loading (``GameLauncher/cancelLoading()``).
+    let cancel: () -> Void
     /// The name the player gave the company on the postcard.
     @AppStorage("postcard.companyName") private var companyName = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -41,12 +47,45 @@ struct RealWorldLoadingView: View {
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text(verbatim: [company, loading.place, preparing].compactMap { $0 }.joined(separator: ", ")))
+            .accessibilityIdentifier("loading.realWorld")
+            progress
+            Button(action: cancel) {
+                Text(verbatim: loading.cancelTitle(in: language))
+                    .font(.body.weight(.semibold))
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+            .accessibilityIdentifier("loading.cancel")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: [company, loading.place, preparing].compactMap { $0 }.joined(separator: ", ")))
-        .accessibilityIdentifier("loading.realWorld")
+    }
+
+    /// The step being done, and the bar of the steps finished: it moves
+    /// only as a step ends (or, reading roads, as its tiles are read).
+    @ViewBuilder private var progress: some View {
+        if let line = loading.stepLine(in: language) {
+            VStack(spacing: 8) {
+                if loading.showsProgress {
+                    ProgressView(value: loading.fraction)
+                        .tint(Theme.primary)
+                        .frame(maxWidth: 240)
+                        .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: loading.fraction)
+                }
+                Text(verbatim: line)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 24)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: line))
+            .accessibilityValue(Text(verbatim: loading.showsProgress ? loading.percentText() : ""))
+            .accessibilityIdentifier("loading.progress")
+        }
     }
 
     private func draw(in context: inout GraphicsContext, size: CGSize, elapsed: Double) {

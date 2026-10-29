@@ -441,6 +441,22 @@ public final class GameLauncher {
     /// round the stations as on the whole of Taiwan, and a blank map is
     /// whole from the start.
     nonisolated static func newWorld(at anchor: GeoAnchor?, options: NewGameOptions, data: NewWorldData, demo: Bool = false) -> GameWorld {
+        let world = layOutWorld(at: anchor, ridersStep: ridersStep(at: anchor, data: data, demo: demo), options: options, data: data, demo: demo)
+        return anchor == nil ? world : grounded(world, options.ground, heights: data.heights)
+    }
+
+    /// The first step of ``newWorld(at:options:data:demo:)`` (decision
+    /// 473): the riders' step of a real-world map bought tile by tile,
+    /// counted from the people round `anchor`; `nil` for any other map.
+    nonisolated static func ridersStep(at anchor: GeoAnchor?, data: NewWorldData, demo: Bool) -> Int64? {
+        guard !demo, let anchor, let population = data.population, let expansion = RealWorldExpansion(around: anchor) else { return nil }
+        return expansion.ridersStep(population: population, places: data.places, water: data.water)
+    }
+
+    /// The second step of ``newWorld(at:options:data:demo:)``: the world,
+    /// with its options, before it is grounded (``grounded(_:_:heights:)``,
+    /// the last step).
+    nonisolated static func layOutWorld(at anchor: GeoAnchor?, ridersStep: Int64?, options: NewGameOptions, data: NewWorldData, demo: Bool) -> GameWorld {
         let seed = options.eventSeed()
         let cap = ModeShiftCounties.cap(at: anchor, in: data.placeNames)
         if let anchor, let population = data.population, let expansion = RealWorldExpansion(around: anchor) {
@@ -449,12 +465,12 @@ public final class GameLauncher {
                 world = GameWorld.newGame(anchor: expansion.anchor, bounds: expansion.bounds, balance: options.startingBalance, eventSeed: seed, land: [])
                 world.setLandOnDemand()
             } else {
-                let step = expansion.ridersStep(population: population, places: data.places, water: data.water)
+                let step = ridersStep ?? expansion.ridersStep(population: population, places: data.places, water: data.water)
                 world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: step, balance: options.startingBalance, eventSeed: seed)
             }
             options.apply(to: &world, modeShiftCap: cap)
             if demo { world.setUnlimitedFunds(true) }
-            return grounded(world, options.ground, heights: data.heights)
+            return world
         }
         var world = GameWorld.newGame(
             anchor: anchor, balance: options.startingBalance, eventSeed: seed, land: anchor.flatMap { land(at: $0, data: data) },
@@ -463,7 +479,7 @@ public final class GameLauncher {
         )
         options.apply(to: &world, modeShiftCap: cap)
         if demo { world.setUnlimitedFunds(true) }
-        return anchor == nil ? world : grounded(world, options.ground, heights: data.heights)
+        return world
     }
 
     /// What the loading screen shows while ``openRealWorldGame(at:)`` (or
@@ -476,17 +492,144 @@ public final class GameLauncher {
     /// 307): a place of Taiwan reads the land of a whole tile. Returns the
     /// task, or `nil` while a map is being built already. A game started
     /// meanwhile stays.
+    ///
+    /// Decision 473: it is built in steps (``LoadingStep``), the same calls
+    /// as ``newWorld(at:options:data:demo:)`` in the same order, so the
+    /// screen shows each as it finishes; ``cancelLoading()`` stops it
+    /// before the next.
     @discardableResult
     public func openRealWorldGame(at anchor: GeoAnchor) -> Task<Void, Never>? {
         guard realWorldLoading == nil, !isOpeningADemo else { return nil }
-        realWorldLoading = RealWorldLoading(place: RealWorldLoading.placeName(near: anchor, in: placeNames, language: language))
         let (options, data, demo) = (newGameOptions, newWorldData, isDemoMode)
+        let counts = !demo && data.population != nil && RealWorldExpansion(around: anchor) != nil
+        let grounds = data.heights != nil && options.ground == .real
+        let steps: [LoadingStep] = (counts ? [.countingPeople] : []) + [.layingOutMap] + (grounds ? [.shapingGround] : [])
+        let run = showLoading(RealWorldLoading(place: RealWorldLoading.placeName(near: anchor, in: placeNames, language: language), steps: steps))
         return Task {
-            let world = await Task.detached(priority: .userInitiated) { Self.newWorld(at: anchor, options: options, data: data, demo: demo) }.value
-            realWorldLoading = nil
+            var riders: Int64?
+            if counts {
+                guard let step = await run.step({ _ in Self.ridersStep(at: anchor, data: data, demo: demo) }) else { return }
+                riders = step
+            }
+            let ridersStep = riders
+            guard var world = await run.step({ _ in
+                Self.layOutWorld(at: anchor, ridersStep: ridersStep, options: options, data: data, demo: demo)
+            }) else { return }
+            if grounds {
+                let laidOut = world
+                guard let grounded = await run.step({ _ in Self.grounded(laidOut, options.ground, heights: data.heights) }) else { return }
+                world = grounded
+            }
+            guard finishLoading(run) else { return }
             guard session == nil else { return }
             begin(world, keepingAutosave: true, isDemo: demo)
         }
+    }
+
+    // MARK: - The loading screen's steps (decision 473)
+
+    /// The loading on the screen (``realWorldLoading``), whose button
+    /// stops it (``cancelLoading()``); `nil` while none shows.
+    @ObservationIgnored private var shownRun: LoadingRun?
+
+    /// One loading: its steps as they finish, and its meter, shared with
+    /// the step running off the main actor.
+    @MainActor
+    final class LoadingRun {
+        private(set) var loading: RealWorldLoading
+        let meter = LoadingMeter()
+        /// Puts the launcher back as it was before the loading: called
+        /// when the player stops it.
+        var undo: () -> Void = {}
+        /// Where each change of ``loading`` goes: the screen, while it
+        /// shows this run.
+        var publish: (RealWorldLoading) -> Void = { _ in }
+
+        init(_ loading: RealWorldLoading) {
+            self.loading = loading
+        }
+
+        /// How often the share of a step done is looked at while it runs.
+        nonisolated static let meterInterval: Duration = .milliseconds(250)
+
+        /// Runs one step off the main actor, the screen showing its share
+        /// done meanwhile, and marks it finished: the step's result, or
+        /// `nil` when the loading was stopped before it ended. A step
+        /// cannot be stopped part way (only reading roads stops early,
+        /// and its result is thrown away), so at most this one step runs
+        /// on after the player stops it.
+        func step<T: Sendable>(_ work: @escaping @Sendable (LoadingMeter) -> T) async -> T? {
+            guard !meter.isCancelled else { return nil }
+            let meter = meter
+            meter.reset()
+            let watching = Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: Self.meterInterval)
+                    guard let self, !Task.isCancelled, !meter.isCancelled else { return }
+                    self.set(self.loading.counting(meter.share))
+                }
+            }
+            let result = await Task.detached(priority: .userInitiated) { work(meter) }.value
+            watching.cancel()
+            guard !meter.isCancelled else { return nil }
+            set(loading.advanced())
+            return result
+        }
+
+        /// Marks a step done that ran elsewhere (a save, read on the
+        /// launcher's save queue); `false` once the loading was stopped.
+        func finishedElsewhere() -> Bool {
+            guard !meter.isCancelled else { return false }
+            set(loading.advanced())
+            return true
+        }
+
+        private func set(_ loading: RealWorldLoading) {
+            self.loading = loading
+            publish(loading)
+        }
+    }
+
+    /// Starts a loading and shows its screen.
+    private func showLoading(_ loading: RealWorldLoading, undo: @escaping () -> Void = {}) -> LoadingRun {
+        let run = LoadingRun(loading)
+        run.undo = undo
+        show(run)
+        return run
+    }
+
+    private func show(_ run: LoadingRun) {
+        shownRun = run
+        realWorldLoading = run.loading
+        run.publish = { [weak self, weak run] loading in
+            guard let self, let run, self.shownRun === run else { return }
+            self.realWorldLoading = loading
+        }
+    }
+
+    /// Ends `run`, its screen going away: `false` when the player stopped
+    /// it, whose screen went already.
+    private func finishLoading(_ run: LoadingRun) -> Bool {
+        guard !run.meter.isCancelled else { return false }
+        if shownRun === run {
+            shownRun = nil
+            realWorldLoading = nil
+        }
+        return true
+    }
+
+    /// Stops the loading on the screen (its button, decision 473): the
+    /// screen goes at once and the player is back where they were (the
+    /// start screen, or the game a save was read from); no part of the
+    /// game being built is kept or opened, and the step running stops
+    /// as soon as it can (reading roads at its next tile; another at its
+    /// end, its result thrown away). Nothing without a loading screen.
+    public func cancelLoading() {
+        guard let run = shownRun else { return }
+        run.meter.cancel()
+        shownRun = nil
+        realWorldLoading = nil
+        run.undo()
     }
 
     /// Starts a new game on the whole of Taiwan (decision 88), its land
@@ -744,12 +887,11 @@ public final class GameLauncher {
     private func beginReadingRoads(of world: GameWorld, place: String, isDemo: Bool) -> Task<Void, Never>? {
         guard !isOpeningADemo, !isReadingRoadsToBegin, realWorldLoading == nil else { return nil }
         isReadingRoadsToBegin = true
-        realWorldLoading = RealWorldLoading(place: place)
+        let run = showLoading(RealWorldLoading(place: place, steps: [.readingRoads])) { [weak self] in self?.isReadingRoadsToBegin = false }
         let (baseMap, playing) = (baseMap, session)
         return Task {
-            let world = await Task.detached(priority: .userInitiated) { Self.readingRoads(of: world, baseMap: baseMap) }.value
+            guard let world = await run.step({ Self.readingRoads(of: world, baseMap: baseMap, meter: $0) }), finishLoading(run) else { return }
             isReadingRoadsToBegin = false
-            realWorldLoading = nil
             guard session === playing else { return }
             begin(world, keepingAutosave: true, isDemo: isDemo)
         }
@@ -774,17 +916,24 @@ public final class GameLauncher {
     public func openHighSpeedDemo(railways: RealRailways) -> Task<Void, Never>? {
         guard !isOpeningADemo, realWorldLoading == nil else { return nil }
         isOpeningHighSpeedDemo = true
-        realWorldLoading = RealWorldLoading(place: language.text("Taiwan High Speed Rail", "台灣高鐵"))
+        let run = showLoading(RealWorldLoading(place: language.text("Taiwan High Speed Rail", "台灣高鐵"), steps: [.layingLine, .readingRoads])) { [weak self] in
+            self?.isOpeningHighSpeedDemo = false
+        }
         let (language, population, places, water, coverage, heights, baseMap) = (language, population, places, water, coverage, heights, baseMap)
         return Task {
-            let world = await Task.detached(priority: .userInitiated) {
-                (try? HighSpeedDemo.make(
+            guard let made = await run.step({ _ in
+                try? HighSpeedDemo.make(
                     in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: heights,
                     eventSeed: .random(in: .min ... .max)
-                )).map { Self.readingRoads(of: $0, baseMap: baseMap) }
-            }.value
+                )
+            }) else { return }
+            var world: GameWorld?
+            if let made {
+                guard let read = await run.step({ Self.readingRoads(of: made, baseMap: baseMap, meter: $0) }) else { return }
+                world = read
+            }
+            guard finishLoading(run) else { return }
             isOpeningHighSpeedDemo = false
-            realWorldLoading = nil
             guard let world else {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The High Speed Rail could not be built from the real-world data.", "無法用實景資料蓋出高鐵。"
@@ -804,9 +953,9 @@ public final class GameLauncher {
     /// build. The High Speed Rail's land round its twelve stations is some
     /// 2,500 blocks, and reading their roads in ``begin`` held the main
     /// thread 28 to 58 s on a Simulator as the game opened.
-    nonisolated static func readingRoads(of world: GameWorld, baseMap: BaseMapTiles?) -> GameWorld {
+    nonisolated static func readingRoads(of world: GameWorld, baseMap: BaseMapTiles?, meter: LoadingMeter? = nil) -> GameWorld {
         var world = world
-        GameSession.readRoads(in: &world, baseMap: baseMap)
+        GameSession.readRoads(in: &world, baseMap: baseMap, meter: meter)
         return world
     }
 
@@ -824,17 +973,24 @@ public final class GameLauncher {
     public func openTRADemo(railways: RealRailways) -> Task<Void, Never>? {
         guard !isOpeningADemo, realWorldLoading == nil else { return nil }
         isOpeningTRADemo = true
-        realWorldLoading = RealWorldLoading(place: language.text("Yilan Line", "宜蘭線"))
+        let run = showLoading(RealWorldLoading(place: language.text("Yilan Line", "宜蘭線"), steps: [.layingLine, .readingRoads])) { [weak self] in
+            self?.isOpeningTRADemo = false
+        }
         let (language, population, places, water, coverage, heights, baseMap) = (language, population, places, water, coverage, heights, baseMap)
         return Task {
-            let world = await Task.detached(priority: .userInitiated) {
-                (try? TRADemo.make(
+            guard let made = await run.step({ _ in
+                try? TRADemo.make(
                     in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, heights: heights,
                     eventSeed: .random(in: .min ... .max)
-                )).map { Self.readingRoads(of: $0, baseMap: baseMap) }
-            }.value
+                )
+            }) else { return }
+            var world: GameWorld?
+            if let made {
+                guard let read = await run.step({ Self.readingRoads(of: made, baseMap: baseMap, meter: $0) }) else { return }
+                world = read
+            }
+            guard finishLoading(run) else { return }
             isOpeningTRADemo = false
-            realWorldLoading = nil
             guard let world else {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The Yilan Line could not be built from the real-world data.", "無法用實景資料蓋出宜蘭線。"
@@ -1253,29 +1409,39 @@ public final class GameLauncher {
         isLoadingSave = true
         savesOpened += 1
         let (opened, begun) = (savesOpened, gamesBegun)
+        // Decision 473: the steps are counted from the start, and shown
+        // with the screen.
+        let run = LoadingRun(RealWorldLoading(place: nil, steps: [.readingSave, .readingRoads], backTo: session == nil ? .startScreen : .game))
+        run.undo = { [weak self] in
+            self?.isLoadingSave = false
+            self?.showsSaveLoading = false
+        }
         Task { [weak self] in
             try? await Task.sleep(for: Self.loadingScreenDelay)
-            guard let self, self.isLoadingSave, self.savesOpened == opened, self.realWorldLoading == nil else { return }
-            self.realWorldLoading = RealWorldLoading(place: nil)
+            guard let self, self.isLoadingSave, self.savesOpened == opened, self.realWorldLoading == nil, !run.meter.isCancelled else { return }
+            self.show(run)
             self.showsSaveLoading = true
         }
         let saveQueue = saveQueue
         return Task {
+            // A save being written or read is not stopped part way: once
+            // stopped, what it read is thrown away.
             let result = await withCheckedContinuation { (done: CheckedContinuation<Result<Read, SaveError>, Never>) in
                 saveQueue.async { done.resume(returning: Result { () throws(SaveError) in try read() }) }
             }
+            guard run.finishedElsewhere() else { return }
             // The data as it is once the save is read: it may have arrived
             // meanwhile.
             let world = (try? result.get()).flatMap(world)
             let (population, places, water, coverage, baseMap) = (population, places, water, coverage, baseMap)
-            let roads = await Task.detached(priority: .userInitiated) {
+            guard let roads = await run.step({ meter in
                 world.flatMap {
-                    GameSession.roadsReadAhead(of: $0, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap)
+                    GameSession.roadsReadAhead(of: $0, population: population, places: places, water: water, coverage: coverage, baseMap: baseMap, meter: meter)
                 }
-            }.value
+            }) else { return }
             isLoadingSave = false
             if showsSaveLoading {
-                realWorldLoading = nil
+                _ = finishLoading(run)
                 showsSaveLoading = false
             }
             guard gamesBegun == begun else { return }
