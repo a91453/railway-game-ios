@@ -106,6 +106,9 @@ public final class GameSession {
     @ObservationIgnored private var isApplyingTick = false
     /// The bubbles ``situationAlerts`` last worked out, and for what.
     @ObservationIgnored var situationAlertsMemo: SituationAlertsMemo?
+    /// How many times ``situationAlerts`` was worked out on the main actor
+    /// (for the tests).
+    @ObservationIgnored var situationAlertsWorkedOut = 0
     /// Why lines hold their trains, as ``trainPathStatusText(of:)`` last
     /// worked it out, and for what.
     @ObservationIgnored var lineDispatchHoldMemo: LineDispatchHoldMemo?
@@ -1750,6 +1753,10 @@ public final class GameSession {
         /// Decision 379: the map's glide to ``world``, from the trains seen
         /// in the world of revision `from`, when the step worked it out.
         var glide: (from: Int, motion: TrainMotion)?
+        /// The map's bubbles of ``world`` (``GameWorld/situationAlerts()``)
+        /// and the period they are for (``situationAlertsPeriod``), when the
+        /// step worked them out.
+        var alerts: (period: Int64, alerts: [MapAlert])?
     }
 
     /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
@@ -1801,6 +1808,11 @@ public final class GameSession {
         let timeBefore = world.clock.now
         let worldBefore = world
         meter.measure(.stepWorld) {
+            // The map's bubbles the tick worked out, in place before the
+            // new world's marks read them (``situationAlerts``).
+            if let alerts = step.alerts {
+                situationAlertsMemo = SituationAlertsMemo(revision: commandRevision, period: alerts.period, alerts: alerts.alerts)
+            }
             isLogging = true
             world = step.world
             isLogging = false
@@ -1888,6 +1900,10 @@ public final class GameSession {
         /// Decision 379: the glide the map showed last, which the tick's
         /// glide goes on from; `nil` with no map, or at 1×.
         var glide: TrainMotion?
+        /// The period of game time whose map bubbles the session already
+        /// has for the world as it is (``situationAlerts``), which the tick
+        /// does not work out again.
+        var alertsPeriod: Int64?
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -1916,6 +1932,11 @@ public final class GameSession {
                         step.glide = tick.glide.flatMap { previous in
                             previous.source.map { ($0, TrainMotion(world: step.world, previous: previous, time: previous.time)) }
                         }
+                        // The map's bubbles, whose deadlock search took the
+                        // bought Sanying Line's main actor 70–100 ms (Linux
+                        // release) at every tick at 6000x.
+                        let period = step.world.clock.now.seconds / GameSession.situationAlertsPeriod
+                        if period != tick.alertsPeriod { step.alerts = (period, step.world.situationAlerts()) }
                         return step
                     }
                 }
@@ -1932,7 +1953,8 @@ public final class GameSession {
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
             advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision)),
-            glide: world.clock.speed == .x1 ? nil : glideToGoOnFrom
+            glide: world.clock.speed == .x1 ? nil : glideToGoOnFrom,
+            alertsPeriod: situationAlertsMemo.flatMap { $0.revision == commandRevision ? $0.period : nil }
         )
     }
 
