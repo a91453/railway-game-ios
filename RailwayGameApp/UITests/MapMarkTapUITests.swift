@@ -94,9 +94,11 @@ final class MapMarkTapUITests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        // The panel's operations rows, on screen first on any size: on an
-        // iPhone its buttons start below them (run 39845867564).
-        let panel = app.descendants(matching: .any).matching(identifier: "station.operations").firstMatch
-        XCTAssertTrue(panel.appears(within: 10), "A tap on the bubble's middle opens its station")
+        // Decision 477: at the freight group, whose first row says what
+        // the town is short of (it was last in the panel, a long scroll
+        // down).
+        let materials = app.descendants(matching: .any).matching(identifier: "station.materials").firstMatch
+        XCTAssertTrue(materials.appears(within: 10), "A tap on the bubble's middle opens its station at its materials")
+        XCTAssertTrue(materials.becomesHittable(within: 5), "The materials row is scrolled into view")
     }
 }

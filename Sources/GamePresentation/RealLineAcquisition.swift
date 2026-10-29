@@ -245,10 +245,14 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// map bought tile by tile, in the order they are bought, each beside
     /// one owned by then; `nil` for none (and in the logs of before).
     public let tiles: [MapTile]?
+    /// Decision 479: the real depot bought with it, the line's; `nil` for
+    /// none (and in the logs of before).
+    public let depot: Depot?
 
     public init(
         realLine: String, pieces: [Piece], stops: [Stop], platforms: [Platform], lineName: String, color: LineColor?, runs: [LineRun],
-        trains: [Start], cars: Int, trainType: TrainType? = nil, dailyRiders: Int64, tiles: [MapTile]?, tier: LineAcquisition.Tier? = nil
+        trains: [Start], cars: Int, trainType: TrainType? = nil, dailyRiders: Int64, tiles: [MapTile]?, tier: LineAcquisition.Tier? = nil,
+        depot: Depot? = nil
     ) {
         self.realLine = realLine
         self.pieces = pieces
@@ -263,6 +267,7 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         self.dailyRiders = dailyRiders
         self.tiles = tiles
         self.tier = tier
+        self.depot = depot
     }
 
     /// Cars per train: the DR1000's three (decision 315's reference row).
@@ -509,10 +514,17 @@ extension GameSession {
     /// line bought before decision 462 lies on the ground at Zhuzhong
     /// whichever it was.
     public func realLineOffer(for line: RealBranchLine) -> RealLineOffer {
-        let laid = realLineOffer(for: line, raising: .viaducts)
-        guard laid.crossesTrack else { return laid.offer }
-        let raised = realLineOffer(for: line, raising: .viaductsAndShared)
-        return raised.offer.problem == nil ? raised.offer : laid.offer
+        func offer(depot: Bool) -> RealLineOffer {
+            let laid = realLineOffer(for: line, raising: .viaducts, depot: depot)
+            guard laid.crossesTrack else { return laid.offer }
+            let raised = realLineOffer(for: line, raising: .viaductsAndShared, depot: depot)
+            return raised.offer.problem == nil ? raised.offer : laid.offer
+        }
+        // Decision 479: without its depot where that cannot be laid.
+        let laid = offer(depot: true)
+        guard laid.acquisition == nil, RealLineDepotSite.site(of: line.id) != nil else { return laid }
+        let without = offer(depot: false)
+        return without.acquisition == nil ? laid : without
     }
 
     /// Which of a line's stations stand raised (decision 462).
@@ -528,7 +540,7 @@ extension GameSession {
     /// The offer of `line` with its stations raised as `raising` says, and
     /// whether GameCore refused it for its track meeting another's at one
     /// level (``GameError/trackConflict(_:)``).
-    func realLineOffer(for line: RealBranchLine, raising: StationRaising) -> (offer: RealLineOffer, crossesTrack: Bool) {
+    func realLineOffer(for line: RealBranchLine, raising: StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false)
         }
@@ -575,12 +587,21 @@ extension GameSession {
             return refused("The real line's stations are not along its track here.", "真實車站不在這段鐵路上。")
         }
 
-        // The ground under the way, read in on a copy.
+        // Decision 479: its real depot's leads and yard, where it has one.
+        let depotSite = RealLineDepotSite.site(of: line.id)
+        let depotPoints = depotSite.map { site in
+            [site.junction, site.yard.start, site.yard.end].map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
+        }
+
+        // The ground under the way, read in on a copy, and under the depot's.
         var draft = world.pricingCopy()
         let step = 32 * RealLineAcquisition.metre, side = 16 * RealLineAcquisition.metre
-        let samples = (0...Int(path.length / step)).flatMap { index -> [PlanPoint] in
-            let point = path.point(at: Double(index) * step)
-            return [(-side, -side), (-side, side), (side, -side), (side, side)].map { dx, dy in WorldVector(x: point.x + dx, y: point.y + dy).plan }
+        let depotWay = depotPoints.map { WorldPath($0) }
+        let samples = [path, depotWay].compactMap(\.self).flatMap { way in
+            (0...Int(way.length / step)).flatMap { index -> [PlanPoint] in
+                let point = way.point(at: Double(index) * step)
+                return [(-side, -side), (-side, side), (side, -side), (side, side)].map { dx, dy in WorldVector(x: point.x + dx, y: point.y + dy).plan }
+            }
         }
         // Decision 401: on a map bought tile by tile, the tiles under the
         // way not owned yet are bought with the line, their land and water
@@ -700,6 +721,21 @@ extension GameSession {
             forced += [a, a + ramp, b - ramp, b]
             second = (a, b)
         }
+        // Decision 479: the depot's wye and crossovers, on the second
+        // track's side of the line, clear of the stations and the second
+        // track's ramps.
+        var depotAt: Double?
+        if depot, let points = depotPoints, let second {
+            let j = path.nearest(points[0]).along
+            let marks = RealLineDepotLayout.marks(at: j)
+            let reach = marks[0]...marks[marks.count - 1]
+            let side = (points[1] - path.point(at: j)).dot(path.tangent(at: j).normal)
+            if side < 0, reach.lowerBound > second.a + ramp + gap, reach.upperBound < second.b - ramp - gap,
+               !spans.contains(where: { $0.overlaps(reach) }) {
+                forced += marks
+                depotAt = j
+            }
+        }
         guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, carried: carried) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
@@ -719,6 +755,7 @@ extension GameSession {
             (main, nil, nil, false),
         ]
         var platformsAt: [(stop: Int, piece: Int, zone: ClosedRange<Double>)] = zones.enumerated().map { ($0.offset, 0, $0.element) }
+        var besideNodes: [Int] = []
         if let second {
             let node = { (distance: Double) in main.distances.firstIndex { abs($0 - distance) < 1 } }
             guard let a = node(second.a), let inner = node(second.a + ramp), let outer = node(second.b - ramp), let b = node(second.b),
@@ -727,6 +764,7 @@ extension GameSession {
                 return refused("The line is too short for its second track here.", "這條線太短，放不下第二條正線。")
             }
             let beside = [a] + Array(inner...outer) + [b]
+            besideNodes = beside
             plans.append((
                 RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: beside.map { $0 == a || $0 == b ? 0 : -HighSpeedDemo.trackOffset }),
                 RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
@@ -757,7 +795,28 @@ extension GameSession {
                 platformsAt.append((loop.stop, plans.count - 1, zone))
             }
         }
-        let pieces = plans.map { entry in
+        // Decision 479: the crossovers either side of the depot's wye, the
+        // first before it to the first track, the second after it from
+        // the first track, as the second track's ramps are laid.
+        let mainNode = { (distance: Double) in main.distances.firstIndex { abs($0 - distance) < 1 } }
+        var depotMarks: [(main: Int, second: Int)] = []
+        if let j = depotAt {
+            depotMarks = RealLineDepotLayout.marks(at: j).compactMap { mark in
+                mainNode(mark).flatMap { node in besideNodes.firstIndex(of: node).map { (node, $0) } }
+            }
+            if depotMarks.count == 6 {
+                let offset = -HighSpeedDemo.trackOffset
+                plans.append((
+                    RealWorldDemo.TrackPlan(beside: main, at: [depotMarks[0].main, depotMarks[1].main], offsets: [0, offset]),
+                    RealLineAcquisition.NodeAt(piece: 0, node: depotMarks[0].main), RealLineAcquisition.NodeAt(piece: 1, node: depotMarks[1].second), true
+                ))
+                plans.append((
+                    RealWorldDemo.TrackPlan(beside: main, at: [depotMarks[4].main, depotMarks[5].main], offsets: [offset, 0]),
+                    RealLineAcquisition.NodeAt(piece: 1, node: depotMarks[4].second), RealLineAcquisition.NodeAt(piece: 0, node: depotMarks[5].main), true
+                ))
+            }
+        }
+        var pieces = plans.map { entry in
             let plan = entry.plan
             let nodes = plan.nodes.indices.map { WorldCoordinate(x: plan.nodes[$0].point.x, y: plan.nodes[$0].point.y, z: plan.heights[$0]) }
             let ground = plan.curves.indices.flatMap { index -> [PlanPoint] in
@@ -768,6 +827,14 @@ extension GameSession {
                 nodes: nodes, start: entry.start, end: entry.end, curves: plan.curves, distances: plan.distances, structure: plan.structure,
                 together: entry.together, ground: ground
             )
+        }
+        var depotLaid: RealLineAcquisition.Depot?
+        if let site = depotSite, let points = depotPoints, let j = depotAt, let laid = RealLineDepotLayout.lay(
+            site, points: points, along: path, at: j, second: plans[1].plan, marks: depotMarks, first: pieces.count, length: platformLength,
+            ground: ground, in: language
+        ) {
+            pieces += laid.pieces
+            depotLaid = laid.depot
         }
 
         let stops = runs.stops.enumerated().map { index, name in
@@ -785,10 +852,21 @@ extension GameSession {
         // each facing up the line but at the terminal. Decision 400: a light
         // rail's train an end has no track for stands at a station between,
         // on the track toward the end nearer it, facing it.
+        // Decision 479: those the real timetable leaves at a station
+        // between the ends stand in the depot, while it has room.
         var starts: [RealLineAcquisition.Start] = []
+        var depotRoom = depotLaid?.platforms ?? []
         let lastStop = runs.stops.count - 1
-        for (name, count) in runs.overnight.sorted(by: { $0.key < $1.key }) {
+        for (name, overnight) in runs.overnight.sorted(by: { $0.key < $1.key }) {
             guard let stop = runs.stops.firstIndex(of: name) else { continue }
+            var count = overnight
+            if stop > 0, stop < lastStop {
+                while count > 0, !depotRoom.isEmpty {
+                    starts.append(RealLineAcquisition.Start(name: "", at: depotRoom.removeFirst(), forward: true))
+                    count -= 1
+                }
+                if count == 0 { continue }
+            }
             var tracks = platformsAt.filter { $0.stop == stop }
             var forward = stop < lastStop
             if double, stop > 0, stop < lastStop {
@@ -808,7 +886,9 @@ extension GameSession {
         starts = starts.enumerated().map { number, start in
             RealLineAcquisition.Start(name: RealWorldDemo.trainName(line: lineName, number: number + 1, in: language), at: start.at, forward: start.forward)
         }
-        let lineRuns = runs.runs.map { run in
+        // Decision 479: with the depot, its own empty runs take the
+        // trains in and out, not the real timetable's positioning runs.
+        let lineRuns = runs.runs.filter { depotLaid == nil || !($0.positioning || $0.train == "回送") }.map { run in
             LineRun(
                 from: runs.stops.firstIndex(of: run.calls[0].station) ?? 0,
                 to: runs.stops.firstIndex(of: run.calls[run.calls.count - 1].station) ?? 0,
@@ -826,7 +906,7 @@ extension GameSession {
             RealLineAcquisition(
                 realLine: line.id, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: lineRuns,
                 trains: starts, cars: cars, trainType: line.trainType, dailyRiders: min(riders, LineAcquisition.maximumDailyRiders),
-                tiles: tiles.isEmpty ? nil : tiles, tier: line.tier == .branch ? nil : line.tier
+                tiles: tiles.isEmpty ? nil : tiles, tier: line.tier == .branch ? nil : line.tier, depot: depotLaid
             )
         }
 
@@ -973,6 +1053,16 @@ extension GameSession {
             LineRun(from: last - run.from, to: last - run.to, times: run.times, days: run.days)
         })
         try world.setLineRoutePreferences(line.id, to: Self.routePreferences(platformsOf, stops: stations.count))
+        // Decision 479: the depot, a platform along each siding, the line's.
+        if let depot = acquisition.depot {
+            let station = try world.buildStation(named: depot.name, at: depot.at)
+            for at in depot.platforms {
+                let (on, offset) = try berth(at, length: depot.length)
+                try world.addTrackPlatform(station.id, on: on, from: offset, to: offset + depot.length)
+            }
+            try world.setStationDepot(station.id, to: true)
+            try world.setLineDepots(line.id, to: [station.id])
+        }
         let count = acquisition.trains.count
         try world.setLineTrainsInService(line.id, to: TrainsInService(peak: count, offPeak: count, low: count))
         let length = Int64(acquisition.cars + 1) * Train.carLength

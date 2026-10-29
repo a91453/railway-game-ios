@@ -41,6 +41,10 @@ final class Map3DTEMU2000Tests: XCTestCase {
         XCTAssertNil(Map3DModelPack.unbaked.index(of: "temu2000-formation"))
         for unit in Map3DTEMU2000.Unit.allCases {
             XCTAssertNotNil(pack.index(of: "temu2000-\(unit.rawValue)"))
+            XCTAssertNotNil(pack.index(of: "temu2000-\(unit.rawValue)-far"))
+            XCTAssertNotEqual(Map3DTEMU2000.studyModel(unit).vertices,
+                              Map3DTEMU2000.model(unit).vertices,
+                              "the study must not alter the operating payload")
         }
         XCTAssertNotNil(pack.index(of: "temu2000-formation"))
     }

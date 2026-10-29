@@ -56,6 +56,17 @@ public enum StationPanelGroup: String, CaseIterable, Hashable, Sendable, Identif
     public static func holding(_ target: TutorialTarget) -> StationPanelGroup? {
         StationPanelPart.allCases.first { $0.tutorialTargets.contains(target) }?.group
     }
+
+    /// The group a map bubble's tap opens the panel at (decision 477), or
+    /// `nil` for the panel's top: a town short of materials at its freight
+    /// group, whose first row says what the town is short of and whose
+    /// yard brings them.
+    public static func answering(_ alert: MapAlert.Kind) -> StationPanelGroup? {
+        switch alert {
+        case .materialsShort: .freight
+        default: nil
+        }
+    }
 }
 
 /// One section of the station panel, in the panel's order.

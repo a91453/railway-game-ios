@@ -1,0 +1,14 @@
+{
+  "origin": "Nippon Sharyo and Taiwan Railway official sources; owner-supplied pictures observed separately; private reference catalog consulted without republishing",
+  "date": "2026-10-29",
+  "license": "Official photographs and publications retained by their respective rights holders; visual research only; no photo pixels embedded in models or previews",
+  "public_use": "Links, facts, SHA-256 of research downloads, and original procedural model only",
+  "sources": [
+    {"type":"manufacturer original photograph and specification", "url":"https://www.n-sharyo.co.jp/business/tetsudo/pages/ztaiw_temu2000.htm", "author":"Nippon Sharyo", "publication_date":"2014 or earlier; page undated", "retrieved":"2026-10-29", "download":"ztaiw_temu2000.jpg", "sha256":"def3bb32b1920174b3d6630249a83d74279cb87f44ddb4d9561dd293c808386c", "license":"Copyright Nippon Sharyo; visual research only"},
+    {"type":"manufacturer original photograph and engineering brochure", "url":"https://www.n-sharyo.co.jp/business/tetsudo/images/2014temu2000-1.jpg", "author":"Nippon Sharyo", "publication_date":"2014", "retrieved":"2026-10-29", "download":"2014temu2000-1.jpg", "sha256":"c42998e6b23bc6e4511e68d2304744cd9ee56b627cddccfd7e3e728a40967b32", "license":"Copyright Nippon Sharyo; visual research only"},
+    {"type":"manufacturer original gangway photograph and interior brochure", "url":"https://www.n-sharyo.co.jp/business/tetsudo/images/2014temu2000-2.jpg", "author":"Nippon Sharyo", "publication_date":"2014", "retrieved":"2026-10-29", "download":"2014temu2000-2.jpg", "sha256":"03c37f0557b1953175fcb4a99e5c8244215edf1b03342115e3cab7bca09a6546", "license":"Copyright Nippon Sharyo; visual research only"},
+    {"type":"TRA original train photograph on official magazine cover", "url":"https://www.railway.gov.tw/tra-tip-web/tip/file/a4dafeb2-0362-45a3-aca1-a88b5900fd8b", "author":"Taiwan Railway Administration", "publication_date":"2016-02", "retrieved":"2026-10-29", "download":"tra-2016.pdf", "sha256":"9866a59156c52112ba2526880a524146d0ba3a6e624ac2c77251f631f2f5b4c6", "license":"Copyright Taiwan Railway Administration; visual research only"},
+    {"type":"owner-supplied illustration", "url":"conversation attachment, no downloadable source URL", "author":"K. Y. Chung / Nanyue Express", "publication_date":"unknown", "retrieved":"2026-10-29", "download":null, "sha256":null, "license":"CC BY-NC-ND 4.0 as printed; visual research only"},
+    {"type":"owner-supplied train photographs", "url":"conversation attachments, no downloadable source URL", "author":"Various (Aaron, Liberty Times and others as printed)", "publication_date":"unknown", "retrieved":"2026-10-29", "download":null, "sha256":null, "license":"Not established; visual research only"}
+  ]
+}

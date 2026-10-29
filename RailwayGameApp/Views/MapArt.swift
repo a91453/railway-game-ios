@@ -46,6 +46,7 @@ enum MapArt {
         network overlay: NetworkOverlay? = nil,
         building: BuildingOverlay? = nil,
         expansion: MapExpansionOverlay? = nil,
+        expansionClear: MapLabelPlacement.Box? = nil,
         traffic: TrafficOverlay = TrafficOverlay(),
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
@@ -67,7 +68,7 @@ enum MapArt {
         in context: GraphicsContext
     ) {
         if part != .trafficAndStations {
-            drawRailway(world, network: overlay, expansion: expansion, projection: projection, edges: edges, layers: layers, lines: lines,
+            drawRailway(world, network: overlay, expansion: expansion, expansionClear: expansionClear, projection: projection, edges: edges, layers: layers, lines: lines,
                         routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
                         journeyProgress: journeyProgress, buses: buses, roads: roads, latitude: latitude, in: context)
         }
@@ -99,6 +100,7 @@ enum MapArt {
         _ world: GameWorld,
         network overlay: NetworkOverlay?,
         expansion: MapExpansionOverlay?,
+        expansionClear: MapLabelPlacement.Box?,
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
         layers: MapLayerPreferences,
@@ -133,7 +135,7 @@ enum MapArt {
         // Decision 160: the land not owned yet is shaded too, and the
         // tiles for sale marked while the player chooses one.
         if let expansion {
-            drawMapExpansion(expansion, land: land, projection: projection, in: context)
+            drawMapExpansion(expansion, land: land, clear: expansionClear, projection: projection, in: context)
         }
 
         if layers.showsCatchmentRings {
@@ -1903,7 +1905,9 @@ enum MapArt {
     /// outside the tiles owned shaded as past the map's edge, each tile for
     /// sale edged with its price (a lock when the best day has not unlocked
     /// it), and the tile chosen filled.
-    private static func drawMapExpansion(_ expansion: MapExpansionOverlay, land: Path, projection: some MapProjection, in context: GraphicsContext) {
+    private static func drawMapExpansion(
+        _ expansion: MapExpansionOverlay, land: Path, clear: MapLabelPlacement.Box?, projection: some MapProjection, in context: GraphicsContext
+    ) {
         func shape(_ rect: PlanRect) -> Path {
             polygon([
                 screenPoint(Double(rect.minX), Double(rect.minY), projection), screenPoint(Double(rect.maxX), Double(rect.minY), projection),
@@ -1925,10 +1929,20 @@ enum MapArt {
                 outline, with: .color(tile.isUnlocked ? Palette.metroGreen : Palette.mapEdge),
                 style: StrokeStyle(lineWidth: isChosen ? 3 : 1.5, dash: [8, 5])
             )
-            let middle = screenPoint(Double(tile.area.minX + tile.area.maxX) / 2, Double(tile.area.minY + tile.area.maxY) / 2, projection)
             let price = Text(verbatim: tile.price.moneyText).font(.caption.weight(.bold)).monospacedDigit()
             let label = tile.isUnlocked ? price : Text(MapGlyph.lock.image).font(.caption) + Text(verbatim: " ") + price
-            context.draw(label.foregroundStyle(Palette.ink), at: middle)
+            // Decision 477: in the middle of the part of the tile clear of
+            // the top bar and the cards, or not at all.
+            let corners = shape(tile.area).boundingRect
+            let resolved = context.resolve(label.foregroundStyle(Palette.ink))
+            let size = resolved.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
+            let area = MapLabelPlacement.Box(x: corners.minX, y: corners.minY, width: corners.width, height: corners.height)
+            guard let clear else {
+                context.draw(resolved, at: CGPoint(x: corners.midX, y: corners.midY))
+                continue
+            }
+            guard let place = MapLabelPlacement.tileLabel(tile: area, clear: clear, width: size.width, height: size.height) else { continue }
+            context.draw(resolved, at: CGPoint(x: (place.minX + place.maxX) / 2, y: (place.minY + place.maxY) / 2))
         }
     }
 
