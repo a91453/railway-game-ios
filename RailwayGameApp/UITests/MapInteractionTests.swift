@@ -1485,10 +1485,11 @@ final class MapInteractionTests: XCTestCase {
         resume.tap()
         // The touch on Resume can be cancelled while the 3D map keeps the
         // main thread busy, and the game stays paused (main cd93d78's full
-        // lane, run 40802613854, and cca7013's, run 40696835983: the app's
-        // trace has "touch cancelled at (618, 34)" 0.1 s after it began and
-        // no resume; d657300's, run 40780780288, has "touch ended" at the
-        // same point and passed). Tap once more if it is still Resume.
+        // lane, run 40802613854: the app's trace has "touch cancelled at
+        // (618, 34)" 0.1 s after it began and no resume; cca7013's, run
+        // 40696835983, failed here too; d657300's, run 40780780288, has
+        // "touch ended" at the same point and passed). Tap once more if it
+        // is still Resume.
         let pause = speed.buttons["Pause"]
         if !pause.appears(within: 5), resume.exists, resume.becomesHittable(within: 2) {
             resume.tap()
