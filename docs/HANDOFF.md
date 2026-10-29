@@ -2043,6 +2043,22 @@
   - 固定在上方的四段篩選會不會太擠。
   - 組標題按鈕的大小。
   - 見決策 481「下一步」。
+- **合併後 `LineRoutePreferenceUITests` 兩支在 main 紅**（只在 full lane 跑，`FULL_LANE_LESSONS_JOB`；PR 的 gate 不跑）。LP 已壓縮 3 次，照規則停手，交接寫在 #1490；派工單 LPF（session_01YGNNunFRqKWjsexshYKzgD）修好，見下。
+  - 證據：手動 `ios-build.yml`（`only_testing: LineRoutePreferenceUITests`，iPhone）run 40844553127 與 40855808395。後者在 9573aea，程式碼與 main aa2fc49 相同。
+  - `testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay` 紅在 `ToolbarSmokeTests.swift:284`：「lines.advanced Switch never lay wholly on screen」。從線頁按返回後，8 次 swipeDown 加 16 次短拖都沒讓開關出現。
+  - `testALineLegCanSelectAPhysicalPlatform` 紅在 `ToolbarSmokeTests.swift:106`：選單點「Automatic route」後，路段的字一直沒變回「Automatic route」，等待逾時。在 68bde52 和 run 40844553127 都綠過。
+  - **原因（LPF 看 40855808395 的結果包與 App 的 trace）**，兩支都是測試的問題，App 沒有玩家點不到的東西：
+    - 進階開關：手機橫放時面板只有 270 點寬、272 點高，上方固定的篩選與排序到 y=213，列只剩約 130 點。`swipeDown()` 從清單正中間（667, 206）開始拖，正好落在排序鈕上，清單一動也不動（失敗時捲軸在 100%，清單停在最底）。之後的短拖與 `bringIntoView` 都是往下捲，開關在上面，永遠到不了。玩家在列上拖可以正常捲回上面。
+    - 選路線：第二次開選單、點「Automatic route」時，點的位置正確（選單項中心 593, 94），但 App 的 trace 寫著這次觸控開始後 164 毫秒被取消，選單沒關、選擇沒生效。這和 `setAdvanced` 註解裡 run 39781136910 的「觸控被取消」是同一類：偶發，玩家再點一次就好。#1472 的 `loadSection` 沒讓頁面重排（路段列在兩次失敗前後的位置相同）。
+  - **修法（只動 `ToolbarSmokeTests.swift`）**：
+    - `setAdvanced`：拖動都從固定控制項下方的列上開始（新的 `XCUIApplication.linesListTop(under:)` 算出列從哪裡開始）；先往上捲到第一列（整個路網）露出來，再用短拖往下找開關；最後把開關本身（不是整列，整列約 115 點，比列的空間高）捲進來。
+    - `bringIntoView`：在清單上時，「完整顯示」要避開固定的控制項，不只導覽列。
+    - 新的 `chooseMenuAction`：點選單項後讀路段的字；沒變就再點一次（選單還開著）或重開選單，最多 3 次，每次先讀字，已選好就不再點。
+  - 驗證：`only_testing: LineRoutePreferenceUITests`（iPhone）run 40860707208（結果待補）。
+  - 以後避免同類問題：
+    - 面板上方有固定（`safeAreaInset`）的控制項時，不要在清單上用 `swipeUp()`／`swipeDown()`，它們從元素正中間開始，會落在固定的控制項上。拖動要從列上開始。
+    - 找不在畫面上的列，要先想它在上面還是下面：`dragUntilWhollyOnScreen` 在元素不存在時只會往下捲。
+    - 點選單項後要確認結果（值或字有沒有變）；沒變而選單還開著，就再點一次，不要只等更久。
 
 ### 4.23 三張載客圖與資料視覺化盤點（決策 478，session_01YGNNuosyKEgJgsVUGFPhbW，派工單 VIZ，#1472，2026-10-29）
 
