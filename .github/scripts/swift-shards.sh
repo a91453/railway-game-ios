@@ -541,6 +541,13 @@ set -euo pipefail
 # 1.24 times that on CI), to campaigns-11 and campaigns-13, which have
 # taken none of the late additions above; DanhaiDepotTests (some 20 s)
 # stays in rest.
+# 2026-10-30: those three and LiujiaLineTrainsTests, Map3DBusLayerTests had
+# no CLASS_WEIGHTS entry, so a pull request's tier counted them 1 s each and
+# put DanhaiBothLinesDayTests beside HighSpeedDemoDayTests: selected-3 hit
+# the 20-minute limit on main (run 40925534792) and on #1514 and #1515. The
+# weights are CI's times where a run reported them (DanhaiGreenLineDay 107,
+# LiujiaLineTrains 108, Map3DBusLayer 65) and 1.24 times the local ones
+# otherwise (DanhaiBothLinesDay 245 -> 300, DanhaiDepot 20 -> 25).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests" ;;
@@ -694,7 +701,9 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   DoubleTrackUpgradeTests:3 GameLauncherTests:3 JourneyTraceTests:3
   LandImportTests:3 LineDraftSummaryTests:3 Map3DParksTests:3
   Map3DSceneKitTests:3 Map3DStationsTests:3 SimpleRulesTests:3
-  TodayAccountTests:3 TrafficOverlayTests:3"
+  TodayAccountTests:3 TrafficOverlayTests:3
+  DanhaiBothLinesDayTests:300 DanhaiGreenLineDayTests:110
+  LiujiaLineTrainsTests:108 Map3DBusLayerTests:65 DanhaiDepotTests:25"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
