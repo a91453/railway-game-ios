@@ -227,14 +227,35 @@ public enum BaseMapStyle {
             }
             return match + [other]
         }
-        return [
-            "interpolate", ["exponential", 1.4], ["zoom"],
-            5, at(["motorway": 0.5], other: 0),
-            8, at(["motorway": 1, "trunk": 0.8, "primary": 0.4], other: 0),
-            11, at(["motorway": 2, "trunk": 1.6, "primary": 1.2, "secondary": 0.8, "tertiary": 0.4], other: 0),
-            14, at(["motorway": 5, "trunk": 4.5, "primary": 3.5, "secondary": 3, "tertiary": 2.5, "minor": 1.5, "service": 0.6], other: 0),
-            18, at(["motorway": 18, "trunk": 16, "primary": 14, "secondary": 12, "tertiary": 10, "minor": 8, "service": 4], other: 0),
-        ]
+        var expression: [Any] = ["interpolate", ["exponential", roadWidthBase], ["zoom"]]
+        for stop in roadWidthStops { expression += [stop.zoom, at(stop.widths, other: 0)] }
+        return expression
+    }
+
+    /// The road widths, points, at each zoom, by class; between two zooms
+    /// they grow by ``roadWidthBase`` a zoom.
+    static let roadWidthStops: [(zoom: Double, widths: [String: Double])] = [
+        (5, ["motorway": 0.5]),
+        (8, ["motorway": 1, "trunk": 0.8, "primary": 0.4]),
+        (11, ["motorway": 2, "trunk": 1.6, "primary": 1.2, "secondary": 0.8, "tertiary": 0.4]),
+        (14, ["motorway": 5, "trunk": 4.5, "primary": 3.5, "secondary": 3, "tertiary": 2.5, "minor": 1.5, "service": 0.6]),
+        (18, ["motorway": 18, "trunk": 16, "primary": 14, "secondary": 12, "tertiary": 10, "minor": 8, "service": 4]),
+    ]
+    static let roadWidthBase = 1.4
+
+    /// A road of class `name`'s width, points, at `zoom`, as the map draws
+    /// it (``roadWidth(casing:)`` without its casing; decision 476).
+    static func roadWidth(of name: String, zoom: Double) -> Double {
+        let stops = roadWidthStops
+        guard let first = stops.first, let last = stops.last else { return 0 }
+        if zoom <= first.zoom { return first.widths[name] ?? 0 }
+        if zoom >= last.zoom { return last.widths[name] ?? 0 }
+        let upper = stops.firstIndex { $0.zoom >= zoom } ?? stops.count - 1
+        let low = stops[upper - 1], high = stops[upper]
+        let span = high.zoom - low.zoom
+        let t = (pow(roadWidthBase, zoom - low.zoom) - 1) / (pow(roadWidthBase, span) - 1)
+        let from = low.widths[name] ?? 0, to = high.widths[name] ?? 0
+        return from + (to - from) * t
     }
 
     static func roadColor(_ c: Colors, casing: Bool) -> [Any] {

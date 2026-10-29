@@ -16,7 +16,7 @@ import XCTest
 final class CityBusToolTests: XCTestCase {
     private let cell = Land.cellLength
 
-    private func session(balance: Money = 100_000_000) throws -> GameSession {
+    private func session(balance: Money = 100_000_000, unlimitedFunds: Bool = false) throws -> GameSession {
         var world = GameWorld(bounds: try WorldBounds(width: 64 * cell, height: 16 * cell), economy: GameEconomy(balance: balance, costs: testCosts))
         try world.buildStation(named: "A", at: CellPosition(row: 8, column: 5).middle)
         world.setEconomyMode(.management)
@@ -24,6 +24,7 @@ final class CityBusToolTests: XCTestCase {
             + (24...28).map { LandCell(row: 8, column: $0, use: .residential, residents: 200, jobs: 0) })
         world.setLandDemand(true)
         world.enableRoads()
+        world.setUnlimitedFunds(unlimitedFunds)
         try world.setRoads((5...30).map { CellPosition(row: 8, column: $0) } + (40...42).map { CellPosition(row: 2, column: $0) },
                            in: [LandBlock(row: 0, column: 0), LandBlock(row: 0, column: 1), LandBlock(row: 0, column: 2)])
         let session = GameSession(world: world)
@@ -185,8 +186,9 @@ final class CityBusToolTests: XCTestCase {
         XCTAssertEqual(preview.line(in: .english), "320 m of new road")
         XCTAssertEqual(preview.line(in: .traditionalChinese), "新鋪 320 公尺")
         let overlay = try XCTUnwrap(session.roadMapOverlay)
-        XCTAssertEqual(overlay.laid, cells)
-        XCTAssertEqual(overlay.draft, cells.map(\.middle))
+        // Decision 476: one line through the cells' middles, as it will be
+        // laid, not a block a cell.
+        XCTAssertEqual(overlay.draft, [cells.map(\.middle)])
         XCTAssertTrue(overlay.isBuildable)
         let before = session.world.economy.balance
         XCTAssertTrue(session.confirmRoad())
@@ -194,11 +196,25 @@ final class CityBusToolTests: XCTestCase {
         XCTAssertEqual(session.world.roads?.built, Set(cells))
         XCTAssertEqual(session.message?.text, "The road is built, for \(Money(1_600_000).moneyText).")
         XCTAssertTrue(session.roadDraft.isEmpty)
-        XCTAssertEqual(session.roadMapOverlay?.own, cells, "outlined while the roads mode is open")
+        XCTAssertEqual(session.roadMapOverlay?.own, [cells.map(\.middle)], "marked while the roads mode is open")
         XCTAssertEqual(try replayed(session), session.world)
         // Out of the mode, the 2D streets of a map with no base map draw them.
         session.setBusMode(.routes)
         XCTAssertNil(session.roadMapOverlay)
+    }
+
+    /// Decision 476: with unlimited funds the cash does not go down, and
+    /// the message says what the button said the road cost, not $0.
+    func testWithUnlimitedFundsTheRoadSaysItsPrice() throws {
+        let session = try session(unlimitedFunds: true)
+        session.setBusMode(.roads)
+        session.endRoadDrag(from: at(12, 10), to: at(12, 14))
+        XCTAssertEqual(session.roadPreview?.price, Money(1_600_000))
+        XCTAssertTrue(session.confirmRoad())
+        XCTAssertEqual(
+            session.message?.text,
+            "The road is built. It cost \(Money(1_600_000).moneyText); with unlimited funds nothing is paid."
+        )
     }
 
     func testADragFromTheRoadsLastCellCarriesItOn() throws {
@@ -220,7 +236,7 @@ final class CityBusToolTests: XCTestCase {
         let preview = try XCTUnwrap(session.roadPreview)
         XCTAssertFalse(preview.canBuild)
         XCTAssertEqual(preview.line(in: .english), "There's a road here already.")
-        XCTAssertEqual(session.roadMapOverlay?.existing.count, 3)
+        XCTAssertEqual(session.roadMapOverlay?.draft.isEmpty, false, "drawn faint over the city's road")
         XCTAssertFalse(session.confirmRoad())
     }
 
@@ -250,7 +266,7 @@ final class CityBusToolTests: XCTestCase {
         let removal = try XCTUnwrap(session.roadRemoval)
         XCTAssertEqual(Set(removal.cells), Set(own), "the whole stretch, not the city's road it joins")
         XCTAssertTrue(removal.canRemove)
-        XCTAssertEqual(Set(session.roadMapOverlay?.removal ?? []), Set(own))
+        XCTAssertEqual(session.roadMapOverlay?.removal, [own.map(\.middle)])
         // A tap on it again lets go.
         session.tapBusTool(at: at(9, 12), reach: reach)
         XCTAssertNil(session.roadRemoval)
