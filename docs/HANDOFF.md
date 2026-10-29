@@ -1,3 +1,5 @@
+> Codex E200 鳴日號風格塗裝（2026-10-29）：[基準／單元／選用限制與重建](art/e200-mingri-style/README.md)。只新增既有 E200CK 機車及標準／尾客車的近遠 studies，原車／共用車／營運映射保持。沒有獨立玩家塗裝選用機制，合併不會自動出現在遊戲；使用者外觀接受、營運接入及真機仍UNVERIFIED。公開 [PR #1480](https://github.com/a91453/railway-game-ios/pull/1480) 仍 OPEN／ready；素材 [PR #25](https://github.com/a91453/railway-assets-private/pull/25) 已合併，實際 producer 與驗證見自有文件。
+
 > Codex 普悠瑪 TEMU2000 studies 外觀續修（[公開 draft #1456](https://github.com/a91453/railway-game-ios/pull/1456)，2026-10-29，revision-2 producer `2cb46a3660bb500549e81098c66421e8163ee479`）：[公開查證／重建／外觀自檢](art/temu2000-2026-10-29/README.md)、[素材 draft #23](https://github.com/a91453/railway-assets-private/pull/23)。使用者明確否定 revision-1 `02d61687` 的歪燈與塗裝；revision-2 左右燈位、下燈座、風擋雨刷及加寬雙紅線已修，使用者對此新 producer 外觀接受仍 UNVERIFIED。10 個近遠單元、2 個八車 assembly、私庫每輪 20 張 PNG；舊版重檔在同 PR 刪除。營運 `puyuma`／`puyumaFar` 全頂點欄位雜湊不變，沒有替換映射；技術 VERIFIED，iOS Metal／動畫／效能 UNVERIFIED。車側大幅圖形、白頰曲率與屋頂設備仍待改善。無 GameCore、存檔、fixtures、購車、班表變更。
 
 > 台北捷運 C371／C381／610 接進營運（派工單 BS，決策 461，`claude/taipei-metro-c371-c381-610`）：各線照實際配車，高雄、桃園、台中改叫 `metroGeneric` 但畫面不變；[對照圖](art/taipei-metro-461-2026-10-28/README.md)。留下的：實機幀數與 500 m 換遠景；#1342 若後合，保留 `Map3DC371`／`Map3DC381` 的 `far` 分支並重跑 `tools/train-models/run.sh OUT --lock`（見 [決策 461](decisions/461.md) 的下一步）。
@@ -2063,6 +2065,14 @@
   - 第二類要 GameCore 記歷史，會動存檔。
   - 規劃提的收支組成甜甜圈與可捲動長趨勢。
   - 以上都見決策 478「下一步」。
+
+### 4.24 宣傳影片素材（決策 475，session_01YGNNukoWqi8apoMDtJNZ3x，派工單 VID，2026-10-29）
+
+- 做了的：`PromoMaterialTests` 與 `website-screenshots.yml` 的 `kind=promo`（[決策 475](decisions/475.md)，#1461 已合併）。一次 iPhone 17 Pro 深色跑（run 40825762656，commit d3cd9db）：230 張 PNG、16 支影片。影片轉橫、裁 20 秒、壓縮後逐格檢查，沒有超過 0.1 秒的卡頓。
+- 素材不在這個 repo：在 `a91453/railway-assets-private` 的 `promo-material/2026-10-29/`，三個草稿 PR（#27 影片＋README＋三城市、#28 四城市、#29 各場景），等作者合併。影片也直接傳給作者了。
+- 還沒做：iPad、淺色（作者：發佈前再拍，他自己也能截圖，所以不再跑 `website-screenshots.yml`）；實機 3D 影片由作者自錄，放 README 的「實機素材」。
+- 沒解決的：「車隊總覽」清單（SwiftUI `List`）在 XCUITest 的拖曳、滑動、邊緣拖曳都不捲動，原因未知，不確定是不是真的 bug（UNVERIFIED，需要在實機試）。`testFreight` 因此在抓不到「跟隨」按鈕時略過「貨運列車」那張截圖。
+- 版面問題（截圖照實呈現，沒改）：地圖擴建的星等標籤蓋住鎖頭與價格、吉祥物蓋住價格、教學文字框蓋住「南站」標籤。
 
 ## 5. 已知、還沒派的待辦
 
