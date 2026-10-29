@@ -55,6 +55,10 @@ struct StationPanel: View {
     @State private var choosingDestination = false
     @State private var destinationSearch = ListSearch()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 477: the group a jump is still scrolling to, and the wait
+    /// for the panel to stop moving before the last scrolls (``settleJump(_:)``).
+    @State private var pendingJump: StationPanelGroup?
+    @State private var jumpSettling: Task<Void, Never>?
     /// Decision 472: the groups folded by their headings, kept for the next
     /// station and the next launch (``StationPanelFolds``).
     @AppStorage("stationPanelFolded") private var foldedGroups = ""
@@ -109,6 +113,9 @@ struct StationPanel: View {
                 guard let focus else { return }
                 screen.stationFocus = nil
                 jump(to: focus, proxy)
+            }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { _ in
+                if pendingJump != nil { settleJump(proxy) }
             }
             .toolbar {
                 if session.selectedStation != nil {
@@ -270,24 +277,39 @@ struct StationPanel: View {
         var changed = folds
         changed.unfold(group)
         foldedGroups = changed.stored
+        pendingJump = group
         Task { @MainActor in
             await Task.yield()
             withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(group, anchor: .top) }
-            // The form places the rows it has not drawn yet by an estimate,
-            // so a scroll to a group far down, as the panel opens, stops
-            // short: one scroll left the Freight heading mid-panel (full
-            // lane runs 40842224823, 40865620118, 40866617267) and a second
-            // after 0.2 s left the panel at Road, a group above it (run
-            // 40889151223; both recordings show the panel resting there).
-            // Each scroll draws the rows it lands on, so the next lands
-            // closer: three more, at once (no animation), settle on the
-            // heading; one already there does not move.
+        }
+        settleJump(proxy)
+    }
+
+    /// Scrolls to ``pendingJump`` again once the panel has stopped moving.
+    /// The form places the rows it has not drawn yet by an estimate, so a
+    /// scroll to a group far down, as the panel opens, stops short: the
+    /// Freight heading mid-panel and its materials row off screen (full
+    /// lane runs 40842224823, 40865620118, 40866617267), or the panel at
+    /// Road, a group above it (run 40889151223). A second scroll a fixed
+    /// time later was not enough: on a slow runner the panel took some ten
+    /// seconds to slide in and every scroll was made before it was in
+    /// place (run 40891750884; the recordings show each). So each move of
+    /// the panel starts the wait again, and only then three scrolls at once
+    /// (no animation), each landing closer as it draws the rows it reaches;
+    /// one already there does not move.
+    private func settleJump(_ proxy: ScrollViewProxy) {
+        jumpSettling?.cancel()
+        jumpSettling = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(MotionRule.cardIn.seconds))
             for _ in 0..<3 {
-                try? await Task.sleep(for: .seconds(MotionRule.change.seconds))
+                guard !Task.isCancelled, let group = pendingJump else { return }
                 var settle = Transaction()
                 settle.disablesAnimations = true
                 withTransaction(settle) { proxy.scrollTo(group, anchor: .top) }
+                try? await Task.sleep(for: .seconds(MotionRule.change.seconds))
             }
+            guard !Task.isCancelled else { return }
+            pendingJump = nil
         }
     }
 
