@@ -16,7 +16,7 @@ tools/kenney-props/build.sh [WORK_DIR]
 | `kenney-pine-young`（`pineYoung`） | 樹幹 0.9 m，兩層 | 64 | 2.26 × 1.90 × 5.02 |
 | `kenney-bushes`（`bushes`） | 兩叢不同大小、轉向的灌木，腳埋進土裡 0.1 m | 120 | 2.40 × 1.70 × 1.00 |
 | `kenney-bushes-large`（`bushesLarge`） | 三叢 | 180 | 3.22 × 2.68 × 1.25 |
-| `kenney-tank`（`tank`） | 罐身拉長 2.4 m、改白，加混凝土墊與中間鞍座 | 332 | 9.76 × 4.40 × 3.26 |
+| `kenney-tank`（`tank`） | 罐身拉長 2.4 m、改白，加混凝土墊與中間鞍座；原件是順時針繞的（裡外翻），每個三角形轉回來（決策 437 的 2026-10-29 修正） | 332 | 9.76 × 4.40 × 3.26 |
 
 樹冠（`Map3DPalette.crown`）與灌木（`embankment`）的顏色讀進遊戲時改成 alpha 0，由每個實例給自己的綠（`Map3DSceneryProp.coniferGreens`、`bushGreens`）。檔案讀不到時，`Map3DModelPack.standard` 裡同尺寸的程式替身照畫。
 
