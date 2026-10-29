@@ -83,10 +83,6 @@ public enum WhatsNew {
                     english: "Choosing the high-speed rail or Yilan line demo closes the menu at once, and the loading screen is no longer covered.",
                     chinese: "高鐵、宜蘭線示範按下就關掉選單，載入畫面不再被蓋住。"
                 ),
-                Line(
-                    english: "The fleet list can be dragged from a train's card.",
-                    chinese: "車隊清單從車卡上也拖得動。"
-                ),
             ]
         ),
         Entry(
