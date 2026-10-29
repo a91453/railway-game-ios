@@ -11,7 +11,8 @@ const model='models/temu2000-leading.m3dmodel';
 const before='_feedback-before.m3dmodel',after='_feedback-after.m3dmodel',html='_feedback.html';
 copyFileSync(resolve(prior,model),resolve(current,before));
 copyFileSync(resolve(current,model),resolve(current,after));
-writeFileSync(resolve(current,html),'<canvas id="canvas"></canvas><script type="module">import{NativeRenderer}from"./renderer.js";window.renderer=new NativeRenderer(document.getElementById("canvas"));window.ready=true;</script>');
+const lighting=JSON.parse(readFileSync(resolve(current,'manifest.json'))).lighting;
+writeFileSync(resolve(current,html),'<canvas id="canvas"></canvas><script type="module">import{NativeRenderer}from"./renderer.js";window.renderer=new NativeRenderer(document.getElementById("canvas"),'+JSON.stringify(lighting)+');window.ready=true;</script>');
 const server=createServer((req,res)=>{try{const p=resolve(current,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!p.startsWith(current+'/'))throw Error();res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.png':'image/png'})[extname(p)]||'application/octet-stream');res.end(readFileSync(p));}catch{res.writeHead(404);res.end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 try{

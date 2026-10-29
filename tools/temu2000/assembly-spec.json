@@ -1,0 +1,24 @@
+{
+  "assemblies": [
+    {"id":"temu2000-formation-v2","placements":[
+      {"unit":"temu2000-trailing","translation":[-73.1475,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-tema","translation":[-51.75,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-tep","translation":[-31.05,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-temb","translation":[-10.35,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-temb","translation":[10.35,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-tep","translation":[31.05,0,0],"rotation_degrees":180},
+      {"unit":"temu2000-tema","translation":[51.75,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-leading","translation":[73.1475,0,0],"rotation_degrees":0}
+    ]},
+    {"id":"temu2000-formation-v2-far","placements":[
+      {"unit":"temu2000-trailing-far","translation":[-73.1475,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-tema-far","translation":[-51.75,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-tep-far","translation":[-31.05,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-temb-far","translation":[-10.35,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-temb-far","translation":[10.35,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-tep-far","translation":[31.05,0,0],"rotation_degrees":180},
+      {"unit":"temu2000-tema-far","translation":[51.75,0,0],"rotation_degrees":0},
+      {"unit":"temu2000-leading-far","translation":[73.1475,0,0],"rotation_degrees":0}
+    ]}
+  ]
+}

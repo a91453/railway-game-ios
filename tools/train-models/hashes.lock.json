@@ -2602,28 +2602,48 @@
       "triangles" : 2738
     },
     "temu2000-formation" : {
-      "hash" : "b94816423a4a90ab",
-      "triangles" : 14812
+      "hash" : "de246807315a301b",
+      "triangles" : 23440
     },
     "temu2000-leading" : {
-      "hash" : "bf52039b3a25bfd1",
-      "triangles" : 2394
+      "hash" : "6089fc28a5da50dc",
+      "triangles" : 6180
+    },
+    "temu2000-leading-far" : {
+      "hash" : "bb2cf5c648917526",
+      "triangles" : 2356
     },
     "temu2000-tema" : {
-      "hash" : "818f0102d995d964",
-      "triangles" : 1624
+      "hash" : "95f672027f7e9c2d",
+      "triangles" : 1800
+    },
+    "temu2000-tema-far" : {
+      "hash" : "3aee391543472289",
+      "triangles" : 760
     },
     "temu2000-temb" : {
-      "hash" : "349d340d24a08b7b",
-      "triangles" : 1636
+      "hash" : "bb4f3a34ee4037f6",
+      "triangles" : 1812
+    },
+    "temu2000-temb-far" : {
+      "hash" : "f7de2d120ad1d48",
+      "triangles" : 772
     },
     "temu2000-tep" : {
-      "hash" : "bbe8d856188692e0",
-      "triangles" : 1776
+      "hash" : "554c50f96987e18a",
+      "triangles" : 1952
+    },
+    "temu2000-tep-far" : {
+      "hash" : "d6ca225687e94390",
+      "triangles" : 832
     },
     "temu2000-trailing" : {
-      "hash" : "aaf063333528a259",
-      "triangles" : 2346
+      "hash" : "7acbc29109a33f20",
+      "triangles" : 6132
+    },
+    "temu2000-trailing-far" : {
+      "hash" : "8894f5a3848c511c",
+      "triangles" : 2404
     },
     "urban-three-formation" : {
       "hash" : "4bd45bdc4d152ed3",

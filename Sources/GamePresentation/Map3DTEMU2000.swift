@@ -13,6 +13,10 @@ public enum Map3DTEMU2000 {
     public static let white = Map3DPalette.tileWhite
     public static let teal = Map3DColor.rgb(0x12A08F)
     public static let navy = Map3DColor.rgb(0x262C57)
+    // The studies-only TRA production palette. The operating set retains its
+    // exact previous vertex payload until a separate integration change.
+    public static let studyRed = Map3DColor.rgb(0xD92E48)
+    public static let studyDark = Map3DColor.rgb(0x273039)
     public static let glass = Map3DColor.rgb(0x405560)
     public static let silver = Map3DColor.rgb(0xAAB7BF)
 
@@ -26,6 +30,12 @@ public enum Map3DTEMU2000 {
     public static func model(_ unit: Unit, far: Bool) -> Map3DModelPack.Model {
         var builder = StationKitBuilder()
         builder.temu2000(unit, far: far)
+        return .flat(named: "temu2000-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
+    }
+
+    public static func studyModel(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model {
+        var builder = StationKitBuilder()
+        builder.temu2000(unit, far: far, study: true)
         return .flat(named: "temu2000-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
     }
 
@@ -50,13 +60,45 @@ public enum Map3DTEMU2000 {
         }
         return .flat(named: "temu2000-formation", from: builder.mesh)
     }
+
+    public static func studyFormation() -> Map3DModelPack.Model {
+        var builder = StationKitBuilder()
+        for (index, unit) in order.enumerated() {
+            builder.add(studyModel(unit), at: Map3DPoint(centres[index], 0, 0),
+                        angle: rotations[index])
+        }
+        return .flat(named: "temu2000-formation", from: builder.mesh)
+    }
 }
 
 extension StationKitBuilder {
-    mutating func temu2000(_ unit: Map3DTEMU2000.Unit, far: Bool = false) {
+    mutating func temuSolidFace(_ points: [Map3DPoint], inside: Map3DPoint, color: UInt32) {
+        guard points.count >= 3 else { return }
+        if points.count > 3 {
+            for i in 1..<(points.count-1) {
+                temuSolidFace([points[0],points[i],points[i+1]],inside:inside,color:color)
+            }
+            return
+        }
+        var front = points
+        let n = (front[1]-front[0]).cross(front[2]-front[0])
+        let centre = front.reduce(Map3DPoint.zero) { $0 + $1*(1/Float(front.count)) }
+        if n.dot(centre-inside) < 0 { front.reverse() }
+        let normal = (front[1]-front[0]).cross(front[2]-front[0])
+        let length = max(0.000001,sqrtf(normal.dot(normal)))
+        let offset = normal*(-0.004/length)
+        let back = front.map { $0 + offset }
+        mesh.addFacet(front,color:color)
+        mesh.addFacet(Array(back.reversed()),color:color)
+        for i in front.indices {
+            let j = (i+1)%front.count
+            mesh.addFacet([front[i],back[i],back[j],front[j]],color:color)
+        }
+    }
+    mutating func temu2000(_ unit: Map3DTEMU2000.Unit, far: Bool = false, study: Bool = false) {
         let white = Map3DTEMU2000.white
-        let teal = Map3DTEMU2000.teal
-        let navy = Map3DTEMU2000.navy
+        let teal = study ? Map3DTEMU2000.studyRed : Map3DTEMU2000.teal
+        let navy = study ? Map3DTEMU2000.studyDark : Map3DTEMU2000.navy
         let glass = Map3DTEMU2000.glass
         let silver = Map3DTEMU2000.silver
         let cab: Float = unit == .leading ? 1 : unit == .trailing ? -1 : 0
@@ -67,12 +109,21 @@ extension StationKitBuilder {
         // New TEMU2000 section: long straight waist, softly rolled upper
         // shoulders and a narrow roof crown. Height and half-width are sampled
         // separately through the cab; no TEMU1000 shell vertices are reused.
-        let section: [(Float, Float)] = [
+        let studySection: [(Float, Float)] = [
+            (0.96,-1.17),(1.05,-1.37),(1.38,-1.45),
+            (1.43,-1.45),(1.53,-1.45),(1.59,-1.45),(1.64,-1.45),(2.53,-1.45),
+            (2.99,-1.42),(3.29,-1.30),(3.49,-1.06),(3.565,-0.66),
+            (3.565,0.66),(3.49,1.06),(3.29,1.30),(2.99,1.42),
+            (2.53,1.45),(1.64,1.45),(1.59,1.45),(1.53,1.45),
+            (1.43,1.45),(1.38,1.45),(1.05,1.37),(0.96,1.17)
+        ]
+        let operatingSection: [(Float, Float)] = [
             (0.96,-1.17),(1.05,-1.37),(1.38,-1.45),(2.53,-1.45),
             (2.99,-1.42),(3.29,-1.30),(3.49,-1.06),(3.565,-0.66),
             (3.565,0.66),(3.49,1.06),(3.29,1.30),(2.99,1.42),
             (2.53,1.45),(1.38,1.45),(1.05,1.37),(0.96,1.17)
         ]
+        let section = study ? studySection : operatingSection
         func ring(_ x: Float, width: Float = 1, top: Float = roofHeight,
                   bottom: Float = 0.96, crown: Float = 0) -> [Map3DPoint] {
             section.map { y, lateral in
@@ -120,12 +171,34 @@ extension StationKitBuilder {
         for k in 0..<(rings.count - 1) {
             for i in section.indices {
                 let j = (i + 1) % section.count
-                face([rings[k][i],rings[k][j],rings[k+1][j]],inside:inside,color:white)
-                face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:inside,color:white)
+                let bodySpan = cab == 0 || k == (cab > 0 ? 0 : rings.count-2)
+                let bandHeight = (section[i].0 + section[j].0)*0.5
+                let isBand = bodySpan && ((bandHeight >= 1.43 && bandHeight < 1.53)
+                    || (bandHeight >= 1.59 && bandHeight < 1.64))
+                let shellColor = isBand ? teal : white
+                // Preserve one winding across every swept station. Choosing
+                // per-triangle orientation against a fixed centre flipped
+                // individual faces where the cab folds down at its lip.
+                if study {
+                    mesh.addFacet([rings[k][i],rings[k][j],rings[k+1][j]],color:shellColor)
+                    mesh.addFacet([rings[k][i],rings[k+1][j],rings[k+1][i]],color:shellColor)
+                } else {
+                    face([rings[k][i],rings[k][j],rings[k+1][j]],inside:inside,color:white)
+                    face([rings[k][i],rings[k+1][j],rings[k+1][i]],inside:inside,color:white)
+                }
             }
         }
         face(rings[0],inside:inside,color:white)
         face(rings[rings.count-1],inside:inside,color:white)
+
+        if study {
+            // The manufacturer's 2014 brochure shows a recessed passage
+            // and rubber diaphragm between cars. Keep it within each end
+            // wall, leaving the driver's nose clear.
+            for end: Float in [-1,1] where cab == 0 || end == -cab {
+                box(end*halfBody,1.05,0,0.22,1.65,1.95,navy)
+            }
+        }
 
         // Separate underframe, two 2.2 m wheelbase bogies, actual 0.86 m
         // wheel diameter. Wheel-centre positions are constrained by 14.3 m
@@ -168,6 +241,19 @@ extension StationKitBuilder {
         for side: Float in [-1,1] {
             let doors: [Float] = cab == 0 ? [-9.10,9.10]
                 : cab > 0 ? [-9.15,5.80] : [-5.80,9.15]
+            func doorPanel(_ x: Float) {
+                if study {
+                    // The door leaf is segmented at the same two paint
+                    // heights as the shell; no overlapping colour plate.
+                    for (base,height,color): (Float,Float,UInt32) in [
+                        (0.99,0.44,white),(1.43,0.10,teal),
+                        (1.53,0.06,white),(1.59,0.05,teal),
+                        (1.64,1.43,white)
+                    ] { box(x,base,side*1.455,0.86,0.010,height,color) }
+                } else {
+                    box(x,0.99,side*1.455,0.86,0.010,2.08,white)
+                }
+            }
             let windowXs: [Float] = cab == 0
                 ? [-7.75,-6.53,-5.31,-4.09,-2.87,-1.65,-0.43,
                    0.79,2.01,3.23,4.45,5.67,6.89,8.11]
@@ -186,53 +272,71 @@ extension StationKitBuilder {
                     }
                     from = max(from, door + 0.50)
                 }
-                for x in doors { box(x,0.99,side*1.455,0.86,0.010,2.08,white) }
+                for x in doors { doorPanel(x) }
             } else {
                 for x in windowXs where !doors.contains(where: { abs(x-$0)<0.72 }) {
                     box(x,2.08,side*1.455,0.87,0.016,0.55,navy)
                     box(x,2.13,side*1.467,0.77,0.008,0.45,glass)
                 }
                 for x in doors {
-                    box(x,0.99,side*1.455,0.86,0.010,2.08,white)
+                    doorPanel(x)
                     box(x,2.12,side*1.465,0.54,0.008,0.65,navy)
                     box(x,2.16,side*1.472,0.46,0.004,0.56,glass)
                     box(x+0.38,1.00,side*1.467,0.012,0.010,2.02,silver)
                 }
             }
-            // Clean game-palette waist stripe, visibly below individual panes.
-            let stripeCenter = cab == 0 ? Float(0) : -cab*1.78
-            let stripeLength = cab == 0 ? Float(19.2) : Float(17.35)
-            box(stripeCenter,1.62,side*1.454,stripeLength,0.014,0.10,teal)
-            box(stripeCenter,1.48,side*1.450,stripeLength,0.012,0.035,navy)
+            if !study {
+                let stripeCenter = cab == 0 ? Float(0) : -cab*1.78
+                let stripeLength = cab == 0 ? Float(19.2) : Float(17.35)
+                box(stripeCenter,1.62,side*1.454,stripeLength,0.014,0.10,teal)
+                box(stripeCenter,1.48,side*1.450,stripeLength,0.012,0.035,navy)
+            }
             if cab != 0 {
                 // Cab side glass is a distinct tapered quadrilateral.
                 let s = side*1.46
-                face([
+                let sidePaneOuter = [
                     Map3DPoint(cab*6.91,2.48,s),
                     Map3DPoint(cab*7.95,2.48,s*0.988),
                     Map3DPoint(cab*8.28,2.94,s*0.970),
                     Map3DPoint(cab*7.05,2.99,s)
-                ],inside:inside,color:navy)
-                face([
+                ]
+                let sidePaneInner = [
                     Map3DPoint(cab*7.00,2.53,s*1.006),
                     Map3DPoint(cab*7.90,2.53,s*0.995),
                     Map3DPoint(cab*8.17,2.88,s*0.978),
                     Map3DPoint(cab*7.12,2.92,s*1.006)
-                ],inside:inside,color:glass)
+                ]
+                if study {
+                    temuSolidFace(sidePaneOuter,inside:inside,color:navy)
+                    temuSolidFace(sidePaneInner,inside:inside,color:glass)
+                } else {
+                    face(sidePaneOuter,inside:inside,color:navy)
+                    face(sidePaneInner,inside:inside,color:glass)
+                }
             }
         }
 
         // Roof housings are physically separate, low and supported; the body
         // roof itself stays white. TEP alone carries the raised pantograph.
         for x: Float in [-5.9,5.9] {
-            // The cab-end HVAC shroud reads as a white hump behind the face,
-            // not a dark rectangular header above its three embedded lamps.
-            box(x,roofHeight-0.005,0,3.15,1.70,0.30,
-                cab != 0 && x*cab > 0 ? white : silver)
-            if !far { box(x,roofHeight+0.292,0,2.34,1.21,0.025,white) }
+            // The nose-side housing must sit behind the forehead. The old
+            // 1.7 m wide rectangular block projected above the front face.
+            let cabEnd = cab != 0 && x*cab > 0
+            if study {
+                let housingLength: Float = cabEnd ? 2.20 : 3.15
+                let housingWidth: Float = cab != 0 ? 1.12 : 1.50
+                let housingHeight: Float = cab != 0 ? 0.025 : 0.15
+                box(x,roofHeight-0.005,0,housingLength,housingWidth,housingHeight,
+                    cab != 0 ? white : silver)
+            } else {
+                box(x,roofHeight-0.005,0,3.15,1.70,0.30,
+                    cabEnd ? white : silver)
+                if !far { box(x,roofHeight+0.292,0,2.34,1.21,0.025,white) }
+            }
         }
         for x: Float in [-1.92,1.92] {
-            box(x,roofHeight-0.005,0,1.00,1.02,0.14,silver)
+            box(x,roofHeight-0.005,0,1.00,1.02,study && cab != 0 ? 0.025 : 0.14,
+                study && cab != 0 ? white : silver)
         }
         if unit == .tep {
             let x: Float = -8.05
@@ -262,7 +366,7 @@ extension StationKitBuilder {
                 func at(_ q: (x: Float,w: Float,h: Float,b: Float,c: Float,far: Bool)) -> Map3DPoint {
                     let cross = ring(cab*q.x,width:q.w,top:q.h,bottom:q.b,crown:q.c)
                     let z = abs(lateral)
-                    for i in 8..<12 {
+                    for i in (study ? 12..<16 : 8..<12) {
                         let p = cross[i], next = cross[i+1]
                         if z <= next.z {
                             let f = min(1,max(0,(z-p.z)/max(0.00001,next.z-p.z)))
@@ -270,11 +374,19 @@ extension StationKitBuilder {
                                               p.y+(next.y-p.y)*f, lateral)
                         }
                     }
-                    return Map3DPoint(cross[12].x,cross[12].y,lateral)
+                    let last = study ? 16 : 12
+                    return Map3DPoint(cross[last].x,cross[last].y,lateral)
                 }
                 let p=at(a),q=at(b)
                 return Map3DPoint(p.x+(q.x-p.x)*blend+cab*lift,
                                   p.y+(q.y-p.y)*blend+lift,lateral)
+            }
+            // Close the decorative patches as shallow solids. A lone facet
+            // passed the old render checks but failed a real edge audit and
+            // disappeared when the view was reversed.
+            func solidFace(_ points: [Map3DPoint], _ color: UInt32) {
+                if study { temuSolidFace(points,inside:inside,color:color) }
+                else { face(points,inside:inside,color:color) }
             }
             func panel(_ allStations: [Float],_ allHalfWidths: [Float],_ allColumns: Int,
                        _ color: UInt32,_ lift: Float,_ lowerCurve: Float = 0) {
@@ -294,8 +406,8 @@ extension StationKitBuilder {
                         }
                         let a=point(row,v0),b=point(row,v1)
                         let c=point(row+1,v1),d=point(row+1,v0)
-                        face([a,b,c],inside:inside,color:color)
-                        face([a,c,d],inside:inside,color:color)
+                        solidFace([a,b,c],color)
+                        solidFace([a,c,d],color)
                     }
                 }
             }
@@ -319,7 +431,7 @@ extension StationKitBuilder {
             // Carry the tapered centre field down the short blunt end cap.
             // A slight bow replaces the perfectly straight cheek-side edge;
             // the white lower lip remains exposed.
-            face([
+            solidFace([
                 Map3DPoint(cab*10.925,1.51,-0.48),
                 Map3DPoint(cab*10.925,1.51,0.48),
                 Map3DPoint(cab*10.925,1.36,0.50),
@@ -330,7 +442,7 @@ extension StationKitBuilder {
                 Map3DPoint(cab*10.925,0.87,-0.48),
                 Map3DPoint(cab*10.925,1.12,-0.50),
                 Map3DPoint(cab*10.925,1.36,-0.50)
-            ],inside:inside,color:teal)
+            ],teal)
             // Lens faces are laid on the swept cab skin, so their position
             // follows the forehead instead of floating above the roof.
             func lens(_ station: Float,_ lateral: Float,_ along: Float,
@@ -342,25 +454,25 @@ extension StationKitBuilder {
                     rim.append(roofPoint(station+along*cosf(angle),
                                          lateral+across*sinf(angle),lift))
                 }
-                face(rim,inside:inside,color:color)
+                solidFace(rim,color)
             }
             for side: Float in [-1,1] {
                 let s = side
                 // The lower paired lamps sit in compact horizontal pods.
-                face([
+                solidFace([
                     roofPoint(9.93,s*0.39,0.160),roofPoint(9.87,s*0.79,0.160),
                     roofPoint(9.99,s*0.97,0.160),roofPoint(10.16,s*0.97,0.160),
                     roofPoint(10.30,s*0.89,0.160),roofPoint(10.25,s*0.47,0.160)
-                ],inside:inside,color:navy)
+                ],navy)
                 lens(10.09,s*0.62,0.065,0.09,0.180,silver)
                 lens(10.12,s*0.94,0.065,0.09,0.180,silver)
                 lens(8.37,s*0.68,0.330,0.145,0.151,navy)
                 lens(8.37,s*0.68,0.245,0.100,0.169,silver)
             }
-            face([
+            solidFace([
                 roofPoint(8.30,-0.19,0.155),roofPoint(8.30,0.19,0.155),
                 roofPoint(8.60,0.19,0.155),roofPoint(8.60,-0.19,0.155)
-            ],inside:inside,color:navy)
+            ],navy)
             for side: Float in [-1,1] {
                 civicTube(roofPoint(9.30,side*0.04,0.180),
                           roofPoint(8.97,side*0.66,0.180),
