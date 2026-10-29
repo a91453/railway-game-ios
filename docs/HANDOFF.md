@@ -1948,6 +1948,14 @@
 - **等 macOS CI 與 TestFlight 看**（UNVERIFIED，Linux 編不了 SwiftUI）：條與按鈕的位置、按下取消後回到的畫面。
 - **下一步**（沒派）：依量到的時間給每步權重；GameCore 建世界加檢查點讓取消能在步驟中間停；第一次開 3D 地圖的等待。見決策 473「下一步」。
 
+### 4.20 地圖標籤不互蓋、「整個臺灣」放第一、缺建材泡泡開在建材（決策 477，session_01YGNNumMhqmw96pGQJnVgtY，派工單 SHOT，2026-10-29）
+
+- 做了的在 [決策 477](decisions/477.md)：警示泡泡、票價避開站名（`MapLabelPlacement`，Linux 測試 `MapLabelPlacementTests`）；擴張地圖的價錢不躲在頂列下、景點星等讓價錢；底圖地名被頂列蓋住時移出；真實地圖選單「整個臺灣」放第一；點「缺建材」泡泡開車站面板並捲到「貨運與拆除」組（`StationPanelGroup.answering`，`StationPanelFocusTests`）。
+- 車隊總覽「從卡片拖不動」查過：main 的程式照影片流程拖得動（run 40822516453、40823923438），沒改，測試 `MapInteractionTests/testTheFleetListScrollsFromADragOnACard` 留著防退步。
+- **發版前要補（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做」）**：截圖驗收沒做。到時在分支或 main 跑 `website-screenshots.yml`，看 freight-materials、freight-station（泡泡點開後面板在建材）、map-expansion、liu-mingchuan（臺北市、基隆市要完整）、real-world-demo-day（票價不蓋八堵）、新加的 real-world-picker；照 `docs/research/UI_UX_REVIEW_2026-10-28.md` §5 看七題、寫最嚴重三項、最多三輪。本 session 的截圖 run 40828547711 排隊中被規劃取消，沒有拍到。
+- **修之前的截圖**（不要刪）：網站截圖 artifact `website-screenshots`，run 40805756457（VID）；宣傳影片截圖 run 40812436549（WEB）。都在 a91453/railway-game-ios 的 Actions，保留到 GitHub 的期限。
+- **等 TestFlight 看**（UNVERIFIED）：iPhone SE 開始畫面不必捲就看得到「新遊戲」是估算，CI 是 iPhone 17 Pro；地名「空位」在各縮放下有沒有把地名推得太遠。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
