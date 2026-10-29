@@ -2025,13 +2025,24 @@
 - **截圖驗收暫緩**（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」）：#1467（決策 472）圖表的驗收沒拍。拍照的測試 `testStatisticsCharts`、`testTrainLooks` 已在 `WebsiteScreenshotTests`，發版前在那個分支跑一次 `website-screenshots.yml`（一次只跑一個），照 skill 第 3 節看，寫成決策 472「472 截圖驗收」；路線清單列的問題給 LP（決策 481）。
 - **鐵道味建議**（只列不改）：決策 482 續篇的表，規劃決定要不要派。
 
-### 4.24 宣傳影片素材（決策 475，session_01YGNNukoWqi8apoMDtJNZ3x，派工單 VID，2026-10-29）
+### 4.22 路線面板拆兩層（決策 481，session_01YGNNunF7F1xm5bcPAv9pcL，派工單 LP，2026-10-29，#1476）
 
-- 做了的：`PromoMaterialTests` 與 `website-screenshots.yml` 的 `kind=promo`（[決策 475](decisions/475.md)，#1461 已合併）。一次 iPhone 17 Pro 深色跑（run 40825762656，commit d3cd9db）：230 張 PNG、16 支影片。影片轉橫、裁 20 秒、壓縮後逐格檢查，沒有超過 0.1 秒的卡頓。
-- 素材不在這個 repo：在 `a91453/railway-assets-private` 的 `promo-material/2026-10-29/`，三個草稿 PR（#27 影片＋README＋三城市、#28 四城市、#29 各場景），等作者合併。影片也直接傳給作者了。
-- 還沒做：iPad、淺色（作者：發佈前再拍，他自己也能截圖，所以不再跑 `website-screenshots.yml`）；實機 3D 影片由作者自錄，放 README 的「實機素材」。
-- 沒解決的：「車隊總覽」清單（SwiftUI `List`）在 XCUITest 的拖曳、滑動、邊緣拖曳都不捲動，原因未知，不確定是不是真的 bug（UNVERIFIED，需要在實機試）。`testFreight` 因此在抓不到「跟隨」按鈕時略過「貨運列車」那張截圖。
-- 版面問題（截圖照實呈現，沒改）：地圖擴建的星等標籤蓋住鎖頭與價格、吉祥物蓋住價格、教學文字框蓋住「南站」標籤。
+- 做了的在 [決策 481](decisions/481.md)，包括：
+  - 精簡清單與每條線自己的頁
+  - 線多時分組、可收合
+  - 「需要注意」篩選
+  - 從頁面返回時清單捲回那條線
+- 規則在 `LinesPanelNavigation.swift`、`LineGroups.swift`，Linux 測試在 `LinesPanelNavigationTests`。
+- **留到發版前**：截圖驗收（決策 482）。作者 2026-10-29 暫停截圖：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」。
+  - `WebsiteScreenshotTests.testLinesListAndLinePage` 已寫好，還沒跑過。它拍三張：清單（`lines-list`）、一條線的頁（`line-page`）、整個路網的頁（`lines-network`）。
+  - 規劃要的「線多一點的局，看得到分組與需要注意」還沒有：貨運場景只有幾條線。發版前跑截圖時，改用實景 demo 或收購後的局。
+  - 合併 main（#1472）後，`testLoadCharts` 改成點列進線頁再拍兩張載客圖，回清單再按路網流量。
+  - `testStatisticsCharts`、`testTrainLooks` 也會拍到路線列：`line.report.*` 還在清單列上，`lines.networkFlow` 還在工具列。
+  - 沒有刪任何截圖：這個 PR 只有 `docs/art/lines-panel-481-2026-10-29/overview.png`（三個做法的示意圖），沒有 Actions 的截圖 artifact。
+- **等實機看**：
+  - 固定在上方的四段篩選會不會太擠。
+  - 組標題按鈕的大小。
+  - 見決策 481「下一步」。
 
 ### 4.23 三張載客圖與資料視覺化盤點（決策 478，session_01YGNNuosyKEgJgsVUGFPhbW，派工單 VIZ，#1472，2026-10-29）
 
@@ -2054,6 +2065,30 @@
   - 第二類要 GameCore 記歷史，會動存檔。
   - 規劃提的收支組成甜甜圈與可捲動長趨勢。
   - 以上都見決策 478「下一步」。
+
+### 4.24 宣傳影片素材（決策 475，session_01YGNNukoWqi8apoMDtJNZ3x，派工單 VID，2026-10-29）
+
+- 做了的：`PromoMaterialTests` 與 `website-screenshots.yml` 的 `kind=promo`（[決策 475](decisions/475.md)，#1461 已合併）。一次 iPhone 17 Pro 深色跑（run 40825762656，commit d3cd9db）：230 張 PNG、16 支影片。影片轉橫、裁 20 秒、壓縮後逐格檢查，沒有超過 0.1 秒的卡頓。
+- 素材不在這個 repo：在 `a91453/railway-assets-private` 的 `promo-material/2026-10-29/`，三個草稿 PR（#27 影片＋README＋三城市、#28 四城市、#29 各場景），等作者合併。影片也直接傳給作者了。
+- 還沒做：iPad、淺色（作者：發佈前再拍，他自己也能截圖，所以不再跑 `website-screenshots.yml`）；實機 3D 影片由作者自錄，放 README 的「實機素材」。
+- 沒解決的：「車隊總覽」清單（SwiftUI `List`）在 XCUITest 的拖曳、滑動、邊緣拖曳都不捲動，原因未知，不確定是不是真的 bug（UNVERIFIED，需要在實機試）。`testFreight` 因此在抓不到「跟隨」按鈕時略過「貨運列車」那張截圖。
+- 版面問題（截圖照實呈現，沒改）：地圖擴建的星等標籤蓋住鎖頭與價格、吉祥物蓋住價格、教學文字框蓋住「南站」標籤。
+
+### 4.25 營運的普悠瑪改用 TEMU2000 revision-2（決策 484，session_01YGNNuoy1fcM99AJFAieNat，派工單 PUY，2026-10-29）
+
+- **做了的**在[決策 484](decisions/484.md)：營運 `puyuma`／`puyumaFar` 改用 #1456 的 revision-2 近遠景，頭尾車用自己的燈鏡片發光；舊的營運配方刪掉（git 歷史在 main `197f642`）。studies 的 `temu2000-*` 不變。
+- **留到發版前：截圖驗收**（作者 2026-10-29：「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」）。
+  - 看普悠瑪的白天、夜裡（頭燈在前、尾燈在後，燈在燈座上不是浮在車鼻前），以及 500 m 換遠景時有沒有跳。`WebsiteScreenshotTests.testTrainLooks` 或實機都可以。
+  - Linux 預覽：`tools/train-models/run.sh OUT --night-lights --ids set-puyuma-head,set-puyuma-tail`，再 `render.mjs OUT --time both`。
+- **TestFlight 的幀數**：近景一列從 14,860 三角變 25,040，在預算內。幀數如果變差，照決策 417 加中間版或降面。
+
+### 4.26 高雄紅橘線、台中綠線、鳴日號的車接進營運（決策 483，session_01YGNNumwzbuZGqTqwGDGEzX，派工單 TRN，2026-10-29）
+
+- **做了的**在[決策 483](decisions/483.md)：實景高雄紅橘線改畫 #1454 的西門子三節車，台中綠線改畫 #1437 的兩節車，鳴日號改畫 #1480 的 E200 鳴日號風格，近景與遠景都接；列車展示多兩列。盤點表（最近兩天交付的每一款車、營運用哪個配方、接入要改哪裡、作者接受的紀錄）也在決策 483。
+- **沒做、留給別人的**：
+  - 普悠瑪紅色塗裝：派工單 PUY 的 #1487（決策 484，§4.25）。
+  - 高雄車要不要算不鏽鋼（`Map3DTrainMaterial.stainlessSets`）：作者看過真機再定。
+  - 實機：兩款近景的幀數、500 m 換遠景、台中第四版與鳴日號的外觀（作者，TestFlight，UNVERIFIED）。
 
 ## 5. 已知、還沒派的待辦
 

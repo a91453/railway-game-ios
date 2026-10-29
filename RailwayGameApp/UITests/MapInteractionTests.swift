@@ -1338,16 +1338,13 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(lines.appears(within: 10))
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["Lines"].firstMatch
-        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
-        bar.waitUntilSettled()
-        // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        let line = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.1")).firstMatch
+        let lists = app.navigationBars["Lines"].firstMatch
+        XCTAssertTrue(lists.appears(within: 10), "The lines panel opens")
+        lists.waitUntilSettled()
+        // Decision 481: line 1's own page, with its own list.
+        let list = app.openLinePage(1)
         // The list runs on under the bar (#659): a row counts as in reach only below it.
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(line, in: list, below: bar.frame.maxY), "Line 1's row must come into reach")
-        line.tap()
+        let bar = app.navigationBars.firstMatch
 
         let depots = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.depot."))
         let depot = depots.firstMatch

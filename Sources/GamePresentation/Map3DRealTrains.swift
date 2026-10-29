@@ -130,7 +130,8 @@ public struct Map3DRealTrains: Sendable {
     /// Taipei Metro's lines: Kaohsiung's, Taoyuan's and Taichung's metro
     /// trains are not C341s. Decision 461: the Taipei Metro's lines are
     /// drawn as their own fleets (``formation(system:line:)``), not split
-    /// as the player's metro is; the other cities' are `metroGeneric`,
+    /// as the player's metro is; the other cities' are their own sets
+    /// (decision 483: Kaohsiung's and Taichung's) or `metroGeneric`,
     /// which no variant splits.
     static func variantKey(system: String, key: String, number: Int, locked: Set<String> = []) -> String {
         system == "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
@@ -186,12 +187,14 @@ public struct Map3DRealTrains: Sendable {
         case "krtc":
             // Decision 461: the other cities' metros are not Taipei's.
             if line.id == "C" { return Formation(key: "greenTram", cars: 2) }
-            return Formation(key: "metroGeneric", cars: 3)
+            // Decision 483: the Red and Orange lines' Siemens three cars.
+            return Formation(key: "kaohsiung", cars: 3)
         case "tymc":
             // The commuter train's four (`airportunknown`).
             return Formation(key: "metroGeneric", cars: 4)
         case "tmrt":
-            return Formation(key: "metroGeneric", cars: 2)
+            // Decision 483: the Green line's own two cars.
+            return Formation(key: "taichungGreen", cars: 2)
         case "sanying":
             // Decision 466: its own two-car train.
             return Formation(key: Map3DTrainSet.sanyingKey, cars: 2)

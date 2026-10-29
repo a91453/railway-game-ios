@@ -18,9 +18,15 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // near and far (48 models, 203,424 vertices). Decision 466 added
         // the Sanying set, near and far (8 models, 42,024 vertices).
         // Decision 467 added the post boxes' and stop pole's stand-ins (498
-        // vertices; the app swaps in their files' 6,072).
-        XCTAssertEqual(pack.models.count, 593)
-        XCTAssertEqual(vertices, 3_374_604)
+        // vertices; the app swaps in their files' 6,072). Decision 484 put
+        // #1456's revision-2 units in the Puyuma set, near and far (the
+        // same models; 45,612 vertices more, 1.8 MB a copy). Decision 483
+        // added the Kaohsiung and Taichung Green sets, near and far (20
+        // models, 107,856 vertices), and made the Ming-Ri #1480's E200
+        // and Chu-Kuang coaches (37,716 more vertices than its E500 and
+        // generic coaches).
+        XCTAssertEqual(pack.models.count, 613)
+        XCTAssertEqual(vertices, 3_565_788)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

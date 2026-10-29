@@ -18,7 +18,9 @@ final class Map3DTrainSetTests: XCTestCase {
         // Decision 461: the generic metro car the C381 key drew before.
         let lineColoured: Set = ["metroGeneric", "wenhu"]
         // Decision 430: the Chu-Kuang sets, near and far.
-        let chuKuang: Set = ["E200CK", "E500CK", "R100CK", "R200CK", "SUMMER", "E200CKFar", "E500CKFar", "R100CKFar", "R200CKFar", "SUMMERFar"]
+        // Decision 483: and the Ming-Ri, #1480's E200CK units repainted.
+        let chuKuang: Set = ["E200CK", "E500CK", "R100CK", "R200CK", "SUMMER", "E200CKFar", "E500CKFar", "R100CKFar", "R200CKFar", "SUMMERFar",
+                             "MINGRI", "MINGRIFar"]
         for set in Map3DTrainSet.all {
             var names = [set.headName]
             for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName, set.middleBackName, set.pantographBackName] where pack.index(of: name) != nil { names.append(name) }
@@ -56,7 +58,12 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
                     // Decision 466: #1422's Sanying cabs, 4,306 each.
                     : set.key == "sanying" ? 4_200...4_400
-                    : name == set.headName && ["E200CK", "E200CKFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
+                    // Decision 484: #1456's revision-2 Puyuma cabs, 6,980 and 6,932.
+                    : set.key == "puyuma" && [set.headName, set.tailName].contains(name) ? 6_900...7_000
+                    // Decision 483: #1454's Kaohsiung cabs, 5,790 each; #1437's Taichung Green cabs, 4,804.
+                    : set.key == "kaohsiung" && [set.headName, set.tailName].contains(name) ? 5_700...5_900
+                    : set.key == "taichungGreen" ? 4_700...4_900
+                    : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -81,11 +88,11 @@ final class Map3DTrainSetTests: XCTestCase {
                 XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
-                let height: ClosedRange<Float> = name == set.headName && ["E500CK", "MINGRI", "STAR", "E500CKFar", "MINGRIFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
+                let height: ClosedRange<Float> = name == set.headName && ["E500CK", "STAR", "E500CKFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
                     : ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
                     : set.key == "STEAM" ? 3.4...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
-                    : ["E200CK", "E200CKFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
+                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
                     : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) ? 3.4...5.3 : 3.4...4.6

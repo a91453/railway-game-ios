@@ -136,9 +136,10 @@ public struct Map3DTrainSet: Sendable {
             hauled("BLUE", locomotive: .r135,
                    coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
             // Decision 286, later: the Ming-Ri's black coaches with their
-            // orange line behind the E500.
-            e500Hauled("MINGRI", coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
-            e500Hauled("MINGRI", far: true, coach: coach(TrainLivery.mingRi, band: 0.38...0.43)),
+            // orange line; decision 483: as #1480's E200 and Chu-Kuang
+            // coaches in the Ming-Ri's black and orange, near and far.
+            mingRi(),
+            mingRi(far: true),
             // Decision 286, later (third): the Formosa Star's pink coaches
             // behind the E500.
             e500Hauled("STAR", coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
@@ -177,7 +178,7 @@ public struct Map3DTrainSet: Sendable {
             // Taichung); it was `metroC381` before.
             multipleUnit("metroGeneric", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
-            // Decision 426: the Puyuma as #1292's TEMU2000, and its light
+            // Decisions 426, 484: the Puyuma as #1456's TEMU2000, and its light
             // version from 500 m out.
             temu2000(),
             temu2000(far: true),
@@ -218,6 +219,14 @@ public struct Map3DTrainSet: Sendable {
             // study), from 500 m out its light cars.
             sanying(),
             sanying(far: true),
+            // Decision 483: the Kaohsiung Metro's Red and Orange lines'
+            // Siemens three-car train (#1454's third revision) and the
+            // Taichung Metro Green line's two-car train (#1437's fourth),
+            // from 500 m out their light cars.
+            kaohsiung(),
+            kaohsiung(far: true),
+            taichungGreen(),
+            taichungGreen(far: true),
             // The DR1000 railcar and the DR3100 diesel express: silver, a thin
             // orange band, yellow-orange faces (the reference's `dr1000`,
             // `dr3100`) on #900's curved fronts.
@@ -285,8 +294,11 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 433: and the C341 (its far set), 3,900 a cab car.
     /// Decision 435: and the EMU900 (its far set), 9,300 a cab car.
     /// Decision 461: and the C371, C381 and 610 (their far sets).
+    /// Decision 466: and the Sanying line's; decision 483: and the
+    /// Kaohsiung and Taichung Green line's (their far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying"]
+                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
+                                "kaohsiung", "taichungGreen"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -543,26 +555,20 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 426: #1292's TEMU2000 units in the operating Puyuma set,
-    /// in the static formation's order (TED, TEMA, TEP, TEMB, TEMB, TEP,
+    /// Decision 426: the TEMU2000 units in the operating Puyuma set, in
+    /// the static formation's order (TED, TEMA, TEP, TEMB, TEMB, TEP,
     /// TEMA, TED): the pantographs on cars 3 and 6 (the second TEP turned
-    /// round, ``Map3DTEMU2000/rotations``), each cab's lamps lit at its real
-    /// end, white at the front and red at the back. `far`, the light units
-    /// (``Map3DTEMU2000/model(_:far:)``) drawn car for car from 500 m out.
+    /// round, ``Map3DTEMU2000/rotations``). Decision 484: the units are
+    /// #1456's revision-2 (the old recipe deleted), each cab car's own
+    /// lamp lenses lit (``Map3DTEMU2000/model(_:far:lamps:)``) for
+    /// decision 449's lights. `far`, the light units drawn car for car
+    /// from 500 m out.
     static func temu2000(far: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: far ? "puyumaFar" : "puyuma", pantographCars: [2, 5], centreCars: [3, 4], ownLengths: true, fixedCars: 8,
                       far: far ? nil : "puyumaFar") {
             func part(_ unit: Map3DTEMU2000.Unit) -> Map3DModelPack.Model { Map3DTEMU2000.model(unit, far: far) }
-            func cab(_ unit: Map3DTEMU2000.Unit, front: Bool) -> Map3DModelPack.Model {
-                let model = Map3DTEMU2000.model(unit, far: far)
-                var builder = StationKitBuilder()
-                builder.add(model, at: .zero)
-                builder.cabLamps(atX: front ? model.maximum.x + 0.02 : model.minimum.x - 0.02,
-                                 colour: front ? Map3DTrainStyle.headlamp : Map3DPalette.lantern,
-                                 height: 1.10, across: 0.30, width: 0.20, tall: 0.14)
-                return .flat(named: "puyuma-\(unit.rawValue)" + (far ? "-far" : ""), from: builder.mesh)
-            }
-            return Cars(head: cab(.leading, front: true), middle: part(.tema), tail: cab(.trailing, front: false), single: nil,
+            func cab(_ unit: Map3DTEMU2000.Unit) -> Map3DModelPack.Model { Map3DTEMU2000.model(unit, far: far, lamps: true) }
+            return Cars(head: cab(.leading), middle: part(.tema), tail: cab(.trailing), single: nil,
                         pantograph: part(.tep).turned, centre: part(.temb), pantographBack: part(.tep))
         }
     }
@@ -694,6 +700,45 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
+    /// Decision 483: the Ming-Ri as #1480's study, the E200CK's units
+    /// (#1201's E200, its front lamps lit, and #1306's automatic-door
+    /// coaches) painted in ``TrainLivery/mingRi``'s black and orange
+    /// (``Map3DE200MingriStyle``), laid as the E200CK (no own lengths), the
+    /// last coach's end lit red. `far`: the light coaches, the same E200
+    /// (it has no light model).
+    static func mingRi(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "MINGRIFar" : "MINGRI", far: far ? nil : "MINGRIFar") {
+            Cars(head: Map3DE200MingriStyle.model(.head, far: far), middle: Map3DE200MingriStyle.model(.car, far: far),
+                 tail: Map3DE200MingriStyle.model(.tail, far: far), single: nil)
+        }
+    }
+
+    /// Decision 483: the Kaohsiung Metro's Siemens train (#1454's third
+    /// revision, the author's 2026-10-29「就這樣」): DM1 at the front, T,
+    /// DM2 turned round at the back (`tools/kaohsiung/assembly.json`),
+    /// always three cars as the real sets, each its own length, the cab
+    /// ends' lamp lenses lit (``litLenses(_:front:)``). `far`:
+    /// ``Map3DKaohsiung/model(_:far:shellOnly:)``'s light cars.
+    static func kaohsiung(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "kaohsiungFar" : "kaohsiung", ownLengths: true, fixedCars: 3, far: far ? nil : "kaohsiungFar") {
+            Cars(head: litLenses(Map3DKaohsiung.model(.dm1, far: far), front: true), middle: Map3DKaohsiung.model(.t, far: far),
+                 tail: litLenses(Map3DKaohsiung.model(.dm2, far: far).turned, front: false), single: nil)
+        }
+    }
+
+    /// Decision 483: the Taichung Metro Green line's two cars (#1437's
+    /// fourth revision): DM1 at the front and DM2 turned round at the back
+    /// (`tools/taichung-green/assembly.json`), always two, laid as
+    /// ``sanying(far:)``, lit as ``kaohsiung(far:)``. `far`: ``Map3DTaichungGreen/model(_:far:shellOnly:)``'s
+    /// light cars.
+    static func taichungGreen(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "taichungGreenFar" : "taichungGreen", ownLengths: true, fixedCars: 2,
+                      far: far ? nil : "taichungGreenFar") {
+            Cars(head: litLenses(Map3DTaichungGreen.model(.dm1, far: far), front: true), middle: nil,
+                 tail: litLenses(Map3DTaichungGreen.model(.dm2, far: far).turned, front: false), single: nil)
+        }
+    }
+
     /// Decision 466: the key of ``sanying(far:)``, the Sanying line's real
     /// trains and the trains of one bought.
     static let sanyingKey = "sanying"
@@ -742,6 +787,23 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 408: `model` with its lamp lenses (``Map3DPalette/tunnelLamp``)
     /// lit, those at its front (+x) white when `front`, those at its back
     /// red when not; the others as they are.
+    /// Decision 483: `model`'s lamp lenses (the headlamps' white, the tail
+    /// lamps' and markers' red, as the recipes of #1454 and #1437 paint
+    /// them, unlit) in the 30 % at its front (or back) end glowing, their
+    /// colours kept; decision 449 then lights each frame's front and back
+    /// lamps from them as every running car's.
+    static func litLenses(_ model: Map3DModelPack.Model, front: Bool) -> Map3DModelPack.Model {
+        let lenses: Set = [Map3DTrainStyle.headlamp, Map3DStreetModel.tailLamp, Map3DPalette.lantern, Map3DPalette.tunnelLamp]
+        let reach = (model.maximum.x - model.minimum.x) * 0.3
+        var vertices = model.vertices
+        for start in stride(from: 0, to: vertices.count, by: 3) where lenses.contains(vertices[start].color) {
+            let x = (vertices[start].x + vertices[start + 1].x + vertices[start + 2].x) / 3
+            guard front ? x > model.maximum.x - reach : x < model.minimum.x + reach else { continue }
+            for i in start..<start + 3 { vertices[i].layer = Map3DVertex.glowing }
+        }
+        return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
+    }
+
     static func lit(_ model: Map3DModelPack.Model, front: Bool) -> Map3DModelPack.Model {
         var vertices = model.vertices
         for start in stride(from: 0, to: vertices.count, by: 3) where vertices[start].color == Map3DPalette.tunnelLamp {

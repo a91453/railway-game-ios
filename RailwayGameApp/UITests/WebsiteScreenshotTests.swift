@@ -290,6 +290,38 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("passenger-load", app)
     }
 
+    /// The lines panel in two levels (decision 481) on the freight scene's
+    /// second morning: the short list with its pinned controls, a line's
+    /// own page, and the whole network's page.
+    func testLinesListAndLinePage() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        keep("lines-list", app)
+
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(row.appears(within: 10), "A line's row shows")
+        row.tap()
+        XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
+        settle(seconds: 2)
+        keep("line-page", app)
+
+        app.navigationBars.firstMatch.buttons.firstMatch.tap()
+        XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "Back to the list")
+        let network = app.buttons["lines.network"]
+        XCTAssertTrue(network.appears(within: 10), "The whole network's row shows")
+        network.tap()
+        settle(seconds: 2)
+        keep("lines-network", app)
+    }
+
     /// Decision 478's load charts on the freight scene: a passenger line's
     /// fullest train by day and its riders between stops, then a section's
     /// riders hour by hour in the flow report.
@@ -308,16 +340,22 @@ final class WebsiteScreenshotTests: XCTestCase {
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A passenger line's row comes into view")
         report.tap()
+        // Decision 481: the charts are on the line's own page.
+        let linePage = app.collectionViews["line.detail"].firstMatch
+        XCTAssertTrue(linePage.appears(within: 10), "The line's page opens")
         let peak = app.descendants(matching: .any)["line.operations.peakLoad"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(peak, in: list), "The fullest train by day comes into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(peak, in: linePage), "The fullest train by day comes into view")
         settle()
         keep("line-peak-load", app)
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["line.load.chart"].firstMatch, in: list),
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["line.load.chart"].firstMatch, in: linePage),
                       "The riders between stops come into view")
         // Worked out in the background.
         settle(seconds: 3)
         keep("line-load-profile", app)
 
+        // The flow report's button is on the list's bar.
+        app.navigationBars.firstMatch.buttons.firstMatch.tap()
+        XCTAssertTrue(linePage.disappears(within: 10), "Back to the list")
         let flow = app.buttons["lines.networkFlow"]
         XCTAssertTrue(flow.becomesHittable(within: 5), "The flow report's button is there")
         flow.tap()
@@ -434,7 +472,8 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle()
         }
 
-        // The lines' rows, each with its trend and its fullest train.
+        // The lines' rows, each with its trend (decision 481: the fullest
+        // train is on the line's own page).
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
@@ -496,11 +535,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
         if app.dragUntilWhollyOnScreen(report, in: list) {
+            // Decision 481: a row opens the line's own page.
             report.tap()
+            let page = app.collectionViews["line.detail"]
+            _ = page.appears(within: 10)
             settle()
             keep("trains-line-details", app)
             let catalog = app.buttons["line.staff.catalog"]
-            if app.dragUntilWhollyOnScreen(catalog, in: list) {
+            if app.dragUntilWhollyOnScreen(catalog, in: page.exists ? page : list) {
                 catalog.tap()
                 let cancel = app.buttons["catalog.cancel"]
                 if cancel.appears(within: 10) {
