@@ -2,7 +2,7 @@
 
 派工單 BH2（session_01YGNNumyVPsXrZoUxy84EdE，由遊戲規劃第 32 任派出），分支 `claude/bughunt-operations`，對照 `main` `9fb305d`（#1520 之後）。範圍：路線面板與單線頁、列車（買車、配車、時刻表、待避、折返、機廠）、車站面板、旅客、倍速與跳過夜晚、跟車與 2D 列車、新手教學與入門 10 關。BH1（建設）、BH3（經營與存檔）同時在跑。
 
-**結論：沒找到 P1。** P2 兩項、P3 三項。P2-1 規劃判定等同 P1（「跳到早上」後切出 App 很常見），在這個 PR 修了；其餘留給公測後。GameCore、存檔版本、golden、fixtures 都不動。
+**結論：沒找到 P1。** P2 兩項、P3 三項，另有 BH9 轉來的教學疑點四項（§3a，只讀程式）。P2-1 規劃判定等同 P1（「跳到早上」後切出 App 很常見），在這個 PR 修了；其餘留給公測後。GameCore、存檔版本、golden、fixtures 都不動。
 
 ## 1. 怎麼找的
 
@@ -60,6 +60,15 @@
 - **重現（無頭）**：第 5、8、9、10 關，07:00 對第 2 條線（已經有 1 列）`staffSelectedLine(headway: 3／10／30)`，30 分鐘內第 1、2 條線的車死結到隔天。
 - **建議修法**：`staff` 只買 `plan.trains` 減掉這個班次已配的車（或在有車時拒絕，請玩家用改班距）；`staffSection` 的條件改成整條線（含停靠模式）都沒有車。
 - **五方**：玩家：現在碰不到，防的是之後有人把配車按鈕放到有車的線上；鐵道迷：無；開發：GamePresentation 一個條件與測試；美術：無；音樂：無。
+
+## 3a. BH9 轉來的教學與入門關疑點（只讀程式，Linux 無法重現）
+
+BH9（session_01YGNNupx2R9L2JmWM9LnsYt）讀程式時看到、照分工轉來的四項，BH2 對照程式後的分級。都在 App 的 SwiftUI 層，Linux 跑不到，全部 UNVERIFIED；公測後用 `ios-build.yml` 的 `only_testing` 確認（現在全面檢查佔著 macOS runner）。
+
+- **P2（疑）結果卡可能出不來**：`RailwayGameApp/Views/ContentView.swift` 約 174–186 行，關卡結束時設 `lessonResult`，用另一個 `.sheet` 顯示；同一個畫面已經用 `.sheet(item: presentedPanel)`（約 124 行）開著面板時，SwiftUI 一次只出一個 sheet，第二個不出現，之後也不會補。遊戲因為結束而暫停，玩家關掉面板後看不到「下一關」卡，要自己按繼續或回選單選下一關（下一關已解鎖）。第 1 關的目標常在路線面板開著時達成，所以值得先看；但 95 版以前的測試者沒有回報過，不確定 iPhone／iPad 上面板是不是 sheet。建議：UI 測試在路線面板開著時讓關卡結束，看 `lessonResult.title` 是否出現；若不出現，結果卡改成面板關掉後再設（或併進 `presentedPanel` 的同一個 sheet）。五方：玩家：過關沒有慶祝與下一步按鈕，像卡住；鐵道迷：無；開發：App 層小改加 UI 測試；美術：無；音樂：過關音效若跟著卡片，也不會響。
+- **P3 結果卡的「再一次／下一關」失敗時沒有訊息**：`ContentView.swift` 約 189–197 行先清 `lessonResult` 再 `launcher.startLesson`；`GameLauncher` 封存自動存檔丟錯時只設 `launcher.message`，那只畫在開始畫面。要磁碟寫不進才會發生，少見。
+- **P3 教學中不能復原、最後一步不能跳過**：`GameSession.canUndo` 在教學時是假（設計如此），按鈕灰掉沒有說明；第 1 課最後一步 `earnFare` 沒有「跳過這一步」。設計題，交給規劃（可考慮在目標面板加「重來這一關」）。
+- **P3 把結果卡滑掉後遊戲仍暫停**：`ContentView.swift` 約 186 行的 sheet 被滑掉時只清 `lessonResult`，沒有 `keepPlaying()`；玩家按一下繼續即可。
 
 ## 4. 看過、沒問題的
 
