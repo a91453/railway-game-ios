@@ -2390,3 +2390,7 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 ### 2026-10-29 高雄第二版續修（Codex）
 
 使用者要求「依實車對照繼續修」。同公開draft#1454 ↔ 素材draft#22，producer `3874b425`，真前版`62c2da42`／素材`10f8abc`。撤回第一輪顯示幕側別及車頭細節的過寬自評：改觀者左側顯示幕、橫向圓弧與風擋／圓角中央門、雙燈共同座、雨刷、下裙與真凹孔連結器。T近遠完整payload、X≤9m後方硬體幾何／flags及其他688模型實際bytes/FNV保持。近三車12148／遠5476，18成品獨立producer重建相同；15項Swift6.4及八件GLB／故障反例／固定尺度真前後／最終viewer下載檢查見自有README和verification。revision-1重檔同PR刪除，留PNG／README／來源；revision-2為最新完整包，沒有ZIP/history。仍studies，營運映射保持；外觀接受／接入／Simulator與真機UNVERIFIED，不merge／auto-merge／TestFlight。
+
+### 2026-10-29 高雄第三版正面塗裝（Codex）
+
+使用者「側面可以了」僅接受R2 producer `3874b425`側面，正面偏方續修；最新producer `bd57e163391bfdf7492cc408c7697451578ae8e1`，真前版素材`1f73fb1`。本輪只改實體殼上的正面分色：黑罩上緣淺弧／肩部收角與U帶細分，不改中央逃生門等硬體或曲面。逐三角形原生52bytes護住X≤9m直側，T近遠整檔保持；兩producer白殼雙向交集驗車頭覆蓋不變。最新main`fd91b75c`的696他車實際bytes/FNV、所有他車鎖保持；只動本型四DM鎖，28繼承差異不消。近三車13892／遠6356；18成品從producer獨立重建相同，15 Swift6.4 WAE、8 GLB、真故障、224PNG／192同尺度前後、24真下載SHA與最終viewer已驗。沿用draft#1454 ↔ 素材draft#22，revision-3為完整包，revision-2重檔同PR刪除留PNG／README／來源。具體資料、預覽、重建及四狀態見[自有交接](art/kaohsiung/README.md)。下一步先檢視此producer正／斜前預覽並記明確回覆，不能把R2側面接受擴張成全車R3接受；外觀正面／整體、營運接入、Simulator／真機Metal效能動畫仍UNVERIFIED。studies、krtc→metroGeneric三車、其他保護範圍不變，不merge／auto-merge／TestFlight。

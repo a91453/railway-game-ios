@@ -100,8 +100,8 @@
     "Blair downloaded first thumbnails include unrelated Taipei painted train; excluded",
     "New Hyundai Rotem extension trains, Yellow Line Stadler, circular LRT and special wraps excluded"
   ],
-  "revision": 2,
-  "previous_producer": "62c2da42bf7edb3ef2e359befe206782fbaaf29b",
-  "previous_asset_commit": "10f8abc615a84638e121e58b71bbfc1343a20a72",
-  "review": "Reopened original KRTC/MTBU/Siemens/2427junction images and verified9 downloaded SHA unchanged. Corrected the observer-left destination, bow, windshield/door seams, lamp casting and lower coupler. No third-party original images redistributed."
+  "revision": 3,
+  "previous_producer": "3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c",
+  "previous_asset_commit": "1f73fb1cdba56ce99e0e3cdc3313175915d0ac92",
+  "review": "Reopened original KRTC/MTBU/Siemens/2427junction images and verified9 downloaded SHA unchanged. Front paint partitions only: more finely sampled U band and arched crown/black-mask border with eased outer shoulders. Same physical bow; accepted straight side and complete T payload protected against revision2. No third-party original images redistributed."
 }

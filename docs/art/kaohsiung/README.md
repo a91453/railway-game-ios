@@ -1,12 +1,12 @@
 # 高雄捷運紅／橘線現役西門子原生 studies
 
-**目前交付第二版**：producer `3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c`，沿用公開draft[#1454](https://github.com/a91453/railway-game-ios/pull/1454) ↔ 素材draft[#22](https://github.com/a91453/railway-assets-private/pull/22)。[完整revision-2／viewer／原生／GLB／20PNG／SHA](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-2)。[實際真前後預覽](overview.png)。
+**目前交付第三版：正面塗裝續修**。producer `bd57e163391bfdf7492cc408c7697451578ae8e1`。公開draft[#1454](https://github.com/a91453/railway-game-ios/pull/1454) ↔ 素材draft[#22](https://github.com/a91453/railway-assets-private/pull/22)。[完整revision-3／viewer／原生／GLB／20PNG／SHA](https://github.com/a91453/railway-assets-private/tree/codex/kaohsiung-native-2026-10-29/game-art-previews/docs/art/kaohsiung/revision-3)。[同相機真前後預覽](overview.png)。
 
-真前版producer `62c2da42bf7edb3ef2e359befe206782fbaaf29b`／素材commit `10f8abc615a84638e121e58b71bbfc1343a20a72`。第一輪的顯示幕放反側、車頭／燈座／連結器過度簡化，撤回其對應「已符合」自評。使用者要求依實車繼續修，尚未接受第二版外觀。第一輪重檔在同素材PR移除，保留PNG、README、來源／授權與狀態；用真commit恢復，不新增history或ZIP。
+使用者：「側面可以了 只是正面塗裝是不是有點方 還要調整嗎」。接受範圍只記到第二版producer `3874b4259a99bd7b4f7e42f1b94fa23a34d4cf2c`的側面；第三版正面與整體外觀仍 **UNVERIFIED**。真前版公開head `bb67bfa14870aeaa624df4f5a1d3a9aa08db7f63`／素材commit `1f73fb1cdba56ce99e0e3cdc3313175915d0ac92`。本輪只細分正面本體分色：黑罩上緣由水平改淺弧、肩部收角漸圓，白／綠松U帶增加分段；中央逃生門保留實拍所見直邊，不把整張正面任意磨圓。
 
-第二輪改了：車頭橫向退縮／肩部弧面、梯形獨立風擋、沿真曲面連續的圓角中央門縫、觀看正面左側的目的地幕、共同雙燈座、頂部燈圈／有支點雨刷、下裙兩頰與連結器缺口、45mm真凹孔。直側色帶至車頭接點同步對齊。T近遠兩件完整bytes及車頭後方X≤9m的幾何與flags保持；車頭鄰近烘焙陰影可變，不宣稱全車所有色值／像素不變。
+實體車頭曲面未動；用兩真producer的shellOnly匯出，逐原曲面平面格比較雙向三角形交集覆蓋。直側面X≤9m所有52-byte原生三角形記錄（含每個頂點座標／色值／flags）完全一致；T近遠兩件完整bytes相同。車頭外硬體幾何／flags保持；前端分色會出現在斜／側視的鼻端，鄰近烘焙陰影也可能變，不宣稱整張側視圖逐像素一致。屋頂、底盤、玻璃、門框、燈、雨刷、裙板、連結器及編組配方保持。
 
-本輪：DM近4918／遠2246、T近2312／遠984，三車近12148／遠5476三角。六單元與兩完整編組共18成品由明確producer獨立worktree重建bytes相同；15項最終Swift6.4 warnings-as-errors測試通過。所有驗證、固定相機／公尺尺度及實際下載SHA見[verification.json](verification.json)。素材技術、外觀、接入、裝置各自看[status.json](status.json)。
+DM近5790／遠2686、T近2312／遠984；三車近13892／遠6356三角。格式單件上限、六單元近遠及完整編組預算分開檢查。最終資料與驗證見[verification.json](verification.json)，四種狀態見[status.json](status.json)。第二版重檔在同素材PR移除，保留20PNG、README、來源／授權與狀態，以真commit恢復，不新增history或ZIP。
 
 本輪獨立重建高雄捷運高運量電聯車（Siemens Modular Metro），一般銀色／綠松塗裝，共用同型車，不依路線另造幾何或紅橘塗裝。靜態展示，不替換營運。使用者外觀接受、營運接入、Simulator／真機均 **UNVERIFIED**。
 
@@ -14,7 +14,7 @@
 
 ## 查證與特徵
 
-資料查核日2026-10-29。高捷公司2006-10-27簡報（原網站失效，下載Internet Archive原PDF，實看第3、5、7頁照片／配置與參數），主管機關2024-03-20岡山延伸段既有列車動測照片、2427junction各部位實拍，以及Siemens2008《First Class Bogies》第42/43頁原照片／工程圖均已下載、開啟。原圖僅本機觀察，不在兩庫再散布，也未送生成服務。
+資料查核日2026-10-29。高捷公司2006-10-27簡報（原網站失效，下載Internet Archive原PDF，實看第3、5、7頁照片／配置與參數），主管機關2024-03-20岡山延伸段既有列車動測照片、2427junction各部位實拍，以及Siemens2008《First Class Bogies》第42/43頁原產品圖／工程圖（產品圖未證實是照片或渲染）均已下載、開啟。原圖僅本機觀察，不在兩庫再散布，也未送生成服務。
 
 | 項目 | 採用與可信度 |
 |---|---|
@@ -64,7 +64,7 @@ main基準50437249。逐張查#1357/#1416/#1342/#1422/#1424/#1437皆MERGED。既
 啟用MOTION_BUDGET_REPORT=1另跑記憶體報告測試通過；standard585模型／133.3MB，靜態studies不入常駐包。最新CI以#1454同head checks為準；素材#22同head guard另查。
 
 
-## 第二輪獨立驗收與外觀對照
+## 第二輪獨立驗收與外觀對照（歷史）
 
 共用拓樸及刪面／反面／編組移位仍通過，新增實際前玻璃埋入150mm／外浮90mm、封住凹孔的真面片及反移目的地幕的真三角形反例，近遠各自拒收。真第一輪四個DM原生也分別被「反側顯示幕／實心連結器」拒收。玻璃保留所有殼／框遮擋，只辨識雨刷範圍內的實際細桿；每個抽樣玻璃外表面55mm內有實體背板。屋頂／八輪／淨空／風琴照實際輸出重驗。
 
@@ -73,3 +73,15 @@ main基準50437249。逐張查#1357/#1416/#1342/#1422/#1424/#1437皆MERGED。既
 已符合：顯示幕改到實拍所見觀者左側；兩側獨立風擋、圓角中央逃生門與曲面分色連續；共同燈座、頂燈圈、雨刷支點、下裙缺口及連結器凹孔可見。仍不符合及資料不足如前述，不用技術通過推斷已獲外觀接受。
 
 Siemens SF3000原圖錄的設備產品圖未註明是攝影或渲染，本輪將它與尺寸／工程圖分開記，不冒稱已證實為實車攝影。原高捷簡報同時含實拍與示意圖，也只依各自性質使用。
+
+## 第三輪對照與驗收
+
+最新main `fd91b75c250f63d19331d87f33e502ef72a1daf8`已含三鶯營運整合#1448與六分片CI#1455，逐張確認為MERGED後納入；不能沿用舊688件名單當最新保護證據。本輪重新匯出最新main的696模型與本分支全部模型比對，台中綠線既接受producer `498d85ef234a00345b4b024c4aa0e6783d73b933`未改。
+
+固定比較以真R2的最終單元／編組為before，同公尺尺度、相機、光線；配色／白模／剪影四向192張僅暫存，最終各單元及編組七向224張亦不整批提交。兩庫本輪只留20張私有PNG和1張公開總覽。實拍旁置四向只本機保留，未散布原照片。
+
+已符合（製作者自檢）：頂冠／黑罩收角更接近實拍弧線，U帶中央與邊角轉折較連續；側面接受範圍、T車、車頭實體曲面與硬體受保護。仍不符合：霧面風格的玻璃／門框／燈組保留低細節切角，非實車光學材質，遠景弧線刻意較少分段。資料不足：無無透視正面／全俯視工程外形，肩部與分色曲線是照片推估；隱藏的DM1／DM2設備序與連結器管線未全還原。技術通過不能當使用者已接受第三版正面。
+
+接手：先檢視revision-3正／斜面與同相機比較，再記使用者對此producer的明確外觀回覆。保持studies及krtc既有metroGeneric三車映射；營運接入、Simulator／真機Metal、效能與動畫均UNVERIFIED。file://依管理政策可能受阻，localhost viewer另有實測；不以瀏覽器模擬替代裝置驗證。
+
+第三輪素材commit：[`5ee6fe9ceafb07ea8d137ad01d413182f8b74484`](https://github.com/a91453/railway-assets-private/tree/5ee6fe9ceafb07ea8d137ad01d413182f8b74484/game-art-previews/docs/art/kaohsiung/revision-3)。staged tree與提交後asset_guard皆通過，本PR95新增檔案、unique blobs17.1MB；本輪20PNG及44檔SHA清單完整解碼／核對。最新CI結果另查兩PR的最新head，不沿用前版結果。
