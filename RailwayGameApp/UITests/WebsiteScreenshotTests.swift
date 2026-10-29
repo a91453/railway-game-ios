@@ -17,16 +17,26 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(map.appears(within: 120), "The scene opens")
         let alerts = app.buttons.matching(identifier: "map.alert")
         XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        // One step closer, so that the bubbles stand clear of the stations'
+        // names under them.
+        zoomInOnce(app)
         settle()
         keep("freight-materials", app)
 
-        // A bubble on screen picks its station, whose tag shows.
+        // Decision 184: a bubble for a town short of materials opens its
+        // station's panel, whose Freight section builds the yard.
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        XCTAssertTrue(app.buttons["map.stationTag"].appears(within: 5), "A tap on a bubble picks its station")
+        let materials = app.descendants(matching: .any)["station.materials"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(materials), "A tap on a bubble opens its station's panel")
         settle()
         keep("freight-station", app)
+        let done = app.buttons["完成"].firstMatch
+        if done.appears(within: 3), done.isHittable {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 10), "The station's panel closes")
+        }
 
         app.buttons["dock.build"].tap()
         let trainTool = app.buttons["tool.train"]
@@ -59,6 +69,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         let expansion = app.buttons["map.expansion"]
         XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
         expansion.tap()
+        // One step closer, so that the sights' stars stand clear of the
+        // prices.
+        zoomInOnce(app)
         settle(seconds: 3)
         keep("map-expansion", app)
     }
@@ -243,14 +256,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         // population is read. The list is found by its first row, which it
         // drops once scrolled away from, so a second swipe found no list:
         // where the list lies is kept, and dragged there.
-        let places = app.collectionViews.containing(.button, identifier: "place.tra-taipei").firstMatch
+        // Decision 442: Taiwan's places are 22 rows, so Taipei's is not on
+        // the first screen; the list is the page's first, found as
+        // `RealWorldMapUITests` finds it.
+        let places = app.collectionViews.firstMatch
         XCTAssertTrue(places.appears(within: 30), "The places are listed")
-        let listColumn = places.frame
         let wholeTaiwan = app.buttons["realWorld.wholeTaiwan"]
-        XCTAssertTrue(scrollScreen(to: wholeTaiwan, in: app, over: listColumn), "The whole of Taiwan comes into view")
+        XCTAssertTrue(app.scrollUntilShown(wholeTaiwan, in: places), "The whole of Taiwan comes into view")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: wholeTaiwan)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
-        wholeTaiwan.tap()
+        app.tapMiddle(of: wholeTaiwan)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
         // By the light of day, the stars over the island.
         waitForClock(from: 9, before: 17, in: app)
@@ -264,6 +279,15 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// One tap on the zoom-in button, when the map has it.
+    private func zoomInOnce(_ app: XCUIApplication) {
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 5), zoomIn.becomesHittable(within: 3) {
+            zoomIn.tap()
+            settle(seconds: 1)
+        }
+    }
 
     private func launch(extra: [String] = []) -> XCUIApplication {
         continueAfterFailure = false
