@@ -443,8 +443,12 @@
   - SAVE1 session_01YGNNuq65cB35dbSd2SspvL：#1556（決策 502 存檔一局一筆，已接 #1558 的快取 format 2）。**合併前開獨立審查**。
   - NTD1 第五棒 session_01YGNNuo8yfmRdphYxt63KUr（Opus）：#1550 新台幣（存檔 76、決策 499、golden 75），目標 100.1，**99.1 前不合**；合前獨立審查。
   - HANG2 已收工；P2-3～P2-7 在 §4.31，**還沒派**（99.1）。
-- **還沒派的**：HANG2 P2-3～P2-7；手機版整體 UI 太佔視野（iPhone 13 玩家回報，下一輪 UI 審查）；車站擴建（決策 506，WAIT1 後）；#1041 已約 2,280 則，近 2,400 時開下一個登記 issue 並改 CLAUDE.md 等的指向（§1）。
-- **號碼**：決策 504 WAIT1、505 STALL97（預留）、506 車站擴建（預留），下一個空的是 507；存檔 76（NTD1）；golden schema 75（NTD1）。
+- **第 35 任加的**（2026-10-30 約 14:00 UTC）：
+  - PLATFIX（session_01YGNNuqVoNBQQPoDp7Eh4NZ，Opus，`platfix-crossover-room`，99.1）：玩家「大直線上放一個月台之後沒辦法新增月台：前後長度不足、已設立橫渡線」。作者「你五方決定」→ 碰到渡線沿直行支繼續找、轉轍器放渡線外側，放不下時訊息講哪一端、被什麼擋、差幾公尺；不縮短 S 彎、不共用既有分岔節點。
+  - **月台排法一次蓋好**（玩家建議，作者「好 照你的排」）：**決策 507 預留**。蓋車站時先選排法（單線一岸、單線一島兩線、雙線兩岸、雙線一島、雙線兩島四線），一次蓋完；用 `PlatformTrack`／`DoubleTrack` 的零件組，只動 GamePresentation。**PLATFIX 合併後才派**，目標 100.1，排在車站擴建（506）前面。
+  - #1556 審查 P3 四項：作者問過，規劃決定四項都在合併前修（SAVE1 已修 1、2，3、4 在修）。
+- **還沒派的**：月台排法（507，PLATFIX 後）；HANG2 P2-3～P2-7；手機版整體 UI 太佔視野（iPhone 13 玩家回報，下一輪 UI 審查）；車站擴建（決策 506，WAIT1 後）；#1041 已約 2,280 則，近 2,400 時開下一個登記 issue 並改 CLAUDE.md 等的指向（§1）。
+- **號碼**：決策 504 WAIT1、505 STALL97（預留）、506 車站擴建（預留）、507 月台排法（預留），下一個空的是 508；存檔 76（NTD1）；golden schema 75（NTD1）。
 
 **第三十四次換手（2026-10-30 約 08:40 UTC，第 33 任 session_01YGNNunvjxx3LhPctQU6a4r → 第 34 任）**：第 33 任壓縮 2 次，照 §1 換手（第 3 層，第 34 任是第 4 層）。
 - **公測開了**：作者發了 TestFlight 97.1（run #97，main 77b93222），公開連結 https://testflight.apple.com/join/dFuQG2KR 已開（人數上限作者調過，08:15 UTC 確認不是「This beta is full」）。What to Test 在這個 PR 改成 97.1 的玩家說明（`.github/testflight-whats-new.md`；第 97 版當時沒改到，App Store Connect 上作者是手貼的）。
