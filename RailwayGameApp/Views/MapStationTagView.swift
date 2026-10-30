@@ -132,7 +132,11 @@ struct MapStationTagView: View {
             height: viewport.height - Double(insets.top) - Double(insets.bottom) - 2 * margin
         )
         let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets).map(\.touchBox)
-        let box = MapLabelPlacement.stationTag(at: point, width: Double(size.width), height: Double(size.height), clear: clear, avoiding: bubbles)
+        // Decision 501: and, moved, off the other stations where it can.
+        let stations = MapLabelPlacement.obstacles(MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport),
+                                                   radius: MapArt.stationRadius(camera), own: (point.x, point.y))
+        let box = MapLabelPlacement.stationTag(at: point, width: Double(size.width), height: Double(size.height), clear: clear, avoiding: bubbles,
+                                               keepingOff: stations)
         return CGSize(width: box.minX, height: box.minY)
     }
 }
