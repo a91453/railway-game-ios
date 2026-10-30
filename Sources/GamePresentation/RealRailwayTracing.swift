@@ -489,11 +489,15 @@ extension GameSession {
                 )
                 break
             }
+            let next = stretch.starting(at: previous)
             do throws(GameError) {
-                previous = try stretch.starting(at: previous).build(in: &draft, heights: heights).to
+                previous = try next.build(in: &draft, heights: heights).to
                 built += 1
             } catch {
-                problem = error.playerMessage(in: language)
+                // Decision 513: which check, where GameCore's error covers
+                // several; asked of the world before the trace, as a
+                // refused stretch may leave its first node in the draft.
+                problem = error.playerMessage(building: next, in: planning, heights: heights, language: language)
                 break
             }
         }
@@ -609,11 +613,14 @@ extension GameSession {
             }
             if !piece.isEmpty { pieces.append(piece) }
         }
-        let first = plan.stretches.first, last = built.last
+        // Decision 513: refused from its first edge, the whole way and its
+        // far end, as drawn, not 0 m and the first edge's end.
+        let first = plan.stretches.first, last = built.isEmpty ? plan.stretches.last : built.last
+        let wayLength = built.isEmpty ? Self.drawnLength(of: points) : length
         let isJoined: (NetworkAnchor) -> Bool = { if case .point = $0 { false } else { true } }
         var preview = NetworkPreview(
-            curve: first?.curve ?? .straight, profile: .uniform, points: shown, length: length,
-            startHeight: first?.from.z ?? 0, endHeight: (last ?? first)?.to.z ?? 0,
+            curve: first?.curve ?? .straight, profile: .uniform, points: shown, length: wayLength,
+            startHeight: first?.from.z ?? 0, endHeight: last?.to.z ?? 0,
             joinsStart: isJoined(start), joinsEnd: !plan.stopped && isJoined(end),
             cost: built.isEmpty ? nil : cost,
             problem: built.isEmpty ? (plan.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")) : shortfall,
@@ -648,6 +655,19 @@ extension GameSession {
                 .compactMap { $0 }.joined(separator: " ")
         }
         return (preview, second)
+    }
+
+    /// The length in plan of the centre lines `pieces`, one after another
+    /// (decision 513).
+    static func drawnLength(of pieces: [[WorldCoordinate]]) -> Int64 {
+        var total = 0.0
+        for piece in pieces {
+            for (a, b) in zip(piece, piece.dropFirst()) {
+                let dx = Double(b.x - a.x), dy = Double(b.y - a.y)
+                total += (dx * dx + dy * dy).squareRoot()
+            }
+        }
+        return Int64(total.rounded())
     }
 
     /// What a trace that joins track already laid says (decision 468):

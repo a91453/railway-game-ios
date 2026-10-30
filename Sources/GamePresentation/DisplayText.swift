@@ -375,8 +375,8 @@ extension GameError {
             )
         case .invalidTrackGeometry:
             language.text(
-                "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different points, and run smoothly.",
-                "這裡不能建軌道：軌道必須在地圖內、與地面的高度差在 64 公尺以內、起點與終點不能是同一點，而且線形要平順。"
+                "Track can't be built there: it must stay on the map, at most 64 m above the ground and 1,024 m below it, start and end at different points, and run smoothly.",
+                "這裡不能建軌道：軌道必須在地圖內、離地最高 64 公尺、地下最深 1,024 公尺，起點與終點不能是同一點，而且線形要平順。"
             )
         case .trackNodeInUse:
             language.text(

@@ -39,6 +39,8 @@
 
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
+> 鋪軌被擋時說出原因、隧道深度（派工單 GEOMSG，[決策 513](decisions/513.md)，`geomsg-track-reason`）：作者 99.1 南澳的「0 公尺｜97 → 65 公尺」是描線的端點在真實隧道裡、地面下 183 公尺，超過 GameCore 的地下 64 公尺；地下改成 1,024 公尺（高架 64 公尺不變），被擋時卡片說是哪一個條件。留下的：描線在整段坡度就失敗時卡片仍是 0 公尺，南迴與阿里山還沒量最深的端點（決策 513 的下一步）；實機在南澳沿北迴線往隧道描一段，看卡片有長度與價錢、建得起來。Linux `TrackGeometryProblemTests` VERIFIED；實機 UNVERIFIED。
+
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
 
 > 公測前抓蟲・營運（派工單 BH2，`claude/bughunt-operations`，2026-10-30）：[`research/BUGHUNT_OPERATIONS_2026-10-30.md`](research/BUGHUNT_OPERATIONS_2026-10-30.md)。沒找到 P1。P2-1（跳過夜晚途中存檔，讀回以 ×6000 跑）在同一個 PR 修了（`GameSession.worldToSave`，`NightSkipTests` 釘住），發版前在實機按「跳到早上」後切出 App、關掉再繼續，看速度是原本的；P2-2（分組清單的上一條／下一條順序不對）與 P3 三項留給公測後。

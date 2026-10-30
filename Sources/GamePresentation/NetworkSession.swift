@@ -295,7 +295,10 @@ extension GameSession {
             problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
         } catch {
             cost = nil
-            problem = networkBuildsDouble && parallel == nil ? Self.noParallelText(in: language) : error.playerMessage(in: language)
+            problem = networkBuildsDouble && parallel == nil
+                ? Self.noParallelText(in: language)
+                // Decision 513: which check, where GameCore's error covers several.
+                : error.playerMessage(building: plan.stretch(structure: networkStructure), in: unbuilt, heights: heights, language: language)
         }
         let cleared = problem == nil ? world.placedBuildings(clearedIn: draft) : []
         let besides = parallel.map { $0.geometry?.points ?? [$0.from, $0.to] } ?? []

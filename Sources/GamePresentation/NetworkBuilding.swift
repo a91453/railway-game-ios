@@ -68,7 +68,8 @@ public struct NetworkPreview: Hashable, Sendable {
     /// tool refuses them before asking GameCore, or they make no edge.
     public let points: [WorldCoordinate]
     /// The length in world units (horizontal chainage); the straight
-    /// distance between the ends without a curve, 0 when they make no edge.
+    /// distance between the ends without a curve; for a traced stretch
+    /// refused from its first edge, the whole way as drawn (decision 513).
     public let length: Int64
     public let startHeight: Int64
     public let endHeight: Int64

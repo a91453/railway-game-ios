@@ -183,9 +183,10 @@ final class ContinuousTrackTests: XCTestCase {
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 512, y: 512)) }
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 16_384, y: 0)) }
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: -1, y: 0)) }
-        // Stage S4: 4096 above or below the ground at most.
+        // Stage S4: 4096 above the ground at most; decision 513: 65,536
+        // below it.
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: 4_097)) }
-        refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: -4_097)) }
+        refused(.invalidTrackGeometry) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: -65_537)) }
         refused(.unknownTrackNode(.node(9))) { _ = try $0.buildTrackEdge(from: .node(9), to: .node(8)) }
         refused(.unknownTrackNode(.node(8))) { _ = try $0.buildTrackEdge(from: a, to: .node(8)) }
         refused(.invalidTrackGeometry) { _ = try $0.buildTrackEdge(from: a, to: a) }
