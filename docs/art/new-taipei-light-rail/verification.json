@@ -1,0 +1,167 @@
+{
+  "producer": "63359f1049d5fa6b94c954d368d82112f203b8ee",
+  "date": "2026-10-30",
+  "first_delivery": true,
+  "previous_accepted_producer": null,
+  "swift": {
+    "version": "6.4",
+    "warnings_as_errors": true,
+    "related_tests_passed": 14
+  },
+  "common_tools": {
+    "node_tests_passed": 5,
+    "python_tests_passed": 6
+  },
+  "model_rebuild": {
+    "status": "VERIFIED",
+    "independent_checkout": true,
+    "exact_files": 52
+  },
+  "png_rebuild": {
+    "status": "VERIFIED",
+    "selected_pngs": 40,
+    "shared_overview_byte_equal": true
+  },
+  "protected_existing": {
+    "status": "VERIFIED",
+    "start_main": "797687de8b44747ecb2e939fd3c89f2b6adb2075",
+    "start_models": 735,
+    "latest_baseline_main": "9d30486124fa13a7352b026d8ad36817a78e8e38",
+    "latest_models": 757,
+    "final_models": 777,
+    "native_bytes_and_every_vertex_field_unchanged": true,
+    "upstream_changes_separate": true,
+    "lock_changes": "20 added entries only; existing entries retained"
+  },
+  "inherited_full_check": {
+    "status": "UNVERIFIED",
+    "unchanged_main_failure_lines": 33,
+    "final_failure_lines": 33,
+    "reasons": [
+      "32 inherited native hash lock mismatches",
+      "TEMU2000 twelve-car formation triangle budget"
+    ],
+    "repaired": false,
+    "gates_changed": false
+  },
+  "memory": {
+    "status": "VERIFIED",
+    "flag": "MOTION_BUDGET_REPORT=1",
+    "standard_resident_models": 613,
+    "model_megabytes": 142.6,
+    "initial_skip_reason": "Existing test intentionally skips without the report flag; rerun with flag passed"
+  },
+  "protected_prs": {
+    "public_1506": {
+      "state": "MERGED",
+      "head": "e00220ec863bcba6daa20706668e70129b16428a",
+      "merged_at": "2026-10-29T22:26:28Z"
+    },
+    "assets_31": {
+      "state": "MERGED",
+      "head": "d95bb0ddeb3367654339a0dbc7870b3bec0b1508",
+      "merged_at": "2026-10-29T22:24:56Z"
+    },
+    "branches_and_files_untouched": true
+  },
+  "integration": "Both studies only; no gameplay selection or dynamic articulation added",
+  "fleets": {
+    "ankeng": {
+      "states": {
+        "asset": {
+          "status": "VERIFIED",
+          "evidence": "Producer 63359f1049d5fa6b94c954d368d82112f203b8ee: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No explicit user acceptance of producer 63359f1049d5fa6b94c954d368d82112f203b8ee; this prompt authorizes creation/delivery only.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "Independent studies only; no operational set, map binding or player selection. Existing greenTram/fiveSectionLRT and train-pack fallback retained."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "Linux native/WebGL only. Simulator visual review, device Metal, Safari, FPS/memory, articulation/curve/grade and collector movement UNVERIFIED."
+        }
+      },
+      "technical": {
+        "status": "VERIFIED",
+        "independent_units": 10,
+        "full_assemblies": 2,
+        "individual_triangle_max": 10436,
+        "near_formation_triangles": 28084,
+        "far_formation_triangles": 13484,
+        "blender_imported_models": 12,
+        "swift_assembly_max_position_error_metres": 1.9073486e-06,
+        "swift_assembly_colour_equal": true,
+        "pngs": 20,
+        "shared_public_overview": 1,
+        "viewer_generated_delivery_rebuild_byte_equal": true,
+        "browser_final_models": 12,
+        "file_protocol": {
+          "status": "UNVERIFIED",
+          "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+        },
+        "native_glb_download_bytes_equal": true,
+        "final_bytes": 34416393
+      },
+      "assets": "https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1",
+      "viewer": "https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1/index.html"
+    },
+    "danhai": {
+      "states": {
+        "asset": {
+          "status": "VERIFIED",
+          "evidence": "Producer 63359f1049d5fa6b94c954d368d82112f203b8ee: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No explicit user acceptance of producer 63359f1049d5fa6b94c954d368d82112f203b8ee; this prompt authorizes creation/delivery only.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "Independent studies only; no operational set, map binding or player selection. Existing greenTram/fiveSectionLRT and train-pack fallback retained."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "Linux native/WebGL only. Simulator visual review, device Metal, Safari, FPS/memory, articulation/curve/grade and collector movement UNVERIFIED."
+        }
+      },
+      "technical": {
+        "status": "VERIFIED",
+        "independent_units": 10,
+        "full_assemblies": 2,
+        "individual_triangle_max": 14524,
+        "near_formation_triangles": 47028,
+        "far_formation_triangles": 21540,
+        "blender_imported_models": 12,
+        "swift_assembly_max_position_error_metres": 1.9073486e-06,
+        "swift_assembly_colour_equal": true,
+        "pngs": 20,
+        "shared_public_overview": 1,
+        "viewer_generated_delivery_rebuild_byte_equal": true,
+        "browser_final_models": 12,
+        "file_protocol": {
+          "status": "UNVERIFIED",
+          "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+        },
+        "native_glb_download_bytes_equal": true,
+        "final_bytes": 55832085
+      },
+      "assets": "https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1",
+      "viewer": "https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1/index.html"
+    }
+  },
+  "limits": [
+    "No explicit user appearance acceptance of this producer",
+    "No actual operational route selection contract; no game appearance after merge",
+    "No simulator visual/device Metal/Safari/performance/curve/grade/collector verification",
+    "Browser file:// navigation blocked by administration; loopback WebGL and zero external requests verified",
+    "Exact module dimensions, hidden equipment and per-part revisions insufficient; engineering replica not claimed"
+  ],
+  "combined_assets_bytes": 90248478,
+  "public_overview_sha256": "4221a532776a3c8fe271443dc5dee4eec143c2b47fb5e8c92e29acf0f8fd7377"
+}

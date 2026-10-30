@@ -49,7 +49,7 @@
 
 本輪**只有studies**，合併後兩款都不會出現在遊戲，也沒有玩家選用入口。現有機制沒有這兩款逐模組動態路徑與當班配車契約；尤其金車曾支援淡海的次級資料不能直接變隨機／奇偶配車。本輪不改RealTrains、TrainSets、Showcase、GameCore、存檔、fixtures、購車／解鎖、班表、控制或動畫。
 
-保護全部既有735模型實際M3DM bytes與全頂點欄位FNV，包括安坑／淡海scene-kit示意、greenTram、five／seven／blue輕軌、共用車、高雄紅橘線與原set／回退。最新main不代表外觀已接受：舊greenTram producer `2a947503`、five-section `25cb20fa`／配色`21a5b7ba`，明確本款接受證據不足，均UNVERIFIED；高雄紅橘線accepted producer `bd57e163`依既有交接保護，本輪未重設其狀態。高雄輕軌公開#1506 `e00220ec`／素材#31 `d95bb0dd`開工OPEN、工作期間已MERGED；已納入最新main，專用分支與交付目錄不動。
+開工先保護735模型；納入上游main後，以未改main `9d304861`重新匯出757模型，逐一保護其實際M3DM bytes與全頂點欄位FNV，包括安坑／淡海scene-kit示意、greenTram、five／seven／blue輕軌、共用車、高雄紅橘線與原set／回退。最新main不代表外觀已接受：舊greenTram producer `2a947503`、five-section `25cb20fa`／配色`21a5b7ba`，明確本款接受證據不足，均UNVERIFIED；高雄紅橘線accepted producer `bd57e163`依既有交接保護，本輪未重設其狀態。高雄輕軌公開#1506 `e00220ec`／素材#31 `d95bb0dd`開工OPEN、工作期間已MERGED；已納入最新main，專用分支與交付目錄不動。
 
 ## 外觀與驗證
 
@@ -58,3 +58,14 @@
 重建與驗收：[tools/new-taipei-lrt/README.md](../../../tools/new-taipei-lrt/README.md)。來源、原生讀回、GLB獨立匯入、幾何與故障反例、Swift組裝、PNG完整解碼、viewer互動／下載SHA、producer獨立checkout重建證據均隨素材交付；公開總結見verification.json。
 
 各款四態分開：素材技術依最終驗證；**使用者明確producer外觀接受、營運接入、裝置驗證均UNVERIFIED**。本prompt、CI、WebGL自檢不代表使用者接受；Metal、Safari、真機效能、彎道／坡度／關節動態與實際供電動作未驗。
+
+## 最終交付（2026-10-30）
+
+最終producer `63359f1049d5fa6b94c954d368d82112f203b8ee`；所有影響輸出的Sources/tools先提交，再由獨立checkout重建52個原生／GLB／組裝檔、40張私庫PNG與共用總覽，全部bytes相同。兩個最終viewer也由獨立producer交付重建相同，並重新跑真正載入／旋轉縮放／下載bytes核對。離線file://受管理政策阻擋，明列UNVERIFIED；HTTP載入零外部請求已驗。每款20張私庫透明PNG＋本頁共用1張，合計素材約86MiB，單檔最大約28MiB。
+
+- 安坑：[完整素材／來源／驗證／重建](https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1)、[viewer](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1/index.html)、[全部角色](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1/selected/all-roles.png)、[近景完整車組](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1/selected/ankeng-lrt-formation.png)、[遠景完整車組](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1/selected/ankeng-lrt-formation-far.png)、[獨立四態](ankeng-status.json)。
+- 淡海：[完整素材／來源／驗證／重建](https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1)、[viewer](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1/index.html)、[全部角色](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1/selected/all-roles.png)、[近景完整車組](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1/selected/danhai-lrt-formation.png)、[遠景完整車組](https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1/selected/danhai-lrt-formation-far.png)、[獨立四態](danhai-status.json)。
+
+安坑近／遠完整車組28084／13484三角；淡海47028／21540。每獨立單元≤15000，完整車組合法分件，沒有更改loader或gate。Swift6.4 WAE及14相關測試、共用Node5／Python6項、兩款各12件獨立Blender匯入、故障反例與PNG全解碼通過。標準常駐613模型／142.6MB保持，啟用既有報告旗標後記憶體檢查通過。
+
+全量檢查保留main原有32個鎖差異與TEMU2000預算1項：在未改main實際輸出重現相同33項；沒有修其他模型或放寬gate。兩款素材技術各為VERIFIED（限已執行範圍），使用者外觀接受、營運接入與裝置各UNVERIFIED。完整已驗／未驗、精確SHA與證據索引見[verification.json](verification.json)。PR最新CI／衝突狀態以各PR當前head為準，不把producer或先前head的結果替代新head。

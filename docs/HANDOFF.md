@@ -2680,3 +2680,5 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 ### Codex 新北安坑／淡海輕軌雙車（2026-10-29）
 
 本輪兩款獨立原生 studies，交接、車型對照、幾何共用依據、來源及狀態見 [new-taipei-light-rail](art/new-taipei-light-rail/README.md)。各自五角色近遠與完整靜態組裝；素材位於素材庫各款 revision-1。沒有營運接入，合併不會在遊戲出現；使用者外觀接受與裝置各自 UNVERIFIED。greenTram／fiveSectionLRT、ntdlrt／ntalrt／krtc/C原映射、列車包／回退及高雄紅橘線不動。上一輪高雄輕軌公開#1506與素材#31開工時OPEN、其後已MERGED（已納入最新main），其分支／檔案保持。未新增GameCore、存檔、fixtures、購車／解鎖、班表、控制或動畫。後續整合須另查當班配車與逐模組動態路徑契約；不要用車號奇偶或隨機配兩款。兩車首次交付、沒有已接受前版，所有未驗及重建producer詳各款來源／status／驗證。
+
+收尾producer `63359f1049d5fa6b94c954d368d82112f203b8ee`：兩款素材技術VERIFIED，獨立producer模型／PNG／viewer bytes相同、最終HTTP viewer真下載／旋轉縮放已驗；file://被瀏覽器管理政策擋住，離線直開仍UNVERIFIED。最新未改main的757個原生payload與全頂點欄位雜湊保持。14 Swift6.4 WAE測試、獨立Blender／原生組裝／故障反例通過；全量33項既有失敗已在main重現，未改gate。兩款各20PNG＋公開共用1張，外觀接受／營運／裝置各UNVERIFIED，詳自有verification.json。
