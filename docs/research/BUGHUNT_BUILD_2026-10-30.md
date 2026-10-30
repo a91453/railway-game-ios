@@ -65,7 +65,7 @@
 | P3-5 | `RealLineAcquisition.swift` 約 428 行 | 買了綠山線又刪掉這條線，再買藍海線：只賣濱海沙崙到漁人碼頭那段，綠山線也再也買不到（讀程式） | 收購紀錄在線刪掉時一併看待，或刪線時提醒 | 玩家：少見；其餘無 |
 | P3-6 | `Sources/GamePresentation/BusOwnRoads.swift` `joining` | 自己的路疊在單行道上，公車可以沿玩家的路逆向（讀程式） | 疊在單行道上的格子照底圖的方向。**已修（ROADFIX）**：沿單行道（半格內、夾角約 25° 內）的那幾段只照街的方向走，`BusOwnRoadsTests.testARoadAlongAOneWayStreetIsTakenItsWayOnly` 釘住 | 玩家：少見；鐵道迷：無；其餘無 |
 | P3-7 | `Sources/GamePresentation/RealRoadCells.swift` 約 181 行 | 離車站遠、地塊還沒讀進來的地方，沿真實的街鋪路照全價收（之後讀進來也不退）（讀程式） | 鋪路前先讀進該處的地塊 | 玩家：照規則免費；其餘無 |
-| P3-8 | `Sources/GamePresentation/BuildingSession.swift:383` `BuildingPreviewKey` 沒有語言 | 暫停時切換語言，建物預覽的拒絕理由仍是舊語言，移動位置後才換（讀程式） | key 加 `language` | 玩家：小；其餘無 |
+| P3-8 | `Sources/GamePresentation/BuildingSession.swift:383` `BuildingPreviewKey` 沒有語言 | 暫停時切換語言，建物預覽的拒絕理由仍是舊語言，移動位置後才換（讀程式） | key 加 `language`。**不會發生（ROADFIX 查證）**：遊戲裡選的語言只在下次開 App 時生效（決策 257，`LanguageChoice.save`），`GameLauncher` 與 `GameSession` 的 `language` 都是開 App 時定下的 `let`，同一局裡語言不會變；沒有改程式 | 玩家：無；其餘無 |
 | P3-9 | `Sources/GamePresentation/RoadDraft.swift` | 道路模式選了要拆的一段，復原後那段仍標著；按拆除會被 GameCore 乾淨拒絕 | `step(to:)` 一併清掉 `roadRemoval`。**已修（ROADFIX）**：`CityBusToolTests.testAnUndoLetsGoOfTheStretchPickedToTakeUp` 釘住 | 玩家：小；其餘無 |
 
 | P3-10 | `Sources/GamePresentation/Map3DStreetLife.swift`、`Map3DStreets.swift` | 3D 的平交道柵欄不會放下，路上的車和行人照樣穿過正在通過的列車（`levelCrossings` 只拿來畫，App 沒有用它擋車） | 列車接近時讓那段路的車流停住、柵欄放下；要先讀 motion skill | 玩家：看起來像真的平交道；鐵道迷：台灣平交道有警報與柵欄；開發：只在呈現層；美術：柵欄動畫；音樂：可以加平交道警鈴 |
