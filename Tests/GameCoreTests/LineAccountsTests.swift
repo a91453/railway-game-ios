@@ -196,7 +196,7 @@ final class LineAccountsTests: XCTestCase {
     func testVersionFortyEightKeepsLineAccounts() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v48-line-accounts.json")
-        var made = try build()
+        var made = try NTScale.$factor.withValue(3) { try build() }
         try made.advance(ticks: 1_500 + 20)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -209,7 +209,10 @@ final class LineAccountsTests: XCTestCase {
         XCTAssertNotNil((object["world"] as? [String: Any])?["lineAccounts"])
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         // Decision 222 counts the changes at B, which version 48 did not.
-        XCTAssertEqual(world, Self.withoutChanges(made))
+        // Decision 499: the day's fares are shared between the two lines in
+        // whole New Taiwan dollars, which moves NT$426 from one to the other
+        // (the total is the same); the hourly costs round once, NT$24 a day.
+        try XCTAssertSameButRounding(world, Self.withoutChanges(made), cents: 42_600)
         XCTAssertEqual(world.lineAccounts?.lines.count, 2)
         XCTAssertFalse(world.lineDays(first).isEmpty)
         // It goes on to be the same world as one that never was saved.
@@ -217,7 +220,7 @@ final class LineAccountsTests: XCTestCase {
         var straight = made
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
-        XCTAssertEqual(Self.withoutChanges(carried), Self.withoutChanges(straight))
+        try XCTAssertSameButRounding(Self.withoutChanges(carried), Self.withoutChanges(straight), cents: 42_600)
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 48,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
