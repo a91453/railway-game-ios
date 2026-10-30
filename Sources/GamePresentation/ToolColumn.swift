@@ -45,6 +45,12 @@ public enum ToolColumn {
 // a real-world map's credits under it, and Build at its foot was cut in
 // half. Build now stands at the foot, outside what scrolls, and what
 // scrolls is cut between two buttons.
+// Later (98.1, the owner: "不是要固定在工具欄最上面嗎"): the bus tool (PR
+// #1263) made four building tools, and on a phone on its side the column
+// no longer fit; anchored at the foot, the part that scrolls stood low over
+// Done, cut after two or three tools, with the room above it empty. While
+// building the column now runs its whole height: the tools from its top,
+// Done and Build at its foot, the room between them empty.
 extension ToolColumn {
     /// A button's height with its icon alone: 32 and the button style's 4
     /// above and below.
@@ -58,11 +64,11 @@ extension ToolColumn {
         return Double(buttons) * compactButtonHeight + Double(buttons - 1) * buttonSpacing + 2 * tilePadding
     }
 
-    /// The building column's height with its icons alone: the card's
-    /// toggle when it shows (`toggle`), the `tools` building tools and
-    /// Done in one group, and Build.
+    /// The building column's height with its icons alone: the `tools`
+    /// building tools from its top, the card's toggle under them when it
+    /// shows (`toggle`), and at its foot Done and Build, each apart.
     public static func buildingHeight(tools: Int, toggle: Bool) -> Double {
-        scrollingContent(tools: tools, toggle: toggle).height + tileGap + tileHeight(buttons: 1)
+        scrollingContent(tools: tools, toggle: toggle, done: false).height + 2 * (tileGap + tileHeight(buttons: 1))
     }
 
     /// How tall the part over Done and Build is shown where the whole
@@ -71,7 +77,8 @@ extension ToolColumn {
     /// buttons (or two groups), the rest scrolling, so no button shows in
     /// part. Done and Build stand under it, each a gap below, so Done is
     /// never scrolled out of reach, and the tools come before the toggle,
-    /// so building needs no scrolling.
+    /// so building needs no scrolling. The part stands at the column's
+    /// top, under the board, not low over Done (98.1).
     public static func buildingScrollHeight(maxHeight: Double, tools: Int, toggle: Bool) -> Double {
         let content = scrollingContent(tools: tools, toggle: toggle, done: false)
         let room = maxHeight - 2 * (tileGap + tileHeight(buttons: 1))

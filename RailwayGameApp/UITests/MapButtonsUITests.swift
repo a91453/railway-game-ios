@@ -85,6 +85,34 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["tool.network"].disappears(within: 10), "Build closes the tools")
     }
 
+    /// 98.1 (the owner: "不是要固定在工具欄最上面嗎"): while building, the
+    /// tools stood low over Done, scrolled, the room above them empty. The
+    /// first tool stands at the column's top now, a margin under the status
+    /// bar, and a finger reaches it as the tools open; Done stays over
+    /// Build. How tall the part that scrolls is, is `ToolColumnTests`.
+    func testThePhonesBuildingToolsStartAtTheColumnsTop() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
+        let app = launch(orientation: .landscapeLeft)
+        defer { app.terminate() }
+
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 10), "The building tools open")
+        XCTAssertTrue(network.becomesHittable(within: 10), "The first tool is covered or scrolled away: \(network.frame)")
+        network.waitUntilSettled()
+        let status = app.descendants(matching: .any)["hud.bar"].firstMatch
+        XCTAssertTrue(status.appears(within: 5))
+        // The margin of 10 and the column's glass, 4, over the first tool.
+        XCTAssertLessThanOrEqual(abs(network.frame.minY - (status.frame.maxY + 10 + 4)), 3,
+                                 "At the column's top: \(network.frame), the status bar \(status.frame)")
+        let done = app.buttons["tool.select"]
+        XCTAssertTrue(done.appears(within: 5))
+        XCTAssertLessThan(done.frame.maxY, build.frame.minY, "Done over Build: \(done.frame) and \(build.frame)")
+        XCTAssertLessThan(network.frame.maxY, done.frame.minY, "The tools over Done: \(network.frame) and \(done.frame)")
+    }
+
     /// On an iPad held upright they stand in the map's corner beside the
     /// lines panel, not gone.
     func testTheIPadsButtonsStayBesideThePanelHeldUpright() throws {

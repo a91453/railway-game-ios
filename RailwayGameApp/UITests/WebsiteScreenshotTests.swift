@@ -188,6 +188,31 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-demo-day", app)
     }
 
+    /// 98.1 (decision 382, later): Build open on a phone on its side, the
+    /// building tools from the column's top, on a map without credits and
+    /// on the real-world demo with its credits under the column. For the
+    /// screenshot review of the pull request that moved them, not the
+    /// website.
+    func testBuildingToolsColumn() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        app.buttons["dock.build"].tap()
+        app.buttons["tool.network"].waitUntilSettled()
+        settle()
+        keep("build-tools-column", app)
+        app.terminate()
+
+        let real = launch()
+        defer { real.terminate() }
+        real.openDemo("demo.realWorld", timeout: 60)
+        XCTAssertTrue(real.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
+        settle(seconds: 4)
+        real.buttons["dock.build"].tap()
+        real.buttons["tool.network"].waitUntilSettled()
+        settle()
+        keep("build-tools-column-real-world", real)
+    }
+
     /// New game → real world (decision 477): the whole of Taiwan first,
     /// above the places.
     func testRealWorldPicker() {
