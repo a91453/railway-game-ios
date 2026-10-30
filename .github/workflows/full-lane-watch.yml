@@ -1,6 +1,6 @@
 name: Full lane watch
 
-# Tells the work registry (#1041; #231 until it filled up) when main's full lane turns red, a job
+# Tells the work registry (#1579; #1041 and #231 until they filled up) when main's full lane turns red, a job
 # or a test turns red that had not in this red streak, or it turns green again
 # (decision 329). On 2026-10-20 and 10-21 the full lane was red ten times in
 # a row and nobody was told: its result shows only on the Actions page. The
@@ -45,5 +45,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
-          ISSUE: "1041"
+          ISSUE: "1579"
         run: python3 -I tools/ci-watch/full_lane_watch.py --run "$RUN_ID"

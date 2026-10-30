@@ -5,7 +5,7 @@ description: 生成海岸、漁港與露營休憩原生 3D 素材、安裝接點
 
 # 海岸、漁港與露營素材
 
-先讀 CLAUDE.md、AGENTS.md、HANDOFF、art-style、station-kit、civic-kit 與工作登記 #1041（#231 為已滿的舊登記）。查最新 main 與全部 Kit 目錄去重，不能只依交接提示的既有批次。
+先讀 CLAUDE.md、AGENTS.md、HANDOFF、art-style、station-kit、civic-kit 與工作登記 #1579（#1041、#231 為已滿的舊登記）。查最新 main 與全部 Kit 目錄去重，不能只依交接提示的既有批次。
 
 本批 24 獨立素材（三類各8）與4組景。Map3DCoastalKit.model(for:)、Map3DModelPack(coastalKit:) 按需建模，不加入 standard、不接地圖。只延伸自己的 Map3DCoastalKit*.swift、tools/coastal-kit、對應測試與文件。不要改 GameCore、存檔、Golden、其他 Kit 或地圖整合。
 
