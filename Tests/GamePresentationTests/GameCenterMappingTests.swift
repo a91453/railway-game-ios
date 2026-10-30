@@ -26,7 +26,7 @@ final class GameCenterMappingTests: XCTestCase {
         XCTAssertTrue(ids.allSatisfy { $0.count <= 100 })
         XCTAssertEqual(Set(GameCenterMapping.points.keys), Set(Achievement.all.map(\.id)), "no achievement without points, none left over")
         XCTAssertTrue(GameCenterMapping.points.values.allSatisfy { (1...100).contains($0) })
-        XCTAssertEqual(GameCenterMapping.points.values.reduce(0, +), 800, "Game Center allows 1,000 in all")
+        XCTAssertEqual(GameCenterMapping.points.values.reduce(0, +), 810, "Game Center allows 1,000 in all")
         XCTAssertLessThanOrEqual(Achievement.all.count, 100)
     }
 

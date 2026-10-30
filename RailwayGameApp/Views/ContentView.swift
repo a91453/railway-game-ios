@@ -467,8 +467,10 @@ struct ContentView: View {
             // 98.1: on a phone, while building, the card's toggle beside the
             // column's foot (``ToolsColumn``), not in it; there with Undo
             // and Redo, as one row.
-            let toggleBesideFoot = toolsColumn && showsRail && session.tutorial?.step.usesDetailsCard != true
-            let showsFootRow = toggleBesideFoot || ControlPanel.showsEdits(session)
+            // Decision 509: Done stands beside Build while building.
+            let doneBesideFoot = toolsColumn && showsRail
+            let toggleBesideFoot = doneBesideFoot && session.tutorial?.step.usesDetailsCard != true
+            let showsFootRow = doneBesideFoot || ControlPanel.showsEdits(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             // Decision 224 (5B): the layer strip under the pill, while not
             // building and not in the tutorial; on a phone the building
@@ -628,9 +630,15 @@ struct ContentView: View {
                 .overlay(alignment: .bottomLeading) {
                     if toolsColumn {
                         HStack(alignment: .bottom, spacing: ControlPanel.tileGap) {
-                            // While building, the card's toggle stands here,
-                            // beside Build, rather than over the tools (98.1):
-                            // in the column the four tools did not fit.
+                            // While building, Done and the card's toggle
+                            // stand here, beside Build, rather than over the
+                            // tools (98.1, decision 509): in the column the
+                            // tools did not fit with them.
+                            if doneBesideFoot {
+                                BuildDoneButton(session: session)
+                                    .controlTile()
+                                    .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
+                            }
                             if toggleBesideFoot {
                                 ControlDetailsToggle(isOpen: isOpen) { detailsChoice = !isOpen }
                                     .disabled(sidePanel != nil)
@@ -1043,7 +1051,7 @@ private struct ToolsColumn: View {
 
     /// The building tools the session offers, Done aside.
     private var buildingTools: Int {
-        ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }.count
+        session.buildToolbarButtons.count
     }
 
     // Not on the tutorial's steps that point into the card, which keep it
@@ -1061,25 +1069,20 @@ private struct ToolsColumn: View {
         .tutorialClip()
     }
 
-    /// While building, where it all fits: the building tools and Done in
-    /// one group close over Build, lit (a second tap closes the tools), at
-    /// the column's foot, where the thumb that pressed Build is (decision
-    /// 382; 98.1, the planner). The card's toggle stands beside Build
-    /// instead (``ContentView``): the four tools did not fit with it on a
-    /// phone on its side.
+    /// While building, where it all fits: the building tools in one group
+    /// close over Build, lit (a second tap closes the tools), at the
+    /// column's foot, where the thumb that pressed Build is (decision 382;
+    /// 98.1, the planner). The card's toggle stands beside Build instead
+    /// (``ContentView``): the four tools did not fit with it on a phone on
+    /// its side; and Done too since 100.1 (decision 509): the five tools
+    /// did not fit with it.
     private func building(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            BuildToolButtons(session: session)
+            BuildToolButtons(session: session, includesDone: false)
                 .controlTile()
             ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
-    }
-
-    @ViewBuilder private var buildingFoot: some View {
-        BuildDoneButton(session: session)
-            .controlTile()
-        ControlPanel(session: session, arrangement: .buildEntry)
     }
 
     /// Icons alone where even they have not the height (a 12 or 13 mini
@@ -1111,9 +1114,7 @@ private struct ToolsColumn: View {
                 }
             }
             Spacer(minLength: ControlPanel.tileGap)
-            VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-                buildingFoot
-            }
+            ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
     }

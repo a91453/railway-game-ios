@@ -174,8 +174,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         // Decision 114: the tools show once Build is pressed.
         requiredButton("dock.build", in: app).tap()
-        requiredButton("tool.building", in: app).tap()
-        requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
+        // Decision 509: zoning has a button of its own.
+        requiredButton("tool.zoning", in: app).tap()
         requiredButton("building.zone.commercial", in: app).tap()
         let count = app.staticTexts["building.zoneCount"]
         XCTAssertTrue(count.appears(within: 10), "Missing the zoned cell count")
@@ -200,8 +200,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         // Decision 114: the tools show once Build is pressed.
         requiredButton("dock.build", in: app).tap()
-        requiredButton("tool.building", in: app).tap()
-        requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
+        // Decision 509: zoning has a button of its own.
+        requiredButton("tool.zoning", in: app).tap()
         XCTAssertTrue(count.appears(within: 10), "Missing the zoned cell count after continuing")
         XCTAssertEqual(count.label, label, "The zones did not survive saving and continuing")
     }

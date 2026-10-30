@@ -56,6 +56,12 @@ public enum ToolColumn {
 // its room; where the tools still do not fit (a 12 or 13 mini, by 3
 // points), the column runs up to the board, the tools scrolling from its
 // top, the first of them showing.
+// Later (100.1, decision 509): zoning has its own button, five building
+// tools. With Done in their group the column took 322 points, 20 more than
+// a 17 Pro on its side has (302), and every phone scrolled; Done now
+// stands beside Build, as the card's toggle does since 98.1 (the lit Build
+// and Done both close the tools), and the five tools over Build take the
+// 278 the four and Done took, fitting the same phones.
 extension ToolColumn {
     /// A button's height with its icon alone: 32 and the button style's 4
     /// above and below.
@@ -71,26 +77,27 @@ extension ToolColumn {
 
     /// The building column's height with its icons alone: the card's
     /// toggle when it shows (`toggle`; on a phone it stands beside Build
-    /// instead since 98.1), the `tools` building tools and Done in one
-    /// group, and Build.
+    /// instead since 98.1), the `tools` building tools in one group, and
+    /// Build. Done stands beside Build since 100.1 (decision 509).
     public static func buildingHeight(tools: Int, toggle: Bool = false) -> Double {
         scrollingContent(tools: tools, toggle: toggle).height + tileGap + tileHeight(buttons: 1)
     }
 
-    /// How tall the part over Done and Build is shown where the whole
-    /// column does not fit in `maxHeight`: the tools, then the card's
-    /// toggle, all of them when they fit, else cut midway between two
-    /// buttons (or two groups), the rest scrolling, so no button shows in
-    /// part. Done and Build stand under it, each a gap below, so Done is
-    /// never scrolled out of reach, and the tools come before the toggle,
-    /// so building needs no scrolling. The column then runs up to the
-    /// board, the part at its top, not low over Done (98.1). Where the room past
+    /// How tall the part over Build is shown where the whole column does
+    /// not fit in `maxHeight`: the tools, then the card's toggle, all of
+    /// them when they fit, else cut midway between two buttons (or two
+    /// groups), the rest scrolling, so no button shows in part. Build
+    /// stands under it, a gap below, with Done beside it since 100.1
+    /// (decision 509; before, Done stood over Build), so Done is never
+    /// scrolled out of reach, and the tools come before the toggle, so
+    /// building needs no scrolling. The column then runs up to the board,
+    /// the part at its top, not low over Build (98.1). Where the room past
     /// the cut holds most of the next button (``peek``), the part takes
     /// the room and shows that button in part, fading: cut cleanly, the
     /// bus tool on a real-world map left no sign that it was there.
     public static func buildingScrollHeight(maxHeight: Double, tools: Int, toggle: Bool) -> Double {
-        let content = scrollingContent(tools: tools, toggle: toggle, done: false)
-        let room = maxHeight - 2 * (tileGap + tileHeight(buttons: 1))
+        let content = scrollingContent(tools: tools, toggle: toggle)
+        let room = maxHeight - (tileGap + tileHeight(buttons: 1))
         guard content.height > room else { return content.height }
         guard let cut = content.cuts.last(where: { $0 <= room }) else { return content.cuts.first ?? 0 }
         return room - cut >= peek ? room : cut
@@ -100,19 +107,18 @@ extension ToolColumn {
     /// than not at all: half a button and the gap before it.
     public static var peek: Double { compactButtonHeight / 2 + tileGap }
 
-    /// The part over Build, Done in the tools' group (`done`) or not, and
-    /// the card's toggle under them: its height and where it may be cut,
-    /// midway between each two buttons.
-    private static func scrollingContent(tools: Int, toggle: Bool, done: Bool = true) -> (height: Double, cuts: [Double]) {
+    /// The part over Build, the tools and the card's toggle under them:
+    /// its height and where it may be cut, midway between each two
+    /// buttons.
+    private static func scrollingContent(tools: Int, toggle: Bool) -> (height: Double, cuts: [Double]) {
         var cuts: [Double] = []
-        let buttons = tools + (done ? 1 : 0)
-        for index in 0..<buttons {
+        for index in 0..<tools {
             let foot = tilePadding + Double(index + 1) * compactButtonHeight + Double(index) * buttonSpacing
-            if index < buttons - 1 { cuts.append(foot + buttonSpacing / 2) }
+            if index < tools - 1 { cuts.append(foot + buttonSpacing / 2) }
         }
-        var y = tileHeight(buttons: buttons)
+        var y = tileHeight(buttons: tools)
         if toggle {
-            if buttons > 0 {
+            if tools > 0 {
                 cuts.append(y + tileGap / 2)
                 y += tileGap
             }

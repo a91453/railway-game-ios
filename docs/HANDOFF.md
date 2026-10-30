@@ -2324,6 +2324,12 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 
 照文件順序做，每項先寫一個在 main 上會紅的測試。
 
+### 4.34 「分區」自己一顆建設工具（決策 509，派工單 ZONE1，session_01YGNNuo27fcYAGK3J1GdZHo，`zone1-zoning-tool`，2026-10-30）
+
+- **做了的**在決策 509：建設工具「路網、列車、建物、分區、公車」，手機的「完成」改站在「建設」旁邊（決策 382 補記）；站長在成長的車站旁有空地時說「點這裡劃分區」；第一棟蓋在分區上的建物通知一次；成就「都市計畫」（`cityPlanner`，10 分）。
+- **等作者的**：App Store Connect 還沒有 `achievement.cityPlanner`。作者要再跑一次 Game Center 的建立步驟（`docs/GAME_CENTER_SETUP.md`；只會新建這一個，其餘照舊），沒建之前遊戲內照常解鎖，只是不回報 Game Center。
+- **還沒驗證**：實機畫面（iPhone 橫拿五個工具、「完成」在「建設」旁）；截圖驗收照決策 482 暫緩，PR 列出要看的畫面。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

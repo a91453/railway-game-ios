@@ -638,7 +638,8 @@ private struct CityBusRouteList: View {
 /// whether a building fits where the player taps. Since P0-C1 (decision 94)
 /// it also demolishes, and shows a managed company what building costs and
 /// what its buildings earn. Since P0-B (decision 98) it zones cells: tap
-/// one, or drag across a rectangle.
+/// one, or drag across a rectangle; since decision 509 from a button of
+/// its own (``BuildToolbarButton/zoning``), with only the zones.
 private struct BuildingControls: View {
     @Bindable var session: GameSession
     /// A kind's glyph, as large as the subheadline it sits beside.
@@ -646,36 +647,47 @@ private struct BuildingControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Building mode", selection: $session.buildingMode) {
-                ForEach(BuildingToolMode.allCases, id: \.self) { mode in
-                    Text(mode.title(in: session.language)).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("building.mode")
-            switch session.buildingMode {
-            case .build:
-                buildOptions
-            case .demolish:
-                Label("Tap one of your buildings to demolish it. A managed company pays a tenth of what it cost.", systemImage: "hand.tap")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
-            case .sell:
-                sellOptions
-            case .zone:
+            // Decision 509: zoning is a button of its own, without the
+            // building tool's modes or its buildings' figures.
+            if session.buildingMode == .zone {
                 zoneOptions
+            } else {
+                buildingOptions
             }
-            Text(verbatim: session.placedBuildingsText)
-                .font(.footnote.weight(.semibold))
+        }
+    }
+
+    @ViewBuilder
+    private var buildingOptions: some View {
+        Picker("Building mode", selection: $session.buildingMode) {
+            ForEach(BuildingToolMode.buildingModes, id: \.self) { mode in
+                Text(mode.title(in: session.language)).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("building.mode")
+        switch session.buildingMode {
+        case .build:
+            buildOptions
+        case .demolish:
+            Label("Tap one of your buildings to demolish it. A managed company pays a tenth of what it cost.", systemImage: "hand.tap")
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+        case .sell:
+            sellOptions
+        case .zone:
+            zoneOptions
+        }
+        Text(verbatim: session.placedBuildingsText)
+            .font(.footnote.weight(.semibold))
+            .monospacedDigit()
+            .accessibilityIdentifier("building.count")
+        if let economy = session.buildingEconomyText {
+            Text(verbatim: economy)
+                .font(.footnote)
                 .monospacedDigit()
-                .accessibilityIdentifier("building.count")
-            if let economy = session.buildingEconomyText {
-                Text(verbatim: economy)
-                    .font(.footnote)
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.textSecondary)
-                    .accessibilityIdentifier("building.economy")
-            }
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("building.economy")
         }
     }
 
@@ -1200,6 +1212,17 @@ struct StatusBanner: View {
             LinearKeyframe(1.0, duration: MotionRule.refuse.seconds)
         }
         .padding(10)
+    }
+}
+
+extension BuildToolbarButton {
+    /// Decision 509: zoning's grid, as the zoning layer's.
+    var systemImage: String {
+        self == .zoning ? "square.grid.3x3.fill" : tool.systemImage
+    }
+
+    func accessibilityName(in language: DisplayLanguage) -> String {
+        self == .zoning ? language.text("Zoning tool", "分區工具") : tool.accessibilityName
     }
 }
 

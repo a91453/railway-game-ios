@@ -35,89 +35,87 @@ final class ToolColumnTests: XCTestCase {
     }
 
     /// Decision 382, later (TestFlight 85.1): while building, the column
-    /// on the smallest phones on their side.
-    func testTheBuildingColumnFitsTheSmallestPhoneOrIsCutBetweenButtons() {
-        // The card's toggle, the track, train and building tools with Done,
-        // and Build: 48 + 6 + 180 + 6 + 48.
-        XCTAssertEqual(ToolColumn.buildingHeight(tools: 3, toggle: true), 288)
-        // An iPhone SE on its side (375, no safe area), the board's foot at
-        // 54, no layer strip while building: all of it fits.
-        let se = ToolColumn.maxHeight(screenHeight: 375, top: 54, gap: 10, bottom: 10)
-        XCTAssertGreaterThanOrEqual(se, ToolColumn.buildingHeight(tools: 3, toggle: true))
-        // Where it does not, Done and Build stand at the foot, apart: the
-        // part over them, the three tools and the toggle, is 136 + 6 + 48.
-        XCTAssertEqual(ToolColumn.buildingScrollHeight(maxHeight: se, tools: 3, toggle: true), 190)
-        // A 13 mini (354 inside the safe area), and an SE, with a
-        // real-world map's credits (30) under the column: it does not fit,
-        // and Done and Build stand whole under a part cut between two
-        // buttons.
+    /// on the smallest phones on their side, cut between two buttons where
+    /// it does not fit; 100.1 (decision 509): five tools over Build, Done
+    /// beside it.
+    func testTheBuildingColumnIsCutBetweenButtonsWhereItDoesNotFit() {
+        // The five tools and Build: 224 + 6 + 48.
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 5), 278)
+        // A 13 mini (354 inside the safe area) and an SE (375), the
+        // board's foot at 59, and 30 more under the column, as the
+        // real-world map's credits took before 98.1: Build stands whole
+        // under a part cut between two buttons.
         for screenHeight in [354.0, 375] {
-            let maxHeight = ToolColumn.maxHeight(screenHeight: screenHeight, top: 54, gap: 10, bottom: 30 + 10)
-            XCTAssertLessThan(maxHeight, ToolColumn.buildingHeight(tools: 3, toggle: true))
-            let shown = ToolColumn.buildingScrollHeight(maxHeight: maxHeight, tools: 3, toggle: true)
-            XCTAssertLessThanOrEqual(shown + 2 * (ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1)), maxHeight)
-            // The cut falls in a gap: every button above it whole.
-            var buttons: [(top: Double, foot: Double)] = (0..<3).map { index in
+            let maxHeight = ToolColumn.maxHeight(screenHeight: screenHeight, top: 59, gap: 10, bottom: 30 + 10)
+            XCTAssertLessThan(maxHeight, ToolColumn.buildingHeight(tools: 5))
+            let shown = ToolColumn.buildingScrollHeight(maxHeight: maxHeight, tools: 5, toggle: false)
+            XCTAssertLessThanOrEqual(shown + ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1), maxHeight)
+            let buttons: [(top: Double, foot: Double)] = (0..<5).map { index in
                 let top = ToolColumn.tilePadding + Double(index) * (40 + ToolColumn.buttonSpacing)
                 return (top, top + 40)
             }
-            let toggle = ToolColumn.tileHeight(buttons: 3) + ToolColumn.tileGap + ToolColumn.tilePadding
-            buttons.append((toggle, toggle + 40))
-            XCTAssertFalse(buttons.contains { $0.top < shown && shown < $0.foot }, "\(screenHeight): cut at \(shown)")
-            // The three tools whole, the toggle under them scrolling; Done
-            // and Build below, never scrolled away.
-            XCTAssertEqual(buttons.filter { $0.foot <= shown }.count, 3, "\(screenHeight)")
+            // The cut falls in a gap, or shows most of the next button
+            // (``ToolColumn/peek``): no button shows less than half.
+            for button in buttons where button.top < shown && shown < button.foot {
+                XCTAssertGreaterThanOrEqual(shown - button.top, ToolColumn.compactButtonHeight / 2, "\(screenHeight): cut at \(shown)")
+            }
+            XCTAssertGreaterThanOrEqual(buttons.filter { $0.foot <= shown }.count, 4, "\(screenHeight)")
         }
-        // In a lesson's first steps: fewer tools, no toggle; all of it fits.
+        // In a lesson's first steps: fewer tools; all of it fits.
         XCTAssertEqual(ToolColumn.buildingScrollHeight(maxHeight: 250, tools: 1, toggle: false), ToolColumn.tileHeight(buttons: 1))
     }
 
     /// 98.1 (the owner, the planner): with the bus tool, four building
-    /// tools, and the card's toggle beside Build rather than over them. The
-    /// four and Done in one group over Build fit a phone on its side without
-    /// scrolling: 224 + 6 + 48. The room each phone leaves, inside its safe
-    /// area, under the board's foot (about 59 on a Pro in the screenshots
-    /// of run 41081038317) with the gap of 10 below it and 10 above the
-    /// screen's foot. The column runs down beside a real-world map's
-    /// credits (the planner's (a)), which start past it, so they take none
-    /// of its room: the same on either map.
-    func testFourBuildingToolsFitAPhoneOnItsSide() {
-        XCTAssertEqual(ToolColumn.buildingHeight(tools: 4), 278)
+    /// tools, and the card's toggle beside Build rather than over them;
+    /// 100.1 (decision 509): with zoning, five, and Done beside Build too.
+    /// With Done in their group the five took 322, more than any phone on
+    /// its side has; without it they take the 278 the four and Done took,
+    /// and fit a phone on its side without scrolling. The room each phone
+    /// leaves, inside its safe area, under the board's foot (about 59 on a
+    /// Pro in the screenshots of run 41081038317) with the gap of 10 below
+    /// it and 10 above the screen's foot. The column runs down beside a
+    /// real-world map's credits (the planner's (a)), which start past it,
+    /// so they take none of its room: the same on either map.
+    func testFiveBuildingToolsFitAPhoneOnItsSide() {
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 5), 278)
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 5) + ToolColumn.compactButtonHeight + ToolColumn.buttonSpacing, 322,
+                       "Done in the tools' group")
         func room(_ screenHeight: Double) -> Double {
             ToolColumn.maxHeight(screenHeight: screenHeight, top: 59, gap: 10, bottom: 10)
         }
+        XCTAssertLessThan(room(381), 322, "with Done in the group, not even a 17 Pro")
         // iPhone 16 Pro, 17 Pro (402 tall, 381 inside), iPhone SE (375,
         // no home indicator), iPhone 14 to 16 (390 and 393, 369 and 372):
         // they fit.
         for height in [381.0, 375, 372, 369] {
-            XCTAssertGreaterThanOrEqual(room(height), ToolColumn.buildingHeight(tools: 4), "\(height)")
+            XCTAssertGreaterThanOrEqual(room(height), ToolColumn.buildingHeight(tools: 5), "\(height)")
         }
         // The 12 and 13 mini (375 tall, 354 inside) does not, by 3 points.
         // There the column scrolls (below).
-        XCTAssertEqual(room(354), ToolColumn.buildingHeight(tools: 4) - 3)
+        XCTAssertEqual(room(354), ToolColumn.buildingHeight(tools: 5) - 3)
     }
 
     /// Where they do not fit, the part that scrolls, at the column's top,
     /// shows the first tools whole and most of the next, fading, so it
     /// shows more is below (run 41081038317 cut cleanly after the building
-    /// tool, the bus tool not there at all); Done and Build whole under it.
-    func testFourBuildingToolsScrollFromTheColumnsTopWhereTheyDoNotFit() {
-        let tools = 4
-        let busTop = ToolColumn.tilePadding + 3 * (ToolColumn.compactButtonHeight + ToolColumn.buttonSpacing)
-        // The mini: three whole and most of the bus tool, the part taking
-        // all the room.
+    /// tool, the bus tool not there at all); Build whole under it.
+    func testFiveBuildingToolsScrollFromTheColumnsTopWhereTheyDoNotFit() {
+        let tools = 5
+        let lastTop = ToolColumn.tilePadding + 4 * (ToolColumn.compactButtonHeight + ToolColumn.buttonSpacing)
+        // The mini: the part takes all the room, 3 short of the column,
+        // the last tool whole and only the glass under it cut.
         let mini = ToolColumn.maxHeight(screenHeight: 354, top: 59, gap: 10, bottom: 10)
-        let room = mini - 2 * (ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1))
+        let room = mini - (ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1))
         let shown = ToolColumn.buildingScrollHeight(maxHeight: mini, tools: tools, toggle: false)
         XCTAssertEqual(shown, room)
-        XCTAssertGreaterThanOrEqual(shown - busTop, ToolColumn.compactButtonHeight / 2)
-        XCTAssertLessThan(shown - busTop, ToolColumn.compactButtonHeight)
-        // Shorter still (243, the mini's room before 98.1, with a
-        // real-world map's credits under the column): too little of the
-        // bus tool would show, so the part is cut after three whole, the
-        // first at the top.
-        let cut = ToolColumn.buildingScrollHeight(maxHeight: 243, tools: tools, toggle: false)
-        XCTAssertGreaterThanOrEqual(cut, ToolColumn.tileHeight(buttons: 3) - ToolColumn.tilePadding)
-        XCTAssertLessThan(cut, ToolColumn.tileHeight(buttons: 4))
+        XCTAssertGreaterThanOrEqual(shown - lastTop, ToolColumn.compactButtonHeight)
+        XCTAssertLessThan(shown, ToolColumn.tileHeight(buttons: tools))
+        // Shorter still (196, the room the mini's column had before 98.1
+        // with a real-world map's credits under it, less Done): too little
+        // of the fifth would show, so the part is cut after four whole,
+        // the first at the top.
+        let cut = ToolColumn.buildingScrollHeight(maxHeight: 196 + ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1), tools: tools, toggle: false)
+        XCTAssertGreaterThanOrEqual(cut, ToolColumn.tileHeight(buttons: 4) - ToolColumn.tilePadding)
+        XCTAssertLessThan(cut, ToolColumn.tileHeight(buttons: 5) - ToolColumn.tilePadding - ToolColumn.compactButtonHeight / 2)
     }
 }
