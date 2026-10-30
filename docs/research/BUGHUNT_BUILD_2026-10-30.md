@@ -35,6 +35,7 @@
 - **在哪**：`Sources/GameCore/City/RoadGrid.swift` `removeRoads` 只比對以格子算的距離（`busRoadMetres`）；但實景地圖的公車路徑是底圖的路網加上玩家的路（`BusRouteEditor.swift` 的 `useOwnRoads(grid.built)`，#1469）。決策 487 之後玩家的路可以疊在城市路格上（`taken`）；拆掉這種格子時格子還是城市的，GameCore 的距離不變就放行，可是畫面的路網少了玩家那條線。
 - **重現**：實景地圖，在底圖不算公車路的小巷或產業道路上鋪路（$0），在上面開一條市區公車並放站牌，再到道路模式點那段路拆掉。允許拆，之後 2D 路線畫成斷的、3D 沒有公車，GameCore 仍照舊距離收錢。
 - **建議修法**：`tapRoadTool` 的預檢（同檔）用畫面同一張路網重算每條路線的路徑，有斷掉就不給拆並說是哪條路線；GameCore 不必改。測試放 `RoadDrawRealMapTests`。
+- **結果（ROADFIX，2026-10-30）**：#1544 修好（`GameSession.routeBroken(byTakingUp:from:)`，`RoadDrawRealMapTests.testARoadACityBusNeedsOnARealMapIsNotTakenUp` 釘住）。
 - 五面向：玩家：避免路線莫名斷掉。鐵道迷：無。開發：只改預檢，在 GamePresentation。美術：無。音樂：無。
 
 ### P2-2 只沿現有路鋪的路（$0），3D 地圖不重建（讀程式）
@@ -42,6 +43,7 @@
 - **在哪**：`RailwayGameApp/Views/Map3D/Map3DPreviewScreen.swift`（約 605 行）與 `Sources/GamePresentation/Map3DBuses.swift`（約 53 行）的簽章用 `world.roads?.allCells.count`；`taken` 的格子本來就在 `cells`，數量不變。
 - **重現**：實景地圖，只沿底圖現有的街拖一段路鋪下（$0）；2D 有，3D 沒有，公車路線改走它也不重畫，直到遊戲週數變（暫停時不會）。拆掉也一樣留著。
 - **建議修法**：簽章加上 `roads.built.count`（或一個版本號）。
+- **結果（ROADFIX，2026-10-30）**：3D 的場景鍵（`Map3DSceneKey`）與公車簽章（`Map3DBuses.Signature`）加上玩家的路（`roads.built`），`RoadCellCountTests` 釘住。
 - 五面向：玩家：鋪了看得到。鐵道迷：無。開發：一行。美術：3D 跟 2D 一致。音樂：無。
 
 ### P2-3 先買淡海藍海線，綠山線就不再出售，說明還說「真實支線都是你的了」（讀程式）
@@ -49,6 +51,7 @@
 - **在哪**：`Sources/GamePresentation/RealLineAcquisition.swift` 約 428–432 行（沒有 `ntdlrt:V after ntdlrt:VB` 的班表就 `continue`，但 `sale.bought` 被藍海線設成 true），說明文字約 478 行。
 - **重現**：淡海附近的實景地圖，先買藍海線。綠山線從出售清單消失，地圖上沒有別的線時，說明寫「這張地圖上的真實支線都是你的了」。買藍海線的卡片事先也沒說買了就不能再買綠山線。
 - **狀態**：#1519（BLG，決策 493）正在開放「先藍海後綠山」，合併後這條自然解掉；若 #1519 沒進公測，至少把說明改成不說「都是你的」。
+- **結果（ROADFIX，2026-10-30）**：#1519 合併後已解（main 77b9322）：藍海線買了以後，綠山線照整條線的班表出售（`metroRuns` 的退路），`DanhaiDepotTests.testTheGreenMountainLineIsBoughtWholeAfterTheBlueCoastLine` 釘住；說明文字不會再在只剩綠山線時說「都是你的了」。沒有改程式。先綠山後刪線再買藍海線的情形是 P3-5。
 - 五面向：玩家：不會以為綠山線已經是自己的。鐵道迷：兩條線本來都能經營。開發：等 #1519。美術：無。音樂：無。
 
 ## 4. P3（小毛病）
