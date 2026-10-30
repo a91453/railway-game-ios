@@ -214,6 +214,21 @@ public final class GameLauncher {
         savePreferences()
     }
 
+    /// Decision 508: whether the station master offers the tutorial before
+    /// a first line, to a player who has not answered. The app's UI tests
+    /// start with it off, as with the first-time card, unless a test asks.
+    public var showsFirstLineOffer = true
+
+    /// Decision 508: the player's answer to the station master's offer of
+    /// the tutorial: lesson 1 at once, or each first-line step named.
+    public func chooseFirstLineGuide(_ choice: FirstLineGuide.Choice) {
+        if preferences.firstLineGuide != choice {
+            preferences.firstLineGuide = choice
+            savePreferences()
+        }
+        if choice == .tutorial { startTutorial() }
+    }
+
     /// Whether the start screen shows the "What's New" card (decision
     /// 415): once, the first time an updated app opens.
     public var showsWhatsNew: Bool {

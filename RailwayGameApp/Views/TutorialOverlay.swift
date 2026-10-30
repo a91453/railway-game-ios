@@ -9,23 +9,28 @@ extension View {
     /// coordinates), which report there (`tutorialPanelTarget(_:)`).
     /// `mapSites`: where the places the step has the player tap on the map
     /// stand on the screen (global coordinates), as the map reports them.
-    func tutorialOverlay(session: GameSession, panelTargets: [TutorialTarget: CGRect] = [:], mapSites: [CGRect] = []) -> some View {
+    ///
+    /// `firstLineGuide`: decision 508, the player's answer to the station
+    /// master's offer; after "I'll do it myself", outside the tutorial, the
+    /// control the station master names is ringed as a step's are.
+    func tutorialOverlay(session: GameSession, panelTargets: [TutorialTarget: CGRect] = [:], mapSites: [CGRect] = [],
+                         firstLineGuide: FirstLineGuide.Choice? = nil) -> some View {
         overlayPreferenceValue(TutorialTargetBounds.self) { anchors in
             GeometryReader { proxy in
+                let viewport = CGRect(origin: .zero, size: proxy.size)
+                // A panel beside the map: what is inside it shows only
+                // within it.
+                let panel = anchors[.sidePanel]?.visibleFrame(in: proxy, viewport: viewport)
+                let origin = proxy.frame(in: .global).origin
+                let inPanels = panelTargets.compactMapValues { frame -> CGRect? in
+                    guard let panel else { return nil }
+                    let visible = frame.offsetBy(dx: -origin.x, dy: -origin.y).intersection(panel)
+                    return visible.isNull || visible.isEmpty ? nil : visible
+                }
+                let frameOf = { (target: TutorialTarget) -> CGRect? in
+                    anchors[target]?.visibleFrame(in: proxy, viewport: viewport) ?? inPanels[target]
+                }
                 if let tutorial = session.tutorial {
-                    let viewport = CGRect(origin: .zero, size: proxy.size)
-                    // A panel beside the map: what is inside it shows only
-                    // within it.
-                    let panel = anchors[.sidePanel]?.visibleFrame(in: proxy, viewport: viewport)
-                    let origin = proxy.frame(in: .global).origin
-                    let inPanels = panelTargets.compactMapValues { frame -> CGRect? in
-                        guard let panel else { return nil }
-                        let visible = frame.offsetBy(dx: -origin.x, dy: -origin.y).intersection(panel)
-                        return visible.isNull || visible.isEmpty ? nil : visible
-                    }
-                    let frameOf = { (target: TutorialTarget) -> CGRect? in
-                        anchors[target]?.visibleFrame(in: proxy, viewport: viewport) ?? inPanels[target]
-                    }
                     let frames = tutorial.step.targets.compactMap(frameOf)
                     // Every control the player may need stays clear of the card,
                     // whatever its size (a full-width Build Track button is
@@ -71,9 +76,46 @@ extension View {
                             map: map.map { TutorialCardPlacement.Frame($0) }
                         )
                     )
+                } else if firstLineGuide == .selfGuided {
+                    FirstLineGuideRing(session: session, choice: .selfGuided, frameOf: frameOf)
                 }
             }
         }
+    }
+}
+
+/// Decision 508: the ring round the control the station master names
+/// after "I'll do it myself", until the first line is made. Its own view,
+/// so the game's every tick reads the world here, not in the screen's body.
+private struct FirstLineGuideRing: View {
+    let session: GameSession
+    let choice: FirstLineGuide.Choice
+    let frameOf: (TutorialTarget) -> CGRect?
+
+    var body: some View {
+        if let target = FirstLineGuide.hint(in: session, choice: choice)?.target, let frame = frameOf(target) {
+            TutorialRing(frame: frame)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// The tutorial's outline round a control (decision 122: the station
+/// master's lantern lights it).
+private struct TutorialRing: View {
+    let frame: CGRect
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .strokeBorder(Theme.accent, lineWidth: 3)
+            .shadow(color: Theme.accent.opacity(0.8), radius: 8)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Color.black.opacity(0.35), lineWidth: 5)
+            }
+            .frame(width: frame.width + 6, height: frame.height + 6)
+            .position(x: frame.midX, y: frame.midY)
     }
 }
 
@@ -145,17 +187,7 @@ private struct TutorialOverlay: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             ForEach(frames.indices, id: \.self) { index in
-                let frame = frames[index]
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Theme.accent, lineWidth: 3)
-                    // Decision 122: the station master's lantern lights it.
-                    .shadow(color: Theme.accent.opacity(0.8), radius: 8)
-                    .background {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(Color.black.opacity(0.35), lineWidth: 5)
-                    }
-                    .frame(width: frame.width + 6, height: frame.height + 6)
-                    .position(x: frame.midX, y: frame.midY)
+                TutorialRing(frame: frames[index])
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)

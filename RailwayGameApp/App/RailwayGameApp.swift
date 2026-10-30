@@ -130,6 +130,12 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-game-card") {
             launcher.dismissFirstGameCard()
         }
+        // Decision 508: likewise the station master's offer of the tutorial
+        // in a game with no line, which stays until answered, unless a test
+        // asks for it with -show-first-line-offer.
+        if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-line-offer") {
+            launcher.showsFirstLineOffer = false
+        }
         // Decision 464: a slow Simulator would open the speed hint's popover
         // by itself in the middle of a test and the next tap would close it;
         // UI tests start with it off unless a test asks with

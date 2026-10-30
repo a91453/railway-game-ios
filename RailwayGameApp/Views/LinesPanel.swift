@@ -120,21 +120,24 @@ struct LinesPanel: View {
                         // pinned above it, the network's switches, Advanced,
                         // a new line and the lines for sale as rows over
                         // it; a line's own settings on its own page.
-                        entriesSection
-                        if showsNewLine {
-                            draftSection
+                        // Decision 486: on a short panel, the controls in
+                        // one row over the lines that scrolls away with
+                        // them; decision 498: the lines there before the
+                        // other rows, so opening the panel shows some.
+                        ForEach(controlsStyle.parts, id: \.self) { part in
+                            listPart(part)
                         }
-                        // Decision 486: on a short panel, one row over
-                        // the lines that scrolls away with them.
-                        if controlsStyle == .inline {
-                            inlineControlsSection
-                        }
-                        listedLines
                     } else {
                         // Decision 100: a new line first, where the panel beside
                         // the map (decision 106) shows it while stations are
-                        // picked on the map.
-                        draftSection
+                        // picked on the map. Decision 508: in its place, while
+                        // there are not two stations to pick, what is missing
+                        // and the button to Build.
+                        if let need = session.linesPanelFirstLineNeed, need.action == .build {
+                            firstLineSection(need)
+                        } else {
+                            draftSection
+                        }
                         // Decision 101: a line without trains offers them next.
                         if let line = session.selectedLine {
                             trainsSection(line)
@@ -160,6 +163,9 @@ struct LinesPanel: View {
                 .hardTopScrollEdge()
                 // Decision 486: a short panel's rows take more of its width.
                 .contentMargins(.horizontal, listsLinesFirst && controlsStyle == .inline ? 8 : nil, for: .scrollContent)
+                // Decision 498: and less room between its sections, so the
+                // first lines show under the controls' row.
+                .listSectionSpacing(listsLinesFirst && controlsStyle == .inline ? .compact : .default)
                 // Decision 481: what finds and orders the lines stays at the
                 // top while the list scrolls under it; decision 486: not on
                 // a short panel, where it left one line in view.
@@ -351,6 +357,20 @@ struct LinesPanel: View {
         session.linesPanelListsLinesFirst
     }
 
+    /// Decision 498: one part of the list while the lines come first.
+    @ViewBuilder
+    private func listPart(_ part: LinesListPart) -> some View {
+        switch part {
+        case .controls: inlineControlsSection
+        case .lines: listedLines
+        case .entries: entriesSection
+        case .newLine:
+            if showsNewLine {
+                draftSection
+            }
+        }
+    }
+
     /// The new line's form folded into one row while the lines come first
     /// (decision 196); picking a station puts it back at the top.
     private var newLineButton: some View {
@@ -367,9 +387,10 @@ struct LinesPanel: View {
         .accessibilityAddTraits(showsNewLine ? .isSelected : [])
     }
 
-    /// Decision 481: the rows over the short list, one each for what is not
-    /// a line: the network's switches and service day (their own page),
-    /// Advanced, a new line, and the real lines for sale (their own page).
+    /// Decision 481: the rows over the short list (under it on a short
+    /// panel, decision 498), one each for what is not a line: the
+    /// network's switches and service day (their own page), Advanced, a
+    /// new line, and the real lines for sale (their own page).
     private var entriesSection: some View {
         Section {
             if session.allows(UnlockableTool.lineDetails) {
@@ -413,8 +434,7 @@ struct LinesPanel: View {
             trafficSection
             serviceDaySection
         }
-        .navigationTitle(Text(verbatim: NetworkSwitches.title(in: session.language)))
-        .navigationBarTitleDisplayMode(.inline)
+        .panelTitle(NetworkSwitches.title(in: session.language))
         .toolbar { doneItem }
         .safeAreaInset(edge: .bottom) {
             StatusBanner(session: session, announces: false)
@@ -425,8 +445,7 @@ struct LinesPanel: View {
         Form {
             buyableLinesSection
         }
-        .navigationTitle(Text(verbatim: NetworkSwitches.forSaleTitle(count: 0, in: session.language)))
-        .navigationBarTitleDisplayMode(.inline)
+        .panelTitle(NetworkSwitches.forSaleTitle(count: 0, in: session.language))
         .toolbar { doneItem }
         .safeAreaInset(edge: .bottom) {
             StatusBanner(session: session, announces: false)
@@ -454,8 +473,7 @@ struct LinesPanel: View {
             .id(line.id)
             .accessibilityIdentifier("line.detail")
             .hardTopScrollEdge()
-            .navigationTitle(Text(verbatim: line.name))
-            .navigationBarTitleDisplayMode(.inline)
+            .panelTitle(line.name)
             .toolbar { doneItem }
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
@@ -520,6 +538,45 @@ struct LinesPanel: View {
         }
         .disabled(id == nil)
         .accessibilityIdentifier(identifier)
+    }
+
+    /// Decision 508: what the first line still needs, in a sentence, over
+    /// how.
+    private func firstLineHeading(_ need: FirstLineNeed) -> some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: need.title(in: language))
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            Text(verbatim: need.detail(in: language))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("lines.firstLine")
+    }
+
+    /// Decision 508: at the top of a panel with fewer than two stations,
+    /// in the new line's place, what is missing and the one button that
+    /// goes there: Build, its track tools chosen.
+    private func firstLineSection(_ need: FirstLineNeed) -> some View {
+        let language = session.language
+        return Section {
+            firstLineHeading(need)
+            Button {
+                screen.panel = nil
+                session.selectTool(.network)
+            } label: {
+                Label {
+                    Text(verbatim: need.buttonTitle(in: language))
+                        .fontWeight(.semibold)
+                } icon: {
+                    Image(systemName: need.buttonSymbol)
+                }
+            }
+            .accessibilityIdentifier("lines.firstLine.go")
+        }
     }
 
     /// Decision 315: the real branch lines this map sells; decision 336:
@@ -770,7 +827,10 @@ struct LinesPanel: View {
                 }
             }
         } header: {
-            Text("Lines")
+            // Decision 498: not on a short panel, under its own "Lines".
+            if !listsLinesFirst || controlsStyle.showsLinesHeading {
+                Text("Lines")
+            }
         }
     }
 
@@ -2356,7 +2416,11 @@ struct LinesPanel: View {
         let draft = session.lineDraft
         let stops = session.lineDraftStops
         return Section {
-            if draft.isEmpty {
+            if draft.isEmpty, let need = session.linesPanelFirstLineNeed {
+                // Decision 508: with no line yet, what this form is for, its
+                // Pick on Map the button that does it.
+                firstLineHeading(need)
+            } else if draft.isEmpty {
                 Text(verbatim: language.text(
                     "Pick the line's first and last stations. The stations the track passes between them are found for you.",
                     "選路線的起點和終點，沿途經過的車站會依軌道自動找出。"

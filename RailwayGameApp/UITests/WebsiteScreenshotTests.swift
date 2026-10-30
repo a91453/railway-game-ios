@@ -188,6 +188,27 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-demo-day", app)
     }
 
+    /// Building on the real-world demo, the panel open at the trailing
+    /// side: where people are, its legend down by the credits rather than
+    /// over the track being laid (TestFlight 98.1).
+    func testBuildingLegendUnderPanel() {
+        // UI tests leave where people are off unless asked (RailwayGameApp).
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["map.potentialLegend"].firstMatch.appears(within: 30), "Where people are shows")
+        settle(seconds: 4)
+        keep("build-legend-under-panel", app)
+    }
+
     /// New game → real world (decision 477): the whole of Taiwan first,
     /// above the places.
     func testRealWorldPicker() {
@@ -304,8 +325,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// The lines panel in two levels (decision 481) on the freight scene's
-    /// second morning: the short list with its pinned controls, a line's
-    /// own page, and the whole network's page.
+    /// second morning: the short list, its lines first on a phone on its
+    /// side (decision 498), a line's own page, and the whole network's page.
     func testLinesListAndLinePage() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         defer { app.terminate() }
@@ -320,11 +341,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 2)
         keep("lines-list", app)
 
-        // On a phone on its side the lines start below the rows over them,
-        // and the form makes a row only once it scrolls in.
+        // The form makes a row only once it scrolls in. The list runs
+        // under the bar (decision 498: no heading over the first line), and
+        // a tap on a row there lands on the bar (run 41081046632).
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "A line's row shows")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        // A tap on a list still moving after the drag only stops it.
+        row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
         settle(seconds: 2)
@@ -332,13 +356,11 @@ final class WebsiteScreenshotTests: XCTestCase {
 
         app.navigationBars.firstMatch.buttons.firstMatch.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "Back to the list")
-        // The network's row is at the list's top, above the line's row.
+        // Decision 498: on a phone on its side the network's row is under
+        // the lines, where `dragUntilWhollyOnScreen` looks for it.
         let network = app.buttons["lines.network"]
         let back = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        // Under the pinned search, filter and sort, which a drag must not
-        // begin on.
         let top = app.linesListTop(under: bar)
-        dragBack(to: network, in: back, below: top, in: app)
         XCTAssertTrue(app.dragUntilWhollyOnScreen(network, in: back, below: top), "The whole network's row shows")
         network.tap()
         settle(seconds: 2)
@@ -714,6 +736,42 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(card.appears(within: 60), "The lesson's card shows")
         settle(seconds: 3)
         keep("lesson-card", app)
+    }
+
+    /// Decision 508, for its screenshot review: a new blank-map game with
+    /// no line, the station master's offer of the tutorial, the lines
+    /// panel saying what is missing, and after "I'll do it myself" the
+    /// station master naming Build with its ring.
+    func testFirstLineGuide() {
+        let app = launch(extra: ["-show-first-line-offer"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 15), "The start screen shows New Game")
+        newGame.tap()
+        app.chooseBlankMap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The new game opens")
+        let offer = app.descendants(matching: .any)["stationMaster.offer"].firstMatch
+        XCTAssertTrue(offer.appears(within: 15), "The station master offers the tutorial")
+        settle()
+        keep("first-line-offer", app)
+
+        app.buttons["entry.lines"].tap()
+        let need = app.descendants(matching: .any)["lines.firstLine"].firstMatch
+        XCTAssertTrue(need.appears(within: 10), "The lines panel says what is missing")
+        settle()
+        keep("first-line-lines-empty", app)
+        let go = app.buttons["lines.firstLine.go"]
+        XCTAssertTrue(go.becomesHittable(), "Its button can be tapped")
+        go.tap()
+        XCTAssertTrue(app.buttons["tool.network"].appears(within: 10), "It opens Build")
+        app.buttons["dock.build"].tap()
+
+        let myself = app.buttons["stationMaster.offer.self"]
+        XCTAssertTrue(myself.becomesHittable(), "I'll do it myself can be tapped")
+        myself.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "The first step is said")
+        settle()
+        keep("first-line-guide-build", app)
     }
 
     /// The game menu on a phone on its side, its rows side by side icons
