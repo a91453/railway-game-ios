@@ -394,9 +394,14 @@
 ///     cells. A build that reads only an earlier version cannot read a
 ///     route with no station and would drop the player's roads, so it
 ///     says the save is newer than it instead.
+/// 76. New Taiwan dollars (decision 499): every amount is in New Taiwan
+///     dollars, three to the dollar before it, so a save of an earlier
+///     version has each amount read times 3. A build that reads only an
+///     earlier version would take the amounts for dollars, three times what
+///     they are, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 75
+    public static let currentVersion = 76
 
     public let world: GameWorld
 
@@ -590,8 +595,14 @@ extension SavedGame: Codable {
         // Version 74 to 75: every route of a world before version 75 feeds
         // its station, carrying no trips of its own, and roads without
         // `"built"` are all the city's: nothing to turn.
+        // Version 75 to 76: every amount was a dollar and is three New
+        // Taiwan dollars (decision 499), so each Money the world holds is
+        // read times 3.
         // Later versions add their steps here.
-        var world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
+        let worldDecoder = try container.superDecoder(forKey: .world)
+        var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {
+            try GameWorld(from: worldDecoder, madeBeforeSpacing: version < 5)
+        }
         if version == 72 { world.seedBoughtTilesRoads() }
         self.world = world
     }

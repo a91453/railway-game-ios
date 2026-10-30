@@ -624,6 +624,44 @@ public struct SaveSummary: Codable, Hashable, Sendable {
         unlimitedFunds = world.economy.unlimitedFunds ? true : nil
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case seconds, balance, stations, lines, trains, realWorld, unlimitedFunds, newTaiwanDollars
+    }
+
+    /// A summary without `"newTaiwanDollars"` was written before decision
+    /// 499 and counts dollars: its balance reads times 3, as its game's does.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        seconds = try container.decode(Int64.self, forKey: .seconds)
+        let balance = try container.decode(Int64.self, forKey: .balance)
+        if try container.decodeIfPresent(Bool.self, forKey: .newTaiwanDollars) == true {
+            self.balance = balance
+        } else {
+            let (scaled, overflow) = balance.multipliedReportingOverflow(by: 3)
+            guard !overflow else {
+                throw DecodingError.dataCorruptedError(forKey: .balance, in: container, debugDescription: "The balance is too large to convert.")
+            }
+            self.balance = scaled
+        }
+        stations = try container.decode(Int.self, forKey: .stations)
+        lines = try container.decode(Int.self, forKey: .lines)
+        trains = try container.decode(Int.self, forKey: .trains)
+        realWorld = try container.decodeIfPresent(Bool.self, forKey: .realWorld)
+        unlimitedFunds = try container.decodeIfPresent(Bool.self, forKey: .unlimitedFunds)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(seconds, forKey: .seconds)
+        try container.encode(balance, forKey: .balance)
+        try container.encode(stations, forKey: .stations)
+        try container.encode(lines, forKey: .lines)
+        try container.encode(trains, forKey: .trains)
+        try container.encodeIfPresent(realWorld, forKey: .realWorld)
+        try container.encodeIfPresent(unlimitedFunds, forKey: .unlimitedFunds)
+        try container.encode(true, forKey: .newTaiwanDollars)
+    }
+
     /// The funds: the balance, or "∞" with unlimited funds.
     private var fundsText: String {
         unlimitedFunds == true ? "∞" : Money(balance).moneyText

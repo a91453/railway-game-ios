@@ -152,6 +152,16 @@ final class RealWorldMapTests: XCTestCase {
         XCTAssertNil(blank["realWorld"], "written only on a real-world map")
     }
 
+    /// A summary written before decision 499 counted dollars: its balance
+    /// reads as three times as many New Taiwan dollars, as its game does,
+    /// and one written now reads as written.
+    func testSummariesFromBeforeNewTaiwanDollarsReadTimesThree() throws {
+        let json = #"{"seconds": 60, "balance": 100, "stations": 1, "lines": 0, "trains": 0}"#
+        XCTAssertEqual(try JSONDecoder().decode(SaveSummary.self, from: Data(json.utf8)).balance, 300)
+        let now = SaveSummary(world: .newGame())
+        XCTAssertEqual(try JSONDecoder().decode(SaveSummary.self, from: JSONEncoder().encode(now)), now)
+    }
+
     // MARK: - Places
 
     /// The references' places: the 22 Taiwan places of

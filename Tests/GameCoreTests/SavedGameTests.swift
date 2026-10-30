@@ -335,7 +335,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(world.trains.map(\.name), ["Train 1", "Train 2"])
         XCTAssertTrue(world.isTrafficControlEnabled)
         XCTAssertEqual(world.accounts.mode, .management)
-        XCTAssertEqual(world.economy.balance, Money(-60_600))
+        XCTAssertEqual(world.economy.balance, Money(-60_600 * 3), "the dollars it saved, as New Taiwan dollars (decision 499)")
     }
 
     /// The version 2 save (Stage E1): the demo map after 90 minutes, in the
@@ -361,7 +361,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(world.trains.map(\.name), ["Train 1", "Train 2"])
         XCTAssertTrue(world.isTrafficControlEnabled)
         XCTAssertEqual(world.accounts.mode, .management)
-        XCTAssertEqual(world.economy.balance, Money(131_595_600))
+        XCTAssertEqual(world.economy.balance, Money(131_595_600 * 3), "the dollars it saved, as New Taiwan dollars (decision 499)")
     }
 
     /// The version 3 save (decision 49): the demo map after 90 minutes,
@@ -405,7 +405,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertEqual(world.stations.map(\.name), ["West", "Central", "East", "North", "South"])
         XCTAssertEqual(world.lines.map(\.name), ["Line 1", "Line 2", "Ring Line"])
         XCTAssertEqual(world.lines.map(\.isRing), [false, false, true])
-        XCTAssertEqual(world.economy.balance, Money(69_962_900))
+        XCTAssertEqual(world.economy.balance, Money(69_962_900 * 3), "the dollars it saved, as New Taiwan dollars (decision 499)")
 
         // The anchor is the only difference from the version 3 save.
         let three = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: Self.fixtures.appendingPathComponent("v3-demo-90-minutes.json"))).world
@@ -1087,6 +1087,54 @@ final class SavedGameTests: XCTestCase {
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v18-whole-island-land.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.placedBuildings.isEmpty)
+    }
+
+    /// Decision 499: the version 75 city-bus save, read in New Taiwan
+    /// dollars (every amount times 3) and written as version 76. The
+    /// version 76 save reads as written, every amount once, and is the
+    /// version 75 world in all but its amounts. Written with
+    /// `NT_DOLLAR_SAVE_NEW=1`.
+    func testVersionSeventySixCountsNewTaiwanDollars() throws {
+        let dollars = try Data(contentsOf: Self.fixtures.appendingPathComponent("v75-city-bus-roads.json"))
+        let migrated = try JSONDecoder().decode(SavedGame.self, from: dollars).world
+
+        let url = Self.fixtures.appendingPathComponent("v76-nt-dollar.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["NT_DOLLAR_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: migrated)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 76)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, migrated, "read once, not times 3 again")
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Self.currentVersion(of: data))
+
+        let old = try XCTUnwrap(try JSONSerialization.jsonObject(with: dollars) as? [String: Any])
+        let oldEconomy = try XCTUnwrap((old["world"] as? [String: Any])?["economy"] as? [String: Any])
+        let newEconomy = try XCTUnwrap((object["world"] as? [String: Any])?["economy"] as? [String: Any])
+        let oldBalance = try XCTUnwrap(oldEconomy["balance"] as? Int64)
+        XCTAssertNotEqual(oldBalance, 0)
+        XCTAssertEqual(newEconomy["balance"] as? Int64, oldBalance * 3)
+        XCTAssertEqual(world.economy.balance, Money(oldBalance * 3))
+        let oldCosts = try XCTUnwrap(oldEconomy["costs"] as? [String: Int64])
+        XCTAssertEqual(newEconomy["costs"] as? [String: Int64], oldCosts.mapValues { $0 * 3 })
+        XCTAssertEqual(world.stations, migrated.stations)
+        XCTAssertEqual(world.busRoutes.map(\.stops), migrated.busRoutes.map(\.stops))
+    }
+
+    /// An amount a save before version 76 holds that would pass `Int64`
+    /// times 3 is refused, not wrapped round.
+    func testAnAmountTooLargeToConvertIsRefused() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v75-city-bus-roads.json"))
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var world = try XCTUnwrap(object["world"] as? [String: Any])
+        var economy = try XCTUnwrap(world["economy"] as? [String: Any])
+        economy["balance"] = Int64.max / 2
+        world["economy"] = economy
+        object["world"] = world
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: object)))
     }
 
     private static func everyCellHasItsBuilding(_ world: GameWorld) -> Bool {
