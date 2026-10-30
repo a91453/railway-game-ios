@@ -634,7 +634,9 @@ final class LessonUITests: XCTestCase {
         // map tap. The draft keeps its stops when Lines is closed.
         selectStation(0)
         tap(app.buttons["entry.lines"])
-        if app.buttons["line.new"].exists {
+        // Decision 498: on a phone "New Line…" is under the lines, maybe
+        // off the panel, so it is looked for while the form is not open.
+        if !app.buttons["Add Selected Station"].appears(within: 3) {
             reveal(app.buttons["line.new"])
             tap(app.buttons["line.new"])
         }

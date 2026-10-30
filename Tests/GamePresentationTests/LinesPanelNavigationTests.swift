@@ -194,6 +194,14 @@ final class LinesPanelNavigationTests: XCTestCase {
         XCTAssertEqual(LinesListControls.style(compactHeight: false), .pinned)
     }
 
+    /// Decision 498 (B1): a short panel (a phone held sideways) showed
+    /// only the network's row and Advanced when opened, no line; its
+    /// lines now come before the rows that are not a line.
+    func testAShortPanelShowsTheLinesBeforeTheOtherRows() {
+        XCTAssertEqual(LinesListControls.inline.parts, [.controls, .lines, .entries, .newLine])
+        XCTAssertEqual(LinesListControls.pinned.parts, [.entries, .newLine, .lines])
+    }
+
     func testTheInlineSearchFieldShowsOnceOpenedAndWhileSomethingIsTyped() {
         let empty = ListSearch()
         let typed = ListSearch("Ji")

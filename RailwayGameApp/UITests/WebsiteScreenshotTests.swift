@@ -304,8 +304,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// The lines panel in two levels (decision 481) on the freight scene's
-    /// second morning: the short list with its pinned controls, a line's
-    /// own page, and the whole network's page.
+    /// second morning: the short list, its lines first on a phone on its
+    /// side (decision 498), a line's own page, and the whole network's page.
     func testLinesListAndLinePage() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         defer { app.terminate() }
@@ -320,8 +320,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 2)
         keep("lines-list", app)
 
-        // On a phone on its side the lines start below the rows over them,
-        // and the form makes a row only once it scrolls in.
+        // The form makes a row only once it scrolls in.
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "A line's row shows")
@@ -332,13 +331,11 @@ final class WebsiteScreenshotTests: XCTestCase {
 
         app.navigationBars.firstMatch.buttons.firstMatch.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "Back to the list")
-        // The network's row is at the list's top, above the line's row.
+        // Decision 498: on a phone on its side the network's row is under
+        // the lines, where `dragUntilWhollyOnScreen` looks for it.
         let network = app.buttons["lines.network"]
         let back = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        // Under the pinned search, filter and sort, which a drag must not
-        // begin on.
         let top = app.linesListTop(under: bar)
-        dragBack(to: network, in: back, below: top, in: app)
         XCTAssertTrue(app.dragUntilWhollyOnScreen(network, in: back, below: top), "The whole network's row shows")
         network.tap()
         settle(seconds: 2)

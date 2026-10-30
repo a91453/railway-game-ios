@@ -173,8 +173,10 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // each drag here begins on the rows. From the top the long drags
         // in `bringIntoView` carried the switch past the rows (run
         // 40844553127): short drags down to it instead.
+        // Decision 498: on a phone held sideways the switch is under the
+        // lines instead, where `bringIntoView` reaches it going down.
         let bar = app.navigationBars["Lines"].firstMatch
-        if !toggle.exists, bar.exists,
+        if !toggle.exists, bar.exists, UIDevice.current.userInterfaceIdiom != .phone,
            let list = app.collectionViews.allElementsBoundByIndex.first(where: { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }) {
             let top = app.linesListTop(under: bar)
             let rows = CGRect(x: list.frame.minX, y: top, width: list.frame.width, height: list.frame.maxY - 8 - top)
