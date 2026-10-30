@@ -492,7 +492,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// A station of the player's beside a real one past the junction
     /// offers the line; the card lists the price, and closes once bought for
     /// the card that says so.
-    func testAStationBesideTheLineOffersIt() throws {
+    func testAStationBesideTheLineOffersIt() async throws {
         let session = try Self.game(round: "PINGXI")
         let pingxi = try line("PINGXI", in: session)
         let frame = try XCTUnwrap(RealWorldFrame(world: session.world))
@@ -503,6 +503,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(session.buyableRealLine(at: near), pingxi)
 
         session.offerRealLine(pingxi)
+        await session.realLineOfferPrepared()
         let offer = try XCTUnwrap(session.shownRealLineOffer)
         let rows = offer.priceRows(in: .traditionalChinese)
         XCTAssertEqual(rows.map(\.label), ["軌道、車站與月台", "3 列車", "沿線的常客", "合計"])

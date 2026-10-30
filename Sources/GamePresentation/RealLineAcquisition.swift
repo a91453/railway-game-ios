@@ -505,16 +505,115 @@ extension GameSession {
     }
 
     /// Opens the purchase card for `line`, laid out and priced now.
+    /// Opens the purchase card for `line` (decision 497): at once, saying
+    /// it is being prepared (``preparingRealLine``), while the line is laid
+    /// out and priced off the main actor (``realLineLaying``; up to 2 s on
+    /// a real map of 64 stations, all of it a frozen screen before). The
+    /// offer shows only if it was laid out on the world as it still is
+    /// (``commandRevision`` and the railways unchanged); otherwise it is
+    /// laid out again on the world as it is now. Closing the card drops it.
     public func offerRealLine(_ line: RealBranchLine) {
-        shownRealLineOffer = realLineOffer(for: line)
+        shownRealLineOffer = nil
+        preparingRealLine = line
+        layRealLineOffer(line)
+    }
+
+    private func layRealLineOffer(_ line: RealBranchLine) {
+        realLineOfferTask?.cancel()
+        let laying = realLineLaying, revision = commandRevision, railways = railwaysRevision
+        realLineOfferTask = Task {
+            let offer = await Task.detached(priority: .userInitiated) { laying.offer(for: line) }.value
+            guard !Task.isCancelled, preparingRealLine == line else { return }
+            guard commandRevision == revision, railwaysRevision == railways else {
+                layRealLineOffer(line)
+                return
+            }
+            realLineOfferTask = nil
+            preparingRealLine = nil
+            shownRealLineOffer = offer
+        }
+    }
+
+    /// Closes the purchase card, or stops preparing it.
+    public func closeRealLineOffer() {
+        realLineOfferTask?.cancel()
+        realLineOfferTask = nil
+        preparingRealLine = nil
+        shownRealLineOffer = nil
+    }
+
+    /// Waits for the offer being prepared, if any (for the tests).
+    func realLineOfferPrepared() async {
+        while let task = realLineOfferTask {
+            await task.value
+            if realLineOfferTask == task { break }
+        }
     }
 
     private func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
+        RealLineLaying.realPoint(of: name, system: system, railways: railways, frame: frame)
+    }
+
+    /// What laying out and pricing a real line reads of the session, taken
+    /// as it is now (decision 497).
+    var realLineLaying: RealLineLaying {
+        RealLineLaying(
+            world: world, railways: railways, traces: realRailwayTraces, language: language, population: population, places: places,
+            water: water, coverage: coverage, heights: heights
+        )
+    }
+
+    /// ``RealLineLaying/offer(for:)`` on the world as it is now, on the
+    /// main actor.
+    public func realLineOffer(for line: RealBranchLine) -> RealLineOffer {
+        realLineLaying.offer(for: line)
+    }
+
+    func realLineOffer(for line: RealBranchLine, raising: RealLineLaying.StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool) {
+        realLineLaying.offer(for: line, raising: raising, depot: depot)
+    }
+
+    func build(_ acquisition: RealLineAcquisition, in world: inout GameWorld, recording: Bool = true) throws(GameError) -> RealLineAcquisitionPrice {
+        try realLineLaying.build(acquisition, in: &world, recording: recording)
+    }
+
+    func buildStepByStep(_ acquisition: RealLineAcquisition, in world: inout GameWorld, recording: Bool = true) throws(GameError) -> RealLineAcquisitionPrice {
+        try realLineLaying.buildStepByStep(acquisition, in: &world, recording: recording)
+    }
+}
+
+/// Decision 497: what laying out, pricing and building a real line reads
+/// of the session (``GameSession/realLineLaying``), as values, so a line's
+/// offer can be laid out off the main actor.
+struct RealLineLaying: Sendable {
+    let world: GameWorld
+    let railways: RealRailways?
+    /// ``GameSession/realRailwayTraces``.
+    let traces: RealRailwayTraces?
+    let language: DisplayLanguage
+    let population: PopulationGrid?
+    let places: PlaceGrid?
+    let water: WaterGrid?
+    let coverage: CoverageGrid?
+    let heights: HeightGrid?
+
+    static func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
         railways.stations.first { $0.id == "\(system)|\(name)" }.map {
             WorldVector(frame.worldPosition(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude))
         }
     }
 
+    private func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
+        Self.realPoint(of: name, system: system, railways: railways, frame: frame)
+    }
+
+    /// ``GameSession/newStationDemand(at:)``.
+    private func newStationDemand(at point: PlanPoint) -> StationDemand {
+        GameSession.newStationDemand(at: point, in: world, population: population, places: places)
+    }
+}
+
+extension RealLineLaying {
     // MARK: - The offer
 
     /// Lays `line` out on a copy of the world and prices it (decision 315):
@@ -528,11 +627,11 @@ extension GameSession {
     /// more with the stations it shares with the company's raised too: a
     /// line bought before decision 462 lies on the ground at Zhuzhong
     /// whichever it was.
-    public func realLineOffer(for line: RealBranchLine) -> RealLineOffer {
+    func offer(for line: RealBranchLine) -> RealLineOffer {
         func offer(depot: Bool) -> RealLineOffer {
-            let laid = realLineOffer(for: line, raising: .viaducts, depot: depot)
+            let laid = self.offer(for: line, raising: .viaducts, depot: depot)
             guard laid.crossesTrack else { return laid.offer }
-            let raised = realLineOffer(for: line, raising: .viaductsAndShared, depot: depot)
+            let raised = self.offer(for: line, raising: .viaductsAndShared, depot: depot)
             return raised.offer.problem == nil ? raised.offer : laid.offer
         }
         // Decision 479: without its depot where that cannot be laid; not
@@ -557,7 +656,7 @@ extension GameSession {
     /// The offer of `line` with its stations raised as `raising` says, and
     /// whether GameCore refused it for its track meeting another's at one
     /// level (``GameError/trackConflict(_:)``).
-    func realLineOffer(for line: RealBranchLine, raising: StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool) {
+    func offer(for line: RealBranchLine, raising: StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false)
         }
@@ -569,7 +668,7 @@ extension GameSession {
         }
         guard let railways, let frame = RealWorldFrame(world: world),
               let runs = line.isUrban ? RealBranchLine.metroRuns(of: line.id, after: line.after, in: railways) : railways.branchRuns[line.network],
-              let traces = realRailwayTraces else {
+              let traces else {
             return refused("This map has no real railway to buy.", "這張地圖沒有可以收購的真實鐵路。")
         }
         guard world.acquisition(of: line.id) == nil else {
@@ -705,7 +804,7 @@ extension GameSession {
                 try? draft.buyMapTile(tile, passingMilestone: true)
             }
             if !tiles.isEmpty {
-                Self.readLand(roundStationsOf: &draft, population: population, places: places, water: self.water, coverage: coverage)
+                GameSession.readLand(roundStationsOf: &draft, population: population, places: places, water: self.water, coverage: coverage)
             }
         }
         try? draft.readGround(under: samples, from: heights)
@@ -1095,7 +1194,7 @@ extension GameSession {
             for tile in tiles {
                 try world.buyMapTile(tile, passingMilestone: true)
             }
-            Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+            GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
         }
         let landed = world.economy.balance
         var nodes: [[TrackNodeID]] = []
@@ -1167,7 +1266,7 @@ extension GameSession {
             try world.addTrackPlatform(stations[platform.stop], on: on, from: offset, to: offset + platform.length)
             platformsOf[stations.count - 1 - platform.stop, default: []].append(TrackPlatform(station: stations[platform.stop], edge: on, start: offset, end: offset + platform.length))
         }
-        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
+        GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
         let built = world.economy.balance
 
         // The line runs from its terminal to its junction: see
