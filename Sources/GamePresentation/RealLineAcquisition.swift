@@ -1069,6 +1069,25 @@ extension GameSession {
     }
 
     func build(_ acquisition: RealLineAcquisition, in world: inout GameWorld, recording: Bool = true) throws(GameError) -> RealLineAcquisitionPrice {
+        // One edit for the passengers (decision 275): every track, platform,
+        // line and train step below otherwise looked again at every group
+        // waiting on the map (``GameWorld/abandonUnservedPassengers()``,
+        // each line's journey worked out afresh), some hundred times for
+        // one line; on the player's real map of 64 stations and 15 lines
+        // (96.1) that was 24 s to buy the Danhai light rail and as long
+        // again to lay its offer, all on the main actor. Nothing in a
+        // purchase takes a service away, so the groups the finished
+        // purchase leaves are those the steps one at a time left
+        // (`PassengerCheckOnceTests`).
+        try world.editTrackAsOne { (world: inout GameWorld) throws(GameError) in
+            try buildStepByStep(acquisition, in: &world, recording: recording)
+        }
+    }
+
+    /// ``build(_:in:recording:)``'s steps, each its own command for the
+    /// passengers, as purchases were built before 0.5.0 (96.1)'s report:
+    /// what the tests compare the one edit with.
+    func buildStepByStep(_ acquisition: RealLineAcquisition, in world: inout GameWorld, recording: Bool = true) throws(GameError) -> RealLineAcquisitionPrice {
         let opening = world.economy.balance
         // Decision 401: the tiles under it first, their land and water read
         // in before the track is laid over them.
