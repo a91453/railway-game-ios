@@ -190,7 +190,8 @@ final class DayPassTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 68)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, withSavedDepreciation(world, of: loaded))
+        // Depreciation is rounded once from 3 times the cost (decision 499).
+        try XCTAssertSameButRounding(loaded, world, cents: 2)
         // The next day's depreciation makes up the cents the save's rounding
         // left out: the books are the same again, and the catch-up is that
         // day's charge.

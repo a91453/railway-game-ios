@@ -18,31 +18,36 @@ func fixtureEconomy(balance: Money, costs: ConstructionCosts) -> GameEconomy {
     GameEconomy(balance: Money(balance.amount * NTScale.factor), costs: costs.times(NTScale.factor))
 }
 
-/// Decision 499: a save before version 76 holds each asset's depreciation
-/// as the cents it then was, times 3, but written down today three times
-/// the cost rounds down once (`cost × d ÷ L`), so it can be up to 2 cents
-/// more; the next day's charge makes up the difference
-/// (`AssetRecord.depreciateOneDay`). This gives `made` the loaded world's
-/// depreciation where the two differ by that and no more, so the rest of
-/// the two worlds compare exactly.
-func withSavedDepreciation(_ made: GameWorld, of loaded: GameWorld, file: StaticString = #filePath, line: UInt = #line) -> GameWorld {
-    var made = made
-    func close(_ ours: Money, _ saved: Money, _ what: String) -> Bool {
-        let gap = ours.amount - saved.amount
-        if gap != 0 { XCTAssertTrue((1...2).contains(gap), "\(what): \(ours) made, \(saved) saved", file: file, line: line) }
-        return (0...2).contains(gap)
+/// Decision 499: a save before version 76 reads as the world it was with
+/// every amount times 3, but a world made today rounds each amount once,
+/// from 3 times its inputs (rent, upkeep, property tax, depreciation, the
+/// ledger rows and balance they add up to), so the two can be a few cents
+/// apart. Asserts that `loaded` and `made` encode alike but for the
+/// amounts of ``newTaiwanDollarKeys``, each within `cents` of the other:
+/// any other value that differs (a count, a time, a place) fails.
+func XCTAssertSameButRounding(_ loaded: GameWorld, _ made: GameWorld, cents: Int64, file: StaticString = #filePath, line: UInt = #line) throws {
+    let encoder = JSONEncoder()
+    func object(_ world: GameWorld) throws -> Any { try JSONSerialization.jsonObject(with: try encoder.encode(world)) }
+    var differences: [String] = []
+    // `name` is the node's own key (an array's item: the array's key and
+    // `[]`), `container` the key of the object holding it.
+    func walk(_ a: Any, _ b: Any, name: String, container: String, path: String) {
+        if let a = a as? [String: Any], let b = b as? [String: Any] {
+            guard Set(a.keys) == Set(b.keys) else { return differences.append("\(path): keys \(a.keys.sorted()) and \(b.keys.sorted())") }
+            for key in a.keys.sorted() { walk(a[key]!, b[key]!, name: key, container: name, path: "\(path)/\(key)") }
+        } else if let a = a as? [Any], let b = b as? [Any] {
+            guard a.count == b.count else { return differences.append("\(path): \(a.count) and \(b.count) items") }
+            for (index, (x, y)) in zip(a, b).enumerated() { walk(x, y, name: name + "[]", container: container, path: "\(path)[\(index)]") }
+        } else if let x = a as? NSNumber, let y = b as? NSNumber {
+            guard x != y else { return }
+            if newTaiwanDollarKeys["\(container)/\(name)"] != nil, abs(x.int64Value - y.int64Value) <= cents { return }
+            differences.append("\(path): \(x) and \(y)")
+        } else if "\(a)" != "\(b)" {
+            differences.append("\(path): \(a) and \(b)")
+        }
     }
-    guard made.accounts.assets.count == loaded.accounts.assets.count,
-          made.accounts.capitalDays.count == loaded.accounts.capitalDays.count else { return made }
-    for (index, saved) in loaded.accounts.assets.enumerated()
-    where close(made.accounts.assets[index].depreciation, saved.depreciation, "asset \(index)") {
-        made.accounts.assets[index].depreciation = saved.depreciation
-    }
-    for (index, saved) in loaded.accounts.capitalDays.enumerated()
-    where close(made.accounts.capitalDays[index].depreciation, saved.depreciation, "capital day \(index)") {
-        made.accounts.capitalDays[index].depreciation = saved.depreciation
-    }
-    return made
+    walk(try object(loaded), try object(made), name: "", container: "", path: "")
+    XCTAssertEqual(differences, [], "loaded and made differ beyond \(cents) cents of rounding", file: file, line: line)
 }
 
 /// A world `width` × `height` world units (320 m a side by default).
@@ -78,6 +83,33 @@ func runDistance(_ length: Int64, in seconds: Int64, after elapsed: Int64, perfo
     return RunningCurve(length: length, duration: seconds * 1000, performance: performance)!.distance(at: elapsed * 1000)
 }
 
+/// The amounts of a save by `parent/key` (an array's objects as `name[]`)
+/// and what decision 499 multiplies them by.
+let newTaiwanDollarKeys: [String: Int64] = [
+    "accounts/dayPass": 3, "accounts/fareBaseline": 3, "accounts/loan": 3, "acquisitions[]/value": 3,
+    "active[]/reward": 3, "offers[]/reward": 3, "assets[]/cost": 3, "assets[]/depreciation": 3,
+    "books/totalCost": 3, "books/totalSales": 3, "breakdown[]/amount": 3,
+    "capitalDays[]/capitalSpending": 3, "capitalDays[]/depreciation": 3, "capitalDays[]/saleBookValue": 3,
+    "capitalDays[]/saleProceeds": 3, "capitalDays[]/writeOff": 3, "capitalDays[]/borrowed": 3, "capitalDays[]/repaid": 3,
+    "cityRequests/owed": 3, "cityRequests/paid": 3, "closed[]/cost": 3, "closed[]/sales": 3,
+    "costs/car": 3, "costs/station": 3, "costs/track": 3, "costs/train": 3,
+    "days[]/cost": 3, "days[]/energyCost": 3, "days[]/fareRevenue": 3, "days[]/fares": 3, "days[]/freightRevenue": 3,
+    "days[]/maintenanceCost": 3, "days[]/operatingCost": 3, "days[]/propertyCost": 3, "days[]/propertyRevenue": 3,
+    "days[]/staffCost": 3, "days[]/interestCost": 3, "days[]/taxCost": 3, "economy/balance": 3,
+    "income/fareRevenue": 3, "income/operatingCost": 3, "income/maintenanceCost": 3, "income/energyCost": 3,
+    "income/staffCost": 3, "income/interestCost": 3, "income/depreciationCost": 3, "income/writeOffCost": 3,
+    "income/capitalSpending": 3, "income/loanBorrowed": 3, "income/loanRepaid": 3, "income/propertyRevenue": 3,
+    "income/propertyCost": 3, "income/saleProceeds": 3, "income/saleBookValue": 3, "income/taxCost": 3,
+    "income/freightRevenue": 3, "closing/cash": 3, "closing/loan": 3,
+    "track/cost": 3, "track/depreciation": 3, "stations/cost": 3, "stations/depreciation": 3,
+    "rollingStock/cost": 3, "rollingStock/depreciation": 3, "buildings/cost": 3, "buildings/depreciation": 3,
+    "land/cost": 3, "land/depreciation": 3, "entries[]/amount": 3, "highSpeedFares[]/fare": 10,
+    "pending/fareRevenue": 3, "placedBuildings[]/buildingCost": 3, "placedBuildings[]/landCost": 3,
+    "request/reward": 3, "tally/energyCost": 3, "tally/fareRevenue": 3, "tally/maintenanceCost": 3,
+    "tally/operatingCost": 3, "tally/staffCost": 3, "thisMonth/cost": 3, "thisMonth/sales": 3, "tripLog[]/fare": 3,
+]
+
+
 /// Decision 499: what a save written before version 76 reads as, in the
 /// form ``SavedGame`` writes (pretty-printed, sorted keys): each amount of
 /// money times 3, and the real high-speed fares (kept at NT$10 to the
@@ -87,29 +119,7 @@ func runDistance(_ length: Int64, in seconds: Int64, after elapsed: Int64, perfo
 /// amounts of the same objects' coding keys; any other number is left as it
 /// is, so a test comparing bytes still checks it.
 func newTaiwanDollars(ofSaveText text: String) -> String {
-    let times: [String: Int64] = [
-        "accounts/dayPass": 3, "accounts/fareBaseline": 3, "accounts/loan": 3, "acquisitions[]/value": 3,
-        "active[]/reward": 3, "offers[]/reward": 3, "assets[]/cost": 3, "assets[]/depreciation": 3,
-        "books/totalCost": 3, "books/totalSales": 3, "breakdown[]/amount": 3,
-        "capitalDays[]/capitalSpending": 3, "capitalDays[]/depreciation": 3, "capitalDays[]/saleBookValue": 3,
-        "capitalDays[]/saleProceeds": 3, "capitalDays[]/writeOff": 3, "capitalDays[]/borrowed": 3, "capitalDays[]/repaid": 3,
-        "cityRequests/owed": 3, "cityRequests/paid": 3, "closed[]/cost": 3, "closed[]/sales": 3,
-        "costs/car": 3, "costs/station": 3, "costs/track": 3, "costs/train": 3,
-        "days[]/cost": 3, "days[]/energyCost": 3, "days[]/fareRevenue": 3, "days[]/fares": 3, "days[]/freightRevenue": 3,
-        "days[]/maintenanceCost": 3, "days[]/operatingCost": 3, "days[]/propertyCost": 3, "days[]/propertyRevenue": 3,
-        "days[]/staffCost": 3, "days[]/interestCost": 3, "days[]/taxCost": 3, "economy/balance": 3,
-        "income/fareRevenue": 3, "income/operatingCost": 3, "income/maintenanceCost": 3, "income/energyCost": 3,
-        "income/staffCost": 3, "income/interestCost": 3, "income/depreciationCost": 3, "income/writeOffCost": 3,
-        "income/capitalSpending": 3, "income/loanBorrowed": 3, "income/loanRepaid": 3, "income/propertyRevenue": 3,
-        "income/propertyCost": 3, "income/saleProceeds": 3, "income/saleBookValue": 3, "income/taxCost": 3,
-        "income/freightRevenue": 3, "closing/cash": 3, "closing/loan": 3,
-        "track/cost": 3, "track/depreciation": 3, "stations/cost": 3, "stations/depreciation": 3,
-        "rollingStock/cost": 3, "rollingStock/depreciation": 3, "buildings/cost": 3, "buildings/depreciation": 3,
-        "land/cost": 3, "land/depreciation": 3, "entries[]/amount": 3, "highSpeedFares[]/fare": 10,
-        "pending/fareRevenue": 3, "placedBuildings[]/buildingCost": 3, "placedBuildings[]/landCost": 3,
-        "request/reward": 3, "tally/energyCost": 3, "tally/fareRevenue": 3, "tally/maintenanceCost": 3,
-        "tally/operatingCost": 3, "tally/staffCost": 3, "thisMonth/cost": 3, "thisMonth/sales": 3, "tripLog[]/fare": 3,
-    ]
+    let times = newTaiwanDollarKeys
     var parents: [String] = []
     var lines: [String] = []
     for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
