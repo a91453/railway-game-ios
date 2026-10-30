@@ -25,7 +25,11 @@
     "body_end": 9.45,
     "coupler_outer_end": 10.005,
     "body_width": 2.852,
-    "highest_equipment": 4.08
+    "highest_equipment": 4.08,
+    "engine_room_roof": 3.78,
+    "radiator_fan_cap": 3.99,
+    "end_crown": 0.045,
+    "roof_end_arch": 0.07
   },
   "unverified": [
     "official cab numbers",
@@ -34,5 +38,7 @@
     "opposite side grille details",
     "orthogonal roof and underside",
     "revenue hauling representative formation"
-  ]
+  ],
+  "revision": 2,
+  "previous_producer": "65464b23fc0b26058521d362555b9a0d8b550c98"
 }

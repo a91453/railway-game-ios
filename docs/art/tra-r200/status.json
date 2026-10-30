@@ -1,7 +1,7 @@
 {
   "asset": {
-    "status": "VERIFIED",
-    "evidence": "Linux Swift 6.4 WAE, native readback, topology, R200 actual fault probes, independent native/GLB bytes, Blender import, decoded transparent PNGs, HTTP inspector rotation/zoom/download byte checks. file:// navigation UNVERIFIED: blocked by browser administration. Engineering/source gaps remain; this is technical study validation only."
+    "status": "UNVERIFIED",
+    "evidence": "Revision 2 geometry, native/GLB audit, fault probes and Blender passed locally; final producer reconstruction and delivered viewer still pending. R1 technical evidence applies only to 65464b23."
   },
   "appearance": {
     "status": "UNVERIFIED",

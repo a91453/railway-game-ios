@@ -2885,3 +2885,5 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 ### Codex R200／R216 獨立雙端 studies（2026-10-30）
 
 [來源、契約、幾何、四態與接手](art/tra-r200/README.md)。本輪保護既有單駕駛室 R200CK 代用配方／營運，獨立建立雙端 R200 近遠完整單機。僅studies，不會合併後自動選用。正式批次、官方端號、遮蔽側／屋頂BOM與部分原廠尺寸來源仍未核齊，不能稱已完成現役工程復刻；所有技術證據與互鏈draft以自有verification為準。沒有已接受R200前版，製作者自檢不代表使用者接受；營運／裝置UNVERIFIED。不改GameCore／存檔／fixtures／配車／他車，不推main／merge／auto-merge／TestFlight。
+
+> Codex R200 第二輪（公開draft #1589 ↔ 素材draft #37）：依使用者「那你改」加寬／微弧前罩與風擋、弧肩、開放台車框、單一凹鑄件／四對彎管、分層機艙屋頂與格柵；真正未接受前稿65464b23，保留同尺度比較。完整資料及producer／四態見 [R200交接](art/tra-r200/README.md)，最新完整包revision-2，第一輪只留PNG／README／來源。只有studies，其他車／營運／standard不變；正式端號與反側屋頂BOM等來源缺口、裝置／營運／使用者接受UNVERIFIED，不合併／auto-merge／TestFlight。
