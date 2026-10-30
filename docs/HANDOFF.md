@@ -429,7 +429,7 @@
   - 官網：railway-reference-private #118 已合併（c47b854b），`website-deploy.yml` 已部署（run 41020652758）。現在首頁寫「公測開放中」，按鈕連到 TestFlight。
 - **還開著的**：
   - #1540（TW，決策 496，草稿，`claude/light-rail-fleets`）：淡海與安坑輕軌、高雄 CAF／Citadis 3:5 接進營運，+27 MB。CI 綠。作者說 **10/31 之後才合**；合之前在實機看輕軌近景的幀數（§4.30）。
-  - #1541（草稿，`claude/fix-screenshot-regressions`）：run 41011347570 紅的四個 `WebsiteScreenshotTests`，都是測試沒跟上面板現在的開法，App 本身沒壞。website-screenshots run 41026860196 在驗證；綠了就請作者合，然後補決策 480、486、477 暫緩的截圖驗收。
+  - #1541（草稿，`claude/fix-screenshot-regressions`）：run 41011347570 紅的四個 `WebsiteScreenshotTests`，都是測試沒跟上面板現在的開法，App 本身沒壞。website-screenshots run 41026860196 證明 testFreight、testStatisticsCharts 好了，還紅 testFinanceComposition（「週」拿不到）與 testLinesListAndLinePage（回清單拿不到「整個路網」）；派工單 SHOTFIX（session_01YGNNuqSNzDAdiYeFTZ9qQY）在修，順便做決策 480、486、477 暫緩的截圖驗收。綠了請作者合。
   - railway-assets-private #36（宣傳片 v4，草稿）：§4.27。
 - **作者請 Codex 做的車**：作者 10/30 問過遊戲裡還缺哪些車的模型。第 33 任給的順序：
   1. 桃園機場捷運（借通用捷運車）
