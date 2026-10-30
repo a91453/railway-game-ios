@@ -108,7 +108,8 @@ struct StartView: View {
             WhatsNewView(language: launcher.language)
         }
         .onAppear {
-            launcher.refresh()
+            // Decision 497: read off the main thread; the list as it was meanwhile.
+            launcher.refreshInBackground()
             if launcher.showsWhatsNew { showsWhatsNew = true }
         }
     }

@@ -553,11 +553,14 @@ private struct GameMenu: View, Equatable {
             // The only way out of the game, in the first section rather
             // than the last row (TestFlight 54.1): on a short phone, or
             // with larger text, the last row of six was off the screen.
+            // Decision 497: the autosave written off the main thread, the
+            // start screen once it is.
             Button {
-                launcher.returnToStart()
+                launcher.returnToStartInBackground()
             } label: {
                 Label("Back to Start", systemImage: "house")
             }
+            .disabled(launcher.isReturningToStart)
             .accessibilityIdentifier("menu.backToStart")
         case .shortcuts:
             // Decision 226, later (2026-10-16): side by side in one row,
