@@ -90,9 +90,25 @@ final class ToolColumnTests: XCTestCase {
         for height in [381.0, 375, 372, 369] {
             XCTAssertGreaterThanOrEqual(room(height), ToolColumn.buildingHeight(tools: 5), "\(height)")
         }
-        // The 12 and 13 mini (375 tall, 354 inside) does not, by 3 points.
-        // There the column scrolls (below).
+        // The 12 and 13 mini (375 tall, 354 inside) does not, by 3 points;
+        // with the tools' glass tight it does (below).
         XCTAssertEqual(room(354), ToolColumn.buildingHeight(tools: 5) - 3)
+        XCTAssertGreaterThanOrEqual(room(354), ToolColumn.buildingHeight(tools: 5, tight: true))
+    }
+
+    /// The planner's merge condition for 100.1 (decision 509): on the
+    /// smallest iPhone on its side, the five tools, Done and Build show
+    /// whole, nothing scrolls, and each is touched over at least 44 points
+    /// without sharing its touch area with the next.
+    func testEveryBuildingToolIsTouchedOver44PointsAndTheMiniNeedsNoScrolling() {
+        let touched = ToolColumn.compactButtonHeight + 2 * ToolColumn.touchReach
+        XCTAssertGreaterThanOrEqual(touched, 44)
+        XCTAssertGreaterThanOrEqual(ToolColumn.buttonWidth, 44)
+        XCTAssertLessThanOrEqual(2 * ToolColumn.touchReach, ToolColumn.buttonSpacing, "two neighbours never share")
+        XCTAssertGreaterThanOrEqual(ToolColumn.tightTilePadding, ToolColumn.touchReach, "the first and last within the glass")
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 5, tight: true), 274)
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 1, tight: true), ToolColumn.buildingHeight(tools: 1) - 4)
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 0, tight: true), ToolColumn.buildingHeight(tools: 0))
     }
 
     /// Where they do not fit, the part that scrolls, at the column's top,

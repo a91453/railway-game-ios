@@ -199,6 +199,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.buttons["dock.build"].tap()
         app.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(app)
         keep("build-tools-column", app)
         // Decision 509: zoning's own button, its card open.
         app.buttons["tool.zoning"].tap()
@@ -222,6 +223,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         real.buttons["dock.build"].tap()
         real.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(real)
         keep("build-tools-column-real-world", real)
         real.terminate()
 
@@ -245,6 +247,28 @@ final class WebsiteScreenshotTests: XCTestCase {
         lesson.buttons["tool.select"].waitUntilSettled()
         settle()
         keep("build-tools-column-lesson", lesson)
+    }
+
+    /// The planner's condition for 100.1 (decision 509), on the smallest
+    /// iPhone the workflow can choose as on the 17 Pro: the five tools,
+    /// Done and Build whole on the screen, apart, and nothing scrolling
+    /// (the bus tool's foot the tools' glass and the gap above Build; a
+    /// part that scrolls would stand lower).
+    private func assertBuildingToolsWhole(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let window = app.windows.firstMatch.frame
+        let tools = ["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus"]
+        for name in tools + ["tool.select", "dock.build"] {
+            let button = app.buttons[name]
+            XCTAssertTrue(button.isHittable, "\(name) can be tapped", file: file, line: line)
+            XCTAssertTrue(window.contains(button.frame), "\(name) whole on the screen: \(button.frame)", file: file, line: line)
+            XCTAssertGreaterThanOrEqual(button.frame.height, 40, "\(name) its full height", file: file, line: line)
+        }
+        let frames = tools.map { app.buttons[$0].frame }
+        for (upper, lower) in zip(frames, frames.dropFirst()) {
+            XCTAssertGreaterThanOrEqual(lower.minY - upper.maxY, 3.5, "apart: \(upper) \(lower)", file: file, line: line)
+        }
+        let build = app.buttons["dock.build"].frame
+        XCTAssertLessThanOrEqual(frames[4].maxY, build.minY - 11.5, "nothing scrolls: bus \(frames[4]), Build \(build)", file: file, line: line)
     }
 
     /// Building on the real-world demo, the panel open at the trailing

@@ -1016,6 +1016,7 @@ private struct ToolsColumn: View {
                 ViewThatFits(in: .vertical) {
                     building(compact: false)
                     building(compact: true)
+                    building(compact: true, tight: true)
                     buildingScrolling
                 }
             } else {
@@ -1075,11 +1076,13 @@ private struct ToolsColumn: View {
     /// 98.1, the planner). The card's toggle stands beside Build instead
     /// (``ContentView``): the four tools did not fit with it on a phone on
     /// its side; and Done too since 100.1 (decision 509): the five tools
-    /// did not fit with it.
-    private func building(compact: Bool) -> some View {
+    /// did not fit with it. `tight`: the tools' glass 2 above and below
+    /// them rather than 4, where only that is short (a 12 or 13 mini on its
+    /// side, by 3 points; 100.1, decision 509: nothing scrolls there).
+    private func building(compact: Bool, tight: Bool = false) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
             BuildToolButtons(session: session, includesDone: false)
-                .controlTile()
+                .controlTile(vertical: tight ? CGFloat(ToolColumn.tightTilePadding) : ToolColumnStyle.tilePadding)
             ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))

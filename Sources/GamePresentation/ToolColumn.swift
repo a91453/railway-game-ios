@@ -61,7 +61,13 @@ public enum ToolColumn {
 // a 17 Pro on its side has (302), and every phone scrolled; Done now
 // stands beside Build, as the card's toggle does since 98.1 (the lit Build
 // and Done both close the tools), and the five tools over Build take the
-// 278 the four and Done took, fitting the same phones.
+// 278 the four and Done took, fitting the same phones. Later the same
+// day (the planner, the merge condition: the smallest iPhone on its side
+// shows the six buttons and Build without scrolling, each touched over at
+// least 44): each button is touched 2 points past its 40 above and below,
+// into the spaces between, and where the column is short (a 12 or 13 mini,
+// by 3 points) the tools' glass is 2 above and below them rather than 4,
+// 274, so nothing scrolls.
 extension ToolColumn {
     /// A button's height with its icon alone: 32 and the button style's 4
     /// above and below.
@@ -78,10 +84,24 @@ extension ToolColumn {
     /// The building column's height with its icons alone: the card's
     /// toggle when it shows (`toggle`; on a phone it stands beside Build
     /// instead since 98.1), the `tools` building tools in one group, and
-    /// Build. Done stands beside Build since 100.1 (decision 509).
-    public static func buildingHeight(tools: Int, toggle: Bool = false) -> Double {
-        scrollingContent(tools: tools, toggle: toggle).height + tileGap + tileHeight(buttons: 1)
+    /// Build. Done stands beside Build since 100.1 (decision 509). `tight`:
+    /// the tools' glass ``tightTilePadding`` above and below them.
+    public static func buildingHeight(tools: Int, toggle: Bool = false, tight: Bool = false) -> Double {
+        let height = scrollingContent(tools: tools, toggle: toggle).height + tileGap + tileHeight(buttons: 1)
+        return tight && tools > 0 ? height - 2 * (tilePadding - tightTilePadding) : height
     }
+
+    /// How far a button's touch area reaches past it, above and below: half
+    /// the space to the next, so each of the column's 40-point buttons is
+    /// touched over 44 points and no two share one (100.1, decision 509;
+    /// before, only the 40 drawn).
+    public static var touchReach: Double { buttonSpacing / 2 }
+
+    /// The glass above and below the building tools' group where the column
+    /// is short of room by no more than what this saves (a 12 or 13 mini on
+    /// its side, by 3 points; 100.1, decision 509): the first and last
+    /// tools' touch areas still end at the glass's edge.
+    public static var tightTilePadding: Double { touchReach }
 
     /// How tall the part over Build is shown where the whole column does
     /// not fit in `maxHeight`: the tools, then the card's toggle, all of

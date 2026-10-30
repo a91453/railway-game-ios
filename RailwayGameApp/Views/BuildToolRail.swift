@@ -98,7 +98,7 @@ struct BuildToolButtons: View {
         } label: {
             TabLabel(systemImage: button.systemImage, title: button.title(in: session.language), isActive: isActive)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .buttonStyle(ToolColumnStyle.touchStyle(isActive: isActive))
         .accessibilityLabel(button.accessibilityName(in: session.language))
         // Stable across localizations for the Traditional Chinese toolbar UI test.
         .accessibilityIdentifier(button.identifier)
@@ -119,7 +119,7 @@ struct BuildDoneButton: View {
         } label: {
             TabLabel(systemImage: "xmark", title: session.language.text("Done", "完成"), isActive: isActive)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .buttonStyle(ToolColumnStyle.touchStyle(isActive: isActive))
         .accessibilityLabel(Text(verbatim: session.language.text("Done building", "完成建設")))
         // The Select tool's identifier: the tutorial and the UI tests choose
         // it by this name.
@@ -148,7 +148,7 @@ struct BuildEntry: View {
         } label: {
             TabLabel(systemImage: "hammer.fill", title: session.language.text("Build", "建設"), isActive: isActive)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .buttonStyle(ToolColumnStyle.touchStyle(isActive: isActive))
         .accessibilityLabel(Text(verbatim: session.language.text("Construction", "建設")))
         .accessibilityHint(Text(verbatim: session.language.text(
             "Shows the track, train and building tools at the map's edge.",

@@ -110,8 +110,11 @@ struct ControlPanel: View {
 extension View {
     /// Decision 226: a group of the screen's controls in its own glass
     /// (since 2026-10-15; at first a solid tile with an outline).
-    func controlTile() -> some View {
-        padding(ToolColumnStyle.tilePadding)
+    /// `vertical`: the glass above and below, where the building tools are
+    /// short of room (``ToolColumn/tightTilePadding``).
+    func controlTile(vertical: CGFloat = ToolColumnStyle.tilePadding) -> some View {
+        padding(.horizontal, ToolColumnStyle.tilePadding)
+            .padding(.vertical, vertical)
             .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -176,6 +179,16 @@ struct ToolColumnStyle: Equatable {
     static let tilePadding = CGFloat(ToolColumn.tilePadding)
     static let buttonSpacing = CGFloat(ToolColumn.buttonSpacing)
     static let width = CGFloat(ToolColumn.width)
+    /// A building tool, Done and Build (100.1, decision 509): drawn 40
+    /// high with its icon alone, touched over 44, reaching 2 into the
+    /// spaces either side (``ToolColumn/touchReach``).
+    static func touchStyle(isActive: Bool) -> ThemeSelectableTouchTargetButtonStyle {
+        ThemeSelectableTouchTargetButtonStyle(
+            isActive: isActive,
+            size: CGSize(width: ToolColumn.buttonWidth, height: ToolColumn.compactButtonHeight),
+            reach: CGFloat(ToolColumn.touchReach)
+        )
+    }
 }
 
 extension EnvironmentValues {
