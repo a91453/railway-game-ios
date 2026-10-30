@@ -502,7 +502,7 @@ public struct SaveLibrary: Sendable {
     public func delete(_ entries: [Entry]) throws(SaveError) {
         let fileManager = FileManager.default
         let aside = url(of: Self.deletingFolder).appendingPathComponent(UUID().uuidString, isDirectory: true)
-        var moved: [(from: URL, to: URL)] = []
+        var moved: [(from: URL, to: URL, member: String)] = []
         do {
             try fileManager.createDirectory(at: aside, withIntermediateDirectories: true)
             for (index, entry) in entries.enumerated() {
@@ -517,24 +517,45 @@ public struct SaveLibrary: Sendable {
                     let to = folder.appendingPathComponent("\(number)")
                     if failingMoves.contains(member) { throw SaveError.fileSystem }
                     try fileManager.moveItem(at: from, to: to)
-                    moved.append((from, to))
+                    moved.append((from, to, member))
                 }
             }
         } catch {
-            for (from, to) in moved.reversed() {
-                try? fileManager.moveItem(at: to, to: from)
+            var allBack = true
+            for (from, to, member) in moved.reversed() {
+                do {
+                    if failingReturns.contains(member) { throw SaveError.fileSystem }
+                    try fileManager.moveItem(at: to, to: from)
+                } catch {
+                    allBack = false
+                }
             }
-            try? fileManager.removeItem(at: url(of: Self.deletingFolder))
+            // One that could not go back stays set aside rather than lost.
+            if allBack { removeSetAside(aside) }
             throw .fileSystem
         }
         // Gone from the list already: failing to free the space only
-        // leaves it for the next delete.
-        try? fileManager.removeItem(at: url(of: Self.deletingFolder))
+        // leaves it. Only this delete's own: what a failed one could not
+        // put back is kept.
+        removeSetAside(aside)
+    }
+
+    /// Removes `aside`, then the folder of what deletes set aside when
+    /// nothing else is left in it.
+    private func removeSetAside(_ aside: URL) {
+        let fileManager = FileManager.default
+        try? fileManager.removeItem(at: aside)
+        let folder = url(of: Self.deletingFolder)
+        if (try? fileManager.contentsOfDirectory(atPath: folder.path))?.isEmpty == true {
+            try? fileManager.removeItem(at: folder)
+        }
     }
 
     /// Test only: save files whose move ``delete(_:)`` fails, to show
     /// it deletes all or none.
     var failingMoves: Set<String> = []
+    /// Test only: save files whose move back after a failed delete fails.
+    var failingReturns: Set<String> = []
 
     // MARK: - Rows and their versions (decision 502)
 
@@ -609,6 +630,10 @@ public struct SaveLibrary: Sendable {
         let fileManager = FileManager.default
         let current = url(of: row)
         guard fileManager.fileExists(atPath: current.path) else { return }
+        // Already the newest version (a save tried again after its write
+        // failed): keeping it twice would push out a real one.
+        if let kept = try? Data(contentsOf: url(of: Self.versionFile(1, of: row))),
+           let now = try? Data(contentsOf: current), kept == now || Self.holdSameGame(kept, now) { return }
         let folder = url(of: Self.versionsPath(of: row))
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         let incoming = folder.appendingPathComponent("incoming.json")

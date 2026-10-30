@@ -171,6 +171,43 @@ final class OneRowPerGameTests: XCTestCase {
         XCTAssertFalse(try FileManager.default.subpathsOfDirectory(atPath: directory.path).contains { $0.hasPrefix(SaveLibrary.deletingFolder) })
     }
 
+    /// A file that cannot be put back after a failed delete is kept set
+    /// aside, never removed, and a later delete leaves it there.
+    func testAFileThatCannotGoBackIsNeverLost() throws {
+        var library = SaveLibrary(directory: directory)
+        let a = try library.save(world(after: 1), as: .manual, at: date(0))
+        let b = try library.save(world(after: 2), as: .manual, at: date(60))
+        let c = try library.save(world(after: 3), as: .manual, at: date(120))
+        library.failingMoves = [b.id]
+        library.failingReturns = [a.id]
+        XCTAssertThrowsError(try library.delete([a, b]))
+        func setAside() throws -> [Data] {
+            try FileManager.default.subpathsOfDirectory(atPath: directory.path)
+                .filter { $0.hasPrefix(SaveLibrary.deletingFolder + "/") && $0.split(separator: "/").count == 4 && $0.hasSuffix("/0") }
+                .map { try Data(contentsOf: directory.appendingPathComponent($0)) }
+        }
+        let kept = try setAside()
+        XCTAssertEqual(kept.count, 1)
+        XCTAssertEqual(try SaveLibrary.decode(kept[0]), try world(after: 1))
+
+        library.failingMoves = []
+        library.failingReturns = []
+        try library.delete([c])
+        XCTAssertEqual(try setAside(), kept, "another delete leaves it")
+    }
+
+    /// The row's newest version is not kept twice (a save tried again
+    /// after its write failed, or the same game saved again).
+    func testTheSameGameIsNotKeptTwiceAsAVersion() throws {
+        let library = SaveLibrary(directory: directory)
+        let row = try library.save(world(after: 1), as: .manual, at: date(0))
+        try library.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        try library.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        try library.save(world(after: 3), as: .manual, at: date(120), row: row.id)
+        let versions = library.earlierVersions(of: try XCTUnwrap(library.entries().first { $0.id == row.id }))
+        XCTAssertEqual(try versions.map { try library.load($0) }, [try world(after: 2), try world(after: 1)])
+    }
+
     // MARK: - The launcher
 
     @MainActor
