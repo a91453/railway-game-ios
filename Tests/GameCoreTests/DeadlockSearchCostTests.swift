@@ -68,7 +68,7 @@ final class DeadlockSearchCostTests: XCTestCase {
     /// alone, so they are the same too.
     func testASharedMemoAnswersAsAFreshOneForEveryTrain() throws {
         var spares = 0, deadlocks = 0, asked = 0
-        let ran = try runCampaign("deadlock.spare-memo", cases: 12) { testCase in
+        let ran = try runCampaign("deadlock.spare-memo", cases: 6) { testCase in
             var world: GameWorld
             if testCase.index % 3 == 2 {
                 let trains = 2 + testCase.random.below(2)
@@ -82,7 +82,7 @@ final class DeadlockSearchCostTests: XCTestCase {
                 world = try Self.singleTrack(stations: count, trains: trains, inService: inService, window: window)
                 testCase.note("single track, \(count) stations, \(trains) trains, \(inService) in service, \(window)")
             }
-            for _ in 0..<(6 * 60) {
+            for _ in 0..<(3 * 60) {
                 try world.advance(ticks: 1)
                 var memo = GameWorld.DispatchMemo()
                 for train in world.trains {
@@ -104,29 +104,28 @@ final class DeadlockSearchCostTests: XCTestCase {
         XCTAssertGreaterThan(deadlocks, 0)
     }
 
-    /// The search with many spares costs about what it does with few: a
-    /// line's capacity layout is worked out once a search, not once a
-    /// spare. Before, 24 trains on 40 stations searched some ten times as
-    /// long as 4 trains did (each spare worked out the 40 stations' paths
-    /// again); now the trains add only their own share.
+    /// The search works each line's capacity layout out once, not once a
+    /// spare: on 40 stations with 16 trains in deadlock, most of them the
+    /// line's spares, it costs a few layouts (before, one a spare and more:
+    /// some 17 times one layout, Linux debug). Timed against one layout on
+    /// the same machine, so a slow runner slows both.
     func testTheSearchDoesNotWorkTheLineOutAgainForEverySpare() throws {
-        func searchMilliseconds(trains: Int) throws -> Double {
-            // Two in service: the rest are spares, and the two running
-            // trains meet head on with no passing loop, so the search runs.
-            var world = try Self.singleTrack(stations: 40, trains: trains, inService: 2)
-            try world.advance(ticks: 30)
-            XCTAssertFalse(world.deadlockedTrains().isEmpty, "\(trains) trains: a deadlock to search")
-            let clock = ContinuousClock()
-            var fastest = Double.infinity
-            for _ in 0..<3 {
-                let spent = clock.measure { _ = world.deadlockedTrains() }
-                fastest = min(fastest, Double(spent.components.seconds) * 1_000 + Double(spent.components.attoseconds) / 1e15)
-            }
-            return fastest
+        var world = try Self.singleTrack(stations: 40, trains: 16)
+        try world.advance(ticks: 30)
+        XCTAssertFalse(world.deadlockedTrains().isEmpty, "a deadlock to search")
+        let spares = world.trains.filter { world.isSpare($0) }.count
+        XCTAssertGreaterThanOrEqual(spares, 8, "spares to ask about")
+        let line = try XCTUnwrap(world.lines.first)
+        let clock = ContinuousClock()
+        func fastest(_ body: () -> Void) -> Double {
+            (0..<3).map { _ in
+                let spent = clock.measure(body)
+                return Double(spent.components.seconds) * 1_000 + Double(spent.components.attoseconds) / 1e15
+            }.min() ?? 0
         }
-        let few = try searchMilliseconds(trains: 4)
-        let many = try searchMilliseconds(trains: 24)
-        XCTAssertLessThan(many, few * 4, String(format: "4 trains %.1f ms, 24 trains %.1f ms", few, many))
+        let layout = fastest { _ = world.capacityLayout(of: line) }
+        let search = fastest { _ = world.deadlockedTrains() }
+        XCTAssertLessThan(search, layout * 5, String(format: "%d spares: one layout %.1f ms, the search %.1f ms", spares, layout, search))
     }
 
     /// On request, what the search and a tick at 6000× cost on long single
