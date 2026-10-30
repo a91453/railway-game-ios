@@ -7,15 +7,53 @@ import GameCore
 // of it is read from the world; nothing here is kept.
 
 extension Money {
+    /// The sign every amount of money the game shows begins with. Every
+    /// amount is written by the functions here (``moneyText``,
+    /// ``wholeText``, ``centsText``, ``signedText``,
+    /// ``TrainRoster/shortMoney(_:)``), never with a `$` of its own, so
+    /// the currency changes in one place (`MoneyTextSourceTests`).
+    public static let currencySymbol = "$"
+
     /// The amount in whole dollars, as the reference shows money
     /// (`metroEconomyMoneyText`: `"$ " + Math.round(dollars)` with thousands
     /// separators), such as "$ 12,345" or "$ -1,428". `Money` counts cents;
     /// half a dollar rounds up, as `Math.round` does.
     public var moneyText: String {
-        // floor((amount + 50) / 100), without overflowing near Int64.max.
+        Self.currencySymbol + " " + wholeDollars.groupedText
+    }
+
+    /// The amount in whole dollars written into a sentence, with no space
+    /// after the sign, such as "$5,000,000" or "$-1,428": the targets and
+    /// starting cash in achievements, challenges and help.
+    public var wholeText: String {
+        Self.currencySymbol + wholeDollars.groupedText
+    }
+
+    /// The amount with its sign in front of the currency, as a ledger row
+    /// shows it: "+$ 1,200", "-$ 1,428"; a loss under half a dollar is
+    /// still "-$ 0".
+    public var signedText: String {
+        let dollars = wholeDollars
+        let sign = dollars < 0 || amount < 0 ? "-" : "+"
+        return sign + Self.currencySymbol + " " + dollars.magnitude.groupedText
+    }
+
+    /// A round amount in words, for the targets a story names: "$300
+    /// million" or "3 億"; ``wholeText`` when it is not that round.
+    public func roundText(in language: DisplayLanguage) -> String {
+        let dollars = wholeDollars
+        let english = dollars != 0 && dollars % 1_000_000 == 0
+            ? "\(Self.currencySymbol)\(dollars / 1_000_000) million" : wholeText
+        let chinese = dollars != 0 && dollars % 100_000_000 == 0
+            ? "\(dollars / 100_000_000) 億" : dollars != 0 && dollars % 10_000 == 0 ? "\(dollars / 10_000) 萬" : wholeText
+        return language.text(english, chinese)
+    }
+
+    /// The whole dollars, `floor((amount + 50) / 100)` as `Math.round`
+    /// takes them, without overflowing near `Int64.max`.
+    var wholeDollars: Int64 {
         let remainder = amount % 100 + 50
-        let dollars = amount / 100 + (remainder >= 100 ? 1 : remainder < 0 ? -1 : 0)
-        return "$ " + Money(dollars).displayText
+        return amount / 100 + (remainder >= 100 ? 1 : remainder < 0 ? -1 : 0)
     }
 
     /// The exact amount in dollars and cents, such as "$ 0.55" or
@@ -23,7 +61,7 @@ extension Money {
     /// difference (not enough cash, ``shortfallTexts(required:available:)``).
     public var centsText: String {
         let cents = amount.magnitude % 100
-        return "$ \(amount < 0 ? "-" : "")\(Money(Int64(amount.magnitude / 100)).displayText).\(cents < 10 ? "0" : "")\(cents)"
+        return Self.currencySymbol + " \(amount < 0 ? "-" : "")\((amount.magnitude / 100).groupedText).\(cents < 10 ? "0" : "")\(cents)"
     }
 
     /// What a refusal for want of cash says `required` and `available`
@@ -31,12 +69,7 @@ extension Money {
     /// (``moneyText``), unless rounding would make the two look enough,
     /// when both are in cents (``centsText``).
     public static func shortfallTexts(required: Money, available: Money) -> (required: String, available: String) {
-        // floor((amount + 50) / 100), as moneyText rounds.
-        func dollars(_ money: Money) -> Int64 {
-            let remainder = money.amount % 100 + 50
-            return money.amount / 100 + (remainder >= 100 ? 1 : remainder < 0 ? -1 : 0)
-        }
-        return dollars(required) > dollars(available)
+        required.wholeDollars > available.wholeDollars
             ? (required.moneyText, available.moneyText)
             : (required.centsText, available.centsText)
     }
@@ -156,14 +189,7 @@ extension FinancePeriod {
 extension LedgerEntry {
     /// The row's amount with its sign, such as "+$ 1,200" or "-$ 1,428".
     public var amountText: String {
-        Self.signedMoneyText(amount)
-    }
-
-    static func signedMoneyText(_ amount: Money) -> String {
-        let digits = amount.moneyText.dropFirst(2)
-        if digits.hasPrefix("-") { return "-$ \(digits.dropFirst())" }
-        // A loss under half a dollar rounds to $ 0, still a loss.
-        return amount < .zero ? "-$ \(digits)" : "+$ \(digits)"
+        amount.signedText
     }
 }
 
@@ -197,7 +223,7 @@ public struct LedgerTotal: Hashable, Sendable {
 
     /// The total with its sign, such as "+$ 1,200".
     public var amountText: String {
-        LedgerEntry.signedMoneyText(amount)
+        amount.signedText
     }
 }
 

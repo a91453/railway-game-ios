@@ -239,6 +239,17 @@ D2 的好處是不動存檔、不動 golden、不動 replay，看起來最便宜
   - 測試的字串斷言改用同一個格式函式，不再寫死 `"$ 12"`。
   - 把借來格式化人數的千分位（`Money(x).displayText`，77 處）換成獨立函式。
   - 完成標準：全部既有測試不改值就綠；之後 PR-1 的測試 diff 只剩金額數字。
+  - **做完了（派工單 NTD0，`ntd0-money-format`，2026-10-30）**：
+    - 格式函式都在 `EconomyText.swift`：`Money.currencySymbol`（唯一寫 `$` 的地方）、`moneyText`（`$ 12,345`）、`wholeText`（句中不空格：`$5,000,000`）、`centsText`、`signedText`（帳本 `+$ 1,200`、`-$ 1,428`，原 `LedgerEntry.signedMoneyText`）、`roundText(in:)`（劇本的整數大數：`$300 million`／`3 億`）；`TrainRoster.shortMoney`、`IncomePulse.text`、`StatusBarWidths.moneyText` 也改用 `currencySymbol`。PR-3 換前綴只改這裡。
+    - 人數的千分位改成 `FixedWidthInteger.groupedText`（`DisplayText.swift`），`Money.displayText` 刪掉了。
+    - 成就（`businessProfit`、`fleetInvestment`）、鐵道大亨（`Challenge.tycoonProfit`／`tycoonEquity`）、說明的難度一則（`NewGameOptions.Difficulty.startingBalance`）、觀光說明的名產店每級花費（`Tourism.spendPerLevel`，原本寫「4 dollars／4 元」，現在是 `$ 4`）都由常數產生。
+    - 測試：`GamePresentationTests` 裡的金額斷言都寫成 `Money(…).moneyText` 等；只有格式函式本身的測試（`EconomyDisplayTests`、`TrainRosterTests.testShortMoney`）留字面的數字，前綴用 `Money.currencySymbol`。`MoneyTextSourceTests` 掃 `Sources/GamePresentation`、`RailwayGameApp/Views` 與 `Tests/GamePresentationTests`，新的 `$` 會變紅。
+    - 盤點（2.7 末列與第 7 節的未盤點項）：
+      - 教學課程：開局現金是 `GameWorld.startingBalance`（`NewGame.swift`，`$3,000,000`），十課的目標都是每日運量（`Lessons.swift` 的 `firstRiders`…`seventhRiders`），沒有金額目標；教學文字沒有寫死的金額。PR-1 只要 `startingBalance` 乘 3。
+      - GamePresentation 裡 PR-1 要乘的金額常數（不在 GameCore）：`GameWorld.startingBalance`、`NewGameOptions.Difficulty.startingBalance`（`NewGame.swift`）、`JijiTargets.startingBalance`／`profit`（`BranchLineChallenge.swift`）、`LiuMingchuanChallenge.startingBalance`、`Challenge.tycoonProfit`／`tycoonEquity`、成就兩個門檻、`CompanyRank` 的淨值門檻（`CompanyRank.swift` 的 `.netWorth`）。
+      - `RailwayGameApp/Views`：`PopulationLegendView`（地價圖例的 `$ 0`、`$ 250+ / m²`、「每平方公尺 $」三處，改用格式函式）、`MonthlyReport`／`TourismPanel`／`MapArt`（人數，改 `groupedText`）；`MapLayerSheet` 的「Land value: $ a square metre」是 String Catalog 的鍵，PR-3 連翻譯一起改（測試裡列為例外）；`dollarsign.circle` 等 SF Symbols 圖示五處（`MapLayerSheet`、`TrainControls`、`InspectorView`、`MapQuickLayers`）沒有新台幣版，留著。其他 `$` 都在註解裡。
+      - `HelpGuide.swift`：只有「難度」一則寫了金額，已改由常數產生；其他是人數。
+      - 留著的 `$`：GameCore `Operations.swift` 的貸款錯誤說明「whole steps of $100,000」（GameCore，PR-1 一起看）；報告測試的表頭與訊息（`AcquisitionReportTests`、`CityBusReportTests`、`JijiReportTests`、`HighSpeedDemoTests`、`LineLossDiagnosisTests`）；`Policy.swift` 報告表改用 `currencySymbol`。
 - **PR-1（GameCore ＋ GamePresentation，一個原子 PR，完整層級）**：
   1. **存檔**：`SavedGame.currentVersion` ＋ 1；版本 < 新版本時所有 `Money` 解碼乘 3。單點做法首選：在 `SavedGame.init(from:)` 讀到版本後，用 `@TaskLocal`（標準函式庫，Linux 可用，GameCore 不需要 Foundation）把倍率傳給 `Money.init(from:)`，只包住 `world` 的解碼；其他地方（成就、設定）解碼 `Money` 時倍率預設是 1。解碼乘法要檢查溢位，並維持 `maximumBalance` 等上限的現有驗證（超過就拒讀）。備案：每個型別自己補一個遷移欄位（欄位太多，不建議）。
   2. **稽核**：寫一個測試把「所有含 `Money` 的 Codable 型別」的欄位逐一設成互不相同的質數，走一遍遷移，證明每個都乘 3；再做**雙版本差分**：同一個舊 fixture，base（舊程式）與 head（新程式）各跑 30 天，每天的帳本金額必須是 3 倍（±湊整），人數、位置等非金額欄位必須相同。非 `Money` 型別的 `Int64` 金額欄位（1.3）用 grep 逐個列進 PR。
@@ -317,6 +328,6 @@ D2 的好處是不動存檔、不動 golden、不動 replay，看起來最便宜
 ## 7. 沒做的事與下一步
 
 - 沒有跑任何報告或測試（只寫文件）：所有「現值」是讀原始碼；「真實」欄中標「未查」者沒有出處，不要當事實引用。
-- 沒有逐行盤點教學課程的開局現金與目標（2.7 末列）、`RailwayGameApp/Views` 裡含 `$` 的 9 個檔、`HelpGuide.swift`；這些是 PR-0 的第一步。
+- 沒有逐行盤點教學課程的開局現金與目標（2.7 末列）、`RailwayGameApp/Views` 裡含 `$` 的 9 個檔、`HelpGuide.swift`；這些是 PR-0 的第一步（PR-0 已盤點，見 5.2）。
 - 稅率（50% 對真實 20%）、利率（5%）、資本財尺度屬於「比例」不是「幣別」，不在這一輪；若要做，是 NEXT_PRIORITIES 第 36 項「經濟加深」的其他部分，和這張分開。
 - 規劃要決定的兩件事：(1) PR-1 的目標日期（10/29 合併，還是讓 10/31 先帶 `$` 出去）；(2) 要不要在 PR-3 把繁中大數字換成 萬／億（建議要，但可在上架後）。

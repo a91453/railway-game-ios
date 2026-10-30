@@ -183,8 +183,8 @@ extension GameSession {
         guard let quote = chosenMapTileQuote else { return nil }
         guard quote.isUnlocked else {
             return language.text(
-                "Unlocks at \(Money(quote.ridersNeeded).displayText) riders a day · best so far \(Money(quote.bestDayRiders).displayText)",
-                "每日運量 \(Money(quote.ridersNeeded).displayText) 人次解鎖 · 目前最佳 \(Money(quote.bestDayRiders).displayText)"
+                "Unlocks at \(quote.ridersNeeded.groupedText) riders a day · best so far \(quote.bestDayRiders.groupedText)",
+                "每日運量 \(quote.ridersNeeded.groupedText) 人次解鎖 · 目前最佳 \(quote.bestDayRiders.groupedText)"
             )
         }
         let names = quote.outsideConnectionsLost.compactMap { world.station(id: $0)?.name }
@@ -208,10 +208,10 @@ extension GameSession {
         guard world.accounts.mode == .management else {
             return language.text("\(owned) · the next \(price)", "\(owned) · 下一塊 \(price)")
         }
-        let needed = Money(expansion.ridersNeeded(toOwn: expansion.owned.count + 1)).displayText
+        let needed = (expansion.ridersNeeded(toOwn: expansion.owned.count + 1)).groupedText
         return language.text(
-            "\(owned) · the next \(price), from \(needed) riders a day (best \(Money(expansion.bestDayRiders).displayText))",
-            "\(owned) · 下一塊 \(price)，每日運量 \(needed) 人次解鎖（目前最佳 \(Money(expansion.bestDayRiders).displayText)）"
+            "\(owned) · the next \(price), from \(needed) riders a day (best \(expansion.bestDayRiders.groupedText))",
+            "\(owned) · 下一塊 \(price)，每日運量 \(needed) 人次解鎖（目前最佳 \(expansion.bestDayRiders.groupedText)）"
         )
     }
 

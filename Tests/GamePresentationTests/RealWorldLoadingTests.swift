@@ -250,3 +250,26 @@ final class RealWorldLoadingTests: XCTestCase {
         XCTAssertTrue(RealRoadCells.read(blocks: blocks, tiles: tiles, frame: frame, bounds: world.bounds, meter: stopped).roads.isEmpty)
     }
 }
+
+/// Decision 473 (landscape): the lines fit the height of an iPhone held
+/// sideways and stay full size otherwise.
+final class LoadingLayoutTests: XCTestCase {
+    func testUprightKeepsTheFullSquare() {
+        XCTAssertEqual(LoadingLayout.mapSide(height: 800, sideBySide: false), 220)
+        XCTAssertEqual(LoadingLayout.mapSide(height: 300, sideBySide: false), 220)
+    }
+
+    func testSidewaysFitsTheHeight() {
+        // An iPhone held sideways is about 390 points tall, less the bars.
+        for height in stride(from: 150.0, through: 430.0, by: 10) {
+            let side = LoadingLayout.mapSide(height: height, sideBySide: true)
+            XCTAssertLessThanOrEqual(side, 220)
+            XCTAssertGreaterThanOrEqual(side, 120)
+            if height >= 152 {
+                XCTAssertLessThanOrEqual(side + 2 * LoadingLayout.sideBySideMargin, height)
+            }
+        }
+        XCTAssertEqual(LoadingLayout.mapSide(height: 350, sideBySide: true), 220)
+        XCTAssertEqual(LoadingLayout.mapSide(height: 200, sideBySide: true), 168)
+    }
+}

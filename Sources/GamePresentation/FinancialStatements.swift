@@ -39,6 +39,16 @@ public struct StatementRow: Hashable, Sendable {
     static func section(_ title: String) -> StatementRow {
         StatementRow(title: title, current: nil, previous: nil, style: .section)
     }
+
+    /// An amount as a statement's column shows it: in full ("$ 3,269,858",
+    /// ``Money/moneyText``), or `short` ("$3.3M", ``TrainRoster/shortMoney(_:)``)
+    /// where the full amounts do not fit on one line beside each other (a
+    /// phone's side panel); "—" for none. The app never breaks an amount
+    /// over two lines.
+    public static func amountText(_ money: Money?, short: Bool) -> String {
+        guard let money else { return "—" }
+        return short ? TrainRoster.shortMoney(money) : money.moneyText
+    }
 }
 
 extension AssetClass {
@@ -272,8 +282,8 @@ extension GameWorld {
         let count = unrecordedAssetCount()
         guard count > 0 else { return nil }
         return language.text(
-            "\(count) track, station or train items have no purchase cost on record and are listed at $ 0.",
-            "有 \(count) 項軌道、車站或列車沒有購置成本紀錄，以 $ 0 列帳。"
+            "\(count) track, station or train items have no purchase cost on record and are listed at \(Money.zero.moneyText).",
+            "有 \(count) 項軌道、車站或列車沒有購置成本紀錄，以 \(Money.zero.moneyText) 列帳。"
         )
     }
 

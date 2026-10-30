@@ -105,7 +105,7 @@ final class InsufficientFundsTests: XCTestCase {
         session.purchaseTrain()
         XCTAssertEqual(
             session.message,
-            StatusMessage(kind: .failure, text: "Not enough cash to buy a train: it costs $ 50 and you have $ 40.", fundsNeeded: price)
+            StatusMessage(kind: .failure, text: "Not enough cash to buy a train: it costs \(Money(5_000).moneyText) and you have \(Money(4_000).moneyText).", fundsNeeded: price)
         )
         // Within the first hour nothing is settled: still short, and said.
         for _ in 0..<30 { session.advance(realElapsed: GameSession.tickInterval) }
@@ -129,10 +129,10 @@ final class InsufficientFundsTests: XCTestCase {
 
     func testWholeDollarsUnlessRoundingHidesTheShortfall() {
         XCTAssertEqual(GameError.insufficientFunds(required: Money(20_000_000), available: Money(14_154_046)).playerMessage(in: .traditionalChinese),
-                       "餘額不足：需要 $ 200,000，目前只有 $ 141,540。")
+                       "餘額不足：需要 \(Money(20_000_000).moneyText)，目前只有 \(Money(14_154_000).moneyText)。")
         XCTAssertEqual(GameError.insufficientFundsText(required: Money(1_000), available: Money(999), doing: "buy a train", in: .english),
-                       "Not enough cash to buy a train: it costs $ 10.00 and you have $ 9.99.")
+                       "Not enough cash to buy a train: it costs \(Money(1_000).centsText) and you have \(Money(999).centsText).")
         XCTAssertEqual(GameError.insufficientFundsText(required: Money(20_000_000), available: Money(14_154_046), doing: "買列車", in: .traditionalChinese),
-                       "餘額不足，無法買列車：需要 $ 200,000，目前只有 $ 141,540。")
+                       "餘額不足，無法買列車：需要 \(Money(20_000_000).moneyText)，目前只有 \(Money(14_154_000).moneyText)。")
     }
 }

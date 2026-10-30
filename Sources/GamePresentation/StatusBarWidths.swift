@@ -53,7 +53,7 @@ public enum StatusBarWidths {
     public static func moneyText(_ balance: Money) -> String {
         let shown = balance.moneyText.filter(\.isNumber).count
         let eights = Int64(String(repeating: "8", count: max(7, min(shown, 18)))) ?? 8_888_888
-        return "$ -" + Money(eights).displayText
+        return Money.currencySymbol + " -" + eights.groupedText
     }
 
     /// Every label the speed menu's button can show.

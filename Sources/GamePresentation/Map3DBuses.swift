@@ -37,6 +37,10 @@ public struct Map3DBuses: Sendable {
 
         let routes: [Route]
         let roads: Int
+        /// BUGHUNT_BUILD P2-2: the player's roads, which a road laid along
+        /// the city's (free, decision 487) changes without changing
+        /// ``roads``.
+        let ownRoads: Set<CellPosition>
         /// Whether the way follows the base map's roads (decision 424).
         let onRoads: Bool
         let palette: LinePalette
@@ -50,7 +54,8 @@ public struct Map3DBuses: Sendable {
                           colour: world.lines(callingAt: station.id).first?.color?.rgb)
                 }
             }
-            roads = world.roads?.allCells.count ?? 0
+            roads = world.roads?.roadCellCount ?? 0
+            ownRoads = world.roads?.built ?? []
             self.onRoads = onRoads != nil
             self.palette = palette
         }
@@ -631,5 +636,17 @@ extension BusRoute {
             service = route.service
             buses = route.buses
         }
+    }
+}
+
+extension RoadGrid {
+    /// PERF_3D_COCKPIT (2026-10-30): how many cells have a road, the
+    /// city's and the player's: ``RoadGrid/allCells``'s count without
+    /// making that set. The 3D map's scene key and its buses' signature
+    /// count the roads at every tick; on the owner's real-world save
+    /// (81,088 city road cells) making the union took about 1.6 ms each
+    /// time, on the main thread.
+    public var roadCellCount: Int {
+        cells.count + built.reduce(0) { $0 + (cells.contains($1) ? 0 : 1) }
     }
 }

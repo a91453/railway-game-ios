@@ -88,7 +88,7 @@ final class StationCommerceCardTests: XCTestCase {
         let card = try XCTUnwrap(StationCommerceCard(station: station, in: world))
         XCTAssertEqual(card.level, .convenienceStore)
         XCTAssertEqual(card.yesterday, StationCommerceLevel.convenienceStore.takings(people: card.people) - StationCommerceLevel.convenienceStore.upkeep)
-        XCTAssertTrue(card.yesterdayText(in: .traditionalChinese).hasPrefix("昨天 +$ "), card.yesterdayText(in: .traditionalChinese))
+        XCTAssertTrue(card.yesterdayText(in: .traditionalChinese).hasPrefix("昨天 +\(Money.currencySymbol) "), card.yesterdayText(in: .traditionalChinese))
         XCTAssertEqual(card.offer?.level, .arcade)
         XCTAssertEqual(card.offerTitle(in: .traditionalChinese), "升級成站內商店街")
     }

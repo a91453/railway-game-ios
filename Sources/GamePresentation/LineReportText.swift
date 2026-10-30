@@ -95,13 +95,13 @@ public struct LineReport: Hashable, Identifiable, Sendable {
                 return language.text("No record of yesterday yet", "昨日還沒有紀錄")
             }
             return language.joined([
-                language.text("Today so far (through last hour): \(Money(today.riders).displayText) riders", "今日（截至上個整點）\(Money(today.riders).displayText) 人次"),
+                language.text("Today so far (through last hour): \(today.riders.groupedText) riders", "今日（截至上個整點）\(today.riders.groupedText) 人次"),
                 language.text("fares \(today.fareRevenue.moneyText)", "票收 \(today.fareRevenue.moneyText)"),
                 language.text("peak \(today.peakLoadPercent)%", "尖峰 \(today.peakLoadPercent)%"),
             ])
         }
         return language.joined([
-            language.text("Yesterday \(Money(yesterday.riders).displayText) riders", "昨日 \(Money(yesterday.riders).displayText) 人次"),
+            language.text("Yesterday \(yesterday.riders.groupedText) riders", "昨日 \(yesterday.riders.groupedText) 人次"),
             language.text("fares \(yesterday.fareRevenue.moneyText)", "票收 \(yesterday.fareRevenue.moneyText)"),
             language.text("profit \(yesterday.profit.moneyText)", "損益 \(yesterday.profit.moneyText)"),
             language.text("peak \(yesterday.peakLoadPercent)%", "尖峰 \(yesterday.peakLoadPercent)%"),
@@ -114,7 +114,7 @@ public struct LineReport: Hashable, Identifiable, Sendable {
         guard !days.isEmpty else { return language.text("No days recorded yet.", "還沒有每日紀錄。") }
         var parts = [
             language.text("Last \(days.count) days", "最近 \(days.count) 天"),
-            language.text("\(Money(totalRiders).displayText) riders", "\(Money(totalRiders).displayText) 人次"),
+            language.text("\(totalRiders.groupedText) riders", "\(totalRiders.groupedText) 人次"),
             language.text("fares \(totalFares.moneyText)", "票收 \(totalFares.moneyText)"),
             language.text("cost \(totalCost.moneyText)", "成本 \(totalCost.moneyText)"),
             language.text("profit \(totalProfit.moneyText)", "損益 \(totalProfit.moneyText)"),
@@ -129,7 +129,7 @@ public struct LineReport: Hashable, Identifiable, Sendable {
     public func dayText(_ day: LineOperatingDay, in language: DisplayLanguage) -> String {
         language.joined([
             language.text("Day \(day.day + 1)", "第 \(day.day + 1) 天"),
-            language.text("\(Money(day.riders).displayText) riders", "\(Money(day.riders).displayText) 人次"),
+            language.text("\(day.riders.groupedText) riders", "\(day.riders.groupedText) 人次"),
             language.text("fares \(day.fareRevenue.moneyText)", "票收 \(day.fareRevenue.moneyText)"),
             language.text("cost \(day.cost.moneyText)", "成本 \(day.cost.moneyText)"),
             language.text("profit \(day.profit.moneyText)", "損益 \(day.profit.moneyText)"),
@@ -209,8 +209,8 @@ extension GameWorld {
         guard lineAccounts != nil else { return nil }
         let flow = stationFlowYesterday(id)
         return language.text(
-            "Yesterday \(Money(flow.boarded).displayText) boarded · \(Money(flow.alighted).displayText) got off",
-            "昨日進站 \(Money(flow.boarded).displayText) 人 · 出站 \(Money(flow.alighted).displayText) 人"
+            "Yesterday \(flow.boarded.groupedText) boarded · \(flow.alighted.groupedText) got off",
+            "昨日進站 \(flow.boarded.groupedText) 人 · 出站 \(flow.alighted.groupedText) 人"
         )
     }
 }

@@ -49,7 +49,6 @@ public enum DataSourceCredits {
     static let nlscHighSpeedRailURL = "https://data.gov.tw/dataset/73221"
     static let nlscMetroURL = "https://data.gov.tw/dataset/73222"
     static let odblURL = "https://opendatacommons.org/licenses/odbl/1-0/"
-    static let repositoryURL = "https://github.com/a91453/railway-game-ios"
     static let worldPopURL = "https://www.worldpop.org"
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
@@ -63,12 +62,10 @@ public enum DataSourceCredits {
     static let mapLibreURL = "https://github.com/maplibre/maplibre-native"
     static let openMapTilesSchemaURL = "https://openmaptiles.org/schema/"
     static let notoSansURL = "https://notofonts.github.io"
-    /// Noto Sans's licence, as the app bundles it (`Resources/Licenses/`).
-    static let notoSansLicenseURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/NotoSans-OFL.txt"
-    static let baseMapToolURL = "https://github.com/a91453/railway-game-ios/tree/main/tools/basemap"
-    /// MapLibre Native's licence and its third-party notices, as the app
-    /// bundles them (`Resources/Licenses/`).
-    static let mapLibreLicenseURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"
+    /// Noto Sans's licence, from the font project (the text also comes with the app).
+    static let notoSansLicenseURL = "https://openfontlicense.org/open-font-license-official-text/"
+    /// MapLibre Native's licence, from its project (the text also comes with the app).
+    static let mapLibreLicenseURL = "https://github.com/maplibre/maplibre-native/blob/main/LICENSE.md"
     static let proceduralTokyoURL = "https://github.com/jeantimex/tokyo"
     /// The notices of the 3D city view's page and the libraries it bundles
     /// (decision 152), next to the page on the game's website (decision 163).
@@ -398,16 +395,15 @@ public enum DataSourceCredits {
                             "鐵道：軌道走向、車站與月台的位置、單線或雙線、橋與隧道。實景地圖：新車站取名用的聚落、村里與鄉鎮，工業區、公園、農地、河川、湖泊與海岸線，觀光景點，以及新車站附近的商店、學校等地點。示範地圖：高鐵示範的機廠與端點站股道、台鐵示範的宜蘭、蘇澳新側線。3D 城市預覽的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
-                        // under the same licence: the source repository link
-                        // below is where they are.
+                        // under the same licence: they ship in the app and
+                        // the mailbox below is the written offer (decision 503).
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The data files the game derives from it are available under the same licence from the source repository below.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲據此整理的資料檔以相同授權提供，可從下方的原始碼儲存庫取得。"
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. The data files the game derives from it come with the app, and a complete machine-readable copy under the same licence is available by writing to hello@alongthelinegame.com.",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用。遊戲據此整理的資料檔隨 App 提供，也可來信 hello@alongthelinegame.com 索取以相同授權提供的完整機器可讀檔案。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
                             DataSourceCredit.Link(title: "ODbL 1.0", url: odblURL),
-                            DataSourceCredit.Link(title: language.text("Source repository", "原始碼儲存庫"), url: repositoryURL),
                         ]
                     ),
                 ]
@@ -492,8 +488,8 @@ public enum DataSourceCredits {
                             "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。台灣、澎湖、金門、馬祖實景 3D 地圖上的建物，以及 3D 城市預覽裡高雄車站、台中車站周圍的建物，也是它的。"
                         ),
                         notice: language.text(
-                            "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them are available under the same licence from the source repository.",
-                            "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔、城市圖塊與足跡圖塊以相同授權提供，可從原始碼儲存庫取得。"
+                            "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them come with the app, and a complete machine-readable copy under the same licence is available by writing to hello@alongthelinegame.com.",
+                            "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔、城市圖塊與足跡圖塊隨 App 提供，也可來信 hello@alongthelinegame.com 索取以相同授權提供的完整機器可讀檔案。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
@@ -501,7 +497,6 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("East Asian buildings", "東亞建物資料"), url: eastAsianBuildingsURL),
                             DataSourceCredit.Link(title: "ODbL 1.0", url: odblURL),
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
-                            DataSourceCredit.Link(title: language.text("Source repository", "原始碼儲存庫"), url: repositoryURL),
                         ]
                     ),
                 ]
@@ -533,13 +528,12 @@ public enum DataSourceCredits {
                             "台灣實景地圖的 OSM 底圖（地圖樣式選單的「OSM」），不用網路也能顯示：海、河川、森林、公園、道路、行政界與地名。3D 地圖把其中的海、河川、森林、公園與道路鋪在地面上。"
                         ),
                         notice: language.text(
-                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them are in the game’s public repository under the same licence. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Labels in Noto Sans, © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
-                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具依同一授權放在遊戲公開的原始碼儲存庫。圖層照 OpenMapTiles 的格式（CC BY 4.0）。文字用 Noto Sans，© The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
+                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them come with the app, and a complete machine-readable copy under the same licence is available by writing to hello@alongthelinegame.com. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Labels in Noto Sans, © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具隨 App 提供，也可來信 hello@alongthelinegame.com 索取以相同授權提供的完整機器可讀檔案。圖層照 OpenMapTiles 的格式（CC BY 4.0）。文字用 Noto Sans，© The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
                             DataSourceCredit.Link(title: language.text("OpenMapTiles schema", "OpenMapTiles 格式"), url: openMapTilesSchemaURL),
-                            DataSourceCredit.Link(title: language.text("The tiles and their tool", "圖磚與工具"), url: baseMapToolURL),
                             DataSourceCredit.Link(title: "Noto Sans", url: notoSansURL),
                             DataSourceCredit.Link(title: language.text("Noto Sans licence", "Noto Sans 授權條款"), url: notoSansLicenseURL),
                         ]

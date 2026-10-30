@@ -10,7 +10,7 @@ import XCTest
 final class UnlimitedFundsTextTests: XCTestCase {
     func testTheCashReadsInfinityAndIsNeverInTheRed() {
         var economy = GameWorld.newGame(balance: -5_000).economy
-        XCTAssertEqual(economy.cashText, "$ -50")
+        XCTAssertEqual(economy.cashText, "\(Money(-5_000).moneyText)")
         XCTAssertTrue(economy.showsInTheRed)
         var world = GameWorld.newGame(balance: -5_000)
         world.setUnlimitedFunds(true)
@@ -24,7 +24,7 @@ final class UnlimitedFundsTextTests: XCTestCase {
     func testTheSaveListShowsInfinity() throws {
         var world = GameWorld.newGame()
         let paying = SaveSummary(world: world)
-        XCTAssertEqual(paying.text(in: .english), "Day 1 · 00:00 · $ 3,000,000 · 0 stations · 0 lines · 0 trains")
+        XCTAssertEqual(paying.text(in: .english), "Day 1 · 00:00 · \(Money(300_000_000).moneyText) · 0 stations · 0 lines · 0 trains")
         let encoded = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(paying)) as? [String: Any])
         XCTAssertNil(encoded["unlimitedFunds"], "written only when on")
         world.setUnlimitedFunds(true)

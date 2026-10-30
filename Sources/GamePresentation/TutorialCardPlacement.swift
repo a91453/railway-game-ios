@@ -153,7 +153,27 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     static let minimumCardHeight: Double = 200
     /// The tallest the open card is measured on a phone on its side: its
     /// title, a line or two of its explanation, scrolling, and its buttons.
+    /// Measured, the card ends on a whole line of its explanation instead
+    /// (``compactMaxHeight(chrome:bodyTop:lineHeight:)``).
     public static let compactMaxHeight: Double = 150
+    /// The fewest lines of the step's explanation the open card shows on a
+    /// phone on its side: its goal, which begins it.
+    public static let compactBodyLines = 2
+
+    /// The tallest the open card is measured on a phone on its side, so
+    /// that its scrolling explanation ends on a whole line (decision 498:
+    /// at 150 points the first step showed one line of its goal and half of
+    /// the next): as many whole lines as fit in ``compactMaxHeight``, but
+    /// at least ``compactBodyLines``. `chrome`: the card's height outside
+    /// its scrolling explanation (padding, status, buttons); `bodyTop`: the
+    /// explanation above its body (the step's row and title); `lineHeight`:
+    /// a line of the body. Not measured yet (`lineHeight` 0):
+    /// ``compactMaxHeight``.
+    public static func compactMaxHeight(chrome: Double, bodyTop: Double, lineHeight: Double) -> Double {
+        guard lineHeight > 0 else { return compactMaxHeight }
+        let fit = ((compactMaxHeight - chrome - bodyTop) / lineHeight).rounded(.down)
+        return chrome + bodyTop + max(Double(compactBodyLines), fit) * lineHeight
+    }
     /// The narrowest a card is measured to leave a band of the map free
     /// beside it.
     static let minimumCardWidth: Double = 240

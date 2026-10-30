@@ -85,14 +85,14 @@ public struct NetworkFlowReport: Equatable, Sendable {
         public func valueText(_ metric: LineMetric, in language: DisplayLanguage) -> String {
             switch metric {
             case .ridership:
-                let count = Money(ridership).displayText
+                let count = ridership.groupedText
                 return language.text("\(count) riders", "\(count) 人次")
             case .length:
                 let km = WorldBounds.kilometresText(length)
                 return language.text("\(km) km", "\(km) 公里")
             case .intensity:
                 guard let intensity else { return "—" }
-                let count = Money(Int64(intensity.rounded())).displayText
+                let count = (Int64(intensity.rounded())).groupedText
                 return language.text("\(count) riders/km", "\(count) 人次／公里")
             case .peakTrains:
                 return language.text(peakTrains == 1 ? "1 train" : "\(peakTrains) trains", "\(peakTrains) 列")
@@ -191,7 +191,7 @@ public struct NetworkFlowReport: Equatable, Sendable {
         }
 
         public func valueText(in language: DisplayLanguage) -> String {
-            let count = Money(people).displayText
+            let count = people.groupedText
             switch kind {
             case .waiting:
                 let minutes = longestWaitMinutes ?? 0
@@ -458,11 +458,11 @@ extension NetworkFlowReport {
     /// with no capacity.
     public static func valueText(of row: SectionRow, in language: DisplayLanguage) -> String {
         let hour = SectionFlow.hourText(row.hour)
-        let load = Money(row.load).displayText
+        let load = row.load.groupedText
         guard let percent = row.percent else {
             return language.text("\(hour) · \(load) riders, no trains", "\(hour) · \(load) 人，沒有列車")
         }
-        let capacity = Money(row.capacity).displayText
+        let capacity = row.capacity.groupedText
         return language.text("\(hour) · \(load) / \(capacity) seats (\(percent)%)", "\(hour) · \(load) 人／運能 \(capacity)（\(percent)%）")
     }
 

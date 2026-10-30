@@ -44,7 +44,7 @@ final class LocalizationTests: XCTestCase {
         }
         XCTAssertEqual(
             GameError.insufficientFunds(required: 50_000, available: 1_234).playerMessage(in: .traditionalChinese),
-            "餘額不足：需要 $ 500，目前只有 $ 12。"
+            "餘額不足：需要 \(Money(50_000).moneyText)，目前只有 \(Money(1_200).moneyText)。"
         )
         XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage(in: .traditionalChinese), "這段軌道上有列車。請先把列車移出軌道。")
         XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage(in: .traditionalChinese), "還有軌道接在這裡。請先拆除那段軌道。")
@@ -105,8 +105,8 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(FinancePeriod.allCases.map { $0.displayName(in: zh) }, ["日", "週", "月", "年"])
         XCTAssertEqual(LedgerEntry.Kind.dailyStaff.displayName(in: zh), "員工費用（日結）")
         XCTAssertEqual(LedgerItem.trainStaff.displayName(in: zh), "司機與調度員工")
-        XCTAssertEqual(FareRules.standard.displayText(in: zh), "固定票價 · $ 5.00")
-        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: zh), "階梯票價 · 5 段，$ 0.55 起")
+        XCTAssertEqual(FareRules.standard.displayText(in: zh), "固定票價 · \(Money(500).centsText)")
+        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: zh), "階梯票價 · 5 段，\(Money(55).centsText) 起")
     }
 
     /// Stage W2b: where a dwell has got to, in both languages.

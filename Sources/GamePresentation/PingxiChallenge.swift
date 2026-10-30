@@ -118,7 +118,7 @@ public enum PingxiChallenge {
     /// What the station master says first (decision 153): what the
     /// challenge asks and what to get ready for.
     static func welcomeText(in language: DisplayLanguage) -> String {
-        let riders = Money(ridersTarget).displayText
+        let riders = ridersTarget.groupedText
         return language.text(
             "The Pingxi Line is ours now, built for coal and losing money. Reach \(riders) riders a day and a year's net profit of \(profitTarget.moneyText). The Sky Lantern Festival brings crowds to Shifen and Pingxi: get trains ready for it!",
             "平溪線交給我們了：這條為運煤而建的支線一直在虧錢。目標是每日運量 \(riders) 人次、一年淨利 \(profitTarget.moneyText)。天燈節會有大批人潮湧進十分和平溪，先把列車準備好！"

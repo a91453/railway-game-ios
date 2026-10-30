@@ -360,8 +360,8 @@ public struct CityCellInfo: Hashable, Sendable {
     public var zone: Zone? = nil
 
     /// "Homes · D2 (6 storeys)", "Residents 120 · Jobs 4", "Land value
-    /// $ 194.85 a m²", "Base $ 25.00 · Service + $ 149.85 · Access +
-    /// $ 20.00" and "Set by Alpha" (or "No station adds to it").
+    /// $ 194.85 a m²", "Base $ 25.00", "Train service + $ 149.85", "Easy to
+    /// reach + $ 20.00" and "Set by Alpha" (or "No station adds to it").
     public func lines(in language: DisplayLanguage) -> [String] {
         var lines: [String] = []
         let useName: (String, String)? = use.map { ($0.names.english, $0.names.chinese) }
@@ -376,7 +376,7 @@ public struct CityCellInfo: Hashable, Sendable {
             } else {
                 lines.append(language.text(useName.0, useName.1))
             }
-            let residents = Money(residents).displayText, jobs = Money(jobs).displayText
+            let residents = residents.groupedText, jobs = jobs.groupedText
             lines.append(language.text("Residents \(residents) · Jobs \(jobs)", "居民 \(residents) 人 · 就業 \(jobs) 個"))
         } else {
             lines.append(language.text("Empty land", "空地"))
@@ -384,7 +384,11 @@ public struct CityCellInfo: Hashable, Sendable {
         let total = Money(value.value).centsText
         lines.append(language.text("Land value \(total) a m²", "地價 每平方公尺 \(total)"))
         let base = Money(value.base).centsText, service = Money(value.servicePremium).centsText, access = Money(value.accessPremium).centsText
-        lines.append(language.text("Base \(base) · Train service + \(service) · Easy to reach + \(access)", "基本 \(base) · 列車服務 + \(service) · 交通便利 + \(access)"))
+        // One line each, as the premiums below are: on one line they ran
+        // past a phone's side panel.
+        lines.append(language.text("Base \(base)", "基本 \(base)"))
+        lines.append(language.text("Train service + \(service)", "列車服務 + \(service)"))
+        lines.append(language.text("Easy to reach + \(access)", "交通便利 + \(access)"))
         if value.parkPremium > 0 {
             let park = Money(value.parkPremium).centsText
             lines.append(language.text("Near a park + \(park)", "鄰近公園 + \(park)"))

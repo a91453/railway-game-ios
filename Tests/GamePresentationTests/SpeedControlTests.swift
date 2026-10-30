@@ -26,10 +26,10 @@ final class SpeedControlTests: XCTestCase {
             let session = GameSession(world: world)
             session.selectTool(.train)
             session.purchaseTrain()
-            XCTAssertEqual(session.world.economy.balance.displayText, "5,000")
+            XCTAssertEqual(session.world.economy.balance.amount.groupedText, "5,000")
 
             session.purchaseTrain()
-            XCTAssertEqual(session.world.economy.balance.displayText, "0")
+            XCTAssertEqual(session.world.economy.balance.amount.groupedText, "0")
         }
     }
 }

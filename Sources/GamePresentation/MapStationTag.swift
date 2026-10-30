@@ -63,10 +63,10 @@ public struct StationTag: Hashable, Sendable {
     public func waitingText(in language: DisplayLanguage) -> String? {
         var parts: [String] = []
         if waiting > 0 {
-            parts.append(language.text("\(Money(waiting).displayText) waiting", "候車 \(Money(waiting).displayText) 人"))
+            parts.append(language.text("\(waiting.groupedText) waiting", "候車 \(waiting.groupedText) 人"))
         }
         if let freight, freight > 0 {
-            parts.append(language.text("\(Money(freight).displayText) t of freight", "待運 \(Money(freight).displayText) 噸"))
+            parts.append(language.text("\(freight.groupedText) t of freight", "待運 \(freight.groupedText) 噸"))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

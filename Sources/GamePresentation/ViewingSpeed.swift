@@ -247,7 +247,7 @@ public struct ViewingSpeed: Hashable, Sendable {
 
     /// "285 km/h", the followed train's speed, or `nil` following none.
     public var trainSpeedText: String? {
-        trainKilometresPerHour.map { "\(Money($0).displayText) km/h" }
+        trainKilometresPerHour.map { "\($0.groupedText) km/h" }
     }
 
     /// What VoiceOver reads for the readout.

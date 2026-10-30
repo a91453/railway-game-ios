@@ -127,11 +127,11 @@ final class OnboardingTests: XCTestCase {
         let advice = StationMasterAdvice.firstLineLosing(loss: Money(4_047_400), hint: hint)
         XCTAssertEqual(
             advice.text(in: .english),
-            "This line lost $ 40,474 yesterday: the stations are too close and too few ride. Extend it to the next town: the nearest populated area with no station is 4.2 km northeast. Tap to look."
+            "This line lost \(Money(4_047_400).moneyText) yesterday: the stations are too close and too few ride. Extend it to the next town: the nearest populated area with no station is 4.2 km northeast. Tap to look."
         )
         XCTAssertEqual(
             advice.text(in: .traditionalChinese),
-            "這條線昨天虧了 $ 40,474：站太近、坐的人太少。把線延伸到下一個城鎮，最近、還沒有車站的人口熱區在東北方 4.2 公里。點一下看位置。"
+            "這條線昨天虧了 \(Money(4_047_400).moneyText)：站太近、坐的人太少。把線延伸到下一個城鎮，最近、還沒有車站的人口熱區在東北方 4.2 公里。點一下看位置。"
         )
         XCTAssertEqual(advice.cameraTarget, PlanPoint(x: 9, y: 9))
         XCTAssertTrue(advice.isWorry)
@@ -194,12 +194,12 @@ final class OnboardingTests: XCTestCase {
     // MARK: - Feedback
 
     func testALossFloatsRedAndShort() {
-        XCTAssertEqual(IncomePulse(amount: Money(123_400), serial: 1).text, "+$ 1,234")
+        XCTAssertEqual(IncomePulse(amount: Money(123_400), serial: 1).text, "\(Money(123_400).signedText)")
         XCTAssertFalse(IncomePulse(amount: Money(123_400), serial: 1).isLoss)
         let loss = IncomePulse(amount: Money(-4_047_400), serial: 2)
         XCTAssertTrue(loss.isLoss)
-        XCTAssertEqual(loss.text, "\u{2212}$40k")
-        XCTAssertEqual(IncomePulse(amount: Money(-250_000), serial: 3).text, "\u{2212}$2,500", "under $10,000 to the dollar")
+        XCTAssertEqual(loss.text, "\u{2212}\(TrainRoster.shortMoney(Money(4_000_000)))")
+        XCTAssertEqual(IncomePulse(amount: Money(-250_000), serial: 3).text, "\u{2212}\(Money.currencySymbol)2,500", "under $10,000 to the dollar")
     }
 
     @MainActor
@@ -309,7 +309,7 @@ final class OnboardingTests: XCTestCase {
 
     func testTheSummarySaysWhatChanged() {
         var options = NewGameOptions()
-        XCTAssertTrue(options.summary(in: .english).hasPrefix("Starts with $ 3,000,000."))
+        XCTAssertTrue(options.summary(in: .english).hasPrefix("Starts with \(Money(300_000_000).moneyText)."))
         // Decision 258: materials are an option of realistic rules only.
         options.rules = .realistic
         options.buildingMaterials = false

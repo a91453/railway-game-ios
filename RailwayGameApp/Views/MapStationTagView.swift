@@ -121,19 +121,22 @@ struct MapStationTagView: View {
     /// 109, stand over it) and of its name under the mark (decision 123:
     /// the tag covered the name's lower half), or over it when there is no
     /// room below; kept clear of the controls along the map's edges.
+    /// Decision 501: and off the bubbles, which it is drawn over: a bubble
+    /// under the station's name (decision 477) lay under the tag, and after
+    /// the first tap every tap on it went to the tag.
     private func placement(under point: ScreenPoint) -> CGSize {
-        let margin = 8.0, clearance = 34.0
-        let width = Double(size.width), height = Double(size.height)
-        let minX = Double(insets.leading) + margin
-        let maxX = viewport.width - Double(insets.trailing) - width - margin
-        let x = min(max(point.x - width / 2, minX), max(minX, maxX))
-        let top = Double(insets.top) + margin
-        let bottom = viewport.height - Double(insets.bottom) - margin
-        var y = point.y + clearance
-        if y + height > bottom {
-            y = point.y - clearance - height
-        }
-        y = min(max(y, top), max(top, bottom - height))
-        return CGSize(width: x, height: y)
+        let margin = 8.0
+        let clear = MapLabelPlacement.Box(
+            x: Double(insets.leading) + margin, y: Double(insets.top) + margin,
+            width: viewport.width - Double(insets.leading) - Double(insets.trailing) - 2 * margin,
+            height: viewport.height - Double(insets.top) - Double(insets.bottom) - 2 * margin
+        )
+        let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets).map(\.touchBox)
+        // Decision 501: and, moved, off the other stations where it can.
+        let stations = MapLabelPlacement.obstacles(MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport),
+                                                   radius: MapArt.stationRadius(camera), own: (point.x, point.y))
+        let box = MapLabelPlacement.stationTag(at: point, width: Double(size.width), height: Double(size.height), clear: clear, avoiding: bubbles,
+                                               keepingOff: stations)
+        return CGSize(width: box.minX, height: box.minY)
     }
 }

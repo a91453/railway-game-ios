@@ -227,6 +227,18 @@ public struct Map3DTrainSet: Sendable {
             kaohsiung(far: true),
             taichungGreen(),
             taichungGreen(far: true),
+            // Decision 496: the real light rails' own five-module trains,
+            // each cut at its middle into the light metro's two cars, from
+            // 500 m out their light versions: New Taipei's Danhai and Ankeng
+            // (#1533) and Kaohsiung's CAF and Citadis fleets (#1506).
+            danhaiLRT(),
+            danhaiLRT(far: true),
+            ankengLRT(),
+            ankengLRT(far: true),
+            kaohsiungCAF(),
+            kaohsiungCAF(far: true),
+            kaohsiungCitadis(),
+            kaohsiungCitadis(far: true),
             // The DR1000 railcar and the DR3100 diesel express: silver, a thin
             // orange band, yellow-orange faces (the reference's `dr1000`,
             // `dr3100`) on #900's curved fronts.
@@ -296,9 +308,11 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 461: and the C371, C381 and 610 (their far sets).
     /// Decision 466: and the Sanying line's; decision 483: and the
     /// Kaohsiung and Taichung Green line's (their far sets).
+    /// Decision 496: and the real light rails' five-module trains (their
+    /// far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
-                                "kaohsiung", "taichungGreen"]
+                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -325,6 +339,8 @@ public struct Map3DTrainSet: Sendable {
             return "n700sG"
         case "emu800":
             return localTrain(number: number)
+        case "klrtCitadis":
+            return kaohsiungLightRail(number: number)
         case "pushPull" where !locked.contains("pushPullE1000"):
             return "pushPullE1000"
         default:
@@ -354,6 +370,16 @@ public struct Map3DTrainSet: Sendable {
     static func taipeiMetro(number: Int) -> String {
         let share = ((number % 20 + 20) % 20) * 7 % 20
         return share < 8 ? "metroC371" : share < 14 ? "metroC381" : "metroC341"
+    }
+
+    /// Decision 496: the set a Kaohsiung light rail train numbered `number`
+    /// is drawn as, as many of each as the fleets' trains: CAF's 9 and
+    /// Alstom's 15, 3 and 5 in 8, by three times the number's remainder by
+    /// 8 (as ``localTrain(number:)``, so that trains one after another are
+    /// not the same kind in a run): 0 to 2 the CAF, 3 to 7 the Citadis.
+    static func kaohsiungLightRail(number: Int) -> String {
+        let share = ((number % 8 + 8) % 8) * 3 % 8
+        return share < 3 ? "klrtCAF" : "klrtCitadis"
     }
 
     /// Decision 408: the number at the end of a real train's key
@@ -739,6 +765,60 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
+    /// Decision 496: a real light rail's five-module train, `modules`
+    /// front to back placed at `centres` as its assembly has them
+    /// (`tools/new-taipei-lrt/assembly-*.json`,
+    /// `tools/kaohsiung-light-rail/assembly-*.json`), the last turned round,
+    /// cut at its middle into the light metro's two cars as
+    /// ``articulated(_:formation:cuts:lamps:)`` cuts the five-section LRT,
+    /// the ends' lamp lenses lit (``litLenses(_:front:)``). The real lines
+    /// draw two cars of 20 m (``Map3DRealTrains/carPitch``), as the green
+    /// tram's. `far`: the modules' light versions, a set of `key` + `Far`.
+    static func fiveModuleLRT(_ key: String, far: Bool, centres: [Float],
+                              modules: @escaping @Sendable () -> [Map3DModelPack.Model]) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? key + "Far" : key, far: far ? nil : key + "Far") {
+            var builder = StationKitBuilder()
+            for (index, module) in modules().enumerated() {
+                builder.add(module, at: Map3DPoint(centres[index], 0, 0), angle: index == centres.count - 1 ? .pi : 0)
+            }
+            let cars = articulated(key, formation: .flat(named: key, from: builder.mesh), cuts: [0], lamps: nil).build()
+            return Cars(head: litLenses(cars.head, front: true), middle: nil,
+                        tail: cars.tail.map { litLenses($0, front: false) }, single: nil)
+        }
+    }
+
+    /// Decision 496: the Danhai light rail's train (#1533's
+    /// ``Map3DDanhaiLRT``), M1 to M5.
+    static func danhaiLRT(far: Bool = false) -> Map3DTrainSet {
+        fiveModuleLRT("danhaiLRT", far: far, centres: Map3DDanhaiLRT.Unit.allCases.map(\.centre)) {
+            Map3DDanhaiLRT.Unit.allCases.map { Map3DDanhaiLRT.model($0, far: far) }
+        }
+    }
+
+    /// Decision 496: the Ankeng light rail's train (#1533's
+    /// ``Map3DAnkengLRT``), M1 to M5.
+    static func ankengLRT(far: Bool = false) -> Map3DTrainSet {
+        fiveModuleLRT("ankengLRT", far: far, centres: Map3DAnkengLRT.Unit.allCases.map(\.centre)) {
+            Map3DAnkengLRT.Unit.allCases.map { Map3DAnkengLRT.model($0, far: far) }
+        }
+    }
+
+    /// Decision 496: the Kaohsiung light rail's first fleet, CAF's Urbos 3
+    /// (#1506's ``Map3DKaohsiungCAF``), C1 S1 R S2 C2.
+    static func kaohsiungCAF(far: Bool = false) -> Map3DTrainSet {
+        fiveModuleLRT("klrtCAF", far: far, centres: [13.1915, 5.65, 0, -5.65, -13.1915]) {
+            Map3DKaohsiungCAF.Unit.allCases.map { Map3DKaohsiungCAF.model($0, far: far) }
+        }
+    }
+
+    /// Decision 496: its second, Alstom's Citadis 305 (#1506's
+    /// ``Map3DKaohsiungCitadis``), M1 SC1 NP SC2 M2.
+    static func kaohsiungCitadis(far: Bool = false) -> Map3DTrainSet {
+        fiveModuleLRT("klrtCitadis", far: far, centres: [12.775, 5.325, 0, -5.325, -12.775]) {
+            Map3DKaohsiungCitadis.Unit.allCases.map { Map3DKaohsiungCitadis.model($0, far: far) }
+        }
+    }
+
     /// Decision 466: the key of ``sanying(far:)``, the Sanying line's real
     /// trains and the trains of one bought.
     static let sanyingKey = "sanying"
@@ -917,12 +997,13 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 338, later: a whole articulated train (`formation`, its
     /// front at +x) as the light metro's cars, cut at `cuts` (front to
     /// back), the lamps lit over the cabs' lamp blocks at `lamps.x` and
-    /// −`lamps.x`. A car's length is from cut to cut (or to its nose), but
+    /// −`lamps.x` (none without `lamps`: decision 496's light rails light
+    /// their own lenses). A car's length is from cut to cut (or to its nose), but
     /// the train as it is at each cut is drawn on into the gap between the
     /// cars, as far as meets the next car halfway once stretched to its
     /// car, and closed there, so a curve never shows it hollow. The cuts
     /// are on plain body, where drawing it on shows no seam.
-    static func articulated(_ key: String, formation: Map3DModelPack.Model, cuts: [Float], lamps: Lamps) -> Map3DTrainSet {
+    static func articulated(_ key: String, formation: Map3DModelPack.Model, cuts: [Float], lamps: Lamps?) -> Map3DTrainSet {
         Map3DTrainSet(key: key) {
             let carLength = Float(TrainType.c.spec.carLength) / Float(WorldCoordinate.unitsPerMetre) - Map3DTrains.carGap
             let ends = [formation.maximum.x] + cuts + [formation.minimum.x]
@@ -933,8 +1014,8 @@ public struct Map3DTrainSet: Sendable {
                 var builder = StationKitBuilder()
                 builder.add(formation.cut(from: index < cuts.count ? back : back - 1, to: index > 0 ? front : front + 1,
                                           reach: (index < cuts.count ? reach : 0, index > 0 ? reach : 0)), at: .zero)
-                if index == 0 { builder.cabLamps(lamps, atX: lamps.x, colour: Map3DTrainStyle.headlamp) }
-                if index == cuts.count { builder.cabLamps(lamps, atX: -lamps.x, colour: Map3DPalette.lantern) }
+                if let lamps, index == 0 { builder.cabLamps(lamps, atX: lamps.x, colour: Map3DTrainStyle.headlamp) }
+                if let lamps, index == cuts.count { builder.cabLamps(lamps, atX: -lamps.x, colour: Map3DPalette.lantern) }
                 let model = Map3DModelPack.Model.flat(named: key, from: builder.mesh)
                 return Map3DModelPack.Model(name: key, vertices: model.vertices, minimum: Map3DPoint(back, model.minimum.y, model.minimum.z),
                                             maximum: Map3DPoint(front, model.maximum.y, model.maximum.z))

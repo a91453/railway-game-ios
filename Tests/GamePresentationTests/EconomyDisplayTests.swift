@@ -7,35 +7,35 @@ import XCTest
 /// economy commands.
 final class EconomyDisplayTests: XCTestCase {
     func testMoneyIsShownInWholeDollarsRoundedAsTheReferenceDoes() {
-        XCTAssertEqual(Money(0).moneyText, "$ 0")
-        XCTAssertEqual(Money(1_234_549).moneyText, "$ 12,345")
-        XCTAssertEqual(Money(1_234_550).moneyText, "$ 12,346", "half a dollar rounds up")
-        XCTAssertEqual(Money(-142_800).moneyText, "$ -1,428")
-        XCTAssertEqual(Money(-150).moneyText, "$ -1", "Math.round(-1.5) is -1")
-        XCTAssertEqual(Money(-151).moneyText, "$ -2")
-        XCTAssertEqual(Money(-49).moneyText, "$ 0")
-        XCTAssertEqual(Money(Int64.max).moneyText, "$ 92,233,720,368,547,758")
-        XCTAssertEqual(Money(Int64.min).moneyText, "$ -92,233,720,368,547,758")
-        XCTAssertEqual(Money(55).centsText, "$ 0.55")
-        XCTAssertEqual(Money(500).centsText, "$ 5.00")
-        XCTAssertEqual(Money(123_405).centsText, "$ 1,234.05")
-        XCTAssertEqual(FareRules.standard.displayText(in: .english), "Flat · $ 5.00")
-        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: .english), "By distance · 5 steps from $ 0.55")
+        XCTAssertEqual(Money(0).moneyText, "\(Money.currencySymbol) 0")
+        XCTAssertEqual(Money(1_234_549).moneyText, "\(Money.currencySymbol) 12,345")
+        XCTAssertEqual(Money(1_234_550).moneyText, "\(Money.currencySymbol) 12,346", "half a dollar rounds up")
+        XCTAssertEqual(Money(-142_800).moneyText, "\(Money.currencySymbol) -1,428")
+        XCTAssertEqual(Money(-150).moneyText, "\(Money.currencySymbol) -1", "Math.round(-1.5) is -1")
+        XCTAssertEqual(Money(-151).moneyText, "\(Money.currencySymbol) -2")
+        XCTAssertEqual(Money(-49).moneyText, "\(Money.currencySymbol) 0")
+        XCTAssertEqual(Money(Int64.max).moneyText, "\(Money.currencySymbol) 92,233,720,368,547,758")
+        XCTAssertEqual(Money(Int64.min).moneyText, "\(Money.currencySymbol) -92,233,720,368,547,758")
+        XCTAssertEqual(Money(55).centsText, "\(Money.currencySymbol) 0.55")
+        XCTAssertEqual(Money(500).centsText, "\(Money.currencySymbol) 5.00")
+        XCTAssertEqual(Money(123_405).centsText, "\(Money.currencySymbol) 1,234.05")
+        XCTAssertEqual(FareRules.standard.displayText(in: .english), "Flat · \(Money(500).centsText)")
+        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: .english), "By distance · 5 steps from \(Money(55).centsText)")
     }
 
     /// Decision 67: the loan's words and the session's loan commands.
     @MainActor
     func testTheLoanIsShownAndTakenInSteps() throws {
         XCTAssertEqual(CompanyAccounts().loanText(in: .english), "No loan")
-        XCTAssertEqual(CompanyAccounts.loanTermsText(in: .english), "$ 100,000 at a time, up to $ 5,000,000, at 5% a year, paid daily")
+        XCTAssertEqual(CompanyAccounts.loanTermsText(in: .english), "\(Money(10_000_000).moneyText) at a time, up to \(Money(500_000_000).moneyText), at 5% a year, paid daily")
         let session = GameSession(world: GameWorld.newGame())
         let balance = session.world.economy.balance
         session.borrowLoanStep()
         XCTAssertEqual(session.world.accounts.loan, CompanyAccounts.loanStep)
         XCTAssertEqual(session.world.economy.balance, balance + CompanyAccounts.loanStep)
-        XCTAssertEqual(session.message?.text, "Borrowed $ 100,000.")
-        XCTAssertEqual(session.world.accounts.loanText(in: .english), "Loan $ 100,000 · $ 14 a day in interest")
-        XCTAssertEqual(session.world.accounts.loanText(in: .traditionalChinese), "貸款 $ 100,000 · 每日利息 $ 14")
+        XCTAssertEqual(session.message?.text, "Borrowed \(Money(10_000_000).moneyText).")
+        XCTAssertEqual(session.world.accounts.loanText(in: .english), "Loan \(Money(10_000_000).moneyText) · \(Money(1_400).moneyText) a day in interest")
+        XCTAssertEqual(session.world.accounts.loanText(in: .traditionalChinese), "貸款 \(Money(10_000_000).moneyText) · 每日利息 \(Money(1_400).moneyText)")
         session.repayLoanStep()
         XCTAssertEqual(session.world.accounts.loan, .zero)
         session.repayLoanStep()
@@ -55,7 +55,7 @@ final class EconomyDisplayTests: XCTestCase {
         let totals = world.recentLedgerTotals()
         XCTAssertEqual(totals.map(\.item), [.operatingCost, .maintenanceCost], "no fares without passengers")
         XCTAssertEqual(totals.reduce(Money.zero) { $0 + $1.amount }, row.amount)
-        XCTAssertTrue(totals[0].amountText.hasPrefix("-$ "))
+        XCTAssertTrue(totals[0].amountText.hasPrefix("-\(Money.currencySymbol) "))
 
         try world.advance(ticks: 60)
         XCTAssertEqual(world.recentLedgerEntries().count, 2)
@@ -113,7 +113,7 @@ final class EconomyDisplayTests: XCTestCase {
             XCTAssertNil(session.world.accounts.fareRules)
             session.setFareRules(.distance(FareRules.standardBands))
             XCTAssertEqual(session.world.accounts.fareRules, .distance(FareRules.standardBands))
-            XCTAssertEqual(session.message?.text, "Fares: By distance · 5 steps from $ 0.55.")
+            XCTAssertEqual(session.message?.text, "Fares: By distance · 5 steps from \(Money(55).centsText).")
         }
     }
 
@@ -121,8 +121,8 @@ final class EconomyDisplayTests: XCTestCase {
     /// price is shown beside it (nothing when cars are free).
     func testTheCarPriceIsShownBesideTheStepperWhenCarsCostMoney() throws {
         var world = try GameWorld(bounds: WorldBounds(width: 4_096, height: 2_048), economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000, car: 4_000_000)))
-        XCTAssertEqual(world.carPriceText(in: .english), "Each car added costs $ 40,000; taking cars off refunds nothing.")
-        XCTAssertEqual(world.carPriceText(in: .traditionalChinese), "每加一節車廂 $ 40,000；減少車廂不退費。")
+        XCTAssertEqual(world.carPriceText(in: .english), "Each car added costs \(Money(4_000_000).moneyText); taking cars off refunds nothing.")
+        XCTAssertEqual(world.carPriceText(in: .traditionalChinese), "每加一節車廂 \(Money(4_000_000).moneyText)；減少車廂不退費。")
         world = try GameWorld(bounds: WorldBounds(width: 4_096, height: 2_048), economy: GameEconomy(balance: 100_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 5_000)))
         XCTAssertNil(world.carPriceText(in: .english), "free cars: nothing to say")
     }
@@ -165,7 +165,7 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(session.world, borrowed, "refused")
         XCTAssertEqual(session.message?.kind, .failure)
         XCTAssertEqual(session.message?.text,
-                       "The company still owes $ 100,000. Free play pays no interest, so repay the loan before switching.")
+                       "The company still owes \(Money(10_000_000).moneyText). Free play pays no interest, so repay the loan before switching.")
         session.repayLoanStep()
         session.setEconomyMode(.free)
         XCTAssertEqual(session.world.accounts.mode, .free)
@@ -277,8 +277,8 @@ extension EconomyDisplayTests {
     /// A loss of less than half a dollar shows as $ 0, but never with a plus.
     func testASmallLossIsNotSignedAsAGain() {
         func text(_ cents: Int64) -> String { LedgerTotal(item: .operatingCost, amount: Money(cents)).amountText }
-        XCTAssertEqual(text(-40), "-$ 0")
-        XCTAssertEqual(text(40), "+$ 0")
-        XCTAssertEqual(text(-150), "-$ 1")
+        XCTAssertEqual(text(-40), "-\(Money.currencySymbol) 0")
+        XCTAssertEqual(text(40), "+\(Money.currencySymbol) 0")
+        XCTAssertEqual(text(-150), "-\(Money.currencySymbol) 1")
     }
 }

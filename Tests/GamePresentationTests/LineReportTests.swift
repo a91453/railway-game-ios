@@ -52,9 +52,9 @@ final class LineReportTests: XCTestCase {
         XCTAssertNil(report.yesterday)
         XCTAssertTrue(report.days.isEmpty, "partial days must stay out of finished-day reports")
         XCTAssertEqual(report.rowText(in: .english),
-                       "Today so far (through last hour): 0 riders · fares $ 0 · peak 0%")
+                       "Today so far (through last hour): 0 riders · fares \(Money(0).moneyText) · peak 0%")
         XCTAssertEqual(report.rowText(in: .traditionalChinese),
-                       "今日（截至上個整點）0 人次 · 票收 $ 0 · 尖峰 0%")
+                       "今日（截至上個整點）0 人次 · 票收 \(Money(0).moneyText) · 尖峰 0%")
         XCTAssertFalse(report.rowText(in: .english).contains("profit"))
         XCTAssertFalse(report.rowText(in: .traditionalChinese).contains("損益"))
     }
@@ -72,9 +72,9 @@ final class LineReportTests: XCTestCase {
         XCTAssertEqual(yesterday.riders, 0)
         XCTAssertLessThan(yesterday.profit, .zero)
         XCTAssertEqual(report.rowText(in: .english),
-                       "Yesterday 0 riders · fares $ 0 · profit \(yesterday.profit.moneyText) · peak 0%")
+                       "Yesterday 0 riders · fares \(Money(0).moneyText) · profit \(yesterday.profit.moneyText) · peak 0%")
         XCTAssertEqual(report.rowText(in: .traditionalChinese),
-                       "昨日 0 人次 · 票收 $ 0 · 損益 \(yesterday.profit.moneyText) · 尖峰 0%")
+                       "昨日 0 人次 · 票收 \(Money(0).moneyText) · 損益 \(yesterday.profit.moneyText) · 尖峰 0%")
         XCTAssertNil(report.operatingRatioPercent, "no fares, no ratio")
         XCTAssertTrue(report.summaryText(in: .english).hasPrefix("Last 2 days · 0 riders"))
         XCTAssertEqual(report.totalProfit, .zero - report.totalCost)

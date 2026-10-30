@@ -85,13 +85,14 @@ final class HangReportTests: XCTestCase {
         print(rows.joined(separator: "\n"))
     }
 
-    /// A real line's card (decision 315) is laid out on the main actor
-    /// when the player taps the line: what each city opening's lines take.
+    /// A real line's card (decision 315): what laying out each city
+    /// opening's lines takes, and, decision 497, what the tap that now lays
+    /// it out off the main actor holds the main actor for.
     func testWhatARealLineOfferTakes() throws {
         _ = try days()
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
         let clock = ContinuousClock()
-        var rows = ["| Opening | Line | Offer ms |", "| --- | --- | ---: |"]
+        var rows = ["| Opening | Line | Offer ms | Tap on the main actor ms |", "| --- | --- | ---: | ---: |"]
         for city in AcquisitionReportTests.cities {
             let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
             let world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
@@ -106,7 +107,10 @@ final class HangReportTests: XCTestCase {
             session.railways = data.railways
             for line in session.buyableRealLines {
                 let spent = clock.measure { _ = session.realLineOffer(for: line) }
-                rows.append(String(format: "| %@ | %@ | %.0f |", city.name, line.id, Self.ms(spent)))
+                // Decision 497: what the tap itself now holds the main actor for.
+                let tap = clock.measure { session.offerRealLine(line) }
+                session.closeRealLineOffer()
+                rows.append(String(format: "| %@ | %@ | %.0f | %.1f |", city.name, line.id, Self.ms(spent), Self.ms(tap)))
             }
         }
         print(rows.joined(separator: "\n"))
@@ -127,6 +131,62 @@ final class HangReportTests: XCTestCase {
         var rows = ["Laying 20 lines: \(lay)"] + Self.header
         rows += try time("Taipei 20 lines", world, days: days)
         rows += try time("Taipei 20 lines, control on", world, days: days, trafficControl: true)
+        print(rows.joined(separator: "\n"))
+    }
+
+    /// The owner's 97.1 report (decision 497, P2-2): going back to the
+    /// start screen takes longer the more saves there are. What writing
+    /// the high-speed demo's autosave takes, what reading the list takes
+    /// with 5, 20 and 50 such saves (with no header kept, with the headers
+    /// kept by an earlier launch, and read again with nothing changed),
+    /// and how long Back to Start takes from
+    /// the tap to the start screen, and holds the main actor for.
+    func testWhatTheSaveListTakes() async throws {
+        _ = try days()
+        let world = try MapFrameCostReportTests.highSpeedSession().world
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HangReport-\(UUID().uuidString)", isDirectory: true)
+        let headers = directory.appendingPathExtension("headers")
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: headers)
+        }
+        let clock = ContinuousClock()
+        var entry: SaveLibrary.Entry?
+        let save = try clock.measure { entry = try SaveLibrary(directory: directory, headers: headers).save(world, as: .manual, at: Date()) }
+        let saved = try XCTUnwrap(entry)
+        let file = directory.appendingPathComponent(saved.id)
+        let bytes = try XCTUnwrap(FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int)
+        var rows = [
+            String(format: "Saving the high-speed demo: %.0f ms, %.1f MB", Self.ms(save), Double(bytes) / 1_048_576),
+            "| Saves | No header kept ms | Headers kept ms | Read again ms |", "| ---: | ---: | ---: | ---: |",
+        ]
+        var count = 1
+        for target in [5, 20, 50] {
+            while count < target {
+                try FileManager.default.copyItem(at: file, to: directory.appendingPathComponent("save-copy-\(count).json"))
+                count += 1
+            }
+            try? FileManager.default.removeItem(at: headers)
+            var listed = 0
+            let cold = clock.measure { listed = SaveLibrary(directory: directory, headers: headers).entries().count }
+            let library = SaveLibrary(directory: directory, headers: headers)
+            let kept = clock.measure { listed = library.entries().count }
+            let again = clock.measure { listed = library.entries().count }
+            XCTAssertEqual(listed, target)
+            rows.append(String(format: "| %d | %.0f | %.0f | %.0f |", target, Self.ms(cold), Self.ms(kept), Self.ms(again)))
+        }
+        // Back to Start with the 50 saves, the list already read once.
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory, headers: headers), language: .traditionalChinese)
+        launcher.refresh()
+        await launcher.load(saved)?.value
+        XCTAssertNotNil(launcher.session)
+        var leaving: Task<Void, Never>?
+        let start = clock.now
+        let tap = clock.measure { leaving = launcher.returnToStartInBackground() }
+        await leaving?.value
+        let whole = clock.now - start
+        XCTAssertNil(launcher.session)
+        rows.append(String(format: "Back to Start with 50 saves: the tap holds the main actor %.1f ms, the start screen comes after %.0f ms", Self.ms(tap), Self.ms(whole)))
         print(rows.joined(separator: "\n"))
     }
 }

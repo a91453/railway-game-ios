@@ -6,12 +6,80 @@ import SwiftUI
 /// period and, when there is one to compare with, the last. Sections are
 /// headings, subtotals and the total stand out, losses are red. The rows
 /// and their words come from GamePresentation.
+///
+/// An amount never breaks over two lines (a player's report from an iPhone
+/// held sideways: "$ 3,269,8" above "58"). Where the titles and the full
+/// amounts do not fit on one line, each title goes above its amounts; where
+/// even the full amounts do not fit beside each other, they are shown short
+/// (``StatementRow/amountText(_:short:)``).
 struct StatementGrid: View {
     let rows: [StatementRow]
     let currentTitle: String
     let previousTitle: String?
 
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            besideGrid
+            stackedGrid(short: false)
+            stackedGrid(short: true)
+        }
+        .font(.footnote)
+        .monospacedDigit()
+    }
+
+    /// The amount columns: this period's and, when there is one, the last.
+    private var amountColumns: Int { previousTitle == nil ? 1 : 2 }
+
+    /// Each title above its amounts, the amounts at the trailing edge.
+    private func stackedGrid(short: Bool) -> some View {
+        Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 2) {
+            GridRow {
+                Color.clear.frame(width: 0, height: 0)
+                Text(verbatim: currentTitle).fontWeight(.semibold)
+                if let previousTitle {
+                    Text(verbatim: previousTitle).fontWeight(.semibold)
+                }
+            }
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                if row.style == .section {
+                    GridRow {
+                        stackedTitle(row.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.textSecondary)
+                            .padding(.top, 6)
+                            .gridCellColumns(amountColumns + 1)
+                    }
+                } else {
+                    GridRow {
+                        stackedTitle(row.title)
+                            .padding(.top, 4)
+                            .gridCellColumns(amountColumns + 1)
+                    }
+                    .fontWeight(row.style == .item ? .regular : .semibold)
+                    GridRow {
+                        Spacer(minLength: 0)
+                        amount(row.current, row.style, short: short)
+                        if previousTitle != nil {
+                            amount(row.previous, row.style, short: short)
+                        }
+                    }
+                    .fontWeight(row.style == .item ? .regular : .semibold)
+                }
+            }
+        }
+    }
+
+    /// A title across the stacked grid: it wraps to the width there is, and
+    /// does not count when the layouts are measured, so a long title does
+    /// not make the amounts short.
+    private func stackedTitle(_ title: String) -> some View {
+        Text(verbatim: title)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(minWidth: 0, idealWidth: 0, maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The titles beside their amounts, all on one line.
+    private var besideGrid: some View {
         Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 4) {
             GridRow {
                 Text(verbatim: "").gridColumnAlignment(.leading)
@@ -32,22 +100,24 @@ struct StatementGrid: View {
                     }
                 } else {
                     GridRow {
-                        Text(verbatim: row.title).gridColumnAlignment(.leading)
-                        amount(row.current, row.style)
+                        Text(verbatim: row.title)
+                            .lineLimit(1)
+                            .gridColumnAlignment(.leading)
+                        amount(row.current, row.style, short: false)
                         if previousTitle != nil {
-                            amount(row.previous, row.style)
+                            amount(row.previous, row.style, short: false)
                         }
                     }
                     .fontWeight(row.style == .item ? .regular : .semibold)
                 }
             }
         }
-        .font(.footnote)
-        .monospacedDigit()
     }
 
-    private func amount(_ money: Money?, _ style: StatementRow.Style) -> some View {
-        Text(verbatim: money?.moneyText ?? "—")
+    private func amount(_ money: Money?, _ style: StatementRow.Style, short: Bool) -> some View {
+        Text(verbatim: StatementRow.amountText(money, short: short))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .foregroundStyle(style != .item && (money ?? .zero) < .zero ? Theme.error : Theme.textPrimary)
     }
 }

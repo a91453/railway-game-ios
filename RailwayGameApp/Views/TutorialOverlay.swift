@@ -84,6 +84,39 @@ private let tutorialPanels: [TutorialTarget] = [.detailsCard, .sidePanel]
 /// The overlay's coordinates, the frames' (the GeometryReader's).
 private let tutorialOverlaySpace = "tutorial.overlay"
 
+/// The open tutorial card's coordinates, its explanation's.
+private let tutorialExplanationSpace = "tutorial.explanation"
+
+/// What the open card measures, for its height on a phone on its side
+/// (``TutorialCardPlacement/compactMaxHeight(chrome:bodyTop:lineHeight:)``,
+/// decision 498): its explanation scrolls in whole lines. All 0 until the
+/// card is laid out.
+private struct TutorialCardLines: Equatable {
+    /// The whole card.
+    var card: CGFloat = 0
+    /// Its explanation, or the part of it that shows when it scrolls.
+    var explanation: CGFloat = 0
+    /// The explanation above its body: the step's row and title.
+    var bodyTop: CGFloat = 0
+    /// A line of the body.
+    var line: CGFloat = 0
+
+    /// The tallest the card is on a phone on its side: the fixed height
+    /// until all is measured.
+    var compactMaxHeight: Double {
+        let measured = card > 0 && explanation > 0 && line > 0
+        return TutorialCardPlacement.compactMaxHeight(
+            chrome: Double(card - explanation), bodyTop: Double(bodyTop), lineHeight: measured ? Double(line) : 0
+        )
+    }
+
+    /// Sets one measure, leaving changes under half a point alone, so the
+    /// card's height does not move on rounding.
+    mutating func update(_ measure: WritableKeyPath<TutorialCardLines, CGFloat>, to value: CGFloat) {
+        if abs(self[keyPath: measure] - value) >= 0.5 { self[keyPath: measure] = value }
+    }
+}
+
 /// Only the card receives touches: outlining a tool or the map must leave
 /// it usable, because Next waits for the player to perform the step. Kept
 /// across steps, it moves a done step on by itself (decision 188) and
@@ -225,6 +258,9 @@ private struct TutorialCardSlot: View {
     @State private var placed: (folded: Bool, frame: CGRect)?
     /// The step has waited long enough to offer "Skip this step".
     @State private var waitedForSkip = false
+    /// The open card's measures, so that on a phone on its side its
+    /// explanation scrolls in whole lines (decision 498).
+    @State private var lines = TutorialCardLines()
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -279,7 +315,7 @@ private struct TutorialCardSlot: View {
         var placement = placement
         let compact = verticalSizeClass == .compact
         placement.maxWidth = compact ? 320 : 340
-        placement.maxHeight = compact ? TutorialCardPlacement.compactMaxHeight : .infinity
+        placement.maxHeight = compact ? lines.compactMaxHeight : .infinity
         if let placed, placed.folded == isFolded {
             placement.previous = TutorialCardPlacement.Frame(placed.frame)
         }
@@ -302,7 +338,7 @@ private struct TutorialCardSlot: View {
                         choose(folded: false)
                     }
                 } else {
-                    TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
+                    TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips, lines: $lines) {
                         UITestTrace.action("tutorial.fold")
                         choose(folded: true)
                     }
@@ -388,6 +424,8 @@ private struct TutorialCard: View {
     let hint: TutorialHint?
     /// Whether "Skip this step" shows.
     let offersSkip: Bool
+    /// Where its measures go (decision 498).
+    @Binding var lines: TutorialCardLines
     /// Folds the card to its title.
     let fold: () -> Void
     @AccessibilityFocusState private var focusesTitle: Bool
@@ -410,6 +448,9 @@ private struct TutorialCard: View {
                 ScrollView { explanation }
                     .scrollBounceBehavior(.basedOnSize)
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                lines.update(\.explanation, to: height)
+            }
             // Outside the scrolling: what is wrong, and the way out, always show.
             statusRow
             ViewThatFits(in: .horizontal) {
@@ -418,6 +459,9 @@ private struct TutorialCard: View {
             }
         }
         .padding(isCompact ? 12 : 16)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+            lines.update(\.card, to: height)
+        }
         .controlSize(isCompact ? ControlSize.regular : ControlSize.large)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
@@ -477,8 +521,24 @@ private struct TutorialCard: View {
             Text(verbatim: tutorial.step.body(in: session.language))
                 .font(isCompact ? Font.footnote : Font.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(tutorialExplanationSpace)).minY } action: { top in
+                    lines.update(\.bodyTop, to: top)
+                }
+                // One line of the body, in its language's script, whose
+                // lines can be taller than the system font's.
+                .background(alignment: .topLeading) {
+                    Text(verbatim: String(tutorial.step.body(in: session.language).prefix(2)))
+                        .font(isCompact ? Font.footnote : Font.subheadline)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .hidden()
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                            lines.update(\.line, to: height)
+                        }
+                }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .coordinateSpace(.named(tutorialExplanationSpace))
         .foregroundStyle(Theme.textPrimary)
     }
 

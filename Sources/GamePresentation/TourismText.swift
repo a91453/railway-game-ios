@@ -191,8 +191,8 @@ extension GameWorld {
     /// The tourism panel's help text.
     public func tourismHelp(in language: DisplayLanguage) -> String {
         language.text(
-            "Tourists come to a sight from the outside connections and the busiest towns, more at weekends and holidays, by season and in fine weather, and ride to the station within 800 m. A souvenir shop adds a quarter star a level and earns \(Tourism.spendPerLevel / 100) dollars a tourist a level. A hotel within 800 m adds a quarter star too (two count) and takes in \(Tourism.hotelStayPermille / 10)% of the tourists as guests. \(Self.sightseeingTrainHelp(in: language))",
-            "觀光客從外部連接站和最大的城鎮出發，週末與連假更多，看季節與天氣，搭車到 800 公尺內的車站。名產店每級加 0.25 星，每位觀光客每級在店裡花 \(Tourism.spendPerLevel / 100) 元。800 公尺內的飯店也各加 0.25 星（算兩家），並接待 \(Tourism.hotelStayPermille / 10)% 的觀光客住宿。\(Self.sightseeingTrainHelp(in: language))"
+            "Tourists come to a sight from the outside connections and the busiest towns, more at weekends and holidays, by season and in fine weather, and ride to the station within 800 m. A souvenir shop adds a quarter star a level and earns \(Money(Tourism.spendPerLevel).moneyText) a tourist a level. A hotel within 800 m adds a quarter star too (two count) and takes in \(Tourism.hotelStayPermille / 10)% of the tourists as guests. \(Self.sightseeingTrainHelp(in: language))",
+            "觀光客從外部連接站和最大的城鎮出發，週末與連假更多，看季節與天氣，搭車到 800 公尺內的車站。名產店每級加 0.25 星，每位觀光客每級在店裡花 \(Money(Tourism.spendPerLevel).moneyText)。800 公尺內的飯店也各加 0.25 星（算兩家），並接待 \(Tourism.hotelStayPermille / 10)% 的觀光客住宿。\(Self.sightseeingTrainHelp(in: language))"
         )
     }
 }

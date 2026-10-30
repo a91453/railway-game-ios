@@ -443,7 +443,9 @@ struct MapView: View {
                             yieldVersion: realRailwayYieldVersion,
                             clock: realTrainClock,
                             frame: realWorld,
-                            animating: !session.world.clock.isPaused && !reduceMotion && realTrainClock.isMoving,
+                            animating: CoveredMap.glides(
+                                !session.world.clock.isPaused && !reduceMotion && realTrainClock.isMoving, covered: screen.showsMap3D
+                            ),
                             camera: projection
                         )
                         .equatable()
@@ -451,13 +453,15 @@ struct MapView: View {
                     MapTrainCanvas(
                         motion: trainMotion,
                         version: trainMotionVersion,
-                        animating: !session.world.clock.isPaused && trainMotion.isMoving,
+                        animating: CoveredMap.glides(!session.world.clock.isPaused && trainMotion.isMoving, covered: screen.showsMap3D),
                         selectedTrainID: session.selectedTrainID,
                         lights: lights,
                         plain: mapLayers.popTravelMode == .sectionFlow,
                         traffic: traffic,
                         depotRuns: session.world.depotRuns(),
-                        reduceMotion: reduceMotion,
+                        // PERF_3D_COCKPIT: the waits' pulse and a deadlock's
+                        // beat stand still under the 3D map (``CoveredMap``).
+                        reduceMotion: !CoveredMap.glides(!reduceMotion, covered: screen.showsMap3D),
                         running: !session.world.clock.isPaused,
                         language: session.language,
                         linePalette: linePalette,
@@ -503,7 +507,9 @@ struct MapView: View {
                     if showsWeather, mapWeather.sky != .clear || !mapWeather.typhoonStations.isEmpty {
                         MapWeatherLayer(
                             weather: mapWeather,
-                            reduceMotion: reduceMotion,
+                            // PERF_3D_COCKPIT: no rain falls on the 2D map
+                            // under the 3D map (``CoveredMap``).
+                            reduceMotion: !CoveredMap.glides(!reduceMotion, covered: screen.showsMap3D),
                             typhoonStations: session.world.stations.filter { mapWeather.typhoonStations.contains($0.id) }.map(\.location),
                             camera: projection
                         )
@@ -1142,9 +1148,19 @@ struct MapView: View {
                 screen.tutorialMapSites = sites
             }
             .onChange(of: session.world.clock) { _, _ in
-                // While its train glides, the frames move the camera.
-                guard !followsGlide else { return }
+                // While its train glides, the frames move the camera; under
+                // the 3D map nothing does (PERF_3D_COCKPIT, ``CoveredMap``).
+                guard CoveredMap.followsTick(gliding: followsGlide, covered: screen.showsMap3D) else { return }
                 FrameCostMeter.shared.measure(.mapTick) { centerOnFollowedTrain(projection: projection) }
+            }
+            // PERF_3D_COCKPIT: the 3D map closed over a map that stood still
+            // under it: the traffic as it is now, and the camera on its
+            // train at once.
+            .onChange(of: screen.showsMap3D) { was, shown in
+                guard CoveredMap.refreshesOnUncover(wasCovered: was, covered: shown) else { return }
+                traffic = session.trafficOverlay
+                followCamera.reset()
+                centerOnFollowedTrain(projection: projection)
             }
             .onChange(of: session.followedTrain?.id) { _, _ in
                 // A new follow snaps to its train, as the reference's
@@ -1180,6 +1196,9 @@ struct MapView: View {
         // Decision 379: what follows a tick here is timed for the frame
         // readout.
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
+            // PERF_3D_COCKPIT: not under the 3D map, whose closing reads it
+            // again (``CoveredMap``): each change drew the track again.
+            guard CoveredMap.takesTraffic(covered: screen.showsMap3D) else { return }
             // Decision 64, later fix: read with the tick, off the main actor.
             FrameCostMeter.shared.measure(.mapTraffic) { traffic = session.trafficOverlay }
         }
@@ -1784,8 +1803,10 @@ struct MapView: View {
                 .allowsHitTesting(false)
         }
         if let cityTooltip {
+            // Its land value's parts one to a line (a phone's report: on
+            // one line they ran under the side panel), so it is taller.
             CityCellTooltip(info: cityTooltip.info, language: session.language)
-                .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 130)))
+                .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 160)))
                 .allowsHitTesting(false)
         }
         if let sectionFlowTooltip {
@@ -2050,7 +2071,12 @@ struct MapView: View {
     /// Whether the camera follows a train that glides between ticks
     /// (decision 182): then it moves with the train every frame.
     private var followsGlide: Bool {
-        session.isFollowingTrain && !session.world.clock.isPaused && trainMotion.isMoving
+        // PERF_3D_COCKPIT: not under the 3D map, whose cockpit follows the
+        // same train (``CoveredMap``).
+        CoveredMap.followsGlide(
+            following: session.isFollowingTrain, running: !session.world.clock.isPaused,
+            trainsMoving: trainMotion.isMoving, covered: screen.showsMap3D
+        )
     }
 
     /// One step of the camera towards the followed train (``FollowCamera``,

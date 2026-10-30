@@ -24,9 +24,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // added the Kaohsiung and Taichung Green sets, near and far (20
         // models, 107,856 vertices), and made the Ming-Ri #1480's E200
         // and Chu-Kuang coaches (37,716 more vertices than its E500 and
-        // generic coaches).
-        XCTAssertEqual(pack.models.count, 613)
-        XCTAssertEqual(vertices, 3_565_788)
+        // generic coaches). Decision 496 added the Danhai, Ankeng and
+        // Kaohsiung CAF and Citadis light rail sets, near and far (32
+        // models with their windows' models, 679,008 vertices, 27.2 MB a copy).
+        XCTAssertEqual(pack.models.count, 645)
+        XCTAssertEqual(vertices, 4_244_796)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

@@ -25,8 +25,8 @@ struct TourismPanel: View {
                 List {
                     Section {
                         Text(verbatim: language.text(
-                            "\(Money(world.touristsThisYear).displayText) tourists this year",
-                            "今年觀光客 \(Money(world.touristsThisYear).displayText) 人次"
+                            "\(world.touristsThisYear.groupedText) tourists this year",
+                            "今年觀光客 \(world.touristsThisYear.groupedText) 人次"
                         ))
                         .fontWeight(.semibold)
                         .accessibilityIdentifier("tourism.year")
@@ -62,8 +62,8 @@ struct TourismPanel: View {
                                     .foregroundStyle(Theme.textSecondary)
                             }
                             Text(verbatim: language.text(
-                                "Today \(row.today) · yesterday \(row.yesterday) · this year \(Money(row.thisYear).displayText) · last year \(Money(row.lastYear).displayText)",
-                                "今天 \(row.today)・昨天 \(row.yesterday)・今年 \(Money(row.thisYear).displayText)・去年 \(Money(row.lastYear).displayText)"
+                                "Today \(row.today) · yesterday \(row.yesterday) · this year \(row.thisYear.groupedText) · last year \(row.lastYear.groupedText)",
+                                "今天 \(row.today)・昨天 \(row.yesterday)・今年 \(row.thisYear.groupedText)・去年 \(row.lastYear.groupedText)"
                             ))
                             .font(.footnote)
                             .monospacedDigit()

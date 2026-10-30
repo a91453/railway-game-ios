@@ -150,8 +150,8 @@ public struct SectionFlow: Equatable, Sendable {
         let section = sections[section]
         let name = world.station(id: section.to)?.name ?? ""
         let start = Self.hourText(reading.hour), end = Self.hourText((reading.hour + 1) % 24)
-        let load = Money(reading.load).displayText
-        let capacity = reading.capacity > 0 ? Money(reading.capacity).displayText : language.text("none", "無")
+        let load = reading.load.groupedText
+        let capacity = reading.capacity > 0 ? reading.capacity.groupedText : language.text("none", "無")
         let percent = reading.percent.map { "（\($0)%）" } ?? ""
         let lines = section.lines.compactMap { world.line(id: $0)?.name }.joined(separator: language.text(", ", "、"))
         let body = language.text(

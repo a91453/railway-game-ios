@@ -143,6 +143,7 @@ struct StationPanel: View {
                     Button("Done") {
                         screen.panel = nil
                     }
+                    .accessibilityIdentifier("station.done")
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -627,7 +628,8 @@ struct StationPanel: View {
     /// first; the time it is due and how it stands on the second. The
     /// time, the minutes and the capsule never break; where the line is
     /// short the capsule keeps only its symbol, then gives way, and the
-    /// line and the way it goes are cut short first.
+    /// line and the way it goes take a second line before they are cut
+    /// short.
     /// `opens3D`: a tap shows it in 3D (decision 334), marked with the 3D
     /// map's glyph after its minutes.
     private func departureRow(_ row: DepartureBoard.Row, language: DisplayLanguage, opens3D: Bool = false) -> some View {
@@ -671,9 +673,13 @@ struct StationPanel: View {
                         }
                         .layoutPriority(1)
                     }
+                    // Two lines where the line's name is long: on a phone's
+                    // side panel "High Speed Rail, nine stops · to Nangang"
+                    // lost its way after a word.
                     Text(verbatim: departureDetail(row, language: language))
                         .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .font(.caption.monospacedDigit())
             }

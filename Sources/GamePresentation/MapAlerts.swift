@@ -84,7 +84,7 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
     public func text(in language: DisplayLanguage, lineName: String? = nil, subject: String? = nil) -> String {
         switch kind {
         case .crowded(let waiting):
-            language.text("Crowded · \(Money(waiting).displayText)", "擁擠 · \(Money(waiting).displayText) 人")
+            language.text("Crowded · \(waiting.groupedText)", "擁擠 · \(waiting.groupedText) 人")
         case .full:
             language.text("Full", "滿了")
         case .lineWithoutTrains:

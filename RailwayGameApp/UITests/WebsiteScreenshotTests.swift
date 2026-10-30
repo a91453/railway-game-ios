@@ -28,11 +28,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        let panel = app.descendants(matching: .any).matching(identifier: "station.operations").firstMatch
-        XCTAssertTrue(panel.appears(within: 10), "A tap on a bubble opens its station's panel")
-        // The materials line sits lower in the form; bring it into view
-        // when the form has it, without failing the shot if it stays below.
+        // Decision 477: the panel opens at its freight group, scrolled past
+        // the operations at its top (a form leaves out the rows off
+        // screen), as `MapMarkTapUITests` waits for it.
         let materials = app.descendants(matching: .any)["station.materials"].firstMatch
+        XCTAssertTrue(materials.appears(within: 10), "A tap on a bubble opens its station's panel")
         _ = app.dragUntilWhollyOnScreen(materials, drags: 8)
         settle()
         keep("freight-station", app)
@@ -87,7 +87,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        XCTAssertTrue(app.revealFinanceComposition(in: list, below: bar.frame.maxY), "The income donut comes into reach")
+        // The freight scene's simple rules fold the reports under the last
+        // row: open them there and drag back up to the donut, rather than
+        // look for it down the folded list first (`revealFinanceComposition`
+        // spent some 220 of the test's 480 seconds so, run 41032530255).
+        let income = app.descendants(matching: .any)["economy.composition.income"].firstMatch
+        let reports = app.buttons["economy.reports"]
+        if !income.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY), reports.label == "更多報表與設定" {
+            reports.tap()
+        }
+        dragBack(to: income, in: list, below: bar.frame.maxY, in: app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY), "The income donut comes into reach")
         settle()
         keep("finance-composition-day-income", app)
 
@@ -103,7 +113,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("finance-composition-picked", app)
 
         // The week: the first midnight's tax, and the small costs as "Other".
+        // The picker is above the statement, scrolled away by now, and a
+        // row the form has let go is otherwise looked for further down.
         let week = app.buttons["週"].firstMatch
+        dragBack(to: week, in: list, below: bar.frame.maxY, in: app)
         XCTAssertTrue(app.dragUntilWhollyOnScreen(week, in: list, below: bar.frame.maxY), "The period picker comes into reach")
         week.tap()
         XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY), "The week's cost donut comes into reach")
@@ -302,12 +315,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         settle(seconds: 2)
         keep("lines-list", app)
 
+        // On a phone on its side the lines start below the rows over them,
+        // and the form makes a row only once it scrolls in.
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
-        XCTAssertTrue(row.appears(within: 10), "A line's row shows")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "A line's row shows")
         row.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
         settle(seconds: 2)
@@ -315,8 +332,14 @@ final class WebsiteScreenshotTests: XCTestCase {
 
         app.navigationBars.firstMatch.buttons.firstMatch.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "Back to the list")
+        // The network's row is at the list's top, above the line's row.
         let network = app.buttons["lines.network"]
-        XCTAssertTrue(network.appears(within: 10), "The whole network's row shows")
+        let back = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        // Under the pinned search, filter and sort, which a drag must not
+        // begin on.
+        let top = app.linesListTop(under: bar)
+        dragBack(to: network, in: back, below: top, in: app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(network, in: back, below: top), "The whole network's row shows")
         network.tap()
         settle(seconds: 2)
         keep("lines-network", app)
@@ -444,23 +467,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         settle()
 
-        // A bubble picks its station; the tag's pencil opens the station's
-        // panel with the rename alert over it, which is cancelled.
+        // A bubble opens its station's panel at the freight group (decisions
+        // 184 and 477; the map's tag, and its pencil, show only with no
+        // panel open); the toolbar's menu goes up to the riders.
         let alerts = app.buttons.matching(identifier: "map.alert")
         XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        let pencil = app.buttons["map.stationTag.edit"]
-        XCTAssertTrue(pencil.appears(within: 5), "A tap on a bubble picks its station")
-        XCTAssertTrue(pencil.becomesHittable(within: 5))
-        pencil.tap()
-        let rename = app.alerts.firstMatch
-        XCTAssertTrue(rename.appears(within: 5), "The station's panel opens with the rename alert")
-        rename.buttons["取消"].tap()
-        XCTAssertTrue(rename.disappears(within: 5))
+        let materials = app.descendants(matching: .any)["station.materials"].firstMatch
+        XCTAssertTrue(materials.appears(within: 10), "A tap on a bubble opens its station's panel")
         settle()
         keep("chart-station-panel", app)
+        tapButton("station.jump", in: app)
+        tapButton("station.jump.riders", in: app)
+        settle()
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
         let entries = app.descendants(matching: .any)["station.flow.entries"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(entries, in: list), "The trips by hour come into view")
@@ -576,6 +597,27 @@ final class WebsiteScreenshotTests: XCTestCase {
 
     // MARK: - Helpers
 
+    /// Drags `list` back towards its top until `element` exists below
+    /// `top`, for `dragUntilWhollyOnScreen`, which looks further down for
+    /// an element that does not exist. A panel beside the map on a phone
+    /// on its side: `swipeDown()` on the list begins at its middle, on the
+    /// economy's donut or on a line's row, and moved neither list in 12
+    /// swipes (run 41026860196); held drags down the leading margin below
+    /// `top`, as `dragUntilWhollyOnScreen` makes, do.
+    private func dragBack(to element: XCUIElement, in list: XCUIElement?, below top: CGFloat, in app: XCUIApplication) {
+        guard let list, list.exists else { return }
+        let area = list.frame
+        let rows = CGRect(x: area.minX, y: max(area.minY, top) + 8, width: area.width, height: area.maxY - 16 - max(area.minY, top))
+        guard rows.height > 40 else { return }
+        let x = (area.minX + 8 - app.frame.minX) / app.frame.width
+        func point(_ y: CGFloat) -> XCUICoordinate {
+            app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: (rows.minY + rows.height * y - app.frame.minY) / app.frame.height))
+        }
+        for _ in 0..<30 where !(element.exists && element.frame.minY >= top) {
+            point(0.15).press(forDuration: 0.1, thenDragTo: point(0.85), withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+    }
+
     /// One tap on the zoom-in button, when the map has it.
     private func zoomInOnce(_ app: XCUIApplication) {
         let zoomIn = app.buttons["放大"]
@@ -583,6 +625,29 @@ final class WebsiteScreenshotTests: XCTestCase {
             zoomIn.tap()
             settle(seconds: 1)
         }
+    }
+
+    /// Lesson 1's first card on a phone on its side (decision 498): its
+    /// explanation ends on a whole line, the goal not cut in half.
+    func testLessonCard() {
+        let app = launch()
+        defer { app.terminate() }
+        let lessons = app.buttons["start.lessons"]
+        XCTAssertTrue(lessons.appears(within: 15), "The start screen shows Lessons")
+        lessons.waitUntilSettled()
+        lessons.tap()
+        let first = app.buttons["lesson.1.start"]
+        if !first.appears(within: 5), lessons.exists {
+            lessons.waitUntilSettled()
+            lessons.tap()
+        }
+        XCTAssertTrue(first.appears(within: 10), "Lesson 1 is listed")
+        XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start can be tapped")
+        first.tap()
+        let card = app.descendants(matching: .any)["tutorial.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 60), "The lesson's card shows")
+        settle(seconds: 3)
+        keep("lesson-card", app)
     }
 
     private func launch(extra: [String] = []) -> XCUIApplication {

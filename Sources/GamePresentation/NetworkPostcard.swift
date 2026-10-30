@@ -105,10 +105,10 @@ public struct NetworkPostcard: Hashable, Sendable {
     /// first.
     static func figures(lines: Int, figures: CompanyFigures, in language: DisplayLanguage) -> [Figure] {
         let all: [(Int64, Figure)] = [
-            (figures.yesterdayRiders, Figure(value: Money(figures.yesterdayRiders).displayText, label: language.text("riders yesterday", "昨日旅客"))),
+            (figures.yesterdayRiders, Figure(value: figures.yesterdayRiders.groupedText, label: language.text("riders yesterday", "昨日旅客"))),
             (figures.trackMetres, Figure(value: RankMeasure.network.valueText(figures.trackMetres), label: language.text("of track", "路網長度"))),
-            (Int64(figures.stations), Figure(value: Money(Int64(figures.stations)).displayText, label: language.text(figures.stations == 1 ? "station" : "stations", "座車站"))),
-            (Int64(lines), Figure(value: Money(Int64(lines)).displayText, label: language.text(lines == 1 ? "line" : "lines", "條路線"))),
+            (Int64(figures.stations), Figure(value: (Int64(figures.stations)).groupedText, label: language.text(figures.stations == 1 ? "station" : "stations", "座車站"))),
+            (Int64(lines), Figure(value: (Int64(lines)).groupedText, label: language.text(lines == 1 ? "line" : "lines", "條路線"))),
         ]
         return Array(all.filter { $0.0 != 0 }.map(\.1).prefix(figureLimit))
     }

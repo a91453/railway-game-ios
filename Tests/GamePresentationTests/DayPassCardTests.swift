@@ -37,13 +37,13 @@ final class DayPassCardTests: XCTestCase {
         XCTAssertTrue(DayPassCard(world: session.world).isAvailable)
         session.setDayPass(Money(800))
         XCTAssertEqual(session.world.accounts.dayPass, Money(800))
-        XCTAssertEqual(session.message?.text, "Day passes on sale at $ 8.00.")
+        XCTAssertEqual(session.message?.text, "Day passes on sale at \(Money(800).centsText).")
         let card = DayPassCard(world: session.world)
-        XCTAssertEqual(card.statusText(in: .traditionalChinese), "販售中 · $ 8.00")
+        XCTAssertEqual(card.statusText(in: .traditionalChinese), "販售中 · \(Money(800).centsText)")
         XCTAssertEqual(card.suggestedPrice, Money(800), "the price on sale")
         // Worth $10 there and back: at $8 a fifth of the 240 buy, $2 under.
         XCTAssertEqual(card.today.sold, 48)
-        XCTAssertEqual(card.todayText(in: .english), "Today about 48 sold: -$ 96 against what their trips would have paid, and 0 extra rides.")
+        XCTAssertEqual(card.todayText(in: .english), "Today about 48 sold: \(Money(-9_600).signedText) against what their trips would have paid, and 0 extra rides.")
 
         session.setDayPass(Money(1_000))
         XCTAssertEqual(DayPassCard(world: session.world).todayText(in: .english), "Nobody buys at this price today.")

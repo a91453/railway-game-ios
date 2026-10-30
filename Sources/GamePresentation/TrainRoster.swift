@@ -260,9 +260,10 @@ public struct TrainRoster: Equatable, Sendable {
         let dollars = money.amount / 100
         let sign = dollars < 0 ? "-" : ""
         let size = dollars.magnitude
-        if size < 1_000 { return "\(sign)$\(size)" }
-        if size < 999_950 { return "\(sign)$\(tenths(size, 1_000))k" }
-        return "\(sign)$\(tenths(size, 1_000_000))M"
+        let symbol = Money.currencySymbol
+        if size < 1_000 { return "\(sign)\(symbol)\(size)" }
+        if size < 999_950 { return "\(sign)\(symbol)\(tenths(size, 1_000))k" }
+        return "\(sign)\(symbol)\(tenths(size, 1_000_000))M"
     }
 
     /// `value / unit` to one decimal, rounded half up: "5.4"; "12" once
