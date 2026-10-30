@@ -444,7 +444,7 @@
   - NTD1 第五棒 session_01YGNNuo8yfmRdphYxt63KUr（Opus）：#1550 新台幣（存檔 76、決策 499、golden 75），目標 100.1，**99.1 前不合**；合前獨立審查。
   - HANG2 已收工；P2-3～P2-7 在 §4.31，**還沒派**（99.1）。
 - **第 35 任加的**（2026-10-30 約 14:00 UTC）：
-  - ~~PLATFIX（session_01YGNNuqVoNBQQPoDp7Eh4NZ，月台軌道被渡線擋住）~~ **作者取消**（「叫他不用做」，約 14:20 UTC）。
+  - ~~PLATFIX（session_01YGNNuqVoNBQQPoDp7Eh4NZ，月台軌道被渡線擋住）~~ **作者取消**（「叫他不用做」，約 14:20 UTC）。它停手前在 Linux 確認一個既有問題：線的盡頭在轉轍器預定位置外 22 m 以內時，`platformTrackTurnout` 把轉轍器吸到盡頭節點（`distance < spacing` 那支），蓋出的月台軌道那一端不接任何軌道。沒修；併進決策 507 的派工一起修。
   - **月台排法一次蓋好**（玩家建議，作者「好 照你的排」）：**決策 507 預留**。蓋車站時先選排法（單線一岸、單線一島兩線、雙線兩岸、雙線一島、雙線兩島四線），一次蓋完；用 `PlatformTrack`／`DoubleTrack` 的零件組，只動 GamePresentation。目標 100.1（原本排在 PLATFIX 後，PLATFIX 取消），排在車站擴建（506）前面。
   - #1556 審查 P3 四項：作者問過，規劃決定四項都在合併前修（SAVE1 已修 1、2，3、4 在修）。
 - DR1000（session_01YGNNupCW2YCoD2nXrEiuNh，Opus）：作者要合 #1530，在 Codex 分支上 merge main 解衝突，柴油客車 3D 改用 45DR1000，不升存檔。
