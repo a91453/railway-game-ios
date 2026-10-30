@@ -51,13 +51,39 @@ COSTS = {"track", "station", "train"}
 def is_money(where, key):
     if key in COSTS:
         return where.endswith(f".costs.{key}")
+    # A town's growth base is its daily trips, not a land value's base.
+    if key == "base" and ".townGrowth." in where:
+        return False
+    # A building sale's parts (decision 130).
+    if key in SALE and ".buildingSale." in where:
+        return True
     return key in MONEY
+
+
+SALE = {"land", "landRight", "building"}
 
 
 # Changes --verify accepts that are not three times the old value:
 # (file, path) → why. Filled from the run, each one explained in the pull
 # request.
-EXCEPTIONS = {}
+EXCEPTIONS = {
+    ("high-speed.json", ".steps[34].expect.fare"): "NT$4.38 a kilometre (decision 499), not 3 × $0.45",
+    ("high-speed.json", ".steps[35].expect.fare"): "NT$4.38 a kilometre (decision 499), not 3 × $0.45",
+    ("high-speed.json", ".steps[36].expect.fare"): "NT$4.38 a kilometre (decision 499), not 3 × $0.45",
+}
+
+# Fixtures whose ledger amounts may be off 3 × old by up to so many cents:
+# file → (cents, why). An hour's costs, a batch of fares and a day's line
+# shares are rounded to whole dollars once from 3 times the cents, not
+# rounded in dollars and then tripled (decision 499): at most NT$1 a line
+# an hour, so NT$24 a day a line and as much in the balance.
+ROUNDED = {
+    name: (2_100, "an hour's costs rounded to whole NT$ once (decision 499)")
+    for name in ("city-buildings-growth.json", "city-buildings-raise.json", "land-value.json",
+                 "materials-growth.json", "water-terrain.json", "zoning.json")
+}
+ROUNDED["economy.json"] = (200, "an hour's costs and a batch of fares rounded to whole NT$ once (decision 499)")
+ROUNDED["line-accounts.json"] = (4_800, "an hour's costs rounded to whole NT$ once, on each of two lines (decision 499)")
 
 
 # A JSON reader that keeps where each number is in the text.
@@ -240,7 +266,7 @@ def merge(node, actual, where, edits):
 # --verify
 
 def verify(base):
-    problems, scaled, exceptions = [], 0, []
+    problems, scaled, exceptions, rounding = [], 0, [], []
     for path in fixture_files():
         rel = path.relative_to(ROOT).as_posix()
         try:
@@ -274,6 +300,11 @@ def verify(base):
                 if is_money(where, key) and isinstance(a, int) and isinstance(b, int):
                     line += f" (3 × old = {3 * a}, off by {b - 3 * a})"
                 reason = EXCEPTIONS.get((path.name, where))
+                rounded = ROUNDED.get(path.name)
+                if not reason and rounded and is_money(where, key) and isinstance(a, int) and isinstance(b, int) \
+                        and abs(b - 3 * a) <= rounded[0]:
+                    rounding.append(f"{line}: {rounded[1]}")
+                    return
                 if reason:
                     exceptions.append(f"{line}: {reason}")
                 else:
@@ -283,6 +314,7 @@ def verify(base):
 
         walk(old, new, "", None)
     print(f"{scaled} amounts are three times the old one")
+    print(f"{len(rounding)} amounts are within a fixture's rounding of three times the old one (ROUNDED)")
     for line in exceptions:
         print(f"exception: {line}")
     for line in problems:
