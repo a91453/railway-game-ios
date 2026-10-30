@@ -454,6 +454,11 @@ struct ContentView: View {
             // Decision 114: the tools down the leading edge while building,
             // between the pill and the dock.
             let showsRail = BuildToolRail.isShown(session)
+            // 98.1: on a phone, while building, the card's toggle beside the
+            // column's foot (``ToolsColumn``), not in it; there with Undo
+            // and Redo, as one row.
+            let toggleBesideFoot = toolsColumn && showsRail && session.tutorial?.step.usesDetailsCard != true
+            let showsFootRow = toggleBesideFoot || ControlPanel.showsEdits(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             // Decision 224 (5B): the layer strip under the pill, while not
             // building and not in the tutorial; on a phone the building
@@ -608,7 +613,17 @@ struct ContentView: View {
                 // foot, when there is an edit to take back or make again.
                 .overlay(alignment: .bottomLeading) {
                     if toolsColumn {
-                        ControlPanel(session: session, arrangement: .editsRow)
+                        HStack(alignment: .bottom, spacing: ControlPanel.tileGap) {
+                            // While building, the card's toggle stands here,
+                            // beside Build, rather than over the tools (98.1):
+                            // in the column the four tools did not fit.
+                            if toggleBesideFoot {
+                                ControlDetailsToggle(isOpen: isOpen) { detailsChoice = !isOpen }
+                                    .disabled(sidePanel != nil)
+                                    .controlTile()
+                            }
+                            ControlPanel(session: session, arrangement: .editsRow)
+                        }
                             .padding(.leading, dockSize.width + ControlPanel.tileGap)
                             .padding(.bottom, strip + margin)
                             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { editsWidth = $0 }
@@ -636,7 +651,7 @@ struct ContentView: View {
                     // map, not over them.
                     let rowEnd = toolsColumn && screen.mapLeadingRowFrame.width > 0
                         ? screen.mapLeadingRowFrame.maxX - proxy.frame(in: .global).minX : 0
-                    let beside = max(dockSize.width + (toolsColumn && ControlPanel.showsEdits(session) ? editsWidth - dockSize.width : 0), rowEnd)
+                    let beside = max(dockSize.width + (toolsColumn && showsFootRow ? editsWidth - dockSize.width : 0), rowEnd)
                     let isCovered = beside + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
                     if session.tutorial == nil, dockSize != .zero {
                         StationMasterCorner(
@@ -718,7 +733,7 @@ struct ContentView: View {
                         .environment(\.mapInsets, EdgeInsets(
                             top: mapTop,
                             // Past Undo and Redo too when they show.
-                            leading: toolsColumn ? max(dockSize.width, ControlPanel.showsEdits(session) ? editsWidth : 0)
+                            leading: toolsColumn ? max(dockSize.width, showsFootRow ? editsWidth : 0)
                                 : showsRail ? BuildToolRail.width + margin : 0,
                             bottom: dockBottom,
                             trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
@@ -944,8 +959,9 @@ private struct ControlDock: View {
 /// keeps its height: the details card's toggle on top, then the tools
 /// (``ControlPanel/Arrangement/toolsColumn``, Build at the bottom). While
 /// building, the building tools (``BuildToolRail``, decision 114) take the
-/// tools' place, close over Done and Build where they fit, else scrolling
-/// from the column's top. Undo and Redo, when they show, stand beside the
+/// tools' place, with Done close over Build where they fit, else
+/// scrolling from the column's top; the card's toggle then stands beside
+/// Build, with Undo and Redo. Undo and Redo, when they show, stand beside the
 /// column's foot (``ContentView``), not in it: a phone held sideways has
 /// not the height for all of them.
 private struct ToolsColumn: View {
@@ -1005,9 +1021,9 @@ private struct ToolsColumn: View {
         ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }.count
     }
 
-    // The card's toggle stays while building too: a chosen tool keeps the
-    // card open, and folding it shows the map. Not on the tutorial's steps
-    // that point into the card, which keep it open, as in the dock.
+    // Not on the tutorial's steps that point into the card, which keep it
+    // open, as in the dock. While building it stands beside Build instead
+    // (``building(compact:)``).
     private var showsToggle: Bool { session.tutorial?.step.usesDetailsCard != true }
 
     /// Icons alone, scrolling, where even they have not the height.
@@ -1020,34 +1036,19 @@ private struct ToolsColumn: View {
         .tutorialClip()
     }
 
-    /// While building, where it all fits: the building tools close over
-    /// Done and Build, lit (a second tap closes the tools), at the column's
-    /// foot, where the thumb that pressed Build is (decision 382; 98.1, the
-    /// planner); the card's toggle on top, as when not building.
+    /// While building, where it all fits: the building tools and Done in
+    /// one group close over Build, lit (a second tap closes the tools), at
+    /// the column's foot, where the thumb that pressed Build is (decision
+    /// 382; 98.1, the planner). The card's toggle stands beside Build
+    /// instead (``ContentView``): the four tools did not fit with it on a
+    /// phone on its side.
     private func building(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            if showsToggle {
-                cardToggle
-            }
-            if buildingTools > 0 {
-                BuildToolButtons(session: session, includesDone: false)
-                    .controlTile()
-            }
-            buildingFoot
+            BuildToolButtons(session: session)
+                .controlTile()
+            ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
-    }
-
-    /// The tools, then the card's toggle under them: building needs no
-    /// scrolling where the toggle does not fit.
-    @ViewBuilder private var buildingTop: some View {
-        if buildingTools > 0 {
-            BuildToolButtons(session: session, includesDone: false)
-                .controlTile()
-        }
-        if showsToggle {
-            cardToggle
-        }
     }
 
     @ViewBuilder private var buildingFoot: some View {
@@ -1056,22 +1057,21 @@ private struct ToolsColumn: View {
         ControlPanel(session: session, arrangement: .buildEntry)
     }
 
-    /// Icons alone where even they have not the height: the column runs up
-    /// to the board (98.1, the owner: "不是要固定在工具欄最上面嗎": the part
-    /// that scrolls stood low over Done, cut short, the room above it
-    /// empty). Done and Build stand whole at the foot (decision 382, later:
-    /// TestFlight 85.1 had Build cut in half, and Done scrolled out of
-    /// reach); what scrolls over them, from the column's top, the tools
-    /// before the card's toggle, is cut between two buttons or shows most
-    /// of the next, fading there, so it shows more is below. It opens at
-    /// its top, the first tool showing.
+    /// Icons alone where even they have not the height (a real-world
+    /// map's credits under the column on the smaller phones): the column
+    /// runs up to the board (98.1, the owner: "不是要固定在工具欄最上面嗎":
+    /// the part that scrolls stood low over Done, cut short, the room above
+    /// it empty). Done and Build stand whole at the foot (decision 382,
+    /// later: TestFlight 85.1 had Build cut in half, and Done scrolled out
+    /// of reach); the tools over them scroll from the column's top, cut
+    /// between two buttons or showing most of the next, fading there, so it
+    /// shows more is below. It opens at its top, the first tool showing.
     private var buildingScrolling: some View {
-        let shown = ToolColumn.buildingScrollHeight(maxHeight: Double(maxHeight), tools: buildingTools, toggle: showsToggle)
+        let shown = ToolColumn.buildingScrollHeight(maxHeight: Double(maxHeight), tools: buildingTools, toggle: false)
         return VStack(alignment: .center, spacing: 0) {
             ScrollView {
-                VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-                    buildingTop
-                }
+                BuildToolButtons(session: session, includesDone: false)
+                    .controlTile()
             }
             .defaultScrollAnchor(.top)
             .scrollBounceBehavior(.basedOnSize)

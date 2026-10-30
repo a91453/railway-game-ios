@@ -48,10 +48,12 @@ public enum ToolColumn {
 // Later (98.1, the owner: "不是要固定在工具欄最上面嗎"): the bus tool (PR
 // #1263) made four building tools, and on a phone on its side the column
 // no longer fit; anchored at the foot, the part that scrolls stood low over
-// Done, cut after two or three tools, with the room above it empty. Where
-// it all fits the tools stand close over Done and Build, by the thumb (the
-// planner); where it does not, the column runs up to the board, the tools
-// scrolling from its top, the first of them showing.
+// Done, cut after two or three tools, with the room above it empty. The
+// card's toggle now stands beside Build while building, so the four tools
+// and Done, in one group, fit over Build on most phones on their side, by
+// the thumb (the planner); where they do not (a real-world map's credits
+// under the column), the column runs up to the board, the tools scrolling
+// from its top, the first of them showing.
 extension ToolColumn {
     /// A button's height with its icon alone: 32 and the button style's 4
     /// above and below.
@@ -66,10 +68,11 @@ extension ToolColumn {
     }
 
     /// The building column's height with its icons alone: the card's
-    /// toggle when it shows (`toggle`), the `tools` building tools, Done
-    /// and Build, each apart.
-    public static func buildingHeight(tools: Int, toggle: Bool) -> Double {
-        scrollingContent(tools: tools, toggle: toggle, done: false).height + 2 * (tileGap + tileHeight(buttons: 1))
+    /// toggle when it shows (`toggle`; on a phone it stands beside Build
+    /// instead since 98.1), the `tools` building tools and Done in one
+    /// group, and Build.
+    public static func buildingHeight(tools: Int, toggle: Bool = false) -> Double {
+        scrollingContent(tools: tools, toggle: toggle).height + tileGap + tileHeight(buttons: 1)
     }
 
     /// How tall the part over Done and Build is shown where the whole
