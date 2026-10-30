@@ -447,7 +447,8 @@ private struct BuildConfirmation {
             // Decision 468, later: a trace along a real line for sale says
             // so, and the pill offers its purchase card.
             let sale = session.tracedSaleHint
-            let lines = [preview.crossoverNote, sale?.text, sale?.shortfall].compactMap(\.self)
+            let hint = session.networkFollowsTrack ? preview.freeFirstHint(in: session.language) : nil
+            let lines = [hint, preview.crossoverNote, sale?.text, sale?.shortfall].compactMap(\.self)
             caption = lines.isEmpty ? nil : lines.joined(separator: "\n")
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
