@@ -220,13 +220,19 @@ public final class GameLauncher {
     public var showsFirstLineOffer = true
 
     /// Decision 508: the player's answer to the station master's offer of
-    /// the tutorial: lesson 1 at once, or each first-line step named.
+    /// the tutorial: lesson 1 at once, the game being played kept in the
+    /// saves first, or each first-line step named.
     public func chooseFirstLineGuide(_ choice: FirstLineGuide.Choice) {
         if preferences.firstLineGuide != choice {
             preferences.firstLineGuide = choice
             savePreferences()
         }
-        if choice == .tutorial { startTutorial() }
+        guard choice == .tutorial else { return }
+        // Review L2-1: the game being played is written first, as Back to
+        // Start writes it, so the lesson leaves it in the saves; one that
+        // cannot be written is not left.
+        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
+        startTutorial()
     }
 
     /// Whether the start screen shows the "What's New" card (decision
