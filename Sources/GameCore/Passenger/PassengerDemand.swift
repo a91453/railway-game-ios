@@ -311,7 +311,8 @@ extension GameWorld {
     /// operating day starts, everyone still waiting at any station goes
     /// home, counted as abandoned at their original station, as when a
     /// station closes (``abandonPassengers(waitingAt:)``). Nobody waits
-    /// through the night; riders on board are not touched.
+    /// through the night; riders on board are not touched. After the
+    /// hour's settlement, so the hour that ends counts who waited in it.
     mutating func sendWaitingPassengersHome(at now: GameTime) {
         let day = GameTime.secondsPerDay
         guard (now.seconds % day + day) % day == LineAcquisition.sameDayCutoff else { return }

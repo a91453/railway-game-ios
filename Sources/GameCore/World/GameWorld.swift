@@ -2763,9 +2763,9 @@ public struct GameWorld: Equatable, Sendable {
                     release = passengerRelease()
                     releasedFrom = start
                 }
-                sendWaitingPassengersHome(at: start)
                 tickFreight(at: start)
                 settleAccounts(at: start, memo: &memo)
+                sendWaitingPassengersHome(at: start)
                 if release != nil {
                     releasePassengers(at: start, &release!)
                 }
@@ -2904,9 +2904,9 @@ public struct GameWorld: Equatable, Sendable {
                     // theirs, minute by minute.
                     for step in 0..<idle {
                         let time = GameTime(seconds: clock.now.seconds + step * minute)
-                        sendWaitingPassengersHome(at: time)
                         tickFreight(at: time)
                         settleAccounts(at: time, memo: &memo)
+                        sendWaitingPassengersHome(at: time)
                         if release != nil {
                             releasePassengers(at: time, &release!)
                         }
