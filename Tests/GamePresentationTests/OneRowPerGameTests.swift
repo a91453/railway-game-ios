@@ -91,6 +91,20 @@ final class OneRowPerGameTests: XCTestCase {
         XCTAssertNil(shared["row"])
     }
 
+    /// The headers kept for the list (decision 497) keep the row too, in
+    /// this launch and the next, without reading the save again.
+    func testTheKeptHeadersKeepTheRow() throws {
+        let headers = directory.appendingPathExtension("headers")
+        defer { try? FileManager.default.removeItem(at: headers) }
+        let library = SaveLibrary(directory: directory, headers: headers)
+        try library.save(world(after: 1), as: .autosave, at: date(0), row: "save-a.json")
+        XCTAssertEqual(library.entries().first?.row, "save-a.json")
+        XCTAssertEqual(library.headersRead, 0)
+        let nextLaunch = SaveLibrary(directory: directory, headers: headers)
+        XCTAssertEqual(nextLaunch.entries().first?.row, "save-a.json")
+        XCTAssertEqual(nextLaunch.headersRead, 0)
+    }
+
     func testANewGameKeepsTheAutosaveInItsRow() throws {
         let library = SaveLibrary(directory: directory)
         let row = try library.save(world(after: 1), news: NewsLog(), as: .manual, at: date(0), named: "Mine")

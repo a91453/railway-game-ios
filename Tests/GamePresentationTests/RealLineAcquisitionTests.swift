@@ -510,9 +510,24 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(rows.dropLast().map(\.amount).reduce(.zero, +), rows.last?.amount)
         XCTAssertEqual(offer.summaryText(in: .traditionalChinese), "三貂嶺—菁桐：7 站、3 列車與真實班次")
         XCTAssertNil(offer.problem, offer.problem ?? "")
+        let today = RealLineAcquired.startsToday(at: session.world.clock.now)
         XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
         XCTAssertNil(session.shownRealLineOffer)
-        XCTAssertNotNil(session.lastLineAcquired)
+        XCTAssertEqual(session.lastLineAcquired?.startsToday, today)
+        XCTAssertEqual(session.lastLineAcquired?.handoverText(in: .traditionalChinese), today ? "今天首班車起由你經營" : "明天首班車起由你經營")
+    }
+
+    /// BUGHUNT_BUILD P3-2: a line bought before four in the morning runs
+    /// that day's runs (``LineAcquisition/firstServiceDay(at:)``), so the
+    /// card and the message say today's first train, not tomorrow's.
+    func testALineBoughtBeforeFourRunsFromTodaysFirstTrain() {
+        let day = GameTime.secondsPerDay, hour = GameTime.secondsPerHour
+        XCTAssertTrue(RealLineAcquired.startsToday(at: GameTime(seconds: 3 * hour)))
+        XCTAssertTrue(RealLineAcquired.startsToday(at: GameTime(seconds: 2 * day + 4 * hour - 1)))
+        XCTAssertFalse(RealLineAcquired.startsToday(at: GameTime(seconds: 2 * day + 4 * hour)))
+        XCTAssertFalse(RealLineAcquired.startsToday(at: GameTime(seconds: 23 * hour)))
+        XCTAssertEqual(RealLineAcquired.handoverText(today: true, in: .traditionalChinese), "今天首班車起由你經營")
+        XCTAssertEqual(RealLineAcquired.handoverText(today: false, in: .traditionalChinese), "明天首班車起由你經營")
     }
 }
 

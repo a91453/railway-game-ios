@@ -451,7 +451,7 @@ final class RealRailwaysTests: XCTestCase {
             for part in ["© OpenMapTiles", "© OpenStreetMap", "ODbL", "CC BY 4.0", "SIL Open Font License 1.1"] {
                 XCTAssertTrue(baseMap.notice.contains(part), part)
             }
-            XCTAssertTrue(baseMap.links.contains { $0.url.hasSuffix("Resources/Licenses/NotoSans-OFL.txt") })
+            XCTAssertTrue(baseMap.links.contains { $0.url.hasPrefix("https://openfontlicense.org/") })
             // Decision 234: the ported earcut's ISC notice in full, and
             // puff's origin.
             let ground = try XCTUnwrap(credits.first { $0.id == "map3DGround" })
