@@ -45,6 +45,14 @@ public enum WhatsNew {
                     english: "When a stretch of track can't be built, the build card names the one reason why.",
                     chinese: "軌道蓋不了時，建造卡會直接說是什麼原因。"
                 ),
+                Line(
+                    english: "With no line yet, the Lines panel says what is missing and takes you to Build, and the station master offers the tutorial.",
+                    chinese: "還沒有路線時，路線面板會說缺什麼並帶你去建設，站長也會先問要不要教學。"
+                ),
+                Line(
+                    english: "Tracing a real line you can buy says what it costs, and Build has a Buy Line button.",
+                    chinese: "描線經過可收購的真實路線時會提示價格，建設裡也多了「收購路線」。"
+                ),
             ],
             fixes: [
                 Line(
@@ -66,6 +74,10 @@ public enum WhatsNew {
                 Line(
                     english: "The game menu shows labels beside its buttons on iPad and on an iPhone held upright.",
                     chinese: "iPad 與直拿的 iPhone，遊戲選單的按鈕旁有文字。"
+                ),
+                Line(
+                    english: "On an iPhone held sideways, the Lines panel shows your lines first, panel titles wrap instead of being cut, and the four building tools fit without scrolling.",
+                    chinese: "iPhone 橫拿時，路線面板先列出你的路線，面板標題不再被切，四個建設工具不用捲。"
                 ),
             ]
         ),
