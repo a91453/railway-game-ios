@@ -19,49 +19,64 @@ struct RealWorldLoadingView: View {
     /// The name the player gave the company on the postcard.
     @AppStorage("postcard.companyName") private var companyName = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var shown = Date.now
 
     var body: some View {
         let company = NetworkPostcard.companyName(companyName, in: language)
         let preparing = language.text("Preparing the map…", "正在準備地圖…")
-        VStack(spacing: 20) {
-            TimelineView(.animation(paused: reduceMotion)) { timeline in
-                Canvas { context, size in
-                    draw(in: &context, size: size, elapsed: timeline.date.timeIntervalSince(shown))
+        // Decision 473: sideways on an iPhone (compact height) the lines
+        // sit left of the text so the whole screen fits.
+        let sideBySide = verticalSizeClass == .compact
+        GeometryReader { geometry in
+            let side = LoadingLayout.mapSide(height: geometry.size.height, sideBySide: sideBySide)
+            let layout = sideBySide ? AnyLayout(HStackLayout(spacing: 24)) : AnyLayout(VStackLayout(spacing: 20))
+            layout {
+                TimelineView(.animation(paused: reduceMotion)) { timeline in
+                    Canvas { context, size in
+                        draw(in: &context, size: size, elapsed: timeline.date.timeIntervalSince(shown))
+                    }
                 }
-            }
-            .frame(width: 220, height: 220)
-            .accessibilityHidden(true)
-            VStack(spacing: 8) {
-                Text(verbatim: company)
-                    .font(.system(.title2, design: .rounded).weight(.heavy))
-                    .foregroundStyle(Theme.textPrimary)
-                if let place = loading.place {
-                    Text(verbatim: place)
-                        .font(.headline)
-                        .foregroundStyle(Theme.primary)
+                .frame(width: side, height: side)
+                .accessibilityHidden(true)
+                VStack(spacing: 20) {
+                    titles(company: company, preparing: preparing)
+                    progress
+                    Button(action: cancel) {
+                        Text(verbatim: loading.cancelTitle(in: language))
+                            .font(.body.weight(.semibold))
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                    .accessibilityIdentifier("loading.cancel")
                 }
-                Text(verbatim: preparing)
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: sideBySide ? 320 : nil)
             }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 24)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(Text(verbatim: [company, loading.place, preparing].compactMap { $0 }.joined(separator: ", ")))
-            .accessibilityIdentifier("loading.realWorld")
-            progress
-            Button(action: cancel) {
-                Text(verbatim: loading.cancelTitle(in: language))
-                    .font(.body.weight(.semibold))
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 44)
-            }
-            .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-            .accessibilityIdentifier("loading.cancel")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
+    }
+
+    private func titles(company: String, preparing: String) -> some View {
+        VStack(spacing: 8) {
+            Text(verbatim: company)
+                .font(.system(.title2, design: .rounded).weight(.heavy))
+                .foregroundStyle(Theme.textPrimary)
+            if let place = loading.place {
+                Text(verbatim: place)
+                    .font(.headline)
+                    .foregroundStyle(Theme.primary)
+            }
+            Text(verbatim: preparing)
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: [company, loading.place, preparing].compactMap { $0 }.joined(separator: ", ")))
+        .accessibilityIdentifier("loading.realWorld")
     }
 
     /// The step being done, and the bar of the steps finished: it moves
