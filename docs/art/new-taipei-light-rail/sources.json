@@ -1,0 +1,337 @@
+{
+  "origin": "Original Swift vertex geometry; visual study of TRSC, NTMetro and New Taipei DORTS primary sources",
+  "date": "2026-10-29",
+  "license": "Project-authored geometry; source media copyright retained, observation only",
+  "public_use": "Only new Swift geometry and derived model renders; source images and private reference paths excluded",
+  "sources": [
+    {
+      "id": "operator",
+      "url": "https://www.ntmetro.com.tw/basic/?node=10012",
+      "file": "operator.html",
+      "sha256": "17ee11074262fc38a4ada03f8a8872e1f0533139e98c4c4ea8ca0b7686b01fdf",
+      "bytes": 55455,
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "maker",
+      "url": "https://www.trsc.com.tw/train/tran-58ad2b69be798",
+      "file": "maker.html",
+      "sha256": "3c967de2f3b5c85e4d4e91cd7ef2fa5cbfeb0c72d9d735022173b20a2cc3456e",
+      "bytes": 13014,
+      "author": "TRSC",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "voith",
+      "url": "https://www.voith.com/corp-en/Voith_Engineering_Services_PM_TRSC_ENG.pdf",
+      "file": "voith.pdf",
+      "sha256": "1fadad7b6964dd39ad5ea266f70c25fa05e4122f8022056c76f5d2775d852662",
+      "bytes": 33560,
+      "author": "Voith",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "official technical publication"
+    },
+    {
+      "id": "bim",
+      "url": "https://www.dorts.ntpc.gov.tw/cdn/file/20211117/88edc200-ffce-4f1d-8101-1f49bc01773e.pdf",
+      "file": "bim.pdf",
+      "sha256": "bcb3b6f94f06756e24cb21aa026d5454b0f82b7ca6ba9932a69a66d9bfb94e03",
+      "bytes": 5353341,
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "official technical publication"
+    },
+    {
+      "id": "localization",
+      "url": "https://www.dorts.ntpc.gov.tw/cdn/file/20230426/f2a40d86-3a14-4188-ba68-e42dea1fb334.pdf",
+      "file": "localization.pdf",
+      "sha256": "21950b7d7fe9bd43e73c25f5893c4e6e248d1ee1eb4702d860ba47e460d0e85a",
+      "bytes": 2600955,
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "official technical publication"
+    },
+    {
+      "id": "ankeng-news",
+      "url": "https://www.info.ntpc.gov.tw/2020/03/16/242886/",
+      "file": "ankeng-news.html",
+      "sha256": "e716e33c8723fc40c8a46e4bd8ece86c8852d48df03e480349b2784c532f144e",
+      "bytes": 64191,
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "ankeng-tour",
+      "url": "https://newtaipei.travel/zh-tw/tour/729",
+      "file": "ankeng-tour.html",
+      "sha256": "d24bab447f9c1a725d4e7b192dd702742a205afdbd7397b03c79ebca92c2f632",
+      "bytes": 210624,
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "dual",
+      "url": "https://www.dorts.ntpc.gov.tw/documentary/articleInfo/nalZ4A5gmzeo",
+      "file": "dual.html",
+      "sha256": "25c84f2dd4bbd5a0b984a5ea7e10007acc75c6eb64db5e3ceba1374a2812c46b",
+      "date": "accessed 2026-10-29",
+      "author": "New Taipei City / NTMetro",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "ankeng-delivered",
+      "url": "https://www.dorts.ntpc.gov.tw/documentary/articleInfo/PRV2jEyNmrWv?page=174",
+      "file": "ankeng-delivered.html",
+      "sha256": "a3d6ccae77d122c72bc714765c691ed5fac8b0023b901578ee94851f96c969f9",
+      "date": "accessed 2026-10-29",
+      "author": "New Taipei City / NTMetro",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "danhai-launch",
+      "url": "https://www.ntpc.gov.tw/ch/home.jsp?dataserno=201611160019&id=28",
+      "file": "danhai-launch.html",
+      "sha256": "c408032e7efeaff330bb986c02083aa2d9b90a463b32310e3ec886442af1927b",
+      "date": "accessed 2026-10-29",
+      "author": "New Taipei City / NTMetro",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "danhai-arrival",
+      "url": "https://www.ntpc.gov.tw/ch/home.jsp?dataserno=201612270008&id=28",
+      "file": "danhai-arrival.html",
+      "sha256": "bdbb377d4cd352a45f4289bb97a5eeb785c9107a180116e7b288d51f95ea2210",
+      "date": "accessed 2026-10-29",
+      "author": "New Taipei City / NTMetro",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "webpage"
+    },
+    {
+      "id": "danhai-panto-study",
+      "url": "https://www.dorts.ntpc.gov.tw/cdn/file/20250731/ce6b6149-9ac3-4eae-9369-1b87f74d335f.pdf",
+      "file": "danhai-panto-study.pdf",
+      "sha256": "f22398edf0717c5583dcec7cea27d0fa727e6ed88b5cb06a72e2ce83f5d1d45c",
+      "date": "accessed 2026-10-29",
+      "author": "New Taipei City / NTMetro",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": false,
+      "kind": "official technical publication"
+    },
+    {
+      "url": "https://www.trsc.com.tw/upload/images/img-58ad2b6a20130.JPG",
+      "file": "maker-1.jpg",
+      "sha256": "a8ca8ae0edd5779d1595c87a84202c3d30129b369adfc23885709716255f597b",
+      "page": "maker",
+      "author": "TRSC",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    },
+    {
+      "url": "https://www.trsc.com.tw/upload/images/img-58ad2b6a54bba.JPG",
+      "file": "maker-2.jpg",
+      "sha256": "ff2f3d3a8a174dad3f54e8b90ca48f81e345591abca5b0777fd8d8962530142a",
+      "page": "maker",
+      "author": "TRSC",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    },
+    {
+      "url": "https://www.trsc.com.tw/upload/images/img-58ad2ca929541.jpg",
+      "file": "maker-3.jpg",
+      "sha256": "84f84c7550d28a79f339b85818844193abfb5f9cc7c36ff040daa1d4aea137cf",
+      "page": "maker",
+      "author": "TRSC",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle manufacture/test photograph; not passenger operation"
+    },
+    {
+      "url": "https://www.ntmetro.com.tw/archive/basic/node19/6LuK5buC5YWn6KeAXzIxMTIwNzA5MjAzNA(3D(3D.jpg",
+      "file": "operator-0.jpg",
+      "sha256": "2ad94f507ecc0bb18eed5e4409120b7510037c8b168b47a076fdfb4e32158d1e",
+      "page": "operator",
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    },
+    {
+      "url": "https://www.ntmetro.com.tw/archive/basic/node19/6LuK5buC5bqn5qSFXzIxMTIwNzA5MjAzNA(3D(3D.jpg",
+      "file": "operator-1.jpg",
+      "sha256": "1b52a6ef9d7bac823a6def43e9ff2a677714841a5fbd5153c82134557e25c9a6",
+      "page": "operator",
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    },
+    {
+      "url": "https://www.ntmetro.com.tw/archive/basic/node19/6LuK5buC5aSW6KeAXzIxMTIwNzA5MjAzNA(3D(3D.jpg",
+      "file": "operator-2.jpg",
+      "sha256": "1f650c28590e3a40b6a6ee0365a83502a2123696af8177746703c396b64cc454",
+      "page": "operator",
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    },
+    {
+      "file": "danhai-roof.jpg",
+      "url": "https://storage.googleapis.com/smiletaiwan-cms-cwg-tw/article/201812/article-5c1f265c7e307.jpg",
+      "sha256": "3ee4f452a6349f896b86def88244977333fdb7e55975b4f78f280d0b5dbbd369",
+      "author": "天下微笑台灣; photograph credit not specified on downloaded file",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    },
+    {
+      "file": "ankeng-roof.jpg",
+      "url": "https://www.dorts.ntpc.gov.tw/cdn/image/20250206/163116c5-023a-4237-a8c0-96e402b1d998.jpg",
+      "sha256": "6e7081b6f60045be6627e3d7fdbab9191085204f5dacadd6c581f3af6aa63132",
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    },
+    {
+      "file": "ankeng-side.jpg",
+      "url": "https://wedid.ntpc.gov.tw/cdn/image/20211021/a98b6379-b26d-4356-9625-d87d08c25cdb.jpg",
+      "sha256": "4ef870c51450c155eafb576a0439cb31ee711ea222202a4c314aa365f48bcff5",
+      "author": "New Taipei City / NTMetro",
+      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
+      "viewed": true,
+      "kind": "real vehicle photograph"
+    }
+  ],
+  "private_reference_check": "Completed locally before public research. Existing illustrative models have shortened dimensions and equal-section display contracts; neither geometry nor those engineering assumptions used. Private mapping is in asset README.",
+  "identity": {
+    "ankeng": {
+      "official": "安坑輕軌列車／安坑輕軌電聯車",
+      "series": "TRSC / Voith five-module low-floor LRV; Danhai follow-on procurement",
+      "marketing": "光耀金 is livery, not engineering type",
+      "engineering_type_code": "UNVERIFIED: official operator/manufacturer pages do not assign a 2000 type code; do not derive type designation from fleet digits",
+      "fleet_range": "201–215 sets; 2011–2155 individual module numbers, final digit 1–5. Secondary roster convention; complete official per-vehicle roster UNVERIFIED. Photographs confirm 2011 and 2101.",
+      "batch": "15 follow-on sets / 75 modules; first arrival 2021-09-30, all delivered 2022-04-08; initial operation 2023-02-10",
+      "livery": "ordinary 光耀金; event wraps excluded"
+    },
+    "danhai": {
+      "official": "淡海輕軌列車／淡海輕軌電聯車",
+      "series": "TRSC / Voith five-module low-floor LRV",
+      "marketing": "行武者號 / Warrior is voted exterior name; not evidence of an engineering product code",
+      "engineering_type_code": "UNVERIFIED: no official 1000 type code or CAF Urbos / Skoda Artic family designation found",
+      "fleet_range": "101–115 sets; 1011–1155 modules, final digit 1–5. Secondary roster convention; complete official per-vehicle roster UNVERIFIED. Official/press photos confirm 1011.",
+      "batch": "initial 15 sets / 75 modules; prototype revealed 2016-11-16, arrived 2016-12-23; volume production announced for 2017 (not proof of actual final delivery date); public opening 2018-12-23 / passenger trial 12-24",
+      "livery": "ordinary original water-blue / white wave design, representative 1011; event wraps and temporary special liveries excluded"
+    }
+  },
+  "comparison": [
+    {
+      "component": "overall dimensions, five modules, 100% low floor, gauge 1435mm, 750V overhead/lithium storage",
+      "result": "CONFIRMED_SAME",
+      "source": "operator / maker; 34.45 x 2.65 x 3.75m pantograph lowered; floor 0.35m"
+    },
+    {
+      "component": "main exterior design and three-bogie architecture",
+      "result": "CONFIRMED_SAME",
+      "source": "2020 localization report follows original design; operator same specs; BIM M1/M5 powered, M3 unpowered; actual photographs"
+    },
+    {
+      "component": "blue-white sea waves versus gold paint; delivery batch",
+      "result": "CONFIRMED_DIFFERENT",
+      "source": "operator; localization report; revealed and delivered dates"
+    },
+    {
+      "component": "HVAC supply, roof panels, external panels, floors, selected glass, lighting, paint, cables and seats at delivery",
+      "result": "CONFIRMED_DIFFERENT",
+      "source": "localization December 2020 table3; about21.8%→41.9%; Danhai seats later also upgraded so current seat differences not inferred"
+    },
+    {
+      "component": "exact FRP mold revision, lamp components, windshield part numbers, door suppliers, bogie production revisions, electrical box arrangement dimensions",
+      "result": "INSUFFICIENT_DATA",
+      "source": "no versioned BOM / manufacturing drawing; photos do not prove interchangeability"
+    },
+    {
+      "component": "single central pantograph / dual collector strips",
+      "result": "CONFIRMED_SAME",
+      "source": "BIM formation figure12 and DORTS dual collector article; exact supplier revisions insufficient"
+    },
+    {
+      "component": "all current route assignments / loaned gold sets on Danhai",
+      "result": "INSUFFICIENT_DATA",
+      "source": "secondary sources report 213–215 loans; no authoritative per-run assignment contract; no random assignment implemented"
+    }
+  ],
+  "geometry_sharing": "Only this new family shares a photo-informed external envelope, module role scaffold and primitive surfaces. Independently keyed livery/role entries; no existing train shell modified. Exact housing dimensions are approximations, not a claim that supplier parts are identical. No third party mesh used.",
+  "dimensions": {
+    "official": {
+      "length": 34.45,
+      "width": 2.65,
+      "lowered_height": 3.75,
+      "floor": 0.35
+    },
+    "estimated": {
+      "shell_lengths": [
+        8,
+        6,
+        4.45,
+        6,
+        8
+      ],
+      "gaps": [
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "centres": [
+        13.225,
+        5.725,
+        0,
+        -5.725,
+        -13.225
+      ],
+      "shell_roof": 3.35,
+      "wheel_radius": 0.29,
+      "bogie_axle_spacing": 1.66,
+      "raised_collector_height": 4.355
+    },
+    "confidence": "BIM says end modules nearly8m, suspended nearly6m, centre about4m. Display split fits official overall length; exact engineering joint centre distances unknown. No claim to engineering reproduction."
+  }
+}

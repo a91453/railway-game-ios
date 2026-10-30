@@ -103,3 +103,5 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 台中捷運綠線的玻璃／八輪／屋頂接觸與反例、獨立GLB匯入、Swift編組對照：[`tools/taichung-green`](../taichung-green/README.md)。只提供本型資料與驗收，匯出／交付沿用本共用工具。
 
 高雄紅／橘線現役西門子 studies 專用編組與幾何反例：[tools/kaohsiung](../kaohsiung/README.md)。
+
+新北安坑／淡海輕軌兩款 studies 編組及專用反例：[tools/new-taipei-lrt](../new-taipei-lrt/README.md)。
