@@ -173,8 +173,10 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // each drag here begins on the rows. From the top the long drags
         // in `bringIntoView` carried the switch past the rows (run
         // 40844553127): short drags down to it instead.
+        // Decision 498: on a phone held sideways the switch is under the
+        // lines instead, where `bringIntoView` reaches it going down.
         let bar = app.navigationBars["Lines"].firstMatch
-        if !toggle.exists, bar.exists,
+        if !toggle.exists, bar.exists, UIDevice.current.userInterfaceIdiom != .phone,
            let list = app.collectionViews.allElementsBoundByIndex.first(where: { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }) {
             let top = app.linesListTop(under: bar)
             let rows = CGRect(x: list.frame.minX, y: top, width: list.frame.width, height: list.frame.maxY - 8 - top)
@@ -700,7 +702,21 @@ extension XCUIApplication {
         let list = collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let row = id.map { descendants(matching: .any)["line.trainsRow.\($0)"].firstMatch }
             ?? descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        // Decision 498: on a phone the rows under the lines (Advanced, the
+        // network's) can be in view, the lines above them unmade; the
+        // drags below only look further down for a row that does not
+        // exist, so the list goes back up until one does.
+        if let list, !row.exists {
+            // Below the bar the list runs under.
+            let top = max(list.frame.minY, bar.frame.maxY)
+            let area = CGRect(x: list.frame.minX, y: top, width: list.frame.width, height: list.frame.maxY - top)
+            for _ in 0..<30 where !row.exists {
+                drag(in: area, at: area.minX + 8, from: 0.2, to: 0.8)
+            }
+        }
         XCTAssertTrue(dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "The line's row must come into reach", file: file, line: line)
+        // A tap on a list still moving after the drags only stops it.
+        row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(page.appears(within: 10), "The line's page did not open", file: file, line: line)
         page.waitUntilStill()
@@ -804,7 +820,8 @@ final class ShellLayoutUITests: XCTestCase {
         let build = app.buttons["dock.build"]
         build.tap()
         app.buttons["tool.select"].waitUntilSettled(timeout: 10)
-        assertOneSize(["controls.toggle", "tool.network", "tool.train", "tool.building", "tool.select", "dock.build"],
+        // The card's toggle stands beside Build while building (98.1).
+        assertOneSize(["tool.network", "tool.train", "tool.building", "tool.bus", "tool.select", "dock.build"],
                       in: app, while: "building")
     }
 
