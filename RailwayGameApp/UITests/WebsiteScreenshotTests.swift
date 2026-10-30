@@ -451,6 +451,41 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("lines-network", app)
     }
 
+    /// Decision 512: a line's page opens its train roster, which lets the
+    /// trains be arranged: the roster of one line, then Arrange.
+    func testTrainRosterOfALine() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        let open = app.buttons["line.trainRoster"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The roster's button shows")
+        open.waitUntilSettled()
+        open.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["trainRoster"].firstMatch.appears(within: 10), "The roster opens")
+        settle(seconds: 3)
+        keep("roster-line", app)
+
+        app.buttons["trainRoster.arrange"].tap()
+        XCTAssertTrue(app.staticTexts["trainRoster.arrangeHint"].appears(within: 5), "Arrange says how")
+        settle(seconds: 2)
+        keep("roster-arrange", app)
+    }
+
     /// Decision 478's load charts on the freight scene: a passenger line's
     /// fullest train by day and its riders between stops, then a section's
     /// riders hour by hour in the flow report.
