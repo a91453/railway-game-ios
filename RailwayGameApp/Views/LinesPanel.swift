@@ -130,8 +130,14 @@ struct LinesPanel: View {
                     } else {
                         // Decision 100: a new line first, where the panel beside
                         // the map (decision 106) shows it while stations are
-                        // picked on the map.
-                        draftSection
+                        // picked on the map. Decision 508: in its place, while
+                        // there are not two stations to pick, what is missing
+                        // and the button to Build.
+                        if let need = session.linesPanelFirstLineNeed, need.action == .build {
+                            firstLineSection(need)
+                        } else {
+                            draftSection
+                        }
                         // Decision 101: a line without trains offers them next.
                         if let line = session.selectedLine {
                             trainsSection(line)
@@ -532,6 +538,45 @@ struct LinesPanel: View {
         }
         .disabled(id == nil)
         .accessibilityIdentifier(identifier)
+    }
+
+    /// Decision 508: what the first line still needs, in a sentence, over
+    /// how.
+    private func firstLineHeading(_ need: FirstLineNeed) -> some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: need.title(in: language))
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+            Text(verbatim: need.detail(in: language))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("lines.firstLine")
+    }
+
+    /// Decision 508: at the top of a panel with fewer than two stations,
+    /// in the new line's place, what is missing and the one button that
+    /// goes there: Build, its track tools chosen.
+    private func firstLineSection(_ need: FirstLineNeed) -> some View {
+        let language = session.language
+        return Section {
+            firstLineHeading(need)
+            Button {
+                screen.panel = nil
+                session.selectTool(.network)
+            } label: {
+                Label {
+                    Text(verbatim: need.buttonTitle(in: language))
+                        .fontWeight(.semibold)
+                } icon: {
+                    Image(systemName: need.buttonSymbol)
+                }
+            }
+            .accessibilityIdentifier("lines.firstLine.go")
+        }
     }
 
     /// Decision 315: the real branch lines this map sells; decision 336:
@@ -2371,7 +2416,11 @@ struct LinesPanel: View {
         let draft = session.lineDraft
         let stops = session.lineDraftStops
         return Section {
-            if draft.isEmpty {
+            if draft.isEmpty, let need = session.linesPanelFirstLineNeed {
+                // Decision 508: with no line yet, what this form is for, its
+                // Pick on Map the button that does it.
+                firstLineHeading(need)
+            } else if draft.isEmpty {
                 Text(verbatim: language.text(
                     "Pick the line's first and last stations. The stations the track passes between them are found for you.",
                     "選路線的起點和終點，沿途經過的車站會依軌道自動找出。"

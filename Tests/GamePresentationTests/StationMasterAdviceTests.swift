@@ -28,7 +28,7 @@ final class StationMasterAdviceTests: XCTestCase {
 
         try world.createLine(named: "Main", stops: [Self.alpha, Self.beta])
         XCTAssertEqual(StationMasterAdvice(world: world), .lineWithoutTrains(line: Self.main, name: "Main"))
-        XCTAssertEqual(StationMasterAdvice(world: world)?.text(in: .traditionalChinese), "「Main」還沒有列車。打開路線幫它配車。")
+        XCTAssertEqual(StationMasterAdvice(world: world)?.text(in: .traditionalChinese), "「Main」還沒有列車。打開「路線」幫它配車。")
         let train = try world.purchaseTrain(named: "T1")
         try world.assignTrain(train.id, to: Self.main, pattern: nil)
         XCTAssertNil(StationMasterAdvice(world: world), "all runs well")

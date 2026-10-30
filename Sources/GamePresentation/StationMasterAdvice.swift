@@ -520,7 +520,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .lineWithoutTrains(_, let name):
             language.text(
                 "\(name) has no trains yet. Open Lines and give it one.",
-                "「\(name)」還沒有列車。打開路線幫它配車。"
+                "「\(name)」還沒有列車。打開「路線」幫它配車。"
             )
         case .noPlaceToPass(_, let name):
             language.text(
@@ -536,8 +536,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             )
         case .buildTrack:
             language.text(
-                "Welcome! Tap Build, then Network, and lay some track to begin.",
-                "歡迎！點「建設」，再選「路網」，鋪一段軌道吧。"
+                "Welcome! Tap Build, the hammer at the bottom left, and lay some track to begin.",
+                "歡迎！點左下的鐵鎚「建設」，鋪一段軌道吧。"
             )
         case .buildStation:
             language.text(
@@ -552,7 +552,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .createLine:
             language.text(
                 "Stations ready. Open Lines and join them into a line.",
-                "車站都好了。打開路線，把它們連成一條路線。"
+                "車站都好了。打開「路線」，把它們連成一條路線。"
             )
         case .underserved(_, let name, let percent):
             language.text(
