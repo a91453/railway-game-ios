@@ -2765,6 +2765,7 @@ public struct GameWorld: Equatable, Sendable {
                 }
                 tickFreight(at: start)
                 settleAccounts(at: start, memo: &memo)
+                sendWaitingPassengersHome(at: start)
                 if release != nil {
                     releasePassengers(at: start, &release!)
                 }
@@ -2905,9 +2906,16 @@ public struct GameWorld: Equatable, Sendable {
                         let time = GameTime(seconds: clock.now.seconds + step * minute)
                         tickFreight(at: time)
                         settleAccounts(at: time, memo: &memo)
+                        sendWaitingPassengersHome(at: time)
                         if release != nil {
                             releasePassengers(at: time, &release!)
                         }
+                    }
+                } else if passengers.contains(where: { !$0.waiting.isEmpty }) {
+                    // Decision 504: those still waiting go home at 04:00
+                    // in the minutes skipped too.
+                    for step in 0..<idle {
+                        sendWaitingPassengersHome(at: GameTime(seconds: clock.now.seconds + step * minute))
                     }
                 }
                 clock.advance(basicSteps: idle * minute)

@@ -371,6 +371,15 @@ public enum HelpGuide {
             keywords: "load autosave export import 讀檔 自動存檔 匯出 匯入"
         ),
         HelpEntry(
+            "shareNetwork", .running,
+            question: ("How do I share my network with a friend?", "怎麼把路網分享給朋友？"),
+            answer: (
+                "Open the game menu, choose Make a Postcard, then Share Network. A friend who opens it can start a game from your network or just look round it.",
+                "打開遊戲選單，選「做明信片」，再按「分享路網」。朋友打開後，可以用你的路網開新的一局，或只是看看。"
+            ),
+            keywords: "share friend postcard send 分享 朋友 明信片 傳給"
+        ),
+        HelpEntry(
             "tutorialAgain", .running,
             question: ("How do I see the tutorial again?", "如何再看一次入門教學？"),
             answer: (

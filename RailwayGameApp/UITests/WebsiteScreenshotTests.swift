@@ -686,6 +686,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("first-line-guide-build", app)
     }
 
+    /// The game menu on a phone on its side, its rows side by side icons
+    /// alone (decision 498), and the settings' Rules row, which says
+    /// where the rules are chosen.
+    func testGameMenuAndRules() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let settings = app.buttons["menu.settings"]
+        XCTAssertTrue(settings.appears(within: 30), "The menu opens")
+        settings.waitUntilSettled()
+        settle(seconds: 1)
+        keep("game-menu", app)
+
+        // Touched at its frame's middle, as SettingsUITests does: the
+        // menu's items have no activation point of their own.
+        let frame = settings.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.switches["settings.music"].appears(within: 10), "The settings open")
+        let rules = app.descendants(matching: .any)["settings.rules"].firstMatch
+        XCTAssertTrue(scrollScreen(to: rules, in: app), "The Rules row shows")
+        settle(seconds: 1)
+        keep("settings-rules", app)
+    }
+
     private func launch(extra: [String] = []) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
