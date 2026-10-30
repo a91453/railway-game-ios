@@ -129,10 +129,10 @@ public enum LiuMingchuanChallenge {
     /// about break even.
     /// Riders a day to reach.
     static let ridersTarget: Int64 = 15_000
-    /// What the governor's treasury starts the railway with: $8 million,
+    /// What the governor's treasury starts the railway with: NT$24 million,
     /// enough for the line to Twatutia and its trains; the line on to
     /// Hsinchu is paid for by what that line earns.
-    static let startingBalance = Money(800_000_000)
+    static let startingBalance = Money(2_400_000_000)
     static let year = FinancePeriod.year.days
 
     /// The scenario: the milestones and the riders, steam trains only.

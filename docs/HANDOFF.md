@@ -2238,6 +2238,25 @@
   - App 大 27 MB。
 - **還沒做的**：作者說 10/31 之後才合。合之前要看 CI 還綠、沒有跟 main 衝突。合之後在實機看三條輕軌的近景幀數，以及 500 m 換遠景（UNVERIFIED）。
 
+### 4.31 金額改新台幣 PR-1（決策 499，派工單 NTD1，`ntd1-nt-dollar`，2026-10-30）
+
+第二棒 session_01YGNNuksaQd8BihQwuQ3g6x 壓縮一次後交接（第一棒 session_01YGNNuqEGisgunmnvtfGAEi）。依據 `docs/research/NT_DOLLAR_SWITCH_2026-10-27.md` §5 方案 B（NT$3＝$1）。號碼：存檔 76、決策 499、golden schema 75。
+
+- **做了的**（分支上已推）：
+  - `Money.decodingScale`（TaskLocal）；`SavedGame` 讀 75 版以前的存檔金額 ×3、溢位就拒讀；76 版存檔照讀。高鐵票價舊存檔是 NT$10＝$1，讀完再由 `convertHighSpeedFaresToNewTaiwanDollars` 換成 ×10。`SaveSummary` 寫 `newTaiwanDollars: true`，沒有的舊摘要餘額 ×3。
+  - GameCore 每個金額常數 ×3（營運、維修、電費、人事、貸款、稅、建造、車種、土地價值、站內商業、子公司、觀光、公車、貨運、擴圖、委託報酬上限）。三個不是機械 ×3 的：高鐵每公里 438 分（照官方票價表，台北—左營 NT$1,489）、預設距離票價改整數新台幣 NT$11/14/17/20/24（`standardBands`）、`standardBands(for:)` 四捨五入到整元。
+  - GamePresentation 的開局資金、建造成本、難度、挑戰與成就目標、公司等級門檻 ×3；`HighSpeedFares.centsPerNewTaiwanDollar = 100`。
+  - 測試：`TestSupport.newTaiwanDollars(ofSaveText:)`（照 parent/key 表把存檔文字的金額 ×3，高鐵票價 ×10）、`ConstructionCosts.times(_:)`；SavedGameTests、CompanyBuildingsTests（部分）、SightseeingTrainTests 已改；新增 `SaveFixtures/v76-nt-dollar.json`（由 v75 公車存檔以 `NT_DOLLAR_SAVE_NEW=1` 產生）。SaveFixtures 舊檔一個都沒改。
+- **還沒做的**（下一棒照順序）：
+  1. 跑 `swift test --skip-build --filter GameCoreTests` 和 GamePresentationTests，把單元測試裡的金額字面值 ×3（不是 ×3 的只有四捨五入造成的，逐個看）。交接時這輪跑到 ContinuousTrackPropertyTests，已知失敗的類別：`AreaBuyOutTests`, `AssetAccountsTests`, `BlockSectionsTests`, `BoardingPropertyTests`, `BuildingMaterialsTests`, `BuildingSaleTests`, `BusRouteTests`, `CityBusTripsTests`, `CityDemandTests`, `CityFootprintsTests`, `CityRequestsTests`, `CompanyBuildingsClearingTests`, `CompanyBuildingsTests`；之後的類別還沒看到。SavedGameTests 的 v16 相等改過還沒重跑。
+  2. `FareBandScale.swift` 改整數新台幣：`bandStartStep` 100、範圍 100...30_000、四捨五入到 100。
+  3. golden：寫 `tools/golden-checks/nt_scale.py`，`--rewrite` 把輸入（`initialState.balance`、`initialState.costs`、`setFareRules` 的 fare 與 bands[].fare）×3、schema 改 75（`Tests/GameCoreTests/GoldenScenario.swift:54` 也改 75），跑 golden 測試照實際輸出改期望值；`--verify` 比 base 與 head：金額鍵＝3×舊、非金額鍵不動，例外逐項列進 PR。
+  4. 重錄 9 個 ReplayFixtures，PR 逐檔說明。
+  5. `HighSpeedTests` 的 v69 期望世界：票價 ×10、其他 ×3。
+  6. What's New 一行（`WhatsNew.swift`、`WhatsNewTests`）；`docs/decisions/499.md`（玩家、鐵道迷、開發、美術、音樂各一行）。
+  7. 讀參考庫（`thsr_fare.json` 等）寫 PR 對照表；PR-2 平衡量測照 `.claude/skills/economy-balance/SKILL.md` 給 HEALTHY/CONCERNS/CRITICAL，「之前」用 `docs/research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md` §6。
+  8. 綠了轉 ready、#1041 留「可合併」、告訴遊戲規劃。NT$ 前綴（PR-3）不在這張。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

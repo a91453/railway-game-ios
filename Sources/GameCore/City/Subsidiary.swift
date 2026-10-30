@@ -35,12 +35,13 @@ public enum SubsidiaryRules {
     /// lines that call at them.
     public static let parkCapture: Int64 = 30
     public static let parkLineCapture: Int64 = 5
-    /// What a customer spends, in cents.
+    /// What a customer spends, in cents (of the New Taiwan dollar since
+    /// decision 499, 3 to the dollar these were set in).
     public static func spend(of kind: PlacedBuildingKind) -> Int64 {
         switch kind {
-        case .departmentStore: 1_800
-        case .hotel: 8_500
-        case .amusementPark: 3_500
+        case .departmentStore: 5_400
+        case .hotel: 25_500
+        case .amusementPark: 10_500
         case .temple: SubsidiaryRules.templeSpend
         case .nightMarket: SubsidiaryRules.nightMarketSpend
         default: 0
@@ -59,13 +60,13 @@ public enum SubsidiaryRules {
     /// lamps, incense and a snack at its gate, set so a temple beside the
     /// first line pays back in some 965 days, inside the hotel's 720 to
     /// 1,440 (measured in decision 361).
-    public static let templeSpend: Int64 = 3_000
+    public static let templeSpend: Int64 = 9_000
     /// A temple's incense, lamps and festivals, in hundredths of what it
     /// takes (decision 361).
     public static let templeVariableCostPercent: Int64 = 40
     /// What a night market's visitor spends, in cents (decision 361's
     /// sequel): a few snacks, a drink and a stall game.
-    public static let nightMarketSpend: Int64 = 3_000
+    public static let nightMarketSpend: Int64 = 9_000
     /// A night market's food and its stallholders' share, in hundredths of
     /// what it takes (decision 361's sequel).
     public static let nightMarketVariableCostPercent: Int64 = 60

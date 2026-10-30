@@ -270,8 +270,8 @@ final class CompanyBuildingsTests: XCTestCase {
 
     /// A save as the current version writes it: its own version replaced.
     private static func currentVersion(of data: Data) -> Data {
-        Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 22,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8)
+        Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 22,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8)
     }
 
     /// The world of `v22-company-buildings.json` (decision 94): a managed
@@ -282,7 +282,8 @@ final class CompanyBuildingsTests: XCTestCase {
     /// two nights' worth and the day's rent, upkeep and tax settled.
     private static func companyBuildingsWorld() throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
+            // The save's amounts times 3: what it reads as (decision 499).
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 3_000_000_000, costs: testCosts.times(3)),
             clock: GameClock(speed: .normal)
         )
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
@@ -320,7 +321,7 @@ final class CompanyBuildingsTests: XCTestCase {
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, try Self.companyBuildingsWorld())
         XCTAssertEqual(world.placedBuildings.map { [$0.residents, $0.jobs] }, [[2, 2], [2, 26]])
-        XCTAssertEqual(world.placedBuildings.map(\.buildingCost), [2_048_000, 24_576_000])
+        XCTAssertEqual(world.placedBuildings.map(\.buildingCost), [6_144_000, 73_728_000])
         XCTAssertEqual(world.accounts.assets.filter { $0.kind == .building }.map(\.owner), [1, 2])
         XCTAssertEqual(world.accounts.entries.last?.kind, .dailyProperty)
         XCTAssertGreaterThan(world.accounts.days.last?.propertyRevenue ?? .zero, .zero)
