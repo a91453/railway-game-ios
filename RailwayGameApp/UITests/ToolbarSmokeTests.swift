@@ -715,6 +715,8 @@ extension XCUIApplication {
             }
         }
         XCTAssertTrue(dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "The line's row must come into reach", file: file, line: line)
+        // A tap on a list still moving after the drags only stops it.
+        row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(page.appears(within: 10), "The line's page did not open", file: file, line: line)
         page.waitUntilStill()
