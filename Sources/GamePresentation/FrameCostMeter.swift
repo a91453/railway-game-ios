@@ -318,14 +318,17 @@ public final class FrameCostMeter: @unchecked Sendable {
     }
 
     /// Decision 421: of a frame `milliseconds` long, the `top` longest
-    /// parts timed on the main thread since it began, those holding no
-    /// other part, and what of it no such part was timed in.
+    /// parts timed on the main thread since it began, and what of it no
+    /// part holding no other part was timed in. Decision 505: the pieces
+    /// of a part (a view's body in the view update, the news after a
+    /// tick) are listed too, and the view update; their time is still in
+    /// "other" when their part is not timed apart.
     func frameParts(over milliseconds: Double, top: Int) -> [FrameTimeStall.Part] {
         lock.withLock {
             guard keeping else { return [] }
             var timed = 0.0
             var parts: [FrameTimeStall.Part] = []
-            for part in FrameCostPart.allCases where part.isTimedApart || part == .viewUpdate {
+            for part in FrameCostPart.allCases where part.isOnMainThread {
                 guard let index = Self.partIndex[part], frameParts[index] > 0 else { continue }
                 if part.isTimedApart { timed += frameParts[index] }
                 parts.append(FrameTimeStall.Part(part: part.rawValue, milliseconds: FrameTimeStats.tenth(frameParts[index])))

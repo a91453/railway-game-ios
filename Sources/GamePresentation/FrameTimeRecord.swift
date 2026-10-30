@@ -225,11 +225,24 @@ public struct FrameTimeStall: Codable, Hashable, Sendable {
     /// Seconds from the stretch's start.
     public let at: Double
     public let parts: [Part]
+    /// Decision 505: the game's clock (seconds) when it ended, to tell a
+    /// stall at 06:00 or midnight from one on the hour; `nil` when not
+    /// given (the 3D map, or a record from before).
+    public let game: Int64?
 
-    public init(milliseconds: Double, at: Double, parts: [Part]) {
+    public init(milliseconds: Double, at: Double, parts: [Part], game: Int64? = nil) {
         self.milliseconds = milliseconds
         self.at = at
         self.parts = parts
+        self.game = game
+    }
+
+    /// "day 38 06:47" of ``game``.
+    func gameText(in language: DisplayLanguage) -> String? {
+        guard let game else { return nil }
+        let day = game / GameTime.secondsPerDay + 1, rest = game % GameTime.secondsPerDay
+        let clock = String(format: "%02lld:%02lld", rest / GameTime.secondsPerHour, rest % GameTime.secondsPerHour / 60)
+        return language.text("game day \(day) \(clock)", "遊戲第 \(day) 日 \(clock)")
     }
 }
 
@@ -313,8 +326,14 @@ public struct FrameTimeSegment: Codable, Hashable, Sendable {
             "停頓 50–100 ms ×\(stalls.short)、100–250 ms ×\(stalls.long)、250 ms 以上（嚴重）×\(stalls.severe)"
         )
         if let longest {
-            stallLine += language.text("; longest \(ms(longest.milliseconds)) at \(String(format: "%.1f", longest.at)) s",
-                                       "；最長 \(ms(longest.milliseconds))（第 \(String(format: "%.1f", longest.at)) 秒）")
+            let at = String(format: "%.1f", longest.at)
+            if let game = longest.gameText(in: language) {
+                stallLine += language.text("; longest \(ms(longest.milliseconds)) at \(at) s (\(game))",
+                                           "；最長 \(ms(longest.milliseconds))（第 \(at) 秒，\(game)）")
+            } else {
+                stallLine += language.text("; longest \(ms(longest.milliseconds)) at \(at) s",
+                                           "；最長 \(ms(longest.milliseconds))（第 \(at) 秒）")
+            }
             if !longest.parts.isEmpty {
                 stallLine += language.text(": ", "：") + longest.parts.map { "\($0.title(in: language)) \(ms($0.milliseconds))" }
                     .joined(separator: language.text(", ", "、"))
@@ -419,8 +438,10 @@ public final class FrameTimeMeter: @unchecked Sendable {
     public static let longestSegment = 300.0
     /// A stretch with fewer intervals than this is not kept.
     public static let fewestIntervals = 10
-    /// The parts of the longest stall kept, the longest first.
-    public static let shownParts = 3
+    /// The parts of the longest stall kept, the longest first. Decision
+    /// 505: five, since the view update and the pieces of a part are
+    /// listed too.
+    public static let shownParts = 5
     public static let mostThermalStates = 6
 
     private struct Tally {
@@ -502,10 +523,11 @@ public final class FrameTimeMeter: @unchecked Sendable {
 
     /// A frame at `time` seconds: on screen (3D, `presentedTime`) or the
     /// main thread's beat (2D, the display link's timestamp). A time of 0
-    /// is a frame that never reached the screen. Whether its interval was
-    /// a stall.
+    /// is a frame that never reached the screen. `game` is the game's
+    /// clock then (decision 505), kept with a longest stall. Whether its
+    /// interval was a stall.
     @discardableResult
-    public func frame(at time: Double) -> Bool {
+    public func frame(at time: Double, game: Int64? = nil) -> Bool {
         lock.withLock {
             // Changed where it is, as `drew` and `gpu` do: a copy would
             // copy the interval counts each frame (review J, J2).
@@ -532,7 +554,8 @@ public final class FrameTimeMeter: @unchecked Sendable {
             if milliseconds > tally!.longest?.milliseconds ?? 0 {
                 let parts = tally!.context.screen == .map2D ? (costs?.frameParts(over: milliseconds, top: Self.shownParts) ?? []) : []
                 tally!.longest = FrameTimeStall(
-                    milliseconds: FrameTimeStats.tenth(milliseconds), at: FrameTimeStats.tenth(time - tally!.start), parts: parts
+                    milliseconds: FrameTimeStats.tenth(milliseconds), at: FrameTimeStats.tenth(time - tally!.start), parts: parts,
+                    game: game
                 )
             }
             return true
