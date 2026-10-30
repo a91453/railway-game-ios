@@ -405,7 +405,8 @@ struct ContentView: View {
     /// the map to the screen's edges and the controls inside the safe area
     /// (decision 120). Nothing floats over a real-world map's bottom strip,
     /// whose Apple logo and legal link nothing may cover
-    /// (``AppleMapBackground``).
+    /// (``AppleMapBackground``), but a phone's tools column beside it, the
+    /// strip starting past the column (98.1).
     private var gameLayout: some View {
         GeometryReader { proxy in
             // Decision 367: none of the frame reads the world itself, which
@@ -584,7 +585,7 @@ struct ContentView: View {
                                 maxHeight: CGFloat(ToolColumn.maxHeight(
                                     screenHeight: proxy.size.height,
                                     top: showsLayerStrip ? pillDepth + margin + stripHeight : pillDepth,
-                                    gap: margin, bottom: strip + margin
+                                    gap: margin, bottom: margin
                                 ))
                             ) {
                                 detailsChoice = !isOpen
@@ -607,7 +608,11 @@ struct ContentView: View {
                     .onChange(of: screen.panel) { _, _ in endDrawingUnderTools() }
                     .padding([.leading, .bottom], margin)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
-                    .padding(.bottom, strip)
+                    // 98.1 (the planner's (a)): the column runs down beside
+                    // a real-world map's credits, which start past it
+                    // (``EnvironmentValues/mapCreditsLeading``); the dock
+                    // stands on them.
+                    .padding(.bottom, toolsColumn ? 0 : strip)
                 }
                 // Decision 226: Undo and Redo beside the tools column's
                 // foot, when there is an edit to take back or make again.
@@ -743,6 +748,7 @@ struct ContentView: View {
                         .environment(\.mapButtonsUnderPanel, buttonsUnderPanel)
                         .environment(\.mapDetailsOpen, isOpen)
                         .environment(\.mapSafeArea, proxy.safeAreaInsets)
+                        .environment(\.mapCreditsLeading, toolsColumn ? dockSize.width : 0)
                         .environment(\.mapShowsLayerStrip, showsLayerStrip)
                         // Decision 226 (2026-10-15, the owner): on a phone
                         // the map's layers and expansion buttons stand on
@@ -1057,8 +1063,8 @@ private struct ToolsColumn: View {
         ControlPanel(session: session, arrangement: .buildEntry)
     }
 
-    /// Icons alone where even they have not the height (a real-world
-    /// map's credits under the column on the smaller phones): the column
+    /// Icons alone where even they have not the height (a 12 or 13 mini
+    /// on its side, by 3 points): the column
     /// runs up to the board (98.1, the owner: "不是要固定在工具欄最上面嗎":
     /// the part that scrolls stood low over Done, cut short, the room above
     /// it empty). Done and Build stand whole at the foot (decision 382,

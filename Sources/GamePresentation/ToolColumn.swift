@@ -51,9 +51,11 @@ public enum ToolColumn {
 // Done, cut after two or three tools, with the room above it empty. The
 // card's toggle now stands beside Build while building, so the four tools
 // and Done, in one group, fit over Build on most phones on their side, by
-// the thumb (the planner); where they do not (a real-world map's credits
-// under the column), the column runs up to the board, the tools scrolling
-// from its top, the first of them showing.
+// the thumb (the planner). The column runs down beside a real-world map's
+// credits, which start past it (the planner's (a)), so they take none of
+// its room; where the tools still do not fit (a 12 or 13 mini, by 3
+// points), the column runs up to the board, the tools scrolling from its
+// top, the first of them showing.
 extension ToolColumn {
     /// A button's height with its icon alone: 32 and the button style's 4
     /// above and below.

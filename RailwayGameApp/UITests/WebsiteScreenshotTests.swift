@@ -207,6 +207,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         real.openDemo("demo.realWorld", timeout: 60)
         XCTAssertTrue(real.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
         settle(seconds: 4)
+        // The credits' row starts past the column, which runs down beside
+        // it (98.1, the planner's (a)).
+        let credit = real.buttons["map.credit"]
+        if credit.appears(within: 10) {
+            XCTAssertGreaterThanOrEqual(credit.frame.minX, real.buttons["dock.build"].frame.maxX, "Past the column: \(credit.frame)")
+        }
+        keep("real-world-credits-row", real)
         real.buttons["dock.build"].tap()
         real.buttons["tool.network"].waitUntilSettled()
         settle()
