@@ -208,19 +208,19 @@ final class MapExpansionTests: XCTestCase {
     }
 
     /// One tile more for every 100,000 riders of the best day; the price
-    /// rises by $5 million for each tile owned.
+    /// rises by NT$15 million for each tile owned (decision 499).
     func testTheMilestonesAndPrices() throws {
         var world = try world(seed: nil)
         world.mapExpansion?.bestDayRiders = 199_999
         XCTAssertEqual(world.mapExpansion?.allowance, 2)
         XCTAssertEqual(world.mapExpansion?.nextPrice, 1_500_000_000)
         try world.buyMapTile(MapTile(row: 2, column: 1))
-        XCTAssertEqual(world.economy.balance, 9_500_000_000)
+        XCTAssertEqual(world.economy.balance, 8_500_000_000)
         XCTAssertEqual(world.mapExpansion?.nextPrice, 3_000_000_000)
         XCTAssertThrowsGameError(try world.buyMapTile(MapTile(row: 2, column: 0)), .mapExpansionLocked(ridersNeeded: 200_000))
         world.mapExpansion?.bestDayRiders = 200_000
         try world.buyMapTile(MapTile(row: 2, column: 0))
-        XCTAssertEqual(world.economy.balance, 8_500_000_000)
+        XCTAssertEqual(world.economy.balance, 5_500_000_000)
         XCTAssertEqual(world.mapExpansion?.owned, [MapTile(row: 2, column: 0), MapTile(row: 2, column: 1), middle])
         XCTAssertEqual(MapExpansion.ridersNeeded(toOwn: 25), 2_400_000)
     }
@@ -233,7 +233,7 @@ final class MapExpansionTests: XCTestCase {
         XCTAssertThrowsGameError(try world.buyMapTile(MapTile(row: 1, column: 1), passingMilestone: true), .mapTileNotAdjacent)
         try world.buyMapTile(MapTile(row: 2, column: 1), passingMilestone: true)
         try world.buyMapTile(MapTile(row: 2, column: 0), passingMilestone: true)
-        XCTAssertEqual(world.economy.balance, 8_500_000_000)
+        XCTAssertEqual(world.economy.balance, 5_500_000_000)
         XCTAssertEqual(world.mapExpansion?.owned, [MapTile(row: 2, column: 0), MapTile(row: 2, column: 1), middle])
     }
 
@@ -258,7 +258,7 @@ final class MapExpansionTests: XCTestCase {
     func testFreePlayBuysWithoutAMilestone() throws {
         var world = try world(free: true, seed: nil)
         try world.buyMapTile(MapTile(row: 2, column: 3))
-        XCTAssertEqual(world.economy.balance, 9_500_000_000)
+        XCTAssertEqual(world.economy.balance, 8_500_000_000)
         XCTAssertEqual(world.accounts.assets, [])
         XCTAssertEqual(world.mapTileQuote(MapTile(row: 2, column: 4))?.ridersNeeded, 0)
     }
@@ -302,8 +302,8 @@ final class MapExpansionTests: XCTestCase {
         XCTAssertEqual(world.mapExpansion?.allowance, 3)
         try world.buyMapTile(MapTile(row: 2, column: 1))
         try world.buyMapTile(MapTile(row: 2, column: 0))
-        // $50 a rider of the step for each tile owned: $1.25 million, then $2.5 million.
-        XCTAssertEqual(world.economy.balance, 10_000_000_000 - 125_000_000 - 250_000_000)
+        // NT$150 a rider of the step for each tile owned: NT$3.75 million, then NT$7.5 million.
+        XCTAssertEqual(world.economy.balance, 10_000_000_000 - 375_000_000 - 750_000_000)
         XCTAssertEqual(world.mapExpansion?.nextPrice, 1_125_000_000)
         XCTAssertThrowsGameError(try world.buyMapTile(MapTile(row: 1, column: 2)), .mapExpansionLocked(ridersNeeded: 75_000))
         let quote = try XCTUnwrap(world.mapTileQuote(MapTile(row: 1, column: 2)))
@@ -317,19 +317,19 @@ final class MapExpansionTests: XCTestCase {
         XCTAssertEqual(MapExpansion.ridersNeeded(toOwn: 4), 300_000, "a map that says nothing asks the standard 100,000 a tile")
     }
 
-    /// The price of a tile is $50 for each rider of the step, for each tile
-    /// owned: the standard step's $5 million, a country town's less, and no
+    /// The price of a tile is NT$150 for each rider of the step, for each
+    /// tile owned: the standard step's NT$15 million, a country town's less, and no
     /// overflow at the most.
     func testThePriceFollowsTheStep() throws {
         XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil).nextPrice, 1_500_000_000)
-        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: 21_000).nextPrice, 315_000_000, "$1.05 million")
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: 21_000).nextPrice, 315_000_000, "NT$3.15 million")
         let two = [middle, MapTile(row: 2, column: 3)]
         XCTAssertEqual(MapExpansion(owned: two, townSeed: nil, ridersStep: 21_000).nextPrice, 630_000_000)
-        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: 1).nextPrice, 15_000, "$50")
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: 1).nextPrice, 15_000, "NT$150")
         // A world of the most tiles, all owned but one, at the most.
         let all = (0..<1_023).map { MapTile(row: $0 / 32, column: $0 % 32) }
         let dearest = MapExpansion(owned: all, townSeed: nil, ridersStep: MapExpansion.maximumRidersStep).nextPrice
-        XCTAssertEqual(dearest.amount, 1_023 * 4_294_967_296 * 5_000)
+        XCTAssertEqual(dearest.amount, 1_023 * 4_294_967_296 * 15_000)
         XCTAssertGreaterThan(dearest.amount, 0)
     }
 

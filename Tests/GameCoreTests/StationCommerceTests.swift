@@ -41,7 +41,7 @@ final class StationCommerceTests: XCTestCase {
         world.setEconomyMode(.management)
         world.setLineAccounts(accounts)
         world.setSpeed(.normal)
-        world.economy.earn(Money(2_000_000_000))
+        world.economy.earn(Money(6_000_000_000))
         return world
     }
 
@@ -59,7 +59,9 @@ final class StationCommerceTests: XCTestCase {
     /// (`docs/research/STATION_COMMERCE_2026-10-14.md` §2.3).
     func testTakingsNearEachLevelsMost() {
         XCTAssertEqual(StationCommerceLevel.convenienceStore.takings(people: 0), .zero)
-        XCTAssertEqual(StationCommerceLevel.convenienceStore.takings(people: 4_000), Money(42_800))
+        // 4,000 × 3,000 ÷ 7,000 = 1,714 customers at 75 cents, NT$1,285.50, to
+        // the whole dollar NT$1,285 (decision 499: not 3 × the old $428).
+        XCTAssertEqual(StationCommerceLevel.convenienceStore.takings(people: 4_000), Money(128_500))
         XCTAssertEqual(StationCommerceLevel.arcade.takings(people: 60_000), Money(1_350_000))
         XCTAssertEqual(StationCommerceLevel.mall.takings(people: 60_000), Money(4_860_000))
         XCTAssertEqual(StationCommerceLevel.mall.takings(people: 90_000), Money(6_075_000))
@@ -80,13 +82,13 @@ final class StationCommerceTests: XCTestCase {
         let before = world.economy.balance
         try world.buildStationCommerce(at: b)
         XCTAssertEqual(world.station(id: b)?.commerce, .convenienceStore)
-        XCTAssertEqual(world.economy.balance, before - Money(35_000_000))
+        XCTAssertEqual(world.economy.balance, before - Money(105_000_000))
         XCTAssertThrowsGameError(try world.buildStationCommerce(at: b), .stationCommerceMaxedOut)
         try world.upgradeStationCommerce(at: b)
         try world.upgradeStationCommerce(at: b)
         XCTAssertEqual(world.station(id: b)?.commerce, .mall)
-        XCTAssertEqual(world.economy.balance, before - Money(1_600_000_000))
-        XCTAssertEqual(records(world, of: b).map(\.cost.amount), [35_000_000, 315_000_000, 1_250_000_000], "a record a level")
+        XCTAssertEqual(world.economy.balance, before - Money(4_800_000_000))
+        XCTAssertEqual(records(world, of: b).map(\.cost.amount), [105_000_000, 945_000_000, 3_750_000_000], "a record a level")
         XCTAssertThrowsGameError(try world.upgradeStationCommerce(at: b), .stationCommerceMaxedOut)
         XCTAssertEqual(try roundTrip(world), world)
 
@@ -153,7 +155,7 @@ final class StationCommerceTests: XCTestCase {
         let atSpare = world.stationCommerceDay(of: spare, onDay: day)
         XCTAssertEqual(atSpare.people, 0, "nobody passes a station no line calls at")
         let row = try XCTUnwrap(world.accounts.entries.last { $0.kind == .dailyStationCommerce })
-        XCTAssertEqual(row.breakdown.map(\.amount), [atB.takings, .zero - Money(2 * 6_000)])
+        XCTAssertEqual(row.breakdown.map(\.amount), [atB.takings, .zero - Money(2 * 18_000)])
         XCTAssertEqual(row.amount, atB.net + atSpare.net)
         XCTAssertEqual(try roundTrip(world), world)
     }
@@ -168,7 +170,7 @@ final class StationCommerceTests: XCTestCase {
         let day = world.dayIndex(of: world.clock.now) - 1
         XCTAssertEqual(world.stationCommercePeople(of: b, onDay: day), 0)
         let row = try XCTUnwrap(world.accounts.entries.last { $0.kind == .dailyStationCommerce })
-        XCTAssertEqual(row.amount, .zero - Money(6_000), "the upkeep alone")
+        XCTAssertEqual(row.amount, .zero - Money(18_000), "the upkeep alone")
     }
 
     /// Without line accounts the shops count twice the station's trips.
@@ -224,7 +226,8 @@ final class StationCommerceTests: XCTestCase {
     func testVersionFiftySevenKeepsStationCommerce() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v57-station-commerce.json")
-        var made = try build()
+        // A save before 76 reads its amounts times 3 (decision 499).
+        var made = try NTScale.$factor.withValue(3) { try build() }
         try made.buildStationCommerce(at: b)
         try made.upgradeStationCommerce(at: b)
         try made.upgradeStationCommerce(at: b)
@@ -240,14 +243,19 @@ final class StationCommerceTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 57)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        // Decision 499: the hourly running costs are rounded to the whole
+        // dollar, and a trip's fare is shared between the lines in whole
+        // dollars, both from 3 times the old amounts: a day's rows and the
+        // lines' shares are up to a few hundred dollars from 3 times the
+        // saved ones; every other value is the same.
+        try XCTAssertSameButRounding(world, made, cents: 50_000)
         XCTAssertEqual(world.station(id: b)?.commerce, .mall)
         XCTAssertGreaterThan(world.stationFlow(b, onDay: world.dayIndex(of: world.clock.now) - 1)?.transferred ?? 0, 0)
         var carried = world
         var straight = made
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
-        XCTAssertEqual(carried, straight)
+        try XCTAssertSameButRounding(carried, straight, cents: 50_000)
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 57,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }

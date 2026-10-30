@@ -63,12 +63,12 @@ final class BuildingSaleTests: XCTestCase {
     func testTheBuildingCountsInFullFromHalfFullAndProRataBelow() throws {
         var world = try world()
         let id = try world.placeBuilding(.house, at: Self.housePoint).id
-        // A house holds 9 + 2 = 11. 4 people: 8 / 11 of 2,048,000 is
-        // 1,489,454.5…, rounded down.
+        // A house holds 9 + 2 = 11. 4 people: 8 / 11 of 6,144,000 is
+        // 4,468,363.6…, rounded down (decision 499: not 3 × the old 1,489,454).
         occupy(&world, id, residents: 2, jobs: 2)
-        XCTAssertEqual(world.saleQuote(of: id)?.building, 1_489_454)
+        XCTAssertEqual(world.saleQuote(of: id)?.building, 4_468_363)
         XCTAssertEqual(world.saleQuote(of: id)?.occupancyFactor, 727, "8,000 / 11")
-        // 5 people: 10 / 11, 1,861,818.1….
+        // 5 people: 10 / 11, 5,585,454.5….
         occupy(&world, id, residents: 3, jobs: 2)
         XCTAssertEqual(world.saleQuote(of: id)?.building, 5_585_454)
         // 6 people is more than half of 11: in full.
@@ -76,22 +76,22 @@ final class BuildingSaleTests: XCTestCase {
         XCTAssertEqual(world.saleQuote(of: id)?.building, 6_144_000)
         XCTAssertEqual(world.saleQuote(of: id)?.occupancyFactor, 1_000)
         occupy(&world, id, residents: 9, jobs: 2)
-        XCTAssertEqual(world.saleQuote(of: id)?.price, 3_575_040 + 2_048_000, "full is no more than half full")
+        XCTAssertEqual(world.saleQuote(of: id)?.price, 10_725_120 + 6_144_000, "full is no more than half full")
     }
 
     func testTheBuildingIsWrittenDownOnItsOwnAndTheLandSellsAtItsValueNow() throws {
         var world = try world()
         let id = try world.placeBuilding(.house, at: Self.housePoint).id
-        // A real midnight: the record (5,811,200) is written down a day,
-        // ⌊5,811,200 / 10,800⌋ = 538; the building alone ⌊2,048,000 /
-        // 10,800⌋ = 189.
+        // A real midnight: the record (17,433,600) is written down a day,
+        // ⌊17,433,600 / 10,800⌋ = 1,614; the building alone ⌊6,144,000 /
+        // 10,800⌋ = 568 (not 3 × the old 189: rounded down once).
         try world.advance(ticks: 1_441)
         let record = try XCTUnwrap(world.accounts.assets.first { $0.kind == .building })
         XCTAssertEqual([record.days, record.depreciation.amount], [1, 1_614])
         occupy(&world, id, residents: 4, jobs: 2)
         let quote = try XCTUnwrap(world.saleQuote(of: id))
-        XCTAssertEqual(quote.buildingBookValue, 2_048_000 - 189)
-        XCTAssertEqual(quote.bookValue, 5_811_200 - 538)
+        XCTAssertEqual(quote.buildingBookValue, 6_144_000 - 568)
+        XCTAssertEqual(quote.bookValue, 17_433_600 - 1_614)
         // The land is quoted at its value now, not at what was paid.
         let value = try XCTUnwrap(world.landValue(row: 7, column: 5)?.value)
         XCTAssertEqual(quote.landRight, Money(256 * value))
@@ -106,8 +106,8 @@ final class BuildingSaleTests: XCTestCase {
         occupy(&world, id, residents: 4, jobs: 2)
         let quote = try XCTUnwrap(world.saleQuote(of: id))
         let land = quote.land
-        // 95% of the land now and the building's 2,047,811 in full.
-        XCTAssertEqual(quote.price, land + 2_047_811)
+        // 95% of the land now and the building's 6,143,432 in full.
+        XCTAssertEqual(quote.price, land + 6_143_432)
         let balance = world.economy.balance
         let equity = world.balanceSheet().equity
         let rows = world.accounts.entries
@@ -349,7 +349,9 @@ final class BuildingSaleTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 29)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.saleWorld() })
+        // The sale's quote and the depreciation are rounded once from 3 times
+        // the cost (decision 499).
+        try XCTAssertSameButRounding(world, try NTScale.$factor.withValue(3) { try Self.saleWorld() }, cents: 5)
         XCTAssertTrue(world.placedBuildings.isEmpty)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .building })
         let sold = try XCTUnwrap(world.accounts.capitalDays.first { $0.saleProceeds > .zero })
