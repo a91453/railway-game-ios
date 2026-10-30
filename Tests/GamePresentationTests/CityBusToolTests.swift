@@ -351,6 +351,21 @@ final class CityBusToolTests: XCTestCase {
         XCTAssertEqual(session.world.roads?.built.count, 5)
     }
 
+    /// BUGHUNT_BUILD P3-9: an undo lets go of the stretch picked to take
+    /// up, as the road it names may be gone.
+    func testAnUndoLetsGoOfTheStretchPickedToTakeUp() throws {
+        let session = try session()
+        session.setBusMode(.roads)
+        session.endRoadDrag(from: at(12, 10), to: at(12, 14))
+        XCTAssertTrue(session.confirmRoad())
+        session.tapBusTool(at: at(12, 12), reach: reach)
+        XCTAssertNotNil(session.roadRemoval)
+        session.undo()
+        XCTAssertEqual(session.world.roads?.built.isEmpty, true)
+        XCTAssertNil(session.roadRemoval)
+        XCTAssertEqual(session.roadMapOverlay?.removal.isEmpty, true)
+    }
+
     func testLeavingTheToolOrModeLetsGoOfTheRoadDrawn() throws {
         let session = try session()
         session.setBusMode(.roads)

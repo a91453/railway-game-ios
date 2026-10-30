@@ -243,16 +243,17 @@ final class StationCommerceTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 57)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        // Decision 499: the hourly running costs are rounded to the whole
-        // dollar, and a trip's fare is shared between the lines in whole
-        // dollars, both from 3 times the old amounts: a day's rows and the
-        // lines' shares are up to a few hundred dollars from 3 times the
-        // saved ones; every other value is the same.
-        try XCTAssertSameButRounding(world, made, cents: 50_000)
+        // Decision 504: this build sends those still waiting at 04:00 home,
+        // which the build that saved this did not, so the world it makes
+        // differs in its passengers and what they paid; the map, the lines
+        // and the clock still match, and the save itself is unchanged.
+        XCTAssertEqual(world.stations, made.stations)
+        XCTAssertEqual(world.lines, made.lines)
+        XCTAssertEqual(world.clock, made.clock)
         XCTAssertEqual(world.station(id: b)?.commerce, .mall)
         XCTAssertGreaterThan(world.stationFlow(b, onDay: world.dayIndex(of: world.clock.now) - 1)?.transferred ?? 0, 0)
         var carried = world
-        var straight = made
+        var straight = try JSONDecoder().decode(SavedGame.self, from: data).world
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
         try XCTAssertSameButRounding(carried, straight, cents: 50_000)

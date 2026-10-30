@@ -25,6 +25,42 @@ final class GameMenuLayoutTests: XCTestCase {
         XCTAssertEqual(GameMenuLayout(showsGoals: true, showsTourism: true).sections, GameMenuLayout(showsGoals: false, showsTourism: false).sections)
     }
 
+    /// Decision 498 (UI_AUDIT B2): the rows side by side show their items'
+    /// titles where the screen is tall enough (an iPad, a phone held
+    /// upright), so Settings, Help and the tutorial are not guessed from an
+    /// icon; on a phone on its side, icons, so the six rows stay in reach
+    /// (decision 226, later; SettingsUITests went red when they did not).
+    func testTheRowsSideBySideShowTheirTitlesWhereTheScreenIsTallEnough() {
+        let layout = GameMenuLayout(showsGoals: true, showsTourism: true)
+        XCTAssertEqual(GameMenuLayout.itemStyle(compactHeight: false), .titled)
+        XCTAssertEqual(GameMenuLayout.itemStyle(compactHeight: true), .iconsOnly)
+        // A phone on its side: some 330 points under the status bar and
+        // the HUD. Titled, the six rows would not fit; icons only, they do.
+        let phoneOnItsSide = 330.0
+        XCTAssertGreaterThan(layout.height(itemStyle: .titled), phoneOnItsSide)
+        XCTAssertLessThanOrEqual(layout.height(itemStyle: .iconsOnly), phoneOnItsSide)
+        // The shortest screen of regular height, an iPhone SE upright (667
+        // points), less its status bar and the HUD: titled, they fit.
+        XCTAssertLessThanOrEqual(layout.height(itemStyle: .titled), 667 - 140)
+        // Every row side by side holds at most what titled items show.
+        for row in [layout.shortcuts.count, layout.helpRow.count, layout.settingsRow.count] {
+            XCTAssertLessThanOrEqual(row, GameMenuLayout.itemsInRow)
+        }
+    }
+
+    /// Decision 498 (UI_GAPS D11): help says where sharing the network
+    /// with a friend is (decision 409), found by either language's words.
+    func testHelpSaysHowToShareTheNetwork() throws {
+        for query in ["分享路網", "share network friend", "朋友"] {
+            XCTAssertTrue(HelpGuide.entries(matching: query).contains { $0.id == "shareNetwork" }, query)
+        }
+        let entry = try XCTUnwrap(HelpGuide.entries.first { $0.id == "shareNetwork" })
+        XCTAssertTrue(entry.answer(in: .traditionalChinese).contains("做明信片"))
+        XCTAssertTrue(entry.answer(in: .traditionalChinese).contains("分享路網"))
+        XCTAssertTrue(entry.answer(in: .english).contains("Make a Postcard"))
+        XCTAssertTrue(entry.answer(in: .english).contains("Share Network"))
+    }
+
     /// Decision 414: the idle mode beside Settings, one row, so the first
     /// level keeps its six rows.
     func testTheIdleModeStandsBesideSettings() {

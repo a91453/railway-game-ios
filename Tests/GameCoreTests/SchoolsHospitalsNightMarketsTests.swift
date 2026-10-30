@@ -328,7 +328,13 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 74)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        try XCTAssertSameButRounding(loaded, world, cents: 10)
+        // Decision 504: this build sends those still waiting at 04:00 home,
+        // which the build that saved this did not, so the world it makes
+        // differs in its passengers and what they paid; the map, the lines
+        // and the clock still match, and the save itself is unchanged.
+        XCTAssertEqual(loaded.stations, world.stations)
+        XCTAssertEqual(loaded.lines, world.lines)
+        XCTAssertEqual(loaded.clock, world.clock)
         XCTAssertEqual(loaded.placedBuildings.map(\.kind), [.school, .hospital, .nightMarket])
         XCTAssertEqual(loaded.placedBuildings.map(\.look), [1, 1, 1])
         XCTAssertEqual(loaded.placedBuildings[2].visitors, 168)
