@@ -1,7 +1,7 @@
 {
   "asset": {
-    "status": "VERIFIED",
-    "evidence": "R2 Linux Swift6.4 WAE and 10 tests; native readback/topology/fault probes, Blender, transparent PNG decoding, HTTP viewer/download checks. Independent b04a6d56 checkout rebuilt native/GLB and 62 rendered/selected PNGs plus public comparison identically. Final package metadata/viewer receive a separate reconstruction check. file:// remains UNVERIFIED: browser administration blocks navigation. Source/engineering gaps remain."
+    "status": "UNVERIFIED",
+    "evidence": "Final R2 per-end casting orientation and actual fault probes passed locally; explicit final producer rebuild pending. Prior independent reconstruction was of b04a6d56, before the per-end casting orientation correction."
   },
   "appearance": {
     "status": "UNVERIFIED",

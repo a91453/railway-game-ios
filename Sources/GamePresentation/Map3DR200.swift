@@ -108,7 +108,7 @@ extension StationKitBuilder {
         let outline:[(Float,Float)]=far
             ? [(-0.19,0.84),(0.19,0.84),(0.19,0.98),(-0.055,0.98),(-0.055,1.08),(0.19,1.08),(0.19,1.22),(-0.19,1.22)]
             : [(-0.165,0.84),(0.165,0.84),(0.19,0.865),(0.19,0.955),(0.165,0.98),(-0.04,0.98),(-0.055,0.995),(-0.055,1.065),(-0.04,1.08),(0.165,1.08),(0.19,1.105),(0.19,1.195),(0.165,1.22),(-0.165,1.22),(-0.19,1.195),(-0.19,0.865)]
-        let a=outline.map{Map3DPoint(end*9.755,$0.1,$0.0)},b=outline.map{Map3DPoint(end*10.005,$0.1,$0.0)}
+        let a=outline.map{Map3DPoint(end*9.755,$0.1,end*$0.0)},b=outline.map{Map3DPoint(end*10.005,$0.1,end*$0.0)}
         func cross(_ i:Int,_ j:Int,_ k:Int)->Float { let p=outline[i],q=outline[j],r=outline[k];return (q.0-p.0)*(r.1-p.1)-(q.1-p.1)*(r.0-p.0) }
         var indices=Array(outline.indices),triangles:[[Int]]=[]
         while indices.count>3 {
@@ -129,7 +129,7 @@ extension StationKitBuilder {
         }
         for i in outline.indices {
             let j=(i+1)%outline.count,du=outline[j].0-outline[i].0,dv=outline[j].1-outline[i].1
-            let inside=Map3DPoint(end*9.88,(outline[i].1+outline[j].1)/2+du*0.05,(outline[i].0+outline[j].0)/2-dv*0.05)
+            let inside=Map3DPoint(end*9.88,(outline[i].1+outline[j].1)/2+du*0.05,end*((outline[i].0+outline[j].0)/2-dv*0.05))
             face([a[i],a[j],b[j],b[i]],inside:inside,color:color)
         }
     }

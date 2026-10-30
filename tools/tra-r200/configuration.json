@@ -40,5 +40,8 @@
     "revenue hauling representative formation"
   ],
   "revision": 2,
-  "previous_producer": "65464b23fc0b26058521d362555b9a0d8b550c98"
+  "previous_producer": "65464b23fc0b26058521d362555b9a0d8b550c98",
+  "component_transforms": {
+    "coupler": "Each end casting is oriented outward once (X and lateral sign), independent of whole-locomotive display rotation."
+  }
 }

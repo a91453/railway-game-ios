@@ -45,7 +45,7 @@ function check(vs){
  }
  for(const x of [-3.05,2.45])for(const y of [-.86,.86])for(const z of [.4,1.16])assert(vs.some(v=>tol(v.position[0],x)&&tol(v.position[1],y)&&tol(v.position[2],z)),'fuel tank absent or displaced');
  for(const end of [-1,1]){
-  const solid=firstHit(vs,end,.12,1.03),opening=firstHit(vs,end,-.14,1.03);
+  const solid=firstHit(vs,end,.12*end,1.03),opening=firstHit(vs,end,-.14*end,1.03);
   assert(solid&&tol(solid.x*end,10.005,.002),'coupler casting missing');
   assert(!opening||opening.x*end<9.75,'coupler aperture blocked');
  }
@@ -101,7 +101,8 @@ const bp=[[9.92,-.18,.995],[10.005,-.18,.995],[10.005,-.07,.995],[9.92,-.07,.995
 const blocked=[...near];for(const q of [[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]])for(const ix of [q[0],q[1],q[2],q[0],q[2],q[3]])blocked.push({position:bp[ix],normal:[1,0,0],color:[98,107,112,255]});
 assert.throws(()=>check(blocked),/aperture/);
 if(process.argv[3]){const old=JSON.parse(readFileSync(resolve(process.argv[3],'manifest.json')));const v=model(readFileSync(resolve(process.argv[3],old.models[0].native))).vertices;assert.throws(()=>check(v),/fan|windshield/);}
+bad(v=>{for(const a of v)if(a.position[0]<-9.74&&a.position[2]>.83&&a.position[2]<1.23&&Math.abs(a.position[1])<.21)a.position[1]*=-1;},/casting|aperture/);
 assert(near.length>far.length*2,'far detail budget');
 assert.deepEqual(bounds(near),bounds(far),'LOD envelope jump');
-writeFileSync(resolve(root,'r200-verification.json'),JSON.stringify({status:'VERIFIED',previous_revision_rejection:process.argv[3]?'VERIFIED':'UNVERIFIED',checks:['12 connected tyre components of expected diameter/width and 12 rail contacts at 6 axle stations','rail/coupler/roof bounds','both end front-facing glass surface gap and 24 first-hit rays','near/far bounds, side paint classification and detail ratio','visible radiator fan first-hit rays; hidden-fan mutation','duplicate triangle, protruding interior cover and reversed whole locomotive rejected','bogie bolster, step stiles and drawgear support witnesses; actual support displacement mutations','actual lifted tyre and floating/buried windshield mutations rejected','concave coupler aperture and closed blocking-box counterexample','optional genuine R1 rejection probe'],limits:['not exhaustive collision detection','side window and door glass rays are sampled, opposite side fittings and roof BOM need sources','24 first-hit windshield rays are sampled visibility, not all-view intersection proof']},null,2)+'\n');
+writeFileSync(resolve(root,'r200-verification.json'),JSON.stringify({status:'VERIFIED',previous_revision_rejection:process.argv[3]?'VERIFIED':'UNVERIFIED',checks:['12 connected tyre components of expected diameter/width and 12 rail contacts at 6 axle stations','rail/coupler/roof bounds','both end front-facing glass surface gap and 24 first-hit rays','near/far bounds, side paint classification and detail ratio','visible radiator fan first-hit rays; hidden-fan mutation','duplicate triangle, protruding interior cover and reversed whole locomotive rejected','bogie bolster, step stiles and drawgear support witnesses; actual support displacement mutations','actual lifted tyre and floating/buried windshield mutations rejected','outward-facing coupler handedness at both ends; reversed-end and closed blocking-box counterexamples','optional genuine R1 rejection probe'],limits:['not exhaustive collision detection','side window and door glass rays are sampled, opposite side fittings and roof BOM need sources','24 first-hit windshield rays are sampled visibility, not all-view intersection proof']},null,2)+'\n');
 console.log('VERIFIED R200-specific geometry probes');
