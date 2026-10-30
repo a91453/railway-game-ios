@@ -51,10 +51,6 @@ final class Map3DMetalView: MTKView {
         /// Decision 394: whether the cab is deep in a tunnel, drawing only
         /// what is under the ground (``Map3DUnderground``).
         var underground: Bool
-        /// PERF (2026-10-30): the frames a second aimed for
-        /// (`preferredFramesPerSecond`), which the rain over the map
-        /// keeps to.
-        var aim: Int
     }
 
     var camera = Map3DCamera()
@@ -93,6 +89,17 @@ final class Map3DMetalView: MTKView {
         }
     }
     private var weatherChange: Map3DWeather.Change?
+    /// Decision 320: the day's rain, its streaks drawn last over the frame
+    /// (PERF_3D_RAIN, 2026-10-30: by the GPU, no longer by a SwiftUI
+    /// `Canvas` on the main thread).
+    var rain = Map3DRain.none
+    /// PERF_3D_RAIN: the streaks' pipeline and depth test (none where the
+    /// shader does not load: then only decision 277's light shows the
+    /// rain), their seeds, and the buffer holding them, made again only
+    /// when the rain or the street detail changes.
+    private var rainPipeline: (pipeline: MTLRenderPipelineState, depth: MTLDepthStencilState)?
+    private var rainSeeds = Map3DRainDrawing()
+    private var rainBuffer: MTLBuffer?
     /// This frame's light: the hour's, under the weather as far as it has
     /// turned.
     private var shown = Map3DLighting(minute: 12 * 60)
@@ -127,6 +134,11 @@ final class Map3DMetalView: MTKView {
     private var memoryWatch = Map3DMemoryWatch()
     private var level: Map3DLoadLevel? { quality.tier(device: deviceTier) == nil ? nil : load.level }
     private var drawsFewerPixels = false
+    /// Decision 259: how much street life the device draws now; PERF_3D_RAIN:
+    /// and how many rain streaks fall (``Map3DRain/streakCount(_:)``).
+    private var streetDetail: Map3DStreetDetail {
+        level.map { $0.streets >= .fewestOnStreets ? $0.tier.streetDetail.lowered : $0.tier.streetDetail } ?? .off
+    }
     /// Decision 238's later note: the 3D look chosen in Settings.
     var quality = Map3DQuality.automatic {
         didSet {
@@ -388,6 +400,21 @@ final class Map3DMetalView: MTKView {
                 sun.vertexFunction = sunBoxes
                 sun.vertexDescriptor = nil
                 if let instanced, let boxes = try? device.makeRenderPipelineState(descriptor: sun) { view.sunDrawing = (chunks, instanced, boxes, depth) }
+            }
+        }
+        // PERF_3D_RAIN (2026-10-30): decision 320's rain streaks and the
+        // storm's lightning, blended over everything as the ground shadows
+        // are, neither tested against the depth nor writing it.
+        if let rainVertex = library.makeFunction(name: "map3dRainVertex"), let rainFragment = library.makeFunction(name: "map3dRainFragment") {
+            descriptor.vertexFunction = rainVertex
+            descriptor.fragmentFunction = rainFragment
+            descriptor.vertexDescriptor = nil
+            let rainDepth = MTLDepthStencilDescriptor()
+            rainDepth.depthCompareFunction = .always
+            rainDepth.isDepthWriteEnabled = false
+            if let rainPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
+               let depth = device.makeDepthStencilState(descriptor: rainDepth) {
+                view.rainPipeline = (rainPipeline, depth)
             }
         }
         return view
@@ -1233,6 +1260,29 @@ final class Map3DMetalView: MTKView {
             drawCalls += 1
             triangles += shadows.triangles
         }
+        // PERF_3D_RAIN (2026-10-30): decision 320's rain over everything,
+        // from seeds made once (``Map3DRainDrawing``) and this frame's 16
+        // floats; the lightning one more instance over the whole screen.
+        if let rainPipeline, rain.drawsStreaks(reduceMotion: reduceMotion, underground: below) {
+            if rainSeeds.update(rain, detail: streetDetail) || rainBuffer == nil {
+                rainBuffer = makeBuffer(rainSeeds.seeds)
+            }
+            let flash = rain.flash(at: start)
+            let instances = rainSeeds.count + (flash > 0 ? 1 : 0)
+            if let rainBuffer, instances > 0, bounds.width > 0, bounds.height > 0 {
+                encoder.setRenderPipelineState(rainPipeline.pipeline)
+                encoder.setDepthStencilState(rainPipeline.depth)
+                encoder.setVertexBuffer(rainBuffer, offset: 0, index: 2)
+                rain.uniforms(seconds: start, width: Double(bounds.width), height: Double(bounds.height), night: shown.night, flash: flash,
+                              count: rainSeeds.count).withUnsafeBytes { bytes in
+                    guard let base = bytes.baseAddress else { return }
+                    encoder.setVertexBytes(base, length: bytes.count, index: 3)
+                }
+                encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: instances)
+                drawCalls += 1
+                triangles += 2 * instances
+            }
+        }
         encoder.endEncoding()
         if !captures.isEmpty, !drawable.texture.isFramebufferOnly {
             copyForCapture(drawable.texture, commands: commands)
@@ -1390,11 +1440,10 @@ final class Map3DMetalView: MTKView {
             triangles: lastCounts.triangles,
             people: lastLife.people,
             vehicles: lastLife.vehicles,
-            streetDetail: level.map { $0.streets >= .fewestOnStreets ? $0.tier.streetDetail.lowered : $0.tier.streetDetail } ?? .off,
+            streetDetail: streetDetail,
             level: level,
             drawScale: Double(contentScaleFactor),
-            underground: underground.isUnderground,
-            aim: preferredFramesPerSecond
+            underground: underground.isUnderground
         )
         // Decision 417: a step down while the device cannot keep up, a
         // step up once it has for a while.

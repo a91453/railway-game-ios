@@ -50,14 +50,6 @@ public struct Map3DRain: Hashable, Sendable {
     /// The streaks' line width, in points.
     public static let lineWidth = 0.7
 
-    /// PERF (2026-10-30): the shortest time between two drawings of the
-    /// streaks, on the main thread, when the 3D map under them aims for
-    /// `aim` frames a second: no more often than the map (30 on Battery
-    /// Saver, in Low Power Mode or with the phone hot), and 60 at most,
-    /// as before (the rain looks no smoother faster).
-    public static func minimumInterval(aim: Int) -> Double {
-        1 / Double(min(max(aim, 1), 60))
-    }
     /// The streaks' colour and opacity at night (the reference's) and by
     /// day (the 2D map's rain, light on dark turned dark on light).
     public static let nightColour: UInt32 = 0xC6D7E4
@@ -98,13 +90,87 @@ public struct Map3DRain: Hashable, Sendable {
     public func streaks(at time: Double, width: Double, height: Double, detail: Map3DStreetDetail) -> [MapWeather.Streak] {
         guard amount > 0, width > 0, height > 0 else { return [] }
         return (0..<streakCount(detail)).map { index in
-            let i = Int32(index)
-            let length = 5 + 6 * Double(map3DRandom(i, 2, salt: Self.salt))
-            let travel = Self.speed * (0.85 + 0.3 * Double(map3DRandom(i, 3, salt: Self.salt))) * time
-            let x = Self.wrapped(Double(map3DRandom(i, 0, salt: Self.salt)) + travel * slant / width) * width
-            let y = Self.wrapped(Double(map3DRandom(i, 1, salt: Self.salt)) + travel / height) * height
-            return MapWeather.Streak(x0: x, y0: y, x1: x + slant * length, y1: y + length)
+            let seed = Self.seed(index)
+            let travel = seed.speed * time
+            let x = Self.wrapped(seed.x + travel * slant / width) * width
+            let y = Self.wrapped(seed.y + travel / height) * height
+            return MapWeather.Streak(x0: x, y0: y, x1: x + slant * seed.length, y1: y + seed.length)
         }
+    }
+
+    /// Streak `index`'s own start (shares of the screen across and down),
+    /// length in points and pace in points a second.
+    static func seed(_ index: Int) -> (x: Double, y: Double, length: Double, speed: Double) {
+        let i = Int32(index)
+        return (Double(map3DRandom(i, 0, salt: salt)), Double(map3DRandom(i, 1, salt: salt)),
+                5 + 6 * Double(map3DRandom(i, 2, salt: salt)), speed * (0.85 + 0.3 * Double(map3DRandom(i, 3, salt: salt))))
+    }
+
+    // MARK: - PERF_3D_RAIN (2026-10-30): drawn by the 3D map's GPU
+
+    /// The streaks as the 3D map's GPU draws them (`map3dRainVertex` in
+    /// `Map3DShaders.metal`): four floats a streak, ``seed(_:)``'s start
+    /// across, start down, length and pace, made once for a rain and a
+    /// street detail (``Map3DRainDrawing``). Each frame the shader moves
+    /// them by the clock alone (``uniforms(seconds:width:height:night:flash:count:)``),
+    /// as ``streaks(at:width:height:detail:)`` does, so the main thread
+    /// works out no streak a frame.
+    public func seeds(_ detail: Map3DStreetDetail) -> [Float] {
+        guard amount > 0 else { return [] }
+        return (0..<streakCount(detail)).flatMap { index in
+            let seed = Self.seed(index)
+            return [Float(seed.x), Float(seed.y), Float(seed.length), Float(seed.speed)]
+        }
+    }
+
+    /// The seconds the shader's streaks fall by: `seconds` (any clock)
+    /// taken over ``clockPeriod``, so a `Float` keeps them to a hundredth
+    /// of a point however long the map is open; the streaks jump once a
+    /// period, to other places in the same rain.
+    public static func shaderSeconds(_ seconds: Double) -> Float {
+        let part = seconds - (seconds / clockPeriod).rounded(.down) * clockPeriod
+        return Float(part)
+    }
+
+    /// See ``shaderSeconds(_:)``.
+    public static let clockPeriod = 600.0
+
+    /// What the shader reads each frame, 16 floats: the screen's width
+    /// and height in points, ``shaderSeconds(_:)`` and the slant; the
+    /// streaks' colour and opacity (``look(night:)``); the lightning's
+    /// white and its opacity (``flashOpacity`` times `flash`, 0 for none);
+    /// half the streaks' ``lineWidth`` and how many streaks there are
+    /// (`count`, the seeds' over four). The same 16 however many streaks
+    /// fall.
+    public func uniforms(seconds: Double, width: Double, height: Double, night: Float, flash: Double, count: Int) -> [Float] {
+        let look = look(night: night)
+        func channel(_ colour: UInt32, _ shift: UInt32) -> Float { Float(colour >> shift & 0xFF) / 255 }
+        return [Float(width), Float(height), Self.shaderSeconds(seconds), Float(slant),
+                channel(look.colour, 16), channel(look.colour, 8), channel(look.colour, 0), Float(look.opacity),
+                1, 1, 1, Float(Self.flashOpacity * min(max(flash, 0), 1)),
+                Float(Self.lineWidth / 2), Float(count), 0, 0]
+    }
+
+    /// Whether the 3D map draws the streaks (and the lightning): when it
+    /// rains, not with Reduce Motion (then only the light of decision 277
+    /// shows the rain), and not with the cab deep in a tunnel (decision
+    /// 394).
+    public func drawsStreaks(reduceMotion: Bool, underground: Bool) -> Bool {
+        amount > 0 && !reduceMotion && !underground
+    }
+
+    /// Streak `index` of `seeds` at `seconds` on a `width` by `height`
+    /// screen, worked out in `Float` as the shader does
+    /// (`map3dRainVertex`): for the tests, which hold it to
+    /// ``streaks(at:width:height:detail:)``.
+    static func shaderStreak(_ index: Int, of seeds: [Float], uniforms: [Float]) -> MapWeather.Streak {
+        let x0 = seeds[index * 4], y0 = seeds[index * 4 + 1], length = seeds[index * 4 + 2], pace = seeds[index * 4 + 3]
+        let width = uniforms[0], height = uniforms[1], seconds = uniforms[2], slant = uniforms[3]
+        func fract(_ v: Float) -> Float { v - v.rounded(.down) }
+        let travel = pace * seconds
+        let x = fract(x0 + travel * slant / width) * width
+        let y = fract(y0 + travel / height) * height
+        return MapWeather.Streak(x0: Double(x), y0: Double(y), x1: Double(x + slant * length), y1: Double(y + length))
     }
 
     /// How bright the lightning is at `time` seconds, from 0 to 1: the 2D
@@ -122,5 +188,38 @@ public struct Map3DRain: Hashable, Sendable {
     private static func wrapped(_ share: Double) -> Double {
         let part = share - share.rounded(.down)
         return part < 0 ? part + 1 : part
+    }
+}
+
+/// PERF_3D_RAIN (2026-10-30): the streaks' seeds the 3D map hands its GPU
+/// (``Map3DRain/seeds(_:)``), made again only when the rain or the street
+/// detail changes, never because the clock or the camera moved: until
+/// then the map draws a frame's rain from the 16 floats of
+/// ``Map3DRain/uniforms(seconds:width:height:night:flash:count:)``. Before,
+/// a SwiftUI `Canvas` over the map worked out and stroked every streak on
+/// the main thread up to 60 times a second, whatever the map drew.
+public struct Map3DRainDrawing: Sendable {
+    /// The seeds now, four floats a streak (empty: no rain).
+    public private(set) var seeds: [Float] = []
+    /// How many times the seeds were made.
+    public private(set) var builds = 0
+    /// How many streaks the seeds were made for: they are
+    /// ``Map3DRain/seed(_:)``'s first so many, whatever the rain.
+    private var made: Int?
+
+    public init() {}
+
+    /// How many streaks the seeds hold.
+    public var count: Int { seeds.count / 4 }
+
+    /// Makes the seeds for `rain` at `detail` if they are not those
+    /// already; whether it made them (the map then hands them over again).
+    public mutating func update(_ rain: Map3DRain, detail: Map3DStreetDetail) -> Bool {
+        let count = rain.streakCount(detail)
+        guard count != made else { return false }
+        made = count
+        seeds = rain.seeds(detail)
+        builds += 1
+        return true
     }
 }

@@ -14964,6 +14964,7 @@ $10,000 的價格照報告的建造、列車與利益算出（旅客那一項是
    - 不能點，VoiceOver 不讀。
    - 晴天、減少動態時整層不在。
    - 雨絲的數量跟著 `Map3DMetalView.Stats.streetDetail`，那一層自動降級，雨絲也跟著少。
+   - **後來（2026-10-30，`docs/research/PERF_3D_RAIN_2026-10-30.md`）**：作者說「下雨對3D駕駛模式負擔太大」。這一層 `Canvas` 拿掉，雨絲與閃電改在 `Map3DMetalView` 每幀最後畫（`map3dRainVertex`）：每條雨絲的起點、長度、速度做一次（`Map3DRainDrawing`），每幀只交 16 個數（`Map3DRain.uniforms`），著色器照 `streaks(at:)` 的算式移動。顏色、數量、速度、斜度、閃電與減少動態時不畫都照舊；雨絲改成跟著 3D 的幀數畫，拍照也拍得到雨。
 7. **預覽工具**：`tools/map3d-preview` 加 `MAP3D_WEATHER`，畫那種天氣的光線、霧與雨絲。
    - 雨絲照手機畫：把 1600 × 900 的圖當成 533 × 300 點、每點 3 像素。
    - 背景改用 `Map3DLighting.background`，霧的顏色與距離改用 `fogColour`、`fogScale`，和 `Map3DMetalView` 相同。

@@ -788,3 +788,52 @@ fragment float4 map3dSignFragment(Map3DSignOut in [[stage_in]], constant Map3DUn
     return map3dLit(base, glow, float4(0.0), normal, in.world, map3dSunSeen(in.world, normal, uniforms, sunShadow), uniforms);
 }
 
+
+// PERF_3D_RAIN (2026-10-30): decision 320's rain streaks, drawn last over
+// the frame instead of by a SwiftUI Canvas on the main thread. Each streak
+// is an instance of four corners (a thin quad), its seed made once
+// (Map3DRain.seeds: start across and down as shares of the screen, length
+// in points, pace in points a second) and moved here by the clock alone,
+// as Map3DRain.streaks does: the start falls and drifts by the slant and
+// comes back in at the other edge. The instance after the last streak is
+// the lightning, one triangle over the whole screen (corner 3 repeats
+// corner 2). Laid out as Map3DRain.uniforms writes it: the screen's width
+// and height in points, the seconds and the slant; the streaks' colour and
+// opacity; the lightning's; half the line width in points and the count.
+struct Map3DRainUniforms {
+    float4 screen;
+    float4 colour;
+    float4 flash;
+    float4 line;
+};
+
+struct Map3DRainOut {
+    float4 position [[position]];
+    float4 colour;
+};
+
+vertex Map3DRainOut map3dRainVertex(uint corner [[vertex_id]], uint instance [[instance_id]],
+                                    const device float4 *seeds [[buffer(2)]], constant Map3DRainUniforms &rain [[buffer(3)]]) {
+    Map3DRainOut out;
+    if (instance >= uint(rain.line.y)) {
+        float2 c = float2(corner == 1 ? 3.0 : -1.0, corner >= 2 ? 3.0 : -1.0);
+        out.position = float4(c, 0.0, 1.0);
+        out.colour = rain.flash;
+        return out;
+    }
+    float4 seed = seeds[instance];
+    float2 size = rain.screen.xy;
+    float slant = rain.screen.w;
+    float travel = seed.w * rain.screen.z;
+    float2 head = float2(fract(seed.x + travel * slant / size.x) * size.x, fract(seed.y + travel / size.y) * size.y);
+    float2 along = float2(slant, 1.0) * seed.z;
+    float2 side = normalize(float2(1.0, -slant)) * rain.line.x;
+    float2 p = head + (corner >= 2 ? along : float2(0.0)) + ((corner & 1) != 0 ? side : -side);
+    out.position = float4(p.x / size.x * 2.0 - 1.0, 1.0 - p.y / size.y * 2.0, 0.0, 1.0);
+    out.colour = rain.colour;
+    return out;
+}
+
+fragment float4 map3dRainFragment(Map3DRainOut in [[stage_in]]) {
+    return in.colour;
+}

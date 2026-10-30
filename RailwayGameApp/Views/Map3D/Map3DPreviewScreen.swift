@@ -77,17 +77,14 @@ struct Map3DPreviewScreen: View {
         let ambient = ambientScreen?.ambient
         ZStack {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
-                      weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
+                      weather: Map3DWeather(MapWeather(world: session.world)), rain: Map3DRain(MapWeather(world: session.world)),
+                      feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: ambient?.view3D ?? followView) },
                       departure: departure, world: session.world, modelsReady: modelsReady,
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
-            Map3DRainLayer(rain: Map3DRain(MapWeather(world: session.world)), detail: stats?.streetDetail ?? .full,
-                           aim: stats?.aim ?? 60,
-                           night: Map3DLighting(at: session.world.clock.now).night, underground: stats?.underground ?? false)
-                .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
                 .ignoresSafeArea()
             if built == nil || !modelsReady {
@@ -728,6 +725,9 @@ private struct Map3DView: UIViewRepresentable {
     let lighting: Map3DLighting
     /// Decision 277: the day's weather on the map.
     let weather: Map3DWeather
+    /// Decision 320: the day's rain, its streaks drawn by the map itself
+    /// (PERF_3D_RAIN, 2026-10-30).
+    let rain: Map3DRain
     let feed: Map3DTrainFeed
     /// Decision 314: where the trains' labels go.
     let trainLabels: Map3DTrainLabelState
@@ -801,6 +801,7 @@ private struct Map3DView: UIViewRepresentable {
         guard let view = uiView as? Map3DMetalView else { return }
         view.lighting = lighting
         view.weather = weather
+        view.rain = rain
         view.onStats = onStats
         view.quality = quality
         view.reduceMotion = context.environment.accessibilityReduceMotion
@@ -1092,56 +1093,6 @@ final class Map3DTrainLabelState {
     func show(_ next: [Map3DTrainLabels.Label]) {
         let rounded = next.map { Map3DTrainLabels.Label(train: $0.train, info: $0.info, x: $0.x.rounded(), y: $0.y.rounded()) }
         if rounded != labels { labels = rounded }
-    }
-}
-
-/// Decision 320: the day's rain over the 3D map (``Map3DRain``), falling
-/// frame by frame and flashing in a storm, unless the player reduces
-/// motion: then only the light of decision 277 shows the rain. Not
-/// touchable, and not read out.
-private struct Map3DRainLayer: View, Equatable {
-    let rain: Map3DRain
-    let detail: Map3DStreetDetail
-    /// PERF (2026-10-30): the frames a second the 3D map aims for.
-    let aim: Int
-    /// How far the day's light has gone (``Map3DLighting/night``).
-    let night: Float
-    /// Decision 394: the cab deep in a tunnel, where no rain falls.
-    let underground: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    nonisolated static func == (lhs: Map3DRainLayer, rhs: Map3DRainLayer) -> Bool {
-        lhs.rain == rhs.rain && lhs.detail == rhs.detail && lhs.aim == rhs.aim && lhs.night == rhs.night && lhs.underground == rhs.underground
-    }
-
-    var body: some View {
-        let rain = rain, detail = detail
-        let look = rain.look(night: night)
-        let colour = Color(.sRGB, red: Double(look.colour >> 16 & 0xFF) / 255, green: Double(look.colour >> 8 & 0xFF) / 255,
-                           blue: Double(look.colour & 0xFF) / 255, opacity: look.opacity)
-        return Group {
-            if rain.amount > 0, !reduceMotion, !underground {
-                // No more often than the map under it, 60 a second at most.
-                TimelineView(.animation(minimumInterval: Map3DRain.minimumInterval(aim: aim))) { timeline in
-                    Canvas { context, size in
-                        let time = timeline.date.timeIntervalSinceReferenceDate
-                        var streaks = Path()
-                        for streak in rain.streaks(at: time, width: size.width, height: size.height, detail: detail) {
-                            streaks.move(to: CGPoint(x: streak.x0, y: streak.y0))
-                            streaks.addLine(to: CGPoint(x: streak.x1, y: streak.y1))
-                        }
-                        context.stroke(streaks, with: .color(colour), style: StrokeStyle(lineWidth: Map3DRain.lineWidth, lineCap: .round))
-                        let flash = rain.flash(at: time)
-                        if flash > 0 {
-                            context.fill(Path(CGRect(origin: .zero, size: size)),
-                                         with: .color(Palette.lightning.opacity(Map3DRain.flashOpacity * flash)))
-                        }
-                    }
-                }
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 
