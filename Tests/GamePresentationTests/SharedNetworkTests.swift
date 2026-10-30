@@ -151,6 +151,41 @@ final class SharedNetworkTests: XCTestCase {
         XCTAssertEqual(world.stations, sent.stations)
     }
 
+    /// BH5 P2-1: the sender's city requests (the subsidies met and not yet
+    /// paid, their stars, the requests in hand) and the hour's freight
+    /// fares not yet booked are money of theirs too: a new game starts
+    /// them again.
+    func testANewGameLeavesTheSendersSubsidiesAndFreightFaresBehind() throws {
+        let fixtures = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures")
+        let requests = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: fixtures.appendingPathComponent("v50-city-requests.json"))).world
+        let sent = try XCTUnwrap(requests.cityRequests)
+        XCTAssertGreaterThan(sent.owed, .zero)
+        XCTAssertFalse(sent.active.isEmpty)
+        let world = try SharedNetwork(data: SaveLibrary.encode(requests, at: date(0))).newGameWorld()
+        let fresh = try XCTUnwrap(world.cityRequests, "the city still asks")
+        XCTAssertEqual(fresh.seed, sent.seed)
+        XCTAssertEqual(fresh.owed, .zero)
+        XCTAssertEqual(fresh.paid, .zero)
+        XCTAssertEqual(fresh.trust, CityRequests.startingTrust)
+        XCTAssertTrue(fresh.active.isEmpty)
+        XCTAssertTrue(fresh.results.isEmpty)
+
+        // A sender's hour of freight fares, earned and not yet booked.
+        let freightSave = try Data(contentsOf: fixtures.appendingPathComponent("v38-freight.json"))
+        var root = try XCTUnwrap(JSONSerialization.jsonObject(with: freightSave) as? [String: Any])
+        var file = try XCTUnwrap(root["world"] as? [String: Any])
+        var freight = try XCTUnwrap(file["freight"] as? [String: Any])
+        freight["pendingRevenue"] = 500_000
+        file["freight"] = freight
+        root["world"] = file
+        let earning = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: root)).world
+        XCTAssertEqual(earning.freight?.pendingRevenue, Money(500_000))
+        let fromFreight = try SharedNetwork(data: SaveLibrary.encode(earning, at: date(0))).newGameWorld()
+        XCTAssertEqual(fromFreight.freight?.pendingRevenue, .zero)
+        XCTAssertEqual(fromFreight.freight?.facilities, earning.freight?.facilities, "the yards stay")
+    }
+
     // MARK: - The launcher
 
     @MainActor

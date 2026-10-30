@@ -1,0 +1,104 @@
+{
+  "assemblies": [
+    {
+      "id": "danhai-lrt-formation",
+      "placements": [
+        {
+          "unit": "danhai-lrt-m1",
+          "translation": [
+            13.225,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m2",
+          "translation": [
+            5.725,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m3",
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m4",
+          "translation": [
+            -5.725,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m5",
+          "translation": [
+            -13.225,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    },
+    {
+      "id": "danhai-lrt-formation-far",
+      "placements": [
+        {
+          "unit": "danhai-lrt-m1-far",
+          "translation": [
+            13.225,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m2-far",
+          "translation": [
+            5.725,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m3-far",
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m4-far",
+          "translation": [
+            -5.725,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "danhai-lrt-m5-far",
+          "translation": [
+            -13.225,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    }
+  ]
+}

@@ -88,6 +88,18 @@ public struct RollingStockCatalog: Equatable, Sendable {
     public static func hourlyCost(daily: Money) -> Money {
         Money((max(0, daily.amount) + 1_200) / 2_400 * 100)
     }
+
+    /// How many windows the showroom draws along a car `width` long and
+    /// `height` tall: as many as fit at 0.7 of its height each, one at
+    /// least. A car with no size yet (a layout pass that gives it none, as
+    /// when a sheet first comes up) has one, rather than a division by
+    /// zero to turn into a count (BH8 P2-1).
+    public static func sideWindows(width: Double, height: Double) -> Int {
+        guard width.isFinite, height.isFinite, width > 0, height > 0 else { return 1 }
+        let fits = width / (height * 0.7)
+        guard fits.isFinite else { return 1 }
+        return max(1, Int(min(fits, 100)))
+    }
 }
 
 extension TrainFamily {
