@@ -76,6 +76,27 @@ def colors(path):
  b=path.read_bytes();n,size=struct.unpack_from('<II',b,8);o=16+(size+3)//4*4
  return np.array([struct.unpack_from('<I',b,o+i*52+16)[0] for i in range(n)],dtype=np.uint32)
 
+def cab_hardware(t):
+ # Rays must reach the actual raised lenses / housing and projecting coupler.
+ # Positions sampled in final native coordinates, not source metadata.
+ for y in [-1.09,-.78,.78,1.09]:
+  ds=ray(t,np.array([10.5,y,1.55]),np.array([-1.,0.,0.]))
+  assert len(ds) and .40<min(ds)<.50,'lower lens absent / moved / buried'
+ for y in [-.16,.16]:
+  ds=ray(t,np.array([10.5,y,3.495]),np.array([-1.,0.,0.]))
+  assert len(ds) and .40<min(ds)<.47,'upper lamp absent / moved / buried'
+ ds=ray(t,np.array([10.5,0,.72]),np.array([-1.,0.,0.]))
+ assert len(ds) and .33<min(ds)<.35,'coupler absent / retracted'
+ # Open recess beside the head: the old solid full-width backing must be gone.
+ ds=ray(t,np.array([10.5,.50,.65]),np.array([-1.,0.,0.]))
+ assert len(ds) and min(ds)>.68,'coupler recess blocked'
+
+def cab_glass_corners(t,f):
+ for side in [-1,1]:
+  for dy,dz in [(-.15,.015),(.15,.015),(-.25,.08),(.25,.08),(0,.02),(.08,.02),(.14,.025)]:
+   distances,ids=ray(t,np.array([10.5,side*.94+dy,2.11+dz]),np.array([-1.,0.,0.]),True)
+   assert len(ids) and f[ids[np.argmin(distances)]]&2,'nose / frame intrudes into lower glazing'
+
 def lod(near,far,nc,fc):
  for x in [-9,-4,-2,2,4,9]:
   for z in [1.4,2,3.15]:

@@ -31,4 +31,4 @@ files=[]
 for f,label in [('baseline','EMU500 conversion baseline (not an accepted previous tourism version)'),('haifeng','Haifeng EMU573'),('shanlan','Shanlan EMU583')]:
  id='emu500-formation' if f=='baseline' else f+'-emu500-formation'
  files.extend([(label+' | '+v,root/f/'review/color'/(id+'-'+v+'.png'))for v in ['isometric','left','front']])
-panel(files,Path(sys.argv[2]),'Native EMU500 conversions | same metre camera and light | first delivery',columns=3,size=(560,300))
+panel(files,Path(sys.argv[2]),'Native EMU500 conversions | same metre camera and light | appearance unaccepted',columns=3,size=(560,300))

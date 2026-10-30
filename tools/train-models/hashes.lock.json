@@ -2,67 +2,67 @@
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "haifeng-emu500-em" : {
-      "hash" : "2f641a0301396c",
-      "triangles" : 7308
+      "hash" : "c40d1a31c0ba14f",
+      "triangles" : 8076
     },
     "haifeng-emu500-em-far" : {
-      "hash" : "5207709a07a53676",
-      "triangles" : 2708
+      "hash" : "af04d780f8f064ec",
+      "triangles" : 3420
     },
     "haifeng-emu500-emc" : {
-      "hash" : "2f641a0301396c",
-      "triangles" : 7308
+      "hash" : "c40d1a31c0ba14f",
+      "triangles" : 8076
     },
     "haifeng-emu500-emc-far" : {
-      "hash" : "5207709a07a53676",
-      "triangles" : 2708
+      "hash" : "af04d780f8f064ec",
+      "triangles" : 3420
     },
     "haifeng-emu500-ep" : {
-      "hash" : "880873f210ead863",
+      "hash" : "6167e154711dc59b",
       "triangles" : 2936
     },
     "haifeng-emu500-ep-far" : {
-      "hash" : "fe808306ced5a06",
+      "hash" : "7e07e67c05fc09ba",
       "triangles" : 1116
     },
     "haifeng-emu500-et" : {
-      "hash" : "7b7ddf2e07a3ef21",
+      "hash" : "af6a5d5b0435f268",
       "triangles" : 3132
     },
     "haifeng-emu500-et-far" : {
-      "hash" : "c54f750a7c58871a",
+      "hash" : "d9ea81c5b58a8da2",
       "triangles" : 1164
     },
     "shanlan-emu500-em" : {
-      "hash" : "264bf05e8ada7adf",
-      "triangles" : 7308
+      "hash" : "1d7d244c073a2ab7",
+      "triangles" : 8076
     },
     "shanlan-emu500-em-far" : {
-      "hash" : "3f2e98fd763f8276",
-      "triangles" : 2708
+      "hash" : "4ca8279dd90b3633",
+      "triangles" : 3420
     },
     "shanlan-emu500-emc" : {
-      "hash" : "264bf05e8ada7adf",
-      "triangles" : 7308
+      "hash" : "1d7d244c073a2ab7",
+      "triangles" : 8076
     },
     "shanlan-emu500-emc-far" : {
-      "hash" : "3f2e98fd763f8276",
-      "triangles" : 2708
+      "hash" : "4ca8279dd90b3633",
+      "triangles" : 3420
     },
     "shanlan-emu500-ep" : {
-      "hash" : "30021cdb23ae569d",
+      "hash" : "64b0cda9bd1e77cb",
       "triangles" : 2936
     },
     "shanlan-emu500-ep-far" : {
-      "hash" : "cdcc4a0dbba837d0",
+      "hash" : "942fb0cbed4bbd8",
       "triangles" : 1116
     },
     "shanlan-emu500-et" : {
-      "hash" : "4607b539bec1d5c0",
+      "hash" : "274bbc4c1f14a710",
       "triangles" : 3132
     },
     "shanlan-emu500-et-far" : {
-      "hash" : "749138e38773cf89",
+      "hash" : "eab1c44c506da216",
       "triangles" : 1164
     },
     "ankeng-lrt-m1" : {
