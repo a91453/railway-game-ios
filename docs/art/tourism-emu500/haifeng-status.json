@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "VERIFIED",
+    "evidence": "Native readback / GLB / common geometry, type-specific curved glazing, lamps / coupler support and real fault cases, independent Swift assembly and Blender import, RGBA and HTTP inspector downloads. Static sampled scope only."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "Maker review only; revision-1 f036e7f7 and this producer have no user acceptance",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "studies only; no player selection or operating mapping"
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator visual, Safari / device Metal / performance or dynamic running validation"
+  }
+}

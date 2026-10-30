@@ -1,6 +1,78 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
+    "45dr1000-drc1025" : {
+      "hash" : "525af0d85db68a27",
+      "triangles" : 3604
+    },
+    "45dr1000-drc1025-far" : {
+      "hash" : "28d97a3c4f69327d",
+      "triangles" : 1584
+    },
+    "haifeng-emu500-em" : {
+      "hash" : "c40d1a31c0ba14f",
+      "triangles" : 8076
+    },
+    "haifeng-emu500-em-far" : {
+      "hash" : "af04d780f8f064ec",
+      "triangles" : 3420
+    },
+    "haifeng-emu500-emc" : {
+      "hash" : "c40d1a31c0ba14f",
+      "triangles" : 8076
+    },
+    "haifeng-emu500-emc-far" : {
+      "hash" : "af04d780f8f064ec",
+      "triangles" : 3420
+    },
+    "haifeng-emu500-ep" : {
+      "hash" : "6167e154711dc59b",
+      "triangles" : 2936
+    },
+    "haifeng-emu500-ep-far" : {
+      "hash" : "7e07e67c05fc09ba",
+      "triangles" : 1116
+    },
+    "haifeng-emu500-et" : {
+      "hash" : "af6a5d5b0435f268",
+      "triangles" : 3132
+    },
+    "haifeng-emu500-et-far" : {
+      "hash" : "d9ea81c5b58a8da2",
+      "triangles" : 1164
+    },
+    "shanlan-emu500-em" : {
+      "hash" : "1d7d244c073a2ab7",
+      "triangles" : 8076
+    },
+    "shanlan-emu500-em-far" : {
+      "hash" : "4ca8279dd90b3633",
+      "triangles" : 3420
+    },
+    "shanlan-emu500-emc" : {
+      "hash" : "1d7d244c073a2ab7",
+      "triangles" : 8076
+    },
+    "shanlan-emu500-emc-far" : {
+      "hash" : "4ca8279dd90b3633",
+      "triangles" : 3420
+    },
+    "shanlan-emu500-ep" : {
+      "hash" : "64b0cda9bd1e77cb",
+      "triangles" : 2936
+    },
+    "shanlan-emu500-ep-far" : {
+      "hash" : "942fb0cbed4bbd8",
+      "triangles" : 1116
+    },
+    "shanlan-emu500-et" : {
+      "hash" : "274bbc4c1f14a710",
+      "triangles" : 3132
+    },
+    "shanlan-emu500-et-far" : {
+      "hash" : "eab1c44c506da216",
+      "triangles" : 1164
+    },
     "ankeng-lrt-m1" : {
       "hash" : "19d4cf075e7672e9",
       "triangles" : 10436
@@ -818,20 +890,36 @@
       "triangles" : 518
     },
     "light-set-dieselRailcar-car" : {
-      "hash" : "b512a4642566edca",
-      "triangles" : 472
+      "hash" : "3d859929f21d9f25",
+      "triangles" : 64
     },
     "light-set-dieselRailcar-head" : {
-      "hash" : "2e1ca0ff70da56c3",
-      "triangles" : 356
+      "hash" : "3d859929f21d9f25",
+      "triangles" : 64
     },
     "light-set-dieselRailcar-single" : {
-      "hash" : "7518eb022b747d31",
-      "triangles" : 240
+      "hash" : "3d859929f21d9f25",
+      "triangles" : 64
     },
     "light-set-dieselRailcar-tail" : {
-      "hash" : "8759327983d789c3",
-      "triangles" : 356
+      "hash" : "56fc84f1f1561d25",
+      "triangles" : 64
+    },
+    "light-set-dieselRailcarFar-car" : {
+      "hash" : "c7f618bd5f82c7d5",
+      "triangles" : 24
+    },
+    "light-set-dieselRailcarFar-head" : {
+      "hash" : "c7f618bd5f82c7d5",
+      "triangles" : 24
+    },
+    "light-set-dieselRailcarFar-single" : {
+      "hash" : "c7f618bd5f82c7d5",
+      "triangles" : 24
+    },
+    "light-set-dieselRailcarFar-tail" : {
+      "hash" : "7d7f9d6b694b1d5",
+      "triangles" : 24
     },
     "light-set-E200CK-car" : {
       "hash" : "2d6cad0d4d66cb7",
@@ -2010,20 +2098,36 @@
       "triangles" : 3172
     },
     "set-dieselRailcar-car" : {
-      "hash" : "ab2217b5432b405a",
-      "triangles" : 1528
+      "hash" : "8fc1fa1d41d9ad49",
+      "triangles" : 3604
     },
     "set-dieselRailcar-head" : {
-      "hash" : "c3c0b769e2ec728a",
-      "triangles" : 2148
+      "hash" : "34af566dc4110ab6",
+      "triangles" : 3604
     },
     "set-dieselRailcar-single" : {
-      "hash" : "3e6e4f34812eed08",
-      "triangles" : 2992
+      "hash" : "acc37490c38c757c",
+      "triangles" : 3604
     },
     "set-dieselRailcar-tail" : {
-      "hash" : "a8c110c29208adda",
-      "triangles" : 2148
+      "hash" : "46cf73e85bb8bc5f",
+      "triangles" : 3604
+    },
+    "set-dieselRailcarFar-car" : {
+      "hash" : "9cec9214090f699",
+      "triangles" : 1584
+    },
+    "set-dieselRailcarFar-head" : {
+      "hash" : "b9170d78e9fff796",
+      "triangles" : 1584
+    },
+    "set-dieselRailcarFar-single" : {
+      "hash" : "93debaa9f5f8dfaa",
+      "triangles" : 1584
+    },
+    "set-dieselRailcarFar-tail" : {
+      "hash" : "ce2d52d6c2018430",
+      "triangles" : 1584
     },
     "set-E200CK-car" : {
       "hash" : "9f2aebebb2477e4b",

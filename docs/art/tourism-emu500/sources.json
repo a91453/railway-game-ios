@@ -1,0 +1,586 @@
+{
+  "origin": "project-native EMU500 adaptation and independently observed sources",
+  "date": "2026-10-30",
+  "license": "Original project code; third-party photos observation only, no pixels/mesh redistributed",
+  "public_use": "Only derived original vertex geometry, factual notes and generated renders",
+  "sources": [
+    {
+      "origin": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/index/005?lang=zh_TW",
+      "date": "current undated page",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/index/006?lang=zh_TW",
+      "date": "current undated page",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://www.motc.gov.tw/ch/app/news_list/view?id=14&module=news&serno=0c1d44ce-b167-4c41-bb12-253f71b91d40",
+      "date": "2025-11-26",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://www.twarchitect.org.tw/works/觀光列車　海風號與山嵐號/",
+      "date": "2025-01",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://www.cosmoc-lit.com/海風號",
+      "date": "2024 project",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://blair-train.blogspot.com/2024/08/blog-post.html",
+      "date": "2024-11-08 updated",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://blair-train.blogspot.com/2024/08/emu583.html",
+      "date": "2024 trial photography",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://news.pts.org.tw/article/742839",
+      "date": "2025-03-19; announces Apr 19 service",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://www.motc.gov.tw/ch/app/data/doc?aplistdn=&detailNo=1361983888926183424&id=811&module=policy&preview=&serno=959f5b63-366b-4399-bb57-8091e3c0cb80&type=s",
+      "date": "2025 policy report",
+      "license": "facts / local observation only",
+      "public_use": false
+    },
+    {
+      "origin": "https://zh.wikipedia.org/zh-tw/台鐵EMU500型電聯車",
+      "date": "secondary dimensions / power roles",
+      "license": "facts / local observation only",
+      "public_use": false
+    }
+  ],
+  "observed_files": [
+    {
+      "file": "haifeng-photo-00.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhwTLVApsDWYcExRAYz-boDCq96rMJUDEw-AQwERqXnDQEKyh39eHpBgE-POznvTsPudnjCaiLtz0jQEzVT-3A_FWO5U0rNXRZy-HtWxvRhYHCyddbeSVYNe1zMx7VUtBBXEASxakSZSogkAqU2yeYLu6d-qH2DV_ZUmKV0dIXWUN-7kOH5VAu2ReEEH9l4/s320/DSC08797.JPG",
+      "sha256": "536fb48647ce4d1e761c42d11eb5b3999f3fb2b9da9eaeb1b0f3583d685562b3",
+      "bytes": 28655,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-01.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi7H7eUKsXRVetjpzfBKIKKS_9J2k59ZwMBQhO1eST2GD-ZiMdexzTx1mxaz68ijUqWHsje30xs831mQEYO06OytTpmC2zdk8jTldQ9TBaPiNzumRCN685m2qwk3czEWA05lkp6ArG-dL5b1qgzQzjotuubK_8jzM1uhjnyGCocQkFvq4V-oI2eNKoeYG0S/s320/DSC00525.JPG",
+      "sha256": "cd6da3de9a3e8a04412aae8297fbce4ddd30b238a2fdd0cc52274393d96dc152",
+      "bytes": 7979,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-02.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhoTmcu5q0JhxlkZaw3PSoA4i8DBcZ6libZ87JBS-EiYgZul9Lg72kowodA3Ib8VFlSN5THVaU7H1QcpbGEb64b5y718_lps85oiH4UTxHYs6liwq01jgokaxIvpLz0o6WQRHF4mAdlj_poUr-HaJ9zNUS9DxhA2hX8UszCdAvZqw0LpqG4OJFbbAwBv84K/s0/DSC00523.JPG",
+      "sha256": "cdfc2f750e77fff7deddd05c71d88fa750e5dfa06cdf89e2f3c0f5741d0b2480",
+      "bytes": 96963,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-03.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEie3Rpc2N09bYxAH2XRn8kivZqN0Dzhr_jkV142mm-ve7IWhNPBNOtYrghgNYBJZRGPDEXOF0CRIwJNbnw_hcj_sl6GYTSnXAlz6pj91-tR12TBtT5Jf4QDWLKJI6DyjHnVh6DMfnWq4NBrC-SsOk2ZW988qMJt77LKEROKQM_DLWAp8ut9rbWGbVibMWIW/s0/DSC00526.JPG",
+      "sha256": "7885a0da0b9477906e1fdfe11bd31845c2703eb07d7434b0ed7a889f972e523b",
+      "bytes": 87833,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-04.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgEt61uPX9SEu6KOOzvd836olWAgRJVdofztgNjhp29py6daWTJsSoAiqdc-KCahb0ntBXGYIREk6ZlUP6Ft9RJVEYd50KbwR3LNHnmZyDmKNcBRYUpn6HUVb4jCrYwVc2DacuGP-u3AFsNqVtB3hy1q56qct-IB6qFkjbY4p9_weudgEN7EO_5OqiIr4wx/s0/DSC00530.JPG",
+      "sha256": "e80c6c50b28fe7eb769a3f419d5b3fc8b0548e7604d4b403a7f27000f54fecbe",
+      "bytes": 95866,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-05.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhpEa60HPzUfySbNNp0k5by7MvoLAxIPbCiftdPgFPxCJQi62dAo6Ntvva4NU6bIAwgtdTT5UfDD1HL4AYXwVYo-OoEvM6BbiRiniL2SRiBgR6AMzM81Eqa__eGQPlXOmxJNAOfmgDyIaBb5t7S60FHe4k2_kNCcscgoukKOCyKz4bAesZsD1y7W5CH0IYJ/s0/DSC00531.JPG",
+      "sha256": "f65550e41e50f692e9c358595eb1ec425ae83fa66908ffc91b7f6b263e121ec2",
+      "bytes": 82056,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-06.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj8xFl4dtjBNFxxBISnXD0IjnV_dQn38__VhmWBAfz6LjyeYbrbzS2geXLAE7kFLB72X2bYxeGgibNGJp9bNQ6jw-sXH5uAOZo2k9zECi2yBcnwhC7wWHrM5v682WNBgil3mC5nAdSYzja7aWyHrkHErT6QxbSOEFaybG7vBkunZsCgdaCOmerq9fjeJV44/s0/DSC00301.JPG",
+      "sha256": "2a77c831051a77cd5f30de5e7700e875ab1a343a3b90e96b7a108945e06e18fa",
+      "bytes": 65841,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-07.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj8KxDBOGUkWHZp1ysfStIdhbb0a1fd1A5402IIoaXx_T-IDhn9p4Bj5z7NwiKmc9Txe7WpcaJHOaWwfmx-PqY4p6_6eOoWEC4_K_JL8U4zOZT-Y5_u-OzrNiD5P-5FG_kCLc_OaibbiOa0rilLTRV_6mRxeaZWDtUCFCo9wsLW6pXdwjtMDaYUJDLchFuh/s0/DSC00300.JPG",
+      "sha256": "3ba38bc6aa1b9682c3dba269a064cb60ba9abef63b04c791e4d7817e5b7cb9ba",
+      "bytes": 58075,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-08.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhHpsse9PMviN-KFpqXth06SbBUIgQBMTUs9wxn2P5G3MvLunZv0fW5gSw2yzFnAVOR__fDE4cbgdO2Ykbyx8lGCVqlGAAa1UgT9lauF1OImWX89tNoIM__w_XCC8Ooe2eBu7_TlXKgNYIya8jy-b_n6PqbIoWv2tT_mWZEJSbhyphenhyphenjY1dKb5EYphnJr0QEf8/s0/DSC08798.JPG",
+      "sha256": "fbe6ac18e1be4592f5dc2327a6b6c2905df1ad4366a6cde3b47143f6eda7c1d8",
+      "bytes": 77448,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-09.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEib1ZlnxRCo9zl3St5ctDRX0X2a5gKnmiTj5QrA5zp5OLUfDyf2_oceGjVRMkTdUv8_laLYeuIP8vWap7Sb-fUSLgONhMoWZgbr8yr7sR_ywr6UT64QDIpW17-YQrIxzvSGS04iUqNOCVYKc_Thueej8O6IVZQcLmszqSgxN6lMtSsXZrHs7vXCU7qyqzHd/s0/DSC08801.JPG",
+      "sha256": "68a34c3a5291899d949f14e92d7b8d0f5bb8da0109c9fffccff2591224690d67",
+      "bytes": 69789,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-10.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjA9EK5yHAZUxm6MQMGTwDSo1lcB5f6j1vfTyH_NR64dKMo4u_oE67jAM-PVz_DU9Ge4u-WAfI65vph_trWyDJv8bE-hBwPxRChEhEtn4XBjQvCIOFlifKzWqhmV5YNT_GmnTJ8fnFqIhghqf_lXWz3cjiN8czuBpRhT6Ov3hKGwCad15FOeXqCaHWzvJSu/s0/DSC08802.JPG",
+      "sha256": "70ddb730861d03042728830c5fe41bdb71d0f9bfc842e7bf68b9da9021887453",
+      "bytes": 78319,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-11.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjH61bIQ_H8NtoGrrN_OObJ3Ue7CQSo_1EZb_aqQw7ueLmjhHYigmvjvbTxbPoq49VF9SZlBzpXfPnpqiHOyyVTO9wv23ZgTGM7nXBwfz-5B2F6HziUXnHMOjeaJTVB0orPORXo5KIJ1y-HJZ2PytvHqdsnLnMjON9FWZA0WBdiotNfnMjIBN6YHgFTVOyK/s0/DSC08803.JPG",
+      "sha256": "46311f025cfec4152a527cd67c9132c571a71fb01ab96b16ccf294162af1bc6d",
+      "bytes": 88575,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-12.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhDR-Q_IoIRBIrl0yJfNOOsioXjWdFKIcWFnV9-6FmL5ZmkZEXZ4GDDoOvsTfO7n1g7R_pOeNf8JGJSCCJepZl0fGUfedKPsx_mTClSPSJJV_-jtcGO0Ssv-mOqv17TR2JngYjCk22ijTjJdf8PWKsXbhEVztUVUHC6jyp6GTdpXJ24L_vs9T2GdpdR7U5o/s0/DSC08807.JPG",
+      "sha256": "75f3da73ce383b3587b154531e312af90be187c8a1629392ceed85d5ecc3c17a",
+      "bytes": 78709,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-13.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg6P7Kz5NhitQaKp1B2RTmeIpN6B63i1b9yPvFiXkwrQJNYKRe_c_ALhLwL_VxuMY97ye_mzg8Qzn88Aokn5l4tw1Wef5CCfNre_ft4bkb9mktqI9w5rQNo4MmfmESoA_g0MWZ7WxCXd8G01MLDRGIHe-yHrb9kUWD9PZxckvIPxqRwOqO5gg1Kx8BssAyT/s0/DSC08806.JPG",
+      "sha256": "daec54c5df14402b0721a25d87b7a2e65dd6565fc65ed83ef054651fb0d2807a",
+      "bytes": 86241,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-14.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiZtA_968FECr6i5RbUpj0f2NJ2C0cVdo1qO_kKV2yyIuu51U9k1r_pL02Uf5JgxRz85F4cwnd_mqgMKaIPkY8UxFO2q7TNEwNcbUKbxozmZ9vn_767SBTfbd2uaWzsvkdwoPg5XY6IN4Z5yHPrjhTQu3ZmyHL_FJyHXxWIGib5f9KOnOA0bhI4QAVzeYoR/s0/DSC00298.JPG",
+      "sha256": "9cfb19bba60f097a23e0a264302432c90e0bb1d96a19d67348ab55b5baca4049",
+      "bytes": 90887,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-15.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh-qm6IKn45WSH3iG2RcqboJKyV-Wa7S6s8m7hnGE38j1QuPsR1sw-EOq35ua-l7OmLWINAis2nlXUrn_e2atnuHxwtJH91-uqoeeJPH4jNJDqwWFIFlJcKBweHV2_gYGCNM1PCiYKUCuJMgIzC6OarbHcULmH72GZiiLvj8umVx63qUpxwU7KUdjzJqKBK/s0/DSC00299.JPG",
+      "sha256": "52acc18c0d682480ad943fad6e7c2a4710cdf2c3d437999ae7237f4fe6c53c19",
+      "bytes": 92169,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-16.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi7H7eUKsXRVetjpzfBKIKKS_9J2k59ZwMBQhO1eST2GD-ZiMdexzTx1mxaz68ijUqWHsje30xs831mQEYO06OytTpmC2zdk8jTldQ9TBaPiNzumRCN685m2qwk3czEWA05lkp6ArG-dL5b1qgzQzjotuubK_8jzM1uhjnyGCocQkFvq4V-oI2eNKoeYG0S/s0/DSC00525.JPG",
+      "sha256": "d52c93a2ed6c4c5215cd75baed021411b53196c3ed760416e4bd6bb66f369fea",
+      "bytes": 13225,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "haifeng-photo-17.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhyZ8hIpStJLmy0EkxKnWFcHeo2RUZeGqg4Pq8y6iajXdZHse8zdQK3JlRdffupYpacV-ymyzrhAAOg9rj6lqLcNiyWtzbTDz4RoclIiLBb9htBdmoPuXxRYtA_DZjeIl9a9ldUfRXI47YtZkHx5A00V4iw0cZk8ypUhCdcMurejClyMj_EFJt6pdUrrc1v/s0/DSC00529.JPG",
+      "sha256": "b5f396b24515a835979799bd2a805d1bb31ffec1a8fcac51427959604eca7299",
+      "bytes": 56987,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "shanlan-photo-00.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj7I1pXyf9ZB_qVivQGnkzYV8D8ZWB9Wb41zNV6jrTSFTGM51_dA1zCFPLDIaoieFxBf0f5Sjj0MZ7bEiVERZI9TJcJNfZBYN8sjinfd685OF8vyupanody0bJQQ0xEGQNzqWQARoRILgQNt3-kcah2UR7d1tXHdQ7Etm5IUnVNvjyuprGFuzEHrcVIbhcf/s320/DSC00258.JPG",
+      "sha256": "00a7d90ca8237cf9a8234a7c154f30966b7a27fd9f3e9fbc4c03077ec000df1c",
+      "bytes": 30751,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "shanlan-photo-01.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiZtA_968FECr6i5RbUpj0f2NJ2C0cVdo1qO_kKV2yyIuu51U9k1r_pL02Uf5JgxRz85F4cwnd_mqgMKaIPkY8UxFO2q7TNEwNcbUKbxozmZ9vn_767SBTfbd2uaWzsvkdwoPg5XY6IN4Z5yHPrjhTQu3ZmyHL_FJyHXxWIGib5f9KOnOA0bhI4QAVzeYoR/s0/DSC00298.JPG",
+      "sha256": "9cfb19bba60f097a23e0a264302432c90e0bb1d96a19d67348ab55b5baca4049",
+      "bytes": 90887,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "shanlan-photo-02.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh-qm6IKn45WSH3iG2RcqboJKyV-Wa7S6s8m7hnGE38j1QuPsR1sw-EOq35ua-l7OmLWINAis2nlXUrn_e2atnuHxwtJH91-uqoeeJPH4jNJDqwWFIFlJcKBweHV2_gYGCNM1PCiYKUCuJMgIzC6OarbHcULmH72GZiiLvj8umVx63qUpxwU7KUdjzJqKBK/s0/DSC00299.JPG",
+      "sha256": "52acc18c0d682480ad943fad6e7c2a4710cdf2c3d437999ae7237f4fe6c53c19",
+      "bytes": 92169,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "shanlan-photo-03.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiDb0UwHqxEfU_W4_5K1n6MJXtCQFjDy07Sv3ZDa0mTenvyy9SQKtEEeAFUEcGOKd1ozgpkTomLC5307Ef-r_Y5mP0auRypoHOKfSoJi6KRvI3k4Pv_3YhAyADI3U-2KfJ6V7bksWPpLVv556Bmt7q-RGm6IgERtDNVj-oer6R6MbDgtm4qQJPUfomWAqrD/s0/DSC00260.JPG",
+      "sha256": "d6a5391a835e9ec4aac4fca0d67a8169068c7564693a895bb886aa147a944708",
+      "bytes": 91397,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "shanlan-photo-04.jpg",
+      "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhIzPU-qR21r3jzak3c_3HnXhUkMkuVia9lWX34EwVlq8Atbme27UNGNYIgY6VLbAC4EbOKAAI-DVYblSq3J7-3VbdcqBkv6eeFof1X5mYMcOPA-dSKYSkU3yBZv76mS4iR_gKFyN0LwULCBg01BEp2O8JqKBa7JUCpf3keg4Oe7Eo2TFeFN_dGq-4Eh3Ug/s0/DSC00261.JPG",
+      "sha256": "7efd7827e4290c8dcaa31c4fae56be3a9b5327bc450d33faadf0917aaf23c7ce",
+      "bytes": 108999,
+      "license": "No redistribution license found; local visual observation only",
+      "author": "Blair Yu",
+      "public_use": false,
+      "viewed": "local original and contact-sheet observation",
+      "kind": "real vehicle photograph; 2024 trial / pre-service, not proof of revenue service",
+      "date": "2024-08-06 / 09-24 / 11-08 (Haifeng); 2024-08-30 / 09-24 (Shanlan); see page captions"
+    },
+    {
+      "file": "architect-1.jpg",
+      "url": "https://www.twarchitect.org.tw/web2015/wp-content/uploads/2024/12/202501a6-1.jpg",
+      "sha256": "55277a4ae1414717ba1433f80fff1a547f9dba9e4ee521d120f57b6dab2422f2",
+      "author": "顏贊成 / 雄獅旅遊 / 劉森湧 (article collective credit)",
+      "date": "2025-01 publication",
+      "license": "observation only; no redistribution",
+      "public_use": false,
+      "viewed": "local original and contact sheet",
+      "kind": "real vehicle; design publication"
+    },
+    {
+      "file": "architect-2.jpg",
+      "url": "https://www.twarchitect.org.tw/web2015/wp-content/uploads/2024/12/202501a6-2.jpg",
+      "sha256": "f95ada0ae8efeaeb6b1aa82f768f5c89477e9ed4b14b0cdd8cd2009da25fdf18",
+      "author": "顏贊成 / 雄獅旅遊 / 劉森湧 (article collective credit)",
+      "date": "2025-01 publication",
+      "license": "observation only; no redistribution",
+      "public_use": false,
+      "viewed": "local original and contact sheet",
+      "kind": "real vehicle; design publication"
+    },
+    {
+      "file": "architect-3.jpg",
+      "url": "https://www.twarchitect.org.tw/web2015/wp-content/uploads/2024/12/202501a6-3.jpg",
+      "sha256": "f113ccd1cd0d9ac06acc35324ad6f22fdf616625f767904aebe75551a12e18fd",
+      "author": "顏贊成 / 雄獅旅遊 / 劉森湧 (article collective credit)",
+      "date": "2025-01 publication",
+      "license": "observation only; no redistribution",
+      "public_use": false,
+      "viewed": "local original and contact sheet",
+      "kind": "real vehicle; design publication"
+    },
+    {
+      "file": "005-08.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/9a250d61-61f5-4143-9e22-5f5dfb7d2a54.fs",
+      "sha256": "32b4df5c3ef79bd1cf908d0827a5ef4e9626ec857c7bab8e7c3667de1f8dc14e",
+      "bytes": 107054,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "005-09.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/df2b68e4-5711-40c9-a834-3e5c0ca703f9.fs",
+      "sha256": "52d268acd6748815b7cbaccd299aef6afd884c3289e80bfac99c3b72bc6354fe",
+      "bytes": 109650,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "005-11.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/14751a69-a14a-4418-98aa-d1773d879db5.fs",
+      "sha256": "b5dc04c30e081e2c8492c4639e58c7eb189e53e20992bcd21c1a76e7625bfd69",
+      "bytes": 81258,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "005-13.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/08a896be-6200-4d22-8bc3-002fb644692e.fs",
+      "sha256": "e85dac233702ac77104b4760e6bf4ac63e182c1b8030b8bea592dc58f8fd7800",
+      "bytes": 58877,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "005-14.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/1dedb9cb-27ea-4ae8-831f-712c9f75e2c5.fs",
+      "sha256": "a2b50b076152066c028040849d1deba3089dd28a42f547c91c29ba620d9ac7da",
+      "bytes": 25081,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "005-15.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/6bb2e4c4-2d74-4d08-8a9f-c9261b61e5a2.fs",
+      "sha256": "5b5658ab3f170a6d21294d096290c17afd1172644ca536e3e2d86c8c412f6306",
+      "bytes": 8363,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "005-16.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/ce3309bb-41a7-41a8-950e-378cffbc4399.fs",
+      "sha256": "a41fffd2dd8258c9cbc7a909c1781c41f73c4b243273d6980c9bf60dc81f00e7",
+      "bytes": 28462,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "005-17.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/40b8e572-51ae-436a-b97f-243350794772.fs",
+      "sha256": "3e88b60ef698089e304c83c316c0ae145a62ccb3b02d28e062a32fb327243499",
+      "bytes": 25753,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-08.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/d089e608-654b-4f09-b45a-503c5da665d2.fs",
+      "sha256": "5708b63684cc9763e13357898ac021c35943a40df2a323f2f2a5ccd20a87682f",
+      "bytes": 131200,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-09.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/fde4c83a-f031-43c3-b8e1-1fc6cc17d07f.fs",
+      "sha256": "39af53f589560cd8301ac68a1274992845b12a2c7dac3ba7e9403a89923990eb",
+      "bytes": 184384,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-13.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/0f9c559b-b561-4627-bf60-ab5155a35264.fs",
+      "sha256": "399e67de7f1586bfb57f28fef24c1ac66ee9eef26070289c6be19c63d74846eb",
+      "bytes": 68113,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-15.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/b03fb201-4b04-49f5-8e49-8b5d7f7136b8.fs",
+      "sha256": "cf7a2d42189b3110bf9156486e8478716d09d3cef1fc4902669508fd1b621d66",
+      "bytes": 85739,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-16.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/c6c41cbe-fae4-4e5e-bdc2-47db7f2a6c2b.fs",
+      "sha256": "5641c1e43f4c871f3d83860a87b6cfa21d6545e056966afb688afc96761eeae3",
+      "bytes": 8043,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-17.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/855ebcdb-2d60-4072-983b-96c3fa3d72ea.fs",
+      "sha256": "265fb860b82b8462996dddc3b4d4424799342351710e535d1074531c001991f4",
+      "bytes": 5557,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-18.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/4baad585-8c7d-472e-ba57-b52dde463bdd.fs",
+      "sha256": "f743553b888af50aae0e66cf097f8b2909418fb2373c104c32fcd2bfe62b9b24",
+      "bytes": 9863,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    },
+    {
+      "file": "006-19.jpg",
+      "url": "https://tip.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/public/ckeditor/2ad099ce-cf02-42b9-905a-16857eb8c08b.fs",
+      "sha256": "c1755a10a4233fa35ac9c63f3edcc8ca1c29675d9f89320fb02b036f5276114d",
+      "bytes": 11729,
+      "public_use": false,
+      "author": "臺鐵公司",
+      "date": "page undated; retrieved 2026-10-30",
+      "license": "observation only, original not redistributed",
+      "viewed": "local original; transparent floorplans composited over white for reading",
+      "kind": "official photograph or floorplan; not engineering section"
+    }
+  ],
+  "gaps": [
+    "Full individual-role opposite-side photos not obtained",
+    "Calibrated roof / underfloor orthographic images and revised engineering BOM absent",
+    "No official re-registration ledger proving any new post-conversion running numbers",
+    "No accepted previous Haifeng / Shanlan model"
+  ],
+  "owner_attachments": {
+    "kind": [
+      "real paired front photo",
+      "exterior design illustration"
+    ],
+    "viewed": "conversation inline; visually inspected",
+    "sha256": null,
+    "limitation": "original upload bytes unavailable locally; no SHA or calibrated dimensions claimed; not redistributed"
+  }
+}

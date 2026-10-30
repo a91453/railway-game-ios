@@ -227,3 +227,22 @@ public enum LoadingRoutes {
 private func distance(_ a: ScreenPoint, _ b: ScreenPoint) -> Double {
     ((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)).squareRoot()
 }
+
+/// Decision 473 (landscape on an iPhone): how the loading screen is laid
+/// out. Held upright it stacks the lines over the text; held sideways
+/// (compact height) the lines go left and the text and button right, and
+/// the lines never take more than the height there is.
+public enum LoadingLayout {
+    /// The side of the square the lines are drawn in, in points.
+    public static let preferredSide = 220.0
+    /// The smallest it shrinks to.
+    public static let minimumSide = 120.0
+    /// Space kept above and below the lines when they sit beside the text.
+    public static let sideBySideMargin = 16.0
+
+    /// The square's side for a screen `height` points tall.
+    public static func mapSide(height: Double, sideBySide: Bool) -> Double {
+        guard sideBySide else { return preferredSide }
+        return min(preferredSide, max(minimumSide, height - 2 * sideBySideMargin))
+    }
+}

@@ -154,7 +154,13 @@ public enum MapLabelPlacement {
     /// station, or beside a bubble in its way, kept inside `clear`, the
     /// nearest to the station first; with nowhere clear, the place that
     /// covers least of them. Never on the station's own mark and name.
-    public static func stationTag(at point: ScreenPoint, width: Double, height: Double, clear: Box, avoiding bubbles: [Box]) -> Box {
+    /// Moved, it keeps off `stations` too (the other stations' marks and
+    /// names) where a place clear of both is at most a tag's height
+    /// further off, so the tag stays by its station: the iPhone's
+    /// screenshot review put the middle station's tag on its west
+    /// neighbour.
+    public static func stationTag(at point: ScreenPoint, width: Double, height: Double, clear: Box, avoiding bubbles: [Box],
+                                  keepingOff stations: [Box] = []) -> Box {
         let clearance = 34.0
         func inside(x: Double, y: Double) -> Box {
             Box(x: min(max(x, clear.minX), max(clear.minX, clear.maxX - width)),
@@ -177,7 +183,13 @@ public enum MapLabelPlacement {
             .filter { !$0.overlaps(own, gap: 0) }
             .sorted { distance($0, point) < distance($1, point) }
         guard !candidates.isEmpty else { return first }
-        return candidates[choose(candidates, avoiding: bubbles, gap: 0)]
+        let offBubbles = candidates[choose(candidates, avoiding: bubbles, gap: 0)]
+        let obstacles = bubbles + stations
+        if let offBoth = candidates.first(where: { box in !obstacles.contains { $0.overlaps(box, gap: 0) } }),
+           distance(offBoth, point) <= distance(offBubbles, point) + height {
+            return offBoth
+        }
+        return offBubbles
     }
 
     /// How far `box`'s middle is from `point`.

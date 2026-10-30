@@ -29,6 +29,10 @@ final class FrameTimeRecorder: NSObject {
     private var follows = false
     private var active = true
     private var link: CADisplayLink?
+    /// Decision 505: the run loop's observers timing the view update,
+    /// and when the one going on began.
+    private var updateObservers: [CFRunLoopObserver] = []
+    private var updateStart: ContinuousClock.Instant?
     private var lastLook: CFTimeInterval = 0
     private var observers: [NSObjectProtocol] = []
 
@@ -158,18 +162,41 @@ final class FrameTimeRecorder: NSObject {
         let link = CADisplayLink(target: self, selector: #selector(beat(_:)))
         link.add(to: .main, forMode: .common)
         self.link = link
+        // Decision 505: the view update (SwiftUI's and Core Animation's,
+        // between the first and last of the main run loop's observers
+        // before it waits, as decision 379's readout times it), so a
+        // stall's "other" tells the views from the rest. Not while the
+        // readout is on, which times it already.
+        let first = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.min) { _, _ in
+            MainActor.assumeIsolated { FrameTimeRecorder.shared.updateStart = .now }
+        }
+        let last = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, CFIndex.max) { _, _ in
+            MainActor.assumeIsolated {
+                let recorder = FrameTimeRecorder.shared
+                guard let start = recorder.updateStart else { return }
+                recorder.updateStart = nil
+                guard !FrameCostMeter.shared.isOn else { return }
+                FrameCostMeter.shared.record(.viewUpdate, since: start)
+            }
+        }
+        updateObservers = [first, last].compactMap { $0 }
+        for observer in updateObservers { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
     }
 
     private func stopBeat() {
         guard let link else { return }
         link.invalidate()
         self.link = nil
+        for observer in updateObservers { CFRunLoopObserverInvalidate(observer) }
+        updateObservers = []
+        updateStart = nil
         FrameCostMeter.shared.keepsFrameParts = false
     }
 
     /// The flat map's beat: the main thread woke for the next frame.
     @objc private func beat(_ link: CADisplayLink) {
-        Self.meter.frame(at: link.timestamp)
+        // Decision 505: with the game's clock, for the longest stall.
+        Self.meter.frame(at: link.timestamp, game: session?.world.clock.now.seconds)
         look(at: link.timestamp)
     }
 

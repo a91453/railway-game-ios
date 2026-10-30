@@ -137,23 +137,28 @@ final class HangReportTests: XCTestCase {
     /// The owner's 97.1 report (decision 497, P2-2): going back to the
     /// start screen takes longer the more saves there are. What writing
     /// the high-speed demo's autosave takes, what reading the list takes
-    /// with 5, 20 and 50 such saves (the first read of a library, then
-    /// again with nothing changed), and how long Back to Start takes from
+    /// with 5, 20 and 50 such saves (with no header kept, with the headers
+    /// kept by an earlier launch, and read again with nothing changed),
+    /// and how long Back to Start takes from
     /// the tap to the start screen, and holds the main actor for.
     func testWhatTheSaveListTakes() async throws {
         _ = try days()
         let world = try MapFrameCostReportTests.highSpeedSession().world
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HangReport-\(UUID().uuidString)", isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let headers = directory.appendingPathExtension("headers")
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: headers)
+        }
         let clock = ContinuousClock()
         var entry: SaveLibrary.Entry?
-        let save = try clock.measure { entry = try SaveLibrary(directory: directory).save(world, as: .manual, at: Date()) }
+        let save = try clock.measure { entry = try SaveLibrary(directory: directory, headers: headers).save(world, as: .manual, at: Date()) }
         let saved = try XCTUnwrap(entry)
         let file = directory.appendingPathComponent(saved.id)
         let bytes = try XCTUnwrap(FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int)
         var rows = [
             String(format: "Saving the high-speed demo: %.0f ms, %.1f MB", Self.ms(save), Double(bytes) / 1_048_576),
-            "| Saves | First read ms | Read again ms |", "| ---: | ---: | ---: |",
+            "| Saves | No header kept ms | Headers kept ms | Read again ms |", "| ---: | ---: | ---: | ---: |",
         ]
         var count = 1
         for target in [5, 20, 50] {
@@ -161,15 +166,17 @@ final class HangReportTests: XCTestCase {
                 try FileManager.default.copyItem(at: file, to: directory.appendingPathComponent("save-copy-\(count).json"))
                 count += 1
             }
-            let library = SaveLibrary(directory: directory)
+            try? FileManager.default.removeItem(at: headers)
             var listed = 0
-            let first = clock.measure { listed = library.entries().count }
+            let cold = clock.measure { listed = SaveLibrary(directory: directory, headers: headers).entries().count }
+            let library = SaveLibrary(directory: directory, headers: headers)
+            let kept = clock.measure { listed = library.entries().count }
             let again = clock.measure { listed = library.entries().count }
             XCTAssertEqual(listed, target)
-            rows.append(String(format: "| %d | %.0f | %.0f |", target, Self.ms(first), Self.ms(again)))
+            rows.append(String(format: "| %d | %.0f | %.0f | %.0f |", target, Self.ms(cold), Self.ms(kept), Self.ms(again)))
         }
         // Back to Start with the 50 saves, the list already read once.
-        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory, headers: headers), language: .traditionalChinese)
         launcher.refresh()
         await launcher.load(saved)?.value
         XCTAssertNotNil(launcher.session)

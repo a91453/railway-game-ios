@@ -134,6 +134,11 @@ public struct Map3DModelPack: Sendable {
                 for reversed in [false, true] { models.append(Map3DEMU800.model(role, reversed: reversed, far: far)) }
             }
         }
+        for fleet in Map3DTourismEMU500.Fleet.allCases {
+            for far in [false,true] {
+                models += Map3DTourismEMU500.order.map { Map3DTourismEMU500.model(fleet,$0,far:far) }
+            }
+        }
         models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
         models.append(Map3DEMU500.formation())
         models += Map3DC341.Unit.allCases.map { Map3DC341.model($0) }
@@ -165,6 +170,7 @@ public struct Map3DModelPack: Sendable {
         for far in [false, true] { models += Map3DKaohsiung.Unit.allCases.map { Map3DKaohsiung.model($0, far: far) } }
         // R21 (first-batch EMD G12) is a static study, not an operating set.
         models += [Map3DG12.model(), Map3DG12.model(far: true)]
+        models += [Map3D45DR1000.model(), Map3D45DR1000.model(far: true)]
         for far in [false, true] { models += Map3DE200MingriStyle.Role.allCases.map { Map3DE200MingriStyle.model($0, far: far) } }
         for far in [false, true] {
             models += Map3DKaohsiungCAF.Unit.allCases.map { Map3DKaohsiungCAF.model($0, far: far) }
