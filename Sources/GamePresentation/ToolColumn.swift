@@ -48,9 +48,10 @@ public enum ToolColumn {
 // Later (98.1, the owner: "不是要固定在工具欄最上面嗎"): the bus tool (PR
 // #1263) made four building tools, and on a phone on its side the column
 // no longer fit; anchored at the foot, the part that scrolls stood low over
-// Done, cut after two or three tools, with the room above it empty. While
-// building the column now runs its whole height: the tools from its top,
-// Done and Build at its foot, the room between them empty.
+// Done, cut after two or three tools, with the room above it empty. Where
+// it all fits the tools stand close over Done and Build, by the thumb (the
+// planner); where it does not, the column runs up to the board, the tools
+// scrolling from its top, the first of them showing.
 extension ToolColumn {
     /// A button's height with its icon alone: 32 and the button style's 4
     /// above and below.
@@ -64,9 +65,9 @@ extension ToolColumn {
         return Double(buttons) * compactButtonHeight + Double(buttons - 1) * buttonSpacing + 2 * tilePadding
     }
 
-    /// The building column's height with its icons alone: the `tools`
-    /// building tools from its top, the card's toggle under them when it
-    /// shows (`toggle`), and at its foot Done and Build, each apart.
+    /// The building column's height with its icons alone: the card's
+    /// toggle when it shows (`toggle`), the `tools` building tools, Done
+    /// and Build, each apart.
     public static func buildingHeight(tools: Int, toggle: Bool) -> Double {
         scrollingContent(tools: tools, toggle: toggle, done: false).height + 2 * (tileGap + tileHeight(buttons: 1))
     }
@@ -77,8 +78,8 @@ extension ToolColumn {
     /// buttons (or two groups), the rest scrolling, so no button shows in
     /// part. Done and Build stand under it, each a gap below, so Done is
     /// never scrolled out of reach, and the tools come before the toggle,
-    /// so building needs no scrolling. The part stands at the column's
-    /// top, under the board, not low over Done (98.1). Where the room past
+    /// so building needs no scrolling. The column then runs up to the
+    /// board, the part at its top, not low over Done (98.1). Where the room past
     /// the cut holds most of the next button (``peek``), the part takes
     /// the room and shows that button in part, fading: cut cleanly, the
     /// bus tool on a real-world map left no sign that it was there.

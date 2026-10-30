@@ -98,4 +98,22 @@ final class ToolColumnTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(peeking - busTop, ToolColumn.compactButtonHeight / 2)
         XCTAssertLessThan(peeking - busTop, ToolColumn.compactButtonHeight)
     }
+
+    /// 98.1 (the planner): where the building column fits it stands at its
+    /// own height over the screen's foot, the tools close over Done by the
+    /// thumb, the room above it left to the map; only where it does not
+    /// does it run up to the board.
+    func testABuildingColumnThatFitsStandsCloseOverDone() {
+        let pro = ToolColumn.maxHeight(screenHeight: 382, top: 54, gap: 10, bottom: 10)
+        // The four tools without the card's toggle (a lesson's step that
+        // points into the card): 180 + 6 + 48 + 6 + 48, a gap between each.
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 4, toggle: false), 288)
+        XCTAssertLessThan(ToolColumn.buildingHeight(tools: 4, toggle: false), pro)
+        // Lesson 1's one tool with the toggle: well under the room.
+        XCTAssertEqual(ToolColumn.buildingHeight(tools: 1, toggle: true), 48 + 6 + 48 + 6 + 48 + 6 + 48)
+        XCTAssertLessThan(ToolColumn.buildingHeight(tools: 1, toggle: true), pro)
+        // With the toggle the four do not fit: the column runs up to the
+        // board and scrolls.
+        XCTAssertGreaterThan(ToolColumn.buildingHeight(tools: 4, toggle: true), pro)
+    }
 }
