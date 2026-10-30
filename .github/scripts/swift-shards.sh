@@ -694,7 +694,7 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ReservationShortcutTests:227 DeadlockPropertyTests:135
   PassengerPropertyTests:132 ScheduledOvertakeTrackLastPropertyTests:128
   OccupiedRoutingPropertyTests:78 WorldStateMachineTests:65
-  NetworkSectionPropertyTests:50 IdleTrainDeadlockTests:48
+  NetworkSectionPropertyTests:50 IdleTrainDeadlockTests:48 DeadlockSearchCostTests:60
   ScheduledTrafficTests:46 LineAccountsTests:35 TurnbackPropertyTests:33
   TurnbackTests:32 ReplayFixtureTests:28 CityRequestsTests:26
   LoadJourneyCacheTests:25 LineRoutePreferencePropertyTests:24
