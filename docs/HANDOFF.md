@@ -2283,6 +2283,27 @@
   - P2-7：`routeWaitText` 與泡泡說出「在等哪一列停著的車」。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
 
+### 4.32 短面板先列路線（決策 498 B1，UIB session_01YGNNuqDeWxuzsEPMNtxT4N，`uib-b1-lines-first`，#1560，2026-10-30）
+
+- **做了的**在決策 498 的 B1 一節：
+  - 手機橫放（`LinesListControls.inline`）時，路線清單的順序改成控制列、路線、入口、新路線（`LinesListControls.parts`，`LinesPanelNavigationTests`）。
+  - 這時不顯示「路線」標題，區塊間距改 compact。
+  - UI 測試 `openLinePage` 找不到路線列時先往上拖。
+  - ios-build `only_testing` 跑過的都綠（41073016530）：LessonUITests 第 1 課、兩個 LineRoutePreferenceUITests、LineDraftSummaryUITests、HUDAlignment 的路線面板測試。
+- **還沒做的**（UIB 壓縮兩次後依規則停下，#1560 仍是 draft）：
+  1. **截圖驗收紅**：`WebsiteScreenshotTests.testLinesListAndLinePage` 停在「The line's page opens」（WebsiteScreenshotTests.swift:330；runs 41078097022、41081046632）。
+     - 測試找到並點了 `"line.trainsRow.1-line.report.1" Button`，點之前已 `waitUntilSettled`，但 `line.detail` 沒出現。
+     - 拿掉標題、改 compact 間距之前，這一步會過。
+     - 先查兩個假說：
+       - 合併起來的識別字表示點到的是列裡的子元素（列車列／報告按鈕）。
+       - 第一列在短面板底邊被切到一半，點的位置落在面板外。
+     - 修法候選：
+       - 點列時改點列的上半部：`coordinate(withNormalizedOffset: (0.5, 0.25))`。
+       - 點之前先用 `dragUntilWhollyOnScreen` 把列整列拉進來。
+  2. 修好後再跑 website-screenshots（一次一個，先確認沒有 in_progress／queued）。看 lines-list、line-page、lines-network 三張，把 `docs/art/ui-audit-2026-10-30/b1-*.png` 放進 PR。
+  3. 更新決策 498 B1 的「驗證」和 PR 說明。PR 說明裡提到的 LessonUITests 改動已經還原，要拿掉。
+  4. 轉 ready，在 #1041 留「可合併」，告訴遊戲規劃。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
