@@ -428,8 +428,7 @@ struct LinesPanel: View {
             trafficSection
             serviceDaySection
         }
-        .navigationTitle(Text(verbatim: NetworkSwitches.title(in: session.language)))
-        .navigationBarTitleDisplayMode(.inline)
+        .panelTitle(NetworkSwitches.title(in: session.language))
         .toolbar { doneItem }
         .safeAreaInset(edge: .bottom) {
             StatusBanner(session: session, announces: false)
@@ -440,8 +439,7 @@ struct LinesPanel: View {
         Form {
             buyableLinesSection
         }
-        .navigationTitle(Text(verbatim: NetworkSwitches.forSaleTitle(count: 0, in: session.language)))
-        .navigationBarTitleDisplayMode(.inline)
+        .panelTitle(NetworkSwitches.forSaleTitle(count: 0, in: session.language))
         .toolbar { doneItem }
         .safeAreaInset(edge: .bottom) {
             StatusBanner(session: session, announces: false)
@@ -469,8 +467,7 @@ struct LinesPanel: View {
             .id(line.id)
             .accessibilityIdentifier("line.detail")
             .hardTopScrollEdge()
-            .navigationTitle(Text(verbatim: line.name))
-            .navigationBarTitleDisplayMode(.inline)
+            .panelTitle(line.name)
             .toolbar { doneItem }
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)

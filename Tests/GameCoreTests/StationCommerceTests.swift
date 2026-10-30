@@ -240,11 +240,17 @@ final class StationCommerceTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 57)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        // Decision 504: this build sends those still waiting at 04:00 home,
+        // which the build that saved this did not, so the world it makes
+        // differs in its passengers and what they paid; the map, the lines
+        // and the clock still match, and the save itself is unchanged.
+        XCTAssertEqual(world.stations, made.stations)
+        XCTAssertEqual(world.lines, made.lines)
+        XCTAssertEqual(world.clock, made.clock)
         XCTAssertEqual(world.station(id: b)?.commerce, .mall)
         XCTAssertGreaterThan(world.stationFlow(b, onDay: world.dayIndex(of: world.clock.now) - 1)?.transferred ?? 0, 0)
         var carried = world
-        var straight = made
+        var straight = try JSONDecoder().decode(SavedGame.self, from: data).world
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
         XCTAssertEqual(carried, straight)

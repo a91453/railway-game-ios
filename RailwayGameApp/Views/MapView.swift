@@ -758,6 +758,18 @@ struct MapView: View {
                     .ambientHidden(screen.ambient != nil)
                 }
                 .overlay(alignment: .bottomTrailing) {
+                    // TestFlight 98.1: under a phone's panel the legend
+                    // goes down to the credits, clear of what stands at
+                    // the bottom under it (``HUDMargins/legendFootUnderPanel``).
+                    let standardFoot = besideTrailing ? clear.bottom : screenEdges.bottom
+                    let global = proxy.frame(in: .global)
+                    let foot: CGFloat = !buttonsUnderPanel ? standardFoot : CGFloat(HUDMargins.legendFootUnderPanel(
+                        standard: Double(standardFoot), screenBottom: Double(screenEdges.bottom), mapHeight: viewport.height,
+                        legendStart: Double(bottomTrailingFrame.minX), legendEnd: Double(bottomTrailingFrame.maxX),
+                        beside: ([cornerRowFrame, bottomLeadingFrame] + attributionFrames
+                            + [screen.editsFrame, screen.stationMasterFrame].map { $0.offsetBy(dx: -global.minX, dy: -global.minY) })
+                            .map { ScreenFrame($0) }
+                    ))
                     // Decision 382: the legend, the overview map and the
                     // buttons end on the status bar's trailing line, and the
                     // buttons stand on the bottom row (``HUDMargins``).
@@ -794,7 +806,7 @@ struct MapView: View {
                                 // layer strip and the banner, over the buttons.
                                 maxHeight: CGFloat(HUDMargins.legendMaximumHeight(
                                     mapHeight: viewport.height, top: Double(max(clear.top, topColumnDepth)),
-                                    bottom: Double(besideTrailing ? clear.bottom : screenEdges.bottom), buttons: !buttonsUnderPanel
+                                    bottom: Double(foot), buttons: !buttonsUnderPanel
                                 ))
                             ) {
                                 stopPopTravelPlay()
@@ -839,7 +851,7 @@ struct MapView: View {
                     // and then above the dock too: moved in from the edge on
                     // a phone, the zoom buttons were under it.
                     .padding(.trailing, besideTrailing ? clear.trailing : screenEdges.trailing)
-                    .padding(.bottom, besideTrailing ? clear.bottom : screenEdges.bottom)
+                    .padding(.bottom, foot)
                     .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
                     .ambientHidden(screen.ambient != nil)
                 }

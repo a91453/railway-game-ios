@@ -307,6 +307,31 @@ extension GameWorld {
         passengers.removeAll { $0.isEmpty }
     }
 
+    /// Decision 504: at ``LineAcquisition/sameDayCutoff`` (04:00), as each
+    /// operating day starts, everyone still waiting at any station goes
+    /// home, counted as abandoned at their original station, as when a
+    /// station closes (``abandonPassengers(waitingAt:)``). Nobody waits
+    /// through the night; riders on board are not touched. After the
+    /// hour's settlement, so the hour that ends counts who waited in it.
+    mutating func sendWaitingPassengersHome(at now: GameTime) {
+        let day = GameTime.secondsPerDay
+        guard (now.seconds % day + day) % day == LineAcquisition.sameDayCutoff else { return }
+        var abandoned: [StationID: Int64] = [:]
+        for index in passengers.indices where !passengers[index].waiting.isEmpty {
+            let station = passengers[index].station
+            for group in passengers[index].abandonGroups(unless: { _ in false }) {
+                abandoned[group.journey?.origin ?? station, default: 0] += group.count
+            }
+        }
+        guard !abandoned.isEmpty else { return }
+        for origin in abandoned.keys.sorted() {
+            if let record = passengers.firstIndex(where: { $0.station == origin }) {
+                passengers[record].abandoned += abandoned[origin]!
+            }
+        }
+        passengers.removeAll { $0.isEmpty }
+    }
+
     /// Whether `leg` is served (see ``isServed(_:)``), with whether its
     /// line's service runs from `memo` once worked out there: the journeys
     /// and headways it reads change only by a command, never within an
