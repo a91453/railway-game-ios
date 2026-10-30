@@ -31,6 +31,41 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-30-98",
+            items: [
+                Line(
+                    english: "The Danhai, Ankeng and Kaohsiung light rail trains look like the real ones on the 3D map.",
+                    chinese: "3D 地圖裡淡海、安坑、高雄輕軌的列車，照實車的樣子畫。"
+                ),
+                Line(
+                    english: "A road laid along an existing street shows on the 3D map at once, and buses redraw onto a new road right away.",
+                    chinese: "沿著地圖上現有街道鋪的路，3D 立刻看得到，公車改走新路也立刻重畫。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Going back to the start screen from the menu no longer freezes, even with many saves.",
+                    chinese: "從選單回開始畫面不再凍住，存檔多也一樣。"
+                ),
+                Line(
+                    english: "Tapping a missing-materials bubble on the map jumps to the station panel's materials row every time, not just the first.",
+                    chinese: "點地圖上缺建材的泡泡，每次都會跳到車站面板的建材列，不只第一次。"
+                ),
+                Line(
+                    english: "On an iPhone held sideways, a tutorial card's text stops at the end of a whole line instead of cutting a line in half.",
+                    chinese: "iPhone 橫拿時，教學卡的說明停在整行，不再切掉半行字。"
+                ),
+                Line(
+                    english: "On the real-world map, a road a bus route uses can no longer be taken up.",
+                    chinese: "實景地圖上，公車線在用的路不能拆。"
+                ),
+                Line(
+                    english: "The quote card for buying a real line is prepared in the background and no longer freezes the screen.",
+                    chinese: "收購真實路線的報價卡改在背景準備，不再卡住畫面。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-30-96",
             items: [
                 Line(
