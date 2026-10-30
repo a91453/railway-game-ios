@@ -247,7 +247,7 @@ needs OSM data reads the same extract.
   Linux runner, billed to the Claude API key in the repository secret
   `ANTHROPIC_API_KEY`; decision 187's later amendment),
   `full-lane-watch.yml` (when an iOS App Build full lane of `main` finishes,
-  `tools/ci-watch/full_lane_watch.py` comments on the work registry (#1041) if it turned red, a
+  `tools/ci-watch/full_lane_watch.py` comments on the work registry (#1579) if it turned red, a
   job turned red that had not in this red streak, or it turned green again;
   as github-actions[bot], never with an at sign; decision 329).
 - Distribution: GitHub Actions → internal TestFlight
@@ -406,9 +406,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   adding a dependency, and reusing copyleft or unlicensed code; nor any
   "never" rule in this file.
 - Several sessions work in parallel. Before starting a task, read every
-  comment of the work registry, issue #1041 (it took over from #231, which
-  stopped taking comments at 2,500 on 2026-10-22; read #231's last unreleased
-  claims too), and post a claim there: the
+  comment of the work registry, issue #1579 (it took over from #1041 on
+  2026-10-30, near GitHub's comment limit, which had taken over from #231;
+  read #1041's last unreleased claims too), and post a claim there: the
   session, branch, task, main files, and the save version, ARCHITECTURE
   decision and golden schema the task reserves (or "不動"). Take each number
   as one more than the largest on `main` or in any claim not yet released.
@@ -432,10 +432,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Compactions are counted in the work registry, not in the conversation
   (owner, 2026-10-24: a summary does not say how many came before). Each
   time a session sees that its conversation was summarized, its first act
-  is a comment in #1041, 「<session> 壓縮第 N 次」, N being one more than
-  its own such comments there. The game-planning session hands over when
-  its third compaction nears (after the second, at about 300k tokens
-  used), writing the handoff before finishing what it holds; an
+  is a comment in #1579, 「<session> 壓縮第 N 次」, N being one more than
+  its own such comments there (and in #1041). The game-planning session
+  hands over when its third compaction nears (after the second, at about
+  300k tokens used), writing the handoff before finishing what it holds; an
   implementation session takes no new work after 1 and stops at 2
   (`docs/HANDOFF.md` §1). The game-planning session may open the next
   one itself with `create_session`, model `claude-opus-5-5` (owner,

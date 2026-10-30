@@ -77,12 +77,48 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertTrue(build.becomesHittable(within: 10), "Build is covered: \(build.frame)")
         let window = app.windows.firstMatch.frame
         XCTAssertLessThanOrEqual(build.frame.maxY, window.maxY - 10, "Whole above the screen's foot: \(build.frame)")
+        // The card's toggle beside Build, not over the tools (98.1).
         let toggle = app.buttons["controls.toggle"]
         if toggle.exists {
-            XCTAssertLessThanOrEqual(toggle.frame.maxY, build.frame.minY, "The column's top over Build: \(toggle.frame)")
+            XCTAssertGreaterThanOrEqual(toggle.frame.minX, build.frame.maxX, "Beside Build: \(toggle.frame) and \(build.frame)")
+            XCTAssertLessThanOrEqual(abs(toggle.frame.midY - build.frame.midY), build.frame.height / 2, "Beside Build: \(toggle.frame) and \(build.frame)")
         }
         build.tap()
         XCTAssertTrue(app.buttons["tool.network"].disappears(within: 10), "Build closes the tools")
+    }
+
+    /// 98.1 (the owner: "不是要固定在工具欄最上面嗎"): while building, the
+    /// tools stood low over Done, scrolled, cut short, the room above them
+    /// empty. Now a finger reaches the first tool as the tools open; where
+    /// they all fit they stand close over Done, else the column runs up to
+    /// a margin under the status bar, the first tool at its top. Done stays
+    /// over Build; the card's toggle stands beside Build. Which of the two, and how tall the part that scrolls
+    /// is, is `ToolColumnTests`.
+    func testThePhonesBuildingToolsStartAtTheColumnsTop() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
+        let app = launch(orientation: .landscapeLeft)
+        defer { app.terminate() }
+
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 10), "The building tools open")
+        XCTAssertTrue(network.becomesHittable(within: 10), "The first tool is covered or scrolled away: \(network.frame)")
+        network.waitUntilSettled()
+        let status = app.descendants(matching: .any)["hud.bar"].firstMatch
+        XCTAssertTrue(status.appears(within: 5))
+        let done = app.buttons["tool.select"]
+        XCTAssertTrue(done.appears(within: 5))
+        XCTAssertLessThan(done.frame.maxY, build.frame.minY, "Done over Build: \(done.frame) and \(build.frame)")
+        XCTAssertLessThan(network.frame.maxY, done.frame.minY, "The tools over Done: \(network.frame) and \(done.frame)")
+        // Up the column: the margin of 10 and the glass, 4, over the first
+        // tool. Close over Done: in one group with it, 4 apart.
+        let atTop = abs(network.frame.minY - (status.frame.maxY + 10 + 4)) <= 3
+        let bus = app.buttons["tool.bus"]
+        let overDone = bus.exists && bus.isHittable && abs(done.frame.minY - bus.frame.maxY - 4) <= 3
+        XCTAssertTrue(atTop || overDone,
+                      "Neither at the column's top nor close over Done: \(network.frame), \(bus.frame), Done \(done.frame), the status bar \(status.frame)")
     }
 
     /// On an iPad held upright they stand in the map's corner beside the

@@ -188,6 +188,81 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-demo-day", app)
     }
 
+    /// 98.1 (decision 382, later): Build open on a phone on its side, the
+    /// building tools from the column's top, on a map without credits and
+    /// on the real-world demo with its credits under the column. For the
+    /// screenshot review of the pull request that moved them, not the
+    /// website.
+    func testBuildingToolsColumn() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        app.buttons["dock.build"].tap()
+        app.buttons["tool.network"].waitUntilSettled()
+        settle()
+        keep("build-tools-column", app)
+        app.terminate()
+
+        let real = launch()
+        defer { real.terminate() }
+        real.openDemo("demo.realWorld", timeout: 60)
+        XCTAssertTrue(real.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
+        settle(seconds: 4)
+        // The credits' row starts past the column, which runs down beside
+        // it (98.1, the planner's (a)).
+        let credit = real.buttons["map.credit"]
+        if credit.appears(within: 10) {
+            XCTAssertGreaterThanOrEqual(credit.frame.minX, real.buttons["dock.build"].frame.maxX, "Past the column: \(credit.frame)")
+        }
+        keep("real-world-credits-row", real)
+        real.buttons["dock.build"].tap()
+        real.buttons["tool.network"].waitUntilSettled()
+        settle()
+        keep("build-tools-column-real-world", real)
+        real.terminate()
+
+        // Lesson 1's tools, which fit: where they stand when nothing scrolls.
+        let lesson = launch()
+        defer { lesson.terminate() }
+        let lessons = lesson.buttons["start.lessons"]
+        XCTAssertTrue(lessons.appears(within: 15), "The start screen shows Lessons")
+        lessons.waitUntilSettled()
+        lessons.tap()
+        let first = lesson.buttons["lesson.1.start"]
+        if !first.appears(within: 5), lessons.exists {
+            lessons.waitUntilSettled()
+            lessons.tap()
+        }
+        XCTAssertTrue(first.appears(within: 10), "Lesson 1 is listed")
+        XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start can be tapped")
+        first.tap()
+        XCTAssertTrue(lesson.descendants(matching: .any)["tutorial.card"].firstMatch.appears(within: 60), "The lesson's card shows")
+        lesson.buttons["dock.build"].tap()
+        lesson.buttons["tool.select"].waitUntilSettled()
+        settle()
+        keep("build-tools-column-lesson", lesson)
+    }
+
+    /// Building on the real-world demo, the panel open at the trailing
+    /// side: where people are, its legend down by the credits rather than
+    /// over the track being laid (TestFlight 98.1).
+    func testBuildingLegendUnderPanel() {
+        // UI tests leave where people are off unless asked (RailwayGameApp).
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["map.potentialLegend"].firstMatch.appears(within: 30), "Where people are shows")
+        settle(seconds: 4)
+        keep("build-legend-under-panel", app)
+    }
+
     /// New game → real world (decision 477): the whole of Taiwan first,
     /// above the places.
     func testRealWorldPicker() {
@@ -201,6 +276,36 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["realWorld.wholeTaiwan"].appears(within: 15), "The places show")
         settle()
         keep("real-world-picker", app)
+    }
+
+    /// Decision 468, later: a trace along the Liujia Line on Hsinchu's
+    /// real-world map says the line can be bought as it is, for how much,
+    /// and its button opens the purchase card. The trace is drawn by the
+    /// Debug app's `-ui-test-trace-for-sale` through the tool's own taps.
+    func testTracedLineForSale() {
+        let app = launch(extra: ["-ui-test-trace-for-sale"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let hsinchu = app.buttons.matching(identifier: "place.tra-hsinchu").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(hsinchu, in: app.collectionViews.firstMatch), "Hsinchu is listed")
+        hsinchu.waitUntilSettled()
+        app.tapMiddle(of: hsinchu)
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        // The trace's hint, its price once laid out, and the pill's button.
+        let buy = app.buttons["map.build.buyLine"]
+        XCTAssertTrue(buy.appears(within: 60), "The trace runs along a line for sale")
+        settle(seconds: 8)
+        keep("traced-line-for-sale", app)
+
+        XCTAssertTrue(buy.becomesHittable(within: 5))
+        buy.tap()
+        settle(seconds: 6)
+        keep("traced-line-for-sale-card", app)
     }
 
     // MARK: - What the game gained after those (decisions 167 to 186)
@@ -304,8 +409,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// The lines panel in two levels (decision 481) on the freight scene's
-    /// second morning: the short list with its pinned controls, a line's
-    /// own page, and the whole network's page.
+    /// second morning: the short list, its lines first on a phone on its
+    /// side (decision 498), a line's own page, and the whole network's page.
     func testLinesListAndLinePage() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         defer { app.terminate() }
@@ -320,11 +425,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 2)
         keep("lines-list", app)
 
-        // On a phone on its side the lines start below the rows over them,
-        // and the form makes a row only once it scrolls in.
+        // The form makes a row only once it scrolls in. The list runs
+        // under the bar (decision 498: no heading over the first line), and
+        // a tap on a row there lands on the bar (run 41081046632).
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "A line's row shows")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        // A tap on a list still moving after the drag only stops it.
+        row.waitUntilSettled()
         row.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].appears(within: 10), "The line's page opens")
         settle(seconds: 2)
@@ -332,13 +440,11 @@ final class WebsiteScreenshotTests: XCTestCase {
 
         app.navigationBars.firstMatch.buttons.firstMatch.tap()
         XCTAssertTrue(app.collectionViews["line.detail"].disappears(within: 10), "Back to the list")
-        // The network's row is at the list's top, above the line's row.
+        // Decision 498: on a phone on its side the network's row is under
+        // the lines, where `dragUntilWhollyOnScreen` looks for it.
         let network = app.buttons["lines.network"]
         let back = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        // Under the pinned search, filter and sort, which a drag must not
-        // begin on.
         let top = app.linesListTop(under: bar)
-        dragBack(to: network, in: back, below: top, in: app)
         XCTAssertTrue(app.dragUntilWhollyOnScreen(network, in: back, below: top), "The whole network's row shows")
         network.tap()
         settle(seconds: 2)
@@ -619,6 +725,72 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// One tap on the zoom-in button, when the map has it.
+    /// Decision 502: the saves list with one row per game, choosing saves
+    /// to delete and the warning before they go, and a save's earlier
+    /// versions. For the screenshot review of the pull request that made
+    /// them, not the website.
+    func testSavesListOneRowPerGame() {
+        let app = launch(extra: ["-sample-saves"])
+        defer { app.terminate() }
+        let saves = app.buttons["start.saves"]
+        XCTAssertTrue(saves.appears(within: 30), "The start screen shows Saves")
+        // On a phone on its side Saves lies below the fold of the start
+        // screen's column: drag that column at the button's own x
+        // (`StartSaveFlowSmokeTests.testAnUnreadableSaveCanBeDeleted`).
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<6 where !saves.isHittable {
+            let x = saves.frame.midX - app.frame.minX
+            origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.75))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.35)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        saves.tap()
+        let select = app.buttons["saves.select"]
+        XCTAssertTrue(select.appears(within: 10), "The list offers Select")
+        settle()
+        keep("saves-list", app)
+
+        // A row's earlier versions, from its "⋯" menu.
+        let menus = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.menu.save-"))
+        let versionsChoice = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.versions.")).firstMatch
+        for index in 0..<menus.count where !versionsChoice.exists {
+            let menu = menus.element(boundBy: index)
+            guard menu.isHittable else { continue }
+            menu.tap()
+            if !versionsChoice.appears(within: 2) { app.tap() }
+        }
+        if versionsChoice.exists {
+            settle(seconds: 1)
+            keep("saves-row-menu", app)
+            versionsChoice.tap()
+            let version = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.version.")).firstMatch
+            XCTAssertTrue(version.appears(within: 10), "The earlier versions are offered")
+            settle(seconds: 1)
+            keep("saves-earlier-versions", app)
+            let cancel = app.buttons["取消"].firstMatch
+            if cancel.exists { cancel.tap() } else { app.tap() }
+            XCTAssertTrue(version.disappears(within: 10))
+        }
+
+        select.tap()
+        let selectAll = app.buttons["saves.selectAll"]
+        XCTAssertTrue(selectAll.appears(within: 10), "Choosing offers Select All")
+        settle(seconds: 1)
+        keep("saves-select", app)
+        selectAll.tap()
+        settle(seconds: 1)
+        keep("saves-select-all", app)
+        tapButton("saves.deleteSelected", in: app)
+        let confirm = app.buttons["saves.deleteSelected.confirm"].firstMatch
+        XCTAssertTrue(confirm.appears(within: 10), "Deleting warns first")
+        settle(seconds: 1)
+        keep("saves-delete-warning", app)
+        let cancel = app.buttons["取消"].firstMatch
+        XCTAssertTrue(cancel.exists)
+        cancel.tap()
+        XCTAssertTrue(confirm.disappears(within: 10), "Cancel keeps the saves")
+    }
+
     private func zoomInOnce(_ app: XCUIApplication) {
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 5), zoomIn.becomesHittable(within: 3) {
@@ -648,6 +820,42 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(card.appears(within: 60), "The lesson's card shows")
         settle(seconds: 3)
         keep("lesson-card", app)
+    }
+
+    /// Decision 508, for its screenshot review: a new blank-map game with
+    /// no line, the station master's offer of the tutorial, the lines
+    /// panel saying what is missing, and after "I'll do it myself" the
+    /// station master naming Build with its ring.
+    func testFirstLineGuide() {
+        let app = launch(extra: ["-show-first-line-offer"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 15), "The start screen shows New Game")
+        newGame.tap()
+        app.chooseBlankMap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The new game opens")
+        let offer = app.descendants(matching: .any)["stationMaster.offer"].firstMatch
+        XCTAssertTrue(offer.appears(within: 15), "The station master offers the tutorial")
+        settle()
+        keep("first-line-offer", app)
+
+        app.buttons["entry.lines"].tap()
+        let need = app.descendants(matching: .any)["lines.firstLine"].firstMatch
+        XCTAssertTrue(need.appears(within: 10), "The lines panel says what is missing")
+        settle()
+        keep("first-line-lines-empty", app)
+        let go = app.buttons["lines.firstLine.go"]
+        XCTAssertTrue(go.becomesHittable(), "Its button can be tapped")
+        go.tap()
+        XCTAssertTrue(app.buttons["tool.network"].appears(within: 10), "It opens Build")
+        app.buttons["dock.build"].tap()
+
+        let myself = app.buttons["stationMaster.offer.self"]
+        XCTAssertTrue(myself.becomesHittable(), "I'll do it myself can be tapped")
+        myself.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "The first step is said")
+        settle()
+        keep("first-line-guide-build", app)
     }
 
     /// The game menu on a phone on its side, its rows side by side icons

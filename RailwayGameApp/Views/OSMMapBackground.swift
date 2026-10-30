@@ -605,8 +605,8 @@ final class FollowingMapLibreView: MLNMapView {
     private func placeCredit() {
         credit.text = railwayLayers.isEmpty ? creditTexts.map : creditTexts.railways
         let safe = screenSafeArea
-        let size = credit.textSize
-        let width = min(size.width + 8, bounds.width - 60 - safe.leading - safe.trailing)
+        let size = credit.textSize(width: bounds.width - 60 - safe.leading - safe.trailing - 8)
+        let width = size.width + 8
         let height = size.height + 2
         let bottom = bounds.height - 6 - safe.bottom
         credit.place(

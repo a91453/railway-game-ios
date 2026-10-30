@@ -453,6 +453,15 @@ public final class GameSession {
     public internal(set) var preparingRealLine: RealBranchLine?
     /// Lays out the offer of ``preparingRealLine`` off the main actor.
     @ObservationIgnored var realLineOfferTask: Task<Void, Never>?
+    /// Decision 468, later: the offer of the line for sale a trace runs
+    /// along, laid out off the main actor, and on which world
+    /// (``tracedSaleHint``).
+    var tracedSaleQuote: TracedSaleQuote?
+    /// Lays out ``tracedSaleQuote`` off the main actor.
+    @ObservationIgnored var tracedSaleQuoteTask: (line: RealBranchLine, task: Task<Void, Never>)?
+    /// The real way of each line for sale (``saleLineWays``), as last
+    /// worked out, and from what.
+    @ObservationIgnored var saleLineWaysMemo: (key: BuyableRealLinesKey, ways: [SaleLineWay])?
 
     /// The real station offered on its purchase card (decision 400 A.8),
     /// while the card is open.

@@ -130,6 +130,12 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-game-card") {
             launcher.dismissFirstGameCard()
         }
+        // Decision 508: likewise the station master's offer of the tutorial
+        // in a game with no line, which stays until answered, unless a test
+        // asks for it with -show-first-line-offer.
+        if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-line-offer") {
+            launcher.showsFirstLineOffer = false
+        }
         // Decision 464: a slow Simulator would open the speed hint's popover
         // by itself in the middle of a test and the next tap would close it;
         // UI tests start with it off unless a test asks with
@@ -283,6 +289,22 @@ struct RailwayGameApp: App {
                 // the player delete.
                 if DebugLaunch.isSet("-broken-save") {
                     try Data("not a save".utf8).write(to: directory.appendingPathComponent("save-broken.json"))
+                }
+                // Decision 502: three games of the player's, one saved three
+                // times (two earlier versions), and the last game's
+                // autosave, for the saves list's screenshots.
+                if DebugLaunch.isSet("-sample-saves") {
+                    let library = SaveLibrary(directory: directory)
+                    let now = Date()
+                    var world = DemoWorld.make(in: .traditionalChinese)
+                    let row = try library.save(world, as: .manual, at: now.addingTimeInterval(-7_200), named: "台北環線")
+                    for minutes in [90.0, 20] {
+                        try world.advance(ticks: 3_600)
+                        try library.save(world, as: .manual, at: now.addingTimeInterval(-minutes * 60), row: row.id)
+                    }
+                    try library.save(GameWorld.newGame(), as: .manual, at: now.addingTimeInterval(-86_400), named: "空白地圖練習")
+                    try library.save(DemoWorld.make(in: .traditionalChinese), as: .manual, at: now.addingTimeInterval(-3 * 86_400))
+                    try library.save(world, as: .autosave, at: now.addingTimeInterval(-300), row: row.id)
                 }
                 return SaveLibrary(directory: directory)
             } catch {

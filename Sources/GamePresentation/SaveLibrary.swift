@@ -49,6 +49,17 @@ public struct SaveLibrary: Sendable {
         /// for the latest autosave and the player's own saves.
         public var slot: Int? { SaveLibrary.slotNumber(of: id) }
 
+        /// Decision 502: the row of the player's saves the game is kept in.
+        /// A save of the player's is its own row (an earlier version, its
+        /// row's); an autosave names the row its game was last saved in or
+        /// loaded from, or `nil` when it has none yet.
+        public let row: String?
+
+        /// How many earlier versions its row keeps (decision 502): at most
+        /// ``SaveLibrary/versionsKept`` less one of the player's saves, and
+        /// the game as last left without saving.
+        public let earlierVersions: Int
+
         /// How long ago it was saved, by the clock on the wall (decision
         /// 192): "just now", "12 min ago", "3 h ago", "2 d ago"; "剛剛",
         /// "12 分鐘前"…; `nil` when that is not known.
@@ -56,13 +67,18 @@ public struct SaveLibrary: Sendable {
             savedAt.map { SaveLibrary.agoText(from: $0, to: now, in: language) }
         }
 
-        init(id: String, kind: Kind, savedAt: Date?, summary: SaveSummary?, problem: SaveError?, name: String? = nil) {
+        init(
+            id: String, kind: Kind, savedAt: Date?, summary: SaveSummary?, problem: SaveError?, name: String? = nil,
+            row: String? = nil, earlierVersions: Int = 0
+        ) {
             self.id = id
             self.kind = kind
             self.savedAt = savedAt
             self.summary = summary
             self.problem = problem
             self.name = name
+            self.row = kind == .manual ? SaveLibrary.row(of: id) : row
+            self.earlierVersions = earlierVersions
         }
     }
 
@@ -88,6 +104,11 @@ public struct SaveLibrary: Sendable {
     /// most six files, some 43 MB.
     public static let autosaveSlots = 5
 
+    /// How many versions a row of the player's saves keeps (decision 502):
+    /// the one listed and the two saved before it, so a save made by
+    /// mistake can be undone.
+    public static let versionsKept = 3
+
     /// The longest name a save keeps; a longer one is cut.
     public static let maximumNameLength = 60
 
@@ -103,6 +124,15 @@ public struct SaveLibrary: Sendable {
     /// `save-….json`'s is `save-….name`, plain UTF-8 text. Not `.json`, so
     /// no build lists it as a save.
     static let nameSuffix = ".name"
+    /// Decision 502: the earlier versions of row `<stem>.json` are
+    /// `Versions/<stem>/1.json` (the latest of them), `2.json`…, each with
+    /// its news log. A folder, so no build lists them as saves, and the
+    /// iCloud round (decision 397) copies none of them.
+    static let versionsFolder = "Versions"
+    /// Where saves being deleted wait until all of them are moved
+    /// (``delete(_:)``), so a delete is all or nothing.
+    static let deletingFolder = "Deleting"
+    static let donePrefix = "done-"
 
     public let directory: URL
     /// The headers already read (decision 497), shared by the library's
@@ -139,6 +169,7 @@ public struct SaveLibrary: Sendable {
     /// the newest first; files that cannot be read last, by name. An empty
     /// list when the folder does not exist yet.
     public func entries() -> [Entry] {
+        tidyUp()
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         // A save's news log (decision 175) lies beside it and is no save.
         let saves = names.filter { $0.hasSuffix(".json") && !$0.hasSuffix(Self.newsSuffix) }
@@ -195,11 +226,15 @@ public struct SaveLibrary: Sendable {
             return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: .fileSystem)
         }
         let given = playerName(of: name)
+        let versions = kind == .manual ? versionFiles(of: name).count : 0
         switch header {
         case .success(let header):
-            return Entry(id: name, kind: kind, savedAt: header.savedAt, summary: header.summary, problem: nil, name: given)
+            return Entry(
+                id: name, kind: kind, savedAt: header.savedAt, summary: header.summary, problem: nil, name: given,
+                row: header.row.flatMap(Self.validRow), earlierVersions: versions
+            )
         case .failure(let problem):
-            return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: problem, name: given)
+            return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: problem, name: given, earlierVersions: versions)
         }
     }
 
@@ -301,16 +336,36 @@ public struct SaveLibrary: Sendable {
         return try Self.decode(data)
     }
 
-    /// Writes `world` as the autosave, over the last one, or as a new save
-    /// of the player's own, saved at `date`. The file is replaced whole or
+    /// Writes `world` as the autosave, over the last one, or as a save of
+    /// the player's own, saved at `date`. The file is replaced whole or
     /// not at all.
+    ///
+    /// Decision 502: `row` is the row of the player's saves the game is
+    /// kept in. A save of the player's is written as that row's newest
+    /// version, the one before kept as an earlier version
+    /// (``versionsKept``); without a row, or when `row` is not a name of
+    /// one, it is a new row. An autosave keeps `row` in its file, so the
+    /// game finds its row again when another game starts
+    /// (``archiveAutosave()``) or on another device.
     @discardableResult
-    public func save(_ world: GameWorld, news: NewsLog? = nil, as kind: Kind, at date: Date, named playerName: String? = nil) throws(SaveError) -> Entry {
-        let data = try Self.encode(world, at: date)
-        let name = kind == .autosave ? Self.autosaveFile : freeName(for: date)
+    public func save(
+        _ world: GameWorld, news: NewsLog? = nil, as kind: Kind, at date: Date, named playerName: String? = nil, row: String? = nil
+    ) throws(SaveError) -> Entry {
+        let row = row.flatMap(Self.validRow)
+        let data = try Self.encode(world, row: kind == .autosave ? row : nil, at: date)
+        let name = kind == .autosave ? Self.autosaveFile : (row ?? freeName(for: date))
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            try data.write(to: url(of: name), options: .atomic)
+            let staged = kind == .manual ? try stageVersion(of: name) : false
+            do {
+                try data.write(to: url(of: name), options: .atomic)
+            } catch {
+                if staged { unstageVersion(of: name) }
+                throw error
+            }
+            // Written: what was there becomes the newest earlier version.
+            // Failing only leaves it waiting, for the next save to finish.
+            if staged { try? commitVersion(of: name) }
         } catch {
             throw .fileSystem
         }
@@ -321,10 +376,16 @@ public struct SaveLibrary: Sendable {
         }
         let summary = SaveSummary(world: world)
         // The list need not read the file it was just given (decision 497).
-        if let header = Header(app: Self.appName, savedAt: date, summary: summary, saveVersion: SavedGame.currentVersion).asRead {
+        if let header = Header(
+            app: Self.appName, savedAt: date, summary: summary, saveVersion: SavedGame.currentVersion,
+            row: kind == .autosave ? row : nil
+        ).asRead {
             headers.keep(.success(header), of: name, stamped: HeaderCache.Stamp(of: url(of: name)), read: false)
         }
-        let entry = Entry(id: name, kind: kind, savedAt: date, summary: summary, problem: nil)
+        let entry = Entry(
+            id: name, kind: kind, savedAt: date, summary: summary, problem: nil, name: self.playerName(of: name),
+            row: row, earlierVersions: kind == .manual ? versionFiles(of: name).count : 0
+        )
         // So is its name (decision 184); the autosave has none.
         guard kind == .manual, let playerName else { return entry }
         return (try? rename(entry, to: playerName)) ?? entry
@@ -342,8 +403,9 @@ public struct SaveLibrary: Sendable {
     /// beyond ``autosaveSlots``. The new one is written whole before any
     /// is deleted, so a failure never leaves fewer than there were.
     @discardableResult
-    public func saveAutosaveSlot(_ world: GameWorld, news: NewsLog? = nil, at date: Date) throws(SaveError) -> SlotWrite {
-        let data = try Self.encode(world, at: date)
+    public func saveAutosaveSlot(_ world: GameWorld, news: NewsLog? = nil, at date: Date, row: String? = nil) throws(SaveError) -> SlotWrite {
+        let row = row.flatMap(Self.validRow)
+        let data = try Self.encode(world, row: row, at: date)
         let name = Self.slotFile(nextSlot())
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -354,7 +416,7 @@ public struct SaveLibrary: Sendable {
         if let news, let log = try? JSONEncoder().encode(news) {
             try? log.write(to: url(of: Self.newsFile(of: name)), options: .atomic)
         }
-        return SlotWrite(entry: Entry(id: name, kind: .autosave, savedAt: date, summary: SaveSummary(world: world), problem: nil), removed: pruneSlots())
+        return SlotWrite(entry: Entry(id: name, kind: .autosave, savedAt: date, summary: SaveSummary(world: world), problem: nil, row: row), removed: pruneSlots())
     }
 
     /// Keeps the latest autosave as the next one taken in turn (decision
@@ -391,6 +453,11 @@ public struct SaveLibrary: Sendable {
     /// newest are read (``newestAutosave()``); of those, one that cannot be
     /// read is kept as a save of the player's too, listed with why, as
     /// before 192: it may be a later build's.
+    ///
+    /// Decision 502: the newest goes into the row its game is kept in,
+    /// when that row is still there, as the row's newest version (nothing,
+    /// when the row already holds that very game); only a game with no
+    /// row is a new one.
     public func archiveAutosave() throws(SaveError) {
         let candidates = newestCandidates()
         let newest = candidates.first { $0.problem == nil }
@@ -398,6 +465,10 @@ public struct SaveLibrary: Sendable {
         let files = autosaveFiles()
         // Kept first: one that fails to move stops here, with none deleted.
         for entry in candidates where kept.contains(entry.id) {
+            if entry == newest, let row = entry.row, FileManager.default.fileExists(atPath: url(of: row).path) {
+                try keepInRow(entry, row: row)
+                continue
+            }
             let name = freeName(for: entry.savedAt ?? Date())
             do {
                 try FileManager.default.moveItem(at: url(of: entry.id), to: url(of: name))
@@ -408,7 +479,9 @@ public struct SaveLibrary: Sendable {
             try? FileManager.default.moveItem(at: url(of: Self.newsFile(of: entry.id)), to: url(of: Self.newsFile(of: name)))
         }
         // Deleting is tidying up: failing to never stops the new game.
-        for name in files where !kept.contains(name) {
+        // An autosave kept in its row is gone already, or is the game the
+        // row holds.
+        for name in files where !kept.contains(name) || newest?.id == name && newest?.row != nil {
             try? FileManager.default.removeItem(at: url(of: name))
             try? FileManager.default.removeItem(at: url(of: Self.newsFile(of: name)))
         }
@@ -427,14 +500,366 @@ public struct SaveLibrary: Sendable {
         (name.hasSuffix(".json") ? String(name.dropLast(".json".count)) : name) + newsSuffix
     }
 
+    /// Deletes `entry` with its news log, its name and, a row of the
+    /// player's saves, its earlier versions (decision 502).
     public func delete(_ entry: Entry) throws(SaveError) {
+        try delete([entry])
+    }
+
+    /// Deletes `entries`, each as ``delete(_:)`` does, all or none
+    /// (decision 502): every one's files are first moved aside, and one
+    /// that cannot be (or a save no longer there) moves the others back
+    /// and deletes nothing.
+    public func delete(_ entries: [Entry]) throws(SaveError) {
+        let fileManager = FileManager.default
+        let aside = url(of: Self.deletingFolder).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        var moved: [(from: URL, to: URL, member: String)] = []
         do {
-            try FileManager.default.removeItem(at: url(of: entry.id))
+            try fileManager.createDirectory(at: aside, withIntermediateDirectories: true)
+            for (index, entry) in entries.enumerated() {
+                let folder = aside.appendingPathComponent("\(index)", isDirectory: true)
+                try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+                var members = [entry.id, Self.newsFile(of: entry.id), Self.nameFile(of: entry.id)]
+                if entry.kind == .manual, let row = entry.row, row == entry.id { members.append(Self.versionsPath(of: row)) }
+                for (number, member) in members.enumerated() {
+                    let from = url(of: member)
+                    // The save itself must be there; what lies beside it may not.
+                    guard number == 0 || fileManager.fileExists(atPath: from.path) else { continue }
+                    let to = folder.appendingPathComponent(member)
+                    try fileManager.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    if failingMoves.contains(member) { throw SaveError.fileSystem }
+                    try fileManager.moveItem(at: from, to: to)
+                    moved.append((from, to, member))
+                }
+            }
+        } catch {
+            var allBack = true
+            for (from, to, member) in moved.reversed() {
+                do {
+                    if failingReturns.contains(member) { throw SaveError.fileSystem }
+                    try fileManager.moveItem(at: to, to: from)
+                } catch {
+                    allBack = false
+                }
+            }
+            // One that could not go back stays set aside, rather than
+            // lost, and goes back the next time the saves are listed.
+            if allBack { removeSetAside(aside) }
+            throw .fileSystem
+        }
+        // Gone from the list already: failing to free the space only
+        // leaves it. Only this delete's own: what a failed one could not
+        // put back is kept.
+        removeSetAside(aside)
+    }
+
+    /// Removes `aside`, then the folder of what deletes set aside when
+    /// nothing else is left in it. Named done first, so what is left of
+    /// one that cannot be removed whole is not put back.
+    private func removeSetAside(_ aside: URL) {
+        let fileManager = FileManager.default
+        let done = aside.deletingLastPathComponent().appendingPathComponent(Self.donePrefix + aside.lastPathComponent)
+        if (try? fileManager.moveItem(at: aside, to: done)) != nil {
+            try? fileManager.removeItem(at: done)
+        } else {
+            try? fileManager.removeItem(at: aside)
+        }
+        removeIfEmpty(url(of: Self.deletingFolder))
+    }
+
+    private func removeIfEmpty(_ folder: URL) {
+        let fileManager = FileManager.default
+        if (try? fileManager.contentsOfDirectory(atPath: folder.path))?.isEmpty == true {
+            try? fileManager.removeItem(at: folder)
+        }
+    }
+
+    /// Before the saves are listed (decision 502): what a failed delete
+    /// could not put back goes back where it was (unless something has
+    /// taken its place), what a finished one left is removed, and the
+    /// earlier versions of a row that is gone (deleted on another device)
+    /// are deleted, so a row of the same name never takes them up.
+    private func tidyUp() {
+        let fileManager = FileManager.default
+        let deleting = url(of: Self.deletingFolder)
+        for aside in (try? fileManager.contentsOfDirectory(atPath: deleting.path)) ?? [] {
+            let folder = deleting.appendingPathComponent(aside, isDirectory: true)
+            if aside.hasPrefix(Self.donePrefix) {
+                try? fileManager.removeItem(at: folder)
+                continue
+            }
+            for index in (try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? [] {
+                let entry = folder.appendingPathComponent(index, isDirectory: true)
+                var members = ((try? fileManager.contentsOfDirectory(atPath: entry.path)) ?? []).filter { $0 != Self.versionsFolder }
+                let versions = entry.appendingPathComponent(Self.versionsFolder, isDirectory: true)
+                members += ((try? fileManager.contentsOfDirectory(atPath: versions.path)) ?? []).map { Self.versionsFolder + "/" + $0 }
+                for member in members where !fileManager.fileExists(atPath: url(of: member).path) {
+                    try? fileManager.createDirectory(at: url(of: member).deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try? fileManager.moveItem(at: entry.appendingPathComponent(member), to: url(of: member))
+                }
+                removeIfEmpty(versions)
+                removeIfEmpty(entry)
+            }
+            removeIfEmpty(folder)
+        }
+        removeIfEmpty(deleting)
+        let versions = url(of: Self.versionsFolder)
+        for stem in (try? fileManager.contentsOfDirectory(atPath: versions.path)) ?? []
+        where !fileManager.fileExists(atPath: url(of: stem + ".json").path) {
+            try? fileManager.removeItem(at: versions.appendingPathComponent(stem, isDirectory: true))
+        }
+    }
+
+    /// Test only: save files whose move ``delete(_:)`` fails, to show
+    /// it deletes all or none.
+    var failingMoves: Set<String> = []
+    /// Test only: save files whose move back after a failed delete fails.
+    var failingReturns: Set<String> = []
+
+    // MARK: - Rows and their versions (decision 502)
+
+    /// The row `name` belongs to: itself, or the row of an earlier version
+    /// `Versions/<stem>/<n>.json`; `nil` for an autosave.
+    static func row(of name: String) -> String? {
+        if isAutosave(name) { return nil }
+        let parts = name.split(separator: "/", omittingEmptySubsequences: false)
+        if parts.count == 3, parts[0] == versionsFolder, versionNumber(of: String(parts[2])) != nil || parts[2] == autosaveVersionName {
+            return validRow(String(parts[1]) + ".json")
+        }
+        return validRow(name)
+    }
+
+    /// `name` when it can name a row of the player's saves: a save in the
+    /// folder itself that is no autosave; otherwise `nil`.
+    static func validRow(_ name: String) -> String? {
+        guard name.hasSuffix(".json"), !name.hasSuffix(newsSuffix), !name.contains("/"), !name.hasPrefix("."),
+              name != ".json", !isAutosave(name) else { return nil }
+        return name
+    }
+
+    /// `Versions/<stem>`, the folder of row `row`'s earlier versions.
+    static func versionsPath(of row: String) -> String {
+        "\(versionsFolder)/\(row.dropLast(".json".count))"
+    }
+
+    static func versionFile(_ number: Int, of row: String) -> String {
+        "\(versionsPath(of: row))/\(number).json"
+    }
+
+    /// The file of a row's earlier version that is the game as last left
+    /// without saving (decision 502, after the second review): one, the
+    /// latest such, beside the player's own earlier saves, so going back
+    /// again and again never pushes those out.
+    static let autosaveVersionName = "autosave.json"
+
+    static func autosaveVersionFile(of row: String) -> String {
+        "\(versionsPath(of: row))/\(autosaveVersionName)"
+    }
+
+    private static func versionNumber(of file: String) -> Int? {
+        guard file.hasSuffix(".json"), !file.hasSuffix(newsSuffix) else { return nil }
+        let digits = file.dropLast(".json".count)
+        guard !digits.isEmpty, digits.allSatisfy({ $0.isASCII && $0.isNumber }), let number = Int(digits), number > 0 else { return nil }
+        return number
+    }
+
+    /// The numbers of row `row`'s earlier versions, the latest (1) first.
+    private func versionNumbers(of row: String) -> [Int] {
+        guard Self.validRow(row) != nil else { return [] }
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: url(of: Self.versionsPath(of: row)).path)) ?? []
+        return files.compactMap(Self.versionNumber).sorted()
+    }
+
+    /// The files of row `row`'s earlier versions: the player's own, the
+    /// latest (1) first, then the game as last left, when kept.
+    private func versionFiles(of row: String) -> [String] {
+        guard Self.validRow(row) != nil else { return [] }
+        let numbered = versionNumbers(of: row).map { Self.versionFile($0, of: row) }
+        let left = Self.autosaveVersionFile(of: row)
+        return FileManager.default.fileExists(atPath: url(of: left).path) ? numbered + [left] : numbered
+    }
+
+    /// The earlier versions of `entry`'s row, the latest first (decision
+    /// 502): loading one goes back to the game as it was saved then. The
+    /// row itself, its newest version, is not among them.
+    public func earlierVersions(of entry: Entry) -> [Entry] {
+        guard entry.kind == .manual, let row = entry.row else { return [] }
+        let versions = versionFiles(of: row).map { entryOfVersion($0, of: row) }
+        // The game as last left goes where its time puts it.
+        return versions.enumerated().sorted { a, b in
+            switch (a.element.savedAt, b.element.savedAt) {
+            case let (x?, y?) where x != y: x > y
+            case (_?, nil): true
+            case (nil, _?): false
+            default: a.offset < b.offset
+            }
+        }.map(\.element)
+    }
+
+    private func entryOfVersion(_ name: String, of row: String) -> Entry {
+        guard let data = try? Data(contentsOf: url(of: name)) else {
+            return Entry(id: name, kind: .manual, savedAt: nil, summary: nil, problem: .fileSystem)
+        }
+        switch Self.header(of: data) {
+        case .success(let header):
+            return Entry(id: name, kind: .manual, savedAt: header.savedAt, summary: header.summary, problem: nil, name: playerName(of: row))
+        case .failure(let problem):
+            return Entry(id: name, kind: .manual, savedAt: nil, summary: nil, problem: problem, name: playerName(of: row))
+        }
+    }
+
+    /// Where a row's next earlier version waits (decision 502) before it
+    /// takes number 1: copied there first, and moved in only once room is
+    /// made, so an app stopped midway loses none. The next version kept
+    /// finishes what it finds there.
+    private func incoming(of row: String) -> (save: URL, news: URL) {
+        let folder = url(of: Self.versionsPath(of: row))
+        return (folder.appendingPathComponent("incoming.json"), folder.appendingPathComponent("incoming" + Self.newsSuffix))
+    }
+
+    /// Copies row `row`'s file, and its news log, to wait as its next
+    /// earlier version; returns whether it did. Not when the newest earlier
+    /// version is the same game already (a save tried again after its write
+    /// failed: keeping it twice would push out a real one).
+    private func stageVersion(of row: String) throws -> Bool {
+        let fileManager = FileManager.default
+        // One left waiting that cannot be moved in is given up rather than
+        // let it stop every save of the row (the second review's 7).
+        do {
+            try commitVersion(of: row)
+        } catch {
+            unstageVersion(of: row)
+        }
+        let current = url(of: row)
+        guard fileManager.fileExists(atPath: current.path) else {
+            // A new row of a name gone before takes no versions of it.
+            try? fileManager.removeItem(at: url(of: Self.versionsPath(of: row)))
+            return false
+        }
+        if let kept = try? Data(contentsOf: url(of: Self.versionFile(1, of: row))),
+           let now = try? Data(contentsOf: current), kept == now || Self.holdSameGame(kept, now) { return false }
+        let incoming = incoming(of: row)
+        try fileManager.createDirectory(at: incoming.save.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? fileManager.removeItem(at: incoming.news)
+        try? fileManager.copyItem(at: url(of: Self.newsFile(of: row)), to: incoming.news)
+        let staged = incoming.save.deletingLastPathComponent().appendingPathComponent("staging.json")
+        try? fileManager.removeItem(at: staged)
+        try fileManager.copyItem(at: current, to: staged)
+        try? fileManager.removeItem(at: incoming.save)
+        try fileManager.moveItem(at: staged, to: incoming.save)
+        return true
+    }
+
+    /// Throws away what waits to be row `row`'s next version: the write it
+    /// was kept for failed, so the row still holds it.
+    private func unstageVersion(of row: String) {
+        let incoming = incoming(of: row)
+        try? FileManager.default.removeItem(at: incoming.save)
+        try? FileManager.default.removeItem(at: incoming.news)
+    }
+
+    /// Makes what waits row `row`'s earlier version 1: the oldest kept
+    /// pushed out, then each moved one along, unless number 1 is free
+    /// already (the app was stopped after making room). Nothing when
+    /// nothing waits.
+    private func commitVersion(of row: String) throws {
+        let fileManager = FileManager.default
+        let incoming = incoming(of: row)
+        guard fileManager.fileExists(atPath: incoming.save.path) else { return }
+        let older = Self.versionsKept - 1
+        guard older > 0 else { return unstageVersion(of: row) }
+        func file(_ number: Int) -> URL { url(of: Self.versionFile(number, of: row)) }
+        func news(_ number: Int) -> URL { url(of: Self.newsFile(of: Self.versionFile(number, of: row))) }
+        if fileManager.fileExists(atPath: file(1).path) {
+            for number in versionNumbers(of: row).reversed() where number >= older {
+                try fileManager.removeItem(at: file(number))
+                try? fileManager.removeItem(at: news(number))
+            }
+            for number in versionNumbers(of: row).reversed() {
+                try fileManager.moveItem(at: file(number), to: file(number + 1))
+                try? fileManager.removeItem(at: news(number + 1))
+                try? fileManager.moveItem(at: news(number), to: news(number + 1))
+            }
+        }
+        try? fileManager.removeItem(at: news(1))
+        if fileManager.fileExists(atPath: incoming.news.path) { try? fileManager.moveItem(at: incoming.news, to: news(1)) }
+        try fileManager.moveItem(at: incoming.save, to: file(1))
+    }
+
+    /// Before another device's copy of the player's save `name` is written
+    /// over this device's (decision 397), keeps this device's as the row's
+    /// newest earlier version, so neither device's game is lost (decision
+    /// 502). Nothing for a name that is no row.
+    func keepBeforeReplacing(_ name: String) throws {
+        guard let row = Self.validRow(name) else { return }
+        if try stageVersion(of: row) { try commitVersion(of: row) }
+    }
+
+    /// After a conflict this device's game in row `from` was copied to row
+    /// `to` (decision 502, after the second review): its earlier versions
+    /// go with it, and the autosaves that named `from` name `to`, so the
+    /// game is saved into its own row from now on and the other device's
+    /// game, which takes `from`, is never saved over it.
+    func moveRow(from: String, to: String) throws {
+        guard let from = Self.validRow(from), let to = Self.validRow(to), from != to else { return }
+        let fileManager = FileManager.default
+        let versions = url(of: Self.versionsPath(of: from))
+        if fileManager.fileExists(atPath: versions.path) {
+            let moved = url(of: Self.versionsPath(of: to))
+            try? fileManager.removeItem(at: moved)
+            try fileManager.moveItem(at: versions, to: moved)
+        }
+        for name in autosaveFiles() {
+            guard let data = try? Data(contentsOf: url(of: name)), let file = try? Self.decodeFile(data), file.row == from else { continue }
+            let renamed = try Self.encode(file: SaveFile(
+                app: file.app, savedAt: file.savedAt, summary: file.summary, game: file.game, news: file.news, company: file.company, row: to
+            ))
+            try renamed.write(to: url(of: name), options: .atomic)
+        }
+    }
+
+    /// Keeps autosave `entry`, of the game kept in row `row`, as that
+    /// row's game as last left, its news log with it (decision 502, after
+    /// the independent reviews): the row's own file stays the one the
+    /// player saved, so loading the row always gives what they saved, and
+    /// the game as left before is written over, so the player's own
+    /// earlier saves are never pushed out. Nothing when the row, or one of
+    /// its versions, is that game already.
+    private func keepInRow(_ entry: Entry, row: String) throws(SaveError) {
+        let data: Data
+        do {
+            data = try Data(contentsOf: url(of: entry.id))
         } catch {
             throw .fileSystem
         }
-        try? FileManager.default.removeItem(at: url(of: Self.newsFile(of: entry.id)))
-        try? FileManager.default.removeItem(at: url(of: Self.nameFile(of: entry.id)))
+        for name in [row] + versionFiles(of: row) {
+            if let held = try? Data(contentsOf: url(of: name)), Self.holdSameGame(data, held) { return }
+        }
+        let name = Self.autosaveVersionFile(of: row)
+        do {
+            // A version names no row of its own.
+            let file = try Self.decodeFile(data)
+            let versionData = try Self.encode(file: SaveFile(app: file.app, savedAt: file.savedAt, summary: file.summary, game: file.game, news: nil))
+            let fileManager = FileManager.default
+            try fileManager.createDirectory(at: url(of: Self.versionsPath(of: row)), withIntermediateDirectories: true)
+            try versionData.write(to: url(of: name), options: .atomic)
+            try? fileManager.removeItem(at: url(of: Self.newsFile(of: name)))
+            try? fileManager.copyItem(at: url(of: Self.newsFile(of: entry.id)), to: url(of: Self.newsFile(of: name)))
+        } catch let error as SaveError {
+            throw error
+        } catch {
+            throw .fileSystem
+        }
+    }
+
+    /// Whether save files `a` and `b` hold the same world. Their summaries
+    /// are compared first, so two different games are told apart without
+    /// reading either world.
+    private static func holdSameGame(_ a: Data, _ b: Data) -> Bool {
+        guard case .success(let first) = header(of: a), case .success(let second) = header(of: b),
+              first.summary == second.summary,
+              let one = try? decode(a), let other = try? decode(b) else { return false }
+        return one == other
     }
 
     /// `world` saved at `date` as a file to share, named after the app and
@@ -472,7 +897,17 @@ public struct SaveLibrary: Sendable {
     /// given (an exported file; a save in the folder keeps its news log
     /// beside it).
     public static func encode(_ world: GameWorld, news: NewsLog? = nil, company: String? = nil, at date: Date) throws(SaveError) -> Data {
-        let file = SaveFile(app: appName, savedAt: date, summary: SaveSummary(world: world), game: SavedGame(world: world), news: news, company: company)
+        try encode(world, news: news, company: company, row: nil, at: date)
+    }
+
+    /// The file, with an autosave's `row` (decision 502) when given.
+    static func encode(_ world: GameWorld, news: NewsLog? = nil, company: String? = nil, row: String?, at date: Date) throws(SaveError) -> Data {
+        try encode(file: SaveFile(
+            app: appName, savedAt: date, summary: SaveSummary(world: world), game: SavedGame(world: world), news: news, company: company, row: row
+        ))
+    }
+
+    private static func encode(file: SaveFile) throws(SaveError) -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         do {
@@ -611,12 +1046,19 @@ public struct SaveLibrary: Sendable {
         return language.text("\(days) d ago", "\(days) 天前")
     }
 
+    /// The name of a new row of the player's saves saved at `date`
+    /// (decision 502), none of `taken` nor of a save there now: a game
+    /// takes it when first saved, before the save is written.
+    public func newRow(at date: Date, besides taken: [String] = []) -> String {
+        freeName(for: date, besides: taken)
+    }
+
     /// `save-<stamp>.json`, or with `-2`, `-3`… when that is taken.
-    private func freeName(for date: Date) -> String {
+    private func freeName(for date: Date, besides taken: [String] = []) -> String {
         let stem = "save-\(Self.stamp(date))"
         var name = "\(stem).json"
         var number = 2
-        while FileManager.default.fileExists(atPath: url(of: name).path) {
+        while FileManager.default.fileExists(atPath: url(of: name).path) || taken.contains(name) {
             name = "\(stem)-\(number).json"
             number += 1
         }
@@ -786,6 +1228,11 @@ public enum SaveError: Error, Hashable, Sendable {
 ///
 /// Decision 409: `company`, the company name on the postcard of a network
 /// shared with a friend, the same way: optional, only in an exported file.
+///
+/// Decision 502: `row`, in an autosave only, the row of the player's saves
+/// its game is kept in, the same way: optional, so the save version stays,
+/// and in the file, so it goes where the autosave goes (iCloud, decision
+/// 397).
 struct SaveFile: Codable {
     let app: String
     let savedAt: Date
@@ -793,14 +1240,16 @@ struct SaveFile: Codable {
     let game: SavedGame
     let news: NewsLog?
     let company: String?
+    let row: String?
 
-    init(app: String, savedAt: Date, summary: SaveSummary, game: SavedGame, news: NewsLog?, company: String? = nil) {
+    init(app: String, savedAt: Date, summary: SaveSummary, game: SavedGame, news: NewsLog?, company: String? = nil, row: String? = nil) {
         self.app = app
         self.savedAt = savedAt
         self.summary = summary
         self.game = game
         self.news = news
         self.company = company
+        self.row = row
     }
 
     init(from decoder: any Decoder) throws {
@@ -813,6 +1262,8 @@ struct SaveFile: Codable {
         news = try? container.decodeIfPresent(NewsLog.self, forKey: .news)
         // So is the company name; ``SharedNetwork`` cleans and cuts it.
         company = try? container.decodeIfPresent(String.self, forKey: .company)
+        // So is the row (decision 502): without it the game gets a new one.
+        row = try? container.decodeIfPresent(String.self, forKey: .row)
     }
 }
 
@@ -826,11 +1277,33 @@ private struct Header: Codable {
     let savedAt: Date
     let summary: SaveSummary
     let game: Game
+    let row: String?
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        app = try container.decode(String.self, forKey: .app)
+        savedAt = try container.decode(Date.self, forKey: .savedAt)
+        summary = try container.decode(SaveSummary.self, forKey: .summary)
+        game = try container.decode(Game.self, forKey: .game)
+        row = try? container.decodeIfPresent(String.self, forKey: .row)
+    }
+
+    init(app: String, savedAt: Date, summary: SaveSummary, game: Game, row: String?) {
+        self.app = app
+        self.savedAt = savedAt
+        self.summary = summary
+        self.game = game
+        self.row = row
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case app, savedAt, summary, game, row
+    }
 }
 
 extension Header {
-    init(app: String, savedAt: Date, summary: SaveSummary, saveVersion: Int) {
-        self.init(app: app, savedAt: savedAt, summary: summary, game: Game(saveVersion: saveVersion))
+    init(app: String, savedAt: Date, summary: SaveSummary, saveVersion: Int, row: String? = nil) {
+        self.init(app: app, savedAt: savedAt, summary: summary, game: Game(saveVersion: saveVersion), row: row)
     }
 
     /// This header as reading it from a file gives it (the time to the
@@ -852,8 +1325,8 @@ extension Header {
 /// that cannot be read is not kept, so it is tried again.
 private final class HeaderCache: @unchecked Sendable {
     /// Raised when ``Header`` gains a field, so the files kept before are
-    /// read again.
-    static let format = 1
+    /// read again (2: the row, decision 502).
+    static let format = 2
 
     /// What tells one file from another under the same name.
     struct Stamp: Codable, Equatable {

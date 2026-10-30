@@ -45,6 +45,17 @@ public enum ToolColumn {
 // a real-world map's credits under it, and Build at its foot was cut in
 // half. Build now stands at the foot, outside what scrolls, and what
 // scrolls is cut between two buttons.
+// Later (98.1, the owner: "不是要固定在工具欄最上面嗎"): the bus tool (PR
+// #1263) made four building tools, and on a phone on its side the column
+// no longer fit; anchored at the foot, the part that scrolls stood low over
+// Done, cut after two or three tools, with the room above it empty. The
+// card's toggle now stands beside Build while building, so the four tools
+// and Done, in one group, fit over Build on most phones on their side, by
+// the thumb (the planner). The column runs down beside a real-world map's
+// credits, which start past it (the planner's (a)), so they take none of
+// its room; where the tools still do not fit (a 12 or 13 mini, by 3
+// points), the column runs up to the board, the tools scrolling from its
+// top, the first of them showing.
 extension ToolColumn {
     /// A button's height with its icon alone: 32 and the button style's 4
     /// above and below.
@@ -59,9 +70,10 @@ extension ToolColumn {
     }
 
     /// The building column's height with its icons alone: the card's
-    /// toggle when it shows (`toggle`), the `tools` building tools and
-    /// Done in one group, and Build.
-    public static func buildingHeight(tools: Int, toggle: Bool) -> Double {
+    /// toggle when it shows (`toggle`; on a phone it stands beside Build
+    /// instead since 98.1), the `tools` building tools and Done in one
+    /// group, and Build.
+    public static func buildingHeight(tools: Int, toggle: Bool = false) -> Double {
         scrollingContent(tools: tools, toggle: toggle).height + tileGap + tileHeight(buttons: 1)
     }
 
@@ -71,13 +83,22 @@ extension ToolColumn {
     /// buttons (or two groups), the rest scrolling, so no button shows in
     /// part. Done and Build stand under it, each a gap below, so Done is
     /// never scrolled out of reach, and the tools come before the toggle,
-    /// so building needs no scrolling.
+    /// so building needs no scrolling. The column then runs up to the
+    /// board, the part at its top, not low over Done (98.1). Where the room past
+    /// the cut holds most of the next button (``peek``), the part takes
+    /// the room and shows that button in part, fading: cut cleanly, the
+    /// bus tool on a real-world map left no sign that it was there.
     public static func buildingScrollHeight(maxHeight: Double, tools: Int, toggle: Bool) -> Double {
         let content = scrollingContent(tools: tools, toggle: toggle, done: false)
         let room = maxHeight - 2 * (tileGap + tileHeight(buttons: 1))
         guard content.height > room else { return content.height }
-        return content.cuts.last { $0 <= room } ?? content.cuts.first ?? 0
+        guard let cut = content.cuts.last(where: { $0 <= room }) else { return content.cuts.first ?? 0 }
+        return room - cut >= peek ? room : cut
     }
+
+    /// The least room past a cut that shows the next button in part rather
+    /// than not at all: half a button and the gap before it.
+    public static var peek: Double { compactButtonHeight / 2 + tileGap }
 
     /// The part over Build, Done in the tools' group (`done`) or not, and
     /// the card's toggle under them: its height and where it may be cut,

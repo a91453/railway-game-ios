@@ -218,6 +218,26 @@ extension View {
             }
     }
 
+    /// The title of a page in a panel beside the map: inline, in the bar's
+    /// middle, on up to two lines and a little smaller before it is cut.
+    /// The panel is narrow with the back and Done buttons either side, and
+    /// the system title kept one line and ended in "…" (author's report,
+    /// iPhone on its side, 2026-10-30).
+    func panelTitle(_ title: String) -> some View {
+        navigationTitle(Text(verbatim: title))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(verbatim: title)
+                        .font(.headline)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .multilineTextAlignment(.center)
+                        .accessibilityAddTraits(.isHeader)
+                }
+            }
+    }
+
     /// A hard edge where a panel's form scrolls under its navigation bar,
     /// on iOS 26 and later: the soft edge left a section's header half
     /// under the bar, blurred (author's report, 2026-10-14). Earlier

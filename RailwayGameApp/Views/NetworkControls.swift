@@ -125,6 +125,13 @@ struct NetworkControls: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("network.crossoverNote")
                     }
+                    // Decision 468, later: a trace along a real line for
+                    // sale, which can be bought as it is instead.
+                    if let sale = session.tracedSaleHint {
+                        TracedSaleRow(sale: sale, language: session.language) {
+                            session.offerTracedSaleLine()
+                        }
+                    }
                     // Decision 124, H3: the stretch over the ground, and
                     // what it costs part by part. Only where the world has
                     // ground: without it the ground is flat at 0 m and the
@@ -555,5 +562,49 @@ private struct CostPartsView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("network.costParts")
+    }
+}
+
+/// Decision 468, later: the real line for sale a trace runs along, what it
+/// costs as it is, what the company lacks for it, and a button to its
+/// purchase card.
+private struct TracedSaleRow: View {
+    let sale: TracedSaleHint
+    let language: DisplayLanguage
+    let buy: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "signature")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+                Text(verbatim: sale.text)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("network.forSale")
+            }
+            if let shortfall = sale.shortfall {
+                Text(verbatim: shortfall)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.warning)
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("network.forSale.short")
+            }
+            Button(action: buy) {
+                Label {
+                    Text(verbatim: TracedSaleHint.buttonTitle(in: language))
+                } icon: {
+                    Image(systemName: "signature")
+                }
+                .frame(minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .font(.footnote)
+            .accessibilityIdentifier("network.forSale.buy")
+        }
+        .padding(.top, 2)
     }
 }
