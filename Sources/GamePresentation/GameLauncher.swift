@@ -160,6 +160,10 @@ public final class GameLauncher {
     /// it began (decision 192): a game left as it was, paused, takes no
     /// slot, so it never pushes out the ones the player may go back to.
     @ObservationIgnored private var lastSlotWorld: GameWorld?
+    /// Decision 502: the row of the player's saves the game being played
+    /// is kept in (``SaveLibrary/Entry/row``), or `nil` until it is first
+    /// saved. Save Game writes that row again; its autosaves name it.
+    public private(set) var gameRow: String?
     @ObservationIgnored private var realWorldLoad: Task<Void, Never>?
 
     public init(library: SaveLibrary, language: DisplayLanguage) {
@@ -1263,10 +1267,20 @@ public final class GameLauncher {
         return open(reading: { () throws(SaveError) in (try library.load(entry), library.news(for: entry)) }, world: \.0) { read, roads in
             switch read {
             case .success(let (world, news)):
-                self.begin(world, keepingAutosave: true, news: news, roads: roads)
+                self.begin(world, keepingAutosave: true, news: news, roads: roads, row: entry.row)
             case .failure(let error):
                 self.message = StatusMessage(kind: .failure, text: error.playerMessage(in: self.language))
             }
+        }
+    }
+
+    /// The earlier versions of the player's save `entry` (decision 502),
+    /// the latest first, read off the main thread after the saves queued:
+    /// what the saves list offers to go back to.
+    public func earlierVersions(of entry: SaveLibrary.Entry) async -> [SaveLibrary.Entry] {
+        let library = library
+        return await withCheckedContinuation { (read: CheckedContinuation<[SaveLibrary.Entry], Never>) in
+            saveQueue.async { read.resume(returning: library.earlierVersions(of: entry)) }
         }
     }
 
@@ -1280,8 +1294,8 @@ public final class GameLauncher {
         // Decision 409: a friend's network only looked at is not kept in
         // turn; going back is then as from the start screen.
         let current = isLookingAtSharedNetwork ? nil : playing.map { ($0.worldToSave, $0.news) }
-        let library = library
-        return open(reading: { () throws(SaveError) -> (GameWorld, NewsLog, Bool, SaveLibrary.Entry?)? in
+        let (library, row) = (library, gameRow)
+        return open(reading: { () throws(SaveError) -> (GameWorld, NewsLog, Bool, SaveLibrary.Entry?, String?)? in
             // Read first: keeping a game in turn may delete the oldest.
             var read: (SaveLibrary.Entry, GameWorld)?
             for candidate in candidates {
@@ -1296,23 +1310,23 @@ public final class GameLauncher {
             let news = library.news(for: entry)
             let fellBackTo = entry == candidates.first ? nil : entry
             if let (now, log) = current {
-                try library.saveAutosaveSlot(now, news: log, at: date)
-                return (world, news, true, fellBackTo)
+                try library.saveAutosaveSlot(now, news: log, at: date, row: row)
+                return (world, news, true, fellBackTo, entry.row)
             }
             guard library.newestAutosave()?.id != entry.id else {
-                return (world, news, false, fellBackTo)
+                return (world, news, false, fellBackTo, entry.row)
             }
             // A damaged latest passed over is moved, not deleted; the
             // one gone back to stays until it is the latest.
             try library.keepLatestAutosaveInSlot(sparing: entry.id)
-            return (world, news, true, fellBackTo)
+            return (world, news, true, fellBackTo, entry.row)
         }, world: { $0?.0 }) { loaded, roads in
             let language = self.language
             switch loaded {
             case .success(nil):
                 self.message = StatusMessage(kind: .failure, text: language.text("None of the autosaves can be loaded.", "所有自動存檔都讀不了。"))
-            case .success(let (world, news, wentBack, fellBackTo)?):
-                self.begin(world, keepingAutosave: false, news: news, roads: roads)
+            case .success(let (world, news, wentBack, fellBackTo, row)?):
+                self.begin(world, keepingAutosave: false, news: news, roads: roads, row: row)
                 if let fellBackTo, let session = self.session {
                     let clock = fellBackTo.savedAt.map { SaveLibrary.clockText($0) } ?? "–"
                     session.message = StatusMessage(kind: .failure, text: language.text(
@@ -1583,7 +1597,8 @@ public final class GameLauncher {
     /// the demo mode.
     @discardableResult
     private func begin(
-        _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil
+        _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil,
+        row: String? = nil
     ) -> Bool {
         let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
@@ -1643,6 +1658,7 @@ public final class GameLauncher {
             self.checkAchievements(of: started)
         }
         session = started
+        gameRow = row
         gamesBegun += 1
         gameIsOpen.value = true
         startLessonClock()
@@ -1735,7 +1751,13 @@ public final class GameLauncher {
             return Task {}
         }
         let language = language
-        return write(session.worldToSave, news: session.news, as: .manual, at: date, named: name) { [weak self, weak session] result in
+        // Decision 502: Save Game writes the game's row again; Save As, a
+        // name of the player's, starts a row of its own, which the game is
+        // then kept in. A new row's name is taken now, so the autosaves
+        // written meanwhile name it.
+        let row = (name == nil ? gameRow : nil) ?? library.newRow(at: date, besides: [gameRow].compactMap { $0 })
+        gameRow = row
+        return write(session.worldToSave, news: session.news, as: .manual, at: date, named: name, row: row) { [weak self, weak session] result in
             switch result {
             case .success(let entry):
                 session?.message = StatusMessage(kind: .success, text: entry.name.map {
@@ -1769,7 +1791,8 @@ public final class GameLauncher {
         recordChallengeResult(at: date)
         let (library, world, news) = (library, session.worldToSave, session.news)
         do throws(SaveError) {
-            try afterSaves { () throws(SaveError) in try library.save(world, news: news, as: .autosave, at: date) }
+            let row = gameRow
+            try afterSaves { () throws(SaveError) in try library.save(world, news: news, as: .autosave, at: date, row: row) }
             if refreshing { refresh() }
             return true
         } catch {
@@ -1831,15 +1854,17 @@ public final class GameLauncher {
     /// once, and calls `done` on the main actor with how it went.
     private func write(
         _ world: GameWorld, news: NewsLog, as kind: SaveLibrary.Kind, inTurn: Bool = false, at date: Date, named name: String? = nil,
-        then done: @escaping @MainActor (Result<SaveLibrary.Entry, SaveError>) -> Void
+        row: String? = nil, then done: @escaping @MainActor (Result<SaveLibrary.Entry, SaveError>) -> Void
     ) -> Task<Void, Never> {
         let library = library
+        // Decision 502: an autosave names the game's row.
+        let row = kind == .manual ? row : gameRow
         let (written, report) = AsyncStream.makeStream(of: Result<SaveLibrary.Entry, SaveError>.self)
         saveQueue.async {
             report.yield(Result { () throws(SaveError) in
                 inTurn
-                    ? try library.saveAutosaveSlot(world, news: news, at: date).entry
-                    : try library.save(world, news: news, as: kind, at: date, named: name)
+                    ? try library.saveAutosaveSlot(world, news: news, at: date, row: row).entry
+                    : try library.save(world, news: news, as: kind, at: date, named: name, row: row)
             })
             report.finish()
         }
@@ -1900,9 +1925,16 @@ public final class GameLauncher {
     }
 
     public func delete(_ entry: SaveLibrary.Entry) {
+        delete([entry])
+    }
+
+    /// Deletes `entries` (decision 502: the saves list's selection), all
+    /// or none, each row with its earlier versions.
+    public func delete(_ entries: [SaveLibrary.Entry]) {
         do throws(SaveError) {
             let library = library
-            try afterSaves { () throws(SaveError) in try library.delete(entry) }
+            try afterSaves { () throws(SaveError) in try library.delete(entries) }
+            message = nil
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
