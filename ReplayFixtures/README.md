@@ -75,20 +75,35 @@ hold: a converted fixture is added, never converted again to make a test
 pass.
 
 Decision 499 (money in New Taiwan dollars, NT$3 to the reference's $1)
-moves every checksum of every file: a checksum covers the money, and a
-world saved before save version 76 is read with every amount times 3.
-No command and no starting world changed, except as listed:
+moves every checksum of every file. A starting world here is read as a
+`GameWorld`, not through `SavedGame`, so its amounts are not converted on
+reading; what moves the checksums is different in each file:
 
 - `kernel.json`, `repeating-services.json`, `line-dispatch.json`,
-  `line-patterns.json`, `economy.json`, `network-economy.json`: the same
-  start and commands; only the checksums were replayed again (all of
-  them moved). Recording them again from their recipes now picks other
-  campaign cases (the generators changed since they were recorded), which
-  would have changed what they test, so they were not recorded again.
-- `long-leg-traffic.json` and `line-route-preferences.json`: recorded again
-  with their own tests (`LongLegReplayTests/testRecordingTheFixture`,
-  `V4B_REPLAY_NEW` in `LineRoutePreferenceTests`); the start and the
-  commands came out the same, all the checksums moved.
+  `line-patterns.json`, `long-leg-traffic.json`,
+  `line-route-preferences.json`: the same start and commands, every
+  command accepted or refused as before. The checksum covers
+  `accounts.fareBaseline`, and a world that does not give one takes the
+  default `demandBaseline`, now NT$2.25 (225 cents) rather than $0.75 (75):
+  so every checksum moved and only the checksums were replayed again.
+  Recording them again from their recipes now picks other campaign cases
+  (the generators changed since they were recorded), which would have
+  changed what they test, so they were not recorded again;
+  `long-leg-traffic.json` and `line-route-preferences.json` were recorded
+  again with their own tests (`LongLegReplayTests/testRecordingTheFixture`,
+  `V4B_REPLAY_NEW` in `LineRoutePreferenceTests`), which gave the same
+  start and commands.
+- `economy.json` and `network-economy.json`: their worlds run the
+  company's money, so their amounts are written in New Taiwan dollars,
+  3 times the old ones: the start's balance and construction costs, and
+  the money of every `setFareBaseline` and `setFareRules` (flat fares and
+  band fares). Without that the hourly costs, already 3 times, ran the
+  balance below zero on the first day, the second train's purchase was
+  refused and the rest of the stream tested one train instead of three.
+  Replayed against the build before decision 499 (`d1df0d7`), every one of
+  the 193 commands of each is accepted or refused as it was, the balance
+  stays within rounding of 3 times the old one (2.998–3.006), and all 21
+  checksums moved.
 - `problem-report-blank-map.json`: converted again from `Reports/blank-map.json`
   (unchanged). Its start is the report's save as GameCore now reads it, so
   its balance and construction costs are 3 times the report's; the

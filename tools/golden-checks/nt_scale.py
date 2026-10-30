@@ -67,9 +67,9 @@ SALE = {"land", "landRight", "building"}
 # (file, path) → why. Filled from the run, each one explained in the pull
 # request.
 EXCEPTIONS = {
-    ("high-speed.json", ".steps[34].expect.fare"): "NT$4.38 a kilometre (decision 499), not 3 × $0.45",
-    ("high-speed.json", ".steps[35].expect.fare"): "NT$4.38 a kilometre (decision 499), not 3 × $0.45",
-    ("high-speed.json", ".steps[36].expect.fare"): "NT$4.38 a kilometre (decision 499), not 3 × $0.45",
+    ("high-speed.json", ".steps[34].expect.fare"): "round(km × 1.35) whole NT$ (decision 499), not 3 × round(km × .45)",
+    ("high-speed.json", ".steps[36].expect.fare"): "round(km × 1.35) whole NT$ (decision 499), not 3 × round(km × .45)",
+    ("high-speed.json", ".description"): "its worked fares in New Taiwan dollars (decision 499)",
 }
 
 # Fixtures whose ledger amounts may be off 3 × old by up to so many cents:

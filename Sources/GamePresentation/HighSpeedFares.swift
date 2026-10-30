@@ -12,8 +12,10 @@ import GameCore
 /// The game has one class of car, so the business car's fares (and the
 /// unreserved car's, a few dollars less) are not used. Since decision 499
 /// the game's money is the New Taiwan dollar, so the table is used as it
-/// is (it was NT$10 to the game's dollar before; the kilometre fare was
-/// raised to match it).
+/// is (it was NT$10 to the game's dollar before). The kilometre fare a
+/// line without a table pays stays the reference's times 3, NT$1.35
+/// (``HighSpeed/centsPerKilometre``), so the demo's real fares are some
+/// three times what the kilometres would ask.
 enum HighSpeedFares {
     /// The real fares in New Taiwan dollars, by the demo's stations
     /// (``HighSpeedDemo/stationNames``), north to south.
