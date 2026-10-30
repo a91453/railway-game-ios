@@ -106,9 +106,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The picker is above the statement, scrolled away by now, and a
         // row the form has let go is otherwise looked for further down.
         let week = app.buttons["週"].firstMatch
-        for _ in 0..<12 where !week.exists {
-            (list ?? app).swipeDown(velocity: .slow)
-        }
+        dragBack(to: week, in: list, below: bar.frame.maxY, in: app)
         XCTAssertTrue(app.dragUntilWhollyOnScreen(week, in: list, below: bar.frame.maxY), "The period picker comes into reach")
         week.tap()
         XCTAssertTrue(app.dragUntilWhollyOnScreen(costs, in: list, below: bar.frame.maxY), "The week's cost donut comes into reach")
@@ -327,10 +325,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The network's row is at the list's top, above the line's row.
         let network = app.buttons["lines.network"]
         let back = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        for _ in 0..<12 where !network.exists {
-            (back ?? app).swipeDown(velocity: .slow)
-        }
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(network, in: back), "The whole network's row shows")
+        // Under the pinned search, filter and sort, which a drag must not
+        // begin on.
+        let top = app.linesListTop(under: bar)
+        dragBack(to: network, in: back, below: top, in: app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(network, in: back, below: top), "The whole network's row shows")
         network.tap()
         settle(seconds: 2)
         keep("lines-network", app)
@@ -587,6 +586,27 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Drags `list` back towards its top until `element` exists below
+    /// `top`, for `dragUntilWhollyOnScreen`, which looks further down for
+    /// an element that does not exist. A panel beside the map on a phone
+    /// on its side: `swipeDown()` on the list begins at its middle, on the
+    /// economy's donut or on a line's row, and moved neither list in 12
+    /// swipes (run 41026860196); held drags down the leading margin below
+    /// `top`, as `dragUntilWhollyOnScreen` makes, do.
+    private func dragBack(to element: XCUIElement, in list: XCUIElement?, below top: CGFloat, in app: XCUIApplication) {
+        guard let list, list.exists else { return }
+        let area = list.frame
+        let rows = CGRect(x: area.minX, y: max(area.minY, top) + 8, width: area.width, height: area.maxY - 16 - max(area.minY, top))
+        guard rows.height > 40 else { return }
+        let x = (area.minX + 8 - app.frame.minX) / app.frame.width
+        func point(_ y: CGFloat) -> XCUICoordinate {
+            app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: (rows.minY + rows.height * y - app.frame.minY) / app.frame.height))
+        }
+        for _ in 0..<30 where !(element.exists && element.frame.minY >= top) {
+            point(0.15).press(forDuration: 0.1, thenDragTo: point(0.85), withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+    }
 
     /// One tap on the zoom-in button, when the map has it.
     private func zoomInOnce(_ app: XCUIApplication) {
