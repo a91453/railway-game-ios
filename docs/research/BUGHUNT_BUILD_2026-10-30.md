@@ -58,8 +58,8 @@
 
 | # | 在哪 | 怎麼重現 | 建議修法 | 五面向 |
 | --- | --- | --- | --- | --- |
-| P3-1 | `RailwayGameApp/Views/RealLineAcquisitionCards.swift:31` `let total = index == 3` | 收購會連帶買地的線（地圖按格子買），價目表多一列「沿線的 N 塊地」，粗體落在「沿線的常客」，「合計」反而不是粗體 | `index == rows.count - 1` | 玩家：合計看得清楚；美術：粗體在對的列；其餘無 |
-| P3-2 | 同檔 24 行，及 `RealLineAcquisition.swift` 約 1205、1226 行 | 凌晨 4 點前收購，卡片與訊息寫「明天首班車起由你經營」，但當天就開（`LineAcquisition.firstServiceDay`） | 依 `firstServiceDay` 寫「今天」或「明天」 | 玩家：說的跟看到的一致；其餘無 |
+| P3-1 | `RailwayGameApp/Views/RealLineAcquisitionCards.swift:31` `let total = index == 3` | 收購會連帶買地的線（地圖按格子買），價目表多一列「沿線的 N 塊地」，粗體落在「沿線的常客」，「合計」反而不是粗體 | `index == rows.count - 1`。**已修（ROADFIX）** | 玩家：合計看得清楚；美術：粗體在對的列；其餘無 |
+| P3-2 | 同檔 24 行，及 `RealLineAcquisition.swift` 約 1205、1226 行 | 凌晨 4 點前收購，卡片與訊息寫「明天首班車起由你經營」，但當天就開（`LineAcquisition.firstServiceDay`） | 依 `firstServiceDay` 寫「今天」或「明天」。**已修（ROADFIX）**：`RealLineAcquired.startsToday(at:)`，`RealLineAcquisitionTests.testALineBoughtBeforeFourRunsFromTodaysFirstTrain` 釘住 | 玩家：說的跟看到的一致；其餘無 |
 | P3-3 | `RealLineAcquisition.swift` 約 706 行 `junctionStation` 沒有濾掉機廠 | 在新竹 450 m 內、比新竹站更靠近接點處蓋機廠，再收購內灣線：被拒絕，說「機廠不能當路線的停靠站」，玩家不知道怎麼辦（讀程式） | 加 `!$0.isDepot` | 玩家：不會莫名買不了；其餘無 |
 | P3-4 | `RealLineAcquisition.swift` 約 1118、1132 行 | 三鶯線、淡海綠山線的價目表：機廠站的造價算進「N 列車」那一列（合計正確）（讀程式） | 機廠站建好後再取 `built` | 玩家：細目正確；其餘無 |
 | P3-5 | `RealLineAcquisition.swift` 約 428 行 | 買了綠山線又刪掉這條線，再買藍海線：只賣濱海沙崙到漁人碼頭那段，綠山線也再也買不到（讀程式） | 收購紀錄在線刪掉時一併看待，或刪線時提醒 | 玩家：少見；其餘無 |
