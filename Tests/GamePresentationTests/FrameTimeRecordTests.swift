@@ -1,4 +1,5 @@
 import Foundation
+import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -173,13 +174,52 @@ final class FrameTimeRecordTests: XCTestCase {
         let segment = try XCTUnwrap(meter.end(at: 2))
         let longest = try XCTUnwrap(segment.longest)
         XCTAssertEqual(longest.milliseconds, 300)
+        // Decision 505: the news, a piece of the tick's step, is listed
+        // too, but not taken from what was not timed.
         XCTAssertEqual(longest.parts, [
             FrameTimeStall.Part(part: "afterStep", milliseconds: 120),
+            FrameTimeStall.Part(part: "stepNews", milliseconds: 100),
             FrameTimeStall.Part(part: "ground", milliseconds: 80),
             FrameTimeStall.Part(part: "labels", milliseconds: 30),
+            FrameTimeStall.Part(part: "trains", milliseconds: 10),
             FrameTimeStall.Part(part: FrameTimeStall.Part.untimed, milliseconds: 60),
         ])
         XCTAssertEqual(segment.stalls.severe, 1)
+    }
+
+    /// Decision 505 (97.1's 6000× stalls of 1–3.6 s, nearly all "other"):
+    /// the longest stall lists the view update and the views' bodies in
+    /// it, which "other" still holds, and the game's clock it ended at.
+    /// On origin/main the record listed neither (the view update was
+    /// timed only with the readout on, and a body never) nor the clock.
+    func testThe2DLongestStallTellsTheViewUpdateAndTheGameClock() throws {
+        let costs = FrameCostMeter()
+        costs.keepsFrameParts = true
+        let meter = FrameTimeMeter(costs: costs)
+        meter.begin(context2D, at: 0, wall: 0)
+        beat(meter, Array(repeating: 16.7, count: 10), from: 1)
+        costs.record(.viewUpdate, milliseconds: 3_000)
+        costs.record(.mapBody, milliseconds: 2_500)
+        costs.record(.hudBody, milliseconds: 40)
+        costs.record(.railway, milliseconds: 8)
+        // Day 38, 06:47:30.
+        let game: Int64 = 37 * GameTime.secondsPerDay + 6 * GameTime.secondsPerHour + 47 * 60 + 30
+        XCTAssertTrue(meter.frame(at: 1.167 + 3.6, game: game))
+        let segment = try XCTUnwrap(meter.end(at: 5))
+        let longest = try XCTUnwrap(segment.longest)
+        XCTAssertEqual(longest.game, game)
+        XCTAssertEqual(longest.parts, [
+            FrameTimeStall.Part(part: "viewUpdate", milliseconds: 3_000),
+            FrameTimeStall.Part(part: "mapBody", milliseconds: 2_500),
+            FrameTimeStall.Part(part: "hudBody", milliseconds: 40),
+            FrameTimeStall.Part(part: "railway", milliseconds: 8),
+            FrameTimeStall.Part(part: FrameTimeStall.Part.untimed, milliseconds: 3_592),
+        ])
+        let text = segment.lines(in: .traditionalChinese).joined(separator: "\n")
+        XCTAssertTrue(text.contains("最長 3600.0 ms（第 4.8 秒，遊戲第 38 日 06:47）：畫面更新 3000.0 ms、地圖 2500.0 ms"), text)
+        // A record kept before it has no clock, and reads as before.
+        let old = try JSONDecoder().decode(FrameTimeStall.self, from: Data(#"{"milliseconds":300,"at":1.5,"parts":[]}"#.utf8))
+        XCTAssertNil(old.game)
     }
 
     func testTheLogKeepsTheNewestWithinItsCountAndSize() throws {
