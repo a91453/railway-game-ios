@@ -129,8 +129,8 @@ final class RealWorldMapTests: XCTestCase {
             launcher.returnToStart()
             let autosave = try XCTUnwrap(launcher.autosave)
             XCTAssertEqual(autosave.summary?.realWorld, true)
-            XCTAssertEqual(autosave.summary?.text(in: .english), "Real-world map · Day 1 · 00:00 · \(Money(300_000_000).moneyText) · 0 stations · 0 lines · 0 trains")
-            XCTAssertEqual(autosave.summary?.text(in: .traditionalChinese), "實景地圖 · 第 1 日 · 00:00 · \(Money(300_000_000).moneyText) · 0 座車站 · 0 條路線 · 0 列列車")
+            XCTAssertEqual(autosave.summary?.text(in: .english), "Real-world map · Day 1 · 00:00 · \(Money(900_000_000).moneyText) · 0 stations · 0 lines · 0 trains")
+            XCTAssertEqual(autosave.summary?.text(in: .traditionalChinese), "實景地圖 · 第 1 日 · 00:00 · \(Money(900_000_000).moneyText) · 0 座車站 · 0 條路線 · 0 列列車")
             await launcher.continueGame()?.value
             XCTAssertEqual(launcher.session?.world.geoAnchor, paris)
 

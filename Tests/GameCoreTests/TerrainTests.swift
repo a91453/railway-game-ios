@@ -217,7 +217,7 @@ final class TerrainTests: XCTestCase {
         XCTAssertEqual(premium(8, 9), 1_800)
         XCTAssertEqual(premium(2, 2), 1_800, "the sea itself")
         let value = try XCTUnwrap(world.landValue(row: 7, column: 8))
-        XCTAssertEqual(value.value, value.base + value.servicePremium + value.accessPremium + 600)
+        XCTAssertEqual(value.value, value.base + value.servicePremium + value.accessPremium + 1_800)
         // A blank map's land is worth what it was.
         let blank = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         XCTAssertEqual(blank.landValues().map(\.waterPremium).max(), 0)

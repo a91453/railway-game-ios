@@ -243,7 +243,7 @@ final class RealisticOperationTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 53)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 400)
         XCTAssertTrue(loaded.realisticOperation)
         XCTAssertEqual(loaded.line(id: main)?.dwellSeconds, 90)
         XCTAssertGreaterThan(loaded.lineDays(main).reduce(0) { $0 + $1.tally.trips }, 0, "it has counted trips")

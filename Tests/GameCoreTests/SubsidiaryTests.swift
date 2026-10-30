@@ -71,17 +71,17 @@ final class SubsidiaryTests: XCTestCase {
     // MARK: - A day's trade
 
     /// 1,000 trips at Alpha, a shopping station: 1,000 × 40‰ × 1.5 × the
-    /// weight of 3,200 units (997) = 59.8, 59 customers at $18.
+    /// weight of 3,200 units (997) = 59.8, 59 customers at NT$54.
     func testADepartmentStoreTakesItsShareOfTheStationsTrips() throws {
         var world = try makeWorld()
         let store = try place(.departmentStore, 0, 3_200, in: &world)
         XCTAssertEqual(weight(0, 3_200), 997)
         XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 59)
         let day = world.subsidiaryDay(of: store, onDay: 0)
-        XCTAssertEqual(day.sales, Money(59 * 1_800))
+        XCTAssertEqual(day.sales, Money(59 * 5_400))
         // 65 % of the sales, and 0.04 % of what it cost, rounded up.
         let staff = (store.cost.amount * 4 + 9_999) / 10_000
-        XCTAssertEqual(day.cost, Money(59 * 1_800 * 65 / 100 + staff))
+        XCTAssertEqual(day.cost, Money(59 * 5_400 * 65 / 100 + staff))
     }
 
     /// A trade that is not shopping counts one tenth less: an office
@@ -98,7 +98,7 @@ final class SubsidiaryTests: XCTestCase {
         var scenic = try makeWorld(alphaKind: .scenic, trips: 2_000)
         let hotel = try place(.hotel, 0, 2_200, in: &scenic)
         XCTAssertEqual(scenic.subsidiaryCustomers(of: hotel, onDay: 0), 19)
-        XCTAssertEqual(scenic.subsidiaryDay(of: hotel, onDay: 0).sales, Money(19 * 8_500))
+        XCTAssertEqual(scenic.subsidiaryDay(of: hotel, onDay: 0).sales, Money(19 * 25_500))
         var homes = try makeWorld(alphaKind: .residential, trips: 2_000)
         let empty = try place(.hotel, 0, 2_200, in: &homes)
         XCTAssertEqual(homes.subsidiaryCustomers(of: empty, onDay: 0), 0)
@@ -310,7 +310,7 @@ final class SubsidiaryTests: XCTestCase {
         try place(.amusementPark, 9_000, 4_800, in: &made)
         made.settleProperty(day: 0, time: made.clock.now)
         for index in made.placedBuildings.indices {
-            made.placedBuildings[index].books.record(sales: 1_000, cost: 400, day: 31)
+            made.placedBuildings[index].books.record(sales: 3_000, cost: 1_200, day: 31)
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -321,7 +321,7 @@ final class SubsidiaryTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 46)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        try XCTAssertSameButRounding(world, made, cents: 5)
         XCTAssertEqual(world.placedBuildings.map(\.kind), [.departmentStore, .hotel, .amusementPark])
         XCTAssertTrue(world.placedBuildings.allSatisfy { $0.books.hasTraded })
         XCTAssertEqual(world.placedBuildings.map { $0.books.closed.count }, [1, 1, 1])

@@ -17,8 +17,8 @@ final class CompanyRankTests: XCTestCase {
         XCTAssertEqual(RankMeasure.bestDay.points(for: 3_000_000), 250)
         XCTAssertEqual(RankMeasure.network.points(for: 30_000), 10)
         XCTAssertEqual(RankMeasure.stations.points(for: 37), 37)
-        XCTAssertEqual(RankMeasure.netWorth.points(for: -5_000_000), 0)
-        XCTAssertEqual(RankMeasure.netWorth.points(for: 25_000_000_000), 100)
+        XCTAssertEqual(RankMeasure.netWorth.points(for: -15_000_000), 0)
+        XCTAssertEqual(RankMeasure.netWorth.points(for: 75_000_000_000), 100)
         XCTAssertEqual(RankMeasure.servedPeople.points(for: 1_000_000), 75)
         XCTAssertEqual(RankMeasure.punctuality.points(for: 900), 90)
     }
@@ -47,7 +47,7 @@ final class CompanyRankTests: XCTestCase {
 
     func testTheScoreAndWhatTheNextTitleNeeds() {
         let figures = CompanyFigures(
-            bestDayRiders: 30_000, trackMetres: 30_000, stations: 10, netWorth: Money(500_000_000), servedPeople: 100_000,
+            bestDayRiders: 30_000, trackMetres: 30_000, stations: 10, netWorth: Money(1_500_000_000), servedPeople: 100_000,
             operatingRatio: 800, punctuality: 1_000
         )
         let rank = CompanyRank(figures: figures)

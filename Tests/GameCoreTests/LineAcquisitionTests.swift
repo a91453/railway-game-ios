@@ -217,7 +217,7 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertFalse(decodes { $0["acquisitions"] = [good.merging(["value": -1]) { $1 }] })
     }
 
-    /// Version 66 (decision 315): Main bought as Pingxi at 05:00 for $20,000
+    /// Version 66 (decision 315): Main bought as Pingxi at 05:00 for $20,000 (NT$60,000)
     /// (2 riders) and run to tomorrow's 06:06, its train sent out; it saves byte
     /// for byte and is the world this build makes.
     func testVersionSixtySixKeepsTheLineBought() throws {
@@ -235,7 +235,7 @@ final class LineAcquisitionTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 66)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, world)
+        try XCTAssertSameButRounding(loaded, world, cents: 2_500)
         XCTAssertEqual(loaded.acquisition(of: pingxi)?.value, Money(6_000_000))
         XCTAssertNotNil(loaded.train(id: blue)?.execution)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)

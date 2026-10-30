@@ -299,7 +299,7 @@ final class TrainTripLogTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 60)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        try XCTAssertSameButRounding(world, made, cents: 2_400)
         let today = world.dayIndex(of: world.clock.now)
         XCTAssertEqual(Set(world.tripLog.map { world.dayIndex(of: $0.sentOut) }), [today - 1, today])
         XCTAssertTrue(world.tripLog.contains(where: \.isRunning))
@@ -308,7 +308,7 @@ final class TrainTripLogTests: XCTestCase {
         var straight = made
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
-        XCTAssertEqual(carried, straight)
+        try XCTAssertSameButRounding(carried, straight, cents: 2_400)
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 60,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }

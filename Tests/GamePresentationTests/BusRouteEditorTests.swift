@@ -65,13 +65,13 @@ final class BusRouteEditorTests: XCTestCase {
         XCTAssertEqual(preview.metres, 1_344)
         XCTAssertEqual(preview.price, Money(33_000_000))
         XCTAssertEqual(preview.headway, 10)
-        // 144 departures, there and back 2.688 km each, $20 a kilometre.
+        // 144 departures, there and back 2.688 km each, NT$60 a kilometre.
         XCTAssertEqual(preview.departures, 144)
         XCTAssertEqual(preview.dailyCost, Money(2_322_432))
         XCTAssertGreaterThan(preview.riders, 0, "the 200s beyond A's 800 m")
         XCTAssertEqual(preview.lines(for: session.busDraft, in: .english).first, "1 stop · 1.3 km · about 4 min")
         XCTAssertEqual(preview.lines(for: session.busDraft, in: .traditionalChinese).first, "1 個站牌 · 1.3 公里 · 約 4 分")
-        XCTAssertEqual(preview.lines(for: session.busDraft, in: .traditionalChinese).last, "營運成本每天 \(Money(774_144).moneyText)")
+        XCTAssertEqual(preview.lines(for: session.busDraft, in: .traditionalChinese).last, "營運成本每天 \(Money(2_322_432).moneyText)")
         // Tapping the stop again takes it away; the last stop, then the
         // station, come off one at a time.
         session.tapBusTool(at: stop.middle, reach: reach)
@@ -118,7 +118,7 @@ final class BusRouteEditorTests: XCTestCase {
         session.tapBusTool(at: CellPosition(row: 8, column: 5).middle, reach: reach)
         session.tapBusTool(at: stop.middle, reach: reach)
         XCTAssertEqual(session.busPreview?.problem,
-                       GameError.insufficientFunds(required: Money(11_000_000), available: session.world.economy.balance).playerMessage(in: .english))
+                       GameError.insufficientFunds(required: Money(33_000_000), available: session.world.economy.balance).playerMessage(in: .english))
         XCTAssertEqual(session.busPreview?.metres, 1_344, "the figures still show")
         // A round trip is 19 minutes: one bus keeps every 19, not 5.
         session.setBusDraftHeadway(5)

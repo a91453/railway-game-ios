@@ -31,8 +31,8 @@ final class RollingStockSessionTests: XCTestCase {
         XCTAssertEqual(plan.cars, 4)
         XCTAssertEqual(plan.pricePerTrain, Money(315_000_000))
         XCTAssertEqual(plan.cost, Money(315_000_000 * Int64(plan.trains)))
-        // 4 maglev cars weigh 7.2 standard trains: (480 + 360 + 192) × 7.2 = 7,430.4 dollars.
-        XCTAssertEqual(plan.dailyCostPerTrain, Money(743_040).roundedToDollars)
+        // 4 maglev cars weigh 7.2 standard trains: (1,440 + 1,080 + 576) × 7.2 = 22,291.2 dollars.
+        XCTAssertEqual(plan.dailyCostPerTrain, Money(2_229_120).roundedToDollars)
         // A cars count out of range is brought into it.
         XCTAssertEqual(world.lineStaffingPlan(Self.main, headway: 10, cars: 99)?.cars, Train.maximumCars)
     }
@@ -98,7 +98,7 @@ final class RollingStockSessionTests: XCTestCase {
             XCTAssertEqual(editing.world.train(id: id)?.cars, 1)
         }
         // Each: the maglev's price for one car less 70 % of the standard train's books, and one more car.
-        let each = (RollingStock.price(of: .maglev, cars: 1).amount - 10_500_000) + TrainType.maglev.pricing.eachCar.amount
+        let each = (RollingStock.price(of: .maglev, cars: 1).amount - 31_500_000) + TrainType.maglev.pricing.eachCar.amount
         XCTAssertEqual(before - editing.world.economy.balance, Money(each * Int64(waiting.count)))
         XCTAssertTrue(editing.message?.text.contains("Left as they were") ?? false)
         XCTAssertEqual(editing.undoCount, 1, "one edit")
@@ -235,7 +235,7 @@ final class RollingStockSessionTests: XCTestCase {
         session.purchaseTrain()
         let id = try XCTUnwrap(session.selectedTrainID)
         let quote = session.world.trainSaleQuote(id)
-        XCTAssertEqual(quote, Money(15_000_000 * 70 / 100))
+        XCTAssertEqual(quote, Money(45_000_000 * 70 / 100))
         let before = session.world.economy.balance
         session.sellTrain(id)
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")

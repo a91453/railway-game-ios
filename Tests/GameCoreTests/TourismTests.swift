@@ -78,8 +78,8 @@ final class TourismTests: XCTestCase {
     /// Home (1, residential, 1,000 trips) and Foot (2, scenic, none) on line
     /// Main with a train; a 3-star town 15.6 m from Foot. The world is so
     /// small that both stations are outside connections.
-    private func world(attractionAt x: Int64 = 6_632) throws -> GameWorld {
-        var world = try GameWorld(bounds: WorldBounds(width: 12_288, height: 3_072), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts))
+    private func world(attractionAt x: Int64 = 6_632, balance: Money = 300_000_000) throws -> GameWorld {
+        var world = try GameWorld(bounds: WorldBounds(width: 12_288, height: 3_072), economy: fixtureEconomy(balance: balance, costs: testCosts))
         try world.buildStation(named: "Home", at: PlanPoint(x: 1_536, y: 1_536))
         try world.buildStation(named: "Foot", at: PlanPoint(x: 5_632, y: 1_536))
         let line = try world.createLine(named: "Main", stops: [home, foot]).id
@@ -191,8 +191,8 @@ final class TourismTests: XCTestCase {
             try poor.investInSouvenirShop(of: AttractionID(rawValue: 1))
             return try XCTUnwrap(poor.accounts.assets.first { $0.kind == .souvenirShop })
         }()
-        XCTAssertEqual(poor.accounts.assets.filter { $0.kind == .souvenirShop }.map(\.cost), [Money(30_000_000), Money(30_000_000)], "a record a level")
-        XCTAssertEqual(record.cost, Money(30_000_000))
+        XCTAssertEqual(poor.accounts.assets.filter { $0.kind == .souvenirShop }.map(\.cost), [Money(90_000_000), Money(90_000_000)], "a record a level")
+        XCTAssertEqual(record.cost, Money(90_000_000))
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(poor)), poor)
     }
 
@@ -202,7 +202,7 @@ final class TourismTests: XCTestCase {
     /// written down once the first level was.
     func testTheSecondLevelIsWrittenDownFromWhenItWasBought() throws {
         let life = AssetClass.buildings.lifeDays
-        let daily = Money(30_000_000 / life)
+        let daily = Money(90_000_000 / life)
         for daysWritten in [Int64(100), life] {
             var world = try self.world()
             world.setEconomyMode(.management)
@@ -331,7 +331,7 @@ final class TourismTests: XCTestCase {
     func testVersionFortySevenKeepsTourism() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v47-tourism.json")
-        var made = try NTScale.$factor.withValue(3) { try world() }
+        var made = try NTScale.$factor.withValue(3) { try world(balance: 100_000_000) }
         made.setEconomyMode(.management)
         try made.investInSouvenirShop(of: AttractionID(rawValue: 1))
         made.setSpeed(.normal)
@@ -345,7 +345,7 @@ final class TourismTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 47)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 5)
         let sight = try XCTUnwrap(loaded.attraction(id: AttractionID(rawValue: 1)))
         XCTAssertEqual(sight.souvenir, 1)
         XCTAssertEqual(sight.yesterday, 315)

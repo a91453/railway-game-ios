@@ -30,7 +30,7 @@ final class MapExpansionSessionTests: XCTestCase {
     /// Review H's H1 (decision 400's sequel): a tile bought on a new blank
     /// game has roads in its towns, as the middle tile's have.
     func testATileBoughtOnANewGameHasRoads() throws {
-        var world = GameWorld.newGame(balance: 1_000_000_000, eventSeed: 7, buysMap: true)
+        var world = GameWorld.newGame(balance: 3_000_000_000, eventSeed: 7, buysMap: true)
         let east = MapTile(row: 2, column: 3)
         try world.buyMapTile(east, passingMilestone: true)
         let roads = try XCTUnwrap(world.roads)
@@ -42,7 +42,7 @@ final class MapExpansionSessionTests: XCTestCase {
     }
 
     func testChoosingAndBuyingATile() throws {
-        var world = GameWorld.newGame(balance: 1_000_000_000, eventSeed: 9, buysMap: true)
+        var world = GameWorld.newGame(balance: 3_000_000_000, eventSeed: 9, buysMap: true)
         let session = GameSession(world: world, language: .english)
         XCTAssertTrue(session.buysMap)
         XCTAssertEqual(session.mapExpansionOverlay?.owned, [PlanRect(minX: 2 * length, minY: 2 * length, maxX: 3 * length, maxY: 3 * length)])
@@ -73,11 +73,11 @@ final class MapExpansionSessionTests: XCTestCase {
         let balance = free.world.economy.balance
         let cells = free.world.land.cells.count
         XCTAssertTrue(free.buyChosenMapTile())
-        XCTAssertEqual(free.message?.text, "Bought the tile for \(Money(500_000_000).moneyText). Its towns wait for your railway.")
+        XCTAssertEqual(free.message?.text, "Bought the tile for \(Money(1_500_000_000).moneyText). Its towns wait for your railway.")
         // Still choosing, the tile let go of (decision 160, later).
         XCTAssertTrue(free.isChoosingMapTile)
         XCTAssertNil(free.chosenMapTile)
-        XCTAssertEqual(free.world.economy.balance, balance - 500_000_000)
+        XCTAssertEqual(free.world.economy.balance, balance - 1_500_000_000)
         XCTAssertGreaterThan(free.world.land.cells.count, cells)
         XCTAssertEqual(free.world.mapExpansion?.owned, [MapTile(row: 2, column: 2), MapTile(row: 2, column: 3)])
         free.undo()
@@ -90,7 +90,7 @@ final class MapExpansionSessionTests: XCTestCase {
     /// tick; stopping resumes it. A building tool chosen meanwhile keeps
     /// the pause, and leaving it resumes the game.
     func testChoosingATilePausesTheGameSoABuyCanBeUndone() throws {
-        var world = GameWorld.newGame(balance: 1_000_000_000, eventSeed: 9, buysMap: true)
+        var world = GameWorld.newGame(balance: 3_000_000_000, eventSeed: 9, buysMap: true)
         world.setEconomyMode(.free)
         let session = GameSession(world: world, language: .english)
         session.setSpeed(.normal)
@@ -139,7 +139,7 @@ final class MapExpansionSessionTests: XCTestCase {
 
     func testTheEconomyPanelsLine() {
         let session = GameSession(world: GameWorld.newGame(eventSeed: 9, buysMap: true), language: .traditionalChinese)
-        XCTAssertEqual(session.mapExpansionText, "地圖：已擁有 1 / 25 塊 · 下一塊 \(Money(500_000_000).moneyText)，每日運量 100,000 人次解鎖（目前最佳 0）")
+        XCTAssertEqual(session.mapExpansionText, "地圖：已擁有 1 / 25 塊 · 下一塊 \(Money(1_500_000_000).moneyText)，每日運量 100,000 人次解鎖（目前最佳 0）")
         XCTAssertNil(GameSession(world: GameWorld.newGame(eventSeed: 9), language: .english).mapExpansionText)
     }
 

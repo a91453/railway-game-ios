@@ -59,7 +59,7 @@ final class AreaBuyOutTests: XCTestCase {
         XCTAssertEqual(on.buyOutPrice(of: home), 47_116_800)
         let quote = try XCTUnwrap(on.placedBuildingQuote(.office, at: Self.betweenTheHomes))
         XCTAssertEqual(quote.cleared, [])
-        XCTAssertEqual(quote.buyOut, Money(2 * 15_705_600 / 8))
+        XCTAssertEqual(quote.buyOut, Money(2 * 47_116_800 / 8))
         XCTAssertEqual(quote.building, 73_728_000)
         XCTAssertEqual(quote.land, 6_144_000)
         // By squares the office reaches neither home's 20 m square in the
@@ -73,7 +73,7 @@ final class AreaBuyOutTests: XCTestCase {
         XCTAssertEqual(off.placedBuildingQuote(.house, at: middle)?.cleared, [CellPosition(row: 5, column: 5)])
         XCTAssertEqual(off.placedBuildingQuote(.house, at: middle)?.buyOut, 47_116_800)
         XCTAssertEqual(on.placedBuildingQuote(.house, at: middle)?.cleared, [])
-        XCTAssertEqual(on.placedBuildingQuote(.house, at: middle)?.buyOut, Money(15_705_600 / 16))
+        XCTAssertEqual(on.placedBuildingQuote(.house, at: middle)?.buyOut, Money(47_116_800 / 16))
     }
 
     func testFreePlayPaysNothingForTheShares() throws {
@@ -91,7 +91,7 @@ final class AreaBuyOutTests: XCTestCase {
         let building = try world.placeBuilding(.office, at: Self.betweenTheHomes)
         XCTAssertEqual(building.residents, 12)
         XCTAssertEqual(building.jobs, 2)
-        XCTAssertEqual(building.landCost, Money(2_048_000 + 2 * 15_705_600 / 8))
+        XCTAssertEqual(building.landCost, Money(6_144_000 + 2 * 47_116_800 / 8))
         for column in [5, 6] {
             XCTAssertEqual(world.land.cell(row: 5, column: column), LandCell(row: 5, column: column, use: .residential, residents: 42, jobs: 7))
             XCTAssertEqual(world.buildings.building(row: 5, column: column)?.density, .d1)

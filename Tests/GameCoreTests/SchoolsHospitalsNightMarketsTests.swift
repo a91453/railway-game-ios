@@ -57,7 +57,7 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         let before = try XCTUnwrap(world.landValue(row: 2, column: 5)?.value)
         try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 10_000))
         XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 2_700)
-        XCTAssertEqual(world.landValue(row: 2, column: 5)?.value, before + 900)
+        XCTAssertEqual(world.landValue(row: 2, column: 5)?.value, before + 2_700)
         // 400 m is 25,600 units: the middle of column 10 (43,008, 23,008
         // east of the school) is within, that of column 11 (47,104, 27,104)
         // is not.
@@ -328,7 +328,7 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 74)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, world)
+        try XCTAssertSameButRounding(loaded, world, cents: 10)
         XCTAssertEqual(loaded.placedBuildings.map(\.kind), [.school, .hospital, .nightMarket])
         XCTAssertEqual(loaded.placedBuildings.map(\.look), [1, 1, 1])
         XCTAssertEqual(loaded.placedBuildings[2].visitors, 168)

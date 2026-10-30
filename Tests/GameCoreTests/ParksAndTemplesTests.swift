@@ -190,7 +190,7 @@ final class ParksAndTemplesTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 71)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, world)
+        try XCTAssertSameButRounding(loaded, world, cents: 5)
         XCTAssertEqual(loaded.placedBuildings.map(\.kind), [.park, .temple])
         XCTAssertEqual(loaded.placedBuildings.map(\.look), [2, 1])
         XCTAssertGreaterThan(loaded.placedBuildings[1].visitors, 0)

@@ -136,17 +136,17 @@ final class DistanceDemandTests: XCTestCase {
         let town = a, west = b, east = c
         try world.createLine(named: "Across", stops: [west, town, east])
         world.setDistanceDemand(true)
-        // The standard fare, $5, as the company has set no fares; the
-        // world's baseline is the reference's $0.75.
+        // The standard fare, NT$15, as the company has set no fares; the
+        // world's baseline is the reference's $0.75, NT$2.25.
         XCTAssertEqual(world.tripFare(from: town, to: west), Money(1_500))
         world.setOutsideConnections(true)
         XCTAssertEqual(world.outsideFare, Money(225))
         XCTAssertEqual(world.tripFare(from: town, to: west), Money(1_725))
         XCTAssertEqual(world.tripFare(from: west, to: town), Money(1_725))
         XCTAssertEqual(world.tripFare(from: west, to: east), Money(1_725), "one surcharge however many ends are outside")
-        try world.setFareBaseline(Money(500))
-        XCTAssertEqual(world.outsideFare, Money(500))
-        XCTAssertEqual(world.tripFare(from: town, to: east), Money(1_000))
+        try world.setFareBaseline(Money(1_500))
+        XCTAssertEqual(world.outsideFare, Money(1_500))
+        XCTAssertEqual(world.tripFare(from: town, to: east), Money(3_000))
 
         // The pairs with an outside connection keep all their trips: Town's
         // 400 shared by the two connections' 3,000 each, 200 each.
@@ -188,8 +188,9 @@ final class DistanceDemandTests: XCTestCase {
         world.setOutsideConnections(true)
         let before = world.accounts.pending.fareRevenue
         world.chargeFares(3, from: a, to: b)
-        // 3 × $5.75 = $17.25, rounded to $17.
-        XCTAssertEqual(world.accounts.pending.fareRevenue - before, Money(1_700))
+        // 3 × NT$17.25 = NT$51.75, rounded to NT$52 (decision 499: rounded
+        // once from 3 times the cents, not 3 × $17).
+        XCTAssertEqual(world.accounts.pending.fareRevenue - before, Money(5_200))
         XCTAssertEqual(world.accounts.pending.fareTrips, 3)
     }
 

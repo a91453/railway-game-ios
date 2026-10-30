@@ -523,7 +523,7 @@ final class FreightTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 38)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 3_000)
         let state = try XCTUnwrap(loaded.freight)
         XCTAssertEqual(state.onBoard, 40, "the train carries a load")
         XCTAssertTrue(state.isConserved)

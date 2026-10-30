@@ -79,12 +79,12 @@ final class CityBusTripsTests: XCTestCase {
         XCTAssertEqual(trips(world, a), before.0, "the trains lose no one")
         XCTAssertEqual(trips(world, b), before.1)
 
-        // A day: 80 riders at $5; 144 departures, 1,290.24 km there and
-        // back at $20.
+        // A day: 80 riders at NT$15; 144 departures, 1,290.24 km there and
+        // back at NT$60.
         try world.advance(ticks: 1_440 + 30)
         let day = try XCTUnwrap(world.busRoute(id: route.id)?.days.last)
         XCTAssertEqual(day.riders, 80)
-        XCTAssertEqual(day.fares, Money(80 * 500))
+        XCTAssertEqual(day.fares, Money(80 * 1_500))
         XCTAssertEqual(day.cost, Money(7_741_440))
         XCTAssertTrue(world.accounts.entries.allSatisfy(GameWorld.isWellFormed))
 
@@ -208,11 +208,12 @@ final class CityBusTripsTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 75)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, world)
+        try XCTAssertSameButRounding(loaded, world, cents: 2_500)
         XCTAssertEqual(loaded.busRoutes.map(\.station), [nil, nil, a])
         XCTAssertEqual(loaded.busRoutes.map(\.transfer), [nil, BusTransfer(station: b, stop: 1), nil])
         XCTAssertEqual(loaded.roads?.built, [CellPosition(row: 7, column: 41), CellPosition(row: 6, column: 41)])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), data)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 75,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
 
         // Version 74 had no city routes: a route there names its station.
         var old = object

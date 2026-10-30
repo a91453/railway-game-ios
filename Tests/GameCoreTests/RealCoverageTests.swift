@@ -36,22 +36,22 @@ final class RealCoverageTests: XCTestCase {
         let empty = try XCTUnwrap(world.land.cell(row: 5, column: 5))
         let half = try XCTUnwrap(world.land.cell(row: 5, column: 6))
         XCTAssertEqual(world.buyOutPrice(of: empty), .zero, "nothing stands there")
-        // Half of 4,096 m², two storeys of it at $40, and its land at 2,000
-        // a m², a fifth more.
-        XCTAssertEqual(world.buyOutPrice(of: half), Money((2 * 2_048 * 4_000 + 2_048 * 2_000) * 120 / 100))
+        // Half of 4,096 m², two storeys of it at NT$120, and its land at
+        // 6,000 a m², a fifth more.
+        XCTAssertEqual(world.buyOutPrice(of: half), Money((2 * 2_048 * 12_000 + 2_048 * 6_000) * 120 / 100))
         let unknown = try self.world(west: nil, east: nil)
         XCTAssertEqual(unknown.buyOutPrice(of: try XCTUnwrap(unknown.land.cell(row: 5, column: 5))), 47_116_800)
         // A full cell: 4,096 m² of ground.
         var full = try self.world(west: 100, east: nil)
         full.setCityBuildings(false)
         XCTAssertEqual(full.buyOutPrice(of: try XCTUnwrap(full.land.cell(row: 5, column: 5))),
-                       Money((2 * 4_096 * 4_000 + 4_096 * 2_000) * 120 / 100))
+                       Money((2 * 4_096 * 12_000 + 4_096 * 6_000) * 120 / 100))
     }
 
     func testAShareOfACarParkCostsNothingAndOfADenseCellALot() throws {
         let world = try world(west: 0, east: 50)
         let quote = try XCTUnwrap(world.placedBuildingQuote(.office, at: Self.betweenTheHomes))
-        XCTAssertEqual(quote.buyOut, Money(24_576_000 / 8))
+        XCTAssertEqual(quote.buyOut, Money(73_728_000 / 8))
         XCTAssertEqual(quote.cleared, [])
     }
 

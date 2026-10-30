@@ -112,9 +112,10 @@ final class ZoningTests: XCTestCase {
         // (10, 5)'s middle is 20,480 south of S0: w = 1000 − ⌊20480² × 1000
         // / 51200²⌋ = 840, S = 840 × 800 / 1000 = 672; (10, 6)'s is 4,096
         // east of that too: ⌊436,207,616,000 / 2,621,440,000⌋ = 166, w =
-        // 834, S = 667. Empty land (1,000), access 2 × 1,000.
-        XCTAssertEqual(world.landValue(row: 10, column: 5)?.value, 1_000 + 15 * 672 + 2_000)
-        XCTAssertEqual(world.landValue(row: 10, column: 6)?.value, 1_000 + 15 * 667 + 2_000)
+        // 834, S = 667. Empty land (3,000), 45 a point of S, access
+        // 2 × 3,000 (decision 499: every value times 3).
+        XCTAssertEqual(world.landValue(row: 10, column: 5)?.value, 3_000 + 45 * 672 + 6_000)
+        XCTAssertEqual(world.landValue(row: 10, column: 6)?.value, 3_000 + 45 * 667 + 6_000)
         world.spread(towards: station(of: world))
         // Shops: a quarter of 4 living there and three times 4 working.
         XCTAssertEqual(world.land.cell(row: 10, column: 5), LandCell(row: 10, column: 5, use: .commercial, residents: 1, jobs: 12))

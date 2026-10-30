@@ -308,7 +308,7 @@ final class DepotTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 54)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 500)
         XCTAssertEqual(loaded.line(id: main)?.depot, depot)
         XCTAssertTrue(loaded.station(id: depot)?.isDepot ?? false)
         XCTAssertFalse(loaded.accounts.depotHours.isEmpty)

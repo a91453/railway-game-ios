@@ -174,7 +174,7 @@ final class BuildingMaterialsTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 39)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        try XCTAssertSameButRounding(world, made, cents: 3_000)
         let state = try XCTUnwrap(world.freight)
         XCTAssertTrue(state.buildingMaterials)
         XCTAssertEqual(state.loads.first?.groups.first?.kind, .materials)

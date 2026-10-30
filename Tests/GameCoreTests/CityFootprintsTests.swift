@@ -70,9 +70,9 @@ final class CityFootprintsTests: XCTestCase {
         let home = try XCTUnwrap(on.land.cell(row: 5, column: 5)), tower = try XCTUnwrap(on.land.cell(row: 5, column: 9))
         let value = try XCTUnwrap(on.landValue(row: 5, column: 5)).value
         XCTAssertEqual(try XCTUnwrap(off.landValue(row: 5, column: 5)).value, value)
-        // Two storeys of 1,536 m² at $40, and 20 × 20 m (40 × 40 m) of land,
-        // a fifth more.
-        let floor: Int64 = 2 * 1_536 * 4_000
+        // Two storeys of 1,536 m² at NT$120, and 20 × 20 m (40 × 40 m) of
+        // land, a fifth more.
+        let floor: Int64 = 2 * 1_536 * 12_000
         XCTAssertEqual(on.buyOutPrice(of: home), Money((floor + 400 * value) * 120 / 100))
         XCTAssertEqual(off.buyOutPrice(of: home), Money((floor + 1_600 * value) * 120 / 100))
         XCTAssertLessThan(on.buyOutPrice(of: home), off.buyOutPrice(of: home))

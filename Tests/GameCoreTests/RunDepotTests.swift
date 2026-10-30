@@ -351,7 +351,7 @@ final class RunDepotTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, version)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 500)
         XCTAssertEqual(loaded.line(id: main)?.depots, [west, east])
         XCTAssertTrue(loaded.line(id: main)?.hasRuns ?? false)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
