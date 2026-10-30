@@ -197,4 +197,18 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(next.current.incomeStatementRows(previous: next.previous, in: .traditionalChinese)
             .first { $0.title == "出售建物損益（已實現）" }?.previous, -2_060_800)
     }
+
+    /// A player's report from an iPhone held sideways: the side panel's
+    /// columns broke "$ 3,269,858" over two lines. An amount is shown in
+    /// full, or short where the full ones do not fit, never broken.
+    func testAnAmountIsInFullOrShortNeverBroken() {
+        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: false), "$ 3,269,858")
+        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: true), "$3.3M")
+        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: false), "$ -4,205,867")
+        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: true), "-$4.2M")
+        XCTAssertEqual(StatementRow.amountText(Money(-1_612_000), short: true), "-$16k")
+        XCTAssertEqual(StatementRow.amountText(.zero, short: true), "$0")
+        XCTAssertEqual(StatementRow.amountText(nil, short: false), "—")
+        XCTAssertEqual(StatementRow.amountText(nil, short: true), "—")
+    }
 }

@@ -1784,8 +1784,10 @@ struct MapView: View {
                 .allowsHitTesting(false)
         }
         if let cityTooltip {
+            // Its land value's parts one to a line (a phone's report: on
+            // one line they ran under the side panel), so it is taller.
             CityCellTooltip(info: cityTooltip.info, language: session.language)
-                .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 130)))
+                .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 160)))
                 .allowsHitTesting(false)
         }
         if let sectionFlowTooltip {
