@@ -128,6 +128,11 @@ public enum Map3DShowcase {
         Entry("fiveSectionLRT", "Five-section light rail", "五節輕軌電車", .lightRail, cars: 2, fixed: true),
         Entry("sevenSectionLRT", "Seven-section light rail", "七節輕軌電車", .lightRail, cars: 3, fixed: true),
         Entry("blueSeven", "Seven-section blue tram", "七節藍色電車", .lightRail, cars: 7, fixed: true),
+        // Decision 496: the real light rails' own trains.
+        Entry("danhaiLRT", "Danhai Light Rail", "淡海輕軌", .lightRail, cars: 2, fixed: true),
+        Entry("ankengLRT", "Ankeng Light Rail", "安坑輕軌", .lightRail, cars: 2, fixed: true),
+        Entry("klrtCAF", "Kaohsiung Light Rail Urbos 3", "高雄輕軌 Urbos 3", .lightRail, cars: 2, fixed: true),
+        Entry("klrtCitadis", "Kaohsiung Light Rail Citadis 305", "高雄輕軌 Citadis 305", .lightRail, cars: 2, fixed: true),
         // Other: the steam train and the short commuter sets.
         Entry("STEAM", "Steam train", "蒸汽列車", .other, cars: 6, most: 10),
         Entry("threeCarUrban", "Three-car urban EMU", "三節都市電聯車", .other, cars: 3, fixed: true),

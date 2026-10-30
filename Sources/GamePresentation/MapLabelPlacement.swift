@@ -131,6 +131,61 @@ public enum MapLabelPlacement {
         }
     }
 
+    /// A placed bubble's box, from its bottom middle (``placeBubbles``).
+    public static func bubbleBox(_ bubble: Bubble, at point: ScreenPoint) -> Box {
+        Box(x: point.x - bubble.width / 2, y: point.y - bubble.height, width: bubble.width, height: bubble.height)
+    }
+
+    /// Where a placed bubble takes a touch: its box, at least 44 by 28,
+    /// touched over 44 high round its middle (``MapAlertBubbles``'
+    /// `TouchTargetButtonStyle`).
+    public static func bubbleTouchBox(_ bubble: Bubble, at point: ScreenPoint) -> Box {
+        let box = bubbleBox(bubble, at: point)
+        let width = max(box.maxX - box.minX, 44), height = max(box.maxY - box.minY, 44)
+        return Box(x: point.x - width / 2, y: (box.minY + box.maxY - height) / 2, width: width, height: height)
+    }
+
+    // MARK: - The selected station's tag (decisions 119 and 501)
+
+    /// Where the tag of the station at `point` goes, `width` by `height`,
+    /// inside `clear`: under the station's mark and name, or over them
+    /// where there is no room below. Decision 501: off `bubbles` (their
+    /// touch areas), which it is drawn over: else over, under or beside the
+    /// station, or beside a bubble in its way, kept inside `clear`, the
+    /// nearest to the station first; with nowhere clear, the place that
+    /// covers least of them. Never on the station's own mark and name.
+    public static func stationTag(at point: ScreenPoint, width: Double, height: Double, clear: Box, avoiding bubbles: [Box]) -> Box {
+        let clearance = 34.0
+        func inside(x: Double, y: Double) -> Box {
+            Box(x: min(max(x, clear.minX), max(clear.minX, clear.maxX - width)),
+                y: min(max(y, clear.minY), max(clear.minY, clear.maxY - height)), width: width, height: height)
+        }
+        let below = point.y + clearance, above = point.y - clearance - height
+        let first = inside(x: point.x - width / 2, y: below + height > clear.maxY ? above : below)
+        guard bubbles.contains(where: { $0.overlaps(first, gap: 0) }) else { return first }
+        let own = Box(x: point.x - 22, y: point.y - clearance + 1, width: 44, height: 2 * clearance - 2)
+        let gap = 4.0
+        // Beside the bubbles round the station only: the real-world maps
+        // show dozens, and each adds places to try.
+        let around = Box(x: point.x - 1.5 * width, y: point.y - 3 * height, width: 3 * width, height: 6 * height)
+        let near = bubbles.filter { $0.overlaps(around, gap: 0) }
+        let xs = [point.x - width / 2, point.x - 22 - gap - width, point.x + 22 + gap]
+            + near.flatMap { [$0.minX - gap - width, $0.maxX + gap] }
+        let ys = [below, above, point.y - height / 2]
+            + near.flatMap { [$0.maxY + gap, $0.minY - gap - height] }
+        let candidates = xs.flatMap { x in ys.map { inside(x: x, y: $0) } }
+            .filter { !$0.overlaps(own, gap: 0) }
+            .sorted { distance($0, point) < distance($1, point) }
+        guard !candidates.isEmpty else { return first }
+        return candidates[choose(candidates, avoiding: bubbles, gap: 0)]
+    }
+
+    /// How far `box`'s middle is from `point`.
+    private static func distance(_ box: Box, _ point: ScreenPoint) -> Double {
+        let dx = (box.minX + box.maxX) / 2 - point.x, dy = (box.minY + box.maxY) / 2 - point.y
+        return (dx * dx + dy * dy).squareRoot()
+    }
+
     // MARK: - Fares (decision 256)
 
     /// The places tried for a fare of `width` by `height` at a station:

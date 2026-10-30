@@ -79,7 +79,10 @@ final class MapMarkTapUITests: XCTestCase {
 
     /// An alert's bubble (decision 121), tapped on its middle: a station
     /// short of building materials opens its station's panel (decision
-    /// 184), as every bubble of this scene is.
+    /// 184), as every bubble of this scene is. Decision 501: and again
+    /// after the panel is closed. The station stays selected, and its tag,
+    /// drawn over the bubbles, lay on the middle station's bubble under its
+    /// name: every later tap opened the tag (97.1 on an iPad).
     func testAnAlertsBubbleTakesATapOnItsMiddle() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -91,14 +94,41 @@ final class MapMarkTapUITests: XCTestCase {
         // an iPhone while the scene was being built (run 39841822269).
         let alerts = app.buttons.matching(identifier: "map.alert")
         XCTAssertTrue(alerts.firstMatch.appears(within: 150), "The stations short of materials show")
-        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
-        XCTAssertNotNil(alert, "A bubble is on screen")
-        alert?.tap()
+        // Every bubble, each twice: which one stands under its station's
+        // name, where the tag goes, depends on the screen and the language
+        // (run 41033785804 tapped one over its station, which the tag
+        // never reached, and passed on the old placement).
+        let middles = alerts.allElementsBoundByIndex.filter(\.isHittable).map { CGPoint(x: $0.frame.midX, y: $0.frame.midY) }
+        XCTAssertFalse(middles.isEmpty, "A bubble is on screen")
         // Decision 477: at the freight group, whose first row says what
         // the town is short of (it was last in the panel, a long scroll
-        // down).
+        // down). The panel scrolls again once it has slid in, which a slow
+        // runner takes seconds to do (``StationPanel/settleJump``).
         let materials = app.descendants(matching: .any).matching(identifier: "station.materials").firstMatch
-        XCTAssertTrue(materials.appears(within: 10), "A tap on the bubble's middle opens its station at its materials")
-        XCTAssertTrue(materials.becomesHittable(within: 5), "The materials row is scrolled into view")
+        let done = app.buttons["station.done"]
+        let tag = app.descendants(matching: .any)["map.stationTag"].firstMatch
+        for (n, middle) in middles.enumerated() {
+            for tap in ["first", "second"] {
+                // The bubble nearest where it was, as a finger goes back.
+                let bubble = alerts.allElementsBoundByIndex.min { a, b in
+                    hypot(a.frame.midX - middle.x, a.frame.midY - middle.y) < hypot(b.frame.midX - middle.x, b.frame.midY - middle.y)
+                }
+                XCTAssertNotNil(bubble, "Bubble \(n) is still on the map for the \(tap) tap")
+                guard let bubble else { return }
+                XCTAssertTrue(bubble.becomesHittable(within: 5), "Bubble \(n) takes the \(tap) tap")
+                // The selected station's tag is drawn over the bubbles.
+                if tag.exists {
+                    XCTAssertFalse(tag.frame.intersects(bubble.frame), "The station's tag \(tag.frame) covers bubble \(n) \(bubble.frame)")
+                }
+                // Where the finger lands, not the element: a tag over the
+                // bubble takes a coordinate's tap, as it took the player's.
+                bubble.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                XCTAssertTrue(materials.appears(within: 10), "The \(tap) tap on bubble \(n)'s middle opens its station at its materials")
+                XCTAssertTrue(materials.becomesHittable(within: 15), "The materials row is scrolled into view after the \(tap) tap on bubble \(n)")
+                XCTAssertTrue(done.appears(within: 5))
+                done.tap()
+                XCTAssertTrue(materials.disappears(within: 10), "The station's panel closes")
+            }
+        }
     }
 }

@@ -11,6 +11,11 @@
     "groundMetres": 0.1
   },
   "fineCarFromTriangles": 8000,
+  "twoCarSets": {
+    "comment": "Decision 496: the real light rails' five-module trains, which the game only ever draws as two cars (the whole train cut at its middle). nearCarMax is there so that a 12-car train fits nearTrainMax; a train that is always two cars has instead a car up to nearCarMax here, the whole train at most a quarter of nearTrainMax. Their far cars keep every far rule.",
+    "nearCarMax": 30000,
+    "sets": ["danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis"]
+  },
   "grandfathered": {
     "comment": "Sets on main when this tool was made that break a rule below. They stay as they are; a new model may not join the list. id -> reason.",
     "noFar": {

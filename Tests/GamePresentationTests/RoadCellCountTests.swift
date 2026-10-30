@@ -18,7 +18,8 @@ final class RoadCellCountTests: XCTestCase {
     }
 
     /// A road the player builds changes the buses' signature, as the
-    /// union's count did; the city's cells alone keep it.
+    /// union's count did; BUGHUNT_BUILD P2-2: also one laid along the
+    /// city's cells (free, decision 487), which leaves the count as it was.
     func testABuiltRoadChangesTheBusesSignature() throws {
         let city = Set((0..<10).map { CellPosition(row: 0, column: $0) })
         var world = GameWorld(bounds: try WorldBounds(width: 65_536, height: 65_536), economy: GameEconomy(balance: Money(1_000_000)))
@@ -28,6 +29,10 @@ final class RoadCellCountTests: XCTestCase {
         world.roads = RoadGrid(cells: city, built: [CellPosition(row: 1, column: 0)])
         XCTAssertNotEqual(Map3DBuses.Signature(world: world, palette: .standard), before)
         world.roads = RoadGrid(cells: city, built: [CellPosition(row: 0, column: 0)])
-        XCTAssertEqual(Map3DBuses.Signature(world: world, palette: .standard), before)
+        let along = Map3DBuses.Signature(world: world, palette: .standard)
+        XCTAssertEqual(along.roads, before.roads)
+        XCTAssertNotEqual(along, before, "a road laid along the city's shows")
+        world.roads = RoadGrid(cells: city)
+        XCTAssertEqual(Map3DBuses.Signature(world: world, palette: .standard), before, "and goes when it is taken up")
     }
 }
