@@ -40,7 +40,8 @@ public struct IncomePulse: Hashable, Sendable {
     public var text: String {
         guard isLoss else { return "+\(amount.moneyText)" }
         let dollars = Int64(amount.amount.magnitude / 100)
-        return dollars >= 10_000 ? "\u{2212}$\((dollars + 500) / 1_000)k" : "\u{2212}$\(Money(dollars).displayText)"
+        let symbol = Money.currencySymbol
+        return dollars >= 10_000 ? "\u{2212}\(symbol)\((dollars + 500) / 1_000)k" : "\u{2212}\(symbol)\(dollars.groupedText)"
     }
 }
 

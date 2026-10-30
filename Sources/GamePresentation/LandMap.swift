@@ -32,8 +32,8 @@ extension GameWorld {
     /// land or a station that does not exist.
     public func landCatchmentText(of id: StationID, in language: DisplayLanguage) -> String? {
         guard !land.isEmpty, let totals = landCatchment(of: id) else { return nil }
-        let residents = Money(totals.residents).displayText
-        let jobs = Money(totals.jobs).displayText
+        let residents = totals.residents.groupedText
+        let jobs = totals.jobs.groupedText
         return language.text(
             "Within 800 m: \(residents) residents · \(jobs) jobs",
             "800 公尺內：居民 \(residents) 人 · 就業 \(jobs) 個"
@@ -54,13 +54,13 @@ extension GameWorld {
         for (density, english, chinese) in names {
             let count = buildings.count { $0.kind == .city && $0.density == density }
             if count > 0 {
-                let number = Money(Int64(count)).displayText
+                let number = (Int64(count)).groupedText
                 parts.append(("\(english) \(number)", "\(chinese) \(number) 棟"))
             }
         }
         let stock = buildings.count { $0.kind == .existingStock }
         if stock > 0 {
-            let number = Money(Int64(stock)).displayText
+            let number = (Int64(stock)).groupedText
             parts.append(("existing \(number)", "原有建物 \(number) 棟"))
         }
         return language.text(

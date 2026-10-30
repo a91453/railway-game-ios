@@ -67,7 +67,7 @@ public struct DayPassCard: Hashable, Sendable {
         guard today.sold > 0 else {
             return language.text("Nobody buys at this price today.", "今天這個價格沒有人買。")
         }
-        let net = LedgerEntry.signedMoneyText(today.net)
+        let net = today.net.signedText
         return language.text(
             "Today about \(today.sold) sold: \(net) against what their trips would have paid, and \(today.rides) extra rides.",
             "今天約賣 \(today.sold) 張：比他們原本的車資 \(net)，多坐 \(today.rides) 趟。"

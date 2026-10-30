@@ -90,7 +90,7 @@ public struct LineLoadProfile: Equatable, Sendable {
         guard let busiest else { return language.text("Nobody rides this line yet.", "這條線還沒有人搭。") }
         let outbound = busiest.outbound >= busiest.inbound
         let (from, to) = outbound ? (busiest.from, busiest.to) : (busiest.to, busiest.from)
-        let riders = Money(outbound ? busiest.outbound : busiest.inbound).displayText
+        let riders = (outbound ? busiest.outbound : busiest.inbound).groupedText
         var text = language.text("Busiest: \(from) → \(to), \(riders) riders a day", "最多人：\(from) → \(to)，一天 \(riders) 人")
         if let peak = outbound ? busiest.outboundPeak : busiest.inboundPeak {
             let hours = "\(SectionFlow.hourText(peak.hour))–\(SectionFlow.hourText((peak.hour + 1) % 24))"
@@ -106,7 +106,7 @@ public struct LineLoadProfile: Equatable, Sendable {
     /// A tapped section's numbers both ways, on one line.
     public func sectionText(_ section: Section, in language: DisplayLanguage) -> String {
         func way(_ name: String, _ riders: Int64, _ peak: Peak?) -> String {
-            let count = Money(riders).displayText
+            let count = riders.groupedText
             var text = language.text("\(name) \(count) a day", "\(name) 一天 \(count) 人")
             if let peak {
                 let share = peak.percent.map { "\($0)%" } ?? language.text("no trains", "沒有列車")
@@ -206,7 +206,7 @@ extension NetworkFlowReport.SectionRow {
     /// seats 3 hours".
     public func hourlySummary(in language: DisplayLanguage) -> String {
         let hours = "\(SectionFlow.hourText(hour))–\(SectionFlow.hourText((hour + 1) % 24))"
-        let riders = Money(load).displayText
+        let riders = load.groupedText
         var text = percent.map {
             language.text("Fullest \(hours): \(riders) riders, \($0)% of the seats", "最擠 \(hours)：\(riders) 人，座位的 \($0)%")
         } ?? language.text("Fullest \(hours): \(riders) riders with no trains", "最擠 \(hours)：\(riders) 人，沒有列車")
@@ -224,10 +224,10 @@ extension NetworkFlowReport.SectionRow {
         let capacity = capacities.indices.contains(hour) ? capacities[hour] : 0
         var parts = [
             "\(SectionFlow.hourText(hour))–\(SectionFlow.hourText((hour + 1) % 24))",
-            language.text("\(Money(load).displayText) riders", "\(Money(load).displayText) 人"),
+            language.text("\(load.groupedText) riders", "\(load.groupedText) 人"),
         ]
         if capacity > 0 {
-            parts.append(language.text("\(Money(capacity).displayText) seats", "\(Money(capacity).displayText) 座位"))
+            parts.append(language.text("\(capacity.groupedText) seats", "\(capacity.groupedText) 座位"))
             parts.append("\((load * 100 + capacity / 2) / capacity)%")
         } else {
             parts.append(language.text("no trains", "沒有列車"))

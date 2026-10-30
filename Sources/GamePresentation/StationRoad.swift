@@ -20,7 +20,7 @@ extension GameWorld {
     public func stationRoadOffer(of id: StationID, in language: DisplayLanguage) -> StationRoadOffer? {
         do throws(GameError) {
             let quote = try stationRoadQuote(at: id)
-            let metres = Money(quote.metres).displayText, price = quote.price.moneyText
+            let metres = quote.metres.groupedText, price = quote.price.moneyText
             return StationRoadOffer(
                 text: language.text("Build Station Road · \(metres) m · \(price)", "鋪站前路 · \(metres) 公尺 · \(price)"), quote: quote
             )

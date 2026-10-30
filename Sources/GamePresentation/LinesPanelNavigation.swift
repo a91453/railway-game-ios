@@ -111,10 +111,10 @@ extension LineReport {
             guard let today else {
                 return [language.text("No record of yesterday yet", "昨日還沒有紀錄")]
             }
-            return [language.text("Today so far \(Money(today.riders).displayText) riders", "今日至今 \(Money(today.riders).displayText) 人次")]
+            return [language.text("Today so far \(today.riders.groupedText) riders", "今日至今 \(today.riders.groupedText) 人次")]
         }
         return [
-            language.text("Yesterday \(Money(yesterday.riders).displayText) riders", "昨日 \(Money(yesterday.riders).displayText) 人次"),
+            language.text("Yesterday \(yesterday.riders.groupedText) riders", "昨日 \(yesterday.riders.groupedText) 人次"),
             language.text("profit \(yesterday.profit.moneyText)", "損益 \(yesterday.profit.moneyText)"),
         ]
     }

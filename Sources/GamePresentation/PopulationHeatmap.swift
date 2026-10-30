@@ -56,7 +56,7 @@ public struct PopulationHeatmap: Sendable {
         static func decimalText(_ value: Double) -> String {
             guard value.isFinite else { return "0" }
             let hundredths = Int64((max(value, 0) * 100).rounded())
-            var text = Money(hundredths / 100).displayText
+            var text = (hundredths / 100).groupedText
             let fraction = hundredths % 100
             if fraction != 0 {
                 text += fraction % 10 == 0 ? ".\(fraction / 10)" : (fraction < 10 ? ".0\(fraction)" : ".\(fraction)")
@@ -66,7 +66,7 @@ public struct PopulationHeatmap: Sendable {
 
         /// "Estimated people: 12,345" and "Population density (people/km²): 9,876.5".
         public func lines(in language: DisplayLanguage) -> [String] {
-            let people = Money(Int64(self.people)).displayText
+            let people = (Int64(self.people)).groupedText
             let density = Self.decimalText(self.density)
             return [
                 language.text("Estimated people: \(people)", "估算人口：\(people) 人"),

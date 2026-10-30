@@ -292,13 +292,13 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(preview?.length, 4_096)
             XCTAssertEqual(preview?.cost, Money(400))
             XCTAssertNil(preview?.problem)
-            XCTAssertEqual(preview?.text(in: .english), "64 m · $ 4")
+            XCTAssertEqual(preview?.text(in: .english), "64 m · \(Money(400).moneyText)")
             XCTAssertEqual(session.world, world, "a preview builds nothing")
 
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, expected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Track #1: 64 m, automatic: surface 64 m, for $ 4."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Track #1: 64 m, automatic: surface 64 m, for \(Money(400).moneyText)."))
             XCTAssertEqual(session.networkStart, .node(.node(2)), "the next stretch starts where this one ended")
             XCTAssertNil(session.networkEnd)
             XCTAssertEqual(session.networkDraftText(), "From the end of a track. Tap where it ends, or drag there from the start.")
@@ -405,13 +405,13 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: Self.b, reach: Self.reach)
             let preview = session.networkPreview
             XCTAssertEqual(preview?.cost, Money(400), "✓ shows the price")
-            XCTAssertEqual(preview?.problem, "Not enough cash to lay this track: it costs $ 4 and you have $ 3.")
+            XCTAssertEqual(preview?.problem, "Not enough cash to lay this track: it costs \(Money(400).moneyText) and you have \(Money(300).moneyText).")
             XCTAssertEqual(preview?.points.count, 2, "the stretch is still drawn")
 
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, world, "no node without its edge")
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Not enough cash to lay this track: it costs $ 4 and you have $ 3.", fundsNeeded: Money(400)))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Not enough cash to lay this track: it costs \(Money(400).moneyText) and you have \(Money(300).moneyText).", fundsNeeded: Money(400)))
             XCTAssertEqual(session.networkStart, .point(Self.a), "the draft is kept")
         }
     }
@@ -438,7 +438,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
             session.tapNetwork(at: PlanPoint(x: 15_360, y: 4_096), reach: Self.reach)
             // 13 tiles at 3 × 100.
-            XCTAssertEqual(session.networkPreview?.text(in: .english), "208 m · 0 m → 8 m · continues the track · $ 39 · on a grade: a platform here is levelled first")
+            XCTAssertEqual(session.networkPreview?.text(in: .english), "208 m · 0 m → 8 m · continues the track · \(Money(3_900).moneyText) · on a grade: a platform here is levelled first")
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, expected)
@@ -728,9 +728,9 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkDraftText(), "從新的一點開始。請點終點，或從起點拖曳過去。")
             session.tapNetwork(at: Self.b, reach: Self.reach)
-            XCTAssertEqual(session.networkPreview?.text(in: .traditionalChinese), "64 公尺 · $ 4")
+            XCTAssertEqual(session.networkPreview?.text(in: .traditionalChinese), "64 公尺 · \(Money(400).moneyText)")
             session.buildNetworkTrack()
-            XCTAssertEqual(session.message?.text, "已建造軌段 #1：64 公尺，自動：地面 64 公尺，花費 $ 4。")
+            XCTAssertEqual(session.message?.text, "已建造軌段 #1：64 公尺，自動：地面 64 公尺，花費 \(Money(400).moneyText)。")
             session.tapNetwork(at: PlanPoint(x: 6_144 + 1_000, y: 2_048), reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.problem, "該位置與另一端太近：兩者至少要相距 22 公尺。")
             XCTAssertEqual(NetworkToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["鋪設", "月台", "拆除", "待避", "機廠"])

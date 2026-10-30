@@ -85,13 +85,14 @@ final class HangReportTests: XCTestCase {
         print(rows.joined(separator: "\n"))
     }
 
-    /// A real line's card (decision 315) is laid out on the main actor
-    /// when the player taps the line: what each city opening's lines take.
+    /// A real line's card (decision 315): what laying out each city
+    /// opening's lines takes, and, decision 497, what the tap that now lays
+    /// it out off the main actor holds the main actor for.
     func testWhatARealLineOfferTakes() throws {
         _ = try days()
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
         let clock = ContinuousClock()
-        var rows = ["| Opening | Line | Offer ms |", "| --- | --- | ---: |"]
+        var rows = ["| Opening | Line | Offer ms | Tap on the main actor ms |", "| --- | --- | ---: | ---: |"]
         for city in AcquisitionReportTests.cities {
             let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
             let world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
@@ -106,7 +107,10 @@ final class HangReportTests: XCTestCase {
             session.railways = data.railways
             for line in session.buyableRealLines {
                 let spent = clock.measure { _ = session.realLineOffer(for: line) }
-                rows.append(String(format: "| %@ | %@ | %.0f |", city.name, line.id, Self.ms(spent)))
+                // Decision 497: what the tap itself now holds the main actor for.
+                let tap = clock.measure { session.offerRealLine(line) }
+                session.closeRealLineOffer()
+                rows.append(String(format: "| %@ | %@ | %.0f | %.1f |", city.name, line.id, Self.ms(spent), Self.ms(tap)))
             }
         }
         print(rows.joined(separator: "\n"))

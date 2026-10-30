@@ -75,13 +75,13 @@ public struct ModeShiftSummary: Hashable, Sendable {
     /// How many switch, on a station's card.
     public func stationText(in language: DisplayLanguage) -> String {
         guard reason != .nearby else { return reasonText(in: language) }
-        let count = Money(riders).displayText
+        let count = riders.groupedText
         return language.text("About \(count) a day ride or drive instead", "每天約 \(count) 人改騎機車或開車")
     }
 
     /// How many switch on a line, and between which stations most do.
     public func lineText(in world: GameWorld, language: DisplayLanguage) -> String {
-        let count = Money(riders).displayText
+        let count = riders.groupedText
         guard let top, let from = world.station(id: top.from)?.name, let to = world.station(id: top.to)?.name else {
             return language.text("About \(count) a day on this line ride or drive instead", "這條線每天約 \(count) 人改騎車")
         }

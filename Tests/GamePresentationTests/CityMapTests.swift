@@ -100,12 +100,12 @@ final class CityMapTests: XCTestCase {
         var world = try world()
         let info = try XCTUnwrap(world.cityCellInfo(atX: 5 * 4_096 + 10, y: 5 * 4_096 + 10))
         XCTAssertEqual(info.lines(in: .english), [
-            "Homes · 6 storeys", "Residents 100 · Jobs 0", "Land value $ 25.00 a m²",
-            "Base $ 25.00 · Train service + $ 0.00 · Easy to reach + $ 0.00", "No station adds to it",
+            "Homes · 6 storeys", "Residents 100 · Jobs 0", "Land value \(Money(2_500).centsText) a m²",
+            "Base \(Money(2_500).centsText)", "Train service + \(Money(0).centsText)", "Easy to reach + \(Money(0).centsText)", "No station adds to it",
         ])
         XCTAssertEqual(info.lines(in: .traditionalChinese), [
-            "住宅 · 6 層樓", "居民 100 人 · 就業 0 個", "地價 每平方公尺 $ 25.00",
-            "基本 $ 25.00 · 列車服務 + $ 0.00 · 交通便利 + $ 0.00", "沒有車站影響地價",
+            "住宅 · 6 層樓", "居民 100 人 · 就業 0 個", "地價 每平方公尺 \(Money(2_500).centsText)",
+            "基本 \(Money(2_500).centsText)", "列車服務 + \(Money(0).centsText)", "交通便利 + \(Money(0).centsText)", "沒有車站影響地價",
         ])
         XCTAssertEqual(world.cityCellInfo(atX: 7 * 4_096, y: 5 * 4_096)?.lines(in: .traditionalChinese).first, "辦公 · 原有建物")
         XCTAssertEqual(world.cityCellInfo(atX: 0, y: 0)?.lines(in: .english).first, "Empty land")
@@ -122,8 +122,8 @@ final class CityMapTests: XCTestCase {
         var world = try world()
         try world.placeBuilding(.school, at: PlanPoint(x: 10_240, y: 10_240))
         let info = try XCTUnwrap(world.cityCellInfo(atX: 5 * 4_096 + 10, y: 5 * 4_096 + 10))
-        XCTAssertTrue(info.lines(in: .english).contains("Near your school or hospital + $ 9.00"))
-        XCTAssertTrue(info.lines(in: .traditionalChinese).contains("鄰近公司的學校或醫院 + $ 9.00"))
+        XCTAssertTrue(info.lines(in: .english).contains("Near your school or hospital + \(Money(900).centsText)"))
+        XCTAssertTrue(info.lines(in: .traditionalChinese).contains("鄰近公司的學校或醫院 + \(Money(900).centsText)"))
     }
 
     /// A served station sets its catchment's premiums: the tooltip names

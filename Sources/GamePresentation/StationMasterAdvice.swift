@@ -608,12 +608,12 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .holidayOver(let kind, let riders, let percent):
             percent >= 0
                 ? language.text(
-                    "\(kind.title(in: language)) is over: \(Money(riders).displayText) riders a day, \(percent)% more than before it.",
-                    "\(kind.title(in: language))結束了：每天 \(Money(riders).displayText) 人次，比連假前多 \(percent)%。"
+                    "\(kind.title(in: language)) is over: \(riders.groupedText) riders a day, \(percent)% more than before it.",
+                    "\(kind.title(in: language))結束了：每天 \(riders.groupedText) 人次，比連假前多 \(percent)%。"
                 )
                 : language.text(
-                    "\(kind.title(in: language)) is over: \(Money(riders).displayText) riders a day, \(-percent)% fewer than before it. Were the trains full?",
-                    "\(kind.title(in: language))結束了：每天 \(Money(riders).displayText) 人次，比連假前少 \(-percent)%。是不是車太擠了？"
+                    "\(kind.title(in: language)) is over: \(riders.groupedText) riders a day, \(-percent)% fewer than before it. Were the trains full?",
+                    "\(kind.title(in: language))結束了：每天 \(riders.groupedText) 人次，比連假前少 \(-percent)%。是不是車太擠了？"
                 )
         case .typhoonComing(let days, let stations, let percent):
             days > 0

@@ -319,7 +319,7 @@ final class StationDemandSessionTests: XCTestCase {
         let rows = world.passengerLedgerRows(of: alpha, in: .english)
         XCTAssertEqual(rows.map(\.title), ["Released", "Waiting", "Riding", "Arrived", "Left a full station", "Gave up", "Left behind (times)"])
         XCTAssertEqual(rows.map(\.count), [ledger.released, ledger.waiting, ledger.riding, ledger.arrived, ledger.overflowed, ledger.abandoned, ledger.refused])
-        XCTAssertEqual(rows[0].countText, Money(ledger.released).displayText)
+        XCTAssertEqual(rows[0].countText, ledger.released.groupedText)
         XCTAssertEqual(
             world.passengerLedgerRows(of: gamma, in: .traditionalChinese).map(\.title),
             ["釋出", "候車", "車上", "已抵達", "車站客滿離開", "放棄搭乘", "未能上車（次）"]

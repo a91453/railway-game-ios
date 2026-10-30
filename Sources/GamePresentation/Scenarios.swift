@@ -127,18 +127,22 @@ extension Challenge {
         }
     )
 
+    /// The tycoon's year of profit and the company's worth.
+    static let tycoonProfit = Money(30_000_000_000)
+    static let tycoonEquity = Money(80_000_000_000)
+
     /// Build a railway company worth a fortune.
     static let tycoon = Challenge(
         id: "sandbox.tycoon",
         titles: ("Railway Tycoon", "鐵道大亨"),
         stories: (
-            "Turn a small railway into a great company: $300 million of profit in a year, and a company worth $800 million.",
-            "把一間小小的鐵路公司經營成大企業：一年賺進 3 億，讓公司身價突破 8 億。"
+            "Turn a small railway into a great company: \(tycoonProfit.roundText(in: .english)) of profit in a year, and a company worth \(tycoonEquity.roundText(in: .english)).",
+            "把一間小小的鐵路公司經營成大企業：一年賺進 \(tycoonProfit.roundText(in: .traditionalChinese))，讓公司身價突破 \(tycoonEquity.roundText(in: .traditionalChinese))。"
         ),
         rules: { _, _ in
             Scenario(
                 id: "sandbox.tycoon",
-                goals: [.annualNetProfit(Money(30_000_000_000)), .equity(Money(80_000_000_000))],
+                goals: [.annualNetProfit(tycoonProfit), .equity(tycoonEquity)],
                 goldDays: 2 * year, silverDays: 5 * year / 2, deadlineDays: 3 * year, insolvencyDays: 60
             )
         }
@@ -218,7 +222,7 @@ extension GameWorld {
             let met = achieved.map { state.elapsedDays(through: $0) }
             func counted(_ now: Int64, _ target: Int64, _ title: String) -> GoalProgress {
                 GoalProgress(
-                    title: title, detail: "\(Money(now).displayText) / \(Money(target).displayText)",
+                    title: title, detail: "\(now.groupedText) / \(target.groupedText)",
                     fraction: met != nil ? 1 : min(1, Double(max(0, now)) / Double(target)), metOnDay: met
                 )
             }
@@ -357,9 +361,9 @@ extension Challenge {
                 Self.milestoneTitle(of: id, goal: index, in: language)
                     ?? language.text("Link all \(points.count) towns by rail", "用鐵路連通全部 \(points.count) 座城鎮")
             case .dailyRiders(let count):
-                language.text("\(Money(count).displayText) riders a day", "每日運量 \(Money(count).displayText) 人次")
+                language.text("\(count.groupedText) riders a day", "每日運量 \(count.groupedText) 人次")
             case .population(let count):
-                language.text("A population of \(Money(count).displayText)", "城市人口 \(Money(count).displayText) 人")
+                language.text("A population of \(count.groupedText)", "城市人口 \(count.groupedText) 人")
             case .tallBuildings(let count):
                 language.text("\(count) high-rises", "\(count) 棟高樓")
             case .annualNetProfit(let amount):

@@ -284,7 +284,7 @@ struct PopulationLegendView: View {
                 .foregroundStyle(Theme.textSecondary)
         }
         if mode == .landValue {
-            Text(verbatim: language.text("$ a square metre; tap a cell for its parts", "單位：每平方公尺 $；點一格看分項"))
+            Text(verbatim: language.text("\(Money.currencySymbol) a square metre; tap a cell for its parts", "單位：每平方公尺 \(Money.currencySymbol)；點一格看分項"))
                 .font(.caption2)
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -326,7 +326,7 @@ struct PopulationLegendView: View {
         case .travel: language.text("Few", "少")
         case .movement: language.text("Decrease", "減少")
         case .landUse: language.text("Low-rise", "低層")
-        case .landValue: "$ 0"
+        case .landValue: Money.zero.moneyText
         case .sectionFlow: language.text("Empty", "空")
         case .potential: language.text("Few", "少")
         case .coverage, .zoning, .terrain: ""
@@ -339,7 +339,7 @@ struct PopulationLegendView: View {
         case .travel: language.text("Many", "多")
         case .movement: language.text("Increase", "增加")
         case .landUse: language.text("Towers", "超高層")
-        case .landValue: "$ \(CityMap.valueSteps.last ?? 0)+ / m²"
+        case .landValue: "\(Money((CityMap.valueSteps.last ?? 0) * 100).moneyText)+ / m²"
         case .sectionFlow: language.text("Full", "滿載")
         case .potential: language.text("Many", "多")
         case .coverage, .zoning, .terrain: ""
@@ -429,7 +429,7 @@ struct PopulationLegendView: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: language.text("Land value, $ a square metre", "地價，每平方公尺多少 $")))
+            .accessibilityLabel(Text(verbatim: language.text("Land value, \(Money.currencySymbol) a square metre", "地價，每平方公尺多少 \(Money.currencySymbol)")))
             .accessibilityIdentifier("map.landValueLegend")
         case .coverage:
             VStack(alignment: .leading, spacing: 3) {

@@ -20,10 +20,10 @@ final class NewGameChoiceTests: XCTestCase {
     /// map's says where it is.
     func testTheCardsSayWhatTheyStartWith() {
         var options = NewGameOptions()
-        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and $ 3,000,000 to build with")
-        XCTAssertEqual(NewGameChoice.blank.detail(in: .traditionalChinese, options: options), "空白地圖，起始資金 $ 3,000,000")
+        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(300_000_000).moneyText) to build with")
+        XCTAssertEqual(NewGameChoice.blank.detail(in: .traditionalChinese, options: options), "空白地圖，起始資金 \(Money(300_000_000).moneyText)")
         options.difficulty = .easy
-        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and $ 5,000,000 to build with")
+        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(500_000_000).moneyText) to build with")
         options.funds = .unlimited
         XCTAssertEqual(NewGameChoice.blank.detail(in: .traditionalChinese, options: options), "空白地圖，資金無限")
         XCTAssertEqual(NewGameChoice.realWorld.detail(in: .english, options: options), "Build on a map of a real place")
@@ -34,8 +34,8 @@ final class NewGameChoiceTests: XCTestCase {
     /// under it that both maps start with them.
     func testTheOptionsRowSaysBothMapsUseIt() {
         var options = NewGameOptions()
-        XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .english), "New Game Options · Simple · Standard · $ 3,000,000")
-        XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .traditionalChinese), "新遊戲選項 · 簡單規則 · 標準 · $ 3,000,000")
+        XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .english), "New Game Options · Simple · Standard · \(Money(300_000_000).moneyText)")
+        XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .traditionalChinese), "新遊戲選項 · 簡單規則 · 標準 · \(Money(300_000_000).moneyText)")
         options.funds = .unlimited
         XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .english), "New Game Options · Simple · Standard · ∞")
         XCTAssertEqual(NewGameChoice.optionsNote(in: .english), "Both maps start with these options.")

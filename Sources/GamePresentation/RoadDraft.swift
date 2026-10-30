@@ -257,7 +257,32 @@ extension GameSession {
                 problem = error.playerMessage(in: language)
             }
         }
+        if problem == nil, real, let route = routeBroken(byTakingUp: stretch, from: roads) {
+            let name = BusRouteText.name(route.id, city: route.station == nil, in: language)
+            problem = language.text(
+                "\(name) runs on this road. Change the route first.", "\(name)走這段路，要先改路線。"
+            )
+        }
         roadRemoval = RoadRemoval(cells: stretch, problem: problem)
+    }
+
+    /// BUGHUNT_BUILD P2-1: on a real-world map the buses go along the base
+    /// map's roads and the player's own (``busRoads``), while GameCore
+    /// measures them along the road cells, which a stretch over the city's
+    /// cells leaves as they were when it is taken up. The first route whose
+    /// way on the map joins now and would break without `stretch`, or
+    /// `nil`. The bus roads are given the player's roads back after.
+    func routeBroken(byTakingUp stretch: [CellPosition], from roads: RoadGrid) -> BusRoute? {
+        guard let onRoads = busRoads else { return nil }
+        let routes = world.busRoutes.compactMap { route -> (BusRoute, PlanPoint?)? in
+            guard let id = route.station else { return (route, nil) }
+            return world.station(id: id).map { (route, $0.location) }
+        }
+        let joined = routes.filter { onRoads.way(ofSaved: $0.0.stops, station: $0.1).firstBroken == nil }
+        guard !joined.isEmpty else { return nil }
+        onRoads.useOwnRoads(roads.built.subtracting(stretch))
+        defer { onRoads.useOwnRoads(roads.built) }
+        return joined.first { onRoads.way(ofSaved: $0.0.stops, station: $0.1).firstBroken != nil }?.0
     }
 
     /// The stretch of the player's road cells joined to `cell` (side by

@@ -12,6 +12,9 @@ struct InspectorView: View {
     /// Decision 336, later: whether the track card's hint about holding a
     /// line's track has been shown.
     @AppStorage(TrackHoldHint.seenKey) private var trackHoldHintSeen = false
+    /// The selection head's width, which puts its buttons under the words
+    /// on a narrow card (``SelectionHeadLayout``).
+    @State private var headWidth: CGFloat = 0
 
     var body: some View {
         inspector
@@ -241,7 +244,13 @@ struct InspectorView: View {
     }
 
     private var selectionInspector: some View {
-        HStack(spacing: 10) {
+        // On an iPhone held sideways the side panel's card is narrow: the
+        // buttons go under the words, so neither is cut short.
+        let below = SelectionHeadLayout.buttonsBelow(width: headWidth)
+        let layout = below
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 10))
+        return layout {
             HStack(spacing: 10) {
                 if let text = session.selectionText() {
                     ZStack {
@@ -280,48 +289,62 @@ struct InspectorView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("inspector.status")
-            Spacer(minLength: 0)
-            if session.selectedBuildingID != nil {
-                Button {
-                    session.sellSelectedBuilding()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "dollarsign.circle.fill")
-                            .font(.caption.weight(.bold))
-                        Text("Sell")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .padding(.horizontal, 8)
-                    .frame(height: 30)
-                }
-                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-                .accessibilityLabel("Sell")
-                .accessibilityHint("Opens the building tool's sale of this building, with the price it would bring.")
+            if !below {
+                Spacer(minLength: 0)
             }
-            if session.selectedStation != nil {
-                Button {
-                    // The tutorial's ridership step: at the riders it speaks of.
-                    screen.stationFocus = StationPanelGroup.opening(for: session.tutorial?.step)
-                    screen.panel = .station
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "person.2.fill")
-                            .font(.caption.weight(.bold))
-                        // Decision 336: named for the panel it opens.
-                        Text("Station…")
-                            .font(.caption.weight(.semibold))
+            // Only with a button: an empty row would add its spacing.
+            if session.selectedBuildingID != nil || session.selectedStation != nil {
+                HStack(spacing: 10) {
+                    if session.selectedBuildingID != nil {
+                        Button {
+                            session.sellSelectedBuilding()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "dollarsign.circle.fill")
+                                    .font(.caption.weight(.bold))
+                                Text("Sell")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 8)
+                            .frame(height: 30)
+                        }
+                        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                        .accessibilityLabel("Sell")
+                        .accessibilityHint("Opens the building tool's sale of this building, with the price it would bring.")
                     }
-                    .padding(.horizontal, 8)
-                    .frame(height: 30)
+                    if session.selectedStation != nil {
+                        Button {
+                            // The tutorial's ridership step: at the riders it speaks of.
+                            screen.stationFocus = StationPanelGroup.opening(for: session.tutorial?.step)
+                            screen.panel = .station
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "person.2.fill")
+                                    .font(.caption.weight(.bold))
+                                // Decision 336: named for the panel it opens.
+                                Text("Station…")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            // The words give way, never the button's name.
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 8)
+                            .frame(height: 30)
+                        }
+                        .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == .station))
+                        .accessibilityLabel("Station…")
+                        .accessibilityHint("Opens the station panel: its platforms, shops, transfers, riders, depot and more.")
+                        .accessibilityIdentifier("inspector.ridership")
+                        // Decision 188: the tutorial's ridership step points at it.
+                        .tutorialTarget(.ridership)
+                    }
                 }
-                .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == .station))
-                .accessibilityLabel("Station…")
-                .accessibilityHint("Opens the station panel: its platforms, shops, transfers, riders, depot and more.")
-                .accessibilityIdentifier("inspector.ridership")
-                // Decision 188: the tutorial's ridership step points at it.
-                .tutorialTarget(.ridership)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { headWidth = $0 }
     }
 }
 

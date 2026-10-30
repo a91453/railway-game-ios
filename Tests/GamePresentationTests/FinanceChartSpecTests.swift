@@ -48,7 +48,7 @@ final class FinanceChartSpecTests: XCTestCase {
         XCTAssertEqual(trips.axis, .people)
         XCTAssertEqual(trips.series.map(\.mark), [.line])
         XCTAssertEqual(trips.valueText(1_234), "1,234 people")
-        XCTAssertEqual(profit.valueText(-400), "$ -400")
+        XCTAssertEqual(profit.valueText(-400), "\(Money(-40_000).moneyText)")
     }
 
     func testEverySeriesHasAValueForEachX() {

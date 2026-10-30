@@ -63,7 +63,7 @@ extension GameSession {
     /// `totals` as the map says it: "Within 800 m: 12,345 residents ·
     /// 6,789 jobs".
     public func catchmentText(_ totals: LandTotals) -> String {
-        let residents = Money(totals.residents).displayText, jobs = Money(totals.jobs).displayText
+        let residents = totals.residents.groupedText, jobs = totals.jobs.groupedText
         return language.text(
             "Within 800 m: \(residents) residents · \(jobs) jobs",
             "800 公尺內：居民 \(residents) · 工作 \(jobs)"
