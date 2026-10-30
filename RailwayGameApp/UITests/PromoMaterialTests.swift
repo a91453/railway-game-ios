@@ -90,6 +90,30 @@ final class PromoMaterialTests: XCTestCase {
         showcase3D("freight", in: app)
     }
 
+    /// Decision 501's screenshot review (scratch): each bubble tapped, its
+    /// station's panel closed, the selected station's tag beside the bubbles.
+    func testFreightTagBesideBubbles() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        guard mapAppears(in: app, timeout: 120) else { return }
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 60))
+        settle(seconds: 4)
+        keep("tag-none", app)
+        let middles = alerts.allElementsBoundByIndex.filter(\.isHittable).map { CGPoint(x: $0.frame.midX, y: $0.frame.midY) }
+        for (n, middle) in middles.enumerated() {
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: middle.x, dy: middle.y)).tap()
+            let done = app.buttons["station.done"]
+            guard done.appears(within: 10) else { keep("tag-\(n)-nopanel", app); continue }
+            settle()
+            keep("tag-\(n)-panel", app)
+            done.tap()
+            _ = done.disappears(within: 10)
+            settle()
+            keep("tag-\(n)", app)
+        }
+    }
+
     func testDepotsScene() {
         let app = launch(extra: ["-screenshot-scene", "depots"])
         defer { app.terminate() }
