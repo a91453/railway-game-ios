@@ -101,4 +101,47 @@ final class MapMarkTapUITests: XCTestCase {
         XCTAssertTrue(materials.appears(within: 10), "A tap on the bubble's middle opens its station at its materials")
         XCTAssertTrue(materials.becomesHittable(within: 5), "The materials row is scrolled into view")
     }
+
+    /// Diagnosis (decision 501): the same bubble tapped again after the
+    /// panel is closed.
+    func testAnAlertsBubbleTakesASecondTap() {
+        continueAfterFailure = true
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-screenshot-scene", "freight",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 150), "The stations short of materials show")
+        guard let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable) else { return XCTFail("no bubble") }
+        let frame = alert.frame
+        print("BUBBLE-DIAG first bubble \(alert.label) at \(frame)")
+        alert.tap()
+        let materials = app.descendants(matching: .any).matching(identifier: "station.materials").firstMatch
+        print("BUBBLE-DIAG first materials appear \(materials.appears(within: 10)) hittable \(materials.becomesHittable(within: 15))")
+        keep(app, "after first tap")
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(done.appears(within: 5))
+        done.tap()
+        XCTAssertTrue(materials.disappears(within: 10), "the panel closes")
+        keep(app, "after done")
+        let tag = app.descendants(matching: .any)["map.stationTag"].firstMatch
+        print("BUBBLE-DIAG tag exists \(tag.appears(within: 3)) frame \(tag.exists ? tag.frame : .zero)")
+        let again = alerts.allElementsBoundByIndex.min { a, b in
+            hypot(a.frame.midX - frame.midX, a.frame.midY - frame.midY) < hypot(b.frame.midX - frame.midX, b.frame.midY - frame.midY)
+        }
+        print("BUBBLE-DIAG second bubble \(again?.label ?? "none") at \(again?.frame ?? .zero) hittable \(again?.isHittable ?? false)")
+        again?.tap()
+        keep(app, "after second tap")
+        print("BUBBLE-DIAG second materials appear \(materials.appears(within: 10)) hittable \(materials.becomesHittable(within: 15))")
+        keep(app, "after second wait")
+        XCTAssertTrue(materials.isHittable, "The second tap opens it at its materials too")
+    }
+
+    private func keep(_ app: XCUIApplication, _ name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
 }
