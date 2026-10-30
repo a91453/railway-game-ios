@@ -87,7 +87,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        XCTAssertTrue(app.revealFinanceComposition(in: list, below: bar.frame.maxY), "The income donut comes into reach")
+        // The freight scene's simple rules fold the reports under the last
+        // row: open them there and drag back up to the donut, rather than
+        // look for it down the folded list first (`revealFinanceComposition`
+        // spent some 220 of the test's 480 seconds so, run 41032530255).
+        let income = app.descendants(matching: .any)["economy.composition.income"].firstMatch
+        let reports = app.buttons["economy.reports"]
+        if !income.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY), reports.label == "更多報表與設定" {
+            reports.tap()
+        }
+        dragBack(to: income, in: list, below: bar.frame.maxY, in: app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(income, in: list, below: bar.frame.maxY), "The income donut comes into reach")
         settle()
         keep("finance-composition-day-income", app)
 
