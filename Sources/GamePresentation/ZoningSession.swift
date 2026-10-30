@@ -102,11 +102,47 @@ extension GameSession {
                     changed == 1 ? "Cleared the zone of 1 cell." : "Cleared the zones of \(changed) cells.", "清除 \(changed) 格的分區。"
                 )
             }
-            return language.text(
+            let zoned = language.text(
                 changed == 1 ? "Zoned 1 cell: \(zone.title(in: .english))." : "Zoned \(changed) cells: \(zone.title(in: .english)).",
                 "劃設\(zone.title(in: .traditionalChinese)) \(changed) 格。"
             )
+            return [zoned, outlookNote(of: rectangle)].compactMap(\.self).joined(separator: language.text(" ", ""))
         } != nil
+    }
+
+    /// Decision 514: after zoning `rectangle` for a use, what its empty
+    /// cells' outlook (``ZoneOutlook``) asks of the player: how many are too
+    /// far from a station, else that they wait for the station to grow when
+    /// none will be built yet; `nil` when some will be built and none is too
+    /// far.
+    func outlookNote(of rectangle: CellRectangle) -> String? {
+        let outlook = ZoningOutlook(world: world)
+        var counts: [ZoneOutlook: Int] = [:]
+        for row in rectangle.rows {
+            for column in rectangle.columns {
+                guard let zone = world.zones.zone(row: row, column: column),
+                      let kind = outlook.outlook(row: row, column: column, zone: zone, in: world)
+                else { continue }
+                counts[kind, default: 0] += 1
+            }
+        }
+        if let far = counts[.tooFar], far > 0 {
+            let total = counts.values.reduce(0, +)
+            return far == total
+                ? language.text("No station is near enough for the town to build here.", "這裡離車站太遠，城市不會來蓋。")
+                : language.text(
+                    far == 1 ? "1 of them is too far from a station to be built." : "\(far) of them are too far from a station to be built.",
+                    "其中 \(far) 格離車站太遠，不會蓋。"
+                )
+        }
+        guard (counts[.builds] ?? 0) == 0 else { return nil }
+        if (counts[.waitsForStation] ?? 0) > 0 {
+            return ZoneOutlook.waitsForStation.explanation(in: language)
+        }
+        if (counts[.notWanted] ?? 0) > 0 {
+            return ZoneOutlook.notWanted.explanation(in: language)
+        }
+        return nil
     }
 
     /// How many cells are zoned, for the zoning tool.

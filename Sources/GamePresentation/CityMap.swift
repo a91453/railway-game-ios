@@ -44,6 +44,9 @@ public struct CityMap: Sendable {
         /// Its zone (decision 98): 0 for none, else 1 to 8 in ``Zone``'s
         /// order (``zoneCode(_:)``).
         let zone: UInt8
+        /// Decision 514: what will happen on it, zoned for a use and empty
+        /// (``ZoneOutlook``'s raw value), else 0.
+        var outlook: UInt8 = 0
     }
 
     /// The smallest a drawn rectangle may be on screen, in points.
@@ -113,10 +116,15 @@ public struct CityMap: Sendable {
                 }
             }
         }
-        // Decision 98: the zoned cells.
-        var zones: [CellPosition: UInt8] = [:]
+        // Decision 98: the zoned cells; decision 514: what will happen on
+        // the empty ones.
+        var zones: [CellPosition: UInt8] = [:], outlooks: [CellPosition: UInt8] = [:]
+        let outlook = ZoningOutlook(world: world)
         for cell in world.zones.cells where cell.row < rows && cell.column < columns {
             zones[cell.position] = UInt8(Self.zoneCode(cell.zone))
+            if let kind = outlook.outlook(row: cell.row, column: cell.column, zone: cell.zone, in: world) {
+                outlooks[cell.position] = UInt8(kind.rawValue)
+            }
         }
         let positions = Set(kinds.keys).union(covered).union(nearParks).union(zones.keys).sorted()
         let values = world.landValues(at: positions)
@@ -124,7 +132,8 @@ public struct CityMap: Sendable {
             let kind = kinds[position]
             return Cell(
                 row: position.row, column: position.column, value: value.value,
-                kind: kind ?? 0, covered: covered.contains(position), peopled: peopled.contains(position), zone: zones[position] ?? 0
+                kind: kind ?? 0, covered: covered.contains(position), peopled: peopled.contains(position), zone: zones[position] ?? 0,
+                outlook: outlooks[position] ?? 0
             )
         }
     }
@@ -269,6 +278,56 @@ public struct CityMap: Sendable {
         return tiles
     }
 
+    /// Decision 514: a block of empty zoned cells and what will happen on
+    /// them (``ZoneOutlook``), for the zoning layer to mark over the zones'
+    /// colours.
+    public struct ZoningMark: Hashable, Sendable {
+        public let minX: Double
+        public let minY: Double
+        public let maxX: Double
+        public let maxY: Double
+        public let outlook: ZoneOutlook
+    }
+
+    /// Decision 514: the empty zoned cells in `region` and their outlooks,
+    /// merged into blocks of `blockSize` a side as ``tiles(for:in:blockSize:)``
+    /// merges them, north to south and west to east; a block takes the
+    /// outlook most of its marked cells have (in ``ZoneOutlook``'s order on
+    /// a tie).
+    public func zoningMarks(in region: WorldRegion, blockSize: Int = 1) -> [ZoningMark] {
+        guard rows > 0, columns > 0, region.minX.isFinite, region.minY.isFinite, region.maxX.isFinite, region.maxY.isFinite
+        else { return [] }
+        let size = max(1, blockSize)
+        let length = Double(Land.cellLength)
+        let firstRow = max(0, Int((region.minY / length).rounded(.down))), lastRow = min(rows - 1, Int((region.maxY / length).rounded(.down)))
+        let firstColumn = max(0, Int((region.minX / length).rounded(.down))), lastColumn = min(columns - 1, Int((region.maxX / length).rounded(.down)))
+        guard firstRow <= lastRow, firstColumn <= lastColumn else { return [] }
+        let lowRow = firstRow / size * size, highRow = min(rows - 1, (lastRow / size + 1) * size - 1)
+        let lowColumn = firstColumn / size * size, highColumn = min(columns - 1, (lastColumn / size + 1) * size - 1)
+        var blocks: [CellPosition: [Int]] = [:]
+        var low = 0, high = cells.count
+        while low < high {
+            let middle = (low + high) / 2
+            if cells[middle].row < lowRow { low = middle + 1 } else { high = middle }
+        }
+        for cell in cells[low...] {
+            guard cell.row <= highRow else { break }
+            guard cell.outlook > 0, (lowColumn...highColumn).contains(cell.column) else { continue }
+            let key = CellPosition(row: cell.row / size, column: cell.column / size)
+            blocks[key, default: [Int](repeating: 0, count: ZoneOutlook.allCases.count + 1)][Int(cell.outlook)] += 1
+        }
+        var marks: [ZoningMark] = []
+        for key in blocks.keys.sorted() {
+            guard let counts = blocks[key],
+                  let most = (1...ZoneOutlook.allCases.count).max(by: { counts[$0] < counts[$1] || (counts[$0] == counts[$1] && $0 > $1) }),
+                  let outlook = ZoneOutlook(rawValue: most)
+            else { continue }
+            let minX = Double(key.column * size) * length, minY = Double(key.row * size) * length
+            marks.append(ZoningMark(minX: minX, minY: minY, maxX: minX + Double(size) * length, maxY: minY + Double(size) * length, outlook: outlook))
+        }
+        return marks
+    }
+
     // MARK: - Colours
 
     /// A use's four shades, D1 to D4 (existing stock draws as D4): homes
@@ -335,6 +394,9 @@ public struct CityMap: Sendable {
         zoneColors[zoneCode(zone) - 1]
     }
 
+    /// Decision 514: the grey over a zoned cell too far from a station.
+    public static let tooFarColor = PopTravel.RGB(0x9E9E9E)
+
     /// Cells a catchment reaches with people, and without.
     public static let coveredColor = PopTravel.RGB(0x2B8CBE)
     public static let coveredEmptyColor = PopTravel.RGB(0xA6BDDB)
@@ -358,6 +420,8 @@ public struct CityCellInfo: Hashable, Sendable {
     public let stationName: String?
     /// What the player zoned it for (decision 98), or `nil`.
     public var zone: Zone? = nil
+    /// Decision 514: what will happen on it, zoned for a use and empty.
+    public var outlook: ZoneOutlook? = nil
 
     /// "Homes · D2 (6 storeys)", "Residents 120 · Jobs 4", "Land value
     /// $ 194.85 a m²", "Base $ 25.00", "Train service + $ 149.85", "Easy to
@@ -407,6 +471,10 @@ public struct CityCellInfo: Hashable, Sendable {
         }
         if let zone {
             lines.append(language.text("Zoned: \(zone.title(in: .english))", "分區：\(zone.title(in: .traditionalChinese))"))
+            // Decision 514: whether the town will build it, and why not.
+            if let outlook {
+                lines.append("\(outlook.title(in: language))\(language.text(": ", "："))\(outlook.explanation(in: language))")
+            }
         }
         if let stationName {
             lines.append(language.text("Set by \(stationName)", "決定價格的車站：\(stationName)"))
@@ -427,10 +495,12 @@ extension GameWorld {
         guard let value = landValue(row: row, column: column) else { return nil }
         let cell = land.cell(row: row, column: column)
         let building = buildings.building(row: row, column: column)
+        let zone = zones.zone(row: row, column: column)
         return CityCellInfo(
             row: row, column: column, use: building?.use ?? cell?.use, kind: building?.kind, density: building?.density,
             residents: cell?.residents ?? 0, jobs: cell?.jobs ?? 0, value: value,
-            stationName: value.station.flatMap { station(id: $0)?.name }, zone: zones.zone(row: row, column: column)
+            stationName: value.station.flatMap { station(id: $0)?.name }, zone: zone,
+            outlook: zone.flatMap { ZoningOutlook(world: self).outlook(row: row, column: column, zone: $0, in: self) }
         )
     }
 
