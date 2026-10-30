@@ -113,11 +113,13 @@ final class OneRowPerGameTests: XCTestCase {
         try library.archiveAutosave()
         let rows = library.entries()
         XCTAssertEqual(rows.map(\.id), [row.id], "no new row, no autosave left")
-        XCTAssertEqual(try library.load(rows[0]), try world(after: 3), "the row's newest version")
+        XCTAssertEqual(try library.load(rows[0]), try world(after: 1), "the row stays what the player saved")
         XCTAssertEqual(rows[0].name, "Mine")
-        XCTAssertEqual(try library.earlierVersions(of: rows[0]).map { try library.load($0) }, [try world(after: 1)])
-        let file = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent(row.id))) as? [String: Any])
-        XCTAssertNil(file["row"], "the player's save names no row")
+        let versions = library.earlierVersions(of: rows[0])
+        XCTAssertEqual(try versions.map { try library.load($0) }, [try world(after: 3)], "the game as it was left")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent(SaveLibrary.newsFile(of: versions[0].id)).path), "with its news")
+        let file = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent(versions[0].id))) as? [String: Any])
+        XCTAssertNil(file["row"], "a version names no row")
     }
 
     func testANewGameAfterSavingWithoutAChangeAddsNoVersion() throws {
@@ -263,7 +265,8 @@ final class OneRowPerGameTests: XCTestCase {
     }
 
     /// The whole loop: save, play on, leave, start another game. The last
-    /// game is one row, its newest version the game as it was left.
+    /// game is one row, still what was saved, the game as it was left its
+    /// newest earlier version.
     @MainActor
     func testANewGameUpdatesTheRowOfTheGameLeft() async throws {
         let library = SaveLibrary(directory: directory)
@@ -278,8 +281,8 @@ final class OneRowPerGameTests: XCTestCase {
         launcher.startNewGame()
         let rows = manualRows(library)
         XCTAssertEqual(rows.count, 1, "no second row for the game left")
-        XCTAssertEqual(try library.load(rows[0]), left)
-        XCTAssertEqual(try library.earlierVersions(of: rows[0]).map { try library.load($0) }, [saved])
+        XCTAssertEqual(try library.load(rows[0]), saved)
+        XCTAssertEqual(try library.earlierVersions(of: rows[0]).map { try library.load($0) }, [left])
         XCTAssertNil(launcher.gameRow, "the new game has no row yet")
     }
 
@@ -383,6 +386,84 @@ final class OneRowPerGameTests: XCTestCase {
         let autosave = try XCTUnwrap(library.autosaves().first)
         XCTAssertEqual(try library.load(autosave), try world(after: 1))
         XCTAssertEqual(autosave.row, row.id)
+    }
+
+    /// Load a save, play, go back, load it again, several times over: each
+    /// time the save is what the player saved, and it stays (the
+    /// independent review's must-fix 1).
+    @MainActor
+    func testRetryingFromACheckpointNeverLosesIt() async throws {
+        let library = SaveLibrary(directory: directory)
+        let checkpoint = try library.save(world(after: 1), as: .manual, at: date(0))
+        let launcher = GameLauncher(library: library, language: .english)
+        for round in 1...5 {
+            await launcher.load(try XCTUnwrap(manualRows(library).first), at: date(Double(round) * 600))?.value
+            XCTAssertEqual(launcher.session?.world, try world(after: 1), "round \(round)")
+            launcher.session?.advance(realElapsed: .seconds(10))
+            XCTAssertTrue(launcher.autosaveCurrentGame(at: date(Double(round) * 600 + 300)))
+            launcher.returnToStart()
+        }
+        let rows = manualRows(library)
+        XCTAssertEqual(rows.map(\.id), [checkpoint.id])
+        XCTAssertEqual(try library.load(rows[0]), try world(after: 1))
+    }
+
+    /// Two devices save one row differently, then one plays on and saves
+    /// again: each device still has its own game (the independent
+    /// review's must-fix 2).
+    func testAfterAConflictEachDevicesCheckpointStaysOnIt() throws {
+        let root = directory.appendingPathComponent("devices", isDirectory: true)
+        let cloud = DirectorySaveFolder(directory: root.appendingPathComponent("iCloud", isDirectory: true))
+        final class Device {
+            let library: SaveLibrary
+            var state = SaveSync.State()
+            init(_ url: URL) { library = SaveLibrary(directory: url) }
+        }
+        let phone = Device(root.appendingPathComponent("phone")), pad = Device(root.appendingPathComponent("pad"))
+        func sync(_ device: Device) {
+            let outcome = SaveSync.run(
+                local: DirectorySaveFolder(directory: device.library.directory), cloud: cloud, state: &device.state,
+                language: .english, now: date(0), keeping: { try device.library.keepBeforeReplacing($0) }
+            )
+            XCTAssertFalse(outcome.isIncomplete)
+        }
+        func holds(_ device: Device, _ wanted: GameWorld) throws -> Bool {
+            let games = device.library.entries().filter { $0.kind == .manual }.flatMap { [$0] + device.library.earlierVersions(of: $0) }
+            return try games.contains { try device.library.load($0) == wanted }
+        }
+        let row = try phone.library.save(world(after: 1), as: .manual, at: date(0))
+        sync(phone)
+        sync(pad)
+        try phone.library.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        try pad.library.save(world(after: 3), as: .manual, at: date(70), row: row.id)
+        sync(phone)
+        sync(pad)
+        sync(phone)
+        try phone.library.save(world(after: 4), as: .manual, at: date(120), row: row.id)
+        sync(phone)
+        sync(pad)
+        XCTAssertTrue(try holds(phone, world(after: 2)), "the phone's game")
+        XCTAssertTrue(try holds(pad, world(after: 3)), "the pad's game")
+        XCTAssertTrue(try holds(pad, world(after: 4)))
+    }
+
+    /// The app stopped while an earlier version was moving in: the next
+    /// save finishes the move and loses no version (the review's 3).
+    func testAVersionHalfMovedIsFinishedByTheNextSave() throws {
+        let library = SaveLibrary(directory: directory)
+        let row = try library.save(world(after: 1), as: .manual, at: date(0))
+        try library.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        // As if stopped after the row was written and number 1 moved to 2,
+        // before what waited took number 1.
+        let folder = directory.appendingPathComponent(SaveLibrary.versionsPath(of: row.id))
+        try FileManager.default.moveItem(at: folder.appendingPathComponent("1.json"), to: folder.appendingPathComponent("2.json"))
+        try SaveLibrary.encode(world(after: 2), at: date(60)).write(to: folder.appendingPathComponent("incoming.json"))
+        try SaveLibrary.encode(world(after: 3), at: date(120)).write(to: directory.appendingPathComponent(row.id))
+        try library.save(world(after: 4), as: .manual, at: date(180), row: row.id)
+        let entry = try XCTUnwrap(library.entries().first)
+        XCTAssertEqual(try library.load(entry), try world(after: 4))
+        XCTAssertEqual(try library.earlierVersions(of: entry).map { try library.load($0) }, [try world(after: 3), try world(after: 2)])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent("incoming.json").path))
     }
 
     @MainActor

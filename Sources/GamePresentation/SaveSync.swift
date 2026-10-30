@@ -230,9 +230,13 @@ public enum SaveSync {
     /// Runs a round between the device's saves `local` and `cloud`, from
     /// and to `state`, in `mode`. A save kept twice is named in `language`,
     /// stamped `now` when its own date cannot be read.
+    /// `keep` is told the file name of a save on the device before another
+    /// device's copy is written over it (decision 502: kept as an earlier
+    /// version); when it throws, the save is left for a later round.
     public static func run(
         local: any SaveSyncFolder, cloud: any SaveSyncFolder, state: inout State,
-        mode: Mode = .full, language: DisplayLanguage, now: Date, isGameOpen: () -> Bool = { false }
+        mode: Mode = .full, language: DisplayLanguage, now: Date, isGameOpen: () -> Bool = { false },
+        keeping keep: (String) throws -> Void = { _ in }
     ) -> Outcome {
         var outcome = Outcome()
         guard let localFiles = try? local.files().filter({ downloadingName($0.key) == nil }),
@@ -347,6 +351,8 @@ public enum SaveSync {
                     if let theirs {
                         if !theirs.canTakeInPlace(over: mine) { newer.insert(stem) }
                         guard mode == .full || mine == nil, mayDownload, theirs.canTakeInPlace(over: mine) else { continue }
+                        // Decision 502: the device's own is kept first.
+                        if mine != nil { try keep(stem + ".json") }
                         try theirs.write(to: local, over: mine)
                         outcome.downloaded.append(stem)
                         settled.insert(stem)

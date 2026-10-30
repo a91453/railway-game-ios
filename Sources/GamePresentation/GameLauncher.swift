@@ -393,7 +393,7 @@ public final class GameLauncher {
         var state = SaveSync.State.read(from: stateFile)
         var outcome = SaveSync.run(
             local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, mode: mode, language: language, now: date,
-            isGameOpen: { isGameOpen.value }
+            isGameOpen: { isGameOpen.value }, keeping: { try library.keepBeforeReplacing($0) }
         )
         // A state left as it was is safe: what the round did left both
         // sides the same, and the next round sees them so.
