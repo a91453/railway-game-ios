@@ -18,6 +18,8 @@
 
 # 交接
 
+> Codex G12／R21 原生 studies（公開 draft [#1485](https://github.com/a91453/railway-game-ios/pull/1485) ↔ 私庫 draft [#26](https://github.com/a91453/railway-assets-private/pull/26)，producer `723d08f8`）：revision-1 `b073c6c6` 整體外觀、revision-2 `69de18da` 正面均遭使用者否定；revision-3 `501f339a` 自檢發現前端白帶被底架遮住而撤回，revision-4 `aa1fb2c8` 解遮擋。現版再依 R21 原圖加兩端實體燈座、角燈孔、可見連結器及長端小型警示牌；保留低白帶、正向黃黑 V、扶手與短端白 V。只用 1960 首批臺鐵 R20 型 EMD G12 的 R21 橘色時期；原圖、估算、比對、重建與四種狀態見 [G12 交接](art/g12-2026-10-29/README.md)。公開只放配方、工具、來源與一張總覽，完整近遠景與 viewer 在私庫 `g12/revision-5/`（前四輪僅留 PNG／README／來源）。現有 SceneKit R20 與全部營運映射不變；此 producer 的使用者外觀接受、營運接入、iOS Metal／真機均 **UNVERIFIED**。不合併／auto-merge／TestFlight。
+
 > Codex E1000雙端PP（#1294）：[來源／外觀／營運／重建](art/e1000-pp-2026-10-26/README.md)。獨立E1000近遠配方，以未合併PP #1291固定61c6969c為stacked base，私庫#87固定1f81f7c。只換pushPull機車，PP客車/E500/EMU與其他服務payload保護；兩端E1000、後機180°、後端貫通道相接。官方規格16.5/17.211m、寬2.885/車高3.904m；輪徑與軸距推估。完整包私有、公開一張總覽。兩PR皆合併並重建才改App，靜態展示不代表推拉控制/真機/動畫。CI看本輪同head，不合併/auto-merge/TestFlight。
 
 > Codex PP客車（#1282）：[來源／外觀／營運與重建交接](art/pp-coaches-2026-10-26/README.md)。四種PP近遠獨立配方及雙端已接受E500第三版＋12客車完整靜態展示（更正11a70d3c漏尾機，尾端同原生旋轉180°）。只有原`pushPull`接點中間客車改PPT1000，E1000兩端、可變節數、列車包／classic／解鎖與回退保持；PPH/PPC/PPM未逐車接營運，E500＋PP未接E500營運。E500CK/MINGRI/STAR客車與既有模型實際payload保護。公開唯一總覽，完整素材／viewer／ZIP在互鏈私有draft；最新同提交CI看PR，不以Linux靜態驗證當真機／動畫／推拉控制。GameCore、存檔與fixtures不動，不合併／auto-merge／TestFlight。
@@ -37,9 +39,15 @@
 
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
 
+> 公測前抓蟲・營運（派工單 BH2，`claude/bughunt-operations`，2026-10-30）：[`research/BUGHUNT_OPERATIONS_2026-10-30.md`](research/BUGHUNT_OPERATIONS_2026-10-30.md)。沒找到 P1。P2-1（跳過夜晚途中存檔，讀回以 ×6000 跑）在同一個 PR 修了（`GameSession.worldToSave`，`NightSkipTests` 釘住），發版前在實機按「跳到早上」後切出 App、關掉再繼續，看速度是原本的；P2-2（分組清單的上一條／下一條順序不對）與 P3 三項留給公測後。
+
+> 公測前抓蟲「公車與車輛」（派工單 BH4，`claude/bughunt-vehicles`，2026-10-30）：[`research/BUGHUNT_VEHICLES_2026-10-30.md`](research/BUGHUNT_VEHICLES_2026-10-30.md)。修了 P1-1（3D 公車的回程鋪不上時當掉）；P3-1～P3-3（復原掉正在編輯的公車線、減少公車不退錢沒說、空白地圖鋪捷徑後 2D 公車線畫舊路）與 §5 還沒有的功能（跟公車的視角、2D 會動的公車、收購真實公車）公測後由規劃派。真實地圖上 3D 公車實機 UNVERIFIED。
+
 > 有功能沒按鈕、有按鈕沒功能（派工單 BH7，`claude/ui-gaps`，2026-10-30）：[`research/UI_GAPS_2026-10-30.md`](research/UI_GAPS_2026-10-30.md)。只讀程式；沒有改程式（沒找到沒接上的按鈕或漏翻）。玩家到不了的 GameCore 指令只有兩個：G1 收購真實公車路線（決策 400 的 10i-4，還沒派，公測後要新卡片）、G2 每條線停站秒數（決策 207 刻意不給）。B-1（設定裡「規則」一列點了沒反應）與 §4 的 D1–D15（補 UIA 沒列的入口步數）公測後由規劃照順序派，D6、D11、D12 跟 UIA 的 B7、B2、B6 一起做。
 
 > 新手教學盤點（派工單 TUT，`claude/tutorial-review-2026-10-30`，2026-10-30）：[`research/TUTORIAL_REVIEW_2026-10-30.md`](research/TUTORIAL_REVIEW_2026-10-30.md)。公測前只修了 A1（「點『車站…』看誰在搭車」打開在「旅客與運量」組）；其餘步驟對照 main 都指得到、按鈕字都對。留下的是該文件 §4 的 B1–B7（教學的路線面板和平常不同、實景地圖沒教、iPad 直拿沒走過教學、錢的事沒教等），公測後由規劃照順序派；B3 發版前要在 iPad 直拿實機走一次第 1 關。
+
+> 公測前抓蟲：3D 載入、App 生命週期、語言（派工單 BH6，`claude/bughunt-3d-lifecycle-text`，決策號不動）：[`research/BUGHUNT_3D_LIFECYCLE_TEXT_2026-10-30.md`](research/BUGHUNT_3D_LIFECYCLE_TEXT_2026-10-30.md)。沒找到 P1；P2-1（3D 地圖不受 xxxLarge 字級上限管，要 Simulator 確認）與 P3 兩項公測後由規劃派。發版前實機要看的十項在該文件 §3。
 
 > 公測前效能盤點（派工單 PERF，`claude/perf-tiers`，決策號不動）：[`research/PERF_TIERS_2026-10-30.md`](research/PERF_TIERS_2026-10-30.md)。這輪只修了兩層雨的重畫次數（3D 跟地圖的格數、2D 限每秒 30 次）。留下的：「自動」在「少像素」之後再加「少陰影與反光」「穩定 30 格」兩步，主執行緒造成的掉格不降畫面（§4 丙，公測後拿實機回報再做）；其餘依 §5 的順序。實機要看的數字在 §6。
 
@@ -284,7 +292,7 @@
 - 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
-- 同時最多 2 個要跑完整 tier（22 個 job：決策 405 的 21 個加決策 411 續篇的 build job）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
+- 同時最多 2 個要跑完整 tier（23 個 job：決策 405 的 21 個、決策 411 續篇的 build job 與決策 495 的 campaigns-19）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
 - session 問能不能推：當下在跑的完整 tier 不到 2 個就答可以。
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
@@ -426,6 +434,7 @@
     - 陷阱資料：在打包資料或程式裡放一兩筆只有本專案有、玩家看不出來的小東西，被整包照搬時可以當證據。不能讓鐵道資料變錯（鐵道迷）。哪幾筆是陷阱只寫在私庫，不寫在公開 repo。
     - 非正式版標示：自己編的 App 顯示「不是正式版本」。CLAUDE.md 規定 app ID 不寫進 repository，所以要用發版時注入的值來判斷（例如 `testflight.yml` 現有的變數），不在程式裡寫死 ID。Simulator 的 UI 測試和官網截圖不能被這個標示擋住。玩家看的文字只說「請從 App Store 下載正式版」，不說原因。
     - 五方各寫一行，取決策號（取號前先看 #1041）。
+    - **進度（10/30，派工單 AT）**：陷阱資料已做（決策 494；細節在私庫 `a91453/railway-reference-private` 的 `Railway/anti-copy/`，改寫或重新產生 App 打包的資料前先讀它）。非正式版標示還沒做，公測後、上 App Store 前再做。
 - WEB：私庫 PR #116 作者已在 07:23 UTC 自己合了（只換「實景示範」1 張）；官網要作者按 Deploy website 才會換。其他圖等新截圖出來，WEB 另開新的 draft PR。
 
 **第三十次換手（2026-10-29 約 07:30 UTC，session_01YGNNunHRtNkV8GUzm1ppB7 壓縮 2 次、用量約 200k → 本任用 `create_session` 開的新規劃，第 6 層）**：作者說「發版前先換手」。照下一段「第二十九任做到哪」接。
@@ -2650,6 +2659,24 @@ EMU900第二版（#1338／draft#1339↔私庫#102）：使用者要求修圓車�
 
 使用者「側面可以了」僅接受R2 producer `3874b425`側面，正面偏方續修；最新producer `bd57e163391bfdf7492cc408c7697451578ae8e1`，真前版素材`1f73fb1`。本輪只改實體殼上的正面分色：黑罩上緣淺弧／肩部收角與U帶細分，不改中央逃生門等硬體或曲面。逐三角形原生52bytes護住X≤9m直側，T近遠整檔保持；兩producer白殼雙向交集驗車頭覆蓋不變。最新main`fd91b75c`的696他車實際bytes/FNV、所有他車鎖保持；只動本型四DM鎖，28繼承差異不消。近三車13892／遠6356；18成品從producer獨立重建相同，15 Swift6.4 WAE、8 GLB、真故障、224PNG／192同尺度前後、24真下載SHA與最終viewer已驗。沿用draft#1454 ↔ 素材draft#22，revision-3為完整包，revision-2重檔同PR刪除留PNG／README／來源。具體資料、預覽、重建及四狀態見[自有交接](art/kaohsiung/README.md)。後續使用者在第三版收尾建議後明確回覆「就這樣」；已據此把producer `bd57e163`的studies整體外觀接受記為VERIFIED，停止外觀修改。營運接入與裝置視覺／真機Metal效能動畫仍UNVERIFIED。交付程式head `cd92b3c6`之Swift gate／六selected分片及Xcode均SUCCESS；公開#1454與素材#22皆由其他流程合併，接受metadata從最新main另開互鏈draft補記（素材#24），模型／20PNG不變。studies、krtc→metroGeneric三車、其他保護範圍不變，不merge／auto-merge／TestFlight。
 
+
+### Codex：高雄輕軌兩現役車型（CAF／Citadis，2026-10-29）
+
+兩款各自五角色近遠景與完整靜態組裝，首次交付，沒有真正前版；
+[查證、模組、保護範圍與交接](art/kaohsiung-light-rail/README.md)、
+[重建／驗收工具](../tools/kaohsiung-light-rail/README.md)。
+素材在 assets-private 的 kaohsiung-light-rail-phase1／phase2 revision-1，
+明確 producer、互鏈 draft PR 與最終證據見該頁 verification.json。
+只註冊 studies；既有解鎖 fiveSectionLRT／鎖定 greenTram 的營運映射未動，
+沒有兩款選用／配屬契約，不應宣稱合併即在遊戲出現。高雄紅橘線與全部既有
+payload 保護；32 舊鎖差異與 TEMU2000 舊整列預算失敗另記，不改 gate。
+兩款使用者外觀接受、營運接入及裝置狀態各為 UNVERIFIED；
+Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 main、未合併或啟動 TestFlight。
+
+同輪補完：兩款far窗柱色界已與近景對齊，新增實際白柱／玻璃帶壞例拒收；
+最終producer `cfeed799260b609b6765ab44404d9ab095c48f94`，素材 `1a1adcc0420f8151c0a074ed4c242fa2aa63a648`。
+80b58f6e／ca6a8bc1是同PR未接受中間版，真實同相機／公尺／光線比較已合併原PNG，非虛構前輪；仍各20張＋公開共用1張、studies而已。最終CI看#1506／素材#31最新head，未把舊head綠燈當最終通過。
+
 ### Codex 新北安坑／淡海輕軌雙車（2026-10-29）
 
-本輪兩款獨立原生 studies，交接、車型對照、幾何共用依據、來源及狀態見 [new-taipei-light-rail](art/new-taipei-light-rail/README.md)。各自五角色近遠與完整靜態組裝；素材位於素材庫各款 revision-1。沒有營運接入，合併不會在遊戲出現；使用者外觀接受與裝置各自 UNVERIFIED。greenTram／fiveSectionLRT、ntdlrt／ntalrt／krtc/C原映射、列車包／回退及高雄紅橘線不動。上一輪高雄輕軌公開#1506與素材#31仍OPEN（開工核對），其分支／檔案保持。未新增GameCore、存檔、fixtures、購車／解鎖、班表、控制或動畫。後續整合須另查當班配車與逐模組動態路徑契約；不要用車號奇偶或隨機配兩款。兩車首次交付、沒有已接受前版，所有未驗及重建producer詳各款來源／status／驗證。
+本輪兩款獨立原生 studies，交接、車型對照、幾何共用依據、來源及狀態見 [new-taipei-light-rail](art/new-taipei-light-rail/README.md)。各自五角色近遠與完整靜態組裝；素材位於素材庫各款 revision-1。沒有營運接入，合併不會在遊戲出現；使用者外觀接受與裝置各自 UNVERIFIED。greenTram／fiveSectionLRT、ntdlrt／ntalrt／krtc/C原映射、列車包／回退及高雄紅橘線不動。上一輪高雄輕軌公開#1506與素材#31開工時OPEN、其後已MERGED（已納入最新main），其分支／檔案保持。未新增GameCore、存檔、fixtures、購車／解鎖、班表、控制或動畫。後續整合須另查當班配車與逐模組動態路徑契約；不要用車號奇偶或隨機配兩款。兩車首次交付、沒有已接受前版，所有未驗及重建producer詳各款來源／status／驗證。

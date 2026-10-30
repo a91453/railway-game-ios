@@ -276,9 +276,11 @@ public struct Map3DBuses: Sendable {
         guard let way = ground(plan, station: station, in: scene, roads: roads, snaps: snaps) else { return nil }
         // The way back, laid from the first stop as the way out is, and
         // gone the other way round.
-        let home = back.flatMap { ground($0.reversed, station: station, in: scene, roads: roads, snaps: snaps) } ?? way
+        // One that cannot be laid is the way out, its stops with it.
+        let laidBack = back.flatMap { back in ground(back.reversed, station: station, in: scene, roads: roads, snaps: snaps).map { (back, $0) } }
+        let home = laidBack?.1 ?? way
         // As the cars keep to the right of the roads they share.
-        let halves = way.halves + (back == nil ? [] : home.halves)
+        let halves = way.halves + (laidBack == nil ? [] : home.halves)
         let half = halves.isEmpty ? 3 : halves.sorted()[halves.count / 2]
         let side = max(half * 0.5, 1.2)
         guard let out = Map3DStreetLife.Path(way.points)?.shifted(side), let backPath = Map3DStreetLife.Path(home.points.reversed())?.shifted(side)
@@ -286,7 +288,7 @@ public struct Map3DBuses: Sendable {
         let length = way.length, backLength = home.length
         return Route(
             motion: motion, stops: plan.stops.map { way.distances[way.marks[$0]] }, length: Float(length), out: out, back: backPath,
-            backStops: (back?.reversed ?? plan).stops.map { backLength - home.distances[home.marks[$0]] },
+            backStops: (laidBack?.0.reversed ?? plan).stops.map { backLength - home.distances[home.marks[$0]] },
             backLength: Float(backLength),
             outHidden: way.hidden.map { Float($0.lowerBound / length)...Float($0.upperBound / length) },
             backHidden: home.hidden.map { Float((backLength - $0.upperBound) / backLength)...Float((backLength - $0.lowerBound) / backLength) },

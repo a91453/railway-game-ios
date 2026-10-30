@@ -39,7 +39,7 @@
 
 ## 配方與幾何來源
 
-獨立 [安坑入口](../../../Sources/GamePresentation/Map3DAnkengLRT.swift)、[淡海入口](../../../Sources/GamePresentation/Map3DDanhaiLRT.swift)，獨立ID與assembly。新 [家族幾何](../../../Sources/GamePresentation/Map3DNewTaipeiLRTGeometry.swift) 只這兩款使用：經確認的同設計主比例建立顯示外殼，不為同家族刻意捏出不存在的車頭差異。無尺寸表面裁切演算法沿用本專案Codex高雄輕軌producer `cfeed799260b609b6765ab44404d9ab095c48f94`，**沒有沿用其車殼、尺寸、門窗與塗裝**。原PR保持OPEN且未改其分支。
+獨立 [安坑入口](../../../Sources/GamePresentation/Map3DAnkengLRT.swift)、[淡海入口](../../../Sources/GamePresentation/Map3DDanhaiLRT.swift)，獨立ID與assembly。新 [家族幾何](../../../Sources/GamePresentation/Map3DNewTaipeiLRTGeometry.swift) 只這兩款使用：經確認的同設計主比例建立顯示外殼，不為同家族刻意捏出不存在的車頭差異。無尺寸表面裁切演算法沿用本專案Codex高雄輕軌producer `cfeed799260b609b6765ab44404d9ab095c48f94`，**沒有沿用其車殼、尺寸、門窗與塗裝**。原PR開工OPEN、其後已合併；未改其分支。
 
 使用既有色票：淡海water＋暖白、安坑schoolWalls與containers金色混合、深色玻璃與霧面平塗。海浪與肩部點紋直接裁切殼面，沒有照片貼圖、品牌、字樣、商標或第三方幾何。原始照片只留本機，不轉送外部服務。
 
@@ -49,7 +49,7 @@
 
 本輪**只有studies**，合併後兩款都不會出現在遊戲，也沒有玩家選用入口。現有機制沒有這兩款逐模組動態路徑與當班配車契約；尤其金車曾支援淡海的次級資料不能直接變隨機／奇偶配車。本輪不改RealTrains、TrainSets、Showcase、GameCore、存檔、fixtures、購車／解鎖、班表、控制或動畫。
 
-保護全部既有735模型實際M3DM bytes與全頂點欄位FNV，包括安坑／淡海scene-kit示意、greenTram、five／seven／blue輕軌、共用車、高雄紅橘線與原set／回退。最新main不代表外觀已接受：舊greenTram producer `2a947503`、five-section `25cb20fa`／配色`21a5b7ba`，明確本款接受證據不足，均UNVERIFIED；高雄紅橘線accepted producer `bd57e163`依既有交接保護，本輪未重設其狀態。高雄輕軌公開#1506 `e00220ec`／素材#31 `d95bb0dd`均OPEN，專用分支與交付目錄不動。
+保護全部既有735模型實際M3DM bytes與全頂點欄位FNV，包括安坑／淡海scene-kit示意、greenTram、five／seven／blue輕軌、共用車、高雄紅橘線與原set／回退。最新main不代表外觀已接受：舊greenTram producer `2a947503`、five-section `25cb20fa`／配色`21a5b7ba`，明確本款接受證據不足，均UNVERIFIED；高雄紅橘線accepted producer `bd57e163`依既有交接保護，本輪未重設其狀態。高雄輕軌公開#1506 `e00220ec`／素材#31 `d95bb0dd`開工OPEN、工作期間已MERGED；已納入最新main，專用分支與交付目錄不動。
 
 ## 外觀與驗證
 

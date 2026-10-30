@@ -217,6 +217,45 @@ final class CityBusToolTests: XCTestCase {
         )
     }
 
+    /// Before the public beta (BH1, 2026-10-30): a road drawn over one
+    /// just laid joins it for nothing; an undo of the one laid left the
+    /// button's price as it was, and the action button then paid the whole
+    /// road ($224 for $128 shown) while the message said $128.
+    func testAfterAnUndoTheRoadDrawnIsPricedAgain() throws {
+        let session = try session()
+        session.setBusMode(.roads)
+        session.endRoadDrag(from: at(12, 10), to: at(12, 14))
+        XCTAssertTrue(session.confirmRoad())
+        session.endRoadDrag(from: at(12, 12), to: at(12, 18))
+        XCTAssertEqual(session.roadPreview?.price, Money(1_280_000), "four new cells; three joined")
+        session.undo()
+        XCTAssertEqual(session.roadPreview?.price, Money(2_240_000), "seven new cells once the first road is gone")
+        let before = session.world.economy.balance
+        XCTAssertTrue(session.confirmRoad())
+        XCTAssertEqual(session.world.economy.balance, before - Money(2_240_000))
+        XCTAssertEqual(session.message?.text, "The road is built, for \(Money(2_240_000).moneyText).")
+    }
+
+    /// The same, when the world changed some other way since the price was
+    /// shown: the button shows the new price and lays nothing until it is
+    /// pressed again.
+    func testARoadWhosePriceChangedIsShownBeforeItIsPaid() throws {
+        let session = try session()
+        session.setBusMode(.roads)
+        session.endRoadDrag(from: at(12, 12), to: at(12, 18))
+        XCTAssertEqual(session.roadPreview?.price, Money(2_240_000))
+        try session.performEdit { (world: inout GameWorld) throws(GameError) in
+            try world.buildRoad(along: (10...14).map { CellPosition(row: 12, column: $0) })
+        }
+        let before = session.world
+        XCTAssertFalse(session.confirmRoad())
+        XCTAssertEqual(session.world, before, "nothing paid at a price not shown")
+        XCTAssertEqual(session.roadPreview?.price, Money(1_280_000))
+        XCTAssertEqual(session.message?.text, "The road now costs \(Money(1_280_000).moneyText). Tap again to lay it.")
+        XCTAssertTrue(session.confirmRoad())
+        XCTAssertEqual(session.world.economy.balance, before.economy.balance - Money(1_280_000))
+    }
+
     func testADragFromTheRoadsLastCellCarriesItOn() throws {
         let session = try session()
         session.setBusMode(.roads)

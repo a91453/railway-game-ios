@@ -93,7 +93,10 @@ public struct SharedNetwork: Sendable {
     /// player's own. The balance is `balance` (a new game's), the sender's
     /// loan, ledger, days and closed years are gone and unlimited funds
     /// are off; the fare rules, what was built at what it cost, and the
-    /// date stay. A challenge's goals are not carried over.
+    /// date stay. A challenge's goals are not carried over, nor the city's
+    /// requests of the sender (their subsidies not yet paid, their stars,
+    /// those in hand: the city asks the new company afresh) or the freight
+    /// fares of the hour not yet booked.
     ///
     /// GameCore keeps the money out of reach of everything but its
     /// commands, and none starts the books again, so this is done on the
@@ -118,9 +121,15 @@ public struct SharedNetwork: Sendable {
             world["economy"] = economy
             world["accounts"] = accounts
             world["scenario"] = nil
+            if var freight = world["freight"] as? [String: Any] {
+                freight["pendingRevenue"] = nil
+                world["freight"] = freight
+            }
             root["world"] = world
             let data = try JSONSerialization.data(withJSONObject: root)
-            return try JSONDecoder().decode(SavedGame.self, from: data).world
+            var made = try JSONDecoder().decode(SavedGame.self, from: data).world
+            if let seed = made.cityRequests?.seed { made.setCityRequests(seed: seed) }
+            return made
         } catch {
             throw .damaged
         }

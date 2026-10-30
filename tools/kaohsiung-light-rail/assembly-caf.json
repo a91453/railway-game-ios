@@ -1,0 +1,13 @@
+{"assemblies":[
+{"id":"klrt-caf-formation","placements":[
+{"unit":"klrt-caf-c1","translation":[13.1915,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-s1","translation":[5.65,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-r","translation":[0,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-s2","translation":[-5.65,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-c2","translation":[-13.1915,0,0],"rotation_degrees":180}]},
+{"id":"klrt-caf-formation-far","placements":[
+{"unit":"klrt-caf-c1-far","translation":[13.1915,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-s1-far","translation":[5.65,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-r-far","translation":[0,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-s2-far","translation":[-5.65,0,0],"rotation_degrees":0},
+{"unit":"klrt-caf-c2-far","translation":[-13.1915,0,0],"rotation_degrees":180}]}]}

@@ -163,7 +163,13 @@ public struct Map3DModelPack: Sendable {
 
         }
         for far in [false, true] { models += Map3DKaohsiung.Unit.allCases.map { Map3DKaohsiung.model($0, far: far) } }
+        // R21 (first-batch EMD G12) is a static study, not an operating set.
+        models += [Map3DG12.model(), Map3DG12.model(far: true)]
         for far in [false, true] { models += Map3DE200MingriStyle.Role.allCases.map { Map3DE200MingriStyle.model($0, far: far) } }
+        for far in [false, true] {
+            models += Map3DKaohsiungCAF.Unit.allCases.map { Map3DKaohsiungCAF.model($0, far: far) }
+            models += Map3DKaohsiungCitadis.Unit.allCases.map { Map3DKaohsiungCitadis.model($0, far: far) }
+        }
         for far in [false, true] {
             models += Map3DAnkengLRT.Unit.allCases.map { Map3DAnkengLRT.model($0, far: far) }
             models += Map3DDanhaiLRT.Unit.allCases.map { Map3DDanhaiLRT.model($0, far: far) }

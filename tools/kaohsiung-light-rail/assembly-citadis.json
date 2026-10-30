@@ -1,0 +1,13 @@
+{"assemblies":[
+{"id":"klrt-citadis-formation","placements":[
+{"unit":"klrt-citadis-m1","translation":[12.775,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-sc1","translation":[5.325,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-np","translation":[0,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-sc2","translation":[-5.325,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-m2","translation":[-12.775,0,0],"rotation_degrees":180}]},
+{"id":"klrt-citadis-formation-far","placements":[
+{"unit":"klrt-citadis-m1-far","translation":[12.775,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-sc1-far","translation":[5.325,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-np-far","translation":[0,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-sc2-far","translation":[-5.325,0,0],"rotation_degrees":0},
+{"unit":"klrt-citadis-m2-far","translation":[-12.775,0,0],"rotation_degrees":180}]}]}
