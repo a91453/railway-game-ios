@@ -20,8 +20,8 @@ final class DayPassTests: XCTestCase {
 
     func testTheSuggestedPriceIsThreeShortestFares() {
         XCTAssertEqual(DayPass.suggestedPrice(for: .standard), Money(4_500))
-        XCTAssertEqual(DayPass.suggestedPrice(for: .distance(FareRules.standardBands)), Money(165))
-        XCTAssertEqual(DayPass.suggestedPrice(for: .flat(.zero)), Money(4_500), "a fare of 0 is charged as 5")
+        XCTAssertEqual(DayPass.suggestedPrice(for: .distance(FareRules.standardBands)), Money(3_300), "three of the first band's NT$11 (decision 499)")
+        XCTAssertEqual(DayPass.suggestedPrice(for: .flat(.zero)), Money(4_500), "a fare of 0 is charged as NT$15")
     }
 
     // MARK: - A world
@@ -62,19 +62,20 @@ final class DayPassTests: XCTestCase {
         XCTAssertEqual(world.dayPassToday(), DayPassDay())
     }
 
-    /// At $15 the trips are worth $20: $5 there and $5 back (the outside
-    /// connection's fare is not the company's), and $5 on to the other
-    /// sight and $5 back. A quarter of each sight's 240 buy: 60 and 60.
+    /// At NT$45 the trips are worth NT$60: NT$15 there and NT$15 back (the
+    /// outside connection's fare is not the company's), and NT$15 on to the
+    /// other sight and NT$15 back. A quarter of each sight's 240 buy: 60 and
+    /// 60. (Decision 499: the reference's $15 pass and $5 fares, times 3.)
     func testTouristsBuyByWhatTheRidesAreWorthAndRideOnToTheNextSight() throws {
         var world = try world()
-        try world.setDayPass(Money(1_500))
+        try world.setDayPass(Money(4_500))
         let passes = world.dayPassToday()
         XCTAssertEqual(passes.sold, 120)
-        XCTAssertEqual(passes.sales, Money(180_000))
-        XCTAssertEqual(passes.journeyFares, Money(120_000))
+        XCTAssertEqual(passes.sales, Money(540_000))
+        XCTAssertEqual(passes.journeyFares, Money(360_000))
         XCTAssertEqual(passes.rides, 240)
-        XCTAssertEqual(passes.rideFares, Money(120_000))
-        XCTAssertEqual(passes.net, Money(60_000), "$5 a pass more than the trips there and back")
+        XCTAssertEqual(passes.rideFares, Money(360_000))
+        XCTAssertEqual(passes.net, Money(180_000), "NT$15 a pass more than the trips there and back")
         XCTAssertEqual(passes.visits, [foot: 120, peak: 120])
         // The Falls' 60 ride on to the Temple and back, the Temple's to the
         // Falls and back.
@@ -82,7 +83,7 @@ final class DayPassTests: XCTestCase {
         XCTAssertEqual(world.dailyDemand(from: peak, to: foot), 120)
         XCTAssertEqual(world.dailyDemand(from: home, to: foot), 240, "the trips there are the same")
 
-        try world.setDayPass(Money(2_000))
+        try world.setDayPass(Money(6_000))
         XCTAssertEqual(world.dayPassToday(), DayPassDay(), "nobody pays what the rides cost")
         XCTAssertEqual(world.dailyDemand(from: foot, to: peak), 0)
         try world.setDayPass(nil)
@@ -90,15 +91,16 @@ final class DayPassTests: XCTestCase {
     }
 
     /// A sight with no other to ride on to is worth only the trip there and
-    /// back: at $8, $2 under it, a fifth buy, and each costs $2 of fares.
+    /// back: at NT$24, NT$6 under it, a fifth buy, and each costs NT$6 of
+    /// fares.
     func testASightAloneIsWorthOnlyTheTripThere() throws {
         var world = try world()
         world.setTourism([Attraction(id: falls, name: "瀑布", englishName: "Falls", point: PlanPoint(x: 101_000, y: 131_072), kind: .town, baseStars: 300)])
-        try world.setDayPass(Money(800))
+        try world.setDayPass(Money(2_400))
         let passes = world.dayPassToday()
         XCTAssertEqual(passes.sold, 48)
         XCTAssertEqual(passes.rides, 0)
-        XCTAssertEqual(passes.net, Money(48 * 800 - 48 * 1_000))
+        XCTAssertEqual(passes.net, Money(48 * 2_400 - 48 * 3_000))
     }
 
     func testFreePlaySellsNone() throws {
@@ -123,15 +125,15 @@ final class DayPassTests: XCTestCase {
     /// covered (charged as the holders boarded) out.
     func testMidnightSettlesThePassesAsOneRow() throws {
         var world = try world()
-        try world.setDayPass(Money(1_500))
+        try world.setDayPass(Money(4_500))
         world.setSpeed(.normal)
         try world.advance(ticks: 1_442)
         let row = try XCTUnwrap(world.accounts.entries.last { $0.kind == .dailyDayPass })
         XCTAssertEqual(row.breakdown, [
-            LedgerLine(item: .dayPassSales, amount: Money(180_000)),
-            LedgerLine(item: .dayPassFares, amount: Money(-240_000)),
+            LedgerLine(item: .dayPassSales, amount: Money(540_000)),
+            LedgerLine(item: .dayPassFares, amount: Money(-720_000)),
         ])
-        XCTAssertEqual(row.amount, Money(-60_000), "the rides on to the other sight were charged and given back")
+        XCTAssertEqual(row.amount, Money(-180_000), "the rides on to the other sight were charged and given back")
         XCTAssertTrue(GameWorld.isWellFormed(row))
         XCTAssertEqual(world.attraction(id: falls)?.yesterday, 300, "240 tourists and 60 from the Temple")
         XCTAssertNil(world.accountsProblem())
@@ -144,7 +146,7 @@ final class DayPassTests: XCTestCase {
         var world = try world()
         let park = try world.placeBuilding(.amusementPark, at: PlanPoint(x: 130_000, y: 131_072 + 6_000))
         let without = world.subsidiaryCustomers(of: park, onDay: 0)
-        try world.setDayPass(Money(1_500))
+        try world.setDayPass(Money(4_500))
         let with = world.subsidiaryCustomers(of: park, onDay: 0)
         let weights = [Int64(130_000), 100_000].map { x -> Int64 in
             let dx = park.centre.x - x, dy = park.centre.y - 131_072
@@ -174,7 +176,7 @@ final class DayPassTests: XCTestCase {
             Attraction(id: falls, name: "瀑布", englishName: "Falls", point: PlanPoint(x: 101_000, y: 131_072), kind: .town, baseStars: 100),
             Attraction(id: temple, name: "廟", englishName: "Temple", point: PlanPoint(x: 131_000, y: 131_072), kind: .town, baseStars: 100),
         ])
-        try world.setDayPass(Money(1_500))
+        try world.setDayPass(Money(4_500))
         world.setSpeed(.normal)
         try world.advance(ticks: 1_450)
 
@@ -188,7 +190,16 @@ final class DayPassTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 68)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded, withSavedDepreciation(world, of: loaded))
+        // The next day's depreciation makes up the cents the save's rounding
+        // left out: the books are the same again, and the catch-up is that
+        // day's charge.
+        var carried = loaded, again = world
+        try carried.advance(ticks: 1_440)
+        try again.advance(ticks: 1_440)
+        XCTAssertEqual(carried.accounts.assets, again.accounts.assets)
+        func written(_ world: GameWorld) -> Money { world.accounts.capitalDays.reduce(.zero) { $0 + $1.depreciation } }
+        XCTAssertEqual(written(carried), written(again))
         XCTAssertEqual(loaded.accounts.dayPass, Money(4_500))
         XCTAssertTrue(loaded.accounts.entries.contains { $0.kind == .dailyDayPass })
     }

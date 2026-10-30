@@ -1,4 +1,4 @@
-import GameCore
+@testable import GameCore
 import XCTest
 
 /// Costs used across tests so expected balances are easy to read.
@@ -16,6 +16,33 @@ enum NTScale {
 /// `GameEconomy(balance:costs:)`, times ``NTScale/factor``.
 func fixtureEconomy(balance: Money, costs: ConstructionCosts) -> GameEconomy {
     GameEconomy(balance: Money(balance.amount * NTScale.factor), costs: costs.times(NTScale.factor))
+}
+
+/// Decision 499: a save before version 76 holds each asset's depreciation
+/// as the cents it then was, times 3, but written down today three times
+/// the cost rounds down once (`cost × d ÷ L`), so it can be up to 2 cents
+/// more; the next day's charge makes up the difference
+/// (`AssetRecord.depreciateOneDay`). This gives `made` the loaded world's
+/// depreciation where the two differ by that and no more, so the rest of
+/// the two worlds compare exactly.
+func withSavedDepreciation(_ made: GameWorld, of loaded: GameWorld, file: StaticString = #filePath, line: UInt = #line) -> GameWorld {
+    var made = made
+    func close(_ ours: Money, _ saved: Money, _ what: String) -> Bool {
+        let gap = ours.amount - saved.amount
+        if gap != 0 { XCTAssertTrue((1...2).contains(gap), "\(what): \(ours) made, \(saved) saved", file: file, line: line) }
+        return (0...2).contains(gap)
+    }
+    guard made.accounts.assets.count == loaded.accounts.assets.count,
+          made.accounts.capitalDays.count == loaded.accounts.capitalDays.count else { return made }
+    for (index, saved) in loaded.accounts.assets.enumerated()
+    where close(made.accounts.assets[index].depreciation, saved.depreciation, "asset \(index)") {
+        made.accounts.assets[index].depreciation = saved.depreciation
+    }
+    for (index, saved) in loaded.accounts.capitalDays.enumerated()
+    where close(made.accounts.capitalDays[index].depreciation, saved.depreciation, "capital day \(index)") {
+        made.accounts.capitalDays[index].depreciation = saved.depreciation
+    }
+    return made
 }
 
 /// A world `width` × `height` world units (320 m a side by default).
@@ -118,3 +145,4 @@ extension ConstructionCosts {
         ConstructionCosts(track: Money(track.amount * scale), station: Money(station.amount * scale), train: Money(train.amount * scale), car: Money(car.amount * scale))
     }
 }
+
