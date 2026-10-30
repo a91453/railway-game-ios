@@ -73,3 +73,24 @@ The rest replay through a session with the app's data
 (`Tests/GamePresentationTests/CommandLogReplay.swift`). The same rules
 hold: a converted fixture is added, never converted again to make a test
 pass.
+
+Decision 499 (money in New Taiwan dollars, NT$3 to the reference's $1)
+moves every checksum of every file: a checksum covers the money, and a
+world saved before save version 76 is read with every amount times 3.
+No command and no starting world changed, except as listed:
+
+- `kernel.json`, `repeating-services.json`, `line-dispatch.json`,
+  `line-patterns.json`, `economy.json`, `network-economy.json`: the same
+  start and commands; only the checksums were replayed again (all of
+  them moved). Recording them again from their recipes now picks other
+  campaign cases (the generators changed since they were recorded), which
+  would have changed what they test, so they were not recorded again.
+- `long-leg-traffic.json` and `line-route-preferences.json`: recorded again
+  with their own tests (`LongLegReplayTests/testRecordingTheFixture`,
+  `V4B_REPLAY_NEW` in `LineRoutePreferenceTests`); the start and the
+  commands came out the same, all the checksums moved.
+- `problem-report-blank-map.json`: converted again from `Reports/blank-map.json`
+  (unchanged). Its start is the report's save as GameCore now reads it, so
+  its balance and construction costs are 3 times the report's; the
+  converter compares the device's balance at the end in the same dollars
+  (`ProblemReportFixtureTests`).
