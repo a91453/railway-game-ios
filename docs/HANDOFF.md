@@ -422,6 +422,30 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第三十五次換手（2026-10-30 約 13:20 UTC，第 34 任 session_01YGNNumkfxuxtaQzx6H62y3 → 第 35 任）**：第 34 任壓縮 2 次、約 293k，照 §1 換手（第 34 任是第 4 層，第 35 任第 5 層）。
+- **98.1 發了**：作者在本 session 說「那我先發自己測」，**作者自己按了** `testflight.yml`（run 41060426150，main **bb17381e**，13:05 UTC）。完整 `ci.yml`（41060131443）與 full lane（41060136243，為騰 Mac 取消後重跑）都還在跑，是發版後補驗；新任看結果，紅了告訴作者。上傳成功後請作者在 App Store Connect 答出口合規；把 run 號與 commit 記進 `docs/research/PLAYER_FEEDBACK.md`。
+  - 98.1 合了：#1540、#1542–#1549、#1552–#1555、#1539、#1541、#1558（HANG2 存檔檔頭快取，作者「存檔越多越卡」）。What's New 98 已在；#1563（REL98，session_01YGNNunK4cXanG2N3LiNyzK）把「存檔多時變快」「收購卡」兩行補進 98 條目、拿掉 testflight-whats-new.md 的改動，綠了就合。
+  - 騰 Mac 時取消又重排的：#1562、#1561 的 iOS、BUBBLE 的截圖、UIB 的 main 對照 run 41059190384、規劃的 full lane。
+- **作者這輪的決定**：
+  - 隱私：「不想被發現」的是公開 repository，**App 內不改**（遊戲名照舊）。README 首頁拿掉遊戲名（#1552）、資料來源頁不連 GitHub（#1553，決策 503）。LICENSE.md 已寫著作權所有，不用再加。改私人 repository 作者說「到時候再改」（費用估算在 #1041 留言 6521806393）。
+  - 98.1 只等 #1558；作者說可以先發自己測。
+  - 「要嗎不然每天都一直滿」→ 規劃決定做**車站擴建**，**決策 506 預留**（#1041 留言 6523382628）：容量 4,000→8,000→16,000，花錢擴建、每日人次達門檻才開放，排在 WAIT1、NTD1 之後（100.1 以後），先用作者那局量「滿」是站太小還是車不夠。
+  - 作者問「轉成點數車站會升級」：沒有這個機制；轉乘點數（決策 298）是加客人不是升級，作者已知。
+- **在做的實作 session（都是 99.1，除非另寫）**：
+  - WAIT1 session_01YGNNums6urdVMQS6QanRKJ（Opus，`wait1-daily-reset`，**決策 504**）：每個營運日 4:00 車站上還在等的人回家、計入 abandoned。作者那局「最久 2,551 分」。改 GameCore，golden 可能動。
+  - STALL97 session_01YGNNun14Q65qQzFK9Ggdcd（Opus，`stall97-6000x`，**決策 505 預留**）：作者 97.1 實機 6000× 主執行緒停 1–3.6 s（「其他」）。存檔、回報在私庫分支 `bug-reports/wait-and-stall-97-2026-10-30`。
+  - BUILDMSG session_01YGNNupv3cG18pgJFNQBTeJ（Sonnet，`buildmsg-reason`）：玩家（iPhone 13）「我只是想拉台鐵」：建軌道被擋時只說實際原因、查 0 公尺、從真實鐵道車站拉軌被擋時提示「開新局可以不放真實鐵道」（作者：「他明明可以不要開真實就好」）。
+  - IPHFIX session_01YGNNuqTFphyeyqbAd8VzXc（Sonnet，`iphfix-landscape`）：作者 iPhone 截圖三處：經濟甜甜圈被切（#1561）、窄面板標題截斷、路線清單搜尋列被蓋（等 #1560 合後再看）。
+  - LOADFIX session_01YGNNuq92hM3EkQDuCVBro8（#1557）：橫拿載入畫面被切。
+  - UIB session_01YGNNuqDeWxuzsEPMNtxT4N（壓縮 1 次，只收尾）：#1551（B2，iPad 上兩支 SettingsUITests 紅，正在 main 對照證明非本 PR）、#1560（B1）。
+  - ROADFIX session_01YGNNupRBmuqtaCPwRs9Hat（壓縮 1 次，只收尾）：#1559（P3-6 公車照單行道）、P3-9＋HANDOFF §4.32。
+  - BUBBLE session_01YGNNum5jQZum4SfoeS9uC2：#1562（決策 501 截圖驗收：中央小卡蓋住西站）。
+  - SAVE1 session_01YGNNuq65cB35dbSd2SspvL：#1556（決策 502 存檔一局一筆，已接 #1558 的快取 format 2）。**合併前開獨立審查**。
+  - NTD1 第五棒 session_01YGNNuo8yfmRdphYxt63KUr（Opus）：#1550 新台幣（存檔 76、決策 499、golden 75），目標 100.1，**99.1 前不合**；合前獨立審查。
+  - HANG2 已收工；P2-3～P2-7 在 §4.31，**還沒派**（99.1）。
+- **還沒派的**：HANG2 P2-3～P2-7；手機版整體 UI 太佔視野（iPhone 13 玩家回報，下一輪 UI 審查）；車站擴建（決策 506，WAIT1 後）；#1041 已約 2,280 則，近 2,400 時開下一個登記 issue 並改 CLAUDE.md 等的指向（§1）。
+- **號碼**：決策 504 WAIT1、505 STALL97（預留）、506 車站擴建（預留），下一個空的是 507；存檔 76（NTD1）；golden schema 75（NTD1）。
+
 **第三十四次換手（2026-10-30 約 08:40 UTC，第 33 任 session_01YGNNunvjxx3LhPctQU6a4r → 第 34 任）**：第 33 任壓縮 2 次，照 §1 換手（第 3 層，第 34 任是第 4 層）。
 - **公測開了**：作者發了 TestFlight 97.1（run #97，main 77b93222），公開連結 https://testflight.apple.com/join/dFuQG2KR 已開（人數上限作者調過，08:15 UTC 確認不是「This beta is full」）。What to Test 在這個 PR 改成 97.1 的玩家說明（`.github/testflight-whats-new.md`；第 97 版當時沒改到，App Store Connect 上作者是手貼的）。
   - 發版前的檢查：77b93222 的完整 ci.yml 綠。iOS 全線 41014514036 紅兩項：`CoverageShortcutUITests`（:41）重跑過了；`MapMarkTapUITests`（:102）重跑 41022695616 又紅，但紅在啟動時（`ToolbarSmokeTests.swift:367` 的快照逾時），找不到哪個合併能解釋，玩家看不到。作者知道後還是決定發 97.1（「我還是想發97.1」）。**下一步**：打開 41022695616 的 xcresult 看失敗截圖；下一次全線還紅，就照 diagnosing-bugs 查。
