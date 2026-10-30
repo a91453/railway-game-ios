@@ -6,6 +6,9 @@ import XCTest
 /// Decision 318: the trains that were drawn as boxes, with models built
 /// from the scene kit's train recipes, one per car.
 final class Map3DTrainSetTests: XCTestCase {
+    /// Decision 496: the real light rails' sets, near and far.
+    static let lightRails: Set = ["danhaiLRT", "danhaiLRTFar", "ankengLRT", "ankengLRTFar", "klrtCAF", "klrtCAFFar",
+                                  "klrtCitadis", "klrtCitadisFar"]
     private let pack = Map3DModelPack.standard
     /// The recipes, their lamps lit as drawn (decision 449 lights a
     /// running car's in the pack only at its train's ends).
@@ -63,6 +66,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 483: #1454's Kaohsiung cabs, 5,790 each; #1437's Taichung Green cabs, 4,804.
                     : set.key == "kaohsiung" && [set.headName, set.tailName].contains(name) ? 5_700...5_900
                     : set.key == "taichungGreen" ? 4_700...4_900
+                    // Decision 496: the real light rails' half trains, near and far
+                    // (#1533's Danhai 24,838 to 25,174 near, #1506's Citadis 7,104 far).
+                    : Self.lightRails.contains(set.key) ? 7_000...25_200
                     : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
@@ -83,7 +89,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
-                    : set.key == "blueSeven" ? 7.5...8.4 : 17...22.5
+                    : set.key == "blueSeven" ? 7.5...8.4
+                    // Decision 496: the Citadis is 33.4 m, a half 16.7 m.
+                    : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3 : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
                 XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")

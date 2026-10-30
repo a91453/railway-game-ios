@@ -143,6 +143,7 @@ struct StationPanel: View {
                     Button("Done") {
                         screen.panel = nil
                     }
+                    .accessibilityIdentifier("station.done")
                 }
             }
             .safeAreaInset(edge: .bottom) {

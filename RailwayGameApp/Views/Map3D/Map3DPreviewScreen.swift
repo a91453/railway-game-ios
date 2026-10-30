@@ -589,6 +589,9 @@ struct Map3DSceneKey: Hashable {
     let bought: Int
     /// Decision 400: a station road shows at once.
     let roads: Int
+    /// BUGHUNT_BUILD P2-2: a road laid along the city's (free, decision
+    /// 487) shows at once too, though the count above stays.
+    let ownRoads: Set<CellPosition>
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
@@ -604,6 +607,7 @@ struct Map3DSceneKey: Hashable {
         bought = world.acquisitions.count { $0.kind == .railway }
         // PERF_3D_COCKPIT: counted, not made into one set at every tick.
         roads = world.roads?.roadCellCount ?? 0
+        ownRoads = world.roads?.built ?? []
     }
 }
 

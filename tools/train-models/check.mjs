@@ -2,7 +2,8 @@
 //   node check.mjs OUT [--lock hashes.lock.json] [--allow id,id] [--new-set key,key]
 //   node check.mjs OUT --grandfather-write   (rewrites budgets.json's list from this run; once, with main's models)
 // Fails (exit 1) when
-//  - a near car has more triangles than budgets.json's nearCarMax;
+//  - a near car has more triangles than budgets.json's nearCarMax (a car of
+//    a set in twoCarSets, its nearCarMax there; decision 496);
 //  - a 12-car train (head, 10 middle, tail) of a set is over nearTrainMax /
 //    its far train over farTrainMax;
 //  - a far car has half or more of its near car's triangles, or does not fit
@@ -30,8 +31,11 @@ const writeGrand = argv.includes('--grandfather-write');
 const fail = (kind, text, id) => { found[kind][id] = found[kind][id] || text; if ((grand[kind] || {})[id] || writeGrand) notes.push(`grandfathered ${kind}: ${text}`); else failures.push(text); };
 const sum = list => list.reduce((s, m) => s + m.triangles, 0);
 
+// Decision 496: a set only ever drawn as two cars has its own car budget.
+const twoCar = budgets.twoCarSets || {sets: []};
 for (const m of manifest.models.filter(m => m.role === 'near')) {
-  if (m.triangles > budgets.nearCarMax) failures.push(`${m.id}: ${m.triangles} triangles, over the near car budget ${budgets.nearCarMax} (decision 417)`);
+  const max = twoCar.sets.some(key => m.id.startsWith(`set-${key}-`)) ? twoCar.nearCarMax : budgets.nearCarMax;
+  if (m.triangles > max) failures.push(`${m.id}: ${m.triangles} triangles, over the near car budget ${max} (decision 417)`);
 }
 for (const set of manifest.sets) {
   const unit = name => byId.get(`set-${set.key}-${name}`);

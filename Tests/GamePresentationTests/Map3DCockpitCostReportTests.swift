@@ -49,13 +49,13 @@ final class Map3DCockpitCostReportTests: XCTestCase {
         // are made of: each change starts the scene, or the buses, again.
         struct SceneParts: Equatable {
             let edges: Int, lastEdge: TrackEdgeID?, platforms: Int, buildings: Int, week: Int64
-            let lines: Map3DLineBands.Signature, bought: Int, roads: Int
+            let lines: Map3DLineBands.Signature, bought: Int, roads: Int, ownRoads: Set<CellPosition>
         }
         func parts(_ world: GameWorld) -> SceneParts {
             SceneParts(edges: world.network.edges.count, lastEdge: world.network.edges.last?.id, platforms: world.network.platforms.count,
                        buildings: world.placedBuildings.count, week: world.clock.now.seconds / (7 * GameTime.secondsPerDay),
                        lines: Map3DLineBands.Signature(world: world), bought: world.acquisitions.count { $0.kind == .railway },
-                       roads: world.roads?.roadCellCount ?? 0)
+                       roads: world.roads?.roadCellCount ?? 0, ownRoads: world.roads?.built ?? [])
         }
         var lastParts = parts(session.world)
         var lastBuses = Map3DBuses.Signature(world: session.world, palette: .standard, roads: session.busRoads)

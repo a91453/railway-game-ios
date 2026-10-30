@@ -55,6 +55,62 @@ final class MapLabelPlacementTests: XCTestCase {
         }
     }
 
+    /// Decision 501: a bubble tapped selects its station, whose tag (over
+    /// the bubbles in the map's layers) stayed under the station after the
+    /// panel closed. Where the bubble had gone under the name, the tag lay
+    /// on it and took every later tap (97.1 on an iPad: only the first tap
+    /// went to the materials).
+    func testASelectedStationsTagLeavesEveryBubbleUncovered() {
+        let bubbles = cross.dropFirst().map { MapLabelPlacement.Bubble(x: $0.x, y: $0.y, text: "缺建材", hasReason: false) }
+        let points = MapLabelPlacement.placeBubbles(bubbles, stations: cross, lift: Self.lift, radius: Self.radius)
+        let touch = zip(bubbles, points).map { MapLabelPlacement.bubbleTouchBox($0, at: $1) }
+        let clear = Box(x: 8, y: 8, width: 784, height: 584)
+        for station in cross {
+            let tag = MapLabelPlacement.stationTag(at: ScreenPoint(x: station.x, y: station.y), width: 150, height: 44,
+                                                   clear: clear, avoiding: touch)
+            for box in touch {
+                XCTAssertFalse(overlaps(tag, box), "\(station.name)'s tag at \(tag) covers a bubble at \(box)")
+            }
+            XCTAssertFalse(overlaps(tag, MapLabelPlacement.markBox(of: station, radius: Self.radius)), "\(station.name)'s tag covers its mark")
+            XCTAssertFalse(overlaps(tag, MapLabelPlacement.nameBox(of: station, radius: Self.radius)), "\(station.name)'s tag covers its name")
+        }
+    }
+
+    /// Decision 501: the same in English, whose bubbles are wider, with
+    /// the stations closer and further apart, as on an iPhone and an iPad
+    /// (only_testing run 41035734895: an English bubble beside the middle
+    /// station lay under the tag).
+    func testATagLeavesTheBubblesUncoveredAtEverySpacing() {
+        for text in ["缺建材", "Short of building materials"] {
+            // An iPhone on its side (852 by 393, the map under the top bar
+            // and over the dock), and an iPad.
+            // The short band (only_testing run 41035734895): neither over
+            // the station nor under the bubble in its way fit.
+            for (clear, spacing) in [(Box(x: 60, y: 125, width: 754, height: 195), 79.0), (Box(x: 60, y: 60, width: 754, height: 250), 79.0),
+                                     (Box(x: 60, y: 60, width: 732, height: 280), 100),
+                                     (Box(x: 8, y: 8, width: 784, height: 584), 79), (Box(x: 8, y: 8, width: 784, height: 584), 120)] {
+                for tagWidth in [125.0, 166] {
+                    let middle = (x: (clear.minX + clear.maxX) / 2, y: (clear.minY + clear.maxY) / 2)
+                    let stations = [(0.0, -1.0), (-1, 0), (0, 0), (1, 0), (0, 1)].enumerated().map { i, at in
+                        MapLabelPlacement.Station(x: middle.x + at.0 * spacing, y: middle.y + at.1 * spacing, name: cross[i].name)
+                    }
+                    let bubbles = stations.dropFirst().map { MapLabelPlacement.Bubble(x: $0.x, y: $0.y, text: text, hasReason: false) }
+                    let points = MapLabelPlacement.placeBubbles(bubbles, stations: stations, lift: Self.lift, radius: Self.radius)
+                    let touch = zip(bubbles, points).map { MapLabelPlacement.bubbleTouchBox($0, at: $1) }
+                    for station in stations {
+                        let tag = MapLabelPlacement.stationTag(at: ScreenPoint(x: station.x, y: station.y), width: tagWidth, height: 44,
+                                                               clear: clear, avoiding: touch)
+                        for box in touch {
+                            XCTAssertFalse(overlaps(tag, box), "\(text), \(spacing) apart: \(station.name)'s tag at \(tag) covers a bubble at \(box)")
+                        }
+                        XCTAssertFalse(overlaps(tag, MapLabelPlacement.markBox(of: station, radius: Self.radius)), "\(station.name)'s tag covers its mark")
+                        XCTAssertFalse(overlaps(tag, MapLabelPlacement.nameBox(of: station, radius: Self.radius)), "\(station.name)'s tag covers its name")
+                    }
+                }
+            }
+        }
+    }
+
     func testABubbleWithRoomStaysOverItsStation() {
         let alone = [MapLabelPlacement.Station(x: 200, y: 200, name: "臺北")]
         let bubble = MapLabelPlacement.Bubble(x: 200, y: 200, text: "Crowded", hasReason: false)
