@@ -86,12 +86,16 @@ final class ToolColumnTests: XCTestCase {
         XCTAssertLessThanOrEqual(shown + 2 * (ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1)), pro)
         // No toggle (a lesson's step that points into the card): it fits.
         XCTAssertLessThanOrEqual(ToolColumn.buildingHeight(tools: tools, toggle: false), pro)
-        // A real-world map's credits (30) under it: the first three whole,
-        // the cut between the building and bus tools; the first tool always
-        // shows, at the top.
+        // A real-world map's credits (30) under it: the first three whole
+        // and most of the bus tool, fading, so it shows more is below (run
+        // 41081038317 cut cleanly after the building tool, the bus tool
+        // not there at all); the first tool always shows, at the top.
         let credits = ToolColumn.maxHeight(screenHeight: 382, top: 54, gap: 10, bottom: 30 + 10)
-        let cut = ToolColumn.buildingScrollHeight(maxHeight: credits, tools: tools, toggle: true)
-        XCTAssertEqual(cut, ToolColumn.tilePadding + 3 * ToolColumn.compactButtonHeight + 2.5 * ToolColumn.buttonSpacing)
-        XCTAssertGreaterThanOrEqual(cut, ToolColumn.tilePadding + ToolColumn.compactButtonHeight)
+        let room = credits - 2 * (ToolColumn.tileGap + ToolColumn.tileHeight(buttons: 1))
+        let peeking = ToolColumn.buildingScrollHeight(maxHeight: credits, tools: tools, toggle: true)
+        XCTAssertEqual(peeking, room)
+        let busTop = ToolColumn.tilePadding + 3 * (ToolColumn.compactButtonHeight + ToolColumn.buttonSpacing)
+        XCTAssertGreaterThanOrEqual(peeking - busTop, ToolColumn.compactButtonHeight / 2)
+        XCTAssertLessThan(peeking - busTop, ToolColumn.compactButtonHeight)
     }
 }
