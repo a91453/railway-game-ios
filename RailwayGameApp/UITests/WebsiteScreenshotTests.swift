@@ -730,6 +730,72 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// One tap on the zoom-in button, when the map has it.
+    /// Decision 502: the saves list with one row per game, choosing saves
+    /// to delete and the warning before they go, and a save's earlier
+    /// versions. For the screenshot review of the pull request that made
+    /// them, not the website.
+    func testSavesListOneRowPerGame() {
+        let app = launch(extra: ["-sample-saves"])
+        defer { app.terminate() }
+        let saves = app.buttons["start.saves"]
+        XCTAssertTrue(saves.appears(within: 30), "The start screen shows Saves")
+        // On a phone on its side Saves lies below the fold of the start
+        // screen's column: drag that column at the button's own x
+        // (`StartSaveFlowSmokeTests.testAnUnreadableSaveCanBeDeleted`).
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<6 where !saves.isHittable {
+            let x = saves.frame.midX - app.frame.minX
+            origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.75))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.35)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        saves.tap()
+        let select = app.buttons["saves.select"]
+        XCTAssertTrue(select.appears(within: 10), "The list offers Select")
+        settle()
+        keep("saves-list", app)
+
+        // A row's earlier versions, from its "⋯" menu.
+        let menus = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.menu.save-"))
+        let versionsChoice = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.versions.")).firstMatch
+        for index in 0..<menus.count where !versionsChoice.exists {
+            let menu = menus.element(boundBy: index)
+            guard menu.isHittable else { continue }
+            menu.tap()
+            if !versionsChoice.appears(within: 2) { app.tap() }
+        }
+        if versionsChoice.exists {
+            settle(seconds: 1)
+            keep("saves-row-menu", app)
+            versionsChoice.tap()
+            let version = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.version.")).firstMatch
+            XCTAssertTrue(version.appears(within: 10), "The earlier versions are offered")
+            settle(seconds: 1)
+            keep("saves-earlier-versions", app)
+            let cancel = app.buttons["取消"].firstMatch
+            if cancel.exists { cancel.tap() } else { app.tap() }
+            XCTAssertTrue(version.disappears(within: 10))
+        }
+
+        select.tap()
+        let selectAll = app.buttons["saves.selectAll"]
+        XCTAssertTrue(selectAll.appears(within: 10), "Choosing offers Select All")
+        settle(seconds: 1)
+        keep("saves-select", app)
+        selectAll.tap()
+        settle(seconds: 1)
+        keep("saves-select-all", app)
+        tapButton("saves.deleteSelected", in: app)
+        let confirm = app.buttons["saves.deleteSelected.confirm"].firstMatch
+        XCTAssertTrue(confirm.appears(within: 10), "Deleting warns first")
+        settle(seconds: 1)
+        keep("saves-delete-warning", app)
+        let cancel = app.buttons["取消"].firstMatch
+        XCTAssertTrue(cancel.exists)
+        cancel.tap()
+        XCTAssertTrue(confirm.disappears(within: 10), "Cancel keeps the saves")
+    }
+
     private func zoomInOnce(_ app: XCUIApplication) {
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 5), zoomIn.becomesHittable(within: 3) {

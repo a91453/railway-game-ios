@@ -15,7 +15,7 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 | 畫風 | `.claude/skills/art-style/SKILL.md`（霧面平塗、薄邊、一個三角形一個顏色） |
 | 量與拍 | `tools/train-models/README.md`（本 skill 第 6 節） |
 | 預算與遠景的規則 | 決策 408（遠景一節換一節）、417（共用預算、精細車規則）、420（簡化器、遠景版）、422、432（遠景版的測試） |
-| 要接的人手 | `docs/HANDOFF.md`、#1041 工作登記（別人正在動的車與檔案） |
+| 要接的人手 | `docs/HANDOFF.md`、#1579 工作登記（別人正在動的車與檔案） |
 
 CLAUDE.md 的參考庫檢查照舊：新的車先看 `a91453/railway-reference-private`（尺寸、照片、顏色），參考模型只量不出貨。
 
