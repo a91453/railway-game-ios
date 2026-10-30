@@ -39,8 +39,6 @@
 
 > 新手教學盤點（派工單 TUT，`claude/tutorial-review-2026-10-30`，2026-10-30）：[`research/TUTORIAL_REVIEW_2026-10-30.md`](research/TUTORIAL_REVIEW_2026-10-30.md)。公測前只修了 A1（「點『車站…』看誰在搭車」打開在「旅客與運量」組）；其餘步驟對照 main 都指得到、按鈕字都對。留下的是該文件 §4 的 B1–B7（教學的路線面板和平常不同、實景地圖沒教、iPad 直拿沒走過教學、錢的事沒教等），公測後由規劃照順序派；B3 發版前要在 iPad 直拿實機走一次第 1 關。
 
-> 公測前抓蟲：經營與存檔（派工單 BH3，`claude/bughunt-economy-saves`，2026-10-30）：[`research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md`](research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md)。沒有找到 P1，也沒有 P2；79 個 SaveFixtures 各玩 31 天、每天存讀都一致。留下 P3-1～P3-4（月報標題不看現金轉負、從「資料」開的月報關掉不回「資料」、讀檔後「上個月月報」不見、回報問題在無限資金時寫餘額），公測後由規劃照順序派；實機 UNVERIFIED。
-
 > 公測前效能盤點（派工單 PERF，`claude/perf-tiers`，決策號不動）：[`research/PERF_TIERS_2026-10-30.md`](research/PERF_TIERS_2026-10-30.md)。這輪只修了兩層雨的重畫次數（3D 跟地圖的格數、2D 限每秒 30 次）。留下的：「自動」在「少像素」之後再加「少陰影與反光」「穩定 30 格」兩步，主執行緒造成的掉格不降畫面（§4 丙，公測後拿實機回報再做）；其餘依 §5 的順序。實機要看的數字在 §6。
 
 > 車庫開放給所有玩家（派工單 GAR，[決策 492](decisions/492.md)，`claude/garage-train-viewer`）：設定裡「車庫」一列打開決策 434 的列車展示；列車包沒解鎖時包裡的車不列。截圖驗收暫緩；發版前在 iPhone 直橫、iPad 直橫各開一次車庫（設定 →「車庫」），看那一段與畫面能開、能關、不跑版，App Store 設定（列車包開關關著）的選車清單沒有包裡的車。Linux `Map3DShowcaseTests` VERIFIED；Simulator 與實機 UNVERIFIED（`TrainShowcaseUITests` 在 full lane）。
