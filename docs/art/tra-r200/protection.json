@@ -1,0 +1,9 @@
+{
+  "status": "VERIFIED",
+  "baseline_commit": "15759aa207cc031fed54dbcc00a98d1a1f671fa8",
+  "existing_models": 835,
+  "payload_bytes_identical": true,
+  "all_vertex_fields_fnv_identical": true,
+  "upstream_changes": "none relative to recorded base",
+  "limits": "M3DM omits u/v but the FNV includes x/y/z/nx/ny/nz/color/u/v/layer"
+}

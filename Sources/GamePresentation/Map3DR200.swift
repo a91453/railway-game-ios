@@ -93,7 +93,11 @@ extension StationKitBuilder {
                 let z=side*0.99
                 r200EndPanel(end,[(z-0.21,1.97),(z+0.21,1.97),(z+0.21,2.23),(z-0.21,2.19)],dark,far:far)
                 r200EndPanel(end,[(z-0.145,2.03),(z+0.145,2.03),(z+0.145,2.15),(z-0.145,2.15)],Map3DTrainStyle.headlamp,depth:0.035,far:far)
-                beam(Map3DPoint(end*9.32,1.58,side*1.25),Map3DPoint(end*9.25,2.67,side*1.25),0.028,metal)
+                let low=Map3DPoint(end*9.49,1.58,side*1.25),bend=Map3DPoint(end*9.49,2.10,side*1.25)
+                let high=Map3DPoint(end*9.2677,2.67,side*1.25)
+                beam(low,bend,0.028,metal);beam(bend,high,0.028,metal)
+                beam(low,Map3DPoint(end*9.445,1.58,side*1.25),0.028,metal)
+                beam(high,Map3DPoint(end*9.223,2.67,side*1.25),0.028,metal)
                 // Side cab window, rear door and real descending access steps.
                 box(end*8.30,2.88,side*1.428,0.83,0.026,0.65,dark)
                 box(end*8.30,2.93,side*1.445,0.73,0.014,0.55,glass)
@@ -101,7 +105,13 @@ extension StationKitBuilder {
                 box(end*7.62,1.56,side*1.448,0.46,0.012,2.00,white)
                 box(end*7.62,2.92,side*1.460,0.29,0.012,0.49,glass)
                 for step in 0..<4 { box(end*7.62,0.40+Float(step)*0.27,side*1.35,0.55,0.30,0.065,metal) }
-                for dx:Float in [-0.35,0.35] { beam(Map3DPoint(end*7.62+dx,1.40,side*1.48),Map3DPoint(end*7.62+dx,2.62,side*1.48),0.025,metal) }
+                for dx:Float in [-0.25,0.25] {
+                    beam(Map3DPoint(end*7.62+dx,0.38,side*1.32),Map3DPoint(end*7.62+dx,1.44,side*1.32),0.035,metal)
+                }
+                if !far { for dx:Float in [-0.35,0.35] {
+                    beam(Map3DPoint(end*7.62+dx,1.40,side*1.48),Map3DPoint(end*7.62+dx,2.62,side*1.48),0.025,metal)
+                    for h:Float in [1.43,2.59] { beam(Map3DPoint(end*7.62+dx,h,side*1.42),Map3DPoint(end*7.62+dx,h,side*1.48),0.025,metal) }
+                } }
                 if !far {
                     beam(Map3DPoint(end*8.50,2.76,side*1.47),Map3DPoint(end*8.50,3.31,side*1.47),0.025,dark)
                     // Windscreen wipers rest along the glass's lower edge.
@@ -122,7 +132,10 @@ extension StationKitBuilder {
             }
             box(end*9.38,0.28,0,0.22,2.40,0.12,metal)
             box(end*9.56,0.91,0,0.75,0.23,0.24,dark)
-            box(end*9.88,0.84,0,0.25,0.38,0.38,metal)
+            box(end*9.20,1.08,0,0.38,0.42,0.18,dark)
+            box(end*9.88,0.84,-0.12,0.25,0.14,0.38,metal)
+            box(end*9.88,0.84,0,0.25,0.38,0.14,metal)
+            box(end*9.88,1.08,0,0.25,0.38,0.14,metal)
         }
         box(0,1.15,0,18.3,2.65,0.25,dark)
         box(-0.30,0.40,0,5.5,1.72,0.76,dark)
@@ -148,11 +161,12 @@ extension StationKitBuilder {
         }
         for centre:Float in [-5.90,5.90] {
             box(centre,0.67,0,4.25,1.60,0.42,dark)
+            box(centre,1.07,0,0.70,0.60,0.14,dark)
             for dx:Float in [-1.50,0,1.50] {
                 for side:Float in [-1,1] {
                     civicTube(Map3DPoint(centre+dx,0.50,side*0.48),Map3DPoint(centre+dx,0.50,side*0.68),radius:0.50,color:dark,sides:far ? 8:16)
                     box(centre+dx,0.50,side*0.91,0.35,0.30,0.32,metal)
-                    if !far { civicTube(Map3DPoint(centre+dx,0.50,side*0.69),Map3DPoint(centre+dx,0.50,side*0.85),radius:0.15,color:metal,sides:8) }
+                    if !far { civicTube(Map3DPoint(centre+dx,0.50,side*0.675),Map3DPoint(centre+dx,0.50,side*0.85),radius:0.15,color:metal,sides:8) }
                 }
                 beam(Map3DPoint(centre+dx,0.50,-0.48),Map3DPoint(centre+dx,0.50,0.48),0.13,metal)
             }

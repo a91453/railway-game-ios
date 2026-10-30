@@ -31,6 +31,11 @@ function check(vs){
  for(let i=0;i<vs.length;i+=3){const key=vs.slice(i,i+3).map(v=>v.position.map(n=>Math.round(n*1e5)).join(',')).sort().join('|');assert(!seen.has(key),'duplicate triangle / equipment');seen.add(key);}
  const b=bounds(vs);assert(tol(b.minimum[0],-10.005)&&tol(b.maximum[0],10.005),'coupler envelope');assert(tol(b.minimum[2],0)&&tol(b.maximum[2],4.08),'rail/roof envelope');
  for(const x of [2.55,4,5.45])assert(tol(highest(vs,x,.1),4.065,.003),'radiator fan hidden or displaced');
+ for(const c of [-5.9,5.9])assert(vs.some(v=>tol(v.position[0],c+.35)&&tol(Math.abs(v.position[1]),.30)&&tol(v.position[2],1.21)),'bogie bolster support absent');
+ for(const e of [-1,1])assert(vs.some(v=>tol(v.position[0]*e,9.39)&&tol(Math.abs(v.position[1]),.21)&&tol(v.position[2],1.26)),'coupler support absent');
+ for(const e of [-1,1])for(const side of [-1,1]){
+  for(const z of [.38,1.44])assert(vs.some(v=>Math.abs(v.position[0]*e-7.37)<.03&&Math.abs(v.position[1]*side-1.32)<.03&&tol(v.position[2],z)),'access step stile absent');
+ }
  // Test every intended tyre contact from the final payload. Removing or
  // raising a wheel must fail rather than relying on the overall Z bound.
  for(const c of [-5.9,5.9])for(const dx of [-1.5,0,1.5])for(const side of [-1,1]){
@@ -51,13 +56,26 @@ function check(vs){
  return b;
 }
 for(const vs of [near,far])check(vs);
+function sideHit(vs,side,x,z){return firstHit(vs.map(v=>({...v,position:[v.position[1],v.position[0],v.position[2]]})),side,x,z);}
+for(const side of [-1,1])for(const x of [-6.2,-1.5,0,1.5,6.5])for(const z of [1.50,2.50,3.80]){
+ const a=sideHit(near,side,x,z),b=sideHit(far,side,x,z);assert(a&&b,'LOD side missing');
+ const colour=c=>c[0]>120?'white':c[2]>c[0]+8?'navy':'equipment';assert.equal(colour(a.color),colour(b.color),'LOD paint boundary jump');
+}
+// An actual opaque interior cover protruding through the windshield is rejected.
+const cover=[[-.7,2.9],[.7,2.9],[0,3.5]].map(([y,z])=>({position:[9.7,y,z],normal:[1,0,0],color:[235,237,234,255]}));
+assert.throws(()=>check([...near,...cover]),/windshield/);
+const reversed=near.map(v=>({...v,position:[-v.position[0],-v.position[1],v.position[2]],normal:[-v.normal[0],-v.normal[1],v.normal[2]]}));
+assert.throws(()=>check(reversed),/fan|roof/);
 assert.throws(()=>check([...near,...structuredClone(near.slice(0,3))]),/duplicate/);
 const bad=(mutator,pattern)=>{const v=structuredClone(near);mutator(v);assert.throws(()=>check(v),pattern);};
 bad(v=>{for(const a of v)if(tol(a.position[0],4.4)&&Math.abs(a.position[1])>.47&&Math.abs(a.position[1])<.69&&a.position[2]<.01)a.position[2]+=.1;},/wheel/);
 bad(v=>{for(const a of v)if(a.position[0]>8.7&&a.position[2]>2.84&&a.position[2]<3.49&&a.color[2]>a.color[0])a.position[0]+=.2;},/glass|windshield/);
 bad(v=>{for(const a of v)if(a.position[0]>8.7&&a.position[2]>2.84&&a.position[2]<3.49&&a.color[2]>a.color[0])a.position[0]-=.1;},/glass|windshield/);
 bad(v=>{for(const a of v)if(a.position[0]>2&&a.position[0]<6.5&&a.position[2]>4.06)a.position[2]-=.1;},/fan|roof/);
+bad(v=>{for(const a of v)if(Math.abs(a.position[0]-5.9)<.36&&Math.abs(a.position[1])<.31&&a.position[2]>1.06&&a.position[2]<1.22)a.position[2]-=.2;},/bolster/);
+bad(v=>{for(const a of v)if(a.position[0]>9&&a.position[0]<9.4&&Math.abs(a.position[1])<.22&&a.position[2]>1.07&&a.position[2]<1.27)a.position[0]-=.2;},/coupler/);
+bad(v=>{for(const a of v)if(Math.abs(a.position[0]-7.37)<.03&&a.position[1]>.28&&tol(a.position[2],.38))a.position[2]+=.1;},/stile/);
 assert(near.length>far.length*2,'far detail budget');
 assert.deepEqual(bounds(near),bounds(far),'LOD envelope jump');
-writeFileSync(resolve(root,'r200-verification.json'),JSON.stringify({status:'VERIFIED',checks:['12 actual tyre contacts at 6 axle stations','rail/coupler/roof bounds','both end front-facing glass surface gap and 24 first-hit rays','near/far bounds and detail ratio','actual lifted tyre and floating/buried windshield mutations rejected'],limits:['not exhaustive collision detection','door visibility, opposite side fittings and roof BOM require further source/audit','front gap test is not independent ray visibility proof']},null,2)+'\n');
+writeFileSync(resolve(root,'r200-verification.json'),JSON.stringify({status:'VERIFIED',checks:['12 actual tyre contacts at 6 axle stations','rail/coupler/roof bounds','both end front-facing glass surface gap and 24 first-hit rays','near/far bounds, side paint classification and detail ratio','visible radiator fan first-hit rays; hidden-fan mutation','duplicate triangle, protruding interior cover and reversed whole locomotive rejected','bogie bolster, step stiles and drawgear support witnesses; actual support displacement mutations','actual lifted tyre and floating/buried windshield mutations rejected'],limits:['not exhaustive collision detection','door visibility, opposite side fittings and roof BOM require further source/audit','24 first-hit windshield rays are sampled visibility, not all-view intersection proof']},null,2)+'\n');
 console.log('VERIFIED R200-specific geometry probes');
