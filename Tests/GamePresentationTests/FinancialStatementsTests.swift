@@ -206,7 +206,7 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: true), "$3.3M")
         XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: false), "$ -4,205,867")
         XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: true), "-$4.2M")
-        XCTAssertEqual(StatementRow.amountText(Money(-1_612_000), short: true), "-$16.1k")
+        XCTAssertEqual(StatementRow.amountText(Money(-1_612_000), short: true), "-$16k")
         XCTAssertEqual(StatementRow.amountText(.zero, short: true), "$0")
         XCTAssertEqual(StatementRow.amountText(nil, short: false), "—")
         XCTAssertEqual(StatementRow.amountText(nil, short: true), "—")
