@@ -217,6 +217,19 @@ final class OneRowPerGameTests: XCTestCase {
         XCTAssertNil(launcher.gameRow, "the new game has no row yet")
     }
 
+    /// The game menu's Back to Start (decision 497, off the main thread)
+    /// names the row too.
+    @MainActor
+    func testBackToStartInTheBackgroundKeepsTheRow() async throws {
+        let library = SaveLibrary(directory: directory)
+        let launcher = GameLauncher(library: library, language: .english)
+        launcher.startNewGame()
+        await launcher.saveCurrentGame(at: date(0)).value
+        let row = launcher.gameRow
+        await launcher.returnToStartInBackground(at: date(60))?.value
+        XCTAssertEqual(library.entries().first { $0.kind == .autosave }?.row, row)
+    }
+
     @MainActor
     func testAGameNeverSavedGetsARowWhenAnotherStarts() async throws {
         let library = SaveLibrary(directory: directory)

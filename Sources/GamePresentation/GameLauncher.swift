@@ -1940,13 +1940,13 @@ public final class GameLauncher {
         isReturningToStart = true
         session.stopGameLoop()
         recordChallengeResult(at: date)
-        let (library, world, news, language) = (library, session.worldToSave, session.news, language)
+        let (library, world, news, language, row) = (library, session.worldToSave, session.news, language, gameRow)
         listRead &+= 1
         let read = listRead
         let (written, report) = AsyncStream.makeStream(of: Result<[SaveLibrary.Entry], SaveError>.self)
         saveQueue.async {
             report.yield(Result { () throws(SaveError) in
-                _ = try library.save(world, news: news, as: .autosave, at: date)
+                _ = try library.save(world, news: news, as: .autosave, at: date, row: row)
                 return library.entries()
             })
             report.finish()
