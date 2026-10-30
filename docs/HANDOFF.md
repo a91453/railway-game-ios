@@ -443,8 +443,14 @@
   - SAVE1 session_01YGNNuq65cB35dbSd2SspvL：#1556（決策 502 存檔一局一筆，已接 #1558 的快取 format 2）。**合併前開獨立審查**。
   - NTD1 第五棒 session_01YGNNuo8yfmRdphYxt63KUr（Opus）：#1550 新台幣（存檔 76、決策 499、golden 75），目標 100.1，**99.1 前不合**；合前獨立審查。
   - HANG2 已收工；P2-3～P2-7 在 §4.31，**還沒派**（99.1）。
-- **還沒派的**：HANG2 P2-3～P2-7；手機版整體 UI 太佔視野（iPhone 13 玩家回報，下一輪 UI 審查）；車站擴建（決策 506，WAIT1 後）；#1041 已約 2,280 則，近 2,400 時開下一個登記 issue 並改 CLAUDE.md 等的指向（§1）。
-- **號碼**：決策 504 WAIT1、505 STALL97（預留）、506 車站擴建（預留），下一個空的是 507；存檔 76（NTD1）；golden schema 75（NTD1）。
+- **第 35 任加的**（2026-10-30 約 14:00 UTC）：
+  - ~~PLATFIX（session_01YGNNuqVoNBQQPoDp7Eh4NZ，月台軌道被渡線擋住）~~ **作者取消**（「叫他不用做」，約 14:20 UTC）。它停手前在 Linux 確認一個既有問題：線的盡頭在轉轍器預定位置外 22 m 以內時，`platformTrackTurnout` 把轉轍器吸到盡頭節點（`distance < spacing` 那支），蓋出的月台軌道那一端不接任何軌道。沒修；併進決策 507 的派工一起修。
+  - **月台排法一次蓋好**（玩家建議，作者「好 照你的排」）：**決策 507 預留**。蓋車站時先選排法（單線一岸、單線一島兩線、雙線兩岸、雙線一島、雙線兩島四線），一次蓋完；用 `PlatformTrack`／`DoubleTrack` 的零件組，只動 GamePresentation。目標 100.1（原本排在 PLATFIX 後，PLATFIX 取消），排在車站擴建（506）前面。
+  - #1556 審查 P3 四項：作者問過，規劃決定四項都在合併前修（SAVE1 已修 1、2，3、4 在修）。
+- DR1000（session_01YGNNupCW2YCoD2nXrEiuNh，Opus）：作者要合 #1530，在 Codex 分支上 merge main 解衝突，柴油客車 3D 改用 45DR1000，不升存檔。
+- **99.1 的門檻**（規劃提、作者問「99.1 定在哪個合完」）：WAIT1 #1567、STALL97 #1568、SAVE1 #1556 都合了、完整 ci 綠，就跟作者說可以發；#1565、#1559、#1560、#1551、#1561 趕得上就帶。
+- **還沒派的**：月台排法（507，100.1）；HANG2 P2-3～P2-7；手機版整體 UI 太佔視野（iPhone 13 玩家回報，下一輪 UI 審查）；車站擴建（決策 506，WAIT1 後）；#1041 已約 2,280 則，近 2,400 時開下一個登記 issue 並改 CLAUDE.md 等的指向（§1）。
+- **號碼**：決策 504 WAIT1、505 STALL97（預留）、506 車站擴建（預留）、507 月台排法（預留），下一個空的是 508；存檔 76（NTD1）；golden schema 75（NTD1）。
 
 **第三十四次換手（2026-10-30 約 08:40 UTC，第 33 任 session_01YGNNunvjxx3LhPctQU6a4r → 第 34 任）**：第 33 任壓縮 2 次，照 §1 換手（第 3 層，第 34 任是第 4 層）。
 - **公測開了**：作者發了 TestFlight 97.1（run #97，main 77b93222），公開連結 https://testflight.apple.com/join/dFuQG2KR 已開（人數上限作者調過，08:15 UTC 確認不是「This beta is full」）。What to Test 在這個 PR 改成 97.1 的玩家說明（`.github/testflight-whats-new.md`；第 97 版當時沒改到，App Store Connect 上作者是手貼的）。
