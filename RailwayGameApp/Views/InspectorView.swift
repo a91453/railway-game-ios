@@ -87,14 +87,15 @@ struct InspectorView: View {
                     chip("list.bullet.rectangle.portrait", session.language.text("Fleet", "車隊總覽"), id: "inspector.train.fleet") {
                         screen.panel = .fleet
                     }
-                    // Decision 512: this train's row of the roster, in one tap.
-                    chip("chart.bar.doc.horizontal", session.language.text("Roster", "運用表"), id: "inspector.train.roster") {
-                        rosterTrain = train
-                    }
                     ForEach(session.trainCardActions(of: train), id: \.self) { action in
                         chip(Self.systemImage(of: action), action.title(in: session.language), id: "inspector.train.\(action.rawValue)") {
                             session.runTrainCardAction(action, on: train)
                         }
+                    }
+                    // Decision 512: this train's row of the roster, in one tap,
+                    // last, so the chips before it keep their places.
+                    chip("chart.bar.doc.horizontal", session.language.text("Roster", "運用表"), id: "inspector.train.roster") {
+                        rosterTrain = train
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

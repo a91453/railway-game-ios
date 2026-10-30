@@ -472,6 +472,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         row.tap()
         let page = app.collectionViews["line.detail"]
         XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        // The line's trains, where trains are sent out, as before the
+        // roster's row was added below them (compare with `line-page`).
+        settle(seconds: 2)
+        keep("roster-line-page-trains", app)
         let open = app.buttons["line.trainRoster"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The roster's button shows")
         open.waitUntilSettled()
