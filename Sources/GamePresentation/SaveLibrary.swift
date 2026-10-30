@@ -131,6 +131,7 @@ public struct SaveLibrary: Sendable {
     /// Where saves being deleted wait until all of them are moved
     /// (``delete(_:)``), so a delete is all or nothing.
     static let deletingFolder = "Deleting"
+    static let donePrefix = "done-"
 
     public let directory: URL
     /// The headers already read (decision 497), shared by the library's
@@ -167,6 +168,7 @@ public struct SaveLibrary: Sendable {
     /// the newest first; files that cannot be read last, by name. An empty
     /// list when the folder does not exist yet.
     public func entries() -> [Entry] {
+        tidyUp()
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         // A save's news log (decision 175) lies beside it and is no save.
         let saves = names.filter { $0.hasSuffix(".json") && !$0.hasSuffix(Self.newsSuffix) }
@@ -514,7 +516,8 @@ public struct SaveLibrary: Sendable {
                     let from = url(of: member)
                     // The save itself must be there; what lies beside it may not.
                     guard number == 0 || fileManager.fileExists(atPath: from.path) else { continue }
-                    let to = folder.appendingPathComponent("\(number)")
+                    let to = folder.appendingPathComponent(member)
+                    try fileManager.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
                     if failingMoves.contains(member) { throw SaveError.fileSystem }
                     try fileManager.moveItem(at: from, to: to)
                     moved.append((from, to, member))
@@ -530,7 +533,8 @@ public struct SaveLibrary: Sendable {
                     allBack = false
                 }
             }
-            // One that could not go back stays set aside rather than lost.
+            // One that could not go back stays set aside, rather than
+            // lost, and goes back the next time the saves are listed.
             if allBack { removeSetAside(aside) }
             throw .fileSystem
         }
@@ -541,13 +545,59 @@ public struct SaveLibrary: Sendable {
     }
 
     /// Removes `aside`, then the folder of what deletes set aside when
-    /// nothing else is left in it.
+    /// nothing else is left in it. Named done first, so what is left of
+    /// one that cannot be removed whole is not put back.
     private func removeSetAside(_ aside: URL) {
         let fileManager = FileManager.default
-        try? fileManager.removeItem(at: aside)
-        let folder = url(of: Self.deletingFolder)
+        let done = aside.deletingLastPathComponent().appendingPathComponent(Self.donePrefix + aside.lastPathComponent)
+        if (try? fileManager.moveItem(at: aside, to: done)) != nil {
+            try? fileManager.removeItem(at: done)
+        } else {
+            try? fileManager.removeItem(at: aside)
+        }
+        removeIfEmpty(url(of: Self.deletingFolder))
+    }
+
+    private func removeIfEmpty(_ folder: URL) {
+        let fileManager = FileManager.default
         if (try? fileManager.contentsOfDirectory(atPath: folder.path))?.isEmpty == true {
             try? fileManager.removeItem(at: folder)
+        }
+    }
+
+    /// Before the saves are listed (decision 502): what a failed delete
+    /// could not put back goes back where it was (unless something has
+    /// taken its place), what a finished one left is removed, and the
+    /// earlier versions of a row that is gone (deleted on another device)
+    /// are deleted, so a row of the same name never takes them up.
+    private func tidyUp() {
+        let fileManager = FileManager.default
+        let deleting = url(of: Self.deletingFolder)
+        for aside in (try? fileManager.contentsOfDirectory(atPath: deleting.path)) ?? [] {
+            let folder = deleting.appendingPathComponent(aside, isDirectory: true)
+            if aside.hasPrefix(Self.donePrefix) {
+                try? fileManager.removeItem(at: folder)
+                continue
+            }
+            for index in (try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? [] {
+                let entry = folder.appendingPathComponent(index, isDirectory: true)
+                var members = ((try? fileManager.contentsOfDirectory(atPath: entry.path)) ?? []).filter { $0 != Self.versionsFolder }
+                let versions = entry.appendingPathComponent(Self.versionsFolder, isDirectory: true)
+                members += ((try? fileManager.contentsOfDirectory(atPath: versions.path)) ?? []).map { Self.versionsFolder + "/" + $0 }
+                for member in members where !fileManager.fileExists(atPath: url(of: member).path) {
+                    try? fileManager.createDirectory(at: url(of: member).deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try? fileManager.moveItem(at: entry.appendingPathComponent(member), to: url(of: member))
+                }
+                removeIfEmpty(versions)
+                removeIfEmpty(entry)
+            }
+            removeIfEmpty(folder)
+        }
+        removeIfEmpty(deleting)
+        let versions = url(of: Self.versionsFolder)
+        for stem in (try? fileManager.contentsOfDirectory(atPath: versions.path)) ?? []
+        where !fileManager.fileExists(atPath: url(of: stem + ".json").path) {
+            try? fileManager.removeItem(at: versions.appendingPathComponent(stem, isDirectory: true))
         }
     }
 
@@ -629,7 +679,11 @@ public struct SaveLibrary: Sendable {
     private func keepVersion(of row: String) throws {
         let fileManager = FileManager.default
         let current = url(of: row)
-        guard fileManager.fileExists(atPath: current.path) else { return }
+        guard fileManager.fileExists(atPath: current.path) else {
+            // A new row of a name gone before takes no versions of it.
+            try? fileManager.removeItem(at: url(of: Self.versionsPath(of: row)))
+            return
+        }
         // Already the newest version (a save tried again after its write
         // failed): keeping it twice would push out a real one.
         if let kept = try? Data(contentsOf: url(of: Self.versionFile(1, of: row))),

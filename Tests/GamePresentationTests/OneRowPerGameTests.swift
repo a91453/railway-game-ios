@@ -172,28 +172,43 @@ final class OneRowPerGameTests: XCTestCase {
     }
 
     /// A file that cannot be put back after a failed delete is kept set
-    /// aside, never removed, and a later delete leaves it there.
+    /// aside, never removed (not by a later delete either), and goes back
+    /// the next time the saves are listed.
     func testAFileThatCannotGoBackIsNeverLost() throws {
         var library = SaveLibrary(directory: directory)
-        let a = try library.save(world(after: 1), as: .manual, at: date(0))
-        let b = try library.save(world(after: 2), as: .manual, at: date(60))
-        let c = try library.save(world(after: 3), as: .manual, at: date(120))
+        let a = try library.save(world(after: 1), news: NewsLog(), as: .manual, at: date(0), named: "A")
+        try library.save(world(after: 2), as: .manual, at: date(30), row: a.id)
+        let b = try library.save(world(after: 3), as: .manual, at: date(60))
+        let c = try library.save(world(after: 4), as: .manual, at: date(120))
+        let listed = library.entries()
         library.failingMoves = [b.id]
-        library.failingReturns = [a.id]
+        library.failingReturns = [a.id, SaveLibrary.versionsPath(of: a.id)]
         XCTAssertThrowsError(try library.delete([a, b]))
-        func setAside() throws -> [Data] {
-            try FileManager.default.subpathsOfDirectory(atPath: directory.path)
-                .filter { $0.hasPrefix(SaveLibrary.deletingFolder + "/") && $0.split(separator: "/").count == 4 && $0.hasSuffix("/0") }
-                .map { try Data(contentsOf: directory.appendingPathComponent($0)) }
-        }
-        let kept = try setAside()
-        XCTAssertEqual(kept.count, 1)
-        XCTAssertEqual(try SaveLibrary.decode(kept[0]), try world(after: 1))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent(a.id).path))
 
         library.failingMoves = []
         library.failingReturns = []
         try library.delete([c])
-        XCTAssertEqual(try setAside(), kept, "another delete leaves it")
+        XCTAssertEqual(library.entries(), listed.filter { $0.id != c.id }, "back, with its name and version")
+        XCTAssertEqual(try library.load(XCTUnwrap(library.entries().first { $0.id == a.id })), try world(after: 2))
+        XCTAssertFalse(try FileManager.default.subpathsOfDirectory(atPath: directory.path).contains { $0.hasPrefix(SaveLibrary.deletingFolder) })
+    }
+
+    /// A row deleted on another device leaves no earlier versions behind
+    /// for a row of the same name.
+    func testTheVersionsOfARowGoneElsewhereGoToo() throws {
+        let library = SaveLibrary(directory: directory)
+        let row = try library.save(world(after: 1), as: .manual, at: date(0))
+        try library.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        try FileManager.default.removeItem(at: directory.appendingPathComponent(row.id))
+        XCTAssertEqual(library.entries(), [])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent(SaveLibrary.versionsPath(of: row.id)).path))
+
+        // Written again without a list in between.
+        try library.save(world(after: 3), as: .manual, at: date(120), row: row.id)
+        try FileManager.default.removeItem(at: directory.appendingPathComponent(row.id))
+        let again = try library.save(world(after: 4), as: .manual, at: date(180), row: row.id)
+        XCTAssertEqual(again.earlierVersions, 0)
     }
 
     /// The row's newest version is not kept twice (a save tried again
@@ -347,6 +362,27 @@ final class OneRowPerGameTests: XCTestCase {
         XCTAssertEqual(rows.map(\.id), [row.id])
         XCTAssertEqual(try library.load(rows[0]), try world(after: 1))
         XCTAssertEqual(try library.earlierVersions(of: rows[0]).map { try library.load($0) }, [try world(after: 2), try world(after: 1)])
+    }
+
+    /// Going back to the oldest version while playing its row: going back
+    /// pushes it out of the row, so it is kept as the autosave.
+    @MainActor
+    func testTheOldestVersionGoneBackToIsKept() async throws {
+        let library = SaveLibrary(directory: directory)
+        let row = try library.save(world(after: 1), as: .manual, at: date(0))
+        try library.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        try library.save(world(after: 3), as: .manual, at: date(120), row: row.id)
+        let launcher = GameLauncher(library: library, language: .english)
+        await launcher.load(try XCTUnwrap(launcher.otherSaves.first), at: date(180))?.value
+        launcher.session?.advance(realElapsed: .seconds(10))
+        XCTAssertTrue(launcher.autosaveCurrentGame(at: date(240)))
+        let versions = await launcher.earlierVersions(of: try XCTUnwrap(manualRows(library).first))
+        let oldest = try XCTUnwrap(versions.last)
+        await launcher.load(oldest, at: date(300))?.value
+        XCTAssertEqual(launcher.session?.world, try world(after: 1))
+        let autosave = try XCTUnwrap(library.autosaves().first)
+        XCTAssertEqual(try library.load(autosave), try world(after: 1))
+        XCTAssertEqual(autosave.row, row.id)
     }
 
     @MainActor

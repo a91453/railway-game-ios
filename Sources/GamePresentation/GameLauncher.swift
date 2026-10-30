@@ -1294,7 +1294,10 @@ public final class GameLauncher {
         return open(reading: { () throws(SaveError) in (try library.load(entry), library.news(for: entry)) }, world: \.0) { read, roads in
             switch read {
             case .success(let (world, news)):
-                self.begin(world, keepingAutosave: true, news: news, roads: roads, row: entry.row)
+                // An earlier version (decision 502) may be the one going
+                // back pushes out of its row: it is kept as the autosave.
+                let isVersion = entry.id.hasPrefix(SaveLibrary.versionsFolder + "/")
+                self.begin(world, keepingAutosave: true, news: news, roads: roads, row: entry.row, autosavingAt: isVersion ? date : nil)
             case .failure(let error):
                 self.message = StatusMessage(kind: .failure, text: error.playerMessage(in: self.language))
             }
@@ -1625,13 +1628,18 @@ public final class GameLauncher {
     @discardableResult
     private func begin(
         _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil,
-        row: String? = nil
+        row: String? = nil, autosavingAt date: Date? = nil
     ) -> Bool {
         let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
             do throws(SaveError) {
                 let library = library
                 try afterSaves { () throws(SaveError) in try library.archiveAutosave() }
+                if let date {
+                    // A failure here leaves the game playing, kept by the
+                    // next autosave.
+                    _ = try? afterSaves { () throws(SaveError) in try library.save(world, news: news, as: .autosave, at: date, row: row) }
+                }
             } catch {
                 // Starting anyway would write over the last game.
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
