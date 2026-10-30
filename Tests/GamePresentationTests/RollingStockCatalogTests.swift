@@ -42,4 +42,22 @@ final class RollingStockCatalogTests: XCTestCase {
         XCTAssertEqual(RollingStockCatalog.Family(.emu3000), .railway)
         XCTAssertEqual(RollingStockCatalog.Family(.highSpeed), .highSpeed)
     }
+
+    /// BH8 P2-1: a car given no width or height (0/0 before) or a height
+    /// of 0 (a width over 0 before) has one window; `Int` of the NaN or
+    /// infinity it divided out to stopped the app.
+    func testACarWithNoSizeYetHasOneWindow() {
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 0, height: 0), 1)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 40, height: 0), 1)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: -1, height: -0.45), 1)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: .nan, height: 10), 1)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: .infinity, height: 10), 1)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 40, height: .leastNonzeroMagnitude), 100)
+    }
+
+    func testACarHasAsManyWindowsAsFitAtSevenTenthsOfItsHeight() {
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 70, height: 20), 5)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 13, height: 20), 1)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 33, height: 14.85), 3)
+    }
 }
