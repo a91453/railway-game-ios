@@ -585,6 +585,29 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Lesson 1's first card on a phone on its side (decision 498): its
+    /// explanation ends on a whole line, the goal not cut in half.
+    func testLessonCard() {
+        let app = launch()
+        defer { app.terminate() }
+        let lessons = app.buttons["start.lessons"]
+        XCTAssertTrue(lessons.appears(within: 15), "The start screen shows Lessons")
+        lessons.waitUntilSettled()
+        lessons.tap()
+        let first = app.buttons["lesson.1.start"]
+        if !first.appears(within: 5), lessons.exists {
+            lessons.waitUntilSettled()
+            lessons.tap()
+        }
+        XCTAssertTrue(first.appears(within: 10), "Lesson 1 is listed")
+        XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start can be tapped")
+        first.tap()
+        let card = app.descendants(matching: .any)["tutorial.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 60), "The lesson's card shows")
+        settle(seconds: 3)
+        keep("lesson-card", app)
+    }
+
     private func launch(extra: [String] = []) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
