@@ -56,6 +56,13 @@ private struct CompositionRing: View {
     @State private var touched: Double?
     /// The slice whose row was tapped, until it is tapped again.
     @State private var pinned: FinanceComposition.Category?
+    /// iPhone held sideways is short: a smaller ring keeps the whole of it
+    /// on the screen with the rows beside it.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    private var diameter: CGFloat {
+        verticalSizeClass == .compact ? 104 : 136
+    }
 
     private var selected: FinanceComposition.Slice? {
         if let touched, let slice = ring.slice(atDollars: touched) { return slice }
@@ -85,12 +92,15 @@ private struct CompositionRing: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityIdentifier("\(identifier).detail")
         }
+        // A Form row sizes itself from the ring's ideal height; stating it
+        // keeps the whole ring in the row.
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder private var donut: some View {
         if ring.isEmpty {
             centre
-                .frame(width: 136, height: 136)
+                .frame(width: diameter, height: diameter)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier(identifier)
         } else {
@@ -137,7 +147,7 @@ private struct CompositionRing: View {
                 }
             }
         }
-        .frame(width: 136, height: 136)
+        .frame(width: diameter, height: diameter)
         .accessibilityLabel(Text(verbatim: spec.title))
         .accessibilityValue(Text(verbatim: spec.summary))
         .accessibilityChartDescriptor(ChartAudioGraph(spec: spec))

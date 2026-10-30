@@ -34,6 +34,25 @@ public enum HUDMargins {
         return max(minimum, mapHeight - top - edge - below)
     }
 
+    /// How far above the map view's foot a layer's legend in the
+    /// bottom-trailing corner stands while a phone's panel is open (its
+    /// buttons in a row under the panel, decision 300), in points, before
+    /// the corner's own ``edge``. TestFlight 98.1 (an iPhone on its side,
+    /// building): above the dock's height it stood in the middle of the
+    /// map, over the track being laid; it goes down to `screenBottom`, the
+    /// safe area and the credits' band, unless something at the bottom
+    /// stands under it: `legend` is its span across the map (`start` to
+    /// `end`, the map's points), `beside` the frames it keeps above (the
+    /// buttons' row, the map's leading buttons, Undo and Redo, the station
+    /// master), on a map `mapHeight` tall. Never higher than `standard`,
+    /// where it stood before.
+    public static func legendFootUnderPanel(standard: Double, screenBottom: Double, mapHeight: Double,
+                                            legendStart: Double, legendEnd: Double, beside: [ScreenFrame]) -> Double {
+        let under = beside.filter { $0.width > 0 && $0.height > 0 && $0.x < legendEnd && $0.x + $0.width > legendStart }
+        let foot = under.map { mapHeight - $0.y }.reduce(screenBottom, max)
+        return min(standard, foot)
+    }
+
     /// The four lines the floating controls keep to on a screen `screen`
     /// big, with the safe area `safeArea` and, on a real-world map, the
     /// credits' band `creditsBand` points tall above the safe area's foot.

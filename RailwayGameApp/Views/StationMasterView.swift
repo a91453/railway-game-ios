@@ -228,6 +228,11 @@ struct StationMasterCorner: View {
                 titleBadge(title)
             }
             }
+            // A layer's legend under a phone's panel keeps above it
+            // (``HUDMargins/legendFootUnderPanel``); the bubble, a few
+            // seconds' word, does not move it.
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.stationMasterFrame = $0 }
+            .onDisappear { screen.stationMasterFrame = .zero }
             if offersTutorial, storyBeat == nil, hasRoom {
                 offerCard
             } else if let storyBeat, hasRoom {
