@@ -8,38 +8,47 @@ import XCTest
 final class FareAndLoanPreviewTests: XCTestCase {
     // MARK: - Fares
 
+    /// Decision 499: fares and the baseline are 3 times the reference's
+    /// (the demand baseline NT$2.25); the default distance bands, NT$11 to
+    /// NT$24, are the ones for a city whose baseline is the standard fare,
+    /// NT$15, as a new game's is (`standardBands(for:)` scales them to any
+    /// other), so they are tried at that baseline.
     func testTheShareIsGameCoresDemandFactor() {
         let baseline = FareRules.demandBaseline
-        for fare in [Money(0), 25, 75, 100, 150, 300, 500] {
+        for fare in [Money(0), 75, 225, 300, 450, 900, 1_500] {
             let share = FareDemandHint.Share(rules: .flat(fare), baseline: baseline)
             XCTAssertEqual(share.shortest, FareRules.demandFactor(fare: fare, baseline: baseline))
             XCTAssertEqual(share.longest, share.shortest)
         }
-        let bands = FareDemandHint.Share(rules: .distance(FareRules.standardBands), baseline: baseline)
-        XCTAssertEqual(bands.shortest, FareRules.demandFactor(fare: 55, baseline: baseline))
-        XCTAssertEqual(bands.longest, FareRules.demandFactor(fare: 120, baseline: baseline))
+        let bands = FareDemandHint.Share(rules: .distance(FareRules.standardBands), baseline: FareRules.standardFare)
+        XCTAssertEqual(bands.shortest, FareRules.demandFactor(fare: 1_100, baseline: FareRules.standardFare))
+        XCTAssertEqual(bands.longest, FareRules.demandFactor(fare: 2_400, baseline: FareRules.standardFare))
     }
 
     func testTheLevels() {
         func level(_ fare: Money) -> FareDemandHint.Level {
-            FareDemandHint.Level(FareDemandHint.Share(rules: .flat(fare), baseline: 75))
+            FareDemandHint.Level(FareDemandHint.Share(rules: .flat(fare), baseline: 225))
         }
-        XCTAssertEqual(level(25), .more, "a third of the usual fare keeps 1,053")
-        XCTAssertEqual(level(75), .usual)
-        XCTAssertEqual(level(85), .usual, "1.13 times keeps 953")
-        XCTAssertEqual(level(120), .lower, "1.6 times keeps 697")
-        XCTAssertEqual(level(500), .veryLow)
+        XCTAssertEqual(level(75), .more, "a third of the usual fare keeps 1,053")
+        XCTAssertEqual(level(225), .usual)
+        XCTAssertEqual(level(255), .usual, "1.13 times keeps 953")
+        XCTAssertEqual(level(360), .lower, "1.6 times keeps 697")
+        XCTAssertEqual(level(1_500), .veryLow)
         XCTAssertEqual(FareDemandHint.Level(FareDemandHint.Share(shortest: 900, longest: 900)), .usual)
         XCTAssertEqual(FareDemandHint.Level(FareDemandHint.Share(shortest: 899, longest: 899)), .lower)
         XCTAssertEqual(FareDemandHint.Level(FareDemandHint.Share(shortest: 499, longest: 499)), .veryLow)
     }
 
     func testTheHintsWords() {
-        let flat = FareDemandHint(proposed: FareDemandHint.Share(rules: .flat(120), baseline: 75), current: .unchanged)
+        let flat = FareDemandHint(proposed: FareDemandHint.Share(rules: .flat(360), baseline: 225), current: .unchanged)
         XCTAssertEqual(flat.text(in: .english), "Demand: fewer riders, about 70% of the riders at the usual fare (now 100%).")
         XCTAssertEqual(flat.text(in: .traditionalChinese), "需求：偏低，約是一般票價時乘客的 70%（現在 100%）。")
         XCTAssertTrue(flat.isWarning)
-        let bands = FareDemandHint(proposed: FareDemandHint.Share(rules: .distance(FareRules.standardBands), baseline: 75), current: FareDemandHint.Share(rules: .flat(120), baseline: 75))
+        let usual = FareRules.standardFare
+        let bands = FareDemandHint(
+            proposed: FareDemandHint.Share(rules: .distance(FareRules.standardBands), baseline: usual),
+            current: FareDemandHint.Share(rules: .flat(2_400), baseline: usual)
+        )
         XCTAssertEqual(bands.proposed.percentText, "102%–70%")
         XCTAssertEqual(
             bands.text(in: .english),
@@ -47,7 +56,7 @@ final class FareAndLoanPreviewTests: XCTestCase {
         )
         XCTAssertEqual(bands.text(in: .traditionalChinese), "需求：偏低，短程約是一般票價時乘客的 102%，最遠的 70%（現在 70%）。")
         XCTAssertFalse(bands.isWarning, "more riders than now")
-        XCTAssertEqual(FareDemandHint.usualFareText(75, in: .traditionalChinese), "這座城市的一般票價：\(Money(75).centsText)。")
+        XCTAssertEqual(FareDemandHint.usualFareText(225, in: .traditionalChinese), "這座城市的一般票價：\(Money(225).centsText)。")
     }
 
     @MainActor
@@ -71,17 +80,17 @@ final class FareAndLoanPreviewTests: XCTestCase {
         XCTAssertEqual(preview.amount, CompanyAccounts.loanStep)
         XCTAssertEqual(preview.dailyInterest, GameWorld.dailyLoanInterest(on: CompanyAccounts.loanStep))
         XCTAssertEqual(preview.dailyInterest, Money(4_200))
-        XCTAssertEqual(preview.monthInterest, Money(1_400 * 30))
-        XCTAssertEqual(preview.yearInterest, Money(1_400 * 360))
+        XCTAssertEqual(preview.monthInterest, Money(4_200 * 30))
+        XCTAssertEqual(preview.yearInterest, Money(4_200 * 360))
         XCTAssertNil(preview.recentDailyResult, "no full day yet")
         XCTAssertNil(preview.resultText(in: .english))
-        XCTAssertEqual(preview.paymentText(in: .english), "Borrowing \(Money(10_000_000).moneyText) adds \(Money(1_400).moneyText) of interest each day, paid at midnight.")
-        XCTAssertEqual(preview.paymentText(in: .traditionalChinese), "借入 \(Money(10_000_000).moneyText)：每天多付利息 \(Money(1_400).moneyText)，午夜支付。")
+        XCTAssertEqual(preview.paymentText(in: .english), "Borrowing \(Money(30_000_000).moneyText) adds \(Money(4_200).moneyText) of interest each day, paid at midnight.")
+        XCTAssertEqual(preview.paymentText(in: .traditionalChinese), "借入 \(Money(30_000_000).moneyText)：每天多付利息 \(Money(4_200).moneyText)，午夜支付。")
         XCTAssertEqual(
             preview.totalText(in: .english),
-            "Kept a month, \(Money(42_000).moneyText) of interest in all; kept a year, \(Money(504_000).moneyText), and \(Money(10_504_000).moneyText) with the loan repaid. Repay it whenever you like."
+            "Kept a month, \(Money(126_000).moneyText) of interest in all; kept a year, \(Money(1_512_000).moneyText), and \(Money(31_512_000).moneyText) with the loan repaid. Repay it whenever you like."
         )
-        XCTAssertEqual(preview.totalText(in: .traditionalChinese), "借一個月共付利息 \(Money(42_000).moneyText)；借一年共付 \(Money(504_000).moneyText)，連本金共 \(Money(10_504_000).moneyText)。本金隨時可以還。")
+        XCTAssertEqual(preview.totalText(in: .traditionalChinese), "借一個月共付利息 \(Money(126_000).moneyText)；借一年共付 \(Money(1_512_000).moneyText)，連本金共 \(Money(31_512_000).moneyText)。本金隨時可以還。")
 
         // The step is what it adds to the interest on what is owed.
         session.borrowLoanStep()

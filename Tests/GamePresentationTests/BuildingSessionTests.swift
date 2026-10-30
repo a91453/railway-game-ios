@@ -104,9 +104,9 @@ final class BuildingSessionTests: XCTestCase {
         let session = GameSession(world: world, language: .english)
         session.selectTool(.building)
         XCTAssertEqual(session.buildingMode, .build)
-        // A house: 512 m² of floor at $40, and 256 m² of empty land at
-        // $10 a m² (its base value).
-        XCTAssertEqual(session.buildingQuoteText, "House: \(Money(2_048_000).moneyText) to build, plus the land's value for 256 m²")
+        // A house: 512 m² of floor at NT$120, and 256 m² of empty land at
+        // NT$30 a m² (its base value; decision 499, both 3 times).
+        XCTAssertEqual(session.buildingQuoteText, "House: \(Money(6_144_000).moneyText) to build, plus the land's value for 256 m²")
         XCTAssertNil(session.buildingEconomyText, "nothing built yet")
 
         // Decision 95: a tap chooses the site and shows what it costs; the
@@ -114,14 +114,15 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 500))
         XCTAssertTrue(session.world.placedBuildings.isEmpty, "a tap only chooses the site")
         XCTAssertEqual(session.buildingPreview?.cost, 6_912_000)
-        XCTAssertEqual(session.buildingPreviewText, "Building \(Money(2_048_000).moneyText) + land \(Money(256_000).moneyText)")
+        XCTAssertEqual(session.buildingPreviewText, "Building \(Money(6_144_000).moneyText) + land \(Money(768_000).moneyText)")
         XCTAssertTrue(session.confirmBuilding())
         XCTAssertNil(session.buildingSite, "built: the site is cleared")
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built house for \(Money(2_304_000).moneyText)."))
-        XCTAssertEqual(session.world.economy.balance, 100_000_000 - 2_304_000)
-        // Empty, so no rent; upkeep 2 bp of 2,048,000 is 410 cents, tax
-        // 1 bp of 256,000 is 26.
-        XCTAssertEqual(session.buildingEconomyText, "Rent \(Money(0).centsText) a day · upkeep and land tax \(Money(436).centsText)")
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built house for \(Money(6_912_000).moneyText)."))
+        XCTAssertEqual(session.world.economy.balance, 100_000_000 - 6_912_000)
+        // Empty, so no rent; upkeep 2 bp of 6,144,000 is 1,228.8, rounded up
+        // to 1,229 cents, tax 1 bp of 768,000 is 76.8, rounded to 77 (not 3
+        // times the old 410 and 26: each is rounded once).
+        XCTAssertEqual(session.buildingEconomyText, "Rent \(Money(0).centsText) a day · upkeep and land tax \(Money(1_306).centsText)")
 
         // Demolishing: a tap on it or within reach of it (the house is
         // 1,024 units across, so it ends at 5,512); a tenth of what it cost.
@@ -131,9 +132,9 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tap one of your buildings to demolish it."))
         XCTAssertEqual(session.world, before)
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_900, y: 5_000), reach: 500))
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Demolished house for \(Money(230_400).moneyText)."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Demolished house for \(Money(691_200).moneyText)."))
         XCTAssertTrue(session.world.placedBuildings.isEmpty)
-        XCTAssertEqual(session.world.economy.balance, 100_000_000 - 2_304_000 - 230_400)
+        XCTAssertEqual(session.world.economy.balance, 100_000_000 - 6_912_000 - 691_200)
         XCTAssertNil(session.buildingEconomyText)
 
         session.undo()
@@ -286,7 +287,7 @@ final class BuildingSessionTests: XCTestCase {
         // The office runs from 22,996 to 25,044 across and 21,504 to 23,552
         // down: 1,580 × 2,048 units of cell (5, 5), which ends at 24,576.
         let covered: Int64 = (24_576 - (24_020 - 1_024)) * 2_048
-        XCTAssertEqual(quote.buyOut, Money(15_705_600 * covered / Land.cellArea))
+        XCTAssertEqual(quote.buyOut, Money(47_116_800 * covered / Land.cellArea))
         XCTAssertEqual(session.buildingOverlay?.boughtOut, [])
         XCTAssertEqual(session.buildingOverlay?.showsCityBuildingSites, false)
         XCTAssertEqual(session.buildingPreviewText?.contains("buying out the city's floor under it \(quote.buyOut.moneyText)"), true)
@@ -338,13 +339,13 @@ final class BuildingSessionTests: XCTestCase {
         // An office on the middle of the D4 home's cell buys it out (the
         // numbers of CompanyBuildingsClearingTests).
         session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
-        XCTAssertEqual(session.buildingPreviewText, "Building \(Money(24_576_000).moneyText) + land \(Money(4_096_000).moneyText), buying out 1 city building \(Money(302_592_000).moneyText)")
+        XCTAssertEqual(session.buildingPreviewText, "Building \(Money(73_728_000).moneyText) + land \(Money(12_288_000).moneyText), buying out 1 city building \(Money(907_776_000).moneyText)")
         let overlay = try XCTUnwrap(session.buildingOverlay)
         XCTAssertEqual(overlay.site, PlanRect(minX: 21_504, minY: 21_504, maxX: 23_552, maxY: 23_552))
         XCTAssertTrue(overlay.siteIsBuildable)
         XCTAssertEqual(overlay.boughtOut, [PlanRect(minX: 21_248, minY: 21_248, maxX: 23_808, maxY: 23_808)])
         XCTAssertTrue(session.confirmBuilding())
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built office block for \(Money(331_264_000).moneyText), pulling down 1 city building."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built office block for \(Money(993_792_000).moneyText), pulling down 1 city building."))
         XCTAssertNil(session.world.land.cell(row: 5, column: 5))
 
         // A site where it cannot stand says why, and cannot be built.
@@ -417,14 +418,14 @@ final class BuildingSessionTests: XCTestCase {
         session.selectTool(.network)
         session.tapNetwork(at: PlanPoint(x: 4_000, y: 10_000), reach: 0)
         session.tapNetwork(at: PlanPoint(x: 16_000, y: 10_000), reach: 0)
-        // 12,000 units of track, 1,200, and the house's demolition, 230,400.
+        // 12,000 units of track, 1,200, and the house's demolition, 691,200.
         let preview = try XCTUnwrap(session.networkPreview)
         XCTAssertEqual(preview.cleared, [house])
-        XCTAssertEqual(preview.cost, 231_600)
+        XCTAssertEqual(preview.cost, 692_400)
         XCTAssertEqual(session.networkOverlay?.cleared, [PlanRect(house)])
         session.buildNetworkTrack()
         XCTAssertEqual(session.message?.kind, .success)
-        XCTAssertTrue(session.message?.text.hasSuffix("for \(Money(231_600).moneyText), pulling down 1 of your buildings.") ?? false, session.message?.text ?? "")
+        XCTAssertTrue(session.message?.text.hasSuffix("for \(Money(692_400).moneyText), pulling down 1 of your buildings.") ?? false, session.message?.text ?? "")
         XCTAssertTrue(session.world.placedBuildings.isEmpty)
     }
 }
