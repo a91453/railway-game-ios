@@ -30,8 +30,9 @@ public enum SightMarks {
     }
 
     /// The sights of `marks` to show: each that overlaps none better rated
-    /// already shown.
-    public static func shown(_ marks: [Mark]) -> Set<AttractionID> {
+    /// already shown, the marks `width` by `height` (decision 510: a star
+    /// alone, ``MapClutter/starWidth``, from the middle zoom).
+    public static func shown(_ marks: [Mark], width: Double = SightMarks.width, height: Double = SightMarks.height) -> Set<AttractionID> {
         var kept: [Mark] = []
         for mark in marks.sorted(by: { $0.stars != $1.stars ? $0.stars > $1.stars : $0.id.rawValue < $1.id.rawValue })
         where kept.allSatisfy({ abs($0.x - mark.x) >= width || abs($0.y - mark.y) >= height }) {

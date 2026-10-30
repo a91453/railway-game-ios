@@ -966,14 +966,15 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     MapLockMarks(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
+                // Decision 174: the sights, with their stars. Decision 510:
+                // under the bubbles, so a bubble over a sight takes the tap.
+                .overlay(alignment: .topLeading) {
+                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
                         .ambientHidden(screen.ambient != nil)
-                }
-                // Decision 174: the sights, with their stars.
-                .overlay(alignment: .topLeading) {
-                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
                 // Decision 246: where the city's requests point.
                 .overlay(alignment: .topLeading) {
