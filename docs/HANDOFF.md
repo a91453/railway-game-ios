@@ -71,6 +71,8 @@
 
 > 乘客需求模型對照（派工單 DEM，研究，`claude/demand-model-research`）：[`research/DEMAND_MODEL_COMPARISON_2026-10-29.md`](research/DEMAND_MODEL_COMPARISON_2026-10-29.md)。用北捷 2025 各站進站與 2025-10 完整 OD 量過現行模型；建議方案 A（居民與工作分開給權重，GameCore 開關、升存檔），B（起訖距離衰減）排在 A 之後；轉運站（台北車站、板橋）轉乘點數上限另外量。實作都還沒派，順序見該文件 §6。
 
+> 截圖測試修好與截圖驗收（派工單 SHOTFIX，#1541，`claude/fix-screenshot-regressions`）：`WebsiteScreenshotTests` 的貨運、統計圖、路線兩層、收支組成四個測試在 run 41044755386 全綠（只跑這四個；整個 class 會超過「Take the screenshots」的 30 分鐘）。截圖驗收（決策 480、486、477）找到的三個問題沒有修，公測後由規劃派：(1) iPhone 橫拿經濟明細只有約 270 點高，支出甜甜圈的下半與它的圖例永遠不能同時看到，週支出那張上方看到的是收入的圖例；(2) 標題被截斷：「整個路網」頁的導覽列只剩「整個…」，貨運站面板標題只剩「西」；(3) 路線清單捲動後，固定的搜尋／篩選／排序列被導覽列切掉一半（chart-line-rows）。截圖在 run 41044755386 的 artifact `website-screenshots`（保留到 11/13）。`testFreight` 的車隊總覽仍然捲不動，留下 `debug-fleet`，沒有 `freight-train`。
+
 > 收支組成甜甜圈圖（派工單 DONUT，[決策 480](decisions/480.md)，#1474，`claude/finance-composition-donut`）：截圖驗收照作者 2026-10-29「截圖先暫停拍攝 明天要發前再做而且我自己也可以截圖」延到發版前。留下的：發版前在分支或 main 手動跑 `website-screenshots.yml`（`WebsiteScreenshotTests.testFinanceComposition` 拍日收入、日支出、選住票價、週支出四張；橫拿、深色、繁中），照 `docs/research/UI_UX_REVIEW_2026-10-28.md` §5 只看截圖答七題、每輪修最嚴重三個、最多三輪；淺色與 iPhone SE 寬沒有自動拍，要實機看。設計預覽在 `docs/art/finance-composition-2026-10-29/`，不要刪。
 
 ## 怎麼用這份
