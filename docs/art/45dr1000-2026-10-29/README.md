@@ -1,0 +1,55 @@
+# 45DR1000 / DRC1025 native static study
+
+Scope: the 2006–2008 stainless steel, yellow and orange appearance of DRC1025 in the two dated Commons photographs. The class is **45DR1000** and the car markings are **45DRC**. The reported 36 vehicles comprise DRC1001–1035 and the former DRC1036, now DSC1001. Japanese Nippon Sharyo prototypes DRC1001/1002 preceded Tang Eng assembly of later cars in 1998–99. A single motor car can run alone or in multiple; do not assume a permanently married set. The photographed 1025 is not the accessible every-third-number layout. This model excludes themed liveries, DSC1001 alteration and later fall guards.
+
+Published class envelope: 19.774 m long, 2.690 m wide, 3.890 m high. Bogie centres, wheel diameter, rooftop box positions and side window pitch are **photo estimates**. Wikipedia's article itself warns about weak sources; primary drawings have not been obtained. User attachments show matching DRC1025 but have no supplied provenance or reuse license and are kept out of repositories and outside services. Two independently fetched Commons originals were opened locally; see `sources.json` for authors, dates, licenses and SHA256. Photos are references only, and their pixels are not in the public overview or private model package.
+
+The recipe was first registered only in `Map3DModelPack.studies`. On 2026-10-30, with the owner's wish to merge #1530 with a vehicle swap, it also became the operating `dieselRailcar` set (see *Operating integration* below); GameCore, saves and fixtures are unchanged. Both cab ends, short body and window row are independently constructed; no G12 geometry or parts are called. The shape, paint and detail are original matte triangle-color geometry. Linux preview must not be read as Metal or user acceptance.
+
+Rebuild: `tools/train-models/run.sh OUT --ids 45dr1000-drc1025,45dr1000-drc1025-far` from the producer commit in the paired asset README. Then `node tools/train-models/package.mjs OUT`, `node tools/train-models/audit.mjs OUT`, `node tools/train-models/render.mjs OUT --time day`, `node tools/train-models/inspect.mjs OUT OUT/index.html`. Three-car display uses the generic assembly spec in `tools/45dr1000/formation.json`.
+
+Appearance review at fixed metre scale: two side doors, stainless corrugations, paired upper headlights, dark cab glass and central yellow gangway agree with the 2006 photo. The rear arrangement, exact roof ducts, underframe boxes and paint junction on the unseen end lack photographic proof. The user later said revision 3's side should be acceptable and requested another front adjustment; acceptance of the final revision-4 producer, operating integration and 45DR1000 iOS device behavior remain **UNVERIFIED**.
+
+## Fixed-camera visual comparison
+
+The local `comparison.png` juxtaposes the two licensed originals at left and the common renderer's 19.774 m front/side views at right. It remains outside both repositories because the photos are not required to rebuild the geometry. Clay, silhouette and coloured renders used the same camera, metre scale and day lighting. The reference photographs are oblique and cannot themselves be made same-camera orthographic observations.
+
+| Finding | Evidence |
+| --- | --- |
+| Matches | Narrow front relative to length; rounded roof shoulder; paired upper lamps; central yellow gangway; lower orange V; side orange waist and yellow upper stripe; two side doors and stainless lower ribs. |
+| Does not match fully | Real cab glazing corner radii and coupler hoses are finer than this matte low-poly study; the front orange cap and black/yellow pilot pattern remain simplified; roof grille and pipe detail is sparse. |
+| Insufficient data | Rear maker plate and any end-to-end asymmetry, precise roof pipe routes, exact underframe engine/generator housings, bogie centres, and the concealed side behind the station sign. |
+
+This comparison records the producer's self-review. The user accepted revision 2's front on 2026-10-30, then identified the side stripe for further review. The listed visual limitations and estimated fittings remain documented.
+
+## Revision 2 — front rebuilt after user feedback
+
+The user said revision 1's front was still far from the real car. That front is **not** an accepted appearance. Revision 1 producer `5ad973d5ee0a1eb5bc015e07065dc3e6119f7280` and private commit `b172056575c93814c7c4c548bba04d7a0d01a2a3` remain the actual before version; its PNGs remain in the private `revision-1/` folder. The new producer and file hashes are recorded in `revision-2/`.
+
+Against the 2006 DRC1025 three-quarter photograph, the replacement front changes the dark glazing from blue-grey square blocks into two wide black rounded cab fields, moves the round lamps inside their upper corners, extends the orange cab brow over the rounded roof shoulder, shapes the yellow gangway and its smaller dark window, puts the lower red markers on round pods, and gives the pilot sloped corners, yellow diagonals, a coupler and hoses. The near model also places a small car-number card in the photographed cab; the far model keeps a simple lamp and matching major colours. These are original native vertex-colour triangles and use no G12 part.
+
+The fixed front camera holds the metre scale and day light constant across revisions. The source is oblique rather than orthographic, so the comparison supports relative locations and colour areas, not exact millimetres. Remaining departures: the black gasket still lacks the real door depth and metal handles, the pilot and air hoses are deliberately sparse at game scale, and the exact unseen rear face and roof hardware are not proven. Producer self-review records these openly; the user accepted revision 2's front on 2026-10-30 before requesting a stripe check.
+
+The second front pass narrowed both black cab fields to restore the visible yellow outer margins, added solid angled corner cheeks from the 2.69 m sidewall to the end face, and split the pilot markings into two diagonal bars per side. The paired front render should be read alongside the oblique 2006 source, with the photo perspective and estimated fittings kept explicit. The final revision-2 producer is the true before version for the subsequent stripe change.
+
+## Revision 3 — orange side waist after stripe review
+
+After accepting the revision-2 front, the user asked whether a livery stripe was missing. The 2006 and 2008 DRC1025 originals show a **thin yellow line above the side windows** and a **much deeper orange band immediately below them**. Both existed in revision 2, but the orange band was only 0.10 m high, about one eighth of the model's window height; it read as an extra thin line in the fixed side render. The 2008 photograph shows a band roughly one quarter of the visible window height. This is a photo ratio, not a measured car dimension.
+
+Producer `5df2923973bbde1785ca3a74fd90fde13be313e8` makes the side orange shell band 0.18 m high, carries that height through the yellow end-bay overlay, and preserves the upper yellow stripe, front V and black/yellow pilot. It is delivered in private revision-3 commit `83364a3fc19a6e7311ec1a89b0dca30e2a2443a0`. Length, width, cab fields, doors, window pitch, bogies and operating mapping are unchanged. A side-strip probe rejects the actual revision-2 native output as too thin and rejects two stripe fault examples. Fixed-camera side and isometric renders were reviewed against the dated photographs; the corrected band is visibly broader, while exact paint boundaries remain estimates. The new producer's appearance acceptance is **UNVERIFIED**.
+
+## Revision 4 — front roof and fittings after user review
+
+The user said the revision-3 side should be acceptable and asked whether the front still needed work. Against the 2006 DRC1025 original, the front-facing rooftop cooler still appeared as a narrow rectangular cap; the real housing has visibly sloped shoulders. The earlier headlamps read as flat pale disks, the gangway header was flat, and the two orange lower cheek sills visible above the pilot were absent. The accepted side livery and side-body geometry are retained.
+
+Final output producer `533f9370598b0f5b101ebfafb37adf7cbd376959`, private revision-4 commit `645f40121fecfc7c29df2507206fd0e3f7012136`: the roof coolers now have broad bases and sloped sides, lamps have metal rings and dark lenses, the gangway has a raised curved header, and orange lower sills finish both cheeks above the pilot. The sloped cooler width and sill height are photo estimates, not drawing dimensions. Fixed-camera front, clay, silhouette and isometric views were checked against the dated oblique original; the source perspective cannot establish an exact orthographic contour. The car length, 2.690 m body width, windows, doors, bogies, yellow upper line and 0.18 m orange side waist remain. Decoded vertex comparison found identical side-body geometry (2,757 near / 741 far vertices) and identical side band vertex fields (1,296 near / 252 far) versus revision 3. Near/far are 3,604 / 1,536 triangles.
+
+The final producer passes the shared native/GLB audit and class-specific cab, roof and stripe checks with fourteen rejected faults; the previous front output fails the new checks. All seven final model/scene files were rebuilt byte-identically from a clean producer worktree. The local source/front-before/front-after comparison remains outside both repositories. User acceptance of revision 4 is **UNVERIFIED**; operating integration and 45DR1000 Metal/device behavior are also **UNVERIFIED**.
+
+## Operating integration (2026-10-30)
+
+The owner asked to merge #1530 and swap the vehicle in; that takes revision 4 as the appearance. `Map3DTrainSet.dr1000Railcar(far:)` replaces the generic SceneKit `multipleUnit("dieselRailcar", …)`: head, middle, tail and single car are all this recipe (each 45DR1000 is a self-contained railcar with a cab at each end), the tail turned round, the lamps at the train's ends lit by the existing `lit(_:front:)`; from 500 m out the set `dieselRailcarFar` uses the far recipe. Which trains get it is unchanged: the diesel branch lines (`Map3DRealTrains`, three cars), the showcase (two, at most three) and a player's diesel train of one or two cars (`set(forKey:count:)`); three or more player cars stay the DR3100 set. Cars are laid at their own 19.8 m.
+
+The far recipe's single 17.6 m side glass strip is now three coplanar panes cut at 7.0 m, so the saloon part lies outside the 2.8 m cab zone of `Map3DTrainLights.windowModel` and lights at night like the other far sets. Colours and outline are unchanged; far triangles 1,536 → 1,584; the `45dr1000-drc1025-far` study hash changes with it. `tools/45dr1000/verify.mjs` still passes. The standard pack gains 8 models (far cars and their window models) and 32,592 vertices (1.3 MB a copy). Appearance on Metal and devices is **UNVERIFIED**.
+
+`operating-overview.png`: the operating set from `tools/train-models` (day and night, Linux WebGL, not Metal): three near cars, three far cars, one car alone.

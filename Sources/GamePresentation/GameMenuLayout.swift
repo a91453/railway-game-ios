@@ -54,6 +54,36 @@ public struct GameMenuLayout: Equatable, Sendable {
     /// group shows three.
     public static let itemsInRow = 3
 
+    /// Decision 498 (UI_AUDIT B2): how the rows side by side show their
+    /// items.
+    public enum ItemStyle: Sendable {
+        /// An icon over its title (the system's medium items): where the
+        /// screen is tall enough, so Settings, Help and the tutorial are
+        /// read rather than guessed.
+        case titled
+        /// Icons alone (the compact group): on a phone on its side, where
+        /// titled rows put the last of the six out of reach.
+        case iconsOnly
+    }
+
+    /// Decision 498: titled items but at compact height (a phone on its
+    /// side), where the menu has some 330 points under the status bar and
+    /// the HUD and the titled rows need more (``height(itemStyle:)``).
+    public static func itemStyle(compactHeight: Bool) -> ItemStyle {
+        compactHeight ? .iconsOnly : .titled
+    }
+
+    /// The first level's height in points, near enough to tell where it
+    /// fits: a row of one item 44, a row side by side 48 with icons alone
+    /// and 72 with titles, 8 between two sections.
+    public func height(itemStyle: ItemStyle) -> Double {
+        let sideBySide: Set<Row> = [.shortcuts, .help, .settings]
+        let rows = sections.joined().reduce(0.0) { height, row in
+            height + (!sideBySide.contains(row) ? 44 : itemStyle == .titled ? 72 : 48)
+        }
+        return rows + Double(max(sections.count - 1, 0)) * 8
+    }
+
     /// The first level, section by section (a divider between two).
     public let sections: [[Row]]
     /// The shortcuts' row, in order.

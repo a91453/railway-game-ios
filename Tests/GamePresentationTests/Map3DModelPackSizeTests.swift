@@ -27,8 +27,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // generic coaches). Decision 496 added the Danhai, Ankeng and
         // Kaohsiung CAF and Citadis light rail sets, near and far (32
         // models with their windows' models, 679,008 vertices, 27.2 MB a copy).
-        XCTAssertEqual(pack.models.count, 645)
-        XCTAssertEqual(vertices, 4_244_796)
+        // #1530 made the DR1000 railcar the 45DR1000, near and far (8
+        // models with the far cars' windows' models, 32,592 vertices
+        // more, 1.3 MB a copy).
+        XCTAssertEqual(pack.models.count, 653)
+        XCTAssertEqual(vertices, 4_277_388)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

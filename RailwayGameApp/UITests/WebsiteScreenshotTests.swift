@@ -242,6 +242,27 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("build-tools-column-lesson", lesson)
     }
 
+    /// Building on the real-world demo, the panel open at the trailing
+    /// side: where people are, its legend down by the credits rather than
+    /// over the track being laid (TestFlight 98.1).
+    func testBuildingLegendUnderPanel() {
+        // UI tests leave where people are off unless asked (RailwayGameApp).
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["map.potentialLegend"].firstMatch.appears(within: 30), "Where people are shows")
+        settle(seconds: 4)
+        keep("build-legend-under-panel", app)
+    }
+
     /// New game → real world (decision 477): the whole of Taiwan first,
     /// above the places.
     func testRealWorldPicker() {
@@ -702,6 +723,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(card.appears(within: 60), "The lesson's card shows")
         settle(seconds: 3)
         keep("lesson-card", app)
+    }
+
+    /// The game menu on a phone on its side, its rows side by side icons
+    /// alone (decision 498), and the settings' Rules row, which says
+    /// where the rules are chosen.
+    func testGameMenuAndRules() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let settings = app.buttons["menu.settings"]
+        XCTAssertTrue(settings.appears(within: 30), "The menu opens")
+        settings.waitUntilSettled()
+        settle(seconds: 1)
+        keep("game-menu", app)
+
+        // Touched at its frame's middle, as SettingsUITests does: the
+        // menu's items have no activation point of their own.
+        let frame = settings.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.switches["settings.music"].appears(within: 10), "The settings open")
+        let rules = app.descendants(matching: .any)["settings.rules"].firstMatch
+        XCTAssertTrue(scrollScreen(to: rules, in: app), "The Rules row shows")
+        settle(seconds: 1)
+        keep("settings-rules", app)
     }
 
     private func launch(extra: [String] = []) -> XCUIApplication {

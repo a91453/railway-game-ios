@@ -629,6 +629,10 @@ struct ContentView: View {
                             }
                             ControlPanel(session: session, arrangement: .editsRow)
                         }
+                            // The whole row, the toggle with Undo and Redo:
+                            // the legend under a panel keeps clear of it.
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.editsFrame = $0 }
+                            .onDisappear { screen.editsFrame = .zero }
                             .padding(.leading, dockSize.width + ControlPanel.tileGap)
                             .padding(.bottom, strip + margin)
                             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { editsWidth = $0 }
@@ -1383,6 +1387,13 @@ final class GameScreenState {
     /// map measured them: on a phone's bottom row the station master
     /// stands past them (decision 226).
     var mapLeadingRowFrame: CGRect = .zero
+    /// Where Undo and Redo beside a phone's tools column, and the station
+    /// master's avatar with its title, stand on the screen (global
+    /// coordinates), `.zero` while they do not show: a layer's legend
+    /// under a phone's panel keeps above them
+    /// (``HUDMargins/legendFootUnderPanel``).
+    var editsFrame: CGRect = .zero
+    var stationMasterFrame: CGRect = .zero
     /// Decision 226: where the tools stand on the screen (global
     /// coordinates; the column down a phone's leading edge, or the dock),
     /// as the screen measured them; a finger drawing on the map compares
