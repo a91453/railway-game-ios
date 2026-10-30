@@ -509,7 +509,7 @@ final class TerrainPresentationTests: XCTestCase {
         placed.addNetworkPlatform()
         // Decision 510: the banner short, why and what to do in the panel.
         XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
-            Climbs 20‰: cannot be levelled here. The Network panel says what to do.
+            No platform built: the Network panel says what to do.
             """))
         XCTAssertTrue(placed.networkDraftText().hasSuffix("""
             climbs 20‰ and cannot be levelled: \(reason) Or lay a short stretch \

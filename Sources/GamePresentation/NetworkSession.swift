@@ -476,11 +476,12 @@ extension GameSession {
     /// stood in the middle of the map under the ✓ pill and over the
     /// layer's key, and said again what the tool's panel says): the
     /// banner's word when ✓ is tapped on a stretch that cannot be
-    /// levelled, short; why and what to do are in the panel
+    /// levelled, short and without "cannot be levelled", which the ✓ pill
+    /// and the panel already say; why and what to do are in the panel
     /// (``networkDraftText()``).
-    func platformGradeRefusalText(_ grade: Int64) -> String {
-        language.text("Climbs \(grade)‰: cannot be levelled here. The Network panel says what to do.",
-                      "坡度 \(grade)‰：這裡無法整平。做法見「路網」面板。")
+    var platformGradeRefusalText: String {
+        language.text("No platform built: the Network panel says what to do.",
+                      "月台沒有蓋：做法見「路網」面板。")
     }
 
     /// The ridership a managed company gives a new station at `point`: on
@@ -552,11 +553,11 @@ extension GameSession {
         // Decision 190: on a grade, the stretch is levelled first, in the
         // same edit; where it cannot be, say why (decision 164).
         var levelling: PlatformLevelling?
-        if let grade = networkPlatformGrade {
+        if networkPlatformGrade != nil {
             switch platformLevelling(of: stretch.edge, from: stretch.start, to: stretch.end, in: world) {
             case .success(let found): levelling = found
             case .failure:
-                message = StatusMessage(kind: .failure, text: platformGradeRefusalText(grade))
+                message = StatusMessage(kind: .failure, text: platformGradeRefusalText)
                 return
             }
         }
@@ -621,15 +622,15 @@ extension GameSession {
             if chosen == nil { built = outcome.station?.id }
         } catch {
             message = refusal(error, doing: .addPlatform(addition))
-            // GameCore's reason the levelling was refused, said with the
-            // grade it was to level; want of cash is said as above, for
-            // the levelling and the station together.
-            if message?.fundsNeeded == nil, let levelling, let grade {
+            // GameCore refused the levelling: said short, as above; want
+            // of cash is said as above, for the levelling and the station
+            // together.
+            if message?.fundsNeeded == nil, let levelling, grade != nil {
                 var probe = world
                 // Decision 510: short; the panel's preview, built on a copy
                 // the same way, says why and what to do.
                 do throws(GameError) { _ = try build(levelling, in: &probe) } catch {
-                    message = StatusMessage(kind: .failure, text: platformGradeRefusalText(grade))
+                    message = StatusMessage(kind: .failure, text: platformGradeRefusalText)
                 }
             }
             added = false
