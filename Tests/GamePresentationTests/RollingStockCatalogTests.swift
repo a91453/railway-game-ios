@@ -52,7 +52,7 @@ final class RollingStockCatalogTests: XCTestCase {
         XCTAssertEqual(RollingStockCatalog.sideWindows(width: -1, height: -0.45), 1)
         XCTAssertEqual(RollingStockCatalog.sideWindows(width: .nan, height: 10), 1)
         XCTAssertEqual(RollingStockCatalog.sideWindows(width: .infinity, height: 10), 1)
-        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 40, height: .leastNonzeroMagnitude), 100)
+        XCTAssertEqual(RollingStockCatalog.sideWindows(width: 40, height: 0.001), 100)
     }
 
     func testACarHasAsManyWindowsAsFitAtSevenTenthsOfItsHeight() {

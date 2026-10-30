@@ -5,9 +5,10 @@
 範圍：所有會讓 App 直接閃退的地方。卡住、凍結、很慢歸 BH9；在功能裡撞到的當機歸該功能的 BH（BH1–BH6）。
 
 **結論：沒有找到 P1**，也就是沒有玩家做得到的操作會閃退。
-- P2 一項，在 App 層，只讀程式。
-- P3 五項，都要手改的指令或存檔才走得到。
-- 這個 PR 沒有改遊戲程式。只加了：
+- P2 一項（P2-1，車型目錄），在 App 層，**這個 PR 已修**：規劃第 32 任判斷公測玩家碰得到，要求一起修。
+- P3 五項，都要手改的指令或存檔才走得到，只記下建議修法。
+- 這個 PR 改的：
+  - P2-1：算式抽成 `RollingStockCatalog.sideWindows`，加 Linux 測試，`RollingStockCatalogView` 改用它；
   - 一個平常跳過的模糊測試：`Tests/GamePresentationTests/CrashFuzzTests.swift`，設 `CRASH_FUZZ` 才跑；
   - 這份文件。
 
@@ -40,7 +41,7 @@
   - 最後存讀一次。
 - 每個指令送出前先寫一行到 stderr，所以當掉時最後一行就是兇手。
 
-**4. GameCore 的 property 與 differential campaign。** 21 個類別，`PROPERTY_STRESS=8`，即每個多 8 個種子。CI 的次數沒改。
+**4. GameCore 的 property 與 differential campaign。** 21 個類別，`PROPERTY_STRESS=2`，即每個多 2 個種子。CI 的次數沒改。
 
 **5. 時間跑很久。** `GameSim new-game --seed 3 then play --policy third-town --days 20 then advance --days 365`。
 
@@ -50,7 +51,7 @@
 
 ## 3. P2
 
-**P2-1　車型目錄的列車小圖在寬度 0 時 `Int(NaN)` 閃退**（App 層，只讀程式，UNVERIFIED）
+**P2-1　車型目錄的列車小圖在寬度 0 時 `Int(NaN)` 閃退**（App 層；已修，這個 PR）
 - **在哪裡**：`RailwayGameApp/Views/RollingStockCatalogView.swift:330–353`，`CatalogTrain`。
 - **怎麼壞**：
   - `width = (proxy.size.width − 2·(count−1)) / count`，`height = min(proxy.size.height − 6, width·0.45)`，接著 `Int(width / (height * 0.7))`。
@@ -59,11 +60,17 @@
   - 高度剛好 6 時會算出 ∞；但這一處有 `minHeight: 60`，走不到。
 - **怎麼走到**：路線面板 → 配車 → 車型目錄（`LinesPanel.swift:2259`），把節數調到 1（`shownCars` 可以是 `Train.minimumCars`）。SwiftUI 在 sheet 剛出現、旋轉、版面還沒定的那一次排版有時會給寬度 0。要剛好這樣才會發生，所以列 P2。
 - **重現**：Linux 跑不了 SwiftUI，沒有重現。
-- **建議修法**（一行，不改畫面）：
-  ```swift
-  let windows = width > 0 && height > 0 ? max(1, Int(width / (height * 0.7))) : 1
-  ```
-- **為什麼這個 PR 沒修**：改 App 會觸發 `ios-build.yml`，而派工單說這段時間不用 macOS runner。這屬 BH4 的範圍（列車選型）；BH4 的 session 已經停止，訊息送不到。
+- **修法（這個 PR）**：
+  - 窗數改由 GamePresentation 的 `RollingStockCatalog.sideWindows(width:height:)` 算：
+    - 寬或高不是有限數或 ≤ 0 時給 1 扇；
+    - 其他照舊：`max(1, Int(width / (height · 0.7)))`；
+    - 上限 100：高度極小時不會生出幾萬個窗格。
+  - `CatalogTrain` 改用它。同一個檔案沒有其他浮點轉整數的地方。
+  - 原本歸 BH4（列車選型）。BH4 已封存，規劃第 32 任把這處交給 BH8，並解除不用 macOS 的限制。
+- **測試**：`RollingStockCatalogTests.testACarWithNoSizeYetHasOneWindow`、`testACarHasAsManyWindowsAsFitAtSevenTenthsOfItsHeight`。
+  - Linux 綠，VERIFIED。
+  - 舊的算式寫在 SwiftUI 的 body 裡，Linux 編不到，所以沒有「在舊程式上紅」的測試；0/0 的 `Int(NaN)` 會 trap，是 Swift 的規則。
+  - App 在 iOS 上的編譯與畫面看 PR 的 `ios-build.yml`；實機 UNVERIFIED。
 - **五面向**：
   - 玩家：打開車型目錄時偶爾閃退，最傷信任；
   - 鐵道迷：無；
@@ -199,15 +206,20 @@
   - 參數放開時打到 P3-1 到 P3-4。
   - 把 `Int` 參數夾在 ±2⁴⁰（點擊不會更大）以後，40 個 case 中只剩 P3-4（班距仍用 Int64 極值）。其他沒有閃退，存讀也都回得來。
   - 另用 `two-towns` 打法跑 20 個 case（編號 100–119）× 300 個指令：一樣只打到 P3-4。
-- property campaign `PROPERTY_STRESS=8`：<<PROP>>
+- property campaign：21 個類別全綠，0 個 trap。
+  - 原本用 `PROPERTY_STRESS=8`，一個類別要 17 分以上，改成 `PROPERTY_STRESS=2`（每個類別多 2 個種子）。
+  - 每類 2–19 分。
 - 長時間：`third-town` 打法玩 20 天，再讓時間跑 365 天，到第 385 天。
   - 結果：沒有閃退、溢位或 trap。
   - 錢：餘額從 300 萬到 9,440 萬。
   - 最後一天的狀態：兩列車都在跑，沒有死結。
   - 玩的那 20 天中，第 19 天有一次死結自己解開了。這屬卡住，歸 BH2 或 BH9，不在這份的範圍。
 
+- `RollingStockCatalogTests`（含 P2-1 的兩個新測試）：綠。
+
 **UNVERIFIED**
-- App 層與 3D 是只讀程式，要 macOS／實機確認，包括 P2-1。
+- App 層與 3D 是只讀程式，要 macOS／實機確認。
+- P2-1 的 App 改動：iOS 編譯看 PR 的 CI，實機沒看。
 
 **怎麼再跑**
 ```sh
