@@ -1,7 +1,7 @@
 {
   "asset": {
-    "status": "UNVERIFIED",
-    "evidence": "Final technical package pending; exact opposite-side equipment, primary dimensions, end-number correspondence and complete fault coverage not yet established."
+    "status": "VERIFIED",
+    "evidence": "Linux Swift 6.4 WAE, native readback, topology, R200 actual fault probes, independent native/GLB bytes, Blender import, decoded transparent PNGs, HTTP inspector rotation/zoom/download byte checks. file:// navigation UNVERIFIED: blocked by browser administration. Engineering/source gaps remain; this is technical study validation only."
   },
   "appearance": {
     "status": "UNVERIFIED",
