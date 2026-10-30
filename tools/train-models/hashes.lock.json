@@ -2106,35 +2106,35 @@
       "triangles" : 11850
     },
     "set-dieselExpress-car" : {
-      "hash" : "7ab97602e1254f9f",
+      "hash" : "52a47ca23e600754",
       "triangles" : 3604
     },
     "set-dieselExpress-head" : {
-      "hash" : "8a49569d5b186bc4",
+      "hash" : "c0e917f7e35c2a67",
       "triangles" : 3604
     },
     "set-dieselExpress-tail" : {
-      "hash" : "60a1c092c47b58b9",
+      "hash" : "ec24ca910e27d6",
       "triangles" : 3604
     },
     "set-dieselExpress-single" : {
-      "hash" : "bc1f9decf0cb3fee",
+      "hash" : "4b88b491f19a9739",
       "triangles" : 3604
     },
     "set-dieselExpressFar-car" : {
-      "hash" : "9666919b96315786",
+      "hash" : "61bb86ff0b28de2d",
       "triangles" : 1584
     },
     "set-dieselExpressFar-head" : {
-      "hash" : "6237cc20380aac56",
+      "hash" : "b411f6412ead145",
       "triangles" : 1584
     },
     "set-dieselExpressFar-single" : {
-      "hash" : "9b0d719ac178f00a",
+      "hash" : "4c26239edf88f621",
       "triangles" : 1584
     },
     "set-dieselExpressFar-tail" : {
-      "hash" : "79895abcc8bfbf8c",
+      "hash" : "7cae652d4424a8ff",
       "triangles" : 1584
     },
     "set-dieselRailcar-car" : {

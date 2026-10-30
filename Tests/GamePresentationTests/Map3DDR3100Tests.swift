@@ -29,7 +29,7 @@ final class Map3DDR3100Tests: XCTestCase {
             XCTAssertEqual(dr3100.vertices.map { [$0.x, $0.y, $0.z] }, dr1000.vertices.map { [$0.x, $0.y, $0.z] }, "the same shape")
             XCTAssertNotEqual(dr3100.vertices.map(\.color), dr1000.vertices.map(\.color), "its own paint")
             let colours = Set(dr3100.vertices.map(\.color))
-            XCTAssertTrue(colours.contains(Map3DColor.rgb(0xBFC8C9)) && colours.contains(Map3DColor.rgb(0xE89A27)))
+            XCTAssertTrue(colours.contains(Map3DColor.rgb(0xAEB0AD)) && colours.contains(Map3DColor.rgb(0xE0653F)) && colours.contains(Map3DColor.rgb(0xE6B324)))
             XCTAssertFalse(colours.contains(Map3D45DR1000.orange), "none of the DR1000's orange")
         }
     }

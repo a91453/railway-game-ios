@@ -27,12 +27,13 @@ public enum Map3D45DR1000 {
         public static let dr1000 = Livery(silver: Map3D45DR1000.silver, orange: Map3D45DR1000.orange, topBand: Map3D45DR1000.yellow,
                                           yellow: Map3D45DR1000.yellow, name: "45dr1000-drc1025")
         /// Decision 511: the DR3100 diesel express on this shape until it
-        /// has its own: the reference's `dr3100` specification (silver
-        /// `BFC8C9` body, `E89A27` accent, yellow gangway end), one orange
-        /// waist stripe and no stripe under the roof; the yellow of its
-        /// model's `yellow` group.
-        public static let dr3100 = Livery(silver: Map3DColor.rgb(0xBFC8C9), orange: Map3DColor.rgb(0xE89A27),
-                                          topBand: Map3DColor.rgb(0xBFC8C9), yellow: Map3DColor.rgb(0xECC147), name: "dr3100-on-45dr1000")
+        /// has its own, in the colours of two photographs of DR3120 the
+        /// author gave (2026-10-30, KASHIWA Train Collection): the stainless
+        /// body, the red-orange band under the windows that runs on as the
+        /// ends' brow and V, a thin yellow line along the windows' top and
+        /// the yellow face, each the median of its colour in both.
+        public static let dr3100 = Livery(silver: Map3DColor.rgb(0xAEB0AD), orange: Map3DColor.rgb(0xE0653F),
+                                          topBand: Map3DColor.rgb(0xE6B324), yellow: Map3DColor.rgb(0xE6B324), name: "dr3100-on-45dr1000")
     }
 
     public static func model(far: Bool = false, livery: Livery = .dr1000) -> Map3DModelPack.Model {
