@@ -275,12 +275,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         let build = app.buttons["dock.build"]
         XCTAssertTrue(build.appears(within: 10))
         build.tap()
-        let platformMode = app.segmentedControls.buttons["月台"].firstMatch
+        let platformMode = app.segmentedControls.buttons["車站"].firstMatch
         if !platformMode.appears(within: 10) {
             let controls = app.buttons["controls.toggle"]
             if controls.appears(within: 5), controls.label == "展開控制項" { controls.tap() }
         }
         XCTAssertTrue(platformMode.becomesHittable(within: 10))
+        settle()
+        keep("station-mode-bar", app)
         platformMode.tap()
         // The station's place, as the map reports it.
         let readout = app.descendants(matching: .any)["map.stations"].firstMatch
@@ -300,6 +302,22 @@ final class WebsiteScreenshotTests: XCTestCase {
         layout.tap()
         settle()
         keep("station-layout-menu", app)
+    }
+
+    /// Decision 507: the tutorial's step that names the network tool's
+    /// Station mode, its card beside the modes.
+    func testTutorialStationStep() {
+        let app = launch(extra: ["-tutorial-step", "station.mode"])
+        defer { app.terminate() }
+        let card = app.descendants(matching: .any)["tutorial.card"].firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        if !card.appears(within: 60), folded.exists { folded.tap() }
+        XCTAssertTrue(card.appears(within: 10), "The tutorial's card shows")
+        let mode = app.segmentedControls.buttons["車站"].firstMatch
+        if !mode.appears(within: 10), app.buttons["dock.build"].exists { app.buttons["dock.build"].tap() }
+        XCTAssertTrue(mode.appears(within: 10), "The Station mode shows")
+        settle(seconds: 3)
+        keep("tutorial-station-step", app)
     }
 
     /// New game → real world (decision 477): the whole of Taiwan first,

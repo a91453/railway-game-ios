@@ -533,7 +533,7 @@ extension GameSession {
         -> Result<(addition: PlayerCommand.PlatformAddition, middle: PlanPoint, chosen: Station?, grade: Int64?), PlatformRefusal>
     {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
-            return .failure(PlatformRefusal(text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")))
+            return .failure(PlatformRefusal(text: language.text("Tap the track where the station goes.", "請點選要蓋車站的軌道。")))
         }
         // Decision 190: on a grade, the stretch is levelled first, in the
         // same edit; where it cannot be, say why (decision 164).
@@ -971,7 +971,7 @@ extension GameSession {
             return parts.joined(separator: " · ")
         case .platform:
             guard let stretch = networkPlatformStretch else {
-                return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")
+                return language.text("Tap the track where the station goes.", "請點選要蓋車站的軌道。")
             }
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
             // Author's report, 2026-10-14: no track numbers or units.

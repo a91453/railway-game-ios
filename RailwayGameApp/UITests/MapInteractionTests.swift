@@ -1005,7 +1005,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(build.appears(within: 5))
         build.tap()
 
-        let platform = app.buttons["Platform"]
+        let platform = app.segmentedControls.buttons["Station"].firstMatch
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             XCTAssertTrue(controls.appears(within: 5))

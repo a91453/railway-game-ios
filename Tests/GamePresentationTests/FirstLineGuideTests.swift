@@ -122,7 +122,7 @@ final class FirstLineGuideTests: XCTestCase {
         let track = try world(stations: 0)
         XCTAssertEqual(hint(track).target, .buildEntry)
         XCTAssertEqual(hint(track, tool: .network).target, .networkModes)
-        XCTAssertEqual(hint(track, tool: .network).text(in: .traditionalChinese), "點「月台」，再點軌道上要蓋車站的地方。")
+        XCTAssertEqual(hint(track, tool: .network).text(in: .traditionalChinese), "點「車站」，再點軌道上要蓋車站的地方。")
         XCTAssertNil(hint(track, tool: .network, mode: .platform).target)
         XCTAssertNotEqual(hint(track, tool: .network, mode: .platform),
                           hint(try world(stations: 1), tool: .network, mode: .platform), "the second station is its own step")

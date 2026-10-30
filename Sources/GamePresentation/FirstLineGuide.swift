@@ -183,8 +183,8 @@ public enum FirstLineGuide {
             }
             if networkMode != .platform {
                 return Hint(target: .networkModes, symbol: nil,
-                            english: "Tap Platform, then tap your track where the station goes.",
-                            chinese: "點「月台」，再點軌道上要蓋車站的地方。")
+                            english: "Tap Station, then tap your track where the station goes.",
+                            chinese: "點「車站」，再點軌道上要蓋車站的地方。")
             }
             return world.stations.isEmpty
                 ? Hint(target: nil, symbol: nil,

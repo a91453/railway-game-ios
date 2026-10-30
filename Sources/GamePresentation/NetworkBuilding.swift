@@ -25,7 +25,8 @@ public enum NetworkAnchor: Hashable, Sendable {
 public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
     /// Taps pick the two ends of a new stretch of track.
     case build
-    /// A tap picks a place on an edge for a station's platform.
+    /// A tap picks a place on an edge for a station, built with its
+    /// platforms and tracks in the layout picked (decision 507).
     case platform
     /// A tap picks an edge to remove.
     case remove
@@ -39,7 +40,7 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
     public func title(in language: DisplayLanguage) -> String {
         switch self {
         case .build: language.text("Lay", "鋪設")
-        case .platform: language.text("Platform", "月台")
+        case .platform: language.text("Station", "車站")
         case .remove: language.text("Remove", "拆除")
         case .passingLoop: language.text("Loop", "待避")
         case .depot: language.text("Depot", "機廠")
