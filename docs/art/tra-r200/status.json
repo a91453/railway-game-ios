@@ -1,7 +1,7 @@
 {
   "asset": {
-    "status": "UNVERIFIED",
-    "evidence": "Revision 2 geometry, native/GLB audit, fault probes and Blender passed locally; final producer reconstruction and delivered viewer still pending. R1 technical evidence applies only to 65464b23."
+    "status": "VERIFIED",
+    "evidence": "R2 Linux Swift6.4 WAE and 10 tests; native readback/topology/fault probes, Blender, transparent PNG decoding, HTTP viewer/download checks. Independent b04a6d56 checkout rebuilt native/GLB and 62 rendered/selected PNGs plus public comparison identically. Final package metadata/viewer receive a separate reconstruction check. file:// remains UNVERIFIED: browser administration blocks navigation. Source/engineering gaps remain."
   },
   "appearance": {
     "status": "UNVERIFIED",
