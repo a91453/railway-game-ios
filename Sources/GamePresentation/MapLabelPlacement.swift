@@ -131,6 +131,36 @@ public enum MapLabelPlacement {
         }
     }
 
+    /// A placed bubble's box, from its bottom middle (``placeBubbles``).
+    public static func bubbleBox(_ bubble: Bubble, at point: ScreenPoint) -> Box {
+        Box(x: point.x - bubble.width / 2, y: point.y - bubble.height, width: bubble.width, height: bubble.height)
+    }
+
+    /// Where a placed bubble takes a touch: its box, at least 44 by 28,
+    /// touched over 44 high round its middle (``MapAlertBubbles``'
+    /// `TouchTargetButtonStyle`).
+    public static func bubbleTouchBox(_ bubble: Bubble, at point: ScreenPoint) -> Box {
+        let box = bubbleBox(bubble, at: point)
+        let width = max(box.maxX - box.minX, 44), height = max(box.maxY - box.minY, 44)
+        return Box(x: point.x - width / 2, y: (box.minY + box.maxY - height) / 2, width: width, height: height)
+    }
+
+    // MARK: - The selected station's tag (decisions 119 and 501)
+
+    /// Where the tag of the station at `point` goes, `width` by `height`,
+    /// inside `clear`: under the station's mark and name, or over them
+    /// where there is no room below.
+    public static func stationTag(at point: ScreenPoint, width: Double, height: Double, clear: Box, avoiding bubbles: [Box]) -> Box {
+        let clearance = 34.0
+        let x = min(max(point.x - width / 2, clear.minX), max(clear.minX, clear.maxX - width))
+        var y = point.y + clearance
+        if y + height > clear.maxY {
+            y = point.y - clearance - height
+        }
+        y = min(max(y, clear.minY), max(clear.minY, clear.maxY - height))
+        return Box(x: x, y: y, width: width, height: height)
+    }
+
     // MARK: - Fares (decision 256)
 
     /// The places tried for a fare of `width` by `height` at a station:

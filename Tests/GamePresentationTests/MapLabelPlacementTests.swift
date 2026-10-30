@@ -55,6 +55,27 @@ final class MapLabelPlacementTests: XCTestCase {
         }
     }
 
+    /// Decision 501: a bubble tapped selects its station, whose tag (over
+    /// the bubbles in the map's layers) stayed under the station after the
+    /// panel closed. Where the bubble had gone under the name, the tag lay
+    /// on it and took every later tap (97.1 on an iPad: only the first tap
+    /// went to the materials).
+    func testASelectedStationsTagLeavesEveryBubbleUncovered() {
+        let bubbles = cross.dropFirst().map { MapLabelPlacement.Bubble(x: $0.x, y: $0.y, text: "缺建材", hasReason: false) }
+        let points = MapLabelPlacement.placeBubbles(bubbles, stations: cross, lift: Self.lift, radius: Self.radius)
+        let touch = zip(bubbles, points).map { MapLabelPlacement.bubbleTouchBox($0, at: $1) }
+        let clear = Box(x: 8, y: 8, width: 784, height: 584)
+        for station in cross {
+            let tag = MapLabelPlacement.stationTag(at: ScreenPoint(x: station.x, y: station.y), width: 150, height: 44,
+                                                   clear: clear, avoiding: touch)
+            for box in touch {
+                XCTAssertFalse(overlaps(tag, box), "\(station.name)'s tag at \(tag) covers a bubble at \(box)")
+            }
+            XCTAssertFalse(overlaps(tag, MapLabelPlacement.markBox(of: station, radius: Self.radius)), "\(station.name)'s tag covers its mark")
+            XCTAssertFalse(overlaps(tag, MapLabelPlacement.nameBox(of: station, radius: Self.radius)), "\(station.name)'s tag covers its name")
+        }
+    }
+
     func testABubbleWithRoomStaysOverItsStation() {
         let alone = [MapLabelPlacement.Station(x: 200, y: 200, name: "臺北")]
         let bubble = MapLabelPlacement.Bubble(x: 200, y: 200, text: "Crowded", hasReason: false)
