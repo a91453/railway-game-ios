@@ -134,6 +134,11 @@ public struct Map3DModelPack: Sendable {
                 for reversed in [false, true] { models.append(Map3DEMU800.model(role, reversed: reversed, far: far)) }
             }
         }
+        for fleet in Map3DTourismEMU500.Fleet.allCases {
+            for far in [false,true] {
+                models += Map3DTourismEMU500.order.map { Map3DTourismEMU500.model(fleet,$0,far:far) }
+            }
+        }
         models += Map3DEMU500.Unit.allCases.map { Map3DEMU500.model($0) }
         models.append(Map3DEMU500.formation())
         models += Map3DC341.Unit.allCases.map { Map3DC341.model($0) }

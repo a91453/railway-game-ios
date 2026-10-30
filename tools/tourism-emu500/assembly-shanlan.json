@@ -1,0 +1,86 @@
+{
+  "assemblies": [
+    {
+      "id": "shanlan-emu500-formation",
+      "placements": [
+        {
+          "unit": "shanlan-emu500-emc",
+          "translation": [
+            30.495,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "shanlan-emu500-ep",
+          "translation": [
+            10.165,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "shanlan-emu500-et",
+          "translation": [
+            -10.165,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "shanlan-emu500-em",
+          "translation": [
+            -30.495,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    },
+    {
+      "id": "shanlan-emu500-formation-far",
+      "placements": [
+        {
+          "unit": "shanlan-emu500-emc-far",
+          "translation": [
+            30.495,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "shanlan-emu500-ep-far",
+          "translation": [
+            10.165,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "shanlan-emu500-et-far",
+          "translation": [
+            -10.165,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "shanlan-emu500-em-far",
+          "translation": [
+            -30.495,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    }
+  ]
+}
