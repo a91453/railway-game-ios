@@ -49,9 +49,9 @@ final class SubsidiarySessionTests: XCTestCase {
         let lines = text.split(separator: "\n").map(String.init)
         XCTAssertEqual(lines.count, 6)
         XCTAssertTrue(lines[0].hasPrefix("Department store #2 · "), lines[0])
-        XCTAssertEqual(lines[1], "This month: sales $ 0, costs $ 0, profit $ 0")
-        XCTAssertEqual(lines[2], "Last month: sales $ 0, costs $ 0, profit $ 0")
-        XCTAssertEqual(lines[3], "Since opening: profit $ 0")
+        XCTAssertEqual(lines[1], "This month: sales \(Money(0).moneyText), costs \(Money(0).moneyText), profit \(Money(0).moneyText)")
+        XCTAssertEqual(lines[2], "Last month: sales \(Money(0).moneyText), costs \(Money(0).moneyText), profit \(Money(0).moneyText)")
+        XCTAssertEqual(lines[3], "Since opening: profit \(Money(0).moneyText)")
         XCTAssertEqual(lines[4], "12-month return 0.0% of its cost")
         XCTAssertTrue(lines[5].hasPrefix("Would sell for $ "), lines[5])
         // Nothing changed in the world.
@@ -91,9 +91,9 @@ final class SubsidiarySessionTests: XCTestCase {
         let session = GameSession(world: world, language: .traditionalChinese)
         session.tapMap(at: PlanPoint(x: 10_000, y: 10_000), reach: 400)
         let lines = try XCTUnwrap(session.selectionText()).split(separator: "\n").map(String.init)
-        XCTAssertEqual(lines[1], "本月：營收 $ 2,000、成本 $ 1,000、損益 $ 1,000")
-        XCTAssertEqual(lines[2], "上月：營收 $ 10,000、成本 $ 4,000、損益 $ 6,000")
-        XCTAssertEqual(lines[3], "開業以來：損益 $ 7,000")
+        XCTAssertEqual(lines[1], "本月：營收 \(Money(200_000).moneyText)、成本 \(Money(100_000).moneyText)、損益 \(Money(100_000).moneyText)")
+        XCTAssertEqual(lines[2], "上月：營收 \(Money(1_000_000).moneyText)、成本 \(Money(400_000).moneyText)、損益 \(Money(600_000).moneyText)")
+        XCTAssertEqual(lines[3], "開業以來：損益 \(Money(700_000).moneyText)")
         // 7,000 dollars over what it cost.
         let cost = store.cost.amount
         let tenths = 700_000 * 1_000 / cost
@@ -127,7 +127,7 @@ final class SubsidiarySessionTests: XCTestCase {
         session.selectTool(.building)
         session.buildingMode = .sell
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 10_000, y: 10_000), reach: 400))
-        XCTAssertTrue(session.salePreviewLines.contains("Business: 6 × its profit of the last 12 months = $ 48,000,000"), "\(session.salePreviewLines)")
-        XCTAssertTrue(session.salePreviewLines.contains("Price $ 48,000,000 · on the books at $ " + (session.salePreview?.quote.bookValue.moneyText.dropFirst(2) ?? "")))
+        XCTAssertTrue(session.salePreviewLines.contains("Business: 6 × its profit of the last 12 months = \(Money(4_800_000_000).moneyText)"), "\(session.salePreviewLines)")
+        XCTAssertTrue(session.salePreviewLines.contains("Price \(Money(4_800_000_000).moneyText) · on the books at " + (session.salePreview?.quote.bookValue.moneyText ?? "")))
     }
 }

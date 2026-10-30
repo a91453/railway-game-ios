@@ -66,7 +66,7 @@ public struct ChartSpec: Hashable, Sendable {
         let whole = Int64(value.rounded())
         switch axis {
         case .money: return Money(whole * 100).moneyText
-        case .people: return language.text("\(Money(whole).displayText) people", "\(Money(whole).displayText) 人")
+        case .people: return language.text("\(whole.groupedText) people", "\(whole.groupedText) 人")
         case .percent: return "\(whole)%"
         }
     }

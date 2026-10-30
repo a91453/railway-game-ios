@@ -37,12 +37,12 @@ final class BuildingSaleSessionTests: XCTestCase {
         XCTAssertEqual(session.salePreview?.quote.price, 243_200)
         XCTAssertEqual(session.salePreviewLines, [
             "House #1 · 0 of 11 people (0%)",
-            "Land: 95% of its right now $ 2,560 = $ 2,432",
-            "Building: book value $ 20,480 × 0% (under half full) = $ 0",
-            "Price $ 2,432 · on the books at $ 23,040",
-            "Realized loss $ 20,608",
+            "Land: 95% of its right now \(Money(256_000).moneyText) = \(Money(243_200).moneyText)",
+            "Building: book value \(Money(2_048_000).moneyText) × 0% (under half full) = \(Money(0).moneyText)",
+            "Price \(Money(243_200).moneyText) · on the books at \(Money(2_304_000).moneyText)",
+            "Realized loss \(Money(2_060_800).moneyText)",
         ])
-        XCTAssertEqual(session.saleGainText, "Realized loss $ 20,608")
+        XCTAssertEqual(session.saleGainText, "Realized loss \(Money(2_060_800).moneyText)")
         // The map marks the building chosen.
         XCTAssertEqual(session.buildingOverlay?.site, PlanRect(session.world.placedBuildings[0]))
         XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, true)
@@ -56,7 +56,7 @@ final class BuildingSaleSessionTests: XCTestCase {
         session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 0)
         let before = session.world
         XCTAssertTrue(session.confirmSale())
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sold house #1 to the city for $ 2,432. Realized loss $ 20,608."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sold house #1 to the city for \(Money(243_200).moneyText). Realized loss \(Money(2_060_800).moneyText)."))
         XCTAssertNil(session.saleCandidate, "sold: nothing is chosen")
         XCTAssertTrue(session.world.placedBuildings.isEmpty)
         XCTAssertEqual(session.world.economy.balance, before.economy.balance + 243_200)
@@ -88,9 +88,9 @@ final class BuildingSaleSessionTests: XCTestCase {
         session.buildingMode = .sell
         session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 0)
         XCTAssertEqual(session.salePreviewLines.first, "小住宅 #1 · 入住 0 / 11 人（0%）")
-        XCTAssertEqual(session.salePreviewLines[1], "土地：目前的土地使用權 $ 2,560 × 95% = $ 2,432")
+        XCTAssertEqual(session.salePreviewLines[1], "土地：目前的土地使用權 \(Money(256_000).moneyText) × 95% = \(Money(243_200).moneyText)")
         XCTAssertTrue(session.confirmSale())
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "小住宅 #1 賣給城市，收入 $ 2,432。已實現損失 $ 20,608。"))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "小住宅 #1 賣給城市，收入 \(Money(243_200).moneyText)。已實現損失 \(Money(2_060_800).moneyText)。"))
 
         let free = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .english)
         free.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000))

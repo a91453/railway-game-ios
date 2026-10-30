@@ -75,12 +75,12 @@ final class TodayAccountTests: XCTestCase {
         XCTAssertEqual(today.title(in: .english), "Today, to 09:00")
         XCTAssertEqual(today.title(in: .traditionalChinese), "今天（截至 09:00）")
         XCTAssertEqual(today.rows(in: .english).map(\.title), ["Fares", "Running costs", "Result"])
-        XCTAssertEqual(today.rows(in: .english).map(\.value), ["$ 1,234", "-$ 1,500", "-$ 266"])
+        XCTAssertEqual(today.rows(in: .english).map(\.value), ["\(Money(123_400).moneyText)", "\(Money(-150_000).signedText)", "\(Money(-26_600).signedText)"])
         XCTAssertEqual(today.rows(in: .traditionalChinese).map(\.title), ["票收", "營運成本", "結果"])
         XCTAssertEqual(today.note(in: .traditionalChinese), "每個整點入帳。人事、電費與其他每天的費用在午夜支付。")
 
         let gain = TodayAccount(throughHour: 18, fareRevenue: Money(500_000), runningCost: Money(120_000))
-        XCTAssertEqual(gain.rows(in: .english).last?.value, "+$ 3,800")
+        XCTAssertEqual(gain.rows(in: .english).last?.value, "\(Money(380_000).signedText)")
         XCTAssertEqual(gain.title(in: .english), "Today, to 18:00")
     }
 

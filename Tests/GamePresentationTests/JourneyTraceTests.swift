@@ -91,7 +91,7 @@ final class JourneyTraceTests: XCTestCase {
             XCTAssertEqual(arc.outbound, pair.outbound)
             XCTAssertEqual(arc.inbound, pair.inbound)
         }
-        let names = trace.arcs.map { "\(world.station(id: $0.station)!.name) \(Money($0.trips).displayText)" }
+        let names = trace.arcs.map { "\(world.station(id: $0.station)!.name) \($0.trips.groupedText)" }
         XCTAssertEqual(trace.summary(in: world, language: .english), "Busiest trips: \(names.joined(separator: ", ")) a day")
         XCTAssertEqual(trace.summary(in: world, language: .traditionalChinese), "最多人往返：\(names.joined(separator: "、"))（每天）")
         XCTAssertNil(world.journeyTrace(of: delta).summary(in: world, language: .english))
@@ -127,7 +127,7 @@ final class JourneyTraceTests: XCTestCase {
         let first = try XCTUnwrap(trace.arcs.first)
         let name = { (id: StationID) in world.station(id: id)!.name }
         XCTAssertTrue(trace.summary(in: world, language: .english)?.hasPrefix(
-            "Busiest trips: \(name(first.from))–\(name(first.station)) \(Money(first.trips).displayText)"
+            "Busiest trips: \(name(first.from))–\(name(first.station)) \(first.trips.groupedText)"
         ) == true, trace.summary(in: world, language: .english) ?? "")
         XCTAssertNil(world.journeyTrace(ofLine: LineID(rawValue: 99)))
     }

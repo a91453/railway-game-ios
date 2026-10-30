@@ -2235,7 +2235,7 @@ enum MapArt {
             }
             guard !placement.isFull else { continue }
             let countText = context.resolve(
-                Text(verbatim: Money(entry.waiting).displayText)
+                Text(verbatim: entry.waiting.groupedText)
                     .font(.system(size: fontSize, weight: .bold))
                     .foregroundStyle(Palette.ink)
             )

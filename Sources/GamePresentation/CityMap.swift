@@ -376,7 +376,7 @@ public struct CityCellInfo: Hashable, Sendable {
             } else {
                 lines.append(language.text(useName.0, useName.1))
             }
-            let residents = Money(residents).displayText, jobs = Money(jobs).displayText
+            let residents = residents.groupedText, jobs = jobs.groupedText
             lines.append(language.text("Residents \(residents) · Jobs \(jobs)", "居民 \(residents) 人 · 就業 \(jobs) 個"))
         } else {
             lines.append(language.text("Empty land", "空地"))

@@ -240,9 +240,9 @@ final class TrainRosterTests: XCTestCase {
                                     fare: Money(210_000), state: .late(minutes: 6), isEmptyRun: false)
         XCTAssertTrue(late.isLate)
         XCTAssertEqual(late.lateText, "+6")
-        XCTAssertEqual(late.detailText(in: .english), "No. 4 · $2.1k")
-        XCTAssertEqual(late.detailText(in: .traditionalChinese), "第 4 趟 · $2.1k")
-        XCTAssertEqual(late.spokenText(in: .english), "Taipei → Hsinchu，01:00–01:20，6 min late，$2.1k")
+        XCTAssertEqual(late.detailText(in: .english), "No. 4 · \(TrainRoster.shortMoney(Money(210_000)))")
+        XCTAssertEqual(late.detailText(in: .traditionalChinese), "第 4 趟 · \(TrainRoster.shortMoney(Money(210_000)))")
+        XCTAssertEqual(late.spokenText(in: .english), "Taipei → Hsinchu，01:00–01:20，6 min late，\(TrainRoster.shortMoney(Money(210_000)))")
         let running = TrainRoster.Cell(number: 5, from: "A", to: "B", start: 0, end: 60, fare: .zero, state: .running(lateMinutes: 0), isEmptyRun: false)
         XCTAssertFalse(running.isLate)
         XCTAssertNil(running.lateText)
@@ -251,12 +251,12 @@ final class TrainRosterTests: XCTestCase {
     }
 
     func testShortMoney() {
-        XCTAssertEqual(TrainRoster.shortMoney(Money(85_000)), "$850")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(540_000)), "$5.4k")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(999_960_00)), "$1.0M")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(12_345_600)), "$123k")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(120_000_000)), "$1.2M")
-        XCTAssertEqual(TrainRoster.shortMoney(.zero), "$0")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(85_000)), "\(Money.currencySymbol)850")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(540_000)), "\(Money.currencySymbol)5.4k")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(999_960_00)), "\(Money.currencySymbol)1.0M")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(12_345_600)), "\(Money.currencySymbol)123k")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(120_000_000)), "\(Money.currencySymbol)1.2M")
+        XCTAssertEqual(TrainRoster.shortMoney(.zero), "\(Money.currencySymbol)0")
     }
 
     /// On an iPhone held sideways, many trains take the short rows.

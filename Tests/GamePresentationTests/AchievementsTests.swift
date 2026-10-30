@@ -252,7 +252,7 @@ extension AchievementsTests {
         facts.bestSubsidiaryProfit = Money(40_000_000)
         XCTAssertTrue(try XCTUnwrap(Achievement.named("firstSubsidiary")).isMet(by: facts))
         XCTAssertFalse(try XCTUnwrap(Achievement.named("allBusinesses")).isMet(by: facts))
-        XCTAssertEqual(try XCTUnwrap(Achievement.named("businessProfit")).progressText(of: facts), "$ 400,000 / $ 1,000,000")
+        XCTAssertEqual(try XCTUnwrap(Achievement.named("businessProfit")).progressText(of: facts), "\(Money(40_000_000).moneyText) / \(Money(100_000_000).moneyText)")
     }
 
     /// Review J: "In Business" and "Group" name a department store, a
@@ -298,7 +298,7 @@ extension AchievementsTests {
         XCTAssertTrue(try XCTUnwrap(Achievement.named("mixedFleet")).isMet(by: facts))
         facts.hasRollingStockEconomics = false
         XCTAssertFalse(try XCTUnwrap(Achievement.named("longTrain")).isMet(by: facts))
-        XCTAssertEqual(try XCTUnwrap(Achievement.named("fleetInvestment")).progressText(of: facts), "$ 1,200,000 / $ 5,000,000")
+        XCTAssertEqual(try XCTUnwrap(Achievement.named("fleetInvestment")).progressText(of: facts), "\(Money(120_000_000).moneyText) / \(Money(500_000_000).moneyText)")
         let mixed = try XCTUnwrap(Achievement.named("mixedFleet"))
         XCTAssertTrue(mixed.isListed(for: nil), "the start screen lists every one")
         XCTAssertFalse(mixed.isListed(for: facts))

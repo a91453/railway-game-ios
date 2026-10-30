@@ -50,8 +50,8 @@ public struct TodayAccount: Equatable, Sendable {
         guard hasSettledHours else { return [] }
         return [
             (language.text("Fares", "票收"), fareRevenue.moneyText),
-            (language.text("Running costs", "營運成本"), LedgerEntry.signedMoneyText(Money(-runningCost.amount))),
-            (language.text("Result", "結果"), LedgerEntry.signedMoneyText(result)),
+            (language.text("Running costs", "營運成本"), Money(-runningCost.amount).signedText),
+            (language.text("Result", "結果"), result.signedText),
         ]
     }
 

@@ -31,9 +31,9 @@ final class StationRoadTests: XCTestCase {
         let offer = try XCTUnwrap(world.stationRoadOffer(of: station.id, in: .english))
         XCTAssertTrue(offer.canBuild)
         XCTAssertEqual(offer.quote, quote)
-        XCTAssertEqual(offer.text, "Build Station Road · \(Money(quote.metres).displayText) m · \(quote.price.moneyText)")
+        XCTAssertEqual(offer.text, "Build Station Road · \(quote.metres.groupedText) m · \(quote.price.moneyText)")
         XCTAssertEqual(world.stationRoadOffer(of: station.id, in: .traditionalChinese)?.text,
-                       "鋪站前路 · \(Money(quote.metres).displayText) 公尺 · \(quote.price.moneyText)")
+                       "鋪站前路 · \(quote.metres.groupedText) 公尺 · \(quote.price.moneyText)")
         let balance = world.economy.balance
         try world.buildStationRoad(at: station.id)
         XCTAssertEqual(world.economy.balance, balance - quote.price)

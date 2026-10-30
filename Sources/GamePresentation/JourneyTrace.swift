@@ -128,7 +128,7 @@ public struct JourneyTrace: Hashable, Sendable {
 
     /// An arc's trips, as written on it: "1,200".
     public static func tripsText(_ arc: Arc) -> String {
-        Money(arc.trips).displayText
+        arc.trips.groupedText
     }
 
     /// What the trace says to VoiceOver: "Busiest trips: Beta 2,000, Gamma

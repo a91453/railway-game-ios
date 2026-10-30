@@ -242,14 +242,14 @@ public struct BusRoutePreview: Hashable, Sendable {
         }
         if riders > 0 {
             lines.append(language.text(
-                "Its stops reach up to \(Money(riders).displayText) trips a day, about \(minutes) min door to station",
-                "站牌一帶每天最多 \(Money(riders).displayText) 人次，門口到車站約 \(minutes) 分"
+                "Its stops reach up to \(riders.groupedText) trips a day, about \(minutes) min door to station",
+                "站牌一帶每天最多 \(riders.groupedText) 人次，門口到車站約 \(minutes) 分"
             ))
         }
         if localTrips > 0 {
             lines.append(language.text(
-                "About \(Money(localTrips).displayText) trips a day between its stops, about \(localMinutes) min door to door",
-                "站牌之間每天約 \(Money(localTrips).displayText) 人次，門口到門口約 \(localMinutes) 分"
+                "About \(localTrips.groupedText) trips a day between its stops, about \(localMinutes) min door to door",
+                "站牌之間每天約 \(localTrips.groupedText) 人次，門口到門口約 \(localMinutes) 分"
             ))
         }
         if riders == 0, localTrips == 0, headway != nil, draft.city {
@@ -607,8 +607,8 @@ extension GameWorld {
         if let last = route.days.last {
             let net = last.fares - last.cost
             day = language.text(
-                "Last day: \(Money(last.riders).displayText) riders · fares \(last.fares.moneyText) · cost \(last.cost.moneyText) · \(net.moneyText)",
-                "前一天：\(Money(last.riders).displayText) 人搭 · 票收 \(last.fares.moneyText) · 成本 \(last.cost.moneyText) · \(net.moneyText)"
+                "Last day: \(last.riders.groupedText) riders · fares \(last.fares.moneyText) · cost \(last.cost.moneyText) · \(net.moneyText)",
+                "前一天：\(last.riders.groupedText) 人搭 · 票收 \(last.fares.moneyText) · 成本 \(last.cost.moneyText) · \(net.moneyText)"
             )
         } else {
             day = language.text("No whole day run yet.", "還沒跑滿一天。")

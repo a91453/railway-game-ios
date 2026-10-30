@@ -199,7 +199,7 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         guard let (now, need) = progress(of: facts) else { return nil }
         if id == "businessProfit" || id == "fleetInvestment" { return "\(Money(now).moneyText) / \(Money(need).moneyText)" }
         if id == "fiveStars" { return "\(now / 100).\(now % 100 / 10) / 5.0 ★" }
-        guard isLength else { return "\(Money(now).displayText) / \(Money(need).displayText)" }
+        guard isLength else { return "\(now.groupedText) / \(need.groupedText)" }
         func km(_ metres: Int64) -> String { WorldBounds.kilometresText(metres * WorldCoordinate.unitsPerMetre) }
         return "\(km(now)) / \(km(need)) km"
     }
@@ -210,6 +210,11 @@ public struct Achievement: Identifiable, Hashable, Sendable {
     }
 
     // MARK: - The list
+
+    /// What a business must have made since it opened for "Paying Business".
+    private static let businessProfit = Money(100_000_000)
+    /// What the fleet must have cost for "Rolling Stock Investor".
+    private static let fleetInvestment = Money(500_000_000)
 
     /// A mark reached when a count passes `need`.
     private static func count(
@@ -369,9 +374,9 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         count("allBusinesses", need: 3,
               ("Group", "Run a department store, a hotel and an amusement park", "One of each kind; hotels need an attraction or an intercity station nearby."),
               ("企業集團", "百貨公司、飯店、遊樂園各一間", "三種各一間；飯店要靠景點或城際車站的旅客。")) { Int64($0.subsidiaryKinds) },
-        count("businessProfit", need: 100_000_000,
-              ("Paying Business", "A business that has made $1,000,000 since it opened", "Build beside a busy station before the district grows."),
-              ("生意興隆", "一間事業開業以來賺進 $1,000,000", "趁地區還沒發展，在熱鬧的車站旁先蓋。")) { $0.bestSubsidiaryProfit.amount },
+        count("businessProfit", need: businessProfit.amount,
+              ("Paying Business", "A business that has made \(businessProfit.wholeText) since it opened", "Build beside a busy station before the district grows."),
+              ("生意興隆", "一間事業開業以來賺進 \(businessProfit.wholeText)", "趁地區還沒發展，在熱鬧的車站旁先蓋。")) { $0.bestSubsidiaryProfit.amount },
         // Decision 180: trains priced by type.
         count("mixedFleet", need: 3,
               ("Mixed Fleet", "Trains of three types", "Choose a type for each line: light rail for short hops, faster trains between towns."),
@@ -379,9 +384,9 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         count("longTrain", need: 10,
               ("Long Train", "A train of 10 cars or more", "Add cars to the trains of a crowded line, or reform the whole line at once."),
               ("長編組", "一列 10 節以上的列車", "擁擠的路線加長編組，或整條線一起改編組。")) { Int64($0.longestTrainCars) },
-        count("fleetInvestment", need: 500_000_000,
-              ("Rolling Stock Investor", "Spend $5,000,000 on trains", "What the fleet cost, conversions included; selling a train takes it off."),
-              ("車隊投資", "車隊的購置成本達 $5,000,000", "列車與車廂的購置與改裝成本；賣掉的列車不算。")) { $0.rollingStockCost.amount },
+        count("fleetInvestment", need: fleetInvestment.amount,
+              ("Rolling Stock Investor", "Spend \(fleetInvestment.wholeText) on trains", "What the fleet cost, conversions included; selling a train takes it off."),
+              ("車隊投資", "車隊的購置成本達 \(fleetInvestment.wholeText)", "列車與車廂的購置與改裝成本；賣掉的列車不算。")) { $0.rollingStockCost.amount },
     ]
 
     public static func named(_ id: String) -> Achievement? {

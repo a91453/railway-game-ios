@@ -47,7 +47,7 @@ final class FareAndLoanPreviewTests: XCTestCase {
         )
         XCTAssertEqual(bands.text(in: .traditionalChinese), "需求：偏低，短程約是一般票價時乘客的 102%，最遠的 70%（現在 70%）。")
         XCTAssertFalse(bands.isWarning, "more riders than now")
-        XCTAssertEqual(FareDemandHint.usualFareText(75, in: .traditionalChinese), "這座城市的一般票價：$ 0.75。")
+        XCTAssertEqual(FareDemandHint.usualFareText(75, in: .traditionalChinese), "這座城市的一般票價：\(Money(75).centsText)。")
     }
 
     @MainActor
@@ -75,13 +75,13 @@ final class FareAndLoanPreviewTests: XCTestCase {
         XCTAssertEqual(preview.yearInterest, Money(1_400 * 360))
         XCTAssertNil(preview.recentDailyResult, "no full day yet")
         XCTAssertNil(preview.resultText(in: .english))
-        XCTAssertEqual(preview.paymentText(in: .english), "Borrowing $ 100,000 adds $ 14 of interest each day, paid at midnight.")
-        XCTAssertEqual(preview.paymentText(in: .traditionalChinese), "借入 $ 100,000：每天多付利息 $ 14，午夜支付。")
+        XCTAssertEqual(preview.paymentText(in: .english), "Borrowing \(Money(10_000_000).moneyText) adds \(Money(1_400).moneyText) of interest each day, paid at midnight.")
+        XCTAssertEqual(preview.paymentText(in: .traditionalChinese), "借入 \(Money(10_000_000).moneyText)：每天多付利息 \(Money(1_400).moneyText)，午夜支付。")
         XCTAssertEqual(
             preview.totalText(in: .english),
-            "Kept a month, $ 420 of interest in all; kept a year, $ 5,040, and $ 105,040 with the loan repaid. Repay it whenever you like."
+            "Kept a month, \(Money(42_000).moneyText) of interest in all; kept a year, \(Money(504_000).moneyText), and \(Money(10_504_000).moneyText) with the loan repaid. Repay it whenever you like."
         )
-        XCTAssertEqual(preview.totalText(in: .traditionalChinese), "借一個月共付利息 $ 420；借一年共付 $ 5,040，連本金共 $ 105,040。本金隨時可以還。")
+        XCTAssertEqual(preview.totalText(in: .traditionalChinese), "借一個月共付利息 \(Money(42_000).moneyText)；借一年共付 \(Money(504_000).moneyText)，連本金共 \(Money(10_504_000).moneyText)。本金隨時可以還。")
 
         // The step is what it adds to the interest on what is owed.
         session.borrowLoanStep()

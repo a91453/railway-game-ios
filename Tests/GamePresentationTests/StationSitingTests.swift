@@ -91,9 +91,9 @@ final class StationSitingTests: XCTestCase {
     /// connection, and the station says so as it opens.
     func testAStationByTheEdgeSaysItIsAnOutsideConnection() throws {
         for (language, caption, ending) in [
-            (DisplayLanguage.english, "Within 800 m: 1,200 residents · 300 jobs\nOutside connection: +$ 5 a trip",
-             " Outside connection: travellers from beyond the map's edge ride from here, paying $ 5 more a trip."),
-            (.traditionalChinese, "800 公尺內：居民 1,200 · 工作 300\n外地連絡站：每趟多收 $ 5", "外地連絡站：地圖外的旅客由這裡進出，每趟多付 $ 5。"),
+            (DisplayLanguage.english, "Within 800 m: 1,200 residents · 300 jobs\nOutside connection: \(Money(500).signedText) a trip",
+             " Outside connection: travellers from beyond the map's edge ride from here, paying \(Money(500).moneyText) more a trip."),
+            (.traditionalChinese, "800 公尺內：居民 1,200 · 工作 300\n外地連絡站：每趟多收 \(Money(500).moneyText)", "外地連絡站：地圖外的旅客由這裡進出，每趟多付 \(Money(500).moneyText)。"),
         ] {
             let session = try makeSession(language: language, outsideConnections: true)
             session.selectTool(.network)

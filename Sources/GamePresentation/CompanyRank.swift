@@ -102,7 +102,7 @@ public enum RankMeasure: String, CaseIterable, Hashable, Sendable {
     /// "58%".
     public func valueText(_ value: Int64) -> String {
         switch self {
-        case .bestDay, .stations, .servedPeople: Money(value).displayText
+        case .bestDay, .stations, .servedPeople: value.groupedText
         case .network: "\(WorldBounds.kilometresText(value * WorldCoordinate.unitsPerMetre)) km"
         case .netWorth: Money(value).moneyText
         case .operatingRatio, .punctuality: "\((value + 5) / 10)%"
@@ -401,7 +401,7 @@ extension UnservedCluster {
     /// station, said from the nearest open station: "About 12,300 people
     /// 4.2 km northeast of Riverside"; without a station, its people only.
     public func suggestionText(in world: GameWorld, language: DisplayLanguage) -> String {
-        let people = Money(people).displayText
+        let people = people.groupedText
         let nearest = world.stations.filter { $0.operationMode != .closed }.min { a, b in
             func squared(_ point: PlanPoint) -> Int64 {
                 let dx = point.x - center.x, dy = point.y - center.y

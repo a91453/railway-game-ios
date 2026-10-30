@@ -716,7 +716,7 @@ public struct PlayReport: Hashable, Sendable {
             "| --- | --- | --: | --- | --: | --- |",
         ]
         for row in rows {
-            let cash = row.cash.map { $0.map { "$\($0 / 100)" } ?? "—" }.joined(separator: " / ")
+            let cash = row.cash.map { $0.map { "\(Money.currencySymbol)\($0 / 100)" } ?? "—" }.joined(separator: " / ")
             let held = row.held.map { "\($0.minutes) (\($0.episodes))" } ?? "— (PLAY_BY_MINUTE=1)"
             let anomalies = row.anomalies.isEmpty ? "none" : row.anomalies.map { "\($0.kind.rawValue) \($0.day)" }.joined(separator: ", ")
             lines.append("| \(row.label) | \(cash) | \(row.lastDayTrips) | \(held) | \(row.deadlocked) of \(row.trains) | \(anomalies) |")

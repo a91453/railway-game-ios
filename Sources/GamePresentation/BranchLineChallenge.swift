@@ -229,8 +229,8 @@ extension BranchLineChallenge {
         silverDays: JijiTargets.silverDays,
         deadlineDays: JijiTargets.deadlineDays,
         welcome: (
-            "The Jiji Line is ours to lay again: from Ershui up the valley to Checheng. Reach Jiji, then Shuili, then Checheng, carry \(Money(JijiTargets.riders).displayText) riders a day and make a year's net profit of \(JijiTargets.profit.moneyText). Turn on Trace real in Network to follow the old line. The first months are lean: a long line is dear to run until the towns along it grow, so start with one short train.",
-            "集集線交給我們重新鋪：從二水沿著山谷到車埕。先到集集、再到水里、最後到車埕，每日運量達到 \(Money(JijiTargets.riders).displayText) 人次、一年淨利 \(JijiTargets.profit.moneyText)。在「路網」打開「沿真實鐵路」就能沿著舊線鋪。頭幾個月最辛苦：沿線城鎮長大之前，長路線的營運很花錢，先用一列短短的列車撐過去。"
+            "The Jiji Line is ours to lay again: from Ershui up the valley to Checheng. Reach Jiji, then Shuili, then Checheng, carry \(JijiTargets.riders.groupedText) riders a day and make a year's net profit of \(JijiTargets.profit.moneyText). Turn on Trace real in Network to follow the old line. The first months are lean: a long line is dear to run until the towns along it grow, so start with one short train.",
+            "集集線交給我們重新鋪：從二水沿著山谷到車埕。先到集集、再到水里、最後到車埕，每日運量達到 \(JijiTargets.riders.groupedText) 人次、一年淨利 \(JijiTargets.profit.moneyText)。在「路網」打開「沿真實鐵路」就能沿著舊線鋪。頭幾個月最辛苦：沿線城鎮長大之前，長路線的營運很花錢，先用一列短短的列車撐過去。"
         ),
         card: (
             "Milestones: Jiji, Shuili, Checheng · sights: Jiji Station, Checheng",

@@ -31,7 +31,7 @@ extension GameWorld {
         var parts: [String] = []
         for stop in line.stops where seen.insert(stop).inserted {
             guard let station = station(id: stop) else { continue }
-            parts.append("\(station.name) \(Money(stationDemand(of: stop)?.hinterland ?? 0).displayText)")
+            parts.append("\(station.name) \((stationDemand(of: stop)?.hinterland ?? 0).groupedText)")
         }
         let radius = HighSpeed.hinterlandRadius / WorldCoordinate.unitsPerMetre / 1_000
         let list = parts.joined(separator: " · ")

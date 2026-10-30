@@ -53,12 +53,12 @@ final class StatusBarWidthsTests: XCTestCase {
     /// room with an eighth digit.
     func testTheCashKeepsRoomForSevenDigitsAndAMinus() {
         let small = StatusBarWidths.moneyText(Money(0))
-        XCTAssertEqual(small, "$ -8,888,888")
+        XCTAssertEqual(small, "\(Money(-888_888_800).moneyText)")
         for dollars: Int64 in [0, 5, -1_428, 120_000, -9_999_999, 9_999_999] {
             XCTAssertEqual(StatusBarWidths.moneyText(Money(dollars * 100)), small)
             XCTAssertTrue(small.count >= Money(dollars * 100).moneyText.count)
         }
-        XCTAssertEqual(StatusBarWidths.moneyText(Money(12_345_678 * 100)), "$ -88,888,888")
+        XCTAssertEqual(StatusBarWidths.moneyText(Money(12_345_678 * 100)), "\(Money(-8_888_888_800).moneyText)")
         XCTAssertEqual(StatusBarWidths.moneyText(Money(Int64.max)).filter(\.isNumber).count, Money(Int64.max).moneyText.filter(\.isNumber).count)
     }
 

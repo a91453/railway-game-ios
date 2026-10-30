@@ -446,8 +446,8 @@ extension GameError {
         case .invalidStationDemand:
             // Money's text is only the digits, grouped by thousands.
             language.text(
-                "A station starts 0 to \(Money(StationDemand.maximumDailyTrips).displayText) trips a day.",
-                "車站每天的出發旅次是 0 到 \(Money(StationDemand.maximumDailyTrips).displayText)。"
+                "A station starts 0 to \(StationDemand.maximumDailyTrips.groupedText) trips a day.",
+                "車站每天的出發旅次是 0 到 \(StationDemand.maximumDailyTrips.groupedText)。"
             )
         case .invalidModeShift:
             language.text(
@@ -537,8 +537,8 @@ extension GameError {
             language.text("Buy a tile next to one you own.", "只能買和已擁有區塊相鄰的一塊。")
         case .mapExpansionLocked(let riders):
             language.text(
-                "Carry \(Money(riders).displayText) riders in a day to buy one more tile.",
-                "要有一天的運量達到 \(Money(riders).displayText) 人次，才能再買一塊。"
+                "Carry \(riders.groupedText) riders in a day to buy one more tile.",
+                "要有一天的運量達到 \(riders.groupedText) 人次，才能再買一塊。"
             )
         case .tourismNotEnabled:
             language.text("This game has no tourism.", "這局遊戲沒有觀光。")
@@ -627,21 +627,23 @@ extension GameError {
             )
         case .invalidLand:
             language.text(
-                "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",
-                "每格土地須在世界範圍內、只列一次，居民與就業各 0 到 \(Money(Land.maximumPerCell).displayText)，且不能都是 0。"
+                "Each cell of land must lie in the world, appear once, and hold 0 to \(Land.maximumPerCell.groupedText) residents and jobs, not both 0.",
+                "每格土地須在世界範圍內、只列一次，居民與就業各 0 到 \(Land.maximumPerCell.groupedText)，且不能都是 0。"
             )
         }
     }
 }
 
-extension Money {
-    /// The amount with thousands separators, such as "1,000,000".
+extension FixedWidthInteger {
+    /// The number with thousands separators, such as "1,000,000": counts
+    /// of riders, residents, trips and the like. Money is written by
+    /// ``Money/moneyText`` and its kin, which use this for their digits.
     ///
     /// Deterministic rather than locale-dependent, so it reads the same in
     /// every message and test.
-    public var displayText: String {
-        let digits = String(amount.magnitude)
-        var text = amount < 0 ? "-" : ""
+    public var groupedText: String {
+        let digits = String(magnitude)
+        var text = self < 0 ? "-" : ""
         for (index, digit) in digits.enumerated() {
             if index > 0, (digits.count - index) % 3 == 0 {
                 text.append(",")

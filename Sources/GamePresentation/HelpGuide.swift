@@ -356,8 +356,8 @@ public enum HelpGuide {
             "difficulty", .money,
             question: ("What do the difficulty levels change?", "難度會改變什麼？"),
             answer: (
-                "Easy starts with $5,000,000 and no holidays or weather; Standard with $3,000,000 and light ones; Expert with $1,500,000 and all of them in full. Open New Game options on the start screen to change each rule separately, and to type a map seed to share a map.",
-                "輕鬆從 $5,000,000 開始，沒有假日與天氣影響；標準 $3,000,000，影響較輕；達人 $1,500,000，影響完整。在開始畫面的「新遊戲選項」可以分別調整每條規則，也能輸入地圖種子來分享地圖。"
+                "Easy starts with \(NewGameOptions.Difficulty.easy.startingBalance.wholeText) and no holidays or weather; Standard with \(NewGameOptions.Difficulty.standard.startingBalance.wholeText) and light ones; Expert with \(NewGameOptions.Difficulty.expert.startingBalance.wholeText) and all of them in full. Open New Game options on the start screen to change each rule separately, and to type a map seed to share a map.",
+                "輕鬆從 \(NewGameOptions.Difficulty.easy.startingBalance.wholeText) 開始，沒有假日與天氣影響；標準 \(NewGameOptions.Difficulty.standard.startingBalance.wholeText)，影響較輕；達人 \(NewGameOptions.Difficulty.expert.startingBalance.wholeText)，影響完整。在開始畫面的「新遊戲選項」可以分別調整每條規則，也能輸入地圖種子來分享地圖。"
             ),
             keywords: "easy standard expert seed 輕鬆 標準 達人 種子 起始資金"
         ),
