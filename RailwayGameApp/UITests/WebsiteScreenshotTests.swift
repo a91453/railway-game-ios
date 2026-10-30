@@ -211,6 +211,28 @@ final class WebsiteScreenshotTests: XCTestCase {
         real.buttons["tool.network"].waitUntilSettled()
         settle()
         keep("build-tools-column-real-world", real)
+        real.terminate()
+
+        // Lesson 1's tools, which fit: where they stand when nothing scrolls.
+        let lesson = launch()
+        defer { lesson.terminate() }
+        let lessons = lesson.buttons["start.lessons"]
+        XCTAssertTrue(lessons.appears(within: 15), "The start screen shows Lessons")
+        lessons.waitUntilSettled()
+        lessons.tap()
+        let first = lesson.buttons["lesson.1.start"]
+        if !first.appears(within: 5), lessons.exists {
+            lessons.waitUntilSettled()
+            lessons.tap()
+        }
+        XCTAssertTrue(first.appears(within: 10), "Lesson 1 is listed")
+        XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start can be tapped")
+        first.tap()
+        XCTAssertTrue(lesson.descendants(matching: .any)["tutorial.card"].firstMatch.appears(within: 60), "The lesson's card shows")
+        lesson.buttons["dock.build"].tap()
+        lesson.buttons["tool.select"].waitUntilSettled()
+        settle()
+        keep("build-tools-column-lesson", lesson)
     }
 
     /// New game → real world (decision 477): the whole of Taiwan first,
