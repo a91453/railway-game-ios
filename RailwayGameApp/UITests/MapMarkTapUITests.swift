@@ -79,7 +79,10 @@ final class MapMarkTapUITests: XCTestCase {
 
     /// An alert's bubble (decision 121), tapped on its middle: a station
     /// short of building materials opens its station's panel (decision
-    /// 184), as every bubble of this scene is.
+    /// 184), as every bubble of this scene is. Decision 501: and again
+    /// after the panel is closed. The station stays selected, and its tag,
+    /// drawn over the bubbles, lay on the middle station's bubble under its
+    /// name: every later tap opened the tag (97.1 on an iPad).
     func testAnAlertsBubbleTakesATapOnItsMiddle() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -91,57 +94,33 @@ final class MapMarkTapUITests: XCTestCase {
         // an iPhone while the scene was being built (run 39841822269).
         let alerts = app.buttons.matching(identifier: "map.alert")
         XCTAssertTrue(alerts.firstMatch.appears(within: 150), "The stations short of materials show")
-        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
-        XCTAssertNotNil(alert, "A bubble is on screen")
-        alert?.tap()
+        let first = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(first, "A bubble is on screen")
+        guard let first else { return }
+        let middle = CGPoint(x: first.frame.midX, y: first.frame.midY)
         // Decision 477: at the freight group, whose first row says what
         // the town is short of (it was last in the panel, a long scroll
-        // down).
+        // down). The panel scrolls again once it has slid in, which a slow
+        // runner takes seconds to do (``StationPanel/settleJump``).
         let materials = app.descendants(matching: .any).matching(identifier: "station.materials").firstMatch
-        XCTAssertTrue(materials.appears(within: 10), "A tap on the bubble's middle opens its station at its materials")
-        XCTAssertTrue(materials.becomesHittable(within: 5), "The materials row is scrolled into view")
-    }
-
-    /// Diagnosis (decision 501): the same bubble tapped again after the
-    /// panel is closed.
-    func testAnAlertsBubbleTakesASecondTap() {
-        continueAfterFailure = true
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-screenshot-scene", "freight",
-                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        defer { app.terminate() }
-        let alerts = app.buttons.matching(identifier: "map.alert")
-        XCTAssertTrue(alerts.firstMatch.appears(within: 150), "The stations short of materials show")
-        guard let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable) else { return XCTFail("no bubble") }
-        let frame = alert.frame
-        print("BUBBLE-DIAG first bubble \(alert.label) at \(frame)")
-        alert.tap()
-        let materials = app.descendants(matching: .any).matching(identifier: "station.materials").firstMatch
-        print("BUBBLE-DIAG first materials appear \(materials.appears(within: 10)) hittable \(materials.becomesHittable(within: 15))")
-        keep(app, "after first tap")
-        let done = app.buttons["Done"].firstMatch
-        XCTAssertTrue(done.appears(within: 5))
-        done.tap()
-        XCTAssertTrue(materials.disappears(within: 10), "the panel closes")
-        keep(app, "after done")
-        let tag = app.descendants(matching: .any)["map.stationTag"].firstMatch
-        print("BUBBLE-DIAG tag exists \(tag.appears(within: 3)) frame \(tag.exists ? tag.frame : .zero)")
-        let again = alerts.allElementsBoundByIndex.min { a, b in
-            hypot(a.frame.midX - frame.midX, a.frame.midY - frame.midY) < hypot(b.frame.midX - frame.midX, b.frame.midY - frame.midY)
+        let done = app.buttons["station.done"]
+        for tap in ["first", "second"] {
+            // The bubble nearest where the first one was, by its middle,
+            // as a finger goes back to it.
+            let bubble = alerts.allElementsBoundByIndex.min { a, b in
+                hypot(a.frame.midX - middle.x, a.frame.midY - middle.y) < hypot(b.frame.midX - middle.x, b.frame.midY - middle.y)
+            }
+            XCTAssertNotNil(bubble, "The bubble is still on the map for the \(tap) tap")
+            guard let bubble else { return }
+            XCTAssertTrue(bubble.becomesHittable(within: 5), "The bubble takes the \(tap) tap")
+            // Where the finger lands, not the element: a tag over the
+            // bubble takes a coordinate's tap, as it took the player's.
+            bubble.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            XCTAssertTrue(materials.appears(within: 10), "The \(tap) tap on the bubble's middle opens its station at its materials")
+            XCTAssertTrue(materials.becomesHittable(within: 15), "The materials row is scrolled into view after the \(tap) tap")
+            XCTAssertTrue(done.appears(within: 5))
+            done.tap()
+            XCTAssertTrue(materials.disappears(within: 10), "The station's panel closes")
         }
-        print("BUBBLE-DIAG second bubble \(again?.label ?? "none") at \(again?.frame ?? .zero) hittable \(again?.isHittable ?? false)")
-        again?.tap()
-        keep(app, "after second tap")
-        print("BUBBLE-DIAG second materials appear \(materials.appears(within: 10)) hittable \(materials.becomesHittable(within: 15))")
-        keep(app, "after second wait")
-        XCTAssertTrue(materials.isHittable, "The second tap opens it at its materials too")
-    }
-
-    private func keep(_ app: XCUIApplication, _ name: String) {
-        let shot = XCTAttachment(screenshot: app.screenshot())
-        shot.name = name
-        shot.lifetime = .keepAlways
-        add(shot)
     }
 }
