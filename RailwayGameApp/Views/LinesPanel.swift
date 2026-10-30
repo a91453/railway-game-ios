@@ -120,16 +120,13 @@ struct LinesPanel: View {
                         // pinned above it, the network's switches, Advanced,
                         // a new line and the lines for sale as rows over
                         // it; a line's own settings on its own page.
-                        entriesSection
-                        if showsNewLine {
-                            draftSection
+                        // Decision 486: on a short panel, the controls in
+                        // one row over the lines that scrolls away with
+                        // them; decision 498: the lines there before the
+                        // other rows, so opening the panel shows some.
+                        ForEach(controlsStyle.parts, id: \.self) { part in
+                            listPart(part)
                         }
-                        // Decision 486: on a short panel, one row over
-                        // the lines that scrolls away with them.
-                        if controlsStyle == .inline {
-                            inlineControlsSection
-                        }
-                        listedLines
                     } else {
                         // Decision 100: a new line first, where the panel beside
                         // the map (decision 106) shows it while stations are
@@ -160,6 +157,9 @@ struct LinesPanel: View {
                 .hardTopScrollEdge()
                 // Decision 486: a short panel's rows take more of its width.
                 .contentMargins(.horizontal, listsLinesFirst && controlsStyle == .inline ? 8 : nil, for: .scrollContent)
+                // Decision 498: and less room between its sections, so the
+                // first lines show under the controls' row.
+                .listSectionSpacing(listsLinesFirst && controlsStyle == .inline ? .compact : .default)
                 // Decision 481: what finds and orders the lines stays at the
                 // top while the list scrolls under it; decision 486: not on
                 // a short panel, where it left one line in view.
@@ -351,6 +351,20 @@ struct LinesPanel: View {
         session.linesPanelListsLinesFirst
     }
 
+    /// Decision 498: one part of the list while the lines come first.
+    @ViewBuilder
+    private func listPart(_ part: LinesListPart) -> some View {
+        switch part {
+        case .controls: inlineControlsSection
+        case .lines: listedLines
+        case .entries: entriesSection
+        case .newLine:
+            if showsNewLine {
+                draftSection
+            }
+        }
+    }
+
     /// The new line's form folded into one row while the lines come first
     /// (decision 196); picking a station puts it back at the top.
     private var newLineButton: some View {
@@ -367,9 +381,10 @@ struct LinesPanel: View {
         .accessibilityAddTraits(showsNewLine ? .isSelected : [])
     }
 
-    /// Decision 481: the rows over the short list, one each for what is not
-    /// a line: the network's switches and service day (their own page),
-    /// Advanced, a new line, and the real lines for sale (their own page).
+    /// Decision 481: the rows over the short list (under it on a short
+    /// panel, decision 498), one each for what is not a line: the
+    /// network's switches and service day (their own page), Advanced, a
+    /// new line, and the real lines for sale (their own page).
     private var entriesSection: some View {
         Section {
             if session.allows(UnlockableTool.lineDetails) {
@@ -767,7 +782,10 @@ struct LinesPanel: View {
                 }
             }
         } header: {
-            Text("Lines")
+            // Decision 498: not on a short panel, under its own "Lines".
+            if !listsLinesFirst || controlsStyle.showsLinesHeading {
+                Text("Lines")
+            }
         }
     }
 
