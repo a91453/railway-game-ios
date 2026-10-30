@@ -103,4 +103,45 @@ final class RoadDrawRealMapTests: XCTestCase {
         XCTAssertEqual(session.message?.text, "Drag across the map to lay a road. Tap one of your roads to take it up.")
         XCTAssertNil(session.roadRemoval)
     }
+    /// BUGHUNT_BUILD P2-1: on a real-world map a bus goes along the base
+    /// map's roads and the player's own. A road laid over the city's road
+    /// cells where the base map has no bus road (an alley, a farm track)
+    /// carries a city route GameCore measures along the cells, which stay
+    /// the city's when it is taken up; the map's way would break. Taking it
+    /// up is refused, naming the route.
+    func testARoadACityBusNeedsOnARealMapIsNotTakenUp() throws {
+        let (session, middle) = try game()
+        let roads = try XCTUnwrap(session.world.roads)
+        let onRoads = try XCTUnwrap(session.busRoads)
+        var found: (stops: [CellPosition], along: [CellPosition])?
+        search: for ring in 0...12 {
+            for start in RoadGrid.ring(ring, round: middle) {
+                for (dr, dc) in [(0, 1), (1, 0)] {
+                    let along = (0...4).map { CellPosition(row: start.row + dr * $0, column: start.column + dc * $0) }
+                    guard along.allSatisfy({ roads.cells.contains($0) && !roads.built.contains($0) }) else { continue }
+                    let stops = [along[0], along[4]]
+                    guard onRoads.way(ofSaved: stops, station: nil).firstBroken != nil else { continue }
+                    found = (stops, along)
+                    break search
+                }
+            }
+        }
+        let (stops, along) = try XCTUnwrap(found, "no line of the city's cells by 大社路 with no bus road along it")
+        try session.performEdit { (world: inout GameWorld) throws(GameError) in
+            try world.buildRoad(along: along)
+        }
+        let way = try XCTUnwrap(session.busRoads).way(ofSaved: stops, station: nil)
+        XCTAssertNil(way.firstBroken, "the player's road joins the stops")
+        let route = try session.performEdit { (world: inout GameWorld) throws(GameError) -> BusRouteID in
+            try world.createBusRoute(to: nil, stops: stops, legMetres: way.legMetres, service: .every(minutes: 30), buses: 1).id
+        }
+
+        session.tapRoadTool(at: along[2].middle)
+        let removal = try XCTUnwrap(session.roadRemoval)
+        XCTAssertFalse(removal.canRemove, "the way along the map would break")
+        XCTAssertEqual(removal.problem, "City bus \(route.rawValue) runs on this road. Change the route first.")
+        XCTAssertFalse(session.confirmRoad())
+        XCTAssertEqual(session.world.roads?.built, Set(along))
+        XCTAssertNil(try XCTUnwrap(session.busRoads).way(ofSaved: stops, station: nil).firstBroken, "the bus roads are as they were")
+    }
 }
