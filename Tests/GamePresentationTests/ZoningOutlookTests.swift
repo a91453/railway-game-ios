@@ -92,10 +92,11 @@ final class ZoningOutlookTests: XCTestCase {
         XCTAssertEqual(marks.count, 6)
         XCTAssertEqual(marks.filter { $0.outlook == .builds }.count, 4)
         XCTAssertEqual(marks.filter { $0.outlook == .tooFar }.count, 2)
-        XCTAssertEqual(marks.first, CityMap.ZoningMark(
-            minX: Double(Int64(column + 1) * cell), minY: Double(Int64(row) * cell),
-            maxX: Double(Int64(column + 2) * cell), maxY: Double(Int64(row + 1) * cell), outlook: .builds
-        ))
+        let first = try XCTUnwrap(marks.first)
+        XCTAssertEqual([first.minX, first.minY, first.maxX, first.maxY], [
+            Double(Int64(column + 1) * cell), Double(Int64(row) * cell), Double(Int64(column + 2) * cell), Double(Int64(row + 1) * cell),
+        ])
+        XCTAssertEqual(first.outlook, .builds)
         // Zoomed out, 16 cells a block: the four that build share a block,
         // the two too far another.
         let blocks = map.zoningMarks(in: all, blockSize: 16)
