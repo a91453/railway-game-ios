@@ -44,6 +44,14 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
+                    english: "With many saves, going back to the start screen and opening the save list are much faster.",
+                    chinese: "存檔多時，回開始畫面與存檔清單變快。"
+                ),
+                Line(
+                    english: "The card for buying a real line shows the total in bold, and a line bought before 4 a.m. says it starts with today's first train.",
+                    chinese: "收購真實路線的卡片，合計用粗體；凌晨 4 點前收購，寫今天首班車起開。"
+                ),
+                Line(
                     english: "Going back to the start screen from the menu no longer freezes, even with many saves.",
                     chinese: "從選單回開始畫面不再凍住，存檔多也一樣。"
                 ),
