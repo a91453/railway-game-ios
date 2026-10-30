@@ -350,7 +350,7 @@ private struct CatalogTrain: View {
             }
             .overlay(alignment: .topLeading) {
                 HStack(spacing: height * 0.25) {
-                    ForEach(0..<max(1, Int(width / (height * 0.7))), id: \.self) { _ in
+                    ForEach(0..<RollingStockCatalog.sideWindows(width: width, height: height), id: \.self) { _ in
                         RoundedRectangle(cornerRadius: 1).fill(Palette.ink).frame(width: height * 0.32, height: height * 0.28)
                     }
                 }
