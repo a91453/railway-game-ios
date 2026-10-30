@@ -34,7 +34,7 @@ final class FinancialStatementsTests: XCTestCase {
             "Assets written off", "Net profit",
         ])
         XCTAssertEqual(income.last?.style, .total)
-        XCTAssertEqual(income.last?.current, Money(-1_400 - 230))
+        XCTAssertEqual(income.last?.current, Money(-4_200 - 230))
         // Every item and the net profit: the items add up to it.
         let items = income.filter { $0.style == .item }.compactMap(\.current)
         XCTAssertEqual(items.reduce(Money.zero, +), income.last?.current)
@@ -43,7 +43,7 @@ final class FinancialStatementsTests: XCTestCase {
         let cash = report.previous.cashFlowRows(previous: report.current, in: .traditionalChinese)
         XCTAssertEqual(cash.first, StatementRow(title: "營業活動之現金流量", current: nil, previous: nil, style: .section))
         XCTAssertEqual(cash.last?.title, "本期現金淨增減")
-        XCTAssertEqual(cash.last?.current, Money(-1_400 - 1_224_000) + CompanyAccounts.loanStep)
+        XCTAssertEqual(cash.last?.current, Money(-4_200 - 1_224_000) + CompanyAccounts.loanStep)
         XCTAssertEqual(cash.last?.previous, .zero, "nothing yet today")
         let flows = cash.filter { $0.style == .item }.compactMap(\.current)
         XCTAssertEqual(flows.reduce(Money.zero, +), cash.last?.current)
@@ -77,11 +77,12 @@ final class FinancialStatementsTests: XCTestCase {
     }
 
     func testTaxShowsWhereThereWasSome() throws {
-        // Decision 131: $250,000 of fares on a day with $14 of interest and
-        // $2.30 of depreciation: $249,983.70 before tax, $74,992 of tax.
+        // Decision 131: NT$750,000 of fares on a day with NT$42 of interest
+        // and NT$2.30 of depreciation: NT$749,955.70 before tax, half of what
+        // is beyond NT$300,000 in tax (decision 499: every amount times 3).
         var world = try world()
         try world.advance(ticks: 1)
-        let fares = Money(25_000_000)
+        let fares = Money(75_000_000)
         world.write(LedgerEntry(
             kind: .hourlyNet, time: world.clock.now, amount: fares,
             breakdown: [
@@ -97,9 +98,9 @@ final class FinancialStatementsTests: XCTestCase {
             "Fares", "Operating", "Maintenance", "Energy", "Staff", "Operating profit", "Loan interest", "Depreciation",
             "Assets written off", "Profit before tax", "Income tax", "Net profit",
         ])
-        XCTAssertEqual(income[9], StatementRow(title: "Profit before tax", current: Money(24_998_370), previous: .zero, style: .subtotal))
-        XCTAssertEqual(income[10].current, Money(-7_499_200))
-        XCTAssertEqual(income.last?.current, Money(24_998_370 - 7_499_200))
+        XCTAssertEqual(income[9], StatementRow(title: "Profit before tax", current: Money(74_995_570), previous: .zero, style: .subtotal))
+        XCTAssertEqual(income[10].current, Money(-22_497_800))
+        XCTAssertEqual(income.last?.current, Money(74_995_570 - 22_497_800))
         let items = income.filter { $0.style == .item }.compactMap(\.current)
         XCTAssertEqual(items.reduce(Money.zero, +), income.last?.current)
         XCTAssertEqual(
@@ -108,15 +109,15 @@ final class FinancialStatementsTests: XCTestCase {
 
         let cash = report.previous.cashFlowRows(previous: report.current, in: .traditionalChinese)
         XCTAssertEqual(cash.map(\.title).prefix(6), ["營業活動之現金流量", "票價收入", "營運支出", "利息支出", "所得稅支出", "營業活動淨額"])
-        XCTAssertEqual(cash[4].current, Money(-7_499_200))
+        XCTAssertEqual(cash[4].current, Money(-22_497_800))
         let flows = cash.filter { $0.style == .item }.compactMap(\.current)
         XCTAssertEqual(flows.reduce(Money.zero, +), cash.last?.current)
         XCTAssertEqual(LedgerEntry.Kind.dailyTax.displayName(in: .traditionalChinese), "營利事業所得稅（日結）")
         XCTAssertEqual(LedgerItem.incomeTax.displayName(in: .english), "Income tax")
         XCTAssertEqual(
-            CompanyAccounts.taxTermsText(in: .english), "Income tax: 50% of each day's profit before tax beyond \(Money(10_000_000).moneyText), paid at midnight"
+            CompanyAccounts.taxTermsText(in: .english), "Income tax: 50% of each day's profit before tax beyond \(Money(30_000_000).moneyText), paid at midnight"
         )
-        XCTAssertEqual(CompanyAccounts.taxTermsText(in: .traditionalChinese), "營利事業所得稅：每天的稅前淨利超過 \(Money(10_000_000).moneyText) 的部分課 50%，午夜支付")
+        XCTAssertEqual(CompanyAccounts.taxTermsText(in: .traditionalChinese), "營利事業所得稅：每天的稅前淨利超過 \(Money(30_000_000).moneyText) 的部分課 50%，午夜支付")
     }
 
     func testAClosedYearHasItsTitleAndHeadline() throws {
@@ -125,10 +126,11 @@ final class FinancialStatementsTests: XCTestCase {
         let year = try XCTUnwrap(world.lastClosedYear)
         XCTAssertEqual(year.titleText(in: .english), "Year 1 closing")
         XCTAssertEqual(year.titleText(in: .traditionalChinese), "第 1 年度決算")
-        // 360 days of $14 interest and 230 cents of depreciation: $5,040 and
-        // $828, a loss of $5,868; equity $100,000 less that.
-        XCTAssertEqual(year.headlineText(in: .english), "Net loss \(Money(586_800).moneyText) · equity \(Money(9_413_200).moneyText)")
-        XCTAssertEqual(year.headlineText(in: .traditionalChinese), "本期淨損 \(Money(586_800).moneyText) · 權益 \(Money(9_413_200).moneyText)")
+        // 360 days of NT$42 interest (decision 499: NT$14 times 3) and 230
+        // cents of depreciation (this test's own costs, not scaled): NT$15,120
+        // and NT$828, a loss of NT$15,948; equity NT$100,000 less that.
+        XCTAssertEqual(year.headlineText(in: .english), "Net loss \(Money(1_594_800).moneyText) · equity \(Money(8_405_200).moneyText)")
+        XCTAssertEqual(year.headlineText(in: .traditionalChinese), "本期淨損 \(Money(1_594_800).moneyText) · 權益 \(Money(8_405_200).moneyText)")
     }
 
     func testWhatWasBuiltBeforeCostsWereKeptIsNoted() throws {
@@ -190,7 +192,7 @@ final class FinancialStatementsTests: XCTestCase {
         let cash = summary.cashFlowRows(previous: nil, in: .traditionalChinese)
         let investing = Dictionary(uniqueKeysWithValues: cash.map { ($0.title, $0.current) })
         XCTAssertEqual(investing["出售建物收入"], 729_600)
-        XCTAssertEqual(investing["投資活動淨額"], 243_200 - 2_304_000)
+        XCTAssertEqual(investing["投資活動淨額"], 729_600 - 6_912_000)
         XCTAssertEqual(investing["本期現金淨增減"], world.economy.balance - 100_000_000)
         // A later period beside it shows the rows too, at 0.
         let next = world.accounts.report(.day, day: 1)

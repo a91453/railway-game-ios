@@ -45,7 +45,7 @@ final class LineAcquisitionTests: XCTestCase {
 
     // MARK: - Buying
 
-    /// Bought at 05:00, the line pays $10,000 for each of its 2 riders, books
+    /// Bought at 05:00, the line pays NT$30,000 for each of its 2 riders, books
     /// it as an asset, and runs from the next day: the run out does not go
     /// at 06:10 today, and goes at 06:10 tomorrow.
     func testABoughtLineIsPaidForAndRunsFromTheNextDay() throws {
@@ -53,7 +53,7 @@ final class LineAcquisitionTests: XCTestCase {
         let before = world.economy.balance
         try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
 
-        XCTAssertEqual(world.economy.balance, before - Money(2_000_000))
+        XCTAssertEqual(world.economy.balance, before - Money(6_000_000))
         XCTAssertEqual(world.acquisitions, [LineAcquisition(realLine: pingxi, line: main, day: 0, value: Money(6_000_000))])
         XCTAssertEqual(world.acquisition(of: pingxi)?.line, main)
         XCTAssertNil(world.acquisition(of: "tra:JIJI"))
@@ -73,8 +73,8 @@ final class LineAcquisitionTests: XCTestCase {
     }
 
     /// Decision 400 (10j-3): a metro line's riders cost its tier's value
-    /// each ($100, a light rail's $70), recorded as the value paid; a
-    /// purchase without a tier is a branch line's, $10,000 a rider.
+    /// each (NT$300, a light rail's NT$210), recorded as the value paid; a
+    /// purchase without a tier is a branch line's, NT$30,000 a rider.
     func testABoughtLinesRidersCostItsTiersValue() throws {
         XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3), Money(9_000_000))
         XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .branch), Money(9_000_000))
@@ -83,7 +83,7 @@ final class LineAcquisitionTests: XCTestCase {
         var world = try world(balance: Money(1_000_000_000_000_000))
         let before = world.economy.balance
         try world.recordLineAcquisition(line: main, realLine: "trtc:R_XBT", dailyRiders: LineAcquisition.maximumDailyRiders, tier: .metro)
-        let value = Money(20_000_000_000)
+        let value = Money(60_000_000_000)
         XCTAssertEqual(world.economy.balance, before - value)
         XCTAssertEqual(world.acquisitions.first?.value, value)
         XCTAssertEqual(world.accounts.assets.last?.cost, value)

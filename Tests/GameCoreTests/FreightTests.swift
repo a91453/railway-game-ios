@@ -60,12 +60,15 @@ final class FreightTests: XCTestCase {
     // MARK: - The rules
 
     func testFareIsTonsByKilometresAtFiveDollars() {
-        // 40 t over 10 km: 400 t-km at $5 is $2,000.
+        // 40 t over 10 km: 400 t-km at NT$15 is NT$6,000.
         XCTAssertEqual(Freight.fare(tons: 40, distance: 10_000 * WorldCoordinate.unitsPerMetre), Money(600_000))
-        // 40 t over 64 m: 1,280 cents, to the nearest dollar $13.
-        XCTAssertEqual(Freight.fare(tons: 40, distance: 4_096), Money(1_300))
-        // 1 t over 64 m: 32 cents, which is under half a dollar.
-        XCTAssertEqual(Freight.fare(tons: 1, distance: 4_096), Money(0))
+        // 40 t over 64 m: 3,840 cents, to the nearest dollar NT$38 (decision
+        // 499: rounded once from 3 times the cents, not 3 × $13).
+        XCTAssertEqual(Freight.fare(tons: 40, distance: 4_096), Money(3_800))
+        // 1 t over 64 m: 96 cents, to the nearest dollar NT$1.
+        XCTAssertEqual(Freight.fare(tons: 1, distance: 4_096), Money(100))
+        // 1 t over 16 m: 24 cents, which is under half a dollar.
+        XCTAssertEqual(Freight.fare(tons: 1, distance: 1_024), Money(0))
     }
 
     /// 100 jobs make 100 × 0.5 = 50 t a day: 2,083 thousandths of a ton an
@@ -132,9 +135,9 @@ final class FreightTests: XCTestCase {
         // Each 40 t over 64 m pays $13, in the hour's freight row.
         let rows = world.accounts.entries.filter { $0.kind == .hourlyFreight }
         XCTAssertFalse(rows.isEmpty)
-        XCTAssertTrue(rows.allSatisfy { $0.amount > .zero && $0.amount.amount % 1_300 == 0 })
+        XCTAssertTrue(rows.allSatisfy { $0.amount > .zero && $0.amount.amount % 3_800 == 0 })
         let paid = rows.reduce(Int64(0)) { $0 + $1.amount.amount }
-        XCTAssertEqual(paid + state.pendingRevenue.amount, state.delivered / 40 * 1_300, "every load let off paid $13")
+        XCTAssertEqual(paid + state.pendingRevenue.amount, state.delivered / 40 * 3_800, "every load let off paid NT$38")
         XCTAssertEqual(world.financeReport(.day).current.freightRevenue.amount, paid)
         XCTAssertEqual(world.financeReport(.day).current.operatingProfit.amount,
                        world.financeReport(.day).current.fareRevenue.amount + paid
