@@ -60,7 +60,25 @@ extension GameSession {
 
     /// Removes line `id` from `world` and sells its trains (decision 327).
     /// Returns how many were sold.
+    ///
+    /// One edit for the passengers (decision 275): removing the line and
+    /// taking each train off it, out of service, off the track and sold
+    /// each looked again at every group waiting on the map
+    /// (``GameWorld/abandonUnservedPassengers()``); on the author's real
+    /// map of 15 lines (0.5.0, 96.1) a removal took 0.3–0.6 s on Linux,
+    /// on the main actor. A removal takes services away and gives none
+    /// back, so the groups it leaves are those the steps one at a time
+    /// left (`PassengerCheckOnceTests`).
     static func removeLineSellingTrains(_ id: LineID, in world: inout GameWorld) throws(GameError) -> Int {
+        try world.editTrackAsOne { (world: inout GameWorld) throws(GameError) in
+            try removeLineSellingTrainsStepByStep(id, in: &world)
+        }
+    }
+
+    /// ``removeLineSellingTrains(_:in:)``'s steps, each its own command
+    /// for the passengers, as before 96.1's report: what the tests compare
+    /// the one edit with.
+    static func removeLineSellingTrainsStepByStep(_ id: LineID, in world: inout GameWorld) throws(GameError) -> Int {
         guard let line = world.line(id: id) else { throw .unknownLine(id) }
         let trains = line.assignedTrains
         try world.removeLine(id)
