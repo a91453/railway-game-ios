@@ -418,6 +418,33 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第三十四次換手（2026-10-30 約 08:40 UTC，第 33 任 session_01YGNNunvjxx3LhPctQU6a4r → 第 34 任）**：第 33 任壓縮 2 次，照 §1 換手（第 3 層，第 34 任是第 4 層）。
+- **公測開了**：作者發了 TestFlight 97.1（run #97，main 77b93222），公開連結 https://testflight.apple.com/join/dFuQG2KR 已開（人數上限作者調過，08:15 UTC 確認不是「This beta is full」）。What to Test 在這個 PR 改成 97.1 的玩家說明（`.github/testflight-whats-new.md`；第 97 版當時沒改到，App Store Connect 上作者是手貼的）。
+  - 發版前的檢查：77b93222 的完整 ci.yml 綠。iOS 全線 41014514036 紅兩項：`CoverageShortcutUITests`（:41）重跑過了；`MapMarkTapUITests`（:102）重跑 41022695616 又紅，但紅在啟動時（`ToolbarSmokeTests.swift:367` 的快照逾時），找不到哪個合併能解釋，玩家看不到。作者知道後還是決定發 97.1（「我還是想發97.1」）。**下一步**：打開 41022695616 的 xcresult 看失敗截圖；下一次全線還紅，就照 diagnosing-bugs 查。
+  - 舊版本：97.1 加進兩個外部群組（公開測試、外部測試 47 人）。≤95.1 當晚讓它失效；96.1 留一天當退路，10/31 讓它失效（作者在 App Store Connect 按）。
+- **今天合併的**（作者說「綠了就合」）：
+  - #1536 iPhone 橫拿的文字：損益表的 `ViewThatFits`、土地資訊框拆三行、選取卡片的按鈕在 300 pt 以下改到摘要下面（`SelectionHeadLayout`）、車站卡發車列換行。
+  - #1537 收購真實路線卡將近一分鐘：`GameSession.build` 和 `removeLineSellingTrains` 改在 `GameWorld.editTrackAsOne` 裡做一次。留下的：6000× 一 tick 0.7 s 還沒修（GameCore，公測後），見 [`research/PERF_REAL_MAP_2026-10-30.md`](research/PERF_REAL_MAP_2026-10-30.md) §3。
+  - #1538 3D 駕駛室在大存檔卡：3D 蓋著時，下面的 2D 地圖不跟車、不滑行、不更新雨和車流（`CoveredMap`）。預估主執行緒一格 10–17 ms，實機 UNVERIFIED。留下的見 [`research/PERF_3D_COCKPIT_2026-10-30.md`](research/PERF_3D_COCKPIT_2026-10-30.md) §3。雨改用 GPU 畫的版本在分支 `claude/perf-3d-rain-gpu`（80908c4d），公測後再開 PR。
+  - 官網：railway-reference-private #118 已合併（c47b854b），`website-deploy.yml` 已部署（run 41020652758）。現在首頁寫「公測開放中」，按鈕連到 TestFlight。
+- **還開著的**：
+  - #1540（TW，決策 496，草稿，`claude/light-rail-fleets`）：淡海與安坑輕軌、高雄 CAF／Citadis 3:5 接進營運，+27 MB。CI 綠。作者說 **10/31 之後才合**；合之前在實機看輕軌近景的幀數（§4.30）。
+  - #1541（草稿，`claude/fix-screenshot-regressions`）：run 41011347570 紅的四個 `WebsiteScreenshotTests`，都是測試沒跟上面板現在的開法，App 本身沒壞。website-screenshots run 41026860196 在驗證；綠了就請作者合，然後補決策 480、486、477 暫緩的截圖驗收。
+  - railway-assets-private #36（宣傳片 v4，草稿）：§4.27。
+- **作者請 Codex 做的車**：作者 10/30 問過遊戲裡還缺哪些車的模型。第 33 任給的順序：
+  1. 桃園機場捷運（借通用捷運車）
+  2. 臺鐵 DR1000／DR3100（舊套件車身）
+  3. 文湖線兩款
+  4. 台北捷運 C301、C321（由 C381、C341 代替）
+  5. 阿里山林鐵（方塊）
+  6. 臺鐵 EMU700（沒有）
+  7. 自創的磁浮與單軌，排最後
+
+  Codex 交的模型是靜態素材，合進去不會自己出現在遊戲裡，要再派一張單接進營運。
+- **Threads**：作者自己發文。正文不放連結，連結放在第一則自己的留言。留言裡已經寫了這些：遊戲上手要一點時間、3D 比較吃效能（設定 →「3D 畫質」調低，或關「天氣效果」），以及 TestFlight 的兩個連結。
+- **排程**：第 33 任的巡查（trig_018FTHC115sctS4srN14zftr）交接時刪掉，新任自己排。
+- **要清的**：容器裡的 worktree 會隨 session 消失，不用管。遠端分支見 §6。
+
 **第三十三次換手（2026-10-30 約 01:10 UTC，第 32 任 session_01YGNNuon2Njt6B8dAanT7j5 → 第 33 任）**：第 32 任壓縮 2 次、用到約 33 萬 token，照 §1 換手（第 2 層，第 33 任是第 3 層）。
 - **今天的目標**：公測。作者 10/30 先發一版自己測，再發一版開公測（10/31 00:00 台灣時間丟連結）。發之前，main HEAD 的完整 ci.yml（workflow_dispatch）和 iOS 全線（ios-build.yml，only_testing 留空）都要綠；最晚 09:30 UTC 開跑，12:00 UTC 前給作者紅綠燈表。作者自己按 TestFlight，或在規劃對話裡說「發」才代按（CLAUDE.md）。What's New 0.5.0（96.1）在 #1518、#1519、#1520 已寫好；這輪的抓蟲修正要不要再加一行，由第 33 任看（跳到早上存檔、鋪路復原的價錢、朋友路網開新局、3D 公車），玩家看得懂的才加。
 - **公測前抓蟲 BH1–BH9**（作者：「修好跟我說」）：
@@ -2187,6 +2214,8 @@
 - **第二版不做了**（遊戲規劃 2026-10-29：作者看了覺得不好看，決定自己用 iPhone 錄）。之後作者錄好，照資產 PR #30 README 的「作者實機錄影後怎麼剪」剪：錄影放 `DEV/`，`tools/fetch_inputs.sh` 抓官網素材、字型與配樂，鏡頭表照 `tools/shots-owner-example.json` 寫，`SHOTS_JSON=… tools/build.py` 一次出預告 16:9、App Store 橫式、直式三種（各有配樂與靜音版），`tools/stutter.py` 檢查停格 ≤ 0.1 秒。
   - 為第二版開的 #1492（`PromoMaterialTests.testTrainShowcaseNewTrains`）與它的錄影 run 40863314600 已用不到：錄影取消了，#1492 由遊戲規劃決定關掉或留著。
 - **還要作者確認的**：片尾「10/31 開放測試」；iPad 與淺色版要不要做（作者說過發佈前自己也能截圖）。
+- **v4 做完了（2026-10-30）**：railway-assets-private 草稿 PR #36，`promo-material/2026-10-30/`，用作者的實機錄影剪。做法：HDR 轉 SDR（npl=120）、`pre.sh` 統一 60 fps、`build_site.py` 出官網用的版本、`fill_badge.py` 補徽章。配樂取自 ae21d70 的 `Website/site/assets/along-the-line-intro-16x9.mp4`。官網那份已經跟 #118 一起上線。v3 不做了，跟 v4 重工。
+  - **沒做的**：App Store 預覽影片、iPad 版、淺色版。要不要做等作者說。
 
 ### 4.28 手機橫放時路線清單的控制收成一列（決策 486，session_01YGNNuokuACFK12zJPuZVJc，派工單 LPS，2026-10-29）
 
@@ -2197,6 +2226,15 @@
 ### 4.29 3D 跟車 10× 的主執行緒工作（決策 485，session_01YGNNuphxaPGPV7TDzRjjop，派工單 FPS，2026-10-29）
 
 3D 地圖的列車滑行與車身高度改從 tick（主執行緒外）拿，3D 面板多一行 `main X ms · longest Y ms`。留下的：實機（3D、駕駛室、集集線、10×）看 fps 回到 60 沒有；`longest` 若仍常超過 30 ms，照 [決策 485](decisions/485.md) 的下一步用 Instruments 找剩下的。截圖驗收照作者 2026-10-29 的指示延到發版前（看 3D 面板展開的那張）。
+
+### 4.30 淡海、安坑、高雄輕軌的車接進營運（決策 496，派工單 TW，`claude/light-rail-fleets`，#1540，2026-10-30）
+
+- **做了的**在決策 496（`docs/decisions/496.md`，跟 #1540 一起合進來）：
+  - 淡海輕軌和安坑輕軌改畫 #1533 的兩節車。
+  - 高雄環狀輕軌照現役車輛比例，CAF 和 Citadis 3:5 混跑。
+  - `tools/train-models/budgets.json` 多了 `twoCarSets`。
+  - App 大 27 MB。
+- **還沒做的**：作者說 10/31 之後才合。合之前要看 CI 還綠、沒有跟 main 衝突。合之後在實機看三條輕軌的近景幀數，以及 500 m 換遠景（UNVERIFIED）。
 
 ## 5. 已知、還沒派的待辦
 
@@ -2264,6 +2302,8 @@
 | `claude/review-u9-u10` | U9、U10，已由 #646 那一輪 cherry-pick 進 main | 可以刪 |
 | `claude/hsr-train-rostering` | 車輛運用（原車接下一班、閒得久的才入庫）的實驗，量了變差、沒有合併 | 數字在決策 296「下一步」第 1 點的「之後」，可以刪 |
 | `claude/real-station-suggestions`、`claude/hsr-overtake-approach`、`claude/hsr-depot-shuttle`、`claude/hsr-rostering-not-adopted` | 決策 295（#844）、294（#845）、296（#846）與 #849，都已合併 | 可以刪 |
+| `claude/perf-3d-rain-gpu` | 3D 的雨改用 GPU 畫（80908c4d），接在 #1538 後面 | 公測後開 PR，要量實機 |
+| `claude/perf-3d-cockpit`、`claude/perf-real-map-600x`、`claude/iphone-text-overflow` | #1538、#1537、#1536，已合併 | 可以刪 |
 | 2026-10-12 以前的其他 `claude/*` | 這份是用淺層 clone 查的，看不到 10-12 以前的歷史，所以沒有核對這些 branch | 刪之前先用完整 clone 確認內容已在 main |
 
 ## 7. 舊交接與文件裡還沒做的（2026-10-16 稽核）
