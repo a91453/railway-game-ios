@@ -1231,14 +1231,17 @@ extension Map3DScene {
                 let edge = fast.contains(platform.platform.station) ? Self.highSpeedPlatformEdge : Self.platformEdge
                 let near = Self.nearestTracks(beside: line, others: others.filter { $0.0 != platform.platform.edge }.map(\.1))
                 // The other platforms of its station across the nearest
-                // track either side.
+                // track either side, far enough for an island between.
+                // Decision 507: two islands with the double track between
+                // them, the platform beside across it too near for one.
                 let partner = platforms.indices
                     .filter { $0 != index && platforms[$0].platform.station == platform.platform.station && platforms[$0].platform.edge != platform.platform.edge }
                     .map { (index: $0, lateral: (middles[$0] - middle).dot(across)) }
                     .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 }
+                    .filter { abs($0.lateral) / 2 - edge >= Self.narrowestPlatform / 2 }
                     .min { abs($0.lateral) < abs($1.lateral) }
                 var side: Float = -1, width = Self.platformWidth
-                if let partner, abs(partner.lateral) / 2 - edge >= Self.narrowestPlatform / 2 {
+                if let partner {
                     side = partner.lateral >= 0 ? 1 : -1
                     width = abs(partner.lateral) / 2 - edge
                 } else {

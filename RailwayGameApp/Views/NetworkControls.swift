@@ -367,6 +367,27 @@ struct NetworkControls: View {
                 .font(.footnote)
                 .accessibilityIdentifier("network.showPopulation")
             }
+            // Decision 507: how the station's platforms and tracks stand,
+            // picked before ✓ builds them all; a layout for the other kind
+            // of track than the one tapped is greyed with why.
+            let layouts = session.stationLayoutChoices
+            TickStable(StableKey(layouts, session.networkStationLayout)) {
+                Picker(selection: Binding(get: { session.networkStationLayout }, set: { session.stationLayout = $0 })) {
+                    ForEach(layouts) { choice in
+                        Text(verbatim: choice.title)
+                            .tag(choice.layout)
+                            .disabled(!choice.fits)
+                    }
+                } label: {
+                    Text(verbatim: session.language.text("Platform layout", "月台排法"))
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("network.stationLayout")
+            }
+            Text(verbatim: session.networkStationLayout.summary(in: session.language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             Stepper(value: $session.platformCars, in: Train.minimumCars...Train.maximumCars) {
                 Text(session.platformLengthText())
                     .font(.footnote)

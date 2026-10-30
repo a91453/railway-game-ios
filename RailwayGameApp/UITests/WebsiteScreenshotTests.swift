@@ -263,6 +263,45 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("build-legend-under-panel", app)
     }
 
+    /// Decision 507: the platform mode's layout menu on a double track,
+    /// with a place picked, then the menu open (the single-track layouts
+    /// greyed with why).
+    func testStationLayoutMenu() {
+        let app = launch(extra: ["-ui-test-world", "double-platform"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let platformMode = app.segmentedControls.buttons["月台"].firstMatch
+        if !platformMode.appears(within: 10) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.appears(within: 5), controls.label == "展開控制項" { controls.tap() }
+        }
+        XCTAssertTrue(platformMode.becomesHittable(within: 10))
+        platformMode.tap()
+        // The station's place, as the map reports it.
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).tap()
+        let layout = app.buttons["network.stationLayout"].firstMatch
+        XCTAssertTrue(layout.appears(within: 10), "The layout menu shows")
+        settle()
+        keep("station-layout-card", app)
+        XCTAssertTrue(layout.becomesHittable(within: 5))
+        layout.tap()
+        settle()
+        keep("station-layout-menu", app)
+    }
+
     /// New game → real world (decision 477): the whole of Taiwan first,
     /// above the places.
     func testRealWorldPicker() {
