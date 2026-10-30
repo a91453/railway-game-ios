@@ -31,6 +31,45 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-31-99",
+            items: [
+                Line(
+                    english: "At 4 a.m. each day, people still waiting at a station go home, so stations no longer stay full overnight.",
+                    chinese: "每天凌晨 4 點，還在車站等的人會先回家，車站不會整夜一直滿著。"
+                ),
+                Line(
+                    english: "The DR1000 diesel railcar on the 3D map looks like the real one.",
+                    chinese: "3D 地圖裡的 DR1000 柴油客車，照實車的樣子畫。"
+                ),
+                Line(
+                    english: "When a stretch of track can't be built, the build card names the one reason why.",
+                    chinese: "軌道蓋不了時，建造卡會直接說是什麼原因。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Buses keep a one-way street's direction on a road laid along it.",
+                    chinese: "沿著單行道鋪的路，公車照樣照單行的方向走。"
+                ),
+                Line(
+                    english: "Undo lets go of the road stretch you picked to take up.",
+                    chinese: "按復原會放掉剛選要拆的那段路。"
+                ),
+                Line(
+                    english: "A station's name tag moved off a bubble no longer covers the station next to it.",
+                    chinese: "車站名牌避開泡泡時，不再蓋到旁邊的車站。"
+                ),
+                Line(
+                    english: "On an iPhone held sideways, the loading screen fits, the whole spending ring shows in the economy panel, and the map legend sits low while you build.",
+                    chinese: "iPhone 橫拿時，載入畫面完整、經濟的支出圓環不再被切，建設時圖例移到下方不擋地圖。"
+                ),
+                Line(
+                    english: "The game menu shows labels beside its buttons on iPad and on an iPhone held upright.",
+                    chinese: "iPad 與直拿的 iPhone，遊戲選單的按鈕旁有文字。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-30-98",
             items: [
                 Line(
