@@ -298,7 +298,22 @@ extension GameSession {
             clearRoadDraft()
             return true
         }
-        guard let preview = roadPreview, preview.canBuild else { return false }
+        guard let shown = roadPreview, shown.canBuild else { return false }
+        // The road drawn is worked out again for the world as it is now: an
+        // undo, or time running on, may have changed what it costs since the
+        // button showed its price. A price the player has not seen is shown
+        // first rather than paid.
+        guard let preview = RoadPreview.make(roadDraft, in: world, language: language) else { return false }
+        guard preview == shown else {
+            roadPreview = preview
+            message = StatusMessage(kind: .failure, text: preview.canBuild
+                ? language.text(
+                    "The road now costs \(preview.price.moneyText). Tap again to lay it.",
+                    "這段路現在造價 \(preview.price.moneyText)，再按一次就鋪。"
+                )
+                : preview.problem ?? language.text("There's a road here already.", "這裡已經有路了。"))
+            return false
+        }
         let done = perform(.buildRoad(along: roadDraft.cells.map(PlayerCommand.Edit.BusStop.init))) { _, _, after in
             // Decision 476: the price the button showed, also with
             // unlimited funds, where the cash does not go down.
