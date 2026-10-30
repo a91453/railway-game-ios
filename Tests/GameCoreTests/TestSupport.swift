@@ -24,7 +24,11 @@ func fixtureEconomy(balance: Money, costs: ConstructionCosts) -> GameEconomy {
 /// ledger rows and balance they add up to), so the two can be a few cents
 /// apart. Asserts that `loaded` and `made` encode alike but for the
 /// amounts of ``newTaiwanDollarKeys``, each within `cents` of the other:
-/// any other value that differs (a count, a time, a place) fails.
+/// any other value that differs (a count, a time, a place) fails. The
+/// days' capital rows (`capitalDays`) are compared by their totals: a
+/// day's depreciation of 0.67 cents was no row at all, and is 2 cents now,
+/// so the made world has more rows of smaller charges adding up to the
+/// same.
 func XCTAssertSameButRounding(_ loaded: GameWorld, _ made: GameWorld, cents: Int64, file: StaticString = #filePath, line: UInt = #line) throws {
     let encoder = JSONEncoder()
     func object(_ world: GameWorld) throws -> Any { try JSONSerialization.jsonObject(with: try encoder.encode(world)) }
@@ -35,6 +39,16 @@ func XCTAssertSameButRounding(_ loaded: GameWorld, _ made: GameWorld, cents: Int
         if let a = a as? [String: Any], let b = b as? [String: Any] {
             guard Set(a.keys) == Set(b.keys) else { return differences.append("\(path): keys \(a.keys.sorted()) and \(b.keys.sorted())") }
             for key in a.keys.sorted() { walk(a[key]!, b[key]!, name: key, container: name, path: "\(path)/\(key)") }
+        } else if name == "capitalDays", let a = a as? [[String: Any]], let b = b as? [[String: Any]] {
+            func totals(_ days: [[String: Any]]) -> [String: Int64] {
+                days.reduce(into: [:]) { sum, day in
+                    for (key, value) in day where key != "day" { sum[key, default: 0] += (value as? NSNumber)?.int64Value ?? 0 }
+                }
+            }
+            let x = totals(a), y = totals(b)
+            for key in Set(x.keys).union(y.keys).sorted() where abs((x[key] ?? 0) - (y[key] ?? 0)) > cents {
+                differences.append("\(path) total \(key): \(x[key] ?? 0) and \(y[key] ?? 0)")
+            }
         } else if let a = a as? [Any], let b = b as? [Any] {
             guard a.count == b.count else { return differences.append("\(path): \(a.count) and \(b.count) items") }
             for (index, (x, y)) in zip(a, b).enumerated() { walk(x, y, name: name + "[]", container: container, path: "\(path)[\(index)]") }
