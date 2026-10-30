@@ -284,6 +284,22 @@ struct RailwayGameApp: App {
                 if DebugLaunch.isSet("-broken-save") {
                     try Data("not a save".utf8).write(to: directory.appendingPathComponent("save-broken.json"))
                 }
+                // Decision 502: three games of the player's, one saved three
+                // times (two earlier versions), and the last game's
+                // autosave, for the saves list's screenshots.
+                if DebugLaunch.isSet("-sample-saves") {
+                    let library = SaveLibrary(directory: directory)
+                    let now = Date()
+                    var world = DemoWorld.make(in: .traditionalChinese)
+                    let row = try library.save(world, as: .manual, at: now.addingTimeInterval(-7_200), named: "台北環線")
+                    for minutes in [90.0, 20] {
+                        try world.advance(ticks: 3_600)
+                        try library.save(world, as: .manual, at: now.addingTimeInterval(-minutes * 60), row: row.id)
+                    }
+                    try library.save(GameWorld.newGame(), as: .manual, at: now.addingTimeInterval(-86_400), named: "空白地圖練習")
+                    try library.save(DemoWorld.make(in: .traditionalChinese), as: .manual, at: now.addingTimeInterval(-3 * 86_400))
+                    try library.save(world, as: .autosave, at: now.addingTimeInterval(-300), row: row.id)
+                }
                 return SaveLibrary(directory: directory)
             } catch {
                 // Never fall back to the player's library if isolation fails.
