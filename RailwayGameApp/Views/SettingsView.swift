@@ -295,7 +295,15 @@ struct SettingsView: View {
                 Text(verbatim: language.text("\(rules.title(in: language)) rules", "\(rules.title(in: language))規則"))
             } label: {
                 Label {
-                    Text(verbatim: language.text("Rules", "規則"))
+                    // Decision 498 (UI_GAPS B-1): it only shows, so say
+                    // where the rules are chosen; a row that did nothing
+                    // when tapped looked broken.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: language.text("Rules", "規則"))
+                        Text(verbatim: language.text("Chosen when you start a new game.", "開新遊戲時選擇。"))
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 } icon: {
                     Image(systemName: "list.bullet.rectangle")
                 }
