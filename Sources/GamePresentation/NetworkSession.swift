@@ -452,6 +452,11 @@ extension GameSession {
     /// kind the places around it make it (homes without the places grid);
     /// anywhere else the city's (``StationDemand/cityDefault``).
     public func newStationDemand(at point: PlanPoint) -> StationDemand {
+        Self.newStationDemand(at: point, in: world, population: population, places: places)
+    }
+
+    /// ``newStationDemand(at:)`` in `world`, with the grids given.
+    nonisolated static func newStationDemand(at point: PlanPoint, in world: GameWorld, population: PopulationGrid?, places: PlaceGrid?) -> StationDemand {
         guard let population, let frame = RealWorldFrame(world: world) else { return .cityDefault }
         let place = frame.coordinate(worldX: Double(point.x), worldY: Double(point.y))
         let radius = StationDemand.catchmentRadius

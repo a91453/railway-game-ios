@@ -447,6 +447,13 @@ public final class GameSession {
     /// the card is open.
     public var shownRealLineOffer: RealLineOffer?
 
+    /// The real line whose purchase card is being prepared (decision 497,
+    /// ``offerRealLine(_:)``): the card is open and says so until its offer
+    /// is laid out.
+    public internal(set) var preparingRealLine: RealBranchLine?
+    /// Lays out the offer of ``preparingRealLine`` off the main actor.
+    @ObservationIgnored var realLineOfferTask: Task<Void, Never>?
+
     /// The real station offered on its purchase card (decision 400 A.8),
     /// while the card is open.
     public var shownRealStationOffer: RealStationOffer?
