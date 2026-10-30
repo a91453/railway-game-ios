@@ -192,7 +192,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// building tools from the column's top, on a map without credits and
     /// on the real-world demo with its credits under the column. For the
     /// screenshot review of the pull request that moved them, not the
-    /// website.
+    /// website. 100.1 (decision 509): with zoning's own button too.
     func testBuildingToolsColumn() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
@@ -200,6 +200,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.buttons["tool.network"].waitUntilSettled()
         settle()
         keep("build-tools-column", app)
+        // Decision 509: zoning's own button, its card open.
+        app.buttons["tool.zoning"].tap()
+        XCTAssertTrue(app.staticTexts["building.zoneCount"].appears(within: 10), "The zoning tool opens")
+        settle()
+        keep("build-tools-zoning", app)
         app.terminate()
 
         let real = launch()
