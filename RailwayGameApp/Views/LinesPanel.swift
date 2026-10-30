@@ -157,6 +157,9 @@ struct LinesPanel: View {
                 .hardTopScrollEdge()
                 // Decision 486: a short panel's rows take more of its width.
                 .contentMargins(.horizontal, listsLinesFirst && controlsStyle == .inline ? 8 : nil, for: .scrollContent)
+                // Decision 498: and less room between its sections, so the
+                // first lines show under the controls' row.
+                .listSectionSpacing(listsLinesFirst && controlsStyle == .inline ? .compact : .default)
                 // Decision 481: what finds and orders the lines stays at the
                 // top while the list scrolls under it; decision 486: not on
                 // a short panel, where it left one line in view.
@@ -782,7 +785,10 @@ struct LinesPanel: View {
                 }
             }
         } header: {
-            Text("Lines")
+            // Decision 498: not on a short panel, under its own "Lines".
+            if !listsLinesFirst || controlsStyle.showsLinesHeading {
+                Text("Lines")
+            }
         }
     }
 

@@ -192,6 +192,13 @@ public enum LinesListControls: Equatable, Sendable {
         }
     }
 
+    /// Decision 498 (B1): whether the lines' section has its "Lines"
+    /// heading. Not on a short panel, whose own title says it and where
+    /// the heading pushed the first line half out of view.
+    public var showsLinesHeading: Bool {
+        self == .pinned
+    }
+
     /// Whether the search field shows: always when pinned; inline once
     /// its button is pressed, and while anything is typed in it, so a
     /// search never hides the field that made it.
