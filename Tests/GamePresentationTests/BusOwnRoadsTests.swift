@@ -69,4 +69,35 @@ final class BusOwnRoadsTests: XCTestCase {
         XCTAssertNil(BusRoadNetwork.crossing(Point(x: 0, y: 0), Point(x: 0, y: 1), Point(x: -1, y: 0), Point(x: 1, y: 0)), "meeting at an end")
         XCTAssertNil(BusRoadNetwork.crossing(Point(x: 0, y: 0), Point(x: 1, y: 0), Point(x: 0, y: 1), Point(x: 1, y: 1)), "parallel")
     }
+
+    /// BUGHUNT_BUILD P3-6: a road of the player's laid along a one-way
+    /// street is taken the street's way only, drawn either way; the piece
+    /// of it that leaves the street is taken both ways.
+    func testARoadAlongAOneWayStreetIsTakenItsWayOnly() throws {
+        let oneWay = [Road(points: [Point(x: 0, y: 0), Point(x: 400, y: 0)], oneway: true)]
+        for own in [[Point(x: 0, y: 20), Point(x: 400, y: 20), Point(x: 400, y: 200)],
+                    [Point(x: 400, y: 200), Point(x: 400, y: 20), Point(x: 0, y: 20)]] {
+            let roads = BusRoadNetwork.joining(own: [own], ends: [], to: oneWay)
+            let along = try XCTUnwrap(roads.first { $0.oneway })
+            XCTAssertEqual(along.points.first?.x, 0, "eastward, as the street: \(own)")
+            XCTAssertEqual(along.points.last?.x, 400)
+            XCTAssertEqual(roads.filter { !$0.oneway }.map(\.points.count), [2], "the piece south, both ways")
+            let network = BusRoadNetwork(roads: roads)
+            func way(_ from: Point, _ to: Point) throws -> [Point]? {
+                let a = try XCTUnwrap(network.nearest(to: from, within: BusRoadNetwork.snapReach))
+                let b = try XCTUnwrap(network.nearest(to: to, within: BusRoadNetwork.snapReach))
+                return network.way(from: a, to: b)
+            }
+            XCTAssertNotNil(try way(Point(x: 50, y: 20), Point(x: 350, y: 20)), "with the street")
+            XCTAssertNil(try way(Point(x: 350, y: 20), Point(x: 50, y: 20)), "not against it")
+        }
+    }
+
+    func testARoadAcrossOrBesideATwoWayStreetIsTakenBothWays() {
+        let roads = BusRoadNetwork.joining(own: [[Point(x: 0, y: 20), Point(x: 400, y: 20)]], ends: [], to: streets)
+        XCTAssertFalse(roads.contains(where: \.oneway))
+        let oneWay = [Road(points: [Point(x: 0, y: 0), Point(x: 400, y: 0)], oneway: true)]
+        let across = BusRoadNetwork.joining(own: [[Point(x: 200, y: -30), Point(x: 200, y: 30)]], ends: [], to: oneWay)
+        XCTAssertFalse(across.contains(where: \.oneway), "across a one-way street, both ways")
+    }
 }

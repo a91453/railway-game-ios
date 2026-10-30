@@ -63,7 +63,7 @@
 | P3-3 | `RealLineAcquisition.swift` 約 706 行 `junctionStation` 沒有濾掉機廠 | 在新竹 450 m 內、比新竹站更靠近接點處蓋機廠，再收購內灣線：被拒絕，說「機廠不能當路線的停靠站」，玩家不知道怎麼辦（讀程式） | 加 `!$0.isDepot` | 玩家：不會莫名買不了；其餘無 |
 | P3-4 | `RealLineAcquisition.swift` 約 1118、1132 行 | 三鶯線、淡海綠山線的價目表：機廠站的造價算進「N 列車」那一列（合計正確）（讀程式） | 機廠站建好後再取 `built` | 玩家：細目正確；其餘無 |
 | P3-5 | `RealLineAcquisition.swift` 約 428 行 | 買了綠山線又刪掉這條線，再買藍海線：只賣濱海沙崙到漁人碼頭那段，綠山線也再也買不到（讀程式） | 收購紀錄在線刪掉時一併看待，或刪線時提醒 | 玩家：少見；其餘無 |
-| P3-6 | `Sources/GamePresentation/BusOwnRoads.swift` `joining` | 自己的路疊在單行道上，公車可以沿玩家的路逆向（讀程式） | 疊在單行道上的格子照底圖的方向 | 玩家：少見；鐵道迷：無；其餘無 |
+| P3-6 | `Sources/GamePresentation/BusOwnRoads.swift` `joining` | 自己的路疊在單行道上，公車可以沿玩家的路逆向（讀程式） | 疊在單行道上的格子照底圖的方向。**已修（ROADFIX）**：沿單行道（半格內、夾角約 25° 內）的那幾段只照街的方向走，`BusOwnRoadsTests.testARoadAlongAOneWayStreetIsTakenItsWayOnly` 釘住 | 玩家：少見；鐵道迷：無；其餘無 |
 | P3-7 | `Sources/GamePresentation/RealRoadCells.swift` 約 181 行 | 離車站遠、地塊還沒讀進來的地方，沿真實的街鋪路照全價收（之後讀進來也不退）（讀程式） | 鋪路前先讀進該處的地塊 | 玩家：照規則免費；其餘無 |
 | P3-8 | `Sources/GamePresentation/BuildingSession.swift:383` `BuildingPreviewKey` 沒有語言 | 暫停時切換語言，建物預覽的拒絕理由仍是舊語言，移動位置後才換（讀程式） | key 加 `language` | 玩家：小；其餘無 |
 | P3-9 | `Sources/GamePresentation/RoadDraft.swift` | 道路模式選了要拆的一段，復原後那段仍標著；按拆除會被 GameCore 乾淨拒絕 | `step(to:)` 一併清掉 `roadRemoval` | 玩家：小；其餘無 |

@@ -5,7 +5,8 @@ import GameCore
 // roads' graph (decision 424), so that a bus goes from them onto the city's
 // roads. On a real-world map the base map does not have them: each is
 // taken as the line it is drawn as (``RoadCentreLines``), both ways and in
-// the open; where it crosses a base map road the two meet there (a
+// the open (but where it runs along a one-way road, that road's way only,
+// BUGHUNT_BUILD P3-6); where it crosses a base map road the two meet there (a
 // junction, the bus may turn), and where it ends within ``ownJoinReach`` of
 // one, a short piece joins it to the nearest point of that road. The
 // graph's own ``BusRoadNetwork/splitAtJunctions`` cuts the base map's road
@@ -50,7 +51,19 @@ extension BusRoadNetwork {
                 for crossing in crossings.sorted(by: { $0.t < $1.t }) { points.append(crossing.point) }
                 points.append(q)
             }
-            roads.append(Road(points: points))
+            // BUGHUNT_BUILD P3-6: the pieces along a one-way road are taken
+            // its way only; a run of pieces that are taken alike is one road.
+            var run = [points[0]], way = 0
+            for (p, q) in zip(points, points.dropFirst()) {
+                let piece = oneWay(p, q, along: open, near: near(p, q, reach: alongReach))
+                if piece != way, run.count >= 2 {
+                    roads.append(Road(points: way < 0 ? run.reversed() : run, oneway: way != 0))
+                    run = [p]
+                }
+                way = piece
+                run.append(q)
+            }
+            roads.append(Road(points: way < 0 ? run.reversed() : run, oneway: way != 0))
         }
         for end in ends {
             var best: (point: Point, away: Double)?
@@ -65,6 +78,36 @@ extension BusRoadNetwork {
             if let best, best.away > mergeMetres { roads.append(Road(points: [end, best.point])) }
         }
         return roads
+    }
+
+    /// How far from a one-way base map road a piece of the player's road
+    /// running beside it is taken as on it, in metres: half a cell, as a
+    /// road laid along a street is drawn through the middles of the cells
+    /// the street crosses.
+    static let alongReach = ownJoinReach / 2
+
+    /// BUGHUNT_BUILD P3-6: the way the piece of the player's road from `p`
+    /// to `q` may be taken where it runs along one of `roads` (of them,
+    /// those at `candidates`) that is one-way, within ``alongReach`` and at
+    /// most about 25° from it: `1` from `p` to `q`, `-1` from `q` to `p`;
+    /// `0`, either way, along none.
+    static func oneWay(_ p: Point, _ q: Point, along roads: [Road], near candidates: [Int]) -> Int {
+        let dx = q.x - p.x, dy = q.y - p.y, span = (dx * dx + dy * dy).squareRoot()
+        guard span > 0 else { return 0 }
+        let middle = Point(x: (p.x + q.x) / 2, y: (p.y + q.y) / 2)
+        var best: (way: Int, away: Double)?
+        for index in candidates where roads[index].oneway {
+            let road = roads[index].points
+            for (a, b) in zip(road, road.dropFirst()) {
+                let ax = b.x - a.x, ay = b.y - a.y, length = (ax * ax + ay * ay).squareRoot()
+                guard length > 0 else { continue }
+                let cosine = (dx * ax + dy * ay) / (span * length)
+                guard abs(cosine) >= 0.9 else { continue }
+                let away = closest(on: a, b, to: middle).distance(to: middle)
+                if away <= alongReach, best.map({ away < $0.away }) ?? true { best = (cosine > 0 ? 1 : -1, away) }
+            }
+        }
+        return best?.way ?? 0
     }
 
     /// Where the piece from `p` to `q` crosses the one from `a` to `b`, as
