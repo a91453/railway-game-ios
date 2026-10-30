@@ -550,7 +550,11 @@ final class OneRowPerGameTests: XCTestCase {
             SaveSync.run(
                 local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, language: .english, now: date(0),
                 keeping: { try library.keepBeforeReplacing($0) },
-                moving: { if failing { throw Failed() } else { try library.moveRow(from: $0, to: $1) } }
+                // Failing, the move there fails; the move back does not.
+                moving: { from, to in
+                    if failing, to != row { throw Failed() }
+                    try library.moveRow(from: from, to: to)
+                }
             )
         }
         let row = try phone.save(world(after: 1), as: .manual, at: date(0)).id
@@ -569,6 +573,65 @@ final class OneRowPerGameTests: XCTestCase {
         XCTAssertEqual(split.movedRows.count, 1)
         XCTAssertEqual(manualRows(pad).count, 2, "one copy")
         XCTAssertEqual(try pad.load(XCTUnwrap(manualRows(pad).first { $0.id == split.movedRows[row] })), try world(after: 3))
+    }
+
+    /// A split whose moving back fails too keeps the copy, and with it the
+    /// row's earlier versions moved to it (the third review's recheck, B).
+    func testASplitThatCannotMoveBackKeepsTheVersions() throws {
+        let root = directory.appendingPathComponent("devices", isDirectory: true)
+        let cloud = DirectorySaveFolder(directory: root.appendingPathComponent("iCloud", isDirectory: true))
+        let phone = SaveLibrary(directory: root.appendingPathComponent("phone")), pad = SaveLibrary(directory: root.appendingPathComponent("pad"))
+        var phoneState = SaveSync.State(), padState = SaveSync.State()
+        struct Failed: Error {}
+        let row = try phone.save(world(after: 1), as: .manual, at: date(0)).id
+        _ = SaveSync.run(local: DirectorySaveFolder(directory: phone.directory), cloud: cloud, state: &phoneState, language: .english, now: date(0))
+        _ = SaveSync.run(local: DirectorySaveFolder(directory: pad.directory), cloud: cloud, state: &padState, language: .english, now: date(0))
+        try phone.save(world(after: 2), as: .manual, at: date(60), row: row)
+        try pad.save(world(after: 3), as: .manual, at: date(70), row: row)
+        _ = SaveSync.run(local: DirectorySaveFolder(directory: phone.directory), cloud: cloud, state: &phoneState, language: .english, now: date(0))
+        let outcome = SaveSync.run(
+            local: DirectorySaveFolder(directory: pad.directory), cloud: cloud, state: &padState, language: .english, now: date(0),
+            moving: { from, to in
+                // Moved, then failing as if after; moving back fails.
+                if from == row { try pad.moveRow(from: from, to: to) }
+                throw Failed()
+            }
+        )
+        XCTAssertTrue(outcome.isIncomplete)
+        let copy = try XCTUnwrap(manualRows(pad).first { $0.id != row }, "the copy stays")
+        XCTAssertEqual(try pad.earlierVersions(of: copy).map { try pad.load($0) }, [try world(after: 1)], "with the versions moved to it")
+    }
+
+    /// A round that runs while a save is being loaded does not move that
+    /// game to a row of its own: the game being loaded counts as open, so
+    /// the row it is begun from is still its own (the third review's 2,
+    /// as rechecked).
+    @MainActor
+    func testARoundWhileASaveLoadsDoesNotMoveItsGame() async throws {
+        let root = directory.appendingPathComponent("devices", isDirectory: true)
+        let cloudURL = root.appendingPathComponent("iCloud", isDirectory: true)
+        let cloud = DirectorySaveFolder(directory: cloudURL)
+        let phone = SaveLibrary(directory: root.appendingPathComponent("phone")), padLibrary = SaveLibrary(directory: root.appendingPathComponent("pad"))
+        var phoneState = SaveSync.State()
+        func syncPhone() {
+            _ = SaveSync.run(local: DirectorySaveFolder(directory: phone.directory), cloud: cloud, state: &phoneState, language: .english, now: date(0))
+        }
+        let row = try phone.save(world(after: 1), as: .manual, at: date(0)).id
+        syncPhone()
+        let pad = GameLauncher(library: padLibrary, language: .english)
+        pad.cloudSaveFolder = { DirectorySaveFolder(directory: cloudURL) }
+        await pad.syncSaves(at: date(10))?.value
+        try phone.save(world(after: 2), as: .manual, at: date(60), row: row)
+        try padLibrary.save(world(after: 3), as: .manual, at: date(70), row: row)
+        syncPhone()
+        pad.refresh()
+        let loading = pad.load(try XCTUnwrap(pad.otherSaves.first { $0.id == row }), at: date(80))
+        let round = pad.syncSaves(at: date(81))
+        await loading?.value
+        await round?.value
+        XCTAssertEqual(pad.session?.world, try world(after: 3))
+        let kept = try XCTUnwrap(padLibrary.entries().first { $0.id == pad.gameRow })
+        XCTAssertEqual(try padLibrary.load(kept), try world(after: 3), "the game's row holds the game")
     }
 
     /// The other device only renamed the row: nothing of this device's is

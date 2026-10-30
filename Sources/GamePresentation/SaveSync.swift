@@ -398,13 +398,17 @@ public enum SaveSync {
                     } catch {
                         // Undone, so the next round does not keep a second
                         // copy of it (the third review's 3).
-                        try? move(name, stem + ".json")
-                        let copy = String(name.dropLast(".json".count))
-                        let files = [name, copy + SaveLibrary.newsSuffix, copy + SaveLibrary.nameSuffix]
-                        for folder in [local, cloud] {
-                            for file in files { try? folder.remove(file) }
+                        // When moving back fails, the copy stays: its row
+                        // holds the earlier versions moved to it, which go
+                        // with a row that is gone (the recheck's B).
+                        if (try? move(name, stem + ".json")) != nil {
+                            let copy = String(name.dropLast(".json".count))
+                            let files = [name, copy + SaveLibrary.newsSuffix, copy + SaveLibrary.nameSuffix]
+                            for folder in [local, cloud] {
+                                for file in files { try? folder.remove(file) }
+                            }
+                            state.synced[copy] = nil
                         }
-                        state.synced[copy] = nil
                         throw error
                     }
                     outcome.keptBoth.append(name)

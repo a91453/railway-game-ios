@@ -1457,6 +1457,7 @@ public final class GameLauncher {
             return nil
         }
         isLoadingSave = true
+        gameIsOpen.loading(true)
         savesOpened += 1
         let (opened, begun) = (savesOpened, gamesBegun)
         // Decision 473: the steps are counted from the start, and shown
@@ -1472,8 +1473,11 @@ public final class GameLauncher {
             self.show(run)
             self.showsSaveLoading = true
         }
-        let saveQueue = saveQueue
+        let (saveQueue, gameIsOpen) = (saveQueue, gameIsOpen)
         return Task {
+            // However it ends, the save is no longer being loaded: begun,
+            // failed or stopped.
+            defer { gameIsOpen.loading(false) }
             // A save being written or read is not stopped part way: once
             // stopped, what it read is thrown away.
             let result = await withCheckedContinuation { (done: CheckedContinuation<Result<Read, SaveError>, Never>) in
@@ -2160,12 +2164,21 @@ public struct RealWorldData: Sendable {
 }
 
 /// Whether a game is open, read on the saves' queue (decision 397).
+/// A save being loaded counts as open (decision 502, after the third
+/// review): a round then does not move its game to a row of its own while
+/// it is read, as it would begin from the row it was read from.
 final class GameOpenFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var isOpen = false
+    private var loads = 0
 
     var value: Bool {
-        get { lock.withLock { isOpen } }
+        get { lock.withLock { isOpen || loads > 0 } }
         set { lock.withLock { isOpen = newValue } }
+    }
+
+    /// A save began, or ended, being loaded.
+    func loading(_ started: Bool) {
+        lock.withLock { loads += started ? 1 : -1 }
     }
 }
