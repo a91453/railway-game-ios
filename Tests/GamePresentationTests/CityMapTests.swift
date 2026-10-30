@@ -101,11 +101,11 @@ final class CityMapTests: XCTestCase {
         let info = try XCTUnwrap(world.cityCellInfo(atX: 5 * 4_096 + 10, y: 5 * 4_096 + 10))
         XCTAssertEqual(info.lines(in: .english), [
             "Homes · 6 storeys", "Residents 100 · Jobs 0", "Land value $ 25.00 a m²",
-            "Base $ 25.00 · Train service + $ 0.00 · Easy to reach + $ 0.00", "No station adds to it",
+            "Base $ 25.00", "Train service + $ 0.00", "Easy to reach + $ 0.00", "No station adds to it",
         ])
         XCTAssertEqual(info.lines(in: .traditionalChinese), [
             "住宅 · 6 層樓", "居民 100 人 · 就業 0 個", "地價 每平方公尺 $ 25.00",
-            "基本 $ 25.00 · 列車服務 + $ 0.00 · 交通便利 + $ 0.00", "沒有車站影響地價",
+            "基本 $ 25.00", "列車服務 + $ 0.00", "交通便利 + $ 0.00", "沒有車站影響地價",
         ])
         XCTAssertEqual(world.cityCellInfo(atX: 7 * 4_096, y: 5 * 4_096)?.lines(in: .traditionalChinese).first, "辦公 · 原有建物")
         XCTAssertEqual(world.cityCellInfo(atX: 0, y: 0)?.lines(in: .english).first, "Empty land")
