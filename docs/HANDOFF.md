@@ -2290,19 +2290,7 @@
   - 這時不顯示「路線」標題，區塊間距改 compact。
   - UI 測試 `openLinePage` 找不到路線列時先往上拖。
   - ios-build `only_testing` 跑過的都綠（41073016530）：LessonUITests 第 1 課、兩個 LineRoutePreferenceUITests、LineDraftSummaryUITests、HUDAlignment 的路線面板測試。
-- **還沒做的**（UIB 壓縮兩次後依規則停下，#1560 仍是 draft）：
-  1. **截圖驗收紅**：`WebsiteScreenshotTests.testLinesListAndLinePage` 停在「The line's page opens」（WebsiteScreenshotTests.swift:330；runs 41078097022、41081046632）。
-     - 測試找到並點了 `"line.trainsRow.1-line.report.1" Button`，點之前已 `waitUntilSettled`，但 `line.detail` 沒出現。
-     - 拿掉標題、改 compact 間距之前，這一步會過。
-     - 先查兩個假說：
-       - 合併起來的識別字表示點到的是列裡的子元素（列車列／報告按鈕）。
-       - 第一列在短面板底邊被切到一半，點的位置落在面板外。
-     - 修法候選：
-       - 點列時改點列的上半部：`coordinate(withNormalizedOffset: (0.5, 0.25))`。
-       - 點之前先用 `dragUntilWhollyOnScreen` 把列整列拉進來。
-  2. 修好後再跑 website-screenshots（一次一個，先確認沒有 in_progress／queued）。看 lines-list、line-page、lines-network 三張，把 `docs/art/ui-audit-2026-10-30/b1-*.png` 放進 PR。
-  3. 更新決策 498 B1 的「驗證」和 PR 說明。PR 說明裡提到的 LessonUITests 改動已經還原，要拿掉。
-  4. 轉 ready，在 #1041 留「可合併」，告訴遊戲規劃。
+- **UIB2（session_01YGNNumAzAnMatbWkBqD8yV）接手做完**（2026-10-30）：截圖測試紅是測試自己的拖曳把線的列推到面板導覽列底下，點到導覽列；改成跟 `openLinePage` 一樣在導覽列以下找列（6bff8ef）。截圖驗收 run 41098330367 綠，三張在 `docs/art/ui-audit-2026-10-30/b1-*.png`，驗證寫在決策 498 B1。#1560 轉 ready，沒有剩下的步驟。
 
 ## 5. 已知、還沒派的待辦
 
