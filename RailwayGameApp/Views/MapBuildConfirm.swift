@@ -191,6 +191,22 @@ struct MapBuildConfirm: View {
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
                 .accessibilityIdentifier("map.build.expandMap")
             }
+            if build.buysLine {
+                Button {
+                    session.offerTracedSaleLine()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "signature")
+                            .font(.body.weight(.bold))
+                        Text(verbatim: TracedSaleHint.buttonTitle(in: session.language))
+                            .font(.subheadline.weight(.bold))
+                    }
+                    .padding(.horizontal, 6)
+                    .frame(minHeight: 40)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                .accessibilityIdentifier("map.build.buyLine")
+            }
             Button {
                 build.cancel()
             } label: {
@@ -306,6 +322,9 @@ private struct BuildConfirmation {
     /// Decision 336: what is drawn lies on land not bought yet, and the
     /// pill offers to go and expand the map.
     var expandsMap = false
+    /// Decision 468, later: the trace runs along a real line for sale,
+    /// and the pill offers its purchase card.
+    var buysLine = false
 
     enum Kind {
         case track, platform, building, sale, mapTile, line, addStop, busRoute, road, roadRemoval
@@ -425,11 +444,16 @@ private struct BuildConfirmation {
             cost = preview.cost
             canConfirm = preview.problem == nil && preview.cost != nil
             kind = .track
-            caption = preview.crossoverNote
+            // Decision 468, later: a trace along a real line for sale says
+            // so, and the pill offers its purchase card.
+            let sale = session.tracedSaleHint
+            let lines = [preview.crossoverNote, sale?.text, sale?.shortfall].compactMap(\.self)
+            caption = lines.isEmpty ? nil : lines.joined(separator: "\n")
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
             confirm = { session.buildNetworkTrack() }
             expandsMap = session.offersMapExpansion(for: preview.problem)
+            buysLine = sale != nil
         case .building where session.buildingMode == .sell:
             // Decision 130: the building chosen to sell, and what it brings.
             guard let sale = session.salePreview else { return nil }

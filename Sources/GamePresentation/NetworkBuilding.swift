@@ -119,6 +119,9 @@ public struct NetworkPreview: Hashable, Sendable {
     /// between it (``points`` runs through both).
     public var existing: [[WorldCoordinate]] = []
     public var newPieces: [[WorldCoordinate]] = []
+    /// Decision 468, later: the real line for sale a traced stretch runs
+    /// along, which the player may buy as it is (``GameSession/tracedSaleHint``).
+    public var forSale: RealBranchLine? = nil
 }
 
 /// What a stretch of track the network tool would build costs, part by

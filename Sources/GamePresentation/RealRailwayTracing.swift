@@ -623,6 +623,7 @@ extension GameSession {
         preview.tracedDouble = decided.real
         preview.existing = built.isEmpty ? [] : plan.existing.map(\.points)
         preview.newPieces = preview.existing.isEmpty ? [] : pieces
+        preview.forSale = tracedSaleLine(from: start, to: end)
         var second: [WorldCoordinate] = []
         if case .success(let found)? = double {
             second = found.parallelPoints

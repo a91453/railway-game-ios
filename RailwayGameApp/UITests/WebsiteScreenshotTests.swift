@@ -203,6 +203,36 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-picker", app)
     }
 
+    /// Decision 468, later: a trace along the Liujia Line on Hsinchu's
+    /// real-world map says the line can be bought as it is, for how much,
+    /// and its button opens the purchase card. The trace is drawn by the
+    /// Debug app's `-ui-test-trace-for-sale` through the tool's own taps.
+    func testTracedLineForSale() {
+        let app = launch(extra: ["-ui-test-trace-for-sale"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let hsinchu = app.buttons.matching(identifier: "place.tra-hsinchu").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(hsinchu, in: app.collectionViews.firstMatch), "Hsinchu is listed")
+        hsinchu.waitUntilSettled()
+        app.tapMiddle(of: hsinchu)
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        // The trace's hint, its price once laid out, and the pill's button.
+        let buy = app.buttons["map.build.buyLine"]
+        XCTAssertTrue(buy.appears(within: 60), "The trace runs along a line for sale")
+        settle(seconds: 8)
+        keep("traced-line-for-sale", app)
+
+        XCTAssertTrue(buy.becomesHittable(within: 5))
+        buy.tap()
+        settle(seconds: 6)
+        keep("traced-line-for-sale-card", app)
+    }
+
     // MARK: - What the game gained after those (decisions 167 to 186)
 
     /// The High Speed Rail demo (decision 170): Nangang to Zuoying on the

@@ -115,6 +115,14 @@ struct ContentView: View {
             .onChange(of: session.tutorial == nil) { _, none in
                 if !none { AmbientMode.end(session: session, screen: screen) }
             }
+            #if DEBUG
+            // Decision 468, later: the website screenshot test's trace
+            // along a real line for sale, once the real railways are in.
+            .task(id: session.canTraceRealRailway) {
+                guard session.canTraceRealRailway, ProcessInfo.processInfo.arguments.contains("-ui-test-trace-for-sale") else { return }
+                session.traceAlongALineForSale()
+            }
+            #endif
             // The map and controls share one screen, so text stops growing at the
             // largest standard size instead of pushing the map off screen.
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
