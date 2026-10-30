@@ -67,3 +67,15 @@ blender --background --python tools/train-shape-refresh/glb-audit.py -- /absolut
 仍不符合完整來源要求：未取得可確定官方1／2端的兩端原圖、反側全側／正交屋頂及實際營運牽引編組照片；沒有用同型相似照片冒稱全部已核。前罩、燈腔與連結器的圓角／精密鑄形、台車懸吊管線、屋頂細部都是模型化簡化。批次BOM、輪徑／軸距與設備寬度的官方數字不足。這些限制保留給後續核對，不能以技術通過抹去。
 
 本輪普通機車一型一款，沒有捏造多個批次鼻形。完整客貨牽引展示未交付，原因及營運邊界見上文。
+
+## 交付與證據
+
+真正producer：`65464b23fc0b26058521d362555b9a0d8b550c98`。近5,484／遠2,648三角；原生各一完整機車，不需分件。
+
+完整素材／自含旋轉縮放下載viewer：[素材庫 revision-1](https://github.com/a91453/railway-assets-private/tree/codex/tra-r200-native/game-art-previews/docs/art/tra-r200/revision-1)。兩庫draft互鏈及最新head CI見PR與#1579登記，base均main。
+
+[實跑驗證](verification.json)、[35交付檔獨立重建一致](rebuild-verification.json)、[835既有payload／全部頂點欄位保護](protection.json)、[幾何](geometry-verification.json)、[真故障反例](r200-verification.json)、[Blender獨立匯入](glb-import-verification.json)、[最終HTTP viewer／下載](browser-verification.json)、[四態](status.json)。
+
+最新幾何10項Swift6.4嚴格測試通過，另啟用記憶體報告：standard仍653模型／171.1MB。未改main全包共用檢查33項既有失敗、34實際鎖差異另列，不修他車／gate。其後main29d2279f只改兩份審查交接文件，Sources/tools/Package/規則未變。
+
+技術VERIFIED；明確producer使用者外觀接受、營運、裝置UNVERIFIED。HTTP viewer已驗，file://被瀏覽器管理政策擋住，離線直開UNVERIFIED。沒有Simulator、真機Metal／效能／動畫證據。正式來源缺口與未交付牽引全列的限制不因技術通過而消失。

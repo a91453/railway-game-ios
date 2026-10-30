@@ -1,0 +1,77 @@
+{
+  "producer": "65464b23fc0b26058521d362555b9a0d8b550c98",
+  "platform": "Linux; Swift 6.4.0 warnings-as-errors, Node 24.19, Chromium WebGL, Blender 4.3.2",
+  "technical_status": "VERIFIED",
+  "native_near_triangles": 5484,
+  "native_far_triangles": 2648,
+  "complete_locomotive": true,
+  "assembly_required": false,
+  "hauling_display": false,
+  "existing_models_protected": 835,
+  "standard_models": 653,
+  "standard_cpu_vertices_memory_mb": 171.1,
+  "standard_change": 0,
+  "swift_tests": {
+    "latest_geometry": {
+      "tests": 10,
+      "failures": 0
+    },
+    "memory_report": {
+      "tests": 1,
+      "failures": 0,
+      "note": "653 standard models unchanged by studies-only R200 revisions"
+    }
+  },
+  "independent_rebuild": {
+    "core_files": 35,
+    "all_bytes_identical": true,
+    "includes_metadata_png_viewer": true
+  },
+  "baseline_full_check": {
+    "status": "VERIFIED FAILURE",
+    "failures": 33,
+    "reproduced_on": "unchanged main 15759aa2",
+    "lock_differences": 34,
+    "gate_modified": false
+  },
+  "upstream": {
+    "latest_main": "29d2279f7fce04bae32f7be44af408161ec887ad",
+    "changes_since_baseline": [
+      "docs/HANDOFF.md",
+      "docs/archive/PR1551_1578_REVIEW_HANDOFF.md"
+    ],
+    "Sources_tools_Package_rule_files_identical": true
+  },
+  "browser": {
+    "HTTP": "VERIFIED",
+    "rotation_zoom": true,
+    "native_glb_download_bytes_sha": true,
+    "file_protocol": "UNVERIFIED; ERR_BLOCKED_BY_ADMINISTRATOR"
+  },
+  "states": {
+    "asset": {
+      "status": "VERIFIED",
+      "evidence": "Linux Swift 6.4 WAE, native readback, topology, R200 actual fault probes, independent native/GLB bytes, Blender import, decoded transparent PNGs, HTTP inspector rotation/zoom/download byte checks. file:// navigation UNVERIFIED: blocked by browser administration. Engineering/source gaps remain; this is technical study validation only."
+    },
+    "appearance": {
+      "status": "UNVERIFIED",
+      "evidence": "No explicit user acceptance of this producer. Author inspection is separate.",
+      "accepted_producer": null
+    },
+    "integration": {
+      "status": "UNVERIFIED",
+      "evidence": "Studies only. Existing r200ChuKuang/R200CK runtime mapping remains unchanged; new native locomotive is not selected by the game."
+    },
+    "device": {
+      "status": "UNVERIFIED",
+      "evidence": "No Simulator or physical-device Metal, performance, animation or operational validation."
+    }
+  },
+  "limitations": [
+    "Official dimensions reports and TSA URL returned 403; historical Stadler URL redirected to empty media page.",
+    "Official cab 1/2 correspondence, opposing side/roof/underbody records and batch BOM incomplete.",
+    "No sourced representative hauling formation or verified runtime integration.",
+    "No user appearance acceptance, Simulator/device Metal/performance/animation verification.",
+    "Static sample geometry tests are not exhaustive collision or engineering proof."
+  ]
+}

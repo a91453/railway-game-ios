@@ -1,0 +1,22 @@
+{
+  "status": "VERIFIED",
+  "producer": "65464b23fc0b26058521d362555b9a0d8b550c98",
+  "independent_checkout": true,
+  "files": 35,
+  "every_delivered_file_sha256_equal": true,
+  "includes": [
+    "2 native units",
+    "2 GLB",
+    "20 transparent PNG",
+    "self-contained viewer",
+    "source/status/configuration inputs",
+    "README/spec/SHA and technical reports"
+  ],
+  "metadata_inputs": {
+    "docs/art/tra-r200/sources.json": "84cef9a0737119a870699c98582c16247200ae539e587aec4aef8d4d00db1b04",
+    "docs/art/tra-r200/status.json": "e6835ac523fe176eb48a0a35bfe4a35c7ad8cbbe4bc1d91ba8eb3edae0c382e3",
+    "tools/tra-r200/configuration.json": "688663c5f7a8de455db3fc83489b9eae5af31dfe915ca6fe55b8fc08264dd877",
+    "tools/tra-r200/curate.py": "ad071ebb823c2884b5ba2b1e225223396d397ce0d7f492ebf85cb2d9a70a49a4",
+    "tools/tra-r200/review.mjs": "97f575b4c5c789477a4447714aa72a52130ac721e0c6e90d8d6cb94ef2e88eb9"
+  }
+}
