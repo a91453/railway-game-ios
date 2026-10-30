@@ -2,11 +2,11 @@
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "ankeng-lrt-m1" : {
-      "hash" : "5464c152aabba86f",
+      "hash" : "19d4cf075e7672e9",
       "triangles" : 10436
     },
     "ankeng-lrt-m1-far" : {
-      "hash" : "55d4056bafea8608",
+      "hash" : "816b4f25035b42ac",
       "triangles" : 5192
     },
     "ankeng-lrt-m2" : {
@@ -34,19 +34,19 @@
       "triangles" : 1224
     },
     "ankeng-lrt-m5" : {
-      "hash" : "5464c152aabba86f",
+      "hash" : "19d4cf075e7672e9",
       "triangles" : 10436
     },
     "ankeng-lrt-m5-far" : {
-      "hash" : "55d4056bafea8608",
+      "hash" : "816b4f25035b42ac",
       "triangles" : 5192
     },
     "danhai-lrt-m1" : {
-      "hash" : "48c794173869c570",
+      "hash" : "b84b2830ea4f616",
       "triangles" : 14524
     },
     "danhai-lrt-m1-far" : {
-      "hash" : "f722d6649f8608e0",
+      "hash" : "5cd8635d3ba49b34",
       "triangles" : 7168
     },
     "danhai-lrt-m2" : {
@@ -74,11 +74,11 @@
       "triangles" : 2784
     },
     "danhai-lrt-m5" : {
-      "hash" : "48c794173869c570",
+      "hash" : "b84b2830ea4f616",
       "triangles" : 14524
     },
     "danhai-lrt-m5-far" : {
-      "hash" : "f722d6649f8608e0",
+      "hash" : "5cd8635d3ba49b34",
       "triangles" : 7168
     },
     "blue-seven-formation" : {

@@ -195,7 +195,10 @@ struct NTLRTBody {
         // envelope only at the bogie enclosure; no cross-axle through the aisle.
         let roofEnd=cab ? half-1.5 : half
         g.box((-half+roofEnd)/2,roof-0.024,0,roofEnd+half,2.14,0.024,sea ? white : body)
-        g.box(0,0.65,0,length-0.12,1.62,0.055,ink)
+        // Keep the hidden cab floor behind the coarser far nose as well as
+        // the near shell. A full-length plate pierced the far lower corners.
+        let floorBack = -half+0.06, floorFront = half-(cab ? 0.25 : 0.06)
+        g.box((floorBack+floorFront)/2,0.65,0,floorFront-floorBack,1.62,0.055,ink)
         if cab {
             var patches: [([UV],UInt32)] = []
             let mask=[UV(-0.46,0.83),UV(0.46,0.83),UV(0.78,0.90),UV(0.98,1.06),UV(1.10,1.3),UV(1.10,2.95),UV(-1.10,2.95),UV(-1.10,1.3),UV(-0.98,1.06),UV(-0.78,0.90)]

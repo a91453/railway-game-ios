@@ -83,6 +83,22 @@ def roofcheck(t,role):
  ds=ray(t[~sel],np.array([x,0,3.351]),np.array([0.,0.,-1.]));assert len(ds) and min(ds)<.002,'roof contact missing'
  return sel
 
+def cabfloor(t):
+ # Probe the actual floor's front corners against the actual nose, independent
+ # of recipe constants. A 12-triangle closed horizontal plate is identifiable
+ # by its narrow height and cabin-wide extent. Its front must remain inside.
+ top=(abs(t[:,:,2]-.705)<.00001).all(axis=1)&(np.ptp(t[:,:,0],axis=1)>7)&(abs(t[:,:,1])<=.81001).all(axis=1)
+ assert top.sum()==2,'missing cab floor top'
+ back,front=t[top,:,0].min(),t[top,:,0].max()
+ sel=(((abs(t[:,:,0]-back)<.00001)|(abs(t[:,:,0]-front)<.00001))&((abs(t[:,:,1]-.81)<.00001)|(abs(t[:,:,1]+.81)<.00001))&((abs(t[:,:,2]-.65)<.00001)|(abs(t[:,:,2]-.705)<.00001))).all(axis=1)
+ floor=t[sel];assert len(floor)==12,'missing or ambiguous cab floor'
+ front=floor[:,:,0].max()
+ for side in [-1,1]:
+  for y in [.70,.75,.80]:
+   o=np.array([4.5,side*y,.70]);ds=ray(t[~sel],o,np.array([-1.,0.,0.]))
+   assert len(ds) and 4.5-min(ds)>front+.005,'cab floor pierces nose'
+ return sel
+
 def formation(s,fleet,far,root):
  suffix='-far' if far else ''
  assert [p['unit'] for p in s['placements']]==[fleet+'-lrt-'+r+suffix for r in ROLES],'wrong order'
@@ -117,6 +133,8 @@ for r in m['models']:
   rows.append({'id':r['id'],'actual_five_unit_assembly_open_passage_joints_common_rail':True,'order_direction_displacement_mutations_rejected':True});continue
  t,f=read(root/r['native']);role=r['id'].split('-')[2]
  ids,n,c=glass(t,f);wheelcheck(t,role);eq=roofcheck(t,role)
+ if role in ['m1','m5']:
+  floor=cabfloor(t);bad=t.copy();bad[floor,:,0]+=.30;reject(lambda:cabfloor(bad))
  # Mutate the actual outward-facing side glass, keeping backing in place.
  pane=ids[(n[ids,1]>.95)&(c[ids,0]<0)]
  assert len(pane)>0
@@ -128,7 +146,7 @@ for r in m['models']:
   bad=t.copy();bad[sel,:,2]+=.035;reject(lambda:wheelcheck(bad,role))
  for axis,amount in [(2,.08),(0,.15)]:
   bad=t.copy();bad[eq,:,axis]+=amount;reject(lambda:roofcheck(bad,role))
- rows.append({'id':r['id'],'sampled_glass_visibility_and_backing':True,'buried_floated_glass_80mm_rejected':True,'wheel_or_suspension_and_clearance':True,'wheel_35mm_and_equipment_80mm_150mm_mutations_rejected':True})
+ rows.append({'id':r['id'],'sampled_glass_visibility_and_backing':True,'buried_floated_glass_80mm_rejected':True,'wheel_or_suspension_and_clearance':True,'wheel_35mm_and_equipment_80mm_150mm_mutations_rejected':True,'cab_floor_contained_and_300mm_mutation_rejected':role in ['m1','m5']})
 byid={r['id']:r for r in m['models']}
 for role in ROLES:
  a=byid[f'{fleet}-lrt-{role}'];b=byid[a['id']+'-far']
