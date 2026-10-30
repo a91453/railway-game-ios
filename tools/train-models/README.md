@@ -107,3 +107,5 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 高雄輕軌 CAF／Citadis 兩款獨立五段 studies 的關節、懸浮段、玻璃、走行與獨立 Swift 組裝驗收：[tools/kaohsiung-light-rail](../kaohsiung-light-rail/README.md)。沿用共用匯出／GLB／渲染／交付，未更動舊車幾何或營運映射。
 
 新北安坑／淡海輕軌兩款 studies 編組及專用反例：[tools/new-taipei-lrt](../new-taipei-lrt/README.md)。
+
+海風／山嵐 EMU500 改造雙款的配置、共同尺度及故障反例：[tools/tourism-emu500](../tourism-emu500/README.md)。保護原EMU500近遠／營運，兩款僅studies。

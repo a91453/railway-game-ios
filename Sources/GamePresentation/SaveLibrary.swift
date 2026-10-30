@@ -105,17 +105,32 @@ public struct SaveLibrary: Sendable {
     static let nameSuffix = ".name"
 
     public let directory: URL
+    /// The headers already read (decision 497), shared by the library's
+    /// copies.
+    private let headers: HeaderCache
 
-    public init(directory: URL) {
+    /// The saves in `directory`; the headers read are kept for the next
+    /// launch in `headers`, a folder of their own outside it, when given
+    /// (decision 497).
+    public init(directory: URL, headers: URL? = nil) {
         self.directory = directory
+        self.headers = HeaderCache(directory: headers)
     }
+
+    /// How many save files the library has read whole for their headers:
+    /// a list reads only those that changed since (decision 497).
+    var headersRead: Int { headers.reads }
 
     /// The saves in the app's Application Support folder, `Saves/`.
     public static func standard() throws -> SaveLibrary {
         let support = try FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
         )
-        return SaveLibrary(directory: support.appendingPathComponent("Saves", isDirectory: true))
+        let caches = try? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        return SaveLibrary(
+            directory: support.appendingPathComponent("Saves", isDirectory: true),
+            headers: caches?.appendingPathComponent("SaveHeaders", isDirectory: true)
+        )
     }
 
     // MARK: - Listing
@@ -126,8 +141,9 @@ public struct SaveLibrary: Sendable {
     public func entries() -> [Entry] {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         // A save's news log (decision 175) lies beside it and is no save.
-        let entries = names.filter { $0.hasSuffix(".json") && !$0.hasSuffix(Self.newsSuffix) }.map(entry(named:))
-        return Self.listed(entries)
+        let saves = names.filter { $0.hasSuffix(".json") && !$0.hasSuffix(Self.newsSuffix) }
+        headers.forget(allBut: Set(saves))
+        return Self.listed(saves.map(entry(named:)))
     }
 
     /// The autosaves alone (decision 192), as ``entries()`` lists them: the
@@ -175,11 +191,11 @@ public struct SaveLibrary: Sendable {
 
     private func entry(named name: String) -> Entry {
         let kind: Kind = Self.isAutosave(name) ? .autosave : .manual
-        guard let data = try? Data(contentsOf: url(of: name)) else {
+        guard let header = cachedHeader(ofFile: name) else {
             return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: .fileSystem)
         }
         let given = playerName(of: name)
-        switch Self.header(of: data) {
+        switch header {
         case .success(let header):
             return Entry(id: name, kind: kind, savedAt: header.savedAt, summary: header.summary, problem: nil, name: given)
         case .failure(let problem):
@@ -210,6 +226,22 @@ public struct SaveLibrary: Sendable {
             }
             return lhs.offset < rhs.offset
         }.map(\.element)
+    }
+
+    /// The header of save file `name` (a path in the folder), read whole
+    /// only when the file is not the one last read (decision 497: a save
+    /// of the high-speed demo takes some 190 ms to read, and the list read
+    /// every save each time); `nil` when it cannot be read.
+    private func cachedHeader(ofFile name: String) -> Result<Header, SaveError>? {
+        let file = url(of: name)
+        let stamp = HeaderCache.Stamp(of: file)
+        if let stamp, let known = headers.header(of: name, stamped: stamp) {
+            return known
+        }
+        guard let data = try? Data(contentsOf: file) else { return nil }
+        let header = Self.header(of: data)
+        headers.keep(header, of: name, stamped: stamp, read: true)
+        return header
     }
 
     // MARK: - Names
@@ -287,7 +319,12 @@ public struct SaveLibrary: Sendable {
         if let news, let log = try? JSONEncoder().encode(news) {
             try? log.write(to: url(of: Self.newsFile(of: name)), options: .atomic)
         }
-        let entry = Entry(id: name, kind: kind, savedAt: date, summary: SaveSummary(world: world), problem: nil)
+        let summary = SaveSummary(world: world)
+        // The list need not read the file it was just given (decision 497).
+        if let header = Header(app: Self.appName, savedAt: date, summary: summary, saveVersion: SavedGame.currentVersion).asRead {
+            headers.keep(.success(header), of: name, stamped: HeaderCache.Stamp(of: url(of: name)), read: false)
+        }
+        let entry = Entry(id: name, kind: kind, savedAt: date, summary: summary, problem: nil)
         // So is its name (decision 184); the autosave has none.
         guard kind == .manual, let playerName else { return entry }
         return (try? rename(entry, to: playerName)) ?? entry
@@ -780,8 +817,8 @@ struct SaveFile: Codable {
 }
 
 /// Only what a list needs and what decides whether the game loads.
-private struct Header: Decodable {
-    struct Game: Decodable {
+private struct Header: Codable {
+    struct Game: Codable {
         let saveVersion: Int
     }
 
@@ -789,4 +826,119 @@ private struct Header: Decodable {
     let savedAt: Date
     let summary: SaveSummary
     let game: Game
+}
+
+extension Header {
+    init(app: String, savedAt: Date, summary: SaveSummary, saveVersion: Int) {
+        self.init(app: app, savedAt: savedAt, summary: summary, game: Game(saveVersion: saveVersion))
+    }
+
+    /// This header as reading it from a file gives it (the time to the
+    /// second, as the file keeps it), or `nil`.
+    var asRead: Header? {
+        try? HeaderCache.decoder.decode(Header.self, from: HeaderCache.encoder.encode(self))
+    }
+}
+
+/// The headers of the saves already read (decision 497, P2-2, the owner's
+/// 97.1 report: the start screen came later the more saves there were, as
+/// listing them read every file whole). A save is read again only when it
+/// is not the file last read: its size, modification time or file number
+/// changed. Kept in memory for the library and its copies, and, for the
+/// next launch, in a small file a save in the app's caches (rebuilt when
+/// the system clears them, or when one is out of date or of another
+/// format), outside the saves' folder, so nothing that reads or syncs the
+/// saves sees it. The save itself and its format are not touched. A file
+/// that cannot be read is not kept, so it is tried again.
+private final class HeaderCache: @unchecked Sendable {
+    /// Raised when ``Header`` gains a field, so the files kept before are
+    /// read again.
+    static let format = 1
+
+    /// What tells one file from another under the same name.
+    struct Stamp: Codable, Equatable {
+        let size: Int
+        let modified: Double
+        let file: Int
+
+        init?(of url: URL) {
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+                  let size = (attributes[.size] as? NSNumber)?.intValue,
+                  let modified = (attributes[.modificationDate] as? Date)?.timeIntervalSinceReferenceDate,
+                  let file = (attributes[.systemFileNumber] as? NSNumber)?.intValue else { return nil }
+            self.size = size
+            self.modified = modified
+            self.file = file
+        }
+    }
+
+    private struct Kept: Codable {
+        let format: Int
+        let stamp: Stamp
+        let header: Header
+    }
+
+    static var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+
+    static var decoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+
+    private let directory: URL?
+    private let lock = NSLock()
+    private var known: [String: (stamp: Stamp, header: Result<Header, SaveError>)] = [:]
+    private var read = 0
+
+    init(directory: URL?) {
+        self.directory = directory
+    }
+
+    var reads: Int { lock.withLock { read } }
+
+    /// The header of save file `name` when it is still the file `stamp`
+    /// tells, or `nil`.
+    func header(of name: String, stamped stamp: Stamp) -> Result<Header, SaveError>? {
+        if let header = lock.withLock({ known[name].flatMap { $0.stamp == stamp ? $0.header : nil } }) {
+            return header
+        }
+        guard let directory, let data = try? Data(contentsOf: directory.appendingPathComponent(name)),
+              let kept = try? Self.decoder.decode(Kept.self, from: data),
+              kept.format == Self.format, kept.stamp == stamp else { return nil }
+        lock.withLock { known[name] = (stamp, .success(kept.header)) }
+        return .success(kept.header)
+    }
+
+    /// Keeps `header` for save file `name`, the file `stamp` tells
+    /// (nothing when there is none); `read` when the file was read whole.
+    func keep(_ header: Result<Header, SaveError>, of name: String, stamped stamp: Stamp?, read: Bool) {
+        lock.withLock {
+            if read { self.read += 1 }
+            if let stamp { known[name] = (stamp, header) } else { known[name] = nil }
+        }
+        guard let directory else { return }
+        let file = directory.appendingPathComponent(name)
+        guard let stamp, case .success(let header) = header,
+              let data = try? Self.encoder.encode(Kept(format: Self.format, stamp: stamp, header: header)) else {
+            try? FileManager.default.removeItem(at: file)
+            return
+        }
+        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: file, options: .atomic)
+    }
+
+    /// Forgets the saves in the folder that are not `names`.
+    func forget(allBut names: Set<String>) {
+        lock.withLock { known = known.filter { $0.key.contains("/") || names.contains($0.key) } }
+        guard let directory else { return }
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        for file in files where file.hasSuffix(".json") && !names.contains(file) {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(file))
+        }
+    }
 }

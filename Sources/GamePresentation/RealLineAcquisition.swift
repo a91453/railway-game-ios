@@ -1334,10 +1334,13 @@ public struct RealLineAcquired: Hashable, Sendable {
     public let trains: Int
     /// The real trains of a weekday (Wednesday) it runs.
     public let weekdayTrains: Int
+    /// BUGHUNT_BUILD P3-2: whether it runs from that day's first train
+    /// (bought before ``LineAcquisition/sameDayCutoff``), not the next day's.
+    public var startsToday = false
 
     public static func == (a: RealLineAcquired, b: RealLineAcquired) -> Bool {
         a.line == b.line && a.name == b.name && a.color == b.color && a.ends == b.ends && a.stations == b.stations && a.metres == b.metres
-            && a.trains == b.trains && a.weekdayTrains == b.weekdayTrains
+            && a.trains == b.trains && a.weekdayTrains == b.weekdayTrains && a.startsToday == b.startsToday
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -1354,7 +1357,23 @@ public struct RealLineAcquired: Hashable, Sendable {
     }
 
     public func handoverText(in language: DisplayLanguage) -> String {
-        language.text("Yours to run from tomorrow's first train", "明天首班車起由你經營")
+        RealLineAcquired.handoverText(today: startsToday, in: language)
+    }
+
+    /// BUGHUNT_BUILD P3-2: from which day's first train a line bought at
+    /// `time` is the company's (``LineAcquisition/firstServiceDay(at:)``):
+    /// that day's before four in the morning, the next day's after.
+    public static func startsToday(at time: GameTime) -> Bool {
+        let day = time.seconds >= 0 ? time.seconds / GameTime.secondsPerDay : (time.seconds + 1) / GameTime.secondsPerDay - 1
+        return LineAcquisition.firstServiceDay(at: time) == day
+    }
+
+    /// "Yours to run from today's (or tomorrow's) first train", without a
+    /// full stop.
+    public static func handoverText(today: Bool, in language: DisplayLanguage) -> String {
+        today
+            ? language.text("Yours to run from today's first train", "今天首班車起由你經營")
+            : language.text("Yours to run from tomorrow's first train", "明天首班車起由你經營")
     }
 
     public func timetableText(in language: DisplayLanguage) -> String {
@@ -1373,10 +1392,12 @@ extension GameSession {
             return false
         }
         let name = acquisition.lineName
+        let today = RealLineAcquired.startsToday(at: world.clock.now)
+        let handover = RealLineAcquired.handoverText(today: today, in: language)
         let made = perform(.acquireRealLine(acquisition)) { _, _, _ in
             language.text(
-                "Bought \(name): its track, \(acquisition.stops.count) stations, \(acquisition.trains.count) trains and its real timetable. Yours to run from tomorrow's first train.",
-                "已收購\(name)：軌道、\(acquisition.stops.count) 座車站、\(acquisition.trains.count) 列車與真實班次。明天首班車起由你經營。"
+                "Bought \(name): its track, \(acquisition.stops.count) stations, \(acquisition.trains.count) trains and its real timetable. \(handover).",
+                "已收購\(name)：軌道、\(acquisition.stops.count) 座車站、\(acquisition.trains.count) 列車與真實班次。\(handover)。"
             )
         }
         guard let line = made?.line else { return false }
@@ -1389,7 +1410,8 @@ extension GameSession {
         lastLineAcquired = RealLineAcquired(
             line: line.id, name: name, color: acquisition.color,
             ends: (acquisition.stops.first?.name ?? "", acquisition.stops.last?.name ?? ""),
-            stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday
+            stations: acquisition.stops.count, metres: max(0, metres), trains: acquisition.trains.count, weekdayTrains: weekday,
+            startsToday: today
         )
         shownRealLineOffer = nil
         selectLine(line.id)

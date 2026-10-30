@@ -452,6 +452,41 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertGreaterThan(tall.frame(in: Self.screen, measure: Self.lineStepCard).height, TutorialCardPlacement.compactMaxHeight)
     }
 
+    /// On a phone on its side the explanation scrolls in whole lines: the
+    /// first step's card, measured on an iPhone at the default text size
+    /// (the audit of 2026-10-30, B3), showed one line of its goal and half
+    /// of the next. Its height ends on a line, at least the first two of
+    /// them, and no taller than ``TutorialCardPlacement/compactMaxHeight``
+    /// when more lines fit (a player's report on 59.1).
+    func testOnAPhoneOnItsSideTheExplanationEndsOnAWholeLine() {
+        // Chrome: the padding, the spacing and the buttons, outside the
+        // scrolling; above the body: the step's row and its title.
+        let cases: [(chrome: Double, bodyTop: Double, line: Double)] = [
+            (68, 62, 16), // the first step at the default size: 1.25 lines fit in 150
+            (68, 62, 18), // Chinese, whose lines are taller
+            (56, 40, 15), // a card with room for more than two lines
+            (80, 70, 20), // larger text: not even one line fits in 150
+            (68, 62.4, 15.7), // fractional measures
+        ]
+        for (chrome, bodyTop, line) in cases {
+            let height = TutorialCardPlacement.compactMaxHeight(chrome: chrome, bodyTop: bodyTop, lineHeight: line)
+            let lines = (height - chrome - bodyTop) / line
+            let context = "chrome \(chrome), above the body \(bodyTop), line \(line): \(height) shows \(lines) lines"
+            XCTAssertEqual(lines, lines.rounded(), accuracy: 0.05, context)
+            XCTAssertGreaterThanOrEqual(lines.rounded(), Double(TutorialCardPlacement.compactBodyLines), context)
+            if chrome + bodyTop + Double(TutorialCardPlacement.compactBodyLines) * line <= TutorialCardPlacement.compactMaxHeight {
+                XCTAssertLessThanOrEqual(height, TutorialCardPlacement.compactMaxHeight, context)
+                XCTAssertGreaterThan(height + line, TutorialCardPlacement.compactMaxHeight, "\(context): a line more fits")
+            } else {
+                XCTAssertEqual(lines.rounded(), Double(TutorialCardPlacement.compactBodyLines), context)
+            }
+        }
+        // Not measured yet: the fixed height.
+        XCTAssertEqual(
+            TutorialCardPlacement.compactMaxHeight(chrome: 0, bodyTop: 0, lineHeight: 0), TutorialCardPlacement.compactMaxHeight
+        )
+    }
+
     /// Folded, the card finds a free place on every screen of the tutorial.
     func testTheFoldedCardAlwaysFindsAFreePlace() {
         let screens: [TutorialCardPlacement] = [

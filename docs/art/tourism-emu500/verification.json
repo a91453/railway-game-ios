@@ -1,0 +1,96 @@
+{
+  "producer": "0e2f38a244db7ea0301169cdb4b6d81f0c340a78",
+  "revision": 2,
+  "previous_delivered_producer": "f036e7f79279586f5831c7cb9bf9d8cce3444558",
+  "previous_accepted_producer": null,
+  "base": "a1e33214bc89f9875cdc7721dcb35948e3af88e3",
+  "latest_main": "d6c5c899821e6f355f557c6c8f7ca52888789178",
+  "source_rebuild": {
+    "status": "VERIFIED",
+    "producer": "0e2f38a244db7ea0301169cdb4b6d81f0c340a78",
+    "independent_checkout": true,
+    "models_and_viewer_rebuilt_from_committed_source_and_status": true,
+    "rows": [
+      {
+        "fleet": "haifeng",
+        "files": 46,
+        "model_files": 22,
+        "pngs": 20,
+        "viewer_sha256": "921f04a70e5b6f656ac6cca9fdd7af1dbc6c69b4a3d32c53f83ccaee42207fa3",
+        "all_bytes_identical": true
+      },
+      {
+        "fleet": "shanlan",
+        "files": 46,
+        "model_files": 22,
+        "pngs": 20,
+        "viewer_sha256": "bb953064dcae555b2a80f36e18e81977735cfd1229b28731fbf08ac0cbcc35aa",
+        "all_bytes_identical": true
+      }
+    ],
+    "public_overview_bytes_identical": true
+  },
+  "protection": {
+    "status": "VERIFIED",
+    "baseline_commit": "d6c5c899821e6f355f557c6c8f7ca52888789178",
+    "existing_models": 777,
+    "payload_bytes_identical": true,
+    "all_vertex_fields_fnv_identical": true,
+    "upstream_changes": "none relative to recorded base",
+    "limits": "M3DM omits u/v but the FNV includes x/y/z/nx/ny/nz/color/u/v/layer"
+  },
+  "old_failures": {
+    "status": "VERIFIED",
+    "identical_failures": 33,
+    "baseline": "unmodified main d6c5c899 actual export",
+    "after": "producer actual export of same 777 IDs",
+    "gate_changed": false,
+    "other_vehicles_fixed": false
+  },
+  "validation": {
+    "swift": "Swift 6.4.0 warnings-as-errors build; final 14 related tests, 0 failures. Independent producer checkout also built with warnings-as-errors.",
+    "common_tools": "Node 5 / Python 6 tests passed",
+    "native": "All 20 units/assemblies native readback; finite / nondegenerate / balanced directed edges / positive components. Glass support / visibility, curved lower corners, lamps / coupler, rail / AC / converted openings and LOD checks.",
+    "actual_faults": "Floating/buried glass, duplicate former door glazing, protruding seal, displaced lamps, retracted coupler, blocked recess, off-rail wheels, AC shift, missing/reversed faces, wrong assembly order / rotation / position and LOD contour / paint faults rejected.",
+    "independent": "Swift assembly max position error 3.8146973e-6 m, colours equal; Blender4.3.2 independently imported 20 GLBs with native axes, bounds, triangle counts, vertex colours and matte nonmetal/no texture checks.",
+    "images": "40 private RGBA PNGs and one public common overview fully decoded, transparent/nonempty/unclipped; independent bytes identical. Maker viewed all units / formations color, clay and silhouette with fixed metre cameras, source photos and unaccepted revision-1 comparison.",
+    "viewer": "Final delivered HTTP inspectors: each 10 models x 7 views x day/night, orbit / zoom pixel change, 390px; native / GLB actual downloads equal and SHA checked, zero external requests.",
+    "standard": "613 models / 3565788 vertices / 142.6MB unchanged; no new standard resident model, operations or selection mapping."
+  },
+  "budgets": {
+    "maximum_unit_triangles": 8076,
+    "formation_near": 22220,
+    "formation_far": 9120,
+    "assembly": "M3DAssembly, legal independent units; no loader / gate changes"
+  },
+  "reuse": {
+    "status": "VERIFIED",
+    "evidence": "16 role/feature comparisons: actual retained bogie and AC triangle-position multisets match baseline EMU500; original API / recipe untouched"
+  },
+  "states": {
+    "asset": "VERIFIED within static sampled scope",
+    "appearance": "UNVERIFIED; no user acceptance of this producer",
+    "integration": "UNVERIFIED; studies only",
+    "device": "UNVERIFIED"
+  },
+  "unverified": [
+    "User acceptance of this producer; previous delivered revision was also unaccepted",
+    "Full individual-role opposite side / calibrated roof / underfloor BOM",
+    "Post-conversion official registration ledger / delivery certificate / exact coupling dimensions",
+    "file:// blocked by browser administration; HTTP separately VERIFIED",
+    "Simulator visual / Safari / device Metal / FPS",
+    "Curves / grades / dynamic running / pantograph animation / exhaustive intersections"
+  ],
+  "ci": "Check the exact current PR head workflows and conflict status; latest snapshots recorded in public #1539 and assets #35 comments, without changing the producer.",
+  "assets": {
+    "head": "f1ee7c2d9e47351db5f002ca8c9d4cb7b1b05d94",
+    "asset_guard_staged": "VERIFIED",
+    "asset_guard_HEAD": "VERIFIED",
+    "added_files": 186,
+    "added_MiB_reported": 52.2,
+    "private_PNGs_this_round": 40,
+    "public_common_PNGs": 1,
+    "old_round_heavy_files_removed": true,
+    "no_zip_history_old_backup": true
+  }
+}

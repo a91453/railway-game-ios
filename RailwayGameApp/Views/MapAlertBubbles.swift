@@ -52,6 +52,15 @@ struct MapAlertBubbles: View {
     /// name (``MapLabelPlacement/placeBubbles(_:stations:lift:radius:)``).
     private var placed: [PlacedAlert] {
         guard session.tool == .select else { return [] }
+        return Self.placements(session: session, camera: camera, viewport: viewport, insets: insets).map {
+            PlacedAlert(bubble: $0.bubble, point: CGPoint(x: $0.point.x, y: $0.point.y))
+        }
+    }
+
+    /// Where each bubble on screen goes (its bottom middle) and the box its
+    /// touch takes. Decision 501: the selected station's tag keeps off them.
+    static func placements(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets)
+        -> [(bubble: MapMarks.Bubble, point: ScreenPoint, touchBox: MapLabelPlacement.Box)] {
         // Decision 210: over the waiting count's pill (and a crowded
         // station's ring) where the map draws them, not on it.
         let radius = MapArt.stationRadius(camera)
@@ -66,21 +75,24 @@ struct MapAlertBubbles: View {
             return (bubble, at)
         }
         guard !shown.isEmpty else { return [] }
+        let plates = shown.map { item in
+            MapLabelPlacement.Bubble(
+                x: item.at.x, y: item.at.y,
+                text: item.bubble.alert.text(in: session.language, lineName: item.bubble.lineName, subject: subject(of: item.bubble, in: session.language)),
+                hasReason: item.bubble.waitReason != nil
+            )
+        }
         let points = MapLabelPlacement.placeBubbles(
-            shown.map { item in
-                MapLabelPlacement.Bubble(
-                    x: item.at.x, y: item.at.y,
-                    text: item.bubble.alert.text(in: session.language, lineName: item.bubble.lineName, subject: subject(of: item.bubble)),
-                    hasReason: item.bubble.waitReason != nil
-                )
-            },
-            stations: stationsOnScreen, lift: lift, radius: radius
+            plates, stations: stationsOnScreen(session: session, camera: camera, viewport: viewport), lift: lift, radius: radius
         )
-        return zip(shown, points).map { PlacedAlert(bubble: $0.bubble, point: CGPoint(x: $1.x, y: $1.y)) }
+        return zip(zip(shown, plates), points).map { item, point in
+            (item.0.bubble, point, MapLabelPlacement.bubbleTouchBox(item.1, at: point))
+        }
     }
 
-    /// The stations whose names a bubble could cover.
-    private var stationsOnScreen: [MapLabelPlacement.Station] {
+    /// The stations whose names a bubble, or the selected station's tag
+    /// (decision 501), could cover.
+    static func stationsOnScreen(session: GameSession, camera: PlanCamera, viewport: ScreenSize) -> [MapLabelPlacement.Station] {
         session.world.stations.compactMap { station in
             let at = camera.screenPoint(of: station.location)
             guard at.x > -80, at.x < viewport.width + 80, at.y > -80, at.y < viewport.height + 80 else { return nil }
@@ -159,7 +171,11 @@ struct MapAlertBubbles: View {
 
     /// The train's or the sight's name (decision 184).
     private func subject(of bubble: MapMarks.Bubble) -> String? {
-        bubble.trainName ?? bubble.sight.map { session.language.text($0.englishName, $0.name) }
+        Self.subject(of: bubble, in: session.language)
+    }
+
+    private static func subject(of bubble: MapMarks.Bubble, in language: DisplayLanguage) -> String? {
+        bubble.trainName ?? bubble.sight.map { language.text($0.englishName, $0.name) }
     }
 
     private func glyph(_ alert: MapAlert) -> MapGlyph {

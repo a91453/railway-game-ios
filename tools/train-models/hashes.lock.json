@@ -1,6 +1,70 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
+    "haifeng-emu500-em" : {
+      "hash" : "c40d1a31c0ba14f",
+      "triangles" : 8076
+    },
+    "haifeng-emu500-em-far" : {
+      "hash" : "af04d780f8f064ec",
+      "triangles" : 3420
+    },
+    "haifeng-emu500-emc" : {
+      "hash" : "c40d1a31c0ba14f",
+      "triangles" : 8076
+    },
+    "haifeng-emu500-emc-far" : {
+      "hash" : "af04d780f8f064ec",
+      "triangles" : 3420
+    },
+    "haifeng-emu500-ep" : {
+      "hash" : "6167e154711dc59b",
+      "triangles" : 2936
+    },
+    "haifeng-emu500-ep-far" : {
+      "hash" : "7e07e67c05fc09ba",
+      "triangles" : 1116
+    },
+    "haifeng-emu500-et" : {
+      "hash" : "af6a5d5b0435f268",
+      "triangles" : 3132
+    },
+    "haifeng-emu500-et-far" : {
+      "hash" : "d9ea81c5b58a8da2",
+      "triangles" : 1164
+    },
+    "shanlan-emu500-em" : {
+      "hash" : "1d7d244c073a2ab7",
+      "triangles" : 8076
+    },
+    "shanlan-emu500-em-far" : {
+      "hash" : "4ca8279dd90b3633",
+      "triangles" : 3420
+    },
+    "shanlan-emu500-emc" : {
+      "hash" : "1d7d244c073a2ab7",
+      "triangles" : 8076
+    },
+    "shanlan-emu500-emc-far" : {
+      "hash" : "4ca8279dd90b3633",
+      "triangles" : 3420
+    },
+    "shanlan-emu500-ep" : {
+      "hash" : "64b0cda9bd1e77cb",
+      "triangles" : 2936
+    },
+    "shanlan-emu500-ep-far" : {
+      "hash" : "942fb0cbed4bbd8",
+      "triangles" : 1116
+    },
+    "shanlan-emu500-et" : {
+      "hash" : "274bbc4c1f14a710",
+      "triangles" : 3132
+    },
+    "shanlan-emu500-et-far" : {
+      "hash" : "eab1c44c506da216",
+      "triangles" : 1164
+    },
     "ankeng-lrt-m1" : {
       "hash" : "19d4cf075e7672e9",
       "triangles" : 10436
@@ -40,46 +104,6 @@
     "ankeng-lrt-m5-far" : {
       "hash" : "816b4f25035b42ac",
       "triangles" : 5192
-    },
-    "danhai-lrt-m1" : {
-      "hash" : "b84b2830ea4f616",
-      "triangles" : 14524
-    },
-    "danhai-lrt-m1-far" : {
-      "hash" : "5cd8635d3ba49b34",
-      "triangles" : 7168
-    },
-    "danhai-lrt-m2" : {
-      "hash" : "cc58393d05592c3f",
-      "triangles" : 6596
-    },
-    "danhai-lrt-m2-far" : {
-      "hash" : "59b14312fc6fd7b7",
-      "triangles" : 2808
-    },
-    "danhai-lrt-m3" : {
-      "hash" : "f12e895198a22075",
-      "triangles" : 4644
-    },
-    "danhai-lrt-m3-far" : {
-      "hash" : "55c612072e4fc9db",
-      "triangles" : 1612
-    },
-    "danhai-lrt-m4" : {
-      "hash" : "96b7792868c9a7cd",
-      "triangles" : 6740
-    },
-    "danhai-lrt-m4-far" : {
-      "hash" : "baf4924d10464bea",
-      "triangles" : 2784
-    },
-    "danhai-lrt-m5" : {
-      "hash" : "b84b2830ea4f616",
-      "triangles" : 14524
-    },
-    "danhai-lrt-m5-far" : {
-      "hash" : "5cd8635d3ba49b34",
-      "triangles" : 7168
     },
     "blue-seven-formation" : {
       "hash" : "875bb3a96fcc5147",
@@ -168,6 +192,46 @@
     "commuter-car" : {
       "hash" : "1b8863c4d7228b0a",
       "triangles" : 1592
+    },
+    "danhai-lrt-m1" : {
+      "hash" : "b84b2830ea4f616",
+      "triangles" : 14524
+    },
+    "danhai-lrt-m1-far" : {
+      "hash" : "5cd8635d3ba49b34",
+      "triangles" : 7168
+    },
+    "danhai-lrt-m2" : {
+      "hash" : "cc58393d05592c3f",
+      "triangles" : 6596
+    },
+    "danhai-lrt-m2-far" : {
+      "hash" : "59b14312fc6fd7b7",
+      "triangles" : 2808
+    },
+    "danhai-lrt-m3" : {
+      "hash" : "f12e895198a22075",
+      "triangles" : 4644
+    },
+    "danhai-lrt-m3-far" : {
+      "hash" : "55c612072e4fc9db",
+      "triangles" : 1612
+    },
+    "danhai-lrt-m4" : {
+      "hash" : "96b7792868c9a7cd",
+      "triangles" : 6740
+    },
+    "danhai-lrt-m4-far" : {
+      "hash" : "baf4924d10464bea",
+      "triangles" : 2784
+    },
+    "danhai-lrt-m5" : {
+      "hash" : "b84b2830ea4f616",
+      "triangles" : 14524
+    },
+    "danhai-lrt-m5-far" : {
+      "hash" : "5cd8635d3ba49b34",
+      "triangles" : 7168
     },
     "duplex-formation" : {
       "hash" : "3b7bd697d5c21cab",
@@ -717,6 +781,22 @@
       "hash" : "f7d76152a433d695",
       "triangles" : 384
     },
+    "light-set-ankengLRT-head" : {
+      "hash" : "aeae044e69e2c251",
+      "triangles" : 112
+    },
+    "light-set-ankengLRT-tail" : {
+      "hash" : "396454ef36174992",
+      "triangles" : 112
+    },
+    "light-set-ankengLRTFar-head" : {
+      "hash" : "ae2a1af5d8d989fc",
+      "triangles" : 52
+    },
+    "light-set-ankengLRTFar-tail" : {
+      "hash" : "35584aab519cf4fe",
+      "triangles" : 52
+    },
     "light-set-BLUE-car" : {
       "hash" : "16dd39ef4f1d9938",
       "triangles" : 472
@@ -772,6 +852,22 @@
     "light-set-circular610Far-tail" : {
       "hash" : "721dccd6aba18cd",
       "triangles" : 80
+    },
+    "light-set-danhaiLRT-head" : {
+      "hash" : "aeae044e69e2c251",
+      "triangles" : 112
+    },
+    "light-set-danhaiLRT-tail" : {
+      "hash" : "396454ef36174992",
+      "triangles" : 112
+    },
+    "light-set-danhaiLRTFar-head" : {
+      "hash" : "ae2a1af5d8d989fc",
+      "triangles" : 52
+    },
+    "light-set-danhaiLRTFar-tail" : {
+      "hash" : "4327e5557ae93fb6",
+      "triangles" : 52
     },
     "light-set-dieselExpress-car" : {
       "hash" : "8d567bde9d813edd",
@@ -1208,6 +1304,38 @@
     "light-set-kaohsiungFar-tail" : {
       "hash" : "8b20f552bf3567e5",
       "triangles" : 112
+    },
+    "light-set-klrtCAF-head" : {
+      "hash" : "9f3153b832f3b4c6",
+      "triangles" : 194
+    },
+    "light-set-klrtCAF-tail" : {
+      "hash" : "d546ce06a8a1d8a7",
+      "triangles" : 206
+    },
+    "light-set-klrtCAFFar-head" : {
+      "hash" : "878b4ee4cd118402",
+      "triangles" : 132
+    },
+    "light-set-klrtCAFFar-tail" : {
+      "hash" : "a16acf5a5d75712c",
+      "triangles" : 140
+    },
+    "light-set-klrtCitadis-head" : {
+      "hash" : "ff7231fd43cb8e6f",
+      "triangles" : 146
+    },
+    "light-set-klrtCitadis-tail" : {
+      "hash" : "c8c0b3aeed064e3b",
+      "triangles" : 156
+    },
+    "light-set-klrtCitadisFar-head" : {
+      "hash" : "e26f55d33b7ef28",
+      "triangles" : 84
+    },
+    "light-set-klrtCitadisFar-tail" : {
+      "hash" : "72accca60e3bb8cd",
+      "triangles" : 86
     },
     "light-set-metroC341-car" : {
       "hash" : "68e8e62fb8955961",
@@ -1845,6 +1973,22 @@
       "hash" : "2d6d09ff2fa2f42c",
       "triangles" : 50
     },
+    "set-ankengLRT-head" : {
+      "hash" : "e0a22502111ff747",
+      "triangles" : 14982
+    },
+    "set-ankengLRT-tail" : {
+      "hash" : "38606a1d79795d77",
+      "triangles" : 14934
+    },
+    "set-ankengLRTFar-head" : {
+      "hash" : "9da9d8296c7f59d2",
+      "triangles" : 7342
+    },
+    "set-ankengLRTFar-tail" : {
+      "hash" : "cda7af2171de56c3",
+      "triangles" : 7294
+    },
     "set-BLUE-car" : {
       "hash" : "cdaf3d84d3d86c31",
       "triangles" : 1528
@@ -1900,6 +2044,22 @@
     "set-circular610Far-tail" : {
       "hash" : "13a8ec0637da0639",
       "triangles" : 1638
+    },
+    "set-danhaiLRT-head" : {
+      "hash" : "7fc154f627e5c12f",
+      "triangles" : 24838
+    },
+    "set-danhaiLRT-tail" : {
+      "hash" : "923ab8a209b64ae6",
+      "triangles" : 25174
+    },
+    "set-danhaiLRTFar-head" : {
+      "hash" : "d68aa6e0fd495cf8",
+      "triangles" : 11634
+    },
+    "set-danhaiLRTFar-tail" : {
+      "hash" : "aeb4d96257e23201",
+      "triangles" : 11850
     },
     "set-dieselExpress-car" : {
       "hash" : "56ef91ff8b47b996",
@@ -2352,6 +2512,38 @@
     "set-kaohsiungFar-tail" : {
       "hash" : "c880afd63b0a1f76",
       "triangles" : 2686
+    },
+    "set-klrtCAF-head" : {
+      "hash" : "29d6ed8375631e85",
+      "triangles" : 21288
+    },
+    "set-klrtCAF-tail" : {
+      "hash" : "45382aef2471623e",
+      "triangles" : 20644
+    },
+    "set-klrtCAFFar-head" : {
+      "hash" : "b07acf8c92c7dc5e",
+      "triangles" : 9480
+    },
+    "set-klrtCAFFar-tail" : {
+      "hash" : "aaa6f03e6aec0ae7",
+      "triangles" : 9696
+    },
+    "set-klrtCitadis-head" : {
+      "hash" : "1fe48aa6320e1412",
+      "triangles" : 15728
+    },
+    "set-klrtCitadis-tail" : {
+      "hash" : "ddbfa3e97ec6e5c",
+      "triangles" : 15336
+    },
+    "set-klrtCitadisFar-head" : {
+      "hash" : "9fa105d56c4180ce",
+      "triangles" : 7104
+    },
+    "set-klrtCitadisFar-tail" : {
+      "hash" : "83c146ed5fd7d58b",
+      "triangles" : 7212
     },
     "set-metroC341-car" : {
       "hash" : "f29076fc0b214434",

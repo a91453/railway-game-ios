@@ -274,7 +274,34 @@ public final class GameLauncher {
 
     public func refresh() {
         let library = library
+        listRead &+= 1
         entries = saveQueue.sync { library.entries() }
+    }
+
+    /// Counts the reads of the list of saves, so a read in the background
+    /// (``refreshInBackground()``) does not put back a list older than one
+    /// read since.
+    @ObservationIgnored private var listRead = 0
+
+    /// ``refresh()`` off the main thread (decision 497, P2-2): reading the
+    /// list decodes the head of every save, some 70 ms a save, after the
+    /// saves and the iCloud round queued before it. The list stays as it
+    /// was until then.
+    @discardableResult
+    public func refreshInBackground() -> Task<Void, Never> {
+        let library = library
+        listRead &+= 1
+        let read = listRead
+        let (listed, report) = AsyncStream.makeStream(of: [SaveLibrary.Entry].self)
+        saveQueue.async {
+            report.yield(library.entries())
+            report.finish()
+        }
+        return Task {
+            for await list in listed where listRead == read {
+                entries = list
+            }
+        }
     }
 
     // MARK: - iCloud (decision 397)
@@ -1862,6 +1889,62 @@ public final class GameLauncher {
     /// being thrown away unsaved.
     public func returnToStart() {
         guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
+        leaveGame()
+        refresh()
+        afterLeaving()
+    }
+
+    /// Whether the game menu's Back to Start is writing the autosave
+    /// before it leaves (``returnToStartInBackground(at:)``).
+    public private(set) var isReturningToStart = false
+
+    /// ``returnToStart()`` without holding the main thread (decision 497,
+    /// P2-2): the game stops at once and the world is copied then; the
+    /// autosave is encoded and written, and the list of saves read, on the
+    /// saves' queue, after any save or iCloud round queued before it (on a
+    /// large map a save is a few MB). The start screen comes once it is
+    /// written; if it fails, the game stays and goes on, with the failure
+    /// on its status line. Nothing, and `nil`, while one is under way.
+    @discardableResult
+    public func returnToStartInBackground(at date: Date = Date()) -> Task<Void, Never>? {
+        guard !isReturningToStart else { return nil }
+        guard let session, !isLookingAtSharedNetwork else {
+            returnToStart()
+            return nil
+        }
+        isReturningToStart = true
+        session.stopGameLoop()
+        recordChallengeResult(at: date)
+        let (library, world, news, language) = (library, session.worldToSave, session.news, language)
+        listRead &+= 1
+        let read = listRead
+        let (written, report) = AsyncStream.makeStream(of: Result<[SaveLibrary.Entry], SaveError>.self)
+        saveQueue.async {
+            report.yield(Result { () throws(SaveError) in
+                _ = try library.save(world, news: news, as: .autosave, at: date)
+                return library.entries()
+            })
+            report.finish()
+        }
+        return Task {
+            for await result in written {
+                isReturningToStart = false
+                guard self.session === session else { continue }
+                switch result {
+                case .success(let list):
+                    leaveGame()
+                    if listRead == read { entries = list }
+                    afterLeaving()
+                case .failure(let error):
+                    session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                    if isActive { session.startGameLoop() }
+                }
+            }
+        }
+    }
+
+    /// What going back to the start screen does once the game is saved.
+    private func leaveGame() {
         stopLessonClock()
         let left = session != nil
         session?.stopGameLoop()
@@ -1873,12 +1956,16 @@ public final class GameLauncher {
         runningSound?(nil)
         weatherSound?(nil)
         message = nil
-        refresh()
-        tellOfSavesKeptTwice()
-        syncSaves()
         if left {
             playSound?(.transition)
         }
+    }
+
+    /// What going back to the start screen does once the list of saves is
+    /// read again.
+    private func afterLeaving() {
+        tellOfSavesKeptTwice()
+        syncSaves()
     }
 
     /// The saves' folder, for exporting a save from the list
