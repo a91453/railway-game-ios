@@ -25,7 +25,8 @@ struct RealLineOfferCard: View {
                     Section {
                         Text(verbatim: offer.summaryText(in: language))
                             .font(.subheadline)
-                        Text(verbatim: language.text("Yours to run from tomorrow's first train.", "明天首班車起由你經營。"))
+                        Text(verbatim: RealLineAcquired.handoverText(today: RealLineAcquired.startsToday(at: session.world.clock.now), in: language)
+                            + language.text(".", "。"))
                             .font(.footnote)
                             .foregroundStyle(Theme.textSecondary)
                     }
@@ -43,8 +44,11 @@ struct RealLineOfferCard: View {
                 }
                 if let offer, offer.price != nil {
                     Section {
-                        ForEach(Array(offer.priceRows(in: language).enumerated()), id: \.offset) { index, row in
-                            let total = index == 3
+                        let rows = offer.priceRows(in: language)
+                        ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                            // BUGHUNT_BUILD P3-1: the total is the last row
+                            // (a line bought with its land has one more).
+                            let total = index == rows.count - 1
                             HStack {
                                 Text(verbatim: row.label)
                                     .font(total ? .subheadline.weight(.semibold) : .subheadline)
