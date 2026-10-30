@@ -20,7 +20,7 @@ python3 tools/new-taipei-lrt/curate.py /absolute/run /absolute/overview.png
 
 環境的Swift放PATH；既有Playwright／Chromium位置不同時設`NODE_GLOBAL`（node_modules目錄，尾端/）及`CHROMIUM_PATH`。編組比較獨立Swift讀回單元，原生組裝逐頂點比對JS展開payload的位置／顏色。
 
-兩車均五不等長模組，M2／M4無輪，三台車12個輪胎、四道中空關節、中央單弓雙舟。單檔15000、整列／LOD預算各驗；沒有修改loader或gate。實際射線抽樣玻璃可見性與24mm支承、四個逐輪Z0／淨空、每角色設備底面接觸、實際關節通道；真浮／埋玻璃80mm、輪抬35mm、設備抬80mm／位移150mm，以及錯序／反向／錯位組裝皆須失敗。共用audit另拒收缺面、反面與實際組裝位移。近遠各驗；遠景省12mm格柵頂細節，其他bounds保持，允差15mm不代表精密工程允差。抽樣不是全碰撞或全像素證明。
+兩車均五不等長模組，M2／M4無輪，三台車12個輪胎、四道中空關節、中央單弓雙舟。單檔15000、整列／LOD預算各驗；沒有修改loader或gate。實際射線抽樣玻璃可見性與24mm支承、四個逐輪Z0／淨空、每角色設備底面接觸、實際關節通道；真浮／埋玻璃80mm、輪抬35mm、設備抬80mm／位移150mm，以及錯序／反向／錯位組裝皆須失敗。共用audit另拒收缺面、反面與實際組裝位移。近遠各驗；直接從原生近景肩部切片取樣並向近遠景射線，拒收真實81de6bb2遠景肩部露空及200mm肩部後退反例。雨刷只排除真12三角連通18mm薄梁，沒有豁免整片風擋。遠景省12mm格柵頂細節，其他bounds保持，允差15mm不代表精密工程允差。抽樣不是全碰撞或全像素證明。
 
 PNG本機全量可多，提交每款20張＋公共共用1張。`curate.py`只讀最終原生渲染；同公尺比較用`review.mjs`固定相機。原始照片僅本地逐向旁置，不提交原圖。全RGBA解碼／alpha／留白用共用`deliver.py`內`verify_png`，viewer用`browser-check.mjs`實載／旋轉縮放／下載SHA。
 

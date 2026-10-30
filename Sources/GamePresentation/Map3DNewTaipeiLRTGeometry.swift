@@ -160,7 +160,7 @@ struct NTLRTBody {
             }
             for (x,w) in bays where w>2.25 { regions.append((G.rectangle(x-0.025,x+0.025,1.07,2.98),ink)) }
             if sea {
-                for k in 0..<5 { let x = -half+0.25+Float(k)*(end+half-0.5)/5
+                for k in 0..<(far ? 3 : 5) { let x = -half+0.25+Float(k)*(end+half-0.5)/Float(far ? 3 : 5)
                     regions.append((G.ellipse(x,3.10,0.16,0.055,sides:8),body))
                 }
             }
@@ -175,7 +175,7 @@ struct NTLRTBody {
             if sea && cab { regions.append((G.rectangle(1.5,end,0.25,1.08),body)) }
             // Side face follows the actual shoulder cross section; glass occupies
             // the surface itself, with a closed 24mm backing, never an overlay.
-            let sideHeights: [Float] = far ? [0.25,0.40,2.98,3.20,3.35] : hs
+            let sideHeights: [Float] = far ? (cab ? [0.25,0.40,0.65,1.4,2.6,2.98,3.20,3.35] : [0.25,0.40,2.98,3.20,3.35]) : hs
             for j in 0..<(sideHeights.count-1) {
                 let h0=sideHeights[j],h1=sideHeights[j+1]
                 g.surface(G.rectangle(-half,end,h0,h1),map:{ uv in Map3DPoint(uv.x,uv.y,side*width(uv.y)) },
@@ -204,14 +204,14 @@ struct NTLRTBody {
             for side: Float in [-1,1] {
                 for k in 0..<3 {
                     let w=side*(0.63+Float(k)*0.14),h:Float=0.98+Float(k)*0.045
-                    patches.append((G.ellipse(w,h,0.047,0.047,sides:far ? 8 : 16),Map3DTrainStyle.headlamp))
+                    patches.append((G.ellipse(w,h,0.047,0.047,sides:far ? 6 : 16),Map3DTrainStyle.headlamp))
                 }
-                patches.append((G.ellipse(side*0.73,0.60,0.046,0.046,sides:far ? 8 : 16),Map3DTrainStyle.headlamp))
+                patches.append((G.ellipse(side*0.73,0.60,0.046,0.046,sides:far ? 6 : 16),Map3DTrainStyle.headlamp))
                 patches.append((G.ellipse(side*0.73,0.34,0.035,0.035,sides:8),Map3DPalette.lantern))
             }
             patches.append((G.ellipse(0,3.05,0.037,0.037,sides:8),Map3DTrainStyle.headlamp))
             let ws: [Float] = far ? [-1,-0.8,0,0.8,1] : (0...10).map { -1+Float($0)/5 }
-            let frontHeights: [Float] = far ? [0.25,0.65,1.4,2.6,2.98,3.35] : hs
+            let frontHeights: [Float] = far ? [0.25,0.40,0.65,1.4,2.6,2.98,3.20,3.35] : hs
             for j in 0..<(frontHeights.count-1) { for i in 0..<(ws.count-1) {
                 let u0=ws[i],u1=ws[i+1],h0=frontHeights[j],h1=frontHeights[j+1]
                 g.surface(G.rectangle(u0,u1,h0,h1),map:{ v in front(half,v.x*width(v.y),v.y) },
@@ -250,7 +250,10 @@ struct NTLRTBody {
         // cabling and exact housing subdivisions are simplified.
         if cab {
             g.box(-0.5,roof,0,3.10,1.63,0.27,steel)
-            g.box(-2.85,roof,0,1.10,1.45,0.18,steel)
+            // ABB published Danhai CC400: 1.70 x 1.60 x 0.45m overall.
+            // Display cover uses 0.40m above deck (mount/interface omitted).
+            // Ankeng part revision is unverified; same approximate family envelope.
+            g.box(-2.90,roof,0,1.70,1.60,0.40,steel)
         } else if suspended {
             g.box(0,roof,0,4.85,1.66,0.14,steel)
             for x: Float in [-1.55,0,1.55] { g.box(x,roof+0.14,0,1.48,1.58,0.16,steel) }

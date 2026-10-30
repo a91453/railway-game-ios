@@ -35,7 +35,7 @@
       "sha256": "1fadad7b6964dd39ad5ea266f70c25fa05e4122f8022056c76f5d2775d852662",
       "bytes": 33560,
       "author": "Voith",
-      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "date": "2015-03-11; accessed2026-10-29",
       "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
       "viewed": false,
       "kind": "official technical publication"
@@ -46,8 +46,8 @@
       "file": "bim.pdf",
       "sha256": "bcb3b6f94f06756e24cb21aa026d5454b0f82b7ca6ba9932a69a66d9bfb94e03",
       "bytes": 5353341,
-      "author": "New Taipei City / NTMetro",
-      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "author": "李政安、凌建勳、涂貫迪／新北市政府捷運工程局",
+      "date": "2018-08; accessed2026-10-29",
       "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
       "viewed": true,
       "kind": "official technical publication"
@@ -59,7 +59,7 @@
       "sha256": "21950b7d7fe9bd43e73c25f5893c4e6e248d1ee1eb4702d860ba47e460d0e85a",
       "bytes": 2600955,
       "author": "New Taipei City / NTMetro",
-      "date": "accessed 2026-10-29; document date in title/record; photograph EXIF capture date unverified",
+      "date": "2020-12; accessed2026-10-29",
       "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
       "viewed": true,
       "kind": "official technical publication"
@@ -238,6 +238,18 @@
       "license": "Copyright retained by source; local visual observation only. No image pixels, text, logos or third-party geometry redistributed.",
       "viewed": true,
       "kind": "real vehicle photograph"
+    },
+    {
+      "id": "abb-cc400",
+      "url": "https://library.e.abb.com/public/dc963d6ccdfa43e4a90ed107ac34dac6/BORDLINE%20CC400%20DC_750V_R_700%20Durmazlar%20RevB%20EN.pdf",
+      "file": "abb-cc400.pdf",
+      "sha256": "4f8fe7d6fe995c77b877dec242b1f7614e22bd6e0ddf9a6a234306f044cfe139",
+      "author": "ABB Switzerland Ltd, Traction",
+      "date": "2018-02-16 Rev B; accessed2026-10-30",
+      "license": "ABB copyright, no redistribution; engineering facts only",
+      "viewed": true,
+      "kind": "manufacturer engineering product sheet; photograph is Turkish Panorama, not Danhai and not used as real-vehicle reference",
+      "supports": "Danhai converter / ESS procurement, roof mounting, outer equipment dimensions; does not establish vehicle product family or exact Ankeng hardware revision"
     }
   ],
   "private_reference_check": "Completed locally before public research. Existing illustrative models have shortened dimensions and equal-section display contracts; neither geometry nor those engineering assumptions used. Private mapping is in asset README.",
@@ -258,7 +270,8 @@
       "engineering_type_code": "UNVERIFIED: no official 1000 type code or CAF Urbos / Skoda Artic family designation found",
       "fleet_range": "101–115 sets; 1011–1155 modules, final digit 1–5. Secondary roster convention; complete official per-vehicle roster UNVERIFIED. Official/press photos confirm 1011.",
       "batch": "initial 15 sets / 75 modules; prototype revealed 2016-11-16, arrived 2016-12-23; volume production announced for 2017 (not proof of actual final delivery date); public opening 2018-12-23 / passenger trial 12-24",
-      "livery": "ordinary original water-blue / white wave design, representative 1011; event wraps and temporary special liveries excluded"
+      "livery": "ordinary original water-blue / white wave design, representative 1011; event wraps and temporary special liveries excluded",
+      "subcontractor_roles": "ABB primary datasheet confirms BORDLINE CC400 compact converters / ESS for 15 TRSC Danhai LRVs. This is a traction product series, not the train model name."
     }
   },
   "comparison": [
@@ -333,5 +346,11 @@
       "raised_collector_height": 4.355
     },
     "confidence": "BIM says end modules nearly8m, suspended nearly6m, centre about4m. Display split fits official overall length; exact engineering joint centre distances unknown. No claim to engineering reproduction."
+  },
+  "secondary_roster": {
+    "danhai": "https://zh.wikipedia.org/wiki/新北捷運淡海輕軌電聯車",
+    "ankeng": "https://zh.wikipedia.org/wiki/新北捷運安坑輕軌電聯車",
+    "access": "Opened full text with web tool2026-10-30; direct download403, no local source SHA. Not primary proof.",
+    "findings": "Roster ranges and central equipment arrangement; Danhai 101–107 in service by2018,108–115 by2019-10 according to secondary roster; official final delivery certificate still UNVERIFIED. Secondary Ankeng article calls it2000型, but official engineering designation not confirmed."
   }
 }

@@ -17,16 +17,40 @@ def colors(p):
  b=p.read_bytes();n,size=struct.unpack_from('<II',b,8);o=16+(size+3)//4*4
  return np.array([struct.unpack_from('<I',b,o+i*52+16)[0] for i in range(n)],dtype=np.uint32)
 
+def actual_wiper(t,f):
+ # The isolated 18mm beam is an expected foreground occluder. Derive its
+ # connected triangles from actual geometry; never excuse a whole glass region.
+ parent=list(range(len(t)));seen={}
+ def find(i):
+  while parent[i]!=i:parent[i]=parent[parent[i]];i=parent[i]
+  return i
+ candidates=np.flatnonzero((t[:,:,0]>3.4).all(axis=1)&(abs(t[:,:,1])<.5).all(axis=1)&(t[:,:,2]>1.10).all(axis=1)&(t[:,:,2]<2.10).all(axis=1))
+ for i in candidates:
+  for point in t[i]:
+   key=tuple(np.round(point,5))
+   if key in seen:parent[find(i)]=find(seen[key])
+   else:seen[key]=i
+ groups={}
+ for i in candidates:groups.setdefault(find(i),[]).append(i)
+ out=np.zeros(len(t),dtype=bool)
+ for ids in groups.values():
+  if len(ids)!=12 or np.any(f[ids]&2):continue
+  p=t[ids].reshape(-1,3);lo=p.min(axis=0);hi=p.max(axis=0)
+  volume=abs(np.sum(np.einsum("ij,ij->i",t[ids,0],np.cross(t[ids,1],t[ids,2])))/6)
+  if volume<.001 and lo[0]>3.4 and max(abs(lo[1]),abs(hi[1]))<.5 and lo[2]>1.10 and hi[2]<2.10 and hi[2]-lo[2]>.85 and hi[1]-lo[1]>.60:out[ids]=True
+ return out
+
 def glass(t,f):
  # Backing may be the adjoining frame closer than the nominal 24/25mm shell
  # thickness. Require a real inward-facing hit within35mm, not a false minimum
  # distance that rejects this valid contact. Visibility is checked separately.
  n=np.cross(t[:,1]-t[:,0],t[:,2]-t[:,0]);n/=np.linalg.norm(n,axis=1)[:,None];c=t.mean(axis=1)
+ visible=t[~actual_wiper(t,f)]
  ids=np.flatnonzero((f&2)>0);assert len(ids)>=4,'no real glass'
  for i in ids[::max(1,len(ids)//96)]:
   for weights in [[1/3]*3,[.6,.2,.2]]:
    p=np.array(weights)@t[i]
-   ds=ray(t,p+n[i]*.20,-n[i]);assert len(ds) and min(ds)>.197,'glass occluded/buried'
+   ds=ray(visible,p+n[i]*.20,-n[i]);assert len(ds) and min(ds)>.197,'glass occluded/buried'
    backing=((f&2)==0)&(np.sum(n*n[i],axis=1)<-.70)
    ds=ray(t[backing],p-n[i]*.0001,-n[i]);assert len(ds) and min(ds)<.035,'glass lost backing / floating'
  return ids,n,c
@@ -111,5 +135,23 @@ for role in ROLES:
  assert b['triangles']*2<a['triangles'],'far not below half'
  for field in ['minimum','maximum']:assert max(abs(x-y)for x,y in zip(a[field],b[field]))<.015,'LOD bounds jump'
  assert a['triangles']<=15000 and b['triangles']<=15000
+# Sealed plate solids alone cannot detect a gap between front and shoulder.
+# Derive the reference edge from actual near vertices, then ray-test both LODs.
+def shoulder(near,other):
+ skin=near[(near[:,:,1]>1.32).all(axis=1)]
+ for height in [.80,1.0,1.18,1.4,2.0,2.6,2.9]:
+  crossings=[]
+  for j in range(3):
+   a,b=skin[:,j],skin[:,(j+1)%3]
+   mask=(((a[:,2]<=height)&(b[:,2]>=height))|((b[:,2]<=height)&(a[:,2]>=height)))&(abs(a[:,2]-b[:,2])>1e-7)
+   ratio=(height-a[mask,2])/(b[mask,2]-a[mask,2]);crossings.extend((a[mask]+(b[mask]-a[mask])*ratio[:,None])[:,0])
+  assert crossings,'missing shoulder reference'
+  origin=np.array([max(crossings)-.07,1.60,height])
+  ds=ray(other,origin,np.array([0.,-1.,0.]));assert len(ds) and min(ds)<.30,'daylight gap at cab shoulder'
+for role in ['m1','m5']:
+ near,_=read(root/'models'/f'{fleet}-lrt-{role}.m3dmodel');far,_=read(root/'models'/f'{fleet}-lrt-{role}-far.m3dmodel')
+ shoulder(near,near);shoulder(near,far)
+ broken=far.copy();sel=(broken[:,:,1]>1.30).all(axis=1)&(broken[:,:,0]>2).all(axis=1);broken[sel,:,0]-=.20
+ reject(lambda:shoulder(near,broken))
 (root/'fleet-verification.json').write_text(json.dumps({'status':'VERIFIED','models':rows,'limits':['Sampled rays, not exhaustive self intersection proof','Module lengths, bogie wheel dimensions and hidden equipment are photo estimates','Static assembly only; no curve, grade, articulation animation or device verification']},indent=2)+'\n')
 print('VERIFIED',fleet,'12 native units/assemblies; actual fault mutations rejected')
