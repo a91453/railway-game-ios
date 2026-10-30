@@ -40,8 +40,10 @@ extension StationKitBuilder {
         let yellow=Map3D45DR1000.yellow, dark=Map3D45DR1000.dark
         let glass=Map3D45DR1000.glass
         // Long, narrow body. The stripe is part of the shell and continues on the ends.
-        drShell(-9.62,9.62,1.12,2.10,silver)
-        drShell(-9.62,9.62,2.10,2.20,orange)
+        // The photographed orange waist occupies about one fifth of the
+        // window height. Its lower edge is estimated from the 2006/08 photos.
+        drShell(-9.62,9.62,1.12,2.02,silver)
+        drShell(-9.62,9.62,2.02,2.20,orange)
         drShell(-9.62,9.62,2.20,3.05,silver)
         drShell(-9.62,9.62,3.05,3.15,yellow)
         drShell(-9.62,9.62,3.15,3.26,silver)
@@ -149,7 +151,7 @@ extension StationKitBuilder {
             let z=side*1.36
             for end:Float in [-1,1] {
                 box(end*8.89,2.22,z,1.45,0.022,0.98,yellow)
-                box(end*8.89,2.10,z+side*0.017,1.45,0.020,0.10,orange)
+                box(end*8.89,2.11,z+side*0.017,1.45,0.020,0.18,orange)
             }
             for x:Float in [-5.95,5.95] {
                 if !far { box(x,1.12,z,0.87,0.035,2.12,Map3D45DR1000.roof) }

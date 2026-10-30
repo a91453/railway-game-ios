@@ -44,6 +44,31 @@ function frontProbe(vertices) {
     throw Error('central yellow gangway missing');
 }
 frontProbe(cab);
+// Dated DRC1025 side photos show a thin yellow line above the windows and a
+// substantially deeper orange waist below them. Probe the delivered side
+// shell triangles, including both sides and the far LOD.
+const orange=[231,116,72],yellow=[233,187,59];
+function stripeProbe(vertices) {
+  for(const side of [-1,1]) {
+    function spans(color) {
+      const result=[];
+      for(let i=0;i<vertices.length;i+=3) {
+        const t=vertices.slice(i,i+3),p=t.map(v=>v.position);
+        if(t.every(v=>v.color.slice(0,3).every((channel,j)=>channel===color[j]))&&
+           p.every(v=>Math.abs(v[1]-side*1.345)<0.002)&&
+           Math.max(...p.map(v=>v[0]))-Math.min(...p.map(v=>v[0]))>18)
+          result.push([Math.min(...p.map(v=>v[2])),Math.max(...p.map(v=>v[2]))]);
+      }
+      return result;
+    }
+    if(!spans(orange).some(([lo,hi])=>lo<=2.025&&hi>=2.195&&hi-lo>=0.17))
+      throw Error('orange side waist missing or too thin');
+    if(!spans(yellow).some(([lo,hi])=>lo<=3.055&&hi>=3.145&&hi-lo>=0.09))
+      throw Error('yellow upper side stripe missing');
+  }
+}
+stripeProbe(cab);
+stripeProbe(model(readFileSync(resolve(root,far.native))).vertices);
 const brokenCab=mutator=>cab.map(v=>{const p={...v,position:[...v.position],color:[...v.color]};mutator(p);return p});
 for(const [name,mutate] of [
   ['left black field lost',v=>{if(v.position[0]>9.70&&v.position[1]>0.45&&v.position[2]>2.14&&v.position[2]<3.26)v.color=[240,240,240,255]}],
@@ -53,6 +78,13 @@ for(const [name,mutate] of [
 ]) {
   let rejected=false;try{frontProbe(brokenCab(mutate))}catch{rejected=true}
   if(!rejected) throw Error(`front fault example passed: ${name}`);
+}
+for(const [name,mutate] of [
+  ['thin orange waist',v=>{if(v.color[0]===orange[0]&&v.color[1]===orange[1]&&v.position[2]<2.10)v.position[2]=2.10}],
+  ['missing yellow upper stripe',v=>{if(v.color[0]===yellow[0]&&v.color[1]===yellow[1])v.color=[180,180,180,255]}]
+]) {
+  let rejected=false;try{stripeProbe(brokenCab(mutate))}catch{rejected=true}
+  if(!rejected) throw Error(`stripe fault example passed: ${name}`);
 }
 for(const [name,change] of [
   ['wide as DR3100',m=>m.maximum[1]+=0.20],
@@ -64,4 +96,4 @@ for(const [name,change] of [
   let rejected=false;try{verify(near,broken)}catch{rejected=true}
   if(!rejected) throw Error(`fault example passed: ${name}`);
 }
-console.log('VERIFIED: 45DR1000 envelope, LOD and photographed cab; eight rejected faults');
+console.log('VERIFIED: 45DR1000 envelope, LOD, photographed cab and side stripes; ten rejected faults');
