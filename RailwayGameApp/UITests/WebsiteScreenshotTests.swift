@@ -188,6 +188,26 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-demo-day", app)
     }
 
+    /// Building on the real-world demo, the panel open at the trailing
+    /// side: where people are, its legend down by the credits rather than
+    /// over the track being laid (TestFlight 98.1).
+    func testBuildingLegendUnderPanel() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["map.potentialLegend"].firstMatch.appears(within: 30), "Where people are shows")
+        settle(seconds: 4)
+        keep("build-legend-under-panel", app)
+    }
+
     /// New game → real world (decision 477): the whole of Taiwan first,
     /// above the places.
     func testRealWorldPicker() {
