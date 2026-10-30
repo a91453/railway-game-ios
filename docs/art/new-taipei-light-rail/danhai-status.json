@@ -1,11 +1,11 @@
 {
   "asset": {
     "status": "VERIFIED",
-    "evidence": "Producer 63359f1049d5fa6b94c954d368d82112f203b8ee: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
+    "evidence": "Producer 0d3b6733f6c76a607c034097f95956f4b38ab958: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
   },
   "appearance": {
     "status": "UNVERIFIED",
-    "evidence": "No explicit user acceptance of producer 63359f1049d5fa6b94c954d368d82112f203b8ee; this prompt authorizes creation/delivery only.",
+    "evidence": "No explicit user acceptance of producer 0d3b6733f6c76a607c034097f95956f4b38ab958; this prompt authorizes creation/delivery only.",
     "accepted_producer": null
   },
   "integration": {

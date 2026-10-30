@@ -1,5 +1,5 @@
 {
-  "producer": "63359f1049d5fa6b94c954d368d82112f203b8ee",
+  "producer": "0d3b6733f6c76a607c034097f95956f4b38ab958",
   "date": "2026-10-30",
   "first_delivery": true,
   "previous_accepted_producer": null,
@@ -70,11 +70,11 @@
       "states": {
         "asset": {
           "status": "VERIFIED",
-          "evidence": "Producer 63359f1049d5fa6b94c954d368d82112f203b8ee: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
+          "evidence": "Producer 0d3b6733f6c76a607c034097f95956f4b38ab958: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
         },
         "appearance": {
           "status": "UNVERIFIED",
-          "evidence": "No explicit user acceptance of producer 63359f1049d5fa6b94c954d368d82112f203b8ee; this prompt authorizes creation/delivery only.",
+          "evidence": "No explicit user acceptance of producer 0d3b6733f6c76a607c034097f95956f4b38ab958; this prompt authorizes creation/delivery only.",
           "accepted_producer": null
         },
         "integration": {
@@ -105,7 +105,7 @@
           "reason": "Browser administration blocks file:// navigation; loopback checks passed."
         },
         "native_glb_download_bytes_equal": true,
-        "final_bytes": 34416393
+        "final_bytes": 34417296
       },
       "assets": "https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1",
       "viewer": "https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1/index.html"
@@ -114,11 +114,11 @@
       "states": {
         "asset": {
           "status": "VERIFIED",
-          "evidence": "Producer 63359f1049d5fa6b94c954d368d82112f203b8ee: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
+          "evidence": "Producer 0d3b6733f6c76a607c034097f95956f4b38ab958: independent native/GLB/PNG bytes, native readback/Swift assembly, geometry and actual fault examples, Blender GLB import, transparent decoded PNGs and Chromium WebGL load/orbit/zoom/native+GLB download byte equality. Final delivery viewer rechecked in browser-verification.json; file:// outcome recorded separately."
         },
         "appearance": {
           "status": "UNVERIFIED",
-          "evidence": "No explicit user acceptance of producer 63359f1049d5fa6b94c954d368d82112f203b8ee; this prompt authorizes creation/delivery only.",
+          "evidence": "No explicit user acceptance of producer 0d3b6733f6c76a607c034097f95956f4b38ab958; this prompt authorizes creation/delivery only.",
           "accepted_producer": null
         },
         "integration": {
@@ -149,7 +149,7 @@
           "reason": "Browser administration blocks file:// navigation; loopback checks passed."
         },
         "native_glb_download_bytes_equal": true,
-        "final_bytes": 55832085
+        "final_bytes": 55832964
       },
       "assets": "https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1",
       "viewer": "https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1/index.html"
@@ -162,6 +162,12 @@
     "Browser file:// navigation blocked by administration; loopback WebGL and zero external requests verified",
     "Exact module dimensions, hidden equipment and per-part revisions insufficient; engineering replica not claimed"
   ],
-  "combined_assets_bytes": 90248478,
-  "public_overview_sha256": "4221a532776a3c8fe271443dc5dee4eec143c2b47fb5e8c92e29acf0f8fd7377"
+  "combined_assets_bytes": 90250260,
+  "public_overview_sha256": "278c370b73065ac8f6b96fa4c02c635245db36d28db3010d6f6fec392639c274",
+  "actual_previous_failure_rejected": {
+    "producer": "63359f1049d5fa6b94c954d368d82112f203b8ee",
+    "failure": "Far internal floor pierced cab nose; final actual surface/floor containment probe rejects it",
+    "fix": "Shorten hidden cab floor in both LODs; no outer-shell, livery or other model changes",
+    "intermediate_not_accepted": true
+  }
 }
