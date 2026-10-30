@@ -42,6 +42,7 @@
 - **在哪**：`RailwayGameApp/Views/Map3D/Map3DPreviewScreen.swift`（約 605 行）與 `Sources/GamePresentation/Map3DBuses.swift`（約 53 行）的簽章用 `world.roads?.allCells.count`；`taken` 的格子本來就在 `cells`，數量不變。
 - **重現**：實景地圖，只沿底圖現有的街拖一段路鋪下（$0）；2D 有，3D 沒有，公車路線改走它也不重畫，直到遊戲週數變（暫停時不會）。拆掉也一樣留著。
 - **建議修法**：簽章加上 `roads.built.count`（或一個版本號）。
+- **結果（ROADFIX，2026-10-30）**：3D 的場景鍵（`Map3DSceneKey`）與公車簽章（`Map3DBuses.Signature`）加上玩家的路（`roads.built`），`RoadCellCountTests` 釘住。
 - 五面向：玩家：鋪了看得到。鐵道迷：無。開發：一行。美術：3D 跟 2D 一致。音樂：無。
 
 ### P2-3 先買淡海藍海線，綠山線就不再出售，說明還說「真實支線都是你的了」（讀程式）
@@ -49,6 +50,7 @@
 - **在哪**：`Sources/GamePresentation/RealLineAcquisition.swift` 約 428–432 行（沒有 `ntdlrt:V after ntdlrt:VB` 的班表就 `continue`，但 `sale.bought` 被藍海線設成 true），說明文字約 478 行。
 - **重現**：淡海附近的實景地圖，先買藍海線。綠山線從出售清單消失，地圖上沒有別的線時，說明寫「這張地圖上的真實支線都是你的了」。買藍海線的卡片事先也沒說買了就不能再買綠山線。
 - **狀態**：#1519（BLG，決策 493）正在開放「先藍海後綠山」，合併後這條自然解掉；若 #1519 沒進公測，至少把說明改成不說「都是你的」。
+- **結果（ROADFIX，2026-10-30）**：#1519 合併後已解（main 77b9322）：藍海線買了以後，綠山線照整條線的班表出售（`metroRuns` 的退路），`DanhaiDepotTests.testTheGreenMountainLineIsBoughtWholeAfterTheBlueCoastLine` 釘住；說明文字不會再在只剩綠山線時說「都是你的了」。沒有改程式。先綠山後刪線再買藍海線的情形是 P3-5。
 - 五面向：玩家：不會以為綠山線已經是自己的。鐵道迷：兩條線本來都能經營。開發：等 #1519。美術：無。音樂：無。
 
 ## 4. P3（小毛病）

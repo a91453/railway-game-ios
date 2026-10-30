@@ -37,6 +37,10 @@ public struct Map3DBuses: Sendable {
 
         let routes: [Route]
         let roads: Int
+        /// BUGHUNT_BUILD P2-2: the player's roads, which a road laid along
+        /// the city's (free, decision 487) changes without changing
+        /// ``roads``.
+        let ownRoads: Set<CellPosition>
         /// Whether the way follows the base map's roads (decision 424).
         let onRoads: Bool
         let palette: LinePalette
@@ -51,6 +55,7 @@ public struct Map3DBuses: Sendable {
                 }
             }
             roads = world.roads?.roadCellCount ?? 0
+            ownRoads = world.roads?.built ?? []
             self.onRoads = onRoads != nil
             self.palette = palette
         }
