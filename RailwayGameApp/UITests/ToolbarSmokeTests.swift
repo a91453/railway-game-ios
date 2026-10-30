@@ -702,6 +702,18 @@ extension XCUIApplication {
         let list = collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let row = id.map { descendants(matching: .any)["line.trainsRow.\($0)"].firstMatch }
             ?? descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        // Decision 498: on a phone the rows under the lines (Advanced, the
+        // network's) can be in view, the lines above them unmade; the
+        // drags below only look further down for a row that does not
+        // exist, so the list goes back up until one does.
+        if let list, !row.exists {
+            // Below the bar the list runs under.
+            let top = max(list.frame.minY, bar.frame.maxY)
+            let area = CGRect(x: list.frame.minX, y: top, width: list.frame.width, height: list.frame.maxY - top)
+            for _ in 0..<30 where !row.exists {
+                drag(in: area, at: area.minX + 8, from: 0.2, to: 0.8)
+            }
+        }
         XCTAssertTrue(dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "The line's row must come into reach", file: file, line: line)
         row.tap()
         XCTAssertTrue(page.appears(within: 10), "The line's page did not open", file: file, line: line)
