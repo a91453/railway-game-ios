@@ -1072,21 +1072,22 @@ struct SaveListView: View {
                         Label(action.title(in: language), systemImage: action.systemImage)
                     }
                 case .delete:
+                    // Decision 502: back to one of the times it was saved
+                    // before, above Delete, which stays last.
+                    if entry.earlierVersions > 0 {
+                        Button {
+                            showEarlierVersions(of: entry)
+                        } label: {
+                            Label(SaveListText.earlierVersionsTitle(in: language), systemImage: "clock.arrow.circlepath")
+                        }
+                        .accessibilityIdentifier("saves.versions.\(entry.id)")
+                    }
                     Button(role: .destructive) {
                         deleting = entry
                     } label: {
                         Label(action.title(in: language), systemImage: action.systemImage)
                     }
                 }
-            }
-            // Decision 502: back to one of the times it was saved before.
-            if entry.earlierVersions > 0 {
-                Button {
-                    showEarlierVersions(of: entry)
-                } label: {
-                    Label(SaveListText.earlierVersionsTitle(in: language), systemImage: "clock.arrow.circlepath")
-                }
-                .accessibilityIdentifier("saves.versions.\(entry.id)")
             }
         } label: {
             Image(systemName: "ellipsis.circle")
