@@ -492,8 +492,8 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// tapped anywhere up the band.
     private func placeCredit() {
         guard !credit.isHidden else { return }
-        let size = credit.textSize
-        let width = min(size.width + 8, bounds.width * 0.45)
+        let size = credit.textSize(width: bounds.width * 0.45 - 8)
+        let width = size.width + 8
         let height = size.height + 2
         let bottom = bounds.height - layoutMargins.bottom
         credit.place(
@@ -554,8 +554,10 @@ final class MapCreditButton: UIButton {
         label.font = .preferredFont(forTextStyle: .caption2)
         label.adjustsFontForContentSizeCategory = true
         label.maximumContentSizeCategory = .extraExtraExtraLarge
-        label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.85
+        // On as many lines as its words need, never cut short: the
+        // licences ask for the credit whole (98.1, beside the tools column).
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
         label.textAlignment = alignment
         label.textColor = .secondaryLabel
         label.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.7)
@@ -583,8 +585,11 @@ final class MapCreditButton: UIButton {
         }
     }
 
-    /// The words' own size, at the player's text size.
-    var textSize: CGSize { label.intrinsicContentSize }
+    /// The words' size at the player's text size, at most `width` wide,
+    /// on more lines where one is too long.
+    func textSize(width: CGFloat) -> CGSize {
+        label.sizeThatFits(CGSize(width: max(1, width), height: .greatestFiniteMagnitude))
+    }
 
     /// Puts the words at `text` and makes the button reach from `bandTop`
     /// to `bandBottom` too, all in the map view's coordinates.

@@ -820,7 +820,8 @@ final class ShellLayoutUITests: XCTestCase {
         let build = app.buttons["dock.build"]
         build.tap()
         app.buttons["tool.select"].waitUntilSettled(timeout: 10)
-        assertOneSize(["controls.toggle", "tool.network", "tool.train", "tool.building", "tool.select", "dock.build"],
+        // The card's toggle stands beside Build while building (98.1).
+        assertOneSize(["tool.network", "tool.train", "tool.building", "tool.bus", "tool.select", "dock.build"],
                       in: app, while: "building")
     }
 

@@ -21,6 +21,11 @@ extension EnvironmentValues {
     /// drawn to the screen's edges, under the camera housing and the home
     /// indicator, and its banners, keys and buttons keep inside this.
     @Entry var mapSafeArea = EdgeInsets()
+    /// 98.1 (the planner's (a)): how far past the safe area's leading edge
+    /// a real-world map's credits start, the logo, the legal link and the
+    /// credit, so the tools column, which runs down beside them on a phone
+    /// on its side, covers none of them.
+    @Entry var mapCreditsLeading: CGFloat = 0
     /// Decision 226: where the map's bottom-leading buttons (layers, map
     /// style, expansion) stand when they share the bottom row with the
     /// tools column and the station master: their foot this far above the
@@ -191,6 +196,7 @@ struct MapView: View {
     @Environment(\.mapTrailingInsetDepth) private var trailingInsetDepth
     @Environment(\.mapButtonsUnderPanel) private var buttonsUnderPanel
     @Environment(\.mapSafeArea) private var safeArea
+    @Environment(\.mapCreditsLeading) private var creditsLeading
     /// The height of the bottom-trailing buttons and key, with their margin.
     @State private var bottomTrailingHeight: CGFloat = 0
     /// How far down the column at the top of the map (the status banner,
@@ -267,6 +273,12 @@ struct MapView: View {
         // Decision 379: timed for the frame readout, the keys its
         // modifiers compare here and what the reader holds when laid out.
         FrameCostMeter.shared.measure(.mapBody) { timedBody }
+    }
+
+    /// The safe area the base map's credits keep inside: past the tools
+    /// column too (``EnvironmentValues/mapCreditsLeading``).
+    private var creditsSafeArea: EdgeInsets {
+        EdgeInsets(top: safeArea.top, leading: safeArea.leading + creditsLeading, bottom: safeArea.bottom, trailing: safeArea.trailing)
     }
 
     private var timedBody: some View {
@@ -1048,7 +1060,7 @@ struct MapView: View {
                                 yield: realRailwayYield,
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
-                                safeArea: safeArea,
+                                safeArea: creditsSafeArea,
                                 covered: clear,
                                 onAttributionFrames: { attributionFrames = $0 },
                                 onCredit: { screen.panel = .dataSources }
@@ -1062,7 +1074,7 @@ struct MapView: View {
                                 trackStyle: trackStyle,
                                 yield: realRailwayYield,
                                 language: session.language,
-                                safeArea: safeArea,
+                                safeArea: creditsSafeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
                                 onCredit: { screen.panel = .dataSources },
                                 onFollowing: baseMapFollowingReport,

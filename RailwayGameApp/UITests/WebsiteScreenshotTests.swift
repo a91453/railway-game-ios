@@ -188,6 +188,60 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-demo-day", app)
     }
 
+    /// 98.1 (decision 382, later): Build open on a phone on its side, the
+    /// building tools from the column's top, on a map without credits and
+    /// on the real-world demo with its credits under the column. For the
+    /// screenshot review of the pull request that moved them, not the
+    /// website.
+    func testBuildingToolsColumn() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        app.buttons["dock.build"].tap()
+        app.buttons["tool.network"].waitUntilSettled()
+        settle()
+        keep("build-tools-column", app)
+        app.terminate()
+
+        let real = launch()
+        defer { real.terminate() }
+        real.openDemo("demo.realWorld", timeout: 60)
+        XCTAssertTrue(real.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
+        settle(seconds: 4)
+        // The credits' row starts past the column, which runs down beside
+        // it (98.1, the planner's (a)).
+        let credit = real.buttons["map.credit"]
+        if credit.appears(within: 10) {
+            XCTAssertGreaterThanOrEqual(credit.frame.minX, real.buttons["dock.build"].frame.maxX, "Past the column: \(credit.frame)")
+        }
+        keep("real-world-credits-row", real)
+        real.buttons["dock.build"].tap()
+        real.buttons["tool.network"].waitUntilSettled()
+        settle()
+        keep("build-tools-column-real-world", real)
+        real.terminate()
+
+        // Lesson 1's tools, which fit: where they stand when nothing scrolls.
+        let lesson = launch()
+        defer { lesson.terminate() }
+        let lessons = lesson.buttons["start.lessons"]
+        XCTAssertTrue(lessons.appears(within: 15), "The start screen shows Lessons")
+        lessons.waitUntilSettled()
+        lessons.tap()
+        let first = lesson.buttons["lesson.1.start"]
+        if !first.appears(within: 5), lessons.exists {
+            lessons.waitUntilSettled()
+            lessons.tap()
+        }
+        XCTAssertTrue(first.appears(within: 10), "Lesson 1 is listed")
+        XCTAssertTrue(first.becomesHittable(), "Lesson 1's Start can be tapped")
+        first.tap()
+        XCTAssertTrue(lesson.descendants(matching: .any)["tutorial.card"].firstMatch.appears(within: 60), "The lesson's card shows")
+        lesson.buttons["dock.build"].tap()
+        lesson.buttons["tool.select"].waitUntilSettled()
+        settle()
+        keep("build-tools-column-lesson", lesson)
+    }
+
     /// Building on the real-world demo, the panel open at the trailing
     /// side: where people are, its legend down by the credits rather than
     /// over the track being laid (TestFlight 98.1).
