@@ -89,13 +89,17 @@ extension StationKitBuilder {
                     }
                     drEndPanel(end,x,roundedWindow(2.15,0.38,3.25),0.085,dark)
                     drEndPanel(end,x,roundedWindow(2.22,0.32,3.18),0.104,glass)
-                    // Lamp and its dark circular bezel sit in the black cab field.
+                    // Metal rim, dark lens and small reflected centre: the
+                    // dated cab photo does not show a solid pale disk.
                     civicTube(Map3DPoint(x+end*0.108,3.04,side*0.88),
                               Map3DPoint(x+end*0.137,3.04,side*0.88),
-                              radius:0.145,color:Map3DColor.rgb(0x202428),sides:12)
+                              radius:0.145,color:Map3DColor.rgb(0x858B87),sides:12)
                     civicTube(Map3DPoint(x+end*0.139,3.04,side*0.88),
-                              Map3DPoint(x+end*0.151,3.04,side*0.88),
-                              radius:0.083,color:Map3DPalette.tunnelLamp,sides:12)
+                              Map3DPoint(x+end*0.147,3.04,side*0.88),
+                              radius:0.105,color:Map3DColor.rgb(0x2B3032),sides:12)
+                    civicTube(Map3DPoint(x+end*0.149,3.04,side*0.88),
+                              Map3DPoint(x+end*0.153,3.04,side*0.88),
+                              radius:0.038,color:Map3DPalette.tunnelLamp,sides:12)
                     beam(Map3DPoint(x+end*0.151,2.29,side*0.51),
                          Map3DPoint(x+end*0.151,2.76,side*1.05),0.024,dark)
                     if end > 0 && side > 0 {
@@ -125,6 +129,15 @@ extension StationKitBuilder {
                     beam(Map3DPoint(x+end*0.18,1.47,side*0.41),
                          Map3DPoint(x+end*0.18,3.04,side*0.41),0.035,Map3D45DR1000.roof)
                 }
+                // The gangway's raised metal header follows its rounded top.
+                beam(Map3DPoint(x+end*0.19,3.04,-0.41),
+                     Map3DPoint(x+end*0.19,3.19,-0.29),0.035,Map3D45DR1000.roof)
+                beam(Map3DPoint(x+end*0.19,3.19,-0.29),
+                     Map3DPoint(x+end*0.19,3.23,0),0.035,Map3D45DR1000.roof)
+                beam(Map3DPoint(x+end*0.19,3.23,0),
+                     Map3DPoint(x+end*0.19,3.19,0.29),0.035,Map3D45DR1000.roof)
+                beam(Map3DPoint(x+end*0.19,3.19,0.29),
+                     Map3DPoint(x+end*0.19,3.04,0.41),0.035,Map3D45DR1000.roof)
             }
             box(x+end*0.09,0.96,0,0.20,2.35,0.21,dark)
             box(x+end*0.13,0.75,0,0.12,0.50,0.32,dark)
@@ -180,7 +193,12 @@ extension StationKitBuilder {
         box(-1.9,0.68,0,2.3,1.48,0.52,Map3D45DR1000.roof)
         box(1.6,0.72,0,2.1,1.25,0.43,dark)
         for x:Float in [-4.6,3.3] {
-            box(x,3.62,0,3.10,1.62,0.27,Map3D45DR1000.roof)
+            // The front view of the real roof cooler has sloped shoulders,
+            // not the old rectangular cap. Its bottom intersects the roof.
+            let a=[Map3DPoint(x-1.55,3.49,-0.94),Map3DPoint(x-1.55,3.49,0.94),
+                   Map3DPoint(x-1.55,3.89,0.75),Map3DPoint(x-1.55,3.89,-0.75)]
+            let b=a.map { Map3DPoint(x+1.55,$0.y,$0.z) }
+            drPrism(a,b,Map3D45DR1000.roof)
             if !far { for i in -3...3 { box(x+Float(i)*0.34,3.89,0,0.035,1.41,0.02,dark) } }
         }
     }

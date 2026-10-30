@@ -42,8 +42,26 @@ function frontProbe(vertices) {
        v.position[2]>1.32&&v.position[2]<3.15&&v.color[0]>100&&
        v.color[0]>v.color[2]*1.4)<8)
     throw Error('central yellow gangway missing');
+  if(count(v=>v.position[0]>9.70&&Math.abs(v.position[1])>0.70&&
+       Math.abs(v.position[1])<1.06&&v.position[2]>2.85&&v.position[2]<3.20&&
+       v.color[0]>70&&v.color[0]<170&&Math.abs(v.color[0]-v.color[1])<12)<100)
+    throw Error('paired metal headlamp rims missing');
+  if(count(v=>v.position[0]>9.82&&Math.abs(v.position[1])<0.44&&
+       v.position[2]>3.16&&v.position[2]<3.26&&v.color[0]>80&&
+       Math.abs(v.color[0]-v.color[1])<15)<30)
+    throw Error('raised gangway header missing');
 }
 frontProbe(cab);
+function roofProbe(vertices) {
+  const lower=vertices.filter(v=>Math.abs(v.position[0]-4.85)<0.01&&
+    Math.abs(v.position[2]-3.49)<0.015&&Math.abs(v.position[1])>0.92).length;
+  const upper=vertices.filter(v=>Math.abs(v.position[0]-4.85)<0.01&&
+    Math.abs(v.position[2]-3.89)<0.015&&Math.abs(v.position[1])>0.70&&
+    Math.abs(v.position[1])<0.76).length;
+  if(lower<6||upper<6) throw Error('sloped rooftop cooler housing missing');
+}
+roofProbe(cab);
+roofProbe(model(readFileSync(resolve(root,far.native))).vertices);
 // Dated DRC1025 side photos show a thin yellow line above the windows and a
 // substantially deeper orange waist below them. Probe the delivered side
 // shell triangles, including both sides and the far LOD.
@@ -74,11 +92,17 @@ for(const [name,mutate] of [
   ['left black field lost',v=>{if(v.position[0]>9.70&&v.position[1]>0.45&&v.position[2]>2.14&&v.position[2]<3.26)v.color=[240,240,240,255]}],
   ['orange brow lost',v=>{if(v.position[0]>9.70&&v.position[2]>3.17)v.color=[20,20,20,255]}],
   ['right headlamp lost',v=>{if(v.position[0]>9.78&&v.position[1]<-0.75&&v.position[1]>-1&&v.position[2]>2.94&&v.position[2]<3.16)v.color=[20,20,20,255]}],
-  ['gangway shifted',v=>{if(v.position[0]>9.80&&Math.abs(v.position[1])<0.36&&v.position[2]>1.32&&v.position[2]<3.15)v.position[1]+=0.60}]
+  ['gangway shifted',v=>{if(v.position[0]>9.80&&Math.abs(v.position[1])<0.36&&v.position[2]>1.32&&v.position[2]<3.15)v.position[1]+=0.60}],
+  ['metal lamp rims lost',v=>{if(v.position[0]>9.70&&Math.abs(v.position[1])>0.70&&Math.abs(v.position[1])<1.06&&v.position[2]>2.85&&v.position[2]<3.20&&v.color[0]>70&&v.color[0]<170&&Math.abs(v.color[0]-v.color[1])<12)v.color=[20,20,20,255]}],
+  ['gangway header lost',v=>{if(v.position[0]>9.82&&Math.abs(v.position[1])<0.44&&v.position[2]>3.16&&v.position[2]<3.26&&v.color[0]>80&&Math.abs(v.color[0]-v.color[1])<15)v.color=[20,20,20,255]}]
 ]) {
   let rejected=false;try{frontProbe(brokenCab(mutate))}catch{rejected=true}
   if(!rejected) throw Error(`front fault example passed: ${name}`);
 }
+let squareRoofRejected=false;
+try {roofProbe(brokenCab(v=>{if(Math.abs(v.position[0]-4.85)<0.01&&
+  Math.abs(v.position[2]-3.49)<0.015)v.position[1]*=0.8}))} catch {squareRoofRejected=true}
+if(!squareRoofRejected) throw Error('square rooftop cooler fault example passed');
 for(const [name,mutate] of [
   ['thin orange waist',v=>{if(v.color[0]===orange[0]&&v.color[1]===orange[1]&&v.position[2]<2.10)v.position[2]=2.10}],
   ['missing yellow upper stripe',v=>{if(v.color[0]===yellow[0]&&v.color[1]===yellow[1])v.color=[180,180,180,255]}]
@@ -96,4 +120,4 @@ for(const [name,change] of [
   let rejected=false;try{verify(near,broken)}catch{rejected=true}
   if(!rejected) throw Error(`fault example passed: ${name}`);
 }
-console.log('VERIFIED: 45DR1000 envelope, LOD, photographed cab and side stripes; ten rejected faults');
+console.log('VERIFIED: 45DR1000 envelope, LOD, photographed cab, roof and side stripes; thirteen rejected faults');
