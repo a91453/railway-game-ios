@@ -90,8 +90,9 @@ struct MapAlertBubbles: View {
         }
     }
 
-    /// The stations whose names a bubble could cover.
-    private static func stationsOnScreen(session: GameSession, camera: PlanCamera, viewport: ScreenSize) -> [MapLabelPlacement.Station] {
+    /// The stations whose names a bubble, or the selected station's tag
+    /// (decision 501), could cover.
+    static func stationsOnScreen(session: GameSession, camera: PlanCamera, viewport: ScreenSize) -> [MapLabelPlacement.Station] {
         session.world.stations.compactMap { station in
             let at = camera.screenPoint(of: station.location)
             guard at.x > -80, at.x < viewport.width + 80, at.y > -80, at.y < viewport.height + 80 else { return nil }

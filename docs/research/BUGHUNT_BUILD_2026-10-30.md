@@ -63,10 +63,10 @@
 | P3-3 | `RealLineAcquisition.swift` 約 706 行 `junctionStation` 沒有濾掉機廠 | 在新竹 450 m 內、比新竹站更靠近接點處蓋機廠，再收購內灣線：被拒絕，說「機廠不能當路線的停靠站」，玩家不知道怎麼辦（讀程式） | 加 `!$0.isDepot` | 玩家：不會莫名買不了；其餘無 |
 | P3-4 | `RealLineAcquisition.swift` 約 1118、1132 行 | 三鶯線、淡海綠山線的價目表：機廠站的造價算進「N 列車」那一列（合計正確）（讀程式） | 機廠站建好後再取 `built` | 玩家：細目正確；其餘無 |
 | P3-5 | `RealLineAcquisition.swift` 約 428 行 | 買了綠山線又刪掉這條線，再買藍海線：只賣濱海沙崙到漁人碼頭那段，綠山線也再也買不到（讀程式） | 收購紀錄在線刪掉時一併看待，或刪線時提醒 | 玩家：少見；其餘無 |
-| P3-6 | `Sources/GamePresentation/BusOwnRoads.swift` `joining` | 自己的路疊在單行道上，公車可以沿玩家的路逆向（讀程式） | 疊在單行道上的格子照底圖的方向 | 玩家：少見；鐵道迷：無；其餘無 |
+| P3-6 | `Sources/GamePresentation/BusOwnRoads.swift` `joining` | 自己的路疊在單行道上，公車可以沿玩家的路逆向（讀程式） | 疊在單行道上的格子照底圖的方向。**已修（ROADFIX）**：沿單行道（半格內、夾角約 25° 內）的那幾段只照街的方向走，`BusOwnRoadsTests.testARoadAlongAOneWayStreetIsTakenItsWayOnly` 釘住 | 玩家：少見；鐵道迷：無；其餘無 |
 | P3-7 | `Sources/GamePresentation/RealRoadCells.swift` 約 181 行 | 離車站遠、地塊還沒讀進來的地方，沿真實的街鋪路照全價收（之後讀進來也不退）（讀程式） | 鋪路前先讀進該處的地塊 | 玩家：照規則免費；其餘無 |
-| P3-8 | `Sources/GamePresentation/BuildingSession.swift:383` `BuildingPreviewKey` 沒有語言 | 暫停時切換語言，建物預覽的拒絕理由仍是舊語言，移動位置後才換（讀程式） | key 加 `language` | 玩家：小；其餘無 |
-| P3-9 | `Sources/GamePresentation/RoadDraft.swift` | 道路模式選了要拆的一段，復原後那段仍標著；按拆除會被 GameCore 乾淨拒絕 | `step(to:)` 一併清掉 `roadRemoval` | 玩家：小；其餘無 |
+| P3-8 | `Sources/GamePresentation/BuildingSession.swift:383` `BuildingPreviewKey` 沒有語言 | 暫停時切換語言，建物預覽的拒絕理由仍是舊語言，移動位置後才換（讀程式） | key 加 `language`。**不會發生（ROADFIX 查證）**：遊戲裡選的語言只在下次開 App 時生效（決策 257，`LanguageChoice.save`），`GameLauncher` 與 `GameSession` 的 `language` 都是開 App 時定下的 `let`，同一局裡語言不會變；沒有改程式 | 玩家：無；其餘無 |
+| P3-9 | `Sources/GamePresentation/RoadDraft.swift` | 道路模式選了要拆的一段，復原後那段仍標著；按拆除會被 GameCore 乾淨拒絕 | `step(to:)` 一併清掉 `roadRemoval`。**已修（ROADFIX）**：`CityBusToolTests.testAnUndoLetsGoOfTheStretchPickedToTakeUp` 釘住 | 玩家：小；其餘無 |
 
 | P3-10 | `Sources/GamePresentation/Map3DStreetLife.swift`、`Map3DStreets.swift` | 3D 的平交道柵欄不會放下，路上的車和行人照樣穿過正在通過的列車（`levelCrossings` 只拿來畫，App 沒有用它擋車） | 列車接近時讓那段路的車流停住、柵欄放下；要先讀 motion skill | 玩家：看起來像真的平交道；鐵道迷：台灣平交道有警報與柵欄；開發：只在呈現層；美術：柵欄動畫；音樂：可以加平交道警鈴 |
 | P3-11 | `Sources/GamePresentation/Map3DStreets.swift` `addOwnRoads`、`Map3DRealGround.addRoads` | 實景地圖的底圖道路，以及玩家自己鋪的路，在 3D 和地面軌道交叉時沒有平交道（只有空白地圖的種子街道有），路面直接畫過鋼軌（UNVERIFIED，Linux 沒畫 3D） | 讓這兩種路也走 `trackMeeting`（決策 263 的軌道優先） | 玩家：不穿模；鐵道迷：該有平交道的地方有；開發：重用現成的判斷；美術：一致；音樂：無 |

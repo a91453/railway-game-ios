@@ -346,7 +346,13 @@ final class CityRequestsTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 50)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        // Decision 504: this build sends those still waiting at 04:00 home,
+        // which the build that saved this did not, so the world it makes
+        // differs in its passengers and what they paid; the map, the lines
+        // and the clock still match, and the save itself is unchanged.
+        XCTAssertEqual(loaded.stations, made.stations)
+        XCTAssertEqual(loaded.lines, made.lines)
+        XCTAssertEqual(loaded.clock, made.clock)
         let requests = try XCTUnwrap(loaded.cityRequests)
         XCTAssertEqual(requests.trust, 2)
         XCTAssertEqual(requests.owed, Money(20_000_000))

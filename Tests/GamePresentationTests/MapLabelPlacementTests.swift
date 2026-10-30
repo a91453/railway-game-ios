@@ -111,6 +111,29 @@ final class MapLabelPlacementTests: XCTestCase {
         }
     }
 
+    /// Decision 501's screenshot review (an iPhone on its side): moved off
+    /// the bubbles, the middle station's tag lay on its west neighbour's
+    /// mark and name. Where a place off both is in reach, it goes there.
+    func testAMovedTagKeepsOffTheOtherStations() {
+        let stations = [(0.0, -1.0), (-1, 0), (0, 0), (1, 0), (0, 1)].enumerated().map { i, at in
+            MapLabelPlacement.Station(x: 437 + at.0 * 79, y: 201 + at.1 * 79, name: cross[i].name)
+        }
+        let bubbles = stations.dropFirst().map { MapLabelPlacement.Bubble(x: $0.x, y: $0.y, text: "缺建材", hasReason: false) }
+        let points = MapLabelPlacement.placeBubbles(bubbles, stations: stations, lift: Self.lift, radius: Self.radius)
+        let touch = zip(bubbles, points).map { MapLabelPlacement.bubbleTouchBox($0, at: $1) }
+        let clear = Box(x: 60, y: 60, width: 754, height: 280)
+        for station in stations {
+            let others = MapLabelPlacement.obstacles(stations, radius: Self.radius, own: (station.x, station.y))
+            let tag = MapLabelPlacement.stationTag(at: ScreenPoint(x: station.x, y: station.y), width: 160, height: 44,
+                                                   clear: clear, avoiding: touch, keepingOff: others)
+            for box in touch + others {
+                XCTAssertFalse(overlaps(tag, box), "\(station.name)'s tag at \(tag) covers \(box)")
+            }
+            let away = ((tag.minX + tag.maxX) / 2 - station.x, (tag.minY + tag.maxY) / 2 - station.y)
+            XCTAssertLessThan((away.0 * away.0 + away.1 * away.1).squareRoot(), 150, "\(station.name)'s tag stays by it")
+        }
+    }
+
     func testABubbleWithRoomStaysOverItsStation() {
         let alone = [MapLabelPlacement.Station(x: 200, y: 200, name: "臺北")]
         let bubble = MapLabelPlacement.Bubble(x: 200, y: 200, text: "Crowded", hasReason: false)

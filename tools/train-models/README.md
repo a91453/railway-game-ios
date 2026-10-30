@@ -108,4 +108,6 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 
 新北安坑／淡海輕軌兩款 studies 編組及專用反例：[tools/new-taipei-lrt](../new-taipei-lrt/README.md)。
 
+45DR1000 DRC1025 static study: [`tools/45dr1000/formation.json`](../45dr1000/formation.json) supplies a three-car generic assembly; source and visual evidence are in `docs/art/45dr1000-2026-10-29/`.
+45DR1000-specific cab, envelope, near/far and eight fault examples: `node tools/45dr1000/verify.mjs OUT`.
 海風／山嵐 EMU500 改造雙款的配置、共同尺度及故障反例：[tools/tourism-emu500](../tourism-emu500/README.md)。保護原EMU500近遠／營運，兩款僅studies。

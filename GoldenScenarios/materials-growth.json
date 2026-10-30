@@ -1,5 +1,5 @@
 {
-  "description": "Building materials in the city's growth (schema 60, decision 157): city-buildings-raise.json with building materials on. Each station holds the 60 t it got by road at the first midnight. At the second, raising takes the new storeys' floor at 200 m2 a ton, rounded up (D1 to D2 31 t, D2 to D3 93 t, D3 to D4 169 t), in the order the raises are chosen, the first unpaid stopping them; a new cell takes 16 t. Alpha raises (0, 0) to D2 (29 t left) and cannot pay for (0, 1); Beta raises (0, 1) and cannot pay for (0, 4); Gamma raises (0, 4) and cannot pay for (0, 5) to D4. All three are short (lastShort [1, 2, 3], decision 158), so each grows at a quarter of its rate (12 to 3 thousandths), and each builds its new cell (13 t left). The midnight then brings 60 t more: 73 t each, 141 t used, 360 t supplied. tools/golden-checks/city_growth.py works every value out independently.",
+  "description": "Building materials in the city's growth (schema 60, decision 157): city-buildings-raise.json with building materials on. Each station holds the 60 t it got by road at the first midnight. At the second, raising takes the new storeys' floor at 200 m2 a ton, rounded up (D1 to D2 31 t, D2 to D3 93 t, D3 to D4 169 t), in the order the raises are chosen, the first unpaid stopping them; a new cell takes 16 t. Alpha raises (0, 0) to D2 (29 t left) and cannot pay for (0, 1); Beta raises (0, 1) and cannot pay for (0, 4); Gamma raises (0, 4) and cannot pay for (0, 5) to D4. All three are short (lastShort [1, 2, 3], decision 158), so each grows at a quarter of its rate (12 to 3 thousandths), and each builds its new cell (13 t left). The midnight then brings 60 t more: 73 t each, 141 t used, 360 t supplied. Alpha and Beta measure lastService 995: the 2 each still waiting at 04:00 went home then (decision 504). tools/golden-checks/city_growth.py works every value out independently.",
   "expectedFinalState": {
     "accounts": {
       "days": [
@@ -14,7 +14,7 @@
         {
           "day": 1,
           "energyCost": 37200,
-          "fareRevenue": 733500,
+          "fareRevenue": 731500,
           "maintenanceCost": 33600,
           "operatingCost": 3267600,
           "staffCost": 234000
@@ -180,10 +180,10 @@
           "time": 1680
         },
         {
-          "amount": -134100,
+          "amount": -136100,
           "breakdown": [
             {
-              "amount": 2500,
+              "amount": 500,
               "item": "fareRevenue"
             },
             {
@@ -723,7 +723,7 @@
         "trainDistance": 0
       }
     },
-    "balance": -2609800,
+    "balance": -2611800,
     "cityBuildings": {
       "buildings": 13,
       "d1": 6,
@@ -767,7 +767,7 @@
     "land": {
       "cells": 13,
       "jobs": 157,
-      "residents": 3531
+      "residents": 3530
     },
     "landDemand": true,
     "lines": [
@@ -976,8 +976,8 @@
     },
     "passengers": [
       {
-        "abandoned": 0,
-        "arrived": 480,
+        "abandoned": 2,
+        "arrived": 478,
         "demand": {
           "dailyTrips": 482,
           "kind": "residential"
@@ -1004,8 +1004,8 @@
         ]
       },
       {
-        "abandoned": 0,
-        "arrived": 490,
+        "abandoned": 2,
+        "arrived": 488,
         "demand": {
           "dailyTrips": 492,
           "kind": "residential"
@@ -1937,7 +1937,7 @@
           "base": 480,
           "lastGrowth": 4,
           "lastReached": 2,
-          "lastService": 1000
+          "lastService": 995
         }
       },
       "observe": {
@@ -1952,7 +1952,7 @@
           "base": 490,
           "lastGrowth": 4,
           "lastReached": 2,
-          "lastService": 1000
+          "lastService": 995
         }
       },
       "observe": {
@@ -1981,7 +1981,7 @@
         "landCell": {
           "column": 0,
           "jobs": 0,
-          "residents": 59,
+          "residents": 58,
           "row": 0,
           "use": "residential"
         }

@@ -193,7 +193,7 @@ extension GameSession {
         switch edgePlan(from: start, to: end, in: prepared) {
         case .success(let found): plan = found
         case .failure(let problem):
-            message = StatusMessage(kind: .failure, text: problem.text(in: language))
+            message = StatusMessage(kind: .failure, text: stretchProblemText(problem, from: start, to: end))
             return
         }
         var command = PlayerCommand.buildTrack(plan.stretch(structure: networkStructure))
@@ -262,7 +262,7 @@ extension GameSession {
             let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
             return (NetworkPreview(
                 curve: .straight, profile: .uniform, points: [from, to], length: Int64((dx * dx + dy * dy).squareRoot().rounded()),
-                startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language)
+                startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil, problem: stretchProblemText(problem, from: start, to: end)
             ), [])
         }
         var parallel: EdgePlan?
@@ -311,6 +311,20 @@ extension GameSession {
             crossoverNote: problem == nil && crossoverOutcome != .none
                 ? String(Self.crossoverText(crossoverOutcome, in: language).drop { $0 == " " }) : nil
         ), besides)
+    }
+
+    /// ``NetworkProblem/text(in:)``, and for a stretch that makes no edge
+    /// beside a real railway, the way to a map with none to work round
+    /// (PLAYER_FEEDBACK 97.1).
+    func stretchProblemText(_ problem: NetworkProblem, from start: NetworkAnchor, to end: NetworkAnchor) -> String {
+        let text = problem.text(in: language)
+        guard case .geometry = problem, canTraceRealRailway,
+              [start, end].contains(where: { planPoint(of: $0).flatMap { tracedPoint(near: $0, reach: 0) } != nil })
+        else { return text }
+        return text + language.text(
+            " To lay a whole line yourself, start a new game on a Blank Map.",
+            "想自己鋪整條線，可以開新局選「空白地圖」。"
+        )
     }
 
     /// Why a double track's parallel cannot be laid beside the stretch.
@@ -369,6 +383,9 @@ extension GameSession {
         }
         var profile = TrackProfile.uniform
         var geometry = TrackGeometry(from: from, to: to, curve: curve)
+        if geometry == nil {
+            return .failure(.geometry(NetworkBuilding.geometryProblem(from: from, to: to, curve: curve, bounds: world.bounds)))
+        }
         if networkEasesGrade, from.z != to.z, let length = geometry?.length {
             // A quarter of the length at each end eases into and out of
             // the grade; the middle half is steady. Decision 164: easing
@@ -766,9 +783,13 @@ enum NetworkProblem: Error {
     /// A turnout on a vertical curve, where GameCore does not split the
     /// track (decision 233).
     case turnoutOnVerticalCurve
+    /// The ends and curve make no edge, for the one reason named.
+    case geometry(NetworkBuilding.GeometryProblem)
 
     func text(in language: DisplayLanguage) -> String {
         switch self {
+        case .geometry(let problem):
+            problem.text(in: language)
         case .missingNode:
             language.text("That end of the track is gone. Tap the track again.", "那個軌道端點已經不在了。請重新點選軌道。")
         case .tooClose:

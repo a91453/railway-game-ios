@@ -208,13 +208,18 @@ final class LineAccountsTests: XCTestCase {
         XCTAssertEqual(object["saveVersion"] as? Int, 48)
         XCTAssertNotNil((object["world"] as? [String: Any])?["lineAccounts"])
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        // Decision 222 counts the changes at B, which version 48 did not.
-        XCTAssertEqual(world, Self.withoutChanges(made))
+        // Decision 504: this build sends those still waiting at 04:00 home,
+        // which the build that saved this did not, so the world it makes
+        // differs in its passengers and what they paid; the map, the lines
+        // and the clock still match, and the save itself is unchanged.
+        XCTAssertEqual(world.stations, made.stations)
+        XCTAssertEqual(world.lines, made.lines)
+        XCTAssertEqual(world.clock, made.clock)
         XCTAssertEqual(world.lineAccounts?.lines.count, 2)
         XCTAssertFalse(world.lineDays(first).isEmpty)
-        // It goes on to be the same world as one that never was saved.
+        // It goes on as the same save read again does.
         var carried = world
-        var straight = made
+        var straight = try JSONDecoder().decode(SavedGame.self, from: data).world
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
         XCTAssertEqual(Self.withoutChanges(carried), Self.withoutChanges(straight))

@@ -231,7 +231,8 @@ final class PassengerDemandTests: XCTestCase {
     }
 
     /// A station holds 4000 waiting passengers: the group that would pass
-    /// that gets in up to it, and the rest leave at once.
+    /// that gets in up to it, and the rest leave at once. The 4000 there
+    /// at 04:00 go home (decision 504), and the station fills again.
     func testAFullStationTurnsPassengersAway() throws {
         var world = try makeCorridor()
         try world.setStationDemand(a, to: demand(.residential, 1_000_000))
@@ -240,8 +241,31 @@ final class PassengerDemandTests: XCTestCase {
         let ledger = world.passengerLedger(of: a)
         XCTAssertEqual(ledger.waiting, 4_000)
         XCTAssertEqual(ledger.released, 1_000_000)
-        XCTAssertEqual(ledger.overflowed, 996_000)
-        XCTAssertEqual(ledger.abandoned, 0)
+        XCTAssertEqual(ledger.overflowed, 992_000)
+        XCTAssertEqual(ledger.abandoned, 4_000)
+    }
+
+    /// Decision 504: at 04:00, as each operating day starts, everyone still
+    /// waiting at a station goes home, counted as abandoned at their own
+    /// station; the minute's release goes on from there.
+    func testWaitingPassengersGoHomeWhenTheOperatingDayStarts() throws {
+        var world = try makeCorridor()
+        try world.setStationDemand(a, to: demand(.residential, 20_000))
+        try world.setStationDemand(b, to: demand(.office, 20_000))
+        try world.advance(ticks: 4 * 60)
+        let waiting = world.passengerLedger(of: a).waiting
+        XCTAssertGreaterThan(waiting, 0)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 0)
+        try world.advance(ticks: 1)
+        let ledger = world.passengerLedger(of: a)
+        XCTAssertEqual(ledger.abandoned, waiting)
+        XCTAssertTrue(world.waitingPassengers(at: a).allSatisfy { $0.since == GameTime(minutes: 4 * 60) })
+        XCTAssertEqual(ledger.released, ledger.waiting + ledger.overflowed + ledger.abandoned)
+        // A whole day in one call goes home the same way the next morning.
+        try world.advance(ticks: 1_440)
+        XCTAssertTrue(world.waitingPassengers(at: a).allSatisfy { $0.since >= GameTime(minutes: 1_440 + 4 * 60) })
+        let later = world.passengerLedger(of: a)
+        XCTAssertEqual(later.released, later.waiting + later.overflowed + later.abandoned)
     }
 
     /// Doing the same in one call or one minute at a time gives the same
@@ -276,6 +300,9 @@ final class PassengerDemandTests: XCTestCase {
         try world.advance(ticks: 9 * 60)
         let waitingAtA = world.passengerLedger(of: a).waiting
         let groupsAtB = world.waitingPassengers(at: b)
+        // Those waiting at 04:00 went home then (decision 504).
+        let homeAtA = world.passengerLedger(of: a).abandoned
+        let homeAtB = world.passengerLedger(of: b).abandoned
         XCTAssertGreaterThan(waitingAtA, 0)
 
         // Line 1 without B: A's passengers for C keep their trip; those for
@@ -286,14 +313,14 @@ final class PassengerDemandTests: XCTestCase {
         XCTAssertFalse(groupsAtA.isEmpty)
         XCTAssertTrue(groupsAtA.allSatisfy { $0.destination == c })
         XCTAssertTrue(world.waitingPassengers(at: b).isEmpty)
-        XCTAssertEqual(world.passengerLedger(of: b).abandoned, groupsAtB.reduce(0) { $0 + $1.count })
+        XCTAssertEqual(world.passengerLedger(of: b).abandoned, homeAtB + groupsAtB.reduce(0) { $0 + $1.count })
         let atA = world.passengerLedger(of: a)
-        XCTAssertEqual(atA.waiting + atA.abandoned, waitingAtA)
+        XCTAssertEqual(atA.waiting + atA.abandoned, homeAtA + waitingAtA)
 
         // Reversed, line 1 takes A to C inbound: the outbound groups leave.
         try world.setLineStops(LineID(rawValue: 1), to: [c, a])
         XCTAssertTrue(world.waitingPassengers(at: a).isEmpty)
-        XCTAssertEqual(world.passengerLedger(of: a).abandoned, waitingAtA)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, homeAtA + waitingAtA)
 
         // From now on B's trips take line 2; removing it strands them.
         try world.advance(ticks: 60)
@@ -302,7 +329,7 @@ final class PassengerDemandTests: XCTestCase {
         XCTAssertGreaterThan(waitingAtB, 0)
         try world.removeLine(LineID(rawValue: 2))
         XCTAssertTrue(world.waitingPassengers(at: b).isEmpty)
-        XCTAssertEqual(world.passengerLedger(of: b).abandoned, groupsAtB.reduce(0) { $0 + $1.count } + waitingAtB)
+        XCTAssertEqual(world.passengerLedger(of: b).abandoned, homeAtB + groupsAtB.reduce(0) { $0 + $1.count } + waitingAtB)
         for record in world.passengers {
             XCTAssertEqual(record.released, record.waitingCount + record.overflowed + record.abandoned)
         }
@@ -379,7 +406,7 @@ final class PassengerDemandTests: XCTestCase {
             ("a group for a line that does not exist", firstGroup { $0["line"] = 7 }),
             ("a group the line takes the other way", firstGroup { $0["direction"] = "inbound" }),
             ("a group for its own station", firstGroup { $0["destination"] = 1 }),
-            ("a group from the future", firstGroup { $0["since"] = 501 }),
+            ("a group from the future", firstGroup { $0["since"] = 30_060 }),
             ("a group from a minute not yet released", mutated { records in
                 var groups = records[0]["waiting"] as! [[String: Any]]
                 groups[groups.count - 1]["since"] = 500

@@ -1,0 +1,11 @@
+{
+  "origin": "TRA 45DR1000 (45DRC1025), 2006–2008 stainless, yellow and orange livery",
+  "date": "2026-10-29",
+  "license": "Original procedural geometry; reference photographs are CC BY-SA and are not republished",
+  "public_use": "Source metadata, procedural recipe and one generated overview only",
+  "photographs": [
+    {"url":"https://commons.wikimedia.org/wiki/File:TRA_DRC1025_at_Taichung_Station_20060129.jpg","author":"Cheng-en Cheng","date":"2006-01-29","license":"CC BY-SA 2.0 tw","sha256":"925ef952de10f40b46c0f371f8edef15332efa4e5e17989779ff1f7fd378692e","use":"Downloaded, decoded and visually examined; front three-quarter, side stripe, roof corner, end lamps"},
+    {"url":"https://commons.wikimedia.org/wiki/File:TRA_DRC1025_at_Shihfen_Station_20080501.jpg","author":"Wei-Min Chen《偉閔》","date":"2008-05-01","license":"CC BY-SA 3.0","sha256":"1d4c51e5d26739e07f1d2aa52320105a9d2b8f1e46154165167fe8e0001fb4ac","use":"Downloaded, decoded and visually examined; side windows, narrow front, yellow end and V band"}
+  ],
+  "specification": {"url":"https://zh.wikipedia.org/wiki/台鐵DR1000型柴油客車","note":"Secondary summary with source warning; dimensions and builder must be corroborated against primary records before operational use"}
+}

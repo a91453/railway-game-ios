@@ -455,6 +455,9 @@ private struct GameMenu: View, Equatable {
     /// Opens the problem report (TestFlight 54.1: a player found it only in
     /// the settings), in the HUD's sheet.
     let reportProblem: @MainActor () -> Void
+    /// Compact height: a phone, held on its side, where the rows side by
+    /// side show icons alone (decision 498).
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     nonisolated static func == (lhs: GameMenu, rhs: GameMenu) -> Bool {
         lhs.session === rhs.session
@@ -502,6 +505,7 @@ private struct GameMenu: View, Equatable {
     /// One row of the menu's first level.
     @ViewBuilder
     private func row(_ row: GameMenuLayout.Row, in layout: GameMenuLayout) -> some View {
+        let itemStyle = GameMenuLayout.itemStyle(compactHeight: verticalSizeClass == .compact)
         switch row {
         case .saveGame:
             Button {
@@ -564,13 +568,14 @@ private struct GameMenu: View, Equatable {
             .accessibilityIdentifier("menu.backToStart")
         case .shortcuts:
             // Decision 226, later (2026-10-16): side by side in one row,
-            // so the first level keeps to six rows (``GameMenuLayout``).
+            // so the first level keeps to six rows (``GameMenuLayout``);
+            // decision 498: titled where the screen is tall enough.
             ControlGroup {
                 ForEach(layout.shortcuts, id: \.self) { shortcut in
                     self.shortcut(shortcut)
                 }
             }
-            .controlGroupStyle(.compactMenu)
+            .menuItemStyle(itemStyle)
         case .help:
             // Decision 383: Help and Report a Problem side by side where
             // More stood, with what More held when it is one row.
@@ -579,7 +584,7 @@ private struct GameMenu: View, Equatable {
                     self.helpItem(item, in: layout)
                 }
             }
-            .controlGroupStyle(.compactMenu)
+            .menuItemStyle(itemStyle)
         case .settings:
             // Decision 414: the idle mode beside Settings, so the first
             // level keeps its six rows.
@@ -588,7 +593,7 @@ private struct GameMenu: View, Equatable {
                     self.settingsItem(item)
                 }
             }
-            .controlGroupStyle(.compactMenu)
+            .menuItemStyle(itemStyle)
         }
     }
 
@@ -1127,5 +1132,18 @@ private enum WidestText {
         if picked.count > 64 { picked.removeAll() }
         picked[key] = text
         return text
+    }
+}
+
+private extension ControlGroup {
+    /// Decision 498 (UI_AUDIT B2): a row side by side in the game menu,
+    /// its items titled under their icons (the system's medium items)
+    /// where the screen is tall enough, icons alone on a phone on its side.
+    @MainActor @ViewBuilder
+    func menuItemStyle(_ style: GameMenuLayout.ItemStyle) -> some View {
+        switch style {
+        case .titled: controlGroupStyle(.automatic)
+        case .iconsOnly: controlGroupStyle(.compactMenu)
+        }
     }
 }

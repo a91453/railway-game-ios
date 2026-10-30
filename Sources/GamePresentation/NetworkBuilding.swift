@@ -374,3 +374,49 @@ extension GameWorld {
         try setGround(heights.ground(of: missing, frame: frame))
     }
 }
+
+extension NetworkBuilding {
+    /// Why two ends and a curve make no edge: the one thing in the way, for
+    /// the build card to name.
+    public enum GeometryProblem: CaseIterable, Sendable {
+        case sameSpot, outsideMap, heightGap, tooBent
+
+        public func text(in language: DisplayLanguage) -> String {
+            switch self {
+            case .sameSpot:
+                language.text(
+                    "The start and end are the same spot. Drag from here to another point.",
+                    "起點和終點在同一個位置。請從這裡拖到另一個點。"
+                )
+            case .outsideMap:
+                language.text(
+                    "The track would run off the map. Pick points farther from the edge.",
+                    "軌道會超出地圖。請選離邊緣遠一點的位置。"
+                )
+            case .heightGap:
+                language.text(
+                    "These two points are too far apart in height for one stretch. Pick points at more similar heights.",
+                    "這兩點的高度落差太大，一段軌道接不起來。請選高度比較接近的兩點。"
+                )
+            case .tooBent:
+                language.text(
+                    "The track can't bend that tightly. Drag farther out, in the direction the track already runs.",
+                    "軌道在這裡彎不過去。請拖遠一點，朝軌道原本延伸的方向。"
+                )
+            }
+        }
+    }
+
+    /// The reason ``TrackGeometry`` refuses `from`, `to` and `curve`, found
+    /// by taking the conditions away one at a time, so no GameCore rule is
+    /// repeated here.
+    public static func geometryProblem(from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve, bounds: WorldBounds) -> GeometryProblem {
+        if from.plan == to.plan { return .sameSpot }
+        var handles: [PlanPoint] = []
+        if case .cubic(let first, let second) = curve { handles = [first, second] }
+        guard from.isWithinLimits, to.isWithinLimits, bounds.contains(from.plan), bounds.contains(to.plan),
+              handles.allSatisfy(bounds.contains) else { return .outsideMap }
+        let level = WorldCoordinate(x: to.x, y: to.y, z: from.z)
+        return TrackGeometry(from: from, to: level, curve: curve) != nil ? .heightGap : .tooBent
+    }
+}

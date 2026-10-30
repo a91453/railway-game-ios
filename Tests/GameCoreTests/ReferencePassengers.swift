@@ -188,10 +188,17 @@ extension ReferenceWorld {
         return nil
     }
 
-    /// Every minute's release, before the trains (decision 34).
+    /// Every minute's release, before the trains (decision 34). At 04:00
+    /// those still waiting go home first, abandoned (decision 504).
     mutating func releasePassengers() {
         var day = minutes % 1440
         if day < 0 { day += 1440 }
+        if day == 240 {
+            for (station, groups) in passengers.queue {
+                passengers.abandoned[station, default: 0] += groups.reduce(0) { $0 + $1.count }
+            }
+            passengers.queue = [:]
+        }
         let hour = Int(day / 60)
         let into = day % 60
         let origins = passengers.demand.keys.sorted()
