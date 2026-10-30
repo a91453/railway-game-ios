@@ -10,7 +10,7 @@ public enum Map3D45DR1000 {
     public static let yellow = Map3DColor.rgb(0xE9BB3B)
     public static let roof = Map3DColor.rgb(0x777D7C)
     public static let dark = Map3DColor.rgb(0x30343A)
-    public static let glass = Map3DPalette.glazing
+    public static let glass = Map3DTrainStyle.glass
     public static func model(far: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
         b.dr1000(far: far)
@@ -27,6 +27,13 @@ extension StationKitBuilder {
     private mutating func drShell(_ x0: Float,_ x1: Float,_ bottom: Float,_ top: Float,_ color: UInt32) {
         func p(_ x:Float)->[Map3DPoint] { [Map3DPoint(x,bottom,-1.345),Map3DPoint(x,bottom,1.345),Map3DPoint(x,top,1.345),Map3DPoint(x,top,-1.345)] }
         drPrism(p(x0),p(x1),color)
+    }
+    /// A shallow raised casting on a cab end. Coordinates are height and lateral
+    /// position in metres; there is no shared locomotive/end-cab geometry.
+    private mutating func drEndPanel(_ end: Float,_ x: Float,_ outline: [(Float,Float)],_ depth: Float,_ color: UInt32) {
+        let back=outline.map { Map3DPoint(x+end*(depth-0.025),$0.0,$0.1) }
+        let front=outline.map { Map3DPoint(x+end*depth,$0.0,$0.1) }
+        drPrism(back,front,color)
     }
     mutating func dr1000(far: Bool) {
         let silver=Map3D45DR1000.silver, orange=Map3D45DR1000.orange
@@ -48,40 +55,94 @@ extension StationKitBuilder {
         // Both ends have cab windows and a central gangway, not a G12 hood or cab.
         for end:Float in [-1,1] {
             let x=end*9.65
-            let outline:[(Float,Float)]=[(1.25,-1.28),(1.25,1.28),(3.11,1.28),(3.32,1.17),(3.43,0.93),(3.46,0),(3.43,-0.93),(3.32,-1.17),(3.11,-1.28)]
-            let back=outline.map { Map3DPoint(x-end*0.03,$0.0,$0.1) }
-            let front=outline.map { Map3DPoint(x+end*0.03,$0.0,$0.1) }
-            drPrism(back,front,yellow)
+            // On DRC1025 the orange brow rolls over the roof shoulder. The
+            // yellow panel below it remains visible between three dark openings.
+            drEndPanel(end,x,[(1.25,-1.22),(1.25,1.22),(3.13,1.22),
+                              (3.19,1.17),(3.19,-1.17),(3.13,-1.22)],0.055,yellow)
+            drEndPanel(end,x,[(3.13,-1.22),(3.13,1.22),(3.32,1.17),
+                              (3.43,0.93),(3.46,0),(3.43,-0.93),
+                              (3.32,-1.17)],0.064,orange)
             for side:Float in [-1,1] {
-                box(x+end*0.052,2.19,side*0.82,0.025,0.79,1.05,dark)
-                box(x+end*0.069,2.22,side*0.82,0.016,0.68,0.96,glass)
+                // The cab corner turns from the 2.69 m sidewall into the
+                // slightly narrower end instead of ending at a square seam.
+                let outer=side*1.345, inner=side*1.29
+                let a=[Map3DPoint(end*9.37,1.25,outer),Map3DPoint(end*9.37,1.25,inner),
+                       Map3DPoint(end*9.37,3.16,inner),Map3DPoint(end*9.37,3.16,outer)]
+                let b=[Map3DPoint(end*9.69,1.25,side*1.22),Map3DPoint(end*9.69,1.25,side*1.17),
+                       Map3DPoint(end*9.69,3.16,side*1.17),Map3DPoint(end*9.69,3.16,side*1.22)]
+                drPrism(a,b,yellow)
                 if far {
-                    box(x+end*0.07,3.06,side*0.85,0.025,0.16,0.16,Map3DPalette.tunnelLamp)
+                    box(x+end*0.073,2.17,side*0.82,0.025,0.76,1.06,dark)
+                    box(x+end*0.089,2.21,side*0.82,0.016,0.65,0.97,glass)
+                    box(x+end*0.111,2.98,side*0.88,0.019,0.18,0.16,
+                        Map3DPalette.tunnelLamp)
                 } else {
-                    civicTube(Map3DPoint(x+end*0.07,3.13,side*0.85),
-                              Map3DPoint(x+end*0.11,3.13,side*0.85),
-                              radius:0.09,color:Map3DPalette.tunnelLamp,sides:12)
+                    func roundedWindow(_ base:Float,_ half:Float,_ top:Float) -> [(Float,Float)] {
+                        let centre=side*0.82
+                        return [(base,centre-half+0.05),(base,centre+half-0.05),
+                                (base+0.05,centre+half),(top-0.16,centre+half),
+                                (top-0.05,centre+half-0.07),(top,centre+half-0.20),
+                                (top,centre-half+0.20),(top-0.05,centre-half+0.07),
+                                (top-0.16,centre-half),(base+0.05,centre-half)]
+                    }
+                    drEndPanel(end,x,roundedWindow(2.15,0.38,3.25),0.085,dark)
+                    drEndPanel(end,x,roundedWindow(2.22,0.32,3.18),0.104,glass)
+                    // Lamp and its dark circular bezel sit in the black cab field.
+                    civicTube(Map3DPoint(x+end*0.108,3.04,side*0.88),
+                              Map3DPoint(x+end*0.137,3.04,side*0.88),
+                              radius:0.145,color:Map3DColor.rgb(0x202428),sides:12)
+                    civicTube(Map3DPoint(x+end*0.139,3.04,side*0.88),
+                              Map3DPoint(x+end*0.151,3.04,side*0.88),
+                              radius:0.083,color:Map3DPalette.tunnelLamp,sides:12)
+                    beam(Map3DPoint(x+end*0.151,2.29,side*0.51),
+                         Map3DPoint(x+end*0.151,2.76,side*1.05),0.024,dark)
+                    if end > 0 && side > 0 {
+                        // Small pale car-number card seen under the left lamp
+                        // in the dated DRC1025 photograph. No borrowed font.
+                        box(x+end*0.158,2.84,side*0.86,0.012,0.40,0.095,
+                            Map3DColor.rgb(0xE4E0D6))
+                    }
                 }
-                box(x+end*0.08,1.52,side*1.05,0.03,0.17,0.17,Map3DColor.rgb(0xBA3433))
+                civicTube(Map3DPoint(x+end*0.086,1.55,side*1.05),
+                          Map3DPoint(x+end*0.115,1.55,side*1.05),
+                          radius:0.18,color:yellow,sides:far ? 8:12)
+                civicTube(Map3DPoint(x+end*0.118,1.55,side*1.05),
+                          Map3DPoint(x+end*0.132,1.55,side*1.05),
+                          radius:0.09,color:Map3DColor.rgb(0xBA3433),sides:far ? 8:12)
                 // Orange V meets the side waist stripe at the outer edge.
                 beam(Map3DPoint(x+end*0.09,2.17,side*1.29),Map3DPoint(x+end*0.09,1.28,side*0.50),0.18,orange)
             }
-            beam(Map3DPoint(x+end*0.08,3.30,-1.13),
-                 Map3DPoint(x+end*0.08,3.30,1.13),0.16,orange)
-            box(x+end*0.10,1.25,0,0.08,0.76,1.86,dark)
-            box(x+end*0.15,1.31,0,0.04,0.60,1.71,yellow)
-            box(x+end*0.18,2.14,0,0.018,0.29,0.85,glass)
+            drEndPanel(end,x,[(1.23,-0.42),(1.23,0.42),(3.11,0.42),
+                              (3.22,0.32),(3.22,-0.32),(3.11,-0.42)],0.14,dark)
+            drEndPanel(end,x,[(1.29,-0.34),(1.29,0.34),(3.05,0.34),
+                              (3.15,0.27),(3.15,-0.27),(3.05,-0.34)],0.16,yellow)
+            drEndPanel(end,x,[(2.23,-0.17),(2.23,0.17),(2.95,0.17),
+                              (3.03,0.12),(3.03,-0.12),(2.95,-0.17)],0.18,glass)
+            if !far {
+                for side:Float in [-1,1] {
+                    beam(Map3DPoint(x+end*0.18,1.47,side*0.41),
+                         Map3DPoint(x+end*0.18,3.04,side*0.41),0.035,Map3D45DR1000.roof)
+                }
+            }
             box(x+end*0.09,0.96,0,0.20,2.35,0.21,dark)
             box(x+end*0.13,0.75,0,0.12,0.50,0.32,dark)
-            // Wide striped pilot masks the underframe when seen head on.
-            box(x+end*0.12,0.21,0,0.10,2.31,0.66,dark)
+            // The pilot is tapered at its lower corners, with two yellow
+            // diagonal chevrons and a visible central coupler and air hoses.
+            drEndPanel(end,x,[(0.20,-0.76),(0.20,0.76),(0.34,1.14),
+                              (0.87,1.14),(0.87,-1.14),(0.34,-1.14)],0.17,dark)
             for side:Float in [-1,1] {
                 beam(Map3DPoint(x+end*0.18,0.25,side*0.18),
                      Map3DPoint(x+end*0.18,0.86,side*0.98),0.14,yellow)
+                beam(Map3DPoint(x+end*0.18,0.22,side*0.72),
+                     Map3DPoint(x+end*0.18,0.60,side*1.08),0.10,yellow)
+                if !far {
+                    beam(Map3DPoint(x+end*0.19,1.05,side*0.32),
+                         Map3DPoint(x+end*0.22,0.53,side*0.57),0.055,Map3D45DR1000.roof)
+                    beam(Map3DPoint(x+end*0.22,0.53,side*0.57),
+                         Map3DPoint(x+end*0.17,0.35,side*0.47),0.055,Map3D45DR1000.roof)
+                }
             }
-            if !far { for side:Float in [-1,1] {
-                beam(Map3DPoint(x+end*0.17,2.44,side*0.42),Map3DPoint(x+end*0.17,1.49,side*0.42),0.035,Map3D45DR1000.roof)
-            } }
+            box(x+end*0.20,0.73,0,0.08,0.26,0.22,Map3DColor.rgb(0x595D5A))
         }
         // Inset doors and separate passenger windows; the accessible 1025 has no short toilet window.
         for side:Float in [-1,1] {

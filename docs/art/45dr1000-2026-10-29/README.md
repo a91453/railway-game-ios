@@ -21,3 +21,13 @@ The local `comparison.png` juxtaposes the two licensed originals at left and the
 | Insufficient data | Rear maker plate and any end-to-end asymmetry, precise roof pipe routes, exact underframe engine/generator housings, bogie centres, and the concealed side behind the station sign. |
 
 This comparison is the producer's self-review only. Appearance acceptance by the user remains **UNVERIFIED**.
+
+## Revision 2 — front rebuilt after user feedback
+
+The user said revision 1's front was still far from the real car. That front is **not** an accepted appearance. Revision 1 producer `5ad973d5ee0a1eb5bc015e07065dc3e6119f7280` and private commit `b172056575c93814c7c4c548bba04d7a0d01a2a3` remain the actual before version; its PNGs remain in the private `revision-1/` folder. The new producer and file hashes are recorded in `revision-2/`.
+
+Against the 2006 DRC1025 three-quarter photograph, the replacement front changes the dark glazing from blue-grey square blocks into two wide black rounded cab fields, moves the round lamps inside their upper corners, extends the orange cab brow over the rounded roof shoulder, shapes the yellow gangway and its smaller dark window, puts the lower red markers on round pods, and gives the pilot sloped corners, yellow diagonals, a coupler and hoses. The near model also places a small car-number card in the photographed cab; the far model keeps a simple lamp and matching major colours. These are original native vertex-colour triangles and use no G12 part.
+
+The fixed front camera holds the metre scale and day light constant across revisions. The source is oblique rather than orthographic, so the comparison supports relative locations and colour areas, not exact millimetres. Remaining departures: the black gasket still lacks the real door depth and metal handles, the pilot and air hoses are deliberately sparse at game scale, and the exact unseen rear face and roof hardware are not proven. Producer self-review records these openly; user acceptance of revision 2 is **UNVERIFIED**.
+
+The second front pass narrowed both black cab fields to restore the visible yellow outer margins, added solid angled corner cheeks from the 2.69 m sidewall to the end face, and split the pilot markings into two diagonal bars per side. The paired front render should be read alongside the oblique 2006 source, with the photo perspective and estimated fittings kept explicit. These changes supersede the first revision-2 preview; only the final revision-2 producer is delivered.
