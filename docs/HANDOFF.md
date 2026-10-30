@@ -49,6 +49,10 @@
 
 > 公測前抓蟲「公車與車輛」（派工單 BH4，`claude/bughunt-vehicles`，2026-10-30）：[`research/BUGHUNT_VEHICLES_2026-10-30.md`](research/BUGHUNT_VEHICLES_2026-10-30.md)。修了 P1-1（3D 公車的回程鋪不上時當掉）；P3-1～P3-3（復原掉正在編輯的公車線、減少公車不退錢沒說、空白地圖鋪捷徑後 2D 公車線畫舊路）與 §5 還沒有的功能（跟公車的視角、2D 會動的公車、收購真實公車）公測後由規劃派。真實地圖上 3D 公車實機 UNVERIFIED。
 
+> 公測前抓蟲「卡住」（派工單 BH9，`claude/bughunt-hang`，2026-10-30）：[`research/BUGHUNT_HANG_2026-10-30.md`](research/BUGHUNT_HANG_2026-10-30.md)。修了 P1-1（大型永久死結時死結搜尋對每列車重算整條線，120 站 40 車一 tick 1.8 s → 56 ms）；P2-1～P2-7（收購卡、回開始畫面存檔、每指令的死結泡泡、跳過夜晚試跑仍在主執行緒；欠錢轉自由模式卡住〔轉 BH3〕；存檔失敗出不去；停著的車擋路沒提示）與 P3 五項公測後由規劃派。App 主執行緒各項實機 UNVERIFIED。
+
+> 公測前抓蟲「當機」（派工單 BH8，`claude/bughunt-crash`，2026-10-30）：[`research/BUGHUNT_CRASH_2026-10-30.md`](research/BUGHUNT_CRASH_2026-10-30.md)。沒有 P1；修了 P2-1（車型目錄小圖寬度為 0 時 `Int(NaN)` 閃退，`RollingStockCatalog.sideWindows`）。P3-1～P3-4（極端指令參數的整數溢位）公測後由規劃派；P3-5（座標放大的存檔讀檔很慢）已轉 BH9。要再跑模糊測試：`CRASH_FUZZ=<cases>` 跑 `CrashFuzzTests`（見文件 §6）。
+
 > 有功能沒按鈕、有按鈕沒功能（派工單 BH7，`claude/ui-gaps`，2026-10-30）：[`research/UI_GAPS_2026-10-30.md`](research/UI_GAPS_2026-10-30.md)。只讀程式；沒有改程式（沒找到沒接上的按鈕或漏翻）。玩家到不了的 GameCore 指令只有兩個：G1 收購真實公車路線（決策 400 的 10i-4，還沒派，公測後要新卡片）、G2 每條線停站秒數（決策 207 刻意不給）。B-1（設定裡「規則」一列點了沒反應）與 §4 的 D1–D15（補 UIA 沒列的入口步數）公測後由規劃照順序派，D6、D11、D12 跟 UIA 的 B7、B2、B6 一起做。
 
 > 新手教學盤點（派工單 TUT，`claude/tutorial-review-2026-10-30`，2026-10-30）：[`research/TUTORIAL_REVIEW_2026-10-30.md`](research/TUTORIAL_REVIEW_2026-10-30.md)。公測前只修了 A1（「點『車站…』看誰在搭車」打開在「旅客與運量」組）；其餘步驟對照 main 都指得到、按鈕字都對。留下的是該文件 §4 的 B1–B7（教學的路線面板和平常不同、實景地圖沒教、iPad 直拿沒走過教學、錢的事沒教等），公測後由規劃照順序派；B3 發版前要在 iPad 直拿實機走一次第 1 關。
