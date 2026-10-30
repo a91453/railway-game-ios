@@ -16,15 +16,31 @@ import XCTest
 /// that map).
 @MainActor
 final class PassengerCheckOnceTests: XCTestCase {
-    /// A game round the Neiwan Line with the Liujia Line bought and run
-    /// eight hours, so groups wait at its stations and Zhuzhong,
-    /// the station the Neiwan Line shares, with the Neiwan Line's offer.
+    /// The app's real-world map at Zhuzhong (`LiujiaLineTrainsTests`'s
+    /// game), the Liujia Line bought at midnight and run to 09:00, so
+    /// groups wait at its stations and at Zhuzhong, the station the
+    /// Neiwan Line shares, and ride its trains; with the Neiwan Line's
+    /// offer.
     private func gameWithRidersWaiting() throws -> (GameSession, RealLineAcquisition) {
-        let session = try RealLineAcquisitionTests.game(round: "NEIWAN", side: 1 << 21, heights: true, rules: .realistic)
+        let data = LiujiaLineTrainsTests.data
+        let junction = try BundledRealData.station("竹中", in: "tra_sched").coordinate
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: junction.latitude, longitudeDegrees: junction.longitude))
+        var options = NewGameOptions()
+        options.seed = 1
+        var world = GameLauncher.newWorld(at: anchor, options: options, data: GameLauncher.NewWorldData(
+            population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
+        ))
+        world.setUnlimitedFunds(true)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.population = data.population
+        session.places = data.places
+        session.water = data.water
+        session.heights = data.heights
+        session.coverage = data.coverage
+        session.railways = data.railways
         let liujia = try XCTUnwrap(session.buyableRealLines.first { $0.network == "LIUJIA" })
         XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: liujia)), session.message?.text ?? "")
-        if session.world.clock.isPaused { session.togglePause() }
-        session.advance(ticks: 8 * 60)
+        session.advance(ticks: 9 * 60)
         let neiwan = try XCTUnwrap(session.buyableRealLines.first { $0.network == "NEIWAN" })
         let acquisition = try XCTUnwrap(session.realLineOffer(for: neiwan).acquisition, "the Neiwan Line's offer")
         let waiting = session.world.passengers.reduce(Int64(0)) { $0 + $1.waiting.reduce(0) { $0 + $1.count } }
@@ -53,16 +69,21 @@ final class PassengerCheckOnceTests: XCTestCase {
     }
 
     /// The purchase looks at the waiting groups once, not after every
-    /// step: on the same machine, with groups waiting, laying it as one
-    /// edit takes well under half what the steps one at a time took (a
-    /// quarter on Linux in debug; the steps' own track work is the rest).
+    /// step: on the same machine, laying it a step at a time takes longer
+    /// than as one edit by more than twenty looks at the groups (by some
+    /// hundred: one per track, platform and train step). Before 96.1's fix
+    /// both were the same.
     func testOneEditLooksAtTheWaitingGroupsOnce() throws {
         let (session, acquisition) = try gameWithRidersWaiting()
         let clock = ContinuousClock()
-        func fastest(_ build: () throws -> Void) rethrows -> Duration {
+        func fastest(_ work: () throws -> Void) rethrows -> Duration {
             var best = Duration.seconds(3_600)
-            for _ in 0..<3 { best = min(best, try clock.measure(build)) }
+            for _ in 0..<3 { best = min(best, try clock.measure(work)) }
             return best
+        }
+        let look = fastest {
+            var world = session.world
+            world.abandonUnservedPassengers()
         }
         let stepped = try fastest {
             var world = session.world
@@ -72,8 +93,8 @@ final class PassengerCheckOnceTests: XCTestCase {
             var world = session.world
             _ = try session.build(acquisition, in: &world)
         }
-        print("Neiwan Line bought with groups waiting: step by step \(stepped), as one edit \(asOne)")
-        XCTAssertLessThan(asOne * 2, stepped, "step by step \(stepped), as one edit \(asOne)")
+        print("Neiwan Line bought with groups waiting: step by step \(stepped), as one edit \(asOne), one look at the groups \(look)")
+        XCTAssertGreaterThan(stepped - asOne, look * 20, "step by step \(stepped), as one edit \(asOne), one look \(look)")
     }
 
     /// Removing a line and selling its trains as one edit leaves the world
