@@ -75,7 +75,7 @@ public struct LoanPreview: Equatable, Sendable {
     public func resultText(in language: DisplayLanguage) -> String? {
         guard let before = recentDailyResult, let after = dailyResultAfter else { return nil }
         let days = recentDayCount
-        let beforeText = LedgerEntry.signedMoneyText(before), afterText = LedgerEntry.signedMoneyText(after)
+        let beforeText = before.signedText, afterText = after.signedText
         return language.text(
             "Over the last \(days) \(days == 1 ? "day" : "days") the company made \(beforeText) a day; with this loan, about \(afterText).",
             "最近 \(days) 天平均每天 \(beforeText)；借了以後約 \(afterText)。"

@@ -65,7 +65,7 @@ extension StationDemand {
 
     /// "10,000 trips a day"; "每日 10,000 人次".
     public static func tripsText(_ trips: Int64, in language: DisplayLanguage) -> String {
-        let count = Money(trips).displayText
+        let count = trips.groupedText
         return language.text("\(count) \(trips == 1 ? "trip" : "trips") a day", "每日 \(count) 人次")
     }
 }
@@ -96,10 +96,10 @@ public struct StationFlow: Hashable, Sendable {
     /// The day's total and the busiest hour of `hours`: "1,000 a day ·
     /// busiest 08:00, 171"; "每日 1,000 · 最多 08:00，171".
     public static func summaryText(of hours: [Int64], in language: DisplayLanguage) -> String {
-        let total = Money(hours.reduce(0, +)).displayText
+        let total = (hours.reduce(0, +)).groupedText
         let peak = peakHour(of: hours)
         let time = clockText(minuteOfDay: 60 * peak)
-        let count = Money(hours[peak]).displayText
+        let count = (hours[peak]).groupedText
         return language.text("\(total) a day · busiest \(time), \(count)", "每日 \(total) · 最多 \(time)，\(count)")
     }
 
@@ -108,7 +108,7 @@ public struct StationFlow: Hashable, Sendable {
     public static func hourText(_ hour: Int, of hours: [Int64], in language: DisplayLanguage) -> String {
         let span = "\(clockText(minuteOfDay: 60 * hour))–\(hour == 23 ? "24:00" : clockText(minuteOfDay: 60 * hour + 60))"
         let count = hours[hour]
-        let text = Money(count).displayText
+        let text = count.groupedText
         return language.text("\(span) · \(text) \(count == 1 ? "trip" : "trips")", "\(span) · \(text) 人次")
     }
 }
@@ -141,7 +141,7 @@ public struct LedgerCount: Hashable, Sendable {
 
     /// The count with thousands separators.
     public var countText: String {
-        Money(count).displayText
+        count.groupedText
     }
 }
 
@@ -369,8 +369,8 @@ extension GameWorld {
     /// back"; "Beta · 去 6,000 · 回 4,000".
     public func demandPairText(_ pair: StationDemandPair, in language: DisplayLanguage) -> String {
         let name = station(id: pair.station)?.name ?? "#\(pair.station.rawValue)"
-        let there = Money(pair.outbound).displayText
-        let back = Money(pair.inbound).displayText
+        let there = pair.outbound.groupedText
+        let back = pair.inbound.groupedText
         return language.text("\(name) · \(there) there · \(back) back", "\(name) · 去 \(there) · 回 \(back)")
     }
 
@@ -636,8 +636,8 @@ extension GameWorld {
     /// 1,250 trips a day · +1.2% yesterday", or `nil` without growth there.
     public func townGrowthText(of id: StationID, in language: DisplayLanguage) -> String? {
         guard let place = townGrowth(of: id), let demand = stationDemand(of: id) else { return nil }
-        let base = Money(place.base).displayText
-        let now = Money(demand.dailyTrips).displayText
+        let base = place.base.groupedText
+        let now = demand.dailyTrips.groupedText
         let sign = place.lastGrowth < 0 ? "-" : "+"
         let tenths = abs(place.lastGrowth)
         let rate = "\(sign)\(tenths / 10).\(tenths % 10)%"

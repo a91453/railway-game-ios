@@ -73,7 +73,7 @@ final class MapExpansionSessionTests: XCTestCase {
         let balance = free.world.economy.balance
         let cells = free.world.land.cells.count
         XCTAssertTrue(free.buyChosenMapTile())
-        XCTAssertEqual(free.message?.text, "Bought the tile for $ 5,000,000. Its towns wait for your railway.")
+        XCTAssertEqual(free.message?.text, "Bought the tile for \(Money(500_000_000).moneyText). Its towns wait for your railway.")
         // Still choosing, the tile let go of (decision 160, later).
         XCTAssertTrue(free.isChoosingMapTile)
         XCTAssertNil(free.chosenMapTile)
@@ -139,7 +139,7 @@ final class MapExpansionSessionTests: XCTestCase {
 
     func testTheEconomyPanelsLine() {
         let session = GameSession(world: GameWorld.newGame(eventSeed: 9, buysMap: true), language: .traditionalChinese)
-        XCTAssertEqual(session.mapExpansionText, "地圖：已擁有 1 / 25 塊 · 下一塊 $ 5,000,000，每日運量 100,000 人次解鎖（目前最佳 0）")
+        XCTAssertEqual(session.mapExpansionText, "地圖：已擁有 1 / 25 塊 · 下一塊 \(Money(500_000_000).moneyText)，每日運量 100,000 人次解鎖（目前最佳 0）")
         XCTAssertNil(GameSession(world: GameWorld.newGame(eventSeed: 9), language: .english).mapExpansionText)
     }
 

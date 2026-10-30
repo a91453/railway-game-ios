@@ -124,7 +124,7 @@ final class FinanceHistoryTests: XCTestCase {
             startDay: 7, endDay: 7, fareRevenue: Money(100), freightRevenue: .zero, propertyRevenue: .zero, cost: Money(300), trips: 4
         )
         XCTAssertTrue(point.detailText(for: .thirtyDays, in: .english).hasPrefix("Day 8 · revenue "))
-        XCTAssertTrue(point.detailText(for: .thirtyDays, in: .english).contains("loss $ 2"))
+        XCTAssertTrue(point.detailText(for: .thirtyDays, in: .english).contains("loss \(Money(200).moneyText)"))
         XCTAssertTrue(point.detailText(for: .thirtyDays, in: .traditionalChinese).contains("旅客 4 人"))
     }
 

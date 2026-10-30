@@ -80,8 +80,8 @@ final class SaveNamingTests: XCTestCase {
 
     func testTheListShowsTheGameDateAndTheFunds() {
         let summary = SaveSummary(world: DemoWorld.make(in: .english))
-        XCTAssertEqual(summary.dateAndFundsText(in: .english), "Year 1 · Jan 1 (Mon) 00:00 · Funds $ 708,800")
-        XCTAssertEqual(summary.dateAndFundsText(in: .traditionalChinese), "第 1 年 1 月 1 日（一）00:00 · 資金 $ 708,800")
+        XCTAssertEqual(summary.dateAndFundsText(in: .english), "Year 1 · Jan 1 (Mon) 00:00 · Funds \(Money(70_880_000).moneyText)")
+        XCTAssertEqual(summary.dateAndFundsText(in: .traditionalChinese), "第 1 年 1 月 1 日（一）00:00 · 資金 \(Money(70_880_000).moneyText)")
         XCTAssertEqual(summary.networkText(in: .english), "5 stations · 3 lines · 4 trains")
         XCTAssertEqual(summary.networkText(in: .traditionalChinese), "5 座車站 · 3 條路線 · 4 列列車")
     }

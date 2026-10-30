@@ -35,10 +35,10 @@ final class FareBandScaleTests: XCTestCase {
 
     func testTheStepsText() {
         XCTAssertEqual(FareRules.bandsText(FareRules.standardBands, in: .english), [
-            "0–6 km · $ 0.55", "6–12 km · $ 0.70", "12–22 km · $ 0.85", "22–32 km · $ 1.00", "32 km and more · $ 1.20",
+            "0–6 km · \(Money(55).centsText)", "6–12 km · \(Money(70).centsText)", "12–22 km · \(Money(85).centsText)", "22–32 km · \(Money(100).centsText)", "32 km and more · \(Money(120).centsText)",
         ])
         XCTAssertEqual(FareRules.bandsText([FareBand(fromMeters: 0, toMeters: 1_500, fare: 5), FareBand(fromMeters: 1_500, toMeters: nil, fare: 10)], in: .traditionalChinese), [
-            "0–1.5 km · $ 0.05", "1.5 km 以上 · $ 0.10",
+            "0–1.5 km · \(Money(5).centsText)", "1.5 km 以上 · \(Money(10).centsText)",
         ])
     }
 }

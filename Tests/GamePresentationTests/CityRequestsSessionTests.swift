@@ -72,7 +72,7 @@ final class CityRequestsSessionTests: XCTestCase {
         let chinese = try XCTUnwrap(world.cityRequestRows(in: .traditionalChinese).first { $0.id == row.id })
         XCTAssertEqual(chinese.title, "Home站運量提升")
         XCTAssertEqual(world.cityTrustText(in: .traditionalChinese), "城市信賴度 ★☆☆☆☆ · 進行中 0 / 1 件")
-        XCTAssertEqual(world.citySubsidyText(in: .english), "Subsidies so far $ 0")
+        XCTAssertEqual(world.citySubsidyText(in: .english), "Subsidies so far \(Money(0).moneyText)")
     }
 
     func testTheButtonsTakeOnAndTurnDown() throws {

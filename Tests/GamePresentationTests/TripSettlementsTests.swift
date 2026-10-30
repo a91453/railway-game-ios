@@ -72,6 +72,6 @@ final class TripSettlementsTests: XCTestCase {
         XCTAssertEqual(late.lateText(in: .traditionalChinese), "+9 分")
         XCTAssertEqual(late.lateText(in: .english), "+9 min")
         XCTAssertEqual(late.stampText(in: .traditionalChinese), "誤")
-        XCTAssertEqual(late.fareText, "+$2.2k")
+        XCTAssertEqual(late.fareText, "+\(TrainRoster.shortMoney(Money(220_000)))")
     }
 }

@@ -54,9 +54,9 @@ final class FinanceCompositionTests: XCTestCase {
         XCTAssertEqual(ring.percentText(of: ring.slices[0]), "66%")
         XCTAssertEqual(ring.percentText(of: ring.slices[2]), "1%")
         XCTAssertEqual(
-            ring.detailText(of: ring.slices[2], in: .english), "Other (Loan interest, Income tax) · $ 30 · 1%"
+            ring.detailText(of: ring.slices[2], in: .english), "Other (Loan interest, Income tax) · \(Money(3_000).moneyText) · 1%"
         )
-        XCTAssertEqual(ring.detailText(of: ring.slices[2], in: .traditionalChinese), "其他（貸款利息、營利事業所得稅） · $ 30 · 1%")
+        XCTAssertEqual(ring.detailText(of: ring.slices[2], in: .traditionalChinese), "其他（貸款利息、營利事業所得稅） · \(Money(3_000).moneyText) · 1%")
     }
 
     func testOneSmallKindKeepsItsName() {
@@ -110,7 +110,7 @@ final class FinanceCompositionTests: XCTestCase {
         XCTAssertEqual(none.costs.summaryText(in: .english), "No accounts yet")
         XCTAssertEqual(none.costs.summaryText(in: .traditionalChinese), "還沒有帳目")
         let zero = FinanceComposition(summary())
-        XCTAssertEqual(zero.income.totalText, "$ 0")
+        XCTAssertEqual(zero.income.totalText, "\(Money(0).moneyText)")
         XCTAssertEqual(zero.costs.summaryText(in: .traditionalChinese), "本期沒有支出")
     }
 
@@ -138,7 +138,7 @@ final class FinanceCompositionTests: XCTestCase {
         XCTAssertEqual(chart.title, "Income by kind")
         XCTAssertEqual(chart.xLabels, ["Fares", "Freight"])
         XCTAssertEqual(chart.series.first?.values, [75, 25])
-        XCTAssertEqual(chart.summary, "Income $ 100, most from Fares (75%)")
-        XCTAssertEqual(ring.summaryText(in: .traditionalChinese), "收入 $ 100，最多是票價收入（75%）")
+        XCTAssertEqual(chart.summary, "Income \(Money(10_000).moneyText), most from Fares (75%)")
+        XCTAssertEqual(ring.summaryText(in: .traditionalChinese), "收入 \(Money(10_000).moneyText)，最多是票價收入（75%）")
     }
 }

@@ -43,6 +43,8 @@
 
 > 公測前抓蟲「建設」（派工單 BH1，`claude/bughunt-build`，2026-10-30）：[`research/BUGHUNT_BUILD_2026-10-30.md`](research/BUGHUNT_BUILD_2026-10-30.md)。P1 一個已修（鋪路草稿在復原後還是舊價，扣的錢跟按鈕不同）；P2-1～P2-3、P3-1～P3-12（含高架、地下、平交道）公測後由規劃照順序派，最前面是 P2-1（實景地圖拆掉沿現有路鋪的路，公車路線斷掉）。P2-3 等 #1519。
 
+> 新台幣 PR-0（派工單 NTD0，`ntd0-money-format`，2026-10-30）：玩家看的金額都經過 `EconomyText.swift` 的格式函式（`Money.currencySymbol` 是唯一的 `$`），測試斷言改用同一組函式，人數改 `groupedText`；盤點與 PR-1 要乘 3 的 GamePresentation 常數寫在 [`research/NT_DOLLAR_SWITCH_2026-10-27.md`](research/NT_DOLLAR_SWITCH_2026-10-27.md) §5.2 PR-0 的「做完了」。PR-1（GameCore、存檔 76、決策 499）由規劃派。
+
 > 公測前抓蟲：經營與存檔（派工單 BH3，`claude/bughunt-economy-saves`，2026-10-30）：[`research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md`](research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md)。沒有找到 P1，也沒有 P2；P3-1～P3-4（月報標題不看現金、從資料開月報後回地圖、讀檔後上個月月報不見、回報問題在無限資金的局寫餘額）留到公測後。§6 是新台幣換算前的平衡基準，PR-2 用同樣的指令量「改之後」。實機 UNVERIFIED。
 
 > 公測前抓蟲：貨運、挑戰與劇本、分享與 Game Center（派工單 BH5，`claude/bughunt-freight-challenges`，2026-10-30）：[`research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md`](research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md)。沒找到 P1。P2-1（從朋友的路網開新局會帶過朋友未領的市府補助、星等與貨運未入帳收入）在同一個 PR 修好了；留下 P3-1～P3-9，公測後由規劃照該文件 §4 的順序派。

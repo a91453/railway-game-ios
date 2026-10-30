@@ -342,7 +342,7 @@ final class TrainControlTests: XCTestCase {
                 session.message,
                 StatusMessage(
                     kind: .failure,
-                    text: "Not enough cash to buy a train: it costs $ 50.00 and you have $ 49.99.",
+                    text: "Not enough cash to buy a train: it costs \(Money(5_000).centsText) and you have \(Money(4_999).centsText).",
                     fundsNeeded: testCosts.train
                 )
             )

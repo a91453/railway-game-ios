@@ -71,8 +71,8 @@ final class FinancialStatementsTests: XCTestCase {
         ])
         XCTAssertEqual(rows[5].current, rows[9].current, "assets equal liabilities and equity")
         XCTAssertEqual(rows[4].current, Money(432_000 - 120))
-        XCTAssertEqual(sheet.depreciationText(of: .rollingStock, in: .english), "Trains and cars: cost $ 4,320, written down $ 1")
-        XCTAssertEqual(sheet.depreciationText(of: .stations, in: .traditionalChinese), "車站：成本 $ 7,200，累計折舊 $ 1")
+        XCTAssertEqual(sheet.depreciationText(of: .rollingStock, in: .english), "Trains and cars: cost \(Money(432_000).moneyText), written down \(Money(100).moneyText)")
+        XCTAssertEqual(sheet.depreciationText(of: .stations, in: .traditionalChinese), "車站：成本 \(Money(720_000).moneyText)，累計折舊 \(Money(100).moneyText)")
         XCTAssertNil(world.unrecordedAssetsText(in: .english))
     }
 
@@ -114,9 +114,9 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(LedgerEntry.Kind.dailyTax.displayName(in: .traditionalChinese), "營利事業所得稅（日結）")
         XCTAssertEqual(LedgerItem.incomeTax.displayName(in: .english), "Income tax")
         XCTAssertEqual(
-            CompanyAccounts.taxTermsText(in: .english), "Income tax: 50% of each day's profit before tax beyond $ 100,000, paid at midnight"
+            CompanyAccounts.taxTermsText(in: .english), "Income tax: 50% of each day's profit before tax beyond \(Money(10_000_000).moneyText), paid at midnight"
         )
-        XCTAssertEqual(CompanyAccounts.taxTermsText(in: .traditionalChinese), "營利事業所得稅：每天的稅前淨利超過 $ 100,000 的部分課 50%，午夜支付")
+        XCTAssertEqual(CompanyAccounts.taxTermsText(in: .traditionalChinese), "營利事業所得稅：每天的稅前淨利超過 \(Money(10_000_000).moneyText) 的部分課 50%，午夜支付")
     }
 
     func testAClosedYearHasItsTitleAndHeadline() throws {
@@ -127,16 +127,16 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(year.titleText(in: .traditionalChinese), "第 1 年度決算")
         // 360 days of $14 interest and 230 cents of depreciation: $5,040 and
         // $828, a loss of $5,868; equity $100,000 less that.
-        XCTAssertEqual(year.headlineText(in: .english), "Net loss $ 5,868 · equity $ 94,132")
-        XCTAssertEqual(year.headlineText(in: .traditionalChinese), "本期淨損 $ 5,868 · 權益 $ 94,132")
+        XCTAssertEqual(year.headlineText(in: .english), "Net loss \(Money(586_800).moneyText) · equity \(Money(9_413_200).moneyText)")
+        XCTAssertEqual(year.headlineText(in: .traditionalChinese), "本期淨損 \(Money(586_800).moneyText) · 權益 \(Money(9_413_200).moneyText)")
     }
 
     func testWhatWasBuiltBeforeCostsWereKeptIsNoted() throws {
         var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 10_000_000, costs: Self.costs))
         try world.buildStation(named: "West", at: PlanPoint(x: 2_048, y: 2_048))
         world.setEconomyMode(.management)
-        XCTAssertEqual(world.unrecordedAssetsText(in: .english), "1 track, station or train items have no purchase cost on record and are listed at $ 0.")
-        XCTAssertEqual(world.unrecordedAssetsText(in: .traditionalChinese), "有 1 項軌道、車站或列車沒有購置成本紀錄，以 $ 0 列帳。")
+        XCTAssertEqual(world.unrecordedAssetsText(in: .english), "1 track, station or train items have no purchase cost on record and are listed at \(Money(0).moneyText).")
+        XCTAssertEqual(world.unrecordedAssetsText(in: .traditionalChinese), "有 1 項軌道、車站或列車沒有購置成本紀錄，以 \(Money(0).moneyText) 列帳。")
     }
 
     @MainActor
@@ -202,12 +202,12 @@ final class FinancialStatementsTests: XCTestCase {
     /// columns broke "$ 3,269,858" over two lines. An amount is shown in
     /// full, or short where the full ones do not fit, never broken.
     func testAnAmountIsInFullOrShortNeverBroken() {
-        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: false), "$ 3,269,858")
-        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: true), "$3.3M")
-        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: false), "$ -4,205,867")
-        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: true), "-$4.2M")
-        XCTAssertEqual(StatementRow.amountText(Money(-1_612_000), short: true), "-$16k")
-        XCTAssertEqual(StatementRow.amountText(.zero, short: true), "$0")
+        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: false), "\(Money(326_985_800).moneyText)")
+        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: true), "\(TrainRoster.shortMoney(Money(330_000_000)))")
+        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: false), "\(Money(-420_586_700).moneyText)")
+        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: true), "\(TrainRoster.shortMoney(Money(-420_000_000)))")
+        XCTAssertEqual(StatementRow.amountText(Money(-1_612_000), short: true), "\(TrainRoster.shortMoney(Money(-1_600_000)))")
+        XCTAssertEqual(StatementRow.amountText(.zero, short: true), "\(TrainRoster.shortMoney(Money(0)))")
         XCTAssertEqual(StatementRow.amountText(nil, short: false), "—")
         XCTAssertEqual(StatementRow.amountText(nil, short: true), "—")
     }

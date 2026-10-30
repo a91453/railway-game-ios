@@ -214,7 +214,7 @@ final class BusRouteEditorTests: XCTestCase {
         card = try XCTUnwrap(world.busRouteCards(feeding: a, in: .english).first)
         let day = try XCTUnwrap(world.busRoute(id: id)?.days.last)
         XCTAssertEqual(card.net, day.fares - day.cost)
-        XCTAssertTrue(card.dayText.hasPrefix("Last day: \(Money(day.riders).displayText) riders · fares "), card.dayText)
+        XCTAssertTrue(card.dayText.hasPrefix("Last day: \(day.riders.groupedText) riders · fares "), card.dayText)
         session.removeBusRoute(id)
         XCTAssertTrue(session.world.busRoutes.isEmpty)
         XCTAssertEqual(session.message?.text, "The bus route is closed.")

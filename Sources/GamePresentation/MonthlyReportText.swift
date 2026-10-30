@@ -221,7 +221,7 @@ public struct MonthlyReport: Hashable, Sendable {
 
 extension MonthlyFigure {
     /// "1,234", for riders.
-    public func countText() -> String { Money(value).displayText }
+    public func countText() -> String { value.groupedText }
 }
 
 extension MonthlyReportMode {

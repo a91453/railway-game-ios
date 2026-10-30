@@ -85,8 +85,8 @@ public enum LineLossReason: Hashable, Sendable {
         switch self {
         case let .tooManyTrains(trains, riders):
             return language.text(
-                "\(trains) trains carry \(Money(riders).displayText) riders a day each: the fares don't come to twice what the trains cost to keep (staff, energy, maintenance). Take some trains off the line, or use shorter ones.",
-                "\(trains) 列車平均每列每天只載 \(Money(riders).displayText) 人次，票收還不到車輛本身開銷（人事、能源、保養）的兩倍。試著撤下幾列車，或改用短一點的列車。"
+                "\(trains) trains carry \(riders.groupedText) riders a day each: the fares don't come to twice what the trains cost to keep (staff, energy, maintenance). Take some trains off the line, or use shorter ones.",
+                "\(trains) 列車平均每列每天只載 \(riders.groupedText) 人次，票收還不到車輛本身開銷（人事、能源、保養）的兩倍。試著撤下幾列車，或改用短一點的列車。"
             )
         case let .longHeadway(minutes, peak):
             return language.text(

@@ -43,7 +43,7 @@ final class ErrorMessageTests: XCTestCase {
             .outOfBounds(point): "x 64 m, y 112 m is outside the map.",
             .invalidName: "Enter a name.",
             .insufficientFunds(required: 50_000, available: 1_234):
-                "Not enough cash: this costs $ 500 and you have $ 12.",
+                "Not enough cash: this costs \(Money(50_000).moneyText) and you have \(Money(1_200).moneyText).",
             .unknownTrain(TrainID(rawValue: 3)): "That train is no longer there.",
             .trainAlreadyPlaced(TrainID(rawValue: 3)): "That train is already on the track.",
             .trainNotPlaced(TrainID(rawValue: 3)): "That train is not on the track.",
@@ -83,13 +83,13 @@ final class ErrorMessageTests: XCTestCase {
         }
     }
 
-    func testMoneyUsesThousandsSeparators() {
-        XCTAssertEqual(Money(0).displayText, "0")
-        XCTAssertEqual(Money(999).displayText, "999")
-        XCTAssertEqual(Money(1_000).displayText, "1,000")
-        XCTAssertEqual(Money(1_000_000).displayText, "1,000,000")
-        XCTAssertEqual(Money(-12_345).displayText, "-12,345")
-        XCTAssertEqual(Money(.min).displayText, "-9,223,372,036,854,775,808")
+    func testCountsUseThousandsSeparators() {
+        XCTAssertEqual(Int64(0).groupedText, "0")
+        XCTAssertEqual(Int64(999).groupedText, "999")
+        XCTAssertEqual(Int64(1_000).groupedText, "1,000")
+        XCTAssertEqual(Int64(1_000_000).groupedText, "1,000,000")
+        XCTAssertEqual(Int64(-12_345).groupedText, "-12,345")
+        XCTAssertEqual(Int64.min.groupedText, "-9,223,372,036,854,775,808")
     }
 }
 

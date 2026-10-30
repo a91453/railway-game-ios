@@ -47,7 +47,7 @@ private struct MonthlyReportCard: View {
                     .accessibilityIdentifier("monthEnd.headline")
             }
             Section {
-                figure(language.text("Riders", "旅客"), report.riders) { "\(Money($0).displayText)" }
+                figure(language.text("Riders", "旅客"), report.riders) { "\($0.groupedText)" }
                 figure(language.text("Fare revenue", "票收"), report.fares) { Money($0).moneyText }
                 figure(language.text("Running costs", "成本"), report.costs, upIsGood: false) { Money($0).moneyText }
                 figure(language.text("Net profit", "淨利"), report.net) { Money($0).moneyText }
@@ -119,7 +119,7 @@ private struct MonthlyReportCard: View {
 
     private func stationRow(_ change: StationTripChange) -> some View {
         LabeledContent {
-            Text(verbatim: change.delta > 0 ? "▲ +\(Money(change.delta).displayText)" : "▼ \(Money(-change.delta).displayText)")
+            Text(verbatim: change.delta > 0 ? "▲ +\(change.delta.groupedText)" : "▼ \((-change.delta).groupedText)")
                 .monospacedDigit()
                 .foregroundStyle(change.delta > 0 ? Theme.success : Theme.error)
         } label: {
