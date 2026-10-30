@@ -1,6 +1,70 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
+    "haifeng-emu500-em" : {
+      "hash" : "2f641a0301396c",
+      "triangles" : 7308
+    },
+    "haifeng-emu500-em-far" : {
+      "hash" : "5207709a07a53676",
+      "triangles" : 2708
+    },
+    "haifeng-emu500-emc" : {
+      "hash" : "2f641a0301396c",
+      "triangles" : 7308
+    },
+    "haifeng-emu500-emc-far" : {
+      "hash" : "5207709a07a53676",
+      "triangles" : 2708
+    },
+    "haifeng-emu500-ep" : {
+      "hash" : "880873f210ead863",
+      "triangles" : 2936
+    },
+    "haifeng-emu500-ep-far" : {
+      "hash" : "fe808306ced5a06",
+      "triangles" : 1116
+    },
+    "haifeng-emu500-et" : {
+      "hash" : "7b7ddf2e07a3ef21",
+      "triangles" : 3132
+    },
+    "haifeng-emu500-et-far" : {
+      "hash" : "c54f750a7c58871a",
+      "triangles" : 1164
+    },
+    "shanlan-emu500-em" : {
+      "hash" : "264bf05e8ada7adf",
+      "triangles" : 7308
+    },
+    "shanlan-emu500-em-far" : {
+      "hash" : "3f2e98fd763f8276",
+      "triangles" : 2708
+    },
+    "shanlan-emu500-emc" : {
+      "hash" : "264bf05e8ada7adf",
+      "triangles" : 7308
+    },
+    "shanlan-emu500-emc-far" : {
+      "hash" : "3f2e98fd763f8276",
+      "triangles" : 2708
+    },
+    "shanlan-emu500-ep" : {
+      "hash" : "30021cdb23ae569d",
+      "triangles" : 2936
+    },
+    "shanlan-emu500-ep-far" : {
+      "hash" : "cdcc4a0dbba837d0",
+      "triangles" : 1116
+    },
+    "shanlan-emu500-et" : {
+      "hash" : "4607b539bec1d5c0",
+      "triangles" : 3132
+    },
+    "shanlan-emu500-et-far" : {
+      "hash" : "749138e38773cf89",
+      "triangles" : 1164
+    },
     "ankeng-lrt-m1" : {
       "hash" : "19d4cf075e7672e9",
       "triangles" : 10436
