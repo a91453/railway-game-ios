@@ -2283,15 +2283,11 @@
   - P2-7：`routeWaitText` 與泡泡說出「在等哪一列停著的車」。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
 
-### 4.32 存檔一局一筆（決策 502，SAVE1 session_01YGNNuq65cB35dbSd2SspvL，PR #1556，2026-10-30）
+### 4.32 存檔一局一筆（決策 502，SAVE1 session_01YGNNuq65cB35dbSd2SspvL → SAVE2 session_01YGNNuogTGYLuCpzpJbTWYt，PR #1556，2026-10-30）
 
-- **做了的**在決策 502（`docs/decisions/502.md`）與 PR #1556：一局一列、存檔寫回同一列、列內留 3 版、多選與全選刪除（正在玩的不列入）、全有或全無。規劃第 35 任的獨立審查（d0ed375）必修 1（自動存檔不再取代那一列的玩家存檔，只成為最新的之前版本）、必修 2（iCloud 下載蓋過本機那一列前先留成版本，`SaveSync.run` 的 `keeping:`）與建議 3（版本先放 `incoming.json`、存檔寫成才搬）都修了，三支回歸測試在 d0ed375 的 `SaveLibrary` 上是紅的，本機 Linux 存檔相關的類別全綠。
-- **還沒做的**（SAVE1 壓縮兩次後依規則停下，接手的照順序做）：
-  1. 在 PR #1556 逐項回覆審查（必修 1、必修 2、建議 3 怎麼修、哪支測試；4、5 延後），結尾附 footer。
-  2. 等 PR 的 CI（Swift CI gate 與 iOS App Build）綠；紅了照 CLAUDE.md 修再推。
-  3. 截圖驗收：`website-screenshots.yml` 在分支 `save1-one-row-per-game` 上跑，`tests` 給 `testSavesListOneRowPerGame`（整個類別會逾時；先看 actions_list，一次只跑一個）。確認「⋯」選單裡「之前的版本」在「刪除」上面（9f6779a 改的），再用新圖重做 `docs/art/saves-one-row-502/overview.png`。
-  4. 改 ready，在 #1041 寫「可合併」，回報遊戲規劃。PR 目標是 99.1：98.1 發出前不合；合併由規劃在獨立審查後做。
-- **延後的**（審查列為可等）：`Deleting/` 搬回時原處已有同名檔就一直留著、搬回失敗可能讓刪掉的檔案部分回來；`keepInRow` 判斷同一局時不比新聞紀錄。
+- **做了的**在決策 502（`docs/decisions/502.md`）與 PR #1556：一局一列、存檔寫回同一列、列內留 3 版、多選與全選刪除（正在玩的不列入）、全有或全無。第一次獨立審查（d0ed375）的必修 1、2、建議 3 由 SAVE1 修（a60d1c2）；第二次獨立審查（a60d1c2）的 4（離開時的進度另放一份，不擠玩家的版本）、5（發現衝突的那台把自己這局搬到新列）、6（只改名不留版本）、7 的前半（卡住的 incoming 不擋存檔）由 SAVE2 修，各有一支在 a60d1c2 上紅的測試。
+- **還沒做的**：規劃第 36 任再開一次獨立審查；審過、CI 綠就轉 ready，在 #1041 寫「可合併」。規劃決定這個 PR 改到 100.1。截圖驗收照作者 10/29 暫緩，PR 寫了要看的畫面。
+- **延後的**（審查列為可等）：`Deleting/` 搬回時原處已有同名檔就一直留著、搬回失敗可能讓刪掉的檔案部分回來；`keepInRow` 判斷同一局時不比新聞紀錄；7 的後半（留了版本後寫入失敗多一份）沒重現。
 
 ### 4.33 BUGHUNT_BUILD 的 P3 還沒修的（派工單 ROADFIX，session_01YGNNupRBmuqtaCPwRs9Hat，2026-10-30）
 

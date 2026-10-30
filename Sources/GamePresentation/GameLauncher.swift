@@ -393,7 +393,8 @@ public final class GameLauncher {
         var state = SaveSync.State.read(from: stateFile)
         var outcome = SaveSync.run(
             local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, mode: mode, language: language, now: date,
-            isGameOpen: { isGameOpen.value }, keeping: { try library.keepBeforeReplacing($0) }
+            isGameOpen: { isGameOpen.value }, keeping: { try library.keepBeforeReplacing($0) },
+            moving: { try library.moveRow(from: $0, to: $1) }
         )
         // A state left as it was is safe: what the round did left both
         // sides the same, and the next round sees them so.
@@ -413,6 +414,8 @@ public final class GameLauncher {
             cloudMarks = Dictionary(uniqueKeysWithValues: (outcome?.marks ?? [:]).map { ($0.key + ".json", $0.value) })
         }
         guard let outcome else { return }
+        // Decision 502: this device's game moved to a row of its own.
+        if let row = gameRow, let moved = outcome.movedRows[row] { gameRow = moved }
         keptTwiceToTell += outcome.keptBoth.count
         guard session == nil else { return }
         if !outcome.downloaded.isEmpty || !outcome.deleted.isEmpty || !outcome.keptBoth.isEmpty {

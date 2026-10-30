@@ -194,6 +194,10 @@ public enum SaveSync {
         /// a save of the player's own beside the device's: their new file
         /// names.
         public var keptBoth: [String] = []
+        /// Rows of the player's saves (file names) whose game on the device
+        /// moved to a row of its own after a conflict, to that row
+        /// (decision 502): the game goes on being saved there.
+        public var movedRows: [String: String] = [:]
         /// Whether something could not be read or written (the other folder
         /// full, or not there): those saves are left as they were, on the
         /// device as before, for the next round.
@@ -233,10 +237,13 @@ public enum SaveSync {
     /// `keep` is told the file name of a save on the device before another
     /// device's copy is written over it (decision 502: kept as an earlier
     /// version); when it throws, the save is left for a later round.
+    /// `move` is told a row of the player's saves whose game on the device
+    /// was moved to a row of its own after a conflict (decision 502, after
+    /// the second review, ``Outcome/movedRows``).
     public static func run(
         local: any SaveSyncFolder, cloud: any SaveSyncFolder, state: inout State,
         mode: Mode = .full, language: DisplayLanguage, now: Date, isGameOpen: () -> Bool = { false },
-        keeping keep: (String) throws -> Void = { _ in }
+        keeping keep: (String) throws -> Void = { _ in }, moving move: (_ from: String, _ to: String) throws -> Void = { _, _ in }
     ) -> Outcome {
         var outcome = Outcome()
         guard let localFiles = try? local.files().filter({ downloadingName($0.key) == nil }),
@@ -351,8 +358,9 @@ public enum SaveSync {
                     if let theirs {
                         if !theirs.canTakeInPlace(over: mine) { newer.insert(stem) }
                         guard mode == .full || mine == nil, mayDownload, theirs.canTakeInPlace(over: mine) else { continue }
-                        // Decision 502: the device's own is kept first.
-                        if mine != nil { try keep(stem + ".json") }
+                        // Decision 502: the device's own is kept first,
+                        // unless only its name changed.
+                        if let mine, mine.files[stem + ".json"] != theirs.files[stem + ".json"] { try keep(stem + ".json") }
                         try theirs.write(to: local, over: mine)
                         outcome.downloaded.append(stem)
                         settled.insert(stem)
@@ -364,6 +372,28 @@ public enum SaveSync {
                         if let l { state.leftHere[stem] = l }
                         continue
                     }
+                    state.synced[stem] = c
+                } else if let mine, let theirs, SaveLibrary.validRow(stem + ".json") != nil, theirs.canTakeInPlace(over: mine) {
+                    // A row of the player's changed on both (decision 502,
+                    // after the second review): this device's game moves
+                    // to a row of its own and the other's takes the row,
+                    // so the two are never saved into one row again. Only
+                    // on the start screen: in a game, the device's saves
+                    // are not written over.
+                    guard mode == .full, !isGameOpen() else { continue }
+                    guard let name = keepAsCopy(
+                        mine, local: local, cloud: cloud, taken: &taken, state: &state, language: language, now: now,
+                        named: splitName(of: mine.givenName, in: language)
+                    ) else {
+                        outcome.isIncomplete = true
+                        continue
+                    }
+                    outcome.keptBoth.append(name)
+                    try move(stem + ".json", name)
+                    outcome.movedRows[stem + ".json"] = name
+                    try theirs.write(to: local, over: mine)
+                    outcome.downloaded.append(stem)
+                    settled.insert(stem)
                     state.synced[stem] = c
                 } else if let mine, let theirs {
                     // Changed on both, differently: both are kept.
@@ -443,14 +473,13 @@ public enum SaveSync {
     /// changed on the other side either).
     private static func keepAsCopy(
         _ group: SaveGroup, local: any SaveSyncFolder, cloud: any SaveSyncFolder, taken: inout Set<String>,
-        state: inout State, language: DisplayLanguage, now: Date
+        state: inout State, language: DisplayLanguage, now: Date, named name: String? = nil
     ) -> String? {
         let stem = freeStem(for: group.savedAt ?? now, taken: taken)
         var files: [String: Data] = [:]
         if let save = group.files[group.stem + ".json"] { files[stem + ".json"] = save }
         if let news = group.files[group.stem + SaveLibrary.newsSuffix] { files[stem + SaveLibrary.newsSuffix] = news }
-        let given = group.files[group.stem + SaveLibrary.nameSuffix].flatMap { String(data: $0, encoding: .utf8) }.flatMap(SaveLibrary.cleanName)
-        files[stem + SaveLibrary.nameSuffix] = Data(copyName(of: given, in: language).utf8)
+        files[stem + SaveLibrary.nameSuffix] = Data((name ?? copyName(of: group.givenName, in: language)).utf8)
         let copy = SaveGroup(files: files)
         do {
             try copy.write(to: local, over: nil)
@@ -471,6 +500,14 @@ public enum SaveSync {
     static func copyName(of given: String?, in language: DisplayLanguage) -> String {
         let name = given.map { language.text("\($0) (other device)", "\($0)（另一台裝置）") }
             ?? language.text("From another device", "另一台裝置的進度")
+        return SaveLibrary.cleanName(name) ?? name
+    }
+
+    /// The name of this device's game moved to a row of its own after a
+    /// conflict (decision 502): its own name, as a second copy.
+    static func splitName(of given: String?, in language: DisplayLanguage) -> String {
+        let name = given.map { language.text("\($0) (second copy)", "\($0)（另一份）") }
+            ?? language.text("Second copy of a game", "同一局的另一份")
         return SaveLibrary.cleanName(name) ?? name
     }
 
@@ -558,6 +595,11 @@ private struct SaveGroup {
     var stem: String {
         let save = files.keys.first { $0.hasSuffix(".json") && !$0.hasSuffix(SaveLibrary.newsSuffix) } ?? ""
         return String(save.dropLast(".json".count))
+    }
+
+    /// The name the player gave it, when they did (decision 184).
+    var givenName: String? {
+        files[stem + SaveLibrary.nameSuffix].flatMap { String(data: $0, encoding: .utf8) }.flatMap(SaveLibrary.cleanName)
     }
 
     /// The fingerprint of all its files, by name and bytes.

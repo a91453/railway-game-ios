@@ -466,6 +466,101 @@ final class OneRowPerGameTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent("incoming.json").path))
     }
 
+    /// Load a row, play, go back without saving, again and again: the
+    /// game as each time left is kept, but never at the cost of the
+    /// player's own earlier saves of that row (the second review's 4).
+    @MainActor
+    func testRetryingNeverPushesOutThePlayersOwnEarlierSaves() async throws {
+        let library = SaveLibrary(directory: directory)
+        let row = try library.save(world(after: 1), as: .manual, at: date(0))
+        try library.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        try library.save(world(after: 3), as: .manual, at: date(120), row: row.id)
+        let launcher = GameLauncher(library: library, language: .english)
+        for round in 1...4 {
+            await launcher.load(try XCTUnwrap(manualRows(library).first), at: date(Double(round) * 600))?.value
+            launcher.session?.advance(realElapsed: .seconds(Double(10 * round)))
+            XCTAssertTrue(launcher.autosaveCurrentGame(at: date(Double(round) * 600 + 300)))
+            launcher.returnToStart()
+        }
+        let entry = try XCTUnwrap(manualRows(library).first)
+        XCTAssertEqual(try library.load(entry), try world(after: 3))
+        let kept = try library.earlierVersions(of: entry).map { try library.load($0) }
+        XCTAssertTrue(kept.contains(try world(after: 2)), "the save before")
+        XCTAssertTrue(kept.contains(try world(after: 1)), "and the one before that")
+        XCTAssertEqual(kept.count, 3, "with the game as last left")
+    }
+
+    /// After a conflict, the other device saves its game into the row
+    /// again and again: this device's own last save is never pushed out
+    /// (the second review's 5). The device that found the conflict moved
+    /// its game to a row of its own, and its autosave names that row.
+    func testRepeatedSavesOnTheOtherDeviceKeepThisDevicesCheckpoint() throws {
+        let root = directory.appendingPathComponent("devices", isDirectory: true)
+        let cloud = DirectorySaveFolder(directory: root.appendingPathComponent("iCloud", isDirectory: true))
+        let phone = SaveLibrary(directory: root.appendingPathComponent("phone")), pad = SaveLibrary(directory: root.appendingPathComponent("pad"))
+        var phoneState = SaveSync.State(), padState = SaveSync.State()
+        @discardableResult
+        func sync(_ library: SaveLibrary, _ state: inout SaveSync.State) -> SaveSync.Outcome {
+            let outcome = SaveSync.run(
+                local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, language: .english, now: date(0),
+                keeping: { try library.keepBeforeReplacing($0) }, moving: { try library.moveRow(from: $0, to: $1) }
+            )
+            XCTAssertFalse(outcome.isIncomplete)
+            return outcome
+        }
+        let row = try phone.save(world(after: 1), as: .manual, at: date(0)).id
+        sync(phone, &phoneState)
+        sync(pad, &padState)
+        try phone.save(world(after: 2), as: .manual, at: date(60), row: row)
+        try pad.save(world(after: 3), as: .manual, at: date(70), row: row)
+        try pad.save(world(after: 4), as: .autosave, at: date(80), row: row)
+        sync(phone, &phoneState)
+        let found = sync(pad, &padState)
+        let padsRow = try XCTUnwrap(found.movedRows[row], "the pad found the conflict and moved its game")
+        XCTAssertEqual(pad.autosaves().first?.row, padsRow, "its autosave goes on in its own row")
+        XCTAssertEqual(try pad.load(XCTUnwrap(pad.entries().first { $0.id == padsRow })), try world(after: 3))
+        // The phone hears of it before it saves again.
+        sync(phone, &phoneState)
+        for ticks in 5...8 {
+            try phone.save(world(after: ticks), as: .manual, at: date(Double(ticks) * 60), row: row)
+            sync(phone, &phoneState)
+            sync(pad, &padState)
+        }
+        func holds(_ library: SaveLibrary, _ wanted: GameWorld) throws -> Bool {
+            let games = library.entries().filter { $0.kind == .manual }.flatMap { [$0] + library.earlierVersions(of: $0) }
+            return try games.contains { try library.load($0) == wanted }
+        }
+        XCTAssertTrue(try holds(pad, world(after: 3)), "the pad's last save")
+        sync(phone, &phoneState)
+        XCTAssertTrue(try holds(phone, world(after: 3)), "on the phone too")
+    }
+
+    /// The other device only renamed the row: nothing of this device's is
+    /// written over, so no version is kept (the second review's 6).
+    func testARenameOnTheOtherDevicePushesOutNoVersion() throws {
+        let root = directory.appendingPathComponent("devices", isDirectory: true)
+        let cloud = DirectorySaveFolder(directory: root.appendingPathComponent("iCloud", isDirectory: true))
+        let phone = SaveLibrary(directory: root.appendingPathComponent("phone")), pad = SaveLibrary(directory: root.appendingPathComponent("pad"))
+        var phoneState = SaveSync.State(), padState = SaveSync.State()
+        func sync(_ library: SaveLibrary, _ state: inout SaveSync.State) {
+            let outcome = SaveSync.run(
+                local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state,
+                language: .english, now: date(0), keeping: { try library.keepBeforeReplacing($0) }
+            )
+            XCTAssertFalse(outcome.isIncomplete)
+        }
+        let row = try phone.save(world(after: 1), as: .manual, at: date(0))
+        try phone.save(world(after: 2), as: .manual, at: date(60), row: row.id)
+        sync(phone, &phoneState)
+        sync(pad, &padState)
+        try pad.rename(XCTUnwrap(pad.entries().first { $0.kind == .manual }), to: "Renamed")
+        sync(pad, &padState)
+        sync(phone, &phoneState)
+        let entry = try XCTUnwrap(phone.entries().first { $0.kind == .manual })
+        XCTAssertEqual(entry.name, "Renamed")
+        XCTAssertEqual(try phone.earlierVersions(of: entry).map { try phone.load($0) }, [try world(after: 1)])
+    }
+
     @MainActor
     func testTheLauncherDeletesTheSelection() throws {
         let library = SaveLibrary(directory: directory)
