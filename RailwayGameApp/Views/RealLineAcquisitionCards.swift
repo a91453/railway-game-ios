@@ -7,25 +7,41 @@ import SwiftUI
 /// three parts and the total, and what is in the way, if anything; Buy
 /// only when nothing is and the cash is there. The offer is the
 /// session's (``GameSession/shownRealLineOffer``); this view only draws it.
+/// Decision 497: without an offer yet, it says the line is being prepared
+/// (``GameSession/preparingRealLine``), Buy off.
 struct RealLineOfferCard: View {
     let session: GameSession
-    let offer: RealLineOffer
+    let line: RealBranchLine
+    let offer: RealLineOffer?
     /// Called after Buy bought the line.
     var bought: () -> Void = {}
 
     var body: some View {
         let language = session.language
-        let shortfall = offer.shortfallText(balance: session.world.economy.balance, in: language)
+        let shortfall = offer?.shortfallText(balance: session.world.economy.balance, in: language)
         NavigationStack {
             Form {
-                Section {
-                    Text(verbatim: offer.summaryText(in: language))
-                        .font(.subheadline)
-                    Text(verbatim: language.text("Yours to run from tomorrow's first train.", "明天首班車起由你經營。"))
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
+                if let offer {
+                    Section {
+                        Text(verbatim: offer.summaryText(in: language))
+                            .font(.subheadline)
+                        Text(verbatim: language.text("Yours to run from tomorrow's first train.", "明天首班車起由你經營。"))
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                } else {
+                    Section {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text(verbatim: language.text("Planning the line and its price…", "正在規劃路線與估價…"))
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("acquire.preparing")
+                    }
                 }
-                if offer.price != nil {
+                if let offer, offer.price != nil {
                     Section {
                         ForEach(Array(offer.priceRows(in: language).enumerated()), id: \.offset) { index, row in
                             let total = index == 3
@@ -48,7 +64,7 @@ struct RealLineOfferCard: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
-                if let problem = offer.problem {
+                if let problem = offer?.problem {
                     Label {
                         Text(verbatim: problem)
                     } icon: {
@@ -61,22 +77,22 @@ struct RealLineOfferCard: View {
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(alignment: .leading, spacing: 6) {
-                    if let shortfall, offer.problem == nil {
+                    if let shortfall, offer?.problem == nil {
                         Text(verbatim: shortfall)
                             .font(.footnote)
                             .foregroundStyle(Theme.warning)
                             .accessibilityIdentifier("acquire.shortfall")
                     }
                     Button {
-                        if session.acquireRealLine(offer) { bought() }
+                        if let offer, session.acquireRealLine(offer) { bought() }
                     } label: {
-                        Text(verbatim: language.text("Buy \(offer.line.name(in: language))", "收購\(offer.line.name(in: language))"))
+                        Text(verbatim: language.text("Buy \(line.name(in: language))", "收購\(line.name(in: language))"))
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     // Decision 110: the card's main action, as the theme draws one.
                     .buttonStyle(ThemeProminentButtonStyle())
-                    .disabled(offer.acquisition == nil || shortfall != nil)
+                    .disabled(offer?.acquisition == nil || shortfall != nil)
                     .accessibilityIdentifier("acquire.buy")
                 }
                 .padding(.horizontal, 16)
@@ -86,12 +102,12 @@ struct RealLineOfferCard: View {
                     Rectangle().fill(Theme.panelBorder).frame(height: 1)
                 }
             }
-            .navigationTitle(Text(verbatim: offer.line.name(in: language)))
+            .navigationTitle(Text(verbatim: line.name(in: language)))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
-                        session.shownRealLineOffer = nil
+                        session.closeRealLineOffer()
                     } label: {
                         Text(verbatim: language.text("Cancel", "取消"))
                     }

@@ -204,10 +204,11 @@ struct ContentView: View {
                 }
             }
             // Decision 315: a real branch line offered, and in the same
-            // sheet the card its purchase ends on.
+            // sheet the card its purchase ends on. Decision 497: open while
+            // the offer is still being prepared.
             .sheet(isPresented: Binding(
-                get: { session.shownRealLineOffer != nil || session.lastLineAcquired != nil },
-                set: { if !$0 { session.shownRealLineOffer = nil; session.lastLineAcquired = nil } }
+                get: { session.shownRealLineOffer != nil || session.preparingRealLine != nil || session.lastLineAcquired != nil },
+                set: { if !$0 { session.closeRealLineOffer(); session.lastLineAcquired = nil } }
             )) {
                 if let acquired = session.lastLineAcquired {
                     AcquisitionCompleteCard(acquired: acquired, language: session.language) {
@@ -216,7 +217,10 @@ struct ContentView: View {
                     }
                     .presentationDetents([.medium, .large])
                 } else if let offer = session.shownRealLineOffer {
-                    RealLineOfferCard(session: session, offer: offer)
+                    RealLineOfferCard(session: session, line: offer.line, offer: offer)
+                        .presentationDetents([.medium, .large])
+                } else if let line = session.preparingRealLine {
+                    RealLineOfferCard(session: session, line: line, offer: nil)
                         .presentationDetents([.medium, .large])
                 }
             }
