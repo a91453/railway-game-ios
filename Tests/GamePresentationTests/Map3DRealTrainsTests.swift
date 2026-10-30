@@ -62,10 +62,10 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertEqual(try formation("krtc", "KR"), .init(key: "kaohsiung", cars: 3))
         XCTAssertEqual(try formation("krtc", "KO"), .init(key: "kaohsiung", cars: 3))
         XCTAssertEqual(try formation("tmrt", "TG"), .init(key: "taichungGreen", cars: 2))
-        // Decision 331: the light rail as the green tram.
-        for (system, id) in [("ntdlrt", "V"), ("ntalrt", "K"), ("krtc", "C")] {
-            XCTAssertEqual(try formation(system, id).key, "greenTram", id)
-        }
+        // Decision 496: the light rails their own five-module trains, two cars.
+        XCTAssertEqual(try formation("ntdlrt", "V"), .init(key: "danhaiLRT", cars: 2))
+        XCTAssertEqual(try formation("ntalrt", "K"), .init(key: "ankengLRT", cars: 2))
+        XCTAssertEqual(try formation("krtc", "C"), .init(key: "klrtCitadis", cars: 2))
         // Every set but the forest railway's is one the game has.
         for system in try XCTUnwrap(Self.railways?.operations).orderedSystems where system.id != "afr" {
             for line in system.lines {

@@ -186,7 +186,9 @@ public struct Map3DRealTrains: Sendable {
             }
         case "krtc":
             // Decision 461: the other cities' metros are not Taipei's.
-            if line.id == "C" { return Formation(key: "greenTram", cars: 2) }
+            // Decision 496: the Circular light rail's CAF and Citadis
+            // trains, by their number (``Map3DTrainSet/kaohsiungLightRail(number:)``).
+            if line.id == "C" { return Formation(key: "klrtCitadis", cars: 2) }
             // Decision 483: the Red and Orange lines' Siemens three cars.
             return Formation(key: "kaohsiung", cars: 3)
         case "tymc":
@@ -198,10 +200,12 @@ public struct Map3DRealTrains: Sendable {
         case "sanying":
             // Decision 466: its own two-car train.
             return Formation(key: Map3DTrainSet.sanyingKey, cars: 2)
-        case "ntdlrt", "ntalrt":
-            // Decision 331: the light rail as the green tram, two cars of
-            // two sections each, about the five sections' 34 m.
-            return Formation(key: "greenTram", cars: 2)
+        case "ntdlrt":
+            // Decision 496: the light rail's own five modules, about 34 m,
+            // as two cars (decision 331's green tram before).
+            return Formation(key: "danhaiLRT", cars: 2)
+        case "ntalrt":
+            return Formation(key: "ankengLRT", cars: 2)
         default:
             // The Alishan Forest Railway's locomotive and five short
             // coaches, about 70 m: boxes, the game has no set.
