@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "VERIFIED",
+    "evidence": "Native readback / GLB / common geometry, type-specific support and actual faults, independent Swift assembly and Blender import, RGBA and final inspector downloads. Static sampled scope only."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "Maker review only; no user acceptance of this producer",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "studies only; no player selection or operating mapping"
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator visual, Safari / device Metal / performance or dynamic running validation"
+  }
+}

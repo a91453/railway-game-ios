@@ -1,0 +1,80 @@
+{
+  "producer": "f036e7f79279586f5831c7cb9bf9d8cce3444558",
+  "base": "a1e33214bc89f9875cdc7721dcb35948e3af88e3",
+  "latest_main": "46ae42b997c7b8d1ba140db80a98af080277f85e",
+  "source_rebuild": {
+    "status": "VERIFIED",
+    "producer": "f036e7f79279586f5831c7cb9bf9d8cce3444558",
+    "independent_checkout": true,
+    "models": [
+      {
+        "fleet": "haifeng",
+        "files": 22,
+        "native_glb_assembly_bytes_identical": true
+      },
+      {
+        "fleet": "shanlan",
+        "files": 22,
+        "native_glb_assembly_bytes_identical": true
+      }
+    ]
+  },
+  "delivery_rebuild": {
+    "status": "VERIFIED",
+    "producer": "f036e7f79279586f5831c7cb9bf9d8cce3444558",
+    "rows": [
+      {
+        "fleet": "haifeng",
+        "files": 46,
+        "viewer_sha256": "6ee5d89c49607ef3e9dc45be472e81ab33f87b68054eaac8b8db94e3ba10f8fc",
+        "all_bytes_identical": true
+      },
+      {
+        "fleet": "shanlan",
+        "files": 46,
+        "viewer_sha256": "c44d331a082a888b55f10d5f344e7493e2c8c8c8d0c9dfba317d4f506afa8482",
+        "all_bytes_identical": true
+      }
+    ],
+    "metadata_note": "RUN inspector initially read status while packaging wrote status; normalized from final declared source/status and independently reran deliver.py. Final DELIVERED viewer bytes identical."
+  },
+  "protection": {
+    "status": "VERIFIED",
+    "latest_main": "46ae42b997c7b8d1ba140db80a98af080277f85e",
+    "models": 777,
+    "all_payload_bytes_and_all_vertex_fields_identical": true,
+    "upstream_changes": "PR1536/1537 UI and route acquisition changes; no vehicle payload differences"
+  },
+  "old_failures": {
+    "status": "VERIFIED",
+    "identical_failures": 33,
+    "baseline": "a1e33214",
+    "latest_main": "46ae42b9",
+    "producer": "f036e7f7",
+    "gate_changed": false,
+    "other_vehicles_fixed": false
+  },
+  "validation": {
+    "swift": "6.4.0 warnings-as-errors; final 16 tests no failures; earlier 71 tests 3 existing skips, 0 failures",
+    "native": "20 units/assemblies readback and geometry; actual glass / duplicates / seal / wheels / equipment / order / direction / position / LOD / missing / reversed faults rejected",
+    "independent": "Swift assembly <=3.8146973e-6m; Blender4.3.2 imports 20 GLBs",
+    "images": "40 private RGBA PNG plus public common overview; independent bytes identical",
+    "viewer": "each 10 models x seven views x day/night, actual native/GLB downloads equal; final delivered viewer independently rebuilt",
+    "memory": "standard 613 models 3565788 vertices / 142.6MB unchanged; enabled MOTION_BUDGET_REPORT test passed"
+  },
+  "states": {
+    "asset": "VERIFIED within static sampled scope",
+    "appearance": "UNVERIFIED",
+    "integration": "UNVERIFIED - studies only",
+    "device": "UNVERIFIED"
+  },
+  "unverified": [
+    "user acceptance of this producer",
+    "full individual role opposite side / calibrated roof / underfloor BOM",
+    "post-conversion official renumbering ledger / delivery certificate / exact dimensions",
+    "file:// browser administration blocked; HTTP verified",
+    "Simulator visual / device Metal / Safari / performance",
+    "curve / grade / running / pantograph animation / exhaustive intersections"
+  ],
+  "ci": "Query current PR head checks; results recorded in linked draft PR / registry without changing producer"
+}

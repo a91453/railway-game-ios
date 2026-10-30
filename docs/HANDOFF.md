@@ -2711,3 +2711,5 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 本輪兩款獨立原生 studies，交接、車型對照、幾何共用依據、來源及狀態見 [new-taipei-light-rail](art/new-taipei-light-rail/README.md)。各自五角色近遠與完整靜態組裝；素材位於素材庫各款 revision-1。沒有營運接入，合併不會在遊戲出現；使用者外觀接受與裝置各自 UNVERIFIED。greenTram／fiveSectionLRT、ntdlrt／ntalrt／krtc/C原映射、列車包／回退及高雄紅橘線不動。上一輪高雄輕軌公開#1506與素材#31開工時OPEN、其後已MERGED（已納入最新main），其分支／檔案保持。未新增GameCore、存檔、fixtures、購車／解鎖、班表、控制或動畫。後續整合須另查當班配車與逐模組動態路徑契約；不要用車號奇偶或隨機配兩款。兩車首次交付、沒有已接受前版，所有未驗及重建producer詳各款來源／status／驗證。
 
 收尾producer `0d3b6733f6c76a607c034097f95956f4b38ab958`：兩款素材技術VERIFIED，獨立producer模型／PNG／viewer bytes相同、最終HTTP viewer真下載／旋轉縮放已驗；file://被瀏覽器管理政策擋住，離線直開仍UNVERIFIED。最新未改main的757個原生payload與全頂點欄位雜湊保持。14 Swift6.4 WAE測試、獨立Blender／原生組裝／故障反例通過；全量33項既有失敗已在main重現，未改gate。兩款各20PNG＋公開共用1張，外觀接受／營運／裝置各UNVERIFIED，詳自有verification.json。
+
+> Codex 海風／山嵐 EMU500 雙款改造（producer `f036e7f7`，素材draft [#35](https://github.com/a91453/railway-assets-private/pull/35)）：[查證、逐部件差異、角色、來源與驗證](art/tourism-emu500/README.md)。從既有原生EMU500截面／弧頭與走行設備生成段改造，兩端封門、中央落地窗與兩款一般漸層獨立處理；原EMU500及其他營運模型／配車／列車包／回退保持。兩款僅studies，沒有玩家選用或動態行駛驗證；使用者明確producer外觀接受、營運與裝置UNVERIFIED。完整交付、producer、雙draft PR與最新head CI見自有文件；不推main／合併／auto-merge／TestFlight。
