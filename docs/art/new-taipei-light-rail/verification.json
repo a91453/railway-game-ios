@@ -105,7 +105,7 @@
           "reason": "Browser administration blocks file:// navigation; loopback checks passed."
         },
         "native_glb_download_bytes_equal": true,
-        "final_bytes": 34417296
+        "final_bytes": 34417259
       },
       "assets": "https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1",
       "viewer": "https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/ankeng-light-rail/revision-1/index.html"
@@ -149,7 +149,7 @@
           "reason": "Browser administration blocks file:// navigation; loopback checks passed."
         },
         "native_glb_download_bytes_equal": true,
-        "final_bytes": 55832964
+        "final_bytes": 55832927
       },
       "assets": "https://github.com/a91453/railway-assets-private/tree/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1",
       "viewer": "https://github.com/a91453/railway-assets-private/blob/codex/new-taipei-light-rail-two-fleets/game-art-previews/docs/art/danhai-light-rail/revision-1/index.html"
@@ -162,7 +162,7 @@
     "Browser file:// navigation blocked by administration; loopback WebGL and zero external requests verified",
     "Exact module dimensions, hidden equipment and per-part revisions insufficient; engineering replica not claimed"
   ],
-  "combined_assets_bytes": 90250260,
+  "combined_assets_bytes": 90250186,
   "public_overview_sha256": "278c370b73065ac8f6b96fa4c02c635245db36d28db3010d6f6fec392639c274",
   "actual_previous_failure_rejected": {
     "producer": "63359f1049d5fa6b94c954d368d82112f203b8ee",
