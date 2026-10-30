@@ -129,7 +129,7 @@ public struct SaveLibrary: Sendable {
     /// iCloud round (decision 397) copies none of them.
     static let versionsFolder = "Versions"
     /// Where saves being deleted wait until all of them are moved
-    /// (``delete(_:)-(_:)``), so a delete is all or nothing.
+    /// (``delete(_:)``), so a delete is all or nothing.
     static let deletingFolder = "Deleting"
 
     public let directory: URL
@@ -455,7 +455,7 @@ public struct SaveLibrary: Sendable {
         try delete([entry])
     }
 
-    /// Deletes `entries`, each as ``delete(_:)-(_:)`` does, all or none
+    /// Deletes `entries`, each as ``delete(_:)`` does, all or none
     /// (decision 502): every one's files are first moved aside, and one
     /// that cannot be (or a save no longer there) moves the others back
     /// and deletes nothing.
@@ -492,7 +492,7 @@ public struct SaveLibrary: Sendable {
         try? fileManager.removeItem(at: url(of: Self.deletingFolder))
     }
 
-    /// Test only: save files whose move ``delete(_:)-(_:)`` fails, to show
+    /// Test only: save files whose move ``delete(_:)`` fails, to show
     /// it deletes all or none.
     var failingMoves: Set<String> = []
 
