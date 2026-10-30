@@ -182,20 +182,20 @@ final class FinancialStatementsTests: XCTestCase {
         let summary = world.financeReport(.day).current
         let income = summary.incomeStatementRows(previous: nil, in: .english)
         let rows = Dictionary(uniqueKeysWithValues: income.map { ($0.title, $0.current) })
-        XCTAssertEqual(rows["Buildings sold"], 243_200)
-        XCTAssertEqual(rows["Their book value"], -2_304_000)
-        XCTAssertEqual(rows["Gain or loss on sale (realized)"], -2_060_800)
-        XCTAssertEqual(rows["Net profit"], -2_060_800)
+        XCTAssertEqual(rows["Buildings sold"], 729_600)
+        XCTAssertEqual(rows["Their book value"], -6_912_000)
+        XCTAssertEqual(rows["Gain or loss on sale (realized)"], -6_182_400)
+        XCTAssertEqual(rows["Net profit"], -6_182_400)
         XCTAssertEqual(income.last?.title, "Net profit")
         let cash = summary.cashFlowRows(previous: nil, in: .traditionalChinese)
         let investing = Dictionary(uniqueKeysWithValues: cash.map { ($0.title, $0.current) })
-        XCTAssertEqual(investing["出售建物收入"], 243_200)
+        XCTAssertEqual(investing["出售建物收入"], 729_600)
         XCTAssertEqual(investing["投資活動淨額"], 243_200 - 2_304_000)
         XCTAssertEqual(investing["本期現金淨增減"], world.economy.balance - 100_000_000)
         // A later period beside it shows the rows too, at 0.
         let next = world.accounts.report(.day, day: 1)
         XCTAssertEqual(next.current.incomeStatementRows(previous: next.previous, in: .traditionalChinese)
-            .first { $0.title == "出售建物損益（已實現）" }?.previous, -2_060_800)
+            .first { $0.title == "出售建物損益（已實現）" }?.previous, -6_182_400)
     }
 
     /// A player's report from an iPhone held sideways: the side panel's

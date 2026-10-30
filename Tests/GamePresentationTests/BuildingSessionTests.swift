@@ -113,7 +113,7 @@ final class BuildingSessionTests: XCTestCase {
         // action button builds there.
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 5_000), reach: 500))
         XCTAssertTrue(session.world.placedBuildings.isEmpty, "a tap only chooses the site")
-        XCTAssertEqual(session.buildingPreview?.cost, 2_304_000)
+        XCTAssertEqual(session.buildingPreview?.cost, 6_912_000)
         XCTAssertEqual(session.buildingPreviewText, "Building \(Money(2_048_000).moneyText) + land \(Money(256_000).moneyText)")
         XCTAssertTrue(session.confirmBuilding())
         XCTAssertNil(session.buildingSite, "built: the site is cleared")

@@ -28,7 +28,7 @@ final class DayPassCardTests: XCTestCase {
         XCTAssertFalse(card.isAvailable)
         XCTAssertNotNil(card.unavailableText(in: .english))
         XCTAssertEqual(card.statusText(in: .english), "Not on sale")
-        XCTAssertEqual(card.suggestedPrice, Money(1_500), "three $5 fares")
+        XCTAssertEqual(card.suggestedPrice, Money(4_500), "three $5 fares")
         XCTAssertNil(card.todayText(in: .english))
     }
 

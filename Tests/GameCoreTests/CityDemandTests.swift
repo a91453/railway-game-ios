@@ -21,7 +21,7 @@ final class CityDemandTests: XCTestCase {
     /// A managed world whose land sets ridership with town growth on and the
     /// station S0.
     private func world(land: [LandCell] = town) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         try world.setLand(land)
         world.setEconomyMode(.management)
         world.setLandDemand(true)
@@ -243,7 +243,7 @@ final class CityDemandTests: XCTestCase {
     /// which the first midnight with residents then settles again.
     func testLandReadInIsNotTheCityGrowing() throws {
         var world = GameWorld(bounds: try WorldBounds(width: 1 << 22, height: 1 << 22),
-                              economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+                              economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         world.setEconomyMode(.management)
         world.setLandDemand(true)
         world.setLandOnDemand()
@@ -293,7 +293,7 @@ final class CityDemandTests: XCTestCase {
     func testVersionThirtyTwoKeepsTheCitysDemand() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v32-city-demand.json")
-        var made = try world()
+        var made = try NTScale.$factor.withValue(3) { try world() }
         made.setCityDemand(true)
         try made.setZone(.office, rows: 8...8, columns: 5...7)
         try made.advance(ticks: 1 + 1_440)
@@ -308,7 +308,7 @@ final class CityDemandTests: XCTestCase {
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, made)
         XCTAssertEqual(world.cityDemand?.baseline, CityMix(shopJobs: 882_352, workJobs: 1_764_705))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 32,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 32,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

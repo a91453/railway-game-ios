@@ -51,7 +51,7 @@ final class MapExpansionSessionTests: XCTestCase {
         XCTAssertTrue(session.isChoosingMapTile)
         let overlay = try XCTUnwrap(session.mapExpansionOverlay)
         XCTAssertEqual(overlay.forSale.count, 4)
-        XCTAssertEqual(overlay.forSale.first?.price, 500_000_000)
+        XCTAssertEqual(overlay.forSale.first?.price, 1_500_000_000)
         XCTAssertEqual(overlay.forSale.first?.isUnlocked, false)
         XCTAssertEqual(overlay.region, WorldRegion(minX: Double(length), minY: Double(length), maxX: Double(4 * length), maxY: Double(4 * length)))
 

@@ -20,7 +20,7 @@ final class SubsidiaryTests: XCTestCase {
     /// service) and demand at Alpha of `alphaKind` and 1,000 trips a day.
     private func makeWorld(alphaKind: StationDemandKind = .shopping, trips: Int64 = 1_000, managed: Bool = true) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 32_768, height: 32_768), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .x10)
+            bounds: WorldBounds(width: 32_768, height: 32_768), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .x10)
         )
         if managed { world.setEconomyMode(.management) }
         try line.build(in: &world)
@@ -153,7 +153,7 @@ final class SubsidiaryTests: XCTestCase {
     private func longLineWorld(gammaTrips: Int64) throws -> (GameWorld, PlacedBuilding) {
         let long = TestLine(tiles: 60)
         var world = try GameWorld(
-            bounds: WorldBounds(width: 65_536, height: 32_768), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .x10)
+            bounds: WorldBounds(width: 65_536, height: 32_768), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .x10)
         )
         world.setEconomyMode(.management)
         try long.build(in: &world)
@@ -304,7 +304,7 @@ final class SubsidiaryTests: XCTestCase {
     func testVersionFortySixKeepsTheSubsidiariesBooks() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v46-subsidiary.json")
-        var made = try makeWorld(alphaKind: .scenic, trips: 4_000)
+        var made = try NTScale.$factor.withValue(3) { try makeWorld(alphaKind: .scenic, trips: 4_000) }
         try place(.departmentStore, 0, 3_200, in: &made)
         try place(.hotel, 0, 8_400, in: &made)
         try place(.amusementPark, 9_000, 4_800, in: &made)
@@ -326,7 +326,7 @@ final class SubsidiaryTests: XCTestCase {
         XCTAssertTrue(world.placedBuildings.allSatisfy { $0.books.hasTraded })
         XCTAssertEqual(world.placedBuildings.map { $0.books.closed.count }, [1, 1, 1])
         XCTAssertEqual(world.accounts.entries.filter { $0.kind == .dailySubsidiary }.count, 1)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 46,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 46,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

@@ -60,9 +60,9 @@ final class StationCommerceTests: XCTestCase {
     func testTakingsNearEachLevelsMost() {
         XCTAssertEqual(StationCommerceLevel.convenienceStore.takings(people: 0), .zero)
         XCTAssertEqual(StationCommerceLevel.convenienceStore.takings(people: 4_000), Money(42_800))
-        XCTAssertEqual(StationCommerceLevel.arcade.takings(people: 60_000), Money(450_000))
-        XCTAssertEqual(StationCommerceLevel.mall.takings(people: 60_000), Money(1_620_000))
-        XCTAssertEqual(StationCommerceLevel.mall.takings(people: 90_000), Money(2_025_000))
+        XCTAssertEqual(StationCommerceLevel.arcade.takings(people: 60_000), Money(1_350_000))
+        XCTAssertEqual(StationCommerceLevel.mall.takings(people: 60_000), Money(4_860_000))
+        XCTAssertEqual(StationCommerceLevel.mall.takings(people: 90_000), Money(6_075_000))
         // However many pass, never the level's most.
         for level in StationCommerceLevel.allCases {
             let most = Money(level.centsPerPerson * level.halfPeople)
@@ -70,7 +70,7 @@ final class StationCommerceTests: XCTestCase {
             XCTAssertLessThan(level.takings(people: .max), most, "no overflow")
             XCTAssertEqual(level.takings(people: -5), .zero)
         }
-        XCTAssertEqual(StationCommerceLevel.allCases.map(\.price.amount).reduce(0, +), 1_600_000_000)
+        XCTAssertEqual(StationCommerceLevel.allCases.map(\.price.amount).reduce(0, +), 4_800_000_000)
     }
 
     // MARK: - Commands
@@ -248,7 +248,7 @@ final class StationCommerceTests: XCTestCase {
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
         XCTAssertEqual(carried, straight)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 57,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 57,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

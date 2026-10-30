@@ -85,7 +85,7 @@ final class RenameAndColourTests: XCTestCase {
     func testVersionFiftyFiveKeepsALinesCode() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v55-line-code.json")
-        var (made, _, line) = try world()
+        var (made, _, line) = try NTScale.$factor.withValue(3) { try world() }
         try made.setLineColor(line, to: LineColor.presets[8])
         try made.setLineCode(line, to: LineCode("BL"))
         try made.advance(ticks: 10)
@@ -100,7 +100,7 @@ final class RenameAndColourTests: XCTestCase {
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, made)
         XCTAssertEqual(loaded.line(id: line)?.code, LineCode("BL"))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 55,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 55,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

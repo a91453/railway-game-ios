@@ -19,9 +19,9 @@ final class DayPassTests: XCTestCase {
     }
 
     func testTheSuggestedPriceIsThreeShortestFares() {
-        XCTAssertEqual(DayPass.suggestedPrice(for: .standard), Money(1_500))
+        XCTAssertEqual(DayPass.suggestedPrice(for: .standard), Money(4_500))
         XCTAssertEqual(DayPass.suggestedPrice(for: .distance(FareRules.standardBands)), Money(165))
-        XCTAssertEqual(DayPass.suggestedPrice(for: .flat(.zero)), Money(1_500), "a fare of 0 is charged as 5")
+        XCTAssertEqual(DayPass.suggestedPrice(for: .flat(.zero)), Money(4_500), "a fare of 0 is charged as 5")
     }
 
     // MARK: - A world
@@ -34,7 +34,7 @@ final class DayPassTests: XCTestCase {
     /// all three with a train, in a managed company. Every tourist sets out
     /// from Home: 240 to each sight on day 0, a Monday.
     private func world() throws -> GameWorld {
-        var world = try GameWorld(bounds: WorldBounds(width: 262_144, height: 262_144), economy: GameEconomy(balance: 1_000_000_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 262_144, height: 262_144), economy: fixtureEconomy(balance: 1_000_000_000_000, costs: testCosts))
         world.setEconomyMode(.management)
         try world.buildStation(named: "Home", at: PlanPoint(x: 10_000, y: 131_072))
         try world.buildStation(named: "Foot", at: PlanPoint(x: 100_000, y: 131_072))
@@ -169,7 +169,7 @@ final class DayPassTests: XCTestCase {
 
     /// One-star sights, so the save keeps few passengers on the way.
     func testVersionSixtyEightKeepsThePass() throws {
-        var world = try world()
+        var world = try NTScale.$factor.withValue(3) { try world() }
         world.setTourism([
             Attraction(id: falls, name: "瀑布", englishName: "Falls", point: PlanPoint(x: 101_000, y: 131_072), kind: .town, baseStars: 100),
             Attraction(id: temple, name: "廟", englishName: "Temple", point: PlanPoint(x: 131_000, y: 131_072), kind: .town, baseStars: 100),
@@ -189,7 +189,7 @@ final class DayPassTests: XCTestCase {
         XCTAssertEqual(object["saveVersion"] as? Int, 68)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, world)
-        XCTAssertEqual(loaded.accounts.dayPass, Money(1_500))
+        XCTAssertEqual(loaded.accounts.dayPass, Money(4_500))
         XCTAssertTrue(loaded.accounts.entries.contains { $0.kind == .dailyDayPass })
     }
 }

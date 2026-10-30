@@ -4,13 +4,27 @@ import XCTest
 /// Costs used across tests so expected balances are easy to read.
 let testCosts = ConstructionCosts(track: 100, station: 1_000, train: 5_000)
 
+/// Decision 499: a save written before version 76 reads with every amount
+/// times 3, so a test that builds the world such a save holds, to compare
+/// the two, builds it inside `NTScale.$factor.withValue(3) { … }`: there
+/// ``fixtureEconomy(balance:costs:)`` starts the world with three times the
+/// balance and costs. Anywhere else the factor is 1.
+enum NTScale {
+    @TaskLocal static var factor: Int64 = 1
+}
+
+/// `GameEconomy(balance:costs:)`, times ``NTScale/factor``.
+func fixtureEconomy(balance: Money, costs: ConstructionCosts) -> GameEconomy {
+    GameEconomy(balance: Money(balance.amount * NTScale.factor), costs: costs.times(NTScale.factor))
+}
+
 /// A world `width` × `height` world units (320 m a side by default).
 func makeWorld(
     width: Int64 = 20_480,
     height: Int64 = 20_480,
     balance: Money = 10_000
 ) throws -> GameWorld {
-    GameWorld(bounds: try WorldBounds(width: width, height: height), economy: GameEconomy(balance: balance, costs: testCosts))
+    GameWorld(bounds: try WorldBounds(width: width, height: height), economy: fixtureEconomy(balance: balance, costs: testCosts))
 }
 
 /// Asserts that `expression` throws exactly `expected`.

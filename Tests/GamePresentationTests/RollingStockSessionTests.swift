@@ -29,8 +29,8 @@ final class RollingStockSessionTests: XCTestCase {
         let plan = try XCTUnwrap(world.lineStaffingPlan(Self.main, headway: 10, type: .maglev, cars: 4))
         XCTAssertEqual(plan.type, .maglev)
         XCTAssertEqual(plan.cars, 4)
-        XCTAssertEqual(plan.pricePerTrain, Money(105_000_000))
-        XCTAssertEqual(plan.cost, Money(105_000_000 * Int64(plan.trains)))
+        XCTAssertEqual(plan.pricePerTrain, Money(315_000_000))
+        XCTAssertEqual(plan.cost, Money(315_000_000 * Int64(plan.trains)))
         // 4 maglev cars weigh 7.2 standard trains: (480 + 360 + 192) × 7.2 = 7,430.4 dollars.
         XCTAssertEqual(plan.dailyCostPerTrain, Money(743_040).roundedToDollars)
         // A cars count out of range is brought into it.
@@ -273,8 +273,8 @@ final class RollingStockSessionTests: XCTestCase {
         let on = try lineWorld()
         let card = on.trainTypeCard(.highSpeed)
         XCTAssertEqual(card.capacityPerCar, 80)
-        XCTAssertEqual(card.firstCarPrice, Money(90_000_000))
-        XCTAssertEqual(card.carPrice, Money(12_000_000))
+        XCTAssertEqual(card.firstCarPrice, Money(270_000_000))
+        XCTAssertEqual(card.carPrice, Money(36_000_000))
         XCTAssertEqual(card.topSpeed, TrainPerformance.highSpeed.topSpeed)
         XCTAssertEqual(on.trainTypeCard(nil).topSpeed, TrainPerformance.standard.topSpeed)
         XCTAssertTrue(card.text(in: .english).contains("80 a car"))

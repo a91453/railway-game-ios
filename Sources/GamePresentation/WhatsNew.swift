@@ -31,6 +31,20 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-31-98",
+            items: [
+                Line(
+                    english: "Money is now counted in New Taiwan dollars: fares, prices and costs are about three times what they were, and old saves convert on their own.",
+                    chinese: "金額改用新台幣：票價、價錢與成本約是原來的三倍，舊存檔會自動換算。"
+                ),
+                Line(
+                    english: "High-speed rail fares follow the official fare table, and the default distance fares are whole dollars.",
+                    chinese: "高鐵票價照官方票價表，預設的分段票價都是整數元。"
+                ),
+            ],
+            fixes: []
+        ),
+        Entry(
             id: "2026-10-30-96",
             items: [
                 Line(

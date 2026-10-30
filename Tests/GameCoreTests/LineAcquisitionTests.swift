@@ -24,7 +24,7 @@ final class LineAcquisitionTests: XCTestCase {
     /// out and Blue at Alpha, laid at `minutes` past midnight on day 0 in a
     /// managed company with `balance`.
     private func world(at minutes: Int = 300, balance: Money = 10_000_000) throws -> GameWorld {
-        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: balance, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: balance, costs: testCosts))
         world.setEconomyMode(.management)
         // A tick a minute; nothing stands yet, so nothing runs.
         world.setSpeed(.normal)
@@ -54,13 +54,13 @@ final class LineAcquisitionTests: XCTestCase {
         try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
 
         XCTAssertEqual(world.economy.balance, before - Money(2_000_000))
-        XCTAssertEqual(world.acquisitions, [LineAcquisition(realLine: pingxi, line: main, day: 0, value: Money(2_000_000))])
+        XCTAssertEqual(world.acquisitions, [LineAcquisition(realLine: pingxi, line: main, day: 0, value: Money(6_000_000))])
         XCTAssertEqual(world.acquisition(of: pingxi)?.line, main)
         XCTAssertNil(world.acquisition(of: "tra:JIJI"))
         let asset = try XCTUnwrap(world.accounts.assets.last)
         XCTAssertEqual(asset.kind, .acquiredLine)
         XCTAssertEqual(asset.owner, main.rawValue)
-        XCTAssertEqual(asset.cost, Money(2_000_000))
+        XCTAssertEqual(asset.cost, Money(6_000_000))
         XCTAssertEqual(world.line(id: main)?.runDays, [0])
 
         // 06:10 today: not sent.
@@ -76,10 +76,10 @@ final class LineAcquisitionTests: XCTestCase {
     /// each ($100, a light rail's $70), recorded as the value paid; a
     /// purchase without a tier is a branch line's, $10,000 a rider.
     func testABoughtLinesRidersCostItsTiersValue() throws {
-        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3), Money(3_000_000))
-        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .branch), Money(3_000_000))
-        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .lightRail), Money(21_000))
-        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .metro), Money(30_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3), Money(9_000_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .branch), Money(9_000_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .lightRail), Money(63_000))
+        XCTAssertEqual(LineAcquisition.value(ofDailyRiders: 3, tier: .metro), Money(90_000))
         var world = try world(balance: Money(1_000_000_000_000_000))
         let before = world.economy.balance
         try world.recordLineAcquisition(line: main, realLine: "trtc:R_XBT", dailyRiders: LineAcquisition.maximumDailyRiders, tier: .metro)
@@ -141,7 +141,7 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: -1) }, .invalidAcquisition)
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2_000_001) }, .invalidAcquisition)
         XCTAssertEqual(refusal { try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 100_000) },
-                       .insufficientFunds(required: Money(100_000_000_000), available: world.economy.balance))
+                       .insufficientFunds(required: Money(300_000_000_000), available: world.economy.balance))
         XCTAssertEqual(refusal(after: { try $0.setLineRuns(main, to: []) }) {
             try $0.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 1)
         }, .invalidAcquisition, "a line without runs")
@@ -221,7 +221,7 @@ final class LineAcquisitionTests: XCTestCase {
     /// (2 riders) and run to tomorrow's 06:06, its train sent out; it saves byte
     /// for byte and is the world this build makes.
     func testVersionSixtySixKeepsTheLineBought() throws {
-        var world = try world()
+        var world = try NTScale.$factor.withValue(3) { try world() }
         try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
         try world.advance(ticks: 24 * 60 + 76)
 
@@ -236,9 +236,9 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(object["saveVersion"] as? Int, 66)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, world)
-        XCTAssertEqual(loaded.acquisition(of: pingxi)?.value, Money(2_000_000))
+        XCTAssertEqual(loaded.acquisition(of: pingxi)?.value, Money(6_000_000))
         XCTAssertNotNil(loaded.train(id: blue)?.execution)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 66,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 66,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

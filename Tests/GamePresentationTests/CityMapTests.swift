@@ -73,7 +73,7 @@ final class CityMapTests: XCTestCase {
         // The land's cells only (no service is measured yet, so no empty
         // cell is worth more than 1,000).
         let values = map.tiles(for: .landValue, in: Self.everywhere)
-        XCTAssertEqual(values.map(\.value), [2_000, 2_500, 6_000, 7_000, 2_000])
+        XCTAssertEqual(values.map(\.value), [6_000, 7_500, 18_000, 21_000, 6_000])
         XCTAssertEqual(values.map(\.color), [2_000, 2_500, 6_000, 7_000, 2_000].map { CityMap.valueColor(cents: $0) })
         XCTAssertEqual(CityMap.valueStep(cents: 1_999), 0)
         XCTAssertEqual(CityMap.valueStep(cents: 2_000), 1)

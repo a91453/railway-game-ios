@@ -17,7 +17,7 @@ final class RealCoverageTests: XCTestCase {
     /// jobs on cells (5, 5) and (5, 6), covered `west` and `east` percent,
     /// the city's buildings and footprints and buying out by area on.
     private func world(west: Int64?, east: Int64?) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
         try world.setLand([
             LandCell(row: 5, column: 5, use: .residential, residents: 48, jobs: 8, coverage: west),
             LandCell(row: 5, column: 6, use: .residential, residents: 48, jobs: 8, coverage: east),
@@ -40,7 +40,7 @@ final class RealCoverageTests: XCTestCase {
         // a m², a fifth more.
         XCTAssertEqual(world.buyOutPrice(of: half), Money((2 * 2_048 * 4_000 + 2_048 * 2_000) * 120 / 100))
         let unknown = try self.world(west: nil, east: nil)
-        XCTAssertEqual(unknown.buyOutPrice(of: try XCTUnwrap(unknown.land.cell(row: 5, column: 5))), 15_705_600)
+        XCTAssertEqual(unknown.buyOutPrice(of: try XCTUnwrap(unknown.land.cell(row: 5, column: 5))), 47_116_800)
         // A full cell: 4,096 m² of ground.
         var full = try self.world(west: 100, east: nil)
         full.setCityBuildings(false)
@@ -68,7 +68,7 @@ final class RealCoverageTests: XCTestCase {
     }
 
     func testACoverageOutOfRangeIsRefused() throws {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts), clock: GameClock(speed: .paused))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts), clock: GameClock(speed: .paused))
         XCTAssertThrowsError(try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 4, jobs: 0, coverage: 101)]))
         XCTAssertThrowsError(try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 4, jobs: 0, coverage: -1)]))
         XCTAssertNoThrow(try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 4, jobs: 0, coverage: 100)]))
@@ -103,7 +103,7 @@ final class RealCoverageTests: XCTestCase {
     func testVersionThirtyFiveKeepsTheLandsCoverage() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v35-real-coverage.json")
-        var made = try world(west: 0, east: 50)
+        var made = try NTScale.$factor.withValue(3) { try world(west: 0, east: 50) }
         _ = try made.placeBuilding(.office, at: Self.betweenTheHomes)
         made.setSpeed(.normal)
         try made.advance(ticks: 10)
@@ -118,7 +118,7 @@ final class RealCoverageTests: XCTestCase {
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, made)
         XCTAssertEqual(world.land.cell(row: 5, column: 6)?.coverage, 50)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 35,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 35,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

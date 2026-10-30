@@ -77,7 +77,7 @@ final class DistanceDemandTests: XCTestCase {
     /// stations West, 30,000 units from the west edge, and East, 60,000 from
     /// the east edge (both within 1 km), on no land.
     private func edgeWorld() throws -> GameWorld {
-        var world = GameWorld(bounds: .standard, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: .standard, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         world.setEconomyMode(.management)
         try world.setLand([LandCell(row: 128, column: 128, use: .residential, residents: 1_000, jobs: 0)])
         world.setLandDemand(true)
@@ -138,12 +138,12 @@ final class DistanceDemandTests: XCTestCase {
         world.setDistanceDemand(true)
         // The standard fare, $5, as the company has set no fares; the
         // world's baseline is the reference's $0.75.
-        XCTAssertEqual(world.tripFare(from: town, to: west), Money(500))
+        XCTAssertEqual(world.tripFare(from: town, to: west), Money(1_500))
         world.setOutsideConnections(true)
-        XCTAssertEqual(world.outsideFare, Money(75))
-        XCTAssertEqual(world.tripFare(from: town, to: west), Money(575))
-        XCTAssertEqual(world.tripFare(from: west, to: town), Money(575))
-        XCTAssertEqual(world.tripFare(from: west, to: east), Money(575), "one surcharge however many ends are outside")
+        XCTAssertEqual(world.outsideFare, Money(225))
+        XCTAssertEqual(world.tripFare(from: town, to: west), Money(1_725))
+        XCTAssertEqual(world.tripFare(from: west, to: town), Money(1_725))
+        XCTAssertEqual(world.tripFare(from: west, to: east), Money(1_725), "one surcharge however many ends are outside")
         try world.setFareBaseline(Money(500))
         XCTAssertEqual(world.outsideFare, Money(500))
         XCTAssertEqual(world.tripFare(from: town, to: east), Money(1_000))
@@ -219,7 +219,7 @@ final class DistanceDemandTests: XCTestCase {
     func testVersionThirtyOneKeepsDistanceDemandAndTheOutsideConnections() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v31-distance-demand.json")
-        var made = try edgeWorld()
+        var made = try NTScale.$factor.withValue(3) { try edgeWorld() }
         made.setDistanceDemand(true)
         made.setOutsideConnections(true)
         try made.createLine(named: "Across", stops: [b, a, c])
@@ -237,7 +237,7 @@ final class DistanceDemandTests: XCTestCase {
         XCTAssertTrue(world.distanceDemand)
         XCTAssertTrue(world.outsideConnections)
         XCTAssertEqual(world.stationDemand(of: b)?.dailyTrips, 3_000)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 31,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 31,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

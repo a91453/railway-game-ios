@@ -22,7 +22,7 @@ final class AreaBuyOutTests: XCTestCase {
     /// jobs on cells (5, 5) and (5, 6), the city's buildings and footprints
     /// on, and buying out by area as `area`.
     private func world(area: Bool) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
         try world.setLand([
             LandCell(row: 5, column: 5, use: .residential, residents: 48, jobs: 8),
             LandCell(row: 5, column: 6, use: .residential, residents: 48, jobs: 8),
@@ -56,12 +56,12 @@ final class AreaBuyOutTests: XCTestCase {
     func testTheQuotePaysTheShareOfEachCellAndClearsNothing() throws {
         let on = try world(area: true), off = try world(area: false)
         let home = try XCTUnwrap(on.land.cell(row: 5, column: 5))
-        XCTAssertEqual(on.buyOutPrice(of: home), 15_705_600)
+        XCTAssertEqual(on.buyOutPrice(of: home), 47_116_800)
         let quote = try XCTUnwrap(on.placedBuildingQuote(.office, at: Self.betweenTheHomes))
         XCTAssertEqual(quote.cleared, [])
         XCTAssertEqual(quote.buyOut, Money(2 * 15_705_600 / 8))
-        XCTAssertEqual(quote.building, 24_576_000)
-        XCTAssertEqual(quote.land, 2_048_000)
+        XCTAssertEqual(quote.building, 73_728_000)
+        XCTAssertEqual(quote.land, 6_144_000)
         // By squares the office reaches neither home's 20 m square in the
         // middle of its cell, and pays nothing for the city's buildings.
         let bySquares = try XCTUnwrap(off.placedBuildingQuote(.office, at: Self.betweenTheHomes))
@@ -71,7 +71,7 @@ final class AreaBuyOutTests: XCTestCase {
         // by area a sixteenth.
         let middle = PlanPoint(x: 22_528, y: 22_528)
         XCTAssertEqual(off.placedBuildingQuote(.house, at: middle)?.cleared, [CellPosition(row: 5, column: 5)])
-        XCTAssertEqual(off.placedBuildingQuote(.house, at: middle)?.buyOut, 15_705_600)
+        XCTAssertEqual(off.placedBuildingQuote(.house, at: middle)?.buyOut, 47_116_800)
         XCTAssertEqual(on.placedBuildingQuote(.house, at: middle)?.cleared, [])
         XCTAssertEqual(on.placedBuildingQuote(.house, at: middle)?.buyOut, Money(15_705_600 / 16))
     }
@@ -211,7 +211,7 @@ final class AreaBuyOutTests: XCTestCase {
     func testVersionThirtyFourKeepsBuyingOutByArea() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v34-area-buyout.json")
-        var made = try world(area: true)
+        var made = try NTScale.$factor.withValue(3) { try world(area: true) }
         _ = try made.placeBuilding(.office, at: Self.betweenTheHomes)
         made.setSpeed(.normal)
         try made.advance(ticks: 10)
@@ -227,7 +227,7 @@ final class AreaBuyOutTests: XCTestCase {
         XCTAssertEqual(world, made)
         XCTAssertTrue(world.areaBuyOut)
         XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 42)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 34,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 34,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

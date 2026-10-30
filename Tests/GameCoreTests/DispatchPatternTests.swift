@@ -20,7 +20,7 @@ final class DispatchPatternTests: XCTestCase {
 
     private func makeWorld(trains count: Int = 2, secondAtGamma: Bool = false, flex: Bool = true) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 0), speed: .normal)
         )
         world.setFlexDispatch(flex)
@@ -303,7 +303,7 @@ final class DispatchPatternTests: XCTestCase {
     /// with each end's last dispatch; it saves byte for byte and is the world this build
     /// makes.
     func testVersionSixtyFiveKeepsTheDispatchPattern() throws {
-        var world = try makeWorld(secondAtGamma: true)
+        var world = try NTScale.$factor.withValue(3) { try makeWorld(secondAtGamma: true) }
         try world.setLineDispatchPattern(main, to: .fromBothEnds)
         try world.advance(ticks: 15)
 
@@ -320,7 +320,7 @@ final class DispatchPatternTests: XCTestCase {
         XCTAssertEqual(loaded, world)
         XCTAssertEqual(loaded.line(id: main)?.dispatchPattern, .fromBothEnds)
         XCTAssertEqual(loaded.line(id: main)?.endLastDispatch, GameTime(minutes: 12))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 65,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 65,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

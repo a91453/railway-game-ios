@@ -29,7 +29,7 @@ final class IncomeTaxTests: XCTestCase {
     }
 
     func testTheTaxIsHalfOfTheProfitBeyondTheAllowance() {
-        XCTAssertEqual(CompanyAccounts.taxFreeProfit, Money(10_000_000))
+        XCTAssertEqual(CompanyAccounts.taxFreeProfit, Money(30_000_000))
         XCTAssertEqual(GameWorld.dailyTax(on: Money(-50_000_000)), .zero)
         XCTAssertEqual(GameWorld.dailyTax(on: .zero), .zero)
         XCTAssertEqual(GameWorld.dailyTax(on: Money(10_000_000)), .zero)

@@ -353,7 +353,7 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertEqual(requests.results.map(\.succeeded), [true])
         XCTAssertEqual(requests.active.map(\.kind), [.newStation])
         XCTAssertFalse(requests.active[0].callsToday.isEmpty)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 50,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 50,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

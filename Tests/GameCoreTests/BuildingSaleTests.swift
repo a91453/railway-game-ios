@@ -19,7 +19,7 @@ final class BuildingSaleTests: XCTestCase {
     private static let housePoint = PlanPoint(x: 24_000, y: 30_000)
 
     private func world(cityBuildings: Bool = false) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
         world.setCityBuildings(cityBuildings)
         world.setEconomyMode(.management)
@@ -46,17 +46,17 @@ final class BuildingSaleTests: XCTestCase {
     func testAnEmptyBuildingSellsForItsLandAlone() throws {
         var world = try world()
         let id = try world.placeBuilding(.house, at: Self.housePoint).id
-        XCTAssertEqual(world.landValue(row: 7, column: 5)?.value, 14_700)
+        XCTAssertEqual(world.landValue(row: 7, column: 5)?.value, 44_100)
         let quote = try XCTUnwrap(world.saleQuote(of: id))
-        XCTAssertEqual(quote.landRight, 3_763_200)
-        XCTAssertEqual(quote.land, 3_575_040, "3,763,200 × 95 / 100")
-        XCTAssertEqual(quote.buildingBookValue, 2_048_000, "not written down yet")
+        XCTAssertEqual(quote.landRight, 11_289_600)
+        XCTAssertEqual(quote.land, 10_725_120, "3,763,200 × 95 / 100")
+        XCTAssertEqual(quote.buildingBookValue, 6_144_000, "not written down yet")
         XCTAssertEqual([quote.occupants, quote.capacity], [0, 11])
         XCTAssertEqual(quote.occupancyFactor, 0)
         XCTAssertEqual(quote.building, .zero, "no one in it: the building brings nothing")
-        XCTAssertEqual(quote.price, 3_575_040)
-        XCTAssertEqual(quote.bookValue, 5_811_200)
-        XCTAssertEqual(quote.gain, -2_236_160, "a loss of the land's twentieth and the whole building")
+        XCTAssertEqual(quote.price, 10_725_120)
+        XCTAssertEqual(quote.bookValue, 17_433_600)
+        XCTAssertEqual(quote.gain, -6_708_480, "a loss of the land's twentieth and the whole building")
         XCTAssertNil(world.saleQuote(of: PlacedBuildingID(rawValue: 9)))
     }
 
@@ -70,10 +70,10 @@ final class BuildingSaleTests: XCTestCase {
         XCTAssertEqual(world.saleQuote(of: id)?.occupancyFactor, 727, "8,000 / 11")
         // 5 people: 10 / 11, 1,861,818.1….
         occupy(&world, id, residents: 3, jobs: 2)
-        XCTAssertEqual(world.saleQuote(of: id)?.building, 1_861_818)
+        XCTAssertEqual(world.saleQuote(of: id)?.building, 5_585_454)
         // 6 people is more than half of 11: in full.
         occupy(&world, id, residents: 4, jobs: 2)
-        XCTAssertEqual(world.saleQuote(of: id)?.building, 2_048_000)
+        XCTAssertEqual(world.saleQuote(of: id)?.building, 6_144_000)
         XCTAssertEqual(world.saleQuote(of: id)?.occupancyFactor, 1_000)
         occupy(&world, id, residents: 9, jobs: 2)
         XCTAssertEqual(world.saleQuote(of: id)?.price, 3_575_040 + 2_048_000, "full is no more than half full")
@@ -87,7 +87,7 @@ final class BuildingSaleTests: XCTestCase {
         // 10,800⌋ = 189.
         try world.advance(ticks: 1_441)
         let record = try XCTUnwrap(world.accounts.assets.first { $0.kind == .building })
-        XCTAssertEqual([record.days, record.depreciation.amount], [1, 538])
+        XCTAssertEqual([record.days, record.depreciation.amount], [1, 1_614])
         occupy(&world, id, residents: 4, jobs: 2)
         let quote = try XCTUnwrap(world.saleQuote(of: id))
         XCTAssertEqual(quote.buildingBookValue, 2_048_000 - 189)
@@ -118,13 +118,13 @@ final class BuildingSaleTests: XCTestCase {
         XCTAssertEqual(world.balanceSheet().buildings, .zero)
         XCTAssertEqual(world.balanceSheet().equity, equity + quote.gain, "the gain realized is all that equity moves by")
         let capital = try XCTUnwrap(world.accounts.capitalDays.last)
-        XCTAssertEqual([capital.day, capital.saleProceeds.amount, capital.saleBookValue.amount], [1, quote.price.amount, 5_810_662])
+        XCTAssertEqual([capital.day, capital.saleProceeds.amount, capital.saleBookValue.amount], [1, quote.price.amount, 17_431_986])
         XCTAssertEqual(capital.writeOff, .zero, "a sale writes nothing off")
         // The day's statements: the gain in the net profit, the cash in the
         // investing activities; no ledger row, as buying wrote none.
         let day = world.financeReport(.day).current
         XCTAssertEqual(day.saleProceeds, quote.price)
-        XCTAssertEqual(day.saleBookValue, 5_810_662)
+        XCTAssertEqual(day.saleBookValue, 17_431_986)
         XCTAssertEqual(day.realizedGain, quote.gain)
         XCTAssertEqual(day.investingCashFlow, quote.price)
         XCTAssertEqual(day.netProfit, day.operatingProfit - day.interestCost - day.depreciationCost - day.writeOffCost + quote.gain)
@@ -143,7 +143,7 @@ final class BuildingSaleTests: XCTestCase {
     }
 
     func testFreePlaySellsForNothingAndTheCityStillTakesItOver() throws {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 100, costs: testCosts))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 100, costs: testCosts))
         let id = try world.placeBuilding(.office, at: Self.housePoint).id
         occupy(&world, id, residents: 3, jobs: 40)
         XCTAssertEqual(world.saleQuote(of: id)?.price, .zero)
@@ -258,7 +258,7 @@ final class BuildingSaleTests: XCTestCase {
     }
 
     func testAMarinaOverTheWaterHandsItsPeopleToTheBankUnderIt() throws {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts))
         world.setCityBuildings(true)
         // A river down column 10.
         try world.setWater((0..<24).map { CellPosition(row: $0, column: 10) })
@@ -311,7 +311,7 @@ final class BuildingSaleTests: XCTestCase {
     /// minutes more.
     static func saleWorld() throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
@@ -349,7 +349,7 @@ final class BuildingSaleTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 29)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.saleWorld())
+        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.saleWorld() })
         XCTAssertTrue(world.placedBuildings.isEmpty)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .building })
         let sold = try XCTUnwrap(world.accounts.capitalDays.first { $0.saleProceeds > .zero })
@@ -357,7 +357,7 @@ final class BuildingSaleTests: XCTestCase {
         XCTAssertGreaterThan(sold.saleBookValue, sold.saleProceeds, "sold at a loss")
         XCTAssertEqual(world.land.cell(row: 7, column: 5)?.residents, 4)
         XCTAssertEqual(world.land.cell(row: 7, column: 7)?.jobs, 20)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 29,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 29,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

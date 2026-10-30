@@ -66,17 +66,17 @@ final class CompanyBuildingsClearingTests: XCTestCase {
         XCTAssertEqual(world.buildings.building(row: 5, column: 5)?.density, .d4)
         let value = try XCTUnwrap(world.landValue(row: 5, column: 5)?.value)
         // No station: the land is worth its D4 home's base, 4,000 a m².
-        XCTAssertEqual(value, 4_000)
+        XCTAssertEqual(value, 12_000)
         // (245,760,000 + 6,400,000) × 120 / 100.
         XCTAssertEqual(world.buyOutPrice(of: home).amount, (61_440 * 4_000 + 1_600 * value) * 120 / 100)
-        XCTAssertEqual(world.buyOutPrice(of: home), 302_592_000)
+        XCTAssertEqual(world.buyOutPrice(of: home), 907_776_000)
         let quote = try XCTUnwrap(world.placedBuildingQuote(.office, at: Self.middle))
         XCTAssertEqual(quote.cleared, [CellPosition(row: 5, column: 5)])
         XCTAssertEqual(quote.buyOut, world.buyOutPrice(of: home))
         // The office: 6,144 m² of floor, 24,576,000; 1,024 m² of land at
         // 4,000, 4,096,000.
-        XCTAssertEqual([quote.building, quote.land], [24_576_000, 4_096_000])
-        XCTAssertEqual(quote.total, 331_264_000)
+        XCTAssertEqual([quote.building, quote.land], [73_728_000, 12_288_000])
+        XCTAssertEqual(quote.total, 993_792_000)
 
         let balance = world.economy.balance
         let office = try world.placeBuilding(.office, at: Self.middle)
@@ -166,14 +166,14 @@ final class CompanyBuildingsClearingTests: XCTestCase {
         // The house cost 2,048,000 + 256,000 (no land: the empty base, 1,000
         // a m²); demolishing it ⌈2,304,000 / 10⌉ = 230,400. The track is
         // 12,000 units, 12 lengths of 1,024 at 100.
-        XCTAssertEqual(house.cost, 2_304_000)
+        XCTAssertEqual(house.cost, 6_912_000)
         XCTAssertEqual(world.placedBuildings(inTheWayOf: [PlanPoint(x: 4_000, y: 10_000), PlanPoint(x: 16_000, y: 10_000)]), [house])
         let balance = world.economy.balance
         try world.buildTrackEdge(from: west, to: east)
         XCTAssertEqual(world.economy.balance, balance - 1_200 - 230_400)
         XCTAssertTrue(world.placedBuildings.isEmpty)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .building })
-        XCTAssertEqual(world.accounts.entries.last?.breakdown, [LedgerLine(item: .propertyDemolition, amount: -230_400)])
+        XCTAssertEqual(world.accounts.entries.last?.breakdown, [LedgerLine(item: .propertyDemolition, amount: -691_200)])
         XCTAssertEqual(world.financeReport(.day).current.netCashFlow, world.economy.balance - 1_000_000_000)
         try assertSavesAndReads(world)
     }

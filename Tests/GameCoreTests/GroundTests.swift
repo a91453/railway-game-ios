@@ -12,7 +12,7 @@ final class GroundTests: XCTestCase {
     private static let side = GroundBlock.side
 
     private func world() -> GameWorld {
-        GameWorld(bounds: Self.bounds, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        GameWorld(bounds: Self.bounds, economy: fixtureEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
     }
 
     /// A block whose corner `row`, `column` stands `height(row, column)`
@@ -193,13 +193,13 @@ final class GroundTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 27)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.groundWorld())
+        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.groundWorld() })
         XCTAssertEqual(world.ground.blocks.count, 3)
         // Block (1, 0)'s corner (2, 3) stands 105 m high: 6,720 units.
         XCTAssertEqual(world.groundHeight(at: PlanPoint(x: 3 * 4_096, y: 65_536 + 2 * 4_096)), 6_720)
         XCTAssertNil(world.groundHeight(at: PlanPoint(x: 70_000, y: 70_000)), "block (1, 1) is not read")
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 27,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 27,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v26-steep-slopes.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.ground.isEmpty)

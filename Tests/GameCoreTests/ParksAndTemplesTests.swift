@@ -12,7 +12,7 @@ final class ParksAndTemplesTests: XCTestCase {
     /// `TourismHotelTests`' world: Home and Foot with a train, a 3-star town
     /// far from both (so tourism is on), in a managed company with cash.
     private func world() throws -> GameWorld {
-        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: GameEconomy(balance: 1_000_000_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: fixtureEconomy(balance: 1_000_000_000_000, costs: testCosts))
         world.setEconomyMode(.management)
         try world.buildStation(named: "Home", at: PlanPoint(x: 10_000, y: 32_768))
         try world.buildStation(named: "Foot", at: PlanPoint(x: 30_000, y: 32_768))
@@ -52,10 +52,10 @@ final class ParksAndTemplesTests: XCTestCase {
         XCTAssertEqual(world.landValue(row: 2, column: 5)?.parkPremium, 0)
         let park = try world.placeBuilding(.park, at: PlanPoint(x: 20_000, y: 10_000))
         XCTAssertEqual(world.dailyRent(of: park), .zero)
-        XCTAssertEqual(world.landValue(row: 2, column: 5)?.parkPremium, 600)
+        XCTAssertEqual(world.landValue(row: 2, column: 5)?.parkPremium, 1_800)
         // 400 m is 25,600 units: six cells east of the park's (20,000 →
         // 45,056, 25,056 off) is within, seven (49,152, 29,152) is not.
-        XCTAssertEqual(world.landValue(row: 2, column: 10)?.parkPremium, 600)
+        XCTAssertEqual(world.landValue(row: 2, column: 10)?.parkPremium, 1_800)
         XCTAssertEqual(world.landValue(row: 2, column: 11)?.parkPremium, 0)
     }
 
@@ -65,9 +65,9 @@ final class ParksAndTemplesTests: XCTestCase {
         // Rent is by the land value under the house's centre (V in
         // ``GameWorld/dailyRent(of:)``): 1,000 bare, 1,600 near a park.
         let under = { (world: GameWorld) in world.landValue(row: Land.cellIndex(house.centre.y), column: Land.cellIndex(house.centre.x))?.value }
-        XCTAssertEqual(under(world), 1_000)
+        XCTAssertEqual(under(world), 3_000)
         try world.placeBuilding(.park, at: PlanPoint(x: 20_000, y: 10_000))
-        XCTAssertEqual(under(world), 1_600)
+        XCTAssertEqual(under(world), 4_800)
     }
 
     // MARK: - Temples
@@ -174,7 +174,7 @@ final class ParksAndTemplesTests: XCTestCase {
     /// temples, their looks and a temple's counted visitors. Written with
     /// `PARK_TEMPLE_SAVE_NEW=1`, as the save was first made.
     func testVersionSeventyOneKeepsParksAndTemples() throws {
-        var world = try world()
+        var world = try NTScale.$factor.withValue(3) { try world() }
         try world.placeBuilding(.park, at: PlanPoint(x: 20_000, y: 10_000), look: 2)
         try world.placeBuilding(.temple, at: PlanPoint(x: 31_000, y: 26_768), look: 1)
         world.setSpeed(.normal)
@@ -194,7 +194,7 @@ final class ParksAndTemplesTests: XCTestCase {
         XCTAssertEqual(loaded.placedBuildings.map(\.kind), [.park, .temple])
         XCTAssertEqual(loaded.placedBuildings.map(\.look), [2, 1])
         XCTAssertGreaterThan(loaded.placedBuildings[1].visitors, 0)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 71,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 71,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

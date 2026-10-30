@@ -285,7 +285,7 @@ final class TrainTripLogTests: XCTestCase {
         // The accounts (and so the log) on from 23:40, so the fixture holds
         // an hour of trips across midnight rather than a day and a half of
         // them.
-        var made = try build(accounts: false)
+        var made = try NTScale.$factor.withValue(3) { try build(accounts: false) }
         try made.advance(ticks: 1_420)
         made.setLineAccounts(true)
         try made.advance(ticks: 50)
@@ -309,8 +309,8 @@ final class TrainTripLogTests: XCTestCase {
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
         XCTAssertEqual(carried, straight)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 60,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 60,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     /// A save from before the log has none, and logs from the next trip

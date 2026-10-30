@@ -63,11 +63,11 @@ final class BusRouteEditorTests: XCTestCase {
         // 21 cells along row 8, 64 m each; a stop $10,000, two buses
         // $50,000 each.
         XCTAssertEqual(preview.metres, 1_344)
-        XCTAssertEqual(preview.price, Money(11_000_000))
+        XCTAssertEqual(preview.price, Money(33_000_000))
         XCTAssertEqual(preview.headway, 10)
         // 144 departures, there and back 2.688 km each, $20 a kilometre.
         XCTAssertEqual(preview.departures, 144)
-        XCTAssertEqual(preview.dailyCost, Money(774_144))
+        XCTAssertEqual(preview.dailyCost, Money(2_322_432))
         XCTAssertGreaterThan(preview.riders, 0, "the 200s beyond A's 800 m")
         XCTAssertEqual(preview.lines(for: session.busDraft, in: .english).first, "1 stop · 1.3 km · about 4 min")
         XCTAssertEqual(preview.lines(for: session.busDraft, in: .traditionalChinese).first, "1 個站牌 · 1.3 公里 · 約 4 分")
@@ -178,7 +178,7 @@ final class BusRouteEditorTests: XCTestCase {
         session.tapBusTool(at: far.middle, reach: reach)
         session.setBusDraftBuses(3)
         let preview = try XCTUnwrap(session.busPreview)
-        XCTAssertEqual(preview.price, Money(6_000_000), "one stop and one bus more")
+        XCTAssertEqual(preview.price, Money(18_000_000), "one stop and one bus more")
         XCTAssertTrue(session.confirmBusRoute())
         let route = try XCTUnwrap(session.world.busRoute(id: id))
         XCTAssertEqual(route.stops, [far, stop])

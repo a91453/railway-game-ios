@@ -218,8 +218,8 @@ final class LineAccountsTests: XCTestCase {
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
         XCTAssertEqual(Self.withoutChanges(carried), Self.withoutChanges(straight))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 48,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 48,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     /// `world` with no changes counted at its stations (decision 222), and

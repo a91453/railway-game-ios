@@ -34,7 +34,7 @@ final class BuildingSaleSessionTests: XCTestCase {
         XCTAssertEqual(session.world, before, "a tap only chooses it")
         // Empty: 95% of the land, 243,200, and nothing for the building,
         // against the 2,304,000 it is on the books at.
-        XCTAssertEqual(session.salePreview?.quote.price, 243_200)
+        XCTAssertEqual(session.salePreview?.quote.price, 729_600)
         XCTAssertEqual(session.salePreviewLines, [
             "House #1 · 0 of 11 people (0%)",
             "Land: 95% of its right now \(Money(256_000).moneyText) = \(Money(243_200).moneyText)",

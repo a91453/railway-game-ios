@@ -171,8 +171,8 @@ final class BusRouteTests: XCTestCase {
         let day = try XCTUnwrap(world.busRoute(id: route.id)?.days.last)
         XCTAssertGreaterThan(day.riders, 0)
         XCTAssertEqual(day.fares, Money(day.riders * 500))
-        XCTAssertEqual(day.cost, Money(774_144))
-        XCTAssertEqual(entry.breakdown, [LedgerLine(item: .busFares, amount: day.fares), LedgerLine(item: .busRunning, amount: Money(-774_144))])
+        XCTAssertEqual(day.cost, Money(2_322_432))
+        XCTAssertEqual(entry.breakdown, [LedgerLine(item: .busFares, amount: day.fares), LedgerLine(item: .busRunning, amount: Money(-2_322_432))])
         XCTAssertTrue(world.accounts.entries.allSatisfy(GameWorld.isWellFormed))
     }
 
@@ -199,10 +199,10 @@ final class BusRouteTests: XCTestCase {
         let route = try world.createBusRoute(to: a, stops: [stop], service: .runs([360, 420, 480]), buses: 1)
         // Three runs of 2.688 km there and back at $20: $161.28.
         XCTAssertEqual(world.busRoute(id: route.id)?.dailyDepartures, 3)
-        XCTAssertEqual(world.busRoute(id: route.id)?.dailyCost, Money(16_128))
+        XCTAssertEqual(world.busRoute(id: route.id)?.dailyCost, Money(48_384))
         // Every 60 minutes: 24 departures, $1,290.24.
         try world.setBusRuns(route.id, to: .every(minutes: 60))
-        XCTAssertEqual(world.busRoute(id: route.id)?.dailyCost, Money(129_024))
+        XCTAssertEqual(world.busRoute(id: route.id)?.dailyCost, Money(387_072))
         // Every minute, but one bus keeps a bus every 19 minutes: 75.
         try world.setBusRuns(route.id, to: .every(minutes: 1))
         XCTAssertEqual(world.busRoute(id: route.id)?.dailyDepartures, 75)
@@ -233,7 +233,7 @@ final class BusRouteTests: XCTestCase {
                                  .busStopsNotConnected(leg: 0))
         var poor = try self.world(balance: Money(500_000))
         XCTAssertThrowsGameError(try poor.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 1),
-                                 .insufficientFunds(required: Money(6_000_000), available: poor.economy.balance))
+                                 .insufficientFunds(required: Money(18_000_000), available: poor.economy.balance))
         XCTAssertTrue(poor.busRoutes.isEmpty)
         XCTAssertEqual(world, before)
         XCTAssertThrowsGameError(try world.setBusCount(BusRouteID(rawValue: 1), to: 1), .unknownBusRoute(BusRouteID(rawValue: 1)))
@@ -313,8 +313,8 @@ final class BusRouteTests: XCTestCase {
         XCTAssertEqual(loaded.busRoutes.map(\.feederTrips), [320, 80])
         XCTAssertEqual(world.busRoutes.map(\.feederTrips), [160, 40])
         XCTAssertEqual(loaded.acquisition(of: "bus:Taipei:307")?.kind, .bus)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 73,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 73,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
 
         // Without the keys there are no buses.
         var plain = object

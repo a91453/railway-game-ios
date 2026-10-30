@@ -66,7 +66,7 @@ final class CityBusToolTests: XCTestCase {
         XCTAssertEqual(preview.metres, 256, "four cells along row 8")
         XCTAssertNil(preview.transfer, "no stop near a station")
         // Two stops $10,000 each, two buses $50,000 each.
-        XCTAssertEqual(preview.price, Money(12_000_000))
+        XCTAssertEqual(preview.price, Money(36_000_000))
         XCTAssertTrue(session.confirmBusRoute())
         let route = try XCTUnwrap(session.world.busRoutes.last)
         XCTAssertNil(route.station)
@@ -182,7 +182,7 @@ final class CityBusToolTests: XCTestCase {
         XCTAssertTrue(preview.canBuild)
         // Five cells, 64 m each, $50 a metre.
         XCTAssertEqual(preview.metres, 320)
-        XCTAssertEqual(preview.price, Money(1_600_000))
+        XCTAssertEqual(preview.price, Money(4_800_000))
         XCTAssertEqual(preview.line(in: .english), "320 m of new road")
         XCTAssertEqual(preview.line(in: .traditionalChinese), "新鋪 320 公尺")
         let overlay = try XCTUnwrap(session.roadMapOverlay)
@@ -209,7 +209,7 @@ final class CityBusToolTests: XCTestCase {
         let session = try session(unlimitedFunds: true)
         session.setBusMode(.roads)
         session.endRoadDrag(from: at(12, 10), to: at(12, 14))
-        XCTAssertEqual(session.roadPreview?.price, Money(1_600_000))
+        XCTAssertEqual(session.roadPreview?.price, Money(4_800_000))
         XCTAssertTrue(session.confirmRoad())
         XCTAssertEqual(
             session.message?.text,
@@ -227,9 +227,9 @@ final class CityBusToolTests: XCTestCase {
         session.endRoadDrag(from: at(12, 10), to: at(12, 14))
         XCTAssertTrue(session.confirmRoad())
         session.endRoadDrag(from: at(12, 12), to: at(12, 18))
-        XCTAssertEqual(session.roadPreview?.price, Money(1_280_000), "four new cells; three joined")
+        XCTAssertEqual(session.roadPreview?.price, Money(3_840_000), "four new cells; three joined")
         session.undo()
-        XCTAssertEqual(session.roadPreview?.price, Money(2_240_000), "seven new cells once the first road is gone")
+        XCTAssertEqual(session.roadPreview?.price, Money(6_720_000), "seven new cells once the first road is gone")
         let before = session.world.economy.balance
         XCTAssertTrue(session.confirmRoad())
         XCTAssertEqual(session.world.economy.balance, before - Money(2_240_000))
@@ -243,14 +243,14 @@ final class CityBusToolTests: XCTestCase {
         let session = try session()
         session.setBusMode(.roads)
         session.endRoadDrag(from: at(12, 12), to: at(12, 18))
-        XCTAssertEqual(session.roadPreview?.price, Money(2_240_000))
+        XCTAssertEqual(session.roadPreview?.price, Money(6_720_000))
         try session.performEdit { (world: inout GameWorld) throws(GameError) in
             try world.buildRoad(along: (10...14).map { CellPosition(row: 12, column: $0) })
         }
         let before = session.world
         XCTAssertFalse(session.confirmRoad())
         XCTAssertEqual(session.world, before, "nothing paid at a price not shown")
-        XCTAssertEqual(session.roadPreview?.price, Money(1_280_000))
+        XCTAssertEqual(session.roadPreview?.price, Money(3_840_000))
         XCTAssertEqual(session.message?.text, "The road now costs \(Money(1_280_000).moneyText). Tap again to lay it.")
         XCTAssertTrue(session.confirmRoad())
         XCTAssertEqual(session.world.economy.balance, before.economy.balance - Money(1_280_000))

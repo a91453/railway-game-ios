@@ -24,7 +24,7 @@ final class DepotTests: XCTestCase {
     /// `withDepot` is false, when the trains stand at Alpha instead.
     private func makeWorld(trains count: Int = 1, inService: Int = 1, minutes: Int64 = 300, withDepot: Bool = true) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 10_240, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 10_240, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minutes), speed: .normal)
         )
         try track.build(in: &world)
@@ -141,7 +141,7 @@ final class DepotTests: XCTestCase {
         for (top, column) in [(Int64(3), 4), (3, 7)] {
             let track = TestLine(tiles: 14)
             var world = try GameWorld(
-                bounds: WorldBounds(width: 16_384, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+                bounds: WorldBounds(width: 16_384, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
                 clock: GameClock(now: GameTime(minutes: 330), speed: .normal)
             )
             try track.build(in: &world)
@@ -257,11 +257,11 @@ final class DepotTests: XCTestCase {
         }
         let plain = try day(withDepot: false)
         let resting = try day(withDepot: true)
-        XCTAssertEqual(row(.dailyEnergy, .trainEnergy, in: plain), Money(-36_000))
-        XCTAssertEqual(row(.dailyStaff, .trainStaff, in: plain), Money(-48_000))
+        XCTAssertEqual(row(.dailyEnergy, .trainEnergy, in: plain), Money(-108_000))
+        XCTAssertEqual(row(.dailyStaff, .trainStaff, in: plain), Money(-144_000))
         XCTAssertEqual(row(.dailyEnergy, .trainEnergy, in: resting), .zero)
         XCTAssertEqual(row(.dailyStaff, .trainStaff, in: resting), .zero)
-        XCTAssertEqual(row(.dailyDepot, .depotUpkeep, in: resting), Money(-80_000))
+        XCTAssertEqual(row(.dailyDepot, .depotUpkeep, in: resting), Money(-240_000))
         XCTAssertNil(row(.dailyDepot, .depotUpkeep, in: plain))
         XCTAssertEqual(
             plain.accounts.entries.filter { $0.kind == .hourlyNet }.map(\.amount),
@@ -295,7 +295,7 @@ final class DepotTests: XCTestCase {
     func testVersionFiftyFourKeepsTheDepot() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v54-depot.json")
-        var made = try makeWorld(minutes: 0)
+        var made = try NTScale.$factor.withValue(3) { try makeWorld(minutes: 0) }
         made.setEconomyMode(.management)
         try made.advance(ticks: 358)
         XCTAssertTrue(made.train(id: id(1))?.isDeadheading ?? false, "on its way out")
@@ -312,8 +312,8 @@ final class DepotTests: XCTestCase {
         XCTAssertEqual(loaded.line(id: main)?.depot, depot)
         XCTAssertTrue(loaded.station(id: depot)?.isDepot ?? false)
         XCTAssertFalse(loaded.accounts.depotHours.isEmpty)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 54,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 54,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     /// A day's depot hours beyond what a day can count are refused: the

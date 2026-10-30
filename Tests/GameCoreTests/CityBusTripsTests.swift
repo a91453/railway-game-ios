@@ -23,7 +23,7 @@ final class CityBusTripsTests: XCTestCase {
     /// with 1,000 office jobs, 3,520 m apart on a line with a train; a road
     /// all along row 8; and `land` beside. A minute a tick.
     private func world(_ land: [LandCell], balance: Money = 1_000_000_000) throws -> GameWorld {
-        var world = GameWorld(bounds: try WorldBounds(width: 128 * cell, height: 16 * cell), economy: GameEconomy(balance: balance, costs: testCosts))
+        var world = GameWorld(bounds: try WorldBounds(width: 128 * cell, height: 16 * cell), economy: fixtureEconomy(balance: balance, costs: testCosts))
         try Self.track.build(in: &world)
         try Self.track.buildStation(named: "A", beside: 21, at: 33, in: &world)
         try Self.track.buildStation(named: "B", beside: 241, at: 33, in: &world)
@@ -85,7 +85,7 @@ final class CityBusTripsTests: XCTestCase {
         let day = try XCTUnwrap(world.busRoute(id: route.id)?.days.last)
         XCTAssertEqual(day.riders, 80)
         XCTAssertEqual(day.fares, Money(80 * 500))
-        XCTAssertEqual(day.cost, Money(2_580_480))
+        XCTAssertEqual(day.cost, Money(7_741_440))
         XCTAssertTrue(world.accounts.entries.allSatisfy(GameWorld.isWellFormed))
 
         // With no bus the route carries no one.
@@ -191,7 +191,7 @@ final class CityBusTripsTests: XCTestCase {
     /// a city route through B, a feeder to A and the player's roads, run a
     /// day.
     func testVersionSeventyFiveKeepsCityRoutesAndThePlayersRoads() throws {
-        var world = try world([homes(30, 400), offices(100, 400), homes(20, 200)])
+        var world = try NTScale.$factor.withValue(3) { try world([homes(30, 400), offices(100, 400), homes(20, 200)]) }
         try world.createBusRoute(to: nil, stops: [at(30), at(100)], service: .every(minutes: 10), buses: 4)
         try world.createBusRoute(to: nil, stops: [at(30), at(64)], service: .every(minutes: 15), buses: 2)
         try world.createBusRoute(to: a, stops: [at(20)], service: .every(minutes: 20), buses: 1)

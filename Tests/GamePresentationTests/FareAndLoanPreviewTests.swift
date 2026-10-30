@@ -70,7 +70,7 @@ final class FareAndLoanPreviewTests: XCTestCase {
         let preview = try XCTUnwrap(session.world.loanPreview())
         XCTAssertEqual(preview.amount, CompanyAccounts.loanStep)
         XCTAssertEqual(preview.dailyInterest, GameWorld.dailyLoanInterest(on: CompanyAccounts.loanStep))
-        XCTAssertEqual(preview.dailyInterest, Money(1_400))
+        XCTAssertEqual(preview.dailyInterest, Money(4_200))
         XCTAssertEqual(preview.monthInterest, Money(1_400 * 30))
         XCTAssertEqual(preview.yearInterest, Money(1_400 * 360))
         XCTAssertNil(preview.recentDailyResult, "no full day yet")

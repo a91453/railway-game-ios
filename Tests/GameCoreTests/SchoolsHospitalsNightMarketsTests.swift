@@ -13,7 +13,7 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
     /// `ParksAndTemplesTests`' world: Home and Foot with a train, a 3-star
     /// town far from both (so tourism is on), in a managed company with cash.
     private func world() throws -> GameWorld {
-        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: GameEconomy(balance: 1_000_000_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: fixtureEconomy(balance: 1_000_000_000_000, costs: testCosts))
         world.setEconomyMode(.management)
         try world.buildStation(named: "Home", at: PlanPoint(x: 10_000, y: 32_768))
         try world.buildStation(named: "Foot", at: PlanPoint(x: 30_000, y: 32_768))
@@ -56,18 +56,18 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 0)
         let before = try XCTUnwrap(world.landValue(row: 2, column: 5)?.value)
         try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 10_000))
-        XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 900)
+        XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 2_700)
         XCTAssertEqual(world.landValue(row: 2, column: 5)?.value, before + 900)
         // 400 m is 25,600 units: the middle of column 10 (43,008, 23,008
         // east of the school) is within, that of column 11 (47,104, 27,104)
         // is not.
-        XCTAssertEqual(world.landValue(row: 2, column: 10)?.civicPremium, 900)
+        XCTAssertEqual(world.landValue(row: 2, column: 10)?.civicPremium, 2_700)
         XCTAssertEqual(world.landValue(row: 2, column: 11)?.civicPremium, 0)
         try world.placeBuilding(.hospital, at: PlanPoint(x: 26_000, y: 10_000))
-        XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 1_400, "a school's and a hospital's add")
+        XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 4_200, "a school's and a hospital's add")
         // A second school counts once.
         try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 16_000))
-        XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 1_400)
+        XCTAssertEqual(world.landValue(row: 2, column: 5)?.civicPremium, 4_200)
     }
 
     /// Exactly 400 m off is outside: the reach is less than 25,600 units.
@@ -77,22 +77,22 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual(edge.landValue(row: 2, column: 10)?.civicPremium, 0)
         var inside = try world()
         try inside.placeBuilding(.school, at: PlanPoint(x: 43_008 - 25_599, y: 10_240))
-        XCTAssertEqual(inside.landValue(row: 2, column: 10)?.civicPremium, 900)
+        XCTAssertEqual(inside.landValue(row: 2, column: 10)?.civicPremium, 2_700)
     }
 
     func testAHouseBesideASchoolLetsForMore() throws {
         var world = try world()
         let house = try world.placeBuilding(.house, at: PlanPoint(x: 20_000, y: 16_000))
         let under = { (world: GameWorld) in world.landValue(row: Land.cellIndex(house.centre.y), column: Land.cellIndex(house.centre.x))?.value }
-        XCTAssertEqual(under(world), 1_000)
+        XCTAssertEqual(under(world), 3_000)
         try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 10_000))
-        XCTAssertEqual(under(world), 1_900)
+        XCTAssertEqual(under(world), 5_700)
     }
 
     /// Two homes of 100 residents the same way from a station, 320 m off
     /// (outside its front); a school within 400 m of the west one only.
     private func growingWorld(with kind: PlacedBuildingKind?, west: Int64 = 100) throws -> (world: GameWorld, station: Station) {
-        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: GameEconomy(balance: 1_000_000_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 131_072, height: 65_536), economy: fixtureEconomy(balance: 1_000_000_000_000, costs: testCosts))
         world.setEconomyMode(.management)
         // Cells (10, 10) and (10, 20): middles (43,008, 43,008) and
         // (83,968, 43,008), 640 m apart.
@@ -311,7 +311,7 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
     /// market's counted visitors. Written with
     /// `SCHOOL_HOSPITAL_MARKET_SAVE_NEW=1`, as the save was first made.
     func testVersionSeventyFourKeepsSchoolsHospitalsAndNightMarkets() throws {
-        var world = try world()
+        var world = try NTScale.$factor.withValue(3) { try world() }
         try world.placeBuilding(.school, at: PlanPoint(x: 20_000, y: 10_000), look: 1)
         try world.placeBuilding(.hospital, at: PlanPoint(x: 26_000, y: 10_000), look: 1)
         try world.placeBuilding(.nightMarket, at: PlanPoint(x: 31_000, y: 26_768), look: 1)
@@ -332,7 +332,7 @@ final class SchoolsHospitalsNightMarketsTests: XCTestCase {
         XCTAssertEqual(loaded.placedBuildings.map(\.kind), [.school, .hospital, .nightMarket])
         XCTAssertEqual(loaded.placedBuildings.map(\.look), [1, 1, 1])
         XCTAssertEqual(loaded.placedBuildings[2].visitors, 168)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 74,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 74,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

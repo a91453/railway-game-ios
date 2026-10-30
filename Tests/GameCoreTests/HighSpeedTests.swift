@@ -181,7 +181,7 @@ final class HighSpeedTests: XCTestCase {
     func testVersionFortyThreeKeepsAHighSpeedLine() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v43-high-speed.json")
-        var made = try corridor()
+        var made = try NTScale.$factor.withValue(3) { try corridor() }
         made.setEconomyMode(.management)
         made.setSpeed(.normal)
         try made.advance(ticks: 5)
@@ -201,8 +201,8 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world.trains.first?.capacity, 640, "eight cars of 80, not overloaded")
         XCTAssertEqual([a, n, b].map { world.stationDemand(of: $0)?.hinterland }, [2_000_000, 500_000, 1_000_000])
         XCTAssertTrue(world.passengers.contains { !$0.waiting.isEmpty }, "passengers wait for it")
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 43,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 43,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     // MARK: - The hinterland
@@ -223,7 +223,7 @@ final class HighSpeedTests: XCTestCase {
     /// - T (80, 50): 200 residents and 300 jobs, 30 cells south of S1.
     /// - V (180, 120): 700 residents, too far from both.
     private func landWorld() throws -> GameWorld {
-        var world = GameWorld(bounds: .standard, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: .standard, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         world.setEconomyMode(.management)
         try world.setLand([
             LandCell(row: 50, column: 50, use: .residential, residents: 1_000, jobs: 0),
@@ -320,7 +320,7 @@ final class HighSpeedTests: XCTestCase {
     /// 1,000,000 people, none with trips of its own.
     private func corridor(hinterlands: [Int64] = [2_000_000, 500_000, 1_000_000], placesTrain: Bool = false) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 5_000_000, height: 200_000), economy: GameEconomy(balance: 1_000_000_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 5_000_000, height: 200_000), economy: fixtureEconomy(balance: 1_000_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         // Along the track: A, N, B. Numbered A, B, N.
@@ -469,7 +469,7 @@ final class HighSpeedTests: XCTestCase {
         var ordinary = try boardingWorld(highSpeed: false)
         try ordinary.advance(ticks: 5)
         XCTAssertEqual(ordinary.accounts.pending.fareTrips, 3)
-        XCTAssertEqual(ordinary.accounts.pending.fareRevenue, 1_500, "three trips at the metro's $5")
+        XCTAssertEqual(ordinary.accounts.pending.fareRevenue, 4_500, "three trips at the metro's $5")
 
         var fast = try boardingWorld(highSpeed: true)
         try fast.advance(ticks: 5)
@@ -481,9 +481,9 @@ final class HighSpeedTests: XCTestCase {
     func testAHighSpeedFareIsNeverLessThanTheNetworks() throws {
         var world = try corridor()
         // A and N are 5 km apart ($2.25 by the kilometres), A and B 61 km.
-        XCTAssertEqual(world.tripFare(from: a, to: n), 500)
+        XCTAssertEqual(world.tripFare(from: a, to: n), 1_500)
         XCTAssertEqual(world.tripFare(from: a, to: n, highSpeed: true), 500, "the network's $5 is more")
-        XCTAssertEqual(world.tripFare(from: a, to: b), 500)
+        XCTAssertEqual(world.tripFare(from: a, to: b), 1_500)
         XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 2_700)
         XCTAssertEqual(world.tripFare(from: n, to: b, highSpeed: true), 2_500, "56 km is $25.20")
         // A fare the company set above the kilometres' is the one asked.
@@ -506,7 +506,7 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world.tripFare(from: b, to: a, highSpeed: true), 4_900, "either way")
         XCTAssertEqual(world.tripFare(from: a, to: n, highSpeed: true), 400, "even below the network's $5, as the real line asks")
         XCTAssertEqual(world.tripFare(from: n, to: b, highSpeed: true), 2_500, "a pair not in the table pays by the kilometre")
-        XCTAssertEqual(world.tripFare(from: a, to: b), 500, "a trip that does not ride the high-speed line pays the network's")
+        XCTAssertEqual(world.tripFare(from: a, to: b), 1_500, "a trip that does not ride the high-speed line pays the network's")
         // The company's fare rules do not change the table's fares.
         try world.setFareRules(.flat(6_000))
         XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 4_900)
@@ -550,7 +550,7 @@ final class HighSpeedTests: XCTestCase {
     func testVersionSixtyNineKeepsTheFareTable() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v69-high-speed-fares.json")
-        var made = try corridor()
+        var made = try NTScale.$factor.withValue(3) { try corridor() }
         made.setEconomyMode(.management)
         made.setSpeed(.normal)
         try made.setHighSpeedFares([HighSpeedFare(between: a, and: b, fare: 4_900), HighSpeedFare(between: a, and: n, fare: 400)])
