@@ -2302,15 +2302,16 @@
   - golden（項 3）：`--rewrite-inputs`、`--apply-log` 一輪就綠；`--verify` 通過：1,138 個剛好 ×3、449 個在各 fixture 寫明的湊整內（腳本的 `ROUNDED`）、高鐵 3 個票價（`EXCEPTIONS`），非金額 0 改。`ReferenceWorldGoldenTests` 綠。`GoldenScenarios/README.md` 加 schema 75 一節。
   - ReplayFixtures（項 4）：照 recipe 重錄會挑到別的 campaign case（產生器變了），所以六個 campaign 檔只重算 checksum，起始世界與指令不動；`long-leg-traffic`、`line-route-preferences` 用自己的測試重錄（起始與指令相同）；問題回報重新轉換。逐檔說明在 `ReplayFixtures/README.md` 最後與決策 499。
   - 合 main（衝突：WhatsNew 改 id `2026-10-31-100`、這一節從 §4.31 改成 §4.32）。
+- **第六棒**（session_01YGNNuoGaZmXME6KLT2Sy6T）：full-ci 第一輪（176f40d）7 個 shard 紅（5、6、8、10、11、14、18），都是測試字面值還沒 ×3／×10，或舊存檔對照沒包 `NTScale`；153c018 修好（`XCTAssertSameButRounding` 容許湊整），CI run 41083210792 全綠。參考庫對照表與 golden／Replay 逐項說明寫進 PR；平衡量測寫進決策 499「量到的」：換算本身 HEALTHY，現金滾雪球 CONCERNS 照舊（換算前就是）。刪了 `nt_fix_test_literals.py`，PR 轉 ready；合併由遊戲規劃審查後決定。
 - **還沒做的**（下一棒照順序；打勾＝做完）：
-  - [ ] 1. （第五棒：單元測試做完；campaign shard 交 CI 跑，紅了再修）單元測試 ×3：上面 373 個與 campaign shard（`.github/scripts/swift-shards.sh run <shard>`）。不是 ×3 的逐個查是湊整造成的才改；非金額的值動了就停下來查、告訴遊戲規劃。
+  - [x] 1. （第五棒：單元測試做完；campaign shard 交 CI 跑，紅了再修）單元測試 ×3：上面 373 個與 campaign shard（`.github/scripts/swift-shards.sh run <shard>`）。不是 ×3 的逐個查是湊整造成的才改；非金額的值動了就停下來查、告訴遊戲規劃。
   - [x] 2. `FareBandScale.swift` 整數新台幣（第三棒）。
   - [x] 3. golden（第五棒）：`python3 -I tools/golden-checks/nt_scale.py --rewrite-inputs`，`swift test --skip-build --filter GoldenScenarioTests > log`，`--apply-log log`，再跑到綠，`--verify` 列出的例外填進腳本的 `EXCEPTIONS` 與決策 499；`GoldenScenarios/README.md` 加 schema 75 一行。
   - [x] 4. （第五棒，做法見上）重錄 9 個 ReplayFixtures（`REPLAY_RECORD="$PWD/ReplayFixtures" swift test --skip-build --filter ReplayFixtureTests/testRecordingTheFixtures`；問題回報那個用 `ProblemReportFixtureTests/testConvertingAReport`），`ReplayFixtures/README.md` 與 PR 逐檔說明。
   - [x] 5. `HighSpeedTests` 的 v69 期望世界（第四棒）：票價 ×10、其他 ×3。
   - [x] 6. What's New 與決策 499（第五棒補完兩節）。
-  - [ ] 7. 參考庫對照表（`thsr_fare.json` 等）；PR-2 平衡量測照 `.claude/skills/economy-balance/SKILL.md`，「之前」用 `docs/research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md` §6。
-  - [ ] 8. 綠了刪 `nt_fix_test_literals.py`、轉 ready、#1041 留「可合併」、告訴遊戲規劃。NT$ 前綴（PR-3）不在這張。
+  - [x] 7. （第六棒）參考庫對照表（`thsr_fare.json` 等）；PR-2 平衡量測照 `.claude/skills/economy-balance/SKILL.md`，「之前」用 `docs/research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md` §6。
+  - [x] 8. （第六棒；合併等遊戲規劃審查）綠了刪 `nt_fix_test_literals.py`、轉 ready、#1041 留「可合併」、告訴遊戲規劃。NT$ 前綴（PR-3）不在這張。
 
 ## 5. 已知、還沒派的待辦
 
