@@ -41,6 +41,12 @@
 
 > 公測前抓蟲・營運（派工單 BH2，`claude/bughunt-operations`，2026-10-30）：[`research/BUGHUNT_OPERATIONS_2026-10-30.md`](research/BUGHUNT_OPERATIONS_2026-10-30.md)。沒找到 P1。P2-1（跳過夜晚途中存檔，讀回以 ×6000 跑）在同一個 PR 修了（`GameSession.worldToSave`，`NightSkipTests` 釘住），發版前在實機按「跳到早上」後切出 App、關掉再繼續，看速度是原本的；P2-2（分組清單的上一條／下一條順序不對）與 P3 三項留給公測後。
 
+> 公測前抓蟲「建設」（派工單 BH1，`claude/bughunt-build`，2026-10-30）：[`research/BUGHUNT_BUILD_2026-10-30.md`](research/BUGHUNT_BUILD_2026-10-30.md)。P1 一個已修（鋪路草稿在復原後還是舊價，扣的錢跟按鈕不同）；P2-1～P2-3、P3-1～P3-12（含高架、地下、平交道）公測後由規劃照順序派，最前面是 P2-1（實景地圖拆掉沿現有路鋪的路，公車路線斷掉）。P2-3 等 #1519。
+
+> 公測前抓蟲：經營與存檔（派工單 BH3，`claude/bughunt-economy-saves`，2026-10-30）：[`research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md`](research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md)。沒有找到 P1，也沒有 P2；P3-1～P3-4（月報標題不看現金、從資料開月報後回地圖、讀檔後上個月月報不見、回報問題在無限資金的局寫餘額）留到公測後。§6 是新台幣換算前的平衡基準，PR-2 用同樣的指令量「改之後」。實機 UNVERIFIED。
+
+> 公測前抓蟲：貨運、挑戰與劇本、分享與 Game Center（派工單 BH5，`claude/bughunt-freight-challenges`，2026-10-30）：[`research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md`](research/BUGHUNT_FREIGHT_CHALLENGES_2026-10-30.md)。沒找到 P1。P2-1（從朋友的路網開新局會帶過朋友未領的市府補助、星等與貨運未入帳收入）在同一個 PR 修好了；留下 P3-1～P3-9，公測後由規劃照該文件 §4 的順序派。
+
 > 公測前抓蟲「公車與車輛」（派工單 BH4，`claude/bughunt-vehicles`，2026-10-30）：[`research/BUGHUNT_VEHICLES_2026-10-30.md`](research/BUGHUNT_VEHICLES_2026-10-30.md)。修了 P1-1（3D 公車的回程鋪不上時當掉）；P3-1～P3-3（復原掉正在編輯的公車線、減少公車不退錢沒說、空白地圖鋪捷徑後 2D 公車線畫舊路）與 §5 還沒有的功能（跟公車的視角、2D 會動的公車、收購真實公車）公測後由規劃派。真實地圖上 3D 公車實機 UNVERIFIED。
 
 > 有功能沒按鈕、有按鈕沒功能（派工單 BH7，`claude/ui-gaps`，2026-10-30）：[`research/UI_GAPS_2026-10-30.md`](research/UI_GAPS_2026-10-30.md)。只讀程式；沒有改程式（沒找到沒接上的按鈕或漏翻）。玩家到不了的 GameCore 指令只有兩個：G1 收購真實公車路線（決策 400 的 10i-4，還沒派，公測後要新卡片）、G2 每條線停站秒數（決策 207 刻意不給）。B-1（設定裡「規則」一列點了沒反應）與 §4 的 D1–D15（補 UIA 沒列的入口步數）公測後由規劃照順序派，D6、D11、D12 跟 UIA 的 B7、B2、B6 一起做。
@@ -407,6 +413,25 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第三十三次換手（2026-10-30 約 01:10 UTC，第 32 任 session_01YGNNuon2Njt6B8dAanT7j5 → 第 33 任）**：第 32 任壓縮 2 次、用到約 33 萬 token，照 §1 換手（第 2 層，第 33 任是第 3 層）。
+- **今天的目標**：公測。作者 10/30 先發一版自己測，再發一版開公測（10/31 00:00 台灣時間丟連結）。發之前，main HEAD 的完整 ci.yml（workflow_dispatch）和 iOS 全線（ios-build.yml，only_testing 留空）都要綠；最晚 09:30 UTC 開跑，12:00 UTC 前給作者紅綠燈表。作者自己按 TestFlight，或在規劃對話裡說「發」才代按（CLAUDE.md）。What's New 0.5.0（96.1）在 #1518、#1519、#1520 已寫好；這輪的抓蟲修正要不要再加一行，由第 33 任看（跳到早上存檔、鋪路復原的價錢、朋友路網開新局、3D 公車），玩家看得懂的才加。
+- **公測前抓蟲 BH1–BH9**（作者：「修好跟我說」）：
+  - 已合併：#1522（BH7）、#1523（BH4，3D 公車回程越界閃退）、#1524（BH1，鋪路復原後還照舊價）、#1525（BH6）、#1526（BH5，朋友路網帶過補助）、#1528（BH2，跳到早上途中存檔讀回 ×6000）、#1529（BH3）。session 都封存了。
+  - **還在做的**：
+    - BH9 卡住（session_01YGNNupx2R9L2JmWM9LnsYt）#1531：大型死結時死結搜尋每列車重算整條線，改成同一次查看共用 DispatchMemo（GameCore，Deadlock.swift，3 處），120 站 40 車每 tick 1785→56 ms。附 differential 測試。整層 CI 在跑；綠了轉 ready、用 sha 合、記 #1041、封存。
+    - BH8 當機（session_01YGNNuocWPGBFMZqgdVi3pE，`claude/bughunt-crash`）：沒有 P1；正在加 P2-1 的一行 guard（`RollingStockCatalogView` 的 `CatalogTrain`，寬度 0 時 `Int(NaN)` 閃退），之後開 draft PR。綠了就合。
+  - 新規則（第 32 任定的）：BH 的 PR 不改 docs/HANDOFF.md，那一行寫在 PR 說明的「HANDOFF 一行：」；BH1、BH3、BH5 的行已在這個 PR 加到上面 BH2 旁邊。BH8、BH9 的行由第 33 任合完後補（一個只改文件的 PR）。
+  - 動手修前在 #1041 登記「BHx 修：檔案：函式」；重疊時的歸屬表在 #1041 comment 6509611978。
+- **實機要看的**（給作者紅綠燈表時一起列）：BH6 文件 §3 的十項；按「跳到早上」後切出 App 再回來，速度要是原本的（BH2）；鋪路畫好後按復原，價錢要更新（BH1）；從朋友的路網開新局，錢不能多（BH5）；車型目錄調到 1 節不閃退（BH8）。
+- **今天其他合併**：#1521（決策 495：新增 campaigns-19，完整 tier 變 23 個 job；RealLineAcquisition、DanhaiBothLinesDay、LiujiaLineTrains 自成一片，run 40969164675 最長 17.4 分；下一個要注意的是 campaigns-12 與 -8）、#1527（決策 494：防照搬的標記，細節只在私庫 `Railway/anti-copy/`，私庫 #117 已合）。
+- **公測後待辦**（加在「第三十一任接手」那段之上）：
+  - 非正式版標示（防搬第二階段）：上 App Store 前做；要讀發版時注入的值，先發一版只給自己的 TestFlight 驗證再給大家（作者問過，第 32 任建議公測後）。
+  - 資料來源與授權總盤點：App 打包的每份資料對一次來源與授權（作者問「遊戲裡有沒有別人的記號」）。
+  - 新台幣 PR-0～PR-3（存檔 76，App Store 前約 11/14）：BH3 文件 §6 是「改之前」的基準。
+  - 各 BH 文件的 P2／P3、UI_AUDIT B1–B10、UI_GAPS G1／B-1／D1–D15、TUT B1–B7、PERF 丙（「自動」再加「少陰影與反光」「穩定 30 格」兩步）。
+- **排程**：第 32 任的巡查 send_later 交接時刪掉；新任自己排（約 30–40 分一次）。Threads 排程已停（作者 10/29 說最後一次）。
+- **作者的狀態**：只有手機，給結論不要叫作者跑指令；語氣溫和；PR 和留言不寫另一個同類 App 的名字。作者很在意「當機和卡住」與 session 之間有沒有重工，每次合併後看其他 PR 有沒有變 dirty（GitHub 遇衝突就不跑 CI）。
 
 **第三十二次換手（2026-10-29 約 14:45 UTC，第 31 任 session_01YGNNukxseY7eMCvXhjtc4X → 第 32 任）**：第 31 任壓縮 2 次、用到約 29 萬 token，照 §1 換手。
 - **發版**：作者已自己發 95.1，testflight.yml 跑在 a7b958c（run 40862262994，綠）。和 6ff5ffe 只差 What's New 多一行「車隊清單從車卡上也拖得動」。作者 10/30 會先自己發一版測，再發一版開公測（10/31 0:00 台灣時間丟連結）。發之前要確認 main HEAD 的完整 ci.yml 和 iOS 全線都綠；作者自己按 TestFlight，或在本對話說「發」才代按。6ff5ffe 的 ci.yml 全量重跑後綠（40866614287）；iOS 全線紅（40866617267），紅的是兩支不穩的 UI 測試，#1498 已修。
