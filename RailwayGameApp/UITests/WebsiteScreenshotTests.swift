@@ -320,10 +320,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 2)
         keep("lines-list", app)
 
-        // The form makes a row only once it scrolls in.
+        // The form makes a row only once it scrolls in. The list runs
+        // under the bar (decision 498: no heading over the first line), and
+        // a tap on a row there lands on the bar (run 41081046632).
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "A line's row shows")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
         // A tap on a list still moving after the drag only stops it.
         row.waitUntilSettled()
         row.tap()
