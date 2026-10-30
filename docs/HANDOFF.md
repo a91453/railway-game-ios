@@ -2881,3 +2881,7 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 > Codex 海風／山嵐 EMU500 雙款改造（producer `f036e7f7`，素材draft [#35](https://github.com/a91453/railway-assets-private/pull/35)）：[查證、逐部件差異、角色、來源與驗證](art/tourism-emu500/README.md)。從既有原生EMU500截面／弧頭與走行設備生成段改造，兩端封門、中央落地窗與兩款一般漸層獨立處理；原EMU500及其他營運模型／配車／列車包／回退保持。兩款僅studies，沒有玩家選用或動態行駛驗證；使用者明確producer外觀接受、營運與裝置UNVERIFIED。完整交付、producer、雙draft PR與最新head CI見自有文件；不推main／合併／auto-merge／TestFlight。
 
 > Codex 海風／山嵐第二輪（producer `0e2f38a244db7ea0301169cdb4b6d81f0c340a78`，公開draft #1539 ↔ 素材draft #35）：依使用者「修」收薄下裙、重建連結器凹區／主管線、上下燈座、中央窗及連續漸層；窗框與玻璃沿原EMU500最終弧頭三角面切分，射線／故障反例驗收。前稿f036e7f7未經接受，撤回過寬外觀自評；素材兩款最新revision-2，上一輪只留PNG／README／來源，重檔同PR移除。本輪Swift6.4 WAE與14項測試、777既有payload／全部頂點欄位保持（main d6c5c899），同33舊全量失敗不改gate。仍studies，不接營運／配車／列車包／回退；兩款外觀接受、營運及裝置UNVERIFIED。獨立producer重建／最終viewer、素材guard與最新head CI以[本型驗證](art/tourism-emu500/verification.json)及兩draft記錄為準。不推main／merge／auto-merge／TestFlight。
+
+### Codex R200／R216 獨立雙端 studies（2026-10-30）
+
+[來源、契約、幾何、四態與接手](art/tra-r200/README.md)。本輪保護既有單駕駛室 R200CK 代用配方／營運，獨立建立雙端 R200 近遠完整單機。僅studies，不會合併後自動選用。正式批次、官方端號、遮蔽側／屋頂BOM與部分原廠尺寸來源仍未核齊，不能稱已完成現役工程復刻；所有技術證據與互鏈draft以自有verification為準。沒有已接受R200前版，製作者自檢不代表使用者接受；營運／裝置UNVERIFIED。不改GameCore／存檔／fixtures／配車／他車，不推main／merge／auto-merge／TestFlight。

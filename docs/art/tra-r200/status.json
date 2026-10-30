@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "VERIFIED",
+    "evidence": "Linux Swift 6.4 WAE, native readback, topology, R200 actual fault probes, independent native/GLB bytes, Blender import, decoded transparent PNGs, HTTP inspector rotation/zoom/download byte checks. file:// navigation UNVERIFIED: blocked by browser administration. Engineering/source gaps remain; this is technical study validation only."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "No explicit user acceptance of this producer. Author inspection is separate.",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Studies only. Existing r200ChuKuang/R200CK runtime mapping remains unchanged; new native locomotive is not selected by the game."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator or physical-device Metal, performance, animation or operational validation."
+  }
+}

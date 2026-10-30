@@ -1,0 +1,42 @@
+{
+  "status": "VERIFIED",
+  "importer": "4.3.2",
+  "checks": [
+    "independent glTF import",
+    "native metre bounds after axis conversion",
+    "triangle counts",
+    "vertex colors",
+    "triangle topology",
+    "matte nonmetal material and no textures"
+  ],
+  "models": [
+    {
+      "id": "tra-r200-r216-locomotive",
+      "triangles": 5484,
+      "minimum": [
+        -10.005000114440918,
+        -1.5,
+        0.0
+      ],
+      "maximum": [
+        10.005000114440918,
+        1.5,
+        4.079999923706055
+      ]
+    },
+    {
+      "id": "tra-r200-r216-locomotive-far",
+      "triangles": 2648,
+      "minimum": [
+        -10.005000114440918,
+        -1.5,
+        0.0
+      ],
+      "maximum": [
+        10.005000114440918,
+        1.5,
+        4.079999923706055
+      ]
+    }
+  ]
+}

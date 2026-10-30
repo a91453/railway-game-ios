@@ -1,0 +1,31 @@
+{
+  "status": "VERIFIED",
+  "transport": "loopback HTTP",
+  "models": [
+    {
+      "id": "tra-r200-r216-locomotive",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-r200-r216-locomotive-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    }
+  ],
+  "orbit_zoom_changed_pixels": true,
+  "mobile_width": 390,
+  "file_protocol": {
+    "status": "UNVERIFIED",
+    "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+  },
+  "errors": [],
+  "external_requests": 0,
+  "limits": [
+    "Browser WebGL only; no device Metal, animation or appearance acceptance."
+  ]
+}
