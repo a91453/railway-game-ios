@@ -1234,11 +1234,12 @@ extension Map3DScene {
                 // track either side, far enough for an island between.
                 // Decision 507: two islands with the double track between
                 // them, the platform beside across it too near for one.
-                let partner = platforms.indices
+                let candidates: [(index: Int, lateral: Float)] = platforms.indices
                     .filter { $0 != index && platforms[$0].platform.station == platform.platform.station && platforms[$0].platform.edge != platform.platform.edge }
                     .map { (index: $0, lateral: (middles[$0] - middle).dot(across)) }
-                    .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 }
-                    .filter { abs($0.lateral) / 2 - edge >= Self.narrowestPlatform / 2 }
+                let wide = Self.narrowestPlatform / 2 + edge
+                let partner = candidates
+                    .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 && abs($0.lateral) / 2 >= wide }
                     .min { abs($0.lateral) < abs($1.lateral) }
                 var side: Float = -1, width = Self.platformWidth
                 if let partner {
