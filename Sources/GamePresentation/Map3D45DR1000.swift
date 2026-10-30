@@ -176,7 +176,10 @@ extension StationKitBuilder {
                 if !far { box(x,1.42,z+side*0.027,0.56,0.021,0.10,silver) }
             }
             if far {
-                box(0,2.20,z,17.6,0.025,0.82,glass)
+                // One strip, cut where the cabs' 2.8 m end so its saloon
+                // part lights at night (Map3DTrainLights.windowModel).
+                box(0,2.20,z,14.0,0.025,0.82,glass)
+                for end:Float in [-1,1] { box(end*7.9,2.20,z,1.8,0.025,0.82,glass) }
             } else {
                 for x:Float in [-8.17,-7.0,-4.65,-2.95,-1.25,0.45,2.15,3.85,7.0,8.15] {
                     box(x,2.19,z,1.14,0.025,0.91,dark)
