@@ -13,7 +13,10 @@ import XCTest
 /// file holding one under `game`); `DAILY_WAIT_DAYS` how many days to run
 /// (default 3). It prints a row every three hours: who waits, the longest
 /// wait, and the running totals of arrivals, abandonments and refusals for
-/// a full station; then each finished day's fares.
+/// a full station; then each finished day's fares. Just before 04:00 it
+/// adds who waits by how many stops their ride goes, and how long they
+/// have waited (boarding takes the farthest first: decision 504's next
+/// step).
 final class DailyWaitReportTests: XCTestCase {
     private struct SharedFile: Decodable {
         let game: SavedGame
@@ -51,6 +54,27 @@ final class DailyWaitReportTests: XCTestCase {
             let day = now.seconds / 86_400, minute = now.seconds % 86_400 / 60
             print("| day \(day) \(minute / 60):\(String(format: "%02d", minute % 60)) | \(waiting) | \(longest) | \(long) | \(arrived) | \(abandoned) | \(overflowed) |")
         }
+        func byStops() {
+            let now = world.clock.now
+            let buckets = ["1", "2", "3-5", "6+"]
+            var count = [Int64](repeating: 0, count: 4), minutes = [Int64](repeating: 0, count: 4)
+            for record in world.passengers {
+                for group in record.waiting {
+                    guard let stops = world.lines.first(where: { $0.id == group.line })?.stops,
+                          let from = stops.firstIndex(of: record.station),
+                          let to = stops.firstIndex(of: group.destination) else { continue }
+                    let hops = abs(to - from)
+                    let bucket = hops <= 1 ? 0 : hops == 2 ? 1 : hops <= 5 ? 2 : 3
+                    count[bucket] += group.count
+                    minutes[bucket] += group.count * (now.seconds - group.since.seconds) / 60
+                }
+            }
+            print("| stops ridden | waiting | mean wait (min) |")
+            print("| --- | --: | --: |")
+            for index in buckets.indices {
+                print("| \(buckets[index]) | \(count[index]) | \(count[index] > 0 ? minutes[index] / count[index] : 0) |")
+            }
+        }
         row()
         let end = start + days * 86_400
         // A row each time the clock passes a third hour, and just before
@@ -63,7 +87,11 @@ final class DailyWaitReportTests: XCTestCase {
         while world.clock.now.seconds < end {
             let before = mark(world.clock.now.seconds)
             try world.advance(ticks: 1)
-            if mark(world.clock.now.seconds) != before { row() }
+            let after = mark(world.clock.now.seconds)
+            if after != before {
+                row()
+                if after % 100 == 4 { byStops() }  // 03:59, the minute before 04:00
+            }
         }
         print("| day | fares |")
         print("| --- | --: |")
