@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "UNVERIFIED",
+    "evidence": "Final technical package pending; exact opposite-side equipment, primary dimensions, end-number correspondence and complete fault coverage not yet established."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "No explicit user acceptance of this producer. Author inspection is separate.",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Studies only. Existing r200ChuKuang/R200CK runtime mapping remains unchanged; new native locomotive is not selected by the game."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator or physical-device Metal, performance, animation or operational validation."
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "representative": "R216, 2024-12-12, ordinary white/navy",
+  "units": [
+    "tra-r200-r216-locomotive",
+    "tra-r200-r216-locomotive-far"
+  ],
+  "native_axes": {
+    "units": "metres",
+    "X+": "radiator/fan end; official cab number unverified",
+    "Y+": "left when looking from -X to +X",
+    "Z+": "up",
+    "rail": 0
+  },
+  "geometry_estimates": {
+    "wheel_diameter": 1,
+    "bogie_centres": [
+      -5.9,
+      5.9
+    ],
+    "axle_offsets": [
+      -1.5,
+      0,
+      1.5
+    ],
+    "body_end": 9.45,
+    "coupler_outer_end": 10.005,
+    "body_width": 2.852,
+    "highest_equipment": 4.08
+  },
+  "unverified": [
+    "official cab numbers",
+    "primary as-built dimensions",
+    "batch/number delivery table",
+    "opposite side grille details",
+    "orthogonal roof and underside",
+    "revenue hauling representative formation"
+  ]
+}

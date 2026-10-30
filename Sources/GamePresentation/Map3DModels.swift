@@ -117,6 +117,7 @@ public struct Map3DModelPack: Sendable {
     /// models are. Only the tools and the model hashes read them.
     init(studiesBaked baked: Bool) {
         var models: [Model] = []
+        models += [Map3DR200.model(), Map3DR200.model(far: true)]
         // Static TEMU2000 units and formation; the operating Puyuma
         // (`set-puyuma…`, decision 484) is made of the same units.
         models += Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0) }
