@@ -8,7 +8,7 @@ The game already maps `dieselRailcar` to its generic DR1000 set and has SceneKit
 
 Rebuild: `tools/train-models/run.sh OUT --ids 45dr1000-drc1025,45dr1000-drc1025-far` from the producer commit in the paired asset README. Then `node tools/train-models/package.mjs OUT`, `node tools/train-models/audit.mjs OUT`, `node tools/train-models/render.mjs OUT --time day`, `node tools/train-models/inspect.mjs OUT OUT/index.html`. Three-car display uses the generic assembly spec in `tools/45dr1000/formation.json`.
 
-Appearance review at fixed metre scale: two side doors, stainless corrugations, paired upper headlights, dark cab glass and central yellow gangway agree with the 2006 photo. The rear arrangement, exact roof ducts, underframe boxes and paint junction on the unseen end lack photographic proof. User acceptance of this producer, operating integration and iOS device behavior remain **UNVERIFIED**.
+Appearance review at fixed metre scale: two side doors, stainless corrugations, paired upper headlights, dark cab glass and central yellow gangway agree with the 2006 photo. The rear arrangement, exact roof ducts, underframe boxes and paint junction on the unseen end lack photographic proof. The user accepted revision 2's front, then questioned its side stripes; acceptance of the revised stripe producer, operating integration and iOS device behavior remain **UNVERIFIED**.
 
 ## Fixed-camera visual comparison
 
@@ -20,7 +20,7 @@ The local `comparison.png` juxtaposes the two licensed originals at left and the
 | Does not match fully | Real headlamp bezels, cab glazing corner radii and coupler hoses are finer than this matte low-poly study; the front orange cap and black/yellow pilot pattern are simplified; rooftop radiators are too box-like. |
 | Insufficient data | Rear maker plate and any end-to-end asymmetry, precise roof pipe routes, exact underframe engine/generator housings, bogie centres, and the concealed side behind the station sign. |
 
-This comparison is the producer's self-review only. Appearance acceptance by the user remains **UNVERIFIED**.
+This comparison records the producer's self-review. The user accepted revision 2's front on 2026-10-30, then identified the side stripe for further review. The listed visual limitations and estimated fittings remain documented.
 
 ## Revision 2 — front rebuilt after user feedback
 
@@ -28,6 +28,12 @@ The user said revision 1's front was still far from the real car. That front is 
 
 Against the 2006 DRC1025 three-quarter photograph, the replacement front changes the dark glazing from blue-grey square blocks into two wide black rounded cab fields, moves the round lamps inside their upper corners, extends the orange cab brow over the rounded roof shoulder, shapes the yellow gangway and its smaller dark window, puts the lower red markers on round pods, and gives the pilot sloped corners, yellow diagonals, a coupler and hoses. The near model also places a small car-number card in the photographed cab; the far model keeps a simple lamp and matching major colours. These are original native vertex-colour triangles and use no G12 part.
 
-The fixed front camera holds the metre scale and day light constant across revisions. The source is oblique rather than orthographic, so the comparison supports relative locations and colour areas, not exact millimetres. Remaining departures: the black gasket still lacks the real door depth and metal handles, the pilot and air hoses are deliberately sparse at game scale, and the exact unseen rear face and roof hardware are not proven. Producer self-review records these openly; user acceptance of revision 2 is **UNVERIFIED**.
+The fixed front camera holds the metre scale and day light constant across revisions. The source is oblique rather than orthographic, so the comparison supports relative locations and colour areas, not exact millimetres. Remaining departures: the black gasket still lacks the real door depth and metal handles, the pilot and air hoses are deliberately sparse at game scale, and the exact unseen rear face and roof hardware are not proven. Producer self-review records these openly; the user accepted revision 2's front on 2026-10-30 before requesting a stripe check.
 
-The second front pass narrowed both black cab fields to restore the visible yellow outer margins, added solid angled corner cheeks from the 2.69 m sidewall to the end face, and split the pilot markings into two diagonal bars per side. The paired front render should be read alongside the oblique 2006 source, with the photo perspective and estimated fittings kept explicit. These changes supersede the first revision-2 preview; only the final revision-2 producer is delivered.
+The second front pass narrowed both black cab fields to restore the visible yellow outer margins, added solid angled corner cheeks from the 2.69 m sidewall to the end face, and split the pilot markings into two diagonal bars per side. The paired front render should be read alongside the oblique 2006 source, with the photo perspective and estimated fittings kept explicit. The final revision-2 producer is the true before version for the subsequent stripe change.
+
+## Revision 3 — orange side waist after stripe review
+
+After accepting the revision-2 front, the user asked whether a livery stripe was missing. The 2006 and 2008 DRC1025 originals show a **thin yellow line above the side windows** and a **much deeper orange band immediately below them**. Both existed in revision 2, but the orange band was only 0.10 m high, about one eighth of the model's window height; it read as an extra thin line in the fixed side render. The 2008 photograph shows a band roughly one quarter of the visible window height. This is a photo ratio, not a measured car dimension.
+
+Producer `5df2923973bbde1785ca3a74fd90fde13be313e8` makes the side orange shell band 0.18 m high, carries that height through the yellow end-bay overlay, and preserves the upper yellow stripe, front V and black/yellow pilot. It is delivered in private revision-3 commit `83364a3fc19a6e7311ec1a89b0dca30e2a2443a0`. Length, width, cab fields, doors, window pitch, bogies and operating mapping are unchanged. A side-strip probe rejects the actual revision-2 native output as too thin and rejects two stripe fault examples. Fixed-camera side and isometric renders were reviewed against the dated photographs; the corrected band is visibly broader, while exact paint boundaries remain estimates. The new producer's appearance acceptance is **UNVERIFIED**.
