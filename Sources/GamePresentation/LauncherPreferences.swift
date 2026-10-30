@@ -24,6 +24,9 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// has seen (``WhatsNew/edition``); `nil` in preferences written
     /// before the card, whose players see the card once.
     public var whatsNewSeen: String?
+    /// Decision 508: what the player answered when the station master
+    /// offered the tutorial before a first line; `nil` until then.
+    public var firstLineGuide: FirstLineGuide.Choice?
 
     public init() {}
 

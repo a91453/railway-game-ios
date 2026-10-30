@@ -650,6 +650,42 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("lesson-card", app)
     }
 
+    /// Decision 508, for its screenshot review: a new blank-map game with
+    /// no line, the station master's offer of the tutorial, the lines
+    /// panel saying what is missing, and after "I'll do it myself" the
+    /// station master naming Build with its ring.
+    func testFirstLineGuide() {
+        let app = launch(extra: ["-show-first-line-offer"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 15), "The start screen shows New Game")
+        newGame.tap()
+        app.chooseBlankMap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The new game opens")
+        let offer = app.descendants(matching: .any)["stationMaster.offer"].firstMatch
+        XCTAssertTrue(offer.appears(within: 15), "The station master offers the tutorial")
+        settle()
+        keep("first-line-offer", app)
+
+        app.buttons["entry.lines"].tap()
+        let need = app.descendants(matching: .any)["lines.firstLine"].firstMatch
+        XCTAssertTrue(need.appears(within: 10), "The lines panel says what is missing")
+        settle()
+        keep("first-line-lines-empty", app)
+        let go = app.buttons["lines.firstLine.go"]
+        XCTAssertTrue(go.becomesHittable(), "Its button can be tapped")
+        go.tap()
+        XCTAssertTrue(app.buttons["tool.network"].appears(within: 10), "It opens Build")
+        app.buttons["dock.build"].tap()
+
+        let myself = app.buttons["stationMaster.offer.self"]
+        XCTAssertTrue(myself.becomesHittable(), "I'll do it myself can be tapped")
+        myself.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["stationMaster.bubble"].firstMatch.appears(within: 10), "The first step is said")
+        settle()
+        keep("first-line-guide-build", app)
+    }
+
     private func launch(extra: [String] = []) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft

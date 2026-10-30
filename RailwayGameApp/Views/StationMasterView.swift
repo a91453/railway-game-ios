@@ -67,6 +67,11 @@ struct StationMasterCorner: View {
     /// Under a panel beside the map: shows nothing, but stays, so it
     /// remembers what it has said.
     var isCovered = false
+    /// Decision 508: whether the tutorial (lesson 1) was finished on this
+    /// device, the player's answer to the offer of it, and what answers it.
+    var tutorialCompleted = true
+    var firstLineGuide: FirstLineGuide.Choice?
+    var answerFirstLineGuide: (FirstLineGuide.Choice) -> Void = { _ in }
     @State private var isTalking = false
     @State private var lastSpoken: StationMasterAdvice?
     @State private var talk = 0
@@ -138,6 +143,13 @@ struct StationMasterCorner: View {
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
             sayIfNew(advice)
+        }
+        // Decision 508: each step of the first line, named after "I'll do
+        // it myself", is said as it comes.
+        .onChange(of: guide) { _, guide in
+            guard guide != nil, storyBeat == nil, hasRoom, !offersTutorial else { return }
+            isTalking = true
+            talk &+= 1
         }
         // Advice that came while a side panel left no room for the bubble
         // is said once the room is back.
@@ -216,16 +228,20 @@ struct StationMasterCorner: View {
                 titleBadge(title)
             }
             }
-            if let storyBeat, hasRoom {
+            if offersTutorial, storyBeat == nil, hasRoom {
+                offerCard
+            } else if let storyBeat, hasRoom {
                 storyCard(storyBeat)
             } else if isTalking, hasRoom {
                 let width = min(maxBubbleWidth, 320)
                 let worry = advice?.isWorry ?? false
+                let symbol = guiding ? guide?.symbol : nil
+                let room: CGFloat = symbol == nil ? 24 : 24 + Self.symbolRoom
                 // One line when it fits, else wrapped at the width it has.
                 ViewThatFits(in: .horizontal) {
-                    bubble(said(advice), worry: worry) { $0.fixedSize() }
-                    bubble(said(advice), worry: worry) {
-                        $0.fixedSize(horizontal: false, vertical: true).frame(width: width - 24, alignment: .leading)
+                    bubble(said(advice), symbol: symbol, worry: worry) { $0.fixedSize() }
+                    bubble(said(advice), symbol: symbol, worry: worry) {
+                        $0.fixedSize(horizontal: false, vertical: true).frame(width: width - room, alignment: .leading)
                     }
                 }
                 .frame(maxWidth: width, alignment: .leading)
@@ -253,6 +269,86 @@ struct StationMasterCorner: View {
         }
         .animation(.spring(duration: 0.3, bounce: 0.3), value: isTalking)
         .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: storyBeat)
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: offersTutorial)
+    }
+
+    /// Decision 508: whether the tutorial is offered now: a free game with
+    /// no line, for a player who has neither finished it nor answered.
+    private var offersTutorial: Bool {
+        FirstLineGuide.offers(in: session, tutorialCompleted: tutorialCompleted, choice: firstLineGuide)
+    }
+
+    /// Decision 508: the first line's next step, named, after "I'll do it
+    /// myself".
+    private var guide: FirstLineGuide.Hint? {
+        FirstLineGuide.hint(in: session, choice: firstLineGuide)
+    }
+
+    /// Whether the bubble says ``guide`` in place of the advice: the advice
+    /// is a step of the first line (not a worry that comes first).
+    private var guiding: Bool {
+        guide != nil && (advice?.isFirstLineStep ?? false)
+    }
+
+    /// The width a step's icon takes before its words.
+    private static let symbolRoom: CGFloat = 22
+
+    /// Decision 508: the station master's first word in a game with no
+    /// line, to a player who skipped the tutorial: the five-minute
+    /// tutorial, or each step named. Stays until answered.
+    private var offerCard: some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(verbatim: FirstLineGuide.offerText(in: language))
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { offerButtons }
+                VStack(alignment: .leading, spacing: 4) { offerButtons }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(width: min(maxBubbleWidth, 340), alignment: .leading)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.accent, lineWidth: 1.5))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("stationMaster.offer")
+        .transition(.pop(anchor: .bottomLeading, reduceMotion: reduceMotion))
+    }
+
+    /// The offer's two answers: the tutorial, then finding one's own way.
+    @ViewBuilder private var offerButtons: some View {
+        let language = session.language
+        Button {
+            answerFirstLineGuide(.tutorial)
+        } label: {
+            Text(verbatim: FirstLineGuide.tutorialButtonTitle(in: language))
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Theme.onPrimary)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 32)
+                .background(Theme.primary, in: Capsule())
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("stationMaster.offer.tutorial")
+        Button {
+            answerFirstLineGuide(.selfGuided)
+        } label: {
+            Text(verbatim: FirstLineGuide.selfGuidedButtonTitle(in: language))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.primary)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("stationMaster.offer.self")
     }
 
     /// Decision 387: a beat of the challenge's story, who says it over what
@@ -423,7 +519,7 @@ struct StationMasterCorner: View {
     /// New advice is said once by itself; the same again is not. Without
     /// room for the bubble it is kept, with its dot, until there is.
     private func sayIfNew(_ advice: StationMasterAdvice?) {
-        guard let advice, advice != lastSpoken, advice != coveredAdvice, storyBeat == nil, hasRoom else { return }
+        guard let advice, advice != lastSpoken, advice != coveredAdvice, storyBeat == nil, hasRoom, !offersTutorial else { return }
         if case .modeShift = advice {
             // Decision 332: said once, leaving what was said before it as
             // said, so that is not said again when the hint goes.
@@ -445,17 +541,30 @@ struct StationMasterCorner: View {
     }
 
     /// The advice, or that all is well.
+    /// Decision 508: after "I'll do it myself", a first-line step names
+    /// its control.
     private func said(_ advice: StationMasterAdvice?) -> String {
-        advice?.text(in: session.language) ?? StationMasterAdvice.allWellText(in: session.language)
+        if guiding, let guide { return guide.text(in: session.language) }
+        return advice?.text(in: session.language) ?? StationMasterAdvice.allWellText(in: session.language)
     }
 
-    /// What it says in a glass bubble, its text laid out by `sized`.
-    private func bubble<Sized: View>(_ text: String, worry: Bool, sized: (Text) -> Sized) -> some View {
-        sized(
-            Text(verbatim: text)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Theme.textPrimary)
-        )
+    /// What it says in a glass bubble, its text laid out by `sized`, after
+    /// the icon of the control it names (decision 508), if any.
+    private func bubble<Sized: View>(_ text: String, symbol: String? = nil, worry: Bool, sized: (Text) -> Sized) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+                    .frame(width: Self.symbolRoom - 6)
+                    .accessibilityHidden(true)
+            }
+            sized(
+                Text(verbatim: text)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.textPrimary)
+            )
+        }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))

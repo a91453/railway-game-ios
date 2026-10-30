@@ -88,7 +88,8 @@ struct ContentView: View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
             // screen with the controls it must not cover.
-            .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets, mapSites: screen.tutorialMapSites)
+            .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets, mapSites: screen.tutorialMapSites,
+                             firstLineGuide: launcher.preferences.firstLineGuide)
             // Decision 414: the idle mode over everything, its tap ending it.
             .overlay {
                 if screen.ambient != nil {
@@ -642,7 +643,13 @@ struct ContentView: View {
                         StationMasterCorner(
                             session: session,
                             maxBubbleWidth: proxy.size.width - beside - trailing - 3 * margin - 52,
-                            isCovered: isCovered
+                            isCovered: isCovered,
+                            // Decision 508: the tutorial offered before a
+                            // first line, and the steps named after "I'll do
+                            // it myself".
+                            tutorialCompleted: launcher.preferences.tutorialCompleted || !launcher.showsFirstLineOffer,
+                            firstLineGuide: launcher.preferences.firstLineGuide,
+                            answerFirstLineGuide: { launcher.chooseFirstLineGuide($0) }
                         )
                         .padding(.leading, beside + margin)
                         .padding(.bottom, strip + margin)
