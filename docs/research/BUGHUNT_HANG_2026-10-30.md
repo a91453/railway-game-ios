@@ -336,8 +336,9 @@ BH2 用無頭玩過單線頁真實按鈕 224 局、入門 10 關、猴子玩家 
 
 **VERIFIED（Linux）：**
 - `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨。
-- debug 測試類：`DeadlockSearchCostTests`、`DeadlockPropertyTests`、`IdleTrainDeadlockTests`、`DeadlockTests`、`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests`。
-- shard：`campaigns-4`、`campaigns-14`。
+- debug 測試類：`DeadlockSearchCostTests`、`DeadlockPropertyTests`、`IdleTrainDeadlockTests`、`DeadlockTests`、`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests`，全綠。`DeadlockSearchCostTests` 在 debug 約 61 s。
+- shard：`campaigns-4`（39 個測試，749 s）、`campaigns-14`（85 個，682 s），全綠。
+- `swift-shards-selftest.sh` 通過（`DeadlockSearchCostTests` 的權重 60 s 加進 `CLASS_WEIGHTS`）。
 - 修前修後的數字：release 的 `DEADLOCK_COST_REPORT`。
 
 **UNVERIFIED：**
