@@ -65,6 +65,10 @@ extension StationKitBuilder {
                               (3.43,0.93),(3.46,0),(3.43,-0.93),
                               (3.32,-1.17)],0.064,orange)
             for side:Float in [-1,1] {
+                // Orange lower sill on both cheeks, visible above the pilot
+                // in the dated front photograph; the gangway stays yellow.
+                drEndPanel(end,x,[(1.25,side*0.43),(1.25,side*1.22),
+                                  (1.43,side*1.22),(1.43,side*0.43)],0.075,orange)
                 // The cab corner turns from the 2.69 m sidewall into the
                 // slightly narrower end instead of ending at a square seam.
                 let outer=side*1.345, inner=side*1.29

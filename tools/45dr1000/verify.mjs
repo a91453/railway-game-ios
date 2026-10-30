@@ -50,6 +50,12 @@ function frontProbe(vertices) {
        v.position[2]>3.16&&v.position[2]<3.26&&v.color[0]>80&&
        Math.abs(v.color[0]-v.color[1])<15)<30)
     throw Error('raised gangway header missing');
+  for(const side of [-1,1]) {
+    if(count(v=>v.position[0]>9.70&&v.position[1]*side>0.43&&
+         v.position[1]*side<1.22&&v.position[2]>=1.245&&v.position[2]<=1.435&&
+         v.color[0]>120&&v.color[0]>v.color[1]*1.35)<12)
+      throw Error('orange lower cab sill missing');
+  }
 }
 frontProbe(cab);
 function roofProbe(vertices) {
@@ -94,7 +100,8 @@ for(const [name,mutate] of [
   ['right headlamp lost',v=>{if(v.position[0]>9.78&&v.position[1]<-0.75&&v.position[1]>-1&&v.position[2]>2.94&&v.position[2]<3.16)v.color=[20,20,20,255]}],
   ['gangway shifted',v=>{if(v.position[0]>9.80&&Math.abs(v.position[1])<0.36&&v.position[2]>1.32&&v.position[2]<3.15)v.position[1]+=0.60}],
   ['metal lamp rims lost',v=>{if(v.position[0]>9.70&&Math.abs(v.position[1])>0.70&&Math.abs(v.position[1])<1.06&&v.position[2]>2.85&&v.position[2]<3.20&&v.color[0]>70&&v.color[0]<170&&Math.abs(v.color[0]-v.color[1])<12)v.color=[20,20,20,255]}],
-  ['gangway header lost',v=>{if(v.position[0]>9.82&&Math.abs(v.position[1])<0.44&&v.position[2]>3.16&&v.position[2]<3.26&&v.color[0]>80&&Math.abs(v.color[0]-v.color[1])<15)v.color=[20,20,20,255]}]
+  ['gangway header lost',v=>{if(v.position[0]>9.82&&Math.abs(v.position[1])<0.44&&v.position[2]>3.16&&v.position[2]<3.26&&v.color[0]>80&&Math.abs(v.color[0]-v.color[1])<15)v.color=[20,20,20,255]}],
+  ['orange lower sill lost',v=>{if(v.position[0]>9.70&&Math.abs(v.position[1])>0.43&&Math.abs(v.position[1])<1.22&&v.position[2]>=1.245&&v.position[2]<=1.435&&v.color[0]>120&&v.color[0]>v.color[1]*1.35)v.color=[230,185,59,255]}]
 ]) {
   let rejected=false;try{frontProbe(brokenCab(mutate))}catch{rejected=true}
   if(!rejected) throw Error(`front fault example passed: ${name}`);
@@ -120,4 +127,4 @@ for(const [name,change] of [
   let rejected=false;try{verify(near,broken)}catch{rejected=true}
   if(!rejected) throw Error(`fault example passed: ${name}`);
 }
-console.log('VERIFIED: 45DR1000 envelope, LOD, photographed cab, roof and side stripes; thirteen rejected faults');
+console.log('VERIFIED: 45DR1000 envelope, LOD, photographed cab, roof and side stripes; fourteen rejected faults');
