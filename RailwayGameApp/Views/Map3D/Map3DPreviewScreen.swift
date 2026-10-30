@@ -602,7 +602,8 @@ struct Map3DSceneKey: Hashable {
         lines = palette == nil ? nil : Map3DLineBands.Signature(world: world)
         self.palette = palette
         bought = world.acquisitions.count { $0.kind == .railway }
-        roads = world.roads?.allCells.count ?? 0
+        // PERF_3D_COCKPIT: counted, not made into one set at every tick.
+        roads = world.roads?.roadCellCount ?? 0
     }
 }
 
