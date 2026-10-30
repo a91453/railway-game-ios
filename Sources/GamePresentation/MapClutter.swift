@@ -156,4 +156,15 @@ public enum MapClutter {
     public static func moreText(_ more: Int) -> String {
         "+\(more)"
     }
+
+    // MARK: - Cards over a short map
+
+    /// Whether the population and travel layers' key folds to its button
+    /// for the build's ✓ pill (decision 510, the author's iPhone held
+    /// sideways: the key stood over the pill's refusal): on a short screen
+    /// while the pill shows, as beside a wide card (``LegendFold``), so the
+    /// pill, the banner and the key each keep a place of their own.
+    public static func legendGivesWayToBuild(compactHeight: Bool, buildPillShown: Bool) -> Bool {
+        compactHeight && buildPillShown
+    }
 }

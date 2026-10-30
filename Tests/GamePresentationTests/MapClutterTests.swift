@@ -107,4 +107,14 @@ final class MapClutterTests: XCTestCase {
         XCTAssertEqual(MapClutter.badgeText(3, in: .traditionalChinese), "3 則提醒")
         XCTAssertEqual(MapClutter.moreText(2), "+2")
     }
+
+    // MARK: - Cards over a short map
+
+    /// On a phone held sideways the layer's key folds while the build's
+    /// pill shows, so the pill, the banner and the key do not overlap.
+    func testTheLayersKeyGivesWayToTheBuildPillOnAShortScreen() {
+        XCTAssertTrue(MapClutter.legendGivesWayToBuild(compactHeight: true, buildPillShown: true))
+        XCTAssertFalse(MapClutter.legendGivesWayToBuild(compactHeight: true, buildPillShown: false))
+        XCTAssertFalse(MapClutter.legendGivesWayToBuild(compactHeight: false, buildPillShown: true))
+    }
 }

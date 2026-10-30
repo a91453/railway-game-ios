@@ -317,7 +317,9 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(tool.networkPlatformLevelling?.problem, reason)
         tool.addNetworkPlatform()
         XCTAssertEqual(tool.message?.kind, .failure)
-        XCTAssertTrue(tool.message?.text.contains(reason) == true, tool.message?.text ?? "")
+        // Decision 510: the reason in the panel, the banner short.
+        XCTAssertTrue(tool.networkDraftText().contains(reason), tool.networkDraftText())
+        XCTAssertFalse(tool.message?.text.contains(reason) == true, tool.message?.text ?? "")
         XCTAssertEqual(tool.world, world)
     }
 
@@ -505,10 +507,14 @@ final class TerrainPresentationTests: XCTestCase {
         let reason = GameError.trackEdgeInUse(edge).playerMessage(in: .english)
         XCTAssertEqual(levelling.problem, reason)
         placed.addNetworkPlatform()
+        // Decision 510: the banner short, why and what to do in the panel.
         XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
-            This track climbs about 20‰ and cannot be levelled for a platform: \(reason) Or lay a short stretch \
-            (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.
+            Climbs 20‰: cannot be levelled here. The Network panel says what to do.
             """))
+        XCTAssertTrue(placed.networkDraftText().hasSuffix("""
+            climbs 20‰ and cannot be levelled: \(reason) Or lay a short stretch \
+            (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.
+            """), placed.networkDraftText())
         XCTAssertEqual(placed.world, world)
     }
 

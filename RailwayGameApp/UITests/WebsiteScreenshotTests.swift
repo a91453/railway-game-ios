@@ -263,6 +263,64 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("build-legend-under-panel", app)
     }
 
+    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
+    /// on the real-world demo where the track climbs, with where people
+    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
+    /// in a place of its own, the key folded while the pill shows. The
+    /// longest platform, so its stretch is the likeliest not to level; a
+    /// stretch that levels still shows the pill, banner and key together.
+    func testPlatformLevellingWithTheLayer() {
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The demo starts")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        // A stretch across the middle of the map, built with the ✓.
+        let frame = map.frame.intersection(app.frame)
+        let middle = (app.buttons["hud.menu"].frame.maxY + build.frame.minY) / 2
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        func point(_ fraction: CGFloat) -> XCUICoordinate {
+            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
+        }
+        point(0.2).tap()
+        point(0.6).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the stretch")
+        confirm.waitUntilSettled()
+        confirm.tap()
+        settle()
+        let platform = app.buttons["月台"]
+        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.exists { controls.tap() }
+        }
+        XCTAssertTrue(platform.appears(within: 10), "No Platform mode")
+        platform.waitUntilSettled()
+        platform.tap()
+        let cars = app.steppers["network.platformCars"]
+        if cars.appears(within: 5) {
+            let more = cars.buttons.element(boundBy: 1)
+            for _ in 0..<20 where more.exists && more.isEnabled && more.isHittable {
+                more.tap()
+            }
+        }
+        point(0.4).tap()
+        XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
+        settle()
+        keep("platform-levelling-pill", app)
+        confirm.waitUntilSettled()
+        confirm.tap()
+        settle()
+        keep("platform-levelling-layer", app)
+    }
+
     /// New game → real world (decision 477): the whole of Taiwan first,
     /// above the places.
     func testRealWorldPicker() {
