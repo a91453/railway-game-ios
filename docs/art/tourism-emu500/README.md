@@ -1,17 +1,23 @@
 # 臺鐵海風號／山嵐號 EMU500 改造 studies
 
-兩款首次交付，各自沒有已接受前版。
+目前為第二輪修整。兩款各自仍沒有已接受前版；上一輪交付 producer `f036e7f79279586f5831c7cb9bf9d8cce3444558` 只是未接受的前稿。
 
-真正producer：`f036e7f79279586f5831c7cb9bf9d8cce3444558`。素材draft [#35](https://github.com/a91453/railway-assets-private/pull/35)。
+真正producer：`0e2f38a244db7ea0301169cdb4b6d81f0c340a78`。素材draft [#35](https://github.com/a91453/railway-assets-private/pull/35)。
 
-- [海風完整素材](https://github.com/a91453/railway-assets-private/tree/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/haifeng-emu500/revision-1)／[viewer](https://github.com/a91453/railway-assets-private/blob/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/haifeng-emu500/revision-1/index.html)
-- [山嵐完整素材](https://github.com/a91453/railway-assets-private/tree/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/shanlan-emu500/revision-1)／[viewer](https://github.com/a91453/railway-assets-private/blob/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/shanlan-emu500/revision-1/index.html)
+- [海風完整素材](https://github.com/a91453/railway-assets-private/tree/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/haifeng-emu500/revision-2)／[viewer](https://github.com/a91453/railway-assets-private/blob/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/haifeng-emu500/revision-2/index.html)
+- [山嵐完整素材](https://github.com/a91453/railway-assets-private/tree/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/shanlan-emu500/revision-2)／[viewer](https://github.com/a91453/railway-assets-private/blob/codex/haifeng-shanlan-emu500/game-art-previews/docs/art/shanlan-emu500/revision-2/index.html)
 
 下載自含HTML後開啟；本機HTTP實測通過，file://受環境政策阻擋、UNVERIFIED。
 
 ![原EMU500改造基準、海風、山嵐共同公尺比較](overview.png)
 
 一般EMU500只標「改造基準」，也沒有取得其第八版或營運遠景的明確producer使用者外觀接受證據，故 **UNVERIFIED**。合併本輪只增加studies，兩款均不出現在遊戲，無玩家選用；靜態四車不代表動態行駛。完整來源逐圖網址／SHA／權利見 [sources.json](sources.json)，重建見 [工具](../../../tools/tourism-emu500/README.md)。公開僅此共同總覽，完整兩套近遠單元／四車、GLB／viewer在互鏈素材draft PR。
+
+## 第二輪外觀修整
+
+撤回上一輪對車頭外觀過寬的自評。本輪收薄深色下裙、移除中央實心大封板與舊前連結器重疊，重建可辨識的連結器頭、支座及主要管線；補出上雙燈盒與下成對圓燈座，放寬中央窗並讓窗框／玻璃的三角面貼合最終弧面。修整中間稿下窗角曾被殼面穿出，已用實際原生射線重現並加入可拒收的驗收，沒有把中間稿當交付。
+
+海風與山嵐分別調亮藍綠／黃綠，真車殼頂點色連續內插，去除原先逐面分段楔形；兩款幾何仍共用已知相同部分，沒有捏造不同車鼻。四角色、四車順序、輪組、空調及集電位置保持。細管線、連結器機構與隱藏設備仍是外觀簡化，非工程復刻。真正前稿與本輪採同公尺相機／光線比較；原EMU500只是改造基準。
 
 ## 身份與版本
 
@@ -27,7 +33,7 @@
 | 試運轉紀錄 | 2024-08-06、09-24、11-08實車照片 | 2024-08-30、09-24實車照片 |
 | 正式營運 | 2024-12-07（交通部施政報告） | 2025-04-19（交通部／公視） |
 | 逐列交付／驗收日 | 資料不足，不能用試車照替代交付證書 | 資料不足 |
-| 選定塗裝 | 現行官網海水藍綠上深下淺、半圓頭部漸層，非活動彩繪 | 現行官網黃綠上深下淺、半圓頭部漸層，非活動彩繪 |
+| 選定塗裝 | 現行官網海水藍綠上深下淺、車頭漸層，非活動彩繪 | 現行官網黃綠上深下淺、車頭漸層，非活動彩繪 |
 
 2024試車照片只支持可見外形；一般營運版本另用臺鐵現行頁、2025設計刊物及營運消息核對。附圖的外觀設計示意不是工程圖；未把它當左右側全部設備的證明。沒有第三方幾何／照片貼圖、品牌字或商標，來源原圖不公開、不送外部生成服務。
 
@@ -44,7 +50,7 @@
 | 集電 | EP單臂弓，展示4.95m | 實照可見EP集電與高壓設備 | 沿用生成段；4.95m只展示升弓，未稱官方降弓高度 |
 | 台車／輪組 | 兩台車八輪胎、860mm、2.8m軸距 | 保留EMU500走行大結構，照片可見 | 沿用生成段及位置，未取得兩列動拖台車所有零件BOM，不稱完全相同 |
 | 車底 | 原角色設備箱簡化 | 主要設備保留、餐車改造可能有設備增設 | 原角色箱體為合理簡化；精密車底差異／管路資料不足 |
-| 塗裝 | 遊戲暖白／綠松、白折線與黃裙紋 | 海風藍綠、山嵐黃綠霧面漸層，無原折線／黃裙紋 | 漸層切在真殼面，非浮動色片；色帶跨角色同高連續 |
+| 塗裝 | 遊戲暖白／綠松、白折線與黃裙紋 | 海風藍綠、山嵐黃綠霧面漸層，無原折線／黃裙紋 | 漸層在真殼面頂點內插，非浮動色片；跨角色同高連續 |
 | 窗內 | 一般配方實心外殼支承玻璃 | 兩款不同座席／色彩配置 | 窗內深色簡化，未做餐飲系統或完整內裝互動 |
 
 兩款確定差異是實體原車、漸層色相及官方座席配置。尚無證據顯示外部殼形必須不同，因此本輪兩款幾何相同、身份／塗裝／配置紀錄獨立，沒有捏造特殊鼻形；這不表示實車每個零件相同。內裝差異只記來源，不把未製作的座席宣稱已交付。
@@ -82,6 +88,6 @@ EMU500 2M2T角色定義來自型式資料；本輪沒有改造牽引電路證書
 原車年份及台車資料需分層閱讀：Blair兩個原車籍頁均列1995，而EMU500全系列資料為1995–1997；本輪沒有原廠逐車出廠證書，不將泛型年份當個車精確製造日期。Blair連結稱TR-55，型式資料另列ABB動拖台車代號；未取得兩列改造BOM核對，因此模型只代表可見的兩軸台車外形，沒有聲稱代號／所有零件已查明一致。
 
 
-最終實跑：44模型／GLB／組裝檔、40私庫PNG＋公共總覽與兩個最終交付viewer，獨立producer checkout重建bytes相同；最終16個Swift相關測試0失敗（先前71項、3既有skip、0失敗）。共用Node5、Python6；20GLB獨立Blender4.3.2匯入；獨立Swift組裝誤差≤3.82e-6m。每款近景20684、遠景7696三角，完整列車合法分件；全部單元≤15000。最終交付viewer每款10項×七向×日夜、旋轉縮放／390px、原生與GLB真下載bytes／SHA均過。素材staged tree與HEAD guard通過：150新增檔、45.1MB。完整證據：[verification.json](verification.json)。
+第二輪最終實跑：44模型／GLB／組裝檔、40私庫PNG＋公共總覽與兩個最終交付viewer，獨立producer checkout重建bytes相同；本輪14個Swift相關測試0失敗（首輪71項、3既有skip、0失敗，為前稿歷史記錄）。共用Node5、Python6；20GLB獨立Blender4.3.2匯入；獨立Swift組裝誤差≤3.82e-6m。每款近景22220、遠景9120三角，完整列車合法分件；全部單元≤15000。最終交付viewer每款10項×七向×日夜、旋轉縮放／390px、原生與GLB真下載bytes／SHA均過。素材最新輪次為revision-2；同PR移除revision-1重檔，保留PNG／README／來源。staged tree與HEAD guard結果見verification.json。完整證據：[verification.json](verification.json)。
 
-開工main a1e33214與工作期間上游main46ae42b9均實際匯出777既有模型；和producer分支的payload bytes／全部頂點欄位FNV一致。上游#1536／#1537為UI和實景路線效能，未混成本輪變更。三者同33舊全量失敗（32舊鎖差異＋TEMU2000整列預算）留存，未改gate。standard613模型／3565788頂點／142.6MB不增加，啟用記憶體檢查通過。原EMU500 API／配方原檔完全不改；保護營運選用／列車包及回退。
+首輪對照開工main a1e33214與上游46ae42b9，本輪另對照main d6c5c899，均實際匯出777既有模型；和本輪producer分支的payload bytes／全部頂點欄位FNV一致。上游UI／效能變更與本輪分開判讀。各自同33舊全量失敗（32舊鎖差異＋TEMU2000整列預算）留存，未改gate。standard613模型／3565788頂點／142.6MB不增加，啟用記憶體檢查通過。原EMU500 API／配方原檔完全不改；保護營運選用／列車包及回退。
