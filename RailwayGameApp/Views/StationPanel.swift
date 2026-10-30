@@ -125,9 +125,8 @@ struct StationPanel: View {
                 }
             }
             }
-            .navigationTitle(session.selectedStation.map { Text(verbatim: $0.name) } ?? Text("Station"))
+            .panelTitle(session.selectedStation?.name ?? session.language.text("Station", "車站"))
             .hardTopScrollEdge()
-            .navigationBarTitleDisplayMode(.inline)
             .renameAlert(
                 title: session.language.text("Rename Station", "車站更名"),
                 name: $renaming,

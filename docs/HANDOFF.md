@@ -2305,6 +2305,15 @@
   - P2-7：`routeWaitText` 與泡泡說出「在等哪一列停著的車」。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
 
+### 4.32 短面板先列路線（決策 498 B1，UIB session_01YGNNuqDeWxuzsEPMNtxT4N，`uib-b1-lines-first`，#1560，2026-10-30）
+
+- **做了的**在決策 498 的 B1 一節：
+  - 手機橫放（`LinesListControls.inline`）時，路線清單的順序改成控制列、路線、入口、新路線（`LinesListControls.parts`，`LinesPanelNavigationTests`）。
+  - 這時不顯示「路線」標題，區塊間距改 compact。
+  - UI 測試 `openLinePage` 找不到路線列時先往上拖。
+  - ios-build `only_testing` 跑過的都綠（41073016530）：LessonUITests 第 1 課、兩個 LineRoutePreferenceUITests、LineDraftSummaryUITests、HUDAlignment 的路線面板測試。
+- **UIB2（session_01YGNNumAzAnMatbWkBqD8yV）接手做完**（2026-10-30）：截圖測試紅是測試自己的拖曳把線的列推到面板導覽列底下，點到導覽列；改成跟 `openLinePage` 一樣在導覽列以下找列（6bff8ef）。截圖驗收 run 41098330367 綠，三張在 `docs/art/ui-audit-2026-10-30/b1-*.png`，驗證寫在決策 498 B1。#1560 轉 ready，沒有剩下的步驟。
+
 ### 4.33 BUGHUNT_BUILD 的 P3 還沒修的（派工單 ROADFIX，session_01YGNNupRBmuqtaCPwRs9Hat，2026-10-30）
 
 ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（#1544）、P2-2（#1548）、P3-1 與 P3-2（#1554）、P3-6（#1559）、P3-9，查了 P2-3（#1519 已解）與 P3-8（同一局語言不會變，不會發生）。壓縮一次後依規則停下，**還沒修的**，每列的位置、怎麼重現、怎麼修都在那份文件 §4 的表：

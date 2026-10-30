@@ -149,6 +149,21 @@ extension NetworkSwitches {
     }
 }
 
+/// Decision 498: a part of the lines panel's list once the lines come
+/// first (decision 196).
+public enum LinesListPart: Hashable, Sendable {
+    /// The search, the filter and the sort in a row of the list (only
+    /// inline; pinned they stand over it).
+    case controls
+    /// The lines, in groups or one section.
+    case lines
+    /// The rows that are not a line: the whole network, Advanced, New
+    /// Line… and the real lines for sale.
+    case entries
+    /// The new line's form, under its New Line… row when that is opened.
+    case newLine
+}
+
 /// Decision 486: how the lines panel shows its search, filter and sort
 /// over the short list. On a short panel (a phone held sideways) they
 /// took half its height, leaving one line in view (95.1 on a device).
@@ -164,6 +179,24 @@ public enum LinesListControls: Equatable, Sendable {
     /// Inline on a panel of compact height, pinned on any other.
     public static func style(compactHeight: Bool) -> Self {
         compactHeight ? .inline : .pinned
+    }
+
+    /// Decision 498 (B1): the parts of the list, top to bottom. A short
+    /// panel showed only the network's row and Advanced when opened, no
+    /// line, so there the lines come first and the rows that are not a
+    /// line follow them.
+    public var parts: [LinesListPart] {
+        switch self {
+        case .pinned: [.entries, .newLine, .lines]
+        case .inline: [.controls, .lines, .entries, .newLine]
+        }
+    }
+
+    /// Decision 498 (B1): whether the lines' section has its "Lines"
+    /// heading. Not on a short panel, whose own title says it and where
+    /// the heading pushed the first line half out of view.
+    public var showsLinesHeading: Bool {
+        self == .pinned
     }
 
     /// Whether the search field shows: always when pinned; inline once
