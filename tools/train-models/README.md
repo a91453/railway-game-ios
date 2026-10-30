@@ -105,3 +105,5 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 高雄紅／橘線現役西門子 studies 專用編組與幾何反例：[tools/kaohsiung](../kaohsiung/README.md)。
 
 高雄輕軌 CAF／Citadis 兩款獨立五段 studies 的關節、懸浮段、玻璃、走行與獨立 Swift 組裝驗收：[tools/kaohsiung-light-rail](../kaohsiung-light-rail/README.md)。沿用共用匯出／GLB／渲染／交付，未更動舊車幾何或營運映射。
+
+新北安坑／淡海輕軌兩款 studies 編組及專用反例：[tools/new-taipei-lrt](../new-taipei-lrt/README.md)。

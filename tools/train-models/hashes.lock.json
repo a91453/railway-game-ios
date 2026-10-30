@@ -1,6 +1,86 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
+    "ankeng-lrt-m1" : {
+      "hash" : "19d4cf075e7672e9",
+      "triangles" : 10436
+    },
+    "ankeng-lrt-m1-far" : {
+      "hash" : "816b4f25035b42ac",
+      "triangles" : 5192
+    },
+    "ankeng-lrt-m2" : {
+      "hash" : "1bd70180c62ed344",
+      "triangles" : 2916
+    },
+    "ankeng-lrt-m2-far" : {
+      "hash" : "d83d11d6db1bf064",
+      "triangles" : 1272
+    },
+    "ankeng-lrt-m3" : {
+      "hash" : "e17e9d463c6ffddb",
+      "triangles" : 1428
+    },
+    "ankeng-lrt-m3-far" : {
+      "hash" : "313143a2004066c6",
+      "triangles" : 604
+    },
+    "ankeng-lrt-m4" : {
+      "hash" : "1aa6b5d59b5c16bf",
+      "triangles" : 2868
+    },
+    "ankeng-lrt-m4-far" : {
+      "hash" : "33e3857185c706d",
+      "triangles" : 1224
+    },
+    "ankeng-lrt-m5" : {
+      "hash" : "19d4cf075e7672e9",
+      "triangles" : 10436
+    },
+    "ankeng-lrt-m5-far" : {
+      "hash" : "816b4f25035b42ac",
+      "triangles" : 5192
+    },
+    "danhai-lrt-m1" : {
+      "hash" : "b84b2830ea4f616",
+      "triangles" : 14524
+    },
+    "danhai-lrt-m1-far" : {
+      "hash" : "5cd8635d3ba49b34",
+      "triangles" : 7168
+    },
+    "danhai-lrt-m2" : {
+      "hash" : "cc58393d05592c3f",
+      "triangles" : 6596
+    },
+    "danhai-lrt-m2-far" : {
+      "hash" : "59b14312fc6fd7b7",
+      "triangles" : 2808
+    },
+    "danhai-lrt-m3" : {
+      "hash" : "f12e895198a22075",
+      "triangles" : 4644
+    },
+    "danhai-lrt-m3-far" : {
+      "hash" : "55c612072e4fc9db",
+      "triangles" : 1612
+    },
+    "danhai-lrt-m4" : {
+      "hash" : "96b7792868c9a7cd",
+      "triangles" : 6740
+    },
+    "danhai-lrt-m4-far" : {
+      "hash" : "baf4924d10464bea",
+      "triangles" : 2784
+    },
+    "danhai-lrt-m5" : {
+      "hash" : "b84b2830ea4f616",
+      "triangles" : 14524
+    },
+    "danhai-lrt-m5-far" : {
+      "hash" : "5cd8635d3ba49b34",
+      "triangles" : 7168
+    },
     "blue-seven-formation" : {
       "hash" : "875bb3a96fcc5147",
       "triangles" : 13968
