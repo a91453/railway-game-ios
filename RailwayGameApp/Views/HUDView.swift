@@ -1136,7 +1136,7 @@ private extension ControlGroup {
     /// Decision 498 (UI_AUDIT B2): a row side by side in the game menu,
     /// its items titled under their icons (the system's medium items)
     /// where the screen is tall enough, icons alone on a phone on its side.
-    @ViewBuilder
+    @MainActor @ViewBuilder
     func menuItemStyle(_ style: GameMenuLayout.ItemStyle) -> some View {
         switch style {
         case .titled: controlGroupStyle(.automatic)
