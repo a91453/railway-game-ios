@@ -357,6 +357,7 @@ public final class GameLauncher {
         let (library, language, gameIsOpen) = (library, language, gameIsOpen)
         let mode: SaveSync.Mode = session == nil ? .full : .keepingDevice
         let (done, report) = AsyncStream.makeStream(of: SaveSync.Outcome?.self)
+        let begun = gamesBegun
         latestRound += 1
         let round = latestRound
         if cloudSaves != .iCloudOff {
@@ -368,7 +369,7 @@ public final class GameLauncher {
         }
         return Task {
             for await outcome in done {
-                noteSync(outcome, at: date, round: round)
+                noteSync(outcome, at: date, round: round, begun: begun)
             }
         }
     }
@@ -407,15 +408,17 @@ public final class GameLauncher {
         return outcome
     }
 
-    private func noteSync(_ outcome: SaveSync.Outcome?, at date: Date, round: Int) {
+    private func noteSync(_ outcome: SaveSync.Outcome?, at date: Date, round: Int, begun: Int) {
         // A later round asked for says how things stand, ended or not.
         if round == latestRound {
             cloudSaves = CloudSaves.after(outcome, at: date)
             cloudMarks = Dictionary(uniqueKeysWithValues: (outcome?.marks ?? [:]).map { ($0.key + ".json", $0.value) })
         }
         guard let outcome else { return }
-        // Decision 502: this device's game moved to a row of its own.
-        if let row = gameRow, let moved = outcome.movedRows[row] { gameRow = moved }
+        // Decision 502: this device's game moved to a row of its own. Not
+        // for a game begun since the round started (the third review's 2):
+        // its row is the one it was begun from.
+        if gamesBegun == begun, let row = gameRow, let moved = outcome.movedRows[row] { gameRow = moved }
         keptTwiceToTell += outcome.keptBoth.count
         guard session == nil else { return }
         if !outcome.downloaded.isEmpty || !outcome.deleted.isEmpty || !outcome.keptBoth.isEmpty {

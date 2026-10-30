@@ -311,7 +311,11 @@ public enum SaveSync {
         // those another device wrote with a later build, left in iCloud.
         var settled: Set<String> = []
         var newer: Set<String> = []
-        for stem in Set(localSaves.keys).union(cloudSaves.keys).union(state.synced.keys).sorted() {
+        // The autosaves last (decision 502, after the third review): a row
+        // moved this round (`move`) has its autosave name the new row
+        // before it goes to iCloud.
+        let stems = Set(localSaves.keys).union(cloudSaves.keys).union(state.synced.keys)
+        for stem in stems.sorted(by: { (SaveLibrary.isAutosave($0 + ".json") ? 1 : 0, $0) < (SaveLibrary.isAutosave($1 + ".json") ? 1 : 0, $1) }) {
             let base = state.synced[stem]
             // A save on its way from iCloud waits for the next round.
             let members = [stem + ".json", stem + SaveLibrary.newsSuffix, stem + SaveLibrary.nameSuffix]
@@ -388,10 +392,23 @@ public enum SaveSync {
                         outcome.isIncomplete = true
                         continue
                     }
+                    do {
+                        try move(stem + ".json", name)
+                        try theirs.write(to: local, over: mine)
+                    } catch {
+                        // Undone, so the next round does not keep a second
+                        // copy of it (the third review's 3).
+                        try? move(name, stem + ".json")
+                        let copy = String(name.dropLast(".json".count))
+                        let files = [name, copy + SaveLibrary.newsSuffix, copy + SaveLibrary.nameSuffix]
+                        for folder in [local, cloud] {
+                            for file in files { try? folder.remove(file) }
+                        }
+                        state.synced[copy] = nil
+                        throw error
+                    }
                     outcome.keptBoth.append(name)
-                    try move(stem + ".json", name)
                     outcome.movedRows[stem + ".json"] = name
-                    try theirs.write(to: local, over: mine)
                     outcome.downloaded.append(stem)
                     settled.insert(stem)
                     state.synced[stem] = c

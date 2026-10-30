@@ -518,6 +518,8 @@ final class OneRowPerGameTests: XCTestCase {
         let found = sync(pad, &padState)
         let padsRow = try XCTUnwrap(found.movedRows[row], "the pad found the conflict and moved its game")
         XCTAssertEqual(pad.autosaves().first?.row, padsRow, "its autosave goes on in its own row")
+        let cloudAutosave = try SaveLibrary.decodeFile(Data(contentsOf: cloud.directory.appendingPathComponent("autosave.json")))
+        XCTAssertEqual(cloudAutosave.row, padsRow, "in iCloud too, in the same round (the third review's 1)")
         XCTAssertEqual(try pad.load(XCTUnwrap(pad.entries().first { $0.id == padsRow })), try world(after: 3))
         // The phone hears of it before it saves again.
         sync(phone, &phoneState)
@@ -533,6 +535,40 @@ final class OneRowPerGameTests: XCTestCase {
         XCTAssertTrue(try holds(pad, world(after: 3)), "the pad's last save")
         sync(phone, &phoneState)
         XCTAssertTrue(try holds(phone, world(after: 3)), "on the phone too")
+    }
+
+    /// A split that fails midway is undone, so the next round keeps no
+    /// second copy of this device's game (the third review's 3).
+    func testASplitThatFailsKeepsNoSecondCopy() throws {
+        let root = directory.appendingPathComponent("devices", isDirectory: true)
+        let cloud = DirectorySaveFolder(directory: root.appendingPathComponent("iCloud", isDirectory: true))
+        let phone = SaveLibrary(directory: root.appendingPathComponent("phone")), pad = SaveLibrary(directory: root.appendingPathComponent("pad"))
+        var phoneState = SaveSync.State(), padState = SaveSync.State()
+        struct Failed: Error {}
+        @discardableResult
+        func sync(_ library: SaveLibrary, _ state: inout SaveSync.State, failing: Bool = false) -> SaveSync.Outcome {
+            SaveSync.run(
+                local: DirectorySaveFolder(directory: library.directory), cloud: cloud, state: &state, language: .english, now: date(0),
+                keeping: { try library.keepBeforeReplacing($0) },
+                moving: { if failing { throw Failed() } else { try library.moveRow(from: $0, to: $1) } }
+            )
+        }
+        let row = try phone.save(world(after: 1), as: .manual, at: date(0)).id
+        sync(phone, &phoneState)
+        sync(pad, &padState)
+        try phone.save(world(after: 2), as: .manual, at: date(60), row: row)
+        try pad.save(world(after: 3), as: .manual, at: date(70), row: row)
+        sync(phone, &phoneState)
+        let failed = sync(pad, &padState, failing: true)
+        XCTAssertTrue(failed.isIncomplete)
+        XCTAssertTrue(failed.movedRows.isEmpty)
+        XCTAssertEqual(manualRows(pad).map(\.id), [row], "the copy is taken back")
+        XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: cloud.directory.path).contains { $0.hasSuffix("-other.json") })
+        let split = sync(pad, &padState)
+        XCTAssertFalse(split.isIncomplete)
+        XCTAssertEqual(split.movedRows.count, 1)
+        XCTAssertEqual(manualRows(pad).count, 2, "one copy")
+        XCTAssertEqual(try pad.load(XCTUnwrap(manualRows(pad).first { $0.id == split.movedRows[row] })), try world(after: 3))
     }
 
     /// The other device only renamed the row: nothing of this device's is
