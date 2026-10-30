@@ -192,7 +192,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// side: where people are, its legend down by the credits rather than
     /// over the track being laid (TestFlight 98.1).
     func testBuildingLegendUnderPanel() {
-        let app = launch()
+        // UI tests leave where people are off unless asked (RailwayGameApp).
+        let app = launch(extra: ["-show-building-layer"])
         defer { app.terminate() }
         app.openDemo("demo.realWorld", timeout: 60)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
