@@ -1,3 +1,5 @@
+import Foundation
+
 // ARCHITECTURE decision 381: the start screen's six buttons and two
 // capsules. Saved Games and Import a Save became one Saves button, which
 // always shows (importing is in its list); Challenges moved into New Game,
@@ -135,6 +137,85 @@ public enum SaveListText {
     public static func rowMenuIdentifier(of entry: SaveLibrary.Entry) -> String {
         "saves.menu.\(entry.id)"
     }
+
+    // MARK: Earlier versions (decision 502)
+
+    /// The row menu's choice that goes back to an earlier version of the
+    /// save, shown when it has one.
+    public static func earlierVersionsTitle(in language: DisplayLanguage) -> String {
+        language.text("Earlier Versions", "之前的版本")
+    }
+
+    /// The question over the earlier versions to choose from.
+    public static func earlierVersionsQuestion(in language: DisplayLanguage) -> String {
+        language.text("Go Back to an Earlier Version?", "回到之前的版本？")
+    }
+
+    /// Under the question.
+    public static func earlierVersionsDetail(in language: DisplayLanguage) -> String {
+        language.text(
+            "Each save keeps the last \(SaveLibrary.versionsKept) times it was saved. Saving again keeps the newest too.",
+            "每個存檔保留最近 \(SaveLibrary.versionsKept) 次存的內容。之後再存，現在最新的也會留著。"
+        )
+    }
+
+    /// An earlier version as a choice: "12 min ago · Year 1 · Jan 3 (Wed)
+    /// 14:20 · Funds $ 12,345", or why it cannot be loaded.
+    public static func versionLabel(of entry: SaveLibrary.Entry, at now: Date, in language: DisplayLanguage) -> String {
+        if let problem = entry.problem { return problem.playerMessage(in: language) }
+        let ago = entry.savedAgoText(at: now, in: language)
+        let game = entry.summary?.dateAndFundsText(in: language)
+        return [ago, game].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// An earlier version's identifier, for the UI tests.
+    public static func versionIdentifier(of entry: SaveLibrary.Entry) -> String {
+        "saves.version.\(entry.id)"
+    }
+
+    // MARK: Choosing several to delete (decision 502)
+
+    /// The saves that can be chosen to delete: the player's own, not the
+    /// autosaves of the game played last, which Continue goes on with.
+    public static func selectable(_ entries: [SaveLibrary.Entry]) -> [SaveLibrary.Entry] {
+        entries.filter { $0.kind == .manual }
+    }
+
+    /// The button that starts and ends choosing.
+    public static func selectTitle(selecting: Bool, in language: DisplayLanguage) -> String {
+        selecting ? language.text("Done", "完成") : language.text("Select", "選取")
+    }
+
+    /// Select All, or Deselect All once every one is chosen.
+    public static func selectAllTitle(allSelected: Bool, in language: DisplayLanguage) -> String {
+        allSelected ? language.text("Deselect All", "取消全選") : language.text("Select All", "全選")
+    }
+
+    /// The delete button, with how many are chosen.
+    public static func deleteSelectedTitle(_ count: Int, in language: DisplayLanguage) -> String {
+        count == 0 ? language.text("Delete", "刪除") : language.text("Delete (\(count))", "刪除（\(count)）")
+    }
+
+    /// The warning before they are deleted.
+    public static func deleteSelectedQuestion(_ count: Int, in language: DisplayLanguage) -> String {
+        count == 1
+            ? language.text("Delete 1 save?", "要刪除 1 個存檔嗎？")
+            : language.text("Delete \(count) saves?", "要刪除 \(count) 個存檔嗎？")
+    }
+
+    /// Under the warning.
+    public static func deleteSelectedDetail(in language: DisplayLanguage) -> String {
+        language.text(
+            "Each one goes with its earlier versions. Deleted saves cannot be brought back.",
+            "每個存檔連同之前的版本一起刪除，刪除後無法復原。"
+        )
+    }
+
+    /// The identifiers, for the UI tests.
+    public static let selectIdentifier = "saves.select"
+    public static let selectAllIdentifier = "saves.selectAll"
+    public static let deleteSelectedIdentifier = "saves.deleteSelected"
+    public static let deleteSelectedConfirmIdentifier = "saves.deleteSelected.confirm"
 }
 
 /// The way to the data sources and licences (``DataSourceCredits``): a row

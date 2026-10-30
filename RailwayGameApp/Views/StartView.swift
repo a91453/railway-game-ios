@@ -686,137 +686,26 @@ struct SaveListView: View {
     @State private var newName = ""
     /// The save the player asked to delete, while the question is up.
     @State private var deleting: SaveLibrary.Entry?
+    /// Decision 502: whether saves are being chosen to delete, the ones
+    /// chosen, and whether the warning before deleting them is up.
+    @State private var selecting = false
+    @State private var selection = Set<String>()
+    @State private var deletingSelection = false
+    /// Decision 502: the save whose earlier versions are offered, and
+    /// them, once read.
+    @State private var versionsOf: SaveLibrary.Entry?
+    @State private var versions: [SaveLibrary.Entry] = []
 
     var body: some View {
         let language = launcher.language
         let saves = SaveLibrary.sorted(launcher.otherSaves, by: order)
         let isEmpty = launcher.otherSaves.isEmpty && launcher.olderAutosaves.isEmpty
         NavigationStack {
-            List {
-                if let message = launcher.message {
-                    Section {
-                        Label(message.text, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(Theme.warning)
-                    }
-                }
-                // With no save, the empty list's own button imports one.
-                if !isEmpty {
-                    Section {
-                        importButton
-                    }
-                }
-                // Decision 397, later: whether the saves are in iCloud, and
-                // Sync Now.
-                if !isEmpty, launcher.cloudSaves.systemImage != nil {
-                    Section {
-                        CloudSaveStatusLine(launcher: launcher, identifier: "saves.syncNow")
-                    }
-                }
-                if !launcher.olderAutosaves.isEmpty {
-                    Section {
-                        ForEach(launcher.olderAutosaves) { entry in
-                            rowWithMenu(entry)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        deleting = entry
-                                    } label: {
-                                        Label {
-                                            Text(verbatim: language.text("Delete", "刪除"))
-                                        } icon: {
-                                            Image(systemName: "trash")
-                                        }
-                                    }
-                                }
-                        }
-                    } header: {
-                        Text(verbatim: language.text("Earlier Autosaves", "之前的自動存檔"))
-                    } footer: {
-                        Text(verbatim: language.text(
-                            "One every 15 minutes of play, the last \(SaveLibrary.autosaveSlots) kept. Going back keeps the game you leave as an autosave too.",
-                            "遊戲中每 15 分鐘存一份，保留最近 \(SaveLibrary.autosaveSlots) 份。回到之前時，離開的進度也會存成一份自動存檔。"
-                        ))
-                    }
-                }
-                Section {
-                    ForEach(saves) { entry in
-                        rowWithMenu(entry)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    deleting = entry
-                                } label: {
-                                    Label {
-                                        Text(verbatim: language.text("Delete", "刪除"))
-                                    } icon: {
-                                        Image(systemName: "trash")
-                                    }
-                                }
-                                if entry.kind == .manual {
-                                    Button {
-                                        startRenaming(entry)
-                                    } label: {
-                                        Label {
-                                            Text(verbatim: language.text("Rename", "重新命名"))
-                                        } icon: {
-                                            Image(systemName: "pencil")
-                                        }
-                                    }
-                                    .tint(Theme.primary)
-                                }
-                            }
-                            .contextMenu {
-                                if entry.kind == .manual {
-                                    Button {
-                                        startRenaming(entry)
-                                    } label: {
-                                        Label {
-                                            Text(verbatim: language.text("Rename", "重新命名"))
-                                        } icon: {
-                                            Image(systemName: "pencil")
-                                        }
-                                    }
-                                }
-                                Button(role: .destructive) {
-                                    deleting = entry
-                                } label: {
-                                    Label {
-                                        Text(verbatim: language.text("Delete", "刪除"))
-                                    } icon: {
-                                        Image(systemName: "trash")
-                                    }
-                                }
-                            }
-                    }
-                }
-            }
-            .overlay {
-                if isEmpty {
-                    // Decision 122, later: the game's own picture, not the system's tray.
-                    ContentUnavailableView {
-                        Label {
-                            Text(verbatim: language.text("No Saves Yet", "還沒有存檔"))
-                        } icon: {
-                            Image("EmptySaves")
-                                .resizable()
-                                .frame(width: 96, height: 96)
-                                .accessibilityHidden(true)
-                        }
-                    } description: {
-                        Text(verbatim: SaveListText.importDetail(in: language))
-                    } actions: {
-                        Button {
-                            importsSave = true
-                        } label: {
-                            Label {
-                                Text(verbatim: SaveListText.importTitle(in: language))
-                            } icon: {
-                                Image(systemName: "square.and.arrow.down")
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Theme.primary)
-                        .accessibilityIdentifier(SaveListText.importIdentifier)
-                    }
+            Group {
+                if selecting {
+                    selectionList(saves)
+                } else {
+                    savesList(saves, isEmpty: isEmpty)
                 }
             }
             .fileImporter(isPresented: $importsSave, allowedContentTypes: [.alongTheLineSave, .json]) { result in
@@ -842,28 +731,106 @@ struct SaveListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Picker(selection: $order) {
-                            ForEach(SaveLibrary.Order.allCases, id: \.self) { order in
-                                Text(verbatim: order.displayName(in: language)).tag(order)
+                    if selecting {
+                        let selectable = SaveListText.selectable(saves).map(\.id)
+                        let allSelected = !selectable.isEmpty && Set(selectable).isSubset(of: selection)
+                        Button {
+                            selection = allSelected ? [] : Set(selectable)
+                        } label: {
+                            Text(verbatim: SaveListText.selectAllTitle(allSelected: allSelected, in: language))
+                        }
+                        .accessibilityIdentifier(SaveListText.selectAllIdentifier)
+                    } else {
+                        Menu {
+                            Picker(selection: $order) {
+                                ForEach(SaveLibrary.Order.allCases, id: \.self) { order in
+                                    Text(verbatim: order.displayName(in: language)).tag(order)
+                                }
+                            } label: {
+                                Text(verbatim: language.text("Sort by", "排序"))
                             }
                         } label: {
-                            Text(verbatim: language.text("Sort by", "排序"))
+                            Label {
+                                Text(verbatim: language.text("Sort", "排序"))
+                            } icon: {
+                                Image(systemName: "arrow.up.arrow.down")
+                            }
                         }
+                        .accessibilityIdentifier("saves.sort")
+                    }
+                }
+                // Decision 502: choose several of the player's saves, or all
+                // of them, to delete at once.
+                if !SaveListText.selectable(saves).isEmpty || selecting {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            selecting.toggle()
+                            selection = []
+                        } label: {
+                            Text(verbatim: SaveListText.selectTitle(selecting: selecting, in: language))
+                        }
+                        .accessibilityIdentifier(SaveListText.selectIdentifier)
+                    }
+                }
+                if !selecting {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") {
+                            dismiss()
+                        }
+                    }
+                }
+                if selecting {
+                    ToolbarItem(placement: .bottomBar) {
+                        Button(role: .destructive) {
+                            deletingSelection = true
+                        } label: {
+                            Text(verbatim: SaveListText.deleteSelectedTitle(selection.count, in: language))
+                        }
+                        .disabled(selection.isEmpty)
+                        .accessibilityIdentifier(SaveListText.deleteSelectedIdentifier)
+                    }
+                }
+            }
+            // The warning before the saves chosen go: Cancel is the
+            // default (decision 502).
+            .alert(
+                Text(verbatim: SaveListText.deleteSelectedQuestion(selection.count, in: language)),
+                isPresented: $deletingSelection
+            ) {
+                Button(role: .cancel) {} label: {
+                    Text(verbatim: language.text("Cancel", "取消"))
+                }
+                Button(role: .destructive) {
+                    launcher.delete(saves.filter { selection.contains($0.id) })
+                    selection = []
+                    selecting = false
+                } label: {
+                    Text(verbatim: language.text("Delete", "刪除"))
+                }
+                .accessibilityIdentifier(SaveListText.deleteSelectedConfirmIdentifier)
+            } message: {
+                Text(verbatim: SaveListText.deleteSelectedDetail(in: language))
+            }
+            .confirmationDialog(
+                Text(verbatim: SaveListText.earlierVersionsQuestion(in: language)),
+                isPresented: Binding(get: { versionsOf != nil && !versions.isEmpty }, set: { if !$0 { versionsOf = nil; versions = [] } }),
+                titleVisibility: .visible
+            ) {
+                let now = Date()
+                ForEach(versions) { version in
+                    Button {
+                        launcher.load(version)
                     } label: {
-                        Label {
-                            Text(verbatim: language.text("Sort", "排序"))
-                        } icon: {
-                            Image(systemName: "arrow.up.arrow.down")
-                        }
+                        Text(verbatim: SaveListText.versionLabel(of: version, at: now, in: language))
                     }
-                    .accessibilityIdentifier("saves.sort")
+                    .disabled(version.problem != nil)
+                    .accessibilityIdentifier(SaveListText.versionIdentifier(of: version))
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                Button(role: .cancel) {} label: {
+                    Text(verbatim: language.text("Cancel", "取消"))
                 }
+            } message: {
+                Text(verbatim: SaveListText.earlierVersionsDetail(in: language))
             }
             .alert(
                 Text(verbatim: language.text("Name This Save", "為存檔命名")),
@@ -911,8 +878,157 @@ struct SaveListView: View {
                 } label: {
                     Text(verbatim: language.text("Cancel", "取消"))
                 }
-            } message: { _ in
-                Text(verbatim: language.text("A deleted save cannot be brought back.", "刪除後無法復原。"))
+            } message: { entry in
+                Text(verbatim: entry.earlierVersions > 0
+                    ? language.text("It goes with its earlier versions. A deleted save cannot be brought back.", "連同之前的版本一起刪除，刪除後無法復原。")
+                    : language.text("A deleted save cannot be brought back.", "刪除後無法復原。"))
+            }
+        }
+    }
+
+    /// Decision 502: the player's saves alone, to choose which to delete.
+    private func selectionList(_ saves: [SaveLibrary.Entry]) -> some View {
+        List(selection: $selection) {
+            Section {
+                ForEach(SaveListText.selectable(saves)) { entry in
+                    row(entry)
+                        .tag(entry.id)
+                        .accessibilityIdentifier("saves.row.\(entry.id)")
+                }
+            }
+        }
+        .environment(\.editMode, .constant(.active))
+    }
+
+    /// The list as it opens: import, iCloud, the earlier autosaves and the
+    /// player's saves.
+    private func savesList(_ saves: [SaveLibrary.Entry], isEmpty: Bool) -> some View {
+        let language = launcher.language
+        return List {
+            if let message = launcher.message {
+                Section {
+                    Label(message.text, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.warning)
+                }
+            }
+            // With no save, the empty list's own button imports one.
+            if !isEmpty {
+                Section {
+                    importButton
+                }
+            }
+            // Decision 397, later: whether the saves are in iCloud, and
+            // Sync Now.
+            if !isEmpty, launcher.cloudSaves.systemImage != nil {
+                Section {
+                    CloudSaveStatusLine(launcher: launcher, identifier: "saves.syncNow")
+                }
+            }
+            if !launcher.olderAutosaves.isEmpty {
+                Section {
+                    ForEach(launcher.olderAutosaves) { entry in
+                        rowWithMenu(entry)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    deleting = entry
+                                } label: {
+                                    Label {
+                                        Text(verbatim: language.text("Delete", "刪除"))
+                                    } icon: {
+                                        Image(systemName: "trash")
+                                    }
+                                }
+                            }
+                    }
+                } header: {
+                    Text(verbatim: language.text("Earlier Autosaves", "之前的自動存檔"))
+                } footer: {
+                    Text(verbatim: language.text(
+                        "One every 15 minutes of play, the last \(SaveLibrary.autosaveSlots) kept. Going back keeps the game you leave as an autosave too.",
+                        "遊戲中每 15 分鐘存一份，保留最近 \(SaveLibrary.autosaveSlots) 份。回到之前時，離開的進度也會存成一份自動存檔。"
+                    ))
+                }
+            }
+            Section {
+                ForEach(saves) { entry in
+                    rowWithMenu(entry)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                deleting = entry
+                            } label: {
+                                Label {
+                                    Text(verbatim: language.text("Delete", "刪除"))
+                                } icon: {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                            if entry.kind == .manual {
+                                Button {
+                                    startRenaming(entry)
+                                } label: {
+                                    Label {
+                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                    } icon: {
+                                        Image(systemName: "pencil")
+                                    }
+                                }
+                                .tint(Theme.primary)
+                            }
+                        }
+                        .contextMenu {
+                            if entry.kind == .manual {
+                                Button {
+                                    startRenaming(entry)
+                                } label: {
+                                    Label {
+                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                    } icon: {
+                                        Image(systemName: "pencil")
+                                    }
+                                }
+                            }
+                            Button(role: .destructive) {
+                                deleting = entry
+                            } label: {
+                                Label {
+                                    Text(verbatim: language.text("Delete", "刪除"))
+                                } icon: {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                        }
+                }
+            }
+        }
+        .overlay {
+            if isEmpty {
+                // Decision 122, later: the game's own picture, not the system's tray.
+                ContentUnavailableView {
+                    Label {
+                        Text(verbatim: language.text("No Saves Yet", "還沒有存檔"))
+                    } icon: {
+                        Image("EmptySaves")
+                            .resizable()
+                            .frame(width: 96, height: 96)
+                            .accessibilityHidden(true)
+                    }
+                } description: {
+                    Text(verbatim: SaveListText.importDetail(in: language))
+                } actions: {
+                    Button {
+                        importsSave = true
+                    } label: {
+                        Label {
+                            Text(verbatim: SaveListText.importTitle(in: language))
+                        } icon: {
+                            Image(systemName: "square.and.arrow.down")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.primary)
+                    .accessibilityIdentifier(SaveListText.importIdentifier)
+                }
             }
         }
     }
@@ -956,6 +1072,16 @@ struct SaveListView: View {
                         Label(action.title(in: language), systemImage: action.systemImage)
                     }
                 case .delete:
+                    // Decision 502: back to one of the times it was saved
+                    // before, above Delete, which stays last.
+                    if entry.earlierVersions > 0 {
+                        Button {
+                            showEarlierVersions(of: entry)
+                        } label: {
+                            Label(SaveListText.earlierVersionsTitle(in: language), systemImage: "clock.arrow.circlepath")
+                        }
+                        .accessibilityIdentifier("saves.versions.\(entry.id)")
+                    }
                     Button(role: .destructive) {
                         deleting = entry
                     } label: {
@@ -1005,6 +1131,16 @@ struct SaveListView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(SaveListText.importIdentifier)
+    }
+
+    /// Reads `entry`'s earlier versions off the main thread, then offers
+    /// them (decision 502).
+    private func showEarlierVersions(of entry: SaveLibrary.Entry) {
+        versionsOf = entry
+        Task {
+            let read = await launcher.earlierVersions(of: entry)
+            if versionsOf == entry { versions = read }
+        }
     }
 
     private func startRenaming(_ entry: SaveLibrary.Entry) {
