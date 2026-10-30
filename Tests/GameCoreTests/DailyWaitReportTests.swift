@@ -53,10 +53,17 @@ final class DailyWaitReportTests: XCTestCase {
         }
         row()
         let end = start + days * 86_400
+        // A row each time the clock passes a third hour, and just before
+        // and after 04:00.
+        func mark(_ seconds: Int64) -> Int64 {
+            let day = seconds / 86_400, second = seconds % 86_400
+            let window: Int64 = second >= 4 * 3_600 + 60 ? 2 : second >= 4 * 3_600 - 60 ? 1 : 0
+            return day * 100 + second / (3 * 3_600) * 3 + window
+        }
         while world.clock.now.seconds < end {
+            let before = mark(world.clock.now.seconds)
             try world.advance(ticks: 1)
-            let second = world.clock.now.seconds % 86_400
-            if second % (3 * 3_600) == 0 || second == 4 * 3_600 - 60 || second == 4 * 3_600 + 60 { row() }
+            if mark(world.clock.now.seconds) != before { row() }
         }
         print("| day | fares |")
         print("| --- | --: |")

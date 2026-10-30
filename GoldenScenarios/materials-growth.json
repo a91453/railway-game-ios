@@ -174,7 +174,7 @@
             "crowdedStations": 0,
             "fullTrains": 0,
             "maxLoad": 6,
-            "maxWaiting": 0
+            "maxWaiting": 2
           },
           "kind": "hourlyNet",
           "time": 1680
