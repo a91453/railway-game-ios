@@ -878,16 +878,36 @@
       "triangles" : 52
     },
     "light-set-dieselExpress-car" : {
-      "hash" : "8d567bde9d813edd",
-      "triangles" : 600
+      "hash" : "3d859929f21d9f25",
+      "triangles" : 64
     },
     "light-set-dieselExpress-head" : {
-      "hash" : "e0026a86c0239200",
-      "triangles" : 518
+      "hash" : "3d859929f21d9f25",
+      "triangles" : 64
     },
     "light-set-dieselExpress-tail" : {
-      "hash" : "9796003a3eec4700",
-      "triangles" : 518
+      "hash" : "56fc84f1f1561d25",
+      "triangles" : 64
+    },
+    "light-set-dieselExpress-single" : {
+      "hash" : "3d859929f21d9f25",
+      "triangles" : 64
+    },
+    "light-set-dieselExpressFar-car" : {
+      "hash" : "c7f618bd5f82c7d5",
+      "triangles" : 24
+    },
+    "light-set-dieselExpressFar-head" : {
+      "hash" : "c7f618bd5f82c7d5",
+      "triangles" : 24
+    },
+    "light-set-dieselExpressFar-single" : {
+      "hash" : "c7f618bd5f82c7d5",
+      "triangles" : 24
+    },
+    "light-set-dieselExpressFar-tail" : {
+      "hash" : "7d7f9d6b694b1d5",
+      "triangles" : 24
     },
     "light-set-dieselRailcar-car" : {
       "hash" : "3d859929f21d9f25",
@@ -2086,16 +2106,36 @@
       "triangles" : 11850
     },
     "set-dieselExpress-car" : {
-      "hash" : "56ef91ff8b47b996",
-      "triangles" : 1748
+      "hash" : "7ab97602e1254f9f",
+      "triangles" : 3604
     },
     "set-dieselExpress-head" : {
-      "hash" : "6401368651605a38",
-      "triangles" : 3172
+      "hash" : "8a49569d5b186bc4",
+      "triangles" : 3604
     },
     "set-dieselExpress-tail" : {
-      "hash" : "b0d986c08adcc673",
-      "triangles" : 3172
+      "hash" : "60a1c092c47b58b9",
+      "triangles" : 3604
+    },
+    "set-dieselExpress-single" : {
+      "hash" : "bc1f9decf0cb3fee",
+      "triangles" : 3604
+    },
+    "set-dieselExpressFar-car" : {
+      "hash" : "9666919b96315786",
+      "triangles" : 1584
+    },
+    "set-dieselExpressFar-head" : {
+      "hash" : "6237cc20380aac56",
+      "triangles" : 1584
+    },
+    "set-dieselExpressFar-single" : {
+      "hash" : "9b0d719ac178f00a",
+      "triangles" : 1584
+    },
+    "set-dieselExpressFar-tail" : {
+      "hash" : "79895abcc8bfbf8c",
+      "triangles" : 1584
     },
     "set-dieselRailcar-car" : {
       "hash" : "8fc1fa1d41d9ad49",
