@@ -16,7 +16,7 @@ final class CurveSpeedRunTests: XCTestCase {
     private func build(limits: Bool, realistic: Bool = true) throws -> (GameWorld, TrainID) {
         var world = try GameWorld(
             bounds: WorldBounds(width: 262_144, height: 262_144),
-            economy: GameEconomy(balance: 1_000_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500))
+            economy: fixtureEconomy(balance: 1_000_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500))
         )
         let r: Int64 = 300 * 64, k = r * 5523 / 10_000
         let (x, y): (Int64, Int64) = (8_192, 8_192)
@@ -187,7 +187,7 @@ final class CurveSpeedRunTests: XCTestCase {
     func testVersionFiftyEightKeepsCurveSpeedLimits() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v58-curve-speed-limits.json")
-        var (made, train) = try build(limits: true)
+        var (made, train) = try NTScale.$factor.withValue(3) { try build(limits: true) }
         while made.train(id: train)?.times?.run?.limits.isEmpty ?? true {
             try made.advance(ticks: 1)
         }
@@ -203,8 +203,8 @@ final class CurveSpeedRunTests: XCTestCase {
         XCTAssertEqual(loaded, made)
         XCTAssertTrue(loaded.curveSpeedLimits)
         XCTAssertEqual(loaded.train(id: train)?.times?.run?.limits.map(\.speed).min(), 75)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 58,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 58,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     // MARK: - With block sections (decision 212)
@@ -216,7 +216,7 @@ final class CurveSpeedRunTests: XCTestCase {
     private func makeChain(limits: Bool) throws -> (world: GameWorld, trains: [TrainID], bow: TrackEdgeID) {
         let length: Int64 = 200_000
         var world = try GameWorld(
-            bounds: WorldBounds(width: 3 * length + 4_096, height: 262_144), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 3 * length + 4_096, height: 262_144), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         // The middle edge an S: east, across 120,000 to the side, east again.

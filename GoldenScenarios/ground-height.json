@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 47,
+  "schemaVersion": 75,
   "description": "The ground's height (ARCHITECTURE decision 124): free play, 131072 x 65536 units (2 x 1 blocks of 16 x 16 cells of 64 m), no stations. A world that has read no ground is flat: groundHeight at (2048, 1024) is 0. setGround gives block (0, 0) the corners 10 r + c metres (17 x 17, row by row), a plane, which the bilinear blend gives exactly as (10 y + x) / 64 world units: (2048, 1024) is 192 (3 m), (31, 0) is 31/64 rounded half up to 0 and (32, 0) is 32/64 to 1, (65535, 61440) is (10 x 61440 + 65535) / 64 = 679935 / 64 = 10623.98, 10624. Block (0, 1) has not been read, so (65536, 0) is not found. setGround with no block, with block (0, 0) again, or with block (1, 0) outside the world (one block tall) beside (0, 1) is refused with invalidGround and reads nothing: (65536, 0) is still not found. Block (0, 1) with one corner, (1, 1), 64 m high and the rest 0 is read: the middle of the block's first cell, (67584, 2048), is a quarter of that corner's 64 m, 16 m, 1024 units; (68608, 3072), three quarters of the way to it both ways, is 64 x 9 / 16 = 36 m, 2304; corner (2, 2) at (73728, 8192) and the block's own corner (65536, 0) are 0. (131072, 0) lies outside the world. The final state reads 2 blocks. Every value is worked out by hand.",
   "initialState": {
     "worldWidth": 131072,
     "worldHeight": 65536,
-    "balance": 10000,
+    "balance": 30000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "paused"
@@ -1708,7 +1708,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 10000,
+    "balance": 30000,
     "gameMinutes": 0,
     "lines": [],
     "network": {

@@ -25,18 +25,19 @@ public enum StationCommerceLevel: Int, CaseIterable, Comparable, Codable, Sendab
     /// cents.
     public var price: Money {
         switch self {
-        case .convenienceStore: Money(35_000_000)
-        case .arcade: Money(315_000_000)
-        case .mall: Money(1_250_000_000)
+        case .convenienceStore: Money(105_000_000)
+        case .arcade: Money(945_000_000)
+        case .mall: Money(3_750_000_000)
         }
     }
 
-    /// What a person through the station brings in, in cents.
+    /// What a person through the station brings in, in cents (of the
+    /// New Taiwan dollar, as every amount here: decision 499).
     public var centsPerPerson: Int64 {
         switch self {
-        case .convenienceStore: 25
-        case .arcade: 30
-        case .mall: 45
+        case .convenienceStore: 75
+        case .arcade: 90
+        case .mall: 135
         }
     }
 
@@ -54,9 +55,9 @@ public enum StationCommerceLevel: Int, CaseIterable, Comparable, Codable, Sendab
     /// The upkeep a day, in cents.
     public var upkeep: Money {
         switch self {
-        case .convenienceStore: Money(6_000)
-        case .arcade: Money(30_000)
-        case .mall: Money(150_000)
+        case .convenienceStore: Money(18_000)
+        case .arcade: Money(90_000)
+        case .mall: Money(450_000)
         }
     }
 

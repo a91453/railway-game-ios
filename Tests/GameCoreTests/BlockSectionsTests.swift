@@ -29,7 +29,7 @@ final class BlockSectionsTests: XCTestCase {
 
     private func makeWorld() throws -> (world: GameWorld, a: StationID, b: StationID) {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 3 * Self.edgeLength + 4_096, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 3 * Self.edgeLength + 4_096, height: 4_096), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         let nodes = try (0..<4).map { try world.buildTrackNode(at: WorldCoordinate(x: 1_024 + Int64($0) * Self.edgeLength, y: 1_024)) }
@@ -97,7 +97,7 @@ final class BlockSectionsTests: XCTestCase {
     /// a train waits on plain track, never among a station's turnouts.
     func testAJunctionBoundsNoBlock() throws {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 2 * Self.edgeLength + 4_096, height: 40_960), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 2 * Self.edgeLength + 4_096, height: 40_960), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         // n1 ──e1── J ──e2── n3, and e3 from J off to n4: a turnout at J.
@@ -223,7 +223,7 @@ final class BlockSectionsTests: XCTestCase {
     // pass it.
     private func makeIdleBetweenRuns(blocks: Bool) throws -> (world: GameWorld, idle: TrainID, service: TrainID, b: StationID, c: StationID) {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 106_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 106_496, height: 16_384), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         let n1 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 4_096))
@@ -318,7 +318,7 @@ final class BlockSectionsTests: XCTestCase {
     func testVersionFiftySixKeepsBlockSections() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v56-block-sections.json")
-        var (made, trains) = try makeChain(blocks: true)
+        var (made, trains) = try NTScale.$factor.withValue(3) { try makeChain(blocks: true) }
         try made.advance(ticks: 2)
         XCTAssertTrue(made.isFollowing(try XCTUnwrap(made.train(id: trains[1]))))
         XCTAssertTrue(made.isFollowing(try XCTUnwrap(made.train(id: trains[2]))))
@@ -333,7 +333,7 @@ final class BlockSectionsTests: XCTestCase {
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, made)
         XCTAssertTrue(loaded.blockSections)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 56,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 56,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

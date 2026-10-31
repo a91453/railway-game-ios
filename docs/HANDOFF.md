@@ -2362,6 +2362,50 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **還沒做的**：CI 綠、規劃確認後轉 ready，在 #1041 寫「可合併」。規劃決定這個 PR 改到 100.1。截圖驗收照作者 10/29 暫緩，PR 寫了要看的畫面。
 - **延後的**（審查列為可等）：`Deleting/` 搬回時原處已有同名檔就一直留著、搬回失敗可能讓刪掉的檔案部分回來；`keepInRow` 判斷同一局時不比新聞紀錄；7 的後半（留了版本後寫入失敗多一份）沒重現。
 
+### 4.35 金額改新台幣 PR-1（決策 499，派工單 NTD1，`ntd1-nt-dollar`，2026-10-30）
+
+第二棒 session_01YGNNuksaQd8BihQwuQ3g6x 壓縮一次後交接（第一棒 session_01YGNNuqEGisgunmnvtfGAEi）。依據 `docs/research/NT_DOLLAR_SWITCH_2026-10-27.md` §5 方案 B（NT$3＝$1）。號碼：存檔 76、決策 499、golden schema 75。
+
+- **做了的**（分支上已推）：
+  - `Money.decodingScale`（TaskLocal）；`SavedGame` 讀 75 版以前的存檔金額 ×3、溢位就拒讀；76 版存檔照讀。高鐵票價舊存檔是 NT$10＝$1，讀完再由 `convertHighSpeedFaresToNewTaiwanDollars` 換成 ×10。`SaveSummary` 寫 `newTaiwanDollars: true`，沒有的舊摘要餘額 ×3。
+  - GameCore 每個金額常數 ×3（營運、維修、電費、人事、貸款、稅、建造、車種、土地價值、站內商業、子公司、觀光、公車、貨運、擴圖、委託報酬上限）。三個不是機械 ×3 的：高鐵每公里 438 分（照官方票價表，台北—左營 NT$1,489）、預設距離票價改整數新台幣 NT$11/14/17/20/24（`standardBands`）、`standardBands(for:)` 四捨五入到整元。
+  - GamePresentation 的開局資金、建造成本、難度、挑戰與成就目標、公司等級門檻 ×3；`HighSpeedFares.centsPerNewTaiwanDollar = 100`。
+  - 測試：`TestSupport.newTaiwanDollars(ofSaveText:)`（照 parent/key 表把存檔文字的金額 ×3，高鐵票價 ×10）、`ConstructionCosts.times(_:)`；SavedGameTests、CompanyBuildingsTests（部分）、SightseeingTrainTests 已改；新增 `SaveFixtures/v76-nt-dollar.json`（由 v75 公車存檔以 `NT_DOLLAR_SAVE_NEW=1` 產生）。SaveFixtures 舊檔一個都沒改。
+- **第三棒**（session_01YGNNuqShqBANnhS1VWF71K，壓縮一次後交接；分支上已推，**還沒全綠**）：
+  - 做了：`FareBandScale` 整數新台幣（項 2）；`WhatsNew.swift` 一則 `2026-10-31-98`、`docs/decisions/499.md`（「golden 的例外」「ReplayFixtures」兩節是空的待補）、`docs/OVERVIEW.md` §2（項 6 大半）；`GoldenScenario.schemaVersion` 75 與 `tools/golden-checks/nt_scale.py`（寫好、**還沒對 fixture 跑**）；單元測試的大半 ×3。
+  - 存檔 fixture 的「讀進來＝重新做的」測試：做的那一邊用 `TestSupport.swift` 的 `fixtureEconomy(balance:costs:)`，再包 `NTScale.$factor.withValue(3) { … }`（讀進來的舊存檔金額 ×3，做的那一邊也要 ×3）；存回去的文字比對用 `newTaiwanDollars(ofSaveText:)`。沒包的測試 factor 是 1，不變。
+  - `tools/golden-checks/nt_fix_test_literals.py FAILS [--apply]`：讀 `swift test` 的 `XCTAssertEqual failed` 行（`grep -a "error:" log`，不要 `cut`，會切壞 UTF-8），實際＝3×期望的就改那一行的字面值；其餘列在 UNHANDLED。**轉 ready 前刪掉這個檔**。
+  - 交接時（`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨）重跑之前失敗的類別，還有 373 個失敗，全是 UNHANDLED（不是單純 ×3）：`TrainTypeCatalogTests` 117（`pinned` 表的價格要 ×3，第 104 行的迴圈）、`RollingStockEconomicsTests` 24、`HighSpeedTests` 23（票價 ×10＝項 5，第 16–27、478–488 行）、`DayPassTests` 19（一日券價格與營收，不是 ×3，要逐個看規則）、`IncomeTaxTests` 16、`CompanyBuildingsTests` 13、`RoadGridTests` 12、`FareAndLoanPreviewTests` 12、`BuildingSessionTests` 12、`CityBusToolTests` 9、`EconomyDisplayTests` 8（`$ 0.45 a kilometre` 之類的字）、`StationCommerceTests`、`MapExpansionTests`、`BuildingSaleTests`、`BuildingSaleSessionTests` 各 6，`LineAcquisitionTests`、`FreightTests`、`FinancialStatementsTests`、`CompanyRankTests`、`CityMapTests`、`BusRouteTests`、`AssetAccountsTests` 各 5，其餘 1–4 個：`TourismTests`、`SubsidiaryTests`、`CompanyBuildingsClearingTests`、`RealCoverageTests`、`DayPassCardTests`、`CityBusTripsTests`、`AreaBuyOutTests`、`ZoningTests`、`TrainTripLogTests`、`TourismHotelTests`、`SchoolsHospitalsNightMarketsTests`、`RunDepotTests`、`ProblemReportFixtureTests`、`DistanceDemandTests`、`CityFootprintsTests`、`BusRouteEditorTests`、`TerrainTests`、`RealisticOperationTests`、`ParksAndTemplesTests`、`DepotTests`、`BuildingMaterialsTests`。很多是世界整個比對（`count differs`），或測試裡從常數算出期望、或土地價值湊整後不是 3 倍。另：`ScheduledOvertakeTrackTests`、`DeadlockTests` 的參考模型（`KernelDifferentialTests.differences`）票價基準要 225；campaign shard 一個都還沒在本機跑；ReplayFixtureTests 9 個要重錄（項 4）。
+  - `fix3`（上面的工具）第一輪自動改了 46 個測試檔，**還沒逐行審過**：只改 actual＝3×expected 的字面值，但註解裡的舊金額沒跟著改，下一棒看 `git diff origin/main -- Tests` 時一起改。
+- **第四棒**（session_01YGNNuo7Z72i6UaBzbD8hCR，壓縮一次後交接；分支上已推，**還沒全綠**）：
+  - 改好 14 個類別（每類一個 commit，訊息寫為什麼是或不是 ×3）：`TrainTypeCatalogTests`、`RollingStockEconomicsTests`、`HighSpeedTests`（含 v69 期望世界＝項 5）、`DayPassTests`、`IncomeTaxTests`、`CompanyBuildingsTests`、`RoadGridTests`、`FareAndLoanPreviewTests`、`BuildingSessionTests`、`CityBusToolTests`、`EconomyDisplayTests`、`StationCommerceTests`、`MapExpansionTests`、`BuildingSaleTests`。
+  - `TestSupport.swift`：金額鍵表提到檔案層的 `newTaiwanDollarKeys`；新增 `XCTAssertSameButRounding(loaded, made, cents:)`：兩個世界編成 JSON 逐點比，只有表裡的金額鍵可以差到 `cents` 分，其他（數量、時間、位置、字串）一差就失敗；`capitalDays` 比各欄的合計。舊存檔「讀進來＝重新做的」的測試，差在湊整時用它，**不要**改期望值。
+  - 決策 499 新增一節「測試看到的、不是剛好 3 倍的值」：折舊無條件捨去（每件資產最多差 2 分，隔天自己補回）、`capitalDays` 的列數變多（舊的每天 0.67 分折舊捨成 0 不寫列；合計相同，**這是金額湊整造成的非金額改變**）、公司建物維護（進位）與房屋稅（四捨五入）1,229／1,129、站內商店營收捨到整元、建物出售 8/11、每小時營運成本湊整元、`LineAccounts.shareFare` 以整元分攤（v57 兩條線之間挪了 NT$426，合計不變）、所得稅半元、一日券、`standardBands` 的意義（基準 NT$15 的票價帶；遊戲一律經 `standardBands(for:)`）、高鐵。
+  - 還在失敗的類別（交接時，`run2.log` 108 個 error 再扣掉最後一個 commit 修的）：`BuildingSaleSessionTests`（×3：土地 7,296、建物 61,440、損失 61,824、餘額 93,817,600，沒改）、`LineAcquisitionTests`（56／87–89 的等級值 60B 對 20B、v66 世界）、`FreightTests`（每噸公里 NT$15 的湊整：3800 對 1300、100 對 0；v38）、`FinancialStatementsTests`（利潤低於 ×3 的免稅額所以「稅前利潤／所得稅」列不見了、結帳年度淨損 15,948 對 5,868，**還有一個 Index out of range 當掉**，在 GamePresentationTests 的 FinancialStatements／Zoning 附近，沒查）、`CompanyRankTests`、`CityMapTests`、`BusRouteTests`、`AssetAccountsTests`、`TourismTests`、`SubsidiaryTests`、`CompanyBuildingsClearingTests`、`RealCoverageTests`、`DayPassCardTests`、`CityBusTripsTests`、`AreaBuyOutTests`、`ZoningTests`、`TrainTripLogTests`、`TourismHotelTests`、`SchoolsHospitalsNightMarketsTests`、`RunDepotTests`、`ProblemReportFixtureTests`、`DistanceDemandTests`、`CityFootprintsTests`、`BusRouteEditorTests`、`TerrainTests`、`RealisticOperationTests`、`ParksAndTemplesTests`、`DepotTests`、`BuildingMaterialsTests`；之後是 kernel 參考模型的票價基準 225（`ScheduledOvertakeTrackTests`、`DeadlockTests`）。
+  - 做法：`swift test --skip-build --filter '<類別>' 2>&1 | grep -a "error:"`，看實際與期望；剛好 ×3 的改字面值（`Money(x)` 包成 `ntd`／×3），不是的先找湊整原因寫進決策 499 再改。
+- **第五棒**（session_01YGNNuo8yfmRdphYxt63KUr）：
+  - 單元測試（`rest` shard 與 GamePresentation 的 150 個失敗）全改好：約 40 類剛好 ×3；不是 ×3 的都查了原因，寫進決策 499「測試看到的、不是剛好 3 倍的值」（每小時湊整、貨運每車湊整、車費一批湊整）。舊存檔「讀進來＝重新做的」一律用 `XCTAssertSameButRounding`，容許值取量到的最大差，非金額欄位 0 差。
+  - 修的 bug（不是改期望值）：`CityMap.valueSteps`（每平方公尺元的色階）沒乘 3；`SubsidiaryTests` v46 手寫的帳沒乘 3；問題回報轉換器拿 76 版以前裝置的結束餘額（舊美元）比新台幣。`FinancialStatements` 的 Index out of range 是測試用索引讀列，稅的兩列因免稅額 ×3 消失；測試的票價 ×3 後兩列回來。
+  - golden（項 3）：`--rewrite-inputs`、`--apply-log` 一輪就綠；`--verify` 通過：1,138 個剛好 ×3、449 個在各 fixture 寫明的湊整內（腳本的 `ROUNDED`）、高鐵 3 個票價（`EXCEPTIONS`），非金額 0 改。`ReferenceWorldGoldenTests` 綠。`GoldenScenarios/README.md` 加 schema 75 一節。
+  - ReplayFixtures（項 4）：照 recipe 重錄會挑到別的 campaign case（產生器變了），所以六個 campaign 檔只重算 checksum，起始世界與指令不動；`long-leg-traffic`、`line-route-preferences` 用自己的測試重錄（起始與指令相同）；問題回報重新轉換。逐檔說明在 `ReplayFixtures/README.md` 最後與決策 499。
+  - 合 main（衝突：WhatsNew 改 id `2026-10-31-100`、這一節從 §4.31 改成 §4.32）。
+- **第六棒**（session_01YGNNuoGaZmXME6KLT2Sy6T）：full-ci 第一輪（176f40d）7 個 shard 紅（5、6、8、10、11、14、18），都是測試字面值還沒 ×3／×10，或舊存檔對照沒包 `NTScale`；153c018 修好（`XCTAssertSameButRounding` 容許湊整），CI run 41083210792 全綠。參考庫對照表與 golden／Replay 逐項說明寫進 PR；平衡量測寫進決策 499「量到的」：換算本身 HEALTHY，現金滾雪球 CONCERNS 照舊（換算前就是）。刪了 `nt_fix_test_literals.py`，PR 轉 ready；合併由遊戲規劃審查後決定。
+- **還沒做的**（下一棒照順序；打勾＝做完）：
+  - [x] 1. （第五棒：單元測試做完；campaign shard 交 CI 跑，紅了再修）單元測試 ×3：上面 373 個與 campaign shard（`.github/scripts/swift-shards.sh run <shard>`）。不是 ×3 的逐個查是湊整造成的才改；非金額的值動了就停下來查、告訴遊戲規劃。
+  - [x] 2. `FareBandScale.swift` 整數新台幣（第三棒）。
+  - [x] 3. golden（第五棒）：`python3 -I tools/golden-checks/nt_scale.py --rewrite-inputs`，`swift test --skip-build --filter GoldenScenarioTests > log`，`--apply-log log`，再跑到綠，`--verify` 列出的例外填進腳本的 `EXCEPTIONS` 與決策 499；`GoldenScenarios/README.md` 加 schema 75 一行。
+  - [x] 4. （第五棒，做法見上）重錄 9 個 ReplayFixtures（`REPLAY_RECORD="$PWD/ReplayFixtures" swift test --skip-build --filter ReplayFixtureTests/testRecordingTheFixtures`；問題回報那個用 `ProblemReportFixtureTests/testConvertingAReport`），`ReplayFixtures/README.md` 與 PR 逐檔說明。
+  - [x] 5. `HighSpeedTests` 的 v69 期望世界（第四棒）：票價 ×10、其他 ×3。
+  - [x] 6. What's New 與決策 499（第五棒補完兩節）。
+  - [x] 7. （第六棒）參考庫對照表（`thsr_fare.json` 等）；PR-2 平衡量測照 `.claude/skills/economy-balance/SKILL.md`，「之前」用 `docs/research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md` §6。
+  - [x] 8. （第六棒；合併等遊戲規劃審查）綠了刪 `nt_fix_test_literals.py`、轉 ready、#1041 留「可合併」、告訴遊戲規劃。NT$ 前綴（PR-3）不在這張。
+  - 第六棒：合 main（#1567 決策 504，凌晨 04:00 還在等的乘客回家）：衝突的 3 個 golden（city-buildings-raise、materials-growth、land-value）照 main 的版本再用 `nt_scale.py` 換算；`economy`、`network-economy` 兩個 replay 只重算 checksum；舊存檔對照測試照 main（只比站、線、時鐘）。
+  - 合 main 第二次（#1556 等，99.1 發版後）：衝突的 WhatsNew 把 `2026-10-31-100` 放在 main 的 `2026-10-31-99` 前面；這一節從 §4.32 改成 §4.35。
+- **獨立審查後的修正**（遊戲規劃第 36 任派 session_01YGNNuqUDNQvyoQt4V44BrL，2026-10-30）：
+  - 高鐵每公里改回參考庫的 3 倍 NT$1.35（審查判 CRITICAL：真實的 NT$4.38 是其他金額的 9.7 倍，改性能就多賺）；官方票價表只給示範地圖與 v69 存檔。`HighSpeedReportTests` 票收 2.997 倍、運量不變。golden `high-speed.json` 第 34、36 步與描述逐值寫在決策 499。
+  - `economy`、`network-economy` 兩個 replay 的起始餘額、建造成本、`setFareBaseline`／`setFareRules` 的金額 ×3：對 base `d1df0d7` 逐指令重播，193 個指令的接受或拒絕全部一樣。其他 7 檔 checksum 動是因為預設 `demandBaseline` 75 → 225，README 與決策 499 改正。
+  - 決策 499 加「高鐵每公里不照真實票價」（五方）與「已知限制」（審查列為低、不改的五項）。沒有剩下的步驟；合併由遊戲規劃決定。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

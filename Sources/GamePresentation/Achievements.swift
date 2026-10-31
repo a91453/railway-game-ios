@@ -212,9 +212,9 @@ public struct Achievement: Identifiable, Hashable, Sendable {
     // MARK: - The list
 
     /// What a business must have made since it opened for "Paying Business".
-    private static let businessProfit = Money(100_000_000)
+    private static let businessProfit = Money(300_000_000)
     /// What the fleet must have cost for "Rolling Stock Investor".
-    private static let fleetInvestment = Money(500_000_000)
+    private static let fleetInvestment = Money(1_500_000_000)
 
     /// A mark reached when a count passes `need`.
     private static func count(
