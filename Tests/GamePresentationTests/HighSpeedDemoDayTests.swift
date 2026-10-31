@@ -24,6 +24,14 @@ final class HighSpeedDemoDayTests: XCTestCase {
         /// At 03:00, every set that is not in a depot, or shares its
         /// siding with another.
         var night: [String] = []
+        /// Each time a set calling at a station between the ends, where its
+        /// run neither starts nor ends, stood on a through track there
+        /// (decision 518), but at the island stations: the minute it was
+        /// first seen, the set, the station and its way, that way's loop
+        /// platforms there, and the minutes it stood there.
+        var onTheThroughTrack: [String: (seen: String, train: TrainID, loops: Set<TrackEdgeID>, first: Int64, last: Int64)] = [:]
+        /// The sets on each loop platform, minute by minute.
+        var onTheLoops: [TrackEdgeID: [Int64: Set<TrainID>]] = [:]
         var world: GameWorld
     }
 
@@ -31,9 +39,36 @@ final class HighSpeedDemoDayTests: XCTestCase {
         var world = try HighSpeedDemoTests.opened.get()
         let tracks = try HighSpeedDemoTests.built.get().tracks
         var day = Day(world: world)
+        let through = Set(tracks.down).union(tracks.up).subtracting(tracks.ends)
+        var stationOf: [TrackEdgeID: StationID] = [:]
+        for platform in world.network.platforms { stationOf[platform.edge] = platform.station }
+        let stations = world.lines.first?.stops ?? []
+        let loopEdges = Set(tracks.downLoops).union(tracks.upLoops)
         for _ in 0..<(24 * 60 + 30) {
             try world.advance(ticks: 1)
             let minute = world.clock.now.minute
+            for train in world.trains {
+                for stretch in world.bodyStretches(of: train) where loopEdges.contains(stretch.traversal.edge) {
+                    day.onTheLoops[stretch.traversal.edge, default: [:]][minute, default: []].insert(train.id)
+                }
+            }
+            for train in world.trains {
+                guard case .waitingAtStop(let stop, let cycle)? = train.execution, case .onEdge(let traversal, _)? = train.position,
+                      stop > 0, train.call(after: stop, cycle: cycle) != nil,
+                      through.contains(traversal.edge), let station = stationOf[traversal.edge],
+                      let index = stations.firstIndex(of: station), index > 0, index < stations.count - 1,
+                      !HighSpeedDemo.islandStations.contains(index)
+                else { continue }
+                let southbound = traversal.direction == .forward
+                let key = "\(train.name) \(stop) \(cycle)"
+                let loops = Set(world.network.platforms(of: station).map(\.edge).filter { (southbound ? tracks.downLoops : tracks.upLoops).contains($0) })
+                if let stand = day.onTheThroughTrack[key] {
+                    day.onTheThroughTrack[key]?.last = max(stand.last, minute)
+                } else {
+                    let seen = "\(minute / 60 % 24):\(String(format: "%02d", minute % 60)) \(train.name) at \(world.station(id: station)?.name ?? "?"), \(southbound ? "southbound" : "northbound")"
+                    day.onTheThroughTrack[key] = (seen, train.id, loops, minute, minute)
+                }
+            }
             if minute == 1_440 + 3 * 60 {
                 var sidings: Set<TrackEdgeID> = []
                 for train in world.trains {
@@ -90,6 +125,28 @@ final class HighSpeedDemoDayTests: XCTestCase {
     /// spacing rules hold a set behind the one ahead for a few minutes where
     /// the game's runs close up on the real day's spacing.
     static let latestAllowed: Int64 = 30 * 60
+
+    /// Decision 518: a set that calls at a station between the ends
+    /// stands on a loop beside the through track, as at the real side
+    /// platforms, and leaves the through track to the sets that pass; on
+    /// the through track only while every loop of its way there is taken
+    /// (Taipei and Banqiao, whose island platforms serve the through
+    /// tracks, aside). So none stands there while a loop of its way stays
+    /// empty from a clearance (``GameWorld/platformClearance``) before it
+    /// came to a clearance after it left: a loop another set is due on,
+    /// or has only just left, is taken (decision 228).
+    func testCallingSetsStandOnTheLoops() throws {
+        let day = try Self.day.get()
+        let clearance = GameWorld.platformClearance / 60
+        let wrong = day.onTheThroughTrack.values.filter { stand in
+            stand.loops.contains { loop in
+                (stand.first - clearance...stand.last + clearance).allSatisfy { minute in
+                    (day.onTheLoops[loop]?[minute] ?? []).subtracting([stand.train]).isEmpty
+                }
+            }
+        }.map(\.seen).sorted()
+        XCTAssertEqual(wrong, [], wrong.joined(separator: "\n"))
+    }
 
     /// Decision 228 (the author's report of 62.1: two sets on one track at
     /// Zuoying): from 07:00 to 03:00, minute by minute, no two sets' bodies

@@ -2507,6 +2507,15 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - 登山車的 3D 模型（DL38＋`alicoach`，參考 `garage-scenes/alishan*.js`；先讀 `.claude/skills/rolling-stock/SKILL.md`）。
   - 獨立山螺旋 16 m、二萬平到神木 20 m 兩處描線停點（資料畫線的折角）。
 
+### 4.39 停站的車停待避線（決策 518，派工單 PASSLOOP session_01YGNNun8qxU3qeJoE7gLpCk，`passloop-siding-platform`，PR #1601，2026-10-31）
+
+第二次壓縮後停手交接。存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
+
+- **做了的**（分支上已推，PR 是 draft）：`RunSpacing.swift` 的 `freePlatformPath`，停完還要開的車先找正線以外的空月台，再來是自己會準時讓出的月台，最後才照舊；規則、重現數字（舊 123 次 → 0）、參考對照與五方在 `docs/decisions/518.md`。第二個 commit（a4fbed1）修了 CI 抓到的回歸：分在兩段軌道上的月台（`TestLine`）的另一半不算「旁邊」（`across`），`LineAcquisitionTests.testVersionSixtySixKeepsTheLineBought` 因此回綠；`CallingLoopPlatformTests` 第五個測試鎖住它。
+- 本機 VERIFIED（a4fbed1）：`-warnings-as-errors` 乾淨；`CallingLoopPlatformTests` 5/5、`LineAcquisitionTests` 10/10、`RealLineAcquisitionTests` 12/12、Golden 24/24、ReplayFixtureTests、SavedGameTests 38/38、LongLegReplayTests 與 spacing、depot 類別。
+- **接手（session_01YGNNuowaMN8MBaj6QWbCLn，遊戲規劃第 37 任派，2026-10-31）**：合了 main（7b015d3，只這份檔案衝突，本節由 §4.36 改為 §4.39）。CI run 41193250249 全綠（rest 17.8 分）。rest 逐類和 main 的 run 41187751239 比：共同 595 類測試合計 664.2 秒對 674.6 秒（×1.016），沒有一類慢超過 1 秒；新加的只有 `CallingLoopPlatformTests`。`HighSpeedDemoDayTests`（campaigns-16）160.5 對 162.3 秒。所以之前的逾時是 rest 本來就太滿（main 8c2cc38a 已拆），不是這個 PR。
+- 沒有剩下的步驟；合併由遊戲規劃決定（排在 TRACELAG 後）。實機上高鐵示範的停站畫面 UNVERIFIED。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
