@@ -232,11 +232,23 @@ public final class GameSession {
             buildingSite = nil
             zoneDrag = nil
             saleCandidate = nil
+            // Decision 522: until the player picks a zone, the zoning
+            // mode opens on the use the city wants most now.
+            if buildingMode == .zone, oldValue != .zone, !isZoningZoneChosen {
+                zoningZone = suggestedZoningZone
+                isZoningZoneChosen = false
+            }
         }
     }
     /// What the zoning mode zones cells for (decision 98), or `nil` to
-    /// clear their zones.
-    public var zoningZone: Zone? = .residential
+    /// clear their zones. Until the player sets it, the zoning mode opens
+    /// on ``suggestedZoningZone`` (decision 522).
+    public var zoningZone: Zone? = .residential {
+        didSet { isZoningZoneChosen = true }
+    }
+    /// Decision 522: whether the player has set ``zoningZone``; never
+    /// saved.
+    @ObservationIgnored var isZoningZoneChosen = false
     /// The cells a drag with the zoning mode would zone, while the finger
     /// is down (decision 98).
     public internal(set) var zoneDrag: CellRectangle?

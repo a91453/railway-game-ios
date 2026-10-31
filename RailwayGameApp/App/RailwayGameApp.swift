@@ -205,7 +205,14 @@ struct RailwayGameApp: App {
         // Decision 165: the website screenshot test opens a scene set up
         // for it, paused at the moment it shows.
         if let name = DebugLaunch.value(of: "-screenshot-scene"), let scene = ScreenshotScene(rawValue: name) {
-            launcher.openScreenshotScene(scene)
+            let opening = launcher.openScreenshotScene(scene)
+            // Decision 522: the zoning drag held down, its far cells grey.
+            if scene == .zoning, DebugLaunch.isSet("-screenshot-zone-drag") {
+                Task {
+                    await opening.value
+                    launcher.session?.holdScreenshotZoningDrag()
+                }
+            }
         }
         #endif
         return launcher

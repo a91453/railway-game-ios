@@ -68,5 +68,19 @@ final class ScreenshotSceneTests: XCTestCase {
         for outlook in ZoneOutlook.allCases {
             XCTAssertGreaterThan(counts[outlook] ?? 0, 0, "\(outlook) shows")
         }
+
+        // Decision 522: the drag held for its screenshot shows cells in
+        // reach and grey ones past it, zoning the use the city wants most.
+        let session = try XCTUnwrap(launcher.session)
+        session.holdScreenshotZoningDrag()
+        XCTAssertTrue(session.isChosen(.zoning))
+        XCTAssertEqual(session.zoningZone, session.suggestedZoningZone)
+        let drag = try XCTUnwrap(session.zoneDrag)
+        let overlay = try XCTUnwrap(session.buildingOverlay)
+        let grey = session.cellsOutOfReach(in: drag).reduce(0) { $0 + $1.count }
+        XCTAssertFalse(overlay.zoneDragOutOfReach.isEmpty)
+        XCTAssertGreaterThan(grey, 0)
+        XCTAssertLessThan(grey, drag.count, "some in reach")
+        XCTAssertEqual(session.world.zones, world.zones, "nothing zoned")
     }
 }

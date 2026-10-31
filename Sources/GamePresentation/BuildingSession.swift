@@ -476,6 +476,11 @@ extension GameSession {
         if buildingMode == .zone, let drag = zoneDrag {
             overlay.zoneDrag = drag.planRect
             overlay.zoneDragColor = zoningZone.map(CityMap.zoneColor)
+            // Decision 522: zoning for a use, the cells no station reaches
+            // are greyed while the finger is down.
+            if zoningZone?.use != nil {
+                overlay.zoneDragOutOfReach = cellsOutOfReach(in: drag).map(\.planRect)
+            }
         }
         if buildingMode == .sell, let sale = salePreview {
             // Decision 130: the building to sell, marked as the one chosen.
@@ -602,6 +607,9 @@ public struct BuildingOverlay: Hashable, Sendable {
     /// colour (`nil` when it clears them).
     public var zoneDrag: PlanRect?
     public var zoneDragColor: PopTravel.RGB?
+    /// Decision 522: the cells of ``zoneDrag`` no station's catchment
+    /// reaches, which the city would never build on, as runs along rows.
+    public var zoneDragOutOfReach: [PlanRect] = []
 
     public init() {}
 }
