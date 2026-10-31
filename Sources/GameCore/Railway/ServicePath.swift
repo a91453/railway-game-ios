@@ -138,6 +138,14 @@ extension GameWorld {
             let keepingLeft: Bool
         }
         var found: [Query: TrainPath?] = [:]
+        /// Decision 527: by line and train length, the traversals the line
+        /// takes only the other way (``GameWorld/oneWayAgainst(_:length:)``);
+        /// the lines do not change within one advance or question either.
+        var against: [LineAgainst: Set<TrackTraversal>] = [:]
+        struct LineAgainst: Hashable {
+            let line: LineID
+            let length: Int64
+        }
     }
 
     /// ``path(from:toStation:length:)``, kept in `memo`.

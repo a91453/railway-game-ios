@@ -459,15 +459,10 @@ extension GameWorld {
                 // itself is never protected from its own line.
                 let lengths = Set(line.trains(ofService: service).filter { $0 != candidate.id }.compactMap { train(id: $0) }.filter { $0.position != nil }.map(\.length))
                 guard !lengths.isEmpty else { continue }
-                let orders = line.isRing ? RingDirection.allCases.map { line.ringCalls($0) }
-                    : [line.calls(ofService: service) + line.calls(ofService: service).dropLast().reversed()]
-                for order in orders {
-                    let calls = order.enumerated().map { index, station in
-                        DirectionMemo.Call(station: line.stops[station], reverses: !line.isRing && (index == order.count / 2 || index == order.count - 1))
-                    }
+                for plan in plans(of: line, service: service) {
                     for length in lengths {
-                        let planned = plannedDirections(.init(calls: calls, length: length, repeats: true, routes: line.routes(ofService: service).isEmpty ? [] : zip(order, order.dropFirst()).map { pair in line.routes(ofService: service).first { $0.from == pair.0 && $0.to == pair.1 } } + [nil], intermediateTurnbacks: isTrafficControlEnabled && !line.isRing), memo: &memo)
-                        if !planned.departures.isEmpty, let first = calls.first {
+                        let planned = plannedDirections(plan(length), memo: &memo)
+                        if !planned.departures.isEmpty, let first = plan(length).calls.first {
                             departures[directions.count] = (first.station, planned.departures)
                         }
                         directions.append(planned.directions)
@@ -479,6 +474,58 @@ extension GameWorld {
         // Only additional track borrowed by an alternative is restricted.
         let defaultWays = Set(routeStretches(of: candidate).stretches.filter { $0.to > $0.from }.map(\.traversal))
         return OpposingParts(directions: directions, defaultWays: defaultWays, departures: departures)
+    }
+
+    /// The plans of `line`'s service `service` (a ring's both ways round,
+    /// or out and back), for a train of the length given.
+    private func plans(of line: ServiceLine, service: Int) -> [(Int64) -> DirectionMemo.Plan] {
+        let orders = line.isRing ? RingDirection.allCases.map { line.ringCalls($0) }
+            : [line.calls(ofService: service) + line.calls(ofService: service).dropLast().reversed()]
+        let routes = line.routes(ofService: service)
+        let turnbacks = isTrafficControlEnabled && !line.isRing
+        return orders.map { order in
+            let calls = order.enumerated().map { index, station in
+                DirectionMemo.Call(station: line.stops[station], reverses: !line.isRing && (index == order.count / 2 || index == order.count - 1))
+            }
+            let preferences = routes.isEmpty ? [] : zip(order, order.dropFirst()).map { pair in routes.first { $0.from == pair.0 && $0.to == pair.1 } } + [nil]
+            return { length in DirectionMemo.Plan(calls: calls, length: length, repeats: true, routes: preferences, intermediateTurnbacks: turnbacks) }
+        }
+    }
+
+    /// Decision 527: the traversals `line`'s plans run along one way only,
+    /// turned round: track its trains of `length` take only the other way.
+    func oneWayAgainst(_ line: ServiceLine, length: Int64) -> Set<TrackTraversal> {
+        var memo = DirectionMemo()
+        var planned: Set<TrackTraversal> = []
+        for service in 0..<line.serviceCount {
+            for plan in plans(of: line, service: service) { planned.formUnion(plannedDirections(plan(length), memo: &memo).directions) }
+        }
+        return Set(planned.filter { !planned.contains($0.reversed) }.map(\.reversed))
+    }
+
+    /// Decision 527: for an empty run of a line with real runs (`train`),
+    /// with traffic control off, the traversals its line takes only the
+    /// other way, which its way keeps off (kept in `memo`); `nil` when the
+    /// rule does not apply. Decision 228 keeps trains apart then and no
+    /// deadlock is undone: one out of a depot that crossed onto the other
+    /// way's track met the line's trains head on, and each waited for the
+    /// other for good (the Sanying line).
+    func lineAgainst(for train: Train, memo: inout PathMemo) -> Set<TrackTraversal>? {
+        guard train.isDeadheading, !isTrafficControlEnabled, followsRealTimetable(train),
+              let line = lines.first(where: { $0.trains.contains(train.id) }) else { return nil }
+        let key = PathMemo.LineAgainst(line: line.id, length: train.length)
+        if let known = memo.against[key] { return known }
+        let against = oneWayAgainst(line, length: train.length)
+        memo.against[key] = against
+        return against
+    }
+
+    /// Decision 527: `path`, the way `train` would go from `start` to
+    /// station `id`, changed to keep off `against` (``lineAgainst(for:memo:)``);
+    /// `nil` when it keeps off it already, or no way does.
+    func lineDirectionPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, against: Set<TrackTraversal>) -> TrainPath? {
+        guard path.traversals.contains(where: against.contains) else { return nil }
+        return self.path(from: start, toStation: id, length: train.length, avoiding: Set<TrackResource>(), forbidden: against)
     }
 
     /// Decision 344: the traversals of `path` into station `id` that only

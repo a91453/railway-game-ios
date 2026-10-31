@@ -211,7 +211,12 @@ extension GameWorld {
                         // one's, the other way round.
                         let theirs = way(of: other.train)
                         let shared = mine.order.first { theirs.starts[$0.reversed] != nil }
-                        let near = shared.flatMap { mine.body.contains($0) ? nil : mine.starts[$0] } ?? at
+                        // Decision 527: on that track already, it goes on,
+                        // as ``heldUp(_:within:near:)`` lets it: two trains
+                        // on it coming towards each other would otherwise
+                        // wait for each other for good.
+                        if let shared, mine.body.contains(shared) { continue }
+                        let near = shared.flatMap { mine.starts[$0] } ?? at
                         left = min(left, max(0, near))
                         break ahead
                     }
