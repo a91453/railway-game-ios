@@ -111,6 +111,28 @@ final class FirstLineGuideTests: XCTestCase {
                        "the game being played is in the saves, its station in it")
     }
 
+    /// Review L3-4: when the game being played cannot be written, the game
+    /// is kept and so is the station master's offer: the answer is not
+    /// kept until lesson 1 has started.
+    func testAFailedAutosaveKeepsTheOffer() throws {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let file = directory.appendingPathComponent("not-a-folder")
+        try Data("x".utf8).write(to: file)
+        let launcher = GameLauncher(library: SaveLibrary(directory: file), language: .english)
+        launcher.startNewGame()
+        let session = try XCTUnwrap(launcher.session)
+        XCTAssertTrue(FirstLineGuide.offers(in: session, tutorialCompleted: false, choice: nil))
+
+        launcher.chooseFirstLineGuide(.tutorial)
+        XCTAssertTrue(launcher.session === session, "the game that could not be written stays")
+        XCTAssertNil(launcher.preferences.firstLineGuide, "not answered yet")
+        XCTAssertTrue(FirstLineGuide.offers(in: session, tutorialCompleted: false,
+                                            choice: launcher.preferences.firstLineGuide),
+                      "the offer is made again")
+    }
+
     /// Review L3-1: a lesson started from the goals panel (or a lesson
     /// result's next lesson) keeps the game being played as well, not only
     /// one started from the station master's offer.
