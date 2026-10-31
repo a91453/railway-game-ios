@@ -12,7 +12,45 @@ extension Money {
     /// ``wholeText``, ``centsText``, ``signedText``,
     /// ``TrainRoster/shortMoney(_:)``), never with a `$` of its own, so
     /// the currency changes in one place (`MoneyTextSourceTests`).
-    public static let currencySymbol = "$"
+    /// New Taiwan dollars: the currency of where the map is (decisions 499
+    /// and 523).
+    public static let currencySymbol = "NT$"
+
+    /// New Taiwan dollars to one US dollar, for the rough reference the
+    /// English interface shows beside large amounts (decision 523). A
+    /// round figure, not a live rate.
+    public static let usDollarReferenceRate: Int64 = 30
+
+    /// The smallest amount, either way, that gets the US dollar
+    /// reference: NT$1,000. Fares, a day pass and other small amounts
+    /// are read in New Taiwan dollars alone.
+    public static let usDollarReferenceMinimum = Money(100_000)
+
+    /// "≈ US$300,000" beside a large amount in the English interface, the
+    /// New Taiwan dollars ÷ ``usDollarReferenceRate`` to the nearest whole
+    /// US dollar (half up, as ``moneyText`` rounds); `nil` in Chinese and
+    /// for an amount under ``usDollarReferenceMinimum`` (decision 523).
+    /// Only shown: every amount the player enters stays in NT$.
+    public func usDollarReferenceText(in language: DisplayLanguage) -> String? {
+        guard language == .english, amount.magnitude >= Self.usDollarReferenceMinimum.amount.magnitude else { return nil }
+        let centsPerDollar = Self.usDollarReferenceRate * 100
+        let remainder = amount % centsPerDollar + centsPerDollar / 2
+        let dollars = amount / centsPerDollar + (remainder >= centsPerDollar ? 1 : remainder < 0 ? -1 : 0)
+        return "≈ US$" + dollars.groupedText
+    }
+
+    /// ``moneyText`` with the US dollar reference after it where there is
+    /// one: "NT$ 9,000,000 (≈ US$300,000)" in English, "NT$ 9,000,000" in
+    /// Chinese (decision 523).
+    public func moneyTextWithReference(in language: DisplayLanguage) -> String {
+        usDollarReferenceText(in: language).map { "\(moneyText) (\($0))" } ?? moneyText
+    }
+
+    /// What the English interface says once about the currency, beside
+    /// the balance; `nil` in Chinese (decision 523).
+    public static func currencyNoteText(in language: DisplayLanguage) -> String? {
+        language == .english ? "Prices are in New Taiwan dollars (NT$); the US$ figures are a rough guide." : nil
+    }
 
     /// The amount in whole dollars, as the reference shows money
     /// (`metroEconomyMoneyText`: `"$ " + Math.round(dollars)` with thousands

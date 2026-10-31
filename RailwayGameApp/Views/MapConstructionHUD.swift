@@ -116,6 +116,13 @@ struct MapConstructionHUD: View {
             Text(cost.moneyText)
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
+            // Decision 523: a rough US dollar figure, English only.
+            if let reference = cost.usDollarReferenceText(in: language) {
+                Text(verbatim: reference)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+                    .monospacedDigit()
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.moneyText)"))
