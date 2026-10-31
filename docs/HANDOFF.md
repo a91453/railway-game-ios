@@ -2406,6 +2406,17 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - `economy`、`network-economy` 兩個 replay 的起始餘額、建造成本、`setFareBaseline`／`setFareRules` 的金額 ×3：對 base `d1df0d7` 逐指令重播，193 個指令的接受或拒絕全部一樣。其他 7 檔 checksum 動是因為預設 `demandBaseline` 75 → 225，README 與決策 499 改正。
   - 決策 499 加「高鐵每公里不照真實票價」（五方）與「已知限制」（審查列為低、不改的五項）。沒有剩下的步驟；合併由遊戲規劃決定。
 
+### 4.36 停站的車停待避線（決策 518，派工單 PASSLOOP session_01YGNNun8qxU3qeJoE7gLpCk，`passloop-siding-platform`，PR #1601，2026-10-31）
+
+第二次壓縮後停手交接。存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
+
+- **做了的**（分支上已推，PR 是 draft）：`RunSpacing.swift` 的 `freePlatformPath`，停完還要開的車先找正線以外的空月台，再來是自己會準時讓出的月台，最後才照舊；規則、重現數字（舊 123 次 → 0）、參考對照與五方在 `docs/decisions/518.md`。第二個 commit（a4fbed1）修了 CI 抓到的回歸：分在兩段軌道上的月台（`TestLine`）的另一半不算「旁邊」（`across`），`LineAcquisitionTests.testVersionSixtySixKeepsTheLineBought` 因此回綠；`CallingLoopPlatformTests` 第五個測試鎖住它。
+- 本機 VERIFIED（a4fbed1）：`-warnings-as-errors` 乾淨；`CallingLoopPlatformTests` 5/5、`LineAcquisitionTests` 10/10、`RealLineAcquisitionTests` 12/12、Golden 24/24、ReplayFixtureTests、SavedGameTests 38/38、LongLegReplayTests 與 spacing、depot 類別。
+- **還沒做的**：CI run 41174302674 的 `rest` shard 到 20 分被取消，**0 個測試失敗**，最後一批沒跑完。每一類都比 #1599 的 `rest` 慢約 1.29 倍，連沒有班次的類別也一樣（PassengerCheckOnceTests 78.9 秒對 59.4、DeadlockSearchCostTests 67.2 對 51.7、Map3DTaichungGreenTests 9.0 對 0.2），所以像是 runner 慢，但還沒證明。下一棒：
+  1. 在本機分別用 main 與這個分支跑最慢的幾類（`grep -rl "class PassengerCheckOnceTests" Tests`，`DeadlockSearchCostTests` 也是），比時間。新的路徑搜尋（`straight` 那次 `path(from:toStation:)`）只在有班次、停完還要開的車選月台時跑。
+  2. 時間一樣：在 PR 留一次證據，讓 `rest` 再跑一次（failed jobs 已經重跑過一次，只能靠下一個真的 commit，例如這份交接的 commit）。慢了：先把 `straight` 記進 `memo`，或只在 `own > 0` 或目標是正線時才算。
+  3. 綠了：PR 轉 ready、#1579 留「可合併」、`send_message` 告訴遊戲規劃。不要合併。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
