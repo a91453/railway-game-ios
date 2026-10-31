@@ -1,4 +1,4 @@
-> 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次。線很多的世界裡 GameCore 蓋一段 edge 本身慢、描線預覽又蓋兩次，是第二個 PR（見決策 521「下一步」）。實機 UNVERIFIED。
+> 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次；第二個 PR（`tracelag-build-once`，決策 521「續」）讓預覽副本不在每段之後清點等車的旅客。描線預覽仍把整串蓋兩次，線多的世界一步最多約 0.5 s（debug），留在決策 521「續」的下一步。實機 UNVERIFIED。
 
 > 從 3D 按「建設」（派工單 BUILD3D，[決策 517](decisions/517.md)，`build3d-return`，2026-10-31）：照舊在 2D 蓋，從 3D 來的按「完成」回到 3D 原本的視角（`Map3DBuildReturn`）。在 3D 裡直接鋪軌只做了評估，留給之後：照決策 517「下一步」的四步（先做 3D 點選、再解決鋪完要等場景重蓋、再只做路網的平面鋪設、最後看實機數據）。實機上回 3D 的樣子、截圖驗收暫緩（ui-review §3），UNVERIFIED。
 
