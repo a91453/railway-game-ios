@@ -808,6 +808,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("lines-network", app)
     }
 
+    /// Decision 524: a line's page with realistic operation shows its last
+    /// seven days' punctuality, Taiwan Railway's past year beside it.
+    func testLineWeeklyPunctuality() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        let weekly = app.descendants(matching: .any)["line.weeklyPunctuality"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The week's punctuality shows")
+        weekly.waitUntilSettled()
+        settle(seconds: 1)
+        keep("line-weekly-punctuality", app)
+    }
+
     /// Decision 512: a line's page opens its train roster, which lets the
     /// trains be arranged: the roster of one line, then Arrange.
     func testTrainRosterOfALine() {
