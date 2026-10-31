@@ -92,11 +92,19 @@ final class WebsiteScreenshotTests: XCTestCase {
         alert?.tap()
         let materials = app.descendants(matching: .any)["station.materials"].firstMatch
         XCTAssertTrue(materials.appears(within: 10), "A tap on a bubble opens its station's panel")
-        _ = app.dragUntilWhollyOnScreen(materials, drags: 8)
+        settle()
+        // The panel's own list, so the row comes clear of the panel's
+        // bottom edge, not only of the screen's.
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(materials, in: list), "The materials row with its next step comes into view")
         settle()
         keep("materials-next-step", app)
-        let platforms = app.descendants(matching: .any)["station.platformTrack.0"].firstMatch
-        _ = app.dragUntilWhollyOnScreen(platforms, drags: 12)
+        // The platforms are in the operations group.
+        tapButton("station.jump", in: app)
+        tapButton("station.jump.operations", in: app)
+        settle()
+        let footer = app.descendants(matching: .any)["station.platforms.footer"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(footer, in: list), "The platforms' footer comes into view")
         settle()
         keep("station-own-track", app)
     }
