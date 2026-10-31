@@ -275,7 +275,12 @@ final class TutorialUITests: XCTestCase {
             if (try? folded.snapshot())?.label.hasSuffix(title) == true { return }
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
+        // The step read after the deadline counts too: a snapshot of the
+        // folded card, gone while the open one showed, spent 12 of the 10
+        // seconds in XCTest's retries, so the loop looked once, and the
+        // last read found the step (pull request #1608, run 41196893183).
         let shown = (try? heading.snapshot())?.label ?? (try? folded.snapshot())?.label ?? "no card"
+        if shown == title || shown.hasSuffix(title) { return }
         XCTFail("Timed out waiting for the step “\(title)”; showing “\(shown)”. \(message)", file: file, line: line)
     }
 

@@ -507,7 +507,12 @@ final class RealWorldMapUITests: XCTestCase {
         // the second platform too.
         let cars = app.steppers.matching(NSPredicate(format: "label BEGINSWITH 'Platform for'")).firstMatch
         if cars.appears(within: 5), !cars.label.hasPrefix("Platform for 4 cars") {
-            let fewer = cars.buttons.matching(NSPredicate(format: "identifier == 'Decrement' OR label == 'Decrement'")).firstMatch
+            // Since the stepper has an identifier of its own (decision
+            // 510), its buttons are "network.platformCars-Decrement",
+            // labelled with the stepper's label and ", Decrement"; the
+            // bare "Decrement" matched nothing (main 447891f's full lane,
+            // run 41187572538).
+            let fewer = cars.buttons.matching(NSPredicate(format: "identifier ENDSWITH '-Decrement' OR identifier == 'Decrement' OR label ENDSWITH 'Decrement'")).firstMatch
             for _ in 0..<20 where !cars.label.hasPrefix("Platform for 4 cars") {
                 // On a phone on its side, with this text, the stepper is
                 // below the details card's fold (run 39812583222).
