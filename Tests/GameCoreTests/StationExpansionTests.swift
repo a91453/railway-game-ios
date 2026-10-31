@@ -22,7 +22,9 @@ final class StationExpansionTests: XCTestCase {
         try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: trips))
         try world.setStationDemand(b, to: StationDemand(kind: .office, dailyTrips: trips))
         world.setSpeed(.normal)
-        world.economy.earn(StationExpansion.allCases.map(\.price).reduce(.zero, +))
+        world.setEconomyMode(.management)
+        // Both expansions and a day's running costs.
+        world.economy.earn(StationExpansion.allCases.map(\.price).reduce(Money(100_000_000), +))
         return world
     }
 
@@ -88,7 +90,7 @@ final class StationExpansionTests: XCTestCase {
 
         world = try makeCorridor()
         try world.advance(ticks: 1_440)
-        try world.economy.spend(world.economy.balance - StationExpansion.concourse.price + Money(1))
+        try world.economy.spend(world.economy.balance - StationExpansion.concourse.price + Money(100))
         before = world
         XCTAssertThrowsError(try world.expandStation(at: a))
         XCTAssertEqual(world, before)
@@ -103,9 +105,9 @@ final class StationExpansionTests: XCTestCase {
         XCTAssertThrowsGameError(try world.expandStation(at: d), .stationIsDepot(d))
         try world.advance(ticks: 1_440)
         try world.expandStation(at: a)
-        XCTAssertThrowsGameError(try world.setStationDepot(a, to: true), .stationIsExpanded(a))
         XCTAssertFalse(records(world, of: a).isEmpty)
         try world.removeLine(try XCTUnwrap(world.lines.first?.id))
+        XCTAssertThrowsGameError(try world.setStationDepot(a, to: true), .stationIsExpanded(a))
         try world.removeStation(a)
         XCTAssertTrue(records(world, of: a).isEmpty)
         XCTAssertNil(world.assetsProblem())
@@ -117,7 +119,9 @@ final class StationExpansionTests: XCTestCase {
     /// before turning the rest away.
     func testAnExpandedStationHoldsMore() throws {
         var world = try makeCorridor()
-        try world.advance(ticks: 1_440)
+        // To the morning peak of day 1, when an hour brings more than the
+        // largest station holds.
+        try world.advance(ticks: 1_440 + 8 * 60)
         XCTAssertEqual(world.passengerLedger(of: a).waiting, 4_000)
         try world.expandStation(at: a)
         try world.advance(ticks: 60)
@@ -145,7 +149,7 @@ final class StationExpansionTests: XCTestCase {
     /// is, or that more wait than the station holds, does not load.
     func testASaveHoldsTheStationToItsRoom() throws {
         var world = try makeCorridor()
-        try world.advance(ticks: 1_440)
+        try world.advance(ticks: 1_440 + 8 * 60)
         try world.expandStation(at: a)
         try world.advance(ticks: 60)
         let data = try JSONEncoder().encode(SavedGame(world: world))
@@ -153,7 +157,10 @@ final class StationExpansionTests: XCTestCase {
         XCTAssertTrue(text.contains(#""expansion":1"#))
         XCTAssertEqual(text.components(separatedBy: #""expansion""#).count - 1, 1, "only the expanded station says so")
         // Taking the expansion off leaves 8,000 waiting where 4,000 fit.
-        text = text.replacingOccurrences(of: #","expansion":1"#, with: "")
+        let stripped = text.replacingOccurrences(of: #","expansion":1"#, with: "").replacingOccurrences(of: #""expansion":1,"#, with: "")
+        XCTAssertNotEqual(stripped, text)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 8_000)
+        text = stripped
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: Data(text.utf8)))
     }
 
@@ -161,7 +168,7 @@ final class StationExpansionTests: XCTestCase {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v78-station-expansion.json")
         var made = try makeCorridor()
-        try made.advance(ticks: 1_440)
+        try made.advance(ticks: 1_440 + 8 * 60)
         try made.expandStation(at: a)
         try made.expandStation(at: a)
         try made.advance(ticks: 60)

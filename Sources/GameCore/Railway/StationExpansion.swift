@@ -34,21 +34,28 @@ public enum StationExpansion: Int, CaseIterable, Comparable, Codable, Sendable {
     }
 
     /// What this expansion costs, in cents (of the New Taiwan dollar,
-    /// decision 499): kept as a building asset.
+    /// decision 499): NT$30 million, then NT$90 million, kept as a station
+    /// asset (20 years). On the owner's save of long trips the first pays
+    /// back within weeks at Taipei and Banqiao; a new game's short fares
+    /// make it slower, not yet measured (decision 506, 量到的).
     public var price: Money {
         switch self {
-        case .concourse: Money(1)
-        case .hall: Money(2)
+        case .concourse: Money(3_000_000_000)
+        case .hall: Money(9_000_000_000)
         }
     }
 
     /// The people a day (got on and off, a change once: the count the
     /// station's shops use, ``GameWorld/stationCommercePeople(of:onDay:)``)
-    /// the station must have had yesterday before this expansion opens.
+    /// the station must have had yesterday before this expansion opens:
+    /// 50,000, then 100,000. On the owner's save the first opens at its
+    /// four busiest stations (Taipei, Banqiao, Hsinchu, Taichung) and at
+    /// none of those a line left unserved; the second at Taipei, and at
+    /// Banqiao once its first expansion brings it past 100,000.
     public var threshold: Int64 {
         switch self {
-        case .concourse: 1
-        case .hall: 2
+        case .concourse: 50_000
+        case .hall: 100_000
         }
     }
 }

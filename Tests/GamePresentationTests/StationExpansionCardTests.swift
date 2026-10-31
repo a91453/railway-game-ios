@@ -16,46 +16,51 @@ final class StationExpansionCardTests: XCTestCase {
         return world
     }
 
-    /// A new line's station is too quiet: the offer says how busy it must
-    /// get, and the button cannot be pressed.
-    func testAQuietStationSaysWhatItNeeds() throws {
+    /// A new line's station is busy enough for the first expansion, not
+    /// yet for the second: the offer then says how busy it must get, and
+    /// the button cannot be pressed.
+    func testTheSecondStepWaitsForABusierStation() throws {
         let world = try world()
         let station = world.stations[0].id
-        let card = try XCTUnwrap(StationExpansionCard(station: station, in: world))
+        var card = try XCTUnwrap(StationExpansionCard(station: station, in: world))
         XCTAssertNil(card.expansion)
         XCTAssertEqual(card.capacity, 4_000)
         XCTAssertEqual(card.people, world.stationExpansionPeople(of: station))
-        let offer = try XCTUnwrap(card.offer)
+        var offer = try XCTUnwrap(card.offer)
         XCTAssertEqual(offer.expansion, .concourse)
         XCTAssertEqual(offer.price, StationExpansion.concourse.price)
-        XCTAssertLessThan(card.people, offer.threshold, "a first line's station is not busy enough")
+        XCTAssertEqual(offer.open, card.people >= StationExpansion.concourse.threshold)
+        XCTAssertEqual(card.capacityText(in: .traditionalChinese), "可容納 4,000 人候車・目前 \(card.waiting.groupedText) 人")
+        XCTAssertGreaterThanOrEqual(card.people, StationExpansion.concourse.threshold, "the first line's town station is busy")
+        XCTAssertLessThan(card.people, StationExpansion.hall.threshold, "but not a city's main station")
+        XCTAssertTrue(card.canExpand)
+        XCTAssertEqual(card.offerTitle(in: .traditionalChinese), "擴建：擴大站廳・\(StationExpansion.concourse.price.moneyText)")
+        XCTAssertEqual(card.offerText(in: .traditionalChinese), "可容納 8,000 人候車，客滿時少流失一些旅客。")
+
+        let session = GameSession(world: world)
+        session.expandStation(at: station)
+        card = try XCTUnwrap(session.stationExpansionCard(of: station))
+        XCTAssertEqual(card.expansion, .concourse)
+        XCTAssertEqual(card.capacity, 8_000)
+        offer = try XCTUnwrap(card.offer)
+        XCTAssertEqual(offer.expansion, .hall)
         XCTAssertFalse(offer.open)
         XCTAssertFalse(card.canExpand)
         let text = try XCTUnwrap(card.offerText(in: .traditionalChinese))
-        XCTAssertTrue(text.hasPrefix("每日進出達 "), text)
-        XCTAssertEqual(card.capacityText(in: .traditionalChinese), "可容納 4,000 人候車・目前 \(card.waiting.groupedText) 人")
+        XCTAssertTrue(text.hasPrefix("每日進出達 100,000 人次才能擴建（昨天 "), text)
     }
 
-    /// Once busy enough, the button expands the station; after both, the
-    /// section says it is at its largest.
-    func testExpandingThroughTheSession() throws {
+    /// After both, the section says it is at its largest.
+    func testTheLargestStation() throws {
         var world = try world()
         let station = world.stations[0].id
-        // A busy day for this station.
-        try world.setStationDemand(station, to: StationDemand(kind: .residential, dailyTrips: StationDemand.maximumDailyTrips))
-        world.setLineAccounts(false)
-        try world.advance(ticks: 1_440)
-        let session = GameSession(world: world)
-        var card = try XCTUnwrap(session.stationExpansionCard(of: station))
-        XCTAssertTrue(card.canExpand)
-        XCTAssertEqual(card.offerTitle(in: .traditionalChinese), "擴建：擴大站廳・\(StationExpansion.concourse.price.moneyText)")
-        session.expandStation(at: station)
-        session.expandStation(at: station)
-        card = try XCTUnwrap(session.stationExpansionCard(of: station))
+        world.setStationExpansion(.hall, at: 0)
+        let card = try XCTUnwrap(StationExpansionCard(station: station, in: world))
         XCTAssertEqual(card.expansion, .hall)
         XCTAssertEqual(card.capacity, 16_000)
         XCTAssertNil(card.offer)
         XCTAssertNil(card.offerTitle(in: .english))
+        XCTAssertFalse(card.canExpand)
         XCTAssertEqual(card.offerText(in: .english), "The station is at its largest.")
     }
 
