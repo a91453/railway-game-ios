@@ -383,9 +383,6 @@ extension GameSession {
             let a = path.project(span.0), b = path.project(span.1)
             return min(a, b)...max(a, b)
         }
-        // Decision 513: the player's trace level at the real line's
-        // stations, as the demo's platforms are.
-        let levelSpans = platforms.isEmpty ? tracedStationSpans(along: path, system: system) : spans
 
         // The ground under the way, every 32 m: the tool's ground (decision
         // 124) for a new end, and the track's heights between.
@@ -462,6 +459,12 @@ extension GameSession {
                 levels.append(TrackRise.Level(path.length...path.length, from: Double(to.z) + band.low, to: Double(to.z) + band.high))
                 looseEnds.end = true
             }
+        }
+        // Decision 513: the player's trace level at the real line's
+        // stations, as the demo's platforms are; a station on a real
+        // viaduct or in a real tunnel stands on it or in it, as above.
+        let levelSpans = !platforms.isEmpty ? spans : tracedStationSpans(along: path, system: system).filter { span in
+            !carried.contains { $0.isLong && $0.range.overlaps(span) }
         }
         guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
             var refused = TracePlan(stretches: [], buildable: 0, problem: language.text(
