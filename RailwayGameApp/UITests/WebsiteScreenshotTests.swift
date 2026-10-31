@@ -335,6 +335,31 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// The selection card of a station on a phone on its side (a player's
+    /// report: its summary was cut short with "…"): a station of the
+    /// high-speed demo picked from its tag, the card in the side panel with
+    /// the platforms and who waits on lines of their own. For the
+    /// screenshot review of the pull request that fixed it, not the website.
+    func testStationCard() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        settle(seconds: 8)
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 1) {
+            for _ in 0..<2 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        let tag = app.descendants(matching: .any).matching(identifier: "map.stationTag").allElementsBoundByIndex.first(where: \.isHittable)
+        tag?.tap()
+        settle(seconds: 3)
+        keep("station-card", app)
+        XCTAssertTrue(app.descendants(matching: .any)["inspector.status"].firstMatch.appears(within: 5), "The selection card shows")
+    }
+
     /// The company's goals on a blank new game (decisions 181 and 183): the
     /// requests the city offers with what each pays, above the company's
     /// rank and title.
