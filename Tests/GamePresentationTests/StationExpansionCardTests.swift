@@ -45,7 +45,8 @@ final class StationExpansionCardTests: XCTestCase {
         offer = try XCTUnwrap(card.offer)
         XCTAssertTrue(offer.full)
         XCTAssertTrue(card.canExpand)
-        XCTAssertEqual(card.offerTitle(in: .traditionalChinese), "擴建：擴大站廳・\(StationExpansion.concourse.price.moneyText)")
+        XCTAssertEqual(card.offerTitle(in: .traditionalChinese), "擴建：擴大站廳")
+        XCTAssertEqual(card.offerPriceText, StationExpansion.concourse.price.moneyText)
         XCTAssertEqual(card.offerText(in: .traditionalChinese), "可容納 8,000 人候車，客滿時少流失一些旅客。")
 
         let session = GameSession(world: world)

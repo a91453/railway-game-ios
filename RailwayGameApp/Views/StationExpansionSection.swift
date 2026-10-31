@@ -31,6 +31,13 @@ struct StationExpansionSection: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: title)
                                 .font(.subheadline.weight(.semibold))
+                            if let price = card.offerPriceText {
+                                Text(verbatim: price)
+                                    .font(.subheadline.weight(.semibold))
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
                             if let text = card.offerText(in: language) {
                                 Text(verbatim: text)
                                     .font(.footnote)

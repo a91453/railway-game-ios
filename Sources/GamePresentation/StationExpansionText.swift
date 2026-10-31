@@ -94,9 +94,15 @@ public struct StationExpansionCard: Hashable, Sendable {
     public func offerTitle(in language: DisplayLanguage) -> String? {
         guard let offer else { return nil }
         return language.text(
-            "Expand: \(offer.expansion.title(in: .english).lowercased()) · \(offer.price.moneyText)",
-            "擴建：\(offer.expansion.title(in: .traditionalChinese))・\(offer.price.moneyText)"
+            "Expand: \(offer.expansion.title(in: .english).lowercased())",
+            "擴建：\(offer.expansion.title(in: .traditionalChinese))"
         )
+    }
+
+    /// The offer's price, on a line of its own under the button's title so
+    /// a narrow panel never breaks the amount.
+    public var offerPriceText: String? {
+        offer?.price.moneyText
     }
 
     /// Whether the button can be pressed.

@@ -5,7 +5,8 @@ import XCTest
 
 /// Decision 506's payback in a new game, on request only
 /// (`STATION_EXPANSION_PAYBACK=<days>`): a world played as it is beside the
-/// same world where every station that may expand does, each morning, with
+/// same world where every station that may expand (busy and full lately)
+/// does, each morning, with
 /// the money given (so the price does not change what else runs). Prints
 /// each day's fares and the people turned away by a full station in both,
 /// and the days the extra fares take to repay what was spent.
@@ -36,11 +37,13 @@ final class StationExpansionPaybackReportTests: XCTestCase {
         for day in 1...days {
             let overflowPlain = plain.passengers.reduce(0) { $0 + $1.overflowed }
             let overflowExpanded = expanded.passengers.reduce(0) { $0 + $1.overflowed }
-            // Expand each morning wherever yesterday's people allow it.
+            // Expand each morning wherever the game allows it: yesterday's
+            // people, and full yesterday or today.
             if day > 1 {
                 for station in expanded.stations {
                     while let next = expanded.nextStationExpansion(of: station.id),
-                          expanded.stationExpansionPeople(of: station.id) >= next.threshold {
+                          expanded.stationExpansionPeople(of: station.id) >= next.threshold,
+                          expanded.stationWasFullLately(station.id) {
                         expanded.economy.earn(next.price)
                         try expanded.expandStation(at: station.id)
                         spent = spent + next.price
