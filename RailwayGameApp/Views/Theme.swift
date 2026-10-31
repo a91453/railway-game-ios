@@ -148,11 +148,13 @@ struct TouchTargetButtonStyle: ButtonStyle {
 struct ThemeSelectableTouchTargetButtonStyle: ButtonStyle {
     let isActive: Bool
     let size: CGSize
+    /// As ``TouchTargetButtonStyle/reach``.
+    var reach: CGFloat = .infinity
 
     func makeBody(configuration: Configuration) -> some View {
         ThemeSelectableButtonStyle(isActive: isActive)
             .makeBody(configuration: configuration)
-            .touchTarget(around: size)
+            .touchTarget(around: size, reach: reach)
     }
 }
 

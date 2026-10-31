@@ -132,7 +132,16 @@ public struct TrainRoster: Equatable, Sendable {
     public let dayStart: Int64
     /// Now, in seconds of game time.
     public let now: Int64
-    public let rows: [Row]
+    public private(set) var rows: [Row]
+
+    /// The roster with only line `line`'s trains (decision 512: opened
+    /// from a line's page), or all of them for `nil`.
+    public func only(line: LineID?) -> TrainRoster {
+        guard let line else { return self }
+        var shown = self
+        shown.rows = rows.filter { $0.line == line }
+        return shown
+    }
 
     /// The last second of the day shown, exclusive.
     public var dayEnd: Int64 { dayStart + GameTime.secondsPerDay }

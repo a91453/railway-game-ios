@@ -176,6 +176,7 @@ extension GameSession {
         var buildable = 0
         var problem: String?
         var existing: [(after: Int, points: [WorldCoordinate])] = []
+        var refusedWay: [WorldCoordinate] = []
         var cursor = (anchor: start, point: WorldVector(from.plan), along: 0.0, fromRun: false)
 
         // One piece of the way, traced; false where it stops the trace.
@@ -189,6 +190,7 @@ extension GameSession {
             buildable = stretches.count + piece.buildable
             stretches += piece.stretches
             if piece.stopped || piece.stretches.isEmpty {
+                refusedWay = piece.refusedWay
                 problem = piece.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")
                 return false
             }
@@ -227,7 +229,11 @@ extension GameSession {
         if stretches.isEmpty, problem == nil {
             problem = language.text("Track is already laid all along here.", "這段已經有軌道了。")
         }
-        guard !stretches.isEmpty else { return TracePlan(stretches: [], buildable: 0, problem: problem) }
+        guard !stretches.isEmpty else {
+            var refused = TracePlan(stretches: [], buildable: 0, problem: problem)
+            refused.refusedWay = refusedWay
+            return refused
+        }
         var plan = TracePlan(stretches: stretches, buildable: buildable, problem: reached ? nil : problem)
         plan.existing = existing.filter { $0.after <= buildable }
         plan.existingLength = plan.existing.reduce(0) { total, run in

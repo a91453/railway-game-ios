@@ -1,7 +1,7 @@
 # Game Center 設定步驟（給作者）
 
 > 讀者：作者。照著按就能完成；不需要密碼以外的任何資料交給 session，session 也不會問。
-> 背景：決策 396（`docs/decisions/396.md`）。遊戲把每週挑戰的完成天數送上 Game Center 的每週排行榜，38 個成就同步成 Game Center 的成就。
+> 背景：決策 396（`docs/decisions/396.md`）。遊戲把每週挑戰的完成天數送上 Game Center 的每週排行榜，39 個成就同步成 Game Center 的成就。
 
 ## 順序（重要）
 
@@ -26,9 +26,9 @@
 2. 上方分頁選 **Features（功能）**（有的帳號叫 **Services（服務）**），左邊選 **Game Center**。
 3. 第一次會問要不要用 Game Center：選 **Enable for Single Game（只用在這個遊戲）**。
 
-## 第 3、4 步：用 GitHub 一次建好排行榜和 38 個成就
+## 第 3、4 步：用 GitHub 一次建好排行榜和 39 個成就
 
-不用一個一個在 App Store Connect 填。GitHub 上的「Game Center setup」會用發 TestFlight 那把 App Store Connect API key，照下面的表建好每週排行榜（含兩種語言）和 38 個成就（含兩種語言與圖）。
+不用一個一個在 App Store Connect 填。GitHub 上的「Game Center setup」會用發 TestFlight 那把 App Store Connect API key，照下面的表建好每週排行榜（含兩種語言）和 39 個成就（含兩種語言與圖）。
 
 ### 先確認 key 的權限（只要看一次）
 
@@ -53,7 +53,7 @@
 3. 等它跑完（一兩分鐘），點進去，看 **Summary** 的清單。dry run 只讀 App Store Connect，不會建任何東西。清單長這樣：
    - `排行榜 weekly.days.v2：新建：……`，下面兩行 `加語言 en-US`、`加語言 zh-Hant`。
    - `成就 achievement.firstFare：新建：First Fare，5 點，不隱藏，不可重複`，下面兩行語言、兩行上傳圖。
-   - 最上面一行是總數：第一次跑應該是「新的項目 39 個、語言 78 個、圖 76 張」。
+   - 最上面一行是總數：第一次跑應該是「新的項目 40 個、語言 80 個、圖 78 張」。
 4. 清單沒問題，再按一次 **Run workflow**，這次 **mode** 選 **apply**。它會先印出同一份清單，再一個一個建，最後寫「全部建好了」。
 
 **排行榜和成就上線之後就刪不掉了**（隨 App 版本送審通過之後），所以 apply 之前一定先看 dry run 的清單。apply 只是建立，還沒上線：在第 5 步送審之前，都可以在 App Store Connect 自己改或刪。
@@ -113,7 +113,7 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 
 **之後挑戰的目標改了**（程式裡的 `ChallengeRecords.rulesVersion` 換版本）：要另建一個新的排行榜（ID 例如 `weekly.days.v3`）。session 會在那個 PR 把它加進 `game-center.json`，作者再跑一次這個 workflow。舊的不用刪。
 
-**38 個成就**：每一個都是 **Hidden** No（遊戲裡的成就清單本來就全部看得到）、**Achievable More Than Once** No；點數共 800 點，Game Center 上限 1,000，留給之後的成就。兩種語言的 **Pre-earned Description** 與 **Earned Description** 都是表裡的說明，**Image** 是 `docs/game-center/achievements/<ID>.png`。
+**39 個成就**：每一個都是 **Hidden** No（遊戲裡的成就清單本來就全部看得到）、**Achievable More Than Once** No；點數共 810 點，Game Center 上限 1,000，留給之後的成就。兩種語言的 **Pre-earned Description** 與 **Earned Description** 都是表裡的說明，**Image** 是 `docs/game-center/achievements/<ID>.png`。
 
 <!-- achievements: generated from docs/game-center/game-center.json by tools/game-center-setup/game_center_setup.py --write-doc; do not edit by hand -->
 | # | ID | 點數 | 隱藏 | 中文名稱 | 中文說明 | 英文名稱 | 英文說明 |
@@ -139,23 +139,24 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 | 19 | `achievement.stations50` | 20 | 否 | 五十站 | 車站 50 座 | Fifty Stations | Build 50 stations |
 | 20 | `achievement.stations100` | 40 | 否 | 百站達成 | 車站 100 座 | A Hundred Stations | Build 100 stations |
 | 21 | `achievement.firstBuilding` | 10 | 否 | 建商起步 | 第一棟公司建物 | Developer | Put up the company's first building |
-| 22 | `achievement.firstFreight` | 10 | 否 | 第一噸貨 | 第一次送達貨物 | First Tonne | Deliver freight |
-| 23 | `achievement.firstTile` | 10 | 否 | 開疆闢土 | 買下第一格地圖 | New Ground | Buy a tile of the map |
-| 24 | `achievement.tower` | 15 | 否 | 站前大樓 | 車站 800 公尺內出現高樓 | Station Tower | A high-rise within 800 m of a station |
-| 25 | `achievement.typhoonSeason` | 15 | 否 | 安然度颱 | 颱風季結束時沒有負債 | Weathered the Storms | End the typhoon season with no debt |
-| 26 | `achievement.challengeGold` | 40 | 否 | 挑戰金牌 | 以金牌完成一項挑戰 | Gold Medal | Complete a challenge with gold |
-| 27 | `achievement.pingxi` | 30 | 否 | 平溪線 | 完成平溪線劇本 | Pingxi Line | Complete the Pingxi challenge |
-| 28 | `achievement.liuMingchuan` | 30 | 否 | 劉銘傳鐵路 | 完成劉銘傳劇本 | Liu Mingchuan's Railway | Complete the Liu Mingchuan challenge |
-| 29 | `achievement.firstTourists` | 10 | 否 | 一日遊 | 第一次把觀光客載到景點 | Day Trippers | Bring tourists to an attraction |
-| 30 | `achievement.tourists100k` | 25 | 否 | 觀光旺季 | 一年 100,000 位觀光客 | Tourist Season | 100,000 tourists in a year |
-| 31 | `achievement.souvenirShop` | 15 | 否 | 名產名店 | 一間名產店升到最高級 | Local Specialties | A souvenir shop at its highest level |
-| 32 | `achievement.fiveStars` | 25 | 否 | 五星景點 | 一處五星的景點 | Five Stars | An attraction rated five stars |
-| 33 | `achievement.firstSubsidiary` | 10 | 否 | 多角經營 | 開第一間百貨公司、飯店或遊樂園 | In Business | Open a department store, hotel or amusement park |
-| 34 | `achievement.allBusinesses` | 25 | 否 | 企業集團 | 百貨公司、飯店、遊樂園各一間 | Group | Run a department store, a hotel and an amusement park |
-| 35 | `achievement.businessProfit` | 25 | 否 | 生意興隆 | 一間事業開業以來賺進 $1,000,000 | Paying Business | A business that has made $1,000,000 since it opened |
-| 36 | `achievement.mixedFleet` | 10 | 否 | 車種齊全 | 車隊有三種以上車種 | Mixed Fleet | Trains of three types |
-| 37 | `achievement.longTrain` | 10 | 否 | 長編組 | 一列 10 節以上的列車 | Long Train | A train of 10 cars or more |
-| 38 | `achievement.fleetInvestment` | 10 | 否 | 車隊投資 | 車隊的購置成本達 $5,000,000 | Rolling Stock Investor | Spend $5,000,000 on trains |
+| 22 | `achievement.cityPlanner` | 10 | 否 | 都市計畫 | 城市在你劃的分區蓋起 10 格 | Town Planner | The town builds on 10 cells you zoned |
+| 23 | `achievement.firstFreight` | 10 | 否 | 第一噸貨 | 第一次送達貨物 | First Tonne | Deliver freight |
+| 24 | `achievement.firstTile` | 10 | 否 | 開疆闢土 | 買下第一格地圖 | New Ground | Buy a tile of the map |
+| 25 | `achievement.tower` | 15 | 否 | 站前大樓 | 車站 800 公尺內出現高樓 | Station Tower | A high-rise within 800 m of a station |
+| 26 | `achievement.typhoonSeason` | 15 | 否 | 安然度颱 | 颱風季結束時沒有負債 | Weathered the Storms | End the typhoon season with no debt |
+| 27 | `achievement.challengeGold` | 40 | 否 | 挑戰金牌 | 以金牌完成一項挑戰 | Gold Medal | Complete a challenge with gold |
+| 28 | `achievement.pingxi` | 30 | 否 | 平溪線 | 完成平溪線劇本 | Pingxi Line | Complete the Pingxi challenge |
+| 29 | `achievement.liuMingchuan` | 30 | 否 | 劉銘傳鐵路 | 完成劉銘傳劇本 | Liu Mingchuan's Railway | Complete the Liu Mingchuan challenge |
+| 30 | `achievement.firstTourists` | 10 | 否 | 一日遊 | 第一次把觀光客載到景點 | Day Trippers | Bring tourists to an attraction |
+| 31 | `achievement.tourists100k` | 25 | 否 | 觀光旺季 | 一年 100,000 位觀光客 | Tourist Season | 100,000 tourists in a year |
+| 32 | `achievement.souvenirShop` | 15 | 否 | 名產名店 | 一間名產店升到最高級 | Local Specialties | A souvenir shop at its highest level |
+| 33 | `achievement.fiveStars` | 25 | 否 | 五星景點 | 一處五星的景點 | Five Stars | An attraction rated five stars |
+| 34 | `achievement.firstSubsidiary` | 10 | 否 | 多角經營 | 開第一間百貨公司、飯店或遊樂園 | In Business | Open a department store, hotel or amusement park |
+| 35 | `achievement.allBusinesses` | 25 | 否 | 企業集團 | 百貨公司、飯店、遊樂園各一間 | Group | Run a department store, a hotel and an amusement park |
+| 36 | `achievement.businessProfit` | 25 | 否 | 生意興隆 | 一間事業開業以來賺進 $1,000,000 | Paying Business | A business that has made $1,000,000 since it opened |
+| 37 | `achievement.mixedFleet` | 10 | 否 | 車種齊全 | 車隊有三種以上車種 | Mixed Fleet | Trains of three types |
+| 38 | `achievement.longTrain` | 10 | 否 | 長編組 | 一列 10 節以上的列車 | Long Train | A train of 10 cars or more |
+| 39 | `achievement.fleetInvestment` | 10 | 否 | 車隊投資 | 車隊的購置成本達 $5,000,000 | Rolling Stock Investor | Spend $5,000,000 on trains |
 <!-- end achievements -->
 
 ## 第 5 步：送審的版本加上 Game Center
@@ -164,7 +165,7 @@ App Store Connect 的成就要有圖。38 張圖在成就圖的 PR（#1158）裡
 
 1. App Store Connect → 「Along the Line」→ **App Store** 分頁 → 要送審的版本。
 2. 往下捲到 **Game Center**，打勾。
-3. 按 **＋** 把 `weekly.days.v2` 和 38 個成就都加進去，**Done**，再 **Save**。
+3. 按 **＋** 把 `weekly.days.v2` 和 39 個成就都加進去，**Done**，再 **Save**。
 
 ## 隱私標示
 

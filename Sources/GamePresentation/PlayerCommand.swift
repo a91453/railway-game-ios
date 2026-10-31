@@ -69,6 +69,10 @@ public enum PlayerCommand: Hashable, Sendable {
     /// ``buildTrackChain(_:)`` lays it, and the station's platform the
     /// whole of one of its edges, all or none.
     case buyRealStation(RealStationPurchase)
+    /// A station's platform and the tracks its layout lays round it, as
+    /// one (decision 507, ``GameSession/stationLayoutPlan(_:platform:)``):
+    /// the platform, each platform track, then the track taken up.
+    case buildStationLayout(StationLayoutPlan)
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -84,10 +88,13 @@ public enum PlayerCommand: Hashable, Sendable {
         /// Where the ground is read in: both ends, then the points GameCore
         /// surveys under the edge (``NetworkBuilding/surveyedPoints(of:)``).
         public let ground: [PlanPoint]
+        /// Decision 515: mountain track (``TrackEdge/mountain``), which
+        /// only a trace of a real mountain line lays.
+        public let mountain: Bool
 
         public init(
             start: NetworkAnchor, end: NetworkAnchor, from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve,
-            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint]
+            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint], mountain: Bool = false
         ) {
             self.start = start
             self.end = end
@@ -97,6 +104,7 @@ public enum PlayerCommand: Hashable, Sendable {
             self.profile = profile
             self.structure = structure
             self.ground = ground
+            self.mountain = mountain
         }
 
         /// Builds it in `world`, reading ground from `heights`: the edge,
@@ -105,7 +113,7 @@ public enum PlayerCommand: Hashable, Sendable {
             try world.readGround(under: ground, from: heights)
             let first = try node(for: start, at: from, in: &world)
             let last = try node(for: end, at: to, in: &world)
-            let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure)
+            let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure, mountain: mountain)
             return (edge, last)
         }
 
@@ -218,6 +226,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .autoService: "autoService"
         case .acquireRealLine: "acquireRealLine"
         case .buyRealStation: "buyRealStation"
+        case .buildStationLayout: "buildStationLayout"
         }
     }
 }
@@ -310,6 +319,14 @@ extension GameSession {
             outcome.line = world.acquisition(of: acquisition.realLine)?.line.flatMap { world.line(id: $0) }
         case .buyRealStation(let purchase):
             outcome.station = try build(purchase, in: &world)
+        case .buildStationLayout(let plan):
+            outcome = try apply(.addPlatform(plan.platform), to: &world)
+            for track in plan.tracks {
+                _ = try build(track, in: &world)
+            }
+            for edge in plan.removed {
+                _ = try apply(.removeTrack(edge), to: &world)
+            }
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -362,6 +379,9 @@ extension PlayerCommand: Codable {
         /// The profile's transitions at the start and the end.
         var transitions: [Int64]?
         var structure: String?
+        /// Decision 515: `true` for mountain track; absent for ordinary
+        /// track (and in logs from before it).
+        var mountain: Bool?
         /// Plan points, x and y each.
         var ground: [Int64]?
         var edge: Int?
@@ -398,6 +418,10 @@ extension PlayerCommand: Codable {
         /// Decision 400 A.8: which of the chain's stretches a real
         /// station bought has its platform on.
         var platformStretch: Int?
+        /// Decision 507: a station layout's name and its steps, an
+        /// `addPlatform`, then `addPlatformTrack`s, then `removeTrack`s.
+        var layout: String?
+        var steps: [PlayerCommand]?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -441,7 +465,7 @@ extension PlayerCommand: Codable {
             return TrackStretch(
                 start: try anchor(record.start), end: try anchor(record.end), from: try coordinate(record.from), to: try coordinate(record.to),
                 curve: curve, profile: TrackProfile(startTransition: transitions[0], endTransition: transitions[1]),
-                structure: structure, ground: try points(record.ground)
+                structure: structure, ground: try points(record.ground), mountain: record.mountain ?? false
             )
         }
         switch record.kind {
@@ -513,6 +537,21 @@ extension PlayerCommand: Codable {
                 stretches: stretches, platform: platform, name: name, at: point,
                 demand: StationDemand(kind: kind, dailyTrips: demand.dailyTrips, hinterland: demand.hinterland)
             ))
+        case "buildStationLayout":
+            var steps = record.steps ?? []
+            guard let layout = record.layout.flatMap(StationLayout.init(rawValue:)), !steps.isEmpty,
+                  case .addPlatform(let platform) = steps.removeFirst() else {
+                throw invalid("a station layout needs its layout and its platform first")
+            }
+            var tracks: [PlatformTrackPlan] = [], removed: [TrackEdgeID] = []
+            for step in steps {
+                switch step {
+                case .addPlatformTrack(let plan) where removed.isEmpty: tracks.append(plan)
+                case .removeTrack(let edge): removed.append(edge)
+                default: throw invalid("a station layout's steps are platform tracks, then track taken up")
+                }
+            }
+            self = .buildStationLayout(StationLayoutPlan(layout: layout, platform: platform, tracks: tracks, removed: removed))
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -562,6 +601,7 @@ extension PlayerCommand: Codable {
             record.transitions = [stretch.profile.startTransition, stretch.profile.endTransition]
             record.structure = stretch.structure.rawValue
             record.ground = stretch.ground.flatMap { [$0.x, $0.y] }
+            record.mountain = stretch.mountain ? true : nil
         }
         switch self {
         case .buildTrack(let stretch):
@@ -621,6 +661,9 @@ extension PlayerCommand: Codable {
             record.name = purchase.name
             record.point = [purchase.at.x, purchase.at.y]
             record.demand = Record.Demand(kind: purchase.demand.kind.rawValue, dailyTrips: purchase.demand.dailyTrips, hinterland: purchase.demand.hinterland)
+        case .buildStationLayout(let plan):
+            record.layout = plan.layout.rawValue
+            record.steps = [.addPlatform(plan.platform)] + plan.tracks.map(PlayerCommand.addPlatformTrack) + plan.removed.map(PlayerCommand.removeTrack)
         }
         try record.encode(to: encoder)
     }
@@ -657,6 +700,13 @@ extension PlayerCommand {
             language.text("build this crossover", "建這組渡線")
         case .addPlatformTrack:
             language.text("add this platform track", "加這條月台線")
+        case .buildStationLayout(let plan):
+            switch plan.platform.station {
+            case .new(let name, _, _):
+                language.text("build station “\(name)” and its tracks", "建造車站「\(name)」與股道")
+            case .existing:
+                language.text("add these platforms and tracks", "加這些月台與股道")
+            }
         case .addPassingLoop:
             language.text("build this passing loop", "建這條待避線")
         case .buildDepotYard:

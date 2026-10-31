@@ -93,6 +93,8 @@ struct LinesPanel: View {
     @AppStorage("linesPanel.foldedGroups") private var storedFoldedGroups = ""
     /// Decision 206: whether the selected line's train diagram is open.
     @State private var showsDiagram = false
+    /// Decision 512: whether the selected line's train roster is open.
+    @State private var showsRoster = false
     /// Decision 196, later: the player's choice for the "Advanced" switch,
     /// or `nil` for the device's default (folded on a phone).
     @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
@@ -1647,6 +1649,18 @@ struct LinesPanel: View {
                 }
             }
             .accessibilityIdentifier("line.trainDiagram")
+            // Decision 512: the line's trains on the roster, where they
+            // can be moved.
+            Button {
+                showsRoster = true
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Train roster", "列車運用表"))
+                } icon: {
+                    Image(systemName: "chart.bar.doc.horizontal")
+                }
+            }
+            .accessibilityIdentifier("line.trainRoster")
             ForEach(Array(line.stops.enumerated()), id: \.offset) { index, station in
                 HStack {
                     Text(verbatim: "\(index + 1). \(name(of: station))")
@@ -2586,6 +2600,11 @@ extension LinesPanel {
             .fullScreenCover(isPresented: active ? $showsDiagram : .constant(false)) {
                 if let id = session.selectedLineID {
                     TrainDiagramView(session: session, line: id)
+                }
+            }
+            .fullScreenCover(isPresented: active ? $showsRoster : .constant(false)) {
+                if let id = session.selectedLineID {
+                    TrainRosterView(session: session, line: id)
                 }
             }
     }

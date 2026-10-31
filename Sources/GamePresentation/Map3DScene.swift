@@ -1231,14 +1231,18 @@ extension Map3DScene {
                 let edge = fast.contains(platform.platform.station) ? Self.highSpeedPlatformEdge : Self.platformEdge
                 let near = Self.nearestTracks(beside: line, others: others.filter { $0.0 != platform.platform.edge }.map(\.1))
                 // The other platforms of its station across the nearest
-                // track either side.
-                let partner = platforms.indices
+                // track either side, far enough for an island between.
+                // Decision 507: two islands with the double track between
+                // them, the platform beside across it too near for one.
+                let candidates: [(index: Int, lateral: Float)] = platforms.indices
                     .filter { $0 != index && platforms[$0].platform.station == platform.platform.station && platforms[$0].platform.edge != platform.platform.edge }
                     .map { (index: $0, lateral: (middles[$0] - middle).dot(across)) }
-                    .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 }
+                let wide = Self.narrowestPlatform / 2 + edge
+                let partner = candidates
+                    .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 && abs($0.lateral) / 2 >= wide }
                     .min { abs($0.lateral) < abs($1.lateral) }
                 var side: Float = -1, width = Self.platformWidth
-                if let partner, abs(partner.lateral) / 2 - edge >= Self.narrowestPlatform / 2 {
+                if let partner {
                     side = partner.lateral >= 0 ? 1 : -1
                     width = abs(partner.lateral) / 2 - edge
                 } else {
@@ -1314,6 +1318,11 @@ extension Map3DScene {
         /// Every lot of the city in the scene, but those on cells the track
         /// runs through: row houses on low homes and shops, blocks for the
         /// rest, trees in the parks.
+        /// Decisions 385 and 516: on a real-world map, the uses whose low
+        /// lots (density 2 and under) lay houses along the roads
+        /// (``addFrontage``); a factory keeps its hall and yard.
+        static let frontedUses: Set<LandUse> = [.residential, .commercial, .office, .civic, .leisure]
+
         mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>, takenBy taken: Set<ChunkKey> = [],
                               besideRoads: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
@@ -1330,9 +1339,13 @@ extension Map3DScene {
                 guard contains(x: x, y: y), !taken.contains(key) else { continue }
                 // Decision 385: low homes and shops along the real roads,
                 // house by house clear of the no-build land; no other lot
-                // whose middle is on it.
-                if streetFrontage, !lot.isOpenGround, !cleared.contains(key), lot.use == .residential || lot.use == .commercial, lot.density <= 2 {
-                    addFrontage(column: lot.column, row: lot.row, density: lot.density, shops: lot.use == .commercial, blocked: blocked)
+                // whose middle is on it. Decision 516: the low offices,
+                // civic and leisure lots too, not one building in the
+                // cell's middle (the real schools and temples stand where
+                // they are, from the footprints and the temples).
+                if streetFrontage, !lot.isOpenGround, !cleared.contains(key), Self.frontedUses.contains(lot.use), lot.density <= 2 {
+                    addFrontage(column: lot.column, row: lot.row, density: lot.density, shops: lot.use == .commercial || lot.use == .office,
+                                blocked: blocked)
                     continue
                 }
                 if onNoBuildLand(point(x: x, y: y, height: 0)) { continue }

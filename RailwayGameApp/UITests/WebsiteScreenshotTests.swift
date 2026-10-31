@@ -74,6 +74,46 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("freight-train", app)
     }
 
+    /// Decision 519: a bubble's station panel says the next step for its
+    /// materials, and its platforms how a track of the player's own calls
+    /// there. For the screenshot review of the pull request that made
+    /// them, not the website.
+    func testMaterialsNextStepAndOwnTrack() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        zoomInOnce(app)
+        settle()
+        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(alert, "A bubble is on screen")
+        alert?.tap()
+        let materials = app.descendants(matching: .any)["station.materials"].firstMatch
+        XCTAssertTrue(materials.appears(within: 10), "A tap on a bubble opens its station's panel")
+        settle()
+        // The panel's own list, so the row comes clear of the panel's
+        // bottom edge, not only of the screen's.
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(materials, in: list), "The materials row with its next step comes into view")
+        settle()
+        keep("materials-next-step", app)
+        // The platforms are in the operations group at the top, which never
+        // folds and so is not in the toolbar's jump menu: drag back up
+        // until the list has loaded their footer again (`swipeDown()`
+        // did not move the list in 20 swipes, run 41169918330), starting
+        // below the panel's toolbar, which covers the list's top (drags
+        // begun there moved nothing, run 41171191571).
+        let footer = app.descendants(matching: .any)["station.platforms.footer"].firstMatch
+        let toolbar = app.buttons["station.jump"].firstMatch
+        let top = toolbar.exists ? toolbar.frame.maxY + 8 : (list?.frame.minY ?? 0) + 80
+        dragBack(to: footer, in: list, below: top, in: app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(footer, in: list, below: top), "The platforms' footer comes into view")
+        settle()
+        keep("station-own-track", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that
@@ -192,14 +232,20 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// building tools from the column's top, on a map without credits and
     /// on the real-world demo with its credits under the column. For the
     /// screenshot review of the pull request that moved them, not the
-    /// website.
+    /// website. 100.1 (decision 509): with zoning's own button too.
     func testBuildingToolsColumn() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         app.buttons["dock.build"].tap()
         app.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(app)
         keep("build-tools-column", app)
+        // Decision 509: zoning's own button, its card open.
+        app.buttons["tool.zoning"].tap()
+        XCTAssertTrue(app.staticTexts["building.zoneCount"].appears(within: 10), "The zoning tool opens")
+        settle()
+        keep("build-tools-zoning", app)
         app.terminate()
 
         let real = launch()
@@ -217,6 +263,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         real.buttons["dock.build"].tap()
         real.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(real)
         keep("build-tools-column-real-world", real)
         real.terminate()
 
@@ -242,6 +289,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("build-tools-column-lesson", lesson)
     }
 
+    /// The planner's condition for 100.1 (decision 509), on the smallest
+    /// iPhone the workflow can choose as on the 17 Pro: the five tools,
+    /// Done and Build whole on the screen, apart, and nothing scrolling
+    /// (the bus tool's foot the tools' glass and the gap above Build; a
+    /// part that scrolls would stand lower).
+    private func assertBuildingToolsWhole(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let window = app.windows.firstMatch.frame
+        let tools = ["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus"]
+        for name in tools + ["tool.select", "dock.build"] {
+            let button = app.buttons[name]
+            XCTAssertTrue(button.isHittable, "\(name) can be tapped", file: file, line: line)
+            XCTAssertTrue(window.contains(button.frame), "\(name) whole on the screen: \(button.frame)", file: file, line: line)
+            // Touched over 44 (2 past the 40 drawn, above and below).
+            XCTAssertGreaterThanOrEqual(button.frame.height, 43.5, "\(name) touched over 44: \(button.frame)", file: file, line: line)
+            XCTAssertGreaterThanOrEqual(button.frame.width, 44, "\(name) touched over 44: \(button.frame)", file: file, line: line)
+        }
+        // The touch areas meet in the 4 between two tools and never cross.
+        let frames = tools.map { app.buttons[$0].frame }
+        for (upper, lower) in zip(frames, frames.dropFirst()) {
+            XCTAssertGreaterThanOrEqual(lower.minY - upper.maxY, -0.5, "apart: \(upper) \(lower)", file: file, line: line)
+        }
+        // Drawn: the bus tool's foot, the tools' glass (4, or 2 where the
+        // column is short) and the gap of 6, then Build's glass of 4; a part
+        // that scrolls stands lower, its foot only the gap above Build's glass.
+        let build = app.buttons["dock.build"].frame
+        XCTAssertLessThanOrEqual(frames[4].maxY - 2, build.minY + 2 - 11.5, "nothing scrolls: bus \(frames[4]), Build \(build)", file: file, line: line)
+    }
+
     /// Building on the real-world demo, the panel open at the trailing
     /// side: where people are, its legend down by the credits rather than
     /// over the track being laid (TestFlight 98.1).
@@ -261,6 +336,180 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map.potentialLegend"].firstMatch.appears(within: 30), "Where people are shows")
         settle(seconds: 4)
         keep("build-legend-under-panel", app)
+    }
+
+    /// Decision 514: the zoning layer's four outlooks on the zoning scene
+    /// (`ScreenshotScene.zoning`) and its legend: by the demo's town the
+    /// edge it can still build on, round the new station that waits for
+    /// trains, and the grey beyond any station's reach. For the screenshot
+    /// review of the pull request that marked them, not the website.
+    func testZoningOutlooks() {
+        let app = launch(extra: ["-screenshot-scene", "zoning"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let layers = app.buttons["map.quickLayer.more"]
+        layers.waitUntilSettled()
+        layers.tap()
+        XCTAssertTrue(app.switches["layer.stationNames"].appears(within: 10), "The layers sheet opens")
+        let row = app.switches["layer.zoning"]
+        XCTAssertTrue(scrollScreen(to: row, in: app), "The zoning row comes into view")
+        let zoning = row.switches.firstMatch
+        XCTAssertTrue(zoning.appears(within: 5))
+        for _ in 0..<3 where zoning.value as? String != "1" {
+            let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: zoning)
+            _ = XCTWaiter.wait(for: [hittable], timeout: 5)
+            zoning.tap()
+            let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: zoning)
+            _ = XCTWaiter.wait(for: [switched], timeout: 3)
+        }
+        XCTAssertEqual(zoning.value as? String, "1", "The zoning layer is on")
+        app.buttons["layer.done"].tap()
+        // The legend starts folded on a phone (decision 510): open it.
+        XCTAssertTrue(app.descendants(matching: .any)["map.populationLegend"].firstMatch.appears(within: 10), "The zoning legend shows")
+        let fold = app.buttons["map.legend.fold"]
+        if fold.appears(within: 5), fold.label == "展開圖例", fold.becomesHittable(within: 5) { fold.tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["map.zoneOutlookLegend"].firstMatch.appears(within: 10), "The outlooks' key shows")
+        settle(seconds: 3)
+        keep("zoning-outlooks", app)
+        // One step out: the new station 1.5 km east and the far zones too.
+        let zoomOut = app.buttons["縮小"]
+        if zoomOut.appears(within: 5), zoomOut.becomesHittable(within: 3) {
+            zoomOut.tap()
+            settle(seconds: 3)
+            keep("zoning-outlooks-wide", app)
+        }
+    }
+
+    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
+    /// on the real-world demo where the track climbs, with where people
+    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
+    /// in a place of its own, the key folded while the pill shows. The
+    /// longest platform, so its stretch is the likeliest not to level; a
+    /// stretch that levels still shows the pill, banner and key together.
+    func testPlatformLevellingWithTheLayer() {
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The demo starts")
+        pauseTheClock(in: app)
+        // Five steps in, as RealWorldMapUITests does: at the opening zoom
+        // the stretch below would run onto land not owned, with no ✓.
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10) {
+            for _ in 0..<5 where zoomIn.isEnabled { zoomIn.tap() }
+        }
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        // A stretch across the middle of the map, built with the ✓ (or,
+        // where the details card stays open, its Build Track button).
+        let frame = map.frame.intersection(app.frame)
+        let middle = (app.buttons["hud.menu"].frame.maxY + build.frame.minY) / 2
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        func point(_ fraction: CGFloat) -> XCUICoordinate {
+            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
+        }
+        point(0.25).tap()
+        point(0.6).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '鋪設軌道'")).firstMatch
+        let builder = confirm.appears(within: 10) ? confirm : card
+        XCTAssertTrue(builder.appears(within: 10), "No way to build the stretch")
+        XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped")
+        builder.tap()
+        settle()
+        let platform = app.segmentedControls.buttons["車站"].firstMatch
+        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.exists { controls.tap() }
+        }
+        XCTAssertTrue(platform.appears(within: 10), "No Station mode")
+        platform.waitUntilSettled()
+        platform.tap()
+        let cars = app.steppers["network.platformCars"]
+        if cars.appears(within: 5) {
+            let more = cars.buttons.element(boundBy: 1)
+            for _ in 0..<20 where more.exists && more.isEnabled && more.isHittable {
+                more.tap()
+            }
+        }
+        // The platform's site on the stretch, off the map's own buttons.
+        let mapButtons = ["map.coverageShortcut", "map.open3D", "縮小", "放大"].map { app.buttons[$0] }
+        var siteX = frame.minX + frame.width * 0.425
+        while let covering = mapButtons.filter(\.exists).map({ $0.frame.insetBy(dx: -4, dy: -4) })
+            .first(where: { $0.contains(CGPoint(x: siteX, y: middle)) }) {
+            siteX = covering.minX - 40
+        }
+        origin.withOffset(CGVector(dx: siteX, dy: middle)).tap()
+        XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
+        settle()
+        keep("platform-levelling-pill", app)
+        confirm.waitUntilSettled()
+        confirm.tap()
+        settle()
+        keep("platform-levelling-layer", app)
+    }
+
+    /// Decision 507: the platform mode's layout menu on a double track,
+    /// with a place picked, then the menu open (the single-track layouts
+    /// greyed with why).
+    func testStationLayoutMenu() {
+        let app = launch(extra: ["-ui-test-world", "double-platform"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let platformMode = app.segmentedControls.buttons["車站"].firstMatch
+        if !platformMode.appears(within: 10) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.appears(within: 5), controls.label == "展開控制項" { controls.tap() }
+        }
+        XCTAssertTrue(platformMode.becomesHittable(within: 10))
+        settle()
+        keep("station-mode-bar", app)
+        platformMode.tap()
+        // The station's place, as the map reports it.
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).tap()
+        let layout = app.buttons["network.stationLayout"].firstMatch
+        XCTAssertTrue(layout.appears(within: 10), "The layout menu shows")
+        settle()
+        keep("station-layout-card", app)
+        XCTAssertTrue(layout.becomesHittable(within: 5))
+        layout.tap()
+        settle()
+        keep("station-layout-menu", app)
+    }
+
+    /// Decision 507: the tutorial's step that names the network tool's
+    /// Station mode, its card beside the modes.
+    func testTutorialStationStep() {
+        let app = launch(extra: ["-tutorial-step", "station.mode"])
+        defer { app.terminate() }
+        let card = app.descendants(matching: .any)["tutorial.card"].firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        if !card.appears(within: 60), folded.exists { folded.tap() }
+        XCTAssertTrue(card.appears(within: 10), "The tutorial's card shows")
+        let mode = app.segmentedControls.buttons["車站"].firstMatch
+        if !mode.appears(within: 10), app.buttons["dock.build"].exists { app.buttons["dock.build"].tap() }
+        XCTAssertTrue(mode.appears(within: 10), "The Station mode shows")
+        settle(seconds: 3)
+        keep("tutorial-station-step", app)
     }
 
     /// New game → real world (decision 477): the whole of Taiwan first,
@@ -308,6 +557,46 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("traced-line-for-sale-card", app)
     }
 
+    /// Decision 513: a trace along the North-Link Line south of Nan'ao
+    /// that no grade reaches says why, with the real line's length and its
+    /// ends' heights. For the screenshot review of its pull request. The
+    /// trace is drawn by the Debug app's `-ui-test-trace-refused` through
+    /// the tool's own taps.
+    func testTraceNoGradeReaches() {
+        let app = launch(extra: ["-ui-test-trace-refused"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.appears(within: 30), "The picker opens")
+        search.tap()
+        search.typeText("南澳")
+        let nanao = app.buttons["station.tra_sched|南澳"]
+        XCTAssertTrue(nanao.appears(within: 30), "Nan'ao is found")
+        nanao.waitUntilSettled()
+        app.tapMiddle(of: nanao)
+        // While the search is on, the toolbar with Build Here is hidden:
+        // the search's own cancel ends it, the map staying on Nan'ao.
+        if !app.buttons["realWorld.start"].appears(within: 3) {
+            // The one on the search field's row, not the picker's own Cancel.
+            let ends = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "關閉", "Cancel", "Close"]))
+            let row = search.frame
+            let end = ends.allElementsBoundByIndex.first { abs($0.frame.midY - row.midY) < row.height }
+            XCTAssertNotNil(end, "The search can be ended")
+            end?.tap()
+        }
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        let refusal = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "坡度上限 40‰")).firstMatch
+        XCTAssertTrue(refusal.appears(within: 120), "The trace is refused, and says why")
+        settle(seconds: 8)
+        keep("trace-no-grade-reaches", app)
+    }
+
     // MARK: - What the game gained after those (decisions 167 to 186)
 
     /// The High Speed Rail demo (decision 170): Nangang to Zuoying on the
@@ -333,6 +622,45 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle(seconds: 3)
             keep("high-speed-demo-close", app)
         }
+    }
+
+    /// The selection card of a station on a phone on its side (a player's
+    /// report: its summary was cut short with "…"): a station of the
+    /// high-speed demo picked from its tag, the card in the side panel with
+    /// the platforms and who waits on lines of their own. For the
+    /// screenshot review of the pull request that fixed it, not the website.
+    func testStationCard() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        settle(seconds: 8)
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 1) {
+            for _ in 0..<2 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        // Yunlin's mark, two steps in on the demo's opening view (run
+        // 41163857917 showed it at about 39 % across and 36 % down; the
+        // station tags are not stations' marks).
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        let status = app.descendants(matching: .any)["inspector.status"].firstMatch
+        for offset in [CGVector(dx: 0.3875, dy: 0.36), CGVector(dx: 0.385, dy: 0.35), CGVector(dx: 0.39, dy: 0.37)] {
+            map.coordinate(withNormalizedOffset: offset).tap()
+            settle(seconds: 2)
+            if status.exists, status.label.hasPrefix("車站") { break }
+        }
+        // The card is in the side panel, which a tap on a station leaves
+        // closed (run 41165522130): open it.
+        let controls = app.buttons["controls.toggle"]
+        if controls.appears(within: 5), controls.becomesHittable(within: 2) {
+            controls.tap()
+        }
+        settle(seconds: 3)
+        keep("station-card", app)
+        XCTAssertTrue(status.appears(within: 5), "The selection card shows")
     }
 
     /// The company's goals on a blank new game (decisions 181 and 183): the
@@ -451,6 +779,122 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("lines-network", app)
     }
 
+    /// Decision 512: a line's page opens its train roster, which lets the
+    /// trains be arranged: the roster of one line, then Arrange.
+    func testTrainRosterOfALine() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        // The line's trains, where trains are sent out, as before the
+        // roster's row was added below them (compare with `line-page`).
+        settle(seconds: 2)
+        keep("roster-line-page-trains", app)
+        let open = app.buttons["line.trainRoster"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The roster's button shows")
+        open.waitUntilSettled()
+        open.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["trainRoster"].firstMatch.appears(within: 10), "The roster opens")
+        settle(seconds: 3)
+        keep("roster-line", app)
+
+        app.buttons["trainRoster.arrange"].tap()
+        XCTAssertTrue(app.staticTexts["trainRoster.arrangeHint"].appears(within: 5), "Arrange says how")
+        settle(seconds: 2)
+        keep("roster-arrange", app)
+        // Every line's trains, to drag one onto another line's row.
+        let all = app.segmentedControls["trainRoster.lines"].buttons["全部路線"]
+        if all.appears(within: 3) {
+            all.tap()
+            settle(seconds: 3)
+            keep("roster-arrange-all", app)
+        }
+    }
+
+    /// Decision 512: sending trains out is as it was. The same test runs on
+    /// `main` and on the pull request, for the two side by side: a line's
+    /// page at its trains and their dispatch, then a train's card.
+    func testDispatchFlowAsBefore() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        settle(seconds: 2)
+        // A line with trains sends more out under "Now"; the catalog
+        // button is only on a line without trains.
+        let now = app.staticTexts["line.headway.now"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(now, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's dispatch shows")
+        now.waitUntilSettled()
+        settle(seconds: 2)
+        keep("dispatch-line-page", app)
+        let done = app.navigationBars.firstMatch.buttons["完成"]
+        if done.exists, done.isHittable {
+            done.tap()
+            settle()
+        }
+
+        // A train brought under the camera from the fleet, then tapped.
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let fleet = app.buttons["train.fleetOverview"]
+        if !fleet.isHittable { app.swipeUp() }
+        XCTAssertTrue(fleet.appears(within: 5))
+        fleet.tap()
+        let follow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "fleet.follow.")).firstMatch
+        XCTAssertTrue(follow.appears(within: 5), "A train to follow")
+        follow.tap()
+        let unfollow = app.buttons["train.unfollow"]
+        XCTAssertTrue(unfollow.appears(within: 5))
+        unfollow.tap()
+        _ = unfollow.disappears(within: 5)
+        app.buttons["tool.select"].tap()
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let card = app.buttons["inspector.train.timetable"]
+        guard card.appears(within: 5) else {
+            keep("debug-dispatch-card", app)
+            return
+        }
+        settle(seconds: 2)
+        keep("dispatch-train-card", app)
+        // The card's buttons are under its trip on a phone on its side:
+        // drag the card, not the map beside it, until they show.
+        let column = card.frame.midX
+        _ = app.dragUntilWhollyOnScreen(app.buttons["inspector.train.fleet"], drags: 4, at: column)
+        settle(seconds: 2)
+        keep("dispatch-train-buttons", app)
+    }
+
     /// Decision 478's load charts on the freight scene: a passenger line's
     /// fullest train by day and its riders between stops, then a section's
     /// riders hour by hour in the flow report.
@@ -550,8 +994,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
         app.tapMiddle(of: wholeTaiwan)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
-        // By the light of day, the stars over the island.
+        // By the light of day, the stars over the island. Decision 510
+        // hides the sights from as far out as the whole island, so in a
+        // step or two until they show.
         waitForClock(from: 9, before: 17, in: app)
+        let zoomIn = app.buttons["放大"]
+        let sight = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'")).firstMatch
+        for _ in 0..<4 where !sight.exists && zoomIn.exists && zoomIn.isEnabled {
+            zoomIn.tap()
+            settle(seconds: 2)
+        }
         settle(seconds: 3)
         keep("tourism-map", app)
 

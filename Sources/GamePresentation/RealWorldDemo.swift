@@ -269,7 +269,7 @@ public enum RealWorldDemo {
         }
 
         /// What building it costs at `costs` (the prices of
-        /// ``GameWorld/buildTrackEdge(from:to:curve:profile:structure:)``,
+        /// ``GameWorld/buildTrackEdge(from:to:curve:profile:structure:mountain:)``,
         /// ``GameWorld/buildStation(named:at:)``,
         /// ``GameWorld/purchaseTrain(named:)`` and
         /// ``GameWorld/setTrainCars(_:to:)``): every track is on the ground.
