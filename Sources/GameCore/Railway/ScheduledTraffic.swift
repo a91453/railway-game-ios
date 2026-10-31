@@ -776,17 +776,24 @@ extension GameWorld {
         var known = plan.hasSiding
         // Only stations with a scheduled conflict activate these costs.
         for station in Set(plan.waits.map(\.station)).sorted() {
-            guard let point = service.points.first(where: { $0.station == station && ($0.stop == stop || $0.station == target) }) else { continue }
+            guard let j = service.points.firstIndex(where: { $0.station == station && ($0.stop == stop || $0.station == target) }) else { continue }
+            let point = service.points[j]
             let stopsHere = point.calls || plan.waits.contains(where: { $0.train == train.id && $0.station == station && $0.stop == point.stop })
+            // Decision 526: where keeping left (decision 202) takes the
+            // nominal way off the straight one, the straight way is the
+            // main: a train passing through keeps to it, and one that
+            // stops leaves it for the loop it keeps to.
+            let straight = trafficStraightBerth(service, at: j).traversal.edge
+            let corridor = stopsHere ? point.berth.traversal.edge : straight
             for platform in network.platforms(of: station) {
                 // The shortest nominal corridor is the main line;
                 // a parallel platform edge is a loop, independent of ID.
-                if platform.edge != point.berth.traversal.edge {
+                if platform.edge != corridor {
                     edgePenalty[platform.edge] = Self.trafficStationPenalty + (stopsHere ? 0 : Self.trafficMismatchPenalty)
                 }
             }
             if station == target, stopsHere, trafficHasSiding(at: point, train: train, known: &known) {
-                for berth in berths(of: station, length: train.length) where berth.traversal.edge == point.berth.traversal.edge {
+                for berth in berths(of: station, length: train.length) where berth.traversal.edge == straight {
                     berthPenalty[berth] = Self.trafficMismatchPenalty
                 }
             }
