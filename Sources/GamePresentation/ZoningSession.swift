@@ -81,6 +81,20 @@ extension GameSession {
         return zone(rectangle)
     }
 
+    /// Decision 522: for the zoning scene's screenshot, opens the zoning
+    /// tool and holds ``ScreenshotScene/zoningDrag(in:)`` down, the map
+    /// showing it whole. Changes nothing in the world.
+    public func holdScreenshotZoningDrag() {
+        let drag = ScreenshotScene.zoningDrag(in: world)
+        choose(.zoning)
+        let margin = Double(4 * Land.cellLength)
+        lookOver(WorldRegion(
+            minX: Double(min(drag.from.x, drag.to.x)) - margin, minY: Double(min(drag.from.y, drag.to.y)) - margin,
+            maxX: Double(max(drag.from.x, drag.to.x)) + margin, maxY: Double(max(drag.from.y, drag.to.y)) + margin
+        ))
+        dragZone(from: drag.from, to: drag.to)
+    }
+
     /// The drag was cancelled: nothing is zoned.
     public func cancelZoneDrag() {
         zoneDrag = nil
@@ -167,12 +181,36 @@ extension GameSession {
 
     /// Decision 509: the station master's "zone here" (``StationMasterAdvice/zoneNearStation(station:name:cells:)``):
     /// the map goes to the station and the zoning tool opens, zoning
-    /// homes unless a use is chosen.
+    /// the use the city wants most (``suggestedZoningZone``) unless a use
+    /// is chosen.
     public func zone(near station: StationID) {
         guard allows(.building), let station = world.station(id: station) else { return }
         lookAt(station.location)
         choose(.zoning)
-        if zoningZone?.use == nil { zoningZone = .residential }
+        if zoningZone?.use == nil { zoningZone = suggestedZoningZone }
+    }
+
+    /// Decision 522: the zone the zoning mode opens on until the player
+    /// picks one: the use the city's demand (decision 139) wants most
+    /// (homes, then shops, then offices on a tie); public facilities, which
+    /// the demand does not hold back, when it wants none of them; homes
+    /// where the demand steers nothing (``cityDemandSteersGrowth``).
+    public var suggestedZoningZone: Zone {
+        guard cityDemandSteersGrowth else { return .residential }
+        let levels = world.cityDemandLevels
+        let ranked: [(Zone, Int64)] = [(.residential, levels.homes), (.commercial, levels.shops), (.office, levels.work)]
+        let best = ranked.dropFirst().reduce(ranked[0]) { $1.1 > $0.1 ? $1 : $0 }
+        return best.1 < 0 ? .civic : best.0
+    }
+
+    /// Decision 522: the cells of `rectangle` no open station's catchment
+    /// reaches (800 m, measured from a cell's middle as the city's growth
+    /// does), which the city never builds on, as runs along each row;
+    /// a zoning drag greys them before the finger lifts.
+    public func cellsOutOfReach(in rectangle: CellRectangle) -> [CellRectangle] {
+        ZoningOutlook.runsOutOfReach(
+            in: rectangle, of: world.stations.filter { $0.operationMode != .closed }.map(\.location)
+        )
     }
 
     /// Decision 514: after zoning `rectangle` for a use, what its empty

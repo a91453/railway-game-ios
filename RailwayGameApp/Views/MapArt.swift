@@ -1939,6 +1939,15 @@ enum MapArt {
             if overlay.zoneDragColor != nil {
                 context.fill(shape, with: .color(colour.opacity(0.35)))
             }
+            // Decision 522: the cells no station reaches, which the town
+            // would never build on, in the zoning layer's "too far" grey.
+            if !overlay.zoneDragOutOfReach.isEmpty {
+                var far = Path()
+                for cells in overlay.zoneDragOutOfReach {
+                    far.addRect(screenRect(minX: Double(cells.minX), minY: Double(cells.minY), maxX: Double(cells.maxX), maxY: Double(cells.maxY), projection))
+                }
+                context.fill(far, with: .color(Color(CityMap.tooFarColor).opacity(0.85)))
+            }
             context.stroke(shape, with: .color(colour), style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
         }
         for rect in overlay.boughtOut {

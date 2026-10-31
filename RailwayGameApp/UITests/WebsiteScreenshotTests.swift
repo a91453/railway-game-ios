@@ -380,6 +380,20 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 522: the zoning scene with the zoning tool open and a drag
+    /// held down round the new station (`-screenshot-zone-drag`): the cells
+    /// no station reaches grey inside the dashed box, and the tool opened
+    /// on the use the city wants most. For the screenshot review of the
+    /// pull request that added them, not the website.
+    func testZoningDragPreview() {
+        let app = launch(extra: ["-screenshot-scene", "zoning", "-screenshot-zone-drag"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.staticTexts["building.zoneCount"].appears(within: 30), "The zoning tool opens")
+        settle(seconds: 4)
+        keep("zoning-drag-preview", app)
+    }
+
     /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
     /// on the real-world demo where the track climbs, with where people
     /// are shown: the ✓ pill, the banner after ✓ and the layer's key each

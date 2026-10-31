@@ -109,6 +109,62 @@ public struct ZoningOutlook: Sendable {
         return .builds
     }
 
+    /// Decision 522: the cells of `rectangle` whose middle lies 800 m or
+    /// more from every point of `stations` (``ZoneOutlook/tooFar``'s
+    /// reach), as runs of columns along each row, by row and then column.
+    /// Works a row at a time from the stations that can reach it, so a
+    /// large drag on a map of hundreds of stations stays quick.
+    public static func runsOutOfReach(in rectangle: CellRectangle, of stations: [PlanPoint]) -> [CellRectangle] {
+        let length = Land.cellLength, radius = Land.catchmentRadius
+        let area = rectangle.planRect
+        let near = stations.filter {
+            $0.x > area.minX - radius && $0.x < area.maxX + radius && $0.y > area.minY - radius && $0.y < area.maxY + radius
+        }
+        /// The largest whole number whose square is at most `value`.
+        func squareRoot(_ value: Int64) -> Int64 {
+            var root = Int64(Double(value).squareRoot())
+            while root * root > value { root -= 1 }
+            while (root + 1) * (root + 1) <= value { root += 1 }
+            return root
+        }
+        /// The lowest whole number at least `value / length`.
+        func columnAtLeast(_ value: Int64) -> Int {
+            Int(value >= 0 ? (value + length - 1) / length : -((-value) / length))
+        }
+        /// The highest whole number at most `value / length`.
+        func columnAtMost(_ value: Int64) -> Int {
+            Int(value >= 0 ? value / length : -((-value + length - 1) / length))
+        }
+        var runs: [CellRectangle] = []
+        for row in rectangle.rows {
+            let middleY = Int64(row) * length + length / 2
+            // The columns each station reaches on this row: a middle x with
+            // (x − station.x)² < radius² − dy².
+            var reached: [ClosedRange<Int>] = []
+            for station in near {
+                let dy = middleY - station.y
+                let room = radius * radius - dy * dy
+                guard room > 0 else { continue }
+                let reach = squareRoot(room - 1)
+                let first = max(rectangle.columns.lowerBound, columnAtLeast(station.x - reach - length / 2))
+                let last = min(rectangle.columns.upperBound, columnAtMost(station.x + reach - length / 2))
+                if first <= last { reached.append(first...last) }
+            }
+            reached.sort { $0.lowerBound < $1.lowerBound }
+            var column = rectangle.columns.lowerBound
+            for range in reached {
+                if range.lowerBound > column {
+                    runs.append(CellRectangle(rows: row...row, columns: column...(range.lowerBound - 1)))
+                }
+                column = max(column, range.upperBound + 1)
+            }
+            if column <= rectangle.columns.upperBound {
+                runs.append(CellRectangle(rows: row...row, columns: column...rectangle.columns.upperBound))
+            }
+        }
+        return runs
+    }
+
     /// Every zoned, empty cell's outlook, by row and then column.
     public func outlooks(in world: GameWorld) -> [(position: CellPosition, outlook: ZoneOutlook)] {
         world.zones.cells.compactMap { cell in
