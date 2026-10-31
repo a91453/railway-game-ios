@@ -92,7 +92,7 @@ struct Map3DPreviewScreen: View {
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: ambient?.view3D ?? followView) },
                       departure: departure, world: session.world, modelsReady: modelsReady,
                       stationTag: stationTag,
-                      onTap: openStation == nil || ambient != nil ? nil : { camera, point in tapped(camera, at: point) },
+                      onTap: openStation == nil || ambient != nil ? nil : { @MainActor camera, point in tapped(camera, at: point) },
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
