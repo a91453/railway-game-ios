@@ -19,6 +19,9 @@ final class RealWorldDemoRoadsTests: XCTestCase {
         launcher.population = HighSpeedDemoTests.population
         launcher.places = HighSpeedDemoTests.places
         launcher.baseMap = baseMap
+        // As the app has them: the session takes them when it begins, and
+        // with them its stations' transfers (decision 525).
+        launcher.railways = railways
         let task = launcher.openRealWorldDemo(railways: railways)
         XCTAssertNil(launcher.openRealWorldDemo(railways: railways), "one build at a time")
         XCTAssertTrue(launcher.isOpeningADemo)

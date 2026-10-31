@@ -285,8 +285,10 @@ public enum HighSpeedDemo {
         world.setRealCarLengths(false)
         // Decision 319: its demand keeps the hours it was measured by.
         world.setTidalDemand(false)
-        // Decision 174: nor do tourists come to its sights.
-        world.setTourism(nil)
+        // Decision 525: tourists come to Taiwan's sights (a new
+        // whole-Taiwan game's, decision 174), and people change at its
+        // stations from the real railways (decision 298).
+        world.setRealTransfers(true)
         // Decision 183: nor does the city ask it for anything.
         world.setCityRequests(seed: nil)
         return world
