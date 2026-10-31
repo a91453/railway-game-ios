@@ -233,7 +233,9 @@ final class TRADemoTests: XCTestCase {
     func testItsStationsRingTheirChimes() throws {
         let world = try Self.built.get().world
         let chimes = world.stations.filter { !$0.isDepot }.map { StationChime.of($0.id, in: world) }
-        XCTAssertEqual(chimes, [.metro, .local, .metro, .local, .metro, .local, .local, .metro, .metro, .metro])
+        // Decision 525: with tourism on, Yilan, Luodong and Dongshan, by
+        // the sights round them, ring the tourist chime.
+        XCTAssertEqual(chimes, [.metro, .local, .metro, .local, .tourist, .local, .local, .tourist, .tourist, .metro])
     }
 
     // MARK: - The game launcher

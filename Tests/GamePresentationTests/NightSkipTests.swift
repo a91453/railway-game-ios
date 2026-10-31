@@ -295,6 +295,9 @@ final class NightSkipTests: XCTestCase {
     @MainActor
     func testASpeedHeldForATickIsTheOneTheSkipGivesBack() async throws {
         let session = GameSession(world: try world())
+        // Decision 497 (P2-4): the offer, run ahead off the main actor,
+        // before the shortcut is tapped.
+        await settle(session)
         session.setSpeed(.normal)
         let tick = try XCTUnwrap(session.beginLoopTick())
         _ = await tick.work()
@@ -325,8 +328,11 @@ final class NightSkipTests: XCTestCase {
 
     /// Pausing, or choosing a speed, ends the skip; the speed is the
     /// player's.
-    func testThePlayerStopsTheSkipWithASpeedOrAPause() throws {
+    func testThePlayerStopsTheSkipWithASpeedOrAPause() async throws {
         let session = GameSession(world: try world())
+        // Decision 497 (P2-4): the offer, run ahead off the main actor,
+        // before the shortcut is tapped.
+        await settle(session)
         session.skipToMorning()
         session.advance(ticks: 5)
         session.setSpeed(.x60)
@@ -336,6 +342,7 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(session.world.clock.speed, .x60)
 
         let paused = GameSession(world: try world())
+        await settle(paused)
         paused.skipToMorning()
         paused.advance(ticks: 3)
         paused.togglePause()
@@ -344,6 +351,7 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(paused.world.clock.runningSpeed, .fast, "resumes as the player left it")
 
         let stopped = GameSession(world: try world())
+        await settle(stopped)
         stopped.skipToMorning()
         stopped.advance(ticks: 3)
         stopped.stopNightSkip()
@@ -356,8 +364,11 @@ final class NightSkipTests: XCTestCase {
     /// speed before the skip, not the skip's own (review F, #1057), and a
     /// save meanwhile keeps that speed.
     @MainActor
-    func testFollowingIn3DDuringTheSkipGivesBackThePlayersSpeed() throws {
+    func testFollowingIn3DDuringTheSkipGivesBackThePlayersSpeed() async throws {
         let session = GameSession(world: try world())
+        // Decision 497 (P2-4): the offer, run ahead off the main actor,
+        // before the shortcut is tapped.
+        await settle(session)
         session.skipToMorning()
         session.advance(ticks: 3)
         XCTAssertNotNil(session.nightSkipRun)
@@ -376,12 +387,15 @@ final class NightSkipTests: XCTestCase {
     /// was, and loads at it, not at the skip's own; a game saved when no
     /// skip runs is saved as it was (BH2 P2-1).
     @MainActor
-    func testASaveDuringTheSkipKeepsTheSpeedBefore() throws {
+    func testASaveDuringTheSkipKeepsTheSpeedBefore() async throws {
         for (speed, paused) in [(GameSpeed.normal, false), (.x60, false), (.x10, true)] {
             var start = try world()
             start.setSpeed(speed)
             if paused { start.pause() }
             let session = GameSession(world: start)
+            // Decision 497 (P2-4): the offer, run ahead off the main actor,
+            // before the shortcut is tapped.
+            await settle(session)
             session.skipToMorning()
             session.advance(ticks: 3)
             XCTAssertNotNil(session.nightSkipRun)
@@ -409,8 +423,11 @@ final class NightSkipTests: XCTestCase {
     /// The music goes down while the night is skipped and comes back when
     /// the skip ends, by itself at its stop or because the player stopped
     /// it; the app is told only when the level changes.
-    func testTheMusicGoesDownWhileTheNightIsSkipped() throws {
+    func testTheMusicGoesDownWhileTheNightIsSkipped() async throws {
         let session = GameSession(world: try world())
+        // Decision 497 (P2-4): the offer, run ahead off the main actor,
+        // before the shortcut is tapped.
+        await settle(session)
         var told: [Double] = []
         session.duckMusic = { told.append($0) }
         session.skipToMorning()
@@ -423,6 +440,7 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(told, [MusicDuck.nightSkipGain, 1], "back at the stop")
 
         let stopped = GameSession(world: try world())
+        await settle(stopped)
         var stoppedTold: [Double] = []
         stopped.duckMusic = { stoppedTold.append($0) }
         stopped.skipToMorning()
@@ -555,10 +573,13 @@ final class NightSkipTests: XCTestCase {
     /// What the shortcut shows is ``GameSession/nightSkip`` after each
     /// tick, and after a command while paused, and stays the same value
     /// from tick to tick while the night lasts.
-    func testTheOfferFollowsTheSkip() throws {
+    func testTheOfferFollowsTheSkip() async throws {
         let session = GameSession(world: try world())
+        // Decision 497 (P2-4): the offer, run ahead off the main actor,
+        // before the shortcut is tapped.
+        await settle(session)
         let skip = try XCTUnwrap(session.nightSkip)
-        XCTAssertEqual(session.nightSkipOffer, skip, "a new session shows it at once")
+        XCTAssertEqual(session.nightSkipOffer, skip, "a new session shows it once found")
         session.advance(ticks: 30)
         XCTAssertEqual(session.nightSkipOffer, session.nightSkip)
         XCTAssertEqual(session.nightSkipOffer?.stop, skip.stop, "the same stop while the night lasts")
@@ -616,6 +637,9 @@ final class NightSkipTests: XCTestCase {
     /// found.
     func testTheGameLoopsTickDoesNotWaitForTheRunAhead() async throws {
         let session = GameSession(world: try world())
+        // Decision 497 (P2-4): the offer, run ahead off the main actor,
+        // before the shortcut is tapped.
+        await settle(session)
         try await loopTick(session)
         XCTAssertNil(session.nightSkipLookAhead, "the memo answers")
         let offer = try XCTUnwrap(session.nightSkipOffer)
@@ -668,6 +692,51 @@ final class NightSkipTests: XCTestCase {
         try await loopTick(session)
         XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world))
         XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead)
+    }
+
+    /// Decision 497 (P2-7): a train parked in the depot while its line is
+    /// closed will not move off before the line opens; while it is open,
+    /// it will.
+    func testATrainParkedWhileItsLineIsClosedStandsStill() throws {
+        let night = try world()
+        XCTAssertEqual(night.standingStill(night.trains[0].id), .outOfHours)
+        let noon = try world(at: 12 * 60)
+        XCTAssertNil(noon.standingStill(noon.trains[0].id))
+    }
+
+    /// Decision 497 (P2-4): opening a game, stopping a skip and the
+    /// shortcut after a command do not run ahead on the main actor (some
+    /// 30 ms a night on the Yilan Line, 600 ms on seven lines round
+    /// Taipei). The offer comes once the run ahead off the main actor is
+    /// found; the shortcut starts the skip then.
+    func testOpeningStoppingAndTheShortcutDoNotRunAheadOnTheMainActor() async throws {
+        let session = GameSession(world: try world())
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, 0, "a game as it opens")
+        await settle(session)
+        let offer = try XCTUnwrap(session.nightSkipOffer, "the offer, once found")
+        XCTAssertEqual(offer, NightSkip.plan(for: session.world))
+
+        session.renameSelectedLine(to: "Main Line")
+        session.skipToMorning()
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, 0, "the shortcut after a command")
+        await settle(session)
+        let run = try XCTUnwrap(session.nightSkipRun, "the skip starts once the run ahead is found")
+        XCTAssertEqual(run.stop, offer.stop)
+
+        session.stopNightSkip()
+        XCTAssertNil(session.nightSkipRun)
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, 0, "stopping a skip")
+        await settle(session)
+        XCTAssertEqual(session.nightSkipOffer, NightSkip.plan(for: session.world))
+
+        // A command after the tap and before the run ahead is found: the
+        // player did something else, so no skip starts.
+        session.renameSelectedLine(to: "Main")
+        session.skipToMorning()
+        session.renameSelectedLine(to: "Main Line")
+        await settle(session)
+        XCTAssertNil(session.nightSkipRun)
+        XCTAssertEqual(session.nightSkipRunAheadOnMain, 0)
     }
 
     /// One tick of the game loop, worked out off the main actor.

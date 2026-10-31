@@ -31,19 +31,17 @@ struct MapAttractionMarks: View {
             // Decision 377: the sights as the session keeps them, not read
             // from the world, so a tick that leaves them as they were
             // rebuilds nothing here.
+            // Decision 477: while the map's tiles are for sale, none over
+            // a tile's price.
             let marks = session.sightMarksTakeTouches != isPassive
-                ? Self.marks(session: session, camera: camera, viewport: viewport, insets: insets) : []
+                ? Self.drawn(session: session, camera: camera, viewport: viewport, insets: insets,
+                             prices: Self.tilePrices(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop))
+                : []
             if !marks.isEmpty {
-                // Decision 477: while the map's tiles are for sale, none
-                // over a tile's price.
-                let prices = tilePrices
                 // Decision 510: the stations, tracks and bubbles whose taps
                 // a mark leaves to them.
                 let guarded = isPassive ? nil : touchGuards
-                ForEach(marks.filter { item in
-                    guard !prices.isEmpty else { return true }
-                    return !MapLabelPlacement.coversPrice(x: item.at.x, y: item.at.y, stars: item.sight.starsText, prices: prices)
-                }, id: \.sight.attraction.id) { item in
+                ForEach(marks, id: \.sight.attraction.id) { item in
                     let takes = guarded.map { takesTouch(item, guards: $0) } ?? false
                     mark(item.sight, rated: item.rated)
                         .opacity(takes ? 1 : 0.5)
@@ -87,6 +85,16 @@ struct MapAttractionMarks: View {
         return onScreen.filter { shown.contains($0.sight.attraction.id) }.map { ($0.sight, $0.at, rated) }
     }
 
+    /// ``marks(session:camera:viewport:insets:)`` the map draws: none
+    /// over a tile's price (decision 477). The alert bubbles ask it too
+    /// (L3-9).
+    static func drawn(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets,
+                      prices: [MapLabelPlacement.Box]) -> [(sight: MapMarks.Sight, at: ScreenPoint, rated: Bool)] {
+        let all = Self.marks(session: session, camera: camera, viewport: viewport, insets: insets)
+        guard !prices.isEmpty else { return all }
+        return all.filter { !MapLabelPlacement.coversPrice(x: $0.at.x, y: $0.at.y, stars: $0.sight.starsText, prices: prices) }
+    }
+
     /// What a mark keeps off (decision 510): the stations' middles on
     /// screen, the warning bubbles' touch areas, and the track within a
     /// tap's reach, in world units.
@@ -103,8 +111,10 @@ struct MapAttractionMarks: View {
     }
 
     /// Where the map draws the prices of the tiles for sale (``MapArt``'s
-    /// `drawMapExpansion`), about.
-    private var tilePrices: [MapLabelPlacement.Box] {
+    /// `drawMapExpansion`), about; `clearTop` where the map's clear part
+    /// starts, `insets.top` when `nil`.
+    static func tilePrices(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets,
+                           clearTop: CGFloat?) -> [MapLabelPlacement.Box] {
         guard let expansion = session.mapExpansionOverlay, !expansion.forSale.isEmpty else { return [] }
         let top = Double(clearTop ?? insets.top)
         let clear = MapLabelPlacement.Box(

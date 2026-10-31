@@ -1051,6 +1051,9 @@ extension GameWorld {
     mutating func abandonUnservedPassengers() {
         // Decision 275: once, at the end of an edit made as one.
         guard trackEditDepth == 0 else { return }
+        // Decision 515 continued: a line whose way now runs on mountain
+        // track keeps only its mountain trains.
+        releaseTrainsThatCannotClimb()
         passengerPlan = PassengerPlanCache()
         abandonStrandedRiders()
         // A pair's balanced routes must still be ridable one after another,

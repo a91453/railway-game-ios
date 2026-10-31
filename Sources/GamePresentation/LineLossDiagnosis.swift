@@ -215,6 +215,9 @@ public struct LineLossDiagnosis: Hashable, Sendable {
     /// At most ``shownReasons``, the worst first; none unless the line
     /// lost money.
     public let reasons: [LineLossReason]
+    /// Its last seven settled days' punctuality beside Taiwan Railway's
+    /// (``GameWorld/lineWeeklyPunctuality(_:)``), or `nil`.
+    public internal(set) var weeklyPunctuality: WeeklyPunctuality?
 
     // MARK: Thresholds (decision 194)
 
@@ -409,11 +412,13 @@ extension GameWorld {
             legsPerTrip: Int64(line.isRing ? line.stops.count : max(1, line.stops.count - 1)), serviceMinutes: minutes,
             trips: sum(\.trips), lateTrips: sum(\.lateTrips)
         )
-        return LineLossDiagnosis(
+        var diagnosis = LineLossDiagnosis(
             line: id, days: days.count, fareRevenue: fares, operatingCost: sum(\.operatingCost),
             maintenanceCost: sum(\.maintenanceCost), energyCost: sum(\.energyCost), staffCost: sum(\.staffCost),
             measures: measures
         )
+        diagnosis.weeklyPunctuality = lineWeeklyPunctuality(id)
+        return diagnosis
     }
 }
 

@@ -1355,8 +1355,11 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainAlreadyPlaced(_:)`` (placement never moves a
-    ///   train), ``GameError/invalidTrainPosition``, or, under traffic
-    ///   control, ``GameError/trackReserved(_:)``.
+    ///   train), ``GameError/invalidTrainPosition``,
+    ///   ``GameError/trainCannotClimb(_:)`` when the train is not a mountain
+    ///   train and its head or body would stand on mountain track (decision
+    ///   515 continued), or, under traffic control,
+    ///   ``GameError/trackReserved(_:)``.
     public mutating func placeTrain(_ id: TrainID, at position: TrainPosition) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
@@ -1370,6 +1373,11 @@ public struct GameWorld: Equatable, Sendable {
             }
             train.position = position
             train.trailEdges = trail
+            // Decision 515 continued: only a mountain train stands on
+            // mountain track, head or body.
+            if !train.climbsMountains, ([traversal.edge] + trail).contains(where: { network.edge($0)?.mountain ?? false }) {
+                throw .trainCannotClimb(id)
+            }
         }
 
         try admit(train, at: index)
@@ -1690,8 +1698,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
     ///   timetable (the service owns the path; stop it first),
     ///   ``GameError/invalidContinuation`` (a step a train may not take, or
-    ///   an `end` that does not fit), or, under traffic control,
-    ///   ``GameError/trackReserved(_:)``.
+    ///   an `end` that does not fit), ``GameError/trainCannotClimb(_:)``
+    ///   when the train is not a mountain train and the path runs onto
+    ///   mountain track (decision 515 continued), or, under traffic
+    ///   control, ``GameError/trackReserved(_:)``.
     public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal], stoppingAt end: Int64? = nil) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         let (traversal, offset): (TrackTraversal, Int64) = switch position {
@@ -1704,6 +1714,11 @@ public struct GameWorld: Equatable, Sendable {
         }
         if let end {
             guard end < network.edge(arrival.edge)!.length, end >= (traversals.isEmpty ? offset : 1) else { throw .invalidContinuation }
+        }
+        // Decision 515 continued: a train that cannot climb is never sent
+        // onto mountain track.
+        if !trains[index].climbsMountains, traversals.contains(where: { network.edge($0.edge)?.mountain ?? false }) {
+            throw .trainCannotClimb(id)
         }
 
         var train = trains[index]
@@ -2431,6 +2446,27 @@ public struct GameWorld: Equatable, Sendable {
             lines[index].patterns[pattern].trains.removeAll { $0 == id }
         }
         abandonUnservedPassengers()
+    }
+
+    /// Takes every train that cannot climb (``Train/climbsMountains``) off
+    /// each line that now runs on mountain track (decision 515 continued):
+    /// after an edit moved the line's way onto it, as ``unassignTrain(_:)``
+    /// would, from the line's own service and its patterns. A train on a
+    /// round trip finishes it as an ordinary service. Called once at the
+    /// end of every command that may change a line's journey (from
+    /// ``abandonUnservedPassengers()``, before the passengers are checked);
+    /// a world with no mountain track changes nothing and answers at once.
+    mutating func releaseTrainsThatCannotClimb() {
+        guard network.edges.contains(where: \.mountain) else { return }
+        let climbers = Set(trains.filter(\.climbsMountains).map(\.id))
+        for index in lines.indices {
+            let assigned = lines[index].trains + lines[index].patterns.flatMap(\.trains)
+            guard assigned.contains(where: { !climbers.contains($0) }), runsOnMountainTrack(lines[index]) else { continue }
+            lines[index].trains.removeAll { !climbers.contains($0) }
+            for pattern in lines[index].patterns.indices {
+                lines[index].patterns[pattern].trains.removeAll { !climbers.contains($0) }
+            }
+        }
     }
 
     /// Makes line `id` a freight line, or a passenger line again. Free.
@@ -3881,12 +3917,24 @@ public struct GameWorld: Equatable, Sendable {
         var whole: [Train] = []
         // With block sections (decision 212) it may follow the trains ahead
         // on them too.
+        var scheduledFollowing: Train?
         if case .setsOff = departure,
            case .setsOff(let scheduled, _)? = scheduledLeaving(waiting, stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
-            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
+            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else {
+                whole.append(scheduled)
+                scheduledFollowing = scheduled
+            }
         }
         if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(waiting, stop: stop, cycle: cycle, memo: &memo.directions.paths) {
             if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
+        }
+        // Decision 526: before the default way, the scheduled one followed
+        // behind the trains ahead on it, as the default may be: a train
+        // passing a station where another waits for it keeps to the way
+        // the plan leaves it, not the one keeping left takes.
+        if granted == nil, let scheduled = scheduledFollowing, !blockSections, scheduled.movement.edges != moved.movement.edges,
+           case .granted(let train) = reserving(scheduled, following: true, memo: &memo.directions) {
+            granted = train
         }
         let train: Train
         if let granted {

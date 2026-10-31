@@ -18,7 +18,7 @@ import XCTest
 ///       --filter MapFrameCostReportTests
 @MainActor
 final class MapFrameCostReportTests: XCTestCase {
-    func testWhatEachCanvasRedrawsASecond() throws {
+    func testWhatEachCanvasRedrawsASecond() async throws {
         guard let value = ProcessInfo.processInfo.environment["MAP_FRAME_REPORT"] else {
             throw XCTSkip("set MAP_FRAME_REPORT=<days> to count the flat map's redraws on a 44-station map")
         }
@@ -54,7 +54,7 @@ final class MapFrameCostReportTests: XCTestCase {
             start.setSpeed(speed)
             let session = GameSession(world: start)
             let seconds = 10
-            let count = try MapRedrawCount.run(session, ticks: seconds * 10)
+            let count = try await MapRedrawCount.run(session, ticks: seconds * 10)
             rows.append("| \(label) | 10 | " + MapRedrawCount.Canvas.allCases.map { count.perSecond($0, over: seconds) }.joined(separator: " | ") + " |")
             if costs.isEmpty {
                 costs = Self.costs(of: session)
@@ -63,7 +63,7 @@ final class MapFrameCostReportTests: XCTestCase {
         rows += ["", "Why the track canvas redraws (of its redraws, by day at 600×): see the scenario rows; inputs that changed:"]
         var start = world
         start.setSpeed(.normal)
-        let reasons = try MapRedrawCount.run(GameSession(world: start), ticks: 100).reasons
+        let reasons = try await MapRedrawCount.run(GameSession(world: start), ticks: 100).reasons
         rows += reasons.sorted { $0.key < $1.key }.map { "- \($0.key): \($0.value) of 100 ticks" }
         rows += ["", "| What the map works out | ms |", "| --- | --: |"] + costs
         print(rows.joined(separator: "\n"))
@@ -77,14 +77,14 @@ final class MapFrameCostReportTests: XCTestCase {
     ///
     ///     MAP_FRAME_REPORT_HSR=100 swift test -c release -Xswiftc -enable-testing \
     ///       --filter MapFrameCostReportTests/testWhatEachCanvasRedrawsOnTheHighSpeedRail
-    func testWhatEachCanvasRedrawsOnTheHighSpeedRail() throws {
+    func testWhatEachCanvasRedrawsOnTheHighSpeedRail() async throws {
         guard let value = ProcessInfo.processInfo.environment["MAP_FRAME_REPORT_HSR"] else {
             throw XCTSkip("set MAP_FRAME_REPORT_HSR=<ticks> to count the flat map's redraws on the High Speed Rail at 6000×")
         }
         let ticks = try XCTUnwrap(Int(value).flatMap { (1...10_000).contains($0) ? $0 : nil }, "MAP_FRAME_REPORT_HSR is 1 to 10,000 ticks")
         let session = try Self.highSpeedSession()
         session.setSpeed(.fast)
-        let count = try MapRedrawCount.run(session, ticks: ticks)
+        let count = try await MapRedrawCount.run(session, ticks: ticks)
         var rows = [
             "stations \(session.world.stations.count), lines \(session.world.lines.count), trains \(session.world.trains.count), traffic control \(session.world.isTrafficControlEnabled ? "on" : "off"), \(ticks) ticks at 6000×",
             "",
@@ -249,11 +249,15 @@ struct MapRedrawCount {
         String(format: "%.1f", Double(redraws[canvas] ?? 0) / Double(seconds))
     }
 
-    static func run(_ session: GameSession, ticks: Int) throws -> MapRedrawCount {
+    /// After each tick it waits for the map's off-main-actor reading of
+    /// the traffic (decision 497 P2-3), as the next frame would see it.
+    static func run(_ session: GameSession, ticks: Int) async throws -> MapRedrawCount {
         var count = MapRedrawCount()
         var last = Inputs(session)
         for _ in 0..<ticks {
             session.advance(realElapsed: GameSession.tickInterval)
+            _ = session.trafficOverlay
+            await session.mapReadsSettled()
             let now = Inputs(session)
             let railway = !MapRedraw.sameRailway(last.world, now.world)
             let stations = !MapRedraw.sameStations(last.world, now.world, comparesLand: false)

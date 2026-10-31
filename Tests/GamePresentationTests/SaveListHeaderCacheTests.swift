@@ -114,4 +114,39 @@ final class SaveListHeaderCacheTests: XCTestCase {
         _ = inMemory.entries()
         XCTAssertEqual(inMemory.headersRead, 1)
     }
+
+    /// L2-4 (#1558's review): a header kept by a newer build, of a save
+    /// newer than this build reads (an older build installed again), is
+    /// listed as newer, as reading the file says, not as one to load.
+    func testAHeaderKeptByANewerBuildIsListedAsNewer() throws {
+        try write("save-a.json", at: date)
+        XCTAssertNil(try XCTUnwrap(library().entries().first).problem)
+        let newer = SavedGame.currentVersion + 1
+
+        // The newer build wrote the save and kept its header.
+        let file = directory.appendingPathComponent("save-a.json")
+        var save = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        var game = try XCTUnwrap(save["game"] as? [String: Any])
+        game["saveVersion"] = newer
+        save["game"] = game
+        try JSONSerialization.data(withJSONObject: save).write(to: file, options: .atomic)
+        let kept = headers.appendingPathComponent("save-a.json")
+        var cache = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: kept)) as? [String: Any])
+        var header = try XCTUnwrap(cache["header"] as? [String: Any])
+        var keptGame = try XCTUnwrap(header["game"] as? [String: Any])
+        keptGame["saveVersion"] = newer
+        header["game"] = keptGame
+        cache["header"] = header
+        let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
+        cache["stamp"] = [
+            "size": try XCTUnwrap(attributes[.size] as? NSNumber).intValue,
+            "modified": try XCTUnwrap(attributes[.modificationDate] as? Date).timeIntervalSinceReferenceDate,
+            "file": try XCTUnwrap(attributes[.systemFileNumber] as? NSNumber).intValue,
+        ]
+        try JSONSerialization.data(withJSONObject: cache).write(to: kept, options: .atomic)
+
+        let older = library()
+        XCTAssertEqual(older.entries().map(\.problem), [.newerVersion(newer)])
+        XCTAssertEqual(older.headersRead, 1, "the kept header is not taken, the file is read")
+    }
 }

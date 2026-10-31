@@ -37,7 +37,11 @@ extension RealWorldDemo {
     ) -> GameWorld {
         // Without the heights the lines would cross each other at 0 m where
         // on the ground one passes over the other: the flat demo instead.
-        guard let heights else { return makeFlat(in: language, railways: railways, land: land, water: water, steep: steep) }
+        guard let heights else {
+            var flat = makeFlat(in: language, railways: railways, land: land, water: water, steep: steep)
+            openSightsAndTransfers(in: &flat)
+            return flat
+        }
         let routes = GroundRoutes(railways: railways)
         func world(balance: Money, ground: [GroundBlock]) throws(GameError) -> GameWorld {
             var world = GameWorld.newGame(anchor: anchor, balance: balance, land: land, water: water, steep: steep)
@@ -62,8 +66,9 @@ extension RealWorldDemo {
             world.setRealCarLengths(false)
             // Decision 319: its demand keeps the hours it was measured by.
             world.setTidalDemand(false)
-            // Decision 174: nor do tourists come to its sights.
-            world.setTourism(nil)
+            // Decision 525: tourists come to its sights, and people change
+            // from the real railways.
+            openSightsAndTransfers(in: &world)
             // Decision 183: nor does the city ask it for anything.
             world.setCityRequests(seed: nil)
             try world.mapGround()
@@ -81,6 +86,17 @@ extension RealWorldDemo {
         } catch {
             preconditionFailure("The real-world demo no longer builds: \(error)")
         }
+    }
+
+    /// Opens the demo's tourism and real transfers (decision 525): the
+    /// sights on its map (Jiufen, the Sky Lanterns of Pingxi, Houtong's
+    /// cats among them) and the people who change at its stations from
+    /// the real railways. The demo has no targets, so nothing measured
+    /// moves; the Pingxi challenge, built on ``makeFlat(in:railways:land:water:steep:)``,
+    /// keeps its one sight and no transfers.
+    static func openSightsAndTransfers(in world: inout GameWorld) {
+        world.setTourism(RealWorldFrame(world: world).map { AttractionCatalog.attractions(in: $0, bounds: world.bounds) })
+        world.setRealTransfers(true)
     }
 
     // MARK: - The lines

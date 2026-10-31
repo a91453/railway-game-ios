@@ -29,13 +29,40 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// that marked them.
     case zoning
 
+    /// Decision 524: the demo map with realistic operation, run on to its
+    /// second morning, so each line's card shows its last seven days'
+    /// punctuality beside Taiwan Railway's. For the screenshot review of
+    /// the pull request that added it.
+    case punctuality
+
     /// The scene's world, its clock paused at the moment to show.
     public func make(in language: DisplayLanguage) -> GameWorld {
         switch self {
         case .freight: Self.freightWorld(in: language)
         case .depots: Self.depotsWorld(in: language)
         case .zoning: Self.zoningWorld(in: language)
+        case .punctuality: Self.punctualityWorld(in: language)
         }
+    }
+
+    // MARK: - Punctuality
+
+    /// A day and nine hours: the first day settled, trains running.
+    static let punctualityRunSeconds: Int64 = 33 * 3_600
+
+    private static func punctualityWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        world.setRealisticOperation(true)
+        do throws(GameError) {
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(punctualityRunSeconds / 600))
+        } catch {
+            preconditionFailure("The punctuality screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Depots
