@@ -259,7 +259,7 @@ struct EconomyPanel: View {
                         session.setEconomyMode(.free)
                     }
                 } message: {
-                    Text("Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again.")
+                    Text(verbatim: GameSession.freePlaySwitchText(in: session.language))
                 }
                 if session.isFreePlayLocked {
                     Text(verbatim: GameSession.freePlayLockedText(in: session.language))
