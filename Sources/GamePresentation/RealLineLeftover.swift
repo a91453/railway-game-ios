@@ -9,7 +9,9 @@ import GameCore
 // platform. Track of a line still running (a platform of a station a line
 // calls at), crossing the way, or beside it farther off than a few metres
 // is not the line's and stays; where it is in the way, the purchase is
-// refused as before.
+// refused as before. Track joined to what is taken up goes with it while
+// none of that joined track has a platform of a station a line calls at:
+// what the old line left past where the new one parts from it.
 
 /// What a purchase takes up before it lays its track (decision 528): the
 /// track left by the same line bought and removed before.
@@ -85,6 +87,34 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
             platforms += on.map { Platform(station: $0.station, edge: $0.edge.number, start: $0.start) }
         }
         guard !edges.isEmpty else { return nil }
+        // The rest of the track joined to it, where none of it is a
+        // station's that a line calls at: what is left of the old line
+        // past where the new one parts from it (the Green Mountain Line's
+        // way to Kanding and its depot, under the Blue Coast Line bought
+        // after it was removed). Joined to a line still running (a branch
+        // line's junction on the main line), only what lies on the way.
+        var joined = Set(edges), queue = edges
+        var dead = true
+        while dead, let next = queue.popLast() {
+            guard let edge = world.network.edge(next) else { continue }
+            for node in [edge.from, edge.to] {
+                for end in world.network.node(node)?.ends ?? [] where !joined.contains(end.edge) {
+                    if world.network.platforms(on: end.edge).contains(where: { called.contains($0.station) }) {
+                        dead = false
+                        break
+                    }
+                    joined.insert(end.edge)
+                    queue.append(end.edge)
+                }
+            }
+        }
+        if dead {
+            let matched = Set(edges)
+            for id in joined.sorted() where !matched.contains(id) {
+                edges.append(id)
+                platforms += world.network.platforms(on: id).map { Platform(station: $0.station, edge: $0.edge.number, start: $0.start) }
+            }
+        }
         let taken = Set(edges)
         let nodes = world.network.nodes.filter { node in
             !node.ends.isEmpty && node.ends.allSatisfy { taken.contains($0.edge) }

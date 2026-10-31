@@ -31,6 +31,26 @@ final class RealLineAcquisitionTests: XCTestCase {
         try XCTUnwrap(session.buyableRealLines.first { $0.network == network }, "\(network) on sale")
     }
 
+    /// Decision 528: the Pingxi Line bought, removed and bought again,
+    /// over the track it left: the same riders and trains paid for, the
+    /// stations it left not built again.
+    func testThePingxiLineIsBoughtAgainAfterItIsRemoved() throws {
+        let session = try Self.game(round: "PINGXI")
+        let first = session.realLineOffer(for: try line("PINGXI", in: session))
+        XCTAssertTrue(session.acquireRealLine(first), session.message?.text ?? "")
+        session.selectLine(try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI")?.line))
+        session.removeSelectedLine()
+        XCTAssertNil(session.world.acquisition(of: "tra:PINGXI"))
+        let again = session.realLineOffer(for: try line("PINGXI", in: session))
+        XCTAssertNotNil(again.acquisition?.clearing, again.problem ?? "")
+        XCTAssertEqual(again.price?.riders, first.price?.riders)
+        XCTAssertEqual(again.price?.trains, first.price?.trains)
+        XCTAssertLessThan(try XCTUnwrap(again.price?.building), try XCTUnwrap(first.price?.building))
+        XCTAssertTrue(session.acquireRealLine(again), session.message?.text ?? "")
+        XCTAssertEqual(session.world.lines.count, 1)
+        XCTAssertEqual(session.world.stations.count, 7)
+    }
+
     func testThePingxiLineIsBoughtAsOneCommandAndRunsItsRealTrains() throws {
         let session = try Self.game(round: "PINGXI")
         let pingxi = try line("PINGXI", in: session)

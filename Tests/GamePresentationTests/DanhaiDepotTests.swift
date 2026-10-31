@@ -114,6 +114,23 @@ final class DanhaiDepotTests: XCTestCase {
         XCTAssertEqual(mine.lineRemovalText(own.id), "The line has no trains.")
     }
 
+    /// Decision 528 (BUGHUNT_BUILD P3-5): after the Green Mountain Line is
+    /// bought and removed, the Blue Coast Line is sold whole, from
+    /// Hongshulin, over the track the other left where they share it.
+    func testTheBlueCoastLineIsSoldWholeAfterTheGreenMountainLineIsRemoved() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
+        let green = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" })
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: green)), session.message?.text ?? "")
+        session.selectLine(try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line))
+        session.removeSelectedLine()
+        let coast = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:VB" })
+        XCTAssertNil(coast.after, "not only from Binhai Shalun")
+        XCTAssertEqual(coast.stops.first, "紅樹林")
+        let offer = session.realLineOffer(for: coast)
+        XCTAssertNotNil(offer.acquisition, offer.problem ?? "")
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+    }
+
     /// `ids` bought in turn on a game round the Green Mountain Line under
     /// `rules`, then played to three in the morning of the third day,
     /// hour by hour: no train in a deadlock at any hour, none more than
