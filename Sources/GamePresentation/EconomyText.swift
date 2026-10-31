@@ -294,6 +294,22 @@ extension GameWorld {
         return language.text("waiting \(groups.joined(separator: ", "))", "候車 \(groups.joined(separator: "、"))")
     }
 
+    /// Who waits at station `id` for the inspector card, one line each so a
+    /// narrow card wraps none of them away: "waiting" first, then up to
+    /// `maxGroups` of ``waitingText(at:in:)`` (the busiest are not sorted
+    /// out: lines by ID), and "+2 more" if there are more (the station
+    /// panel lists them all). Empty if nobody waits.
+    public func waitingLines(at id: StationID, maxGroups: Int = 3, in language: DisplayLanguage) -> [String] {
+        let groups = waitingText(at: id, in: language)
+        guard !groups.isEmpty else { return [] }
+        var lines = [language.text("Waiting", "候車")] + groups.prefix(maxGroups)
+        if groups.count > maxGroups {
+            let rest = groups.count - maxGroups
+            lines.append(language.text("+\(rest) more", "還有 \(rest) 項"))
+        }
+        return lines
+    }
+
     /// Whether train `id`'s load is tons: it is on a freight line, or was
     /// and still has cargo on board, which is lost at the next whole hour
     /// (decision 155); for that hour it read "riding 0".
