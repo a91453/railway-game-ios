@@ -62,14 +62,17 @@ public struct TrackEdgePlan: Hashable, Sendable {
     public let curve: TrackCurve
     public let profile: TrackProfile
     public let structure: TrackStructure
+    /// Whether it is mountain track (decision 515, ``TrackEdge/mountain``).
+    public let mountain: Bool
 
     public init(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform,
-                structure: TrackStructure = .surface) {
+                structure: TrackStructure = .surface, mountain: Bool = false) {
         self.from = from
         self.to = to
         self.curve = curve
         self.profile = profile
         self.structure = structure
+        self.mountain = mountain
     }
 }
 
@@ -95,13 +98,20 @@ public struct TrackEdge: Hashable, Sendable {
     /// The curve speed limits along the edge, from its `from` node
     /// (decision 217, ``CurveSpeedLimit/limits(from:to:curve:length:)``):
     /// derived from the end nodes and the curve when the edge is built or
-    /// loaded, never saved. Empty for a straight edge.
+    /// loaded, never saved. Empty for a straight edge. Since decision 515
+    /// a mountain edge's grade limit too (``MountainTrack/speedLimit(of:)``).
     public let speedLimits: [TrackSpeedLimit]
+    /// Whether it is mountain track (decision 515): it may be as steep as
+    /// ``TrackProfile/maximumMountainGrade``, only a mountain train
+    /// (``TrainType/climbsMountains``) may run on it, and no train runs it
+    /// faster than its grade allows. Track built before decision 515 is
+    /// not.
+    public let mountain: Bool
 
     init(
         id: TrackEdgeID, from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, length: Int64,
         profile: TrackProfile = .uniform, structure: TrackStructure = .surface, sections: [TrackSection] = [],
-        speedLimits: [TrackSpeedLimit] = []
+        speedLimits: [TrackSpeedLimit] = [], mountain: Bool = false
     ) {
         self.id = id
         self.from = from
@@ -112,6 +122,12 @@ public struct TrackEdge: Hashable, Sendable {
         self.structure = structure
         self.sections = sections
         self.speedLimits = speedLimits
+        self.mountain = mountain
+    }
+
+    /// The steepest grade it may have (decision 515).
+    public var maximumGrade: TrackGrade {
+        TrackProfile.maximumGrade(mountain: mountain)
     }
 
     /// The node a traversal of this edge ends at.
@@ -384,12 +400,12 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// both nodes.
     mutating func addEdge(
         from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, sections: [TrackSection] = [],
-        geometry: TrackGeometry, next: Int
+        mountain: Bool = false, geometry: TrackGeometry, next: Int
     ) -> TrackEdgeID {
         let id = TrackEdgeID.edge(nextEdgeNumber)
         edges.append(TrackEdge(
             id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections,
-            speedLimits: CurveSpeedLimit.limits(of: geometry, curve: curve)
+            speedLimits: MountainTrack.speedLimits(of: geometry, curve: curve, mountain: mountain), mountain: mountain
         ))
         nextEdgeNumber = next
         attach(id, direction: geometry.startDirection, at: from)
@@ -465,13 +481,14 @@ extension RailwayNetwork: Codable {
     }
 
     private enum EdgeKeys: String, CodingKey {
-        case id, from, to, curve, profile, structure, sections
+        case id, from, to, curve, profile, structure, sections, mountain
     }
 
     /// Decodes `{"nodes", "edges", "nextNodeID", "nextEdgeID"}`: nodes as
     /// `{"id", "x", "y", "z"}` and edges as `{"id", "from", "to", "curve"}`
     /// with, since Stage S4, `"profile"` when it has transitions and
-    /// `"structure"` when it is not surface track (a Stage S3 edge has
+    /// `"structure"` when it is not surface track, and since decision 515
+    /// `"mountain": true` for mountain track (a Stage S3 edge has
     /// neither and reads as uniform surface track). Both lists are in
     /// ascending ID order, IDs from 1 and below the next ID. Every derived
     /// value (each edge's length, each node's ends) is worked out again, not
@@ -524,6 +541,8 @@ extension RailwayNetwork: Codable {
             let structure = edge.contains(.structure) ? try edge.decode(TrackStructure.self, forKey: .structure) : .surface
             // Decision 124: an automatic edge's sections, and only its.
             let sections = edge.contains(.sections) ? try edge.decode([TrackSection].self, forKey: .sections) : []
+            // Decision 515: mountain track, written only when it is.
+            let mountain = edge.contains(.mountain) ? try edge.decode(Bool.self, forKey: .mountain) : false
             guard number >= 1, number < nextEdgeNumber, number > lastEdge else {
                 throw corrupt("Track edge IDs must be ascending, from 1 and below nextEdgeID.")
             }
@@ -546,7 +565,7 @@ extension RailwayNetwork: Codable {
             let id = TrackEdgeID.edge(number)
             edges.append(TrackEdge(
                 id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections,
-                speedLimits: CurveSpeedLimit.limits(of: geometry, curve: curve)
+                speedLimits: MountainTrack.speedLimits(of: geometry, curve: curve, mountain: mountain), mountain: mountain
             ))
             attach(id, direction: geometry.startDirection, at: from)
             attach(id, direction: geometry.endDirection, at: to)
@@ -598,6 +617,9 @@ extension RailwayNetwork: Codable {
             }
             if !edge.sections.isEmpty {
                 try entry.encode(edge.sections, forKey: .sections)
+            }
+            if edge.mountain {
+                try entry.encode(true, forKey: .mountain)
             }
         }
         try container.encode(nextNodeNumber, forKey: .nextNodeID)

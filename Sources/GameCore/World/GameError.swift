@@ -356,4 +356,8 @@ public enum GameError: Error, Hashable, Sendable {
     /// A bus route runs along the road (decision 438): change the route
     /// first.
     case roadInUse(BusRouteID)
+    /// The train's type cannot climb the mountain track (decision 515,
+    /// ``TrackEdge/mountain``) the line or the train's way runs on: only a
+    /// mountain train (``TrainType/climbsMountains``) may.
+    case trainCannotClimb(TrainID)
 }

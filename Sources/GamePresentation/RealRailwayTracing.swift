@@ -270,6 +270,31 @@ extension GameSession {
     /// it.
     static let traceGrade = 0.038
 
+    /// Decision 515: the steepest grade a stretch of a real mountain line
+    /// (``mountainSystems``) is laid at, a little under mountain track's 70
+    /// in 1,000 (``TrackProfile/maximumMountainGrade``) for the same
+    /// reason, and by as much as ``traceGrade`` is under 40: at 68 the
+    /// Alishan line's curves, each a little shorter than the traced way
+    /// under it, came out at 70.8.
+    static let mountainTraceGrade = 0.066
+
+    /// Decision 515: the real railways whose lines climb more steeply than
+    /// the game's 40 in 1,000, which a trace lays as mountain track where
+    /// it must: the Alishan Forest Railway, whose ruling grade is 62.5 in
+    /// 1,000 (the Forestry and Nature Conservation Agency's 林業軌道 page,
+    /// recreation.forest.gov.tw/Railway/Introduce, which the Railway
+    /// reference's `docs/afr-push-pull-0913.md` cites for its switchbacks).
+    /// The other real lines of the map (the TRA's 25 in 1,000 at most, the
+    /// High Speed Rail's, the metros') climb no more than the game's
+    /// grade.
+    static let mountainSystems: Set<String> = ["afr_sched"]
+
+    /// The steepest grade a trace of a real line of `system` is laid at:
+    /// ``mountainTraceGrade`` for a mountain line, else ``traceGrade``.
+    static func traceGrade(ofSystem system: String?) -> Double {
+        system.map(mountainSystems.contains) ?? false ? mountainTraceGrade : traceGrade
+    }
+
     /// Whether the network tool can trace the real railway here: on a
     /// real-world map whose real railways are loaded.
     public var canTraceRealRailway: Bool {
@@ -466,8 +491,18 @@ extension GameSession {
         let levelSpans = !platforms.isEmpty ? spans : tracedStationSpans(along: path, system: system).filter { span in
             !carried.contains { $0.isLong && $0.range.overlaps(span) }
         }
-        guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
-            var refused = TracePlan(stretches: [], buildable: 0, problem: language.text(
+        // Decision 515: a real mountain line climbs as steeply as mountain
+        // track may.
+        let lineSystem = system ?? realRailwayTraces.flatMap { traces in
+            traces.snap(WorldVector(from.plan), within: reach).map { traces.lines[$0.place.line].system }
+        }
+        let grade = Self.traceGrade(ofSystem: lineSystem)
+        let climbs = grade > Self.traceGrade
+        guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: grade, carried: carried) else {
+            var refused = TracePlan(stretches: [], buildable: 0, problem: climbs ? language.text(
+                "The track cannot climb from one end to the other along this line within the steepest grade of mountain track, 70‰.",
+                "沿這段真實鐵路，從一端到另一端的高低差超過登山軌道的坡度上限 70‰，鋪不上去。"
+            ) : language.text(
                 "The track cannot climb from one end to the other along this line within the steepest grade, 40‰.",
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
             ))
@@ -483,7 +518,7 @@ extension GameSession {
                 let heights = stride(from: span.lowerBound, through: span.upperBound, by: TrackRise.spacing).map { rise.height(at: $0) } + [rise.height(at: span.upperBound)]
                 return TrackRise.Level(span, from: heights.min() ?? 0, to: heights.max() ?? 0)
             }
-            if let levelled = TrackRise(path: path, ground: ground, water: water, levels: levels + flat, grade: Self.traceGrade, carried: carried) {
+            if let levelled = TrackRise(path: path, ground: ground, water: water, levels: levels + flat, grade: grade, carried: carried) {
                 rise = levelled
             }
         }
@@ -520,11 +555,15 @@ extension GameSession {
         for (index, curve) in plan.curves.enumerated() {
             let a = index == 0 ? from : WorldCoordinate(x: plan.nodes[index].point.x, y: plan.nodes[index].point.y, z: plan.heights[index])
             let b = index + 1 == last ? to : WorldCoordinate(x: plan.nodes[index + 1].point.x, y: plan.nodes[index + 1].point.y, z: plan.heights[index + 1])
-            let surveyed = TrackGeometry(from: a, to: b, curve: curve).map(NetworkBuilding.surveyedPoints(of:)) ?? []
+            let geometry = TrackGeometry(from: a, to: b, curve: curve)
+            let surveyed = geometry.map(NetworkBuilding.surveyedPoints(of:)) ?? []
+            // Decision 515: on a mountain line, only what is steeper than
+            // the game's grade is mountain track.
+            let steep = climbs && geometry.map { !$0.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) } ?? false
             stretches.append(PlayerCommand.TrackStretch(
                 start: index == 0 ? start : .point(a.plan), end: index + 1 == last ? end : .point(b.plan),
                 from: a, to: b, curve: curve, profile: .uniform, structure: networkStructure,
-                ground: [a.plan, b.plan] + surveyed
+                ground: [a.plan, b.plan] + surveyed, mountain: steep
             ))
         }
 
@@ -535,9 +574,7 @@ extension GameSession {
         var built = 0
         var problem: String?
         var previous: TrackNodeID?
-        let tightest = Self.traceMinimumRadius(ofSystem: system ?? realRailwayTraces.flatMap { traces in
-            traces.snap(WorldVector(from.plan), within: reach).map { traces.lines[$0.place.line].system }
-        })
+        let tightest = Self.traceMinimumRadius(ofSystem: lineSystem)
         for stretch in stretches {
             if let radius = Self.tightestRadius(of: stretch), radius < tightest {
                 problem = language.text(
@@ -554,7 +591,11 @@ extension GameSession {
                 // Decision 513: which check, where GameCore's error covers
                 // several; asked of the world before the trace, as a
                 // refused stretch may leave its first node in the draft.
-                problem = error.playerMessage(building: next, in: planning, heights: heights, language: language)
+                // Decision 515: mountain track's own limit.
+                problem = stretch.mountain && error == .trackTooSteep ? language.text(
+                    "That track would be too steep. Mountain track may climb or fall at most 70 in 1000.",
+                    "這段軌道太陡了。登山軌道的坡度最多 70‰。"
+                ) : error.playerMessage(building: next, in: planning, heights: heights, language: language)
                 break
             }
         }
@@ -569,9 +610,8 @@ extension GameSession {
 }
 
 extension GameSession {
-    /// The tightest curve a traced edge may have on the TRA, the High
-    /// Speed Rail and the Alishan Forest Railway: 40 m, the forest
-    /// railway's tightest. GameCore has no curve radius (a stretch may turn
+    /// The tightest curve a traced edge may have on the TRA and the High
+    /// Speed Rail: 40 m, the forest railway's tightest. GameCore has no curve radius (a stretch may turn
     /// up to 90° where it joins, decision 103); this only stops a trace
     /// where a kink in the real line's drawing, or a link between two
     /// lines, would bend the track into a hairpin. Measured as the
@@ -581,13 +621,16 @@ extension GameSession {
     /// The tightest on the metros and light rails (decision 401's sequel):
     /// 20 m. Their real lines turn tighter than the forest railway's, the
     /// Wenhu Line about 35 m round its corners and Kaohsiung's Circular
-    /// Line 26 m, and 40 m left gaps in them.
+    /// Line 26 m, and 40 m left gaps in them. Since decision 515 the
+    /// Alishan Forest Railway's too: its drawn line measures 28 to 39 m
+    /// round its real 40 m curves, and 40 m stopped every trace of it
+    /// within a station or two.
     static let urbanTraceMinimumRadius = 20 * RealRailwayTraces.metre
 
     /// The tightest curve a traced edge of `system`'s line may have.
     static func traceMinimumRadius(ofSystem system: String?) -> Double {
         switch system {
-        case nil, "tra_sched", "thsr_sched", "afr_sched": traceMinimumRadius
+        case nil, "tra_sched", "thsr_sched": traceMinimumRadius
         default: urbanTraceMinimumRadius
         }
     }
@@ -878,7 +921,8 @@ extension PlayerCommand.TrackStretch {
         guard let node else { return self }
         if case .node = start { return self }
         return PlayerCommand.TrackStretch(
-            start: .node(node), end: end, from: from, to: to, curve: curve, profile: profile, structure: structure, ground: ground
+            start: .node(node), end: end, from: from, to: to, curve: curve, profile: profile, structure: structure, ground: ground,
+            mountain: mountain
         )
     }
 }

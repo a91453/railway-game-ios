@@ -166,7 +166,7 @@ extension GameSession {
 
     /// Builds the stretch of track between the picked ends through
     /// `GameWorld.buildTrackNode(at:)` for each new end and
-    /// `GameWorld.buildTrackEdge(from:to:curve:profile:structure:)`, all or
+    /// `GameWorld.buildTrackEdge(from:to:curve:profile:structure:mountain:)`, all or
     /// nothing. The end then becomes the start of the next stretch, so taps
     /// lay a line piece by piece, each continuing the last.
     public func buildNetworkTrack() {

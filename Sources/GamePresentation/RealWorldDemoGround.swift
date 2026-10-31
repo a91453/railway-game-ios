@@ -30,7 +30,7 @@ extension RealWorldDemo {
     /// with what they cost on top of a new game's money, so what is left is
     /// a new game's: the track's price depends on the ground under it, so
     /// the layout is planned over the ground first and priced edge by edge
-    /// (``GameWorld/trackEdgePrice(from:to:curve:profile:structure:)``).
+    /// (``GameWorld/trackEdgePrice(from:to:curve:profile:structure:mountain:)``).
     public static func make(
         in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = [],
         steep: [CellPosition] = [], heights: HeightGrid? = nil

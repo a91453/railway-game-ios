@@ -88,10 +88,13 @@ public enum PlayerCommand: Hashable, Sendable {
         /// Where the ground is read in: both ends, then the points GameCore
         /// surveys under the edge (``NetworkBuilding/surveyedPoints(of:)``).
         public let ground: [PlanPoint]
+        /// Decision 515: mountain track (``TrackEdge/mountain``), which
+        /// only a trace of a real mountain line lays.
+        public let mountain: Bool
 
         public init(
             start: NetworkAnchor, end: NetworkAnchor, from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve,
-            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint]
+            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint], mountain: Bool = false
         ) {
             self.start = start
             self.end = end
@@ -101,6 +104,7 @@ public enum PlayerCommand: Hashable, Sendable {
             self.profile = profile
             self.structure = structure
             self.ground = ground
+            self.mountain = mountain
         }
 
         /// Builds it in `world`, reading ground from `heights`: the edge,
@@ -109,7 +113,7 @@ public enum PlayerCommand: Hashable, Sendable {
             try world.readGround(under: ground, from: heights)
             let first = try node(for: start, at: from, in: &world)
             let last = try node(for: end, at: to, in: &world)
-            let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure)
+            let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure, mountain: mountain)
             return (edge, last)
         }
 
@@ -375,6 +379,9 @@ extension PlayerCommand: Codable {
         /// The profile's transitions at the start and the end.
         var transitions: [Int64]?
         var structure: String?
+        /// Decision 515: `true` for mountain track; absent for ordinary
+        /// track (and in logs from before it).
+        var mountain: Bool?
         /// Plan points, x and y each.
         var ground: [Int64]?
         var edge: Int?
@@ -458,7 +465,7 @@ extension PlayerCommand: Codable {
             return TrackStretch(
                 start: try anchor(record.start), end: try anchor(record.end), from: try coordinate(record.from), to: try coordinate(record.to),
                 curve: curve, profile: TrackProfile(startTransition: transitions[0], endTransition: transitions[1]),
-                structure: structure, ground: try points(record.ground)
+                structure: structure, ground: try points(record.ground), mountain: record.mountain ?? false
             )
         }
         switch record.kind {
@@ -594,6 +601,7 @@ extension PlayerCommand: Codable {
             record.transitions = [stretch.profile.startTransition, stretch.profile.endTransition]
             record.structure = stretch.structure.rawValue
             record.ground = stretch.ground.flatMap { [$0.x, $0.y] }
+            record.mountain = stretch.mountain ? true : nil
         }
         switch self {
         case .buildTrack(let stretch):

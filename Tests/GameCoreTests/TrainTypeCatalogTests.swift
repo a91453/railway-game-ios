@@ -49,6 +49,8 @@ final class TrainTypeCatalogTests: XCTestCase {
         .init(code: "MINGRI", capacity: 26, doors: 2, overloads: true, performance: .mingRi, first: 400_000, car: 55_000, permille: 1_400),
         .init(code: "STAR", capacity: 29, doors: 2, overloads: true, performance: .formosaStar, first: 375_000, car: 45_000, permille: 1_300),
         .init(code: "SUMMER", capacity: 50, doors: 2, overloads: true, performance: .midsummerFormosa, first: 350_000, car: 35_000, permille: 1_650),
+        // Decision 515.
+        .init(code: "ALISHAN", capacity: 40, doors: 2, overloads: true, performance: .forestRailway, first: 180_000, car: 30_000, permille: 1_500),
     ]
 
     /// Cents of New Taiwan dollars for a pinned price in the reference's dollars.
@@ -73,10 +75,10 @@ final class TrainTypeCatalogTests: XCTestCase {
     func testTheListsKeepTheirTypesAndOrder() {
         XCTAssertEqual(TrainType.main.map(\.rawValue), ["A", "B", "C"])
         XCTAssertEqual(TrainType.reference.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL"])
-        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER"])
+        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER", "ALISHAN"])
         XCTAssertEqual(TrainType.referenceDefault.rawValue, "B")
         XCTAssertEqual([TrainType.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail, .steam, .highSpeed, .emu3000,
-                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa], TrainType.allCases)
+                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa, .alishan], TrainType.allCases)
     }
 
     func testTheStandardCarKeepsItsNumbers() {
