@@ -708,10 +708,10 @@ extension Tutorial {
             targets: [.networkModes],
             goal: .chooseNetworkMode(.platform),
             setup: [.clearPicks],
-            title: ("Tap Platform", "點「月台」"),
+            title: ("Tap Station", "點「車站」"),
             body: (
-                "A station is a platform on your track.",
-                "車站就是蓋在軌道上的月台。"
+                "A station goes on your track, built with its platforms.",
+                "車站蓋在軌道上，月台一起蓋好。"
             )
         ),
         TutorialStep(

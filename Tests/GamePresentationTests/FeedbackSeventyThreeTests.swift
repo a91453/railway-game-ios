@@ -97,7 +97,7 @@ final class FeedbackSeventyThreeTests: XCTestCase {
         XCTAssertEqual(world.lineDraftGap(through: [west, lonely]), .noPlatform(lonely))
         XCTAssertEqual(
             world.lineDraftGapText(.noPlatform(lonely), in: .traditionalChinese),
-            "Lonely 還沒有月台：用路網工具的「月台」在軌道上設一座。路線只停點選的車站，軌道接通後列車才能行駛。"
+            "Lonely 還沒有月台：用路網工具的「車站」在軌道上設一座。路線只停點選的車站，軌道接通後列車才能行駛。"
         )
         let east = try line.buildStation(named: "East", beside: 4, at: 0, in: &world)
         XCTAssertNil(world.lineDraftGap(through: [west, east]), "joined")
