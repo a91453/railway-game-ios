@@ -47,11 +47,11 @@ final class RealStationPurchaseTests: XCTestCase {
         let platform = Double(try XCTUnwrap(session.realPlatformCars(forStationNamed: "猴硐", at: pin.point))) * Double(session.world.platformCarLength)
             / Double(WorldCoordinate.unitsPerMetre)
         XCTAssertEqual(Double(offer.metres), platform + 300, accuracy: 2)
-        // Only what building costs: the station's $200,000 and the track,
+        // Only what building costs: the station's NT$600,000 and the track,
         // no value for a line's running.
-        let station = Money(20_000_000)
+        let station = Money(60_000_000)
         XCTAssertGreaterThan(price, station)
-        XCTAssertLessThan(price, station + Money(Int64(offer.metres) * 20_000))
+        XCTAssertLessThan(price, station + Money(Int64(offer.metres) * 60_000))
         print("猴硐: \(offer.metres) m, \(price.moneyText)")
 
         let before = session.world

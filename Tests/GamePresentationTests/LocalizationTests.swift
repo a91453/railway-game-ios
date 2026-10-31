@@ -105,8 +105,8 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(FinancePeriod.allCases.map { $0.displayName(in: zh) }, ["日", "週", "月", "年"])
         XCTAssertEqual(LedgerEntry.Kind.dailyStaff.displayName(in: zh), "員工費用（日結）")
         XCTAssertEqual(LedgerItem.trainStaff.displayName(in: zh), "司機與調度員工")
-        XCTAssertEqual(FareRules.standard.displayText(in: zh), "固定票價 · \(Money(500).centsText)")
-        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: zh), "階梯票價 · 5 段，\(Money(55).centsText) 起")
+        XCTAssertEqual(FareRules.standard.displayText(in: zh), "固定票價 · \(Money(1_500).centsText)")
+        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: zh), "階梯票價 · 5 段，\(Money(1_100).centsText) 起")
     }
 
     /// Stage W2b: where a dwell has got to, in both languages.

@@ -14,7 +14,8 @@
 // world before it, one price and one weight for every train.
 
 /// What one type of train costs to buy and to run (decision 180). Money is
-/// in cents, as everywhere in GameCore.
+/// in cents, as everywhere in GameCore; the prices are New Taiwan dollars
+/// (decision 499: 3 to the dollar they were set in).
 public struct RollingStockPricing: Hashable, Sendable {
     /// A new train of the type, with its first car.
     public let firstCar: Money
@@ -41,7 +42,7 @@ extension TrainType {
 /// The rules of decision 180 as plain functions of a type and a car count.
 public enum RollingStock {
     /// The standard car, for a train without a type: A's prices and weight.
-    public static let standard = RollingStockPricing(firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000)
+    public static let standard = RollingStockPricing(firstDollars: 450_000, carDollars: 120_000, operatingPermille: 1_000)
 
     /// A train sold brings back this share of what is left of its cost on
     /// the books.
@@ -81,11 +82,11 @@ public enum RollingStock {
 }
 
 extension RollingStock {
-    /// A standard train's fixed cost a day, in dollars: staff 480, energy
-    /// 360 and the maintenance 8 an hour that ``Operations`` settles (the
-    /// part of its running cost that does not depend on the kilometres it
-    /// runs).
-    public static let standardDailyDollars: Int64 = 480 + 360 + 8 * 24
+    /// A standard train's fixed cost a day, in New Taiwan dollars: staff
+    /// 1,440, energy 1,080 and the maintenance 24 an hour that
+    /// ``Operations`` settles (the part of its running cost that does not
+    /// depend on the kilometres it runs; decision 499).
+    public static let standardDailyDollars: Int64 = 1_440 + 1_080 + 24 * 24
 }
 
 extension GameWorld {

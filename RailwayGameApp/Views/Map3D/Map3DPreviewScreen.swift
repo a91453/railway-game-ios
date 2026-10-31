@@ -36,7 +36,11 @@ struct Map3DPreviewScreen: View {
     /// in its place of the close button; and the same with the building
     /// tools out. `nil` from the settings, which have no 2D map below.
     var toMap2D: ((Map3DHandoff.Plan) -> Void)? = nil
-    var build: ((Map3DHandoff.Plan) -> Void)? = nil
+    /// Decision 517: Build hands over this view too, to come back to as
+    /// building ends.
+    var build: ((Map3DHandoff.Plan, Map3DBuildReturn.Viewpoint) -> Void)? = nil
+    /// Decision 517: the view Build left, opened again as building ended.
+    var resumes: Map3DBuildReturn.Viewpoint? = nil
     /// Decision 414: the game screen while the idle mode runs, whose
     /// director picks the view the train is followed from; the controls
     /// are put away and a tap ends the mode (`endAmbient`).
@@ -78,7 +82,7 @@ struct Map3DPreviewScreen: View {
         ZStack {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
-                      start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
+                      start: handedOver, openedAt: openedAt, resumes: resumes, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: ambient?.view3D ?? followView) },
                       departure: departure, world: session.world, modelsReady: modelsReady,
                       onStats: { stats = $0 })
@@ -130,7 +134,8 @@ struct Map3DPreviewScreen: View {
                             // Decision 313: building is on the 2D map; this
                             // takes the player there with the tools out.
                             Button {
-                                leave(to: build)
+                                guard let scene, let camera = cameraLink.camera else { return close() }
+                                build(Map3DHandoff.plan(from: camera, in: scene), Map3DBuildReturn.Viewpoint(camera: camera, in: scene))
                             } label: {
                                 Label {
                                     Text(verbatim: language.text("Build", "建設"))
@@ -743,6 +748,8 @@ private struct Map3DView: UIViewRepresentable {
     /// Decision 313, later: the 2D map's view the 3D button opened this
     /// over.
     let openedAt: Map3DHandoff.Plan?
+    /// Decision 517: the view Build left, to open at again.
+    let resumes: Map3DBuildReturn.Viewpoint?
     let farOut: ((Map3DCamera) -> Void)?
     /// Decision 269, later: the way the map faces, for the compass.
     let compass: Map3DCompassState
@@ -864,6 +871,9 @@ private struct Map3DView: UIViewRepresentable {
             // Decision 269: where the 2D map was, as close, straight down.
             view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)
             context.coordinator.handedOverAt = view.camera.distance
+        } else if first, let resumes {
+            // Decision 517: back where Build left, turned and leaning as it was.
+            view.camera = resumes.camera(in: scene, viewport: view.camera.viewport)
         } else if first {
             // Open over the place the 2D map showed (decision 313, later),
             // or from the settings the middle of what is built, the whole

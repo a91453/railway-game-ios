@@ -1,14 +1,14 @@
 {
- "schemaVersion": 64,
+ "schemaVersion": 75,
  "description": "Buying the map with its own step (schema 64, decision 167), 9 steps. A world of 3 x 1 tiles of 1,048,576 units, free play, 3,000,000,000 at the start. The riders each tile beyond the first needs are the map's own: ridersStep, 100,000 when left out, and the land costs $50 (5,000 cents) for each rider of it for each tile owned, 500,000,000 for the second tile at the standard step. enableMapExpansion refuses a step below 1 or above 2^32 = 4,294,967,296 (invalidRidersStep), checked after 'turned on already' and before the tile: a step of 0 with a tile outside the world (row 5) is refused for the step. With a step of 25,000 and tile (0, 0) it is turned on; turned on again it is refused (mapExpansionEnabled). Free play needs no riders: tile (0, 1) costs 1 x 25,000 x 5,000 = 125,000,000, where the standard step would have cost 500,000,000. Managed, tile (0, 2) is the third tile: it needs 2 x 25,000 = 50,000 riders in the best day, and the best day is 0 (mapExpansionLocked, riders 50,000), where the standard step would have asked 200,000. The final state keeps ridersStep 25,000; balance 3,000,000,000 - 125,000,000 = 2,875,000,000.",
  "initialState": {
   "worldWidth": 3145728,
   "worldHeight": 1048576,
-  "balance": 3000000000,
+  "balance": 9000000000,
   "costs": {
-   "track": 100,
-   "station": 1000,
-   "train": 5000
+   "track": 300,
+   "station": 3000,
+   "train": 15000
   },
   "gameMinutes": 0,
   "speed": "paused"
@@ -116,7 +116,7 @@
     "trainDistance": 0
    }
   },
-  "balance": 2875000000,
+  "balance": 8625000000,
   "gameMinutes": 0,
   "lines": [],
   "mapExpansion": {

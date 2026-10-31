@@ -50,6 +50,14 @@ extension PlayerCommand {
         /// runs none (``GameSession/assignSelectedTrainToSelectedLine(pattern:)``).
         case assignTrain(TrainID, LineID, pattern: Int?)
         case unassignTrain(TrainID)
+        /// Off its line, if on one, and to another line's own service as
+        /// ``assignTrain(_:_:pattern:)`` does (decision 512: the roster's
+        /// drag).
+        case moveTrainToLine(TrainID, LineID)
+        /// Its own repeating timetable `by` seconds later, its service
+        /// stopped and started again where it waits at its first stop
+        /// (decision 512: the roster's drag).
+        case shiftTrainTimetable(TrainID, by: Int64)
         /// On a platform of a station, the way nearer `heading`
         /// (``GameSession/placeSelectedTrain()``).
         case placeTrain(TrainID, at: StationID, heading: CompassHeading)
@@ -286,6 +294,19 @@ extension GameSession {
                 }
             }
         case .unassignTrain(let id): try world.unassignTrain(id)
+        case .moveTrainToLine(let id, let lineID):
+            if world.assignedLine(of: id) != nil { try world.unassignTrain(id) }
+            outcome = try apply(.assignTrain(id, lineID, pattern: nil), to: &world)
+        case .shiftTrainTimetable(let id, let seconds):
+            guard let train = world.train(id: id) else { throw .unknownTrain(id) }
+            guard let stops = TrainRosterDrag.shiftedTimetable(of: train, by: seconds) else { throw .invalidTimetable }
+            let running = train.execution != nil
+            if running { try world.stopTrainService(id) }
+            try world.setTrainTimetable(id, to: stops, repeatingEvery: train.timetablePeriod)
+            if running {
+                try world.startTrainService(id)
+                try world.useTrainPerformanceForMovement(id)
+            }
         case .placeTrain(let id, let station, let heading):
             outcome.placed = try Self.place(id, atPlatformOf: station, heading: heading, in: &world)
         case .staffLine(let id, let headway, let type, let cars, let language):

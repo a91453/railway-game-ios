@@ -1,26 +1,26 @@
 {
   "checksums" : [
-    "E017B928F92EF1E9",
-    "F8734EFAD314675B",
-    "FA81733FBF091ECD",
-    "A599C96A58EE3602",
-    "40504B8538E6DE94",
-    "40504B8538E6DE94",
-    "81EC4543C39ACB43",
-    "8B8F2802F115AFEF",
-    "BCA33A7996B68CC1",
-    "74C9836AEF25487D",
-    "DAC69953F2957309",
-    "685113B6288D290D",
-    "CEC4B36DE8F72DAD",
-    "E9178D5090F4225A",
-    "B1FD8DF51D007548",
-    "2FB5EAAED57F7FB0",
-    "5116860F94927942",
-    "72B057298A5EC5A9",
-    "AEEBF71A621F9FF3",
-    "B389FE0A33C6CED9",
-    "A81821745D86DB0E"
+    "974564C29B3FE7F0",
+    "1E38993FC054739D",
+    "347EF09C57C01AF3",
+    "AF4F7C45D274CABC",
+    "9EFE587379DE1F12",
+    "9EFE587379DE1F12",
+    "A503D48E8747CBC7",
+    "D2B139524A63BB94",
+    "6DDF3CAA805A6BF0",
+    "14FD89434FE339F0",
+    "7C444A18AB33B775",
+    "4AB658363391946",
+    "AE7830550767D08B",
+    "EA9C8E79E0A0AB8C",
+    "1215629C7BA115F0",
+    "5F62D7EB8E4B6188",
+    "A53DD214E9A36749",
+    "D608696282BE1D19",
+    "2F575D645C2C3327",
+    "9A27F31917B09BC1",
+    "AB8BF92ED0E0C88E"
   ],
   "commands" : [
     {
@@ -97,7 +97,7 @@
     },
     {
       "kind" : "setFareBaseline",
-      "money" : 155
+      "money" : 465
     },
     {
       "at" : {
@@ -167,22 +167,22 @@
       "rules" : {
         "bands" : [
           {
-            "fare" : 269,
+            "fare" : 807,
             "from" : 0,
             "to" : 53
           },
           {
-            "fare" : 265,
+            "fare" : 795,
             "from" : 53,
             "to" : 132
           },
           {
-            "fare" : 100,
+            "fare" : 300,
             "from" : 132,
             "to" : 195
           },
           {
-            "fare" : 357,
+            "fare" : 1071,
             "from" : 195
           }
         ]
@@ -296,7 +296,7 @@
     },
     {
       "kind" : "setFareBaseline",
-      "money" : 43
+      "money" : 129
     },
     {
       "kind" : "purchase",
@@ -304,7 +304,7 @@
     },
     {
       "kind" : "setFareBaseline",
-      "money" : 155
+      "money" : 465
     },
     {
       "at" : {
@@ -377,7 +377,7 @@
     },
     {
       "kind" : "setFareBaseline",
-      "money" : 155
+      "money" : 465
     },
     {
       "kind" : "createLine",
@@ -432,7 +432,7 @@
       "rules" : {
         "bands" : [
           {
-            "fare" : 50,
+            "fare" : 150,
             "from" : 5
           }
         ]
@@ -595,7 +595,7 @@
     {
       "kind" : "setFareRules",
       "rules" : {
-        "flat" : 456
+        "flat" : 1368
       }
     },
     {
@@ -648,7 +648,7 @@
     },
     {
       "kind" : "setFareBaseline",
-      "money" : 550
+      "money" : 1650
     },
     {
       "demand" : {
@@ -712,7 +712,7 @@
     {
       "kind" : "setFareRules",
       "rules" : {
-        "flat" : 75
+        "flat" : 225
       }
     },
     {
@@ -770,7 +770,7 @@
     },
     {
       "kind" : "setFareBaseline",
-      "money" : 75
+      "money" : 225
     },
     {
       "kind" : "advance",
@@ -806,7 +806,7 @@
       "rules" : {
         "bands" : [
           {
-            "fare" : 544,
+            "fare" : 1632,
             "from" : 0
           }
         ]
@@ -829,7 +829,7 @@
       "rules" : {
         "bands" : [
           {
-            "fare" : 521,
+            "fare" : 1563,
             "from" : 0
           }
         ]
@@ -867,7 +867,7 @@
     {
       "kind" : "setFareRules",
       "rules" : {
-        "flat" : 500
+        "flat" : 1500
       }
     },
     {
@@ -941,22 +941,22 @@
       "rules" : {
         "bands" : [
           {
-            "fare" : 164,
+            "fare" : 492,
             "from" : 0,
             "to" : 32
           },
           {
-            "fare" : 360,
+            "fare" : 1080,
             "from" : 32,
             "to" : 88
           },
           {
-            "fare" : 72,
+            "fare" : 216,
             "from" : 88,
             "to" : 186
           },
           {
-            "fare" : 423,
+            "fare" : 1269,
             "from" : 186
           }
         ]
@@ -1002,7 +1002,7 @@
     {
       "kind" : "setFareRules",
       "rules" : {
-        "flat" : 40
+        "flat" : 120
       }
     },
     {
@@ -1035,12 +1035,12 @@
       "rules" : {
         "bands" : [
           {
-            "fare" : 50,
+            "fare" : 150,
             "from" : 0,
             "to" : 40
           },
           {
-            "fare" : 70,
+            "fare" : 210,
             "from" : 60
           }
         ]
@@ -1100,12 +1100,12 @@
       "rules" : {
         "bands" : [
           {
-            "fare" : 123,
+            "fare" : 369,
             "from" : 0,
             "to" : 6
           },
           {
-            "fare" : 260,
+            "fare" : 780,
             "from" : 6
           }
         ]
@@ -1216,12 +1216,12 @@
       "speed" : "double"
     },
     "economy" : {
-      "balance" : 1000000,
+      "balance" : 3000000,
       "costs" : {
-        "car" : 300,
-        "station" : 1000,
-        "track" : 100,
-        "train" : 5000
+        "car" : 900,
+        "station" : 3000,
+        "track" : 300,
+        "train" : 15000
       }
     },
     "map" : {

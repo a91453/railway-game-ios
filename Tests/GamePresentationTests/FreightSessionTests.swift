@@ -193,8 +193,26 @@ final class FreightSessionTests: XCTestCase {
         let alerts = world.mapAlerts().filter { $0.kind == .materialsShort }
         XCTAssertEqual(alerts.compactMap(\.station), world.freight?.lastShort)
         XCTAssertEqual(alerts.first?.text(in: .traditionalChinese), "缺建材")
-        XCTAssertEqual(try XCTUnwrap(world.materialsText(at: short, in: .english)).components(separatedBy: "\n").last,
+        XCTAssertEqual(try XCTUnwrap(world.materialsText(at: short, in: .english)).components(separatedBy: "\n")[1],
                        "Short last night: the town grew at a quarter. A raise takes 31 to 169 t, a new block 16 t.")
+        // Decision 519: and the next step, read from what is built.
+        func nextStep(_ language: DisplayLanguage = .english) throws -> String? {
+            try XCTUnwrap(world.materialsText(at: short, in: language)).components(separatedBy: "\n").last
+        }
+        XCTAssertEqual(try nextStep(), "Next: build a freight yard here (the button below); trains let materials off only at a yard.")
+        try world.buildFreightFacility(at: short)
+        XCTAssertEqual(try nextStep(), "Next: have another station's freight yard send building materials (in its Freight section).")
+        let other = try XCTUnwrap(world.stations.first { $0.id != short }).id
+        try world.buildFreightFacility(at: other)
+        try world.setFreightProduct(at: other, to: .materials)
+        let shortName = try XCTUnwrap(world.station(id: short)?.name)
+        XCTAssertEqual(
+            try nextStep(.traditionalChinese),
+            "下一步：到「路線」把停靠這站和出建材那站的路線設成貨運路線。自己拉的貨運軌道要有「\(shortName)」的月台：用路網工具的「車站」點那條軌道，車站選「\(shortName)」。"
+        )
+        let goods = try world.createLine(named: "Materials", stops: [other, short])
+        try world.setLineFreight(goods.id, to: true)
+        XCTAssertEqual(try nextStep(), "A freight line already brings materials here; more trains on it bring more.")
         let name = try XCTUnwrap(world.station(id: short)?.name)
         XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).isWorry)
         XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).text(in: .traditionalChinese).contains("缺建材"))

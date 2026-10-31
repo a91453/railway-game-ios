@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 51,
+  "schemaVersion": 75,
   "description": "Decision 133: a line's runs. Main calls at Alpha, Beta and Gamma; its runs are Alpha to Gamma leaving at 00:10 (Beta 00:15-00:16, Gamma 00:20), back leaving Gamma at 00:30 (Beta 00:35-00:36, Alpha 00:40), and Beta to Alpha at 00:50 on Saturdays and Sundays only. Runs that are not the line's are refused; one each way is a headway of a day; a line with runs takes no pattern and is no ring. Blue at Alpha is sent five minutes before the run out leaves and keeps its times, arriving at Gamma early and waiting; at 00:25 the run back sends it from Gamma, turning it round first; the weekend run does not go on day 0, a Monday. Runs cannot change while the train runs one.",
   "initialState": {
     "worldWidth": 8192,
     "worldHeight": 4096,
-    "balance": 1000000,
+    "balance": 3000000,
     "costs": {
-      "track": 1000,
-      "station": 50000,
-      "train": 200000
+      "track": 3000,
+      "station": 150000,
+      "train": 600000
     },
     "gameMinutes": 0,
     "speed": "normal"
@@ -789,7 +789,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 644000,
+    "balance": 1932000,
     "gameMinutes": 60,
     "lines": [
       {

@@ -826,16 +826,17 @@ extension GameSpeed {
 
 extension GameSession {
     /// What the inspector shows about the selection (Stage F1): the
-    /// selected station (see ``GameWorld/stationSummary(_:in:)``) and who
-    /// waits there by line and direction (G1c); or the train a tap on the
+    /// selected station (see ``GameWorld/stationSummary(_:in:)``) and, on
+    /// lines of their own, who waits there by line and direction (G1c); or the train a tap on the
     /// map picked (``GameSession/tappedTrainID``, see
     /// ``GameWorld/trainSummary(of:in:)``). `nil` when neither is
     /// selected.
     public func selectionText() -> String? {
         if let station = selectedStation {
             let summary = world.stationSummary(station.id, in: language)
-            guard let waiting = world.waitingSummary(at: station.id, in: language) else { return summary }
-            return "\(summary) · \(waiting)"
+            // One line each: in a phone's side panel the one long line lost
+            // its end ("Station · Yunlin · 4 platforms, 832 m · waiting …").
+            return ([summary] + world.waitingLines(at: station.id, in: language)).joined(separator: "\n")
         }
         if let train = tappedTrainID, let summary = world.trainSummary(of: train, in: language) {
             return summary

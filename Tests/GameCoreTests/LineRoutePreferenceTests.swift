@@ -32,7 +32,7 @@ final class LineRoutePreferenceTests: XCTestCase {
     /// New schema-32 short golden: two 2048-unit straight edges. The
     /// preferred far platform gives 3072 out and 3584 back, 20+21+240=281 s.
     func testNewShortGoldenPinsTheFartherPhysicalPlatform() throws {
-        var world = try GameWorld(bounds: .init(width: 8_192, height: 8_192), economy: .init(balance: 1_000_000, costs: .init(track: 0, station: 0, train: 0, car: 0)), clock: .init(speed: .normal))
+        var world = try GameWorld(bounds: .init(width: 8_192, height: 8_192), economy: fixtureEconomy(balance: 1_000_000, costs: .init(track: 0, station: 0, train: 0, car: 0)), clock: .init(speed: .normal))
         for x: Int64 in [1_024, 3_072, 5_120] { try world.buildTrackNode(at: .init(x: x, y: 4_096)) }
         try world.buildTrackEdge(from: .node(1), to: .node(2))
         try world.buildTrackEdge(from: .node(2), to: .node(3))
@@ -365,7 +365,11 @@ final class LineRoutePreferenceTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: save).world, world)
         XCTAssertGreaterThanOrEqual(SavedGame.currentVersion, 10, "physical preferences require v10 or later")
         var old = try XCTUnwrap(JSONSerialization.jsonObject(with: encoder.encode(SavedGame(world: automatic))) as? [String: Any]); old["saveVersion"] = 9
-        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: old)).world, automatic)
+        // Decision 499: a version 9 save reads with its amounts times 3.
+        let pretty = JSONEncoder(); pretty.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let migrated = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: old)).world
+        XCTAssertEqual(String(decoding: try pretty.encode(SavedGame(world: migrated)), as: UTF8.self),
+                       newTaiwanDollars(ofSaveText: String(decoding: try pretty.encode(SavedGame(world: automatic)), as: UTF8.self)))
         try automatic.advance(ticks: 610)
         try world.advance(ticks: 610); XCTAssertNil(model.advance(ticks: 610))
         XCTAssertEqual(world.reservedResources(of: world.trains[0].id), [])

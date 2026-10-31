@@ -42,8 +42,8 @@
 public enum Freight {
     /// The tons a car carries.
     public static let tonsPerCar: Int64 = 40
-    /// What a freight facility costs: $50,000, paid as capital spending.
-    public static let facilityCost: Money = 5_000_000
+    /// What a freight facility costs: NT$150,000, paid as capital spending.
+    public static let facilityCost: Money = 15_000_000
     /// The most tons a facility holds; cargo made beyond it is spilled.
     public static let stockLimit: Int64 = 2_000
     /// How far a facility's industry lies: 1,600 m.
@@ -52,10 +52,12 @@ public enum Freight {
     public static let milliTonsPerJobDay: Int64 = 500
     /// The tons a day a port is made besides.
     public static let portTonsPerDay: Int64 = 200
-    /// What a ton pays for a kilometre: $5 (500 cents). A full passenger car
-    /// pays $1,430 a trip at the standard $5 fare, a freight car one way only,
-    /// 40 t: over 5.4 km that is $1,080 (`BalanceReportTests.testAFreightLine`).
-    public static let centsPerTonKilometre: Int64 = 500
+    /// What a ton pays for a kilometre: NT$15 (1,500 cents). A full
+    /// passenger car pays NT$4,290 a trip at the standard NT$15 fare, a
+    /// freight car one way only, 40 t: over 5.4 km that is NT$3,240
+    /// (`BalanceReportTests.testAFreightLine`; decision 499 multiplied
+    /// both by 3).
+    public static let centsPerTonKilometre: Int64 = 1_500
     // Building materials (decision 156): this project's numbers (gap),
     // the study's §6.2, to be measured with decision 157's growth.
 

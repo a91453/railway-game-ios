@@ -400,6 +400,10 @@ public struct RealTrainTraffic: Sendable {
         public let stationKm: [Double]
         let ringKm: Double?
         let schedule: Schedule
+        /// Decision 511: the DR3100 diesel express's runs along the line
+        /// (``dr3100Runs(_:stationKm:in:)``), every day besides the
+        /// line's own trains.
+        var dr3100: Runs? = nil
     }
 
     /// Runs sorted by start, and the longest, to find quickly those running
@@ -535,7 +539,33 @@ public struct RealTrainTraffic: Sendable {
         } else {
             return nil
         }
-        return Line(system: system, line: line, color: color, shape: shape, stationKm: stationKm, ringKm: ringKm, schedule: schedule)
+        return Line(system: system, line: line, color: color, shape: shape, stationKm: stationKm, ringKm: ringKm, schedule: schedule,
+                    dr3100: system == "tra" ? dr3100Runs(line, stationKm: stationKm, in: operations) : nil)
+    }
+
+    /// Decision 511: the scheduled day of the trains the DR3100 diesel
+    /// express runs (`tra-dr3100-schedule.json`, the TRA's timetable from
+    /// 2026-10-16: 209, 221, 238 and 246 between Shulin and Hualien).
+    public static let dr3100Schedule = "tra-dr3100"
+    /// What the keys of their places begin with
+    /// (``places(of:at:on:dayBefore:)``).
+    static let dr3100Prefix = "dr3100#"
+
+    /// Decision 511: the part of each DR3100 train on Taiwan Railway's
+    /// `line`, by its stations' names, as the High Speed Rail's day is
+    /// laid on its line: the stations it calls at and passes there, if two
+    /// or more; `nil` when no such train comes along it.
+    static func dr3100Runs(_ line: RealOperationLine, stationKm: [Double], in operations: RealRailwayOperations) -> Runs? {
+        guard let day = operations.schedule(forSystem: dr3100Schedule) else { return nil }
+        var kmByName: [String: Double] = [:]
+        for (station, km) in zip(line.stations, stationKm) where kmByName[station.name] == nil { kmByName[station.name] = km }
+        let runs = day.trains.compactMap { train -> RealTrainRun? in
+            let stops = train.stops.compactMap { stop in
+                kmByName[stop.name].map { RealTrainRun.Stop(km: $0, arrival: stop.arrivalSecond, departure: stop.departureSecond) }
+            }
+            return stops.count >= 2 ? RealTrainRun(stops: stops, performance: .of(system: "tra")) : nil
+        }
+        return runs.isEmpty ? nil : Runs(runs)
     }
 
     /// The site's `buildLineSchedule`: one train there and back (or once
@@ -600,6 +630,11 @@ public struct RealTrainTraffic: Sendable {
                 let time = (second + Double(k) * Double(period) / Double(count)).truncatingRemainder(dividingBy: Double(period))
                 if let place = round.place(at: time, ringKm: line.ringKm) { found.append(("h\(k)", place.km, place.towardKm)) }
             }
+        }
+        // Decision 511: and the DR3100's, every day.
+        if let runs = line.dr3100 {
+            add(runs, at: second, prefix: Self.dr3100Prefix)
+            add(runs, at: second + 86_400, prefix: "-" + Self.dr3100Prefix)
         }
         return found
     }

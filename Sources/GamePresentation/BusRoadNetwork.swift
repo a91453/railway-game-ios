@@ -497,6 +497,26 @@ public final class BusRoads: @unchecked Sendable {
         projection = RealRoadCells.Projection(frame: frame)
     }
 
+    private init(tiles: BaseMapTiles, projection: RealRoadCells.Projection) {
+        self.tiles = tiles
+        self.projection = projection
+    }
+
+    /// Review L1-1: a copy of these roads with the player's roads `cells`
+    /// instead, to try a change on: the tiles read so far go with it, its
+    /// networks are made afresh as they are asked for, and these roads are
+    /// left as they are (their networks, and ``ownVersion``, by which the
+    /// map keeps its ways).
+    func trying(ownRoads cells: Set<CellPosition>) -> BusRoads {
+        let trial = BusRoads(tiles: tiles, projection: projection)
+        lock.lock()
+        trial.read = read
+        trial.named = named
+        lock.unlock()
+        trial.useOwnRoads(cells)
+        return trial
+    }
+
     /// The network of the tiles round the box from `low` to `high`, a
     /// ``margin`` more each side.
     func network(from low: BusRoadNetwork.Point, to high: BusRoadNetwork.Point) -> BusRoadNetwork {

@@ -14,8 +14,9 @@
 // - the fare's effect on demand (`metroFareDemandPenaltyForFare`, against
 //   `METRO_FARE_DEMAND_BASELINE_USD = 0.75`), as a table.
 //
-// Money is in cents of the reference's dollar (decision 36): its fares
-// have two decimals (0.55 to 1.20 a band).
+// Money is in cents (decision 36), of the New Taiwan dollar since decision
+// 499: three to the reference's dollar, so its fares (5 flat, 0.55 to 1.20
+// a band) are written times 3 here, the bands in whole New Taiwan dollars.
 
 /// Whether the company keeps accounts (the reference's `economyMode`):
 /// `free` builds without fares or running costs, `management` charges both.
@@ -46,27 +47,31 @@ public enum FareRules: Hashable, Sendable {
     case flat(Money)
     case distance([FareBand])
 
-    /// The editor's flat fare: 5 (`flatFare ?? 5`).
-    public static let standardFare: Money = 500
+    /// The editor's flat fare: 5 (`flatFare ?? 5`), NT$15 at 3 to the
+    /// reference's dollar (decision 499).
+    public static let standardFare: Money = 1_500
 
     /// What trips pay until the player sets fares: ``standardFare`` for
     /// any distance.
     public static let standard = FareRules.flat(standardFare)
 
-    /// The editor's distance steps (`lineInfoFareDefaultDistanceBands`):
-    /// 0.55 to 6 km, 0.70 to 12, 0.85 to 22, 1.00 to 32, 1.20 beyond.
+    /// The editor's distance steps (`lineInfoFareDefaultDistanceBands`:
+    /// 0.55 to 6 km, 0.70 to 12, 0.85 to 22, 1.00 to 32, 1.20 beyond, at
+    /// its default city's baseline 0.75), here for a city whose baseline
+    /// is ``standardFare`` (decision 499): those fares times 20, in whole
+    /// New Taiwan dollars, NT$11, 14, 17, 20 and 24.
     public static let standardBands: [FareBand] = [
-        FareBand(fromMeters: 0, toMeters: 6_000, fare: 55),
-        FareBand(fromMeters: 6_000, toMeters: 12_000, fare: 70),
-        FareBand(fromMeters: 12_000, toMeters: 22_000, fare: 85),
-        FareBand(fromMeters: 22_000, toMeters: 32_000, fare: 100),
-        FareBand(fromMeters: 32_000, toMeters: nil, fare: 120),
+        FareBand(fromMeters: 0, toMeters: 6_000, fare: 1_100),
+        FareBand(fromMeters: 6_000, toMeters: 12_000, fare: 1_400),
+        FareBand(fromMeters: 12_000, toMeters: 22_000, fare: 1_700),
+        FareBand(fromMeters: 22_000, toMeters: 32_000, fare: 2_000),
+        FareBand(fromMeters: 32_000, toMeters: nil, fare: 2_400),
     ]
 
     /// ``standardBands`` for a city whose fare baseline is `baseline`:
-    /// each fare times `baseline` ÷ 0.75 (the steps were written for the
-    /// reference's default city), to the nearest 0.05. ``standardBands``
-    /// itself at 0.75.
+    /// each fare times `baseline` ÷ ``standardFare``, to the nearest whole
+    /// New Taiwan dollar but never below 1. ``standardBands`` itself at
+    /// ``standardFare``.
     ///
     /// - Precondition: `baseline` is from 1 to ``maximumFare``, the range a
     ///   world accepts for its baseline (a far larger one would overflow the
@@ -74,7 +79,7 @@ public enum FareRules: Hashable, Sendable {
     public static func standardBands(for baseline: Money) -> [FareBand] {
         precondition((Money(1)...maximumFare).contains(baseline), "standardBands(for:) requires a baseline from 1 to maximumFare")
         return standardBands.map { band in
-            let fare = (2 * band.fare.amount * baseline.amount + 375) / 750 * 5
+            let fare = max(1, (2 * band.fare.amount * baseline.amount + standardFare.amount * 100) / (standardFare.amount * 200)) * 100
             return FareBand(fromMeters: band.fromMeters, toMeters: band.toMeters, fare: Money(fare))
         }
     }
@@ -83,7 +88,7 @@ public enum FareRules: Hashable, Sendable {
     public static let maximumBands = 64
     /// The highest fare and distance a rule may name: far beyond any game,
     /// and small enough that every product below fits an `Int64`.
-    public static let maximumFare: Money = 1_000_000_000
+    public static let maximumFare: Money = 3_000_000_000
     public static let maximumMeters: Int64 = 10_000_000
 
     /// Whether the engine would take these rules: fares from 0 to
@@ -133,17 +138,18 @@ public enum FareRules: Hashable, Sendable {
         fare > .zero ? fare : standardMinimum
     }
 
-    static let standardMinimum: Money = 500
+    static let standardMinimum: Money = 1_500
 }
 
 extension FareRules {
     // MARK: Demand
 
     /// The fare the reference's demand compares fares with
-    /// (`METRO_FARE_DEMAND_BASELINE_USD`): 0.75, its default city's. It
+    /// (`METRO_FARE_DEMAND_BASELINE_USD`): 0.75, its default city's, NT$2.25
+    /// at 3 to its dollar (decision 499). It
     /// has one for each real city (`metroFareDemandBaselineForCity`); a
     /// world sets its own with ``GameWorld/setFareBaseline(_:)``.
-    public static let demandBaseline: Money = 75
+    public static let demandBaseline: Money = 225
 
     /// How much of a pair's demand a fare of `fare` keeps, in thousandths
     /// (`metroFareDemandPenaltyForFare` against `baseline`): up to

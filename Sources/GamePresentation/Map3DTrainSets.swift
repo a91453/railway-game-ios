@@ -243,11 +243,10 @@ public struct Map3DTrainSet: Sendable {
             // revision), near and from 500 m out its light version.
             dr1000Railcar(),
             dr1000Railcar(far: true),
-            // The DR3100 diesel express: silver, a thin orange band,
-            // yellow-orange faces (the reference's `dr3100`) on #900's
-            // curved fronts.
-            multipleUnit("dieselExpress", asset: "05_TRA_classic_3x2-04", body: 0xBFC8C9, band: 0xE89A27, thinBand: true,
-                         face: 0xE89A27),
+            // Decision 511: the DR3100 diesel express on the DR1000's shape
+            // in its own silver and orange, near and from 500 m out.
+            dr1000Railcar(livery: .dr3100),
+            dr1000Railcar(far: true, livery: .dr3100),
             // Decision 331: the light metro as the green low-floor tram.
             lowFloorTram("greenTram"),
             // Decision 331, later: a two-car commuter as the green
@@ -758,11 +757,15 @@ public struct Map3DTrainSet: Sendable {
     /// railcar with a cab at each end, coupled two or three (the branch
     /// lines' formations), at its own 19.8 m; the last car turned round.
     /// `far`: the recipe's light version, a set of `dieselRailcarFar`.
-    static func dr1000Railcar(far: Bool = false) -> Map3DTrainSet {
-        Map3DTrainSet(key: far ? "dieselRailcarFar" : "dieselRailcar", ownLengths: true,
-                      far: far ? nil : "dieselRailcarFar") {
+    /// Decision 511: with `livery` ``Map3D45DR1000/Livery/dr3100``, the
+    /// DR3100 diesel express (`dieselExpress`, `dieselExpressFar`), drawn
+    /// on this shape until it has its own (the author, 2026-10-30: the two
+    /// differ little); every car of it has a cab at each end as well.
+    static func dr1000Railcar(far: Bool = false, livery: Map3D45DR1000.Livery = .dr1000) -> Map3DTrainSet {
+        let key = livery == .dr3100 ? "dieselExpress" : "dieselRailcar"
+        return Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true, far: far ? nil : key + "Far") {
             // The lamps over the cab windows lit at the train's ends.
-            let car = Map3D45DR1000.model(far: far)
+            let car = Map3D45DR1000.model(far: far, livery: livery)
             return Cars(head: lit(car, front: true), middle: car, tail: lit(car.turned, front: false),
                         single: lit(lit(car, front: true), front: false))
         }
