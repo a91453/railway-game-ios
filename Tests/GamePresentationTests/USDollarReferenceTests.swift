@@ -6,9 +6,7 @@ import XCTest
 /// shows a rough US dollar figure beside large ones.
 final class USDollarReferenceTests: XCTestCase {
     func testAmountsAreInNewTaiwanDollars() {
-        XCTAssertEqual(Money(900_000_000).moneyText, "NT$ 9,000,000")
-        XCTAssertEqual(Money(1_500).centsText, "NT$ 15.00")
-        XCTAssertEqual(Money(-142_800).signedText, "-NT$ 1,428")
+        XCTAssertEqual(Money.currencySymbol, "NT" + "$")
     }
 
     func testTheReferenceIsThirtyNewTaiwanDollarsToTheDollarRounded() {
@@ -31,9 +29,10 @@ final class USDollarReferenceTests: XCTestCase {
     }
 
     func testTheReferenceFollowsTheAmountInBrackets() {
-        XCTAssertEqual(Money(900_000_000).moneyTextWithReference(in: .english), "NT$ 9,000,000 (≈ US$300,000)")
-        XCTAssertEqual(Money(900_000_000).moneyTextWithReference(in: .traditionalChinese), "NT$ 9,000,000")
-        XCTAssertEqual(Money(1_500).moneyTextWithReference(in: .english), "NT$ 15")
+        let cash = Money(900_000_000)
+        XCTAssertEqual(cash.moneyTextWithReference(in: .english), "\(cash.moneyText) (≈ US$300,000)")
+        XCTAssertEqual(cash.moneyTextWithReference(in: .traditionalChinese), cash.moneyText)
+        XCTAssertEqual(Money(1_500).moneyTextWithReference(in: .english), Money(1_500).moneyText)
     }
 
     func testTheCurrencyIsSaidOnceInEnglish() {

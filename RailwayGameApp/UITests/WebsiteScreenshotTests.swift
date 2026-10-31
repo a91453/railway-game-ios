@@ -184,6 +184,67 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("map-expansion", app)
     }
 
+    /// Decision 523: amounts in NT$, and in English a rough US$ figure
+    /// under the balance, beside a stretch's cost and after the starting
+    /// cash. For the screenshot review of the pull request that added it,
+    /// not the website.
+    func testUSDollarReferenceEnglish() {
+        currencyShots(english: true)
+    }
+
+    /// Decision 523: the same screens in Chinese, NT$ with no US$ figure.
+    func testUSDollarReferenceChinese() {
+        currencyShots(english: false)
+    }
+
+    private func currencyShots(english: Bool) {
+        let suffix = english ? "en" : "zh"
+        let app = launch(english: english)
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        XCTAssertTrue(app.buttons["newGame.blank"].appears(within: 10), "The new game's options open")
+        settle(seconds: 1)
+        keep("currency-new-game-\(suffix)", app)
+        app.chooseBlankMap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The game opens")
+        settle()
+        keep("currency-hud-\(suffix)", app)
+
+        tapButton("entry.economy", in: app)
+        settle()
+        keep("currency-economy-\(suffix)", app)
+        app.terminate()
+
+        // A stretch drawn but not built: the cost above the map.
+        let again = launch(english: english)
+        defer { again.terminate() }
+        let start = again.buttons["start.newGame"]
+        XCTAssertTrue(start.appears(within: 10))
+        again.bringStartButtonIntoView(start)
+        start.tap()
+        again.chooseBlankMap()
+        let field = again.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(field.appears(within: 60), "The game opens")
+        let build = again.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = again.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        let frame = field.frame.intersection(again.frame)
+        let middle = (again.buttons["hud.menu"].frame.maxY + build.frame.minY) / 2
+        let origin = again.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.3, dy: middle)).tap()
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.6, dy: middle)).tap()
+        settle()
+        keep("currency-build-cost-\(suffix)", again)
+    }
+
     /// The Liu Mingchuan challenge as it opens: its map from Keelung to
     /// Hsinchu, and the station master's first words.
     func testLiuMingchuanChallenge() {
@@ -1393,11 +1454,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["start.brand"].firstMatch.appears(within: 30), "The start screen")
     }
 
-    private func launch(extra: [String] = []) -> XCUIApplication {
+    private func launch(extra: [String] = [], english: Bool = false) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"] + extra
+        let language = english ? ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] : ["-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
+        app.launchArguments = ["-ui-testing"] + language + extra
         app.launch()
         return app
     }
