@@ -1054,6 +1054,19 @@ extension NetworkAnchor {
 }
 
 extension NetworkPreview {
+    /// Decision 41: a stretch with no track at either end is straight; the
+    /// next one, laid from its end, bends to follow it. Said once the
+    /// stretch could be built, so the player is not left thinking the
+    /// first line is stuck straight. `nil` for any stretch that joins
+    /// track, bends, or is refused.
+    public func freeFirstHint(in language: DisplayLanguage) -> String? {
+        guard problem == nil, traced == nil, !joinsStart, !joinsEnd, curve == .straight else { return nil }
+        return language.text(
+            "The first stretch is straight. Lay the next one from its end and it bends along.",
+            "第一段是直線；從它的尾端接著鋪，就會順著彎過去。"
+        )
+    }
+
     /// What the stretch is: "75 m · 0 m → 8 m · continues the track ·
     /// $ 1,500"; the cost is left out when GameCore refuses it.
     public func text(in language: DisplayLanguage) -> String {

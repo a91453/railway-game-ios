@@ -118,6 +118,13 @@ struct NetworkControls: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("network.traceNote")
                     }
+                    if session.networkFollowsTrack, let hint = preview.freeFirstHint(in: session.language) {
+                        Text(verbatim: hint)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("network.freeFirstHint")
+                    }
                     if let note = preview.crossoverNote {
                         Text(verbatim: note)
                             .font(.footnote)
