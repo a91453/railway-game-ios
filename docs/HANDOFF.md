@@ -2448,6 +2448,12 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **還沒驗證**：實機畫面；站長「劃分區」的泡泡沒有截圖；e9178e2 改過的三個 full lane UI 測試（`MapButtonsUITests/testThePhonesBuildingToolsStartAtTheColumnsTop`、`MapButtonsUITests/testThePhonesZoomButtonsStandOnTheColumnsLine`、`ToolbarSmokeTests/testTheToolsColumnsButtonsAreOneSize`）沒有單獨跑過，合併後的 full lane 會跑；紅了照它們的新邊界（觸控框比畫的多上下 2 pt、「完成」在「建設」右邊）修。
 - ZONE1 已壓縮 3 次，沒有其他剩下的步驟。
 
+### 4.37 自己拉的軌道加成旁邊車站的月台、缺建材說下一步（決策 519，派工單 FREIGHTPLAT，session_01YGNNum9tS2UtTJPb8hQben，2026-10-31）
+
+- 做了的在 [決策 519](decisions/519.md)：「車站」模式點在某站月台旁 100 m 內的軌道，預設加成那站的月台（尾端外的同一條線照舊是新站）；車站選單照距離排、寫幾公尺；車站卡月台組多一句怎麼讓自己的軌道停這站；缺建材那行接著說下一步（蓋貨運場→別站出建材→設貨運路線＋月台→加開列車）。規則在 `NetworkSession.swift`、`FreightText.swift`，Linux 測試 `PlatformStationJoinTests`、`FreightSessionTests`。
+- **等 TestFlight 看**（UNVERIFIED）：作者那局台北旁那條線點下去是不是台北（離月台超過 100 m 就要從選單選，選單台北在前面）。
+- **下一步**（沒派）：見決策 519「下一步」。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

@@ -74,6 +74,46 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("freight-train", app)
     }
 
+    /// Decision 519: a bubble's station panel says the next step for its
+    /// materials, and its platforms how a track of the player's own calls
+    /// there. For the screenshot review of the pull request that made
+    /// them, not the website.
+    func testMaterialsNextStepAndOwnTrack() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        zoomInOnce(app)
+        settle()
+        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(alert, "A bubble is on screen")
+        alert?.tap()
+        let materials = app.descendants(matching: .any)["station.materials"].firstMatch
+        XCTAssertTrue(materials.appears(within: 10), "A tap on a bubble opens its station's panel")
+        settle()
+        // The panel's own list, so the row comes clear of the panel's
+        // bottom edge, not only of the screen's.
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(materials, in: list), "The materials row with its next step comes into view")
+        settle()
+        keep("materials-next-step", app)
+        // The platforms are in the operations group at the top, which never
+        // folds and so is not in the toolbar's jump menu: drag back up
+        // until the list has loaded their footer again (`swipeDown()`
+        // did not move the list in 20 swipes, run 41169918330), starting
+        // below the panel's toolbar, which covers the list's top (drags
+        // begun there moved nothing, run 41171191571).
+        let footer = app.descendants(matching: .any)["station.platforms.footer"].firstMatch
+        let toolbar = app.buttons["station.jump"].firstMatch
+        let top = toolbar.exists ? toolbar.frame.maxY + 8 : (list?.frame.minY ?? 0) + 80
+        dragBack(to: footer, in: list, below: top, in: app)
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(footer, in: list, below: top), "The platforms' footer comes into view")
+        settle()
+        keep("station-own-track", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that
