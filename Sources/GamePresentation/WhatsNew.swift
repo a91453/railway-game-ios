@@ -31,7 +31,7 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
-            id: "2026-10-31-100-2",
+            id: "2026-10-31-101-1",
             items: [
                 Line(
                     english: "Build has a Zoning tool of its own; the station master points out empty land to zone, and you hear when the first building goes up.",
@@ -65,8 +65,24 @@ public enum WhatsNew {
                     english: "The DR3100 diesel express runs four times a day on the real map.",
                     chinese: "真實地圖每天多跑四班 DR3100 柴聯自強號。"
                 ),
+                Line(
+                    english: "Dragging a zone greys out the squares no station reaches, and the Zoning tool opens on the use the city needs most.",
+                    chinese: "拖曳分區時，車站搆不到的格子先變灰；分區工具打開時先選城市最缺的用途。"
+                ),
+                Line(
+                    english: "Trains that stop wait on the passing loop, leaving the main line to trains running through.",
+                    chinese: "停站的列車改停待避線，正線留給通過的車。"
+                ),
             ],
             fixes: [
+                Line(
+                    english: "Starting a lesson from the goals panel saves the game you are playing first.",
+                    chinese: "從目標面板開始關卡前，會先存好目前這局。"
+                ),
+                Line(
+                    english: "Laying track from the 3D view, Expand Map no longer sends you back to 3D.",
+                    chinese: "從 3D 進來鋪軌時，按「擴建地圖」不會再跳回 3D。"
+                ),
                 Line(
                     english: "Dragging a new line from the end of a track no longer freezes the map.",
                     chinese: "從軌道端點拖曳描線時，畫面不再卡住。"
