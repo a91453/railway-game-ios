@@ -53,4 +53,25 @@ final class SanyingDepotTests: XCTestCase {
         XCTAssertEqual(deadlocked, 0)
         XCTAssertLessThanOrEqual(session.world.trains.count { session.world.stationsStoppedAt(by: $0.id).contains(station.id) }, 1)
     }
+
+    /// BUGHUNT_BUILD P3-4: the price's trains are the trains alone, the
+    /// depot's station and platforms with the building (the total was
+    /// right; the depot was counted with the trains).
+    func testTheDepotIsPricedWithTheBuildingNotTheTrains() throws {
+        let session = try RealLineAcquisitionTests.game(round: "sanying:LB", side: 1 << 21, heights: true)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "sanying:LB" })
+        let offer = session.realLineOffer(for: line)
+        let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+        XCTAssertNotNil(acquisition.depot)
+        let price = try XCTUnwrap(offer.price)
+
+        var trains = session.world.pricingCopy()
+        let before = trains.economy.balance
+        for start in acquisition.trains {
+            let train = try acquisition.trainType.map { try trains.purchaseTrain(named: start.name, as: $0) }
+                ?? trains.purchaseTrain(named: start.name)
+            try trains.setTrainCars(train.id, to: acquisition.cars)
+        }
+        XCTAssertEqual(price.trains, before - trains.economy.balance)
+    }
 }
