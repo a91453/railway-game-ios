@@ -225,16 +225,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        // The balance is among the reports folded under today's figures:
-        // open them and bring the balance into view.
+        // Once the first hour has closed, the balance is among the reports
+        // folded under today's figures; before it, every report shows and
+        // there is no toggle. Go down the list until one or the other
+        // comes, open the reports if folded, then come back to the balance.
         let balance = english ? app.staticTexts["economy.balance.usd"].firstMatch : app.staticTexts["目前餘額"].firstMatch
         let reports = app.buttons["economy.reports"].firstMatch
-        if !balance.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY),
-           reports.label == (english ? "More reports and settings" : "更多報表與設定") {
-            reports.tap()
+        for _ in 0..<30 where !balance.exists {
+            if reports.exists, reports.isHittable {
+                if reports.label == (english ? "More reports and settings" : "更多報表與設定") { reports.tap() }
+                break
+            }
+            _ = app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY, drags: 1)
         }
-        XCTAssertTrue(balance.appears(within: 10), "The balance is in the panel")
         dragBack(to: balance, in: list, below: bar.frame.maxY, in: app)
+        XCTAssertTrue(balance.appears(within: 10), "The balance is in the panel")
         _ = app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY)
         settle()
         keep("currency-economy-\(suffix)", app)
