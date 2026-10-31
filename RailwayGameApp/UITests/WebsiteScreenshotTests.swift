@@ -164,6 +164,35 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("finance-composition-week-costs", app)
     }
 
+    /// HANG2 P2-5 (decision 497): the confirmation before switching to free
+    /// play, which says the cash stays where it is. For the screenshot
+    /// review of the pull request that changed it, not the website.
+    func testFreePlaySwitchConfirmation() {
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        app.chooseBlankMap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The game opens")
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars["經濟明細"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let reports = app.buttons["economy.reports"]
+        let free = app.buttons["切換到自由模式"].firstMatch
+        if !free.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY), reports.label == "更多報表與設定" {
+            reports.tap()
+        }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(free, in: list, below: bar.frame.maxY), "The free play switch comes into reach")
+        free.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "現金會停在現在的數字")).firstMatch.appears(within: 10), "The confirmation says the cash stays")
+        settle(seconds: 1)
+        keep("free-play-switch-confirmation", app)
+    }
+
     /// A blank new game's map expansion: the tiles that can be bought,
     /// their prices, and the locked ones.
     func testMapExpansion() {

@@ -1741,6 +1741,16 @@ public final class GameSession {
     }
 
     /// Why ``isFreePlayLocked`` keeps the game managed.
+    /// What the confirmation before switching to free play says (decision
+    /// 46; HANG2 P2-5, decision 497): what free play is, that the cash
+    /// stays where it is, and that the switch goes one way.
+    public static func freePlaySwitchText(in language: DisplayLanguage) -> String {
+        language.text(
+            "Free play has no fares or running costs, and you set each station's ridership. Your cash stays at what it is now and will not grow. It cannot become a managed company again.",
+            "自由模式不收票價、沒有營運成本，各站的客源由你設定。現金會停在現在的數字，之後不會再增加。切換後無法再改回經營模式。"
+        )
+    }
+
     public static func freePlayLockedText(in language: DisplayLanguage) -> String {
         language.text(
             "A challenge is being played: its goals are judged only for a managed company. Finish it, or start a new game for free play.",
