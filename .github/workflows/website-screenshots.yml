@@ -92,14 +92,17 @@ jobs:
                       # Numbers or strings, depending on the device type.
                       scale = float(profile["mainScreenScale"])
                       sizes[devicetype["identifier"]] = (float(profile["mainScreenWidth"]) / scale, float(profile["mainScreenHeight"]) / scale)
-                  except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException, ZeroDivisionError):
-                      pass
+                  except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException, ZeroDivisionError) as error:
+                      print(f"{devicetype.get('name', '?')}: no screen size ({error!r})")
               for d in iphones:
                   print(f"{d['name']}: {sizes.get(d.get('deviceTypeIdentifier'), '?')}")
               sized = [d for d in iphones if d.get("deviceTypeIdentifier") in sizes]
-              if not sized:
-                  raise SystemExit("No iPhone Simulator with a known screen size")
-              device = min(sized, key=lambda d: (min(sizes[d["deviceTypeIdentifier"]]), "mini" not in d["name"]))
+              if sized:
+                  device = min(sized, key=lambda d: (min(sizes[d["deviceTypeIdentifier"]]), "mini" not in d["name"]))
+              else:
+                  # No sizes: by name, a mini, then an SE, then the first iPhone.
+                  named = [d for word in (" mini", " SE") for d in iphones if word in d["name"]]
+                  device = (named or iphones)[0]
           else:
               # An iPhone Pro that is not a Max; an iPad Pro (the largest).
               pros = [d for d in iphones if d["name"].endswith(" Pro")] if kind == "iPhone" \
