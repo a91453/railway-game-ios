@@ -5,7 +5,7 @@ import XCTest
 
 /// ARCHITECTURE decision 230: the trains of the native 3D map, made in code.
 final class Map3DModelTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
         // Decision 244: and the street furniture after the trains (decision
