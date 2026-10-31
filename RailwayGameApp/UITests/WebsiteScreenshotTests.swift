@@ -521,9 +521,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         let page = app.collectionViews["line.detail"]
         XCTAssertTrue(page.appears(within: 10), "The line's page opens")
         settle(seconds: 2)
-        let catalog = app.buttons["line.staff.catalog"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(catalog, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's dispatch shows")
-        catalog.waitUntilSettled()
+        // A line with trains sends more out under "Now"; the catalog
+        // button is only on a line without trains.
+        let now = app.staticTexts["line.headway.now"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(now, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's dispatch shows")
+        now.waitUntilSettled()
         settle(seconds: 2)
         keep("dispatch-line-page", app)
         let done = app.navigationBars.firstMatch.buttons["完成"]
