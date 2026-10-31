@@ -140,6 +140,23 @@ final class TracedSaleTests: XCTestCase {
         XCTAssertNotNil(session.networkPreview)
     }
 
+    /// L2-5 (#1576's review): a price laid out for a world a command then
+    /// changed is laid out again, so a paused game's hint gets one.
+    func testAPriceLaidOutForAWorldThatChangedIsLaidOutAgain() async throws {
+        let session = try zhuzhong()
+        session.tapNetwork(at: try point("竹中", in: session), reach: reach)
+        session.tapNetwork(at: try point("六家", in: session), reach: reach)
+        XCTAssertNil(try XCTUnwrap(session.tracedSaleHint).price)
+        // A command while the price is laid out: nothing the hint shows
+        // changes, so nothing would ask for it again.
+        session.setSpeed(.fast)
+        XCTAssertNotNil(session.networkPreview?.forSale)
+        await session.tracedSaleQuoted()
+        let quote = try XCTUnwrap(session.tracedSaleQuote, "laid out again for the world as it is now")
+        XCTAssertEqual(quote.revision, session.commandRevision)
+        XCTAssertNotNil(session.tracedSaleHint?.price)
+    }
+
     func testNoHintWithoutTracingOrOnceTheLineIsBought() async throws {
         let session = try zhuzhong(unlimited: true)
         let liujia = try XCTUnwrap(session.buyableRealLines.first { $0.network == "LIUJIA" })

@@ -102,6 +102,32 @@ final class FirstLineGuideTests: XCTestCase {
     func testTheTutorialKeepsTheGameBeingPlayed() throws {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
+        let (library, launcher, session) = try gameWithAStation(in: directory)
+        XCTAssertTrue(FirstLineGuide.offers(in: session, tutorialCompleted: false, choice: nil))
+
+        launcher.chooseFirstLineGuide(.tutorial)
+        XCTAssertEqual(launcher.session?.lesson?.id, Lesson.all[0].id)
+        XCTAssertEqual(try freePlayGames(in: library).map(\.stations.count), [1],
+                       "the game being played is in the saves, its station in it")
+    }
+
+    /// Review L3-1: a lesson started from the goals panel (or a lesson
+    /// result's next lesson) keeps the game being played as well, not only
+    /// one started from the station master's offer.
+    func testALessonFromTheGoalsPanelKeepsTheGameBeingPlayed() throws {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (library, launcher, _) = try gameWithAStation(in: directory)
+
+        launcher.startLesson(Lesson.all[0])
+        XCTAssertEqual(launcher.session?.lesson?.id, Lesson.all[0].id)
+        XCTAssertEqual(try freePlayGames(in: library).map(\.stations.count), [1],
+                       "the game being played is in the saves, its station in it")
+    }
+
+    /// A new game with a stretch of track and one platform, not yet
+    /// autosaved.
+    private func gameWithAStation(in directory: URL) throws -> (SaveLibrary, GameLauncher, GameSession) {
         let library = SaveLibrary(directory: directory)
         let launcher = GameLauncher(library: library, language: .english)
         launcher.startNewGame()
@@ -117,12 +143,13 @@ final class FirstLineGuideTests: XCTestCase {
         session.tapNetwork(at: point(4), reach: 512)
         session.addNetworkPlatform()
         XCTAssertEqual(session.world.stations.count, 1)
-        XCTAssertTrue(FirstLineGuide.offers(in: session, tutorialCompleted: false, choice: nil))
+        XCTAssertEqual(try freePlayGames(in: library).count, 0, "nothing saved yet")
+        return (library, launcher, session)
+    }
 
-        launcher.chooseFirstLineGuide(.tutorial)
-        XCTAssertEqual(launcher.session?.lesson?.id, Lesson.all[0].id)
-        let kept = try library.entries().filter { $0.problem == nil }.map { try library.load($0) }.filter { $0.lesson == nil }
-        XCTAssertEqual(kept.map(\.stations.count), [1], "the game being played is in the saves, its station in it")
+    /// The saved games in `library` that are not lessons.
+    private func freePlayGames(in library: SaveLibrary) throws -> [GameWorld] {
+        try library.entries().filter { $0.problem == nil }.map { try library.load($0) }.filter { $0.lesson == nil }
     }
 
     func testAnOlderPreferencesFileReadsWithNoAnswer() throws {

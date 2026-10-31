@@ -184,6 +184,19 @@ public final class GameSession {
     /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
     /// for; the game loop reads it off the main actor with each tick.
     @ObservationIgnored var trafficMemo: (revision: Int, reading: TrafficReading)?
+    /// How many times ``trafficOverlay`` was read on the main actor, for
+    /// tests.
+    @ObservationIgnored var trafficReadOnTheMainActor = 0
+    /// Decision 497 (P2-3): the reading of traffic control worked out off
+    /// the main actor after a command, and for which ``worldRevision``.
+    @ObservationIgnored var trafficReadTask: (revision: Int, task: Task<Void, Never>)?
+    /// Counts the readings of traffic control worked out off the main
+    /// actor after a command once each is in: the map takes
+    /// ``trafficOverlay`` again when it changes.
+    public private(set) var trafficReadingsTaken = 0
+    /// Decision 497 (P2-3): the map's bubbles worked out off the main
+    /// actor after a command, and for which ``commandRevision``.
+    @ObservationIgnored var situationAlertsTask: (revision: Int, task: Task<Void, Never>)?
     /// Decision 379: the trains' glide the map last showed
     /// (``trainMotion(after:at:)``), which the game loop's tick glides on
     /// from off the main actor; `nil` while no map shows them.
@@ -1057,7 +1070,9 @@ public final class GameSession {
         self.newsWatch = NewsWatch(world: world)
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
-        refreshNightSkipOffer()
+        // Decision 497 (P2-4): the run ahead off the main actor; the offer
+        // comes once it is found.
+        refreshNightSkipOfferOffTheMainActor()
         refreshScreenFacts()
         refreshMapMarks()
         refreshFollowBar()
@@ -1535,6 +1550,10 @@ public final class GameSession {
     /// paused (decision 330, later) or after the game loop's tick
     /// (decision 369), or `nil`.
     @ObservationIgnored var nightSkipLookAhead: Task<Void, Never>?
+    /// Decision 497 (P2-4): the ``commandRevision`` at which the shortcut
+    /// was tapped while the run ahead was still to be found off the main
+    /// actor; the skip starts once it is, unless a command came since.
+    @ObservationIgnored var skipToMorningRequested: Int?
 
     /// The first move of the night whose skip ended or was stopped, so the
     /// setting does not start it again.
@@ -2107,14 +2126,19 @@ public final class GameSession {
     /// for the world as it is now: read with the tick that made it, off
     /// the main actor, or else (after a command) here, once.
     public var trafficOverlay: TrafficOverlay {
-        trafficReading().overlay
+        _ = trafficReadingsTaken
+        return trafficReading().overlay
     }
 
     /// ``GameCore/GameWorld/routeWaitText(of:in:)`` of the world as it is
     /// now, in ``language``: the selected train's read with the tick, and
     /// none searched for a train the tick's reading shows waits for nothing.
     public func routeWaitText(of id: TrainID) -> String? {
+        _ = trafficReadingsTaken
         var reading = trafficReading()
+        // Decision 497 (P2-3): while the reading after a command is worked
+        // out, the words the last one has, none searched for here.
+        guard trafficMemo?.revision == worldRevision else { return reading.texts[id] ?? nil }
         let text = reading.waitText(of: id, in: world, language: language)
         trafficMemo = (worldRevision, reading)
         return text
@@ -2122,9 +2146,60 @@ public final class GameSession {
 
     private func trafficReading() -> TrafficReading {
         if let memo = trafficMemo, memo.revision == worldRevision { return memo.reading }
+        // Decision 497 (P2-3): after a command, the last reading until the
+        // new one, worked out off the main actor, is in. Only the game as
+        // it opens is read here.
+        if let last = trafficMemo?.reading {
+            readTrafficOffTheMainActor(after: last)
+            return last
+        }
+        trafficReadOnTheMainActor += 1
         let reading = TrafficReading(world: world, in: language)
         trafficMemo = (worldRevision, reading)
         return reading
+    }
+
+    /// Works out the reading of traffic control of the world as it is
+    /// now off the main actor, as the game loop's tick does, and keeps it
+    /// if the world is still as it was then. Once for each world.
+    private func readTrafficOffTheMainActor(after last: TrafficReading) {
+        let revision = worldRevision
+        guard trafficReadTask?.revision != revision else { return }
+        let (world, train, language) = (world, selectedTrainID, language)
+        let task = Task { [weak self] in
+            let reading = await Task.detached(priority: .userInitiated) {
+                TrafficReading(world: world, train: train, in: language, previous: last)
+            }.value
+            guard let self, worldRevision == revision else { return }
+            trafficMemo = (revision, reading)
+            trafficReadingsTaken &+= 1
+        }
+        trafficReadTask = (revision, task)
+    }
+
+    /// Works out ``situationAlerts`` of the world as it is now off the
+    /// main actor (decision 497, P2-3), and puts them on the map if no
+    /// command changed the world meanwhile and no tick brought fresher
+    /// ones. Once for each command.
+    func workOutSituationAlertsOffTheMainActor() {
+        let revision = commandRevision
+        guard situationAlertsTask?.revision != revision else { return }
+        let world = world
+        let task = Task { [weak self] in
+            let (period, alerts) = await Task.detached(priority: .userInitiated) {
+                (world.clock.now.seconds / GameSession.situationAlertsPeriod, world.situationAlerts())
+            }.value
+            guard let self, commandRevision == revision, situationAlertsMemo?.revision != revision else { return }
+            situationAlertsMemo = SituationAlertsMemo(revision: revision, period: period, alerts: alerts)
+            refreshMapMarks()
+        }
+        situationAlertsTask = (revision, task)
+    }
+
+    /// Returns once the map's readings begun off the main actor are in.
+    func mapReadsSettled() async {
+        await situationAlertsTask?.task.value
+        await trafficReadTask?.task.value
     }
 
     /// Ends `tick` with what ``LoopTick/work()`` made of it: the world

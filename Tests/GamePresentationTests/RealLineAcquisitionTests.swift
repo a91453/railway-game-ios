@@ -161,6 +161,28 @@ final class RealLineAcquisitionTests: XCTestCase {
         }
     }
 
+    /// BUGHUNT_BUILD P3-3: a depot of the player's nearer the junction
+    /// than any station is not taken as the line's junction station (the
+    /// purchase was refused, a depot being no line's stop).
+    func testADepotByTheJunctionIsNotTheJunctionStation() throws {
+        let scratch = try Self.game(round: "NEIWAN", side: 1 << 21)
+        let neiwan = try line("NEIWAN", in: scratch)
+        XCTAssertTrue(scratch.acquireRealLine(scratch.realLineOffer(for: neiwan)), scratch.message?.text ?? "")
+        let junction = try XCTUnwrap(scratch.world.stations.first { $0.name == neiwan.stops[0] }, neiwan.stops[0]).location
+
+        var world = try Self.game(round: "NEIWAN", side: 1 << 21).world
+        let depot = try world.buildStation(named: "機廠", at: PlanPoint(x: junction.x + 100 * WorldCoordinate.unitsPerMetre, y: junction.y))
+        try world.setStationDepot(depot.id, to: true)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.railways = scratch.railways
+        let offer = session.realLineOffer(for: try line("NEIWAN", in: session))
+        XCTAssertNil(offer.problem)
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        let bought = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: neiwan.id)?.line)))
+        XCTAssertFalse(bought.stops.contains(depot.id))
+        XCTAssertEqual(session.world.station(id: depot.id)?.isDepot, true)
+    }
+
     /// Decision 462: the Liujia and Neiwan Lines part at Zhuzhong, the
     /// Liujia Line's platforms up on its viaduct and the Neiwan Line's on
     /// the ground. Either is bought after the other, in either order: one

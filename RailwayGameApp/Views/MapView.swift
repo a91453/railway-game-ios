@@ -1226,7 +1226,7 @@ struct MapView: View {
         }
         // Decision 379: what follows a tick here is timed for the frame
         // readout.
-        .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
+        .onChange(of: TrafficKey(world: session.world, taken: session.trafficReadingsTaken), initial: true) { _, _ in
             // PERF_3D_COCKPIT: not under the 3D map, whose closing reads it
             // again (``CoveredMap``): each change drew the track again.
             guard CoveredMap.takesTraffic(covered: screen.showsMap3D) else { return }
@@ -2193,8 +2193,12 @@ private struct TrafficKey: Equatable {
     let trains: [Train]
     let lines: [ServiceLine]
     let network: RailwayNetwork
+    /// Decision 497 (P2-3): a reading worked out off the main actor after
+    /// a command is in.
+    let taken: Int
 
-    init(world: GameWorld) {
+    init(world: GameWorld, taken: Int) {
+        self.taken = taken
         now = world.clock.now
         isEnabled = world.isTrafficControlEnabled
         trains = world.trains
@@ -2904,10 +2908,14 @@ private struct CityMapKey: Equatable {
     /// land worth more.
     let zones: Zoning?
     let placed: [PlacedBuilding]
+    /// L3-10 (#1592's review): the zone marks say whether the city builds
+    /// on a zone, which turns on city demand.
+    let hasCityDemand: Bool
     let isShown: Bool
 
     init(world: GameWorld, isShown: Bool) {
         self.isShown = isShown
+        hasCityDemand = isShown && world.cityDemand != nil
         land = isShown ? world.land : nil
         buildings = isShown ? world.buildings : nil
         stations = isShown ? world.stations : []

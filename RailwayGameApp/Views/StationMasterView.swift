@@ -336,10 +336,14 @@ struct StationMasterCorner: View {
             Text(verbatim: FirstLineGuide.tutorialButtonTitle(in: language))
                 .font(.footnote.weight(.bold))
                 .foregroundStyle(Theme.onPrimary)
-                .lineLimit(1)
+                // L2-3 (#1573's review): two lines where the card is too
+                // narrow for the words on one, not cut short.
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 12)
+                .padding(.vertical, 4)
                 .frame(minHeight: 32)
-                .background(Theme.primary, in: Capsule())
+                .background(Theme.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
         }
@@ -351,7 +355,10 @@ struct StationMasterCorner: View {
             Text(verbatim: FirstLineGuide.selfGuidedButtonTitle(in: language))
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.primary)
-                .lineLimit(1)
+                // L2-3 (#1573's review): two lines where the card is too
+                // narrow for the words on one, not cut short.
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 12)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())

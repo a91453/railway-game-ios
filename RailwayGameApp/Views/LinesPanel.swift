@@ -1608,25 +1608,13 @@ struct LinesPanel: View {
                     Text(verbatim: session.language.text("Remove Line", "刪除路線"))
                 }
             } message: {
-                Text(verbatim: removalText(line))
+                Text(verbatim: session.lineRemovalText(line.id))
             }
         } header: {
             Text(verbatim: "\(line.name) · \(line.window.displayText(in: session.language))")
         } footer: {
             Text(verbatim: session.world.serviceDay.summaryText(in: session.language))
         }
-    }
-
-    /// What removing `line` does to its trains (decision 327).
-    private func removalText(_ line: ServiceLine) -> String {
-        let sale = session.world.lineRemovalSale(line.id)
-        guard sale.trains > 0 else {
-            return session.language.text("The line has no trains.", "這條路線沒有列車。")
-        }
-        return session.language.text(
-            "Its \(sale.trains) \(sale.trains == 1 ? "train is" : "trains are") sold with it, for \(sale.proceeds.moneyText).",
-            "它的 \(sale.trains) 列車會一起賣掉，取得 \(sale.proceeds.moneyText)。"
-        )
     }
 
     // MARK: - The selected line's stops (Stage C2)
@@ -2652,6 +2640,15 @@ private struct LineLossCard: View, Equatable {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("line.costs")
+            // NEXT_PRIORITIES §22.17: the last seven days' punctuality,
+            // with Taiwan Railway's real year beside it.
+            if let weekly = diagnosis.weeklyPunctuality {
+                Text(verbatim: weekly.text(in: language))
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("line.weeklyPunctuality")
+            }
             // Decision 207: with realistic operation, how many trips were
             // on time.
             if let punctuality = diagnosis.punctualityText(in: language) {

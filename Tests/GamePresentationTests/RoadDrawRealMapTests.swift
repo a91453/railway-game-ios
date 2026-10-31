@@ -88,6 +88,46 @@ final class RoadDrawRealMapTests: XCTestCase {
         XCTAssertFalse(session.roadPreview?.canBuild ?? true)
     }
 
+    /// BUGHUNT_BUILD P3-7: a road drawn along a real street far from the
+    /// stations, where the land is not read in yet, is free as it is near
+    /// them: the land and its roads are read in under the road drawn
+    /// first. Before, it was priced and laid as new road all along.
+    func testARoadAlongARealStreetWhereTheLandIsNotReadIsFree() throws {
+        let (session, middle) = try game()
+        // 8 km east of 大社路: land the game has not read.
+        let away = CellPosition(row: middle.row, column: middle.column + Int(8_000 * WorldCoordinate.unitsPerMetre / Land.cellLength))
+        let read = try XCTUnwrap(session.world.landBlocks)
+        XCTAssertFalse(read.contains(LandBlock(cellRow: away.row, column: away.column)))
+
+        // Where the real streets are there, from a game that has read it.
+        let (scratch, _) = try game()
+        scratch.readLand(within: WholeTaiwan.landReach, of: away.middle)
+        let streets = try XCTUnwrap(scratch.world.roads).cells
+        var found: [CellPosition]?
+        search: for ring in 0...20 {
+            for start in RoadGrid.ring(ring, round: away) {
+                for (dr, dc) in [(0, 1), (1, 0)] {
+                    let along = (0...3).map { CellPosition(row: start.row + dr * $0, column: start.column + dc * $0) }
+                    guard along.allSatisfy({ streets.contains($0) }),
+                          !read.contains(where: { along.map { LandBlock(cellRow: $0.row, column: $0.column) }.contains($0) }) else { continue }
+                    found = along
+                    break search
+                }
+            }
+        }
+        let along = try XCTUnwrap(found, "no four cells along a street 8 km east of 大社路")
+
+        session.dragRoad(from: along[0].middle, to: along[3].middle)
+        XCTAssertEqual(session.roadDraft.cells, along)
+        let preview = try XCTUnwrap(session.roadPreview)
+        XCTAssertEqual(preview.price, .zero, "along road already there")
+        XCTAssertEqual(preview.line(in: .traditionalChinese), "沿現有的路 256 公尺，不用錢")
+        let before = session.world.economy.balance
+        XCTAssertTrue(session.confirmRoad(), session.message?.text ?? "")
+        XCTAssertEqual(session.world.economy.balance, before)
+        XCTAssertEqual(session.world.roads?.built, Set(along))
+    }
+
     /// The report's first tap: on a real-world map the city's road cells
     /// are not drawn (the base map draws its streets), so a tap on one does
     /// not say it is the city's road; it says how to draw one.

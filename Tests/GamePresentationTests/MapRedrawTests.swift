@@ -7,7 +7,7 @@ import XCTest
 /// stations' names; an edit of the railway redraws both.
 @MainActor
 final class MapRedrawTests: XCTestCase {
-    func testATickRedrawsNeitherTheRailwayNorTheNames() throws {
+    func testATickRedrawsNeitherTheRailwayNorTheNames() async throws {
         let metre = WorldCoordinate.unitsPerMetre
         // Through the new game's towns (FeatureUITestWorld's big grid), so
         // passengers come to wait.
@@ -21,6 +21,10 @@ final class MapRedrawTests: XCTestCase {
         var trafficChanges = 0, countChanges = 0
         for _ in 0..<600 {
             session.advance(realElapsed: GameSession.tickInterval)
+            // The traffic is read off the main actor after a tick (decision
+            // 497 P2-3): ask for it, then wait for it, as the next frame would.
+            _ = session.trafficOverlay
+            await session.mapReadsSettled()
             let now = MapRedrawCount.Inputs(session)
             if now.traffic != last.traffic { trafficChanges += 1 }
             if now.waiting != last.waiting { countChanges += 1 }

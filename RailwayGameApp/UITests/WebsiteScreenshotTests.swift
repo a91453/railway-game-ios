@@ -808,6 +808,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("lines-network", app)
     }
 
+    /// Decision 524: a line's page with realistic operation shows its last
+    /// seven days' punctuality, Taiwan Railway's past year beside it.
+    func testLineWeeklyPunctuality() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        let weekly = app.descendants(matching: .any)["line.weeklyPunctuality"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The week's punctuality shows")
+        weekly.waitUntilSettled()
+        settle(seconds: 1)
+        keep("line-weekly-punctuality", app)
+    }
+
     /// Decision 512: a line's page opens its train roster, which lets the
     /// trains be arranged: the roster of one line, then Arrange.
     func testTrainRosterOfALine() {
@@ -1365,6 +1393,32 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(scrollScreen(to: rules, in: app), "The Rules row shows")
         settle(seconds: 1)
         keep("settings-rules", app)
+    }
+
+    /// Decision 497 (P2-6): Back to Start when the autosave cannot be
+    /// written asks whether to leave without saving, and leaving reaches
+    /// the start screen.
+    func testLeavingWithoutSaving() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-unwritable-saves"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let backToStart = app.buttons["menu.backToStart"]
+        XCTAssertTrue(backToStart.appears(within: 30), "The menu opens")
+        backToStart.waitUntilSettled()
+        // Touched at its frame's middle, as in testGameMenuAndRules.
+        let frame = backToStart.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        // An alert's button is in the tree twice.
+        let leave = app.buttons["menu.leaveWithoutSaving"].firstMatch
+        XCTAssertTrue(leave.appears(within: 60), "The question to leave without saving")
+        settle(seconds: 1)
+        keep("leave-without-saving", app)
+        leave.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["start.brand"].firstMatch.appears(within: 30), "The start screen")
     }
 
     private func launch(extra: [String] = []) -> XCUIApplication {

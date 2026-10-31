@@ -188,6 +188,27 @@ final class TrainRosterDragTests: XCTestCase {
         XCTAssertEqual(session.world.train(id: own)?.timetable.first?.departure.seconds, 60 * 60)
     }
 
+    /// L3-5 (#1588's review): moved to leave before now, it leaves a cycle
+    /// later, and the preview says how long that is.
+    func testAMoveBeforeNowSaysHowLongItWaits() throws {
+        var (world, own) = try ownTimetable()
+        while world.clock.now.seconds < 30 * 60 { try world.advance(ticks: 1) }
+        guard case .waitingAtStop(0, _) = world.train(id: own)?.execution else { return XCTFail("waits at A") }
+        let roster = TrainRoster(world: world)
+        let soon = try XCTUnwrap(TrainRosterDrag.shift(of: own, by: -15 * 60, in: world, roster: roster))
+        XCTAssertNil(soon.waits, "45 past the hour is still to come")
+        XCTAssertEqual(soon.text(in: .english), "-15 min · leaves 00:45")
+        // 15 past the hour has gone: the next cycle's, at 01:15.
+        let later = try XCTUnwrap(TrainRosterDrag.shift(of: own, by: -45 * 60, in: world, roster: roster))
+        XCTAssertEqual(later.verdict, .moves(departure: 75 * 60))
+        XCTAssertEqual(later.waits, 75 * 60 - world.clock.now.seconds)
+        let minutes = (75 * 60 - world.clock.now.seconds + 59) / 60
+        XCTAssertEqual(later.text(in: .english), "-45 min · leaves 01:15 (in \(minutes) min)")
+        XCTAssertEqual(later.text(in: .traditionalChinese), "-45 分 · 01:15 開（\(minutes) 分後）")
+        XCTAssertEqual(TrainRosterDrag.Shift.waitText(23 * 3_600 + 15 * 60, in: .traditionalChinese), "23 小時 15 分")
+        XCTAssertEqual(TrainRosterDrag.Shift.waitText(2 * 3_600, in: .english), "2 h")
+    }
+
     /// Out on its trip it is not moved: its service would stop halfway.
     func testATimetableMovesOnlyAtItsFirstStop() throws {
         var (world, own) = try ownTimetable()

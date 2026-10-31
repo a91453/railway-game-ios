@@ -131,6 +131,66 @@ final class MountainTrackTests: XCTestCase {
         try world.assignTrain(ordinary, to: line)
     }
 
+    // Decision 515 continued (ALISHAN2): placing, sending and lines whose
+    // way moves onto mountain track.
+
+    func testATrainThatCannotClimbIsNotPlacedOnMountainTrack() throws {
+        var (world, climb, _) = try build()
+        let ordinary = try world.purchaseTrain(named: "Blue").id
+        refused(.trainCannotClimb(ordinary), in: world) {
+            try $0.placeTrain(ordinary, at: .onEdge(TrackTraversal(edge: climb, direction: .forward), offset: 2_048))
+        }
+        // Its head past the top, the body of its three cars still on the climb.
+        try world.setTrainCars(ordinary, to: 3)
+        let last = try XCTUnwrap(world.network.edges.last?.id)
+        refused(.trainCannotClimb(ordinary), in: world) {
+            try $0.placeTrain(ordinary, at: .onEdge(TrackTraversal(edge: last, direction: .forward), offset: 1))
+        }
+        let alishan = try world.purchaseTrain(named: "Alishan", as: .alishan).id
+        try world.placeTrain(alishan, at: .onEdge(TrackTraversal(edge: climb, direction: .forward), offset: 2_048))
+    }
+
+    func testATrainThatCannotClimbIsNotSentOntoMountainTrack() throws {
+        var (world, climb, first) = try build()
+        let ordinary = try world.purchaseTrain(named: "Blue").id
+        let alishan = try world.purchaseTrain(named: "Alishan", as: .alishan).id
+        try world.placeTrain(ordinary, at: .onEdge(TrackTraversal(edge: first, direction: .forward), offset: 2_048))
+        try world.placeTrain(alishan, at: .onEdge(TrackTraversal(edge: first, direction: .forward), offset: 4_096))
+        let up = TrackTraversal(edge: climb, direction: .forward)
+        refused(.trainCannotClimb(ordinary), in: world) { try $0.setTrainContinuation(ordinary, along: [up]) }
+        try world.setTrainContinuation(ordinary, along: [], stoppingAt: 3_072)
+        try world.setTrainContinuation(alishan, along: [up])
+    }
+
+    func testALineMovedOntoMountainTrackKeepsOnlyItsMountainTrains() throws {
+        var world = try makeWorld()
+        let points = [
+            WorldCoordinate(x: 2_048, y: 2_048), WorldCoordinate(x: 6_144, y: 2_048),
+            WorldCoordinate(x: 10_240, y: 2_048, z: 256), WorldCoordinate(x: 14_336, y: 2_048, z: 256),
+        ]
+        let nodes = try points.map { try world.buildTrackNode(at: $0) }
+        let first = try world.buildTrackEdge(from: nodes[0], to: nodes[1])
+        let last = try world.buildTrackEdge(from: nodes[2], to: nodes[3], structure: .elevated)
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: 4_096, y: 2_560)).id
+        try world.addTrackPlatform(a, on: first, from: 0, to: 4_096)
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: 12_288, y: 2_560)).id
+        try world.addTrackPlatform(b, on: last, from: 0, to: 4_096)
+        try world.createLine(named: "Mountain", stops: [a, b])
+        // A and B are not joined yet: any train may be given the line.
+        XCTAssertFalse(world.lineRunsOnMountainTrack(line))
+        let ordinary = try world.purchaseTrain(named: "Blue").id
+        let alishan = try world.purchaseTrain(named: "Alishan", as: .alishan).id
+        try world.assignTrain(ordinary, to: line)
+        try world.assignTrain(alishan, to: line)
+        XCTAssertEqual(world.line(id: line)?.trains, [ordinary, alishan])
+
+        _ = try world.buildTrackEdge(from: nodes[1], to: nodes[2], structure: .elevated, mountain: true)
+        XCTAssertTrue(world.lineRunsOnMountainTrack(line))
+        XCTAssertEqual(world.line(id: line)?.trains, [alishan], "the train that cannot climb is taken off")
+        XCTAssertNil(world.assignedLine(of: ordinary))
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "the world still loads")
+    }
+
     // MARK: - Saving
 
     func testMountainTrackIsSavedOnlyWhereItIs() throws {

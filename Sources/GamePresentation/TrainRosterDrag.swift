@@ -102,6 +102,11 @@ public enum TrainRosterDrag {
         /// Another train that would leave the same station in the same
         /// minute: "Two leaves A then too".
         public let clash: String?
+        /// How long from now it leaves where the move puts its departure
+        /// before now, so it waits for the next cycle (L3-5, #1588's
+        /// review: the time alone did not say it was a cycle, or a day,
+        /// later); `nil` otherwise.
+        public var waits: Int64? = nil
 
         public var drops: Bool {
             if case .moves = verdict { true } else { false }
@@ -116,8 +121,23 @@ public enum TrainRosterDrag {
             case .notAtFirstStop(let station):
                 return language.text("Moves only while it waits at \(station)", "停在\(station)等發車時才能改")
             case .moves(let departure):
-                return language.text("\(signed) min · leaves \(GameTime(seconds: departure).clockText)",
-                                     "\(signed) 分 · \(GameTime(seconds: departure).clockText) 開")
+                let text = language.text("\(signed) min · leaves \(GameTime(seconds: departure).clockText)",
+                                         "\(signed) 分 · \(GameTime(seconds: departure).clockText) 開")
+                guard let waits else { return text }
+                return language.text("\(text) (in \(Self.waitText(waits, in: language)))",
+                                     "\(text)（\(Self.waitText(waits, in: language))後）")
+            }
+        }
+
+        /// "45 min", "23 h 15 min"; "45 分", "23 小時 15 分", to the minute
+        /// up.
+        static func waitText(_ seconds: Int64, in language: DisplayLanguage) -> String {
+            let minutes = (seconds + GameTime.secondsPerMinute - 1) / GameTime.secondsPerMinute
+            let (hours, rest) = (minutes / 60, minutes % 60)
+            switch (hours, rest) {
+            case (0, _): return language.text("\(rest) min", "\(rest) 分")
+            case (_, 0): return language.text("\(hours) h", "\(hours) 小時")
+            default: return language.text("\(hours) h \(rest) min", "\(hours) 小時 \(rest) 分")
             }
         }
     }
@@ -161,7 +181,8 @@ public enum TrainRosterDrag {
             }
         }
         return Shift(train: train, seconds: seconds, verdict: .moves(departure: departure),
-                     clash: clash.map { "\($0.name)" })
+                     clash: clash.map { "\($0.name)" },
+                     waits: cycle > 0 ? departure - world.clock.now.seconds : nil)
     }
 }
 

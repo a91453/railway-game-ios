@@ -76,6 +76,26 @@ final class DanhaiDepotTests: XCTestCase {
         XCTAssertEqual(standing(at: depot.id), 9)
     }
 
+    /// BUGHUNT_BUILD P3-5: a real line bought cannot be bought again once
+    /// its line is removed (and a line sold beside it is still sold
+    /// beside its track), so removing it says so; a line of the player's
+    /// own does not.
+    func testRemovingABoughtLineSaysItCannotBeBoughtAgain() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
+        let green = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" })
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: green)), session.message?.text ?? "")
+        let bought = try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line)
+        XCTAssertTrue(session.lineRemovalText(bought).hasSuffix("這條線是買來的，刪掉後就不能再買回來；軌道與車站會留著。"))
+        XCTAssertTrue(session.lineRemovalText(bought).hasPrefix("它的 13 列車會一起賣掉"))
+
+        var world = session.world
+        let stops = try XCTUnwrap(world.line(id: bought)?.stops)
+        let own = try world.createLine(named: "自己的線", stops: Array(stops.prefix(2)))
+        let mine = GameSession(world: world, language: .english)
+        XCTAssertEqual(mine.lineRemovalText(own.id), "The line has no trains.")
+        XCTAssertTrue(mine.lineRemovalText(bought).hasSuffix(" This line was bought: once removed, it cannot be bought again. Its track and stations stay."))
+    }
+
     /// `ids` bought in turn on a game round the Green Mountain Line under
     /// `rules`, then played to three in the morning of the third day,
     /// hour by hour: no train in a deadlock at any hour, none more than
