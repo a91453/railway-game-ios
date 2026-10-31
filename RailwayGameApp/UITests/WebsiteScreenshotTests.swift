@@ -324,6 +324,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertEqual(zoning.value as? String, "1", "The zoning layer is on")
         app.buttons["layer.done"].tap()
+        // The legend starts folded on a phone (decision 510): open it.
+        XCTAssertTrue(app.descendants(matching: .any)["map.populationLegend"].firstMatch.appears(within: 10), "The zoning legend shows")
+        let fold = app.buttons["map.legend.fold"]
+        if fold.appears(within: 5), fold.label == "展開圖例", fold.becomesHittable(within: 5) { fold.tap() }
         XCTAssertTrue(app.descendants(matching: .any)["map.zoneOutlookLegend"].firstMatch.appears(within: 10), "The outlooks' key shows")
         settle(seconds: 3)
         keep("zoning-outlooks", app)
