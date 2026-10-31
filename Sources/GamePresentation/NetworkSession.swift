@@ -458,9 +458,30 @@ extension GameSession {
     /// and what to do instead (decision 164).
     func platformGradeText(_ grade: Int64, problem: String) -> String {
         language.text(
-            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
-            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) \(platformShortStretchText)",
+            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)\(platformShortStretchText)"
         )
+    }
+
+    /// What to do where a platform's stretch cannot be levelled (decision
+    /// 164).
+    var platformShortStretchText: String {
+        language.text(
+            "Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
+            "或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+        )
+    }
+
+    /// Decision 510 (the author's iPhone held sideways: the long refusal
+    /// stood in the middle of the map under the ✓ pill and over the
+    /// layer's key, and said again what the tool's panel says): the
+    /// banner's word when ✓ is tapped on a stretch that cannot be
+    /// levelled, short and without "cannot be levelled", which the ✓ pill
+    /// and the panel already say; why and what to do are in the panel
+    /// (``networkDraftText()``).
+    var platformGradeRefusalText: String {
+        language.text("No platform built: the Network panel says what to do.",
+                      "月台沒有蓋：做法見「路網」面板。")
     }
 
     /// The ridership a managed company gives a new station at `point`: on
@@ -539,11 +560,12 @@ extension GameSession {
         // same edit; where it cannot be, say why (decision 164).
         var levelling: PlatformLevelling?
         let grade = networkPlatformGrade
-        if let grade {
+        if grade != nil {
             switch platformLevelling(of: stretch.edge, from: stretch.start, to: stretch.end, in: world) {
             case .success(let found): levelling = found
-            case .failure(let problem):
-                return .failure(PlatformRefusal(text: platformGradeText(grade, problem: problem.text(in: language))))
+            case .failure:
+                // Decision 510: short; the panel says why and what to do.
+                return .failure(PlatformRefusal(text: platformGradeRefusalText))
             }
         }
         var middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
@@ -631,13 +653,15 @@ extension GameSession {
             if chosen == nil { built = outcome.station?.id }
         } catch {
             message = refusal(error, doing: command)
-            // GameCore's reason the levelling was refused, said with the
-            // grade it was to level; want of cash is said as above, for
-            // the levelling and the station together.
-            if message?.fundsNeeded == nil, let levelling = addition.levelling, let grade {
+            // GameCore refused the levelling: said short, as above; want
+            // of cash is said as above, for the levelling and the station
+            // together.
+            if message?.fundsNeeded == nil, let levelling = addition.levelling, grade != nil {
                 var probe = world
+                // Decision 510: short; the panel's preview, built on a copy
+                // the same way, says why and what to do.
                 do throws(GameError) { _ = try build(levelling, in: &probe) } catch {
-                    message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: error.playerMessage(in: language)))
+                    message = StatusMessage(kind: .failure, text: platformGradeRefusalText)
                 }
             }
             added = false
@@ -982,7 +1006,10 @@ extension GameSession {
             // Decision 164: a grade says so before the tap on ✓; decision
             // 190: and that ✓ levels it, for what.
             guard let levelling = networkPlatformLevelling else { return place }
-            return place + " · " + levelling.text(in: language)
+            // Decision 510: where it cannot be levelled, what to do instead,
+            // here only (the banner says only that it cannot).
+            let instead = levelling.problem == nil ? "" : " " + platformShortStretchText
+            return place + " · " + levelling.text(in: language) + instead
         case .remove:
             guard let edge = networkEdgePoint?.edge else {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")

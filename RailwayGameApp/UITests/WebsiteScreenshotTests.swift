@@ -298,6 +298,81 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("build-legend-under-panel", app)
     }
 
+    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
+    /// on the real-world demo where the track climbs, with where people
+    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
+    /// in a place of its own, the key folded while the pill shows. The
+    /// longest platform, so its stretch is the likeliest not to level; a
+    /// stretch that levels still shows the pill, banner and key together.
+    func testPlatformLevellingWithTheLayer() {
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The demo starts")
+        pauseTheClock(in: app)
+        // Five steps in, as RealWorldMapUITests does: at the opening zoom
+        // the stretch below would run onto land not owned, with no ✓.
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10) {
+            for _ in 0..<5 where zoomIn.isEnabled { zoomIn.tap() }
+        }
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        // A stretch across the middle of the map, built with the ✓ (or,
+        // where the details card stays open, its Build Track button).
+        let frame = map.frame.intersection(app.frame)
+        let middle = (app.buttons["hud.menu"].frame.maxY + build.frame.minY) / 2
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        func point(_ fraction: CGFloat) -> XCUICoordinate {
+            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
+        }
+        point(0.25).tap()
+        point(0.6).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '鋪設軌道'")).firstMatch
+        let builder = confirm.appears(within: 10) ? confirm : card
+        XCTAssertTrue(builder.appears(within: 10), "No way to build the stretch")
+        XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped")
+        builder.tap()
+        settle()
+        let platform = app.segmentedControls.buttons["車站"].firstMatch
+        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.exists { controls.tap() }
+        }
+        XCTAssertTrue(platform.appears(within: 10), "No Station mode")
+        platform.waitUntilSettled()
+        platform.tap()
+        let cars = app.steppers["network.platformCars"]
+        if cars.appears(within: 5) {
+            let more = cars.buttons.element(boundBy: 1)
+            for _ in 0..<20 where more.exists && more.isEnabled && more.isHittable {
+                more.tap()
+            }
+        }
+        // The platform's site on the stretch, off the map's own buttons.
+        let mapButtons = ["map.coverageShortcut", "map.open3D", "縮小", "放大"].map { app.buttons[$0] }
+        var siteX = frame.minX + frame.width * 0.425
+        while let covering = mapButtons.filter(\.exists).map({ $0.frame.insetBy(dx: -4, dy: -4) })
+            .first(where: { $0.contains(CGPoint(x: siteX, y: middle)) }) {
+            siteX = covering.minX - 40
+        }
+        origin.withOffset(CGVector(dx: siteX, dy: middle)).tap()
+        XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
+        settle()
+        keep("platform-levelling-pill", app)
+        confirm.waitUntilSettled()
+        confirm.tap()
+        settle()
+        keep("platform-levelling-layer", app)
+    }
+
     /// Decision 507: the platform mode's layout menu on a double track,
     /// with a place picked, then the menu open (the single-track layouts
     /// greyed with why).
@@ -797,8 +872,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
         app.tapMiddle(of: wholeTaiwan)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
-        // By the light of day, the stars over the island.
+        // By the light of day, the stars over the island. Decision 510
+        // hides the sights from as far out as the whole island, so in a
+        // step or two until they show.
         waitForClock(from: 9, before: 17, in: app)
+        let zoomIn = app.buttons["放大"]
+        let sight = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'")).firstMatch
+        for _ in 0..<4 where !sight.exists && zoomIn.exists && zoomIn.isEnabled {
+            zoomIn.tap()
+            settle(seconds: 2)
+        }
         settle(seconds: 3)
         keep("tourism-map", app)
 

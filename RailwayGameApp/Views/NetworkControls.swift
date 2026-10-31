@@ -413,6 +413,7 @@ struct NetworkControls: View {
                     .font(.footnote)
                     .monospacedDigit()
             }
+            .accessibilityIdentifier("network.platformCars")
             // Decision 184, later: drawn from the stations' names alone, so
             // a running game's ticks leave the open menu alone.
             let stations = session.stationMenuChoices
