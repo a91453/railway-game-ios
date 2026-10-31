@@ -26,7 +26,7 @@ struct MapAlertBubbles: View {
         let arranged = Self.arranged(session: session, camera: camera, viewport: viewport, insets: insets)
         ZStack(alignment: .topLeading) {
             if session.tool == .select {
-                ForEach(placed(arranged.onMap)) { item in
+                ForEach(placed) { item in
                     // Its bottom middle at the point: the bubble stands on a
                     // frame of no size, placed there. Alignment guides
                     // placed the bubbles only against each other, and the
@@ -50,7 +50,7 @@ struct MapAlertBubbles: View {
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: placed(arranged.onMap).map(\.id))
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: placed.map(\.id))
         .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: arranged.folded.isEmpty)
         .onChange(of: arranged.folded.isEmpty) { _, empty in
             if empty { listOpen = false }
@@ -163,9 +163,8 @@ struct MapAlertBubbles: View {
     /// The alerts on the map: each over its station (or train, or sight),
     /// or, decision 477, beside it where that covers another station's
     /// name (``MapLabelPlacement/placeBubbles(_:stations:lift:radius:)``).
-    private func placed(_ groups: [MapClutter.Group]) -> [PlacedAlert] {
-        guard session.tool == .select else { return [] }
-        return Self.placements(groups, session: session, camera: camera).map {
+    private var placed: [PlacedAlert] {
+        Self.placements(session: session, camera: camera, viewport: viewport, insets: insets).map {
             PlacedAlert(bubble: $0.bubble, more: $0.more, point: CGPoint(x: $0.point.x, y: $0.point.y))
         }
     }
@@ -175,6 +174,15 @@ struct MapAlertBubbles: View {
     /// A sight's warning is not repeated over its own mark.
     static func arranged(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets)
         -> (onMap: [MapClutter.Group], folded: [MapMarks.Bubble]) {
+        let inputs = PlacementInputs(session: session, camera: camera, viewport: viewport, insets: insets)
+        if let memo = PlacementMemo.last, memo.inputs == inputs { return memo.arranged }
+        let arranged = arranged(session: session, camera: camera, viewport: viewport, insets: insets, prices: inputs.prices)
+        PlacementMemo.last = PlacementMemo(inputs: inputs, arranged: arranged)
+        return arranged
+    }
+
+    private static func arranged(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets,
+                                 prices: [MapLabelPlacement.Box]) -> (onMap: [MapClutter.Group], folded: [MapMarks.Bubble]) {
         // Decision 377: as the session keeps them, not read from the world,
         // so a tick that leaves them as they were rebuilds nothing here.
         let onScreen = session.mapBubbles.filter { bubble in
@@ -183,7 +191,10 @@ struct MapAlertBubbles: View {
                 && at.y > Double(insets.top) + 40 && at.y < viewport.height - Double(insets.bottom)
         }
         guard !onScreen.isEmpty else { return ([], []) }
-        let marked = Set(MapAttractionMarks.marks(session: session, camera: camera, viewport: viewport, insets: insets).map(\.sight.attraction.id))
+        // L3-9 (#1583's review): the marks the map draws, not those over a
+        // tile's price, so a sight whose mark is not drawn keeps its warning.
+        let marked = Set(MapAttractionMarks.drawn(session: session, camera: camera, viewport: viewport, insets: insets, prices: prices)
+            .map(\.sight.attraction.id))
         let level = MapProblems.level(referenceSize: camera.referenceSize)
         return MapClutter.arrange(onScreen, markedSights: marked, limit: MapClutter.bubbleLimit(level))
     }
@@ -201,7 +212,53 @@ struct MapAlertBubbles: View {
     static func placements(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets)
         -> [(bubble: MapMarks.Bubble, more: Int, point: ScreenPoint, touchBox: MapLabelPlacement.Box)] {
         guard session.tool == .select else { return [] }
-        return placements(arranged(session: session, camera: camera, viewport: viewport, insets: insets).onMap, session: session, camera: camera)
+        let groups = arranged(session: session, camera: camera, viewport: viewport, insets: insets).onMap
+        // ``arranged`` just kept its memo for these inputs.
+        if let placed = PlacementMemo.last?.placements { return placed }
+        let placed = placements(groups, session: session, camera: camera)
+        PlacementMemo.last?.placements = placed
+        return placed
+    }
+
+    /// What ``arranged`` and ``placements`` are worked out from (L1-2,
+    /// #1546's review): the bubbles, the selected station's tag and the
+    /// sights' marks each ask for them, at every redraw, and placing them
+    /// goes through every station on screen.
+    private struct PlacementInputs: Equatable {
+        let camera: PlanCamera
+        let viewport: ScreenSize
+        let insets: EdgeInsets
+        let language: DisplayLanguage
+        let tool: ConstructionTool
+        let bubbles: [MapMarks.Bubble]
+        let sights: [MapMarks.Sight]
+        let stations: [MapLabelPlacement.Station]
+        /// Where the tiles' prices are while the map is for sale: no sight
+        /// mark is drawn over one (L3-9).
+        let prices: [MapLabelPlacement.Box]
+
+        @MainActor
+        init(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets) {
+            self.camera = camera
+            self.viewport = viewport
+            self.insets = insets
+            language = session.language
+            tool = session.tool
+            bubbles = session.mapBubbles
+            sights = session.mapSights
+            stations = MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: camera.viewport)
+            prices = MapAttractionMarks.tilePrices(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: nil)
+        }
+    }
+
+    /// The last ``arranged`` and ``placements``, for their inputs.
+    @MainActor
+    private struct PlacementMemo {
+        static var last: PlacementMemo?
+
+        let inputs: PlacementInputs
+        let arranged: (onMap: [MapClutter.Group], folded: [MapMarks.Bubble])
+        var placements: [(bubble: MapMarks.Bubble, more: Int, point: ScreenPoint, touchBox: MapLabelPlacement.Box)]?
     }
 
     private static func placements(_ groups: [MapClutter.Group], session: GameSession, camera: PlanCamera)

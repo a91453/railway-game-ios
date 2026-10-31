@@ -98,6 +98,14 @@ struct ContentView: View {
             // screen with the controls it must not cover.
             .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets, mapSites: screen.tutorialMapSites,
                              firstLineGuide: launcher.preferences.firstLineGuide)
+            // L1-3 (#1549's review): while Back to Start writes the
+            // autosave, nothing takes a touch, so nothing done then is left
+            // out of it.
+            .overlay {
+                if launcher.isReturningToStart {
+                    SavingCover(language: session.language)
+                }
+            }
             // Decision 414: the idle mode over everything, its tap ending it.
             .overlay {
                 if screen.ambient != nil {
@@ -1670,5 +1678,30 @@ private struct PassingLoopCards: ViewModifier {
     private func finishHint() {
         seen = true
         session.dismissPassingLoopHint()
+    }
+}
+
+/// Over the game while Back to Start writes the autosave (L1-3): takes
+/// every touch, and says the game is being saved.
+private struct SavingCover: View {
+    let language: DisplayLanguage
+
+    var body: some View {
+        ZStack {
+            Color.clear
+                .contentShape(Rectangle())
+            HStack(spacing: 8) {
+                ProgressView()
+                Text(verbatim: language.text("Saving…", "儲存中…"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .glassBackground(in: Capsule())
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("game.savingCover")
+        }
+        .ignoresSafeArea()
     }
 }

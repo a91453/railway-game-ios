@@ -2549,6 +2549,29 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **接手（session_01YGNNuowaMN8MBaj6QWbCLn，遊戲規劃第 37 任派，2026-10-31）**：合了 main（7b015d3，只這份檔案衝突，本節由 §4.36 改為 §4.39）。CI run 41193250249 全綠（rest 17.8 分）。rest 逐類和 main 的 run 41187751239 比：共同 595 類測試合計 664.2 秒對 674.6 秒（×1.016），沒有一類慢超過 1 秒；新加的只有 `CallingLoopPlatformTests`。`HighSpeedDemoDayTests`（campaigns-16）160.5 對 162.3 秒。所以之前的逾時是 rest 本來就太滿（main 8c2cc38a 已拆），不是這個 PR。
 - 沒有剩下的步驟；合併由遊戲規劃決定（排在 TRACELAG 後）。實機上高鐵示範的停站畫面 UNVERIFIED。
 
+### 4.40 審查剩下的 P3（派工單 REV-P3，session_01YGNNuo4zKUm33FJPAx7M5A，`rev-p3`，2026-10-31）
+
+存檔版本、決策編號、golden schema、GameCore 都不動。代號的原文在 `docs/archive/PR1510_1549_REVIEW_HANDOFF.md`（L1）、`PR1551_1578_REVIEW_HANDOFF.md`（L2）與 #1611 的 `PR1579_1610_REVIEW_HANDOFF.md`（L3）。
+
+- **修了**：
+  - L1-2：泡泡的排列與位置（`MapAlertBubbles.arranged`／`placements`）記住上一份，輸入（相機、畫面、泡泡、景點、畫面內車站、地價標籤、語言、工具）沒變就不重算；泡泡圖層、選站標籤、景點標記三處共用。
+  - L1-3：按「回到開始畫面」後自動存檔寫完前，畫面上蓋一層收下所有觸控的「儲存中…」（`ContentView` 的 `SavingCover`），沒動 `GameLauncher`。
+  - L2-3：站長教學提議的兩顆按鈕在窄卡片上可以換成兩行，不再被切成「跟我做 5 分…」。
+  - L2-4：檔頭快取讀回比這版新的存檔版本時不採用，改讀檔，清單照樣標「較新版本」。
+  - L2-5：報價算到一半世界變了，若描線還沿著同一條線就重新報價（暫停時提示也會有價格）。
+  - L3-5：時刻表格子往前拖過「現在」時，預覽加上「（N 分後）」「（N 小時 M 分後）」。
+  - L3-6：運用表的「復原」只在運用表自己做過、還能復原的編輯時能按。
+  - L3-7：運用表拖曳放開時，用按下時記住的列車與最後看到的路線，不再照位置重找。
+  - L3-8：沒有城市建築的世界，分區用土地格的用途算「第一棟」通知與「都市計畫」成就（`GameWorld.zonedUseBuilt`）。
+  - L3-9：泡泡只拿掉「真的畫出來的」景點標記的提醒（蓋到地價的標記不算）。
+  - L3-10：分區標記的重建鍵加上城市需求開關。
+- **沒修、留給之後**：
+  - L3-3：歸 ALISHAN2（§23.1 第 9 名）。
+  - L3-4（自動存檔失敗時站長的教學提議不再出現）：要改 `GameLauncher.swift`（偏好在存檔成功後才寫），和 HANG2-P2 的 PR 撞檔，這次不動；等 HANG2-P2 的 PR 都合了再做，一行加一個測試。
+  - L3-9 的小差：選地（`isChoosingMapTile`）時景點標記是淡的那一層，它的地價標籤從 `max(clear.top, topColumnDepth)` 算，泡泡這邊用 `insets.top`；只有靠近畫面頂端的景點可能差一個。
+  - L3-11（每幀多做的掃描）：L1-2 的記憶已經省掉泡泡與標記的重算；`StationLayout` 車站模式的 `trackBeside` 還沒量也沒改，交給查主執行緒停頓的工作順便量。
+- **UNVERIFIED**：L1-2、L1-3、L2-3、L3-6、L3-7、L3-9、L3-10 是 App 的程式，Linux 編不到，靠 PR 的 iOS 建置；實機手感沒看。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

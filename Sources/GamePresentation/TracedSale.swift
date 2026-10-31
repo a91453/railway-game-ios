@@ -187,7 +187,7 @@ extension GameSession {
 
     /// Lays out `line`'s offer off the main actor for ``tracedSaleQuote``,
     /// unless that is already under way; again where the world changed
-    /// meanwhile.
+    /// meanwhile, once laid out.
     private func quoteTracedSale(_ line: RealBranchLine) {
         if let running = tracedSaleQuoteTask, running.line == line { return }
         tracedSaleQuoteTask?.task.cancel()
@@ -196,7 +196,14 @@ extension GameSession {
             let offer = await Task.detached(priority: .utility) { laying.offer(for: line) }.value
             guard !Task.isCancelled else { return }
             tracedSaleQuoteTask = nil
-            guard commandRevision == revision, railwaysRevision == railways else { return }
+            guard commandRevision == revision, railwaysRevision == railways else {
+                // L2-5 (#1576's review): the world changed meanwhile. Laid
+                // out again while the trace still runs along the line, or
+                // a paused game's hint would stay without a price, as
+                // nothing it shows changed.
+                if networkPreview?.forSale == line { quoteTracedSale(line) }
+                return
+            }
             tracedSaleQuote = TracedSaleQuote(offer: offer, revision: revision, railways: railways)
         }
         tracedSaleQuoteTask = (line, task)

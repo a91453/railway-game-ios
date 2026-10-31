@@ -162,4 +162,23 @@ final class ZoningToolTests: XCTestCase {
         XCTAssertTrue(planner.isMet(by: facts))
         XCTAssertEqual(planner.title(in: .traditionalChinese), "都市計畫")
     }
+
+    /// L3-8 (#1581's review): in a world without city buildings the city
+    /// grows land on zoned cells, and that counts as building on them.
+    func testWithoutCityBuildingsTheLandCounts() throws {
+        let session = GameSession(world: try world(), language: .english)
+        XCTAssertFalse(session.world.cityBuildings)
+        session.choose(.zoning)
+        session.zoningZone = .residential
+        XCTAssertTrue(session.zone(CellRectangle(rows: 2...2, columns: 2...3)))
+        XCTAssertEqual(session.zonedCellsAwaitingBuilding, [CellPosition(row: 2, column: 2), CellPosition(row: 2, column: 3)])
+
+        var world = session.world
+        try world.setLand([LandCell(row: 2, column: 3, use: .residential, residents: 40, jobs: 0)])
+        XCTAssertFalse(world.cityBuildings)
+        XCTAssertNil(world.buildings.building(row: 2, column: 3))
+        let built = try XCTUnwrap(GameSession.firstBuilt(on: [CellPosition(row: 2, column: 2), CellPosition(row: 2, column: 3)], in: world))
+        XCTAssertEqual(built.cell, CellPosition(row: 2, column: 3))
+        XCTAssertEqual(AchievementFacts(world: world).zonedCellsBuilt, 1)
+    }
 }
