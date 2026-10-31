@@ -393,13 +393,44 @@ extension GameWorld {
         if deadlockedTrains().contains(id) {
             return language.text("Deadlocked with \(name)", "與 \(name) 互相卡住（死結）")
         }
+        let text: String
         if let place = passingPlace(of: id) {
             let station = station(id: place)?.name ?? "#\(place.rawValue)"
-            return language.text("Standing aside at \(station) until \(name) clears the route", "在 \(station) 待避，等待 \(name) 讓出進路")
+            text = language.text("Standing aside at \(station) until \(name) clears the route", "在 \(station) 待避，等待 \(name) 讓出進路")
+        } else if case .travellingToStop? = train(id: id)?.execution {
+            text = language.text("Following \(name)", "跟在 \(name) 後面")
+        } else {
+            text = language.text("Waiting for \(name) to clear the route", "等待 \(name) 讓出進路")
         }
-        if case .travellingToStop? = train(id: id)?.execution {
-            return language.text("Following \(name)", "跟在 \(name) 後面")
+        // Decision 497 (P2-7): a train that will not move off by itself,
+        // named with why, so the player knows which train to move.
+        guard let still = standingStill(holder) else { return text }
+        return language.text("\(text) (\(name): \(still.text(in: language)))", "\(text)（\(name)：\(still.text(in: language))）")
+    }
+
+    /// Why train `id` stands where it is and will not move off by itself
+    /// (decision 497, P2-7), or `nil`: stopped by the player (its speed at
+    /// 0), on no line, or parked while its line is closed. A train waiting
+    /// for one of these is not in a deadlock (it counts as one that will
+    /// go), yet waits until the player moves it or the line opens.
+    public func standingStill(_ id: TrainID) -> StandingStill? {
+        guard let train = train(id: id), train.position != nil else { return nil }
+        if train.movement.rate == 0 { return .stoppedByPlayer }
+        guard train.execution == nil else { return nil }
+        guard let lineID = assignedLine(of: id), let line = line(id: lineID) else { return .onNoLine }
+        return line.window.contains(minuteOfDay: clock.now.minuteOfDay) ? nil : .outOfHours
+    }
+}
+
+/// See ``GameWorld/standingStill(_:)``.
+public enum StandingStill: Hashable, Sendable {
+    case stoppedByPlayer, onNoLine, outOfHours
+
+    public func text(in language: DisplayLanguage) -> String {
+        switch self {
+        case .stoppedByPlayer: language.text("stopped by you", "被你停下了")
+        case .onNoLine: language.text("on no line", "沒有派給任何路線")
+        case .outOfHours: language.text("parked until its line opens", "停著等路線開始營運")
         }
-        return language.text("Waiting for \(name) to clear the route", "等待 \(name) 讓出進路")
     }
 }
