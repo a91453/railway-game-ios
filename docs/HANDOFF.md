@@ -461,6 +461,27 @@
 - **排程**：第 36 任留了一個巡查 trig_01FmPXzUtYW4f2euEDrN55Kr（01:36 UTC，送回第 36 任）；交接後刪掉，第 37 任自己排。
 - **還沒派的**（同下面第 36 任的現況）：HANG2 P2-3～P2-7（§4.31）、iPad SettingsUITests、車站擴建（506）、≈US$ 參考、99.1 後請作者在 6000× 下回報一次。
 
+**第 37 任交給第 38 任（2026-10-31 約 10:30 UTC，壓縮 4 次）**：第 38 任由作者在 claude.ai 開（opus 5.5 高）。接手後先做這幾件：
+- **最急：TRACELAG → 100.2**。作者 18:06（台灣時間）在 100.1 真機錄影說「軌道與路線大延遲」「這感覺很影響體驗」。
+  - 效能面板讀數：從既有軌道端點拖描線時掉到 20–32 fps。「地圖」（`FrameCostPart.mapBody`）每步 max 865.9 ms，最長一幀 668 ms；軌道畫布本身只要 1.6 ms。
+  - 時間花在 MapView body 讀 `session.networkOverlay` 時，每個拖曳步驟都把 `networkDraftPreview`／`tracePreview` 整個重算一次。疑似 100.1 的 #1599、#1593、#1598 讓這一步變重。
+  - 實作 session TRACELAG：session_01YGNNuonUfg49wqMPGz83DM，已說是緊急、最小修正，PR 一開就回報。
+  - 合它優先，其他 PR 讓路。合進 main 後跑完整 `ci.yml`（workflow_dispatch）與 full lane，都綠了跟作者說「100.2 可以發（commit X）」。作者答應：「好 修好跟我說」。
+  - **發 100.2 之前先寫 `.github/testflight-whats-new.md`**（只寫這個修正，並把作者手貼的 100.1 說明換掉）。
+- **100.1 的 What to Test 漏寫了**（第 37 任的疏失）：testflight.yml 填了 PR 標題清單，作者在 App Store Connect 手貼第 37 任給的玩家說明。這一次之後，「可以發」之前一定先確認 `.github/testflight-whats-new.md` 自上一版之後改過（見 §1.2 那一行）。遊戲內「新功能」的 `2026-10-31-100` 那則也只寫了新台幣，100.2 那則把 100.1 的其他項補上。
+- **100.1 補驗**：完整 `ci.yml` 41187751239（171cd7b）綠；TestFlight run 41188529796 成功；full lane 41187572538（447891f，和 171cd7b 只差文件）10:15 UTC 時 5 個 job 綠 3 個，剩 Xcode build 與 lessons 在跑，結果記到 #1579。紀錄還沒寫進 `research/PLAYER_FEEDBACK.md`。
+- **在做的實作 session**（都是第 37 任開的，會用 send_message 回報給 session_01YGNNukwzZeGBzvAif8zfja；接手後對每個送一則「改回報給 <第 38 任 session>」）：
+
+  | 工作 | session | 內容 |
+  | --- | --- | --- |
+  | TRACELAG | session_01YGNNuonUfg49wqMPGz83DM | 描線預覽每步 650–870 ms（緊急，100.2） |
+  | CIREST | session_01YGNNum3i7XqrWkTZ83fEJJ | rest 分片壓到 12 分鐘以下（`swift-shards.sh`） |
+  | PASSLOOP | session_01YGNNuowaMN8MBaj6QWbCLn | 接手 #1601（決策 518），合 main、重跑 CI |
+  | IPHLAND | session_01YGNNumJxPZX8Ea6PMbn3c2 | iPhone 橫拿卡片標題「5站」、右側空面板框、審查 L2-2；要看截圖再合 |
+
+- **排序**：其餘照 `research/NEXT_PRIORITIES_2026-10-12.md` §23，TRACELAG 插在最前面。
+- **排程**：第 37 任排的巡查 trig_01Rqfi4XghuBFRQexewBcV5c（10:41 UTC）接手後可刪，第 38 任自己排。
+
 **第 37 任的現況（2026-10-31 約 06:50 UTC，session_01YGNNukwzZeGBzvAif8zfja，第 6 層，壓縮 3 次，交棒）**：
 - **交棒**：第 37 任在 06:45 UTC 第 3 次壓縮。下一任在第 7 層，由作者在 claude.ai 開，模型 opus 5.5 高。接手時先讀這一段和 #1579 最新的留言，再看 main 的完整 `ci.yml` 與 full lane 綠了沒。
 - **100.1 已合**：#1594、#1582、#1581、#1588、#1600、#1596、#1597、#1583、#1586、#1598、#1592、#1599（main 43d53ea）、#1593（main 447891f，09:10 UTC）。截圖都由規劃看過（決策 482）。
