@@ -150,7 +150,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertTrue(trains.allSatisfy { session.world.train(id: $0) == nil })
         XCTAssertEqual(session.world.economy.balance, world.economy.balance + proceeds)
-        XCTAssertNotNil(session.world.acquisition(of: "tra:PINGXI"), "the real line is still the company's")
+        XCTAssertNil(session.world.acquisition(of: "tra:PINGXI"), "decision 528: on sale again")
         var after = session.world
         XCTAssertEqual(demolish(&after), [])
         XCTAssertTrue(after.network.edges.isEmpty)

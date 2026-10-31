@@ -87,6 +87,6 @@ final class BrokenSaveRepairTests: XCTestCase {
         let loaded = try JSONDecoder().decode(GameWorld.self, from: data)
         XCTAssertEqual(loaded, world)
         XCTAssertFalse(loaded.accounts.assets.contains { $0.kind == .acquiredLine })
-        XCTAssertEqual(loaded.acquisitions.map(\.realLine), ["tra:PINGXI"])
+        XCTAssertEqual(loaded.acquisitions, [], "decision 528: the purchase went with the line")
     }
 }
