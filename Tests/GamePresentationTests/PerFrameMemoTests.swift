@@ -56,7 +56,7 @@ final class PerFrameMemoTests: XCTestCase {
         XCTAssertNil(session.trackInspection(of: TrackEdgeID.edge(9_999)))
     }
 
-    func testTheSituationBubblesAreWorkedOutAgainAfterACommandOrTenGameMinutes() throws {
+    func testTheSituationBubblesAreWorkedOutAgainAfterACommandOrTenGameMinutes() async throws {
         var world = try makeWorld(width: 40_960, height: 8_192, balance: 100_000)
         for (name, x) in [("Alpha", 1), ("Beta", 3)] {
             try world.buildStation(named: name, at: TestLine.centre(x, 0))
@@ -70,10 +70,15 @@ final class PerFrameMemoTests: XCTestCase {
         try session.performEdit { world throws(GameError) in
             try world.createLine(named: "Main", stops: [StationID(rawValue: 1), StationID(rawValue: 2)])
         }
-        XCTAssertEqual(session.situationAlerts.map(\.kind), [.sightWithoutStation(AttractionID(rawValue: 1))], "a command: at once")
+        // Decision 497 (P2-3): after a command, off the main actor, the
+        // last ones shown until then.
+        XCTAssertEqual(session.situationAlerts, [], "the last ones until the new ones are in")
+        await session.mapReadsSettled()
+        XCTAssertEqual(session.situationAlerts.map(\.kind), [.sightWithoutStation(AttractionID(rawValue: 1))], "a command: worked out again")
         XCTAssertEqual(session.situationAlerts, session.world.situationAlerts())
 
         session.setSpeed(.normal)
+        await session.mapReadsSettled()
         _ = session.situationAlerts
         let memo = try XCTUnwrap(session.situationAlertsMemo)
         try tick(session)

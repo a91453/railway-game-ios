@@ -183,7 +183,8 @@ extension GameSession {
     nonisolated static let situationAlertsPeriod: Int64 = 10 * 60
 
     /// ``GameWorld/situationAlerts()``, as the map draws them: worked out
-    /// again after a command (``commandRevision``) and every
+    /// again after a command (``commandRevision``, off the main actor since
+    /// decision 497's P2-3) and every
     /// ``situationAlertsPeriod`` of game time, not at every tick and every
     /// read. The deadlock search behind a stuck train's bubble asks a route
     /// of every waiting train: tens of milliseconds a time on the
@@ -194,6 +195,13 @@ extension GameSession {
     public var situationAlerts: [MapAlert] {
         let period = world.clock.now.seconds / Self.situationAlertsPeriod
         if let memo = situationAlertsMemo, memo.revision == commandRevision, memo.period == period {
+            return memo.alerts
+        }
+        // Decision 497 (P2-3): after a command, the last bubbles until the
+        // new ones, worked out off the main actor, are in (tens of ms on a
+        // large network, at every tap while building, pausing or undoing).
+        if let memo = situationAlertsMemo, memo.revision != commandRevision {
+            workOutSituationAlertsOffTheMainActor()
             return memo.alerts
         }
         let alerts = world.situationAlerts()

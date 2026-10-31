@@ -2410,7 +2410,7 @@
 
 - **做了的**在決策 497（`docs/decisions/497.md`）：P2-1 收購報價卡在背景排版（#1545）；P2-2 回開始畫面的存檔與清單移出主執行緒（#1549）；存檔清單的檔頭快取（作者 97.1「存檔越多越卡」，`hang2-p2-2-list`）。
 - **還沒做的**（HANG2 壓縮一次後依規則停下，`docs/research/BUGHUNT_HANG_2026-10-30.md` 的順序，一項一個 PR，決策 497 接著寫一節）：
-  - P2-3：每個指令後在主執行緒算死結泡泡（`situationAlerts`）與交通狀態（`TrafficReading`）。照遊戲迴圈的做法在 detached task 算、先顯示舊的。
+  - ~~P2-3~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-3-command-reads`，決策 497 的 P2-3 一節。
   - P2-4：跳過夜晚的預先試跑在 `stopNightSkip()`、`skipToMorning()`（memo 沒命中）與 `GameSession.init` 還在主執行緒；改用 `refreshNightSkipOfferOffTheMainActor()`。
   - P2-5：欠錢轉自由模式就卡住。先對照 `BUGHUNT_ECONOMY_SAVES_2026-10-30.md`；要改 GameCore 先問遊戲規劃。
   - P2-6：回開始畫面時自動存檔失敗就出不去。失敗時跳確認框給「不存檔離開」；同步的 `returnToStart()` 與 `returnToStartInBackground(at:)`（失敗時留在遊戲）兩條路都要接。
