@@ -41,6 +41,45 @@ final class Map3DBuildReturnTests: XCTestCase {
         XCTAssertNil(trip.toolChanged(to: .select, in: id, shows3D: true, tutorialRuns: false))
     }
 
+    /// Review L3-2: Expand Map from building that began on the 3D map puts
+    /// the tools away to choose a tile on the 2D map: that is not building
+    /// ended, so the 3D map does not open over the tiles for sale, nor
+    /// later.
+    func testExpandingTheMapIsNotBuildingEnded() {
+        let game = Game(), id = ObjectIdentifier(game)
+        var trip = Map3DBuildReturn()
+        trip.leftForBuilding(from: turnedView(), in: id)
+        XCTAssertNil(trip.toolChanged(to: .network, in: id, shows3D: true, tutorialRuns: false))
+        XCTAssertNil(trip.toolChanged(to: .select, in: id, shows3D: true, tutorialRuns: false, choosingMapTile: true))
+        XCTAssertFalse(trip.waits)
+        XCTAssertNil(trip.toolChanged(to: .network, in: id, shows3D: true, tutorialRuns: false))
+        XCTAssertNil(trip.toolChanged(to: .select, in: id, shows3D: true, tutorialRuns: false))
+    }
+
+    /// What the app's watch sees as Expand Map is pressed in a game that
+    /// buys its map: the select tool, and choosing a tile already set.
+    @MainActor
+    func testExpandMapIsSeenAsChoosingATile() {
+        let session = GameSession(world: GameWorld.newGame(balance: 3_000_000_000, eventSeed: 9, buysMap: true),
+                                  language: .english)
+        var trip = Map3DBuildReturn()
+        trip.leftForBuilding(from: turnedView(), in: ObjectIdentifier(session))
+        func seen() -> Map3DBuildReturn.Viewpoint? {
+            trip.toolChanged(to: session.tool, in: ObjectIdentifier(session), shows3D: true,
+                             tutorialRuns: session.tutorial != nil, choosingMapTile: session.isChoosingMapTile)
+        }
+        session.selectTool(.network)
+        let building = seen()
+        XCTAssertNil(building)
+        session.startChoosingMapTile()
+        let (tool, choosing) = (session.tool, session.isChoosingMapTile)
+        XCTAssertEqual(tool, .select)
+        XCTAssertTrue(choosing)
+        let expanding = seen()
+        XCTAssertNil(expanding, "the 3D map does not open over the tiles for sale")
+        XCTAssertFalse(trip.waits)
+    }
+
     /// Building started on the 2D map ends there.
     func testBuildingFromTheTwoDMapStaysTwoD() {
         let game = Game(), id = ObjectIdentifier(game)
