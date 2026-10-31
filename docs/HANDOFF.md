@@ -1,6 +1,6 @@
 > iPhone 橫拿三件畫面修正（派工單 IPHLAND，`claude/iphone-landscape-fixes`，決策號不動，2026-10-31）：側邊面板頁的標題在 compact height 時改放在導覽列下方一列、和面板一樣寬（`PanelTitlePlacement`，`Theme.swift` 的 `panelTitle`），修掉車站卡站名被工具列夾成一兩個字與審查 L2-2；實景新局右側的空框是小地圖（沒有軌道與車站、或畫面已經看到整張地圖時不畫，`MiniMap.isShown(beside:)`）。Linux `MapFocusTests`、`MiniMapTests` VERIFIED；畫面靠截圖驗收，iPad 與 iPhone SE 沒拍。
 
-> 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次；第二個 PR（`tracelag-build-once`，決策 521「續」）讓預覽副本不在每段之後清點等車的旅客。描線預覽仍把整串蓋兩次，線多的世界一步最多約 0.5 s（debug），留在決策 521「續」的下一步。實機 UNVERIFIED。
+> 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次；第二個 PR（`tracelag-build-once`，決策 521「續」）讓預覽副本不在每段之後清點等車的旅客。描線預覽把整串蓋兩次：單線、不分段的描線已改成沿用描線時蓋好的副本（UIFIX，決策 521「續二」）；分段描線與雙線仍蓋兩次，留在「續二」的下一步。實機 UNVERIFIED。
 
 > main full lane 連三次紅（派工單 FLANE，session_01YGNNuovKC4vUNueQF95y3C，`flane-full-lane`，2026-10-31）：`RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner` 是測試過期（決策 510 給月台長度 Stepper 加了 identifier，它的按鈕改叫 `network.platformCars-Decrement`，舊的 `== 'Decrement'` 找不到），已改。`ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy` 的 6000× 其實選到了（失敗訊息讀到 6000×），是等待唯一一次查詢卡在 App 的幾秒停頓裡；`chooseSpeed` 改成等完再讀一次 label。`FinanceCompositionUITests` 紅過兩種：447891f 的「Timed out while evaluating UI query」是模擬器上 App 主執行緒 50 秒停頓（`ui-smoke-trace`），沒改程式；分支上 only_testing（run 41195369563）是按「資料」的觸控 150 ms 後被取消（trace「touch cancelled」，接著 885 ms 沒畫面，正是站長泡泡 7 秒到時收起），照 HUDAlignmentUITests 的做法沒開就再按一次。兩者都不是 3acace6..447891f 的退步：Linux 上貨運場景與 6000× 午夜在 3acace6 和 447891f 一樣快，7ac6649、3acace6 的 trace 也有 10–37 秒的停頓，前兩輪 `second`／`lessons` 紅的四支（LineRoutePreference、HUDAlignment 站長泡泡、MapInteraction 改站名、Settings 音量）各只紅一次、下一輪就綠。**還沒查到的**：full lane 裡 App 為什麼常有幾秒到幾十秒的主執行緒停頓（錄影看貨運場景是建物圖層畫出來前那段）；要在 Mac 上用 Instruments 量，Linux 量不到。
 
@@ -461,8 +461,8 @@
   - P2-5 的 B 案（§4.31）。
   - P2-7 的 `.noRoute` 與機廠滿了（動 GameCore）。
   - P3-5 刪掉的線可以買回（§4.33，動 GameCore）。
-  - 決策 521「續」的下一步：描線預覽蓋兩次。
-  - 決策 522 的下一步：拖曳預覽的填色。
+  - 決策 521「續」的下一步：描線預覽蓋兩次（UIFIX 做了單線不分段的，見「續二」；分段與雙線還在）。
+  - 決策 522 的下一步：拖曳預覽的填色（UIFIX 做了，見 522「續」）。
 - **號碼**：
   - 存檔：main 是 77，78 給 STATIONEXP。
   - 決策：main 用到 522，沒有 520.md。取號前先在 #1579 和 #1041 查 520 有沒有人留著；沒人留的話，下一個是 523。
@@ -2566,10 +2566,11 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - L3-8：沒有城市建築的世界，分區用土地格的用途算「第一棟」通知與「都市計畫」成就（`GameWorld.zonedUseBuilt`）。
   - L3-9：泡泡只拿掉「真的畫出來的」景點標記的提醒（蓋到地價的標記不算）。
   - L3-10：分區標記的重建鍵加上城市需求開關。
+  - 後來（UIFIX，session_01YGNNunwJCYnpcqxRuffiNA，`uifix-tails`）：
+    - L3-4：站長的「跟我做 5 分鐘教學」只在第 1 關真的開了之後才記下回答（`GameLauncher.startLesson` 回傳有沒有開）；自動存檔失敗、留在這局時提議還在。測試 `FirstLineGuideTests.testAFailedAutosaveKeepsTheOffer`。
+    - L3-9 的小差：泡泡、景點標記（兩層）、選站標籤算地價標籤時都用 `max(clear.top, topColumnDepth)`（和地圖畫地價的同一個頂端），`MapAlertBubbles`／`MapStationTagView` 多一個 `clearTop`。
 - **沒修、留給之後**：
   - L3-3：歸 ALISHAN2（§23.1 第 9 名）。
-  - L3-4（自動存檔失敗時站長的教學提議不再出現）：要改 `GameLauncher.swift`（偏好在存檔成功後才寫），和 HANG2-P2 的 PR 撞檔，這次不動；等 HANG2-P2 的 PR 都合了再做，一行加一個測試。
-  - L3-9 的小差：選地（`isChoosingMapTile`）時景點標記是淡的那一層，它的地價標籤從 `max(clear.top, topColumnDepth)` 算，泡泡這邊用 `insets.top`；只有靠近畫面頂端的景點可能差一個。
   - L3-11（每幀多做的掃描）：L1-2 的記憶已經省掉泡泡與標記的重算；`StationLayout` 車站模式的 `trackBeside` 還沒量也沒改，交給查主執行緒停頓的工作順便量。
 - **UNVERIFIED**：L1-2、L1-3、L2-3、L3-6、L3-7、L3-9、L3-10 是 App 的程式，Linux 編不到，靠 PR 的 iOS 建置；實機手感沒看。
 

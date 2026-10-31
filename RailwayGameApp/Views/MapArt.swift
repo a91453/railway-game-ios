@@ -1937,7 +1937,7 @@ enum MapArt {
             let colour = overlay.zoneDragColor.map { Color($0) } ?? Color.gray
             let shape = Path(rect)
             if overlay.zoneDragColor != nil {
-                context.fill(shape, with: .color(colour.opacity(0.35)))
+                context.fill(shape, with: .color(colour.opacity(BuildingOverlay.zoneDragFillOpacity)))
             }
             // Decision 522: the cells no station reaches, which the town
             // would never build on, in the zoning layer's "too far" grey.

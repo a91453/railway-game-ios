@@ -100,7 +100,8 @@ struct MapAttractionMarks: View {
     /// tap's reach, in world units.
     private var touchGuards: (stations: [ScreenPoint], bubbles: [MapLabelPlacement.Box], reach: Int64) {
         let stations = MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport).map { ScreenPoint(x: $0.x, y: $0.y) }
-        let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets).map(\.touchBox)
+        let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets,
+                                                  clearTop: clearTop).map(\.touchBox)
         return (stations, bubbles, Int64(camera.worldDistance(MapClutter.stationGuard)))
     }
 
