@@ -373,8 +373,9 @@ struct NetworkControls: View {
                     .monospacedDigit()
             }
             // Decision 184, later: drawn from the stations' names alone, so
-            // a running game's ticks leave the open menu alone.
-            let stations = session.stationMenuChoices
+            // a running game's ticks leave the open menu alone. Decision
+            // 519: the nearest the picked track first, with how far.
+            let stations = session.platformStationMenuChoices
             TickStable(StableKey(stations, session.platformStationID)) {
                 Picker("Platform station", selection: $session.platformStationID) {
                     Text("New station").tag(StationID?.none)
