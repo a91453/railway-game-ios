@@ -99,6 +99,19 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         return world
     }
 
+    /// Decision 522: the zoning drag the zoning scene's screenshot holds
+    /// down: a box some 2 km a side round the new station 1.5 km east,
+    /// reaching back to the town's edge, so the drag shows cells in reach
+    /// and the grey ones past it.
+    public static func zoningDrag(in world: GameWorld) -> (from: PlanPoint, to: PlanPoint) {
+        let row = Int((world.bounds.height / 2) / Land.cellLength)
+        let column = Int((world.bounds.width / 2) / Land.cellLength)
+        func middle(_ row: Int, _ column: Int) -> PlanPoint {
+            PlanPoint(x: Int64(column) * Land.cellLength + Land.cellLength / 2, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
+        }
+        return (middle(row - 15, column + 9), middle(row + 15, column + 39))
+    }
+
     // MARK: - Freight
 
     /// How long the freight scene runs before it is shown: to 08:00:30 on
