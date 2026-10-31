@@ -1384,7 +1384,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         // Touched at its frame's middle, as in testGameMenuAndRules.
         let frame = backToStart.frame
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
-        let leave = app.buttons["menu.leaveWithoutSaving"]
+        // An alert's button is in the tree twice.
+        let leave = app.buttons["menu.leaveWithoutSaving"].firstMatch
         XCTAssertTrue(leave.appears(within: 60), "The question to leave without saving")
         settle(seconds: 1)
         keep("leave-without-saving", app)
