@@ -638,21 +638,92 @@ extension GameSession {
     /// one it belongs to by default: 2048 units, 32 m (Stage C1).
     public static let platformStationReach: Int64 = 2_048
 
+    /// Decision 519: how far beside one of a station's platforms (along
+    /// its length, not out past its ends) a new platform's place may be to
+    /// belong to it by default, 100 m: a big station's tracks spread that
+    /// wide (Taipei Main's TRA and HSR tracks side by side), and a
+    /// player's track drawn beside them joins it.
+    public static let platformBesideReach: Int64 = 100 * WorldCoordinate.unitsPerMetre
+
     /// The station nearest the place `point` on the network, by where it
-    /// stands (``Station/location``), if one lies within
-    /// ``platformStationReach``; the lowest ID of equally near ones.
+    /// stands (``Station/location``) within ``platformStationReach``, or
+    /// by a platform the place lies beside, within ``platformBesideReach``
+    /// (decision 519); the lowest ID of equally near ones.
     private func nearestStation(to point: NetworkEdgePoint) -> StationID? {
         guard let position = world.trackGeometry(of: point.edge)?.location(at: point.distance).position else { return nil }
         let reach = Self.platformStationReach
         var best: (id: StationID, distance: Int64)?
+        func consider(_ id: StationID, _ squared: Int64) {
+            guard best == nil || squared < best!.distance || (squared == best!.distance && id.rawValue < best!.id.rawValue) else { return }
+            best = (id, squared)
+        }
         for station in world.stations {
             let centre = station.location
             let dx = centre.x - position.x, dy = centre.y - position.y
             let squared = dx * dx + dy * dy
-            guard squared <= reach * reach, best == nil || squared < best!.distance else { continue }
-            best = (station.id, squared)
+            if squared <= reach * reach { consider(station.id, squared) }
+        }
+        let beside = Double(Self.platformBesideReach)
+        for platform in world.network.platforms {
+            guard let distance = Self.besideDistance(from: position.plan, to: platform, in: world), distance <= beside else { continue }
+            consider(platform.station, Int64((distance * distance).rounded()))
         }
         return best?.id
+    }
+
+    /// How far `point` lies on the plan beside `platform`: from the
+    /// nearest place of its stretch of track, when that place is not one
+    /// of its ends, so a point out past an end (the next station along
+    /// the line) is not beside it; `nil` then, or when its edge is gone.
+    static func besideDistance(from point: PlanPoint, to platform: TrackPlatform, in world: GameWorld) -> Double? {
+        guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
+        let px = Double(point.x), py = Double(point.y)
+        var best: (squared: Double, along: Double)?
+        for index in geometry.points.indices.dropLast() {
+            let from = geometry.distances[index], to = geometry.distances[index + 1]
+            guard to > from, to >= platform.start, from <= platform.end else { continue }
+            let a = geometry.points[index], b = geometry.points[index + 1]
+            let ax = Double(a.x), ay = Double(a.y), dx = Double(b.x) - ax, dy = Double(b.y) - ay
+            // The part of this piece the platform covers, as fractions of it.
+            let low = max(0, Double(platform.start - from) / Double(to - from))
+            let high = min(1, Double(platform.end - from) / Double(to - from))
+            let span = dx * dx + dy * dy
+            let t = span > 0 ? min(high, max(low, ((px - ax) * dx + (py - ay) * dy) / span)) : low
+            let ex = ax + t * dx - px, ey = ay + t * dy - py
+            let squared = ex * ex + ey * ey
+            if best == nil || squared < best!.squared { best = (squared, Double(from) + t * Double(to - from)) }
+        }
+        guard let best, best.along > Double(platform.start), best.along < Double(platform.end) else { return nil }
+        return best.squared.squareRoot()
+    }
+
+    /// Decision 519: the stations for the Station mode's menu, nearest the
+    /// picked place first, each with how far it stands; in the world's
+    /// order, without distances, while no place is picked. A real-world
+    /// map has hundreds, and the one wanted is the one beside the track.
+    public var platformStationMenuChoices: [MenuChoice<StationID>] {
+        guard let place = networkEdgePoint, let position = world.trackGeometry(of: place.edge)?.location(at: place.distance).position else {
+            return stationMenuChoices
+        }
+        return world.stations
+            .map { station -> (station: Station, squared: Int64) in
+                let dx = station.location.x - position.x, dy = station.location.y - position.y
+                return (station, dx * dx + dy * dy)
+            }
+            .sorted { ($0.squared, $0.station.id.rawValue) < ($1.squared, $1.station.id.rawValue) }
+            .map { entry in
+                let units = Int64(Double(entry.squared).squareRoot().rounded())
+                return MenuChoice(id: entry.station.id, title: "\(entry.station.name) · \(NetworkBuilding.lengthText(units, in: language))")
+            }
+    }
+
+    /// Decision 519: how a track the player drew themselves gets a
+    /// platform of `station`, for the station panel's platforms.
+    public func ownTrackPlatformHelp(for station: Station) -> String {
+        language.text(
+            "For a track of your own to call here, tap it with the network tool's Station mode and choose \(station.name).",
+            "要讓自己拉的軌道停這站：用路網工具的「車站」點那條軌道，車站選「\(station.name)」。"
+        )
     }
 
     // MARK: - Trains
