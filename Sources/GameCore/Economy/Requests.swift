@@ -138,8 +138,8 @@ public struct CityRequests: Hashable, Sendable {
     public static let stationTripsFloor: Int64 = 500
     public static let networkTripsFloor: Int64 = 200
     public static let populationFloor: Int64 = 1_000
-    /// The most a request pays: $10 million.
-    public static let maximumReward = Money(1_000_000_000)
+    /// The most a request pays: NT$30 million (decision 499).
+    public static let maximumReward = Money(3_000_000_000)
 
     public init(seed: UInt32) {
         self.seed = seed
@@ -388,32 +388,32 @@ extension GameWorld {
             let near = active.filter { $0.kind == .newStation }.compactMap(\.point)
             guard let place = largestUnservedSettlement(avoiding: near) else { return nil }
             return CityRequest(id: id, kind: kind, point: place.point, baseline: place.people, target: CityRequests.settlementCalls,
-                               reward: CityRequests.reward(dollars: 300_000 + 50 * place.people), days: days, offeredDay: day)
+                               reward: CityRequests.reward(dollars: 900_000 + 150 * place.people), days: days, offeredDay: day)
         case .stationRiders:
             let candidates = served.filter { (stationDemand(of: $0)?.dailyTrips ?? 0) >= CityRequests.stationTripsFloor }
             guard let station = pick(candidates), let trips = stationDemand(of: station)?.dailyTrips else { return nil }
             let target = CityRequests.ceiling(trips, 14, 10)
             return CityRequest(id: id, kind: kind, station: station, baseline: trips, target: target,
-                               reward: CityRequests.reward(dollars: 40 * (target - trips), floor: 200_000), days: days, offeredDay: day)
+                               reward: CityRequests.reward(dollars: 120 * (target - trips), floor: 600_000), days: days, offeredDay: day)
         case .networkRiders:
             guard !active.contains(where: { $0.kind == .networkRiders }), let best = cityRequests?.bestDayTrips,
                   best >= CityRequests.networkTripsFloor else { return nil }
             let target = CityRequests.ceiling(best, 125, 100)
             return CityRequest(id: id, kind: kind, baseline: best, target: target,
-                               reward: CityRequests.reward(dollars: 20 * (target - best), floor: 200_000), days: days, offeredDay: day)
+                               reward: CityRequests.reward(dollars: 60 * (target - best), floor: 600_000), days: days, offeredDay: day)
         case .materials:
             guard let state = freight, state.buildingMaterials, let station = pick(state.lastShort.filter { self.station(id: $0) != nil }) else {
                 return nil
             }
             let tons = 7 * Self.dailyMaterialsNeed
             return CityRequest(id: id, kind: kind, station: station, baseline: 0, target: tons,
-                               reward: CityRequests.reward(dollars: 30 * tons, floor: 200_000), days: days, offeredDay: day)
+                               reward: CityRequests.reward(dollars: 90 * tons, floor: 600_000), days: days, offeredDay: day)
         case .population:
             let candidates = served.filter { (landCatchment(of: $0)?.residents ?? 0) >= CityRequests.populationFloor }
             guard let station = pick(candidates), let residents = landCatchment(of: station)?.residents else { return nil }
             let target = CityRequests.ceiling(residents, 12, 10)
             return CityRequest(id: id, kind: kind, station: station, baseline: residents, target: target,
-                               reward: CityRequests.reward(dollars: 100 * (target - residents), floor: 1_000_000), days: days, offeredDay: day)
+                               reward: CityRequests.reward(dollars: 300 * (target - residents), floor: 3_000_000), days: days, offeredDay: day)
         case .tourism:
             guard let sights = tourism?.attractions else { return nil }
             let busy = Set(active.filter { $0.kind == .tourism }.compactMap(\.attraction))
@@ -428,7 +428,7 @@ extension GameWorld {
             let share: Int64 = servingStation(at: sight.point) == nil ? 600 : 1_200
             let target = max(1, CityRequests.ceiling(expected, share, 1_000))
             return CityRequest(id: id, kind: kind, attraction: sight.id, baseline: 0, target: target,
-                               reward: CityRequests.reward(dollars: 10 * target, floor: 500_000), days: days, offeredDay: day)
+                               reward: CityRequests.reward(dollars: 30 * target, floor: 1_500_000), days: days, offeredDay: day)
         }
     }
 

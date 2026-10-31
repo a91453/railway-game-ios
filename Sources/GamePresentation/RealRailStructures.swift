@@ -96,6 +96,7 @@ public struct RealRailStructures: Sendable, Equatable {
                 min(a.x, b.x) <= box.x.upperBound && box.x.lowerBound <= max(a.x, b.x)
                     && min(a.y, b.y) <= box.y.upperBound && box.y.lowerBound <= max(a.y, b.y)
             }) || points.contains(where: { box.x.contains($0.x) && box.y.contains($0.y) }) else { continue }
+            let whole = zip(points, points.dropFirst()).reduce(0) { $0 + ($1.1 - $1.0).length }
             var samples = [points[0]]
             for (a, b) in zip(points, points.dropFirst()) {
                 let steps = max(1, Int(((b - a).length / Self.sampleSpacing).rounded(.up)))
@@ -106,7 +107,7 @@ public struct RealRailStructures: Sendable, Equatable {
                 defer { run = []; length = 0 }
                 guard run.count >= 2, let start = run.min(), let end = run.max(), end - start >= Self.alongShare * length else { return }
                 guard (first == 0 && last == samples.count - 1) || end - start >= Self.shortestPart else { return }
-                found.append(TrackRise.Carried(range: start...end, kind: structure.kind))
+                found.append(TrackRise.Carried(range: start...end, kind: structure.kind, length: whole))
             }
             for (index, sample) in samples.enumerated() {
                 let inBox = box.x.contains(sample.x) && box.y.contains(sample.y)
@@ -123,7 +124,10 @@ public struct RealRailStructures: Sendable, Equatable {
         for kind in [Kind.bridge, .tunnel] {
             for stretch in found.filter({ $0.kind == kind }).sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
                 if let last = merged.last, last.kind == kind, stretch.range.lowerBound <= last.range.upperBound {
-                    merged[merged.count - 1] = TrackRise.Carried(range: last.range.lowerBound...max(last.range.upperBound, stretch.range.upperBound), kind: kind)
+                    merged[merged.count - 1] = TrackRise.Carried(
+                        range: last.range.lowerBound...max(last.range.upperBound, stretch.range.upperBound), kind: kind,
+                        length: max(last.length, stretch.length)
+                    )
                 } else {
                     merged.append(stretch)
                 }

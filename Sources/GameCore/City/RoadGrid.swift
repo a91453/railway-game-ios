@@ -43,9 +43,9 @@ public struct RoadGrid: Hashable, Sendable {
     /// The farthest a station draws a road from, in cells each way (16 km):
     /// past it the roads leave it alone.
     public static let growthReach = 256
-    /// What a station road costs a metre: $50, half the track's $100
-    /// (decision 400's research 3.2).
-    public static let pricePerMetre = Money(5_000)
+    /// What a station road costs a metre: NT$150, half the track's NT$300
+    /// (decision 400's research 3.2, times 3 by decision 499).
+    public static let pricePerMetre = Money(15_000)
     /// The longest station road: 512 m, eight cells in a line.
     public static let stationRoadMetres: Int64 = 512
     /// A cell's side, and the way across one corner to corner, in metres

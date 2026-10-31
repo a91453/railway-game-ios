@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 66,
+  "schemaVersion": 75,
   "description": "Door crowding (ARCHITECTURE decision 169) on boarding.json's world: nodes a (512, 1536) to g (6656, 1536), 1024 units apart, Alpha, Beta and Gamma with a platform either side of their nodes, Main (Alpha, Beta, Gamma) all day, Blue (one car, standard: 320 rated, 352 taken, 4 doors, 8 passengers a second) on it; Alpha (residential, 1,000,000 a day) fills its queue of 4000 within a minute of 07:50. Door crowding is turned on. Blue is sent out at 480 (28,800 s); its doors have opened at 28,808 and the 352 it takes on (225 for Beta, 127 for Gamma, as boarding.json) are boarded at once, but the exchange takes as long as the crowd at the doors makes it: the crowd is the larger of the riders over what the train is rated for (0 of 320) and the passengers waiting over what a station holds (4000 of 4000), 1,000 thousandths, so the time is multiplied by 1 + 1.5 x 1.0^4 = 2.5 (2,500 thousandths) and 352 take ceil(352 x 2500 / 8000) = 110 s, not the 44 of boarding.json: the exchange ends at 28,918 (boarding.json: 28,852) and the doors start closing then, the latest of it, the least dwell at a terminal less the doors' 9 s (28,800 + 42 - 9 = 28,833) and the scheduled departure less 9 s (28,842 - 9 = 28,833). Every expected value that does not depend on the crowd is boarding.json's own (the riders and Alpha's ledger at 481:00); those that do are worked out in tools/golden-checks/door_crowding.py from the rule in the decision, not from the Swift code: at 481:00 (28,860) the train is 18 s late and the exchange is not over; at 482:00 (28,920) the doors are closing (since 28,918) and it is 78 s late.",
   "initialState": {
     "worldWidth": 8192,
     "worldHeight": 4096,
-    "balance": 1000000,
+    "balance": 3000000,
     "costs": {
-      "track": 1000,
-      "station": 50000,
-      "train": 200000
+      "track": 3000,
+      "station": 150000,
+      "train": 600000
     },
     "gameMinutes": 470,
     "speed": "normal"
@@ -580,7 +580,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 644000,
+    "balance": 1932000,
     "doorCrowding": true,
     "gameMinutes": 482,
     "lines": [

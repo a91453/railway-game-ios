@@ -119,7 +119,7 @@ final class RealCarLengthTests: XCTestCase {
     /// lengths, a twelve-car high-speed set, a four-car medium metro and a
     /// standard train of one car.
     func testVersionSixtyTwoKeepsTheCarLengths() throws {
-        var world = try makeWorld(real: true)
+        var world = try NTScale.$factor.withValue(3) { try makeWorld(real: true) }
         let set = try world.purchaseTrain(named: "THSR 101", as: .highSpeed)
         try world.setTrainCars(set.id, to: 12)
         let metro = try world.purchaseTrain(named: "Metro 1", as: .b)
@@ -139,7 +139,7 @@ final class RealCarLengthTests: XCTestCase {
         XCTAssertEqual(loaded, world)
         XCTAssertTrue(loaded.realCarLengths)
         XCTAssertEqual(loaded.trains.map(\.length), [11 * 1_600, 3 * 1_248, 0])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 62,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 62,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

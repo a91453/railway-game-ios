@@ -19,6 +19,10 @@
 // - since decision 131 (native: the reference has no tax), each day's end
 //   also pays half of what the day made before tax beyond $100,000.
 //
+// Decision 499: amounts are New Taiwan dollars at 3 to the reference's
+// dollar, so every rate above is written times 3 below (225·departures,
+// 1,860·stations, …) and rounds to whole New Taiwan dollars.
+//
 // Nothing happens in the free economy mode, the default.
 
 extension GameWorld {
@@ -102,6 +106,18 @@ extension GameWorld {
         let table = fares.sorted { $0.key < $1.key }
         guard HighSpeedFare.isTable(table) else { throw .invalidFareRules }
         accounts.highSpeedFares = table
+    }
+
+    /// Decision 499: a world saved before version 76 kept the real
+    /// high-speed fares at NT$10 to its dollar, read times 3 like every
+    /// amount; this makes each the real table's New Taiwan dollars, times
+    /// 10 in all (exact: each was read as a multiple of 3). A fare that
+    /// would pass ``FareRules/maximumFare`` stays as it is.
+    mutating func convertHighSpeedFaresToNewTaiwanDollars() {
+        accounts.highSpeedFares = accounts.highSpeedFares.map { pair in
+            let fare = pair.fare.amount / 3 * 10
+            return fare <= FareRules.maximumFare.amount ? HighSpeedFare(between: pair.from, and: pair.to, fare: Money(fare)) : pair
+        }
     }
 
     /// Borrows `amount` from the bank (decision 67): the balance goes up by
@@ -339,12 +355,12 @@ extension GameWorld {
         let km = Self.unitsPerKilometre
         // 75·departures + 42·train-km + 18·stations, over 64000.
         let operating = Self.roundedDollars(
-            (75 * pending.departures + 18 * assets.stations) * km + 42 * pending.trainDistance, over: km
+            (225 * pending.departures + 54 * assets.stations) * km + 126 * pending.trainDistance, over: km
         )
         // The trains' weight is in thousandths, so the sum is over a
         // thousand kilometres' worth of units; a world without rolling-stock
         // economics weighs 1,000 a train and rounds as it always did.
-        let maintenance = Self.roundedDollars((12 * assets.routeLength + 9 * pending.trainDistance) * 1_000 + 8 * assets.trainWeight * km, over: km * 1_000)
+        let maintenance = Self.roundedDollars((36 * assets.routeLength + 27 * pending.trainDistance) * 1_000 + 24 * assets.trainWeight * km, over: km * 1_000)
         accounts.pending = .empty
         countDepotHour(assets: assets)
         // Decision 179: the lines' shares of the hour.
@@ -373,15 +389,15 @@ extension GameWorld {
         let day = dayIndex(of: time)
         // Each part is rounded on its own; the total is the rounded sum, as
         // in the reference, so they may differ by a dollar.
-        var routeEnergy = Self.roundedDollars(220 * assets.routeLength, over: km)
-        var trainEnergy = Self.roundedDollars(360 * assets.trainWeight, over: 1_000)
+        var routeEnergy = Self.roundedDollars(660 * assets.routeLength, over: km)
+        var trainEnergy = Self.roundedDollars(1_080 * assets.trainWeight, over: 1_000)
         var energy = routeEnergy + trainEnergy
         // Decision 162: a fuel spell makes the day's energy dearer or
         // cheaper, each part rounded to whole dollars and the row their sum
         // (a ledger row is its breakdown's sum).
         if let index = fuelSpell(onDay: day)?.index {
-            routeEnergy = Self.roundedDollars(220 * assets.routeLength * index, over: km * 1_000)
-            trainEnergy = Self.roundedDollars(360 * assets.trainWeight * index, over: 1_000_000)
+            routeEnergy = Self.roundedDollars(660 * assets.routeLength * index, over: km * 1_000)
+            trainEnergy = Self.roundedDollars(1_080 * assets.trainWeight * index, over: 1_000_000)
             energy = routeEnergy + trainEnergy
         }
         if energy > .zero {
@@ -399,17 +415,17 @@ extension GameWorld {
                 breakdown: [LedgerLine(item: .loanInterest, amount: .zero - interest)]
             ), day: day)
         }
-        let trainStaff = Self.roundedDollars(480 * assets.trainWeight, over: 1_000)
+        let trainStaff = Self.roundedDollars(1_440 * assets.trainWeight, over: 1_000)
         settleLineDay(day: day, assets: assets, routeEnergy: routeEnergy, trainEnergy: trainEnergy, trainStaff: trainStaff)
         // Decision 223: the trip log keeps the day that ended and the new
         // one.
         dropTrips(before: day)
-        let staff = Money(620 * assets.stations * 100) + trainStaff
+        let staff = Money(1_860 * assets.stations * 100) + trainStaff
         if staff > .zero {
             write(LedgerEntry(
                 kind: .dailyStaff, time: time, amount: .zero - staff,
                 breakdown: [
-                    LedgerLine(item: .stationStaff, amount: Money(-620 * assets.stations * 100)),
+                    LedgerLine(item: .stationStaff, amount: Money(-1_860 * assets.stations * 100)),
                     LedgerLine(item: .trainStaff, amount: .zero - trainStaff),
                 ]
             ), day: day)
@@ -561,7 +577,7 @@ extension GameWorld {
         }
         guard (.zero...CompanyAccounts.maximumLoan).contains(accounts.loan),
               accounts.loan.amount % CompanyAccounts.loanStep.amount == 0 else {
-            return "The loan must be whole steps of $100,000, up to the most the bank lends."
+            return "The loan must be whole loan steps, up to the most the bank lends."
         }
         guard accounts.entries.allSatisfy({ $0.time <= clock.now }) else { return "Ledger rows cannot be dated after now." }
         if let opened = accounts.openedAt {

@@ -42,12 +42,12 @@ final class LandValueTests: XCTestCase {
         let rows = Int((world.bounds.height + 4_095) / 4_096), columns = Int((world.bounds.width + 4_095) / 4_096)
         guard row >= 0, column >= 0, row < rows, column < columns else { return nil }
         let uses: [LandUse: Int64] = [
-            .residential: 2_000, .commercial: 3_000, .office: 3_500,
+            .residential: 6_000, .commercial: 9_000, .office: 10_500,
             // Decision 91's.
-            .industrial: 1_500, .civic: 2_500, .leisure: 3_000, .agricultural: 600, .park: 1_200,
+            .industrial: 4_500, .civic: 7_500, .leisure: 9_000, .agricultural: 1_800, .park: 3_600,
         ]
         let factors: [Int64] = [1_000, 1_250, 1_600, 2_000]
-        var b: Int64 = 1_000, d: Int64 = 1_000
+        var b: Int64 = 3_000, d: Int64 = 1_000
         if let building = world.buildings.all.first(where: { $0.cells.contains(CellPosition(row: row, column: column)) }) {
             b = uses[building.use]!
             d = factors[building.density.rawValue - 1]
@@ -71,14 +71,14 @@ final class LandValueTests: XCTestCase {
                 }
             }
         }
-        // Decision 91: 600 within 400 m of a park's middle.
+        // Decision 91: 1,800 within 400 m of a park's middle.
         let nearPark = world.land.cells.contains { cell in
             let dx = Int64(cell.column - column) * 4_096, dy = Int64(cell.row - row) * 4_096
             return cell.use == .park && dx * dx + dy * dy < 25_600 * 25_600
         }
-        let p: Int64 = nearPark ? 600 : 0
-        let total = min(50_000, max(500, base + 15 * s + 1_000 * a + p))
-        return LandValue(value: total, base: base, servicePremium: 15 * s, accessPremium: 1_000 * a, station: station, parkPremium: p)
+        let p: Int64 = nearPark ? 1_800 : 0
+        let total = min(150_000, max(1_500, base + 45 * s + 3_000 * a + p))
+        return LandValue(value: total, base: base, servicePremium: 45 * s, accessPremium: 3_000 * a, station: station, parkPremium: p)
     }
 
     // MARK: - The study's examples
@@ -86,20 +86,20 @@ final class LandValueTests: XCTestCase {
     func testTheStudysExamples() throws {
         // D2 homes 400 m (25,600 units) from a station that served 800
         // thousandths and reached 3: w = 1000 − 250 = 750, S = 600,
-        // base 2000 × 1250 / 1000 = 2500, 2500 + 9000 + 3000 = 14,500.
+        // base 6000 × 1250 / 1000 = 7500, 7500 + 27000 + 9000 = 43,500.
         let home = LandCell(row: 5, column: 5, use: .residential, residents: 100, jobs: 0)
         var station = Self.point(row: 5, column: 5)
         station = PlanPoint(x: station.x + 25_600, y: station.y)
         var world = try world([home], stations: [station], service: [800], reached: [3])
         XCTAssertEqual(world.buildings.building(row: 5, column: 5)?.density, .d2)
-        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 14_500, base: 2_500, servicePremium: 9_000, accessPremium: 3_000, station: StationID(rawValue: 1)))
-        // No service: its base, 2,500.
+        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 43_500, base: 7_500, servicePremium: 27_000, accessPremium: 9_000, station: StationID(rawValue: 1)))
+        // No service: its base, 7,500.
         world = try self.world([home], stations: [station], service: [0], reached: [3])
-        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 2_500, base: 2_500, servicePremium: 0, accessPremium: 0, station: nil))
-        // D4 offices at a fully served station reaching 5: 7000 + 15000 + 5000.
+        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 7_500, base: 7_500, servicePremium: 0, accessPremium: 0, station: nil))
+        // D4 offices at a fully served station reaching 5: 21000 + 45000 + 15000.
         let office = LandCell(row: 5, column: 5, use: .office, residents: 0, jobs: 1_600)
         world = try self.world([office], stations: [Self.point(row: 5, column: 5)], service: [1_000], reached: [5])
-        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 27_000, base: 7_000, servicePremium: 15_000, accessPremium: 5_000, station: StationID(rawValue: 1)))
+        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 81_000, base: 21_000, servicePremium: 45_000, accessPremium: 15_000, station: StationID(rawValue: 1)))
     }
 
     func testTheCatchmentEdgeIsStrict() throws {
@@ -109,10 +109,11 @@ final class LandValueTests: XCTestCase {
         // Homes at the station's own cell give it ridership to measure.
         let homes = [LandCell(row: 5, column: 18, use: .residential, residents: 100, jobs: 0)]
         var world = try world(homes, stations: [PlanPoint(x: middle.x + 51_200, y: middle.y)], service: [1_000], reached: [2])
-        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 1_000, base: 1_000, servicePremium: 0, accessPremium: 0, station: nil))
+        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 3_000, base: 3_000, servicePremium: 0, accessPremium: 0, station: nil))
         world = try self.world(homes, stations: [PlanPoint(x: middle.x + 51_199, y: middle.y)], service: [1_000], reached: [2])
-        // w = 1000 − floor(51199² × 1000 / 51200²) = 1000 − 999 = 1: S = 1.
-        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 3_015, base: 1_000, servicePremium: 15, accessPremium: 2_000, station: StationID(rawValue: 1)))
+        // w = 1000 − floor(51199² × 1000 / 51200²) = 1000 − 999 = 1: S = 1,
+        // 45 a point.
+        XCTAssertEqual(world.landValue(row: 5, column: 5), LandValue(value: 9_045, base: 3_000, servicePremium: 45, accessPremium: 6_000, station: StationID(rawValue: 1)))
     }
 
     func testTheBestStationSetsItAndATieGoesToTheLower() throws {
@@ -123,33 +124,33 @@ final class LandValueTests: XCTestCase {
         // The same distance and service: the lower station, its reach.
         var world = try world(homes, stations: [east, west], service: [900, 900], reached: [1, 4])
         XCTAssertEqual(world.landValue(row: 5, column: 5)?.station, StationID(rawValue: 1))
-        XCTAssertEqual(world.landValue(row: 5, column: 5)?.accessPremium, 1_000)
+        XCTAssertEqual(world.landValue(row: 5, column: 5)?.accessPremium, 3_000)
         // The better served one wins, though it reaches less.
         world = try self.world(homes, stations: [east, west], service: [900, 950], reached: [4, 1])
         XCTAssertEqual(world.landValue(row: 5, column: 5)?.station, StationID(rawValue: 2))
-        XCTAssertEqual(world.landValue(row: 5, column: 5)?.accessPremium, 1_000)
+        XCTAssertEqual(world.landValue(row: 5, column: 5)?.accessPremium, 3_000)
         XCTAssertEqual(world.landValue(row: 5, column: 5), Self.reference(world, row: 5, column: 5))
     }
 
     func testTheValueStaysWithinItsBounds() {
-        XCTAssertEqual(LandValueRules.value(base: 0, service: 0, access: 0), 500)
-        XCTAssertEqual(LandValueRules.value(base: 499, service: 0, access: 0), 500)
-        XCTAssertEqual(LandValueRules.value(base: 7_000, service: 15_000, access: 5_000), 27_000)
-        XCTAssertEqual(LandValueRules.value(base: 40_000, service: 15_000, access: 5_000), 50_000)
+        XCTAssertEqual(LandValueRules.value(base: 0, service: 0, access: 0), 1_500)
+        XCTAssertEqual(LandValueRules.value(base: 1_499, service: 0, access: 0), 1_500)
+        XCTAssertEqual(LandValueRules.value(base: 21_000, service: 45_000, access: 15_000), 81_000)
+        XCTAssertEqual(LandValueRules.value(base: 120_000, service: 45_000, access: 15_000), 150_000)
     }
 
     func testWithoutTheLandSettingRidershipOnlyTheBaseCounts() throws {
         let home = LandCell(row: 5, column: 5, use: .commercial, residents: 0, jobs: 100)
         var world = try world([home], stations: [Self.point(row: 5, column: 5)], service: [1_000], reached: [5])
-        XCTAssertEqual(world.landValue(row: 5, column: 5)?.value, 3_750 + 15_000 + 5_000)
+        XCTAssertEqual(world.landValue(row: 5, column: 5)?.value, 11_250 + 45_000 + 15_000)
         var free = world
         free.setEconomyMode(.free)
-        XCTAssertEqual(free.landValue(row: 5, column: 5), LandValue(value: 3_750, base: 3_750, servicePremium: 0, accessPremium: 0, station: nil))
+        XCTAssertEqual(free.landValue(row: 5, column: 5), LandValue(value: 11_250, base: 11_250, servicePremium: 0, accessPremium: 0, station: nil))
         var off = world
         off.setLandDemand(false)
-        XCTAssertEqual(off.landValue(row: 5, column: 5)?.value, 3_750)
+        XCTAssertEqual(off.landValue(row: 5, column: 5)?.value, 11_250)
         world.setTownGrowth(false)
-        XCTAssertEqual(world.landValue(row: 5, column: 5)?.value, 3_750)
+        XCTAssertEqual(world.landValue(row: 5, column: 5)?.value, 11_250)
     }
 
     func testUsesAndDensitiesSetTheBase() throws {
@@ -159,12 +160,12 @@ final class LandValueTests: XCTestCase {
             LandCell(row: 1, column: 3, use: .commercial, residents: 0, jobs: 1_000),
             LandCell(row: 1, column: 4, use: .office, residents: 0, jobs: 5_000),
         ], stations: [], service: [], reached: [])
-        // D1 homes 2000; D3 homes 3200; D4 shops 6000; existing stock
-        // offices (D4) 7000; an empty cell 1000.
-        XCTAssertEqual((1...5).map { world.landValue(row: 1, column: $0)?.base }, [2_000, 3_200, 6_000, 7_000, 1_000])
+        // D1 homes 6000; D3 homes 9600; D4 shops 18000; existing stock
+        // offices (D4) 21000; an empty cell 3000.
+        XCTAssertEqual((1...5).map { world.landValue(row: 1, column: $0)?.base }, [6_000, 9_600, 18_000, 21_000, 3_000])
         // Without buildings, the land's use at D 1000.
         world.setCityBuildings(false)
-        XCTAssertEqual((1...5).map { world.landValue(row: 1, column: $0)?.base }, [2_000, 2_000, 3_000, 3_500, 1_000])
+        XCTAssertEqual((1...5).map { world.landValue(row: 1, column: $0)?.base }, [6_000, 6_000, 9_000, 10_500, 3_000])
         // Outside the world, none.
         for (row, column) in [(-1, 0), (0, -1), (24, 0), (0, 32)] {
             XCTAssertNil(world.landValue(row: row, column: column))
@@ -177,7 +178,7 @@ final class LandValueTests: XCTestCase {
         XCTAssertEqual(world.landValues(rows: 20...40, columns: 30...40).count, 4 * 2)
     }
 
-    /// Decision 91: the five more uses' bases, and a park adds 600 to every
+    /// Decision 91: the five more uses' bases, and a park adds 1,800 to every
     /// cell whose middle lies within 400 m of its middle.
     func testTheNewUsesBasesAndTheLandRoundAPark() throws {
         let world = try world([
@@ -187,18 +188,18 @@ final class LandValueTests: XCTestCase {
             LandCell(row: 1, column: 4, use: .agricultural, residents: 3, jobs: 8),
             LandCell(row: 10, column: 10, use: .park, residents: 0, jobs: 0),
         ], stations: [], service: [], reached: [])
-        // All D1: factories 1500, schools 2500, sights 3000, farms 600.
-        XCTAssertEqual((1...4).map { world.landValue(row: 1, column: $0)?.value }, [1_500, 2_500, 3_000, 600])
+        // All D1: factories 4500, schools 7500, sights 9000, farms 1800.
+        XCTAssertEqual((1...4).map { world.landValue(row: 1, column: $0)?.value }, [4_500, 7_500, 9_000, 1_800])
         XCTAssertEqual((1...4).map { world.landValue(row: 1, column: $0)?.parkPremium }, [0, 0, 0, 0])
-        // The park itself, 1200 and its own 600.
-        XCTAssertEqual(world.landValue(row: 10, column: 10), LandValue(value: 1_800, base: 1_200, servicePremium: 0, accessPremium: 0, station: nil, parkPremium: 600))
+        // The park itself, 3600 and its own 1800.
+        XCTAssertEqual(world.landValue(row: 10, column: 10), LandValue(value: 5_400, base: 3_600, servicePremium: 0, accessPremium: 0, station: nil, parkPremium: 1_800))
         // Six cells east (393 m) is near, seven (459 m) is not; four
         // across and four down (370 m) is, four and five (419 m) is not.
-        XCTAssertEqual(world.landValue(row: 10, column: 16)?.value, 1_600)
-        XCTAssertEqual(world.landValue(row: 10, column: 17)?.value, 1_000)
-        XCTAssertEqual(world.landValue(row: 14, column: 14)?.value, 1_600)
-        XCTAssertEqual(world.landValue(row: 14, column: 15)?.value, 1_000)
-        XCTAssertEqual(world.landValue(row: 4, column: 10)?.parkPremium, 600)
+        XCTAssertEqual(world.landValue(row: 10, column: 16)?.value, 4_800)
+        XCTAssertEqual(world.landValue(row: 10, column: 17)?.value, 3_000)
+        XCTAssertEqual(world.landValue(row: 14, column: 14)?.value, 4_800)
+        XCTAssertEqual(world.landValue(row: 14, column: 15)?.value, 3_000)
+        XCTAssertEqual(world.landValue(row: 4, column: 10)?.parkPremium, 1_800)
         XCTAssertEqual(world.landValue(row: 3, column: 10)?.parkPremium, 0)
         for row in 0..<24 {
             for column in 0..<32 {

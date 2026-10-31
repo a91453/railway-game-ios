@@ -128,8 +128,8 @@ extension Challenge {
     )
 
     /// The tycoon's year of profit and the company's worth.
-    static let tycoonProfit = Money(30_000_000_000)
-    static let tycoonEquity = Money(80_000_000_000)
+    static let tycoonProfit = Money(90_000_000_000)
+    static let tycoonEquity = Money(240_000_000_000)
 
     /// Build a railway company worth a fortune.
     static let tycoon = Challenge(

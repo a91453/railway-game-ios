@@ -132,6 +132,8 @@ struct MapStationTagView: View {
             height: viewport.height - Double(insets.top) - Double(insets.bottom) - 2 * margin
         )
         let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets).map(\.touchBox)
+            // Decision 510: and the badge of the alerts not on the map.
+            + [MapAlertBubbles.badgeTouchBox(session: session, camera: camera, viewport: viewport, insets: insets)].compactMap { $0 }
         // Decision 501: and, moved, off the other stations where it can.
         let stations = MapLabelPlacement.obstacles(MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport),
                                                    radius: MapArt.stationRadius(camera), own: (point.x, point.y))

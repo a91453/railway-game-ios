@@ -16,7 +16,7 @@ final class TrackSectionTests: XCTestCase {
     private static let row: Int64 = 2_048
 
     private func world() -> GameWorld {
-        GameWorld(bounds: Self.bounds, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        GameWorld(bounds: Self.bounds, economy: fixtureEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
     }
 
     /// A world with ground whose block (0, 0) has corner column c at
@@ -108,13 +108,16 @@ final class TrackSectionTests: XCTestCase {
     }
 
     /// The edge's own ends stand on the ground; a node goes at most 64 m
-    /// above or below the ground under it.
-    func testANodeStaysWithin64MetresOfTheGround() throws {
+    /// above the ground under it, and (decision 513) 1,024 m below it, as
+    /// a tunnel under a mountain does.
+    func testANodeStaysWithin64MetresAboveTheGroundAnd1024BelowIt() throws {
         var world = try world(columns: [100])
         XCTAssertEqual(world.groundHeight(at: PlanPoint(x: 1_024, y: Self.row)), 6_400)
         XCTAssertNoThrow(try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: Self.row, z: 6_400 + 4_096)))
         XCTAssertNoThrow(try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: Self.row, z: 6_400 - 4_096)))
-        for z: Int64 in [6_400 + 4_097, 6_400 - 4_097, 0] {
+        XCTAssertNoThrow(try world.buildTrackNode(at: WorldCoordinate(x: 4_096, y: Self.row, z: 0)), "100 m down, under the hill")
+        XCTAssertNoThrow(try world.buildTrackNode(at: WorldCoordinate(x: 5_120, y: Self.row, z: 6_400 - 65_536)))
+        for z: Int64 in [6_400 + 4_097, 6_400 - 65_537] {
             XCTAssertThrowsError(try world.buildTrackNode(at: WorldCoordinate(x: 3_072, y: Self.row, z: z))) {
                 XCTAssertEqual($0 as? GameError, .invalidTrackGeometry)
             }
@@ -349,13 +352,13 @@ final class TrackSectionTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 28)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.terrainTrackWorld())
+        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.terrainTrackWorld() })
         XCTAssertTrue(world.ground.isMapped)
         let kinds = world.network.edges.map { Set($0.sections.map(\.kind)) }
         XCTAssertEqual(kinds.count, 2)
         XCTAssertTrue(kinds[0].contains(.bridge))
         XCTAssertEqual(kinds[1], [.tunnel])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 28,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 28,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

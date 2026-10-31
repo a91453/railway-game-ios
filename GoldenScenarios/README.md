@@ -1017,3 +1017,10 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 最後 Main 沒有商業、Halt 是 `"commerce": 1`，餘額 614,998,000。
 - 每個值都是手算的（價錢是決策 222 的表）；不推進時間，一天的結算由 `StationCommerceTests` 驗。最終狀態的其他欄位照 `map-expansion-once.json` 的空世界。
 - 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 499：金額改新台幣（schema 75）
+
+- 沒有新指令或新欄位；每份 fixture 的 `schemaVersion` 改成 75，金額的意思從參考庫的美元換成新台幣（NT$3＝$1）。
+- 輸入乘 3（`tools/golden-checks/nt_scale.py --rewrite-inputs`）：起始餘額、建造成本、`setFareRules` 的票價；期望值換成 GameCore 給的值（`--apply-log`）。
+- `python3 -I tools/golden-checks/nt_scale.py --verify` 比對 main：1,139 個金額剛好是舊值的 3 倍；449 個在各 fixture 寫明的湊整內（`ROUNDED`：每小時的成本、一批車費與每條路線一天的分攤從 3 倍的分只湊一次整元，每列每小時最多差 NT$1、一天最多 NT$24 一條線）；高鐵的 2 個票價是 `round(km × 1.35)` 只湊一次整元，和 3 × 舊的整元差 NT$1，加上改寫成新台幣的 `high-speed.json` 描述（`EXCEPTIONS`）。任何不是金額的值（人數、時間、車站、城市成長的基準旅次）一個都沒有改。
+- 逐項的原因寫在[決策 499](../docs/decisions/499.md)「golden 的例外」。

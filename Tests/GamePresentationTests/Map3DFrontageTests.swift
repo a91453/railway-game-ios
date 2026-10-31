@@ -148,6 +148,41 @@ final class Map3DFrontageTests: XCTestCase {
         XCTAssertTrue(blocked.builder.layFrontage(blocked.cell, density: 1, shops: false, blocked: [blocked.cell]).houses.isEmpty)
     }
 
+    /// Decision 516 (the owner's 99.1 report: on the plain round Yilan, the
+    /// game's own houses stood one in the middle of every 64 m cell, the
+    /// roads running between them): a lot of every low use on a real map,
+    /// not only the homes and shops, lays its houses along the roads; none
+    /// in a cell's middle away from them, and none in a cell no road comes
+    /// near.
+    func testEveryLowLotsHousesStandAlongTheRoads() throws {
+        // A street along the cell's north edge: its middle 30 m off it,
+        // beyond any house fronting it.
+        let street: [(points: [Map3DPoint], half: Float, kind: Map3DBaseMap.RoadKind)] = [
+            ([Map3DPoint(-40, 0, 2), Map3DPoint(110, 0, 2)], 2.5, .minor),
+        ]
+        let reach = street[0].half + Map3DScene.Builder.frontageReach + 0.5
+        for use in [LandUse.residential, .commercial, .office, .civic, .leisure] {
+            for density in 1...2 {
+                var (builder, cell, west, north) = builder(roads: street)
+                let lonely = Map3DScene.ChunkKey(column: cell.column + 4, row: cell.row + 4)
+                let skyline = CitySkyline(lots: [CitySkyline.Lot(row: cell.row, column: cell.column, use: use, density: density),
+                                                 CitySkyline.Lot(row: lonely.row, column: lonely.column, use: use, density: density)],
+                                          time: GameTime(seconds: 0))
+                for target in [Map3DScene.Builder.Target.near, .far] {
+                    builder.target = target
+                    builder.addCity(skyline, clearOf: [])
+                }
+                let drawn = [builder.meshes, builder.nearMeshes, builder.farMeshes].flatMap { $0.values }.flatMap(\.vertices)
+                    + builder.farMeshes.values.flatMap(\.boxes).flatMap(\.vertices)
+                let raised = drawn.filter { $0.y > 2.5 }
+                XCTAssertFalse(raised.isEmpty, "\(use) \(density): houses along the street")
+                for vertex in raised {
+                    XCTAssertLessThan(abs(vertex.z - (north + 2)), reach, "\(use) \(density): \(vertex.x - west), \(vertex.z - north)")
+                }
+            }
+        }
+    }
+
     func testTheShapesGeometry() {
         let house = Map3DScene.Builder.StreetHouse(middle: .zero, front: Map3DPoint(0, 0, 1), along: Map3DPoint(1, 0, 0), width: 6, depth: 10)
         XCTAssertEqual(house.distance(from: Map3DPoint(-10, 0, 8), to: Map3DPoint(10, 0, 8)), 3, accuracy: 1e-5)

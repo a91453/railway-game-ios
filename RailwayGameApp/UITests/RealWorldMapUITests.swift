@@ -469,12 +469,12 @@ final class RealWorldMapUITests: XCTestCase {
         }
 
         // The platform mode, from the details card (opened if folded).
-        let platform = app.buttons["Platform"]
+        let platform = app.segmentedControls.buttons["Station"].firstMatch
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }
         }
-        XCTAssertTrue(platform.appears(within: 10), "No Platform mode")
+        XCTAssertTrue(platform.appears(within: 10), "No Station mode")
         platform.waitUntilSettled()
         platform.tap()
         // Beside the open details card the 3D map and zoom buttons stand in

@@ -73,6 +73,14 @@ struct ContentView: View {
         runner.close3D = { withTransaction(cut) { screen.showsMap3D = false } }
     }
 
+    /// Decision 313: the 3D map's Build, onto the 2D map at `plan` with
+    /// the tools out; decision 517: back to `view` as building ends.
+    private func build(from plan: Map3DHandoff.Plan, leaving view: Map3DBuildReturn.Viewpoint) {
+        back(to: plan)
+        screen.map3DBuildReturn.leftForBuilding(from: view, in: ObjectIdentifier(session))
+        session.selectTool(.network)
+    }
+
     /// Decision 269: the 3D map closes at once onto the 2D map at `plan`.
     private func back(to plan: Map3DHandoff.Plan) {
         screen.map2DReturn = plan
@@ -123,6 +131,13 @@ struct ContentView: View {
                 guard session.canTraceRealRailway, ProcessInfo.processInfo.arguments.contains("-ui-test-trace-for-sale") else { return }
                 session.traceAlongALineForSale()
             }
+            // Decision 513: the screenshot test's trace near Nan'ao that
+            // no grade reaches, once the real railways are in (the card is
+            // worked out again when the heights arrive).
+            .task(id: session.canTraceRealRailway) {
+                guard session.canTraceRealRailway, ProcessInfo.processInfo.arguments.contains("-ui-test-trace-refused") else { return }
+                session.traceWhereNoGradeReaches()
+            }
             #endif
             // The map and controls share one screen, so text stops growing at the
             // largest standard size instead of pushing the map off screen.
@@ -143,20 +158,17 @@ struct ContentView: View {
                 // Decision 313: its "2D" button goes back to the 2D map
                 // where it looks, whichever way it opened, and Build there
                 // with the building tools out, as the dock's Build does.
+                // Decision 517: and back to this view as building ends.
                 Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, openedAt: screen.map3DOpenedAt,
                                    departure: screen.map3DDeparture,
                                    close: { screen.showsMap3D = false },
                                    handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
                                    toMap2D: { plan in back(to: plan) },
-                                   build: { plan in
-                    back(to: plan)
-                    session.selectTool(.network)
-                }, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
+                                   build: { plan, view in build(from: plan, leaving: view) }, resumes: screen.map3DResume, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
             }
             // Decision 334: a station board's train is shown once.
-            .onChange(of: screen.showsMap3D) { _, shown in
-                if !shown { screen.map3DDeparture = nil }
-            }
+            // Decision 517: and building from the 3D map goes back there.
+            .modifier(Map3DShownWatch(session: session, screen: screen, shows3D: map3DQuality.shows3D))
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
             .onChange(of: pausesForImportantEvents) { _, _ in syncSecretarySettings() }
@@ -467,8 +479,10 @@ struct ContentView: View {
             // 98.1: on a phone, while building, the card's toggle beside the
             // column's foot (``ToolsColumn``), not in it; there with Undo
             // and Redo, as one row.
-            let toggleBesideFoot = toolsColumn && showsRail && session.tutorial?.step.usesDetailsCard != true
-            let showsFootRow = toggleBesideFoot || ControlPanel.showsEdits(session)
+            // Decision 509: Done stands beside Build while building.
+            let doneBesideFoot = toolsColumn && showsRail
+            let toggleBesideFoot = doneBesideFoot && session.tutorial?.step.usesDetailsCard != true
+            let showsFootRow = doneBesideFoot || ControlPanel.showsEdits(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             // Decision 224 (5B): the layer strip under the pill, while not
             // building and not in the tutorial; on a phone the building
@@ -628,9 +642,15 @@ struct ContentView: View {
                 .overlay(alignment: .bottomLeading) {
                     if toolsColumn {
                         HStack(alignment: .bottom, spacing: ControlPanel.tileGap) {
-                            // While building, the card's toggle stands here,
-                            // beside Build, rather than over the tools (98.1):
-                            // in the column the four tools did not fit.
+                            // While building, Done and the card's toggle
+                            // stand here, beside Build, rather than over the
+                            // tools (98.1, decision 509): in the column the
+                            // tools did not fit with them.
+                            if doneBesideFoot {
+                                BuildDoneButton(session: session)
+                                    .controlTile()
+                                    .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
+                            }
                             if toggleBesideFoot {
                                 ControlDetailsToggle(isOpen: isOpen) { detailsChoice = !isOpen }
                                     .disabled(sidePanel != nil)
@@ -925,10 +945,12 @@ private struct ControlDetailsToggle: View {
         }
         // As wide as Undo and Redo beside it, touched over 44. In the
         // column it is already as wide as the tools under it, and touched
-        // over no more than they are: a wider area made it 52 points to
-        // VoiceOver and the UI tests beside their 48 (main d657300).
-        .buttonStyle(ThemeSelectableTouchTargetButtonStyle(
-            isActive: isOpen, size: column == nil ? EditButtonSize.drawn : CGSize(width: 44, height: 44)))
+        // over what they are, 44 high (100.1, decision 509): a wider area
+        // made it 52 points to VoiceOver and the UI tests beside their 48
+        // (main d657300).
+        .buttonStyle(column == nil
+            ? ThemeSelectableTouchTargetButtonStyle(isActive: isOpen, size: EditButtonSize.drawn)
+            : ToolColumnStyle.touchStyle(isActive: isOpen))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
         .accessibilityIdentifier("controls.toggle")
     }
@@ -1008,6 +1030,7 @@ private struct ToolsColumn: View {
                 ViewThatFits(in: .vertical) {
                     building(compact: false)
                     building(compact: true)
+                    building(compact: true, tight: true)
                     buildingScrolling
                 }
             } else {
@@ -1043,7 +1066,7 @@ private struct ToolsColumn: View {
 
     /// The building tools the session offers, Done aside.
     private var buildingTools: Int {
-        ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }.count
+        session.buildToolbarButtons.count
     }
 
     // Not on the tutorial's steps that point into the card, which keep it
@@ -1061,25 +1084,22 @@ private struct ToolsColumn: View {
         .tutorialClip()
     }
 
-    /// While building, where it all fits: the building tools and Done in
-    /// one group close over Build, lit (a second tap closes the tools), at
-    /// the column's foot, where the thumb that pressed Build is (decision
-    /// 382; 98.1, the planner). The card's toggle stands beside Build
-    /// instead (``ContentView``): the four tools did not fit with it on a
-    /// phone on its side.
-    private func building(compact: Bool) -> some View {
+    /// While building, where it all fits: the building tools in one group
+    /// close over Build, lit (a second tap closes the tools), at the
+    /// column's foot, where the thumb that pressed Build is (decision 382;
+    /// 98.1, the planner). The card's toggle stands beside Build instead
+    /// (``ContentView``): the four tools did not fit with it on a phone on
+    /// its side; and Done too since 100.1 (decision 509): the five tools
+    /// did not fit with it. `tight`: the tools' glass 2 above and below
+    /// them rather than 4, where only that is short (a 12 or 13 mini on its
+    /// side, by 3 points; 100.1, decision 509: nothing scrolls there).
+    private func building(compact: Bool, tight: Bool = false) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            BuildToolButtons(session: session)
-                .controlTile()
+            BuildToolButtons(session: session, includesDone: false)
+                .controlTile(vertical: tight ? CGFloat(ToolColumn.tightTilePadding) : ToolColumnStyle.tilePadding)
             ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
-    }
-
-    @ViewBuilder private var buildingFoot: some View {
-        BuildDoneButton(session: session)
-            .controlTile()
-        ControlPanel(session: session, arrangement: .buildEntry)
     }
 
     /// Icons alone where even they have not the height (a 12 or 13 mini
@@ -1111,9 +1131,7 @@ private struct ToolsColumn: View {
                 }
             }
             Spacer(minLength: ControlPanel.tileGap)
-            VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-                buildingFoot
-            }
+            ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
     }
@@ -1298,6 +1316,39 @@ private struct DetailsCard: View {
     }
 }
 
+/// Decision 334: a station board's train is shown once. Decision 517:
+/// the 3D map opened some other way forgets a return from building; and
+/// building the 3D map's Build started ends back on the 3D map, where it
+/// was left, at once (as it left). Its own modifier, out of the game
+/// screen's long chain, which Xcode could not type-check in time.
+private struct Map3DShownWatch: ViewModifier {
+    let session: GameSession
+    let screen: GameScreenState
+    let shows3D: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: screen.showsMap3D) { _, shown in
+                if !shown {
+                    screen.map3DDeparture = nil
+                    screen.map3DResume = nil
+                } else {
+                    screen.map3DBuildReturn.forget()
+                }
+            }
+            .onChange(of: session.tool) { _, tool in
+                guard let view = screen.map3DBuildReturn.toolChanged(to: tool, in: ObjectIdentifier(session), shows3D: shows3D,
+                                                                     tutorialRuns: session.tutorial != nil) else { return }
+                screen.map3DHandoff = nil
+                screen.map3DOpenedAt = view.plan
+                screen.map3DResume = view
+                var cut = Transaction()
+                cut.disablesAnimations = true
+                withTransaction(cut) { screen.showsMap3D = true }
+            }
+    }
+}
+
 /// What the game screen shows besides the world: the panel that is open and
 /// the population and travel layer's opacity, hour and playback. View state
 /// only, never game state; it lives above the layout (``ContentView``), so
@@ -1367,6 +1418,11 @@ final class GameScreenState {
     /// Decision 313, later: the 2D map's view when the 3D button opened the
     /// 3D map, which opens over the same place.
     var map3DOpenedAt: Map3DHandoff.Plan?
+    /// Decision 517: whether building started from the 3D map's Build,
+    /// and the view it left there; and that view while the 3D map opens
+    /// at it again.
+    var map3DBuildReturn = Map3DBuildReturn()
+    var map3DResume: Map3DBuildReturn.Viewpoint?
     /// Decision 334: the train on a station's board the 3D map opened
     /// for, shown at its platform.
     var map3DDeparture: Map3DNextDeparture?

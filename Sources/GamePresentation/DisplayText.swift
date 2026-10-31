@@ -375,8 +375,8 @@ extension GameError {
             )
         case .invalidTrackGeometry:
             language.text(
-                "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different points, and run smoothly.",
-                "這裡不能建軌道：軌道必須在地圖內、與地面的高度差在 64 公尺以內、起點與終點不能是同一點，而且線形要平順。"
+                "Track can't be built there: it must stay on the map, at most 64 m above the ground and 1,024 m below it, start and end at different points, and run smoothly.",
+                "這裡不能建軌道：軌道必須在地圖內、離地最高 64 公尺、地下最深 1,024 公尺，起點與終點不能是同一點，而且線形要平順。"
             )
         case .trackNodeInUse:
             language.text(
@@ -831,16 +831,17 @@ extension GameSpeed {
 
 extension GameSession {
     /// What the inspector shows about the selection (Stage F1): the
-    /// selected station (see ``GameWorld/stationSummary(_:in:)``) and who
-    /// waits there by line and direction (G1c); or the train a tap on the
+    /// selected station (see ``GameWorld/stationSummary(_:in:)``) and, on
+    /// lines of their own, who waits there by line and direction (G1c); or the train a tap on the
     /// map picked (``GameSession/tappedTrainID``, see
     /// ``GameWorld/trainSummary(of:in:)``). `nil` when neither is
     /// selected.
     public func selectionText() -> String? {
         if let station = selectedStation {
             let summary = world.stationSummary(station.id, in: language)
-            guard let waiting = world.waitingSummary(at: station.id, in: language) else { return summary }
-            return "\(summary) · \(waiting)"
+            // One line each: in a phone's side panel the one long line lost
+            // its end ("Station · Yunlin · 4 platforms, 832 m · waiting …").
+            return ([summary] + world.waitingLines(at: station.id, in: language)).joined(separator: "\n")
         }
         if let train = tappedTrainID, let summary = world.trainSummary(of: train, in: language) {
             return summary

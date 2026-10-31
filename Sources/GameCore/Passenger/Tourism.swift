@@ -131,10 +131,11 @@ public struct Tourism: Hashable, Sendable {
     /// near it, in thousandths (shared among the hotels there).
     public static let hotelStayPermille: Int64 = 80
     public static let starsPerSouvenirLevel = 25
-    /// What a level of the shop costs: $300,000, in cents.
-    public static let souvenirCost: Int64 = 30_000_000
+    /// What a level of the shop costs: NT$900,000, in cents (decision
+    /// 499: $300,000 times 3).
+    public static let souvenirCost: Int64 = 90_000_000
     /// What a tourist spends in the shop, in cents, times its level.
-    public static let spendPerLevel: Int64 = 400
+    public static let spendPerLevel: Int64 = 1_200
     /// A shop's upkeep a day, in hundred-thousandths of what it cost.
     public static let upkeepPerDay: Int64 = 50
     /// How close a station must be to serve an attraction: 800 m.

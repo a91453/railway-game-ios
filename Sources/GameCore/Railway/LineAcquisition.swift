@@ -48,8 +48,8 @@ public struct LineAcquisition: Hashable, Sendable {
         public var valuePerDailyRider: Money {
             switch self {
             case .branch: LineAcquisition.valuePerDailyRider
-            case .lightRail: Money(7_000)
-            case .metro: Money(10_000)
+            case .lightRail: Money(21_000)
+            case .metro: Money(30_000)
             }
         }
     }
@@ -58,9 +58,10 @@ public struct LineAcquisition: Hashable, Sendable {
     /// busiest metro line's (decision 400).
     public static let maximumDailyRiders: Int64 = 2_000_000
     /// What a bought branch line costs for each rider a day its stations
-    /// carry in real life, on top of building it and its trains: $10,000
-    /// (decision 315, measured by `AcquisitionReportTests`).
-    public static let valuePerDailyRider = Money(1_000_000)
+    /// carry in real life, on top of building it and its trains:
+    /// NT$30,000 (decision 315, measured by `AcquisitionReportTests`;
+    /// decision 499 multiplied it by 3).
+    public static let valuePerDailyRider = Money(3_000_000)
     /// The longest real line name kept.
     public static let maximumNameLength = 64
     /// Bought before this second of a day, the line runs that day's

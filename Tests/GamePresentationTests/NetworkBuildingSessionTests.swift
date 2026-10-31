@@ -94,6 +94,33 @@ final class NetworkBuildingSessionTests: XCTestCase {
         XCTAssertEqual(turnout.end(of: fromWest.id)?.exits.contains(branch.id), true, "a train from the west may take the branch")
     }
 
+    /// Decision 41's straight first stretch is said to be one: with no
+    /// track at either end the preview adds the hint, and once the next
+    /// stretch starts from its end, or the start is on track, it does not.
+    @MainActor
+    func testTheFirstStretchOfFreePointsSaysItIsStraight() throws {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 1_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 2_048, y: 4_096))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 18_432, y: 4_096))
+        _ = try world.buildTrackEdge(from: west, to: east)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+
+        session.tapNetwork(at: PlanPoint(x: 2_048, y: 12_288), reach: Self.reach)
+        session.tapNetwork(at: PlanPoint(x: 10_240, y: 12_288), reach: Self.reach)
+        let free = try XCTUnwrap(session.networkPreview)
+        XCTAssertNil(free.problem)
+        XCTAssertEqual(free.freeFirstHint(in: .english), "The first stretch is straight. Lay the next one from its end and it bends along.")
+        XCTAssertEqual(free.freeFirstHint(in: .traditionalChinese), "第一段是直線；從它的尾端接著鋪，就會順著彎過去。")
+
+        session.clearNetworkDraft()
+        session.tapNetwork(at: PlanPoint(x: 2_048, y: 4_096), reach: Self.reach)
+        session.tapNetwork(at: PlanPoint(x: 2_048, y: 8_192), reach: Self.reach)
+        let joined = try XCTUnwrap(session.networkPreview)
+        XCTAssertTrue(joined.joinsStart)
+        XCTAssertNil(joined.freeFirstHint(in: .english), "it starts on track")
+    }
+
     /// With snapping off every tap is a new point at the height being
     /// built: a viaduct's end over the line, and a parallel track 5 m beside
     /// it, closer than a tap reaches. On, the same taps join the line.
@@ -733,7 +760,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.message?.text, "已建造軌段 #1：64 公尺，自動：地面 64 公尺，花費 \(Money(400).moneyText)。")
             session.tapNetwork(at: PlanPoint(x: 6_144 + 1_000, y: 2_048), reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.problem, "該位置與另一端太近：兩者至少要相距 22 公尺。")
-            XCTAssertEqual(NetworkToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["鋪設", "月台", "拆除", "待避", "機廠"])
+            XCTAssertEqual(NetworkToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["鋪設", "車站", "拆除", "待避", "機廠"])
             XCTAssertEqual(TrackStructure.allCases.map { $0.name(in: .traditionalChinese) }, ["地面", "高架", "橋樑", "隧道", "自動"])
             XCTAssertEqual(TrackStructure.offered.map { $0.name(in: .traditionalChinese) }, ["自動", "地面", "高架", "橋樑", "隧道"])
         }

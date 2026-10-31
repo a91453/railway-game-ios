@@ -54,8 +54,8 @@ extension Challenge {
 public enum PingxiChallenge {
     /// Riders a day to reach.
     static let ridersTarget: Int64 = 80_000
-    /// A closed year's net profit to reach: $2,000,000.
-    static let profitTarget = Money(200_000_000)
+    /// A closed year's net profit to reach: NT$6,000,000.
+    static let profitTarget = Money(600_000_000)
 
     /// The Sky Lantern Festival: from day 62 of each 360-day year for 3 days,
     /// the demand at Shifen and Pingxi two and a half times their own,

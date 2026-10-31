@@ -30,8 +30,9 @@
 // residents and jobs and its centre's land value.
 
 extension PlacedBuildingRules {
-    /// What a m² of floor costs to build: $40 (the Phase 7 study's `B`).
-    public static let floorCost: Money = 4_000
+    /// What a m² of floor costs to build: NT$120 (the Phase 7 study's `B`,
+    /// $40, times 3: decision 499).
+    public static let floorCost: Money = 12_000
     /// The day's upkeep, in ten-thousandths of the building's cost, rounded
     /// up, and the day's tax on the land, in ten-thousandths of what its use
     /// cost, rounded half up.

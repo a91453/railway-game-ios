@@ -124,7 +124,16 @@ final class ProblemReportFixtureTests: XCTestCase {
             time: world.clock.now.seconds, balance: world.economy.balance.amount, nodes: world.network.nodes.count,
             edges: world.network.edges.count, stations: world.stations.count, lines: world.lines.count, trains: world.trains.count
         )
-        guard end == report.end else { throw Refusal(reason: "it ends at \(end), the device at \(report.end)") }
+        // A save before version 76 kept the reference's dollars, which
+        // GameCore reads as 3 New Taiwan dollars each (decision 499); the
+        // device's balance at the end is in the same dollars as its start.
+        struct StartVersion: Decodable {
+            struct Start: Decodable { var saveVersion: Int }
+            var start: Start
+        }
+        var device = report.end
+        if try JSONDecoder().decode(StartVersion.self, from: data).start.saveVersion < 76 { device.balance *= 3 }
+        guard end == device else { throw Refusal(reason: "it ends at \(end), the device at \(device)") }
         let checksums = ReplayFixture.checksums(from: start, applying: operations, every: ReplayFixture.interval) { index, problem in
             XCTFail("\(source): command \(index): \(problem)")
         }

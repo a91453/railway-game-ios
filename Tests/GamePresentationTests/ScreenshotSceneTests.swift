@@ -54,4 +54,19 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertEqual(row.choices.map(\.isChosen), [true, false])
         XCTAssertTrue(session.world.lines.allSatisfy { !$0.assignedTrains.isEmpty }, "the demo's lines still run")
     }
+
+    /// Decision 514: the zoning scene shows every outlook the zoning layer
+    /// marks.
+    func testTheZoningSceneShowsEveryOutlook() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await launcher.openScreenshotScene(.zoning).value
+        let world = try XCTUnwrap(launcher.session?.world, "the launcher plays the scene")
+        XCTAssertEqual(world.clock.speed, .paused)
+        let counts = ZoningOutlook(world: world).counts(in: world)
+        for outlook in ZoneOutlook.allCases {
+            XCTAssertGreaterThan(counts[outlook] ?? 0, 0, "\(outlook) shows")
+        }
+    }
 }

@@ -17,7 +17,7 @@ final class UnlimitedFundsTests: XCTestCase {
     /// otherwise, unlimited funds.
     private func world(balance: Money = 0, unlimited: Bool = true) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 16_384, height: 4_096), economy: GameEconomy(balance: balance, costs: costs),
+            bounds: WorldBounds(width: 16_384, height: 4_096), economy: fixtureEconomy(balance: balance, costs: costs),
             clock: GameClock(speed: .paused)
         )
         world.setEconomyMode(.management)
@@ -80,7 +80,7 @@ final class UnlimitedFundsTests: XCTestCase {
     func testMapTilesCostNothing() throws {
         let length = MapExpansion.tileLength
         var world = try GameWorld(
-            bounds: WorldBounds(width: 5 * length, height: 5 * length), economy: GameEconomy(balance: 0, costs: costs),
+            bounds: WorldBounds(width: 5 * length, height: 5 * length), economy: fixtureEconomy(balance: 0, costs: costs),
             clock: GameClock(speed: .paused)
         )
         world.setUnlimitedFunds(true)
@@ -106,7 +106,7 @@ final class UnlimitedFundsTests: XCTestCase {
     func testVersionFiftyOneKeepsUnlimitedFunds() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v51-unlimited-funds.json")
-        var made = try world()
+        var made = try NTScale.$factor.withValue(3) { try world() }
         let a = try made.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048, z: 0))
         let b = try made.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 2_048, z: 0))
         let edge = try made.buildTrackEdge(from: a, to: b)
@@ -132,8 +132,8 @@ final class UnlimitedFundsTests: XCTestCase {
         // It goes on building for nothing.
         try loaded.buildStation(named: "Beta", at: PlanPoint(x: 8_192, y: 2_048))
         XCTAssertEqual(loaded.economy.balance, .zero)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: JSONDecoder().decode(SavedGame.self, from: data).world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 51,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: JSONDecoder().decode(SavedGame.self, from: data).world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 51,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     /// Decision 245: a pricing copy holds cash for anything, so a command of

@@ -148,15 +148,15 @@ public struct BusRoute: Hashable, Sendable {
     public static let metresPerHour: Int64 = 18_000
     /// Minutes at the ends of each round trip.
     public static let layoverMinutes: Int64 = 10
-    /// What a stop and a bus cost: $10,000 and $50,000.
-    public static let stopPrice = Money(1_000_000)
-    public static let busPrice = Money(5_000_000)
-    /// A rider's fare: one fare segment, $5.
-    public static let fare = Money(500)
+    /// What a stop and a bus cost: NT$30,000 and NT$150,000.
+    public static let stopPrice = Money(3_000_000)
+    public static let busPrice = Money(15_000_000)
+    /// A rider's fare: one fare segment, NT$15.
+    public static let fare = Money(1_500)
     /// What a bus costs for each kilometre it runs, driver, fuel and
-    /// upkeep: $20 (Taiwan's city buses, NT$52–66 a bus-kilometre, at
-    /// NT$3 a dollar).
-    public static let costPerKilometre = Money(2_000)
+    /// upkeep: NT$60 (Taiwan's city buses, NT$52–66 a bus-kilometre;
+    /// decision 438 set $20 at NT$3 a dollar, decision 499 made it NT$).
+    public static let costPerKilometre = Money(6_000)
     /// The part of the land a stop reaches that rides as much as the land
     /// a station reaches on foot: a half, the rest taking a scooter or
     /// staying near home.

@@ -22,7 +22,7 @@ final class FlexDispatchTests: XCTestCase {
 
     private func makeWorld(stops: [StationID], trains count: Int = 1, at start: TrainPosition? = nil) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 0), speed: .normal)
         )
         world.setFlexDispatch(true)
@@ -332,7 +332,7 @@ final class FlexDispatchTests: XCTestCase {
     func testVersionFortyFiveKeepsAnEmptyRun() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v45-flex-dispatch.json")
-        var made = try makeWorld(stops: [alpha, beta, gamma])
+        var made = try NTScale.$factor.withValue(3) { try makeWorld(stops: [alpha, beta, gamma]) }
         try made.setLineStops(main, to: [beta, gamma])
         try made.advance(ticks: 2)
         let encoder = JSONEncoder()
@@ -353,7 +353,7 @@ final class FlexDispatchTests: XCTestCase {
         try carried.advance(ticks: 5)
         XCTAssertFalse(try XCTUnwrap(carried.train(id: one)).isDeadheading)
         XCTAssertEqual(carried.train(id: one)?.timetable.first?.station, beta)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 45,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 45,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

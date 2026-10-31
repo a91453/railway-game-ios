@@ -41,7 +41,7 @@ private final class TutorialJourney {
         "Zoom out to see both towns",
         "Tap one town, then the other",
         "Tap ✓ to build the track",
-        "Tap Platform",
+        "Tap Station",
         "Tap your track in one town",
         "Tap ✓ to build the station",
         "Tap your track in the other town",
@@ -140,7 +140,7 @@ private final class TutorialJourney {
 
         // Stations
         arrive(at: 5)
-        let platform = app.buttons["Platform"]
+        let platform = app.segmentedControls.buttons["Station"].firstMatch
         check(platform, "the Platform mode")
         platform.tap()
 

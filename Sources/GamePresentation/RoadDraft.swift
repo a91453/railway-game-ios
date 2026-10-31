@@ -271,18 +271,57 @@ extension GameSession {
     /// measures them along the road cells, which a stretch over the city's
     /// cells leaves as they were when it is taken up. The first route whose
     /// way on the map joins now and would break without `stretch`, or
-    /// `nil`. The bus roads are given the player's roads back after.
+    /// `nil`.
+    ///
+    /// Review L1-1: working out every route's way twice, the bus roads'
+    /// networks let go each time, held a tap 2 s with 19 city routes (Linux
+    /// debug). A way that comes nowhere near the stretch has a way without
+    /// it (taking roads up leaves the rest as they were), so only the
+    /// routes whose way as the map draws it (``busPathMemo``) passes it are
+    /// worked out again, on a copy of the bus roads without the stretch;
+    /// the bus roads themselves, and the ways the map keeps, are left as
+    /// they are.
     func routeBroken(byTakingUp stretch: [CellPosition], from roads: RoadGrid) -> BusRoute? {
         guard let onRoads = busRoads else { return nil }
-        let routes = world.busRoutes.compactMap { route -> (BusRoute, PlanPoint?)? in
-            guard let id = route.station else { return (route, nil) }
-            return world.station(id: id).map { (route, $0.location) }
+        let taken = Set(stretch), version = onRoads.ownVersion
+        let passing = world.busRoutes.compactMap { route -> (BusRoute, PlanPoint?)? in
+            let at: PlanPoint?
+            if let id = route.station {
+                guard let station = world.station(id: id) else { return nil }
+                at = station.location
+            } else {
+                at = nil
+            }
+            let points: [PlanPoint]
+            if let known = busPathMemo[route.id], known.stops == route.stops, known.station == at, known.onRoads, known.ownRoads == version {
+                guard known.broken.isEmpty else { return nil }
+                points = known.points
+            } else {
+                let way = onRoads.way(ofSaved: route.stops, station: at)
+                guard way.firstBroken == nil else { return nil }
+                points = way.points
+            }
+            return Self.way(points, passes: taken) ? (route, at) : nil
         }
-        let joined = routes.filter { onRoads.way(ofSaved: $0.0.stops, station: $0.1).firstBroken == nil }
-        guard !joined.isEmpty else { return nil }
-        onRoads.useOwnRoads(roads.built.subtracting(stretch))
-        defer { onRoads.useOwnRoads(roads.built) }
-        return joined.first { onRoads.way(ofSaved: $0.0.stops, station: $0.1).firstBroken != nil }?.0
+        guard !passing.isEmpty else { return nil }
+        let without = onRoads.trying(ownRoads: roads.built.subtracting(stretch))
+        return passing.first { without.way(ofSaved: $0.0.stops, station: $0.1).firstBroken != nil }?.0
+    }
+
+    /// Review L1-1: whether a way drawn through `points` may go along the
+    /// player's road on `cells`: whether a point of it lies within two
+    /// cells of one. A road's line runs through its cells' middles and is
+    /// joined to the base map's roads within a cell of them, so the pieces
+    /// a stretch's taking up removes end within about a cell and a half of
+    /// its cells (the rounded corners move a point 8 m more).
+    static func way(_ points: [PlanPoint], passes cells: Set<CellPosition>) -> Bool {
+        guard !cells.isEmpty else { return false }
+        return points.contains { point in
+            let cell = CellPosition(containing: point)
+            return (-2...2).contains { dr in
+                (-2...2).contains { dc in cells.contains(CellPosition(row: cell.row + dr, column: cell.column + dc)) }
+            }
+        }
     }
 
     /// The stretch of the player's road cells joined to `cell` (side by

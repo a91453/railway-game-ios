@@ -295,7 +295,10 @@ extension GameSession {
             problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
         } catch {
             cost = nil
-            problem = networkBuildsDouble && parallel == nil ? Self.noParallelText(in: language) : error.playerMessage(in: language)
+            problem = networkBuildsDouble && parallel == nil
+                ? Self.noParallelText(in: language)
+                // Decision 513: which check, where GameCore's error covers several.
+                : error.playerMessage(building: plan.stretch(structure: networkStructure), in: unbuilt, heights: heights, language: language)
         }
         let cleared = problem == nil ? world.placedBuildings(clearedIn: draft) : []
         let besides = parallel.map { $0.geometry?.points ?? [$0.from, $0.to] } ?? []
@@ -458,9 +461,30 @@ extension GameSession {
     /// and what to do instead (decision 164).
     func platformGradeText(_ grade: Int64, problem: String) -> String {
         language.text(
-            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
-            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) \(platformShortStretchText)",
+            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)\(platformShortStretchText)"
         )
+    }
+
+    /// What to do where a platform's stretch cannot be levelled (decision
+    /// 164).
+    var platformShortStretchText: String {
+        language.text(
+            "Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
+            "或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+        )
+    }
+
+    /// Decision 510 (the author's iPhone held sideways: the long refusal
+    /// stood in the middle of the map under the ✓ pill and over the
+    /// layer's key, and said again what the tool's panel says): the
+    /// banner's word when ✓ is tapped on a stretch that cannot be
+    /// levelled, short and without "cannot be levelled", which the ✓ pill
+    /// and the panel already say; why and what to do are in the panel
+    /// (``networkDraftText()``).
+    var platformGradeRefusalText: String {
+        language.text("No platform built: the Network panel says what to do.",
+                      "月台沒有蓋：做法見「路網」面板。")
     }
 
     /// The ridership a managed company gives a new station at `point`: on
@@ -524,20 +548,27 @@ extension GameSession {
         )
     }
 
-    public func addNetworkPlatform() {
+    /// The platform ``addNetworkPlatform()`` would add along
+    /// ``networkPlatformStretch``, levelled first on a grade (decision 190),
+    /// with the same station's platform on the track beside where
+    /// `beside` asks for it (decision 285); or what to say where it cannot
+    /// be. `chosen` is the station it joins, `nil` for a new one.
+    func networkPlatformDraft(beside wantsBeside: Bool = true)
+        -> Result<(addition: PlayerCommand.PlatformAddition, middle: PlanPoint, chosen: Station?, grade: Int64?), PlatformRefusal>
+    {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
-            message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
-            return
+            return .failure(PlatformRefusal(text: language.text("Tap the track where the station goes.", "請點選要蓋車站的軌道。")))
         }
         // Decision 190: on a grade, the stretch is levelled first, in the
         // same edit; where it cannot be, say why (decision 164).
         var levelling: PlatformLevelling?
-        if let grade = networkPlatformGrade {
+        let grade = networkPlatformGrade
+        if grade != nil {
             switch platformLevelling(of: stretch.edge, from: stretch.start, to: stretch.end, in: world) {
             case .success(let found): levelling = found
-            case .failure(let problem):
-                message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: problem.text(in: language)))
-                return
+            case .failure:
+                // Decision 510: short; the panel says why and what to do.
+                return .failure(PlatformRefusal(text: platformGradeRefusalText))
             }
         }
         var middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
@@ -545,47 +576,71 @@ extension GameSession {
             middle = level
         }
         let chosen = platformStationID.flatMap { world.station(id: $0) }
-        let name = stationName
-        let demand = newStationDemand(at: middle)
-        var built: StationID?
-        let grade = networkPlatformGrade
+        let station: PlayerCommand.PlatformStation = chosen.map { .existing($0.id) }
+            ?? .new(name: stationName, at: middle, demand: newStationDemand(at: middle))
         // Decision 285: the same station's platform on the track beside,
         // where no track joins the two; left out where GameCore would
         // refuse it (a platform there already, a train on it), so the one
         // tapped is built as before. Want of cash refuses both.
-        var beside = besidePlatform(of: stretch)
+        var beside = wantsBeside ? besidePlatform(of: stretch) : nil
         if let found = beside {
             var probe = world.pricingCopy()
             let both = PlayerCommand.PlatformAddition(
-                edge: stretch.edge, start: stretch.start, end: stretch.end,
-                station: chosen.map { .existing($0.id) } ?? .new(name: name, at: middle, demand: demand),
-                levelling: levelling, beside: found
+                edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: found
             )
             do throws(GameError) { _ = try apply(.addPlatform(both), to: &probe) } catch { beside = nil }
         }
-        let alsoBeside = beside == nil ? "" : besidePlatformText()
+        let addition = PlayerCommand.PlatformAddition(
+            edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: beside
+        )
+        return .success((addition, middle, chosen, grade))
+    }
+
+    public func addNetworkPlatform() {
+        let layout = networkStationLayout
+        // Decision 507: the island layouts keep the platform beside off
+        // the track beside where they move it (``stationLayoutPlan``).
+        let draft: (addition: PlayerCommand.PlatformAddition, middle: PlanPoint, chosen: Station?, grade: Int64?)
+        switch networkPlatformDraft(beside: layout != .doubleIsland) {
+        case .success(let found): draft = found
+        case .failure(let refusal):
+            message = StatusMessage(kind: .failure, text: refusal.text)
+            return
+        }
+        guard let stretch = networkPlatformStretch else { return }
+        let (addition, middle, chosen, grade) = draft
+        var built: StationID?
+        let alsoBeside = addition.beside == nil || layout.isLaidByLayout ? "" : besidePlatformText()
         /// What the tool says it did.
         func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), levelled: String, in world: GameWorld) -> String {
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
+            let laid = layout.isLaidByLayout ? stationLayoutText(layout) : ""
             return chosen == nil
                 ? language.text(
                     "Built station “\(station.name)” with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
-                ) + levelled + alsoBeside + openingReach(of: station, in: world)
+                ) + laid + levelled + alsoBeside + openingReach(of: station, in: world)
                 : language.text(
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
-                ) + levelled + alsoBeside
+                ) + laid + levelled + alsoBeside
         }
         // Decision 193: a command the log keeps, levelling and all.
-        let addition = PlayerCommand.PlatformAddition(
-            edge: stretch.edge, start: stretch.start, end: stretch.end,
-            station: chosen.map { .existing($0.id) } ?? .new(name: name, at: middle, demand: demand),
-            levelling: levelling, beside: beside
-        )
+        // Decision 507: with the tracks the layout lays round it, as one.
+        let command: PlayerCommand
+        if layout.isLaidByLayout {
+            switch stationLayoutPlan(layout, platform: addition) {
+            case .success(let plan): command = .buildStationLayout(plan)
+            case .failure(let problem):
+                message = StatusMessage(kind: .failure, text: problem.text(in: language))
+                return
+            }
+        } else {
+            command = .addPlatform(addition)
+        }
         let added: Bool
         do throws(GameError) {
-            let outcome = try performCommand(.addPlatform(addition))
+            let outcome = try performCommand(command)
             let done = outcome.stretch ?? stretch
             var levelled = ""
             if let cost = outcome.levellingCost {
@@ -600,14 +655,16 @@ extension GameSession {
             added = true
             if chosen == nil { built = outcome.station?.id }
         } catch {
-            message = refusal(error, doing: .addPlatform(addition))
-            // GameCore's reason the levelling was refused, said with the
-            // grade it was to level; want of cash is said as above, for
-            // the levelling and the station together.
-            if message?.fundsNeeded == nil, let levelling, let grade {
+            message = refusal(error, doing: command)
+            // GameCore refused the levelling: said short, as above; want
+            // of cash is said as above, for the levelling and the station
+            // together.
+            if message?.fundsNeeded == nil, let levelling = addition.levelling, grade != nil {
                 var probe = world
+                // Decision 510: short; the panel's preview, built on a copy
+                // the same way, says why and what to do.
                 do throws(GameError) { _ = try build(levelling, in: &probe) } catch {
-                    message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: error.playerMessage(in: language)))
+                    message = StatusMessage(kind: .failure, text: platformGradeRefusalText)
                 }
             }
             added = false
@@ -625,6 +682,11 @@ extension GameSession {
         }
     }
 
+    /// Why ``networkPlatformDraft(beside:)`` has no platform to add.
+    struct PlatformRefusal: Error {
+        let text: String
+    }
+
     /// Removes `platform` through
     /// `GameWorld.removeTrackPlatform(_:on:from:)`.
     public func removeNetworkPlatform(_ platform: TrackPlatform) {
@@ -638,21 +700,92 @@ extension GameSession {
     /// one it belongs to by default: 2048 units, 32 m (Stage C1).
     public static let platformStationReach: Int64 = 2_048
 
+    /// Decision 519: how far beside one of a station's platforms (along
+    /// its length, not out past its ends) a new platform's place may be to
+    /// belong to it by default, 100 m: a big station's tracks spread that
+    /// wide (Taipei Main's TRA and HSR tracks side by side), and a
+    /// player's track drawn beside them joins it.
+    public static let platformBesideReach: Int64 = 100 * WorldCoordinate.unitsPerMetre
+
     /// The station nearest the place `point` on the network, by where it
-    /// stands (``Station/location``), if one lies within
-    /// ``platformStationReach``; the lowest ID of equally near ones.
+    /// stands (``Station/location``) within ``platformStationReach``, or
+    /// by a platform the place lies beside, within ``platformBesideReach``
+    /// (decision 519); the lowest ID of equally near ones.
     private func nearestStation(to point: NetworkEdgePoint) -> StationID? {
         guard let position = world.trackGeometry(of: point.edge)?.location(at: point.distance).position else { return nil }
         let reach = Self.platformStationReach
         var best: (id: StationID, distance: Int64)?
+        func consider(_ id: StationID, _ squared: Int64) {
+            guard best == nil || squared < best!.distance || (squared == best!.distance && id.rawValue < best!.id.rawValue) else { return }
+            best = (id, squared)
+        }
         for station in world.stations {
             let centre = station.location
             let dx = centre.x - position.x, dy = centre.y - position.y
             let squared = dx * dx + dy * dy
-            guard squared <= reach * reach, best == nil || squared < best!.distance else { continue }
-            best = (station.id, squared)
+            if squared <= reach * reach { consider(station.id, squared) }
+        }
+        let beside = Double(Self.platformBesideReach)
+        for platform in world.network.platforms {
+            guard let distance = Self.besideDistance(from: position.plan, to: platform, in: world), distance <= beside else { continue }
+            consider(platform.station, Int64((distance * distance).rounded()))
         }
         return best?.id
+    }
+
+    /// How far `point` lies on the plan beside `platform`: from the
+    /// nearest place of its stretch of track, when that place is not one
+    /// of its ends, so a point out past an end (the next station along
+    /// the line) is not beside it; `nil` then, or when its edge is gone.
+    static func besideDistance(from point: PlanPoint, to platform: TrackPlatform, in world: GameWorld) -> Double? {
+        guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
+        let px = Double(point.x), py = Double(point.y)
+        var best: (squared: Double, along: Double)?
+        for index in geometry.points.indices.dropLast() {
+            let from = geometry.distances[index], to = geometry.distances[index + 1]
+            guard to > from, to >= platform.start, from <= platform.end else { continue }
+            let a = geometry.points[index], b = geometry.points[index + 1]
+            let ax = Double(a.x), ay = Double(a.y), dx = Double(b.x) - ax, dy = Double(b.y) - ay
+            // The part of this piece the platform covers, as fractions of it.
+            let low = max(0, Double(platform.start - from) / Double(to - from))
+            let high = min(1, Double(platform.end - from) / Double(to - from))
+            let span = dx * dx + dy * dy
+            let t = span > 0 ? min(high, max(low, ((px - ax) * dx + (py - ay) * dy) / span)) : low
+            let ex = ax + t * dx - px, ey = ay + t * dy - py
+            let squared = ex * ex + ey * ey
+            if best == nil || squared < best!.squared { best = (squared, Double(from) + t * Double(to - from)) }
+        }
+        guard let best, best.along > Double(platform.start), best.along < Double(platform.end) else { return nil }
+        return best.squared.squareRoot()
+    }
+
+    /// Decision 519: the stations for the Station mode's menu, nearest the
+    /// picked place first, each with how far it stands; in the world's
+    /// order, without distances, while no place is picked. A real-world
+    /// map has hundreds, and the one wanted is the one beside the track.
+    public var platformStationMenuChoices: [MenuChoice<StationID>] {
+        guard let place = networkEdgePoint, let position = world.trackGeometry(of: place.edge)?.location(at: place.distance).position else {
+            return stationMenuChoices
+        }
+        return world.stations
+            .map { station -> (station: Station, squared: Int64) in
+                let dx = station.location.x - position.x, dy = station.location.y - position.y
+                return (station, dx * dx + dy * dy)
+            }
+            .sorted { ($0.squared, $0.station.id.rawValue) < ($1.squared, $1.station.id.rawValue) }
+            .map { entry in
+                let units = Int64(Double(entry.squared).squareRoot().rounded())
+                return MenuChoice(id: entry.station.id, title: "\(entry.station.name) · \(NetworkBuilding.lengthText(units, in: language))")
+            }
+    }
+
+    /// Decision 519: how a track the player drew themselves gets a
+    /// platform of `station`, for the station panel's platforms.
+    public func ownTrackPlatformHelp(for station: Station) -> String {
+        language.text(
+            "For a track of your own to call here, tap it with the network tool's Station mode and choose \(station.name).",
+            "要讓自己拉的軌道停這站：用路網工具的「車站」點那條軌道，車站選「\(station.name)」。"
+        )
     }
 
     // MARK: - Trains
@@ -936,7 +1069,7 @@ extension GameSession {
             return parts.joined(separator: " · ")
         case .platform:
             guard let stretch = networkPlatformStretch else {
-                return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")
+                return language.text("Tap the track where the station goes.", "請點選要蓋車站的軌道。")
             }
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
             // Author's report, 2026-10-14: no track numbers or units.
@@ -947,7 +1080,10 @@ extension GameSession {
             // Decision 164: a grade says so before the tap on ✓; decision
             // 190: and that ✓ levels it, for what.
             guard let levelling = networkPlatformLevelling else { return place }
-            return place + " · " + levelling.text(in: language)
+            // Decision 510: where it cannot be levelled, what to do instead,
+            // here only (the banner says only that it cannot).
+            let instead = levelling.problem == nil ? "" : " " + platformShortStretchText
+            return place + " · " + levelling.text(in: language) + instead
         case .remove:
             guard let edge = networkEdgePoint?.edge else {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")
@@ -992,6 +1128,19 @@ extension NetworkAnchor {
 }
 
 extension NetworkPreview {
+    /// Decision 41: a stretch with no track at either end is straight; the
+    /// next one, laid from its end, bends to follow it. Said once the
+    /// stretch could be built, so the player is not left thinking the
+    /// first line is stuck straight. `nil` for any stretch that joins
+    /// track, bends, or is refused.
+    public func freeFirstHint(in language: DisplayLanguage) -> String? {
+        guard problem == nil, traced == nil, !joinsStart, !joinsEnd, curve == .straight else { return nil }
+        return language.text(
+            "The first stretch is straight. Lay the next one from its end and it bends along.",
+            "第一段是直線；從它的尾端接著鋪，就會順著彎過去。"
+        )
+    }
+
     /// What the stretch is: "75 m · 0 m → 8 m · continues the track ·
     /// $ 1,500"; the cost is left out when GameCore refuses it.
     public func text(in language: DisplayLanguage) -> String {

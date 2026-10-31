@@ -1,9 +1,9 @@
 {
   "checksums" : [
-    "C00E50C1595464D3",
-    "C54B3151DE61E0F4",
-    "DF059FE5FD8AB4E8",
-    "B691E519DD313356"
+    "64A86678E728BB8E",
+    "5E6EBE59D27FE3C9",
+    "3E686EAE9AB5AE10",
+    "746E5DEF17F30E1E"
   ],
   "commands" : [
     {
@@ -205,11 +205,11 @@
       "speed" : "paused"
     },
     "economy" : {
-      "balance" : 1000000,
+      "balance" : 3000000,
       "costs" : {
-        "station" : 1000,
-        "track" : 100,
-        "train" : 5000
+        "station" : 3000,
+        "track" : 300,
+        "train" : 15000
       }
     },
     "nextStationID" : 1,

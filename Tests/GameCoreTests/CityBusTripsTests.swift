@@ -23,7 +23,7 @@ final class CityBusTripsTests: XCTestCase {
     /// with 1,000 office jobs, 3,520 m apart on a line with a train; a road
     /// all along row 8; and `land` beside. A minute a tick.
     private func world(_ land: [LandCell], balance: Money = 1_000_000_000) throws -> GameWorld {
-        var world = GameWorld(bounds: try WorldBounds(width: 128 * cell, height: 16 * cell), economy: GameEconomy(balance: balance, costs: testCosts))
+        var world = GameWorld(bounds: try WorldBounds(width: 128 * cell, height: 16 * cell), economy: fixtureEconomy(balance: balance, costs: testCosts))
         try Self.track.build(in: &world)
         try Self.track.buildStation(named: "A", beside: 21, at: 33, in: &world)
         try Self.track.buildStation(named: "B", beside: 241, at: 33, in: &world)
@@ -79,13 +79,13 @@ final class CityBusTripsTests: XCTestCase {
         XCTAssertEqual(trips(world, a), before.0, "the trains lose no one")
         XCTAssertEqual(trips(world, b), before.1)
 
-        // A day: 80 riders at $5; 144 departures, 1,290.24 km there and
-        // back at $20.
+        // A day: 80 riders at NT$15; 144 departures, 1,290.24 km there and
+        // back at NT$60.
         try world.advance(ticks: 1_440 + 30)
         let day = try XCTUnwrap(world.busRoute(id: route.id)?.days.last)
         XCTAssertEqual(day.riders, 80)
-        XCTAssertEqual(day.fares, Money(80 * 500))
-        XCTAssertEqual(day.cost, Money(2_580_480))
+        XCTAssertEqual(day.fares, Money(80 * 1_500))
+        XCTAssertEqual(day.cost, Money(7_741_440))
         XCTAssertTrue(world.accounts.entries.allSatisfy(GameWorld.isWellFormed))
 
         // With no bus the route carries no one.
@@ -191,7 +191,7 @@ final class CityBusTripsTests: XCTestCase {
     /// a city route through B, a feeder to A and the player's roads, run a
     /// day.
     func testVersionSeventyFiveKeepsCityRoutesAndThePlayersRoads() throws {
-        var world = try world([homes(30, 400), offices(100, 400), homes(20, 200)])
+        var world = try NTScale.$factor.withValue(3) { try world([homes(30, 400), offices(100, 400), homes(20, 200)]) }
         try world.createBusRoute(to: nil, stops: [at(30), at(100)], service: .every(minutes: 10), buses: 4)
         try world.createBusRoute(to: nil, stops: [at(30), at(64)], service: .every(minutes: 15), buses: 2)
         try world.createBusRoute(to: a, stops: [at(20)], service: .every(minutes: 20), buses: 1)
@@ -219,8 +219,8 @@ final class CityBusTripsTests: XCTestCase {
         XCTAssertEqual(loaded.busRoutes.map(\.station), [nil, nil, a])
         XCTAssertEqual(loaded.busRoutes.map(\.transfer), [nil, BusTransfer(station: b, stop: 1), nil])
         XCTAssertEqual(loaded.roads?.built, [CellPosition(row: 7, column: 41), CellPosition(row: 6, column: 41)])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 75,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 75,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
 
         // Version 74 had no city routes: a route there names its station.
         var old = object

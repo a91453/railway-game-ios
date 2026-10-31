@@ -1646,6 +1646,53 @@ enum MapArt {
     private static func drawCity(_ map: CityMap, mode: PopTravelMode, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
         let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
         drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+        if mode == .zoning {
+            drawZoneOutlooks(map.zoningMarks(in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+        }
+    }
+
+    /// Decision 514: over the zones' colours, what each empty zoned block
+    /// will do (``ZoneOutlook``): nothing over one that will be built,
+    /// white stripes rising to the right over one waiting for its station,
+    /// white cross-hatching over one the town does not want now, and grey
+    /// over one too far from a station; lines about 6 points apart, running
+    /// on across blocks.
+    private static func drawZoneOutlooks(_ marks: [CityMap.ZoningMark], opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
+        guard !marks.isEmpty else { return }
+        var greyed = Path(), lines = Path()
+        for mark in marks {
+            let rect = screenRect(minX: mark.minX, minY: mark.minY, maxX: mark.maxX, maxY: mark.maxY, projection)
+            switch mark.outlook {
+            case .builds: continue
+            case .tooFar: greyed.addRect(rect)
+            case .waitsForStation: addHatching(to: &lines, in: rect, rising: true)
+            case .notWanted:
+                addHatching(to: &lines, in: rect, rising: true)
+                addHatching(to: &lines, in: rect, rising: false)
+            }
+        }
+        let strength = min(1, opacity + 0.2)
+        context.fill(greyed, with: .color(Color(CityMap.tooFarColor).opacity(0.8 * strength)))
+        context.stroke(lines, with: .color(.white.opacity(0.9 * strength)), lineWidth: 1.25)
+    }
+
+    /// Adds to `path` the diagonals of `rect` 6 points apart, on lines fixed
+    /// to the screen so neighbouring blocks' join: rising to the right
+    /// (x + y = c), or falling (x − y = c).
+    private static func addHatching(to path: inout Path, in rect: CGRect, rising: Bool, spacing: Double = 6) {
+        let low = rising ? rect.minX + rect.minY : rect.minX - rect.maxY
+        let high = rising ? rect.maxX + rect.maxY : rect.maxX - rect.minY
+        guard (high - low).isFinite else { return }
+        for k in Int((low / spacing).rounded(.up))...max(Int((low / spacing).rounded(.up)), Int((high / spacing).rounded(.down))) {
+            let c = Double(k) * spacing
+            // The line's points with x in the rectangle and y = c − x (or
+            // x − c) in it too.
+            let start = rising ? max(rect.minX, c - rect.maxY) : max(rect.minX, rect.minY + c)
+            let end = rising ? min(rect.maxX, c - rect.minY) : min(rect.maxX, rect.maxY + c)
+            guard start < end else { continue }
+            path.move(to: CGPoint(x: start, y: rising ? c - start : start - c))
+            path.addLine(to: CGPoint(x: end, y: rising ? c - end : end - c))
+        }
     }
 
     /// Decision 311: where a station would have riders
