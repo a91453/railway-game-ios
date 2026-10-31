@@ -27,6 +27,8 @@ final class RealCarLengthTests: XCTestCase {
             "STAR": 1_280,
             // Decision 286, later (fourth): the Midsummer Formosa's Chu-Kuang coaches, 20.0 m.
             "SUMMER": 1_280,
+            // Decision 515: the Alishan Forest Railway's coaches, 13.0 m (estimated).
+            "ALISHAN": 832,
         ]
         XCTAssertEqual(Set(metres.keys), Set(TrainType.allCases.map(\.rawValue)))
         for type in TrainType.allCases {

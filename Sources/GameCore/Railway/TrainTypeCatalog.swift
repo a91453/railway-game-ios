@@ -111,6 +111,19 @@
 //   (``Tourism/starsPerRoundIslandTrain``), the Midsummer Formosa a star
 //   and a quarter (``Tourism/starsPerSteamTrain``). The most any train
 //   calling there adds is what counts.
+// - The Alishan Forest Railway's train (阿里山林鐵, decision 515) is the
+//   owner's reference (`Railway/taiwan-rail-reference-clean`: the garage
+//   scene `alishan` and `docs/garage-alishan-prototype-20260910.md`, a
+//   DL38 diesel and two `alicoach` coaches; `docs/afr-push-pull-0913.md`,
+//   the DL25 and its pushing and pulling): as the Chu-Kuang trains, one set
+//   whose cars are the coaches, the locomotive in the first car's price. It
+//   runs as `PERF_RULES` have the forest railway run
+//   (``TrainPerformance/forestRailway``). The coaches' seats and length
+//   are not in the reference (gap): a coach is rated 40 and 13.0 m long,
+//   estimates for the 762 mm gauge's small coaches, with a door at each
+//   end of each side. Its prices are this project's: a small diesel and
+//   small coaches, dear to run on the mountain. It is the only type that
+//   climbs mountain track (``TrainTypeSpec/climbsMountains``).
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -164,11 +177,14 @@ public struct TrainTypeSpec: Hashable, Sendable {
     public let sightseeingStars: Int
     /// Whether it is a sightseeing train (decision 286).
     public var isSightseeing: Bool { sightseeingStars > 0 }
+    /// Whether a train of the type may run on mountain track (decision
+    /// 515, ``TrackEdge/mountain``): a mountain train's.
+    public let climbsMountains: Bool
 
     init(
         code: String, family: TrainFamily, offer: TrainTypeOffer, capacity: Int64, doors: Int64, overloads: Bool,
         performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64, carMetres: (Int64, Int64),
-        sightseeingStars: Int = 0
+        sightseeingStars: Int = 0, climbsMountains: Bool = false
     ) {
         self.code = code
         self.family = family
@@ -180,6 +196,7 @@ public struct TrainTypeSpec: Hashable, Sendable {
         pricing = RollingStockPricing(firstDollars: firstDollars, carDollars: carDollars, operatingPermille: operatingPermille)
         carLength = Self.worldUnits(metres: carMetres.0, tenths: carMetres.1)
         self.sightseeingStars = sightseeingStars
+        self.climbsMountains = climbsMountains
     }
 
     /// `metres.tenths` metres in world units (64 a metre), to the nearest.
@@ -252,6 +269,10 @@ public enum TrainTypeCatalog {
         .init(code: "SUMMER", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
               performance: .midsummerFormosa, firstDollars: 350_000, carDollars: 35_000, operatingPermille: 1_650, carMetres: (20, 0),
               sightseeingStars: Tourism.starsPerSteamTrain),
+        // Decision 515: the Alishan Forest Railway's diesel and its coaches.
+        .init(code: "ALISHAN", family: .railway, offer: .added, capacity: 40, doors: 2, overloads: true,
+              performance: .forestRailway, firstDollars: 180_000, carDollars: 30_000, operatingPermille: 1_500, carMetres: (13, 0),
+              climbsMountains: true),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

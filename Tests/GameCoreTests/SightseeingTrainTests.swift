@@ -43,7 +43,7 @@ final class SightseeingTrainTests: XCTestCase {
 
     func testTheSightseeingTypes() {
         XCTAssertEqual(TrainType.allCases.filter(\.isSightseeing), [.haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa])
-        XCTAssertEqual(TrainType.allCases.map(\.sightseeingStars), Array(repeating: 0, count: 17) + [50, 50, 50, 100, 75, 125])
+        XCTAssertEqual(TrainType.allCases.map(\.sightseeingStars), Array(repeating: 0, count: 17) + [50, 50, 50, 100, 75, 125, 0])
         XCTAssertEqual(TrainType.blueTrain.ratedCapacityPerCar, 50)
         XCTAssertEqual(TrainType.blueTrain.doorsPerCar, 2)
         XCTAssertEqual(TrainType.blueTrain.performance, .r100ChuKuang)

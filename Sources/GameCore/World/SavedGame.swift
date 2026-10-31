@@ -394,9 +394,15 @@
 ///     cells. A build that reads only an earlier version cannot read a
 ///     route with no station and would drop the player's roads, so it
 ///     says the save is newer than it instead.
+/// 77. Mountain track (decision 515): an edge can be `"mountain": true`,
+///     steeper than 40 in 1000 up to 70, and a train's `"type"` can be
+///     `"ALISHAN"`. A build that reads only an earlier version would call
+///     such an edge too steep and cannot read the type, so it says the save
+///     is newer than it instead. (Version 76 is the New Taiwan dollar's,
+///     decision 499, in its own pull request.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 75
+    public static let currentVersion = 77
 
     public let world: GameWorld
 
@@ -590,6 +596,9 @@ extension SavedGame: Codable {
         // Version 74 to 75: every route of a world before version 75 feeds
         // its station, carrying no trips of its own, and roads without
         // `"built"` are all the city's: nothing to turn.
+        // Version 75 to 77: every edge of a world before version 77 is
+        // ordinary track, as an edge without `"mountain"` reads, and no
+        // train is the Alishan Forest Railway's.
         // Later versions add their steps here.
         var world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
         if version == 72 { world.seedBoughtTilesRoads() }

@@ -92,6 +92,9 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// Chu-Kuang coaches behind the CT273 steam locomotive. Not the steam
     /// train of decision 153 (``steam``), which only an era offers.
     public static let midsummerFormosa = TrainType(listed: "SUMMER")
+    /// The Alishan Forest Railway's train (阿里山林鐵, decision 515): small
+    /// coaches behind a diesel, the only type that climbs mountain track.
+    public static let alishan = TrainType(listed: "ALISHAN")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
@@ -150,6 +153,10 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// is not a sightseeing train.
     public var sightseeingStars: Int { TrainTypeCatalog.builtIn[row].sightseeingStars }
 
+    /// Whether a train of this type may run on mountain track (decision
+    /// 515, ``TrackEdge/mountain``): only the Alishan Forest Railway's.
+    public var climbsMountains: Bool { TrainTypeCatalog.builtIn[row].climbsMountains }
+
     /// Reads a code; a code no type has does not read, as the type's codes
     /// did when they were an enum's raw values.
     public init(from decoder: any Decoder) throws {
@@ -198,6 +205,12 @@ extension Train {
 
     /// How many passengers get off, or on, in a second: through every door
     /// of every car (see ``ServiceDwell/passengersPerDoorPerSecond``).
+    /// Whether it may run on mountain track (decision 515): its type
+    /// climbs mountains. The standard car does not.
+    public var climbsMountains: Bool {
+        type?.climbsMountains ?? false
+    }
+
     public var passengersPerSecond: Int64 {
         ServiceDwell.passengersPerDoorPerSecond * doorsPerCar * Int64(cars)
     }

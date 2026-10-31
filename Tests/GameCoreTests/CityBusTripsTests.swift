@@ -219,7 +219,8 @@ final class CityBusTripsTests: XCTestCase {
         XCTAssertEqual(loaded.busRoutes.map(\.station), [nil, nil, a])
         XCTAssertEqual(loaded.busRoutes.map(\.transfer), [nil, BusTransfer(station: b, stop: 1), nil])
         XCTAssertEqual(loaded.roads?.built, [CellPosition(row: 7, column: 41), CellPosition(row: 6, column: 41)])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), data)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 75,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
 
         // Version 74 had no city routes: a route there names its station.
         var old = object

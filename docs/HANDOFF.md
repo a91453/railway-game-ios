@@ -2360,6 +2360,15 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **還沒做的**：CI 綠、規劃確認後轉 ready，在 #1041 寫「可合併」。規劃決定這個 PR 改到 100.1。截圖驗收照作者 10/29 暫緩，PR 寫了要看的畫面。
 - **延後的**（審查列為可等）：`Deleting/` 搬回時原處已有同名檔就一直留著、搬回失敗可能讓刪掉的檔案部分回來；`keepInRow` 判斷同一局時不比新聞紀錄；7 的後半（留了版本後寫入失敗多一份）沒重現。
 
+### 4.35 登山軌道與阿里山林鐵（決策 515，ALISHAN session_01YGNNumbnQtwccikAUfEgt2，`alishan-mountain-grade`，2026-10-30）
+
+- **做了的**在決策 515（`docs/decisions/515.md`）：描 `afr_sched` 時坡度到 70‰（邊的 `mountain`）、林鐵描線半徑 20 m、`ALISHAN` 車種、只有登山車上得去（`trainCannotClimb`）、依坡度限速；存檔版本 77。
+- **還沒做的**（決策 515 的「缺口與下一步」，一項一個 PR）：
+  - 不在車站的折返（Z 字）：GameCore 只在中途站月台折返（決策 63）；要讓列車在非車站的節點換向，動 `LineJourney` 與交通控制，要升 golden 時照規則逐值說明。
+  - `placeTrain`、接續運轉沒有檢查登山；線路改走登山軌道後已在線上的一般車不會被拉下來。
+  - 登山車的 3D 模型（DL38＋`alicoach`，參考 `garage-scenes/alishan*.js`；先讀 `.claude/skills/rolling-stock/SKILL.md`）。
+  - 獨立山螺旋 16 m、二萬平到神木 20 m 兩處描線停點（資料畫線的折角）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
