@@ -513,6 +513,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         settle(seconds: 2)
         keep("dispatch-train-card", app)
+        // The card's buttons are under its trip on a phone on its side:
+        // drag the card, not the map beside it, until they show.
+        let column = card.frame.midX
+        _ = app.dragUntilWhollyOnScreen(app.buttons["inspector.train.fleet"], drags: 4, at: column)
+        settle(seconds: 2)
+        keep("dispatch-train-buttons", app)
     }
 
     /// Decision 478's load charts on the freight scene: a passenger line's
