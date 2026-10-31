@@ -20,10 +20,10 @@ final class NewGameChoiceTests: XCTestCase {
     /// map's says where it is.
     func testTheCardsSayWhatTheyStartWith() {
         var options = NewGameOptions()
-        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(900_000_000).moneyText) to build with")
+        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(900_000_000).moneyTextWithReference(in: .english)) to build with")
         XCTAssertEqual(NewGameChoice.blank.detail(in: .traditionalChinese, options: options), "空白地圖，起始資金 \(Money(900_000_000).moneyText)")
         options.difficulty = .easy
-        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(1_500_000_000).moneyText) to build with")
+        XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(1_500_000_000).moneyTextWithReference(in: .english)) to build with")
         options.funds = .unlimited
         XCTAssertEqual(NewGameChoice.blank.detail(in: .traditionalChinese, options: options), "空白地圖，資金無限")
         XCTAssertEqual(NewGameChoice.realWorld.detail(in: .english, options: options), "Build on a map of a real place")

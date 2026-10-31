@@ -213,9 +213,26 @@ struct EconomyPanel: View {
                         .font(.title3.weight(.bold))
                         .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.textPrimary)
                         .monospacedDigit()
+                    // Decision 523: a rough US dollar figure under the
+                    // balance, English only.
+                    if !session.world.economy.unlimitedFunds,
+                       let reference = session.world.economy.balance.usDollarReferenceText(in: session.language) {
+                        Text(verbatim: reference)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .monospacedDigit()
+                            .accessibilityIdentifier("economy.balance.usd")
+                    }
                 }
             }
             .padding(.vertical, 4)
+            // Decision 523: the currency, said once in English.
+            if let note = Money.currencyNoteText(in: session.language) {
+                Text(verbatim: note)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("economy.currencyNote")
+            }
 
             LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
             // Decision 160: the tiles of the map owned, and what the next
@@ -259,7 +276,7 @@ struct EconomyPanel: View {
                         session.setEconomyMode(.free)
                     }
                 } message: {
-                    Text("Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again.")
+                    Text(verbatim: GameSession.freePlaySwitchText(in: session.language))
                 }
                 if session.isFreePlayLocked {
                     Text(verbatim: GameSession.freePlayLockedText(in: session.language))

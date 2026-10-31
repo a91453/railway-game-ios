@@ -925,16 +925,6 @@
         }
       }
     },
-    "Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自由模式不收票價、沒有營運成本，各站的客源由你設定。切換後無法再改回經營模式。"
-          }
-        }
-      }
-    },
     "Free play: no fares and no running costs." : {
       "localizations" : {
         "zh-Hant" : {
@@ -2775,12 +2765,12 @@
         }
       }
     },
-    "Land use: homes, shops or offices, darker for taller buildings. Land value: $ a square metre, higher near good train service; tap a cell for its parts. Catchment coverage: the land within 800 m of a station, and the people no station reaches." : {
+    "Land use: homes, shops or offices, darker for taller buildings. Land value: NT$ a square metre, higher near good train service; tap a cell for its parts. Catchment coverage: the land within 800 m of a station, and the people no station reaches." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "土地用途：住宅、商業或辦公，建物越高顏色越深。地價：每平方公尺多少 $，車站服務越好越高；點一格可看分項。腹地涵蓋：車站 800 公尺內的範圍，以及沒有車站涵蓋的住戶。"
+            "value" : "土地用途：住宅、商業或辦公，建物越高顏色越深。地價：每平方公尺多少 NT$，車站服務越好越高；點一格可看分項。腹地涵蓋：車站 800 公尺內的範圍，以及沒有車站涵蓋的住戶。"
           }
         }
       }

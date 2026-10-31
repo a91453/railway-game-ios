@@ -193,6 +193,35 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("finance-composition-week-costs", app)
     }
 
+    /// HANG2 P2-5 (decision 497): the confirmation before switching to free
+    /// play, which says the cash stays where it is. For the screenshot
+    /// review of the pull request that changed it, not the website.
+    func testFreePlaySwitchConfirmation() {
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        app.chooseBlankMap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The game opens")
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars["經濟明細"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let reports = app.buttons["economy.reports"]
+        let free = app.buttons["切換到自由模式"].firstMatch
+        if !free.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY), reports.label == "更多報表與設定" {
+            reports.tap()
+        }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(free, in: list, below: bar.frame.maxY), "The free play switch comes into reach")
+        free.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "現金會停在現在的數字")).firstMatch.appears(within: 10), "The confirmation says the cash stays")
+        settle(seconds: 1)
+        keep("free-play-switch-confirmation", app)
+    }
+
     /// A blank new game's map expansion: the tiles that can be bought,
     /// their prices, and the locked ones.
     func testMapExpansion() {
@@ -211,6 +240,97 @@ final class WebsiteScreenshotTests: XCTestCase {
         zoomInOnce(app)
         settle(seconds: 3)
         keep("map-expansion", app)
+    }
+
+    /// Decision 523: amounts in NT$, and in English a rough US$ figure
+    /// under the balance, beside a stretch's cost and after the starting
+    /// cash. For the screenshot review of the pull request that added it,
+    /// not the website.
+    func testUSDollarReferenceEnglish() {
+        currencyShots(english: true)
+    }
+
+    /// Decision 523: the same screens in Chinese, NT$ with no US$ figure.
+    func testUSDollarReferenceChinese() {
+        currencyShots(english: false)
+    }
+
+    private func currencyShots(english: Bool) {
+        let suffix = english ? "en" : "zh"
+        let app = launch(english: english)
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        XCTAssertTrue(app.buttons["newGame.blank"].appears(within: 10), "The new game's options open")
+        settle(seconds: 1)
+        keep("currency-new-game-\(suffix)", app)
+        app.chooseBlankMap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The game opens")
+        settle()
+        keep("currency-hud-\(suffix)", app)
+
+        tapButton("entry.economy", in: app)
+        // The press on Data can be cancelled while the station master's
+        // bubble goes (`FinanceCompositionUITests`): tap once more if the
+        // panel did not open.
+        let bar = app.navigationBars[english ? "Economy" : "經濟明細"].firstMatch
+        if !bar.appears(within: 10) {
+            tapButton("entry.economy", in: app)
+        }
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        // Once the first hour has closed, the balance is among the reports
+        // folded under today's figures; before it, every report shows and
+        // there is no toggle. Go down the list until one or the other
+        // comes, open the reports if folded, then go on to the balance.
+        let balance = english ? app.staticTexts["economy.balance.usd"].firstMatch : app.staticTexts["目前餘額"].firstMatch
+        let reports = app.buttons["economy.reports"].firstMatch
+        // The panel beside the map is short and its rows are mostly fare
+        // controls: swipe the list (a press and drag there changed the
+        // fare, run 41236322793), and drag only clear of buttons.
+        for _ in 0..<30 where !balance.exists && !reports.exists {
+            list?.swipeUp(velocity: .slow)
+        }
+        if !balance.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY, clearOf: .button),
+           reports.label == (english ? "More reports and settings" : "更多報表與設定") {
+            reports.tap()
+        }
+        // The reports open below the fleet, above the toggle: the balance
+        // follows the trends, further down.
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY, clearOf: .button),
+                      "The balance is in the panel")
+        settle()
+        keep("currency-economy-\(suffix)", app)
+        app.terminate()
+
+        // A stretch drawn but not built: the cost above the map.
+        let again = launch(english: english)
+        defer { again.terminate() }
+        let start = again.buttons["start.newGame"]
+        XCTAssertTrue(start.appears(within: 10))
+        again.bringStartButtonIntoView(start)
+        start.tap()
+        again.chooseBlankMap()
+        let field = again.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(field.appears(within: 60), "The game opens")
+        let build = again.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = again.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        let frame = field.frame.intersection(again.frame)
+        let middle = (again.buttons["hud.menu"].frame.maxY + build.frame.minY) / 2
+        let origin = again.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.3, dy: middle)).tap()
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.6, dy: middle)).tap()
+        settle()
+        keep("currency-build-cost-\(suffix)", again)
     }
 
     /// The Liu Mingchuan challenge as it opens: its map from Keelung to
@@ -1450,11 +1570,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["start.brand"].firstMatch.appears(within: 30), "The start screen")
     }
 
-    private func launch(extra: [String] = []) -> XCUIApplication {
+    private func launch(extra: [String] = [], english: Bool = false) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"] + extra
+        let language = english ? ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] : ["-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
+        app.launchArguments = ["-ui-testing"] + language + extra
         app.launch()
         return app
     }

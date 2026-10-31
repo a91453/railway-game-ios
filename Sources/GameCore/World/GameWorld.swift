@@ -4018,10 +4018,16 @@ public struct GameWorld: Equatable, Sendable {
                let path = path(from: start, toStation: call, length: train.length, eligible: free, keepingLeft: true, memo: &memo) {
                 return (path, nil)
             }
-            guard let nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
-            // Decision 228: with traffic control off, a free platform first.
+            guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
+            // Decision 527: an empty run keeps off track its line takes
+            // only the other way.
+            let against = lineAgainst(for: train, memo: &memo)
+            if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against) { nearest = kept }
+            // Decision 228: with traffic control off, a free platform first;
+            // decision 527: not one only that track reaches.
             if let next = train.call(after: stop, cycle: cycle),
-               let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo) {
+               let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo),
+               !(against.map { against in free.traversals.contains(where: against.contains) && !nearest.traversals.contains(where: against.contains) } ?? false) {
                 return (free, nil)
             }
             return (nearest, nil)

@@ -162,7 +162,7 @@ final class PolicyTests: XCTestCase {
         let table = PlayReport.table([PlayReport(label: "By minute", player: minutes), PlayReport(label: "By day", player: days)], title: "Test")
         let rows = table.split(separator: "\n", omittingEmptySubsequences: false)
         XCTAssertEqual(rows.count, 6)
-        XCTAssertTrue(rows[4].hasPrefix("| By minute | $\(minutes.balances[0] / 100) / $\(minutes.balances[2] / 100) / — / — | \(minutes.trips[2]) | 0 (0) | 0 of 1 | none |"), String(rows[4]))
+        XCTAssertTrue(rows[4].hasPrefix("| By minute | \(Money.currencySymbol)\(minutes.balances[0] / 100) / \(Money.currencySymbol)\(minutes.balances[2] / 100) / — / — | \(minutes.trips[2]) | 0 (0) | 0 of 1 | none |"), String(rows[4]))
         XCTAssertTrue(rows[5].contains("| — (PLAY_BY_MINUTE=1) |"), String(rows[5]))
     }
 

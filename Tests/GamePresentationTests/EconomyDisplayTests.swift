@@ -161,6 +161,27 @@ final class EconomyDisplayTests: XCTestCase {
         }
     }
 
+    /// HANG2 P2-5 (decision 497): free play earns nothing, so the cash
+    /// stays where the switch left it, and the confirmation says so before
+    /// the player switches.
+    func testTheFreePlayConfirmationSaysTheCashStaysWhereItIs() async throws {
+        var world = try makeLine()
+        world.setEconomyMode(.management)
+        try await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            session.setEconomyMode(.free)
+            XCTAssertEqual(session.world.accounts.mode, .free)
+            var free = session.world
+            let cash = free.economy.balance
+            free.setSpeed(.x60)
+            try free.advance(ticks: 1_440)
+            XCTAssertLessThanOrEqual(free.economy.balance, cash, "free play earns nothing")
+            XCTAssertTrue(GameSession.freePlaySwitchText(in: .english).contains("Your cash stays at what it is now and will not grow."))
+            XCTAssertTrue(GameSession.freePlaySwitchText(in: .traditionalChinese).contains("現金會停在現在的數字，之後不會再增加。"))
+            XCTAssertTrue(GameSession.freePlaySwitchText(in: .english).hasSuffix("It cannot become a managed company again."))
+        }
+    }
+
     /// Interest is paid only by a managed company: a company with a loan
     /// must repay it before free play, or the loan would cost nothing.
     @MainActor

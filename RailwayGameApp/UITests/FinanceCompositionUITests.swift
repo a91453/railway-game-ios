@@ -38,14 +38,14 @@ final class FinanceCompositionUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["economy.composition.costs"].firstMatch.exists, "The cost donut shows")
 
         let detail = app.staticTexts["economy.composition.income.detail"]
-        XCTAssertTrue(detail.label.hasPrefix("Income $"), "Before a tap the ring's total is summed up: \(detail.label)")
+        XCTAssertTrue(detail.label.hasPrefix("Income NT$"), "Before a tap the ring's total is summed up: \(detail.label)")
         let fares = app.buttons["economy.composition.income.fares"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(fares, in: list, below: bar.frame.maxY), "The fares row comes into reach")
         XCTAssertTrue(fares.becomesHittable(within: 5))
         fares.tap()
-        XCTAssertTrue(detail.label.hasPrefix("Fares · $"), "The tapped slice is spelled out: \(detail.label)")
+        XCTAssertTrue(detail.label.hasPrefix("Fares · NT$"), "The tapped slice is spelled out: \(detail.label)")
         fares.tap()
-        XCTAssertTrue(detail.label.hasPrefix("Income $"), "A second tap lets it go: \(detail.label)")
+        XCTAssertTrue(detail.label.hasPrefix("Income NT$"), "A second tap lets it go: \(detail.label)")
     }
 }
 
