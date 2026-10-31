@@ -191,6 +191,8 @@ struct StationPanel: View {
         case .platforms: platformsSection(station)
         case .tripsByHour: tripsByHourSection(station)
         case .passengers: passengersSection(station)
+        // Decision 506: room for more to wait, once busy enough.
+        case .expansion: StationExpansionSection(session: session, station: station.id)
         case .demand: demandSection(station)
         case .events: eventsSection(station)
         case .tripsByStation: tripsByStationSection(station)

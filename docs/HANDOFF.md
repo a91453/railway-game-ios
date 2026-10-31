@@ -2573,7 +2573,13 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - L3-11（每幀多做的掃描）：L1-2 的記憶已經省掉泡泡與標記的重算；`StationLayout` 車站模式的 `trackBeside` 還沒量也沒改，交給查主執行緒停頓的工作順便量。
 - **UNVERIFIED**：L1-2、L1-3、L2-3、L3-6、L3-7、L3-9、L3-10 是 App 的程式，Linux 編不到，靠 PR 的 iOS 建置；實機手感沒看。
 
-### 4.41 在 3D 直接鋪軌（決策 517 續，派工單 BUILD3D-2，session_01YGNNuoVbtz1ohJBKbA8itq，`build3d-pick`，2026-10-31）
+### 4.41 車站擴建（決策 506，派工單 STATIONEXP session_01YGNNunzxiVH7aAtqVw8b33，`stationexp-capacity`，2026-10-31）
+
+- **做了的**在決策 506（`docs/decisions/506.md`）：候車容量 4,000 → 8,000 → 16,000，NT$30M／NT$90M，昨天進出 50,000／100,000 人次、而且昨天或今天客滿擋過人才開放；存檔 78。先量了作者 97.1 那局：三鶯線 9 站的「滿」是沒有車載（一天 0 人次），台北、板橋才是站太小。
+- **三鶯線一天 0 人次的線索**（DEMOON 派工 SANYING-NOTRAIN、決策 527 在查，原因是機廠出來的回送車經渡線開上反向的 A 線而死結）：作者 97.1 存檔（私庫 `bug-reports/wait-and-stall-97-2026-10-30`）裡，三鶯線 12 列車的 `execution` 全是 `travelling`（停在 stop 1、3 或 4 之前），時刻表最後的發車時間比存檔的 `seconds` 3,221,250 早 47–48 小時；其他 70 列車中位數只早 9 分鐘。列車 1、5、12 的時刻表只剩 2 站（28 → 27 鶯桃福德）。模擬兩天，這 12 列車一次也沒有停站（`StationCapacityReportTests` 的「停在站上」是 –）。看來是卡住，不是車少：先從這幾列車的位置（edge 2388、2390 一帶）與號誌、前車查起。
+- **還沒做的**在決策 506「下一步」：3D 站體隨等級變大；開放條件從「昨天或今天客滿」改成「最近幾天常客滿」（新局 seed 1 一天的尖峰就讓一站開放一天，決策 506「平衡」）；三鶯線一整天 0 人次的原因另開派工；
+
+### 4.42 在 3D 直接鋪軌（決策 517 續，派工單 BUILD3D-2，session_01YGNNuoVbtz1ohJBKbA8itq，`build3d-pick`，2026-10-31）
 
 存檔版本、決策編號、golden schema、GameCore 都不動。拆成五個 PR，表在 [決策 517 的「續」](decisions/517.md)。
 

@@ -315,6 +315,17 @@ public enum GameError: Error, Hashable, Sendable {
     case stationCommerceMaxedOut
     /// The station has no shops (decision 222).
     case noStationCommerce(StationID)
+    /// An expanded station cannot become a depot (decision 506): the
+    /// station.
+    case stationIsExpanded(StationID)
+    /// The station has had both expansions (decision 506).
+    case stationExpansionMaxedOut
+    /// The station had fewer people yesterday than the next expansion
+    /// needs (decision 506): how many it needs.
+    case stationTooQuietToExpand(needed: Int64)
+    /// The station turned no passenger away for want of room yesterday or
+    /// today, so an expansion would not carry more (decision 506).
+    case stationNotFullToExpand
     /// The real line, or the line its trains run as, was bought already
     /// (decision 315).
     case lineAlreadyAcquired
