@@ -39,7 +39,7 @@
 
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
-> 分區看得到效果（派工單 ZONE2，[決策 514](decisions/514.md)，`zone2-zoning-status`）：分區圖層分出會蓋、等車站成長、離車站太遠、目前不缺。量到的：用途有人要時第一棟第 1 天、第五棟第 3 天，不慢；問題是範圍（大方框六成在 800 m 外）與需求（第一條線住宅需求第 1 天就轉負，預設的住宅分區幾乎不蓋）。留下的：決策 514「下一步」第 1、2 項（住宅需求、拖曳時先標範圍外），下一版由規劃派；量法用 `ZoningReportTests`。截圖驗收與實機 UNVERIFIED。
+> 分區看得到效果（派工單 ZONE2，[決策 514](decisions/514.md)，`zone2-zoning-status`）：分區圖層分出會蓋、等車站成長、離車站太遠、目前不缺。量到的：用途有人要時第一棟第 1 天、第五棟第 3 天，不慢；問題是範圍（大方框六成在 800 m 外）與需求（第一條線住宅需求第 1 天就轉負，預設的住宅分區幾乎不蓋）。留下的（規劃第 36 任 10/31 定）：另開一個 PR、目標下一版，做決策 514「下一步」第 2 項（拖曳時先把 800 m 外畫灰）與第 1 項的最小做法（分區工具預設選需求最高的用途）；住宅需求的 GameCore 平衡先不動。ZONE2 已壓縮一次、不接新工作，由規劃另派。量法用 `ZoningReportTests`，截圖情境 `ScreenshotScene.zoning`（`WebsiteScreenshotTests/testZoningOutlooks`）。實機 UNVERIFIED。
 
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
 
