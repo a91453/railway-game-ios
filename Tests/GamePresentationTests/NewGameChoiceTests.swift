@@ -21,7 +21,7 @@ final class NewGameChoiceTests: XCTestCase {
     func testTheCardsSayWhatTheyStartWith() {
         var options = NewGameOptions()
         XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(900_000_000).moneyTextWithReference(in: .english)) to build with")
-        XCTAssertEqual(NewGameChoice.blank.detail(in: .traditionalChinese, options: options), "空白地圖，起始資金 \(Money(900_000_000).moneyText)")
+        XCTAssertEqual(NewGameChoice.blank.detail(in: .traditionalChinese, options: options), "空白地圖，起始資金 \(Money.currencySymbol) 900 萬")
         options.difficulty = .easy
         XCTAssertEqual(NewGameChoice.blank.detail(in: .english, options: options), "An empty map and \(Money(1_500_000_000).moneyTextWithReference(in: .english)) to build with")
         options.funds = .unlimited

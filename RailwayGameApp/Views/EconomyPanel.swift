@@ -208,8 +208,9 @@ struct EconomyPanel: View {
                     Text("Balance")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
-                    // Decision 200: "∞" with unlimited funds.
-                    Text(verbatim: session.world.economy.cashText)
+                    // Decision 200: "∞" with unlimited funds. Decision 523,
+                    // continued: in 萬 or 億 in Chinese, every dollar under it.
+                    Text(verbatim: session.world.economy.cashText(in: session.language))
                         .font(.title3.weight(.bold))
                         .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.textPrimary)
                         .monospacedDigit()
@@ -222,6 +223,14 @@ struct EconomyPanel: View {
                             .foregroundStyle(Theme.textSecondary)
                             .monospacedDigit()
                             .accessibilityIdentifier("economy.balance.usd")
+                    }
+                    if !session.world.economy.unlimitedFunds,
+                       session.world.economy.balance.compactText(in: session.language) != session.world.economy.balance.moneyText {
+                        Text(verbatim: session.world.economy.balance.moneyText)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .monospacedDigit()
+                            .accessibilityIdentifier("economy.balance.exact")
                     }
                 }
             }

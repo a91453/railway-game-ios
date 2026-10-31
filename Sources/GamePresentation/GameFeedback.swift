@@ -43,6 +43,19 @@ public struct IncomePulse: Hashable, Sendable {
         let symbol = Money.currencySymbol
         return dollars >= 10_000 ? "\u{2212}\(symbol)\((dollars + 500) / 1_000)k" : "\u{2212}\(symbol)\(dollars.groupedText)"
     }
+
+    /// ``text`` as the Chinese interface floats it (decision 523,
+    /// continued): money in, or a loss, from NT$10,000 in 萬 or 億
+    /// (``Money/compactText(in:)``): "+NT$ 1.2 萬", "−NT$ 4 萬"; in
+    /// English, ``text``.
+    public func text(in language: DisplayLanguage) -> String {
+        guard language == .traditionalChinese else { return text }
+        var compact = amount.compactText(in: language)
+        guard isLoss else { return "+" + compact }
+        // "NT$ -4 萬" → "−NT$ 4 萬", as the English loss puts its sign first.
+        if let minus = compact.firstIndex(of: "-") { compact.remove(at: minus) }
+        return "\u{2212}" + compact
+    }
 }
 
 /// A request to move the map's camera to a place (decision 177).

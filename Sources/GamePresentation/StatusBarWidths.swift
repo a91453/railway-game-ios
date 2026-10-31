@@ -47,13 +47,27 @@ public enum StatusBarWidths {
     }
 
     /// The widest the cash can read until its amount gains a digit, with
-    /// the room of a minus sign and of at least seven digits ("$ -8,888,888"):
-    /// a balance that goes up and down by a digit, or below zero, keeps
-    /// one width.
-    public static func moneyText(_ balance: Money) -> String {
-        let shown = balance.moneyText.filter(\.isNumber).count
-        let eights = Int64(String(repeating: "8", count: max(7, min(shown, 18)))) ?? 8_888_888
-        return Money.currencySymbol + " -" + eights.groupedText
+    /// the room of a minus sign and of at least seven digits ("NT$
+    /// -8,888,888"): a balance that goes up and down by a digit, or below
+    /// zero, keeps one width. In Chinese, where the cash is in 萬 or 億
+    /// (``Money/compactText(in:)``), the room of the widest 萬 ("NT$
+    /// -8,888.8 萬", every balance under 1 億), and from 1 億 that of the
+    /// 億 with at least four digits before the point and two after it
+    /// ("NT$ -8,888.88 億"), so passing 1 億 never narrows the bar.
+    public static func moneyText(_ balance: Money, in language: DisplayLanguage) -> String {
+        let size = balance.wholeDollars.magnitude
+        guard language == .traditionalChinese else {
+            let digits = balance.moneyText.filter(\.isNumber).count
+            return Money.currencySymbol + " -" + eights(max(7, min(digits, 18))).groupedText
+        }
+        // Under 1 億 once rounded to the thousand, the cash is in 萬.
+        guard (size + 500) / 1_000 >= 100_000 else { return Money.currencySymbol + " -8,888.8 萬" }
+        let yi = (size + 500_000) / 100_000_000
+        return Money.currencySymbol + " -" + eights(max(4, min(String(yi).count, 16))).groupedText + ".88 億"
+    }
+
+    private static func eights(_ count: Int) -> Int64 {
+        Int64(String(repeating: "8", count: count)) ?? 8_888_888
     }
 
     /// Every label the speed menu's button can show.

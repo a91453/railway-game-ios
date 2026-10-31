@@ -28,7 +28,7 @@ public enum NewGameChoice: String, CaseIterable, Sendable {
         case .blank:
             options.funds == .unlimited
                 ? language.text("An empty map with unlimited funds", "空白地圖，資金無限")
-                : language.text("An empty map and \(options.startingBalance.moneyTextWithReference(in: .english)) to build with", "空白地圖，起始資金 \(options.startingBalance.moneyText)")
+                : language.text("An empty map and \(options.startingBalance.moneyTextWithReference(in: .english)) to build with", "空白地圖，起始資金 \(options.startingBalance.compactText(in: .traditionalChinese))")
         case .realWorld:
             language.text("Build on a map of a real place", "在真實地點的地圖上建造")
         }

@@ -231,7 +231,8 @@ struct MapBuildConfirm: View {
                             .font(.subheadline.weight(.bold))
                     }
                     if let cost = build.cost {
-                        Text(verbatim: cost.moneyText)
+                        // Decision 523, continued: in 萬 or 億 in Chinese.
+                        Text(verbatim: cost.compactText(in: session.language))
                             .font(.subheadline.weight(.bold))
                             .monospacedDigit()
                     }
@@ -547,7 +548,7 @@ private struct BuildConfirmation {
         case .roadRemoval: language.text("Take up this road", "拆掉這段路")
         }
         guard let cost else { return what }
-        return "\(what), \(cost.moneyText)"
+        return "\(what), \(cost.compactText(in: language))"
     }
 }
 
