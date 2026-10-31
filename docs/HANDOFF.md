@@ -49,6 +49,8 @@
 
 > 列車運用表入口與拖拉編排（派工單 ROSTER2，[決策 512](decisions/512.md)，`roster2-drag`）：路線頁、列車卡直接開運用表；「編排」裡長按車名拖到別條線改派、長按預定格左右拖改自有時刻表。在路上的車不能改派、自有時刻表只在停在第一站時能改；路線車的錯開、跑完再改派、在路上改時刻要新 GameCore 指令或升存檔，見決策 512 的下一步（甲～丁，預覽 `docs/art/roster2-drag-2026-10-30/next-steps.svg`）。長按拖曳在 Simulator 與實機的手感 UNVERIFIED。
 
+> 鋪軌被擋時說出原因、隧道深度（派工單 GEOMSG，[決策 513](decisions/513.md)，`geomsg-track-reason`）：作者 99.1 南澳的「0 公尺｜97 → 65 公尺」是描線的端點在真實隧道裡、地面下 183 公尺，超過 GameCore 的地下 64 公尺；地下改成 1,024 公尺（高架 64 公尺不變），被擋時卡片說是哪一個條件。第二個回報（南澳北溪到朝陽的短描線「0 公尺｜↕ 0」與 40‰）：新端點被釘在隧道口山坡、橋頭河岸的粗地面上，改成可以在路堤或路塹上（-10.5～+7.5 公尺），截短的長隧道照全長算，`TrackRise` 路的終點一定有樣本；整段沒有坡度時卡片畫那段真實路線。第三個回報（南澳站放不下 16 節月台、35‰）：描線經過真實車站時那段排成平的。留下的：拒絕原因加「坡度超過上限」一類交給決策 515（ALISHAN），南迴還沒量最深的端點（決策 513 的下一步）；實機在南澳沿北迴線往隧道描一段、在朝陽前描一小段、描過南澳站放 16 節月台，看卡片有長度與價錢、建得起來。Linux `TrackGeometryProblemTests` VERIFIED；實機 UNVERIFIED。
+
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
 
 > 公測前抓蟲・營運（派工單 BH2，`claude/bughunt-operations`，2026-10-30）：[`research/BUGHUNT_OPERATIONS_2026-10-30.md`](research/BUGHUNT_OPERATIONS_2026-10-30.md)。沒找到 P1。P2-1（跳過夜晚途中存檔，讀回以 ×6000 跑）在同一個 PR 修了（`GameSession.worldToSave`，`NightSkipTests` 釘住），發版前在實機按「跳到早上」後切出 App、關掉再繼續，看速度是原本的；P2-2（分組清單的上一條／下一條順序不對）與 P3 三項留給公測後。
@@ -2473,6 +2475,15 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - 做了的在 [決策 519](decisions/519.md)：「車站」模式點在某站月台旁 100 m 內的軌道，預設加成那站的月台（尾端外的同一條線照舊是新站）；車站選單照距離排、寫幾公尺；車站卡月台組多一句怎麼讓自己的軌道停這站；缺建材那行接著說下一步（蓋貨運場→別站出建材→設貨運路線＋月台→加開列車）。規則在 `NetworkSession.swift`、`FreightText.swift`，Linux 測試 `PlatformStationJoinTests`、`FreightSessionTests`。
 - **等 TestFlight 看**（UNVERIFIED）：作者那局台北旁那條線點下去是不是台北（離月台超過 100 m 就要從選單選，選單台北在前面）。
 - **下一步**（沒派）：見決策 519「下一步」。
+
+### 4.38 登山軌道與阿里山林鐵（決策 515，ALISHAN session_01YGNNumbnQtwccikAUfEgt2，`alishan-mountain-grade`，2026-10-30）
+
+- **做了的**在決策 515（`docs/decisions/515.md`）：描 `afr_sched` 時坡度到 70‰（邊的 `mountain`）、林鐵描線半徑 20 m、`ALISHAN` 車種、只有登山車上得去（`trainCannotClimb`）、依坡度限速；存檔版本 77。
+- **還沒做的**（決策 515 的「缺口與下一步」，一項一個 PR）：
+  - 不在車站的折返（Z 字）：GameCore 只在中途站月台折返（決策 63）；要讓列車在非車站的節點換向，動 `LineJourney` 與交通控制，要升 golden 時照規則逐值說明。
+  - `placeTrain`、接續運轉沒有檢查登山；線路改走登山軌道後已在線上的一般車不會被拉下來。
+  - 登山車的 3D 模型（DL38＋`alicoach`，參考 `garage-scenes/alishan*.js`；先讀 `.claude/skills/rolling-stock/SKILL.md`）。
+  - 獨立山螺旋 16 m、二萬平到神木 20 m 兩處描線停點（資料畫線的折角）。
 
 ## 5. 已知、還沒派的待辦
 

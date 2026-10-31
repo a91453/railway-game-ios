@@ -401,9 +401,14 @@
 ///     (times 10 in all). A build that reads only an
 ///     earlier version would take the amounts for dollars, three times what
 ///     they are, so it says the save is newer than it instead.
+/// 77. Mountain track (decision 515): an edge can be `"mountain": true`,
+///     steeper than 40 in 1000 up to 70, and a train's `"type"` can be
+///     `"ALISHAN"`. A build that reads only an earlier version would call
+///     such an edge too steep and cannot read the type, so it says the save
+///     is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 76
+    public static let currentVersion = 77
 
     public let world: GameWorld
 
@@ -602,6 +607,9 @@ extension SavedGame: Codable {
         // read times 3; the real high-speed fares, kept at NT$10 to the
         // dollar, become the real table's own New Taiwan dollars
         // (``GameWorld/convertHighSpeedFaresToNewTaiwanDollars()``).
+        // Version 76 to 77: every edge of a world before version 77 is
+        // ordinary track, as an edge without `"mountain"` reads, and no
+        // train is the Alishan Forest Railway's.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

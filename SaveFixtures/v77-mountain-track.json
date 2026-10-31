@@ -1,0 +1,160 @@
+{
+  "saveVersion" : 77,
+  "world" : {
+    "bounds" : {
+      "height" : 65536,
+      "width" : 65536
+    },
+    "clock" : {
+      "now" : 0,
+      "resumeSpeed" : "normal",
+      "speed" : "paused"
+    },
+    "economy" : {
+      "balance" : 999994700,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 500
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Mountain",
+        "stops" : [
+          1,
+          2
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "mountain" : true,
+          "structure" : "elevated",
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "structure" : "elevated",
+          "to" : 4
+        }
+      ],
+      "nextEdgeID" : 4,
+      "nextNodeID" : 5,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 2048,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 6144,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 10240,
+          "y" : 2048,
+          "z" : 256
+        },
+        {
+          "id" : 4,
+          "x" : 14336,
+          "y" : 2048,
+          "z" : 256
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 3,
+    "nextTrainID" : 2,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "A",
+        "point" : {
+          "x" : 4096,
+          "y" : 2560
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "B",
+        "point" : {
+          "x" : 12288,
+          "y" : 2560
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "id" : 1,
+        "name" : "Alishan",
+        "performance" : {
+          "acceleration" : 700,
+          "braking" : 1100,
+          "topSpeed" : 45
+        },
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 1,
+            "offset" : 4096
+          }
+        },
+        "type" : "ALISHAN"
+      }
+    ]
+  }
+}

@@ -408,23 +408,24 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func buildTrackEdge(
-        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface,
+        mountain: Bool = false
     ) throws(GameError) -> TrackEdgeID {
-        let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, checksSpacing: true)
+        let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, mountain: mountain, checksSpacing: true)
         abandonUnservedPassengers()
         return id
     }
 
     /// Builds the edges `plans` describe, in order, as one command (the
     /// owner's play-test, 2026-10-06): each as
-    /// ``buildTrackEdge(from:to:curve:profile:structure:)`` would, charged
+    /// ``buildTrackEdge(from:to:curve:profile:structure:mountain:)`` would, charged
     /// the same, except that the spacing rule is checked once all of them
     /// are built, along the ways they make together. An X crossover's
     /// diagonal runs within 4 m of the other track near the middle and parts
     /// from it only by way of its other half; built one at a time, the first
     /// half would be refused. All or nothing. Returns the new edges in order.
     ///
-    /// - Throws: what ``buildTrackEdge(from:to:curve:profile:structure:)``
+    /// - Throws: what ``buildTrackEdge(from:to:curve:profile:structure:mountain:)``
     ///   throws for the first plan it refuses, checked as that plan is
     ///   built (``GameError/insufficientFunds(required:available:)`` for
     ///   the first the money left does not cover); then
@@ -436,7 +437,7 @@ public struct GameWorld: Equatable, Sendable {
         var built: [TrackEdgeID] = []
         for plan in plans {
             built.append(try after.buildTrackEdge(from: plan.from, to: plan.to, curve: plan.curve, profile: plan.profile,
-                                                  structure: plan.structure, checksSpacing: false))
+                                                  structure: plan.structure, mountain: plan.mountain, checksSpacing: false))
         }
         for id in built {
             if let other = after.network.firstTooClose(existing: id, besides: []) {
@@ -449,7 +450,7 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     private mutating func buildTrackEdge(
-        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, checksSpacing: Bool
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, mountain: Bool, checksSpacing: Bool
     ) throws(GameError) -> TrackEdgeID {
         guard let start = network.node(from) else { throw .unknownTrackNode(from) }
         guard let end = network.node(to) else { throw .unknownTrackNode(to) }
@@ -458,7 +459,8 @@ public struct GameWorld: Equatable, Sendable {
         else { throw .invalidTrackGeometry }
         // Decision 160: the whole of it on the company's own ground.
         if let tile = firstTileNotOwned(along: geometry.points.map(\.plan)) { throw .mapTileNotOwned(tile) }
-        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else { throw .trackTooSteep }
+        // Decision 515: mountain track may be steeper.
+        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade(mountain: mountain)) else { throw .trackTooSteep }
         // Decision 124: what carries it, measured from the ground.
         let sections = try sections(of: geometry, structure: structure)
         if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
@@ -484,7 +486,8 @@ public struct GameWorld: Equatable, Sendable {
         try economy.spend(price)
 
         let id = network.addEdge(
-            from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, geometry: geometry, next: next
+            from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, mountain: mountain, geometry: geometry,
+            next: next
         )
         network.dropSpacedExemptions()
         // Phase 7a: the edge is on the books at what it cost.
@@ -603,7 +606,7 @@ public struct GameWorld: Equatable, Sendable {
     ///   stops at a platform on it; ``GameError/trackConflict(_:)`` or
     ///   ``GameError/trackTooClose(_:)`` when a part would meet other track;
     ///   or ``GameError/idsExhausted``. Since decision 124, before the trains,
-    ///   what ``buildTrackEdge(from:to:curve:profile:structure:)`` throws when
+    ///   what ``buildTrackEdge(from:to:curve:profile:structure:mountain:)`` throws when
     ///   a part's structure does not suit the ground under it; since decision
     ///   160, after the parts' geometry, ``GameError/mapTileNotOwned(_:)``
     ///   when a part's centre line passes over a tile the company does not
@@ -625,8 +628,8 @@ public struct GameWorld: Equatable, Sendable {
               cut.first.controlPoints.allSatisfy(bounds.contains), cut.second.controlPoints.allSatisfy(bounds.contains),
               let firstGeometry = TrackGeometry(from: start.position, to: middle, curve: cut.first, profile: firstProfile),
               let secondGeometry = TrackGeometry(from: middle, to: end.position, curve: cut.second, profile: secondProfile),
-              firstGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade),
-              secondGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade)
+              firstGeometry.steepestGrade.isNoSteeper(than: edge.maximumGrade),
+              secondGeometry.steepestGrade.isNoSteeper(than: edge.maximumGrade)
         else { throw .invalidTrackGeometry }
         // Decision 160: each part is sampled afresh, so it is checked on the
         // company's own ground as an edge built is.
@@ -668,13 +671,13 @@ public struct GameWorld: Equatable, Sendable {
         }
         let (_, firstNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: firstProfile, structure: edge.structure,
-                                  sections: firstSections, geometry: firstGeometry, next: firstNext)
+                                  sections: firstSections, mountain: edge.mountain, geometry: firstGeometry, next: firstNext)
         if let other = after.firstConflict(from: node, to: edge.to, curve: cut.second, geometry: secondGeometry) {
             throw .trackConflict(other)
         }
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: secondProfile, structure: edge.structure,
-                                   sections: secondSections, geometry: secondGeometry, next: secondNext)
+                                   sections: secondSections, mountain: edge.mountain, geometry: secondGeometry, next: secondNext)
         // Spacing along the ways of the network with both parts: alone,
         // neither reaches the junction where the edge parted from track
         // beside it.
@@ -1450,7 +1453,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trainAlreadyPlaced(_:)``, or
     ///   ``GameError/trainTypeUnavailable(_:)`` for a type the scenario's era
     ///   does not have (decision 86), or `nil` in an era with types, which
-    ///   has no standard car (decision 153).
+    ///   has no standard car (decision 153); or, since decision 515,
+    ///   ``GameError/trainCannotClimb(_:)`` for a type that is not a
+    ///   mountain train while the train is on a line that runs on
+    ///   mountain track.
     public mutating func setTrainType(_ id: TrainID, to type: TrainType?) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
@@ -1458,6 +1464,9 @@ public struct GameWorld: Equatable, Sendable {
         // since decision 153 no standard car.
         if let allowed = scenario?.scenario.trainTypes, !(type.map(allowed.contains) ?? false) {
             throw .trainTypeUnavailable(type)
+        }
+        if !(type?.climbsMountains ?? false), let line = assignedLine(of: id).flatMap({ self.line(id: $0) }), runsOnMountainTrack(line) {
+            throw .trainCannotClimb(id)
         }
         // Decision 180: a change of type is the old train sold on the sale
         // rule and the new one bought: the new type's price for the cars it
@@ -2377,13 +2386,16 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/unknownLine(_:)``, ``GameError/unknownLinePattern(_:)``,
     ///   ``GameError/trainOnLine(_:)`` if it is on a line already (this one
-    ///   included), or ``GameError/trainServiceActive(_:)`` while it runs a
-    ///   service of its own (stop it first).
+    ///   included), ``GameError/trainServiceActive(_:)`` while it runs a
+    ///   service of its own (stop it first), or, since decision 515,
+    ///   ``GameError/trainCannotClimb(_:)`` when the line runs on mountain
+    ///   track and the train is not a mountain train.
     public mutating func assignTrain(_ id: TrainID, to line: LineID, pattern: Int? = nil) throws(GameError) {
         let index = try trainIndex(of: id)
         let (target, service) = try lineService(line, pattern: pattern)
         guard assignedLine(of: id) == nil else { throw .trainOnLine(id) }
         guard trains[index].execution == nil else { throw .trainServiceActive(id) }
+        guard trains[index].climbsMountains || !runsOnMountainTrack(lines[target]) else { throw .trainCannotClimb(id) }
 
         if service == 0 {
             lines[target].trains.insert(id, at: lines[target].trains.firstIndex { $0 > id } ?? lines[target].trains.count)
@@ -5481,7 +5493,7 @@ extension GameWorld: Codable {
         for edge in network.edges {
             guard let geometry = network.geometry(of: edge.id) else { return "Track edge \(edge.id) has no geometry." }
             geometries.append(geometry)
-            guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else {
+            guard geometry.steepestGrade.isNoSteeper(than: edge.maximumGrade) else {
                 return "Track edge \(edge.id) is steeper than the maximum grade."
             }
             if let problem = structureProblem(of: edge, geometry: geometry) {

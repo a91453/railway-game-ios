@@ -375,8 +375,8 @@ extension GameError {
             )
         case .invalidTrackGeometry:
             language.text(
-                "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different points, and run smoothly.",
-                "這裡不能建軌道：軌道必須在地圖內、與地面的高度差在 64 公尺以內、起點與終點不能是同一點，而且線形要平順。"
+                "Track can't be built there: it must stay on the map, at most 64 m above the ground and 1,024 m below it, start and end at different points, and run smoothly.",
+                "這裡不能建軌道：軌道必須在地圖內、離地最高 64 公尺、地下最深 1,024 公尺，起點與終點不能是同一點，而且線形要平順。"
             )
         case .trackNodeInUse:
             language.text(
@@ -604,6 +604,11 @@ extension GameError {
             language.text("This is the city's road: only roads you built can be taken up.", "這是城市的路，只能拆自己鋪的路。")
         case .roadInUse:
             language.text("A bus route runs along this road: change the route first.", "有公車路線走這段路，請先改路線。")
+        case .trainCannotClimb:
+            language.text(
+                "This line runs on mountain track, which only a mountain train such as the Alishan Forest Railway's can climb. Choose that type.",
+                "這條路線有登山軌道，只有阿里山林鐵這類登山列車爬得上去。請改用登山車種。"
+            )
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:
@@ -891,6 +896,7 @@ extension TrainType {
         "MINGRI": ("Ming-Ri sightseeing train", "鳴日號"),
         "STAR": ("Formosa Star sightseeing train", "環島之星"),
         "SUMMER": ("Midsummer Formosa steam train", "仲夏寶島號"),
+        "ALISHAN": ("Alishan Forest Railway mountain train", "阿里山林鐵登山列車"),
     ]
 }
 
