@@ -451,6 +451,68 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("lines-network", app)
     }
 
+    /// Decision 512: sending trains out is as it was. The same test runs on
+    /// `main` and on the pull request, for the two side by side: a line's
+    /// page at its trains and their dispatch, then a train's card.
+    func testDispatchFlowAsBefore() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        settle(seconds: 2)
+        let catalog = app.buttons["line.staff.catalog"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(catalog, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's dispatch shows")
+        catalog.waitUntilSettled()
+        settle(seconds: 2)
+        keep("dispatch-line-page", app)
+        let done = app.navigationBars.firstMatch.buttons["完成"]
+        if done.exists, done.isHittable {
+            done.tap()
+            settle()
+        }
+
+        // A train brought under the camera from the fleet, then tapped.
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let fleet = app.buttons["train.fleetOverview"]
+        if !fleet.isHittable { app.swipeUp() }
+        XCTAssertTrue(fleet.appears(within: 5))
+        fleet.tap()
+        let follow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "fleet.follow.")).firstMatch
+        XCTAssertTrue(follow.appears(within: 5), "A train to follow")
+        follow.tap()
+        let unfollow = app.buttons["train.unfollow"]
+        XCTAssertTrue(unfollow.appears(within: 5))
+        unfollow.tap()
+        _ = unfollow.disappears(within: 5)
+        app.buttons["tool.select"].tap()
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let card = app.buttons["inspector.train.timetable"]
+        guard card.appears(within: 5) else {
+            keep("debug-dispatch-card", app)
+            return
+        }
+        settle(seconds: 2)
+        keep("dispatch-train-card", app)
+    }
+
     /// Decision 478's load charts on the freight scene: a passenger line's
     /// fullest train by day and its riders between stops, then a section's
     /// riders hour by hour in the flow report.
