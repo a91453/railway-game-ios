@@ -200,6 +200,15 @@ extension GameSession {
             : language.text("This track is double", "這裡是雙線")
     }
 
+    /// The platform mode's big button: "Build station" where the pick
+    /// starts a new station, "Add platform" where it joins one that
+    /// stands (``platformStationID``).
+    public var networkPlatformActionTitle: String {
+        platformStationID == nil
+            ? language.text("Build Station", "蓋車站")
+            : language.text("Add Platform", "加月台")
+    }
+
     /// The layout menu of the platform mode: each layout by name, those
     /// that do not fit the track picked with why, and off.
     public var stationLayoutChoices: [StationLayoutChoice] {
