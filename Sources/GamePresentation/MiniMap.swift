@@ -110,6 +110,18 @@ public struct MiniMap: Equatable, Sendable {
 
     /// The narrowest side of the small map, in points.
     public static let shortestSide = 44.0
+
+    /// Whether the small map is shown beside a map view showing
+    /// `visible`: not while it has nothing to draw (no track and no
+    /// station, as a new real-world game), nor while the view already
+    /// shows the whole of it, when it was an empty frame with nothing to
+    /// jump to (IPHLAND: a frame on the right of a new game at Nan'ao).
+    public func isShown(beside visible: WorldRegion) -> Bool {
+        guard !track.isEmpty || !stations.isEmpty else { return false }
+        let coversAll = visible.minX <= region.minX && visible.minY <= region.minY
+            && visible.maxX >= region.maxX && visible.maxY >= region.maxY
+        return !coversAll
+    }
 }
 
 /// Where the world lies on the small map: the whole of ``MiniMap/region``
