@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 62,
+  "schemaVersion": 75,
   "description": "Weather, typhoons and the fuel price (decision 162, schema 62), drawn by FNV-1a over \"7|key\" (decision 69's SeedDraw); every value below was worked out by an independent Python implementation of the draws. Home (1, residential, 1000 trips a day) and Office (2) on line Main; the clock is at day 33. Without a seed (decision 154's disruptions) every day is clear, no typhoon comes and the fuel price is steady: Home's 1000 trips to Office are shared over the hours as in holidays.json. With seed 7: days before 30 are calm; day 33 (February, rain 300 per mille) rolls 'weather.33' under 300, so it rains; day 71 (March, thunderstorms 20 per mille) rolls under 20. Today's rain takes 100 per mille off the network's demand: 1000 x 0.9 = 900, shared over the same hours. Year 0's typhoon slots: only slot 0 comes (its roll under 500): it starts on day 194 (180 + the 'start' roll), is announced a day before, blows two days, centred at (2865, 1399) with a radius of 12288 x 442 / 1000 = 5431 units, taking 800 per mille off. Month 5's fuel spell starts on day 151 for 11 days at 1.186 (dearer, three times in five). At the light level a typhoon takes 400, the fuel index is 1.093 (half as far from 1) and rain 50, so today's demand is 950. Great Britain has the same weather from the same seed but no typhoons.",
   "initialState": {
     "worldWidth": 12288,
     "worldHeight": 3072,
-    "balance": 3000,
+    "balance": 9000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 47520,
     "speed": "normal"
@@ -447,7 +447,7 @@
   "expectedFinalState": {
     "gameMinutes": 47520,
     "speed": "normal",
-    "balance": 1000,
+    "balance": 3000,
     "stations": [
       {
         "id": 1,

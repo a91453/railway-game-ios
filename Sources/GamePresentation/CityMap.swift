@@ -301,8 +301,9 @@ public struct CityMap: Sendable {
     }
 
     /// The land value legend's steps, in dollars a m²: a value at or above
-    /// a step and below the next takes its colour.
-    public static let valueSteps: [Int64] = [0, 20, 40, 60, 90, 120, 160, 200, 250]
+    /// a step and below the next takes its colour (the reference's steps
+    /// times 3, decision 499).
+    public static let valueSteps: [Int64] = [0, 60, 120, 180, 270, 360, 480, 600, 750]
     /// Their colours, pale yellow to deep red.
     public static let valueColors: [PopTravel.RGB] = [
         PopTravel.RGB(0xFFFFCC), PopTravel.RGB(0xFFEDA0), PopTravel.RGB(0xFED976), PopTravel.RGB(0xFEB24C), PopTravel.RGB(0xFD8D3C),

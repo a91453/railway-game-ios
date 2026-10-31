@@ -67,7 +67,7 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertTrue([a, c].contains(offer.station!))
         XCTAssertEqual(offer.baseline, 1_500)
         XCTAssertEqual(offer.target, 2_100, "⌈1,500 × 1.4⌉")
-        XCTAssertEqual(offer.reward, Money(20_000_000), "$40 × 600 is $24,000, below the $200,000 floor")
+        XCTAssertEqual(offer.reward, Money(60_000_000), "NT$120 × 600 is NT$72,000, below the NT$600,000 floor")
         XCTAssertEqual(offer.days, 60)
         XCTAssertEqual(offer.offeredDay, 0)
         XCTAssertNil(offer.acceptedDay)
@@ -83,7 +83,7 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertEqual(Set(offers.map(\.kind)), [.stationRiders, .networkRiders])
         let network = try XCTUnwrap(offers.first { $0.kind == .networkRiders })
         XCTAssertEqual(network.target, 1_250, "⌈1,000 × 1.25⌉")
-        XCTAssertEqual(network.reward, Money(20_000_000), "$20 × 250 is $5,000, below the floor")
+        XCTAssertEqual(network.reward, Money(60_000_000), "NT$60 × 250 is NT$15,000, below the floor")
         XCTAssertEqual(network.days, 90)
         for seed in UInt32(1)...40 {
             world.cityRequests = CityRequests(seed: seed)
@@ -118,7 +118,7 @@ final class CityRequestsTests: XCTestCase {
         let offer = try XCTUnwrap(world.cityRequests?.offers.first { $0.kind == .newStation })
         XCTAssertEqual(offer.point, place.point)
         XCTAssertEqual(offer.target, 10)
-        XCTAssertEqual(offer.reward, Money(48_000_000), "$300,000 + $50 × 3,600")
+        XCTAssertEqual(offer.reward, Money(144_000_000), "NT$900,000 + NT$150 × 3,600")
         XCTAssertNil(world.largestUnservedSettlement(avoiding: [place.point]), "the hamlet is too small")
     }
 
@@ -165,20 +165,20 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertEqual(requests.results[0].day, 0)
         XCTAssertEqual(requests.results[0].request.progress, 2_100)
         XCTAssertEqual(requests.trust, 2)
-        XCTAssertEqual(requests.owed, Money(20_000_000))
+        XCTAssertEqual(requests.owed, Money(60_000_000))
         XCTAssertFalse(world.accounts.entries.contains { $0.kind == .monthlySubsidy }, "not paid before the month is out")
         try world.advance(ticks: 29 * 1_440)
         requests = try XCTUnwrap(world.cityRequests)
         XCTAssertEqual(requests.owed, .zero)
-        XCTAssertEqual(requests.paid, Money(20_000_000))
+        XCTAssertEqual(requests.paid, Money(60_000_000))
         let row = try XCTUnwrap(world.accounts.entries.last { $0.kind == .monthlySubsidy })
-        XCTAssertEqual(row.amount, Money(20_000_000))
-        XCTAssertEqual(row.breakdown, [LedgerLine(item: .subsidy, amount: Money(20_000_000))])
+        XCTAssertEqual(row.amount, Money(60_000_000))
+        XCTAssertEqual(row.breakdown, [LedgerLine(item: .subsidy, amount: Money(60_000_000))])
         XCTAssertEqual(row.time, GameTime(seconds: 30 * 86_400 - 60), "the last minute of day 29")
         // Taxable: in the day's profit, booked as non-railway revenue.
         let day = try XCTUnwrap(world.accounts.days.first { $0.day == 29 })
-        XCTAssertGreaterThanOrEqual(day.propertyRevenue, Money(20_000_000))
-        XCTAssertGreaterThan(day.taxCost, .zero, "half of what the day made beyond $100,000")
+        XCTAssertGreaterThanOrEqual(day.propertyRevenue, Money(60_000_000))
+        XCTAssertGreaterThan(day.taxCost, .zero, "half of what the day made beyond NT$300,000")
         // The second month's offers, drawn on day 30.
         XCTAssertTrue(requests.offers.allSatisfy { $0.offeredDay == 30 })
         XCTAssertFalse(requests.offers.isEmpty)
@@ -330,12 +330,12 @@ final class CityRequestsTests: XCTestCase {
     func testVersionFiftyKeepsTheRequests() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v50-city-requests.json")
-        var made = try build()
+        var made = try NTScale.$factor.withValue(3) { try build() }
         let offer = try XCTUnwrap(made.cityRequests?.offers.first)
         try made.acceptRequest(offer.id)
         try made.setStationDemand(offer.station!, to: StationDemand(kind: .residential, dailyTrips: 2_100))
         try made.advance(ticks: 1_441)
-        hand(&made, .newStation, point: PlanPoint(x: 1_536, y: 1_536), target: 1_000)
+        hand(&made, .newStation, point: PlanPoint(x: 1_536, y: 1_536), target: 1_000, reward: Money(30_000_000))
         try made.advance(ticks: 300)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -355,11 +355,11 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertEqual(loaded.clock, made.clock)
         let requests = try XCTUnwrap(loaded.cityRequests)
         XCTAssertEqual(requests.trust, 2)
-        XCTAssertEqual(requests.owed, Money(20_000_000))
+        XCTAssertEqual(requests.owed, Money(60_000_000))
         XCTAssertEqual(requests.results.map(\.succeeded), [true])
         XCTAssertEqual(requests.active.map(\.kind), [.newStation])
         XCTAssertFalse(requests.active[0].callsToday.isEmpty)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 50,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 50,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

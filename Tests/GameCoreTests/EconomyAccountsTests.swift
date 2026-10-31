@@ -70,11 +70,11 @@ final class EconomyAccountsTests: XCTestCase {
 
     func testFaresAreFlatOrByStraightLineDistanceWithTheLegacyMinimum() throws {
         var world = try makeWorld()
-        XCTAssertEqual(world.tripFare(from: alpha, to: gamma), 500, "the editor's flat 5")
+        XCTAssertEqual(world.tripFare(from: alpha, to: gamma), 1_500, "the editor's flat 5, NT$15")
         XCTAssertNil(world.tripFare(from: alpha, to: alpha))
         XCTAssertNil(world.tripFare(from: alpha, to: StationID(rawValue: 9)))
         try world.setFareRules(.distance(FareRules.standardBands))
-        XCTAssertEqual(world.tripFare(from: alpha, to: gamma), 55, "64 m is in the first step")
+        XCTAssertEqual(world.tripFare(from: alpha, to: gamma), 1_100, "64 m is in the first step")
         // Alpha to Gamma is 4096 units: 64 m. A step ending exactly there
         // does not take the trip; one ending a metre later does.
         try world.setFareRules(.distance([
@@ -83,7 +83,7 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.tripFare(from: alpha, to: gamma), 90)
         XCTAssertEqual(world.tripFare(from: alpha, to: beta), 30)
         try world.setFareRules(.flat(0))
-        XCTAssertEqual(world.tripFare(from: alpha, to: beta), 500, "a fare of 0 is charged as 5")
+        XCTAssertEqual(world.tripFare(from: alpha, to: beta), 1_500, "a fare of 0 is charged as NT$15")
     }
 
     /// Stage F3d: a fare measures the straight line between the stations'
@@ -167,17 +167,19 @@ final class EconomyAccountsTests: XCTestCase {
     /// Hour 0: trips are sent out at 0, 8, …, 48 (four departures each) and
     /// at 56 (Alpha at 56:42, Beta at 57:58; Gamma at 60:14 is in the next
     /// hour): 30 departures, 30 × 2048 = 61440 world units. Operating
-    /// round(75·30 + 42·61440/64000 + 18·3) = round(2344.32) = 2344;
-    /// maintenance round(12·3584/64000 + 9·61440/64000 + 8·1) =
-    /// round(17.312) = 17 (the route is the line's planned journey out,
+    /// round(225·30 + 126·61440/64000 + 54·3) = round(7032.96) = 7033;
+    /// maintenance round(36·3584/64000 + 27·61440/64000 + 24·1) =
+    /// round(51.936) = 52 (the route is the line's planned journey out,
     /// from its shortest berth: on the track network the end of Alpha's
-    /// platform past b, 512 on, so 3584, not the 4096 of the grid). Three passengers paid 5 each at Alpha at 0.
+    /// platform past b, 512 on, so 3584, not the 4096 of the grid). Three passengers paid 15 each at Alpha at 0.
+    /// (Decision 499: the reference's rates times 3, rounded once, so not
+    /// three times the 2344 and 17 they were.)
     func testAnHourIsSettledIntoOneRowAtTheTopOfTheNext() throws {
         var world = try makeWorld()
         try wait(&world, 3, at: alpha, for: beta)
         let start = world.economy.balance
         try world.advance(ticks: 60)
-        XCTAssertEqual(world.accounts.pending.fareRevenue, 1_500)
+        XCTAssertEqual(world.accounts.pending.fareRevenue, 4_500)
         XCTAssertEqual(world.accounts.pending.fareTrips, 3)
         XCTAssertEqual(world.accounts.pending.departures, 30)
         XCTAssertEqual(world.accounts.pending.trainDistance, 30 * 2_048)
@@ -186,23 +188,23 @@ final class EconomyAccountsTests: XCTestCase {
 
         try world.advance(ticks: 1)
         XCTAssertEqual(world.accounts.entries, [LedgerEntry(
-            kind: .hourlyNet, time: GameTime(minutes: 60), amount: 1_500 - 234_400 - 1_700,
+            kind: .hourlyNet, time: GameTime(minutes: 60), amount: 4_500 - 703_300 - 5_200,
             breakdown: [
-                LedgerLine(item: .fareRevenue, amount: 1_500), LedgerLine(item: .operatingCost, amount: -234_400),
-                LedgerLine(item: .maintenanceCost, amount: -1_700),
+                LedgerLine(item: .fareRevenue, amount: 4_500), LedgerLine(item: .operatingCost, amount: -703_300),
+                LedgerLine(item: .maintenanceCost, amount: -5_200),
             ],
             crowding: CrowdingMetrics(crowdedStations: 0, fullTrains: 0, maxWaiting: 0, maxLoad: 0)
         )])
-        XCTAssertEqual(world.economy.balance, start + Money(1_500 - 234_400 - 1_700))
+        XCTAssertEqual(world.economy.balance, start + Money(4_500 - 703_300 - 5_200))
         XCTAssertEqual(world.accounts.pending.departures, 1, "Gamma at 60:14 is in the next hour")
         XCTAssertEqual(world.accounts.pending.trainDistance, 2_048)
         XCTAssertEqual(world.accounts.pending.fareRevenue, .zero)
         XCTAssertEqual(world.accounts.openedAt, GameTime(minutes: 60))
     }
 
-    /// The day's end: energy round(220·3584/64000 + 360·1) = round(372.32) =
-    /// 372 (route 12, trains 360; the route is 3584 on the track network,
-    /// see above); staff 620·3 + 480·1 = 2340. Written at
+    /// The day's end: energy round(660·3584/64000) + 1080·1 = 37 + 1080 =
+    /// 1117 (the route is 3584 on the track network, see above); staff
+    /// 1860·3 + 1440·1 = 7020. Written at
     /// minute 1439, after the hour.
     func testADayEndsWithEnergyAndStaffAndTheBalanceMayGoBelowZero() throws {
         var world = try makeWorld()
@@ -211,12 +213,12 @@ final class EconomyAccountsTests: XCTestCase {
         let daily = world.accounts.entries.suffix(2)
         XCTAssertEqual(Array(daily), [
             LedgerEntry(
-                kind: .dailyEnergy, time: GameTime(minutes: 1_439), amount: -37_200,
-                breakdown: [LedgerLine(item: .routeEnergy, amount: -1_200), LedgerLine(item: .trainEnergy, amount: -36_000)]
+                kind: .dailyEnergy, time: GameTime(minutes: 1_439), amount: -111_700,
+                breakdown: [LedgerLine(item: .routeEnergy, amount: -3_700), LedgerLine(item: .trainEnergy, amount: -108_000)]
             ),
             LedgerEntry(
-                kind: .dailyStaff, time: GameTime(minutes: 1_439), amount: -234_000,
-                breakdown: [LedgerLine(item: .stationStaff, amount: -186_000), LedgerLine(item: .trainStaff, amount: -48_000)]
+                kind: .dailyStaff, time: GameTime(minutes: 1_439), amount: -702_000,
+                breakdown: [LedgerLine(item: .stationStaff, amount: -558_000), LedgerLine(item: .trainStaff, amount: -144_000)]
             ),
         ])
         XCTAssertEqual(world.accounts.entries.dropLast(2).last?.time, GameTime(minutes: 1_440), "the hour is settled first")
@@ -225,8 +227,8 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.accounts.days.map(\.day), [0], "the hour settled at midnight is the ended day's")
         let report = world.financeReport(.day)
         XCTAssertEqual(report.current.index, 1)
-        XCTAssertEqual(report.previous.energyCost, 37_200)
-        XCTAssertEqual(report.previous.staffCost, 234_000)
+        XCTAssertEqual(report.previous.energyCost, 111_700)
+        XCTAssertEqual(report.previous.staffCost, 702_000)
     }
 
     /// A batch is the same as single steps, settlements included.
@@ -257,9 +259,9 @@ final class EconomyAccountsTests: XCTestCase {
         world.setEconomyMode(.management)
         let balance = world.economy.balance
         try world.advance(ticks: 1_441)
-        // 24 hours of 18 × 3 stations, then a day's staff of 620 × 3.
+        // 24 hours of 54 × 3 stations, then a day's staff of 1860 × 3.
         XCTAssertEqual(world.accounts.entries.map(\.kind), Array(repeating: .hourlyNet, count: 24) + [.dailyStaff])
-        XCTAssertEqual(world.economy.balance, balance - Money(24 * 5_400 + 186_000))
+        XCTAssertEqual(world.economy.balance, balance - Money(24 * 16_200 + 558_000))
     }
 
     /// A station two lines call at is staffed and run for each of them, as
@@ -277,9 +279,9 @@ final class EconomyAccountsTests: XCTestCase {
         world.setEconomyMode(.management)
         let balance = world.economy.balance
         try world.advance(ticks: 1_441)
-        // Main has 2 stations and Branch 2: 4, so 24 hours of 18 × 4, then
-        // a day's staff of 620 × 4.
-        XCTAssertEqual(world.economy.balance, balance - Money(24 * 7_200 + 248_000))
+        // Main has 2 stations and Branch 2: 4, so 24 hours of 54 × 4, then
+        // a day's staff of 1860 × 4.
+        XCTAssertEqual(world.economy.balance, balance - Money(24 * 21_600 + 744_000))
     }
 
     /// The year report's previous year stays whole through the next year:
@@ -298,10 +300,10 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.accounts.days.count, 720)
         let year = world.financeReport(.year)
         XCTAssertEqual(year.current.index, 1)
-        // A day: 24 hours of 18 × 3 stations, and staff of 620 × 3.
-        XCTAssertEqual(year.previous.operatingCost, Money(360 * 24 * 5_400))
-        XCTAssertEqual(year.previous.staffCost, Money(360 * 186_000))
-        XCTAssertEqual(year.current.staffCost, Money(359 * 186_000), "day 719 has not ended")
+        // A day: 24 hours of 54 × 3 stations, and staff of 1860 × 3.
+        XCTAssertEqual(year.previous.operatingCost, Money(360 * 24 * 16_200))
+        XCTAssertEqual(year.previous.staffCost, Money(360 * 558_000))
+        XCTAssertEqual(year.current.staffCost, Money(359 * 558_000), "day 719 has not ended")
         // Midnight's rows still belong to day 719; day 720's first hour is
         // settled at 01:00, and then day 0 leaves.
         try world.advance(ticks: 2)
@@ -311,7 +313,7 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertEqual(world.accounts.days.first?.day, 1)
         let next = world.financeReport(.year)
         XCTAssertEqual(next.current.index, 2)
-        XCTAssertEqual(next.previous.staffCost, Money(360 * 186_000), "the second year, whole")
+        XCTAssertEqual(next.previous.staffCost, Money(360 * 558_000), "the second year, whole")
     }
 
     // MARK: - Demand
@@ -321,13 +323,13 @@ final class EconomyAccountsTests: XCTestCase {
         try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 1_000))
         try world.setStationDemand(beta, to: StationDemand(kind: .office, dailyTrips: 1_000))
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "never set: no effect")
-        try world.setFareRules(.flat(75))
+        try world.setFareRules(.flat(225))
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "at the baseline")
         try world.setFareRules(.flat(0))
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "a free trip is taken as the baseline")
         try world.setFareRules(.flat(1))
-        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_078, "the cheapest fare: 1080 to 1076 at 13 thousandths of the baseline")
-        try world.setFareRules(.flat(150))
+        XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_079, "the cheapest fare: 1080 to 1076 at 4 thousandths of the baseline")
+        try world.setFareRules(.flat(450))
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 487, "twice the baseline")
         world.setEconomyMode(.free)
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "a free company")
@@ -341,7 +343,7 @@ final class EconomyAccountsTests: XCTestCase {
         var world = try makeWorld()
         try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 1_000))
         try world.setStationDemand(beta, to: StationDemand(kind: .office, dailyTrips: 1_000))
-        XCTAssertEqual(world.accounts.fareBaseline, 75, "the reference's default city")
+        XCTAssertEqual(world.accounts.fareBaseline, 225, "the reference's default city")
         try world.setFareBaseline(500)
         try world.setFareRules(.flat(500))
         XCTAssertEqual(world.dailyDemand(from: alpha, to: beta), 1_000, "at the baseline")
@@ -357,9 +359,11 @@ final class EconomyAccountsTests: XCTestCase {
         XCTAssertThrowsError(try world.setFareBaseline(FareRules.maximumFare + Money(1))) { XCTAssertEqual($0 as? GameError, .invalidFareRules) }
         XCTAssertEqual(world, before, "a refused baseline changes nothing")
 
-        XCTAssertEqual(FareRules.standardBands(for: FareRules.demandBaseline), FareRules.standardBands)
-        XCTAssertEqual(FareRules.standardBands(for: 500).map(\.fare), [365, 465, 565, 665, 800], "0.55 to 1.20 times 5 / 0.75, to 0.05")
-        XCTAssertEqual(FareRules.standardBands(for: 500).map(\.toMeters), FareRules.standardBands.map(\.toMeters))
+        XCTAssertEqual(FareRules.standardBands(for: FareRules.standardFare), FareRules.standardBands)
+        XCTAssertEqual(FareRules.standardBands(for: 4_500).map(\.fare), [3_300, 4_200, 5_100, 6_000, 7_200], "NT$11 to 24 times 45 / 15, to the dollar")
+        XCTAssertEqual(FareRules.standardBands(for: 1_000).map(\.fare), [700, 900, 1_100, 1_300, 1_600], "times 10 / 15, to the nearest dollar")
+        XCTAssertEqual(FareRules.standardBands(for: 1).map(\.fare), [100, 100, 100, 100, 100], "never below NT$1")
+        XCTAssertEqual(FareRules.standardBands(for: 4_500).map(\.toMeters), FareRules.standardBands.map(\.toMeters))
     }
 
     func testTheDemandTableIsTheReferencesFormula() {
@@ -376,8 +380,8 @@ final class EconomyAccountsTests: XCTestCase {
         for (index, entry) in FareRules.demandTable.enumerated() {
             XCTAssertEqual(entry, Int64((reference(Double(index) / 20) * 1_000 + 0.5).rounded(.down)), "ratio \(Double(index) / 20)")
         }
-        for cents in Int64(1)...1_000 {
-            let ratio = Double(cents) / 75
+        for cents in Int64(1)...3_000 {
+            let ratio = Double(cents) / 225
             XCTAssertLessThanOrEqual(abs(Double(FareRules.demandFactor(fare: Money(cents))) - reference(ratio) * 1_000), 2.5, "fare \(cents)")
         }
         XCTAssertEqual(FareRules.demandFactor(fare: 0), 1_000, "taken as the baseline, as the reference's caller does")

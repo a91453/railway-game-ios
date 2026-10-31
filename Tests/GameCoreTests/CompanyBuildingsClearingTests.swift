@@ -60,23 +60,23 @@ final class CompanyBuildingsClearingTests: XCTestCase {
 
     func testBuildingOverACityBuildingBuysItOutAndItsPeopleMoveIn() throws {
         var world = try world()
-        // The D4 home: 40 storeys of 1,536 m², 61,440 m² at 4,000 cents,
+        // The D4 home: 40 storeys of 1,536 m², 61,440 m² at 12,000 cents,
         // and its 1,600 m² square at the cell's land value, a fifth more.
         let home = try XCTUnwrap(world.land.cell(row: 5, column: 5))
         XCTAssertEqual(world.buildings.building(row: 5, column: 5)?.density, .d4)
         let value = try XCTUnwrap(world.landValue(row: 5, column: 5)?.value)
-        // No station: the land is worth its D4 home's base, 4,000 a m².
-        XCTAssertEqual(value, 4_000)
-        // (245,760,000 + 6,400,000) × 120 / 100.
-        XCTAssertEqual(world.buyOutPrice(of: home).amount, (61_440 * 4_000 + 1_600 * value) * 120 / 100)
-        XCTAssertEqual(world.buyOutPrice(of: home), 302_592_000)
+        // No station: the land is worth its D4 home's base, 12,000 a m².
+        XCTAssertEqual(value, 12_000)
+        // (737,280,000 + 19,200,000) × 120 / 100.
+        XCTAssertEqual(world.buyOutPrice(of: home).amount, (61_440 * 12_000 + 1_600 * value) * 120 / 100)
+        XCTAssertEqual(world.buyOutPrice(of: home), 907_776_000)
         let quote = try XCTUnwrap(world.placedBuildingQuote(.office, at: Self.middle))
         XCTAssertEqual(quote.cleared, [CellPosition(row: 5, column: 5)])
         XCTAssertEqual(quote.buyOut, world.buyOutPrice(of: home))
         // The office: 6,144 m² of floor, 24,576,000; 1,024 m² of land at
         // 4,000, 4,096,000.
-        XCTAssertEqual([quote.building, quote.land], [24_576_000, 4_096_000])
-        XCTAssertEqual(quote.total, 331_264_000)
+        XCTAssertEqual([quote.building, quote.land], [73_728_000, 12_288_000])
+        XCTAssertEqual(quote.total, 993_792_000)
 
         let balance = world.economy.balance
         let office = try world.placeBuilding(.office, at: Self.middle)
@@ -163,17 +163,17 @@ final class CompanyBuildingsClearingTests: XCTestCase {
 
     func testTrackThroughTheCompanysBuildingPullsItDownForItsFee() throws {
         var (world, west, east, house) = try trackWorld()
-        // The house cost 2,048,000 + 256,000 (no land: the empty base, 1,000
-        // a m²); demolishing it ⌈2,304,000 / 10⌉ = 230,400. The track is
+        // The house cost 6,144,000 + 768,000 (no land: the empty base, 3,000
+        // a m²); demolishing it ⌈6,912,000 / 10⌉ = 691,200. The track is
         // 12,000 units, 12 lengths of 1,024 at 100.
-        XCTAssertEqual(house.cost, 2_304_000)
+        XCTAssertEqual(house.cost, 6_912_000)
         XCTAssertEqual(world.placedBuildings(inTheWayOf: [PlanPoint(x: 4_000, y: 10_000), PlanPoint(x: 16_000, y: 10_000)]), [house])
         let balance = world.economy.balance
         try world.buildTrackEdge(from: west, to: east)
-        XCTAssertEqual(world.economy.balance, balance - 1_200 - 230_400)
+        XCTAssertEqual(world.economy.balance, balance - 1_200 - 691_200)
         XCTAssertTrue(world.placedBuildings.isEmpty)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .building })
-        XCTAssertEqual(world.accounts.entries.last?.breakdown, [LedgerLine(item: .propertyDemolition, amount: -230_400)])
+        XCTAssertEqual(world.accounts.entries.last?.breakdown, [LedgerLine(item: .propertyDemolition, amount: -691_200)])
         XCTAssertEqual(world.financeReport(.day).current.netCashFlow, world.economy.balance - 1_000_000_000)
         try assertSavesAndReads(world)
     }
@@ -204,10 +204,10 @@ final class CompanyBuildingsClearingTests: XCTestCase {
     }
 
     func testClearingNeedsTheMoneyForTrackAndFeeTogether() throws {
-        var (world, west, east, _) = try trackWorld(balance: 2_304_000 + 100_000)
+        var (world, west, east, _) = try trackWorld(balance: 6_912_000 + 100_000)
         let before = world
         XCTAssertThrowsGameError(try world.buildTrackEdge(from: west, to: east),
-                                 .insufficientFunds(required: 1_200 + 230_400, available: 100_000))
+                                 .insufficientFunds(required: 1_200 + 691_200, available: 100_000))
         XCTAssertEqual(world, before)
     }
 
@@ -219,7 +219,7 @@ final class CompanyBuildingsClearingTests: XCTestCase {
         let balance = world.economy.balance
         try world.buildStation(named: "Here", at: PlanPoint(x: 10_000, y: 10_639))
         XCTAssertTrue(world.placedBuildings.isEmpty)
-        XCTAssertEqual(world.economy.balance, balance - 1_000 - 230_400)
+        XCTAssertEqual(world.economy.balance, balance - 1_000 - 691_200)
         try assertSavesAndReads(world)
     }
 

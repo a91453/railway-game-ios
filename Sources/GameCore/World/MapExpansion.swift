@@ -54,12 +54,12 @@ public struct MapExpansion: Hashable, Sendable {
     /// (``WorldBounds/standard``).
     public static let tileLength: Int64 = 1 << 20
     /// What each tile owned adds to the price of the next on a map whose
-    /// milestone is the standard (``standardRidersStep``): $5,000,000, so
-    /// the second costs $5 million, the third $10 million, and the last of
-    /// a blank map's 25 $120 million. That is $50 for every rider a day the
-    /// milestone asks, which is what a map with its own step pays
-    /// (``nextPrice``).
-    public static let priceStep: Money = 500_000_000
+    /// milestone is the standard (``standardRidersStep``): NT$15,000,000,
+    /// so the second costs NT$15 million, the third NT$30 million, and the
+    /// last of a blank map's 25 NT$360 million. That is NT$150 for every
+    /// rider a day the milestone asks, which is what a map with its own
+    /// step pays (``nextPrice``; decision 499 multiplied it by 3).
+    public static let priceStep: Money = 1_500_000_000
     /// The riders in a day each tile owned beyond the first needs, unless
     /// the map says otherwise (``ridersStep``): a company may own one tile,
     /// and one more for every 100,000 riders of its best day. A line

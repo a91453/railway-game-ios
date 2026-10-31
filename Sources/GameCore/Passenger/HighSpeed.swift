@@ -58,18 +58,24 @@
 public enum HighSpeed {
     // MARK: Fare
 
-    /// The fare of a kilometre, in cents (`.45`).
-    public static let centsPerKilometre: Int64 = 45
+    /// The fare of a kilometre, in cents of the New Taiwan dollar: NT$1.35,
+    /// the reference's `.45` at 3 to its dollar like every amount
+    /// (decision 499). Not the real line's NT$4.38: demand does not look
+    /// at the high-speed fare, so a dearer kilometre would make any line
+    /// pay more just by being planned at high-speed performance (decision
+    /// 168's rule 3); the real fares are the demo's table
+    /// (``CompanyAccounts/highSpeedFares``).
+    public static let centsPerKilometre: Int64 = 135
 
     /// The fare of a trip whose straight-line distance is
-    /// `√squaredDistance` world units (1/64 m): `round(km × 0.45)` dollars,
-    /// rounded half up as `Math.round` does, in whole dollars; 153 for the
-    /// 340.04 km from Taipei to Zuoying along the track, as the reference's
-    /// formula gives. A trip pays this or the network's fare, whichever is
+    /// `√squaredDistance` world units (1/64 m): `round(km × 1.35)` New
+    /// Taiwan dollars, rounded half up as `Math.round` does, in whole
+    /// dollars; 459 (3 × the reference's 153) for the 340.04 km from
+    /// Taipei to Zuoying along the track. A trip pays this or the network's fare, whichever is
     /// more (``GameWorld/tripFare(from:to:highSpeed:)``).
     public static func fare(squaredDistance: Int64) -> Money {
         let units = FixedPoint.squareRoot(max(0, squaredDistance))
-        // units / 64,000 kilometres × 45 / 100 dollars.
+        // units / 64,000 kilometres × 135 / 100 dollars.
         let dollars = (units * centsPerKilometre + 3_200_000) / 6_400_000
         return Money(dollars * 100)
     }

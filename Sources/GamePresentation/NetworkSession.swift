@@ -458,9 +458,30 @@ extension GameSession {
     /// and what to do instead (decision 164).
     func platformGradeText(_ grade: Int64, problem: String) -> String {
         language.text(
-            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
-            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) \(platformShortStretchText)",
+            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)\(platformShortStretchText)"
         )
+    }
+
+    /// What to do where a platform's stretch cannot be levelled (decision
+    /// 164).
+    var platformShortStretchText: String {
+        language.text(
+            "Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
+            "或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+        )
+    }
+
+    /// Decision 510 (the author's iPhone held sideways: the long refusal
+    /// stood in the middle of the map under the ✓ pill and over the
+    /// layer's key, and said again what the tool's panel says): the
+    /// banner's word when ✓ is tapped on a stretch that cannot be
+    /// levelled, short and without "cannot be levelled", which the ✓ pill
+    /// and the panel already say; why and what to do are in the panel
+    /// (``networkDraftText()``).
+    var platformGradeRefusalText: String {
+        language.text("No platform built: the Network panel says what to do.",
+                      "月台沒有蓋：做法見「路網」面板。")
     }
 
     /// The ridership a managed company gives a new station at `point`: on
@@ -524,20 +545,27 @@ extension GameSession {
         )
     }
 
-    public func addNetworkPlatform() {
+    /// The platform ``addNetworkPlatform()`` would add along
+    /// ``networkPlatformStretch``, levelled first on a grade (decision 190),
+    /// with the same station's platform on the track beside where
+    /// `beside` asks for it (decision 285); or what to say where it cannot
+    /// be. `chosen` is the station it joins, `nil` for a new one.
+    func networkPlatformDraft(beside wantsBeside: Bool = true)
+        -> Result<(addition: PlayerCommand.PlatformAddition, middle: PlanPoint, chosen: Station?, grade: Int64?), PlatformRefusal>
+    {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
-            message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
-            return
+            return .failure(PlatformRefusal(text: language.text("Tap the track where the station goes.", "請點選要蓋車站的軌道。")))
         }
         // Decision 190: on a grade, the stretch is levelled first, in the
         // same edit; where it cannot be, say why (decision 164).
         var levelling: PlatformLevelling?
-        if let grade = networkPlatformGrade {
+        let grade = networkPlatformGrade
+        if grade != nil {
             switch platformLevelling(of: stretch.edge, from: stretch.start, to: stretch.end, in: world) {
             case .success(let found): levelling = found
-            case .failure(let problem):
-                message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: problem.text(in: language)))
-                return
+            case .failure:
+                // Decision 510: short; the panel says why and what to do.
+                return .failure(PlatformRefusal(text: platformGradeRefusalText))
             }
         }
         var middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
@@ -545,47 +573,71 @@ extension GameSession {
             middle = level
         }
         let chosen = platformStationID.flatMap { world.station(id: $0) }
-        let name = stationName
-        let demand = newStationDemand(at: middle)
-        var built: StationID?
-        let grade = networkPlatformGrade
+        let station: PlayerCommand.PlatformStation = chosen.map { .existing($0.id) }
+            ?? .new(name: stationName, at: middle, demand: newStationDemand(at: middle))
         // Decision 285: the same station's platform on the track beside,
         // where no track joins the two; left out where GameCore would
         // refuse it (a platform there already, a train on it), so the one
         // tapped is built as before. Want of cash refuses both.
-        var beside = besidePlatform(of: stretch)
+        var beside = wantsBeside ? besidePlatform(of: stretch) : nil
         if let found = beside {
             var probe = world.pricingCopy()
             let both = PlayerCommand.PlatformAddition(
-                edge: stretch.edge, start: stretch.start, end: stretch.end,
-                station: chosen.map { .existing($0.id) } ?? .new(name: name, at: middle, demand: demand),
-                levelling: levelling, beside: found
+                edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: found
             )
             do throws(GameError) { _ = try apply(.addPlatform(both), to: &probe) } catch { beside = nil }
         }
-        let alsoBeside = beside == nil ? "" : besidePlatformText()
+        let addition = PlayerCommand.PlatformAddition(
+            edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: beside
+        )
+        return .success((addition, middle, chosen, grade))
+    }
+
+    public func addNetworkPlatform() {
+        let layout = networkStationLayout
+        // Decision 507: the island layouts keep the platform beside off
+        // the track beside where they move it (``stationLayoutPlan``).
+        let draft: (addition: PlayerCommand.PlatformAddition, middle: PlanPoint, chosen: Station?, grade: Int64?)
+        switch networkPlatformDraft(beside: layout != .doubleIsland) {
+        case .success(let found): draft = found
+        case .failure(let refusal):
+            message = StatusMessage(kind: .failure, text: refusal.text)
+            return
+        }
+        guard let stretch = networkPlatformStretch else { return }
+        let (addition, middle, chosen, grade) = draft
+        var built: StationID?
+        let alsoBeside = addition.beside == nil || layout.isLaidByLayout ? "" : besidePlatformText()
         /// What the tool says it did.
         func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), levelled: String, in world: GameWorld) -> String {
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
+            let laid = layout.isLaidByLayout ? stationLayoutText(layout) : ""
             return chosen == nil
                 ? language.text(
                     "Built station “\(station.name)” with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
-                ) + levelled + alsoBeside + openingReach(of: station, in: world)
+                ) + laid + levelled + alsoBeside + openingReach(of: station, in: world)
                 : language.text(
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
-                ) + levelled + alsoBeside
+                ) + laid + levelled + alsoBeside
         }
         // Decision 193: a command the log keeps, levelling and all.
-        let addition = PlayerCommand.PlatformAddition(
-            edge: stretch.edge, start: stretch.start, end: stretch.end,
-            station: chosen.map { .existing($0.id) } ?? .new(name: name, at: middle, demand: demand),
-            levelling: levelling, beside: beside
-        )
+        // Decision 507: with the tracks the layout lays round it, as one.
+        let command: PlayerCommand
+        if layout.isLaidByLayout {
+            switch stationLayoutPlan(layout, platform: addition) {
+            case .success(let plan): command = .buildStationLayout(plan)
+            case .failure(let problem):
+                message = StatusMessage(kind: .failure, text: problem.text(in: language))
+                return
+            }
+        } else {
+            command = .addPlatform(addition)
+        }
         let added: Bool
         do throws(GameError) {
-            let outcome = try performCommand(.addPlatform(addition))
+            let outcome = try performCommand(command)
             let done = outcome.stretch ?? stretch
             var levelled = ""
             if let cost = outcome.levellingCost {
@@ -600,14 +652,16 @@ extension GameSession {
             added = true
             if chosen == nil { built = outcome.station?.id }
         } catch {
-            message = refusal(error, doing: .addPlatform(addition))
-            // GameCore's reason the levelling was refused, said with the
-            // grade it was to level; want of cash is said as above, for
-            // the levelling and the station together.
-            if message?.fundsNeeded == nil, let levelling, let grade {
+            message = refusal(error, doing: command)
+            // GameCore refused the levelling: said short, as above; want
+            // of cash is said as above, for the levelling and the station
+            // together.
+            if message?.fundsNeeded == nil, let levelling = addition.levelling, grade != nil {
                 var probe = world
+                // Decision 510: short; the panel's preview, built on a copy
+                // the same way, says why and what to do.
                 do throws(GameError) { _ = try build(levelling, in: &probe) } catch {
-                    message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: error.playerMessage(in: language)))
+                    message = StatusMessage(kind: .failure, text: platformGradeRefusalText)
                 }
             }
             added = false
@@ -623,6 +677,11 @@ extension GameSession {
             automaticStationName = suggestion
             platformStationID = built
         }
+    }
+
+    /// Why ``networkPlatformDraft(beside:)`` has no platform to add.
+    struct PlatformRefusal: Error {
+        let text: String
     }
 
     /// Removes `platform` through
@@ -936,7 +995,7 @@ extension GameSession {
             return parts.joined(separator: " · ")
         case .platform:
             guard let stretch = networkPlatformStretch else {
-                return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")
+                return language.text("Tap the track where the station goes.", "請點選要蓋車站的軌道。")
             }
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
             // Author's report, 2026-10-14: no track numbers or units.
@@ -947,7 +1006,10 @@ extension GameSession {
             // Decision 164: a grade says so before the tap on ✓; decision
             // 190: and that ✓ levels it, for what.
             guard let levelling = networkPlatformLevelling else { return place }
-            return place + " · " + levelling.text(in: language)
+            // Decision 510: where it cannot be levelled, what to do instead,
+            // here only (the banner says only that it cannot).
+            let instead = levelling.problem == nil ? "" : " " + platformShortStretchText
+            return place + " · " + levelling.text(in: language) + instead
         case .remove:
             guard let edge = networkEdgePoint?.edge else {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")

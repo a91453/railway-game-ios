@@ -48,6 +48,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// Decision 128: the town round a station grew yesterday, by `tenths`
     /// of a percent: the most of any.
     case townGrew(station: StationID, name: String, tenths: Int64)
+    /// Decision 509: the town round a station grew yesterday, the most of
+    /// any, and `cells` empty cells within ``zoningReach`` of it are
+    /// zoned for nothing: a tap opens the zoning tool there.
+    case zoneNearStation(station: StationID, name: String, cells: Int)
     /// Decision 154: a public holiday starts in `days` days (1 to 3),
     /// raising demand on every line by `percent`.
     case holidayComing(kind: HolidayKind, days: Int64, percent: Int64)
@@ -466,10 +470,53 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
         // The first of the most grown, as `places` is by station.
         if let grown = open.filter({ $0.lastGrowth > 0 }).max(by: { $0.lastGrowth < $1.lastGrowth || ($0.lastGrowth == $1.lastGrowth && $0.station > $1.station) }) {
+            // Decision 509: empty land beside it that no zone steers.
+            if let station = world.station(id: grown.station), let cells = emptyCellsToZone(near: station.location, in: world) {
+                return .zoneNearStation(station: grown.station, name: station.name, cells: cells)
+            }
             // Thousandths of the town are tenths of a percent.
             return .townGrew(station: grown.station, name: name(grown.station), tenths: grown.lastGrowth)
         }
         return nil
+    }
+
+    /// How far from a growing station the station master looks for empty
+    /// land to zone (decision 509): 400 m, the walk the town fills first.
+    public static let zoningReach: Int64 = 400 * WorldCoordinate.unitsPerMetre
+    /// The fewest empty cells worth zoning (decision 509).
+    public static let zoningCells = 4
+
+    /// Decision 509: the empty cells within ``zoningReach`` of `point`
+    /// (no one lives or works there, no building, not water or a steep
+    /// slope, on ground the company owns, no zone), when there are at
+    /// least ``zoningCells`` of them and the player has zoned none of the
+    /// cells there for a use; else `nil`.
+    static func emptyCellsToZone(near point: PlanPoint, in world: GameWorld) -> Int? {
+        let reach = zoningReach, cell = Land.cellLength
+        let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
+        guard rows > 0, columns > 0 else { return nil }
+        let rowRange = max(0, Int((point.y - reach) / cell))...min(rows - 1, Int(max(0, point.y + reach) / cell))
+        let columnRange = max(0, Int((point.x - reach) / cell))...min(columns - 1, Int(max(0, point.x + reach) / cell))
+        guard !rowRange.isEmpty, !columnRange.isEmpty else { return nil }
+        var empty = 0
+        for row in rowRange {
+            for column in columnRange {
+                let middle = PlanPoint(x: Int64(column) * cell + cell / 2, y: Int64(row) * cell + cell / 2)
+                let dx = middle.x - point.x, dy = middle.y - point.y
+                guard dx * dx + dy * dy <= reach * reach else { continue }
+                if let zone = world.zones.zone(row: row, column: column) {
+                    // The player plans here already.
+                    if zone.use != nil { return nil }
+                    continue
+                }
+                guard world.land.cell(row: row, column: column) == nil, world.buildings.building(row: row, column: column) == nil,
+                      !world.terrain.isWater(row: row, column: column), !world.terrain.isSteep(row: row, column: column),
+                      world.ownsGround(at: middle)
+                else { continue }
+                empty += 1
+            }
+        }
+        return empty >= zoningCells ? empty : nil
     }
 
     /// What the station master says when tapped with no advice to give
@@ -558,6 +605,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
             language.text(
                 "Only \(percent)% of \(name)'s passengers got a train yesterday. At 80% the town round it grows taller: run more trains.",
                 "昨天「\(name)」只有 \(percent)% 的旅客搭上車。到 80% 附近的城市才會長高，加開列車吧。"
+            )
+        case .zoneNearStation(_, let name, _):
+            language.text(
+                "The town round \(name) is growing, with empty land beside it. Tap here to zone it and choose what the town builds there.",
+                "「\(name)」附近的城市正在成長，旁邊還有空地。點這裡劃分區，決定城市在那裡蓋什麼。"
             )
         case .townGrew(_, let name, let tenths):
             language.text(
@@ -674,7 +726,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         switch self {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .noPlaceToPass, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
-        case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
+        case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .zoneNearStation, .holidayComing, .holidayOver, .scenarioWelcome,
              .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
         }
     }

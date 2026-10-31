@@ -132,6 +132,7 @@
 		823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */; };
 		82725CA6F6CD81AB9D1385E2 /* real_buses_MiaoliCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = 8DD7AC937959CBAB6BEAEB18 /* real_buses_MiaoliCounty.json */; };
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
+		84064E106987C284B4E4FEF1 /* tra-dr3100-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = AFF4530BB0DF6E37DF8B54E1 /* tra-dr3100-schedule.json */; };
 		84A1D1C6352E4D84E1A55FB4 /* GameCenterLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D9DBA602A1D4B5ECC848F8 /* GameCenterLink.swift */; };
 		85C1FCAF943A8E51ED75EC46 /* horn-diesel.wav in Resources */ = {isa = PBXBuildFile; fileRef = 536AA1661B8D1E023E8B015C /* horn-diesel.wav */; };
 		866964714A9713149D8697CD /* CoverageShortcutUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */; };
@@ -435,6 +436,7 @@
 		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		AD6E3ED548E183F6E79E0111 /* rail-joint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "rail-joint.wav"; sourceTree = "<group>"; };
 		AFA812528CA2F00BD6143418 /* MapStationTagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapStationTagView.swift; sourceTree = "<group>"; };
+		AFF4530BB0DF6E37DF8B54E1 /* tra-dr3100-schedule.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tra-dr3100-schedule.json"; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2B258E67922BFC5C37DA76C /* real_buses_LienchiangCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_LienchiangCounty.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
@@ -625,6 +627,7 @@
 				F34F5FAD9996ED6204B4F23C /* tra_station_class.json */,
 				150E696C9936773A65399191 /* tra_station_info.json */,
 				95B22F52AC2B7370C697A499 /* tra_track_sections.json */,
+				AFF4530BB0DF6E37DF8B54E1 /* tra-dr3100-schedule.json */,
 				6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */,
 				FAA79D875396E732FE48A605 /* tra.json */,
 				D8A3D706AFEA85A7941D8933 /* track_lines.geojson */,
@@ -1096,6 +1099,7 @@
 				F720FC931D713539D1AF8CCC /* tmrt.json in Resources */,
 				481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */,
 				BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */,
+				84064E106987C284B4E4FEF1 /* tra-dr3100-schedule.json in Resources */,
 				6469EAB1A8C4CFA2DD9C80F2 /* tra-yilan-schedule.json in Resources */,
 				0CAEF26EBDE94052FA874ABE /* tra.json in Resources */,
 				E8D91661A60476AD32234249 /* tra_branch_runs.json in Resources */,

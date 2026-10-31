@@ -20,7 +20,7 @@ final class NewGameBalanceTests: XCTestCase {
         XCTAssertTrue(world.stations.allSatisfy { (world.stationDemand(of: $0.id)?.dailyTrips ?? 0) > 0 }, "both towns give their station ridership")
 
         let cost = GameWorld.startingBalance - world.economy.balance
-        XCTAssertEqual(cost, Money(122_840_000), "$1,228,400")
+        XCTAssertEqual(cost, Money(368_520_000), "NT$3,685,200")
         XCTAssertLessThan(cost.amount * 2, GameWorld.startingBalance.amount, "with more than half the money to spare")
 
         // The second whole day, its hours and its day settled.
@@ -47,9 +47,9 @@ final class NewGameBalanceTests: XCTestCase {
         XCTAssertEqual(world.stationDemand(of: far), StationDemand(kind: .residential, dailyTrips: DistanceDemand.outsideTrips))
         XCTAssertEqual(world.tripFare(from: world.stations[0].id, to: far), FareRules.standardFare + FareRules.standardFare)
 
-        // Some 10 km of track: $1,695,600, more than half the starting money.
+        // Some 10 km of track: NT$5,086,800, more than half the starting money.
         let cost = GameWorld.startingBalance - world.economy.balance
-        XCTAssertEqual(cost, Money(169_560_000), "$1,695,600")
+        XCTAssertEqual(cost, Money(508_680_000), "NT$5,086,800")
         try world.advance(ticks: 1 + 2 * 1_440)
         let day = world.financeReport(.day).previous
         XCTAssertGreaterThan(day.operatingProfit, .zero)
@@ -89,7 +89,7 @@ final class NewGameBalanceTests: XCTestCase {
         try world.setTrainContinuation(train, along: [], stoppingAt: tile + platform)
         try world.setTrainMovementRate(train, to: 512)
         try world.assignTrain(train, to: line)
-        XCTAssertEqual(GameWorld.startingBalance - world.economy.balance, Money(91_480_000), "$914,800")
+        XCTAssertEqual(GameWorld.startingBalance - world.economy.balance, Money(274_440_000), "NT$2,744,400")
         // Each pair keeps a tenth of what it had before decision 137.
         var walking = world
         walking.setDistanceDemand(false)
@@ -130,7 +130,7 @@ final class NewGameBalanceTests: XCTestCase {
         let demo = DemoWorld.make(in: .english)
         let costs = ConstructionCosts.newGame
         XCTAssertEqual(demo.economy.costs, costs)
-        XCTAssertEqual(GameWorld.startingBalance - demo.economy.balance, Money(229_120_000), "$2,291,200")
+        XCTAssertEqual(GameWorld.startingBalance - demo.economy.balance, Money(687_360_000), "NT$6,873,600")
         XCTAssertGreaterThan(demo.economy.balance.amount, 2 * costs.station.amount + costs.train.amount)
     }
 }

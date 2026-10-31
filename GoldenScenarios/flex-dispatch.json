@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 67,
+  "schemaVersion": 75,
   "description": "Flexible dispatch (ARCHITECTURE decision 172, schema 67) on the line of line-dispatch.json: nodes a (512, 1536) to g (6656, 1536), 1024 units apart, straight edges e1 to e6, Alpha, Beta and Gamma with a platform on the 512 units either side of b, d and f (Delta and Far have none). Both lines plan with a crawl, { acceleration 125, braking 100, topSpeed 1 }: 4096 units take 240 s (line-dispatch.json), 2048 units take 8 s to reach 1 km/h, 106.2 s at it and 10 s to stop, 124.2, so 125 s. setFlexDispatch turns it on. Main (Alpha, Gamma) and Short (Alpha, Beta, Gamma) run all day with one train. Blue is assigned at Alpha and then stands at Gamma facing west (e6 backward 1024); Red stands at Alpha. Short loses its first stop (setLineStops [Beta, Gamma]), so Red is stopped at a station that is no stop of its line. At 1 Blue is sent out from the line's last stop: the round trip of the stops in reverse, Gamma 0 to 42 s, Alpha 282 to 402 s (turning round), Gamma 642 s (4 minutes of travel each way, 2 at the far end, as line-dispatch.json). Red runs empty to the nearer end, Beta (two links; Gamma is four): Alpha 0 to 42 s, Beta 42 + 125 = 167 s, the whole run 2048 units, and takes no headway slot. reverseLineStops of an unknown line is refused (unknownLine); of Main, with Blue on its trip, it is allowed and Blue finishes the trip as planned. At 12 both trains are idle at their first stops (Blue at Gamma, now Main's first stop, Red at Beta) and are sent out at 12 on ordinary round trips: Blue Gamma 762 s, Alpha 1002 to 1122 s, Gamma 1362 s; Red Beta 762 s, Gamma 887 to 1007 s, Beta 1132 s. Red is ready at Beta at 4 and goes on its first ordinary trip then, so Short's next dispatch is a headway (8 minutes) later, at 12. The final state has Short's deadheadDistance 2048 (world units), and no train is mid empty run.",
   "initialState": {
     "worldWidth": 8192,
     "worldHeight": 4096,
-    "balance": 1000000,
+    "balance": 3000000,
     "costs": {
-      "track": 1000,
-      "station": 50000,
-      "train": 200000
+      "track": 3000,
+      "station": 150000,
+      "train": 600000
     },
     "gameMinutes": 0,
     "speed": "normal"
@@ -774,7 +774,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 344000,
+    "balance": 1032000,
     "flexDispatch": true,
     "gameMinutes": 13,
     "lines": [

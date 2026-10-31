@@ -18,8 +18,8 @@ struct ReferenceAccounts: Equatable {
     var managed = false
     var rules: FareRules?
     /// The city's fare baseline, in cents: the reference's default city's
-    /// 75 until set.
-    var baseline: Int64 = 75
+    /// 225 until set (0.75 of the reference's dollar, decision 499).
+    var baseline: Int64 = 225
     var opened: Int64?
     var fareCents: Int64 = 0
     var fareTrips: Int64 = 0
@@ -44,14 +44,14 @@ extension ReferenceWorld {
     mutating func setFareRules(_ rules: FareRules) -> GameError? {
         switch rules {
         case .flat(let fare):
-            if fare.amount < 0 || fare.amount > 1_000_000_000 { return .invalidFareRules }
+            if fare.amount < 0 || fare.amount > 3_000_000_000 { return .invalidFareRules }
         case .distance(let bands):
             // "expected 1–64 bands"
             if bands.isEmpty || bands.count > 64 { return .invalidFareRules }
             // "bands must cover all distances without gaps"
             var reached: Int64 = 0
             for (index, band) in bands.enumerated() {
-                if band.fromMeters != reached || band.fare.amount < 0 || band.fare.amount > 1_000_000_000 { return .invalidFareRules }
+                if band.fromMeters != reached || band.fare.amount < 0 || band.fare.amount > 3_000_000_000 { return .invalidFareRules }
                 guard let to = band.toMeters else {
                     // "last band must be open ended": only the last.
                     if index != bands.count - 1 { return .invalidFareRules }
@@ -67,7 +67,7 @@ extension ReferenceWorld {
 
     mutating func setFareBaseline(_ baseline: Money) -> GameError? {
         // A cent at least, and no dearer than any fare may be.
-        if baseline.amount < 1 || baseline.amount > 1_000_000_000 { return .invalidFareRules }
+        if baseline.amount < 1 || baseline.amount > 3_000_000_000 { return .invalidFareRules }
         accounts.baseline = baseline.amount
         return nil
     }
@@ -83,7 +83,7 @@ extension ReferenceWorld {
               let a = stations.first(where: { $0.id == origin }), let b = stations.first(where: { $0.id == destination })
         else { return nil }
         let length = Self.floorRoot((a.point.x - b.point.x) * (a.point.x - b.point.x) + (a.point.y - b.point.y) * (a.point.y - b.point.y))
-        switch accounts.rules ?? .flat(500) {
+        switch accounts.rules ?? .flat(1_500) {
         case .flat(let fare):
             return fare.amount
         case .distance(let bands):
@@ -97,7 +97,7 @@ extension ReferenceWorld {
     }
 
     func tripFare(from origin: Int, to destination: Int) -> Int64? {
-        ruleFare(from: origin, to: destination).map { $0 <= 0 ? 500 : $0 }
+        ruleFare(from: origin, to: destination).map { $0 <= 0 ? 1_500 : $0 }
     }
 
     /// The demand factor of a pair while fares change demand.
@@ -148,8 +148,8 @@ extension ReferenceWorld {
         func round(_ sixtyFourThousandths: Int64) -> Int64 {
             ((sixtyFourThousandths + 32_000) / 64_000) * 100
         }
-        let operating = round(75 * 64_000 * accounts.departures + 42 * accounts.distance + 18 * 64_000 * stations)
-        let maintenance = round(12 * route + 9 * accounts.distance + 8 * 64_000 * trainCount)
+        let operating = round(225 * 64_000 * accounts.departures + 126 * accounts.distance + 54 * 64_000 * stations)
+        let maintenance = round(36 * route + 27 * accounts.distance + 24 * 64_000 * trainCount)
         let fares = accounts.fareCents
         accounts.fareCents = 0
         accounts.fareTrips = 0
@@ -185,18 +185,18 @@ extension ReferenceWorld {
         }
         guard minutes % 1440 == 0 else { return }
         let ended = day
-        let energy = round(220 * route + 360 * 64_000 * trainCount)
+        let energy = round(660 * route + 1_080 * 64_000 * trainCount)
         if energy > 0 {
             write(LedgerEntry(
                 kind: .dailyEnergy, time: GameTime(minutes: minutes - 1), amount: Money(-energy),
-                breakdown: [LedgerLine(item: .routeEnergy, amount: Money(-round(220 * route))), LedgerLine(item: .trainEnergy, amount: Money(-36_000 * trainCount))]
+                breakdown: [LedgerLine(item: .routeEnergy, amount: Money(-round(660 * route))), LedgerLine(item: .trainEnergy, amount: Money(-108_000 * trainCount))]
             ), day: ended, totals: [0, 0, 0, energy, 0])
         }
-        let staff = 62_000 * stations + 48_000 * trainCount
+        let staff = 186_000 * stations + 144_000 * trainCount
         if staff > 0 {
             write(LedgerEntry(
                 kind: .dailyStaff, time: GameTime(minutes: minutes - 1), amount: Money(-staff),
-                breakdown: [LedgerLine(item: .stationStaff, amount: Money(-62_000 * stations)), LedgerLine(item: .trainStaff, amount: Money(-48_000 * trainCount))]
+                breakdown: [LedgerLine(item: .stationStaff, amount: Money(-186_000 * stations)), LedgerLine(item: .trainStaff, amount: Money(-144_000 * trainCount))]
             ), day: ended, totals: [0, 0, 0, 0, staff])
         }
     }

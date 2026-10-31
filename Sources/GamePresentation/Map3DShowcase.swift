@@ -91,7 +91,7 @@ public enum Map3DShowcase {
         Entry("puyuma", "TEMU2000 Puyuma", "TEMU2000 普悠瑪號", .taiwanRailway, cars: 8, fixed: true),
         Entry("taroko", "TEMU1000 Taroko", "TEMU1000 太魯閣號", .taiwanRailway, cars: 8, fixed: true),
         Entry("dieselRailcar", "DR1000 railcar", "DR1000 柴油客車", .taiwanRailway, cars: 2, most: 3),
-        Entry("dieselExpress", "DR3100 diesel Tze-Chiang", "DR3100 柴聯自強號", .taiwanRailway, cars: 6, most: 9),
+        Entry("dieselExpress", "DR3100 diesel Tze-Chiang", "DR3100 柴聯自強號", .taiwanRailway, cars: 3, most: 9),
         Entry("pushPullE1000", "Push-pull Tze-Chiang, E1000", "推拉式自強號（E1000）", .taiwanRailway, cars: 12, most: 14),
         Entry("emu500", "EMU500 local", "EMU500 區間車", .taiwanRailway, cars: 8),
         Entry("pushPull", "Push-pull Tze-Chiang, E500", "推拉式自強號（E500）", .taiwanRailway, cars: 12, most: 14),

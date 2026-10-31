@@ -16,7 +16,7 @@ final class TransferDemandTests: XCTestCase {
     /// trips a day), and the stations Hub and Yard on no land, far from the
     /// edge.
     private func world() throws -> GameWorld {
-        var world = GameWorld(bounds: .standard, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: .standard, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         world.setEconomyMode(.management)
         try world.setLand([LandCell(row: 128, column: 128, use: .residential, residents: 1_000, jobs: 0)])
         world.setLandDemand(true)
@@ -114,7 +114,7 @@ final class TransferDemandTests: XCTestCase {
     }
 
     func testVersionSixtyFourKeepsTheTransfers() throws {
-        var world = try world()
+        var world = try NTScale.$factor.withValue(3) { try world() }
         world.setRealTransfers(true)
         try world.setTransfers([hub: 7, town: 2])
         try world.advance(ticks: 10)
@@ -133,7 +133,7 @@ final class TransferDemandTests: XCTestCase {
         XCTAssertTrue(loaded.realTransfers)
         XCTAssertEqual(loaded.stations.map(\.transferPoints), [2, 7, 0])
         XCTAssertEqual(loaded.stationDemand(of: hub)?.dailyTrips, 700)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 64,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 64,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

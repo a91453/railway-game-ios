@@ -180,7 +180,7 @@ final class SharedNetworkTests: XCTestCase {
         file["freight"] = freight
         root["world"] = file
         let earning = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: root)).world
-        XCTAssertEqual(earning.freight?.pendingRevenue, Money(500_000))
+        XCTAssertEqual(earning.freight?.pendingRevenue, Money(1_500_000), "a version 38 save, read times 3 (decision 499)")
         let fromFreight = try SharedNetwork(data: SaveLibrary.encode(earning, at: date(0))).newGameWorld()
         XCTAssertEqual(fromFreight.freight?.pendingRevenue, .zero)
         XCTAssertEqual(fromFreight.freight?.facilities, earning.freight?.facilities, "the yards stay")

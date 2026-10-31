@@ -557,17 +557,18 @@ final class HighSpeedDemoTests: XCTestCase {
     }
 
     /// Decision 325: its trips pay the real fare between each two of its
-    /// twelve stations, NT$10 to the dollar, either way; a depot has none.
+    /// twelve stations, in New Taiwan dollars (decision 499), either way; a
+    /// depot has none.
     func testItsTripsPayTheRealFares() throws {
         let world = try Self.built.get().world
         let stations = world.stations.filter { !$0.isDepot }.map(\.id)
         XCTAssertEqual(world.accounts.highSpeedFares.count, 66, "each two of the twelve")
         func fare(_ from: Int, _ to: Int) -> Int64? { world.tripFare(from: stations[from], to: stations[to], highSpeed: true)?.amount }
-        XCTAssertEqual(fare(1, 11), 14_900, "Taipei to Zuoying, NT$1,490")
-        XCTAssertEqual(fare(11, 1), 14_900)
-        XCTAssertEqual(fare(0, 1), 400, "Nangang to Taipei, NT$40")
-        XCTAssertEqual(fare(6, 4), 4_100, "Taichung to Hsinchu, NT$410")
-        XCTAssertEqual(fare(0, 11), 15_300, "the whole line, NT$1,530")
+        XCTAssertEqual(fare(1, 11), 149_000, "Taipei to Zuoying, NT$1,490")
+        XCTAssertEqual(fare(11, 1), 149_000)
+        XCTAssertEqual(fare(0, 1), 4_000, "Nangang to Taipei, NT$40")
+        XCTAssertEqual(fare(6, 4), 41_000, "Taichung to Hsinchu, NT$410")
+        XCTAssertEqual(fare(0, 11), 153_000, "the whole line, NT$1,530")
         let depot = try XCTUnwrap(world.stations.first(where: \.isDepot)).id
         XCTAssertNil(world.accounts.highSpeedFare(between: depot, and: stations[0]))
     }
