@@ -106,6 +106,30 @@ struct HUDView: View {
                 "為這個存檔取個名字，方便在「存檔」裡找到。"
             ))
         }
+        // Decision 497 (P2-6): Back to Start could not write the autosave.
+        .alert(
+            Text(verbatim: UnsavedLeaving.title(in: session.language)),
+            isPresented: Binding {
+                launcher.unsavedLeaving != nil
+            } set: { shown in
+                if !shown { launcher.keepPlayingUnsaved() }
+            },
+            presenting: launcher.unsavedLeaving
+        ) { _ in
+            Button(role: .destructive) {
+                launcher.leaveWithoutSaving()
+            } label: {
+                Text(verbatim: UnsavedLeaving.leaveButton(in: session.language))
+            }
+            .accessibilityIdentifier("menu.leaveWithoutSaving")
+            Button(role: .cancel) {
+                launcher.keepPlayingUnsaved()
+            } label: {
+                Text(verbatim: UnsavedLeaving.stayButton(in: session.language))
+            }
+        } message: { offer in
+            Text(verbatim: offer.message(in: session.language))
+        }
         .confirmationDialog(
             Text(verbatim: session.language.text("Go Back to an Autosave?", "回到之前的自動存檔？")),
             isPresented: $choosingGoBack,

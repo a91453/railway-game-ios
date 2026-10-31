@@ -57,6 +57,55 @@ final class ReturnToStartInBackgroundTests: XCTestCase {
         XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: SaveError.fileSystem.playerMessage(in: .english)))
     }
 
+    /// Decision 497 (P2-6): an autosave that cannot be written (a full
+    /// phone) offers to leave without saving, on both ways back; leaving
+    /// reaches the start screen, and keeping on playing keeps the game.
+    @MainActor
+    func testAFailedAutosaveOffersToLeaveWithoutSaving() async throws {
+        try Data("x".utf8).write(to: directory)
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.openDemo()
+        let session = try XCTUnwrap(launcher.session)
+        XCTAssertNil(launcher.unsavedLeaving)
+
+        await launcher.returnToStartInBackground(at: date)?.value
+        let offer = try XCTUnwrap(launcher.unsavedLeaving, "the background way back asks")
+        XCTAssertEqual(offer.reason, SaveError.fileSystem.playerMessage(in: .english))
+        launcher.keepPlayingUnsaved()
+        XCTAssertNil(launcher.unsavedLeaving)
+        XCTAssertTrue(launcher.session === session, "keeping on playing keeps the game")
+
+        launcher.returnToStart()
+        XCTAssertNotNil(launcher.unsavedLeaving, "the immediate way back asks too")
+        XCTAssertTrue(launcher.session === session)
+        launcher.leaveWithoutSaving()
+        XCTAssertNil(launcher.session, "the start screen, unsaved")
+        XCTAssertNil(launcher.unsavedLeaving)
+        XCTAssertFalse(launcher.isReturningToStart)
+        XCTAssertFalse(session.isGameLoopRunning)
+    }
+
+    /// Nothing is offered, and nothing left, without a failed save.
+    @MainActor
+    func testLeavingWithoutSavingNeedsAFailedSave() throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.openDemo()
+        launcher.leaveWithoutSaving()
+        XCTAssertNotNil(launcher.session, "not left without the offer")
+        launcher.returnToStart()
+        XCTAssertNil(launcher.session)
+        XCTAssertNil(launcher.unsavedLeaving)
+    }
+
+    /// The question says what is lost, in both languages.
+    func testTheQuestionSaysWhatIsLost() {
+        let offer = UnsavedLeaving(reason: "The phone is full.")
+        XCTAssertTrue(offer.message(in: .english).hasPrefix("The phone is full."))
+        XCTAssertTrue(offer.message(in: .english).contains("since the last save"))
+        XCTAssertTrue(offer.message(in: .traditionalChinese).contains("上次存檔"))
+        XCTAssertEqual(UnsavedLeaving.leaveButton(in: .traditionalChinese), "不存檔離開")
+    }
+
     /// The start screen's list read off the main thread; a read in the
     /// background does not put back a list older than one read since.
     @MainActor

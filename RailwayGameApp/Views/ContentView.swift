@@ -1338,7 +1338,8 @@ private struct Map3DShownWatch: ViewModifier {
             }
             .onChange(of: session.tool) { _, tool in
                 guard let view = screen.map3DBuildReturn.toolChanged(to: tool, in: ObjectIdentifier(session), shows3D: shows3D,
-                                                                     tutorialRuns: session.tutorial != nil) else { return }
+                                                                     tutorialRuns: session.tutorial != nil,
+                                                                     choosingMapTile: session.isChoosingMapTile) else { return }
                 screen.map3DHandoff = nil
                 screen.map3DOpenedAt = view.plan
                 screen.map3DResume = view

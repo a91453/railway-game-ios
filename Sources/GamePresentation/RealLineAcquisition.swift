@@ -836,8 +836,9 @@ extension RealLineLaying {
         // and, decision 400, any other by its real name within 450 m (a
         // transfer to the company's line, or the line bought before): the
         // line's platforms join it.
+        // Review BUGHUNT_BUILD P3-3: never a depot, which no line calls at.
         let junctionStation = world.stations
-            .filter { (WorldVector($0.location) - points[0]).length <= RealLineAcquisition.junctionReach }
+            .filter { !$0.isDepot && (WorldVector($0.location) - points[0]).length <= RealLineAcquisition.junctionReach }
             .min { (WorldVector($0.location) - points[0]).length < (WorldVector($1.location) - points[0]).length }
         func sameName(_ index: Int) -> StationID? {
             let real = railways.stations.first { $0.id == "\(line.system)|\(runs.stops[index])" }
@@ -1267,7 +1268,6 @@ extension RealLineLaying {
             platformsOf[stations.count - 1 - platform.stop, default: []].append(TrackPlatform(station: stations[platform.stop], edge: on, start: offset, end: offset + platform.length))
         }
         GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
-        let built = world.economy.balance
 
         // The line runs from its terminal to its junction: see
         // ``routePreferences(_:stops:)``.
@@ -1289,6 +1289,9 @@ extension RealLineLaying {
             try world.setStationDepot(station.id, to: true)
             try world.setLineDepots(line.id, to: [station.id])
         }
+        // Review BUGHUNT_BUILD P3-4: after the depot, whose station and
+        // platforms are building, not trains.
+        let built = world.economy.balance
         let count = acquisition.trains.count
         try world.setLineTrainsInService(line.id, to: TrainsInService(peak: count, offPeak: count, low: count))
         let length = Int64(acquisition.cars + 1) * Train.carLength

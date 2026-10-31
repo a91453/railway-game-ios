@@ -313,6 +313,14 @@ struct RailwayGameApp: App {
                     try library.save(DemoWorld.make(in: .traditionalChinese), as: .manual, at: now.addingTimeInterval(-3 * 86_400))
                     try library.save(world, as: .autosave, at: now.addingTimeInterval(-300), row: row.id)
                 }
+                // Decision 497 (P2-6): a folder no save can be written
+                // to, as on a full phone, for the screenshot of Back to
+                // Start's question to leave without saving.
+                if DebugLaunch.isSet("-unwritable-saves") {
+                    let blocked = directory.appendingPathComponent("unwritable")
+                    try Data("x".utf8).write(to: blocked)
+                    return SaveLibrary(directory: blocked)
+                }
                 return SaveLibrary(directory: directory)
             } catch {
                 // Never fall back to the player's library if isolation fails.

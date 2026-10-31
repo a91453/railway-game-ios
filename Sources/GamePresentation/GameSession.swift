@@ -1070,7 +1070,9 @@ public final class GameSession {
         self.newsWatch = NewsWatch(world: world)
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
-        refreshNightSkipOffer()
+        // Decision 497 (P2-4): the run ahead off the main actor; the offer
+        // comes once it is found.
+        refreshNightSkipOfferOffTheMainActor()
         refreshScreenFacts()
         refreshMapMarks()
         refreshFollowBar()
@@ -1548,6 +1550,10 @@ public final class GameSession {
     /// paused (decision 330, later) or after the game loop's tick
     /// (decision 369), or `nil`.
     @ObservationIgnored var nightSkipLookAhead: Task<Void, Never>?
+    /// Decision 497 (P2-4): the ``commandRevision`` at which the shortcut
+    /// was tapped while the run ahead was still to be found off the main
+    /// actor; the skip starts once it is, unless a command came since.
+    @ObservationIgnored var skipToMorningRequested: Int?
 
     /// The first move of the night whose skip ended or was stopped, so the
     /// setting does not start it again.
