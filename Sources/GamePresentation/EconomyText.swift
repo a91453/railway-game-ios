@@ -30,13 +30,14 @@ extension Money {
     /// New Taiwan dollars ÷ ``usDollarReferenceRate`` to the nearest whole
     /// US dollar (half up, as ``moneyText`` rounds); `nil` in Chinese and
     /// for an amount under ``usDollarReferenceMinimum`` (decision 523).
-    /// Only shown: every amount the player enters stays in NT$.
+    /// Only shown: every amount the player enters stays in NT$. The space
+    /// after "≈" does not break, so a wrapped line keeps the two together.
     public func usDollarReferenceText(in language: DisplayLanguage) -> String? {
         guard language == .english, amount.magnitude >= Self.usDollarReferenceMinimum.amount.magnitude else { return nil }
         let centsPerDollar = Self.usDollarReferenceRate * 100
         let remainder = amount % centsPerDollar + centsPerDollar / 2
         let dollars = amount / centsPerDollar + (remainder >= centsPerDollar ? 1 : remainder < 0 ? -1 : 0)
-        return "≈ US$" + dollars.groupedText
+        return "≈\u{00A0}US$" + dollars.groupedText
     }
 
     /// ``moneyText`` with the US dollar reference after it where there is

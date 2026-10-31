@@ -26,7 +26,7 @@ final class MoneyTextSourceTests: XCTestCase {
         "public static let currencySymbol = \"NT$\"",
         // The US dollar reference beside large amounts, and the sentence
         // that names both currencies (decision 523).
-        "return \"≈ US$\" + dollars.groupedText",
+        "return \"≈\\u{00A0}US$\" + dollars.groupedText",
         "Prices are in New Taiwan dollars (NT$); the US$ figures are a rough guide.",
         // A String Catalog key (Localizable.xcstrings), changed with its
         // translation when the currency changes (decision 523).
