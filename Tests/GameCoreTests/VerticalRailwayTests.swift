@@ -131,12 +131,15 @@ final class VerticalRailwayTests: XCTestCase {
         XCTAssertFalse(TrackGrade(rise: .max, run: 1).isNoSteeper(than: TrackGrade(rise: .max - 1, run: 1)))
         XCTAssertTrue(TrackGrade(rise: -(.max), run: .max).isNoSteeper(than: TrackGrade(rise: 1, run: 1)))
         XCTAssertEqual(TrackGrade(rise: -40, run: 1_000), TrackGrade(rise: -1, run: 25))
-        // A world's heights: 4096 above or below the ground.
+        // A world's heights: 4096 above the ground, and since decision
+        // 513, 65,536 below it.
         var world = try makeWorld()
         XCTAssertNoThrow(try node(0, 0, 4_096, in: &world))
         XCTAssertNoThrow(try node(0, 0, -4_096, in: &world))
+        XCTAssertNoThrow(try node(0, 128, -4_097, in: &world))
+        XCTAssertNoThrow(try node(0, 256, -65_536, in: &world))
         refused(.invalidTrackGeometry, in: world) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: 4_097)) }
-        refused(.invalidTrackGeometry, in: world) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: -4_097)) }
+        refused(.invalidTrackGeometry, in: world) { _ = try $0.buildTrackNode(at: WorldCoordinate(x: 0, y: 0, z: -65_537)) }
     }
 
     // MARK: - Building

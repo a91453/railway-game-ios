@@ -179,8 +179,10 @@ public struct RailwayNetwork: Hashable, Sendable {
     }
 
     /// The heights a node may stand at in a world (Stage S4): 4096 units
-    /// (64 m) above or below the ground.
-    public static let heightRange: ClosedRange<Int64> = -4_096...4_096
+    /// (64 m) above the ground; below it, since decision 513, 65,536
+    /// units (1,024 m), so a tunnel can run under a mountain as Taiwan's
+    /// real ones do (it was 64 m below too).
+    public static let heightRange: ClosedRange<Int64> = -65_536...4_096
 
     /// How far from a node two edges that end there may meet in plan at
     /// any height (Stage S4): 1024 units, 16 m. Branches of a turnout
