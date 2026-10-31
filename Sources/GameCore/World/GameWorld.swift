@@ -3908,12 +3908,24 @@ public struct GameWorld: Equatable, Sendable {
         var whole: [Train] = []
         // With block sections (decision 212) it may follow the trains ahead
         // on them too.
+        var scheduledFollowing: Train?
         if case .setsOff = departure,
            case .setsOff(let scheduled, _)? = scheduledLeaving(waiting, stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
-            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
+            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else {
+                whole.append(scheduled)
+                scheduledFollowing = scheduled
+            }
         }
         if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(waiting, stop: stop, cycle: cycle, memo: &memo.directions.paths) {
             if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
+        }
+        // Decision 526: before the default way, the scheduled one followed
+        // behind the trains ahead on it, as the default may be: a train
+        // passing a station where another waits for it keeps to the way
+        // the plan leaves it, not the one keeping left takes.
+        if granted == nil, let scheduled = scheduledFollowing, !blockSections, scheduled.movement.edges != moved.movement.edges,
+           case .granted(let train) = reserving(scheduled, following: true, memo: &memo.directions) {
+            granted = train
         }
         let train: Train
         if let granted {

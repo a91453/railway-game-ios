@@ -694,6 +694,16 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead)
     }
 
+    /// Decision 497 (P2-7): a train parked in the depot while its line is
+    /// closed will not move off before the line opens; while it is open,
+    /// it will.
+    func testATrainParkedWhileItsLineIsClosedStandsStill() throws {
+        let night = try world()
+        XCTAssertEqual(night.standingStill(night.trains[0].id), .outOfHours)
+        let noon = try world(at: 12 * 60)
+        XCTAssertNil(noon.standingStill(noon.trains[0].id))
+    }
+
     /// Decision 497 (P2-4): opening a game, stopping a skip and the
     /// shortcut after a command do not run ahead on the main actor (some
     /// 30 ms a night on the Yilan Line, 600 ms on seven lines round
