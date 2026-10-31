@@ -82,4 +82,23 @@ final class MiniMapTests: XCTestCase {
         XCTAssertEqual(overhanging.bottomRight, ScreenPoint(x: 25, y: 100))
         XCTAssertNil(projection.frame(of: WorldRegion(minX: 5_000, minY: 0, maxX: 6_000, maxY: 1_000)))
     }
+
+    /// IPHLAND: a new real-world game showed an empty frame on the right
+    /// of the map: nothing drawn yet, and the view showing all of it.
+    func testItIsShownOnlyWithSomethingToDrawAndSomewhereToGo() {
+        let region = WorldRegion(minX: 0, minY: 0, maxX: 4_000, maxY: 4_000)
+        let part = WorldRegion(minX: 1_000, minY: 1_000, maxX: 2_000, maxY: 2_000)
+        let all = WorldRegion(minX: -500, minY: -100, maxX: 4_200, maxY: 4_000)
+        let empty = MiniMap(region: region)
+        XCTAssertFalse(empty.isShown(beside: part), "Nothing drawn")
+        XCTAssertFalse(empty.isShown(beside: all))
+        let station = MiniMap(region: region, stations: [.init(x: 100, y: 100)])
+        XCTAssertTrue(station.isShown(beside: part))
+        XCTAssertFalse(station.isShown(beside: all), "The view already shows all of it")
+        XCTAssertFalse(station.isShown(beside: region), "Exactly all of it")
+        let track = MiniMap(region: region, track: [.init(from: .init(x: 0, y: 0), to: .init(x: 10, y: 0))])
+        XCTAssertTrue(track.isShown(beside: part), "Track alone, no station yet")
+        // Wider than the map but not as tall: somewhere left to go.
+        XCTAssertTrue(track.isShown(beside: WorldRegion(minX: -500, minY: 1_000, maxX: 4_500, maxY: 2_000)))
+    }
 }
