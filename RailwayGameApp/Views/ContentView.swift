@@ -172,7 +172,18 @@ struct ContentView: View {
                                    close: { screen.showsMap3D = false },
                                    handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
                                    toMap2D: { plan in back(to: plan) },
-                                   build: { plan, view in build(from: plan, leaving: view) }, resumes: screen.map3DResume, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
+                                   build: { plan, view in build(from: plan, leaving: view) }, resumes: screen.map3DResume,
+                                   openStation: { plan, rename in
+                                       // Decision 517 續: the tag tapped on the 3D map opens on the 2D map.
+                                       if rename {
+                                           screen.renamesStationOnOpen = true
+                                           screen.panel = .station
+                                       } else {
+                                           screen.detailsRequests &+= 1
+                                       }
+                                       back(to: plan)
+                                   },
+                                   ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
             }
             // Decision 334: a station board's train is shown once.
             // Decision 517: and building from the 3D map goes back there.

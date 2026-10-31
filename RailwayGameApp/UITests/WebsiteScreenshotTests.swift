@@ -7,6 +7,32 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
+    /// Decision 517 續: the station picked on the 2D map keeps its tag on
+    /// the 3D map, under the station there; a tap on the tag opens its
+    /// details back on the 2D map.
+    func testThreeDStationTag() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons["map.stationTag"].appears(within: 30), "A station is picked")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        let close = app.buttons["map3D.close"]
+        XCTAssertTrue(close.appears(within: 60), "The 3D map opens")
+        let tag = app.buttons["map3D.stationTag"]
+        XCTAssertTrue(tag.appears(within: 120), "The picked station's tag stands on the 3D map")
+        settle(seconds: 4)
+        keep("map3d-station-tag", app)
+        XCTAssertTrue(tag.becomesHittable(within: 10))
+        tag.tap()
+        XCTAssertTrue(close.disappears(within: 20), "The tag opens its details on the 2D map")
+        settle()
+        keep("map3d-station-tag-details", app)
+    }
+
     /// The freight scene (`ScreenshotScene.freight`): the map with the
     /// stations short of building materials, a yard's station picked (its
     /// tag says the goods waiting), and the freight train's card.
