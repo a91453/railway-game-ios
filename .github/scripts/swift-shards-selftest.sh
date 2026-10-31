@@ -208,7 +208,7 @@ says '!near its 20-minute limit' "without JOB_STARTED (locally) no job warning" 
 FAKE_SECONDS=70 says 'warning title=UnitTests has no weight::UnitTests took 70 s in rest' \
   "a slow class with no weight warns" "$script" run rest
 FAKE_SECONDS=40 says 'warning title=SingleTrackCapacityPropertyTests weight out of date::.*took 80 s.*says 24' \
-  "a class past twice its weight warns" "$script" run campaigns-2
+  "a class past twice its weight warns" "$script" run campaigns-12
 FAKE_SECONDS=40 says '!ServicePropertyTests (has no weight|weight out of date)' \
   "a class within its weight does not warn" "$script" run campaigns-2
 JOB_STARTED=$(($(date +%s) - 1108)) FAKE_SLEEP=4 says 'warning title=Shard rest about to reach its 20-minute limit::rest has run 18m30s; slowest classes so far: ' \
