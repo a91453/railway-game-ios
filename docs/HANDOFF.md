@@ -2430,6 +2430,12 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - `economy`、`network-economy` 兩個 replay 的起始餘額、建造成本、`setFareBaseline`／`setFareRules` 的金額 ×3：對 base `d1df0d7` 逐指令重播，193 個指令的接受或拒絕全部一樣。其他 7 檔 checksum 動是因為預設 `demandBaseline` 75 → 225，README 與決策 499 改正。
   - 決策 499 加「高鐵每公里不照真實票價」（五方）與「已知限制」（審查列為低、不改的五項）。沒有剩下的步驟；合併由遊戲規劃決定。
 
+### 4.36 自己拉的軌道加成旁邊車站的月台、缺建材說下一步（決策 519，派工單 FREIGHTPLAT，session_01YGNNum9tS2UtTJPb8hQben，2026-10-31）
+
+- 做了的在 [決策 519](decisions/519.md)：「車站」模式點在某站月台旁 100 m 內的軌道，預設加成那站的月台（尾端外的同一條線照舊是新站）；車站選單照距離排、寫幾公尺；車站卡月台組多一句怎麼讓自己的軌道停這站；缺建材那行接著說下一步（蓋貨運場→別站出建材→設貨運路線＋月台→加開列車）。規則在 `NetworkSession.swift`、`FreightText.swift`，Linux 測試 `PlatformStationJoinTests`、`FreightSessionTests`。
+- **等 TestFlight 看**（UNVERIFIED）：作者那局台北旁那條線點下去是不是台北（離月台超過 100 m 就要從選單選，選單台北在前面）。
+- **下一步**（沒派）：見決策 519「下一步」。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

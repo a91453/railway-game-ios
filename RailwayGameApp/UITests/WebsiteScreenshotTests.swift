@@ -74,6 +74,33 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("freight-train", app)
     }
 
+    /// Decision 519: a bubble's station panel says the next step for its
+    /// materials, and its platforms how a track of the player's own calls
+    /// there. For the screenshot review of the pull request that made
+    /// them, not the website.
+    func testMaterialsNextStepAndOwnTrack() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
+        zoomInOnce(app)
+        settle()
+        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(alert, "A bubble is on screen")
+        alert?.tap()
+        let materials = app.descendants(matching: .any)["station.materials"].firstMatch
+        XCTAssertTrue(materials.appears(within: 10), "A tap on a bubble opens its station's panel")
+        _ = app.dragUntilWhollyOnScreen(materials, drags: 8)
+        settle()
+        keep("materials-next-step", app)
+        let platforms = app.descendants(matching: .any)["station.platformTrack.0"].firstMatch
+        _ = app.dragUntilWhollyOnScreen(platforms, drags: 12)
+        settle()
+        keep("station-own-track", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that
