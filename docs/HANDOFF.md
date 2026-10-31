@@ -2573,6 +2573,13 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - L3-11（每幀多做的掃描）：L1-2 的記憶已經省掉泡泡與標記的重算；`StationLayout` 車站模式的 `trackBeside` 還沒量也沒改，交給查主執行緒停頓的工作順便量。
 - **UNVERIFIED**：L1-2、L1-3、L2-3、L3-6、L3-7、L3-9、L3-10 是 App 的程式，Linux 編不到，靠 PR 的 iOS 建置；實機手感沒看。
 
+### 4.41 在 3D 直接鋪軌（決策 517 續，派工單 BUILD3D-2，session_01YGNNuoVbtz1ohJBKbA8itq，`build3d-pick`，2026-10-31）
+
+存檔版本、決策編號、golden schema、GameCore 都不動。拆成五個 PR，表在 [決策 517 的「續」](decisions/517.md)。
+
+- **做了的**：PR 1，`Map3DPick`（射線打地面、螢幕 24 pt 內吸附軌道節點、土地格），只有規則與 Linux 測試，畫面沒變。
+- **接手的下一步**：PR 2（3D 裡分開點與拖、點車站／軌道開卡片、場景自己的地面高度交給拾取、邊的吸附；要截圖驗收），再來 PR 3（鋪完只重蓋經過的區塊，先在實機量重蓋秒數）、PR 4（3D 裡的路網平面鋪設）、PR 5（看實機數據）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
