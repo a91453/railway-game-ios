@@ -235,11 +235,16 @@ final class RealWorldDemoGroundTests: XCTestCase {
         XCTAssertGreaterThan(world.stations.map { world.passengerLedger(of: $0.id).arrived }.reduce(0, +), 0, "passengers rode")
     }
 
-    /// Without the app's heights it is the flat demo, as before.
+    /// Without the app's heights it is the flat demo, as before, with its
+    /// sights and transfers open (decision 525; the flat demo itself is the
+    /// Pingxi challenge's, which keeps them closed).
     func testWithoutHeightsItIsTheFlatDemo() throws {
         let railways = try Self.railways()
         let world = RealWorldDemo.make(in: .english, railways: railways)
         XCTAssertFalse(world.ground.isMapped)
-        XCTAssertEqual(world, RealWorldDemo.makeFlat(in: .english, railways: railways))
+        var flat = RealWorldDemo.makeFlat(in: .english, railways: railways)
+        XCTAssertNotEqual(world, flat)
+        RealWorldDemo.openSightsAndTransfers(in: &flat)
+        XCTAssertEqual(world, flat)
     }
 }

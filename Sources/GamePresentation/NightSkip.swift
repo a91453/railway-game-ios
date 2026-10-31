@@ -210,6 +210,12 @@ extension GameSession {
               !world.trains.contains(where: NightSkip.isRunning),
               !(nightSkipMemo?.covers(world.clock.now, revision: commandRevision) ?? false) else {
             refreshNightSkipOffer()
+            // Decision 497 (P2-4): the shortcut tapped before the run ahead
+            // was found, and no command since.
+            if let requested = skipToMorningRequested {
+                skipToMorningRequested = nil
+                if requested == commandRevision { skipToMorning() }
+            }
             return
         }
         guard nightSkipLookAhead == nil else { return }
@@ -227,7 +233,19 @@ extension GameSession {
     /// Runs the game at its fastest speed to the skip's stop (decision
     /// 305); does nothing when there is nothing to skip.
     public func skipToMorning() {
-        guard !isLayingDemoRealLines, let skip = nightSkip else { return }
+        guard !isLayingDemoRealLines else { return }
+        // Decision 497 (P2-4): a run ahead the memo does not answer (after
+        // a command) runs off the main actor, and the skip starts once it
+        // is found (``lookAgainForNightSkip()``).
+        let answered = nightSkipRun != nil || isPausedForBuilding
+            || world.trains.contains(where: NightSkip.isRunning)
+            || nightSkipMemo?.covers(world.clock.now, revision: commandRevision) == true
+        guard answered else {
+            skipToMorningRequested = commandRevision
+            lookAgainForNightSkip()
+            return
+        }
+        guard let skip = nightSkip else { return }
         // A speed chosen while a tick was worked out is the speed to come
         // back to, not the one before it (``heldSpeed``).
         applyHeldSpeed()
@@ -243,7 +261,9 @@ extension GameSession {
     public func stopNightSkip() {
         guard nightSkipRun != nil else { return }
         endNightSkip(pausing: false)
-        refreshNightSkipOffer()
+        // Decision 497 (P2-4): ending it is a command, which the memo does
+        // not answer; run ahead off the main actor.
+        refreshNightSkipOfferOffTheMainActor()
     }
 
     /// The player chose a speed or paused while a skip ran: the speed is

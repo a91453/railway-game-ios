@@ -443,6 +443,31 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 38 任交給第 39 任（2026-10-31 約 17:45 UTC，session_01YGNNumGMsXsPxuQX4jyaCq，壓縮 2 次）**：第 38 任由作者在 claude.ai 開，是第 0 層；第 39 任由第 38 任用 `create_session` 開，是第 1 層（opus 5.5 高）。
+- **101.1 已發**：作者 17:00 UTC 自己按的，testflight.yml run 41222363939，main deef5e3。檢查：完整 `ci.yml` 41217606027 綠、full lane 41217608700 綠（四個 job 都綠）。100.2 沒有發，內容併進 101.1。紀錄在 `research/PLAYER_FEEDBACK.md`（#1622）。101.1 的發版凍結已經結束。
+- **main**：61e05d1。101.1 之後合了 #1615（HANG2 P2-6）、#1619（ROADFIX-P3）、#1622（只有文件）。接手時先看 main 推送的 `ci.yml` 綠了沒。
+- **等著合的**（HANG2-P2，session_01YGNNumzMVAszUPgVLu26iP，已壓縮 1 次，只收尾自己的 PR）：
+  - 照 #1618 → #1617 → #1620 → #1621 的順序，一次合一個。
+  - 這四個都在決策 497 結尾和 §4.31 加內容，所以每合一個，HANG2 要先在下一個合 main，CI 綠了再合。
+  - #1621 還是 draft，要先看 `testFreePlaySwitchConfirmation` 的截圖（決策 482）。
+- **草稿**：
+  - #1611 REVIEW-L3：等它補完再合，session 看 #1579 的登記。
+  - #1589：Codex 的 R200，不是我們的。
+- **§23 進度**：
+  - 做完的：1 IPHLAND（#1604）、2 CIREST（#1606）、3 PASSLOOP（#1601）、4 FLANE（#1608，後續 #1613）、5 ZONE3（#1609）、10 ROADFIX-P3（#1619）。
+  - 做了一半：6 REVIEW-L3（#1611）、7 HANG2-P2（上面四個 PR）。
+  - 下一批照 §23.1 順序派：8 STATIONEXP（存檔 78，動 GameCore）、9 ALISHAN2（動 GameCore，不和 LOOP-SIMPLE 同時）、11 REV-P3、12 USD、13 PUNCT、14 DEMOON。同時最多 2 個動 GameCore。
+- **記在別處、還沒派的後續**：
+  - P2-5 的 B 案（§4.31）。
+  - P2-7 的 `.noRoute` 與機廠滿了（動 GameCore）。
+  - P3-5 刪掉的線可以買回（§4.33，動 GameCore）。
+  - 決策 521「續」的下一步：描線預覽蓋兩次。
+  - 決策 522 的下一步：拖曳預覽的填色。
+- **號碼**：
+  - 存檔：main 是 77，78 給 STATIONEXP。
+  - 決策：main 用到 522，沒有 520.md。取號前先在 #1579 和 #1041 查 520 有沒有人留著；沒人留的話，下一個是 523。
+- **回報**：L3FIX／ROADFIX（session_01YGNNupKN2twaXYyb91H3Cp）和 HANG2-P2 都回報給第 38 任。接手後對 HANG2-P2 送一則「改回報給 <第 39 任 session>」。L3FIX 已經沒有工作。
+
 **第三十七次換手（2026-10-31 約 01:15 UTC，第 36 任 session_01YGNNunAp2WBFfGrmq3mXES → 第 37 任）**：第 36 任壓縮 3 次、約 300k，照 §1 換手（第 36 任是第 5 層，第 37 任第 6 層；第 7 層起由作者在 claude.ai 開）。
 - **100.1 的計畫**：分三批合，最後一批合完、main 的完整 `ci.yml`（workflow_dispatch）與 full lane 都綠，就跟作者說「100.1 可以發（commit X）」。只有作者按發版。提醒作者答 App Store Connect 的出口合規、99.1 的外部群組。
 - **已合（這輪）**：#1584、#1585、#1587、#1591、#1590（DR3100，決策 511）、#1550（NTD1 新台幣，存檔 76，決策 499）。main d7d25547 的推送 `ci.yml` 交接時還在跑；full lane d7d25547 綠。#1550 的 ChallengeReport seed 1 報告還沒跑。
@@ -2410,11 +2435,11 @@
 
 - **做了的**在決策 497（`docs/decisions/497.md`）：P2-1 收購報價卡在背景排版（#1545）；P2-2 回開始畫面的存檔與清單移出主執行緒（#1549）；存檔清單的檔頭快取（作者 97.1「存檔越多越卡」，`hang2-p2-2-list`）。
 - **還沒做的**（HANG2 壓縮一次後依規則停下，`docs/research/BUGHUNT_HANG_2026-10-30.md` 的順序，一項一個 PR，決策 497 接著寫一節）：
-  - P2-3：每個指令後在主執行緒算死結泡泡（`situationAlerts`）與交通狀態（`TrafficReading`）。照遊戲迴圈的做法在 detached task 算、先顯示舊的。
-  - P2-4：跳過夜晚的預先試跑在 `stopNightSkip()`、`skipToMorning()`（memo 沒命中）與 `GameSession.init` 還在主執行緒；改用 `refreshNightSkipOfferOffTheMainActor()`。
+  - ~~P2-3~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-3-command-reads`，決策 497 的 P2-3 一節。
+  - ~~P2-4~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-4-night-skip`，決策 497 的 P2-4 一節。
   - ~~P2-5：欠錢轉自由模式就卡住~~：做了 A（確認框說現金會停住，決策 497 P2-5，`hang2-p2-5-free-play-cash`）。**下一步 B**（留給 BH3 或之後的經濟規則決定，要動 GameCore、佔一個名額）：轉自由模式時順便打開無限資金（`GameWorld.setEconomyMode`，`Operations.swift`），已經轉成自由模式的舊存檔要不要也打開一併決定。
-  - P2-6：回開始畫面時自動存檔失敗就出不去。失敗時跳確認框給「不存檔離開」；同步的 `returnToStart()` 與 `returnToStartInBackground(at:)`（失敗時留在遊戲）兩條路都要接。
-  - P2-7：`routeWaitText` 與泡泡說出「在等哪一列停著的車」。
+  - ~~P2-6~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-6-leave-unsaved`，決策 497 的 P2-6 一節。
+  - ~~P2-7~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了提示的部分，`hang2-p2-7-parked-holder`，決策 497 的 P2-7 一節。`.noRoute` 與機廠滿了這兩種要 GameCore 加查詢，還沒做；讓派車員移開停著的車是調度規則，公測後由 BH2 決定。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
 
 ### 4.32 短面板先列路線（決策 498 B1，UIB session_01YGNNuqDeWxuzsEPMNtxT4N，`uib-b1-lines-first`，#1560，2026-10-30）
@@ -2435,6 +2460,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **P3-7**：離車站遠、地塊還沒讀進來的地方，沿真實的街鋪路照全價收（`RealRoadCells.swift`）。
 
 照文件順序做，每項先寫一個在 main 上會紅的測試。
+
+**ROADFIX-P3（session_01YGNNupKN2twaXYyb91H3Cp，2026-10-31，`roadfix-p3`）修了上面四項**：P3-3、P3-4、P3-7 照建議修；P3-5 只做了刪線時的提醒（買來的線刪掉後不能再買回來）。真的要能買回，得改 GameCore 的 `recordLineAcquisition`（同一條真實路線只能買一次），並處理留下的軌道；目前沒有派。
 
 ### 4.34 存檔一局一筆（決策 502，SAVE1 session_01YGNNuq65cB35dbSd2SspvL → SAVE2 session_01YGNNuogTGYLuCpzpJbTWYt，PR #1556，2026-10-30）
 
@@ -2509,7 +2536,7 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **做了的**在決策 515（`docs/decisions/515.md`）：描 `afr_sched` 時坡度到 70‰（邊的 `mountain`）、林鐵描線半徑 20 m、`ALISHAN` 車種、只有登山車上得去（`trainCannotClimb`）、依坡度限速；存檔版本 77。
 - **還沒做的**（決策 515 的「缺口與下一步」，一項一個 PR）：
   - 不在車站的折返（Z 字）：GameCore 只在中途站月台折返（決策 63）；要讓列車在非車站的節點換向，動 `LineJourney` 與交通控制，要升 golden 時照規則逐值說明。
-  - `placeTrain`、接續運轉沒有檢查登山；線路改走登山軌道後已在線上的一般車不會被拉下來。
+  - ~~`placeTrain`、接續運轉沒有檢查登山；線路改走登山軌道後已在線上的一般車不會被拉下來。~~ ALISHAN2（session_01YGNNupKwkmd2NDUaYLBpRs，`claude/alishan2-climbing-check`，2026-10-31）補了，見決策 515「續」。剩下：不在線上、自己跑時刻表的一般車，服務找路仍可能經過登山軌道（決策 515「續」的缺口 1，和 Z 字折返一起看）。
   - 登山車的 3D 模型（DL38＋`alicoach`，參考 `garage-scenes/alishan*.js`；先讀 `.claude/skills/rolling-stock/SKILL.md`）。
   - 獨立山螺旋 16 m、二萬平到神木 20 m 兩處描線停點（資料畫線的折角）。
 
@@ -2521,6 +2548,29 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - 本機 VERIFIED（a4fbed1）：`-warnings-as-errors` 乾淨；`CallingLoopPlatformTests` 5/5、`LineAcquisitionTests` 10/10、`RealLineAcquisitionTests` 12/12、Golden 24/24、ReplayFixtureTests、SavedGameTests 38/38、LongLegReplayTests 與 spacing、depot 類別。
 - **接手（session_01YGNNuowaMN8MBaj6QWbCLn，遊戲規劃第 37 任派，2026-10-31）**：合了 main（7b015d3，只這份檔案衝突，本節由 §4.36 改為 §4.39）。CI run 41193250249 全綠（rest 17.8 分）。rest 逐類和 main 的 run 41187751239 比：共同 595 類測試合計 664.2 秒對 674.6 秒（×1.016），沒有一類慢超過 1 秒；新加的只有 `CallingLoopPlatformTests`。`HighSpeedDemoDayTests`（campaigns-16）160.5 對 162.3 秒。所以之前的逾時是 rest 本來就太滿（main 8c2cc38a 已拆），不是這個 PR。
 - 沒有剩下的步驟；合併由遊戲規劃決定（排在 TRACELAG 後）。實機上高鐵示範的停站畫面 UNVERIFIED。
+
+### 4.40 審查剩下的 P3（派工單 REV-P3，session_01YGNNuo4zKUm33FJPAx7M5A，`rev-p3`，2026-10-31）
+
+存檔版本、決策編號、golden schema、GameCore 都不動。代號的原文在 `docs/archive/PR1510_1549_REVIEW_HANDOFF.md`（L1）、`PR1551_1578_REVIEW_HANDOFF.md`（L2）與 #1611 的 `PR1579_1610_REVIEW_HANDOFF.md`（L3）。
+
+- **修了**：
+  - L1-2：泡泡的排列與位置（`MapAlertBubbles.arranged`／`placements`）記住上一份，輸入（相機、畫面、泡泡、景點、畫面內車站、地價標籤、語言、工具）沒變就不重算；泡泡圖層、選站標籤、景點標記三處共用。
+  - L1-3：按「回到開始畫面」後自動存檔寫完前，畫面上蓋一層收下所有觸控的「儲存中…」（`ContentView` 的 `SavingCover`），沒動 `GameLauncher`。
+  - L2-3：站長教學提議的兩顆按鈕在窄卡片上可以換成兩行，不再被切成「跟我做 5 分…」。
+  - L2-4：檔頭快取讀回比這版新的存檔版本時不採用，改讀檔，清單照樣標「較新版本」。
+  - L2-5：報價算到一半世界變了，若描線還沿著同一條線就重新報價（暫停時提示也會有價格）。
+  - L3-5：時刻表格子往前拖過「現在」時，預覽加上「（N 分後）」「（N 小時 M 分後）」。
+  - L3-6：運用表的「復原」只在運用表自己做過、還能復原的編輯時能按。
+  - L3-7：運用表拖曳放開時，用按下時記住的列車與最後看到的路線，不再照位置重找。
+  - L3-8：沒有城市建築的世界，分區用土地格的用途算「第一棟」通知與「都市計畫」成就（`GameWorld.zonedUseBuilt`）。
+  - L3-9：泡泡只拿掉「真的畫出來的」景點標記的提醒（蓋到地價的標記不算）。
+  - L3-10：分區標記的重建鍵加上城市需求開關。
+- **沒修、留給之後**：
+  - L3-3：歸 ALISHAN2（§23.1 第 9 名）。
+  - L3-4（自動存檔失敗時站長的教學提議不再出現）：要改 `GameLauncher.swift`（偏好在存檔成功後才寫），和 HANG2-P2 的 PR 撞檔，這次不動；等 HANG2-P2 的 PR 都合了再做，一行加一個測試。
+  - L3-9 的小差：選地（`isChoosingMapTile`）時景點標記是淡的那一層，它的地價標籤從 `max(clear.top, topColumnDepth)` 算，泡泡這邊用 `insets.top`；只有靠近畫面頂端的景點可能差一個。
+  - L3-11（每幀多做的掃描）：L1-2 的記憶已經省掉泡泡與標記的重算；`StationLayout` 車站模式的 `trackBeside` 還沒量也沒改，交給查主執行緒停頓的工作順便量。
+- **UNVERIFIED**：L1-2、L1-3、L2-3、L3-6、L3-7、L3-9、L3-10 是 App 的程式，Linux 編不到，靠 PR 的 iOS 建置；實機手感沒看。
 
 ## 5. 已知、還沒派的待辦
 

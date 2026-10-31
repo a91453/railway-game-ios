@@ -1953,12 +1953,39 @@ public final class GameLauncher {
 
     /// Autosaves and goes back to the start screen. If the autosave fails
     /// the game stays, with the failure on its status line, rather than
-    /// being thrown away unsaved.
+    /// being thrown away unsaved, and the player is asked whether to leave
+    /// without saving (``unsavedLeaving``, decision 497 P2-6).
     public func returnToStart() {
-        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
+        guard session == nil || autosaveCurrentGame(refreshing: false) else {
+            if let message = session?.message, message.kind == .failure {
+                unsavedLeaving = UnsavedLeaving(reason: message.text)
+            }
+            return
+        }
         leaveGame()
         refresh()
         afterLeaving()
+    }
+
+    /// Decision 497 (P2-6): set when Back to Start could not write the
+    /// autosave; the app asks whether to leave without saving
+    /// (``leaveWithoutSaving()``) or keep playing (``keepPlayingUnsaved()``).
+    public private(set) var unsavedLeaving: UnsavedLeaving?
+
+    /// Leaves the game unsaved for the start screen, after Back to Start
+    /// failed to save it and the player chose to (``unsavedLeaving``).
+    /// Nothing without that question.
+    public func leaveWithoutSaving() {
+        guard unsavedLeaving != nil else { return }
+        unsavedLeaving = nil
+        leaveGame()
+        refreshInBackground()
+        afterLeaving()
+    }
+
+    /// Answers ``unsavedLeaving`` by staying in the game.
+    public func keepPlayingUnsaved() {
+        unsavedLeaving = nil
     }
 
     /// Whether the game menu's Back to Start is writing the autosave
@@ -1971,7 +1998,9 @@ public final class GameLauncher {
     /// saves' queue, after any save or iCloud round queued before it (on a
     /// large map a save is a few MB). The start screen comes once it is
     /// written; if it fails, the game stays and goes on, with the failure
-    /// on its status line. Nothing, and `nil`, while one is under way.
+    /// on its status line, and the player is asked whether to leave
+    /// without saving (``unsavedLeaving``). Nothing, and `nil`, while one
+    /// is under way.
     @discardableResult
     public func returnToStartInBackground(at date: Date = Date()) -> Task<Void, Never>? {
         guard !isReturningToStart else { return nil }
@@ -2003,8 +2032,10 @@ public final class GameLauncher {
                     if listRead == read { entries = list }
                     afterLeaving()
                 case .failure(let error):
-                    session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                    let reason = error.playerMessage(in: language)
+                    session.message = StatusMessage(kind: .failure, text: reason)
                     if isActive { session.startGameLoop() }
+                    unsavedLeaving = UnsavedLeaving(reason: reason)
                 }
             }
         }
@@ -2012,6 +2043,7 @@ public final class GameLauncher {
 
     /// What going back to the start screen does once the game is saved.
     private func leaveGame() {
+        unsavedLeaving = nil
         stopLessonClock()
         let left = session != nil
         session?.stopGameLoop()

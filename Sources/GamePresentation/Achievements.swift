@@ -144,7 +144,7 @@ public struct AchievementFacts: Hashable, Sendable {
         rollingStockCost = world.balanceSheet().rollingStock.cost
         zonedCellsBuilt = world.zones.cells.count { cell in
             guard let use = cell.zone.use else { return false }
-            return world.buildings.building(row: cell.row, column: cell.column)?.use == use
+            return world.zonedUseBuilt(row: cell.row, column: cell.column) == use
         }
         if let state = world.scenario, case .completed(_, let rating)? = state.outcome {
             completedScenario = state.scenario.id
