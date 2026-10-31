@@ -2441,6 +2441,7 @@
   - ~~P2-6~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-6-leave-unsaved`，決策 497 的 P2-6 一節。
   - ~~P2-7~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了提示的部分，`hang2-p2-7-parked-holder`，決策 497 的 P2-7 一節。`.noRoute` 與機廠滿了這兩種要 GameCore 加查詢，還沒做；讓派車員移開停著的車是調度規則，公測後由 BH2 決定。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
+  - **nightly 的 NightSkip 不穩**（run 41239862458 的 campaigns-9，`testACommandWhilePausedRunsAheadOffTheMainActor`）：HANG2-P2 查出原因（第二次預先推算可能在測試醒來前就算完），修在 #1632（`hang2-p2-nightskip-flake`，決策 497 的「後來」）。HANG2-P2 壓縮第二次後依規則停下：**#1632 還是 draft**，CI 綠了由遊戲規劃（或另派的人）轉 ready 再合。
 
 ### 4.32 短面板先列路線（決策 498 B1，UIB session_01YGNNuqDeWxuzsEPMNtxT4N，`uib-b1-lines-first`，#1560，2026-10-30）
 
