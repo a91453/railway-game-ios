@@ -2432,6 +2432,15 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - `economy`、`network-economy` 兩個 replay 的起始餘額、建造成本、`setFareBaseline`／`setFareRules` 的金額 ×3：對 base `d1df0d7` 逐指令重播，193 個指令的接受或拒絕全部一樣。其他 7 檔 checksum 動是因為預設 `demandBaseline` 75 → 225，README 與決策 499 改正。
   - 決策 499 加「高鐵每公里不照真實票價」（五方）與「已知限制」（審查列為低、不改的五項）。沒有剩下的步驟；合併由遊戲規劃決定。
 
+### 4.36 「分區」自己一顆建設工具（決策 509，派工單 ZONE1，session_01YGNNuo27fcYAGK3J1GdZHo，`zone1-zoning-tool`，2026-10-30）
+
+- **做了的**在決策 509：建設工具「路網、列車、建物、分區、公車」，手機的「完成」改站在「建設」旁邊（決策 382 補記）；站長在成長的車站旁有空地時說「點這裡劃分區」；第一棟蓋在分區上的建物通知一次；成就「都市計畫」（`cityPlanner`，10 分）。
+- **等作者的**：App Store Connect 還沒有 `achievement.cityPlanner`。作者要再跑一次 Game Center 的建立步驟（`docs/GAME_CENTER_SETUP.md`；只會新建這一個，其餘照舊），沒建之前遊戲內照常解鎖，只是不回報 Game Center。
+- **規劃的合併條件**（小 iPhone 橫拿整排不用捲、每顆觸控 44 pt）：觸控範圍改 44、mini 上工具組玻璃縮成上下 2 pt；截圖用 `website-screenshots.yml` 的 `device` = `iphone-small`、`tests` = `testBuildingToolsColumn`（決策 509 第 2 點）。
+- **截圖驗收**（決策 509）：17 Pro 四張、最小可選的 iPhone 17e 兩張（run 41156612390，`docs/art/ui-audit-2026-10-30/zone1-*.png`）。runner 沒有 SE／mini 的模擬器，mini 的窄玻璃只由 Linux 的 `ToolColumnTests` 驗證。
+- **還沒驗證**：實機畫面；站長「劃分區」的泡泡沒有截圖；e9178e2 改過的三個 full lane UI 測試（`MapButtonsUITests/testThePhonesBuildingToolsStartAtTheColumnsTop`、`MapButtonsUITests/testThePhonesZoomButtonsStandOnTheColumnsLine`、`ToolbarSmokeTests/testTheToolsColumnsButtonsAreOneSize`）沒有單獨跑過，合併後的 full lane 會跑；紅了照它們的新邊界（觸控框比畫的多上下 2 pt、「完成」在「建設」右邊）修。
+- ZONE1 已壓縮 3 次，沒有其他剩下的步驟。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

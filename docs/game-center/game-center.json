@@ -453,6 +453,26 @@
       ]
     },
     {
+      "vendorIdentifier": "achievement.cityPlanner",
+      "referenceName": "Town Planner",
+      "points": 10,
+      "showBeforeEarned": true,
+      "repeatable": false,
+      "image": "achievements/achievement.cityPlanner.png",
+      "localizations": [
+        {
+          "locale": "zh-Hant",
+          "name": "都市計畫",
+          "description": "城市在你劃的分區蓋起 10 格"
+        },
+        {
+          "locale": "en-US",
+          "name": "Town Planner",
+          "description": "The town builds on 10 cells you zoned"
+        }
+      ]
+    },
+    {
       "vendorIdentifier": "achievement.firstFreight",
       "referenceName": "First Tonne",
       "points": 10,

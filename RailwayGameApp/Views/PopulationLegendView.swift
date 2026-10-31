@@ -464,8 +464,8 @@ struct PopulationLegendView: View {
             .accessibilityIdentifier("map.zoningLegend")
             if nothingZoned {
                 Text(verbatim: language.text(
-                    "Nothing zoned yet: draw zones with Build, then Buildings, then Zone.",
-                    "還沒有劃分區：點「建設」→「建物」→「分區」來劃。"
+                    "Nothing zoned yet: draw zones with Build, then Zoning.",
+                    "還沒有劃分區：點「建設」→「分區」來劃。"
                 ))
                 .font(.caption2)
                 .foregroundStyle(Theme.textSecondary)

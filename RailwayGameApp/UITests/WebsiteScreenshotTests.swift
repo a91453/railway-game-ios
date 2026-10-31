@@ -192,14 +192,20 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// building tools from the column's top, on a map without credits and
     /// on the real-world demo with its credits under the column. For the
     /// screenshot review of the pull request that moved them, not the
-    /// website.
+    /// website. 100.1 (decision 509): with zoning's own button too.
     func testBuildingToolsColumn() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         app.buttons["dock.build"].tap()
         app.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(app)
         keep("build-tools-column", app)
+        // Decision 509: zoning's own button, its card open.
+        app.buttons["tool.zoning"].tap()
+        XCTAssertTrue(app.staticTexts["building.zoneCount"].appears(within: 10), "The zoning tool opens")
+        settle()
+        keep("build-tools-zoning", app)
         app.terminate()
 
         let real = launch()
@@ -217,6 +223,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         real.buttons["dock.build"].tap()
         real.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(real)
         keep("build-tools-column-real-world", real)
         real.terminate()
 
@@ -240,6 +247,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         lesson.buttons["tool.select"].waitUntilSettled()
         settle()
         keep("build-tools-column-lesson", lesson)
+    }
+
+    /// The planner's condition for 100.1 (decision 509), on the smallest
+    /// iPhone the workflow can choose as on the 17 Pro: the five tools,
+    /// Done and Build whole on the screen, apart, and nothing scrolling
+    /// (the bus tool's foot the tools' glass and the gap above Build; a
+    /// part that scrolls would stand lower).
+    private func assertBuildingToolsWhole(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let window = app.windows.firstMatch.frame
+        let tools = ["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus"]
+        for name in tools + ["tool.select", "dock.build"] {
+            let button = app.buttons[name]
+            XCTAssertTrue(button.isHittable, "\(name) can be tapped", file: file, line: line)
+            XCTAssertTrue(window.contains(button.frame), "\(name) whole on the screen: \(button.frame)", file: file, line: line)
+            // Touched over 44 (2 past the 40 drawn, above and below).
+            XCTAssertGreaterThanOrEqual(button.frame.height, 43.5, "\(name) touched over 44: \(button.frame)", file: file, line: line)
+            XCTAssertGreaterThanOrEqual(button.frame.width, 44, "\(name) touched over 44: \(button.frame)", file: file, line: line)
+        }
+        // The touch areas meet in the 4 between two tools and never cross.
+        let frames = tools.map { app.buttons[$0].frame }
+        for (upper, lower) in zip(frames, frames.dropFirst()) {
+            XCTAssertGreaterThanOrEqual(lower.minY - upper.maxY, -0.5, "apart: \(upper) \(lower)", file: file, line: line)
+        }
+        // Drawn: the bus tool's foot, the tools' glass (4, or 2 where the
+        // column is short) and the gap of 6, then Build's glass of 4; a part
+        // that scrolls stands lower, its foot only the gap above Build's glass.
+        let build = app.buttons["dock.build"].frame
+        XCTAssertLessThanOrEqual(frames[4].maxY - 2, build.minY + 2 - 11.5, "nothing scrolls: bus \(frames[4]), Build \(build)", file: file, line: line)
     }
 
     /// Building on the real-world demo, the panel open at the trailing
