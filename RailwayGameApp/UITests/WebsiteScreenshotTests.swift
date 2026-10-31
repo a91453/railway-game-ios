@@ -329,6 +329,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(nanao.appears(within: 30), "Nan'ao is found")
         nanao.waitUntilSettled()
         app.tapMiddle(of: nanao)
+        // While the search is on, the toolbar with Build Here is hidden:
+        // the search's own cancel ends it, the map staying on Nan'ao.
+        if !app.buttons["realWorld.start"].appears(within: 3) {
+            // The one on the search field's row, not the picker's own Cancel.
+            let ends = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "關閉", "Cancel", "Close"]))
+            let row = search.frame
+            let end = ends.allElementsBoundByIndex.first { abs($0.frame.midY - row.midY) < row.height }
+            XCTAssertNotNil(end, "The search can be ended")
+            end?.tap()
+        }
         tapButton("realWorld.start", in: app, timeout: 60)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
         let refusal = app.descendants(matching: .any)
