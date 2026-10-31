@@ -228,10 +228,7 @@ public final class GameLauncher {
             savePreferences()
         }
         guard choice == .tutorial else { return }
-        // Review L2-1: the game being played is written first, as Back to
-        // Start writes it, so the lesson leaves it in the saves; one that
-        // cannot be written is not left.
-        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
+        // Review L2-1: `startLesson` writes the game being played first.
         startTutorial()
     }
 
@@ -1121,6 +1118,12 @@ public final class GameLauncher {
     /// Starts `lesson` (decision 266): its game, with its guide's first step
     /// on screen when it has a guide.
     public func startLesson(_ lesson: Lesson) {
+        // Reviews L2-1 and L3-1: the game being played is written first, as
+        // Back to Start writes it, so the lesson leaves it in the saves,
+        // whichever way the lesson was started (the station master, the
+        // goals panel, a lesson result's next lesson); one that cannot be
+        // written is not left.
+        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
         guard begin(.newGame(lesson: lesson), keepingAutosave: true) else { return }
         var plays = preferences.lessonPlays ?? [:]
         plays[lesson.id, default: LessonPlay()].starts += 1

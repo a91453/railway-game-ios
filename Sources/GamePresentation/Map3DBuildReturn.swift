@@ -65,10 +65,16 @@ public struct Map3DBuildReturn: Equatable, Sendable {
     /// and waits. Never with the 3D map off (decision 365) or the tutorial
     /// running (its steps are on the 2D map), and not in another game,
     /// which forget the return.
+    ///
+    /// Review L3-2: Expand Map (the build card's, the banner's, a tapped
+    /// lock) puts the tools away too, to choose a tile on the 2D map:
+    /// `choosingMapTile` (``GameSession/isChoosingMapTile``, already set
+    /// when the tool change is seen) is not building ended, and forgets
+    /// the return, so the player sees the tiles for sale.
     public mutating func toolChanged(to tool: ConstructionTool, in game: ObjectIdentifier,
-                                     shows3D: Bool, tutorialRuns: Bool) -> Viewpoint? {
+                                     shows3D: Bool, tutorialRuns: Bool, choosingMapTile: Bool = false) -> Viewpoint? {
         guard let view else { return nil }
-        guard game == self.game, shows3D, !tutorialRuns else {
+        guard game == self.game, shows3D, !tutorialRuns, !choosingMapTile else {
             forget()
             return nil
         }
