@@ -118,6 +118,13 @@ struct NetworkControls: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("network.traceNote")
                     }
+                    if session.networkFollowsTrack, let hint = preview.freeFirstHint(in: session.language) {
+                        Text(verbatim: hint)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("network.freeFirstHint")
+                    }
                     if let note = preview.crossoverNote {
                         Text(verbatim: note)
                             .font(.footnote)
@@ -413,6 +420,7 @@ struct NetworkControls: View {
                     .font(.footnote)
                     .monospacedDigit()
             }
+            .accessibilityIdentifier("network.platformCars")
             // Decision 184, later: drawn from the stations' names alone, so
             // a running game's ticks leave the open menu alone.
             let stations = session.stationMenuChoices

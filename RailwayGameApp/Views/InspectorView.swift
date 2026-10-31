@@ -276,9 +276,10 @@ struct InspectorView: View {
                     Text(verbatim: text)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
-                        // Three lines: in a phone's card "Station · Ruifang ·
-                        // 2 platforms, 128 m" took two and lost its end.
-                        .lineLimit(session.selectedBuildingID == nil && session.selectedTrackEdge == nil ? 3 : 7)
+                        // A station's text is at most six short lines (its
+                        // waiting list is capped), so it is shown whole; a
+                        // phone's card lost the end of the long single line.
+                        .lineLimit(session.selectedStation != nil ? nil : session.selectedBuildingID == nil && session.selectedTrackEdge == nil ? 3 : 7)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {

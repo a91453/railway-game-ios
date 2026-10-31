@@ -45,6 +45,8 @@
 
 > 分區看得到效果（派工單 ZONE2，[決策 514](decisions/514.md)，`zone2-zoning-status`）：分區圖層分出會蓋、等車站成長、離車站太遠、目前不缺。量到的：用途有人要時第一棟第 1 天、第五棟第 3 天，不慢；問題是範圍（大方框六成在 800 m 外）與需求（第一條線住宅需求第 1 天就轉負，預設的住宅分區幾乎不蓋）。留下的（規劃第 36 任 10/31 定）：另開一個 PR、目標下一版，做決策 514「下一步」第 2 項（拖曳時先把 800 m 外畫灰）與第 1 項的最小做法（分區工具預設選需求最高的用途）；住宅需求的 GameCore 平衡先不動。ZONE2 已壓縮一次、不接新工作，由規劃另派。量法用 `ZoningReportTests`，截圖情境 `ScreenshotScene.zoning`（`WebsiteScreenshotTests/testZoningOutlooks`）。實機 UNVERIFIED。
 
+> 地圖上少一點東西（派工單 UICLUTTER，[決策 510](decisions/510.md)，`uiclutter-map`，2026-10-30）：景點依縮放收起、不搶車站與軌道的點擊，警告每站一個、地圖上最多幾個、其餘收進左上角的徽章。Linux `MapClutterTests` VERIFIED；也修了 iPhone 橫拿整平失敗時藥丸、橫幅、右側面板與「哪裡人多」圖例疊在一起（橫幅改短句、圖例在藥丸出現時收起）。#1583 已 merge #1582 後的 main。截圖 run 41165534178 看過 7 張，另 2 張（整平失敗、觀光景點）的測試已修，實作 session 壓縮兩次停下，遊戲規劃第 37 任接手：截圖 run 41168313459 看過，iPhone 橫拿藥丸、短橫幅、「哪裡人多」圖例不互蓋；觀光景點那張拉近到嘉義山區時畫面裡沒有景點星星（畫面裡可能本來就沒有景點），**實機看實景地圖中距離時景點星星有出現**。iPhone 13 直拿沒截圖，實機看實景地圖拉遠與車站旁的景點。
+
 > 列車運用表入口與拖拉編排（派工單 ROSTER2，[決策 512](decisions/512.md)，`roster2-drag`）：路線頁、列車卡直接開運用表；「編排」裡長按車名拖到別條線改派、長按預定格左右拖改自有時刻表。在路上的車不能改派、自有時刻表只在停在第一站時能改；路線車的錯開、跑完再改派、在路上改時刻要新 GameCore 指令或升存檔，見決策 512 的下一步（甲～丁，預覽 `docs/art/roster2-drag-2026-10-30/next-steps.svg`）。長按拖曳在 Simulator 與實機的手感 UNVERIFIED。
 
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
@@ -2141,6 +2143,7 @@
    - #1132 合併後，確認 `Map3DScene.init` 裡有這個條件；沒有就補一個小 PR。
    - 動 `addCity` 的人先 `send_message` 給這兩個 session。
 3. **實機**：只在 Linux 的 WebGL 預覽看過（`docs/art/map3d-no-build-2026-10-23/`）；下一次 TestFlight 看 600 倍俯看小港與板橋，房子是不是太稀或太密（`Map3DScene.Builder.openShare` 與 `layFrontage` 的公寓比例）。
+4. **決策 516**（HOUSEROAD，作者 99.1 宜蘭平原的點陣）：辦公、公共、休閒的低密度地塊也沿路排了。還沒做：密度 3 以上的樓與工廠在實景地圖上仍在格子中間（決策 516 下一步第 1 點）；實機看宜蘭平原 600× 俯看的疏密（第 2 點）。
 
 ### 4.10 3D 月台只畫在放得下的地方（決策 392，session_01QnjGxTmCx1sAYpH4wacqhH）
 
@@ -2435,6 +2438,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - 高鐵每公里改回參考庫的 3 倍 NT$1.35（審查判 CRITICAL：真實的 NT$4.38 是其他金額的 9.7 倍，改性能就多賺）；官方票價表只給示範地圖與 v69 存檔。`HighSpeedReportTests` 票收 2.997 倍、運量不變。golden `high-speed.json` 第 34、36 步與描述逐值寫在決策 499。
   - `economy`、`network-economy` 兩個 replay 的起始餘額、建造成本、`setFareBaseline`／`setFareRules` 的金額 ×3：對 base `d1df0d7` 逐指令重播，193 個指令的接受或拒絕全部一樣。其他 7 檔 checksum 動是因為預設 `demandBaseline` 75 → 225，README 與決策 499 改正。
   - 決策 499 加「高鐵每公里不照真實票價」（五方）與「已知限制」（審查列為低、不改的五項）。沒有剩下的步驟；合併由遊戲規劃決定。
+
+- **Swift CI 的 selected-4 分片快碰到 20 分鐘上限**（PLATBTN，2026-10-31）：a906ed1 用了 19m14s，0b4d4c3 曾逾時（run 41156023348）。之後可能要在 `.github/scripts/swift-shards.sh` 的 `selected_part` 重新切分。
 
 ### 4.36 「分區」自己一顆建設工具（決策 509，派工單 ZONE1，session_01YGNNuo27fcYAGK3J1GdZHo，`zone1-zoning-tool`，2026-10-30）
 

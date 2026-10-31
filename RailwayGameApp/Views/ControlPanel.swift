@@ -1066,7 +1066,7 @@ private struct ActionButton: View {
             case .build:
                 guard let cost = session.networkPreview?.cost else { return String(localized: "Build Track") }
                 return String(localized: "Build Track · \(cost.moneyText)")
-            case .platform: return String(localized: "Add Platform")
+            case .platform: return session.networkPlatformActionTitle
             case .remove: return String(localized: "Remove Track")
             case .passingLoop:
                 // Decision 204: the loop and its signal station, for what.
