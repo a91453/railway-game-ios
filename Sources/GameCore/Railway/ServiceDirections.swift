@@ -503,18 +503,27 @@ extension GameWorld {
         return Set(planned.filter { !planned.contains($0.reversed) }.map(\.reversed))
     }
 
-    /// Decision 527: `path`, the way an empty run of a line with real runs
-    /// (`train`) would go from `start` to station `id`, changed to keep
-    /// off track its line takes only the other way, with traffic control
-    /// off (decision 228 keeps trains apart and no deadlock is undone): one
-    /// out of a depot that crossed onto the other way's track met the
-    /// line's trains head on, and each waited for the other for good (the
-    /// Sanying line). `nil` when `path` keeps off such track already, the
-    /// rule does not apply, or no way keeps off it.
-    func lineDirectionPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train) -> TrainPath? {
+    /// Decision 527: for an empty run of a line with real runs (`train`),
+    /// with traffic control off, the traversals its line takes only the
+    /// other way, which its way keeps off (kept in `memo`); `nil` when the
+    /// rule does not apply. Decision 228 keeps trains apart then and no
+    /// deadlock is undone: one out of a depot that crossed onto the other
+    /// way's track met the line's trains head on, and each waited for the
+    /// other for good (the Sanying line).
+    func lineAgainst(for train: Train, memo: inout PathMemo) -> Set<TrackTraversal>? {
         guard train.isDeadheading, !isTrafficControlEnabled, followsRealTimetable(train),
               let line = lines.first(where: { $0.trains.contains(train.id) }) else { return nil }
+        let key = PathMemo.LineAgainst(line: line.id, length: train.length)
+        if let known = memo.against[key] { return known }
         let against = oneWayAgainst(line, length: train.length)
+        memo.against[key] = against
+        return against
+    }
+
+    /// Decision 527: `path`, the way `train` would go from `start` to
+    /// station `id`, changed to keep off `against` (``lineAgainst(for:memo:)``);
+    /// `nil` when it keeps off it already, or no way does.
+    func lineDirectionPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, against: Set<TrackTraversal>) -> TrainPath? {
         guard path.traversals.contains(where: against.contains) else { return nil }
         return self.path(from: start, toStation: id, length: train.length, avoiding: Set<TrackResource>(), forbidden: against)
     }
