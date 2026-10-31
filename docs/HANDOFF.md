@@ -2413,7 +2413,7 @@
   - P2-3：每個指令後在主執行緒算死結泡泡（`situationAlerts`）與交通狀態（`TrafficReading`）。照遊戲迴圈的做法在 detached task 算、先顯示舊的。
   - ~~P2-4~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-4-night-skip`，決策 497 的 P2-4 一節。
   - P2-5：欠錢轉自由模式就卡住。先對照 `BUGHUNT_ECONOMY_SAVES_2026-10-30.md`；要改 GameCore 先問遊戲規劃。
-  - P2-6：回開始畫面時自動存檔失敗就出不去。失敗時跳確認框給「不存檔離開」；同步的 `returnToStart()` 與 `returnToStartInBackground(at:)`（失敗時留在遊戲）兩條路都要接。
+  - ~~P2-6~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-6-leave-unsaved`，決策 497 的 P2-6 一節。
   - P2-7：`routeWaitText` 與泡泡說出「在等哪一列停著的車」。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
 
@@ -2435,6 +2435,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **P3-7**：離車站遠、地塊還沒讀進來的地方，沿真實的街鋪路照全價收（`RealRoadCells.swift`）。
 
 照文件順序做，每項先寫一個在 main 上會紅的測試。
+
+**ROADFIX-P3（session_01YGNNupKN2twaXYyb91H3Cp，2026-10-31，`roadfix-p3`）修了上面四項**：P3-3、P3-4、P3-7 照建議修；P3-5 只做了刪線時的提醒（買來的線刪掉後不能再買回來）。真的要能買回，得改 GameCore 的 `recordLineAcquisition`（同一條真實路線只能買一次），並處理留下的軌道；目前沒有派。
 
 ### 4.34 存檔一局一筆（決策 502，SAVE1 session_01YGNNuq65cB35dbSd2SspvL → SAVE2 session_01YGNNuogTGYLuCpzpJbTWYt，PR #1556，2026-10-30）
 
