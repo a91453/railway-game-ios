@@ -60,7 +60,10 @@ import GameCore
 ///   a set turns back. Every set calls on the loops, as at the real side
 ///   platforms, but the expresses at Taipei and Banqiao, whose island
 ///   platforms serve the through tracks (``islandStations``); an express
-///   passes a station on its through track (decision 228).
+///   passes a station on its through track (decision 228). A set that
+///   calls goes to another free loop, or keeps its own when the set on it
+///   leaves in time, and stops on the through track only when every loop
+///   of its way there is taken over its time (decision 518).
 /// - Its trains are high-speed sets (`TrainType.highSpeed`, twelve cars
 ///   rated 80 each), planned at `PERF_HSR`; the lines are high-speed lines
 ///   (decision 168), so their stations draw the people round them and their

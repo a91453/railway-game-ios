@@ -386,7 +386,13 @@ extension GameWorld {
             let (until, overflow) = clock.now.seconds.addingReportingOverflow(Self.platformClearance)
             waits[target] = max(waits[target] ?? 0, overflow ? .max : until)
         }
-        guard let own = waits[target], own > 0 else { return nil }
+        let own = waits[target] ?? 0
+        // Decision 518: a train that goes on from the call keeps off the
+        // track a train passing the station takes, and stands beside it.
+        // `calling` are the platforms the lines name for their calls there.
+        let goesOn = train.call(after: next.stop, cycle: next.cycle) != nil
+        let calling = goesOn ? callingPlatforms(of: id) : []
+        guard own > 0 || (goesOn && !calling.contains(target)) else { return nil }
         // The last node of `path` at least `platformApproach` short of
         // its end: after the edge it starts on, or one of its traversals.
         var reached = (network.edge(first.edge)?.length ?? 0) - offset
@@ -399,8 +405,37 @@ extension GameWorld {
             cut = (index, traversal, reached)
         }
         let all = berths(of: id, length: train.length)
+        guard goesOn else { return freePlatformPath(path, from: start, toStation: id, for: train, among: all, waits: waits, below: own, cut: cut, memo: &memo) }
+        // Decision 518: the through track is the platform the shortest way
+        // from there reaches (the straight way through the station). A
+        // train that goes on takes any other free platform first; its own,
+        // when it is not the through track's and comes free in time; the
+        // through track's only when every other is taken over its time
+        // there, unless a line names it for its call there (an island
+        // platform's).
+        let approach = cut.flatMap { cut in network.edge(cut.traversal.edge).map { (cut.traversal, $0.length) } } ?? (first, offset)
+        let straight = self.path(from: .onEdge(approach.0, offset: approach.1), toStation: id, length: train.length, eligible: Set(all), memo: &memo)
+            .map { ($0.traversals.last ?? approach.0).edge }
+        guard own > 0 || target == straight else { return nil }
+        let beside = all.filter { $0.traversal.edge != straight || calling.contains($0.traversal.edge) }
+        if let found = freePlatformPath(path, from: start, toStation: id, for: train, among: beside, waits: waits, below: max(own, 1), cut: cut, memo: &memo) {
+            return found
+        }
+        guard own > 1 else { return nil }
+        return freePlatformPath(path, from: start, toStation: id, for: train, among: all, waits: waits, below: own, cut: cut, memo: &memo)
+    }
+
+    /// ``freePlatformPath(_:from:toStation:for:next:memo:)`` among
+    /// `berths`: the way to the one free soonest, sooner than `own`, from
+    /// `cut` along `path`, or from `start`; none another train is coming
+    /// out of towards it (decision 283).
+    private func freePlatformPath(
+        _ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, among berths: [Berth],
+        waits: [TrackEdgeID: Int64], below own: Int64, cut: (index: Int, traversal: TrackTraversal, distance: Int64)?, memo: inout PathMemo
+    ) -> TrainPath? {
+        guard case .onEdge(let first, _) = start else { return nil }
         for limit in Set(waits.values).sorted() where limit < own {
-            var eligible = Set(all.filter { (waits[$0.traversal.edge] ?? .max) <= limit })
+            var eligible = Set(berths.filter { (waits[$0.traversal.edge] ?? .max) <= limit })
             // Decision 283: nor one another train is coming out of towards it.
             while !eligible.isEmpty {
                 let found: TrainPath
@@ -417,6 +452,17 @@ extension GameWorld {
             }
         }
         return nil
+    }
+
+    /// Decision 518: the edges of station `id`'s platforms that the lines
+    /// of real runs name for their calls there (``ServiceLine/routePreferences``):
+    /// the loops beside a through track, where a train that stops stands.
+    func callingPlatforms(of id: StationID) -> Set<TrackEdgeID> {
+        var edges: Set<TrackEdgeID> = []
+        for line in lines where !line.runs.isEmpty {
+            for preference in line.routePreferences where preference.platform.station == id { edges.insert(preference.platform.edge) }
+        }
+        return edges
     }
 }
 
