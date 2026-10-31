@@ -372,17 +372,37 @@ struct NetworkControls: View {
             // of track than the one tapped is greyed with why.
             let layouts = session.stationLayoutChoices
             TickStable(StableKey(layouts, session.networkStationLayout)) {
-                Picker(selection: Binding(get: { session.networkStationLayout }, set: { session.stationLayout = $0 })) {
-                    ForEach(layouts) { choice in
-                        Text(verbatim: choice.title)
-                            .tag(choice.layout)
-                            .disabled(!choice.fits)
-                    }
-                } label: {
+                // A Menu, not a menu Picker: a Picker shows only the
+                // chosen value without its label, and does not grey the
+                // rows that do not fit.
+                HStack {
                     Text(verbatim: session.language.text("Platform layout", "月台排法"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer(minLength: 8)
+                    Menu {
+                        ForEach(layouts) { choice in
+                            Button {
+                                session.stationLayout = choice.layout
+                            } label: {
+                                if choice.layout == session.networkStationLayout {
+                                    Label(choice.title, systemImage: "checkmark")
+                                } else {
+                                    Text(verbatim: choice.title)
+                                }
+                            }
+                            .disabled(!choice.fits)
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(verbatim: session.networkStationLayout.title(in: session.language))
+                            Image(systemName: "chevron.up.chevron.down")
+                                .imageScale(.small)
+                        }
+                        .font(.footnote)
+                    }
+                    .accessibilityIdentifier("network.stationLayout")
                 }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("network.stationLayout")
             }
             Text(verbatim: session.networkStationLayout.summary(in: session.language))
                 .font(.caption)
