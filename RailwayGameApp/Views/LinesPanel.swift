@@ -433,7 +433,9 @@ struct LinesPanel: View {
     /// page is opened for it.
     private var networkPage: some View {
         Form {
-            trafficSection
+            // The page's title already names it (IPHLAND: on a phone on
+            // its side the two stood one under the other).
+            trafficSection(titled: false)
             serviceDaySection
         }
         .panelTitle(NetworkSwitches.title(in: session.language))
@@ -702,11 +704,13 @@ struct LinesPanel: View {
     @ViewBuilder
     private var networkSection: some View {
         if session.allows(UnlockableTool.lineDetails) {
-            trafficSection
+            trafficSection(titled: true)
         }
     }
 
-    private var trafficSection: some View {
+    /// `titled`: with the block's name as its header, where no page title
+    /// above names it.
+    private func trafficSection(titled: Bool) -> some View {
         Section {
             Toggle("Traffic control", isOn: Binding(
                 get: { session.world.isTrafficControlEnabled },
@@ -717,7 +721,9 @@ struct LinesPanel: View {
                 set: { session.setPassengerRoutingMode($0 ? .network : .direct) }
             ))
         } header: {
-            Text(verbatim: NetworkSwitches.title(in: session.language))
+            if titled {
+                Text(verbatim: NetworkSwitches.title(in: session.language))
+            }
         } footer: {
             Text("When on, a train takes its whole route before it leaves, and other trains wait until it has cleared it.")
             Text("With network routes, passengers change lines and walk to stations nearby; otherwise they ride only a line serving both stations.")
