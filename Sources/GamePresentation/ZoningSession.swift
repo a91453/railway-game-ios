@@ -92,7 +92,7 @@ extension GameSession {
     @discardableResult
     public func zone(_ rectangle: CellRectangle) -> Bool {
         let zone = zoningZone
-        return perform(.setZone(.init(zone), rows: rectangle.rows, columns: rectangle.columns)) { outcome, _, _ in
+        let zoned = perform(.setZone(.init(zone), rows: rectangle.rows, columns: rectangle.columns)) { outcome, _, _ in
             let changed = outcome.number
             guard changed > 0 else {
                 return language.text("No cell changed.", "沒有格子改變。")
@@ -107,6 +107,71 @@ extension GameSession {
                 "劃設\(zone.title(in: .traditionalChinese)) \(changed) 格。"
             )
         } != nil
+        if zoned { awaitBuilding(on: rectangle, for: zone) }
+        return zoned
+    }
+
+    /// Decision 509: keeps the empty cells of `rectangle` just zoned for a
+    /// use, to say when the city first builds on one; forgets those
+    /// cleared or zoned to keep the city off.
+    private func awaitBuilding(on rectangle: CellRectangle, for zone: Zone?) {
+        for row in rectangle.rows {
+            for column in rectangle.columns {
+                let cell = CellPosition(row: row, column: column)
+                if zone?.use != nil, world.zones.zone(row: row, column: column) == zone,
+                   world.buildings.building(row: row, column: column) == nil {
+                    zonedCellsAwaitingBuilding.insert(cell)
+                } else {
+                    zonedCellsAwaitingBuilding.remove(cell)
+                }
+            }
+        }
+    }
+
+    /// Decision 509: after a midnight, says once that the city built on a
+    /// cell the player zoned empty, the first time it does, and stops
+    /// waiting; cells whose zone was taken back (Undo) are forgotten.
+    /// Zoning again waits again.
+    func noteZonedCellsBuiltOn() {
+        guard !zonedCellsAwaitingBuilding.isEmpty else { return }
+        zonedCellsAwaitingBuilding = zonedCellsAwaitingBuilding.filter {
+            world.zones.zone(row: $0.row, column: $0.column)?.use != nil
+        }
+        guard let zone = Self.firstBuilt(on: zonedCellsAwaitingBuilding, in: world)?.zone else { return }
+        zonedCellsAwaitingBuilding = []
+        let say = { (language: DisplayLanguage) in
+            language.text(
+                "The town has put up its first building on land you zoned: \(zone.title(in: .english)).",
+                "你劃的分區蓋起第一棟建物了：\(zone.title(in: .traditionalChinese))。"
+            )
+        }
+        news.add(day: world.clock.now.seconds / GameTime.secondsPerDay, .growth, text: say)
+        isMessageKeptOutOfNews = true
+        message = StatusMessage(kind: .success, text: say(language))
+        isMessageKeptOutOfNews = false
+    }
+
+    /// Decision 509: the first of `cells`, by row and then column, the
+    /// city has built on while it is still zoned for a use, and its zone;
+    /// `nil` while it has built on none.
+    static func firstBuilt(on cells: Set<CellPosition>, in world: GameWorld) -> (cell: CellPosition, zone: Zone)? {
+        for cell in cells.sorted() {
+            guard let zone = world.zones.zone(row: cell.row, column: cell.column), zone.use != nil,
+                  world.buildings.building(row: cell.row, column: cell.column) != nil
+            else { continue }
+            return (cell, zone)
+        }
+        return nil
+    }
+
+    /// Decision 509: the station master's "zone here" (``StationMasterAdvice/zoneNearStation(station:name:cells:)``):
+    /// the map goes to the station and the zoning tool opens, zoning
+    /// homes unless a use is chosen.
+    public func zone(near station: StationID) {
+        guard allows(.building), let station = world.station(id: station) else { return }
+        lookAt(station.location)
+        choose(.zoning)
+        if zoningZone?.use == nil { zoningZone = .residential }
     }
 
     /// How many cells are zoned, for the zoning tool.

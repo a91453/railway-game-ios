@@ -375,16 +375,6 @@
         }
       }
     },
-    "Add Platform" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "設置月台"
-          }
-        }
-      }
-    },
     "Add Selected Station" : {
       "localizations" : {
         "zh-Hant" : {

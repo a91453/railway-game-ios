@@ -56,7 +56,8 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertTrue(zoomIn.appears(within: 10))
         XCTAssertTrue(zoomIn.becomesHittable(within: 10), "\(zoomIn) is covered: \(zoomIn.frame)")
         build.waitUntilSettled()
-        let foot = build.frame.maxY + 4
+        // Build is touched 2 below what it draws (decision 509).
+        let foot = build.frame.maxY - 2 + 4
         XCTAssertLessThan(abs(zoomIn.frame.maxY - foot), 3, "On the column's line: \(zoomIn.frame) and \(build.frame)")
     }
 
@@ -91,9 +92,9 @@ final class MapButtonsUITests: XCTestCase {
     /// tools stood low over Done, scrolled, cut short, the room above them
     /// empty. Now a finger reaches the first tool as the tools open; where
     /// they all fit they stand close over Done, else the column runs up to
-    /// a margin under the status bar, the first tool at its top. Done stays
-    /// over Build; the card's toggle stands beside Build. Which of the two, and how tall the part that scrolls
-    /// is, is `ToolColumnTests`.
+    /// a margin under the status bar, the first tool at its top. Done and
+    /// the card's toggle stand beside Build (100.1, decision 509). Which of
+    /// the two, and how tall the part that scrolls is, is `ToolColumnTests`.
     func testThePhonesBuildingToolsStartAtTheColumnsTop() throws {
         try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
         let app = launch(orientation: .landscapeLeft)
@@ -110,15 +111,18 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertTrue(status.appears(within: 5))
         let done = app.buttons["tool.select"]
         XCTAssertTrue(done.appears(within: 5))
-        XCTAssertLessThan(done.frame.maxY, build.frame.minY, "Done over Build: \(done.frame) and \(build.frame)")
-        XCTAssertLessThan(network.frame.maxY, done.frame.minY, "The tools over Done: \(network.frame) and \(done.frame)")
-        // Up the column: the margin of 10 and the glass, 4, over the first
-        // tool. Close over Done: in one group with it, 4 apart.
-        let atTop = abs(network.frame.minY - (status.frame.maxY + 10 + 4)) <= 3
+        XCTAssertGreaterThanOrEqual(done.frame.minX, build.frame.maxX, "Done beside Build: \(done.frame) and \(build.frame)")
+        XCTAssertEqual(done.frame.midY, build.frame.midY, accuracy: 0.5, "Done beside Build: \(done.frame) and \(build.frame)")
+        XCTAssertLessThan(network.frame.maxY, build.frame.minY, "The tools over Build: \(network.frame) and \(build.frame)")
+        // Each button is touched 2 past what it draws, above and below
+        // (decision 509). Up the column: the margin of 10 and the glass, 4
+        // (2 where the column is short), over the first tool. Close over
+        // Build: the tools' glass, the gap of 6 and Build's glass between.
+        let atTop = abs(network.frame.minY + 2 - (status.frame.maxY + 10 + 4)) <= 3
         let bus = app.buttons["tool.bus"]
-        let overDone = bus.exists && bus.isHittable && abs(done.frame.minY - bus.frame.maxY - 4) <= 3
-        XCTAssertTrue(atTop || overDone,
-                      "Neither at the column's top nor close over Done: \(network.frame), \(bus.frame), Done \(done.frame), the status bar \(status.frame)")
+        let overBuild = bus.exists && bus.isHittable && abs((build.frame.minY + 2) - (bus.frame.maxY - 2) - (4 + 6 + 4)) <= 3
+        XCTAssertTrue(atTop || overBuild,
+                      "Neither at the column's top nor close over Build: \(network.frame), \(bus.frame), Build \(build.frame), the status bar \(status.frame)")
     }
 
     /// On an iPad held upright they stand in the map's corner beside the

@@ -192,14 +192,20 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// building tools from the column's top, on a map without credits and
     /// on the real-world demo with its credits under the column. For the
     /// screenshot review of the pull request that moved them, not the
-    /// website.
+    /// website. 100.1 (decision 509): with zoning's own button too.
     func testBuildingToolsColumn() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         app.buttons["dock.build"].tap()
         app.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(app)
         keep("build-tools-column", app)
+        // Decision 509: zoning's own button, its card open.
+        app.buttons["tool.zoning"].tap()
+        XCTAssertTrue(app.staticTexts["building.zoneCount"].appears(within: 10), "The zoning tool opens")
+        settle()
+        keep("build-tools-zoning", app)
         app.terminate()
 
         let real = launch()
@@ -217,6 +223,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         real.buttons["dock.build"].tap()
         real.buttons["tool.network"].waitUntilSettled()
         settle()
+        assertBuildingToolsWhole(real)
         keep("build-tools-column-real-world", real)
         real.terminate()
 
@@ -240,6 +247,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         lesson.buttons["tool.select"].waitUntilSettled()
         settle()
         keep("build-tools-column-lesson", lesson)
+    }
+
+    /// The planner's condition for 100.1 (decision 509), on the smallest
+    /// iPhone the workflow can choose as on the 17 Pro: the five tools,
+    /// Done and Build whole on the screen, apart, and nothing scrolling
+    /// (the bus tool's foot the tools' glass and the gap above Build; a
+    /// part that scrolls would stand lower).
+    private func assertBuildingToolsWhole(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let window = app.windows.firstMatch.frame
+        let tools = ["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus"]
+        for name in tools + ["tool.select", "dock.build"] {
+            let button = app.buttons[name]
+            XCTAssertTrue(button.isHittable, "\(name) can be tapped", file: file, line: line)
+            XCTAssertTrue(window.contains(button.frame), "\(name) whole on the screen: \(button.frame)", file: file, line: line)
+            // Touched over 44 (2 past the 40 drawn, above and below).
+            XCTAssertGreaterThanOrEqual(button.frame.height, 43.5, "\(name) touched over 44: \(button.frame)", file: file, line: line)
+            XCTAssertGreaterThanOrEqual(button.frame.width, 44, "\(name) touched over 44: \(button.frame)", file: file, line: line)
+        }
+        // The touch areas meet in the 4 between two tools and never cross.
+        let frames = tools.map { app.buttons[$0].frame }
+        for (upper, lower) in zip(frames, frames.dropFirst()) {
+            XCTAssertGreaterThanOrEqual(lower.minY - upper.maxY, -0.5, "apart: \(upper) \(lower)", file: file, line: line)
+        }
+        // Drawn: the bus tool's foot, the tools' glass (4, or 2 where the
+        // column is short) and the gap of 6, then Build's glass of 4; a part
+        // that scrolls stands lower, its foot only the gap above Build's glass.
+        let build = app.buttons["dock.build"].frame
+        XCTAssertLessThanOrEqual(frames[4].maxY - 2, build.minY + 2 - 11.5, "nothing scrolls: bus \(frames[4]), Build \(build)", file: file, line: line)
     }
 
     /// Building on the real-world demo, the panel open at the trailing
@@ -467,6 +502,45 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// The selection card of a station on a phone on its side (a player's
+    /// report: its summary was cut short with "…"): a station of the
+    /// high-speed demo picked from its tag, the card in the side panel with
+    /// the platforms and who waits on lines of their own. For the
+    /// screenshot review of the pull request that fixed it, not the website.
+    func testStationCard() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        settle(seconds: 8)
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 1) {
+            for _ in 0..<2 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        // Yunlin's mark, two steps in on the demo's opening view (run
+        // 41163857917 showed it at about 39 % across and 36 % down; the
+        // station tags are not stations' marks).
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        let status = app.descendants(matching: .any)["inspector.status"].firstMatch
+        for offset in [CGVector(dx: 0.3875, dy: 0.36), CGVector(dx: 0.385, dy: 0.35), CGVector(dx: 0.39, dy: 0.37)] {
+            map.coordinate(withNormalizedOffset: offset).tap()
+            settle(seconds: 2)
+            if status.exists, status.label.hasPrefix("車站") { break }
+        }
+        // The card is in the side panel, which a tap on a station leaves
+        // closed (run 41165522130): open it.
+        let controls = app.buttons["controls.toggle"]
+        if controls.appears(within: 5), controls.becomesHittable(within: 2) {
+            controls.tap()
+        }
+        settle(seconds: 3)
+        keep("station-card", app)
+        XCTAssertTrue(status.appears(within: 5), "The selection card shows")
+    }
+
     /// The company's goals on a blank new game (decisions 181 and 183): the
     /// requests the city offers with what each pays, above the company's
     /// rank and title.
@@ -581,6 +655,122 @@ final class WebsiteScreenshotTests: XCTestCase {
         network.tap()
         settle(seconds: 2)
         keep("lines-network", app)
+    }
+
+    /// Decision 512: a line's page opens its train roster, which lets the
+    /// trains be arranged: the roster of one line, then Arrange.
+    func testTrainRosterOfALine() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        // The line's trains, where trains are sent out, as before the
+        // roster's row was added below them (compare with `line-page`).
+        settle(seconds: 2)
+        keep("roster-line-page-trains", app)
+        let open = app.buttons["line.trainRoster"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(open, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The roster's button shows")
+        open.waitUntilSettled()
+        open.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["trainRoster"].firstMatch.appears(within: 10), "The roster opens")
+        settle(seconds: 3)
+        keep("roster-line", app)
+
+        app.buttons["trainRoster.arrange"].tap()
+        XCTAssertTrue(app.staticTexts["trainRoster.arrangeHint"].appears(within: 5), "Arrange says how")
+        settle(seconds: 2)
+        keep("roster-arrange", app)
+        // Every line's trains, to drag one onto another line's row.
+        let all = app.segmentedControls["trainRoster.lines"].buttons["全部路線"]
+        if all.appears(within: 3) {
+            all.tap()
+            settle(seconds: 3)
+            keep("roster-arrange-all", app)
+        }
+    }
+
+    /// Decision 512: sending trains out is as it was. The same test runs on
+    /// `main` and on the pull request, for the two side by side: a line's
+    /// page at its trains and their dispatch, then a train's card.
+    func testDispatchFlowAsBefore() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        settle()
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        settle(seconds: 2)
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list, below: bar.frame.maxY), "A line's row shows")
+        row.waitUntilSettled()
+        row.tap()
+        let page = app.collectionViews["line.detail"]
+        XCTAssertTrue(page.appears(within: 10), "The line's page opens")
+        settle(seconds: 2)
+        // A line with trains sends more out under "Now"; the catalog
+        // button is only on a line without trains.
+        let now = app.staticTexts["line.headway.now"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(now, in: page, below: app.navigationBars.firstMatch.frame.maxY), "The line's dispatch shows")
+        now.waitUntilSettled()
+        settle(seconds: 2)
+        keep("dispatch-line-page", app)
+        let done = app.navigationBars.firstMatch.buttons["完成"]
+        if done.exists, done.isHittable {
+            done.tap()
+            settle()
+        }
+
+        // A train brought under the camera from the fleet, then tapped.
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let fleet = app.buttons["train.fleetOverview"]
+        if !fleet.isHittable { app.swipeUp() }
+        XCTAssertTrue(fleet.appears(within: 5))
+        fleet.tap()
+        let follow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "fleet.follow.")).firstMatch
+        XCTAssertTrue(follow.appears(within: 5), "A train to follow")
+        follow.tap()
+        let unfollow = app.buttons["train.unfollow"]
+        XCTAssertTrue(unfollow.appears(within: 5))
+        unfollow.tap()
+        _ = unfollow.disappears(within: 5)
+        app.buttons["tool.select"].tap()
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let card = app.buttons["inspector.train.timetable"]
+        guard card.appears(within: 5) else {
+            keep("debug-dispatch-card", app)
+            return
+        }
+        settle(seconds: 2)
+        keep("dispatch-train-card", app)
+        // The card's buttons are under its trip on a phone on its side:
+        // drag the card, not the map beside it, until they show.
+        let column = card.frame.midX
+        _ = app.dragUntilWhollyOnScreen(app.buttons["inspector.train.fleet"], drags: 4, at: column)
+        settle(seconds: 2)
+        keep("dispatch-train-buttons", app)
     }
 
     /// Decision 478's load charts on the freight scene: a passenger line's
