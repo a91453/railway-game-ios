@@ -215,6 +215,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("currency-hud-\(suffix)", app)
 
         tapButton("entry.economy", in: app)
+        let bar = app.navigationBars[english ? "Economy" : "經濟明細"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        // The balance sits under today's figures: bring the line after it
+        // into view, so the balance and (in English) its US$ show.
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let after = app.staticTexts["economy.mapExpansion"].firstMatch
+        _ = app.dragUntilWhollyOnScreen(after, in: list, below: bar.frame.maxY)
         settle()
         keep("currency-economy-\(suffix)", app)
         app.terminate()
