@@ -304,6 +304,32 @@ final class PassengerTransferTests: XCTestCase {
         try assertConservedAndSaveable(world)
     }
 
+    /// Decision 521, cause two: a track preview's copy leaves the
+    /// passengers alone after each step (nobody sent away, so no step
+    /// goes through the waiting groups), and prices the steps as a
+    /// pricing copy does.
+    func testATrackPreviewCopyPricesTrackWithoutSendingPassengersAway() throws {
+        var world = try world()
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: GameTime(minutes: -1))
+        let track = TestLine(tiles: 7)
+        func steps(_ world: inout GameWorld) throws {
+            try world.removeTrackPlatform(a, on: .edge(2), from: 0)
+            try world.removeTrackEdge(.edge(2))
+            _ = try world.buildTrackEdge(from: track.node(1), to: track.node(2))
+        }
+        var priced = world.pricingCopy()
+        try steps(&priced)
+        var previewed = world.trackPreviewCopy()
+        try steps(&previewed)
+        XCTAssertEqual(priced.passengerLedger(of: a).abandoned, 5)
+        XCTAssertEqual(previewed.passengerLedger(of: a).abandoned, 0)
+        XCTAssertEqual(previewed.passengerLedger(of: a).waiting, 5)
+        XCTAssertEqual(previewed.economy.balance, priced.economy.balance)
+        XCTAssertEqual(previewed.network, priced.network)
+        XCTAssertEqual(world.passengerLedger(of: a).waiting, 5)
+    }
+
     /// One edit that leaves the track broken sends the queue away at its
     /// end, as the commands one at a time do.
     func testTrackLeftBrokenByOneEditAbandonsThePlannedQueue() throws {
