@@ -124,19 +124,21 @@ final class Map3DMotionBudgetTests: XCTestCase {
         XCTAssertEqual(pack.model(head, forType: "EMU3000", count: 8, at: reach * 1.5 + 1, reach: higher), far)
         XCTAssertEqual(pack.model(head, forType: "EMU3000", count: 8, at: Map3DTrains.modelReach * 1.25 - 1, reach: higher), far)
         XCTAssertNil(pack.model(head, forType: "EMU3000", count: 8, at: Map3DTrains.modelReach * 1.25 + 1, reach: higher))
-        // A car with no far model: a box where it was.
-        let diesel = try XCTUnwrap(pack.index(of: "set-dieselExpress-head"))
-        XCTAssertNil(pack.model(diesel, forType: "dieselExpress", count: 8, at: Map3DTrains.modelReach + 1, reach: higher))
+        // A car with no far model: a box where it was (decision 511 gave
+        // the DR3100 one, so the generic metro's).
+        let metro = try XCTUnwrap(pack.index(of: "set-metroGeneric-head"))
+        XCTAssertNil(pack.model(metro, forType: "metroGeneric", count: 8, at: Map3DTrains.modelReach + 1, reach: higher))
     }
 
     func testACarWithNoFarModelKeepsItsOwnAsFarAsBefore() throws {
         let pack = Map3DModelPack.standard
-        let head = try XCTUnwrap(pack.index(of: "set-dieselExpress-head"))
-        let reach = Map3DTrainSet.reach(of: "dieselExpress")
+        // Decision 511 gave the DR3100 a far model: the generic metro's.
+        let head = try XCTUnwrap(pack.index(of: "set-metroGeneric-head"))
+        let reach = Map3DTrainSet.reach(of: "metroGeneric")
         let nearer = Map3DLoadStep.nearerFarModels.reach(on: .standard)
-        XCTAssertEqual(pack.model(head, forType: "dieselExpress", count: 8, at: reach * 0.7, reach: nearer), head)
-        XCTAssertEqual(pack.model(head, forType: "dieselExpress", count: 8, at: Map3DTrains.modelReach * 0.8 - 1, reach: nearer), head)
-        XCTAssertNil(pack.model(head, forType: "dieselExpress", count: 8, at: Map3DTrains.modelReach * 0.8 + 1, reach: nearer))
+        XCTAssertEqual(pack.model(head, forType: "metroGeneric", count: 8, at: reach * 0.7, reach: nearer), head)
+        XCTAssertEqual(pack.model(head, forType: "metroGeneric", count: 8, at: Map3DTrains.modelReach * 0.8 - 1, reach: nearer), head)
+        XCTAssertNil(pack.model(head, forType: "metroGeneric", count: 8, at: Map3DTrains.modelReach * 0.8 + 1, reach: nearer))
     }
 
     // MARK: Stepping down and up
