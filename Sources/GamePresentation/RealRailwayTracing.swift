@@ -570,7 +570,7 @@ extension GameSession {
         // GameCore's answer, edge by edge, on the copy; an edge whose curve
         // turns tighter than the tool lays stops it first. Cash does not
         // stop it (decision 245): the preview weighs the whole price.
-        draft = draft.pricingCopy()
+        draft = draft.trackPreviewCopy()
         var built = 0
         var problem: String?
         var previous: TrackNodeID?
@@ -666,7 +666,7 @@ extension GameSession {
             TrackGeometry(from: stretch.from, to: stretch.to, curve: stretch.curve)?.points ?? [stretch.from, stretch.to]
         }
         let built = Array(plan.stretches.prefix(plan.buildable))
-        var draft = world.pricingCopy()
+        var draft = world.trackPreviewCopy()
         var cost: Money?
         var command = PlayerCommand.buildTrackChain(built)
         // Decision 247: with double track on, the second track beside it;

@@ -224,20 +224,10 @@ extension View {
     /// middle, on up to two lines and a little smaller before it is cut.
     /// The panel is narrow with the back and Done buttons either side, and
     /// the system title kept one line and ended in "…" (author's report,
-    /// iPhone on its side, 2026-10-30).
+    /// iPhone on its side, 2026-10-30). On a phone on its side it stands
+    /// on a row under the bar instead (``PanelTitlePlacement``).
     func panelTitle(_ title: String) -> some View {
-        navigationTitle(Text(verbatim: title))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text(verbatim: title)
-                        .font(.headline)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                        .multilineTextAlignment(.center)
-                        .accessibilityAddTraits(.isHeader)
-                }
-            }
+        modifier(PanelTitle(title: title))
     }
 
     /// A hard edge where a panel's form scrolls under its navigation bar,
@@ -379,5 +369,52 @@ extension View {
                 Text(verbatim: message)
             }
         }
+    }
+}
+
+/// ``View/panelTitle(_:)``: the title in the bar's middle, or on a row
+/// under the bar on a compact height (``PanelTitlePlacement``).
+private struct PanelTitle: ViewModifier {
+    let title: String
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    func body(content: Content) -> some View {
+        let placement = PanelTitlePlacement.place(compactHeight: verticalSizeClass == .compact)
+        content
+            // Kept in both places: the back button of the page pushed
+            // from this one reads it.
+            .navigationTitle(Text(verbatim: title))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    if placement == .bar {
+                        label
+                    } else {
+                        // Holds the bar's middle, so the system does not
+                        // put the navigation title back there.
+                        Color.clear
+                            .frame(width: 1, height: 1)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if placement == .belowBar {
+                    label
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .background(Color(uiColor: .systemGroupedBackground))
+                }
+            }
+    }
+
+    private var label: some View {
+        Text(verbatim: title)
+            .font(.headline)
+            .lineLimit(PanelTitlePlacement.lineLimit)
+            .minimumScaleFactor(0.8)
+            .multilineTextAlignment(.center)
+            .accessibilityAddTraits(.isHeader)
     }
 }

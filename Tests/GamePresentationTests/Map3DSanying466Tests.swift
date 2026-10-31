@@ -5,7 +5,7 @@ import XCTest
 /// far: cab A at the front, cab B turned round at the back, two cars
 /// whatever the train's count, the Sanying line's real trains drawn as it.
 final class Map3DSanying466Tests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     private func cars(_ key: String, _ count: Int) throws -> [Map3DModelPack.Model] {
         try XCTUnwrap(pack.layout(forType: key, count: count), key).map { pack.models[$0.model] }

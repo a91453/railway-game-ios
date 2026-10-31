@@ -838,12 +838,14 @@ struct MapView: View {
                                 }
                             }
                             .transition(.scale.combined(with: .opacity))
-                        } else if insets.trailing == 0 {
+                        } else if insets.trailing == 0, miniMap?.isShown(beside: projection.visibleRegion) ?? false {
                             // Decision 116: the whole map, small; it gives
                             // way to a layer's legend, which needs the height,
                             // and to the details card or a panel at the
                             // trailing side: beside them it would stand in
                             // the middle of a phone's map, under the finger.
+                            // Not while it has nothing to draw or the view
+                            // shows all of it (``MiniMap/isShown(beside:)``).
                             MiniMapView(map: miniMap, visible: projection.visibleRegion, language: session.language) { point in
                                 if session.followedTrain != nil { session.stopFollowingTrain() }
                                 camera = projection.centered(atX: point.x, y: point.y)

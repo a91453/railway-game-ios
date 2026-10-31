@@ -5,8 +5,8 @@ import XCTest
 /// Decision 439: the trains' soft shade, baked into their colour once, when
 /// the pack is made.
 final class Map3DTrainOcclusionTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
-    private let recipes = Map3DModelPack.unbaked
+    private var pack: Map3DModelPack { .standard }
+    private var recipes: Map3DModelPack { .unbaked }
 
     private func brightness(_ colour: UInt32) -> Int {
         Int(colour & 0xFF) + Int((colour >> 8) & 0xFF) + Int((colour >> 16) & 0xFF)

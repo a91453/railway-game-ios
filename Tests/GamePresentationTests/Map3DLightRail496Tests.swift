@@ -7,7 +7,7 @@ import XCTest
 /// each cut into the light metro's two cars, from 500 m out their light
 /// versions.
 final class Map3DLightRail496Tests: XCTestCase {
-    let pack = Map3DModelPack.standard
+    var pack: Map3DModelPack { .standard }
     static let keys = ["danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis"]
     /// The whole train's length from nose to nose, metres (the READMEs'
     /// assembly tables).
