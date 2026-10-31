@@ -1,5 +1,7 @@
 > iPhone 橫拿三件畫面修正（派工單 IPHLAND，`claude/iphone-landscape-fixes`，決策號不動，2026-10-31）：側邊面板頁的標題在 compact height 時改放在導覽列下方一列、和面板一樣寬（`PanelTitlePlacement`，`Theme.swift` 的 `panelTitle`），修掉車站卡站名被工具列夾成一兩個字與審查 L2-2；實景新局右側的空框是小地圖（沒有軌道與車站、或畫面已經看到整張地圖時不畫，`MiniMap.isShown(beside:)`）。Linux `MapFocusTests`、`MiniMapTests` VERIFIED；畫面靠截圖驗收，iPad 與 iPhone SE 沒拍。
 
+> 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次。線很多的世界裡 GameCore 蓋一段 edge 本身慢、描線預覽又蓋兩次，是第二個 PR（見決策 521「下一步」）。實機 UNVERIFIED。
+
 > 從 3D 按「建設」（派工單 BUILD3D，[決策 517](decisions/517.md)，`build3d-return`，2026-10-31）：照舊在 2D 蓋，從 3D 來的按「完成」回到 3D 原本的視角（`Map3DBuildReturn`）。在 3D 裡直接鋪軌只做了評估，留給之後：照決策 517「下一步」的四步（先做 3D 點選、再解決鋪完要等場景重蓋、再只做路網的平面鋪設、最後看實機數據）。實機上回 3D 的樣子、截圖驗收暫緩（ui-review §3），UNVERIFIED。
 
 > DR3100 柴聯自強號（決策 511，session_01YGNNuo4eEH6JS6x5CwJ3LG，`dr3100-service`，2026-10-30）：`dieselExpress` 三節以上改用 45DR1000 的外型、DR3100 自己的塗裝（`Map3D45DR1000.Livery.dr3100`，近遠景）；真實地圖的縱貫線北段、宜蘭線、北迴線每天多跑 209／221／238／246 四班 DR3100 三節（`tra-dr3100-schedule.json`）。**沒做的**：臺鐵示範（決策 240）裡這四班仍在「台鐵 自強／莒光」線上用推拉式 12 節跑；要改得在 `TRADemo.kinds` 加一條 DR3100 線並重跑 `TRADemoTests`、`TRADemoDayTests`（見 `docs/decisions/511.md`「還沒做的」）。DR3100 自己的外型（中間的 DR3150 無駕駛室、20.274 m）也還沒有。實機外觀與幀數 UNVERIFIED。
@@ -462,6 +464,27 @@
 - **號碼**：決策 513 GEOMSG、514 ZONE2、515 ALISHAN、516 HOUSEROAD（若需要）、517 BUILD3D、518 PASSLOOP；下一個空的是 519。存檔 77 給 ALISHAN。
 - **排程**：第 36 任留了一個巡查 trig_01FmPXzUtYW4f2euEDrN55Kr（01:36 UTC，送回第 36 任）；交接後刪掉，第 37 任自己排。
 - **還沒派的**（同下面第 36 任的現況）：HANG2 P2-3～P2-7（§4.31）、iPad SettingsUITests、車站擴建（506）、≈US$ 參考、99.1 後請作者在 6000× 下回報一次。
+
+**第 37 任交給第 38 任（2026-10-31 約 10:30 UTC，壓縮 4 次）**：第 38 任由作者在 claude.ai 開（opus 5.5 高）。接手後先做這幾件：
+- **最急：TRACELAG → 100.2**。作者 18:06（台灣時間）在 100.1 真機錄影說「軌道與路線大延遲」「這感覺很影響體驗」。
+  - 效能面板讀數：從既有軌道端點拖描線時掉到 20–32 fps。「地圖」（`FrameCostPart.mapBody`）每步 max 865.9 ms，最長一幀 668 ms；軌道畫布本身只要 1.6 ms。
+  - 時間花在 MapView body 讀 `session.networkOverlay` 時，每個拖曳步驟都把 `networkDraftPreview`／`tracePreview` 整個重算一次。疑似 100.1 的 #1599、#1593、#1598 讓這一步變重。
+  - 實作 session TRACELAG：session_01YGNNuonUfg49wqMPGz83DM，已說是緊急、最小修正，PR 一開就回報。
+  - 合它優先，其他 PR 讓路。合進 main 後跑完整 `ci.yml`（workflow_dispatch）與 full lane，都綠了跟作者說「100.2 可以發（commit X）」。作者答應：「好 修好跟我說」。
+  - **發 100.2 之前先寫 `.github/testflight-whats-new.md`**（只寫這個修正，並把作者手貼的 100.1 說明換掉）。
+- **100.1 的 What to Test 漏寫了**（第 37 任的疏失）：testflight.yml 填了 PR 標題清單，作者在 App Store Connect 手貼第 37 任給的玩家說明。這一次之後，「可以發」之前一定先確認 `.github/testflight-whats-new.md` 自上一版之後改過（見 §1.2 那一行）。遊戲內「新功能」的 `2026-10-31-100` 那則也只寫了新台幣，100.2 那則把 100.1 的其他項補上。
+- **100.1 補驗**：完整 `ci.yml` 41187751239（171cd7b）綠；TestFlight run 41188529796 成功；full lane 41187572538（447891f，和 171cd7b 只差文件）10:15 UTC 時 5 個 job 綠 3 個，剩 Xcode build 與 lessons 在跑，結果記到 #1579。紀錄還沒寫進 `research/PLAYER_FEEDBACK.md`。
+- **在做的實作 session**（都是第 37 任開的，會用 send_message 回報給 session_01YGNNukwzZeGBzvAif8zfja；接手後對每個送一則「改回報給 <第 38 任 session>」）：
+
+  | 工作 | session | 內容 |
+  | --- | --- | --- |
+  | TRACELAG | session_01YGNNuonUfg49wqMPGz83DM | 描線預覽每步 650–870 ms（緊急，100.2） |
+  | CIREST | session_01YGNNum3i7XqrWkTZ83fEJJ | rest 分片壓到 12 分鐘以下（`swift-shards.sh`） |
+  | PASSLOOP | session_01YGNNuowaMN8MBaj6QWbCLn | 接手 #1601（決策 518），合 main、重跑 CI |
+  | IPHLAND | session_01YGNNumJxPZX8Ea6PMbn3c2 | iPhone 橫拿卡片標題「5站」、右側空面板框、審查 L2-2；要看截圖再合 |
+
+- **排序**：其餘照 `research/NEXT_PRIORITIES_2026-10-12.md` §23，TRACELAG 插在最前面。
+- **排程**：第 37 任排的巡查 trig_01Rqfi4XghuBFRQexewBcV5c（10:41 UTC）接手後可刪，第 38 任自己排。
 
 **第 37 任的現況（2026-10-31 約 06:50 UTC，session_01YGNNukwzZeGBzvAif8zfja，第 6 層，壓縮 3 次，交棒）**：
 - **交棒**：第 37 任在 06:45 UTC 第 3 次壓縮。下一任在第 7 層，由作者在 claude.ai 開，模型 opus 5.5 高。接手時先讀這一段和 #1579 最新的留言，再看 main 的完整 `ci.yml` 與 full lane 綠了沒。

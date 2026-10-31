@@ -10,7 +10,7 @@ final class Map3DPropsTests: XCTestCase {
     private static let tiles: Result<BaseMapTiles, Error> = Result {
         try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan.pmtiles"), options: .alwaysMapped))
     }
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     func testTheModelsAreTheirRealSizes() throws {
         for (prop, height, triangles) in [(Map3DProp.tree, Float(4.4 + 2.3 * 0.95), 60...90), (.lamp, 8.62, 30...60), (.pole, 10.2, 60...120)] {

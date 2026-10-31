@@ -6,7 +6,7 @@ import XCTest
 /// Decision 446: Taipei's three scooters close up, and the rows parked in
 /// front of the shops.
 final class Map3DScootersTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     private func model(_ kind: Map3DStreetModel) throws -> Map3DModelPack.Model {
         pack.models[try XCTUnwrap(pack.index(of: kind.modelName))]
