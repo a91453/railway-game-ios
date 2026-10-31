@@ -72,6 +72,10 @@ public enum WhatsNew {
                     chinese: "從軌道端點拖曳描線時，畫面不再卡住。"
                 ),
                 Line(
+                    english: "On an iPhone held sideways, a side panel's station or line name shows whole above it, and no empty mini map sits on the right.",
+                    chinese: "iPhone 橫拿時，側邊面板的站名與路線名完整顯示，右側不再有空的小地圖框。"
+                ),
+                Line(
                     english: "Sights fold away as you zoom out, a station's warnings share one badge, and taps go to stations and track first.",
                     chinese: "景點依縮放收起、同一站的警告合成一顆徽章，點擊先給車站與軌道。"
                 ),
