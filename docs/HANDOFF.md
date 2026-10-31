@@ -427,6 +427,30 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第三十七次換手（2026-10-31 約 01:15 UTC，第 36 任 session_01YGNNunAp2WBFfGrmq3mXES → 第 37 任）**：第 36 任壓縮 3 次、約 300k，照 §1 換手（第 36 任是第 5 層，第 37 任第 6 層；第 7 層起由作者在 claude.ai 開）。
+- **100.1 的計畫**：分三批合，最後一批合完、main 的完整 `ci.yml`（workflow_dispatch）與 full lane 都綠，就跟作者說「100.1 可以發（commit X）」。只有作者按發版。提醒作者答 App Store Connect 的出口合規、99.1 的外部群組。
+- **已合（這輪）**：#1584、#1585、#1587、#1591、#1590（DR3100，決策 511）、#1550（NTD1 新台幣，存檔 76，決策 499）。main d7d25547 的推送 `ci.yml` 交接時還在跑；full lane d7d25547 綠。#1550 的 ChallengeReport seed 1 報告還沒跑。
+- **合併順序**（作者：「好 綠了就合」，等 main 綠才合下一批，螢幕有變的要看截圖，決策 482）：
+  1. #1582 PLATLAYOUT（決策 507，session_01YGNNunAE46kn6nhKToQVDQ）：截圖 run 41150887362，看過就合，再通知 UICLUTTER 與 TRACKHINT。
+  2. #1583 UICLUTTER（決策 510，session_01YGNNuoCZyhdimmFomU4tcG）：#1582 合後 merge main，再拍截圖。
+  3. #1586 TRACKHINT（session_01YGNNunAhpgqKXr3duUqhN9）：第一段鋪軌是直線（`NetworkBuilding.curve` 兩端都空就畫直線，設計如此）的提示。免截圖，排在 #1583 後。
+  4. #1581 ZONE1（決策 509，session_01YGNNuo27fcYAGK3J1GdZHo）：還差小 iPhone 的截圖。之前誤說「A 列車有分區」，作者更正，文字已改成「SimCity／Cities: Skylines」。
+  5. #1592 ZONE2（決策 514，session_01YGNNuns1js3JryrY9ZEZpK）：排在 #1581 後，要截圖。作者說「分區看起來沒什麼作用」：決策 98 只在成長中車站的範圍內填空格，需求是負的用途就跳過。ZONE2 讓圖層說出原因，後續 PR 放下一版。
+  6. #1588 ROSTER2（決策 512，session_01YGNNumBRTdCpYye3rq4eep）：修正已推（b7e6c20）。要派車流程的前後截圖；「之前」的 run 41151250233 失敗，ROSTER2 在處理。作者問過「直接點派出列車」不受影響。
+  7. GEOMSG（決策 513，session_01YGNNuoRrRTXXysd6fhDuj8）：還沒 PR。內容如下：
+     - 鋪軌被擋時說出真正原因：坡度超過 40‰（`TrackProfile.maximumGrade`），或高低差超過 128 m（`TrackGeometry.maximumRise`）。目前都落到 `invalidTrackGeometry` 那句。
+     - 查南澳站放不下的三種情況。
+     - 作者問：預設的台鐵軌道擋在那裡，重鋪時不會刪掉，該怎麼辦。
+  8. #1593 ALISHAN（存檔 77，決策 515，session_01YGNNumbnQtwccikAUfEgt2，已壓縮 1 次）：阿里山照真實坡度鋪的山區軌道，排在 GEOMSG 後。#1550 和 GEOMSG 都合了就通知它 merge main。
+- **還沒 PR 的**：
+  - HOUSEROAD（決策 516 若需要，session_01YGNNunYtaAHmBXbpL19FVv）：作者說隨機生成的房屋也要靠馬路（參考決策 385、389）。
+  - BUILD3D（決策 517，session_01YGNNuon8ZuU8yaEFfYhXzx）：在 3D 按建設不跳回 2D。草稿 #1594：蓋完回到 3D 原本的視角。
+  - PASSLOOP（決策 518，session_01YGNNun8qxU3qeJoE7gLpCk）：作者說快車要讓車時應該走待避月台，高鐵示範有時停在主線。登記 #1579 留言 6536924388。
+- **不是我們的**：#1589（R200／R216，Codex）紅，不用管。
+- **號碼**：決策 513 GEOMSG、514 ZONE2、515 ALISHAN、516 HOUSEROAD（若需要）、517 BUILD3D、518 PASSLOOP；下一個空的是 519。存檔 77 給 ALISHAN。
+- **排程**：第 36 任留了一個巡查 trig_01FmPXzUtYW4f2euEDrN55Kr（01:36 UTC，送回第 36 任）；交接後刪掉，第 37 任自己排。
+- **還沒派的**（同下面第 36 任的現況）：HANG2 P2-3～P2-7（§4.31）、iPad SettingsUITests、車站擴建（506）、≈US$ 參考、99.1 後請作者在 6000× 下回報一次。
+
 **第 36 任的現況（2026-10-30 約 22:00 UTC，session_01YGNNunAp2WBFfGrmq3mXES，壓縮 1 次）**：
 - **99.1 發了**：作者自己按（run 41128192853，main d71ffecc，21:43 UTC 上傳成功）。紀錄在 `research/PLAYER_FEEDBACK.md`。full lane 41124234935 是發版後補驗。作者說「不用凍結了 開始合併」。
 - **99.1 合的**：#1572、#1573、#1576、#1578，以及更早的 #1560、#1561、#1570、#1577 等。發版後合了 #1556（SAVE2，決策 502）。
