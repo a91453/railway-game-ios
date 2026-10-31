@@ -99,9 +99,9 @@ final class TourismHotelTests: XCTestCase {
         let one = try hotel(&world, dx: 0)
         world.setSpeed(.normal)
         try world.advance(ticks: 1_442)
-        // Day 0's 315 tourists, 25 stay at $85: $2,125 taken; its cost 55%
+        // Day 0's 315 tourists, 25 stay at NT$255: NT$6,375 taken; its cost 55%
         // of that and the staff, 0.04% of the hotel's cost, rounded up.
-        let sales = 25 * 8_500
+        let sales = 25 * 25_500
         let building = try XCTUnwrap(world.placedBuilding(id: one.id))
         let staff = (building.cost.amount * 4 + 9_999) / 10_000
         XCTAssertEqual(building.books.totalSales, Money(Int64(sales)))

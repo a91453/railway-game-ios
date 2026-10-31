@@ -29,7 +29,7 @@ final class RunSpacingMinuteTests: XCTestCase {
     /// at its column and facing.
     private func makeWorld(_ lines: [(stops: [StationID], performance: TrainPerformance, runs: [LineRun], trains: [(x: Int, facingEast: Bool)])]) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 14_336, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 14_336, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 355), speed: .normal)
         )
         try track.build(in: &world)
@@ -124,10 +124,12 @@ final class RunSpacingMinuteTests: XCTestCase {
     /// Save version 63: saved within a minute, the allowances come back,
     /// and the loaded world goes on as the saved one does.
     func testVersionSixtyThreeKeepsTheAllowances() throws {
-        var world = try makeWorld([
-            ([alpha, gamma], slow, [run(0, 1, at: 360, taking: 12)], [(3, true)]),
-            ([west, gamma], fast, [run(0, 1, at: 361, taking: 4)], [(1, true)]),
-        ])
+        var world = try NTScale.$factor.withValue(3) {
+            try makeWorld([
+                ([alpha, gamma], slow, [run(0, 1, at: 360, taking: 12)], [(3, true)]),
+                ([west, gamma], fast, [run(0, 1, at: 361, taking: 4)], [(1, true)]),
+            ])
+        }
         world.setSpeed(.x10)
         for _ in 0..<(8 * 60 + 25) { try world.advance(ticks: 1) }
         XCTAssertFalse(world.spacingAllowances.isEmpty)
@@ -142,8 +144,8 @@ final class RunSpacingMinuteTests: XCTestCase {
         XCTAssertEqual(object["saveVersion"] as? Int, 63)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, world)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 63,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 63,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
         for _ in 0..<120 {
             try world.advance(ticks: 1)
             try loaded.advance(ticks: 1)

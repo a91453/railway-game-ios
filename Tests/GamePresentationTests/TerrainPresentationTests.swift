@@ -306,6 +306,36 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(tool.world.passengerLedger(of: ends[0].station).waiting, 5)
     }
 
+    /// Decision 521, cause two: with passengers waiting, the preview of
+    /// track laid on from the line's end (worked out on a copy that leaves
+    /// the passengers alone) says what building it does: the same price,
+    /// the same way, no reason it cannot; and the build itself still
+    /// checks the passengers, who keep waiting.
+    func testThePreviewWithPassengersWaitingIsWhatTheBuildDoes() throws {
+        var (world, _, ends, line) = try longLine()
+        try world.setLineServiceWindow(line.id, to: .allDay)
+        try world.setLineTrainsInService(line.id, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.setStationDemand(ends[0].station, to: StationDemand(kind: .residential, dailyTrips: 0))
+        world.setPassengerRoutingMode(.network)
+        let route = try XCTUnwrap(world.passengerRoutes(from: ends[0].station, to: ends[1].station).first)
+        let journey = try XCTUnwrap(PassengerJourney(origin: ends[0].station, route: route))
+        let west = try XCTUnwrap(world.passengers.firstIndex { $0.station == ends[0].station })
+        world.passengers[west].release(5, along: journey, at: GameTime(minutes: -1))
+        let session = preview(world, from: 193_024, to: 240_000)
+        let shown = try XCTUnwrap(session.networkPreview)
+        XCTAssertNil(shown.problem, shown.problem ?? "")
+        let price = try XCTUnwrap(shown.cost)
+        let before = session.world
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(before.economy.balance - session.world.economy.balance, price)
+        let built = try XCTUnwrap(session.world.network.edges.first { before.network.edge($0.id) == nil })
+        XCTAssertEqual(built.length, shown.length)
+        XCTAssertEqual(session.world.trackGeometry(of: built.id)?.points, shown.points)
+        XCTAssertEqual(session.world.passengerLedger(of: ends[0].station).waiting, 5)
+        XCTAssertEqual(session.world.passengerLedger(of: ends[0].station).abandoned, 0)
+    }
+
     /// A train standing at a platform on the edge: refused, saying a train
     /// is on that track, and nothing changes.
     func testAnEdgeWithATrainAtItsPlatformIsNotLevelled() throws {
@@ -317,7 +347,9 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(tool.networkPlatformLevelling?.problem, reason)
         tool.addNetworkPlatform()
         XCTAssertEqual(tool.message?.kind, .failure)
-        XCTAssertTrue(tool.message?.text.contains(reason) == true, tool.message?.text ?? "")
+        // Decision 510: the reason in the panel, the banner short.
+        XCTAssertTrue(tool.networkDraftText().contains(reason), tool.networkDraftText())
+        XCTAssertFalse(tool.message?.text.contains(reason) == true, tool.message?.text ?? "")
         XCTAssertEqual(tool.world, world)
     }
 
@@ -505,10 +537,14 @@ final class TerrainPresentationTests: XCTestCase {
         let reason = GameError.trackEdgeInUse(edge).playerMessage(in: .english)
         XCTAssertEqual(levelling.problem, reason)
         placed.addNetworkPlatform()
+        // Decision 510: the banner short, why and what to do in the panel.
         XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
-            This track climbs about 20‰ and cannot be levelled for a platform: \(reason) Or lay a short stretch \
-            (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.
+            No platform built: the Network panel says what to do.
             """))
+        XCTAssertTrue(placed.networkDraftText().hasSuffix("""
+            climbs 20‰ and cannot be levelled: \(reason) Or lay a short stretch \
+            (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.
+            """), placed.networkDraftText())
         XCTAssertEqual(placed.world, world)
     }
 

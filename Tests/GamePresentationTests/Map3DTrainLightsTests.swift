@@ -5,7 +5,7 @@ import XCTest
 /// Decision 449: every train's headlamps at its front, its tail lamps at
 /// its back and its windows lit at night, the same way on every set.
 final class Map3DTrainLightsTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     private func lit(_ keys: [String], lights: Float = 1) -> (rows: [Map3DShowcase.Row], before: Map3DTrains.Frame, after: Map3DTrains.Frame) {
         let rows = Map3DShowcase.layout(keys: keys)

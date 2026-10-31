@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 62,
+  "schemaVersion": 75,
   "description": "A typhoon's day (decision 162's later fix, schema 62): a typhoon cuts the trips to and from the stations it blows over, once even when it blows over both ends, and sends none of them elsewhere; every value below was worked out by tools/golden-checks/typhoon_demand.py from the rules. Home (1, residential), Office (2, office), Port (3, office) and Town (4, residential), 1000 trips a day each, on line Main; the clock is at day 194 (15 July, no holiday in Taiwan or Great Britain). Without a seed every origin shares its 1000 trips among the other three by their daily trips: 334, 333, 333 (the unit left over to the lowest ID). With seed 7 it rains on day 194 (July, 'weather.194' rolls 414: not under 250, under 450), taking 100 per mille off: 900 trips, 300 to each. Year 0's typhoon (weather.json) blows on days 194 and 195, centred at (2865, 1399) with a radius of 5431: Home (1336 away) and Office (2770 away) are under it, Port (6863) and Town (8911) are not. Each pair keeps the smaller of its two ends' multipliers: Home to Office 300 x 200 / 1000 = 60 (a fifth, not a fifth of a fifth), Home to Port 60, Town to Home 60, and Town to Port keeps its 300. Great Britain with the same seed has the same rain and no typhoon: 300 for every pair, so Town to Port is what it is without the typhoon: none of the trips cut go elsewhere. At the light level the rain takes 50 (950 trips: 317, 317, 316) and the typhoon 400: 317 x 600 / 1000 = 190 for the pairs it cuts, and Town to Port keeps its 316. The hours are the day's shape times the origin's departure and the destination's arrival peaks, as in holidays.json.",
   "initialState": {
     "worldWidth": 12288,
     "worldHeight": 3072,
-    "balance": 5000,
+    "balance": 15000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 279360,
     "speed": "normal"
@@ -830,7 +830,7 @@
   "expectedFinalState": {
     "gameMinutes": 279360,
     "speed": "normal",
-    "balance": 1000,
+    "balance": 3000,
     "stations": [
       {
         "id": 1,

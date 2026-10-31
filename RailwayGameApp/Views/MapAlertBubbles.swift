@@ -8,7 +8,9 @@ import SwiftUI
 /// the line panel at the line, where it can be staffed in one step
 /// (decision 101). Shown while the player is looking at the map (the
 /// Select tool), not while building, so they never cover what is being
-/// built; a bubble goes when its cause does.
+/// built; a bubble goes when its cause does. Decision 510: one bubble
+/// over a station however many alerts it has, a few on the map at once,
+/// and the rest behind one badge that lists them.
 struct MapAlertBubbles: View {
     let session: GameSession
     let camera: PlanCamera
@@ -17,77 +19,219 @@ struct MapAlertBubbles: View {
     let insets: EdgeInsets
     @Environment(GameScreenState.self) private var screen
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Whether the badge's list is open (decision 510).
+    @State private var listOpen = false
 
     var body: some View {
+        let arranged = Self.arranged(session: session, camera: camera, viewport: viewport, insets: insets)
         ZStack(alignment: .topLeading) {
             if session.tool == .select {
-                ForEach(placed) { item in
+                ForEach(placed(arranged.onMap)) { item in
                     // Its bottom middle at the point: the bubble stands on a
                     // frame of no size, placed there. Alignment guides
                     // placed the bubbles only against each other, and the
                     // stack, as large as the bubbles, sat in the map's top
                     // left corner with all of them in it.
-                    bubble(item.bubble)
+                    bubble(item.bubble, more: item.more)
                         .fixedSize()
                         .frame(width: 0, height: 0, alignment: .bottom)
                         .position(item.point)
                         .transition(.pop(reduceMotion: reduceMotion))
                 }
+                // Decision 510: the alerts not on the map, behind one
+                // badge in the map's top corner; not under a request's
+                // card, which is there.
+                if !arranged.folded.isEmpty, session.focusedRequest == nil {
+                    folded(arranged.folded)
+                        .padding(.leading, insets.leading + 8)
+                        .padding(.top, insets.top + 8)
+                        .transition(.pop(reduceMotion: reduceMotion))
+                }
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: placed.map(\.id))
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: placed(arranged.onMap).map(\.id))
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: arranged.folded.isEmpty)
+        .onChange(of: arranged.folded.isEmpty) { _, empty in
+            if empty { listOpen = false }
+        }
+        .onChange(of: session.tool) { listOpen = false }
+    }
+
+    /// The badge, and its list while open: each alert's glyph and words,
+    /// a tap going to it as its bubble would.
+    private func folded(_ bubbles: [MapMarks.Bubble]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                listOpen.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    MapGlyph.warning.image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 13)
+                        .foregroundStyle(Theme.panel)
+                        .frame(width: 20, height: 20)
+                        .background(tint(bubbles[0].alert), in: Circle())
+                        .accessibilityHidden(true)
+                    Text(verbatim: "\(bubbles.count)")
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textPrimary)
+                    Image(systemName: listOpen ? "chevron.up" : "chevron.down")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityHidden(true)
+                }
+                .padding(.leading, 4)
+                .padding(.trailing, 8)
+                .frame(minHeight: 28)
+                .background(Theme.panel, in: Capsule())
+                .overlay(Capsule().strokeBorder(tint(bubbles[0].alert), lineWidth: 1.5))
+                .background(Capsule().fill(Color.black.opacity(0.18)).offset(y: 2))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 44, height: 28)))
+            .accessibilityLabel(Text(verbatim: MapClutter.badgeText(bubbles.count, in: session.language)))
+            .accessibilityHint(Text(verbatim: listOpen
+                ? session.language.text("Hides the list.", "收起清單。")
+                : session.language.text("Lists what needs you.", "列出需要處理的事。")))
+            .accessibilityIdentifier("map.alerts")
+            if listOpen {
+                // Five rows at most before it scrolls.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(bubbles, id: \.alert.id) { bubble in
+                            row(bubble)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .frame(width: 280, height: min(CGFloat(bubbles.count) * 44 + 8, 5 * 44 + 8))
+                .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.textSecondary.opacity(0.4), lineWidth: 1))
+                .transition(.pop(reduceMotion: reduceMotion))
+            }
+        }
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: listOpen)
+    }
+
+    /// One alert of the badge's list.
+    private func row(_ bubble: MapMarks.Bubble) -> some View {
+        let alert = bubble.alert
+        let text = alert.text(in: session.language, lineName: bubble.lineName, subject: subject(of: bubble))
+        return Button {
+            listOpen = false
+            go(to: alert)
+        } label: {
+            HStack(spacing: 6) {
+                glyph(alert).image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 11, height: 11)
+                    .foregroundStyle(Theme.panel)
+                    .frame(width: 18, height: 18)
+                    .background(tint(alert), in: Circle())
+                    .accessibilityHidden(true)
+                Text(verbatim: text)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: text))
+        .accessibilityHint(Text(verbatim: session.language.text("Goes to it.", "前往處理。")))
+        .accessibilityIdentifier("map.alerts.row")
     }
 
     /// An alert on screen, and where its bubble's bottom middle goes.
     private struct PlacedAlert: Identifiable {
         let bubble: MapMarks.Bubble
+        /// The alerts over its place it does not name (decision 510).
+        let more: Int
         let point: CGPoint
         // Decision 184, later: the bubble's subject, not its figures.
         var id: MapAlert.ID { bubble.alert.id }
     }
 
-    /// The alerts on screen: each over its station (or train, or sight),
+    /// The alerts on the map: each over its station (or train, or sight),
     /// or, decision 477, beside it where that covers another station's
     /// name (``MapLabelPlacement/placeBubbles(_:stations:lift:radius:)``).
-    private var placed: [PlacedAlert] {
+    private func placed(_ groups: [MapClutter.Group]) -> [PlacedAlert] {
         guard session.tool == .select else { return [] }
-        return Self.placements(session: session, camera: camera, viewport: viewport, insets: insets).map {
-            PlacedAlert(bubble: $0.bubble, point: CGPoint(x: $0.point.x, y: $0.point.y))
+        return Self.placements(groups, session: session, camera: camera).map {
+            PlacedAlert(bubble: $0.bubble, more: $0.more, point: CGPoint(x: $0.point.x, y: $0.point.y))
         }
+    }
+
+    /// Decision 510: the alerts on screen, as a few bubbles on the map and
+    /// the rest behind the badge (``MapClutter/arrange(_:markedSights:limit:)``).
+    /// A sight's warning is not repeated over its own mark.
+    static func arranged(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets)
+        -> (onMap: [MapClutter.Group], folded: [MapMarks.Bubble]) {
+        // Decision 377: as the session keeps them, not read from the world,
+        // so a tick that leaves them as they were rebuilds nothing here.
+        let onScreen = session.mapBubbles.filter { bubble in
+            let at = camera.screenPoint(of: bubble.alert.location)
+            return at.x > Double(insets.leading) && at.x < viewport.width - Double(insets.trailing)
+                && at.y > Double(insets.top) + 40 && at.y < viewport.height - Double(insets.bottom)
+        }
+        guard !onScreen.isEmpty else { return ([], []) }
+        let marked = Set(MapAttractionMarks.marks(session: session, camera: camera, viewport: viewport, insets: insets).map(\.sight.attraction.id))
+        let level = MapProblems.level(referenceSize: camera.referenceSize)
+        return MapClutter.arrange(onScreen, markedSights: marked, limit: MapClutter.bubbleLimit(level))
+    }
+
+    /// Where the badge takes a touch while it shows (closed), about: its
+    /// glyph, count and chevron, touched over 44 high.
+    static func badgeTouchBox(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets) -> MapLabelPlacement.Box? {
+        guard session.tool == .select, session.focusedRequest == nil,
+              !arranged(session: session, camera: camera, viewport: viewport, insets: insets).folded.isEmpty else { return nil }
+        return MapLabelPlacement.Box(x: Double(insets.leading) + 8, y: Double(insets.top) + 8 - 8, width: 72, height: 44)
     }
 
     /// Where each bubble on screen goes (its bottom middle) and the box its
     /// touch takes. Decision 501: the selected station's tag keeps off them.
     static func placements(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets)
-        -> [(bubble: MapMarks.Bubble, point: ScreenPoint, touchBox: MapLabelPlacement.Box)] {
+        -> [(bubble: MapMarks.Bubble, more: Int, point: ScreenPoint, touchBox: MapLabelPlacement.Box)] {
+        guard session.tool == .select else { return [] }
+        return placements(arranged(session: session, camera: camera, viewport: viewport, insets: insets).onMap, session: session, camera: camera)
+    }
+
+    private static func placements(_ groups: [MapClutter.Group], session: GameSession, camera: PlanCamera)
+        -> [(bubble: MapMarks.Bubble, more: Int, point: ScreenPoint, touchBox: MapLabelPlacement.Box)] {
+        guard !groups.isEmpty else { return [] }
         // Decision 210: over the waiting count's pill (and a crowded
         // station's ring) where the map draws them, not on it.
         let radius = MapArt.stationRadius(camera)
         let lift = MapProblems.level(referenceSize: camera.referenceSize) == .hidden ? 14 : radius + 30
-        // Decision 377: as the session keeps them, not read from the world,
-        // so a tick that leaves them as they were rebuilds nothing here.
-        let shown: [(bubble: MapMarks.Bubble, at: ScreenPoint)] = session.mapBubbles.compactMap { bubble in
-            let at = camera.screenPoint(of: bubble.alert.location)
-            guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
-                  at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom)
-            else { return nil }
-            return (bubble, at)
-        }
-        guard !shown.isEmpty else { return [] }
+        let shown = groups.map { (group: $0, at: camera.screenPoint(of: $0.top.alert.location)) }
         let plates = shown.map { item in
             MapLabelPlacement.Bubble(
                 x: item.at.x, y: item.at.y,
-                text: item.bubble.alert.text(in: session.language, lineName: item.bubble.lineName, subject: subject(of: item.bubble, in: session.language)),
-                hasReason: item.bubble.waitReason != nil
+                text: bubbleText(item.group.top, more: item.group.more, in: session.language),
+                hasReason: item.group.top.waitReason != nil
             )
         }
         let points = MapLabelPlacement.placeBubbles(
-            plates, stations: stationsOnScreen(session: session, camera: camera, viewport: viewport), lift: lift, radius: radius
+            plates, stations: stationsOnScreen(session: session, camera: camera, viewport: camera.viewport), lift: lift, radius: radius
         )
         return zip(zip(shown, plates), points).map { item, point in
-            (item.0.bubble, point, MapLabelPlacement.bubbleTouchBox(item.1, at: point))
+            (item.0.group.top, item.0.group.more, point, MapLabelPlacement.bubbleTouchBox(item.1, at: point))
         }
+    }
+
+    /// What a bubble says, with "+1" for the alerts over its place it
+    /// does not name (decision 510).
+    private static func bubbleText(_ bubble: MapMarks.Bubble, more: Int, in language: DisplayLanguage) -> String {
+        let text = bubble.alert.text(in: language, lineName: bubble.lineName, subject: subject(of: bubble, in: language))
+        return more > 0 ? "\(text) \(MapClutter.moreText(more))" : text
     }
 
     /// The stations whose names a bubble, or the selected station's tag
@@ -100,29 +244,34 @@ struct MapAlertBubbles: View {
         }
     }
 
-    private func bubble(_ bubble: MapMarks.Bubble) -> some View {
+    /// Goes to what `alert` is about, from its bubble or the badge's list.
+    private func go(to alert: MapAlert) {
+        if session.respond(to: alert) {
+            screen.panel = .lines
+        }
+        // Decision 184: a sight opens the sights, a challenge in the
+        // red the company's figures. A town short of materials opens
+        // its station's panel, whose Freight section builds the yard.
+        switch alert.kind {
+        case .sightWithoutStation(let sight):
+            // Decision 250: at that sight's row.
+            screen.sightFocus = sight
+            screen.panel = .tourism
+        // Decision 477: at the freight group, where its materials are.
+        case .materialsShort where alert.station != nil:
+            screen.stationFocus = StationPanelGroup.answering(alert.kind)
+            screen.panel = .station
+        case .insolvency: screen.panel = .economy
+        default: break
+        }
+    }
+
+    private func bubble(_ bubble: MapMarks.Bubble, more: Int) -> some View {
         let alert = bubble.alert
-        let text = alert.text(in: session.language, lineName: bubble.lineName, subject: subject(of: bubble))
+        let text = Self.bubbleText(bubble, more: more, in: session.language)
         let why = bubble.waitReason?.text(in: session.language)
         return Button {
-            if session.respond(to: alert) {
-                screen.panel = .lines
-            }
-            // Decision 184: a sight opens the sights, a challenge in the
-            // red the company's figures. A town short of materials opens
-            // its station's panel, whose Freight section builds the yard.
-            switch alert.kind {
-            case .sightWithoutStation(let sight):
-                // Decision 250: at that sight's row.
-                screen.sightFocus = sight
-                screen.panel = .tourism
-            // Decision 477: at the freight group, where its materials are.
-            case .materialsShort where alert.station != nil:
-                screen.stationFocus = StationPanelGroup.answering(alert.kind)
-                screen.panel = .station
-            case .insolvency: screen.panel = .economy
-            default: break
-            }
+            go(to: alert)
         } label: {
             HStack(spacing: 4) {
                 // Decision 121: the map's glyph on a disc of the alert's

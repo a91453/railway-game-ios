@@ -17,7 +17,7 @@ final class RoadGridTests: XCTestCase {
     /// A managed world of 32 × 16 cells (2,048 × 1,024 m), ten minutes a
     /// tick, with a town in cell (8, 10).
     private func world(balance: Money = 1_000_000_000) throws -> GameWorld {
-        var world = GameWorld(bounds: try WorldBounds(width: 32 * cell, height: 16 * cell), economy: GameEconomy(balance: balance, costs: testCosts),
+        var world = GameWorld(bounds: try WorldBounds(width: 32 * cell, height: 16 * cell), economy: fixtureEconomy(balance: balance, costs: testCosts),
                               clock: GameClock(speed: .fast))
         world.setEconomyMode(.management)
         world.enableRoads(towns: [middle(8, 10)])
@@ -91,19 +91,19 @@ final class RoadGridTests: XCTestCase {
 
     // MARK: - Station roads
 
-    func testAStationRoadRunsToTheNearestRoadAtFiftyDollarsAMetre() throws {
+    func testAStationRoadRunsToTheNearestRoadAtOneHundredFiftyDollarsAMetre() throws {
         var world = try world()
         let station = try world.buildStation(named: "East", at: middle(8, 15))
         let balance = world.economy.balance
-        // Four cells west to (8, 11): 256 m, $12,800.
+        // Four cells west to (8, 11): 256 m at NT$150, NT$38,400.
         let quote = try world.stationRoadQuote(at: station.id)
         XCTAssertEqual(quote.joins, CellPosition(row: 8, column: 11))
         XCTAssertEqual(quote.cells, (12...15).reversed().map { CellPosition(row: 8, column: $0) })
         XCTAssertEqual(quote.metres, 256)
-        XCTAssertEqual(quote.price, Money(1_280_000))
+        XCTAssertEqual(quote.price, Money(3_840_000))
         XCTAssertEqual(try world.buildStationRoad(at: station.id), quote)
-        XCTAssertEqual(world.economy.balance, balance - Money(1_280_000))
-        XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending, Money(1_281_000), "with the station's $10")
+        XCTAssertEqual(world.economy.balance, balance - Money(3_840_000))
+        XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending, Money(3_841_000), "with the station's $10")
         // Decision 438: a station road built from now on is the player's
         // own, and can be taken up again.
         XCTAssertEqual(world.roads?.built, Set(quote.cells))
@@ -119,7 +119,7 @@ final class RoadGridTests: XCTestCase {
         XCTAssertEqual(quote.joins, CellPosition(row: 9, column: 11))
         XCTAssertEqual(quote.cells, [CellPosition(row: 11, column: 14), CellPosition(row: 10, column: 13), CellPosition(row: 9, column: 12)])
         XCTAssertEqual(quote.metres, 2 * 90 + 64)
-        XCTAssertEqual(quote.price, Money(244 * 5_000))
+        XCTAssertEqual(quote.price, Money(244 * 15_000))
     }
 
     func testAStationRoadReachesFiveHundredAndTwelveMetresAtMost() throws {
@@ -138,7 +138,7 @@ final class RoadGridTests: XCTestCase {
         let station = try world.buildStation(named: "East", at: middle(8, 15))
         let before = world
         XCTAssertThrowsGameError(try world.buildStationRoad(at: station.id),
-                                 .insufficientFunds(required: Money(1_280_000), available: world.economy.balance))
+                                 .insufficientFunds(required: Money(3_840_000), available: world.economy.balance))
         XCTAssertEqual(world, before)
     }
 
@@ -162,9 +162,9 @@ final class RoadGridTests: XCTestCase {
         let quote = try world.roadQuote(along: path)
         XCTAssertEqual(quote.cells, Array(path.dropFirst()))
         XCTAssertEqual(quote.taken, [CellPosition(row: 8, column: 11)])
-        XCTAssertEqual(quote.price, Money(1_090_000), "the price as on a blank map")
+        XCTAssertEqual(quote.price, Money(3_270_000), "the price as on a blank map")
         try world.buildRoad(along: path)
-        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
+        XCTAssertEqual(world.economy.balance, balance - Money(3_270_000))
         XCTAssertEqual(world.roads?.built, Set(path))
         XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11), "the city's roads as they were")
         // Wholly along the city's road: taken, for nothing.
@@ -173,7 +173,7 @@ final class RoadGridTests: XCTestCase {
         XCTAssertEqual(free.cells, [])
         XCTAssertEqual(free.taken, along)
         XCTAssertEqual(free.price, .zero)
-        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
+        XCTAssertEqual(world.economy.balance, balance - Money(3_270_000))
         XCTAssertEqual(world.roads?.built, Set(path + along))
         // Taken up, the city's road stays.
         try world.removeRoads(along)
@@ -185,16 +185,16 @@ final class RoadGridTests: XCTestCase {
         var world = try world()
         let balance = world.economy.balance
         // From the town's (8, 11) east two cells and up a corner: 64 + 64
-        // + 90 m new, $10,900; the town's own cell is free.
+        // + 90 m new, NT$32,700; the town's own cell is free.
         let path = [CellPosition(row: 8, column: 11), CellPosition(row: 8, column: 12), CellPosition(row: 8, column: 13), CellPosition(row: 7, column: 14)]
         let quote = try world.roadQuote(along: path)
         XCTAssertEqual(quote.cells, Array(path.dropFirst()))
         XCTAssertEqual(quote.taken, [], "a blank map draws the city's roads: they stay the city's")
         XCTAssertEqual(quote.metres, 218)
-        XCTAssertEqual(quote.price, Money(1_090_000))
+        XCTAssertEqual(quote.price, Money(3_270_000))
         XCTAssertEqual(try world.buildRoad(along: path), quote)
-        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
-        XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending, Money(1_090_000))
+        XCTAssertEqual(world.economy.balance, balance - Money(3_270_000))
+        XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending, Money(3_270_000))
         XCTAssertEqual(world.roads?.built, Set(path.dropFirst()))
         XCTAssertEqual(world.roads?.cells, cells(7...9, 9...11), "the city's roads as they were")
         XCTAssertEqual(world.roads?.contains(CellPosition(row: 7, column: 14)), true)
@@ -206,7 +206,7 @@ final class RoadGridTests: XCTestCase {
         let again = try world.buildRoad(along: path.reversed())
         XCTAssertEqual(again.cells, [])
         XCTAssertEqual(again.price, .zero)
-        XCTAssertEqual(world.economy.balance, balance - Money(1_090_000))
+        XCTAssertEqual(world.economy.balance, balance - Money(3_270_000))
         // A first cell of its own is a cell's side.
         XCTAssertEqual(try world.roadQuote(along: [CellPosition(row: 2, column: 2)]).metres, 64)
     }
@@ -237,7 +237,7 @@ final class RoadGridTests: XCTestCase {
         var poor = try self.world(balance: Money(100_000))
         let poorBefore = poor
         XCTAssertThrowsGameError(try poor.buildRoad(along: [CellPosition(row: 2, column: 2), CellPosition(row: 2, column: 3)]),
-                                 .insufficientFunds(required: Money(640_000), available: Money(100_000)))
+                                 .insufficientFunds(required: Money(1_920_000), available: Money(100_000)))
         XCTAssertEqual(poor, poorBefore)
     }
 
@@ -358,7 +358,7 @@ final class RoadGridTests: XCTestCase {
     private func boughtWorld() throws -> (world: GameWorld, tile: MapTile) {
         let length = MapExpansion.tileLength
         var world = GameWorld(bounds: try WorldBounds(width: 5 * length, height: 5 * length),
-                              economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .fast))
+                              economy: fixtureEconomy(balance: 3_000_000_000, costs: testCosts), clock: GameClock(speed: .fast))
         world.setEconomyMode(.management)
         world.enableRoads(towns: Land.townCentres(seed: 7, in: world.bounds))
         try world.enableMapExpansion(owning: MapTile(row: 2, column: 2), townSeed: 7)
@@ -451,7 +451,7 @@ final class RoadGridTests: XCTestCase {
     // MARK: - Saves
 
     func testVersionSeventyTwoKeepsTheRoads() throws {
-        var world = try world()
+        var world = try NTScale.$factor.withValue(3) { try world() }
         let station = try world.buildStation(named: "East", at: middle(8, 15))
         try world.buildStationRoad(at: station.id)
         try world.buildStation(named: "North", at: middle(5, 10))
@@ -473,14 +473,14 @@ final class RoadGridTests: XCTestCase {
         var expected = world
         expected.roads?.cells.formUnion(world.roads?.built ?? [])
         expected.roads?.built = []
-        XCTAssertEqual(loaded, expected)
+        try XCTAssertSameButRounding(loaded, expected, cents: 0)
         // The town's square, the station road and the month's cell toward
         // North, (6, 10), and the base map's cell.
         XCTAssertEqual(loaded.roads?.cells, cells(7...9, 9...11).union((12...15).map { CellPosition(row: 8, column: $0) })
             .union([CellPosition(row: 6, column: 10), CellPosition(row: 2, column: 20)]))
         XCTAssertEqual(loaded.roads?.readBlocks, [LandBlock(row: 0, column: 1)])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 72,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 72,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
         // Without the key there are no roads.
         var plain = object
         var saved = try XCTUnwrap(plain["world"] as? [String: Any])

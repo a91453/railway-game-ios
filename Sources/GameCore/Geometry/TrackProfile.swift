@@ -71,6 +71,21 @@ public struct TrackProfile: Hashable, Sendable {
     /// gameplay parameter of this game, not a claim about real railways.
     public static let maximumGrade = TrackGrade(rise: 40, run: 1_000)
 
+    /// The steepest grade mountain track may have, up or down: 70 in 1000
+    /// (decision 515). Only an edge built as mountain track
+    /// (``TrackEdge/mountain``) may be steeper than ``maximumGrade``: the
+    /// network tool lays it only where it traces a real line whose ground
+    /// climbs more steeply than that, as the Alishan Forest Railway's
+    /// 62.5 in 1000 does, and only a mountain train may run on it
+    /// (``TrainType/climbsMountains``).
+    public static let maximumMountainGrade = TrackGrade(rise: 70, run: 1_000)
+
+    /// The steepest grade an edge may have: ``maximumMountainGrade`` for
+    /// mountain track, else ``maximumGrade`` (decision 515).
+    public static func maximumGrade(mountain: Bool) -> TrackGrade {
+        mountain ? maximumMountainGrade : maximumGrade
+    }
+
     /// The steepest grade a turnout may stand on, up or down: 25 in 1000
     /// (decision 233). Track this steep or less can be split in the middle
     /// of its steady grade (``GameWorld/splitTrackEdge(_:at:)``).

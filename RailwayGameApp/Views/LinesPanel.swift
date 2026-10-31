@@ -93,6 +93,8 @@ struct LinesPanel: View {
     @AppStorage("linesPanel.foldedGroups") private var storedFoldedGroups = ""
     /// Decision 206: whether the selected line's train diagram is open.
     @State private var showsDiagram = false
+    /// Decision 512: whether the selected line's train roster is open.
+    @State private var showsRoster = false
     /// Decision 196, later: the player's choice for the "Advanced" switch,
     /// or `nil` for the device's default (folded on a phone).
     @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
@@ -431,7 +433,9 @@ struct LinesPanel: View {
     /// page is opened for it.
     private var networkPage: some View {
         Form {
-            trafficSection
+            // The page's title already names it (IPHLAND: on a phone on
+            // its side the two stood one under the other).
+            trafficSection(titled: false)
             serviceDaySection
         }
         .panelTitle(NetworkSwitches.title(in: session.language))
@@ -700,11 +704,13 @@ struct LinesPanel: View {
     @ViewBuilder
     private var networkSection: some View {
         if session.allows(UnlockableTool.lineDetails) {
-            trafficSection
+            trafficSection(titled: true)
         }
     }
 
-    private var trafficSection: some View {
+    /// `titled`: with the block's name as its header, where no page title
+    /// above names it.
+    private func trafficSection(titled: Bool) -> some View {
         Section {
             Toggle("Traffic control", isOn: Binding(
                 get: { session.world.isTrafficControlEnabled },
@@ -715,7 +721,9 @@ struct LinesPanel: View {
                 set: { session.setPassengerRoutingMode($0 ? .network : .direct) }
             ))
         } header: {
-            Text(verbatim: NetworkSwitches.title(in: session.language))
+            if titled {
+                Text(verbatim: NetworkSwitches.title(in: session.language))
+            }
         } footer: {
             Text("When on, a train takes its whole route before it leaves, and other trains wait until it has cleared it.")
             Text("With network routes, passengers change lines and walk to stations nearby; otherwise they ride only a line serving both stations.")
@@ -1647,6 +1655,18 @@ struct LinesPanel: View {
                 }
             }
             .accessibilityIdentifier("line.trainDiagram")
+            // Decision 512: the line's trains on the roster, where they
+            // can be moved.
+            Button {
+                showsRoster = true
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Train roster", "列車運用表"))
+                } icon: {
+                    Image(systemName: "chart.bar.doc.horizontal")
+                }
+            }
+            .accessibilityIdentifier("line.trainRoster")
             ForEach(Array(line.stops.enumerated()), id: \.offset) { index, station in
                 HStack {
                     Text(verbatim: "\(index + 1). \(name(of: station))")
@@ -2586,6 +2606,11 @@ extension LinesPanel {
             .fullScreenCover(isPresented: active ? $showsDiagram : .constant(false)) {
                 if let id = session.selectedLineID {
                     TrainDiagramView(session: session, line: id)
+                }
+            }
+            .fullScreenCover(isPresented: active ? $showsRoster : .constant(false)) {
+                if let id = session.selectedLineID {
+                    TrainRosterView(session: session, line: id)
                 }
             }
     }

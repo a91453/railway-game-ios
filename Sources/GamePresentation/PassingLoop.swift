@@ -3,7 +3,7 @@ import GameCore
 // A passing loop in one step (decision 204, NEXT_PRIORITIES §0 item 10):
 // tap a single track, and a second track goes beside it, 5 m to one side,
 // joined by a turnout at each end, as the platform track tool lays one
-// (``GameSession/sidingPlan(on:from:to:spacing:reach:side:)``). With it
+// (``GameSession/sidingPlan(on:from:to:spacing:reach:side:in:)``). With it
 // comes a signal station (號誌站): a station closed to passengers with a
 // platform on each track, so a timetable that calls there has its meets
 // planned there, and a line that calls there may run a train each way on
@@ -59,7 +59,7 @@ extension GameSession {
         guard length < edge.length else { return .failure(.noRoom) }
         let start = min(max(0, point.distance - length / 2), edge.length - length)
         let end = start + length
-        return sidingPlan(on: point.edge, from: start, to: end, spacing: PassingLoopPlan.spacing, reach: PassingLoopPlan.reach, side: side).map { siding in
+        return sidingPlan(on: point.edge, from: start, to: end, spacing: PassingLoopPlan.spacing, reach: PassingLoopPlan.reach, side: side, in: world).map { siding in
             let middle = geometry.location(at: (start + end) / 2).position.plan
             return PassingLoopPlan(
                 edge: point.edge, start: start, end: end,

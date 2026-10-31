@@ -8,7 +8,10 @@ import XCTest
 /// numbers are kept: a value moved here is a behaviour change.
 final class TrainTypeCatalogTests: XCTestCase {
     /// One type as it was: its code, a car's rating and doors, whether it
-    /// overloads, its own performance, and its prices in dollars.
+    /// overloads, its own performance, and its prices in the reference's
+    /// dollars. Decision 499 counts money in New Taiwan dollars, NT$3 to the
+    /// reference's $1, so every price is checked as `ntd` times the pinned one
+    /// and the table itself does not move.
     private struct Pinned {
         let code: String
         let capacity: Int64
@@ -46,7 +49,12 @@ final class TrainTypeCatalogTests: XCTestCase {
         .init(code: "MINGRI", capacity: 26, doors: 2, overloads: true, performance: .mingRi, first: 400_000, car: 55_000, permille: 1_400),
         .init(code: "STAR", capacity: 29, doors: 2, overloads: true, performance: .formosaStar, first: 375_000, car: 45_000, permille: 1_300),
         .init(code: "SUMMER", capacity: 50, doors: 2, overloads: true, performance: .midsummerFormosa, first: 350_000, car: 35_000, permille: 1_650),
+        // Decision 515.
+        .init(code: "ALISHAN", capacity: 40, doors: 2, overloads: true, performance: .forestRailway, first: 180_000, car: 30_000, permille: 1_500),
     ]
+
+    /// Cents of New Taiwan dollars for a pinned price in the reference's dollars.
+    private static func ntd(_ dollars: Int64) -> Money { Money(dollars * 100 * 3) }
 
     func testEveryTypeKeepsItsNumbers() throws {
         XCTAssertEqual(TrainType.allCases.map(\.rawValue), Self.pinned.map(\.code), "the types, in their order")
@@ -57,8 +65,8 @@ final class TrainTypeCatalogTests: XCTestCase {
             XCTAssertEqual(type.doorsPerCar, pin.doors, pin.code)
             XCTAssertEqual(type.overloads, pin.overloads, pin.code)
             XCTAssertEqual(type.performance, pin.performance, pin.code)
-            XCTAssertEqual(type.pricing.firstCar, Money(pin.first * 100), pin.code)
-            XCTAssertEqual(type.pricing.eachCar, Money(pin.car * 100), pin.code)
+            XCTAssertEqual(type.pricing.firstCar, Self.ntd(pin.first), pin.code)
+            XCTAssertEqual(type.pricing.eachCar, Self.ntd(pin.car), pin.code)
             XCTAssertEqual(type.pricing.operatingPermille, pin.permille, pin.code)
             XCTAssertEqual(RollingStock.pricing(of: type), type.pricing, pin.code)
         }
@@ -67,15 +75,15 @@ final class TrainTypeCatalogTests: XCTestCase {
     func testTheListsKeepTheirTypesAndOrder() {
         XCTAssertEqual(TrainType.main.map(\.rawValue), ["A", "B", "C"])
         XCTAssertEqual(TrainType.reference.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL"])
-        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER"])
+        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER", "ALISHAN"])
         XCTAssertEqual(TrainType.referenceDefault.rawValue, "B")
         XCTAssertEqual([TrainType.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail, .steam, .highSpeed, .emu3000,
-                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa], TrainType.allCases)
+                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa, .alishan], TrainType.allCases)
     }
 
     func testTheStandardCarKeepsItsNumbers() {
-        XCTAssertEqual(RollingStock.standard.firstCar, Money(150_000 * 100))
-        XCTAssertEqual(RollingStock.standard.eachCar, Money(40_000 * 100))
+        XCTAssertEqual(RollingStock.standard.firstCar, Self.ntd(150_000))
+        XCTAssertEqual(RollingStock.standard.eachCar, Self.ntd(40_000))
         XCTAssertEqual(RollingStock.standard.operatingPermille, 1_000)
         XCTAssertEqual(RollingStock.pricing(of: nil), RollingStock.standard)
         var train = Train(id: TrainID(rawValue: 1), name: "T")
@@ -101,7 +109,7 @@ final class TrainTypeCatalogTests: XCTestCase {
                 XCTAssertEqual(train.ratedCapacity, rated, "\(pin.code) × \(cars)")
                 XCTAssertEqual(train.capacity, pin.overloads ? (rated * 11 + 5) / 10 : rated, "\(pin.code) × \(cars)")
                 XCTAssertEqual(train.passengersPerSecond, ServiceDwell.passengersPerDoorPerSecond * pin.doors * Int64(cars), "\(pin.code) × \(cars)")
-                XCTAssertEqual(RollingStock.price(of: type, cars: cars), Money((pin.first + pin.car * Int64(cars - 1)) * 100), "\(pin.code) × \(cars)")
+                XCTAssertEqual(RollingStock.price(of: type, cars: cars), Self.ntd(pin.first + pin.car * Int64(cars - 1)), "\(pin.code) × \(cars)")
                 XCTAssertEqual(RollingStock.weight(of: type, cars: cars), pin.permille * Int64(cars), "\(pin.code) × \(cars)")
             }
         }

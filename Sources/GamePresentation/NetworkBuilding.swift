@@ -25,7 +25,8 @@ public enum NetworkAnchor: Hashable, Sendable {
 public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
     /// Taps pick the two ends of a new stretch of track.
     case build
-    /// A tap picks a place on an edge for a station's platform.
+    /// A tap picks a place on an edge for a station, built with its
+    /// platforms and tracks in the layout picked (decision 507).
     case platform
     /// A tap picks an edge to remove.
     case remove
@@ -39,7 +40,7 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
     public func title(in language: DisplayLanguage) -> String {
         switch self {
         case .build: language.text("Lay", "鋪設")
-        case .platform: language.text("Platform", "月台")
+        case .platform: language.text("Station", "車站")
         case .remove: language.text("Remove", "拆除")
         case .passingLoop: language.text("Loop", "待避")
         case .depot: language.text("Depot", "機廠")
@@ -68,7 +69,8 @@ public struct NetworkPreview: Hashable, Sendable {
     /// tool refuses them before asking GameCore, or they make no edge.
     public let points: [WorldCoordinate]
     /// The length in world units (horizontal chainage); the straight
-    /// distance between the ends without a curve, 0 when they make no edge.
+    /// distance between the ends without a curve; for a traced stretch
+    /// refused from its first edge, the whole way as drawn (decision 513).
     public let length: Int64
     public let startHeight: Int64
     public let endHeight: Int64

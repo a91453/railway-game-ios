@@ -85,7 +85,7 @@ final class TidalDemandTests: XCTestCase {
     /// A managed world of the standard bounds with demand from land: Town
     /// on 600 residents and 400 office jobs.
     private func landWorld() throws -> GameWorld {
-        var world = GameWorld(bounds: .standard, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: .standard, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         world.setEconomyMode(.management)
         try world.setLand([
             LandCell(row: 128, column: 128, use: .residential, residents: 600, jobs: 0),
@@ -134,7 +134,7 @@ final class TidalDemandTests: XCTestCase {
     }
 
     func testVersionSixtySevenKeepsTheTide() throws {
-        var world = try landWorld()
+        var world = try NTScale.$factor.withValue(3) { try landWorld() }
         world.setTidalDemand(true)
         try world.advance(ticks: 10)
 
@@ -151,8 +151,8 @@ final class TidalDemandTests: XCTestCase {
         XCTAssertEqual(loaded, world)
         XCTAssertTrue(loaded.tidalDemand)
         XCTAssertEqual(loaded.stationDemand(of: home)?.homeShare, 444)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 67,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 67,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
         // Without the key the tide is off.
         var plain = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         var saved = try XCTUnwrap(plain["world"] as? [String: Any])

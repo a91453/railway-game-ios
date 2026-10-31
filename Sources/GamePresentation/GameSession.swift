@@ -162,6 +162,9 @@ public final class GameSession {
     /// The levelling of the platform's stretch, kept likewise (see
     /// ``networkPlatformLevelling``).
     @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
+    /// The station layout's plan for the platform's stretch, kept likewise
+    /// (decision 507, ``networkStationLayoutPreview``).
+    @ObservationIgnored var stationLayoutMemo: StationLayoutMemo?
     /// How many times the network tool's previews (the track, a passing
     /// loop, a depot, a platform's levelling) were worked out (for the tests).
     @ObservationIgnored var buildPreviewsWorkedOut = 0
@@ -229,14 +232,30 @@ public final class GameSession {
             buildingSite = nil
             zoneDrag = nil
             saleCandidate = nil
+            // Decision 522: until the player picks a zone, the zoning
+            // mode opens on the use the city wants most now.
+            if buildingMode == .zone, oldValue != .zone, !isZoningZoneChosen {
+                zoningZone = suggestedZoningZone
+                isZoningZoneChosen = false
+            }
         }
     }
     /// What the zoning mode zones cells for (decision 98), or `nil` to
-    /// clear their zones.
-    public var zoningZone: Zone? = .residential
+    /// clear their zones. Until the player sets it, the zoning mode opens
+    /// on ``suggestedZoningZone`` (decision 522).
+    public var zoningZone: Zone? = .residential {
+        didSet { isZoningZoneChosen = true }
+    }
+    /// Decision 522: whether the player has set ``zoningZone``; never
+    /// saved.
+    @ObservationIgnored var isZoningZoneChosen = false
     /// The cells a drag with the zoning mode would zone, while the finger
     /// is down (decision 98).
     public internal(set) var zoneDrag: CellRectangle?
+    /// Decision 509: the empty cells the player zoned for a use, until
+    /// the city first builds on one of them (``noteZonedCellsBuiltOn()``).
+    /// Never saved.
+    @ObservationIgnored var zonedCellsAwaitingBuilding: Set<CellPosition> = []
     /// Where the building tool would build, once the player tapped there
     /// (decision 95): the map shows the building there and what it would
     /// cost and pull down, and the action button builds it.
@@ -640,6 +659,10 @@ public final class GameSession {
     public internal(set) var networkEdgePoint: NetworkEdgePoint?
     /// How many cars the next platform is long enough for.
     public var platformCars = GameSession.defaultPlatformCars
+    /// How the next station's platforms and tracks are laid out (decision
+    /// 507): the player's pick, which ``networkStationLayout`` follows
+    /// where it fits the track picked.
+    public var stationLayout: StationLayout = .singleSide
     /// The station the next platform serves; `nil` builds a new station
     /// named ``stationName`` beside it.
     public var platformStationID: StationID?
@@ -668,6 +691,7 @@ public final class GameSession {
         didSet {
             networkPreviewMemo = nil
             platformLevellingMemo = nil
+            stationLayoutMemo = nil
             passingLoopMemo = nil
             depotYardMemo = nil
             lineOpeningMemo = nil
@@ -1922,7 +1946,11 @@ public final class GameSession {
         // Decision 175: the secretary room reads what the step changed.
         meter.measure(.stepNews) { observeNews(closedBefore: closedBefore) }
         if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
-            meter.measure(.stepMidnight) { onMidnight?() }
+            meter.measure(.stepMidnight) {
+                // Decision 509: before the achievements, which say theirs last.
+                noteZonedCellsBuiltOn()
+                onMidnight?()
+            }
         }
         // Decision 305: the night's skip goes on, ends or starts.
         meter.measure(.stepNightSkip) { continueNightSkip(aheadOffTheMainActor: fromLoop) }

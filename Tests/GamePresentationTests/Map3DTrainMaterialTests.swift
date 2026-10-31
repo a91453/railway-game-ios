@@ -6,8 +6,8 @@ import XCTest
 /// Decision 450: the trains' window glass and stainless bodies, marked as
 /// the pack is made, and what the shader does with them.
 final class Map3DTrainMaterialTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
-    private let recipes = Map3DModelPack.unbaked
+    private var pack: Map3DModelPack { .standard }
+    private var recipes: Map3DModelPack { .unbaked }
 
     static let shaders = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

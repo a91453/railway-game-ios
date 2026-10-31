@@ -30,9 +30,9 @@ on:
         options: [website, promo]
         default: website
       device:
-        description: "promo only: iphone or ipad"
+        description: "iphone (a Pro), ipad (promo only) or iphone-small (the smallest iPhone, to check the tools fit)"
         type: choice
-        options: [iphone, ipad]
+        options: [iphone, ipad, iphone-small]
         default: iphone
       appearance:
         description: "promo only: dark, light or both (the recording is of the first)"
@@ -40,7 +40,7 @@ on:
         options: [dark, light, both]
         default: dark
       tests:
-        description: "promo only: PromoMaterialTests methods, separated by spaces or commas (empty: all)"
+        description: "PromoMaterialTests (promo) or WebsiteScreenshotTests (website) methods, separated by spaces or commas (empty: all)"
         type: string
         default: ""
 
@@ -61,26 +61,53 @@ jobs:
 
       # The website's screenshots are from an iPhone Pro (2622 × 1206 on
       # its side): the first available Pro that is not a Max, else the first
-      # iPhone.
+      # iPhone. `device` = iphone-small (100.1, decision 509; the planner's
+      # merge condition) takes the narrowest iPhone in points instead, a
+      # mini before an SE of the same width (less room on its side), to see
+      # that the tools column fits there; the log lists every iPhone with
+      # its size.
       - name: Select a Simulator
         env:
-          PROMO_DEVICE: ${{ inputs.kind == 'promo' && inputs.device || 'iphone' }}
+          PROMO_DEVICE: ${{ (inputs.kind == 'promo' || inputs.device == 'iphone-small') && inputs.device || 'iphone' }}
         run: |
           xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          xcrun simctl list devicetypes --json > "$RUNNER_TEMP/devicetypes.json"
           python3 - <<'PY'
-          import json, os
+          import json, os, plistlib
           from pathlib import Path
           devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
-          kind = "iPad" if os.environ["PROMO_DEVICE"] == "ipad" else "iPhone"
+          wanted = os.environ["PROMO_DEVICE"]
+          kind = "iPad" if wanted == "ipad" else "iPhone"
           iphones = [device for runtime, group in devices.items()
                      if ".iOS-" in runtime for device in group
                      if device["isAvailable"] and device["name"].startswith(kind)]
           if not iphones:
               raise SystemExit(f"No available {kind} Simulator")
-          # An iPhone Pro that is not a Max; an iPad Pro (the largest).
-          pros = [d for d in iphones if d["name"].endswith(" Pro")] if kind == "iPhone" \
-              else [d for d in iphones if d["name"].startswith("iPad Pro")]
-          device = (pros or iphones)[-1]
+          if wanted == "iphone-small":
+              # The screen in points, from the device type's profile.
+              sizes = {}
+              for devicetype in json.loads(Path(os.environ["RUNNER_TEMP"], "devicetypes.json").read_text())["devicetypes"]:
+                  try:
+                      profile = plistlib.loads(Path(devicetype["bundlePath"], "Contents/Resources/profile.plist").read_bytes())
+                      # Numbers or strings, depending on the device type.
+                      scale = float(profile["mainScreenScale"])
+                      sizes[devicetype["identifier"]] = (float(profile["mainScreenWidth"]) / scale, float(profile["mainScreenHeight"]) / scale)
+                  except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException, ZeroDivisionError) as error:
+                      print(f"{devicetype.get('name', '?')}: no screen size ({error!r})")
+              for d in iphones:
+                  print(f"{d['name']}: {sizes.get(d.get('deviceTypeIdentifier'), '?')}")
+              sized = [d for d in iphones if d.get("deviceTypeIdentifier") in sizes]
+              if sized:
+                  device = min(sized, key=lambda d: (min(sizes[d["deviceTypeIdentifier"]]), "mini" not in d["name"]))
+              else:
+                  # No sizes: by name, a mini, then an SE, then the first iPhone.
+                  named = [d for word in (" mini", " SE") for d in iphones if word in d["name"]]
+                  device = (named or iphones)[0]
+          else:
+              # An iPhone Pro that is not a Max; an iPad Pro (the largest).
+              pros = [d for d in iphones if d["name"].endswith(" Pro")] if kind == "iPhone" \
+                  else [d for d in iphones if d["name"].startswith("iPad Pro")]
+              device = (pros or iphones)[-1]
           print(f"Selected {device['name']} ({device['udid']})")
           with open(os.environ["GITHUB_ENV"], "a") as env:
               env.write(f"SIMULATOR_UDID={device['udid']}\n")

@@ -3,7 +3,7 @@ import XCTest
 
 /// Decision 434: the train showcase's catalog, rows and camera views.
 final class Map3DShowcaseTests: XCTestCase {
-    let pack = Map3DModelPack.standard
+    var pack: Map3DModelPack { .standard }
 
     // MARK: - The catalog
 

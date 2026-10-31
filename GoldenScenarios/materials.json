@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 59,
+  "schemaVersion": 75,
   "description": "Building materials (schema 59, decision 156), 12 steps. Alpha (1536, 512) and Gamma (5632, 512) in a world 8192 by 4096 units, a managed company, 100 industrial jobs in the cell at row 0, column 0 (nearer Alpha), freight on and a yard at Alpha (5,000,000 cents). A yard cannot send materials before they are on, nor can a station without a yard (Gamma). With materials on, Alpha's yard sends them. A day and a minute at normal speed: each midnight (minutes 0 and 1440) every station gets 60 t of materials by road, 120 t each, 240 t supplied; the yard makes 25 hours of 50,000 thousandths of a ton (hours 0 to 24): 1,250,000 thousandths, 52 t and 2,000 over. No line, so no running cost: balance 100,000,000 - 2 x 1,000 - 5,000,000 = 94,998,000.",
   "initialState": {
     "worldWidth": 8192,
     "worldHeight": 4096,
-    "balance": 100000000,
+    "balance": 300000000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "paused"
@@ -157,7 +157,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 94998000,
+    "balance": 284994000,
     "freight": {
       "buildingMaterials": true,
       "delivered": 0,

@@ -57,7 +57,7 @@ final class Map3DTEMU2000Tests: XCTestCase {
 
     // MARK: The operating Puyuma (decisions 426, 484)
 
-    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
+    private var pack: Map3DModelPack { .unbaked }  // the recipes before decision 439's shade
 
     private func models(_ key: String) throws -> [Map3DModelPack.Model] {
         try XCTUnwrap(pack.layout(forType: key, count: 8)).map { pack.models[$0.model] }

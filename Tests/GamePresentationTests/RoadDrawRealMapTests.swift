@@ -144,4 +144,62 @@ final class RoadDrawRealMapTests: XCTestCase {
         XCTAssertEqual(session.world.roads?.built, Set(along))
         XCTAssertNil(try XCTUnwrap(session.busRoads).way(ofSaved: stops, station: nil).firstBroken, "the bus roads are as they were")
     }
+
+    /// Review L1-1: with many city routes, a tap on the player's road works
+    /// out again only the routes whose way goes along it, on a copy of the
+    /// bus roads. Before, every route was worked out twice and the bus
+    /// roads' networks were let go each time: 19 routes held the tap 2.1 s
+    /// (Linux debug).
+    func testTakingUpARoadWithManyRoutesIsQuick() throws {
+        let (session, middle) = try game()
+        let roads = try XCTUnwrap(session.world.roads)
+        let onRoads = try XCTUnwrap(session.busRoads)
+        var own: [CellPosition]?
+        search: for ring in 3...30 {
+            for start in RoadGrid.ring(ring, round: middle) {
+                let along = (0...4).map { CellPosition(row: start.row, column: start.column + $0) }
+                if along.allSatisfy({ !roads.cells.contains($0) }) {
+                    own = along
+                    break search
+                }
+            }
+        }
+        let road = try XCTUnwrap(own, "no five cells without a road by 大社路")
+        try session.performEdit { (world: inout GameWorld) throws(GameError) in
+            try world.buildRoad(along: road)
+        }
+        // City routes of three stops along the city's roads round it.
+        let cells = roads.cells.filter { abs($0.row - middle.row) < 40 && abs($0.column - middle.column) < 40 }
+            .sorted { ($0.row, $0.column) < ($1.row, $1.column) }
+        var made = 0, index = 0
+        while made < 20, index + 600 < cells.count {
+            let stops = [cells[index], cells[index + 300], cells[index + 600]]
+            index += 37
+            let way = onRoads.way(ofSaved: stops, station: nil)
+            guard way.firstBroken == nil, let metres = way.legMetres else { continue }
+            _ = try session.performEdit { (world: inout GameWorld) throws(GameError) -> BusRouteID in
+                try world.createBusRoute(to: nil, stops: stops, legMetres: metres, service: .every(minutes: 30), buses: 1).id
+            }
+            made += 1
+        }
+        XCTAssertGreaterThanOrEqual(made, 15, "city routes by 大社路")
+        // As the map draws them.
+        XCTAssertNotNil(session.busMapOverlay)
+        let version = try XCTUnwrap(session.busRoads).ownVersion
+        // What the check cost before: every route's way on roads worked
+        // out afresh (it did that twice).
+        let fresh = Date()
+        let again = try XCTUnwrap(session.busRoads).trying(ownRoads: roads.built.union(road))
+        for route in session.world.busRoutes { _ = again.way(ofSaved: route.stops, station: nil) }
+        let once = Date().timeIntervalSince(fresh)
+
+        let start = Date()
+        XCTAssertNil(session.routeBroken(byTakingUp: road, from: try XCTUnwrap(session.world.roads)))
+        let took = Date().timeIntervalSince(start)
+        XCTAssertLessThan(took, once, "the check took \(took) s, every way afresh \(once) s, with \(made) routes")
+        session.tapRoadTool(at: road[2].middle)
+        let removal = try XCTUnwrap(session.roadRemoval)
+        XCTAssertTrue(removal.canRemove, "no route goes along it")
+        XCTAssertEqual(try XCTUnwrap(session.busRoads).ownVersion, version, "the bus roads and the map's ways are left as they are")
+    }
 }

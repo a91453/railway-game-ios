@@ -49,7 +49,7 @@ final class RunDepotTests: XCTestCase {
         at places: [(x: Int, facingEast: Bool)] = [(1, true), (9, false)]
     ) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 12_288, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 12_288, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: minutes), speed: .normal)
         )
         try track.build(in: &world)
@@ -120,7 +120,7 @@ final class RunDepotTests: XCTestCase {
     func testUnderTrafficControlALateTrainLeavesItsRunToOneFromTheDepot() throws {
         func world(trafficControl: Bool) throws -> GameWorld {
             var world = try GameWorld(
-                bounds: WorldBounds(width: 12_288, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+                bounds: WorldBounds(width: 12_288, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
                 clock: GameClock(now: GameTime(minutes: 330), speed: .normal)
             )
             try track.build(in: &world)
@@ -338,7 +338,7 @@ final class RunDepotTests: XCTestCase {
     private func checkFixture(_ name: String, version: Int, writing: Bool) throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/\(name)")
-        var made = try makeWorld()
+        var made = try NTScale.$factor.withValue(3) { try makeWorld() }
         made.setEconomyMode(.management)
         try made.advance(ticks: 353)
         XCTAssertTrue(made.trains.allSatisfy(\.isDeadheading), "both on their way out")
@@ -351,11 +351,11 @@ final class RunDepotTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, version)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 500)
         XCTAssertEqual(loaded.line(id: main)?.depots, [west, east])
         XCTAssertTrue(loaded.line(id: main)?.hasRuns ?? false)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : \#(version),"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : \#(version),"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
         try loaded.advance(ticks: 30)
         XCTAssertEqual(loaded.line(id: main)?.runDays[0], 0, "and the runs leave")
     }

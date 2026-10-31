@@ -396,16 +396,17 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// (decision 168). Empty until set.
     public internal(set) var highSpeedFares: [HighSpeedFare] = []
 
-    /// Loans are taken and repaid $100,000 at a time.
-    public static let loanStep: Money = 10_000_000
-    /// The most the company may owe: $5,000,000.
-    public static let maximumLoan: Money = 500_000_000
+    /// Loans are taken and repaid NT$300,000 at a time (decision 499:
+    /// $100,000 times 3).
+    public static let loanStep: Money = 30_000_000
+    /// The most the company may owe: NT$15,000,000.
+    public static let maximumLoan: Money = 1_500_000_000
     /// The yearly interest, in hundredths of a percent: 5 %, over the
     /// finance report's 360-day year, charged daily.
     public static let interestBasisPoints: Int64 = 500
     /// Decision 131: the profit a day makes before tax that is not taxed,
-    /// $100,000, and the share of the rest paid as tax, in per cent: half.
-    public static let taxFreeProfit: Money = 10_000_000
+    /// NT$300,000, and the share of the rest paid as tax, in per cent: half.
+    public static let taxFreeProfit: Money = 30_000_000
     public static let taxPercent: Int64 = 50
 
     /// The economy panel shows the last 12 rows and the last hour's totals;

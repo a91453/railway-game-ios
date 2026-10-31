@@ -201,7 +201,7 @@ extension GameSession {
         main: [PlayerCommand.TrackStretch], run: [(edge: TrackEdgeID, reversed: Bool)], parallel: [PlayerCommand.TrackStretch],
         platforms: [ChainPlatform], wantsCrossover: (start: Bool, end: Bool), in world: GameWorld
     ) throws(GameError) -> DoubleChainPlan {
-        var draft = world.pricingCopy()
+        var draft = world.trackPreviewCopy()
         let built = try buildDoubleChain(main: main, parallel: parallel, platforms: platforms, in: &draft)
         let mainRun = main.isEmpty ? run : built.main.map { (edge: $0, reversed: false) }
         let atStart = wantsCrossover.start && !(parallel.first?.start.isNode ?? true)

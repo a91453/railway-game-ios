@@ -9,10 +9,10 @@ final class Map3DTrainSetTests: XCTestCase {
     /// Decision 496: the real light rails' sets, near and far.
     static let lightRails: Set = ["danhaiLRT", "danhaiLRTFar", "ankengLRT", "ankengLRTFar", "klrtCAF", "klrtCAFFar",
                                   "klrtCitadis", "klrtCitadisFar"]
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
     /// The recipes, their lamps lit as drawn (decision 449 lights a
     /// running car's in the pack only at its train's ends).
-    private let recipes = Map3DModelPack.unbaked
+    private var recipes: Map3DModelPack { .unbaked }
 
     /// Every set's cars are in the pack: a car's length and width, on the
     /// rail, up to a lowered pantograph's height, in their own colours (none

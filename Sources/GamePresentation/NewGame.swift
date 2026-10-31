@@ -216,22 +216,23 @@ extension GameWorld {
         }
     }()
 
-    /// What a new game starts with: $3,000,000, a first line and some to
+    /// What a new game starts with: NT$9,000,000, a first line and some to
     /// spare (ARCHITECTURE decision 46; the reference's starting cash is in
     /// its economy engine, which its snapshot does not have).
-    public static let startingBalance: Money = 300_000_000
+    public static let startingBalance: Money = 900_000_000
 }
 
 extension ConstructionCosts {
     /// A new game's prices (ARCHITECTURE decision 46), set so a first line
     /// pays for itself in about ten days of its fares less its running
-    /// costs: about $35,000 a day for each station of the city's ridership
-    /// at the standard fare. Track is $100,000 a kilometre on the ground
+    /// costs: about NT$105,000 a day for each station of the city's
+    /// ridership at the standard fare. Track is NT$300,000 a kilometre on
+    /// the ground
     /// (times 3 on a viaduct, 4 on a bridge, 5 in a tunnel), a station
-    /// $200,000, a train $150,000 with its first car and each car added
-    /// $40,000. The reference prices building in quotas, from its economy
+    /// NT$600,000, a train NT$450,000 with its first car and each car added
+    /// NT$120,000 (decision 499: the dollars these were set in, times 3). The reference prices building in quotas, from its economy
     /// engine, which its snapshot does not have.
-    public static let newGame = ConstructionCosts(track: 160_000, station: 20_000_000, train: 15_000_000, car: 4_000_000)
+    public static let newGame = ConstructionCosts(track: 480_000, station: 60_000_000, train: 45_000_000, car: 12_000_000)
 }
 
 /// A small prebuilt network for trying the game and testing it on a
@@ -554,12 +555,12 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     public enum Difficulty: String, CaseIterable, Codable, Sendable {
         case easy, standard, expert
 
-        /// $5,000,000, $3,000,000 or $1,500,000.
+        /// NT$15,000,000, NT$9,000,000 or NT$4,500,000.
         public var startingBalance: Money {
             switch self {
-            case .easy: 500_000_000
+            case .easy: 1_500_000_000
             case .standard: GameWorld.startingBalance
-            case .expert: 150_000_000
+            case .expert: 450_000_000
             }
         }
 

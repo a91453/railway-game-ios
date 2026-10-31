@@ -16,7 +16,7 @@ final class ZoningTests: XCTestCase {
     /// A managed world whose land sets ridership with town growth on, the
     /// station measured at 800 and 2 stations reached.
     private func world(land: [LandCell] = [LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)]) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         try world.setLand(land)
         world.setEconomyMode(.management)
         world.setLandDemand(true)
@@ -80,7 +80,7 @@ final class ZoningTests: XCTestCase {
         }
         XCTAssertEqual(world, before)
         // 200 cells a side: 128 is the most a side.
-        var large = GameWorld(bounds: try WorldBounds(width: 819_200, height: 819_200), economy: GameEconomy(balance: 0, costs: testCosts))
+        var large = GameWorld(bounds: try WorldBounds(width: 819_200, height: 819_200), economy: fixtureEconomy(balance: 0, costs: testCosts))
         XCTAssertEqual(try large.setZone(.reserved, rows: 0...127, columns: 72...199), 16_384)
         XCTAssertThrowsError(try large.setZone(.reserved, rows: 0...128, columns: 0...0))
         XCTAssertThrowsError(try large.setZone(nil, rows: 0...0, columns: 0...128))
@@ -112,9 +112,10 @@ final class ZoningTests: XCTestCase {
         // (10, 5)'s middle is 20,480 south of S0: w = 1000 − ⌊20480² × 1000
         // / 51200²⌋ = 840, S = 840 × 800 / 1000 = 672; (10, 6)'s is 4,096
         // east of that too: ⌊436,207,616,000 / 2,621,440,000⌋ = 166, w =
-        // 834, S = 667. Empty land (1,000), access 2 × 1,000.
-        XCTAssertEqual(world.landValue(row: 10, column: 5)?.value, 1_000 + 15 * 672 + 2_000)
-        XCTAssertEqual(world.landValue(row: 10, column: 6)?.value, 1_000 + 15 * 667 + 2_000)
+        // 834, S = 667. Empty land (3,000), 45 a point of S, access
+        // 2 × 3,000 (decision 499: every value times 3).
+        XCTAssertEqual(world.landValue(row: 10, column: 5)?.value, 3_000 + 45 * 672 + 6_000)
+        XCTAssertEqual(world.landValue(row: 10, column: 6)?.value, 3_000 + 45 * 667 + 6_000)
         world.spread(towards: station(of: world))
         // Shops: a quarter of 4 living there and three times 4 working.
         XCTAssertEqual(world.land.cell(row: 10, column: 5), LandCell(row: 10, column: 5, use: .commercial, residents: 1, jobs: 12))
@@ -150,8 +151,8 @@ final class ZoningTests: XCTestCase {
         // Both middles are 20,480 east or west and 20,480 south of S0:
         // ⌊838,860,800,000 / 2,621,440,000⌋ = 320, w = 680, S = 544, worth
         // 1,000 + 15 × 544 + 2,000 = 11,160. A tie goes to the lower column.
-        XCTAssertEqual(world.landValue(row: 10, column: 0)?.value, 11_160)
-        XCTAssertEqual(world.landValue(row: 10, column: 10)?.value, 11_160)
+        XCTAssertEqual(world.landValue(row: 10, column: 0)?.value, 33_480)
+        XCTAssertEqual(world.landValue(row: 10, column: 10)?.value, 33_480)
         var plain = world
         plain.spread(towards: station(of: plain))
         XCTAssertNotNil(plain.land.cell(row: 10, column: 0))
@@ -160,8 +161,8 @@ final class ZoningTests: XCTestCase {
         // from (10, 10)'s and 49,152 from (10, 0)'s: only the first lies
         // within 400 m (25,600).
         try world.placeBuilding(.house, at: PlanPoint(x: 51_200, y: 43_008))
-        XCTAssertEqual(world.landValue(row: 10, column: 10)?.companyPremium, 600)
-        XCTAssertEqual(world.landValue(row: 10, column: 10)?.value, 11_760)
+        XCTAssertEqual(world.landValue(row: 10, column: 10)?.companyPremium, 1_800)
+        XCTAssertEqual(world.landValue(row: 10, column: 10)?.value, 35_280)
         XCTAssertEqual(world.landValue(row: 10, column: 0)?.companyPremium, 0)
         world.spread(towards: station(of: world))
         XCTAssertNotNil(world.land.cell(row: 10, column: 10))
@@ -177,7 +178,7 @@ final class ZoningTests: XCTestCase {
         try world.setZone(.noDevelopment, rows: 10...10, columns: 11...11)
         try world.setZone(.reserved, rows: 10...10, columns: 13...13)
         try world.setZone(.office, rows: 10...10, columns: 12...12)
-        XCTAssertEqual(world.landValue(row: 10, column: 12)?.companyPremium, 600, "its own cell too")
+        XCTAssertEqual(world.landValue(row: 10, column: 12)?.companyPremium, 1_800, "its own cell too")
         XCTAssertEqual(world.landValue(row: 10, column: 11)?.companyPremium, 0, "no development is not zoned for a use")
         XCTAssertEqual(world.landValue(row: 10, column: 13)?.companyPremium, 0)
         XCTAssertEqual(world.landValue(row: 11, column: 12)?.companyPremium, 0, "not zoned")
@@ -279,7 +280,7 @@ final class ZoningTests: XCTestCase {
     /// 14, run ten minutes.
     static func zoningWorld() throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
@@ -310,11 +311,11 @@ final class ZoningTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 23)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.zoningWorld())
+        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.zoningWorld() })
         XCTAssertEqual(world.zones.cells.count, 15)
         XCTAssertEqual(world.zones.zone(row: 14, column: 11), .reserved)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 23,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 23,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v22-company-buildings.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.zones.isEmpty)

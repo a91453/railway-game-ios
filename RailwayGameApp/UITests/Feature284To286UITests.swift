@@ -29,7 +29,7 @@ final class Feature284To286UITests: XCTestCase {
         // toggle then folded the open card (main 30e3492's full lane, run
         // 40076217572). So the card's own mode first, the toggle only when
         // the card stays folded.
-        let platformMode = app.segmentedControls.buttons["月台"].firstMatch
+        let platformMode = app.segmentedControls.buttons["車站"].firstMatch
         if !platformMode.appears(within: 10) {
             let controls = app.buttons["controls.toggle"]
             if controls.appears(within: 5), controls.label == "展開控制項" { tap(controls) }

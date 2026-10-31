@@ -5,7 +5,7 @@ import XCTest
 
 /// Tests inspect generated geometry and runtime dispatch, not just recipe inputs.
 final class Map3DEMU3000Tests: XCTestCase {
-    private let pack=Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     func testAnActualWorldEMUUsesTheNewMeshesAtTheirOwnScale() throws {
         var world=try makeWorld(width:128_000,height:65_536,balance:100_000_000)

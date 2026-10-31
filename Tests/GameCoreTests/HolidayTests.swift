@@ -11,7 +11,7 @@ final class HolidayTests: XCTestCase {
     /// Four stations on a line, with demand, starting at game day `day`.
     private func world(_ disruptions: Disruptions? = Disruptions(level: .standard, country: "TW"), weekly: Bool = true, day: Int64 = 0) throws -> GameWorld {
         var world = GameWorld(
-            bounds: try WorldBounds(width: 16_384, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: try WorldBounds(width: 16_384, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(seconds: day * GameTime.secondsPerDay))
         )
         let track = TestLine(tiles: 14)
@@ -287,7 +287,7 @@ final class HolidayTests: XCTestCase {
     func testAPlanAsksForTodaysHolidayOnce() throws {
         func world(_ country: String) throws -> GameWorld {
             var world = GameWorld(
-                bounds: try WorldBounds(width: 131_072, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+                bounds: try WorldBounds(width: 131_072, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
                 clock: GameClock(now: GameTime(seconds: 10 * GameTime.secondsPerDay))
             )
             let track = TestLine(tiles: 121)
@@ -355,7 +355,7 @@ final class HolidayTests: XCTestCase {
     func testVersionThirtySevenKeepsTheHolidays() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v37-holidays.json")
-        var made = try world()
+        var made = try NTScale.$factor.withValue(3) { try world() }
         try made.advance(ticks: 30)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -368,7 +368,7 @@ final class HolidayTests: XCTestCase {
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, made)
         XCTAssertEqual(world.disruptions, Disruptions(level: .standard, country: "TW"))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 37,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 37,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

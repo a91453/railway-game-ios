@@ -23,7 +23,7 @@ final class TerrainTests: XCTestCase {
     /// down column 10 below it; one home cell at (5, 5), and town growth
     /// with the station S0 there, measured at 800.
     private func world() throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         try world.setWater(cells(0...4, 0...31) + cells(5...23, 10...10))
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
         world.setEconomyMode(.management)
@@ -58,7 +58,7 @@ final class TerrainTests: XCTestCase {
     }
 
     func testSettingWaterReplacesIt() throws {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         XCTAssertTrue(world.terrain.isEmpty)
         try world.setWater(cells(0...1, 0...31))
         XCTAssertEqual(world.terrain.water, [WaterRun(row: 0, column: 0, count: 32), WaterRun(row: 1, column: 0, count: 32)])
@@ -82,7 +82,7 @@ final class TerrainTests: XCTestCase {
         }
         XCTAssertEqual(world, before)
         // Land read as it is needed reads its water with its blocks.
-        var onDemand = GameWorld(bounds: Self.blocks, economy: GameEconomy(balance: 0, costs: testCosts))
+        var onDemand = GameWorld(bounds: Self.blocks, economy: fixtureEconomy(balance: 0, costs: testCosts))
         onDemand.setLandOnDemand()
         XCTAssertThrowsError(try onDemand.setWater([CellPosition(row: 0, column: 0)])) { XCTAssertEqual($0 as? GameError, .invalidTerrain) }
     }
@@ -94,12 +94,12 @@ final class TerrainTests: XCTestCase {
         }
         // A blank map's first town lies round the middle, (12, 16): its
         // cells in rows 4 and above, and in column 10, are left out.
-        var blank = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        var blank = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         blank.foundTowns(seed: 1)
         let dry = blank.land.cells.filter { $0.row > 4 && $0.column != 10 }
         XCTAssertGreaterThan(dry.count, 0)
         XCTAssertLessThan(dry.count, blank.land.cells.count)
-        var wet = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        var wet = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         try wet.setWater(cells(0...4, 0...31) + cells(5...23, 10...10))
         wet.foundTowns(seed: 1)
         XCTAssertEqual(wet.land.cells, dry)
@@ -195,7 +195,7 @@ final class TerrainTests: XCTestCase {
             XCTAssertEqual($0 as? GameError, .onWater(row: 4, column: 4))
         }
         // A world without water has no shore.
-        var dry = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        var dry = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         XCTAssertThrowsError(try dry.placeBuilding(.marina, at: PlanPoint(x: 14_336, y: 20_480))) { XCTAssertEqual($0 as? GameError, .needsShore) }
     }
 
@@ -206,27 +206,27 @@ final class TerrainTests: XCTestCase {
         func premium(_ row: Int, _ column: Int) -> Int64? {
             world.landValue(row: row, column: column)?.waterPremium
         }
-        XCTAssertEqual(premium(5, 5), 600, "64 m from the sea")
-        XCTAssertEqual(premium(6, 5), 600, "128 m")
+        XCTAssertEqual(premium(5, 5), 1_800, "64 m from the sea")
+        XCTAssertEqual(premium(6, 5), 1_800, "128 m")
         XCTAssertEqual(premium(7, 5), 0, "192 m")
-        XCTAssertEqual(premium(7, 8), 600, "128 m from the river")
+        XCTAssertEqual(premium(7, 8), 1_800, "128 m from the river")
         XCTAssertEqual(premium(7, 7), 0, "192 m from the river and the sea")
         // (6, 8): 128 m from the sea and from the river; (8, 9) beside the
         // river.
-        XCTAssertEqual(premium(6, 8), 600)
-        XCTAssertEqual(premium(8, 9), 600)
-        XCTAssertEqual(premium(2, 2), 600, "the sea itself")
+        XCTAssertEqual(premium(6, 8), 1_800)
+        XCTAssertEqual(premium(8, 9), 1_800)
+        XCTAssertEqual(premium(2, 2), 1_800, "the sea itself")
         let value = try XCTUnwrap(world.landValue(row: 7, column: 8))
-        XCTAssertEqual(value.value, value.base + value.servicePremium + value.accessPremium + 600)
+        XCTAssertEqual(value.value, value.base + value.servicePremium + value.accessPremium + 1_800)
         // A blank map's land is worth what it was.
-        let blank = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        let blank = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         XCTAssertEqual(blank.landValues().map(\.waterPremium).max(), 0)
         // Every cell agrees with working it out the long way.
         let wet = (0..<24).flatMap { row in (0..<32).filter { world.isWater(row: row, column: $0) }.map { (row, $0) } }
         for row in 0..<24 {
             for column in 0..<32 {
                 let near = wet.contains { let (dr, dc) = (Int64($0.0 - row) * 4_096, Int64($0.1 - column) * 4_096); return dr * dr + dc * dc < 10_240 * 10_240 }
-                XCTAssertEqual(premium(row, column), near ? 600 : 0, "(\(row), \(column))")
+                XCTAssertEqual(premium(row, column), near ? 1_800 : 0, "(\(row), \(column))")
             }
         }
     }
@@ -247,7 +247,7 @@ final class TerrainTests: XCTestCase {
     /// across the edge between them (columns 10 to 20) and a cell of land
     /// in each.
     private func readTwoBlocks(_ order: [Int]) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.blocks, economy: GameEconomy(balance: 0, costs: testCosts))
+        var world = GameWorld(bounds: Self.blocks, economy: fixtureEconomy(balance: 0, costs: testCosts))
         world.setLandOnDemand()
         for index in order {
             let block = LandBlock(row: 0, column: index)
@@ -272,7 +272,7 @@ final class TerrainTests: XCTestCase {
     }
 
     func testBadWaterInABlockIsRefusedAndGrownLandStays() throws {
-        var world = GameWorld(bounds: Self.blocks, economy: GameEconomy(balance: 0, costs: testCosts))
+        var world = GameWorld(bounds: Self.blocks, economy: fixtureEconomy(balance: 0, costs: testCosts))
         world.setLandOnDemand()
         let before = world
         let block = LandBlock(row: 0, column: 0)
@@ -305,7 +305,7 @@ final class TerrainTests: XCTestCase {
         XCTAssertEqual((terrain["water"] as? [Any])?.count, 5 + 19)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world)
         // A world without water writes none.
-        let dry = try JSONEncoder().encode(GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts)))
+        let dry = try JSONEncoder().encode(GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts)))
         XCTAssertFalse(String(decoding: dry, as: UTF8.self).contains("terrain"))
 
         func decodes(_ water: String, land: String? = nil, blocks: String? = nil) -> Bool {
@@ -336,7 +336,7 @@ final class TerrainTests: XCTestCase {
     /// ten minutes.
     static func shoreWorld() throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         let sea = (0...2).flatMap { row in (0...31).map { CellPosition(row: row, column: $0) } }
@@ -369,9 +369,9 @@ final class TerrainTests: XCTestCase {
         XCTAssertEqual(world.terrain.waterCellCount, 3 * 32 + 21)
         XCTAssertEqual(world.zones.cells.count, 5, "row 2 is the sea")
         XCTAssertEqual(world.placedBuildings.map(\.kind), [.house])
-        XCTAssertEqual(world.placedBuildings.first?.landCost, 256_000, "256 m² at the empty land's 1,000, as it was paid")
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 24,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(world.placedBuildings.first?.landCost, 768_000, "256 m² at the empty land's 1,000, as it was paid")
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 24,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v23-zoning.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.terrain.isEmpty)
@@ -391,12 +391,12 @@ final class TerrainTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 25)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.shoreWorld())
+        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.shoreWorld() })
         XCTAssertEqual(world.placedBuildings.map(\.kind), [.house, .marina])
         // 256 and 1,024 m² at 1,600 a m², the empty land's 1,000 and 600 by
         // the water.
-        XCTAssertEqual(world.placedBuildings.map(\.landCost), [409_600, 1_638_400])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 25,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(world.placedBuildings.map(\.landCost), [1_228_800, 4_915_200])
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 25,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

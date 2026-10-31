@@ -5,7 +5,7 @@ import XCTest
 
 /// ARCHITECTURE decision 230: the trains of the native 3D map, made in code.
 final class Map3DModelTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
         // Decision 244: and the street furniture after the trains (decision
@@ -108,8 +108,9 @@ final class Map3DModelTests: XCTestCase {
         for type in TrainTypeCatalog.builtIn {
             // Decision 318: the Chu-Kuang sets and the Blue Train have their
             // locomotives now (decision 399: and the steam train); the rest
-            // have no model.
-            let expected = !["MAGLEV", "SKYRAIL", "MONORAIL"].contains(type.code)
+            // have no model (decision 515: nor the Alishan mountain train
+            // yet, boxes as the real forest railway's trains are).
+            let expected = !["MAGLEV", "SKYRAIL", "MONORAIL", "ALISHAN"].contains(type.code)
             XCTAssertEqual(pack.models(forType: type.code) != nil, expected, type.code)
         }
         XCTAssertNotNil(pack.models(forType: ""), "a train with no type is a commuter EMU")
