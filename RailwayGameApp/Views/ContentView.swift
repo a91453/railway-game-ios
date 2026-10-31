@@ -143,19 +143,40 @@ struct ContentView: View {
                 // Decision 313: its "2D" button goes back to the 2D map
                 // where it looks, whichever way it opened, and Build there
                 // with the building tools out, as the dock's Build does.
+                // Decision 517: and back to this view as building ends.
                 Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, openedAt: screen.map3DOpenedAt,
                                    departure: screen.map3DDeparture,
                                    close: { screen.showsMap3D = false },
                                    handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
                                    toMap2D: { plan in back(to: plan) },
-                                   build: { plan in
+                                   build: { plan, view in
                     back(to: plan)
+                    screen.map3DBuildReturn.leftForBuilding(from: view, in: ObjectIdentifier(session))
                     session.selectTool(.network)
-                }, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
+                }, resumes: screen.map3DResume, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
             }
             // Decision 334: a station board's train is shown once.
             .onChange(of: screen.showsMap3D) { _, shown in
-                if !shown { screen.map3DDeparture = nil }
+                if !shown {
+                    screen.map3DDeparture = nil
+                    screen.map3DResume = nil
+                } else {
+                    // Decision 517: opened some other way, building ends on the 2D map.
+                    screen.map3DBuildReturn.forget()
+                }
+            }
+            // Decision 517: building the 3D map's Build started ends back
+            // on the 3D map, where it was left, at once (as it left).
+            .onChange(of: session.tool) { _, tool in
+                guard let view = screen.map3DBuildReturn.toolChanged(to: tool, in: ObjectIdentifier(session),
+                                                                     shows3D: map3DQuality.shows3D,
+                                                                     tutorialRuns: session.tutorial != nil) else { return }
+                screen.map3DHandoff = nil
+                screen.map3DOpenedAt = view.plan
+                screen.map3DResume = view
+                var cut = Transaction()
+                cut.disablesAnimations = true
+                withTransaction(cut) { screen.showsMap3D = true }
             }
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
@@ -1367,6 +1388,11 @@ final class GameScreenState {
     /// Decision 313, later: the 2D map's view when the 3D button opened the
     /// 3D map, which opens over the same place.
     var map3DOpenedAt: Map3DHandoff.Plan?
+    /// Decision 517: whether building started from the 3D map's Build,
+    /// and the view it left there; and that view while the 3D map opens
+    /// at it again.
+    var map3DBuildReturn = Map3DBuildReturn()
+    var map3DResume: Map3DBuildReturn.Viewpoint?
     /// Decision 334: the train on a station's board the 3D map opened
     /// for, shown at its platform.
     var map3DDeparture: Map3DNextDeparture?
