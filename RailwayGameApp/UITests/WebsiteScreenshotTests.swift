@@ -99,11 +99,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.dragUntilWhollyOnScreen(materials, in: list), "The materials row with its next step comes into view")
         settle()
         keep("materials-next-step", app)
-        // The platforms are in the operations group.
-        tapButton("station.jump", in: app)
-        tapButton("station.jump.operations", in: app)
-        settle()
+        // The platforms are in the operations group at the top, which never
+        // folds and so is not in the toolbar's jump menu: drag back up
+        // until the list has loaded their footer again.
         let footer = app.descendants(matching: .any)["station.platforms.footer"].firstMatch
+        for _ in 0..<20 where !footer.exists {
+            list?.swipeDown()
+        }
         XCTAssertTrue(app.dragUntilWhollyOnScreen(footer, in: list), "The platforms' footer comes into view")
         settle()
         keep("station-own-track", app)
