@@ -2492,10 +2492,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 
 - **做了的**（分支上已推，PR 是 draft）：`RunSpacing.swift` 的 `freePlatformPath`，停完還要開的車先找正線以外的空月台，再來是自己會準時讓出的月台，最後才照舊；規則、重現數字（舊 123 次 → 0）、參考對照與五方在 `docs/decisions/518.md`。第二個 commit（a4fbed1）修了 CI 抓到的回歸：分在兩段軌道上的月台（`TestLine`）的另一半不算「旁邊」（`across`），`LineAcquisitionTests.testVersionSixtySixKeepsTheLineBought` 因此回綠；`CallingLoopPlatformTests` 第五個測試鎖住它。
 - 本機 VERIFIED（a4fbed1）：`-warnings-as-errors` 乾淨；`CallingLoopPlatformTests` 5/5、`LineAcquisitionTests` 10/10、`RealLineAcquisitionTests` 12/12、Golden 24/24、ReplayFixtureTests、SavedGameTests 38/38、LongLegReplayTests 與 spacing、depot 類別。
-- **還沒做的**：CI run 41174302674 的 `rest` shard 到 20 分被取消，**0 個測試失敗**，最後一批沒跑完。每一類都比 #1599 的 `rest` 慢約 1.29 倍，連沒有班次的類別也一樣（PassengerCheckOnceTests 78.9 秒對 59.4、DeadlockSearchCostTests 67.2 對 51.7、Map3DTaichungGreenTests 9.0 對 0.2），所以像是 runner 慢，但還沒證明。下一棒：
-  1. 在本機分別用 main 與這個分支跑最慢的幾類（`grep -rl "class PassengerCheckOnceTests" Tests`，`DeadlockSearchCostTests` 也是），比時間。新的路徑搜尋（`straight` 那次 `path(from:toStation:)`）只在有班次、停完還要開的車選月台時跑。
-  2. 時間一樣：在 PR 留一次證據，讓 `rest` 再跑一次（failed jobs 已經重跑過一次，只能靠下一個真的 commit，例如這份交接的 commit）。慢了：先把 `straight` 記進 `memo`，或只在 `own > 0` 或目標是正線時才算。
-  3. 綠了：PR 轉 ready、#1579 留「可合併」、`send_message` 告訴遊戲規劃。不要合併。
+- **接手（session_01YGNNuowaMN8MBaj6QWbCLn，遊戲規劃第 37 任派，2026-10-31）**：合了 main（7b015d3，只這份檔案衝突，本節由 §4.36 改為 §4.39）。CI run 41193250249 全綠（rest 17.8 分）。rest 逐類和 main 的 run 41187751239 比：共同 595 類測試合計 664.2 秒對 674.6 秒（×1.016），沒有一類慢超過 1 秒；新加的只有 `CallingLoopPlatformTests`。`HighSpeedDemoDayTests`（campaigns-16）160.5 對 162.3 秒。所以之前的逾時是 rest 本來就太滿（main 8c2cc38a 已拆），不是這個 PR。
+- 沒有剩下的步驟；合併由遊戲規劃決定（排在 TRACELAG 後）。實機上高鐵示範的停站畫面 UNVERIFIED。
 
 ## 5. 已知、還沒派的待辦
 
