@@ -96,6 +96,40 @@ final class StationExpansionTests: XCTestCase {
         XCTAssertEqual(world, before)
     }
 
+    /// A busy station that turned no one away for want of room yesterday
+    /// or today stays as it is: more room would not carry more. A full
+    /// day counts for the day after too, not longer; a save keeps it and
+    /// rejects one no count backs or still to come.
+    func testOnlyAStationFullLatelyExpands() throws {
+        var world = try makeCorridor()
+        try world.advance(ticks: 1_440)
+        let index = try XCTUnwrap(world.passengers.firstIndex { $0.station == a })
+        let today = world.clock.now.seconds / 86_400
+        XCTAssertEqual(world.passengers[index].lastFullDay, today - 1, "A was full yesterday morning (no one comes at midnight)")
+        XCTAssertTrue(world.stationWasFullLately(a))
+        XCTAssertEqual(try roundTrip(world), world, "a save keeps the full day")
+
+        world.passengers[index].lastFullDay = today - 2
+        XCTAssertFalse(world.stationWasFullLately(a))
+        let before = world
+        XCTAssertThrowsGameError(try world.expandStation(at: a), .stationNotFullToExpand)
+        XCTAssertEqual(world, before)
+        world.passengers[index].lastFullDay = nil
+        XCTAssertThrowsGameError(try world.expandStation(at: a), .stationNotFullToExpand)
+        world.passengers[index].lastFullDay = today - 1
+        XCTAssertTrue(world.stationWasFullLately(a))
+        try world.expandStation(at: a)
+        XCTAssertEqual(world.station(id: a)?.expansion, .concourse)
+
+        world.passengers[index].lastFullDay = today + 1
+        XCTAssertThrowsError(try roundTrip(world), "a full day still to come")
+        var empty = try makeCorridor()
+        try empty.advance(ticks: 1)
+        let quiet = try XCTUnwrap(empty.passengers.firstIndex { $0.overflowed == 0 })
+        empty.passengers[quiet].lastFullDay = 0
+        XCTAssertThrowsError(try roundTrip(empty), "a full day with no one turned away")
+    }
+
     /// A depot is never expanded, and an expanded station cannot become
     /// one; taking the station down takes its expansions off the books.
     func testDepotsAndRemoval() throws {

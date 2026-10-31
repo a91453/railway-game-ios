@@ -1147,6 +1147,9 @@ extension GameWorld {
             guard let standing = station(id: record.station) else { return "Passengers wait at station \(id), which does not exist." }
             // Decision 506: an expanded station holds more.
             guard record.waitingCount <= standing.capacity else { return "More passengers wait at station \(id) than it holds." }
+            if let day = record.lastFullDay, day > clock.now.seconds / 86_400 {
+                return "Station \(id) was full on a day still to come."
+            }
             for group in record.waiting {
                 guard isServed(group, at: record.station, checkingLeg: { valid.contains($0) }, onFreightLines: true) else {
                     return "Passengers at station \(id) wait for a trip no line takes that way."

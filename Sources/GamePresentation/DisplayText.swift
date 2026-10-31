@@ -579,6 +579,11 @@ extension GameError {
                 "Expanding needs \(needed.groupedText) people a day through the station.",
                 "每日進出要達 \(needed.groupedText) 人次才能擴建。"
             )
+        case .stationNotFullToExpand:
+            language.text(
+                "The station was not full yesterday, so expanding would not carry more people.",
+                "這一站昨天沒有客滿，擴建也不會多載旅客。"
+            )
         case .lineAlreadyAcquired:
             language.text("This line is already yours.", "這條線已經是你的了。")
         case .invalidAcquisition:

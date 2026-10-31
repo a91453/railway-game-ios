@@ -1,7 +1,8 @@
 import GameCore
 
 // The station panel's expansion (decision 506): how many can wait at the
-// station, and the next expansion's price and the people a day it needs,
+// station, and the next expansion's price, the people a day it needs and
+// whether the station was full lately,
 // in English or Traditional Chinese. The player's text says what an
 // expansion does for them, not how it is worked out (#600).
 
@@ -25,6 +26,9 @@ public struct StationExpansionCard: Hashable, Sendable {
         public let threshold: Int64
         /// Whether yesterday's people reached the threshold.
         public let open: Bool
+        /// Whether the station turned anyone away for want of room
+        /// yesterday or today.
+        public let full: Bool
         public let affordable: Bool
     }
 
@@ -48,7 +52,8 @@ public struct StationExpansionCard: Hashable, Sendable {
         self.people = people
         if let next = world.nextStationExpansion(of: id) {
             offer = Offer(expansion: next, price: next.price, threshold: next.threshold,
-                          open: people >= next.threshold, affordable: world.economy.canAfford(next.price))
+                          open: people >= next.threshold, full: world.stationWasFullLately(id),
+                          affordable: world.economy.canAfford(next.price))
         } else {
             offer = nil
         }
@@ -73,6 +78,12 @@ public struct StationExpansionCard: Hashable, Sendable {
                 "每日進出達 \(offer.threshold.groupedText) 人次才能擴建（昨天 \(people.groupedText)）。"
             )
         }
+        guard offer.full else {
+            return language.text(
+                "Opens once the station fills and turns people away. It was not full yesterday.",
+                "車站客滿、有旅客進不來時才能擴建。昨天沒有客滿。"
+            )
+        }
         return language.text(
             "Room for \(offer.expansion.capacity.groupedText) waiting, so fewer are turned away when it fills.",
             "可容納 \(offer.expansion.capacity.groupedText) 人候車，客滿時少流失一些旅客。"
@@ -90,14 +101,14 @@ public struct StationExpansionCard: Hashable, Sendable {
 
     /// Whether the button can be pressed.
     public var canExpand: Bool {
-        offer.map { $0.open && $0.affordable } ?? false
+        offer.map { $0.open && $0.full && $0.affordable } ?? false
     }
 
     /// What the section says of itself.
     public static func explanation(in language: DisplayLanguage) -> String {
         language.text(
-            "When the station is full, those who come are turned away. A busy station can be expanded to hold more.",
-            "車站客滿時，再來的旅客會離開。人多的車站可以擴建，容納更多人候車。"
+            "When the station is full, those who come are turned away. A busy station that fills up can be expanded to hold more.",
+            "車站客滿時，再來的旅客會離開。人多又會客滿的車站可以擴建，容納更多人候車。"
         )
     }
 }

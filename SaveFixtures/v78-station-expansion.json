@@ -919,6 +919,7 @@
           "dailyTrips" : 1000000,
           "kind" : "residential"
         },
+        "lastFullDay" : 1,
         "overflowed" : 1367278,
         "released" : 1391278,
         "remainders" : [
@@ -1413,6 +1414,7 @@
           "dailyTrips" : 1000000,
           "kind" : "office"
         },
+        "lastFullDay" : 1,
         "overflowed" : 1182921,
         "released" : 1194921,
         "remainders" : [

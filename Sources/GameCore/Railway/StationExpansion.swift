@@ -94,6 +94,14 @@ extension GameWorld {
         return stationCommercePeople(of: id, onDay: today - 1)
     }
 
+    /// Whether station `id` turned a passenger away because it was full
+    /// yesterday or today: an expansion opens only then (decision 506; the
+    /// new game's stations reach the threshold long before they fill).
+    public func stationWasFullLately(_ id: StationID) -> Bool {
+        guard let day = passengers.first(where: { $0.station == id })?.lastFullDay else { return false }
+        return day >= clock.now.seconds / 86_400 - 1
+    }
+
     /// The expansion station `id` would get next, `nil` when it has had
     /// both or is not a station that can be expanded.
     public func nextStationExpansion(of id: StationID) -> StationExpansion? {
@@ -105,13 +113,15 @@ extension GameWorld {
     // MARK: - Commands
 
     /// Expands station `id` one step (decision 506), paying its price, kept
-    /// as a building asset (30 years). The station must have had the
-    /// step's threshold of people yesterday.
+    /// as a station asset (20 years). The station must have had the
+    /// step's threshold of people yesterday and turned a passenger away
+    /// for want of room yesterday or today.
     ///
     /// - Throws, in this order: ``GameError/unknownStation(_:)``,
     ///   ``GameError/stationIsDepot(_:)``,
     ///   ``GameError/stationExpansionMaxedOut``,
     ///   ``GameError/stationTooQuietToExpand(needed:)``,
+    ///   ``GameError/stationNotFullToExpand``,
     ///   ``GameError/insufficientFunds(required:available:)``.
     public mutating func expandStation(at id: StationID) throws(GameError) {
         guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
@@ -126,6 +136,7 @@ extension GameWorld {
         guard stationExpansionPeople(of: id) >= next.threshold else {
             throw .stationTooQuietToExpand(needed: next.threshold)
         }
+        guard stationWasFullLately(id) else { throw .stationNotFullToExpand }
         try economy.spend(next.price)
         setStationExpansion(next, at: index)
         acquireAsset(.stationExpansion, owner: id.rawValue, cost: next.price)

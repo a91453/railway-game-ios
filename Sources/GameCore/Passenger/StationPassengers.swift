@@ -138,6 +138,10 @@ public struct StationPassengers: Hashable, Sendable {
     public internal(set) var remainders: [DemandRemainder]
     /// How many wait in all: the sum of ``waiting``'s counts, kept with it.
     public private(set) var waitingCount: Int64
+    /// The last day (second ÷ 86400) a passenger released here was turned
+    /// away because the station was full, if any (decision 506: an
+    /// expansion opens only at a station full yesterday or today).
+    public internal(set) var lastFullDay: Int64?
 
     /// Passengers waiting at a station not expanded at most: the
     /// reference's `STATION_CAPACITY × 8`. One released when the station is
@@ -166,6 +170,7 @@ public struct StationPassengers: Hashable, Sendable {
         self.arrived = 0
         self.refused = 0
         self.remainders = []
+        self.lastFullDay = nil
     }
 
     /// The station's audit, given how many of its passengers are `riding`
@@ -198,6 +203,7 @@ public struct StationPassengers: Hashable, Sendable {
         }
         released += count
         overflowed += count - admitted
+        if admitted < count { lastFullDay = now.seconds / 86_400 }
     }
 
     mutating func release(_ count: Int64, along journey: PassengerJourney, at now: GameTime,
@@ -210,6 +216,7 @@ public struct StationPassengers: Hashable, Sendable {
         }
         released += count
         overflowed += count - admitted
+        if admitted < count { lastFullDay = now.seconds / 86_400 }
     }
 
     /// Admits a group arriving from another service. Its release and final
@@ -406,7 +413,7 @@ extension DemandRemainder: Codable {
 
 extension StationPassengers: Codable {
     private enum CodingKeys: String, CodingKey {
-        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders
+        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders, lastFullDay
     }
 
     /// Decodes a station's passengers. A station without demand has no
@@ -432,6 +439,7 @@ extension StationPassengers: Codable {
         let arrived = container.contains(.arrived) ? try container.decode(Int64.self, forKey: .arrived) : 0
         let refused = container.contains(.refused) ? try container.decode(Int64.self, forKey: .refused) : 0
         let remainders = try container.decode([DemandRemainder].self, forKey: .remainders)
+        let lastFullDay = try container.decodeIfPresent(Int64.self, forKey: .lastFullDay)
         func corrupt(_ key: CodingKeys, _ description: String) -> DecodingError {
             DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Station \(station.rawValue): \(description)")
         }
@@ -473,6 +481,11 @@ extension StationPassengers: Codable {
         else {
             throw corrupt(.released, "more passengers are accounted for than were released.")
         }
+        if let lastFullDay {
+            guard lastFullDay >= 0, overflowed > 0 else {
+                throw corrupt(.lastFullDay, "a station that never turned anyone away has no full day.")
+            }
+        }
         guard zip(remainders, remainders.dropFirst()).allSatisfy({ $0.destination < $1.destination }) else {
             throw corrupt(.remainders, "remainders must be listed once each, by ascending destination.")
         }
@@ -489,6 +502,7 @@ extension StationPassengers: Codable {
         self.arrived = arrived
         self.refused = refused
         self.remainders = remainders
+        self.lastFullDay = lastFullDay
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -508,5 +522,6 @@ extension StationPassengers: Codable {
             try container.encode(refused, forKey: .refused)
         }
         try container.encode(remainders, forKey: .remainders)
+        try container.encodeIfPresent(lastFullDay, forKey: .lastFullDay)
     }
 }

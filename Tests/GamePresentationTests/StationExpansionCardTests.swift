@@ -16,11 +16,12 @@ final class StationExpansionCardTests: XCTestCase {
         return world
     }
 
-    /// A new line's station is busy enough for the first expansion, not
-    /// yet for the second: the offer then says how busy it must get, and
-    /// the button cannot be pressed.
+    /// A new line's station is busy enough for the first expansion but
+    /// not full: the offer says it must fill first, and the button cannot
+    /// be pressed. Once full, it expands; the second step waits for a
+    /// busier station.
     func testTheSecondStepWaitsForABusierStation() throws {
-        let world = try world()
+        var world = try world()
         let station = world.stations[0].id
         var card = try XCTUnwrap(StationExpansionCard(station: station, in: world))
         XCTAssertNil(card.expansion)
@@ -33,6 +34,16 @@ final class StationExpansionCardTests: XCTestCase {
         XCTAssertEqual(card.capacityText(in: .traditionalChinese), "可容納 4,000 人候車・目前 \(card.waiting.groupedText) 人")
         XCTAssertGreaterThanOrEqual(card.people, StationExpansion.concourse.threshold, "the first line's town station is busy")
         XCTAssertLessThan(card.people, StationExpansion.hall.threshold, "but not a city's main station")
+        XCTAssertFalse(offer.full, "a new line's station does not fill")
+        XCTAssertFalse(card.canExpand)
+        XCTAssertEqual(card.offerText(in: .traditionalChinese), "車站客滿、有旅客進不來時才能擴建。昨天沒有客滿。")
+
+        // Full yesterday.
+        let index = try XCTUnwrap(world.passengers.firstIndex { $0.station == station })
+        world.passengers[index].lastFullDay = world.clock.now.seconds / 86_400 - 1
+        card = try XCTUnwrap(StationExpansionCard(station: station, in: world))
+        offer = try XCTUnwrap(card.offer)
+        XCTAssertTrue(offer.full)
         XCTAssertTrue(card.canExpand)
         XCTAssertEqual(card.offerTitle(in: .traditionalChinese), "擴建：擴大站廳・\(StationExpansion.concourse.price.moneyText)")
         XCTAssertEqual(card.offerText(in: .traditionalChinese), "可容納 8,000 人候車，客滿時少流失一些旅客。")
