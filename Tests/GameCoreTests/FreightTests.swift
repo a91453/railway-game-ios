@@ -26,7 +26,7 @@ final class FreightTests: XCTestCase {
     private func world(jobs: Int64 = 100, yards: Bool = true, freightLine: Bool = true, trains: Int = 1,
                        mode: EconomyMode = .management) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts)
         )
         try track.build(in: &world)
         try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
@@ -60,12 +60,15 @@ final class FreightTests: XCTestCase {
     // MARK: - The rules
 
     func testFareIsTonsByKilometresAtFiveDollars() {
-        // 40 t over 10 km: 400 t-km at $5 is $2,000.
-        XCTAssertEqual(Freight.fare(tons: 40, distance: 10_000 * WorldCoordinate.unitsPerMetre), Money(200_000))
-        // 40 t over 64 m: 1,280 cents, to the nearest dollar $13.
-        XCTAssertEqual(Freight.fare(tons: 40, distance: 4_096), Money(1_300))
-        // 1 t over 64 m: 32 cents, which is under half a dollar.
-        XCTAssertEqual(Freight.fare(tons: 1, distance: 4_096), Money(0))
+        // 40 t over 10 km: 400 t-km at NT$15 is NT$6,000.
+        XCTAssertEqual(Freight.fare(tons: 40, distance: 10_000 * WorldCoordinate.unitsPerMetre), Money(600_000))
+        // 40 t over 64 m: 3,840 cents, to the nearest dollar NT$38 (decision
+        // 499: rounded once from 3 times the cents, not 3 × $13).
+        XCTAssertEqual(Freight.fare(tons: 40, distance: 4_096), Money(3_800))
+        // 1 t over 64 m: 96 cents, to the nearest dollar NT$1.
+        XCTAssertEqual(Freight.fare(tons: 1, distance: 4_096), Money(100))
+        // 1 t over 16 m: 24 cents, which is under half a dollar.
+        XCTAssertEqual(Freight.fare(tons: 1, distance: 1_024), Money(0))
     }
 
     /// 100 jobs make 100 × 0.5 = 50 t a day: 2,083 thousandths of a ton an
@@ -132,9 +135,9 @@ final class FreightTests: XCTestCase {
         // Each 40 t over 64 m pays $13, in the hour's freight row.
         let rows = world.accounts.entries.filter { $0.kind == .hourlyFreight }
         XCTAssertFalse(rows.isEmpty)
-        XCTAssertTrue(rows.allSatisfy { $0.amount > .zero && $0.amount.amount % 1_300 == 0 })
+        XCTAssertTrue(rows.allSatisfy { $0.amount > .zero && $0.amount.amount % 3_800 == 0 })
         let paid = rows.reduce(Int64(0)) { $0 + $1.amount.amount }
-        XCTAssertEqual(paid + state.pendingRevenue.amount, state.delivered / 40 * 1_300, "every load let off paid $13")
+        XCTAssertEqual(paid + state.pendingRevenue.amount, state.delivered / 40 * 3_800, "every load let off paid NT$38")
         XCTAssertEqual(world.financeReport(.day).current.freightRevenue.amount, paid)
         XCTAssertEqual(world.financeReport(.day).current.operatingProfit.amount,
                        world.financeReport(.day).current.fareRevenue.amount + paid
@@ -325,7 +328,7 @@ final class FreightTests: XCTestCase {
     // MARK: - Commands
 
     func testCommandsAreCheckedInOrder() throws {
-        var off = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts))
+        var off = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts))
         try track.build(in: &off)
         try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &off)
         try track.buildStation(named: "Gamma", beside: 5, at: 0, in: &off)
@@ -354,7 +357,7 @@ final class FreightTests: XCTestCase {
         try world.setLineFreight(main, to: false)
 
         // A company that cannot pay is refused, and keeps its money.
-        var poor = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+        var poor = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts))
         try track.build(in: &poor)
         try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &poor)
         poor.enableFreight()
@@ -431,7 +434,7 @@ final class FreightTests: XCTestCase {
     /// A world without freight writes none of it; a world with it keeps it
     /// all, and the version says so.
     func testSavingKeepsFreightAndAWorldWithoutItWritesNone() throws {
-        var plain = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000, costs: testCosts))
+        var plain = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000, costs: testCosts))
         try track.build(in: &plain)
         let text = String(decoding: try JSONEncoder().encode(SavedGame(world: plain)), as: UTF8.self)
         XCTAssertFalse(text.contains("freight"), "a world with no freight is what it was")
@@ -508,7 +511,7 @@ final class FreightTests: XCTestCase {
     func testVersionThirtyEightKeepsItsFreight() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v38-freight.json")
-        var made = try world(jobs: 40_000)
+        var made = try NTScale.$factor.withValue(3) { try world(jobs: 40_000) }
         try hours(5, &made)
         while made.freight?.loads.isEmpty ?? true { try made.advance(ticks: 1) }
         let encoder = JSONEncoder()
@@ -520,13 +523,13 @@ final class FreightTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 38)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 3_000)
         let state = try XCTUnwrap(loaded.freight)
         XCTAssertEqual(state.onBoard, 40, "the train carries a load")
         XCTAssertTrue(state.isConserved)
         XCTAssertTrue(loaded.lines[0].isFreight)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 38,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 38,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
         // And it goes on: the load is let off and paid for.
         try loaded.advance(ticks: 30)
         XCTAssertGreaterThan(try XCTUnwrap(loaded.freight).delivered, state.delivered)

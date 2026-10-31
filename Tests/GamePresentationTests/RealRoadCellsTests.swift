@@ -249,7 +249,7 @@ final class RealRoadCellsTests: XCTestCase {
         let offer = try XCTUnwrap(session.world.stationRoadOffer(of: station.id, in: .english))
         XCTAssertTrue(offer.canBuild)
         XCTAssertEqual(offer.quote?.metres, 64)
-        XCTAssertEqual(offer.quote?.price, Money(320_000))
+        XCTAssertEqual(offer.quote?.price, Money(960_000))
         XCTAssertNotNil(session.perform(.buildStationRoad(station.id)) { _, _, _ in "" })
         XCTAssertNil(session.world.stationRoadOffer(of: station.id, in: .english), "\(String(describing: session.message))")
         XCTAssertFalse(try XCTUnwrap(session.world.roads).cells.isEmpty)

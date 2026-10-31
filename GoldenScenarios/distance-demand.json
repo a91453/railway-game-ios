@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 52,
+  "schemaVersion": 75,
   "description": "Decision 137: demand by distance and the outside connections, in a world 524288 x 196608 units (8.2 x 3.1 km). A stands at (100352, 100352), B 400 m east of it, D 1.75 km and C 3 km, on the line A-B-D-C; A starts 1000 trips a day and B, C and D draw 1000 each. Off, A's 1000 are shared equally by B, C and D: 334, 333, 333. With demand by distance each pair keeps a share of its trips by its straight-line distance, a tenth up to 500 m, all from 2 km and in a straight line between: 334 x 100 = 33, 333 x 1000 = 333, 333 x 850 = 283 (thousandths, rounded half up). Then the company is managed and the land, homes of 1000 residents on A's cell (row 24, column 24), sets the ridership: A and B share the cell by nearness (1000 : 750), 571 and 429 residents, 228 and 172 trips; C and D reach no land and have none. E stands 20000 units (312 m) inside the east edge, on the line Out from A. Without the outside connections it has no ridership and A sends B its 228, of which 400 m keep 23. With them E is an outside connection: the outside's 6000 trips a day are all its, A's 228 go 6 to B (kept 1) and 222 to E, all kept, and E's 6000 all go to A, the one station it reaches with ridership. A trip to or from E pays the standard 500 and the city's baseline of 75 more: 575.",
   "initialState": {
     "worldWidth": 524288,
     "worldHeight": 196608,
-    "balance": 100000,
+    "balance": 300000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "paused"
@@ -427,7 +427,7 @@
       },
       "expect": {
         "found": true,
-        "fare": 500
+        "fare": 1500
       }
     },
     {
@@ -555,7 +555,7 @@
       },
       "expect": {
         "found": true,
-        "fare": 575
+        "fare": 1725
       }
     },
     {
@@ -566,7 +566,7 @@
       },
       "expect": {
         "found": true,
-        "fare": 575
+        "fare": 1725
       }
     },
     {
@@ -577,7 +577,7 @@
       },
       "expect": {
         "found": true,
-        "fare": 500
+        "fare": 1500
       }
     },
     {
@@ -692,7 +692,7 @@
   "expectedFinalState": {
     "gameMinutes": 0,
     "speed": "paused",
-    "balance": 95000,
+    "balance": 285000,
     "stations": [
       {
         "id": 1,

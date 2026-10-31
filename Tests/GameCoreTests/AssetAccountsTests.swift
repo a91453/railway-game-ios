@@ -166,15 +166,15 @@ final class AssetAccountsTests: XCTestCase {
 
     func testLoansAreFinancingCashFlows() throws {
         var world = try world()
-        try world.borrow(Money(30_000_000))
-        try world.repayLoan(Money(10_000_000))
+        try world.borrow(Money(90_000_000))
+        try world.repayLoan(Money(30_000_000))
         let today = world.financeReport(.day).current
-        XCTAssertEqual(today.loanBorrowed, 30_000_000)
-        XCTAssertEqual(today.loanRepaid, 10_000_000)
-        XCTAssertEqual(today.financingCashFlow, 20_000_000)
+        XCTAssertEqual(today.loanBorrowed, 90_000_000)
+        XCTAssertEqual(today.loanRepaid, 30_000_000)
+        XCTAssertEqual(today.financingCashFlow, 60_000_000)
         XCTAssertEqual(today.netProfit, .zero)
         let sheet = world.balanceSheet()
-        XCTAssertEqual(sheet.loan, 20_000_000)
+        XCTAssertEqual(sheet.loan, 60_000_000)
         XCTAssertEqual(sheet.equity, Self.start, "borrowing leaves the company worth the same")
     }
 
@@ -189,15 +189,15 @@ final class AssetAccountsTests: XCTestCase {
         let closed = try XCTUnwrap(world.accounts.years.first)
         XCTAssertEqual(world.accounts.years.count, 1)
         XCTAssertEqual(closed.year, 0)
-        // 360 days of 230 cents, and $14 interest a day.
+        // 360 days of 230 cents, and NT$42 interest a day.
         XCTAssertEqual(closed.income.depreciationCost, 82_800)
-        XCTAssertEqual(closed.income.interestCost, Money(360 * 1_400))
+        XCTAssertEqual(closed.income.interestCost, Money(360 * 4_200))
         XCTAssertEqual(closed.income.capitalSpending, 1_224_000)
         XCTAssertEqual(closed.income.loanBorrowed, CompanyAccounts.loanStep)
-        XCTAssertEqual(closed.income.netProfit, Money(-82_800 - 504_000))
-        XCTAssertEqual(closed.income.netCashFlow, Money(-1_224_000 - 504_000) + CompanyAccounts.loanStep)
+        XCTAssertEqual(closed.income.netProfit, Money(-82_800 - 1_512_000))
+        XCTAssertEqual(closed.income.netCashFlow, Money(-1_224_000 - 1_512_000) + CompanyAccounts.loanStep)
         XCTAssertEqual(closed.closing, world.balanceSheet())
-        XCTAssertEqual(closed.closing.cash, Self.start + CompanyAccounts.loanStep - Money(1_224_000 + 504_000))
+        XCTAssertEqual(closed.closing.cash, Self.start + CompanyAccounts.loanStep - Money(1_224_000 + 1_512_000))
         XCTAssertEqual(closed.closing.fixedAssets, Money(1_224_000 - 82_800))
         XCTAssertEqual(closed.closing.equity, Self.start + Money(closed.income.netProfit.amount))
         XCTAssertNil(world.accountsProblem())

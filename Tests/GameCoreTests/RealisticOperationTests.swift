@@ -228,7 +228,7 @@ final class RealisticOperationTests: XCTestCase {
     func testVersionFiftyThreeKeepsRealisticOperation() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v53-realistic-operation.json")
-        var made = try build(realistic: true, performance: .highSpeed)
+        var made = try NTScale.$factor.withValue(3) { try build(realistic: true, performance: .highSpeed) }
         try made.setLineDwell(main, seconds: 90)
         _ = try trainOnLine(&made)
         try made.advance(ticks: 3 * 60)
@@ -243,11 +243,11 @@ final class RealisticOperationTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 53)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(loaded, made)
+        try XCTAssertSameButRounding(loaded, made, cents: 400)
         XCTAssertTrue(loaded.realisticOperation)
         XCTAssertEqual(loaded.line(id: main)?.dwellSeconds, 90)
         XCTAssertGreaterThan(loaded.lineDays(main).reduce(0) { $0 + $1.tally.trips }, 0, "it has counted trips")
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 53,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 53,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

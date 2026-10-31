@@ -10,10 +10,12 @@ import GameCore
 /// either way.
 ///
 /// The game has one class of car, so the business car's fares (and the
-/// unreserved car's, a few dollars less) are not used. Its money is not
-/// yet the New Taiwan dollar: NT$10 is the game's $1, which keeps the
-/// level of decision 168's kilometre fare (Taipei to Zuoying $153 by the
-/// kilometre, NT$1,490 here and so $149).
+/// unreserved car's, a few dollars less) are not used. Since decision 499
+/// the game's money is the New Taiwan dollar, so the table is used as it
+/// is (it was NT$10 to the game's dollar before). The kilometre fare a
+/// line without a table pays stays the reference's times 3, NT$1.35
+/// (``HighSpeed/centsPerKilometre``), so the demo's real fares are some
+/// three times what the kilometres would ask.
 enum HighSpeedFares {
     /// The real fares in New Taiwan dollars, by the demo's stations
     /// (``HighSpeedDemo/stationNames``), north to south.
@@ -32,8 +34,8 @@ enum HighSpeedFares {
         [ 1530,  1490,  1460,  1330,  1200,  1060,   790,   670,   560,   410,   140,     0], // 左營
     ]
 
-    /// The game's cents in a New Taiwan dollar: NT$10 is $1.
-    static let centsPerNewTaiwanDollar: Int64 = 10
+    /// The game's cents in a New Taiwan dollar.
+    static let centsPerNewTaiwanDollar: Int64 = 100
 
     /// The fares the demo's trips pay, in the game's money.
     static let standard: [[Money]] = newTaiwanDollars.map { row in row.map { Money($0 * centsPerNewTaiwanDollar) } }

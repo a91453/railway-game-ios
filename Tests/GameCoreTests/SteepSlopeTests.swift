@@ -21,7 +21,7 @@ final class SteepSlopeTests: XCTestCase {
     /// and a lake at rows 20 to 23, columns 0 to 3; one home cell at
     /// (5, 5), and town growth with the station S0 there, measured at 800.
     private func world() throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
         try world.setWater(cells(20...23, 0...3))
         try world.setSteep(cells(0...23, 7...31))
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
@@ -72,7 +72,7 @@ final class SteepSlopeTests: XCTestCase {
         XCTAssertEqual(world.land.cell(row: 5, column: 9)?.residents, 50)
         XCTAssertNil(world.terrainProblem())
         // Land read as it is needed reads its slopes with its blocks.
-        var onDemand = GameWorld(bounds: Self.blocks, economy: GameEconomy(balance: 0, costs: testCosts))
+        var onDemand = GameWorld(bounds: Self.blocks, economy: fixtureEconomy(balance: 0, costs: testCosts))
         onDemand.setLandOnDemand()
         XCTAssertThrowsError(try onDemand.setSteep([CellPosition(row: 0, column: 0)])) { XCTAssertEqual($0 as? GameError, .invalidTerrain) }
     }
@@ -115,7 +115,7 @@ final class SteepSlopeTests: XCTestCase {
         XCTAssertEqual(try world.setZone(.commercial, rows: 2...3, columns: 5...9), 4)
         XCTAssertEqual(world.zones.cells.map(\.position), cells(2...3, 5...6))
         // Water first: still onWater, as before decision 115.
-        var wet = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        var wet = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         try wet.setWater([CellPosition(row: 0, column: 0)])
         try wet.setSteep([CellPosition(row: 0, column: 1)])
         XCTAssertThrowsError(try wet.setZone(.office, rows: 0...0, columns: 0...1)) { XCTAssertEqual($0 as? GameError, .onWater(row: 0, column: 0)) }
@@ -139,11 +139,11 @@ final class SteepSlopeTests: XCTestCase {
     }
 
     func testTownsOfAMapWithNoOneLeaveTheMountainOut() throws {
-        var blank = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        var blank = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         blank.foundTowns(seed: 1)
         let flat = blank.land.cells.filter { $0.column < 7 }
         XCTAssertLessThan(flat.count, blank.land.cells.count)
-        var hilly = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 0, costs: testCosts))
+        var hilly = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 0, costs: testCosts))
         try hilly.setSteep(cells(0...23, 7...31))
         hilly.foundTowns(seed: 1)
         XCTAssertEqual(hilly.land.cells, flat)
@@ -160,7 +160,7 @@ final class SteepSlopeTests: XCTestCase {
     // MARK: - Land read as it is needed
 
     private func readTwoBlocks(_ order: [Int]) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.blocks, economy: GameEconomy(balance: 0, costs: testCosts))
+        var world = GameWorld(bounds: Self.blocks, economy: fixtureEconomy(balance: 0, costs: testCosts))
         world.setLandOnDemand()
         for index in order {
             let columns = index == 0 ? 12...15 : 16...19
@@ -179,7 +179,7 @@ final class SteepSlopeTests: XCTestCase {
         XCTAssertEqual(westFirst.land.cell(row: 5, column: 13)?.residents, 10, "land on a slope")
         XCTAssertNil(westFirst.terrainProblem())
 
-        var world = GameWorld(bounds: Self.blocks, economy: GameEconomy(balance: 0, costs: testCosts))
+        var world = GameWorld(bounds: Self.blocks, economy: fixtureEconomy(balance: 0, costs: testCosts))
         world.setLandOnDemand()
         let before = world
         for (water, steep) in [
@@ -227,7 +227,7 @@ final class SteepSlopeTests: XCTestCase {
     /// minutes.
     static func slopeWorld() throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         let sea = (0...2).flatMap { row in (0...31).map { CellPosition(row: row, column: $0) } }
@@ -262,11 +262,11 @@ final class SteepSlopeTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 26)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.slopeWorld())
+        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.slopeWorld() })
         XCTAssertEqual(world.terrain.steepCellCount, 21 * 12)
         XCTAssertEqual(world.land.cell(row: 6, column: 22)?.residents, 50)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 26,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 26,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
 
         let older = try Data(contentsOf: Self.fixtures.appendingPathComponent("v25-shore-buildings.json"))
         XCTAssertTrue(try JSONDecoder().decode(SavedGame.self, from: older).world.terrain.steep.isEmpty)

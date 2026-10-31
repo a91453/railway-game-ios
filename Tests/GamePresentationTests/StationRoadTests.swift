@@ -27,7 +27,7 @@ final class StationRoadTests: XCTestCase {
         let quote = try world.stationRoadQuote(at: station.id)
         // Three cells to the seed square's edge, $50 a metre.
         XCTAssertEqual(quote.metres, 192)
-        XCTAssertEqual(quote.price, Money(960_000))
+        XCTAssertEqual(quote.price, Money(2_880_000))
         let offer = try XCTUnwrap(world.stationRoadOffer(of: station.id, in: .english))
         XCTAssertTrue(offer.canBuild)
         XCTAssertEqual(offer.quote, quote)

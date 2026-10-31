@@ -64,7 +64,7 @@ final class CityRequestsSessionTests: XCTestCase {
         let row = try XCTUnwrap(world.cityRequestRows(in: .english).first { $0.kind == .stationRiders })
         XCTAssertEqual(row.title, "More riders at Home")
         XCTAssertEqual(row.detail, "From 1500 to 2100 planned trips a day within 60 days.")
-        XCTAssertEqual(row.reward, Money(20_000_000))
+        XCTAssertEqual(row.reward, Money(60_000_000))
         XCTAssertFalse(row.isActive)
         XCTAssertEqual(row.progressText, "1500 / 2100 trips a day")
         XCTAssertEqual(row.daysLeft, 30, "open until the next month's offers")

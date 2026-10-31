@@ -78,8 +78,8 @@ final class TourismTests: XCTestCase {
     /// Home (1, residential, 1,000 trips) and Foot (2, scenic, none) on line
     /// Main with a train; a 3-star town 15.6 m from Foot. The world is so
     /// small that both stations are outside connections.
-    private func world(attractionAt x: Int64 = 6_632) throws -> GameWorld {
-        var world = try GameWorld(bounds: WorldBounds(width: 12_288, height: 3_072), economy: GameEconomy(balance: 100_000_000, costs: testCosts))
+    private func world(attractionAt x: Int64 = 6_632, balance: Money = 300_000_000) throws -> GameWorld {
+        var world = try GameWorld(bounds: WorldBounds(width: 12_288, height: 3_072), economy: fixtureEconomy(balance: balance, costs: testCosts))
         try world.buildStation(named: "Home", at: PlanPoint(x: 1_536, y: 1_536))
         try world.buildStation(named: "Foot", at: PlanPoint(x: 5_632, y: 1_536))
         let line = try world.createLine(named: "Main", stops: [home, foot]).id
@@ -171,7 +171,7 @@ final class TourismTests: XCTestCase {
             XCTAssertEqual(world.accounts.assets.filter { $0.kind == .souvenirShop }.count, 1)
             world.setTourism(replacement)
             XCTAssertTrue(world.accounts.assets.filter { $0.kind == .souvenirShop }.isEmpty)
-            XCTAssertEqual(world.accounts.capitalDays.last?.writeOff, Money(30_000_000))
+            XCTAssertEqual(world.accounts.capitalDays.last?.writeOff, Money(90_000_000))
             let data = try JSONEncoder().encode(SavedGame(world: world))
             XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         }
@@ -181,7 +181,7 @@ final class TourismTests: XCTestCase {
         var world = try world()
         let before = world.economy.balance
         try world.investInSouvenirShop(of: AttractionID(rawValue: 1))
-        XCTAssertEqual(before - world.economy.balance, Money(30_000_000))
+        XCTAssertEqual(before - world.economy.balance, Money(90_000_000))
         // Free play keeps no accounts.
         XCTAssertTrue(world.accounts.assets.isEmpty)
         var poor = try self.world()
@@ -191,8 +191,8 @@ final class TourismTests: XCTestCase {
             try poor.investInSouvenirShop(of: AttractionID(rawValue: 1))
             return try XCTUnwrap(poor.accounts.assets.first { $0.kind == .souvenirShop })
         }()
-        XCTAssertEqual(poor.accounts.assets.filter { $0.kind == .souvenirShop }.map(\.cost), [Money(30_000_000), Money(30_000_000)], "a record a level")
-        XCTAssertEqual(record.cost, Money(30_000_000))
+        XCTAssertEqual(poor.accounts.assets.filter { $0.kind == .souvenirShop }.map(\.cost), [Money(90_000_000), Money(90_000_000)], "a record a level")
+        XCTAssertEqual(record.cost, Money(90_000_000))
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(poor)), poor)
     }
 
@@ -202,7 +202,7 @@ final class TourismTests: XCTestCase {
     /// written down once the first level was.
     func testTheSecondLevelIsWrittenDownFromWhenItWasBought() throws {
         let life = AssetClass.buildings.lifeDays
-        let daily = Money(30_000_000 / life)
+        let daily = Money(90_000_000 / life)
         for daysWritten in [Int64(100), life] {
             var world = try self.world()
             world.setEconomyMode(.management)
@@ -288,8 +288,8 @@ final class TourismTests: XCTestCase {
         // 315 tourists spend $4 × 1 in the shop: $1,260; upkeep 0.05% of $300,000 = $150.
         let row = try XCTUnwrap(world.accounts.entries.last { $0.kind == .dailyTourism })
         XCTAssertEqual(row.breakdown, [
-            LedgerLine(item: .tourismRevenue, amount: Money(126_000)),
-            LedgerLine(item: .tourismUpkeep, amount: Money(-15_000)),
+            LedgerLine(item: .tourismRevenue, amount: Money(378_000)),
+            LedgerLine(item: .tourismUpkeep, amount: Money(-45_000)),
         ])
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
@@ -331,7 +331,7 @@ final class TourismTests: XCTestCase {
     func testVersionFortySevenKeepsTourism() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v47-tourism.json")
-        var made = try world()
+        var made = try NTScale.$factor.withValue(3) { try world(balance: 100_000_000) }
         made.setEconomyMode(.management)
         try made.investInSouvenirShop(of: AttractionID(rawValue: 1))
         made.setSpeed(.normal)
@@ -356,9 +356,9 @@ final class TourismTests: XCTestCase {
         XCTAssertEqual(sight.souvenir, 1)
         XCTAssertEqual(sight.yesterday, 315)
         XCTAssertEqual(sight.thisYear, 315)
-        XCTAssertEqual(loaded.accounts.assets.filter { $0.kind == .souvenirShop }.map(\.cost), [Money(30_000_000)])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 47,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(loaded.accounts.assets.filter { $0.kind == .souvenirShop }.map(\.cost), [Money(90_000_000)])
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 47,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     /// A save from before decision 174 has no tourism.
@@ -375,7 +375,7 @@ final class TourismTests: XCTestCase {
     /// last: the tourists of a network game come over routes of the track,
     /// and the plan releases what the queries give.
     func testNetworkTouristsRideTheTrackAndTheNetworkPlanAgrees() throws {
-        var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 4_096), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 4_096), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts))
         let track = TestLine(tiles: 14)
         try track.build(in: &world)
         let ids = (1...4).map { StationID(rawValue: $0) }

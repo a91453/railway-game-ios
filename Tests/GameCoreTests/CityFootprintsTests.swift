@@ -20,7 +20,7 @@ final class CityFootprintsTests: XCTestCase {
     /// (5, 5) and a D4 home of 1,000 on cell (5, 9), with the city's
     /// buildings on, and the footprints as `footprints`.
     private func world(footprints: Bool) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
         try world.setLand([
             LandCell(row: 5, column: 5, use: .residential, residents: 4, jobs: 0),
             LandCell(row: 5, column: 9, use: .residential, residents: 1_000, jobs: 3),
@@ -70,9 +70,9 @@ final class CityFootprintsTests: XCTestCase {
         let home = try XCTUnwrap(on.land.cell(row: 5, column: 5)), tower = try XCTUnwrap(on.land.cell(row: 5, column: 9))
         let value = try XCTUnwrap(on.landValue(row: 5, column: 5)).value
         XCTAssertEqual(try XCTUnwrap(off.landValue(row: 5, column: 5)).value, value)
-        // Two storeys of 1,536 m² at $40, and 20 × 20 m (40 × 40 m) of land,
-        // a fifth more.
-        let floor: Int64 = 2 * 1_536 * 4_000
+        // Two storeys of 1,536 m² at NT$120, and 20 × 20 m (40 × 40 m) of
+        // land, a fifth more.
+        let floor: Int64 = 2 * 1_536 * 12_000
         XCTAssertEqual(on.buyOutPrice(of: home), Money((floor + 400 * value) * 120 / 100))
         XCTAssertEqual(off.buyOutPrice(of: home), Money((floor + 1_600 * value) * 120 / 100))
         XCTAssertLessThan(on.buyOutPrice(of: home), off.buyOutPrice(of: home))
@@ -122,7 +122,7 @@ final class CityFootprintsTests: XCTestCase {
     /// city then puts up there, which may be denser than the cell's now
     /// (decision 130 with decision 142).
     func testASoldBuildingsPeopleDoNotMoveIntoAnotherBuildingsSquare() throws {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
         try world.setLand([LandCell(row: 5, column: 5, use: .office, residents: 0, jobs: 150)])
         world.setCityBuildings(true)
         world.setEconomyMode(.management)
@@ -149,7 +149,7 @@ final class CityFootprintsTests: XCTestCase {
     /// cell's now: here 20 jobs are a D1 square the house beside it clears,
     /// and 150 a D2 square it does not.
     func testASoldBuildingsPeopleKeepClearWithTheCitysBuildingsOff() throws {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
         try world.setLand([LandCell(row: 5, column: 5, use: .office, residents: 0, jobs: 20)])
         world.setEconomyMode(.management)
         world.setCityFootprints(true)
@@ -180,7 +180,7 @@ final class CityFootprintsTests: XCTestCase {
     func testVersionThirtyThreeKeepsTheCitysFootprints() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v33-city-footprints.json")
-        var made = try world(footprints: true)
+        var made = try NTScale.$factor.withValue(3) { try world(footprints: true) }
         _ = try made.placeBuilding(.office, at: Self.besideTheHome)
         made.setSpeed(.normal)
         try made.advance(ticks: 10)
@@ -196,8 +196,8 @@ final class CityFootprintsTests: XCTestCase {
         XCTAssertEqual(world, made)
         XCTAssertTrue(world.cityFootprints)
         XCTAssertNotNil(world.land.cell(row: 5, column: 5))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 33,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 33,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }
 

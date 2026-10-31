@@ -19,23 +19,23 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(Money(55).centsText, "\(Money.currencySymbol) 0.55")
         XCTAssertEqual(Money(500).centsText, "\(Money.currencySymbol) 5.00")
         XCTAssertEqual(Money(123_405).centsText, "\(Money.currencySymbol) 1,234.05")
-        XCTAssertEqual(FareRules.standard.displayText(in: .english), "Flat · \(Money(500).centsText)")
-        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: .english), "By distance · 5 steps from \(Money(55).centsText)")
+        XCTAssertEqual(FareRules.standard.displayText(in: .english), "Flat · \(Money(1_500).centsText)")
+        XCTAssertEqual(FareRules.distance(FareRules.standardBands).displayText(in: .english), "By distance · 5 steps from \(Money(1_100).centsText)")
     }
 
     /// Decision 67: the loan's words and the session's loan commands.
     @MainActor
     func testTheLoanIsShownAndTakenInSteps() throws {
         XCTAssertEqual(CompanyAccounts().loanText(in: .english), "No loan")
-        XCTAssertEqual(CompanyAccounts.loanTermsText(in: .english), "\(Money(10_000_000).moneyText) at a time, up to \(Money(500_000_000).moneyText), at 5% a year, paid daily")
+        XCTAssertEqual(CompanyAccounts.loanTermsText(in: .english), "\(Money(30_000_000).moneyText) at a time, up to \(Money(1_500_000_000).moneyText), at 5% a year, paid daily")
         let session = GameSession(world: GameWorld.newGame())
         let balance = session.world.economy.balance
         session.borrowLoanStep()
         XCTAssertEqual(session.world.accounts.loan, CompanyAccounts.loanStep)
         XCTAssertEqual(session.world.economy.balance, balance + CompanyAccounts.loanStep)
-        XCTAssertEqual(session.message?.text, "Borrowed \(Money(10_000_000).moneyText).")
-        XCTAssertEqual(session.world.accounts.loanText(in: .english), "Loan \(Money(10_000_000).moneyText) · \(Money(1_400).moneyText) a day in interest")
-        XCTAssertEqual(session.world.accounts.loanText(in: .traditionalChinese), "貸款 \(Money(10_000_000).moneyText) · 每日利息 \(Money(1_400).moneyText)")
+        XCTAssertEqual(session.message?.text, "Borrowed \(Money(30_000_000).moneyText).")
+        XCTAssertEqual(session.world.accounts.loanText(in: .english), "Loan \(Money(30_000_000).moneyText) · \(Money(4_200).moneyText) a day in interest")
+        XCTAssertEqual(session.world.accounts.loanText(in: .traditionalChinese), "貸款 \(Money(30_000_000).moneyText) · 每日利息 \(Money(4_200).moneyText)")
         session.repayLoanStep()
         XCTAssertEqual(session.world.accounts.loan, .zero)
         session.repayLoanStep()
@@ -113,7 +113,7 @@ final class EconomyDisplayTests: XCTestCase {
             XCTAssertNil(session.world.accounts.fareRules)
             session.setFareRules(.distance(FareRules.standardBands))
             XCTAssertEqual(session.world.accounts.fareRules, .distance(FareRules.standardBands))
-            XCTAssertEqual(session.message?.text, "Fares: By distance · 5 steps from \(Money(55).centsText).")
+            XCTAssertEqual(session.message?.text, "Fares: By distance · 5 steps from \(Money(1_100).centsText).")
         }
     }
 
@@ -165,7 +165,7 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(session.world, borrowed, "refused")
         XCTAssertEqual(session.message?.kind, .failure)
         XCTAssertEqual(session.message?.text,
-                       "The company still owes \(Money(10_000_000).moneyText). Free play pays no interest, so repay the loan before switching.")
+                       "The company still owes \(Money(30_000_000).moneyText). Free play pays no interest, so repay the loan before switching.")
         session.repayLoanStep()
         session.setEconomyMode(.free)
         XCTAssertEqual(session.world.accounts.mode, .free)

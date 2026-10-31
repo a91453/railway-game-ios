@@ -22,7 +22,7 @@ final class CompanyBuildingsTests: XCTestCase {
     /// A managed world whose land sets ridership with town growth on, the
     /// station measured at `service` and 2 stations reached, and `balance`.
     private func world(service: Int64 = 800, balance: Money = 1_000_000_000) throws -> GameWorld {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: balance, costs: testCosts), clock: GameClock(speed: .normal))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: balance, costs: testCosts), clock: GameClock(speed: .normal))
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
         world.setEconomyMode(.management)
         world.setLandDemand(true)
@@ -62,34 +62,34 @@ final class CompanyBuildingsTests: XCTestCase {
 
     func testAManagedCompanyPaysForTheBuildingAndItsLand() throws {
         var world = try world()
-        XCTAssertEqual(world.landValue(row: 7, column: 5)?.value, 14_700)
-        // The building: 512 m² at $40, 2,048,000 cents; the land: 256 m² at
-        // 14,700 cents, 3,763,200.
+        XCTAssertEqual(world.landValue(row: 7, column: 5)?.value, 44_100)
+        // The building: 512 m² at NT$120, 6,144,000 cents; the land: 256 m² at
+        // 44,100 cents, 11,289,600 (decision 499: both 3 times).
         let quote = try XCTUnwrap(world.placedBuildingQuote(.house, at: Self.housePoint))
-        XCTAssertEqual(quote, PlacedBuildingQuote(building: 2_048_000, land: 3_763_200))
-        XCTAssertEqual(quote.total, 5_811_200)
+        XCTAssertEqual(quote, PlacedBuildingQuote(building: 6_144_000, land: 11_289_600))
+        XCTAssertEqual(quote.total, 17_433_600)
         XCTAssertNil(world.placedBuildingQuote(.house, at: PlanPoint(x: -1, y: 0)))
         let balance = world.economy.balance
         let house = try world.placeBuilding(.house, at: Self.housePoint)
-        XCTAssertEqual(world.economy.balance, balance - 5_811_200)
-        XCTAssertEqual([house.buildingCost, house.landCost], [2_048_000, 3_763_200])
+        XCTAssertEqual(world.economy.balance, balance - 17_433_600)
+        XCTAssertEqual([house.buildingCost, house.landCost], [6_144_000, 11_289_600])
         XCTAssertEqual([house.residents, house.jobs], [0, 0], "empty when built")
         let record = try XCTUnwrap(world.accounts.assets.first { $0.kind == .building })
-        XCTAssertEqual([record.owner, Int(record.cost.amount)], [1, 5_811_200])
-        XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending.amount, 1_000 + 5_811_200, "the station and the house")
-        XCTAssertEqual(world.balanceSheet().buildings, AssetClassBalance(cost: 5_811_200, depreciation: .zero))
+        XCTAssertEqual([record.owner, Int(record.cost.amount)], [1, 17_433_600])
+        XCTAssertEqual(world.accounts.capitalDays.last?.capitalSpending.amount, 1_000 + 17_433_600, "the station and the house")
+        XCTAssertEqual(world.balanceSheet().buildings, AssetClassBalance(cost: 17_433_600, depreciation: .zero))
         XCTAssertEqual(AssetClass.buildings.lifeDays, 10_800, "30 years of 360 days")
     }
 
     func testNotEnoughMoneyBuildsNothing() throws {
         var world = try world(balance: 5_000_000)
         let before = world
-        XCTAssertThrowsGameError(try world.placeBuilding(.house, at: Self.housePoint), .insufficientFunds(required: 5_811_200, available: before.economy.balance))
+        XCTAssertThrowsGameError(try world.placeBuilding(.house, at: Self.housePoint), .insufficientFunds(required: 17_433_600, available: before.economy.balance))
         XCTAssertEqual(world, before)
     }
 
     func testFreePlayPaysNothingAndKeepsNoBooks() throws {
-        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 100, costs: testCosts))
+        var world = GameWorld(bounds: Self.small, economy: fixtureEconomy(balance: 100, costs: testCosts))
         XCTAssertEqual(world.placedBuildingQuote(.office, at: Self.housePoint), PlacedBuildingQuote(building: .zero, land: .zero))
         let office = try world.placeBuilding(.office, at: Self.housePoint)
         XCTAssertEqual(world.economy.balance, 100)
@@ -159,28 +159,30 @@ final class CompanyBuildingsTests: XCTestCase {
         let id = try world.placeBuilding(.house, at: Self.housePoint).id
         world.fillPlacedBuildings()
         let house = try XCTUnwrap(world.placedBuilding(id: id))
-        // (1 × 1000 + 1 × 1500) × (1000 + 780 / 2) × 14,700 / 10,000,000
-        // = 2,500 × 1,390 × 14,700 / 10^7 = 5,108 cents.
-        XCTAssertEqual(world.dailyRent(of: house), 5_108)
-        // Upkeep: 2,048,000 × 2 / 10,000 = 409.6, rounded up 410; tax:
-        // (3,763,200 + 5,000) / 10,000 = 376.
-        XCTAssertEqual(world.dailyUpkeep(of: house).upkeep, 410)
-        XCTAssertEqual(world.dailyUpkeep(of: house).tax, 376)
+        // (1 × 1000 + 1 × 1500) × (1000 + 780 / 2) × 44,100 / 10,000,000
+        // = 2,500 × 1,390 × 44,100 / 10^7 = 15,324 cents (15,324.75 rounded
+        // down; 3 × the old 5,108 would be 15,324 too).
+        XCTAssertEqual(world.dailyRent(of: house), 15_324)
+        // Upkeep: 6,144,000 × 2 / 10,000 = 1,228.8, rounded up 1,229; tax:
+        // (11,289,600 + 5,000) / 10,000 = 1,129. Not 3 × the old 410 and 376
+        // (1,230 and 1,128): each is rounded once, from 3 times the cost.
+        XCTAssertEqual(world.dailyUpkeep(of: house).upkeep, 1_229)
+        XCTAssertEqual(world.dailyUpkeep(of: house).tax, 1_129)
         let balance = world.economy.balance
         world.settleProperty(day: 0, time: world.clock.now)
         let row = try XCTUnwrap(world.accounts.entries.last)
         XCTAssertEqual(row.kind, .dailyProperty)
-        XCTAssertEqual(row.amount, 5_108 - 410 - 376)
+        XCTAssertEqual(row.amount, 15_324 - 1_229 - 1_129)
         XCTAssertEqual(row.breakdown, [
-            LedgerLine(item: .propertyRent, amount: 5_108), LedgerLine(item: .propertyUpkeep, amount: -410), LedgerLine(item: .propertyTax, amount: -376),
+            LedgerLine(item: .propertyRent, amount: 15_324), LedgerLine(item: .propertyUpkeep, amount: -1_229), LedgerLine(item: .propertyTax, amount: -1_129),
         ])
-        XCTAssertEqual(world.economy.balance, balance + 4_322)
+        XCTAssertEqual(world.economy.balance, balance + 12_966)
         let day = try XCTUnwrap(world.accounts.days.last)
-        XCTAssertEqual([day.propertyRevenue, day.propertyCost], [5_108, 786])
+        XCTAssertEqual([day.propertyRevenue, day.propertyCost], [15_324, 2_358])
         XCTAssertEqual(day.totalCost, .zero, "the railway's costs are apart")
         let summary = world.accounts.report(.day, day: 0).current
-        XCTAssertEqual(summary.propertyRevenue, 5_108)
-        XCTAssertEqual(summary.operatingProfit, 4_322)
+        XCTAssertEqual(summary.propertyRevenue, 15_324)
+        XCTAssertEqual(summary.operatingProfit, 12_966)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "a well-formed row")
     }
 
@@ -194,10 +196,10 @@ final class CompanyBuildingsTests: XCTestCase {
         try world.advance(ticks: 1_441)
         let row = try XCTUnwrap(world.accounts.entries.first { $0.kind == .dailyProperty })
         XCTAssertEqual(row.time, GameTime(minutes: 1_439))
-        XCTAssertEqual(row.breakdown.map(\.amount), [0, -410, -376])
+        XCTAssertEqual(row.breakdown.map(\.amount), [0, -1_229, -1_129])
         XCTAssertEqual(world.placedBuildings[0].residents + world.placedBuildings[0].jobs, 0, "served nothing: still empty")
-        // Written down a day: ⌊5,811,200 / 10,800⌋ = 538.
-        XCTAssertEqual(world.accounts.assets.first { $0.kind == .building }?.depreciation, 538)
+        // Written down a day: ⌊17,433,600 / 10,800⌋ = 1,614.
+        XCTAssertEqual(world.accounts.assets.first { $0.kind == .building }?.depreciation, 1_614)
     }
 
     // MARK: - Demolishing
@@ -210,21 +212,21 @@ final class CompanyBuildingsTests: XCTestCase {
         world.refreshLandDemand()
         let station = world.stations[0].id
         XCTAssertEqual(world.stationDemand(of: station)?.dailyTrips, 401)
-        // ⌈5,811,200 × 10 / 100⌉ = 581,120.
-        XCTAssertEqual(world.demolitionCost(of: world.placedBuildings[0]), 581_120)
+        // ⌈17,433,600 × 10 / 100⌉ = 1,743,360.
+        XCTAssertEqual(world.demolitionCost(of: world.placedBuildings[0]), 1_743_360)
         let balance = world.economy.balance
         try world.removePlacedBuilding(id)
-        XCTAssertEqual(world.economy.balance, balance - 581_120)
+        XCTAssertEqual(world.economy.balance, balance - 1_743_360)
         XCTAssertTrue(world.placedBuildings.isEmpty)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .building })
-        XCTAssertEqual(world.accounts.capitalDays.last?.writeOff, 5_811_200, "nothing written down yet: all of it")
+        XCTAssertEqual(world.accounts.capitalDays.last?.writeOff, 17_433_600, "nothing written down yet: all of it")
         // The fee is a ledger row of its own, counted with the buildings'
         // costs, so the day's cash flow is what the balance did.
         let row = try XCTUnwrap(world.accounts.entries.last)
         XCTAssertEqual(row.kind, .buildingDemolition)
-        XCTAssertEqual(row.breakdown, [LedgerLine(item: .propertyDemolition, amount: -581_120)])
+        XCTAssertEqual(row.breakdown, [LedgerLine(item: .propertyDemolition, amount: -1_743_360)])
         let day = world.financeReport(.day).current
-        XCTAssertEqual(day.propertyCost, 581_120)
+        XCTAssertEqual(day.propertyCost, 1_743_360)
         XCTAssertEqual(day.netCashFlow, world.economy.balance - opening, "the station, the house and its demolition")
         XCTAssertEqual(world.stationDemand(of: station)?.dailyTrips, 400, "its riders go with it")
         XCTAssertThrowsGameError(try world.removePlacedBuilding(id), .unknownPlacedBuilding(id))
@@ -232,10 +234,10 @@ final class CompanyBuildingsTests: XCTestCase {
     }
 
     func testDemolishingNeedsTheMoney() throws {
-        var world = try world(balance: 6_000_000)
+        var world = try world(balance: 18_000_000)
         let id = try world.placeBuilding(.house, at: Self.housePoint).id
         let before = world
-        XCTAssertThrowsGameError(try world.removePlacedBuilding(id), .insufficientFunds(required: 581_120, available: before.economy.balance))
+        XCTAssertThrowsGameError(try world.removePlacedBuilding(id), .insufficientFunds(required: 1_743_360, available: before.economy.balance))
         XCTAssertEqual(world, before)
     }
 
@@ -251,8 +253,8 @@ final class CompanyBuildingsTests: XCTestCase {
         let building = try XCTUnwrap((object["placedBuildings"] as? [[String: Any]])?.first)
         XCTAssertEqual(building["residents"] as? Int, 1)
         XCTAssertEqual(building["jobs"] as? Int, 13)
-        XCTAssertEqual(building["buildingCost"] as? Int, 6_144 * 4_000)
-        XCTAssertEqual(building["landCost"] as? Int, 1_024 * 14_700)
+        XCTAssertEqual(building["buildingCost"] as? Int, 6_144 * 12_000)
+        XCTAssertEqual(building["landCost"] as? Int, 1_024 * 44_100)
         // More people than it holds is refused.
         var tooFull = object
         var buildings = try XCTUnwrap(object["placedBuildings"] as? [[String: Any]])
@@ -270,8 +272,8 @@ final class CompanyBuildingsTests: XCTestCase {
 
     /// A save as the current version writes it: its own version replaced.
     private static func currentVersion(of data: Data) -> Data {
-        Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 22,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8)
+        Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 22,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8)
     }
 
     /// The world of `v22-company-buildings.json` (decision 94): a managed
@@ -282,7 +284,7 @@ final class CompanyBuildingsTests: XCTestCase {
     /// two nights' worth and the day's rent, upkeep and tax settled.
     private static func companyBuildingsWorld() throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 131_072, height: 98_304), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 131_072, height: 98_304), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
@@ -318,9 +320,12 @@ final class CompanyBuildingsTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 22)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.companyBuildingsWorld())
+        // Rent, upkeep and tax are rounded once from 3 times their inputs:
+        // the day's property row and the balance are up to 5 cents from
+        // 3 times the saved ones (decision 499).
+        try XCTAssertSameButRounding(world, try NTScale.$factor.withValue(3) { try Self.companyBuildingsWorld() }, cents: 5)
         XCTAssertEqual(world.placedBuildings.map { [$0.residents, $0.jobs] }, [[2, 2], [2, 26]])
-        XCTAssertEqual(world.placedBuildings.map(\.buildingCost), [2_048_000, 24_576_000])
+        XCTAssertEqual(world.placedBuildings.map(\.buildingCost), [6_144_000, 73_728_000])
         XCTAssertEqual(world.accounts.assets.filter { $0.kind == .building }.map(\.owner), [1, 2])
         XCTAssertEqual(world.accounts.entries.last?.kind, .dailyProperty)
         XCTAssertGreaterThan(world.accounts.days.last?.propertyRevenue ?? .zero, .zero)
