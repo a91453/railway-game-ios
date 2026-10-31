@@ -261,14 +261,20 @@ final class WebsiteScreenshotTests: XCTestCase {
             let button = app.buttons[name]
             XCTAssertTrue(button.isHittable, "\(name) can be tapped", file: file, line: line)
             XCTAssertTrue(window.contains(button.frame), "\(name) whole on the screen: \(button.frame)", file: file, line: line)
-            XCTAssertGreaterThanOrEqual(button.frame.height, 40, "\(name) its full height", file: file, line: line)
+            // Touched over 44 (2 past the 40 drawn, above and below).
+            XCTAssertGreaterThanOrEqual(button.frame.height, 43.5, "\(name) touched over 44: \(button.frame)", file: file, line: line)
+            XCTAssertGreaterThanOrEqual(button.frame.width, 44, "\(name) touched over 44: \(button.frame)", file: file, line: line)
         }
+        // The touch areas meet in the 4 between two tools and never cross.
         let frames = tools.map { app.buttons[$0].frame }
         for (upper, lower) in zip(frames, frames.dropFirst()) {
-            XCTAssertGreaterThanOrEqual(lower.minY - upper.maxY, 3.5, "apart: \(upper) \(lower)", file: file, line: line)
+            XCTAssertGreaterThanOrEqual(lower.minY - upper.maxY, -0.5, "apart: \(upper) \(lower)", file: file, line: line)
         }
+        // Drawn: the bus tool's foot, the tools' glass (4, or 2 where the
+        // column is short) and the gap of 6, then Build's glass of 4; a part
+        // that scrolls stands lower, its foot only the gap above Build's glass.
         let build = app.buttons["dock.build"].frame
-        XCTAssertLessThanOrEqual(frames[4].maxY, build.minY - 11.5, "nothing scrolls: bus \(frames[4]), Build \(build)", file: file, line: line)
+        XCTAssertLessThanOrEqual(frames[4].maxY - 2, build.minY + 2 - 11.5, "nothing scrolls: bus \(frames[4]), Build \(build)", file: file, line: line)
     }
 
     /// Building on the real-world demo, the panel open at the trailing

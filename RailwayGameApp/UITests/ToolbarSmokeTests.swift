@@ -813,16 +813,22 @@ final class ShellLayoutUITests: XCTestCase {
         assertOneSize(["controls.toggle", "entry.economy", "entry.lines", "dock.build"], in: app, while: "looking at the map")
         // The strip's glass ends 3 points under its buttons, the column's 4
         // above its first; between them the screen's gap of 10, as from the
-        // board to the strip.
-        XCTAssertGreaterThanOrEqual(toggle.frame.minY - more.frame.maxY, 3 + 10 + 4 - 0.5,
+        // board to the strip. The toggle is touched 2 above what it draws
+        // (decision 509).
+        XCTAssertGreaterThanOrEqual(toggle.frame.minY - more.frame.maxY, 3 + 10 + 4 - 2 - 0.5,
                                     "The column stops a gap below the layer strip: toggle \(toggle.frame), strip \(more.frame)")
 
         let build = app.buttons["dock.build"]
         build.tap()
         app.buttons["tool.select"].waitUntilSettled(timeout: 10)
-        // The card's toggle stands beside Build while building (98.1).
-        assertOneSize(["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus", "tool.select", "dock.build"],
+        // The card's toggle stands beside Build while building (98.1), and
+        // Done too (100.1, decision 509): one size, beside it.
+        assertOneSize(["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus", "dock.build"],
                       in: app, while: "building")
+        let done = app.buttons["tool.select"].frame
+        XCTAssertEqual(done.size.width, build.frame.width, accuracy: 0.5, "Done is Build's size: \(done), \(build.frame)")
+        XCTAssertEqual(done.size.height, build.frame.height, accuracy: 0.5, "Done is Build's size: \(done), \(build.frame)")
+        XCTAssertEqual(done.midY, build.frame.midY, accuracy: 0.5, "Done beside Build: \(done), \(build.frame)")
     }
 
     private func assertOneSize(_ identifiers: [String], in app: XCUIApplication, while state: String,

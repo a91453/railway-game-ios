@@ -245,7 +245,8 @@ private struct QuickEntries: View {
         } label: {
             TabLabel(systemImage: systemImage, title: title, isActive: screen.panel == panel)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == panel))
+        // Touched over 44, as the tools are (100.1, decision 509).
+        .buttonStyle(ToolColumnStyle.touchStyle(isActive: screen.panel == panel))
         .frame(minWidth: 44)
         .accessibilityLabel(name)
         .accessibilityIdentifier(id)
