@@ -585,6 +585,12 @@ set -euo pipefail
 # (about 190 to 250) and LiujiaLineTrainsTests (about 105), get a shard of
 # their own, campaigns-19, about 590 s; campaigns-5, -13 and -14 go back to
 # 584, 438 and 564 s on run 40917483376. A full tier is 23 jobs.
+# 2026-10-31: rest timed out at its 20 minutes three times on #1593's
+# run 41181157543 (head 019a9c3) and once on #1599's (b398816), its tests
+# still passing when cut off; the script's warning named the slowest
+# classes: PassengerCheckOnceTests 81 s, DeadlockSearchCostTests 66 s,
+# PassengerRouteSearchTests 35 s. They go to the shortest jobs of #1593's
+# run: campaigns-9 (8.5 minutes), campaigns-8 (10.7) and campaigns-18 (11).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests FlexDispatchPropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests" ;;
@@ -594,8 +600,8 @@ classes_of() {
     campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests NetworkPostcardTests SharedNetworkTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests PassengerPropertyTests CityRequestsTests Map3DTests StationCommerceCardTests LineLossDiagnosisTests SanyingDepotTests BusOneWayAndTunnelRealMapTests SanyingLineFreezeTests Map3DSceneryPropsTests" ;;
     campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests Map3DBusesTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests" ;;
-    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests DanhaiBlueThenGreenRealisticDayTests" ;;
-    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests" ;;
+    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests ScreenshotSceneTests TimetablePropertyTests DanhaiBlueThenGreenRealisticDayTests DeadlockSearchCostTests" ;;
+    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests NightSkipTests FreightSessionTests SanyingLineSimpleDayTests PassengerCheckOnceTests" ;;
     campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests" ;;
     campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests DemoRealLinesTests LoopLineBoardingTests LongLegReplayTests LineAccountsTests DanhaiGreenLineDayTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests ContinuousTrackPropertyTests LessonTests DanhaiBlueThenGreenSimpleDayTests" ;;
@@ -604,7 +610,7 @@ classes_of() {
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackPropertyTests Map3DStreetsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests Map3DShadowTests RealWorldExpansionTests ShortTurnCardTests" ;;
     campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests ScheduledOvertakeTrackFinalPropertyTests Map3DSurfaceTests NewsSessionTests Map3DPropsTests Map3DNightAndGroundTests DemoAtTests SeededStreetPlanTests Map3DBuildingsTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests AutoServiceTests Map3DHandoffTests Map3DDetailTests" ;;
     campaigns-17) echo "PassengerPlanKeyTests EconomyPropertyTests TurnbackTests LessonGuideTests Map3DTaipeiLandmarksTests TrainPackTests Map3DParksTests Map3DSceneKitTests" ;;
-    campaigns-18) echo "HighSpeedDemoTests TRADemoDayTests DemoRealLinesTrackTests AchievementsTests RealWorldDemoRoadsTests TrainNightLightsReadBackTests RealBusesTests" ;;
+    campaigns-18) echo "HighSpeedDemoTests TRADemoDayTests DemoRealLinesTrackTests AchievementsTests RealWorldDemoRoadsTests TrainNightLightsReadBackTests RealBusesTests PassengerRouteSearchTests" ;;
     campaigns-19) echo "RealLineAcquisitionTests DanhaiBothLinesDayTests LiujiaLineTrainsTests" ;;
     *) return 1 ;;
   esac
@@ -694,7 +700,8 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ReservationShortcutTests:227 DeadlockPropertyTests:135
   PassengerPropertyTests:132 ScheduledOvertakeTrackLastPropertyTests:128
   OccupiedRoutingPropertyTests:78 WorldStateMachineTests:65
-  NetworkSectionPropertyTests:50 IdleTrainDeadlockTests:48 DeadlockSearchCostTests:60
+  NetworkSectionPropertyTests:50 IdleTrainDeadlockTests:48 DeadlockSearchCostTests:66
+  PassengerCheckOnceTests:81 PassengerRouteSearchTests:35
   ScheduledTrafficTests:46 LineAccountsTests:35 TurnbackPropertyTests:33
   TurnbackTests:32 ReplayFixtureTests:28 CityRequestsTests:26
   LoadJourneyCacheTests:25 LineRoutePreferencePropertyTests:24
