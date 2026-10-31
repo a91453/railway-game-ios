@@ -254,6 +254,11 @@ struct TracePlan {
     /// Decision 468: the trace stops after all its stretches, where track
     /// already laid leaves no room to go on.
     var stopsAfter = false
+    /// Decision 513: where no grade reaches from one end to the other
+    /// (``TrackRise`` finds none, so there are no stretches), the way
+    /// along the real line, each point at the height the tool would lay
+    /// it on the ground, for the card to show.
+    var refusedWay: [WorldCoordinate] = []
 
     var stopped: Bool { buildable < stretches.count || stopsAfter }
 }
@@ -328,6 +333,31 @@ extension GameSession {
     /// and the `platforms` to lay along it, each from one point of the way
     /// to another: each becomes one level edge, its ends nodes.
     ///
+    /// Decision 513: the real stations of `system` (the line's at the
+    /// start's where none is given) along `path`, each with the longest
+    /// platform's length of the path about it, an end near the path's end
+    /// drawn to it: where the player's trace lays its track level, as the
+    /// real station stands.
+    func tracedStationSpans(along path: WorldPath, system: String?) -> [ClosedRange<Double>] {
+        let reach = Self.traceReach(NetworkBuilding.minimumSpacing * 2)
+        guard let railways, let frame = RealWorldFrame(world: world), let first = path.points.first,
+              let system = system ?? realRailwayTraces.flatMap({ traces in traces.snap(first, within: reach).map { traces.lines[$0.place.line].system } })
+        else { return [] }
+        let length = Double(Int64(Train.maximumCars) * world.platformCarLength)
+        let margin = Double(NetworkBuilding.minimumSpacing)
+        var spans: [ClosedRange<Double>] = []
+        for station in railways.stations where station.system.id == system {
+            let near = path.nearest(WorldVector(frame.worldPosition(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude)))
+            guard near.away <= DemoRealLines.stationReach else { continue }
+            var low = max(0, near.along - length / 2), high = min(path.length, near.along + length / 2)
+            if low < margin { low = 0 }
+            if path.length - high < margin { high = path.length }
+            guard high - low >= margin, !spans.contains(where: { $0.overlaps(low...high) }) else { continue }
+            spans.append(low...high)
+        }
+        return spans.sorted { $0.lowerBound < $1.lowerBound }
+    }
+
     /// Decision 400 A.8: `onGround`, all of it on the ground, as the game's
     /// stations are (decision 132), whatever the tool's height and
     /// structure and the real line's tunnels and viaducts.
@@ -353,6 +383,9 @@ extension GameSession {
             let a = path.project(span.0), b = path.project(span.1)
             return min(a, b)...max(a, b)
         }
+        // Decision 513: the player's trace level at the real line's
+        // stations, as the demo's platforms are.
+        let levelSpans = platforms.isEmpty ? tracedStationSpans(along: path, system: system) : spans
 
         // The ground under the way, every 32 m: the tool's ground (decision
         // 124) for a new end, and the track's heights between.
@@ -374,7 +407,7 @@ extension GameSession {
             let plan = point.plan
             return planning.terrain.isWater(row: Int(plan.y / Land.cellLength), column: Int(plan.x / Land.cellLength))
         }
-        // An end on track keeps that track's height; a new end stands on
+        // An end on track keeps that track's height; a new end stands near
         // the ground, or as the tool sets it above.
         var levels: [TrackRise.Level] = []
         if case .point = start {} else { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
@@ -386,6 +419,7 @@ extension GameSession {
         // light rails'.
         var carried: [TrackRise.Carried] = []
         var carriedEnds = (start: false, end: false)
+        var looseEnds = (start: false, end: false)
         if mapped, !onGround, networkStructure == .automatic, networkHeight == 0 || demoKeepsRealStructures, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
            let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
             carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
@@ -395,8 +429,10 @@ extension GameSession {
             // reaching past it; elsewhere it stands where the tool puts it,
             // and the track climbs or falls from it to the real line's
             // viaduct or tunnel.
+            // Decision 513: how long the real structure is, not the part
+            // of it along the way (a short trace ends in a long tunnel).
             let on = RealRailStructures.sampleSpacing
-            for (index, stretch) in carried.enumerated() where stretch.range.upperBound - stretch.range.lowerBound >= TrackRise.shortestCarried {
+            for (index, stretch) in carried.enumerated() where stretch.isLong {
                 var range = stretch.range
                 if case .point = start, range.lowerBound <= on {
                     range = -TrackRise.carriedInset...range.upperBound
@@ -406,23 +442,41 @@ extension GameSession {
                     range = range.lowerBound...path.length + TrackRise.carriedInset
                     carriedEnds.end = true
                 }
-                carried[index] = TrackRise.Carried(range: range, kind: stretch.kind)
+                carried[index] = TrackRise.Carried(range: range, kind: stretch.kind, length: stretch.length)
             }
-            if !carried.isEmpty {
-                if case .point = start, !carriedEnds.start { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
-                if case .point = end, !carriedEnds.end { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
+        }
+        // Decision 513: a new end elsewhere stands near where the tool puts
+        // it, on an embankment or in a cutting as the track between does
+        // (``TrackRise/surfaceBand``), at the height the grade lays it:
+        // the ground the game reads beside a real tunnel's mouth or a
+        // bridge's end is the hillside or the bank, steeper than the real
+        // line, and an end held to it left the track no grade to it. On
+        // the ground (decision 400 A.8), as before.
+        if !onGround {
+            let band = TrackRise.surfaceBand
+            if case .point = start, !carriedEnds.start {
+                levels.append(TrackRise.Level(0...0, from: Double(from.z) + band.low, to: Double(from.z) + band.high))
+                looseEnds.start = true
+            }
+            if case .point = end, !carriedEnds.end {
+                levels.append(TrackRise.Level(path.length...path.length, from: Double(to.z) + band.low, to: Double(to.z) + band.high))
+                looseEnds.end = true
             }
         }
         guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
-            return TracePlan(stretches: [], buildable: 0, problem: language.text(
+            var refused = TracePlan(stretches: [], buildable: 0, problem: language.text(
                 "The track cannot climb from one end to the other along this line within the steepest grade, 40‰.",
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
             ))
+            refused.refusedWay = [from] + path.points.dropFirst().dropLast().map {
+                WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: Int64(ground($0).rounded()))
+            } + [to]
+            return refused
         }
         // Decision 351: each platform level, between the heights the track
         // would have along it.
-        if !spans.isEmpty {
-            let flat = spans.map { span in
+        if !levelSpans.isEmpty {
+            let flat = levelSpans.map { span in
                 let heights = stride(from: span.lowerBound, through: span.upperBound, by: TrackRise.spacing).map { rise.height(at: $0) } + [rise.height(at: span.upperBound)]
                 return TrackRise.Level(span, from: heights.min() ?? 0, to: heights.max() ?? 0)
             }
@@ -430,8 +484,8 @@ extension GameSession {
                 rise = levelled
             }
         }
-        if carriedEnds.start { from = WorldCoordinate(x: from.x, y: from.y, z: rise.node(at: 0)) }
-        if carriedEnds.end { to = WorldCoordinate(x: to.x, y: to.y, z: rise.node(at: path.length)) }
+        if carriedEnds.start || looseEnds.start { from = WorldCoordinate(x: from.x, y: from.y, z: rise.node(at: 0)) }
+        if carriedEnds.end || looseEnds.end { to = WorldCoordinate(x: to.x, y: to.y, z: rise.node(at: path.length)) }
 
         // Each end leaves the track there along it, where the tool joins
         // track (as one stretch does, decision 103).
@@ -454,7 +508,7 @@ extension GameSession {
             }
         }
         let plan = RealWorldDemo.TrackPlan(
-            path, forced: [0, path.length] + spans.flatMap { [$0.lowerBound, $0.upperBound] }, avoiding: spans,
+            path, forced: [0, path.length] + levelSpans.flatMap { [$0.lowerBound, $0.upperBound] }, avoiding: levelSpans,
             start: (from.plan, startDirection), end: (to.plan, endDirection),
             rise: rise, structure: networkStructure
         )
@@ -614,13 +668,15 @@ extension GameSession {
             if !piece.isEmpty { pieces.append(piece) }
         }
         // Decision 513: refused from its first edge, the whole way and its
-        // far end, as drawn, not 0 m and the first edge's end.
+        // far end, as drawn, not 0 m and the first edge's end; with no
+        // stretch at all (no grade reaches), the real line's way.
         let first = plan.stretches.first, last = built.isEmpty ? plan.stretches.last : built.last
-        let wayLength = built.isEmpty ? Self.drawnLength(of: points) : length
+        if plan.stretches.isEmpty { shown = plan.refusedWay }
+        let wayLength = plan.stretches.isEmpty ? Self.drawnLength(of: [plan.refusedWay]) : built.isEmpty ? Self.drawnLength(of: points) : length
         let isJoined: (NetworkAnchor) -> Bool = { if case .point = $0 { false } else { true } }
         var preview = NetworkPreview(
             curve: first?.curve ?? .straight, profile: .uniform, points: shown, length: wayLength,
-            startHeight: first?.from.z ?? 0, endHeight: last?.to.z ?? 0,
+            startHeight: first?.from.z ?? plan.refusedWay.first?.z ?? 0, endHeight: last?.to.z ?? plan.refusedWay.last?.z ?? 0,
             joinsStart: isJoined(start), joinsEnd: !plan.stopped && isJoined(end),
             cost: built.isEmpty ? nil : cost,
             problem: built.isEmpty ? (plan.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")) : shortfall,
