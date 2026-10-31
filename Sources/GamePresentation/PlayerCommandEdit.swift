@@ -144,6 +144,8 @@ extension PlayerCommand {
         case buildStationCommerce(StationID)
         case upgradeStationCommerce(StationID)
         case demolishStationCommerce(StationID)
+        /// A station expanded a step (decision 506).
+        case expandStation(StationID)
 
         // MARK: Buses (decision 400, 10i-5)
         /// A bus route to a station through its stops, the farthest first.
@@ -393,6 +395,7 @@ extension GameSession {
         case .buildStationCommerce(let id): try world.buildStationCommerce(at: id)
         case .upgradeStationCommerce(let id): try world.upgradeStationCommerce(at: id)
         case .demolishStationCommerce(let id): try world.demolishStationCommerce(at: id)
+        case .expandStation(let id): try world.expandStation(at: id)
         }
         return outcome
     }

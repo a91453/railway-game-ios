@@ -51,7 +51,7 @@ extension GameWorld {
     public func crowdedStationNote(at id: StationID, in language: DisplayLanguage) -> String? {
         let groups = waitingPassengers(at: id)
         let waiting = groups.reduce(Int64(0)) { $0 + $1.count }
-        guard waiting * 2 >= StationPassengers.capacity else { return nil }
+        guard waiting * 2 >= stationCapacity(of: id) else { return nil }
         var note = language.text(
             "Passengers board only trains that stop where they are going, so trains can leave a crowded station part-empty. The peak load is the fullest departure of the day. Run more trains on the busiest line above, or a line to where they are going.",
             "乘客只上會停目的地的車，所以車站擠、列車也可能沒坐滿。尖峰載客率是當天最滿的一班。請在上面候車最多的路線加開列車，或開一條到他們目的地的路線。"

@@ -1226,6 +1226,12 @@ extension StepOutcome: Codable {
             self = .rejected(.stationCommerceMaxedOut)
         case "noStationCommerce":
             self = try .rejected(.noStationCommerce(container.decodeStation(forKey: .station)))
+        case "stationIsExpanded":
+            self = try .rejected(.stationIsExpanded(container.decodeStation(forKey: .station)))
+        case "stationExpansionMaxedOut":
+            self = .rejected(.stationExpansionMaxedOut)
+        case "stationTooQuietToExpand":
+            self = try .rejected(.stationTooQuietToExpand(needed: container.decode(Int64.self, forKey: .required)))
         case "lineAlreadyAcquired":
             self = .rejected(.lineAlreadyAcquired)
         case "invalidAcquisition":
@@ -1664,6 +1670,14 @@ extension StepOutcome: Codable {
         case .rejected(.noStationCommerce(let id)):
             try container.encode("noStationCommerce", forKey: .result)
             try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.stationIsExpanded(let id)):
+            try container.encode("stationIsExpanded", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.stationExpansionMaxedOut):
+            try container.encode("stationExpansionMaxedOut", forKey: .result)
+        case .rejected(.stationTooQuietToExpand(let needed)):
+            try container.encode("stationTooQuietToExpand", forKey: .result)
+            try container.encode(needed, forKey: .required)
         case .rejected(.lineAlreadyAcquired):
             try container.encode("lineAlreadyAcquired", forKey: .result)
         case .rejected(.invalidAcquisition):

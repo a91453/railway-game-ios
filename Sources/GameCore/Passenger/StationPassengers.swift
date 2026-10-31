@@ -139,10 +139,15 @@ public struct StationPassengers: Hashable, Sendable {
     /// How many wait in all: the sum of ``waiting``'s counts, kept with it.
     public private(set) var waitingCount: Int64
 
-    /// Passengers waiting at a station at most: the reference's
-    /// `STATION_CAPACITY × 8`. One released when the station is full leaves
-    /// at once (see ``PassengerLedger/overflowed``).
+    /// Passengers waiting at a station not expanded at most: the
+    /// reference's `STATION_CAPACITY × 8`. One released when the station is
+    /// full leaves at once (see ``PassengerLedger/overflowed``). An
+    /// expanded station holds more (decision 506,
+    /// ``StationExpansion/capacity``, ``GameWorld/stationCapacity(of:)``).
     public static let capacity: Int64 = 4_000
+
+    /// The most any station holds: its last expansion's (decision 506).
+    public static let maximumCapacity: Int64 = StationExpansion.allCases.map(\.capacity).max()!
 
     /// The most passengers a save may say were ever released at a station.
     /// A station releases at most a million a day, so play from any count
@@ -184,8 +189,9 @@ public struct StationPassengers: Hashable, Sendable {
     /// minute `now`: as many as the station has room for wait, as one group
     /// at the back of the queue, and the rest leave at once (the
     /// reference's `_metroAdmitDispatchPassengers`).
-    mutating func release(_ count: Int64, to destination: StationID, along trip: PassengerTrip, at now: GameTime) {
-        let admitted = min(count, max(0, Self.capacity - waitingCount))
+    mutating func release(_ count: Int64, to destination: StationID, along trip: PassengerTrip, at now: GameTime,
+                          capacity: Int64 = StationPassengers.capacity) {
+        let admitted = min(count, max(0, capacity - waitingCount))
         if admitted > 0 {
             waiting.append(WaitingGroup(line: trip.line, direction: trip.direction, destination: destination, since: now, count: admitted))
             waitingCount += admitted
@@ -194,8 +200,9 @@ public struct StationPassengers: Hashable, Sendable {
         overflowed += count - admitted
     }
 
-    mutating func release(_ count: Int64, along journey: PassengerJourney, at now: GameTime) {
-        let admitted = min(count, max(0, Self.capacity - waitingCount))
+    mutating func release(_ count: Int64, along journey: PassengerJourney, at now: GameTime,
+                          capacity: Int64 = StationPassengers.capacity) {
+        let admitted = min(count, max(0, capacity - waitingCount))
         if admitted > 0 {
             let leg = journey.leg
             enqueue(WaitingGroup(line: leg.line, direction: leg.direction,
@@ -208,8 +215,9 @@ public struct StationPassengers: Hashable, Sendable {
     /// Admits a group arriving from another service. Its release and final
     /// outcome remain on the original station's ledger.
     mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
-                                   at now: GameTime, readyAt: GameTime) -> Int64 {
-        let admitted = min(count, max(0, Self.capacity - waitingCount))
+                                   at now: GameTime, readyAt: GameTime,
+                                   capacity: Int64 = StationPassengers.capacity) -> Int64 {
+        let admitted = min(count, max(0, capacity - waitingCount))
         guard admitted > 0 else { return 0 }
         let leg = journey.leg
         let group = WaitingGroup(line: leg.line, direction: leg.direction, destination: leg.to,
@@ -429,11 +437,13 @@ extension StationPassengers: Codable {
         }
         // Every count is checked against a bound before it is added, so no
         // sum below can overflow.
-        guard Int64(waiting.count) <= Self.capacity, waiting.allSatisfy({ $0.count <= Self.capacity }) else {
+        // Against the most any station holds; the world's decoder holds
+        // each to its own station's (decision 506).
+        guard Int64(waiting.count) <= Self.maximumCapacity, waiting.allSatisfy({ $0.count <= Self.maximumCapacity }) else {
             throw corrupt(.waiting, "more passengers wait than the station holds.")
         }
         let total = waiting.reduce(Int64(0)) { $0 + $1.count }
-        guard total <= Self.capacity else { throw corrupt(.waiting, "more passengers wait than the station holds.") }
+        guard total <= Self.maximumCapacity else { throw corrupt(.waiting, "more passengers wait than the station holds.") }
         // Released minute by minute, by ascending leg destination. Several
         // planned journeys can share one minute and destination.
         guard zip(waiting, waiting.dropFirst()).allSatisfy({

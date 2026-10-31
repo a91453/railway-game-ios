@@ -116,9 +116,10 @@ extension GameWorld {
         let counts = MapLayers.waitingPassengerCounts(in: self)
         for station in stations {
             let waiting = counts[station.id] ?? 0
-            if waiting >= StationPassengers.capacity {
+            // Decision 506: an expanded station holds more.
+            if waiting >= station.capacity {
                 alerts.append(MapAlert(kind: .full(waiting: waiting), station: station.id, location: station.location))
-            } else if waiting * 2 >= StationPassengers.capacity {
+            } else if waiting * 2 >= station.capacity {
                 alerts.append(MapAlert(kind: .crowded(waiting: waiting), station: station.id, location: station.location))
             }
         }

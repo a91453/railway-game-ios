@@ -934,6 +934,7 @@ extension GameWorld {
         let into = Int64(minute % 60)
         let plan = release.plan
         let unopened = linesNotYetRunning(at: now)
+        let expanded = expandedStationCapacities
         for index in plan.flows.indices {
             let share = (60 - into) * plan.hourly[24 * index + hour] + into * plan.hourly[24 * index + next]
             let total = release.remainders[index] + share
@@ -942,14 +943,16 @@ extension GameWorld {
             if count > 0 {
                 let flow = plan.flows[index]
                 guard let record = passengers.firstIndex(where: { $0.station == flow.origin }) else { continue }
+                let capacity = expanded.isEmpty ? StationPassengers.capacity
+                    : expanded[flow.origin] ?? StationPassengers.capacity
                 if flow.choices.isEmpty {
                     guard !unopened.contains(flow.trip.line) else { continue }
-                    passengers[record].release(count, to: flow.destination, along: flow.trip, at: now)
+                    passengers[record].release(count, to: flow.destination, along: flow.trip, at: now, capacity: capacity)
                 } else {
                     let shares = allocateRouteRelease(count, from: flow.origin, flow: flow)
                     for (choice, share) in zip(flow.choices, shares) where share > 0
                         && (unopened.isEmpty || !choice.journey.legs.contains(where: { unopened.contains($0.line) })) {
-                        passengers[record].release(share, along: choice.journey, at: now)
+                        passengers[record].release(share, along: choice.journey, at: now, capacity: capacity)
                     }
                 }
             }
@@ -1141,7 +1144,9 @@ extension GameWorld {
         let valid = servedWaitingLegs(onFreightLines: true)
         for record in passengers {
             let id = record.station.rawValue
-            guard station(id: record.station) != nil else { return "Passengers wait at station \(id), which does not exist." }
+            guard let standing = station(id: record.station) else { return "Passengers wait at station \(id), which does not exist." }
+            // Decision 506: an expanded station holds more.
+            guard record.waitingCount <= standing.capacity else { return "More passengers wait at station \(id) than it holds." }
             for group in record.waiting {
                 guard isServed(group, at: record.station, checkingLeg: { valid.contains($0) }, onFreightLines: true) else {
                     return "Passengers at station \(id) wait for a trip no line takes that way."

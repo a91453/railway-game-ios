@@ -134,7 +134,7 @@ final class CommandEditTests: XCTestCase {
             .setZone(.init(nil), rows: 0...1, columns: 3...5), .buyMapTile(MapTile(row: 1, column: 2)),
             .acceptRequest(4), .declineRequest(5), .investInSouvenirShop(AttractionID(rawValue: 6)),
             .buildStationCommerce(station), .upgradeStationCommerce(station), .demolishStationCommerce(station),
-            .setStationDepot(station, true), .setLineDepot(line, station), .setLineDepot(line, nil),
+            .expandStation(station), .setStationDepot(station, true), .setLineDepot(line, station), .setLineDepot(line, nil),
             .setLineDepots(line, [station, StationID(rawValue: 5)]),
         ]
         let entries = edits.enumerated().map { CommandLog.Entry(time: Int64($0.offset), action: .command(.edit($0.element))) }
