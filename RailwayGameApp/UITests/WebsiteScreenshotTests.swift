@@ -682,8 +682,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
         app.tapMiddle(of: wholeTaiwan)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
-        // By the light of day, the stars over the island.
+        // By the light of day, the stars over the island. Decision 510
+        // hides the sights from as far out as the whole island, so in a
+        // step or two until they show.
         waitForClock(from: 9, before: 17, in: app)
+        let zoomIn = app.buttons["放大"]
+        let sight = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'")).firstMatch
+        for _ in 0..<4 where !sight.exists && zoomIn.exists && zoomIn.isEnabled {
+            zoomIn.tap()
+            settle(seconds: 2)
+        }
         settle(seconds: 3)
         keep("tourism-map", app)
 
