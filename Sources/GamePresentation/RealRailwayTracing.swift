@@ -1005,10 +1005,10 @@ extension GameSession {
 
 extension GameSession {
     /// For the website screenshot test (decision 513): the network tool
-    /// tracing single track along the North-Link Line from 3,700 m to
-    /// 3,500 m south of Nan'ao, which no grade reaches, and the map looking
-    /// over it; whether the trace was refused. Through the tool's own taps,
-    /// as `TrackGeometryProblemTests` draws it.
+    /// tracing single track along the North-Link Line from 3,500 m to
+    /// 3,400 m south of Nan'ao, which no grade reaches on the map a game
+    /// started there has, and the map looking over it; whether the trace
+    /// was refused. Through the tool's own taps.
     @discardableResult
     public func traceWhereNoGradeReaches() -> Bool {
         guard canTraceRealRailway, let railways, let frame = RealWorldFrame(world: world),
@@ -1020,7 +1020,7 @@ extension GameSession {
             ($0.point(at: $0.project(nanao)) - nanao).length < ($1.point(at: $1.project(nanao)) - nanao).length
         }) else { return false }
         let metre = Double(WorldCoordinate.unitsPerMetre), station = path.project(nanao)
-        let a = path.point(at: station - 3_700 * metre).plan, b = path.point(at: station - 3_500 * metre).plan
+        let a = path.point(at: station - 3_500 * metre).plan, b = path.point(at: station - 3_400 * metre).plan
         selectTool(.network)
         setNetworkMode(.build)
         networkTracesRealRailway = true

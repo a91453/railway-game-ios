@@ -137,15 +137,21 @@ final class TrackGeometryProblemTests: XCTestCase {
         XCTAssertGreaterThan(abs(preview.endHeight - preview.startHeight), 8 * WorldCoordinate.unitsPerMetre, "more than 40‰ of 200 m apart")
     }
 
-    /// The website screenshot test's trace (`-ui-test-trace-refused`) is
-    /// the stretch above, drawn the same way.
-    func testTheScreenshotTraceIsTheOneNoGradeReaches() throws {
-        let (session, _, _) = try nanao()
-        session.networkTracesRealRailway = false
+    /// The website screenshot test's trace (`-ui-test-trace-refused`), on
+    /// the map the app opens at Nan'ao from the picker (a tile of Taiwan,
+    /// decision 167): refused, as no grade reaches it.
+    func testTheScreenshotTraceIsOneNoGradeReaches() throws {
+        let nanao = try BundledRealData.station("南澳", in: "tra_sched")
+        let expansion = try XCTUnwrap(RealWorldExpansion(around: try XCTUnwrap(nanao.anchor)))
+        var world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: 12_000)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.heights = try XCTUnwrap(HighSpeedDemoTests.heights)
+        session.railways = try BundledRealData.railways()
         XCTAssertTrue(session.traceWhereNoGradeReaches())
         let preview = try XCTUnwrap(session.networkPreview)
         XCTAssertEqual(preview.problem, "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。")
-        XCTAssertEqual(Double(preview.length) / metre, 200, accuracy: 20)
+        XCTAssertEqual(Double(preview.length) / metre, 100, accuracy: 15)
     }
 
     /// Case 3 (the owner's 99.1 report, the same game): a 16-car platform
