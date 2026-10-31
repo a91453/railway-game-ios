@@ -11,7 +11,7 @@ final class StationCommerceCardTests: XCTestCase {
     private func world() throws -> GameWorld {
         let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
         var world = try newGameLine(through: [towns[0], towns[1]])
-        world.economy.earn(Money(2_000_000_000))
+        world.economy.earn(Money(6_000_000_000))
         try world.advance(ticks: 2 * 1_440 + 10)
         return world
     }
@@ -25,7 +25,7 @@ final class StationCommerceCardTests: XCTestCase {
         XCTAssertEqual(card.yesterday, .zero)
         let offer = try XCTUnwrap(card.offer)
         XCTAssertEqual(offer.level, .convenienceStore)
-        XCTAssertEqual(offer.price, Money(35_000_000))
+        XCTAssertEqual(offer.price, Money(105_000_000))
         XCTAssertEqual(offer.extraPerDay, StationCommerceLevel.convenienceStore.takings(people: card.people) - StationCommerceLevel.convenienceStore.upkeep)
         XCTAssertTrue(offer.affordable)
         XCTAssertNotNil(offer.paybackTenths)
@@ -66,7 +66,7 @@ final class StationCommerceCardTests: XCTestCase {
         session.buildNextStationCommerce(at: station)
         XCTAssertEqual(session.message?.kind, .success)
         XCTAssertEqual(session.world.station(id: station)?.commerce, .convenienceStore)
-        XCTAssertEqual(before - session.world.economy.balance, Money(35_000_000))
+        XCTAssertEqual(before - session.world.economy.balance, Money(105_000_000))
         session.buildNextStationCommerce(at: station)
         session.buildNextStationCommerce(at: station)
         XCTAssertEqual(session.world.station(id: station)?.commerce, .mall)

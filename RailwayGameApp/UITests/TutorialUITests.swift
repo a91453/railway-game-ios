@@ -116,8 +116,8 @@ final class TutorialUITests: XCTestCase {
         }
 
         // The station chapter: the details card opens for the modes.
-        waitForStep(app, title: "Tap Platform", "The ✓ did not build the track")
-        let platform = app.buttons["Platform"]
+        waitForStep(app, title: "Tap Station", "The ✓ did not build the track")
+        let platform = app.segmentedControls.buttons["Station"].firstMatch
         XCTAssertTrue(platform.appears(within: 10))
         XCTAssertTrue(platform.becomesHittable(), "The Platform mode cannot be tapped")
         if card.exists {

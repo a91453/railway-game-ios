@@ -9,7 +9,7 @@ final class GoalsTests: XCTestCase {
     /// Five stations in a row, 1 km apart, in a managed world.
     private func makeStations(managed: Bool = true) throws -> (GameWorld, [StationID]) {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 400_000, height: 8_192), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 400_000, height: 8_192), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         if managed { world.setEconomyMode(.management) }
@@ -272,7 +272,7 @@ final class GoalsTests: XCTestCase {
     func testVersionThirtySixKeepsTheSteamTrain() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v36-steam-era.json")
-        let made = try steamWorld()
+        let made = try NTScale.$factor.withValue(3) { try steamWorld() }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         if ProcessInfo.processInfo.environment["STEAM_ERA_SAVE_NEW"] != nil {
@@ -286,8 +286,8 @@ final class GoalsTests: XCTestCase {
         XCTAssertEqual(world.trains.first?.type, .steam)
         XCTAssertEqual(world.trains.first?.performance, .steam)
         XCTAssertEqual(world.lines.first?.performance, .steam)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 36,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 36,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     func testFastForwardRunsTenMinutesATick() throws {

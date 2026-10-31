@@ -96,6 +96,35 @@ final class FirstLineGuideTests: XCTestCase {
         XCTAssertNotNil(later.session?.tutorial, "its guide on its first step")
     }
 
+    /// Review L2-1: the game being played when the tutorial is chosen is
+    /// in the saves afterwards, with what was built in it, not lost to
+    /// lesson 1.
+    func testTheTutorialKeepsTheGameBeingPlayed() throws {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = SaveLibrary(directory: directory)
+        let launcher = GameLauncher(library: library, language: .english)
+        launcher.startNewGame()
+        let session = try XCTUnwrap(launcher.session)
+        let tile: Int64 = 1_024
+        let bounds = session.world.bounds
+        func point(_ x: Int64) -> PlanPoint { PlanPoint(x: bounds.width / 2 - 8 * tile + x * tile, y: bounds.height / 2) }
+        session.selectTool(.network)
+        session.tapNetwork(at: point(2), reach: 512)
+        session.tapNetwork(at: point(13), reach: 512)
+        session.buildNetworkTrack()
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: point(4), reach: 512)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.world.stations.count, 1)
+        XCTAssertTrue(FirstLineGuide.offers(in: session, tutorialCompleted: false, choice: nil))
+
+        launcher.chooseFirstLineGuide(.tutorial)
+        XCTAssertEqual(launcher.session?.lesson?.id, Lesson.all[0].id)
+        let kept = try library.entries().filter { $0.problem == nil }.map { try library.load($0) }.filter { $0.lesson == nil }
+        XCTAssertEqual(kept.map(\.stations.count), [1], "the game being played is in the saves, its station in it")
+    }
+
     func testAnOlderPreferencesFileReadsWithNoAnswer() throws {
         let older = Data(#"{"firstGameCardDismissed":true,"hasLaunched":true,"newGameOptions":{},"tutorialCompleted":false}"#.utf8)
         let preferences = try JSONDecoder().decode(LauncherPreferences.self, from: older)
@@ -122,7 +151,7 @@ final class FirstLineGuideTests: XCTestCase {
         let track = try world(stations: 0)
         XCTAssertEqual(hint(track).target, .buildEntry)
         XCTAssertEqual(hint(track, tool: .network).target, .networkModes)
-        XCTAssertEqual(hint(track, tool: .network).text(in: .traditionalChinese), "點「月台」，再點軌道上要蓋車站的地方。")
+        XCTAssertEqual(hint(track, tool: .network).text(in: .traditionalChinese), "點「車站」，再點軌道上要蓋車站的地方。")
         XCTAssertNil(hint(track, tool: .network, mode: .platform).target)
         XCTAssertNotEqual(hint(track, tool: .network, mode: .platform),
                           hint(try world(stations: 1), tool: .network, mode: .platform), "the second station is its own step")

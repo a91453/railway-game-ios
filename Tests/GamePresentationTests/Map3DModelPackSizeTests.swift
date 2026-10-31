@@ -29,9 +29,12 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // models with their windows' models, 679,008 vertices, 27.2 MB a copy).
         // #1530 made the DR1000 railcar the 45DR1000, near and far (8
         // models with the far cars' windows' models, 32,592 vertices
-        // more, 1.3 MB a copy).
-        XCTAssertEqual(pack.models.count, 653)
-        XCTAssertEqual(vertices, 4_277_388)
+        // more, 1.3 MB a copy). Decision 511 drew the DR3100 on the
+        // 45DR1000's shape in its own paint, near and far, instead of the
+        // scene kit's three cars (10 models more, 34,128 vertices more,
+        // 1.4 MB a copy).
+        XCTAssertEqual(pack.models.count, 663)
+        XCTAssertEqual(vertices, 4_311_516)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

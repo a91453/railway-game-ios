@@ -11,10 +11,35 @@ public enum Map3D45DR1000 {
     public static let roof = Map3DColor.rgb(0x777D7C)
     public static let dark = Map3DColor.rgb(0x30343A)
     public static let glass = Map3DTrainStyle.glass
-    public static func model(far: Bool = false) -> Map3DModelPack.Model {
+
+    /// The paint on the shared shape: the stainless body, the waist stripe
+    /// with the ends' brow, sills and V, the thin stripe under the roof,
+    /// and the yellow of the ends, gangway, pilot chevrons and door panels.
+    public struct Livery: Hashable, Sendable {
+        public let silver: UInt32
+        public let orange: UInt32
+        public let topBand: UInt32
+        public let yellow: UInt32
+        /// What the models are named, near and far.
+        let name: String
+
+        /// The DRC1025's 2006–08 orange and yellow.
+        public static let dr1000 = Livery(silver: Map3D45DR1000.silver, orange: Map3D45DR1000.orange, topBand: Map3D45DR1000.yellow,
+                                          yellow: Map3D45DR1000.yellow, name: "45dr1000-drc1025")
+        /// Decision 511: the DR3100 diesel express on this shape until it
+        /// has its own, in the colours of two photographs of DR3120 the
+        /// author gave (2026-10-30, KASHIWA Train Collection): the stainless
+        /// body, the red-orange band under the windows that runs on as the
+        /// ends' brow and V, a thin yellow line along the windows' top and
+        /// the yellow face, each the median of its colour in both.
+        public static let dr3100 = Livery(silver: Map3DColor.rgb(0xAEB0AD), orange: Map3DColor.rgb(0xE0653F),
+                                          topBand: Map3DColor.rgb(0xE6B324), yellow: Map3DColor.rgb(0xE6B324), name: "dr3100-on-45dr1000")
+    }
+
+    public static func model(far: Bool = false, livery: Livery = .dr1000) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
-        b.dr1000(far: far)
-        return .flat(named: far ? "45dr1000-drc1025-far" : "45dr1000-drc1025", from: b.mesh)
+        b.dr1000(far: far, livery: livery)
+        return .flat(named: far ? livery.name + "-far" : livery.name, from: b.mesh)
     }
 }
 
@@ -35,9 +60,9 @@ extension StationKitBuilder {
         let front=outline.map { Map3DPoint(x+end*depth,$0.0,$0.1) }
         drPrism(back,front,color)
     }
-    mutating func dr1000(far: Bool) {
-        let silver=Map3D45DR1000.silver, orange=Map3D45DR1000.orange
-        let yellow=Map3D45DR1000.yellow, dark=Map3D45DR1000.dark
+    mutating func dr1000(far: Bool, livery: Map3D45DR1000.Livery = .dr1000) {
+        let silver=livery.silver, orange=livery.orange
+        let yellow=livery.yellow, dark=Map3D45DR1000.dark
         let glass=Map3D45DR1000.glass
         // Long, narrow body. The stripe is part of the shell and continues on the ends.
         // The photographed orange waist occupies about one fifth of the
@@ -45,7 +70,7 @@ extension StationKitBuilder {
         drShell(-9.62,9.62,1.12,2.02,silver)
         drShell(-9.62,9.62,2.02,2.20,orange)
         drShell(-9.62,9.62,2.20,3.05,silver)
-        drShell(-9.62,9.62,3.05,3.15,yellow)
+        drShell(-9.62,9.62,3.05,3.15,livery.topBand)
         drShell(-9.62,9.62,3.15,3.26,silver)
         // Six-facet rounded shoulder, substantially narrower at the crown than the sidewall.
         func roofProfile(_ x:Float)->[Map3DPoint] {

@@ -13,8 +13,13 @@ final class CommandLogTests: XCTestCase {
     private static let reach: Int64 = 512
 
     /// A blank map, paused, with money to build.
-    private func blankWorld() throws -> GameWorld {
-        try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000, speed: .paused)
+    /// `scale` 3 is the world a save before version 76 reads as: every
+    /// amount times 3 (decision 499).
+    private func blankWorld(scale: Int64 = 1) throws -> GameWorld {
+        let costs = ConstructionCosts(track: Money(testCosts.track.amount * scale), station: Money(testCosts.station.amount * scale),
+                                      train: Money(testCosts.train.amount * scale), car: Money(testCosts.car.amount * scale))
+        return GameWorld(bounds: try WorldBounds(width: 16_384, height: 8_192),
+                         economy: GameEconomy(balance: Money(1_000_000 * scale), costs: costs), clock: GameClock(speed: .paused))
     }
 
     /// Track from (2048, 2048) to (6144, 2048) and on to (10240, 4096), and
@@ -435,8 +440,8 @@ final class CommandLogTests: XCTestCase {
     /// (`ProblemReportFixtureTests`): a blank map, track, stations and
     /// platforms from the network tool, a refused platform, the speed and
     /// game time between them.
-    private func exampleSession() throws -> GameSession {
-        let session = GameSession(world: try blankWorld())
+    private func exampleSession(scale: Int64 = 1) throws -> GameSession {
+        let session = GameSession(world: try blankWorld(scale: scale))
         session.networkStructure = .surface
         build(in: session)
         session.setSpeed(.normal)
@@ -479,8 +484,20 @@ final class CommandLogTests: XCTestCase {
         let report = try JSONDecoder().decode(CommandLogReport.self, from: Data(contentsOf: url))
         let replay = try CommandLogReplay(report)
         XCTAssertNil(replay.stopped?.reason)
-        XCTAssertEqual(CommandLogReport.Summary(replay.session.world), report.end)
-        XCTAssertEqual(replay.session.world, try exampleSession().world, "made by the example's session")
+        // The example starts from a save of version 50, read with every
+        // amount times 3 (decision 499); the device's balance at the end is
+        // in the same dollars as its start.
+        struct StartVersion: Decodable {
+            struct Start: Decodable { var saveVersion: Int }
+            var start: Start
+        }
+        XCTAssertEqual(try JSONDecoder().decode(StartVersion.self, from: Data(contentsOf: url)).start.saveVersion, 50)
+        let end = CommandLogReport.Summary(replay.session.world)
+        XCTAssertEqual(end.balance, 3 * report.end.balance)
+        XCTAssertEqual([end.time, Int64(end.nodes), Int64(end.edges), Int64(end.stations), Int64(end.lines), Int64(end.trains)],
+                       [report.end.time, Int64(report.end.nodes), Int64(report.end.edges), Int64(report.end.stations),
+                        Int64(report.end.lines), Int64(report.end.trains)])
+        XCTAssertEqual(replay.session.world, try exampleSession(scale: 3).world, "made by the example's session")
         XCTAssertEqual(report.entries.filter(\.refused).count, 1)
     }
 

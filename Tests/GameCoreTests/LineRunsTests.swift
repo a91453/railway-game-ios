@@ -25,7 +25,7 @@ final class LineRunsTests: XCTestCase {
     /// Alpha, Beta and Gamma on a straight track, the line Main calling at
     /// all three, and the train Blue at Alpha facing Gamma, on the line.
     private func world(runs: [LineRun]? = nil) throws -> GameWorld {
-        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts))
         try track.build(in: &world)
         try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
         try track.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
@@ -307,7 +307,7 @@ final class LineRunsTests: XCTestCase {
     func testVersionThirtyKeepsTheRuns() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v30-line-runs.json")
-        var made = try world()
+        var made = try NTScale.$factor.withValue(3) { try world() }
         try made.advance(ticks: 10)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -322,8 +322,8 @@ final class LineRunsTests: XCTestCase {
         XCTAssertEqual(world.line(id: main)?.runs, [out, back])
         XCTAssertEqual(world.line(id: main)?.runDays, [0, nil])
         XCTAssertEqual(seconds(world.train(id: blue)?.timetable), [[300, 600], [900, 960], [1_200, 1_200]])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 30,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 30,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     func testRunsSaveAndLoad() throws {

@@ -296,12 +296,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         confirm.waitUntilSettled()
         confirm.tap()
         settle()
-        let platform = app.buttons["月台"]
+        let platform = app.segmentedControls.buttons["車站"].firstMatch
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }
         }
-        XCTAssertTrue(platform.appears(within: 10), "No Platform mode")
+        XCTAssertTrue(platform.appears(within: 10), "No Station mode")
         platform.waitUntilSettled()
         platform.tap()
         let cars = app.steppers["network.platformCars"]
@@ -319,6 +319,63 @@ final class WebsiteScreenshotTests: XCTestCase {
         confirm.tap()
         settle()
         keep("platform-levelling-layer", app)
+    }
+
+    /// Decision 507: the platform mode's layout menu on a double track,
+    /// with a place picked, then the menu open (the single-track layouts
+    /// greyed with why).
+    func testStationLayoutMenu() {
+        let app = launch(extra: ["-ui-test-world", "double-platform"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let platformMode = app.segmentedControls.buttons["車站"].firstMatch
+        if !platformMode.appears(within: 10) {
+            let controls = app.buttons["controls.toggle"]
+            if controls.appears(within: 5), controls.label == "展開控制項" { controls.tap() }
+        }
+        XCTAssertTrue(platformMode.becomesHittable(within: 10))
+        settle()
+        keep("station-mode-bar", app)
+        platformMode.tap()
+        // The station's place, as the map reports it.
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).tap()
+        let layout = app.buttons["network.stationLayout"].firstMatch
+        XCTAssertTrue(layout.appears(within: 10), "The layout menu shows")
+        settle()
+        keep("station-layout-card", app)
+        XCTAssertTrue(layout.becomesHittable(within: 5))
+        layout.tap()
+        settle()
+        keep("station-layout-menu", app)
+    }
+
+    /// Decision 507: the tutorial's step that names the network tool's
+    /// Station mode, its card beside the modes.
+    func testTutorialStationStep() {
+        let app = launch(extra: ["-tutorial-step", "station.mode"])
+        defer { app.terminate() }
+        let card = app.descendants(matching: .any)["tutorial.card"].firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        if !card.appears(within: 60), folded.exists { folded.tap() }
+        XCTAssertTrue(card.appears(within: 10), "The tutorial's card shows")
+        let mode = app.segmentedControls.buttons["車站"].firstMatch
+        if !mode.appears(within: 10), app.buttons["dock.build"].exists { app.buttons["dock.build"].tap() }
+        XCTAssertTrue(mode.appears(within: 10), "The Station mode shows")
+        settle(seconds: 3)
+        keep("tutorial-station-step", app)
     }
 
     /// New game → real world (decision 477): the whole of Taiwan first,
@@ -783,6 +840,72 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// One tap on the zoom-in button, when the map has it.
+    /// Decision 502: the saves list with one row per game, choosing saves
+    /// to delete and the warning before they go, and a save's earlier
+    /// versions. For the screenshot review of the pull request that made
+    /// them, not the website.
+    func testSavesListOneRowPerGame() {
+        let app = launch(extra: ["-sample-saves"])
+        defer { app.terminate() }
+        let saves = app.buttons["start.saves"]
+        XCTAssertTrue(saves.appears(within: 30), "The start screen shows Saves")
+        // On a phone on its side Saves lies below the fold of the start
+        // screen's column: drag that column at the button's own x
+        // (`StartSaveFlowSmokeTests.testAnUnreadableSaveCanBeDeleted`).
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<6 where !saves.isHittable {
+            let x = saves.frame.midX - app.frame.minX
+            origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.75))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.35)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        saves.tap()
+        let select = app.buttons["saves.select"]
+        XCTAssertTrue(select.appears(within: 10), "The list offers Select")
+        settle()
+        keep("saves-list", app)
+
+        // A row's earlier versions, from its "⋯" menu.
+        let menus = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.menu.save-"))
+        let versionsChoice = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.versions.")).firstMatch
+        for index in 0..<menus.count where !versionsChoice.exists {
+            let menu = menus.element(boundBy: index)
+            guard menu.isHittable else { continue }
+            menu.tap()
+            if !versionsChoice.appears(within: 2) { app.tap() }
+        }
+        if versionsChoice.exists {
+            settle(seconds: 1)
+            keep("saves-row-menu", app)
+            versionsChoice.tap()
+            let version = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "saves.version.")).firstMatch
+            XCTAssertTrue(version.appears(within: 10), "The earlier versions are offered")
+            settle(seconds: 1)
+            keep("saves-earlier-versions", app)
+            let cancel = app.buttons["取消"].firstMatch
+            if cancel.exists { cancel.tap() } else { app.tap() }
+            XCTAssertTrue(version.disappears(within: 10))
+        }
+
+        select.tap()
+        let selectAll = app.buttons["saves.selectAll"]
+        XCTAssertTrue(selectAll.appears(within: 10), "Choosing offers Select All")
+        settle(seconds: 1)
+        keep("saves-select", app)
+        selectAll.tap()
+        settle(seconds: 1)
+        keep("saves-select-all", app)
+        tapButton("saves.deleteSelected", in: app)
+        let confirm = app.buttons["saves.deleteSelected.confirm"].firstMatch
+        XCTAssertTrue(confirm.appears(within: 10), "Deleting warns first")
+        settle(seconds: 1)
+        keep("saves-delete-warning", app)
+        let cancel = app.buttons["取消"].firstMatch
+        XCTAssertTrue(cancel.exists)
+        cancel.tap()
+        XCTAssertTrue(confirm.disappears(within: 10), "Cancel keeps the saves")
+    }
+
     private func zoomInOnce(_ app: XCUIApplication) {
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 5), zoomIn.becomesHittable(within: 3) {

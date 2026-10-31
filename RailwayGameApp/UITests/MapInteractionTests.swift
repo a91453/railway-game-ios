@@ -1005,7 +1005,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(build.appears(within: 5))
         build.tap()
 
-        let platform = app.buttons["Platform"]
+        let platform = app.segmentedControls.buttons["Station"].firstMatch
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             XCTAssertTrue(controls.appears(within: 5))
@@ -1505,6 +1505,8 @@ final class MapInteractionTests: XCTestCase {
     /// Decision 269, later fix (71.1, the owner: "3D 一放大就跳回 2D"): a
     /// 3D map the button opened stays 3D as it is pinched closer; only one
     /// a pinch handed over goes back to the 2D map, and only pinched out.
+    /// Decision 517: Build there builds on the 2D map and Done goes back
+    /// to the 3D map; Build started on the 2D map stays there.
     func testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -1541,7 +1543,24 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(build.becomesHittable(within: 10))
         build.tap()
         XCTAssertTrue(close.disappears(within: 10), "Build goes back to the 2D map")
-        XCTAssertTrue(app.buttons["tool.select"].appears(within: 10), "Build takes the building tools out")
+        let done = app.buttons["tool.select"]
+        XCTAssertTrue(done.appears(within: 10), "Build takes the building tools out")
+        // Decision 517: Done there goes back to the 3D map Build left.
+        XCTAssertTrue(done.becomesHittable(within: 10))
+        done.tap()
+        XCTAssertTrue(close.appears(within: 20), "Done goes back to the 3D map")
+        XCTAssertTrue(build.becomesHittable(within: 20))
+        // Back to the 2D map with its button: building started there ends there.
+        close.tap()
+        XCTAssertTrue(close.disappears(within: 10))
+        let dockBuild = app.buttons["dock.build"]
+        XCTAssertTrue(dockBuild.becomesHittable(within: 10))
+        dockBuild.tap()
+        XCTAssertTrue(done.appears(within: 10))
+        XCTAssertTrue(done.becomesHittable(within: 10))
+        done.tap()
+        XCTAssertTrue(done.disappears(within: 10), "Done puts the tools away")
+        XCTAssertFalse(close.appears(within: 3), "Building started on the 2D map stays there")
     }
 
     /// Decision 384 (TestFlight 85.1): on a phone on its side the new

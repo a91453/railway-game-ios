@@ -86,20 +86,25 @@ public struct LandValue: Hashable, Sendable {
 }
 
 /// The numbers of land value (Phase 6c-3): this project's (gap).
+///
+/// Decision 499: every amount is in cents of the New Taiwan dollar, 3 to
+/// the dollar these rules were written in, so each base, premium and bound
+/// is the comment's number times 3; the bases times the density factors
+/// stay whole, so every value is exactly 3 times what it was.
 public enum LandValueRules {
     /// B for a cell with no land and no building, in cents a m².
-    public static let vacantBase: Int64 = 1_000
+    public static let vacantBase: Int64 = 3_000
 
     /// B for a use, in cents a m².
     public static func base(of use: LandUse) -> Int64 {
         switch use {
-        case .residential: 2_000
-        case .commercial, .leisure: 3_000
-        case .office: 3_500
-        case .industrial: 1_500
-        case .civic: 2_500
-        case .agricultural: 600
-        case .park: 1_200
+        case .residential: 6_000
+        case .commercial, .leisure: 9_000
+        case .office: 10_500
+        case .industrial: 4_500
+        case .civic: 7_500
+        case .agricultural: 1_800
+        case .park: 3_600
         }
     }
 
@@ -116,28 +121,28 @@ public enum LandValueRules {
     /// D without a building, in thousandths.
     public static let vacantDensityFactor: Int64 = 1_000
     /// Cents a m² for each point of the best station's score S (0 to 1,000).
-    public static let servicePremium: Int64 = 15
+    public static let servicePremium: Int64 = 45
     /// Cents a m² for each station the best station reached (0 to 5).
-    public static let accessPremium: Int64 = 1_000
+    public static let accessPremium: Int64 = 3_000
     /// Cents a m² near a park (decision 91), and how near: 400 m.
-    public static let parkPremium: Int64 = 600
+    public static let parkPremium: Int64 = 1_800
     public static let parkReach: Int64 = 25_600
     /// Cents a m² on a cell zoned for a use near the company's buildings
     /// (decision 98), and how near their centres: 400 m, as a park.
-    public static let companyPremium: Int64 = 600
+    public static let companyPremium: Int64 = 1_800
     public static let companyReach: Int64 = 25_600
     /// Cents a m² by the water (decision 111), and how near a cell of
     /// water's middle: 160 m, two and a half cells.
-    public static let waterPremium: Int64 = 600
+    public static let waterPremium: Int64 = 1_800
     public static let waterReach: Int64 = 10_240
     /// Cents a m² near the company's schools and hospitals (decision 361's
     /// sequel), and how near their centres: 400 m, as a park.
-    public static let schoolPremium: Int64 = 900
-    public static let hospitalPremium: Int64 = 500
+    public static let schoolPremium: Int64 = 2_700
+    public static let hospitalPremium: Int64 = 1_500
     public static let civicReach: Int64 = 25_600
     /// The least and the most a cell is worth, in cents a m².
-    public static let minimum: Int64 = 500
-    public static let maximum: Int64 = 50_000
+    public static let minimum: Int64 = 1_500
+    public static let maximum: Int64 = 150_000
 
     /// `base + service + access + park + company + water + civic` within
     /// ``minimum`` … ``maximum``.

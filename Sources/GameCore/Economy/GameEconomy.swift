@@ -28,7 +28,8 @@ public struct ConstructionCosts: Hashable, Codable, Sendable {
 
     /// GameCore's prices for its own new worlds and tests. The app's new
     /// game sets its own (`GameWorld.newGame()`, ARCHITECTURE decision 46).
-    public static let standard = ConstructionCosts(track: 1_000, station: 50_000, train: 200_000)
+    /// In New Taiwan dollars, 3 to the dollar they were (decision 499).
+    public static let standard = ConstructionCosts(track: 3_000, station: 150_000, train: 600_000)
 }
 
 extension ConstructionCosts {

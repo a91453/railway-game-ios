@@ -28,24 +28,24 @@ final class DayPassCardTests: XCTestCase {
         XCTAssertFalse(card.isAvailable)
         XCTAssertNotNil(card.unavailableText(in: .english))
         XCTAssertEqual(card.statusText(in: .english), "Not on sale")
-        XCTAssertEqual(card.suggestedPrice, Money(1_500), "three $5 fares")
+        XCTAssertEqual(card.suggestedPrice, Money(4_500), "three $5 fares")
         XCTAssertNil(card.todayText(in: .english))
     }
 
     func testTheSessionSellsAndStops() throws {
         let session = GameSession(world: try world())
         XCTAssertTrue(DayPassCard(world: session.world).isAvailable)
-        session.setDayPass(Money(800))
-        XCTAssertEqual(session.world.accounts.dayPass, Money(800))
-        XCTAssertEqual(session.message?.text, "Day passes on sale at \(Money(800).centsText).")
+        session.setDayPass(Money(2_400))
+        XCTAssertEqual(session.world.accounts.dayPass, Money(2_400))
+        XCTAssertEqual(session.message?.text, "Day passes on sale at \(Money(2_400).centsText).")
         let card = DayPassCard(world: session.world)
-        XCTAssertEqual(card.statusText(in: .traditionalChinese), "販售中 · \(Money(800).centsText)")
-        XCTAssertEqual(card.suggestedPrice, Money(800), "the price on sale")
-        // Worth $10 there and back: at $8 a fifth of the 240 buy, $2 under.
+        XCTAssertEqual(card.statusText(in: .traditionalChinese), "販售中 · \(Money(2_400).centsText)")
+        XCTAssertEqual(card.suggestedPrice, Money(2_400), "the price on sale")
+        // Worth NT$30 there and back: at NT$24 a fifth of the 240 buy, NT$6 under.
         XCTAssertEqual(card.today.sold, 48)
-        XCTAssertEqual(card.todayText(in: .english), "Today about 48 sold: \(Money(-9_600).signedText) against what their trips would have paid, and 0 extra rides.")
+        XCTAssertEqual(card.todayText(in: .english), "Today about 48 sold: \(Money(-28_800).signedText) against what their trips would have paid, and 0 extra rides.")
 
-        session.setDayPass(Money(1_000))
+        session.setDayPass(Money(3_000))
         XCTAssertEqual(DayPassCard(world: session.world).todayText(in: .english), "Nobody buys at this price today.")
         session.setDayPass(nil)
         XCTAssertNil(session.world.accounts.dayPass)

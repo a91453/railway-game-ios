@@ -16,7 +16,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 1000000,
+    "balance": 3000000,
     "gameMinutes": 0,
     "lines": [
       {
@@ -191,7 +191,7 @@
     "trains": []
   },
   "initialState": {
-    "balance": 1000000,
+    "balance": 3000000,
     "costs": {
       "car": 0,
       "station": 0,
@@ -203,7 +203,7 @@
     "worldHeight": 8192,
     "worldWidth": 8192
   },
-  "schemaVersion": 33,
+  "schemaVersion": 75,
   "steps": [
     {
       "command": {

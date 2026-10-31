@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 53,
+  "schemaVersion": 75,
   "description": "Decision 139: the city's demand for homes, shops and work, in a world 32 x 24 cells of 64 m, managed, with the city's buildings. The land is homes of 1000 residents at row 5, column 5, shops of 400 jobs at column 6 and offices of 600 jobs at column 7. Off, the city has no demand. On, it keeps the mix it has: 400,000 shop jobs and 600,000 jobs in work for every million residents, so nothing is in demand. An office block placed on the shops' cell (26624, 22528) buys them out: the city has 1000 residents, no shop jobs and 600 jobs in work. Shops: 10 x 1000 x (400,000 - 0) / 400,000, past full, 1000; homes: jobs a resident 600,000 against 1,000,000, 10 x 1000 x (-400,000) / 1,000,000, past full, -1000; work: as kept, 0. Turned off and on again the city keeps the mix it has then (no shop jobs, 600,000 in work), and nothing is in demand.",
   "initialState": {
     "worldWidth": 131072,
     "worldHeight": 98304,
-    "balance": 1000000000,
+    "balance": 3000000000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "paused"
@@ -167,7 +167,7 @@
   "expectedFinalState": {
     "gameMinutes": 0,
     "speed": "paused",
-    "balance": 828582400,
+    "balance": 2485747200,
     "stations": [],
     "trains": [],
     "lines": [],
@@ -235,11 +235,11 @@
     },
     "placedBuildings": [
       {
-        "buildingCost": 24576000,
+        "buildingCost": 73728000,
         "id": 1,
         "jobs": 168,
         "kind": "office",
-        "landCost": 146841600,
+        "landCost": 440524800,
         "x": 26624,
         "y": 22528
       }

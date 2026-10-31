@@ -23,7 +23,7 @@ final class BuildingMaterialsTests: XCTestCase {
     /// Alpha's yard sending them.
     private func world(trains: Int = 1, materials: Bool = true) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts)
         )
         try track.build(in: &world)
         try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
@@ -60,7 +60,7 @@ final class BuildingMaterialsTests: XCTestCase {
         XCTAssertEqual(world.freightFacility(at: alpha)?.product, .materials)
         XCTAssertEqual(world.materialsSuppliedPerDay(at: alpha), 60)
 
-        var off = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000, costs: testCosts))
+        var off = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000, costs: testCosts))
         XCTAssertThrowsGameError(try off.setFreightProduct(at: alpha, to: .goods), .freightNotEnabled)
         off.enableBuildingMaterials()
         XCTAssertNotNil(off.freight, "building materials turn freight on")
@@ -162,7 +162,7 @@ final class BuildingMaterialsTests: XCTestCase {
     func testVersionThirtyNineKeepsItsBuildingMaterials() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v39-materials.json")
-        var made = try world()
+        var made = try NTScale.$factor.withValue(3) { try world() }
         try made.advance(ticks: 5 * 60)
         while made.freight?.loads.isEmpty ?? true { try made.advance(ticks: 1) }
         let encoder = JSONEncoder()
@@ -174,14 +174,14 @@ final class BuildingMaterialsTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 39)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        try XCTAssertSameButRounding(world, made, cents: 3_000)
         let state = try XCTUnwrap(world.freight)
         XCTAssertTrue(state.buildingMaterials)
         XCTAssertEqual(state.loads.first?.groups.first?.kind, .materials)
         XCTAssertEqual(state.facilities.first?.product, .materials)
         XCTAssertTrue(state.isConserved)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 39,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 39,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     // MARK: - The city's growth (decision 157)

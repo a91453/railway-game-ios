@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 30,
+  "schemaVersion": 75,
   "description": "Following between calls under traffic control (Stage U2, ARCHITECTURE decision 56). A straight line of four edges of 32768 (512 m) east along y = 1024, n1 to n5: A's platform on e1 from 1024 to 3072, M's on e2 and N's on e3 from 14336 to 16384, B's on e4 from 28672 to 30720. Leader (2 cars, 1024 long) stands at M's forward berth (16384 along e2) and runs M 0/1 to B 21/21, 16384 + 32768 + 30720 = 79872 in 20 minutes. Follower (2 cars) stands at A's (3072 along e1) and runs A 0/0 to N 7/7 past M without calling there, 29696 + 32768 + 16384 = 78848 in 7 minutes. Due at 0:42, the Follower waits at A while the Leader stands at M on its route: a train that stands is not one to follow (routeHolder 1, no reservation). At 1:00 the Leader, the lower ID, leaves first and takes its whole route; in the same second the Follower sets off following it: no train holds its route up to 14335 along e2 (the Leader's tail, at 15360 on a span boundary, holds the span ending there too), 44031 from its head; 400 m (25600, the Railway reference's BLOCK_GAP_KM) short of that is 18431 on, 21503 along e1, and it holds its route to the end of the span there (e1 from 2048 to 21504). Its run is the 420 seconds its timetable gives (Stage W2c), but it goes no farther than its reservation holds it. At 4:01 the Leader's tail is 27344 along e2, inside the span from 26624; 400 m short of 26623 is 1023 along e2, where the Follower's head stands, holding e1 from 31744, n2 and e2 to 1024. Each second, before anything sets off, it takes more of its route as the Leader frees it: at 9:01 the Leader's tail is 14577 along e3, inside the span from 14336; 400 m short of that is 21503 along e2, and the Follower holds its route to 21504, its head at 20599. Once the Leader's tail has left the Follower's route, the Follower takes the rest of it and arrives at N at 10:40 (second 640), 220 seconds late, releasing its route (Stage T): it holds its place alone, e3 from 14336 to 17408. The Leader is still on its way to B at the end.",
   "initialState": {
     "worldWidth": 133120,
     "worldHeight": 4096,
-    "balance": 1000000,
+    "balance": 3000000,
     "costs": {
-      "track": 10,
-      "station": 1000,
-      "train": 5000
+      "track": 30,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "normal"
@@ -1454,7 +1454,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 984720,
+    "balance": 2954160,
     "gameSeconds": 661,
     "lines": [],
     "network": {

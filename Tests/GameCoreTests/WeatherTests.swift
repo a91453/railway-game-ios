@@ -12,7 +12,7 @@ final class WeatherTests: XCTestCase {
     /// `level` with `seed`, starting at game day `day`.
     private func world(seed: UInt32? = 7, level: DisruptionLevel = .standard, country: String = "TW", day: Int64 = 0) throws -> GameWorld {
         var world = GameWorld(
-            bounds: try WorldBounds(width: 16_384, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+            bounds: try WorldBounds(width: 16_384, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(seconds: day * GameTime.secondsPerDay))
         )
         let track = TestLine(tiles: 14)
@@ -288,7 +288,7 @@ final class WeatherTests: XCTestCase {
     func testVersionFortyOneKeepsTheSeed() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v41-weather.json")
-        var made = try world(day: firstDay(with: .rain))
+        var made = try NTScale.$factor.withValue(3) { try world(day: firstDay(with: .rain)) }
         try made.advance(ticks: 30)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -302,7 +302,7 @@ final class WeatherTests: XCTestCase {
         XCTAssertEqual(world, made)
         XCTAssertEqual(world.disruptions?.seed, 7)
         XCTAssertEqual(world.weather(onDay: firstDay(with: .rain)), .rain)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 41,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 41,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

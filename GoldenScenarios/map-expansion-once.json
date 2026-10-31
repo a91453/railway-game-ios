@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 63,
+  "schemaVersion": 75,
   "description": "Buying the map is turned on once (decision 160's later fix, schema 63). A world of 2 x 1 tiles of 1,048,576 units, free play, 1,000,000,000 at the start. Turned on owning tile (0, 0), it refuses to be turned on again (mapExpansionEnabled): starting over from one tile would forget the tiles bought while their land stays in the books. Tile (0, 1) is bought for 1 x 500,000,000; turning it on again, even with the tile first owned, is still refused, and so is a tile outside the world (row 5): the refusal is checked first. The company keeps both tiles; balance 1,000,000,000 - 500,000,000 = 500,000,000.",
   "initialState": {
     "worldWidth": 2097152,
     "worldHeight": 1048576,
-    "balance": 1000000000,
+    "balance": 3000000000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "paused"
@@ -81,7 +81,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 500000000,
+    "balance": 1500000000,
     "gameMinutes": 0,
     "lines": [],
     "mapExpansion": {

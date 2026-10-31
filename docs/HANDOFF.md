@@ -1,3 +1,7 @@
+> 從 3D 按「建設」（派工單 BUILD3D，[決策 517](decisions/517.md)，`build3d-return`，2026-10-31）：照舊在 2D 蓋，從 3D 來的按「完成」回到 3D 原本的視角（`Map3DBuildReturn`）。在 3D 裡直接鋪軌只做了評估，留給之後：照決策 517「下一步」的四步（先做 3D 點選、再解決鋪完要等場景重蓋、再只做路網的平面鋪設、最後看實機數據）。實機上回 3D 的樣子、截圖驗收暫緩（ui-review §3），UNVERIFIED。
+
+> DR3100 柴聯自強號（決策 511，session_01YGNNuo4eEH6JS6x5CwJ3LG，`dr3100-service`，2026-10-30）：`dieselExpress` 三節以上改用 45DR1000 的外型、DR3100 自己的塗裝（`Map3D45DR1000.Livery.dr3100`，近遠景）；真實地圖的縱貫線北段、宜蘭線、北迴線每天多跑 209／221／238／246 四班 DR3100 三節（`tra-dr3100-schedule.json`）。**沒做的**：臺鐵示範（決策 240）裡這四班仍在「台鐵 自強／莒光」線上用推拉式 12 節跑；要改得在 `TRADemo.kinds` 加一條 DR3100 線並重跑 `TRADemoTests`、`TRADemoDayTests`（見 `docs/decisions/511.md`「還沒做的」）。DR3100 自己的外型（中間的 DR3150 無駕駛室、20.274 m）也還沒有。實機外觀與幀數 UNVERIFIED。
+
 > Codex 45DR1000 靜態 studies（公開 draft #1530 ↔ 私庫 draft #33）：`docs/art/45dr1000-2026-10-29/README.md` 與 sources.json 記 DRC1025 2006–08 版本、來源和推估。公開 recipe 原只加 studies 近遠景；2026-10-30 DR1000 session（session_01YGNNupCW2YCoD2nXrEiuNh）在同一 PR 把營運的 `dieselRailcar`／新的 `dieselRailcarFar` set 換成這款（每節兩端駕駛室，2～3 節照常由 `Map3DRealTrains` 與 `set(forKey:count:)` 決定，未改路由；遠景側窗切成三段讓夜間客室窗會亮，三角形 1,536→1,584）。NEXT_PRIORITIES §22.2 第 17 名「`dr1000` 車種」（升存檔、`TrainType`）是另一件，未做。revision-2 重做使用者否定的首版正面；revision-3 將窗下橘帶由 0.10 m 加厚至照片推估的 0.18 m，使用者認為側面應可接受。revision-4 producer `533f9370598b0f5b101ebfafb37adf7cbd376959` 又依正面原圖修斜肩車頂箱、燈圈、貫通門上框和兩側橘色下緣，私庫 `revision-4/` 留完整素材，前三輪只留 PNG／README／來源。新正面外觀接受、營運整合與 45DR1000 Metal／裝置仍 UNVERIFIED，不得以 Linux viewer 或通用 Simulator build 當本車裝置驗收。不合併／auto-merge／TestFlight。
 
 > Codex E200 鳴日號風格塗裝（2026-10-29）：[基準／單元／選用限制與重建](art/e200-mingri-style/README.md)。只新增既有 E200CK 機車及標準／尾客車的近遠 studies，原車／共用車／營運映射保持。沒有獨立玩家塗裝選用機制，合併不會自動出現在遊戲；使用者外觀接受、營運接入及真機仍UNVERIFIED。公開 [PR #1480](https://github.com/a91453/railway-game-ios/pull/1480) 仍 OPEN／ready；素材 [PR #25](https://github.com/a91453/railway-assets-private/pull/25) 已合併，實際 producer 與驗證見自有文件。
@@ -81,7 +85,8 @@
 
 ## 怎麼用這份
 
-- **開工前**：讀第 1、2、3 節，確認要做的事沒有人在做，作者也沒有說「先不要動」。然後照 CLAUDE.md 在工作登記 #1041 登記。
+- **開工前**：讀第 1、2、3 節，確認要做的事沒有人在做，作者也沒有說「先不要動」。然後照 CLAUDE.md 在工作登記 #1579 登記。
+- **工作登記又換了 issue**（2026-10-30）：#1041 約 2,360 則，接近上限，遊戲規劃第 36 任開了 #1579（工作登記（三））。從此本文件寫「#1041」或「#231」的現行規則都指 #1579；2026-10-30 以前的紀錄留在 #1041。#1579 接近 2,400 則時，照下一條換。
 - **工作登記換了 issue**（2026-10-22）：#231 滿 2,500 則留言，GitHub 不再接受新留言，改用 #1041。這份文件裡其餘寫「#231」的地方，從此都指 #1041；2026-10-22 以前的紀錄留在 #231。#1041 接近 2,400 則時，遊戲規劃開下一個 issue，並改 CLAUDE.md、AGENTS.md、GEMINI.md、`full-lane-watch.yml` 與 `tools/ci-watch/full_lane_watch.py`。
 - **收工時**：做到一半、留給之後、交給別人的事，寫進這份的對應一節（或寫進該決策的「下一步」，並在這裡留一行指過去），跟最後一個 PR 一起合併。只寫在 session 訊息、PR 說明或 #231 留言裡的交接，下一個 session 看不到。
 - **交接給另一個 session**：用 send_message 傳的內容，也要在這裡留一份。
@@ -96,7 +101,7 @@
 - 新功能的實作 session 同時最多 3–4 個，照 NEXT_PRIORITIES §22 的順序一件一件開；開著的 PR 也不要多，免得一直解衝突。
   - 作者 2026-10-25：「你先派好了 好像3～4個session沒關係 沒有撞到相同的部分」：3–4 個可以同時派，條件是它們不改同一批檔案；改同一塊的（例如都動 LineAcquisition）照順序一個合了再派下一個。
 - PR 審查比新功能優先。上一輪是 #786–#872（§7.1）。
-- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 K（#1288–#1385，分兩段：K1 #1288–#1340，23 個程式 PR、24 點，[`archive/PR1288_1340_REVIEW_HANDOFF.md`](archive/PR1288_1340_REVIEW_HANDOFF.md)；K2 #1343–#1385，24 個程式 PR、26 點，[`archive/PR1343_1385_REVIEW_HANDOFF.md`](archive/PR1343_1385_REVIEW_HANDOFF.md)；K2-1 由 #1393 修、K2-2 由 #1394 修，K1-1、K2-3～K2-9 交出去）；下一輪從 #1386 起數。再上一輪是審查 J（#1229–#1287，[`archive/PR1242_1287_REVIEW_HANDOFF.md`](archive/PR1242_1287_REVIEW_HANDOFF.md)）。
+- **多久審查一次**（2026-10-22，作者：「多少pr要做一次pr review 因為有時候只是加入文件跟codex加模型而已你五方比較」）：**數程式的 PR，滿 30 點開一輪審查**。GameCore 的 PR 算 2 點；GamePresentation、App、CI 腳本、資料工具（`tools/` 會產生打包資料的）、`Web/` 的程式算 1 點；只改文件、只加模型或素材（Codex 的模型包、`Map3D*Kit` 的配方）、只改測試的算 0 點。上一輪是審查 L（#1510–#1578，分兩段：L1 #1510–#1549，28 個程式 PR、29 點，[`archive/PR1510_1549_REVIEW_HANDOFF.md`](archive/PR1510_1549_REVIEW_HANDOFF.md)，P1 0、P2 1（L1-1：拆自己的路時每條公車線算兩次，點按卡約 2 秒）、P3 2；L2 #1551–#1578，21 個程式 PR、22 點，[`archive/PR1551_1578_REVIEW_HANDOFF.md`](archive/PR1551_1578_REVIEW_HANDOFF.md)，P1 0、P2 1（L2-1：站長的「跟我做 5 分鐘教學」沒先存目前這局）、P3 4）；下一輪從 #1579 起數。再上一輪是公測前審查 REV（#1496–#1509，[`archive/PR1496_1509_REVIEW_HANDOFF.md`](archive/PR1496_1509_REVIEW_HANDOFF.md)）與審查 K（#1288–#1385，[`archive/PR1343_1385_REVIEW_HANDOFF.md`](archive/PR1343_1385_REVIEW_HANDOFF.md)）。
   - 量的（2026-10-22，main 最近 60 個合併，約 10 小時）：文件 13、只有素材／測試 6、程式 41（其中 GameCore 5）。#962–#1017 共 51 個 PR、37 個程式、41 點：已經超過，下一個空位先開審查 D。
   - 為什麼 30 點：一個審查 session 看 30 個程式 PR（每個 diff 約 5–10 千 token）大約 15–30 萬，在第一次壓縮（約 32 萬）之前看完；上一輪 #873–#944 一次 72 個，A6–A11 到現在還開著。
   - 五方（權重照 NEXT_PRIORITIES §19；選項：A 每 30 個 PR、B 每 50 個 PR、C 每 30 點、D 每天一次、E 每 60 點）：
@@ -425,6 +430,58 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第三十七次換手（2026-10-31 約 01:15 UTC，第 36 任 session_01YGNNunAp2WBFfGrmq3mXES → 第 37 任）**：第 36 任壓縮 3 次、約 300k，照 §1 換手（第 36 任是第 5 層，第 37 任第 6 層；第 7 層起由作者在 claude.ai 開）。
+- **100.1 的計畫**：分三批合，最後一批合完、main 的完整 `ci.yml`（workflow_dispatch）與 full lane 都綠，就跟作者說「100.1 可以發（commit X）」。只有作者按發版。提醒作者答 App Store Connect 的出口合規、99.1 的外部群組。
+- **已合（這輪）**：#1584、#1585、#1587、#1591、#1590（DR3100，決策 511）、#1550（NTD1 新台幣，存檔 76，決策 499）。main d7d25547 的推送 `ci.yml` 交接時還在跑；full lane d7d25547 綠。#1550 的 ChallengeReport seed 1 報告還沒跑。
+- **合併順序**（作者：「好 綠了就合」，等 main 綠才合下一批，螢幕有變的要看截圖，決策 482）：
+  1. #1582 PLATLAYOUT（決策 507，session_01YGNNunAE46kn6nhKToQVDQ）：截圖 run 41150887362，看過就合，再通知 UICLUTTER 與 TRACKHINT。
+  2. #1583 UICLUTTER（決策 510，session_01YGNNuoCZyhdimmFomU4tcG）：#1582 合後 merge main，再拍截圖。
+  3. #1586 TRACKHINT（session_01YGNNunAhpgqKXr3duUqhN9）：第一段鋪軌是直線（`NetworkBuilding.curve` 兩端都空就畫直線，設計如此）的提示。免截圖，排在 #1583 後。
+  4. #1581 ZONE1（決策 509，session_01YGNNuo27fcYAGK3J1GdZHo）：還差小 iPhone 的截圖。之前誤說「A 列車有分區」，作者更正，文字已改成「SimCity／Cities: Skylines」。
+  5. #1592 ZONE2（決策 514，session_01YGNNuns1js3JryrY9ZEZpK）：排在 #1581 後，要截圖。作者說「分區看起來沒什麼作用」：決策 98 只在成長中車站的範圍內填空格，需求是負的用途就跳過。ZONE2 讓圖層說出原因，後續 PR 放下一版。
+  6. #1588 ROSTER2（決策 512，session_01YGNNumBRTdCpYye3rq4eep）：修正已推（b7e6c20）。要派車流程的前後截圖；「之前」的 run 41151250233 失敗，ROSTER2 在處理。作者問過「直接點派出列車」不受影響。
+  7. GEOMSG（決策 513，session_01YGNNuoRrRTXXysd6fhDuj8）：還沒 PR。內容如下：
+     - 鋪軌被擋時說出真正原因：坡度超過 40‰（`TrackProfile.maximumGrade`），或高低差超過 128 m（`TrackGeometry.maximumRise`）。目前都落到 `invalidTrackGeometry` 那句。
+     - 查南澳站放不下的三種情況。
+     - 作者問：預設的台鐵軌道擋在那裡，重鋪時不會刪掉，該怎麼辦。
+  8. #1593 ALISHAN（存檔 77，決策 515，session_01YGNNumbnQtwccikAUfEgt2，已壓縮 1 次）：阿里山照真實坡度鋪的山區軌道，排在 GEOMSG 後。#1550 和 GEOMSG 都合了就通知它 merge main。
+- **還沒 PR 的**：
+  - HOUSEROAD（決策 516 若需要，session_01YGNNunYtaAHmBXbpL19FVv）：作者說隨機生成的房屋也要靠馬路（參考決策 385、389）。
+  - BUILD3D（決策 517，session_01YGNNuon8ZuU8yaEFfYhXzx）：在 3D 按建設不跳回 2D。草稿 #1594：蓋完回到 3D 原本的視角。
+  - PASSLOOP（決策 518，session_01YGNNun8qxU3qeJoE7gLpCk）：作者說快車要讓車時應該走待避月台，高鐵示範有時停在主線。登記 #1579 留言 6536924388。
+- **不是我們的**：#1589（R200／R216，Codex）紅，不用管。
+- **號碼**：決策 513 GEOMSG、514 ZONE2、515 ALISHAN、516 HOUSEROAD（若需要）、517 BUILD3D、518 PASSLOOP；下一個空的是 519。存檔 77 給 ALISHAN。
+- **排程**：第 36 任留了一個巡查 trig_01FmPXzUtYW4f2euEDrN55Kr（01:36 UTC，送回第 36 任）；交接後刪掉，第 37 任自己排。
+- **還沒派的**（同下面第 36 任的現況）：HANG2 P2-3～P2-7（§4.31）、iPad SettingsUITests、車站擴建（506）、≈US$ 參考、99.1 後請作者在 6000× 下回報一次。
+
+**第 36 任的現況（2026-10-30 約 22:00 UTC，session_01YGNNunAp2WBFfGrmq3mXES，壓縮 1 次）**：
+- **99.1 發了**：作者自己按（run 41128192853，main d71ffecc，21:43 UTC 上傳成功）。紀錄在 `research/PLAYER_FEEDBACK.md`。full lane 41124234935 是發版後補驗。作者說「不用凍結了 開始合併」。
+- **99.1 合的**：#1572、#1573、#1576、#1578，以及更早的 #1560、#1561、#1570、#1577 等。發版後合了 #1556（SAVE2，決策 502）。
+- **工作登記換到 #1579**：#1041 約 2,360 則，#1580 改指向。
+- **在做的（100.1）**：
+
+  | 工作 | session | 決策 | PR |
+  | --- | --- | --- | --- |
+  | ZONE1 分區獨立一顆工具 | session_01YGNNuo27fcYAGK3J1GdZHo | 509 | #1581 |
+  | PLATLAYOUT 月台排法 | session_01YGNNunAE46kn6nhKToQVDQ | 507 | #1582 |
+  | UICLUTTER iPhone 13 玩家「UI過多、容易誤觸」 | session_01YGNNuoCZyhdimmFomU4tcG | 510 | |
+  | DR3100 接入運行，先用 DR1000 的配方 | session_01YGNNuo4eEH6JS6x5CwJ3LG | 511 | |
+  | NTD1 第六棒：修 #1550 獨立審查的兩項必修 | session_01YGNNuqUDNQvyoQt4V44BrL | 499 | #1550 |
+  | 審查 L1（#1510–#1549） | session_01YGNNuq2kgbe3peC7BKSFEX | | |
+  | 審查 L2（#1551–#1578） | session_01YGNNuoHoVW8bZch4prpm3R | | |
+
+  - DR3100 是作者原話「dr3100接入運行 先用dr1000代替 兩者差異不大」。
+  - #1550 的兩項必修：兩個 ReplayFixtures 的金額沒乘 3；高鐵每公里票價變 9.7 倍。規劃決定每公里票價維持舊水準乘 3。
+  - 審查 L 那輪點數從 #1510 起約 51 點。
+- **號碼**：下一個空的決策號是 512。存檔 76 與 golden 75 給 NTD1。
+- **CI 優化**：99.1 的完整 ci 約 25 分，最慢一組是中位數的 1.3 倍，沒有過線。Mac 排隊只是發版當晚塞。
+- **還沒派的**：
+  - HANG2 P2-3～P2-7（§4.31）
+  - iPad SettingsUITests
+  - 車站擴建（506）
+  - ≈US$ 參考
+  - 99.1 後請作者在 6000× 下回報一次
 
 **第三十六次換手（2026-10-30 約 16:50 UTC，第 35 任 session_01YGNNukwV4BudeNCor4i52r → 第 36 任）**：第 35 任壓縮 3 次、約 300k，照 §1 換手（第 35 任是第 4 層，第 36 任第 5 層）。
 - **作者睡前的話**（約 16:40 UTC，對第 35 任說）：「那你繼續做我要去睡覺了 希望明天早上已經發新版 然後你也已經在做100.1的準備了」。發版照 CLAUDE.md：main HEAD 的完整 `ci.yml`（workflow_dispatch）與 full lane 都綠才可以按 `testflight.yml`，一次。這句是對第 35 任說的；第 36 任若判斷不能當成「發」，就把紅綠燈表與「可以發（commit X）」準備好，等作者起床說一聲。
@@ -2325,6 +2382,57 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **P3-7**：離車站遠、地塊還沒讀進來的地方，沿真實的街鋪路照全價收（`RealRoadCells.swift`）。
 
 照文件順序做，每項先寫一個在 main 上會紅的測試。
+
+### 4.34 存檔一局一筆（決策 502，SAVE1 session_01YGNNuq65cB35dbSd2SspvL → SAVE2 session_01YGNNuogTGYLuCpzpJbTWYt，PR #1556，2026-10-30）
+
+- **做了的**在決策 502（`docs/decisions/502.md`）與 PR #1556：一局一列、存檔寫回同一列、列內留 3 版、多選與全選刪除（正在玩的不列入）、全有或全無。第一次獨立審查（d0ed375）的必修 1、2、建議 3 由 SAVE1 修（a60d1c2）；第二次獨立審查（a60d1c2）的 4（離開時的進度另放一份，不擠玩家的版本）、5（發現衝突的那台把自己這局搬到新列）、6（只改名不留版本）、7 的前半（卡住的 incoming 不擋存檔）由 SAVE2 修，各有一支在 a60d1c2 上紅的測試。
+- 第三次獨立審查（6b9fb12）的 1（自動存檔最後同步）、2（`gameRow` 只換同步前的局）、3（分家失敗收回複本）也修了。複審（d35df1c）的 A（讀檔中算在遊戲中）、B（搬回失敗不刪複本）也修了。
+- **還沒做的**：CI 綠、規劃確認後轉 ready，在 #1041 寫「可合併」。規劃決定這個 PR 改到 100.1。截圖驗收照作者 10/29 暫緩，PR 寫了要看的畫面。
+- **延後的**（審查列為可等）：`Deleting/` 搬回時原處已有同名檔就一直留著、搬回失敗可能讓刪掉的檔案部分回來；`keepInRow` 判斷同一局時不比新聞紀錄；7 的後半（留了版本後寫入失敗多一份）沒重現。
+
+### 4.35 金額改新台幣 PR-1（決策 499，派工單 NTD1，`ntd1-nt-dollar`，2026-10-30）
+
+第二棒 session_01YGNNuksaQd8BihQwuQ3g6x 壓縮一次後交接（第一棒 session_01YGNNuqEGisgunmnvtfGAEi）。依據 `docs/research/NT_DOLLAR_SWITCH_2026-10-27.md` §5 方案 B（NT$3＝$1）。號碼：存檔 76、決策 499、golden schema 75。
+
+- **做了的**（分支上已推）：
+  - `Money.decodingScale`（TaskLocal）；`SavedGame` 讀 75 版以前的存檔金額 ×3、溢位就拒讀；76 版存檔照讀。高鐵票價舊存檔是 NT$10＝$1，讀完再由 `convertHighSpeedFaresToNewTaiwanDollars` 換成 ×10。`SaveSummary` 寫 `newTaiwanDollars: true`，沒有的舊摘要餘額 ×3。
+  - GameCore 每個金額常數 ×3（營運、維修、電費、人事、貸款、稅、建造、車種、土地價值、站內商業、子公司、觀光、公車、貨運、擴圖、委託報酬上限）。三個不是機械 ×3 的：高鐵每公里 438 分（照官方票價表，台北—左營 NT$1,489）、預設距離票價改整數新台幣 NT$11/14/17/20/24（`standardBands`）、`standardBands(for:)` 四捨五入到整元。
+  - GamePresentation 的開局資金、建造成本、難度、挑戰與成就目標、公司等級門檻 ×3；`HighSpeedFares.centsPerNewTaiwanDollar = 100`。
+  - 測試：`TestSupport.newTaiwanDollars(ofSaveText:)`（照 parent/key 表把存檔文字的金額 ×3，高鐵票價 ×10）、`ConstructionCosts.times(_:)`；SavedGameTests、CompanyBuildingsTests（部分）、SightseeingTrainTests 已改；新增 `SaveFixtures/v76-nt-dollar.json`（由 v75 公車存檔以 `NT_DOLLAR_SAVE_NEW=1` 產生）。SaveFixtures 舊檔一個都沒改。
+- **第三棒**（session_01YGNNuqShqBANnhS1VWF71K，壓縮一次後交接；分支上已推，**還沒全綠**）：
+  - 做了：`FareBandScale` 整數新台幣（項 2）；`WhatsNew.swift` 一則 `2026-10-31-98`、`docs/decisions/499.md`（「golden 的例外」「ReplayFixtures」兩節是空的待補）、`docs/OVERVIEW.md` §2（項 6 大半）；`GoldenScenario.schemaVersion` 75 與 `tools/golden-checks/nt_scale.py`（寫好、**還沒對 fixture 跑**）；單元測試的大半 ×3。
+  - 存檔 fixture 的「讀進來＝重新做的」測試：做的那一邊用 `TestSupport.swift` 的 `fixtureEconomy(balance:costs:)`，再包 `NTScale.$factor.withValue(3) { … }`（讀進來的舊存檔金額 ×3，做的那一邊也要 ×3）；存回去的文字比對用 `newTaiwanDollars(ofSaveText:)`。沒包的測試 factor 是 1，不變。
+  - `tools/golden-checks/nt_fix_test_literals.py FAILS [--apply]`：讀 `swift test` 的 `XCTAssertEqual failed` 行（`grep -a "error:" log`，不要 `cut`，會切壞 UTF-8），實際＝3×期望的就改那一行的字面值；其餘列在 UNHANDLED。**轉 ready 前刪掉這個檔**。
+  - 交接時（`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨）重跑之前失敗的類別，還有 373 個失敗，全是 UNHANDLED（不是單純 ×3）：`TrainTypeCatalogTests` 117（`pinned` 表的價格要 ×3，第 104 行的迴圈）、`RollingStockEconomicsTests` 24、`HighSpeedTests` 23（票價 ×10＝項 5，第 16–27、478–488 行）、`DayPassTests` 19（一日券價格與營收，不是 ×3，要逐個看規則）、`IncomeTaxTests` 16、`CompanyBuildingsTests` 13、`RoadGridTests` 12、`FareAndLoanPreviewTests` 12、`BuildingSessionTests` 12、`CityBusToolTests` 9、`EconomyDisplayTests` 8（`$ 0.45 a kilometre` 之類的字）、`StationCommerceTests`、`MapExpansionTests`、`BuildingSaleTests`、`BuildingSaleSessionTests` 各 6，`LineAcquisitionTests`、`FreightTests`、`FinancialStatementsTests`、`CompanyRankTests`、`CityMapTests`、`BusRouteTests`、`AssetAccountsTests` 各 5，其餘 1–4 個：`TourismTests`、`SubsidiaryTests`、`CompanyBuildingsClearingTests`、`RealCoverageTests`、`DayPassCardTests`、`CityBusTripsTests`、`AreaBuyOutTests`、`ZoningTests`、`TrainTripLogTests`、`TourismHotelTests`、`SchoolsHospitalsNightMarketsTests`、`RunDepotTests`、`ProblemReportFixtureTests`、`DistanceDemandTests`、`CityFootprintsTests`、`BusRouteEditorTests`、`TerrainTests`、`RealisticOperationTests`、`ParksAndTemplesTests`、`DepotTests`、`BuildingMaterialsTests`。很多是世界整個比對（`count differs`），或測試裡從常數算出期望、或土地價值湊整後不是 3 倍。另：`ScheduledOvertakeTrackTests`、`DeadlockTests` 的參考模型（`KernelDifferentialTests.differences`）票價基準要 225；campaign shard 一個都還沒在本機跑；ReplayFixtureTests 9 個要重錄（項 4）。
+  - `fix3`（上面的工具）第一輪自動改了 46 個測試檔，**還沒逐行審過**：只改 actual＝3×expected 的字面值，但註解裡的舊金額沒跟著改，下一棒看 `git diff origin/main -- Tests` 時一起改。
+- **第四棒**（session_01YGNNuo7Z72i6UaBzbD8hCR，壓縮一次後交接；分支上已推，**還沒全綠**）：
+  - 改好 14 個類別（每類一個 commit，訊息寫為什麼是或不是 ×3）：`TrainTypeCatalogTests`、`RollingStockEconomicsTests`、`HighSpeedTests`（含 v69 期望世界＝項 5）、`DayPassTests`、`IncomeTaxTests`、`CompanyBuildingsTests`、`RoadGridTests`、`FareAndLoanPreviewTests`、`BuildingSessionTests`、`CityBusToolTests`、`EconomyDisplayTests`、`StationCommerceTests`、`MapExpansionTests`、`BuildingSaleTests`。
+  - `TestSupport.swift`：金額鍵表提到檔案層的 `newTaiwanDollarKeys`；新增 `XCTAssertSameButRounding(loaded, made, cents:)`：兩個世界編成 JSON 逐點比，只有表裡的金額鍵可以差到 `cents` 分，其他（數量、時間、位置、字串）一差就失敗；`capitalDays` 比各欄的合計。舊存檔「讀進來＝重新做的」的測試，差在湊整時用它，**不要**改期望值。
+  - 決策 499 新增一節「測試看到的、不是剛好 3 倍的值」：折舊無條件捨去（每件資產最多差 2 分，隔天自己補回）、`capitalDays` 的列數變多（舊的每天 0.67 分折舊捨成 0 不寫列；合計相同，**這是金額湊整造成的非金額改變**）、公司建物維護（進位）與房屋稅（四捨五入）1,229／1,129、站內商店營收捨到整元、建物出售 8/11、每小時營運成本湊整元、`LineAccounts.shareFare` 以整元分攤（v57 兩條線之間挪了 NT$426，合計不變）、所得稅半元、一日券、`standardBands` 的意義（基準 NT$15 的票價帶；遊戲一律經 `standardBands(for:)`）、高鐵。
+  - 還在失敗的類別（交接時，`run2.log` 108 個 error 再扣掉最後一個 commit 修的）：`BuildingSaleSessionTests`（×3：土地 7,296、建物 61,440、損失 61,824、餘額 93,817,600，沒改）、`LineAcquisitionTests`（56／87–89 的等級值 60B 對 20B、v66 世界）、`FreightTests`（每噸公里 NT$15 的湊整：3800 對 1300、100 對 0；v38）、`FinancialStatementsTests`（利潤低於 ×3 的免稅額所以「稅前利潤／所得稅」列不見了、結帳年度淨損 15,948 對 5,868，**還有一個 Index out of range 當掉**，在 GamePresentationTests 的 FinancialStatements／Zoning 附近，沒查）、`CompanyRankTests`、`CityMapTests`、`BusRouteTests`、`AssetAccountsTests`、`TourismTests`、`SubsidiaryTests`、`CompanyBuildingsClearingTests`、`RealCoverageTests`、`DayPassCardTests`、`CityBusTripsTests`、`AreaBuyOutTests`、`ZoningTests`、`TrainTripLogTests`、`TourismHotelTests`、`SchoolsHospitalsNightMarketsTests`、`RunDepotTests`、`ProblemReportFixtureTests`、`DistanceDemandTests`、`CityFootprintsTests`、`BusRouteEditorTests`、`TerrainTests`、`RealisticOperationTests`、`ParksAndTemplesTests`、`DepotTests`、`BuildingMaterialsTests`；之後是 kernel 參考模型的票價基準 225（`ScheduledOvertakeTrackTests`、`DeadlockTests`）。
+  - 做法：`swift test --skip-build --filter '<類別>' 2>&1 | grep -a "error:"`，看實際與期望；剛好 ×3 的改字面值（`Money(x)` 包成 `ntd`／×3），不是的先找湊整原因寫進決策 499 再改。
+- **第五棒**（session_01YGNNuo8yfmRdphYxt63KUr）：
+  - 單元測試（`rest` shard 與 GamePresentation 的 150 個失敗）全改好：約 40 類剛好 ×3；不是 ×3 的都查了原因，寫進決策 499「測試看到的、不是剛好 3 倍的值」（每小時湊整、貨運每車湊整、車費一批湊整）。舊存檔「讀進來＝重新做的」一律用 `XCTAssertSameButRounding`，容許值取量到的最大差，非金額欄位 0 差。
+  - 修的 bug（不是改期望值）：`CityMap.valueSteps`（每平方公尺元的色階）沒乘 3；`SubsidiaryTests` v46 手寫的帳沒乘 3；問題回報轉換器拿 76 版以前裝置的結束餘額（舊美元）比新台幣。`FinancialStatements` 的 Index out of range 是測試用索引讀列，稅的兩列因免稅額 ×3 消失；測試的票價 ×3 後兩列回來。
+  - golden（項 3）：`--rewrite-inputs`、`--apply-log` 一輪就綠；`--verify` 通過：1,138 個剛好 ×3、449 個在各 fixture 寫明的湊整內（腳本的 `ROUNDED`）、高鐵 3 個票價（`EXCEPTIONS`），非金額 0 改。`ReferenceWorldGoldenTests` 綠。`GoldenScenarios/README.md` 加 schema 75 一節。
+  - ReplayFixtures（項 4）：照 recipe 重錄會挑到別的 campaign case（產生器變了），所以六個 campaign 檔只重算 checksum，起始世界與指令不動；`long-leg-traffic`、`line-route-preferences` 用自己的測試重錄（起始與指令相同）；問題回報重新轉換。逐檔說明在 `ReplayFixtures/README.md` 最後與決策 499。
+  - 合 main（衝突：WhatsNew 改 id `2026-10-31-100`、這一節從 §4.31 改成 §4.32）。
+- **第六棒**（session_01YGNNuoGaZmXME6KLT2Sy6T）：full-ci 第一輪（176f40d）7 個 shard 紅（5、6、8、10、11、14、18），都是測試字面值還沒 ×3／×10，或舊存檔對照沒包 `NTScale`；153c018 修好（`XCTAssertSameButRounding` 容許湊整），CI run 41083210792 全綠。參考庫對照表與 golden／Replay 逐項說明寫進 PR；平衡量測寫進決策 499「量到的」：換算本身 HEALTHY，現金滾雪球 CONCERNS 照舊（換算前就是）。刪了 `nt_fix_test_literals.py`，PR 轉 ready；合併由遊戲規劃審查後決定。
+- **還沒做的**（下一棒照順序；打勾＝做完）：
+  - [x] 1. （第五棒：單元測試做完；campaign shard 交 CI 跑，紅了再修）單元測試 ×3：上面 373 個與 campaign shard（`.github/scripts/swift-shards.sh run <shard>`）。不是 ×3 的逐個查是湊整造成的才改；非金額的值動了就停下來查、告訴遊戲規劃。
+  - [x] 2. `FareBandScale.swift` 整數新台幣（第三棒）。
+  - [x] 3. golden（第五棒）：`python3 -I tools/golden-checks/nt_scale.py --rewrite-inputs`，`swift test --skip-build --filter GoldenScenarioTests > log`，`--apply-log log`，再跑到綠，`--verify` 列出的例外填進腳本的 `EXCEPTIONS` 與決策 499；`GoldenScenarios/README.md` 加 schema 75 一行。
+  - [x] 4. （第五棒，做法見上）重錄 9 個 ReplayFixtures（`REPLAY_RECORD="$PWD/ReplayFixtures" swift test --skip-build --filter ReplayFixtureTests/testRecordingTheFixtures`；問題回報那個用 `ProblemReportFixtureTests/testConvertingAReport`），`ReplayFixtures/README.md` 與 PR 逐檔說明。
+  - [x] 5. `HighSpeedTests` 的 v69 期望世界（第四棒）：票價 ×10、其他 ×3。
+  - [x] 6. What's New 與決策 499（第五棒補完兩節）。
+  - [x] 7. （第六棒）參考庫對照表（`thsr_fare.json` 等）；PR-2 平衡量測照 `.claude/skills/economy-balance/SKILL.md`，「之前」用 `docs/research/BUGHUNT_ECONOMY_SAVES_2026-10-30.md` §6。
+  - [x] 8. （第六棒；合併等遊戲規劃審查）綠了刪 `nt_fix_test_literals.py`、轉 ready、#1041 留「可合併」、告訴遊戲規劃。NT$ 前綴（PR-3）不在這張。
+  - 第六棒：合 main（#1567 決策 504，凌晨 04:00 還在等的乘客回家）：衝突的 3 個 golden（city-buildings-raise、materials-growth、land-value）照 main 的版本再用 `nt_scale.py` 換算；`economy`、`network-economy` 兩個 replay 只重算 checksum；舊存檔對照測試照 main（只比站、線、時鐘）。
+  - 合 main 第二次（#1556 等，99.1 發版後）：衝突的 WhatsNew 把 `2026-10-31-100` 放在 main 的 `2026-10-31-99` 前面；這一節從 §4.32 改成 §4.35。
+- **獨立審查後的修正**（遊戲規劃第 36 任派 session_01YGNNuqUDNQvyoQt4V44BrL，2026-10-30）：
+  - 高鐵每公里改回參考庫的 3 倍 NT$1.35（審查判 CRITICAL：真實的 NT$4.38 是其他金額的 9.7 倍，改性能就多賺）；官方票價表只給示範地圖與 v69 存檔。`HighSpeedReportTests` 票收 2.997 倍、運量不變。golden `high-speed.json` 第 34、36 步與描述逐值寫在決策 499。
+  - `economy`、`network-economy` 兩個 replay 的起始餘額、建造成本、`setFareBaseline`／`setFareRules` 的金額 ×3：對 base `d1df0d7` 逐指令重播，193 個指令的接受或拒絕全部一樣。其他 7 檔 checksum 動是因為預設 `demandBaseline` 75 → 225，README 與決策 499 改正。
+  - 決策 499 加「高鐵每公里不照真實票價」（五方）與「已知限制」（審查列為低、不改的五項）。沒有剩下的步驟；合併由遊戲規劃決定。
 
 ## 5. 已知、還沒派的待辦
 

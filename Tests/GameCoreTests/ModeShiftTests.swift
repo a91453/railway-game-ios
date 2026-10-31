@@ -185,7 +185,7 @@ final class ModeShiftTests: XCTestCase {
 
     /// SaveFixtures/v70-mode-shift.json.
     func testVersionSeventyKeepsTheModeShift() throws {
-        var world = try corridor(headway: 10)
+        var world = try NTScale.$factor.withValue(3) { try corridor(headway: 10) }
         try world.setModeShift(ModeShift.realistic(cap: 548))
         try world.advance(ticks: 10)
 
@@ -201,8 +201,8 @@ final class ModeShiftTests: XCTestCase {
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, world)
         XCTAssertEqual(loaded.modeShift, ModeShift(rule: .realistic, cap: 548))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 70,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 70,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
         // Without the key nobody switches.
         var plain = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         var saved = try XCTUnwrap(plain["world"] as? [String: Any])

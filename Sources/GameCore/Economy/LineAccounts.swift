@@ -20,6 +20,10 @@
 //   route length and by trains;
 // - staff `620·stations + 480·trains`: exactly each line's own.
 //
+// Decision 499: the company's figures are New Taiwan dollars, each rate
+// times 3 (1,860·stations); the apportioning weights keep the reference's
+// rates, whose proportions are the same.
+//
 // A station two lines call at counts for both (as the company counts it).
 // Freight lines carry no passenger fares: they show their costs. Only a
 // managed company records anything; a removed line's records go with it.
@@ -485,7 +489,7 @@ extension GameWorld {
         for (index, entry) in owned.enumerated() {
             var tally = LineTally()
             tally.energyCost = Money((routeShares[index] + trainShares[index]) * 100)
-            tally.staffCost = Money((620 * entry.stations + staffShares[index]) * 100)
+            tally.staffCost = Money((1_860 * entry.stations + staffShares[index]) * 100)
             book.lines[book.index(of: entry.id)].record(tally, day: day)
         }
         lineAccounts = book
