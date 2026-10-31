@@ -2549,10 +2549,11 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **接手（session_01YGNNuowaMN8MBaj6QWbCLn，遊戲規劃第 37 任派，2026-10-31）**：合了 main（7b015d3，只這份檔案衝突，本節由 §4.36 改為 §4.39）。CI run 41193250249 全綠（rest 17.8 分）。rest 逐類和 main 的 run 41187751239 比：共同 595 類測試合計 664.2 秒對 674.6 秒（×1.016），沒有一類慢超過 1 秒；新加的只有 `CallingLoopPlatformTests`。`HighSpeedDemoDayTests`（campaigns-16）160.5 對 162.3 秒。所以之前的逾時是 rest 本來就太滿（main 8c2cc38a 已拆），不是這個 PR。
 - 沒有剩下的步驟；合併由遊戲規劃決定（排在 TRACELAG 後）。實機上高鐵示範的停站畫面 UNVERIFIED。
 
-### 4.40 車站擴建（決策 506，派工單 STATIONEXP session_01YGNNunzxiVH7aAtqVw8b33，`stationexp-capacity`，2026-10-31）
+### 4.41 車站擴建（決策 506，派工單 STATIONEXP session_01YGNNunzxiVH7aAtqVw8b33，`stationexp-capacity`，2026-10-31）
 
 - **做了的**在決策 506（`docs/decisions/506.md`）：候車容量 4,000 → 8,000 → 16,000，NT$30M／NT$90M，昨天進出 50,000／100,000 人次才開放；存檔 78。先量了作者 97.1 那局：三鶯線 9 站的「滿」是沒有車載（一天 0 人次），台北、板橋才是站太小。
-- **還沒做的**在決策 506「下一步」：3D 站體隨等級變大；新局的回本量測（必要時調價）；三鶯線一整天 0 人次的原因另開派工；截圖驗收 `WebsiteScreenshotTests.testStationExpansionSection`（決策 482 暫緩時等恢復再跑）。
+- **三鶯線一天 0 人次的線索**（遊戲規劃另派人查）：作者 97.1 存檔（私庫 `bug-reports/wait-and-stall-97-2026-10-30`）裡，三鶯線 12 列車的 `execution` 全是 `travelling`（停在 stop 1、3 或 4 之前），時刻表最後的發車時間比存檔的 `seconds` 3,221,250 早 47–48 小時；其他 70 列車中位數只早 9 分鐘。列車 1、5、12 的時刻表只剩 2 站（28 → 27 鶯桃福德）。模擬兩天，這 12 列車一次也沒有停站（`StationCapacityReportTests` 的「停在站上」是 –）。看來是卡住，不是車少：先從這幾列車的位置（edge 2388、2390 一帶）與號誌、前車查起。
+- **還沒做的**在決策 506「下一步」：3D 站體隨等級變大；開放條件加「昨天客滿擋了人」（新局 seed 1 的站人次過門檻卻不滿，擴建 30 天不回本，決策 506「平衡」）；三鶯線一整天 0 人次的原因另開派工；截圖驗收 `WebsiteScreenshotTests.testStationExpansionSection`（決策 482 暫緩時等恢復再跑）。
 
 ## 5. 已知、還沒派的待辦
 
