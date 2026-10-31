@@ -460,9 +460,9 @@
 - **還沒派的**（同下面第 36 任的現況）：HANG2 P2-3～P2-7（§4.31）、iPad SettingsUITests、車站擴建（506）、≈US$ 參考、99.1 後請作者在 6000× 下回報一次。
 
 **第 37 任的現況（2026-10-31 約 06:50 UTC，session_01YGNNukwzZeGBzvAif8zfja，第 6 層，壓縮 3 次，交棒）**：
-- **交棒**：第 37 任在 06:45 UTC 第 3 次壓縮。下一任在第 7 層，由作者在 claude.ai 開，模型 opus 5.5 高。接手時先讀這一段和 #1579 最新的留言，再看 #1599、#1593 合了沒。
-- **100.1 已合**：#1594、#1582、#1581、#1588、#1600、#1596、#1597、#1583、#1586、#1598、#1592、#1599（main 43d53ea）。截圖都由規劃看過（決策 482）。
-- **100.1 還剩**：#1593 ALISHAN（存檔 77，決策 515；07:25 UTC 已請它合 main）。它合了、main 的完整 `ci.yml`（workflow_dispatch）與 full lane 都綠，才跟作者說「100.1 可以發（commit X）」。要提醒作者三件事：
+- **交棒**：第 37 任在 06:45 UTC 第 3 次壓縮。下一任在第 7 層，由作者在 claude.ai 開，模型 opus 5.5 高。接手時先讀這一段和 #1579 最新的留言，再看 main 的完整 `ci.yml` 與 full lane 綠了沒。
+- **100.1 已合**：#1594、#1582、#1581、#1588、#1600、#1596、#1597、#1583、#1586、#1598、#1592、#1599（main 43d53ea）、#1593（main 447891f，09:10 UTC）。截圖都由規劃看過（決策 482）。
+- **100.1 全部合完**（#1593 是最後一個，ALISHAN 壓縮兩次後交回，規劃在它的分支推了 8c2cc38a：rest 分片連三次撞 20 分鐘上限，把 PassengerCheckOnceTests、DeadlockSearchCostTests、PassengerRouteSearchTests 移到 campaigns-9、-8、-18，之後 rest 18 分鐘過）。接著在 main 跑完整 `ci.yml`（workflow_dispatch）與 full lane；main 的完整 `ci.yml`（workflow_dispatch）與 full lane 都綠，才跟作者說「100.1 可以發（commit X）」。要提醒作者三件事：
   - App Store Connect 的出口合規。
   - 99.1 的外部群組。
   - #1581 加了 `achievement.cityPlanner`，Game Center 要再設一次（§4.36）。
@@ -473,7 +473,7 @@
   - 實機看實景地圖中距離時景點星星有沒有出現。#1583 的觀光截圖拉近到嘉義山區時，畫面裡沒有星星，可能只是那裡本來就沒有景點。
   - ZONE2 的後續（決策 514 的下一步）：住宅需求一開始就是負的、拖曳時把不會蓋的格子畫灰、預設用途選最缺的。
   - 3D 直接鋪軌四步（決策 517）。
-  - CI 的 rest 分片常撞 20 分鐘上限（#1599 的 b398816、ae05aee 與 #1601 都撞過，沒有測試失敗，重跑 15–16 分鐘過）：在 `.github/scripts/swift-shards.sh` 的 `classes_of` 把 rest 的長類別移到別組。
+  - CI 的 rest 分片仍接近 20 分鐘上限（8c2cc38a 移出三類後還要 18 分鐘）：再看 rest 的警告列出的最慢類別，在 `.github/scripts/swift-shards.sh` 的 `classes_of` 移到最短的組。
   - 第 36 任列的還沒派的那幾項。
 - **排程**：規劃自己排巡查（send_later）。換手時刪掉舊的，下一任自己排。
 
