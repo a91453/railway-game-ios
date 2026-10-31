@@ -274,7 +274,7 @@ extension GameSession {
         var crossoverOutcome = DoubleTrack.CrossoverOutcome.none
         // Decision 245: built where cash never stops it, so the cost is
         // all of it, and the cash in hand is weighed against that.
-        draft = draft.pricingCopy()
+        draft = draft.trackPreviewCopy()
         let unbuilt = draft
         do throws(GameError) {
             let built = try plan.build(in: &draft, structure: networkStructure, heights: heights)
