@@ -228,7 +228,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // Once the first hour has closed, the balance is among the reports
         // folded under today's figures; before it, every report shows and
         // there is no toggle. Go down the list until one or the other
-        // comes, open the reports if folded, then come back to the balance.
+        // comes, open the reports if folded, then go on to the balance.
         let balance = english ? app.staticTexts["economy.balance.usd"].firstMatch : app.staticTexts["目前餘額"].firstMatch
         let reports = app.buttons["economy.reports"].firstMatch
         // The panel beside the map is short and its rows are mostly fare
@@ -241,11 +241,10 @@ final class WebsiteScreenshotTests: XCTestCase {
            reports.label == (english ? "More reports and settings" : "更多報表與設定") {
             reports.tap()
         }
-        for _ in 0..<30 where !(balance.exists && balance.frame.minY >= bar.frame.maxY) {
-            list?.swipeDown(velocity: .slow)
-        }
-        XCTAssertTrue(balance.appears(within: 10), "The balance is in the panel")
-        _ = app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY, clearOf: .button)
+        // The reports open below the fleet, above the toggle: the balance
+        // follows the trends, further down.
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY, clearOf: .button),
+                      "The balance is in the panel")
         settle()
         keep("currency-economy-\(suffix)", app)
         app.terminate()
