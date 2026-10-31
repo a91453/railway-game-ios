@@ -275,6 +275,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.openDemo("demo.realWorld", timeout: 60)
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 60), "The demo starts")
+        pauseTheClock(in: app)
+        // Five steps in, as RealWorldMapUITests does: at the opening zoom
+        // the stretch below would run onto land not owned, with no ✓.
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10) {
+            for _ in 0..<5 where zoomIn.isEnabled { zoomIn.tap() }
+        }
         let build = app.buttons["dock.build"]
         XCTAssertTrue(build.appears(within: 10))
         build.tap()
@@ -282,19 +289,22 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(network.appears(within: 5))
         network.waitUntilSettled()
         if !network.isSelected { network.tap() }
-        // A stretch across the middle of the map, built with the ✓.
+        // A stretch across the middle of the map, built with the ✓ (or,
+        // where the details card stays open, its Build Track button).
         let frame = map.frame.intersection(app.frame)
         let middle = (app.buttons["hud.menu"].frame.maxY + build.frame.minY) / 2
         let origin = app.coordinate(withNormalizedOffset: .zero)
         func point(_ fraction: CGFloat) -> XCUICoordinate {
             origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
         }
-        point(0.2).tap()
+        point(0.25).tap()
         point(0.6).tap()
         let confirm = app.buttons["map.build.confirm"]
-        XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the stretch")
-        confirm.waitUntilSettled()
-        confirm.tap()
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '鋪設軌道'")).firstMatch
+        let builder = confirm.appears(within: 10) ? confirm : card
+        XCTAssertTrue(builder.appears(within: 10), "No way to build the stretch")
+        XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped")
+        builder.tap()
         settle()
         let platform = app.segmentedControls.buttons["車站"].firstMatch
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
@@ -311,7 +321,14 @@ final class WebsiteScreenshotTests: XCTestCase {
                 more.tap()
             }
         }
-        point(0.4).tap()
+        // The platform's site on the stretch, off the map's own buttons.
+        let mapButtons = ["map.coverageShortcut", "map.open3D", "縮小", "放大"].map { app.buttons[$0] }
+        var siteX = frame.minX + frame.width * 0.425
+        while let covering = mapButtons.filter(\.exists).map({ $0.frame.insetBy(dx: -4, dy: -4) })
+            .first(where: { $0.contains(CGPoint(x: siteX, y: middle)) }) {
+            siteX = covering.minX - 40
+        }
+        origin.withOffset(CGVector(dx: siteX, dy: middle)).tap()
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         settle()
         keep("platform-levelling-pill", app)
