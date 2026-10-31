@@ -443,6 +443,31 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 38 任交給第 39 任（2026-10-31 約 17:45 UTC，session_01YGNNumGMsXsPxuQX4jyaCq，壓縮 2 次）**：第 38 任由作者在 claude.ai 開，是第 0 層；第 39 任由第 38 任用 `create_session` 開，是第 1 層（opus 5.5 高）。
+- **101.1 已發**：作者 17:00 UTC 自己按的，testflight.yml run 41222363939，main deef5e3。檢查：完整 `ci.yml` 41217606027 綠、full lane 41217608700 綠（四個 job 都綠）。100.2 沒有發，內容併進 101.1。紀錄在 `research/PLAYER_FEEDBACK.md`（#1622）。101.1 的發版凍結已經結束。
+- **main**：61e05d1。101.1 之後合了 #1615（HANG2 P2-6）、#1619（ROADFIX-P3）、#1622（只有文件）。接手時先看 main 推送的 `ci.yml` 綠了沒。
+- **等著合的**（HANG2-P2，session_01YGNNumzMVAszUPgVLu26iP，已壓縮 1 次，只收尾自己的 PR）：
+  - 照 #1618 → #1617 → #1620 → #1621 的順序，一次合一個。
+  - 這四個都在決策 497 結尾和 §4.31 加內容，所以每合一個，HANG2 要先在下一個合 main，CI 綠了再合。
+  - #1621 還是 draft，要先看 `testFreePlaySwitchConfirmation` 的截圖（決策 482）。
+- **草稿**：
+  - #1611 REVIEW-L3：等它補完再合，session 看 #1579 的登記。
+  - #1589：Codex 的 R200，不是我們的。
+- **§23 進度**：
+  - 做完的：1 IPHLAND（#1604）、2 CIREST（#1606）、3 PASSLOOP（#1601）、4 FLANE（#1608，後續 #1613）、5 ZONE3（#1609）、10 ROADFIX-P3（#1619）。
+  - 做了一半：6 REVIEW-L3（#1611）、7 HANG2-P2（上面四個 PR）。
+  - 下一批照 §23.1 順序派：8 STATIONEXP（存檔 78，動 GameCore）、9 ALISHAN2（動 GameCore，不和 LOOP-SIMPLE 同時）、11 REV-P3、12 USD、13 PUNCT、14 DEMOON。同時最多 2 個動 GameCore。
+- **記在別處、還沒派的後續**：
+  - P2-5 的 B 案（§4.31）。
+  - P2-7 的 `.noRoute` 與機廠滿了（動 GameCore）。
+  - P3-5 刪掉的線可以買回（§4.33，動 GameCore）。
+  - 決策 521「續」的下一步：描線預覽蓋兩次。
+  - 決策 522 的下一步：拖曳預覽的填色。
+- **號碼**：
+  - 存檔：main 是 77，78 給 STATIONEXP。
+  - 決策：main 用到 522，沒有 520.md。取號前先在 #1579 和 #1041 查 520 有沒有人留著；沒人留的話，下一個是 523。
+- **回報**：L3FIX／ROADFIX（session_01YGNNupKN2twaXYyb91H3Cp）和 HANG2-P2 都回報給第 38 任。接手後對 HANG2-P2 送一則「改回報給 <第 39 任 session>」。L3FIX 已經沒有工作。
+
 **第三十七次換手（2026-10-31 約 01:15 UTC，第 36 任 session_01YGNNunAp2WBFfGrmq3mXES → 第 37 任）**：第 36 任壓縮 3 次、約 300k，照 §1 換手（第 36 任是第 5 層，第 37 任第 6 層；第 7 層起由作者在 claude.ai 開）。
 - **100.1 的計畫**：分三批合，最後一批合完、main 的完整 `ci.yml`（workflow_dispatch）與 full lane 都綠，就跟作者說「100.1 可以發（commit X）」。只有作者按發版。提醒作者答 App Store Connect 的出口合規、99.1 的外部群組。
 - **已合（這輪）**：#1584、#1585、#1587、#1591、#1590（DR3100，決策 511）、#1550（NTD1 新台幣，存檔 76，決策 499）。main d7d25547 的推送 `ci.yml` 交接時還在跑；full lane d7d25547 綠。#1550 的 ChallengeReport seed 1 報告還沒跑。
