@@ -558,7 +558,7 @@ final class MapInteractionTests: XCTestCase {
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: target.x, dy: target.y)).tap()
         let buy = app.buttons["map.expansion.buy"]
         XCTAssertTrue(buy.appears(within: 5), "A pill to buy the tile chosen")
-        XCTAssertTrue(buy.label.hasPrefix("Buy tile, $"), "The pill says what it buys: \(buy.label)")
+        XCTAssertTrue(buy.label.hasPrefix("Buy tile, NT$"), "The pill says what it buys: \(buy.label)")
         XCTAssertFalse(app.buttons["map.build.confirm"].exists, "Not a build's ✓")
 
         expansion.tap()

@@ -53,7 +53,7 @@ final class SubsidiarySessionTests: XCTestCase {
         XCTAssertEqual(lines[2], "Last month: sales \(Money(0).moneyText), costs \(Money(0).moneyText), profit \(Money(0).moneyText)")
         XCTAssertEqual(lines[3], "Since opening: profit \(Money(0).moneyText)")
         XCTAssertEqual(lines[4], "12-month return 0.0% of its cost")
-        XCTAssertTrue(lines[5].hasPrefix("Would sell for $ "), lines[5])
+        XCTAssertTrue(lines[5].hasPrefix("Would sell for \(Money.currencySymbol) "), lines[5])
         // Nothing changed in the world.
         XCTAssertEqual(session.world.placedBuildings.count, 2)
         // A tap on empty ground lets go of it.
@@ -98,7 +98,7 @@ final class SubsidiarySessionTests: XCTestCase {
         let cost = store.cost.amount
         let tenths = 700_000 * 1_000 / cost
         XCTAssertEqual(lines[4], "近 12 個月報酬率 \(tenths / 10).\(tenths % 10)%（占造價）")
-        XCTAssertTrue(lines[5].hasPrefix("估計售價 $ "), lines[5])
+        XCTAssertTrue(lines[5].hasPrefix("估計售價 \(Money.currencySymbol) "), lines[5])
     }
 
     func testOtherBuildingsShowWhoIsInThem() throws {
@@ -115,7 +115,7 @@ final class SubsidiarySessionTests: XCTestCase {
         XCTAssertEqual(session.buildingMode, .sell)
         XCTAssertEqual(session.saleCandidate, PlacedBuildingID(rawValue: 2))
         XCTAssertNotNil(session.salePreview)
-        XCTAssertTrue(session.salePreviewLines.contains { $0.hasPrefix("Price $ ") })
+        XCTAssertTrue(session.salePreviewLines.contains { $0.hasPrefix("Price \(Money.currencySymbol) ") })
     }
 
     func testABusinessWorthMoreThanItsPropertyShowsInTheSaleCard() throws {

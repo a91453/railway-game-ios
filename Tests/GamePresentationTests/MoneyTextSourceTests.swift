@@ -23,10 +23,14 @@ final class MoneyTextSourceTests: XCTestCase {
     /// Lines that may keep a `$` of their own, with why.
     private static let allowed = [
         // The one place the sign is written.
-        "public static let currencySymbol = \"$\"",
+        "public static let currencySymbol = \"NT$\"",
+        // The US dollar reference beside large amounts, and the sentence
+        // that names both currencies (decision 523).
+        "return \"≈\\u{00A0}US$\" + dollars.groupedText",
+        "Prices are in New Taiwan dollars (NT$); the US$ figures are a rough guide.",
         // A String Catalog key (Localizable.xcstrings), changed with its
-        // translation when the currency changes (PR-3).
-        "Land value: $ a square metre, higher near good train service",
+        // translation when the currency changes (decision 523).
+        "Land value: NT$ a square metre, higher near good train service",
     ]
 
     private func linesWithCurrency(in directory: String, matching pattern: NSRegularExpression) throws -> [String] {
