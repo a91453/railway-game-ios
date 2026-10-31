@@ -427,6 +427,45 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// The selection card of a station on a phone on its side (a player's
+    /// report: its summary was cut short with "…"): a station of the
+    /// high-speed demo picked from its tag, the card in the side panel with
+    /// the platforms and who waits on lines of their own. For the
+    /// screenshot review of the pull request that fixed it, not the website.
+    func testStationCard() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.highSpeed", timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        settle(seconds: 8)
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 1) {
+            for _ in 0..<2 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        // Yunlin's mark, two steps in on the demo's opening view (run
+        // 41163857917 showed it at about 39 % across and 36 % down; the
+        // station tags are not stations' marks).
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        let status = app.descendants(matching: .any)["inspector.status"].firstMatch
+        for offset in [CGVector(dx: 0.3875, dy: 0.36), CGVector(dx: 0.385, dy: 0.35), CGVector(dx: 0.39, dy: 0.37)] {
+            map.coordinate(withNormalizedOffset: offset).tap()
+            settle(seconds: 2)
+            if status.exists, status.label.hasPrefix("車站") { break }
+        }
+        // The card is in the side panel, which a tap on a station leaves
+        // closed (run 41165522130): open it.
+        let controls = app.buttons["controls.toggle"]
+        if controls.appears(within: 5), controls.becomesHittable(within: 2) {
+            controls.tap()
+        }
+        settle(seconds: 3)
+        keep("station-card", app)
+        XCTAssertTrue(status.appears(within: 5), "The selection card shows")
+    }
+
     /// The company's goals on a blank new game (decisions 181 and 183): the
     /// requests the city offers with what each pays, above the company's
     /// rank and title.
