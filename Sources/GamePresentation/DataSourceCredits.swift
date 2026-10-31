@@ -317,12 +317,12 @@ public enum DataSourceCredits {
                             "交通部運輸資料流通服務平臺（TDX）"
                         ),
                         detail: language.text(
-                            "Most of the station order, station names, station codes and addresses above; the High Speed Rail’s, the metros’ and the light rails’ timetables; the High-Speed Rail Demo’s fares; and some lines’ colours.",
-                            "上面大部分路線的站序、站名、車站代碼與地址，高鐵、捷運與輕軌的時刻表，高鐵示範的票價，以及部分路線的路線色。"
+                            "Most of the station order, station names, station codes and addresses above; the High Speed Rail’s, the metros’ and the light rails’ timetables; the High-Speed Rail Demo’s fares; some lines’ colours; and Taiwan Railway’s on-time rate over the past year, shown beside a line’s.",
+                            "上面大部分路線的站序、站名、車站代碼與地址，高鐵、捷運與輕軌的時刻表，高鐵示範的票價，部分路線的路線色，以及路線卡上台鐵近一年的準點率。"
                         ),
                         notice: language.text(
-                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: rail stations, lines, station order of lines, line shapes, travel times between stations, headways, station timetables, the High Speed Rail’s daily timetable and its origin–destination fares. ",
-                            "交通部運輸資料流通服務平臺（TDX）2026 年軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表、高鐵每日時刻表與高鐵起訖站票價"
+                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: rail stations, lines, station order of lines, line shapes, travel times between stations, headways, station timetables, the High Speed Rail’s daily timetable and its origin–destination fares; Taiwan Railway’s live train delays, 20 November 2025 to 26 October 2026. ",
+                            "交通部運輸資料流通服務平臺（TDX）2026 年軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表、高鐵每日時刻表與高鐵起訖站票價；臺鐵列車即時誤點（2025 年 11 月 20 日至 2026 年 10 月 26 日）"
                         ) + openGovernmentAttribution(in: language),
                         links: [
                             DataSourceCredit.Link(title: "TDX", url: tdxURL),

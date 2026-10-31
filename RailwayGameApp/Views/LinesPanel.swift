@@ -2640,6 +2640,15 @@ private struct LineLossCard: View, Equatable {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("line.costs")
+            // NEXT_PRIORITIES §22.17: the last seven days' punctuality,
+            // with Taiwan Railway's real year beside it.
+            if let weekly = diagnosis.weeklyPunctuality {
+                Text(verbatim: weekly.text(in: language))
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("line.weeklyPunctuality")
+            }
             // Decision 207: with realistic operation, how many trips were
             // on time.
             if let punctuality = diagnosis.punctualityText(in: language) {
