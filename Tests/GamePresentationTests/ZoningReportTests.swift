@@ -28,8 +28,9 @@ final class ZoningReportTests: XCTestCase {
         Plan(title: "Homes, 9 × 9 cells (576 m) round each station", zone: .residential, side: 9, eastOfFirst: nil),
         Plan(title: "Homes, 25 × 25 cells (1.6 km) round each station", zone: .residential, side: 25, eastOfFirst: nil),
         Plan(title: "Homes, 9 × 9 cells 1.5 km from the first station", zone: .residential, side: 9, eastOfFirst: 1_500),
-        Plan(title: "Shops, 9 × 9 cells round each station", zone: .commercial, side: 9, eastOfFirst: nil),
-        Plan(title: "Offices, 9 × 9 cells round each station", zone: .office, side: 9, eastOfFirst: nil),
+        Plan(title: "Shops, 25 × 25 cells round each station", zone: .commercial, side: 25, eastOfFirst: nil),
+        Plan(title: "Offices, 25 × 25 cells round each station", zone: .office, side: 25, eastOfFirst: nil),
+        Plan(title: "Schools and public offices, 25 × 25 cells round each station", zone: .civic, side: 25, eastOfFirst: nil),
     ]
 
     func testZonesOfAFirstLine() throws {
@@ -38,7 +39,12 @@ final class ZoningReportTests: XCTestCase {
         }
         let days = try XCTUnwrap(Int(value).flatMap { $0 > 0 ? $0 : nil })
         let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
-        let start = try newGameLine(through: [towns[0], towns[1]])
+        var start = try newGameLine(through: [towns[0], towns[1]])
+        // Decision 139: `BALANCE_NO_CITY_DEMAND=1` measures the zones without
+        // the city's valves.
+        if ProcessInfo.processInfo.environment["BALANCE_NO_CITY_DEMAND"] != nil {
+            start.setCityDemand(false)
+        }
         var summary = [
             "| Plan | Zoned empty | Builds / waits / too far / not wanted (day 0) | Same, day 1 | First built | Fifth built | Built by day \(days) |",
             "| --- | --: | --- | --- | --: | --: | --: |",
