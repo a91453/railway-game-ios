@@ -69,7 +69,9 @@ struct TrainRosterView: View {
     private var compactWidth: Bool { horizontalSizeClass == .compact }
     /// Points an hour takes across.
     private var hourWidth: CGFloat { compactWidth ? 90 : 120 }
-    private var nameWidth: CGFloat { compactWidth ? 104 : 150 }
+    /// The names' column; arranging adds the grip before the name, so the
+    /// name keeps its room (decision 512).
+    private var nameWidth: CGFloat { (compactWidth ? 104 : 150) + (arranging ? 24 : 0) }
 
     var body: some View {
         NavigationStack {
@@ -335,8 +337,13 @@ struct TrainRosterView: View {
                                     .id(row.train)
                             }
                         }
+                        // As wide as the table leaves: the hours' scroll
+                        // view took more and pushed the names right
+                        // (decision 512's screenshot review).
                         hours(roster, rowHeight: rowHeight, compact: compact)
+                            .frame(width: max(0, proxy.size.width - nameWidth))
                     }
+                    .frame(width: proxy.size.width, alignment: .leading)
                     .coordinateSpace(.named(Self.table))
                     .overlay(alignment: .topLeading) { lineDragMarks(rowHeight: rowHeight, width: proxy.size.width) }
                 }
