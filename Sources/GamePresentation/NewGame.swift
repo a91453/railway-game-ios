@@ -717,7 +717,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     /// One short paragraph on what these options change from the standard
     /// game, shown under the options.
     public func summary(in language: DisplayLanguage) -> String {
-        let cash = funds == .unlimited ? "∞" : startingBalance.moneyText
+        let cash = funds == .unlimited ? "∞" : startingBalance.compactText(in: language)
         let disruptions = switch (disruption, self.rules) {
         case (.off, _): language.text("No holidays, weather or typhoons disturb the traffic.", "假日、天氣與颱風不影響客流。")
         case (.light, .realistic): language.text("Holidays, weather and typhoons disturb the traffic gently.", "假日、天氣與颱風對客流的影響較輕。")

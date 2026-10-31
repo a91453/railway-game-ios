@@ -52,14 +52,14 @@ final class StatusBarWidthsTests: XCTestCase {
     /// The cash keeps one width from $ 0 to $ -9,999,999 and only gains
     /// room with an eighth digit.
     func testTheCashKeepsRoomForSevenDigitsAndAMinus() {
-        let small = StatusBarWidths.moneyText(Money(0))
+        let small = StatusBarWidths.moneyText(Money(0), in: .english)
         XCTAssertEqual(small, "\(Money(-888_888_800).moneyText)")
         for dollars: Int64 in [0, 5, -1_428, 120_000, -9_999_999, 9_999_999] {
-            XCTAssertEqual(StatusBarWidths.moneyText(Money(dollars * 100)), small)
+            XCTAssertEqual(StatusBarWidths.moneyText(Money(dollars * 100), in: .english), small)
             XCTAssertTrue(small.count >= Money(dollars * 100).moneyText.count)
         }
-        XCTAssertEqual(StatusBarWidths.moneyText(Money(12_345_678 * 100)), "\(Money(-8_888_888_800).moneyText)")
-        XCTAssertEqual(StatusBarWidths.moneyText(Money(Int64.max)).filter(\.isNumber).count, Money(Int64.max).moneyText.filter(\.isNumber).count)
+        XCTAssertEqual(StatusBarWidths.moneyText(Money(12_345_678 * 100), in: .english), "\(Money(-8_888_888_800).moneyText)")
+        XCTAssertEqual(StatusBarWidths.moneyText(Money(Int64.max), in: .english).filter(\.isNumber).count, Money(Int64.max).moneyText.filter(\.isNumber).count)
     }
 
     /// Every label the speed button can show is offered, and the train's

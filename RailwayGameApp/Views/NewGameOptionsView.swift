@@ -38,7 +38,7 @@ struct NewGameOptionsView: View {
                     .accessibilityIdentifier("newGameOptions.difficulty")
                     LabeledContent(
                         language.text("Starting cash", "起始資金"),
-                        value: launcher.newGameOptions.funds == .unlimited ? "∞" : launcher.newGameOptions.startingBalance.moneyTextWithReference(in: language)
+                        value: launcher.newGameOptions.funds == .unlimited ? "∞" : launcher.newGameOptions.startingBalance.compactTextWithReference(in: language)
                     )
                 } header: {
                     Text(verbatim: language.text("Difficulty", "難度"))
