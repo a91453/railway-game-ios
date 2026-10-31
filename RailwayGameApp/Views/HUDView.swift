@@ -243,7 +243,8 @@ private struct HUDCash: View {
 
     /// The balance in dollars, as before decision 200.
     private var balance: some View {
-        let text = session.world.economy.balance.moneyText
+        // Decision 523, continued: in 萬 or 億 in Chinese.
+        let text = session.world.economy.balance.compactText(in: session.language)
         let isNegative = session.world.economy.balance < .zero
         return Button {
             screen.panel = .economy
@@ -255,7 +256,7 @@ private struct HUDCash: View {
                 Text(text)
                     .foregroundStyle(isNegative ? Theme.error : Theme.textPrimary)
                     // Decision 251: until the amount gains an eighth digit.
-                    .modifier(WidestTextRoom(StatusBarWidths.moneyText(session.world.economy.balance)))
+                    .modifier(WidestTextRoom(StatusBarWidths.moneyText(session.world.economy.balance, in: session.language)))
                 // Decision 175: a challenge that is lost to the red says how
                 // long is left.
                 if let days = session.world.insolvencyCountdown {
@@ -275,7 +276,7 @@ private struct HUDCash: View {
         .buttonStyle(.plain)
         // Decision 117: what just came in, under the cash.
         .overlay(alignment: .bottom) {
-            IncomeFloat(pulse: session.incomePulse)
+            IncomeFloat(pulse: session.incomePulse, language: session.language)
         }
         .accessibilityLabel("Cash \(text)")
         .accessibilityHint("Shows fares, running costs and the ledger.")

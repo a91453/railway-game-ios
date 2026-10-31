@@ -47,6 +47,46 @@ extension Money {
         usDollarReferenceText(in: language).map { "\(moneyText) (\($0))" } ?? moneyText
     }
 
+    /// The amount as the Chinese interface writes it where room is short
+    /// or the figure is large (decision 523, continued): from NT$10,000
+    /// in 萬 to one decimal ("NT$ 900 萬", "NT$ 1,234.6 萬"), from 1 億
+    /// in 億 to two ("NT$ 1.23 億"), rounded half away from zero, with no
+    /// trailing zero after the point; below NT$10,000, and in English,
+    /// ``moneyText``. The cash in the status bar, the economy panel's
+    /// balance, the price of a build and the new game's starting cash;
+    /// the ledger and the statements keep every dollar.
+    public func compactText(in language: DisplayLanguage) -> String {
+        let dollars = wholeDollars
+        let size = dollars.magnitude
+        guard language == .traditionalChinese, size >= 10_000 else { return moneyText }
+        let sign = dollars < 0 ? "-" : ""
+        // Thousands are tenths of 萬; a figure that rounds up to 10,000
+        // 萬 is written as 1 億.
+        let thousands = (size + 500) / 1_000
+        let figure = thousands < 100_000
+            ? Self.decimalText(thousands, places: 1) + " 萬"
+            : Self.decimalText((size + 500_000) / 1_000_000, places: 2) + " 億"
+        return Self.currencySymbol + " " + sign + figure
+    }
+
+    /// ``compactText(in:)`` with the US dollar reference after it in
+    /// English (``moneyTextWithReference(in:)``): the new game's starting
+    /// cash.
+    public func compactTextWithReference(in language: DisplayLanguage) -> String {
+        usDollarReferenceText(in: language).map { "\(moneyText) (\($0))" } ?? compactText(in: language)
+    }
+
+    /// `value` with its last `places` digits after a point, thousands
+    /// grouped, trailing zeros after the point dropped: "1,234.6", "900".
+    static func decimalText(_ value: UInt64, places: Int) -> String {
+        var unit: UInt64 = 1
+        for _ in 0..<places { unit *= 10 }
+        var fraction = String(value % unit)
+        fraction = String(repeating: "0", count: places - fraction.count) + fraction
+        while fraction.last == "0" { fraction.removeLast() }
+        return (value / unit).groupedText + (fraction.isEmpty ? "" : "." + fraction)
+    }
+
     /// What the English interface says once about the currency, beside
     /// the balance; `nil` in Chinese (decision 523).
     public static func currencyNoteText(in language: DisplayLanguage) -> String? {
@@ -133,6 +173,12 @@ extension GameEconomy {
     /// "∞" with free play's unlimited funds (decision 200).
     public var cashText: String {
         unlimitedFunds ? "∞" : balance.moneyText
+    }
+
+    /// ``cashText`` in 萬／億 in Chinese (``Money/compactText(in:)``): the
+    /// status bar and the economy panel's balance (decision 523, continued).
+    public func cashText(in language: DisplayLanguage) -> String {
+        unlimitedFunds ? "∞" : balance.compactText(in: language)
     }
 
     /// Whether the cash is shown as in the red: never with unlimited funds.
