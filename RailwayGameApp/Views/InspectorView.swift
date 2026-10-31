@@ -15,10 +15,15 @@ struct InspectorView: View {
     /// The selection head's width, which puts its buttons under the words
     /// on a narrow card (``SelectionHeadLayout``).
     @State private var headWidth: CGFloat = 0
+    /// Decision 512: the train whose row of the train roster is open.
+    @State private var rosterTrain: TrainID?
 
     var body: some View {
         inspector
             .themeCard(padding: 10, cornerRadius: 12)
+            .fullScreenCover(isPresented: Binding(get: { rosterTrain != nil }, set: { if !$0 { rosterTrain = nil } })) {
+                TrainRosterView(session: session, focus: rosterTrain)
+            }
     }
 
     @ViewBuilder
@@ -86,6 +91,11 @@ struct InspectorView: View {
                         chip(Self.systemImage(of: action), action.title(in: session.language), id: "inspector.train.\(action.rawValue)") {
                             session.runTrainCardAction(action, on: train)
                         }
+                    }
+                    // Decision 512: this train's row of the roster, in one tap,
+                    // last, so the chips before it keep their places.
+                    chip("chart.bar.doc.horizontal", session.language.text("Roster", "運用表"), id: "inspector.train.roster") {
+                        rosterTrain = train
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

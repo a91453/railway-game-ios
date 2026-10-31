@@ -256,7 +256,11 @@ struct StationMasterCorner: View {
                     // station takes the map there and, while selecting,
                     // selects it; any other only puts the bubble away.
                     isTalking = false
-                    if let line = advice?.line {
+                    if case .zoneNearStation(let station, _, _)? = advice {
+                        // Decision 509: "zone here" opens the zoning tool
+                        // at the station.
+                        session.zone(near: station)
+                    } else if let line = advice?.line {
                         // Decision 194, later: a losing line opens in the
                         // line panel, its card saying why.
                         session.openLine(line)
@@ -486,7 +490,8 @@ struct StationMasterCorner: View {
         switch advice {
         case .stationFull(let station, _), .stationCrowded(let station, _),
              .underserved(let station, _, _), .townGrew(let station, _, _),
-             .materialsShort(let station, _), .modeShift(let station):
+             .materialsShort(let station, _), .modeShift(let station),
+             .zoneNearStation(let station, _, _):
             station
         default:
             nil

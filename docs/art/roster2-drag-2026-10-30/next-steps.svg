@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="420" viewBox="0 0 880 420" font-family="-apple-system, 'PingFang TC', sans-serif">
+  <rect width="880" height="420" fill="#F6F4EE"/>
+  <text x="20" y="30" font-size="16" font-weight="700" fill="#262C57">決策 512 的下一步（預覽，未實作）：要新的 GameCore 指令</text>
+  <!-- hours axis -->
+  <g font-size="11" fill="#5B6185">
+    <text x="190" y="62">07:00</text><text x="350" y="62">08:00</text><text x="510" y="62">09:00</text><text x="670" y="62">10:00</text>
+  </g>
+  <g stroke="#262C57" stroke-opacity="0.14"><line x1="190" y1="68" x2="190" y2="400"/><line x1="350" y1="68" x2="350" y2="400"/><line x1="510" y1="68" x2="510" y2="400"/><line x1="670" y1="68" x2="670" y2="400"/></g>
+
+  <!-- A: line header as drop target -->
+  <text x="20" y="92" font-size="12" font-weight="700" fill="#262C57">甲　沒有列車的路線也有一列可以放</text>
+  <rect x="20" y="100" width="840" height="44" fill="#3B6FD8" fill-opacity="0.18" stroke="#262C57" stroke-width="2"/>
+  <rect x="30" y="112" width="34" height="20" rx="4" fill="#E0A100"/><text x="36" y="127" font-size="11" font-weight="700" fill="#fff">BL</text>
+  <text x="72" y="127" font-size="12" font-weight="700" fill="#262C57">板南線（0 列）</text>
+  <text x="200" y="127" font-size="12" fill="#262C57">放開：改派到板南線</text>
+
+  <!-- B: line train row with stagger -->
+  <text x="20" y="172" font-size="12" font-weight="700" fill="#262C57">乙　路線車左右拖：只錯開這一列的發車（每列車自己的錯開分鐘）</text>
+  <rect x="20" y="180" width="160" height="44" fill="#E9E7F2"/>
+  <text x="30" y="207" font-size="12" font-weight="700" fill="#262C57">≡ 1203</text>
+  <rect x="230" y="186" width="90" height="32" rx="4" fill="#2E8B57"/>
+  <rect x="390" y="186" width="90" height="32" rx="4" fill="none" stroke="#5B6185" stroke-dasharray="4 3"/>
+  <rect x="430" y="186" width="90" height="32" rx="4" fill="#3B6FD8" fill-opacity="0.35" stroke="#262C57" stroke-width="2"/>
+  <text x="540" y="207" font-size="12" fill="#262C57">+15 分 · 下一班 08:35 開（預定格要 GameCore 預測）</text>
+
+  <!-- C: pending reassignment -->
+  <text x="20" y="252" font-size="12" font-weight="700" fill="#262C57">丙　正在跑的車：跑完這一趟再改派（存檔要記住「之後去哪條線」）</text>
+  <rect x="20" y="260" width="160" height="44" fill="#E9E7F2"/>
+  <text x="30" y="287" font-size="12" font-weight="700" fill="#262C57">≡ 1105</text>
+  <rect x="250" y="266" width="200" height="32" rx="4" fill="#2E8B57" stroke="#262C57" stroke-width="2"/>
+  <text x="258" y="287" font-size="11" font-weight="700" fill="#fff">台北 → 南港　行駛中</text>
+  <rect x="460" y="270" width="150" height="24" rx="12" fill="#FFC86B"/>
+  <text x="472" y="287" font-size="11" font-weight="700" fill="#262C57">→ 跑完改派 板南線</text>
+
+  <!-- D: retime while running -->
+  <text x="20" y="332" font-size="12" font-weight="700" fill="#262C57">丁　自有時刻表在路上也能改：從下一輪起生效，不必停在第一站</text>
+  <rect x="20" y="340" width="160" height="44" fill="#E9E7F2"/>
+  <text x="30" y="367" font-size="12" font-weight="700" fill="#262C57">≡ 區間 2</text>
+  <rect x="210" y="346" width="100" height="32" rx="4" fill="#2E8B57" stroke="#262C57" stroke-width="2"/>
+  <rect x="370" y="346" width="100" height="32" rx="4" fill="none" stroke="#5B6185" stroke-dasharray="4 3"/>
+  <rect x="410" y="346" width="100" height="32" rx="4" fill="#3B6FD8" fill-opacity="0.35" stroke="#262C57" stroke-width="2"/>
+  <text x="530" y="367" font-size="12" fill="#262C57">+15 分 · 從 08:10 那班起</text>
+</svg>

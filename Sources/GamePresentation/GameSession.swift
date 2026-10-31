@@ -240,6 +240,10 @@ public final class GameSession {
     /// The cells a drag with the zoning mode would zone, while the finger
     /// is down (decision 98).
     public internal(set) var zoneDrag: CellRectangle?
+    /// Decision 509: the empty cells the player zoned for a use, until
+    /// the city first builds on one of them (``noteZonedCellsBuiltOn()``).
+    /// Never saved.
+    @ObservationIgnored var zonedCellsAwaitingBuilding: Set<CellPosition> = []
     /// Where the building tool would build, once the player tapped there
     /// (decision 95): the map shows the building there and what it would
     /// cost and pull down, and the action button builds it.
@@ -1930,7 +1934,11 @@ public final class GameSession {
         // Decision 175: the secretary room reads what the step changed.
         meter.measure(.stepNews) { observeNews(closedBefore: closedBefore) }
         if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
-            meter.measure(.stepMidnight) { onMidnight?() }
+            meter.measure(.stepMidnight) {
+                // Decision 509: before the achievements, which say theirs last.
+                noteZonedCellsBuiltOn()
+                onMidnight?()
+            }
         }
         // Decision 305: the night's skip goes on, ends or starts.
         meter.measure(.stepNightSkip) { continueNightSkip(aheadOffTheMainActor: fromLoop) }

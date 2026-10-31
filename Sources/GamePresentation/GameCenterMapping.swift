@@ -34,15 +34,16 @@ public enum GameCenterMapping {
         weeklyLeaderboards[ChallengeRecords.rulesVersion]
     }
 
-    /// Each achievement's points, 800 of Game Center's 1,000, so marks
-    /// added later still have room. The first steps are worth 5–10, the
+    /// Each achievement's points, 810 of Game Center's 1,000, so marks
+    /// added later still have room (800 for the first 38; decision 509's
+    /// town planning took 10). The first steps are worth 5–10, the
     /// long-term goals 80.
     public static let points: [String: Int] = [
         "firstFare": 5, "riders1k": 10, "riders10k": 20, "riders100k": 40, "riders1m": 80,
         "track10": 5, "track50": 15, "track200": 30, "track1000": 80,
         "longLine": 25, "stoppingLine": 15, "earlyBird": 10, "nightOwl": 10, "ringLine": 15, "hub": 15, "highSpeed": 15,
         "fleet20": 15, "stations25": 10, "stations50": 20, "stations100": 40,
-        "firstBuilding": 10, "firstFreight": 10, "firstTile": 10, "tower": 15, "typhoonSeason": 15,
+        "firstBuilding": 10, "cityPlanner": 10, "firstFreight": 10, "firstTile": 10, "tower": 15, "typhoonSeason": 15,
         "challengeGold": 40, "pingxi": 30, "liuMingchuan": 30,
         "firstTourists": 10, "tourists100k": 25, "souvenirShop": 15, "fiveStars": 25,
         "firstSubsidiary": 10, "allBusinesses": 25, "businessProfit": 25,
