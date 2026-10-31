@@ -215,19 +215,27 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("currency-hud-\(suffix)", app)
 
         tapButton("entry.economy", in: app)
+        // The press on Data can be cancelled while the station master's
+        // bubble goes (`FinanceCompositionUITests`): tap once more if the
+        // panel did not open.
+        let bar = app.navigationBars[english ? "Economy" : "經濟明細"].firstMatch
+        if !bar.appears(within: 10) {
+            tapButton("entry.economy", in: app)
+        }
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         // The balance is among the reports folded under today's figures:
         // open them and bring the balance into view.
+        let balance = english ? app.staticTexts["economy.balance.usd"].firstMatch : app.staticTexts["目前餘額"].firstMatch
         let reports = app.buttons["economy.reports"].firstMatch
-        XCTAssertTrue(reports.appears(within: 15), "The economy panel opens")
-        reports.waitUntilSettled()
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.contains(CGPoint(x: reports.frame.midX, y: reports.frame.midY)) }
-        if reports.label == (english ? "More reports and settings" : "更多報表與設定") {
-            _ = app.dragUntilWhollyOnScreen(reports, in: list)
+        if !balance.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY),
+           reports.label == (english ? "More reports and settings" : "更多報表與設定") {
             reports.tap()
         }
-        let balance = english ? app.staticTexts["economy.balance.usd"].firstMatch : app.staticTexts["目前餘額"].firstMatch
         XCTAssertTrue(balance.appears(within: 10), "The balance is in the panel")
-        _ = app.dragUntilWhollyOnScreen(balance, in: list)
+        dragBack(to: balance, in: list, below: bar.frame.maxY, in: app)
+        _ = app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY)
         settle()
         keep("currency-economy-\(suffix)", app)
         app.terminate()
