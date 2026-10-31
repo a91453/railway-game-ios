@@ -2413,7 +2413,7 @@
   - P2-3：每個指令後在主執行緒算死結泡泡（`situationAlerts`）與交通狀態（`TrafficReading`）。照遊戲迴圈的做法在 detached task 算、先顯示舊的。
   - P2-4：跳過夜晚的預先試跑在 `stopNightSkip()`、`skipToMorning()`（memo 沒命中）與 `GameSession.init` 還在主執行緒；改用 `refreshNightSkipOfferOffTheMainActor()`。
   - P2-5：欠錢轉自由模式就卡住。先對照 `BUGHUNT_ECONOMY_SAVES_2026-10-30.md`；要改 GameCore 先問遊戲規劃。
-  - P2-6：回開始畫面時自動存檔失敗就出不去。失敗時跳確認框給「不存檔離開」；同步的 `returnToStart()` 與 `returnToStartInBackground(at:)`（失敗時留在遊戲）兩條路都要接。
+  - ~~P2-6~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-6-leave-unsaved`，決策 497 的 P2-6 一節。
   - P2-7：`routeWaitText` 與泡泡說出「在等哪一列停著的車」。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
 

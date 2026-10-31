@@ -1367,6 +1367,31 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("settings-rules", app)
     }
 
+    /// Decision 497 (P2-6): Back to Start when the autosave cannot be
+    /// written asks whether to leave without saving, and leaving reaches
+    /// the start screen.
+    func testLeavingWithoutSaving() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-unwritable-saves"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let backToStart = app.buttons["menu.backToStart"]
+        XCTAssertTrue(backToStart.appears(within: 30), "The menu opens")
+        backToStart.waitUntilSettled()
+        // Touched at its frame's middle, as in testGameMenuAndRules.
+        let frame = backToStart.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        let leave = app.buttons["menu.leaveWithoutSaving"]
+        XCTAssertTrue(leave.appears(within: 60), "The question to leave without saving")
+        settle(seconds: 1)
+        keep("leave-without-saving", app)
+        leave.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["start.brand"].firstMatch.appears(within: 30), "The start screen")
+    }
+
     private func launch(extra: [String] = []) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
