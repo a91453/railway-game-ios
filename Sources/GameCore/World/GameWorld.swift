@@ -1054,6 +1054,7 @@ public struct GameWorld: Equatable, Sendable {
         if isDepot {
             guard !lines.contains(where: { $0.stops.contains(id) }) else { throw .depotIsLineStop(id) }
             guard stations[index].commerce == nil else { throw .stationHasCommerce(id) }
+            guard stations[index].expansion == nil else { throw .stationIsExpanded(id) }
             var changed = self
             changed.stations[index].isDepot = true
             for line in lines {
@@ -1078,6 +1079,12 @@ public struct GameWorld: Equatable, Sendable {
     /// and charge.
     mutating func setStationCommerce(_ level: StationCommerceLevel?, at index: Int) {
         stations[index].commerce = level
+    }
+
+    /// Sets how far the station at `index` is expanded (decision 506);
+    /// ``expandStation(at:)`` checks and charges.
+    mutating func setStationExpansion(_ expansion: StationExpansion?, at index: Int) {
+        stations[index].expansion = expansion
     }
 
     /// Sets the transfer points of the station at `index` (decision 298);
@@ -1265,6 +1272,8 @@ public struct GameWorld: Equatable, Sendable {
         disposeAsset(.station, owner: id.rawValue)
         // Decision 222: its shops go with it.
         disposeAsset(.stationCommerce, owner: id.rawValue)
+        // Decision 506: and its expansions.
+        disposeAsset(.stationExpansion, owner: id.rawValue)
 
         abandonUnservedPassengers()
         refreshLandDemand()

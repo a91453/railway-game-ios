@@ -50,6 +50,10 @@ public struct Station: Identifiable, Hashable, Sendable {
     /// a day from the real network. Set by ``GameWorld/setTransfers(_:)``
     /// only, while ``GameWorld/realTransfers`` is on; a depot has none.
     public internal(set) var transferPoints: Int64 = 0
+    /// How far it has been expanded to hold more waiting passengers
+    /// (decision 506), `nil` for not at all. Set by
+    /// ``GameWorld/expandStation(at:)`` only; a depot is never expanded.
+    public internal(set) var expansion: StationExpansion?
 
     /// A station standing at `point`.
     ///
@@ -69,7 +73,7 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes, point, operationMode, depot, commerce, transferPoints
+        case id, name, position, annexes, point, operationMode, depot, commerce, transferPoints, expansion
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
@@ -134,6 +138,14 @@ extension Station: Codable {
                 )
             }
         }
+        // Decision 506: a station without `"expansion"` is not expanded
+        // (every save before version 78), and a depot never is.
+        expansion = try container.decodeIfPresent(StationExpansion.self, forKey: .expansion)
+        if expansion != nil, isDepot {
+            throw DecodingError.dataCorruptedError(
+                forKey: .expansion, in: container, debugDescription: "Station \(id.rawValue) is a depot, which is never expanded."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -152,6 +164,7 @@ extension Station: Codable {
         if transferPoints > 0 {
             try container.encode(transferPoints, forKey: .transferPoints)
         }
+        try container.encodeIfPresent(expansion, forKey: .expansion)
     }
 }
 

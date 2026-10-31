@@ -563,13 +563,27 @@ extension GameError {
         case .notADepot:
             language.text("That station is not a depot.", "這個車站不是機廠。")
         case .stationIsDepot:
-            language.text("A depot has no shops.", "機廠不能開店。")
+            language.text("A depot has no shops and cannot be expanded.", "機廠不能開店，也不能擴建。")
         case .stationHasCommerce:
             language.text("This station has shops: demolish them before making it a depot.", "這個車站有商業：先拆除商業，才能改成機廠。")
         case .stationCommerceMaxedOut:
             language.text("The station's shops are at their top level.", "這一站的商業已經是最高等級。")
         case .noStationCommerce:
             language.text("This station has no shops.", "這個車站沒有商業。")
+        case .stationIsExpanded:
+            language.text("This station has been expanded, so it cannot become a depot.", "這個車站已經擴建，不能改成機廠。")
+        case .stationExpansionMaxedOut:
+            language.text("The station is already at its largest.", "這個車站已經擴建到最大。")
+        case let .stationTooQuietToExpand(needed):
+            language.text(
+                "Expanding needs \(needed.groupedText) people a day through the station.",
+                "每日進出要達 \(needed.groupedText) 人次才能擴建。"
+            )
+        case .stationNotFullToExpand:
+            language.text(
+                "The station was not full yesterday, so expanding would not carry more people.",
+                "這一站昨天沒有客滿，擴建也不會多載旅客。"
+            )
         case .lineAlreadyAcquired:
             language.text("This line is already yours.", "這條線已經是你的了。")
         case .invalidAcquisition:
