@@ -76,6 +76,14 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
+                    english: "Starting a lesson from the goals panel saves the game you are playing first.",
+                    chinese: "從目標面板開始關卡前，會先存好目前這局。"
+                ),
+                Line(
+                    english: "Laying track from the 3D view, Expand Map no longer sends you back to 3D.",
+                    chinese: "從 3D 進來鋪軌時，按「擴建地圖」不會再跳回 3D。"
+                ),
+                Line(
                     english: "Dragging a new line from the end of a track no longer freezes the map.",
                     chinese: "從軌道端點拖曳描線時，畫面不再卡住。"
                 ),
