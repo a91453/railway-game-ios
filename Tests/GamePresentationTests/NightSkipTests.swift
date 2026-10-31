@@ -611,10 +611,19 @@ final class NightSkipTests: XCTestCase {
         // that is gone, so it runs ahead again for the new one.
         paused.setSelectedLineAllDay(false)
         let first = try XCTUnwrap(paused.nightSkipLookAhead)
+        let firstRevision = paused.commandRevision
         paused.setSelectedLineAllDay(true)
         paused.setSelectedLineAllDay(false)
         await first.value
-        XCTAssertNotNil(paused.nightSkipLookAhead, "the world changed meanwhile: it runs ahead again")
+        // The run ahead again may already be done by the time this resumes
+        // (a small world on a busy runner, nightly run 41239862458): either
+        // it is under way, or what it found is for the latest world, never
+        // what the first one found.
+        XCTAssertNotEqual(paused.nightSkipMemo?.revision, firstRevision, "what the first found is for a world that is gone")
+        XCTAssertTrue(
+            paused.nightSkipLookAhead != nil || paused.nightSkipMemo?.revision == paused.commandRevision,
+            "the world changed meanwhile: it runs ahead again"
+        )
         await settle(paused)
         XCTAssertEqual(paused.nightSkipOffer, NightSkip.plan(for: paused.world), "as the main actor would have found it")
         let memo = try XCTUnwrap(paused.nightSkipMemo)
