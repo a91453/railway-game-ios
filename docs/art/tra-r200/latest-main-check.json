@@ -1,0 +1,314 @@
+{
+  "status": "REPRODUCED_INHERITED_FAILURE",
+  "baseline_main": "2ebe025a317771e8c89f0c6301066c266c2454d2",
+  "models_compared": 845,
+  "main_failures": 33,
+  "branch_failures": 33,
+  "all_failure_messages_identical": true,
+  "failures": [
+    "FAIL: temu2000-formation: 25040 triangles, over the near car budget 20000 (decision 417)",
+    "FAIL: e200mingri-style-car: hash 89c4ac3b30d3f0fc (6476 triangles), the lock has 6247d707c1bfdf2c (6476); a deliberate change is named with --allow e200mingri-style-car",
+    "FAIL: e200mingri-style-tail: hash 2d86c51a3177c38d (6500 triangles), the lock has 46f6e3705b72555 (6500); a deliberate change is named with --allow e200mingri-style-tail",
+    "FAIL: light-set-emu3000-head: hash 93a55abbf3d3973d (496 triangles), the lock has a46d46de986590d8 (496); a deliberate change is named with --allow light-set-emu3000-head",
+    "FAIL: light-set-emu3000-tail: hash 35e74169de55d2c4 (506 triangles), the lock has ea82a910238c66dd (506); a deliberate change is named with --allow light-set-emu3000-tail",
+    "FAIL: set-E200CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-E200CK-car",
+    "FAIL: set-E200CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-E200CK-tail",
+    "FAIL: set-E500CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-E500CK-car",
+    "FAIL: set-E500CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-E500CK-tail",
+    "FAIL: set-MINGRI-car: hash 89c4ac3b30d3f0fc (6476 triangles), the lock has 6247d707c1bfdf2c (6476); a deliberate change is named with --allow set-MINGRI-car",
+    "FAIL: set-MINGRI-tail: hash 2d86c51a3177c38d (6500 triangles), the lock has 46f6e3705b72555 (6500); a deliberate change is named with --allow set-MINGRI-tail",
+    "FAIL: set-R100CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-R100CK-car",
+    "FAIL: set-R100CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-R100CK-tail",
+    "FAIL: set-R200CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-R200CK-car",
+    "FAIL: set-R200CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-R200CK-tail",
+    "FAIL: set-SUMMER-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-SUMMER-car",
+    "FAIL: set-SUMMER-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-SUMMER-tail",
+    "FAIL: set-emu3000-car: hash 4d2fe71ec0e677cf (5592 triangles), the lock has a11a65f68fd83180 (5592); a deliberate change is named with --allow set-emu3000-car",
+    "FAIL: set-emu3000-em6: hash 74048dfbcdfbca5b (5456 triangles), the lock has a0925ea90550d424 (5456); a deliberate change is named with --allow set-emu3000-em6",
+    "FAIL: set-emu3000-ep10: hash e453b796347d7319 (5968 triangles), the lock has f1ef266dc8369346 (5968); a deliberate change is named with --allow set-emu3000-ep10",
+    "FAIL: set-emu3000-ep7: hash 98b9dbdd1939afc6 (5832 triangles), the lock has e772f6b09e38a521 (5832); a deliberate change is named with --allow set-emu3000-ep7",
+    "FAIL: set-emu3000-et: hash 2971ac0d17033c43 (5704 triangles), the lock has 18a66070e97c408c (5704); a deliberate change is named with --allow set-emu3000-et",
+    "FAIL: set-emu3000-head: hash a861643f224f49cf (8962 triangles), the lock has b519a5bc93e4527 (8962); a deliberate change is named with --allow set-emu3000-head",
+    "FAIL: set-emu3000-panto: hash e5f0588393f5c66a (5832 triangles), the lock has 434011a058dfb0a5 (5832); a deliberate change is named with --allow set-emu3000-panto",
+    "FAIL: set-emu3000-tail: hash 3c2182d899c09503 (8962 triangles), the lock has aec24e038833fb97 (8962); a deliberate change is named with --allow set-emu3000-tail",
+    "FAIL: set-emu3000Far-car: hash cc63c05ba12288b1 (2560 triangles), the lock has 309559e60aefc529 (2560); a deliberate change is named with --allow set-emu3000Far-car",
+    "FAIL: set-emu3000Far-em6: hash 271b8144c5b340d3 (2472 triangles), the lock has 75fc73c42f1c2572 (2472); a deliberate change is named with --allow set-emu3000Far-em6",
+    "FAIL: set-emu3000Far-ep10: hash b8b9aac7aca0fa5d (2776 triangles), the lock has 625333991309e9e1 (2776); a deliberate change is named with --allow set-emu3000Far-ep10",
+    "FAIL: set-emu3000Far-ep7: hash 79fc5e4e22551c79 (2688 triangles), the lock has d822ebfa063f4964 (2688); a deliberate change is named with --allow set-emu3000Far-ep7",
+    "FAIL: set-emu3000Far-et: hash 8e97cd296034f2ee (2624 triangles), the lock has f19e1d848782a42e (2624); a deliberate change is named with --allow set-emu3000Far-et",
+    "FAIL: set-emu3000Far-head: hash 662e1aff98e262dc (3834 triangles), the lock has c029467de7e9018e (3834); a deliberate change is named with --allow set-emu3000Far-head",
+    "FAIL: set-emu3000Far-panto: hash 33a204c793707ee9 (2688 triangles), the lock has 7a098677d8cec03c (2688); a deliberate change is named with --allow set-emu3000Far-panto",
+    "FAIL: set-emu3000Far-tail: hash 8b2a43ae19b24984 (3834 triangles), the lock has e7032f429defc8aa (3834); a deliberate change is named with --allow set-emu3000Far-tail"
+  ],
+  "lock_differences": 34,
+  "differences": [
+    {
+      "id": "e200mingri-style-car",
+      "actual_hash": "89c4ac3b30d3f0fc",
+      "locked": {
+        "hash": "6247d707c1bfdf2c",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "e200mingri-style-tail",
+      "actual_hash": "2d86c51a3177c38d",
+      "locked": {
+        "hash": "46f6e3705b72555",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "light-set-emu3000-head",
+      "actual_hash": "93a55abbf3d3973d",
+      "locked": {
+        "hash": "a46d46de986590d8",
+        "triangles": 496
+      }
+    },
+    {
+      "id": "light-set-emu3000-tail",
+      "actual_hash": "35e74169de55d2c4",
+      "locked": {
+        "hash": "ea82a910238c66dd",
+        "triangles": 506
+      }
+    },
+    {
+      "id": "scenery-busStopPole",
+      "actual_hash": "3bff96f2cccef641",
+      "locked": null
+    },
+    {
+      "id": "scenery-postBoxes",
+      "actual_hash": "bbb71fc344060bd2",
+      "locked": null
+    },
+    {
+      "id": "set-E200CK-car",
+      "actual_hash": "7c585dfaaf454fdb",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-E200CK-tail",
+      "actual_hash": "197686ab7443eee2",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-E500CK-car",
+      "actual_hash": "7c585dfaaf454fdb",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-E500CK-tail",
+      "actual_hash": "197686ab7443eee2",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-MINGRI-car",
+      "actual_hash": "89c4ac3b30d3f0fc",
+      "locked": {
+        "hash": "6247d707c1bfdf2c",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-MINGRI-tail",
+      "actual_hash": "2d86c51a3177c38d",
+      "locked": {
+        "hash": "46f6e3705b72555",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-R100CK-car",
+      "actual_hash": "7c585dfaaf454fdb",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-R100CK-tail",
+      "actual_hash": "197686ab7443eee2",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-R200CK-car",
+      "actual_hash": "7c585dfaaf454fdb",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-R200CK-tail",
+      "actual_hash": "197686ab7443eee2",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-SUMMER-car",
+      "actual_hash": "7c585dfaaf454fdb",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-SUMMER-tail",
+      "actual_hash": "197686ab7443eee2",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-emu3000-car",
+      "actual_hash": "4d2fe71ec0e677cf",
+      "locked": {
+        "hash": "a11a65f68fd83180",
+        "triangles": 5592
+      }
+    },
+    {
+      "id": "set-emu3000-em6",
+      "actual_hash": "74048dfbcdfbca5b",
+      "locked": {
+        "hash": "a0925ea90550d424",
+        "triangles": 5456
+      }
+    },
+    {
+      "id": "set-emu3000-ep10",
+      "actual_hash": "e453b796347d7319",
+      "locked": {
+        "hash": "f1ef266dc8369346",
+        "triangles": 5968
+      }
+    },
+    {
+      "id": "set-emu3000-ep7",
+      "actual_hash": "98b9dbdd1939afc6",
+      "locked": {
+        "hash": "e772f6b09e38a521",
+        "triangles": 5832
+      }
+    },
+    {
+      "id": "set-emu3000-et",
+      "actual_hash": "2971ac0d17033c43",
+      "locked": {
+        "hash": "18a66070e97c408c",
+        "triangles": 5704
+      }
+    },
+    {
+      "id": "set-emu3000-head",
+      "actual_hash": "a861643f224f49cf",
+      "locked": {
+        "hash": "b519a5bc93e4527",
+        "triangles": 8962
+      }
+    },
+    {
+      "id": "set-emu3000-panto",
+      "actual_hash": "e5f0588393f5c66a",
+      "locked": {
+        "hash": "434011a058dfb0a5",
+        "triangles": 5832
+      }
+    },
+    {
+      "id": "set-emu3000-tail",
+      "actual_hash": "3c2182d899c09503",
+      "locked": {
+        "hash": "aec24e038833fb97",
+        "triangles": 8962
+      }
+    },
+    {
+      "id": "set-emu3000Far-car",
+      "actual_hash": "cc63c05ba12288b1",
+      "locked": {
+        "hash": "309559e60aefc529",
+        "triangles": 2560
+      }
+    },
+    {
+      "id": "set-emu3000Far-em6",
+      "actual_hash": "271b8144c5b340d3",
+      "locked": {
+        "hash": "75fc73c42f1c2572",
+        "triangles": 2472
+      }
+    },
+    {
+      "id": "set-emu3000Far-ep10",
+      "actual_hash": "b8b9aac7aca0fa5d",
+      "locked": {
+        "hash": "625333991309e9e1",
+        "triangles": 2776
+      }
+    },
+    {
+      "id": "set-emu3000Far-ep7",
+      "actual_hash": "79fc5e4e22551c79",
+      "locked": {
+        "hash": "d822ebfa063f4964",
+        "triangles": 2688
+      }
+    },
+    {
+      "id": "set-emu3000Far-et",
+      "actual_hash": "8e97cd296034f2ee",
+      "locked": {
+        "hash": "f19e1d848782a42e",
+        "triangles": 2624
+      }
+    },
+    {
+      "id": "set-emu3000Far-head",
+      "actual_hash": "662e1aff98e262dc",
+      "locked": {
+        "hash": "c029467de7e9018e",
+        "triangles": 3834
+      }
+    },
+    {
+      "id": "set-emu3000Far-panto",
+      "actual_hash": "33a204c793707ee9",
+      "locked": {
+        "hash": "7a098677d8cec03c",
+        "triangles": 2688
+      }
+    },
+    {
+      "id": "set-emu3000Far-tail",
+      "actual_hash": "8b2a43ae19b24984",
+      "locked": {
+        "hash": "e7032f429defc8aa",
+        "triangles": 3834
+      }
+    }
+  ],
+  "gate_modified": false,
+  "upstream_lock_unchanged": true
+}

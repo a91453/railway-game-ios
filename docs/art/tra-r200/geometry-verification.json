@@ -3,16 +3,16 @@
   "models": [
     {
       "id": "tra-r200-r216-locomotive",
-      "balanced_edges": 8222,
-      "positive_components": 307,
-      "precision_metres": 0.00001,
+      "balanced_edges": 19053,
+      "positive_components": 435,
+      "precision_metres": 1e-05,
       "missing_and_reversed_face_rejected": true
     },
     {
       "id": "tra-r200-r216-locomotive-far",
-      "balanced_edges": 3968,
-      "positive_components": 162,
-      "precision_metres": 0.00001,
+      "balanced_edges": 7647,
+      "positive_components": 282,
+      "precision_metres": 1e-05,
       "missing_and_reversed_face_rejected": true
     }
   ],
@@ -21,5 +21,6 @@
     "No vehicle-specific glass visibility, equipment support, tyre/rail or clearance proof.",
     "No exhaustive intersections, engineering precision, appearance acceptance or device performance.",
     "Assembly payload is a JS expansion check; independently compare a Swift formation when available."
-  ]
+  ],
+  "producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732"
 }

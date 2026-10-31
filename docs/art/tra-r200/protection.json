@@ -1,9 +1,53 @@
 {
   "status": "VERIFIED",
-  "baseline_commit": "15759aa207cc031fed54dbcc00a98d1a1f671fa8",
-  "existing_models": 835,
+  "baseline_commit": "2ebe025a317771e8c89f0c6301066c266c2454d2",
+  "existing_models": 845,
   "payload_bytes_identical": true,
   "all_vertex_fields_fnv_identical": true,
-  "upstream_changes": "none relative to recorded base",
-  "limits": "M3DM omits u/v but the FNV includes x/y/z/nx/ny/nz/color/u/v/layer"
+  "upstream_changes": {
+    "old_baseline": "15759aa207cc031fed54dbcc00a98d1a1f671fa8",
+    "latest_main": "2ebe025a317771e8c89f0c6301066c266c2454d2",
+    "added": [
+      "light-set-dieselExpress-single",
+      "light-set-dieselExpressFar-car",
+      "light-set-dieselExpressFar-head",
+      "light-set-dieselExpressFar-single",
+      "light-set-dieselExpressFar-tail",
+      "set-dieselExpress-single",
+      "set-dieselExpressFar-car",
+      "set-dieselExpressFar-head",
+      "set-dieselExpressFar-single",
+      "set-dieselExpressFar-tail"
+    ],
+    "changed_existing": [
+      "light-set-dieselExpress-car",
+      "light-set-dieselExpress-head",
+      "light-set-dieselExpress-tail",
+      "set-dieselExpress-car",
+      "set-dieselExpress-head",
+      "set-dieselExpress-tail"
+    ],
+    "removed": []
+  },
+  "limits": "M3DM omits u/v but the FNV includes x/y/z/nx/ny/nz/color/u/v/layer",
+  "actual_export_producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732",
+  "delivered_producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732",
+  "pack_inventory": {
+    "actual_models": 845,
+    "standard_models": 663,
+    "studies_models": 182,
+    "unlocked_main_models": [
+      "scenery-busStopPole",
+      "scenery-postBoxes"
+    ],
+    "inventory_equals_union_of_actual_native_exports": true
+  },
+  "standard_cpu_vertex_bytes": 172460640,
+  "R200_standard_model_and_vertex_delta": 0,
+  "historical_835_protection": {
+    "source": "72528a4993705b7a4cdb3e456bc597738f0152af",
+    "payload_bytes_identical": true,
+    "all_vertex_fields_fnv_identical": true
+  },
+  "method": "Unchanged latest-main checkout exported all 843 locked IDs plus two actual unlocked scenery IDs. Runtime standard/studies inventory proved their 845-ID union complete. Producer independently exported the 843 IDs; current producer exported the two scenery models with R200. Actual payload bytes and FNV of x/y/z/nx/ny/nz/color/u/v/layer compared for all 845. No upstream locks changed."
 }

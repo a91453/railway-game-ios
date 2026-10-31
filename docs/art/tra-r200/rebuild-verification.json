@@ -1,7 +1,8 @@
 {
   "status": "VERIFIED",
-  "producer": "65464b23fc0b26058521d362555b9a0d8b550c98",
+  "producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732",
   "independent_checkout": true,
+  "latest_main": "2ebe025a317771e8c89f0c6301066c266c2454d2",
   "files": 35,
   "every_delivered_file_sha256_equal": true,
   "includes": [
@@ -9,14 +10,24 @@
     "2 GLB",
     "20 transparent PNG",
     "self-contained viewer",
-    "source/status/configuration inputs",
-    "README/spec/SHA and technical reports"
+    "pinned source/status/configuration/README inputs",
+    "spec/SHA and technical reports"
   ],
   "metadata_inputs": {
     "docs/art/tra-r200/sources.json": "84cef9a0737119a870699c98582c16247200ae539e587aec4aef8d4d00db1b04",
-    "docs/art/tra-r200/status.json": "e6835ac523fe176eb48a0a35bfe4a35c7ad8cbbe4bc1d91ba8eb3edae0c382e3",
-    "tools/tra-r200/configuration.json": "688663c5f7a8de455db3fc83489b9eae5af31dfe915ca6fe55b8fc08264dd877",
-    "tools/tra-r200/curate.py": "ad071ebb823c2884b5ba2b1e225223396d397ce0d7f492ebf85cb2d9a70a49a4",
-    "tools/tra-r200/review.mjs": "97f575b4c5c789477a4447714aa72a52130ac721e0c6e90d8d6cb94ef2e88eb9"
-  }
+    "docs/art/tra-r200/status.json": "9943e761c4edd4e25232149bbb9d7d5d8a7c8ad6d80fcca53edcbba1d666bc71",
+    "docs/art/tra-r200/README.md": "de7b1b9bb3ec7e54cd5bb11c93353a6806bce3cf4cc962af5dea89b8f875bdb6",
+    "tools/tra-r200/configuration.json": "7d4a67072cabfb85846888cec12fca92b2e178cada35e924c9a019cd30858765",
+    "tools/tra-r200/curate.py": "8f08dc26818e2ba372adf88633a4fcb90808b6f8f99462580e79302243e3355c",
+    "tools/tra-r200/review.mjs": "97f575b4c5c789477a4447714aa72a52130ac721e0c6e90d8d6cb94ef2e88eb9",
+    "tools/tra-r200/deliver.py": "e73dc2ac05f809dd25cd170b9236cb4bd1777e1b5b99c71941e8833a8bd18738"
+  },
+  "previous_preview_sha256": {
+    "tra-r200-r216-locomotive-isometric.png": "f9f33b2f8ec1b0596f7c620e26a86c46261e8e947233a31f9958a423e420a57c",
+    "tra-r200-r216-locomotive-left.png": "c5c55aa73abae5f81fa936fcc6442b8a02c6cfa9f17486dde69d6988bc794b19",
+    "tra-r200-r216-locomotive-front.png": "1c1b29ac845f74ceac3f2748b39fe67e9a40346f0ebb76984112d6163130ac68"
+  },
+  "overview_bytes_identical": true,
+  "raw_native_glb_review_selected_files_equal": 66,
+  "superseded_attempt": "Stale pre-upstream sets metadata was rejected. Both final manifests were regenerated from current 9c87ea5c code; no metadata overwrite to fake equality."
 }

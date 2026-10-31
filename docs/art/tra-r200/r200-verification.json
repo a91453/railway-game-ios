@@ -1,5 +1,6 @@
 {
   "status": "VERIFIED",
+  "previous_revision_rejection": "UNVERIFIED",
   "checks": [
     "12 connected tyre components of expected diameter/width and 12 rail contacts at 6 axle stations",
     "rail/coupler/roof bounds",
@@ -8,11 +9,14 @@
     "visible radiator fan first-hit rays; hidden-fan mutation",
     "duplicate triangle, protruding interior cover and reversed whole locomotive rejected",
     "bogie bolster, step stiles and drawgear support witnesses; actual support displacement mutations",
-    "actual lifted tyre and floating/buried windshield mutations rejected"
+    "actual lifted tyre and floating/buried windshield mutations rejected",
+    "outward-facing coupler handedness at both ends; reversed-end and closed blocking-box counterexamples",
+    "optional genuine R1 rejection probe"
   ],
   "limits": [
     "not exhaustive collision detection",
     "side window and door glass rays are sampled, opposite side fittings and roof BOM need sources",
     "24 first-hit windshield rays are sampled visibility, not all-view intersection proof"
-  ]
+  ],
+  "producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732"
 }

@@ -12,7 +12,7 @@
   "models": [
     {
       "id": "tra-r200-r216-locomotive",
-      "triangles": 5484,
+      "triangles": 12702,
       "minimum": [
         -10.005000114440918,
         -1.5,
@@ -26,7 +26,7 @@
     },
     {
       "id": "tra-r200-r216-locomotive-far",
-      "triangles": 2648,
+      "triangles": 5098,
       "minimum": [
         -10.005000114440918,
         -1.5,
@@ -38,5 +38,10 @@
         4.079999923706055
       ]
     }
-  ]
+  ],
+  "producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732",
+  "imported_glb_sha256": {
+    "tra-r200-r216-locomotive": "d441386e5b416870ea71b59df301addc7899a7a7df937eaed1196e6e3bfa9e86",
+    "tra-r200-r216-locomotive-far": "c0b99bd097ea36135beafa985323606aaf7bd6adc31c1950daba5e210b20315b"
+  }
 }
