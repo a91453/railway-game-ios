@@ -1,6 +1,6 @@
 # 臺鐵 R200／R216：第二輪原生近遠景 studies
 
-本輪修正駕駛室／端面、走行設備與屋頂分層；不是營運接入。真正 producer、三角數及實跑結果見 `verification.json` 與完整素材的 manifest，外觀接受仍 UNVERIFIED。
+本輪修正駕駛室／端面、走行設備與屋頂分層；不是營運接入。真正 producer、三角數及實跑結果見 [verification.json](https://github.com/a91453/railway-game-ios/blob/codex/tra-r200-native/docs/art/tra-r200/verification.json) 與完整素材的 manifest，外觀接受仍 UNVERIFIED。
 
 [公開 draft #1589](https://github.com/a91453/railway-game-ios/pull/1589) ↔ [素材 draft #37](https://github.com/a91453/railway-assets-private/pull/37)。兩庫 base main，不合併、auto-merge 或 TestFlight。
 
@@ -8,7 +8,7 @@
 
 R200 是臺鐵訂購的 Stadler SALi 柴電機車，Stadler Rail Valencia 在西班牙製造，訂購34輛 R201–R234。Cummins 引擎、ABB 牽引變流器與 TSA 馬達的角色分開，不將設備供應商稱為整車製造商。代表 R216，依 Blair 2024-12-12 竹南一般白／深藍塗裝照片（ref-04）；不是活動彩繪、效果圖或運送封套版。
 
-原始來源與逐圖 SHA／權利見 [sources.json](sources.json)。重新開啟 R216 全側、R201 正面與駕駛室／燈／連結器近照，對照最終原生圖。R201 2023-07-10 見面會只支持固定外觀，不當正式營運證據；R201 銘牌顯示2022製造，不能把概括的2023起生產當逐車年表。抵臺、整備、試運轉、驗收、首航分開；逐車製造／交付／驗收批次仍未核齊。
+原始來源與逐圖 SHA／權利見 [來源與逐圖 SHA](https://github.com/a91453/railway-game-ios/blob/codex/tra-r200-native/docs/art/tra-r200/sources.json)。重新開啟 R216 全側、R201 正面與駕駛室／燈／連結器近照，對照最終原生圖。R201 2023-07-10 見面會只支持固定外觀，不當正式營運證據；R201 銘牌顯示2022製造，不能把概括的2023起生產當逐車年表。抵臺、整備、試運轉、驗收、首航分開；逐車製造／交付／驗收批次仍未核齊。
 
 正式出國報告及 TSA 部分網址回403；舊 Stadler 網址改到無原新聞內容的頁面，不能宣稱已讀原報告。2021採購期二手資料20.000×2.852×3.900m，與後來二手as-built 20.010×2.852×4.080m不同；本模型暫採後者包絡，官方原圖仍 UNVERIFIED。輪徑／軸距、最大設備寬、批次BOM、官方1／2端、反側全側及正交屋頂／車底照不足。
 
@@ -68,8 +68,10 @@ blender --background --python tools/train-shape-refresh/glb-audit.py -- /tmp/r20
 
 ## 保護、營運與四態界線
 
-僅 studies，同兩個R200 ID；不改standard、Map3DTrainSets／Trains／RealTrains、R200CK、他車、配車、回退、燈控、GameCore、存檔、fixtures、購車、班表或動畫。835既有模型原生payload及全頂點欄位保護另驗。main的33項既有共用檢查失敗／34鎖差異不擅改，鎖只更新本輪兩項。
+僅 studies，同兩個R200 ID；不改standard、Map3DTrainSets／Trains／RealTrains、R200CK、他車、配車、回退、燈控、GameCore、存檔、fixtures、購車、班表或動畫。原始基準835既有模型已逐bytes及全頂點欄位核對保持；最新main另作實際全量對照，結果見 protection.json。原始基準33項既有共用檢查失敗／34鎖差異保留歷史證據；最新main另驗，不改他車鎖或gate，鎖只更新本輪兩項。
 
 既有r200ChuKuang→R200CK仍用舊近似，尺寸／端別／營運身份接點不完整，本輪不換。沒有來源可靠且接點已核的代表性R216完整牽引編組，未湊客貨全列；單機不叫全列或動態行駛已驗。合併不會自動在遊戲選用。
 
 素材技術依最終證據；明確producer使用者外觀接受、營運、裝置均UNVERIFIED。HTTP viewer不代替file://、Simulator、真機Metal／效能／動畫；離線直開先前被瀏覽器管理政策擋住，本輪亦須分開重驗。正式端號、反側／屋頂車底與批次BOM缺口仍保留。
+
+最新上游基準 `2ebe025a317771e8c89f0c6301066c266c2454d2` 已帶入本分支；DR3100等上游變動與R200改動分開核對，不把上游模型／營運／規則變更算成本輪製作。真正交付producer與最新主線保護、模型包數字見驗證JSON。

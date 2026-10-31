@@ -1,7 +1,7 @@
 {
   "asset": {
     "status": "VERIFIED",
-    "evidence": "R2 source 72528a4993705b7a4cdb3e456bc597738f0152af independently rebuilt: all 4 native/GLB files, 62 rendered/selected PNGs and public overview byte-identical. Swift 6.4 warnings-as-errors; 10 tests passed; shared topology and R200 actual fault probes passed; Blender 4.3.2 import and HTTP WebGL rotation/zoom/download checks passed. Final metadata producer is independently reconstructed as recorded in rebuild-verification.json. file:// remains UNVERIFIED because browser administration blocks navigation. Engineering/source gaps remain; technical study validation only."
+    "evidence": "Independent final producer reconstruction is recorded in rebuild-verification.json: complete native/GLB, 20 selected transparent PNGs, self-contained viewer and pinned metadata. Swift 6.4 warnings-as-errors, related tests, shared topology and actual R200 fault probes, Blender 4.3.2 import, HTTP rotation/zoom and download checks. All existing models are compared against actual latest-main exports separately from upstream changes. file:// remains UNVERIFIED because browser administration blocks navigation. Source/engineering gaps remain; technical study validation only."
   },
   "appearance": {
     "status": "UNVERIFIED",
