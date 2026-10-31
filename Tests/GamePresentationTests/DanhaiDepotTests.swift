@@ -76,24 +76,42 @@ final class DanhaiDepotTests: XCTestCase {
         XCTAssertEqual(standing(at: depot.id), 9)
     }
 
-    /// BUGHUNT_BUILD P3-5: a real line bought cannot be bought again once
-    /// its line is removed (and a line sold beside it is still sold
-    /// beside its track), so removing it says so; a line of the player's
-    /// own does not.
-    func testRemovingABoughtLineSaysItCannotBeBoughtAgain() throws {
+    /// Decision 528 (BUGHUNT_BUILD P3-5): a real line bought and removed
+    /// is on sale again, the track it left taken up and laid again, and
+    /// runs as bought; removing it says its track and stations stay
+    /// until then. A line of the player's own says only what it sells.
+    func testABoughtLineRemovedIsBoughtAgain() throws {
         let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
         let green = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" })
         XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: green)), session.message?.text ?? "")
         let bought = try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line)
-        XCTAssertTrue(session.lineRemovalText(bought).hasSuffix("這條線是買來的，刪掉後就不能再買回來；軌道與車站會留著。"))
         XCTAssertTrue(session.lineRemovalText(bought).hasPrefix("它的 13 列車會一起賣掉"))
+        XCTAssertTrue(session.lineRemovalText(bought).hasSuffix("這條線是買來的，刪掉後可以再買回來；軌道與車站會留著。"))
+        let stations = session.world.stations.count, edges = session.world.network.edges.count
 
+        let ownStops = Array(try XCTUnwrap(session.world.line(id: bought)?.stops).prefix(2))
+        session.selectLine(bought)
+        session.removeSelectedLine()
+        XCTAssertNil(session.world.line(id: bought), session.message?.text ?? "")
+        XCTAssertNil(session.world.acquisition(of: "ntdlrt:V"))
+        XCTAssertEqual(session.world.network.edges.count, edges, "its track stays")
         var world = session.world
-        let stops = try XCTUnwrap(world.line(id: bought)?.stops)
-        let own = try world.createLine(named: "自己的線", stops: Array(stops.prefix(2)))
+        let again = session
+        let line = try XCTUnwrap(again.buyableRealLines.first { $0.id == "ntdlrt:V" }, "the Green Mountain Line on sale again")
+        let offer = again.realLineOffer(for: line)
+        let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+        let clearing = try XCTUnwrap(acquisition.clearing, "the track it left taken up")
+        XCTAssertGreaterThan(clearing.edges.count, 0)
+        XCTAssertEqual(clearing.stations.count, 1, "its old depot")
+        XCTAssertTrue(again.acquireRealLine(offer), again.message?.text ?? "")
+        XCTAssertNotNil(again.world.acquisition(of: "ntdlrt:V"))
+        // Its stations are the ones it left (the depot built again).
+        XCTAssertEqual(again.world.stations.count, stations)
+        XCTAssertEqual(again.world.trains.count, 13)
+
+        let own = try world.createLine(named: "自己的線", stops: ownStops)
         let mine = GameSession(world: world, language: .english)
         XCTAssertEqual(mine.lineRemovalText(own.id), "The line has no trains.")
-        XCTAssertTrue(mine.lineRemovalText(bought).hasSuffix(" This line was bought: once removed, it cannot be bought again. Its track and stations stay."))
     }
 
     /// `ids` bought in turn on a game round the Green Mountain Line under

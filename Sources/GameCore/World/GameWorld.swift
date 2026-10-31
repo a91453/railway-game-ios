@@ -1226,8 +1226,10 @@ public struct GameWorld: Equatable, Sendable {
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
                 removeLineAccounts(of: lines[index].id)
-                // Decision 315: as removing the line does.
+                // Decision 315: as removing the line does; decision 528,
+                // its purchase with it.
                 disposeAsset(.acquiredLine, owner: lines[index].id.rawValue)
+                forgetAcquisition(ofLine: lines[index].id)
                 lines.remove(at: index)
                 continue
             }
@@ -1946,8 +1948,10 @@ public struct GameWorld: Equatable, Sendable {
         let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
         removeLineAccounts(of: id)
-        // Decision 315: what a line bought cost for its riders goes with it.
+        // Decision 315: what a line bought cost for its riders goes with it;
+        // decision 528, and its purchase, so the real line is on sale again.
         disposeAsset(.acquiredLine, owner: id.rawValue)
+        forgetAcquisition(ofLine: id)
         abandonUnservedPassengers()
         // Decision 168: its stations draw no intercity trips unless
         // another high-speed line calls at them.
@@ -5037,6 +5041,16 @@ extension GameWorld: Codable {
         }
         busRoutes = try container.decodeIfPresent([BusRoute].self, forKey: .busRoutes) ?? []
         nextBusRouteID = try container.decodeIfPresent(Int.self, forKey: .nextBusRouteID) ?? 1
+        // Decision 528: a purchase whose line or bus route was removed
+        // before it went with it is dropped, so the real line is on sale
+        // again; nothing is paid back or booked again. One naming a number
+        // never handed out is still refused below.
+        let busRouteIDs = Set(busRoutes.map(\.id)), linesHandedOut = lineIDsHandedOut, routesHandedOut = nextBusRouteID
+        acquisitions.removeAll { bought in
+            if let line = bought.line { return line.rawValue < linesHandedOut && !lineIDs.contains(line.rawValue) }
+            if let route = bought.busRoute { return route.rawValue < routesHandedOut && !busRouteIDs.contains(route) }
+            return false
+        }
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(

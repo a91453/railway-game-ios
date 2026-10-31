@@ -161,16 +161,37 @@ final class LineAcquisitionTests: XCTestCase {
 
     // MARK: - Removing
 
-    /// A bought line removed writes its asset off; the purchase stays, so
-    /// the real line cannot be bought again.
-    func testRemovingABoughtLineWritesItOff() throws {
-        var world = try world()
+    /// A bought line removed writes its asset off and drops its purchase,
+    /// so the real line can be bought again (decision 528), paid for
+    /// again.
+    func testRemovingABoughtLineWritesItOffAndPutsItOnSaleAgain() throws {
+        var world = try world(balance: 100_000_000)
         try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
         try world.removeLine(main)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .acquiredLine })
-        XCTAssertEqual(world.acquisitions.map(\.realLine), [pingxi])
+        XCTAssertEqual(world.acquisitions, [])
+        XCTAssertNil(world.acquisition(of: pingxi))
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
         let other = try world.createLine(named: "Other", stops: [alpha, gamma]).id
-        XCTAssertThrowsError(try world.recordLineAcquisition(line: other, realLine: pingxi, dailyRiders: 1))
+        try world.setLineRuns(other, to: [LineRun(from: 0, to: 1, times: [LineRunTime(arrival: 22_200, departure: 22_200), LineRunTime(arrival: 22_800, departure: 22_800)])])
+        let balance = world.economy.balance
+        try world.recordLineAcquisition(line: other, realLine: pingxi, dailyRiders: 2)
+        XCTAssertEqual(world.acquisition(of: pingxi)?.line, other)
+        XCTAssertEqual(world.economy.balance, balance - LineAcquisition.value(ofDailyRiders: 2))
+    }
+
+    /// Decision 528: a save from before it, holding the purchase of a line
+    /// since removed, loads without it, so the real line is on sale again.
+    func testASavedPurchaseOfARemovedLineIsDropped() throws {
+        var world = try world()
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
+        let bought = try XCTUnwrap(world.acquisitions.first)
+        try world.removeLine(main)
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        object["acquisitions"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([bought]))
+        let loaded = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(loaded.acquisitions, [])
+        XCTAssertEqual(loaded, world)
     }
 
     /// A bought line that loses its stations, so that it is removed with
@@ -183,7 +204,7 @@ final class LineAcquisitionTests: XCTestCase {
         try world.removeStation(gamma)
         XCTAssertNil(world.line(id: main))
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .acquiredLine })
-        XCTAssertEqual(world.acquisitions.map(\.realLine), [pingxi])
+        XCTAssertEqual(world.acquisitions, [], "decision 528: on sale again")
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
 

@@ -15,12 +15,14 @@ public struct LineAcquisition: Hashable, Sendable {
 
     public let kind: Kind
     /// The real line's or route's name in the app's data
-    /// (`"tra:PINGXI"`): bought once only.
+    /// (`"tra:PINGXI"`): bought once while the company has it.
     public let realLine: String
-    /// The line its trains run as, a railway's. Kept when the line is
-    /// removed later, so the real line is still the company's.
+    /// The line its trains run as, a railway's. Removing the line drops
+    /// the purchase with it, and the real line is on sale again (decision
+    /// 528; before it, the purchase was kept and the line never sold
+    /// again).
     public let line: LineID?
-    /// The bus route it runs as, a bus route's; kept likewise.
+    /// The bus route it runs as, a bus route's; dropped likewise.
     public let busRoute: BusRouteID?
     /// The game day it was bought.
     public let day: Int64
@@ -152,8 +154,9 @@ extension GameWorld {
     /// from that day's first train.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
-    ///   ``GameError/lineAlreadyAcquired`` if `realLine` or the line was
-    ///   bought before; ``GameError/invalidAcquisition`` for an empty
+    ///   ``GameError/lineAlreadyAcquired`` if the company has `realLine`
+    ///   or the line bought (one removed since is not, decision 528);
+    ///   ``GameError/invalidAcquisition`` for an empty
     ///   or too long name, riders outside 0 to
     ///   ``LineAcquisition/maximumDailyRiders``, or a line without runs or
     ///   one that has run one; ``GameError/insufficientFunds(required:available:)``.
@@ -173,6 +176,13 @@ extension GameWorld {
         setRunsDone(ofLine: index, through: lastDayDone >= 0 ? lastDayDone : nil)
         acquisitions.append(LineAcquisition(realLine: realLine, line: id, day: dayIndex(of: clock.now), value: value))
         acquireAsset(.acquiredLine, owner: id.rawValue, cost: value)
+    }
+
+    /// Decision 528: drops the purchase line `id` runs, as the line is
+    /// removed, so its real line is on sale again. What it cost was
+    /// written off with the line's asset.
+    mutating func forgetAcquisition(ofLine id: LineID) {
+        acquisitions.removeAll { $0.line == id }
     }
 
     // MARK: - Queries

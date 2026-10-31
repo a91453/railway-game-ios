@@ -259,11 +259,15 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// Decision 479: the real depot bought with it, the line's; `nil` for
     /// none (and in the logs of before).
     public let depot: Depot?
+    /// Decision 528: the track the same line left when it was bought and
+    /// removed before, taken up first; `nil` for none (and in the logs of
+    /// before).
+    public let clearing: RealLineClearing?
 
     public init(
         realLine: String, pieces: [Piece], stops: [Stop], platforms: [Platform], lineName: String, color: LineColor?, runs: [LineRun],
         trains: [Start], cars: Int, trainType: TrainType? = nil, dailyRiders: Int64, tiles: [MapTile]?, tier: LineAcquisition.Tier? = nil,
-        depot: Depot? = nil
+        depot: Depot? = nil, clearing: RealLineClearing? = nil
     ) {
         self.realLine = realLine
         self.pieces = pieces
@@ -279,6 +283,15 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         self.tiles = tiles
         self.tier = tier
         self.depot = depot
+        self.clearing = clearing
+    }
+
+    /// It, taking `clearing` up first (decision 528).
+    func clearing(_ clearing: RealLineClearing?) -> RealLineAcquisition {
+        RealLineAcquisition(
+            realLine: realLine, pieces: pieces, stops: stops, platforms: platforms, lineName: lineName, color: color, runs: runs, trains: trains,
+            cars: cars, trainType: trainType, dailyRiders: dailyRiders, tiles: tiles, tier: tier, depot: depot, clearing: clearing
+        )
     }
 
     /// Cars per train: the DR1000's three (decision 315's reference row).
@@ -570,7 +583,8 @@ extension GameSession {
     }
 
     func realLineOffer(for line: RealBranchLine, raising: RealLineLaying.StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool) {
-        realLineLaying.offer(for: line, raising: raising, depot: depot)
+        let laid = realLineLaying.offer(for: line, raising: raising, depot: depot)
+        return (laid.offer, laid.crossesTrack)
     }
 
     func build(_ acquisition: RealLineAcquisition, in world: inout GameWorld, recording: Bool = true) throws(GameError) -> RealLineAcquisitionPrice {
@@ -628,19 +642,50 @@ extension RealLineLaying {
     /// line bought before decision 462 lies on the ground at Zhuzhong
     /// whichever it was.
     func offer(for line: RealBranchLine) -> RealLineOffer {
-        func offer(depot: Bool) -> RealLineOffer {
+        let laid = laidOffer(for: line)
+        // Decision 528: refused for the track the same line left when it
+        // was bought and removed before, laid again on the world without
+        // it, and that track taken up first.
+        guard laid.offer.acquisition == nil, let first = laid.laid,
+              let clearing = RealLineClearing.clearing(in: world, under: first.pieces) else { return laid.offer }
+        var cleared = world.pricingCopy()
+        do throws(GameError) {
+            try clearing.apply(to: &cleared)
+        } catch {
+            return laid.offer
+        }
+        let again = RealLineLaying(
+            world: cleared, railways: railways, traces: traces, language: language, population: population, places: places, water: water,
+            coverage: coverage, heights: heights
+        ).laidOffer(for: line)
+        guard let acquisition = again.offer.acquisition else { return laid.offer }
+        let taken = RealLineClearing.clearing(in: world, under: acquisition.pieces) ?? clearing
+        let bought = acquisition.clearing(taken)
+        var probe = world.pricingCopy()
+        do throws(GameError) {
+            let price = try build(bought, in: &probe)
+            return RealLineOffer(line: line, acquisition: bought, price: price, problem: nil)
+        } catch {
+            return laid.offer
+        }
+    }
+
+    /// ``offer(for:)`` without taking up what the line left before, and
+    /// the line as laid where GameCore refused it.
+    private func laidOffer(for line: RealBranchLine) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
+        func offer(depot: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
             let laid = self.offer(for: line, raising: .viaducts, depot: depot)
-            guard laid.crossesTrack else { return laid.offer }
+            guard laid.crossesTrack else { return (laid.offer, laid.laid) }
             let raised = self.offer(for: line, raising: .viaductsAndShared, depot: depot)
-            return raised.offer.problem == nil ? raised.offer : laid.offer
+            return raised.offer.problem == nil ? (raised.offer, raised.laid) : (laid.offer, laid.laid)
         }
         // Decision 479: without its depot where that cannot be laid; not
         // a line whose end has no room for its trains without it
         // (decision 489).
         let laid = offer(depot: true)
-        guard laid.acquisition == nil, let site = RealLineDepotSite.site(of: line.id), site.beyond == nil else { return laid }
+        guard laid.offer.acquisition == nil, let site = RealLineDepotSite.site(of: line.id), site.beyond == nil else { return laid }
         let without = offer(depot: false)
-        return without.acquisition == nil ? laid : without
+        return without.offer.acquisition == nil ? laid : without
     }
 
     /// Which of a line's stations stand raised (decision 462).
@@ -653,14 +698,15 @@ extension RealLineLaying {
         case viaductsAndShared
     }
 
-    /// The offer of `line` with its stations raised as `raising` says, and
+    /// The offer of `line` with its stations raised as `raising` says,
     /// whether GameCore refused it for its track meeting another's at one
-    /// level (``GameError/trackConflict(_:)``).
-    func offer(for line: RealBranchLine, raising: StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool) {
-        func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool) {
-            (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false)
+    /// level (``GameError/trackConflict(_:)``), and the line as laid where
+    /// GameCore refused it (decision 528).
+    func offer(for line: RealBranchLine, raising: StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
+        func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
+            (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
         }
-        func refusedForLand() -> (offer: RealLineOffer, crossesTrack: Bool) {
+        func refusedForLand() -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             refused(
                 "The land this line crosses does not touch yours. Use Expand Map to buy up to the line first, then buy it.",
                 "這條線經過的地和你的地不相連。先用「擴建地圖」買到這條線旁邊，再收購。"
@@ -1125,7 +1171,7 @@ extension RealLineLaying {
             var probe = world.pricingCopy()
             do throws(GameError) {
                 let price = try build(bought, in: &probe)
-                return (RealLineOffer(line: line, acquisition: bought, price: price, problem: nil), false)
+                return (RealLineOffer(line: line, acquisition: bought, price: price, problem: nil), false, nil)
             } catch {
                 if case .mapTileNotOwned(let tile) = error, let owned = world.mapExpansion?.owned, !tiles.contains(tile) {
                     guard let order = RealLineAcquisition.buyingOrder(of: Set(tiles + [tile]), owned: owned) else { return refusedForLand() }
@@ -1133,7 +1179,7 @@ extension RealLineLaying {
                     continue
                 }
                 let crosses = if case .trackConflict = error { true } else { false }
-                return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses)
+                return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)
             }
         }
     }
@@ -1198,6 +1244,8 @@ extension RealLineLaying {
             GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
         }
         let landed = world.economy.balance
+        // Decision 528: what the same line left when it was removed.
+        try acquisition.clearing?.apply(to: &world)
         var nodes: [[TrackNodeID]] = []
         var edges: [[TrackEdgeID]] = []
         for piece in acquisition.pieces {
