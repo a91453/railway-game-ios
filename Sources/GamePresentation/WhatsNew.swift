@@ -31,6 +31,61 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-10-31-100-2",
+            items: [
+                Line(
+                    english: "Build has a Zoning tool of its own; the station master points out empty land to zone, and you hear when the first building goes up.",
+                    chinese: "建設多了「分區」工具；站長會指出可以劃分區的空地，第一棟建物蓋好時會通知。"
+                ),
+                Line(
+                    english: "Building a station, you pick its layout first and the whole station is built at once.",
+                    chinese: "蓋車站時先選排法，整個車站一次蓋好。"
+                ),
+                Line(
+                    english: "The train roster opens from the line page and the train card, and you arrange trains by dragging them.",
+                    chinese: "列車運用表可以從路線頁和列車卡直接打開，拖拉就能排班。"
+                ),
+                Line(
+                    english: "When track can't be laid, you are told which condition stops it; tunnels can go down to 1,024 m.",
+                    chinese: "鋪軌被擋時會說出是哪個條件；隧道最深可到地下 1,024 公尺。"
+                ),
+                Line(
+                    english: "The zoning layer says for each square whether it will build, waits for the station, is too far away or is not needed yet.",
+                    chinese: "分區圖層會標出每一格是會蓋、等車站成長、離車站太遠，還是目前不缺。"
+                ),
+                Line(
+                    english: "Track you lay beside a station's platforms joins that station, and a missing-materials note says what to do next.",
+                    chinese: "自己拉的軌道旁有車站月台，就加成那站的月台；缺建材時會說下一步。"
+                ),
+                Line(
+                    english: "Each game takes one row in the save list, keeps its last three versions, and several rows can be deleted at once.",
+                    chinese: "同一局存檔只佔一列，列內留最近 3 版，也可以多選刪除。"
+                ),
+                Line(
+                    english: "The DR3100 diesel express runs four times a day on the real map.",
+                    chinese: "真實地圖每天多跑四班 DR3100 柴聯自強號。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Dragging a new line from the end of a track no longer freezes the map.",
+                    chinese: "從軌道端點拖曳描線時，畫面不再卡住。"
+                ),
+                Line(
+                    english: "Sights fold away as you zoom out, a station's warnings share one badge, and taps go to stations and track first.",
+                    chinese: "景點依縮放收起、同一站的警告合成一顆徽章，點擊先給車站與軌道。"
+                ),
+                Line(
+                    english: "Pressing Build from the 3D map brings you back to the same 3D view when you finish.",
+                    chinese: "從 3D 按「建設」，蓋完會回到 3D 原本的視角。"
+                ),
+                Line(
+                    english: "Taking up your own road no longer holds up the next tap.",
+                    chinese: "拆自己的路不再讓下一次點按卡住。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-31-100",
             items: [
                 Line(
