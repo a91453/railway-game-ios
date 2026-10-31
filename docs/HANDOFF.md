@@ -2536,7 +2536,7 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **做了的**在決策 515（`docs/decisions/515.md`）：描 `afr_sched` 時坡度到 70‰（邊的 `mountain`）、林鐵描線半徑 20 m、`ALISHAN` 車種、只有登山車上得去（`trainCannotClimb`）、依坡度限速；存檔版本 77。
 - **還沒做的**（決策 515 的「缺口與下一步」，一項一個 PR）：
   - 不在車站的折返（Z 字）：GameCore 只在中途站月台折返（決策 63）；要讓列車在非車站的節點換向，動 `LineJourney` 與交通控制，要升 golden 時照規則逐值說明。
-  - `placeTrain`、接續運轉沒有檢查登山；線路改走登山軌道後已在線上的一般車不會被拉下來。
+  - ~~`placeTrain`、接續運轉沒有檢查登山；線路改走登山軌道後已在線上的一般車不會被拉下來。~~ ALISHAN2（session_01YGNNupKwkmd2NDUaYLBpRs，`claude/alishan2-climbing-check`，2026-10-31）補了，見決策 515「續」。剩下：不在線上、自己跑時刻表的一般車，服務找路仍可能經過登山軌道（決策 515「續」的缺口 1，和 Z 字折返一起看）。
   - 登山車的 3D 模型（DL38＋`alicoach`，參考 `garage-scenes/alishan*.js`；先讀 `.claude/skills/rolling-stock/SKILL.md`）。
   - 獨立山螺旋 16 m、二萬平到神木 20 m 兩處描線停點（資料畫線的折角）。
 
