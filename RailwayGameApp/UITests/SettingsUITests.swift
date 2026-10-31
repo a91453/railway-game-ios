@@ -28,9 +28,11 @@ final class SettingsUITests: XCTestCase {
         // (decision 381), they start below the fold, and a List makes a
         // row only as it comes near (full lane 40026341039). Checked after
         // the switch: at the list's top the switch stays above the band
-        // the drags bring a row into (run 40046083471).
+        // the drags bring a row into (run 40046083471). Each drag starts
+        // clear of the sliders: one that began on the chimes slider moved
+        // the slider, not the list, 24 times over (full lane 41200504678).
         for volume in ["music", "chimes", "effects"] {
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.sliders["settings.volume.\(volume)"]), "Missing the \(volume) volume")
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(app.sliders["settings.volume.\(volume)"], clearOf: .slider), "Missing the \(volume) volume")
         }
 
         tap(app.buttons["settings.done"], name: "settings.done")
