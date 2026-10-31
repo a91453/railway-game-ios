@@ -89,9 +89,10 @@ jobs:
               for devicetype in json.loads(Path(os.environ["RUNNER_TEMP"], "devicetypes.json").read_text())["devicetypes"]:
                   try:
                       profile = plistlib.loads(Path(devicetype["bundlePath"], "Contents/Resources/profile.plist").read_bytes())
-                      scale = profile["mainScreenScale"]
-                      sizes[devicetype["identifier"]] = (profile["mainScreenWidth"] / scale, profile["mainScreenHeight"] / scale)
-                  except (KeyError, OSError, plistlib.InvalidFileException, ZeroDivisionError):
+                      # Numbers or strings, depending on the device type.
+                      scale = float(profile["mainScreenScale"])
+                      sizes[devicetype["identifier"]] = (float(profile["mainScreenWidth"]) / scale, float(profile["mainScreenHeight"]) / scale)
+                  except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException, ZeroDivisionError):
                       pass
               for d in iphones:
                   print(f"{d['name']}: {sizes.get(d.get('deviceTypeIdentifier'), '?')}")
