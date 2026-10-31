@@ -418,7 +418,7 @@ extension GameWorld {
             .map { ($0.traversals.last ?? approach.0).edge }
         guard own > 0 || target == straight else { return nil }
         let beside = all.filter { $0.traversal.edge != straight || calling.contains($0.traversal.edge) }
-        if let found = freePlatformPath(path, from: start, toStation: id, for: train, among: beside, waits: waits, below: max(own, 1), cut: cut, memo: &memo) {
+        if let found = freePlatformPath(path, from: start, toStation: id, for: train, among: beside, waits: waits, below: max(own, 1), cut: cut, across: straight, memo: &memo) {
             return found
         }
         guard own > 1 else { return nil }
@@ -428,10 +428,13 @@ extension GameWorld {
     /// ``freePlatformPath(_:from:toStation:for:next:memo:)`` among
     /// `berths`: the way to the one free soonest, sooner than `own`, from
     /// `cut` along `path`, or from `start`; none another train is coming
-    /// out of towards it (decision 283).
+    /// out of towards it (decision 283), nor one reached across edge
+    /// `across` (decision 518: the rest of a platform on the through track
+    /// is not beside it).
     private func freePlatformPath(
         _ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, among berths: [Berth],
-        waits: [TrackEdgeID: Int64], below own: Int64, cut: (index: Int, traversal: TrackTraversal, distance: Int64)?, memo: inout PathMemo
+        waits: [TrackEdgeID: Int64], below own: Int64, cut: (index: Int, traversal: TrackTraversal, distance: Int64)?,
+        across: TrackEdgeID? = nil, memo: inout PathMemo
     ) -> TrainPath? {
         guard case .onEdge(let first, _) = start else { return nil }
         for limit in Set(waits.values).sorted() where limit < own {
@@ -447,7 +450,8 @@ extension GameWorld {
                     found = whole
                 }
                 let reached = (found.traversals.last ?? first).edge
-                guard trainLeavingTowards(train, along: [first] + found.traversals) != nil else { return found }
+                let crosses = across.map { across in ([first] + found.traversals).dropLast().contains { $0.edge == across } } ?? false
+                guard crosses || trainLeavingTowards(train, along: [first] + found.traversals) != nil else { return found }
                 eligible = eligible.filter { $0.traversal.edge != reached }
             }
         }

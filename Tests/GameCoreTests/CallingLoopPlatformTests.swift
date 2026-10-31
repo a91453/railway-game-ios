@@ -118,4 +118,31 @@ final class CallingLoopPlatformTests: XCTestCase {
     func testWhereItsRunEndsItStandsAtTheNearest() throws {
         XCTAssertEqual(try standing(makeScene(named: false, endsAtX: true, otherLeaves: nil)), .edge(2))
     }
+
+    /// A station whose platform is split over two edges of one track, the
+    /// last half of the edge from the west and the first of the edge to
+    /// the east (``TestLine``): the far half is the rest of the through
+    /// track's platform, not a loop beside it, so a train calling there
+    /// still stands at the near half (`LineAcquisitionTests`' v66 save).
+    func testTheRestOfThePlatformAheadIsNotBesideIt() throws {
+        let track = TestLine(tiles: 7)
+        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 10_000_000, costs: testCosts))
+        world.setSpeed(.normal)
+        try world.advance(ticks: 300)
+        try track.build(in: &world)
+        let alpha = try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        let beta = try track.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
+        let gamma = try track.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
+        let line = try world.createLine(named: "Main", stops: [alpha, beta, gamma]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        let blue = try world.purchaseTrain(named: "Blue").id
+        try world.placeTrain(blue, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(blue, to: 1_024)
+        try world.assignTrain(blue, to: line)
+        try world.setLineRuns(line, to: [LineRun(from: 0, to: 2, times: [at(370), LineRunTime(arrival: 375 * 60, departure: 376 * 60), at(380)])])
+        try world.advance(ticks: 75)
+        XCTAssertEqual(world.stationsStoppedAt(by: blue), [beta], "Blue is at Beta")
+        guard case .onEdge(let traversal, _)? = world.train(id: blue)?.position else { return XCTFail("Blue is on the track") }
+        XCTAssertEqual(traversal.edge, track.edge(3))
+    }
 }
