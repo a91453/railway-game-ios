@@ -1002,3 +1002,36 @@ extension GameSession {
             : language.text("Single track, as the real railway is here.", "照真實鐵路鋪成單線。")
     }
 }
+
+extension GameSession {
+    /// For the website screenshot test (decision 513): the network tool
+    /// tracing single track along the North-Link Line from 3,700 m to
+    /// 3,500 m south of Nan'ao, which no grade reaches, and the map looking
+    /// over it; whether the trace was refused. Through the tool's own taps,
+    /// as `TrackGeometryProblemTests` draws it.
+    @discardableResult
+    public func traceWhereNoGradeReaches() -> Bool {
+        guard canTraceRealRailway, let railways, let frame = RealWorldFrame(world: world),
+              let nanao = RealLineLaying.realPoint(of: "南澳", system: "tra_sched", railways: railways, frame: frame) else { return false }
+        let paths = railways.lines.filter { $0.system.id == "tra_sched" && $0.points.count > 20 }.map { line in
+            WorldPath(line.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) })
+        }
+        guard let path = paths.min(by: {
+            ($0.point(at: $0.project(nanao)) - nanao).length < ($1.point(at: $1.project(nanao)) - nanao).length
+        }) else { return false }
+        let metre = Double(WorldCoordinate.unitsPerMetre), station = path.project(nanao)
+        let a = path.point(at: station - 3_700 * metre).plan, b = path.point(at: station - 3_500 * metre).plan
+        selectTool(.network)
+        setNetworkMode(.build)
+        networkTracesRealRailway = true
+        networkBuildsDouble = false
+        let reach = 24 * WorldCoordinate.unitsPerMetre
+        tapNetwork(at: a, reach: reach)
+        tapNetwork(at: b, reach: reach)
+        lookOver(WorldRegion(
+            minX: Double(min(a.x, b.x)), minY: Double(min(a.y, b.y)),
+            maxX: Double(max(a.x, b.x)), maxY: Double(max(a.y, b.y))
+        ))
+        return networkPreview?.traced == 0
+    }
+}

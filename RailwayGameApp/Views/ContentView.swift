@@ -123,6 +123,13 @@ struct ContentView: View {
                 guard session.canTraceRealRailway, ProcessInfo.processInfo.arguments.contains("-ui-test-trace-for-sale") else { return }
                 session.traceAlongALineForSale()
             }
+            // Decision 513: the screenshot test's trace near Nan'ao that
+            // no grade reaches, once the real railways are in (the card is
+            // worked out again when the heights arrive).
+            .task(id: session.canTraceRealRailway) {
+                guard session.canTraceRealRailway, ProcessInfo.processInfo.arguments.contains("-ui-test-trace-refused") else { return }
+                session.traceWhereNoGradeReaches()
+            }
             #endif
             // The map and controls share one screen, so text stops growing at the
             // largest standard size instead of pushing the map off screen.

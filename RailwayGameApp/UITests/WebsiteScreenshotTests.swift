@@ -308,6 +308,36 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("traced-line-for-sale-card", app)
     }
 
+    /// Decision 513: a trace along the North-Link Line south of Nan'ao
+    /// that no grade reaches says why, with the real line's length and its
+    /// ends' heights. For the screenshot review of its pull request. The
+    /// trace is drawn by the Debug app's `-ui-test-trace-refused` through
+    /// the tool's own taps.
+    func testTraceNoGradeReaches() {
+        let app = launch(extra: ["-ui-test-trace-refused"])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.appears(within: 30), "The picker opens")
+        search.tap()
+        search.typeText("南澳")
+        let nanao = app.buttons["station.tra_sched|南澳"]
+        XCTAssertTrue(nanao.appears(within: 30), "Nan'ao is found")
+        nanao.waitUntilSettled()
+        app.tapMiddle(of: nanao)
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        let refusal = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "坡度上限 40‰")).firstMatch
+        XCTAssertTrue(refusal.appears(within: 120), "The trace is refused, and says why")
+        settle(seconds: 8)
+        keep("trace-no-grade-reaches", app)
+    }
+
     // MARK: - What the game gained after those (decisions 167 to 186)
 
     /// The High Speed Rail demo (decision 170): Nangang to Zuoying on the

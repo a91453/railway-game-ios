@@ -137,6 +137,17 @@ final class TrackGeometryProblemTests: XCTestCase {
         XCTAssertGreaterThan(abs(preview.endHeight - preview.startHeight), 8 * WorldCoordinate.unitsPerMetre, "more than 40‰ of 200 m apart")
     }
 
+    /// The website screenshot test's trace (`-ui-test-trace-refused`) is
+    /// the stretch above, drawn the same way.
+    func testTheScreenshotTraceIsTheOneNoGradeReaches() throws {
+        let (session, _, _) = try nanao()
+        session.networkTracesRealRailway = false
+        XCTAssertTrue(session.traceWhereNoGradeReaches())
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertEqual(preview.problem, "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。")
+        XCTAssertEqual(Double(preview.length) / metre, 200, accuracy: 20)
+    }
+
     /// Case 3 (the owner's 99.1 report, the same game): a 16-car platform
     /// at Nan'ao station, on track traced through it, refused as "35‰,
     /// cannot be levelled": the traced track there climbed with the ground
