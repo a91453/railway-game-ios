@@ -20,6 +20,15 @@ final class FinanceCompositionUITests: XCTestCase {
         economy.waitUntilSettled()
         economy.tap()
         let bar = app.navigationBars["Economy"].firstMatch
+        // The press on Data can be cancelled while the app's main thread
+        // stalls (the app's trace: "touch cancelled at (100, 240)" 150 ms
+        // after it began, then an 885 ms gap between frames, as the station
+        // master's bubble went; branch flane-full-lane, run 41195369563),
+        // and the panel never opens. Tap once more if it did not, as
+        // HUDAlignmentUITests does for Build.
+        if !bar.appears(within: 10), economy.exists {
+            economy.tap()
+        }
         XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
         bar.waitUntilSettled()
         // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).

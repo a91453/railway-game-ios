@@ -496,8 +496,15 @@ extension XCUIApplication {
         coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: place.midX - screen.minX, dy: place.midY - screen.minY)).tap()
         let chosen = NSPredicate(format: "label == %@", "Speed: \(name)")
-        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10), .completed,
-                       "The touch did not choose \(name): \(speed.label)", file: file, line: line)
+        // The waiter's look can be its only one: on main 447891f's full
+        // lane (run 41187572538) 6000× was chosen, the app stalled for
+        // seconds as the demo ran into midnight at it, and the one look,
+        // begun before the label changed, took 9 of the 10 seconds; the
+        // label read for the message said 6000×. So the label is read once
+        // more, as `chooseMenuAction` does, before the touch counts as lost.
+        let waited = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10)
+        XCTAssertTrue(waited == .completed || speed.label == "Speed: \(name)",
+                      "The touch did not choose \(name): \(speed.label)", file: file, line: line)
         XCTAssertTrue(row.disappears(within: 10), "The speed menu stayed open after \(name) was chosen", file: file, line: line)
     }
 
