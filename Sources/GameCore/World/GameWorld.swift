@@ -3997,7 +3997,10 @@ public struct GameWorld: Equatable, Sendable {
                let path = path(from: start, toStation: call, length: train.length, eligible: free, keepingLeft: true, memo: &memo) {
                 return (path, nil)
             }
-            guard let nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
+            guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
+            // Decision 527: an empty run keeps off track its line takes
+            // only the other way.
+            if let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train) { nearest = kept }
             // Decision 228: with traffic control off, a free platform first.
             if let next = train.call(after: stop, cycle: cycle),
                let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo) {
