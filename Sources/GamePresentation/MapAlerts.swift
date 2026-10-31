@@ -140,17 +140,19 @@ extension GameWorld {
     }
 
     /// The bubbles decision 184 adds, after ``mapAlerts()``: each train in
-    /// a deadlock, each sight of ``alertedSightStars`` or more without a
+    /// a deadlock or waiting for a train standing still (decision 497,
+    /// P2-7), each sight of ``alertedSightStars`` or more without a
     /// station once a passenger line runs, and a challenge's days left in
     /// the red. Apart from ``mapAlerts()``, which the station master asks
     /// at every step: a deadlock is worked out from every waiting train.
     public func situationAlerts() -> [MapAlert] {
         var alerts: [MapAlert] = []
-        if isTrafficControlEnabled {
-            for id in deadlockedTrains() {
-                guard let head = bodyPath(of: id).first else { continue }
-                alerts.append(MapAlert(kind: .trainStuck(id), station: nil, location: PlanPoint(x: head.x, y: head.y)))
-            }
+        // Decision 497 (P2-7): also each train waiting for one that will
+        // not move off by itself (``standingStill(_:)``), which is not a
+        // deadlock but waits as long.
+        for wait in routeWaits() where wait.isDeadlocked || standingStill(wait.holder) != nil {
+            guard let head = bodyPath(of: wait.train).first else { continue }
+            alerts.append(MapAlert(kind: .trainStuck(wait.train), station: nil, location: PlanPoint(x: head.x, y: head.y)))
         }
         if let tourism, lines.contains(where: { !$0.isFreight }) {
             // The rating with its hotels (``stars(of:)``), as the panel shows it.

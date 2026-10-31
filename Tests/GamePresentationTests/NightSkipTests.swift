@@ -670,6 +670,16 @@ final class NightSkipTests: XCTestCase {
         XCTAssertEqual(session.nightSkipRunAheadOnMain, ranAhead)
     }
 
+    /// Decision 497 (P2-7): a train parked in the depot while its line is
+    /// closed will not move off before the line opens; while it is open,
+    /// it will.
+    func testATrainParkedWhileItsLineIsClosedStandsStill() throws {
+        let night = try world()
+        XCTAssertEqual(night.standingStill(night.trains[0].id), .outOfHours)
+        let noon = try world(at: 12 * 60)
+        XCTAssertNil(noon.standingStill(noon.trains[0].id))
+    }
+
     /// One tick of the game loop, worked out off the main actor.
     private func loopTick(_ session: GameSession) async throws {
         let tick = try XCTUnwrap(session.beginLoopTick())

@@ -232,6 +232,37 @@ final class TrafficOverlayTests: XCTestCase {
         XCTAssertNil(session.routeWaitText(of: east))
     }
 
+    /// Decision 497 (P2-7): a wait for a train that will not move off by
+    /// itself is not a deadlock, but nothing tells the player which train
+    /// to move. The words and a stuck bubble name it and why.
+    func testAWaitForATrainStandingStillSaysWhichAndWhy() throws {
+        var world = try passingLoopWorld()
+        try world.setTrafficControl(true)
+        // Westbound out of service where it stands, on no line.
+        try world.stopTrainService(west)
+        var waited = false
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            if world.trainHoldingRoute(of: east) == west { waited = true; break }
+        }
+        XCTAssertTrue(waited, "Eastbound waits for Westbound")
+        XCTAssertEqual(world.deadlockedTrains(), [], "not a deadlock: Westbound counts as one that will go")
+        XCTAssertEqual(world.standingStill(west), .onNoLine)
+        XCTAssertNil(world.standingStill(east))
+        let words = try XCTUnwrap(world.routeWaitText(of: east, in: .english))
+        XCTAssertTrue(words.hasSuffix("(Westbound: on no line)"), words)
+        let chinese = try XCTUnwrap(world.routeWaitText(of: east, in: .traditionalChinese))
+        XCTAssertTrue(chinese.hasSuffix("（Westbound：沒有派給任何路線）"), chinese)
+        assertReasonsMatchTheWords(world.trafficOverlay(), in: world)
+        XCTAssertEqual(world.situationAlerts().map(\.kind), [.trainStuck(east)], "a bubble on the train that waits")
+
+        // Its speed set to 0 by the player.
+        try world.setTrainMovementRate(west, to: 0)
+        XCTAssertEqual(world.standingStill(west), .stoppedByPlayer)
+        XCTAssertTrue(try XCTUnwrap(world.routeWaitText(of: east, in: .english)).hasSuffix("(Westbound: stopped by you)"))
+        XCTAssertEqual(world.situationAlerts().map(\.kind), [.trainStuck(east)])
+    }
+
     // MARK: - Marks side by side (the site's blockSideShift)
 
     private func mark(_ train: Int, _ x: Double, _ y: Double, along: (Double, Double) = (1, 0)) -> WaitMarkSides.Mark {
