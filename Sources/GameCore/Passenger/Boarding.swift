@@ -407,7 +407,8 @@ extension GameWorld {
             slot = passengers.firstIndex { $0.station > station } ?? passengers.count
             passengers.insert(StationPassengers(station: station), at: slot)
         }
-        let admitted = passengers[slot].enqueueTransfer(count, along: journey, at: clock.now, readyAt: ready)
+        let admitted = passengers[slot].enqueueTransfer(count, along: journey, at: clock.now, readyAt: ready,
+            capacity: stationCapacity(of: station))
         passengers[passengerIndex(of: origin)].abandoned += count - admitted
         return station == alighting ? admitted : 0
     }

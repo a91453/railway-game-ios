@@ -114,6 +114,35 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-own-track", app)
     }
 
+    /// Decision 506: a station panel's size section, how many can wait
+    /// and the next expansion with what it needs. For the screenshot
+    /// review of the pull request that made it, not the website.
+    func testStationExpansionSection() {
+        let app = launch(extra: ["-screenshot-scene", "freight"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations' bubbles show")
+        zoomInOnce(app)
+        settle()
+        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(alert, "A bubble is on screen")
+        alert?.tap()
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "A tap on a bubble opens its station's panel")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
+        let section = app.descendants(matching: .any)["station.expansion.current"].firstMatch
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list), "The station size section comes into view")
+        settle()
+        keep("station-expansion", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that

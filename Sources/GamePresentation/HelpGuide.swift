@@ -167,10 +167,10 @@ public enum HelpGuide {
             "crowdedButLowLoad", .running,
             question: ("Why is my station full while the peak load is low?", "車站客滿，尖峰載客率卻不高，為什麼？"),
             answer: (
-                "A station is full at 4,000 waiting. Each of them waits for one line and one way and boards only a train that stops where they are going; people changing trains wait there too. So one way of one line can fill the station while the other trains leave part empty. The peak load is the fullest departure of the day, not the average. When a line has closed for the night its passengers wait for the first train, so a station can be full overnight. Open the station panel: it lists who waits for each line and way. Run more trains on the busiest one, lengthen its service hours, or build a line to where they are going.",
-                "候車達 4,000 人時車站就客滿。每位乘客只等一條路線的一個方向，只上會停他目的地的車；轉乘的乘客也在站內等。所以可能某條路線的某個方向就把車站擠滿，其他列車卻沒坐滿。尖峰載客率是當天最滿的那一班，不是平均。路線收班後，乘客會留在站內等首班車，所以半夜車站也可能是滿的。打開車站面板，會依路線和方向列出候車人數；在最多人等的那條加開列車、延長營運時間，或開一條到他們目的地的路線。"
+                "A station is full at 4,000 waiting, or 8,000 and 16,000 once expanded. Each of them waits for one line and one way and boards only a train that stops where they are going; people changing trains wait there too. So one way of one line can fill the station while the other trains leave part empty. The peak load is the fullest departure of the day, not the average. When a line has closed for the night its passengers wait for the first train, so a station can be full overnight. Open the station panel: it lists who waits for each line and way. Run more trains on the busiest one, lengthen its service hours, or build a line to where they are going. A busy station can also be expanded in its panel, but more room only helps when the trains have seats.",
+                "候車達 4,000 人時車站就客滿，擴建後是 8,000、16,000 人。每位乘客只等一條路線的一個方向，只上會停他目的地的車；轉乘的乘客也在站內等。所以可能某條路線的某個方向就把車站擠滿，其他列車卻沒坐滿。尖峰載客率是當天最滿的那一班，不是平均。路線收班後，乘客會留在站內等首班車，所以半夜車站也可能是滿的。打開車站面板，會依路線和方向列出候車人數；在最多人等的那條加開列車、延長營運時間，或開一條到他們目的地的路線。人多的車站也可以在面板裡擴建，但列車有空位，多出來的空間才有用。"
             ),
-            keywords: "full crowded station waiting peak load transfer closed overnight 客滿 擁擠 滿了 候車 載客率 尖峰 轉乘 收班"
+            keywords: "full crowded station waiting peak load transfer closed overnight expand expansion 客滿 擴建 擁擠 滿了 候車 載客率 尖峰 轉乘 收班"
         ),
         HelpEntry(
             "whyLosing", .money,

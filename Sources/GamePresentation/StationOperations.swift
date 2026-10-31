@@ -224,7 +224,7 @@ public struct StationOperations: Equatable, Sendable {
         self.station = station
         let waiting = world.waitingPassengers(at: station).reduce(Int64(0)) { $0 + $1.count }
         self.waiting = waiting
-        self.crowding = MapProblems.Crowding(waiting: waiting)
+        self.crowding = MapProblems.Crowding(waiting: waiting, holds: world.stationCapacity(of: station))
 
         var standing: [TrackPlatform: TrainID] = [:]
         for train in PlatformUse.trainsAlongPlatformEdges(in: world) {

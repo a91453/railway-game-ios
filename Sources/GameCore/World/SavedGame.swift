@@ -406,9 +406,15 @@
 ///     `"ALISHAN"`. A build that reads only an earlier version would call
 ///     such an edge too steep and cannot read the type, so it says the save
 ///     is newer than it instead.
+/// 78. Station expansion (decision 506): a station can have its
+///     `"expansion"` (1 or 2), holding 8,000 or 16,000 waiting, and its
+///     records more than 4,000 waiting; the asset records can be a
+///     `"stationExpansion"`. A build that reads only an earlier version
+///     would drop the expansion and refuse the queue as more than the
+///     station holds, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 77
+    public static let currentVersion = 78
 
     public let world: GameWorld
 
@@ -610,6 +616,8 @@ extension SavedGame: Codable {
         // Version 76 to 77: every edge of a world before version 77 is
         // ordinary track, as an edge without `"mountain"` reads, and no
         // train is the Alishan Forest Railway's.
+        // Version 77 to 78: a station without `"expansion"` is not expanded
+        // (decision 506): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

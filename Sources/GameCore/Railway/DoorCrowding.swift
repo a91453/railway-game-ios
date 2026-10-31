@@ -20,7 +20,8 @@
 // (``Train/passengersPerSecond``) and `crowd` is the larger of two ratios
 // taken when the doors have opened: the riders on board over what the train
 // is rated for, and the passengers waiting at the station over what the
-// station holds (``StationPassengers/capacity``), at most the 1.1 a train
+// station holds (``GameWorld/stationCapacity(of:)``: more once expanded,
+// decision 506), at most the 1.1 a train
 // takes (``DoorCrowding/limit``).
 //
 //     crowd   0.3    0.5    0.8    1.0    1.1
@@ -49,11 +50,13 @@ public enum DoorCrowding {
     public static let coefficient: Int64 = 1_500
 
     /// The crowd at the doors of a train rated for `rated` passengers with
-    /// `riders` on board, at a station where `waiting` wait, in thousandths:
-    /// the larger of the train's and the station's, at most ``limit``.
-    public static func crowd(riders: Int64, rated: Int64, waiting: Int64) -> Int64 {
+    /// `riders` on board, at a station holding `holds` where `waiting` wait,
+    /// in thousandths: the larger of the train's and the station's, at most
+    /// ``limit``.
+    public static func crowd(riders: Int64, rated: Int64, waiting: Int64,
+                             holds: Int64 = StationPassengers.capacity) -> Int64 {
         let train = rated > 0 ? max(0, riders) * 1_000 / rated : 0
-        let platform = max(0, waiting) * 1_000 / StationPassengers.capacity
+        let platform = max(0, waiting) * 1_000 / max(1, holds)
         return min(max(train, platform), limit)
     }
 
@@ -110,6 +113,7 @@ extension GameWorld {
         guard doorCrowding, let train = train(id: id) else { return 0 }
         if let line = assignedLine(of: id), self.line(id: line)?.isFreight ?? false { return 0 }
         let waiting = passengers.first { $0.station == station }?.waitingCount ?? 0
-        return DoorCrowding.crowd(riders: riderCount(of: id), rated: train.ratedCapacity, waiting: waiting)
+        return DoorCrowding.crowd(riders: riderCount(of: id), rated: train.ratedCapacity, waiting: waiting,
+            holds: stationCapacity(of: station))
     }
 }

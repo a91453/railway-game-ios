@@ -2269,25 +2269,29 @@ enum MapArt {
         let near = context.clipBoundingRect.insetBy(dx: -60, dy: -40)
         var centers: [StationID: ScreenPoint] = [:]
         var visible: [StationID: Int64] = [:]
+        // Decision 506: an expanded station's room.
+        var holds: [StationID: Int64] = [:]
         for station in world.stations {
             guard let waiting = waitingCounts[station.id], waiting > 0 else { continue }
             let center = projection.screenPoint(of: station.location)
             guard near.contains(CGPoint(x: center.x, y: center.y)) else { continue }
             centers[station.id] = center
             visible[station.id] = waiting
+            if station.expansion != nil { holds[station.id] = station.capacity }
         }
         let limit = MapProblems.pillLimit(level)
         var placement = MapProblems.Placement(limit: limit)
         var rings = 0
         let fontSize = level == .full ? max(8, min(11, radius * 0.7)) : 8
-        for entry in MapProblems.stationOrder(visible) {
+        for entry in MapProblems.stationOrder(visible, holds: holds) {
             guard !placement.isFull || rings < limit else { break }
             guard let center = centers[entry.station] else { continue }
-            let crowding = MapProblems.Crowding(waiting: entry.waiting)
+            let room = holds[entry.station] ?? StationPassengers.capacity
+            let crowding = MapProblems.Crowding(waiting: entry.waiting, holds: room)
             let ringRadius = radius + max(4.5, radius * 0.35)
             if crowding != .normal, rings < limit {
                 rings += 1
-                drawCrowdedRing(at: center, radius: ringRadius, fill: MapProblems.fill(waiting: entry.waiting), isFull: crowding == .full, in: context)
+                drawCrowdedRing(at: center, radius: ringRadius, fill: MapProblems.fill(waiting: entry.waiting, holds: room), isFull: crowding == .full, in: context)
             }
             guard !placement.isFull else { continue }
             let countText = context.resolve(
