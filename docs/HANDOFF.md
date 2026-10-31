@@ -2111,6 +2111,7 @@
    - #1132 合併後，確認 `Map3DScene.init` 裡有這個條件；沒有就補一個小 PR。
    - 動 `addCity` 的人先 `send_message` 給這兩個 session。
 3. **實機**：只在 Linux 的 WebGL 預覽看過（`docs/art/map3d-no-build-2026-10-23/`）；下一次 TestFlight 看 600 倍俯看小港與板橋，房子是不是太稀或太密（`Map3DScene.Builder.openShare` 與 `layFrontage` 的公寓比例）。
+4. **決策 516**（HOUSEROAD，作者 99.1 宜蘭平原的點陣）：辦公、公共、休閒的低密度地塊也沿路排了。還沒做：密度 3 以上的樓與工廠在實景地圖上仍在格子中間（決策 516 下一步第 1 點）；實機看宜蘭平原 600× 俯看的疏密（第 2 點）。
 
 ### 4.10 3D 月台只畫在放得下的地方（決策 392，session_01QnjGxTmCx1sAYpH4wacqhH）
 
