@@ -94,11 +94,13 @@ final class LocalPassTests: XCTestCase {
     /// A, which has no siding): both took the loop at Middle, kept to it by
     /// keeping left, and the express ran behind the stopping train all the
     /// way, reaching East after it (at 19:58, the stopping train at 14:47).
-    /// Now the stopping train waits at Middle on the other track, the
-    /// express goes by along the loop, and reaches East first: at 11:41,
-    /// the stopping train at 16:15, 88 seconds later than before.
+    /// Decision 366 had the stopping train wait at Middle on the straight
+    /// track while the express went by along the loop (11:41, the stopping
+    /// train 16:15). Since decision 526 the stopping train turns into the
+    /// loop and the express keeps to the straight track, as with the loop
+    /// between the tracks: 11:41, the stopping train 16:15.
     func testTheStoppingTrainStandsAsideAtMiddleForTheExpress() throws {
-        try assertStandsAside(loopBetween: false, on: .edge(3), "aside from the express's way through the loop")
+        try assertStandsAside(loopBetween: false, on: .edge(12), "in the loop, the straight track left to the express")
     }
 
     /// The loop between the two tracks instead (south of the eastbound
