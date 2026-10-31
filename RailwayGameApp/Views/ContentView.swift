@@ -73,6 +73,14 @@ struct ContentView: View {
         runner.close3D = { withTransaction(cut) { screen.showsMap3D = false } }
     }
 
+    /// Decision 313: the 3D map's Build, onto the 2D map at `plan` with
+    /// the tools out; decision 517: back to `view` as building ends.
+    private func build(from plan: Map3DHandoff.Plan, leaving view: Map3DBuildReturn.Viewpoint) {
+        back(to: plan)
+        screen.map3DBuildReturn.leftForBuilding(from: view, in: ObjectIdentifier(session))
+        session.selectTool(.network)
+    }
+
     /// Decision 269: the 3D map closes at once onto the 2D map at `plan`.
     private func back(to plan: Map3DHandoff.Plan) {
         screen.map2DReturn = plan
@@ -149,35 +157,11 @@ struct ContentView: View {
                                    close: { screen.showsMap3D = false },
                                    handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
                                    toMap2D: { plan in back(to: plan) },
-                                   build: { plan, view in
-                    back(to: plan)
-                    screen.map3DBuildReturn.leftForBuilding(from: view, in: ObjectIdentifier(session))
-                    session.selectTool(.network)
-                }, resumes: screen.map3DResume, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
+                                   build: { plan, view in build(from: plan, leaving: view) }, resumes: screen.map3DResume, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
             }
             // Decision 334: a station board's train is shown once.
-            .onChange(of: screen.showsMap3D) { _, shown in
-                if !shown {
-                    screen.map3DDeparture = nil
-                    screen.map3DResume = nil
-                } else {
-                    // Decision 517: opened some other way, building ends on the 2D map.
-                    screen.map3DBuildReturn.forget()
-                }
-            }
-            // Decision 517: building the 3D map's Build started ends back
-            // on the 3D map, where it was left, at once (as it left).
-            .onChange(of: session.tool) { _, tool in
-                guard let view = screen.map3DBuildReturn.toolChanged(to: tool, in: ObjectIdentifier(session),
-                                                                     shows3D: map3DQuality.shows3D,
-                                                                     tutorialRuns: session.tutorial != nil) else { return }
-                screen.map3DHandoff = nil
-                screen.map3DOpenedAt = view.plan
-                screen.map3DResume = view
-                var cut = Transaction()
-                cut.disablesAnimations = true
-                withTransaction(cut) { screen.showsMap3D = true }
-            }
+            // Decision 517: and building from the 3D map goes back there.
+            .modifier(Map3DShownWatch(session: session, screen: screen, shows3D: map3DQuality.shows3D))
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
             .onChange(of: pausesForImportantEvents) { _, _ in syncSecretarySettings() }
@@ -1316,6 +1300,39 @@ private struct DetailsCard: View {
             .padding([.bottom, .horizontal], Self.padding)
             .padding(.top, pinsEnds ? Self.spacing : Self.spacing - Self.fade)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footHeight = $0 }
+    }
+}
+
+/// Decision 334: a station board's train is shown once. Decision 517:
+/// the 3D map opened some other way forgets a return from building; and
+/// building the 3D map's Build started ends back on the 3D map, where it
+/// was left, at once (as it left). Its own modifier, out of the game
+/// screen's long chain, which Xcode could not type-check in time.
+private struct Map3DShownWatch: ViewModifier {
+    let session: GameSession
+    let screen: GameScreenState
+    let shows3D: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: screen.showsMap3D) { _, shown in
+                if !shown {
+                    screen.map3DDeparture = nil
+                    screen.map3DResume = nil
+                } else {
+                    screen.map3DBuildReturn.forget()
+                }
+            }
+            .onChange(of: session.tool) { _, tool in
+                guard let view = screen.map3DBuildReturn.toolChanged(to: tool, in: ObjectIdentifier(session), shows3D: shows3D,
+                                                                     tutorialRuns: session.tutorial != nil) else { return }
+                screen.map3DHandoff = nil
+                screen.map3DOpenedAt = view.plan
+                screen.map3DResume = view
+                var cut = Transaction()
+                cut.disablesAnimations = true
+                withTransaction(cut) { screen.showsMap3D = true }
+            }
     }
 }
 
