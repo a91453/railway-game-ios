@@ -312,7 +312,10 @@ final class TerrainPresentationTests: XCTestCase {
     /// the same way, no reason it cannot; and the build itself still
     /// checks the passengers, who keep waiting.
     func testThePreviewWithPassengersWaitingIsWhatTheBuildDoes() throws {
-        var (world, _, ends, _) = try longLine()
+        var (world, _, ends, line) = try longLine()
+        try world.setLineServiceWindow(line.id, to: .allDay)
+        try world.setLineTrainsInService(line.id, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.setStationDemand(ends[0].station, to: StationDemand(kind: .residential, dailyTrips: 0))
         world.setPassengerRoutingMode(.network)
         let route = try XCTUnwrap(world.passengerRoutes(from: ends[0].station, to: ends[1].station).first)
         let journey = try XCTUnwrap(PassengerJourney(origin: ends[0].station, route: route))
