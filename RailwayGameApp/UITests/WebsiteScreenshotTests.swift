@@ -231,16 +231,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         // comes, open the reports if folded, then come back to the balance.
         let balance = english ? app.staticTexts["economy.balance.usd"].firstMatch : app.staticTexts["目前餘額"].firstMatch
         let reports = app.buttons["economy.reports"].firstMatch
-        for _ in 0..<30 where !balance.exists {
-            if reports.exists, reports.isHittable {
-                if reports.label == (english ? "More reports and settings" : "更多報表與設定") { reports.tap() }
-                break
-            }
-            _ = app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY, drags: 1)
+        // The panel beside the map is short and its rows are mostly fare
+        // controls: swipe the list (a press and drag there changed the
+        // fare, run 41236322793), and drag only clear of buttons.
+        for _ in 0..<30 where !balance.exists && !reports.exists {
+            list?.swipeUp(velocity: .slow)
         }
-        dragBack(to: balance, in: list, below: bar.frame.maxY, in: app)
+        if !balance.exists, app.dragUntilWhollyOnScreen(reports, in: list, below: bar.frame.maxY, clearOf: .button),
+           reports.label == (english ? "More reports and settings" : "更多報表與設定") {
+            reports.tap()
+        }
+        for _ in 0..<30 where !(balance.exists && balance.frame.minY >= bar.frame.maxY) {
+            list?.swipeDown(velocity: .slow)
+        }
         XCTAssertTrue(balance.appears(within: 10), "The balance is in the panel")
-        _ = app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY)
+        _ = app.dragUntilWhollyOnScreen(balance, in: list, below: bar.frame.maxY, clearOf: .button)
         settle()
         keep("currency-economy-\(suffix)", app)
         app.terminate()
