@@ -2908,10 +2908,14 @@ private struct CityMapKey: Equatable {
     /// land worth more.
     let zones: Zoning?
     let placed: [PlacedBuilding]
+    /// L3-10 (#1592's review): the zone marks say whether the city builds
+    /// on a zone, which turns on city demand.
+    let hasCityDemand: Bool
     let isShown: Bool
 
     init(world: GameWorld, isShown: Bool) {
         self.isShown = isShown
+        hasCityDemand = isShown && world.cityDemand != nil
         land = isShown ? world.land : nil
         buildings = isShown ? world.buildings : nil
         stations = isShown ? world.stations : []

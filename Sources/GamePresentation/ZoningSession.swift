@@ -134,7 +134,7 @@ extension GameSession {
             for column in rectangle.columns {
                 let cell = CellPosition(row: row, column: column)
                 if zone?.use != nil, world.zones.zone(row: row, column: column) == zone,
-                   world.buildings.building(row: row, column: column) == nil {
+                   world.zonedUseBuilt(row: row, column: column) == nil {
                     zonedCellsAwaitingBuilding.insert(cell)
                 } else {
                     zonedCellsAwaitingBuilding.remove(cell)
@@ -172,7 +172,7 @@ extension GameSession {
     static func firstBuilt(on cells: Set<CellPosition>, in world: GameWorld) -> (cell: CellPosition, zone: Zone)? {
         for cell in cells.sorted() {
             guard let zone = world.zones.zone(row: cell.row, column: cell.column), zone.use != nil,
-                  world.buildings.building(row: cell.row, column: cell.column) != nil
+                  world.zonedUseBuilt(row: cell.row, column: cell.column) != nil
             else { continue }
             return (cell, zone)
         }
@@ -309,5 +309,16 @@ extension GameSession {
                 "只有城市需要這種用途（需求不是負的）時才會蓋。"
             )
         }
+    }
+}
+
+extension GameWorld {
+    /// What the city has built on a cell, as zoning counts it (decision
+    /// 509): its building's use where the world has city buildings, its
+    /// land's use otherwise (L3-8, #1581's review: a world without city
+    /// buildings, an older save among them, grows land on zoned cells
+    /// all the same); `nil` while it has built nothing there.
+    func zonedUseBuilt(row: Int, column: Int) -> LandUse? {
+        cityBuildings ? buildings.building(row: row, column: column)?.use : land.cell(row: row, column: column)?.use
     }
 }

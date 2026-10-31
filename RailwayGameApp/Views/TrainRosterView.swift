@@ -41,6 +41,15 @@ struct TrainRosterView: View {
     @State private var result: String?
     @GestureState private var lineDrag: LineDrag? = nil
     @GestureState private var shiftDrag: ShiftDrag? = nil
+    /// The edits made here that Undo can take back (L3-6, #1588's review:
+    /// Undo here took back what was built before the roster opened).
+    @State private var rosterEdits = 0
+    /// The line under a dragged name, and the train of a held planned box,
+    /// for the drag that started at `start` (L3-7, #1588's review: the
+    /// roster is built again every second, and a row added above moved
+    /// what lay under the finger).
+    @State private var nameTarget: (start: CGPoint, line: LineID?)?
+    @State private var heldBox: (start: CGPoint, train: TrainID?)?
 
     /// A train's name being dragged over the rows.
     private struct LineDrag {
@@ -48,6 +57,7 @@ struct TrainRosterView: View {
         let name: String
         var location: CGPoint = .zero
         var row: Int?
+        var line: LineID?
         var move: TrainRosterDrag.LineMove?
     }
 
@@ -110,7 +120,9 @@ struct TrainRosterView: View {
                 ToolbarItemGroup(placement: .primaryAction) {
                     if arranging {
                         Button {
+                            let before = session.undoCount
                             session.undo()
+                            if session.undoCount < before { rosterEdits = max(0, rosterEdits - 1) }
                             result = session.message?.text
                             rebuild += 1
                         } label: {
@@ -120,7 +132,7 @@ struct TrainRosterView: View {
                                 Image(systemName: "arrow.uturn.backward")
                             }
                         }
-                        .disabled(!session.canUndo)
+                        .disabled(!session.canUndo || min(rosterEdits, session.undoCount) == 0)
                         .accessibilityIdentifier("trainRoster.undo")
                     }
                     // Decision 512: moving trains on the roster, today only.
@@ -576,19 +588,26 @@ struct TrainRosterView: View {
                 if let drag {
                     moving.location = drag.location
                     let index = target(drag.location.y)
-                    if index != moving.row {
+                    let line = index.flatMap { rows[$0].line }
+                    if index != moving.row || line != moving.line {
                         moving.row = index
-                        moving.move = index.flatMap { rows[$0].line }.flatMap { session.rosterLineMove(of: row.train, to: $0) }
+                        moving.line = line
+                        moving.move = line.flatMap { session.rosterLineMove(of: row.train, to: $0) }
                     }
                 }
                 state = moving
             }
+            .onChanged { value in
+                guard case .second(true, let drag?) = value else { return }
+                let line = target(drag.location.y).flatMap { rows[$0].line }
+                if nameTarget?.start != drag.startLocation || nameTarget?.line != line {
+                    nameTarget = (drag.startLocation, line)
+                }
+            }
             .onEnded { value in
-                guard case .second(true, let drag?) = value, let index = target(drag.location.y), let line = rows[index].line,
-                      session.rosterLineMove(of: row.train, to: line)?.drops == true else { return }
-                session.moveTrain(row.train, toLine: line)
-                result = session.message?.text
-                rebuild += 1
+                guard case .second(true, let drag?) = value, let held = nameTarget, held.start == drag.startLocation,
+                      let line = held.line, session.rosterLineMove(of: row.train, to: line)?.drops == true else { return }
+                rosterEdit { session.moveTrain(row.train, toLine: line) }
             }
     }
 
@@ -649,13 +668,16 @@ struct TrainRosterView: View {
                 }
                 state = moving
             }
+            .onChanged { value in
+                guard case .second(true, let drag?) = value, heldBox?.start != drag.startLocation else { return }
+                heldBox = (drag.startLocation, box(drag.startLocation)?.train)
+            }
             .onEnded { value in
-                guard case .second(true, let drag?) = value, let train = box(drag.startLocation)?.train else { return }
+                guard case .second(true, let drag?) = value, let held = heldBox, held.start == drag.startLocation,
+                      let train = held.train else { return }
                 let seconds = TrainRosterDrag.shift(forWidth: Double(drag.translation.width), hourWidth: perHour)
                 guard TrainRosterDrag.shift(of: train, by: seconds, in: session.world, roster: roster)?.drops == true else { return }
-                session.shiftTrainTimetable(train, by: seconds)
-                result = session.message?.text
-                rebuild += 1
+                rosterEdit { session.shiftTrainTimetable(train, by: seconds) }
             }
     }
 
@@ -681,20 +703,25 @@ struct TrainRosterView: View {
     private func arrangeActions(_ row: TrainRoster.Row) -> some View {
         ForEach(session.world.lines.filter { $0.id != row.line }, id: \.id) { line in
             Button(language.text("Move to \(line.name)", "改派到\(line.name)")) {
-                session.moveTrain(row.train, toLine: line.id)
-                result = session.message?.text
-                rebuild += 1
+                rosterEdit { session.moveTrain(row.train, toLine: line.id) }
             }
         }
         if row.cells.contains(where: { $0.state == .planned }) {
             ForEach([-TrainRosterDrag.snap, TrainRosterDrag.snap], id: \.self) { seconds in
                 Button(seconds < 0 ? language.text("5 min earlier", "提前 5 分") : language.text("5 min later", "延後 5 分")) {
-                    session.shiftTrainTimetable(row.train, by: seconds)
-                    result = session.message?.text
-                    rebuild += 1
+                    rosterEdit { session.shiftTrainTimetable(row.train, by: seconds) }
                 }
             }
         }
+    }
+
+    /// Makes an edit of the roster's, counted for its Undo (L3-6).
+    private func rosterEdit(_ edit: () -> Void) {
+        let before = session.undoCount
+        edit()
+        if session.undoCount > before { rosterEdits += 1 }
+        result = session.message?.text
+        rebuild += 1
     }
 
     private func spoken(_ row: TrainRoster.Row) -> String {
