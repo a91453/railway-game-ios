@@ -149,10 +149,10 @@ final class HighSpeedSessionTests: XCTestCase {
         XCTAssertEqual(world.highSpeedLineText(Self.fast, in: .english), "People within 8 km: Alpha 3,652,324 · Beta 1,540,955")
         XCTAssertEqual(world.highSpeedLineText(Self.fast, in: .traditionalChinese), "8 公里內的人口：Alpha 3,652,324 · Beta 1,540,955")
         let help = world.highSpeedLineHelp(in: .english)
-        for part in ["\(Money(45).centsText) a kilometre", "network's fare", "8 km", "none for trips under 10 km", "the most from 80 km"] {
+        for part in ["\(Money(135).centsText) a kilometre", "network's fare", "8 km", "none for trips under 10 km", "the most from 80 km"] {
             XCTAssertTrue(help.contains(part), part)
         }
-        XCTAssertTrue(world.highSpeedLineHelp(in: .traditionalChinese).contains("每公里 \(Money(45).centsText)"))
+        XCTAssertTrue(world.highSpeedLineHelp(in: .traditionalChinese).contains("每公里 \(Money(135).centsText)"))
     }
 
     func testAHighSpeedSetRunsAtHighSpeed() throws {

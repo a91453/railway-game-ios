@@ -426,10 +426,13 @@ private struct BuildConfirmation {
             // the track costs; where it cannot be, ✓ says why when tapped.
             // A new station's price is in it too.
             let levelling = session.networkPlatformLevelling
-            cost = session.networkPlatformCost
+            // Decision 507: an island layout's price is its tracks' too,
+            // and where it cannot be laid the pill says why.
+            let layout = session.networkStationLayoutPreview
+            cost = layout.map(\.cost) ?? session.networkPlatformCost
             canConfirm = true
             kind = .platform
-            caption = [session.platformSiteCaption(catchment, at: site), levelling?.caption(in: session.language)]
+            caption = [session.platformSiteCaption(catchment, at: site), levelling?.caption(in: session.language), layout?.problem]
                 .compactMap(\.self).joined(separator: "\n")
             showsCatchment = true
             cancel = { session.clearNetworkDraft() }

@@ -1,11 +1,11 @@
 {
-  "schemaVersion": 36,
+  "schemaVersion": 75,
   "description": "Demand from land (Phase 6b, ARCHITECTURE decision 73) in a world 32 x 24 cells of 64 m. The land is three cells: homes at row 5, column 5 with 1000 residents; offices at row 5, column 7 with 500 jobs; shops at row 5, column 20 with 10 residents and 300 jobs. West stands at the middle of the homes (22528, 22528), Annex at the middle of the offices (30720, 22528), Market at the middle of the shops (83968, 22528). A managed company's station takes its ridership from its share of the land only once demand from land is on: West has none when built, and when it is turned on West alone reaches the homes (d^2 = 0, weight 1000) and the offices (dx = 8192, d^2 = 67108864, weight 1000 - floor(67108864 x 1000 / 51200^2) = 1000 - 25 = 975), not the shops (61440 away, beyond 51200): 1000 residents and 500 office jobs, (1500 x 40 + 50) / 100 = 600 trips a day, homes (residents the most). Built next, Annex shares both cells with West by weights 1000 and 975 (the nearer more), by the largest remainder: the homes' 1000 residents 506 to West (1000 x 1000 / 1975 = 506.3) and 494 to Annex, the offices' 500 jobs 247 to West (975 / 1975) and 253 to Annex. West then has 753 people, 301 trips; Annex 747, 299; both homes. Market alone reaches the shops: 310, (310 x 40 + 50) / 100 = 124 trips, shops (the jobs the most). While the land sets them a station's ridership cannot be set (stationDemandFromLand). In free play it can (Market 77 trips of sights), and turning management on again gives every station the land's ridership back. All values worked out by hand and checked with an independent Python implementation of the rule.",
   "initialState": {
     "worldWidth": 131072,
     "worldHeight": 98304,
-    "balance": 10000,
-    "costs": { "track": 100, "station": 1000, "train": 5000 },
+    "balance": 30000,
+    "costs": { "track": 300, "station": 3000, "train": 15000 },
     "gameMinutes": 0,
     "speed": "paused"
   },
@@ -29,7 +29,7 @@
   "expectedFinalState": {
     "gameMinutes": 0,
     "speed": "paused",
-    "balance": 7000,
+    "balance": 21000,
     "stations": [
       { "id": 1, "name": "West", "point": { "x": 22528, "y": 22528 } },
       { "id": 2, "name": "Annex", "point": { "x": 30720, "y": 22528 } },

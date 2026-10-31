@@ -731,6 +731,9 @@ extension RealRailways {
                 // Decision 240: a weekday of the Yilan Line, Toucheng to
                 // Su'aoxin, for the TRA demo.
                 TRADemo.schedule: { try file("\(TRADemo.schedule)-schedule", "json") },
+                // Decision 511: the DR3100 diesel express's trains, on the
+                // real lines.
+                RealTrainTraffic.dr3100Schedule: { try file("\(RealTrainTraffic.dr3100Schedule)-schedule", "json") },
             ]
         )
         let transfers = read("station_transfers", "json").flatMap { data in

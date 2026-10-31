@@ -16,7 +16,7 @@ final class TrackSectionTests: XCTestCase {
     private static let row: Int64 = 2_048
 
     private func world() -> GameWorld {
-        GameWorld(bounds: Self.bounds, economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        GameWorld(bounds: Self.bounds, economy: fixtureEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .normal))
     }
 
     /// A world with ground whose block (0, 0) has corner column c at
@@ -349,13 +349,13 @@ final class TrackSectionTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 28)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, try Self.terrainTrackWorld())
+        XCTAssertEqual(world, try NTScale.$factor.withValue(3) { try Self.terrainTrackWorld() })
         XCTAssertTrue(world.ground.isMapped)
         let kinds = world.network.edges.map { Set($0.sections.map(\.kind)) }
         XCTAssertEqual(kinds.count, 2)
         XCTAssertTrue(kinds[0].contains(.bridge))
         XCTAssertEqual(kinds[1], [.tunnel])
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 28,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 28,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

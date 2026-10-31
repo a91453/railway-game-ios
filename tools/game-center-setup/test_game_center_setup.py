@@ -267,7 +267,7 @@ class SetupTests(selftest.Fixture):
         self.assertEqual(status, 0)
         self.assertEqual(self.fake.writes(), [])
         self.assertEqual(store.writes, 0)
-        self.assertIn("新的項目 39 個、語言 78 個、圖 76 張；先不建 0 個。", out)
+        self.assertIn("新的項目 40 個、語言 80 個、圖 78 張；先不建 0 個。", out)
         self.assertIn("這是 dry run", out)
         for item in self.data["leaderboards"] + self.data["achievements"]:
             self.assertIn(f"`{item['vendorIdentifier']}`：新建", out)
@@ -278,7 +278,7 @@ class SetupTests(selftest.Fixture):
         self.assertEqual(status, 0, out)
         self.assertIn("全部建好了", out)
         achievements = self.posted("/v2/gameCenterAchievements")
-        self.assertEqual(len(self.data["achievements"]), 38)
+        self.assertEqual(len(self.data["achievements"]), 39)
         self.assertEqual([item["attributes"] for item in achievements], [
             {"referenceName": item["referenceName"], "points": item["points"],
              "showBeforeEarned": item["showBeforeEarned"], "repeatable": item["repeatable"],
@@ -292,7 +292,7 @@ class SetupTests(selftest.Fixture):
             self.assertEqual(item["attributes"]["afterEarnedDescription"], item["attributes"]["beforeEarnedDescription"])
         # Every image arrived whole, in its parts, and was marked uploaded.
         images = [item for item in self.fake.resources.values() if item["type"] == "gameCenterAchievementImages"]
-        self.assertEqual(len(images), 76)
+        self.assertEqual(len(images), 78)
         by_name = {item["vendorIdentifier"]: item for item in self.data["achievements"]}
         for image in images:
             self.assertEqual(image["attributes"]["assetDeliveryState"], {"state": "UPLOAD_COMPLETE"})
@@ -344,7 +344,7 @@ class SetupTests(selftest.Fixture):
                          [item["attributes"]["vendorIdentifier"] for item in self.posted("/v2/gameCenterAchievements")])
         self.assertEqual(self.posted("/v2/gameCenterLeaderboards"), [])
         self.assertEqual(self.posted("/v2/gameCenterLeaderboardLocalizations"), [])
-        self.assertEqual(len(self.posted("/v2/gameCenterAchievements")), 37)
+        self.assertEqual(len(self.posted("/v2/gameCenterAchievements")), 38)
         # Only the missing language (and its image) was added to the existing one.
         version = self.fake.children("gameCenterAchievementVersions", "parent", existing["id"])[0]
         added = [item for item in self.posted("/v2/gameCenterAchievementLocalizations")
@@ -365,7 +365,7 @@ class SetupTests(selftest.Fixture):
         status, _, out, _ = self.run_tool(apply=True, only="achievements")
         self.assertEqual(status, 0, out)
         self.assertIn("its version is LIVE", out)
-        self.assertEqual(len(self.posted("/v2/gameCenterAchievementLocalizations")), 37 * 2)
+        self.assertEqual(len(self.posted("/v2/gameCenterAchievementLocalizations")), 38 * 2)
 
     def test_a_refused_key_stops_with_the_role_hint(self):
         self.fake.refuse_writes = (403, {"errors": [{"status": "403", "code": "FORBIDDEN_ERROR",
@@ -392,7 +392,7 @@ class SetupTests(selftest.Fixture):
         self.assertEqual(status, 0, out)
         self.assertEqual(len(self.posted("/v2/gameCenterLeaderboards")), 1)
         self.assertEqual(self.posted("/v2/gameCenterAchievements"), [])
-        self.assertIn("先不建 38 個", out)
+        self.assertIn("先不建 39 個", out)
 
     def test_only_leaderboards_reads_no_achievements(self):
         status, _, out, _ = self.run_tool(apply=False, only="leaderboards")
@@ -429,8 +429,8 @@ class DataTests(unittest.TestCase):
 
     def test_the_table(self):
         data = setup.load()
-        self.assertEqual(len(data["achievements"]), 38)
-        self.assertEqual(sum(item["points"] for item in data["achievements"]), 800)
+        self.assertEqual(len(data["achievements"]), 39)
+        self.assertEqual(sum(item["points"] for item in data["achievements"]), 810)
         self.assertEqual([item["vendorIdentifier"] for item in data["leaderboards"]], ["weekly.days.v2"])
 
     def test_the_first_period_starts_on_the_next_taiwan_monday(self):

@@ -71,13 +71,13 @@ final class CityMapTests: XCTestCase {
         let world = try world()
         let map = CityMap(world: world)
         // The land's cells only (no service is measured yet, so no empty
-        // cell is worth more than 1,000).
+        // cell is worth more than 3,000).
         let values = map.tiles(for: .landValue, in: Self.everywhere)
-        XCTAssertEqual(values.map(\.value), [2_000, 2_500, 6_000, 7_000, 2_000])
-        XCTAssertEqual(values.map(\.color), [2_000, 2_500, 6_000, 7_000, 2_000].map { CityMap.valueColor(cents: $0) })
-        XCTAssertEqual(CityMap.valueStep(cents: 1_999), 0)
-        XCTAssertEqual(CityMap.valueStep(cents: 2_000), 1)
-        XCTAssertEqual(CityMap.valueStep(cents: 27_000), 8)
+        XCTAssertEqual(values.map(\.value), [6_000, 7_500, 18_000, 21_000, 6_000])
+        XCTAssertEqual(values.map(\.color), [6_000, 7_500, 18_000, 21_000, 6_000].map { CityMap.valueColor(cents: $0) })
+        XCTAssertEqual(CityMap.valueStep(cents: 5_999), 0)
+        XCTAssertEqual(CityMap.valueStep(cents: 6_000), 1)
+        XCTAssertEqual(CityMap.valueStep(cents: 81_000), 8)
         // Coverage: Alpha's 800 m reaches row 5's cells; the home at row
         // 20, column 30 is reached by none.
         let coverage = map.tiles(for: .coverage, in: Self.everywhere)
@@ -100,12 +100,12 @@ final class CityMapTests: XCTestCase {
         var world = try world()
         let info = try XCTUnwrap(world.cityCellInfo(atX: 5 * 4_096 + 10, y: 5 * 4_096 + 10))
         XCTAssertEqual(info.lines(in: .english), [
-            "Homes · 6 storeys", "Residents 100 · Jobs 0", "Land value \(Money(2_500).centsText) a m²",
-            "Base \(Money(2_500).centsText)", "Train service + \(Money(0).centsText)", "Easy to reach + \(Money(0).centsText)", "No station adds to it",
+            "Homes · 6 storeys", "Residents 100 · Jobs 0", "Land value \(Money(7_500).centsText) a m²",
+            "Base \(Money(7_500).centsText)", "Train service + \(Money(0).centsText)", "Easy to reach + \(Money(0).centsText)", "No station adds to it",
         ])
         XCTAssertEqual(info.lines(in: .traditionalChinese), [
-            "住宅 · 6 層樓", "居民 100 人 · 就業 0 個", "地價 每平方公尺 \(Money(2_500).centsText)",
-            "基本 \(Money(2_500).centsText)", "列車服務 + \(Money(0).centsText)", "交通便利 + \(Money(0).centsText)", "沒有車站影響地價",
+            "住宅 · 6 層樓", "居民 100 人 · 就業 0 個", "地價 每平方公尺 \(Money(7_500).centsText)",
+            "基本 \(Money(7_500).centsText)", "列車服務 + \(Money(0).centsText)", "交通便利 + \(Money(0).centsText)", "沒有車站影響地價",
         ])
         XCTAssertEqual(world.cityCellInfo(atX: 7 * 4_096, y: 5 * 4_096)?.lines(in: .traditionalChinese).first, "辦公 · 原有建物")
         XCTAssertEqual(world.cityCellInfo(atX: 0, y: 0)?.lines(in: .english).first, "Empty land")
@@ -122,8 +122,8 @@ final class CityMapTests: XCTestCase {
         var world = try world()
         try world.placeBuilding(.school, at: PlanPoint(x: 10_240, y: 10_240))
         let info = try XCTUnwrap(world.cityCellInfo(atX: 5 * 4_096 + 10, y: 5 * 4_096 + 10))
-        XCTAssertTrue(info.lines(in: .english).contains("Near your school or hospital + \(Money(900).centsText)"))
-        XCTAssertTrue(info.lines(in: .traditionalChinese).contains("鄰近公司的學校或醫院 + \(Money(900).centsText)"))
+        XCTAssertTrue(info.lines(in: .english).contains("Near your school or hospital + \(Money(2_700).centsText)"))
+        XCTAssertTrue(info.lines(in: .traditionalChinese).contains("鄰近公司的學校或醫院 + \(Money(2_700).centsText)"))
     }
 
     /// A served station sets its catchment's premiums: the tooltip names

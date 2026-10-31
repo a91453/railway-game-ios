@@ -261,18 +261,18 @@ final class OnboardingTests: XCTestCase {
     func testTheDifficultiesSetTheCashAndTheDisruptions() {
         var easy = NewGameOptions()
         easy.difficulty = .easy
-        XCTAssertEqual(easy.startingBalance, Money(500_000_000))
+        XCTAssertEqual(easy.startingBalance, Money(1_500_000_000))
         XCTAssertEqual(easy.disruption, .off)
         var expert = NewGameOptions()
         expert.difficulty = .expert
-        XCTAssertEqual(expert.startingBalance, Money(150_000_000))
+        XCTAssertEqual(expert.startingBalance, Money(450_000_000))
         expert.disruptionChoice = .light
         XCTAssertEqual(expert.disruption, .light, "chosen apart from the difficulty")
 
         var world = GameWorld.newGame(balance: easy.startingBalance, eventSeed: 7)
         easy.apply(to: &world)
         XCTAssertNil(world.disruptions)
-        XCTAssertEqual(world.economy.balance, Money(500_000_000))
+        XCTAssertEqual(world.economy.balance, Money(1_500_000_000))
         var hard = NewGameOptions()
         hard.difficulty = .expert
         // Decision 258: realistic rules keep the weather drawn from the seed.
@@ -309,7 +309,7 @@ final class OnboardingTests: XCTestCase {
 
     func testTheSummarySaysWhatChanged() {
         var options = NewGameOptions()
-        XCTAssertTrue(options.summary(in: .english).hasPrefix("Starts with \(Money(300_000_000).moneyText)."))
+        XCTAssertTrue(options.summary(in: .english).hasPrefix("Starts with \(Money(900_000_000).moneyText)."))
         // Decision 258: materials are an option of realistic rules only.
         options.rules = .realistic
         options.buildingMaterials = false
@@ -357,7 +357,7 @@ final class OnboardingTests: XCTestCase {
         launcher.newGameOptions = options
         launcher.startNewGame()
         let world = try XCTUnwrap(launcher.session?.world)
-        XCTAssertEqual(world.economy.balance, Money(500_000_000))
+        XCTAssertEqual(world.economy.balance, Money(1_500_000_000))
         XCTAssertNil(world.disruptions)
         XCTAssertEqual(world.demandEvents?.seed, 99)
         XCTAssertNil(world.mapExpansion, "the usual map, not bought tile by tile")

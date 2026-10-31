@@ -467,8 +467,8 @@ extension GameWorld {
     // MARK: - Costs
 
     /// What a depot costs a day for each of its sidings (decision 209), in
-    /// cents: $400, about half what a train's energy and crew cost a day.
-    public static let depotSidingDailyFee = Money(40_000)
+    /// cents: NT$1,200, about half what a train's energy and crew cost a day.
+    public static let depotSidingDailyFee = Money(120_000)
 
     /// The sidings of the depots, one a platform (decision 209).
     func depotSidingCount() -> Int64 {

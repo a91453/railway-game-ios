@@ -139,7 +139,7 @@ final class DoorCrowdingTests: XCTestCase {
     // MARK: - The world
 
     func testItIsOffInANewWorldAndSavedOnlyWhenOn() throws {
-        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000, costs: testCosts))
+        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000, costs: testCosts))
         XCTAssertFalse(world.doorCrowding)
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
@@ -166,7 +166,7 @@ final class DoorCrowdingTests: XCTestCase {
     /// 1,500 / 2,500 / 3, with no demand of the stations' own.
     private func makeWorld(crowding: Bool) throws -> GameWorld {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .x10)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 1_000_000, costs: testCosts), clock: GameClock(speed: .x10)
         )
         try line.build(in: &world)
         try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
@@ -282,7 +282,7 @@ final class DoorCrowdingTests: XCTestCase {
     /// waiting do not slow the cargo.
     func testACrowdOnAPlatformDoesNotSlowFreight() throws {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts), clock: GameClock(speed: .x10)
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts), clock: GameClock(speed: .x10)
         )
         try line.build(in: &world)
         try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
@@ -336,7 +336,7 @@ final class DoorCrowdingTests: XCTestCase {
     func testVersionFortyFourKeepsDoorCrowdingAndTheEMU3000() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v44-door-crowding.json")
-        var made = try makeWorld(crowding: true)
+        var made = try NTScale.$factor.withValue(3) { try makeWorld(crowding: true) }
         let express = try made.purchaseTrain(named: "Express")
         try made.setTrainCars(express.id, to: 12)
         try made.setTrainType(express.id, to: .emu3000)
@@ -362,8 +362,8 @@ final class DoorCrowdingTests: XCTestCase {
         var carried = world
         try carried.advance(ticks: 80)
         XCTAssertEqual(carried.train(id: one)?.times, times(134, 223, 223, departure: 55))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 44,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 44,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 
     /// A world from before decision 169 has no flag and no EMU3000: the

@@ -257,11 +257,11 @@ extension BranchLineChallenge {
 /// line is laid easily; the challenge is to get through its first months.
 enum JijiTargets {
     static let riders: Int64 = 20_000
-    /// A closed year's net profit: $3,000,000.
-    static let profit = Money(300_000_000)
-    /// $7 million: the line on flat ground and $1.7 million to spare, for
+    /// A closed year's net profit: NT$9,000,000.
+    static let profit = Money(900_000_000)
+    /// NT$21 million: the line on flat ground and NT$5.1 million to spare, for
     /// the app's embankments, cuttings and tunnels and the first months.
-    static let startingBalance = Money(700_000_000)
+    static let startingBalance = Money(2_100_000_000)
     static let goldDays = FinancePeriod.year.days
     static let silverDays = 2 * FinancePeriod.year.days
     static let deadlineDays = 3 * FinancePeriod.year.days

@@ -52,3 +52,17 @@ python3 -I tools/real-timetables/extract_metro_runs.py \
   - 不收（終點站同時要停的車比遊戲鋪的 5 條軌道多）：淡水信義線（25 條）、松山新店線（14）、中和新蘆線新莊端（迴龍 8）與蘆洲端（南勢角 6、古亭 4、蘆洲 8；共用的主線因此也不做）、板南線（13）、環狀線（12）、桃園機場線（8）、高雄紅線（小港、岡山車站各 8）、橘線（大寮 7）、台中綠線（北屯總站、高鐵臺中站各 6）。文湖線不試（35 m 的彎）。
   - 三鶯線（頂埔—鶯桃福德，`sanying:LB`）：398 班、8 班回送、12 組車（過夜：頂埔 4、鶯桃福德 4，媽祖田、長壽山、國華、永吉公園各 1）。端點只有 5 條軌道，所以 4 組停在中間站的正線上；晚上把它們送過去的回送（`extract_branch_runs.facing`）從另一端開來，停在往較近端點的那一條、面向它（遊戲半夜擺車的樣子），並且在當天最後一班經過那站之後才到；較靠端點的那一站先送，另一班才不會開過停著的車。以前照「一進站就送」從近的端點開過去，停在反方向的正線上，擋住當晚最後幾班，整條線從第二天起停住（決策 400 的「量到的」10j-3）。
 - 時刻表更新時重跑，並重跑 `RealLineAcquisitionTests`。
+
+## DR3100 柴聯自強號的班次（決策 511）
+
+`extract_dr3100_schedule.py` 從參考庫新版 `Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json`（2026-10-16 起 14 天）取車種 `自強(D31)`（`data/tra_special_trains.json` 的 DR3100 柴聯自強號）的列車，寫成 App 的 `RailwayGameApp/Resources/RealRailways/tra-dr3100-schedule.json`（格式同 `thsr-schedule.json`），讓 3D 與 2D 的真實地圖把它們畫在縱貫線北段、宜蘭線、北迴線上。
+
+```sh
+python3 -I tools/real-timetables/extract_dr3100_schedule.py \
+  /tmp/ref/Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json \
+  RailwayGameApp/Resources/RealRailways/tra-dr3100-schedule.json
+```
+
+- 4 班：209、221（花蓮→樹林）、238、246（樹林→花蓮），每個通過站都留時刻。
+- 這幾班 14 天沒有每天都開時，程式停下來（遊戲每天都跑它們）。
+- 參考庫的檔案更新時重跑，並重跑 `Map3DDR3100Tests`。

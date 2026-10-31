@@ -28,7 +28,7 @@ final class KeepLeftTests: XCTestCase {
     /// (e5 to node 9, e9, e10 to node 6): longer, with each joint along the
     /// straight.
     static func world(keepLeft: Bool, bow: Int64 = 0) throws -> (world: GameWorld, west: StationID, east: StationID) {
-        var world = try GameWorld(bounds: WorldBounds(width: 40_960, height: 20_480), economy: GameEconomy(balance: 1_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)), clock: GameClock(speed: .normal))
+        var world = try GameWorld(bounds: WorldBounds(width: 40_960, height: 20_480), economy: fixtureEconomy(balance: 1_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)), clock: GameClock(speed: .normal))
         for (x, y): (Int64, Int64) in [(1_024, 5_120), (5_120, 5_120), (9_216, 4_096), (9_216, 6_144), (30_720, 4_096), (30_720, 6_144), (34_816, 5_120), (38_912, 5_120)] {
             try world.buildTrackNode(at: WorldCoordinate(x: x, y: y))
         }
@@ -156,7 +156,7 @@ final class KeepLeftTests: XCTestCase {
     /// going east past West, e8 from the north track to the south going west
     /// past East.
     static func crossovers(keepLeft: Bool) throws -> (world: GameWorld, line: LineID) {
-        var world = try GameWorld(bounds: WorldBounds(width: 40_960, height: 10_240), economy: GameEconomy(balance: 1_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)), clock: GameClock(speed: .normal))
+        var world = try GameWorld(bounds: WorldBounds(width: 40_960, height: 10_240), economy: fixtureEconomy(balance: 1_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)), clock: GameClock(speed: .normal))
         for (x, y): (Int64, Int64) in [(1_024, 4_096), (13_312, 4_096), (31_744, 4_096), (38_912, 4_096), (1_024, 6_144), (9_216, 6_144), (27_648, 6_144), (38_912, 6_144)] {
             try world.buildTrackNode(at: WorldCoordinate(x: x, y: y))
         }
@@ -231,7 +231,7 @@ final class KeepLeftTests: XCTestCase {
     func testVersionFiftyTwoKeepsKeepingLeft() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v52-keep-left.json")
-        var (made, west, east) = try Self.world(keepLeft: true)
+        var (made, west, east) = try NTScale.$factor.withValue(3) { try Self.world(keepLeft: true) }
         let line = try made.createLine(named: "Main", stops: [west, east]).id
         let train = try made.purchaseTrain(named: "Blue").id
         try made.setTrainCars(train, to: 2)
@@ -251,7 +251,7 @@ final class KeepLeftTests: XCTestCase {
         XCTAssertEqual(loaded, made)
         XCTAssertTrue(loaded.keepLeft)
         XCTAssertEqual(loaded.path(from: Self.fromEast, toStation: west)?.traversals, Self.westboundLeft)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 52,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 52,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
 }

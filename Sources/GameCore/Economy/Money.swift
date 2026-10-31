@@ -31,8 +31,21 @@ extension Money: ExpressibleByIntegerLiteral {
 }
 
 extension Money: Codable {
+    /// What every amount decoded is multiplied by: 1, except while
+    /// ``SavedGame`` reads a world from before version 76, whose amounts
+    /// were dollars and are New Taiwan dollars at 3 to 1 (decision 499).
+    @TaskLocal static var decodingScale: Int64 = 1
+
+    /// Decodes an amount, times ``decodingScale``, refusing one the scale
+    /// would carry past `Int64`.
     public init(from decoder: any Decoder) throws {
-        self.init(try decoder.singleValueContainer().decode(Int64.self))
+        let container = try decoder.singleValueContainer()
+        let amount = try container.decode(Int64.self)
+        let (scaled, overflow) = amount.multipliedReportingOverflow(by: Self.decodingScale)
+        guard !overflow else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "The amount is too large to convert.")
+        }
+        self.init(scaled)
     }
 
     public func encode(to encoder: any Encoder) throws {

@@ -1,7 +1,7 @@
 {
- "schemaVersion": 69,
+ "schemaVersion": 75,
  "description": "Tourists (ARCHITECTURE decision 174, schema 69). Home (1, residential, 1,000 trips a day) and Foot (2, scenic, none) on line Main with a train; the world is so small that Home is an outside connection, the tourists' only source. Without tourism Home sends Foot nothing. setTourism adds one attraction, Old Street (a 3-star town) 1,000 units (15.6 m) from Foot: on day 0, a Monday, 2,000 potential tourists x 600 per mille (a weekday) x 1,000 (a town has no season) x 1,000 (clear) x 200 per mille captured = 240 a day, sent out from Home by the scenic arrival curve times the day's shape and back from Foot by the scenic departure curve (largest remainder). A souvenir shop adds a quarter star a level: level 1 is 3.25 stars, 2,625 potential, 315 tourists; level 2 is 3.5 stars, 3,250 potential, 390. A third level is attractionMaxedOut, an attraction 5 is unknownAttraction. With Taiwan's holidays on, day 0 is New Year's Day, x2,000 per mille: 3,250 x 2 x 0.2 = 1,300. Tourism off sends nothing and its commands are tourismNotEnabled. An attraction 51,201 units (one more than 800 m) from Foot has no station and draws nothing; at 51,200 it draws 2,000 x 2 x 0.2 = 800 on the holiday. Every number is worked out in tools/golden-checks/tourism.py from the rules, not from the Swift code.",
- "initialState": {"worldWidth": 12288, "worldHeight": 3072, "balance": 100000000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "normal"},
+ "initialState": {"worldWidth": 12288, "worldHeight": 3072, "balance": 300000000, "costs": {"track": 300, "station": 3000, "train": 15000}, "gameMinutes": 0, "speed": "normal"},
  "steps": [
   {"command": {"type": "buildStationAt", "name": "Home", "point": {"x": 1536, "y": 1536}}, "expect": {"result": "ok"}},
   {"command": {"type": "buildStationAt", "name": "Foot", "point": {"x": 5632, "y": 1536}}, "expect": {"result": "ok"}},
@@ -50,7 +50,7 @@
     "trainDistance": 0
    }
   },
-  "balance": 39993000,
+  "balance": 119979000,
   "disruptions": {
    "country": "TW",
    "level": "standard"

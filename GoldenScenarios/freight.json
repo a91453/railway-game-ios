@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 58,
+  "schemaVersion": 75,
   "description": "Freight (schema 58, decision 155), 15 steps. Alpha (1536, 512) and Gamma (5632, 512) in a world 8192 by 4096 units, a managed company, 100 industrial jobs in the cell at row 0, column 0 (middle (2048, 2048), nearer Alpha), the line Goods between them. Freight commands are refused before enableFreight, an unknown station is refused, a second yard at Alpha is refused. Each yard costs 5,000,000 cents. Three hours at normal speed: 100 jobs make 100 x 500 = 50,000 thousandths of a ton a day, and each hour begins by making 50,000 thousandths, so hours 0, 1 and 2 make 2 t each (150,000 thousandths: 6 t and 6,000 over): 6 t made, all waiting at Alpha, none at Gamma. Balance 100,000,000 - 2 x 1,000 (stations) - 2 x 5,000,000 (yards) - 2 x 3,600 (operating cost of the two hours settled, 18 dollars a station) = 89,990,800.",
   "initialState": {
     "worldWidth": 8192,
     "worldHeight": 4096,
-    "balance": 100000000,
+    "balance": 300000000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "paused"
@@ -181,21 +181,21 @@
           "energyCost": 0,
           "fareRevenue": 0,
           "maintenanceCost": 0,
-          "operatingCost": 7200,
+          "operatingCost": 21600,
           "staffCost": 0
         }
       ],
       "fareRules": null,
       "ledger": [
         {
-          "amount": -3600,
+          "amount": -10800,
           "breakdown": [
             {
               "amount": 0,
               "item": "fareRevenue"
             },
             {
-              "amount": -3600,
+              "amount": -10800,
               "item": "operatingCost"
             },
             {
@@ -213,14 +213,14 @@
           "time": 60
         },
         {
-          "amount": -3600,
+          "amount": -10800,
           "breakdown": [
             {
               "amount": 0,
               "item": "fareRevenue"
             },
             {
-              "amount": -3600,
+              "amount": -10800,
               "item": "operatingCost"
             },
             {
@@ -249,7 +249,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 89990800,
+    "balance": 269972400,
     "freight": {
       "delivered": 0,
       "facilities": [

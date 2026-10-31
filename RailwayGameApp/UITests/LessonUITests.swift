@@ -68,7 +68,7 @@ final class LessonUITests: XCTestCase {
         XCTAssertFalse(app.buttons["tool.building"].exists)
         openControls()
         XCTAssertTrue(mode("Lay").appears(within: 5))
-        XCTAssertTrue(mode("Platform").appears(within: 5))
+        XCTAssertTrue(mode("Station").appears(within: 5))
         XCTAssertFalse(mode("Loop").exists)
         XCTAssertFalse(mode("Depot").exists)
     }
@@ -615,7 +615,7 @@ final class LessonUITests: XCTestCase {
         XCTAssertTrue(app.buttons["map.build.confirm"].disappears(within: 5))
 
         openControls()
-        tap(mode("Platform"))
+        tap(mode("Station"))
         let platform = project(PlanPoint(x: site.x, y: site.y), from: known)
         tapMap(platform)
         // The touch on the map can be cancelled (the app's trace: "touch

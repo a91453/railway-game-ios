@@ -3,7 +3,8 @@ import GamePresentation
 import SwiftUI
 
 /// The tools, in a column down the map's leading edge while building
-/// (decision 114): the track network, trains and buildings, then Done,
+/// (decision 114): the track network, trains, buildings, zoning (decision
+/// 509) and buses, then Done,
 /// which goes back to looking at the map (the Select tool). The dock's
 /// Build entry (``BuildEntry``) opens it; there is no Select button in
 /// the dock any more, as a tap on the map selects whenever no tool is
@@ -73,8 +74,9 @@ struct BuildToolButtons: View {
     var body: some View {
         VStack(spacing: ToolColumnStyle.buttonSpacing) {
             // Decision 266: in a lesson, only the tools it has unlocked.
-            ForEach(ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }, id: \.self) { tool in
-                toolButton(tool)
+            // Decision 509: zoning a button of its own, after Buildings.
+            ForEach(session.buildToolbarButtons, id: \.self) { button in
+                toolButton(button)
             }
             if includesDone {
                 if column?.compact != true {
@@ -86,22 +88,22 @@ struct BuildToolButtons: View {
         }
     }
 
-    private func toolButton(_ tool: ConstructionTool) -> some View {
-        let isActive = session.tool == tool
+    private func toolButton(_ button: BuildToolbarButton) -> some View {
+        let isActive = session.isChosen(button)
         return Button {
             // A tool chosen again stays chosen: Done, or Build in the dock,
             // goes back to looking at the map.
-            UITestTrace.action("tool.\(tool)")
-            session.selectTool(tool)
+            UITestTrace.action(button.identifier)
+            session.choose(button)
         } label: {
-            TabLabel(systemImage: tool.systemImage, title: tool.title(in: session.language), isActive: isActive)
+            TabLabel(systemImage: button.systemImage, title: button.title(in: session.language), isActive: isActive)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
-        .accessibilityLabel(tool.accessibilityName)
+        .buttonStyle(ToolColumnStyle.touchStyle(isActive: isActive))
+        .accessibilityLabel(button.accessibilityName(in: session.language))
         // Stable across localizations for the Traditional Chinese toolbar UI test.
-        .accessibilityIdentifier("tool.\(tool)")
+        .accessibilityIdentifier(button.identifier)
         .accessibilityAddTraits(isActive ? .isSelected : [])
-        .tutorialTarget(TutorialTarget(tool: tool))
+        .tutorialTarget(button == .zoning ? nil : TutorialTarget(tool: button.tool))
     }
 }
 
@@ -117,7 +119,7 @@ struct BuildDoneButton: View {
         } label: {
             TabLabel(systemImage: "xmark", title: session.language.text("Done", "完成"), isActive: isActive)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .buttonStyle(ToolColumnStyle.touchStyle(isActive: isActive))
         .accessibilityLabel(Text(verbatim: session.language.text("Done building", "完成建設")))
         // The Select tool's identifier: the tutorial and the UI tests choose
         // it by this name.
@@ -146,7 +148,7 @@ struct BuildEntry: View {
         } label: {
             TabLabel(systemImage: "hammer.fill", title: session.language.text("Build", "建設"), isActive: isActive)
         }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .buttonStyle(ToolColumnStyle.touchStyle(isActive: isActive))
         .accessibilityLabel(Text(verbatim: session.language.text("Construction", "建設")))
         .accessibilityHint(Text(verbatim: session.language.text(
             "Shows the track, train and building tools at the map's edge.",

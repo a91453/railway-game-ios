@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 74,
+  "schemaVersion": 75,
   "description": "Station commerce (decision 222, schema 74). A world of 8,192 x 4,096 units, free play, 1,000,000,000 at the start; stations Main and Halt for 1,000 each (999,998,000). Main has no shops to upgrade (noStationCommerce). A convenience store in Main costs 35,000,000 (964,998,000) and cannot be built twice (stationCommerceMaxedOut); the arcade costs 315,000,000 (649,998,000); the mall's 1,250,000,000 is more than is left (insufficientFunds), and the refusal changes nothing. Main's shops are demolished: nothing comes back; a second demolition finds none. A convenience store in Halt: 35,000,000 (614,998,000). Station 9 does not exist (unknownStation). Main ends with no shops, Halt with level 1 (\"commerce\": 1).",
   "initialState": {
     "worldWidth": 8192,
     "worldHeight": 4096,
-    "balance": 1000000000,
+    "balance": 3000000000,
     "costs": {
-      "track": 100,
-      "station": 1000,
-      "train": 5000
+      "track": 300,
+      "station": 3000,
+      "train": 15000
     },
     "gameMinutes": 0,
     "speed": "paused"
@@ -84,8 +84,8 @@
       },
       "expect": {
         "result": "insufficientFunds",
-        "required": 1250000000,
-        "available": 649998000
+        "required": 3750000000,
+        "available": 1949994000
       }
     },
     {
@@ -143,7 +143,7 @@
         "trainDistance": 0
       }
     },
-    "balance": 614998000,
+    "balance": 1844994000,
     "gameMinutes": 0,
     "lines": [],
     "network": {

@@ -49,7 +49,7 @@ public enum RankMeasure: String, CaseIterable, Hashable, Sendable {
         case .bestDay: 1_000_000
         case .network: 300_000
         case .stations: 100
-        case .netWorth: 50_000_000_000
+        case .netWorth: 150_000_000_000
         case .servedPeople: 2_000_000
         case .operatingRatio: 600
         case .punctuality: 1_000
@@ -348,7 +348,7 @@ public struct CompanyRank: Hashable, Sendable {
         case .bestDay: [1_000, 5_000, 10_000, 30_000, 50_000, 100_000, 200_000, 300_000, 500_000, 1_000_000]
         case .network: [5_000, 10_000, 25_000, 50_000, 100_000, 200_000, 300_000]
         case .stations: [5, 10, 25, 50, 75, 100]
-        case .netWorth: [500_000_000, 1_000_000_000, 2_500_000_000, 5_000_000_000, 10_000_000_000, 25_000_000_000, 50_000_000_000]
+        case .netWorth: [1_500_000_000, 3_000_000_000, 7_500_000_000, 15_000_000_000, 30_000_000_000, 75_000_000_000, 150_000_000_000]
         case .servedPeople: [10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000, 2_000_000]
         case .operatingRatio: [900, 800, 700, 600]
         case .punctuality: [700, 800, 900, 1_000]

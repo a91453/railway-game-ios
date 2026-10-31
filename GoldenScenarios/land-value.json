@@ -1,20 +1,20 @@
 {
-  "schemaVersion": 49,
+  "schemaVersion": 75,
   "description": "Land value (Phase 6c-3, ARCHITECTURE decision 76), worked out when asked: value = clamp(floor(B x D / 1000) + 15 x S + 1000 x A, 500, 50000) cents a m2, B the use's base (1000 an empty cell, 2000 homes, 3000 shops, 3500 offices), D the building's density factor (1000, 1250, 1600, 2000 for D1 to D4, existing stock D4; 1000 without a building), S and A the best station's score floor(w x lastService / 1000) and lastReached, w = 1000 - floor(d2 x 1000 / 51200^2) for the stations whose catchment reaches the cell (d2 < 51200^2) and that measured some service, the highest score winning and a tie going to the lower station. A world 32768 x 8192 units (8 x 2 cells) on economy.json's line Main (Alpha (1536, 512), Beta (3584, 512), Gamma (5632, 512), one train all day from 23:00), managed, with demand from land, town growth and the city's buildings on. The land: row 0 column 0 homes of 100 (D2), 1 shops of 100 jobs (D2), 2 offices of 1600 jobs (D4), 3 homes of 2000 (existing stock), row 1 column 0 homes of 56 (D1). Before any service is measured each cell is worth its base: 2000 x 1250 / 1000 = 2500, 3000 x 1250 / 1000 = 3750, 3500 x 2000 / 1000 = 7000, 2000 x 2000 / 1000 = 4000, 2000, and an empty cell (row 1 column 7, row 0 column 7) 1000; cells outside the world (row 2, column 8, row -1) have none. After the first midnight (no measure yet) still 2500. The second midnight measures Alpha and Beta at lastService 996 (the 2 each still waiting at 04:00 went home then, decision 504) and Gamma at 1000, all at lastReached 2 (GameCore's values from the railway, as the townGrowth observations show) and raises the full D1 homes at row 1 column 0 to D2 (decision 75; no other building is nine tenths full, decision 129). Schema 49 (decision 129): the station front, the cells within 256 m of a growing station (columns 0 to 3 of each, and 4 of Beta's and Gamma's; 5 to 7 of none), grows three times as fast, so the land grows to 2181 residents (2182 before decision 504) and 1789 jobs (2170 and 1721 before) and the stations' trips from 508, 514 and 520 to 522, 529 and 537 (lastGrowth 27, 29 and 32 thousandths; 511, 519 and 526, 5, 9 and 11 before); the land and trips are checked by the same independent night as tools/golden-checks/city_growth.py's. Land value does not read the counts, so no value changes. Then: row 0 column 0, middle (2048, 2048), is d2 = 512^2 + 1536^2 = 2621440 from Alpha and 1536^2 + 1536^2 = 4718592 from Beta, both w = 995 ((1000 - 1) x 996 / 1000, rounded down, for each): a tie, Alpha; S = 995, 2500 + 14925 + 2000 = 19425. Column 1 (6144, 2048) is nearest Gamma, d2 = 512^2 + 1536^2, w 999: 3750 + 14985 + 2000 = 20735. Column 2 (10240, 2048): Gamma, d2 = 4608^2 + 1536^2 = 23592960, floor 9, w 991: 7000 + 14865 + 2000 = 23865. Column 3: Gamma, w 971: 4000 + 14565 + 2000 = 20565. Row 1 column 0 (now D2): Alpha, d2 = 512^2 + 5632^2, floor 12, w 984 (988 x 996 / 1000, rounded down): 2500 + 14760 + 2000 = 19260. The empty row 1 column 7 (30720, 6144): Gamma, d2 = 25088^2 + 5632^2, floor 252, w 748: 1000 + 11220 + 2000 = 14220; row 0 column 7: Gamma, w 759: 1000 + 11385 + 2000 = 14385. In free play the land does not set ridership and only the base counts: 2500 and 7000. Every landValue is worked out from the rule, the observed buildings and the observed measures by an independent Python implementation (tools/golden-checks/land_value.py); the railway, passenger, account and land values are GameCore's, as in economy.json.",
-  "initialState": {"worldWidth": 32768, "worldHeight": 8192, "balance": 1000000, "costs": {"track": 1000, "station": 50000, "train": 200000}, "gameMinutes": 1380, "speed": "normal"},
+  "initialState": {"worldWidth": 32768, "worldHeight": 8192, "balance": 3000000, "costs": {"track": 3000, "station": 150000, "train": 600000}, "gameMinutes": 1380, "speed": "normal"},
   "steps": [
     {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
     {"command": {"type": "setLand", "cells": [{"row": 0, "column": 0, "use": "residential", "residents": 100, "jobs": 0}, {"row": 0, "column": 1, "use": "commercial", "residents": 0, "jobs": 100}, {"row": 0, "column": 2, "use": "office", "residents": 0, "jobs": 1600}, {"row": 0, "column": 3, "use": "residential", "residents": 2000, "jobs": 0}, {"row": 1, "column": 0, "use": "residential", "residents": 56, "jobs": 0}]}, "expect": {"result": "ok"}},
     {"command": {"type": "setLandDemand", "enabled": true}, "expect": {"result": "ok"}},
     {"command": {"type": "setTownGrowth", "enabled": true}, "expect": {"result": "ok"}},
     {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
-    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 2500, "base": 2500, "servicePremium": 0, "accessPremium": 0, "station": null}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 1}, "expect": {"found": true, "landValue": {"value": 3750, "base": 3750, "servicePremium": 0, "accessPremium": 0, "station": null}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 2}, "expect": {"found": true, "landValue": {"value": 7000, "base": 7000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 3}, "expect": {"found": true, "landValue": {"value": 4000, "base": 4000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
-    {"observe": {"type": "landValue", "row": 1, "column": 0}, "expect": {"found": true, "landValue": {"value": 2000, "base": 2000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
-    {"observe": {"type": "landValue", "row": 1, "column": 7}, "expect": {"found": true, "landValue": {"value": 1000, "base": 1000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 7}, "expect": {"found": true, "landValue": {"value": 1000, "base": 1000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 7500, "base": 7500, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 1}, "expect": {"found": true, "landValue": {"value": 11250, "base": 11250, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 2}, "expect": {"found": true, "landValue": {"value": 21000, "base": 21000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 3}, "expect": {"found": true, "landValue": {"value": 12000, "base": 12000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 1, "column": 0}, "expect": {"found": true, "landValue": {"value": 6000, "base": 6000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 1, "column": 7}, "expect": {"found": true, "landValue": {"value": 3000, "base": 3000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 7}, "expect": {"found": true, "landValue": {"value": 3000, "base": 3000, "servicePremium": 0, "accessPremium": 0, "station": null}}},
     {"observe": {"type": "landValue", "row": 2, "column": 0}, "expect": {"found": false}},
     {"observe": {"type": "landValue", "row": 0, "column": 8}, "expect": {"found": false}},
     {"observe": {"type": "landValue", "row": -1, "column": 0}, "expect": {"found": false}},
@@ -49,33 +49,33 @@
     {"command": {"type": "setLineTrainsInService", "line": 1, "trains": {"peak": 1, "offPeak": 1, "low": 1}}, "expect": {"result": "ok"}},
     {"command": {"type": "assignTrain", "train": 1, "line": 1}, "expect": {"result": "ok"}},
     {"command": {"type": "advance", "ticks": 61}, "expect": {"result": "ok"}},
-    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 2500, "base": 2500, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 7500, "base": 7500, "servicePremium": 0, "accessPremium": 0, "station": null}}},
     {"command": {"type": "advance", "ticks": 1440}, "expect": {"result": "ok"}},
     {"observe": {"type": "townGrowth", "station": 1}, "expect": {"found": true, "townGrowth": {"base": 508, "lastGrowth": 27, "lastService": 996, "lastReached": 2}}},
     {"observe": {"type": "townGrowth", "station": 2}, "expect": {"found": true, "townGrowth": {"base": 514, "lastGrowth": 29, "lastService": 996, "lastReached": 2}}},
     {"observe": {"type": "townGrowth", "station": 3}, "expect": {"found": true, "townGrowth": {"base": 520, "lastGrowth": 32, "lastService": 1000, "lastReached": 2}}},
     {"observe": {"type": "building", "row": 0, "column": 0}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 19425, "base": 2500, "servicePremium": 14925, "accessPremium": 2000, "station": 1}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 58275, "base": 7500, "servicePremium": 44775, "accessPremium": 6000, "station": 1}}},
     {"observe": {"type": "building", "row": 0, "column": 1}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "commercial", "density": 2, "residents": 48, "jobs": 216}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 1}, "expect": {"found": true, "landValue": {"value": 20735, "base": 3750, "servicePremium": 14985, "accessPremium": 2000, "station": 3}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 1}, "expect": {"found": true, "landValue": {"value": 62205, "base": 11250, "servicePremium": 44955, "accessPremium": 6000, "station": 3}}},
     {"observe": {"type": "building", "row": 0, "column": 2}, "expect": {"found": true, "building": {"id": 3, "kind": "city", "use": "office", "density": 4, "residents": 160, "jobs": 1680}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 2}, "expect": {"found": true, "landValue": {"value": 23865, "base": 7000, "servicePremium": 14865, "accessPremium": 2000, "station": 3}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 2}, "expect": {"found": true, "landValue": {"value": 71595, "base": 21000, "servicePremium": 44595, "accessPremium": 6000, "station": 3}}},
     {"observe": {"type": "building", "row": 0, "column": 3}, "expect": {"found": true, "building": {"id": 4, "kind": "existingStock", "use": "residential", "density": 4, "residents": 2000, "jobs": 240}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 3}, "expect": {"found": true, "landValue": {"value": 20565, "base": 4000, "servicePremium": 14565, "accessPremium": 2000, "station": 3}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 3}, "expect": {"found": true, "landValue": {"value": 61695, "base": 12000, "servicePremium": 43695, "accessPremium": 6000, "station": 3}}},
     {"observe": {"type": "building", "row": 1, "column": 0}, "expect": {"found": true, "building": {"id": 5, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
-    {"observe": {"type": "landValue", "row": 1, "column": 0}, "expect": {"found": true, "landValue": {"value": 19260, "base": 2500, "servicePremium": 14760, "accessPremium": 2000, "station": 1}}},
+    {"observe": {"type": "landValue", "row": 1, "column": 0}, "expect": {"found": true, "landValue": {"value": 57780, "base": 7500, "servicePremium": 44280, "accessPremium": 6000, "station": 1}}},
     {"observe": {"type": "building", "row": 1, "column": 7}, "expect": {"found": false}},
-    {"observe": {"type": "landValue", "row": 1, "column": 7}, "expect": {"found": true, "landValue": {"value": 14220, "base": 1000, "servicePremium": 11220, "accessPremium": 2000, "station": 3}}},
+    {"observe": {"type": "landValue", "row": 1, "column": 7}, "expect": {"found": true, "landValue": {"value": 42660, "base": 3000, "servicePremium": 33660, "accessPremium": 6000, "station": 3}}},
     {"observe": {"type": "building", "row": 0, "column": 7}, "expect": {"found": false}},
-    {"observe": {"type": "landValue", "row": 0, "column": 7}, "expect": {"found": true, "landValue": {"value": 14385, "base": 1000, "servicePremium": 11385, "accessPremium": 2000, "station": 3}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 7}, "expect": {"found": true, "landValue": {"value": 43155, "base": 3000, "servicePremium": 34155, "accessPremium": 6000, "station": 3}}},
     {"command": {"type": "setEconomyMode", "mode": "free"}, "expect": {"result": "ok"}},
-    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 2500, "base": 2500, "servicePremium": 0, "accessPremium": 0, "station": null}}},
-    {"observe": {"type": "landValue", "row": 0, "column": 2}, "expect": {"found": true, "landValue": {"value": 7000, "base": 7000, "servicePremium": 0, "accessPremium": 0, "station": null}}}
+    {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 7500, "base": 7500, "servicePremium": 0, "accessPremium": 0, "station": null}}},
+    {"observe": {"type": "landValue", "row": 0, "column": 2}, "expect": {"found": true, "landValue": {"value": 21000, "base": 21000, "servicePremium": 0, "accessPremium": 0, "station": null}}}
   ],
   "expectedFinalState": {
     "gameMinutes": 2881,
     "speed": "normal",
-    "balance": -2574800,
+    "balance": -7722900,
     "stations": [
       {
         "id": 1,
@@ -493,36 +493,36 @@
       "days": [
         {
           "day": 0,
-          "energyCost": 37200,
-          "fareRevenue": 500,
-          "maintenanceCost": 1400,
-          "operatingCost": 142800,
-          "staffCost": 234000
+          "energyCost": 111700,
+          "fareRevenue": 1500,
+          "maintenanceCost": 4200,
+          "operatingCost": 428500,
+          "staffCost": 702000
         },
         {
           "day": 1,
-          "energyCost": 37200,
-          "fareRevenue": 768500,
-          "maintenanceCost": 33600,
-          "operatingCost": 3267600,
-          "staffCost": 234000
+          "energyCost": 111700,
+          "fareRevenue": 2305500,
+          "maintenanceCost": 98700,
+          "operatingCost": 9803100,
+          "staffCost": 702000
         }
       ],
       "fareRules": null,
       "ledger": [
         {
-          "amount": -143700,
+          "amount": -431200,
           "breakdown": [
             {
-              "amount": 500,
+              "amount": 1500,
               "item": "fareRevenue"
             },
             {
-              "amount": -142800,
+              "amount": -428500,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4200,
               "item": "maintenanceCost"
             }
           ],
@@ -536,14 +536,14 @@
           "time": 1440
         },
         {
-          "amount": -37200,
+          "amount": -111700,
           "breakdown": [
             {
-              "amount": -1200,
+              "amount": -3700,
               "item": "routeEnergy"
             },
             {
-              "amount": -36000,
+              "amount": -108000,
               "item": "trainEnergy"
             }
           ],
@@ -552,14 +552,14 @@
           "time": 1439
         },
         {
-          "amount": -234000,
+          "amount": -702000,
           "breakdown": [
             {
-              "amount": -186000,
+              "amount": -558000,
               "item": "stationStaff"
             },
             {
-              "amount": -48000,
+              "amount": -144000,
               "item": "trainStaff"
             }
           ],
@@ -568,18 +568,18 @@
           "time": 1439
         },
         {
-          "amount": -133100,
+          "amount": -399200,
           "breakdown": [
             {
-              "amount": 3500,
+              "amount": 10500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -593,18 +593,18 @@
           "time": 1500
         },
         {
-          "amount": -134600,
+          "amount": -403700,
           "breakdown": [
             {
-              "amount": 2000,
+              "amount": 6000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -618,18 +618,18 @@
           "time": 1560
         },
         {
-          "amount": -133600,
+          "amount": -400700,
           "breakdown": [
             {
-              "amount": 3000,
+              "amount": 9000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -643,18 +643,18 @@
           "time": 1620
         },
         {
-          "amount": -132600,
+          "amount": -397700,
           "breakdown": [
             {
-              "amount": 4000,
+              "amount": 12000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -668,18 +668,18 @@
           "time": 1680
         },
         {
-          "amount": -136100,
+          "amount": -408200,
           "breakdown": [
             {
-              "amount": 500,
+              "amount": 1500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -693,18 +693,18 @@
           "time": 1740
         },
         {
-          "amount": -125600,
+          "amount": -376700,
           "breakdown": [
             {
-              "amount": 11000,
+              "amount": 33000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -718,18 +718,18 @@
           "time": 1800
         },
         {
-          "amount": -103700,
+          "amount": -311200,
           "breakdown": [
             {
-              "amount": 40500,
+              "amount": 121500,
               "item": "fareRevenue"
             },
             {
-              "amount": -142800,
+              "amount": -428500,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4200,
               "item": "maintenanceCost"
             }
           ],
@@ -743,18 +743,18 @@
           "time": 1860
         },
         {
-          "amount": -63100,
+          "amount": -189200,
           "breakdown": [
             {
-              "amount": 73500,
+              "amount": 220500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -768,18 +768,18 @@
           "time": 1920
         },
         {
-          "amount": -63100,
+          "amount": -189200,
           "breakdown": [
             {
-              "amount": 73500,
+              "amount": 220500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -793,18 +793,18 @@
           "time": 1980
         },
         {
-          "amount": -87100,
+          "amount": -261200,
           "breakdown": [
             {
-              "amount": 49500,
+              "amount": 148500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -818,18 +818,18 @@
           "time": 2040
         },
         {
-          "amount": -109100,
+          "amount": -327200,
           "breakdown": [
             {
-              "amount": 27500,
+              "amount": 82500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -843,18 +843,18 @@
           "time": 2100
         },
         {
-          "amount": -111600,
+          "amount": -334700,
           "breakdown": [
             {
-              "amount": 25000,
+              "amount": 75000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -868,18 +868,18 @@
           "time": 2160
         },
         {
-          "amount": -112100,
+          "amount": -336200,
           "breakdown": [
             {
-              "amount": 24500,
+              "amount": 73500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -893,18 +893,18 @@
           "time": 2220
         },
         {
-          "amount": -117700,
+          "amount": -353200,
           "breakdown": [
             {
-              "amount": 26500,
+              "amount": 79500,
               "item": "fareRevenue"
             },
             {
-              "amount": -142800,
+              "amount": -428500,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4200,
               "item": "maintenanceCost"
             }
           ],
@@ -918,18 +918,18 @@
           "time": 2280
         },
         {
-          "amount": -109600,
+          "amount": -328700,
           "breakdown": [
             {
-              "amount": 27000,
+              "amount": 81000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -943,18 +943,18 @@
           "time": 2340
         },
         {
-          "amount": -101100,
+          "amount": -303200,
           "breakdown": [
             {
-              "amount": 35500,
+              "amount": 106500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -968,18 +968,18 @@
           "time": 2400
         },
         {
-          "amount": -79600,
+          "amount": -238700,
           "breakdown": [
             {
-              "amount": 57000,
+              "amount": 171000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -993,18 +993,18 @@
           "time": 2460
         },
         {
-          "amount": -62600,
+          "amount": -187700,
           "breakdown": [
             {
-              "amount": 74000,
+              "amount": 222000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -1018,18 +1018,18 @@
           "time": 2520
         },
         {
-          "amount": -61600,
+          "amount": -184700,
           "breakdown": [
             {
-              "amount": 75000,
+              "amount": 225000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -1043,18 +1043,18 @@
           "time": 2580
         },
         {
-          "amount": -88100,
+          "amount": -264200,
           "breakdown": [
             {
-              "amount": 48500,
+              "amount": 145500,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -1068,18 +1068,18 @@
           "time": 2640
         },
         {
-          "amount": -110200,
+          "amount": -330700,
           "breakdown": [
             {
-              "amount": 34000,
+              "amount": 102000,
               "item": "fareRevenue"
             },
             {
-              "amount": -142800,
+              "amount": -428500,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4200,
               "item": "maintenanceCost"
             }
           ],
@@ -1093,18 +1093,18 @@
           "time": 2700
         },
         {
-          "amount": -104600,
+          "amount": -313700,
           "breakdown": [
             {
-              "amount": 32000,
+              "amount": 96000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -1118,18 +1118,18 @@
           "time": 2760
         },
         {
-          "amount": -118600,
+          "amount": -355700,
           "breakdown": [
             {
-              "amount": 18000,
+              "amount": 54000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -1143,18 +1143,18 @@
           "time": 2820
         },
         {
-          "amount": -133600,
+          "amount": -400700,
           "breakdown": [
             {
-              "amount": 3000,
+              "amount": 9000,
               "item": "fareRevenue"
             },
             {
-              "amount": -135200,
+              "amount": -405600,
               "item": "operatingCost"
             },
             {
-              "amount": -1400,
+              "amount": -4100,
               "item": "maintenanceCost"
             }
           ],
@@ -1168,14 +1168,14 @@
           "time": 2880
         },
         {
-          "amount": -37200,
+          "amount": -111700,
           "breakdown": [
             {
-              "amount": -1200,
+              "amount": -3700,
               "item": "routeEnergy"
             },
             {
-              "amount": -36000,
+              "amount": -108000,
               "item": "trainEnergy"
             }
           ],
@@ -1184,14 +1184,14 @@
           "time": 2879
         },
         {
-          "amount": -234000,
+          "amount": -702000,
           "breakdown": [
             {
-              "amount": -186000,
+              "amount": -558000,
               "item": "stationStaff"
             },
             {
-              "amount": -48000,
+              "amount": -144000,
               "item": "trainStaff"
             }
           ],
@@ -1204,7 +1204,7 @@
       "openedAt": 2880,
       "pending": {
         "departures": 0,
-        "fareRevenue": 500,
+        "fareRevenue": 1500,
         "fareTrips": 1,
         "passengers": 0,
         "seats": 0,

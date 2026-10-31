@@ -85,4 +85,30 @@ final class PlatformTrackSessionTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .failure)
         XCTAssertEqual(session.world, world)
     }
+    /// Decision 507: the line ends 10 m past where the far turnout would
+    /// stand, within a split's least piece of it. The turnout went to the
+    /// line's end node, where the new track and the main one met from the
+    /// same side with nothing beyond: the platform track's far end joined
+    /// no track a train could leave by. Now it either joins the line where
+    /// a train runs on, or is refused for want of room.
+    @MainActor
+    func testATurnoutNeverLandsOnTheLinesEnd() throws {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
+        // The platform ends at x 19,456; the side turnout's reach is 50 m
+        // (3,200 units), so the far turnout would stand at x 22,656.
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 22_656 + 640, y: 8_192))
+        let edge = try world.buildTrackEdge(from: west, to: east)
+        let station = try world.buildStation(named: "Middle", at: PlanPoint(x: 16_384, y: 8_704)).id
+        try world.addTrackPlatform(station, on: edge, from: 12_288, to: 18_432)
+        let platform = try XCTUnwrap(world.trackPlatforms(of: station).first)
+        let session = GameSession(world: world)
+        session.addPlatformTrack(beside: platform, layout: .side, side: .left)
+        for node in session.world.network.nodes where node.ends.count > 1 {
+            XCTAssertTrue(node.ends.allSatisfy { !$0.exits.isEmpty }, "node \(node.id): track meeting with nothing beyond, \(node.ends)")
+        }
+        // No room past the far end: refused, nothing changed.
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.world, world)
+    }
 }
