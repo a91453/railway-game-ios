@@ -43,6 +43,10 @@
 
 > Codex E500製程文件化（#1255）：[跨AI案例與固定版本交接](art/native-vehicle-modeling/CASE_STUDY_E500.md)。使用者已接受producer85647d0a第三版外觀；記錄連續六格屋頂殼、正面過寬底座、真第二／三版、非屋頂保護、重建與分層驗證。模型公開draft #1256 ↔ 私庫#84在本次文件接手時尚未合併，固定來源不假設main已有配方；本輪不改已接受模型／素材。合併模型PR並重建App才更新E500CK／MINGRI／STAR；真機與動畫仍未驗。
 
+> 地圖上少一點東西（派工單 UICLUTTER，[決策 510](decisions/510.md)，`uiclutter-map`，2026-10-30）：景點依縮放收起、不搶車站與軌道的點擊，警告每站一個、地圖上最多幾個、其餘收進左上角的徽章。Linux `MapClutterTests` VERIFIED；也修了 iPhone 橫拿整平失敗時藥丸、橫幅、右側面板與「哪裡人多」圖例疊在一起（橫幅改短句、圖例在藥丸出現時收起）。#1583 已 merge #1582 後的 main。截圖 run 41165534178 看過 7 張，另 2 張（整平失敗、觀光景點）的測試已修，實作 session 壓縮兩次停下，遊戲規劃第 37 任接手：截圖 run 41168313459 看過，iPhone 橫拿藥丸、短橫幅、「哪裡人多」圖例不互蓋；觀光景點那張拉近到嘉義山區時畫面裡沒有景點星星（畫面裡可能本來就沒有景點），**實機看實景地圖中距離時景點星星有出現**。iPhone 13 直拿沒截圖，實機看實景地圖拉遠與車站旁的景點。
+
+> 列車運用表入口與拖拉編排（派工單 ROSTER2，[決策 512](decisions/512.md)，`roster2-drag`）：路線頁、列車卡直接開運用表；「編排」裡長按車名拖到別條線改派、長按預定格左右拖改自有時刻表。在路上的車不能改派、自有時刻表只在停在第一站時能改；路線車的錯開、跑完再改派、在路上改時刻要新 GameCore 指令或升存檔，見決策 512 的下一步（甲～丁，預覽 `docs/art/roster2-drag-2026-10-30/next-steps.svg`）。長按拖曳在 Simulator 與實機的手感 UNVERIFIED。
+
 > 公測前介面盤點（派工單 UIA，`claude/ui-audit-beta`，2026-10-30）：[`research/UI_AUDIT_2026-10-30.md`](research/UI_AUDIT_2026-10-30.md)。各功能的入口與步數、iPhone 橫拿與 iPad 直橫拿的遮擋。公測前只修了 A1（「資料」可以再打開上個月的月報）；B1–B10 公測後由規劃照順序派，最前面是 B1（iPhone 打開「路線」看不到線）、B2（☰ 後三列只有圖示）、B3（iPhone 教學卡把目標切在半行）。截圖在 railway-assets-private 的 `game-art-previews/docs/art/ui-audit-2026-10-30/`。
 
 > 公測前抓蟲・營運（派工單 BH2，`claude/bughunt-operations`，2026-10-30）：[`research/BUGHUNT_OPERATIONS_2026-10-30.md`](research/BUGHUNT_OPERATIONS_2026-10-30.md)。沒找到 P1。P2-1（跳過夜晚途中存檔，讀回以 ×6000 跑）在同一個 PR 修了（`GameSession.worldToSave`，`NightSkipTests` 釘住），發版前在實機按「跳到早上」後切出 App、關掉再繼續，看速度是原本的；P2-2（分組清單的上一條／下一條順序不對）與 P3 三項留給公測後。
@@ -2137,6 +2141,7 @@
    - #1132 合併後，確認 `Map3DScene.init` 裡有這個條件；沒有就補一個小 PR。
    - 動 `addCity` 的人先 `send_message` 給這兩個 session。
 3. **實機**：只在 Linux 的 WebGL 預覽看過（`docs/art/map3d-no-build-2026-10-23/`）；下一次 TestFlight 看 600 倍俯看小港與板橋，房子是不是太稀或太密（`Map3DScene.Builder.openShare` 與 `layFrontage` 的公寓比例）。
+4. **決策 516**（HOUSEROAD，作者 99.1 宜蘭平原的點陣）：辦公、公共、休閒的低密度地塊也沿路排了。還沒做：密度 3 以上的樓與工廠在實景地圖上仍在格子中間（決策 516 下一步第 1 點）；實機看宜蘭平原 600× 俯看的疏密（第 2 點）。
 
 ### 4.10 3D 月台只畫在放得下的地方（決策 392，session_01QnjGxTmCx1sAYpH4wacqhH）
 
@@ -2432,7 +2437,18 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - `economy`、`network-economy` 兩個 replay 的起始餘額、建造成本、`setFareBaseline`／`setFareRules` 的金額 ×3：對 base `d1df0d7` 逐指令重播，193 個指令的接受或拒絕全部一樣。其他 7 檔 checksum 動是因為預設 `demandBaseline` 75 → 225，README 與決策 499 改正。
   - 決策 499 加「高鐵每公里不照真實票價」（五方）與「已知限制」（審查列為低、不改的五項）。沒有剩下的步驟；合併由遊戲規劃決定。
 
-### 4.36 自己拉的軌道加成旁邊車站的月台、缺建材說下一步（決策 519，派工單 FREIGHTPLAT，session_01YGNNum9tS2UtTJPb8hQben，2026-10-31）
+- **Swift CI 的 selected-4 分片快碰到 20 分鐘上限**（PLATBTN，2026-10-31）：a906ed1 用了 19m14s，0b4d4c3 曾逾時（run 41156023348）。之後可能要在 `.github/scripts/swift-shards.sh` 的 `selected_part` 重新切分。
+
+### 4.36 「分區」自己一顆建設工具（決策 509，派工單 ZONE1，session_01YGNNuo27fcYAGK3J1GdZHo，`zone1-zoning-tool`，2026-10-30）
+
+- **做了的**在決策 509：建設工具「路網、列車、建物、分區、公車」，手機的「完成」改站在「建設」旁邊（決策 382 補記）；站長在成長的車站旁有空地時說「點這裡劃分區」；第一棟蓋在分區上的建物通知一次；成就「都市計畫」（`cityPlanner`，10 分）。
+- **等作者的**：App Store Connect 還沒有 `achievement.cityPlanner`。作者要再跑一次 Game Center 的建立步驟（`docs/GAME_CENTER_SETUP.md`；只會新建這一個，其餘照舊），沒建之前遊戲內照常解鎖，只是不回報 Game Center。
+- **規劃的合併條件**（小 iPhone 橫拿整排不用捲、每顆觸控 44 pt）：觸控範圍改 44、mini 上工具組玻璃縮成上下 2 pt；截圖用 `website-screenshots.yml` 的 `device` = `iphone-small`、`tests` = `testBuildingToolsColumn`（決策 509 第 2 點）。
+- **截圖驗收**（決策 509）：17 Pro 四張、最小可選的 iPhone 17e 兩張（run 41156612390，`docs/art/ui-audit-2026-10-30/zone1-*.png`）。runner 沒有 SE／mini 的模擬器，mini 的窄玻璃只由 Linux 的 `ToolColumnTests` 驗證。
+- **還沒驗證**：實機畫面；站長「劃分區」的泡泡沒有截圖；e9178e2 改過的三個 full lane UI 測試（`MapButtonsUITests/testThePhonesBuildingToolsStartAtTheColumnsTop`、`MapButtonsUITests/testThePhonesZoomButtonsStandOnTheColumnsLine`、`ToolbarSmokeTests/testTheToolsColumnsButtonsAreOneSize`）沒有單獨跑過，合併後的 full lane 會跑；紅了照它們的新邊界（觸控框比畫的多上下 2 pt、「完成」在「建設」右邊）修。
+- ZONE1 已壓縮 3 次，沒有其他剩下的步驟。
+
+### 4.37 自己拉的軌道加成旁邊車站的月台、缺建材說下一步（決策 519，派工單 FREIGHTPLAT，session_01YGNNum9tS2UtTJPb8hQben，2026-10-31）
 
 - 做了的在 [決策 519](decisions/519.md)：「車站」模式點在某站月台旁 100 m 內的軌道，預設加成那站的月台（尾端外的同一條線照舊是新站）；車站選單照距離排、寫幾公尺；車站卡月台組多一句怎麼讓自己的軌道停這站；缺建材那行接著說下一步（蓋貨運場→別站出建材→設貨運路線＋月台→加開列車）。規則在 `NetworkSession.swift`、`FreightText.swift`，Linux 測試 `PlatformStationJoinTests`、`FreightSessionTests`。
 - **等 TestFlight 看**（UNVERIFIED）：作者那局台北旁那條線點下去是不是台北（離月台超過 100 m 就要從選單選，選單台北在前面）。

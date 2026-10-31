@@ -153,6 +153,25 @@ final class StationLayoutTests: XCTestCase {
         XCTAssertEqual(command.name, "buildStationLayout")
     }
 
+    /// The big button says what it does: a pick away from every station
+    /// builds one, a pick on a station's own track adds to it.
+    func testTheBuildButtonSaysStationOrPlatform() throws {
+        let session = try line(double: false)
+        session.tapNetwork(at: PlanPoint(x: 18_432, y: 10_240), reach: 64)
+        XCTAssertNil(session.platformStationID)
+        XCTAssertEqual(session.language, .english)
+        XCTAssertEqual(session.networkPlatformActionTitle, "Build Station")
+        session.stationName = "Middle"
+        session.addNetworkPlatform()
+        session.tapNetwork(at: PlanPoint(x: 18_432, y: 10_240), reach: 64)
+        XCTAssertNotNil(session.platformStationID)
+        XCTAssertEqual(session.networkPlatformActionTitle, "Add Platform")
+        let chinese = GameSession(world: session.world, language: .traditionalChinese)
+        XCTAssertEqual(chinese.networkPlatformActionTitle, "蓋車站")
+        chinese.platformStationID = session.platformStationID
+        XCTAssertEqual(chinese.networkPlatformActionTitle, "加月台")
+    }
+
     /// Too little money: nothing is built, and the preview said so.
     func testALayoutTheCashDoesNotCoverChangesNothing() throws {
         func picked(_ session: GameSession) {

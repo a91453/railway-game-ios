@@ -83,6 +83,13 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(world.waitingText(at: alpha, in: .english), ["Main to Gamma · \(waiting)"])
         XCTAssertEqual(world.waitingSummary(at: alpha, in: .english), "waiting Main to Gamma · \(waiting)")
         XCTAssertEqual(world.waitingSummary(at: alpha, in: .traditionalChinese), "候車 Main 往 Gamma · \(waiting)")
+        // The inspector card gets them on lines of their own.
+        XCTAssertEqual(world.waitingLines(at: alpha, in: .english), ["Waiting", "Main to Gamma · \(waiting)"])
+        XCTAssertEqual(world.waitingLines(at: alpha, in: .traditionalChinese), ["候車", "Main 往 Gamma · \(waiting)"])
+        // Only so many, and the rest counted.
+        XCTAssertEqual(world.waitingLines(at: alpha, maxGroups: 0, in: .english), ["Waiting", "+1 more"])
+        XCTAssertEqual(world.waitingLines(at: alpha, maxGroups: 0, in: .traditionalChinese), ["候車", "還有 1 項"])
+        XCTAssertEqual(world.waitingLines(at: StationID(rawValue: 3), in: .english), [])
 
         let riding = world.riders(of: TrainID(rawValue: 1)).reduce(Int64(0)) { $0 + $1.count }
         XCTAssertGreaterThan(riding, 0)

@@ -472,8 +472,10 @@ struct ContentView: View {
             // 98.1: on a phone, while building, the card's toggle beside the
             // column's foot (``ToolsColumn``), not in it; there with Undo
             // and Redo, as one row.
-            let toggleBesideFoot = toolsColumn && showsRail && session.tutorial?.step.usesDetailsCard != true
-            let showsFootRow = toggleBesideFoot || ControlPanel.showsEdits(session)
+            // Decision 509: Done stands beside Build while building.
+            let doneBesideFoot = toolsColumn && showsRail
+            let toggleBesideFoot = doneBesideFoot && session.tutorial?.step.usesDetailsCard != true
+            let showsFootRow = doneBesideFoot || ControlPanel.showsEdits(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             // Decision 224 (5B): the layer strip under the pill, while not
             // building and not in the tutorial; on a phone the building
@@ -633,9 +635,15 @@ struct ContentView: View {
                 .overlay(alignment: .bottomLeading) {
                     if toolsColumn {
                         HStack(alignment: .bottom, spacing: ControlPanel.tileGap) {
-                            // While building, the card's toggle stands here,
-                            // beside Build, rather than over the tools (98.1):
-                            // in the column the four tools did not fit.
+                            // While building, Done and the card's toggle
+                            // stand here, beside Build, rather than over the
+                            // tools (98.1, decision 509): in the column the
+                            // tools did not fit with them.
+                            if doneBesideFoot {
+                                BuildDoneButton(session: session)
+                                    .controlTile()
+                                    .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
+                            }
                             if toggleBesideFoot {
                                 ControlDetailsToggle(isOpen: isOpen) { detailsChoice = !isOpen }
                                     .disabled(sidePanel != nil)
@@ -930,10 +938,12 @@ private struct ControlDetailsToggle: View {
         }
         // As wide as Undo and Redo beside it, touched over 44. In the
         // column it is already as wide as the tools under it, and touched
-        // over no more than they are: a wider area made it 52 points to
-        // VoiceOver and the UI tests beside their 48 (main d657300).
-        .buttonStyle(ThemeSelectableTouchTargetButtonStyle(
-            isActive: isOpen, size: column == nil ? EditButtonSize.drawn : CGSize(width: 44, height: 44)))
+        // over what they are, 44 high (100.1, decision 509): a wider area
+        // made it 52 points to VoiceOver and the UI tests beside their 48
+        // (main d657300).
+        .buttonStyle(column == nil
+            ? ThemeSelectableTouchTargetButtonStyle(isActive: isOpen, size: EditButtonSize.drawn)
+            : ToolColumnStyle.touchStyle(isActive: isOpen))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
         .accessibilityIdentifier("controls.toggle")
     }
@@ -1013,6 +1023,7 @@ private struct ToolsColumn: View {
                 ViewThatFits(in: .vertical) {
                     building(compact: false)
                     building(compact: true)
+                    building(compact: true, tight: true)
                     buildingScrolling
                 }
             } else {
@@ -1048,7 +1059,7 @@ private struct ToolsColumn: View {
 
     /// The building tools the session offers, Done aside.
     private var buildingTools: Int {
-        ConstructionTool.networkTools.filter { $0 != .select && session.allows($0) }.count
+        session.buildToolbarButtons.count
     }
 
     // Not on the tutorial's steps that point into the card, which keep it
@@ -1066,25 +1077,22 @@ private struct ToolsColumn: View {
         .tutorialClip()
     }
 
-    /// While building, where it all fits: the building tools and Done in
-    /// one group close over Build, lit (a second tap closes the tools), at
-    /// the column's foot, where the thumb that pressed Build is (decision
-    /// 382; 98.1, the planner). The card's toggle stands beside Build
-    /// instead (``ContentView``): the four tools did not fit with it on a
-    /// phone on its side.
-    private func building(compact: Bool) -> some View {
+    /// While building, where it all fits: the building tools in one group
+    /// close over Build, lit (a second tap closes the tools), at the
+    /// column's foot, where the thumb that pressed Build is (decision 382;
+    /// 98.1, the planner). The card's toggle stands beside Build instead
+    /// (``ContentView``): the four tools did not fit with it on a phone on
+    /// its side; and Done too since 100.1 (decision 509): the five tools
+    /// did not fit with it. `tight`: the tools' glass 2 above and below
+    /// them rather than 4, where only that is short (a 12 or 13 mini on its
+    /// side, by 3 points; 100.1, decision 509: nothing scrolls there).
+    private func building(compact: Bool, tight: Bool = false) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-            BuildToolButtons(session: session)
-                .controlTile()
+            BuildToolButtons(session: session, includesDone: false)
+                .controlTile(vertical: tight ? CGFloat(ToolColumn.tightTilePadding) : ToolColumnStyle.tilePadding)
             ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
-    }
-
-    @ViewBuilder private var buildingFoot: some View {
-        BuildDoneButton(session: session)
-            .controlTile()
-        ControlPanel(session: session, arrangement: .buildEntry)
     }
 
     /// Icons alone where even they have not the height (a 12 or 13 mini
@@ -1116,9 +1124,7 @@ private struct ToolsColumn: View {
                 }
             }
             Spacer(minLength: ControlPanel.tileGap)
-            VStack(alignment: .center, spacing: ControlPanel.tileGap) {
-                buildingFoot
-            }
+            ControlPanel(session: session, arrangement: .buildEntry)
         }
         .environment(\.toolColumnStyle, ToolColumnStyle(compact: true))
     }

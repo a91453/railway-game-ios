@@ -196,8 +196,8 @@ public enum FirstLineGuide {
         }
         if building {
             return Hint(target: .selectTool, symbol: "xmark",
-                        english: "Two stations. Tap Done, under the tools on the left, to stop building.",
-                        chinese: "兩座車站好了。點左邊工具最下面的「完成」結束建造。")
+                        english: "Two stations. Tap Done at the bottom left to stop building.",
+                        chinese: "兩座車站好了。點左下的「完成」結束建造。")
         }
         if !linesPanelShown {
             return Hint(target: .linesButton, symbol: linesSymbol,

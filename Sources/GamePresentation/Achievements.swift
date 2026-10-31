@@ -2,7 +2,8 @@ import Foundation
 import GameCore
 
 // Achievements (ARCHITECTURE decision 181): 38 marks of what the player
-// has done, kept on the device across games, checked each midnight. The
+// has done (39 since decision 509's town planning), kept on the device
+// across games, checked each midnight. The
 // list, its "how to get it" lines and its progress readings are the
 // reference's (`Railway/site_archive_clean/index.html`: `ACHIEVEMENTS`,
 // `ACH_TESTS`, `ACH_PROG`, `achContext`), which judged them by the rides the
@@ -73,6 +74,9 @@ public struct AchievementFacts: Hashable, Sendable {
     public var trainTypes = 0
     public var longestTrainCars = 0
     public var rollingStockCost: Money = .zero
+    /// Decision 509: the cells the player zoned for a use that a city
+    /// building of that use stands on.
+    public var zonedCellsBuilt = 0
 
     public init(figures: CompanyFigures = CompanyFigures()) {
         self.figures = figures
@@ -138,6 +142,10 @@ public struct AchievementFacts: Hashable, Sendable {
         trainTypes = Set(world.trains.map(\.type)).count
         longestTrainCars = world.trains.map(\.cars).max() ?? 0
         rollingStockCost = world.balanceSheet().rollingStock.cost
+        zonedCellsBuilt = world.zones.cells.count { cell in
+            guard let use = cell.zone.use else { return false }
+            return world.buildings.building(row: cell.row, column: cell.column)?.use == use
+        }
         if let state = world.scenario, case .completed(_, let rating)? = state.outcome {
             completedScenario = state.scenario.id
             completedGold = rating == .gold
@@ -257,7 +265,7 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         return (facts.hasTourism || !needsTourism) && (facts.hasRollingStockEconomics || !needsRollingStockEconomics)
     }
 
-    /// The 38 achievements, in the order the list shows them.
+    /// The 39 achievements, in the order the list shows them.
     public static let all: [Achievement] = [
         // The reference's `first`, `rider5`, `rider15`: rides followed,
         // here riders in a day.
@@ -336,6 +344,10 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         flag("firstFreight",
              ("First Tonne", "Deliver freight", "Run a freight line from a factory to a station that wants its goods."),
              ("第一噸貨", "第一次送達貨物", "開一條從工廠到需要貨物的車站的貨運路線。")) { $0.hasDeliveredFreight },
+        // Decision 509: the zoning tool.
+        count("cityPlanner", need: 10,
+              ("Town Planner", "The town builds on 10 cells you zoned", "Build → Zoning: zone the empty land beside a growing station, and the town builds what you chose there first."),
+              ("都市計畫", "城市在你劃的分區蓋起 10 格", "建設 →「分區」：在成長中的車站旁劃空地，城市會先在那裡蓋你選的用途。")) { Int64($0.zonedCellsBuilt) },
         count("firstTile", need: 1,
               ("New Ground", "Buy a tile of the map", "On a map bought tile by tile, a best day of riders unlocks the next tile."),
               ("開疆闢土", "買下第一格地圖", "分區購買的地圖上，最佳單日運量會解鎖下一塊。")) { Int64($0.tilesBought) },

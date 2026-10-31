@@ -241,6 +241,7 @@ extension StationMasterAdvice {
         case .createLine: (.advice, "createLine", nil)
         case .underserved(let station, _, _): (.growth, "underserved:\(station.rawValue)", .station(station.rawValue))
         case .townGrew(let station, _, _): (.growth, "grew:\(station.rawValue)", .station(station.rawValue))
+        case .zoneNearStation(let station, _, _): (.growth, "zone:\(station.rawValue)", .station(station.rawValue))
         case .holidayComing(let kind, _, _): (.holiday, "holiday:\(kind.rawValue)", nil)
         case .holidayOver(let kind, _, _): (.holiday, "holidayOver:\(kind.rawValue)", nil)
         case .materialsShort(let station, _): (.materials, "materials:\(station.rawValue)", .station(station.rawValue))
