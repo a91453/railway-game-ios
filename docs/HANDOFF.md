@@ -469,6 +469,7 @@
   - 99.1 的外部群組。
   - #1581 加了 `achievement.cityPlanner`，Game Center 要再設一次（§4.36）。
 - **不進 100.1**：#1601 PASSLOOP（決策 518）。理由：它改 GameCore 的停站選月台，rest 組 CI 撞到時間上限、原因還沒查，而且和 main 衝突。PASSLOOP session 壓縮兩次已封存；發版後開新的實作 session 接手：先合 main，再查 rest 組是不是變慢。
+- **100.1 發了**：作者 09:23 UTC 自己按的，testflight.yml run 41188529796，main 171cd7b。作者說 100.1 之後解凍。**之後照 `research/NEXT_PRIORITIES_2026-10-12.md` §23 的順序派**：IPHLAND、CIREST、PASSLOOP、FLANE、ZONE3、REVIEW-L3，以下依序。下面這張舊清單已經併進 §23。
 - **100.1 之後要派的**：
   - iPhone 橫拿時，側邊車站卡的站名被夾在工具列按鈕之間，只剩「5站」（`panelTitle`；#1598 的截圖看到，那個 PR 沒動到）。
   - iPhone 橫拿實景開局，右側有一個空的面板框（#1599 截圖 run 41176904229 看到，不是那個 PR 的東西），查是哪個面板收起後留下的殼。
