@@ -35,7 +35,7 @@ final class NewGameChoiceTests: XCTestCase {
     func testTheOptionsRowSaysBothMapsUseIt() {
         var options = NewGameOptions()
         XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .english), "New Game Options · Simple · Standard · \(Money(900_000_000).moneyText)")
-        XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .traditionalChinese), "新遊戲選項 · 簡單規則 · 標準 · \(Money(900_000_000).moneyText)")
+        XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .traditionalChinese), "新遊戲選項 · 簡單規則 · 標準 · \(Money.currencySymbol) 900 萬")
         options.funds = .unlimited
         XCTAssertEqual(NewGameChoice.optionsSummary(options, in: .english), "New Game Options · Simple · Standard · ∞")
         XCTAssertEqual(NewGameChoice.optionsNote(in: .english), "Both maps start with these options.")

@@ -72,7 +72,7 @@ public enum NewGameChoice: String, CaseIterable, Sendable {
 
     /// The options' row: the rules, the difficulty and the cash.
     public static func optionsSummary(_ options: NewGameOptions, in language: DisplayLanguage) -> String {
-        let cash = options.funds == .unlimited ? "∞" : options.startingBalance.moneyText
+        let cash = options.funds == .unlimited ? "∞" : options.startingBalance.compactText(in: language)
         return language.text(
             "New Game Options · \(options.rules.title(in: language)) · \(options.difficulty.title(in: language)) · \(cash)",
             "新遊戲選項 · \(options.rules.title(in: language))規則 · \(options.difficulty.title(in: language)) · \(cash)"
