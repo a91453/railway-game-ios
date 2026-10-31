@@ -462,6 +462,24 @@ struct PopulationLegendView: View {
                 }
             }
             .accessibilityIdentifier("map.zoningLegend")
+            // Decision 514: what an empty zoned cell will do, and why.
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 3) {
+                ForEach(ZoneOutlook.allCases, id: \.self) { outlook in
+                    HStack(spacing: 6) {
+                        ZoneOutlookSwatch(outlook: outlook).frame(width: 14, height: 10)
+                        Text(verbatim: outlook.title(in: language))
+                            .font(.caption2)
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                }
+            }
+            .accessibilityIdentifier("map.zoneOutlookLegend")
+            Text(verbatim: ZoneOutlook.hint(in: language))
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             if nothingZoned {
                 Text(verbatim: language.text(
                     "Nothing zoned yet: draw zones with Build, then Zoning.",
@@ -598,5 +616,38 @@ private struct SteepSwatch: View {
             context.stroke(lines, with: .color(Color(TerrainMap.steepColor)), lineWidth: 0.75)
         }
         .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Color(TerrainMap.steepColor).opacity(0.5), lineWidth: 0.5))
+    }
+}
+
+/// Decision 514: a zoning legend swatch, homes' colour marked as the map
+/// marks an empty zoned cell of `outlook` (``ZoneOutlook``).
+private struct ZoneOutlookSwatch: View {
+    let outlook: ZoneOutlook
+
+    var body: some View {
+        Canvas { context, size in
+            let rect = CGRect(origin: .zero, size: size)
+            context.fill(Path(rect), with: .color(Color(CityMap.zoneColor(.residential))))
+            var lines = Path()
+            for k in stride(from: -size.height, through: size.width, by: 4) {
+                switch outlook {
+                case .builds, .tooFar: break
+                case .waitsForStation:
+                    lines.move(to: CGPoint(x: k, y: size.height))
+                    lines.addLine(to: CGPoint(x: k + size.height, y: 0))
+                case .notWanted:
+                    lines.move(to: CGPoint(x: k, y: size.height))
+                    lines.addLine(to: CGPoint(x: k + size.height, y: 0))
+                    lines.move(to: CGPoint(x: k, y: 0))
+                    lines.addLine(to: CGPoint(x: k + size.height, y: size.height))
+                }
+            }
+            if outlook == .tooFar {
+                context.fill(Path(rect), with: .color(Color(CityMap.tooFarColor).opacity(0.8)))
+            }
+            context.stroke(lines, with: .color(.white.opacity(0.9)), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 2))
+        .accessibilityHidden(true)
     }
 }

@@ -338,6 +338,48 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("build-legend-under-panel", app)
     }
 
+    /// Decision 514: the zoning layer's four outlooks on the zoning scene
+    /// (`ScreenshotScene.zoning`) and its legend: by the demo's town the
+    /// edge it can still build on, round the new station that waits for
+    /// trains, and the grey beyond any station's reach. For the screenshot
+    /// review of the pull request that marked them, not the website.
+    func testZoningOutlooks() {
+        let app = launch(extra: ["-screenshot-scene", "zoning"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let layers = app.buttons["map.quickLayer.more"]
+        layers.waitUntilSettled()
+        layers.tap()
+        XCTAssertTrue(app.switches["layer.stationNames"].appears(within: 10), "The layers sheet opens")
+        let row = app.switches["layer.zoning"]
+        XCTAssertTrue(scrollScreen(to: row, in: app), "The zoning row comes into view")
+        let zoning = row.switches.firstMatch
+        XCTAssertTrue(zoning.appears(within: 5))
+        for _ in 0..<3 where zoning.value as? String != "1" {
+            let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: zoning)
+            _ = XCTWaiter.wait(for: [hittable], timeout: 5)
+            zoning.tap()
+            let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: zoning)
+            _ = XCTWaiter.wait(for: [switched], timeout: 3)
+        }
+        XCTAssertEqual(zoning.value as? String, "1", "The zoning layer is on")
+        app.buttons["layer.done"].tap()
+        // The legend starts folded on a phone (decision 510): open it.
+        XCTAssertTrue(app.descendants(matching: .any)["map.populationLegend"].firstMatch.appears(within: 10), "The zoning legend shows")
+        let fold = app.buttons["map.legend.fold"]
+        if fold.appears(within: 5), fold.label == "展開圖例", fold.becomesHittable(within: 5) { fold.tap() }
+        XCTAssertTrue(app.descendants(matching: .any)["map.zoneOutlookLegend"].firstMatch.appears(within: 10), "The outlooks' key shows")
+        settle(seconds: 3)
+        keep("zoning-outlooks", app)
+        // One step out: the new station 1.5 km east and the far zones too.
+        let zoomOut = app.buttons["縮小"]
+        if zoomOut.appears(within: 5), zoomOut.becomesHittable(within: 3) {
+            zoomOut.tap()
+            settle(seconds: 3)
+            keep("zoning-outlooks-wide", app)
+        }
+    }
+
     /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
     /// on the real-world demo where the track climbs, with where people
     /// are shown: the ✓ pill, the banner after ✓ and the layer's key each

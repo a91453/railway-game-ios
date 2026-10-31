@@ -20,11 +20,21 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// has depots too, but takes minutes to build on a test runner.
     case depots
 
+    /// Decision 514: the demo map on its second morning with zones in each
+    /// outlook the zoning layer marks: by the demo's stations, which grew
+    /// last night, schools (which the city builds) and the use the city
+    /// wants least (not needed now); round a new station no train serves
+    /// yet (waits for its station); and further out than any station
+    /// reaches (too far). For the screenshot review of the pull request
+    /// that marked them.
+    case zoning
+
     /// The scene's world, its clock paused at the moment to show.
     public func make(in language: DisplayLanguage) -> GameWorld {
         switch self {
         case .freight: Self.freightWorld(in: language)
         case .depots: Self.depotsWorld(in: language)
+        case .zoning: Self.zoningWorld(in: language)
         }
     }
 
@@ -50,6 +60,39 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             try world.setLineDepots(line1.id, to: [westDepot])
         } catch {
             preconditionFailure("The depots screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Zoning
+
+    private static func zoningWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            // Past the first midnight, when the served stations grew.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(freightRunSeconds / 600))
+            let row = Int((world.bounds.height / 2) / Land.cellLength)
+            let column = Int((world.bounds.width / 2) / Land.cellLength)
+            // The use the city wants least, if it has more than it wants.
+            let levels = world.cityDemandLevels
+            let unwanted = [(Zone.residential, levels.homes), (.commercial, levels.shops), (.office, levels.work)]
+                .min { $0.1 < $1.1 }.map(\.0) ?? .residential
+            // The town fills the demo's stations' 800 m (some 13 cells), so
+            // only its edge is in reach: north of it, out past the reach,
+            // the unwanted use; west, schools.
+            try world.setZone(unwanted, rows: (row - 20)...(row - 10), columns: (column - 6)...(column + 6))
+            try world.setZone(.civic, rows: (row - 6)...(row + 6), columns: (column - 20)...(column - 10))
+            // A station 1.5 km east, no train serves yet, zoned round.
+            let east = Int64(column + 24) * Land.cellLength + Land.cellLength / 2
+            _ = try world.buildStation(
+                named: language.text("New Town", "新市鎮"), at: PlanPoint(x: east, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
+            )
+            try world.setZone(.residential, rows: (row - 4)...(row + 4), columns: (column + 20)...(column + 28))
+        } catch {
+            preconditionFailure("The zoning screenshot scene no longer builds: \(error)")
         }
         world.setSpeed(.normal)
         world.setSpeed(.paused)
