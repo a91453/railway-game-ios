@@ -141,9 +141,10 @@ extension GameSession {
     /// along it (`forward`) or back: through each node where the line runs
     /// straight on (one way on), to a place on an edge, or to a node when
     /// the place is nearer it than a split may be. `nil` where the line
-    /// ends, branches or climbs first. The new track leaves the turnout back
+    /// ends, branches or climbs first, or ends within a split's least piece
+    /// of the place (decision 507). The new track leaves the turnout back
     /// toward the platform.
-    func platformTrackTurnout(from edge: TrackEdgeID, at offset: Int64, forward: Bool, reach: Int64) -> PlatformTrackTurnout? {
+    func platformTrackTurnout(from edge: TrackEdgeID, at offset: Int64, forward: Bool, reach: Int64, in world: GameWorld) -> PlatformTrackTurnout? {
         var edge = edge, offset = offset, forward = forward, left = reach
         let spacing = NetworkBuilding.minimumSpacing
         for _ in 0..<64 {
@@ -156,12 +157,17 @@ extension GameSession {
                 let back = forward ? location.direction.reversed : location.direction
                 // At a node, the way along the edge toward the platform:
                 // into the edge from its `from` node, back along it from its
-                // `to` node, the other way round going forward.
+                // `to` node, the other way round going forward. Decision
+                // 507: not where the line ends, which would join the new
+                // track to the old one from the same side with nothing
+                // beyond, a dead end at that end of the platform track.
                 if distance < spacing, let node = world.network.node(current.from) {
+                    guard node.end(of: edge)?.exits.isEmpty == false else { return nil }
                     let leaving = forward ? geometry.startDirection.reversed : geometry.startDirection
                     return PlatformTrackTurnout(node: node.id, point: nil, position: node.position, leaving: leaving)
                 }
                 if current.length - distance < spacing, let node = world.network.node(current.to) {
+                    guard node.end(of: edge)?.exits.isEmpty == false else { return nil }
                     let leaving = forward ? geometry.endDirection : geometry.endDirection.reversed
                     return PlatformTrackTurnout(node: node.id, point: nil, position: node.position, leaving: leaving)
                 }
@@ -183,7 +189,7 @@ extension GameSession {
         -> Result<PlatformTrackPlan, PlatformTrackProblem>
     {
         guard world.trackPlatforms(of: platform.station).contains(platform) else { return .failure(.missing) }
-        return sidingPlan(on: platform.edge, from: platform.start, to: platform.end, spacing: layout.spacing, reach: layout.reach, side: side).map {
+        return sidingPlan(on: platform.edge, from: platform.start, to: platform.end, spacing: layout.spacing, reach: layout.reach, side: side, in: world).map {
             PlatformTrackPlan(platform: platform, near: $0.near, far: $0.far, beside: $0.beside, curves: $0.curves, structure: $0.structure)
         }
     }
@@ -191,14 +197,14 @@ extension GameSession {
     /// A track beside `edge` from `start` to `end`, `spacing` to the `side`,
     /// joined to it by a turnout `reach` beyond each end: a platform track's
     /// (above) or a passing loop's (decision 204).
-    func sidingPlan(on edgeID: TrackEdgeID, from start: Int64, to end: Int64, spacing: Int64, reach: Int64, side: PlatformTrackSide)
-        -> Result<Siding, PlatformTrackProblem>
+    func sidingPlan(on edgeID: TrackEdgeID, from start: Int64, to end: Int64, spacing: Int64, reach: Int64, side: PlatformTrackSide,
+                    in world: GameWorld) -> Result<Siding, PlatformTrackProblem>
     {
         guard let edge = world.network.edge(edgeID), let geometry = world.trackGeometry(of: edgeID),
               start >= 0, start < end, end <= geometry.length else { return .failure(.missing) }
         guard geometry.startHeight == geometry.endHeight, edge.profile == .uniform else { return .failure(.notLevel) }
-        guard let near = platformTrackTurnout(from: edgeID, at: start, forward: false, reach: reach),
-              let far = platformTrackTurnout(from: edgeID, at: end, forward: true, reach: reach)
+        guard let near = platformTrackTurnout(from: edgeID, at: start, forward: false, reach: reach, in: world),
+              let far = platformTrackTurnout(from: edgeID, at: end, forward: true, reach: reach, in: world)
         else { return .failure(.noRoom) }
         func besides(_ distance: Int64) -> (position: WorldCoordinate, way: PlanVector) {
             // The same parallel as a double track's and a depot's sidings.
@@ -218,7 +224,7 @@ extension GameSession {
         ))
     }
 
-    /// The parts of a siding (``sidingPlan(on:from:to:spacing:reach:side:)``).
+    /// The parts of a siding (``sidingPlan(on:from:to:spacing:reach:side:in:)``).
     struct Siding {
         let near: PlatformTrackTurnout
         let far: PlatformTrackTurnout

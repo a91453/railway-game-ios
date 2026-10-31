@@ -162,6 +162,9 @@ public final class GameSession {
     /// The levelling of the platform's stretch, kept likewise (see
     /// ``networkPlatformLevelling``).
     @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
+    /// The station layout's plan for the platform's stretch, kept likewise
+    /// (decision 507, ``networkStationLayoutPreview``).
+    @ObservationIgnored var stationLayoutMemo: StationLayoutMemo?
     /// How many times the network tool's previews (the track, a passing
     /// loop, a depot, a platform's levelling) were worked out (for the tests).
     @ObservationIgnored var buildPreviewsWorkedOut = 0
@@ -640,6 +643,10 @@ public final class GameSession {
     public internal(set) var networkEdgePoint: NetworkEdgePoint?
     /// How many cars the next platform is long enough for.
     public var platformCars = GameSession.defaultPlatformCars
+    /// How the next station's platforms and tracks are laid out (decision
+    /// 507): the player's pick, which ``networkStationLayout`` follows
+    /// where it fits the track picked.
+    public var stationLayout: StationLayout = .singleSide
     /// The station the next platform serves; `nil` builds a new station
     /// named ``stationName`` beside it.
     public var platformStationID: StationID?
@@ -668,6 +675,7 @@ public final class GameSession {
         didSet {
             networkPreviewMemo = nil
             platformLevellingMemo = nil
+            stationLayoutMemo = nil
             passingLoopMemo = nil
             depotYardMemo = nil
             lineOpeningMemo = nil

@@ -73,6 +73,14 @@ struct ContentView: View {
         runner.close3D = { withTransaction(cut) { screen.showsMap3D = false } }
     }
 
+    /// Decision 313: the 3D map's Build, onto the 2D map at `plan` with
+    /// the tools out; decision 517: back to `view` as building ends.
+    private func build(from plan: Map3DHandoff.Plan, leaving view: Map3DBuildReturn.Viewpoint) {
+        back(to: plan)
+        screen.map3DBuildReturn.leftForBuilding(from: view, in: ObjectIdentifier(session))
+        session.selectTool(.network)
+    }
+
     /// Decision 269: the 3D map closes at once onto the 2D map at `plan`.
     private func back(to plan: Map3DHandoff.Plan) {
         screen.map2DReturn = plan
@@ -143,20 +151,17 @@ struct ContentView: View {
                 // Decision 313: its "2D" button goes back to the 2D map
                 // where it looks, whichever way it opened, and Build there
                 // with the building tools out, as the dock's Build does.
+                // Decision 517: and back to this view as building ends.
                 Map3DPreviewScreen(session: session, handedOver: screen.map3DHandoff, openedAt: screen.map3DOpenedAt,
                                    departure: screen.map3DDeparture,
                                    close: { screen.showsMap3D = false },
                                    handBack: screen.map3DHandoff == nil ? nil : { plan in back(to: plan) },
                                    toMap2D: { plan in back(to: plan) },
-                                   build: { plan in
-                    back(to: plan)
-                    session.selectTool(.network)
-                }, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
+                                   build: { plan, view in build(from: plan, leaving: view) }, resumes: screen.map3DResume, ambientScreen: screen, endAmbient: { AmbientMode.end(session: session, screen: screen) })
             }
             // Decision 334: a station board's train is shown once.
-            .onChange(of: screen.showsMap3D) { _, shown in
-                if !shown { screen.map3DDeparture = nil }
-            }
+            // Decision 517: and building from the 3D map goes back there.
+            .modifier(Map3DShownWatch(session: session, screen: screen, shows3D: map3DQuality.shows3D))
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
             .onChange(of: pausesForImportantEvents) { _, _ in syncSecretarySettings() }
@@ -1298,6 +1303,39 @@ private struct DetailsCard: View {
     }
 }
 
+/// Decision 334: a station board's train is shown once. Decision 517:
+/// the 3D map opened some other way forgets a return from building; and
+/// building the 3D map's Build started ends back on the 3D map, where it
+/// was left, at once (as it left). Its own modifier, out of the game
+/// screen's long chain, which Xcode could not type-check in time.
+private struct Map3DShownWatch: ViewModifier {
+    let session: GameSession
+    let screen: GameScreenState
+    let shows3D: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: screen.showsMap3D) { _, shown in
+                if !shown {
+                    screen.map3DDeparture = nil
+                    screen.map3DResume = nil
+                } else {
+                    screen.map3DBuildReturn.forget()
+                }
+            }
+            .onChange(of: session.tool) { _, tool in
+                guard let view = screen.map3DBuildReturn.toolChanged(to: tool, in: ObjectIdentifier(session), shows3D: shows3D,
+                                                                     tutorialRuns: session.tutorial != nil) else { return }
+                screen.map3DHandoff = nil
+                screen.map3DOpenedAt = view.plan
+                screen.map3DResume = view
+                var cut = Transaction()
+                cut.disablesAnimations = true
+                withTransaction(cut) { screen.showsMap3D = true }
+            }
+    }
+}
+
 /// What the game screen shows besides the world: the panel that is open and
 /// the population and travel layer's opacity, hour and playback. View state
 /// only, never game state; it lives above the layout (``ContentView``), so
@@ -1367,6 +1405,11 @@ final class GameScreenState {
     /// Decision 313, later: the 2D map's view when the 3D button opened the
     /// 3D map, which opens over the same place.
     var map3DOpenedAt: Map3DHandoff.Plan?
+    /// Decision 517: whether building started from the 3D map's Build,
+    /// and the view it left there; and that view while the 3D map opens
+    /// at it again.
+    var map3DBuildReturn = Map3DBuildReturn()
+    var map3DResume: Map3DBuildReturn.Viewpoint?
     /// Decision 334: the train on a station's board the 3D map opened
     /// for, shown at its platform.
     var map3DDeparture: Map3DNextDeparture?
