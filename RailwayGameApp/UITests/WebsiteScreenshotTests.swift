@@ -353,9 +353,17 @@ final class WebsiteScreenshotTests: XCTestCase {
                 settle(seconds: 1)
             }
         }
-        let tag = app.descendants(matching: .any).matching(identifier: "map.stationTag").allElementsBoundByIndex.first(where: \.isHittable)
-        tag?.tap()
-        settle(seconds: 3)
+        // Yunlin's mark, two steps in on the demo's opening view (run
+        // 41163857917 showed it at about 39 % across and 36 % down; the
+        // station tags are not stations' marks).
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        let status = app.descendants(matching: .any)["inspector.status"].firstMatch
+        for offset in [CGVector(dx: 0.3875, dy: 0.36), CGVector(dx: 0.385, dy: 0.35), CGVector(dx: 0.39, dy: 0.37)] {
+            map.coordinate(withNormalizedOffset: offset).tap()
+            settle(seconds: 2)
+            if status.exists, status.label.hasPrefix("車站") { break }
+        }
+        settle(seconds: 2)
         keep("station-card", app)
         XCTAssertTrue(app.descendants(matching: .any)["inspector.status"].firstMatch.appears(within: 5), "The selection card shows")
     }
