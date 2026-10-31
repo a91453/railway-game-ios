@@ -363,9 +363,15 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle(seconds: 2)
             if status.exists, status.label.hasPrefix("車站") { break }
         }
-        settle(seconds: 2)
+        // The card is in the side panel, which a tap on a station leaves
+        // closed (run 41165522130): open it.
+        let controls = app.buttons["controls.toggle"]
+        if controls.appears(within: 5), controls.becomesHittable(within: 2) {
+            controls.tap()
+        }
+        settle(seconds: 3)
         keep("station-card", app)
-        XCTAssertTrue(app.descendants(matching: .any)["inspector.status"].firstMatch.appears(within: 5), "The selection card shows")
+        XCTAssertTrue(status.appears(within: 5), "The selection card shows")
     }
 
     /// The company's goals on a blank new game (decisions 181 and 183): the
