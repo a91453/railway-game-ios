@@ -20,11 +20,9 @@ final class DemoSightsAndTransfersTests: XCTestCase {
     func testTheRealWorldDemoHasItsSightsAndTransfers() throws {
         let world = RealWorldDemo.make(in: .traditionalChinese, railways: try BundledRealData.railways())
         let sights = try XCTUnwrap(world.tourism?.attractions.map(\.name))
-        print("real-world demo sights:", sights)
         XCTAssertGreaterThan(sights.count, 1)
         XCTAssertTrue(world.realTransfers)
         let points = try transfers(of: world)
-        print("real-world demo transfers:", points.sorted { $0.key < $1.key })
         XCTAssertFalse(points.isEmpty)
     }
 
@@ -33,7 +31,6 @@ final class DemoSightsAndTransfersTests: XCTestCase {
         XCTAssertGreaterThan(world.tourism?.attractions.count ?? 0, 1)
         XCTAssertTrue(world.realTransfers)
         let points = try transfers(of: world)
-        print("high-speed demo transfers:", points.sorted { $0.key < $1.key })
         XCTAssertFalse(points.isEmpty)
     }
 
@@ -42,7 +39,6 @@ final class DemoSightsAndTransfersTests: XCTestCase {
         XCTAssertGreaterThan(world.tourism?.attractions.count ?? 0, 1)
         XCTAssertTrue(world.realTransfers)
         let points = try transfers(of: world)
-        print("TRA demo transfers:", points.sorted { $0.key < $1.key })
         XCTAssertFalse(points.isEmpty)
     }
 
