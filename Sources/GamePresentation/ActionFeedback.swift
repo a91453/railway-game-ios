@@ -82,9 +82,9 @@ public struct FareFloatBoard: Hashable, Sendable {
         /// When it appeared, in the caller's seconds.
         public let born: Double
 
-        /// "+$12", "+$13.4k".
-        public var text: String {
-            "+" + TrainRoster.shortMoney(amount)
+        /// "+NT$12", "+NT$13.4k", "+NT$1.3萬".
+        public func text(in language: DisplayLanguage) -> String {
+            "+" + TrainRoster.shortMoney(amount, in: language)
         }
     }
 

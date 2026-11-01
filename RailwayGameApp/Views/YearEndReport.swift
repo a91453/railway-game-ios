@@ -11,11 +11,13 @@ import SwiftUI
 /// held sideways: "$ 3,269,8" above "58"). Where the titles and the full
 /// amounts do not fit on one line, each title goes above its amounts; where
 /// even the full amounts do not fit beside each other, they are shown short
-/// (``StatementRow/amountText(_:short:)``).
+/// (``StatementRow/amountText(_:short:in:)``).
 struct StatementGrid: View {
     let rows: [StatementRow]
     let currentTitle: String
     let previousTitle: String?
+    /// For the short amounts (decision 523, continued: 萬 in Chinese).
+    let language: DisplayLanguage
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -115,7 +117,7 @@ struct StatementGrid: View {
     }
 
     private func amount(_ money: Money?, _ style: StatementRow.Style, short: Bool) -> some View {
-        Text(verbatim: StatementRow.amountText(money, short: short))
+        Text(verbatim: StatementRow.amountText(money, short: short, in: language))
             .lineLimit(1)
             .minimumScaleFactor(0.8)
             .foregroundStyle(style != .item && (money ?? .zero) < .zero ? Theme.error : Theme.textPrimary)
@@ -149,7 +151,7 @@ struct YearEndReport: View {
             }
             Section {
                 StatementGrid(rows: statement.income.incomeStatementRows(previous: previous?.income, in: language),
-                              currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language))
+                              currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language), language: language)
             } header: {
                 Text(verbatim: language.text("Income statement", "損益表"))
             }
@@ -159,13 +161,13 @@ struct YearEndReport: View {
                                   closingCash: unlimitedFunds ? nil : (statement.closing.cash, previous?.closing.cash),
                                   in: language
                               ),
-                              currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language))
+                              currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language), language: language)
             } header: {
                 Text(verbatim: language.text("Cash flows", "現金流量表"))
             }
             Section {
                 StatementGrid(rows: statement.closing.rows(previous: previous?.closing, in: language),
-                              currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language))
+                              currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language), language: language)
             } header: {
                 Text(verbatim: language.text("Balance sheet at year end", "年底資產負債表"))
             } footer: {

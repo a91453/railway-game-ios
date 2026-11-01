@@ -31,8 +31,8 @@ public struct TripSettlements: Equatable, Sendable {
         /// "Taipei → Hsinchu".
         public var routeText: String { "\(from) → \(to)" }
 
-        /// "+$13.4k".
-        public var fareText: String { "+" + TrainRoster.shortMoney(fare) }
+        /// "+NT$13.4k", "+NT$1.3萬".
+        public func fareText(in language: DisplayLanguage) -> String { "+" + TrainRoster.shortMoney(fare, in: language) }
 
         /// "+6 min" for a late trip, else `nil`.
         public func lateText(in language: DisplayLanguage) -> String? {
