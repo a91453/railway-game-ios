@@ -74,7 +74,10 @@ END_TRACKS = 5
 # Decision 489: the lines bought with a real depot past an end station
 # (`RealLineDepotSite` in Sources/GamePresentation/RealLineDepot.swift),
 # by their game id: that end station.
-DEPOT_ENDS = {"ntdlrt:V": "崁頂"}
+# Decision 535 (PR W): the Wenhu Line runs on into a depot past each end,
+# the Muzha depot past Taipei Zoo and the Neihu depot past Taipei Nangang
+# Exhibition Center.
+DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館")}
 # The tracks such a line's end station may have: its own and loops three
 # deep either side.
 DEPOT_END_TRACKS = 7
@@ -98,7 +101,7 @@ LINES = [
     # (docs/HANDOFF.md).
     # Decision 400, 10j-3: the metros. Each is tried; those whose ends
     # stand more trains at once than the game lays tracks are left out
-    # and say so. Not the Wenhu Line (trtc:BR, its 35 m curves).
+    # and say so.
     ("trtc", "R", None, None),
     ("trtc", "R_XBT", None, None),
     ("trtc", "G", None, None),
@@ -107,6 +110,8 @@ LINES = [
     ("trtc", "O_LUZHOU", None, None),
     ("trtc", "BL", None, None),
     ("trtc", "Y", None, None),
+    # Decision 535 (PR W): the Wenhu Line, with its two depots.
+    ("trtc", "BR", None, None),
     ("tymc", "A", None, None),
     ("krtc", "KR", None, None),
     ("krtc", "KO", None, None),
@@ -194,11 +199,11 @@ def parked(tool, found, days, stops, line, prompt=True):
     return line, None
 
 
-def depot_tracks(tool, found, start, stops, depot):
+def depot_tracks(tool, found, start, stops, depots):
     """Decision 489: the most trainsets standing at each station at once
     on any weekday of a line bought with a depot beside its end station
-    `depot`, played from `start` as `tool.tracks` does but with the trains
-    standing at `depot` overnight in the depot, and each train counted at
+    in `depots`, played from `start` as `tool.tracks` does but with the
+    trains standing at those ends overnight in their depots, and each train counted at
     a station only from `LOOKAHEAD` before its next run there (till then
     the game keeps it in the depot); one with no further run there that
     day goes to the depot at once. The positioning runs taking the other
@@ -208,7 +213,7 @@ def depot_tracks(tool, found, start, stops, depot):
     for day in range(7):
         idle = collections.defaultdict(list)
         for station, count in start.items():
-            if station != depot:
+            if station not in depots:
                 idle[station] += [0] * count
         spans = collections.defaultdict(list)
         for run in tool.day_of(found, day):
@@ -250,9 +255,9 @@ def main(folder, out):
         game_id = f"{system}:{line_id}"
         label = game_id + (f" after {system}:{after}" if after else "")
         line, problem = tool.line_runs({"trains": found}, days, stops)
-        depot = DEPOT_ENDS.get(game_id)
-        if depot and not problem:
-            line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, depot)
+        depots = DEPOT_ENDS.get(game_id)
+        if depots and not problem:
+            line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, depots)
             ends = (stops[0], stops[-1])
             worst = {s: n for s, n in line["tracks"].items() if n > (DEPOT_END_TRACKS if s in ends else 3)}
             if worst:

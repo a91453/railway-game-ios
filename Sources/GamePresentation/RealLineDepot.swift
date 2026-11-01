@@ -73,8 +73,38 @@ struct RealLineDepotSite: Sendable {
         sidings: 9, beyond: "崁頂", compact: true
     )
 
-    static func site(of line: String) -> RealLineDepotSite? {
-        [sanxia, danhai].first { $0.line == line }
+    /// Decision 535 (PR W): the Muzha depot (木柵機廠, way 71266521) of
+    /// the Wenhu Line, past Taipei Zoo: where the line's two tracks end and
+    /// its leads begin (ways 194634022 and 194633990, the leads 307449195
+    /// and 307449196), and the middle of its stabling tracks' near ends and
+    /// of their far ends (ways 71380030, 71380035 and 71380037;
+    /// `tools/rail-depots`). Its sidings hold the trains the real timetable
+    /// leaves at Taipei Zoo overnight, one each.
+    static let muzha = RealLineDepotSite(
+        line: "trtc:BR", english: "Muzha Depot", chinese: "木柵機廠",
+        junction: (24.998574, 121.579812),
+        yard: ((25.001219, 121.584390), (25.001219, 121.585408)),
+        sidings: 22, beyond: "動物園", compact: false
+    )
+
+    /// Decision 535 (PR W): the Neihu depot (內湖機廠, way 499801370) of
+    /// the Wenhu Line, past Taipei Nangang Exhibition Center: where the
+    /// line's two tracks end past its platform and its leads begin (ways
+    /// 310746644 and 310746645, the leads 499750991 and 127958010), and the
+    /// middle of its stabling tracks' near ends and of their far ends (ways
+    /// 499756245 to 499756259). Its sidings hold the trains the real
+    /// timetable leaves at Nangang Exhibition Center overnight, one each.
+    static let neihu = RealLineDepotSite(
+        line: "trtc:BR", english: "Neihu Depot", chinese: "內湖機廠",
+        junction: (25.055245, 121.618427),
+        yard: ((25.058961, 121.620931), (25.059392, 121.620496)),
+        sidings: 22, beyond: "南港展覽館", compact: false
+    )
+
+    /// The real depots line `line` is bought with (decision 535: the
+    /// Wenhu Line has one past each end).
+    static func sites(of line: String) -> [RealLineDepotSite] {
+        [sanxia, danhai, muzha, neihu].filter { $0.line == line }
     }
 
     func name(in language: DisplayLanguage) -> String {
