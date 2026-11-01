@@ -57,8 +57,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(open3D.becomesHittable(within: 10))
         open3D.tap()
         XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
-        waitForPicture(timeout: 150)
-        settle(seconds: 5)
+        // The size check of waitForPicture passed the spinner here; wait
+        // for the spinner itself to go.
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 240), "The 3D map is drawn")
+        settle(seconds: 8)
         keep("freight-3d", app)
     }
 

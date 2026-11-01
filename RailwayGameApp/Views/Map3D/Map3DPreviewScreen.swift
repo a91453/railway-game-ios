@@ -111,6 +111,7 @@ struct Map3DPreviewScreen: View {
             if built == nil || !modelsReady {
                 ProgressView()
                     .controlSize(.large)
+                    .accessibilityIdentifier("map3D.loading")
             }
             VStack {
                 HStack(alignment: .top) {
