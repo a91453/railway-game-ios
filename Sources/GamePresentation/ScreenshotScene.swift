@@ -62,7 +62,6 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         var world = DemoWorld.make(in: language)
         do throws(GameError) {
             guard let station = world.stations.first else { throw .unknownStation(StationID(rawValue: 1)) }
-            world.economy.earn(Money(10_000_000_000))
             // The first sites round the station a building can stand on.
             let offsets: [(Int64, Int64)] = [(0, -6_000), (0, 6_000), (-6_000, -6_000), (6_000, -6_000), (-6_000, 6_000), (6_000, 6_000),
                                              (0, -10_000), (0, 10_000), (-10_000, 0), (10_000, 0)]
