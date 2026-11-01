@@ -223,13 +223,15 @@ public final class GameLauncher {
     /// the tutorial: lesson 1 at once, the game being played kept in the
     /// saves first, or each first-line step named.
     public func chooseFirstLineGuide(_ choice: FirstLineGuide.Choice) {
+        // Review L2-1: `startLesson` writes the game being played first.
+        // Review L3-4: the answer is kept only once lesson 1 has started,
+        // so a game that could not be written, and is kept, still has the
+        // station master's offer.
+        if choice == .tutorial, !startLesson(Lesson.all[0]) { return }
         if preferences.firstLineGuide != choice {
             preferences.firstLineGuide = choice
             savePreferences()
         }
-        guard choice == .tutorial else { return }
-        // Review L2-1: `startLesson` writes the game being played first.
-        startTutorial()
     }
 
     /// Whether the start screen shows the "What's New" card (decision
@@ -1117,19 +1119,22 @@ public final class GameLauncher {
 
     /// Starts `lesson` (decision 266): its game, with its guide's first step
     /// on screen when it has a guide.
-    public func startLesson(_ lesson: Lesson) {
+    /// Returns whether the lesson's game was started.
+    @discardableResult
+    public func startLesson(_ lesson: Lesson) -> Bool {
         // Reviews L2-1 and L3-1: the game being played is written first, as
         // Back to Start writes it, so the lesson leaves it in the saves,
         // whichever way the lesson was started (the station master, the
         // goals panel, a lesson result's next lesson); one that cannot be
         // written is not left.
-        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
-        guard begin(.newGame(lesson: lesson), keepingAutosave: true) else { return }
+        guard session == nil || autosaveCurrentGame(refreshing: false) else { return false }
+        guard begin(.newGame(lesson: lesson), keepingAutosave: true) else { return false }
         var plays = preferences.lessonPlays ?? [:]
         plays[lesson.id, default: LessonPlay()].starts += 1
         preferences.lessonPlays = plays
         savePreferences()
         if !lesson.guide.isEmpty { session?.startTutorial() }
+        return true
     }
 
     /// Keeps the stars `world`'s lesson was passed with, if more than before;

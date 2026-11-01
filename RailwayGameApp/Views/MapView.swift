@@ -975,11 +975,13 @@ struct MapView: View {
                 // Decision 174: the sights, with their stars. Decision 510:
                 // under the bubbles, so a bubble over a sight takes the tap.
                 .overlay(alignment: .topLeading) {
-                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear,
+                                       clearTop: max(clear.top, topColumnDepth))
                 }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
-                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
+                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
+                                    clearTop: max(clear.top, topColumnDepth))
                         .ambientHidden(screen.ambient != nil)
                 }
                 // Decision 246: where the city's requests point.
@@ -988,7 +990,8 @@ struct MapView: View {
                 }
                 // Decision 119: the station selected, looked at.
                 .overlay(alignment: .topLeading) {
-                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear)
+                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear,
+                                      clearTop: max(clear.top, topColumnDepth))
                 }
                 // Decision 117: something just put up.
                 .overlay(alignment: .topLeading) {

@@ -259,6 +259,12 @@ struct TracePlan {
     /// along the real line, each point at the height the tool would lay
     /// it on the ground, for the card to show.
     var refusedWay: [WorldCoordinate] = []
+    /// Decision 521's second sequel: the preview copy with exactly the
+    /// first ``buildable`` stretches built on it, as the trace found them,
+    /// for the preview to price instead of building the chain again; `nil`
+    /// where GameCore refused an edge (a refused edge may leave its first
+    /// node in the copy) or the trace was put together from pieces.
+    var built: GameWorld?
 
     var stopped: Bool { buildable < stretches.count || stopsAfter }
 }
@@ -574,6 +580,7 @@ extension GameSession {
         var built = 0
         var problem: String?
         var previous: TrackNodeID?
+        var refused = false
         let tightest = Self.traceMinimumRadius(ofSystem: lineSystem)
         for stretch in stretches {
             if let radius = Self.tightestRadius(of: stretch), radius < tightest {
@@ -596,10 +603,12 @@ extension GameSession {
                     "That track would be too steep. Mountain track may climb or fall at most 70 in 1000.",
                     "這段軌道太陡了。登山軌道的坡度最多 70‰。"
                 ) : error.playerMessage(building: next, in: planning, heights: heights, language: language)
+                refused = true
                 break
             }
         }
         var found = TracePlan(stretches: stretches, buildable: built, problem: problem)
+        if !refused { found.built = draft }
         found.platformStretches = spans.map { span in
             plan.distances.indices.dropLast().first {
                 abs(plan.distances[$0] - span.lowerBound) < 1 && abs(plan.distances[$0 + 1] - span.upperBound) < 1
@@ -685,7 +694,12 @@ extension GameSession {
         case .failure?:
             break
         case nil:
-            if !built.isEmpty, (try? apply(command, to: &draft)) != nil {
+            // Decision 521's second sequel: the copy the trace built the
+            // same chain on, not the chain built again.
+            if !built.isEmpty, let traced = plan.built {
+                draft = traced
+                cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+            } else if !built.isEmpty, (try? apply(command, to: &draft)) != nil {
                 cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
             }
         }

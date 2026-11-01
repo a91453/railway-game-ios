@@ -21,6 +21,9 @@ struct MapStationTagView: View {
     let viewport: ScreenSize
     /// What floats over the map's edges (``EnvironmentValues/mapInsets``).
     let insets: EdgeInsets
+    /// Where the map's clear part starts under the top bar and its column
+    /// (decision 477), for the bubbles' tile prices.
+    var clearTop: CGFloat?
     @Environment(\.mapDetailsOpen) private var detailsOpen
     @Environment(GameScreenState.self) private var screen
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -72,9 +75,9 @@ struct MapStationTagView: View {
             width: viewport.width - Double(insets.leading) - Double(insets.trailing) - 2 * margin,
             height: viewport.height - Double(insets.top) - Double(insets.bottom) - 2 * margin
         )
-        let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets).map(\.touchBox)
+        let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop).map(\.touchBox)
             // Decision 510: and the badge of the alerts not on the map.
-            + [MapAlertBubbles.badgeTouchBox(session: session, camera: camera, viewport: viewport, insets: insets)].compactMap { $0 }
+            + [MapAlertBubbles.badgeTouchBox(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop)].compactMap { $0 }
         // Decision 501: and, moved, off the other stations where it can.
         let stations = MapLabelPlacement.obstacles(MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport),
                                                    radius: MapArt.stationRadius(camera), own: (point.x, point.y))

@@ -607,6 +607,12 @@ public struct BuildingOverlay: Hashable, Sendable {
     /// colour (`nil` when it clears them).
     public var zoneDrag: PlanRect?
     public var zoneDragColor: PopTravel.RGB?
+    /// Decision 522's sequel: how opaque the zone's colour fills the drag,
+    /// near the legend's colour. At 0.35 over the dark map homes read as
+    /// shops, shops as offices and sights as public buildings; from 0.65
+    /// each reads as its own, and 0.75 leaves a margin while the map still
+    /// shows faintly through.
+    public static let zoneDragFillOpacity = 0.75
     /// Decision 522: the cells of ``zoneDrag`` no station's catchment
     /// reaches, which the city would never build on, as runs along rows.
     public var zoneDragOutOfReach: [PlanRect] = []

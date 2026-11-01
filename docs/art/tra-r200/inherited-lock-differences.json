@@ -1,0 +1,376 @@
+{
+  "baseline": "15759aa207cc031fed54dbcc00a98d1a1f671fa8",
+  "status": "VERIFIED",
+  "existing_models": 835,
+  "differences": [
+    {
+      "id": "e200mingri-style-car",
+      "locked": {
+        "hash": "6247d707c1bfdf2c",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "89c4ac3b30d3f0fc",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "e200mingri-style-tail",
+      "locked": {
+        "hash": "46f6e3705b72555",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "2d86c51a3177c38d",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "light-set-emu3000-head",
+      "locked": {
+        "hash": "a46d46de986590d8",
+        "triangles": 496
+      },
+      "actual": {
+        "hash": "93a55abbf3d3973d",
+        "triangles": 496
+      }
+    },
+    {
+      "id": "light-set-emu3000-tail",
+      "locked": {
+        "hash": "ea82a910238c66dd",
+        "triangles": 506
+      },
+      "actual": {
+        "hash": "35e74169de55d2c4",
+        "triangles": 506
+      }
+    },
+    {
+      "id": "scenery-busStopPole",
+      "locked": null,
+      "actual": {
+        "hash": "3bff96f2cccef641",
+        "triangles": 58
+      }
+    },
+    {
+      "id": "scenery-postBoxes",
+      "locked": null,
+      "actual": {
+        "hash": "bbb71fc344060bd2",
+        "triangles": 108
+      }
+    },
+    {
+      "id": "set-E200CK-car",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-E200CK-tail",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-E500CK-car",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-E500CK-tail",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-emu3000-car",
+      "locked": {
+        "hash": "a11a65f68fd83180",
+        "triangles": 5592
+      },
+      "actual": {
+        "hash": "4d2fe71ec0e677cf",
+        "triangles": 5592
+      }
+    },
+    {
+      "id": "set-emu3000-em6",
+      "locked": {
+        "hash": "a0925ea90550d424",
+        "triangles": 5456
+      },
+      "actual": {
+        "hash": "74048dfbcdfbca5b",
+        "triangles": 5456
+      }
+    },
+    {
+      "id": "set-emu3000-ep7",
+      "locked": {
+        "hash": "e772f6b09e38a521",
+        "triangles": 5832
+      },
+      "actual": {
+        "hash": "98b9dbdd1939afc6",
+        "triangles": 5832
+      }
+    },
+    {
+      "id": "set-emu3000-ep10",
+      "locked": {
+        "hash": "f1ef266dc8369346",
+        "triangles": 5968
+      },
+      "actual": {
+        "hash": "e453b796347d7319",
+        "triangles": 5968
+      }
+    },
+    {
+      "id": "set-emu3000-et",
+      "locked": {
+        "hash": "18a66070e97c408c",
+        "triangles": 5704
+      },
+      "actual": {
+        "hash": "2971ac0d17033c43",
+        "triangles": 5704
+      }
+    },
+    {
+      "id": "set-emu3000-head",
+      "locked": {
+        "hash": "b519a5bc93e4527",
+        "triangles": 8962
+      },
+      "actual": {
+        "hash": "a861643f224f49cf",
+        "triangles": 8962
+      }
+    },
+    {
+      "id": "set-emu3000-panto",
+      "locked": {
+        "hash": "434011a058dfb0a5",
+        "triangles": 5832
+      },
+      "actual": {
+        "hash": "e5f0588393f5c66a",
+        "triangles": 5832
+      }
+    },
+    {
+      "id": "set-emu3000-tail",
+      "locked": {
+        "hash": "aec24e038833fb97",
+        "triangles": 8962
+      },
+      "actual": {
+        "hash": "3c2182d899c09503",
+        "triangles": 8962
+      }
+    },
+    {
+      "id": "set-emu3000Far-car",
+      "locked": {
+        "hash": "309559e60aefc529",
+        "triangles": 2560
+      },
+      "actual": {
+        "hash": "cc63c05ba12288b1",
+        "triangles": 2560
+      }
+    },
+    {
+      "id": "set-emu3000Far-em6",
+      "locked": {
+        "hash": "75fc73c42f1c2572",
+        "triangles": 2472
+      },
+      "actual": {
+        "hash": "271b8144c5b340d3",
+        "triangles": 2472
+      }
+    },
+    {
+      "id": "set-emu3000Far-ep7",
+      "locked": {
+        "hash": "d822ebfa063f4964",
+        "triangles": 2688
+      },
+      "actual": {
+        "hash": "79fc5e4e22551c79",
+        "triangles": 2688
+      }
+    },
+    {
+      "id": "set-emu3000Far-ep10",
+      "locked": {
+        "hash": "625333991309e9e1",
+        "triangles": 2776
+      },
+      "actual": {
+        "hash": "b8b9aac7aca0fa5d",
+        "triangles": 2776
+      }
+    },
+    {
+      "id": "set-emu3000Far-et",
+      "locked": {
+        "hash": "f19e1d848782a42e",
+        "triangles": 2624
+      },
+      "actual": {
+        "hash": "8e97cd296034f2ee",
+        "triangles": 2624
+      }
+    },
+    {
+      "id": "set-emu3000Far-head",
+      "locked": {
+        "hash": "c029467de7e9018e",
+        "triangles": 3834
+      },
+      "actual": {
+        "hash": "662e1aff98e262dc",
+        "triangles": 3834
+      }
+    },
+    {
+      "id": "set-emu3000Far-panto",
+      "locked": {
+        "hash": "7a098677d8cec03c",
+        "triangles": 2688
+      },
+      "actual": {
+        "hash": "33a204c793707ee9",
+        "triangles": 2688
+      }
+    },
+    {
+      "id": "set-emu3000Far-tail",
+      "locked": {
+        "hash": "e7032f429defc8aa",
+        "triangles": 3834
+      },
+      "actual": {
+        "hash": "8b2a43ae19b24984",
+        "triangles": 3834
+      }
+    },
+    {
+      "id": "set-MINGRI-car",
+      "locked": {
+        "hash": "6247d707c1bfdf2c",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "89c4ac3b30d3f0fc",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-MINGRI-tail",
+      "locked": {
+        "hash": "46f6e3705b72555",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "2d86c51a3177c38d",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-R100CK-car",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-R100CK-tail",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-R200CK-car",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-R200CK-tail",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    },
+    {
+      "id": "set-SUMMER-car",
+      "locked": {
+        "hash": "9f2aebebb2477e4b",
+        "triangles": 6476
+      },
+      "actual": {
+        "hash": "7c585dfaaf454fdb",
+        "triangles": 6476
+      }
+    },
+    {
+      "id": "set-SUMMER-tail",
+      "locked": {
+        "hash": "ac77eb322d524d1a",
+        "triangles": 6500
+      },
+      "actual": {
+        "hash": "197686ab7443eee2",
+        "triangles": 6500
+      }
+    }
+  ],
+  "note": "Computed from unchanged main. This task does not repair other model locks."
+}
