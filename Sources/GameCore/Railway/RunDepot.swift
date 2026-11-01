@@ -157,14 +157,18 @@ extension GameWorld {
         var candidates: [Int] = []
         for station in stations {
             // Decision 535: on a ring, the trains facing each way round
-            // against the runs going that way.
-            for way in runWays(of: line) {
-                let waiting = runTrainsWaiting(of: line, at: station, way: way)
-                let wanted = pendingRunStarts(of: line, from: station, way: way).count { $0 <= horizon }
+            // against the runs going that way; a train one way keeps for
+            // its runs (one facing the other way among them, turned round)
+            // is not one too many the other way.
+            let counted = runWays(of: line).map { way in
+                (way, runTrainsWaiting(of: line, at: station, way: way), pendingRunStarts(of: line, from: station, way: way).count { $0 <= horizon })
+            }
+            let kept = Set(counted.flatMap { $0.1.prefix($0.2) })
+            for (_, waiting, wanted) in counted {
                 // Decision 296: a train out of a depot for a run due here is
                 // not one too many until that run leaves or is dropped.
                 let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
-                var leaving = waiting.count > wanted ? Array(waiting.suffix(waiting.count - wanted).reversed()) : []
+                var leaving = waiting.count > wanted ? Array(waiting.suffix(waiting.count - wanted).reversed()).filter { !kept.contains($0) } : []
                 // Decision 297: under traffic control, while no run from here
                 // is due, a train in the way of a service waiting for its
                 // route goes in too.

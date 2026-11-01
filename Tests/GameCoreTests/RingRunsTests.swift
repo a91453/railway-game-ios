@@ -320,6 +320,21 @@ final class RingRunsTests: XCTestCase {
         XCTAssertEqual(world.stationsStoppedAt(by: train), [depotStation])
     }
 
+    /// Only the outer way has runs from A, two laps at 06:00 and 06:10,
+    /// and the train at A facing the inner way is the spare for the
+    /// second: it stands at A from 05:00, is not sent into the depot G
+    /// for want of an inner run (and out again), and takes the 06:10 lap
+    /// turned round where it stands.
+    func testATrainFacingAWayWithoutRunsTakesTheOtherWaysRunTurnedRound() throws {
+        var world = try makeWorld(runs: [runs[1], run(from: 0, to: 0, .outer, legs: 6, at: 21_600)], minute: 300, depot: true)
+        let sent = try sentOut(&world, ticks: 2 * 60)
+        XCTAssertEqual(try XCTUnwrap(sent[clockwise]).map(names), ["AFEDCBA", "AG"])
+        XCTAssertEqual(try XCTUnwrap(sent[clockwise])[0].first?.reverses, true)
+        XCTAssertEqual(seconds(try XCTUnwrap(sent[clockwise])[0]).first?.last, 22_200)
+        XCTAssertEqual(try XCTUnwrap(sent[anticlockwise]).map(names), ["AFEDCBA"])
+        XCTAssertEqual(seconds(try XCTUnwrap(sent[anticlockwise])[0]).first?.last, 21_600)
+    }
+
     // MARK: - Riders
 
     /// With only the inner lap from A, a rider from E to B goes the inner
