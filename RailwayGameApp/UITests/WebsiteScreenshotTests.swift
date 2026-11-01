@@ -183,8 +183,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(tag.appears(within: 30), "The first station is picked")
         XCTAssertTrue(tag.becomesHittable(within: 10))
         tag.tap()
+        // The tag opens the station's details; their "Station…" opens the panel.
+        let open = app.buttons["inspector.ridership"].firstMatch
+        XCTAssertTrue(open.appears(within: 10), "A tap on the tag opens its station's details")
+        XCTAssertTrue(open.becomesHittable(within: 10))
+        open.tap()
         let jump = app.buttons["station.jump"].firstMatch
-        XCTAssertTrue(jump.appears(within: 10), "A tap on the tag opens its station's panel")
+        XCTAssertTrue(jump.appears(within: 10), "Station… opens the station's panel")
         jump.tap()
         let riders = app.buttons["station.jump.riders"].firstMatch
         XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
