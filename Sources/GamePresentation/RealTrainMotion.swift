@@ -400,10 +400,6 @@ public struct RealTrainTraffic: Sendable {
         public let stationKm: [Double]
         let ringKm: Double?
         let schedule: Schedule
-        /// Decision 511: the DR3100 diesel express's runs along the line
-        /// (``dr3100Runs(_:stationKm:in:)``), every day besides the
-        /// line's own trains.
-        var dr3100: Runs? = nil
     }
 
     /// Runs sorted by start, and the longest, to find quickly those running
@@ -411,10 +407,27 @@ public struct RealTrainTraffic: Sendable {
     struct Runs: Sendable {
         let runs: [RealTrainRun]
         let longest: Int
+        /// Each run's key (decision 532: its model and number), when the
+        /// runs have their own; otherwise a run is keyed by its index.
+        let keys: [String]?
 
         init(_ runs: [RealTrainRun]) {
             self.runs = runs.sorted { $0.start < $1.start }
             longest = runs.map { $0.end - $0.start }.max() ?? 0
+            keys = nil
+        }
+
+        /// Runs each with its own key.
+        init(keyed: [(key: String, run: RealTrainRun)]) {
+            let sorted = keyed.sorted { ($0.run.start, $0.key) < ($1.run.start, $1.key) }
+            runs = sorted.map(\.run)
+            keys = sorted.map(\.key)
+            longest = runs.map { $0.end - $0.start }.max() ?? 0
+        }
+
+        /// Run `index`'s key.
+        func key(_ index: Int) -> String {
+            keys?[index] ?? "\(index)"
         }
 
         /// The indices of the runs on the road at `second`.
@@ -443,6 +456,9 @@ public struct RealTrainTraffic: Sendable {
         /// One train's round trip, repeated as the headway gives
         /// (`posPeriodic`).
         case headway(RealTrainRun, period: Int)
+        /// Decision 532: each day of a week's runs, by
+        /// ``RealWeekTimetable/bit(of:)`` (Taiwan Railway's every train).
+        case week([Runs])
     }
 
     /// The lines that come onto the map.
@@ -453,7 +469,8 @@ public struct RealTrainTraffic: Sendable {
     /// Taiwan Railway's is the game's own (decision 304): the site has
     /// none, and 55 km/h with 25 seconds at each station takes a train from
     /// Keelung to Zhunan (125.6 km, 37 stations) in about 2 h 32 min, as a
-    /// local train does.
+    /// local train does. Decision 532: only for a TRA line its week of
+    /// trains (``traSchedule``) has none on, or without that file.
     static let speedKmh: [String: Double] = [
         "trtc": 34, "tymc": 45, "ntdlrt": 25, "ntalrt": 25, "sanying": 34, "krtc": 36, "tmrt": 32, "tra": 55,
     ]
@@ -465,7 +482,8 @@ public struct RealTrainTraffic: Sendable {
 
     /// The lines of `operations` that come within `metres` of `frame`'s
     /// map, each with the trains its data has: a metro's timetable, the
-    /// High Speed Rail's day of trains, or Taiwan Railway's headways.
+    /// High Speed Rail's day of trains, or Taiwan Railway's week of every
+    /// train (decision 532; its headways without that file).
     public init(operations: RealRailwayOperations, frame: RealWorldFrame, bounds: WorldBounds, bought: Set<String> = [], margin metres: Double = 2_000) {
         let half = RealWorldFrame.halfExtent(of: bounds)
         let corners = [(-1.0, -1.0), (1.0, 1.0)].map { sx, sy in
@@ -518,7 +536,9 @@ public struct RealTrainTraffic: Sendable {
             ?? RealRailways.RGB(red: 128, green: 128, blue: 128)
 
         let schedule: Schedule
-        if let timetable = operations.timetable(forSystem: system)?.lines[line.id] {
+        if system == "tra", let week = traWeek(line, stationKm: stationKm, in: operations) {
+            schedule = week
+        } else if let timetable = operations.timetable(forSystem: system)?.lines[line.id] {
             var sets: [String: Runs] = [:]
             for (name, trips) in timetable.sets {
                 sets[name] = Runs(trips.compactMap { RealTrainRun(trip: $0, line: line, stationKm: stationKm) })
@@ -539,33 +559,74 @@ public struct RealTrainTraffic: Sendable {
         } else {
             return nil
         }
-        return Line(system: system, line: line, color: color, shape: shape, stationKm: stationKm, ringKm: ringKm, schedule: schedule,
-                    dr3100: system == "tra" ? dr3100Runs(line, stationKm: stationKm, in: operations) : nil)
+        return Line(system: system, line: line, color: color, shape: shape, stationKm: stationKm, ringKm: ringKm, schedule: schedule)
     }
 
-    /// Decision 511: the scheduled day of the trains the DR3100 diesel
-    /// express runs (`tra-dr3100-schedule.json`, the TRA's timetable from
-    /// 2026-10-16: 209, 221, 238 and 246 between Shulin and Hualien).
-    public static let dr3100Schedule = "tra-dr3100"
-    /// What the keys of their places begin with
-    /// (``places(of:at:on:dayBefore:)``).
-    static let dr3100Prefix = "dr3100#"
+    /// Decision 532: the week of Taiwan Railway's every train
+    /// (`tra-schedule.json`, ``RealWeekTimetable``); decision 511's DR3100
+    /// diesel express among them.
+    public static let traSchedule = "tra"
 
-    /// Decision 511: the part of each DR3100 train on Taiwan Railway's
-    /// `line`, by its stations' names, as the High Speed Rail's day is
-    /// laid on its line: the stations it calls at and passes there, if two
-    /// or more; `nil` when no such train comes along it.
-    static func dr3100Runs(_ line: RealOperationLine, stationKm: [Double], in operations: RealRailwayOperations) -> Runs? {
-        guard let day = operations.schedule(forSystem: dr3100Schedule) else { return nil }
+    /// Decision 532: the stretch of `train` on Taiwan Railway's `line`:
+    /// the longest run of its stops (those it calls at and those it
+    /// passes) that are each one of the line's stations, two or more, so
+    /// a train that leaves the line at a junction and comes back to
+    /// another of its stations (a Mountain line train at the Coast line's
+    /// two ends) is not laid on it. Of those, the stations it calls at
+    /// and the stretch's two ends: a train runs through a station it
+    /// passes without slowing (``RealRunProfile``). `nil` for none.
+    static func traRun(_ train: RealWeekTimetable.Train, kmByName: [String: Double]) -> RealTrainRun? {
+        var best: Range<Int> = 0..<0
+        var start: Int?
+        for index in 0...train.stops.count {
+            if index < train.stops.count, kmByName[train.stops[index].name] != nil {
+                if start == nil { start = index }
+            } else if let from = start {
+                if index - from > best.count { best = from..<index }
+                start = nil
+            }
+        }
+        guard best.count >= 2 else { return nil }
+        let stops = best.compactMap { index -> RealTrainRun.Stop? in
+            let stop = train.stops[index]
+            guard stop.stops || index == best.lowerBound || index == best.upperBound - 1, let km = kmByName[stop.name] else { return nil }
+            return RealTrainRun.Stop(km: km, arrival: stop.arrival, departure: stop.departure)
+        }
+        return RealTrainRun(stops: stops, performance: .of(system: "tra"))
+    }
+
+    /// Decision 532: Taiwan Railway's `line`'s trains of each day of the
+    /// week (``traRun(_:kmByName:)``), each keyed by its model and number
+    /// (``traKey(model:number:)``); `nil` without the file or when no
+    /// train comes along the line.
+    static func traWeek(_ line: RealOperationLine, stationKm: [Double], in operations: RealRailwayOperations) -> Schedule? {
+        guard let week = operations.weekSchedule(forSystem: traSchedule) else { return nil }
         var kmByName: [String: Double] = [:]
         for (station, km) in zip(line.stations, stationKm) where kmByName[station.name] == nil { kmByName[station.name] = km }
-        let runs = day.trains.compactMap { train -> RealTrainRun? in
-            let stops = train.stops.compactMap { stop in
-                kmByName[stop.name].map { RealTrainRun.Stop(km: $0, arrival: stop.arrivalSecond, departure: stop.departureSecond) }
-            }
-            return stops.count >= 2 ? RealTrainRun(stops: stops, performance: .of(system: "tra")) : nil
+        var byBit: [[(key: String, run: RealTrainRun)]] = Array(repeating: [], count: 8)
+        for train in week.trains {
+            guard let run = traRun(train, kmByName: kmByName) else { continue }
+            let key = traKey(model: train.model, number: train.number)
+            for bit in 0..<8 where train.dayBits & (1 << bit) != 0 { byBit[bit].append((key, run)) }
         }
-        return runs.isEmpty ? nil : Runs(runs)
+        guard byBit.contains(where: { !$0.isEmpty }) else { return nil }
+        return .week(byBit.map { Runs(keyed: $0) })
+    }
+
+    /// Decision 532: the key of a Taiwan Railway train's place, its model
+    /// and number (`自強(3000障)#123`), from which the 3D map draws its
+    /// formation (``Map3DRealTrains/formation(of:system:place:locked:)``).
+    static func traKey(model: String, number: String) -> String {
+        "\(model)#\(number)"
+    }
+
+    /// The model in a Taiwan Railway train's place key
+    /// (``traKey(model:number:)``), the day before's (`-`) too; `nil` for
+    /// any other key.
+    static func traModel(ofPlace key: String) -> String? {
+        guard let cut = key.lastIndex(of: "#") else { return nil }
+        let model = key[..<cut]
+        return String(model.hasPrefix("-") ? model.dropFirst() : model)
     }
 
     /// The site's `buildLineSchedule`: one train there and back (or once
@@ -609,7 +670,7 @@ public struct RealTrainTraffic: Sendable {
         func add(_ runs: Runs, at time: Double, prefix: String) {
             for index in runs.running(at: time) {
                 if let place = runs.runs[index].place(at: time, ringKm: line.ringKm) {
-                    found.append(("\(prefix)\(index)", place.km, place.towardKm))
+                    found.append(("\(prefix)\(runs.key(index))", place.km, place.towardKm))
                 }
             }
         }
@@ -620,6 +681,9 @@ public struct RealTrainTraffic: Sendable {
         case .daily(let runs):
             add(runs, at: second, prefix: "")
             add(runs, at: second + 86_400, prefix: "-")
+        case .week(let days):
+            add(days[RealWeekTimetable.bit(of: day)], at: second, prefix: "")
+            add(days[RealWeekTimetable.bit(of: dayBefore)], at: second + 86_400, prefix: "-")
         case .headway(let round, let period):
             guard Self.headwayHours.contains(Int(second)), period > 0,
                   let headway = RealTimetables.isPeak(second: Int(second)) ? line.line.peakHeadwaySec ?? line.line.offpeakHeadwaySec
@@ -630,11 +694,6 @@ public struct RealTrainTraffic: Sendable {
                 let time = (second + Double(k) * Double(period) / Double(count)).truncatingRemainder(dividingBy: Double(period))
                 if let place = round.place(at: time, ringKm: line.ringKm) { found.append(("h\(k)", place.km, place.towardKm)) }
             }
-        }
-        // Decision 511: and the DR3100's, every day.
-        if let runs = line.dr3100 {
-            add(runs, at: second, prefix: Self.dr3100Prefix)
-            add(runs, at: second + 86_400, prefix: "-" + Self.dr3100Prefix)
         }
         return found
     }
@@ -709,10 +768,45 @@ extension RealRailwayOperations {
     /// trains within ``DepartureBoard/soonSeconds`` (at most
     /// ``realTrainsPerWay``), or its next one when none is that soon; the
     /// data has no platforms, so a way stands for one.
+    /// Decision 532: Taiwan Railway's from its week of every train
+    /// (``RealTrainTraffic/traSchedule``), those that call at the station
+    /// on the day (or after midnight, the day before), once for the
+    /// station however many of its lines meet there, named ``traName``;
+    /// its headways only without that file.
     public func service(atStationNamed name: String, siteSystem: String, after second: Int, on day: RealServiceDay, dayBefore: RealServiceDay) -> [RealStationService] {
         let key = RealRailways.stationKey(name)
         var found: [RealStationService] = []
+        func next(_ times: [String: Set<Int>], system: String, line: String, lineName: String) {
+            let soon = second + Int(DepartureBoard.soonSeconds)
+            let trains = times.flatMap { destination, all -> [RealNextTrain] in
+                let sorted = all.sorted()
+                let listed = sorted.prefix { $0 <= soon }.prefix(Self.realTrainsPerWay)
+                return (listed.isEmpty ? sorted.prefix(1) : listed).map {
+                    RealNextTrain(system: system, line: line, lineName: lineName, destination: destination, second: $0)
+                }
+            }
+            .sorted { ($0.second, $0.destination) < ($1.second, $1.destination) }
+            if !trains.isEmpty { found.append(.next(trains)) }
+        }
         for system in orderedSystems where Self.siteSystems[system.id] == siteSystem {
+            if system.id == "tra", let week = weekSchedule(forSystem: RealTrainTraffic.traSchedule) {
+                guard let line = system.lines.first(where: { $0.stations.contains { RealRailways.stationKey($0.name) == key } }) else { continue }
+                // The station's names in the system's lines (the timetable
+                // names stations as they do), compared as they are.
+                let names = Set(system.lines.flatMap(\.stations).map(\.name).filter { RealRailways.stationKey($0) == key })
+                var times: [String: Set<Int>] = [:]
+                for train in week.trains {
+                    guard let last = train.stops.last, !names.contains(last.name) else { continue }
+                    let today = train.runs(on: day), yesterday = train.runs(on: dayBefore)
+                    guard today || yesterday else { continue }
+                    for stop in train.stops.dropLast() where stop.stops && names.contains(stop.name) {
+                        if today, stop.departure >= second { times[last.name, default: []].insert(stop.departure) }
+                        if yesterday, stop.departure - 86_400 >= second { times[last.name, default: []].insert(stop.departure - 86_400) }
+                    }
+                }
+                next(times, system: system.id, line: line.id, lineName: Self.traName)
+                continue
+            }
             for line in system.lines {
                 guard let index = line.stations.firstIndex(where: { RealRailways.stationKey($0.name) == key }) else { continue }
                 let lineName = Self.shortName(line.name)
@@ -746,16 +840,7 @@ extension RealRailwayOperations {
                     found.append(.headway(system: system.id, line: line.id, lineName: lineName, seconds: headway))
                     continue
                 }
-                let soon = second + Int(DepartureBoard.soonSeconds)
-                let trains = times.flatMap { destination, all -> [RealNextTrain] in
-                    let sorted = all.sorted()
-                    let listed = sorted.prefix { $0 <= soon }.prefix(Self.realTrainsPerWay)
-                    return (listed.isEmpty ? sorted.prefix(1) : listed).map {
-                        RealNextTrain(system: system.id, line: line.id, lineName: lineName, destination: destination, second: $0)
-                    }
-                }
-                .sorted { ($0.second, $0.destination) < ($1.second, $1.destination) }
-                if !trains.isEmpty { found.append(.next(trains)) }
+                next(times, system: system.id, line: line.id, lineName: lineName)
             }
         }
         return found
@@ -763,6 +848,10 @@ extension RealRailwayOperations {
 
     /// Decision 354: the most trains one way lists within the 15 minutes.
     public static let realTrainsPerWay = 3
+
+    /// Decision 532: what Taiwan Railway's next trains are listed under,
+    /// one line for a station however many of its lines meet there.
+    public static let traName = "臺鐵"
 
     /// A line's name without the stretch in brackets.
     static func shortName(_ name: String) -> String {

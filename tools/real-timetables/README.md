@@ -53,16 +53,18 @@ python3 -I tools/real-timetables/extract_metro_runs.py \
   - 三鶯線（頂埔—鶯桃福德，`sanying:LB`）：398 班、8 班回送、12 組車（過夜：頂埔 4、鶯桃福德 4，媽祖田、長壽山、國華、永吉公園各 1）。端點只有 5 條軌道，所以 4 組停在中間站的正線上；晚上把它們送過去的回送（`extract_branch_runs.facing`）從另一端開來，停在往較近端點的那一條、面向它（遊戲半夜擺車的樣子），並且在當天最後一班經過那站之後才到；較靠端點的那一站先送，另一班才不會開過停著的車。以前照「一進站就送」從近的端點開過去，停在反方向的正線上，擋住當晚最後幾班，整條線從第二天起停住（決策 400 的「量到的」10j-3）。
 - 時刻表更新時重跑，並重跑 `RealLineAcquisitionTests`。
 
-## DR3100 柴聯自強號的班次（決策 511）
+## 臺鐵一週的每一班車（決策 532）
 
-`extract_dr3100_schedule.py` 從參考庫新版 `Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json`（2026-10-16 起 14 天）取車種 `自強(D31)`（`data/tra_special_trains.json` 的 DR3100 柴聯自強號）的列車，寫成 App 的 `RailwayGameApp/Resources/RealRailways/tra-dr3100-schedule.json`（格式同 `thsr-schedule.json`），讓 3D 與 2D 的真實地圖把它們畫在縱貫線北段、宜蘭線、北迴線上。
+`extract_tra_schedule.py` 從參考庫新版 `Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json`（臺鐵開放資料，2026-10-16 起 14 天，政府資料開放授權條款第 1 版）取一週的每一班車，寫成 App 的 `RailwayGameApp/Resources/RealRailways/tra-schedule.json`，讓 2D 與 3D 的真實地圖照真實班次畫臺鐵列車（車種、停站、到開時刻），車站卡的「下一班」也用它。決策 511 原本另外打包的 DR3100 四班（`extract_dr3100_schedule.py`、`tra-dr3100-schedule.json`）併進這一份，舊工具與檔案已刪除。
 
 ```sh
-python3 -I tools/real-timetables/extract_dr3100_schedule.py \
+python3 -I tools/real-timetables/extract_tra_schedule.py \
   /tmp/ref/Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json \
-  RailwayGameApp/Resources/RealRailways/tra-dr3100-schedule.json
+  RailwayGameApp/Resources/RealRailways/tra.json \
+  RailwayGameApp/Resources/RealRailways/tra-schedule.json
 ```
 
-- 4 班：209、221（花蓮→樹林）、238、246（樹林→花蓮），每個通過站都留時刻。
-- 這幾班 14 天沒有每天都開時，程式停下來（遊戲每天都跑它們）。
-- 參考庫的檔案更新時重跑，並重跑 `Map3DDR3100Tests`。
+- 每個星期幾取 14 天裡第一個不是假日的日子（星期日 10-18 到星期六 10-17），再取一個落在平日的假日（10-26 星期一，光復節補假），只收這八天開的車：1,038 班、38,678 個停靠與通過站、242 站。
+- 每班只留車次、車種（`typeName`）、車型（`carName`）、開的日子（8 個位元）與每站的到開時刻（第一站的到達秒，之後是距上一站開出的秒數，再加停站秒數；通過站的站號存成負數）。7.06 MB 的來源變成 445 KB（gzip 後約 92 KB）。
+- 站名照遊戲的 `tra.json`：時刻表的「左營」「新城」改成「左營(舊城)」「新城 (太魯閣)」；`tra.json` 沒有的站（環島列車的「臺北-環島」）不收。
+- 參考庫的檔案更新時重跑，並重跑 `RealTRAScheduleTests`、`Map3DDR3100Tests`。

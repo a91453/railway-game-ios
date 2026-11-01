@@ -867,6 +867,46 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(status.appears(within: 5), "The selection card shows")
     }
 
+    /// Decision 532: a real-world station's card with Taiwan Railway's
+    /// real next trains ("臺鐵 下一班：…"), a station of the real-world
+    /// demo by day, its "Real Station" section under the surroundings.
+    /// For the screenshot review of the pull request that made them, not
+    /// the website.
+    func testRealStationNextTrains() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The demo starts")
+        waitForClock(from: 7, before: 20, in: app)
+        pauseTheClock(in: app)
+        settle(seconds: 3)
+        // Where the stations are (`map.stations`, "x,y;x,y" in the map's
+        // points), one clear of the map's buttons.
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10), "The stations' places")
+        let clear = map.frame.insetBy(dx: map.frame.width * 0.2, dy: map.frame.height * 0.2)
+        let points = (readout.value as? String ?? "").split(separator: ";").compactMap { pair -> CGPoint? in
+            let xy = pair.split(separator: ",").compactMap { Double($0) }
+            guard xy.count == 2 else { return nil }
+            return CGPoint(x: map.frame.minX + xy[0], y: map.frame.minY + xy[1])
+        }.filter { clear.contains($0) }
+        XCTAssertFalse(points.isEmpty, "A station clear of the map's buttons")
+        // A hold selects the station even when a train is over it.
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: points[0].x - app.frame.minX, dy: points[0].y - app.frame.minY))
+            .press(forDuration: 1)
+        tapButton("station.jump", in: app)
+        tapButton("station.jump.area", in: app)
+        settle()
+        let next = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "臺鐵 下一班")).firstMatch
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        let shown = app.dragUntilWhollyOnScreen(next, in: list)
+        settle()
+        keep("real-station-next-trains", app)
+        XCTAssertTrue(shown, "Taiwan Railway's next trains come into view")
+    }
+
     /// The company's goals on a blank new game (decisions 181 and 183): the
     /// requests the city offers with what each pays, above the company's
     /// rank and title.
