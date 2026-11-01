@@ -77,6 +77,13 @@ final class Map3DFreightTrainTests: XCTestCase {
         }
     }
 
+    /// The website screenshot of decision 539 follows the freight scene's
+    /// first freight train on the track (`-screenshot-follow-freight`).
+    func testTheFreightSceneHasAFreightTrainOnTheTrack() {
+        let world = ScreenshotScene.freight.make(in: .traditionalChinese)
+        XCTAssertTrue(world.trains.contains { $0.position != nil && world.isFreightTrain($0.id) })
+    }
+
     func testAFreightTrainBlowsTheDieselHorn() throws {
         let (freight, train) = try world(freight: true)
         let car = try XCTUnwrap(freight.train(id: train))
