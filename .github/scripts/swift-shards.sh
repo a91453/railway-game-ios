@@ -32,7 +32,7 @@
 #                                    replaced by a newer push (superseded)
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-19   the long property, differential and mutation
+#   campaigns-1 .. campaigns-20   the long property, differential and mutation
 #                                campaigns, and the golden scenarios, named
 #                                below
 #   rest                         every test that no campaign shard names: the
@@ -642,29 +642,30 @@ set -euo pipefail
 # next step is another shard (decision 495's way).
 classes_of() {
   case "$1" in
-    campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests LineAccountsTests" ;;
-    campaigns-2) echo "ServicePropertyTests SanyingLineRealisticDayTests DanhaiBlueThenGreenSimpleDayTests WeeklyPunctualityTests ReplayFixtureTests FreightSessionTests" ;;
-    campaigns-3) echo "ServiceRepeatingPropertyTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests Map3DModelTests" ;;
+    campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests Map3DRealTrainsTests LineAccountsTests Map3DCoarseChunkTests" ;;
+    campaigns-2) echo "ServicePropertyTests SanyingLineRealisticDayTests WeeklyPunctualityTests ReplayFixtureTests FreightSessionTests ReservationShortcutTests" ;;
+    campaigns-3) echo "NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests Map3DModelTests HighSpeedDemoTests" ;;
     campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests" ;;
-    campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests LoopLineBoardingTests Map3DRealTracksTests BusRouteTests DanhaiGreenLineDayTests" ;;
+    campaigns-5) echo "SaveMutationSecondHalfTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests LoopLineBoardingTests Map3DRealTracksTests BusRouteTests Map3DChuKuangIntegrationTests TRADemoTests" ;;
     campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests CityRequestsTests Map3DTests LineLossDiagnosisTests SanyingDepotTests BusOneWayAndTunnelRealMapTests SanyingLineFreezeTests Map3DSceneryPropsTests DemoRealLinesTests Map3DC341Tests" ;;
-    campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests LoadTrackCheckIndexTests NetworkPostcardTests" ;;
-    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests DanhaiBlueThenGreenRealisticDayTests DeadlockSearchCostTests RealLineOfferPreparingTests FlexDispatchPropertyTests TownGrowthTests NetworkSectionPropertyTests" ;;
+    campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests PolicyTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests LoadTrackCheckIndexTests NetworkPostcardTests DanhaiBlueThenGreenSimpleDayTests" ;;
+    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests DeadlockSearchCostTests RealLineOfferPreparingTests FlexDispatchPropertyTests TownGrowthTests NetworkSectionPropertyTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests SanyingLineSimpleDayTests" ;;
-    campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests Map3DBusesTests Map3DOpenEveryStartTests Map3DChuKuangIntegrationTests Map3DFarSets420Tests Map3DFarSets422Tests Map3DHighSpeedSetsTests Map3DLightRail496Tests Map3DMetroSets483Tests Map3DPPIntegrationTests Map3DSanying466Tests Map3DScootersTests Map3DShowcaseTests Map3DTEMU2000Tests Map3DTaipeiMetro461Tests Map3DTrainLightsTests Map3DTrainMaterialTests Map3DC371C381Tests Map3DE500Tests RealWorldDemoTests" ;;
-    campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests LongLegReplayTests DemoSightsAndTransfersTests PassengerPropertyTests Map3DBuildingsTests LoadJourneyCacheTests" ;;
+    campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests Map3DBusesTests Map3DOpenEveryStartTests Map3DFarSets420Tests Map3DFarSets422Tests Map3DHighSpeedSetsTests Map3DLightRail496Tests Map3DMetroSets483Tests Map3DPPIntegrationTests Map3DSanying466Tests Map3DScootersTests Map3DShowcaseTests Map3DTEMU2000Tests Map3DTaipeiMetro461Tests Map3DTrainLightsTests Map3DTrainMaterialTests Map3DC371C381Tests Map3DE500Tests RealWorldDemoTests Map3DPlatformClearanceTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests LongLegReplayTests DemoSightsAndTransfersTests PassengerPropertyTests Map3DBuildingsTests ScheduledOvertakeTrackPropertyTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests LessonTests DanhaiDepotTests SingleTrackCapacityPropertyTests" ;;
-    campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests TurnbackPropertyTests Map3DStreamingTests LineLossFixesTests LiujiaLineTrainsTests ScreenshotSceneTests AnkengLineTests TRADemoTests" ;;
+    campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests TurnbackPropertyTests Map3DStreamingTests LineLossFixesTests LiujiaLineTrainsTests ScreenshotSceneTests AnkengLineTests DanhaiGreenLineDayTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests IdleTrainDeadlockTests Map3DEMU3000Tests MapMarksTests Map3DC341IntegrationTests Map3DBoxInstanceTests TrafficSpeedTests CityGrowthTests ScheduledOvertakeTrackMiddlePropertyTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests Map3DStreetsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests Map3DShadowTests RealWorldExpansionTests ShortTurnCardTests Map3DBuildReturnTests SharedNetworkTests Map3DRealBuildingsTests" ;;
     campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests ScheduledOvertakeTrackFinalPropertyTests Map3DSurfaceTests NewsSessionTests Map3DPropsTests Map3DNightAndGroundTests DemoAtTests SeededStreetPlanTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests AutoServiceTests Map3DHandoffTests Map3DDetailTests" ;;
-    campaigns-17) echo "PassengerPlanKeyTests EconomyPropertyTests LessonGuideTests Map3DTaipeiLandmarksTests TrainPackTests Map3DParksTests Map3DSceneKitTests TimetablePropertyTests ScheduledOvertakeTrackPropertyTests NightSkipTests" ;;
-    campaigns-18) echo "HighSpeedDemoTests TRADemoDayTests DemoRealLinesTrackTests AchievementsTests RealWorldDemoRoadsTests TrainNightLightsReadBackTests RealBusesTests PassengerRouteSearchTests StationCommerceCardTests Map3DBusLayerTests PassengerCheckOnceTests TurnbackTests" ;;
-    campaigns-19) echo "RealLineAcquisitionTests DanhaiBothLinesDayTests ContinuousTrackPropertyTests Map3DCoarseChunkTests Map3DTourismEMU500Tests" ;;
+    campaigns-17) echo "PassengerPlanKeyTests EconomyPropertyTests LessonGuideTests Map3DTaipeiLandmarksTests TrainPackTests Map3DParksTests Map3DSceneKitTests TimetablePropertyTests NightSkipTests LoadJourneyCacheTests" ;;
+    campaigns-18) echo "TRADemoDayTests DemoRealLinesTrackTests AchievementsTests RealWorldDemoRoadsTests TrainNightLightsReadBackTests RealBusesTests PassengerRouteSearchTests StationCommerceCardTests Map3DBusLayerTests PassengerCheckOnceTests TurnbackTests DanhaiBlueThenGreenRealisticDayTests" ;;
+    campaigns-19) echo "RealLineAcquisitionTests DanhaiBothLinesDayTests ContinuousTrackPropertyTests Map3DTourismEMU500Tests Map3DTrainLabelsTests" ;;
+    campaigns-20) echo "LinePatternPropertyTests ServiceRepeatingPropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19 campaigns-20)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""
