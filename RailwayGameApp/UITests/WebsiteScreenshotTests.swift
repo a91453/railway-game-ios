@@ -26,7 +26,8 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(open3D.becomesHittable(within: 10))
             open3D.tap()
             XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
-            settle(seconds: 20)
+            waitForPicture(timeout: 150)
+            settle(seconds: 5)
             keep("bought-\(name)-3d", app)
             app.terminate()
         }
@@ -1815,6 +1816,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.launchArguments = ["-ui-testing"] + language + extra
         app.launch()
         return app
+    }
+
+    /// Waits until the 3D map is drawn, not its spinner: the Simulator
+    /// draws it in software and can take over a minute; a screenshot of
+    /// the spinner is about 240 KB, one of the map far more.
+    private func waitForPicture(timeout: TimeInterval) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if XCUIScreen.main.screenshot().pngRepresentation.count > 600_000 { return }
+            Thread.sleep(forTimeInterval: 2)
+        }
     }
 
     /// Lets the map draw and the animations end before a screenshot.
