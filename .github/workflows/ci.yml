@@ -246,11 +246,12 @@ jobs:
     needs: [changes, swift-build]
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
-    # The slowest shard takes about 9 minutes of tests on a fast runner and
-    # up to about 12 on a slow one (see the table in swift-shards.sh), plus
-    # about a minute to start and download the build; the limit leaves room
-    # for campaigns to grow before a shard is split further.
-    timeout-minutes: 20
+    # A shard has about 680 to 760 s of tests on a fast runner; the same
+    # classes take up to 1.7 times as long on a slow one (campaigns-13: 11m18s
+    # in one full-tier run, 19m18s in the next), which reaches the old 20
+    # minutes. 30 still stops a test that is really stuck (decision 540). The
+    # build job keeps its 20.
+    timeout-minutes: 30
     container: swift:6.4-noble
     strategy:
       # The shards are independent: let every one finish so a failing run
