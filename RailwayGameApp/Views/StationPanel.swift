@@ -1475,6 +1475,29 @@ struct StationPanel: View {
         }
     }
 
+    private func civicRidersSection(_ riders: [CivicRiders]) -> some View {
+        Section {
+            ForEach(riders, id: \.kind) { entry in
+                Label {
+                    Text(verbatim: entry.text(in: session.language))
+                        .font(.footnote)
+                        .monospacedDigit()
+                } icon: {
+                    entry.kind.mapGlyph.image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
+                        .foregroundStyle(Theme.primary)
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("station.civicRiders.\(entry.kind.rawValue)")
+            }
+        } header: {
+            Text(verbatim: session.language.text("Riders from Your Buildings", "自有建築帶來的旅客"))
+        }
+    }
+
     // MARK: - Read-only
 
     /// The trips by hour, once worked out for this station; the last ones
@@ -1484,6 +1507,11 @@ struct StationPanel: View {
         if let ridership, ridership.key.station == station.id {
             if let flow = ridership.value.flow {
                 flowSection(flow)
+            }
+            // Decision 533: the riders the company's schools and hospitals
+            // near the station bring today.
+            if !ridership.value.civic.isEmpty {
+                civicRidersSection(ridership.value.civic)
             }
         } else {
             Section {

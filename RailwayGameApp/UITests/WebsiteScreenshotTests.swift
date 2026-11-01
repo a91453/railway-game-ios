@@ -169,6 +169,61 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-expansion", app)
     }
 
+    /// Decision 533: the station panel's row of the riders a school and a
+    /// hospital beside the station bring, under its trips by hour, at
+    /// half past seven on a school day (`ScreenshotScene.commute`). For
+    /// the screenshot review of the pull request that made it, not the
+    /// website.
+    func testCivicRidersRow() {
+        let app = launch(extra: ["-screenshot-scene", "commute", "-screenshot-select-station", "1"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        // A hold on the first station (the school's and the hospital's)
+        // opens its panel, as `ToolbarSmokeTests`' board test does: the
+        // tag's tap opens only the details card.
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        func first() -> CGPoint? {
+            ((stations.value as? String) ?? "").split(separator: ";").first.flatMap { pair in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+            }
+        }
+        var last = first()
+        let still = Date().addingTimeInterval(10)
+        while Date() < still {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = first()
+            if now != nil, now == last { break }
+            last = now
+        }
+        guard let point = last else { return XCTFail("The scene has stations") }
+        var list: XCUIElement?
+        for _ in 0..<3 where list == nil {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
+            let opened = Date().addingTimeInterval(5)
+            repeat {
+                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
+            } while list == nil && Date() < opened
+        }
+        XCTAssertNotNil(list, "The hold opens the station's panel")
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "The panel has its jump menu")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
+        // By its words too: in the list the row's identifier was not found
+        // though it showed (run 41281919190's recording).
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@ OR label BEGINSWITH %@", "station.civicRiders.school", "學校 ·")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "The riders row comes into view")
+        settle()
+        keep("station-civic-riders", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that
