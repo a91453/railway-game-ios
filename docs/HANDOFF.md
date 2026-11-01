@@ -1,3 +1,5 @@
+> 3D 彎道上列車頭尾兩節（派工單 CURVE3D，[決策 538](decisions/538.md)，`curve3d-train-on-curve`，104.1 竹中六家線）：車身外的前半節、後半節改沿軌道放（`TrainTrackReach`），不再直直伸出彎道；Linux `LiujiaLineTrainsTests.testTheLiujiaTrainsAtZhuzhongKeepEveryCarOnTheCurve` 舊放法 8.8 m、新 0 m。留下的：2D 地圖仍直直放、快轉滑行時車身外的高度，見決策 538「下一步」。實機 UNVERIFIED。
+
 > iPhone 橫拿三件畫面修正（派工單 IPHLAND，`claude/iphone-landscape-fixes`，決策號不動，2026-10-31）：側邊面板頁的標題在 compact height 時改放在導覽列下方一列、和面板一樣寬（`PanelTitlePlacement`，`Theme.swift` 的 `panelTitle`），修掉車站卡站名被工具列夾成一兩個字與審查 L2-2；實景新局右側的空框是小地圖（沒有軌道與車站、或畫面已經看到整張地圖時不畫，`MiniMap.isShown(beside:)`）。Linux `MapFocusTests`、`MiniMapTests` VERIFIED；畫面靠截圖驗收，iPad 與 iPhone SE 沒拍。
 
 > 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次；第二個 PR（`tracelag-build-once`，決策 521「續」）讓預覽副本不在每段之後清點等車的旅客。描線預覽把整串蓋兩次：單線、不分段的描線已改成沿用描線時蓋好的副本（UIFIX，決策 521「續二」）；分段描線與雙線仍蓋兩次，留在「續二」的下一步。描線預覽看起來像兩條（底下亮的真實路線、雙線光暈疊深）已由 TRACE2 改成只看到一條（決策 521「續三」）。分段描線與雙線的預覽也只蓋一次了，找沿途已鋪軌道改用路線索引（TRACE3，決策 521「續四」）；被擋下的描線仍重蓋前面幾段、GameCore 蓋 edge 本身未動，在「續四」下一步。實機 UNVERIFIED。
