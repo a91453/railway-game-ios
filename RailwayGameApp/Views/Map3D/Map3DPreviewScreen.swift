@@ -597,6 +597,9 @@ struct Map3DSceneKey: Hashable {
     /// BUGHUNT_BUILD P2-2: a road laid along the city's (free, decision
     /// 487) shows at once too, though the count above stays.
     let ownRoads: Set<CellPosition>
+    /// Decision 506, later: an expanded station's bigger building shows
+    /// at once.
+    let expansions: Int
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
@@ -613,6 +616,7 @@ struct Map3DSceneKey: Hashable {
         // PERF_3D_COCKPIT: counted, not made into one set at every tick.
         roads = world.roads?.roadCellCount ?? 0
         ownRoads = world.roads?.built ?? []
+        expansions = Map3DStationKit.expansionSignature(of: world)
     }
 }
 
