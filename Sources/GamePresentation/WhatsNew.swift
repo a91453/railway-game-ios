@@ -96,6 +96,10 @@ public enum WhatsNew {
                     chinese: "路網大的時候，每天早上 6 點排班時的停頓短了很多。"
                 ),
                 Line(
+                    english: "The total in the middle of the economy pie chart now fits inside the ring.",
+                    chinese: "經營圓餅圖中間的總金額完整放進圓環裡，不再被切掉。"
+                ),
+                Line(
                     english: "Tapping in the mountains on the 3D map lands where your finger is, and hidden track behind a hill is not picked.",
                     chinese: "在 3D 地圖的山區點選，會落在手指下的地方，山後看不到的軌道不會被點到。"
                 ),
