@@ -60,8 +60,12 @@ private struct CompositionRing: View {
     /// on the screen with the rows beside it.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
+    /// Grows with Dynamic Type so the figure in the middle keeps its room.
+    @ScaledMetric(relativeTo: .footnote) private var baseDiameter: CGFloat = 136
+    @ScaledMetric(relativeTo: .footnote) private var compactDiameter: CGFloat = 104
+
     private var diameter: CGFloat {
-        verticalSizeClass == .compact ? 104 : 136
+        verticalSizeClass == .compact ? compactDiameter : baseDiameter
     }
 
     private var selected: FinanceComposition.Slice? {
@@ -114,12 +118,12 @@ private struct CompositionRing: View {
             Text(verbatim: ring.title(in: language))
                 .font(.caption2)
                 .foregroundStyle(Theme.textSecondary)
-            Text(verbatim: ring.totalText)
-                .font(.callout.weight(.semibold))
+            Text(verbatim: ring.centreText(in: language))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .minimumScaleFactor(0.5)
         }
     }
 
@@ -142,7 +146,7 @@ private struct CompositionRing: View {
                 if let frame = proxy.plotFrame {
                     let plot = geometry[frame]
                     centre
-                        .frame(width: plot.width * 0.56)
+                        .frame(width: plot.width * 0.6)
                     .position(x: plot.midX, y: plot.midY)
                 }
             }

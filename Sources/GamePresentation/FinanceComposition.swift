@@ -116,6 +116,14 @@ public struct FinanceComposition: Hashable, Sendable {
         /// there are no accounts.
         public var totalText: String { hasRecords ? total.moneyText : "—" }
 
+        /// ``totalText`` short enough for the middle of the ring, which is
+        /// narrow on an iPhone: 萬／億 in Chinese, k／M in English, with no
+        /// spaces ("NT$294.5萬", "NT$2.9M"); the exact figure is in the
+        /// listing and the spoken summary.
+        public func centreText(in language: DisplayLanguage) -> String {
+            hasRecords ? TrainRoster.shortMoney(total, in: language) : "—"
+        }
+
         /// A touched slice, spelled out: "Fares · $ 12,000 · 72%"; for
         /// "Other", the kinds in it after its name.
         public func detailText(of slice: Slice, in language: DisplayLanguage) -> String {
