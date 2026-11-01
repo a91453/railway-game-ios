@@ -80,6 +80,10 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
+                    english: "On a large network, the pause at 6 a.m. while the day's runs are planned is much shorter.",
+                    chinese: "路網大的時候，每天早上 6 點排班時的停頓短了很多。"
+                ),
+                Line(
                     english: "Tapping in the mountains on the 3D map lands where your finger is, and hidden track behind a hill is not picked.",
                     chinese: "在 3D 地圖的山區點選，會落在手指下的地方，山後看不到的軌道不會被點到。"
                 ),
