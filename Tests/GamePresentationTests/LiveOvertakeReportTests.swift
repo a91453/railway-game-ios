@@ -86,11 +86,11 @@ final class LiveOvertakeReportTests: XCTestCase {
         try measure("TRA demo, traffic control on", &world, minutes: 24 * 60)
     }
 
-    /// A single track about 8 km long, W – M – E, M with a loop beside
-    /// the main track, W and E each with a bay beside their main platform:
-    /// a stopping train (W, M, E) and an express (W, E) out of W every
-    /// hour from 06:00 to 21:00, the express 6 minutes behind, and each
-    /// back from E half an hour later. The stopping train's timetable
+    /// A single track about 8 km long, W – A – M – B – E, M with a loop
+    /// beside the main track, W and E each with a bay beside their main
+    /// platform: a stopping train (all five) and an express (W, E) out of
+    /// W every hour from 06:00 to 21:00, the express 3 minutes behind, and
+    /// each back from E half an hour later. The stopping train's timetable
     /// allows it less time than it needs, so it runs late and the express
     /// catches it up.
     func testASingleTrackWithAPassingLoop() throws {
@@ -120,24 +120,24 @@ final class LiveOvertakeReportTests: XCTestCase {
         try world.buildTrackEdge(from: .node(6), to: .node(7)) // e9 E main
         try world.buildTrackEdge(from: .node(6), to: .node(8), curve: .cubic(point(32_768, 4_096), point(32_768, 2_048))) // e10 E bay
         var ids: [StationID] = []
-        for (name, x) in [("W", Int64(4_096)), ("M", 18_432), ("E", 32_768)] {
+        for (name, x) in [("W", Int64(4_096)), ("A", 9_216), ("M", 18_432), ("B", 27_648), ("E", 32_768)] {
             ids.append(try world.buildStation(named: name, at: PlanPoint(x: x * scale, y: 8_192 * scale)).id)
         }
         func length(_ edge: Int) throws -> Int64 { try XCTUnwrap(world.trackEdge(.edge(edge))?.length) }
-        for (station, edge) in [(0, 1), (0, 2), (1, 4), (1, 6), (2, 9), (2, 10)] {
+        for (station, edge) in [(0, 1), (0, 2), (1, 3), (2, 4), (2, 6), (3, 8), (4, 9), (4, 10)] {
             let l = try length(edge)
             try world.addTrackPlatform(ids[station], on: .edge(edge), from: l / 2 - 1_024 * scale, to: l / 2 + 1_024 * scale)
         }
         func at(_ seconds: Int64, _ dwell: Int64 = 0) -> LineRunTime { LineRunTime(arrival: seconds, departure: seconds + dwell) }
         let local = try world.createLine(named: "Local", stops: ids).id
-        let express = try world.createLine(named: "Express", stops: [ids[0], ids[2]]).id
+        let express = try world.createLine(named: "Express", stops: [ids[0], ids[4]]).id
         var localRuns: [LineRun] = [], expressRuns: [LineRun] = []
         for hour in Int64(6)...21 {
             let t = hour * 3_600
-            localRuns.append(LineRun(from: 0, to: 2, times: [at(t), at(t + 180, 30), at(t + 420)]))
-            localRuns.append(LineRun(from: 2, to: 0, times: [at(t + 1_800), at(t + 2_040, 30), at(t + 2_280)]))
-            expressRuns.append(LineRun(from: 0, to: 1, times: [at(t + 360), at(t + 780)]))
-            expressRuns.append(LineRun(from: 1, to: 0, times: [at(t + 2_160), at(t + 2_580)]))
+            localRuns.append(LineRun(from: 0, to: 4, times: [at(t), at(t + 90, 30), at(t + 210, 30), at(t + 330, 30), at(t + 450)]))
+            localRuns.append(LineRun(from: 4, to: 0, times: [at(t + 1_800), at(t + 1_890, 30), at(t + 2_010, 30), at(t + 2_130, 30), at(t + 2_250)]))
+            expressRuns.append(LineRun(from: 0, to: 1, times: [at(t + 180), at(t + 600)]))
+            expressRuns.append(LineRun(from: 1, to: 0, times: [at(t + 1_980), at(t + 2_400)]))
         }
         try world.setLineRuns(local, to: localRuns)
         try world.setLineRuns(express, to: expressRuns)

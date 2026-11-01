@@ -114,8 +114,10 @@ extension GameWorld {
         // The slow one's route is chosen as it leaves a call, so it can
         // stand aside only beyond the call it waits at or left, or at that
         // call if it already stands on a siding there. Decision 542: or on
-        // the way to the call it travels to, which it turns aside for while
-        // it still can (see ``standingAsideOnTheWay(_:plan:memo:)``).
+        // the way to the call it travels to: the route it set off on may
+        // already go to a siding there (the wait was planned before it
+        // left), or it turns aside while it still can (see
+        // ``standingAsideOnTheWay(_:plan:memo:)``).
         func choosable(_ n: Int) -> Bool {
             let p = l.points[common[n].l]
             guard n == 0 else { return p.stop > at.stop }
@@ -183,9 +185,11 @@ extension GameWorld {
     /// run kept, with the reservation traffic control gives it, or the train
     /// holding track it needs. `nil` when there is no such wait, or no other
     /// way to a berth off the straight track there (it has passed the
-    /// turnout).
+    /// turnout), and for a train of a line with runs (decision 133): on the
+    /// TRA demo's day with traffic control on, turning those aside on the
+    /// way jammed the line from the afternoon on (decision 542's results).
     func standingAsideOnTheWay(_ train: Train, plan: TrafficPlan, memo: inout DirectionMemo) -> Reserving? {
-        guard isTrafficControlEnabled, case .travellingToStop(let stop, let cycle)? = train.execution,
+        guard isTrafficControlEnabled, !followsRealTimetable(train), case .travellingToStop(let stop, let cycle)? = train.execution,
               let position = train.position, case .onEdge(let traversal, _) = position,
               let wait = plan.waits.first(where: { $0.train == train.id && $0.kind == .overtake && $0.hold != nil && $0.stop == stop && $0.cycle == cycle }),
               !train.trafficVisits.contains(where: { $0.station == wait.station && $0.stop == stop && $0.cycle == cycle }),
