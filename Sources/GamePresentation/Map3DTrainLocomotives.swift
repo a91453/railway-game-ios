@@ -11,7 +11,7 @@ import Foundation
 /// The mesh space is the scene kit's: +x front, +y up, +z left, metres;
 /// the head lamps glow at the front only.
 enum Map3DTrainLocomotive: Sendable {
-    case e200, e500, r100, r200, r135, e1000
+    case e200, e500, r100, r135, e1000
     /// Decision 286, later (fourth): the CT273 steam locomotive's black
     /// and gold (the reference's garage `ct273`) on the hood unit, until
     /// there is a steam locomotive's shape.
@@ -23,7 +23,6 @@ enum Map3DTrainLocomotive: Sendable {
         case .e200: b.e200()
         case .e500: b.e500()
         case .r100: b.hoodUnit(body: 0xDF753B, stripe: 0xEAE6D3, rail: 0xEAE6D3, chevron: false, fans: 2)
-        case .r200: b.r200()
         case .r135: b.hoodUnit(body: 0x232E48, stripe: 0xEEEDE4, rail: 0xEEEDE4, chevron: true, fans: 2)
         case .e1000: b.e1000()
         case .ct273: b.hoodUnit(body: 0x262D2B, stripe: 0xBCAB74, rail: 0xBCAB74, chevron: false, fans: 0)
@@ -77,22 +76,6 @@ extension SceneKitBuilder {
         sideGrilles(count: 8, from: -5, to: 5, y: 2.1, height: 1.35, colour: dark)
         roofGrilles(from: -2.6, to: 2.6)
         pantographs(at: [-5.4, 5.4])
-    }
-
-    /// R200: white, one cab, a wide dark grille band along the engine
-    /// room, three radiator fans on the roof.
-    fileprivate mutating func r200() {
-        let white = Map3DColor.rgb(0xEBEDEA), dark = Map3DColor.rgb(0x283944)
-        running(axles: 3)
-        // The Stadler cab: the most raked, a big windscreen.
-        let nose = Nose(rake: 0.85, chamfer: 0.5, split: 2.0, lower: white, upper: white)
-        body(lower: white, upper: white, split: 2.6, line: nil, front: nose.depth, back: 0)
-        roof(white)
-        boxCab(end: 1, nose: nose, lit: true)
-        closedEnd(end: -1, body: white)
-        box(-1.2, 1.75, 0, 10.4, 2.84, 1.6, dark)
-        sideGrilles(count: 7, from: -5.8, to: 3.4, y: 1.85, height: 1.4, colour: Map3DColor.shaded(dark, 0.7))
-        fans(at: [-4.6, -1.9, 0.8], colour: Map3DColor.shaded(white, 0.6))
     }
 
     /// E1000 power car: white, the nose and a band of grilles orange, one
@@ -297,14 +280,6 @@ extension SceneKitBuilder {
         for i in 0..<count {
             let x = from + pitch * (Float(i) + 0.5)
             box(x, Self.roofTop + 0.08, 0, pitch * 0.85, 1.7, 0.1, Self.graphite)
-        }
-    }
-
-    /// Radiator fans on the roof.
-    fileprivate mutating func fans(at xs: [Float], colour: UInt32) {
-        for x in xs {
-            cylinder(x, Self.roofTop + 0.08, 0, radius: 0.6, height: 0.08, color: colour, sides: 10)
-            box(x, Self.roofTop + 0.16, 0, 1.0, 0.1, 0.03, Self.graphite)
         }
     }
 
