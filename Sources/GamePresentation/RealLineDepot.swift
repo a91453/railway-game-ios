@@ -101,10 +101,34 @@ struct RealLineDepotSite: Sendable {
         sidings: 22, beyond: "南港展覽館", compact: false
     )
 
+    /// Decision 535 (continued, ANKENGDEPOT): the Ankeng depot (安坑機廠,
+    /// landuse way 724086719) of the Ankeng LRT, past Shuangcheng: a strip
+    /// some 300 m long west of the line's run on past the station. The real
+    /// leads leave the line's end, loop round west and north and come into
+    /// the stabling tracks from their north end, the yard lying back beside
+    /// the line; the game's lead does not turn back on itself, so it leaves
+    /// at the real crossover past the station (ways 1137758430 and
+    /// 1137758431, their middle) and curves round into the depot, its yard
+    /// running on from the real stabling tracks' north ends (their middle,
+    /// ways 1140796066 to 1140796072 and 1140796074 to 1140796078) toward
+    /// a point level with the depot's north end, some 60 m east of its
+    /// northernmost node, so that the yard as laid lies the way the real
+    /// stabling tracks do, in the depot's north-west half
+    /// (`tools/rail-depots`). The real timetable stands six of the seven
+    /// trains at Shuangcheng overnight and one at Shisizhang; seven
+    /// sidings, as the real depot holds them all, one spare.
+    static let ankeng = RealLineDepotSite(
+        line: "ntalrt:K", english: "Ankeng Depot", chinese: "安坑機廠",
+        junction: (24.943964, 121.488158),
+        yard: ((24.944371, 121.486844), (24.945657, 121.487100)),
+        sidings: 7, beyond: "雙城", compact: true
+    )
+
     /// The real depots line `line` is bought with (decision 535: the
-    /// Wenhu Line has one past each end).
+    /// Wenhu Line has one past each end; its continuation, the Ankeng LRT
+    /// one past Shuangcheng).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng].filter { $0.line == line }
     }
 
     func name(in language: DisplayLanguage) -> String {

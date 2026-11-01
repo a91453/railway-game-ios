@@ -62,13 +62,17 @@ have (`END_TRACKS`) and the game sends the rest into the depots. Not listed: the
 Rail. Its trains run round the loop and come back to Lizihnei; a line's
 runs of the game run end to end (decision 535).
 
-The Ankeng LRT (decision 535, continued) stands two of its trains
+The Ankeng LRT (decision 535, continued) stood two of its trains
 overnight at stations between, Shuangcheng having too few tracks. Each
-comes in from beyond its station, facing the end its first run of the
+came in from beyond its station, facing the end its first run of the
 morning leaves for (`extract_branch_runs.beyond`): one from Shuangcheng
-runs out to Shisizhang first. Come straight from Shuangcheng, it stood on
+ran out to Shisizhang first. Come straight from Shuangcheng, it stood on
 the second track, where the game lays no way over to the first, and the
-morning's trains toward Shisizhang stood behind it from 06:12.
+morning's trains toward Shisizhang stood behind it from 06:12. It is now
+bought with the real Ankeng depot past Shuangcheng (decision 535,
+continued, ANKENGDEPOT; `DEPOT_ENDS`): its six trains standing there
+overnight are in the depot, one stands at Shisizhang, and none at a
+station between.
 """
 import collections
 import importlib.util
@@ -86,8 +90,9 @@ END_TRACKS = 5
 # by their game id: that end station.
 # Decision 535 (PR W): the Wenhu Line runs on into a depot past each end,
 # the Muzha depot past Taipei Zoo and the Neihu depot past Taipei Nangang
-# Exhibition Center.
-DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館")}
+# Exhibition Center. Decision 535 (continued, ANKENGDEPOT): the Ankeng LRT
+# runs on into the Ankeng depot past Shuangcheng.
+DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館"), "ntalrt:K": ("雙城",)}
 # The tracks such a line's end station may have: its own and loops three
 # deep either side.
 DEPOT_END_TRACKS = 7
