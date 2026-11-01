@@ -58,6 +58,14 @@ public enum StationExpansion: Int, CaseIterable, Comparable, Codable, Sendable {
         case .hall: 100_000
         }
     }
+
+    /// How many recent days an expansion looks back over for full days,
+    /// today included (decision 534).
+    public static let fullDaysWindow: Int64 = 7
+
+    /// On how many of those days the station must have turned passengers
+    /// away for want of room (decision 534).
+    public static let fullDaysNeeded: Int64 = 4
 }
 
 extension Station {
@@ -94,12 +102,21 @@ extension GameWorld {
         return stationCommercePeople(of: id, onDay: today - 1)
     }
 
-    /// Whether station `id` turned a passenger away because it was full
-    /// yesterday or today: an expansion opens only then (decision 506; the
-    /// new game's stations reach the threshold long before they fill).
+    /// On how many of the last ``StationExpansion/fullDaysWindow`` days
+    /// (today included) station `id` turned a passenger away for want of
+    /// room (decision 534).
+    public func stationFullDays(of id: StationID) -> Int64 {
+        guard let record = passengers.first(where: { $0.station == id }) else { return 0 }
+        return record.fullDayCount(endingOn: clock.now.seconds / 86_400, window: StationExpansion.fullDaysWindow)
+    }
+
+    /// Whether station `id` filled often enough lately for an expansion to
+    /// open: on ``StationExpansion/fullDaysNeeded`` of the last
+    /// ``StationExpansion/fullDaysWindow`` days (decision 534; decision 506
+    /// took one full day, yesterday or today, and a new game's one peak
+    /// opened it for a day).
     public func stationWasFullLately(_ id: StationID) -> Bool {
-        guard let day = passengers.first(where: { $0.station == id })?.lastFullDay else { return false }
-        return day >= clock.now.seconds / 86_400 - 1
+        stationFullDays(of: id) >= StationExpansion.fullDaysNeeded
     }
 
     /// The expansion station `id` would get next, `nil` when it has had
@@ -114,8 +131,9 @@ extension GameWorld {
 
     /// Expands station `id` one step (decision 506), paying its price, kept
     /// as a station asset (20 years). The station must have had the
-    /// step's threshold of people yesterday and turned a passenger away
-    /// for want of room yesterday or today.
+    /// step's threshold of people yesterday and turned passengers away
+    /// for want of room on enough of the last days
+    /// (``GameWorld/stationWasFullLately(_:)``, decision 534).
     ///
     /// - Throws, in this order: ``GameError/unknownStation(_:)``,
     ///   ``GameError/stationIsDepot(_:)``,

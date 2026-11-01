@@ -142,6 +142,15 @@ public struct StationPassengers: Hashable, Sendable {
     /// away because the station was full, if any (decision 506: an
     /// expansion opens only at a station full yesterday or today).
     public internal(set) var lastFullDay: Int64?
+    /// The days full up to ``lastFullDay`` (decision 534): bit k is the
+    /// day `lastFullDay - k`, so bit 0 is always set while there is a full
+    /// day, and the mask is 0 when there is none. It keeps the last
+    /// ``fullDaysKept`` days, so an expansion can ask how often the station
+    /// filled lately, not only whether it did once.
+    public internal(set) var fullDays: Int64
+
+    /// How many days ``fullDays`` remembers.
+    public static let fullDaysKept: Int64 = 8
 
     /// Passengers waiting at a station not expanded at most: the
     /// reference's `STATION_CAPACITY × 8`. One released when the station is
@@ -171,6 +180,34 @@ public struct StationPassengers: Hashable, Sendable {
         self.refused = 0
         self.remainders = []
         self.lastFullDay = nil
+        self.fullDays = 0
+    }
+
+    /// Records that a passenger was turned away for want of room on `day`
+    /// (decisions 506 and 534). Days only move forward.
+    mutating func markFull(on day: Int64) {
+        guard let last = lastFullDay else {
+            lastFullDay = day
+            fullDays = 1
+            return
+        }
+        guard day > last else { return }
+        let shift = day - last
+        fullDays = shift >= Self.fullDaysKept ? 1 : (fullDays << shift | 1) & (1 << Self.fullDaysKept - 1)
+        lastFullDay = day
+    }
+
+    /// On how many of the `window` days ending on `day` (that day
+    /// included, at most ``fullDaysKept``) a passenger was turned away for
+    /// want of room (decision 534).
+    func fullDayCount(endingOn day: Int64, window: Int64) -> Int64 {
+        guard let last = lastFullDay, last <= day else { return 0 }
+        var count: Int64 = 0
+        for k in 0..<min(window, Self.fullDaysKept) {
+            let bit = last - (day - k)
+            if bit >= 0, bit < Self.fullDaysKept, fullDays >> bit & 1 == 1 { count += 1 }
+        }
+        return count
     }
 
     /// The station's audit, given how many of its passengers are `riding`
@@ -203,7 +240,7 @@ public struct StationPassengers: Hashable, Sendable {
         }
         released += count
         overflowed += count - admitted
-        if admitted < count { lastFullDay = now.seconds / 86_400 }
+        if admitted < count { markFull(on: now.seconds / 86_400) }
     }
 
     mutating func release(_ count: Int64, along journey: PassengerJourney, at now: GameTime,
@@ -216,7 +253,7 @@ public struct StationPassengers: Hashable, Sendable {
         }
         released += count
         overflowed += count - admitted
-        if admitted < count { lastFullDay = now.seconds / 86_400 }
+        if admitted < count { markFull(on: now.seconds / 86_400) }
     }
 
     /// Admits a group arriving from another service. Its release and final
@@ -413,7 +450,7 @@ extension DemandRemainder: Codable {
 
 extension StationPassengers: Codable {
     private enum CodingKeys: String, CodingKey {
-        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders, lastFullDay
+        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders, lastFullDay, fullDays
     }
 
     /// Decodes a station's passengers. A station without demand has no
@@ -440,6 +477,8 @@ extension StationPassengers: Codable {
         let refused = container.contains(.refused) ? try container.decode(Int64.self, forKey: .refused) : 0
         let remainders = try container.decode([DemandRemainder].self, forKey: .remainders)
         let lastFullDay = try container.decodeIfPresent(Int64.self, forKey: .lastFullDay)
+        // A save before decision 534 knows only its last full day.
+        let fullDays = try container.decodeIfPresent(Int64.self, forKey: .fullDays) ?? (lastFullDay == nil ? 0 : 1)
         func corrupt(_ key: CodingKeys, _ description: String) -> DecodingError {
             DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Station \(station.rawValue): \(description)")
         }
@@ -485,6 +524,11 @@ extension StationPassengers: Codable {
             guard lastFullDay >= 0, overflowed > 0 else {
                 throw corrupt(.lastFullDay, "a station that never turned anyone away has no full day.")
             }
+            guard fullDays & 1 == 1, fullDays < 1 << Self.fullDaysKept else {
+                throw corrupt(.fullDays, "the full days must include the last one and no more than are kept.")
+            }
+        } else {
+            guard fullDays == 0 else { throw corrupt(.fullDays, "full days with no last full day.") }
         }
         guard zip(remainders, remainders.dropFirst()).allSatisfy({ $0.destination < $1.destination }) else {
             throw corrupt(.remainders, "remainders must be listed once each, by ascending destination.")
@@ -503,6 +547,7 @@ extension StationPassengers: Codable {
         self.refused = refused
         self.remainders = remainders
         self.lastFullDay = lastFullDay
+        self.fullDays = fullDays
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -523,5 +568,9 @@ extension StationPassengers: Codable {
         }
         try container.encode(remainders, forKey: .remainders)
         try container.encodeIfPresent(lastFullDay, forKey: .lastFullDay)
+        // Only the last full day: left out, as before decision 534.
+        if fullDays > 1 {
+            try container.encode(fullDays, forKey: .fullDays)
+        }
     }
 }
