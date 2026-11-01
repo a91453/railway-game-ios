@@ -1,0 +1,360 @@
+{
+  "origin": "Independent native Breezy Blue coach-family reconstruction from official role definitions and observed real photographs",
+  "date": "2026-11-01",
+  "license": "Own geometry; source photographs and diagrams observed only, no third-party mesh, pixels, logo or text texture used",
+  "public_use": "Only original Swift geometry, factual source metadata, configuration and rendered model previews",
+  "sources": [
+    {
+      "id": "tra-official",
+      "url": "https://www.railway.gov.tw/tra-tip-web/tip/tip00N/tipN01/blue/index?lang=zh_TW",
+      "author": "Taiwan Railway Corporation",
+      "date": "live page retrieved 2026-11-01; page does not give a photograph date",
+      "file": "tra-blue-index.html",
+      "sha256": "c840a65e5effd2800d1763015d8002353569e73d539bd552a38234f572c146d6",
+      "type": "official service page",
+      "read": true,
+      "supports": [
+        "four roles: mixed, exhibition, long-seat, rotating-seat",
+        "restored non-air-conditioned tourist service"
+      ],
+      "does_not_establish": [
+        "dated car count, individual vehicle numbers, order or orientation"
+      ],
+      "license": "copyright TRA; observed only; no source image/HTML redistribution"
+    },
+    {
+      "id": "tra-quarterly374",
+      "url": "https://www.railway.gov.tw/tra-tip-web/tip/tip004/tip405/research",
+      "author": "Taiwan Railways Administration",
+      "date": "2020 railway quarterly no.374; restoration meeting 2020-05-15",
+      "file": "tra-quarterly374.pdf",
+      "sha256": "24af8aa5a54dd9fb819fddda71a7cdfa92f62e129a8be2f5f7bd518251eb64f7",
+      "type": "official planning/report",
+      "read": true,
+      "supports": [
+        "13 cars planned for restoration in three batches",
+        "roof/ventilator, window, bogie, axle-generator and toilet restoration program"
+      ],
+      "does_not_establish": [
+        "13-car complete train",
+        "implemented dated final order"
+      ],
+      "license": "copyright TRA; observation and factual synthesis only",
+      "url_note": "TRA quarterly 374 landing/source index; exact PDF retrieval URL is not retained in this record; SHA pins the observed report. Exact PDF URL UNVERIFIED."
+    },
+    {
+      "id": "tpk32200",
+      "url": "https://emu300ct.web.fc2.com/index/trapc/ot_cars/32200s.htm",
+      "author": "Kashiwa / Train Collection",
+      "date": "page sections updated through restored Breezy Blue appearance; individual side photograph dates not provided",
+      "file": "32200s-original.html",
+      "sha256": "5fe9d6f1e5e5b57c019bf536baa5bbb4df0fea499bc38198f37a321ced674320",
+      "type": "railway database with actual vehicle photographs",
+      "read": true,
+      "supports": [
+        "20.000 x 2.865 x 3.953 m maximum dimensions",
+        "ICF India 1971, TR40 bogies",
+        "double doors at two inset stations, rounded small sash windows, tucked-in lower side",
+        "restored TPK vacuum waste tank, 32228 right battery-box difference"
+      ],
+      "license": "CC BY-NC-SA 3.0 TW footer; photographs observed only, metadata published, no photo/diagram copied"
+    },
+    {
+      "id": "tp32850",
+      "url": "https://emu300ct.web.fc2.com/index/trapc/ot_cars/32850s.htm",
+      "author": "Kashiwa / Train Collection",
+      "date": "individual side photograph dates not supplied",
+      "file": "32850s.html",
+      "sha256": "6a901a431f588ed56643340c90b150f450f338ed2bb08ee41cf6fe107386129b",
+      "type": "railway database with actual vehicle photographs",
+      "read": true,
+      "supports": [
+        "20.000 x 2.865 x 3.963 m maximum dimensions",
+        "Japan Kisha/Niigata/Kawasaki 1969, TR31 bogies",
+        "two double doors, long seats, box ventilators with larger door/centre units",
+        "TP32859/32865 restored paint, retained display circulation toilet"
+      ],
+      "license": "CC BY-NC-SA 3.0 TW footer; observation only, no images/diagrams reused"
+    },
+    {
+      "id": "spk32700",
+      "url": "https://emu300ct.web.fc2.com/index/trapc/ot_cars/35SPK32700.htm",
+      "author": "Kashiwa / Train Collection",
+      "date": "individual side photograph dates not supplied",
+      "file": "35SPK32700.html",
+      "sha256": "439e82027b0ac19473d22f9c4979de51dd6c83e9e8fad1cc26fc4c21068f81e8",
+      "type": "railway database with actual vehicle photographs",
+      "read": true,
+      "supports": [
+        "20.000 x 2.865 x 3.953 m maximum dimensions",
+        "Japan Niigata/Kinki/Fuji 1970, TR35 bogies",
+        "two end swing doors, 16 sash windows, nine roof ventilators",
+        "SPK32717/32757 restored paint and vacuum waste tank"
+      ],
+      "license": "CC BY-NC-SA 3.0 TW footer; observation only, no images/diagrams reused"
+    }
+  ],
+  "photos": [
+    {
+      "file": "tpk32228-left.jpg",
+      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32200s/40TPK32220-L_32228.JPG",
+      "sha256": "1f1c17f4e7da20fca04e2c1c3ea08f95b6df31b4bf545f5c5d8dfe954da1d3bf",
+      "author": "Kashiwa / Train Collection",
+      "date": "not supplied for this photograph",
+      "vehicle": "40TPK32228",
+      "view": "full left side",
+      "kind": "real vehicle photograph",
+      "inspected": true,
+      "license": "CC BY-NC-SA 3.0 TW on source page; observation only, original not redistributed",
+      "public_use": "factual metadata only"
+    },
+    {
+      "file": "tpk32228-right.jpg",
+      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32200s/40TPK32220-R_32228.JPG",
+      "sha256": "41b2fade99b0117acbf12ab6c4bf7648ee1f1c8c2aa5482e510fdc44fc07670a",
+      "author": "Kashiwa / Train Collection",
+      "date": "not supplied for this photograph",
+      "vehicle": "40TPK32228",
+      "view": "full right side",
+      "kind": "real vehicle photograph",
+      "inspected": true,
+      "license": "CC BY-NC-SA 3.0 TW on source page; observation only, original not redistributed",
+      "public_use": "factual metadata only"
+    },
+    {
+      "file": "spk32717-right.jpg",
+      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/35SPK32700/35SPK32700-R_32717.JPG",
+      "sha256": "8817d862ea53a80b877c0941d9195b784f99db45585af3c5daf93423bc470252",
+      "author": "Kashiwa / Train Collection",
+      "date": "not supplied for this photograph",
+      "vehicle": "35SPK32717",
+      "view": "full right side",
+      "kind": "real vehicle photograph",
+      "inspected": true,
+      "license": "CC BY-NC-SA 3.0 TW on source page; observation only, original not redistributed",
+      "public_use": "factual metadata only"
+    },
+    {
+      "file": "spk32757-left.jpg",
+      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/35SPK32700/35SPK32700-L_32757.JPG",
+      "sha256": "11f6a3d8f6efa4fdb0a25ada0b73e5ef3f3908790d2c5ff60f65ec51ebab7c9d",
+      "author": "Kashiwa / Train Collection",
+      "date": "not supplied for this photograph",
+      "vehicle": "35SPK32757",
+      "view": "full left side",
+      "kind": "real vehicle photograph",
+      "inspected": true,
+      "license": "CC BY-NC-SA 3.0 TW on source page; observation only, original not redistributed",
+      "public_use": "factual metadata only"
+    },
+    {
+      "file": "tp32869-left.jpg",
+      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32850s/35TP32850-L_32869.JPG",
+      "sha256": "d64aa95ec04c5e140c1dd6d075bb69a68460390b68524b163e01420b4a5f5977",
+      "author": "Kashiwa / Train Collection",
+      "date": "not supplied for this photograph",
+      "vehicle": "35TP32869 according to source filename/caption; markings not used as dated identity",
+      "view": "full left side",
+      "kind": "real vehicle photograph",
+      "inspected": true,
+      "license": "CC BY-NC-SA 3.0 TW on source page; observation only, original not redistributed",
+      "public_use": "factual metadata only"
+    },
+    {
+      "file": "tp32869-right.jpg",
+      "url": "https://emu300ct.web.fc2.com/Web_Photography/WebSideView/TRAPC/PC_OT/OT-32850s/35TP32850-R_32869.JPG",
+      "sha256": "b7760dd02e69084057193b00b1a5e0bdb770197a4244921d965a91829ca2a546",
+      "author": "Kashiwa / Train Collection",
+      "date": "not supplied for this photograph",
+      "vehicle": "35TP32869 according to source filename/caption; markings not used as dated identity",
+      "view": "full right side",
+      "kind": "real vehicle photograph",
+      "inspected": true,
+      "license": "CC BY-NC-SA 3.0 TW on source page; observation only, original not redistributed",
+      "public_use": "factual metadata only"
+    },
+    {
+      "file": "4travel-90692617.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692617.jpg?1780886878",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "f177916f4916dbba57bcbeaf3ffcb332e3e5be0c01e60b60338aa6f1166fc89a",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    },
+    {
+      "file": "4travel-90692620.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692620.jpg?1780886273",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "8b27fd0d9176301ed7039c5f9d872c8d360b3d7b3f001fcfa7b715c79a41ae06",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    },
+    {
+      "file": "4travel-90692624.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692624.jpg?1780881058",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "4a534ae595600fa02cb0f7487659ea3ccfc943fdcc1987e2a6e22097d129c420",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    },
+    {
+      "file": "4travel-90692627.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692627.jpg?1780881058",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "87f269db9f4f63e2e244a1996f1a89ae9179545224e818dec58bec5ca74344eb",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    },
+    {
+      "file": "4travel-90692628.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692628.jpg?1780881058",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "01342c7967024719726571255ba0914b0e33658c0c957c3f5170e75555d6471d",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    },
+    {
+      "file": "4travel-90692629.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692629.jpg?1780881058",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "c96dc768b951333f161f9ec113c2a63c8dbe0735eddda3905824df3771a327a7",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    },
+    {
+      "file": "4travel-90692651.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692651.jpg?1780881058",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "c3daca3dc35cbd3cf5676cc844c542aa7d1cbc8775198d4cf35c52609c2d5b4f",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    },
+    {
+      "file": "4travel-90692655.jpg",
+      "url": "https://cdn.4travel.jp/img/tcs/t/pict/src/90/69/26/src_90692655.jpg?1780881058",
+      "page": "https://4travel.jp/travelogue/12055095",
+      "sha256": "2c99e0d2c4ab0931458190df05db6d3485b75608b8dede841b4a05b32a832b2b",
+      "author": "4travel contributor (display name retained on source page; copyright with photographer)",
+      "date": "2026-05-22 journey; 2026-08-26 repost",
+      "vehicle": "R122/R129/coach numbers mostly unreadable",
+      "view": "interior / side / coupler / operating whole train; see file",
+      "kind": "real operating train photograph",
+      "inspected": true,
+      "license": "Copyright photographer/4travel; observation only, no redistribution",
+      "public_use": "metadata only"
+    }
+  ],
+  "geometry_reuse": {
+    "copied_vehicle_shell": "none",
+    "shared_project_primitives": [
+      "StationKitBuilder.box",
+      "StationKitBuilder.beam",
+      "StationKitBuilder.face",
+      "StationKitBuilder.civicTube"
+    ],
+    "new_components": [
+      "independent ICF/Japanese shells",
+      "window and door stations",
+      "roof ventilators",
+      "TR31/TR35/TR40 exterior interpretations",
+      "restored toilet/underframe layouts"
+    ]
+  },
+  "representatives": {
+    "mixed": "40TPK32200 restored family; side details supported by 32228, not a dated train assignment",
+    "exhibition": "35TP32850 family; TP32859 visible in 2026 journey, other exact interior/exterior differences unknown",
+    "long_seat": "35TP32850 restored family; no invented car number assignment",
+    "rotating_seat": "35SPK32700 restored family; 32717/32757 side references"
+  },
+  "formation_evidence": {
+    "date": "2026-05-22",
+    "url": "https://4travel.jp/travelogue/12055095",
+    "observed_locomotives": [
+      "R122",
+      "R129"
+    ],
+    "locomotive_order_front_to_rear": [
+      "R122 short end facing away from coaches",
+      "R129 short end facing toward coaches"
+    ],
+    "coach_count": 5,
+    "coach_roles_front_to_rear": [
+      "mixed",
+      "exhibition",
+      "long-seat",
+      "rotating-seat",
+      "mixed"
+    ],
+    "coach_numbers": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "coach_directions": [
+      "UNVERIFIED",
+      "UNVERIFIED",
+      "UNVERIFIED",
+      "UNVERIFIED",
+      "UNVERIFIED"
+    ],
+    "status": "UNVERIFIED exact dated numbered formation; role order and two locomotives are supported",
+    "limitations": [
+      "Role assembly is a reconstruction of a dated reported role order, not a fully identified exact train",
+      "Photograph 90692624 shows TP32859 but its numbered position is not established",
+      "R123 source unit reused for role-display locomotive geometry only; R122/R129 altered hardware identity not independently established"
+    ]
+  },
+  "unknowns": [
+    "official passenger-car end numbers",
+    "exact bogie wheelbase, centre spacing and wheel diameter; photo-informed display dimensions",
+    "orthographic roof and underside engineering drawings",
+    "exact numbered dated coach order/directions",
+    "full interior reconstruction",
+    "separate wheelchair/service-coach hardware not established; no invented accessible role"
+  ],
+  "height_disagreement": "35TP32850 source maximum height 3963 mm vs secondary Wikipedia 3953 mm; this model uses specific Train Collection family value and does not claim surveyed precision"
+}

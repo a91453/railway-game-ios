@@ -69,6 +69,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 496: the real light rails' half trains, near and far
                     // (#1533's Danhai 24,838 to 25,174 near, #1506's Citadis 7,104 far).
                     : Self.lightRails.contains(set.key) ? 7_000...25_200
+                    : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 100...15_000
                     : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
                     : name == set.headName && ["R200CK", "R200CKFar"].contains(set.key) ? 5_000...12_800
@@ -95,6 +96,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
                     : set.key == "blueSeven" ? 7.5...8.4
+                    : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 15.79...15.81
                     // Decision 496: the Citadis is 33.4 m, a half 16.7 m.
                     : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3
                     // Decision 531: the Alishan train's DL-38 8.9 m and coaches 13 m.
@@ -126,8 +128,17 @@ final class Map3DTrainSetTests: XCTestCase {
             let middle = (recipes.models[try XCTUnwrap(pack.index(of: set.headName))].minimum.x
                 + recipes.models[try XCTUnwrap(pack.index(of: set.headName))].maximum.x) / 2
             let head = recipes.models[try XCTUnwrap(pack.index(of: set.headName))]
-            XCTAssertTrue(head.vertices.contains { $0.glows && $0.x > middle + 4 }, "\(set.key): the head's lamps at the front")
-            XCTAssertFalse(head.vertices.contains { $0.glows && $0.x < middle - 4 }, "\(set.key): none at its back")
+            if ["R100CK", "R100CKFar"].contains(set.key) {
+                // R100 carries real lens colours at both physical ends.
+                // Runtime end lamps, rather than recipe glow, choose the lit end.
+                let index = try XCTUnwrap(pack.index(of: set.headName))
+                let lights = try XCTUnwrap(pack.lights[index])
+                XCTAssertFalse(lights.lamps(atFront: true).head.isEmpty)
+                XCTAssertFalse(lights.lamps(atFront: false).head.isEmpty)
+            } else {
+                XCTAssertTrue(head.vertices.contains { $0.glows && $0.x > middle + 4 }, "\(set.key): the head's lamps at the front")
+                XCTAssertFalse(head.vertices.contains { $0.glows && $0.x < middle - 4 }, "\(set.key): none at its back")
+            }
             if let tail = pack.index(of: set.tailName).map({ recipes.models[$0] }) {
                 XCTAssertTrue(tail.vertices.contains { $0.glows && $0.x < -4 }, "\(set.key): the tail's lamps at the back")
                 XCTAssertFalse(tail.vertices.contains { $0.glows && $0.x > 4 }, "\(set.key): none at its front")
@@ -181,7 +192,10 @@ final class Map3DTrainSetTests: XCTestCase {
         let steam = try layout("STEAM", 3)
         XCTAssertEqual(steam[0].1 + steam[0].2 + steam[1].1, Map3DDuplexSteam.formation().length, accuracy: 0.01,
                        "the locomotive and tender as #1118 couples them")
-        for key in ["R100CK", "", "C"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        for key in ["", "C"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        // R100 uses its native metre length; its dedicated integration tests
+        // cover all counts and preserve the existing coach payloads.
+        XCTAssertNotNil(pack.layout(forType: "R100CK", count: 3))
         // Decision 461: the player's metro is the C381's units at their own lengths.
         XCTAssertEqual(try layout("A", 3).map(\.0), ["set-metroC381-head", "set-metroC381-car", "set-metroC381-tail"])
         // Only half as far as other cars: the steam locomotives are eight

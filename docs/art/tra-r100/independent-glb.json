@@ -1,0 +1,216 @@
+{
+  "importer": "4.3.2",
+  "status": "VERIFIED",
+  "models": [
+    {
+      "id": "tra-r100-r122-orange-locomotive",
+      "triangles": 7318,
+      "minimum": [
+        -7.899999618530273,
+        -1.475000023841858,
+        0.0
+      ],
+      "maximum": [
+        7.899999618530273,
+        1.475000023841858,
+        3.919999837875366
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-r100-r122-orange-locomotive-far",
+      "triangles": 3466,
+      "minimum": [
+        -7.899999618530273,
+        -1.475000023841858,
+        0.0
+      ],
+      "maximum": [
+        7.899999618530273,
+        1.475000023841858,
+        3.919999837875366
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-r100-r123-breezy-blue-locomotive",
+      "triangles": 7318,
+      "minimum": [
+        -7.899999618530273,
+        -1.475000023841858,
+        0.0
+      ],
+      "maximum": [
+        7.899999618530273,
+        1.475000023841858,
+        3.919999837875366
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-r100-r123-breezy-blue-locomotive-far",
+      "triangles": 3466,
+      "minimum": [
+        -7.899999618530273,
+        -1.475000023841858,
+        0.0
+      ],
+      "maximum": [
+        7.899999618530273,
+        1.475000023841858,
+        3.919999837875366
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-mixed",
+      "triangles": 13194,
+      "minimum": [
+        -10.0,
+        -1.4325003623962402,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325003623962402,
+        3.953000068664551
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-mixed-far",
+      "triangles": 5478,
+      "minimum": [
+        -10.0,
+        -1.4325000047683716,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325000047683716,
+        3.953000068664551
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition",
+      "triangles": 13278,
+      "minimum": [
+        -10.0,
+        -1.4325003623962402,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325003623962402,
+        3.9630000591278076
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition-far",
+      "triangles": 5370,
+      "minimum": [
+        -10.0,
+        -1.4325000047683716,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325000047683716,
+        3.9630000591278076
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat",
+      "triangles": 13278,
+      "minimum": [
+        -10.0,
+        -1.4325003623962402,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325003623962402,
+        3.9630000591278076
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat-far",
+      "triangles": 5370,
+      "minimum": [
+        -10.0,
+        -1.4325000047683716,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325000047683716,
+        3.9630000591278076
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat",
+      "triangles": 12234,
+      "minimum": [
+        -10.0,
+        -1.4325003623962402,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325003623962402,
+        3.953000068664551
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat-far",
+      "triangles": 4950,
+      "minimum": [
+        -10.0,
+        -1.4325000047683716,
+        0.0
+      ],
+      "maximum": [
+        10.0,
+        1.4325000047683716,
+        3.953000068664551
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "breezy-blue-five-coach-role-study-unverified",
+      "triangles": 79814,
+      "minimum": [
+        -65.80000305175781,
+        -1.475000023841858,
+        0.0
+      ],
+      "maximum": [
+        65.80000305175781,
+        1.475000023841858,
+        3.9630000591278076
+      ],
+      "vertex_colors": true
+    },
+    {
+      "id": "breezy-blue-five-coach-role-study-unverified-far",
+      "triangles": 33578,
+      "minimum": [
+        -65.80000305175781,
+        -1.475000023841858,
+        0.0
+      ],
+      "maximum": [
+        65.80000305175781,
+        1.475000023841858,
+        3.9630000591278076
+      ],
+      "vertex_colors": true
+    }
+  ]
+}

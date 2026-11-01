@@ -1,0 +1,337 @@
+{
+  "status": "VERIFIED",
+  "producer": "7b0ce7c726e0fde40da9e479f00ac9920a5f9496",
+  "independent_checkout": true,
+  "files": [
+    {
+      "file": "DELIVERY-SPEC.json",
+      "sha256": "aaf7da6dfa63def33f4935f70cca3c510a0824a239a12799c9ab336358959c24",
+      "identical": true
+    },
+    {
+      "file": "IDENTITY.md",
+      "sha256": "356e11ac08199183ce0b377c3df6ba08be0abc8458dea817f371d24b48e5cf77",
+      "identical": true
+    },
+    {
+      "file": "README.md",
+      "sha256": "98bd65730ab2753cd2512a3c13f46f5c5489ce2e82479cec70437890184dc623",
+      "identical": true
+    },
+    {
+      "file": "SHA256SUMS.txt",
+      "sha256": "58a59d727cd9ed40eb8d9c5bfb453a31b829c908144271d12a4a045b9ef3794b",
+      "identical": true
+    },
+    {
+      "file": "SOURCE.md",
+      "sha256": "43a4a6e582cb11d8fa8d6c801dcd094748cd010a9d39fc19bcfb62f807a919d9",
+      "identical": true
+    },
+    {
+      "file": "blue-sources.json",
+      "sha256": "345ccef1bd6eb15f3b0b649ab46e96602e5bd2d8d53270d14495c045e931064d",
+      "identical": true
+    },
+    {
+      "file": "configuration.json",
+      "sha256": "c53c659fb3572714706ed3a64630ad45e60414c35d7886ad38d0b554fbf78156",
+      "identical": true
+    },
+    {
+      "file": "formation.json",
+      "sha256": "12a0fd4a42c9e1fe888aa4c355cd69da25f2c7a330832eef15b52776d3708e97",
+      "identical": true
+    },
+    {
+      "file": "geometry-verification.json",
+      "sha256": "25f51f6931bc7e39788023739d7b6b90b425b49d07cd9a9d84cbc8bcabcd4df6",
+      "identical": true
+    },
+    {
+      "file": "independent-glb.json",
+      "sha256": "2f3935b91c5a365e74f811c7e19267591827f6d736d0fc8616af03efb6d5ba75",
+      "identical": true
+    },
+    {
+      "file": "index.html",
+      "sha256": "b6276291be7ce130dc9c8bcc2650c5db31ba584ab643d33aaacd2924fa3237a9",
+      "identical": true
+    },
+    {
+      "file": "manifest.json",
+      "sha256": "05812a33a582781be4f7f442ffc28c930eb3c196985822f75726e3443d9829a4",
+      "identical": true
+    },
+    {
+      "file": "models/breezy-blue-five-coach-role-study-unverified-far.glb",
+      "sha256": "50e52c3588690fb7a3cbaadb262b0325f284047af37a822b50ca6697803ccf2b",
+      "identical": true
+    },
+    {
+      "file": "models/breezy-blue-five-coach-role-study-unverified-far.m3dscene.json",
+      "sha256": "f5872ccfcfde3b3432af6e98d92851f0351055bdcb187bb652f5f9b9581eaaec",
+      "identical": true
+    },
+    {
+      "file": "models/breezy-blue-five-coach-role-study-unverified-far.triangles.bin",
+      "sha256": "5a1a2b99b8649db6111364dc6d8e4fd9cb6bf280093497f5f6545c38bfe38958",
+      "identical": true
+    },
+    {
+      "file": "models/breezy-blue-five-coach-role-study-unverified.glb",
+      "sha256": "ef2a490cea0ec6249b7e942cb9bee2b8658023a204c15c57732ec484659462b1",
+      "identical": true
+    },
+    {
+      "file": "models/breezy-blue-five-coach-role-study-unverified.m3dscene.json",
+      "sha256": "9567527568e54e6e7ceefbe3a8122907bcbe1b25336632f05bbfedd379bc245d",
+      "identical": true
+    },
+    {
+      "file": "models/breezy-blue-five-coach-role-study-unverified.triangles.bin",
+      "sha256": "f11d0ac0a77fa9b2a7abb0f1988ca6a592cffc4c7753d5af841e8e15a181a203",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-exhibition-far.glb",
+      "sha256": "6db4f9641c2bb658ce61f9e0592fed1604708a3f6883719ef90b4a79634ce5a5",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-exhibition-far.m3dmodel",
+      "sha256": "6879175a25587699b37b2ebd3e05e3972811770278eaec72881e86d144065c46",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-exhibition.glb",
+      "sha256": "219fc4de9fe718815f432e9dea3a349a0d9faa9c99b5aa15c544943ef1df52de",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-exhibition.m3dmodel",
+      "sha256": "cea340b9e57754a98b7d9da6a58d6b2d7497c42f651e9addc5b0d55a393617b5",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-long-seat-far.glb",
+      "sha256": "9cefadccf672807b14bb8efd7bfe59f8ccd9532037fb52e9ca8025cbe0102195",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-long-seat-far.m3dmodel",
+      "sha256": "84f4ea80c5fad73a0264f4b11a31d0f4fe0a4a3b4388c9c0428ac9d79c5e4418",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-long-seat.glb",
+      "sha256": "c0d6cf5958762e91fab96475c8b19e27b79103269ad9b9e372d0e2f6874529b3",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-long-seat.m3dmodel",
+      "sha256": "a6e24a4ca96810d52b4b9bb572d95c5ef7a456e1aa434a5f85b60841f9aa406b",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-mixed-far.glb",
+      "sha256": "ed7b8e5ddc47bdae0a2cdebc951d3f57ec390897294872c1b325e2169584f031",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-mixed-far.m3dmodel",
+      "sha256": "1e5c8ba3d16dd64af207f414224c1a253d5c6c52182c961a31a399e58c1355d0",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-mixed.glb",
+      "sha256": "5e4b6a55d7d8c7bd8e700e9ba723dcfba07cf7be3d922086fc2b2791229b2ba9",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-mixed.m3dmodel",
+      "sha256": "437d69f723ff6ea7e9d1273bd196b803d431ef4f43a587f1161f575901ce2685",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-rotating-seat-far.glb",
+      "sha256": "5bb4715e5e575d7755d1078a363e9bf8aa21f2ed8602895ac345a11431436ac6",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-rotating-seat-far.m3dmodel",
+      "sha256": "54d7e48e071f148e9aa26f77f4ebcd321b399e697612eec9aa5e0c589dd5b75a",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-rotating-seat.glb",
+      "sha256": "29deb6f351530b38f1ca435b172f574a2bce331295fe4a6586fbf3b2cb77d8f3",
+      "identical": true
+    },
+    {
+      "file": "models/tra-breezy-blue-coach-rotating-seat.m3dmodel",
+      "sha256": "fcc1f82f1197a2ea43105c9ac91d0deb2f73f72c33154096bd7846e538012c9a",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r122-orange-locomotive-far.glb",
+      "sha256": "639489c96c0cf46d582d9a374e3bfed23f8b10b737429cbb2a8bfe30f0c45e8c",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r122-orange-locomotive-far.m3dmodel",
+      "sha256": "5c9a141bf056deb205dfc1ffe582c8032253abbb744972a28b4bb6a5330b3e0d",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r122-orange-locomotive.glb",
+      "sha256": "187afeb8ab1212bb1df748e851d438fb7e120606c68481fcfda30974058ed1be",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r122-orange-locomotive.m3dmodel",
+      "sha256": "daf7c87f8973fc2ca09dc6bc2b676d4507d80f7ec389109383814c257e895d0c",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r123-breezy-blue-locomotive-far.glb",
+      "sha256": "820f62e98a5e064faaa07100ec331969a59083f9b8982ae95c4143d920915a4a",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r123-breezy-blue-locomotive-far.m3dmodel",
+      "sha256": "a55372b2e3b1b896e840a3bd6a28285bdc37310dc7ac3b0ba2cf04222cd884a7",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r123-breezy-blue-locomotive.glb",
+      "sha256": "832267eb2245cf3ee83fa929c6bc69f0d909ece69b8f0bcf6805e9621dddc1ea",
+      "identical": true
+    },
+    {
+      "file": "models/tra-r100-r123-breezy-blue-locomotive.m3dmodel",
+      "sha256": "2bd1ddbfe0dd97c23453b3ea6412beeb8eb6f22900a68c671375c5fa8003a149",
+      "identical": true
+    },
+    {
+      "file": "r100-verification.json",
+      "sha256": "25cce0dc94884c28c63f769d8f042150f953100099814444bc1e7bc88a85be7e",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-back.png",
+      "sha256": "506c49bd9446ac6cd179c8a6e6389bceb82760173b954a1aac95e38d284286de",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-bottom.png",
+      "sha256": "2d4d721d7dd56cc5dde2521d22ec8b20a387e52549ffd42fdfcb1b14b603a555",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-clay.png",
+      "sha256": "0ca6f9b37a0a44f604535227c8aa88a19810df42e42e90434070dbcbebcd35d5",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-front.png",
+      "sha256": "038daba2c97dccc4210a2699f5a3e99af44ef84b08ee790914c4c091a79832c7",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-isometric.png",
+      "sha256": "eb5fc511b8a962a098fd75e1a1c51dcf5ffa0f5aa3e0c1b86ebd4b67cd6c411d",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-left.png",
+      "sha256": "53cd606a3c0b894d9c24f3f3548b51b777499e3356dd6f56641092682963808b",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-right.png",
+      "sha256": "a4228156d7a007c9a612602e813d0b6f233506f660896b3b2e8b2b31485cec5c",
+      "identical": true
+    },
+    {
+      "file": "selected/coaches-top.png",
+      "sha256": "f0652b8fe9260c0c3bd2ca44f7c2ed916042a5981f4d34b54a641993b80399d2",
+      "identical": true
+    },
+    {
+      "file": "selected/formation.png",
+      "sha256": "1808bee48c46118ad4407c8bca7ea8af778e8b94910bc08839a5202d6d94dc6e",
+      "identical": true
+    },
+    {
+      "file": "selected/game-scale.png",
+      "sha256": "f2004a2bdc26bc50855984c95defb9ad5a7906f84e46c7fe696754a6eb05cfd6",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-back.png",
+      "sha256": "3a7b3736c8d97856b12c50f5e06c9b67e3cc904437d89d2e4ecacdeb75da5e80",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-bottom.png",
+      "sha256": "b23986639e1c5f2f585911c13a5add928b0c246e645c2c39553b961f764bc7f7",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-clay.png",
+      "sha256": "9621484c8d314fd398c31c4907cd2603192b866c49cae13274715b317e061690",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-front.png",
+      "sha256": "f1f3424a28ec9b44a152bdede24e58906ec93830a01bdc699e92ece66ba53d32",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-isometric.png",
+      "sha256": "0e6a68fedaf78ea334c9e21e7faae810543fac9be8ae8d2ada980c7509927b36",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-left.png",
+      "sha256": "607b499e4ecb48a0a44981628d012495cafdd0f322e6a88e05d0e74c0da86207",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-right.png",
+      "sha256": "d5fe2b75f276853d55167c3d2f15bddfc77340ace0038451e6ea93454d2489dd",
+      "identical": true
+    },
+    {
+      "file": "selected/locomotives-top.png",
+      "sha256": "9b7209ce8aa283d5becce1fdafb6514dfcf15e1448ffbaa05ffe40eeb4d209d4",
+      "identical": true
+    },
+    {
+      "file": "selected/running-gear.png",
+      "sha256": "7d98f6e84e5321d43dfca77bc7e9b4933eea501e121e48d5122555520bac8516",
+      "identical": true
+    },
+    {
+      "file": "selected/silhouettes.png",
+      "sha256": "a3fdd15340ed18b65d90d840a011bce2d3c1f058845df7a0e4f4ee38de0f7886",
+      "identical": true
+    },
+    {
+      "file": "source-record.json",
+      "sha256": "b37ca653ede282ec80af283093ca2c290d82953e75d195ff9b88754eb31c6ae4",
+      "identical": true
+    },
+    {
+      "file": "status.json",
+      "sha256": "df1c2b16bf3a8944df9072078ba9383250b2710bbf6d1cec2d8bd487d322fff7",
+      "identical": true
+    },
+    {
+      "file": "swift-assembly-verification.json",
+      "sha256": "0977e4f33b10878f0557c0fafa7ecba2b7587c2cdeaec52795acc7ed2127c5ee",
+      "identical": true
+    }
+  ]
+}
