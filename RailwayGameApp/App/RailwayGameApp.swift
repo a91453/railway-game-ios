@@ -213,6 +213,18 @@ struct RailwayGameApp: App {
                     launcher.session?.holdScreenshotZoningDrag()
                 }
             }
+            // Decision 535: a train of a bought real line picked and
+            // followed, for its card and the 3D map.
+            if let real = DebugLaunch.value(of: "-screenshot-follow-bought") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let line = session.world.acquisition(of: real)?.line,
+                       let train = session.world.line(id: line)?.assignedTrains.first(where: { session.world.train(id: $0)?.position != nil }) {
+                        session.selectTrain(train)
+                        session.toggleFollowTrain(train)
+                    }
+                }
+            }
             // Decision 517 續: a station picked, for the 3D map's tag.
             if DebugLaunch.isSet("-screenshot-select-station") {
                 Task {

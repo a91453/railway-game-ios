@@ -190,6 +190,13 @@ public struct Map3DRealTrains: Sendable {
     /// `baseFormation`), each the game's set for that stock, or the nearest
     /// set it has.
     static func formation(system: String, line: RealOperationLine) -> Formation {
+        formation(system: system, id: line.id, name: line.name)
+    }
+
+    /// Decision 535: the same, of a line known by its id (`R_XBT`) and
+    /// name (`內灣線`) alone: a real line the company bought
+    /// (``RealLineStock``), drawn as the trains it had before.
+    static func formation(system: String, id: String, name: String) -> Formation {
         switch system {
         case "thsr":
             // The 700T: twelve cars.
@@ -198,13 +205,13 @@ public struct Map3DRealTrains: Sendable {
             // The diesel branches' DR1000 railcars, three on a weekday;
             // the rest the EMU800, eight cars, as most local trains
             // (`dr1000`, `commuter`).
-            if Map3DScene.dieselBranches.contains(where: { line.name.hasPrefix($0) }) { return Formation(key: "dieselRailcar", cars: 3) }
+            if Map3DScene.dieselBranches.contains(where: { name.hasPrefix($0) }) { return Formation(key: "dieselRailcar", cars: 3) }
             return Formation(key: "emu800", cars: 8)
         case "trtc":
             // Decision 461: each line's own fleet, of the models the game
             // has (the C301 and C321 have none: the line's other fleet
             // stands in for them).
-            switch line.id {
+            switch id {
             // The Wenhu line's four cars (`wenhu`).
             case "BR": return Formation(key: "wenhu", cars: 4)
             // The Circular line's four-car 610.
@@ -224,7 +231,7 @@ public struct Map3DRealTrains: Sendable {
             // Decision 461: the other cities' metros are not Taipei's.
             // Decision 496: the Circular light rail's CAF and Citadis
             // trains, by their number (``Map3DTrainSet/kaohsiungLightRail(number:)``).
-            if line.id == "C" { return Formation(key: "klrtCitadis", cars: 2) }
+            if id == "C" { return Formation(key: "klrtCitadis", cars: 2) }
             // Decision 483: the Red and Orange lines' Siemens three cars.
             return Formation(key: "kaohsiung", cars: 3)
         case "tymc":

@@ -45,15 +45,13 @@ public enum Map3DTrains {
         public init(world: GameWorld) {
             var bodies: [TrainID: [WorldCoordinate]] = [:]
             var types: [TrainID: String] = [:]
-            // Decision 466: the trains of a Sanying line bought, its own
-            // two-car train.
-            let sanying = Set(world.acquisitions.filter { $0.realLine.hasPrefix("sanying:") }.compactMap(\.line))
-            let bought = Set(world.lines.filter { sanying.contains($0.id) }.flatMap(\.trains))
+            // Decision 535 (decision 466 the Sanying Line's before it): the
+            // trains of a real line bought, its own stock.
+            let bought = RealLineStock.setKeys(in: world)
             for train in world.trains where train.position != nil {
                 bodies[train.id] = world.bodyPath(of: train.id)
                 // Decision 318: or the set its performance has a model for.
-                types[train.id] = bought.contains(train.id) ? Map3DTrainSet.sanyingKey
-                    : Map3DTrainSet.key(type: train.type, performance: train.performance)
+                types[train.id] = bought[train.id] ?? Map3DTrainSet.key(type: train.type, performance: train.performance)
             }
             self.bodies = bodies
             self.types = types

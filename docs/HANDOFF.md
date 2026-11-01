@@ -6,6 +6,8 @@
 
 > 從 3D 按「建設」（派工單 BUILD3D，[決策 517](decisions/517.md)，`build3d-return`，2026-10-31）：照舊在 2D 蓋，從 3D 來的按「完成」回到 3D 原本的視角（`Map3DBuildReturn`）。在 3D 裡直接鋪軌只做了評估，留給之後：照決策 517「下一步」的四步（先做 3D 點選、再解決鋪完要等場景重蓋、再只做路網的平面鋪設、最後看實機數據）。實機上回 3D 的樣子、截圖驗收暫緩（ui-review §3），UNVERIFIED。
 
+> 收購的真實路線換上該線自己的車（派工單 ACQSTOCK，[決策 535](decisions/535.md)，`claude/acqstock-real-trains`，2026-11-01）：只改表現層，收購前後 3D 是同一款車（台鐵支線 DR1000、六家沙崙 EMU 區間車、淡海輕軌、北投支線 C371），卡片與路線列寫車名。**沒做的**：性能維持收購時的（評估見決策 535「性能」）；節數仍是 GameCore 的（北投支線 6 節、三鶯 3 節，真車 3、2 節）；2D 列車顏色沒換。實機 UNVERIFIED。
+
 > DR3100 柴聯自強號（決策 511，session_01YGNNuo4eEH6JS6x5CwJ3LG，`dr3100-service`，2026-10-30）：`dieselExpress` 三節以上改用 45DR1000 的外型、DR3100 自己的塗裝（`Map3D45DR1000.Livery.dr3100`，近遠景）；真實地圖的縱貫線北段、宜蘭線、北迴線每天多跑 209／221／238／246 四班 DR3100 三節（`tra-dr3100-schedule.json`）。**沒做的**：臺鐵示範（決策 240）裡這四班仍在「台鐵 自強／莒光」線上用推拉式 12 節跑；要改得在 `TRADemo.kinds` 加一條 DR3100 線並重跑 `TRADemoTests`、`TRADemoDayTests`（見 `docs/decisions/511.md`「還沒做的」）。DR3100 自己的外型（中間的 DR3150 無駕駛室、20.274 m）也還沒有。實機外觀與幀數 UNVERIFIED。
 
 > Codex 45DR1000 靜態 studies（公開 draft #1530 ↔ 私庫 draft #33）：`docs/art/45dr1000-2026-10-29/README.md` 與 sources.json 記 DRC1025 2006–08 版本、來源和推估。公開 recipe 原只加 studies 近遠景；2026-10-30 DR1000 session（session_01YGNNupCW2YCoD2nXrEiuNh）在同一 PR 把營運的 `dieselRailcar`／新的 `dieselRailcarFar` set 換成這款（每節兩端駕駛室，2～3 節照常由 `Map3DRealTrains` 與 `set(forKey:count:)` 決定，未改路由；遠景側窗切成三段讓夜間客室窗會亮，三角形 1,536→1,584）。NEXT_PRIORITIES §22.2 第 17 名「`dr1000` 車種」（升存檔、`TrainType`）是另一件，未做。revision-2 重做使用者否定的首版正面；revision-3 將窗下橘帶由 0.10 m 加厚至照片推估的 0.18 m，使用者認為側面應可接受。revision-4 producer `533f9370598b0f5b101ebfafb37adf7cbd376959` 又依正面原圖修斜肩車頂箱、燈圈、貫通門上框和兩側橘色下緣，私庫 `revision-4/` 留完整素材，前三輪只留 PNG／README／來源。新正面外觀接受、營運整合與 45DR1000 Metal／裝置仍 UNVERIFIED，不得以 Linux viewer 或通用 Simulator build 當本車裝置驗收。不合併／auto-merge／TestFlight。
