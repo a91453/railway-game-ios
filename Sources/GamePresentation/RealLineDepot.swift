@@ -79,12 +79,14 @@ struct RealLineDepotSite: Sendable {
     /// and 307449196), and the middle of its stabling tracks' near ends and
     /// of their far ends (ways 71380030, 71380035 and 71380037;
     /// `tools/rail-depots`). Its sidings hold the trains the real timetable
-    /// leaves at Taipei Zoo overnight, one each.
+    /// leaves at Taipei Zoo overnight, one each, either side in turn as the
+    /// Danhai depot's (22 to one side would reach some 1.5 km past the
+    /// real yard).
     static let muzha = RealLineDepotSite(
         line: "trtc:BR", english: "Muzha Depot", chinese: "木柵機廠",
         junction: (24.998574, 121.579812),
         yard: ((25.001219, 121.584390), (25.001219, 121.585408)),
-        sidings: 22, beyond: "動物園", compact: false
+        sidings: 22, beyond: "動物園", compact: true
     )
 
     /// Decision 535 (PR W): the Neihu depot (內湖機廠, way 499801370) of
@@ -98,7 +100,7 @@ struct RealLineDepotSite: Sendable {
         line: "trtc:BR", english: "Neihu Depot", chinese: "內湖機廠",
         junction: (25.055245, 121.618427),
         yard: ((25.058961, 121.620931), (25.059392, 121.620496)),
-        sidings: 22, beyond: "南港展覽館", compact: false
+        sidings: 22, beyond: "南港展覽館", compact: true
     )
 
     /// The real depots line `line` is bought with (decision 535: the

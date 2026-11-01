@@ -84,6 +84,11 @@ public struct RealBranchLine: Hashable, Sendable {
     /// medium-capacity trains are the game's APM.
     var isWenhu: Bool { system == "mrt" && network == "BR" }
 
+    /// Decision 535 (PR W): whether it is sold only with traffic control
+    /// on. The Wenhu Line's trains, two and a half minutes apart, stood
+    /// still from its first morning without it (the decision's next step).
+    var needsTrafficControl: Bool { isWenhu }
+
     /// Whether its price pays for the riders of its first station: not at a
     /// branch line's junction, which is the main line's, nor where a light
     /// rail joins the one bought before, whose riders that paid for.
@@ -659,6 +664,11 @@ extension RealLineLaying {
     /// line bought before decision 462 lies on the ground at Zhuzhong
     /// whichever it was.
     func offer(for line: RealBranchLine) -> RealLineOffer {
+        if line.needsTrafficControl, !world.isTrafficControlEnabled {
+            return RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(
+                "Turn on Traffic control to buy this line.", "打開「行車控制」後才能收購這條線。"
+            ))
+        }
         let laid = laidOffer(for: line)
         // Decision 528: refused where the same line, bought and removed
         // before, left its track, laid again on the world without that
@@ -1529,6 +1539,12 @@ extension GameSession {
     public func acquireRealLine(_ offer: RealLineOffer) -> Bool {
         guard let acquisition = offer.acquisition else {
             message = StatusMessage(kind: .failure, text: offer.problem ?? "")
+            return false
+        }
+        // Decision 535 (PR W): an offer laid out before traffic control
+        // was turned off is refused as a new one would be.
+        if offer.line.needsTrafficControl, !world.isTrafficControlEnabled {
+            message = StatusMessage(kind: .failure, text: realLineOffer(for: offer.line).problem ?? "")
             return false
         }
         let name = acquisition.lineName

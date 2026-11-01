@@ -186,7 +186,13 @@ final class AcquisitionReportTests: XCTestCase {
         let latitude = stations.map(\.coordinate.latitude).reduce(0, +) / Double(stations.count)
         let longitude = stations.map(\.coordinate.longitude).reduce(0, +) / Double(stations.count)
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
-        var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(20_000_000_000), land: [], rules: .simple)
+        // Decision 535 (PR W): the Wenhu Line, sold only with traffic
+        // control on, under realistic rules, with $1 billion for its price.
+        let wenhu = network == "trtc:BR"
+        var world = GameWorld.newGame(
+            anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(wenhu ? 100_000_000_000 : 20_000_000_000), land: [],
+            rules: wenhu ? .realistic : .simple
+        )
         world.setLandOnDemand()
         world.setRealTransfers(true)
         try world.mapGround()

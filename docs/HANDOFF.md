@@ -1736,6 +1736,8 @@
 - 發佈板（Releases）的 vehicle-source-pack-2nd、vehicle-source-pack-3rd、Tai 不動（作者：「發佈板那邊的都不動」）；Release 檔不算進 repository 大小。
 - 不改寫歷史、不 force-push：刪檔不會縮小舊庫在 GitHub 上的大小，只讓 session 的淺層 clone 變小。
 
+**文湖線只在行車控制開時賣（2026-11-01，WENHU，#1666）**：行車控制關時文湖線第一天早上就卡住，還沒查；重現指令、分鐘、列車位置、假說在 `docs/decisions/535.md` 的「535（續）」下一步。遊戲規劃第 41 任排成 GameCore 調查（LOOP-2、ZSWITCH 之後）；查好後拿掉 `RealBranchLine.needsTrafficControl`。
+
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
 
 | 事項 | 狀態 | 在哪裡 |
