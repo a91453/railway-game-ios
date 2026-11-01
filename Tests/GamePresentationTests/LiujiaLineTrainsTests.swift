@@ -16,7 +16,7 @@ final class LiujiaLineTrainsTests: XCTestCase {
     /// A new game of the app's real-world map at Zhuzhong, bought tile by
     /// tile and with the app's realistic rules, as the launcher begins
     /// it, with money enough.
-    private static func zhuzhong() throws -> GameSession {
+    static func zhuzhong() throws -> GameSession {
         let junction = try BundledRealData.station("竹中", in: "tra_sched").coordinate
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: junction.latitude, longitudeDegrees: junction.longitude))
         var options = NewGameOptions()

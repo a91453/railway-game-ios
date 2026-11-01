@@ -11,7 +11,7 @@ import Foundation
 /// The mesh space is the scene kit's: +x front, +y up, +z left, metres;
 /// the head lamps glow at the front only.
 enum Map3DTrainLocomotive: Sendable {
-    case e200, e500, r100, r135, e1000
+    case e200, e500, r100, e1000
     /// Decision 286, later (fourth): the CT273 steam locomotive's black
     /// and gold (the reference's garage `ct273`) on the hood unit, until
     /// there is a steam locomotive's shape.
@@ -22,10 +22,9 @@ enum Map3DTrainLocomotive: Sendable {
         switch self {
         case .e200: b.e200()
         case .e500: b.e500()
-        case .r100: b.hoodUnit(body: 0xDF753B, stripe: 0xEAE6D3, rail: 0xEAE6D3, chevron: false, fans: 2)
-        case .r135: b.hoodUnit(body: 0x232E48, stripe: 0xEEEDE4, rail: 0xEEEDE4, chevron: true, fans: 2)
+        case .r100: b.hoodUnit(body: 0xDF753B, stripe: 0xEAE6D3, rail: 0xEAE6D3, fans: 2)
         case .e1000: b.e1000()
-        case .ct273: b.hoodUnit(body: 0x262D2B, stripe: 0xBCAB74, rail: 0xBCAB74, chevron: false, fans: 0)
+        case .ct273: b.hoodUnit(body: 0x262D2B, stripe: 0xBCAB74, rail: 0xBCAB74, fans: 0)
         }
         return .flat(named: "\(self)", from: b.mesh)
     }
@@ -96,9 +95,9 @@ extension SceneKitBuilder {
         pantographs(at: [2.6])
     }
 
-    /// A hood unit (R100, R135): a long hood, the cab near the front, a
+    /// A hood unit (R100): a long hood, the cab near the front, a
     /// short nose, a walkway with handrails round it.
-    fileprivate mutating func hoodUnit(body colour: UInt32, stripe: UInt32, rail: UInt32, chevron: Bool, fans count: Int) {
+    fileprivate mutating func hoodUnit(body colour: UInt32, stripe: UInt32, rail: UInt32, fans count: Int) {
         let body = Map3DColor.rgb(colour), line = Map3DColor.rgb(stripe), handrail = Map3DColor.rgb(rail)
         running(axles: 3)
         box(0, 1.2, 0, 2 * Self.half - 0.2, 2.9, 0.14, Self.graphite)
@@ -125,18 +124,12 @@ extension SceneKitBuilder {
                 beam(Map3DPoint(x, 1.34, z), Map3DPoint(x, 2.25, z), thickness: 0.06, color: handrail)
             }
         }
-        // The nose: lamps, and on the R135 its yellow and black V.
+        // The nose: lamps.
         let face: Float = 8.0
         for z: Float in [-0.6, 0.6] {
             let start = mesh.vertices.count
             box(face + 0.05, 2.15, z, 0.12, 0.26, 0.2, Map3DTrainStyle.headlamp)
             mesh.makeGlowing(from: start)
-        }
-        if chevron {
-            box(face + 0.02, 1.4, 0, 0.06, 2.0, 0.6, Self.pilotYellow)
-            for z: Float in [-1, 1] {
-                beam(Map3DPoint(face + 0.07, 2.0, z * 0.95), Map3DPoint(face + 0.07, 1.42, 0), thickness: 0.12, color: Self.graphite)
-            }
         }
         pilot(end: 1, chevron: true)
         pilot(end: -1, chevron: true)

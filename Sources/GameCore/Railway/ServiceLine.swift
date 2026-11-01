@@ -816,8 +816,11 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         // times, every level alike: as many as are assigned to it, at the
         // runs' headway.
         if hasRuns {
-            guard roundTrips.first ?? nil != nil, !trains.isEmpty else { return ([nil], Array(repeating: 0, count: stops.count - 1)) }
-            return ([(trains.count, runHeadway)], Array(repeating: Self.load(ofHeadway: runHeadway), count: stops.count - 1))
+            // Decision 535: a ring's segments include the last stop's
+            // back to the first.
+            let segments = isRing ? stops.count : stops.count - 1
+            guard roundTrips.first ?? nil != nil, !trains.isEmpty else { return ([nil], Array(repeating: 0, count: segments)) }
+            return ([(trains.count, runHeadway)], Array(repeating: Self.load(ofHeadway: runHeadway), count: segments))
         }
         if isRing {
             guard let lap = roundTrips.first ?? nil, let plan = Self.ringService(trainsInService, targetHeadways, at: level, lap: lap, capacity: capacities?.first ?? nil) else {
@@ -1171,7 +1174,7 @@ extension ServiceLine: Codable {
         else {
             throw DecodingError.dataCorruptedError(
                 forKey: .runs, in: container,
-                debugDescription: "Line \(id.rawValue)'s runs must be its own, on a line that is not a ring, has no patterns and calls at no station twice, each with the day it last ran."
+                debugDescription: "Line \(id.rawValue)'s runs must be its own, going one way round on a ring and with no way on any other line, on a line with no patterns that calls at no station twice, each with the day it last ran."
             )
         }
     }

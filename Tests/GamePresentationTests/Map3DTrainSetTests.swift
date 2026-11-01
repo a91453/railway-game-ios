@@ -70,6 +70,10 @@ final class Map3DTrainSetTests: XCTestCase {
                     // (#1533's Danhai 24,838 to 25,174 near, #1506's Citadis 7,104 far).
                     : Self.lightRails.contains(set.key) ? 7_000...25_200
                     : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 100...15_000
+                    // Decision 541: the Blue Train's two R100s, 14,636 near and
+                    // 6,932 far; #1671's coaches 13,194 to 13,278 near, 5,370
+                    // to 5,478 far.
+                    : ["BLUE", "BLUEFar"].contains(set.key) ? 5_000...15_000
                     : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
                     : name == set.headName && ["R200CK", "R200CKFar", "FREIGHT", "FREIGHTFar"].contains(set.key) ? 5_000...12_800
@@ -100,6 +104,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 539: the R200 20.01 m, its container wagons 14.2 m.
                     : name == set.headName && ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 20.0...20.02
                     : ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 14.1...14.3
+                    // Decision 541: the Blue Train's head unit, two R100s back to back.
+                    : name == set.headName && ["BLUE", "BLUEFar"].contains(set.key) ? 31.58...31.62
                     // Decision 496: the Citadis is 33.4 m, a half 16.7 m.
                     : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3
                     // Decision 531: the Alishan train's DL-38 8.9 m and coaches 13 m.

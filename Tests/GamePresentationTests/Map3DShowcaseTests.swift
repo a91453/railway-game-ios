@@ -100,8 +100,8 @@ final class Map3DShowcaseTests: XCTestCase {
     }
 
     func testFarUsesTheSetsFarModels() {
-        let near = Map3DShowcase.layout(keys: ["emu800", "BLUE"], cars: [:], far: false)
-        let far = Map3DShowcase.layout(keys: ["emu800", "BLUE"], cars: [:], far: true)
+        let near = Map3DShowcase.layout(keys: ["emu800", "STEAM"], cars: [:], far: false)
+        let far = Map3DShowcase.layout(keys: ["emu800", "STEAM"], cars: [:], far: true)
         XCTAssertTrue(near[0].cars.allSatisfy { pack.models[$0.model].name.hasPrefix("set-emu800-") || pack.models[$0.model].name.hasPrefix("emu800") })
         XCTAssertTrue(far[0].cars.allSatisfy { pack.models[$0.model].name.hasPrefix("set-emu800Far-") }, "\(far[0].cars.map { pack.models[$0.model].name })")
         XCTAssertEqual(far[0].key, "emu800")

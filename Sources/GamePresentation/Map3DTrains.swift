@@ -49,7 +49,10 @@ public enum Map3DTrains {
             // trains of a real line bought, its own stock.
             let bought = RealLineStock.setKeys(in: world)
             for train in world.trains where train.position != nil {
-                bodies[train.id] = world.bodyPath(of: train.id)
+                // Decision 538: and the track past its two ends, where the
+                // halves of its end cars are laid, at that track's height.
+                let back = TrainTrackReach.back(of: train, in: world)
+                bodies[train.id] = TrainTrackReach.front(of: train, in: world).dropFirst().reversed() + (back.isEmpty ? world.bodyPath(of: train.id) : back)
                 // Decision 318: or the set its performance has a model for.
                 types[train.id] = bought[train.id] ?? Map3DTrainSet.key(type: train.type, performance: train.performance)
             }
@@ -175,10 +178,8 @@ public enum Map3DTrains {
         reach: Map3DModelReach = .standard
     ) -> Frame {
         var frame = Frame()
-        let gap = Double(carGap) * Double(WorldCoordinate.unitsPerMetre)
         for run in motion.runs {
-            guard let head = run.head(at: progress) else { continue }
-            let body = run.body(at: progress)
+            guard run.head(at: progress) != nil else { continue }
             // Decision 227: as many cars as stand its own car length apart.
             let count = TrainCars.count(length: run.length, carPitch: run.carPitch)
             // Decision 380: facing the way the track runs behind the head,
@@ -186,20 +187,7 @@ public enum Map3DTrains {
             // one sampled point of the track to the next.
             let steady = run.steadyHead(at: progress, over: Self.steadySpan)
             let (side, stripe) = colours(of: run.look, palette: palette)
-            // Decision 408: half the high-speed trains the N700S-G (decision
-            // 338, second later: none while the train pack is locked).
-            // Decision 539: a freight train, whatever its type, the R200 and
-            // its container wagons.
-            let trainType = run.look == .freight ? Map3DTrainSet.freightKey
-                : Map3DTrainSet.variant(of: heights.type(of: run.train), number: run.train.rawValue, locked: models?.locked ?? [])
-            let hasModels = models?.models(forType: trainType) != nil
-            // Decision 399: or each car at its model's own length.
-            let layout = hasModels ? models?.layout(forType: trainType, count: count) : nil
-            let heading = steady?.heading ?? head.heading
-            let units = Double(WorldCoordinate.unitsPerMetre)
-            let cars = layout.map {
-                TrainCars.cars(body: body, heading: heading, lengths: $0.map { Double($0.length) * units }, gaps: $0.map { Double($0.gap) * units })
-            } ?? TrainCars.cars(body: body, heading: heading, count: count, gap: gap)
+            let (trainType, hasModels, layout, cars) = Self.cars(of: run, progress: progress, heights: heights, models: models)
             // Decision 334: the rails under the train, front to back, for
             // its ring.
             var line: [Map3DPoint] = []
@@ -275,6 +263,38 @@ public enum Map3DTrains {
             }
         }
         return frame
+    }
+
+    /// The cars of `run` at `progress` as ``frame(_:progress:heights:in:models:eye:palette:ringed:reach:)``
+    /// lays them, each its polyline in world units from its front to its
+    /// back: the type its models are looked up by, whether `models` has
+    /// them, the set's own lengths (decision 399) when it does.
+    static func cars(
+        of run: TrainMotion.Run, progress: Double, heights: Heights, models: Map3DModelPack?
+    ) -> (type: String, hasModels: Bool, layout: [Map3DModelPack.LaidCar]?, cars: [[TrainMotion.Point]]) {
+        guard let head = run.head(at: progress) else { return ("", false, nil, []) }
+        let gap = Double(carGap) * Double(WorldCoordinate.unitsPerMetre)
+        let body = run.body(at: progress)
+        let count = TrainCars.count(length: run.length, carPitch: run.carPitch)
+        let steady = run.steadyHead(at: progress, over: Self.steadySpan)
+        // Decision 408: half the high-speed trains the N700S-G (decision
+        // 338, second later: none while the train pack is locked).
+        // Decision 539: a freight train, whatever its type, the R200 and
+        // its container wagons.
+        let trainType = run.look == .freight ? Map3DTrainSet.freightKey
+            : Map3DTrainSet.variant(of: heights.type(of: run.train), number: run.train.rawValue, locked: models?.locked ?? [])
+        let hasModels = models?.models(forType: trainType) != nil
+        // Decision 399: or each car at its model's own length.
+        let layout = hasModels ? models?.layout(forType: trainType, count: count) : nil
+        let heading = steady?.heading ?? head.heading
+        let units = Double(WorldCoordinate.unitsPerMetre)
+        // Decision 538: past the body's ends along the track.
+        let track = run.track(at: progress)
+        let cars = layout.map {
+            TrainCars.cars(body: body, heading: heading, lengths: $0.map { Double($0.length) * units }, gaps: $0.map { Double($0.gap) * units },
+                           track: track)
+        } ?? TrainCars.cars(body: body, heading: heading, count: count, gap: gap, track: track)
+        return (trainType, hasModels, layout, cars)
     }
 
     /// Decision 334: the ring round a train asked about on a station's

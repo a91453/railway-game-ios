@@ -370,6 +370,12 @@ extension GameWorld {
         guard allowsService(at: leg.from), allowsService(at: leg.to),
               let line = line(id: leg.line), onFreightLines || !line.isFreight, scheduled
         else { return false }
+        // Decision 535: on a ring with runs, a way round and arc some run
+        // goes, across the seam as anywhere else.
+        if line.isRing, line.hasRuns {
+            guard leg.pattern == nil, let from = line.stops.firstIndex(of: leg.from), let to = line.stops.firstIndex(of: leg.to) else { return false }
+            return line.runsServe(from: from, to: to, way: leg.direction == .outbound ? .inner : .outer)
+        }
         if line.isRing {
             let direction: RingDirection = leg.direction == .outbound ? .inner : .outer
             guard line.ringWayRuns(direction), journey(of: line, service: 0, direction: direction) != nil else { return false }

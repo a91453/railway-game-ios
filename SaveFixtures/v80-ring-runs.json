@@ -1,0 +1,852 @@
+{
+  "saveVersion" : 80,
+  "world" : {
+    "bounds" : {
+      "height" : 8192,
+      "width" : 10240
+    },
+    "clock" : {
+      "now" : 22200,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 979200,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "deadheadDistance" : 12448,
+        "depot" : 7,
+        "id" : 1,
+        "name" : "Ring",
+        "ring" : true,
+        "runDays" : [
+          0,
+          0,
+          null,
+          null,
+          null,
+          null
+        ],
+        "runs" : [
+          {
+            "from" : 0,
+            "times" : [
+              [
+                21600,
+                21600
+              ],
+              [
+                21900,
+                21960
+              ],
+              [
+                22260,
+                22320
+              ],
+              [
+                22620,
+                22680
+              ],
+              [
+                22980,
+                23040
+              ],
+              [
+                23340,
+                23400
+              ],
+              [
+                23700,
+                23700
+              ]
+            ],
+            "to" : 0,
+            "way" : "inner"
+          },
+          {
+            "from" : 0,
+            "times" : [
+              [
+                22200,
+                22200
+              ],
+              [
+                22500,
+                22560
+              ],
+              [
+                22860,
+                22920
+              ],
+              [
+                23220,
+                23280
+              ],
+              [
+                23580,
+                23640
+              ],
+              [
+                23940,
+                24000
+              ],
+              [
+                24300,
+                24300
+              ]
+            ],
+            "to" : 0,
+            "way" : "outer"
+          },
+          {
+            "from" : 0,
+            "times" : [
+              [
+                25200,
+                25200
+              ],
+              [
+                25500,
+                25560
+              ],
+              [
+                25860,
+                25920
+              ],
+              [
+                26220,
+                26220
+              ]
+            ],
+            "to" : 3,
+            "way" : "inner"
+          },
+          {
+            "from" : 0,
+            "times" : [
+              [
+                25800,
+                25800
+              ],
+              [
+                26100,
+                26160
+              ],
+              [
+                26460,
+                26520
+              ],
+              [
+                26820,
+                26820
+              ]
+            ],
+            "to" : 3,
+            "way" : "outer"
+          },
+          {
+            "from" : 3,
+            "times" : [
+              [
+                28800,
+                28800
+              ],
+              [
+                29100,
+                29160
+              ],
+              [
+                29460,
+                29520
+              ],
+              [
+                29820,
+                29820
+              ]
+            ],
+            "to" : 0,
+            "way" : "inner"
+          },
+          {
+            "from" : 3,
+            "times" : [
+              [
+                29400,
+                29400
+              ],
+              [
+                29700,
+                29760
+              ],
+              [
+                30060,
+                30120
+              ],
+              [
+                30420,
+                30420
+              ]
+            ],
+            "to" : 0,
+            "way" : "outer"
+          }
+        ],
+        "stops" : [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "trains" : [
+          1,
+          2
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 7482,
+                "y" : 3072
+              },
+              "control2" : {
+                "x" : 7168,
+                "y" : 2758
+              }
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 7168,
+                "y" : 5434
+              },
+              "control2" : {
+                "x" : 7482,
+                "y" : 5120
+              }
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 2758,
+                "y" : 5120
+              },
+              "control2" : {
+                "x" : 3072,
+                "y" : 5434
+              }
+            }
+          },
+          "from" : 7,
+          "id" : 7,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 3072,
+                "y" : 2758
+              },
+              "control2" : {
+                "x" : 2758,
+                "y" : 3072
+              }
+            }
+          },
+          "from" : 8,
+          "id" : 8,
+          "to" : 1
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 9,
+          "id" : 9,
+          "to" : 10
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 10,
+          "id" : 10,
+          "to" : 11
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 9844,
+                "y" : 2048
+              },
+              "control2" : {
+                "x" : 9216,
+                "y" : 1420
+              }
+            }
+          },
+          "from" : 11,
+          "id" : 11,
+          "to" : 12
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 9216,
+                "y" : 6772
+              },
+              "control2" : {
+                "x" : 9844,
+                "y" : 6144
+              }
+            }
+          },
+          "from" : 12,
+          "id" : 12,
+          "to" : 13
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 13,
+          "id" : 13,
+          "to" : 14
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 14,
+          "id" : 14,
+          "to" : 15
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 396,
+                "y" : 6144
+              },
+              "control2" : {
+                "x" : 1024,
+                "y" : 6772
+              }
+            }
+          },
+          "from" : 15,
+          "id" : 15,
+          "to" : 16
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 1024,
+                "y" : 1420
+              },
+              "control2" : {
+                "x" : 396,
+                "y" : 2048
+              }
+            }
+          },
+          "from" : 16,
+          "id" : 16,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 5376,
+                "y" : 3072
+              },
+              "control2" : {
+                "x" : 5376,
+                "y" : 2816
+              }
+            }
+          },
+          "from" : 2,
+          "id" : 17,
+          "to" : 17
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 5888,
+                "y" : 2816
+              },
+              "control2" : {
+                "x" : 5888,
+                "y" : 3072
+              }
+            }
+          },
+          "from" : 17,
+          "id" : 18,
+          "to" : 3
+        }
+      ],
+      "nextEdgeID" : 19,
+      "nextNodeID" : 18,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 4096,
+          "y" : 3072,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 5120,
+          "y" : 3072,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 6144,
+          "y" : 3072,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 7168,
+          "y" : 4096,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 6144,
+          "y" : 5120,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5120,
+          "y" : 5120,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 4096,
+          "y" : 5120,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 3072,
+          "y" : 4096,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 3072,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 10,
+          "x" : 5120,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 11,
+          "x" : 7168,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 12,
+          "x" : 9216,
+          "y" : 4096,
+          "z" : 0
+        },
+        {
+          "id" : 13,
+          "x" : 7168,
+          "y" : 6144,
+          "z" : 0
+        },
+        {
+          "id" : 14,
+          "x" : 5120,
+          "y" : 6144,
+          "z" : 0
+        },
+        {
+          "id" : 15,
+          "x" : 3072,
+          "y" : 6144,
+          "z" : 0
+        },
+        {
+          "id" : 16,
+          "x" : 1024,
+          "y" : 4096,
+          "z" : 0
+        },
+        {
+          "id" : 17,
+          "x" : 5632,
+          "y" : 2816,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 3,
+          "end" : 2048,
+          "start" : 1536,
+          "station" : 3
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 4
+        },
+        {
+          "edge" : 6,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 5
+        },
+        {
+          "edge" : 7,
+          "end" : 2048,
+          "start" : 1536,
+          "station" : 6
+        },
+        {
+          "edge" : 9,
+          "end" : 2048,
+          "start" : 1536,
+          "station" : 1
+        },
+        {
+          "edge" : 10,
+          "end" : 2048,
+          "start" : 1536,
+          "station" : 2
+        },
+        {
+          "edge" : 11,
+          "end" : 4090,
+          "start" : 3578,
+          "station" : 3
+        },
+        {
+          "edge" : 13,
+          "end" : 2048,
+          "start" : 1536,
+          "station" : 4
+        },
+        {
+          "edge" : 14,
+          "end" : 2048,
+          "start" : 1536,
+          "station" : 5
+        },
+        {
+          "edge" : 15,
+          "end" : 4090,
+          "start" : 3578,
+          "station" : 6
+        },
+        {
+          "edge" : 18,
+          "end" : 512,
+          "start" : 0,
+          "station" : 7
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 8,
+    "nextTrainID" : 3,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "A",
+        "point" : {
+          "x" : 4608,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "B",
+        "point" : {
+          "x" : 6656,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "C",
+        "point" : {
+          "x" : 9728,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "D",
+        "point" : {
+          "x" : 6656,
+          "y" : 7680
+        }
+      },
+      {
+        "id" : 5,
+        "name" : "E",
+        "point" : {
+          "x" : 4608,
+          "y" : 7680
+        }
+      },
+      {
+        "id" : 6,
+        "name" : "F",
+        "point" : {
+          "x" : 1536,
+          "y" : 7680
+        }
+      },
+      {
+        "depot" : true,
+        "id" : 7,
+        "name" : "G",
+        "point" : {
+          "x" : 8704,
+          "y" : 1536
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 2
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "rate" : 1024
+        },
+        "name" : "Clockwise",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 3,
+            "offset" : 1638
+          }
+        },
+        "times" : {
+          "arrival" : 21900,
+          "departure" : 21960,
+          "run" : {
+            "length" : 2048,
+            "seconds" : 300,
+            "start" : 21960
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 21300,
+            "departure" : 21600,
+            "station" : 1
+          },
+          {
+            "arrival" : 21900,
+            "departure" : 21960,
+            "station" : 2
+          },
+          {
+            "arrival" : 22260,
+            "departure" : 22320,
+            "station" : 3
+          },
+          {
+            "arrival" : 22620,
+            "departure" : 22680,
+            "station" : 4
+          },
+          {
+            "arrival" : 22980,
+            "departure" : 23040,
+            "station" : 5
+          },
+          {
+            "arrival" : 23340,
+            "departure" : 23400,
+            "station" : 6
+          },
+          {
+            "arrival" : 23700,
+            "departure" : 23700,
+            "station" : 1
+          }
+        ]
+      },
+      {
+        "execution" : {
+          "phase" : "waiting",
+          "stop" : 0
+        },
+        "id" : 2,
+        "movement" : {
+          "cursor" : 0,
+          "end" : 512,
+          "rate" : 1024
+        },
+        "name" : "Anticlockwise",
+        "position" : {
+          "onEdge" : {
+            "direction" : "backward",
+            "edge" : 9,
+            "offset" : 512
+          }
+        },
+        "times" : {
+          "arrival" : 21900,
+          "closing" : 22191,
+          "exchangeEnd" : 21908
+        },
+        "timetable" : [
+          {
+            "arrival" : 21900,
+            "departure" : 22200,
+            "station" : 1
+          },
+          {
+            "arrival" : 22500,
+            "departure" : 22560,
+            "station" : 6
+          },
+          {
+            "arrival" : 22860,
+            "departure" : 22920,
+            "station" : 5
+          },
+          {
+            "arrival" : 23220,
+            "departure" : 23280,
+            "station" : 4
+          },
+          {
+            "arrival" : 23580,
+            "departure" : 23640,
+            "station" : 3
+          },
+          {
+            "arrival" : 23940,
+            "departure" : 24000,
+            "station" : 2
+          },
+          {
+            "arrival" : 24300,
+            "departure" : 24300,
+            "station" : 1
+          }
+        ]
+      }
+    ]
+  }
+}

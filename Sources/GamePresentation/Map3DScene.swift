@@ -1387,12 +1387,8 @@ extension Map3DScene {
                 }
                 if cleared.contains(ChunkKey(column: lot.column, row: lot.row)) {
                     // A plaza where the track passes.
-                    let half = Float(cell / Self.metre / 2) - 1
-                    mesh(at: base) { mesh in
-                        mesh.addQuad(base + Map3DPoint(-half, 0.03, -half), base + Map3DPoint(-half, 0.03, half),
-                                     base + Map3DPoint(half, 0.03, half), base + Map3DPoint(half, 0.03, -half), color: Map3DPalette.plaza,
-                                     paint: Self.paving)
-                    }
+                    let square = groundSquare(round: base, half: Float(cell / Self.metre / 2) - 1, lift: 0.03)
+                    mesh(at: base) { $0.addFlat(square, triangles: Self.squareTriangles, color: Map3DPalette.plaza, paint: Self.paving) }
                     continue
                 }
                 switch lot.use {
@@ -1418,6 +1414,22 @@ extension Map3DScene {
             }
         }
 
+        /// 103.1: the corners of a lot's square `half` metres each way
+        /// round `base` (its 64 m cell's middle), `lift` over the drawn
+        /// ground (``drawnGround(x:z:)``). Laid flat at the middle's
+        /// height, a square on a slope stuck out of the hill as long
+        /// triangles where the ground dipped under it.
+        mutating func groundSquare(round base: Map3DPoint, half: Float, lift: Float) -> [Map3DPoint] {
+            [(-half, -half), (-half, half), (half, half), (half, -half)].map { dx, dz in
+                Map3DPoint(base.x + dx, drawnGround(x: base.x + dx, z: base.z + dz) + lift, base.z + dz)
+            }
+        }
+
+        /// ``groundSquare(round:half:lift:)``'s two triangles, split from
+        /// its north-west corner to its south-east one as the cell's
+        /// ground is, so each lies on one of the ground's.
+        static let squareTriangles = [0, 1, 2, 0, 2, 3]
+
         mutating func addOpenGround(_ lot: CitySkyline.Lot, base: Map3DPoint, seed: (Int32, Int32)) {
             let half = Float(Double(Land.cellLength) / Self.metre / 2) - 0.5
             let park = lot.use == .park
@@ -1432,15 +1444,15 @@ extension Map3DScene {
                         guard map3DRandom(seed.0, seed.1, salt: salt) < 0.7 else { continue }
                         let jitterX = (map3DRandom(seed.0, seed.1, salt: salt + 20) - 0.5) * 8
                         let jitterZ = (map3DRandom(seed.0, seed.1, salt: salt + 40) - 0.5) * 8
-                        let spot = base + Map3DPoint(Float(i) * 20 + jitterX, 0, Float(j) * 20 + jitterZ)
+                        var spot = base + Map3DPoint(Float(i) * 20 + jitterX, 0, Float(j) * 20 + jitterZ)
+                        spot.y = drawnGround(x: spot.x, z: spot.z)
                         trees.append((spot, 4 + map3DRandom(seed.0, seed.1, salt: salt + 60) * 3))
                     }
                 }
             }
+            let square = groundSquare(round: base, half: half, lift: 0.02)
             mesh(at: base) { mesh in
-                mesh.addQuad(base + Map3DPoint(-half, 0.02, -half), base + Map3DPoint(-half, 0.02, half),
-                             base + Map3DPoint(half, 0.02, half), base + Map3DPoint(half, 0.02, -half),
-                             color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
+                mesh.addFlat(square, triangles: Self.squareTriangles, color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
                 for (spot, size) in trees {
                     if !far {
                         mesh.addBox(base: spot, length: 0.6, width: 0.6, height: size * 0.45, top: Map3DPalette.trunk, side: Map3DPalette.trunk)
