@@ -3382,44 +3382,44 @@
       "triangles" : 12
     },
     "light-set-ALISHAN-car" : {
-      "hash" : "b8d886e027a5504d",
+      "hash" : "7db10d7739bf5a1d",
       "triangles" : 48
     },
     "light-set-ALISHAN-tail" : {
-      "hash" : "b8d886e027a5504d",
+      "hash" : "7db10d7739bf5a1d",
       "triangles" : 48
     },
     "light-set-ALISHANFar-car" : {
-      "hash" : "e6444da155316a5",
+      "hash" : "896ec4080534acd5",
       "triangles" : 8
     },
     "light-set-ALISHANFar-tail" : {
-      "hash" : "e6444da155316a5",
+      "hash" : "896ec4080534acd5",
       "triangles" : 8
     },
     "set-ALISHAN-car" : {
-      "hash" : "9c611f34dee73f01",
-      "triangles" : 2000
+      "hash" : "e89e025724f20054",
+      "triangles" : 3988
     },
     "set-ALISHAN-head" : {
-      "hash" : "6771a5ac56b286d8",
-      "triangles" : 2528
+      "hash" : "4e0e837fdda05ada",
+      "triangles" : 7712
     },
     "set-ALISHAN-tail" : {
-      "hash" : "5a7013a8176a542d",
-      "triangles" : 2000
+      "hash" : "b9b10edafb8878b3",
+      "triangles" : 3988
     },
     "set-ALISHANFar-car" : {
-      "hash" : "db4542748e5a407f",
-      "triangles" : 956
+      "hash" : "565db045c865bd74",
+      "triangles" : 1372
     },
     "set-ALISHANFar-head" : {
-      "hash" : "7b08487bf8962dbb",
-      "triangles" : 1024
+      "hash" : "cf2e40f9fd1ca643",
+      "triangles" : 2316
     },
     "set-ALISHANFar-tail" : {
-      "hash" : "2a87d38d016fb14b",
-      "triangles" : 956
+      "hash" : "7ff73b13a4a3782f",
+      "triangles" : 1372
     }
   }
 }

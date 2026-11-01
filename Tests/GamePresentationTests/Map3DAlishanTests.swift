@@ -34,7 +34,7 @@ final class Map3DAlishanTests: XCTestCase {
     /// the far versions the near ones' frames and colours and under half
     /// their triangles.
     func testTheirFrames() throws {
-        for (unit, length, width, height) in [("head", 8.9, 2.2, 3.05), ("car", 13.0, 2.276, 3.22), ("tail", 13.0, 2.276, 3.22)] as [(String, Float, Float, Float)] {
+        for (unit, length, width, height) in [("head", 8.9, 2.28, 3.21), ("car", 13.0, 2.32, 3.13), ("tail", 13.0, 2.32, 3.13)] as [(String, Float, Float, Float)] {
             let near = try XCTUnwrap(pack.index(of: "set-ALISHAN-\(unit)").map { pack.models[$0] })
             let far = try XCTUnwrap(pack.index(of: "set-ALISHANFar-\(unit)").map { pack.models[$0] })
             XCTAssertEqual(near.length, length, accuracy: 1e-3, unit)
@@ -49,14 +49,14 @@ final class Map3DAlishanTests: XCTestCase {
         }
     }
 
-    /// The reference's colours: the red locomotive with its cream line, the
-    /// cream coach with its red band; the windows the trains' glass, so
-    /// they light at night.
+    /// The photographed colours: the red locomotive with its white band,
+    /// the coach red below a white line and dark green along its windows;
+    /// the windows the trains' glass, so they light at night.
     func testTheirColours() {
         let loco = Set(Map3DAlishan.locomotive().vertices.map(\.color))
         XCTAssertTrue(loco.isSuperset(of: [Map3DColor.rgb(0xB83230), Map3DColor.rgb(0xE9E1CF), Map3DTrainStyle.glass]))
         let coach = Set(Map3DAlishan.coach().vertices.map(\.color))
-        XCTAssertTrue(coach.isSuperset(of: [Map3DColor.rgb(0xE6D7B0), Map3DColor.rgb(0xAD333A), Map3DTrainStyle.glass]))
+        XCTAssertTrue(coach.isSuperset(of: [Map3DColor.rgb(0xB83230), Map3DColor.rgb(0xE9E1CF), Map3DColor.rgb(0x1E4A3E), Map3DTrainStyle.glass]))
         XCTAssertEqual(Set(Map3DAlishan.coach(far: true).vertices.map(\.color)).subtracting(coach).map { String($0, radix: 16) }, [], "the far coach's colours are the near one's")
         XCTAssertEqual(Set(Map3DAlishan.locomotive(far: true).vertices.map(\.color)).subtracting(loco).map { String($0, radix: 16) }, [], "the far locomotive's colours are the near one's")
     }
@@ -72,10 +72,10 @@ final class Map3DAlishanTests: XCTestCase {
 
     /// The recipes are pinned: a change to a shared function shows here.
     func testTheRecipesAreUnchanged() {
-        XCTAssertEqual(hash(Map3DAlishan.locomotive()), "46270613d25375d7")
-        XCTAssertEqual(hash(Map3DAlishan.locomotive(far: true)), "9a832a149a838c9c")
-        XCTAssertEqual(hash(Map3DAlishan.coach()), "de6fe83d85b449b3")
-        XCTAssertEqual(hash(Map3DAlishan.coach(far: true)), "cd2f908502f39a83")
+        XCTAssertEqual(hash(Map3DAlishan.locomotive()), "4878a0e42db7eb8d")
+        XCTAssertEqual(hash(Map3DAlishan.locomotive(far: true)), "393b58c158239c18")
+        XCTAssertEqual(hash(Map3DAlishan.coach()), "f762c29fd7626164")
+        XCTAssertEqual(hash(Map3DAlishan.coach(far: true)), "781461f90adac51a")
     }
 
     private func hash(_ model: Map3DModelPack.Model) -> String {

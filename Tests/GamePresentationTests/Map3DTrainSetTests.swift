@@ -71,7 +71,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : Self.lightRails.contains(set.key) ? 7_000...25_200
                     : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
-                    : name == set.headName && ["R200CK", "R200CKFar"].contains(set.key) ? 5_000...12_800 : 100...4_100
+                    : name == set.headName && ["R200CK", "R200CKFar"].contains(set.key) ? 5_000...12_800
+                    // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
+                    : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -98,8 +100,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 531: the Alishan train's DL-38 8.9 m and coaches 13 m.
                     : alishan ? (name.hasSuffix("-head") ? 8.8...9.0 : 12.9...13.1) : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
-                // Decision 531: the 762 mm gauge's cars 2.2 to 2.3 m wide.
-                XCTAssertTrue((alishan ? 2.1...2.3 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
+                // Decision 531: the 762 mm gauge's cars 2.2 to 2.3 m wide, the
+                // coaches' grab bars 2.32 m.
+                XCTAssertTrue((alishan ? 2.1...2.35 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
                 let height: ClosedRange<Float> = name == set.headName && ["E500CK", "STAR", "E500CKFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
