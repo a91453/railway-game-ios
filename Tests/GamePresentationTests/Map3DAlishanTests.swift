@@ -71,10 +71,10 @@ final class Map3DAlishanTests: XCTestCase {
 
     /// The recipes are pinned: a change to a shared function shows here.
     func testTheRecipesAreUnchanged() {
-        XCTAssertEqual(hash(Map3DAlishan.locomotive()), "cf92ad1c9dd33923")
-        XCTAssertEqual(hash(Map3DAlishan.locomotive(far: true)), "15e35322077df838")
-        XCTAssertEqual(hash(Map3DAlishan.coach()), "2edf6d8471941707")
-        XCTAssertEqual(hash(Map3DAlishan.coach(far: true)), "75d9fe17deb47bb7")
+        XCTAssertEqual(hash(Map3DAlishan.locomotive()), "46270613d25375d7")
+        XCTAssertEqual(hash(Map3DAlishan.locomotive(far: true)), "9a832a149a838c9c")
+        XCTAssertEqual(hash(Map3DAlishan.coach()), "de6fe83d85b449b3")
+        XCTAssertEqual(hash(Map3DAlishan.coach(far: true)), "cd2f908502f39a83")
     }
 
     private func hash(_ model: Map3DModelPack.Model) -> String {

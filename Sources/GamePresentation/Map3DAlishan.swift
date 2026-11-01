@@ -92,19 +92,28 @@ extension StationKitBuilder {
     /// A flat pane of glass on an end, facing along `end`: no sides, so
     /// the night lights do not take it for a side window.
     private mutating func afrEndPane(_ end: Float, _ x: Float, _ y: Float, _ z: Float, width: Float, height: Float) {
-        face([Map3DPoint(x, y, z - width / 2), Map3DPoint(x, y, z + width / 2),
-              Map3DPoint(x, y + height, z + width / 2), Map3DPoint(x, y + height, z - width / 2)],
-             inside: Map3DPoint(x - end, y + height / 2, z), color: Map3DAlishan.glass)
+        afrEndPlate(end, x, y, z, width: width, height: height, face: Map3DAlishan.glass)
+    }
+
+    /// A thin closed plate on an end, its outer face `face` and the rest
+    /// the frame's colour.
+    private mutating func afrEndPlate(_ end: Float, _ x: Float, _ y: Float, _ z: Float, width: Float, height: Float, face colour: UInt32) {
+        func corners(_ at: Float) -> [Map3DPoint] {
+            [Map3DPoint(at, y, z - width / 2), Map3DPoint(at, y, z + width / 2),
+             Map3DPoint(at, y + height, z + width / 2), Map3DPoint(at, y + height, z - width / 2)]
+        }
+        let a = corners(x - end * 0.012), b = corners(x)
+        let inside = Map3DPoint(x - end * 0.006, y + height / 2, z)
+        face(a, inside: inside, color: Map3DAlishan.frame)
+        face(b, inside: inside, color: colour)
+        for i in a.indices { let j = (i + 1) % a.count; face([a[i], a[j], b[j], b[i]], inside: inside, color: Map3DAlishan.frame) }
     }
 
     /// A round lamp lens facing along `end` at `x`, `height` up, `across`.
     private mutating func afrLens(_ end: Float, _ x: Float, height: Float, across: Float, radius: Float, far: Bool) {
         if far {
             // A square lens, the same colour, flat on the end.
-            let r = radius, f = x + end * 0.03
-            face([Map3DPoint(f, height - r, across - r), Map3DPoint(f, height - r, across + r),
-                  Map3DPoint(f, height + r, across + r), Map3DPoint(f, height + r, across - r)],
-                 inside: Map3DPoint(x - end, height, across), color: Map3DAlishan.lamp)
+            afrEndPlate(end, x + end * 0.03, height - radius, across, width: radius * 2, height: radius * 2, face: Map3DAlishan.lamp)
             return
         }
         civicTube(Map3DPoint(x, height, across), Map3DPoint(x + end * 0.03, height, across),
@@ -278,7 +287,7 @@ extension StationKitBuilder {
             // The end: two windows either side of the gangway door, its
             // bellows, the coupler and the lamps low at the corners.
             for side: Float in [-1, 1] {
-                box(x + end * 0.012, 1.76, side * 0.64, 0.024, 0.54, 0.70, frame)
+                if !far { box(x + end * 0.012, 1.76, side * 0.64, 0.024, 0.54, 0.70, frame) }
                 afrEndPane(end, x + end * 0.026, 1.80, side * 0.64, width: 0.46, height: 0.62)
                 afrLens(end, x + end * 0.01, height: 1.22, across: side * 0.78, radius: 0.06, far: far)
             }

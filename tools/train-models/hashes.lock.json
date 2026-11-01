@@ -3398,28 +3398,28 @@
       "triangles" : 8
     },
     "set-ALISHAN-car" : {
-      "hash" : "b0b1a5cbf32c15e4",
-      "triangles" : 1940
+      "hash" : "9c611f34dee73f01",
+      "triangles" : 2000
     },
     "set-ALISHAN-head" : {
-      "hash" : "6b3db6f5770f2562",
-      "triangles" : 2488
+      "hash" : "6771a5ac56b286d8",
+      "triangles" : 2528
     },
     "set-ALISHAN-tail" : {
-      "hash" : "4be3dae115f3c0ec",
-      "triangles" : 1940
+      "hash" : "5a7013a8176a542d",
+      "triangles" : 2000
     },
     "set-ALISHANFar-car" : {
-      "hash" : "84cfba13cfa7fd31",
-      "triangles" : 904
+      "hash" : "db4542748e5a407f",
+      "triangles" : 956
     },
     "set-ALISHANFar-head" : {
-      "hash" : "90c7ca951b5fc88f",
-      "triangles" : 944
+      "hash" : "7b08487bf8962dbb",
+      "triangles" : 1024
     },
     "set-ALISHANFar-tail" : {
-      "hash" : "2b1c0e1cf76f0a64",
-      "triangles" : 904
+      "hash" : "2a87d38d016fb14b",
+      "triangles" : 956
     }
   }
 }

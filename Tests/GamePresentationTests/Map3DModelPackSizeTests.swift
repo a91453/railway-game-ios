@@ -34,9 +34,9 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // scene kit's three cars (10 models more, 34,128 vertices more,
         // 1.4 MB a copy). Decision 531 added the Alishan train's DL-38
         // and coaches, near and far (10 models with the coaches'
-        // windows' models, 27,696 vertices more, 1.1 MB a copy).
+        // windows' models, 28,728 vertices more, 1.1 MB a copy).
         XCTAssertEqual(pack.models.count, 673)
-        XCTAssertEqual(vertices, 4_339_212)
+        XCTAssertEqual(vertices, 4_340_244)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
