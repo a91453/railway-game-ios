@@ -163,6 +163,24 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (103.1)，2026-11-01
+
+從 `main` `0c6e5ce` 建置，TestFlight `testflight.yml` run 41287858768，成功（作者先發、遊戲規劃後報，HANDOFF §1.2）。
+
+**這個 commit 的檢查**（發版後補驗）：
+- full lane run 41287836096：second、lessons、iPad 教學綠；build job 紅一支：`FinanceCompositionUITests.testTheIncomeAndCostDonutsShowAndTheirRowsAnswerATap`（187 秒，`ToolbarSmokeTests.swift:556`「Lost connection to the application (pid 26651)」）。
+- **結論（FLANE4）：不是玩家會碰到的閃退或卡住，是 UI 測試的查詢自己逾時，XCTest 在 App 裡的程式接著自己中止。** 證據（result bundle 與 App 的 trace）：
+  - result bundle 裡有 App（pid 26651）的 crash report：SIGABRT，`NSInternalInconsistencyException`「Illegal fault request … for placeholderValue, snapshot has no data source」。整條堆疊都是 `XCTAutomationSupport`（`-[XCElementSnapshot _fetchSimpleValueForKey:]` ← `XCTElementQuery` ← `XCTPerformOnMainRunLoop`），沒有一格是遊戲的程式；這個框架只在 UI 測試時才載入 App，玩家的版本裡沒有。
+  - 斷線前：App 的 stdout 先記「XCTPerformOnMainRunLoop work timed out after 60.0s」，查詢是 `descendants(matching: .any)["economy.composition.income"]`，它一個一個取遍整個 App 的元素（地圖、HUD、工具列），這次每個元素要 0.1–11 秒，60 秒內還沒走到經濟面板的清單；下一次查詢 XCTest 自己的 assertion 失敗，App 中止。App 的畫面計數在查詢開始前一直有在動（每 2 秒 50–110 格）。
+  - 不是 #1655、#1656 弄的：這支測試在 deef5e3、59e0f6c、85ee8b1、e985fb6、1b64367、5121f61 的 full lane 都綠，但每次都要 210–312 秒。原因是示範的貨運場景是簡單規則，報表收在清單最下面的「More reports and settings」裡，測試先往下拖 25 次找還沒打開的圓餅圖，每拖一次就查一遍整個 App。紅的那次，崩潰正好在這 25 次裡。
+  - 在 `main` `ce8a75a` 用 `only_testing` 重跑一次（run 41294280154）：**綠**（302.8 秒），所以這次紅是偶發，不是新的 bug。
+- 處理（五方決定，PR #1662）：測試改成先打開報表再往回拖到圓餅圖（`WebsiteScreenshotTests` 早就這樣做），查詢只找經濟面板的清單，不找整個 App。App 的程式不動。改好的測試在分支用 `only_testing` 跑一次（run 41295638951）：綠，110.8 秒（main 上同一支是 302.8 秒）。
+  - 玩家：無影響，App 沒改；full lane 少一個假紅，真的 bug 比較不會被當成偶發。
+  - 鐵道迷：無。
+  - 開發：查詢次數與範圍都變小，這支測試少掉約 200 秒的拖動，也少碰 XCTest 60 秒逾時的機會；不加重試，因為重試會把真的卡住藏起來。
+  - 美術：無。
+  - 音樂：無。
+
 ### 0.5.0 (102.1)，2026-11-01
 
 從 `main` `e985fb6`（#1638 的合併，102.1 的 What to Test 與遊戲內「新功能」）建置。TestFlight `testflight.yml` run 41259679262，作者 01:05 UTC 自己按（「跟上次一樣，你合併完 full lane 前先發」），成功。
