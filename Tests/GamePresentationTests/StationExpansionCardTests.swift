@@ -36,11 +36,21 @@ final class StationExpansionCardTests: XCTestCase {
         XCTAssertLessThan(card.people, StationExpansion.hall.threshold, "but not a city's main station")
         XCTAssertFalse(offer.full, "a new line's station does not fill")
         XCTAssertFalse(card.canExpand)
-        XCTAssertEqual(card.offerText(in: .traditionalChinese), "車站客滿、有旅客進不來時才能擴建。昨天沒有客滿。")
+        XCTAssertEqual(card.fullDays, 0)
+        XCTAssertEqual(card.offerText(in: .traditionalChinese), "最近 7 天裡要有 4 天客滿、有旅客進不來，才能擴建（目前 0 天）。")
+        XCTAssertEqual(card.offerText(in: .english), "Opens once the station has been full, turning people away, on 4 of the last 7 days (so far 0).")
 
-        // Full yesterday.
+        // Full yesterday only: a peak, not often (decision 534).
         let index = try XCTUnwrap(world.passengers.firstIndex { $0.station == station })
         world.passengers[index].lastFullDay = world.clock.now.seconds / 86_400 - 1
+        world.passengers[index].fullDays = 1
+        card = try XCTUnwrap(StationExpansionCard(station: station, in: world))
+        XCTAssertFalse(try XCTUnwrap(card.offer).full)
+        XCTAssertFalse(card.canExpand)
+        XCTAssertEqual(card.offerText(in: .traditionalChinese), "最近 7 天裡要有 4 天客滿、有旅客進不來，才能擴建（目前 1 天）。")
+
+        // Full on four of the last seven days.
+        world.passengers[index].fullDays = 0b1_0111
         card = try XCTUnwrap(StationExpansionCard(station: station, in: world))
         offer = try XCTUnwrap(card.offer)
         XCTAssertTrue(offer.full)

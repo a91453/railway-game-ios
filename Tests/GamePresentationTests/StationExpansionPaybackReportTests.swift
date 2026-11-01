@@ -38,7 +38,7 @@ final class StationExpansionPaybackReportTests: XCTestCase {
             let overflowPlain = plain.passengers.reduce(0) { $0 + $1.overflowed }
             let overflowExpanded = expanded.passengers.reduce(0) { $0 + $1.overflowed }
             // Expand each morning wherever the game allows it: yesterday's
-            // people, and full yesterday or today.
+            // people, and full often enough lately (decision 534).
             if day > 1 {
                 for station in expanded.stations {
                     while let next = expanded.nextStationExpansion(of: station.id),
