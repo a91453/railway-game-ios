@@ -3380,6 +3380,46 @@
     "walk-tens-9" : {
       "hash" : "e8db78b1b62aa73c",
       "triangles" : 12
+    },
+    "light-set-ALISHAN-car" : {
+      "hash" : "b8d886e027a5504d",
+      "triangles" : 48
+    },
+    "light-set-ALISHAN-tail" : {
+      "hash" : "b8d886e027a5504d",
+      "triangles" : 48
+    },
+    "light-set-ALISHANFar-car" : {
+      "hash" : "e6444da155316a5",
+      "triangles" : 8
+    },
+    "light-set-ALISHANFar-tail" : {
+      "hash" : "e6444da155316a5",
+      "triangles" : 8
+    },
+    "set-ALISHAN-car" : {
+      "hash" : "b0b1a5cbf32c15e4",
+      "triangles" : 1940
+    },
+    "set-ALISHAN-head" : {
+      "hash" : "6b3db6f5770f2562",
+      "triangles" : 2488
+    },
+    "set-ALISHAN-tail" : {
+      "hash" : "4be3dae115f3c0ec",
+      "triangles" : 1940
+    },
+    "set-ALISHANFar-car" : {
+      "hash" : "84cfba13cfa7fd31",
+      "triangles" : 904
+    },
+    "set-ALISHANFar-head" : {
+      "hash" : "90c7ca951b5fc88f",
+      "triangles" : 944
+    },
+    "set-ALISHANFar-tail" : {
+      "hash" : "2b1c0e1cf76f0a64",
+      "triangles" : 904
     }
   }
 }
