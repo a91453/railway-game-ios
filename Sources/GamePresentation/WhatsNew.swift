@@ -49,6 +49,10 @@ public enum WhatsNew {
                     english: "The R200 now hauls freight, so R200 Chu-Kuang trains are no longer sold; the ones you have keep running.",
                     chinese: "R200 改拉貨運，買車時不再有 R200 莒光號；已經有的照常行駛。"
                 ),
+                Line(
+                    english: "The Ankeng light rail comes with its real depot, where its trains rest overnight.",
+                    chinese: "收購安坑輕軌時一起拿到真實的安坑機廠，晚上列車回機廠休息。"
+                ),
             ],
             fixes: [
                 Line(
@@ -58,6 +62,10 @@ public enum WhatsNew {
                 Line(
                     english: "On the 3D map, a train at a curved platform keeps its front and back cars on the track.",
                     chinese: "3D 地圖上，停在彎道月台的列車，頭尾不再甩出軌道外。"
+                ),
+                Line(
+                    english: "On the 2D map, a crowded station's ring no longer covers its name.",
+                    chinese: "2D 地圖上，擁擠車站的圓環不再蓋住站名。"
                 ),
             ]
         ),
