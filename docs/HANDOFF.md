@@ -2466,6 +2466,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 
 **BUYBACK（session_01YGNNuqHsWbGjPjrKvrzJsn，2026-10-31，`buyback-real-line`）做了 P3-5 的完整修正**（[決策 528](decisions/528.md)）：刪線時收購紀錄一起拿掉、舊存檔讀檔時丟掉；GameCore 記住每次收購鋪的邊（存檔 79），刪線後留一份，再買時只拆那些邊、任何路線經過的不拆，卡片說要拆幾段。藍海線在刪掉綠山線後可整條買。79 以前存檔裡刪掉的線沒有記軌道，舊軌道擋路時照舊拒絕。實機 UNVERIFIED。
 
+**接手點（BUYBACK 已壓縮 1 次，做完這個 PR 就停）**：#1636 已按第一次獨立審查（P1 A–D、P2、P3）改完，head 見 PR。還差兩件事：遊戲規劃安排的第二次獨立審查，以及 102.1 發版後合併。第二次審查若要修改，由新的實作 session 接手：從 `buyback-real-line` 繼續，先讀[決策 528](decisions/528.md)。存檔 79 已用掉；golden schema 76 已釋出。
+
 ### 4.34 存檔一局一筆（決策 502，SAVE1 session_01YGNNuq65cB35dbSd2SspvL → SAVE2 session_01YGNNuogTGYLuCpzpJbTWYt，PR #1556，2026-10-30）
 
 - **做了的**在決策 502（`docs/decisions/502.md`）與 PR #1556：一局一列、存檔寫回同一列、列內留 3 版、多選與全選刪除（正在玩的不列入）、全有或全無。第一次獨立審查（d0ed375）的必修 1、2、建議 3 由 SAVE1 修（a60d1c2）；第二次獨立審查（a60d1c2）的 4（離開時的進度另放一份，不擠玩家的版本）、5（發現衝突的那台把自己這局搬到新列）、6（只改名不留版本）、7 的前半（卡住的 incoming 不擋存檔）由 SAVE2 修，各有一支在 a60d1c2 上紅的測試。
