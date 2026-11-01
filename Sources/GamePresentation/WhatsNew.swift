@@ -31,6 +31,57 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-11-01-102-1",
+            items: [
+                Line(
+                    english: "A crowded station can be expanded, from 4,000 to 8,000 to 16,000 waiting passengers.",
+                    chinese: "人潮擠滿的車站可以擴建，候車人數從 4,000 加到 8,000，再到 16,000。"
+                ),
+                Line(
+                    english: "The line card shows how punctual the line was over the last 7 days, beside Taiwan Railway's year.",
+                    chinese: "路線卡多了最近 7 天的準點率，括號裡是台鐵近一年的數字。"
+                ),
+                Line(
+                    english: "Money is shown in New Taiwan dollars, with a rough figure in US dollars beside large amounts.",
+                    chinese: "金額改用新台幣，大金額用萬、億來寫。"
+                ),
+                Line(
+                    english: "The real-map, high-speed and Taiwan Railway demos have tourists and real transfers.",
+                    chinese: "實景、高鐵與台鐵示範有觀光客，也能照真實車站轉乘。"
+                ),
+                Line(
+                    english: "At a station with a passing loop, trains running through keep to the straight main line.",
+                    chinese: "有待避線的車站，通過的車走直的正線，等候的車進外側股道。"
+                ),
+                Line(
+                    english: "When a train waits and will not move off by itself, you are told which train it waits for.",
+                    chinese: "列車一直等著不走時，會說出它在等哪一班車。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Trains on the Sanying line no longer all stop when an empty train heads back to the depot.",
+                    chinese: "三鶯線不會再因為回送車擋住對向而整條停住。"
+                ),
+                Line(
+                    english: "Placing or rerouting a train checks that it can climb a mountain line.",
+                    chinese: "放車或改路線時，會先檢查列車爬不爬得上山線。"
+                ),
+                Line(
+                    english: "Skipping the night and giving orders no longer make the screen stall.",
+                    chinese: "跳過夜晚、下指令時，畫面不會再停頓。"
+                ),
+                Line(
+                    english: "If saving fails as you go back to the start screen, you can leave without saving.",
+                    chinese: "回開始畫面時存檔失敗，可以選擇不存檔離開。"
+                ),
+                Line(
+                    english: "Dragging a zone fills it in a clearer colour, so shops and offices are easy to tell apart.",
+                    chinese: "拖曳分區時的顏色更清楚，商業區和辦公區一眼分得出來。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-31-101-1",
             items: [
                 Line(
