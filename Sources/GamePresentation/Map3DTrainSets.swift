@@ -45,6 +45,11 @@ public struct Map3DTrainSet: Sendable {
     /// ``reach(of:)`` but within ``Map3DTrains/modelReach``: a lighter
     /// model of the same train.
     var far: String? = nil
+    /// Decision 539: the key of the set whose head car this set draws as
+    /// its own, so the pack holds that model once (the freight train's
+    /// R200 is the R200 Chu-Kuang's); this set's ``Cars/head`` is not put
+    /// in the pack.
+    var headOf: String? = nil
     let build: @Sendable () -> Cars
 
     struct Cars {
@@ -76,7 +81,7 @@ public struct Map3DTrainSet: Sendable {
     }
 
     /// The models' names in the pack.
-    var headName: String { "set-\(key)-head" }
+    var headName: String { "set-\(headOf ?? key)-head" }
     var middleName: String { "set-\(key)-car" }
     var tailName: String { "set-\(key)-tail" }
     var singleName: String { "set-\(key)-single" }
@@ -88,7 +93,15 @@ public struct Map3DTrainSet: Sendable {
     var pantographBackName: String { "set-\(key)-pantoBack" }
     var fourthName: String { "set-\(key)-fourth" }
     var fourthBackName: String { "set-\(key)-fourthBack" }
-    func unitName(_ unit: String) -> String { "set-\(key)-\(unit)" }
+    func unitName(_ unit: String) -> String { unit == "head" ? headName : "set-\(key)-\(unit)" }
+
+    /// The unit `name` (a model's name in the pack) is of this set
+    /// ("head", "car", "tail"…), or `nil` when it is not one of its own.
+    func unit(of name: String) -> String? {
+        if name == headName { return "head" }
+        let prefix = "set-\(key)-"
+        return name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : nil
+    }
 
     /// The four model names and their models, in the pack's order.
     func models() -> [Map3DModelPack.Model] {
@@ -99,7 +112,7 @@ public struct Map3DTrainSet: Sendable {
         func named(_ model: Map3DModelPack.Model, _ name: String) -> Map3DModelPack.Model {
             Map3DModelPack.Model(name: name, vertices: model.vertices, minimum: model.minimum, maximum: model.maximum)
         }
-        var models = [named(cars.head, headName)]
+        var models = headOf == nil ? [named(cars.head, headName)] : []
         if let middle = cars.middle { models.append(named(middle, middleName)) }
         if let tail = cars.tail { models.append(named(tail, tailName)) }
         if let single = cars.single { models.append(named(single, singleName)) }
@@ -277,6 +290,11 @@ public struct Map3DTrainSet: Sendable {
             ownLength("blueSeven", head: Map3DSevenCarBlue.model(.leading), middle: Map3DSevenCarBlue.model(.middleOne),
                       tail: Map3DSevenCarBlue.model(.trailing), cars: 7,
                       lamps: Lamps(x: 4.02, height: 1.005, across: 0.65, width: 0.32, tall: 0.17)),
+            // Decision 539: a freight line's train, whatever its type, as an
+            // R200 and container flat wagons, and from 500 m out their light
+            // versions; last, so no set's models before them move.
+            freight(),
+            freight(far: true),
         ]
     }()
 
@@ -318,7 +336,7 @@ public struct Map3DTrainSet: Sendable {
     /// far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
-                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN"]
+                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -512,6 +530,23 @@ public struct Map3DTrainSet: Sendable {
     static func r200Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
         let legacy = hauled(key, head: { litLenses(Map3DR200.model(far: far), front: true) }, coach: coach, far: far)
         return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
+    }
+
+    /// Decision 539: the key of the set a freight line's train is drawn
+    /// as, whatever its type (``Map3DTrains/frame(_:progress:heights:in:models:eye:palette:ringed:reach:)``).
+    public static let freightKey = "FREIGHT"
+
+    /// Decision 539: the freight train: the R200 (decision 529's, its
+    /// front lamps lit; the R200 Chu-Kuang's model itself, ``headOf``) and ``Map3DContainerWagon``s at their own lengths,
+    /// the wagons' loads cycling 40 ft rust, two 20 ft, 40 ft green from
+    /// each end inward, the last wagon the one with the red tail marker.
+    static func freight(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? freightKey + "Far" : freightKey, cycle: [.middle, .fourth, .centre], ownLengths: true,
+                      far: far ? nil : freightKey + "Far", headOf: far ? "R200CKFar" : "R200CK") {
+            Cars(head: litLenses(Map3DR200.model(far: far), front: true),
+                 middle: Map3DContainerWagon.model(.forty, far: far), tail: Map3DContainerWagon.model(.tail, far: far), single: nil,
+                 centre: Map3DContainerWagon.model(.fortyGreen, far: far), fourth: Map3DContainerWagon.model(.twenties, far: far))
+        }
     }
 
     static func hauled(_ key: String, locomotive: Map3DTrainLocomotive, coach: Coach, lastIsLocomotive: Bool = false,

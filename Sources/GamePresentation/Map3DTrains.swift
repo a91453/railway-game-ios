@@ -165,8 +165,9 @@ public enum Map3DTrains {
     /// Every car of every train in `motion` at `progress`, in `scene`'s
     /// space: within ``modelReach`` of `eye` (``Map3DTrainSet/reach(of:)``), a car of a type `models` has
     /// is an instance of its model (the head car's model at both ends, the
-    /// last one turned round; the middle cars' between); the rest, and a
-    /// freight train, boxes. Decision 417: the far models and the boxes
+    /// last one turned round; the middle cars' between); the rest boxes.
+    /// Decision 539: a freight train the R200 and its wagons
+    /// (``Map3DTrainSet/freightKey``). Decision 417: the far models and the boxes
     /// from `reach` of their distances.
     public static func frame(
         _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene,
@@ -187,8 +188,11 @@ public enum Map3DTrains {
             let (side, stripe) = colours(of: run.look, palette: palette)
             // Decision 408: half the high-speed trains the N700S-G (decision
             // 338, second later: none while the train pack is locked).
-            let trainType = Map3DTrainSet.variant(of: heights.type(of: run.train), number: run.train.rawValue, locked: models?.locked ?? [])
-            let hasModels = run.look != .freight && models?.models(forType: trainType) != nil
+            // Decision 539: a freight train, whatever its type, the R200 and
+            // its container wagons.
+            let trainType = run.look == .freight ? Map3DTrainSet.freightKey
+                : Map3DTrainSet.variant(of: heights.type(of: run.train), number: run.train.rawValue, locked: models?.locked ?? [])
+            let hasModels = models?.models(forType: trainType) != nil
             // Decision 399: or each car at its model's own length.
             let layout = hasModels ? models?.layout(forType: trainType, count: count) : nil
             let heading = steady?.heading ?? head.heading

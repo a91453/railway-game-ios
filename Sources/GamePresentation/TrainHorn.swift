@@ -41,6 +41,13 @@ public enum TrainHorn: String, CaseIterable, Hashable, Sendable {
         }
     }
 
+    /// Decision 539: the horn of `train` in `world`: a freight line's
+    /// train is drawn behind an R200 whatever its type, so it blows the
+    /// diesel's horn; any other train as ``of(_:)``.
+    public static func of(_ train: Train, in world: GameWorld) -> TrainHorn {
+        world.isFreightTrain(train.id) ? .diesel : of(train)
+    }
+
     /// Whether the horn also blows by itself, nearing a stop and running
     /// into a tunnel: the Taiwan Railway's horns, whose drivers blow them
     /// there (its running rules: before a station and before a tunnel).

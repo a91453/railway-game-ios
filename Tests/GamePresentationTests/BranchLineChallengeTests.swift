@@ -27,7 +27,7 @@ final class BranchLineChallengeTests: XCTestCase {
         // Its two sights: Jiji Station and Checheng, both on the line.
         XCTAssertEqual(world.tourism?.attractions.map(\.name), ["集集車站", "車埕"])
         // Any train runs: the line has no era.
-        XCTAssertEqual(world.offeredTrainTypes, TrainType.offered)
+        XCTAssertEqual(world.offeredTrainTypes, TrainType.offered.filter { !TrainType.withdrawnFromSale.contains($0) }, "decision 539: no new R200 Chu-Kuang")
     }
 
     func testItsGoalsAreTheMilestonesAndTheRiders() throws {
