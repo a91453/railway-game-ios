@@ -55,10 +55,17 @@ the line does not need them, so its ends are not held to the tracks the
 game lays for the trains standing overnight. Its `tracks` count only the
 trains the line needs at a station within the look ahead the game's depot
 uses (`depot_tracks`), and an end may have up to `DEPOT_END_TRACKS`, its
-loops three deep either side. Not listed: the Ankeng LRT
-(see `LINES`) and the Kaohsiung Circular Light Rail. Its trains run one way round
-the loop and come back to Lizihnei; a line of the game runs end to end and
-turns back.
+loops three deep either side. Not listed: the Kaohsiung Circular Light
+Rail. Its trains run round the loop and come back to Lizihnei; a line's
+runs of the game run end to end (decision 535).
+
+The Ankeng LRT (decision 535, continued) stands two of its trains
+overnight at stations between, Shuangcheng having too few tracks. Each
+comes in from beyond its station, facing the end its first run of the
+morning leaves for (`extract_branch_runs.beyond`): one from Shuangcheng
+runs out to Shisizhang first. Come straight from Shuangcheng, it stood on
+the second track, where the game lays no way over to the first, and the
+morning's trains toward Shisizhang stood behind it from 06:12.
 """
 import collections
 import importlib.util
@@ -92,10 +99,7 @@ LINES = [
     # whole instead, laid beside the Blue Coast Line to Binhai Shalun
     # (decision 493), with the runs listed for it alone.
     ("ntdlrt", "VB", "濱海沙崙", "V"),
-    # Not yet the Ankeng LRT (ntalrt:K): its trips pass here, but the
-    # game's second track on its tight curves is laid only 8 m off the
-    # first, and its trains then stand from six in the morning on
-    # (docs/HANDOFF.md).
+    ("ntalrt", "K", None, None),
     # Decision 400, 10j-3: the metros. Each is tried; those whose ends
     # stand more trains at once than the game lays tracks are left out
     # and say so. Not the Wenhu Line (trtc:BR, its 35 m curves).
