@@ -38,6 +38,10 @@ public enum WhatsNew {
                     chinese: "蓋好的學校、醫院會帶學生和看病的旅客搭車來，車站卡上看得到人數。"
                 ),
                 Line(
+                    english: "A real line you buy keeps its own trains, such as the DR1000 on branch lines and the Danhai light rail.",
+                    chinese: "收購的真實路線保留自己的車：支線是 DR1000，淡海是淡海輕軌列車。"
+                ),
+                Line(
                     english: "A station can be expanded once it was full on 4 of the last 7 days; its card counts the days so far.",
                     chinese: "最近 7 天裡有 4 天客滿的車站才能擴建，車站卡會寫目前幾天。"
                 ),
