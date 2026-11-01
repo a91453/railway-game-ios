@@ -2619,7 +2619,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **3D 站體隨等級變大**：派工單 STATIONEXP-3D（session_01YGNNuotGg4YicGBR6rf8hX，`stationexp-3d`）做了，見決策 506「續」。
 - **開放條件改成最近 7 天有 4 天客滿**：派工單 STATIONEXP-2（session_01YGNNupkGji172gBESV1hnh，`stationexp-busy-days`）做了，見決策 534。
 - **還沒做的**在決策 506「下一步」：2D 站名牌旁的等級記號（交給新 session，接手點在下面）；三鶯線一整天 0 人次已由決策 527 修好（main 上作者 97.1 那局三鶯線各站不再客滿，決策 534「量到的」）；
-- **2D 站名牌旁的等級記號：接手點**（STATIONEXP-2 session_01YGNNupkGji172gBESV1hnh 只試了圖示，沒有 commit；遊戲規劃第 40 任同意交給新 session）：
+- **2D 站名牌旁的等級記號：做了**（派工單 BADGE，session_01YGNNuq4tB6xwzS9LqMfuEM，`badge-station-tier`）：方案 E，見決策 506「續二」。以下是原本的接手點，留作紀錄。
+- ~~2D 站名牌旁的等級記號：接手點~~（STATIONEXP-2 session_01YGNNupkGji172gBESV1hnh 只試了圖示，沒有 commit；遊戲規劃第 40 任同意交給新 session）：
   - **位置**：`MapArt.drawStationName`（`RailwayGameApp/Views/MapArt.swift`，約第 2109 行）。商業的黃色方塊（決策 222，`MapGlyph.shops1`–`shops3`）在站名左邊，等級記號放右邊，做法照它：方塊裡放單色模板圖示。`MapRedraw.sameNames` 比對整個 `stations`，`Station.expansion` 一變就會重畫，不用改。
   - **試過、不採用的圖示**（照 art-style 的預覽腳本，在淺／深的面板與地圖四種底、48／24／16 點、模糊與灰階看過）：
     - A：山形屋頂、拱門的站房，1 個（站廳）／2 個並排（大廳）。看起來就是住宅（`MapGlyphHouse`），地圖上會混在一起。
