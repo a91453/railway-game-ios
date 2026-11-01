@@ -736,7 +736,7 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   PassengerPropertyTests:132 ScheduledOvertakeTrackLastPropertyTests:128
   OccupiedRoutingPropertyTests:78 WorldStateMachineTests:65
   NetworkSectionPropertyTests:50 IdleTrainDeadlockTests:48 DeadlockSearchCostTests:66
-  PassengerCheckOnceTests:81 PassengerRouteSearchTests:35
+  PassengerCheckOnceTests:74 PassengerRouteSearchTests:35
   ScheduledTrafficTests:46 LineAccountsTests:35 TurnbackPropertyTests:33
   TurnbackTests:32 ReplayFixtureTests:28 CityRequestsTests:26
   LoadJourneyCacheTests:25 LineRoutePreferencePropertyTests:24
@@ -750,14 +750,14 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   BlockSectionsTests:4 LandDemandTests:4 HighSpeedTests:4 BoardingTests:3
   LocalPassTests:59 LongLegReplayTests:16
   HighSpeedDemoTests:400 HighSpeedDemoDayTests:328 TRADemoTests:121
-  HighSpeedDemoBatchTests:95 NewGameSavePropertyTests:92 TRADemoDayTests:59
+  HighSpeedDemoBatchTests:135 NewGameSavePropertyTests:92 TRADemoDayTests:59
   OnboardingTests:92 CommandLogTests:66 LessonGuideTests:62
   RealLineAcquisitionTests:290 SanyingLineSimpleDayTests:192 SanyingLineRealisticDayTests:226 DemoRealLinesTrackTests:160 NetworkPostcardTests:64 Map3DSceneMemoryTests:136
   Map3DPlatformClearanceTests:113
-  NightSkipTests:57 RealWorldDemoTests:51 LineLossFixesTests:71
-  Map3DCoarseChunkTests:31 Map3DStreetLifeTests:29 RealRailwayTracingTests:43
+  NightSkipTests:66 RealWorldDemoTests:51 LineLossFixesTests:71
+  Map3DCoarseChunkTests:31 Map3DStreetLifeTests:58 RealRailwayTracingTests:43
   DemoRealLinesTests:26 Map3DStreamingTests:25 Map3DStreetsTests:48
-  Map3DOpenEveryStartTests:23 MonthlyReportTests:19 Map3DSurfaceTests:35
+  Map3DOpenEveryStartTests:23 DemoSightsAndTransfersTests:150 AnkengLineTests:76 MonthlyReportTests:19 Map3DSurfaceTests:35
   Map3DTests:44 RealWorldDataLoadTests:18 LessonTests:17
   NewGameBalanceTests:17 NewsSessionTests:17 PolicyTests:17
   RealWorldDemoGroundTests:17 Map3DRealBuildingsTests:37
@@ -783,11 +783,11 @@ CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   Map3DSceneKitTests:3 Map3DStationsTests:3 SimpleRulesTests:3
   TodayAccountTests:3 TrafficOverlayTests:3
   DanhaiBothLinesDayTests:300 DanhaiGreenLineDayTests:185
-  LiujiaLineTrainsTests:108 Map3DBusLayerTests:36 DanhaiDepotTests:11
+  LiujiaLineTrainsTests:108 Map3DBusLayerTests:36 DanhaiDepotTests:110
   FrameTimeBenchTests:22 RealWorldDemoRoadsTests:12 Map3DSceneryPropsTests:26
   Map3DTrainOcclusionTests:13 SanyingLineFreezeTests:17 SanyingDepotTests:42
   Map3DTrainSetTests:17 BusReadAheadTests:12 RealBusesTests:11
-  Map3DBusesTests:59 SharedNetworkTests:47 Map3DFrontageTests:13
+  Map3DBusesTests:89 SharedNetworkTests:47 Map3DFrontageTests:13
   Map3DEMU800IntegrationTests:16 RoadsTurnOnTests:14
   BusOneWayAndTunnelRealMapTests:12 Map3DC341IntegrationTests:10
   DanhaiBlueThenGreenSimpleDayTests:410 DanhaiBlueThenGreenRealisticDayTests:410
@@ -1576,7 +1576,7 @@ path_plan() {
 #   parts=<how many jobs share it (SELECTED_PART)>
 # with one line per file on stderr: its tier and why.
 declare -A FIXTURE_PLANS=()
-PRESENTATION_PARTS=7
+PRESENTATION_PARTS=8
 pr_plan() {
   local path line tier rank best=0 tests="" edited="" plans
   code_cache
@@ -1613,6 +1613,12 @@ pr_plan() {
     # Seven since 2026-10-30: #1515's six parts took 493 to 1,026 s of tests
     # (run of 738494a), its selected-3 19.5 minutes of the job's 20, with
     # the Danhai and Liujia classes added; seven are about 700.
+    # Eight since 2026-11-01: main 7b09afa's selected-7 reached the 20 minutes
+    # (run 41314182024) because DanhaiDepotTests (110 s, weight 11),
+    # DemoSightsAndTransfersTests (146 s), HighSpeedDemoBatchTests (137 s) and
+    # AnkengLineTests (76 s) were missing or far too light in CLASS_WEIGHTS;
+    # with those and a few more refreshed the weights sum to about 6,600 s,
+    # 940 s a part for seven and 825 for eight.
     [[ " $tests " != *" GamePresentationTests.* "* ]] || parts="$PRESENTATION_PARTS"
     # An edited campaign file's class can take most of a job's 20 minutes
     # on its own (ServiceRepeatingPropertyTests 792 s of tests); two of
