@@ -27,6 +27,7 @@ final class Map3DAlishanTests: XCTestCase {
         XCTAssertEqual(layout.map(\.length), [8.9, 13, 13, 13, 13, 13])
         XCTAssertEqual(layout.reduce(0) { $0 + $1.length }, 73.9, accuracy: 1e-3, "about the 70 m the reference gives")
         XCTAssertFalse(pack.isTurned(forType: "ALISHAN", carIndex: 5, count: 6), "the last coach has its own model")
+        XCTAssertEqual(Map3DShowcase.entry("ALISHAN")?.gauge, 0.762, "the showcase lays it on the forest railway's gauge")
     }
 
     /// The models' frames: on the rails, the 762 mm gauge's narrow cars,
