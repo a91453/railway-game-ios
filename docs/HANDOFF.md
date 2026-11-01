@@ -446,6 +446,26 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 40 任交給第 41 任（2026-11-01 約 14:10 UTC，session_01YGNNuoSiXAJiUsqe53Fe24，第 2 層，壓縮 2 次，約 275k tokens）**：第 41 任由第 40 任用 `create_session` 開，是第 3 層（opus 5.5）。
+
+- **作者 2026-11-01 的新規則**：
+  - 「以後都這樣我自己先試 你再告訴我結果省效率」：作者自己按 `testflight.yml`，規劃事後報 full ci 與 full lane（§1.2）。所以每合一批玩家看得到的 PR，就要把 `WhatsNew.entries` 最前面那則和 `.github/testflight-whats-new.md` 補好，隨時能發。
+  - 「沒必要就不要等」：截圖分三級（決策 482「續」，#1673）。
+- **104.1 的內容都合了**：#1654、#1659、#1660、#1665、#1667、#1668、#1669、#1672、#1658。說明在 #1674（把最後幾行補進 WhatsNew 和 What to Test）。
+- **接手時先做**：
+  1. 等 main 的 `ci.yml`（cf973f4，5 張那一批）綠了，合 #1674 與 #1675（ANKENG 的交接：安坑機廠、CI 權重表過時，只改文件）。
+  2. 跟作者說 104.1 可以發。作者發了以後，查那個 commit 的 full ci 與 full lane，記進 PLAYER_FEEDBACK。
+- **還開著的 session**：
+  - WENHU（session_01YGNNunAwxPkXP7K8bZoNR3，#1666 draft）：選 A，決策 537 的 GameCore 規則，另開一個 GameCore PR；#1666 等它合了再接。
+  - TRI3D（session_01YGNNumGVoUUFuc2Lv9nL8u，壓縮 1 次）：濁水的尖三角形在 Linux 重現不了，等作者用「回報問題」送那個畫面。分支 `tri3d-triangulation` 只有掃描測試。
+- **沒人在做、要接的**：
+  - LOOPRUN #1676：session 壓縮 2 次已停，第 41 任接手。存檔 80、golden schema 76、決策 535「續」，GameCore；CI 綠了轉 ready 合，紅了修或另派。它的 `RunDepot.swift` 和 WENHU 的 537 會重疊，合的時候錯開。
+  - 安坑機廠：照 #1675 寫的派新 session（只改 GamePresentation 和工具），和 WENHU 改 `DEPOT_ENDS` 的部分錯開。
+  - KLRT（決策 535 PR 2）：要等 LOOPRUN、WENHU 合了，加上作者下載 data.kcg.gov.tw 的「高雄環狀輕軌各站進出量」（容器連不上那個網站）。
+  - BUILD3D PR 3b／PR 4 的順序：等作者在 TestFlight 鋪完軌道後送「回報問題」，看重蓋的時間。
+  - 2D：放大到三級時，擁擠圓環會壓到站名上半部（HANDOFF §4.41）。
+- **號碼**：下一個決策 538；存檔 81、golden schema 77（80、76 已由 LOOPRUN 用掉）。
+
 **第 39 任交給第 40 任（2026-11-01 約 04:00 UTC，session_01YGNNupwLVxuPiWcrdA6NPs，壓縮 3 次）**：第 40 任由第 39 任用 `create_session` 開，是第 2 層（opus 5.5 高）。作者對合併的話：「都行綠了就合」「綠了就合」，綠的 PR 照批次規則合。
 - **102.1 已發**，full lane 的紅是測試自己的問題，#1646 修好（only_testing 41266541046 綠），不用補版。玩家回報（97.1 樹林死機、101.1 卡頓）與分析在 `research/PLAYER_FEEDBACK.md`。
 - **103 的排序**：NEXT_PRIORITIES §24 與 §24.4（作者同意的新功能 COMMUTE、TRATT）。
