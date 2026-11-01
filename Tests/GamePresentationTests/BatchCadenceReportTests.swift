@@ -84,7 +84,7 @@ final class BatchCadenceReportTests: XCTestCase {
             outcome.mostDeadlocked = max(outcome.mostDeadlocked, world.deadlockedTrains().count)
         }
         for line in world.lines {
-            for day in world.lineAccounts?.lineDays(line.id) ?? [] {
+            for day in world.lineDays(line.id) {
                 outcome.departures += day.tally.departures
                 outcome.trips += day.tally.trips
                 outcome.late += day.tally.lateTrips
@@ -106,11 +106,9 @@ final class BatchCadenceReportTests: XCTestCase {
         // To the start of a day and two days on, so both days close.
         let day = GameTime.secondsPerDay
         let hours = (2 * day + day - opened.clock.now.seconds % day) / GameTime.secondsPerHour
-        var outcomes: [(GameSpeed, Outcome)] = []
         for speed in [GameSpeed.normal, .double, .fast] {
             let started = Date()
             let outcome = try run(opened, at: speed, hours: hours)
-            outcomes.append((speed, outcome))
             FileHandle.standardError.write(Data("BATCH_CADENCE \(name)\(simple ? " simple" : "") \(speed): \(outcome); \(String(format: "%.0f", Date().timeIntervalSince(started))) s\n".utf8))
         }
     }
