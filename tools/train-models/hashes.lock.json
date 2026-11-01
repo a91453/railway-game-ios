@@ -2898,8 +2898,8 @@
       "triangles" : 6476
     },
     "set-R100CK-head" : {
-      "hash" : "2040ca8fbe4499a5",
-      "triangles" : 1284
+      "hash" : "487acd6df3bce14e",
+      "triangles" : 7318
     },
     "set-R100CK-tail" : {
       "hash" : "ac77eb322d524d1a",
@@ -2910,8 +2910,8 @@
       "triangles" : 4008
     },
     "set-R100CKFar-head" : {
-      "hash" : "8c259f8ab026244e",
-      "triangles" : 1284
+      "hash" : "af63d1ff49283b2b",
+      "triangles" : 3466
     },
     "set-R100CKFar-tail" : {
       "hash" : "ef4c9712a6fa04ed",
@@ -3420,6 +3420,58 @@
     "set-ALISHANFar-tail" : {
       "hash" : "7ff73b13a4a3782f",
       "triangles" : 1372
+    },
+    "light-set-R100CK-head": {
+      "hash": "1fd3b248b872dc81",
+      "triangles": 236
+    },
+    "tra-r100-r122-orange-locomotive": {
+      "hash": "487acd6df3bce14e",
+      "triangles": 7318
+    },
+    "tra-r100-r122-orange-locomotive-far": {
+      "hash": "af63d1ff49283b2b",
+      "triangles": 3466
+    },
+    "tra-r100-r123-breezy-blue-locomotive": {
+      "hash": "8ac816abe00dbe5e",
+      "triangles": 7318
+    },
+    "tra-r100-r123-breezy-blue-locomotive-far": {
+      "hash": "e30347f3524cd9",
+      "triangles": 3466
+    },
+    "tra-breezy-blue-coach-mixed": {
+      "hash": "560bf1929022813c",
+      "triangles": 13194
+    },
+    "tra-breezy-blue-coach-mixed-far": {
+      "hash": "4a3e3a61fd7944b4",
+      "triangles": 5478
+    },
+    "tra-breezy-blue-coach-exhibition": {
+      "hash": "b65343f403175c64",
+      "triangles": 13278
+    },
+    "tra-breezy-blue-coach-exhibition-far": {
+      "hash": "717ed9b78b1f3788",
+      "triangles": 5370
+    },
+    "tra-breezy-blue-coach-long-seat": {
+      "hash": "b65343f403175c64",
+      "triangles": 13278
+    },
+    "tra-breezy-blue-coach-long-seat-far": {
+      "hash": "717ed9b78b1f3788",
+      "triangles": 5370
+    },
+    "tra-breezy-blue-coach-rotating-seat": {
+      "hash": "ed4d15ceedce24ad",
+      "triangles": 12234
+    },
+    "tra-breezy-blue-coach-rotating-seat-far": {
+      "hash": "8e90e16859922caf",
+      "triangles": 4950
     }
   }
 }

@@ -1,0 +1,173 @@
+{
+  "status": "UNVERIFIED exact numbered real formation; documented role-layout study only",
+  "source": "https://4travel.jp/travelogue/12055095",
+  "date": "2026-05-22",
+  "coach_directions": "Display convention only; unknown real directions",
+  "coupling_gap_metres": 0,
+  "assemblies": [
+    {
+      "id": "breezy-blue-five-coach-role-study-unverified",
+      "placements": [
+        {
+          "unit": "tra-r100-r123-breezy-blue-locomotive",
+          "translation": [
+            57.9,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": "R122",
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-r100-r123-breezy-blue-locomotive",
+          "translation": [
+            42.1,
+            0,
+            0
+          ],
+          "rotation_degrees": 180,
+          "vehicle_number": "R129",
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-mixed",
+          "translation": [
+            24.2,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-exhibition",
+          "translation": [
+            4.2,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-long-seat",
+          "translation": [
+            -15.8,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-rotating-seat",
+          "translation": [
+            -35.8,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-mixed",
+          "translation": [
+            -55.8,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        }
+      ]
+    },
+    {
+      "id": "breezy-blue-five-coach-role-study-unverified-far",
+      "placements": [
+        {
+          "unit": "tra-r100-r123-breezy-blue-locomotive-far",
+          "translation": [
+            57.9,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": "R122",
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-r100-r123-breezy-blue-locomotive-far",
+          "translation": [
+            42.1,
+            0,
+            0
+          ],
+          "rotation_degrees": 180,
+          "vehicle_number": "R129",
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-mixed-far",
+          "translation": [
+            24.2,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-exhibition-far",
+          "translation": [
+            4.2,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-long-seat-far",
+          "translation": [
+            -15.8,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-rotating-seat-far",
+          "translation": [
+            -35.8,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        },
+        {
+          "unit": "tra-breezy-blue-coach-mixed-far",
+          "translation": [
+            -55.8,
+            0,
+            0
+          ],
+          "rotation_degrees": 0,
+          "vehicle_number": null,
+          "identity_status": "UNVERIFIED geometry representation / coach direction; see blue-sources.json"
+        }
+      ]
+    }
+  ]
+}
