@@ -88,6 +88,10 @@ public enum WhatsNew {
             ],
             fixes: [
                 Line(
+                    english: "Tracing a long line on a big network previews much faster.",
+                    chinese: "路網大的時候，長距離描線的預覽快了很多。"
+                ),
+                Line(
                     english: "On a large network, the pause at 6 a.m. while the day's runs are planned is much shorter.",
                     chinese: "路網大的時候，每天早上 6 點排班時的停頓短了很多。"
                 ),
