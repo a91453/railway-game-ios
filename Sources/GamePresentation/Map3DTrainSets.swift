@@ -494,9 +494,10 @@ public struct Map3DTrainSet: Sendable {
     }
 
     /// Decision 529: R200-only substitution, as ``e500Hauled``: the same
-    /// coaches and pack lookups, the locomotive at its own 20.01 m.
+    /// coaches and pack lookups, the locomotive at its own 20.01 m, the
+    /// lamps of its front cab lit (it has a cab at each end).
     static func r200Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
-        let legacy = hauled(key, head: { Map3DR200.model(far: far) }, coach: coach, far: far)
+        let legacy = hauled(key, head: { litLenses(Map3DR200.model(far: far), front: true) }, coach: coach, far: far)
         return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
     }
 
