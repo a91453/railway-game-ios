@@ -117,6 +117,14 @@ public struct Map3DModelPack: Sendable {
     /// models are. Only the tools and the model hashes read them.
     init(studiesBaked baked: Bool) {
         var models: [Model] = []
+        // Independent R100 liveries; dated Breezy Blue formation evidence is
+        // separate from the existing variable-count BLUE operating identity.
+        for livery in Map3DR100.Livery.allCases {
+            for far in [false, true] { models.append(Map3DR100.model(livery: livery, far: far)) }
+        }
+        for role in Map3DBreezyBlueCoaches.Role.allCases {
+            for far in [false, true] { models.append(Map3DBreezyBlueCoaches.model(role, far: far)) }
+        }
         models += [Map3DR200.model(), Map3DR200.model(far: true)]
         // Static TEMU2000 units and formation; the operating Puyuma
         // (`set-puyuma…`, decision 484) is made of the same units.

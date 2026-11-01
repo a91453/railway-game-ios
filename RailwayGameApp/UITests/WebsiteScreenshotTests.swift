@@ -7,6 +7,43 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
+    /// Decision 536: a train of a real line bought, the Neiwan Line's and
+    /// the Danhai light rail's, followed: its card says what it is, the
+    /// lines list what the line runs, and the 3D map draws the real line's
+    /// own train (the DR1000, the Danhai light rail's), not a generic one.
+    /// For the screenshot review of the pull request that drew them so.
+    func testBoughtLineStock() {
+        for (real, name) in [("tra:NEIWAN", "neiwan"), ("ntdlrt:V", "danhai")] {
+            let app = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-follow-bought", real, "-map3D.quality", "saving"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let stock = app.descendants(matching: .any)["train.stock"].firstMatch
+            XCTAssertTrue(stock.appears(within: 30), "\(real): the train's card says what it is")
+            settle(seconds: 3)
+            keep("bought-\(name)-train-card", app)
+
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            waitForPicture(timeout: 150)
+            settle(seconds: 5)
+            keep("bought-\(name)-3d", app)
+            app.terminate()
+        }
+
+        let app = launch(extra: ["-screenshot-scene", "acquired"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 3)
+        keep("bought-lines-list", app)
+    }
+
     /// Decision 517 續: the station picked on the 2D map keeps its tag on
     /// the 3D map, under the station there; a tap on the tag opens its
     /// details back on the 2D map.
@@ -167,6 +204,119 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list), "The station size section comes into view")
         settle()
         keep("station-expansion", app)
+    }
+
+    /// Decision 506 續二 (BADGE): the expansion scene
+    /// (`ScreenshotScene.expansion`), West's concourse mark beside its name,
+    /// close up (the overview's names carry no squares). For the
+    /// screenshot review of the pull request that drew the mark, not the
+    /// website; in both languages.
+    func testStationTierMark() {
+        tierMarkShot(english: false)
+    }
+
+    func testStationTierMarkInEnglish() {
+        tierMarkShot(english: true)
+    }
+
+    /// The same scene's Central: past the people a day its first expansion
+    /// needs, full on too few of the last seven days.
+    func testStationExpansionFullDays() {
+        fullDaysShot(english: false)
+    }
+
+    func testStationExpansionFullDaysInEnglish() {
+        fullDaysShot(english: true)
+    }
+
+    private func tierMarkShot(english: Bool) {
+        let app = launch(extra: ["-screenshot-scene", "expansion"], english: english)
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 180), "The scene opens")
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        func west() -> CGPoint? {
+            ((stations.value as? String) ?? "").split(separator: ";").first.flatMap { pair in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+            }
+        }
+        settle()
+        // Zoom in first (the badges are drawn only at full detail), then
+        // drag West to the middle; the zoom does not keep a point in place,
+        // so the drag comes after it and reads West again. The drag starts
+        // between the side rail and the stations (a hold on a station opens
+        // its panel) and is slow, so the map does not coast past.
+        let zoomIn = app.buttons[english ? "Zoom in" : "放大"]
+        XCTAssertTrue(zoomIn.appears(within: 5), "The zoom buttons show")
+        for _ in 0..<3 where zoomIn.isEnabled {
+            XCTAssertTrue(zoomIn.becomesHittable(within: 3))
+            zoomIn.tap()
+            settle(seconds: 1)
+        }
+        settle()
+        guard let point = west() else { return XCTFail("The scene has stations") }
+        let middle = CGPoint(x: map.frame.width / 2, y: map.frame.height / 2)
+        let shift = CGVector(dx: middle.x - point.x, dy: middle.y - point.y)
+        let from = CGVector(dx: middle.x - shift.dx / 2, dy: middle.y + 120 - shift.dy / 2)
+        let origin = map.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(from).press(
+            forDuration: 0.1,
+            thenDragTo: origin.withOffset(CGVector(dx: from.dx + shift.dx, dy: from.dy + shift.dy)),
+            withVelocity: .slow,
+            thenHoldForDuration: 0.3)
+        settle()
+        keep("station-tier-mark-\(english ? "en" : "zh")", app)
+        if let moved = west() {
+            XCTAssertLessThan(abs(moved.x - middle.x), map.frame.width / 4, "West is near the middle (\(moved))")
+        }
+    }
+
+    private func fullDaysShot(english: Bool) {
+        let app = launch(extra: ["-screenshot-scene", "expansion"], english: english)
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 180), "The scene opens")
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        func central() -> CGPoint? {
+            let pairs = ((stations.value as? String) ?? "").split(separator: ";")
+            guard pairs.count > 1 else { return nil }
+            let xy = pairs[1].split(separator: ",").compactMap { Double($0) }
+            return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+        }
+        var last = central()
+        let still = Date().addingTimeInterval(10)
+        while Date() < still {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = central()
+            if now != nil, now == last { break }
+            last = now
+        }
+        // A hold on Central opens its panel, as `testCivicRidersRow` does.
+        guard let point = last else { return XCTFail("The scene has a second station") }
+        var list: XCUIElement?
+        for _ in 0..<3 where list == nil {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
+            let opened = Date().addingTimeInterval(5)
+            repeat {
+                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
+            } while list == nil && Date() < opened
+        }
+        XCTAssertNotNil(list, "The hold opens the station's panel")
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "The panel has its jump menu")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
+        let offer = app.descendants(matching: .any)["station.expansion.build"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(offer, in: list), "The station size card's offer comes into view")
+        settle()
+        keep("station-expansion-full-days-\(english ? "en" : "zh")", app)
     }
 
     /// Decision 533: the station panel's row of the riders a school and a
@@ -814,6 +964,41 @@ final class WebsiteScreenshotTests: XCTestCase {
         buy.tap()
         settle(seconds: 6)
         keep("traced-line-for-sale-card", app)
+    }
+
+    /// Decision 535 (continued, ANKENG): the Ankeng LRT's purchase card on
+    /// a real-world game at Banqiao, opened from the lines panel's lines
+    /// for sale. For the screenshot review of its pull request.
+    func testAnkengLRTForSale() {
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let banqiao = app.buttons.matching(identifier: "place.tra-banqiao").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(banqiao, in: app.collectionViews.firstMatch), "Banqiao is listed")
+        banqiao.waitUntilSettled()
+        app.tapMiddle(of: banqiao)
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        settle(seconds: 4)
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let ankeng = app.buttons["line.acquire.K"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(ankeng, in: list), "The Ankeng LRT is for sale")
+        settle(seconds: 1)
+        keep("ankeng-for-sale", app)
+        ankeng.tap()
+        XCTAssertTrue(app.buttons["acquire.buy"].appears(within: 120), "Its card is laid out")
+        settle(seconds: 2)
+        keep("ankeng-for-sale-card", app)
     }
 
     /// Decision 513: a trace along the North-Link Line south of Nan'ao
@@ -1779,6 +1964,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.launchArguments = ["-ui-testing"] + language + extra
         app.launch()
         return app
+    }
+
+    /// Waits until the 3D map is drawn, not its spinner: the Simulator
+    /// draws it in software and can take over a minute; a screenshot of
+    /// the spinner is about 240 KB, one of the map far more.
+    private func waitForPicture(timeout: TimeInterval) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if XCUIScreen.main.screenshot().pngRepresentation.count > 600_000 { return }
+            Thread.sleep(forTimeInterval: 2)
+        }
     }
 
     /// Lets the map draw and the animations end before a screenshot.

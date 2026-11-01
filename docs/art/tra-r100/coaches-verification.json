@@ -1,0 +1,100 @@
+{
+  "status": "VERIFIED",
+  "models": [
+    {
+      "id": "tra-breezy-blue-coach-mixed",
+      "visible_supported_glass_samples": 760,
+      "tyre_contacts": 8
+    },
+    {
+      "id": "tra-breezy-blue-coach-mixed-far",
+      "visible_supported_glass_samples": 304,
+      "tyre_contacts": 8
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition",
+      "visible_supported_glass_samples": 760,
+      "tyre_contacts": 8
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition-far",
+      "visible_supported_glass_samples": 304,
+      "tyre_contacts": 8
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat",
+      "visible_supported_glass_samples": 760,
+      "tyre_contacts": 8
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat-far",
+      "visible_supported_glass_samples": 304,
+      "tyre_contacts": 8
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat",
+      "visible_supported_glass_samples": 680,
+      "tyre_contacts": 8
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat-far",
+      "visible_supported_glass_samples": 272,
+      "tyre_contacts": 8
+    }
+  ],
+  "rejected_faults": [
+    "tra-breezy-blue-coach-mixed: floating actual side glazing",
+    "tra-breezy-blue-coach-mixed: buried actual side glazing",
+    "tra-breezy-blue-coach-mixed: duplicate shell",
+    "tra-breezy-blue-coach-mixed: lifted wheel contact",
+    "tra-breezy-blue-coach-mixed: extra actual wheel / axle",
+    "tra-breezy-blue-coach-mixed: opaque plate protrudes through glazing",
+    "tra-breezy-blue-coach-mixed-far: floating actual side glazing",
+    "tra-breezy-blue-coach-mixed-far: buried actual side glazing",
+    "tra-breezy-blue-coach-mixed-far: duplicate shell",
+    "tra-breezy-blue-coach-mixed-far: lifted wheel contact",
+    "tra-breezy-blue-coach-mixed-far: extra actual wheel / axle",
+    "tra-breezy-blue-coach-mixed-far: opaque plate protrudes through glazing",
+    "tra-breezy-blue-coach-exhibition: floating actual side glazing",
+    "tra-breezy-blue-coach-exhibition: buried actual side glazing",
+    "tra-breezy-blue-coach-exhibition: duplicate shell",
+    "tra-breezy-blue-coach-exhibition: lifted wheel contact",
+    "tra-breezy-blue-coach-exhibition: extra actual wheel / axle",
+    "tra-breezy-blue-coach-exhibition: opaque plate protrudes through glazing",
+    "tra-breezy-blue-coach-exhibition-far: floating actual side glazing",
+    "tra-breezy-blue-coach-exhibition-far: buried actual side glazing",
+    "tra-breezy-blue-coach-exhibition-far: duplicate shell",
+    "tra-breezy-blue-coach-exhibition-far: lifted wheel contact",
+    "tra-breezy-blue-coach-exhibition-far: extra actual wheel / axle",
+    "tra-breezy-blue-coach-exhibition-far: opaque plate protrudes through glazing",
+    "tra-breezy-blue-coach-long-seat: floating actual side glazing",
+    "tra-breezy-blue-coach-long-seat: buried actual side glazing",
+    "tra-breezy-blue-coach-long-seat: duplicate shell",
+    "tra-breezy-blue-coach-long-seat: lifted wheel contact",
+    "tra-breezy-blue-coach-long-seat: extra actual wheel / axle",
+    "tra-breezy-blue-coach-long-seat: opaque plate protrudes through glazing",
+    "tra-breezy-blue-coach-long-seat-far: floating actual side glazing",
+    "tra-breezy-blue-coach-long-seat-far: buried actual side glazing",
+    "tra-breezy-blue-coach-long-seat-far: duplicate shell",
+    "tra-breezy-blue-coach-long-seat-far: lifted wheel contact",
+    "tra-breezy-blue-coach-long-seat-far: extra actual wheel / axle",
+    "tra-breezy-blue-coach-long-seat-far: opaque plate protrudes through glazing",
+    "tra-breezy-blue-coach-rotating-seat: floating actual side glazing",
+    "tra-breezy-blue-coach-rotating-seat: buried actual side glazing",
+    "tra-breezy-blue-coach-rotating-seat: duplicate shell",
+    "tra-breezy-blue-coach-rotating-seat: lifted wheel contact",
+    "tra-breezy-blue-coach-rotating-seat: extra actual wheel / axle",
+    "tra-breezy-blue-coach-rotating-seat: opaque plate protrudes through glazing",
+    "tra-breezy-blue-coach-rotating-seat-far: floating actual side glazing",
+    "tra-breezy-blue-coach-rotating-seat-far: buried actual side glazing",
+    "tra-breezy-blue-coach-rotating-seat-far: duplicate shell",
+    "tra-breezy-blue-coach-rotating-seat-far: lifted wheel contact",
+    "tra-breezy-blue-coach-rotating-seat-far: extra actual wheel / axle",
+    "tra-breezy-blue-coach-rotating-seat-far: opaque plate protrudes through glazing"
+  ],
+  "limits": [
+    "Side glazing first-hit and backing samples, not all-view intersection proof",
+    "Published wheel/axle display dimensions remain photo estimates",
+    "Roof/equipment positioning and role fidelity require source comparison; these probes do not certify a numbered real formation"
+  ]
+}

@@ -254,8 +254,8 @@ extension GameWorld {
             direction = here < next ? .outbound : .inbound
         }
         // Decision 133: a run goes one way, the way its stops go along the
-        // line's.
-        if let served = self.line(id: line), served.hasRuns,
+        // line's (on a ring, decision 535, the way round below).
+        if let served = self.line(id: line), served.hasRuns, !served.isRing,
            let here = served.stops.firstIndex(of: train.timetable[stop].station),
            let next = served.stops.firstIndex(of: train.timetable[stop + 1].station) {
             direction = here < next ? .outbound : .inbound
@@ -266,6 +266,14 @@ extension GameWorld {
         // its place among them decides only for a lap that tells neither.
         let ringWay: RingDirection? = self.line(id: line).flatMap { served in
             guard served.isRing else { return nil }
+            // Decision 535: a run of a ring goes its way round, from this
+            // stop to the next that way, across the seam between the last
+            // stop and the first as anywhere else, not by their order.
+            if served.hasRuns {
+                guard let here = served.stops.firstIndex(of: train.timetable[stop].station),
+                      let next = served.stops.firstIndex(of: train.timetable[stop + 1].station) else { return nil }
+                return next == (here + 1) % served.stops.count ? .inner : .outer
+            }
             // Decision 172: a lap that starts elsewhere than at the first
             // stop does not tell by its second call.
             if train.timetable.count > 1, !flexDispatch || train.timetable[0].station == served.stops[0], let next = served.stops.dropFirst().first, let last = served.stops.last {

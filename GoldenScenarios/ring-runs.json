@@ -1,0 +1,2208 @@
+{
+  "schemaVersion": 76,
+  "description": "Decision 535: runs of a ring. A double ring: the loop of ring-line.json moved to centre (5120, 4096), the inner track (edges 1-8, clockwise), and the same loop twice as large round it, the outer track (edges 9-16), never joined. Six stations A-F, each with a platform on the last 512 of inner edges 1, 2, 3, 5, 6, 7 and outer edges 9, 10, 11, 13, 14, 15, so the stops in order go clockwise: the inner way round is the inner track clockwise, the outer way the outer track anticlockwise. Runs (each leg five minutes, a minute at every stop between): D to A the inner way at 05:00, across the seam (D 05:00, E 05:05-05:06, F 05:11-05:12, A 05:17); a whole lap from A the inner way at 06:00 (back at A 06:35); a whole lap from A the outer way at 06:10 (back at A 06:45). Refused (invalidLineRuns): a lap without a way, a lap with six times for seven calls, a run from D the inner way to B with times for three legs; a ring with runs stays a ring. The headway is the inner way's two runs over 05:00 to 06:00, 70 minutes. Inner stands at D facing clockwise, Outer at A facing anticlockwise. Inner is sent five minutes before 05:00, keeps the run's times and does not turn round; at A at 05:17 it stands facing clockwise and takes the inner lap at 05:55 without turning; Outer takes the outer lap at 06:05 without turning. At 07:00 both stand at A. Final state: balance 3,000,000 - track 108,000 (36 lengths of 1024 at 3,000; the outer corners of 4,090 count 4) - six stations 900,000 - two trains 1,200,000 = 792,000; runDays [0, 0, 0]; Inner at A's inner berth (edge 1 forward, 1024), Outer at A's outer berth (edge 9 backward, 512).",
+  "initialState": {
+    "worldWidth": 10240,
+    "worldHeight": 8192,
+    "balance": 3000000,
+    "costs": {
+      "track": 3000,
+      "station": 150000,
+      "train": 600000
+    },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 4096,
+        "y": 3072,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 5120,
+        "y": 3072,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 6144,
+        "y": 3072,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 7168,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 6144,
+        "y": 5120,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 5120,
+        "y": 5120,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 4096,
+        "y": 5120,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 3072,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 1,
+        "to": 2,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 2,
+        "to": 3,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 3,
+        "to": 4,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 7482,
+            "y": 3072
+          },
+          "control2": {
+            "x": 7168,
+            "y": 2758
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 4,
+        "to": 5,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 7168,
+            "y": 5434
+          },
+          "control2": {
+            "x": 7482,
+            "y": 5120
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 5,
+        "to": 6,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 6,
+        "to": 7,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 7,
+        "to": 8,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 2758,
+            "y": 5120
+          },
+          "control2": {
+            "x": 3072,
+            "y": 5434
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 8,
+        "to": 1,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 3072,
+            "y": 2758
+          },
+          "control2": {
+            "x": 2758,
+            "y": 3072
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 3072,
+        "y": 2048,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 5120,
+        "y": 2048,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 7168,
+        "y": 2048,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 9216,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 7168,
+        "y": 6144,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 5120,
+        "y": 6144,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 3072,
+        "y": 6144,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1024,
+        "y": 4096,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 9,
+        "to": 10,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 10,
+        "to": 11,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 11,
+        "to": 12,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 9844,
+            "y": 2048
+          },
+          "control2": {
+            "x": 9216,
+            "y": 1420
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 12,
+        "to": 13,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 9216,
+            "y": 6772
+          },
+          "control2": {
+            "x": 9844,
+            "y": 6144
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 13,
+        "to": 14,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 14,
+        "to": 15,
+        "curve": {
+          "type": "straight"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 15,
+        "to": 16,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 396,
+            "y": 6144
+          },
+          "control2": {
+            "x": 1024,
+            "y": 6772
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 16,
+        "to": 9,
+        "curve": {
+          "type": "cubic",
+          "control1": {
+            "x": 1024,
+            "y": 1420
+          },
+          "control2": {
+            "x": 396,
+            "y": 2048
+          }
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "A",
+        "point": {
+          "x": 4608,
+          "y": 512
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "B",
+        "point": {
+          "x": 6656,
+          "y": 512
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "C",
+        "point": {
+          "x": 9728,
+          "y": 512
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "D",
+        "point": {
+          "x": 6656,
+          "y": 7680
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "E",
+        "point": {
+          "x": 4608,
+          "y": 7680
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "F",
+        "point": {
+          "x": 1536,
+          "y": 7680
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 1,
+        "edge": 1,
+        "start": 512,
+        "end": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 1,
+        "edge": 9,
+        "start": 1536,
+        "end": 2048
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 2,
+        "edge": 2,
+        "start": 512,
+        "end": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 2,
+        "edge": 10,
+        "start": 1536,
+        "end": 2048
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 3,
+        "edge": 3,
+        "start": 1536,
+        "end": 2048
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 3,
+        "edge": 11,
+        "start": 3578,
+        "end": 4090
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 4,
+        "edge": 5,
+        "start": 512,
+        "end": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 4,
+        "edge": 13,
+        "start": 1536,
+        "end": 2048
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 5,
+        "edge": 6,
+        "start": 512,
+        "end": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 5,
+        "edge": 14,
+        "start": 1536,
+        "end": 2048
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 6,
+        "edge": 7,
+        "start": 1536,
+        "end": 2048
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "addTrackPlatform",
+        "station": 6,
+        "edge": 15,
+        "start": 3578,
+        "end": 4090
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Ring",
+        "stops": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineRing",
+        "line": 1,
+        "ring": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineServiceWindow",
+        "line": 1,
+        "window": {
+          "type": "allDay"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "purchaseTrain",
+        "name": "Inner"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "placeTrain",
+        "train": 1,
+        "position": {
+          "type": "edge",
+          "edge": 5,
+          "direction": "forward",
+          "offset": 1024
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainMovementRate",
+        "train": 1,
+        "rate": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "assignTrain",
+        "train": 1,
+        "line": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "purchaseTrain",
+        "name": "Outer"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "placeTrain",
+        "train": 2,
+        "position": {
+          "type": "edge",
+          "edge": 9,
+          "direction": "backward",
+          "offset": 512
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainPath",
+        "train": 2,
+        "path": [],
+        "end": 512
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setTrainMovementRate",
+        "train": 2,
+        "rate": 1024
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "assignTrain",
+        "train": 2,
+        "line": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineRuns",
+        "line": 1,
+        "lineRuns": [
+          {
+            "from": 0,
+            "to": 0,
+            "times": [
+              [
+                21600,
+                21600
+              ],
+              [
+                21900,
+                21960
+              ],
+              [
+                22260,
+                22320
+              ],
+              [
+                22620,
+                22680
+              ],
+              [
+                22980,
+                23040
+              ],
+              [
+                23340,
+                23400
+              ],
+              [
+                23700,
+                23700
+              ]
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "result": "invalidLineRuns"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineRuns",
+        "line": 1,
+        "lineRuns": [
+          {
+            "from": 0,
+            "to": 0,
+            "times": [
+              [
+                21600,
+                21600
+              ],
+              [
+                21900,
+                21960
+              ],
+              [
+                22260,
+                22320
+              ],
+              [
+                22620,
+                22680
+              ],
+              [
+                22980,
+                23040
+              ],
+              [
+                23340,
+                23400
+              ]
+            ],
+            "way": "inner"
+          }
+        ]
+      },
+      "expect": {
+        "result": "invalidLineRuns"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineRuns",
+        "line": 1,
+        "lineRuns": [
+          {
+            "from": 3,
+            "to": 1,
+            "times": [
+              [
+                18000,
+                18000
+              ],
+              [
+                18300,
+                18360
+              ],
+              [
+                18660,
+                18720
+              ],
+              [
+                19020,
+                19020
+              ]
+            ],
+            "way": "inner"
+          }
+        ]
+      },
+      "expect": {
+        "result": "invalidLineRuns"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineRuns",
+        "line": 1,
+        "lineRuns": [
+          {
+            "from": 3,
+            "to": 0,
+            "times": [
+              [
+                18000,
+                18000
+              ],
+              [
+                18300,
+                18360
+              ],
+              [
+                18660,
+                18720
+              ],
+              [
+                19020,
+                19020
+              ]
+            ],
+            "way": "inner"
+          },
+          {
+            "from": 0,
+            "to": 0,
+            "times": [
+              [
+                21600,
+                21600
+              ],
+              [
+                21900,
+                21960
+              ],
+              [
+                22260,
+                22320
+              ],
+              [
+                22620,
+                22680
+              ],
+              [
+                22980,
+                23040
+              ],
+              [
+                23340,
+                23400
+              ],
+              [
+                23700,
+                23700
+              ]
+            ],
+            "way": "inner"
+          },
+          {
+            "from": 0,
+            "to": 0,
+            "times": [
+              [
+                22200,
+                22200
+              ],
+              [
+                22500,
+                22560
+              ],
+              [
+                22860,
+                22920
+              ],
+              [
+                23220,
+                23280
+              ],
+              [
+                23580,
+                23640
+              ],
+              [
+                23940,
+                24000
+              ],
+              [
+                24300,
+                24300
+              ]
+            ],
+            "way": "outer"
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "lineHeadway",
+        "line": 1,
+        "level": "peak"
+      },
+      "expect": {
+        "found": true,
+        "minutes": 70
+      }
+    },
+    {
+      "command": {
+        "type": "setLineRing",
+        "line": 1,
+        "ring": false
+      },
+      "expect": {
+        "result": "invalidLineRuns"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineRing",
+        "line": 1,
+        "ring": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 295
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 1
+      },
+      "expect": {
+        "execution": {
+          "type": "inactive"
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "timetable",
+        "train": 1
+      },
+      "expect": {
+        "timetable": [
+          {
+            "station": 4,
+            "arrival": 295,
+            "departure": 300,
+            "reverse": false
+          },
+          {
+            "station": 5,
+            "arrival": 305,
+            "departure": 306,
+            "reverse": false
+          },
+          {
+            "station": 6,
+            "arrival": 311,
+            "departure": 312,
+            "reverse": false
+          },
+          {
+            "station": 1,
+            "arrival": 317,
+            "departure": 317,
+            "reverse": false
+          }
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 24
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 1
+      },
+      "expect": {
+        "execution": {
+          "type": "inactive"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "stationStops",
+        "train": 1
+      },
+      "expect": {
+        "stations": [
+          1
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 35
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 1
+      },
+      "expect": {
+        "execution": {
+          "type": "inactive"
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "timetable",
+        "train": 1
+      },
+      "expect": {
+        "timetable": [
+          {
+            "station": 1,
+            "arrival": 355,
+            "departure": 360,
+            "reverse": false
+          },
+          {
+            "station": 2,
+            "arrival": 365,
+            "departure": 366,
+            "reverse": false
+          },
+          {
+            "station": 3,
+            "arrival": 371,
+            "departure": 372,
+            "reverse": false
+          },
+          {
+            "station": 4,
+            "arrival": 377,
+            "departure": 378,
+            "reverse": false
+          },
+          {
+            "station": 5,
+            "arrival": 383,
+            "departure": 384,
+            "reverse": false
+          },
+          {
+            "station": 6,
+            "arrival": 389,
+            "departure": 390,
+            "reverse": false
+          },
+          {
+            "station": 1,
+            "arrival": 395,
+            "departure": 395,
+            "reverse": false
+          }
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 10
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "timetable",
+        "train": 2
+      },
+      "expect": {
+        "timetable": [
+          {
+            "station": 1,
+            "arrival": 365,
+            "departure": 370,
+            "reverse": false
+          },
+          {
+            "station": 6,
+            "arrival": 375,
+            "departure": 376,
+            "reverse": false
+          },
+          {
+            "station": 5,
+            "arrival": 381,
+            "departure": 382,
+            "reverse": false
+          },
+          {
+            "station": 4,
+            "arrival": 387,
+            "departure": 388,
+            "reverse": false
+          },
+          {
+            "station": 3,
+            "arrival": 393,
+            "departure": 394,
+            "reverse": false
+          },
+          {
+            "station": 2,
+            "arrival": 399,
+            "departure": 400,
+            "reverse": false
+          },
+          {
+            "station": 1,
+            "arrival": 405,
+            "departure": 405,
+            "reverse": false
+          }
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 54
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 1
+      },
+      "expect": {
+        "execution": {
+          "type": "inactive"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "stationStops",
+        "train": 1
+      },
+      "expect": {
+        "stations": [
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "execution",
+        "train": 2
+      },
+      "expect": {
+        "execution": {
+          "type": "inactive"
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "stationStops",
+        "train": 2
+      },
+      "expect": {
+        "stations": [
+          1
+        ]
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 792000,
+    "gameMinutes": 420,
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": null,
+        "name": "Ring",
+        "outerLastDispatch": null,
+        "patterns": [],
+        "ring": true,
+        "runDays": [
+          0,
+          0,
+          0
+        ],
+        "runs": [
+          {
+            "from": 3,
+            "times": [
+              [
+                18000,
+                18000
+              ],
+              [
+                18300,
+                18360
+              ],
+              [
+                18660,
+                18720
+              ],
+              [
+                19020,
+                19020
+              ]
+            ],
+            "to": 0,
+            "way": "inner"
+          },
+          {
+            "from": 0,
+            "times": [
+              [
+                21600,
+                21600
+              ],
+              [
+                21900,
+                21960
+              ],
+              [
+                22260,
+                22320
+              ],
+              [
+                22620,
+                22680
+              ],
+              [
+                22980,
+                23040
+              ],
+              [
+                23340,
+                23400
+              ],
+              [
+                23700,
+                23700
+              ]
+            ],
+            "to": 0,
+            "way": "inner"
+          },
+          {
+            "from": 0,
+            "times": [
+              [
+                22200,
+                22200
+              ],
+              [
+                22500,
+                22560
+              ],
+              [
+                22860,
+                22920
+              ],
+              [
+                23220,
+                23280
+              ],
+              [
+                23580,
+                23640
+              ],
+              [
+                23940,
+                24000
+              ],
+              [
+                24300,
+                24300
+              ]
+            ],
+            "to": 0,
+            "way": "outer"
+          }
+        ],
+        "stops": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [
+          1,
+          2
+        ],
+        "trainsInService": {
+          "low": 0,
+          "offPeak": 0,
+          "peak": 0
+        },
+        "window": {
+          "type": "allDay"
+        }
+      }
+    ],
+    "network": {
+      "edges": [
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 1,
+          "id": 1,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 2
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 2,
+          "id": 2,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 3
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 7482,
+              "y": 3072
+            },
+            "control2": {
+              "x": 7168,
+              "y": 2758
+            },
+            "type": "cubic"
+          },
+          "from": 3,
+          "id": 3,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 4
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 7168,
+              "y": 5434
+            },
+            "control2": {
+              "x": 7482,
+              "y": 5120
+            },
+            "type": "cubic"
+          },
+          "from": 4,
+          "id": 4,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 5
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 5,
+          "id": 5,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 6
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 6,
+          "id": 6,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 7
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 2758,
+              "y": 5120
+            },
+            "control2": {
+              "x": 3072,
+              "y": 5434
+            },
+            "type": "cubic"
+          },
+          "from": 7,
+          "id": 7,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 8
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 3072,
+              "y": 2758
+            },
+            "control2": {
+              "x": 2758,
+              "y": 3072
+            },
+            "type": "cubic"
+          },
+          "from": 8,
+          "id": 8,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 1
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 9,
+          "id": 9,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 10
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 10,
+          "id": 10,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 11
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 9844,
+              "y": 2048
+            },
+            "control2": {
+              "x": 9216,
+              "y": 1420
+            },
+            "type": "cubic"
+          },
+          "from": 11,
+          "id": 11,
+          "length": 4090,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 12
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 9216,
+              "y": 6772
+            },
+            "control2": {
+              "x": 9844,
+              "y": 6144
+            },
+            "type": "cubic"
+          },
+          "from": 12,
+          "id": 12,
+          "length": 4090,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 13
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 13,
+          "id": 13,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 14
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 14,
+          "id": 14,
+          "length": 2048,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 15
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 396,
+              "y": 6144
+            },
+            "control2": {
+              "x": 1024,
+              "y": 6772
+            },
+            "type": "cubic"
+          },
+          "from": 15,
+          "id": 15,
+          "length": 4090,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 16
+        },
+        {
+          "curve": {
+            "control1": {
+              "x": 1024,
+              "y": 1420
+            },
+            "control2": {
+              "x": 396,
+              "y": 2048
+            },
+            "type": "cubic"
+          },
+          "from": 16,
+          "id": 16,
+          "length": 4090,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 9
+        }
+      ],
+      "nodes": [
+        {
+          "id": 1,
+          "x": 4096,
+          "y": 3072,
+          "z": 0
+        },
+        {
+          "id": 2,
+          "x": 5120,
+          "y": 3072,
+          "z": 0
+        },
+        {
+          "id": 3,
+          "x": 6144,
+          "y": 3072,
+          "z": 0
+        },
+        {
+          "id": 4,
+          "x": 7168,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 5,
+          "x": 6144,
+          "y": 5120,
+          "z": 0
+        },
+        {
+          "id": 6,
+          "x": 5120,
+          "y": 5120,
+          "z": 0
+        },
+        {
+          "id": 7,
+          "x": 4096,
+          "y": 5120,
+          "z": 0
+        },
+        {
+          "id": 8,
+          "x": 3072,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 9,
+          "x": 3072,
+          "y": 2048,
+          "z": 0
+        },
+        {
+          "id": 10,
+          "x": 5120,
+          "y": 2048,
+          "z": 0
+        },
+        {
+          "id": 11,
+          "x": 7168,
+          "y": 2048,
+          "z": 0
+        },
+        {
+          "id": 12,
+          "x": 9216,
+          "y": 4096,
+          "z": 0
+        },
+        {
+          "id": 13,
+          "x": 7168,
+          "y": 6144,
+          "z": 0
+        },
+        {
+          "id": 14,
+          "x": 5120,
+          "y": 6144,
+          "z": 0
+        },
+        {
+          "id": 15,
+          "x": 3072,
+          "y": 6144,
+          "z": 0
+        },
+        {
+          "id": 16,
+          "x": 1024,
+          "y": 4096,
+          "z": 0
+        }
+      ],
+      "platforms": [
+        {
+          "edge": 1,
+          "end": 1024,
+          "start": 512,
+          "station": 1
+        },
+        {
+          "edge": 2,
+          "end": 1024,
+          "start": 512,
+          "station": 2
+        },
+        {
+          "edge": 3,
+          "end": 2048,
+          "start": 1536,
+          "station": 3
+        },
+        {
+          "edge": 5,
+          "end": 1024,
+          "start": 512,
+          "station": 4
+        },
+        {
+          "edge": 6,
+          "end": 1024,
+          "start": 512,
+          "station": 5
+        },
+        {
+          "edge": 7,
+          "end": 2048,
+          "start": 1536,
+          "station": 6
+        },
+        {
+          "edge": 9,
+          "end": 2048,
+          "start": 1536,
+          "station": 1
+        },
+        {
+          "edge": 10,
+          "end": 2048,
+          "start": 1536,
+          "station": 2
+        },
+        {
+          "edge": 11,
+          "end": 4090,
+          "start": 3578,
+          "station": 3
+        },
+        {
+          "edge": 13,
+          "end": 2048,
+          "start": 1536,
+          "station": 4
+        },
+        {
+          "edge": 14,
+          "end": 2048,
+          "start": 1536,
+          "station": 5
+        },
+        {
+          "edge": 15,
+          "end": 4090,
+          "start": 3578,
+          "station": 6
+        }
+      ]
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "normal",
+    "stations": [
+      {
+        "id": 1,
+        "name": "A",
+        "point": {
+          "x": 4608,
+          "y": 512
+        }
+      },
+      {
+        "id": 2,
+        "name": "B",
+        "point": {
+          "x": 6656,
+          "y": 512
+        }
+      },
+      {
+        "id": 3,
+        "name": "C",
+        "point": {
+          "x": 9728,
+          "y": 512
+        }
+      },
+      {
+        "id": 4,
+        "name": "D",
+        "point": {
+          "x": 6656,
+          "y": 7680
+        }
+      },
+      {
+        "id": 5,
+        "name": "E",
+        "point": {
+          "x": 4608,
+          "y": 7680
+        }
+      },
+      {
+        "id": 6,
+        "name": "F",
+        "point": {
+          "x": 1536,
+          "y": 7680
+        }
+      }
+    ],
+    "trafficControl": false,
+    "trains": [
+      {
+        "cars": 1,
+        "execution": {
+          "type": "inactive"
+        },
+        "id": 1,
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "rate": 1024
+        },
+        "name": "Inner",
+        "position": {
+          "direction": "forward",
+          "edge": 1,
+          "offset": 1024,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [],
+        "timetable": [
+          {
+            "arrival": 355,
+            "departure": 360,
+            "reverse": false,
+            "station": 1
+          },
+          {
+            "arrival": 365,
+            "departure": 366,
+            "reverse": false,
+            "station": 2
+          },
+          {
+            "arrival": 371,
+            "departure": 372,
+            "reverse": false,
+            "station": 3
+          },
+          {
+            "arrival": 377,
+            "departure": 378,
+            "reverse": false,
+            "station": 4
+          },
+          {
+            "arrival": 383,
+            "departure": 384,
+            "reverse": false,
+            "station": 5
+          },
+          {
+            "arrival": 389,
+            "departure": 390,
+            "reverse": false,
+            "station": 6
+          },
+          {
+            "arrival": 395,
+            "departure": 395,
+            "reverse": false,
+            "station": 1
+          }
+        ],
+        "trailEdges": []
+      },
+      {
+        "cars": 1,
+        "execution": {
+          "type": "inactive"
+        },
+        "id": 2,
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "end": 512,
+          "rate": 1024
+        },
+        "name": "Outer",
+        "position": {
+          "direction": "backward",
+          "edge": 9,
+          "offset": 512,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [],
+        "timetable": [
+          {
+            "arrival": 365,
+            "departure": 370,
+            "reverse": false,
+            "station": 1
+          },
+          {
+            "arrival": 375,
+            "departure": 376,
+            "reverse": false,
+            "station": 6
+          },
+          {
+            "arrival": 381,
+            "departure": 382,
+            "reverse": false,
+            "station": 5
+          },
+          {
+            "arrival": 387,
+            "departure": 388,
+            "reverse": false,
+            "station": 4
+          },
+          {
+            "arrival": 393,
+            "departure": 394,
+            "reverse": false,
+            "station": 3
+          },
+          {
+            "arrival": 399,
+            "departure": 400,
+            "reverse": false,
+            "station": 2
+          },
+          {
+            "arrival": 405,
+            "departure": 405,
+            "reverse": false,
+            "station": 1
+          }
+        ],
+        "trailEdges": []
+      }
+    ]
+  }
+}

@@ -31,6 +31,12 @@ public struct LineRunTime: Hashable, Sendable {
 /// One train of a line's timetable (decision 133): from stop `from` to
 /// stop `to` (indices into the line's stops), calling at every stop
 /// between, at `times`, on `days`.
+///
+/// On a ring (decision 49) a run goes round one way, ``way`` (decision
+/// 535): from `from` it calls at the next stop that way each time, on past
+/// the last stop to the first (or the first to the last), `times.count - 1`
+/// legs, ending at `to`; `from == to` is a whole lap. A run of any other
+/// line has no way.
 public struct LineRun: Hashable, Sendable {
     /// The index, in the line's stops, of the stop it leaves first.
     public let from: Int
@@ -42,6 +48,9 @@ public struct LineRun: Hashable, Sendable {
     /// Saturday (see ``StationDemand/weekday(ofDay:)``; a game starts on a
     /// Monday).
     public let days: Int
+    /// Decision 535: on a ring, the way round it goes; `nil` on any other
+    /// line.
+    public let way: RingDirection?
 
     /// Every day of the week.
     public static let everyDay = 0b111_1111
@@ -54,31 +63,57 @@ public struct LineRun: Hashable, Sendable {
     /// A run's times end before the second midnight after its day began.
     public static let latestSecond: Int64 = 2 * GameTime.secondsPerDay
 
-    public init(from: Int, to: Int, times: [LineRunTime], days: Int = everyDay) {
+    public init(from: Int, to: Int, times: [LineRunTime], days: Int = everyDay, way: RingDirection? = nil) {
         self.from = from
         self.to = to
         self.times = times
         self.days = days
+        self.way = way
     }
 
-    /// The stops it calls at, as indices into the line's stops, in order.
+    /// The stops it calls at, as indices into the line's stops, in order,
+    /// for a run of a line that is not a ring (see ``calls(stopCount:)``).
     public var calls: [Int] {
         from < to ? Array(from...to) : Array((to...from).reversed())
     }
 
-    /// Whether it runs the way the line's stops are listed.
-    public var isOutbound: Bool {
-        from < to
+    /// The stops it calls at on a line with `stopCount` stops, in order:
+    /// on a ring (decision 535) `from`, then the next stop ``way`` each
+    /// time, round past the line's ends, to `to`; otherwise ``calls``.
+    public func calls(stopCount: Int) -> [Int] {
+        guard let way, stopCount > 0 else { return calls }
+        let step = way == .inner ? 1 : stopCount - 1
+        return (0...Self.ringLegs(from: from, to: to, way: way, stopCount: stopCount)).map { (from + $0 * step) % stopCount }
     }
 
-    /// Whether it is a run of a line with `stopCount` stops: two different
-    /// stops of it, a time for each call, times that never go back (a call
-    /// arrives no earlier than the one before leaves) and end before
-    /// ``latestSecond``, and some day of the week.
-    func isValid(stopCount: Int) -> Bool {
-        guard from != to, (0..<stopCount).contains(from), (0..<stopCount).contains(to),
-              times.count == abs(to - from) + 1, (1...Self.everyDay).contains(days)
-        else { return false }
+    /// Decision 535: the legs from stop `from` to stop `to` going `way`
+    /// round a ring of `stopCount` stops: a whole lap when they are the
+    /// same stop.
+    static func ringLegs(from: Int, to: Int, way: RingDirection, stopCount: Int) -> Int {
+        let difference = way == .inner ? to - from : from - to
+        let legs = ((difference % stopCount) + stopCount) % stopCount
+        return legs == 0 ? stopCount : legs
+    }
+
+    /// Whether it runs the way the line's stops are listed: on a ring
+    /// (decision 535) the ``RingDirection/inner`` way.
+    public var isOutbound: Bool {
+        way.map { $0 == .inner } ?? (from < to)
+    }
+
+    /// Whether it is a run of a line with `stopCount` stops, a ring when
+    /// `ring`: two different stops of it, or on a ring (decision 535) with
+    /// a way and up to a whole lap round (the same stop); a time for each
+    /// call, times that never go back (a call arrives no earlier than the
+    /// one before leaves) and end before ``latestSecond``, and some day of
+    /// the week.
+    func isValid(stopCount: Int, ring: Bool = false) -> Bool {
+        guard (0..<stopCount).contains(from), (0..<stopCount).contains(to), (1...Self.everyDay).contains(days) else { return false }
+        if ring {
+            guard let way, times.count == Self.ringLegs(from: from, to: to, way: way, stopCount: stopCount) + 1 else { return false }
+        } else {
+            guard way == nil, from != to, times.count == abs(to - from) + 1 else { return false }
+        }
         guard times.allSatisfy({ 0 <= $0.arrival && $0.arrival <= $0.departure && $0.departure < Self.latestSecond }) else { return false }
         return zip(times, times.dropFirst()).allSatisfy { $0.departure <= $1.arrival }
     }
@@ -113,23 +148,89 @@ extension ServiceLine {
     }
 
     /// Whether `runs` can be this line's: each a run of it (see
-    /// ``LineRun/isValid(stopCount:)``), on a line that is not a ring, has
-    /// no patterns and calls at no station twice.
+    /// ``LineRun/isValid(stopCount:ring:)``), on a line that has no
+    /// patterns and calls at no station twice. Since decision 535 a ring
+    /// can have runs too, each going one way round.
     func canHave(_ runs: [LineRun]) -> Bool {
         guard !runs.isEmpty else { return true }
-        return !isRing && patterns.isEmpty && Set(stops).count == stops.count && runs.allSatisfy { $0.isValid(stopCount: stops.count) }
+        return patterns.isEmpty && Set(stops).count == stops.count && runs.allSatisfy { $0.isValid(stopCount: stops.count, ring: isRing) }
+    }
+
+    /// The stops `run` calls at, in order (see ``LineRun/calls(stopCount:)``).
+    func calls(of run: LineRun) -> [Int] {
+        run.calls(stopCount: stops.count)
     }
 
     /// Whether riders can go from stop `from` to stop `to` (indices into
     /// the line's stops) on one train (decision 149): on a line with runs,
     /// some run goes that way and calls at both; on any other line, yes.
     /// A way or a stretch no run goes has no train, so no one sets out on
-    /// it and no route plans it.
+    /// it and no route plans it. On a ring with runs (decision 535) either
+    /// way round, see ``runsServe(from:to:way:)``.
     func runsServe(from: Int, to: Int) -> Bool {
         guard hasRuns else { return true }
+        if isRing { return RingDirection.allCases.contains { runsServe(from: from, to: to, way: $0) } }
         return runs.contains { run in
             run.isOutbound == (from < to) && min(run.from, run.to) <= min(from, to) && max(from, to) <= max(run.from, run.to)
         }
+    }
+
+    // MARK: - Arcs of a ring (decision 535)
+
+    /// Where stop `stop` comes in a lap of the ring going `way` from its
+    /// first stop: the place of its leg on (the ring's lap journeys'
+    /// legs, ``ringCalls(_:)``).
+    func ringPlace(of stop: Int, way: RingDirection) -> Int {
+        way == .inner ? stop : (stops.count - stop) % stops.count
+    }
+
+    /// The legs of a ring a run going `way` drives, as the place of its
+    /// first (see ``ringPlace(of:way:)``) and how many follow on round
+    /// from there.
+    func ringArc(of run: LineRun) -> (start: Int, legs: Int)? {
+        guard isRing, let way = run.way else { return nil }
+        return (ringPlace(of: run.from, way: way), LineRun.ringLegs(from: run.from, to: run.to, way: way, stopCount: stops.count))
+    }
+
+    /// Whether the legs `legs` from place `start` lie within those `legs`
+    /// from place `outer` round a ring of `count` legs.
+    static func arc(_ start: Int, _ legs: Int, liesWithin outer: Int, _ outerLegs: Int, count: Int) -> Bool {
+        ((start - outer) % count + count) % count + legs <= outerLegs
+    }
+
+    /// Decision 535: whether a run of the ring goes `way` from stop `from`
+    /// round to stop `to`, calling at both.
+    func runsServe(from: Int, to: Int, way: RingDirection) -> Bool {
+        guard isRing, from != to, stops.indices.contains(from), stops.indices.contains(to) else { return false }
+        let start = ringPlace(of: from, way: way)
+        let legs = LineRun.ringLegs(from: from, to: to, way: way, stopCount: stops.count)
+        return runs.contains { run in
+            guard run.way == way, let arc = ringArc(of: run) else { return false }
+            return Self.arc(start, legs, liesWithin: arc.start, arc.legs, count: stops.count)
+        }
+    }
+
+    /// Decision 535: what passengers ride a ring with runs on going `way`,
+    /// as decision 149's stretches do on a line with ends: the stops a
+    /// whole lap starts at, busiest first (then by stop), each a lap
+    /// passengers ride round from there; and the arcs of the other runs,
+    /// as the place of their first leg and how many legs, leaving out
+    /// those inside one of those laps or inside another arc, by place.
+    /// A ride within one of them is served (``runsServe(from:to:way:)``).
+    func ringRunPaths(way: RingDirection) -> (laps: [Int], arcs: [(start: Int, legs: Int)]) {
+        let count = stops.count
+        var starts: [Int: Int] = [:]
+        var arcs: [(start: Int, legs: Int)] = []
+        for run in runs where run.way == way {
+            guard let arc = ringArc(of: run) else { continue }
+            if arc.legs == count { starts[run.from, default: 0] += 1 } else if !arcs.contains(where: { $0 == arc }) { arcs.append(arc) }
+        }
+        let laps = starts.keys.sorted { (starts[$0]!, -$0) > (starts[$1]!, -$1) }
+        let kept = arcs.filter { arc in
+            !laps.contains { Self.arc(arc.start, arc.legs, liesWithin: ringPlace(of: $0, way: way), count, count: count) }
+                && !arcs.contains { $0 != arc && Self.arc(arc.start, arc.legs, liesWithin: $0.start, $0.legs, count: count) }
+        }
+        return (laps, kept.sorted { ($0.start, $0.legs) < ($1.start, $1.legs) })
     }
 
     /// The stretches of the line its runs go `outbound` or back (decision
@@ -210,15 +311,18 @@ struct RunTrip: Hashable, Sendable {
 
     /// The run's timetable for a train sent out at `dispatch` for game day
     /// `day`: the first stop arriving now and leaving at the run's first
-    /// departure (or ``ServiceDwell/terminalMinimum`` from now, if later),
-    /// every other call at the run's times, but never before the call
-    /// before has left; the last call is where the service ends.
+    /// departure (or ``ServiceDwell/terminalMinimum`` from now, if later;
+    /// on a ring, decision 535, ``ServiceDwell/minimum`` unless the train
+    /// turns round first, as a ring's lap leaves), every other call at the
+    /// run's times, but never before the call before has left; the last
+    /// call is where the service ends.
     func timetable(_ run: LineRun, calling stops: [StationID], day: Int64, sentOutAt dispatch: GameTime) -> [ScheduledStop] {
         let base = day * GameTime.secondsPerDay
-        let calls = run.calls
+        let calls = run.calls(stopCount: stops.count)
+        let least = run.way != nil && !turnsFirst ? ServiceDwell.minimum : ServiceDwell.terminalMinimum
         var timetable = [ScheduledStop(
             station: stops[calls[0]], arrival: dispatch,
-            departure: GameTime(seconds: max(dispatch.seconds + ServiceDwell.terminalMinimum, base + run.times[0].departure)), reverses: turnsFirst
+            departure: GameTime(seconds: max(dispatch.seconds + least, base + run.times[0].departure)), reverses: turnsFirst
         )]
         for index in calls.indices.dropFirst() {
             let left = timetable[index - 1].departure.seconds
@@ -241,15 +345,45 @@ extension GameWorld {
     /// train is not placed. Each leg as a line's journey drives it (see
     /// ``drive(_:calling:from:routes:)``), turning round between the ends
     /// only where the track makes it (V4d).
+    ///
+    /// Decision 535: on a ring the train goes as it faces when it faces the
+    /// run's way round (``facesRingWay(_:_:on:at:)``), and turns round
+    /// first only when it does not, or cannot go on as it faces: one way
+    /// round is one track of a double ring, and turned round where it is
+    /// shorter it would run against that way's trains.
     func runTrip(of line: ServiceLine, _ run: LineRun, for train: Train) -> RunTrip? {
         guard let placement = train.placement else { return nil }
-        let ahead = driveRun(line, calling: run.calls, from: placement)
-        let turned = driveRun(line, calling: run.calls, from: turnedRound(placement))
+        let calls = line.calls(of: run)
+        let ahead = driveRun(line, calling: calls, from: placement)
+        if let way = run.way, let ahead, facesRingWay(placement, way, on: line, at: run.from) {
+            return RunTrip(turnsFirst: false, legs: ahead.legs, turnbacks: ahead.turnbacks)
+        }
+        let turned = driveRun(line, calling: calls, from: turnedRound(placement))
+        if run.way != nil {
+            if let turned { return RunTrip(turnsFirst: true, legs: turned.legs, turnbacks: turned.turnbacks) }
+            return ahead.map { RunTrip(turnsFirst: false, legs: $0.legs, turnbacks: $0.turnbacks) }
+        }
         func seconds(_ legs: [LineLeg]) -> Int64 { legs.reduce(0) { $0 + $1.seconds } }
         if let turned, ahead.map({ seconds(turned.legs) < seconds($0.legs) }) ?? true {
             return RunTrip(turnsFirst: true, legs: turned.legs, turnbacks: turned.turnbacks)
         }
         return ahead.map { RunTrip(turnsFirst: false, legs: $0.legs, turnbacks: $0.turnbacks) }
+    }
+
+    /// Decision 535: whether a train standing at `placement` at stop `stop`
+    /// of ring `line` faces the way `way` round it: going on as it faces,
+    /// the next stop that way is nearer than the next stop the other way
+    /// (which, facing that way, it reaches only round the whole ring), or
+    /// the other way has no route ahead at all.
+    func facesRingWay(_ placement: TrainPlacement, _ way: RingDirection, on line: ServiceLine, at stop: Int) -> Bool {
+        let count = line.stops.count
+        guard line.isRing, count >= 3 else { return false }
+        let routes = line.routes(ofService: 0)
+        let next = way == .inner ? (stop + 1) % count : (stop + count - 1) % count
+        let other = way == .inner ? (stop + count - 1) % count : (stop + 1) % count
+        guard let there = linePath(line, from: stop, to: next, start: placement.position, length: placement.length, routes: routes) else { return false }
+        guard let back = linePath(line, from: stop, to: other, start: placement.position, length: placement.length, routes: routes) else { return true }
+        return there.distance < back.distance
     }
 
     /// The legs of `line` calling at `calls` one way, driven from `start`,
@@ -290,13 +424,26 @@ extension GameWorld {
     /// of its first departure now, or the route its line names for that
     /// leg (decision 323), which it leaves by first when it can (decision
     /// 61). With its index and timetable.
+    ///
+    /// Decision 535: on a ring, a train that faces the run's way round
+    /// first, and only when none does one that turns round.
     func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64) -> (index: Int, timetable: [ScheduledStop])? {
+        if run.way != nil {
+            return readyRunTrain(of: line, run, day: day, turning: false) ?? readyRunTrain(of: line, run, day: day, turning: true)
+        }
+        return readyRunTrain(of: line, run, day: day, turning: nil)
+    }
+
+    /// ``readyRunTrain(of:_:day:)`` among the trains whose trip turns
+    /// round first when `turning` is `true`, or does not when `false`, or
+    /// either when `nil`.
+    private func readyRunTrain(of line: ServiceLine, _ run: LineRun, day: Int64, turning: Bool?) -> (index: Int, timetable: [ScheduledStop])? {
         let first = line.stops[run.from]
         for id in line.trains {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
             let train = trains[index]
             guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: first),
-                  let trip = runTrip(of: line, run, for: train)
+                  let trip = runTrip(of: line, run, for: train), turning.map({ $0 == trip.turnsFirst }) ?? true
             else { continue }
             let timetable = trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now)
             if isTrafficControlEnabled, let leaving = sentOut(train, on: timetable), case .held = reservingDeparture(leaving) {
@@ -361,12 +508,13 @@ extension GameWorld {
 
 extension LineRun: Codable {
     private enum CodingKeys: String, CodingKey {
-        case from, to, times, days
+        case from, to, times, days, way
     }
 
-    /// Decodes `{"from", "to", "times": [[arrival, departure], …], "days"}`,
-    /// `"days"` left out for every day. Whether the run fits its line is the
-    /// line's to check.
+    /// Decodes `{"from", "to", "times": [[arrival, departure], …], "days",
+    /// "way"}`, `"days"` left out for every day, `"way"` (decision 535,
+    /// `"inner"` or `"outer"`) for a run of a ring only. Whether the run
+    /// fits its line is the line's to check.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let pairs = try container.decode([[Int64]].self, forKey: .times)
@@ -376,7 +524,8 @@ extension LineRun: Codable {
         self.init(
             from: try container.decode(Int.self, forKey: .from), to: try container.decode(Int.self, forKey: .to),
             times: pairs.map { LineRunTime(arrival: $0[0], departure: $0[1]) },
-            days: container.contains(.days) ? try container.decode(Int.self, forKey: .days) : Self.everyDay
+            days: container.contains(.days) ? try container.decode(Int.self, forKey: .days) : Self.everyDay,
+            way: try container.decodeIfPresent(RingDirection.self, forKey: .way)
         )
     }
 
@@ -388,5 +537,6 @@ extension LineRun: Codable {
         if days != Self.everyDay {
             try container.encode(days, forKey: .days)
         }
+        try container.encodeIfPresent(way, forKey: .way)
     }
 }

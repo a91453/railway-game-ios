@@ -1194,7 +1194,12 @@ extension RealWorldDemo.TrackPlan {
     /// Where two nodes in a row stand off by the same, the edge between
     /// runs beside `plan`'s that far off it;
     /// where they differ, it is a ramp from the one to the other.
-    init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double]) {
+    /// `following`, each edge's handles are as much longer or shorter
+    /// than a third of `plan`'s stretch as its chord is than `plan`'s
+    /// (decision 535, continued): on a curve, the track outside it is
+    /// longer, and with the same handles bulged in to within 4 m of the
+    /// other in the middle (the Ankeng LRT's tight curves).
+    init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double], following: Bool = false) {
         let distances = indices.map { plan.distances[$0] }
         let nodes = zip(indices, offsets).map { index, offset in
             let node = plan.nodes[index], direction = node.direction.unit
@@ -1206,7 +1211,12 @@ extension RealWorldDemo.TrackPlan {
         self.nodes = nodes
         heights = indices.map { plan.heights[$0] }
         curves = distances.indices.dropLast().map { index in
-            let handle = (distances[index + 1] - distances[index]) / 3
+            var handle = (distances[index + 1] - distances[index]) / 3
+            if following {
+                let chord = (WorldVector(plan.nodes[indices[index + 1]].point) - WorldVector(plan.nodes[indices[index]].point)).length
+                let beside = (WorldVector(nodes[index + 1].point) - WorldVector(nodes[index].point)).length
+                if chord > 0 { handle *= beside / chord }
+            }
             let c1 = WorldVector(nodes[index].point) + nodes[index].direction * handle
             let c2 = WorldVector(nodes[index + 1].point) - nodes[index + 1].direction * handle
             return .cubic(c1.plan, c2.plan)

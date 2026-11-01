@@ -155,8 +155,7 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
     /// The sets stretched to a car's length have no layout of their own, as
     /// before: the 20 m coach is drawn the length it was.
     func testTheStretchedSetsStillHaveNoLayout() throws {
-        // Decision 529: the R200CK runs #1589's 20.01 m R200 at its own length.
-        for key in ["R100CK", "E200CK"] {
+        for key in ["E200CK"] {
             for count in [3, 6, 12] { XCTAssertNil(pack.layout(forType: key, count: count), key) }
             XCTAssertFalse(try set(key, far: false).ownLengths)
             XCTAssertFalse(try set(key, far: true).ownLengths)
@@ -197,13 +196,13 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
     /// it has.
     func testTheLocomotivesAreUnchanged() throws {
         let heads: [String: String] = [
-            "E200CK": "8627afbfece96e5e", "R100CK": "e39e7101afd08de4", "R200CK": "a7b06e165ca838c8",
+            "E200CK": "8627afbfece96e5e", "R200CK": "a7b06e165ca838c8",
             "SUMMER": "bfdb194e7eb7d9ea", "E500CK": "9847c0f5eb19364",
         ]
         for (key, expected) in heads {
             XCTAssertEqual(hash(try model(try set(key, far: false).headName)), expected, key)
         }
-        for key in ["E200CK", "R100CK", "SUMMER"] {
+        for key in ["E200CK", "SUMMER"] {
             XCTAssertEqual(payload(try model(try set(key, far: true).headName)), payload(try model(try set(key, far: false).headName)), key)
         }
         // Decision 529: the R200 as #1589's, near and far.

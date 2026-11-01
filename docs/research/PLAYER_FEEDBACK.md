@@ -163,6 +163,43 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (104.1)，2026-11-01
+
+從 `main` `7b09afa`（#1675 的合併）建置。TestFlight `testflight.yml` run 41314317437（run 104），作者 14:04 UTC 自己按，成功，已發給玩家。
+
+103.1 之後玩家看得到的：收購的真實路線保留自己的車（#1665，決策 536）、學校與醫院帶旅客（#1654）、車站擴建要 7 天裡 4 天客滿（#1660，決策 534）、2D 站房記號（#1667）、安坑輕軌收購（#1668）、06:00 排班變快（#1669）、長描線預覽變快（#1672）、圓餅圖中間金額（#1658）、3D 山區點選（#1659）。
+
+- What to Test：作者按的時候 #1674 還沒合，App Store Connect 自動填的文字少了 #1667、#1668、#1672、#1658 四行，遊戲規劃把這四行交給作者貼上。App 裡「這版新增」卡同樣少這四行，下一版那則補上。
+- 從這版起發版不凍結（HANDOFF §1.2）。
+
+**這個 commit 的檢查**（發版後補驗）：
+- push 的 `ci.yml` run 41314182024：紅，GamePresentation 那層 selected-7 跑到 20 分鐘上限被取消，沒有測試失敗（`CLASS_WEIGHTS` 過時，#1677 修）。不影響玩家。
+- 完整 `ci.yml` run 41318166302、full lane run 41318168937：兩個都綠（2026-11-01 補驗，7b09afa）。
+
+### 0.5.0 (103.1)，2026-11-01
+
+從 `main` `0c6e5ce` 建置，TestFlight `testflight.yml` run 41287858768，成功（作者先發、遊戲規劃後報，HANDOFF §1.2）。
+
+**這個 commit 的檢查**（發版後補驗）：
+- full lane run 41287836096：second、lessons、iPad 教學綠；build job 紅一支：`FinanceCompositionUITests.testTheIncomeAndCostDonutsShowAndTheirRowsAnswerATap`（187 秒，`ToolbarSmokeTests.swift:556`「Lost connection to the application (pid 26651)」）。
+- **結論（FLANE4）：不是玩家會碰到的閃退或卡住，是 UI 測試的查詢自己逾時，XCTest 在 App 裡的程式接著自己中止。** 證據（result bundle 與 App 的 trace）：
+  - result bundle 裡有 App（pid 26651）的 crash report：SIGABRT，`NSInternalInconsistencyException`「Illegal fault request … for placeholderValue, snapshot has no data source」。整條堆疊都是 `XCTAutomationSupport`（`-[XCElementSnapshot _fetchSimpleValueForKey:]` ← `XCTElementQuery` ← `XCTPerformOnMainRunLoop`），沒有一格是遊戲的程式；這個框架只在 UI 測試時才載入 App，玩家的版本裡沒有。
+  - 斷線前：App 的 stdout 先記「XCTPerformOnMainRunLoop work timed out after 60.0s」，查詢是 `descendants(matching: .any)["economy.composition.income"]`，它一個一個取遍整個 App 的元素（地圖、HUD、工具列），這次每個元素要 0.1–11 秒，60 秒內還沒走到經濟面板的清單；下一次查詢 XCTest 自己的 assertion 失敗，App 中止。App 的畫面計數在查詢開始前一直有在動（每 2 秒 50–110 格）。
+  - 不是 #1655、#1656 弄的：這支測試在 deef5e3、59e0f6c、85ee8b1、e985fb6、1b64367、5121f61 的 full lane 都綠，但每次都要 210–312 秒。原因是示範的貨運場景是簡單規則，報表收在清單最下面的「More reports and settings」裡，測試先往下拖 25 次找還沒打開的圓餅圖，每拖一次就查一遍整個 App。紅的那次，崩潰正好在這 25 次裡。
+  - 在 `main` `ce8a75a` 用 `only_testing` 重跑一次（run 41294280154）：**綠**（302.8 秒），所以這次紅是偶發，不是新的 bug。
+- 處理（五方決定，PR #1662）：測試改成先打開報表再往回拖到圓餅圖（`WebsiteScreenshotTests` 早就這樣做），查詢只找經濟面板的清單，不找整個 App。App 的程式不動。改好的測試在分支用 `only_testing` 跑一次（run 41295638951）：綠，110.8 秒（main 上同一支是 302.8 秒）。
+  - 玩家：無影響，App 沒改；full lane 少一個假紅，真的 bug 比較不會被當成偶發。
+  - 鐵道迷：無。
+  - 開發：查詢次數與範圍都變小，這支測試少掉約 200 秒的拖動，也少碰 XCTest 60 秒逾時的機會；不加重試，因為重試會把真的卡住藏起來。
+  - 美術：無。
+  - 音樂：無。
+
+**玩家回報**（2026-11-01，作者轉來，附截圖）：
+
+| # | 分類 | 意見摘要 | 狀態 |
+|---|---|---|---|
+| 1 | bug | 103.1：實景地圖、集集線濁水站附近、3D、夜裡、俯視、600×：「其實 3D 地圖好像都有這個問題」。截圖：單線軌道上兩塊灰褐色細格平面，從平面拉出幾個大尖三角形（離軌道 50–150 m），顏色紋理和平面一樣。104.1 在竹中站（六家線高架月台與內灣線交會處）又看到：米色大平面從站旁往右上、右下拉出長尖三角，蓋過道路與草地，另一塊往左下成梯形 | **修在 TRI3D**（`tri3d-triangulation`，回歸測試 `Map3DLotGroundTests`，前後圖在 `docs/art/tri3d-lot-squares-2026-11-01/`）。原因不是三角化：Earcut 與 mapbox 2.2.4 逐行對過，建物輪廓、底圖覆蓋、塹壕、月台都掃過，沒有問題。是城市地塊的方塊：真實軌道經過的城市地塊鋪站前廣場（米色鋪面），空地鋪農地或公園，每塊是 64 m 格子裡 62 m 的方塊，整塊平放在格子中心的地面高度；但地面畫成格子的兩片斜三角。坡地上地面從方塊一角底下沉下去，方塊就從山坡凸出來，露出的部分俯視看正是長尖三角或梯形。修法：方塊四角放在畫出來的地面上，照地面同一條西北到東南的對角線切兩片，每片落在地面的一片三角上；公園的樹也改站在地面上。全台 242 個台鐵站周圍 1.2 km：修前 220 站有方塊離地（最多 29 m，猴硐；內灣 27 m、竹中 5 m、濁水 2 m），修後 0 站。先前測試沒抓到，是因為測試世界沒讀地面（`mapGround()`），地面全是 0 m。實機請作者在下一版看竹中與濁水的 3D（UNVERIFIED，需實機） |
+
 ### 0.5.0 (102.1)，2026-11-01
 
 從 `main` `e985fb6`（#1638 的合併，102.1 的 What to Test 與遊戲內「新功能」）建置。TestFlight `testflight.yml` run 41259679262，作者 01:05 UTC 自己按（「跟上次一樣，你合併完 full lane 前先發」），成功。

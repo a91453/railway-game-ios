@@ -1,0 +1,54 @@
+{
+  "units": "metres",
+  "native_axes": "+X short hood for locomotive; +X lavatory end for coach (display conventions, official end numbers unknown); +Y left; +Z up; rail Z0",
+  "locomotive": {
+    "length": 15.8,
+    "width": 2.95,
+    "height": 3.92,
+    "coupler_faces": [
+      -7.9,
+      7.9
+    ],
+    "bogie_centres": [
+      -4.55,
+      4.55
+    ],
+    "axle_offsets": [
+      -1.35,
+      0,
+      1.35
+    ],
+    "wheel_radii": [
+      0.508,
+      0.43,
+      0.508
+    ],
+    "dimension_status": "Published class envelope; length datum unknown. Axle/centre/idler and fitting dimensions photo estimates."
+  },
+  "coach": {
+    "length": 20,
+    "width": 2.865,
+    "height_by_role": {
+      "mixed": 3.953,
+      "exhibition": 3.963,
+      "long-seat": 3.963,
+      "rotating-seat": 3.953
+    },
+    "coupler_faces": [
+      -10,
+      10
+    ],
+    "bogie_centres": [
+      -6.75,
+      6.75
+    ],
+    "axle_offsets": [
+      -1.05,
+      1.05
+    ],
+    "wheel_radius": 0.43,
+    "dimension_status": "Published family envelope; wheel/centre/fitting stations photo estimates."
+  },
+  "rotation": "0 or 180 degrees once in assembly; never bake a second reversal",
+  "source": "docs/art/tra-r100/sources.json"
+}
