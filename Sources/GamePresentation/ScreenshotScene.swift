@@ -42,6 +42,17 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// screenshot review of the pull request that added it.
     case commute
 
+    /// Decision 506 續二 (BADGE): the demo map on its fourth morning with
+    /// West and East crowded every day and 中央 (Central) only since the
+    /// second: West expanded once, its concourse mark beside its name, and
+    /// Central's station size card past the people it needs but full on
+    /// only three of the last seven days. The demo's ridership comes from
+    /// its land and stays under 50,000 a day, so this scene sets the three
+    /// stations' demand itself (the land's off, as on a map the player
+    /// draws on). For the screenshot review of the pull request that drew
+    /// the mark, not the website.
+    case expansion
+
     /// The scene's world, its clock paused at the moment to show.
     public func make(in language: DisplayLanguage) -> GameWorld {
         switch self {
@@ -50,7 +61,48 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .zoning: Self.zoningWorld(in: language)
         case .punctuality: Self.punctualityWorld(in: language)
         case .commute: Self.commuteWorld(in: language)
+        case .expansion: Self.expansionWorld(in: language)
         }
+    }
+
+    // MARK: - Expansion
+
+    /// Eight in the morning of the fourth day (day 3): West and East have
+    /// been full on four days, Central on three.
+    public static let expansionRunSeconds: Int64 = 3 * 86_400 + 8 * 3_600
+
+    private static func expansionWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            let ids = world.stations.map(\.id)
+            guard ids.count >= 3 else { throw .unknownStation(StationID(rawValue: 3)) }
+            world.setLandDemand(false)
+            // The stations' own counts of the people through them, not the
+            // lines' (which count those the trains carried).
+            world.setLineAccounts(false)
+            func crowd(_ id: StationID, trips: Int64) throws(GameError) {
+                let demand = world.stationDemand(of: id)
+                try world.setStationDemand(id, to: StationDemand(kind: demand?.kind ?? .residential, dailyTrips: trips,
+                                                                hinterland: demand?.hinterland ?? 0))
+            }
+            try crowd(ids[0], trips: 300_000)
+            try crowd(ids[2], trips: 300_000)
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: 86_400 / 600)
+            try crowd(ids[1], trips: 200_000)
+            try world.advance(ticks: Int((expansionRunSeconds - 86_400) / 600))
+            // The concourse costs more than the demo holds.
+            if world.accounts.loan < CompanyAccounts.maximumLoan {
+                try world.borrow(CompanyAccounts.maximumLoan - world.accounts.loan)
+            }
+            try world.expandStation(at: ids[0])
+        } catch {
+            preconditionFailure("The expansion screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Commute

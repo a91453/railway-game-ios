@@ -169,6 +169,72 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-expansion", app)
     }
 
+    /// Decision 506 續二 (BADGE): the expansion scene
+    /// (`ScreenshotScene.expansion`): West's concourse mark beside its name
+    /// on the map, and Central's station size card, past the people a day
+    /// it needs but full on too few of the last seven days. For the
+    /// screenshot review of the pull request that drew the mark, not the
+    /// website; in both languages.
+    func testStationTierMarkAndFullDays() {
+        expansionShots(english: false)
+    }
+
+    func testStationTierMarkAndFullDaysInEnglish() {
+        expansionShots(english: true)
+    }
+
+    private func expansionShots(english: Bool) {
+        let suffix = english ? "en" : "zh"
+        let app = launch(extra: ["-screenshot-scene", "expansion"], english: english)
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 180), "The scene opens")
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        // One step closer, so the marks beside the names read.
+        zoomInOnce(app)
+        func central() -> CGPoint? {
+            let pairs = ((stations.value as? String) ?? "").split(separator: ";")
+            guard pairs.count > 1 else { return nil }
+            let xy = pairs[1].split(separator: ",").compactMap { Double($0) }
+            return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+        }
+        var last = central()
+        let still = Date().addingTimeInterval(10)
+        while Date() < still {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = central()
+            if now != nil, now == last { break }
+            last = now
+        }
+        settle()
+        keep("station-tier-mark-\(suffix)", app)
+
+        // A hold on Central opens its panel, as `testCivicRidersRow` does.
+        guard let point = last else { return XCTFail("The scene has a second station") }
+        var list: XCUIElement?
+        for _ in 0..<3 where list == nil {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
+            let opened = Date().addingTimeInterval(5)
+            repeat {
+                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
+            } while list == nil && Date() < opened
+        }
+        XCTAssertNotNil(list, "The hold opens the station's panel")
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "The panel has its jump menu")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
+        let offer = app.descendants(matching: .any)["station.expansion.build"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(offer, in: list), "The station size card's offer comes into view")
+        settle()
+        keep("station-expansion-full-days-\(suffix)", app)
+    }
+
     /// Decision 533: the station panel's row of the riders a school and a
     /// hospital beside the station bring, under its trips by hour, at
     /// half past seven on a school day (`ScreenshotScene.commute`). For
