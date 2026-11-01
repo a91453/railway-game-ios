@@ -174,7 +174,7 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 
 **這個 commit 的檢查**（發版後補驗）：
 - push 的 `ci.yml` run 41314182024：紅，GamePresentation 那層 selected-7 跑到 20 分鐘上限被取消，沒有測試失敗（`CLASS_WEIGHTS` 過時，#1677 修）。不影響玩家。
-- 完整 `ci.yml` run 41318166302、full lane run 41318168937：跑中，結果補在這裡。
+- 完整 `ci.yml` run 41318166302、full lane run 41318168937：兩個都綠（2026-11-01 補驗，7b09afa）。
 
 ### 0.5.0 (103.1)，2026-11-01
 
