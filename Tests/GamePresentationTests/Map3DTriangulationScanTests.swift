@@ -67,14 +67,32 @@ extension Map3DTriangulationScanTests {
         let city = CityTileArea.areas(in: resources.appendingPathComponent("BaseMap/city"))
         let temples = try RealTemples(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan_temples.json")))
         let railways = try XCTUnwrap(Map3DRealTrainsTests.railways)
-        let at = frame.worldPosition(latitude: 23.834496, longitude: 120.704726)
-        let origin = (x: at.x.rounded(), y: at.y.rounded())
+        let name = ProcessInfo.processInfo.environment["TRI_STATION"] ?? "濁水"
+        let station = try BundledRealData.station(name, in: "tra_sched")
+        let at = try BundledRealData.point(station.coordinate, in: world)
+        _ = frame
+        let origin = (x: Double(at.x).rounded(), y: Double(at.y).rounded())
         let half = Map3DScene.reach * Double(WorldCoordinate.unitsPerMetre)
         let region = WorldRegion(minX: origin.x - half, minY: origin.y - half, maxX: origin.x + half, maxY: origin.y + half)
         let scene = Map3DScene(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), frame: (region, origin.x, origin.y),
                                baseMap: tiles, cityTiles: city, footprints: footprints, heights: heights, lineBands: nil, railways: railways, temples: temples)
-        var byColor: [UInt32: (count: Int, longest: Float, at: Map3DPoint)] = [:]
+        print("ORIGIN", scene.originX - origin.x, scene.originY - origin.y)
         for chunk in scene.chunks {
+            for (kind, mesh) in [("mesh", chunk.mesh), ("far", chunk.far), ("close", chunk.close), ("standIn", chunk.standIn)] {
+                let v = mesh.vertices
+                for i in stride(from: 0, to: mesh.indices.count, by: 3) {
+                    let ps = [v[Int(mesh.indices[i])].position, v[Int(mesh.indices[i + 1])].position, v[Int(mesh.indices[i + 2])].position]
+                    let mid = (ps[0] + ps[1] + ps[2]) * (1.0 / 3)
+                    guard abs(mid.x) < 700, abs(mid.z) < 700, abs(Self.normalY(ps)) > 0.5 else { continue }
+                    let longest = max((ps[1] - ps[0]).length, (ps[2] - ps[1]).length, (ps[0] - ps[2]).length)
+                    let a = v[Int(mesh.indices[i])]
+                    guard longest > 40, ![0xfff6eeec, 0xffcaddb6].contains(a.color) else { continue }
+                    print("FLAT", kind, String(a.color, radix: 16), a.layer, Int(longest), ps.map { "(\(Int($0.x)),\(Int($0.y)),\(Int($0.z)))" }.joined(separator: " "))
+                }
+            }
+        }
+        var byColor: [UInt32: (count: Int, longest: Float, at: Map3DPoint)] = [:]
+        for chunk in [Map3DScene.Chunk]() {
             for mesh in [chunk.mesh, chunk.farWithBoxes, chunk.close, chunk.standIn, chunk.shadows] {
                 let v = mesh.vertices
                 for i in stride(from: 0, to: mesh.indices.count, by: 3) {
@@ -121,6 +139,19 @@ extension Map3DTriangulationScanTests {
         let footprints = try FootprintTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped))
         let scene = Map3DScene(world: session.world, focus: (x, y), baseMap: tiles, footprints: footprints, heights: heights, railways: session.railways)
         print("ORIGIN", scene.originX - x, scene.originY - y)
+        var worst: Float = 0
+        for chunk in scene.chunks {
+            for mesh in [chunk.mesh, chunk.farWithBoxes] {
+                for index in mesh.indices {
+                    let vertex = mesh.vertices[Int(index)]
+                    guard [Map3DPalette.plaza, Map3DPalette.farm, Map3DPalette.park].contains(vertex.color), vertex.ny > 0.5 else { continue }
+                    let gap = vertex.y - scene.drawnGround.height(x: vertex.x, z: vertex.z, world: session.world)
+                    if gap < 0.01 || gap > 0.5 { print("OFF", gap, vertex.position); worst = max(worst, abs(gap)) }
+                }
+            }
+        }
+        print("WORST", worst)
+        if ProcessInfo.processInfo.environment["TRI_OFF_ONLY"] != nil { return }
         for chunk in scene.chunks {
             for mesh in [chunk.mesh, chunk.farWithBoxes, chunk.close, chunk.standIn, chunk.shadows] {
                 let v = mesh.vertices
@@ -129,8 +160,9 @@ extension Map3DTriangulationScanTests {
                     let pa = a.position, pb = b.position, pc = c.position
                     let longest = max((pb - pa).length, (pc - pb).length, (pa - pc).length)
                     let mid = Map3DPoint((pa.x + pb.x + pc.x) / 3, (pa.y + pb.y + pc.y) / 3, (pa.z + pb.z + pc.z) / 3)
-                    guard longest > 50 else { continue }
-                    print("DEMO", String(a.color, radix: 16), a.layer, Int(longest), Int(mid.x / 50) * 50, Int(mid.z / 50) * 50, pa, pb, pc)
+                    let triArea = (pb - pa).cross(pc - pa).length / 2
+                    guard longest > 40, triArea > 150, abs(Self.normalY([pa, pb, pc])) > 0.5, ![0xfff6eeec, 0xffcaddb6].contains(a.color) else { continue }
+                    print("DEMO", Int(triArea), String(a.color, radix: 16), a.layer, Int(longest), Int(mid.x / 50) * 50, Int(mid.z / 50) * 50, pa, pb, pc)
                 }
             }
         }

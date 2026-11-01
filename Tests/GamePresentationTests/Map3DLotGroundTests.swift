@@ -38,7 +38,10 @@ final class Map3DLotGroundTests: XCTestCase {
     /// round it with the real lines, the heights and the base map.
     private static func scene(at name: String, system: String = "tra_sched") throws -> (scene: Map3DScene, world: GameWorld) {
         let station = try BundledRealData.station(name, in: system)
-        let world = GameWorld.newGame(anchor: try XCTUnwrap(station.anchor))
+        // With its ground mapped, as a real-world game's is (without it
+        // the ground is 0 m everywhere and every square lies flat on it).
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(station.anchor))
+        try world.mapGround()
         let centre = try BundledRealData.point(station.coordinate, in: world)
         let half = 600 * Double(WorldCoordinate.unitsPerMetre)
         let region = WorldRegion(minX: Double(centre.x) - half, minY: Double(centre.y) - half,
@@ -59,7 +62,14 @@ final class Map3DLotGroundTests: XCTestCase {
     func testTheLotSquaresLieOnTheDrawnGroundBesideTheJijiLine() throws {
         let (scene, world) = try Self.scene(at: "濁水")
         let (off, checked) = Self.offGround(scene, world: world)
-        XCTAssertGreaterThan(checked, 0, "squares to check"); print("CHECKED", checked, scene.chunks.flatMap { $0.mesh.vertices }.filter { $0.color == Map3DPalette.plaza }.count, scene.chunks.flatMap { $0.mesh.vertices }.filter { $0.color == Map3DPalette.farm }.count)
+        XCTAssertGreaterThan(checked, 0, "squares to check")
+        XCTAssertTrue(off.isEmpty, "\(off.count) of \(checked) corners off the ground, the worst \(off.max { abs($0.1) < abs($1.1) }.map { "\($0.1) m at \($0.0)" } ?? "")")
+    }
+
+    func testTheLotSquaresLieOnTheDrawnGroundAtZhuzhong() throws {
+        let (scene, world) = try Self.scene(at: "竹中")
+        let (off, checked) = Self.offGround(scene, world: world)
+        XCTAssertGreaterThan(checked, 0, "squares to check")
         XCTAssertTrue(off.isEmpty, "\(off.count) of \(checked) corners off the ground, the worst \(off.max { abs($0.1) < abs($1.1) }.map { "\($0.1) m at \($0.0)" } ?? "")")
     }
 
