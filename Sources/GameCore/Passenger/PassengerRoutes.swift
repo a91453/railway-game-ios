@@ -251,7 +251,40 @@ struct PassengerRouteGraph: Equatable {
                     line.services(at: level, roundTrips: journeys.prefix(service + 1).map { $0?.roundTripMinutes },
                                   capacities: Array(capacities.prefix(service + 1))).plans[service]?.headway
                 }
-                if line.isRing {
+                if line.isRing, line.hasRuns {
+                    // Decision 535: a ring with runs rides, each way round,
+                    // a lap from each stop whole laps start at and the arcs
+                    // of the other runs (``ServiceLine/ringRunPaths(way:)``),
+                    // each leg as the way's lap drives it.
+                    let count = line.stops.count
+                    for direction in [RingDirection.inner, .outer] {
+                        guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer),
+                              lap.legs.count == count else { continue }
+                        let seconds = lap.legs.map(\.seconds)
+                        let way: LineDirection = direction == .inner ? .outbound : .inbound
+                        let step = direction == .inner ? 1 : count - 1
+                        func stations(from stop: Int, legs: Int) -> [StationID] {
+                            (0...legs).map { line.stops[(stop + $0 * step) % count] }
+                        }
+                        func legSeconds(from place: Int, legs: Int) -> [Int64] {
+                            (0..<legs).map { seconds[(place + $0) % count] }
+                        }
+                        let (laps, arcs) = line.ringRunPaths(way: direction)
+                        for start in laps {
+                            Self.add(ServicePath(line: line.id, pattern: nil, direction: way, stations: stations(from: start, legs: count),
+                                                 runSeconds: legSeconds(from: line.ringPlace(of: start, way: direction), legs: count),
+                                                 headway: headway, isRing: true, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds),
+                                     to: &included, calls: &calls)
+                        }
+                        for arc in arcs {
+                            let first = direction == .inner ? arc.start : (count - arc.start) % count
+                            Self.add(ServicePath(line: line.id, pattern: nil, direction: way, stations: stations(from: first, legs: arc.legs),
+                                                 runSeconds: legSeconds(from: arc.start, legs: arc.legs),
+                                                 headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds),
+                                     to: &included, calls: &calls)
+                        }
+                    }
+                } else if line.isRing {
                     for direction in [RingDirection.inner, .outer] where line.ringWayRuns(direction) {
                         guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer) else { continue }
                         let stationIDs = line.ringCalls(direction).map { line.stops[$0] }

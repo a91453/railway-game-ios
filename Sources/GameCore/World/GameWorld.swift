@@ -2078,7 +2078,10 @@ public struct GameWorld: Equatable, Sendable {
         }
         // Decision 133: each run calls at the same stations, the other way
         // along the reversed stops.
-        line.runs = line.runs.map { LineRun(from: last - $0.from, to: last - $0.to, times: $0.times, days: $0.days) }
+        // Decision 535: on a ring, the other way round too.
+        line.runs = line.runs.map {
+            LineRun(from: last - $0.from, to: last - $0.to, times: $0.times, days: $0.days, way: $0.way.map { $0 == .inner ? .outer : .inner })
+        }
         lines[index] = line
         // Its passengers still take it between the same stations, now the
         // other way along its stops (decision 80: only those whose trip it
@@ -2107,8 +2110,9 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
     ///   ``GameError/invalidLineRuns`` for runs that are not the line's
-    ///   (see ``LineRun``), or any on a ring, a line with patterns or one
-    ///   calling at a station twice; or
+    ///   (see ``LineRun``: on a ring, decision 535, each going one way
+    ///   round), or any on a line with patterns or one calling at a station
+    ///   twice; or
     ///   ``GameError/trainServiceActive(_:)`` for the first of its trains,
     ///   in ID order, running a service: the way its riders go is the
     ///   line's, which this would change under them.
@@ -2201,13 +2205,15 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/invalidLinePattern`` to make a ring of a line with
     ///   patterns (the reference keeps a ring's route legs to one over the
     ///   whole ring, `consolidateRingRouteLegs`; its ring express is not
-    ///   ported).
+    ///   ported), or ``GameError/invalidLineRuns`` to make a ring of a line
+    ///   with runs, or a line again of a ring with runs (decision 535: a
+    ///   ring's runs go one way round, a line's from end to end).
     public mutating func setLineRing(_ id: LineID, to isRing: Bool) throws(GameError) {
         let index = try lineIndex(of: id)
         if isRing {
             guard ServiceLine.isRingStopList(lines[index].stops) else { throw .invalidLineStops }
             guard lines[index].patterns.isEmpty else { throw .invalidLinePattern }
-            guard !lines[index].hasRuns else { throw .invalidLineRuns }
+            guard lines[index].isRing || !lines[index].hasRuns else { throw .invalidLineRuns }
             let counts = lines[index].trainsInService
             lines[index].trainsInService = TrainsInService(
                 peak: ServiceLine.paired(counts.peak), offPeak: ServiceLine.paired(counts.offPeak), low: ServiceLine.paired(counts.low)
@@ -2217,6 +2223,9 @@ public struct GameWorld: Equatable, Sendable {
             lines[index].endLastDispatch = nil
             lines[index].opensPair = false
         } else {
+            // Decision 535: a ring's runs go one way round, which a line
+            // with ends has no way to follow.
+            guard !lines[index].isRing || !lines[index].hasRuns else { throw .invalidLineRuns }
             lines[index].outerLastDispatch = nil
         }
         if lines[index].isRing != isRing { lines[index].routePreferences = [] }
@@ -3069,6 +3078,8 @@ public struct GameWorld: Equatable, Sendable {
         let train: TrainID
         let from: TrainPlacement
         let to: StationID
+        /// Decision 535: the way round a ring the run out is for.
+        var way: RingDirection? = nil
     }
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it
@@ -4026,6 +4037,17 @@ public struct GameWorld: Equatable, Sendable {
             // Decision 221: into a depot, a free siding first.
             if let path = pathIntoDepot(call, from: start, for: train, memo: &memo) {
                 return (path, nil)
+            }
+            // Decision 535: out of a depot to a stop of a ring with runs, a
+            // berth facing the way of the run it is for; under traffic
+            // control a free one of those first (decision 290).
+            if let facing = ringPullOutBerths(of: train, leaving: stop, to: call) {
+                let free = pullOutBerths(of: train, leaving: stop, to: call).map { $0.intersection(facing) } ?? []
+                for eligible in [free, facing] where !eligible.isEmpty {
+                    if let path = path(from: start, toStation: call, length: train.length, eligible: eligible, keepingLeft: true, memo: &memo) {
+                        return (path, nil)
+                    }
+                }
             }
             // Decision 290: out of a depot under traffic control, a free
             // berth of the stop.

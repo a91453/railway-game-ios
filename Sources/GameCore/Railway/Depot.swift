@@ -234,13 +234,21 @@ extension GameWorld {
     /// path, as it stands or turned round (the first target, then as it
     /// stands, among equals); `nil` for a train not stopped at a station,
     /// or when none can be reached (decisions 172 and 209).
-    func emptyRun(of line: ServiceLine, for train: Train, to targets: [StationID]) -> LineTrip? {
+    ///
+    /// With `facing` (decision 535: a run out to a stop of a ring with
+    /// runs, for a run going that way round), the path to a berth the
+    /// train stands at facing that way (see ``ringBerths(of:facing:on:length:)``),
+    /// as a train sent out of a depot to it takes (``ringPullOutBerths(of:leaving:to:)``).
+    func emptyRun(of line: ServiceLine, for train: Train, to targets: [StationID], facing way: RingDirection? = nil) -> LineTrip? {
         guard let placement = train.placement, let here = stationsStoppedAt(by: train.id).first else { return nil }
         var best: (seconds: Int64, turns: Bool, end: StationID)?
         for end in targets {
+            let facing = way.flatMap { ringBerths(of: end, facing: $0, on: line, length: train.length) }
             for turns in [false, true] {
                 let from = turns ? turnedRound(placement) : placement
-                guard let path = path(from: from.position, toStation: end, length: train.length) else { continue }
+                var memo = PathMemo()
+                guard let path = facing.flatMap({ self.path(from: from.position, toStation: end, length: train.length, eligible: $0, keepingLeft: true, memo: &memo) })
+                    ?? path(from: from.position, toStation: end, length: train.length) else { continue }
                 var seconds: Int64 = 0
                 if path.distance > 0 {
                     guard let least = plannedSeconds(length: path.distance, line: line, limits: speedLimits(from: from, along: path, below: line.performance.topSpeed)) else { continue }
@@ -255,6 +263,53 @@ extension GameWorld {
             journey: LineJourney(start: placement.position, legs: [], roundTripSeconds: 0),
             deadhead: LineTrip.DeadheadRun(from: here, to: best.end, seconds: best.seconds)
         )
+    }
+
+    /// Decision 535: the berths of `station`, a stop of ring `line`, where
+    /// a train `length` long stands facing `way` round it (see
+    /// ``facesRingWay(_:_:on:at:)``); `nil` when there are none, or the
+    /// line is no ring.
+    func ringBerths(of station: StationID, facing way: RingDirection, on line: ServiceLine, length: Int64) -> Set<Berth>? {
+        guard line.isRing, let stop = line.stops.firstIndex(of: station) else { return nil }
+        let facing = berths(of: station, length: length).filter { berth in
+            facesRingWay(TrainPlacement(position: .onEdge(berth.traversal, offset: berth.offset), trailEdges: [], length: length), way, on: line, at: stop)
+        }
+        return facing.isEmpty ? nil : Set(facing)
+    }
+
+    /// Decision 535: the way round ring `line` (with runs) that a train
+    /// sent out of a depot to `station` is for: of the runs leaving there
+    /// still to go, the way of the first that none of the trains waiting
+    /// there facing its way takes (the first runs each way go to those
+    /// trains, one each), the inner way first among equals; `nil` when
+    /// every run has a train.
+    func ringPullOutWay(of line: ServiceLine, to station: StationID) -> RingDirection? {
+        guard line.isRing, line.hasRuns, let stop = line.stops.firstIndex(of: station) else { return nil }
+        var best: (start: Int64, way: RingDirection)?
+        for way in RingDirection.allCases {
+            let waiting = line.trains.count { id in
+                guard let train = train(id: id), train.execution == nil, let placement = train.placement, isStopped(train, at: station) else { return false }
+                return facesRingWay(placement, way, on: line, at: stop)
+            }
+            let starts = pendingRunStarts(of: line, from: station, way: way).sorted()
+            guard starts.count > waiting, best.map({ starts[waiting] < $0.start }) ?? true else { continue }
+            best = (starts[waiting], way)
+        }
+        return best?.way
+    }
+
+    /// Decision 535: the berths a train of a ring with runs, sent out of a
+    /// depot and leaving it from stop `stop`, runs to at `call`: those it
+    /// stands at facing the way of the run it is for (see
+    /// ``ringPullOutWay(of:to:)``), so it goes on round as it faces and
+    /// does not turn round onto the other way's track. `nil` for any other
+    /// departure.
+    func ringPullOutBerths(of train: Train, leaving stop: Int, to call: StationID) -> Set<Berth>? {
+        guard train.isDeadheading, station(id: train.timetable[stop].station)?.isDepot == true, station(id: call)?.isDepot == false,
+              let line = lines.first(where: { $0.isRing && $0.hasRuns && $0.trains.contains(train.id) }),
+              let way = ringPullOutWay(of: line, to: call)
+        else { return nil }
+        return ringBerths(of: call, facing: way, on: line, length: train.length)
     }
 
     /// Where a train out of `line`'s depot runs to for service `service`:

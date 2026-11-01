@@ -418,9 +418,13 @@
 ///     reads only an earlier version would drop both and could no longer
 ///     take up the old line's track, so it says the save is newer than it
 ///     instead.
+/// 80. Runs of a ring (decision 535): a ring can have runs, each with its
+///     `"way"` round (`"inner"` or `"outer"`). A build that reads only an
+///     earlier version would read such a run as one from end to end and
+///     refuse the whole line, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 79
+    public static let currentVersion = 80
 
     public let world: GameWorld
 
@@ -627,6 +631,8 @@ extension SavedGame: Codable {
         // Version 78 to 79: a purchase without `"track"` laid none it
         // knows of and a world without `"leftTrack"` has none left
         // (decision 528): nothing to turn.
+        // Version 79 to 80: no ring of a world before version 80 has runs,
+        // and no run a way (decision 535): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

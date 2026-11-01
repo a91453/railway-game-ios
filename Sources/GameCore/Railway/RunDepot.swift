@@ -18,12 +18,13 @@ extension GameWorld {
     /// `station`, have not sent a train out on their day and may still:
     /// those of the days ``LineRun/latestDispatch`` behind to tomorrow (as
     /// ``ServiceLine/dueRuns(at:)`` looks), but those whose last moment
-    /// to leave has passed.
-    func pendingRunStarts(of line: ServiceLine, from station: StationID) -> [Int64] {
+    /// to leave has passed. With `way` (decision 535), only the runs that
+    /// go that way round a ring.
+    func pendingRunStarts(of line: ServiceLine, from station: StationID, way: RingDirection? = nil) -> [Int64] {
         let now = clock.now.seconds
         let today = GameTime.floorDivide(now, GameTime.secondsPerDay)
         var starts: [Int64] = []
-        for (index, run) in line.runs.enumerated() where line.stops[run.from] == station {
+        for (index, run) in line.runs.enumerated() where line.stops[run.from] == station && (way == nil || run.way == way) {
             for day in (today - 2)...(today + 1) where day >= 0 && run.runs(onDay: day) && (line.runDays[index] ?? -1) < day && run.fits(onDay: day) {
                 let start = run.start(onDay: day)
                 if start + LineRun.latestDispatch >= now { starts.append(start) }
@@ -32,15 +33,38 @@ extension GameWorld {
         return starts
     }
 
+    /// Decision 535: the ways round a ring with runs that a stop's trains
+    /// and runs are counted by, each on its own, as a train goes on round
+    /// the way it faces; on any other line one, `nil`, for both.
+    func runWays(of line: ServiceLine) -> [RingDirection?] {
+        line.isRing ? [.inner, .outer] : [nil]
+    }
+
     /// `line`'s trains without a service waiting at `station`, in ID
-    /// order: placed, with a rate above 0, stopped there.
-    private func runTrainsWaiting(of line: ServiceLine, at station: StationID) -> [Int] {
-        line.trains.compactMap { id in
+    /// order: placed, with a rate above 0, stopped there; with `way`
+    /// (decision 535), facing that way round the ring.
+    private func runTrainsWaiting(of line: ServiceLine, at station: StationID, way: RingDirection? = nil) -> [Int] {
+        let stop = line.stops.firstIndex(of: station)
+        return line.trains.compactMap { id in
             guard let index = trains.firstIndex(where: { $0.id == id }) else { return nil }
             let train = trains[index]
-            guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: station) else { return nil }
+            guard train.execution == nil, let placement = train.placement, train.movement.rate > 0, isStopped(train, at: station) else { return nil }
+            if let way, let stop, !facesRingWay(placement, way, on: line, at: stop) { return nil }
             return index
         }
+    }
+
+    /// Decision 535: whether `train`, on its way to end its timetable at a
+    /// stop of ring `line`, stands there facing `way`: a run of the line
+    /// that ends there going that way, or an empty run, which is counted
+    /// either way (where it stops decides, and it is not known yet).
+    private func arrives(_ train: Train, on line: ServiceLine, facing way: RingDirection) -> Bool {
+        let count = train.timetable.count
+        guard !train.isDeadheading, count >= 2,
+              let last = line.stops.firstIndex(of: train.timetable[count - 1].station),
+              let before = line.stops.firstIndex(of: train.timetable[count - 2].station)
+        else { return true }
+        return (last == (before + 1) % line.stops.count) == (way == .inner)
     }
 
     /// When each of `line`'s trains for `station` can take a run there,
@@ -50,10 +74,12 @@ extension GameWorld {
     /// now (``lateness(of:)``): a train hours behind its timetable, held
     /// for its route, is not there for the run it would have taken, and a
     /// train out of the depot takes the run instead.
-    private func runTrainsReady(of line: ServiceLine, at station: StationID) -> [Int64] {
-        var times = runTrainsWaiting(of: line, at: station).map { _ in clock.now.seconds }
+    /// With `way` (decision 535), those that face it round the ring.
+    private func runTrainsReady(of line: ServiceLine, at station: StationID, way: RingDirection? = nil) -> [Int64] {
+        var times = runTrainsWaiting(of: line, at: station, way: way).map { _ in clock.now.seconds }
         for id in line.trains {
-            guard let train = train(id: id), train.execution != nil, let last = train.timetable.last, last.station == station else { continue }
+            guard let train = train(id: id), train.execution != nil, let last = train.timetable.last, last.station == station,
+                  way.map({ arrives(train, on: line, facing: $0) }) ?? true else { continue }
             var arrival = last.arrival.seconds
             if isTrafficControlEnabled, let late = lateness(of: id), late > 0 {
                 arrival = arrival.addingReportingOverflow(late).overflow ? .max : arrival + late
@@ -124,22 +150,26 @@ extension GameWorld {
         var inTheWay: Set<TrainID>?
         var candidates: [Int] = []
         for station in stations {
-            let waiting = runTrainsWaiting(of: line, at: station)
-            let wanted = pendingRunStarts(of: line, from: station).count { $0 <= horizon }
-            // Decision 296: a train out of a depot for a run due here is
-            // not one too many until that run leaves or is dropped.
-            let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
-            var leaving = waiting.count > wanted ? Array(waiting.suffix(waiting.count - wanted).reversed()) : []
-            // Decision 297: under traffic control, while no run from here
-            // is due, a train in the way of a service waiting for its
-            // route goes in too.
-            if isTrafficControlEnabled, !due {
-                if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
-                leaving += waiting.filter { inTheWay!.contains(trains[$0].id) && !leaving.contains($0) }
-            }
-            for index in leaving {
-                if due, cameOutOfDepot(trains[index], to: station) { continue }
-                candidates.append(index)
+            // Decision 535: on a ring, the trains facing each way round
+            // against the runs going that way.
+            for way in runWays(of: line) {
+                let waiting = runTrainsWaiting(of: line, at: station, way: way)
+                let wanted = pendingRunStarts(of: line, from: station, way: way).count { $0 <= horizon }
+                // Decision 296: a train out of a depot for a run due here is
+                // not one too many until that run leaves or is dropped.
+                let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
+                var leaving = waiting.count > wanted ? Array(waiting.suffix(waiting.count - wanted).reversed()) : []
+                // Decision 297: under traffic control, while no run from here
+                // is due, a train in the way of a service waiting for its
+                // route goes in too.
+                if isTrafficControlEnabled, !due {
+                    if inTheWay == nil { inTheWay = trainsInTheWay(memo: &memo.directions) }
+                    leaving += waiting.filter { inTheWay!.contains(trains[$0].id) && !leaving.contains($0) }
+                }
+                for index in leaving where !candidates.contains(index) {
+                    if due, cameOutOfDepot(trains[index], to: station) { continue }
+                    candidates.append(index)
+                }
             }
         }
         return candidates
@@ -186,7 +216,8 @@ extension GameWorld {
     /// of `line` standing in its depots: the first in ID order of the
     /// depot whose first has the shortest run (then the depot listed
     /// first), with its index. Kept in `memo` for where the train stands.
-    private func runPullOut(of line: ServiceLine, to station: StationID, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
+    /// With `way` (decision 535) for a run going that way round a ring.
+    private func runPullOut(of line: ServiceLine, to station: StationID, way: RingDirection? = nil, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         var best: (index: Int, trip: LineTrip, seconds: Int64)?
         for depot in line.depots {
             guard let index = line.trains.lazy.compactMap({ id in self.trains.firstIndex { $0.id == id } }).first(where: { index in
@@ -194,11 +225,11 @@ extension GameWorld {
                 return train.execution == nil && train.movement.rate > 0 && self.isStopped(train, at: depot)
             }), let placement = trains[index].placement else { continue }
             let trip: LineTrip?
-            let query = RunDepotQuery(train: trains[index].id, from: placement, to: station)
+            let query = RunDepotQuery(train: trains[index].id, from: placement, to: station, way: way)
             if let known = memo.runDepotTrips[query] {
                 trip = known
             } else {
-                trip = emptyRun(of: line, for: trains[index], to: [station])
+                trip = emptyRun(of: line, for: trains[index], to: [station], facing: way)
                 memo.runDepotTrips[query] = .some(trip)
             }
             guard let trip, let run = trip.deadhead, best.map({ run.seconds < $0.seconds }) ?? true else { continue }
@@ -228,33 +259,36 @@ extension GameWorld {
         let now = clock.now.seconds
         var seen: Set<StationID> = []
         for station in line.stops where seen.insert(station).inserted {
-            let starts = pendingRunStarts(of: line, from: station)
-            // Nothing is due within the look ahead: no run out takes longer.
-            let soon = starts.filter { $0 - LineRun.earliestDispatch - Self.runDepotLookahead <= now }
-            let ready = runTrainsReady(of: line, at: station)
-            guard Self.runsWithoutTrains(soon, ready: ready) > 0, let (index, trip) = runPullOut(of: line, to: station, memo: &memo),
-                  let run = trip.deadhead
-            else { continue }
-            let lead = Self.lead(of: run) * GameTime.secondsPerMinute
-            // Decision 296: under traffic control, only the runs it can
-            // stand at in time for: a run out that arrives after a run's
-            // last moment to leave does not take it.
-            let reachable = soon.filter { !isTrafficControlEnabled || $0 + LineRun.latestDispatch >= now + lead }
-            // Decision 302: under traffic control, a train on its way that
-            // stands there by the time this one would takes any run: a
-            // late train beats a run out that arrives after it. One already
-            // behind its arrival there counts as there now, as before: how
-            // far it still has to go is not known.
-            let covering = isTrafficControlEnabled ? ready.map { $0 > now && $0 <= now + lead ? Int64.min : $0 }.sorted() : ready
-            guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: covering) > 0 else { continue }
-            // Decision 290: under traffic control, only with a berth there
-            // for it; without one it stays in the depot.
-            if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
-            if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reservingDeparture(leaving, memo: &memo.directions) {
-                continue
+            // Decision 535: on a ring, each way round on its own.
+            for way in runWays(of: line) {
+                let starts = pendingRunStarts(of: line, from: station, way: way)
+                // Nothing is due within the look ahead: no run out takes longer.
+                let soon = starts.filter { $0 - LineRun.earliestDispatch - Self.runDepotLookahead <= now }
+                let ready = runTrainsReady(of: line, at: station, way: way)
+                guard Self.runsWithoutTrains(soon, ready: ready) > 0, let (index, trip) = runPullOut(of: line, to: station, way: way, memo: &memo),
+                      let run = trip.deadhead
+                else { continue }
+                let lead = Self.lead(of: run) * GameTime.secondsPerMinute
+                // Decision 296: under traffic control, only the runs it can
+                // stand at in time for: a run out that arrives after a run's
+                // last moment to leave does not take it.
+                let reachable = soon.filter { !isTrafficControlEnabled || $0 + LineRun.latestDispatch >= now + lead }
+                // Decision 302: under traffic control, a train on its way that
+                // stands there by the time this one would takes any run: a
+                // late train beats a run out that arrives after it. One already
+                // behind its arrival there counts as there now, as before: how
+                // far it still has to go is not known.
+                let covering = isTrafficControlEnabled ? ready.map { $0 > now && $0 <= now + lead ? Int64.min : $0 }.sorted() : ready
+                guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: covering) > 0 else { continue }
+                // Decision 290: under traffic control, only with a berth there
+                // for it; without one it stays in the depot.
+                if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
+                if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
+                   case .held = reservingDeparture(leaving, memo: &memo.directions) {
+                    continue
+                }
+                return (index, trip)
             }
-            return (index, trip)
         }
         return nil
     }
@@ -361,17 +395,19 @@ extension GameWorld {
         }
         var seen: Set<StationID> = []
         for station in line.stops where seen.insert(station).inserted {
-            let starts = pendingRunStarts(of: line, from: station)
-            guard !starts.isEmpty else { continue }
-            let lead = runPullOut(of: line, to: station, memo: &memo)?.trip.deadhead.map { Self.lead(of: $0) * GameTime.secondsPerMinute }
-            for start in starts {
-                wake(at: start - Self.runDepotLookahead)
-                wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
-                if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
-                // Decision 296: once its first departure has passed, a
-                // train waiting for it counts as too late for it.
-                wake(at: start + 1)
-                wake(at: start + LineRun.latestDispatch + 1)
+            for way in runWays(of: line) {
+                let starts = pendingRunStarts(of: line, from: station, way: way)
+                guard !starts.isEmpty else { continue }
+                let lead = runPullOut(of: line, to: station, way: way, memo: &memo)?.trip.deadhead.map { Self.lead(of: $0) * GameTime.secondsPerMinute }
+                for start in starts {
+                    wake(at: start - Self.runDepotLookahead)
+                    wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
+                    if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
+                    // Decision 296: once its first departure has passed, a
+                    // train waiting for it counts as too late for it.
+                    wake(at: start + 1)
+                    wake(at: start + LineRun.latestDispatch + 1)
+                }
             }
         }
         return soonest
