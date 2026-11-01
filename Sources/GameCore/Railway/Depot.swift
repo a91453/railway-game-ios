@@ -242,19 +242,26 @@ extension GameWorld {
     func emptyRun(of line: ServiceLine, for train: Train, to targets: [StationID], facing way: RingDirection? = nil) -> LineTrip? {
         guard let placement = train.placement, let here = stationsStoppedAt(by: train.id).first else { return nil }
         var best: (seconds: Int64, turns: Bool, end: StationID)?
-        for end in targets {
-            let facing = way.flatMap { ringBerths(of: end, facing: $0, on: line, length: train.length) }
-            for turns in [false, true] {
-                let from = turns ? turnedRound(placement) : placement
-                var memo = PathMemo()
-                guard let path = facing.flatMap({ self.path(from: from.position, toStation: end, length: train.length, eligible: $0, keepingLeft: true, memo: &memo) })
-                    ?? path(from: from.position, toStation: end, length: train.length) else { continue }
-                var seconds: Int64 = 0
-                if path.distance > 0 {
-                    guard let least = plannedSeconds(length: path.distance, line: line, limits: speedLimits(from: from, along: path, below: line.performance.topSpeed)) else { continue }
-                    seconds = least
+        // With a way, a facing berth first, as it stands or turned round,
+        // and any berth only when no facing one can be reached: a short
+        // run to the other way's side would leave the run turning round.
+        for facingOnly in way == nil ? [false] : [true, false] where best == nil {
+            for end in targets {
+                let facing = facingOnly ? way.flatMap { ringBerths(of: end, facing: $0, on: line, length: train.length) } : nil
+                if facingOnly, facing == nil { continue }
+                for turns in [false, true] {
+                    let from = turns ? turnedRound(placement) : placement
+                    var memo = PathMemo()
+                    let found = facing.map { self.path(from: from.position, toStation: end, length: train.length, eligible: $0, keepingLeft: true, memo: &memo) }
+                        ?? path(from: from.position, toStation: end, length: train.length)
+                    guard let path = found else { continue }
+                    var seconds: Int64 = 0
+                    if path.distance > 0 {
+                        guard let least = plannedSeconds(length: path.distance, line: line, limits: speedLimits(from: from, along: path, below: line.performance.topSpeed)) else { continue }
+                        seconds = least
+                    }
+                    if best == nil || seconds < best!.seconds { best = (seconds, turns, end) }
                 }
-                if best == nil || seconds < best!.seconds { best = (seconds, turns, end) }
             }
         }
         guard let best else { return nil }

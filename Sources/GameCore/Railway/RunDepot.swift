@@ -42,16 +42,22 @@ extension GameWorld {
 
     /// `line`'s trains without a service waiting at `station`, in ID
     /// order: placed, with a rate above 0, stopped there; with `way`
-    /// (decision 535), facing that way round the ring.
+    /// (decision 535), those facing that way round the ring, and those
+    /// facing the other way that its runs from there do not need (one
+    /// each, in ID order), which take a run this way turned round rather
+    /// than leave it to a train out of the depot, or go in when none does.
     private func runTrainsWaiting(of line: ServiceLine, at station: StationID, way: RingDirection? = nil) -> [Int] {
-        let stop = line.stops.firstIndex(of: station)
-        return line.trains.compactMap { id in
+        let waiting = line.trains.compactMap { id -> Int? in
             guard let index = trains.firstIndex(where: { $0.id == id }) else { return nil }
             let train = trains[index]
-            guard train.execution == nil, let placement = train.placement, train.movement.rate > 0, isStopped(train, at: station) else { return nil }
-            if let way, let stop, !facesRingWay(placement, way, on: line, at: stop) { return nil }
+            guard train.execution == nil, train.placement != nil, train.movement.rate > 0, isStopped(train, at: station) else { return nil }
             return index
         }
+        guard let way, let stop = line.stops.firstIndex(of: station) else { return waiting }
+        let facing = Set(waiting.filter { facesRingWay(trains[$0].placement!, way, on: line, at: stop) })
+        let needed = pendingRunStarts(of: line, from: station, way: way == .inner ? .outer : .inner).count
+        let spare = Set(waiting.filter { !facing.contains($0) }.dropFirst(needed))
+        return waiting.filter { facing.contains($0) || spare.contains($0) }
     }
 
     /// Decision 535: whether `train`, on its way to end its timetable at a
