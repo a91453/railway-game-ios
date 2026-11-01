@@ -42,6 +42,10 @@ public enum WhatsNew {
                     chinese: "收購的真實路線保留自己的車：支線是 DR1000，淡海是淡海輕軌列車。"
                 ),
                 Line(
+                    english: "The Ankeng light rail can now be bought as a real line.",
+                    chinese: "安坑輕軌開放收購。"
+                ),
+                Line(
                     english: "On the 2D map, an expanded station shows a small station mark beside its name.",
                     chinese: "2D 地圖上，擴建過的車站在站名旁會多一個小站房記號。"
                 ),
