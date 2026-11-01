@@ -6,7 +6,7 @@ import XCTest
 /// Decision 535 (PR W): the Wenhu Line is bought with its two real
 /// depots, Muzha past Taipei Zoo and Neihu past Nangang Exhibition
 /// Center, and its 44 four-car people movers, half standing in each depot
-/// overnight. Its ends are laid with seven tracks; the trains they cannot
+/// overnight. Its ends are laid with five tracks; the trains they cannot
 /// hold go into the depots.
 @MainActor
 final class WenhuDepotTests: XCTestCase {
