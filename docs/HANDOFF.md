@@ -1736,6 +1736,8 @@
 - 發佈板（Releases）的 vehicle-source-pack-2nd、vehicle-source-pack-3rd、Tai 不動（作者：「發佈板那邊的都不動」）；Release 檔不算進 repository 大小。
 - 不改寫歷史、不 force-push：刪檔不會縮小舊庫在 GitHub 上的大小，只讓 session 的淺層 clone 變小。
 
+**文湖線還不上架（2026-11-01，WENHU，#1666）**：兩座機廠、多座機廠的收購程式與班次資料合了，但文湖線第一天早上就卡住（擬實規則也會；舊 main 446bf7f 跑得完），`urbanLines` 先不列 `trtc:BR`。重現指令、列車位置、假說與要二分的提交在 `docs/decisions/535.md` 的「535（續）」下一步。遊戲規劃第 41 任排成 GameCore 調查；查好後放回那一列、補早上的 CI 測試、量價格。WENHU 壓縮兩次後停在這裡。
+
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
 
 | 事項 | 狀態 | 在哪裡 |

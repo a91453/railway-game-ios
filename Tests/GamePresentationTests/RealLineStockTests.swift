@@ -17,7 +17,7 @@ final class RealLineStockTests: XCTestCase {
             "tra:PINGXI": "dieselRailcar", "tra:JIJI": "dieselRailcar", "tra:NEIWAN": "dieselRailcar", "tra:SHENAO": "dieselRailcar",
             "tra:LIUJIA": "emu800", "tra:SHALUN": "emu800",
             "ntdlrt:V": "danhaiLRT", "ntdlrt:VB": "danhaiLRT", "ntalrt:K": "ankengLRT",
-            "trtc:R_XBT": "metroC371", "trtc:G_XBT": "metroC371", "sanying:LB": Map3DTrainSet.sanyingKey,
+            "trtc:R_XBT": "metroC371", "trtc:G_XBT": "metroC371", "trtc:BR": "wenhu", "sanying:LB": Map3DTrainSet.sanyingKey,
         ]
         for (line, key) in expected {
             XCTAssertEqual(RealLineStock.setKey(ofRealLine: line), key, line)

@@ -16,6 +16,12 @@ Decision 489: then, for the Danhai depot (淡海機廠, way 651032395) of the Da
 Rail past Kanding, the numbers `RealLineDepotSite.danhai` holds: the
 middle of the line's two tracks' ends, where its leads begin, and the
 middle of its yard tracks' near (east) ends and of their far (west) ends.
+
+Decision 535 (PR W): then, for the Wenhu Line's two depots, both past an
+end as Danhai's is, the numbers `RealLineDepotSite.muzha` and `.neihu`
+hold: the middle of the line's two tracks' ends past the end station,
+where the leads begin, and the middle of the yard tracks' near ends (the
+leads') and of their far ends.
 """
 import math
 import sys
@@ -33,6 +39,21 @@ DANHAI_ENDS = [605463606, 658195694]  # the line's two tracks past Kanding
 DANHAI_YARD = [690355135, 690355138, 690355139, 690355140, 690355141, 690355144,
                690355145, 690355204, 690377821, 690377824, 690377825]
 
+# Decision 535: the Wenhu Line. Past Taipei Zoo its two tracks (ways
+# 194634022, 194633990) end where the Muzha depot's leads (307449195,
+# 307449196) begin; its stabling tracks are the three through the yard's
+# west end (71380030, 71380035, 71380037).
+MUZHA_ENDS = [194634022, 194633990]
+MUZHA_YARD = [71380030, 71380035, 71380037]
+MUZHA_LEADS = [307449195, 307449196]
+# Past Taipei Nangang Exhibition Center its two tracks (310746644,
+# 310746645) end where the Neihu depot's leads (499750991, 127958010)
+# begin; its stabling tracks fan out north-west from the leads (499756245
+# to 499756259).
+NEIHU_ENDS = [310746644, 310746645]
+NEIHU_YARD = list(range(499756245, 499756260))
+NEIHU_LEADS = [499750991, 127958010]
+
 
 class Ways(osmium.SimpleHandler):
     def __init__(self):
@@ -41,7 +62,7 @@ class Ways(osmium.SimpleHandler):
         self.platforms = []
 
     def way(self, w):
-        if w.id in (DEPOT, CROSSOVER, *SIDINGS, *DANHAI_ENDS, *DANHAI_YARD):
+        if w.id in (DEPOT, CROSSOVER, *SIDINGS, *DANHAI_ENDS, *DANHAI_YARD, *MUZHA_ENDS, *MUZHA_YARD, *MUZHA_LEADS, *NEIHU_ENDS, *NEIHU_YARD, *NEIHU_LEADS):
             self.ways[w.id] = [(n.lat, n.lon) for n in w.nodes]
         elif w.id >= PLATFORM_FIRST and w.tags.get("railway") == "platform" and w.tags.get("area") == "yes":
             points = [(n.lat, n.lon) for n in w.nodes]
@@ -76,6 +97,24 @@ def main():
     print("danhai junction", middle(ends))
     print("danhai yard start", middle([y[1] for y in yard]))
     print("danhai yard end", middle([y[0] for y in yard]))
+
+    # Decision 535: the Wenhu Line's depots. The tracks' ends nearer the
+    # leads, and each yard track's end nearer the leads and its far end.
+    for name, end_ids, yard_ids, lead_ids in (
+        ("muzha", MUZHA_ENDS, MUZHA_YARD, MUZHA_LEADS), ("neihu", NEIHU_ENDS, NEIHU_YARD, NEIHU_LEADS)
+    ):
+        tracks = [ways.ways[i] for i in end_ids]
+        leads = [ways.ways[i] for i in yard_ids if i in ways.ways]
+        # Each main track's end where a lead begins.
+        starts = [p for i in lead_ids for p in (ways.ways[i][0], ways.ways[i][-1])]
+        ends = [min((w[0], w[-1]), key=lambda p: min(metres(p, q) for q in starts)) for w in tracks]
+        junction = middle(ends)
+        near = [min((w[0], w[-1]), key=lambda p: metres(p, junction)) for w in leads]
+        far = [max((w[0], w[-1]), key=lambda p: metres(p, junction)) for w in leads]
+        print(f"{name} junction", junction)
+        print(f"{name} yard start", middle(near))
+        print(f"{name} yard end", middle(far))
+        print(f"{name} yard tracks", len(leads), "longest", round(max(metres(n, f) for n, f in zip(near, far)), 1), "m")
 
 
 if __name__ == "__main__":
