@@ -128,8 +128,8 @@ public struct Map3DTrainSet: Sendable {
             hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang, far: true),
             e500Hauled("E500CK", coach: chuKuang),
             e500Hauled("E500CK", far: true, coach: chuKuang),
-            hauled("R100CK", locomotive: .r100, coach: chuKuang),
-            hauled("R100CK", locomotive: .r100, coach: chuKuang, far: true),
+            r100Hauled(),
+            r100Hauled(far: true),
             hauled("R200CK", locomotive: .r200, coach: chuKuang),
             hauled("R200CK", locomotive: .r200, coach: chuKuang, far: true),
             // Decision 286: the Blue Train's R135 and its old blue coaches.
@@ -483,6 +483,16 @@ public struct Map3DTrainSet: Sendable {
         func model(far: Bool) -> Map3DModelPack.Model {
             self == .e500 ? Map3DE500.model(far: far) : Map3DE1000.model(far: far)
         }
+    }
+
+    /// Native R100 only for the existing R100CK identity. +X is the
+    /// short-hood/cab end. Keep the same coach roles, count, lighting and
+    /// fallback rules; own lengths prevent stretching the locomotive to 19.4 m.
+    static func r100Hauled(far: Bool = false) -> Map3DTrainSet {
+        let key = "R100CK"
+        let legacy = hauled(key, head: { Map3DR100.model(livery: .orange, far: far) }, coach: chuKuangCoach, far: far)
+        return Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true,
+                            far: far ? nil : key + "Far", build: legacy.build)
     }
 
     /// E500-only substitution. Retains the original coaches and all pack/lock/fallback lookup rules.

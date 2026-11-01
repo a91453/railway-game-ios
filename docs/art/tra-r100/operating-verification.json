@@ -1,0 +1,73 @@
+{
+  "status": "UNVERIFIED",
+  "scope": "Native presentation binding and Linux frame/selection contracts; source-era, complete Breezy Blue service identity and device behavior are separate.",
+  "orange": {
+    "status": "UNVERIFIED",
+    "selected_identity": "TrainType.r100ChuKuang / R100CK, including the existing nil-type r100ChuKuang performance alias",
+    "selection": "Map3DTrainSet.r100Hauled replaces only the R100CK/R100CKFar locomotive head; it preserves the existing Chu-Kuang standard coach and tail roles.",
+    "native_axes": "+X short-hood/cab end; +Y left when looking toward +X; +Z up; rail Z=0; metres. Official real-vehicle end numbering remains unknown.",
+    "distance_contract": "Same running car count; native metre lengths without X stretch; near below 500 m, own far from 500 to below 900 m, existing boxes from 900 m. Existing lower-tier reach changes remain in force.",
+    "lighting": "The shared runtime extracts the two real stacked lens solids at either end, then lights the first/last train ends through the existing frame ends contract. Cab position is not used to invent a running direction.",
+    "preserved": [
+      "count and coach roles",
+      "TrainPack membership and fallback",
+      "type/performance aliases",
+      "number-based variants",
+      "existing coach payloads",
+      "other diesel and freight selections",
+      "shared loader and gate"
+    ],
+    "source_era_limit": "The orange representative is a dated R122 appearance; 2026 ordinary orange service is not established by this binding. No real vehicle assignment or fleet ratio is introduced.",
+    "required_test_class": "Map3DR100IntegrationTests",
+    "final_test_evidence": null
+  },
+  "breezy_blue": {
+    "status": "UNVERIFIED",
+    "existing_identity": "TrainType.blueTrain / BLUE",
+    "runtime_change": "None. Existing BLUE generic locomotive/coach payloads and fallback remain intact.",
+    "reason": "The existing variable-count BLUE contract does not identify the dated locomotive pair, individual coach registrations, special coach role order or each coach's direction. Static new native units and assembly do not establish those operating assignments.",
+    "missing_for_operating_selection": [
+      "An authoritative dated vehicle/role identity available at the existing presentation selection boundary",
+      "A source-supported assignment of special coach roles and directions to the existing variable-count train",
+      "A verified rule for selecting a complete real formation without inventing fleet ratios or changing GameCore/count semantics"
+    ],
+    "prohibited_inference": "A BLUE/R100 name, a blue locomotive, or a static full assembly is not evidence that the complete real service has been integrated."
+  },
+  "real_trains": {
+    "status": "VERIFIED",
+    "method": "Source inspection",
+    "evidence": "Map3DRealTrains.formation(system:line:) has no exact R100/Breezy Blue service assignment; its existing TRA DR1000/EMU800 paths are not modified."
+  },
+  "resident_budget": {
+    "status": "UNVERIFIED",
+    "latest_main_baseline_commit": "c4592d787835749a210146563280e95e69e4be22",
+    "latest_main_standard_models": 663,
+    "latest_main_standard_vertices": 4357932,
+    "upstream_r200_vertex_delta_from_takeover": 46416,
+    "note": "The upstream R200IN increase is excluded from this task's R100 delta. The final actual runtime snapshot and enabled memory report determine the R100 increment.",
+    "final_evidence": null,
+    "latest_main_inventory_verified": {
+      "standard_models": 663,
+      "standard_vertices": 4357932,
+      "studies_models": 184,
+      "studies_vertices": 2402964,
+      "standard_bytes_per_cpu_or_gpu_copy": 174317280,
+      "manifest_sha256": "4c4ade90b019391078302ac9741072ce8d4e878c1f33f9d6d31568ab49cdf0b1"
+    },
+    "inherited_failures": {
+      "status": "VERIFIED",
+      "method": "Unmodified latest-main full runtime export followed by shared check.mjs",
+      "total": 33,
+      "old_lock_mismatches": 32,
+      "existing_budget_failures": [
+        "temu2000-formation: 25040 triangles exceeds nearCarMax 20000"
+      ],
+      "gate_changed": false,
+      "latest_main_check_log_sha256": "b25a0f3a41bcc8ab8561fe10aea76cc4182d91660e53761f1d96dec742819874"
+    }
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator or physical-device Metal, frame rate, memory pressure, curved-path operation, animation or full dynamic collision validation. Linux native/frame tests and WebGL do not establish device behavior."
+  }
+}
