@@ -1057,7 +1057,7 @@ extension RealLineLaying {
             let beside = [a] + Array(inner...outer) + [b]
             besideNodes = beside
             plans.append((
-                RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: beside.map { $0 == a || $0 == b ? 0 : -HighSpeedDemo.trackOffset }),
+                RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: beside.map { $0 == a || $0 == b ? 0 : -HighSpeedDemo.trackOffset }, following: true),
                 RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
             ))
             platformsAt += zones.indices.dropFirst().dropLast().map { ($0, plans.count - 1, zones[$0]) }

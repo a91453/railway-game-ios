@@ -34,6 +34,29 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertTrue(world.lines.filter { !$0.isFreight }.allSatisfy { !$0.assignedTrains.isEmpty }, "the demo's lines still run")
     }
 
+    /// Decision 506 續二: the expansion scene, on its fourth morning: West
+    /// expanded once (its mark beside its name), and Central past the
+    /// people its first expansion needs but full on three of the last seven
+    /// days, so its card says how many full days it still wants.
+    func testTheExpansionSceneShowsAMarkAndACardShortOfFullDays() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await launcher.openScreenshotScene(.expansion).value
+        let world = try XCTUnwrap(launcher.session?.world, "the launcher plays the scene")
+        XCTAssertEqual(world.clock.speed, .paused)
+        XCTAssertEqual(world.clock.now, GameTime(seconds: ScreenshotScene.expansionRunSeconds))
+        XCTAssertEqual(world.stations.map(\.expansion), [.concourse, nil, nil, nil, nil])
+        let central = world.stations[1]
+        XCTAssertEqual(central.name, "中央")
+        let card = try XCTUnwrap(StationExpansionCard(station: central.id, in: world))
+        let offer = try XCTUnwrap(card.offer)
+        XCTAssertTrue(offer.open, "past the people a day it needs: \(card.people)")
+        XCTAssertFalse(offer.full)
+        XCTAssertTrue((1...3).contains(card.fullDays), "full on \(card.fullDays) days")
+        XCTAssertEqual(card.offerText(in: .traditionalChinese), "最近 7 天裡要有 4 天客滿、有旅客進不來，才能擴建（目前 \(card.fullDays) 天）。")
+    }
+
     /// The depots scene: the demo map with two depots, Line 1 keeping its
     /// trains at the west one, so the line panel lists both, nearest first,
     /// and ticks the west one.

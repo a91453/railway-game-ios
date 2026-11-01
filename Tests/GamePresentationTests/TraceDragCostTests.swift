@@ -113,6 +113,112 @@ final class TraceDragCostTests: XCTestCase {
         XCTAssertEqual(preview.cost, Money(GameWorld.pricingBalance.amount - again.economy.balance.amount))
     }
 
+    /// Decision 521's fourth sequel: a trace that joins track already laid
+    /// (Taipei to Banqiao over its middle third, decision 468) builds its
+    /// pieces on one copy, and that copy is the chain built afresh.
+    func testAJoinedTraceBuildsItsPiecesOnOneCopy() throws {
+        let taipei = try BundledRealData.station("臺北", in: "tra_sched")
+        let session = GameSession(world: GameWorld.newGame(anchor: try XCTUnwrap(taipei.anchor)), language: .english)
+        session.railways = try BundledRealData.railways()
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        session.networkBuildsDouble = false
+        session.networkDoubleChosen = true
+        let from = try BundledRealData.point(taipei.coordinate, in: session.world)
+        let to = try BundledRealData.point(try BundledRealData.station("板橋", in: "tra_sched").coordinate, in: session.world)
+        let traces = try XCTUnwrap(session.realRailwayTraces)
+        let way = WorldPath(try XCTUnwrap(traces.path(
+            from: try XCTUnwrap(traces.snap(WorldVector(from), within: 50 * Double(metre))).place,
+            to: try XCTUnwrap(traces.snap(WorldVector(to), within: 50 * Double(metre))).place
+        )))
+        session.tapNetwork(at: way.point(at: way.length / 3).plan, reach: reach)
+        session.tapNetwork(at: way.point(at: way.length * 2 / 3).plan, reach: reach)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        session.clearNetworkDraft()
+        session.tapNetwork(at: from, reach: reach)
+        session.tapNetwork(at: to, reach: reach)
+        let start = try XCTUnwrap(session.networkStart), end = try XCTUnwrap(session.networkEnd)
+
+        let plan = try XCTUnwrap(session.traceAlong(from: start, to: end))
+        XCTAssertFalse(plan.existing.isEmpty, "it joins the track laid")
+        XCTAssertGreaterThan(plan.buildable, 0)
+        let traced = try XCTUnwrap(plan.built, "the pieces' copy")
+        XCTAssertEqual(plan.builtEdges.count, plan.buildable)
+        var again = session.world.trackPreviewCopy()
+        _ = try session.apply(.buildTrackChain(Array(plan.stretches.prefix(plan.buildable))), to: &again)
+        XCTAssertEqual(traced.network, again.network)
+        XCTAssertEqual(traced.economy.balance, again.economy.balance)
+        XCTAssertEqual(traced.placedBuildings, again.placedBuildings)
+        let preview = try XCTUnwrap(session.tracePreview(from: start, to: end)?.0)
+        XCTAssertEqual(preview.cost, Money(GameWorld.pricingBalance.amount - again.economy.balance.amount))
+    }
+
+    /// Decision 521's fourth sequel: a double trace (Luodong to Dongshan,
+    /// decision 247) plans its second track on the copy the trace built
+    /// the first on, and finds what it finds with the first built afresh.
+    func testADoubleTracePlansOnTheTracedCopy() throws {
+        let luodong = try BundledRealData.station("羅東", in: "tra_sched")
+        let session = GameSession(world: GameWorld.newGame(anchor: try XCTUnwrap(luodong.anchor)), language: .english)
+        session.railways = try BundledRealData.railways()
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        session.tapNetwork(at: try BundledRealData.point(luodong.coordinate, in: session.world), reach: reach)
+        session.tapNetwork(at: try BundledRealData.point(try BundledRealData.station("冬山", in: "tra_sched").coordinate, in: session.world), reach: reach)
+        let start = try XCTUnwrap(session.networkStart), end = try XCTUnwrap(session.networkEnd)
+        let plan = try XCTUnwrap(session.traceAlong(from: start, to: end))
+        XCTAssertNotNil(plan.built)
+        let built = Array(plan.stretches.prefix(plan.buildable))
+        guard case .success(let reused) = session.tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped, traced: plan),
+              case .success(let afresh) = session.tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped)
+        else { return XCTFail("the second track is laid both ways") }
+        XCTAssertEqual(reused.command, afresh.command)
+        XCTAssertEqual(reused.built.network, afresh.built.network)
+        XCTAssertEqual(reused.built.economy.balance, afresh.built.economy.balance)
+        XCTAssertEqual(reused.built.placedBuildings, afresh.built.placedBuildings)
+        XCTAssertEqual(reused.outcome, afresh.outcome)
+        XCTAssertEqual(reused.crossoverPoints, afresh.crossoverPoints)
+    }
+
+    /// Decision 521's fourth sequel: the way's index gives each point the
+    /// nearest place the way does, and passes over only edges no point of
+    /// which comes within reach.
+    func testTheWaysIndexGivesTheNearestPlaceTheWayDoes() throws {
+        let taipei = try BundledRealData.station("臺北", in: "tra_sched")
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(taipei.anchor))
+        let session = GameSession(world: world, language: .english)
+        session.railways = try BundledRealData.railways()
+        let traces = try XCTUnwrap(session.realRailwayTraces)
+        let from = try BundledRealData.point(taipei.coordinate, in: world)
+        let to = try BundledRealData.point(try BundledRealData.station("板橋", in: "tra_sched").coordinate, in: world)
+        let way = WorldPath(try XCTUnwrap(traces.path(
+            from: try XCTUnwrap(traces.snap(WorldVector(from), within: 50 * Double(metre))).place,
+            to: try XCTUnwrap(traces.snap(WorldVector(to), within: 50 * Double(metre))).place
+        ))).smoothed()
+        XCTAssertGreaterThan(way.points.count, TraceOverlap.Index.chunk * 4, "several pieces")
+        let index = TraceOverlap.Index(way)
+        // Points along the way, beside it, beyond its ends and far off.
+        var points: [WorldVector] = []
+        for step in 0...400 {
+            let along = way.length * (Double(step) / 400 * 1.2 - 0.1)
+            let base = way.point(at: along)
+            for side in [-2_000.0, -300, -9, -8, 0, 3, 8, 50, 900] {
+                points.append(WorldVector(x: base.x + side * Double(metre) * 0.6, y: base.y - side * Double(metre) * 0.8))
+            }
+        }
+        for point in points {
+            let a = index.nearest(point), b = way.nearest(point)
+            XCTAssertEqual(a.along, b.along, "\(point)")
+            XCTAssertEqual(a.away, b.away, "\(point)")
+        }
+        for (a, b) in zip(points, points.dropFirst()) where !index.comesWithin(TraceOverlap.reach, of: [a, b]) {
+            XCTAssertGreaterThan(way.nearest(a).away, TraceOverlap.reach)
+            XCTAssertGreaterThan(way.nearest(b).away, TraceOverlap.reach)
+        }
+    }
+
     /// The memo gives the blocks as the file does, in order, and keeps each
     /// frame apart.
     func testTheMemoGivesWhatTheRowsDo() throws {

@@ -2118,7 +2118,8 @@ enum MapArt {
         // frame redraws: first rule out stations whose name cannot reach
         // the view. A caption2 character is under 24 points wide and a line
         // under 48 high at the largest text size, so this bound needs no
-        // measuring; the shops' square (decision 222) adds 20 to its left.
+        // measuring; the shops' square (decision 222) adds 20 to its left,
+        // and the expansion's (decision 506 續) 20 to its right.
         let reach = Double(station.name.count) * 12 + 20
         let largest = CGRect(x: center.x - reach, y: center.y + radius, width: reach * 2, height: 4 + 48 + 14)
         guard largest.intersects(context.clipBoundingRect) else { return }
@@ -2131,13 +2132,22 @@ enum MapArt {
         context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
         // Decision 222: the station's shops, a warm yellow square to the
         // left of its name with one, two or three bags in it.
-        if let level = station.commerce {
-            let side = max(12, min(16, nameSize.height))
-            let chip = CGRect(x: nameRect.minX - 4 - side, y: nameRect.midY - side / 2, width: side, height: side)
+        let side = max(12, min(16, nameSize.height))
+        func chip(_ glyph: MapGlyph, x: Double) {
+            let chip = CGRect(x: x, y: nameRect.midY - side / 2, width: side, height: side)
             let square = Path(roundedRect: chip, cornerRadius: 3)
             context.fill(square, with: .color(Palette.playerBuilding))
             context.stroke(square, with: .color(Palette.ink), lineWidth: 1.2)
-            drawStationSymbol(.shops(level), at: ScreenPoint(x: chip.midX, y: chip.midY), size: side * 0.8, context: context)
+            drawStationSymbol(glyph, at: ScreenPoint(x: chip.midX, y: chip.midY), size: side * 0.8, context: context)
+        }
+        if let level = station.commerce {
+            chip(.shops(level), x: nameRect.minX - 4 - side)
+        }
+        // Decision 506 續 (BADGE): the station's expansion, the same square
+        // to the right of its name, a station house for the concourse and
+        // one with an upper storey for the grand hall.
+        if let expansion = station.expansion {
+            chip(.station(expansion), x: nameRect.maxX + 4)
         }
         // Decision 216: the badges of its lines in a row under the name,
         // at most four.
