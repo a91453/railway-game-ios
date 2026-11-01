@@ -266,7 +266,7 @@ struct Map3DPreviewScreen: View {
             guard openStation != nil, stationTag.station == nil, let id = session.selectedStationID,
                   let scene, let camera = cameraLink.camera else { return }
             let space = Map3DPick.Space(scene: scene)
-            stationTag.show(id, at: Map3DTap.anchor(of: id, in: session.world, space: space, ground: Map3DPick.ground(of: session.world, in: space)),
+            stationTag.show(id, at: Map3DTap.anchor(of: id, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)),
                             seenBy: camera)
         }
         .onChange(of: showsRealTrains) { _, shown in
@@ -344,7 +344,7 @@ struct Map3DPreviewScreen: View {
         else { return }
         let id = session.tapMap3D(at: hit, reach: Map3DTap.reach(at: hit.point, camera: camera))
         let space = Map3DPick.Space(scene: scene)
-        let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: session.world, in: space)) }
+        let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)) }
         stationTag.show(id, at: anchor, seenBy: camera)
     }
 

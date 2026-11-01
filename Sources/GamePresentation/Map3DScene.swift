@@ -125,6 +125,9 @@ public struct Map3DScene: Sendable {
     /// Decision 359: the player's track, where it runs in a tunnel and
     /// the ground drawn over it.
     public let trackCover: Map3DTrackCover
+    /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
+    /// (``Map3DPick/ground(of:world:)``).
+    public let drawnGround: Map3DGroundGrid
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
@@ -319,6 +322,7 @@ public struct Map3DScene: Sendable {
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         builder.addGround(water: real == nil)
+        drawnGround = builder.groundGrid()
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
         // Decision 438: the player's own roads, which the base map has not.
         if real != nil { builder.addOwnRoads() }
@@ -926,17 +930,42 @@ extension Map3DScene {
             let worldX = originX + Double(x) * Self.metre, worldY = originY + Double(z) * Self.metre
             let column = Int((worldX / cell).rounded(.down)), row = Int((worldY / cell).rounded(.down))
             let fx = Float(worldX / cell - Double(column)), fy = Float(worldY / cell - Double(row))
-            func corner(_ row: Int, _ column: Int) -> Float {
-                let key = ChunkKey(column: column, row: row)
-                if let known = corners[key] { return known }
-                let height = ground(x: Double(column) * cell, y: Double(row) * cell)
-                corners[key] = height
-                return height
-            }
-            let a = corner(row, column), b = corner(row + 1, column), c = corner(row + 1, column + 1), d = corner(row, column + 1)
+            let a = groundCorner(row: row, column: column), b = groundCorner(row: row + 1, column: column)
+            let c = groundCorner(row: row + 1, column: column + 1), d = groundCorner(row: row, column: column + 1)
             // a (0, 0), b (0, 1), c (1, 1), d (1, 0) in (fx, fy): the
             // triangles a b c and a c d.
             return fy >= fx ? a + fx * (c - b) + fy * (b - a) : a + fx * (d - a) + fy * (c - d)
+        }
+
+        /// The ground's height at the 64 m grid's corner (`row`,
+        /// `column`), in metres, as ``addGround(water:)`` lays it, worked
+        /// out once.
+        mutating func groundCorner(row: Int, column: Int) -> Float {
+            let key = ChunkKey(column: column, row: row)
+            if let known = corners[key] { return known }
+            let cell = Double(Land.cellLength)
+            let height = ground(x: Double(column) * cell, y: Double(row) * cell)
+            corners[key] = height
+            return height
+        }
+
+        /// Decision 517 續 (BUILD3D-3): the corners ``addGround(water:)``
+        /// lays over the region, for taps (``Map3DScene/drawnGround``).
+        mutating func groundGrid() -> Map3DGroundGrid {
+            let cell = Double(Land.cellLength)
+            let firstColumn = Int((region.minX / cell).rounded(.down)), lastColumn = Int((region.maxX / cell).rounded(.up)) - 1
+            let firstRow = Int((region.minY / cell).rounded(.down)), lastRow = Int((region.maxY / cell).rounded(.up)) - 1
+            guard firstColumn <= lastColumn, firstRow <= lastRow else {
+                return Map3DGroundGrid(originX: originX, originY: originY, firstRow: 0, firstColumn: 0, rows: 0, columns: 0, heights: [],
+                                       file: fileGround)
+            }
+            var heights: [Float] = []
+            heights.reserveCapacity((lastRow - firstRow + 2) * (lastColumn - firstColumn + 2))
+            for row in firstRow...(lastRow + 1) {
+                for column in firstColumn...(lastColumn + 1) { heights.append(groundCorner(row: row, column: column)) }
+            }
+            return Map3DGroundGrid(originX: originX, originY: originY, firstRow: firstRow, firstColumn: firstColumn,
+                                   rows: lastRow - firstRow + 2, columns: lastColumn - firstColumn + 2, heights: heights, file: fileGround)
         }
 
         /// `points` laid on the drawn ground, ``Map3DShadow/lift`` over it.
@@ -965,19 +994,9 @@ extension Map3DScene {
             let firstColumn = Int((region.minX / cell).rounded(.down)), lastColumn = Int((region.maxX / cell).rounded(.up)) - 1
             let firstRow = Int((region.minY / cell).rounded(.down)), lastRow = Int((region.maxY / cell).rounded(.up)) - 1
             guard firstColumn <= lastColumn, firstRow <= lastRow else { return }
-            var heights: [Int: Float] = [:]
-            let width = lastColumn - firstColumn + 2
             func corner(_ row: Int, _ column: Int) -> Map3DPoint {
                 let x = Double(column) * cell, y = Double(row) * cell
-                let index = (row - firstRow) * width + (column - firstColumn)
-                let height: Float
-                if let known = heights[index] {
-                    height = known
-                } else {
-                    height = ground(x: x, y: y)
-                    heights[index] = height
-                }
-                return Map3DPoint(Float((x - originX) / Self.metre), height, Float((y - originY) / Self.metre))
+                return Map3DPoint(Float((x - originX) / Self.metre), groundCorner(row: row, column: column), Float((y - originY) / Self.metre))
             }
             for row in firstRow...lastRow {
                 for column in firstColumn...lastColumn {
