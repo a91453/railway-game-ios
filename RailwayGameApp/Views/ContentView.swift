@@ -155,10 +155,14 @@ struct ContentView: View {
                 let joining = arguments.contains("-ui-test-trace-joined")
                 guard joining || arguments.contains("-ui-test-trace-double"),
                       let region = session.traceForPreviewScreenshot(from: "羅東", to: "冬山", joining: joining) else { return }
-                // Asked again once the map is up: the first ask comes
-                // before the map is there to take it.
-                try? await Task.sleep(for: .seconds(6))
-                session.lookOver(region)
+                // Asked again while the test zooms in: the first ask comes
+                // before the map is there to take it, and a region only
+                // ever zooms out, so the test zooms in with the button and
+                // this keeps the place in the middle.
+                for _ in 0..<15 {
+                    try? await Task.sleep(for: .seconds(4))
+                    session.lookOver(region)
+                }
             }
             #endif
             // The map and controls share one screen, so text stops growing at the

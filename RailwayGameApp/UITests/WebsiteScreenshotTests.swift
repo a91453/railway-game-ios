@@ -840,8 +840,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         tapButton("realWorld.start", in: app, timeout: 60)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
         XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 120), "The trace is previewed")
-        // The Debug app looks close over it again 6 s after tracing.
-        settle(seconds: 14)
+        // Close enough to see the glow: the Debug app keeps the place in
+        // the middle every 4 s for a minute.
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.becomesHittable(within: 10))
+        for _ in 0..<4 {
+            zoomIn.tap()
+            settle(seconds: 1)
+        }
+        settle(seconds: 10)
         keep(name, app)
     }
 
