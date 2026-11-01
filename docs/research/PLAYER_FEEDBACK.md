@@ -197,6 +197,7 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 | # | 分類 | 意見摘要 | 狀態 |
 | --- | --- | --- | --- |
 | 1 | 效能 | iPhone 16 Pro Max，101.1：「很容易卡頓」。截圖：實景地圖高雄小港一帶，第 1 年 1 月 3 日 02:31，600×，開著站名、候車、人口、車資與章四個圖層，剛按了復原（「已復原上一步編輯」） | 沒有附回報。截圖的情形（夜裡、剛復原）正好碰到 102.1 修的兩項：(1) 指令之後的死結泡泡與交通狀態改在背景算（決策 497 P2-3，復原、暫停、換速度、每次建設都會碰到）；(2) 跳過夜晚的預先試跑在指令之後改在背景跑（決策 497 P2-4，台北七條線一次 600 ms）。還剩：改了路線那天 06:00 的乘客計畫要算好幾秒，時間會停住（103 的 PLANDAY，NEXT_PRIORITIES §24 第 5 名）。請玩家更新到 102.1；還會卡就用「回報問題」送出（會帶卡住的時間與分項） |
+| 2 | bug | iPad Air 11"（iPad15,3，120 Hz）、iPadOS 18.4.1，101.1：「於入門 5 第 8 步驟建立路線時，按下完成建立發生不明情況的閃退」 | 附當機紀錄（全文在作者手上）。CRASH101：`EXC_BREAKPOINT`（SIGTRAP），崩在 SwiftUI 的非同步算圖執行緒（`DisplayLink.asyncThread` → `ViewRendererHost.renderAsync` → `ViewGraph.updateOutputsAsync`），不在主執行緒：路線清單一列（`LinesPanel.lineRow`）窄排法的 `ViewThatFits` 量尺寸時，`ForEach(report.compactRowParts(in:))` 的內容 closure 被叫起來；那個 closure 在 Swift 6 推為 `@MainActor`，執行時的 executor 檢查（`swift_task_isCurrentExecutor` → `_dispatch_assert_queue_fail`）就讓 App 停下。建好路線，清單多一列、動畫進行中，正好碰上；它的 id 是會變的文字（人次、損益），每次變都要在背景建新的一項。同時背景 Task 在算 `Map3DScene.seededStreets`（世界的副本），主執行緒在等 SwiftUI 的鎖，都只是旁觀。Apple 論壇有同型回報（thread 802729「AsyncRenderer causes crashes in ForEach when in Swift 6 language mode」，FB20692404 到 2026-09 還開著）。修在 CRASH101 的 PR：那一列改成兩個直接建的 `Text`，不用 `ForEach`（`LineReport.compactRowLines(in:)`，版面照決策 486）；同型的 iPad 建造欄（`BuildToolButtons` 在 `ViewThatFits` 裡，入門解鎖工具時按鈕會變）改用 `@Sendable` closure 建按鈕。Simulator 不一定走非同步算圖，重現不了，待實機確認 |
 
 ### 0.5.0 (100.1)，2026-10-31
 
