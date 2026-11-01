@@ -801,6 +801,49 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("trace-no-grade-reaches", app)
     }
 
+    /// Decision 521's third sequel: a double trace near Luodong, and a
+    /// trace from Taipei to Banqiao joining track laid on its middle third,
+    /// each previewed as one way (no second line beside it, no darker band
+    /// where the glows meet). For the screenshot review of its pull
+    /// request; drawn by the Debug app through the tool's own taps.
+    func testTracePreviewDouble() {
+        tracePreviewShot(argument: "-ui-test-trace-double", station: "羅東", search: "羅東", name: "trace-preview-double")
+    }
+
+    func testTracePreviewJoined() {
+        tracePreviewShot(argument: "-ui-test-trace-joined", station: "臺北", search: "臺北", name: "trace-preview-joined")
+    }
+
+    private func tracePreviewShot(argument: String, station: String, search text: String, name: String) {
+        let app = launch(extra: [argument])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.appears(within: 30), "The picker opens")
+        search.tap()
+        search.typeText(text)
+        let place = app.buttons["station.tra_sched|\(station)"]
+        XCTAssertTrue(place.appears(within: 30), "\(station) is found")
+        place.waitUntilSettled()
+        app.tapMiddle(of: place)
+        if !app.buttons["realWorld.start"].appears(within: 3) {
+            let ends = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "關閉", "Cancel", "Close"]))
+            let row = search.frame
+            let end = ends.allElementsBoundByIndex.first { abs($0.frame.midY - row.midY) < row.height }
+            XCTAssertNotNil(end, "The search can be ended")
+            end?.tap()
+        }
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 120), "The trace is previewed")
+        settle(seconds: 10)
+        keep(name, app)
+    }
+
     // MARK: - What the game gained after those (decisions 167 to 186)
 
     /// The High Speed Rail demo (decision 170): Nangang to Zuoying on the
