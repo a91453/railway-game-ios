@@ -842,8 +842,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 120), "The trace is previewed")
         // Close enough to see the glow: the Debug app keeps the place in
         // the middle every 4 s for a minute.
-        let zoomIn = app.buttons["Zoom in"]
-        XCTAssertTrue(zoomIn.becomesHittable(within: 10))
+        // By its label, which the app shows in Chinese here.
+        let zoomIn = app.buttons.matching(NSPredicate(format: "label IN %@", ["Zoom in", "放大"])).firstMatch
+        XCTAssertTrue(zoomIn.becomesHittable(within: 10), "The zoom-in button")
         for _ in 0..<4 {
             zoomIn.tap()
             settle(seconds: 1)
