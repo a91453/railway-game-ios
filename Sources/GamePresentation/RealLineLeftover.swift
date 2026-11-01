@@ -265,7 +265,7 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
             chinese.append("\(depots) 座機廠")
         }
         let englishList = english.count == 1 ? english[0] : english.dropLast().joined(separator: ", ") + " and " + english[english.count - 1]
-        let chineseList = chinese.count == 1 ? chinese[0] : chinese.dropLast().joined(separator: "、") + "與" + chinese[chinese.count - 1]
+        let chineseList = chinese.count == 1 ? chinese[0] : chinese.dropLast().joined(separator: "、") + "與 " + chinese[chinese.count - 1]
         if shared == true {
             return language.text(
                 "Buying it first takes up \(englishList) that lines removed before left.",

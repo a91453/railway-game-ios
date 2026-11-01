@@ -113,10 +113,10 @@ final class DanhaiDepotTests: XCTestCase {
         let platforms = clearing.platforms.count
         XCTAssertGreaterThan(platforms, 1, "its stations' platforms on that track")
         XCTAssertNil(clearing.shared)
-        XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix("收購時會先拆掉這條線刪掉時留下的 \(laid.count) 段軌道、\(platforms) 個月台與 1 座機廠。"))
+        XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix("收購時會先拆掉這條線刪掉時留下的 \(laid.count) 段軌道、\(platforms) 個月台與 1 座機廠。"), offer.summaryText(in: .traditionalChinese))
         XCTAssertTrue(offer.summaryText(in: .english).hasSuffix(
             "Buying it first takes up \(laid.count) pieces of track, \(platforms) platforms and 1 depot the line left when it was removed."
-        ))
+        ), offer.summaryText(in: .english))
         XCTAssertTrue(again.acquireRealLine(offer), again.message?.text ?? "")
         XCTAssertNotNil(again.world.acquisition(of: "ntdlrt:V"))
         // Its stations are the ones it left (the depot built again).
@@ -243,6 +243,8 @@ final class DanhaiDepotTests: XCTestCase {
         ]
         let start = try XCTUnwrap(starts.first { world.path(from: $0, toStation: newTown) != nil }, "Danhai New Town is reached from Kanding")
         try world.placeTrain(train, at: start)
+        guard case .onEdge(_, let offset) = start else { return XCTFail("placed on an edge") }
+        try world.setTrainContinuation(train, along: [], stoppingAt: offset)
         let now = world.clock.now.seconds
         try world.setTrainTimetable(train, to: [
             ScheduledStop(station: kanding, arrival: GameTime(seconds: now), departure: GameTime(seconds: now + 600)),
@@ -264,9 +266,10 @@ final class DanhaiDepotTests: XCTestCase {
         XCTAssertFalse(clearing.platforms.contains { [kanding, newTown].contains($0.station) })
         XCTAssertTrue(taken.isSubset(of: left))
         XCTAssertLessThan(taken.count, left.subtracting(used).count, "only the Green Mountain Line's track the Blue Coast Line comes onto")
+        XCTAssertGreaterThan(clearing.platforms.count, 0, "the shared stations' platforms it comes onto")
+        XCTAssertEqual(clearing.stations, [], "the depot stays")
         XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix(
-            "收購時會先拆掉之前刪掉的路線留下的 \(taken.count) 段軌道" + (clearing.platforms.isEmpty ? "" : "、\(clearing.platforms.count) 個月台")
-                + (clearing.stations.isEmpty ? "" : "與 \(clearing.stations.count) 座機廠") + "。"
+            "收購時會先拆掉之前刪掉的路線留下的 \(taken.count) 段軌道與 \(clearing.platforms.count) 個月台。"
         ), offer.summaryText(in: .traditionalChinese))
         XCTAssertTrue(player.acquireRealLine(offer), player.message?.text ?? "")
         XCTAssertFalse(player.world.network.platforms.filter { $0.station == newTown }.isEmpty, "Danhai New Town keeps its platforms")
