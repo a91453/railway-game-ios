@@ -42,6 +42,17 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// screenshot review of the pull request that added it.
     case commute
 
+    /// Decision 536: the demo map with its first line bought as the
+    /// Neiwan Line and its second as the Danhai light rail's Green
+    /// Mountain Line (recorded as bought, as the app records a real line
+    /// it laid), run on to the second morning: their trains drawn and
+    /// named as the real lines' own. For the screenshot review of the pull
+    /// request that drew them so.
+    case acquired
+
+    /// The real lines ``acquired`` records its first two lines as, in order.
+    public static let acquiredLines = ["tra:NEIWAN", "ntdlrt:V"]
+
     /// The scene's world, its clock paused at the moment to show.
     public func make(in language: DisplayLanguage) -> GameWorld {
         switch self {
@@ -50,7 +61,42 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .zoning: Self.zoningWorld(in: language)
         case .punctuality: Self.punctualityWorld(in: language)
         case .commute: Self.commuteWorld(in: language)
+        case .acquired: Self.acquiredWorld(in: language)
         }
+    }
+
+    // MARK: - Acquired
+
+    /// Seven in the morning of the second day: the trains out.
+    static let acquiredRunSeconds: Int64 = 31 * 3_600
+
+    private static func acquiredWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            for (line, real) in zip(world.lines.prefix(acquiredLines.count), acquiredLines) {
+                // A run down the line every twenty minutes from 05:00,
+                // three minutes a stop, as a real line bought has its
+                // timetable's (decision 315).
+                let stops = line.stops.count
+                let runs = stride(from: Int64(5 * 3_600), through: 23 * 3_600, by: 20 * 60).map { start in
+                    LineRun(from: 0, to: stops - 1, times: (0..<stops).map { stop in
+                        let at = start + Int64(stop) * 180
+                        return LineRunTime(arrival: at, departure: stop == 0 || stop == stops - 1 ? at : at + 30)
+                    })
+                }
+                try world.setLineRuns(line.id, to: runs)
+                let tier: LineAcquisition.Tier = real.hasPrefix("tra:") ? .branch : .lightRail
+                try world.recordLineAcquisition(line: line.id, realLine: real, dailyRiders: 0, tier: tier)
+            }
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(acquiredRunSeconds / 600))
+        } catch {
+            preconditionFailure("The acquired screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Commute

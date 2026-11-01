@@ -7,6 +7,43 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
+    /// Decision 536: a train of a real line bought, the Neiwan Line's and
+    /// the Danhai light rail's, followed: its card says what it is, the
+    /// lines list what the line runs, and the 3D map draws the real line's
+    /// own train (the DR1000, the Danhai light rail's), not a generic one.
+    /// For the screenshot review of the pull request that drew them so.
+    func testBoughtLineStock() {
+        for (real, name) in [("tra:NEIWAN", "neiwan"), ("ntdlrt:V", "danhai")] {
+            let app = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-follow-bought", real, "-map3D.quality", "saving"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let stock = app.descendants(matching: .any)["train.stock"].firstMatch
+            XCTAssertTrue(stock.appears(within: 30), "\(real): the train's card says what it is")
+            settle(seconds: 3)
+            keep("bought-\(name)-train-card", app)
+
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            waitForPicture(timeout: 150)
+            settle(seconds: 5)
+            keep("bought-\(name)-3d", app)
+            app.terminate()
+        }
+
+        let app = launch(extra: ["-screenshot-scene", "acquired"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 3)
+        keep("bought-lines-list", app)
+    }
+
     /// Decision 517 續: the station picked on the 2D map keeps its tag on
     /// the 3D map, under the station there; a tap on the tag opens its
     /// details back on the 2D map.
@@ -1779,6 +1816,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.launchArguments = ["-ui-testing"] + language + extra
         app.launch()
         return app
+    }
+
+    /// Waits until the 3D map is drawn, not its spinner: the Simulator
+    /// draws it in software and can take over a minute; a screenshot of
+    /// the spinner is about 240 KB, one of the map far more.
+    private func waitForPicture(timeout: TimeInterval) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if XCUIScreen.main.screenshot().pngRepresentation.count > 600_000 { return }
+            Thread.sleep(forTimeInterval: 2)
+        }
     }
 
     /// Lets the map draw and the animations end before a screenshot.
