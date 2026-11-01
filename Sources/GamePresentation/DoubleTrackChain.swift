@@ -197,17 +197,32 @@ extension GameSession {
     /// run backward), then `parallel`, then `platforms`, then a crossover
     /// at each end the second track does not join and `wantsCrossover`
     /// says joins track. Throws what GameCore refused.
+    ///
+    /// Decision 521's fourth sequel: `mainBuilt`, a preview copy of `world`
+    /// with `main` already built on it and its edges in order (a traced
+    /// stretch's, ``TracePlan/built``), is planned on instead of building
+    /// `main` again.
     func planDoubleChain(
         main: [PlayerCommand.TrackStretch], run: [(edge: TrackEdgeID, reversed: Bool)], parallel: [PlayerCommand.TrackStretch],
-        platforms: [ChainPlatform], wantsCrossover: (start: Bool, end: Bool), in world: GameWorld
+        platforms: [ChainPlatform], wantsCrossover: (start: Bool, end: Bool), in world: GameWorld,
+        mainBuilt: (world: GameWorld, edges: [TrackEdgeID])? = nil
     ) throws(GameError) -> DoubleChainPlan {
-        var draft = world.trackPreviewCopy()
-        let built = try buildDoubleChain(main: main, parallel: parallel, platforms: platforms, in: &draft)
-        let mainRun = main.isEmpty ? run : built.main.map { (edge: $0, reversed: false) }
+        var draft: GameWorld
+        let mainEdges: [TrackEdgeID], parallelEdges: [TrackEdgeID]
+        if let mainBuilt, !main.isEmpty, mainBuilt.edges.count == main.count {
+            draft = mainBuilt.world
+            parallelEdges = try buildDoubleChain(main: [], parallel: parallel, platforms: platforms, in: &draft).parallel
+            mainEdges = mainBuilt.edges
+        } else {
+            draft = world.trackPreviewCopy()
+            let built = try buildDoubleChain(main: main, parallel: parallel, platforms: platforms, in: &draft)
+            (mainEdges, parallelEdges) = (built.main, built.parallel)
+        }
+        let mainRun = main.isEmpty ? run : mainEdges.map { (edge: $0, reversed: false) }
         let atStart = wantsCrossover.start && !(parallel.first?.start.isNode ?? true)
         let atEnd = wantsCrossover.end && !(parallel.last?.end.isNode ?? true)
         let found = chainCrossovers(
-            main: mainRun, parallel: built.parallel.map { (edge: $0, reversed: false) }, atStart: atStart, atEnd: atEnd, in: &draft
+            main: mainRun, parallel: parallelEdges.map { (edge: $0, reversed: false) }, atStart: atStart, atEnd: atEnd, in: &draft
         )
         let points = parallel.flatMap(\.geometryPoints)
         return DoubleChainPlan(

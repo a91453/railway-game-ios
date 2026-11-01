@@ -90,13 +90,16 @@ final class FrameTimeRecorder: NSObject {
     }
 
     /// A problem report's part: the stretch going on, then those kept,
-    /// then the fixed test's runs on this device (V2).
+    /// then the fixed test's runs on this device (V2), then the 3D scene's
+    /// builds (decision 517 續).
     func reportText(in language: DisplayLanguage) async -> String? {
         let going = Self.meter.current(at: CACurrentMediaTime())
         let device = FrameTimeBenchRunner.device
         let parts = await Task.detached(priority: .utility) {
             [FrameTimeRecorder.store.current().reportText(in: language, going: going),
-             FrameTimeBenchRunner.store.current().reportText(on: device, in: language)]
+             FrameTimeBenchRunner.store.current().reportText(on: device, in: language),
+             // Decision 517 續 (PR 3b's measurement): the 3D scene's builds.
+             Map3DSceneBuildLog.shared.reportText(in: language)]
         }.value
         let text = parts.compactMap { $0 }.joined(separator: "\n\n")
         return text.isEmpty ? nil : text

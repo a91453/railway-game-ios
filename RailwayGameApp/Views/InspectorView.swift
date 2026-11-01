@@ -55,6 +55,13 @@ struct InspectorView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("inspector.train.details")
             }
+            // Decision 536: on a real line bought, what the train is.
+            if let stock = session.world.boughtStockText(of: train, in: session.language) {
+                Label(stock, systemImage: "tram.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("train.stock")
+            }
             // TestFlight 56.1: a train looked at with no tool had no way to
             // follow it; the train tool's button (`train.follow`) sat behind
             // Build since decision 114. The card's head never scrolls, so

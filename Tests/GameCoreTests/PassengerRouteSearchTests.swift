@@ -18,18 +18,22 @@ final class PassengerRouteSearchTests: XCTestCase {
 
     /// A random network of `stations` stations: lines both ways, some rings,
     /// walks between stations near each other, a closed station or two.
-    private func graph(_ random: inout SplitMix64, stations: Int) -> PassengerRouteGraph {
+    /// With `ties`, the seconds come from a few round values, some rides
+    /// take none and the headways match, so that many routes cost the
+    /// same and the tie-breaks decide.
+    private func graph(_ random: inout SplitMix64, stations: Int, ties: Bool = false) -> PassengerRouteGraph {
         let ids = (1...stations).map { StationID(rawValue: $0) }
         var paths: [PassengerRouteGraph.ServicePath] = []
         for line in 1...(3 + random.below(4)) {
             let calls = ids.filter { _ in random.below(3) == 0 }.shuffled(using: &random)
             guard calls.count >= 2 else { continue }
-            let runs = (1..<calls.count).map { _ in Int64(60 + random.below(400)) }
-            let headway = Int64(120 + random.below(1_200))
-            let dwell = Int64(random.below(60))
+            func run() -> Int64 { ties ? Int64(60 * random.below(3)) : Int64(60 + random.below(400)) }
+            let runs = (1..<calls.count).map { _ in run() }
+            let headway = ties ? Int64(120 * (1 + random.below(2))) : Int64(120 + random.below(1_200))
+            let dwell = ties ? Int64(30 * random.below(2)) : Int64(random.below(60))
             let isRing = random.below(4) == 0
             let stops = isRing ? calls + [calls[0]] : calls
-            let ringRuns = isRing ? runs + [Int64(60 + random.below(400))] : runs
+            let ringRuns = isRing ? runs + [run()] : runs
             paths.append(PassengerRouteGraph.ServicePath(
                 line: LineID(rawValue: line), pattern: nil, direction: .outbound,
                 stations: stops, runSeconds: ringRuns, headway: headway, isRing: isRing, dwellSeconds: dwell))
@@ -72,11 +76,22 @@ final class PassengerRouteSearchTests: XCTestCase {
     /// to its ban, so that a search banning two rides starts from the one
     /// banning the first of them, rebuilt from its history at the second.
     func testTheSecondBanStartsFromTheFirst() {
-        var random = SplitMix64(seed: 0x2026_1101)
+        checkSecondBans(seed: 0x2026_1101, ties: false)
+    }
+
+    /// 派工單 PLANDAY-2: the same where many routes cost the same to the
+    /// second and some rides take no time at all, so that the tie-breaks,
+    /// down to the order labels were made in, decide.
+    func testTheSecondBanFindsTheSameWhenRoutesTie() {
+        checkSecondBans(seed: 0x2026_1102, ties: true)
+    }
+
+    private func checkSecondBans(seed: UInt64, ties: Bool, file: StaticString = #filePath, line: UInt = #line) {
+        var random = SplitMix64(seed: seed)
         var second = 0
         for _ in 0..<6 {
             let stations = 8 + random.below(10)
-            let graph = graph(&random, stations: stations)
+            let graph = graph(&random, stations: stations, ties: ties)
             for limits in [(512, 400_000), (3, 80)] {
                 var searches = PassengerRouteSearches(graph: graph, searchLimit: limits.0, labelBudget: limits.1)
                 let ids = (1...stations).map { StationID(rawValue: $0) }
@@ -93,14 +108,14 @@ final class PassengerRouteSearchTests: XCTestCase {
                                 second += 1
                                 XCTAssertTrue(same(searches.shortest(from: origin, to: destination, banning: bans),
                                                    graph.shortest(from: origin, to: destination, banning: bans)),
-                                              "\(origin) → \(destination) banning \(bans)")
+                                              "\(origin) → \(destination) banning \(bans)", file: file, line: line)
                             }
                         }
                     }
                 }
             }
         }
-        XCTAssertGreaterThan(second, 200, "searches banning two rides were asked")
+        XCTAssertGreaterThan(second, 200, "searches banning two rides were asked", file: file, line: line)
     }
 
     /// 派工單 BB: the copies kept stay within their limits however many

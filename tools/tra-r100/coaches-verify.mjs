@@ -1,0 +1,22 @@
+// Post-producer checks on actual delivered native geometry. No recipe constants
+// are used to synthesize a second mesh. Topology stays in shared audit.mjs.
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {model} from '../train-models/native.mjs';
+const root=resolve(process.argv[2]),manifest=JSON.parse(readFileSync(resolve(root,'manifest.json'))),rows=[],faults=[];
+function load(row){const b=readFileSync(resolve(root,row.native)),v=model(b).vertices;const start=16+Math.ceil(b.readUInt32LE(12)/4)*4;for(let i=0;i<v.length;i++)v[i].glass=!!(b.readUInt32LE(start+Math.floor(i/3)*52)&2);return v;}
+function hits(v,x,z,side){const out=[];for(let i=0;i<v.length;i+=3){const p=v.slice(i,i+3).map(t=>t.position),[a,b,c]=p,d=(b[0]-a[0])*(c[2]-a[2])-(c[0]-a[0])*(b[2]-a[2]);if(Math.abs(d)<1e-10)continue;const u=((x-a[0])*(c[2]-a[2])-(c[0]-a[0])*(z-a[2]))/d,w=((b[0]-a[0])*(z-a[2])-(x-a[0])*(b[2]-a[2]))/d;if(u>=-1e-6&&w>=-1e-6&&u+w<=1.000001)out.push({y:side*(a[1]+u*(b[1]-a[1])+w*(c[1]-a[1])),i,glass:v[i].glass});}return out.sort((a,b)=>b.y-a.y);}
+function check(v){const seen=new Set();for(let i=0;i<v.length;i+=3){const k=v.slice(i,i+3).map(t=>t.position.map(x=>Math.round(x*1e5)).join(',')).sort().join('|');assert(!seen.has(k),'duplicate shell/equipment');seen.add(k);}
+ for(const x of [-7.8,-5.7,5.7,7.8])for(const side of [-1,1])assert(v.some(t=>Math.abs(t.position[0]-x)<1e-4&&Math.abs(t.position[2])<1e-4&&t.position[1]*side>.49&&t.position[1]*side<.69),'missing/lifted tyre');
+ const contacts=new Set(v.filter(t=>Math.abs(t.position[2])<1e-4&&Math.abs(t.position[1])>.49&&Math.abs(t.position[1])<.69).map(t=>Math.round(t.position[0]*10000)+","+Math.sign(t.position[1])));assert.equal(contacts.size,8,"wrong axle/wheel count");
+ const probes=[];for(let i=0;i<v.length;i+=3){if(!v[i].glass||Math.abs(v[i].normal[1])<.9)continue;const t=v.slice(i,i+3),side=Math.sign(v[i].normal[1]),x=t.reduce((s,a)=>s+a.position[0],0)/3,z=t.reduce((s,a)=>s+a.position[2],0)/3,y=side*t.reduce((s,a)=>s+a.position[1],0)/3;if(side*Math.sign(t[0].position[1])<0||Math.abs(y)<1.35)continue;const h=hits(v,x,z,side);assert(h.length&&h[0].glass&&Math.abs(h[0].y-y)<.002,'glass buried/occluded '+JSON.stringify({x,z,y,hit:h[0]}));const back=h.find(a=>!a.glass&&a.y<y-.003);assert(back&&y-back.y>.001&&y-back.y<.05,'glass floating/support gap '+JSON.stringify({x,z,y,back}));probes.push([x,z,side]);}assert(probes.length>50,'missing glazing');return probes;}
+for(const r of manifest.models.filter(r=>r.id.startsWith('tra-breezy-blue-coach-'))){const v=load(r),probes=check(v);function reject(name,mutate){const bad=structuredClone(v);mutate(bad);assert.throws(()=>check(bad),undefined,r.id+name);faults.push(r.id+': '+name);}
+ reject('floating actual side glazing',v=>v.forEach(t=>{if(t.glass&&Math.abs(t.normal[1])>.5)t.position[1]+=.2*Math.sign(t.position[1]);}));
+ reject('buried actual side glazing',v=>v.forEach(t=>{if(t.glass&&Math.abs(t.normal[1])>.5)t.position[1]-=.15*Math.sign(t.position[1]);}));
+ reject('duplicate shell',v=>v.push(...structuredClone(v.slice(0,3))));
+ reject('lifted wheel contact',v=>v.forEach(t=>{if(Math.abs(t.position[0]-7.8)<1e-4&&Math.abs(t.position[2])<1e-4&&t.position[1]>.49&&t.position[1]<.69)t.position[2]+=.1;}));
+ reject('extra actual wheel / axle',v=>{const add=[];for(let i=0;i<v.length;i+=3){const t=v.slice(i,i+3);if(t.every(a=>a.position[0]>=7.3699&&a.position[0]<=8.2301&&a.position[1]>=.4999&&a.position[1]<=.6801&&a.position[2]>=-.0001&&a.position[2]<=.8601)){add.push(...structuredClone(t).map(a=>({...a,position:[a.position[0]-2,a.position[1],a.position[2]]})));}}assert(add.length);v.push(...add);});
+ const [x,z,s]=probes[0];reject('opaque plate protrudes through glazing',v=>v.push(...[[x-.12,s*1.6,z-.12],[x+.12,s*1.6,z-.12],[x,s*1.6,z+.12]].map(position=>({position,normal:[0,s,0],color:[255,255,255,255],glass:false}))));
+ rows.push({id:r.id,visible_supported_glass_samples:probes.length,tyre_contacts:8});}
+writeFileSync(resolve(root,'coaches-verification.json'),JSON.stringify({status:'VERIFIED',models:rows,rejected_faults:faults,limits:['Side glazing first-hit and backing samples, not all-view intersection proof','Published wheel/axle display dimensions remain photo estimates','Roof/equipment positioning and role fidelity require source comparison; these probes do not certify a numbered real formation']},null,2)+'\n');console.log('VERIFIED coaches: '+faults.length+' actual faults rejected');

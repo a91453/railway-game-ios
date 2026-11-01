@@ -191,7 +191,7 @@ needs OSM data reads the same extract.
   decision 185, `swift-shards.sh plan`; pushes since decision 413): every shard
   for GameCore, the package, the CI scripts or a test file other test files
   use, or two edited campaigns (or one beside GamePresentation); all the
-  GamePresentation tests (in seven jobs) for GamePresentation, its tests, the
+  GamePresentation tests (in eight jobs) for GamePresentation, its tests, the
   app's bundled data or a `tools/` file they read; the classes that read the fixtures
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
@@ -491,8 +491,13 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Before adding or changing a screen, panel, list or chart in the app, read
   `.claude/skills/ui-review/SKILL.md`, and before marking its pull request
   ready, take its screenshot review (`website-screenshots.yml`, one run at
-  a time; the game-planning session merges only after seeing the
-  screenshots; decision 482).
+  a time, started alongside CI). Decision 482's amendment sets three
+  levels: no screenshots for text-only changes, a new row in an existing
+  card, performance, rules, tools and tests; a small change to an existing
+  screen is screenshotted and reviewed by its own session and merges once
+  CI is green; a new screen, panel, chart, icon, illustration, 3D model or
+  livery merges only after the game-planning session has seen the
+  screenshots. When unsure, take the higher level.
 - Prefer small, minimal changes. Avoid speculative architecture, abstractions
   with no current use, new dependencies, and unrelated refactors or formatting.
 - This repository is public: never commit secrets (API keys, `.p8`/`.p12`,

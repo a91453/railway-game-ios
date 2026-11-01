@@ -428,8 +428,13 @@ struct PassengerRouteSearch {
     /// PLANDAY: an array of legs for every label was an allocation each).
     private var orders: [OrderNode] = []
     /// Each state's labels no other label dominates: a state is its call's
-    /// number, twice, plus one aboard.
-    private var frontier: [[Int]]
+    /// number, twice, plus one aboard. They are a list through the labels,
+    /// from `frontierHead` of the state on by `frontierNext` of each label
+    /// (-1 ends it), in no order that matters: an array for each state
+    /// was an allocation each, retained and released with every copy of
+    /// the search (派工單 PLANDAY-2).
+    private var frontierHead: [Int32]
+    private var frontierNext: [Int32] = []
     private var active: [Bool] = []
     /// A binary heap of open labels under one strict total order, so it
     /// pops exactly the label a full sort would put first.
@@ -460,7 +465,7 @@ struct PassengerRouteSearch {
         self.graph = graph
         let lookup = graph.lookup
         banned = Self.calls(banned: forbidden, on: graph)
-        frontier = Array(repeating: [], count: 2 * lookup.nodeSlot.count)
+        frontierHead = Array(repeating: -1, count: 2 * lookup.nodeSlot.count)
         arrived = Array(repeating: -1, count: lookup.calls.count)
         arrivedAt = Array(repeating: Self.never, count: lookup.calls.count)
         expandedAt = Array(repeating: Self.never, count: lookup.nodeSlot.count)
@@ -568,9 +573,9 @@ struct PassengerRouteSearch {
     ///
     /// The labels made by then are the first ones (they are numbered as
     /// they are made); of those, the ones still in the frontier make it up
-    /// in their order, and the ones not popped yet are the open ones. The
-    /// heap's own arrangement is not kept: it pops by a strict total
-    /// order, whatever its arrangement. Labels already put out of the
+    /// (its order matters to nothing), and the ones not popped yet are the
+    /// open ones. The heap's own arrangement is not kept: it pops by a
+    /// strict total order, whatever its arrangement. Labels already put out of the
     /// frontier are left out of it, as popping them does nothing.
     func paused(before number: Int) -> PassengerRouteSearch? {
         let then = expandedAt[number]
@@ -580,13 +585,16 @@ struct PassengerRouteSearch {
         while count > 0 && madeAt[count - 1] >= then { count -= 1 }
         search.labels.removeLast(labels.count - count)
         search.madeAt.removeLast(labels.count - count)
+        search.frontierNext = Array(repeating: -1, count: count)
         search.poppedAt = poppedAt[..<count].map { $0 <= then ? $0 : Self.never }
         search.droppedAt = droppedAt[..<count].map { $0 < then ? $0 : Self.never }
         search.active = search.droppedAt.map { $0 == Self.never }
-        search.frontier = Array(repeating: [], count: frontier.count)
+        search.frontierHead = Array(repeating: -1, count: frontierHead.count)
         search.open = []
         for index in 0..<count where search.active[index] {
-            search.frontier[state(labels[index].state)].append(index)
+            let slot = state(labels[index].state)
+            search.frontierNext[index] = search.frontierHead[slot]
+            search.frontierHead[slot] = Int32(index)
             if search.poppedAt[index] == Self.never { search.open.append(index) }
         }
         search.heapify()
@@ -736,21 +744,25 @@ struct PassengerRouteSearch {
     @discardableResult
     private mutating func offer(_ label: PassengerRouteLabel) -> Bool {
         let slot = state(label.state)
-        if frontier[slot].contains(where: { dominates($0, label) }) { return false }
-        // Kept in their order, the new one last, in place.
-        var survivors = frontier[slot]
-        frontier[slot] = []
-        var kept = 0
-        for index in survivors {
-            if dominates(index, label, reversed: true) {
-                active[index] = false
-                droppedAt[index] = time
-            } else {
-                survivors[kept] = index
-                kept += 1
-            }
+        var cursor = frontierHead[slot]
+        while cursor >= 0 {
+            if dominates(Int(cursor), label) { return false }
+            cursor = frontierNext[Int(cursor)]
         }
-        survivors.removeLast(survivors.count - kept)
+        // Those it dominates leave the list.
+        var previous: Int32 = -1
+        cursor = frontierHead[slot]
+        while cursor >= 0 {
+            let next = frontierNext[Int(cursor)]
+            if dominates(Int(cursor), label, reversed: true) {
+                active[Int(cursor)] = false
+                droppedAt[Int(cursor)] = time
+                if previous < 0 { frontierHead[slot] = next } else { frontierNext[Int(previous)] = next }
+            } else {
+                previous = cursor
+            }
+            cursor = next
+        }
         let index = labels.count
         labels.append(label)
         active.append(true)
@@ -758,8 +770,8 @@ struct PassengerRouteSearch {
         poppedAt.append(Self.never)
         droppedAt.append(Self.never)
         push(index)
-        survivors.append(index)
-        frontier[slot] = survivors
+        frontierNext.append(frontierHead[slot])
+        frontierHead[slot] = Int32(index)
         return true
     }
 

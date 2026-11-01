@@ -32,7 +32,7 @@ import XCTest
 ///   the most it can borrow buy it (A.5's $8 million).
 @MainActor
 final class AcquisitionReportTests: XCTestCase {
-    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "ntdlrt:VB", "trtc:R_XBT", "trtc:G_XBT"]
+    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "ntdlrt:VB", "ntalrt:K", "trtc:R_XBT", "trtc:G_XBT"]
     static let checkpoints: [Int64] = [1, 2, 7, 30, 180, 360, 720]
 
     private func requestedDays() throws -> Int64 {

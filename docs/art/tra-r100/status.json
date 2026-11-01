@@ -1,0 +1,37 @@
+{
+  "asset": {
+    "status": "UNVERIFIED",
+    "evidence": "Final independent producer, browser, coach fault coverage and protection checks are tracked separately; do not infer completion from initial topology audit."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "No explicit user acceptance of this producer.",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Orange R100CK targeted binding exists; final verification pending. BLUE remains original substitute; exact dated numbered formation / coach orientations unavailable."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator or physical-device Metal, performance, animation or dynamic train validation."
+  },
+  "components": {
+    "orange_R122": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    },
+    "blue_R123": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    },
+    "coaches": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    },
+    "complete_numbered_formation": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    }
+  }
+}

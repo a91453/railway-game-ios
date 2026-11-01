@@ -26,8 +26,8 @@ public struct StationExpansionCard: Hashable, Sendable {
         public let threshold: Int64
         /// Whether yesterday's people reached the threshold.
         public let open: Bool
-        /// Whether the station turned anyone away for want of room
-        /// yesterday or today.
+        /// Whether the station turned people away for want of room on
+        /// enough of the last days (decision 534).
         public let full: Bool
         public let affordable: Bool
     }
@@ -40,6 +40,9 @@ public struct StationExpansionCard: Hashable, Sendable {
     public let waiting: Int64
     /// Yesterday's people through the station.
     public let people: Int64
+    /// On how many of the last days the station turned people away for
+    /// want of room (decision 534).
+    public let fullDays: Int64
     public let offer: Offer?
 
     public init?(station id: StationID, in world: GameWorld) {
@@ -50,6 +53,7 @@ public struct StationExpansionCard: Hashable, Sendable {
         waiting = world.passengers.first { $0.station == id }?.waitingCount ?? 0
         let people = world.stationExpansionPeople(of: id)
         self.people = people
+        fullDays = world.stationFullDays(of: id)
         if let next = world.nextStationExpansion(of: id) {
             offer = Offer(expansion: next, price: next.price, threshold: next.threshold,
                           open: people >= next.threshold, full: world.stationWasFullLately(id),
@@ -79,9 +83,10 @@ public struct StationExpansionCard: Hashable, Sendable {
             )
         }
         guard offer.full else {
+            let window = StationExpansion.fullDaysWindow, needed = StationExpansion.fullDaysNeeded
             return language.text(
-                "Opens once the station fills and turns people away. It was not full yesterday.",
-                "車站客滿、有旅客進不來時才能擴建。昨天沒有客滿。"
+                "Opens once the station has been full, turning people away, on \(needed) of the last \(window) days (so far \(fullDays)).",
+                "最近 \(window) 天裡要有 \(needed) 天客滿、有旅客進不來，才能擴建（目前 \(fullDays) 天）。"
             )
         }
         return language.text(

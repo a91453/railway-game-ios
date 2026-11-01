@@ -34,6 +34,26 @@ public enum WhatsNew {
             id: "2026-11-01-104-1",
             items: [
                 Line(
+                    english: "Schools and hospitals you build bring students and patients by train, shown on the station card.",
+                    chinese: "蓋好的學校、醫院會帶學生和看病的旅客搭車來，車站卡上看得到人數。"
+                ),
+                Line(
+                    english: "A real line you buy keeps its own trains, such as the DR1000 on branch lines and the Danhai light rail.",
+                    chinese: "收購的真實路線保留自己的車：支線是 DR1000，淡海是淡海輕軌列車。"
+                ),
+                Line(
+                    english: "The Ankeng light rail can now be bought as a real line.",
+                    chinese: "安坑輕軌開放收購。"
+                ),
+                Line(
+                    english: "On the 2D map, an expanded station shows a small station mark beside its name.",
+                    chinese: "2D 地圖上，擴建過的車站在站名旁會多一個小站房記號。"
+                ),
+                Line(
+                    english: "A station can be expanded once it was full on 4 of the last 7 days; its card counts the days so far.",
+                    chinese: "最近 7 天裡有 4 天客滿的車站才能擴建，車站卡會寫目前幾天。"
+                ),
+                Line(
                     english: "Taiwan Railway trains on the real map run to the real train-by-train timetable.",
                     chinese: "實景地圖的台鐵列車，照真實的逐班時刻表行駛。"
                 ),
@@ -67,6 +87,22 @@ public enum WhatsNew {
                 ),
             ],
             fixes: [
+                Line(
+                    english: "Tracing a long line on a big network previews much faster.",
+                    chinese: "路網大的時候，長距離描線的預覽快了很多。"
+                ),
+                Line(
+                    english: "On a large network, the pause at 6 a.m. while the day's runs are planned is much shorter.",
+                    chinese: "路網大的時候，每天早上 6 點排班時的停頓短了很多。"
+                ),
+                Line(
+                    english: "The total in the middle of the economy pie chart now fits inside the ring.",
+                    chinese: "經營圓餅圖中間的總金額完整放進圓環裡，不再被切掉。"
+                ),
+                Line(
+                    english: "Tapping in the mountains on the 3D map lands where your finger is, and hidden track behind a hill is not picked.",
+                    chinese: "在 3D 地圖的山區點選，會落在手指下的地方，山後看不到的軌道不會被點到。"
+                ),
                 Line(
                     english: "Tracing from the end of a track shows one preview line, no longer two on top of each other.",
                     chinese: "從軌道端點描線時，預覽只畫一條，不再重疊。"

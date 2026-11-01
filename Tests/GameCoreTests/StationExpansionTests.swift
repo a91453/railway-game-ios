@@ -28,6 +28,10 @@ final class StationExpansionTests: XCTestCase {
         return world
     }
 
+    /// The minutes of the days a station must be full on before it can
+    /// expand (decision 534): the corridor's A fills every day.
+    private let fullDays = 1_440 * Int(StationExpansion.fullDaysNeeded)
+
     private func roundTrip(_ world: GameWorld) throws -> GameWorld {
         try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
     }
@@ -60,7 +64,7 @@ final class StationExpansionTests: XCTestCase {
         // No day behind it yet.
         XCTAssertThrowsGameError(try world.expandStation(at: a),
             .stationTooQuietToExpand(needed: StationExpansion.concourse.threshold))
-        try world.advance(ticks: 1_440)
+        try world.advance(ticks: fullDays)
         XCTAssertGreaterThanOrEqual(world.stationExpansionPeople(of: a), StationExpansion.hall.threshold)
         let before = world.economy.balance
         try world.expandStation(at: a)
@@ -89,45 +93,97 @@ final class StationExpansionTests: XCTestCase {
         XCTAssertEqual(world, before)
 
         world = try makeCorridor()
-        try world.advance(ticks: 1_440)
+        try world.advance(ticks: fullDays)
         try world.economy.spend(world.economy.balance - StationExpansion.concourse.price + Money(100))
         before = world
         XCTAssertThrowsError(try world.expandStation(at: a))
         XCTAssertEqual(world, before)
     }
 
-    /// A busy station that turned no one away for want of room yesterday
-    /// or today stays as it is: more room would not carry more. A full
-    /// day counts for the day after too, not longer; a save keeps it and
-    /// rejects one no count backs or still to come.
-    func testOnlyAStationFullLatelyExpands() throws {
+    /// A busy station must have turned passengers away for want of room
+    /// on 4 of the last 7 days, today included (decision 534; decision 506
+    /// took one day, and a new game's one peak opened it). A save keeps
+    /// the full days and rejects ones no count backs, still to come, or
+    /// not ending on the last full day.
+    func testOnlyAStationOftenFullLatelyExpands() throws {
+        XCTAssertEqual(StationExpansion.fullDaysWindow, 7)
+        XCTAssertEqual(StationExpansion.fullDaysNeeded, 4)
         var world = try makeCorridor()
         try world.advance(ticks: 1_440)
         let index = try XCTUnwrap(world.passengers.firstIndex { $0.station == a })
-        let today = world.clock.now.seconds / 86_400
+        var today = world.clock.now.seconds / 86_400
         XCTAssertEqual(world.passengers[index].lastFullDay, today - 1, "A was full yesterday morning (no one comes at midnight)")
-        XCTAssertTrue(world.stationWasFullLately(a))
-        XCTAssertEqual(try roundTrip(world), world, "a save keeps the full day")
+        XCTAssertEqual(world.passengers[index].fullDays, 1)
+        XCTAssertEqual(world.stationFullDays(of: a), 1)
+        XCTAssertFalse(world.stationWasFullLately(a), "one full day is a peak, not often")
+        XCTAssertThrowsGameError(try world.expandStation(at: a), .stationNotFullToExpand)
 
-        world.passengers[index].lastFullDay = today - 2
-        XCTAssertFalse(world.stationWasFullLately(a))
+        try world.advance(ticks: 1_440 * 3)
+        today = world.clock.now.seconds / 86_400
+        XCTAssertEqual(world.passengers[index].fullDays, 0b1111, "four days in a row")
+        XCTAssertEqual(world.stationFullDays(of: a), 4)
+        XCTAssertTrue(world.stationWasFullLately(a))
+        XCTAssertEqual(try roundTrip(world), world, "a save keeps the full days")
+
+        // Full on days 0, 1 and 3, not 2: three of the last seven.
+        world.passengers[index].fullDays = 0b1011
+        XCTAssertEqual(world.stationFullDays(of: a), 3)
         let before = world
         XCTAssertThrowsGameError(try world.expandStation(at: a), .stationNotFullToExpand)
         XCTAssertEqual(world, before)
-        world.passengers[index].lastFullDay = nil
-        XCTAssertThrowsGameError(try world.expandStation(at: a), .stationNotFullToExpand)
+        // Four, but the first falls out of the seven days once it is old.
+        world.passengers[index].fullDays = 0b1111
+        world.passengers[index].lastFullDay = today - 3
+        XCTAssertEqual(world.stationFullDays(of: a), 4, "days − 6 to − 3 are within the seven")
+        world.passengers[index].lastFullDay = today - 4
+        XCTAssertEqual(world.stationFullDays(of: a), 3, "day − 7 is not")
         world.passengers[index].lastFullDay = today - 1
-        XCTAssertTrue(world.stationWasFullLately(a))
         try world.expandStation(at: a)
         XCTAssertEqual(world.station(id: a)?.expansion, .concourse)
 
         world.passengers[index].lastFullDay = today + 1
         XCTAssertThrowsError(try roundTrip(world), "a full day still to come")
+        world.passengers[index].lastFullDay = today - 1
+        world.passengers[index].fullDays = 0b1110
+        XCTAssertThrowsError(try roundTrip(world), "full days not ending on the last one")
+        world.passengers[index].fullDays = 1 << StationPassengers.fullDaysKept | 1
+        XCTAssertThrowsError(try roundTrip(world), "more days than are kept")
         var empty = try makeCorridor()
         try empty.advance(ticks: 1)
         let quiet = try XCTUnwrap(empty.passengers.firstIndex { $0.overflowed == 0 })
         empty.passengers[quiet].lastFullDay = 0
+        empty.passengers[quiet].fullDays = 1
         XCTAssertThrowsError(try roundTrip(empty), "a full day with no one turned away")
+        empty.passengers[quiet].lastFullDay = nil
+        empty.passengers[quiet].fullDays = 0b11
+        XCTAssertThrowsError(try roundTrip(empty), "full days with no last full day")
+    }
+
+    /// The days kept move with the last full day: a gap shifts them, a gap
+    /// longer than the days kept forgets them, and the same day is counted
+    /// once (decision 534).
+    func testTheFullDaysMoveForward() {
+        var record = StationPassengers(station: a)
+        XCTAssertEqual(record.fullDayCount(endingOn: 10, window: 7), 0)
+        record.markFull(on: 10)
+        record.markFull(on: 10)
+        XCTAssertEqual(record.fullDays, 1)
+        record.markFull(on: 12)
+        XCTAssertEqual(record.fullDays, 0b101)
+        XCTAssertEqual(record.lastFullDay, 12)
+        XCTAssertEqual(record.fullDayCount(endingOn: 12, window: 7), 2)
+        XCTAssertEqual(record.fullDayCount(endingOn: 16, window: 7), 2, "day 10 is the seventh day ending on 16")
+        XCTAssertEqual(record.fullDayCount(endingOn: 17, window: 7), 1)
+        XCTAssertEqual(record.fullDayCount(endingOn: 11, window: 7), 0, "asked before its last full day, it counts none")
+        record.markFull(on: 9)
+        XCTAssertEqual(record.lastFullDay, 12, "days only move forward")
+        record.markFull(on: 18)
+        XCTAssertEqual(record.fullDays, 0b100_0001, "day 10 falls past the eight days kept, day 12 does not")
+        XCTAssertEqual(record.fullDayCount(endingOn: 18, window: 7), 2)
+        record.markFull(on: 19)
+        XCTAssertEqual(record.fullDays, 0b1000_0011)
+        record.markFull(on: 40)
+        XCTAssertEqual(record.fullDays, 1, "a gap of more than eight days forgets the rest")
     }
 
     /// A depot is never expanded, and an expanded station cannot become
@@ -137,7 +193,7 @@ final class StationExpansionTests: XCTestCase {
         try world.setStationDepot(d, to: true)
         XCTAssertNil(world.nextStationExpansion(of: d))
         XCTAssertThrowsGameError(try world.expandStation(at: d), .stationIsDepot(d))
-        try world.advance(ticks: 1_440)
+        try world.advance(ticks: fullDays)
         try world.expandStation(at: a)
         XCTAssertFalse(records(world, of: a).isEmpty)
         try world.removeLine(try XCTUnwrap(world.lines.first?.id))
@@ -155,7 +211,7 @@ final class StationExpansionTests: XCTestCase {
         var world = try makeCorridor()
         // To the morning peak of day 1, when an hour brings more than the
         // largest station holds.
-        try world.advance(ticks: 1_440 + 8 * 60)
+        try world.advance(ticks: fullDays + 8 * 60)
         XCTAssertEqual(world.passengerLedger(of: a).waiting, 4_000)
         try world.expandStation(at: a)
         try world.advance(ticks: 60)
@@ -183,7 +239,7 @@ final class StationExpansionTests: XCTestCase {
     /// is, or that more wait than the station holds, does not load.
     func testASaveHoldsTheStationToItsRoom() throws {
         var world = try makeCorridor()
-        try world.advance(ticks: 1_440 + 8 * 60)
+        try world.advance(ticks: fullDays + 8 * 60)
         try world.expandStation(at: a)
         try world.advance(ticks: 60)
         let data = try JSONEncoder().encode(SavedGame(world: world))
@@ -201,11 +257,21 @@ final class StationExpansionTests: XCTestCase {
     func testVersionSeventyEightKeepsTheExpansion() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v78-station-expansion.json")
+        // Made under decision 506's rule, one full day: decision 534 asks
+        // for more, so the steps are taken as the command takes them.
         var made = try makeCorridor()
         try made.advance(ticks: 1_440 + 8 * 60)
-        try made.expandStation(at: a)
-        try made.expandStation(at: a)
+        let index = try XCTUnwrap(made.stations.firstIndex { $0.id == a })
+        for step in StationExpansion.allCases {
+            try made.economy.spend(step.price)
+            made.setStationExpansion(step, at: index)
+            made.acquireAsset(.stationExpansion, owner: a.rawValue, cost: step.price)
+        }
         try made.advance(ticks: 60)
+        // A save before decision 534 knows only the last full day.
+        for record in made.passengers.indices where made.passengers[record].lastFullDay != nil {
+            made.passengers[record].fullDays = 1
+        }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         if ProcessInfo.processInfo.environment["STATION_EXPANSION_SAVE_NEW"] != nil {

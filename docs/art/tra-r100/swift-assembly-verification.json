@@ -1,0 +1,204 @@
+{
+  "arithmetic" : "Float32 multiplication then Float32 addition; native Z-up, yaw 0/180 degrees only; no scale.",
+  "assemblies" : [
+    {
+      "all_vertex_fields_fnv64" : "c8853471edfb870b",
+      "assembly_payload" : "models/breezy-blue-five-coach-role-study-unverified.triangles.bin",
+      "configured_placements_equal" : true,
+      "embedded_unit_bytes_equal" : true,
+      "faults" : [
+        {
+          "configuration_rejected" : true,
+          "fault" : "wrong_order",
+          "mutated_payload_bytes" : 4150328,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "configuration_rejected" : true,
+          "fault" : "wrong_direction",
+          "mutated_payload_bytes" : 4150328,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "configuration_rejected" : true,
+          "fault" : "double_reversal",
+          "mutated_payload_bytes" : 4150328,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "configuration_rejected" : true,
+          "fault" : "wrong_translation",
+          "mutated_payload_bytes" : 4150328,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "fault" : "different_embedded_unit_bytes",
+          "payload_rejected" : true,
+          "reference_bytes_rejected" : true,
+          "state" : "VERIFIED"
+        }
+      ],
+      "id" : "breezy-blue-five-coach-role-study-unverified",
+      "maximum" : [
+        65.8,
+        1.475,
+        3.963
+      ],
+      "minimum" : [
+        -65.8,
+        -1.475,
+        0
+      ],
+      "native" : "models/breezy-blue-five-coach-role-study-unverified.m3dscene.json",
+      "native_sha256" : "9567527568e54e6e7ceefbe3a8122907bcbe1b25336632f05bbfedd379bc245d",
+      "payload_bytes_equal" : true,
+      "payload_sha256" : "f11d0ac0a77fa9b2a7abb0f1988ca6a592cffc4c7753d5af841e8e15a181a203",
+      "placements" : 7,
+      "state" : "VERIFIED",
+      "triangles" : 79814,
+      "units" : [
+        {
+          "bytes" : 690532,
+          "id" : "tra-breezy-blue-coach-exhibition",
+          "native" : "models/tra-breezy-blue-coach-exhibition.m3dmodel",
+          "sha256" : "cea340b9e57754a98b7d9da6a58d6b2d7497c42f651e9addc5b0d55a393617b5"
+        },
+        {
+          "bytes" : 690528,
+          "id" : "tra-breezy-blue-coach-long-seat",
+          "native" : "models/tra-breezy-blue-coach-long-seat.m3dmodel",
+          "sha256" : "a6e24a4ca96810d52b4b9bb572d95c5ef7a456e1aa434a5f85b60841f9aa406b"
+        },
+        {
+          "bytes" : 686156,
+          "id" : "tra-breezy-blue-coach-mixed",
+          "native" : "models/tra-breezy-blue-coach-mixed.m3dmodel",
+          "sha256" : "437d69f723ff6ea7e9d1273bd196b803d431ef4f43a587f1161f575901ce2685"
+        },
+        {
+          "bytes" : 636244,
+          "id" : "tra-breezy-blue-coach-rotating-seat",
+          "native" : "models/tra-breezy-blue-coach-rotating-seat.m3dmodel",
+          "sha256" : "fcc1f82f1197a2ea43105c9ac91d0deb2f73f72c33154096bd7846e538012c9a"
+        },
+        {
+          "bytes" : 380616,
+          "id" : "tra-r100-r123-breezy-blue-locomotive",
+          "native" : "models/tra-r100-r123-breezy-blue-locomotive.m3dmodel",
+          "sha256" : "2bd1ddbfe0dd97c23453b3ea6412beeb8eb6f22900a68c671375c5fa8003a149"
+        }
+      ],
+      "vertices" : 239442
+    },
+    {
+      "all_vertex_fields_fnv64" : "59468903cd55e10e",
+      "assembly_payload" : "models/breezy-blue-five-coach-role-study-unverified-far.triangles.bin",
+      "configured_placements_equal" : true,
+      "embedded_unit_bytes_equal" : true,
+      "faults" : [
+        {
+          "configuration_rejected" : true,
+          "fault" : "wrong_order",
+          "mutated_payload_bytes" : 1746056,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "configuration_rejected" : true,
+          "fault" : "wrong_direction",
+          "mutated_payload_bytes" : 1746056,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "configuration_rejected" : true,
+          "fault" : "double_reversal",
+          "mutated_payload_bytes" : 1746056,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "configuration_rejected" : true,
+          "fault" : "wrong_translation",
+          "mutated_payload_bytes" : 1746056,
+          "payload_rejected" : true,
+          "state" : "VERIFIED"
+        },
+        {
+          "fault" : "different_embedded_unit_bytes",
+          "payload_rejected" : true,
+          "reference_bytes_rejected" : true,
+          "state" : "VERIFIED"
+        }
+      ],
+      "id" : "breezy-blue-five-coach-role-study-unverified-far",
+      "maximum" : [
+        65.8,
+        1.475,
+        3.963
+      ],
+      "minimum" : [
+        -65.8,
+        -1.475,
+        0
+      ],
+      "native" : "models/breezy-blue-five-coach-role-study-unverified-far.m3dscene.json",
+      "native_sha256" : "f5872ccfcfde3b3432af6e98d92851f0351055bdcb187bb652f5f9b9581eaaec",
+      "payload_bytes_equal" : true,
+      "payload_sha256" : "5a1a2b99b8649db6111364dc6d8e4fd9cb6bf280093497f5f6545c38bfe38958",
+      "placements" : 7,
+      "state" : "VERIFIED",
+      "triangles" : 33578,
+      "units" : [
+        {
+          "bytes" : 279320,
+          "id" : "tra-breezy-blue-coach-exhibition-far",
+          "native" : "models/tra-breezy-blue-coach-exhibition-far.m3dmodel",
+          "sha256" : "6879175a25587699b37b2ebd3e05e3972811770278eaec72881e86d144065c46"
+        },
+        {
+          "bytes" : 279316,
+          "id" : "tra-breezy-blue-coach-long-seat-far",
+          "native" : "models/tra-breezy-blue-coach-long-seat-far.m3dmodel",
+          "sha256" : "84f4ea80c5fad73a0264f4b11a31d0f4fe0a4a3b4388c9c0428ac9d79c5e4418"
+        },
+        {
+          "bytes" : 284928,
+          "id" : "tra-breezy-blue-coach-mixed-far",
+          "native" : "models/tra-breezy-blue-coach-mixed-far.m3dmodel",
+          "sha256" : "1e5c8ba3d16dd64af207f414224c1a253d5c6c52182c961a31a399e58c1355d0"
+        },
+        {
+          "bytes" : 257480,
+          "id" : "tra-breezy-blue-coach-rotating-seat-far",
+          "native" : "models/tra-breezy-blue-coach-rotating-seat-far.m3dmodel",
+          "sha256" : "54d7e48e071f148e9aa26f77f4ebcd321b399e697612eec9aa5e0c589dd5b75a"
+        },
+        {
+          "bytes" : 180316,
+          "id" : "tra-r100-r123-breezy-blue-locomotive-far",
+          "native" : "models/tra-r100-r123-breezy-blue-locomotive-far.m3dmodel",
+          "sha256" : "a55372b2e3b1b896e840a3bd6a28285bdc37310dc7ac3b0ba2cf04222cd884a7"
+        }
+      ],
+      "vertices" : 100734
+    }
+  ],
+  "configuration_sha256" : "12a0fd4a42c9e1fe888aa4c355cd69da25f2c7a330832eef15b52776d3708e97",
+  "faults_tested" : [
+    "different_embedded_unit_bytes",
+    "double_reversal",
+    "wrong_direction",
+    "wrong_order",
+    "wrong_translation"
+  ],
+  "implementation" : "Independent Foundation-only Swift; no JS or GamePresentation imports.",
+  "limits" : "Static configuration/native/payload verification only; does not establish real-world formation evidence, coupler compatibility, runtime selection or device validation.",
+  "manifest_sha256" : "be2d5743d40f523f955edd43185f56fb1da3bbb6af436af20e4465a77b845b1f",
+  "state" : "VERIFIED",
+  "stored_fields" : "Every triangle flag and every corner Float32 XYZ / UInt32 RGBA compared byte-for-byte; derived Float32 normals and native material flags included in all-vertex FNV64."
+}
