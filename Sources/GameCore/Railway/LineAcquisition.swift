@@ -31,7 +31,7 @@ public struct LineAcquisition: Hashable, Sendable {
     /// Decision 528: the track a railway's purchase laid, by edge, which
     /// stays as the line's ``LeftTrack`` when the line is removed; `nil`
     /// for a bus route's and a purchase saved before version 79.
-    public let track: [TrackEdgeID]?
+    public private(set) var track: [TrackEdgeID]?
 
     /// What kind of railway a line bought is, which sets what each of its
     /// riders costs (decision 400, 10j-3).
@@ -108,6 +108,14 @@ public struct LineAcquisition: Hashable, Sendable {
         self.day = day
         self.value = value
         track = nil
+    }
+
+    /// It with its track changed by `change` (decision 528: an edge
+    /// of it split).
+    func splitting(track change: ([TrackEdgeID]) -> [TrackEdgeID]) -> LineAcquisition {
+        var changed = self
+        changed.track = track.map(change)
+        return changed
     }
 
     var isValid: Bool {
@@ -256,6 +264,22 @@ extension GameWorld {
         }
     }
 
+    /// Decision 528: edge `id` split into `first` and `second`
+    /// (``splitTrackEdge(_:at:)``), each purchase's track and each track
+    /// left holding it holds both parts in its place, so what a line laid
+    /// is still what buying it again takes up.
+    mutating func splitAcquiredTrack(_ id: TrackEdgeID, into first: TrackEdgeID, _ second: TrackEdgeID) {
+        func split(_ edges: [TrackEdgeID]) -> [TrackEdgeID] {
+            edges.flatMap { $0 == id ? [first, second] : [$0] }
+        }
+        for index in acquisitions.indices where acquisitions[index].track?.contains(id) == true {
+            acquisitions[index] = acquisitions[index].splitting(track: split)
+        }
+        for index in leftTrack.indices where leftTrack[index].edges.contains(id) {
+            leftTrack[index] = LeftTrack(realLine: leftTrack[index].realLine, edges: split(leftTrack[index].edges))
+        }
+    }
+
     /// Decision 528: the track real line `realLine` left when it was
     /// removed, still standing; none if it left none.
     public func trackLeft(by realLine: String) -> [TrackEdgeID] {
@@ -280,7 +304,7 @@ extension GameWorld {
             return "Each line or bus route bought is well formed, a number handed out, and bought once."
         }
         let edgesHandedOut = network.nextEdgeNumber
-        func handedOut(_ edges: [TrackEdgeID]) -> Bool { edges.allSatisfy { ($0.networkNumber ?? 0) < edgesHandedOut } }
+        func handedOut(_ edges: [TrackEdgeID]) -> Bool { edges.allSatisfy { (1..<edgesHandedOut).contains($0.networkNumber ?? 0) } }
         guard acquisitions.allSatisfy({ handedOut($0.track ?? []) }),
               leftTrack.allSatisfy({ left in left.isValid && handedOut(left.edges) && !acquisitions.contains(where: { $0.realLine == left.realLine }) }),
               Set(leftTrack.map(\.realLine)).count == leftTrack.count else {

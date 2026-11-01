@@ -238,6 +238,44 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(world.trackLeft(by: pingxi), [])
     }
 
+    /// #1636 second review, P3: an edge of the track a purchase laid, or
+    /// a removed line left, split in two (as the player joins a branch
+    /// to it) is still that track, both parts in its place, so buying
+    /// the line again takes them up.
+    func testASplitEdgeIsStillTheTrackLaidOrLeft() throws {
+        var world = try world(balance: 100_000_000)
+        // A long siding no line runs over, laid with the line.
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 3_584))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 7_680, y: 3_584))
+        let siding = try world.buildTrackEdge(from: west, to: east)
+        let laid = world.network.edges.map(\.id)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: laid)
+        /// Splits `edge` at its middle, returning its parts in order.
+        func split(_ edge: TrackEdgeID) throws -> [TrackEdgeID] {
+            let before = Set(world.network.edges.map(\.id))
+            try world.splitTrackEdge(edge, at: try XCTUnwrap(world.network.edge(edge)?.length) / 2)
+            return Set(world.network.edges.map(\.id)).subtracting(before).sorted { ($0.networkNumber ?? 0) < ($1.networkNumber ?? 0) }
+        }
+        func replacing(_ edges: [TrackEdgeID], _ edge: TrackEdgeID, with parts: [TrackEdgeID]) -> [TrackEdgeID] {
+            edges.flatMap { $0 == edge ? parts : [$0] }
+        }
+        // While the line runs.
+        let halves = try split(siding)
+        XCTAssertEqual(halves.count, 2)
+        var expected = replacing(laid, siding, with: halves)
+        XCTAssertEqual(world.acquisition(of: pingxi)?.track, expected)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        // Removed, and split again.
+        try world.removeLine(main)
+        XCTAssertEqual(world.trackLeft(by: pingxi), expected)
+        let quarters = try split(halves[0])
+        XCTAssertEqual(quarters.count, 2)
+        expected = replacing(expected, halves[0], with: quarters)
+        XCTAssertEqual(world.leftTrack, [LeftTrack(realLine: pingxi, edges: expected)])
+        XCTAssertEqual(world.trackLeft(by: pingxi), expected)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     /// A purchase naming track that is not there, or an edge twice, is
     /// refused and changes nothing.
     func testAPurchaseWithTrackNotThereIsRefused() throws {
@@ -273,6 +311,8 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": []]) { $1 }] })
         XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [(laid[0].networkNumber ?? -1), (laid[0].networkNumber ?? -1)]]) { $1 }] })
         XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [9_999]]) { $1 }] }, "an edge not handed out")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [0]]) { $1 }] }, "edges are numbered from 1")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [-3]]) { $1 }] }, "edges are numbered from 1")
         XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["realLine": ""]) { $1 }] })
     }
 

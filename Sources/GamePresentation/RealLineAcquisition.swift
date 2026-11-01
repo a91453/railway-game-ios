@@ -650,23 +650,71 @@ extension RealLineLaying {
         // before, left its track, laid again on the world without that
         // track, which is taken up first. A first purchase, or one nothing
         // is in the way of, takes nothing up.
-        guard laid.offer.acquisition == nil, let clearing = RealLineClearing.clearing(in: world, for: line) else { return laid.offer }
+        guard laid.offer.acquisition == nil, let left = RealLineClearing.left(in: world, for: line),
+              var clearing = RealLineClearing.clearing(in: world, taking: left.own + left.shared, shared: !left.shared.isEmpty)
+        else { return laid.offer }
         func refusal(_ error: GameError) -> RealLineOffer {
             RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(
                 "The track the line left cannot be taken up: ", "這條線之前留下的軌道拆不掉："
             ) + error.playerMessage(in: language))
         }
-        var cleared = world.pricingCopy()
-        do throws(GameError) {
-            try clearing.apply(to: &cleared)
-        } catch {
-            return refusal(error)
+        func laying(taking clearing: RealLineClearing) -> (offer: RealLineOffer, cleared: GameWorld?) {
+            var cleared = world.pricingCopy()
+            do throws(GameError) {
+                try clearing.apply(to: &cleared)
+            } catch {
+                return (refusal(error), nil)
+            }
+            let again = RealLineLaying(
+                world: cleared, railways: railways, traces: traces, language: language, population: population, places: places, water: water,
+                coverage: coverage, heights: heights
+            ).laidOffer(for: line)
+            return (again.offer, cleared)
         }
-        let again = RealLineLaying(
-            world: cleared, railways: railways, traces: traces, language: language, population: population, places: places, water: water,
-            coverage: coverage, heights: heights
-        ).laidOffer(for: line)
-        guard let acquisition = again.offer.acquisition else { return again.offer }
+        let again = laying(taking: clearing)
+        guard var acquisition = again.offer.acquisition, let cleared = again.cleared else { return again.offer }
+        // #1636 second review, P2: the track the line sharing its first
+        // stations left is taken up only where the line laid without it
+        // comes onto it (or close beside it); the rest (the Green
+        // Mountain Line's way to Kanding, for the Blue Coast Line) stays.
+        // A piece missed, the purchase built on the world without the
+        // rest names it, and it is taken up too.
+        if !left.shared.isEmpty {
+            var built = cleared
+            let before = Set(built.network.edges.map(\.id))
+            var taking: [TrackEdgeID] = []
+            if (try? build(acquisition, in: &built, recording: false)) != nil {
+                taking = RealLineClearing.overlapping(left.shared, in: world, laid: built, besides: before)
+            } else {
+                taking = left.shared
+            }
+            // The least that lets the purchase be built; the whole of it
+            // where something else refuses the purchase.
+            var narrowed = clearing
+            narrowing: for _ in 0...left.shared.count {
+                let tried = RealLineClearing.clearing(in: world, taking: left.own + taking, shared: !taking.isEmpty)
+                var probe = world.pricingCopy()
+                do throws(GameError) {
+                    try tried?.apply(to: &probe)
+                    _ = try build(acquisition, in: &probe, recording: false)
+                    if let tried { narrowed = tried }
+                    break narrowing
+                } catch {
+                    let blocking: TrackEdgeID? = switch error {
+                    case .trackConflict(let edge), .trackTooClose(let edge): edge
+                    default: nil
+                    }
+                    guard let blocking, left.shared.contains(blocking), !taking.contains(blocking) else { break narrowing }
+                    taking.append(blocking)
+                }
+            }
+            // Laid again on the world keeping the rest; refused there
+            // after all, the whole is taken up as before.
+            if narrowed != clearing, let narrowedAcquisition = laying(taking: narrowed).offer.acquisition {
+                acquisition = narrowedAcquisition
+                clearing = narrowed
+            }
+        }
         let bought = acquisition.clearing(clearing)
         var probe = world.pricingCopy()
         do throws(GameError) {

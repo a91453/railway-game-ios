@@ -2464,7 +2464,7 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 
 **ROADFIX-P3（session_01YGNNupKN2twaXYyb91H3Cp，2026-10-31，`roadfix-p3`）修了上面四項**：P3-3、P3-4、P3-7 照建議修；P3-5 只做了刪線時的提醒（買來的線刪掉後不能再買回來）。真的要能買回，得改 GameCore 的 `recordLineAcquisition`（同一條真實路線只能買一次），並處理留下的軌道；目前沒有派。
 
-**BUYBACK（session_01YGNNuqHsWbGjPjrKvrzJsn，2026-10-31，`buyback-real-line`）做了 P3-5 的完整修正**（[決策 528](decisions/528.md)）：刪線時收購紀錄一起拿掉、舊存檔讀檔時丟掉；GameCore 記住每次收購鋪的邊（存檔 79），刪線後留一份，再買時只拆那些邊、任何路線經過的不拆，卡片說要拆幾段。藍海線在刪掉綠山線後可整條買。79 以前存檔裡刪掉的線沒有記軌道，舊軌道擋路時照舊拒絕。實機 UNVERIFIED。
+**BUYBACK（session_01YGNNuqHsWbGjPjrKvrzJsn，2026-10-31，`buyback-real-line`）做了 P3-5 的完整修正**（[決策 528](decisions/528.md)）：刪線時收購紀錄一起拿掉、舊存檔讀檔時丟掉；GameCore 記住每次收購鋪的邊（存檔 79），刪線後留一份，再買時只拆那些邊、任何路線經過的不拆，卡片說要拆幾段。藍海線在刪掉綠山線後可整條買。79 以前存檔裡刪掉的線沒有記軌道，舊軌道擋路時照舊拒絕。實機 UNVERIFIED。BUYBACK-2（session_01YGNNukrq1bjpkYYFjG86yA，2026-11-01）依第二次審查補：自排時刻表的列車用的軌道也不拆、另一條線留下的只拆實際碰到的、切開的邊紀錄跟著走、卡片寫月台數；剩下兩項 P3 在決策 528 的「下一步」。
 
 **接手點（BUYBACK 已壓縮 1 次，做完這個 PR 就停）**：#1636 已按第一次獨立審查（P1 A–D、P2、P3）改完，head 見 PR。還差兩件事：遊戲規劃安排的第二次獨立審查，以及 102.1 發版後合併。第二次審查若要修改，由新的實作 session 接手：從 `buyback-real-line` 繼續，先讀[決策 528](decisions/528.md)。存檔 79 已用掉；golden schema 76 已釋出。
 
