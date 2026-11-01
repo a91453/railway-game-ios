@@ -35,8 +35,9 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // 1.4 MB a copy). Decision 529 put #1589's R200 in the R200CK
         // sets, near and far, in place of the scene kit's (the same models,
         // 46,416 vertices more, 1.9 MB a copy).
-        XCTAssertEqual(pack.models.count, 663)
-        XCTAssertEqual(vertices, 4_357_932)
+        XCTAssertEqual(pack.models.count, 664)
+        // R100 native near/far heads and actual cab-window light payload: +25,356 vertices.
+        XCTAssertEqual(vertices, 4_383_288)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

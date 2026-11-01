@@ -3159,3 +3159,7 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 > Codex R200 第二輪（公開draft #1589 ↔ 素材draft #37）：依使用者「那你改」加寬／微弧前罩與風擋、弧肩、開放台車框、單一凹鑄件／四對彎管、分層機艙屋頂與格柵；真正未接受前稿65464b23，保留同尺度比較。完整資料及producer／四態見 [R200交接](art/tra-r200/README.md)，最新完整包revision-2，第一輪只留PNG／README／來源。只有studies，其他車／營運／standard不變；正式端號與反側屋頂BOM等來源缺口、裝置／營運／使用者接受UNVERIFIED，不合併／auto-merge／TestFlight。
 
 > R200第二輪收尾：真正producer `9c87ea5c94e23b5810ff4a48a9455bbc6fa03732`，最新main基準`2ebe025a`。近12702／遠5098三角、35核心交付檔與66原始模型／檢查圖檔獨立checkout逐bytes一致。最新10 Swift6.4 WAE測試通過，845既有模型payload及全頂點欄位保持（含2個未入上游鎖的場景模型）；standard663／172.5MB，R200常駐增量0。最新main與本分支同33既有全量失敗／34鎖差異，不改gate／他車鎖。外觀接受／營運／裝置與受管理政策阻擋的file://均UNVERIFIED；兩draft最新head CI及衝突見PR留言。
+
+### 2026-11-01 Codex R100／藍皮解憂續作
+
+[R100來源、契約與交接](art/tra-r100/README.md)：獨立橘R122年代版／藍R123 2023-01-22、四種官方客車角色近遠。2026現役原色尚無證據；2025年底全退是計畫，2026藍皮實拍仍有R100。2026-05-22雙機五客的角色順序可讀，客車實號／方向與R122/R129設備改造未齊；整列只可標role-layout study，不能稱可靠實號完整編組交付。BLUE營運保持代用，缺接點明列，外觀接受／裝置UNVERIFIED。橘R100CK針對接點、原生尺度與燈契約另驗，不更改其他柴油映射。工作登記#1579 comment6551910190。最新main c4592d78已合R200IN，本輪保護其新營運payload，上游R200增量與本輪分開。真正producer、獨立重建、847舊runtime保護及兩庫draft／CI以自有verification與PR最新head為準；尚未通過項目不能以初版測試替代。不推main／merge／auto-merge／TestFlight。
