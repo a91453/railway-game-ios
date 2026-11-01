@@ -69,45 +69,64 @@ final class LiveOvertakeReportTests: XCTestCase {
         ))
     }
 
-    /// The TRA demo as the game opens it (07:00), a day to 07:00 the next
-    /// morning, with traffic control on (the demo has it off, and with it
-    /// off no wait is ever planned).
+    /// The TRA demo as the game opens it (07:00), run until traffic
+    /// control can be turned on (the demo has it off, and no two sets may
+    /// share track when it is turned on; with it off no wait is ever
+    /// planned), then a day with it on.
     func testTheTRADemo() throws {
         try skipUnlessAsked()
         var world = try TRADemoTests.opened.get()
-        try world.setTrafficControl(true)
+        var minutes = 0
+        while (try? world.setTrafficControl(true)) == nil {
+            try world.advance(ticks: 1)
+            minutes += 1
+            guard minutes < 24 * 60 else { return XCTFail("traffic control never turned on") }
+        }
+        say("TRA demo: traffic control on at \(world.clock.now.minute / 60 % 24):\(String(format: "%02d", world.clock.now.minute % 60))")
         try measure("TRA demo, traffic control on", &world, minutes: 24 * 60)
     }
 
-    /// A single track 8 km long, W – M – E, M with a loop beside the main
-    /// track: a stopping train (W, M, E) and an express (W, E) out of W
-    /// every hour from 06:00 to 21:00, the express 6 minutes behind, and
-    /// each back from E half an hour later. The stopping train's
-    /// timetable allows it a minute less than it needs each way, so it
-    /// runs late and the express catches it up.
+    /// A single track about 8 km long, W – M – E, M with a loop beside
+    /// the main track, W and E each with a bay beside their main platform:
+    /// a stopping train (W, M, E) and an express (W, E) out of W every
+    /// hour from 06:00 to 21:00, the express 6 minutes behind, and each
+    /// back from E half an hour later. The stopping train's timetable
+    /// allows it less time than it needs, so it runs late and the express
+    /// catches it up.
     func testASingleTrackWithAPassingLoop() throws {
         try skipUnlessAsked()
         let scale: Int64 = 16
         var world = try GameWorld(
-            bounds: WorldBounds(width: 36_864 * scale, height: 12_288 * scale),
+            bounds: WorldBounds(width: 36_864 * scale, height: 10_240 * scale),
             economy: GameEconomy(balance: 100_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)),
             clock: GameClock(speed: .normal)
         )
-        for (x, y): (Int64, Int64) in [(1_024, 4_096), (9_216, 4_096), (25_600, 4_096), (33_792, 4_096), (13_312, 6_144), (21_504, 6_144)] {
+        // Nodes: 1 W main end, 2 W bay end, 3 W turnout, 4 loop start, 5
+        // loop end, 6 E turnout, 7 E main end, 8 E bay end, 9 and 10 the
+        // loop's ends.
+        for (x, y): (Int64, Int64) in [(1_024, 4_096), (1_024, 2_048), (7_168, 4_096), (11_264, 4_096), (25_600, 4_096), (29_696, 4_096),
+                                       (35_840, 4_096), (35_840, 2_048), (15_360, 6_144), (21_504, 6_144)] {
             try world.buildTrackNode(at: WorldCoordinate(x: x * scale, y: y * scale))
         }
-        for edge in 1...3 { try world.buildTrackEdge(from: .node(edge), to: .node(edge + 1)) }
-        try world.buildTrackEdge(from: .node(2), to: .node(5), curve: .cubic(PlanPoint(x: 11_264 * scale, y: 4_096 * scale), PlanPoint(x: 11_264 * scale, y: 6_144 * scale)))
-        try world.buildTrackEdge(from: .node(5), to: .node(6))
-        try world.buildTrackEdge(from: .node(6), to: .node(3), curve: .cubic(PlanPoint(x: 23_552 * scale, y: 6_144 * scale), PlanPoint(x: 23_552 * scale, y: 4_096 * scale)))
+        func point(_ x: Int64, _ y: Int64) -> PlanPoint { PlanPoint(x: x * scale, y: y * scale) }
+        try world.buildTrackEdge(from: .node(1), to: .node(3)) // e1 W main
+        try world.buildTrackEdge(from: .node(2), to: .node(3), curve: .cubic(point(4_096, 2_048), point(4_096, 4_096))) // e2 W bay
+        try world.buildTrackEdge(from: .node(3), to: .node(4)) // e3
+        try world.buildTrackEdge(from: .node(4), to: .node(5)) // e4 M main
+        try world.buildTrackEdge(from: .node(4), to: .node(9), curve: .cubic(point(13_312, 4_096), point(13_312, 6_144))) // e5
+        try world.buildTrackEdge(from: .node(9), to: .node(10)) // e6 M loop
+        try world.buildTrackEdge(from: .node(10), to: .node(5), curve: .cubic(point(23_552, 6_144), point(23_552, 4_096))) // e7
+        try world.buildTrackEdge(from: .node(5), to: .node(6)) // e8
+        try world.buildTrackEdge(from: .node(6), to: .node(7)) // e9 E main
+        try world.buildTrackEdge(from: .node(6), to: .node(8), curve: .cubic(point(32_768, 4_096), point(32_768, 2_048))) // e10 E bay
         var ids: [StationID] = []
-        for (name, x) in [("W", Int64(3_072)), ("M", 17_408), ("E", 31_744)] {
+        for (name, x) in [("W", Int64(4_096)), ("M", 18_432), ("E", 32_768)] {
             ids.append(try world.buildStation(named: name, at: PlanPoint(x: x * scale, y: 8_192 * scale)).id)
         }
-        // W and E with two platforms each, so a set can wait there for its
-        // next run while the other comes in.
-        for (station, edge, start, end): (Int, Int, Int64, Int64) in [(0, 1, 1_024, 3_072), (0, 1, 4_096, 6_144), (1, 2, 7_168, 9_216), (1, 5, 3_072, 5_120), (2, 3, 2_048, 4_096), (2, 3, 5_120, 7_168)] {
-            try world.addTrackPlatform(ids[station], on: .edge(edge), from: start * scale, to: end * scale)
+        func length(_ edge: Int) throws -> Int64 { try XCTUnwrap(world.trackEdge(.edge(edge))?.length) }
+        for (station, edge) in [(0, 1), (0, 2), (1, 4), (1, 6), (2, 9), (2, 10)] {
+            let l = try length(edge)
+            try world.addTrackPlatform(ids[station], on: .edge(edge), from: l / 2 - 1_024 * scale, to: l / 2 + 1_024 * scale)
         }
         func at(_ seconds: Int64, _ dwell: Int64 = 0) -> LineRunTime { LineRunTime(arrival: seconds, departure: seconds + dwell) }
         let local = try world.createLine(named: "Local", stops: ids).id
@@ -122,11 +141,12 @@ final class LiveOvertakeReportTests: XCTestCase {
         }
         try world.setLineRuns(local, to: localRuns)
         try world.setLineRuns(express, to: expressRuns)
-        for (line, offset) in [(local, Int64(2_048)), (express, 5_120)] {
+        for (line, edge) in [(local, 1), (express, 2)] {
             let id = try world.purchaseTrain(named: line == local ? "Local" : "Express").id
+            let offset = try length(edge) / 2 + 1_024 * scale
             try world.setTrainCars(id, to: 2)
-            try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: offset * scale))
-            try world.setTrainContinuation(id, along: [], stoppingAt: offset * scale)
+            try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(edge), direction: .forward), offset: offset))
+            try world.setTrainContinuation(id, along: [], stoppingAt: offset)
             try world.setTrainMovementRate(id, to: 1_024)
             try world.assignTrain(id, to: line)
         }
