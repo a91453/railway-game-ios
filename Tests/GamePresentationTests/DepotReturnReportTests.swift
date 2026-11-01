@@ -52,7 +52,9 @@ final class DepotReturnReportTests: XCTestCase {
     static func bought(_ id: String) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true, rules: simple ? .simple : .realistic)
-        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale")
+        // Decision 535 (continued): the Wenhu Line is not on sale yet; its
+        // row in `RealBranchLine.urbanLines` back, this measures it.
+        guard let line = session.buyableRealLines.first(where: { $0.id == id }) else { throw XCTSkip("\(id) is not on sale") }
         let offer = session.realLineOffer(for: line)
         XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
         return session.world

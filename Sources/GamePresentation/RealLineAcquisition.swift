@@ -84,11 +84,6 @@ public struct RealBranchLine: Hashable, Sendable {
     /// medium-capacity trains are the game's APM.
     var isWenhu: Bool { system == "mrt" && network == "BR" }
 
-    /// Decision 535 (PR W): whether it is sold only with traffic control
-    /// on. The Wenhu Line's trains, two and a half minutes apart, stood
-    /// still from its first morning without it (the decision's next step).
-    var needsTrafficControl: Bool { isWenhu }
-
     /// Whether its price pays for the riders of its first station: not at a
     /// branch line's junction, which is the main line's, nor where a light
     /// rail joins the one bought before, whose riders that paid for.
@@ -112,15 +107,17 @@ public struct RealBranchLine: Hashable, Sendable {
     /// first station. A line is on sale where `metro_runs.json` has its
     /// runs (`tools/real-timetables/extract_metro_runs.py` says why the
     /// others are not). Kaohsiung's Circular Light Rail is not listed:
-    /// the game's runs do not go round a ring yet (decision 535). The
-    /// Wenhu Line is bought with its two depots (decision 535).
+    /// the game's runs do not go round a ring yet (decision 535). Nor is
+    /// the Wenhu Line yet: its runs and its two depots are ready, but its
+    /// trains stood still on its first morning (decision 535 continued,
+    /// next step); its row, `("mrt", "BR", "Wenhu Line", "文湖線", nil,
+    /// .metro, false)`, goes back here once they run.
     static let urbanLines: [(system: String, network: String, english: String, chinese: String, shares: String?, tier: LineAcquisition.Tier, leavesALine: Bool)] = [
         ("ntdlrt", "V", "Danhai LRT Green Mountain Line", "淡海輕軌綠山線", "ntdlrt:VB", .lightRail, false),
         ("ntdlrt", "VB", "Danhai LRT Blue Coast Line", "淡海輕軌藍海線", "ntdlrt:V", .lightRail, false),
         ("ntalrt", "K", "Ankeng LRT", "安坑輕軌", nil, .lightRail, false),
         ("mrt", "R_XBT", "Xinbeitou Branch Line", "新北投支線", nil, .metro, true),
         ("mrt", "G_XBT", "Xiaobitan Branch Line", "小碧潭支線", nil, .metro, true),
-        ("mrt", "BR", "Wenhu Line", "文湖線", nil, .metro, false),
         ("sanying", "LB", "Sanying Line", "三鶯線", nil, .metro, false),
     ]
 
@@ -664,11 +661,6 @@ extension RealLineLaying {
     /// line bought before decision 462 lies on the ground at Zhuzhong
     /// whichever it was.
     func offer(for line: RealBranchLine) -> RealLineOffer {
-        if line.needsTrafficControl, !world.isTrafficControlEnabled {
-            return RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(
-                "Turn on Traffic control to buy this line.", "打開「行車控制」後才能收購這條線。"
-            ))
-        }
         let laid = laidOffer(for: line)
         // Decision 528: refused where the same line, bought and removed
         // before, left its track, laid again on the world without that
@@ -1539,12 +1531,6 @@ extension GameSession {
     public func acquireRealLine(_ offer: RealLineOffer) -> Bool {
         guard let acquisition = offer.acquisition else {
             message = StatusMessage(kind: .failure, text: offer.problem ?? "")
-            return false
-        }
-        // Decision 535 (PR W): an offer laid out before traffic control
-        // was turned off is refused as a new one would be.
-        if offer.line.needsTrafficControl, !world.isTrafficControlEnabled {
-            message = StatusMessage(kind: .failure, text: realLineOffer(for: offer.line).problem ?? "")
             return false
         }
         let name = acquisition.lineName
