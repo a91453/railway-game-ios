@@ -39,7 +39,7 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // the coaches' windows' models, 62,580 vertices more, 2.5 MB a
         // copy, drawn from photographs of the real cars).
         // R100 native heads and new cab window light: +25,356 vertices.
-        // Decision 540: the Blue Train's two R100s and #1671's four coach
+        // Decision 541: the Blue Train's two R100s and #1671's four coach
         // roles, near and far, in place of the R135 set (14 models more with
         // the windows' models, 295,182 vertices more, 11.8 MB a copy).
         XCTAssertEqual(pack.models.count, 688)

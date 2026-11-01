@@ -221,7 +221,7 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
     /// The Blue Train, the Formosa Star and the steam train are not
     /// Chu-Kuang coaches: every model of them as it was on main before
     /// this decision. (Decision 483 made the Ming-Ri #1480's E200CK units;
-    /// decision 540 the Blue Train two R100s and #1671's coaches.)
+    /// decision 541 the Blue Train two R100s and #1671's coaches.)
     func testTheOtherHauledSetsAreAsTheyWere() throws {
         let before: [String: String] = [
             "set-STAR-head": "9847c0f5eb19364", "set-STAR-car": "ad7930168200a9e5", "set-STAR-tail": "17bd7d1f746dd0b5",

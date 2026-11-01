@@ -116,7 +116,7 @@ final class Map3DR100IntegrationTests: XCTestCase {
             XCTAssertEqual(payload(try model(prefix + "-car", in: pack)), payload(Map3DChuKuangPassenger.model(.standard, far: far)))
             XCTAssertEqual(payload(try model(prefix + "-tail", in: pack)), payload(Map3DTrainSet.chuKuangTail(far: far)))
         }
-        // Decision 540: the Blue Train no longer runs the R135 stand-in; its
+        // Decision 541: the Blue Train no longer runs the R135 stand-in; its
         // set is pinned by Map3DBreezyBlueIntegrationTests.
         XCTAssertNotNil(Map3DTrainSet.named("BLUEFar"))
     }

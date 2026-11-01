@@ -117,7 +117,7 @@ public struct Map3DModelPack: Sendable {
     /// models are. Only the tools and the model hashes read them.
     init(studiesBaked baked: Bool) {
         var models: [Model] = []
-        // Independent R100 liveries and the Breezy Blue coaches; decision 540
+        // Independent R100 liveries and the Breezy Blue coaches; decision 541
         // runs the blue ones as the BLUE set (`set-BLUE…`).
         for livery in Map3DR100.Livery.allCases {
             for far in [false, true] { models.append(Map3DR100.model(livery: livery, far: far)) }
@@ -276,7 +276,7 @@ public struct Map3DModelPack: Sendable {
         if carIndex == count - 1 { return index(of: set.tailName) ?? index(of: set.headName) }
         let back = carIndex * 2 >= count
         if set.cycleFromFront, !set.cycle.isEmpty {
-            // Decision 540: the coach roles in order from the front.
+            // Decision 541: the coach roles in order from the front.
             switch set.cycle[(carIndex - 1) % set.cycle.count] {
             case .middle: return index(of: set.middleName)
             case .pantograph: return index(of: set.pantographName)

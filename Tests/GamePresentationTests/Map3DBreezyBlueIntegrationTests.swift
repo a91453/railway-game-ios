@@ -2,7 +2,7 @@ import GameCore
 import XCTest
 @testable import GamePresentation
 
-/// Decision 540: the Blue Train (`BLUE`) runs two blue R100s and #1671's
+/// Decision 541: the Blue Train (`BLUE`) runs two blue R100s and #1671's
 /// restored coaches, near and far, in the role order reported on
 /// 2026-05-22 (`tools/tra-r100/formation.json`).
 final class Map3DBreezyBlueIntegrationTests: XCTestCase {

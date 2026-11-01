@@ -31,7 +31,7 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 435: and ``Slot/fourth``, a fourth car in the cycle (the
     /// EMU900's), its back half's ``Cars/fourthBack``.
     var cycle: [Slot] = []
-    /// Decision 540: ``cycle`` from the car behind the head to the car
+    /// Decision 541: ``cycle`` from the car behind the head to the car
     /// before the tail, in that order and over again, with no back half
     /// (a hauled set's coach roles behind its locomotive).
     var cycleFromFront = false
@@ -137,7 +137,7 @@ public struct Map3DTrainSet: Sendable {
             // Preserve upstream decision 529 R200 binding.
             r200Hauled("R200CK", coach: chuKuang),
             r200Hauled("R200CK", far: true, coach: chuKuang),
-            // Decision 540: the Blue Train as it ran on 2026-05-22, two
+            // Decision 541: the Blue Train as it ran on 2026-05-22, two
             // blue R100s and #1671's restored coaches, near and far.
             breezyBlue(),
             breezyBlue(far: true),
@@ -505,7 +505,7 @@ public struct Map3DTrainSet: Sendable {
                             far: far ? nil : key + "Far", build: legacy.build)
     }
 
-    /// Decision 540: the Blue Train (藍皮解憂號) as reported on 2026-05-22
+    /// Decision 541: the Blue Train (藍皮解憂號) as reported on 2026-05-22
     /// (`tools/tra-r100/formation.json`, `docs/art/tra-r100/blue-sources.json`):
     /// two blue R100s at the front, R122 its short (cab) end forward and
     /// R129 turned round, its short end toward the coaches, drawn as one
@@ -534,7 +534,7 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 540: the Blue Train's last coach, a mixed one, its two red
+    /// Decision 541: the Blue Train's last coach, a mixed one, its two red
     /// marker lenses at the back end (the recipe's own, `0x9D413A`) lit.
     static func breezyBlueTail(far: Bool) -> Map3DModelPack.Model {
         let coach = Map3DBreezyBlueCoaches.model(.mixed, far: far)
