@@ -11,7 +11,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// the 3D map, under the station there; a tap on the tag opens its
     /// details back on the 2D map.
     func testThreeDStationTag() {
-        let app = launch(extra: ["-screenshot-scene", "freight", "-map3D.quality", "saving"])
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-select-station", "1", "-map3D.quality", "saving"])
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 120), "The scene opens")
