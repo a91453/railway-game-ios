@@ -75,3 +75,30 @@ extension GameSession {
         if marks.sights != mapSights { mapSights = marks.sights }
     }
 }
+
+/// Which sights lie on track (``GameSession/sightIsOnTrack(_:within:)``),
+/// for one reach and command (L3-11).
+struct SightsOnTrackMemo {
+    let reach: Int64
+    let commandRevision: Int
+    var onTrack: [PlanPoint: Bool]
+}
+
+extension GameSession {
+    /// Whether track passes within `reach` world units of the sight at
+    /// `point`, where its mark leaves the tap to the track (decision 510).
+    /// The map asks it of every mark shown, every frame, and each answer
+    /// looked along every edge (L3-11): answers are kept until the reach
+    /// (the map's zoom) or the track (a command) changes.
+    public func sightIsOnTrack(_ point: PlanPoint, within reach: Int64) -> Bool {
+        _ = world
+        if sightsOnTrackMemo?.reach != reach || sightsOnTrackMemo?.commandRevision != commandRevision {
+            sightsOnTrackMemo = SightsOnTrackMemo(reach: reach, commandRevision: commandRevision, onTrack: [:])
+        }
+        if let known = sightsOnTrackMemo?.onTrack[point] { return known }
+        let onTrack = world.trackEdgePoint(near: point, within: reach) != nil
+        sightsOnTrackMemo?.onTrack[point] = onTrack
+        trackSearchesWorkedOut += 1
+        return onTrack
+    }
+}

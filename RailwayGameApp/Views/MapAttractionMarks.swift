@@ -107,7 +107,7 @@ struct MapAttractionMarks: View {
 
     private func takesTouch(_ item: (sight: MapMarks.Sight, at: ScreenPoint, rated: Bool),
                             guards: (stations: [ScreenPoint], bubbles: [MapLabelPlacement.Box], reach: Int64)) -> Bool {
-        let onTrack = session.world.trackEdgePoint(near: item.sight.attraction.point, within: guards.reach) != nil
+        let onTrack = session.sightIsOnTrack(item.sight.attraction.point, within: guards.reach)
         return MapClutter.sightTakesTouch(at: item.at, stations: guards.stations, bubbles: guards.bubbles, onTrack: onTrack)
     }
 

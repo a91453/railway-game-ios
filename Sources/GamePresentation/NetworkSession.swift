@@ -452,8 +452,18 @@ extension GameSession {
 
     /// The stretch of the track beside ``networkPlatformStretch`` that gets
     /// a platform with it (decision 285, ``besidePlatformStretch(of:)``).
+    /// The map's body asks it several times a frame (the layout menu, the
+    /// layout ✓ builds), and each looked along every edge (L3-11), so it is
+    /// kept for the stretch and command it was looked for at.
     public var networkPlatformBeside: (edge: TrackEdgeID, start: Int64, end: Int64)? {
-        networkPlatformStretch.flatMap(besidePlatformStretch(of:))
+        guard let stretch = networkPlatformStretch else { return nil }
+        _ = world
+        let key = PlatformBesideMemo.Key(edge: stretch.edge, start: stretch.start, end: stretch.end, commandRevision: commandRevision)
+        if let memo = platformBesideMemo, memo.key == key { return memo.beside }
+        let beside = besidePlatformStretch(of: stretch)
+        platformBesideMemo = PlatformBesideMemo(key: key, beside: beside)
+        trackSearchesWorkedOut += 1
+        return beside
     }
 
     /// Why the stretch on track that climbs `grade` per mille cannot be

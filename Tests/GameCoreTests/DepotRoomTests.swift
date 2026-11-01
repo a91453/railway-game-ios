@@ -142,4 +142,28 @@ final class DepotRoomTests: XCTestCase {
         try batched.advance(ticks: 13 * 60)
         XCTAssertEqual(batched, single)
     }
+
+    /// Decision 497 (P2-7): the train that stayed at A says why: its line
+    /// would send it into Depot, which has no siding left. The trains in
+    /// the depot are held by nothing; without traffic control a train goes
+    /// in anyway, so none is held.
+    func testTheTrainThatStayedIsHeldByTheFullDepot() throws {
+        var scene = try makeScene()
+        try scene.world.advance(ticks: 30)
+        let stayed = try XCTUnwrap(scene.world.trains.first { scene.world.stationsStoppedAt(by: $0.id) == [scene.a] })
+        XCTAssertEqual(scene.world.heldDeparture(of: stayed.id), .depotFull(scene.depot))
+        XCTAssertEqual(scene.world.heldDepartures(), [stayed.id: .depotFull(scene.depot)])
+        for train in scene.world.trains where train.id != stayed.id {
+            XCTAssertNil(scene.world.heldDeparture(of: train.id), "\(train.name) in the depot")
+        }
+        var unchanged = scene.world
+        try unchanged.advance(ticks: 1)
+        var asked = scene.world
+        _ = asked.heldDepartures()
+        try asked.advance(ticks: 1)
+        XCTAssertEqual(asked, unchanged, "asking changes nothing")
+        try scene.world.setTrafficControl(false)
+        XCTAssertNil(scene.world.heldDeparture(of: stayed.id))
+        XCTAssertEqual(scene.world.heldDepartures(), [:])
+    }
 }

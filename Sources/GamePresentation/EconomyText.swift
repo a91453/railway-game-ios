@@ -10,7 +10,7 @@ extension Money {
     /// The sign every amount of money the game shows begins with. Every
     /// amount is written by the functions here (``moneyText``,
     /// ``wholeText``, ``centsText``, ``signedText``,
-    /// ``TrainRoster/shortMoney(_:)``), never with a `$` of its own, so
+    /// ``TrainRoster/shortMoney(_:in:)``), never with a `$` of its own, so
     /// the currency changes in one place (`MoneyTextSourceTests`).
     /// New Taiwan dollars: the currency of where the map is (decisions 499
     /// and 523).

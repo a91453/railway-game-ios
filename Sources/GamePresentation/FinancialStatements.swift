@@ -41,13 +41,13 @@ public struct StatementRow: Hashable, Sendable {
     }
 
     /// An amount as a statement's column shows it: in full ("$ 3,269,858",
-    /// ``Money/moneyText``), or `short` ("$3.3M", ``TrainRoster/shortMoney(_:)``)
+    /// ``Money/moneyText``), or `short` ("$3.3M", ``TrainRoster/shortMoney(_:in:)``)
     /// where the full amounts do not fit on one line beside each other (a
     /// phone's side panel); "—" for none. The app never breaks an amount
     /// over two lines.
-    public static func amountText(_ money: Money?, short: Bool) -> String {
+    public static func amountText(_ money: Money?, short: Bool, in language: DisplayLanguage) -> String {
         guard let money else { return "—" }
-        return short ? TrainRoster.shortMoney(money) : money.moneyText
+        return short ? TrainRoster.shortMoney(money, in: language) : money.moneyText
     }
 }
 

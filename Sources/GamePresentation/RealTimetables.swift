@@ -451,3 +451,95 @@ public struct RealLineRuns: Sendable, Equatable {
         }
     }
 }
+
+/// Decision 532: a system's every train of a week (`tra-schedule.json`,
+/// Taiwan Railway's, as `tools/real-timetables/extract_tra_schedule.py`
+/// packs TRA's timetable of 2026-10-16): one real day of each weekday and
+/// one weekday public holiday, each train with its number, kind and model,
+/// the days it runs, and every station it calls at or passes with its
+/// arrival and departure second of the service day (past 86,400 after
+/// midnight).
+public struct RealWeekTimetable: Hashable, Sendable {
+    public struct Stop: Hashable, Sendable {
+        /// The station, as the system's `<system>.json` names it.
+        public let name: String
+        public let arrival: Int
+        public let departure: Int
+        /// Whether the train stops, not just passes.
+        public let stops: Bool
+    }
+
+    public struct Train: Hashable, Sendable {
+        /// The train number (`2551`).
+        public let number: String
+        /// Its kind as the timetable sorts it (`區間車`, `自強`).
+        public let kind: String
+        /// Its model as the timetable names it (`自強(3000障)`).
+        public let model: String
+        /// Bit w for weekday w (Sunday 0) of ``RealWeekTimetable/days``,
+        /// bit 7 for ``RealWeekTimetable/holiday``.
+        public let dayBits: Int
+        public let stops: [Stop]
+
+        /// Whether it runs on game day `day` (``RealWeekTimetable/bit(of:)``).
+        public func runs(on day: RealServiceDay) -> Bool {
+            dayBits & (1 << RealWeekTimetable.bit(of: day)) != 0
+        }
+    }
+
+    public enum FormatError: Error, Hashable {
+        case malformedTrain(String)
+    }
+
+    /// The real day each weekday stands for, Sunday first (`YYYY-MM-DD`).
+    public let days: [String]
+    /// The real public holiday a holiday of the game stands for.
+    public let holiday: String?
+    public let trains: [Train]
+
+    /// The bit of ``Train/dayBits`` game day `day` runs: a holiday the
+    /// holiday's, any other day its weekday's.
+    public static func bit(of day: RealServiceDay) -> Int {
+        day.isHoliday ? 7 : day.weekday
+    }
+
+    public init(data: Data) throws {
+        struct RawTrain: Decodable {
+            let n: String
+            let t: Int
+            let k: Int
+            let d: Int
+            let s: [Int]
+        }
+        struct RawFile: Decodable {
+            let days: [String]
+            let holiday: String?
+            let kinds: [String]
+            let models: [String]
+            let stations: [String]
+            let trains: [RawTrain]
+        }
+        let raw = try JSONDecoder().decode(RawFile.self, from: data)
+        days = raw.days
+        holiday = raw.holiday
+        trains = try raw.trains.map { train in
+            // Three numbers a stop: the station (negative for one passed),
+            // the first's arrival or the seconds since the stop before it
+            // left, and how long it stands.
+            guard train.s.count >= 6, train.s.count.isMultiple(of: 3), raw.kinds.indices.contains(train.t),
+                  raw.models.indices.contains(train.k) else { throw FormatError.malformedTrain(train.n) }
+            var stops: [Stop] = []
+            stops.reserveCapacity(train.s.count / 3)
+            var left = 0
+            for at in stride(from: 0, to: train.s.count, by: 3) {
+                let code = train.s[at], gap = train.s[at + 1], dwell = train.s[at + 2]
+                let station = code >= 0 ? code : -code - 1
+                guard raw.stations.indices.contains(station), gap >= 0, dwell >= 0 else { throw FormatError.malformedTrain(train.n) }
+                let arrival = stops.isEmpty ? gap : left + gap
+                left = arrival + dwell
+                stops.append(Stop(name: raw.stations[station], arrival: arrival, departure: left, stops: code >= 0))
+            }
+            return Train(number: train.n, kind: raw.kinds[train.t], model: raw.models[train.k], dayBits: train.d, stops: stops)
+        }
+    }
+}
