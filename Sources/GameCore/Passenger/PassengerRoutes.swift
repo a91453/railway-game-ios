@@ -477,12 +477,12 @@ struct PassengerRouteSearch {
     /// One leg of a label's order (see ``orders``).
     private struct OrderNode {
         let leg: PassengerRouteOrderLeg
-        let parent: Int
-        let depth: Int
+        let parent: Int32
+        let depth: Int32
     }
 
     private func depth(_ order: Int) -> Int {
-        order < 0 ? 0 : orders[order].depth
+        order < 0 ? 0 : Int(orders[order].depth)
     }
 
     /// Whether the legs of order `lhs` come before those of `rhs`: what
@@ -491,8 +491,8 @@ struct PassengerRouteSearch {
     private func orderPrecedes(_ lhs: Int, _ rhs: Int) -> Bool {
         var left = lhs, right = rhs
         let leftDepth = depth(lhs), rightDepth = depth(rhs)
-        for _ in 0..<max(0, leftDepth - rightDepth) { left = orders[left].parent }
-        for _ in 0..<max(0, rightDepth - leftDepth) { right = orders[right].parent }
+        for _ in 0..<max(0, leftDepth - rightDepth) { left = Int(orders[left].parent) }
+        for _ in 0..<max(0, rightDepth - leftDepth) { right = Int(orders[right].parent) }
         // Up from the last position both have: the highest leg that
         // differs is the first difference.
         var first: Bool?
@@ -507,8 +507,8 @@ struct PassengerRouteSearch {
                     first = a.to.rawValue < b.to.rawValue
                 }
             }
-            left = orders[left].parent
-            right = orders[right].parent
+            left = Int(orders[left].parent)
+            right = Int(orders[right].parent)
         }
         return first ?? (leftDepth < rightDepth)
     }
@@ -784,7 +784,7 @@ struct PassengerRouteSearch {
             } else {
                 orders.append(OrderNode(leg: PassengerRouteOrderLeg(line: ridePath.line,
                                                                     from: ridePath.stations[edge.from], to: to),
-                                        parent: label.order, depth: depth(label.order) + 1))
+                                        parent: Int32(label.order), depth: Int32(depth(label.order) + 1)))
             }
             let order = orders.count - 1
             if !offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
