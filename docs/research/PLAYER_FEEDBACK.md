@@ -173,8 +173,8 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
   - result bundle 裡有 App（pid 26651）的 crash report：SIGABRT，`NSInternalInconsistencyException`「Illegal fault request … for placeholderValue, snapshot has no data source」。整條堆疊都是 `XCTAutomationSupport`（`-[XCElementSnapshot _fetchSimpleValueForKey:]` ← `XCTElementQuery` ← `XCTPerformOnMainRunLoop`），沒有一格是遊戲的程式；這個框架只在 UI 測試時才載入 App，玩家的版本裡沒有。
   - 斷線前：App 的 stdout 先記「XCTPerformOnMainRunLoop work timed out after 60.0s」，查詢是 `descendants(matching: .any)["economy.composition.income"]`，它一個一個取遍整個 App 的元素（地圖、HUD、工具列），這次每個元素要 0.1–11 秒，60 秒內還沒走到經濟面板的清單；下一次查詢 XCTest 自己的 assertion 失敗，App 中止。App 的畫面計數在查詢開始前一直有在動（每 2 秒 50–110 格）。
   - 不是 #1655、#1656 弄的：這支測試在 deef5e3、59e0f6c、85ee8b1、e985fb6、1b64367、5121f61 的 full lane 都綠，但每次都要 210–312 秒。原因是示範的貨運場景是簡單規則，報表收在清單最下面的「More reports and settings」裡，測試先往下拖 25 次找還沒打開的圓餅圖，每拖一次就查一遍整個 App。紅的那次，崩潰正好在這 25 次裡。
-  - 在 `main` `ce8a75a` 用 `only_testing` 重跑一次（run 41294280154）：RERUN_RESULT。
-- 處理（五方決定，PR PRNUM）：測試改成先打開報表再往回拖到圓餅圖（`WebsiteScreenshotTests` 早就這樣做），查詢只找經濟面板的清單，不找整個 App。App 的程式不動。
+  - 在 `main` `ce8a75a` 用 `only_testing` 重跑一次（run 41294280154）：**綠**（302.8 秒），所以這次紅是偶發，不是新的 bug。
+- 處理（五方決定，PR #1662）：測試改成先打開報表再往回拖到圓餅圖（`WebsiteScreenshotTests` 早就這樣做），查詢只找經濟面板的清單，不找整個 App。App 的程式不動。
   - 玩家：無影響，App 沒改；full lane 少一個假紅，真的 bug 比較不會被當成偶發。
   - 鐵道迷：無。
   - 開發：查詢次數與範圍都變小，這支測試少掉約 200 秒的拖動，也少碰 XCTest 60 秒逾時的機會；不加重試，因為重試會把真的卡住藏起來。
