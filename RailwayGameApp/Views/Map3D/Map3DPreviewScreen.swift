@@ -1164,13 +1164,28 @@ final class Map3DStationTagState {
     func show(_ id: StationID?, at anchor: Map3DPoint?, seenBy camera: Map3DCamera) {
         station = anchor == nil ? nil : id
         self.anchor = anchor
-        place(seenBy: camera)
+        point = anchor.flatMap { camera.screenPoint(of: $0) }.map { CGPoint(x: CGFloat($0.x.rounded()), y: CGFloat($0.y.rounded())) }
+        pending = point
     }
 
+    /// Called from the Metal view's frame: the move is taken after the
+    /// frame, once, not while the frame (which a view update can start) is
+    /// being drawn, so placing the tag never starts another update inside
+    /// one.
     func place(seenBy camera: Map3DCamera) {
         let next = anchor.flatMap { camera.screenPoint(of: $0) }.map { CGPoint(x: CGFloat($0.x.rounded()), y: CGFloat($0.y.rounded())) }
-        if next != point { point = next }
+        pending = next
+        guard next != point, !isPlacing else { return }
+        isPlacing = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            isPlacing = false
+            if pending != point { point = pending }
+        }
     }
+
+    @ObservationIgnored private var pending: CGPoint?
+    @ObservationIgnored private var isPlacing = false
 }
 
 /// Decision 517 續: the 2D map's station tag (decision 119,
