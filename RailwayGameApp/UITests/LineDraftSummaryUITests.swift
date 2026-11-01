@@ -35,7 +35,10 @@ final class LineDraftSummaryUITests: XCTestCase {
         let points = stationPoints().filter { clear.contains($0) }
         XCTAssertGreaterThanOrEqual(points.count, 2, "Two stations clear of the map's buttons")
 
-        selectStation(at: points[0])
+        guard let first = points.first(where: isUncovered) else {
+            return XCTFail("No station clear of the controls over the map: \(points)")
+        }
+        selectStation(at: first)
         tap(app.buttons["entry.lines"])
         // Both maps open with lines, so the panel lists them first and folds
         // the new line's form into "New Line…" below them (decision 196),
@@ -56,7 +59,14 @@ final class LineDraftSummaryUITests: XCTestCase {
         XCTAssertTrue(summary.label.hasPrefix("1 stop"), summary.label)
         tap(app.navigationBars["Lines"].buttons["Done"])
 
-        selectStation(at: points[1])
+        // Looked for now, not at the start: the line's readout stands by
+        // the first station now, and with the panel gone the layer strip
+        // opens out again (run 41259213331: the second station was under
+        // its Waiting, folded to one button while the panel was open).
+        guard let second = points.first(where: { $0 != first && isUncovered($0) }) else {
+            return XCTFail("No second station clear of the controls over the map: \(points)")
+        }
+        selectStation(at: second)
         tap(app.buttons["entry.lines"])
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
@@ -134,6 +144,22 @@ final class LineDraftSummaryUITests: XCTestCase {
         XCTAssertTrue(element("station.operations").appears(within: 10), "The station's card opens")
         tap(app.navigationBars.buttons["Done"].firstMatch)
         XCTAssertTrue(element("station.operations").disappears(within: 5))
+    }
+
+    /// Whether a hold at `point` reaches the map: not under the controls
+    /// over it, as they stand now. The row under the status pill is kept
+    /// clear across the map's width: the layer strip there folds to one
+    /// button while a card or panel narrows the row and opens out when it
+    /// goes, and the follow bar or a next step can stand beside it.
+    private func isUncovered(_ point: CGPoint) -> Bool {
+        let strip = element("map.quickLayer.strip")
+        if strip.exists { strip.waitUntilStill() }
+        let row = [strip, element("hud.bar")].filter(\.exists).map(\.frame.maxY).max() ?? 0
+        guard point.y > row + 12 else { return false }
+        let controls = ["hud.tools", "hud.rail", "hud.card", "hud.panel", "follow.bar", "map.corner",
+                        "stationMaster", "stationMaster.bubble",
+                        "map.build.catchment", "map.build.cancel", "map.build.confirm"]
+        return !controls.map { element($0) }.contains { $0.exists && $0.frame.insetBy(dx: -12, dy: -12).contains(point) }
     }
 
     /// Where the stations are on the map, once it has settled (as
