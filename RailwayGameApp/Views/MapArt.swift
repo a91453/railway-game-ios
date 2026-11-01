@@ -2113,7 +2113,7 @@ enum MapArt {
         in context: GraphicsContext
     ) {
         let center = projection.screenPoint(of: station.location)
-        let radius = stationRadius(projection)
+        let nameTop = MapProblems.nameTop(stationRadius: stationRadius(projection))
         // Resolving and measuring a name is the costly part, and every pan
         // frame redraws: first rule out stations whose name cannot reach
         // the view. A caption2 character is under 24 points wide and a line
@@ -2121,15 +2121,15 @@ enum MapArt {
         // measuring; the shops' square (decision 222) adds 20 to its left,
         // and the expansion's (decision 506 續) 20 to its right.
         let reach = Double(station.name.count) * 12 + 20
-        let largest = CGRect(x: center.x - reach, y: center.y + radius, width: reach * 2, height: 4 + 48 + 14)
+        let largest = CGRect(x: center.x - reach, y: center.y + nameTop, width: reach * 2, height: 4 + 48 + 14)
         guard largest.intersects(context.clipBoundingRect) else { return }
         let name = context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink))
         let nameSize = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
-        let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + radius + 4, width: nameSize.width, height: nameSize.height)
+        let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + nameTop, width: nameSize.width, height: nameSize.height)
         // Decision 205: on the same pale plate as the names zoomed out
         // (``drawOverviewNames``), so it reads over a line or a town.
         context.fill(Path(roundedRect: nameRect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
-        context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
+        context.draw(name, at: CGPoint(x: center.x, y: center.y + nameTop), anchor: .top)
         // Decision 222: the station's shops, a warm yellow square to the
         // left of its name with one, two or three bags in it.
         let side = max(12, min(16, nameSize.height))
@@ -2298,7 +2298,7 @@ enum MapArt {
             guard let center = centers[entry.station] else { continue }
             let room = holds[entry.station] ?? StationPassengers.capacity
             let crowding = MapProblems.Crowding(waiting: entry.waiting, holds: room)
-            let ringRadius = radius + max(4.5, radius * 0.35)
+            let ringRadius = MapProblems.ringRadius(stationRadius: radius)
             if crowding != .normal, rings < limit {
                 rings += 1
                 drawCrowdedRing(at: center, radius: ringRadius, fill: MapProblems.fill(waiting: entry.waiting, holds: room), isFull: crowding == .full, in: context)

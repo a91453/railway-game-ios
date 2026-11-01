@@ -69,6 +69,22 @@ public enum MapProblems {
         }
     }
 
+    /// The radius of a crowded station's ring (decision 210) round a badge
+    /// of `stationRadius`: the badge, plus a gap that grows with it.
+    public static func ringRadius(stationRadius: Double) -> Double {
+        stationRadius + max(4.5, stationRadius * 0.35)
+    }
+
+    /// Half the ring's white halo stroke, which reaches past ``ringRadius(stationRadius:)``.
+    public static let ringHaloReach = 2.5
+
+    /// How far under a station's centre its name plate starts: just past
+    /// the badge, and below the ring's halo, so a crowded ring never covers
+    /// the name however big the badge is zoomed in.
+    public static func nameTop(stationRadius: Double) -> Double {
+        ringRadius(stationRadius: stationRadius) + ringHaloReach + 1.5
+    }
+
     /// How much of the room is taken, 0 to 1: how far round the crowded
     /// ring goes.
     public static func fill(waiting: Int64, holds: Int64 = StationPassengers.capacity) -> Double {
