@@ -1099,16 +1099,17 @@ extension GameSession {
     /// network tool tracing from `from` to `to`, the map looking close over
     /// the stretch a third of the way along (or, with `joining`, first
     /// laying the middle third and looking where the trace joins it);
-    /// whether the preview can be built. Through the tool's own taps.
+    /// where it looks when the preview can be built, `nil` when it cannot.
+    /// Through the tool's own taps.
     @discardableResult
-    public func traceForPreviewScreenshot(from: String, to: String, joining: Bool) -> Bool {
+    public func traceForPreviewScreenshot(from: String, to: String, joining: Bool) -> WorldRegion? {
         guard canTraceRealRailway, let railways, let frame = RealWorldFrame(world: world),
               let start = RealLineLaying.realPoint(of: from, system: "tra_sched", railways: railways, frame: frame),
               let end = RealLineLaying.realPoint(of: to, system: "tra_sched", railways: railways, frame: frame),
-              let traces = realRailwayTraces else { return false }
+              let traces = realRailwayTraces else { return nil }
         let metre = Double(WorldCoordinate.unitsPerMetre)
         guard let a = traces.snap(start, within: 50 * metre), let b = traces.snap(end, within: 50 * metre),
-              let points = traces.path(from: a.place, to: b.place) else { return false }
+              let points = traces.path(from: a.place, to: b.place) else { return nil }
         let way = WorldPath(points)
         selectTool(.network)
         setNetworkMode(.build)
@@ -1125,7 +1126,8 @@ extension GameSession {
         tapNetwork(at: start.plan, reach: reach)
         tapNetwork(at: end.plan, reach: reach)
         let centre = way.point(at: way.length / 3), half = (joining ? 500 : 250) * metre
-        lookOver(WorldRegion(minX: centre.x - half, minY: centre.y - half, maxX: centre.x + half, maxY: centre.y + half))
-        return networkPreview?.problem == nil
+        let region = WorldRegion(minX: centre.x - half, minY: centre.y - half, maxX: centre.x + half, maxY: centre.y + half)
+        lookOver(region)
+        return networkPreview?.problem == nil ? region : nil
     }
 }

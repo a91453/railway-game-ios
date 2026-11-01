@@ -801,8 +801,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("trace-no-grade-reaches", app)
     }
 
-    /// Decision 521's third sequel: a double trace near Luodong, and a
-    /// trace from Taipei to Banqiao joining track laid on its middle third,
+    /// Decision 521's third sequel: a double trace from Luodong to
+    /// Dongshan, and the same trace joining track laid on its middle third,
     /// each previewed as one way (no second line beside it, no darker band
     /// where the glows meet). For the screenshot review of its pull
     /// request; drawn by the Debug app through the tool's own taps.
@@ -811,7 +811,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     func testTracePreviewJoined() {
-        tracePreviewShot(argument: "-ui-test-trace-joined", station: "臺北", search: "臺北", name: "trace-preview-joined")
+        tracePreviewShot(argument: "-ui-test-trace-joined", station: "羅東", search: "羅東", name: "trace-preview-joined")
     }
 
     private func tracePreviewShot(argument: String, station: String, search text: String, name: String) {
@@ -840,7 +840,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         tapButton("realWorld.start", in: app, timeout: 60)
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
         XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 120), "The trace is previewed")
-        settle(seconds: 10)
+        // The Debug app looks close over it again 6 s after tracing.
+        settle(seconds: 14)
         keep(name, app)
     }
 

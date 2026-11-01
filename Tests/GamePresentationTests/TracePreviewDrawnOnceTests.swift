@@ -96,12 +96,14 @@ final class TracePreviewDrawnOnceTests: XCTestCase {
     /// `-ui-test-trace-joined`) draw what the tests above check.
     func testTheScreenshotTracesShowTheirPreviews() throws {
         let double = try session(at: "羅東")
-        XCTAssertTrue(double.traceForPreviewScreenshot(from: "羅東", to: "冬山", joining: false), double.networkPreview?.problem ?? "")
+        XCTAssertNotNil(double.traceForPreviewScreenshot(from: "羅東", to: "冬山", joining: false), double.networkPreview?.problem ?? "")
         XCTAssertFalse(try XCTUnwrap(double.networkOverlay).crossing.isEmpty, "a double track")
-        XCTAssertNotNil(double.cameraRequest)
+        XCTAssertNotNil(double.cameraRequest?.region)
 
-        let joined = try session(at: "臺北")
-        XCTAssertTrue(joined.traceForPreviewScreenshot(from: "臺北", to: "板橋", joining: true), joined.networkPreview?.problem ?? "")
-        XCTAssertEqual(try XCTUnwrap(joined.networkOverlay).existing.count, 1, "joins the track laid first")
+        let joined = try session(at: "羅東")
+        XCTAssertNotNil(joined.traceForPreviewScreenshot(from: "羅東", to: "冬山", joining: true), joined.networkPreview?.problem ?? "")
+        let overlay = try XCTUnwrap(joined.networkOverlay)
+        XCTAssertEqual(overlay.existing.count, 1, "joins the track laid first")
+        XCTAssertTrue(overlay.crossing.isEmpty, "single where it joins track")
     }
 }

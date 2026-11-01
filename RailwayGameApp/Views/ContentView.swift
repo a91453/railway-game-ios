@@ -147,15 +147,18 @@ struct ContentView: View {
                 session.traceWhereNoGradeReaches()
             }
             // Decision 521's third sequel: the screenshot test's double
-            // trace near Luodong, or a trace joining track near Taipei.
+            // trace near Luodong, or the same trace joining track laid on its
+            // middle third.
             .task(id: session.canTraceRealRailway) {
                 guard session.canTraceRealRailway else { return }
                 let arguments = ProcessInfo.processInfo.arguments
-                if arguments.contains("-ui-test-trace-double") {
-                    session.traceForPreviewScreenshot(from: "羅東", to: "冬山", joining: false)
-                } else if arguments.contains("-ui-test-trace-joined") {
-                    session.traceForPreviewScreenshot(from: "臺北", to: "板橋", joining: true)
-                }
+                let joining = arguments.contains("-ui-test-trace-joined")
+                guard joining || arguments.contains("-ui-test-trace-double"),
+                      let region = session.traceForPreviewScreenshot(from: "羅東", to: "冬山", joining: joining) else { return }
+                // Asked again once the map is up: the first ask comes
+                // before the map is there to take it.
+                try? await Task.sleep(for: .seconds(6))
+                session.lookOver(region)
             }
             #endif
             // The map and controls share one screen, so text stops growing at the
