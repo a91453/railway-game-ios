@@ -34,6 +34,14 @@ public enum WhatsNew {
             id: "2026-11-01-104-1",
             items: [
                 Line(
+                    english: "Schools and hospitals you build bring students and patients by train, shown on the station card.",
+                    chinese: "蓋好的學校、醫院會帶學生和看病的旅客搭車來，車站卡上看得到人數。"
+                ),
+                Line(
+                    english: "A station can be expanded once it was full on 4 of the last 7 days; its card counts the days so far.",
+                    chinese: "最近 7 天裡有 4 天客滿的車站才能擴建，車站卡會寫目前幾天。"
+                ),
+                Line(
                     english: "Taiwan Railway trains on the real map run to the real train-by-train timetable.",
                     chinese: "實景地圖的台鐵列車，照真實的逐班時刻表行駛。"
                 ),
@@ -67,6 +75,10 @@ public enum WhatsNew {
                 ),
             ],
             fixes: [
+                Line(
+                    english: "Tapping in the mountains on the 3D map lands where your finger is, and hidden track behind a hill is not picked.",
+                    chinese: "在 3D 地圖的山區點選，會落在手指下的地方，山後看不到的軌道不會被點到。"
+                ),
                 Line(
                     english: "Tracing from the end of a track shows one preview line, no longer two on top of each other.",
                     chinese: "從軌道端點描線時，預覽只畫一條，不再重疊。"
