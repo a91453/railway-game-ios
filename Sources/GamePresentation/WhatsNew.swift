@@ -31,6 +31,53 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-11-01-104-1",
+            items: [
+                Line(
+                    english: "Taiwan Railway trains on the real map run to the real train-by-train timetable.",
+                    chinese: "實景地圖的台鐵列車，照真實的逐班時刻表行駛。"
+                ),
+                Line(
+                    english: "The Alishan line runs DL-38 diesel locomotives with Alishan coaches, and Chu-Kuang trains have a new R200 locomotive.",
+                    chinese: "阿里山線換成 DL-38 柴油機車與阿里山客車；莒光號換上新的 R200 機車。"
+                ),
+                Line(
+                    english: "An expanded station grows on the 3D map too, and tapping a station there shows its name board.",
+                    chinese: "擴建過的車站在 3D 地圖上也會變大；點 3D 地圖上的車站會出現站名牌。"
+                ),
+                Line(
+                    english: "The economy panel shows the whole company's punctuality over the last 7 days.",
+                    chinese: "經營面板多了全公司最近 7 天的準點率。"
+                ),
+                Line(
+                    english: "A real line you bought and then removed can be bought again.",
+                    chinese: "收購來的真實路線拆掉之後，可以再買回來。"
+                ),
+                Line(
+                    english: "A train that stops because it finds no route, or because the depot is full, tells you why.",
+                    chinese: "找不到路、或機廠停滿而停著的列車，會說出原因。"
+                ),
+                Line(
+                    english: "Switching to free mode lets you turn on unlimited money.",
+                    chinese: "轉成自由模式時，可以打開無限資金。"
+                ),
+                Line(
+                    english: "The train roster writes large amounts of money the same short way as the rest of the game.",
+                    chinese: "車隊表的金額也改用萬、億來寫。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Tracing from the end of a track shows one preview line, no longer two on top of each other.",
+                    chinese: "從軌道端點描線時，預覽只畫一條，不再重疊。"
+                ),
+                Line(
+                    english: "On iPad, tapping Finish in step 8 of tutorial lesson 5 no longer can close the app.",
+                    chinese: "修好 iPad 入門第 5 課第 8 步按「完成建立」時可能閃退的問題。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-11-01-102-1",
             items: [
                 Line(
