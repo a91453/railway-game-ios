@@ -80,6 +80,27 @@ extension Map3DStationKit {
         }
     }
 
+    /// Decision 506, later: how much of each platform the canopy covers,
+    /// by how far its station is expanded: the middle three fifths as
+    /// most of TRA's (decision 259), four fifths for a bigger concourse,
+    /// all but the ramps' ends for a big station.
+    static func canopyShare(_ expansion: StationExpansion?) -> Float {
+        switch expansion {
+        case nil: 0.6
+        case .concourse: 0.8
+        case .hall: 0.95
+        }
+    }
+
+    /// Decision 506, later: what of the stations' expansions the 3D
+    /// scene draws, for the key it is built again on: every station's
+    /// level added up. A level is never taken back (a station keeps it
+    /// until it goes, with its platforms), so the sum moves whenever one
+    /// is expanded.
+    public static func expansionSignature(of world: GameWorld) -> Int {
+        world.stations.reduce(0) { $0 + ($1.expansion?.rawValue ?? 0) }
+    }
+
     /// The far box's walls and roof for a building of `profile`.
     static func farColours(_ profile: Profile) -> (wall: UInt32, roof: UInt32) {
         switch profile {
@@ -99,7 +120,7 @@ extension StationKitBuilder {
     /// them (z), a forecourt to its front; nothing for a profile that has
     /// only entrances (``Map3DStationKit/hasHouse(_:)``). The kit's own
     /// recipes (`station(_:)`), each rail court left out.
-    mutating func house(_ station: Map3DStationKit.Station) {
+    mutating func house(_ station: Map3DStationKit.Station, expansion: StationExpansion? = nil) {
         let p = station.profile, v = Int(station.seed % 7)
         switch p {
         case .taipei: taipei()
@@ -156,10 +177,47 @@ extension StationKitBuilder {
         case .formosa, .centralPark, .underground, .elevated, .lightRail:
             return
         }
+        // Decision 506, later: an expanded station's wings.
+        if let expansion { expansionWings(expansion) }
         // A forecourt from its back to six metres before it.
         guard let bounds = mesh.bounds, bounds.min.x < bounds.max.x else { return }
         let length = bounds.max.x - bounds.min.x + 6, width = bounds.max.z - bounds.min.z + 8
         box(bounds.min.x + length / 2, 0, (bounds.min.z + bounds.max.z) / 2, length, width, 0.2, Map3DPalette.plaza)
+    }
+
+    /// Decision 506, later: an expanded station's building, grown along
+    /// its platforms (z) from what `house` drew. A bigger concourse
+    /// (``StationExpansion/concourse``) adds a glass-fronted concourse
+    /// wing at each end, its back with the building's, its front a little
+    /// short of it; a big station (``StationExpansion/hall``) puts a
+    /// second floor on each wing and a long glass canopy over the whole
+    /// front. The wings are as tall as a two-floor hall at most, so a
+    /// landmark's towers still stand out.
+    mutating func expansionWings(_ expansion: StationExpansion) {
+        guard let bounds = mesh.bounds, bounds.min.x < bounds.max.x else { return }
+        let depth = bounds.max.x - bounds.min.x, width = bounds.max.z - bounds.min.z
+        let wingDepth = max(depth * 0.8, 10), wingWidth = max(width * 0.35, 10)
+        // A little in from the back, so the back windows and the roof's
+        // edge stay within the building's own back.
+        let x = bounds.min.x + 0.05 + wingDepth / 2, floor: Float = 5.2
+        for sign: Float in [-1, 1] {
+            let z = (bounds.min.z + bounds.max.z) / 2 + sign * (width / 2 + wingWidth / 2)
+            facade(x, 0.25, z, wingDepth, wingWidth, floor, Map3DPalette.concrete, bays: max(2, Int(wingWidth / 4)))
+            box(x, 0.25 + floor, z, wingDepth, wingWidth + 0.3, 0.3, Self.white)
+            if expansion == .hall {
+                facade(x, 0.55 + floor, z, wingDepth - 2, wingWidth, floor - 0.6, Self.glass, bays: max(2, Int(wingWidth / 4)))
+                box(x, 2 * floor - 0.05, z, wingDepth - 1.7, wingWidth + 0.3, 0.35, Self.steel)
+            }
+        }
+        guard expansion == .hall else { return }
+        // The front canopy over the whole frontage, on columns before it.
+        let front = bounds.min.x + wingDepth, span = width + 2 * wingWidth
+        canopy(front + 3.5, 6.2, (bounds.min.z + bounds.max.z) / 2, length: 7, width: span, rise: 1.2, color: Self.glass)
+        let columns = max(2, Int(span / 12))
+        for index in 0...columns {
+            let z = (bounds.min.z + bounds.max.z) / 2 - span / 2 + span * Float(index) / Float(columns)
+            box(front + 6.5, 0.25, z, 0.4, 0.4, 5.95, Self.steel)
+        }
     }
 
     /// The kit's canopy over `length` metres of a platform `width` wide
@@ -235,9 +293,9 @@ extension Map3DScene.Builder {
             } else if drawnElsewhere.contains(station.profile) {
                 continue
             } else if Map3DStationKit.hasHouse(station.profile) {
-                cells.formUnion(addHouse(station, platforms: open, middle: middle))
+                cells.formUnion(addHouse(station, id: id, platforms: open, middle: middle))
             } else {
-                addEntrances(station, platforms: open, path: longest, middle: middle)
+                addEntrances(station, id: id, platforms: open, path: longest, middle: middle)
             }
         }
         if shops { addShopStreets() }
@@ -256,11 +314,13 @@ extension Map3DScene.Builder {
     }
 
     /// The kit's canopy over the middle three fifths of each platform (as
-    /// most of TRA's are, decision 259), in pieces of at most 8 m along
-    /// its line; far off the flat canopy.
+    /// most of TRA's are, decision 259), more of it at an expanded station
+    /// (decision 506, later: ``Map3DStationKit/canopyShare(_:)``), in
+    /// pieces of at most 8 m along its line; far off the flat canopy.
     private mutating func addCanopies() {
         for platform in laidPlatforms {
-            let middle = Self.middle(of: platform.line, share: 0.6)
+            let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
+            let middle = Self.middle(of: platform.line, share: share)
             guard let path = Map3DStreetLife.Path(middle) else { continue }
             let count = max(1, Int((path.length / 8).rounded(.up))), step = path.length / Float(count)
             let width = min(platform.width + 0.3, 7)
@@ -289,10 +349,10 @@ extension Map3DScene.Builder {
     /// other track, its back a metre past the farthest of them, or over
     /// the middle of its underground platforms. Close up the kit's model
     /// with its shadow, far off a box. The cells it stands on.
-    private mutating func addHouse(_ station: Map3DStationKit.Station, platforms: [LaidPlatform],
+    private mutating func addHouse(_ station: Map3DStationKit.Station, id: StationID, platforms: [LaidPlatform],
                                    middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint)) -> Set<Map3DScene.ChunkKey> {
         var kit = StationKitBuilder()
-        kit.house(station)
+        kit.house(station, expansion: world.station(id: id)?.expansion)
         guard let bounds = kit.mesh.bounds else { return [] }
         let depth = bounds.max.x - bounds.min.x, wide = bounds.max.z - bounds.min.z
         let (forward, back) = besidePlatforms(depth: depth, wide: wide, platforms: platforms, middle: middle)
@@ -398,9 +458,10 @@ extension Map3DScene.Builder {
     /// An underground station's exits at street level, a viaduct's stair
     /// entrances beside it, 美麗島's glass entrances, 中央公園's wave
     /// roof; a light-rail stop has its canopies alone.
-    private mutating func addEntrances(_ station: Map3DStationKit.Station, platforms: [LaidPlatform], path: Map3DStreetLife.Path,
+    private mutating func addEntrances(_ station: Map3DStationKit.Station, id: StationID, platforms: [LaidPlatform], path: Map3DStreetLife.Path,
                                        middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint)) {
         guard station.profile != .lightRail else { return }
+        let extra = world.station(id: id)?.expansion?.rawValue ?? 0
         var pieces: [(mesh: Map3DMesh, at: Map3DPoint, forward: Map3DPoint)] = []
         func part(_ part: Map3DStationKit.Part) -> Map3DMesh {
             var kit = StationKitBuilder()
@@ -409,15 +470,26 @@ extension Map3DScene.Builder {
         }
         switch station.profile {
         case .elevated:
-            // At the middle, a stair entrance each way beside the viaduct.
+            // At the middle, a stair entrance each way beside the viaduct;
+            // decision 506, later: an expanded station one more pair per
+            // level, further along.
             let out = (platforms.map { abs($0.offset) + $0.width / 2 }.max() ?? Self.platformEdge) + 3
             for sign: Float in [-1, 1] {
-                pieces.append((part(.stairHead), middle.point + middle.along * (sign * 12) + middle.right * (sign * out), middle.along * sign))
+                for level in 0...extra {
+                    // 12 m from the middle, then 36 m the other way, then 60 m.
+                    let along = sign * (12 + Float(level) * 24) * (level % 2 == 0 ? 1 : -1)
+                    pieces.append((part(.stairHead), middle.point + middle.along * along + middle.right * (sign * out), middle.along * sign))
+                }
             }
         default:
             // An exit a sixth of the way in from each end, on either side,
-            // its stairs going down towards the platforms.
-            for (share, sign) in [(Float(1) / 6, Float(-1)), (5 / 6, 1)] {
+            // its stairs going down towards the platforms; decision 506,
+            // later: an expanded station one more pair per level, a third
+            // of the way in, then at the middle.
+            var exits: [(share: Float, sign: Float)] = [(1 / 6, -1), (5 / 6, 1)]
+            if extra >= 1 { exits += [(Float(1) / 3, Float(1)), (Float(2) / 3, Float(-1))] }
+            if extra >= 2 { exits += [(Float(0.5), Float(1)), (Float(0.5), Float(-1))] }
+            for (share, sign) in exits {
                 let at = path.at(path.length * share)
                 pieces.append((part(.undergroundExit), at.point + at.right * (sign * 8), at.along * sign))
             }
