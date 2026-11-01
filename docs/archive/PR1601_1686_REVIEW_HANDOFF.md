@@ -68,7 +68,7 @@ L3 已審到 #1610（含 #1604、#1606、#1608、#1610），本輪從 #1601 起�
 - **位置**：`Sources/GameCore/Railway/RunSpacing.swift:398-426`（`freePlatformPath`）。
 - **問題**：#1601 之前，列車自己的月台空著（`own == 0`）就不改路徑。#1601 讓「會繼續開」的列車在目標是直通那一條時，也從 `platformApproach`（1 km）切點改找 `beside` 的空月台。`beside` 是 `berths(of:length:)`（車站所有月台，兩個方向的正線都算）扣掉直通那一條；`path(..., eligible:, keepingLeft: true)` 從切點找最短路，不擋對向正線；新加的 `crosses` 只擋走過直通那條邊的路。所以切點之後到月台之間有渡線，就會選到對向正線的月台（空的月台 `platformWaits` 是 0，比 `max(own, 1)` 小）。決策 228 說 1 km「比車站的待避線伸得遠，所以不會在更遠處切到對向」，但渡線在 1 km 內時擋不住；#1601 之前只有「自己的月台被佔」時才會走到這一步，#1601 讓一般停站都會。
 - **什麼時候會碰到**：號誌（交通管制）關、照真實班次的線（收購或示範的線，`followsRealTimetable`）、雙線、某站進站前 1 km 內有渡線（玩家自己鋪的渡線、決策 247 雙線工具在雙線段兩端放的渡線）、那時沒有對向列車要停那個月台。列車停到對向月台，接著沿對向正線開往下一站；對向的車來時會互相擋（決策 527 在三鶯線看到的對頭卡法），可能卡死。
-- **驗證**（Linux，臨時測試，量完刪掉）：雙線 P–X–Q，東正線 e2、西正線 e4，X 進站前一組渡線 e3（J1→K，1/20），X 在 e2、e4 各一座同位置的月台，Q 也是；號誌關；一條線 P→X→Q 一班（10:05／10:12–10:13／10:20）。main 6ebf8c7：列車在 X 停在 **e4**（對向），之後沿 e4 開到 Q（`stationsStoppedAt == [Q]`，仍在 e4）。#1601 之前（aa13937^1）同一個測試：見第四節。**VERIFIED**。
+- **驗證**（Linux，臨時測試，量完刪掉）：雙線 P–X–Q，東正線 e2、西正線 e4，X 進站前一組渡線 e3（J1→K，1/20），X 在 e2、e4 各一座同位置的月台，Q 也是；號誌關；一條線 P→X→Q 一班（10:05／10:12–10:13／10:20）。main 6ebf8c7：列車在 X 停在 **e4**（對向），之後沿 e4 開到 Q（`stationsStoppedAt == [Q]`，仍在 e4）。#1601 之前（aa13937^1）同一個測試通過：停在 **e2**，開到 Q 時仍在 e2（第四節）。所以是 #1601 造成的退步。**VERIFIED**。
 - **建議修法**：`beside` 只留不用換到對向正線就到得了的月台，例如路徑不能走 `opposingServiceTraversals` 或線路的規劃方向（#1631 的 `oneWayAgainst`）標成反方向的邊；或要求從切點出發的路要接回直通那條軌道的同一條正線。回歸測試照上面的場景，修前紅、修後綠。要動 GameCore，佔一個 GameCore 名額。
 
 ### L4-2（P2，潛在；環狀輕軌上線即 P1）#1676：到站板與運行圖還用非環線的 `run.calls`，環線跨接縫的班次會讓到站板當掉
@@ -147,6 +147,7 @@ L3 已審到 #1610（含 #1604、#1606、#1608、#1610），本輪從 #1601 起�
 Linux、Swift 6.4.0、`main` 6ebf8c7：
 
 - `swift build --build-tests -Xswiftc -warnings-as-errors`：**VERIFIED**（通過）。
+- L4-1 在 #1601 之前的對照：aa13937^1 的 worktree，**VERIFIED**（通過）。
 - L4-1、L4-2 的重現：臨時測試（`Tests/GameCoreTests/ZZReviewL4OppositePlatformTests.swift`、`Tests/GamePresentationTests/ZZReviewL4RingRunTests.swift`），量完刪掉，沒有提交。**VERIFIED**。
 - `.github/scripts/swift-shards-selftest.sh`：**VERIFIED**（通過）。
 - L4-3：Simulator 的截圖 run 41216089932（之前就跑過的，本 session 沒有另跑）。
@@ -154,7 +155,7 @@ Linux、Swift 6.4.0、`main` 6ebf8c7：
 
 ## 四、#1601 之前的對照
 
-（見下次提交）
+把 L4-1 的臨時測試放到 aa13937^1（#1601 合併前）的 worktree，Linux 建置後跑：列車在 X 停在 e2（自己的正線，offset 123,136），之後在 e2 停到 Q；測試通過（EXIT 0）。main 6ebf8c7 上同一個測試失敗（停在 e4）。**VERIFIED**。worktree 與臨時測試量完刪掉。
 
 ## 五、下一步
 
