@@ -586,7 +586,15 @@ extension GameSession {
         // GameCore's answer, edge by edge, on the copy; an edge whose curve
         // turns tighter than the tool lays stops it first. Cash does not
         // stop it (decision 245): the preview weighs the whole price.
-        var copy = base ?? draft.trackPreviewCopy()
+        var copy: GameWorld
+        if var base {
+            // The same ground read in as on the draft, all at once: read a
+            // stretch at a time, it took longer to build on.
+            try? base.readGround(under: samples, from: heights)
+            copy = base
+        } else {
+            copy = draft.trackPreviewCopy()
+        }
         var built = 0
         var builtEdges: [TrackEdgeID] = []
         var problem: String?
