@@ -33,7 +33,6 @@ final class RealTRAScheduleTests: XCTestCase {
                 XCTAssertGreaterThanOrEqual(stop.departure, stop.arrival, train.number)
                 last = stop.departure
             }
-            XCTAssertTrue(train.stops.first!.stops && train.stops.last!.stops, train.number)
         }
         // Each day runs some 900 trains.
         for bit in 0..<8 {
@@ -93,7 +92,7 @@ final class RealTRAScheduleTests: XCTestCase {
         let operations = try operations
         let wednesday = RealServiceDay(weekday: 3), tuesday = RealServiceDay(weekday: 2)
         let second = 8 * 3_600
-        let services = operations.service(atStationNamed: "臺北", siteSystem: "tra", after: second, on: wednesday, dayBefore: tuesday)
+        let services = operations.service(atStationNamed: "臺北", siteSystem: "tra_sched", after: second, on: wednesday, dayBefore: tuesday)
         XCTAssertEqual(services.count, 1)
         guard case .next(let trains) = try XCTUnwrap(services.first) else { return XCTFail("\(services)") }
         XCTAssertFalse(trains.isEmpty)

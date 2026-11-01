@@ -791,12 +791,15 @@ extension RealRailwayOperations {
         for system in orderedSystems where Self.siteSystems[system.id] == siteSystem {
             if system.id == "tra", let week = weekSchedule(forSystem: RealTrainTraffic.traSchedule) {
                 guard let line = system.lines.first(where: { $0.stations.contains { RealRailways.stationKey($0.name) == key } }) else { continue }
+                // The station's names in the system's lines (the timetable
+                // names stations as they do), compared as they are.
+                let names = Set(system.lines.flatMap(\.stations).map(\.name).filter { RealRailways.stationKey($0) == key })
                 var times: [String: Set<Int>] = [:]
                 for train in week.trains {
-                    guard let last = train.stops.last, RealRailways.stationKey(last.name) != key else { continue }
+                    guard let last = train.stops.last, !names.contains(last.name) else { continue }
                     let today = train.runs(on: day), yesterday = train.runs(on: dayBefore)
                     guard today || yesterday else { continue }
-                    for stop in train.stops.dropLast() where stop.stops && RealRailways.stationKey(stop.name) == key {
+                    for stop in train.stops.dropLast() where stop.stops && names.contains(stop.name) {
                         if today, stop.departure >= second { times[last.name, default: []].insert(stop.departure) }
                         if yesterday, stop.departure - 86_400 >= second { times[last.name, default: []].insert(stop.departure - 86_400) }
                     }
