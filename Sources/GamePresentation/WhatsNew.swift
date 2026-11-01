@@ -42,6 +42,10 @@ public enum WhatsNew {
                     chinese: "收購的真實路線保留自己的車：支線是 DR1000，淡海是淡海輕軌列車。"
                 ),
                 Line(
+                    english: "On the 2D map, an expanded station shows a small station mark beside its name.",
+                    chinese: "2D 地圖上，擴建過的車站在站名旁會多一個小站房記號。"
+                ),
+                Line(
                     english: "A station can be expanded once it was full on 4 of the last 7 days; its card counts the days so far.",
                     chinese: "最近 7 天裡有 4 天客滿的車站才能擴建，車站卡會寫目前幾天。"
                 ),
