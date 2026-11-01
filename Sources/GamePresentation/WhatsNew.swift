@@ -42,8 +42,8 @@ public enum WhatsNew {
                     chinese: "路線卡多了最近 7 天的準點率，括號裡是台鐵近一年的數字。"
                 ),
                 Line(
-                    english: "Money is shown as NT$, with a rough US$ figure beside large amounts.",
-                    chinese: "金額寫成 NT$，大金額用萬、億來寫。"
+                    english: "Money is shown in New Taiwan dollars, with a rough figure in US dollars beside large amounts.",
+                    chinese: "金額改用新台幣，大金額用萬、億來寫。"
                 ),
                 Line(
                     english: "The real-map, high-speed and Taiwan Railway demos have tourists and real transfers.",
