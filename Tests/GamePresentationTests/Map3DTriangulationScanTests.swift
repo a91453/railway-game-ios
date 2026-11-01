@@ -165,8 +165,36 @@ extension Map3DTriangulationScanTests {
         let scene = Map3DScene(world: bought, snapshot: bought.railwaySnapshot(), skyline: CitySkyline(world: bought), focus: (x, y), baseMap: baseMap,
                                footprints: footprints, heights: data.heights, railways: railways)
         print("ORIGIN", scene.originX - x, scene.originY - y)
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        var onTrack = Set<[Int]>()
+        for edge in bought.railwaySnapshot().edges {
+            for p in edge.geometry.points {
+                let sx = (Double(p.x) - scene.originX) / metre, sz = (Double(p.y) - scene.originY) / metre
+                guard abs(sx) < 2000, abs(sz) < 2000 else { continue }
+                onTrack.insert([Int((sx / 4).rounded()), Int((sz / 4).rounded())])
+            }
+        }
+        func near(_ p: Map3DPoint) -> Bool {
+            let cx = Int((p.x / 4).rounded()), cz = Int((p.z / 4).rounded())
+            for dx in -3...3 { for dz in -3...3 where onTrack.contains([cx + dx, cz + dz]) { return true } }
+            return false
+        }
         for chunk in scene.chunks {
             for mesh in [chunk.mesh, chunk.farWithBoxes, chunk.close, chunk.standIn] {
+                let v = mesh.vertices
+                for i in stride(from: 0, to: mesh.indices.count, by: 3) {
+                    let ps = [v[Int(mesh.indices[i])].position, v[Int(mesh.indices[i + 1])].position, v[Int(mesh.indices[i + 2])].position]
+                    let nears = ps.map(near)
+                    guard nears.contains(true), nears.contains(false) else { continue }
+                    let longest = max((ps[1] - ps[0]).length, (ps[2] - ps[1]).length, (ps[0] - ps[2]).length)
+                    guard longest > 40 else { continue }
+                    let a = v[Int(mesh.indices[i])]
+                    print("SPIKE", String(a.color, radix: 16), a.layer, Int(longest), ps[0], ps[1], ps[2])
+                }
+            }
+        }
+        for chunk in [Map3DScene.Chunk]() {
+            for mesh in [chunk.mesh] {
                 let v = mesh.vertices
                 for i in stride(from: 0, to: mesh.indices.count, by: 3) {
                     let a = v[Int(mesh.indices[i])], b = v[Int(mesh.indices[i + 1])], c = v[Int(mesh.indices[i + 2])]
