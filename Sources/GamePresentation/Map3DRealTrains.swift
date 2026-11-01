@@ -193,7 +193,7 @@ public struct Map3DRealTrains: Sendable {
         formation(system: system, id: line.id, name: line.name)
     }
 
-    /// Decision 535: the same, of a line known by its id (`R_XBT`) and
+    /// Decision 536: the same, of a line known by its id (`R_XBT`) and
     /// name (`內灣線`) alone: a real line the company bought
     /// (``RealLineStock``), drawn as the trains it had before.
     static func formation(system: String, id: String, name: String) -> Formation {

@@ -1,6 +1,6 @@
 import GameCore
 
-/// Decision 535: the trains of a real line the company bought (decision
+/// Decision 536: the trains of a real line the company bought (decision
 /// 315, decision 400) are drawn and named as the line's own stock, the
 /// same as before it was bought (``Map3DRealTrains/formation(system:id:name:)``):
 /// the Neiwan Line's DR1000 railcars, the Danhai light rail's own trains,
@@ -56,7 +56,7 @@ public enum RealLineStock {
 }
 
 extension GameWorld {
-    /// Decision 535: what train `id` is, when it runs on a real line the
+    /// Decision 536: what train `id` is, when it runs on a real line the
     /// company bought: that line's stock, as the 3D map draws it (a local
     /// line's three fleets split by the train's number, as
     /// ``Map3DTrainSet/variant(of:number:locked:)``); `nil` for any other.
@@ -65,7 +65,7 @@ extension GameWorld {
         return RealLineStock.name(ofSet: Map3DTrainSet.variant(of: key, number: id.rawValue), in: language)
     }
 
-    /// Decision 535: what the trains of line `id` are, when it is a real
+    /// Decision 536: what the trains of line `id` are, when it is a real
     /// line the company bought; `nil` for any other.
     public func boughtStockText(ofLine id: LineID, in language: DisplayLanguage) -> String? {
         guard let acquisition = acquisitions.first(where: { $0.kind == .railway && $0.line == id }),

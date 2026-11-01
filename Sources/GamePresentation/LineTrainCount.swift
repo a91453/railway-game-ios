@@ -177,7 +177,7 @@ extension GameWorld {
         let count = line(id: id)?.assignedTrains.count ?? 0
         guard count > 0 else { return language.text("No trains", "沒有列車") }
         var trains = language.text("\(count) \(count == 1 ? "train" : "trains")", "\(count) 列")
-        // Decision 535: a real line bought, what its trains are.
+        // Decision 536: a real line bought, what its trains are.
         if let stock = boughtStockText(ofLine: id, in: language) { trains += " · " + stock }
         guard let headway = lineRunningHeadway(id) else { return trains }
         return trains + " · " + headwayText(minutes: headway, in: language).lowercased()

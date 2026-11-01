@@ -248,7 +248,7 @@ struct TrainControls: View {
                     .accessibilityIdentifier("train.follow")
                 }
             }
-            // Decision 535: on a real line bought, what the train is.
+            // Decision 536: on a real line bought, what the train is.
             if let stock = session.world.boughtStockText(of: train.id, in: language) {
                 Label(stock, systemImage: "tram.fill")
                     .font(.footnote)

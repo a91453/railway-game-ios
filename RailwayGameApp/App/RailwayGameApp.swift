@@ -213,7 +213,7 @@ struct RailwayGameApp: App {
                     launcher.session?.holdScreenshotZoningDrag()
                 }
             }
-            // Decision 535: a train of a bought real line picked and
+            // Decision 536: a train of a bought real line picked and
             // followed, for its card and the 3D map.
             if let real = DebugLaunch.value(of: "-screenshot-follow-bought") {
                 Task {

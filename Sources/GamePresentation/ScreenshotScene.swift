@@ -42,7 +42,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// screenshot review of the pull request that added it.
     case commute
 
-    /// Decision 535: the demo map with its first line bought as the
+    /// Decision 536: the demo map with its first line bought as the
     /// Neiwan Line and its second as the Danhai light rail's Green
     /// Mountain Line (recorded as bought, as the app records a real line
     /// it laid), run on to the second morning: their trains drawn and

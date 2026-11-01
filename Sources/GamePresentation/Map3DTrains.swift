@@ -45,7 +45,7 @@ public enum Map3DTrains {
         public init(world: GameWorld) {
             var bodies: [TrainID: [WorldCoordinate]] = [:]
             var types: [TrainID: String] = [:]
-            // Decision 535 (decision 466 the Sanying Line's before it): the
+            // Decision 536 (decision 466 the Sanying Line's before it): the
             // trains of a real line bought, its own stock.
             let bought = RealLineStock.setKeys(in: world)
             for train in world.trains where train.position != nil {

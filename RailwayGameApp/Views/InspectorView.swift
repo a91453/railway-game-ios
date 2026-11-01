@@ -55,7 +55,7 @@ struct InspectorView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("inspector.train.details")
             }
-            // Decision 535: on a real line bought, what the train is.
+            // Decision 536: on a real line bought, what the train is.
             if let stock = session.world.boughtStockText(of: train, in: session.language) {
                 Label(stock, systemImage: "tram.fill")
                     .font(.footnote)

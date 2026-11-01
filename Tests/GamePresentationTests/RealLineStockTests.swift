@@ -3,7 +3,7 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 535, the author's question of 2026-11-01: a real line bought
+/// Decision 536, the author's question of 2026-11-01: a real line bought
 /// kept none of its own trains: the TRA branch lines' were drawn as a
 /// three-car urban EMU, the Danhai light rail's as the green tram. Now
 /// they are drawn, and named, as the line's own stock, as before they were
@@ -79,7 +79,7 @@ final class RealLineStockTests: XCTestCase {
     }
 }
 
-/// Decision 535's screenshot scene builds: its two bought lines' trains
+/// Decision 536's screenshot scene builds: its two bought lines' trains
 /// on the track, drawn as their real lines' stock.
 @MainActor
 final class RealLineStockSceneTests: XCTestCase {

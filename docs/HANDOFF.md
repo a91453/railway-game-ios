@@ -6,7 +6,7 @@
 
 > 從 3D 按「建設」（派工單 BUILD3D，[決策 517](decisions/517.md)，`build3d-return`，2026-10-31）：照舊在 2D 蓋，從 3D 來的按「完成」回到 3D 原本的視角（`Map3DBuildReturn`）。在 3D 裡直接鋪軌只做了評估，留給之後：照決策 517「下一步」的四步（先做 3D 點選、再解決鋪完要等場景重蓋、再只做路網的平面鋪設、最後看實機數據）。實機上回 3D 的樣子、截圖驗收暫緩（ui-review §3），UNVERIFIED。
 
-> 收購的真實路線換上該線自己的車（派工單 ACQSTOCK，[決策 535](decisions/535.md)，`claude/acqstock-real-trains`，2026-11-01）：只改表現層，收購前後 3D 是同一款車（台鐵支線 DR1000、六家沙崙 EMU 區間車、淡海輕軌、北投支線 C371），卡片與路線列寫車名。**沒做的**：性能維持收購時的（評估見決策 535「性能」）；節數仍是 GameCore 的（北投支線 6 節、三鶯 3 節，真車 3、2 節）；2D 列車顏色沒換。實機 UNVERIFIED。
+> 收購的真實路線換上該線自己的車（派工單 ACQSTOCK，[決策 536](decisions/536.md)，`claude/acqstock-real-trains`，2026-11-01）：只改表現層，收購前後 3D 是同一款車（台鐵支線 DR1000、六家沙崙 EMU 區間車、淡海輕軌、北投支線 C371），卡片與路線列寫車名。**沒做的**：性能維持收購時的（評估見決策 536「性能」）；節數仍是 GameCore 的（北投支線 6 節、三鶯 3 節，真車 3、2 節）；2D 列車顏色沒換。實機 UNVERIFIED。
 
 > DR3100 柴聯自強號（決策 511，session_01YGNNuo4eEH6JS6x5CwJ3LG，`dr3100-service`，2026-10-30）：`dieselExpress` 三節以上改用 45DR1000 的外型、DR3100 自己的塗裝（`Map3D45DR1000.Livery.dr3100`，近遠景）；真實地圖的縱貫線北段、宜蘭線、北迴線每天多跑 209／221／238／246 四班 DR3100 三節（`tra-dr3100-schedule.json`）。**沒做的**：臺鐵示範（決策 240）裡這四班仍在「台鐵 自強／莒光」線上用推拉式 12 節跑；要改得在 `TRADemo.kinds` 加一條 DR3100 線並重跑 `TRADemoTests`、`TRADemoDayTests`（見 `docs/decisions/511.md`「還沒做的」）。DR3100 自己的外型（中間的 DR3150 無駕駛室、20.274 m）也還沒有。實機外觀與幀數 UNVERIFIED。
 

@@ -7,7 +7,7 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
-    /// Decision 535: a train of a real line bought, the Neiwan Line's and
+    /// Decision 536: a train of a real line bought, the Neiwan Line's and
     /// the Danhai light rail's, followed: its card says what it is, the
     /// lines list what the line runs, and the 3D map draws the real line's
     /// own train (the DR1000, the Danhai light rail's), not a generic one.
