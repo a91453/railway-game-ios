@@ -1264,6 +1264,26 @@ public struct NetworkOverlay: Hashable, Sendable {
     public var cleared: [PlanRect] = []
 
     public init() {}
+
+    /// The lines under the next stretch's soft glow (decision 521's third
+    /// sequel): its centre line, a double track's second track and its
+    /// crossovers; nothing when it cannot be built. The map strokes them
+    /// as one path, so where the two tracks' glows meet, 5 m apart, they
+    /// do not lie twice over each other and darken into a third line.
+    public var previewGlow: [[WorldCoordinate]] {
+        guard previewIsBuildable else { return [] }
+        return ([preview, crossing] + crossovers).filter { $0.count > 1 }
+    }
+
+    /// The lines drawn solid over ``previewGlow``: each track once. A trace
+    /// that joins track already laid (decision 468) draws its new pieces
+    /// solid and the track already laid dashed (``existing``), not its
+    /// whole way over them again.
+    public var previewTracks: [[WorldCoordinate]] {
+        guard previewIsBuildable else { return [] }
+        let centre = existing.isEmpty ? [preview] : newPieces
+        return (centre + [crossing] + crossovers).filter { $0.count > 1 }
+    }
 }
 
 extension GameSession {
@@ -1283,7 +1303,10 @@ extension GameSession {
         switch networkMode {
         case .build:
             overlay.traceable = traceableRealLines
-            if !overlay.traceable.isEmpty { overlay.tracedWay = networkTracedWay }
+            // Decision 521's third sequel: a traced stretch's preview is
+            // the way itself; the real line lit under it as well, a little
+            // beside it, read as a second track.
+            if !overlay.traceable.isEmpty, networkDraftPreview?.preview.traced == nil { overlay.tracedWay = networkTracedWay }
             if let start = networkStart, let end = networkEnd, let (from, to) = endPositions(from: start, to: end, in: world) {
                 overlay.anchors = [from, to]
             } else {

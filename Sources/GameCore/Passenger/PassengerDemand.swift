@@ -30,7 +30,9 @@ extension GameWorld {
     /// The game day demand is worked out for, with weekly demand, events
     /// or holidays: today's. `nil` without any, when every day is the same.
     var demandDay: Int64? {
-        weeklyDemand || demandEvents != nil || disruptions != nil || tourism != nil ? dayIndex(of: clock.now) : nil
+        // Decision 533: a school's students come on school days only.
+        weeklyDemand || demandEvents != nil || disruptions != nil || tourism != nil
+            || placedBuildings.contains(where: \.kind.bringsRiders) ? dayIndex(of: clock.now) : nil
     }
 
     /// Whether today's demand follows the weekend's hours: on a weekend,
@@ -481,7 +483,7 @@ extension GameWorld {
                 switched = decayed - trips
                 between = PassengerCrowding.decayed(between, minutes: minutes)
             }
-            let extra = (tourists[reached.destination]).map { $0.outbound + $0.back } ?? 0
+            let extra = tourists[reached.destination]?.total ?? 0
             return DemandDetail(destination: reached.destination, trips: trips + between + extra, trip: reached.trip,
                                 tooExpensive: tooExpensive, switched: switched, route: route)
         }
@@ -596,6 +598,9 @@ extension GameWorld {
         /// The company's temples and night markets as sights (decision 361
         /// and its sequel): one built or sold changes the tourists' trips.
         var temples: [Attraction] = []
+        /// The company's schools and hospitals (decision 533): one built or
+        /// sold changes their riders' trips.
+        var civic: [PlacedBuildingID] = []
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -727,7 +732,8 @@ extension GameWorld {
         let pull = pulls(of: drawing)
         let typhoons = typhoonMultipliers()
         // Decision 174: the tourists' pairs, added to the ordinary ones.
-        let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { trip(from: $0, to: $1) != nil }.flows
+        // Decision 533: and the riders of the company's schools and hospitals.
+        let tourists = passengerExtraFlows(onDay: dayIndex(of: clock.now)) { trip(from: $0, to: $1) != nil }
         let drawingStations = Set(drawing.map(\.station))
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
@@ -774,12 +780,13 @@ extension GameWorld {
         memo.use(graph)
         var searches = PassengerRouteSearches(graph: graph)
         // Decision 174: the tourists' pairs, added to the ordinary ones.
-        let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { from, to in
+        // Decision 533: and the riders of the company's schools and hospitals.
+        let tourists = passengerExtraFlows(onDay: dayIndex(of: clock.now)) { from, to in
             let pair = PassengerRouteMemo.Pair(origin: from, destination: to)
             let found = memo[pair] ?? passengerRouteChoices(from: from, to: to, searches: &searches)
             memo[pair] = found
             return !found.isEmpty
-        }.flows
+        }
         let drawingStations = Set(drawing.map(\.station))
         struct Draft {
             let origin: StationID
@@ -876,7 +883,9 @@ extension GameWorld {
     mutating func passengerRelease() -> PassengerRelease? {
         // With weekly demand a plan is for one day.
         let temples = companySights().map(\.sight)
-        if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars || passengerPlan.temples != temples {
+        let civic = civicRiderBuildings
+        if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars || passengerPlan.temples != temples
+            || passengerPlan.civic != civic {
             passengerPlan = PassengerPlanCache()
         }
         if passengerPlan.plan == nil {
@@ -884,6 +893,7 @@ extension GameWorld {
             passengerPlan.day = demandDay
             passengerPlan.stars = tourismStars
             passengerPlan.temples = temples
+            passengerPlan.civic = civic
             passengerPlan.plan = .some(makePassengerPlan(memo: &passengerRouteMemo))
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }

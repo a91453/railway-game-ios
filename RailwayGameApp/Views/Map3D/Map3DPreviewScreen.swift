@@ -266,7 +266,7 @@ struct Map3DPreviewScreen: View {
             guard openStation != nil, stationTag.station == nil, let id = session.selectedStationID,
                   let scene, let camera = cameraLink.camera else { return }
             let space = Map3DPick.Space(scene: scene)
-            stationTag.show(id, at: Map3DTap.anchor(of: id, in: session.world, space: space, ground: Map3DPick.ground(of: session.world, in: space)),
+            stationTag.show(id, at: Map3DTap.anchor(of: id, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)),
                             seenBy: camera)
         }
         .onChange(of: showsRealTrains) { _, shown in
@@ -344,7 +344,7 @@ struct Map3DPreviewScreen: View {
         else { return }
         let id = session.tapMap3D(at: hit, reach: Map3DTap.reach(at: hit.point, camera: camera))
         let space = Map3DPick.Space(scene: scene)
-        let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: session.world, in: space)) }
+        let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)) }
         stationTag.show(id, at: anchor, seenBy: camera)
     }
 
@@ -472,6 +472,12 @@ final class Map3DSceneCache {
             hold.reuse()
             return building
         }
+        // Decision 517 續 (PR 3b's measurement): why this one is built.
+        let why: Map3DSceneBuildTime.Why = if let previous = self.key, game === session {
+            previous.edges != key.edges || previous.lastEdge != key.lastEdge ? .track : .other
+        } else {
+            .first
+        }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
         // so the blocks it has read do not stand up as cliffs.
@@ -492,6 +498,8 @@ final class Map3DSceneCache {
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
         let task = Task.detached(priority: .userInitiated) {
+            let clock = ContinuousClock()
+            let started = clock.now
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             let source = Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
                                           cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
@@ -501,7 +509,14 @@ final class Map3DSceneCache {
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
                                           noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) })
-            return Map3DBuiltScene(scene: source.scene(focus: focus), source: source)
+            let read = clock.now
+            let scene = source.scene(focus: focus)
+            let seconds = { (duration: Duration) in Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18 }
+            let number = Map3DSceneBuildLog.shared.add(Map3DSceneBuildTime(
+                why: why, realWorld: world.geoAnchor != nil, edges: world.network.edges.count, chunks: scene.chunks.count,
+                triangles: scene.triangleCount, readSeconds: seconds(read - started), buildSeconds: seconds(clock.now - read),
+                wall: Date().timeIntervalSince1970))
+            return Map3DBuiltScene(scene: scene, source: source, buildNumber: number)
         }
         self.key = key
         game = session
@@ -521,6 +536,9 @@ final class Map3DSceneCache {
 struct Map3DBuiltScene: Sendable {
     let scene: Map3DScene
     let source: Map3DChunkSource
+    /// Decision 517 續: its number in ``Map3DSceneBuildLog``, for the time
+    /// it takes to show.
+    var buildNumber: Int?
 }
 
 /// Decision 358: what a scene is built from, read once (the files) and
@@ -899,7 +917,13 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 358: the chunks built ahead that the scene built anew
         // round the same place does not hold, kept until built again.
         let kept = context.coordinator.streamer.kept(for: scene)
+        let showing = ContinuousClock.now
         view.show(scene, keeping: kept)
+        // Decision 517 續 (PR 3b's measurement): how long handing it over took.
+        if let number = built?.buildNumber {
+            let took = ContinuousClock.now - showing
+            Map3DSceneBuildLog.shared.shown(number, seconds: Double(took.components.seconds) + Double(took.components.attoseconds) * 1e-18)
+        }
         context.coordinator.streamer.start(built, kept: kept)
         // Decision 338: the train pack's sets as before them until it is
         // unlocked.

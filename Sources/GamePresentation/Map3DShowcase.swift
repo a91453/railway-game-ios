@@ -56,6 +56,9 @@ public enum Map3DShowcase {
         public let fewestCars: Int
         /// The band of a set that takes its line's colour (0xRRGGBB).
         let stripe: UInt32
+        /// The track's gauge under it, metres: its kind's, but the forest
+        /// railway's 762 mm for the Alishan train (decision 531).
+        let gauge: Float
 
         public var id: String { key }
 
@@ -64,7 +67,7 @@ public enum Map3DShowcase {
         }
 
         init(_ key: String, _ english: String, _ chinese: String, _ category: Category, cars: Int, most: Int? = nil,
-             fixed: Bool = false, stripe: UInt32 = 0x2F6DB5) {
+             fixed: Bool = false, stripe: UInt32 = 0x2F6DB5, gauge: Float? = nil) {
             self.key = key
             self.english = english
             self.chinese = chinese
@@ -73,6 +76,7 @@ public enum Map3DShowcase {
             mostCars = most ?? cars
             fewestCars = fixed ? cars : 1
             self.stripe = stripe
+            self.gauge = gauge ?? category.gauge
         }
     }
 
@@ -135,6 +139,8 @@ public enum Map3DShowcase {
         Entry("klrtCitadis", "Kaohsiung Light Rail Citadis 305", "高雄輕軌 Citadis 305", .lightRail, cars: 2, fixed: true),
         // Other: the steam train and the short commuter sets.
         Entry("STEAM", "Steam train", "蒸汽列車", .other, cars: 6, most: 10),
+        // Decision 531: the DL-38 and its coaches, on the forest railway's gauge.
+        Entry("ALISHAN", "Alishan Forest Railway mountain train", "阿里山林鐵登山列車", .other, cars: 6, most: 8, gauge: 0.762),
         Entry("threeCarUrban", "Three-car urban EMU", "三節都市電聯車", .other, cars: 3, fixed: true),
         Entry("greenCommuter", "Two-car green EMU", "兩節綠色電聯車", .other, cars: 2, fixed: true),
     ]
@@ -326,7 +332,7 @@ public enum Map3DShowcase {
                      color: groundColour)
         let ballast = Map3DPaint(.ballast, .tile(width: 5, height: 2.4))
         for row in rows {
-            let gauge = entry(row.key)?.category.gauge ?? 1.067
+            let gauge = entry(row.key)?.gauge ?? 1.067
             let line = [Map3DPoint(row.tailX - 6, railTop, row.z), Map3DPoint(6, railTop, row.z)]
             mesh.addRibbon(along: line, width: Map3DScene.Builder.bedTop, lift: -Map3DScene.Builder.bedDrop, depth: 0.6,
                            top: Map3DPalette.ballast, side: Map3DPalette.ballast, topPaint: ballast)

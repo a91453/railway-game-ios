@@ -711,27 +711,27 @@ enum MapArt {
             let width = max(2, referenceSize * 0.12)
             context.stroke(wholePolyline(overlay.unbuilt, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
         }
-        // Decision 468: a trace that joins track already laid: the glow
-        // along all of it, the new track's pieces solid and the track
-        // already there dashed in the same colour.
-        if overlay.previewIsBuildable, !overlay.existing.isEmpty {
-            let width = max(2, referenceSize * 0.12)
-            context.stroke(polyline(overlay.preview, projection: projection), with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
-            for points in overlay.newPieces where points.count > 1 {
-                context.stroke(polyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
-            }
+        // Decision 521's third sequel: one glow under all of it, stroked as
+        // one path so a double track's two glows do not darken where they
+        // meet; then each track once. Decision 468: a trace that joins
+        // track already laid draws the track already there dashed in the
+        // same colour.
+        let width = max(2, referenceSize * 0.12)
+        let glow = overlay.previewGlow
+        if !glow.isEmpty {
+            var path = Path()
+            for points in glow { path.addPath(polyline(points, projection: projection)) }
+            context.stroke(path, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
+        }
+        for points in overlay.previewTracks {
+            context.stroke(polyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+        }
+        if overlay.previewIsBuildable {
             for points in overlay.existing where points.count > 1 {
                 context.stroke(wholePolyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
             }
-        }
-        let joined = overlay.previewIsBuildable && !overlay.existing.isEmpty
-        for points in (joined ? [] : [overlay.preview]) + [overlay.crossing] + overlay.crossovers where points.count > 1 {
-            let line = polyline(points, projection: projection)
-            let width = max(2, referenceSize * 0.12)
-            if overlay.previewIsBuildable {
-                context.stroke(line, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
-                context.stroke(line, with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
-            } else {
+        } else {
+            for points in [overlay.preview, overlay.crossing] + overlay.crossovers where points.count > 1 {
                 // Dashed, so drawn whole (see the tunnels in drawNetwork).
                 context.stroke(wholePolyline(points, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
             }

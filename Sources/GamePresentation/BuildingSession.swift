@@ -60,11 +60,11 @@ extension PlacedBuildingKind {
             language.text("Draws visitors who ride your trains to it and leave offerings.",
                           "吸引香客搭你的車來參拜，香油錢是它的收入。")
         case .school:
-            language.text("Families move in nearby, and land around it is worth more.",
-                          "附近的住家長得快，周圍的地價也變高。")
+            language.text("Students ride your trains to it on school days. Families move in nearby, and land around it is worth more.",
+                          "上學日有學生搭你的車來上課。附近的住家長得快，周圍的地價也變高。")
         case .hospital:
-            language.text("People settle nearby, and land around it is worth more.",
-                          "附近的人口長得快，周圍的地價也變高。")
+            language.text("Patients and visitors ride your trains to it by day. People settle nearby, and land around it is worth more.",
+                          "白天有看病、探病的人搭你的車來。附近的人口長得快，周圍的地價也變高。")
         case .nightMarket:
             language.text("Draws evening crowds who ride your trains to it and spend at its stalls.",
                           "吸引人搭你的車來逛夜市，攤位的生意是它的收入。")

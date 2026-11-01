@@ -243,7 +243,12 @@ extension GameSession {
         case .setTrafficControl(let enabled): try world.setTrafficControl(enabled)
         case .setDisruptions(let disruptions): world.setDisruptions(disruptions)
         case .setPassengerRoutingMode(let mode): world.setPassengerRoutingMode(mode)
-        case .setEconomyMode(let mode): world.setEconomyMode(mode)
+        case .setEconomyMode(let mode):
+            // Decision 497 (P2-5, B): a managed company switching to free
+            // play gets unlimited funds, as free play earns nothing.
+            let wasManaged = world.accounts.mode == .management
+            world.setEconomyMode(mode)
+            if mode == .free, wasManaged { world.setUnlimitedFunds(true) }
         case .setFareRules(let rules): try world.setFareRules(rules)
         case .setDayPass(let price): try world.setDayPass(price)
         case .borrow(let amount): try world.borrow(amount)

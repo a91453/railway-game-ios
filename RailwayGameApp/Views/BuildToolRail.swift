@@ -75,8 +75,12 @@ struct BuildToolButtons: View {
         VStack(spacing: ToolColumnStyle.buttonSpacing) {
             // Decision 266: in a lesson, only the tools it has unlocked.
             // Decision 509: zoning a button of its own, after Buildings.
-            ForEach(session.buildToolbarButtons, id: \.self) { button in
-                toolButton(button)
+            // A sendable closure, not main-actor code (CRASH101): this
+            // column stands in a ViewThatFits whose other layouts SwiftUI's
+            // asynchronous renderer may measure, and build their buttons,
+            // off the main thread when a lesson unlocks a tool.
+            ForEach(session.buildToolbarButtons, id: \.self) { @Sendable button in
+                BuildToolButton(session: session, button: button)
             }
             if includesDone {
                 if column?.compact != true {
@@ -87,8 +91,14 @@ struct BuildToolButtons: View {
             }
         }
     }
+}
 
-    private func toolButton(_ button: BuildToolbarButton) -> some View {
+/// One building tool's button in ``BuildToolButtons``.
+struct BuildToolButton: View {
+    let session: GameSession
+    let button: BuildToolbarButton
+
+    var body: some View {
         let isActive = session.isChosen(button)
         return Button {
             // A tool chosen again stays chosen: Done, or Build in the dock,

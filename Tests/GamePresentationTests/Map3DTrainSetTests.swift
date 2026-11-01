@@ -72,7 +72,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 100...15_000
                     : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
-                    : name == set.headName && ["R200CK", "R200CKFar"].contains(set.key) ? 5_000...12_800 : 100...4_100
+                    : name == set.headName && ["R200CK", "R200CKFar"].contains(set.key) ? 5_000...12_800
+                    // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
+                    : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -83,6 +85,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 // Decision 408: the 700T's cars 25.2 to 25.5 m, the N700S-G's
                 // and its far set's 25 and 25.3 m,
                 // Decision 422: the 700T's far set as long as its near one.
+                let alishan = ["ALISHAN", "ALISHANFar"].contains(set.key)
                 let length: ClosedRange<Float> = ["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
                     // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
@@ -95,9 +98,13 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "blueSeven" ? 7.5...8.4
                     : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 15.79...15.81
                     // Decision 496: the Citadis is 33.4 m, a half 16.7 m.
-                    : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3 : 17...22.5
+                    : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3
+                    // Decision 531: the Alishan train's DL-38 8.9 m and coaches 13 m.
+                    : alishan ? (name.hasSuffix("-head") ? 8.8...9.0 : 12.9...13.1) : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
-                XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
+                // Decision 531: the 762 mm gauge's cars 2.2 to 2.3 m wide, the
+                // coaches' grab bars 2.32 m.
+                XCTAssertTrue((alishan ? 2.1...2.35 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
                 let height: ClosedRange<Float> = name == set.headName && ["E500CK", "STAR", "E500CKFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
@@ -107,7 +114,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
-                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) ? 3.4...5.3 : 3.4...4.6
+                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) ? 3.4...5.3
+                    // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
+                    : alishan ? 3.0...3.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")

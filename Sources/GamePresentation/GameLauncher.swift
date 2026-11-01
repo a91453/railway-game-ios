@@ -1660,6 +1660,18 @@ public final class GameLauncher {
         }
     }
 
+    /// `world` with unlimited funds when it is a managed company that
+    /// switched to free play before the switch turned them on (decision
+    /// 497, P2-5 B): a save from then has the cash it switched with and
+    /// nothing to earn more. A world never managed (its accounts never
+    /// opened) is left as it is.
+    nonisolated public static func withFreePlayFunds(_ world: GameWorld) -> GameWorld {
+        guard world.accounts.mode == .free, world.accounts.openedAt != nil, !world.economy.unlimitedFunds else { return world }
+        var funded = world
+        funded.setUnlimitedFunds(true)
+        return funded
+    }
+
     /// Plays `world`. Returns whether it started. A demo (`isDemo`)
     /// unlocks no achievements (decision 181), nor does its save later.
     /// Decision 351: nor does any new game (one without `news`) begun in
@@ -1669,6 +1681,7 @@ public final class GameLauncher {
         _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil,
         row: String? = nil, autosavingAt date: Date? = nil
     ) -> Bool {
+        let world = Self.withFreePlayFunds(world)
         let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
             do throws(SaveError) {

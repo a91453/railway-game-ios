@@ -146,6 +146,24 @@ struct ContentView: View {
                 guard session.canTraceRealRailway, ProcessInfo.processInfo.arguments.contains("-ui-test-trace-refused") else { return }
                 session.traceWhereNoGradeReaches()
             }
+            // Decision 521's third sequel: the screenshot test's double
+            // trace near Luodong, or the same trace joining track laid on its
+            // middle third.
+            .task(id: session.canTraceRealRailway) {
+                guard session.canTraceRealRailway else { return }
+                let arguments = ProcessInfo.processInfo.arguments
+                let joining = arguments.contains("-ui-test-trace-joined")
+                guard joining || arguments.contains("-ui-test-trace-double"),
+                      let region = session.traceForPreviewScreenshot(from: "羅東", to: "冬山", joining: joining) else { return }
+                // Asked again while the test zooms in: the first ask comes
+                // before the map is there to take it, and a region only
+                // ever zooms out, so the test zooms in with the button and
+                // this keeps the place in the middle.
+                for _ in 0..<15 {
+                    try? await Task.sleep(for: .seconds(4))
+                    session.lookOver(region)
+                }
+            }
             #endif
             // The map and controls share one screen, so text stops growing at the
             // largest standard size instead of pushing the map off screen.

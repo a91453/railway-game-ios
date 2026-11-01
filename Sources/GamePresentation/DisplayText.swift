@@ -581,8 +581,8 @@ extension GameError {
             )
         case .stationNotFullToExpand:
             language.text(
-                "The station was not full yesterday, so expanding would not carry more people.",
-                "這一站昨天沒有客滿，擴建也不會多載旅客。"
+                "The station has not been full often enough lately, so expanding would not carry more people.",
+                "這一站最近不常客滿，擴建也不會多載旅客。"
             )
         case .lineAlreadyAcquired:
             language.text("This line is already yours.", "這條線已經是你的了。")

@@ -7,6 +7,43 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
+    /// Decision 536: a train of a real line bought, the Neiwan Line's and
+    /// the Danhai light rail's, followed: its card says what it is, the
+    /// lines list what the line runs, and the 3D map draws the real line's
+    /// own train (the DR1000, the Danhai light rail's), not a generic one.
+    /// For the screenshot review of the pull request that drew them so.
+    func testBoughtLineStock() {
+        for (real, name) in [("tra:NEIWAN", "neiwan"), ("ntdlrt:V", "danhai")] {
+            let app = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-follow-bought", real, "-map3D.quality", "saving"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            let stock = app.descendants(matching: .any)["train.stock"].firstMatch
+            XCTAssertTrue(stock.appears(within: 30), "\(real): the train's card says what it is")
+            settle(seconds: 3)
+            keep("bought-\(name)-train-card", app)
+
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            waitForPicture(timeout: 150)
+            settle(seconds: 5)
+            keep("bought-\(name)-3d", app)
+            app.terminate()
+        }
+
+        let app = launch(extra: ["-screenshot-scene", "acquired"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 3)
+        keep("bought-lines-list", app)
+    }
+
     /// Decision 517 續: the station picked on the 2D map keeps its tag on
     /// the 3D map, under the station there; a tap on the tag opens its
     /// details back on the 2D map.
@@ -169,6 +206,61 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-expansion", app)
     }
 
+    /// Decision 533: the station panel's row of the riders a school and a
+    /// hospital beside the station bring, under its trips by hour, at
+    /// half past seven on a school day (`ScreenshotScene.commute`). For
+    /// the screenshot review of the pull request that made it, not the
+    /// website.
+    func testCivicRidersRow() {
+        let app = launch(extra: ["-screenshot-scene", "commute", "-screenshot-select-station", "1"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        // A hold on the first station (the school's and the hospital's)
+        // opens its panel, as `ToolbarSmokeTests`' board test does: the
+        // tag's tap opens only the details card.
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 30), "The stations are drawn")
+        func first() -> CGPoint? {
+            ((stations.value as? String) ?? "").split(separator: ";").first.flatMap { pair in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+            }
+        }
+        var last = first()
+        let still = Date().addingTimeInterval(10)
+        while Date() < still {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = first()
+            if now != nil, now == last { break }
+            last = now
+        }
+        guard let point = last else { return XCTFail("The scene has stations") }
+        var list: XCUIElement?
+        for _ in 0..<3 where list == nil {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
+            let opened = Date().addingTimeInterval(5)
+            repeat {
+                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
+            } while list == nil && Date() < opened
+        }
+        XCTAssertNotNil(list, "The hold opens the station's panel")
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "The panel has its jump menu")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
+        // By its words too: in the list the row's identifier was not found
+        // though it showed (run 41281919190's recording).
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@ OR label BEGINSWITH %@", "station.civicRiders.school", "學校 ·")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "The riders row comes into view")
+        settle()
+        keep("station-civic-riders", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that
@@ -243,7 +335,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(app.dragUntilWhollyOnScreen(free, in: list, below: bar.frame.maxY), "The free play switch comes into reach")
         free.tap()
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "現金會停在現在的數字")).firstMatch.appears(within: 10), "The confirmation says the cash stays")
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "蓋東西、買車都不用錢")).firstMatch.appears(within: 10), "The confirmation says building costs nothing")
         settle(seconds: 1)
         keep("free-play-switch-confirmation", app)
     }
@@ -799,6 +891,58 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(refusal.appears(within: 120), "The trace is refused, and says why")
         settle(seconds: 8)
         keep("trace-no-grade-reaches", app)
+    }
+
+    /// Decision 521's third sequel: a double trace from Luodong to
+    /// Dongshan, and the same trace joining track laid on its middle third,
+    /// each previewed as one way (no second line beside it, no darker band
+    /// where the glows meet). For the screenshot review of its pull
+    /// request; drawn by the Debug app through the tool's own taps.
+    func testTracePreviewDouble() {
+        tracePreviewShot(argument: "-ui-test-trace-double", station: "羅東", search: "羅東", name: "trace-preview-double")
+    }
+
+    func testTracePreviewJoined() {
+        tracePreviewShot(argument: "-ui-test-trace-joined", station: "羅東", search: "羅東", name: "trace-preview-joined")
+    }
+
+    private func tracePreviewShot(argument: String, station: String, search text: String, name: String) {
+        let app = launch(extra: [argument])
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.appears(within: 30), "The picker opens")
+        search.tap()
+        search.typeText(text)
+        let place = app.buttons["station.tra_sched|\(station)"]
+        XCTAssertTrue(place.appears(within: 30), "\(station) is found")
+        place.waitUntilSettled()
+        app.tapMiddle(of: place)
+        if !app.buttons["realWorld.start"].appears(within: 3) {
+            let ends = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "關閉", "Cancel", "Close"]))
+            let row = search.frame
+            let end = ends.allElementsBoundByIndex.first { abs($0.frame.midY - row.midY) < row.height }
+            XCTAssertNotNil(end, "The search can be ended")
+            end?.tap()
+        }
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 120), "The trace is previewed")
+        // Close enough to see the glow: the Debug app keeps the place in
+        // the middle every 4 s for a minute.
+        // By its label, which the app shows in Chinese here.
+        let zoomIn = app.buttons.matching(NSPredicate(format: "label IN %@", ["Zoom in", "放大"])).firstMatch
+        XCTAssertTrue(zoomIn.becomesHittable(within: 10), "The zoom-in button")
+        for _ in 0..<4 {
+            zoomIn.tap()
+            settle(seconds: 1)
+        }
+        settle(seconds: 10)
+        keep(name, app)
     }
 
     // MARK: - What the game gained after those (decisions 167 to 186)
@@ -1672,6 +1816,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.launchArguments = ["-ui-testing"] + language + extra
         app.launch()
         return app
+    }
+
+    /// Waits until the 3D map is drawn, not its spinner: the Simulator
+    /// draws it in software and can take over a minute; a screenshot of
+    /// the spinner is about 240 KB, one of the map far more.
+    private func waitForPicture(timeout: TimeInterval) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if XCUIScreen.main.screenshot().pngRepresentation.count > 600_000 { return }
+            Thread.sleep(forTimeInterval: 2)
+        }
     }
 
     /// Lets the map draw and the animations end before a screenshot.

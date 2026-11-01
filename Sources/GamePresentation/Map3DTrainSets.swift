@@ -248,6 +248,10 @@ public struct Map3DTrainSet: Sendable {
             // in its own silver and orange, near and from 500 m out.
             dr1000Railcar(livery: .dr3100),
             dr1000Railcar(far: true, livery: .dr3100),
+            // Decision 531: the Alishan Forest Railway's mountain train, the
+            // DL-38 and its coaches, near and from 500 m out.
+            alishan(),
+            alishan(far: true),
             // Decision 331: the light metro as the green low-floor tram.
             lowFloorTram("greenTram"),
             // Decision 331, later: a two-car commuter as the green
@@ -314,7 +318,7 @@ public struct Map3DTrainSet: Sendable {
     /// far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
-                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis"]
+                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -787,6 +791,18 @@ public struct Map3DTrainSet: Sendable {
             let car = Map3D45DR1000.model(far: far, livery: livery)
             return Cars(head: lit(car, front: true), middle: car, tail: lit(car.turned, front: false),
                         single: lit(lit(car, front: true), front: false))
+        }
+    }
+
+    /// Decision 531: the Alishan Forest Railway's mountain train
+    /// (``Map3DAlishan``): the DL-38 at the front, its radiator lamps lit,
+    /// the coaches behind, the last one's back lamps lit red, each car its
+    /// own length. `far`: their light versions.
+    static func alishan(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "ALISHANFar" : "ALISHAN", ownLengths: true, far: far ? nil : "ALISHANFar") {
+            let coach = Map3DAlishan.coach(far: far)
+            return Cars(head: lit(Map3DAlishan.locomotive(far: far), front: true), middle: coach,
+                        tail: lit(coach, front: false), single: nil)
         }
     }
 

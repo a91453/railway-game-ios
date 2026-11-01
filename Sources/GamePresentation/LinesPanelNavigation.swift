@@ -119,6 +119,16 @@ extension LineReport {
         ]
     }
 
+    /// ``compactRowParts(in:)`` as the narrow row's one or two lines, so
+    /// the row builds them without a `ForEach` (CRASH101: SwiftUI's
+    /// asynchronous renderer ran a `ForEach` row closure, main-actor code,
+    /// off the main thread while measuring the row's `ViewThatFits`).
+    public func compactRowLines(in language: DisplayLanguage) -> (first: String, second: String?) {
+        let parts = compactRowParts(in: language)
+        let rest = parts.dropFirst().joined(separator: " · ")
+        return (parts.first ?? "", rest.isEmpty ? nil : rest)
+    }
+
     /// Whether the row's text is a loss, drawn in the warning colour.
     public var lostMoneyYesterday: Bool {
         yesterday.map { $0.profit < .zero } ?? false
