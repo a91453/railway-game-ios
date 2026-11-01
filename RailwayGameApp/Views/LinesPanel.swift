@@ -1224,12 +1224,17 @@ struct LinesPanel: View {
                     if let report {
                         ViewThatFits(in: .horizontal) {
                             reportText(report, report.compactRowText(in: session.language), id: line.id)
+                            // No ForEach here (CRASH101, 2026-11-01): its row
+                            // closure is main-actor code, and SwiftUI's
+                            // asynchronous renderer built a narrow row's
+                            // items off the main thread while measuring this
+                            // ViewThatFits, which stopped the app. The two
+                            // lines are built here, with the row.
+                            let lines = report.compactRowLines(in: session.language)
                             VStack(alignment: .leading, spacing: 1) {
-                                ForEach(report.compactRowParts(in: session.language), id: \.self) { part in
-                                    Text(verbatim: part)
-                                        .font(.caption2.monospacedDigit())
-                                        .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
-                                        .lineLimit(1)
+                                compactRowLine(lines.first, lostMoney: report.lostMoneyYesterday)
+                                if let second = lines.second {
+                                    compactRowLine(second, lostMoney: report.lostMoneyYesterday)
                                 }
                             }
                             .accessibilityElement(children: .combine)
@@ -1251,6 +1256,14 @@ struct LinesPanel: View {
                     .accessibilityHidden(true)
             }
         }
+    }
+
+    /// One line of a narrow row's riders and profit (decision 486).
+    private func compactRowLine(_ text: String, lostMoney: Bool) -> some View {
+        Text(verbatim: text)
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(lostMoney ? Theme.error : Theme.textSecondary)
+            .lineLimit(1)
     }
 
     /// A row's name and its marks: ring, high-speed, needs a look.
