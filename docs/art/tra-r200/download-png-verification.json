@@ -1,0 +1,19 @@
+{
+  "status": "VERIFIED",
+  "actual_viewer_png_downloads": [
+    {
+      "file": "download-tra-r200-r216-locomotive-far.png",
+      "sha256": "d7ac581377ef2e162d3795d1f77d53dfbea816aba497be346a79c7634a2bc0bb",
+      "bytes": 53946
+    },
+    {
+      "file": "download-tra-r200-r216-locomotive.png",
+      "sha256": "06d476bfb7691e2f9215e4bb744401c618ab7b489ef44874b8ff17c1e0a5fc3a",
+      "bytes": 64635
+    }
+  ],
+  "full_decode": true,
+  "rgba_transparent_nonempty_unclipped": true,
+  "review_and_selected_decoded": 62,
+  "delivered_previews": 20
+}

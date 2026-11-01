@@ -77,6 +77,42 @@ final class TraceDragCostTests: XCTestCase {
         XCTAssertEqual(drag(other, from: otherEnd, over: otherSteps), first)
     }
 
+    /// Decision 521's second sequel: the traced preview prices the copy the
+    /// trace built its stretches on, not the chain built a second time,
+    /// and that copy is the chain built afresh.
+    func testATracedPreviewBuildsTheChainOnce() throws {
+        let heights = try XCTUnwrap(TRADemoTests.heights)
+        let waiao = try BundledRealData.station("外澳", in: "tra_sched")
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(waiao.anchor))
+        try world.mapGround()
+        let session = GameSession(world: world, language: .english)
+        session.heights = heights
+        session.railways = try BundledRealData.railways()
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        // Single track, the player's choice: the real line is double here,
+        // and the double track's preview is planned apart (decision 247).
+        session.networkBuildsDouble = false
+        let from = try BundledRealData.point(waiao.coordinate, in: world)
+        let toucheng = try BundledRealData.point(try BundledRealData.station("頭城", in: "tra_sched").coordinate, in: world)
+        session.tapNetwork(at: from, reach: reach)
+        session.tapNetwork(at: PlanPoint(x: (from.x + toucheng.x) / 2, y: (from.y + toucheng.y) / 2), reach: reach)
+        let start = try XCTUnwrap(session.networkStart), end = try XCTUnwrap(session.networkEnd)
+
+        let plan = try XCTUnwrap(session.traceAlong(from: start, to: end))
+        XCTAssertGreaterThan(plan.buildable, 0, "some of it can be built")
+        let traced = try XCTUnwrap(plan.built, "the trace keeps the copy it built on")
+        var again = session.world.trackPreviewCopy()
+        _ = try session.apply(.buildTrackChain(Array(plan.stretches.prefix(plan.buildable))), to: &again)
+        XCTAssertEqual(traced.network, again.network)
+        XCTAssertEqual(traced.economy.balance, again.economy.balance)
+        XCTAssertEqual(traced.placedBuildings, again.placedBuildings)
+
+        let preview = try XCTUnwrap(session.tracePreview(from: start, to: end)?.0)
+        XCTAssertEqual(preview.cost, Money(GameWorld.pricingBalance.amount - again.economy.balance.amount))
+    }
+
     /// The memo gives the blocks as the file does, in order, and keeps each
     /// frame apart.
     func testTheMemoGivesWhatTheRowsDo() throws {

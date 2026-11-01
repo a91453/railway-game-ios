@@ -17,13 +17,16 @@ struct MapAlertBubbles: View {
     let viewport: ScreenSize
     /// What floats over the map's edges (``EnvironmentValues/mapInsets``).
     let insets: EdgeInsets
+    /// Where the map's clear part starts under the top bar and its column
+    /// (decision 477), for the tiles' prices; `insets.top` when `nil`.
+    var clearTop: CGFloat?
     @Environment(GameScreenState.self) private var screen
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether the badge's list is open (decision 510).
     @State private var listOpen = false
 
     var body: some View {
-        let arranged = Self.arranged(session: session, camera: camera, viewport: viewport, insets: insets)
+        let arranged = Self.arranged(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop)
         ZStack(alignment: .topLeading) {
             if session.tool == .select {
                 ForEach(placed) { item in
@@ -164,7 +167,7 @@ struct MapAlertBubbles: View {
     /// or, decision 477, beside it where that covers another station's
     /// name (``MapLabelPlacement/placeBubbles(_:stations:lift:radius:)``).
     private var placed: [PlacedAlert] {
-        Self.placements(session: session, camera: camera, viewport: viewport, insets: insets).map {
+        Self.placements(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop).map {
             PlacedAlert(bubble: $0.bubble, more: $0.more, point: CGPoint(x: $0.point.x, y: $0.point.y))
         }
     }
@@ -172,9 +175,10 @@ struct MapAlertBubbles: View {
     /// Decision 510: the alerts on screen, as a few bubbles on the map and
     /// the rest behind the badge (``MapClutter/arrange(_:markedSights:limit:)``).
     /// A sight's warning is not repeated over its own mark.
-    static func arranged(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets)
+    static func arranged(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets,
+                         clearTop: CGFloat? = nil)
         -> (onMap: [MapClutter.Group], folded: [MapMarks.Bubble]) {
-        let inputs = PlacementInputs(session: session, camera: camera, viewport: viewport, insets: insets)
+        let inputs = PlacementInputs(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop)
         if let memo = PlacementMemo.last, memo.inputs == inputs { return memo.arranged }
         let arranged = arranged(session: session, camera: camera, viewport: viewport, insets: insets, prices: inputs.prices)
         PlacementMemo.last = PlacementMemo(inputs: inputs, arranged: arranged)
@@ -201,18 +205,20 @@ struct MapAlertBubbles: View {
 
     /// Where the badge takes a touch while it shows (closed), about: its
     /// glyph, count and chevron, touched over 44 high.
-    static func badgeTouchBox(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets) -> MapLabelPlacement.Box? {
+    static func badgeTouchBox(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets,
+                              clearTop: CGFloat? = nil) -> MapLabelPlacement.Box? {
         guard session.tool == .select, session.focusedRequest == nil,
-              !arranged(session: session, camera: camera, viewport: viewport, insets: insets).folded.isEmpty else { return nil }
+              !arranged(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop).folded.isEmpty else { return nil }
         return MapLabelPlacement.Box(x: Double(insets.leading) + 8, y: Double(insets.top) + 8 - 8, width: 72, height: 44)
     }
 
     /// Where each bubble on screen goes (its bottom middle) and the box its
     /// touch takes. Decision 501: the selected station's tag keeps off them.
-    static func placements(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets)
+    static func placements(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets,
+                           clearTop: CGFloat? = nil)
         -> [(bubble: MapMarks.Bubble, more: Int, point: ScreenPoint, touchBox: MapLabelPlacement.Box)] {
         guard session.tool == .select else { return [] }
-        let groups = arranged(session: session, camera: camera, viewport: viewport, insets: insets).onMap
+        let groups = arranged(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop).onMap
         // ``arranged`` just kept its memo for these inputs.
         if let placed = PlacementMemo.last?.placements { return placed }
         let placed = placements(groups, session: session, camera: camera)
@@ -238,7 +244,7 @@ struct MapAlertBubbles: View {
         let prices: [MapLabelPlacement.Box]
 
         @MainActor
-        init(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets) {
+        init(session: GameSession, camera: PlanCamera, viewport: ScreenSize, insets: EdgeInsets, clearTop: CGFloat?) {
             self.camera = camera
             self.viewport = viewport
             self.insets = insets
@@ -247,7 +253,7 @@ struct MapAlertBubbles: View {
             bubbles = session.mapBubbles
             sights = session.mapSights
             stations = MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: camera.viewport)
-            prices = MapAttractionMarks.tilePrices(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: nil)
+            prices = MapAttractionMarks.tilePrices(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop)
         }
     }
 

@@ -148,4 +148,32 @@ final class ZoningPreviewTests: XCTestCase {
         session.choose(.zoning)
         XCTAssertEqual(session.zoningZone, .residential)
     }
+
+    /// Decision 522's sequel: over the map's land, dark and light (the
+    /// app's `Palette.land`, 0x262C57 and 0xECEEF6), each use's drag fill
+    /// is nearest in hue to its own legend colour, not a neighbour's (at
+    /// 0.35 shops read as offices over the dark map).
+    func testTheDragFillReadsAsItsOwnZone() {
+        let uses = Zone.allCases.filter { $0.use != nil }.map(CityMap.zoneColor)
+        func hue(_ c: (Double, Double, Double)) -> Double {
+            let high = max(c.0, c.1, c.2), low = min(c.0, c.1, c.2)
+            guard high > low else { return 0 }
+            let h: Double = if high == c.0 { (c.1 - c.2) / (high - low) }
+                else if high == c.1 { 2 + (c.2 - c.0) / (high - low) }
+                else { 4 + (c.0 - c.1) / (high - low) }
+            return (h * 60 + 360).truncatingRemainder(dividingBy: 360)
+        }
+        func apart(_ a: Double, _ b: Double) -> Double { min(abs(a - b), 360 - abs(a - b)) }
+        func rgb(_ c: PopTravel.RGB) -> (Double, Double, Double) { (Double(c.red), Double(c.green), Double(c.blue)) }
+        let opacity = BuildingOverlay.zoneDragFillOpacity
+        for land in [(38.0, 44.0, 87.0), (236.0, 238.0, 246.0)] {
+            for (index, colour) in uses.enumerated() {
+                let c = rgb(colour)
+                let filled = hue((opacity * c.0 + (1 - opacity) * land.0, opacity * c.1 + (1 - opacity) * land.1,
+                                  opacity * c.2 + (1 - opacity) * land.2))
+                let nearest = uses.indices.min { apart(filled, hue(rgb(uses[$0]))) < apart(filled, hue(rgb(uses[$1]))) }
+                XCTAssertEqual(nearest, index, "zone \(index) over land \(land)")
+            }
+        }
+    }
 }

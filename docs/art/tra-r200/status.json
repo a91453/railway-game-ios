@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "VERIFIED",
+    "evidence": "Independent final producer reconstruction is recorded in rebuild-verification.json: complete native/GLB, 20 selected transparent PNGs, self-contained viewer and pinned metadata. Swift 6.4 warnings-as-errors, related tests, shared topology and actual R200 fault probes, Blender 4.3.2 import, HTTP rotation/zoom and download checks. All existing models are compared against actual latest-main exports separately from upstream changes. file:// remains UNVERIFIED because browser administration blocks navigation. Source/engineering gaps remain; technical study validation only."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "No explicit user acceptance of this producer. Author inspection is separate.",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Studies only. Existing r200ChuKuang/R200CK runtime mapping remains unchanged; new native locomotive is not selected by the game."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator or physical-device Metal, performance, animation or operational validation."
+  }
+}

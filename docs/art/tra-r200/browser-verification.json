@@ -1,0 +1,45 @@
+{
+  "status": "VERIFIED",
+  "transport": "loopback HTTP",
+  "models": [
+    {
+      "id": "tra-r200-r216-locomotive",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-r200-r216-locomotive-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    }
+  ],
+  "orbit_zoom_changed_pixels": true,
+  "mobile_width": 390,
+  "file_protocol": {
+    "status": "UNVERIFIED",
+    "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+  },
+  "errors": [],
+  "external_requests": 0,
+  "limits": [
+    "Browser WebGL only; no device Metal, animation or appearance acceptance."
+  ],
+  "producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732",
+  "viewer_sha256": "50561995c32f31a957fd92a43912273b627385afbd14048c52c33b9c53a34a98",
+  "actual_download_payload_sha256": [
+    {
+      "id": "tra-r200-r216-locomotive",
+      "native": "a42f83f187695d6f6a423534352a4bf07aa190db2f408d091b507ce6fc594061",
+      "glb": "d441386e5b416870ea71b59df301addc7899a7a7df937eaed1196e6e3bfa9e86"
+    },
+    {
+      "id": "tra-r200-r216-locomotive-far",
+      "native": "45796dddea6cf8164d44359faffd7442dd0b0bcdb0cad17a50cdbe976600d1dd",
+      "glb": "c0b99bd097ea36135beafa985323606aaf7bd6adc31c1950daba5e210b20315b"
+    }
+  ]
+}
