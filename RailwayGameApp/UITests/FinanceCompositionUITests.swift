@@ -35,7 +35,7 @@ final class FinanceCompositionUITests: XCTestCase {
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
 
         XCTAssertTrue(app.revealFinanceComposition(in: list, below: bar.frame.maxY), "The income donut comes into reach")
-        XCTAssertTrue(app.descendants(matching: .any)["economy.composition.costs"].firstMatch.exists, "The cost donut shows")
+        XCTAssertTrue((list ?? app).descendants(matching: .any)["economy.composition.costs"].firstMatch.exists, "The cost donut shows")
 
         let detail = app.staticTexts["economy.composition.income.detail"]
         XCTAssertTrue(detail.label.hasPrefix("Income NT$"), "Before a tap the ring's total is summed up: \(detail.label)")
@@ -53,16 +53,27 @@ extension XCUIApplication {
     /// Brings the economy panel's income donut (decision 480) wholly into
     /// `list`, below `below`; whether it came. A game of simple rules keeps
     /// the reports folded away under a toggle at the list's foot, and the
-    /// reports open above it, so after the toggle the list goes back to its
-    /// top first.
+    /// reports open above it, so the toggle goes first and the list then
+    /// goes back up to the donut, as `WebsiteScreenshotTests` does.
+    ///
+    /// Looking down the folded list for the donut first cost 25 drags, each
+    /// followed by a query of every element in the app: the test took
+    /// 210–312 s in each full lane from deef5e3 to 5121f61, and in 0c6e5ce's
+    /// (103.1, run 41287836096) one such query stalled 60 s, the time
+    /// XCTest gives a query on the app's main thread, and XCTest's own code
+    /// in the app then aborted it ("Illegal fault request … snapshot has no
+    /// data source"). So the queries look in `list`, not the whole app.
     func revealFinanceComposition(in list: XCUIElement?, below: CGFloat) -> Bool {
-        let income = descendants(matching: .any)["economy.composition.income"].firstMatch
-        if dragUntilWhollyOnScreen(income, in: list, below: below, drags: 25) { return true }
-        let reports = buttons["economy.reports"]
-        guard reports.exists, reports.isHittable else { return false }
-        reports.tap()
-        for _ in 0..<12 where !income.exists {
-            (list ?? self).swipeDown(velocity: .fast)
+        let scope = list ?? self
+        let income = scope.descendants(matching: .any)["economy.composition.income"].firstMatch
+        if !income.exists {
+            let reports = scope.buttons["economy.reports"]
+            if dragUntilWhollyOnScreen(reports, in: list, below: below), reports.label == "More reports and settings" {
+                reports.tap()
+            }
+            for _ in 0..<12 where !income.exists {
+                scope.swipeDown(velocity: .fast)
+            }
         }
         return dragUntilWhollyOnScreen(income, in: list, below: below)
     }
