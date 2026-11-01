@@ -7,6 +7,32 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
+    /// Decision 517 續: the station picked on the 2D map keeps its tag on
+    /// the 3D map, under the station there; a tap on the tag opens its
+    /// details back on the 2D map.
+    func testThreeDStationTag() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-select-station", "1", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons["map.stationTag"].appears(within: 30), "A station is picked")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        let close = app.buttons["map3D.close"]
+        XCTAssertTrue(close.appears(within: 60), "The 3D map opens")
+        let tag = app.buttons["map3D.stationTag"]
+        XCTAssertTrue(tag.appears(within: 120), "The picked station's tag stands on the 3D map")
+        settle(seconds: 4)
+        keep("map3d-station-tag", app)
+        XCTAssertTrue(tag.becomesHittable(within: 10))
+        tag.tap()
+        XCTAssertTrue(close.disappears(within: 20), "The tag opens its details on the 2D map")
+        settle()
+        keep("map3d-station-tag-details", app)
+    }
+
     /// The freight scene (`ScreenshotScene.freight`): the map with the
     /// stations short of building materials, a yard's station picked (its
     /// tag says the goods waiting), and the freight train's card.
@@ -983,6 +1009,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         weekly.waitUntilSettled()
         settle(seconds: 1)
         keep("line-weekly-punctuality", app)
+    }
+
+    /// Decision 524, later: the economy panel shows every passenger line's
+    /// last seven days' punctuality, Taiwan Railway's past year beside it.
+    func testCompanyWeeklyPunctuality() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars["經濟明細"].firstMatch
+        if !bar.appears(within: 10) {
+            tapButton("entry.economy", in: app)
+        }
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let weekly = app.descendants(matching: .any)["economy.weeklyPunctuality"].firstMatch
+        // Swipe, not drag: the rows above it are mostly fare controls
+        // (`currencyShots`).
+        for _ in 0..<30 where !weekly.exists {
+            list?.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: list, below: bar.frame.maxY, clearOf: .button),
+                      "The company's week of punctuality shows")
+        weekly.waitUntilSettled()
+        settle(seconds: 1)
+        keep("company-weekly-punctuality", app)
     }
 
     /// Decision 512: a line's page opens its train roster, which lets the

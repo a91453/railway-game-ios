@@ -90,8 +90,8 @@ extension GameSession {
 
     /// What the confirmation of removing line `id` says: what happens to
     /// its trains (decision 327) and, for a real line bought (review
-    /// BUGHUNT_BUILD P3-5), that it cannot be bought again; a line sold
-    /// later beside it is then sold as it would be beside this one.
+    /// BUGHUNT_BUILD P3-5, decision 528), that it can be bought again and
+    /// its track and stations stay meanwhile.
     public func lineRemovalText(_ id: LineID) -> String {
         let sale = world.lineRemovalSale(id)
         let trains = sale.trains > 0
@@ -102,8 +102,8 @@ extension GameSession {
             : language.text("The line has no trains.", "這條路線沒有列車。")
         guard world.acquisitions.contains(where: { $0.line == id }) else { return trains }
         return trains + language.text(
-            " This line was bought: once removed, it cannot be bought again. Its track and stations stay.",
-            "這條線是買來的，刪掉後就不能再買回來；軌道與車站會留著。"
+            " This line was bought: once removed, it can be bought again. Its track and stations stay.",
+            "這條線是買來的，刪掉後可以再買回來；軌道與車站會留著。"
         )
     }
 
