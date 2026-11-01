@@ -169,6 +169,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-expansion", app)
     }
 
+    /// Decision 533: the station panel's row of the riders a school and a
+    /// hospital beside the station bring, under its trips by hour, at
+    /// half past seven on a school day (`ScreenshotScene.commute`). For
+    /// the screenshot review of the pull request that made it, not the
+    /// website.
+    func testCivicRidersRow() {
+        let app = launch(extra: ["-screenshot-scene", "commute", "-screenshot-select-station", "1"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        let tag = app.buttons["map.stationTag"]
+        XCTAssertTrue(tag.appears(within: 30), "The first station is picked")
+        XCTAssertTrue(tag.becomesHittable(within: 10))
+        tag.tap()
+        let jump = app.buttons["station.jump"].firstMatch
+        XCTAssertTrue(jump.appears(within: 10), "A tap on the tag opens its station's panel")
+        jump.tap()
+        let riders = app.buttons["station.jump.riders"].firstMatch
+        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
+        riders.tap()
+        settle()
+        let row = app.descendants(matching: .any)["station.civicRiders.school"].firstMatch
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "The riders row comes into view")
+        settle()
+        keep("station-civic-riders", app)
+    }
+
     /// Decision 480: the economy panel's income and cost donuts in the
     /// freight scene, the day's and the week's (its tax and "Other"), and a
     /// slice picked. For the screenshot review of the pull request that

@@ -83,4 +83,20 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertLessThan(grey, drag.count, "some in reach")
         XCTAssertEqual(session.world.zones, world.zones, "nothing zoned")
     }
+
+    /// Decision 533: the commute scene's first station brings students
+    /// and patients on the first morning.
+    func testTheCommuteSceneBringsStudentsAndPatients() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await launcher.openScreenshotScene(.commute).value
+        let world = try XCTUnwrap(launcher.session?.world, "the launcher plays the scene")
+        XCTAssertEqual(world.clock.speed, .paused)
+        XCTAssertEqual(world.clock.now, GameTime(seconds: 7 * 3_600 + 30 * 60))
+        let station = try XCTUnwrap(world.stations.first)
+        let riders = world.stationRidership(of: station.id).civic
+        XCTAssertEqual(riders.map(\.kind), [.school, .hospital], "\(riders)")
+        XCTAssertTrue(riders.allSatisfy { $0.riders > 0 })
+    }
 }

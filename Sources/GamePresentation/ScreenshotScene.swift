@@ -35,6 +35,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// the pull request that added it.
     case punctuality
 
+    /// Decision 533: the demo map with a school and a hospital of the
+    /// company's beside its first station, run on to half past seven on
+    /// the first morning, a school day, when the students are on their
+    /// way: the station panel's row of the riders they bring. For the
+    /// screenshot review of the pull request that added it.
+    case commute
+
     /// The scene's world, its clock paused at the moment to show.
     public func make(in language: DisplayLanguage) -> GameWorld {
         switch self {
@@ -42,7 +49,45 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .depots: Self.depotsWorld(in: language)
         case .zoning: Self.zoningWorld(in: language)
         case .punctuality: Self.punctualityWorld(in: language)
+        case .commute: Self.commuteWorld(in: language)
         }
+    }
+
+    // MARK: - Commute
+
+    /// Half past seven on the first morning (a Monday).
+    static let commuteRunSeconds: Int64 = 7 * 3_600 + 30 * 60
+
+    private static func commuteWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            guard let station = world.stations.first else { throw .unknownStation(StationID(rawValue: 1)) }
+            world.economy.earn(Money(10_000_000_000))
+            // The first sites round the station a building can stand on.
+            let offsets: [(Int64, Int64)] = [(0, -6_000), (0, 6_000), (-6_000, -6_000), (6_000, -6_000), (-6_000, 6_000), (6_000, 6_000),
+                                             (0, -10_000), (0, 10_000), (-10_000, 0), (10_000, 0)]
+            for kind in [PlacedBuildingKind.school, .hospital] {
+                var refused: GameError?
+                for (dx, dy) in offsets {
+                    do throws(GameError) {
+                        try world.placeBuilding(kind, at: PlanPoint(x: station.point.x + dx, y: station.point.y + dy))
+                        refused = nil
+                        break
+                    } catch {
+                        refused = error
+                    }
+                }
+                if let refused { throw refused }
+            }
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(commuteRunSeconds / 600))
+        } catch {
+            preconditionFailure("The commute screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Punctuality
