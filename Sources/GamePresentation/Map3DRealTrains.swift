@@ -242,9 +242,14 @@ public struct Map3DRealTrains: Sendable {
             return Formation(key: "danhaiLRT", cars: 2)
         case "ntalrt":
             return Formation(key: "ankengLRT", cars: 2)
+        case "afr":
+            // Decision 531: the Alishan Forest Railway's locomotive and five
+            // coaches (`integration/formations.js` `forest`, estimated from
+            // the forest railway's charter information), the DL-38 and its
+            // coaches at their own lengths, about 74 m.
+            return Formation(key: "ALISHAN", cars: 6)
         default:
-            // The Alishan Forest Railway's locomotive and five short
-            // coaches, about 70 m: boxes, the game has no set.
+            // A system the game has no set for: boxes.
             return Formation(key: "", cars: 3)
         }
     }

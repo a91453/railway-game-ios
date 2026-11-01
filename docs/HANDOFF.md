@@ -2574,7 +2574,7 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **還沒做的**（決策 515 的「缺口與下一步」，一項一個 PR）：
   - 不在車站的折返（Z 字）：GameCore 只在中途站月台折返（決策 63）；要讓列車在非車站的節點換向，動 `LineJourney` 與交通控制，要升 golden 時照規則逐值說明。
   - ~~`placeTrain`、接續運轉沒有檢查登山；線路改走登山軌道後已在線上的一般車不會被拉下來。~~ ALISHAN2（session_01YGNNupKwkmd2NDUaYLBpRs，`claude/alishan2-climbing-check`，2026-10-31）補了，見決策 515「續」。剩下：不在線上、自己跑時刻表的一般車，服務找路仍可能經過登山軌道（決策 515「續」的缺口 1，和 Z 字折返一起看）。
-  - 登山車的 3D 模型（DL38＋`alicoach`，參考 `garage-scenes/alishan*.js`；先讀 `.claude/skills/rolling-stock/SKILL.md`）。
+  - ~~登山車的 3D 模型（DL38＋`alicoach`）。~~ ALISHAN3（session_01YGNNumCWCNTAvXzNR8hewS，`alishan3-dl38`，2026-11-01）做了，作者說醜後由 ALISHAN4（session_01YGNNunuFfySvr1h9RVMKf2）照實車照片重做（修訂 2），見決策 531：`Map3DAlishan` 近景與遠景、`ALISHAN` 列車組、真實林鐵畫成機車加五節。剩下（決策 531 的缺口）：兩款車的長度是估的；上山時機車在下山端推，和 Z 字折返一起看；聯控客車、第七代機車、森里號沒做。
   - 獨立山螺旋 16 m、二萬平到神木 20 m 兩處描線停點（資料畫線的折角）。
 
 ### 4.39 停站的車停待避線（決策 518，派工單 PASSLOOP session_01YGNNun8qxU3qeJoE7gLpCk，`passloop-siding-platform`，PR #1601，2026-10-31）

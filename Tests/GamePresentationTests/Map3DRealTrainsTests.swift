@@ -66,8 +66,12 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertEqual(try formation("ntdlrt", "V"), .init(key: "danhaiLRT", cars: 2))
         XCTAssertEqual(try formation("ntalrt", "K"), .init(key: "ankengLRT", cars: 2))
         XCTAssertEqual(try formation("krtc", "C"), .init(key: "klrtCitadis", cars: 2))
-        // Every set but the forest railway's is one the game has.
-        for system in try XCTUnwrap(Self.railways?.operations).orderedSystems where system.id != "afr" {
+        // Decision 531: the forest railway its DL-38 and five coaches.
+        for line in try XCTUnwrap(Self.railways?.operations?.system(id: "afr")).lines {
+            XCTAssertEqual(Map3DRealTrains.formation(system: "afr", line: line), .init(key: "ALISHAN", cars: 6), line.id)
+        }
+        // Every set is one the game has.
+        for system in try XCTUnwrap(Self.railways?.operations).orderedSystems {
             for line in system.lines {
                 let key = Map3DRealTrains.formation(system: system.id, line: line).key
                 XCTAssertNotNil(Map3DModelPack.standard.models(forType: key), "\(system.id) \(line.id)")
