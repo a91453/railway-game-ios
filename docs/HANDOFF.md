@@ -2595,9 +2595,13 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 
 存檔版本、決策編號、golden schema、GameCore 都不動。拆成五個 PR，表在 [決策 517 的「續」](decisions/517.md)。
 
-- **做了的**：PR 1，`Map3DPick`（射線打地面、螢幕 24 pt 內吸附軌道節點、土地格），只有規則與 Linux 測試，畫面沒變。
-- **接手的下一步**：PR 2（3D 裡分開點與拖、點車站／軌道開卡片、場景自己的地面高度交給拾取、邊的吸附；要截圖驗收），再來 PR 3（鋪完只重蓋經過的區塊，先在實機量重蓋秒數）、PR 4（3D 裡的路網平面鋪設）、PR 5（看實機數據）。
-
+- **做了的**：PR 1（#1634），`Map3DPick`（射線打地面、螢幕 24 pt 內吸附軌道節點、土地格），只有規則與 Linux 測試。PR 2（`build3d-tap`），3D 裡點車站出 2D 那張名牌（`StationTagCard`），點名牌回平面地圖開詳細資料。
+- **BUILD3D-2 停在這裡**（壓縮 1 次，遊戲規劃 39 說 PR 2 做完寫好接手點就停）。PR 2 是 #1637：合之前要看截圖（`website-screenshots.yml` 的 `map3d-station-tag`、`map3d-station-tag-details`）；轉 ready 與否看 #1637 最後的留言。
+- **接手的下一步**（每一項各開一個 PR，表與理由在決策 517「續」）：
+  - **PR 3 場景自己的地面、遮擋、邊的吸附**（不動畫面）。入口：`Map3DPick.ground(of:in:)` 現在只讀 `GameWorld.groundHeight(at:)`，沒讀的區塊回 0 m；實景地圖畫出來的地面在 `Map3DScene` 的 `Builder(…, heights: HeightGrid?)` 裡（`Map3DScene.swift` 約 242–302 行），讓場景留一份 64 m 格的高度給 `Map3DPick.Ground`。被山擋住的節點：`Map3DPick.pick` 找節點前，用 `ground(along:)` 打到的距離比節點的深度，比較近就不吸附。邊的吸附：仿 2D 路網工具的螢幕距離，在 `pick` 加一個 `.edge` 目標。列車、建物點了要不要反應也在這裡定（現在不反應）。
+  - **PR 3b 鋪完不等重蓋**：開工先在實機量現在重蓋 3D 場景要幾秒；只重蓋經過的區塊，找 `Map3DSceneCache`（`Map3DPreviewScreen.swift`、`MapView.swift`、`RailwayGameApp.swift` 用它）。
+  - **PR 4 3D 裡的平面鋪軌**（改畫面，要截圖）：點的入口已經有了，`Map3DPreviewScreen.swift` 的 `tapped(_:at:)` → `Map3DPick.pick` → `GameSession.tapMap3D`（`Map3DTap.swift`）；路網工具時改交給 `NetworkSession`（加收「節點或地面點」的入口，reach 用 `Map3DTap.reach(at:camera:)`），草稿用 Metal 帶狀網格，✓ ✕ 泡泡放在 `Map3DCamera.screenPoint(of:)`；名牌的跟鏡頭擺法（`Map3DStationTagState.place(seenBy:)`、`Map3DTap.tagOrigin`）可照抄。現在只在選取工具收點（`tapMap3D` 的 guard）。
+  - **PR 5**：看實機數據再定建物、分區、公車要不要進 3D。
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
