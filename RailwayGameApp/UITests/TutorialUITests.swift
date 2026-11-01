@@ -152,7 +152,14 @@ final class TutorialUITests: XCTestCase {
 
         let lines = app.buttons["entry.lines"]
         XCTAssertTrue(lines.appears(within: 10))
-        XCTAssertTrue(lines.becomesHittable(), "The Lines button is covered")
+        // Ten seconds, not two: on a slow iPad runner each query took up to
+        // half a second while the city drew its buildings, and the five in
+        // two seconds all said no with nothing over the button (main
+        // 1b64367's full lane, run 41272201294: its recording shows the
+        // folded card above the dock and Lines uncovered throughout).
+        // Something that really covers it still fails, with the frames.
+        XCTAssertTrue(lines.becomesHittable(within: 10),
+                      "The Lines button is covered: button \(lines.frame), card \(card.exists ? card.frame : .null), folded \(folded.exists ? folded.frame : .null)")
         lines.tap()
         let pick = app.buttons["line.draft.pick"]
         XCTAssertTrue(pick.appears(within: 10), "The lines panel did not open")
