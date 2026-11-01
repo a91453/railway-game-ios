@@ -13783,7 +13783,7 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 **下一步**：
 1. 實機看過大小與淡度後再調 `RealTrainTraffic.look`。
 2. 3D 地圖的真實列車（3D 那條線有餘裕時）。
-3. 台鐵的逐班時刻表要打包另一份資料：參考庫 `taiwan-rail-reference-clean` 有 2026-10-16 的時刻表。打包後，台鐵改成逐班。
+3. 台鐵的逐班時刻表要打包另一份資料：參考庫 `taiwan-rail-reference-clean` 有 2026-10-16 的時刻表。打包後，台鐵改成逐班。（2026-11-01 做了：[決策 532](decisions/532.md)，`tra-schedule.json`。）
 4. 路線名與站名的英文。
 5. R3 轉乘照真實班次的時段。
 

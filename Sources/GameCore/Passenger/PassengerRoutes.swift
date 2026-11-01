@@ -90,6 +90,11 @@ struct PassengerRideEdge: Hashable {
     let from: Int
     let to: Int
     let direction: Int
+
+    /// A fixed order of edges, to break ties without the order of a set.
+    static func precedes(_ lhs: Self, _ rhs: Self) -> Bool {
+        (lhs.line, lhs.from, lhs.to, lhs.direction) < (rhs.line, rhs.from, rhs.to, rhs.direction)
+    }
 }
 
 struct PassengerRouteNode: Hashable, Comparable {
@@ -122,7 +127,9 @@ private struct PassengerRouteLabel {
     let transfer: Int64
     let walk: Int64
     let changes: Int
-    let order: [PassengerRouteOrderLeg]
+    /// Its legs for exact ties: a node of its search's
+    /// ``PassengerRouteSearch/orders``, -1 for none.
+    let order: Int
     let previous: Int?
     let arrival: Arrival
 }
@@ -396,7 +403,7 @@ struct PassengerRouteGraph: Equatable {
 /// asked tens of thousands of searches that were the same but for their
 /// destination).
 struct PassengerRouteSearch {
-    /// Where ``run(until:pausing:)`` stopped.
+    /// Where ``run(until:pausingBefore:)`` stopped.
     enum Stop {
         /// Label `index` is the first to arrive at the target station.
         case arrived(Int)
@@ -405,11 +412,21 @@ struct PassengerRouteSearch {
         case firstExpansion(Int)
     }
 
+    /// When nothing has happened yet: the time of a label never popped or
+    /// never put out of the frontier, or of a call never expanded.
+    private static let never = Int32.max
+
     private let graph: PassengerRouteGraph
     /// The calls whose ride to the next call is banned, by number (see
     /// ``PassengerRouteGraph/Lookup/firstNode``).
     var banned: [Int] = []
     private var labels: [PassengerRouteLabel] = []
+    /// The labels' leg orders, sharing their prefixes: each node is one
+    /// leg after the node `parent` (-1: the first leg), `depth` legs in
+    /// all. A label riding on changes only its last leg, so it is a new
+    /// node beside the old one; a label boarding keeps its node (派工單
+    /// PLANDAY: an array of legs for every label was an allocation each).
+    private var orders: [OrderNode] = []
     /// Each state's labels no other label dominates: a state is its call's
     /// number, twice, plus one aboard.
     private var frontier: [[Int]]
@@ -420,10 +437,24 @@ struct PassengerRouteSearch {
     /// The first label to arrive at each station aboard, by station slot;
     /// -1 before one has.
     private var arrived: [Int]
-    /// Whether a label at each call, by number, has been expanded.
-    private var expanded: [Bool]
     /// A label popped and not expanded yet: the search paused before it.
     private var pending: Int?
+    /// Its history, so that ``paused(before:)`` can give it as it was
+    /// (派工單 PLANDAY). The time is how many labels it has popped and
+    /// expanded (or paused before): a label made, popped or put out of the
+    /// frontier while label `t` is being expanded has time `t`, one made
+    /// before the first pop time 0.
+    private var time: Int32 = 0
+    /// When each label was made, popped and put out of the frontier.
+    private var madeAt: [Int32] = []
+    private var poppedAt: [Int32] = []
+    private var droppedAt: [Int32] = []
+    /// When the first label to arrive at each station slot was popped.
+    private var arrivedAt: [Int32]
+    /// When each call, by number, was first expanded (or paused before),
+    /// and the label it was.
+    private var expandedAt: [Int32]
+    private var expandedLabel: [Int32]
 
     init(graph: PassengerRouteGraph, from origin: StationID, banning forbidden: Set<PassengerRideEdge>) {
         self.graph = graph
@@ -431,26 +462,70 @@ struct PassengerRouteSearch {
         banned = Self.calls(banned: forbidden, on: graph)
         frontier = Array(repeating: [], count: 2 * lookup.nodeSlot.count)
         arrived = Array(repeating: -1, count: lookup.calls.count)
-        expanded = Array(repeating: false, count: lookup.nodeSlot.count)
+        arrivedAt = Array(repeating: Self.never, count: lookup.calls.count)
+        expandedAt = Array(repeating: Self.never, count: lookup.nodeSlot.count)
+        expandedLabel = Array(repeating: -1, count: lookup.nodeSlot.count)
         guard let slot = lookup.slot[origin], !lookup.closed[slot] else { return }
         for node in lookup.calls[slot] {
             let wait = max(1, passengerMinutesRoundingUp(graph.paths[node.line].headway, by: 2)) * GameTime.secondsPerMinute
             offer(PassengerRouteLabel(state: PassengerRouteState(node: node, onboard: false),
                                       total: wait, ride: 0, wait: wait, transfer: 0, walk: 0,
-                                      changes: 0, order: [], previous: nil, arrival: .board))
+                                      changes: 0, order: -1, previous: nil, arrival: .board))
         }
+    }
+
+    /// One leg of a label's order (see ``orders``).
+    private struct OrderNode {
+        let leg: PassengerRouteOrderLeg
+        let parent: Int32
+        let depth: Int32
+    }
+
+    private func depth(_ order: Int) -> Int {
+        order < 0 ? 0 : Int(orders[order].depth)
+    }
+
+    /// Whether the legs of order `lhs` come before those of `rhs`: what
+    /// `passengerRouteOrderPrecedes` gives for their arrays (the first
+    /// leg that differs decides, else the shorter comes first).
+    private func orderPrecedes(_ lhs: Int, _ rhs: Int) -> Bool {
+        var left = lhs, right = rhs
+        let leftDepth = depth(lhs), rightDepth = depth(rhs)
+        for _ in 0..<max(0, leftDepth - rightDepth) { left = Int(orders[left].parent) }
+        for _ in 0..<max(0, rightDepth - leftDepth) { right = Int(orders[right].parent) }
+        // Up from the last position both have: the highest leg that
+        // differs is the first difference.
+        var first: Bool?
+        while left != right {
+            let a = orders[left].leg, b = orders[right].leg
+            if a != b {
+                if a.line.rawValue != b.line.rawValue {
+                    first = a.line.rawValue < b.line.rawValue
+                } else if a.from.rawValue != b.from.rawValue {
+                    first = a.from.rawValue < b.from.rawValue
+                } else {
+                    first = a.to.rawValue < b.to.rawValue
+                }
+            }
+            left = Int(orders[left].parent)
+            right = Int(orders[right].parent)
+        }
+        return first ?? (leftDepth < rightDepth)
     }
 
     /// The calls, by number, whose rides to the next call are the edges
     /// `forbidden` (see `PassengerRouteGraph.nextRide`); an edge no ride is
     /// bans nothing.
     static func calls(banned forbidden: Set<PassengerRideEdge>, on graph: PassengerRouteGraph) -> [Int] {
-        forbidden.compactMap { edge in
-            guard graph.paths.indices.contains(edge.line), edge.to == edge.from + 1,
-                  graph.paths[edge.line].stations.indices.contains(edge.to),
-                  edge.direction == (graph.paths[edge.line].direction == .outbound ? 1 : -1) else { return nil }
-            return graph.lookup.firstNode[edge.line] + edge.from
-        }
+        forbidden.compactMap { call(banning: $0, on: graph) }
+    }
+
+    /// The call whose ride to the next call is `edge`, if it is one.
+    static func call(banning edge: PassengerRideEdge, on graph: PassengerRouteGraph) -> Int? {
+        guard graph.paths.indices.contains(edge.line), edge.to == edge.from + 1,
+              graph.paths[edge.line].stations.indices.contains(edge.to),
+              edge.direction == (graph.paths[edge.line].direction == .outbound ? 1 : -1) else { return nil }
+        return graph.lookup.firstNode[edge.line] + edge.from
     }
 
     /// The cheapest route to `destination`, searching on from where the
@@ -458,7 +533,7 @@ struct PassengerRouteSearch {
     mutating func route(to destination: StationID) -> (PassengerRoute, [PassengerRideEdge])? {
         guard let target = slot(of: destination) else { return nil }
         if arrived[target] >= 0 { return graph.reconstruct(arrived[target], from: labels) }
-        guard case .arrived(let index) = run(until: target, pausing: false) else { return nil }
+        guard case .arrived(let index) = run(until: target) else { return nil }
         return graph.reconstruct(index, from: labels)
     }
 
@@ -477,17 +552,67 @@ struct PassengerRouteSearch {
     /// How many labels it holds: what a copy of it costs.
     var size: Int { labels.count }
 
+    /// Whether a label at call `number` has been expanded, or the search
+    /// is paused before the first one.
+    func hasExpanded(_ number: Int) -> Bool { expandedAt[number] != Self.never }
+
+    /// When it first expanded a label at call `number` (or paused before
+    /// it), by its time; `Int32.max` if it has not.
+    func expansionTime(of number: Int) -> Int32 { expandedAt[number] }
+
+    /// This search as it was paused before it first expanded a label at
+    /// call `number`, or `nil` if it has not: what a search banning that
+    /// call's ride, and the rides this one bans, has done by then (the
+    /// ban changes nothing before), rebuilt from its history without
+    /// searching again (派工單 PLANDAY).
+    ///
+    /// The labels made by then are the first ones (they are numbered as
+    /// they are made); of those, the ones still in the frontier make it up
+    /// in their order, and the ones not popped yet are the open ones. The
+    /// heap's own arrangement is not kept: it pops by a strict total
+    /// order, whatever its arrangement. Labels already put out of the
+    /// frontier are left out of it, as popping them does nothing.
+    func paused(before number: Int) -> PassengerRouteSearch? {
+        let then = expandedAt[number]
+        guard then != Self.never else { return nil }
+        var search = self
+        var count = madeAt.count
+        while count > 0 && madeAt[count - 1] >= then { count -= 1 }
+        search.labels.removeLast(labels.count - count)
+        search.madeAt.removeLast(labels.count - count)
+        search.poppedAt = poppedAt[..<count].map { $0 <= then ? $0 : Self.never }
+        search.droppedAt = droppedAt[..<count].map { $0 < then ? $0 : Self.never }
+        search.active = search.droppedAt.map { $0 == Self.never }
+        search.frontier = Array(repeating: [], count: frontier.count)
+        search.open = []
+        for index in 0..<count where search.active[index] {
+            search.frontier[state(labels[index].state)].append(index)
+            if search.poppedAt[index] == Self.never { search.open.append(index) }
+        }
+        search.heapify()
+        for slot in arrived.indices where arrivedAt[slot] > then {
+            search.arrived[slot] = -1
+            search.arrivedAt[slot] = Self.never
+        }
+        for call in expandedAt.indices where expandedAt[call] > then {
+            search.expandedAt[call] = Self.never
+            search.expandedLabel[call] = -1
+        }
+        search.pending = Int(expandedLabel[number])
+        search.time = then
+        return search
+    }
+
     /// The first label to arrive at station slot `target`, if one has.
     func arrival(at target: Int) -> Int? {
         arrived[target] >= 0 ? arrived[target] : nil
     }
 
     /// Searches on until the first label arrives aboard at station slot
-    /// `target` (-1: none), or until there is nothing left. When `pausing`,
-    /// it also stops before expanding a call for the first time, holding
-    /// that label for the next run: a search banning that call's ride is
-    /// this one up to here.
-    mutating func run(until target: Int, pausing: Bool) -> Stop {
+    /// `target` (-1: none), or until there is nothing left. It also stops
+    /// before expanding call `pause` for the first time, holding that label
+    /// for the next run.
+    mutating func run(until target: Int, pausingBefore pause: Int = -1) -> Stop {
         let lookup = graph.lookup
         while true {
             let index: Int
@@ -498,21 +623,27 @@ struct PassengerRouteSearch {
                 guard let next = popFirst() else { return .exhausted }
                 guard active[next] else { continue }
                 index = next
+                time += 1
+                poppedAt[index] = time
                 // Only a ride arrives: a walk ends where another ride starts.
                 let state = labels[index].state
+                let number = lookup.firstNode[state.node.line] + state.node.stop
                 if state.onboard {
-                    let slot = lookup.nodeSlot[lookup.firstNode[state.node.line] + state.node.stop]
-                    if arrived[slot] < 0 { arrived[slot] = index }
+                    let slot = lookup.nodeSlot[number]
+                    if arrived[slot] < 0 {
+                        arrived[slot] = index
+                        arrivedAt[slot] = time
+                    }
+                }
+                if expandedAt[number] == Self.never {
+                    expandedAt[number] = time
+                    expandedLabel[number] = Int32(index)
+                    if number == pause {
+                        pending = index
+                        return .firstExpansion(number)
+                    }
                 }
             }
-            let node = labels[index].state.node
-            let number = lookup.firstNode[node.line] + node.stop
-            if pausing && !expanded[number] {
-                expanded[number] = true
-                pending = index
-                return .firstExpansion(number)
-            }
-            expanded[number] = true
             // A search for this destination alone stops here, after
             // arriving; another goes on from this label.
             expand(index)
@@ -535,8 +666,12 @@ struct PassengerRouteSearch {
         let rightChanges = labels[b].changes
         if leftChanges != rightChanges { return leftChanges < rightChanges }
         if leftTotal != rightTotal { return leftTotal < rightTotal }
-        if passengerRouteOrderPrecedes(labels[a].order, labels[b].order) { return true }
-        if passengerRouteOrderPrecedes(labels[b].order, labels[a].order) { return false }
+        let leftOrder = labels[a].order
+        let rightOrder = labels[b].order
+        if leftOrder != rightOrder {
+            if orderPrecedes(leftOrder, rightOrder) { return true }
+            if orderPrecedes(rightOrder, leftOrder) { return false }
+        }
         let left = labels[a].state
         let right = labels[b].state
         if left.node != right.node { return left.node < right.node }
@@ -555,21 +690,32 @@ struct PassengerRouteSearch {
         }
     }
 
+    /// Arranges `open` into a heap.
+    private mutating func heapify() {
+        for start in stride(from: open.count / 2 - 1, through: 0, by: -1) {
+            siftDown(start)
+        }
+    }
+
+    private mutating func siftDown(_ start: Int) {
+        var parent = start
+        while true {
+            let left = 2 * parent + 1
+            guard left < open.count else { break }
+            var best = left
+            if left + 1 < open.count, precedes(open[left + 1], open[left]) { best = left + 1 }
+            guard precedes(open[best], open[parent]) else { break }
+            open.swapAt(best, parent)
+            parent = best
+        }
+    }
+
     private mutating func popFirst() -> Int? {
         guard let first = open.first else { return nil }
         let last = open.removeLast()
         if !open.isEmpty {
             open[0] = last
-            var parent = 0
-            while true {
-                let left = 2 * parent + 1
-                guard left < open.count else { break }
-                var best = left
-                if left + 1 < open.count, precedes(open[left + 1], open[left]) { best = left + 1 }
-                guard precedes(open[best], open[parent]) else { break }
-                open.swapAt(best, parent)
-                parent = best
-            }
+            siftDown(0)
         }
         return first
     }
@@ -581,13 +727,16 @@ struct PassengerRouteSearch {
         let (lhsChanges, rhsChanges) = reversed ? (label.changes, labels[index].changes) : (labels[index].changes, label.changes)
         guard lhsTotal <= rhsTotal, lhsChanges <= rhsChanges else { return false }
         if lhsTotal < rhsTotal || lhsChanges < rhsChanges { return true }
-        return reversed ? !passengerRouteOrderPrecedes(labels[index].order, label.order)
-            : !passengerRouteOrderPrecedes(label.order, labels[index].order)
+        return reversed ? !orderPrecedes(labels[index].order, label.order)
+            : !orderPrecedes(label.order, labels[index].order)
     }
 
-    private mutating func offer(_ label: PassengerRouteLabel) {
+    /// Keeps `label` unless a label at its state dominates it; whether
+    /// it kept it.
+    @discardableResult
+    private mutating func offer(_ label: PassengerRouteLabel) -> Bool {
         let slot = state(label.state)
-        if frontier[slot].contains(where: { dominates($0, label) }) { return }
+        if frontier[slot].contains(where: { dominates($0, label) }) { return false }
         // Kept in their order, the new one last, in place.
         var survivors = frontier[slot]
         frontier[slot] = []
@@ -595,6 +744,7 @@ struct PassengerRouteSearch {
         for index in survivors {
             if dominates(index, label, reversed: true) {
                 active[index] = false
+                droppedAt[index] = time
             } else {
                 survivors[kept] = index
                 kept += 1
@@ -604,9 +754,13 @@ struct PassengerRouteSearch {
         let index = labels.count
         labels.append(label)
         active.append(true)
+        madeAt.append(time)
+        poppedAt.append(Self.never)
+        droppedAt.append(Self.never)
         push(index)
         survivors.append(index)
         frontier[slot] = survivors
+        return true
     }
 
     /// Offers every label one step on from label `index`.
@@ -623,18 +777,24 @@ struct PassengerRouteSearch {
             let seconds = run + dwell
             let ridePath = paths[edge.line]
             let to = ridePath.stations[edge.to]
-            var order = label.order
-            if label.state.onboard, let last = order.last {
-                order[order.count - 1] = PassengerRouteOrderLeg(line: last.line, from: last.from, to: to)
+            if label.state.onboard, label.order >= 0 {
+                let last = orders[label.order]
+                orders.append(OrderNode(leg: PassengerRouteOrderLeg(line: last.leg.line, from: last.leg.from, to: to),
+                                        parent: last.parent, depth: last.depth))
             } else {
-                order.append(PassengerRouteOrderLeg(line: ridePath.line,
-                                                    from: ridePath.stations[edge.from], to: to))
+                orders.append(OrderNode(leg: PassengerRouteOrderLeg(line: ridePath.line,
+                                                                    from: ridePath.stations[edge.from], to: to),
+                                        parent: Int32(label.order), depth: Int32(depth(label.order) + 1)))
             }
-            offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
-                                      total: label.total + seconds, ride: label.ride + seconds,
-                                      wait: label.wait, transfer: label.transfer, walk: label.walk,
-                                      changes: label.changes, order: order, previous: index,
-                                      arrival: .ride(edge, seconds)))
+            let order = orders.count - 1
+            if !offer(PassengerRouteLabel(state: PassengerRouteState(node: next, onboard: true),
+                                          total: label.total + seconds, ride: label.ride + seconds,
+                                          wait: label.wait, transfer: label.transfer, walk: label.walk,
+                                          changes: label.changes, order: order, previous: index,
+                                          arrival: .ride(edge, seconds))) {
+                // Dominated: no label holds the node.
+                orders.removeLast()
+            }
         }
         // Nobody gets off, changes or walks at a closed station: trains
         // run through it (the reference's
@@ -693,58 +853,55 @@ struct PassengerRouteSearch {
 /// ``GameWorld/passengerRoutes(from:to:limit:searches:)``). A plan asks
 /// its pairs origin by origin, so a new origin drops the last one's.
 ///
-/// A search banning some rides is the one banning none up to the first
-/// time it would take one of them: the unbanned search keeps a copy of
-/// itself paused before some calls' first expansions, and a banned one
-/// starts from the latest copy before the earliest banned call, run on
-/// to that call. Nothing differs from starting it afresh but the work.
+/// A search banning some rides is the one banning one ride fewer up to
+/// the first time it would take that ride: a search banning one ride
+/// starts from the unbanned search as it was paused before that ride's
+/// call, and one banning two from the search banning the one of them the
+/// unbanned search reaches first, as it was before the other's call
+/// (``PassengerRouteSearch/paused(before:)``). Nothing differs from
+/// starting it afresh but the work (派工單 AQ; 派工單 PLANDAY took the
+/// second ban from the first's search, and the copies from the searches'
+/// histories).
 ///
-/// Each copy is a whole search, so they are held to a number (派工單 BB:
-/// a copy at every call took a game of 200 stations past 1.4 GB): copies
-/// every `spacing` calls, the spacing doubling when they would pass
-/// `checkpointLimit`, and the banned searches asked most lately, at most
-/// `searchLimit` of them and `labelBudget` labels together. A dropped
-/// one starts again when asked.
+/// The banned searches asked most lately are kept, at most `searchLimit`
+/// of them and `labelBudget` labels together (派工單 BB: 200 stations
+/// took 1.4 GB). A dropped one starts again when asked.
 struct PassengerRouteSearches {
     let graph: PassengerRouteGraph
-    /// At most this many copies of the unbanned search are kept.
-    let checkpointLimit: Int
     /// At most this many banned searches are kept.
     let searchLimit: Int
     /// The banned searches kept hold at most this many labels, but for
-    /// the one asked last.
+    /// the one asked last. 200,000 since 派工單 PLANDAY (400,000 before),
+    /// as each label now also keeps its history and order node: about the
+    /// memory the old budget took.
     let labelBudget: Int
     private var origin: StationID?
     private var unbanned: PassengerRouteSearch?
-    /// The order in which the unbanned search first reached each call, by
-    /// number; -1 before it has.
-    private var reached: [Int] = []
-    /// How many calls the unbanned search has reached.
-    private var reachedCount = 0
-    /// The unbanned search paused before the first expansion of its call
-    /// `order`, every `spacing` calls, in order.
-    private var checkpoints: [(order: Int, search: PassengerRouteSearch)] = []
-    private var spacing = 1
-    private var searches: [Set<PassengerRideEdge>: PassengerRouteSearch] = [:]
-    /// The keys of `searches`, the one asked longest ago first.
-    private var searchOrder: [Set<PassengerRideEdge>] = []
+    /// The banned searches kept, each with when it was asked last.
+    private var searches: [Set<PassengerRideEdge>: (search: PassengerRouteSearch, asked: Int)] = [:]
+    /// The keys of `searches` by when they were asked last.
+    private var asked: [Int: Set<PassengerRideEdge>] = [:]
+    /// The next time a search is asked, and no time a search kept was
+    /// asked last is before `oldest`.
+    private var now = 0
+    private var oldest = 0
+    /// The labels of the banned searches kept.
+    private var held = 0
 
-    init(graph: PassengerRouteGraph, checkpointLimit: Int = 16, searchLimit: Int = 512,
-         labelBudget: Int = 400_000) {
+    init(graph: PassengerRouteGraph, searchLimit: Int = 512, labelBudget: Int = 200_000) {
         self.graph = graph
-        self.checkpointLimit = max(1, checkpointLimit)
         self.searchLimit = max(1, searchLimit)
         self.labelBudget = max(0, labelBudget)
     }
 
     /// How many whole searches are kept besides the unbanned one.
-    var copies: Int { checkpoints.count + searches.count }
+    var copies: Int { searches.count }
 
     /// How many banned searches are kept.
     var bannedSearches: Int { searches.count }
 
     /// The labels of the banned searches kept.
-    var bannedLabels: Int { searches.values.reduce(0) { $0 + $1.size } }
+    var bannedLabels: Int { searches.values.reduce(0) { $0 + $1.search.size } }
 
     /// What ``PassengerRouteGraph/shortest(from:to:banning:)`` gives.
     mutating func shortest(from origin: StationID, to destination: StationID,
@@ -752,91 +909,101 @@ struct PassengerRouteSearches {
         if origin != self.origin {
             self.origin = origin
             unbanned = PassengerRouteSearch(graph: graph, from: origin, banning: [])
-            reached = Array(repeating: -1, count: graph.lookup.nodeSlot.count)
-            reachedCount = 0
-            checkpoints = []
-            spacing = 1
             searches = [:]
-            searchOrder = []
+            asked = [:]
+            oldest = now
+            held = 0
         }
         guard !forbidden.isEmpty else {
             guard let target = unbanned!.slot(of: destination) else { return nil }
             if let index = unbanned!.arrival(at: target) { return unbanned!.route(ending: index) }
-            guard case .arrived(let index) = runUnbanned(until: target, orBefore: []) else { return nil }
+            guard case .arrived(let index) = unbanned!.run(until: target) else { return nil }
             return unbanned!.route(ending: index)
         }
-        if searches[forbidden] == nil {
-            if searches.count >= searchLimit {
-                searches[searchOrder.removeFirst()] = nil
-            }
-            searches[forbidden] = start(banning: forbidden)
-        } else {
-            searchOrder.remove(at: searchOrder.firstIndex(of: forbidden)!)
-        }
-        searchOrder.append(forbidden)
-        let found = searches[forbidden]!.route(to: destination)
-        var held = bannedLabels
-        while held > labelBudget && searchOrder.count > 1 {
-            held -= searches.removeValue(forKey: searchOrder.removeFirst())!.size
+        var search = take(forbidden)
+        let found = search.route(to: destination)
+        keep(search, banning: forbidden)
+        while held > labelBudget && searches.count > 1 {
+            dropOldest()
         }
         return found
     }
 
-    /// Runs the unbanned search on, noting each call's first expansion,
-    /// until it arrives at slot `target` or reaches one of the calls
-    /// `calls` for the first time.
-    private mutating func runUnbanned(until target: Int, orBefore calls: [Int]) -> PassengerRouteSearch.Stop {
-        while true {
-            let stop = unbanned!.run(until: target, pausing: true)
-            guard case .firstExpansion(let number) = stop else { return stop }
-            let order = reachedCount
-            reached[number] = order
-            reachedCount += 1
-            if order % spacing == 0 {
-                checkpoints.append((order, unbanned!))
-                if checkpoints.count > checkpointLimit {
-                    spacing *= 2
-                    checkpoints.removeAll { $0.order % spacing != 0 }
-                }
-            }
-            if calls.contains(number) { return stop }
+    /// The search banning `forbidden`, taken out of those kept, or started.
+    private mutating func take(_ forbidden: Set<PassengerRideEdge>) -> PassengerRouteSearch {
+        if let kept = searches.removeValue(forKey: forbidden) {
+            asked[kept.asked] = nil
+            held -= kept.search.size
+            return kept.search
         }
+        return start(banning: forbidden)
     }
 
-    /// The unbanned search paused before the first expansion of its call
-    /// `order`: the latest copy before it, run on to it.
-    private func paused(at order: Int) -> PassengerRouteSearch {
-        let checkpoint = checkpoints.last { $0.order <= order }!
-        var search = checkpoint.search
-        for _ in checkpoint.order..<order {
-            guard case .firstExpansion = search.run(until: -1, pausing: true) else {
-                preconditionFailure("the unbanned search reached call \(order) before")
-            }
+    /// Keeps `search` as the one asked last, dropping the one asked
+    /// longest ago when there are too many.
+    private mutating func keep(_ search: PassengerRouteSearch, banning forbidden: Set<PassengerRideEdge>) {
+        if searches.count >= searchLimit {
+            dropOldest()
         }
-        return search
+        searches[forbidden] = (search, now)
+        asked[now] = forbidden
+        now += 1
+        held += search.size
     }
 
-    /// A search banning `forbidden`, as far on as the unbanned one is the
-    /// same.
+    /// Drops the search asked longest ago.
+    private mutating func dropOldest() {
+        while asked[oldest] == nil { oldest += 1 }
+        held -= searches.removeValue(forKey: asked.removeValue(forKey: oldest)!)!.search.size
+    }
+
+    /// A search banning `forbidden`, as far on as the one banning one ride
+    /// fewer is the same.
     private mutating func start(banning forbidden: Set<PassengerRideEdge>) -> PassengerRouteSearch {
         let calls = PassengerRouteSearch.calls(banned: forbidden, on: graph)
-        func earliest() -> PassengerRouteSearch? {
-            calls.map { reached[$0] }.filter { $0 >= 0 }.min().map(paused(at:))
+        guard !calls.isEmpty else {
+            // It bans nothing it could take.
+            return unbanned!
+        }
+        // The ride the unbanned search reaches last, or never: banning it
+        // changes the search banning the others latest.
+        let last = forbidden.max { left, right in
+            let (a, b) = (expansion(of: left), expansion(of: right))
+            return a != b ? a < b : PassengerRideEdge.precedes(left, right)
+        }!
+        var fewer = forbidden
+        fewer.remove(last)
+        guard let call = PassengerRouteSearch.call(banning: last, on: graph) else {
+            // Banning `last` bans nothing: the same as banning the others.
+            var search = fewer.isEmpty ? unbanned! : take(fewer)
+            if !fewer.isEmpty { keep(search, banning: fewer) }
+            search.banned = calls
+            return search
         }
         var search: PassengerRouteSearch
-        if calls.isEmpty {
-            search = unbanned!
-        } else if let known = earliest() {
-            search = known
-        } else if case .exhausted = runUnbanned(until: -1, orBefore: calls) {
-            // It never takes a banned ride.
-            search = unbanned!
+        if fewer.isEmpty {
+            if !unbanned!.hasExpanded(call) {
+                _ = unbanned!.run(until: -1, pausingBefore: call)
+            }
+            // It never takes the ride: the same search.
+            search = unbanned!.paused(before: call) ?? unbanned!
         } else {
-            // Paused before the first banned call it reaches.
-            search = unbanned!
+            var parent = take(fewer)
+            if !parent.hasExpanded(call) {
+                _ = parent.run(until: -1, pausingBefore: call)
+            }
+            search = parent.paused(before: call) ?? parent
+            keep(parent, banning: fewer)
         }
         search.banned = calls
         return search
+    }
+
+    /// When the unbanned search first expanded the call of `edge`'s ride,
+    /// if it has, by its time.
+    private func expansion(of edge: PassengerRideEdge) -> Int32 {
+        guard let call = PassengerRouteSearch.call(banning: edge, on: graph) else { return Int32.min }
+        return unbanned!.expansionTime(of: call)
     }
 }
 

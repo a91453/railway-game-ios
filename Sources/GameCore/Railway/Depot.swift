@@ -386,7 +386,25 @@ extension GameWorld {
     /// those that wait. Under traffic
     /// control it must be able to take its route now.
     func trainEnteringDepot(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
-        guard !line.depots.isEmpty, !line.hasRuns, clock.now.seconds >= 0 else { return nil }
+        for index in depotEntryCandidates(of: line, stream, memo: &memo) {
+            guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
+            // Decision 280: under traffic control, only with a siding for it.
+            if isTrafficControlEnabled, let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
+            if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
+               case .held = reservingDeparture(leaving, memo: &memo.directions) {
+                continue
+            }
+            return (index, trip)
+        }
+        return nil
+    }
+
+    /// The trains ``trainEnteringDepot(of:_:memo:)`` would send into a
+    /// depot, by index, in the order it tries them, before it asks for an
+    /// empty run, a siding (decision 280) or a route: shared with
+    /// ``waitsForDepotRoom(_:)`` (decision 497, P2-7).
+    func depotEntryCandidates(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> [Int] {
+        guard !line.depots.isEmpty, !line.hasRuns, clock.now.seconds >= 0 else { return [] }
         var waiting: [Int] = [], stranded: [Int] = []
         for id in line.trains(of: stream) {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
@@ -404,17 +422,7 @@ extension GameWorld {
             soon.flatMap { wanted(line, stream, at: $0, memo: &memo)?.trains } ?? 0
         )
         let surplus = runningTrains(of: line, stream) + waiting.count > needed
-        for index in stranded + (surplus ? waiting.reversed() : []) {
-            guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
-            // Decision 280: under traffic control, only with a siding for it.
-            if isTrafficControlEnabled, let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
-            if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-               case .held = reservingDeparture(leaving, memo: &memo.directions) {
-                continue
-            }
-            return (index, trip)
-        }
-        return nil
+        return stranded + (surplus ? waiting.reversed() : [])
     }
 
     // MARK: - Waking

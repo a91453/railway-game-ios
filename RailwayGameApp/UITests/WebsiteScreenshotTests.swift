@@ -7,6 +7,32 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
+    /// Decision 517 續: the station picked on the 2D map keeps its tag on
+    /// the 3D map, under the station there; a tap on the tag opens its
+    /// details back on the 2D map.
+    func testThreeDStationTag() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-select-station", "1", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons["map.stationTag"].appears(within: 30), "A station is picked")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        let close = app.buttons["map3D.close"]
+        XCTAssertTrue(close.appears(within: 60), "The 3D map opens")
+        let tag = app.buttons["map3D.stationTag"]
+        XCTAssertTrue(tag.appears(within: 120), "The picked station's tag stands on the 3D map")
+        settle(seconds: 4)
+        keep("map3d-station-tag", app)
+        XCTAssertTrue(tag.becomesHittable(within: 10))
+        tag.tap()
+        XCTAssertTrue(close.disappears(within: 20), "The tag opens its details on the 2D map")
+        settle()
+        keep("map3d-station-tag-details", app)
+    }
+
     /// The freight scene (`ScreenshotScene.freight`): the map with the
     /// stations short of building materials, a yard's station picked (its
     /// tag says the goods waiting), and the freight train's card.
@@ -841,6 +867,46 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(status.appears(within: 5), "The selection card shows")
     }
 
+    /// Decision 532: a real-world station's card with Taiwan Railway's
+    /// real next trains ("臺鐵 下一班：…"), a station of the real-world
+    /// demo by day, its "Real Station" section under the surroundings.
+    /// For the screenshot review of the pull request that made them, not
+    /// the website.
+    func testRealStationNextTrains() {
+        let app = launch()
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld", timeout: 60)
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The demo starts")
+        waitForClock(from: 7, before: 20, in: app)
+        pauseTheClock(in: app)
+        settle(seconds: 3)
+        // Where the stations are (`map.stations`, "x,y;x,y" in the map's
+        // points), one clear of the map's buttons.
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10), "The stations' places")
+        let clear = map.frame.insetBy(dx: map.frame.width * 0.2, dy: map.frame.height * 0.2)
+        let points = (readout.value as? String ?? "").split(separator: ";").compactMap { pair -> CGPoint? in
+            let xy = pair.split(separator: ",").compactMap { Double($0) }
+            guard xy.count == 2 else { return nil }
+            return CGPoint(x: map.frame.minX + xy[0], y: map.frame.minY + xy[1])
+        }.filter { clear.contains($0) }
+        XCTAssertFalse(points.isEmpty, "A station clear of the map's buttons")
+        // A hold selects the station even when a train is over it.
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: points[0].x - app.frame.minX, dy: points[0].y - app.frame.minY))
+            .press(forDuration: 1)
+        tapButton("station.jump", in: app)
+        tapButton("station.jump.area", in: app)
+        settle()
+        let next = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "臺鐵 下一班")).firstMatch
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+        let shown = app.dragUntilWhollyOnScreen(next, in: list)
+        settle()
+        keep("real-station-next-trains", app)
+        XCTAssertTrue(shown, "Taiwan Railway's next trains come into view")
+    }
+
     /// The company's goals on a blank new game (decisions 181 and 183): the
     /// requests the city offers with what each pays, above the company's
     /// rank and title.
@@ -983,6 +1049,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         weekly.waitUntilSettled()
         settle(seconds: 1)
         keep("line-weekly-punctuality", app)
+    }
+
+    /// Decision 524, later: the economy panel shows every passenger line's
+    /// last seven days' punctuality, Taiwan Railway's past year beside it.
+    func testCompanyWeeklyPunctuality() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars["經濟明細"].firstMatch
+        if !bar.appears(within: 10) {
+            tapButton("entry.economy", in: app)
+        }
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let weekly = app.descendants(matching: .any)["economy.weeklyPunctuality"].firstMatch
+        // Swipe, not drag: the rows above it are mostly fare controls
+        // (`currencyShots`).
+        for _ in 0..<30 where !weekly.exists {
+            list?.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: list, below: bar.frame.maxY, clearOf: .button),
+                      "The company's week of punctuality shows")
+        weekly.waitUntilSettled()
+        settle(seconds: 1)
+        keep("company-weekly-punctuality", app)
     }
 
     /// Decision 512: a line's page opens its train roster, which lets the

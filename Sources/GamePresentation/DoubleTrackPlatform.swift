@@ -15,6 +15,19 @@ import GameCore
 // track (`Simulator/` places platform pieces by hand, `MapBuilder/` adds
 // stations by place): this is native.
 
+/// ``GameSession/networkPlatformBeside`` as last looked for (L3-11).
+struct PlatformBesideMemo {
+    struct Key: Equatable {
+        let edge: TrackEdgeID
+        let start: Int64
+        let end: Int64
+        let commandRevision: Int
+    }
+
+    let key: Key
+    let beside: (edge: TrackEdgeID, start: Int64, end: Int64)?
+}
+
 extension GameSession {
     /// The stretch of the track beside the platform's `stretch`, opposite
     /// it, when that track is joined to it by no track at all; `nil`

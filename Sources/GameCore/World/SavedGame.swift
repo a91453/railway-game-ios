@@ -412,9 +412,15 @@
 ///     `"stationExpansion"`. A build that reads only an earlier version
 ///     would drop the expansion and refuse the queue as more than the
 ///     station holds, so it says the save is newer than it instead.
+/// 79. Buying a removed line again (decision 528): a railway's purchase
+///     can have its `"track"` (the edges it laid), and the world its
+///     `"leftTrack"` (what lines bought and removed left). A build that
+///     reads only an earlier version would drop both and could no longer
+///     take up the old line's track, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 78
+    public static let currentVersion = 79
 
     public let world: GameWorld
 
@@ -618,6 +624,9 @@ extension SavedGame: Codable {
         // train is the Alishan Forest Railway's.
         // Version 77 to 78: a station without `"expansion"` is not expanded
         // (decision 506): nothing to turn.
+        // Version 78 to 79: a purchase without `"track"` laid none it
+        // knows of and a world without `"leftTrack"` has none left
+        // (decision 528): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

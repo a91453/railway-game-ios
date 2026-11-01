@@ -50,7 +50,7 @@ final class TripSettlementsTests: XCTestCase {
         XCTAssertEqual(entry.trainName, "One")
         XCTAssertEqual(entry.routeText, "A → A")
         XCTAssertEqual(entry.lineCode, LineBadge.codes(for: world.lines)[try XCTUnwrap(entry.line)])
-        XCTAssertEqual(entry.fareText, "+" + TrainRoster.shortMoney(entry.fare))
+        XCTAssertEqual(entry.fareText(in: .english), "+" + TrainRoster.shortMoney(entry.fare, in: .english))
         XCTAssertNil(entry.lateText(in: .english))
         XCTAssertEqual(entry.stampText(in: .traditionalChinese), "準")
     }
@@ -72,6 +72,6 @@ final class TripSettlementsTests: XCTestCase {
         XCTAssertEqual(late.lateText(in: .traditionalChinese), "+9 分")
         XCTAssertEqual(late.lateText(in: .english), "+9 min")
         XCTAssertEqual(late.stampText(in: .traditionalChinese), "誤")
-        XCTAssertEqual(late.fareText, "+\(TrainRoster.shortMoney(Money(220_000)))")
+        XCTAssertEqual(late.fareText(in: .english), "+\(TrainRoster.shortMoney(Money(220_000), in: .english))")
     }
 }

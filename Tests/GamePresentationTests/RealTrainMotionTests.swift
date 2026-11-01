@@ -192,9 +192,12 @@ final class RealTrainMotionTests: XCTestCase {
         guard case .daily(let runs) = hsr.schedule else { return XCTFail("\(hsr.schedule)") }
         XCTAssertFalse(runs.runs.isEmpty)
         XCTAssertTrue(runs.runs.allSatisfy { $0.performance == .highSpeed })
+        // Decision 532: Taiwan Railway's week of every train, as local
+        // trains.
         let tra = try XCTUnwrap(traffic.lines.first { $0.system == "tra" })
-        guard case .headway(let local, _) = tra.schedule else { return XCTFail("\(tra.schedule)") }
-        XCTAssertEqual(local.performance, .local)
+        guard case .week(let days) = tra.schedule else { return XCTFail("\(tra.schedule)") }
+        XCTAssertFalse(days.allSatisfy(\.runs.isEmpty))
+        XCTAssertTrue(days.allSatisfy { $0.runs.allSatisfy { $0.performance == .local } })
     }
 
     func testARingTakesTheShorterWayRound() throws {
@@ -368,7 +371,10 @@ final class RealTrainMotionTests: XCTestCase {
         let lines = session.realServiceText(of: id)
         XCTAssertFalse(lines.isEmpty)
         XCTAssertLessThanOrEqual(lines.count, GameSession.realServiceLinesShown)
-        XCTAssertTrue(lines.contains { $0.hasPrefix("縱貫線北段：約每 10 分一班") }, "\(lines)")
+        // Decision 532: Taiwan Railway's real next trains, once for the
+        // station.
+        XCTAssertTrue(lines.contains { $0.hasPrefix("臺鐵 下一班：往") }, "\(lines)")
+        XCTAssertFalse(lines.contains { $0.contains("約每") && $0.hasPrefix("縱貫線") }, "\(lines)")
         XCTAssertTrue(lines.contains { $0.hasPrefix("高鐵 下一班：往") }, "\(lines)")
         let details = session.realStationDetails(of: id)
         XCTAssertTrue(lines.allSatisfy(details.contains), "\(details)")

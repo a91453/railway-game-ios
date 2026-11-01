@@ -165,6 +165,15 @@ public final class GameSession {
     /// The station layout's plan for the platform's stretch, kept likewise
     /// (decision 507, ``networkStationLayoutPreview``).
     @ObservationIgnored var stationLayoutMemo: StationLayoutMemo?
+    /// The stretch beside the platform's, kept for the stretch and command
+    /// it was looked for at (L3-11, ``networkPlatformBeside``).
+    @ObservationIgnored var platformBesideMemo: PlatformBesideMemo?
+    /// Which sights lie on track within a tap's reach, kept for the reach
+    /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
+    @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
+    /// How many times the track was searched for the two above (for the
+    /// tests).
+    @ObservationIgnored var trackSearchesWorkedOut = 0
     /// How many times the network tool's previews (the track, a passing
     /// loop, a depot, a platform's levelling) were worked out (for the tests).
     @ObservationIgnored var buildPreviewsWorkedOut = 0

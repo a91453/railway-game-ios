@@ -130,8 +130,9 @@ public struct Map3DTrainSet: Sendable {
             e500Hauled("E500CK", far: true, coach: chuKuang),
             r100Hauled(),
             r100Hauled(far: true),
-            hauled("R200CK", locomotive: .r200, coach: chuKuang),
-            hauled("R200CK", locomotive: .r200, coach: chuKuang, far: true),
+            // Preserve upstream decision 529 R200 binding.
+            r200Hauled("R200CK", coach: chuKuang),
+            r200Hauled("R200CK", far: true, coach: chuKuang),
             // Decision 286: the Blue Train's R135 and its old blue coaches.
             hauled("BLUE", locomotive: .r135,
                    coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
@@ -498,6 +499,14 @@ public struct Map3DTrainSet: Sendable {
     /// E500-only substitution. Retains the original coaches and all pack/lock/fallback lookup rules.
     static func e500Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
         let legacy = hauled(key, head: { Map3DE500.model(far: far) }, coach: coach, far: far)
+        return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
+    }
+
+    /// Decision 529: R200-only substitution, as ``e500Hauled``: the same
+    /// coaches and pack lookups, the locomotive at its own 20.01 m, the
+    /// lamps of its front cab lit (it has a cab at each end).
+    static func r200Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
+        let legacy = hauled(key, head: { litLenses(Map3DR200.model(far: far), front: true) }, coach: coach, far: far)
         return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
     }
 

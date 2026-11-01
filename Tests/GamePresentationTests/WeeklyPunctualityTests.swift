@@ -37,6 +37,8 @@ final class WeeklyPunctualityTests: XCTestCase {
         XCTAssertEqual(weekly.text(in: .english), "On time, last 7 days: 93% (Taiwan Railway, past year: 93%)")
         let late = try XCTUnwrap(WeeklyPunctuality(records: [day(0, trips: 3, late: 3), day(1, trips: 7, late: 0)], settledDay: 2))
         XCTAssertEqual(late.text(in: .traditionalChinese), "最近 7 天準點率 70%（台鐵近一年 93%）")
+        XCTAssertEqual(weekly.companyText(in: .traditionalChinese), "全公司最近 7 天準點率 93%（台鐵近一年 93%）")
+        XCTAssertEqual(weekly.companyText(in: .english), "All lines on time, last 7 days: 93% (Taiwan Railway, past year: 93%)")
     }
 
     func testTaiwanRailwaysFigureIsTheAnalysisOne() throws {
@@ -71,6 +73,31 @@ final class WeeklyPunctualityTests: XCTestCase {
         XCTAssertNil(world.lineWeeklyPunctuality(Self.line), "not shown without realistic operation")
         XCTAssertNil(world.lineLossDiagnosis(Self.line)?.weeklyPunctuality)
         XCTAssertNil(world.lineWeeklyPunctuality(LineID(rawValue: 99)))
+    }
+
+    func testTheCompanysLineAddsUpEveryPassengerLine() throws {
+        let world = ScreenshotScene.punctuality.make(in: .traditionalChinese)
+        let passengerLines = world.lines.filter { !$0.isFreight }
+        XCTAssertGreaterThan(passengerLines.count, 1)
+        let weeklies = try passengerLines.map { try XCTUnwrap(world.lineWeeklyPunctuality($0.id), "\($0.name)") }
+        let company = try XCTUnwrap(world.companyWeeklyPunctuality())
+        XCTAssertEqual(company.trips, weeklies.reduce(0) { $0 + $1.trips })
+        XCTAssertEqual(company.lateTrips, weeklies.reduce(0) { $0 + $1.lateTrips })
+
+        var off = world
+        off.setRealisticOperation(false)
+        XCTAssertNil(off.companyWeeklyPunctuality(), "not shown without realistic operation")
+        var noAccounts = world
+        noAccounts.setLineAccounts(false)
+        XCTAssertNil(noAccounts.companyWeeklyPunctuality())
+    }
+
+    func testTheCompanysLineNeedsTenTripsOverAllLinesAndNoneInANewGame() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        XCTAssertNil(world.companyWeeklyPunctuality(), "no day settled yet")
+        try world.advance(ticks: 1 + 2 * 1_440)
+        XCTAssertEqual(world.companyWeeklyPunctuality(), world.lineWeeklyPunctuality(Self.line), "one line: the same figure")
     }
 
     func testTheScreenshotSceneShowsItOnEveryPassengerLine() throws {

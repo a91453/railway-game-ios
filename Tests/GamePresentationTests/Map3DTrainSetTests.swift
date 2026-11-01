@@ -70,7 +70,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     // (#1533's Danhai 24,838 to 25,174 near, #1506's Citadis 7,104 far).
                     : Self.lightRails.contains(set.key) ? 7_000...25_200
                     : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 100...15_000
-                    : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
+                    : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
+                    // Decision 529: #1589's R200, 12,702 near and 5,098 far.
+                    : name == set.headName && ["R200CK", "R200CKFar"].contains(set.key) ? 5_000...12_800 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.

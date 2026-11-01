@@ -155,7 +155,7 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
     /// The sets stretched to a car's length have no layout of their own, as
     /// before: the 20 m coach is drawn the length it was.
     func testTheStretchedSetsStillHaveNoLayout() throws {
-        for key in ["E200CK", "R200CK"] {
+        for key in ["E200CK"] {
             for count in [3, 6, 12] { XCTAssertNil(pack.layout(forType: key, count: count), key) }
             XCTAssertFalse(try set(key, far: false).ownLengths)
             XCTAssertFalse(try set(key, far: true).ownLengths)
@@ -190,26 +190,30 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
         }
     }
 
-    /// The locomotives stay as they were: the far set has the near one's
+    /// The locomotives stay as they were (decision 529: but the R200, now
+    /// #1589's, near and far): the far set has the near one's
     /// where it has no light model of its own, the E500's light model where
     /// it has.
     func testTheLocomotivesAreUnchanged() throws {
         let heads: [String: String] = [
-            "E200CK": "8627afbfece96e5e", "R200CK": "d9d90477d06f35a4",
+            "E200CK": "8627afbfece96e5e", "R200CK": "a7b06e165ca838c8",
             "SUMMER": "bfdb194e7eb7d9ea", "E500CK": "9847c0f5eb19364",
         ]
         for (key, expected) in heads {
             XCTAssertEqual(hash(try model(try set(key, far: false).headName)), expected, key)
         }
-        for key in ["E200CK", "R200CK", "SUMMER"] {
+        for key in ["E200CK", "SUMMER"] {
             XCTAssertEqual(payload(try model(try set(key, far: true).headName)), payload(try model(try set(key, far: false).headName)), key)
         }
+        // Decision 529: the R200 as #1589's, near and far.
+        XCTAssertEqual(hash(try model("set-R200CKFar-head")), "85118900406cf626")
+        XCTAssertEqual(payload(try model("set-R200CKFar-head")), payload(Map3DTrainSet.litLenses(Map3DR200.model(far: true), front: true)))
         XCTAssertEqual(hash(try model("set-E500CKFar-head")), "8dbdf8cee771ebe4")
         XCTAssertEqual(payload(try model("set-E500CKFar-head")), payload(Map3DE500.model(far: true)))
         XCTAssertEqual(hash(try model("set-SUMMER-tender")), "dab705df760e2507")
         XCTAssertEqual(payload(try model("set-SUMMERFar-tender")), payload(try model("set-SUMMER-tender")))
         // The E200's and the E500's lamps are lit at the front, as before.
-        for key in ["E200CK", "E500CK", "SUMMER"] {
+        for key in ["E200CK", "E500CK", "R200CK", "SUMMER"] {
             XCTAssertTrue(try model(try set(key, far: false).headName).vertices.contains { $0.glows && $0.x > 4 }, key)
         }
     }

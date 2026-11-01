@@ -1646,8 +1646,8 @@
       "triangles" : 836
     },
     "light-set-R200CK-head" : {
-      "hash" : "ed49c41c8a342939",
-      "triangles" : 40
+      "hash" : "6a961af61072ec61",
+      "triangles" : 76
     },
     "light-set-R200CK-tail" : {
       "hash" : "606b3e2de27fa1ef",
@@ -1658,8 +1658,8 @@
       "triangles" : 468
     },
     "light-set-R200CKFar-head" : {
-      "hash" : "ed49c41c8a342939",
-      "triangles" : 40
+      "hash" : "7f12f7be19d64d5d",
+      "triangles" : 24
     },
     "light-set-R200CKFar-tail" : {
       "hash" : "63557037382901ab",
@@ -2922,8 +2922,8 @@
       "triangles" : 6476
     },
     "set-R200CK-head" : {
-      "hash" : "d4d7227371dbb0e4",
-      "triangles" : 1174
+      "hash" : "e50f713827002322",
+      "triangles" : 12702
     },
     "set-R200CK-tail" : {
       "hash" : "ac77eb322d524d1a",
@@ -2934,8 +2934,8 @@
       "triangles" : 4008
     },
     "set-R200CKFar-head" : {
-      "hash" : "1728c1a61af4a42e",
-      "triangles" : 1174
+      "hash" : "f952efbaae76b99b",
+      "triangles" : 5098
     },
     "set-R200CKFar-tail" : {
       "hash" : "ef4c9712a6fa04ed",

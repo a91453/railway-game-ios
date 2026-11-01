@@ -193,6 +193,11 @@ public struct GameWorld: Equatable, Sendable {
     /// bought them. None in a new world and in saves from before it. Set by
     /// ``recordLineAcquisition(line:realLine:dailyRiders:tier:)`` only.
     public internal(set) var acquisitions: [LineAcquisition] = []
+    /// Decision 528: the track real lines bought and removed left, what
+    /// buying them again takes up. None in a new world and in saves from
+    /// before version 79. Set by ``recordLineAcquisition(line:realLine:dailyRiders:tier:track:)``
+    /// and removing a line bought only.
+    public internal(set) var leftTrack: [LeftTrack] = []
     /// The roads on the land's grid (decision 400), or `nil` for a world
     /// without them. Off in a new world and in saves from before it; the
     /// player's new games turn them on. Set by ``enableRoads(towns:)``,
@@ -716,6 +721,9 @@ public struct GameWorld: Equatable, Sendable {
         if let edge = id.networkNumber, let firstNumber = first.networkNumber, let secondNumber = second.networkNumber {
             splitTrackAsset(edge, into: (firstNumber, firstGeometry.length), (secondNumber, secondGeometry.length))
         }
+        // Decision 528: what a purchase laid or a line removed left keeps
+        // both parts in its place.
+        splitAcquiredTrack(id, into: first, second)
         // Decision 204: the lines' journeys run on the parts, as after any
         // other change to the track.
         abandonUnservedPassengers()
@@ -1233,8 +1241,10 @@ public struct GameWorld: Equatable, Sendable {
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
                 removeLineAccounts(of: lines[index].id)
-                // Decision 315: as removing the line does.
+                // Decision 315: as removing the line does; decision 528,
+                // its purchase with it.
                 disposeAsset(.acquiredLine, owner: lines[index].id.rawValue)
+                forgetAcquisition(ofLine: lines[index].id)
                 lines.remove(at: index)
                 continue
             }
@@ -1263,8 +1273,11 @@ public struct GameWorld: Equatable, Sendable {
         }
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
-        // Decision 400, 10i-2: the bus routes feeding it close.
-        busRoutes.removeAll { $0.station == id }
+        // Decision 400, 10i-2: the bus routes feeding it close; decision
+        // 528, a real route bought goes on sale again.
+        let closing = Set(busRoutes.filter { $0.station == id }.map(\.id))
+        busRoutes.removeAll { closing.contains($0.id) }
+        acquisitions.removeAll { $0.busRoute.map(closing.contains) ?? false }
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
@@ -1955,8 +1968,10 @@ public struct GameWorld: Equatable, Sendable {
         let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
         removeLineAccounts(of: id)
-        // Decision 315: what a line bought cost for its riders goes with it.
+        // Decision 315: what a line bought cost for its riders goes with it;
+        // decision 528, and its purchase, so the real line is on sale again.
         disposeAsset(.acquiredLine, owner: id.rawValue)
+        forgetAcquisition(ofLine: id)
         abandonUnservedPassengers()
         // Decision 168: its stations draw no intercity trips unless
         // another high-speed line calls at them.
@@ -4877,7 +4892,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID
     }
 
@@ -5010,6 +5025,10 @@ extension GameWorld: Codable {
         if container.contains(.acquisitions), acquisitions.isEmpty {
             throw DecodingError.dataCorruptedError(forKey: .acquisitions, in: container, debugDescription: "A world is written with \"acquisitions\" only when it bought a line.")
         }
+        leftTrack = try container.decodeIfPresent([LeftTrack].self, forKey: .leftTrack) ?? []
+        if container.contains(.leftTrack), leftTrack.isEmpty {
+            throw DecodingError.dataCorruptedError(forKey: .leftTrack, in: container, debugDescription: "A world is written with \"leftTrack\" only when a line bought left some.")
+        }
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
@@ -5046,6 +5065,16 @@ extension GameWorld: Codable {
         }
         busRoutes = try container.decodeIfPresent([BusRoute].self, forKey: .busRoutes) ?? []
         nextBusRouteID = try container.decodeIfPresent(Int.self, forKey: .nextBusRouteID) ?? 1
+        // Decision 528: a purchase whose line or bus route was removed
+        // before it went with it is dropped, so the real line is on sale
+        // again; nothing is paid back or booked again. One naming a number
+        // never handed out is still refused below.
+        let busRouteIDs = Set(busRoutes.map(\.id)), linesHandedOut = lineIDsHandedOut, routesHandedOut = nextBusRouteID
+        acquisitions.removeAll { bought in
+            if let line = bought.line { return line.rawValue < linesHandedOut && !lineIDs.contains(line.rawValue) }
+            if let route = bought.busRoute { return route.rawValue < routesHandedOut && !busRouteIDs.contains(route) }
+            return false
+        }
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -5181,6 +5210,9 @@ extension GameWorld: Codable {
         }
         if !tripLog.isEmpty {
             try container.encode(tripLog, forKey: .tripLog)
+        }
+        if !leftTrack.isEmpty {
+            try container.encode(leftTrack, forKey: .leftTrack)
         }
         if !acquisitions.isEmpty {
             try container.encode(acquisitions, forKey: .acquisitions)

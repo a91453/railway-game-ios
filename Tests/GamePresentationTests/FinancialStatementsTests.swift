@@ -204,13 +204,13 @@ final class FinancialStatementsTests: XCTestCase {
     /// columns broke "$ 3,269,858" over two lines. An amount is shown in
     /// full, or short where the full ones do not fit, never broken.
     func testAnAmountIsInFullOrShortNeverBroken() {
-        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: false), "\(Money(326_985_800).moneyText)")
-        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: true), "\(TrainRoster.shortMoney(Money(330_000_000)))")
-        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: false), "\(Money(-420_586_700).moneyText)")
-        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: true), "\(TrainRoster.shortMoney(Money(-420_000_000)))")
-        XCTAssertEqual(StatementRow.amountText(Money(-1_612_000), short: true), "\(TrainRoster.shortMoney(Money(-1_600_000)))")
-        XCTAssertEqual(StatementRow.amountText(.zero, short: true), "\(TrainRoster.shortMoney(Money(0)))")
-        XCTAssertEqual(StatementRow.amountText(nil, short: false), "—")
-        XCTAssertEqual(StatementRow.amountText(nil, short: true), "—")
+        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: false, in: .english), "\(Money(326_985_800).moneyText)")
+        XCTAssertEqual(StatementRow.amountText(Money(326_985_800), short: true, in: .english), "\(TrainRoster.shortMoney(Money(330_000_000), in: .english))")
+        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: false, in: .english), "\(Money(-420_586_700).moneyText)")
+        XCTAssertEqual(StatementRow.amountText(Money(-420_586_700), short: true, in: .english), "\(TrainRoster.shortMoney(Money(-420_000_000), in: .english))")
+        XCTAssertEqual(StatementRow.amountText(Money(-1_612_000), short: true, in: .english), "\(TrainRoster.shortMoney(Money(-1_600_000), in: .english))")
+        XCTAssertEqual(StatementRow.amountText(.zero, short: true, in: .english), "\(TrainRoster.shortMoney(Money(0), in: .english))")
+        XCTAssertEqual(StatementRow.amountText(nil, short: false, in: .english), "—")
+        XCTAssertEqual(StatementRow.amountText(nil, short: true, in: .english), "—")
     }
 }

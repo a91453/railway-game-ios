@@ -162,4 +162,53 @@ final class DoubleTrackPlatformTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertEqual(session.world.network.platforms.count, 1)
     }
+
+    /// L3-11: the map's body asks for the track beside several times a
+    /// frame (the layout menu, the layout ✓ builds), and on Taipei's
+    /// twenty lines each look took 11–27 ms. It is looked for once per
+    /// pick and command, and the answer stays right after a command.
+    func testTheTrackBesideIsLookedForOncePerPickAndCommand() throws {
+        let session = try doubleTrack()
+        tap(session, x: 6_144, north: false)
+        let first = try XCTUnwrap(session.networkPlatformBeside)
+        let searched = session.trackSearchesWorkedOut
+        for _ in 0..<10 {
+            _ = session.networkPlatformBeside
+            _ = session.networkStationLayout
+            _ = session.stationLayoutChoices
+        }
+        XCTAssertEqual(session.trackSearchesWorkedOut, searched, "kept for the same pick")
+        XCTAssertEqual(session.networkPlatformBeside?.edge, first.edge)
+        tap(session, x: 18_432, north: false)
+        XCTAssertNotNil(session.networkPlatformBeside)
+        XCTAssertEqual(session.trackSearchesWorkedOut, searched + 1, "another pick looks again")
+        // The platforms built: the same pick now has a platform beside it.
+        tap(session, x: 6_144, north: false)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        tap(session, x: 6_144, north: false)
+        XCTAssertNil(session.networkPlatformBeside, "looked again after the command")
+    }
+
+    /// L3-11: the sights' marks ask, every frame, whether track lies
+    /// within a tap's reach; the answers are kept until the reach or the
+    /// track changes.
+    func testTheSightsOnTrackAreLookedForOncePerReachAndCommand() throws {
+        let session = try doubleTrack()
+        let onTrack = PlanPoint(x: 10_240, y: 10_240 + 100), offTrack = PlanPoint(x: 10_240, y: 14_000)
+        let searched = session.trackSearchesWorkedOut
+        for _ in 0..<10 {
+            XCTAssertTrue(session.sightIsOnTrack(onTrack, within: 200))
+            XCTAssertFalse(session.sightIsOnTrack(offTrack, within: 200))
+        }
+        XCTAssertEqual(session.trackSearchesWorkedOut, searched + 2, "each sight once")
+        XCTAssertFalse(session.sightIsOnTrack(onTrack, within: 50), "a nearer reach, after zooming in")
+        XCTAssertEqual(session.trackSearchesWorkedOut, searched + 3)
+        session.setNetworkMode(.build)
+        session.tapNetwork(at: PlanPoint(x: 10_240, y: 14_000), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 20_480, y: 14_000), reach: 16)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertTrue(session.sightIsOnTrack(offTrack, within: 50), "new track by it")
+    }
 }
