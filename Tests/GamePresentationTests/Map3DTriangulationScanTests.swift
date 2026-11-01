@@ -136,3 +136,47 @@ extension Map3DTriangulationScanTests {
         }
     }
 }
+
+extension Map3DTriangulationScanTests {
+    @MainActor
+    func testScanBoughtJiji() throws {
+        guard ProcessInfo.processInfo.environment["TRI_SCAN"] != nil else { throw XCTSkip("TRI_SCAN") }
+        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let railways = try XCTUnwrap(data.railways)
+        let resources = Map3DRealTrainsTests.resources
+        let baseMap = try BaseMapTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped))
+        let footprints = try FootprintTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped))
+        var world = try HighSpeedDemo.make(in: .traditionalChinese, railways: railways, population: data.population, places: data.places,
+                                           water: data.water, coverage: data.coverage, heights: data.heights)
+        world = GameLauncher.readingRoads(of: world, baseMap: baseMap)
+        world.setUnlimitedFunds(true)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.population = data.population; session.places = data.places; session.water = data.water
+        session.heights = data.heights; session.coverage = data.coverage; session.baseMap = baseMap; session.railways = railways
+        session.readLandRoundStations()
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.network == "JIJI" }, "\(session.buyableRealLines.map(\.network))")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let bought = session.world
+        print("BOUGHT", bought.network.edges.count, bought.network.platforms.count, bought.stations.count)
+        let name = ProcessInfo.processInfo.environment["TRI_STATION"] ?? "濁水"
+        let station = try BundledRealData.station(name, in: "tra_sched")
+        let centre = try BundledRealData.point(station.coordinate, in: bought)
+        let x = Double(centre.x), y = Double(centre.y)
+        let scene = Map3DScene(world: bought, snapshot: bought.railwaySnapshot(), skyline: CitySkyline(world: bought), focus: (x, y), baseMap: baseMap,
+                               footprints: footprints, heights: data.heights, railways: railways)
+        print("ORIGIN", scene.originX - x, scene.originY - y)
+        for chunk in scene.chunks {
+            for mesh in [chunk.mesh, chunk.farWithBoxes, chunk.close, chunk.standIn] {
+                let v = mesh.vertices
+                for i in stride(from: 0, to: mesh.indices.count, by: 3) {
+                    let a = v[Int(mesh.indices[i])], b = v[Int(mesh.indices[i + 1])], c = v[Int(mesh.indices[i + 2])]
+                    let pa = a.position, pb = b.position, pc = c.position
+                    let longest = max((pb - pa).length, (pc - pb).length, (pa - pc).length)
+                    let mid = Map3DPoint((pa.x + pb.x + pc.x) / 3, (pa.y + pb.y + pc.y) / 3, (pa.z + pb.z + pc.z) / 3)
+                    guard longest > 40, abs(mid.x) < 1500, abs(mid.z) < 1500 else { continue }
+                    print("JIJI", String(a.color, radix: 16), a.layer, Int(longest), pa, pb, pc)
+                }
+            }
+        }
+    }
+}
