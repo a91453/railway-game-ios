@@ -8,3 +8,5 @@
 `deliver.py` 固定 producer 的來源／狀態／配置輸入再呼叫共用交付，不另造 loader 或 viewer。
 
 完整來源、限制、遊戲選用與重建命令見 [R100 README](../../docs/art/tra-r100/README.md)。
+
+後續原生驗收：`node tools/tra-r100/coaches-verify.mjs OUT`，對固定producer輸出做八客車單元側玻璃可見／背襯與輪數驗收，含48個實際壞例。它不重建mesh，不證明實車編組或全部屋頂／車底接觸；素材包保留producer當時的status，不事後覆寫成已接受。

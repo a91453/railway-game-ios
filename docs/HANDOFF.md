@@ -3178,3 +3178,5 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 ### 2026-11-01 Codex R100／藍皮解憂續作
 
 [R100來源、契約與交接](art/tra-r100/README.md)：獨立橘R122年代版／藍R123 2023-01-22、四種官方客車角色近遠。2026現役原色尚無證據；2025年底全退是計畫，2026藍皮實拍仍有R100。2026-05-22雙機五客的角色順序可讀，客車實號／方向與R122/R129設備改造未齊；整列只可標role-layout study，不能稱可靠實號完整編組交付。BLUE營運保持代用，缺接點明列，外觀接受／裝置UNVERIFIED。橘R100CK針對接點、原生尺度與燈契約另驗，不更改其他柴油映射。工作登記#1579 comment6551910190。最新main c4592d78已合R200IN，本輪保護其新營運payload，上游R200增量與本輪分開。真正producer、獨立重建、847舊runtime保護及兩庫draft／CI以自有verification與PR最新head為準；尚未通過項目不能以初版測試替代。不推main／merge／auto-merge／TestFlight。
+
+互鏈draft：公開[#1671](https://github.com/a91453/railway-game-ios/pull/1671) ↔ 素材[#40](https://github.com/a91453/railway-assets-private/pull/40)。producer `7b0ce7c726e0fde40da9e479f00ac9920a5f9496`；20私庫sheet＋1公開總覽、66交付檔獨立重建一致。後續客車48實際反例另記公開報告，不覆寫原producer素材status。公開PR因main新增ALISHAN/ACQSTOCK再merge，保留所有上游角色與接點；最新head及整包保護／CI見自有verification和PR。完整實車編組資料缺口及全部未驗仍保留，不稱已完成完整原任務。

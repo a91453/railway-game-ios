@@ -2,7 +2,7 @@
   "status": "UNVERIFIED",
   "scope": "Native presentation binding and Linux frame/selection contracts; source-era, complete Breezy Blue service identity and device behavior are separate.",
   "orange": {
-    "status": "UNVERIFIED",
+    "status": "VERIFIED",
     "selected_identity": "TrainType.r100ChuKuang / R100CK, including the existing nil-type r100ChuKuang performance alias",
     "selection": "Map3DTrainSet.r100Hauled replaces only the R100CK/R100CKFar locomotive head; it preserves the existing Chu-Kuang standard coach and tail roles.",
     "native_axes": "+X short-hood/cab end; +Y left when looking toward +X; +Z up; rail Z=0; metres. Official real-vehicle end numbering remains unknown.",
@@ -19,7 +19,7 @@
     ],
     "source_era_limit": "The orange representative is a dated R122 appearance; 2026 ordinary orange service is not established by this binding. No real vehicle assignment or fleet ratio is introduced.",
     "required_test_class": "Map3DR100IntegrationTests",
-    "final_test_evidence": null
+    "final_test_evidence": "45 scoped tests including Map3DR100IntegrationTests on merged 6db15095: exact identity, own metre lengths for counts1/2/3/6/12, both real lamp ends and 500/900m LOD; actual Simulator/device/dynamic running remain UNVERIFIED."
   },
   "breezy_blue": {
     "status": "UNVERIFIED",

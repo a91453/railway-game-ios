@@ -7,12 +7,16 @@
     "vertices": 4383288,
     "model_bytes_each_copy": 175331520,
     "added_vertices": 25356,
-    "added_bytes_cpu_plus_gpu": 2028480
+    "added_bytes_cpu_plus_gpu": 2028480,
+    "latest_models": 674,
+    "latest_vertices": 4445868,
+    "latest_model_bytes_each_copy": 177834720,
+    "latest_report": "674 models / 177.8MB per CPU or GPU copy from enabled MOTION_BUDGET_REPORT"
   },
   "full_check": {
     "status": "UNVERIFIED full gate green",
     "inherited_failures": 33,
-    "baseline": "c4592d787835749a210146563280e95e69e4be22",
+    "baseline": "6db15095c3e526f35755930b3c6e4bb82579cfcf",
     "detail": "32 existing lock mismatches and TEMU2000 formation near-car budget; reproduced on unchanged main; no gate/other locks fixed"
   },
   "unverified": [
@@ -24,5 +28,82 @@
     "user acceptance",
     "BLUE complete operating integration",
     "Simulator/device Metal, dynamic running, animation and performance"
-  ]
+  ],
+  "post_producer_coaches": {
+    "status": "VERIFIED",
+    "report": "coaches-verification.json",
+    "actual_faults": 48,
+    "scope": "Both LODs of all four roles: actual side glazing first-hit/backing, opaque intrusion, duplicate shell, eight wheel contacts, lifted/missing/extra axle; end glazing, roof/underframe contact and full all-view manual acceptance remain outside these probes."
+  },
+  "latest_main": "6db15095c3e526f35755930b3c6e4bb82579cfcf",
+  "latest_runtime": {
+    "standard": 674,
+    "standard_vertices": 4445868,
+    "studies": 196,
+    "studies_vertices": 2687124
+  },
+  "producer_units_after_latest_main_merge": [
+    {
+      "id": "tra-r100-r122-orange-locomotive",
+      "identical": true,
+      "sha256": "daf7c87f8973fc2ca09dc6bc2b676d4507d80f7ec389109383814c257e895d0c"
+    },
+    {
+      "id": "tra-r100-r122-orange-locomotive-far",
+      "identical": true,
+      "sha256": "5c9a141bf056deb205dfc1ffe582c8032253abbb744972a28b4bb6a5330b3e0d"
+    },
+    {
+      "id": "tra-r100-r123-breezy-blue-locomotive",
+      "identical": true,
+      "sha256": "2bd1ddbfe0dd97c23453b3ea6412beeb8eb6f22900a68c671375c5fa8003a149"
+    },
+    {
+      "id": "tra-r100-r123-breezy-blue-locomotive-far",
+      "identical": true,
+      "sha256": "a55372b2e3b1b896e840a3bd6a28285bdc37310dc7ac3b0ba2cf04222cd884a7"
+    },
+    {
+      "id": "tra-breezy-blue-coach-mixed",
+      "identical": true,
+      "sha256": "437d69f723ff6ea7e9d1273bd196b803d431ef4f43a587f1161f575901ce2685"
+    },
+    {
+      "id": "tra-breezy-blue-coach-mixed-far",
+      "identical": true,
+      "sha256": "1e5c8ba3d16dd64af207f414224c1a253d5c6c52182c961a31a399e58c1355d0"
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition",
+      "identical": true,
+      "sha256": "cea340b9e57754a98b7d9da6a58d6b2d7497c42f651e9addc5b0d55a393617b5"
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition-far",
+      "identical": true,
+      "sha256": "6879175a25587699b37b2ebd3e05e3972811770278eaec72881e86d144065c46"
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat",
+      "identical": true,
+      "sha256": "a6e24a4ca96810d52b4b9bb572d95c5ef7a456e1aa434a5f85b60841f9aa406b"
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat-far",
+      "identical": true,
+      "sha256": "84f4ea80c5fad73a0264f4b11a31d0f4fe0a4a3b4388c9c0428ac9d79c5e4418"
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat",
+      "identical": true,
+      "sha256": "fcc1f82f1197a2ea43105c9ac91d0deb2f73f72c33154096bd7846e538012c9a"
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat-far",
+      "identical": true,
+      "sha256": "54d7e48e071f148e9aa26f77f4ebcd321b399e697612eec9aa5e0c589dd5b75a"
+    }
+  ],
+  "latest_protection": "protection.json: 857 actual baseline models, 855 unchanged; only R100CK two heads changed; 13 added R100 models/window light",
+  "swift_latest_main": "VERIFIED Swift6.4 warnings-as-errors build and 45 scoped tests, 0 failures, 160.14s on 6db15095 merge"
 }

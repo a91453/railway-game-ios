@@ -1,0 +1,41 @@
+{
+  "scope": "Existing project primitives only. No old locomotive/coach shell is imported or recoloured.",
+  "methods": [
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitGeometry.swift",
+      "function": "box",
+      "producer": "4d799a57448c77bee6ae5e53a2f6ccb3d39c0771",
+      "reuse": "small closed equipment, underframe, door/window supports",
+      "shared_api_changed": false
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitGeometry.swift",
+      "function": "beam",
+      "producer": "4d799a57448c77bee6ae5e53a2f6ccb3d39c0771",
+      "reuse": "handrails, steps, open bogie braces",
+      "shared_api_changed": false
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitGeometry.swift",
+      "function": "face",
+      "producer": "4d799a57448c77bee6ae5e53a2f6ccb3d39c0771",
+      "reuse": "outward planar faces; independently authored R100 and coach profiles",
+      "shared_api_changed": false
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCivicKitGeometry.swift",
+      "function": "civicTube",
+      "producer": "f5e72843ff1412e318e4415eab6cd53714cc49c2",
+      "reuse": "wheel/axle cylinders and horn; own dimensions/stations",
+      "shared_api_changed": false
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DProps.swift",
+      "function": "Model.flat",
+      "producer": "0ffa2dcc44d1bb22ad3f0222d3ee0983a8cd92fe",
+      "reuse": "single builder-to-native axis conversion and triangle normals",
+      "shared_api_changed": false
+    }
+  ],
+  "protection": "857 actual latest-main runtime models enumerated; 855 complete payloads/all vertex fields preserved. Two targeted R100CK heads intentionally replaced."
+}

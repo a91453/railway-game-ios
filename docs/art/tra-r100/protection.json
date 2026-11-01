@@ -1,18 +1,18 @@
 {
   "status": "VERIFIED",
-  "baseline_commit": "c4592d787835749a210146563280e95e69e4be22",
-  "candidate_ref": "7b0ce7c7",
-  "baseline_manifest_sha256": "4c4ade90b019391078302ac9741072ce8d4e878c1f33f9d6d31568ab49cdf0b1",
-  "candidate_manifest_sha256": "5cfc38c79c25730e86575e60897402a4abdd12984f7fc8ffa1b0a5e04b0804b7",
+  "baseline_commit": "6db15095c3e526f35755930b3c6e4bb82579cfcf",
+  "candidate_ref": "325308ab",
+  "baseline_manifest_sha256": "a005f00fc5585ec6e6167cea12eae7aea9aa83e80199870bfb76be0ea25c5bb4",
+  "candidate_manifest_sha256": "35abf3b4d48d7aa6eb6dfb1247a56a186b650df1ac5c1a8559c8c8a693b3dc5e",
   "baseline_runtime_inventory": {
-    "standard": 663,
-    "standard_vertices": 4357932,
+    "standard": 673,
+    "standard_vertices": 4420512,
     "studies": 184,
     "studies_vertices": 2402964
   },
   "candidate_runtime_inventory": {
-    "standard": 664,
-    "standard_vertices": 4383288,
+    "standard": 674,
+    "standard_vertices": 4445868,
     "studies": 196,
     "studies_vertices": 2687124
   },
@@ -29,8 +29,8 @@
     "v",
     "layer"
   ],
-  "existing_models": 847,
-  "unchanged_existing_models": 845,
+  "existing_models": 857,
+  "unchanged_existing_models": 855,
   "intentional_changed": [
     "set-R100CK-head",
     "set-R100CKFar-head"
@@ -2509,6 +2509,58 @@
       "candidate_all_fields_sha256": "861d0ae54f0339a5d59df903370bb021e249a16906da521036e8c212583a8fc8",
       "baseline_all_fields_fnv": "f7d76152a433d695",
       "candidate_all_fields_fnv": "f7d76152a433d695"
+    },
+    {
+      "id": "light-set-ALISHAN-car",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "6d893b24cab3a6aa3e8502acfc36e3463220bb2801ed1cbbbbea5e0f31f70736",
+      "candidate_native_sha256": "6d893b24cab3a6aa3e8502acfc36e3463220bb2801ed1cbbbbea5e0f31f70736",
+      "baseline_all_fields_sha256": "195f82d7dc50d79fab8a6c74afa3ccfbbb73e773ea140ce9f8789b6760f2181f",
+      "candidate_all_fields_sha256": "195f82d7dc50d79fab8a6c74afa3ccfbbb73e773ea140ce9f8789b6760f2181f",
+      "baseline_all_fields_fnv": "7db10d7739bf5a1d",
+      "candidate_all_fields_fnv": "7db10d7739bf5a1d"
+    },
+    {
+      "id": "light-set-ALISHAN-tail",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "de2c59ee5f285bc1cd72e46b721a8cd1166c40a4323b2bd71bbab672c3826aa7",
+      "candidate_native_sha256": "de2c59ee5f285bc1cd72e46b721a8cd1166c40a4323b2bd71bbab672c3826aa7",
+      "baseline_all_fields_sha256": "195f82d7dc50d79fab8a6c74afa3ccfbbb73e773ea140ce9f8789b6760f2181f",
+      "candidate_all_fields_sha256": "195f82d7dc50d79fab8a6c74afa3ccfbbb73e773ea140ce9f8789b6760f2181f",
+      "baseline_all_fields_fnv": "7db10d7739bf5a1d",
+      "candidate_all_fields_fnv": "7db10d7739bf5a1d"
+    },
+    {
+      "id": "light-set-ALISHANFar-car",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "ad7f08d8e3be5655e7c6d08cb1e60385bf3d152d0fb3dc3308eca348e2f0c96b",
+      "candidate_native_sha256": "ad7f08d8e3be5655e7c6d08cb1e60385bf3d152d0fb3dc3308eca348e2f0c96b",
+      "baseline_all_fields_sha256": "3ce506989eb9f0aa140f0ee773ccc8dd181b67cf03861f7195c250298feed680",
+      "candidate_all_fields_sha256": "3ce506989eb9f0aa140f0ee773ccc8dd181b67cf03861f7195c250298feed680",
+      "baseline_all_fields_fnv": "896ec4080534acd5",
+      "candidate_all_fields_fnv": "896ec4080534acd5"
+    },
+    {
+      "id": "light-set-ALISHANFar-tail",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "96f08737fb5e2ca76c8432cd65f4ee52ad07c2d2a1f49568045fbb0c001a109b",
+      "candidate_native_sha256": "96f08737fb5e2ca76c8432cd65f4ee52ad07c2d2a1f49568045fbb0c001a109b",
+      "baseline_all_fields_sha256": "3ce506989eb9f0aa140f0ee773ccc8dd181b67cf03861f7195c250298feed680",
+      "candidate_all_fields_sha256": "3ce506989eb9f0aa140f0ee773ccc8dd181b67cf03861f7195c250298feed680",
+      "baseline_all_fields_fnv": "896ec4080534acd5",
+      "candidate_all_fields_fnv": "896ec4080534acd5"
     },
     {
       "id": "light-set-BLUE-car",
@@ -6526,6 +6578,84 @@
       "candidate_all_fields_sha256": "500e87590cd6bc5a0a0ad55b59dd8e6922beab07b26500b3c7c8f6272a9a80de",
       "baseline_all_fields_fnv": "2d6d09ff2fa2f42c",
       "candidate_all_fields_fnv": "2d6d09ff2fa2f42c"
+    },
+    {
+      "id": "set-ALISHAN-car",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "6fdeeeb1f560f16fee6905f46a7fd5e16c5e35160ff20571b346dcd2cae37958",
+      "candidate_native_sha256": "6fdeeeb1f560f16fee6905f46a7fd5e16c5e35160ff20571b346dcd2cae37958",
+      "baseline_all_fields_sha256": "9827127c27d545b407add4f7ccf840a819be4f3fdab4d3f62f07d1c71982f612",
+      "candidate_all_fields_sha256": "9827127c27d545b407add4f7ccf840a819be4f3fdab4d3f62f07d1c71982f612",
+      "baseline_all_fields_fnv": "e89e025724f20054",
+      "candidate_all_fields_fnv": "e89e025724f20054"
+    },
+    {
+      "id": "set-ALISHAN-head",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "3fc0363bf1d31c3367c2312cf42d1a38dc575e16191fd810b7ea7ab491d70758",
+      "candidate_native_sha256": "3fc0363bf1d31c3367c2312cf42d1a38dc575e16191fd810b7ea7ab491d70758",
+      "baseline_all_fields_sha256": "aa60ef1841ed286f621884ef7a35d71f200aa6545759c684e137c3eaf3f2a03e",
+      "candidate_all_fields_sha256": "aa60ef1841ed286f621884ef7a35d71f200aa6545759c684e137c3eaf3f2a03e",
+      "baseline_all_fields_fnv": "4e0e837fdda05ada",
+      "candidate_all_fields_fnv": "4e0e837fdda05ada"
+    },
+    {
+      "id": "set-ALISHAN-tail",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "eb2dc232db49f255660c100a8ceac2c8ad933ad3f3dc7ba32fe0617be2cfe59c",
+      "candidate_native_sha256": "eb2dc232db49f255660c100a8ceac2c8ad933ad3f3dc7ba32fe0617be2cfe59c",
+      "baseline_all_fields_sha256": "87a33d4d7513289a7821b32f088f3c2e3afe7591076f0d7be3a75543a381b1a3",
+      "candidate_all_fields_sha256": "87a33d4d7513289a7821b32f088f3c2e3afe7591076f0d7be3a75543a381b1a3",
+      "baseline_all_fields_fnv": "b9b10edafb8878b3",
+      "candidate_all_fields_fnv": "b9b10edafb8878b3"
+    },
+    {
+      "id": "set-ALISHANFar-car",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "b3f3c372308655f69aa27f8210f7ca1a31927f57449f676a85b1c4295eae9b79",
+      "candidate_native_sha256": "b3f3c372308655f69aa27f8210f7ca1a31927f57449f676a85b1c4295eae9b79",
+      "baseline_all_fields_sha256": "5e9d5991c35a87468b15cd9828f9854badf864bffd4a4afe2a103753f3a94642",
+      "candidate_all_fields_sha256": "5e9d5991c35a87468b15cd9828f9854badf864bffd4a4afe2a103753f3a94642",
+      "baseline_all_fields_fnv": "565db045c865bd74",
+      "candidate_all_fields_fnv": "565db045c865bd74"
+    },
+    {
+      "id": "set-ALISHANFar-head",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "7ba39e0f2642a87deef1cb38a587e48679d98628795f56db6d74fe3dd7a00f12",
+      "candidate_native_sha256": "7ba39e0f2642a87deef1cb38a587e48679d98628795f56db6d74fe3dd7a00f12",
+      "baseline_all_fields_sha256": "58cfc929230cf0513235fe2f8f40fa49cd54b44873b99307f84b2b8ea1957eb8",
+      "candidate_all_fields_sha256": "58cfc929230cf0513235fe2f8f40fa49cd54b44873b99307f84b2b8ea1957eb8",
+      "baseline_all_fields_fnv": "cf2e40f9fd1ca643",
+      "candidate_all_fields_fnv": "cf2e40f9fd1ca643"
+    },
+    {
+      "id": "set-ALISHANFar-tail",
+      "native_bytes_identical": true,
+      "all_ten_vertex_fields_bytes_identical": true,
+      "all_vertex_fields_fnv_identical": true,
+      "bounds_identical": true,
+      "baseline_native_sha256": "0a31c0bcfff2b683f3a0c4743dd3c3939b7f88678fa9e2dc4403d9516cd88cfc",
+      "candidate_native_sha256": "0a31c0bcfff2b683f3a0c4743dd3c3939b7f88678fa9e2dc4403d9516cd88cfc",
+      "baseline_all_fields_sha256": "fc19e2a5561b84bfc2c8ecfaf723583d3b61f3566cff99574dec6bdc9c40f302",
+      "candidate_all_fields_sha256": "fc19e2a5561b84bfc2c8ecfaf723583d3b61f3566cff99574dec6bdc9c40f302",
+      "baseline_all_fields_fnv": "7ff73b13a4a3782f",
+      "candidate_all_fields_fnv": "7ff73b13a4a3782f"
     },
     {
       "id": "set-BLUE-car",
