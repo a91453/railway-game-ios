@@ -300,6 +300,19 @@ def facing(surplus, deficit, stops):
     return pairs + list(zip(left, [d for d in deficit if not between(d)]))
 
 
+def beyond(origin, destination, stops):
+    """The end a train from `origin` runs out to first to come in to
+    `destination`, a station between, from beyond it, facing the end
+    nearer it (`facing`); `None` when it comes from beyond already, or
+    `destination` is an end."""
+    if destination in (stops[0], stops[-1]):
+        return None
+    index, at = stops.index(origin), stops.index(destination)
+    if 2 * at <= len(stops) - 1:
+        return None if index > at else stops[-1]
+    return None if index < at else stops[0]
+
+
 def balanced(found, start, stops, prompt=False):
     """`found` with positioning runs that take the trains back to `start`
     after each day's last arrival, checked, and each station's tracks;
@@ -322,9 +335,25 @@ def balanced(found, start, stops, prompt=False):
             deficit += [station] * max(0, count - len(idle[station]))
         surplus.sort()
         pairs = list(zip(surplus, deficit))
-        if prompt == "spare":
+        if prompt:
             pairs = facing(surplus, deficit, stops)
         for (free, origin), destination in pairs:
+            via = beyond(origin, destination, stops) if prompt else None
+            if via is not None:
+                # Decision 535 (continued, the Ankeng LRT): no train free
+                # beyond a station between, one from the near end runs
+                # out to the far end first and comes back to it from
+                # there. Come in from the near end, it stood on the
+                # double track's second track, facing away from the end
+                # its first run of the morning leaves for, with no way
+                # over to the first track: the morning's first trains
+                # toward the terminal stood behind it from 06:12.
+                leaves = max(free, max([r["calls"][0][2] for r in day_of(found, day) if r["calls"][0][0] == origin] + [free]) + TURNAROUND)
+                out = stretch(found, origin, via, leaves)
+                if out is None:
+                    return None, f"weekday {day}: no real train runs {origin} to {via} to time a positioning run"
+                found.append({"train": "回送", "type": "回送", "calls": out, "days": [day], "positioning": True})
+                free, origin = out[-1][1] + TURNAROUND, via
             if prompt == "spare":
                 last = free - TURNAROUND
             elif prompt:

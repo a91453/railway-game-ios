@@ -966,6 +966,41 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("traced-line-for-sale-card", app)
     }
 
+    /// Decision 535 (continued, ANKENG): the Ankeng LRT's purchase card on
+    /// a real-world game at Banqiao, opened from the lines panel's lines
+    /// for sale. For the screenshot review of its pull request.
+    func testAnkengLRTForSale() {
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        tapButton("newGame.realWorld", in: app, timeout: 60)
+        let banqiao = app.buttons.matching(identifier: "place.tra-banqiao").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(banqiao, in: app.collectionViews.firstMatch), "Banqiao is listed")
+        banqiao.waitUntilSettled()
+        app.tapMiddle(of: banqiao)
+        tapButton("realWorld.start", in: app, timeout: 60)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
+        settle(seconds: 4)
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let ankeng = app.buttons["line.acquire.K"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(ankeng, in: list), "The Ankeng LRT is for sale")
+        settle(seconds: 1)
+        keep("ankeng-for-sale", app)
+        ankeng.tap()
+        XCTAssertTrue(app.buttons["acquire.buy"].appears(within: 120), "Its card is laid out")
+        settle(seconds: 2)
+        keep("ankeng-for-sale-card", app)
+    }
+
     /// Decision 513: a trace along the North-Link Line south of Nan'ao
     /// that no grade reaches says why, with the real line's length and its
     /// ends' heights. For the screenshot review of its pull request. The
