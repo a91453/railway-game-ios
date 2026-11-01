@@ -2637,6 +2637,7 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 - **接手的下一步**（每一項各開一個 PR，表與理由在決策 517「續」）：
   - **PR 3 做了**（BUILD3D-3，session_01YGNNuq4tB6xwzS9LqMfuEM，`build3d-pick-3`）：`Map3DScene.drawnGround`、`Map3DPick.isSeen`、`.edge` 目標；列車、建物點了不反應（五方在決策 517「續」的 PR 3）。以下是原本的交接，留作紀錄。
   - ~~PR 3 場景自己的地面、遮擋、邊的吸附~~（不動畫面）。入口：`Map3DPick.ground(of:in:)` 現在只讀 `GameWorld.groundHeight(at:)`，沒讀的區塊回 0 m；實景地圖畫出來的地面在 `Map3DScene` 的 `Builder(…, heights: HeightGrid?)` 裡（`Map3DScene.swift` 約 242–302 行），讓場景留一份 64 m 格的高度給 `Map3DPick.Ground`。被山擋住的節點：`Map3DPick.pick` 找節點前，用 `ground(along:)` 打到的距離比節點的深度，比較近就不吸附。邊的吸附：仿 2D 路網工具的螢幕距離，在 `pick` 加一個 `.edge` 目標。列車、建物點了要不要反應也在這裡定（現在不反應）。
+  - **PR 3b 先量**（BUILD3D-3，`build3d-rebuild-timing`）：回報問題裡多了「3D 場景建造」的秒數。量法與怎麼判寫在決策 517「續」的「PR 3b 先量」。**等作者在 TestFlight 量完、遊戲規劃看過數字，才開 PR 3b 本身**。
   - **PR 3b 鋪完不等重蓋**：開工先在實機量現在重蓋 3D 場景要幾秒；只重蓋經過的區塊，找 `Map3DSceneCache`（`Map3DPreviewScreen.swift`、`MapView.swift`、`RailwayGameApp.swift` 用它）。
   - **PR 4 3D 裡的平面鋪軌**（改畫面，要截圖）：點的入口已經有了，`Map3DPreviewScreen.swift` 的 `tapped(_:at:)` → `Map3DPick.pick` → `GameSession.tapMap3D`（`Map3DTap.swift`）；路網工具時改交給 `NetworkSession`（加收「節點或地面點」的入口，reach 用 `Map3DTap.reach(at:camera:)`），草稿用 Metal 帶狀網格，✓ ✕ 泡泡放在 `Map3DCamera.screenPoint(of:)`；名牌的跟鏡頭擺法（`Map3DStationTagState.place(seenBy:)`、`Map3DTap.tagOrigin`）可照抄。現在只在選取工具收點（`tapMap3D` 的 guard）。
   - **PR 5**：看實機數據再定建物、分區、公車要不要進 3D。
