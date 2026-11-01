@@ -161,16 +161,37 @@ final class LineAcquisitionTests: XCTestCase {
 
     // MARK: - Removing
 
-    /// A bought line removed writes its asset off; the purchase stays, so
-    /// the real line cannot be bought again.
-    func testRemovingABoughtLineWritesItOff() throws {
-        var world = try world()
+    /// A bought line removed writes its asset off and drops its purchase,
+    /// so the real line can be bought again (decision 528), paid for
+    /// again.
+    func testRemovingABoughtLineWritesItOffAndPutsItOnSaleAgain() throws {
+        var world = try world(balance: 100_000_000)
         try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
         try world.removeLine(main)
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .acquiredLine })
-        XCTAssertEqual(world.acquisitions.map(\.realLine), [pingxi])
+        XCTAssertEqual(world.acquisitions, [])
+        XCTAssertNil(world.acquisition(of: pingxi))
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
         let other = try world.createLine(named: "Other", stops: [alpha, gamma]).id
-        XCTAssertThrowsError(try world.recordLineAcquisition(line: other, realLine: pingxi, dailyRiders: 1))
+        try world.setLineRuns(other, to: [LineRun(from: 0, to: 1, times: [LineRunTime(arrival: 22_200, departure: 22_200), LineRunTime(arrival: 22_800, departure: 22_800)])])
+        let balance = world.economy.balance
+        try world.recordLineAcquisition(line: other, realLine: pingxi, dailyRiders: 2)
+        XCTAssertEqual(world.acquisition(of: pingxi)?.line, other)
+        XCTAssertEqual(world.economy.balance, balance - LineAcquisition.value(ofDailyRiders: 2))
+    }
+
+    /// Decision 528: a save from before it, holding the purchase of a line
+    /// since removed, loads without it, so the real line is on sale again.
+    func testASavedPurchaseOfARemovedLineIsDropped() throws {
+        var world = try world()
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2)
+        let bought = try XCTUnwrap(world.acquisitions.first)
+        try world.removeLine(main)
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        object["acquisitions"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([bought]))
+        let loaded = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(loaded.acquisitions, [])
+        XCTAssertEqual(loaded, world)
     }
 
     /// A bought line that loses its stations, so that it is removed with
@@ -183,8 +204,141 @@ final class LineAcquisitionTests: XCTestCase {
         try world.removeStation(gamma)
         XCTAssertNil(world.line(id: main))
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .acquiredLine })
-        XCTAssertEqual(world.acquisitions.map(\.realLine), [pingxi])
+        XCTAssertEqual(world.acquisitions, [], "decision 528: on sale again")
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
+    /// Decision 528: a purchase keeps the track it laid; the line removed
+    /// leaves what of it stands, which the same real line bought again
+    /// forgets. The track left saves and loads.
+    func testABoughtLineRemovedLeavesItsTrack() throws {
+        var world = try world(balance: 100_000_000)
+        let laid = world.network.edges.map(\.id)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: laid)
+        XCTAssertEqual(world.acquisition(of: pingxi)?.track, laid)
+        XCTAssertEqual(world.trackLeft(by: pingxi), [], "nothing left while it runs")
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        try world.removeLine(main)
+        XCTAssertEqual(world.leftTrack, [LeftTrack(realLine: pingxi, edges: laid)])
+        XCTAssertEqual(world.trackLeft(by: pingxi), laid)
+        XCTAssertEqual(world.trackLeft(by: "tra:JIJI"), [])
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        // An edge taken up is no longer left.
+        let free = try XCTUnwrap(laid.last)
+        for platform in world.network.platforms(on: free) {
+            try world.removeTrackPlatform(platform.station, on: free, from: platform.start)
+        }
+        try world.removeTrackEdge(free)
+        XCTAssertEqual(world.trackLeft(by: pingxi), laid.filter { $0 != free })
+        // Bought again, the track it left is forgotten.
+        let other = try world.createLine(named: "Other", stops: [alpha, beta]).id
+        try world.setLineRuns(other, to: [LineRun(from: 0, to: 1, times: [LineRunTime(arrival: 22_200, departure: 22_200), LineRunTime(arrival: 22_500, departure: 22_500)])])
+        try world.recordLineAcquisition(line: other, realLine: pingxi, dailyRiders: 2)
+        XCTAssertEqual(world.leftTrack, [])
+        XCTAssertEqual(world.trackLeft(by: pingxi), [])
+    }
+
+    /// #1636 second review, P3: an edge of the track a purchase laid, or
+    /// a removed line left, split in two (as the player joins a branch
+    /// to it) is still that track, both parts in its place, so buying
+    /// the line again takes them up.
+    func testASplitEdgeIsStillTheTrackLaidOrLeft() throws {
+        var world = try world(balance: 100_000_000)
+        // A long siding no line runs over, laid with the line.
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 3_584))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 7_680, y: 3_584))
+        let siding = try world.buildTrackEdge(from: west, to: east)
+        let laid = world.network.edges.map(\.id)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: laid)
+        /// Splits `edge` at its middle, returning its parts in order.
+        func split(_ edge: TrackEdgeID) throws -> [TrackEdgeID] {
+            let before = Set(world.network.edges.map(\.id))
+            try world.splitTrackEdge(edge, at: try XCTUnwrap(world.network.edge(edge)?.length) / 2)
+            return Set(world.network.edges.map(\.id)).subtracting(before).sorted { ($0.networkNumber ?? 0) < ($1.networkNumber ?? 0) }
+        }
+        func replacing(_ edges: [TrackEdgeID], _ edge: TrackEdgeID, with parts: [TrackEdgeID]) -> [TrackEdgeID] {
+            edges.flatMap { $0 == edge ? parts : [$0] }
+        }
+        // While the line runs.
+        let halves = try split(siding)
+        XCTAssertEqual(halves.count, 2)
+        var expected = replacing(laid, siding, with: halves)
+        XCTAssertEqual(world.acquisition(of: pingxi)?.track, expected)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        // Removed, and split again.
+        try world.removeLine(main)
+        XCTAssertEqual(world.trackLeft(by: pingxi), expected)
+        let quarters = try split(halves[0])
+        XCTAssertEqual(quarters.count, 2)
+        expected = replacing(expected, halves[0], with: quarters)
+        XCTAssertEqual(world.leftTrack, [LeftTrack(realLine: pingxi, edges: expected)])
+        XCTAssertEqual(world.trackLeft(by: pingxi), expected)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
+    /// A purchase naming track that is not there, or an edge twice, is
+    /// refused and changes nothing.
+    func testAPurchaseWithTrackNotThereIsRefused() throws {
+        var world = try world()
+        let before = world
+        let edge = try XCTUnwrap(world.network.edges.first?.id)
+        XCTAssertThrowsGameError(try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: [.edge(999)]), .invalidAcquisition)
+        XCTAssertThrowsGameError(try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: [edge, edge]), .invalidAcquisition)
+        XCTAssertThrowsGameError(try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: []), .invalidAcquisition)
+        XCTAssertEqual(world, before)
+    }
+
+    /// A hand-made save with bad track left is refused.
+    func testTrackLeftIsChecked() throws {
+        var world = try world(balance: 100_000_000)
+        let laid = world.network.edges.map(\.id)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: laid)
+        try world.removeLine(main)
+        let data = try JSONEncoder().encode(world)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertNotNil(object["leftTrack"])
+        func decodes(_ change: (inout [String: Any]) -> Void) -> Bool {
+            var edited = object
+            change(&edited)
+            guard let data = try? JSONSerialization.data(withJSONObject: edited) else { return false }
+            return (try? JSONDecoder().decode(GameWorld.self, from: data)) != nil
+        }
+        let good: [String: Any] = ["realLine": pingxi, "edges": [(laid[0].networkNumber ?? -1)]]
+        XCTAssertTrue(decodes { $0["leftTrack"] = [good] })
+        XCTAssertTrue(decodes { $0["leftTrack"] = nil })
+        XCTAssertFalse(decodes { $0["leftTrack"] = [] }, "an empty list is not written")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good, good] }, "a line leaves track once")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": []]) { $1 }] })
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [(laid[0].networkNumber ?? -1), (laid[0].networkNumber ?? -1)]]) { $1 }] })
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [9_999]]) { $1 }] }, "an edge not handed out")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [0]]) { $1 }] }, "edges are numbered from 1")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [-3]]) { $1 }] }, "edges are numbered from 1")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["realLine": ""]) { $1 }] })
+    }
+
+    /// Version 79 (decision 528): Main bought as Pingxi with the track it
+    /// laid, then removed, leaving that track; it saves byte for byte and
+    /// is the world this build makes.
+    func testVersionSeventyNineKeepsTheTrackLeft() throws {
+        var world = try world(balance: 100_000_000)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: world.network.edges.map(\.id))
+        try world.removeLine(main)
+        try world.advance(ticks: 60)
+
+        let url = SavedGameTests.fixtures.appendingPathComponent("v79-track-left.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["TRACK_LEFT_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: world)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 79)
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.trackLeft(by: pingxi).count, 6)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 79,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
 
     // MARK: - Saving

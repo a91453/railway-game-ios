@@ -213,6 +213,15 @@ struct RailwayGameApp: App {
                     launcher.session?.holdScreenshotZoningDrag()
                 }
             }
+            // Decision 517 續: a station picked, for the 3D map's tag.
+            if DebugLaunch.isSet("-screenshot-select-station") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let station = session.world.stations.first {
+                        session.selectStation(station.id)
+                    }
+                }
+            }
         }
         #endif
         return launcher

@@ -52,6 +52,7 @@ struct EconomyPanel: View {
                 }
                 faresSection
                 dayPassSection
+                punctualitySection
                 fleetSection
                 if today == nil || showsAllReports {
                     trendSection
@@ -119,6 +120,21 @@ struct EconomyPanel: View {
             Text(verbatim: today.note(in: language))
         }
         .accessibilityIdentifier("economy.today")
+    }
+
+    /// Decision 524, later: every passenger line's trips on time over the
+    /// last seven settled days, beside Taiwan Railway's past year, the
+    /// same figure the line card shows for one line. Nothing below ten
+    /// trips or without realistic operation.
+    @ViewBuilder
+    private var punctualitySection: some View {
+        if let weekly = session.world.companyWeeklyPunctuality() {
+            Section {
+                Text(verbatim: weekly.companyText(in: session.language))
+                    .monospacedDigit()
+                    .accessibilityIdentifier("economy.weeklyPunctuality")
+            }
+        }
     }
 
     /// Decision 336, later: the trains and their sale, from

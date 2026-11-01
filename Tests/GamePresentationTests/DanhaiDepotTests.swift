@@ -76,24 +76,205 @@ final class DanhaiDepotTests: XCTestCase {
         XCTAssertEqual(standing(at: depot.id), 9)
     }
 
-    /// BUGHUNT_BUILD P3-5: a real line bought cannot be bought again once
-    /// its line is removed (and a line sold beside it is still sold
-    /// beside its track), so removing it says so; a line of the player's
-    /// own does not.
-    func testRemovingABoughtLineSaysItCannotBeBoughtAgain() throws {
+    /// Decision 528 (BUGHUNT_BUILD P3-5): a real line bought and removed
+    /// is on sale again, the track it left taken up and laid again, and
+    /// runs as bought; removing it says its track and stations stay
+    /// until then. A line of the player's own says only what it sells.
+    func testABoughtLineRemovedIsBoughtAgain() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
+        let green = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" })
+        let first = session.realLineOffer(for: green)
+        XCTAssertNil(first.acquisition?.clearing, "a first purchase takes nothing up")
+        XCTAssertFalse(first.summaryText(in: .traditionalChinese).contains("拆掉"))
+        let edgesBefore = Set(session.world.network.edges.map(\.id))
+        XCTAssertTrue(session.acquireRealLine(first), session.message?.text ?? "")
+        let bought = try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line)
+        let laid = Set(session.world.network.edges.map(\.id)).subtracting(edgesBefore)
+        XCTAssertEqual(Set(try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.track)), laid, "the purchase keeps the track it laid")
+        XCTAssertTrue(session.lineRemovalText(bought).hasPrefix("它的 13 列車會一起賣掉"))
+        XCTAssertTrue(session.lineRemovalText(bought).hasSuffix("這條線是買來的，刪掉後可以再買回來；軌道與車站會留著。"))
+        let stations = session.world.stations.count, edges = session.world.network.edges.count
+
+        let ownStops = Array(try XCTUnwrap(session.world.line(id: bought)?.stops).prefix(2))
+        session.selectLine(bought)
+        session.removeSelectedLine()
+        XCTAssertNil(session.world.line(id: bought), session.message?.text ?? "")
+        XCTAssertNil(session.world.acquisition(of: "ntdlrt:V"))
+        XCTAssertEqual(session.world.network.edges.count, edges, "its track stays")
+        XCTAssertEqual(Set(session.world.trackLeft(by: "ntdlrt:V")), laid, "and is what it left")
+        var world = session.world
+        let again = session
+        let line = try XCTUnwrap(again.buyableRealLines.first { $0.id == "ntdlrt:V" }, "the Green Mountain Line on sale again")
+        let offer = again.realLineOffer(for: line)
+        let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+        let clearing = try XCTUnwrap(acquisition.clearing, "the track it left taken up")
+        XCTAssertEqual(Set(clearing.edges.map(TrackEdgeID.edge)), laid, "no line runs over it: all it left, and only that")
+        XCTAssertEqual(clearing.stations.count, 1, "its old depot")
+        let platforms = clearing.platforms.count
+        XCTAssertGreaterThan(platforms, 1, "its stations' platforms on that track")
+        XCTAssertNil(clearing.shared)
+        XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix("收購時會先拆掉這條線刪掉時留下的 \(laid.count) 段軌道、\(platforms) 個月台與 1 座機廠。"), offer.summaryText(in: .traditionalChinese))
+        XCTAssertTrue(offer.summaryText(in: .english).hasSuffix(
+            "Buying it first takes up \(laid.count) pieces of track, \(platforms) platforms and 1 depot the line left when it was removed."
+        ), offer.summaryText(in: .english))
+        XCTAssertTrue(again.acquireRealLine(offer), again.message?.text ?? "")
+        XCTAssertNotNil(again.world.acquisition(of: "ntdlrt:V"))
+        // Its stations are the ones it left (the depot built again).
+        XCTAssertEqual(again.world.stations.count, stations)
+        XCTAssertEqual(again.world.trains.count, 13)
+        XCTAssertEqual(again.world.leftTrack, [], "bought again, nothing is left")
+
+        let own = try world.createLine(named: "自己的線", stops: ownStops)
+        let mine = GameSession(world: world, language: .english)
+        XCTAssertEqual(mine.lineRemovalText(own.id), "The line has no trains.")
+    }
+
+    /// Decision 528 (#1636 review P1-C): track the removed line left that
+    /// another line runs over, even through a station it does not stop
+    /// at, is not taken up.
+    func testTrackALineRunsOverIsNotTakenUp() throws {
         let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
         let green = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" })
         XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: green)), session.message?.text ?? "")
         let bought = try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line)
-        XCTAssertTrue(session.lineRemovalText(bought).hasSuffix("這條線是買來的，刪掉後就不能再買回來；軌道與車站會留著。"))
-        XCTAssertTrue(session.lineRemovalText(bought).hasPrefix("它的 13 列車會一起賣掉"))
-
+        let stops = try XCTUnwrap(session.world.line(id: bought)?.stops)
+        session.selectLine(bought)
+        session.removeSelectedLine()
+        XCTAssertNil(session.world.line(id: bought), session.message?.text ?? "")
         var world = session.world
-        let stops = try XCTUnwrap(world.line(id: bought)?.stops)
-        let own = try world.createLine(named: "自己的線", stops: Array(stops.prefix(2)))
-        let mine = GameSession(world: world, language: .english)
-        XCTAssertEqual(mine.lineRemovalText(own.id), "The line has no trains.")
-        XCTAssertTrue(mine.lineRemovalText(bought).hasSuffix(" This line was bought: once removed, it cannot be bought again. Its track and stations stay."))
+        let left = Set(world.trackLeft(by: "ntdlrt:V"))
+        let all = try XCTUnwrap(RealLineClearing.clearing(in: world, for: green))
+        XCTAssertEqual(Set(all.edges.map(TrackEdgeID.edge)), left)
+        // A line of the player's from the first stop to the third, passing
+        // the second without stopping.
+        _ = try world.createLine(named: "自己的線", stops: [stops[0], stops[2]])
+        let used = RealLineClearing.edgesInUse(in: world)
+        let passed = Set(world.network.platforms.filter { $0.station == stops[1] }.map(\.edge))
+        XCTAssertFalse(passed.isDisjoint(with: used), "the platform track it passes through is in use")
+        let clearing = try XCTUnwrap(RealLineClearing.clearing(in: world, for: green))
+        let taken = Set(clearing.edges.map(TrackEdgeID.edge))
+        XCTAssertTrue(taken.isDisjoint(with: used))
+        XCTAssertTrue(taken.isSubset(of: left))
+        XCTAssertLessThan(taken.count, left.count)
+        XCTAssertFalse(clearing.platforms.contains { [stops[0], stops[2]].contains($0.station) })
+
+        // Review P3: a train standing on the track left, it cannot be
+        // taken up, and the card says why.
+        var standing = session.world
+        let edge = try XCTUnwrap(left.max { (standing.network.edge($0)?.length ?? 0) < (standing.network.edge($1)?.length ?? 0) })
+        let train = try standing.purchaseTrain(named: "留下的車").id
+        try standing.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: try XCTUnwrap(standing.network.edge(edge)?.length)))
+        let blocked = GameSession(world: standing, language: .traditionalChinese)
+        blocked.railways = session.railways
+        blocked.heights = session.heights
+        let offer = blocked.realLineOffer(for: green)
+        XCTAssertNil(offer.acquisition)
+        XCTAssertEqual(offer.problem, "這條線之前留下的軌道拆不掉：這段軌道上有列車。請先把列車移出軌道。")
+    }
+
+    /// Decision 528 (BUGHUNT_BUILD P3-5): after the Green Mountain Line is
+    /// bought and removed, the Blue Coast Line is sold whole, from
+    /// Hongshulin, over the track the other left where they share it.
+    func testTheBlueCoastLineIsSoldWholeAfterTheGreenMountainLineIsRemoved() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
+        let green = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" })
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: green)), session.message?.text ?? "")
+        session.selectLine(try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line))
+        session.removeSelectedLine()
+        let coast = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:VB" })
+        XCTAssertNil(coast.after, "not only from Binhai Shalun")
+        XCTAssertEqual(coast.stops.first, "紅樹林")
+        let offer = session.realLineOffer(for: coast)
+        XCTAssertNotNil(offer.acquisition, offer.problem ?? "")
+        // #1636 second review, P2: only the Green Mountain Line's track
+        // the Blue Coast Line comes onto, not its way on to Kanding.
+        let clearing = try XCTUnwrap(offer.acquisition?.clearing)
+        let all = try XCTUnwrap(RealLineClearing.clearing(in: session.world, for: coast))
+        XCTAssertEqual(clearing.shared, true)
+        XCTAssertLessThan(clearing.edges.count, all.edges.count)
+        let kanding = try XCTUnwrap(session.world.stations.first { $0.name == "崁頂" }).id
+        let newTown = try XCTUnwrap(session.world.stations.first { $0.name == "淡海新市鎮" }).id
+        XCTAssertFalse(clearing.platforms.contains { [kanding, newTown].contains($0.station) })
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        XCTAssertFalse(session.world.network.platforms.filter { $0.station == kanding }.isEmpty, "Kanding's platform stays")
+    }
+
+    /// #1636 second review, P2: the Green Mountain Line bought and
+    /// removed, the edge under Kanding's platform split (as the player
+    /// joins a branch), and a train of the player's running its own
+    /// timetable from Kanding to Danhai New Town, buying the Blue Coast
+    /// Line takes up neither station's platforms nor the way between
+    /// them, and none of the Green Mountain Line's track it does not come
+    /// onto: the train still reaches Danhai New Town.
+    func testTrackATrainOfItsOwnRunsOverIsNotTakenUp() throws {
+        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true)
+        let green = try XCTUnwrap(session.buyableRealLines.first { $0.id == "ntdlrt:V" })
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: green)), session.message?.text ?? "")
+        session.selectLine(try XCTUnwrap(session.world.acquisition(of: "ntdlrt:V")?.line))
+        session.removeSelectedLine()
+        var world = session.world
+        let kanding = try XCTUnwrap(world.stations.first { $0.name == "崁頂" }).id
+        let newTown = try XCTUnwrap(world.stations.first { $0.name == "淡海新市鎮" }).id
+        // Split the edge under Kanding's platform, beside the platform.
+        let platform = try XCTUnwrap(world.network.platforms.first { $0.station == kanding })
+        let length = try XCTUnwrap(world.network.edge(platform.edge)?.length)
+        let reach = GameWorld.minimumSplitPiece
+        let cuts = [(platform.start + reach) / 2, platform.start / 2, (platform.end + length) / 2, (platform.end + length - reach) / 2]
+            .filter { ($0 >= reach && $0 <= platform.start - reach) || ($0 >= platform.end + reach && $0 <= length - reach) }
+        var split = false
+        for cut in cuts where !split {
+            var tried = world
+            if (try? tried.splitTrackEdge(platform.edge, at: cut)) != nil {
+                world = tried
+                split = true
+            }
+        }
+        XCTAssertTrue(split, "the edge under Kanding splits")
+        let left = Set(world.trackLeft(by: "ntdlrt:V"))
+        XCTAssertFalse(left.contains(platform.edge))
+        // A train of the player's: at Kanding, to Danhai New Town, on a
+        // timetable of its own.
+        let train = try world.purchaseTrain(named: "自己的車").id
+        let at = try XCTUnwrap(world.network.platforms.first { $0.station == kanding })
+        let atLength = try XCTUnwrap(world.network.edge(at.edge)?.length)
+        let starts: [TrainPosition] = [
+            .onEdge(TrackTraversal(edge: at.edge, direction: .forward), offset: at.end),
+            .onEdge(TrackTraversal(edge: at.edge, direction: .backward), offset: atLength - at.start),
+        ]
+        let start = try XCTUnwrap(starts.first { world.path(from: $0, toStation: newTown) != nil }, "Danhai New Town is reached from Kanding")
+        try world.placeTrain(train, at: start)
+        guard case .onEdge(_, let offset) = start else { return XCTFail("placed on an edge") }
+        try world.setTrainContinuation(train, along: [], stoppingAt: offset)
+        let now = world.clock.now.seconds
+        try world.setTrainTimetable(train, to: [
+            ScheduledStop(station: kanding, arrival: GameTime(seconds: now), departure: GameTime(seconds: now + 600)),
+            ScheduledStop(station: newTown, arrival: GameTime(seconds: now + 900), departure: GameTime(seconds: now + 1_200)),
+        ])
+        try world.startTrainService(train)
+        XCTAssertTrue(left.contains(at.edge), "the split track is still what the line left")
+
+        let player = GameSession(world: world, language: .traditionalChinese)
+        player.railways = session.railways
+        player.heights = session.heights
+        let used = RealLineClearing.edgesInUse(in: world)
+        let coast = try XCTUnwrap(player.buyableRealLines.first { $0.id == "ntdlrt:VB" })
+        let offer = player.realLineOffer(for: coast)
+        let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+        let clearing = try XCTUnwrap(acquisition.clearing)
+        let taken = Set(clearing.edges.map(TrackEdgeID.edge))
+        XCTAssertTrue(taken.isDisjoint(with: used), "no track the train runs over")
+        XCTAssertFalse(clearing.platforms.contains { [kanding, newTown].contains($0.station) })
+        XCTAssertTrue(taken.isSubset(of: left))
+        XCTAssertLessThan(taken.count, left.subtracting(used).count, "only the Green Mountain Line's track the Blue Coast Line comes onto")
+        XCTAssertGreaterThan(clearing.platforms.count, 0, "the shared stations' platforms it comes onto")
+        XCTAssertEqual(clearing.stations, [], "the depot stays")
+        XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix(
+            "收購時會先拆掉之前刪掉的路線留下的 \(taken.count) 段軌道與 \(clearing.platforms.count) 個月台。"
+        ), offer.summaryText(in: .traditionalChinese))
+        XCTAssertTrue(player.acquireRealLine(offer), player.message?.text ?? "")
+        XCTAssertFalse(player.world.network.platforms.filter { $0.station == newTown }.isEmpty, "Danhai New Town keeps its platforms")
+        let standing = try XCTUnwrap(player.world.train(id: train)?.position)
+        XCTAssertNotNil(player.world.path(from: standing, toStation: newTown), "the train still reaches Danhai New Town")
     }
 
     /// `ids` bought in turn on a game round the Green Mountain Line under

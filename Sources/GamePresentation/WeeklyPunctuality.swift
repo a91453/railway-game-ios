@@ -58,12 +58,29 @@ public struct WeeklyPunctuality: Hashable, Sendable {
 
     /// "On time, last 7 days: 93% (Taiwan Railway, past year: 93%)".
     public func text(in language: DisplayLanguage) -> String {
-        let percent = "\(permille / 10)%"
-        let real = "\((TaiwanRailwayPunctuality.pastYearPermille + 5) / 10)%"
-        return language.text(
-            "On time, last \(Self.days) days: \(percent) (Taiwan Railway, past year: \(real))",
-            "最近 \(Self.days) 天準點率 \(percent)（台鐵近一年 \(real)）"
+        language.text(
+            "On time, last \(Self.days) days: \(percent) (Taiwan Railway, past year: \(realPercent))",
+            "最近 \(Self.days) 天準點率 \(percent)（台鐵近一年 \(realPercent)）"
         )
+    }
+
+    /// The company's line in the economy panel (decision 524, later):
+    /// "All lines on time, last 7 days: 93% (Taiwan Railway, past year: 93%)".
+    public func companyText(in language: DisplayLanguage) -> String {
+        language.text(
+            "All lines on time, last \(Self.days) days: \(percent) (Taiwan Railway, past year: \(realPercent))",
+            "全公司最近 \(Self.days) 天準點率 \(percent)（台鐵近一年 \(realPercent)）"
+        )
+    }
+
+    /// The game's figure, rounded down like the card's other percentages.
+    private var percent: String {
+        "\(permille / 10)%"
+    }
+
+    /// Taiwan Railway's, rounded to a whole percent.
+    private var realPercent: String {
+        "\((TaiwanRailwayPunctuality.pastYearPermille + 5) / 10)%"
     }
 }
 
@@ -75,5 +92,15 @@ extension GameWorld {
     public func lineWeeklyPunctuality(_ id: LineID) -> WeeklyPunctuality? {
         guard realisticOperation, lineAccounts != nil, let line = line(id: id), !line.isFreight else { return nil }
         return WeeklyPunctuality(records: lineDays(id), settledDay: lineLossSettledDay)
+    }
+
+    /// Every passenger line's trips added up over the same seven settled
+    /// days (decision 524, later: the economy panel's line), or `nil` under
+    /// the same conditions as a line's, or with fewer than
+    /// ``WeeklyPunctuality/minimumTrips`` trips over all of them.
+    public func companyWeeklyPunctuality() -> WeeklyPunctuality? {
+        guard realisticOperation, lineAccounts != nil else { return nil }
+        let records = lines.lazy.filter { !$0.isFreight }.flatMap { lineDays($0.id) }
+        return WeeklyPunctuality(records: Array(records), settledDay: lineLossSettledDay)
     }
 }

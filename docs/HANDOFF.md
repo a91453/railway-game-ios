@@ -443,6 +443,17 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 39 任現況（2026-11-01 約 01:30 UTC，session_01YGNNupwLVxuPiWcrdA6NPs，第 1 層，壓縮 2 次）**：約 300k tokens 時交給第 40 任（第 2 層，可以自己用 `create_session` 開）。
+- **102.1 已發**：作者 01:05 UTC 自己按（「跟上次一樣，你合併完 full lane 前先發」），testflight.yml run 41259679262，main e985fb6（#1638）。發版凍結已解除。完整 `ci.yml` 41259207094 與 full lane 的結果出來後，補進 `research/PLAYER_FEEDBACK.md`。
+- **下一版（103）的排序**：NEXT_PRIORITIES §24（取代 §23；§23 的 16 項都做完了）。
+- **在跑的**：
+  - #1636 BUYBACK（session_01YGNNuqHsWbGjPjrKvrzJsn，決策 528、存檔 79，動 GameCore）：已依第一輪審查改寫，合之前再做一次獨立審查。
+  - #1639 UIFIX（session_01YGNNunwJCYnpcqxRuffiNA）：L3-11＋短金額萬／億，要截圖。
+  - #1637 BUILD3D-2 PR 2（session_01YGNNuoVbtz1ohJBKbA8itq）：要截圖；這個 session 收完 PR 2 就停，PR 3–5 另開（§24 第 13 名）。
+  - R200IN（session_01YGNNumMoJMjafUzBC43vWz，`r200-native-in`，決策 529）：PR 還沒開。
+- **號碼**：決策下一個 530、存檔下一個 80、golden schema 下一個 76。
+- **沒封存**：第 37 任（手上有 Threads 草稿）與第 38 任，等作者決定。
+
 **第 38 任交給第 39 任（2026-10-31 約 17:45 UTC，session_01YGNNumGMsXsPxuQX4jyaCq，壓縮 2 次）**：第 38 任由作者在 claude.ai 開，是第 0 層；第 39 任由第 38 任用 `create_session` 開，是第 1 層（opus 5.5 高）。
 - **101.1 已發**：作者 17:00 UTC 自己按的，testflight.yml run 41222363939，main deef5e3。檢查：完整 `ci.yml` 41217606027 綠、full lane 41217608700 綠（四個 job 都綠）。100.2 沒有發，內容併進 101.1。紀錄在 `research/PLAYER_FEEDBACK.md`（#1622）。101.1 的發版凍結已經結束。
 - **main**：61e05d1。101.1 之後合了 #1615（HANG2 P2-6）、#1619（ROADFIX-P3）、#1622（只有文件）。接手時先看 main 推送的 `ci.yml` 綠了沒。
@@ -2464,6 +2475,10 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 
 **ROADFIX-P3（session_01YGNNupKN2twaXYyb91H3Cp，2026-10-31，`roadfix-p3`）修了上面四項**：P3-3、P3-4、P3-7 照建議修；P3-5 只做了刪線時的提醒（買來的線刪掉後不能再買回來）。真的要能買回，得改 GameCore 的 `recordLineAcquisition`（同一條真實路線只能買一次），並處理留下的軌道；目前沒有派。
 
+**BUYBACK（session_01YGNNuqHsWbGjPjrKvrzJsn，2026-10-31，`buyback-real-line`）做了 P3-5 的完整修正**（[決策 528](decisions/528.md)）：刪線時收購紀錄一起拿掉、舊存檔讀檔時丟掉；GameCore 記住每次收購鋪的邊（存檔 79），刪線後留一份，再買時只拆那些邊、任何路線經過的不拆，卡片說要拆幾段。藍海線在刪掉綠山線後可整條買。79 以前存檔裡刪掉的線沒有記軌道，舊軌道擋路時照舊拒絕。實機 UNVERIFIED。BUYBACK-2（session_01YGNNukrq1bjpkYYFjG86yA，2026-11-01）依第二次審查補：自排時刻表的列車用的軌道也不拆、另一條線留下的只拆實際碰到的、切開的邊紀錄跟著走、卡片寫月台數；剩下兩項 P3 在決策 528 的「下一步」。
+
+**接手點（BUYBACK 已壓縮 1 次，做完這個 PR 就停）**：#1636 已按第一次獨立審查（P1 A–D、P2、P3）改完，head 見 PR。還差兩件事：遊戲規劃安排的第二次獨立審查，以及 102.1 發版後合併。第二次審查若要修改，由新的實作 session 接手：從 `buyback-real-line` 繼續，先讀[決策 528](decisions/528.md)。存檔 79 已用掉；golden schema 76 已釋出。
+
 ### 4.34 存檔一局一筆（決策 502，SAVE1 session_01YGNNuq65cB35dbSd2SspvL → SAVE2 session_01YGNNuogTGYLuCpzpJbTWYt，PR #1556，2026-10-30）
 
 - **做了的**在決策 502（`docs/decisions/502.md`）與 PR #1556：一局一列、存檔寫回同一列、列內留 3 版、多選與全選刪除（正在玩的不列入）、全有或全無。第一次獨立審查（d0ed375）的必修 1、2、建議 3 由 SAVE1 修（a60d1c2）；第二次獨立審查（a60d1c2）的 4（離開時的進度另放一份，不擠玩家的版本）、5（發現衝突的那台把自己這局搬到新列）、6（只改名不留版本）、7 的前半（卡住的 incoming 不擋存檔）由 SAVE2 修，各有一支在 a60d1c2 上紅的測試。
@@ -2585,9 +2600,13 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 
 存檔版本、決策編號、golden schema、GameCore 都不動。拆成五個 PR，表在 [決策 517 的「續」](decisions/517.md)。
 
-- **做了的**：PR 1，`Map3DPick`（射線打地面、螢幕 24 pt 內吸附軌道節點、土地格），只有規則與 Linux 測試，畫面沒變。
-- **接手的下一步**：PR 2（3D 裡分開點與拖、點車站／軌道開卡片、場景自己的地面高度交給拾取、邊的吸附；要截圖驗收），再來 PR 3（鋪完只重蓋經過的區塊，先在實機量重蓋秒數）、PR 4（3D 裡的路網平面鋪設）、PR 5（看實機數據）。
-
+- **做了的**：PR 1（#1634），`Map3DPick`（射線打地面、螢幕 24 pt 內吸附軌道節點、土地格），只有規則與 Linux 測試。PR 2（`build3d-tap`），3D 裡點車站出 2D 那張名牌（`StationTagCard`），點名牌回平面地圖開詳細資料。
+- **BUILD3D-2 停在這裡**（壓縮 1 次，遊戲規劃 39 說 PR 2 做完寫好接手點就停）。PR 2 是 #1637：合之前要看截圖（`website-screenshots.yml` 的 `map3d-station-tag`、`map3d-station-tag-details`）；轉 ready 與否看 #1637 最後的留言。
+- **接手的下一步**（每一項各開一個 PR，表與理由在決策 517「續」）：
+  - **PR 3 場景自己的地面、遮擋、邊的吸附**（不動畫面）。入口：`Map3DPick.ground(of:in:)` 現在只讀 `GameWorld.groundHeight(at:)`，沒讀的區塊回 0 m；實景地圖畫出來的地面在 `Map3DScene` 的 `Builder(…, heights: HeightGrid?)` 裡（`Map3DScene.swift` 約 242–302 行），讓場景留一份 64 m 格的高度給 `Map3DPick.Ground`。被山擋住的節點：`Map3DPick.pick` 找節點前，用 `ground(along:)` 打到的距離比節點的深度，比較近就不吸附。邊的吸附：仿 2D 路網工具的螢幕距離，在 `pick` 加一個 `.edge` 目標。列車、建物點了要不要反應也在這裡定（現在不反應）。
+  - **PR 3b 鋪完不等重蓋**：開工先在實機量現在重蓋 3D 場景要幾秒；只重蓋經過的區塊，找 `Map3DSceneCache`（`Map3DPreviewScreen.swift`、`MapView.swift`、`RailwayGameApp.swift` 用它）。
+  - **PR 4 3D 裡的平面鋪軌**（改畫面，要截圖）：點的入口已經有了，`Map3DPreviewScreen.swift` 的 `tapped(_:at:)` → `Map3DPick.pick` → `GameSession.tapMap3D`（`Map3DTap.swift`）；路網工具時改交給 `NetworkSession`（加收「節點或地面點」的入口，reach 用 `Map3DTap.reach(at:camera:)`），草稿用 Metal 帶狀網格，✓ ✕ 泡泡放在 `Map3DCamera.screenPoint(of:)`；名牌的跟鏡頭擺法（`Map3DStationTagState.place(seenBy:)`、`Map3DTap.tagOrigin`）可照抄。現在只在選取工具收點（`tapMap3D` 的 guard）。
+  - **PR 5**：看實機數據再定建物、分區、公車要不要進 3D。
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
@@ -3110,3 +3129,11 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 > Codex 海風／山嵐 EMU500 雙款改造（producer `f036e7f7`，素材draft [#35](https://github.com/a91453/railway-assets-private/pull/35)）：[查證、逐部件差異、角色、來源與驗證](art/tourism-emu500/README.md)。從既有原生EMU500截面／弧頭與走行設備生成段改造，兩端封門、中央落地窗與兩款一般漸層獨立處理；原EMU500及其他營運模型／配車／列車包／回退保持。兩款僅studies，沒有玩家選用或動態行駛驗證；使用者明確producer外觀接受、營運與裝置UNVERIFIED。完整交付、producer、雙draft PR與最新head CI見自有文件；不推main／合併／auto-merge／TestFlight。
 
 > Codex 海風／山嵐第二輪（producer `0e2f38a244db7ea0301169cdb4b6d81f0c340a78`，公開draft #1539 ↔ 素材draft #35）：依使用者「修」收薄下裙、重建連結器凹區／主管線、上下燈座、中央窗及連續漸層；窗框與玻璃沿原EMU500最終弧頭三角面切分，射線／故障反例驗收。前稿f036e7f7未經接受，撤回過寬外觀自評；素材兩款最新revision-2，上一輪只留PNG／README／來源，重檔同PR移除。本輪Swift6.4 WAE與14項測試、777既有payload／全部頂點欄位保持（main d6c5c899），同33舊全量失敗不改gate。仍studies，不接營運／配車／列車包／回退；兩款外觀接受、營運及裝置UNVERIFIED。獨立producer重建／最終viewer、素材guard與最新head CI以[本型驗證](art/tourism-emu500/verification.json)及兩draft記錄為準。不推main／merge／auto-merge／TestFlight。
+
+### Codex R200／R216 獨立雙端 studies（2026-10-30）
+
+[來源、契約、幾何、四態與接手](art/tra-r200/README.md)。本輪保護既有單駕駛室 R200CK 代用配方／營運，獨立建立雙端 R200 近遠完整單機。僅studies，不會合併後自動選用。正式批次、官方端號、遮蔽側／屋頂BOM與部分原廠尺寸來源仍未核齊，不能稱已完成現役工程復刻；所有技術證據與互鏈draft以自有verification為準。沒有已接受R200前版，製作者自檢不代表使用者接受；營運／裝置UNVERIFIED。不改GameCore／存檔／fixtures／配車／他車，不推main／merge／auto-merge／TestFlight。
+
+> Codex R200 第二輪（公開draft #1589 ↔ 素材draft #37）：依使用者「那你改」加寬／微弧前罩與風擋、弧肩、開放台車框、單一凹鑄件／四對彎管、分層機艙屋頂與格柵；真正未接受前稿65464b23，保留同尺度比較。完整資料及producer／四態見 [R200交接](art/tra-r200/README.md)，最新完整包revision-2，第一輪只留PNG／README／來源。只有studies，其他車／營運／standard不變；正式端號與反側屋頂BOM等來源缺口、裝置／營運／使用者接受UNVERIFIED，不合併／auto-merge／TestFlight。
+
+> R200第二輪收尾：真正producer `9c87ea5c94e23b5810ff4a48a9455bbc6fa03732`，最新main基準`2ebe025a`。近12702／遠5098三角、35核心交付檔與66原始模型／檢查圖檔獨立checkout逐bytes一致。最新10 Swift6.4 WAE測試通過，845既有模型payload及全頂點欄位保持（含2個未入上游鎖的場景模型）；standard663／172.5MB，R200常駐增量0。最新main與本分支同33既有全量失敗／34鎖差異，不改gate／他車鎖。外觀接受／營運／裝置與受管理政策阻擋的file://均UNVERIFIED；兩draft最新head CI及衝突見PR留言。

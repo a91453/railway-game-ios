@@ -279,6 +279,20 @@ final class BusRouteTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(LineAcquisition.self, from: Data(#"{"kind":"bus","realLine":"x","line":1,"day":0,"value":0}"#.utf8)))
     }
 
+    /// Decision 528 (#1636 review P2): removing the station a bought real
+    /// route feeds closes the route and drops its purchase at once, so the
+    /// world saves and loads as it is and the route is on sale again.
+    func testABoughtRouteClosedWithItsStationIsOnSaleAgain() throws {
+        var world = try world()
+        let route = try world.createBusRoute(to: a, stops: [stop], service: .every(minutes: 10), buses: 2)
+        try world.recordBusAcquisition(route: route.id, realRoute: "bus:Taipei:307", dailyRiders: 3)
+        try world.removeLine(world.lines[0].id)
+        try world.removeStation(a)
+        XCTAssertTrue(world.busRoutes.isEmpty)
+        XCTAssertEqual(world.acquisitions, [])
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     // MARK: - Saves
 
     func testVersionSeventyThreeKeepsTheBusRoute() throws {
