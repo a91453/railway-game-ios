@@ -14,6 +14,14 @@ final class MapProblemsTests: XCTestCase {
 
     // MARK: - Zoom
 
+    func testTheNameStartsBelowTheRingAtEveryZoom() {
+        for radius in stride(from: 5.0, through: 80.0, by: 0.5) {
+            let ring = MapProblems.ringRadius(stationRadius: radius)
+            XCTAssertGreaterThan(ring, radius)
+            XCTAssertGreaterThan(MapProblems.nameTop(stationRadius: radius), ring + MapProblems.ringHaloReach, "radius \(radius)")
+        }
+    }
+
     func testTheLevelsFollowTheZoom() {
         XCTAssertEqual(MapProblems.level(referenceSize: 0.1), .hidden, "the whole island")
         XCTAssertEqual(MapProblems.level(referenceSize: MapProblems.mediumFrom - 0.01), .hidden)
