@@ -119,7 +119,7 @@ private struct CompositionRing: View {
                 .font(.caption2)
                 .foregroundStyle(Theme.textSecondary)
             Text(verbatim: ring.centreText(in: language))
-                .font(.footnote.weight(.semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -146,7 +146,7 @@ private struct CompositionRing: View {
                 if let frame = proxy.plotFrame {
                     let plot = geometry[frame]
                     centre
-                        .frame(width: plot.width * 0.6)
+                        .frame(width: plot.width * 0.58)
                     .position(x: plot.midX, y: plot.midY)
                 }
             }
