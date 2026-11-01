@@ -337,8 +337,11 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertNil(offer.problem, "\(id): \(offer.problem ?? "")")
         let acquisition = try XCTUnwrap(offer.acquisition, id)
         // Bought with its depot (decision 479), the depot sends its trains
-        // out and takes them in, not the timetable's positioning runs.
-        let sold = runs.runs.filter { acquisition.depot == nil || !($0.positioning || $0.train == "回送") }
+        // out and takes them in, not the timetable's positioning runs;
+        // one past an end (decision 489, the Ankeng LRT's) keeps those
+        // taking the other end's trains back there for the night.
+        let pastAnEnd = RealLineDepotSite.sites(of: id).contains { $0.beyond != nil }
+        let sold = runs.runs.filter { acquisition.depot == nil || pastAnEnd || !($0.positioning || $0.train == "回送") }
         XCTAssertEqual(acquisition.runs.count, sold.count, id)
         XCTAssertEqual(acquisition.trains.count, runs.overnight.values.reduce(0, +), id)
         XCTAssertEqual(acquisition.trainType, type, id)

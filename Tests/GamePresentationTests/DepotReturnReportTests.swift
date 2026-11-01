@@ -5,8 +5,8 @@ import XCTest
 
 /// Decision 535 (PR W): how the lines with runs and depots fare, run only
 /// when asked (`DEPOT_RETURN_REPORT=1`, some minutes in a release build;
-/// `DEPOT_RETURN_ONLY=<name>` for one, `DEPOT_RETURN_SIMPLE=1` with
-/// traffic control off). Each is played from where it opens or is bought
+/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, danhai, ankeng, sanying,
+/// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off). Each is played from where it opens or is bought
 /// for 51 hours, minute by minute, and says how many of its second day's
 /// runs were not sent out, how many empty runs went into a depot and came
 /// out of one, about how far the empty runs drove, the most trains in a
@@ -31,6 +31,11 @@ final class DepotReturnReportTests: XCTestCase {
     func testTheGreenMountainLine() throws {
         try wanted("danhai")
         try report("danhai", Self.bought("ntdlrt:V"))
+    }
+
+    func testTheAnkengLRT() throws {
+        try wanted("ankeng")
+        try report("ankeng", Self.bought("ntalrt:K"))
     }
 
     func testTheSanyingLine() throws {

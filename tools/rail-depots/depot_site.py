@@ -22,6 +22,15 @@ end as Danhai's is, the numbers `RealLineDepotSite.muzha` and `.neihu`
 hold: the middle of the line's two tracks' ends past the end station,
 where the leads begin, and the middle of the yard tracks' near ends (the
 leads') and of their far ends.
+
+Decision 535 (continued, ANKENGDEPOT): then, for the Ankeng depot
+(安坑機廠, way 724086719) of the Ankeng LRT past Shuangcheng, what
+`RealLineDepotSite.ankeng` is made from: the middle of the crossover past
+the station the game's lead leaves at, the middle of the stabling tracks'
+north ends, and the depot's northernmost node (the yard's far end is set
+some 60 m east of it: see the site's comment), with the line's two tracks'
+end past the station, where the real leads begin, and the stabling tracks'
+south ends for comparison.
 """
 import math
 import sys
@@ -55,6 +64,17 @@ NEIHU_YARD = list(range(499756245, 499756260))
 NEIHU_LEADS = [499750991, 127958010]
 
 
+# Decision 535 (continued): the Ankeng LRT. Past Shuangcheng its two tracks
+# (1140796056, 1140796057) end where the real leads loop round into the
+# depot from its north; the crossovers past the station (1137758430,
+# 1137758431); the stabling tracks, two groups side by side (1140796066 to
+# 1140796072, 1140796074 to 1140796078).
+ANKENG_DEPOT = 724086719
+ANKENG_ENDS = [1140796056, 1140796057]
+ANKENG_CROSSOVER = [1137758430, 1137758431]
+ANKENG_YARD = [*range(1140796066, 1140796073), *range(1140796074, 1140796079)]
+
+
 class Ways(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
@@ -62,7 +82,8 @@ class Ways(osmium.SimpleHandler):
         self.platforms = []
 
     def way(self, w):
-        if w.id in (DEPOT, CROSSOVER, *SIDINGS, *DANHAI_ENDS, *DANHAI_YARD, *MUZHA_ENDS, *MUZHA_YARD, *MUZHA_LEADS, *NEIHU_ENDS, *NEIHU_YARD, *NEIHU_LEADS):
+        if w.id in (DEPOT, CROSSOVER, *SIDINGS, *DANHAI_ENDS, *DANHAI_YARD, *MUZHA_ENDS, *MUZHA_YARD, *MUZHA_LEADS, *NEIHU_ENDS, *NEIHU_YARD, *NEIHU_LEADS,
+                    ANKENG_DEPOT, *ANKENG_ENDS, *ANKENG_CROSSOVER, *ANKENG_YARD):
             self.ways[w.id] = [(n.lat, n.lon) for n in w.nodes]
         elif w.id >= PLATFORM_FIRST and w.tags.get("railway") == "platform" and w.tags.get("area") == "yes":
             points = [(n.lat, n.lon) for n in w.nodes]
@@ -115,6 +136,16 @@ def main():
         print(f"{name} yard start", middle(near))
         print(f"{name} yard end", middle(far))
         print(f"{name} yard tracks", len(leads), "longest", round(max(metres(n, f) for n, f in zip(near, far)), 1), "m")
+
+    # Decision 535 (continued): the Ankeng depot.
+    crossover = [p for i in ANKENG_CROSSOVER for p in (ways.ways[i][0], ways.ways[i][-1])]
+    yard = [sorted((ways.ways[i][0], ways.ways[i][-1])) for i in ANKENG_YARD]
+    print("ankeng junction (crossover)", middle(crossover))
+    print("ankeng yard start (north ends)", middle([y[1] for y in yard]))
+    print("ankeng depot north end", max(ways.ways[ANKENG_DEPOT]))
+    print("ankeng tracks' end", middle([min((w[0], w[-1])) for w in (ways.ways[i] for i in ANKENG_ENDS)]))
+    print("ankeng yard south ends", middle([y[0] for y in yard]))
+    print("ankeng yard tracks", len(yard), "longest", round(max(metres(a, b) for a, b in yard), 1), "m")
 
 
 if __name__ == "__main__":
