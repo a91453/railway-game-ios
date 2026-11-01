@@ -44,6 +44,26 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("bought-lines-list", app)
     }
 
+    /// Decision 539: a freight line's train, followed on the 3D map, is
+    /// the R200 hauling container wagons (not grey boxes). For the
+    /// screenshot review of the pull request that drew it so.
+    func testFreightTrainIn3D() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-follow-freight", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 30), "The freight train is followed")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        // The size check of waitForPicture passed the spinner here; wait
+        // for the spinner itself to go.
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 240), "The 3D map is drawn")
+        settle(seconds: 8)
+        keep("freight-3d", app)
+    }
+
     /// Decision 517 續: the station picked on the 2D map keeps its tag on
     /// the 3D map, under the station there; a tap on the tag opens its
     /// details back on the 2D map.

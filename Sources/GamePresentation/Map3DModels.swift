@@ -310,9 +310,9 @@ public struct Map3DModelPack: Sendable {
     public func farModel(of model: Int, forType code: String, count: Int) -> Int? {
         guard models.indices.contains(model), let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked),
               let far = set.far.flatMap({ Map3DTrainSet.byKey[$0] }) else { return nil }
-        let prefix = "set-\(set.key)-", name = models[model].name
-        guard name.hasPrefix(prefix) else { return nil }
-        return index(of: far.unitName(String(name.dropFirst(prefix.count))))
+        // Decision 539: or the head it borrows (``Map3DTrainSet/headOf``).
+        guard let unit = set.unit(of: models[model].name) else { return nil }
+        return index(of: far.unitName(unit))
     }
 
     /// Decision 408: the model a car of `code` is drawn with `distance`

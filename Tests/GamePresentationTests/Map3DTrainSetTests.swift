@@ -76,7 +76,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["BLUE", "BLUEFar"].contains(set.key) ? 5_000...15_000
                     : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
-                    : name == set.headName && ["R200CK", "R200CKFar"].contains(set.key) ? 5_000...12_800
+                    : name == set.headName && ["R200CK", "R200CKFar", "FREIGHT", "FREIGHTFar"].contains(set.key) ? 5_000...12_800
                     // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
                     : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
@@ -101,6 +101,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
                     : set.key == "blueSeven" ? 7.5...8.4
                     : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 15.79...15.81
+                    // Decision 539: the R200 20.01 m, its container wagons 14.2 m.
+                    : name == set.headName && ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 20.0...20.02
+                    : ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 14.1...14.3
                     // Decision 541: the Blue Train's head unit, two R100s back to back.
                     : name == set.headName && ["BLUE", "BLUEFar"].contains(set.key) ? 31.58...31.62
                     // Decision 496: the Citadis is 33.4 m, a half 16.7 m.

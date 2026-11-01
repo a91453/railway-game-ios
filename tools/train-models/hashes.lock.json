@@ -3473,6 +3473,38 @@
       "hash": "8e90e16859922caf",
       "triangles": 4950
     },
+    "set-FREIGHT-car" : {
+      "hash" : "e37d38a3c42bc04f",
+      "triangles" : 3260
+    },
+    "set-FREIGHT-centre" : {
+      "hash" : "143a2fea4876df52",
+      "triangles" : 3260
+    },
+    "set-FREIGHT-fourth" : {
+      "hash" : "a59c74be1e43ce1a",
+      "triangles" : 3668
+    },
+    "set-FREIGHT-tail" : {
+      "hash" : "e5c322eeb9d616e4",
+      "triangles" : 3284
+    },
+    "set-FREIGHTFar-car" : {
+      "hash" : "9137a0345a9f7cbc",
+      "triangles" : 992
+    },
+    "set-FREIGHTFar-centre" : {
+      "hash" : "33e56a52f27adf5c",
+      "triangles" : 992
+    },
+    "set-FREIGHTFar-fourth" : {
+      "hash" : "593de3420dbb532b",
+      "triangles" : 1256
+    },
+    "set-FREIGHTFar-tail" : {
+      "hash" : "1052d38379c6cdd4",
+      "triangles" : 1016
+    },
     "light-set-BLUE-fourth": {
       "hash": "a13a2b00a0cffc32",
       "triangles": 1368

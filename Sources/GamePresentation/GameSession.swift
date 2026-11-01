@@ -1407,7 +1407,7 @@ public final class GameSession {
     /// volume and the phone's silent switch keep it quiet.
     public func soundHorn() {
         guard let train = followedTrain else { return }
-        playSound?(.horn(TrainHorn.of(train)))
+        playSound?(.horn(TrainHorn.of(train, in: world)))
     }
 
     /// Decision 403 (續二): where the followed train was after the last
@@ -1427,7 +1427,7 @@ public final class GameSession {
         }
         let place = world.hornPlace(of: train.id)
         defer { hornPlace = place }
-        let horn = TrainHorn.of(train)
+        let horn = TrainHorn.of(train, in: world)
         guard horn.blowsByItself, let place, TrainHorn.blowsByItself(from: hornPlace, to: place) else { return }
         playSound(.horn(horn))
     }

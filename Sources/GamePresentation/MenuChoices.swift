@@ -47,9 +47,13 @@ extension GameSession {
     /// `TRAIN_TYPES`): the standard car (`nil`) where the game offers it,
     /// then the offered types (in a lesson, those it has opened, decision
     /// 374), each with its card and what changing the train to it costs
-    /// (decision 180).
+    /// (decision 180). Decision 539: a train of a type no longer sold
+    /// (``TrainType/withdrawnFromSale``) has its own type listed last, so
+    /// the menu still shows what it is.
     public func trainTypeMenuChoices(for id: TrainID) -> [MenuChoice<TrainType?>] {
-        trainTypes.map { type in
+        var types = trainTypes
+        if let own = world.train(id: id)?.type, !types.contains(own) { types.append(own) }
+        return types.map { type in
             MenuChoice(id: type, title: Train.typeText(type, in: language), detail: world.trainTypeMenuText(type, for: id, in: language))
         }
     }
