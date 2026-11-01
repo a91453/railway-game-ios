@@ -125,6 +125,17 @@ public struct TrainRoster: Equatable, Sendable {
         public func dispatchText(in language: DisplayLanguage) -> String? {
             isDispatchedByLine ? language.text("Dispatched by line", "依路線派車") : nil
         }
+
+        /// The line under its name, widest first, for the roster to show
+        /// the first that fits its narrow column: what it earned and its
+        /// use ("NT$7.2萬 · 82%"), then without the currency ("7.2萬 ·
+        /// 82%"), then what it earned alone (decision 523, 續二: 萬 is
+        /// wider than k, and the use was cut off).
+        public func revenueTexts(in language: DisplayLanguage) -> [String] {
+            let money = TrainRoster.shortMoney(revenue, in: language)
+            let bare = money.replacing(Money.currencySymbol, with: "")
+            return [money + " · \(utilisation)%", bare + " · \(utilisation)%", money]
+        }
     }
 
     public let day: Day

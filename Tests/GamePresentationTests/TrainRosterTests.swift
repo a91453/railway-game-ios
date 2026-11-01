@@ -280,4 +280,16 @@ final class TrainRosterTests: XCTestCase {
         XCTAssertFalse(TrainRosterLayout.usesCompactRows(rows: 6, height: 300))
         XCTAssertTrue(TrainRosterLayout.usesCompactRows(rows: 7, height: 300))
     }
+
+    /// Decision 523, 續二: the line under a train's name, widest first,
+    /// for the roster's narrow column.
+    func testTheRevenueLineHasNarrowerChoices() {
+        let row = TrainRoster.Row(train: TrainID(rawValue: 1), name: "列車 1", line: nil, lineCode: nil,
+                                  revenue: Money(7_200_000), utilisation: 82, cells: [])
+        XCTAssertEqual(row.revenueTexts(in: .traditionalChinese), ["NT$7.2萬 · 82%", "7.2萬 · 82%", "NT$7.2萬"])
+        XCTAssertEqual(row.revenueTexts(in: .english), ["NT$72k · 82%", "72k · 82%", "NT$72k"])
+        let loss = TrainRoster.Row(train: TrainID(rawValue: 2), name: "2", line: nil, lineCode: nil,
+                                   revenue: Money(-40_470_000), utilisation: 5, cells: [])
+        XCTAssertEqual(loss.revenueTexts(in: .traditionalChinese)[1], "-40.5萬 · 5%")
+    }
 }

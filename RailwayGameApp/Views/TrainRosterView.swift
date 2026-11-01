@@ -389,10 +389,13 @@ struct TrainRosterView: View {
                         .lineLimit(1)
                 }
                 if !compact {
-                    Text(verbatim: TrainRoster.shortMoney(row.revenue, in: language) + " · " + "\(row.utilisation)%")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
+                    // Decision 523, 續二: the first that fits the column.
+                    let texts = row.revenueTexts(in: language)
+                    ViewThatFits(in: .horizontal) {
+                        revenueText(texts[0])
+                        revenueText(texts[1])
+                        revenueText(texts[2])
+                    }
                     // Why a line's train has no planned boxes.
                     if let note = row.dispatchText(in: language) {
                         Text(verbatim: note)
@@ -415,6 +418,16 @@ struct TrainRosterView: View {
             .padding(.vertical, 4)
         }
         .padding(.horizontal, 8)
+    }
+
+    /// One of a row's revenue lines (``TrainRoster/Row/revenueTexts(in:)``),
+    /// at its own width so `ViewThatFits` can tell whether it fits.
+    private func revenueText(_ text: String) -> some View {
+        Text(verbatim: text)
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     private func hours(_ roster: TrainRoster, rowHeight: CGFloat, compact: Bool) -> some View {
