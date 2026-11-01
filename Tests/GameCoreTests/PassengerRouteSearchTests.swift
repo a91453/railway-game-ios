@@ -55,15 +55,52 @@ final class PassengerRouteSearchTests: XCTestCase {
     }
 
     func testAResumedSearchFindsWhatASearchForOneDestinationFinds() {
-        check(seed: 0xA0_2026_1027, checkpointLimit: 16, searchLimit: 512, labelBudget: 400_000)
+        check(seed: 0xA0_2026_1027, searchLimit: 512, labelBudget: 400_000)
     }
 
-    /// 派工單 BB: with few copies kept, a banned search starts from a copy
-    /// further back and runs on, and a dropped one starts again; neither
+    /// 派工單 BB: with few searches kept, a dropped one starts again, from
+    /// the search banning one ride fewer started again too; neither
     /// changes an answer.
     func testFewCopiesFindTheSame() {
-        check(seed: 0xBB_2026_1028, checkpointLimit: 1, searchLimit: 1, labelBudget: 400_000, graphs: 12)
-        check(seed: 0xBB_2026_1029, checkpointLimit: 3, searchLimit: 8, labelBudget: 60, graphs: 12)
+        check(seed: 0xBB_2026_1028, searchLimit: 1, labelBudget: 400_000, graphs: 12)
+        check(seed: 0xBB_2026_1029, searchLimit: 8, labelBudget: 60, graphs: 12)
+    }
+
+    /// 派工單 PLANDAY: the bans of the k-shortest search, asked as
+    /// `GameWorld.passengerRoutes(from:to:limit:searches:)` asks them: the
+    /// first route's rides one at a time, then the next route's rides added
+    /// to its ban, so that a search banning two rides starts from the one
+    /// banning the first of them, rebuilt from its history at the second.
+    func testTheSecondBanStartsFromTheFirst() {
+        var random = SplitMix64(seed: 0x2026_1101)
+        var second = 0
+        for _ in 0..<6 {
+            let stations = 8 + random.below(10)
+            let graph = graph(&random, stations: stations)
+            for limits in [(512, 400_000), (3, 80)] {
+                var searches = PassengerRouteSearches(graph: graph, searchLimit: limits.0, labelBudget: limits.1)
+                let ids = (1...stations).map { StationID(rawValue: $0) }
+                for origin in ids {
+                    for destination in ids where destination != origin {
+                        let first = searches.shortest(from: origin, to: destination, banning: [])
+                        XCTAssertTrue(same(first, graph.shortest(from: origin, to: destination, banning: [])))
+                        for edge in first?.1 ?? [] {
+                            let found = searches.shortest(from: origin, to: destination, banning: [edge])
+                            XCTAssertTrue(same(found, graph.shortest(from: origin, to: destination, banning: [edge])),
+                                          "\(origin) → \(destination) banning \(edge)")
+                            for other in found?.1 ?? [] where other != edge {
+                                let bans: Set<PassengerRideEdge> = [edge, other]
+                                second += 1
+                                XCTAssertTrue(same(searches.shortest(from: origin, to: destination, banning: bans),
+                                                   graph.shortest(from: origin, to: destination, banning: bans)),
+                                              "\(origin) → \(destination) banning \(bans)")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        XCTAssertGreaterThan(second, 200, "searches banning two rides were asked")
     }
 
     /// 派工單 BB: the copies kept stay within their limits however many
@@ -77,8 +114,7 @@ final class PassengerRouteSearchTests: XCTestCase {
         XCTAssertGreaterThan(graph.lookup.nodeSlot.count, 4 * 16, "more calls than copies")
         let ids = (1...stations).map { StationID(rawValue: $0) }
         for (searchLimit, labelBudget) in [(16, 400_000), (128, 2_000)] {
-            var searches = PassengerRouteSearches(graph: graph, checkpointLimit: 16, searchLimit: searchLimit,
-                                                  labelBudget: labelBudget)
+            var searches = PassengerRouteSearches(graph: graph, searchLimit: searchLimit, labelBudget: labelBudget)
             var most = 0, mostLabels = 0, banned = 0
             for origin in ids.prefix(6) {
                 for destination in ids where destination != origin {
@@ -92,21 +128,20 @@ final class PassengerRouteSearchTests: XCTestCase {
                 }
             }
             XCTAssertGreaterThan(banned, 2 * 16, "more banned searches than are kept")
-            XCTAssertLessThanOrEqual(most, 16 + searchLimit)
+            XCTAssertLessThanOrEqual(most, searchLimit)
             XCTAssertLessThanOrEqual(mostLabels, labelBudget)
-            XCTAssertGreaterThan(most, 16, "the copies were used")
+            XCTAssertGreaterThan(most, 1, "the copies were used")
         }
     }
 
-    private func check(seed: UInt64, checkpointLimit: Int, searchLimit: Int, labelBudget: Int, graphs: Int = 40,
+    private func check(seed: UInt64, searchLimit: Int, labelBudget: Int, graphs: Int = 40,
                        file: StaticString = #filePath, line: UInt = #line) {
         var random = SplitMix64(seed: seed)
         var asked = 0, found = 0
         for _ in 0..<graphs {
             let stations = 6 + random.below(14)
             let graph = graph(&random, stations: stations)
-            var searches = PassengerRouteSearches(graph: graph, checkpointLimit: checkpointLimit,
-                                                  searchLimit: searchLimit, labelBudget: labelBudget)
+            var searches = PassengerRouteSearches(graph: graph, searchLimit: searchLimit, labelBudget: labelBudget)
             let ids = (1...stations).map { StationID(rawValue: $0) }
             for origin in ids {
                 // The rides of some first routes, banned one or two at a
@@ -120,8 +155,7 @@ final class PassengerRouteSearchTests: XCTestCase {
                         if alone != nil { found += 1 }
                         XCTAssertTrue(same(alone, resumed), "\(origin) → \(destination) banning \(bans)",
                                       file: file, line: line)
-                        XCTAssertLessThanOrEqual(searches.copies, checkpointLimit + searchLimit,
-                                                 file: file, line: line)
+                        XCTAssertLessThanOrEqual(searches.copies, searchLimit, file: file, line: line)
                         XCTAssertTrue(searches.bannedLabels <= labelBudget || searches.bannedSearches == 1,
                                       file: file, line: line)
                         if let edges = alone?.1, !edges.isEmpty {
