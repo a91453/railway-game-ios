@@ -731,10 +731,10 @@ extension RealRailways {
                 // Decision 240: a weekday of the Yilan Line, Toucheng to
                 // Su'aoxin, for the TRA demo.
                 TRADemo.schedule: { try file("\(TRADemo.schedule)-schedule", "json") },
-                // Decision 511: the DR3100 diesel express's trains, on the
-                // real lines.
-                RealTrainTraffic.dr3100Schedule: { try file("\(RealTrainTraffic.dr3100Schedule)-schedule", "json") },
-            ]
+            ],
+            // Decision 532: Taiwan Railway's every train of a week, on the
+            // real lines (the DR3100's of decision 511 among them).
+            weekSchedules: [RealTrainTraffic.traSchedule: { try file("\(RealTrainTraffic.traSchedule)-schedule", "json") }]
         )
         let transfers = read("station_transfers", "json").flatMap { data in
             parse("station_transfers.json") { try RealStationTransfers(data: data) }

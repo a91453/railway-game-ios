@@ -145,16 +145,20 @@ public struct RealRailwayOperations: Sendable {
     public let loadIssues: [RealDataLoadIssue]
     private let timetables: LazyFiles<RealSystemTimetable>
     private let schedules: LazyFiles<RealDailySchedule>
+    private let weekSchedules: LazyFiles<RealWeekTimetable>
 
     /// `systems` is each system's `<key>.json` by key; `timetables` each
     /// system's `<key>_times.json` (keyed by `<key>` or `<key>_times`),
     /// read when first needed; `schedules` a scheduled system's day of
     /// trains (`thsr`: `thsr-schedule.json`; `tra-yilan`:
-    /// `tra-yilan-schedule.json`, decision 240).
+    /// `tra-yilan-schedule.json`, decision 240); `weekSchedules` a
+    /// system's every train of a week (`tra`: `tra-schedule.json`,
+    /// decision 532).
     public init(
         systems systemsData: [String: Data],
         timetables: [String: @Sendable () throws -> Data] = [:],
-        schedules: [String: @Sendable () throws -> Data] = [:]
+        schedules: [String: @Sendable () throws -> Data] = [:],
+        weekSchedules: [String: @Sendable () throws -> Data] = [:]
     ) {
         var issues: [RealDataLoadIssue] = []
         var parsed: [String: RealOperationSystem] = [:]
@@ -173,12 +177,14 @@ public struct RealRailwayOperations: Sendable {
         }
         self.timetables = LazyFiles(sources: keyed, fileName: { "\($0)_times.json" }, parse: { try RealSystemTimetable(data: $0) })
         self.schedules = LazyFiles(sources: schedules, fileName: { "\($0)-schedule.json" }, parse: { try RealDailySchedule(data: $0) })
+        self.weekSchedules = LazyFiles(sources: weekSchedules, fileName: { "\($0)-schedule.json" }, parse: { try RealWeekTimetable(data: $0) })
     }
 
     /// The same from data already read.
-    public init(systems systemsData: [String: Data], timetables: [String: Data], schedules: [String: Data] = [:]) {
+    public init(systems systemsData: [String: Data], timetables: [String: Data], schedules: [String: Data] = [:], weekSchedules: [String: Data] = [:]) {
         func source(_ data: Data) -> @Sendable () throws -> Data { { data } }
-        self.init(systems: systemsData, timetables: timetables.mapValues(source), schedules: schedules.mapValues(source))
+        self.init(systems: systemsData, timetables: timetables.mapValues(source), schedules: schedules.mapValues(source),
+                  weekSchedules: weekSchedules.mapValues(source))
     }
 
     private static func system(_ key: String, from data: Data) throws -> RealOperationSystem {
@@ -286,9 +292,15 @@ public struct RealRailwayOperations: Sendable {
         schedules.value(id)
     }
 
+    /// Decision 532: system `id`'s every train of a week (`tra`:
+    /// `tra-schedule.json`), read the first time it is asked for.
+    public func weekSchedule(forSystem id: String) -> RealWeekTimetable? {
+        weekSchedules.value(id)
+    }
+
     /// The timetables and schedules read so far that could not be.
     public var timetableIssues: [RealDataLoadIssue] {
-        timetables.issues + schedules.issues
+        timetables.issues + schedules.issues + weekSchedules.issues
     }
 }
 

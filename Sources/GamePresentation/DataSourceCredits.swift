@@ -353,8 +353,8 @@ public enum DataSourceCredits {
                         id: "traOpenData",
                         title: language.text("TRA open data", "台鐵開放資料"),
                         detail: language.text(
-                            "The real times of TRA’s trains: the Pingxi Line in the Real-World Demo, the Yilan Line in the TRA Demo, and the six branch lines you can buy on a real-world map.",
-                            "台鐵列車的真實時刻：實景示範的平溪線、台鐵示範的宜蘭線，以及實景地圖上可以買下的六條支線。"
+                            "The real times of TRA’s trains: every TRA train of a week on a real-world map and the next trains on its station cards, the Pingxi Line in the Real-World Demo, the Yilan Line in the TRA Demo, and the six branch lines you can buy on a real-world map.",
+                            "台鐵列車的真實時刻：實景地圖上一週的每一班台鐵列車與車站卡的下一班、實景示範的平溪線、台鐵示範的宜蘭線，以及實景地圖上可以買下的六條支線。"
                         ),
                         notice: language.text(
                             "Taiwan Railway Corporation, 2026: train timetables, from TRA open data (ods.railway.gov.tw). ",
