@@ -6,7 +6,7 @@ import XCTest
 /// Taipei Metro's lines by their own fleets, the Circular line the 610;
 /// Kaohsiung's, Taoyuan's and Taichung's metros stay the generic car.
 final class Map3DTaipeiMetro461Tests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     private func cars(_ key: String, _ count: Int) throws -> [Map3DModelPack.Model] {
         try XCTUnwrap(pack.layout(forType: key, count: count), key).map { pack.models[$0.model] }

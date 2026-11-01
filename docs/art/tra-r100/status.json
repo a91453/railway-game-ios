@@ -1,0 +1,37 @@
+{
+  "asset": {
+    "status": "UNVERIFIED",
+    "evidence": "Final independent producer, browser, coach fault coverage and protection checks are tracked separately; do not infer completion from initial topology audit."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "No explicit user acceptance of this producer.",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Orange R100CK targeted binding exists; final verification pending. Decision 541: BLUE runs two blue R100s (one 31.6 m head unit, R129 turned) and the restored coaches in the 2026-05-22 reported role order, near and far; coach numbers and directions remain UNVERIFIED (every coach faces forward). Linux tests only; device Metal UNVERIFIED."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No Simulator or physical-device Metal, performance, animation or dynamic train validation."
+  },
+  "components": {
+    "orange_R122": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    },
+    "blue_R123": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    },
+    "coaches": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    },
+    "complete_numbered_formation": {
+      "status": "UNVERIFIED",
+      "evidence": "See individual source, geometry and final verification reports"
+    }
+  }
+}

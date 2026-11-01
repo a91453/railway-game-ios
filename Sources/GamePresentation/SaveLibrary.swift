@@ -1382,7 +1382,10 @@ private final class HeaderCache: @unchecked Sendable {
         }
         guard let directory, let data = try? Data(contentsOf: directory.appendingPathComponent(name)),
               let kept = try? Self.decoder.decode(Kept.self, from: data),
-              kept.format == Self.format, kept.stamp == stamp else { return nil }
+              kept.format == Self.format, kept.stamp == stamp,
+              // L2-4: a header a newer build kept is read from the file
+              // again, which marks it newer than this build reads.
+              kept.header.game.saveVersion <= SavedGame.currentVersion else { return nil }
         lock.withLock { known[name] = (stamp, .success(kept.header)) }
         return .success(kept.header)
     }

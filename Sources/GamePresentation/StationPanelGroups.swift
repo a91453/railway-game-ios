@@ -10,8 +10,8 @@ public enum StationPanelGroup: String, CaseIterable, Hashable, Sendable, Identif
     /// Platforms, trains due, the way to another station, how the station
     /// runs, depots and transfers: what a player opens a station for.
     case operations
-    /// Trips by hour, who waits and where they go, the station's demand
-    /// and events.
+    /// Trips by hour, who waits and where they go, the room to wait
+    /// (decision 506), the station's demand and events.
     case riders
     /// Shops, the real station, the people, land, roads and buses round it.
     case area
@@ -81,8 +81,8 @@ public enum StationPanelGroup: String, CaseIterable, Hashable, Sendable, Identif
 public enum StationPanelPart: String, CaseIterable, Hashable, Sendable {
     // Operations.
     case buyLine, operations, departureBoard, journey, rename, operationMode, depot, transfer, platforms
-    // Riders.
-    case tripsByHour, passengers, demand, events, tripsByStation
+    // Riders; the station's expansion (decision 506) under who waits.
+    case tripsByHour, passengers, expansion, demand, events, tripsByStation
     // Surroundings.
     case commerce, realStation, catchment, land, road, bus
     // Freight and removal.
@@ -92,7 +92,7 @@ public enum StationPanelPart: String, CaseIterable, Hashable, Sendable {
         switch self {
         case .buyLine, .operations, .departureBoard, .journey, .rename, .operationMode, .depot, .transfer, .platforms:
             .operations
-        case .tripsByHour, .passengers, .demand, .events, .tripsByStation:
+        case .tripsByHour, .passengers, .expansion, .demand, .events, .tripsByStation:
             .riders
         case .commerce, .realStation, .catchment, .land, .road, .bus:
             .area

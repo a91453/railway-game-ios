@@ -154,14 +154,35 @@ public struct Map3DRealTrains: Sendable {
     /// the timetable does not say how many coupled).
     static let dr3100 = Formation(key: "dieselExpress", cars: 3)
 
+    /// Decision 532: the formation a Taiwan Railway train of `model` (its
+    /// timetable's `carName`) is drawn as, `rail-3d`'s
+    /// `integration/formations.js` `baseFormation`: the EMU3000's twelve
+    /// cars (and the 110K and 110M, as it has them), the Taroko's and the
+    /// Puyuma's eight, the push-pull's twelve coaches and a power car at
+    /// each end, decision 511's DR3100, and a Chu-Kuang's locomotive and
+    /// eight coaches; `nil` for any other (a local train), which runs as
+    /// its line's.
+    static func traFormation(model: String) -> Formation? {
+        if model.hasPrefix("自強(3000") || model == "110K" || model == "110M" { return Formation(key: "emu3000", cars: 12) }
+        if model.contains("(太,") { return Formation(key: "taroko", cars: 8) }
+        if model.contains("(普,") { return Formation(key: "puyuma", cars: 8) }
+        if model.contains("(PP") { return Formation(key: "pushPull", cars: 14) }
+        if model.contains("(D31") { return dr3100 }
+        if model.contains("莒光") || model.contains("普通車") { return Formation(key: "E200CK", cars: 9) }
+        return nil
+    }
+
     /// The formation the train at `place` (its key in
     /// ``RealTrainTraffic/places(of:at:on:dayBefore:)``) of a line whose
-    /// trains are `line` is drawn as: decision 511, a DR3100 train's
-    /// ``dr3100``; any other ``formation(of:system:number:locked:)`` by its
-    /// number.
+    /// trains are `line` is drawn as: decision 532, a Taiwan Railway
+    /// train's by its model (``traFormation(model:)``); any other
+    /// ``formation(of:system:number:locked:)`` by its number.
     static func formation(of line: Formation, system: String, place: String, locked: Set<String> = []) -> Formation {
-        if place.hasPrefix(RealTrainTraffic.dr3100Prefix) || place.hasPrefix("-" + RealTrainTraffic.dr3100Prefix) { return dr3100 }
-        return formation(of: line, system: system, number: Map3DTrainSet.number(ofRealTrain: place), locked: locked)
+        let number = Map3DTrainSet.number(ofRealTrain: place)
+        if system == "tra", let model = RealTrainTraffic.traModel(ofPlace: place), let own = traFormation(model: model) {
+            return formation(of: own, system: system, number: number, locked: locked)
+        }
+        return formation(of: line, system: system, number: number, locked: locked)
     }
 
     /// Each line's trains (decision 339): as many cars as `Railway/`
@@ -169,6 +190,13 @@ public struct Map3DRealTrains: Sendable {
     /// `baseFormation`), each the game's set for that stock, or the nearest
     /// set it has.
     static func formation(system: String, line: RealOperationLine) -> Formation {
+        formation(system: system, id: line.id, name: line.name)
+    }
+
+    /// Decision 536: the same, of a line known by its id (`R_XBT`) and
+    /// name (`內灣線`) alone: a real line the company bought
+    /// (``RealLineStock``), drawn as the trains it had before.
+    static func formation(system: String, id: String, name: String) -> Formation {
         switch system {
         case "thsr":
             // The 700T: twelve cars.
@@ -177,13 +205,13 @@ public struct Map3DRealTrains: Sendable {
             // The diesel branches' DR1000 railcars, three on a weekday;
             // the rest the EMU800, eight cars, as most local trains
             // (`dr1000`, `commuter`).
-            if Map3DScene.dieselBranches.contains(where: { line.name.hasPrefix($0) }) { return Formation(key: "dieselRailcar", cars: 3) }
+            if Map3DScene.dieselBranches.contains(where: { name.hasPrefix($0) }) { return Formation(key: "dieselRailcar", cars: 3) }
             return Formation(key: "emu800", cars: 8)
         case "trtc":
             // Decision 461: each line's own fleet, of the models the game
             // has (the C301 and C321 have none: the line's other fleet
             // stands in for them).
-            switch line.id {
+            switch id {
             // The Wenhu line's four cars (`wenhu`).
             case "BR": return Formation(key: "wenhu", cars: 4)
             // The Circular line's four-car 610.
@@ -203,7 +231,7 @@ public struct Map3DRealTrains: Sendable {
             // Decision 461: the other cities' metros are not Taipei's.
             // Decision 496: the Circular light rail's CAF and Citadis
             // trains, by their number (``Map3DTrainSet/kaohsiungLightRail(number:)``).
-            if line.id == "C" { return Formation(key: "klrtCitadis", cars: 2) }
+            if id == "C" { return Formation(key: "klrtCitadis", cars: 2) }
             // Decision 483: the Red and Orange lines' Siemens three cars.
             return Formation(key: "kaohsiung", cars: 3)
         case "tymc":
@@ -221,9 +249,14 @@ public struct Map3DRealTrains: Sendable {
             return Formation(key: "danhaiLRT", cars: 2)
         case "ntalrt":
             return Formation(key: "ankengLRT", cars: 2)
+        case "afr":
+            // Decision 531: the Alishan Forest Railway's locomotive and five
+            // coaches (`integration/formations.js` `forest`, estimated from
+            // the forest railway's charter information), the DL-38 and its
+            // coaches at their own lengths, about 74 m.
+            return Formation(key: "ALISHAN", cars: 6)
         default:
-            // The Alishan Forest Railway's locomotive and five short
-            // coaches, about 70 m: boxes, the game has no set.
+            // A system the game has no set for: boxes.
             return Formation(key: "", cars: 3)
         }
     }

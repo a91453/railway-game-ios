@@ -496,8 +496,15 @@ extension XCUIApplication {
         coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: place.midX - screen.minX, dy: place.midY - screen.minY)).tap()
         let chosen = NSPredicate(format: "label == %@", "Speed: \(name)")
-        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10), .completed,
-                       "The touch did not choose \(name): \(speed.label)", file: file, line: line)
+        // The waiter's look can be its only one: on main 447891f's full
+        // lane (run 41187572538) 6000× was chosen, the app stalled for
+        // seconds as the demo ran into midnight at it, and the one look,
+        // begun before the label changed, took 9 of the 10 seconds; the
+        // label read for the message said 6000×. So the label is read once
+        // more, as `chooseMenuAction` does, before the touch counts as lost.
+        let waited = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: chosen, object: speed)], timeout: 10)
+        XCTAssertTrue(waited == .completed || speed.label == "Speed: \(name)",
+                      "The touch did not choose \(name): \(speed.label)", file: file, line: line)
         XCTAssertTrue(row.disappears(within: 10), "The speed menu stayed open after \(name) was chosen", file: file, line: line)
     }
 
@@ -813,16 +820,22 @@ final class ShellLayoutUITests: XCTestCase {
         assertOneSize(["controls.toggle", "entry.economy", "entry.lines", "dock.build"], in: app, while: "looking at the map")
         // The strip's glass ends 3 points under its buttons, the column's 4
         // above its first; between them the screen's gap of 10, as from the
-        // board to the strip.
-        XCTAssertGreaterThanOrEqual(toggle.frame.minY - more.frame.maxY, 3 + 10 + 4 - 0.5,
+        // board to the strip. The toggle is touched 2 above what it draws
+        // (decision 509).
+        XCTAssertGreaterThanOrEqual(toggle.frame.minY - more.frame.maxY, 3 + 10 + 4 - 2 - 0.5,
                                     "The column stops a gap below the layer strip: toggle \(toggle.frame), strip \(more.frame)")
 
         let build = app.buttons["dock.build"]
         build.tap()
         app.buttons["tool.select"].waitUntilSettled(timeout: 10)
-        // The card's toggle stands beside Build while building (98.1).
-        assertOneSize(["tool.network", "tool.train", "tool.building", "tool.bus", "tool.select", "dock.build"],
+        // The card's toggle stands beside Build while building (98.1), and
+        // Done too (100.1, decision 509): one size, beside it.
+        assertOneSize(["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus", "dock.build"],
                       in: app, while: "building")
+        let done = app.buttons["tool.select"].frame
+        XCTAssertEqual(done.size.width, build.frame.width, accuracy: 0.5, "Done is Build's size: \(done), \(build.frame)")
+        XCTAssertEqual(done.size.height, build.frame.height, accuracy: 0.5, "Done is Build's size: \(done), \(build.frame)")
+        XCTAssertEqual(done.midY, build.frame.midY, accuracy: 0.5, "Done beside Build: \(done), \(build.frame)")
     }
 
     private func assertOneSize(_ identifiers: [String], in app: XCUIApplication, while state: String,

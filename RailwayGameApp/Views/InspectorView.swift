@@ -15,10 +15,15 @@ struct InspectorView: View {
     /// The selection head's width, which puts its buttons under the words
     /// on a narrow card (``SelectionHeadLayout``).
     @State private var headWidth: CGFloat = 0
+    /// Decision 512: the train whose row of the train roster is open.
+    @State private var rosterTrain: TrainID?
 
     var body: some View {
         inspector
             .themeCard(padding: 10, cornerRadius: 12)
+            .fullScreenCover(isPresented: Binding(get: { rosterTrain != nil }, set: { if !$0 { rosterTrain = nil } })) {
+                TrainRosterView(session: session, focus: rosterTrain)
+            }
     }
 
     @ViewBuilder
@@ -49,6 +54,13 @@ struct InspectorView: View {
                     .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("inspector.train.details")
+            }
+            // Decision 536: on a real line bought, what the train is.
+            if let stock = session.world.boughtStockText(of: train, in: session.language) {
+                Label(stock, systemImage: "tram.fill")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("train.stock")
             }
             // TestFlight 56.1: a train looked at with no tool had no way to
             // follow it; the train tool's button (`train.follow`) sat behind
@@ -86,6 +98,11 @@ struct InspectorView: View {
                         chip(Self.systemImage(of: action), action.title(in: session.language), id: "inspector.train.\(action.rawValue)") {
                             session.runTrainCardAction(action, on: train)
                         }
+                    }
+                    // Decision 512: this train's row of the roster, in one tap,
+                    // last, so the chips before it keep their places.
+                    chip("chart.bar.doc.horizontal", session.language.text("Roster", "運用表"), id: "inspector.train.roster") {
+                        rosterTrain = train
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -266,9 +283,10 @@ struct InspectorView: View {
                     Text(verbatim: text)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
-                        // Three lines: in a phone's card "Station · Ruifang ·
-                        // 2 platforms, 128 m" took two and lost its end.
-                        .lineLimit(session.selectedBuildingID == nil && session.selectedTrackEdge == nil ? 3 : 7)
+                        // A station's text is at most six short lines (its
+                        // waiting list is capped), so it is shown whole; a
+                        // phone's card lost the end of the long single line.
+                        .lineLimit(session.selectedStation != nil ? nil : session.selectedBuildingID == nil && session.selectedTrackEdge == nil ? 3 : 7)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {

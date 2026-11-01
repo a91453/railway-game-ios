@@ -21,6 +21,16 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(SidePanelWidth.card(screenWidth: 1_180, compactHeight: false), 340)
     }
 
+    /// IPHLAND (review L2-2): on a phone on its side a panel page's title
+    /// stands under the bar, as wide as the panel, not between the bar's
+    /// buttons; elsewhere in the bar's middle, as before. Two lines either
+    /// way.
+    func testAPanelTitleStandsUnderTheBarOnAPhoneOnItsSide() {
+        XCTAssertEqual(PanelTitlePlacement.place(compactHeight: true), .belowBar)
+        XCTAssertEqual(PanelTitlePlacement.place(compactHeight: false), .bar)
+        XCTAssertEqual(PanelTitlePlacement.lineLimit, 2)
+    }
+
     /// Decision 300: on a phone on its side the zoom row stands under a
     /// panel, in the credits' band where it has room; elsewhere as before.
     func testTheZoomRowStandsUnderAPanelOnAPhoneOnItsSide() {

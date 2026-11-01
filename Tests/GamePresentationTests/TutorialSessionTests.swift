@@ -667,7 +667,7 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(Set(steps.map(\.id)).count, steps.count)
         XCTAssertEqual(steps.map { $0.title(in: .english) }, [
             "Tap Build", "Zoom out to see the town", "Tap the start, then the end", "Tap ✓ to build the track",
-            "Tap Platform", "Tap your track near one end", "Tap ✓ to build the station", "Tap the track near the other end",
+            "Tap Station", "Tap your track near one end", "Tap ✓ to build the station", "Tap the track near the other end",
             "Tap ✓ for the second station", "Tap Done to stop building",
             "Tap Lines", "Tap one station, then the other", "Tap ✓, then Open Line",
             "Tap Buy … and Start Service", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
@@ -676,7 +676,7 @@ final class TutorialSessionTests: XCTestCase {
         ])
         XCTAssertEqual(steps.map { $0.title(in: .traditionalChinese) }, [
             "點「建設」", "縮小地圖看看城鎮", "點起點，再點終點", "按 ✓ 蓋好軌道",
-            "點「月台」", "點軌道靠近一端的地方", "按 ✓ 蓋車站", "點軌道另一端的地方", "按 ✓ 蓋第二座車站",
+            "點「車站」", "點軌道靠近一端的地方", "按 ✓ 蓋車站", "點軌道另一端的地方", "按 ✓ 蓋第二座車站",
             "點「完成」結束建造",
             "點「路線」", "點一座車站，再點另一座", "按 ✓，再按「開通路線」",
             "按「購買…列並開始營運」", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
@@ -1048,7 +1048,7 @@ final class TutorialSessionTests: XCTestCase {
             session.tapNetwork(at: PlanPoint(x: 1_024, y: 1_024), reach: Self.reach)
             XCTAssertEqual(session.tutorialHint?.text, "Tap the track again to pick the spot.")
             session.addNetworkPlatform()
-            XCTAssertEqual(session.tutorialHint, TutorialHint("Tap the track where the platform goes.", isProblem: true))
+            XCTAssertEqual(session.tutorialHint, TutorialHint("Tap the track where the station goes.", isProblem: true))
 
             // Two stations no track joins.
             let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)

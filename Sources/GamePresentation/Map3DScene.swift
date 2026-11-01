@@ -125,6 +125,9 @@ public struct Map3DScene: Sendable {
     /// Decision 359: the player's track, where it runs in a tunnel and
     /// the ground drawn over it.
     public let trackCover: Map3DTrackCover
+    /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
+    /// (``Map3DPick/ground(of:world:)``).
+    public let drawnGround: Map3DGroundGrid
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
@@ -319,6 +322,7 @@ public struct Map3DScene: Sendable {
         // on it.
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         builder.addGround(water: real == nil)
+        drawnGround = builder.groundGrid()
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
         // Decision 438: the player's own roads, which the base map has not.
         if real != nil { builder.addOwnRoads() }
@@ -926,17 +930,42 @@ extension Map3DScene {
             let worldX = originX + Double(x) * Self.metre, worldY = originY + Double(z) * Self.metre
             let column = Int((worldX / cell).rounded(.down)), row = Int((worldY / cell).rounded(.down))
             let fx = Float(worldX / cell - Double(column)), fy = Float(worldY / cell - Double(row))
-            func corner(_ row: Int, _ column: Int) -> Float {
-                let key = ChunkKey(column: column, row: row)
-                if let known = corners[key] { return known }
-                let height = ground(x: Double(column) * cell, y: Double(row) * cell)
-                corners[key] = height
-                return height
-            }
-            let a = corner(row, column), b = corner(row + 1, column), c = corner(row + 1, column + 1), d = corner(row, column + 1)
+            let a = groundCorner(row: row, column: column), b = groundCorner(row: row + 1, column: column)
+            let c = groundCorner(row: row + 1, column: column + 1), d = groundCorner(row: row, column: column + 1)
             // a (0, 0), b (0, 1), c (1, 1), d (1, 0) in (fx, fy): the
             // triangles a b c and a c d.
             return fy >= fx ? a + fx * (c - b) + fy * (b - a) : a + fx * (d - a) + fy * (c - d)
+        }
+
+        /// The ground's height at the 64 m grid's corner (`row`,
+        /// `column`), in metres, as ``addGround(water:)`` lays it, worked
+        /// out once.
+        mutating func groundCorner(row: Int, column: Int) -> Float {
+            let key = ChunkKey(column: column, row: row)
+            if let known = corners[key] { return known }
+            let cell = Double(Land.cellLength)
+            let height = ground(x: Double(column) * cell, y: Double(row) * cell)
+            corners[key] = height
+            return height
+        }
+
+        /// Decision 517 續 (BUILD3D-3): the corners ``addGround(water:)``
+        /// lays over the region, for taps (``Map3DScene/drawnGround``).
+        mutating func groundGrid() -> Map3DGroundGrid {
+            let cell = Double(Land.cellLength)
+            let firstColumn = Int((region.minX / cell).rounded(.down)), lastColumn = Int((region.maxX / cell).rounded(.up)) - 1
+            let firstRow = Int((region.minY / cell).rounded(.down)), lastRow = Int((region.maxY / cell).rounded(.up)) - 1
+            guard firstColumn <= lastColumn, firstRow <= lastRow else {
+                return Map3DGroundGrid(originX: originX, originY: originY, firstRow: 0, firstColumn: 0, rows: 0, columns: 0, heights: [],
+                                       file: fileGround)
+            }
+            var heights: [Float] = []
+            heights.reserveCapacity((lastRow - firstRow + 2) * (lastColumn - firstColumn + 2))
+            for row in firstRow...(lastRow + 1) {
+                for column in firstColumn...(lastColumn + 1) { heights.append(groundCorner(row: row, column: column)) }
+            }
+            return Map3DGroundGrid(originX: originX, originY: originY, firstRow: firstRow, firstColumn: firstColumn,
+                                   rows: lastRow - firstRow + 2, columns: lastColumn - firstColumn + 2, heights: heights, file: fileGround)
         }
 
         /// `points` laid on the drawn ground, ``Map3DShadow/lift`` over it.
@@ -965,19 +994,9 @@ extension Map3DScene {
             let firstColumn = Int((region.minX / cell).rounded(.down)), lastColumn = Int((region.maxX / cell).rounded(.up)) - 1
             let firstRow = Int((region.minY / cell).rounded(.down)), lastRow = Int((region.maxY / cell).rounded(.up)) - 1
             guard firstColumn <= lastColumn, firstRow <= lastRow else { return }
-            var heights: [Int: Float] = [:]
-            let width = lastColumn - firstColumn + 2
             func corner(_ row: Int, _ column: Int) -> Map3DPoint {
                 let x = Double(column) * cell, y = Double(row) * cell
-                let index = (row - firstRow) * width + (column - firstColumn)
-                let height: Float
-                if let known = heights[index] {
-                    height = known
-                } else {
-                    height = ground(x: x, y: y)
-                    heights[index] = height
-                }
-                return Map3DPoint(Float((x - originX) / Self.metre), height, Float((y - originY) / Self.metre))
+                return Map3DPoint(Float((x - originX) / Self.metre), groundCorner(row: row, column: column), Float((y - originY) / Self.metre))
             }
             for row in firstRow...lastRow {
                 for column in firstColumn...lastColumn {
@@ -1231,14 +1250,18 @@ extension Map3DScene {
                 let edge = fast.contains(platform.platform.station) ? Self.highSpeedPlatformEdge : Self.platformEdge
                 let near = Self.nearestTracks(beside: line, others: others.filter { $0.0 != platform.platform.edge }.map(\.1))
                 // The other platforms of its station across the nearest
-                // track either side.
-                let partner = platforms.indices
+                // track either side, far enough for an island between.
+                // Decision 507: two islands with the double track between
+                // them, the platform beside across it too near for one.
+                let candidates: [(index: Int, lateral: Float)] = platforms.indices
                     .filter { $0 != index && platforms[$0].platform.station == platform.platform.station && platforms[$0].platform.edge != platform.platform.edge }
                     .map { (index: $0, lateral: (middles[$0] - middle).dot(across)) }
-                    .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 }
+                let wide = Self.narrowestPlatform / 2 + edge
+                let partner = candidates
+                    .filter { abs($0.lateral) < 15 && abs(abs($0.lateral) - near[$0.lateral >= 0 ? 1 : 0]) < 1 && abs($0.lateral) / 2 >= wide }
                     .min { abs($0.lateral) < abs($1.lateral) }
                 var side: Float = -1, width = Self.platformWidth
-                if let partner, abs(partner.lateral) / 2 - edge >= Self.narrowestPlatform / 2 {
+                if let partner {
                     side = partner.lateral >= 0 ? 1 : -1
                     width = abs(partner.lateral) / 2 - edge
                 } else {
@@ -1314,6 +1337,11 @@ extension Map3DScene {
         /// Every lot of the city in the scene, but those on cells the track
         /// runs through: row houses on low homes and shops, blocks for the
         /// rest, trees in the parks.
+        /// Decisions 385 and 516: on a real-world map, the uses whose low
+        /// lots (density 2 and under) lay houses along the roads
+        /// (``addFrontage``); a factory keeps its hall and yard.
+        static let frontedUses: Set<LandUse> = [.residential, .commercial, .office, .civic, .leisure]
+
         mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>, takenBy taken: Set<ChunkKey> = [],
                               besideRoads: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
@@ -1330,9 +1358,13 @@ extension Map3DScene {
                 guard contains(x: x, y: y), !taken.contains(key) else { continue }
                 // Decision 385: low homes and shops along the real roads,
                 // house by house clear of the no-build land; no other lot
-                // whose middle is on it.
-                if streetFrontage, !lot.isOpenGround, !cleared.contains(key), lot.use == .residential || lot.use == .commercial, lot.density <= 2 {
-                    addFrontage(column: lot.column, row: lot.row, density: lot.density, shops: lot.use == .commercial, blocked: blocked)
+                // whose middle is on it. Decision 516: the low offices,
+                // civic and leisure lots too, not one building in the
+                // cell's middle (the real schools and temples stand where
+                // they are, from the footprints and the temples).
+                if streetFrontage, !lot.isOpenGround, !cleared.contains(key), Self.frontedUses.contains(lot.use), lot.density <= 2 {
+                    addFrontage(column: lot.column, row: lot.row, density: lot.density, shops: lot.use == .commercial || lot.use == .office,
+                                blocked: blocked)
                     continue
                 }
                 if onNoBuildLand(point(x: x, y: y, height: 0)) { continue }
@@ -1355,12 +1387,8 @@ extension Map3DScene {
                 }
                 if cleared.contains(ChunkKey(column: lot.column, row: lot.row)) {
                     // A plaza where the track passes.
-                    let half = Float(cell / Self.metre / 2) - 1
-                    mesh(at: base) { mesh in
-                        mesh.addQuad(base + Map3DPoint(-half, 0.03, -half), base + Map3DPoint(-half, 0.03, half),
-                                     base + Map3DPoint(half, 0.03, half), base + Map3DPoint(half, 0.03, -half), color: Map3DPalette.plaza,
-                                     paint: Self.paving)
-                    }
+                    let square = groundSquare(round: base, half: Float(cell / Self.metre / 2) - 1, lift: 0.03)
+                    mesh(at: base) { $0.addFlat(square, triangles: Self.squareTriangles, color: Map3DPalette.plaza, paint: Self.paving) }
                     continue
                 }
                 switch lot.use {
@@ -1386,6 +1414,22 @@ extension Map3DScene {
             }
         }
 
+        /// 103.1: the corners of a lot's square `half` metres each way
+        /// round `base` (its 64 m cell's middle), `lift` over the drawn
+        /// ground (``drawnGround(x:z:)``). Laid flat at the middle's
+        /// height, a square on a slope stuck out of the hill as long
+        /// triangles where the ground dipped under it.
+        mutating func groundSquare(round base: Map3DPoint, half: Float, lift: Float) -> [Map3DPoint] {
+            [(-half, -half), (-half, half), (half, half), (half, -half)].map { dx, dz in
+                Map3DPoint(base.x + dx, drawnGround(x: base.x + dx, z: base.z + dz) + lift, base.z + dz)
+            }
+        }
+
+        /// ``groundSquare(round:half:lift:)``'s two triangles, split from
+        /// its north-west corner to its south-east one as the cell's
+        /// ground is, so each lies on one of the ground's.
+        static let squareTriangles = [0, 1, 2, 0, 2, 3]
+
         mutating func addOpenGround(_ lot: CitySkyline.Lot, base: Map3DPoint, seed: (Int32, Int32)) {
             let half = Float(Double(Land.cellLength) / Self.metre / 2) - 0.5
             let park = lot.use == .park
@@ -1400,15 +1444,15 @@ extension Map3DScene {
                         guard map3DRandom(seed.0, seed.1, salt: salt) < 0.7 else { continue }
                         let jitterX = (map3DRandom(seed.0, seed.1, salt: salt + 20) - 0.5) * 8
                         let jitterZ = (map3DRandom(seed.0, seed.1, salt: salt + 40) - 0.5) * 8
-                        let spot = base + Map3DPoint(Float(i) * 20 + jitterX, 0, Float(j) * 20 + jitterZ)
+                        var spot = base + Map3DPoint(Float(i) * 20 + jitterX, 0, Float(j) * 20 + jitterZ)
+                        spot.y = drawnGround(x: spot.x, z: spot.z)
                         trees.append((spot, 4 + map3DRandom(seed.0, seed.1, salt: salt + 60) * 3))
                     }
                 }
             }
+            let square = groundSquare(round: base, half: half, lift: 0.02)
             mesh(at: base) { mesh in
-                mesh.addQuad(base + Map3DPoint(-half, 0.02, -half), base + Map3DPoint(-half, 0.02, half),
-                             base + Map3DPoint(half, 0.02, half), base + Map3DPoint(half, 0.02, -half),
-                             color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
+                mesh.addFlat(square, triangles: Self.squareTriangles, color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
                 for (spot, size) in trees {
                     if !far {
                         mesh.addBox(base: spot, length: 0.6, width: 0.6, height: size * 0.45, top: Map3DPalette.trunk, side: Map3DPalette.trunk)

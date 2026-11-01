@@ -1,0 +1,33 @@
+{
+  "public_base": "15759aa207cc031fed54dbcc00a98d1a1f671fa8",
+  "assets_base": "4b55411aea3706a564c56215c28e71062b07f507",
+  "reference_base": "a0caeaeeb46524371ea0ad7f333b77101df29e8b",
+  "work_registry": 1579,
+  "previous_r200": [
+    {
+      "pr": 710,
+      "state": "MERGED",
+      "scope": "2D livery/type metadata; no accepted new native payload"
+    },
+    {
+      "pr": 910,
+      "state": "MERGED",
+      "head": "86837eead1c953dbd77f4a05d8d4e3f6759dbf2e",
+      "scope": "one-cab generic R200 approximation"
+    },
+    {
+      "pr": 923,
+      "state": "MERGED",
+      "head": "a2d0a37cd768d6f9a017d335f968d25768870ced",
+      "scope": "retained old locomotive recipe"
+    }
+  ],
+  "protected_prior_work": {
+    "1539": "MERGED",
+    "assets35": "MERGED",
+    "1533": "MERGED",
+    "assets34": "MERGED"
+  },
+  "accepted_r200_predecessor": null,
+  "acceptance_evidence": "UNVERIFIED; no explicit acceptance of an accurate dual-cab R200 found"
+}

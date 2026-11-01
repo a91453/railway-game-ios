@@ -32,9 +32,21 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // more, 1.3 MB a copy). Decision 511 drew the DR3100 on the
         // 45DR1000's shape in its own paint, near and far, instead of the
         // scene kit's three cars (10 models more, 34,128 vertices more,
-        // 1.4 MB a copy).
-        XCTAssertEqual(pack.models.count, 663)
-        XCTAssertEqual(vertices, 4_311_516)
+        // 1.4 MB a copy). Decision 529 put #1589's R200 in the R200CK
+        // sets, near and far, in place of the scene kit's (the same models,
+        // 46,416 vertices more, 1.9 MB a copy). Decision 531 added the
+        // Alishan train's DL-38 and coaches, near and far (10 models with
+        // the coaches' windows' models, 62,580 vertices more, 2.5 MB a
+        // copy, drawn from photographs of the real cars).
+        // R100 native heads and new cab window light: +25,356 vertices.
+        // Decision 541: the Blue Train's two R100s and #1671's four coach
+        // roles, near and far, in place of the R135 set (14 models more with
+        // the windows' models, 295,182 vertices more, 11.8 MB a copy).
+        // Decision 539: the freight train's container wagons, near and
+        // far, behind the R200 Chu-Kuang's own R200 model (8 models, no
+        // window models, 53,184 vertices more, 2.1 MB a copy).
+        XCTAssertEqual(pack.models.count, 696)
+        XCTAssertEqual(vertices, 4_794_234)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

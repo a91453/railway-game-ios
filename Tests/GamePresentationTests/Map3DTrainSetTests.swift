@@ -9,10 +9,10 @@ final class Map3DTrainSetTests: XCTestCase {
     /// Decision 496: the real light rails' sets, near and far.
     static let lightRails: Set = ["danhaiLRT", "danhaiLRTFar", "ankengLRT", "ankengLRTFar", "klrtCAF", "klrtCAFFar",
                                   "klrtCitadis", "klrtCitadisFar"]
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
     /// The recipes, their lamps lit as drawn (decision 449 lights a
     /// running car's in the pack only at its train's ends).
-    private let recipes = Map3DModelPack.unbaked
+    private var recipes: Map3DModelPack { .unbaked }
 
     /// Every set's cars are in the pack: a car's length and width, on the
     /// rail, up to a lowered pantograph's height, in their own colours (none
@@ -69,7 +69,16 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 496: the real light rails' half trains, near and far
                     // (#1533's Danhai 24,838 to 25,174 near, #1506's Citadis 7,104 far).
                     : Self.lightRails.contains(set.key) ? 7_000...25_200
-                    : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000 : 100...4_100
+                    : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 100...15_000
+                    // Decision 541: the Blue Train's two R100s, 14,636 near and
+                    // 6,932 far; #1671's coaches 13,194 to 13,278 near, 5,370
+                    // to 5,478 far.
+                    : ["BLUE", "BLUEFar"].contains(set.key) ? 5_000...15_000
+                    : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
+                    // Decision 529: #1589's R200, 12,702 near and 5,098 far.
+                    : name == set.headName && ["R200CK", "R200CKFar", "FREIGHT", "FREIGHTFar"].contains(set.key) ? 5_000...12_800
+                    // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
+                    : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -80,6 +89,7 @@ final class Map3DTrainSetTests: XCTestCase {
                 // Decision 408: the 700T's cars 25.2 to 25.5 m, the N700S-G's
                 // and its far set's 25 and 25.3 m,
                 // Decision 422: the 700T's far set as long as its near one.
+                let alishan = ["ALISHAN", "ALISHANFar"].contains(set.key)
                 let length: ClosedRange<Float> = ["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
                     // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
@@ -90,10 +100,20 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
                     : set.key == "blueSeven" ? 7.5...8.4
+                    : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 15.79...15.81
+                    // Decision 539: the R200 20.01 m, its container wagons 14.2 m.
+                    : name == set.headName && ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 20.0...20.02
+                    : ["FREIGHT", "FREIGHTFar"].contains(set.key) ? 14.1...14.3
+                    // Decision 541: the Blue Train's head unit, two R100s back to back.
+                    : name == set.headName && ["BLUE", "BLUEFar"].contains(set.key) ? 31.58...31.62
                     // Decision 496: the Citadis is 33.4 m, a half 16.7 m.
-                    : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3 : 17...22.5
+                    : ["klrtCitadis", "klrtCitadisFar"].contains(set.key) ? 16.5...17.3
+                    // Decision 531: the Alishan train's DL-38 8.9 m and coaches 13 m.
+                    : alishan ? (name.hasSuffix("-head") ? 8.8...9.0 : 12.9...13.1) : 17...22.5
                 XCTAssertTrue(length.contains(model.length), "\(name): \(model.length) m long")
-                XCTAssertTrue((2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
+                // Decision 531: the 762 mm gauge's cars 2.2 to 2.3 m wide, the
+                // coaches' grab bars 2.32 m.
+                XCTAssertTrue((alishan ? 2.1...2.35 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
                 let height: ClosedRange<Float> = name == set.headName && ["E500CK", "STAR", "E500CKFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
@@ -103,7 +123,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
-                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) ? 3.4...5.3 : 3.4...4.6
+                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) ? 3.4...5.3
+                    // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
+                    : alishan ? 3.0...3.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
                 if lineColoured.contains(set.key) {
                     XCTAssertTrue(model.vertices.contains { $0.color >> 24 == 0 }, "\(name): the band is the line's colour")
@@ -115,8 +137,17 @@ final class Map3DTrainSetTests: XCTestCase {
             let middle = (recipes.models[try XCTUnwrap(pack.index(of: set.headName))].minimum.x
                 + recipes.models[try XCTUnwrap(pack.index(of: set.headName))].maximum.x) / 2
             let head = recipes.models[try XCTUnwrap(pack.index(of: set.headName))]
-            XCTAssertTrue(head.vertices.contains { $0.glows && $0.x > middle + 4 }, "\(set.key): the head's lamps at the front")
-            XCTAssertFalse(head.vertices.contains { $0.glows && $0.x < middle - 4 }, "\(set.key): none at its back")
+            if ["R100CK", "R100CKFar"].contains(set.key) {
+                // R100 carries real lens colours at both physical ends.
+                // Runtime end lamps, rather than recipe glow, choose the lit end.
+                let index = try XCTUnwrap(pack.index(of: set.headName))
+                let lights = try XCTUnwrap(pack.lights[index])
+                XCTAssertFalse(lights.lamps(atFront: true).head.isEmpty)
+                XCTAssertFalse(lights.lamps(atFront: false).head.isEmpty)
+            } else {
+                XCTAssertTrue(head.vertices.contains { $0.glows && $0.x > middle + 4 }, "\(set.key): the head's lamps at the front")
+                XCTAssertFalse(head.vertices.contains { $0.glows && $0.x < middle - 4 }, "\(set.key): none at its back")
+            }
             if let tail = pack.index(of: set.tailName).map({ recipes.models[$0] }) {
                 XCTAssertTrue(tail.vertices.contains { $0.glows && $0.x < -4 }, "\(set.key): the tail's lamps at the back")
                 XCTAssertFalse(tail.vertices.contains { $0.glows && $0.x > 4 }, "\(set.key): none at its front")
@@ -170,7 +201,10 @@ final class Map3DTrainSetTests: XCTestCase {
         let steam = try layout("STEAM", 3)
         XCTAssertEqual(steam[0].1 + steam[0].2 + steam[1].1, Map3DDuplexSteam.formation().length, accuracy: 0.01,
                        "the locomotive and tender as #1118 couples them")
-        for key in ["R100CK", "", "C"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        for key in ["", "C"] { XCTAssertNil(pack.layout(forType: key, count: 3), key) }
+        // R100 uses its native metre length; its dedicated integration tests
+        // cover all counts and preserve the existing coach payloads.
+        XCTAssertNotNil(pack.layout(forType: "R100CK", count: 3))
         // Decision 461: the player's metro is the C381's units at their own lengths.
         XCTAssertEqual(try layout("A", 3).map(\.0), ["set-metroC381-head", "set-metroC381-car", "set-metroC381-tail"])
         // Only half as far as other cars: the steam locomotives are eight

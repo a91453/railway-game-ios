@@ -83,6 +83,13 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertEqual(world.waitingText(at: alpha, in: .english), ["Main to Gamma · \(waiting)"])
         XCTAssertEqual(world.waitingSummary(at: alpha, in: .english), "waiting Main to Gamma · \(waiting)")
         XCTAssertEqual(world.waitingSummary(at: alpha, in: .traditionalChinese), "候車 Main 往 Gamma · \(waiting)")
+        // The inspector card gets them on lines of their own.
+        XCTAssertEqual(world.waitingLines(at: alpha, in: .english), ["Waiting", "Main to Gamma · \(waiting)"])
+        XCTAssertEqual(world.waitingLines(at: alpha, in: .traditionalChinese), ["候車", "Main 往 Gamma · \(waiting)"])
+        // Only so many, and the rest counted.
+        XCTAssertEqual(world.waitingLines(at: alpha, maxGroups: 0, in: .english), ["Waiting", "+1 more"])
+        XCTAssertEqual(world.waitingLines(at: alpha, maxGroups: 0, in: .traditionalChinese), ["候車", "還有 1 項"])
+        XCTAssertEqual(world.waitingLines(at: StationID(rawValue: 3), in: .english), [])
 
         let riding = world.riders(of: TrainID(rawValue: 1)).reduce(Int64(0)) { $0 + $1.count }
         XCTAssertGreaterThan(riding, 0)
@@ -101,7 +108,7 @@ final class EconomyDisplayTests: XCTestCase {
             let session = GameSession(world: world)
             session.setEconomyMode(.free)
             XCTAssertEqual(session.world.accounts.mode, .free)
-            XCTAssertEqual(session.message?.text, "Free play: no fares or running costs, and you set each station's ridership.")
+            XCTAssertEqual(session.message?.text, "Free play: no fares or running costs, building costs nothing, and you set each station's ridership.")
             session.setEconomyMode(.management)
             XCTAssertEqual(session.world.accounts.mode, .free)
             XCTAssertEqual(
@@ -127,10 +134,8 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertNil(world.carPriceText(in: .english), "free cars: nothing to say")
     }
 
-    /// Building still costs money in free play and nothing earns any, so a
-    /// company in the red that switched could never build again (and the
-    /// switch cannot be undone): the session refuses until the balance is
-    /// back above zero.
+    /// Free play is not a way out of going bankrupt: the session refuses a
+    /// company in the red until the balance is back above zero.
     func testACompanyInTheRedCannotSwitchToFreePlay() async throws {
         var world = try makeLine()
         world.setEconomyMode(.management)
@@ -148,10 +153,60 @@ final class EconomyDisplayTests: XCTestCase {
             XCTAssertEqual(session.message?.kind, .failure)
             XCTAssertEqual(
                 session.message?.text,
-                "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game."
+                "The company is in the red. Bring the balance back above zero before switching to free play, or start a new game."
             )
             XCTAssertEqual(session.world, opened, "nothing else changed")
         }
+    }
+
+    /// HANG2 P2-5 B (decision 497): free play earns nothing, so the switch
+    /// turns unlimited funds on: building still works however little cash
+    /// was left, the cash stays as it was, and the confirmation says so
+    /// before the player switches.
+    func testSwitchingToFreePlayTurnsUnlimitedFundsOn() async throws {
+        var world = try makeLine()
+        world.setEconomyMode(.management)
+        try await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            XCTAssertFalse(session.world.economy.unlimitedFunds)
+            session.setEconomyMode(.free)
+            XCTAssertEqual(session.world.accounts.mode, .free)
+            XCTAssertTrue(session.world.economy.unlimitedFunds, "building costs nothing from then on")
+            var free = session.world
+            let cash = free.economy.balance
+            free.setSpeed(.x60)
+            try free.advance(ticks: 1_440)
+            try free.purchaseTrain(named: "Spare")
+            XCTAssertEqual(free.economy.balance, cash, "nothing earned, nothing paid")
+            // The player's command itself turns them on, so a replay of
+            // the command log does too.
+            let replaying = HeadlessGame(world: world)
+            XCTAssertEqual(replaying.perform([.edit(.setEconomyMode(.free))]).refused, 0)
+            XCTAssertTrue(replaying.world.economy.unlimitedFunds, "the command turns them on")
+            XCTAssertEqual(GameSession.freePlaySwitchText(in: .english),
+                           "Free play has no fares or running costs, and you set each station's ridership. Building and buying cost nothing from then on, and achievements are no longer counted. It cannot become a managed company again.")
+            XCTAssertEqual(GameSession.freePlaySwitchText(in: .traditionalChinese),
+                           "自由模式不收票價、沒有營運成本，各站的客源由你設定。之後蓋東西、買車都不用錢，也不再計成就。切換後無法再改回經營模式。")
+        }
+    }
+
+    /// HANG2 P2-5 B (decision 497): a save of a company that switched to
+    /// free play before the switch turned unlimited funds on gets them as
+    /// it opens; a world never managed, or one managed now, is left as it
+    /// is.
+    func testAnOlderFreePlaySaveGetsUnlimitedFundsAsItOpens() throws {
+        var world = try makeLine()
+        XCTAssertEqual(GameLauncher.withFreePlayFunds(world), world, "never managed")
+        world.setEconomyMode(.management)
+        XCTAssertEqual(GameLauncher.withFreePlayFunds(world), world, "managed")
+        world.setEconomyMode(.free)
+        world.setUnlimitedFunds(false)
+        let older = world
+        let opened = GameLauncher.withFreePlayFunds(older)
+        XCTAssertTrue(opened.economy.unlimitedFunds)
+        var expected = older
+        expected.setUnlimitedFunds(true)
+        XCTAssertEqual(opened, expected, "nothing else changes")
     }
 
     /// Interest is paid only by a managed company: a company with a loan

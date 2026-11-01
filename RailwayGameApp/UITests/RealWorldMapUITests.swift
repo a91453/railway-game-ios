@@ -469,12 +469,12 @@ final class RealWorldMapUITests: XCTestCase {
         }
 
         // The platform mode, from the details card (opened if folded).
-        let platform = app.buttons["Platform"]
+        let platform = app.segmentedControls.buttons["Station"].firstMatch
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }
         }
-        XCTAssertTrue(platform.appears(within: 10), "No Platform mode")
+        XCTAssertTrue(platform.appears(within: 10), "No Station mode")
         platform.waitUntilSettled()
         platform.tap()
         // Beside the open details card the 3D map and zoom buttons stand in
@@ -507,7 +507,12 @@ final class RealWorldMapUITests: XCTestCase {
         // the second platform too.
         let cars = app.steppers.matching(NSPredicate(format: "label BEGINSWITH 'Platform for'")).firstMatch
         if cars.appears(within: 5), !cars.label.hasPrefix("Platform for 4 cars") {
-            let fewer = cars.buttons.matching(NSPredicate(format: "identifier == 'Decrement' OR label == 'Decrement'")).firstMatch
+            // Since the stepper has an identifier of its own (decision
+            // 510), its buttons are "network.platformCars-Decrement",
+            // labelled with the stepper's label and ", Decrement"; the
+            // bare "Decrement" matched nothing (main 447891f's full lane,
+            // run 41187572538).
+            let fewer = cars.buttons.matching(NSPredicate(format: "identifier ENDSWITH '-Decrement' OR identifier == 'Decrement' OR label ENDSWITH 'Decrement'")).firstMatch
             for _ in 0..<20 where !cars.label.hasPrefix("Platform for 4 cars") {
                 // On a phone on its side, with this text, the stepper is
                 // below the details card's fold (run 39812583222).

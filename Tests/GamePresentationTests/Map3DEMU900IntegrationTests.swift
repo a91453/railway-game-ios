@@ -5,7 +5,7 @@ import XCTest
 /// #1339's EMU900 too, near and far, as many of them as the EMU900's share
 /// of the three fleets' cars; the EMU500 and EMU800 the rest.
 final class Map3DEMU900IntegrationTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     private func cars(_ key: String, _ count: Int) throws -> [Map3DModelPack.Model] {
         try XCTUnwrap(pack.layout(forType: key, count: count), key).map { pack.models[$0.model] }

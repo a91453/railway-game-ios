@@ -193,6 +193,11 @@ public struct GameWorld: Equatable, Sendable {
     /// bought them. None in a new world and in saves from before it. Set by
     /// ``recordLineAcquisition(line:realLine:dailyRiders:tier:)`` only.
     public internal(set) var acquisitions: [LineAcquisition] = []
+    /// Decision 528: the track real lines bought and removed left, what
+    /// buying them again takes up. None in a new world and in saves from
+    /// before version 79. Set by ``recordLineAcquisition(line:realLine:dailyRiders:tier:track:)``
+    /// and removing a line bought only.
+    public internal(set) var leftTrack: [LeftTrack] = []
     /// The roads on the land's grid (decision 400), or `nil` for a world
     /// without them. Off in a new world and in saves from before it; the
     /// player's new games turn them on. Set by ``enableRoads(towns:)``,
@@ -408,23 +413,24 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func buildTrackEdge(
-        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface,
+        mountain: Bool = false
     ) throws(GameError) -> TrackEdgeID {
-        let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, checksSpacing: true)
+        let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, mountain: mountain, checksSpacing: true)
         abandonUnservedPassengers()
         return id
     }
 
     /// Builds the edges `plans` describe, in order, as one command (the
     /// owner's play-test, 2026-10-06): each as
-    /// ``buildTrackEdge(from:to:curve:profile:structure:)`` would, charged
+    /// ``buildTrackEdge(from:to:curve:profile:structure:mountain:)`` would, charged
     /// the same, except that the spacing rule is checked once all of them
     /// are built, along the ways they make together. An X crossover's
     /// diagonal runs within 4 m of the other track near the middle and parts
     /// from it only by way of its other half; built one at a time, the first
     /// half would be refused. All or nothing. Returns the new edges in order.
     ///
-    /// - Throws: what ``buildTrackEdge(from:to:curve:profile:structure:)``
+    /// - Throws: what ``buildTrackEdge(from:to:curve:profile:structure:mountain:)``
     ///   throws for the first plan it refuses, checked as that plan is
     ///   built (``GameError/insufficientFunds(required:available:)`` for
     ///   the first the money left does not cover); then
@@ -436,7 +442,7 @@ public struct GameWorld: Equatable, Sendable {
         var built: [TrackEdgeID] = []
         for plan in plans {
             built.append(try after.buildTrackEdge(from: plan.from, to: plan.to, curve: plan.curve, profile: plan.profile,
-                                                  structure: plan.structure, checksSpacing: false))
+                                                  structure: plan.structure, mountain: plan.mountain, checksSpacing: false))
         }
         for id in built {
             if let other = after.network.firstTooClose(existing: id, besides: []) {
@@ -449,7 +455,7 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     private mutating func buildTrackEdge(
-        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, checksSpacing: Bool
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, mountain: Bool, checksSpacing: Bool
     ) throws(GameError) -> TrackEdgeID {
         guard let start = network.node(from) else { throw .unknownTrackNode(from) }
         guard let end = network.node(to) else { throw .unknownTrackNode(to) }
@@ -458,7 +464,8 @@ public struct GameWorld: Equatable, Sendable {
         else { throw .invalidTrackGeometry }
         // Decision 160: the whole of it on the company's own ground.
         if let tile = firstTileNotOwned(along: geometry.points.map(\.plan)) { throw .mapTileNotOwned(tile) }
-        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else { throw .trackTooSteep }
+        // Decision 515: mountain track may be steeper.
+        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade(mountain: mountain)) else { throw .trackTooSteep }
         // Decision 124: what carries it, measured from the ground.
         let sections = try sections(of: geometry, structure: structure)
         if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
@@ -484,7 +491,8 @@ public struct GameWorld: Equatable, Sendable {
         try economy.spend(price)
 
         let id = network.addEdge(
-            from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, geometry: geometry, next: next
+            from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, mountain: mountain, geometry: geometry,
+            next: next
         )
         network.dropSpacedExemptions()
         // Phase 7a: the edge is on the books at what it cost.
@@ -603,7 +611,7 @@ public struct GameWorld: Equatable, Sendable {
     ///   stops at a platform on it; ``GameError/trackConflict(_:)`` or
     ///   ``GameError/trackTooClose(_:)`` when a part would meet other track;
     ///   or ``GameError/idsExhausted``. Since decision 124, before the trains,
-    ///   what ``buildTrackEdge(from:to:curve:profile:structure:)`` throws when
+    ///   what ``buildTrackEdge(from:to:curve:profile:structure:mountain:)`` throws when
     ///   a part's structure does not suit the ground under it; since decision
     ///   160, after the parts' geometry, ``GameError/mapTileNotOwned(_:)``
     ///   when a part's centre line passes over a tile the company does not
@@ -625,8 +633,8 @@ public struct GameWorld: Equatable, Sendable {
               cut.first.controlPoints.allSatisfy(bounds.contains), cut.second.controlPoints.allSatisfy(bounds.contains),
               let firstGeometry = TrackGeometry(from: start.position, to: middle, curve: cut.first, profile: firstProfile),
               let secondGeometry = TrackGeometry(from: middle, to: end.position, curve: cut.second, profile: secondProfile),
-              firstGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade),
-              secondGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade)
+              firstGeometry.steepestGrade.isNoSteeper(than: edge.maximumGrade),
+              secondGeometry.steepestGrade.isNoSteeper(than: edge.maximumGrade)
         else { throw .invalidTrackGeometry }
         // Decision 160: each part is sampled afresh, so it is checked on the
         // company's own ground as an edge built is.
@@ -668,13 +676,13 @@ public struct GameWorld: Equatable, Sendable {
         }
         let (_, firstNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: firstProfile, structure: edge.structure,
-                                  sections: firstSections, geometry: firstGeometry, next: firstNext)
+                                  sections: firstSections, mountain: edge.mountain, geometry: firstGeometry, next: firstNext)
         if let other = after.firstConflict(from: node, to: edge.to, curve: cut.second, geometry: secondGeometry) {
             throw .trackConflict(other)
         }
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: secondProfile, structure: edge.structure,
-                                   sections: secondSections, geometry: secondGeometry, next: secondNext)
+                                   sections: secondSections, mountain: edge.mountain, geometry: secondGeometry, next: secondNext)
         // Spacing along the ways of the network with both parts: alone,
         // neither reaches the junction where the edge parted from track
         // beside it.
@@ -713,6 +721,9 @@ public struct GameWorld: Equatable, Sendable {
         if let edge = id.networkNumber, let firstNumber = first.networkNumber, let secondNumber = second.networkNumber {
             splitTrackAsset(edge, into: (firstNumber, firstGeometry.length), (secondNumber, secondGeometry.length))
         }
+        // Decision 528: what a purchase laid or a line removed left keeps
+        // both parts in its place.
+        splitAcquiredTrack(id, into: first, second)
         // Decision 204: the lines' journeys run on the parts, as after any
         // other change to the track.
         abandonUnservedPassengers()
@@ -1051,6 +1062,7 @@ public struct GameWorld: Equatable, Sendable {
         if isDepot {
             guard !lines.contains(where: { $0.stops.contains(id) }) else { throw .depotIsLineStop(id) }
             guard stations[index].commerce == nil else { throw .stationHasCommerce(id) }
+            guard stations[index].expansion == nil else { throw .stationIsExpanded(id) }
             var changed = self
             changed.stations[index].isDepot = true
             for line in lines {
@@ -1075,6 +1087,12 @@ public struct GameWorld: Equatable, Sendable {
     /// and charge.
     mutating func setStationCommerce(_ level: StationCommerceLevel?, at index: Int) {
         stations[index].commerce = level
+    }
+
+    /// Sets how far the station at `index` is expanded (decision 506);
+    /// ``expandStation(at:)`` checks and charges.
+    mutating func setStationExpansion(_ expansion: StationExpansion?, at index: Int) {
+        stations[index].expansion = expansion
     }
 
     /// Sets the transfer points of the station at `index` (decision 298);
@@ -1223,8 +1241,10 @@ public struct GameWorld: Equatable, Sendable {
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
                 removeLineAccounts(of: lines[index].id)
-                // Decision 315: as removing the line does.
+                // Decision 315: as removing the line does; decision 528,
+                // its purchase with it.
                 disposeAsset(.acquiredLine, owner: lines[index].id.rawValue)
+                forgetAcquisition(ofLine: lines[index].id)
                 lines.remove(at: index)
                 continue
             }
@@ -1253,13 +1273,18 @@ public struct GameWorld: Equatable, Sendable {
         }
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
-        // Decision 400, 10i-2: the bus routes feeding it close.
-        busRoutes.removeAll { $0.station == id }
+        // Decision 400, 10i-2: the bus routes feeding it close; decision
+        // 528, a real route bought goes on sale again.
+        let closing = Set(busRoutes.filter { $0.station == id }.map(\.id))
+        busRoutes.removeAll { closing.contains($0.id) }
+        acquisitions.removeAll { $0.busRoute.map(closing.contains) ?? false }
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
         // Decision 222: its shops go with it.
         disposeAsset(.stationCommerce, owner: id.rawValue)
+        // Decision 506: and its expansions.
+        disposeAsset(.stationExpansion, owner: id.rawValue)
 
         abandonUnservedPassengers()
         refreshLandDemand()
@@ -1343,8 +1368,11 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainAlreadyPlaced(_:)`` (placement never moves a
-    ///   train), ``GameError/invalidTrainPosition``, or, under traffic
-    ///   control, ``GameError/trackReserved(_:)``.
+    ///   train), ``GameError/invalidTrainPosition``,
+    ///   ``GameError/trainCannotClimb(_:)`` when the train is not a mountain
+    ///   train and its head or body would stand on mountain track (decision
+    ///   515 continued), or, under traffic control,
+    ///   ``GameError/trackReserved(_:)``.
     public mutating func placeTrain(_ id: TrainID, at position: TrainPosition) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
@@ -1358,6 +1386,11 @@ public struct GameWorld: Equatable, Sendable {
             }
             train.position = position
             train.trailEdges = trail
+            // Decision 515 continued: only a mountain train stands on
+            // mountain track, head or body.
+            if !train.climbsMountains, ([traversal.edge] + trail).contains(where: { network.edge($0)?.mountain ?? false }) {
+                throw .trainCannotClimb(id)
+            }
         }
 
         try admit(train, at: index)
@@ -1450,7 +1483,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trainAlreadyPlaced(_:)``, or
     ///   ``GameError/trainTypeUnavailable(_:)`` for a type the scenario's era
     ///   does not have (decision 86), or `nil` in an era with types, which
-    ///   has no standard car (decision 153).
+    ///   has no standard car (decision 153); or, since decision 515,
+    ///   ``GameError/trainCannotClimb(_:)`` for a type that is not a
+    ///   mountain train while the train is on a line that runs on
+    ///   mountain track.
     public mutating func setTrainType(_ id: TrainID, to type: TrainType?) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
@@ -1458,6 +1494,9 @@ public struct GameWorld: Equatable, Sendable {
         // since decision 153 no standard car.
         if let allowed = scenario?.scenario.trainTypes, !(type.map(allowed.contains) ?? false) {
             throw .trainTypeUnavailable(type)
+        }
+        if !(type?.climbsMountains ?? false), let line = assignedLine(of: id).flatMap({ self.line(id: $0) }), runsOnMountainTrack(line) {
+            throw .trainCannotClimb(id)
         }
         // Decision 180: a change of type is the old train sold on the sale
         // rule and the new one bought: the new type's price for the cars it
@@ -1672,8 +1711,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trainServiceActive(_:)`` while the train runs its
     ///   timetable (the service owns the path; stop it first),
     ///   ``GameError/invalidContinuation`` (a step a train may not take, or
-    ///   an `end` that does not fit), or, under traffic control,
-    ///   ``GameError/trackReserved(_:)``.
+    ///   an `end` that does not fit), ``GameError/trainCannotClimb(_:)``
+    ///   when the train is not a mountain train and the path runs onto
+    ///   mountain track (decision 515 continued), or, under traffic
+    ///   control, ``GameError/trackReserved(_:)``.
     public mutating func setTrainContinuation(_ id: TrainID, along traversals: [TrackTraversal], stoppingAt end: Int64? = nil) throws(GameError) {
         let (index, position) = try manuallyControlledTrain(id)
         let (traversal, offset): (TrackTraversal, Int64) = switch position {
@@ -1686,6 +1727,11 @@ public struct GameWorld: Equatable, Sendable {
         }
         if let end {
             guard end < network.edge(arrival.edge)!.length, end >= (traversals.isEmpty ? offset : 1) else { throw .invalidContinuation }
+        }
+        // Decision 515 continued: a train that cannot climb is never sent
+        // onto mountain track.
+        if !trains[index].climbsMountains, traversals.contains(where: { network.edge($0.edge)?.mountain ?? false }) {
+            throw .trainCannotClimb(id)
         }
 
         var train = trains[index]
@@ -1922,8 +1968,10 @@ public struct GameWorld: Equatable, Sendable {
         let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
         removeLineAccounts(of: id)
-        // Decision 315: what a line bought cost for its riders goes with it.
+        // Decision 315: what a line bought cost for its riders goes with it;
+        // decision 528, and its purchase, so the real line is on sale again.
         disposeAsset(.acquiredLine, owner: id.rawValue)
+        forgetAcquisition(ofLine: id)
         abandonUnservedPassengers()
         // Decision 168: its stations draw no intercity trips unless
         // another high-speed line calls at them.
@@ -2030,7 +2078,10 @@ public struct GameWorld: Equatable, Sendable {
         }
         // Decision 133: each run calls at the same stations, the other way
         // along the reversed stops.
-        line.runs = line.runs.map { LineRun(from: last - $0.from, to: last - $0.to, times: $0.times, days: $0.days) }
+        // Decision 535: on a ring, the other way round too.
+        line.runs = line.runs.map {
+            LineRun(from: last - $0.from, to: last - $0.to, times: $0.times, days: $0.days, way: $0.way.map { $0 == .inner ? .outer : .inner })
+        }
         lines[index] = line
         // Its passengers still take it between the same stations, now the
         // other way along its stops (decision 80: only those whose trip it
@@ -2059,8 +2110,9 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
     ///   ``GameError/invalidLineRuns`` for runs that are not the line's
-    ///   (see ``LineRun``), or any on a ring, a line with patterns or one
-    ///   calling at a station twice; or
+    ///   (see ``LineRun``: on a ring, decision 535, each going one way
+    ///   round), or any on a line with patterns or one calling at a station
+    ///   twice; or
     ///   ``GameError/trainServiceActive(_:)`` for the first of its trains,
     ///   in ID order, running a service: the way its riders go is the
     ///   line's, which this would change under them.
@@ -2153,13 +2205,15 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/invalidLinePattern`` to make a ring of a line with
     ///   patterns (the reference keeps a ring's route legs to one over the
     ///   whole ring, `consolidateRingRouteLegs`; its ring express is not
-    ///   ported).
+    ///   ported), or ``GameError/invalidLineRuns`` to make a ring of a line
+    ///   with runs, or a line again of a ring with runs (decision 535: a
+    ///   ring's runs go one way round, a line's from end to end).
     public mutating func setLineRing(_ id: LineID, to isRing: Bool) throws(GameError) {
         let index = try lineIndex(of: id)
         if isRing {
             guard ServiceLine.isRingStopList(lines[index].stops) else { throw .invalidLineStops }
             guard lines[index].patterns.isEmpty else { throw .invalidLinePattern }
-            guard !lines[index].hasRuns else { throw .invalidLineRuns }
+            guard lines[index].isRing || !lines[index].hasRuns else { throw .invalidLineRuns }
             let counts = lines[index].trainsInService
             lines[index].trainsInService = TrainsInService(
                 peak: ServiceLine.paired(counts.peak), offPeak: ServiceLine.paired(counts.offPeak), low: ServiceLine.paired(counts.low)
@@ -2169,6 +2223,9 @@ public struct GameWorld: Equatable, Sendable {
             lines[index].endLastDispatch = nil
             lines[index].opensPair = false
         } else {
+            // Decision 535: a ring's runs go one way round, which a line
+            // with ends has no way to follow.
+            guard !lines[index].isRing || !lines[index].hasRuns else { throw .invalidLineRuns }
             lines[index].outerLastDispatch = nil
         }
         if lines[index].isRing != isRing { lines[index].routePreferences = [] }
@@ -2377,13 +2434,16 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/unknownLine(_:)``, ``GameError/unknownLinePattern(_:)``,
     ///   ``GameError/trainOnLine(_:)`` if it is on a line already (this one
-    ///   included), or ``GameError/trainServiceActive(_:)`` while it runs a
-    ///   service of its own (stop it first).
+    ///   included), ``GameError/trainServiceActive(_:)`` while it runs a
+    ///   service of its own (stop it first), or, since decision 515,
+    ///   ``GameError/trainCannotClimb(_:)`` when the line runs on mountain
+    ///   track and the train is not a mountain train.
     public mutating func assignTrain(_ id: TrainID, to line: LineID, pattern: Int? = nil) throws(GameError) {
         let index = try trainIndex(of: id)
         let (target, service) = try lineService(line, pattern: pattern)
         guard assignedLine(of: id) == nil else { throw .trainOnLine(id) }
         guard trains[index].execution == nil else { throw .trainServiceActive(id) }
+        guard trains[index].climbsMountains || !runsOnMountainTrack(lines[target]) else { throw .trainCannotClimb(id) }
 
         if service == 0 {
             lines[target].trains.insert(id, at: lines[target].trains.firstIndex { $0 > id } ?? lines[target].trains.count)
@@ -2410,6 +2470,27 @@ public struct GameWorld: Equatable, Sendable {
             lines[index].patterns[pattern].trains.removeAll { $0 == id }
         }
         abandonUnservedPassengers()
+    }
+
+    /// Takes every train that cannot climb (``Train/climbsMountains``) off
+    /// each line that now runs on mountain track (decision 515 continued):
+    /// after an edit moved the line's way onto it, as ``unassignTrain(_:)``
+    /// would, from the line's own service and its patterns. A train on a
+    /// round trip finishes it as an ordinary service. Called once at the
+    /// end of every command that may change a line's journey (from
+    /// ``abandonUnservedPassengers()``, before the passengers are checked);
+    /// a world with no mountain track changes nothing and answers at once.
+    mutating func releaseTrainsThatCannotClimb() {
+        guard network.edges.contains(where: \.mountain) else { return }
+        let climbers = Set(trains.filter(\.climbsMountains).map(\.id))
+        for index in lines.indices {
+            let assigned = lines[index].trains + lines[index].patterns.flatMap(\.trains)
+            guard assigned.contains(where: { !climbers.contains($0) }), runsOnMountainTrack(lines[index]) else { continue }
+            lines[index].trains.removeAll { !climbers.contains($0) }
+            for pattern in lines[index].patterns.indices {
+                lines[index].patterns[pattern].trains.removeAll { !climbers.contains($0) }
+            }
+        }
     }
 
     /// Makes line `id` a freight line, or a passenger line again. Free.
@@ -2997,6 +3078,8 @@ public struct GameWorld: Equatable, Sendable {
         let train: TrainID
         let from: TrainPlacement
         let to: StationID
+        /// Decision 535: the way round a ring the run out is for.
+        var way: RingDirection? = nil
     }
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it
@@ -3860,12 +3943,24 @@ public struct GameWorld: Equatable, Sendable {
         var whole: [Train] = []
         // With block sections (decision 212) it may follow the trains ahead
         // on them too.
+        var scheduledFollowing: Train?
         if case .setsOff = departure,
            case .setsOff(let scheduled, _)? = scheduledLeaving(waiting, stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
-            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
+            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else {
+                whole.append(scheduled)
+                scheduledFollowing = scheduled
+            }
         }
         if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(waiting, stop: stop, cycle: cycle, memo: &memo.directions.paths) {
             if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
+        }
+        // Decision 526: before the default way, the scheduled one followed
+        // behind the trains ahead on it, as the default may be: a train
+        // passing a station where another waits for it keeps to the way
+        // the plan leaves it, not the one keeping left takes.
+        if granted == nil, let scheduled = scheduledFollowing, !blockSections, scheduled.movement.edges != moved.movement.edges,
+           case .granted(let train) = reserving(scheduled, following: true, memo: &memo.directions) {
+            granted = train
         }
         let train: Train
         if let granted {
@@ -3943,16 +4038,33 @@ public struct GameWorld: Equatable, Sendable {
             if let path = pathIntoDepot(call, from: start, for: train, memo: &memo) {
                 return (path, nil)
             }
+            // Decision 535: out of a depot to a stop of a ring with runs, a
+            // berth facing the way of the run it is for; under traffic
+            // control a free one of those first (decision 290).
+            if let facing = ringPullOutBerths(of: train, leaving: stop, to: call) {
+                let free = pullOutBerths(of: train, leaving: stop, to: call).map { $0.intersection(facing) } ?? []
+                for eligible in [free, facing] where !eligible.isEmpty {
+                    if let path = path(from: start, toStation: call, length: train.length, eligible: eligible, keepingLeft: true, memo: &memo) {
+                        return (path, nil)
+                    }
+                }
+            }
             // Decision 290: out of a depot under traffic control, a free
             // berth of the stop.
             if let free = pullOutBerths(of: train, leaving: stop, to: call),
                let path = path(from: start, toStation: call, length: train.length, eligible: free, keepingLeft: true, memo: &memo) {
                 return (path, nil)
             }
-            guard let nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
-            // Decision 228: with traffic control off, a free platform first.
+            guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
+            // Decision 527: an empty run keeps off track its line takes
+            // only the other way.
+            let against = lineAgainst(for: train, memo: &memo)
+            if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against) { nearest = kept }
+            // Decision 228: with traffic control off, a free platform first;
+            // decision 527: not one only that track reaches.
             if let next = train.call(after: stop, cycle: cycle),
-               let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo) {
+               let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo),
+               !(against.map { against in free.traversals.contains(where: against.contains) && !nearest.traversals.contains(where: against.contains) } ?? false) {
                 return (free, nil)
             }
             return (nearest, nil)
@@ -4802,7 +4914,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID
     }
 
@@ -4935,6 +5047,10 @@ extension GameWorld: Codable {
         if container.contains(.acquisitions), acquisitions.isEmpty {
             throw DecodingError.dataCorruptedError(forKey: .acquisitions, in: container, debugDescription: "A world is written with \"acquisitions\" only when it bought a line.")
         }
+        leftTrack = try container.decodeIfPresent([LeftTrack].self, forKey: .leftTrack) ?? []
+        if container.contains(.leftTrack), leftTrack.isEmpty {
+            throw DecodingError.dataCorruptedError(forKey: .leftTrack, in: container, debugDescription: "A world is written with \"leftTrack\" only when a line bought left some.")
+        }
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
@@ -4971,6 +5087,16 @@ extension GameWorld: Codable {
         }
         busRoutes = try container.decodeIfPresent([BusRoute].self, forKey: .busRoutes) ?? []
         nextBusRouteID = try container.decodeIfPresent(Int.self, forKey: .nextBusRouteID) ?? 1
+        // Decision 528: a purchase whose line or bus route was removed
+        // before it went with it is dropped, so the real line is on sale
+        // again; nothing is paid back or booked again. One naming a number
+        // never handed out is still refused below.
+        let busRouteIDs = Set(busRoutes.map(\.id)), linesHandedOut = lineIDsHandedOut, routesHandedOut = nextBusRouteID
+        acquisitions.removeAll { bought in
+            if let line = bought.line { return line.rawValue < linesHandedOut && !lineIDs.contains(line.rawValue) }
+            if let route = bought.busRoute { return route.rawValue < routesHandedOut && !busRouteIDs.contains(route) }
+            return false
+        }
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -5106,6 +5232,9 @@ extension GameWorld: Codable {
         }
         if !tripLog.isEmpty {
             try container.encode(tripLog, forKey: .tripLog)
+        }
+        if !leftTrack.isEmpty {
+            try container.encode(leftTrack, forKey: .leftTrack)
         }
         if !acquisitions.isEmpty {
             try container.encode(acquisitions, forKey: .acquisitions)
@@ -5481,7 +5610,7 @@ extension GameWorld: Codable {
         for edge in network.edges {
             guard let geometry = network.geometry(of: edge.id) else { return "Track edge \(edge.id) has no geometry." }
             geometries.append(geometry)
-            guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else {
+            guard geometry.steepestGrade.isNoSteeper(than: edge.maximumGrade) else {
                 return "Track edge \(edge.id) is steeper than the maximum grade."
             }
             if let problem = structureProblem(of: edge, geometry: geometry) {

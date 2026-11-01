@@ -163,8 +163,8 @@ final class MapLabelPlacementTests: XCTestCase {
         ]
         let old = Box(x: 284 - 30, y: 167 - 32, width: 60, height: 20)
         XCTAssertTrue(overlaps(old, MapLabelPlacement.nameBox(of: stations[1], radius: Self.radius)), "Where main drew it")
-        let point = MapLabelPlacement.placeFares([(x: 284, y: 167, text: "+\(TrainRoster.shortMoney(Money(150_000)))")], stations: stations, radius: Self.radius)[0]
-        let width = MapLabelPlacement.textWidth("+\(TrainRoster.shortMoney(Money(150_000)))", size: 12) + 12
+        let point = MapLabelPlacement.placeFares([(x: 284, y: 167, text: "+\(TrainRoster.shortMoney(Money(150_000), in: .english))")], stations: stations, radius: Self.radius)[0]
+        let width = MapLabelPlacement.textWidth("+\(TrainRoster.shortMoney(Money(150_000), in: .english))", size: 12) + 12
         let box = Box(x: point.x - width / 2, y: point.y - 10, width: width, height: 20)
         for station in stations {
             XCTAssertFalse(overlaps(box, MapLabelPlacement.nameBox(of: station, radius: Self.radius)), "The fare covers \(station.name)")
@@ -172,7 +172,7 @@ final class MapLabelPlacementTests: XCTestCase {
     }
 
     func testAFareWithRoomStaysOverItsStation() {
-        let point = MapLabelPlacement.placeFares([(x: 100, y: 100, text: "+\(TrainRoster.shortMoney(Money(1_200)))")], stations: [.init(x: 100, y: 100, name: "A")],
+        let point = MapLabelPlacement.placeFares([(x: 100, y: 100, text: "+\(TrainRoster.shortMoney(Money(1_200), in: .english))")], stations: [.init(x: 100, y: 100, name: "A")],
                                                  radius: Self.radius)[0]
         XCTAssertEqual(point, ScreenPoint(x: 100, y: 78))
     }

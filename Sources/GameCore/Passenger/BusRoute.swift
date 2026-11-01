@@ -427,11 +427,13 @@ extension GameWorld {
         busRoutesChanged()
     }
 
-    /// Closes route `id`; its stops and buses are not sold back.
+    /// Closes route `id`; its stops and buses are not sold back. A real
+    /// route bought goes on sale again (decision 528).
     ///
     /// - Throws: ``GameError/unknownBusRoute(_:)``.
     public mutating func removeBusRoute(_ id: BusRouteID) throws(GameError) {
         busRoutes.remove(at: try busRouteIndex(of: id))
+        acquisitions.removeAll { $0.busRoute == id }
         busRoutesChanged()
     }
 

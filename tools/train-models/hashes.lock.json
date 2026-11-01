@@ -1,6 +1,14 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
+    "tra-r200-r216-locomotive" : {
+      "hash" : "e2c38748a7e6cbcd",
+      "triangles" : 12702
+    },
+    "tra-r200-r216-locomotive-far" : {
+      "hash" : "27f0043026dfb286",
+      "triangles" : 5098
+    },
     "45dr1000-drc1025" : {
       "hash" : "525af0d85db68a27",
       "triangles" : 3604
@@ -806,16 +814,16 @@
       "triangles" : 52
     },
     "light-set-BLUE-car" : {
-      "hash" : "16dd39ef4f1d9938",
-      "triangles" : 472
+      "hash" : "6fe99a27fbed96e9",
+      "triangles" : 1528
     },
     "light-set-BLUE-head" : {
-      "hash" : "6f945beab3888257",
-      "triangles" : 14
+      "hash" : "502c0402ade19b5e",
+      "triangles" : 620
     },
     "light-set-BLUE-tail" : {
-      "hash" : "5334d881abcefe8f",
-      "triangles" : 356
+      "hash" : "229d50dd8cb05a7",
+      "triangles" : 1440
     },
     "light-set-blueSeven-car" : {
       "hash" : "480dfdde653457e5",
@@ -1638,8 +1646,8 @@
       "triangles" : 836
     },
     "light-set-R200CK-head" : {
-      "hash" : "ed49c41c8a342939",
-      "triangles" : 40
+      "hash" : "6a961af61072ec61",
+      "triangles" : 76
     },
     "light-set-R200CK-tail" : {
       "hash" : "606b3e2de27fa1ef",
@@ -1650,8 +1658,8 @@
       "triangles" : 468
     },
     "light-set-R200CKFar-head" : {
-      "hash" : "ed49c41c8a342939",
-      "triangles" : 40
+      "hash" : "7f12f7be19d64d5d",
+      "triangles" : 24
     },
     "light-set-R200CKFar-tail" : {
       "hash" : "63557037382901ab",
@@ -2034,16 +2042,16 @@
       "triangles" : 7294
     },
     "set-BLUE-car" : {
-      "hash" : "cdaf3d84d3d86c31",
-      "triangles" : 1528
+      "hash" : "560bf1929022813c",
+      "triangles" : 13194
     },
     "set-BLUE-head" : {
-      "hash" : "3ffc000f5a0f04cf",
-      "triangles" : 1320
+      "hash" : "308636d30e2a3af1",
+      "triangles" : 14636
     },
     "set-BLUE-tail" : {
-      "hash" : "809f6b07576e1c79",
-      "triangles" : 1588
+      "hash" : "55d2203e05c29cd5",
+      "triangles" : 13194
     },
     "set-blueSeven-car" : {
       "hash" : "928a8d6893b17a7",
@@ -2890,8 +2898,8 @@
       "triangles" : 6476
     },
     "set-R100CK-head" : {
-      "hash" : "2040ca8fbe4499a5",
-      "triangles" : 1284
+      "hash" : "487acd6df3bce14e",
+      "triangles" : 7318
     },
     "set-R100CK-tail" : {
       "hash" : "ac77eb322d524d1a",
@@ -2902,8 +2910,8 @@
       "triangles" : 4008
     },
     "set-R100CKFar-head" : {
-      "hash" : "8c259f8ab026244e",
-      "triangles" : 1284
+      "hash" : "af63d1ff49283b2b",
+      "triangles" : 3466
     },
     "set-R100CKFar-tail" : {
       "hash" : "ef4c9712a6fa04ed",
@@ -2914,8 +2922,8 @@
       "triangles" : 6476
     },
     "set-R200CK-head" : {
-      "hash" : "d4d7227371dbb0e4",
-      "triangles" : 1174
+      "hash" : "e50f713827002322",
+      "triangles" : 12702
     },
     "set-R200CK-tail" : {
       "hash" : "ac77eb322d524d1a",
@@ -2926,8 +2934,8 @@
       "triangles" : 4008
     },
     "set-R200CKFar-head" : {
-      "hash" : "1728c1a61af4a42e",
-      "triangles" : 1174
+      "hash" : "f952efbaae76b99b",
+      "triangles" : 5098
     },
     "set-R200CKFar-tail" : {
       "hash" : "ef4c9712a6fa04ed",
@@ -3372,6 +3380,186 @@
     "walk-tens-9" : {
       "hash" : "e8db78b1b62aa73c",
       "triangles" : 12
+    },
+    "light-set-ALISHAN-car" : {
+      "hash" : "7db10d7739bf5a1d",
+      "triangles" : 48
+    },
+    "light-set-ALISHAN-tail" : {
+      "hash" : "7db10d7739bf5a1d",
+      "triangles" : 48
+    },
+    "light-set-ALISHANFar-car" : {
+      "hash" : "896ec4080534acd5",
+      "triangles" : 8
+    },
+    "light-set-ALISHANFar-tail" : {
+      "hash" : "896ec4080534acd5",
+      "triangles" : 8
+    },
+    "set-ALISHAN-car" : {
+      "hash" : "e89e025724f20054",
+      "triangles" : 3988
+    },
+    "set-ALISHAN-head" : {
+      "hash" : "4e0e837fdda05ada",
+      "triangles" : 7712
+    },
+    "set-ALISHAN-tail" : {
+      "hash" : "b9b10edafb8878b3",
+      "triangles" : 3988
+    },
+    "set-ALISHANFar-car" : {
+      "hash" : "565db045c865bd74",
+      "triangles" : 1372
+    },
+    "set-ALISHANFar-head" : {
+      "hash" : "cf2e40f9fd1ca643",
+      "triangles" : 2316
+    },
+    "set-ALISHANFar-tail" : {
+      "hash" : "7ff73b13a4a3782f",
+      "triangles" : 1372
+    },
+    "light-set-R100CK-head": {
+      "hash": "1fd3b248b872dc81",
+      "triangles": 236
+    },
+    "tra-r100-r122-orange-locomotive": {
+      "hash": "487acd6df3bce14e",
+      "triangles": 7318
+    },
+    "tra-r100-r122-orange-locomotive-far": {
+      "hash": "af63d1ff49283b2b",
+      "triangles": 3466
+    },
+    "tra-r100-r123-breezy-blue-locomotive": {
+      "hash": "8ac816abe00dbe5e",
+      "triangles": 7318
+    },
+    "tra-r100-r123-breezy-blue-locomotive-far": {
+      "hash": "e30347f3524cd9",
+      "triangles": 3466
+    },
+    "tra-breezy-blue-coach-mixed": {
+      "hash": "560bf1929022813c",
+      "triangles": 13194
+    },
+    "tra-breezy-blue-coach-mixed-far": {
+      "hash": "4a3e3a61fd7944b4",
+      "triangles": 5478
+    },
+    "tra-breezy-blue-coach-exhibition": {
+      "hash": "b65343f403175c64",
+      "triangles": 13278
+    },
+    "tra-breezy-blue-coach-exhibition-far": {
+      "hash": "717ed9b78b1f3788",
+      "triangles": 5370
+    },
+    "tra-breezy-blue-coach-long-seat": {
+      "hash": "b65343f403175c64",
+      "triangles": 13278
+    },
+    "tra-breezy-blue-coach-long-seat-far": {
+      "hash": "717ed9b78b1f3788",
+      "triangles": 5370
+    },
+    "tra-breezy-blue-coach-rotating-seat": {
+      "hash": "ed4d15ceedce24ad",
+      "triangles": 12234
+    },
+    "tra-breezy-blue-coach-rotating-seat-far": {
+      "hash": "8e90e16859922caf",
+      "triangles": 4950
+    },
+    "set-FREIGHT-car" : {
+      "hash" : "e37d38a3c42bc04f",
+      "triangles" : 3260
+    },
+    "set-FREIGHT-centre" : {
+      "hash" : "143a2fea4876df52",
+      "triangles" : 3260
+    },
+    "set-FREIGHT-fourth" : {
+      "hash" : "a59c74be1e43ce1a",
+      "triangles" : 3668
+    },
+    "set-FREIGHT-tail" : {
+      "hash" : "e5c322eeb9d616e4",
+      "triangles" : 3284
+    },
+    "set-FREIGHTFar-car" : {
+      "hash" : "9137a0345a9f7cbc",
+      "triangles" : 992
+    },
+    "set-FREIGHTFar-centre" : {
+      "hash" : "33e56a52f27adf5c",
+      "triangles" : 992
+    },
+    "set-FREIGHTFar-fourth" : {
+      "hash" : "593de3420dbb532b",
+      "triangles" : 1256
+    },
+    "set-FREIGHTFar-tail" : {
+      "hash" : "1052d38379c6cdd4",
+      "triangles" : 1016
+    },
+    "light-set-BLUE-fourth": {
+      "hash": "a13a2b00a0cffc32",
+      "triangles": 1368
+    },
+    "light-set-BLUE-panto": {
+      "hash": "b862e0f3af85ce8a",
+      "triangles": 1528
+    },
+    "light-set-BLUEFar-car": {
+      "hash": "207485f4d239efdd",
+      "triangles": 616
+    },
+    "light-set-BLUEFar-fourth": {
+      "hash": "8504571f7c9f4108",
+      "triangles": 552
+    },
+    "light-set-BLUEFar-head": {
+      "hash": "19921e885f068230",
+      "triangles": 84
+    },
+    "light-set-BLUEFar-panto": {
+      "hash": "ac90f8c7e8372125",
+      "triangles": 616
+    },
+    "light-set-BLUEFar-tail": {
+      "hash": "d0131736f750cdf9",
+      "triangles": 576
+    },
+    "set-BLUE-fourth": {
+      "hash": "ed4d15ceedce24ad",
+      "triangles": 12234
+    },
+    "set-BLUE-panto": {
+      "hash": "b65343f403175c64",
+      "triangles": 13278
+    },
+    "set-BLUEFar-car": {
+      "hash": "4a3e3a61fd7944b4",
+      "triangles": 5478
+    },
+    "set-BLUEFar-fourth": {
+      "hash": "8e90e16859922caf",
+      "triangles": 4950
+    },
+    "set-BLUEFar-head": {
+      "hash": "e68df960b8d871b8",
+      "triangles": 6932
+    },
+    "set-BLUEFar-panto": {
+      "hash": "717ed9b78b1f3788",
+      "triangles": 5370
+    },
+    "set-BLUEFar-tail": {
+      "hash": "51bde485e21d2f79",
+      "triangles": 5478
     }
   }
 }

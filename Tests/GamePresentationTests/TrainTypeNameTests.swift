@@ -34,6 +34,7 @@ final class TrainTypeNameTests: XCTestCase {
         (.mingRi, "Ming-Ri sightseeing train", "鳴日號"),
         (.formosaStar, "Formosa Star sightseeing train", "環島之星"),
         (.midsummerFormosa, "Midsummer Formosa steam train", "仲夏寶島號"),
+        (.alishan, "Alishan Forest Railway mountain train", "阿里山林鐵登山列車"),
     ]
 
     func testEveryTypeHasItsName() {
@@ -121,7 +122,7 @@ final class TrainTypeNameTests: XCTestCase {
     /// written before the names changed still reads, every code to the type
     /// it was.
     func testTheCodesTheSavesStoreDidNotMove() throws {
-        let codes = ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER"]
+        let codes = ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER", "ALISHAN"]
         XCTAssertEqual(TrainType.allCases.map(\.rawValue), codes)
         for type in TrainType.allCases {
             let data = try JSONEncoder().encode([type])
@@ -137,7 +138,8 @@ final class TrainTypeNameTests: XCTestCase {
     /// and the text the screen shows for it is built from the new name.
     func testASaveWithEveryTypeLoadsBackAndIsShownByTheNewNames() throws {
         var world = try makeWorld(balance: 100_000_000)
-        let types: [TrainType?] = [nil] + world.offeredTrainTypes.map { Optional($0) }
+        // Decision 539: and those no longer sold, which a save may still hold.
+        let types: [TrainType?] = [nil] + (world.offeredTrainTypes + TrainType.withdrawnFromSale.sorted { $0.rawValue < $1.rawValue }).map { Optional($0) }
         var trains: [(id: TrainID, type: TrainType?)] = []
         for type in types {
             let id = try world.purchaseTrain(named: "T\(trains.count)").id

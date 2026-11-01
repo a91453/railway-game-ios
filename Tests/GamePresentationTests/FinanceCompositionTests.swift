@@ -111,6 +111,8 @@ final class FinanceCompositionTests: XCTestCase {
         XCTAssertEqual(none.costs.summaryText(in: .traditionalChinese), "還沒有帳目")
         let zero = FinanceComposition(summary())
         XCTAssertEqual(zero.income.totalText, "\(Money(0).moneyText)")
+        XCTAssertEqual(none.income.centreText(in: .english), "—")
+        XCTAssertEqual(zero.income.centreText(in: .traditionalChinese), "NT$0")
         XCTAssertEqual(zero.costs.summaryText(in: .traditionalChinese), "本期沒有支出")
     }
 
@@ -140,5 +142,12 @@ final class FinanceCompositionTests: XCTestCase {
         XCTAssertEqual(chart.series.first?.values, [75, 25])
         XCTAssertEqual(chart.summary, "Income \(Money(10_000).moneyText), most from Fares (75%)")
         XCTAssertEqual(ring.summaryText(in: .traditionalChinese), "收入 \(Money(10_000).moneyText)，最多是票價收入（75%）")
+    }
+
+    func testCentreTextIsShortInBothLanguages() {
+        let ring = FinanceComposition(summary(fares: Money(2_945_000_00))).income
+        XCTAssertEqual(ring.centreText(in: .traditionalChinese), "NT$294.5萬")
+        XCTAssertEqual(ring.centreText(in: .english), "NT$2.9M")
+        XCTAssertLessThanOrEqual(ring.centreText(in: .english).count, 9)
     }
 }

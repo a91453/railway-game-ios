@@ -91,7 +91,11 @@ extension GameWorld {
         let own = trafficNominalDirections(&plan, service: s)
         let opposite = Set(plan.services.indices.filter { plan.services[$0].train.id != service.train.id }
             .flatMap { trafficNominalDirections(&plan, service: $0).map(\.reversed) }).subtracting(own)
+        // Decision 526: where keeping left takes the train off the straight
+        // way, the track it keeps to is the loop and the straight way is the
+        // main a passing train keeps to (see ``trafficStraightBerth(_:at:)``).
         let assignedSiding = trafficAssignedSiding(plan, service: s, at: j)
+            || trafficStraightBerth(service, at: j).traversal.edge != point.berth.traversal.edge
         let tracks = berths(of: point.station, length: service.train.length).compactMap { berth -> TrafficTrack? in
             guard berth.traversal.edge != point.berth.traversal.edge || assignedSiding,
                   let track = trafficTrack(service, at: j, berth: berth),
@@ -102,6 +106,23 @@ extension GameWorld {
         }
         plan.sidings[key] = tracks
         return tracks
+    }
+
+    /// Decision 526: the berth at point `j` of `service` that its way from
+    /// the point before takes without keeping left (decision 202): the
+    /// straight way through the station, the main line. It is the point's
+    /// own berth with keeping left off, at the first point, or when no
+    /// such way is found.
+    func trafficStraightBerth(_ service: TrafficService, at j: Int) -> Berth {
+        let points = service.points, point = points[j]
+        guard keepLeft, j > 0 else { return point.berth }
+        let start = trafficDeparture(service, at: j - 1, berth: points[j - 1].berth)
+        guard case .onEdge(let first, _) = start,
+              let path = trafficPath(from: start, toStation: point.station, length: service.train.length,
+                                     berthPenalty: [:], edgePenalty: [:], keepingLeft: false) else { return point.berth }
+        let last = path.traversals.last ?? first
+        guard let length = network.edge(last.edge)?.length else { return point.berth }
+        return Berth(traversal: last, offset: path.end ?? length)
     }
 
     /// An explicit stopping track may already be the passing place. The
@@ -218,7 +239,9 @@ extension GameWorld {
                 // for each other's choice of siding.
                 if plan.waits.contains(where: { $0.kind == .overtake && $0.train == peer.train.id && $0.station == target && $0.stop == v.stop && $0.cycle == v.cycle }),
                    v.arrival > p.arrival || (v.arrival == p.arrival && peer.train.id > train.id) { continue }
-                var berth = v.berth
+                // Decision 526: a train passing through keeps to the
+                // straight way at a station where one waits for it.
+                var berth = v.calls ? v.berth : trafficStraightBerth(peer, at: k)
                 if k == 0, peer.train.execution?.stop == 0, isStopped(peer.train, at: target),
                    case .onEdge(let run, let offset)? = peer.train.position { berth = Berth(traversal: run, offset: offset) }
                 guard let move = trafficTrack(peer, at: k, berth: berth) else { return nil }

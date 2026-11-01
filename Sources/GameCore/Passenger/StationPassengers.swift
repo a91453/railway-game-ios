@@ -138,11 +138,29 @@ public struct StationPassengers: Hashable, Sendable {
     public internal(set) var remainders: [DemandRemainder]
     /// How many wait in all: the sum of ``waiting``'s counts, kept with it.
     public private(set) var waitingCount: Int64
+    /// The last day (second ÷ 86400) a passenger released here was turned
+    /// away because the station was full, if any (decision 506: an
+    /// expansion opens only at a station full yesterday or today).
+    public internal(set) var lastFullDay: Int64?
+    /// The days full up to ``lastFullDay`` (decision 534): bit k is the
+    /// day `lastFullDay - k`, so bit 0 is always set while there is a full
+    /// day, and the mask is 0 when there is none. It keeps the last
+    /// ``fullDaysKept`` days, so an expansion can ask how often the station
+    /// filled lately, not only whether it did once.
+    public internal(set) var fullDays: Int64
 
-    /// Passengers waiting at a station at most: the reference's
-    /// `STATION_CAPACITY × 8`. One released when the station is full leaves
-    /// at once (see ``PassengerLedger/overflowed``).
+    /// How many days ``fullDays`` remembers.
+    public static let fullDaysKept: Int64 = 8
+
+    /// Passengers waiting at a station not expanded at most: the
+    /// reference's `STATION_CAPACITY × 8`. One released when the station is
+    /// full leaves at once (see ``PassengerLedger/overflowed``). An
+    /// expanded station holds more (decision 506,
+    /// ``StationExpansion/capacity``, ``GameWorld/stationCapacity(of:)``).
     public static let capacity: Int64 = 4_000
+
+    /// The most any station holds: its last expansion's (decision 506).
+    public static let maximumCapacity: Int64 = StationExpansion.allCases.map(\.capacity).max()!
 
     /// The most passengers a save may say were ever released at a station.
     /// A station releases at most a million a day, so play from any count
@@ -161,6 +179,35 @@ public struct StationPassengers: Hashable, Sendable {
         self.arrived = 0
         self.refused = 0
         self.remainders = []
+        self.lastFullDay = nil
+        self.fullDays = 0
+    }
+
+    /// Records that a passenger was turned away for want of room on `day`
+    /// (decisions 506 and 534). Days only move forward.
+    mutating func markFull(on day: Int64) {
+        guard let last = lastFullDay else {
+            lastFullDay = day
+            fullDays = 1
+            return
+        }
+        guard day > last else { return }
+        let shift = day - last
+        fullDays = shift >= Self.fullDaysKept ? 1 : (fullDays << shift | 1) & (1 << Self.fullDaysKept - 1)
+        lastFullDay = day
+    }
+
+    /// On how many of the `window` days ending on `day` (that day
+    /// included, at most ``fullDaysKept``) a passenger was turned away for
+    /// want of room (decision 534).
+    func fullDayCount(endingOn day: Int64, window: Int64) -> Int64 {
+        guard let last = lastFullDay, last <= day else { return 0 }
+        var count: Int64 = 0
+        for k in 0..<min(window, Self.fullDaysKept) {
+            let bit = last - (day - k)
+            if bit >= 0, bit < Self.fullDaysKept, fullDays >> bit & 1 == 1 { count += 1 }
+        }
+        return count
     }
 
     /// The station's audit, given how many of its passengers are `riding`
@@ -184,18 +231,21 @@ public struct StationPassengers: Hashable, Sendable {
     /// minute `now`: as many as the station has room for wait, as one group
     /// at the back of the queue, and the rest leave at once (the
     /// reference's `_metroAdmitDispatchPassengers`).
-    mutating func release(_ count: Int64, to destination: StationID, along trip: PassengerTrip, at now: GameTime) {
-        let admitted = min(count, max(0, Self.capacity - waitingCount))
+    mutating func release(_ count: Int64, to destination: StationID, along trip: PassengerTrip, at now: GameTime,
+                          capacity: Int64 = StationPassengers.capacity) {
+        let admitted = min(count, max(0, capacity - waitingCount))
         if admitted > 0 {
             waiting.append(WaitingGroup(line: trip.line, direction: trip.direction, destination: destination, since: now, count: admitted))
             waitingCount += admitted
         }
         released += count
         overflowed += count - admitted
+        if admitted < count { markFull(on: now.seconds / 86_400) }
     }
 
-    mutating func release(_ count: Int64, along journey: PassengerJourney, at now: GameTime) {
-        let admitted = min(count, max(0, Self.capacity - waitingCount))
+    mutating func release(_ count: Int64, along journey: PassengerJourney, at now: GameTime,
+                          capacity: Int64 = StationPassengers.capacity) {
+        let admitted = min(count, max(0, capacity - waitingCount))
         if admitted > 0 {
             let leg = journey.leg
             enqueue(WaitingGroup(line: leg.line, direction: leg.direction,
@@ -203,13 +253,15 @@ public struct StationPassengers: Hashable, Sendable {
         }
         released += count
         overflowed += count - admitted
+        if admitted < count { markFull(on: now.seconds / 86_400) }
     }
 
     /// Admits a group arriving from another service. Its release and final
     /// outcome remain on the original station's ledger.
     mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
-                                   at now: GameTime, readyAt: GameTime) -> Int64 {
-        let admitted = min(count, max(0, Self.capacity - waitingCount))
+                                   at now: GameTime, readyAt: GameTime,
+                                   capacity: Int64 = StationPassengers.capacity) -> Int64 {
+        let admitted = min(count, max(0, capacity - waitingCount))
         guard admitted > 0 else { return 0 }
         let leg = journey.leg
         let group = WaitingGroup(line: leg.line, direction: leg.direction, destination: leg.to,
@@ -398,7 +450,7 @@ extension DemandRemainder: Codable {
 
 extension StationPassengers: Codable {
     private enum CodingKeys: String, CodingKey {
-        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders
+        case station, demand, waiting, released, overflowed, abandoned, arrived, refused, remainders, lastFullDay, fullDays
     }
 
     /// Decodes a station's passengers. A station without demand has no
@@ -424,16 +476,21 @@ extension StationPassengers: Codable {
         let arrived = container.contains(.arrived) ? try container.decode(Int64.self, forKey: .arrived) : 0
         let refused = container.contains(.refused) ? try container.decode(Int64.self, forKey: .refused) : 0
         let remainders = try container.decode([DemandRemainder].self, forKey: .remainders)
+        let lastFullDay = try container.decodeIfPresent(Int64.self, forKey: .lastFullDay)
+        // A save before decision 534 knows only its last full day.
+        let fullDays = try container.decodeIfPresent(Int64.self, forKey: .fullDays) ?? (lastFullDay == nil ? 0 : 1)
         func corrupt(_ key: CodingKeys, _ description: String) -> DecodingError {
             DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Station \(station.rawValue): \(description)")
         }
         // Every count is checked against a bound before it is added, so no
         // sum below can overflow.
-        guard Int64(waiting.count) <= Self.capacity, waiting.allSatisfy({ $0.count <= Self.capacity }) else {
+        // Against the most any station holds; the world's decoder holds
+        // each to its own station's (decision 506).
+        guard Int64(waiting.count) <= Self.maximumCapacity, waiting.allSatisfy({ $0.count <= Self.maximumCapacity }) else {
             throw corrupt(.waiting, "more passengers wait than the station holds.")
         }
         let total = waiting.reduce(Int64(0)) { $0 + $1.count }
-        guard total <= Self.capacity else { throw corrupt(.waiting, "more passengers wait than the station holds.") }
+        guard total <= Self.maximumCapacity else { throw corrupt(.waiting, "more passengers wait than the station holds.") }
         // Released minute by minute, by ascending leg destination. Several
         // planned journeys can share one minute and destination.
         guard zip(waiting, waiting.dropFirst()).allSatisfy({
@@ -463,6 +520,16 @@ extension StationPassengers: Codable {
         else {
             throw corrupt(.released, "more passengers are accounted for than were released.")
         }
+        if let lastFullDay {
+            guard lastFullDay >= 0, overflowed > 0 else {
+                throw corrupt(.lastFullDay, "a station that never turned anyone away has no full day.")
+            }
+            guard fullDays & 1 == 1, fullDays < 1 << Self.fullDaysKept else {
+                throw corrupt(.fullDays, "the full days must include the last one and no more than are kept.")
+            }
+        } else {
+            guard fullDays == 0 else { throw corrupt(.fullDays, "full days with no last full day.") }
+        }
         guard zip(remainders, remainders.dropFirst()).allSatisfy({ $0.destination < $1.destination }) else {
             throw corrupt(.remainders, "remainders must be listed once each, by ascending destination.")
         }
@@ -479,6 +546,8 @@ extension StationPassengers: Codable {
         self.arrived = arrived
         self.refused = refused
         self.remainders = remainders
+        self.lastFullDay = lastFullDay
+        self.fullDays = fullDays
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -498,5 +567,10 @@ extension StationPassengers: Codable {
             try container.encode(refused, forKey: .refused)
         }
         try container.encode(remainders, forKey: .remainders)
+        try container.encodeIfPresent(lastFullDay, forKey: .lastFullDay)
+        // Only the last full day: left out, as before decision 534.
+        if fullDays > 1 {
+            try container.encode(fullDays, forKey: .fullDays)
+        }
     }
 }

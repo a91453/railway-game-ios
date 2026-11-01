@@ -30,7 +30,9 @@ extension GameWorld {
     /// The game day demand is worked out for, with weekly demand, events
     /// or holidays: today's. `nil` without any, when every day is the same.
     var demandDay: Int64? {
-        weeklyDemand || demandEvents != nil || disruptions != nil || tourism != nil ? dayIndex(of: clock.now) : nil
+        // Decision 533: a school's students come on school days only.
+        weeklyDemand || demandEvents != nil || disruptions != nil || tourism != nil
+            || placedBuildings.contains(where: \.kind.bringsRiders) ? dayIndex(of: clock.now) : nil
     }
 
     /// Whether today's demand follows the weekend's hours: on a weekend,
@@ -368,6 +370,12 @@ extension GameWorld {
         guard allowsService(at: leg.from), allowsService(at: leg.to),
               let line = line(id: leg.line), onFreightLines || !line.isFreight, scheduled
         else { return false }
+        // Decision 535: on a ring with runs, a way round and arc some run
+        // goes, across the seam as anywhere else.
+        if line.isRing, line.hasRuns {
+            guard leg.pattern == nil, let from = line.stops.firstIndex(of: leg.from), let to = line.stops.firstIndex(of: leg.to) else { return false }
+            return line.runsServe(from: from, to: to, way: leg.direction == .outbound ? .inner : .outer)
+        }
         if line.isRing {
             let direction: RingDirection = leg.direction == .outbound ? .inner : .outer
             guard line.ringWayRuns(direction), journey(of: line, service: 0, direction: direction) != nil else { return false }
@@ -481,7 +489,7 @@ extension GameWorld {
                 switched = decayed - trips
                 between = PassengerCrowding.decayed(between, minutes: minutes)
             }
-            let extra = (tourists[reached.destination]).map { $0.outbound + $0.back } ?? 0
+            let extra = tourists[reached.destination]?.total ?? 0
             return DemandDetail(destination: reached.destination, trips: trips + between + extra, trip: reached.trip,
                                 tooExpensive: tooExpensive, switched: switched, route: route)
         }
@@ -596,6 +604,9 @@ extension GameWorld {
         /// The company's temples and night markets as sights (decision 361
         /// and its sequel): one built or sold changes the tourists' trips.
         var temples: [Attraction] = []
+        /// The company's schools and hospitals (decision 533): one built or
+        /// sold changes their riders' trips.
+        var civic: [PlacedBuildingID] = []
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -727,7 +738,8 @@ extension GameWorld {
         let pull = pulls(of: drawing)
         let typhoons = typhoonMultipliers()
         // Decision 174: the tourists' pairs, added to the ordinary ones.
-        let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { trip(from: $0, to: $1) != nil }.flows
+        // Decision 533: and the riders of the company's schools and hospitals.
+        let tourists = passengerExtraFlows(onDay: dayIndex(of: clock.now)) { trip(from: $0, to: $1) != nil }
         let drawingStations = Set(drawing.map(\.station))
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
@@ -774,12 +786,13 @@ extension GameWorld {
         memo.use(graph)
         var searches = PassengerRouteSearches(graph: graph)
         // Decision 174: the tourists' pairs, added to the ordinary ones.
-        let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { from, to in
+        // Decision 533: and the riders of the company's schools and hospitals.
+        let tourists = passengerExtraFlows(onDay: dayIndex(of: clock.now)) { from, to in
             let pair = PassengerRouteMemo.Pair(origin: from, destination: to)
             let found = memo[pair] ?? passengerRouteChoices(from: from, to: to, searches: &searches)
             memo[pair] = found
             return !found.isEmpty
-        }.flows
+        }
         let drawingStations = Set(drawing.map(\.station))
         struct Draft {
             let origin: StationID
@@ -876,7 +889,9 @@ extension GameWorld {
     mutating func passengerRelease() -> PassengerRelease? {
         // With weekly demand a plan is for one day.
         let temples = companySights().map(\.sight)
-        if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars || passengerPlan.temples != temples {
+        let civic = civicRiderBuildings
+        if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars || passengerPlan.temples != temples
+            || passengerPlan.civic != civic {
             passengerPlan = PassengerPlanCache()
         }
         if passengerPlan.plan == nil {
@@ -884,6 +899,7 @@ extension GameWorld {
             passengerPlan.day = demandDay
             passengerPlan.stars = tourismStars
             passengerPlan.temples = temples
+            passengerPlan.civic = civic
             passengerPlan.plan = .some(makePassengerPlan(memo: &passengerRouteMemo))
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }
@@ -934,6 +950,7 @@ extension GameWorld {
         let into = Int64(minute % 60)
         let plan = release.plan
         let unopened = linesNotYetRunning(at: now)
+        let expanded = expandedStationCapacities
         for index in plan.flows.indices {
             let share = (60 - into) * plan.hourly[24 * index + hour] + into * plan.hourly[24 * index + next]
             let total = release.remainders[index] + share
@@ -942,14 +959,16 @@ extension GameWorld {
             if count > 0 {
                 let flow = plan.flows[index]
                 guard let record = passengers.firstIndex(where: { $0.station == flow.origin }) else { continue }
+                let capacity = expanded.isEmpty ? StationPassengers.capacity
+                    : expanded[flow.origin] ?? StationPassengers.capacity
                 if flow.choices.isEmpty {
                     guard !unopened.contains(flow.trip.line) else { continue }
-                    passengers[record].release(count, to: flow.destination, along: flow.trip, at: now)
+                    passengers[record].release(count, to: flow.destination, along: flow.trip, at: now, capacity: capacity)
                 } else {
                     let shares = allocateRouteRelease(count, from: flow.origin, flow: flow)
                     for (choice, share) in zip(flow.choices, shares) where share > 0
                         && (unopened.isEmpty || !choice.journey.legs.contains(where: { unopened.contains($0.line) })) {
-                        passengers[record].release(share, along: choice.journey, at: now)
+                        passengers[record].release(share, along: choice.journey, at: now, capacity: capacity)
                     }
                 }
             }
@@ -1048,6 +1067,9 @@ extension GameWorld {
     mutating func abandonUnservedPassengers() {
         // Decision 275: once, at the end of an edit made as one.
         guard trackEditDepth == 0 else { return }
+        // Decision 515 continued: a line whose way now runs on mountain
+        // track keeps only its mountain trains.
+        releaseTrainsThatCannotClimb()
         passengerPlan = PassengerPlanCache()
         abandonStrandedRiders()
         // A pair's balanced routes must still be ridable one after another,
@@ -1141,7 +1163,12 @@ extension GameWorld {
         let valid = servedWaitingLegs(onFreightLines: true)
         for record in passengers {
             let id = record.station.rawValue
-            guard station(id: record.station) != nil else { return "Passengers wait at station \(id), which does not exist." }
+            guard let standing = station(id: record.station) else { return "Passengers wait at station \(id), which does not exist." }
+            // Decision 506: an expanded station holds more.
+            guard record.waitingCount <= standing.capacity else { return "More passengers wait at station \(id) than it holds." }
+            if let day = record.lastFullDay, day > clock.now.seconds / 86_400 {
+                return "Station \(id) was full on a day still to come."
+            }
             for group in record.waiting {
                 guard isServed(group, at: record.station, checkingLeg: { valid.contains($0) }, onFreightLines: true) else {
                     return "Passengers at station \(id) wait for a trip no line takes that way."

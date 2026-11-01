@@ -334,8 +334,12 @@ struct MapView: View {
             // folding changes.
             // Decision 300: beside a phone's panel too, where the buttons
             // leave it alone.
+            // Decision 510: and on a short screen while the build's ✓ pill
+            // shows, so the pill, the banner and the key do not overlap.
             let legendBesideCard = buttonsUnderPanel || (insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - buttonsDepth < screenEdges.top + trailingInsetDepth)
+                || MapClutter.legendGivesWayToBuild(compactHeight: verticalSizeClass == .compact,
+                                                    buildPillShown: MapBuildConfirm.isShown(session, panel: screen.panel))
             let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
             // What the camera's own framing keeps its places clear of (#593,
             // a player's report: the opening put a station under the zoom
@@ -834,12 +838,14 @@ struct MapView: View {
                                 }
                             }
                             .transition(.scale.combined(with: .opacity))
-                        } else if insets.trailing == 0 {
+                        } else if insets.trailing == 0, miniMap?.isShown(beside: projection.visibleRegion) ?? false {
                             // Decision 116: the whole map, small; it gives
                             // way to a layer's legend, which needs the height,
                             // and to the details card or a panel at the
                             // trailing side: beside them it would stand in
                             // the middle of a phone's map, under the finger.
+                            // Not while it has nothing to draw or the view
+                            // shows all of it (``MiniMap/isShown(beside:)``).
                             MiniMapView(map: miniMap, visible: projection.visibleRegion, language: session.language) { point in
                                 if session.followedTrain != nil { session.stopFollowingTrain() }
                                 camera = projection.centered(atX: point.x, y: point.y)
@@ -966,14 +972,17 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     MapLockMarks(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
+                // Decision 174: the sights, with their stars. Decision 510:
+                // under the bubbles, so a bubble over a sight takes the tap.
+                .overlay(alignment: .topLeading) {
+                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear,
+                                       clearTop: max(clear.top, topColumnDepth))
+                }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
-                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
+                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
+                                    clearTop: max(clear.top, topColumnDepth))
                         .ambientHidden(screen.ambient != nil)
-                }
-                // Decision 174: the sights, with their stars.
-                .overlay(alignment: .topLeading) {
-                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
                 // Decision 246: where the city's requests point.
                 .overlay(alignment: .topLeading) {
@@ -981,7 +990,8 @@ struct MapView: View {
                 }
                 // Decision 119: the station selected, looked at.
                 .overlay(alignment: .topLeading) {
-                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear)
+                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear,
+                                      clearTop: max(clear.top, topColumnDepth))
                 }
                 // Decision 117: something just put up.
                 .overlay(alignment: .topLeading) {
@@ -1219,7 +1229,7 @@ struct MapView: View {
         }
         // Decision 379: what follows a tick here is timed for the frame
         // readout.
-        .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
+        .onChange(of: TrafficKey(world: session.world, taken: session.trafficReadingsTaken), initial: true) { _, _ in
             // PERF_3D_COCKPIT: not under the 3D map, whose closing reads it
             // again (``CoveredMap``): each change drew the track again.
             guard CoveredMap.takesTraffic(covered: screen.showsMap3D) else { return }
@@ -2186,8 +2196,12 @@ private struct TrafficKey: Equatable {
     let trains: [Train]
     let lines: [ServiceLine]
     let network: RailwayNetwork
+    /// Decision 497 (P2-3): a reading worked out off the main actor after
+    /// a command is in.
+    let taken: Int
 
-    init(world: GameWorld) {
+    init(world: GameWorld, taken: Int) {
+        self.taken = taken
         now = world.clock.now
         isEnabled = world.isTrafficControlEnabled
         trains = world.trains
@@ -2897,10 +2911,14 @@ private struct CityMapKey: Equatable {
     /// land worth more.
     let zones: Zoning?
     let placed: [PlacedBuilding]
+    /// L3-10 (#1592's review): the zone marks say whether the city builds
+    /// on a zone, which turns on city demand.
+    let hasCityDemand: Bool
     let isShown: Bool
 
     init(world: GameWorld, isShown: Bool) {
         self.isShown = isShown
+        hasCityDemand = isShown && world.cityDemand != nil
         land = isShown ? world.land : nil
         buildings = isShown ? world.buildings : nil
         stations = isShown ? world.stations : []

@@ -98,7 +98,9 @@ final class TrafficControlSessionTests: XCTestCase {
             session.advance(realElapsed: GameSession.tickInterval)
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.world.train(id: Self.local)?.execution, .waitingAtStop(0, cycle: 0))
-            XCTAssertEqual(session.world.routeWaitText(of: Self.local, in: .english), "Waiting for Express to clear the route")
+            // Express was placed without a rate, so it never moves off:
+            // the wait says so (decision 497 P2-7).
+            XCTAssertEqual(session.world.routeWaitText(of: Self.local, in: .english), "Waiting for Express to clear the route (Express: stopped by you)")
             XCTAssertNil(session.world.routeWaitText(of: Self.express, in: .english), "Express is not waiting for a route")
             XCTAssertNil(session.world.routeWaitText(of: TrainID(rawValue: 9), in: .english))
             // Without traffic control nothing waits.

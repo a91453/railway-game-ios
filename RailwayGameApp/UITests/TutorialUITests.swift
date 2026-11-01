@@ -116,8 +116,8 @@ final class TutorialUITests: XCTestCase {
         }
 
         // The station chapter: the details card opens for the modes.
-        waitForStep(app, title: "Tap Platform", "The ✓ did not build the track")
-        let platform = app.buttons["Platform"]
+        waitForStep(app, title: "Tap Station", "The ✓ did not build the track")
+        let platform = app.segmentedControls.buttons["Station"].firstMatch
         XCTAssertTrue(platform.appears(within: 10))
         XCTAssertTrue(platform.becomesHittable(), "The Platform mode cannot be tapped")
         if card.exists {
@@ -152,7 +152,14 @@ final class TutorialUITests: XCTestCase {
 
         let lines = app.buttons["entry.lines"]
         XCTAssertTrue(lines.appears(within: 10))
-        XCTAssertTrue(lines.becomesHittable(), "The Lines button is covered")
+        // Ten seconds, not two: on a slow iPad runner each query took up to
+        // half a second while the city drew its buildings, and the five in
+        // two seconds all said no with nothing over the button (main
+        // 1b64367's full lane, run 41272201294: its recording shows the
+        // folded card above the dock and Lines uncovered throughout).
+        // Something that really covers it still fails, with the frames.
+        XCTAssertTrue(lines.becomesHittable(within: 10),
+                      "The Lines button is covered: button \(lines.frame), card \(card.exists ? card.frame : .null), folded \(folded.exists ? folded.frame : .null)")
         lines.tap()
         let pick = app.buttons["line.draft.pick"]
         XCTAssertTrue(pick.appears(within: 10), "The lines panel did not open")
@@ -275,7 +282,12 @@ final class TutorialUITests: XCTestCase {
             if (try? folded.snapshot())?.label.hasSuffix(title) == true { return }
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
+        // The step read after the deadline counts too: a snapshot of the
+        // folded card, gone while the open one showed, spent 12 of the 10
+        // seconds in XCTest's retries, so the loop looked once, and the
+        // last read found the step (pull request #1608, run 41196893183).
         let shown = (try? heading.snapshot())?.label ?? (try? folded.snapshot())?.label ?? "no card"
+        if shown == title || shown.hasSuffix(title) { return }
         XCTFail("Timed out waiting for the step “\(title)”; showing “\(shown)”. \(message)", file: file, line: line)
     }
 

@@ -31,6 +31,246 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-11-02-105-1",
+            items: [
+                Line(
+                    english: "The Breezy Blue train now has two blue R100 locomotives pulling its blue coaches.",
+                    chinese: "藍皮解憂號換成兩台藍色 R100 機車重連，拉著藍皮客車。"
+                ),
+                Line(
+                    english: "Freight trains on the 3D map are an R200 locomotive pulling container wagons, with a diesel horn.",
+                    chinese: "貨運線的列車在 3D 地圖上是 R200 機車拉貨櫃車，汽笛也換成柴油機車的。"
+                ),
+                Line(
+                    english: "Chu-Kuang trains behind an R100 have a new orange R100 locomotive.",
+                    chinese: "R100 牽引的莒光號換上新的橘色 R100 機車。"
+                ),
+                Line(
+                    english: "The R200 now hauls freight, so R200 Chu-Kuang trains are no longer sold; the ones you have keep running.",
+                    chinese: "R200 改拉貨運，買車時不再有 R200 莒光號；已經有的照常行駛。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "On the 3D map, sloping ground no longer shows sharp spikes.",
+                    chinese: "3D 地圖上，坡地的地面不再冒出尖尖的三角形。"
+                ),
+                Line(
+                    english: "On the 3D map, a train at a curved platform keeps its front and back cars on the track.",
+                    chinese: "3D 地圖上，停在彎道月台的列車，頭尾不再甩出軌道外。"
+                ),
+            ]
+        ),
+        Entry(
+            id: "2026-11-01-104-1",
+            items: [
+                Line(
+                    english: "Schools and hospitals you build bring students and patients by train, shown on the station card.",
+                    chinese: "蓋好的學校、醫院會帶學生和看病的旅客搭車來，車站卡上看得到人數。"
+                ),
+                Line(
+                    english: "A real line you buy keeps its own trains, such as the DR1000 on branch lines and the Danhai light rail.",
+                    chinese: "收購的真實路線保留自己的車：支線是 DR1000，淡海是淡海輕軌列車。"
+                ),
+                Line(
+                    english: "The Ankeng light rail can now be bought as a real line.",
+                    chinese: "安坑輕軌開放收購。"
+                ),
+                Line(
+                    english: "On the 2D map, an expanded station shows a small station mark beside its name.",
+                    chinese: "2D 地圖上，擴建過的車站在站名旁會多一個小站房記號。"
+                ),
+                Line(
+                    english: "A station can be expanded once it was full on 4 of the last 7 days; its card counts the days so far.",
+                    chinese: "最近 7 天裡有 4 天客滿的車站才能擴建，車站卡會寫目前幾天。"
+                ),
+                Line(
+                    english: "Taiwan Railway trains on the real map run to the real train-by-train timetable.",
+                    chinese: "實景地圖的台鐵列車，照真實的逐班時刻表行駛。"
+                ),
+                Line(
+                    english: "The Alishan line runs DL-38 diesel locomotives with Alishan coaches, and Chu-Kuang trains have a new R200 locomotive.",
+                    chinese: "阿里山線換成 DL-38 柴油機車與阿里山客車；莒光號換上新的 R200 機車。"
+                ),
+                Line(
+                    english: "An expanded station grows on the 3D map too, and tapping a station there shows its name board.",
+                    chinese: "擴建過的車站在 3D 地圖上也會變大；點 3D 地圖上的車站會出現站名牌。"
+                ),
+                Line(
+                    english: "The economy panel shows the whole company's punctuality over the last 7 days.",
+                    chinese: "經營面板多了全公司最近 7 天的準點率。"
+                ),
+                Line(
+                    english: "A real line you bought and then removed can be bought again.",
+                    chinese: "收購來的真實路線拆掉之後，可以再買回來。"
+                ),
+                Line(
+                    english: "A train that stops because it finds no route, or because the depot is full, tells you why.",
+                    chinese: "找不到路、或機廠停滿而停著的列車，會說出原因。"
+                ),
+                Line(
+                    english: "Switching to free mode lets you turn on unlimited money.",
+                    chinese: "轉成自由模式時，可以打開無限資金。"
+                ),
+                Line(
+                    english: "The train roster writes large amounts of money the same short way as the rest of the game.",
+                    chinese: "車隊表的金額也改用萬、億來寫。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Tracing a long line on a big network previews much faster.",
+                    chinese: "路網大的時候，長距離描線的預覽快了很多。"
+                ),
+                Line(
+                    english: "On a large network, the pause at 6 a.m. while the day's runs are planned is much shorter.",
+                    chinese: "路網大的時候，每天早上 6 點排班時的停頓短了很多。"
+                ),
+                Line(
+                    english: "The total in the middle of the economy pie chart now fits inside the ring.",
+                    chinese: "經營圓餅圖中間的總金額完整放進圓環裡，不再被切掉。"
+                ),
+                Line(
+                    english: "Tapping in the mountains on the 3D map lands where your finger is, and hidden track behind a hill is not picked.",
+                    chinese: "在 3D 地圖的山區點選，會落在手指下的地方，山後看不到的軌道不會被點到。"
+                ),
+                Line(
+                    english: "Tracing from the end of a track shows one preview line, no longer two on top of each other.",
+                    chinese: "從軌道端點描線時，預覽只畫一條，不再重疊。"
+                ),
+                Line(
+                    english: "On iPad, tapping Finish in step 8 of tutorial lesson 5 no longer can close the app.",
+                    chinese: "修好 iPad 入門第 5 課第 8 步按「完成建立」時可能閃退的問題。"
+                ),
+            ]
+        ),
+        Entry(
+            id: "2026-11-01-102-1",
+            items: [
+                Line(
+                    english: "A crowded station can be expanded, from 4,000 to 8,000 to 16,000 waiting passengers.",
+                    chinese: "人潮擠滿的車站可以擴建，候車人數從 4,000 加到 8,000，再到 16,000。"
+                ),
+                Line(
+                    english: "The line card shows how punctual the line was over the last 7 days, beside Taiwan Railway's year.",
+                    chinese: "路線卡多了最近 7 天的準點率，括號裡是台鐵近一年的數字。"
+                ),
+                Line(
+                    english: "Money is shown in New Taiwan dollars, with a rough figure in US dollars beside large amounts.",
+                    chinese: "金額改用新台幣，大金額用萬、億來寫。"
+                ),
+                Line(
+                    english: "The real-map, high-speed and Taiwan Railway demos have tourists and real transfers.",
+                    chinese: "實景、高鐵與台鐵示範有觀光客，也能照真實車站轉乘。"
+                ),
+                Line(
+                    english: "At a station with a passing loop, trains running through keep to the straight main line.",
+                    chinese: "有待避線的車站，通過的車走直的正線，等候的車進外側股道。"
+                ),
+                Line(
+                    english: "When a train waits and will not move off by itself, you are told which train it waits for.",
+                    chinese: "列車一直等著不走時，會說出它在等哪一班車。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Trains on the Sanying line no longer all stop when an empty train heads back to the depot.",
+                    chinese: "三鶯線不會再因為回送車擋住對向而整條停住。"
+                ),
+                Line(
+                    english: "Placing or rerouting a train checks that it can climb a mountain line.",
+                    chinese: "放車或改路線時，會先檢查列車爬不爬得上山線。"
+                ),
+                Line(
+                    english: "Skipping the night and giving orders no longer make the screen stall.",
+                    chinese: "跳過夜晚、下指令時，畫面不會再停頓。"
+                ),
+                Line(
+                    english: "If saving fails as you go back to the start screen, you can leave without saving.",
+                    chinese: "回開始畫面時存檔失敗，可以選擇不存檔離開。"
+                ),
+                Line(
+                    english: "Dragging a zone fills it in a clearer colour, so shops and offices are easy to tell apart.",
+                    chinese: "拖曳分區時的顏色更清楚，商業區和辦公區一眼分得出來。"
+                ),
+            ]
+        ),
+        Entry(
+            id: "2026-10-31-101-1",
+            items: [
+                Line(
+                    english: "Build has a Zoning tool of its own; the station master points out empty land to zone, and you hear when the first building goes up.",
+                    chinese: "建設多了「分區」工具；站長會指出可以劃分區的空地，第一棟建物蓋好時會通知。"
+                ),
+                Line(
+                    english: "Building a station, you pick its layout first and the whole station is built at once.",
+                    chinese: "蓋車站時先選排法，整個車站一次蓋好。"
+                ),
+                Line(
+                    english: "The train roster opens from the line page and the train card, and you arrange trains by dragging them.",
+                    chinese: "列車運用表可以從路線頁和列車卡直接打開，拖拉就能排班。"
+                ),
+                Line(
+                    english: "When track can't be laid, you are told which condition stops it; tunnels can go down to 1,024 m.",
+                    chinese: "鋪軌被擋時會說出是哪個條件；隧道最深可到地下 1,024 公尺。"
+                ),
+                Line(
+                    english: "The zoning layer says for each square whether it will build, waits for the station, is too far away or is not needed yet.",
+                    chinese: "分區圖層會標出每一格是會蓋、等車站成長、離車站太遠，還是目前不缺。"
+                ),
+                Line(
+                    english: "Track you lay beside a station's platforms joins that station, and a missing-materials note says what to do next.",
+                    chinese: "自己拉的軌道旁有車站月台，就加成那站的月台；缺建材時會說下一步。"
+                ),
+                Line(
+                    english: "Each game takes one row in the save list, keeps its last three versions, and several rows can be deleted at once.",
+                    chinese: "同一局存檔只佔一列，列內留最近 3 版，也可以多選刪除。"
+                ),
+                Line(
+                    english: "The DR3100 diesel express runs four times a day on the real map.",
+                    chinese: "真實地圖每天多跑四班 DR3100 柴聯自強號。"
+                ),
+                Line(
+                    english: "Dragging a zone greys out the squares no station reaches, and the Zoning tool opens on the use the city needs most.",
+                    chinese: "拖曳分區時，車站搆不到的格子先變灰；分區工具打開時先選城市最缺的用途。"
+                ),
+                Line(
+                    english: "Trains that stop wait on the passing loop, leaving the main line to trains running through.",
+                    chinese: "停站的列車改停待避線，正線留給通過的車。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Starting a lesson from the goals panel saves the game you are playing first.",
+                    chinese: "從目標面板開始關卡前，會先存好目前這局。"
+                ),
+                Line(
+                    english: "Laying track from the 3D view, Expand Map no longer sends you back to 3D.",
+                    chinese: "從 3D 進來鋪軌時，按「擴建地圖」不會再跳回 3D。"
+                ),
+                Line(
+                    english: "Dragging a new line from the end of a track no longer freezes the map.",
+                    chinese: "從軌道端點拖曳描線時，畫面不再卡住。"
+                ),
+                Line(
+                    english: "On an iPhone held sideways, a side panel's station or line name shows whole above it, and no empty mini map sits on the right.",
+                    chinese: "iPhone 橫拿時，側邊面板的站名與路線名完整顯示，右側不再有空的小地圖框。"
+                ),
+                Line(
+                    english: "Sights fold away as you zoom out, a station's warnings share one badge, and taps go to stations and track first.",
+                    chinese: "景點依縮放收起、同一站的警告合成一顆徽章，點擊先給車站與軌道。"
+                ),
+                Line(
+                    english: "Pressing Build from the 3D map brings you back to the same 3D view when you finish.",
+                    chinese: "從 3D 按「建設」，蓋完會回到 3D 原本的視角。"
+                ),
+                Line(
+                    english: "Taking up your own road no longer holds up the next tap.",
+                    chinese: "拆自己的路不再讓下一次點按卡住。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-10-31-100",
             items: [
                 Line(

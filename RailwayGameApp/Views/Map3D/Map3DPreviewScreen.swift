@@ -36,7 +36,15 @@ struct Map3DPreviewScreen: View {
     /// in its place of the close button; and the same with the building
     /// tools out. `nil` from the settings, which have no 2D map below.
     var toMap2D: ((Map3DHandoff.Plan) -> Void)? = nil
-    var build: ((Map3DHandoff.Plan) -> Void)? = nil
+    /// Decision 517: Build hands over this view too, to come back to as
+    /// building ends.
+    var build: ((Map3DHandoff.Plan, Map3DBuildReturn.Viewpoint) -> Void)? = nil
+    /// Decision 517: the view Build left, opened again as building ended.
+    var resumes: Map3DBuildReturn.Viewpoint? = nil
+    /// Decision 517 續: a station tapped here, its tag's details (`false`)
+    /// or its pencil (`true`) opened on the 2D map where this one looks.
+    /// `nil` from the settings, which have no 2D map below: no taps there.
+    var openStation: ((Map3DHandoff.Plan, _ rename: Bool) -> Void)? = nil
     /// Decision 414: the game screen while the idle mode runs, whose
     /// director picks the view the train is followed from; the controls
     /// are put away and a tap ends the mode (`endAmbient`).
@@ -54,6 +62,8 @@ struct Map3DPreviewScreen: View {
     @State private var compass = Map3DCompassState()
     @State private var cameraLink = Map3DCameraLink()
     @State private var trainLabels = Map3DTrainLabelState()
+    /// Decision 517 續: the station tapped and where its tag stands.
+    @State private var stationTag = Map3DStationTagState()
     /// Decision 403 (續二): the photo of the 3D map just taken, to share.
     @State private var photo = Map3DPhotoState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -78,9 +88,11 @@ struct Map3DPreviewScreen: View {
         ZStack {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
-                      start: handedOver, openedAt: openedAt, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
+                      start: handedOver, openedAt: openedAt, resumes: resumes, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
                       follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: ambient?.view3D ?? followView) },
                       departure: departure, world: session.world, modelsReady: modelsReady,
+                      stationTag: stationTag,
+                      onTap: openStation == nil || ambient != nil ? nil : { @MainActor camera, point in tapped(camera, at: point) },
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
@@ -90,9 +102,16 @@ struct Map3DPreviewScreen: View {
                 .ignoresSafeArea()
             Map3DTrainLabelsView(state: trainLabels, world: session.world)
                 .ignoresSafeArea()
+            if let openStation, ambient == nil {
+                Map3DStationTagView(state: stationTag, session: session) { rename in
+                    leave { plan in openStation(plan, rename) }
+                }
+                .ignoresSafeArea()
+            }
             if built == nil || !modelsReady {
                 ProgressView()
                     .controlSize(.large)
+                    .accessibilityIdentifier("map3D.loading")
             }
             VStack {
                 HStack(alignment: .top) {
@@ -130,7 +149,8 @@ struct Map3DPreviewScreen: View {
                             // Decision 313: building is on the 2D map; this
                             // takes the player there with the tools out.
                             Button {
-                                leave(to: build)
+                                guard let scene, let camera = cameraLink.camera else { return close() }
+                                build(Map3DHandoff.plan(from: camera, in: scene), Map3DBuildReturn.Viewpoint(camera: camera, in: scene))
                             } label: {
                                 Label {
                                     Text(verbatim: language.text("Build", "建設"))
@@ -241,6 +261,15 @@ struct Map3DPreviewScreen: View {
             // Decision 400, 10i-6: and the player's buses with it.
             feed.updateBuses(world: session.world, palette: linePalette, roads: session.busRoads, glides: !session.world.clock.isPaused && !reduceMotion)
         }
+        // Decision 517 續: a station picked on the 2D map keeps its tag here,
+        // once the scene is up to stand it on.
+        .onChange(of: sceneVersion) { _, _ in
+            guard openStation != nil, stationTag.station == nil, let id = session.selectedStationID,
+                  let scene, let camera = cameraLink.camera else { return }
+            let space = Map3DPick.Space(scene: scene)
+            stationTag.show(id, at: Map3DTap.anchor(of: id, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)),
+                            seenBy: camera)
+        }
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
@@ -305,6 +334,19 @@ struct Map3DPreviewScreen: View {
             UIBezierPath(roundedRect: band, cornerRadius: pad).fill()
             text.draw(with: band.insetBy(dx: pad, dy: pad), options: [.usesLineFragmentOrigin], context: nil)
         }
+    }
+
+    /// Decision 517 續: a tap at `point` seen by `camera` does to the
+    /// station under it what a tap on the 2D map does: selects it, its tag
+    /// under it; elsewhere lets go. Not while following a train.
+    private func tapped(_ camera: Map3DCamera, at point: CGPoint) {
+        guard let scene, session.followedTrain == nil,
+              let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
+        else { return }
+        let id = session.tapMap3D(at: hit, reach: Map3DTap.reach(at: hit.point, camera: camera))
+        let space = Map3DPick.Space(scene: scene)
+        let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)) }
+        stationTag.show(id, at: anchor, seenBy: camera)
     }
 
     /// Decision 403: the driving display of the train followed.
@@ -431,6 +473,12 @@ final class Map3DSceneCache {
             hold.reuse()
             return building
         }
+        // Decision 517 續 (PR 3b's measurement): why this one is built.
+        let why: Map3DSceneBuildTime.Why = if let previous = self.key, game === session {
+            previous.edges != key.edges || previous.lastEdge != key.lastEdge ? .track : .other
+        } else {
+            .first
+        }
         let world = session.world
         // The ground the world has not read yet, from the heights file,
         // so the blocks it has read do not stand up as cliffs.
@@ -451,6 +499,8 @@ final class Map3DSceneCache {
         // Decision 385: and the land with no town on it.
         let noBuild = world.geoAnchor == nil ? nil : BaseMapFiles.noBuild
         let task = Task.detached(priority: .userInitiated) {
+            let clock = ContinuousClock()
+            let started = clock.now
             let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
             let source = Map3DChunkSource(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), baseMap: baseMap,
                                           cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
@@ -460,7 +510,14 @@ final class Map3DSceneCache {
                                           lineBands: Map3DLineBands(world: world, palette: palette), railways: railways,
                                           temples: temples.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealTemples(data: $0) },
                                           noBuild: noBuild.flatMap { try? Data(contentsOf: $0) }.flatMap { try? RealNoBuildLand(data: $0) })
-            return Map3DBuiltScene(scene: source.scene(focus: focus), source: source)
+            let read = clock.now
+            let scene = source.scene(focus: focus)
+            let seconds = { (duration: Duration) in Double(duration.components.seconds) + Double(duration.components.attoseconds) * 1e-18 }
+            let number = Map3DSceneBuildLog.shared.add(Map3DSceneBuildTime(
+                why: why, realWorld: world.geoAnchor != nil, edges: world.network.edges.count, chunks: scene.chunks.count,
+                triangles: scene.triangleCount, readSeconds: seconds(read - started), buildSeconds: seconds(clock.now - read),
+                wall: Date().timeIntervalSince1970))
+            return Map3DBuiltScene(scene: scene, source: source, buildNumber: number)
         }
         self.key = key
         game = session
@@ -480,6 +537,9 @@ final class Map3DSceneCache {
 struct Map3DBuiltScene: Sendable {
     let scene: Map3DScene
     let source: Map3DChunkSource
+    /// Decision 517 續: its number in ``Map3DSceneBuildLog``, for the time
+    /// it takes to show.
+    var buildNumber: Int?
 }
 
 /// Decision 358: what a scene is built from, read once (the files) and
@@ -592,6 +652,9 @@ struct Map3DSceneKey: Hashable {
     /// BUGHUNT_BUILD P2-2: a road laid along the city's (free, decision
     /// 487) shows at once too, though the count above stays.
     let ownRoads: Set<CellPosition>
+    /// Decision 506, later: an expanded station's bigger building shows
+    /// at once.
+    let expansions: Int
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil) {
         self.hasHeights = hasHeights
@@ -608,6 +671,7 @@ struct Map3DSceneKey: Hashable {
         // PERF_3D_COCKPIT: counted, not made into one set at every tick.
         roads = world.roads?.roadCellCount ?? 0
         ownRoads = world.roads?.built ?? []
+        expansions = Map3DStationKit.expansionSignature(of: world)
     }
 }
 
@@ -743,6 +807,8 @@ private struct Map3DView: UIViewRepresentable {
     /// Decision 313, later: the 2D map's view the 3D button opened this
     /// over.
     let openedAt: Map3DHandoff.Plan?
+    /// Decision 517: the view Build left, to open at again.
+    let resumes: Map3DBuildReturn.Viewpoint?
     let farOut: ((Map3DCamera) -> Void)?
     /// Decision 269, later: the way the map faces, for the compass.
     let compass: Map3DCompassState
@@ -757,6 +823,11 @@ private struct Map3DView: UIViewRepresentable {
     let world: GameWorld
     /// Whether ``models`` is made; the first scene waits for it.
     let modelsReady: Bool
+    /// Decision 517 續: placed under its station each frame.
+    let stationTag: Map3DStationTagState
+    /// Decision 517 續: a tap on the map, with the camera then and where,
+    /// in points; `nil` takes none.
+    let onTap: (@MainActor (Map3DCamera, CGPoint) -> Void)?
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -795,7 +866,9 @@ private struct Map3DView: UIViewRepresentable {
         pan.maximumNumberOfTouches = 1
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
         let rotation = UIRotationGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.rotate(_:)))
-        for recognizer in [pan, pinch, rotation] as [UIGestureRecognizer] {
+        // Decision 517 續: a tap, which a drag, a pinch or a turn is not.
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
+        for recognizer in [pan, pinch, rotation, tap] as [UIGestureRecognizer] {
             recognizer.delegate = context.coordinator
             view.addGestureRecognizer(recognizer)
         }
@@ -812,6 +885,7 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 429: the junctions' signals change with the game clock.
         view.signalClock = Map3DSignalTiming.Clock(world.clock)
         context.coordinator.farOut = farOut
+        context.coordinator.onTap = onTap
         defer {
             // Decision 333: once the first scene has its camera, so the
             // flight starts from it.
@@ -844,7 +918,13 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 358: the chunks built ahead that the scene built anew
         // round the same place does not hold, kept until built again.
         let kept = context.coordinator.streamer.kept(for: scene)
+        let showing = ContinuousClock.now
         view.show(scene, keeping: kept)
+        // Decision 517 續 (PR 3b's measurement): how long handing it over took.
+        if let number = built?.buildNumber {
+            let took = ContinuousClock.now - showing
+            Map3DSceneBuildLog.shared.shown(number, seconds: Double(took.components.seconds) + Double(took.components.attoseconds) * 1e-18)
+        }
         context.coordinator.streamer.start(built, kept: kept)
         // Decision 338: the train pack's sets as before them until it is
         // unlocked.
@@ -857,13 +937,19 @@ private struct Map3DView: UIViewRepresentable {
             return pack
         }
         view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed, reach: reach) }
-        let labels = trainLabels
-        view.trainHeads = { heads, camera in labels.show(feed.labels(heads: heads, camera: camera)) }
+        let labels = trainLabels, tag = stationTag
+        view.trainHeads = { heads, camera in
+            labels.show(feed.labels(heads: heads, camera: camera))
+            tag.place(seenBy: camera)
+        }
         view.streetLife = { camera, lights, budget in feed.streetLife(in: scene, camera: camera, lights: lights, budget: budget) }
         if first, let start {
             // Decision 269: where the 2D map was, as close, straight down.
             view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)
             context.coordinator.handedOverAt = view.camera.distance
+        } else if first, let resumes {
+            // Decision 517: back where Build left, turned and leaning as it was.
+            view.camera = resumes.camera(in: scene, viewport: view.camera.viewport)
         } else if first {
             // Open over the place the 2D map showed (decision 313, later),
             // or from the settings the middle of what is built, the whole
@@ -885,6 +971,7 @@ private struct Map3DView: UIViewRepresentable {
         /// Decision 334: the departure last flown to.
         var flownTo: Map3DNextDeparture?
         var farOut: ((Map3DCamera) -> Void)?
+        var onTap: (@MainActor (Map3DCamera, CGPoint) -> Void)?
         /// Decision 269: how far out the camera a pinch handed over opened;
         /// `nil` when the 3D button opened the map.
         var handedOverAt: Float?
@@ -987,6 +1074,12 @@ private struct Map3DView: UIViewRepresentable {
             pinchFrom = nil
         }
 
+        /// Decision 517 續: following a train, a tap does nothing here.
+        @objc func tap(_ recognizer: UITapGestureRecognizer) {
+            guard recognizer.state == .ended, let view, view.following == nil, let onTap else { return }
+            onTap(view.camera, recognizer.location(in: view))
+        }
+
         @objc func rotate(_ recognizer: UIRotationGestureRecognizer) {
             if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
@@ -1083,6 +1176,88 @@ private struct Map3DCompassNeedle: Shape {
         path.addLine(to: point(17, 22))
         path.closeSubpath()
         return path
+    }
+}
+
+/// Decision 517 續: the station tapped on the 3D map, and where its tag
+/// stands: set by the screen on a tap, placed by the Metal view each frame
+/// as the camera moves, only when it moves a whole point.
+@MainActor
+@Observable
+final class Map3DStationTagState {
+    private(set) var station: StationID?
+    /// Where the station is drawn, in the view's points; `nil` behind the eye.
+    private(set) var point: CGPoint?
+    @ObservationIgnored private var anchor: Map3DPoint?
+
+    func show(_ id: StationID?, at anchor: Map3DPoint?, seenBy camera: Map3DCamera) {
+        station = anchor == nil ? nil : id
+        self.anchor = anchor
+        point = anchor.flatMap { camera.screenPoint(of: $0) }.map { CGPoint(x: CGFloat($0.x.rounded()), y: CGFloat($0.y.rounded())) }
+        pending = point
+    }
+
+    /// Called from the Metal view's frame: the move is taken after the
+    /// frame, once, not while the frame (which a view update can start) is
+    /// being drawn, so placing the tag never starts another update inside
+    /// one.
+    func place(seenBy camera: Map3DCamera) {
+        let next = anchor.flatMap { camera.screenPoint(of: $0) }.map { CGPoint(x: CGFloat($0.x.rounded()), y: CGFloat($0.y.rounded())) }
+        pending = next
+        guard next != point, !isPlacing else { return }
+        isPlacing = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            isPlacing = false
+            if pending != point { point = pending }
+        }
+    }
+
+    @ObservationIgnored private var pending: CGPoint?
+    @ObservationIgnored private var isPlacing = false
+}
+
+/// Decision 517 續: the 2D map's station tag (decision 119,
+/// ``StationTagCard``) under the station tapped on the 3D map; its details
+/// and pencil open on the 2D map. Shown while that station stays selected
+/// and nothing is followed; it pops up as on the 2D map (``MotionRule/pop``).
+private struct Map3DStationTagView: View {
+    let state: Map3DStationTagState
+    let session: GameSession
+    let open: (_ rename: Bool) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var size = CGSize(width: 160, height: 44)
+
+    /// The controls along the top and the hint along the bottom, kept clear.
+    private static let clear: (top: Float, leading: Float, bottom: Float, trailing: Float) = (72, 0, 64, 0)
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                if let tag, let origin = origin(in: proxy.size) {
+                    StationTagCard(tag: tag, session: session, details: { open(false) }, rename: { open(true) }, identifier: "map3D.stationTag")
+                        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+                        .offset(origin)
+                        .transition(.pop(anchor: .top, reduceMotion: reduceMotion))
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: state.station)
+        }
+    }
+
+    private var tag: StationTag? {
+        guard session.tool == .select, session.tutorial == nil, session.followedTrain == nil,
+              let id = state.station, id == session.selectedStationID else { return nil }
+        return StationTag(world: session.world, station: id)
+    }
+
+    private func origin(in viewport: CGSize) -> CGSize? {
+        guard let point = state.point,
+              let origin = Map3DTap.tagOrigin(under: Float(point.x), Float(point.y), width: Float(size.width), height: Float(size.height),
+                                              viewport: (Float(viewport.width), Float(viewport.height)), clear: Self.clear)
+        else { return nil }
+        return CGSize(width: CGFloat(origin.x), height: CGFloat(origin.y))
     }
 }
 

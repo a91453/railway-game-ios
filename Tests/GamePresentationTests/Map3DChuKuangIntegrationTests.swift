@@ -5,7 +5,7 @@ import XCTest
 /// Decision 430: the Chu-Kuang sets (E200CK, E500CK, R100CK, R200CK and the
 /// Midsummer Formosa) run #1306's automatic-door coach, near and far.
 final class Map3DChuKuangIntegrationTests: XCTestCase {
-    private let pack = Map3DModelPack.unbaked  // the recipes before decision 439's shade
+    private var pack: Map3DModelPack { .unbaked }  // the recipes before decision 439's shade
     private let keys = ["E200CK", "E500CK", "R100CK", "R200CK", "SUMMER"]
 
     private func model(_ name: String) throws -> Map3DModelPack.Model {
@@ -155,7 +155,7 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
     /// The sets stretched to a car's length have no layout of their own, as
     /// before: the 20 m coach is drawn the length it was.
     func testTheStretchedSetsStillHaveNoLayout() throws {
-        for key in ["R100CK", "E200CK", "R200CK"] {
+        for key in ["E200CK"] {
             for count in [3, 6, 12] { XCTAssertNil(pack.layout(forType: key, count: count), key) }
             XCTAssertFalse(try set(key, far: false).ownLengths)
             XCTAssertFalse(try set(key, far: true).ownLengths)
@@ -190,43 +190,46 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
         }
     }
 
-    /// The locomotives stay as they were: the far set has the near one's
+    /// The locomotives stay as they were (decision 529: but the R200, now
+    /// #1589's, near and far): the far set has the near one's
     /// where it has no light model of its own, the E500's light model where
     /// it has.
     func testTheLocomotivesAreUnchanged() throws {
         let heads: [String: String] = [
-            "E200CK": "8627afbfece96e5e", "R100CK": "e39e7101afd08de4", "R200CK": "d9d90477d06f35a4",
+            "E200CK": "8627afbfece96e5e", "R200CK": "a7b06e165ca838c8",
             "SUMMER": "bfdb194e7eb7d9ea", "E500CK": "9847c0f5eb19364",
         ]
         for (key, expected) in heads {
             XCTAssertEqual(hash(try model(try set(key, far: false).headName)), expected, key)
         }
-        for key in ["E200CK", "R100CK", "R200CK", "SUMMER"] {
+        for key in ["E200CK", "SUMMER"] {
             XCTAssertEqual(payload(try model(try set(key, far: true).headName)), payload(try model(try set(key, far: false).headName)), key)
         }
+        // Decision 529: the R200 as #1589's, near and far.
+        XCTAssertEqual(hash(try model("set-R200CKFar-head")), "85118900406cf626")
+        XCTAssertEqual(payload(try model("set-R200CKFar-head")), payload(Map3DTrainSet.litLenses(Map3DR200.model(far: true), front: true)))
         XCTAssertEqual(hash(try model("set-E500CKFar-head")), "8dbdf8cee771ebe4")
         XCTAssertEqual(payload(try model("set-E500CKFar-head")), payload(Map3DE500.model(far: true)))
         XCTAssertEqual(hash(try model("set-SUMMER-tender")), "dab705df760e2507")
         XCTAssertEqual(payload(try model("set-SUMMERFar-tender")), payload(try model("set-SUMMER-tender")))
         // The E200's and the E500's lamps are lit at the front, as before.
-        for key in ["E200CK", "E500CK", "SUMMER"] {
+        for key in ["E200CK", "E500CK", "R200CK", "SUMMER"] {
             XCTAssertTrue(try model(try set(key, far: false).headName).vertices.contains { $0.glows && $0.x > 4 }, key)
         }
     }
 
     /// The Blue Train, the Formosa Star and the steam train are not
     /// Chu-Kuang coaches: every model of them as it was on main before
-    /// this decision. (Decision 483 made the Ming-Ri #1480's E200CK units.)
+    /// this decision. (Decision 483 made the Ming-Ri #1480's E200CK units;
+    /// decision 541 the Blue Train two R100s and #1671's coaches.)
     func testTheOtherHauledSetsAreAsTheyWere() throws {
         let before: [String: String] = [
-            "set-BLUE-head": "84d4a14820279a14", "set-BLUE-car": "1ef18359c168b9f5", "set-BLUE-tail": "267f145e46bbcd85",
             "set-STAR-head": "9847c0f5eb19364", "set-STAR-car": "ad7930168200a9e5", "set-STAR-tail": "17bd7d1f746dd0b5",
             "set-STARFar-head": "8dbdf8cee771ebe4", "set-STARFar-car": "ad7930168200a9e5", "set-STARFar-tail": "17bd7d1f746dd0b5",
             "set-STEAM-head": "b043cf673bc3f74a", "set-STEAM-car": "1ef18359c168b9f5", "set-STEAM-tail": "267f145e46bbcd85",
             "set-STEAM-tender": "3f3c9943404f058f",
         ]
         for (name, expected) in before { XCTAssertEqual(hash(try model(name)), expected, name) }
-        XCTAssertNil(Map3DTrainSet.named("BLUEFar"))
         XCTAssertNil(Map3DTrainSet.named("STEAMFar"))
     }
 

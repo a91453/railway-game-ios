@@ -30,14 +30,18 @@ extension RealWorldDemo {
     /// with what they cost on top of a new game's money, so what is left is
     /// a new game's: the track's price depends on the ground under it, so
     /// the layout is planned over the ground first and priced edge by edge
-    /// (``GameWorld/trackEdgePrice(from:to:curve:profile:structure:)``).
+    /// (``GameWorld/trackEdgePrice(from:to:curve:profile:structure:mountain:)``).
     public static func make(
         in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = [],
         steep: [CellPosition] = [], heights: HeightGrid? = nil
     ) -> GameWorld {
         // Without the heights the lines would cross each other at 0 m where
         // on the ground one passes over the other: the flat demo instead.
-        guard let heights else { return makeFlat(in: language, railways: railways, land: land, water: water, steep: steep) }
+        guard let heights else {
+            var flat = makeFlat(in: language, railways: railways, land: land, water: water, steep: steep)
+            openSightsAndTransfers(in: &flat)
+            return flat
+        }
         let routes = GroundRoutes(railways: railways)
         func world(balance: Money, ground: [GroundBlock]) throws(GameError) -> GameWorld {
             var world = GameWorld.newGame(anchor: anchor, balance: balance, land: land, water: water, steep: steep)
@@ -62,8 +66,9 @@ extension RealWorldDemo {
             world.setRealCarLengths(false)
             // Decision 319: its demand keeps the hours it was measured by.
             world.setTidalDemand(false)
-            // Decision 174: nor do tourists come to its sights.
-            world.setTourism(nil)
+            // Decision 525: tourists come to its sights, and people change
+            // from the real railways.
+            openSightsAndTransfers(in: &world)
             // Decision 183: nor does the city ask it for anything.
             world.setCityRequests(seed: nil)
             try world.mapGround()
@@ -81,6 +86,17 @@ extension RealWorldDemo {
         } catch {
             preconditionFailure("The real-world demo no longer builds: \(error)")
         }
+    }
+
+    /// Opens the demo's tourism and real transfers (decision 525): the
+    /// sights on its map (Jiufen, the Sky Lanterns of Pingxi, Houtong's
+    /// cats among them) and the people who change at its stations from
+    /// the real railways. The demo has no targets, so nothing measured
+    /// moves; the Pingxi challenge, built on ``makeFlat(in:railways:land:water:steep:)``,
+    /// keeps its one sight and no transfers.
+    static func openSightsAndTransfers(in world: inout GameWorld) {
+        world.setTourism(RealWorldFrame(world: world).map { AttractionCatalog.attractions(in: $0, bounds: world.bounds) })
+        world.setRealTransfers(true)
     }
 
     // MARK: - The lines
@@ -616,6 +632,19 @@ struct TrackRise {
     struct Carried: Hashable {
         let range: ClosedRange<Double>
         let kind: RealRailStructures.Kind
+        /// How long the real structure is, in world units: more than
+        /// `range` where the path ends on it or in it (decision 513).
+        let length: Double
+
+        init(range: ClosedRange<Double>, kind: RealRailStructures.Kind, length: Double? = nil) {
+            self.range = range
+            self.kind = kind
+            self.length = max(length ?? 0, range.upperBound - range.lowerBound)
+        }
+
+        /// Whether it bounds the track: at least ``shortestCarried`` long,
+        /// the real structure, not only the part along the path.
+        var isLong: Bool { length >= TrackRise.shortestCarried }
     }
 
     /// Decision 279: how the real line's structures bound the track. On a
@@ -675,9 +704,15 @@ struct TrackRise {
         let count = max(1, Int((path.length / Self.spacing).rounded(.up)))
         let grid = (0...count).map { min(Double($0) * Self.spacing, path.length) }
         let ends = levels.flatMap { [$0.range.lowerBound, $0.range.upperBound] }.filter { (0...path.length).contains($0) }
+        // Decision 513: of two samples less than half a unit apart, a
+        // level's end, so that a level at the path's end has a sample.
         var distances: [Double] = []
-        for distance in (grid + ends).sorted() where distances.last.map({ distance - $0 > 0.5 }) ?? true {
-            distances.append(distance)
+        for distance in (grid + ends).sorted() {
+            if let last = distances.last, distance - last <= 0.5 {
+                if ends.contains(distance) { distances[distances.count - 1] = distance }
+            } else {
+                distances.append(distance)
+            }
         }
         self.distances = distances
         let points = distances.map { path.point(at: $0) }
@@ -798,10 +833,12 @@ struct TrackRise {
             if wet[index] { lastWet = distances[index] }
             nearWater[index] = nearWater[index] || lastWet - distances[index] <= carriedInset
         }
-        let long = carried.filter { $0.range.upperBound - $0.range.lowerBound >= shortestCarried }
+        let long = carried.filter(\.isLong)
         // What bounds each sample: low and high from the ground, or none.
         let each = zip(distances, nearWater).map { distance, nearWater -> (low: Double, high: Double)? in
-            if let stretch = long.first(where: { ($0.range.lowerBound + carriedInset...$0.range.upperBound - carriedInset).contains(distance) }) {
+            // Inside it, past its inset at each end: none of a long
+            // structure's part along the path shorter than both insets.
+            if let stretch = long.first(where: { $0.range.lowerBound + carriedInset <= distance && distance <= $0.range.upperBound - carriedInset }) {
                 switch stretch.kind {
                 case .bridge: return (carriedHeight, .infinity)
                 case .tunnel: return (-.infinity, -carriedDepth)

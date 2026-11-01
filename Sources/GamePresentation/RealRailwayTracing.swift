@@ -254,6 +254,21 @@ struct TracePlan {
     /// Decision 468: the trace stops after all its stretches, where track
     /// already laid leaves no room to go on.
     var stopsAfter = false
+    /// Decision 513: where no grade reaches from one end to the other
+    /// (``TrackRise`` finds none, so there are no stretches), the way
+    /// along the real line, each point at the height the tool would lay
+    /// it on the ground, for the card to show.
+    var refusedWay: [WorldCoordinate] = []
+    /// Decision 521's second sequel: the preview copy with exactly the
+    /// first ``buildable`` stretches built on it, as the trace found them,
+    /// for the preview to price instead of building the chain again; `nil`
+    /// where GameCore refused an edge (a refused edge may leave its first
+    /// node in the copy). Decision 521's fourth sequel: a trace put
+    /// together from pieces builds them all on one copy, so it has one too.
+    var built: GameWorld?
+    /// The edges of those stretches on ``built``, in order; empty where it
+    /// is `nil`.
+    var builtEdges: [TrackEdgeID] = []
 
     var stopped: Bool { buildable < stretches.count || stopsAfter }
 }
@@ -264,6 +279,31 @@ extension GameSession {
     /// between two of its heights, rounded to whole units, never exceeds
     /// it.
     static let traceGrade = 0.038
+
+    /// Decision 515: the steepest grade a stretch of a real mountain line
+    /// (``mountainSystems``) is laid at, a little under mountain track's 70
+    /// in 1,000 (``TrackProfile/maximumMountainGrade``) for the same
+    /// reason, and by as much as ``traceGrade`` is under 40: at 68 the
+    /// Alishan line's curves, each a little shorter than the traced way
+    /// under it, came out at 70.8.
+    static let mountainTraceGrade = 0.066
+
+    /// Decision 515: the real railways whose lines climb more steeply than
+    /// the game's 40 in 1,000, which a trace lays as mountain track where
+    /// it must: the Alishan Forest Railway, whose ruling grade is 62.5 in
+    /// 1,000 (the Forestry and Nature Conservation Agency's 林業軌道 page,
+    /// recreation.forest.gov.tw/Railway/Introduce, which the Railway
+    /// reference's `docs/afr-push-pull-0913.md` cites for its switchbacks).
+    /// The other real lines of the map (the TRA's 25 in 1,000 at most, the
+    /// High Speed Rail's, the metros') climb no more than the game's
+    /// grade.
+    static let mountainSystems: Set<String> = ["afr_sched"]
+
+    /// The steepest grade a trace of a real line of `system` is laid at:
+    /// ``mountainTraceGrade`` for a mountain line, else ``traceGrade``.
+    static func traceGrade(ofSystem system: String?) -> Double {
+        system.map(mountainSystems.contains) ?? false ? mountainTraceGrade : traceGrade
+    }
 
     /// Whether the network tool can trace the real railway here: on a
     /// real-world map whose real railways are loaded.
@@ -328,6 +368,31 @@ extension GameSession {
     /// and the `platforms` to lay along it, each from one point of the way
     /// to another: each becomes one level edge, its ends nodes.
     ///
+    /// Decision 513: the real stations of `system` (the line's at the
+    /// start's where none is given) along `path`, each with the longest
+    /// platform's length of the path about it, an end near the path's end
+    /// drawn to it: where the player's trace lays its track level, as the
+    /// real station stands.
+    func tracedStationSpans(along path: WorldPath, system: String?) -> [ClosedRange<Double>] {
+        let reach = Self.traceReach(NetworkBuilding.minimumSpacing * 2)
+        guard let railways, let frame = RealWorldFrame(world: world), let first = path.points.first,
+              let system = system ?? realRailwayTraces.flatMap({ traces in traces.snap(first, within: reach).map { traces.lines[$0.place.line].system } })
+        else { return [] }
+        let length = Double(Int64(Train.maximumCars) * world.platformCarLength)
+        let margin = Double(NetworkBuilding.minimumSpacing)
+        var spans: [ClosedRange<Double>] = []
+        for station in railways.stations where station.system.id == system {
+            let near = path.nearest(WorldVector(frame.worldPosition(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude)))
+            guard near.away <= DemoRealLines.stationReach else { continue }
+            var low = max(0, near.along - length / 2), high = min(path.length, near.along + length / 2)
+            if low < margin { low = 0 }
+            if path.length - high < margin { high = path.length }
+            guard high - low >= margin, !spans.contains(where: { $0.overlaps(low...high) }) else { continue }
+            spans.append(low...high)
+        }
+        return spans.sorted { $0.lowerBound < $1.lowerBound }
+    }
+
     /// Decision 400 A.8: `onGround`, all of it on the ground, as the game's
     /// stations are (decision 132), whatever the tool's height and
     /// structure and the real line's tunnels and viaducts.
@@ -335,9 +400,15 @@ extension GameSession {
     /// Decision 401's sequel: `system`, the real line's system, sets the
     /// tightest curve (``traceMinimumRadius(ofSystem:)``; the line at the
     /// start's where none is given).
+    ///
+    /// Decision 521's fourth sequel: GameCore builds the edges on `base`
+    /// where one is given (a preview copy with the pieces of the trace
+    /// before this one built on it, ``traceAlong(from:to:)``), else on a
+    /// preview copy of the world; the way is planned on the world either
+    /// way.
     func tracePlan(
         from start: NetworkAnchor, to end: NetworkAnchor, along given: [WorldVector]? = nil, platforms: [(WorldVector, WorldVector)] = [],
-        onGround: Bool = false, system: String? = nil
+        onGround: Bool = false, system: String? = nil, buildingOn base: GameWorld? = nil
     ) -> TracePlan? {
         let networkHeight = onGround ? 0 : self.networkHeight
         let networkStructure = onGround ? TrackStructure.automatic : self.networkStructure
@@ -374,7 +445,7 @@ extension GameSession {
             let plan = point.plan
             return planning.terrain.isWater(row: Int(plan.y / Land.cellLength), column: Int(plan.x / Land.cellLength))
         }
-        // An end on track keeps that track's height; a new end stands on
+        // An end on track keeps that track's height; a new end stands near
         // the ground, or as the tool sets it above.
         var levels: [TrackRise.Level] = []
         if case .point = start {} else { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
@@ -386,6 +457,7 @@ extension GameSession {
         // light rails'.
         var carried: [TrackRise.Carried] = []
         var carriedEnds = (start: false, end: false)
+        var looseEnds = (start: false, end: false)
         if mapped, !onGround, networkStructure == .automatic, networkHeight == 0 || demoKeepsRealStructures, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
            let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
             carried = structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system)
@@ -395,8 +467,10 @@ extension GameSession {
             // reaching past it; elsewhere it stands where the tool puts it,
             // and the track climbs or falls from it to the real line's
             // viaduct or tunnel.
+            // Decision 513: how long the real structure is, not the part
+            // of it along the way (a short trace ends in a long tunnel).
             let on = RealRailStructures.sampleSpacing
-            for (index, stretch) in carried.enumerated() where stretch.range.upperBound - stretch.range.lowerBound >= TrackRise.shortestCarried {
+            for (index, stretch) in carried.enumerated() where stretch.isLong {
                 var range = stretch.range
                 if case .point = start, range.lowerBound <= on {
                     range = -TrackRise.carriedInset...range.upperBound
@@ -406,32 +480,66 @@ extension GameSession {
                     range = range.lowerBound...path.length + TrackRise.carriedInset
                     carriedEnds.end = true
                 }
-                carried[index] = TrackRise.Carried(range: range, kind: stretch.kind)
-            }
-            if !carried.isEmpty {
-                if case .point = start, !carriedEnds.start { levels.append(TrackRise.Level(0...0, at: Double(from.z))) }
-                if case .point = end, !carriedEnds.end { levels.append(TrackRise.Level(path.length...path.length, at: Double(to.z))) }
+                carried[index] = TrackRise.Carried(range: range, kind: stretch.kind, length: stretch.length)
             }
         }
-        guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: Self.traceGrade, carried: carried) else {
-            return TracePlan(stretches: [], buildable: 0, problem: language.text(
+        // Decision 513: a new end elsewhere stands near where the tool puts
+        // it, on an embankment or in a cutting as the track between does
+        // (``TrackRise/surfaceBand``), at the height the grade lays it:
+        // the ground the game reads beside a real tunnel's mouth or a
+        // bridge's end is the hillside or the bank, steeper than the real
+        // line, and an end held to it left the track no grade to it. On
+        // the ground (decision 400 A.8), as before.
+        if !onGround {
+            let band = TrackRise.surfaceBand
+            if case .point = start, !carriedEnds.start {
+                levels.append(TrackRise.Level(0...0, from: Double(from.z) + band.low, to: Double(from.z) + band.high))
+                looseEnds.start = true
+            }
+            if case .point = end, !carriedEnds.end {
+                levels.append(TrackRise.Level(path.length...path.length, from: Double(to.z) + band.low, to: Double(to.z) + band.high))
+                looseEnds.end = true
+            }
+        }
+        // Decision 513: the player's trace level at the real line's
+        // stations, as the demo's platforms are; a station on a real
+        // viaduct or in a real tunnel stands on it or in it, as above.
+        let levelSpans = !platforms.isEmpty ? spans : tracedStationSpans(along: path, system: system).filter { span in
+            !carried.contains { $0.isLong && $0.range.overlaps(span) }
+        }
+        // Decision 515: a real mountain line climbs as steeply as mountain
+        // track may.
+        let lineSystem = system ?? realRailwayTraces.flatMap { traces in
+            traces.snap(WorldVector(from.plan), within: reach).map { traces.lines[$0.place.line].system }
+        }
+        let grade = Self.traceGrade(ofSystem: lineSystem)
+        let climbs = grade > Self.traceGrade
+        guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: grade, carried: carried) else {
+            var refused = TracePlan(stretches: [], buildable: 0, problem: climbs ? language.text(
+                "The track cannot climb from one end to the other along this line within the steepest grade of mountain track, 70‰.",
+                "沿這段真實鐵路，從一端到另一端的高低差超過登山軌道的坡度上限 70‰，鋪不上去。"
+            ) : language.text(
                 "The track cannot climb from one end to the other along this line within the steepest grade, 40‰.",
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
             ))
+            refused.refusedWay = [from] + path.points.dropFirst().dropLast().map {
+                WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: Int64(ground($0).rounded()))
+            } + [to]
+            return refused
         }
         // Decision 351: each platform level, between the heights the track
         // would have along it.
-        if !spans.isEmpty {
-            let flat = spans.map { span in
+        if !levelSpans.isEmpty {
+            let flat = levelSpans.map { span in
                 let heights = stride(from: span.lowerBound, through: span.upperBound, by: TrackRise.spacing).map { rise.height(at: $0) } + [rise.height(at: span.upperBound)]
                 return TrackRise.Level(span, from: heights.min() ?? 0, to: heights.max() ?? 0)
             }
-            if let levelled = TrackRise(path: path, ground: ground, water: water, levels: levels + flat, grade: Self.traceGrade, carried: carried) {
+            if let levelled = TrackRise(path: path, ground: ground, water: water, levels: levels + flat, grade: grade, carried: carried) {
                 rise = levelled
             }
         }
-        if carriedEnds.start { from = WorldCoordinate(x: from.x, y: from.y, z: rise.node(at: 0)) }
-        if carriedEnds.end { to = WorldCoordinate(x: to.x, y: to.y, z: rise.node(at: path.length)) }
+        if carriedEnds.start || looseEnds.start { from = WorldCoordinate(x: from.x, y: from.y, z: rise.node(at: 0)) }
+        if carriedEnds.end || looseEnds.end { to = WorldCoordinate(x: to.x, y: to.y, z: rise.node(at: path.length)) }
 
         // Each end leaves the track there along it, where the tool joins
         // track (as one stretch does, decision 103).
@@ -454,7 +562,7 @@ extension GameSession {
             }
         }
         let plan = RealWorldDemo.TrackPlan(
-            path, forced: [0, path.length] + spans.flatMap { [$0.lowerBound, $0.upperBound] }, avoiding: spans,
+            path, forced: [0, path.length] + levelSpans.flatMap { [$0.lowerBound, $0.upperBound] }, avoiding: levelSpans,
             start: (from.plan, startDirection), end: (to.plan, endDirection),
             rise: rise, structure: networkStructure
         )
@@ -463,24 +571,36 @@ extension GameSession {
         for (index, curve) in plan.curves.enumerated() {
             let a = index == 0 ? from : WorldCoordinate(x: plan.nodes[index].point.x, y: plan.nodes[index].point.y, z: plan.heights[index])
             let b = index + 1 == last ? to : WorldCoordinate(x: plan.nodes[index + 1].point.x, y: plan.nodes[index + 1].point.y, z: plan.heights[index + 1])
-            let surveyed = TrackGeometry(from: a, to: b, curve: curve).map(NetworkBuilding.surveyedPoints(of:)) ?? []
+            let geometry = TrackGeometry(from: a, to: b, curve: curve)
+            let surveyed = geometry.map(NetworkBuilding.surveyedPoints(of:)) ?? []
+            // Decision 515: on a mountain line, only what is steeper than
+            // the game's grade is mountain track.
+            let steep = climbs && geometry.map { !$0.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) } ?? false
             stretches.append(PlayerCommand.TrackStretch(
                 start: index == 0 ? start : .point(a.plan), end: index + 1 == last ? end : .point(b.plan),
                 from: a, to: b, curve: curve, profile: .uniform, structure: networkStructure,
-                ground: [a.plan, b.plan] + surveyed
+                ground: [a.plan, b.plan] + surveyed, mountain: steep
             ))
         }
 
         // GameCore's answer, edge by edge, on the copy; an edge whose curve
         // turns tighter than the tool lays stops it first. Cash does not
         // stop it (decision 245): the preview weighs the whole price.
-        draft = draft.pricingCopy()
+        var copy: GameWorld
+        if var base {
+            // The same ground read in as on the draft, all at once: read a
+            // stretch at a time, it took longer to build on.
+            try? base.readGround(under: samples, from: heights)
+            copy = base
+        } else {
+            copy = draft.trackPreviewCopy()
+        }
         var built = 0
+        var builtEdges: [TrackEdgeID] = []
         var problem: String?
         var previous: TrackNodeID?
-        let tightest = Self.traceMinimumRadius(ofSystem: system ?? realRailwayTraces.flatMap { traces in
-            traces.snap(WorldVector(from.plan), within: reach).map { traces.lines[$0.place.line].system }
-        })
+        var refused = false
+        let tightest = Self.traceMinimumRadius(ofSystem: lineSystem)
         for stretch in stretches {
             if let radius = Self.tightestRadius(of: stretch), radius < tightest {
                 problem = language.text(
@@ -489,15 +609,30 @@ extension GameSession {
                 )
                 break
             }
+            let next = stretch.starting(at: previous)
             do throws(GameError) {
-                previous = try stretch.starting(at: previous).build(in: &draft, heights: heights).to
+                let edge = try next.build(in: &copy, heights: heights)
+                previous = edge.to
+                builtEdges.append(edge.edge)
                 built += 1
             } catch {
-                problem = error.playerMessage(in: language)
+                // Decision 513: which check, where GameCore's error covers
+                // several; asked of the world before the trace, as a
+                // refused stretch may leave its first node in the copy.
+                // Decision 515: mountain track's own limit.
+                problem = stretch.mountain && error == .trackTooSteep ? language.text(
+                    "That track would be too steep. Mountain track may climb or fall at most 70 in 1000.",
+                    "這段軌道太陡了。登山軌道的坡度最多 70‰。"
+                ) : error.playerMessage(building: next, in: planning, heights: heights, language: language)
+                refused = true
                 break
             }
         }
         var found = TracePlan(stretches: stretches, buildable: built, problem: problem)
+        if !refused {
+            found.built = copy
+            found.builtEdges = builtEdges
+        }
         found.platformStretches = spans.map { span in
             plan.distances.indices.dropLast().first {
                 abs(plan.distances[$0] - span.lowerBound) < 1 && abs(plan.distances[$0 + 1] - span.upperBound) < 1
@@ -508,9 +643,8 @@ extension GameSession {
 }
 
 extension GameSession {
-    /// The tightest curve a traced edge may have on the TRA, the High
-    /// Speed Rail and the Alishan Forest Railway: 40 m, the forest
-    /// railway's tightest. GameCore has no curve radius (a stretch may turn
+    /// The tightest curve a traced edge may have on the TRA and the High
+    /// Speed Rail: 40 m, the forest railway's tightest. GameCore has no curve radius (a stretch may turn
     /// up to 90° where it joins, decision 103); this only stops a trace
     /// where a kink in the real line's drawing, or a link between two
     /// lines, would bend the track into a hairpin. Measured as the
@@ -520,13 +654,16 @@ extension GameSession {
     /// The tightest on the metros and light rails (decision 401's sequel):
     /// 20 m. Their real lines turn tighter than the forest railway's, the
     /// Wenhu Line about 35 m round its corners and Kaohsiung's Circular
-    /// Line 26 m, and 40 m left gaps in them.
+    /// Line 26 m, and 40 m left gaps in them. Since decision 515 the
+    /// Alishan Forest Railway's too: its drawn line measures 28 to 39 m
+    /// round its real 40 m curves, and 40 m stopped every trace of it
+    /// within a station or two.
     static let urbanTraceMinimumRadius = 20 * RealRailwayTraces.metre
 
     /// The tightest curve a traced edge of `system`'s line may have.
     static func traceMinimumRadius(ofSystem system: String?) -> Double {
         switch system {
-        case nil, "tra_sched", "thsr_sched", "afr_sched": traceMinimumRadius
+        case nil, "tra_sched", "thsr_sched": traceMinimumRadius
         default: urbanTraceMinimumRadius
         }
     }
@@ -562,7 +699,7 @@ extension GameSession {
             TrackGeometry(from: stretch.from, to: stretch.to, curve: stretch.curve)?.points ?? [stretch.from, stretch.to]
         }
         let built = Array(plan.stretches.prefix(plan.buildable))
-        var draft = world.pricingCopy()
+        var draft = world.trackPreviewCopy()
         var cost: Money?
         var command = PlayerCommand.buildTrackChain(built)
         // Decision 247: with double track on, the second track beside it;
@@ -571,7 +708,7 @@ extension GameSession {
         let decided = plan.existing.isEmpty ? tracedDouble(built) : (double: false, real: nil)
         var double: Result<DoubleChainPlan, TraceDoubleProblem>?
         if decided.double, !built.isEmpty {
-            double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped)
+            double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped, traced: plan)
         }
         switch double {
         case .success(let found)?:
@@ -581,7 +718,12 @@ extension GameSession {
         case .failure?:
             break
         case nil:
-            if !built.isEmpty, (try? apply(command, to: &draft)) != nil {
+            // Decision 521's second sequel: the copy the trace built the
+            // same chain on, not the chain built again.
+            if !built.isEmpty, let traced = plan.built {
+                draft = traced
+                cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+            } else if !built.isEmpty, (try? apply(command, to: &draft)) != nil {
                 cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
             }
         }
@@ -609,11 +751,16 @@ extension GameSession {
             }
             if !piece.isEmpty { pieces.append(piece) }
         }
-        let first = plan.stretches.first, last = built.last
+        // Decision 513: refused from its first edge, the whole way and its
+        // far end, as drawn, not 0 m and the first edge's end; with no
+        // stretch at all (no grade reaches), the real line's way.
+        let first = plan.stretches.first, last = built.isEmpty ? plan.stretches.last : built.last
+        if plan.stretches.isEmpty { shown = plan.refusedWay }
+        let wayLength = plan.stretches.isEmpty ? Self.drawnLength(of: [plan.refusedWay]) : built.isEmpty ? Self.drawnLength(of: points) : length
         let isJoined: (NetworkAnchor) -> Bool = { if case .point = $0 { false } else { true } }
         var preview = NetworkPreview(
-            curve: first?.curve ?? .straight, profile: .uniform, points: shown, length: length,
-            startHeight: first?.from.z ?? 0, endHeight: (last ?? first)?.to.z ?? 0,
+            curve: first?.curve ?? .straight, profile: .uniform, points: shown, length: wayLength,
+            startHeight: first?.from.z ?? plan.refusedWay.first?.z ?? 0, endHeight: last?.to.z ?? plan.refusedWay.last?.z ?? 0,
             joinsStart: isJoined(start), joinsEnd: !plan.stopped && isJoined(end),
             cost: built.isEmpty ? nil : cost,
             problem: built.isEmpty ? (plan.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")) : shortfall,
@@ -650,6 +797,19 @@ extension GameSession {
         return (preview, second)
     }
 
+    /// The length in plan of the centre lines `pieces`, one after another
+    /// (decision 513).
+    static func drawnLength(of pieces: [[WorldCoordinate]]) -> Int64 {
+        var total = 0.0
+        for piece in pieces {
+            for (a, b) in zip(piece, piece.dropFirst()) {
+                let dx = Double(b.x - a.x), dy = Double(b.y - a.y)
+                total += (dx * dx + dy * dy).squareRoot()
+            }
+        }
+        return Int64(total.rounded())
+    }
+
     /// What a trace that joins track already laid says (decision 468):
     /// "Joins the track already laid for 1.2 km, at no cost.", and where
     /// the player wanted double track, that it is single here.
@@ -672,8 +832,11 @@ extension GameSession {
     /// (decision 247), on ``networkDoubleSide``, and a crossover at each
     /// end that joins track (the far end only when the trace gets there);
     /// or why not, as the player reads it.
+    ///
+    /// Decision 521's fourth sequel: on the copy `traced` built `built` on
+    /// where it has one (``TracePlan/built``), not built again.
     func tracedDoublePlan(
-        _ built: [PlayerCommand.TrackStretch], from start: NetworkAnchor, to end: NetworkAnchor, reachesEnd: Bool
+        _ built: [PlayerCommand.TrackStretch], from start: NetworkAnchor, to end: NetworkAnchor, reachesEnd: Bool, traced: TracePlan? = nil
     ) -> Result<DoubleChainPlan, TraceDoubleProblem> {
         guard let parallel = parallelChain(beside: built.map(ChainSegment.init), side: networkDoubleSide, in: world) else {
             return .failure(TraceDoubleProblem(text: Self.noParallelText(in: language)))
@@ -681,7 +844,8 @@ extension GameSession {
         do throws(GameError) {
             return .success(try planDoubleChain(
                 main: built, run: [], parallel: parallel, platforms: [],
-                wantsCrossover: (needsCrossover(start, in: world), reachesEnd && needsCrossover(end, in: world)), in: world
+                wantsCrossover: (needsCrossover(start, in: world), reachesEnd && needsCrossover(end, in: world)), in: world,
+                mainBuilt: traced.flatMap { plan in plan.built.map { (world: $0, edges: plan.builtEdges) } }
             ))
         } catch {
             return .failure(TraceDoubleProblem(text: error.playerMessage(in: language)))
@@ -702,7 +866,7 @@ extension GameSession {
         var crossovers = DoubleTrack.CrossoverOutcome.none
         let decided = plan.existing.isEmpty ? tracedDouble(stretches) : (double: false, real: nil)
         if decided.double {
-            switch tracedDoublePlan(stretches, from: start, to: end, reachesEnd: !plan.stopped) {
+            switch tracedDoublePlan(stretches, from: start, to: end, reachesEnd: !plan.stopped, traced: plan) {
             case .success(let found):
                 command = found.command
                 crossovers = found.outcome
@@ -799,7 +963,8 @@ extension PlayerCommand.TrackStretch {
         guard let node else { return self }
         if case .node = start { return self }
         return PlayerCommand.TrackStretch(
-            start: .node(node), end: end, from: from, to: to, curve: curve, profile: profile, structure: structure, ground: ground
+            start: .node(node), end: end, from: from, to: to, curve: curve, profile: profile, structure: structure, ground: ground,
+            mountain: mountain
         )
     }
 }
@@ -921,5 +1086,76 @@ extension GameSession {
         double
             ? language.text("Double track, as the real railway is here.", "照真實鐵路鋪成複線。")
             : language.text("Single track, as the real railway is here.", "照真實鐵路鋪成單線。")
+    }
+}
+
+extension GameSession {
+    /// For the website screenshot test (decision 513): the network tool
+    /// tracing single track along the North-Link Line from 3,500 m to
+    /// 3,400 m south of Nan'ao, which no grade reaches on the map a game
+    /// started there has, and the map looking over it; whether the trace
+    /// was refused. Through the tool's own taps.
+    @discardableResult
+    public func traceWhereNoGradeReaches() -> Bool {
+        guard canTraceRealRailway, let railways, let frame = RealWorldFrame(world: world),
+              let nanao = RealLineLaying.realPoint(of: "南澳", system: "tra_sched", railways: railways, frame: frame) else { return false }
+        let paths = railways.lines.filter { $0.system.id == "tra_sched" && $0.points.count > 20 }.map { line in
+            WorldPath(line.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) })
+        }
+        guard let path = paths.min(by: {
+            ($0.point(at: $0.project(nanao)) - nanao).length < ($1.point(at: $1.project(nanao)) - nanao).length
+        }) else { return false }
+        let metre = Double(WorldCoordinate.unitsPerMetre), station = path.project(nanao)
+        let a = path.point(at: station - 3_500 * metre).plan, b = path.point(at: station - 3_400 * metre).plan
+        selectTool(.network)
+        setNetworkMode(.build)
+        networkTracesRealRailway = true
+        networkBuildsDouble = false
+        let reach = 24 * WorldCoordinate.unitsPerMetre
+        tapNetwork(at: a, reach: reach)
+        tapNetwork(at: b, reach: reach)
+        lookOver(WorldRegion(
+            minX: Double(min(a.x, b.x)), minY: Double(min(a.y, b.y)),
+            maxX: Double(max(a.x, b.x)), maxY: Double(max(a.y, b.y))
+        ))
+        return networkPreview?.traced == 0
+    }
+}
+
+extension GameSession {
+    /// For the website screenshot test (decision 521's third sequel): the
+    /// network tool tracing from `from` to `to`, the map looking close over
+    /// the stretch a third of the way along (or, with `joining`, first
+    /// laying the middle third and looking where the trace joins it);
+    /// where it looks when the preview can be built, `nil` when it cannot.
+    /// Through the tool's own taps.
+    @discardableResult
+    public func traceForPreviewScreenshot(from: String, to: String, joining: Bool) -> WorldRegion? {
+        guard canTraceRealRailway, let railways, let frame = RealWorldFrame(world: world),
+              let start = RealLineLaying.realPoint(of: from, system: "tra_sched", railways: railways, frame: frame),
+              let end = RealLineLaying.realPoint(of: to, system: "tra_sched", railways: railways, frame: frame),
+              let traces = realRailwayTraces else { return nil }
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        guard let a = traces.snap(start, within: 50 * metre), let b = traces.snap(end, within: 50 * metre),
+              let points = traces.path(from: a.place, to: b.place) else { return nil }
+        let way = WorldPath(points)
+        selectTool(.network)
+        setNetworkMode(.build)
+        networkTracesRealRailway = true
+        let reach = 24 * WorldCoordinate.unitsPerMetre
+        if joining {
+            networkBuildsDouble = false
+            networkDoubleChosen = true
+            tapNetwork(at: way.point(at: way.length / 3).plan, reach: reach)
+            tapNetwork(at: way.point(at: way.length * 2 / 3).plan, reach: reach)
+            buildNetworkTrack()
+            clearNetworkDraft()
+        }
+        tapNetwork(at: start.plan, reach: reach)
+        tapNetwork(at: end.plan, reach: reach)
+        let centre = way.point(at: way.length / 3), half = (joining ? 500 : 250) * metre
+        let region = WorldRegion(minX: centre.x - half, minY: centre.y - half, maxX: centre.x + half, maxY: centre.y + half)
+        lookOver(region)
+        return networkPreview?.problem == nil ? region : nil
     }
 }

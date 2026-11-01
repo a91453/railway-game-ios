@@ -228,8 +228,161 @@ final class TrafficOverlayTests: XCTestCase {
 
         session.setTrafficControl(false)
         XCTAssertNotEqual(session.trafficMemo?.revision, session.worldRevision)
+        // Decision 497 (P2-3): read again off the main actor.
+        _ = session.trafficOverlay
+        await session.mapReadsSettled()
         XCTAssertEqual(session.trafficOverlay, TrafficOverlay())
         XCTAssertNil(session.routeWaitText(of: east))
+    }
+
+    /// Decision 497 (P2-7): a wait for a train that will not move off by
+    /// itself is not a deadlock, but nothing tells the player which train
+    /// to move. The words and a stuck bubble name it and why.
+    func testAWaitForATrainStandingStillSaysWhichAndWhy() throws {
+        var world = try passingLoopWorld()
+        try world.setTrafficControl(true)
+        // Westbound out of service where it stands, on no line.
+        try world.stopTrainService(west)
+        var waited = false
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            if world.trainHoldingRoute(of: east) == west { waited = true; break }
+        }
+        XCTAssertTrue(waited, "Eastbound waits for Westbound")
+        XCTAssertEqual(world.deadlockedTrains(), [], "not a deadlock: Westbound counts as one that will go")
+        XCTAssertEqual(world.standingStill(west), .onNoLine)
+        XCTAssertNil(world.standingStill(east))
+        let words = try XCTUnwrap(world.routeWaitText(of: east, in: .english))
+        XCTAssertTrue(words.hasSuffix("(Westbound: on no line)"), words)
+        let chinese = try XCTUnwrap(world.routeWaitText(of: east, in: .traditionalChinese))
+        XCTAssertTrue(chinese.hasSuffix("（Westbound：沒有派給任何路線）"), chinese)
+        assertReasonsMatchTheWords(world.trafficOverlay(), in: world)
+        XCTAssertEqual(world.situationAlerts().map(\.kind), [.trainStuck(east)], "a bubble on the train that waits")
+
+        // Its speed set to 0 by the player.
+        try world.setTrainMovementRate(west, to: 0)
+        XCTAssertEqual(world.standingStill(west), .stoppedByPlayer)
+        XCTAssertTrue(try XCTUnwrap(world.routeWaitText(of: east, in: .english)).hasSuffix("(Westbound: stopped by you)"))
+        XCTAssertEqual(world.situationAlerts().map(\.kind), [.trainStuck(east)])
+    }
+
+    /// A station on track of its own, joined to nothing: no way leads
+    /// there from the loop, or from it to the loop.
+    private func island(in world: inout GameWorld) throws -> (station: StationID, edge: TrackEdgeID) {
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 10_240))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 9_216, y: 10_240))
+        let edge = try world.buildTrackEdge(from: a, to: b)
+        let station = try world.buildStation(named: "Island", at: PlanPoint(x: 5_120, y: 11_264)).id
+        try world.addTrackPlatform(station, on: edge, from: 1_024, to: 7_168)
+        return (station, edge)
+    }
+
+    /// Decision 497 (P2-7): a train due to leave with no way to its next
+    /// stop says so on its card and gets a bubble, traffic control on or
+    /// off.
+    func testATrainWithNoWayOnSaysSo() throws {
+        var world = try passingLoopWorld()
+        let (station, edge) = try island(in: &world)
+        let shuttle = try world.purchaseTrain(named: "Shuttle").id
+        try world.setTrainCars(shuttle, to: 2)
+        try world.placeTrain(shuttle, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 6_144))
+        try world.setTrainContinuation(shuttle, along: [], stoppingAt: 6_144)
+        try world.setTrainMovementRate(shuttle, to: 1_024)
+        let w = try XCTUnwrap(world.stations.first { $0.name == "W" }).id
+        try world.setTrainTimetable(shuttle, to: [
+            ScheduledStop(station: station, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
+            ScheduledStop(station: w, arrival: GameTime(minutes: 4), departure: GameTime(minutes: 4)),
+        ])
+        try world.startTrainService(shuttle)
+        var controlled = world
+        try controlled.setTrafficControl(true)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.heldDeparture(of: shuttle), .noRoute(to: w))
+        XCTAssertEqual(world.routeWaitText(of: shuttle, in: .english), "No way on to W: check the track to it")
+        XCTAssertEqual(world.routeWaitText(of: shuttle, in: .traditionalChinese), "沒有路可以開到 W：檢查往那裡的軌道")
+        XCTAssertEqual(world.situationAlerts().map(\.kind), [.trainStuck(shuttle)])
+        try controlled.advance(ticks: 1)
+        XCTAssertEqual(controlled.routeWaitText(of: shuttle, in: .english), "No way on to W: check the track to it")
+        XCTAssertEqual(controlled.situationAlerts().filter { $0.kind == .trainStuck(shuttle) }.count, 1, "one bubble")
+    }
+
+    /// Decision 497 (P2-7): a train waiting for one that has no way on
+    /// names it and why, and gets a bubble: not a deadlock, yet it waits
+    /// until the track changes.
+    func testAWaitForATrainWithNoWayOnSaysWhichAndWhy() throws {
+        var world = try passingLoopWorld()
+        let (station, _) = try island(in: &world)
+        let e = try XCTUnwrap(world.stations.first { $0.name == "E" }).id
+        try world.stopTrainService(west)
+        try world.setTrainTimetable(west, to: [
+            ScheduledStop(station: e, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
+            ScheduledStop(station: station, arrival: GameTime(minutes: 4), departure: GameTime(minutes: 4)),
+        ])
+        try world.startTrainService(west)
+        try world.setTrafficControl(true)
+        var waited = false
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            if world.trainHoldingRoute(of: east) == west { waited = true; break }
+        }
+        XCTAssertTrue(waited, "Eastbound waits for Westbound")
+        XCTAssertEqual(world.deadlockedTrains(), [])
+        XCTAssertEqual(world.standingStill(west), .noRoute(to: "Island"))
+        let words = try XCTUnwrap(world.routeWaitText(of: east, in: .english))
+        XCTAssertTrue(words.hasSuffix("(Westbound: no way on to Island)"), words)
+        let chinese = try XCTUnwrap(world.routeWaitText(of: east, in: .traditionalChinese))
+        XCTAssertTrue(chinese.hasSuffix("（Westbound：沒有路可以開到 Island）"), chinese)
+        assertReasonsMatchTheWords(world.trafficOverlay(), in: world)
+        let stuck = world.situationAlerts().compactMap { alert -> TrainID? in
+            if case .trainStuck(let id) = alert.kind { return id }
+            return nil
+        }
+        XCTAssertEqual(Set(stuck), [east, west], "a bubble on each")
+        XCTAssertEqual(stuck.count, 2)
+    }
+
+    /// Decision 497 (P2-3): a command no longer searches for deadlocks on
+    /// the main actor for the map's bubbles and traffic overlay (tens of
+    /// ms on a large network, at every tap while building, pausing or
+    /// undoing). The map shows the last reading until the new one, worked
+    /// out off the main actor, is in.
+    @MainActor
+    func testACommandsBubblesAndTrafficAreReadOffTheMainActor() async throws {
+        var world = try passingLoopWorld()
+        try world.setTrafficControl(true)
+        let session = GameSession(world: world)
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        let outcome = await tick.work()
+        XCTAssertTrue(session.finish(tick, with: outcome))
+        let shown = session.trafficOverlay
+        XCTAssertEqual(shown.waits.filter(\.isDeadlocked).count, 2)
+        _ = session.situationAlerts
+        let (alertsBefore, trafficBefore) = (session.situationAlertsWorkedOut, session.trafficReadOnTheMainActor)
+
+        session.setTrafficControl(false)
+        XCTAssertEqual(session.trafficOverlay, shown, "the last reading until the new one is in")
+        _ = session.situationAlerts
+        _ = session.routeWaitText(of: east)
+        XCTAssertEqual(session.situationAlertsWorkedOut, alertsBefore, "no deadlock search for the bubbles on the main actor")
+        XCTAssertEqual(session.trafficReadOnTheMainActor, trafficBefore, "no deadlock search for the overlay on the main actor")
+
+        await session.mapReadsSettled()
+        XCTAssertEqual(session.trafficOverlay, TrafficOverlay(), "the new reading, once in")
+        XCTAssertEqual(session.situationAlerts, session.world.situationAlerts())
+        XCTAssertEqual(session.mapBubbles, MapMarks(world: session.world, situationAlerts: session.world.situationAlerts()).bubbles)
+        XCTAssertNil(session.routeWaitText(of: east))
+        XCTAssertEqual(session.situationAlertsWorkedOut, alertsBefore)
+        XCTAssertEqual(session.trafficReadOnTheMainActor, trafficBefore)
+
+        // Two commands in a row: only the latest reading is kept.
+        for on in [true, false, true] {
+            session.setTrafficControl(on)
+            _ = session.trafficOverlay
+        }
+        await session.mapReadsSettled()
+        XCTAssertEqual(session.trafficOverlay, session.world.trafficOverlay())
+        XCTAssertEqual(session.routeWaitText(of: east), session.world.routeWaitText(of: east, in: session.language))
+        XCTAssertEqual(session.situationAlerts, session.world.situationAlerts())
     }
 
     // MARK: - Marks side by side (the site's blockSideShift)

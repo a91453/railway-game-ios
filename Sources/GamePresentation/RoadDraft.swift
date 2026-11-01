@@ -414,7 +414,23 @@ extension GameSession {
     }
 
     func refreshRoadPreview() {
+        readLandUnderRoadDraft()
         roadPreview = RoadPreview.make(roadDraft, in: world, language: language)
+    }
+
+    /// Review BUGHUNT_BUILD P3-7: on a map whose land is read in as it is
+    /// needed, the land of each block the road drawn crosses, and with it
+    /// the base map's roads there, so a road along a real street far from
+    /// the stations is priced (and laid) as along road already there, as
+    /// it is near them. Not an edit, as for the building tool.
+    private func readLandUnderRoadDraft() {
+        guard let read = world.landBlocks else { return }
+        var asked = Set<LandBlock>()
+        for cell in roadDraft.cells {
+            let block = LandBlock(cellRow: cell.row, column: cell.column)
+            guard !read.contains(block), asked.insert(block).inserted else { continue }
+            readLand(within: 1, of: cell.middle)
+        }
     }
 
     /// The player's roads and the road drawn, for the 2D map: `nil` outside

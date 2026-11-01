@@ -208,7 +208,7 @@ says '!near its 20-minute limit' "without JOB_STARTED (locally) no job warning" 
 FAKE_SECONDS=70 says 'warning title=UnitTests has no weight::UnitTests took 70 s in rest' \
   "a slow class with no weight warns" "$script" run rest
 FAKE_SECONDS=40 says 'warning title=SingleTrackCapacityPropertyTests weight out of date::.*took 80 s.*says 24' \
-  "a class past twice its weight warns" "$script" run campaigns-2
+  "a class past twice its weight warns" "$script" run campaigns-12
 FAKE_SECONDS=40 says '!ServicePropertyTests (has no weight|weight out of date)' \
   "a class within its weight does not warn" "$script" run campaigns-2
 JOB_STARTED=$(($(date +%s) - 1108)) FAKE_SLEEP=4 says 'warning title=Shard rest about to reach its 20-minute limit::rest has run 18m30s; slowest classes so far: ' \
@@ -661,8 +661,8 @@ expect_decision() {
 }
 expect_decision true full full "a push to main of GameCore" EVENT=push LISTED=true -- Sources/GameCore/World/GameWorld.swift
 # A push to main runs the tier of its files, as a pull request does (decision 413).
-expect_decision true presentation '{"shard":"selected-7","tests":"GamePresentationTests.*","part":"7/7"}' \
-  "a push to main of GamePresentation runs it in 7 parts" EVENT=push LISTED=true -- "${pr414[@]}"
+expect_decision true presentation '{"shard":"selected-8","tests":"GamePresentationTests.*","part":"8/8"}' \
+  "a push to main of GamePresentation runs it in 8 parts" EVENT=push LISTED=true -- "${pr414[@]}"
 expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
   "a push to main of one test file runs its classes" EVENT=push LISTED=true -- "${pr401[@]}"
 expect_decision true presentation 'GamePresentationTests' "a push to main does not read labels" EVENT=push LISTED=true \
@@ -672,8 +672,8 @@ expect_decision true full full "a push to main whose files could not be listed" 
 expect_decision true full full "a manual run" EVENT=workflow_dispatch LISTED=false --
 expect_decision true full full "the nightly run" EVENT=schedule LISTED=false --
 expect_decision true full full "the nightly run, even with files listed" EVENT=schedule LISTED=true -- "${pr414[@]}"
-expect_decision true presentation '{"shard":"selected-7","tests":"GamePresentationTests.*","part":"7/7"}' \
-  "a pull request of GamePresentation runs it in 7 parts" EVENT=pull_request LISTED=true -- "${pr414[@]}"
+expect_decision true presentation '{"shard":"selected-8","tests":"GamePresentationTests.*","part":"8/8"}' \
+  "a pull request of GamePresentation runs it in 8 parts" EVENT=pull_request LISTED=true -- "${pr414[@]}"
 expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
   "a pull request of one campaign file" EVENT=pull_request LISTED=true -- "${pr401[@]}"
 expect_decision true full full "a pull request labelled full-ci" EVENT=pull_request LISTED=true LABELS="full-ci" -- "${pr414[@]}"

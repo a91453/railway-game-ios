@@ -223,16 +223,15 @@ public final class GameLauncher {
     /// the tutorial: lesson 1 at once, the game being played kept in the
     /// saves first, or each first-line step named.
     public func chooseFirstLineGuide(_ choice: FirstLineGuide.Choice) {
+        // Review L2-1: `startLesson` writes the game being played first.
+        // Review L3-4: the answer is kept only once lesson 1 has started,
+        // so a game that could not be written, and is kept, still has the
+        // station master's offer.
+        if choice == .tutorial, !startLesson(Lesson.all[0]) { return }
         if preferences.firstLineGuide != choice {
             preferences.firstLineGuide = choice
             savePreferences()
         }
-        guard choice == .tutorial else { return }
-        // Review L2-1: the game being played is written first, as Back to
-        // Start writes it, so the lesson leaves it in the saves; one that
-        // cannot be written is not left.
-        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
-        startTutorial()
     }
 
     /// Whether the start screen shows the "What's New" card (decision
@@ -1120,13 +1119,22 @@ public final class GameLauncher {
 
     /// Starts `lesson` (decision 266): its game, with its guide's first step
     /// on screen when it has a guide.
-    public func startLesson(_ lesson: Lesson) {
-        guard begin(.newGame(lesson: lesson), keepingAutosave: true) else { return }
+    /// Returns whether the lesson's game was started.
+    @discardableResult
+    public func startLesson(_ lesson: Lesson) -> Bool {
+        // Reviews L2-1 and L3-1: the game being played is written first, as
+        // Back to Start writes it, so the lesson leaves it in the saves,
+        // whichever way the lesson was started (the station master, the
+        // goals panel, a lesson result's next lesson); one that cannot be
+        // written is not left.
+        guard session == nil || autosaveCurrentGame(refreshing: false) else { return false }
+        guard begin(.newGame(lesson: lesson), keepingAutosave: true) else { return false }
         var plays = preferences.lessonPlays ?? [:]
         plays[lesson.id, default: LessonPlay()].starts += 1
         preferences.lessonPlays = plays
         savePreferences()
         if !lesson.guide.isEmpty { session?.startTutorial() }
+        return true
     }
 
     /// Keeps the stars `world`'s lesson was passed with, if more than before;
@@ -1652,6 +1660,18 @@ public final class GameLauncher {
         }
     }
 
+    /// `world` with unlimited funds when it is a managed company that
+    /// switched to free play before the switch turned them on (decision
+    /// 497, P2-5 B): a save from then has the cash it switched with and
+    /// nothing to earn more. A world never managed (its accounts never
+    /// opened) is left as it is.
+    nonisolated public static func withFreePlayFunds(_ world: GameWorld) -> GameWorld {
+        guard world.accounts.mode == .free, world.accounts.openedAt != nil, !world.economy.unlimitedFunds else { return world }
+        var funded = world
+        funded.setUnlimitedFunds(true)
+        return funded
+    }
+
     /// Plays `world`. Returns whether it started. A demo (`isDemo`)
     /// unlocks no achievements (decision 181), nor does its save later.
     /// Decision 351: nor does any new game (one without `news`) begun in
@@ -1661,6 +1681,7 @@ public final class GameLauncher {
         _ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false, roads: RoadsReadAhead? = nil,
         row: String? = nil, autosavingAt date: Date? = nil
     ) -> Bool {
+        let world = Self.withFreePlayFunds(world)
         let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
             do throws(SaveError) {
@@ -1950,12 +1971,39 @@ public final class GameLauncher {
 
     /// Autosaves and goes back to the start screen. If the autosave fails
     /// the game stays, with the failure on its status line, rather than
-    /// being thrown away unsaved.
+    /// being thrown away unsaved, and the player is asked whether to leave
+    /// without saving (``unsavedLeaving``, decision 497 P2-6).
     public func returnToStart() {
-        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
+        guard session == nil || autosaveCurrentGame(refreshing: false) else {
+            if let message = session?.message, message.kind == .failure {
+                unsavedLeaving = UnsavedLeaving(reason: message.text)
+            }
+            return
+        }
         leaveGame()
         refresh()
         afterLeaving()
+    }
+
+    /// Decision 497 (P2-6): set when Back to Start could not write the
+    /// autosave; the app asks whether to leave without saving
+    /// (``leaveWithoutSaving()``) or keep playing (``keepPlayingUnsaved()``).
+    public private(set) var unsavedLeaving: UnsavedLeaving?
+
+    /// Leaves the game unsaved for the start screen, after Back to Start
+    /// failed to save it and the player chose to (``unsavedLeaving``).
+    /// Nothing without that question.
+    public func leaveWithoutSaving() {
+        guard unsavedLeaving != nil else { return }
+        unsavedLeaving = nil
+        leaveGame()
+        refreshInBackground()
+        afterLeaving()
+    }
+
+    /// Answers ``unsavedLeaving`` by staying in the game.
+    public func keepPlayingUnsaved() {
+        unsavedLeaving = nil
     }
 
     /// Whether the game menu's Back to Start is writing the autosave
@@ -1968,7 +2016,9 @@ public final class GameLauncher {
     /// saves' queue, after any save or iCloud round queued before it (on a
     /// large map a save is a few MB). The start screen comes once it is
     /// written; if it fails, the game stays and goes on, with the failure
-    /// on its status line. Nothing, and `nil`, while one is under way.
+    /// on its status line, and the player is asked whether to leave
+    /// without saving (``unsavedLeaving``). Nothing, and `nil`, while one
+    /// is under way.
     @discardableResult
     public func returnToStartInBackground(at date: Date = Date()) -> Task<Void, Never>? {
         guard !isReturningToStart else { return nil }
@@ -2000,8 +2050,10 @@ public final class GameLauncher {
                     if listRead == read { entries = list }
                     afterLeaving()
                 case .failure(let error):
-                    session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                    let reason = error.playerMessage(in: language)
+                    session.message = StatusMessage(kind: .failure, text: reason)
                     if isActive { session.startGameLoop() }
+                    unsavedLeaving = UnsavedLeaving(reason: reason)
                 }
             }
         }
@@ -2009,6 +2061,7 @@ public final class GameLauncher {
 
     /// What going back to the start screen does once the game is saved.
     private func leaveGame() {
+        unsavedLeaving = nil
         stopLessonClock()
         let left = session != nil
         session?.stopGameLoop()

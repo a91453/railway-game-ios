@@ -116,9 +116,10 @@ extension GameWorld {
         let counts = MapLayers.waitingPassengerCounts(in: self)
         for station in stations {
             let waiting = counts[station.id] ?? 0
-            if waiting >= StationPassengers.capacity {
+            // Decision 506: an expanded station holds more.
+            if waiting >= station.capacity {
                 alerts.append(MapAlert(kind: .full(waiting: waiting), station: station.id, location: station.location))
-            } else if waiting * 2 >= StationPassengers.capacity {
+            } else if waiting * 2 >= station.capacity {
                 alerts.append(MapAlert(kind: .crowded(waiting: waiting), station: station.id, location: station.location))
             }
         }
@@ -140,17 +141,29 @@ extension GameWorld {
     }
 
     /// The bubbles decision 184 adds, after ``mapAlerts()``: each train in
-    /// a deadlock, each sight of ``alertedSightStars`` or more without a
+    /// a deadlock or waiting for a train standing still (decision 497,
+    /// P2-7), each train with no way on or waiting for a depot siding
+    /// (``GameWorld/heldDeparture(of:)``), each sight of ``alertedSightStars`` or more without a
     /// station once a passenger line runs, and a challenge's days left in
     /// the red. Apart from ``mapAlerts()``, which the station master asks
     /// at every step: a deadlock is worked out from every waiting train.
     public func situationAlerts() -> [MapAlert] {
         var alerts: [MapAlert] = []
-        if isTrafficControlEnabled {
-            for id in deadlockedTrains() {
-                guard let head = bodyPath(of: id).first else { continue }
-                alerts.append(MapAlert(kind: .trainStuck(id), station: nil, location: PlanPoint(x: head.x, y: head.y)))
-            }
+        // Decision 497 (P2-7): also each train waiting for one that will
+        // not move off by itself (``standingStill(_:)``), which is not a
+        // deadlock but waits as long.
+        let held = heldDepartures()
+        var stuck: Set<TrainID> = []
+        for wait in routeWaits() where wait.isDeadlocked || standingStill(wait.holder, held: held[wait.holder]) != nil {
+            guard let head = bodyPath(of: wait.train).first else { continue }
+            stuck.insert(wait.train)
+            alerts.append(MapAlert(kind: .trainStuck(wait.train), station: nil, location: PlanPoint(x: head.x, y: head.y)))
+        }
+        // And each train held by no train but by the track or a full
+        // depot (``GameWorld/heldDeparture(of:)``), by ascending ID.
+        for id in held.keys.sorted() where !stuck.contains(id) && trainHoldingRoute(of: id) == nil {
+            guard let head = bodyPath(of: id).first else { continue }
+            alerts.append(MapAlert(kind: .trainStuck(id), station: nil, location: PlanPoint(x: head.x, y: head.y)))
         }
         if let tourism, lines.contains(where: { !$0.isFreight }) {
             // The rating with its hotels (``stars(of:)``), as the panel shows it.
@@ -183,7 +196,8 @@ extension GameSession {
     nonisolated static let situationAlertsPeriod: Int64 = 10 * 60
 
     /// ``GameWorld/situationAlerts()``, as the map draws them: worked out
-    /// again after a command (``commandRevision``) and every
+    /// again after a command (``commandRevision``, off the main actor since
+    /// decision 497's P2-3) and every
     /// ``situationAlertsPeriod`` of game time, not at every tick and every
     /// read. The deadlock search behind a stuck train's bubble asks a route
     /// of every waiting train: tens of milliseconds a time on the
@@ -194,6 +208,13 @@ extension GameSession {
     public var situationAlerts: [MapAlert] {
         let period = world.clock.now.seconds / Self.situationAlertsPeriod
         if let memo = situationAlertsMemo, memo.revision == commandRevision, memo.period == period {
+            return memo.alerts
+        }
+        // Decision 497 (P2-3): after a command, the last bubbles until the
+        // new ones, worked out off the main actor, are in (tens of ms on a
+        // large network, at every tap while building, pausing or undoing).
+        if let memo = situationAlertsMemo, memo.revision != commandRevision {
+            workOutSituationAlertsOffTheMainActor()
             return memo.alerts
         }
         let alerts = world.situationAlerts()

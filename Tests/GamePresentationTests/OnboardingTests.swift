@@ -198,7 +198,7 @@ final class OnboardingTests: XCTestCase {
         XCTAssertFalse(IncomePulse(amount: Money(123_400), serial: 1).isLoss)
         let loss = IncomePulse(amount: Money(-4_047_400), serial: 2)
         XCTAssertTrue(loss.isLoss)
-        XCTAssertEqual(loss.text, "\u{2212}\(TrainRoster.shortMoney(Money(4_000_000)))")
+        XCTAssertEqual(loss.text, "\u{2212}\(TrainRoster.shortMoney(Money(4_000_000), in: .english))")
         XCTAssertEqual(IncomePulse(amount: Money(-250_000), serial: 3).text, "\u{2212}\(Money.currencySymbol)2,500", "under $10,000 to the dollar")
     }
 

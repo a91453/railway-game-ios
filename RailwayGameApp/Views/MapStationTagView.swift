@@ -21,6 +21,9 @@ struct MapStationTagView: View {
     let viewport: ScreenSize
     /// What floats over the map's edges (``EnvironmentValues/mapInsets``).
     let insets: EdgeInsets
+    /// Where the map's clear part starts under the top bar and its column
+    /// (decision 477), for the bubbles' tile prices.
+    var clearTop: CGFloat?
     @Environment(\.mapDetailsOpen) private var detailsOpen
     @Environment(GameScreenState.self) private var screen
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -52,10 +55,52 @@ struct MapStationTagView: View {
     }
 
     private func content(_ tag: StationTag) -> some View {
+        StationTagCard(tag: tag, session: session, details: { screen.detailsRequests &+= 1 }, rename: {
+            screen.renamesStationOnOpen = true
+            screen.panel = .station
+        })
+    }
+
+    /// Under `point`, clear of the station's mark (its bubbles, decision
+    /// 109, stand over it) and of its name under the mark (decision 123:
+    /// the tag covered the name's lower half), or over it when there is no
+    /// room below; kept clear of the controls along the map's edges.
+    /// Decision 501: and off the bubbles, which it is drawn over: a bubble
+    /// under the station's name (decision 477) lay under the tag, and after
+    /// the first tap every tap on it went to the tag.
+    private func placement(under point: ScreenPoint) -> CGSize {
+        let margin = 8.0
+        let clear = MapLabelPlacement.Box(
+            x: Double(insets.leading) + margin, y: Double(insets.top) + margin,
+            width: viewport.width - Double(insets.leading) - Double(insets.trailing) - 2 * margin,
+            height: viewport.height - Double(insets.top) - Double(insets.bottom) - 2 * margin
+        )
+        let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop).map(\.touchBox)
+            // Decision 510: and the badge of the alerts not on the map.
+            + [MapAlertBubbles.badgeTouchBox(session: session, camera: camera, viewport: viewport, insets: insets, clearTop: clearTop)].compactMap { $0 }
+        // Decision 501: and, moved, off the other stations where it can.
+        let stations = MapLabelPlacement.obstacles(MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport),
+                                                   radius: MapArt.stationRadius(camera), own: (point.x, point.y))
+        let box = MapLabelPlacement.stationTag(at: point, width: Double(size.width), height: Double(size.height), clear: clear, avoiding: bubbles,
+                                               keepingOff: stations)
+        return CGSize(width: box.minX, height: box.minY)
+    }
+}
+
+/// The station tag's card (decision 119): the lines' badges, the name, who
+/// waits there; a tap opens the details, the pencil the station's panel
+/// with the rename field up. Decision 517 續: the 2D map's tag and the 3D
+/// map's (``Map3DStationTagView``) are this one card.
+struct StationTagCard: View {
+    let tag: StationTag
+    let session: GameSession
+    let details: () -> Void
+    let rename: () -> Void
+    var identifier = "map.stationTag"
+
+    var body: some View {
         HStack(spacing: 0) {
-            Button {
-                screen.detailsRequests &+= 1
-            } label: {
+            Button(action: details) {
                 HStack(spacing: 8) {
                     if !tag.lines.isEmpty {
                         // Decision 216: the lines' badges, stacked.
@@ -91,13 +136,10 @@ struct MapStationTagView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text(verbatim: [tag.name, tag.waitingText(in: session.language)].compactMap { $0 }.joined(separator: ", ")))
             .accessibilityHint(Text(verbatim: session.language.text("Shows the station's details.", "顯示車站的詳細資料。")))
-            .accessibilityIdentifier("map.stationTag")
+            .accessibilityIdentifier(identifier)
             Divider()
                 .frame(height: 24)
-            Button {
-                screen.renamesStationOnOpen = true
-                screen.panel = .station
-            } label: {
+            Button(action: rename) {
                 Image(systemName: "pencil")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(Theme.primary)
@@ -106,7 +148,7 @@ struct MapStationTagView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(verbatim: session.language.text("Rename the station", "車站更名")))
-            .accessibilityIdentifier("map.stationTag.edit")
+            .accessibilityIdentifier(identifier + ".edit")
         }
         .fixedSize()
         .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -117,26 +159,4 @@ struct MapStationTagView: View {
         .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
     }
 
-    /// Under `point`, clear of the station's mark (its bubbles, decision
-    /// 109, stand over it) and of its name under the mark (decision 123:
-    /// the tag covered the name's lower half), or over it when there is no
-    /// room below; kept clear of the controls along the map's edges.
-    /// Decision 501: and off the bubbles, which it is drawn over: a bubble
-    /// under the station's name (decision 477) lay under the tag, and after
-    /// the first tap every tap on it went to the tag.
-    private func placement(under point: ScreenPoint) -> CGSize {
-        let margin = 8.0
-        let clear = MapLabelPlacement.Box(
-            x: Double(insets.leading) + margin, y: Double(insets.top) + margin,
-            width: viewport.width - Double(insets.leading) - Double(insets.trailing) - 2 * margin,
-            height: viewport.height - Double(insets.top) - Double(insets.bottom) - 2 * margin
-        )
-        let bubbles = MapAlertBubbles.placements(session: session, camera: camera, viewport: viewport, insets: insets).map(\.touchBox)
-        // Decision 501: and, moved, off the other stations where it can.
-        let stations = MapLabelPlacement.obstacles(MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport),
-                                                   radius: MapArt.stationRadius(camera), own: (point.x, point.y))
-        let box = MapLabelPlacement.stationTag(at: point, width: Double(size.width), height: Double(size.height), clear: clear, avoiding: bubbles,
-                                               keepingOff: stations)
-        return CGSize(width: box.minX, height: box.minY)
-    }
 }

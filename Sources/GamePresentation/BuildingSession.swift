@@ -60,11 +60,11 @@ extension PlacedBuildingKind {
             language.text("Draws visitors who ride your trains to it and leave offerings.",
                           "吸引香客搭你的車來參拜，香油錢是它的收入。")
         case .school:
-            language.text("Families move in nearby, and land around it is worth more.",
-                          "附近的住家長得快，周圍的地價也變高。")
+            language.text("Students ride your trains to it on school days. Families move in nearby, and land around it is worth more.",
+                          "上學日有學生搭你的車來上課。附近的住家長得快，周圍的地價也變高。")
         case .hospital:
-            language.text("People settle nearby, and land around it is worth more.",
-                          "附近的人口長得快，周圍的地價也變高。")
+            language.text("Patients and visitors ride your trains to it by day. People settle nearby, and land around it is worth more.",
+                          "白天有看病、探病的人搭你的車來。附近的人口長得快，周圍的地價也變高。")
         case .nightMarket:
             language.text("Draws evening crowds who ride your trains to it and spend at its stalls.",
                           "吸引人搭你的車來逛夜市，攤位的生意是它的收入。")
@@ -476,6 +476,11 @@ extension GameSession {
         if buildingMode == .zone, let drag = zoneDrag {
             overlay.zoneDrag = drag.planRect
             overlay.zoneDragColor = zoningZone.map(CityMap.zoneColor)
+            // Decision 522: zoning for a use, the cells no station reaches
+            // are greyed while the finger is down.
+            if zoningZone?.use != nil {
+                overlay.zoneDragOutOfReach = cellsOutOfReach(in: drag).map(\.planRect)
+            }
         }
         if buildingMode == .sell, let sale = salePreview {
             // Decision 130: the building to sell, marked as the one chosen.
@@ -602,6 +607,15 @@ public struct BuildingOverlay: Hashable, Sendable {
     /// colour (`nil` when it clears them).
     public var zoneDrag: PlanRect?
     public var zoneDragColor: PopTravel.RGB?
+    /// Decision 522's sequel: how opaque the zone's colour fills the drag,
+    /// near the legend's colour. At 0.35 over the dark map homes read as
+    /// shops, shops as offices and sights as public buildings; from 0.65
+    /// each reads as its own, and 0.75 leaves a margin while the map still
+    /// shows faintly through.
+    public static let zoneDragFillOpacity = 0.75
+    /// Decision 522: the cells of ``zoneDrag`` no station's catchment
+    /// reaches, which the city would never build on, as runs along rows.
+    public var zoneDragOutOfReach: [PlanRect] = []
 
     public init() {}
 }

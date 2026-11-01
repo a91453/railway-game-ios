@@ -55,10 +55,20 @@ the line does not need them, so its ends are not held to the tracks the
 game lays for the trains standing overnight. Its `tracks` count only the
 trains the line needs at a station within the look ahead the game's depot
 uses (`depot_tracks`), and an end may have up to `DEPOT_END_TRACKS`, its
-loops three deep either side. Not listed: the Ankeng LRT
-(see `LINES`) and the Kaohsiung Circular Light Rail. Its trains run one way round
-the loop and come back to Lizihnei; a line of the game runs end to end and
-turns back.
+loops three deep either side. The Wenhu Line is bought with its two, at
+Muzha and Neihu (decision 535, PR W); its ends would hold 16 trains each
+within the look ahead, so they are laid with the five a metro's end may
+have (`END_TRACKS`) and the game sends the rest into the depots. Not listed: the Kaohsiung Circular Light
+Rail. Its trains run round the loop and come back to Lizihnei; a line's
+runs of the game run end to end (decision 535).
+
+The Ankeng LRT (decision 535, continued) stands two of its trains
+overnight at stations between, Shuangcheng having too few tracks. Each
+comes in from beyond its station, facing the end its first run of the
+morning leaves for (`extract_branch_runs.beyond`): one from Shuangcheng
+runs out to Shisizhang first. Come straight from Shuangcheng, it stood on
+the second track, where the game lays no way over to the first, and the
+morning's trains toward Shisizhang stood behind it from 06:12.
 """
 import collections
 import importlib.util
@@ -74,7 +84,10 @@ END_TRACKS = 5
 # Decision 489: the lines bought with a real depot past an end station
 # (`RealLineDepotSite` in Sources/GamePresentation/RealLineDepot.swift),
 # by their game id: that end station.
-DEPOT_ENDS = {"ntdlrt:V": "崁頂"}
+# Decision 535 (PR W): the Wenhu Line runs on into a depot past each end,
+# the Muzha depot past Taipei Zoo and the Neihu depot past Taipei Nangang
+# Exhibition Center.
+DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館")}
 # The tracks such a line's end station may have: its own and loops three
 # deep either side.
 DEPOT_END_TRACKS = 7
@@ -92,13 +105,10 @@ LINES = [
     # whole instead, laid beside the Blue Coast Line to Binhai Shalun
     # (decision 493), with the runs listed for it alone.
     ("ntdlrt", "VB", "濱海沙崙", "V"),
-    # Not yet the Ankeng LRT (ntalrt:K): its trips pass here, but the
-    # game's second track on its tight curves is laid only 8 m off the
-    # first, and its trains then stand from six in the morning on
-    # (docs/HANDOFF.md).
+    ("ntalrt", "K", None, None),
     # Decision 400, 10j-3: the metros. Each is tried; those whose ends
     # stand more trains at once than the game lays tracks are left out
-    # and say so. Not the Wenhu Line (trtc:BR, its 35 m curves).
+    # and say so.
     ("trtc", "R", None, None),
     ("trtc", "R_XBT", None, None),
     ("trtc", "G", None, None),
@@ -107,6 +117,8 @@ LINES = [
     ("trtc", "O_LUZHOU", None, None),
     ("trtc", "BL", None, None),
     ("trtc", "Y", None, None),
+    # Decision 535 (PR W): the Wenhu Line, with its two depots.
+    ("trtc", "BR", None, None),
     ("tymc", "A", None, None),
     ("krtc", "KR", None, None),
     ("krtc", "KO", None, None),
@@ -194,11 +206,11 @@ def parked(tool, found, days, stops, line, prompt=True):
     return line, None
 
 
-def depot_tracks(tool, found, start, stops, depot):
+def depot_tracks(tool, found, start, stops, depots):
     """Decision 489: the most trainsets standing at each station at once
     on any weekday of a line bought with a depot beside its end station
-    `depot`, played from `start` as `tool.tracks` does but with the trains
-    standing at `depot` overnight in the depot, and each train counted at
+    in `depots`, played from `start` as `tool.tracks` does but with the
+    trains standing at those ends overnight in their depots, and each train counted at
     a station only from `LOOKAHEAD` before its next run there (till then
     the game keeps it in the depot); one with no further run there that
     day goes to the depot at once. The positioning runs taking the other
@@ -208,7 +220,7 @@ def depot_tracks(tool, found, start, stops, depot):
     for day in range(7):
         idle = collections.defaultdict(list)
         for station, count in start.items():
-            if station != depot:
+            if station not in depots:
                 idle[station] += [0] * count
         spans = collections.defaultdict(list)
         for run in tool.day_of(found, day):
@@ -250,11 +262,20 @@ def main(folder, out):
         game_id = f"{system}:{line_id}"
         label = game_id + (f" after {system}:{after}" if after else "")
         line, problem = tool.line_runs({"trains": found}, days, stops)
-        depot = DEPOT_ENDS.get(game_id)
-        if depot and not problem:
-            line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, depot)
+        depots = DEPOT_ENDS.get(game_id)
+        if depots and not problem:
+            line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, depots)
             ends = (stops[0], stops[-1])
-            worst = {s: n for s, n in line["tracks"].items() if n > (DEPOT_END_TRACKS if s in ends else 3)}
+            # Decision 535 (PR W): an end with a depot beyond it is laid
+            # with no more tracks than the game lays there (a metro's
+            # `END_TRACKS`, its platforms longer than a light rail's); the
+            # game sends the trains it cannot hold into the depot
+            # (decisions 221 and 297).
+            most = END_TRACKS if metro else DEPOT_END_TRACKS
+            for end in ends:
+                if end in depots:
+                    line["tracks"][end] = min(line["tracks"][end], most)
+            worst = {s: n for s, n in line["tracks"].items() if n > (most if s in ends else 3)}
             if worst:
                 problem = f"stations need more tracks than the game lays, with the depot: {worst}"
         elif not problem:

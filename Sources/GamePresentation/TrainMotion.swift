@@ -158,8 +158,11 @@ public struct TrainMotion: Sendable {
         let position: TrainPosition
         /// The edges the train was to enter, in order.
         let ahead: [TrackEdgeID]
-        /// Its body, head first (``GameWorld/bodyPath(of:)``).
+        /// Its body, head first (``GameWorld/bodyPath(of:)``), then
+        /// decision 538's track past its tail (``TrainTrackReach/back(of:in:)``).
         let body: [Point]
+        /// How long its body is, along ``body``, in world units.
+        let bodyLength: Double
     }
 
     /// One train's last move.
@@ -181,6 +184,14 @@ public struct TrainMotion: Sendable {
         public let carPitch: Double
         /// The way the head faces now, as GameCore says, in world units.
         public let heading: Point
+        /// Decision 538: the track ahead of its head now, head first
+        /// (``TrainTrackReach/front(of:in:)``), where its first car's front
+        /// half is laid.
+        var ahead: [Point] = []
+        /// Decision 538: how far along ``trail`` its body as it was at the
+        /// last tick ends: past it, ``trail`` goes on along the track past
+        /// its tail. `nil`: all of ``trail``.
+        var bodyEnd: Double?
 
         /// Its head at `progress` from the last tick (0) to now (1): where
         /// and which way it faces.
@@ -201,7 +212,7 @@ public struct TrainMotion: Sendable {
         /// less than a tenth of `span` of track behind the head.
         public func steadyHead(at progress: Double, over span: Double) -> (point: Point, heading: Point)? {
             let along = lag * (1 - min(max(progress, 0), 1))
-            let reach = min(span, trail.length - along)
+            let reach = min(span, (bodyEnd ?? trail.length) - along)
             guard reach > span / 10, let head = trail.point(at: along) else { return nil }
             var x = (value: 0.0, slope: 0.0), y = (value: 0.0, slope: 0.0)
             for (index, weight) in Self.steadyWeights.enumerated() {
@@ -246,6 +257,16 @@ public struct TrainMotion: Sendable {
         public func body(at progress: Double) -> [Point] {
             let along = lag * (1 - min(max(progress, 0), 1))
             return trail.points(from: along, to: along + length)
+        }
+
+        /// Decision 538: the track under and round it at `progress`, from
+        /// its head: `ahead` the way it faces, `behind` back along its body
+        /// and on past its tail, as far as the track was worked out.
+        func track(at progress: Double) -> (ahead: [Point], behind: [Point]) {
+            let along = lag * (1 - min(max(progress, 0), 1))
+            let covered = along > 0 ? Array(trail.points(from: 0, to: along).reversed()) : []
+            let ahead = covered.isEmpty ? self.ahead : covered + self.ahead.dropFirst()
+            return (ahead, trail.points(from: along, to: trail.length))
         }
     }
 
@@ -307,11 +328,15 @@ public struct TrainMotion: Sendable {
         for train in world.trains {
             guard let position = train.position, let head = world.location(of: position) else { continue }
             let body = train.length > 0 ? world.bodyPath(of: train.id).map(Point.init) : [Point(head.position)]
-            let sample = Sample(position: position, ahead: Array(train.movement.remainingEdges), body: body)
+            // Decision 538: and on past its tail along the track.
+            let back = TrainTrackReach.back(of: train, in: world).map(Point.init)
+            let sample = Sample(position: position, ahead: Array(train.movement.remainingEdges), body: back.count > 1 ? back : body,
+                                bodyLength: Trail(body).length)
             samples[train.id] = sample
             let size = (Double(head.direction.dx) * Double(head.direction.dx) + Double(head.direction.dy) * Double(head.direction.dy)).squareRoot()
             let heading = size > 0 ? Point(x: Double(head.direction.dx) / size, y: Double(head.direction.dy) / size) : Point(x: 1, y: 0)
-            var trail = Trail(body)
+            var trail = Trail(sample.body)
+            var bodyEnd = sample.bodyLength
             var lag = 0.0
             // Through a call, the new path's edges entered so far; GameCore
             // keeps a path whose last edge has been entered as none, so the
@@ -328,13 +353,15 @@ public struct TrainMotion: Sendable {
                 let glide = Trail(covered.reversed())
                 if glide.length > 0, glide.length <= Self.longestGlide {
                     trail = Trail(Array(covered.reversed()) + before.body.dropFirst())
+                    bodyEnd = glide.length + before.bodyLength
                     lag = glide.length
                 }
             }
             runs.append(Run(
                 train: train.id, look: looks[train.id] ?? .plain, isHighSpeed: train.type?.isHighSpeed == true,
                 livery: TrainLivery.of(type: train.type, performance: train.performance),
-                trail: trail, lag: lag, length: Double(train.length), carPitch: Double(train.carPitch), heading: heading
+                trail: trail, lag: lag, length: Double(train.length), carPitch: Double(train.carPitch), heading: heading,
+                ahead: TrainTrackReach.front(of: train, in: world).map(Point.init), bodyEnd: bodyEnd
             ))
         }
         self.runs = runs

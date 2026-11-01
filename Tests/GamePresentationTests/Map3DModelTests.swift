@@ -5,7 +5,7 @@ import XCTest
 
 /// ARCHITECTURE decision 230: the trains of the native 3D map, made in code.
 final class Map3DModelTests: XCTestCase {
-    private let pack = Map3DModelPack.standard
+    private var pack: Map3DModelPack { .standard }
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
         // Decision 244: and the street furniture after the trains (decision
@@ -30,7 +30,7 @@ final class Map3DModelTests: XCTestCase {
         let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
         // Decision 449: and after them, the running cars' windows.
         XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest)
-        XCTAssertEqual(Map3DModelPack.studies.models.count, temu2000Models + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models + Map3DSanying.Unit.allCases.count * 2 + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count + Map3DTaichungGreen.Role.allCases.count * 2 + Map3DKaohsiung.Unit.allCases.count * 2 + Map3DE200MingriStyle.Role.allCases.count * 2 + Map3DKaohsiungCAF.Unit.allCases.count * 2 + Map3DKaohsiungCitadis.Unit.allCases.count * 2 + 2 + 2 + 20 + 16) // Tourism EMU500 x16; R21 G12, 45DR1000 near/far and two New Taipei fleets.
+        XCTAssertEqual(Map3DModelPack.studies.models.count, temu2000Models + ppDisplayModels + Map3DEMU800.Role.allCases.count * 4 + emu500Models + Map3DC341.Unit.allCases.count + Map3DEMU900.Role.allCases.count * 6 + taipei610Models + Map3DSanying.Unit.allCases.count * 2 + Map3DC371.Unit.allCases.count + Map3DC381.Unit.allCases.count + Map3DTaichungGreen.Role.allCases.count * 2 + Map3DKaohsiung.Unit.allCases.count * 2 + Map3DE200MingriStyle.Role.allCases.count * 2 + Map3DKaohsiungCAF.Unit.allCases.count * 2 + Map3DKaohsiungCitadis.Unit.allCases.count * 2 + 2 + 2 + 20 + 16 + 2 + 12) // R100 two liveries x2, Breezy Blue four roles x2; R200 near/far; Tourism EMU500 x16; R21 G12, 45DR1000 near/far and two New Taipei fleets.
 
         for style in Map3DTrainStyle.all {
             var names = [style.name + "-cab", style.name + "-car"]
@@ -108,7 +108,8 @@ final class Map3DModelTests: XCTestCase {
         for type in TrainTypeCatalog.builtIn {
             // Decision 318: the Chu-Kuang sets and the Blue Train have their
             // locomotives now (decision 399: and the steam train); the rest
-            // have no model.
+            // have no model (decision 531: the Alishan mountain train has
+            // its DL-38 and coaches).
             let expected = !["MAGLEV", "SKYRAIL", "MONORAIL"].contains(type.code)
             XCTAssertEqual(pack.models(forType: type.code) != nil, expected, type.code)
         }

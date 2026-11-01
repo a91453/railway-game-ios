@@ -375,8 +375,8 @@ extension GameError {
             )
         case .invalidTrackGeometry:
             language.text(
-                "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different points, and run smoothly.",
-                "這裡不能建軌道：軌道必須在地圖內、與地面的高度差在 64 公尺以內、起點與終點不能是同一點，而且線形要平順。"
+                "Track can't be built there: it must stay on the map, at most 64 m above the ground and 1,024 m below it, start and end at different points, and run smoothly.",
+                "這裡不能建軌道：軌道必須在地圖內、離地最高 64 公尺、地下最深 1,024 公尺，起點與終點不能是同一點，而且線形要平順。"
             )
         case .trackNodeInUse:
             language.text(
@@ -563,13 +563,27 @@ extension GameError {
         case .notADepot:
             language.text("That station is not a depot.", "這個車站不是機廠。")
         case .stationIsDepot:
-            language.text("A depot has no shops.", "機廠不能開店。")
+            language.text("A depot has no shops and cannot be expanded.", "機廠不能開店，也不能擴建。")
         case .stationHasCommerce:
             language.text("This station has shops: demolish them before making it a depot.", "這個車站有商業：先拆除商業，才能改成機廠。")
         case .stationCommerceMaxedOut:
             language.text("The station's shops are at their top level.", "這一站的商業已經是最高等級。")
         case .noStationCommerce:
             language.text("This station has no shops.", "這個車站沒有商業。")
+        case .stationIsExpanded:
+            language.text("This station has been expanded, so it cannot become a depot.", "這個車站已經擴建，不能改成機廠。")
+        case .stationExpansionMaxedOut:
+            language.text("The station is already at its largest.", "這個車站已經擴建到最大。")
+        case let .stationTooQuietToExpand(needed):
+            language.text(
+                "Expanding needs \(needed.groupedText) people a day through the station.",
+                "每日進出要達 \(needed.groupedText) 人次才能擴建。"
+            )
+        case .stationNotFullToExpand:
+            language.text(
+                "The station has not been full often enough lately, so expanding would not carry more people.",
+                "這一站最近不常客滿，擴建也不會多載旅客。"
+            )
         case .lineAlreadyAcquired:
             language.text("This line is already yours.", "這條線已經是你的了。")
         case .invalidAcquisition:
@@ -604,6 +618,11 @@ extension GameError {
             language.text("This is the city's road: only roads you built can be taken up.", "這是城市的路，只能拆自己鋪的路。")
         case .roadInUse:
             language.text("A bus route runs along this road: change the route first.", "有公車路線走這段路，請先改路線。")
+        case .trainCannotClimb:
+            language.text(
+                "This line runs on mountain track, which only a mountain train such as the Alishan Forest Railway's can climb. Choose that type.",
+                "這條路線有登山軌道，只有阿里山林鐵這類登山列車爬得上去。請改用登山車種。"
+            )
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:
@@ -826,16 +845,17 @@ extension GameSpeed {
 
 extension GameSession {
     /// What the inspector shows about the selection (Stage F1): the
-    /// selected station (see ``GameWorld/stationSummary(_:in:)``) and who
-    /// waits there by line and direction (G1c); or the train a tap on the
+    /// selected station (see ``GameWorld/stationSummary(_:in:)``) and, on
+    /// lines of their own, who waits there by line and direction (G1c); or the train a tap on the
     /// map picked (``GameSession/tappedTrainID``, see
     /// ``GameWorld/trainSummary(of:in:)``). `nil` when neither is
     /// selected.
     public func selectionText() -> String? {
         if let station = selectedStation {
             let summary = world.stationSummary(station.id, in: language)
-            guard let waiting = world.waitingSummary(at: station.id, in: language) else { return summary }
-            return "\(summary) · \(waiting)"
+            // One line each: in a phone's side panel the one long line lost
+            // its end ("Station · Yunlin · 4 platforms, 832 m · waiting …").
+            return ([summary] + world.waitingLines(at: station.id, in: language)).joined(separator: "\n")
         }
         if let train = tappedTrainID, let summary = world.trainSummary(of: train, in: language) {
             return summary
@@ -890,6 +910,7 @@ extension TrainType {
         "MINGRI": ("Ming-Ri sightseeing train", "鳴日號"),
         "STAR": ("Formosa Star sightseeing train", "環島之星"),
         "SUMMER": ("Midsummer Formosa steam train", "仲夏寶島號"),
+        "ALISHAN": ("Alishan Forest Railway mountain train", "阿里山林鐵登山列車"),
     ]
 }
 

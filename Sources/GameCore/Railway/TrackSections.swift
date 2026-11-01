@@ -557,7 +557,7 @@ public struct TrackLongSection: Hashable, Sendable {
 }
 
 extension GameWorld {
-    /// What ``buildTrackEdge(from:to:curve:profile:structure:)`` would
+    /// What ``buildTrackEdge(from:to:curve:profile:structure:mountain:)`` would
     /// charge for an edge between nodes at `from` and `to` (decision 132),
     /// shaped by `curve` and `profile` and carried by `structure`: its
     /// sections measured from the ground and priced the same way, without
@@ -570,17 +570,17 @@ extension GameWorld {
     ///   money.
     public func trackEdgePrice(
         from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve = .straight, profile: TrackProfile = .uniform,
-        structure: TrackStructure = .surface
+        structure: TrackStructure = .surface, mountain: Bool = false
     ) throws(GameError) -> Money {
         guard from != to, curve.controlPoints.allSatisfy(bounds.contains),
               let geometry = TrackGeometry(from: from, to: to, curve: curve, profile: profile)
         else { throw .invalidTrackGeometry }
-        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else { throw .trackTooSteep }
+        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade(mountain: mountain)) else { throw .trackTooSteep }
         return try edgeCost(of: geometry, structure: structure, sections: sections(of: geometry, structure: structure))
     }
 
     /// Edge `id`'s long section and its price in parts (decision 124, H3),
-    /// measured as ``buildTrackEdge(from:to:curve:profile:structure:)``
+    /// measured as ``buildTrackEdge(from:to:curve:profile:structure:mountain:)``
     /// measured and charged it; `nil` for an edge the network does not
     /// have, or one over ground the world has not read. Read only.
     public func longSection(of id: TrackEdgeID) -> TrackLongSection? {

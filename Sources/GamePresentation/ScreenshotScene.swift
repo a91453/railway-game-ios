@@ -20,12 +20,200 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// has depots too, but takes minutes to build on a test runner.
     case depots
 
+    /// Decision 514: the demo map on its second morning with zones in each
+    /// outlook the zoning layer marks: by the demo's stations, which grew
+    /// last night, schools (which the city builds) and the use the city
+    /// wants least (not needed now); round a new station no train serves
+    /// yet (waits for its station); and further out than any station
+    /// reaches (too far). For the screenshot review of the pull request
+    /// that marked them.
+    case zoning
+
+    /// Decision 524: the demo map with realistic operation, run on to its
+    /// second morning, so each line's card shows its last seven days'
+    /// punctuality beside Taiwan Railway's. For the screenshot review of
+    /// the pull request that added it.
+    case punctuality
+
+    /// Decision 533: the demo map with a school and a hospital of the
+    /// company's beside its first station, run on to half past seven on
+    /// the second morning, a school day, when the students are on their
+    /// way: the station panel's row of the riders they bring. For the
+    /// screenshot review of the pull request that added it.
+    case commute
+
+    /// Decision 506 續二 (BADGE): the demo map on its fourth morning with
+    /// West and East crowded every day and 中央 (Central) only since the
+    /// second: West expanded once, its concourse mark beside its name, and
+    /// Central's station size card past the people it needs but full on
+    /// only three of the last seven days. The demo's ridership comes from
+    /// its land and stays under 50,000 a day, so this scene sets the three
+    /// stations' demand itself (the land's off, as on a map the player
+    /// draws on). For the screenshot review of the pull request that drew
+    /// the mark, not the website.
+    case expansion
+
+    /// Decision 536: the demo map with its first line bought as the
+    /// Neiwan Line and its second as the Danhai light rail's Green
+    /// Mountain Line (recorded as bought, as the app records a real line
+    /// it laid), run on to the second morning: their trains drawn and
+    /// named as the real lines' own. For the screenshot review of the pull
+    /// request that drew them so.
+    case acquired
+
+    /// The real lines ``acquired`` records its first two lines as, in order.
+    public static let acquiredLines = ["tra:NEIWAN", "ntdlrt:V"]
+
     /// The scene's world, its clock paused at the moment to show.
     public func make(in language: DisplayLanguage) -> GameWorld {
         switch self {
         case .freight: Self.freightWorld(in: language)
         case .depots: Self.depotsWorld(in: language)
+        case .zoning: Self.zoningWorld(in: language)
+        case .punctuality: Self.punctualityWorld(in: language)
+        case .commute: Self.commuteWorld(in: language)
+        case .expansion: Self.expansionWorld(in: language)
+        case .acquired: Self.acquiredWorld(in: language)
         }
+    }
+
+    // MARK: - Expansion
+
+    /// Eight in the morning of the fourth day (day 3): West and East have
+    /// been full on four days, Central on three.
+    public static let expansionRunSeconds: Int64 = 3 * 86_400 + 8 * 3_600
+
+    private static func expansionWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            let ids = world.stations.map(\.id)
+            guard ids.count >= 3 else { throw .unknownStation(StationID(rawValue: 3)) }
+            world.setLandDemand(false)
+            // The stations' own counts of the people through them, not the
+            // lines' (which count those the trains carried).
+            world.setLineAccounts(false)
+            func crowd(_ id: StationID, trips: Int64) throws(GameError) {
+                let demand = world.stationDemand(of: id)
+                try world.setStationDemand(id, to: StationDemand(kind: demand?.kind ?? .residential, dailyTrips: trips,
+                                                                hinterland: demand?.hinterland ?? 0))
+            }
+            try crowd(ids[0], trips: 300_000)
+            try crowd(ids[2], trips: 300_000)
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: 86_400 / 600)
+            try crowd(ids[1], trips: 200_000)
+            try world.advance(ticks: Int((expansionRunSeconds - 86_400) / 600))
+            // The concourse costs more than the demo holds.
+            if world.accounts.loan < CompanyAccounts.maximumLoan {
+                try world.borrow(CompanyAccounts.maximumLoan - world.accounts.loan)
+            }
+            try world.expandStation(at: ids[0])
+        } catch {
+            preconditionFailure("The expansion screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Acquired
+
+    /// Seven in the morning of the second day: the trains out.
+    static let acquiredRunSeconds: Int64 = 31 * 3_600
+
+    private static func acquiredWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            for (line, real) in zip(world.lines.prefix(acquiredLines.count), acquiredLines) {
+                // A run down the line every twenty minutes from 05:00,
+                // three minutes a stop, as a real line bought has its
+                // timetable's (decision 315).
+                let stops = line.stops.count
+                let runs = stride(from: Int64(5 * 3_600), through: 23 * 3_600, by: 20 * 60).map { start in
+                    LineRun(from: 0, to: stops - 1, times: (0..<stops).map { stop in
+                        let at = start + Int64(stop) * 180
+                        return LineRunTime(arrival: at, departure: stop == 0 || stop == stops - 1 ? at : at + 30)
+                    })
+                }
+                try world.setLineRuns(line.id, to: runs)
+                let tier: LineAcquisition.Tier = real.hasPrefix("tra:") ? .branch : .lightRail
+                try world.recordLineAcquisition(line: line.id, realLine: real, dailyRiders: 0, tier: tier)
+            }
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(acquiredRunSeconds / 600))
+        } catch {
+            preconditionFailure("The acquired screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Commute
+
+    /// Half past seven on the second morning, a Tuesday: the first is the
+    /// New Year holiday, with no school.
+    static let commuteRunSeconds: Int64 = 31 * 3_600 + 30 * 60
+
+    private static func commuteWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            guard let station = world.stations.first else { throw .unknownStation(StationID(rawValue: 1)) }
+            // A school and a hospital cost more than the demo holds.
+            try world.borrow(CompanyAccounts.maximumLoan)
+            // The first sites round the station a building can stand on,
+            // nearest first, within its 800 m.
+            let directions: [(Int64, Int64)] = [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]
+            var offsets: [(Int64, Int64)] = []
+            for distance in stride(from: Int64(6_000), through: 42_000, by: 4_000) {
+                for (dx, dy) in directions {
+                    offsets.append((dx * distance, dy * distance))
+                }
+            }
+            for kind in [PlacedBuildingKind.school, .hospital] {
+                var refused: GameError?
+                for (dx, dy) in offsets {
+                    do throws(GameError) {
+                        try world.placeBuilding(kind, at: PlanPoint(x: station.point.x + dx, y: station.point.y + dy))
+                        refused = nil
+                        break
+                    } catch {
+                        refused = error
+                    }
+                }
+                if let refused { throw refused }
+            }
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(commuteRunSeconds / 600))
+        } catch {
+            preconditionFailure("The commute screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Punctuality
+
+    /// A day and nine hours: the first day settled, trains running.
+    static let punctualityRunSeconds: Int64 = 33 * 3_600
+
+    private static func punctualityWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        world.setRealisticOperation(true)
+        do throws(GameError) {
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(punctualityRunSeconds / 600))
+        } catch {
+            preconditionFailure("The punctuality screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Depots
@@ -54,6 +242,52 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
+    }
+
+    // MARK: - Zoning
+
+    private static func zoningWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            // Past the first midnight, when the served stations grew.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(freightRunSeconds / 600))
+            let row = Int((world.bounds.height / 2) / Land.cellLength)
+            let column = Int((world.bounds.width / 2) / Land.cellLength)
+            // The use the city wants least, if it has more than it wants.
+            let levels = world.cityDemandLevels
+            let unwanted = [(Zone.residential, levels.homes), (.commercial, levels.shops), (.office, levels.work)]
+                .min { $0.1 < $1.1 }.map(\.0) ?? .residential
+            // The town fills the demo's stations' 800 m (some 13 cells), so
+            // only its edge is in reach: north of it, out past the reach,
+            // the unwanted use; west, schools.
+            try world.setZone(unwanted, rows: (row - 20)...(row - 10), columns: (column - 6)...(column + 6))
+            try world.setZone(.civic, rows: (row - 6)...(row + 6), columns: (column - 20)...(column - 10))
+            // A station 1.5 km east, no train serves yet, zoned round.
+            let east = Int64(column + 24) * Land.cellLength + Land.cellLength / 2
+            _ = try world.buildStation(
+                named: language.text("New Town", "新市鎮"), at: PlanPoint(x: east, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
+            )
+            try world.setZone(.residential, rows: (row - 4)...(row + 4), columns: (column + 20)...(column + 28))
+        } catch {
+            preconditionFailure("The zoning screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Decision 522: the zoning drag the zoning scene's screenshot holds
+    /// down: a box some 2 km a side round the new station 1.5 km east,
+    /// reaching back to the town's edge, so the drag shows cells in reach
+    /// and the grey ones past it.
+    public static func zoningDrag(in world: GameWorld) -> (from: PlanPoint, to: PlanPoint) {
+        let row = Int((world.bounds.height / 2) / Land.cellLength)
+        let column = Int((world.bounds.width / 2) / Land.cellLength)
+        func middle(_ row: Int, _ column: Int) -> PlanPoint {
+            PlanPoint(x: Int64(column) * Land.cellLength + Land.cellLength / 2, y: Int64(row) * Land.cellLength + Land.cellLength / 2)
+        }
+        return (middle(row - 15, column + 9), middle(row + 15, column + 39))
     }
 
     // MARK: - Freight

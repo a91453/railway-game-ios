@@ -60,6 +60,8 @@ struct BuildPulseMark: View {
 /// is shown. Takes no touches; VoiceOver hears the cash itself.
 struct IncomeFloat: View {
     let pulse: IncomePulse?
+    /// Decision 523, continued: 萬 and 億 in Chinese.
+    let language: DisplayLanguage
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown: IncomePulse?
     @State private var rise = 0.0
@@ -67,7 +69,7 @@ struct IncomeFloat: View {
     var body: some View {
         ZStack {
             if let shown {
-                Text(verbatim: shown.text)
+                Text(verbatim: shown.text(in: language))
                     .font(.caption.weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(shown.isLoss ? Theme.error : Theme.success)
@@ -118,7 +120,7 @@ struct FareFloatMarks: View {
         let points = floats.isEmpty ? [] : MapLabelPlacement.placeFares(
             floats.map { float in
                 let at = camera.screenPoint(of: float.location)
-                return (x: at.x, y: at.y, text: float.text)
+                return (x: at.x, y: at.y, text: float.text(in: session.language))
             },
             stations: session.world.stations.compactMap { station in
                 let at = camera.screenPoint(of: station.location)
@@ -131,7 +133,7 @@ struct FareFloatMarks: View {
         ZStack(alignment: .topLeading) {
             ForEach(floats) { float in
                 let at = placed[float.id] ?? camera.screenPoint(of: float.location)
-                FareFloatLabel(text: float.text)
+                FareFloatLabel(text: float.text(in: session.language))
                     .position(x: at.x, y: at.y)
             }
         }

@@ -113,12 +113,20 @@ struct MapConstructionHUD: View {
             Image(systemName: "banknote")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Theme.success)
-            Text(cost.moneyText)
+            // Decision 523, continued: in 萬 or 億 in Chinese.
+            Text(verbatim: cost.compactText(in: language))
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
+            // Decision 523: a rough US dollar figure, English only.
+            if let reference = cost.usDollarReferenceText(in: language) {
+                Text(verbatim: reference)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+                    .monospacedDigit()
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.moneyText)"))
+        .accessibilityLabel(text("Cost: \(cost.moneyText)", "費用：\(cost.compactText(in: language))"))
     }
 
     /// `english` or `chinese` for the session's language. GamePresentation's

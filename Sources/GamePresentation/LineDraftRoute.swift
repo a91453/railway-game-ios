@@ -150,8 +150,8 @@ extension GameWorld {
         case .noPlatform(let id):
             let name = stationName(id)
             return language.text(
-                "\(name) has no platform yet: add one on the track with the network tool's Platform.",
-                "\(name) 還沒有月台：用路網工具的「月台」在軌道上設一座。"
+                "\(name) has no platform yet: add one on the track with the network tool's Station.",
+                "\(name) 還沒有月台：用路網工具的「車站」在軌道上設一座。"
             ) + still
         case .separateTracks(let a, let b):
             let first = stationName(a), second = stationName(b)

@@ -1,0 +1,73 @@
+{
+  "producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732",
+  "revision": 2,
+  "latest_main": "2ebe025a317771e8c89f0c6301066c266c2454d2",
+  "platform": "Linux; Swift 6.4.0 warnings-as-errors, Node 24.19, Chromium WebGL, Blender 4.3.2",
+  "technical_status": "VERIFIED",
+  "native_near_triangles": 12702,
+  "native_far_triangles": 5098,
+  "complete_locomotive": true,
+  "assembly_required": false,
+  "hauling_display": false,
+  "existing_models_protected": 845,
+  "standard_models": 663,
+  "standard_cpu_vertex_bytes": 172460640,
+  "standard_cpu_vertices_memory_mb": 172.5,
+  "standard_change": 0,
+  "swift_tests": {
+    "latest_geometry": {
+      "tests": 10,
+      "failures": 0,
+      "seconds": 135.746,
+      "producer": "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732"
+    },
+    "pack_inventory": "Actual latest-main runtime inventory: 663 standard,182 studies; two upstream scenery models absent from lock; all 845 protected."
+  },
+  "independent_rebuild": {
+    "core_files": 35,
+    "all_bytes_identical": true,
+    "includes_metadata_png_viewer": true,
+    "raw_native_glb_review_selected_files": 66
+  },
+  "baseline_full_check": {
+    "status": "REPRODUCED_INHERITED_FAILURE",
+    "failures": 33,
+    "reproduced_on": "2ebe025a317771e8c89f0c6301066c266c2454d2",
+    "lock_differences": 34,
+    "gate_modified": false
+  },
+  "browser": {
+    "HTTP": "VERIFIED",
+    "rotation_zoom": true,
+    "native_glb_download_bytes_sha": true,
+    "file_protocol": "UNVERIFIED; ERR_BLOCKED_BY_ADMINISTRATOR"
+  },
+  "states": {
+    "asset": {
+      "status": "VERIFIED",
+      "evidence": "Independent final producer reconstruction is recorded in rebuild-verification.json: complete native/GLB, 20 selected transparent PNGs, self-contained viewer and pinned metadata. Swift 6.4 warnings-as-errors, related tests, shared topology and actual R200 fault probes, Blender 4.3.2 import, HTTP rotation/zoom and download checks. All existing models are compared against actual latest-main exports separately from upstream changes. file:// remains UNVERIFIED because browser administration blocks navigation. Source/engineering gaps remain; technical study validation only."
+    },
+    "appearance": {
+      "status": "UNVERIFIED",
+      "evidence": "No explicit user acceptance of this producer. Author inspection is separate.",
+      "accepted_producer": null
+    },
+    "integration": {
+      "status": "UNVERIFIED",
+      "evidence": "Studies only. Existing r200ChuKuang/R200CK runtime mapping remains unchanged; new native locomotive is not selected by the game."
+    },
+    "device": {
+      "status": "UNVERIFIED",
+      "evidence": "No Simulator or physical-device Metal, performance, animation or operational validation."
+    }
+  },
+  "limitations": [
+    "Official dimensions reports and TSA URL returned 403; historical Stadler URL redirected without original article.",
+    "Official cab 1/2 correspondence, opposing full side, orthogonal roof/underbody and batch BOM incomplete; wheelbase/wheel diameter and small geometry remain explicitly estimated.",
+    "No sourced compatible representative hauling formation or verified runtime integration.",
+    "No explicit user acceptance, Simulator/device Metal, performance or animation verification.",
+    "Sampled geometry fault probes are not exhaustive collision or engineering proof."
+  ],
+  "new_studies_models": 2,
+  "producer_total_models": 847
+}

@@ -208,8 +208,10 @@ final class RealRailwayTracingTests: XCTestCase {
         let way = session.networkTracedWay
         XCTAssertFalse(way.isEmpty)
         XCTAssertEqual(session.networkTracedWay, way)
-        XCTAssertEqual(session.networkOverlay?.tracedWay ?? way, way)
-        XCTAssertEqual(session.tracedWaysWorkedOut, 1, "read three times, worked out once")
+        // Decision 521's third sequel: with the traced preview shown, the
+        // map does not light the way under it.
+        XCTAssertEqual(session.networkOverlay?.tracedWay, [])
+        XCTAssertEqual(session.tracedWaysWorkedOut, 1, "read twice, worked out once")
 
         session.clearNetworkDraft()
         session.tapNetwork(at: taipei, reach: reach)

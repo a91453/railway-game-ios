@@ -29,10 +29,14 @@ public enum TrainCars {
     /// first) runs back from it and that faces `heading`: each car's
     /// polyline from its front to its back, the leading car first, `gap`
     /// world units apart. Empty when there is no body.
+    ///
+    /// Decision 538: along `track` (``TrainMotion/Run/track(at:)``) past
+    /// the body's two ends, as far as it goes, rather than straight on.
     public static func cars(
-        body: [TrainMotion.Point], heading: TrainMotion.Point, count: Int, gap: Double = 0
+        body: [TrainMotion.Point], heading: TrainMotion.Point, count: Int, gap: Double = 0,
+        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil
     ) -> [[TrainMotion.Point]] {
-        guard count > 0, let trail = spine(body: body, heading: heading, needed: drawnCarLength * Double(count)) else { return [] }
+        guard count > 0, let trail = spine(body: body, heading: heading, needed: drawnCarLength * Double(count), track: track) else { return [] }
         let trim = min(max(gap, 0), drawnCarLength / 2) / 2
         return (0..<count).map { index in
             let front = Double(index) * drawnCarLength
@@ -61,7 +65,8 @@ public enum TrainCars {
     /// scale (a 12-car EMU3000, 245.7 m, is not squeezed into 240 m).
     /// A train whose cars stand their real lengths apart is drawn as it was.
     public static func cars(
-        body: [TrainMotion.Point], heading: TrainMotion.Point, lengths: [Double], gaps: [Double]
+        body: [TrainMotion.Point], heading: TrainMotion.Point, lengths: [Double], gaps: [Double],
+        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil
     ) -> [[TrainMotion.Point]] {
         var whole = 0.0
         for (index, length) in lengths.enumerated() { whole += length + (index < gaps.count ? gaps[index] : 0) }
@@ -72,22 +77,36 @@ public enum TrainCars {
             fronts.append(front)
             front += (length + (index < gaps.count ? gaps[index] : 0)) * scale
         }
-        guard !lengths.isEmpty, let trail = spine(body: body, heading: heading, needed: front) else { return [] }
+        guard !lengths.isEmpty, let trail = spine(body: body, heading: heading, needed: front, track: track) else { return [] }
         return lengths.indices.map { trail.points(from: fronts[$0], to: fronts[$0] + lengths[$0] * scale) }
     }
 
     /// The track a train's cars are laid along, from its nose half a car
     /// ahead of its head back along its `body` and, past its tail,
-    /// straight on, at least `needed` long.
-    private static func spine(body: [TrainMotion.Point], heading: TrainMotion.Point, needed: Double) -> TrainMotion.Trail? {
+    /// straight on, at least `needed` long. Decision 538: with `track`,
+    /// the nose and what lies past the tail along it, as far as it goes:
+    /// on a sharp curve, laid straight on, the last car swung metres off
+    /// the track (104.1, Zhuzhong's viaduct platform).
+    private static func spine(
+        body: [TrainMotion.Point], heading: TrainMotion.Point, needed: Double,
+        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil
+    ) -> TrainMotion.Trail? {
         guard let head = body.first else { return nil }
         let forward = unit(heading) ?? backward(body).map { TrainMotion.Point(x: -$0.x, y: -$0.y) } ?? TrainMotion.Point(x: 1, y: 0)
         let half = drawnCarLength / 2
-        let nose = TrainMotion.Point(x: head.x + forward.x * half, y: head.y + forward.y * half)
-        var spine = [nose] + body
+        var spine: [TrainMotion.Point]
+        let ahead = TrainMotion.Trail(track?.ahead ?? [])
+        if ahead.length >= half {
+            spine = ahead.points(from: 0, to: half).reversed()
+        } else {
+            spine = [TrainMotion.Point(x: head.x + forward.x * half, y: head.y + forward.y * half)]
+        }
+        var rear = body
+        if let behind = track?.behind, TrainMotion.Trail(behind).length >= TrainMotion.Trail(body).length { rear = behind }
+        spine += rear
         let laid = TrainMotion.Trail(spine).length
         if laid < needed, let tail = spine.last {
-            let back = backward(body) ?? TrainMotion.Point(x: -forward.x, y: -forward.y)
+            let back = backward(rear) ?? TrainMotion.Point(x: -forward.x, y: -forward.y)
             let rest = needed - laid
             spine.append(TrainMotion.Point(x: tail.x + back.x * rest, y: tail.y + back.y * rest))
         }

@@ -711,27 +711,27 @@ enum MapArt {
             let width = max(2, referenceSize * 0.12)
             context.stroke(wholePolyline(overlay.unbuilt, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
         }
-        // Decision 468: a trace that joins track already laid: the glow
-        // along all of it, the new track's pieces solid and the track
-        // already there dashed in the same colour.
-        if overlay.previewIsBuildable, !overlay.existing.isEmpty {
-            let width = max(2, referenceSize * 0.12)
-            context.stroke(polyline(overlay.preview, projection: projection), with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
-            for points in overlay.newPieces where points.count > 1 {
-                context.stroke(polyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
-            }
+        // Decision 521's third sequel: one glow under all of it, stroked as
+        // one path so a double track's two glows do not darken where they
+        // meet; then each track once. Decision 468: a trace that joins
+        // track already laid draws the track already there dashed in the
+        // same colour.
+        let width = max(2, referenceSize * 0.12)
+        let glow = overlay.previewGlow
+        if !glow.isEmpty {
+            var path = Path()
+            for points in glow { path.addPath(polyline(points, projection: projection)) }
+            context.stroke(path, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
+        }
+        for points in overlay.previewTracks {
+            context.stroke(polyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+        }
+        if overlay.previewIsBuildable {
             for points in overlay.existing where points.count > 1 {
                 context.stroke(wholePolyline(points, projection: projection), with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
             }
-        }
-        let joined = overlay.previewIsBuildable && !overlay.existing.isEmpty
-        for points in (joined ? [] : [overlay.preview]) + [overlay.crossing] + overlay.crossovers where points.count > 1 {
-            let line = polyline(points, projection: projection)
-            let width = max(2, referenceSize * 0.12)
-            if overlay.previewIsBuildable {
-                context.stroke(line, with: .color(Color.accentColor.opacity(0.3)), style: StrokeStyle(lineWidth: referenceSize * 0.5, lineCap: .round, lineJoin: .round))
-                context.stroke(line, with: .color(Color.accentColor), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
-            } else {
+        } else {
+            for points in [overlay.preview, overlay.crossing] + overlay.crossovers where points.count > 1 {
                 // Dashed, so drawn whole (see the tunnels in drawNetwork).
                 context.stroke(wholePolyline(points, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
             }
@@ -1646,6 +1646,53 @@ enum MapArt {
     private static func drawCity(_ map: CityMap, mode: PopTravelMode, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
         let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
         drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+        if mode == .zoning {
+            drawZoneOutlooks(map.zoningMarks(in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+        }
+    }
+
+    /// Decision 514: over the zones' colours, what each empty zoned block
+    /// will do (``ZoneOutlook``): nothing over one that will be built,
+    /// white stripes rising to the right over one waiting for its station,
+    /// white cross-hatching over one the town does not want now, and grey
+    /// over one too far from a station; lines about 6 points apart, running
+    /// on across blocks.
+    private static func drawZoneOutlooks(_ marks: [CityMap.ZoningMark], opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
+        guard !marks.isEmpty else { return }
+        var greyed = Path(), lines = Path()
+        for mark in marks {
+            let rect = screenRect(minX: mark.minX, minY: mark.minY, maxX: mark.maxX, maxY: mark.maxY, projection)
+            switch mark.outlook {
+            case .builds: continue
+            case .tooFar: greyed.addRect(rect)
+            case .waitsForStation: addHatching(to: &lines, in: rect, rising: true)
+            case .notWanted:
+                addHatching(to: &lines, in: rect, rising: true)
+                addHatching(to: &lines, in: rect, rising: false)
+            }
+        }
+        let strength = min(1, opacity + 0.2)
+        context.fill(greyed, with: .color(Color(CityMap.tooFarColor).opacity(0.8 * strength)))
+        context.stroke(lines, with: .color(.white.opacity(0.9 * strength)), lineWidth: 1.25)
+    }
+
+    /// Adds to `path` the diagonals of `rect` 6 points apart, on lines fixed
+    /// to the screen so neighbouring blocks' join: rising to the right
+    /// (x + y = c), or falling (x − y = c).
+    private static func addHatching(to path: inout Path, in rect: CGRect, rising: Bool, spacing: Double = 6) {
+        let low = rising ? rect.minX + rect.minY : rect.minX - rect.maxY
+        let high = rising ? rect.maxX + rect.maxY : rect.maxX - rect.minY
+        guard (high - low).isFinite else { return }
+        for k in Int((low / spacing).rounded(.up))...max(Int((low / spacing).rounded(.up)), Int((high / spacing).rounded(.down))) {
+            let c = Double(k) * spacing
+            // The line's points with x in the rectangle and y = c − x (or
+            // x − c) in it too.
+            let start = rising ? max(rect.minX, c - rect.maxY) : max(rect.minX, rect.minY + c)
+            let end = rising ? min(rect.maxX, c - rect.minY) : min(rect.maxX, rect.maxY + c)
+            guard start < end else { continue }
+            path.move(to: CGPoint(x: start, y: rising ? c - start : start - c))
+            path.addLine(to: CGPoint(x: end, y: rising ? c - end : end - c))
+        }
     }
 
     /// Decision 311: where a station would have riders
@@ -1890,7 +1937,16 @@ enum MapArt {
             let colour = overlay.zoneDragColor.map { Color($0) } ?? Color.gray
             let shape = Path(rect)
             if overlay.zoneDragColor != nil {
-                context.fill(shape, with: .color(colour.opacity(0.35)))
+                context.fill(shape, with: .color(colour.opacity(BuildingOverlay.zoneDragFillOpacity)))
+            }
+            // Decision 522: the cells no station reaches, which the town
+            // would never build on, in the zoning layer's "too far" grey.
+            if !overlay.zoneDragOutOfReach.isEmpty {
+                var far = Path()
+                for cells in overlay.zoneDragOutOfReach {
+                    far.addRect(screenRect(minX: Double(cells.minX), minY: Double(cells.minY), maxX: Double(cells.maxX), maxY: Double(cells.maxY), projection))
+                }
+                context.fill(far, with: .color(Color(CityMap.tooFarColor).opacity(0.85)))
             }
             context.stroke(shape, with: .color(colour), style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
         }
@@ -2062,7 +2118,8 @@ enum MapArt {
         // frame redraws: first rule out stations whose name cannot reach
         // the view. A caption2 character is under 24 points wide and a line
         // under 48 high at the largest text size, so this bound needs no
-        // measuring; the shops' square (decision 222) adds 20 to its left.
+        // measuring; the shops' square (decision 222) adds 20 to its left,
+        // and the expansion's (decision 506 續) 20 to its right.
         let reach = Double(station.name.count) * 12 + 20
         let largest = CGRect(x: center.x - reach, y: center.y + nameTop, width: reach * 2, height: 4 + 48 + 14)
         guard largest.intersects(context.clipBoundingRect) else { return }
@@ -2075,13 +2132,22 @@ enum MapArt {
         context.draw(name, at: CGPoint(x: center.x, y: center.y + nameTop), anchor: .top)
         // Decision 222: the station's shops, a warm yellow square to the
         // left of its name with one, two or three bags in it.
-        if let level = station.commerce {
-            let side = max(12, min(16, nameSize.height))
-            let chip = CGRect(x: nameRect.minX - 4 - side, y: nameRect.midY - side / 2, width: side, height: side)
+        let side = max(12, min(16, nameSize.height))
+        func chip(_ glyph: MapGlyph, x: Double) {
+            let chip = CGRect(x: x, y: nameRect.midY - side / 2, width: side, height: side)
             let square = Path(roundedRect: chip, cornerRadius: 3)
             context.fill(square, with: .color(Palette.playerBuilding))
             context.stroke(square, with: .color(Palette.ink), lineWidth: 1.2)
-            drawStationSymbol(.shops(level), at: ScreenPoint(x: chip.midX, y: chip.midY), size: side * 0.8, context: context)
+            drawStationSymbol(glyph, at: ScreenPoint(x: chip.midX, y: chip.midY), size: side * 0.8, context: context)
+        }
+        if let level = station.commerce {
+            chip(.shops(level), x: nameRect.minX - 4 - side)
+        }
+        // Decision 506 續 (BADGE): the station's expansion, the same square
+        // to the right of its name, a station house for the concourse and
+        // one with an upper storey for the grand hall.
+        if let expansion = station.expansion {
+            chip(.station(expansion), x: nameRect.maxX + 4)
         }
         // Decision 216: the badges of its lines in a row under the name,
         // at most four.
@@ -2213,25 +2279,29 @@ enum MapArt {
         let near = context.clipBoundingRect.insetBy(dx: -60, dy: -40)
         var centers: [StationID: ScreenPoint] = [:]
         var visible: [StationID: Int64] = [:]
+        // Decision 506: an expanded station's room.
+        var holds: [StationID: Int64] = [:]
         for station in world.stations {
             guard let waiting = waitingCounts[station.id], waiting > 0 else { continue }
             let center = projection.screenPoint(of: station.location)
             guard near.contains(CGPoint(x: center.x, y: center.y)) else { continue }
             centers[station.id] = center
             visible[station.id] = waiting
+            if station.expansion != nil { holds[station.id] = station.capacity }
         }
         let limit = MapProblems.pillLimit(level)
         var placement = MapProblems.Placement(limit: limit)
         var rings = 0
         let fontSize = level == .full ? max(8, min(11, radius * 0.7)) : 8
-        for entry in MapProblems.stationOrder(visible) {
+        for entry in MapProblems.stationOrder(visible, holds: holds) {
             guard !placement.isFull || rings < limit else { break }
             guard let center = centers[entry.station] else { continue }
-            let crowding = MapProblems.Crowding(waiting: entry.waiting)
+            let room = holds[entry.station] ?? StationPassengers.capacity
+            let crowding = MapProblems.Crowding(waiting: entry.waiting, holds: room)
             let ringRadius = MapProblems.ringRadius(stationRadius: radius)
             if crowding != .normal, rings < limit {
                 rings += 1
-                drawCrowdedRing(at: center, radius: ringRadius, fill: MapProblems.fill(waiting: entry.waiting), isFull: crowding == .full, in: context)
+                drawCrowdedRing(at: center, radius: ringRadius, fill: MapProblems.fill(waiting: entry.waiting, holds: room), isFull: crowding == .full, in: context)
             }
             guard !placement.isFull else { continue }
             let countText = context.resolve(

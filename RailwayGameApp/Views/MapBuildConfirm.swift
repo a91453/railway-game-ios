@@ -231,7 +231,8 @@ struct MapBuildConfirm: View {
                             .font(.subheadline.weight(.bold))
                     }
                     if let cost = build.cost {
-                        Text(verbatim: cost.moneyText)
+                        // Decision 523, continued: in 萬 or 億 in Chinese.
+                        Text(verbatim: cost.compactText(in: session.language))
                             .font(.subheadline.weight(.bold))
                             .monospacedDigit()
                     }
@@ -426,10 +427,13 @@ private struct BuildConfirmation {
             // the track costs; where it cannot be, ✓ says why when tapped.
             // A new station's price is in it too.
             let levelling = session.networkPlatformLevelling
-            cost = session.networkPlatformCost
+            // Decision 507: an island layout's price is its tracks' too,
+            // and where it cannot be laid the pill says why.
+            let layout = session.networkStationLayoutPreview
+            cost = layout.map(\.cost) ?? session.networkPlatformCost
             canConfirm = true
             kind = .platform
-            caption = [session.platformSiteCaption(catchment, at: site), levelling?.caption(in: session.language)]
+            caption = [session.platformSiteCaption(catchment, at: site), levelling?.caption(in: session.language), layout?.problem]
                 .compactMap(\.self).joined(separator: "\n")
             showsCatchment = true
             cancel = { session.clearNetworkDraft() }
@@ -447,7 +451,8 @@ private struct BuildConfirmation {
             // Decision 468, later: a trace along a real line for sale says
             // so, and the pill offers its purchase card.
             let sale = session.tracedSaleHint
-            let lines = [preview.crossoverNote, sale?.text, sale?.shortfall].compactMap(\.self)
+            let hint = session.networkFollowsTrack ? preview.freeFirstHint(in: session.language) : nil
+            let lines = [hint, preview.crossoverNote, sale?.text, sale?.shortfall].compactMap(\.self)
             caption = lines.isEmpty ? nil : lines.joined(separator: "\n")
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
@@ -543,7 +548,7 @@ private struct BuildConfirmation {
         case .roadRemoval: language.text("Take up this road", "拆掉這段路")
         }
         guard let cost else { return what }
-        return "\(what), \(cost.moneyText)"
+        return "\(what), \(cost.compactText(in: language))"
     }
 }
 

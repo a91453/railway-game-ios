@@ -191,6 +191,8 @@ struct StationPanel: View {
         case .platforms: platformsSection(station)
         case .tripsByHour: tripsByHourSection(station)
         case .passengers: passengersSection(station)
+        // Decision 506: room for more to wait, once busy enough.
+        case .expansion: StationExpansionSection(session: session, station: station.id)
         case .demand: demandSection(station)
         case .events: eventsSection(station)
         case .tripsByStation: tripsByStationSection(station)
@@ -843,7 +845,8 @@ struct StationPanel: View {
             Text(verbatim: language.text(
                 "A platform track runs beside the platform with a turnout at each end. Island: one platform between the tracks, 11 m apart. Side: a platform outside each track, 5 m apart.",
                 "月台軌道會建在月台旁，兩端各有一組轉轍器。島式：兩軌之間共用一座月台，軌距 11 公尺。岸式：兩軌外側各有月台，軌距 5 公尺。"
-            ))
+            ) + "\n" + session.ownTrackPlatformHelp(for: station))
+            .accessibilityIdentifier("station.platforms.footer")
         }
     }
 
@@ -1472,6 +1475,29 @@ struct StationPanel: View {
         }
     }
 
+    private func civicRidersSection(_ riders: [CivicRiders]) -> some View {
+        Section {
+            ForEach(riders, id: \.kind) { entry in
+                Label {
+                    Text(verbatim: entry.text(in: session.language))
+                        .font(.footnote)
+                        .monospacedDigit()
+                } icon: {
+                    entry.kind.mapGlyph.image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
+                        .foregroundStyle(Theme.primary)
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("station.civicRiders.\(entry.kind.rawValue)")
+            }
+        } header: {
+            Text(verbatim: session.language.text("Riders from Your Buildings", "自有建築帶來的旅客"))
+        }
+    }
+
     // MARK: - Read-only
 
     /// The trips by hour, once worked out for this station; the last ones
@@ -1481,6 +1507,11 @@ struct StationPanel: View {
         if let ridership, ridership.key.station == station.id {
             if let flow = ridership.value.flow {
                 flowSection(flow)
+            }
+            // Decision 533: the riders the company's schools and hospitals
+            // near the station bring today.
+            if !ridership.value.civic.isEmpty {
+                civicRidersSection(ridership.value.civic)
             }
         } else {
             Section {

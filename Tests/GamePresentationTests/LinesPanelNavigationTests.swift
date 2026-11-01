@@ -135,6 +135,23 @@ final class LinesPanelNavigationTests: XCTestCase {
         XCTAssertEqual(none.compactRowParts(in: .traditionalChinese).count, 1)
     }
 
+    /// CRASH101: the narrow row's lines, built without a ForEach, are the
+    /// same parts, one under the other.
+    func testTheNarrowRowsLinesAreItsParts() {
+        let yesterday = day(1, riders: 12_340)
+        let report = LineReport(line: Self.first, name: "Red", today: nil, yesterday: yesterday, days: [yesterday])
+        let new = LineReport(line: Self.first, name: "Red", today: day(0, riders: 40), yesterday: nil, days: [])
+        let none = LineReport(line: Self.first, name: "Red", today: nil, yesterday: nil, days: [])
+        for row in [report, new, none] {
+            for language in [DisplayLanguage.english, .traditionalChinese] {
+                let lines = row.compactRowLines(in: language)
+                XCTAssertEqual([lines.first] + (lines.second.map { [$0] } ?? []), row.compactRowParts(in: language))
+            }
+        }
+        XCTAssertEqual(report.compactRowLines(in: .english).second, "profit \(yesterday.profit.moneyText)")
+        XCTAssertNil(new.compactRowLines(in: .english).second)
+    }
+
     func testTheNetworkRowSaysHowItIsSet() throws {
         let session = try session()
         XCTAssertEqual(

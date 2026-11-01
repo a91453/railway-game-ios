@@ -162,6 +162,18 @@ public final class GameSession {
     /// The levelling of the platform's stretch, kept likewise (see
     /// ``networkPlatformLevelling``).
     @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
+    /// The station layout's plan for the platform's stretch, kept likewise
+    /// (decision 507, ``networkStationLayoutPreview``).
+    @ObservationIgnored var stationLayoutMemo: StationLayoutMemo?
+    /// The stretch beside the platform's, kept for the stretch and command
+    /// it was looked for at (L3-11, ``networkPlatformBeside``).
+    @ObservationIgnored var platformBesideMemo: PlatformBesideMemo?
+    /// Which sights lie on track within a tap's reach, kept for the reach
+    /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
+    @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
+    /// How many times the track was searched for the two above (for the
+    /// tests).
+    @ObservationIgnored var trackSearchesWorkedOut = 0
     /// How many times the network tool's previews (the track, a passing
     /// loop, a depot, a platform's levelling) were worked out (for the tests).
     @ObservationIgnored var buildPreviewsWorkedOut = 0
@@ -181,6 +193,19 @@ public final class GameSession {
     /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
     /// for; the game loop reads it off the main actor with each tick.
     @ObservationIgnored var trafficMemo: (revision: Int, reading: TrafficReading)?
+    /// How many times ``trafficOverlay`` was read on the main actor, for
+    /// tests.
+    @ObservationIgnored var trafficReadOnTheMainActor = 0
+    /// Decision 497 (P2-3): the reading of traffic control worked out off
+    /// the main actor after a command, and for which ``worldRevision``.
+    @ObservationIgnored var trafficReadTask: (revision: Int, task: Task<Void, Never>)?
+    /// Counts the readings of traffic control worked out off the main
+    /// actor after a command once each is in: the map takes
+    /// ``trafficOverlay`` again when it changes.
+    public private(set) var trafficReadingsTaken = 0
+    /// Decision 497 (P2-3): the map's bubbles worked out off the main
+    /// actor after a command, and for which ``commandRevision``.
+    @ObservationIgnored var situationAlertsTask: (revision: Int, task: Task<Void, Never>)?
     /// Decision 379: the trains' glide the map last showed
     /// (``trainMotion(after:at:)``), which the game loop's tick glides on
     /// from off the main actor; `nil` while no map shows them.
@@ -229,14 +254,30 @@ public final class GameSession {
             buildingSite = nil
             zoneDrag = nil
             saleCandidate = nil
+            // Decision 522: until the player picks a zone, the zoning
+            // mode opens on the use the city wants most now.
+            if buildingMode == .zone, oldValue != .zone, !isZoningZoneChosen {
+                zoningZone = suggestedZoningZone
+                isZoningZoneChosen = false
+            }
         }
     }
     /// What the zoning mode zones cells for (decision 98), or `nil` to
-    /// clear their zones.
-    public var zoningZone: Zone? = .residential
+    /// clear their zones. Until the player sets it, the zoning mode opens
+    /// on ``suggestedZoningZone`` (decision 522).
+    public var zoningZone: Zone? = .residential {
+        didSet { isZoningZoneChosen = true }
+    }
+    /// Decision 522: whether the player has set ``zoningZone``; never
+    /// saved.
+    @ObservationIgnored var isZoningZoneChosen = false
     /// The cells a drag with the zoning mode would zone, while the finger
     /// is down (decision 98).
     public internal(set) var zoneDrag: CellRectangle?
+    /// Decision 509: the empty cells the player zoned for a use, until
+    /// the city first builds on one of them (``noteZonedCellsBuiltOn()``).
+    /// Never saved.
+    @ObservationIgnored var zonedCellsAwaitingBuilding: Set<CellPosition> = []
     /// Where the building tool would build, once the player tapped there
     /// (decision 95): the map shows the building there and what it would
     /// cost and pull down, and the action button builds it.
@@ -640,6 +681,10 @@ public final class GameSession {
     public internal(set) var networkEdgePoint: NetworkEdgePoint?
     /// How many cars the next platform is long enough for.
     public var platformCars = GameSession.defaultPlatformCars
+    /// How the next station's platforms and tracks are laid out (decision
+    /// 507): the player's pick, which ``networkStationLayout`` follows
+    /// where it fits the track picked.
+    public var stationLayout: StationLayout = .singleSide
     /// The station the next platform serves; `nil` builds a new station
     /// named ``stationName`` beside it.
     public var platformStationID: StationID?
@@ -668,6 +713,7 @@ public final class GameSession {
         didSet {
             networkPreviewMemo = nil
             platformLevellingMemo = nil
+            stationLayoutMemo = nil
             passingLoopMemo = nil
             depotYardMemo = nil
             lineOpeningMemo = nil
@@ -1033,7 +1079,9 @@ public final class GameSession {
         self.newsWatch = NewsWatch(world: world)
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
-        refreshNightSkipOffer()
+        // Decision 497 (P2-4): the run ahead off the main actor; the offer
+        // comes once it is found.
+        refreshNightSkipOfferOffTheMainActor()
         refreshScreenFacts()
         refreshMapMarks()
         refreshFollowBar()
@@ -1359,7 +1407,7 @@ public final class GameSession {
     /// volume and the phone's silent switch keep it quiet.
     public func soundHorn() {
         guard let train = followedTrain else { return }
-        playSound?(.horn(TrainHorn.of(train)))
+        playSound?(.horn(TrainHorn.of(train, in: world)))
     }
 
     /// Decision 403 (續二): where the followed train was after the last
@@ -1379,7 +1427,7 @@ public final class GameSession {
         }
         let place = world.hornPlace(of: train.id)
         defer { hornPlace = place }
-        let horn = TrainHorn.of(train)
+        let horn = TrainHorn.of(train, in: world)
         guard horn.blowsByItself, let place, TrainHorn.blowsByItself(from: hornPlace, to: place) else { return }
         playSound(.horn(horn))
     }
@@ -1511,6 +1559,10 @@ public final class GameSession {
     /// paused (decision 330, later) or after the game loop's tick
     /// (decision 369), or `nil`.
     @ObservationIgnored var nightSkipLookAhead: Task<Void, Never>?
+    /// Decision 497 (P2-4): the ``commandRevision`` at which the shortcut
+    /// was tapped while the run ahead was still to be found off the main
+    /// actor; the skip starts once it is, unless a command came since.
+    @ObservationIgnored var skipToMorningRequested: Int?
 
     /// The first move of the night whose skip ended or was stopped, so the
     /// setting does not start it again.
@@ -1668,9 +1720,12 @@ public final class GameSession {
     /// (`MetroSaveModePolicy`): its ridership would be the player's, not
     /// the city's.
     ///
-    /// A company in the red cannot switch: building still costs money in
-    /// free play, which has no income, so a negative balance could never be
-    /// built out of and the switch cannot be undone. Nor can a company with
+    /// Decision 497 (P2-5, B): the switch turns unlimited funds on (in the
+    /// edit itself, ``PlayerCommand/Edit/setEconomyMode(_:)``, so the
+    /// command log replays it), so
+    /// building and buying cost nothing from then on. A company in the red
+    /// still cannot switch: free play is not a way out of going bankrupt.
+    /// Nor can a company with
     /// a loan: interest is paid only by a managed company (decision 67), so
     /// the loan would become money it never pays for. Nor can a challenge
     /// being played (``isFreePlayLocked``).
@@ -1689,8 +1744,8 @@ public final class GameSession {
         }
         guard world.economy.balance >= .zero else {
             message = StatusMessage(kind: .failure, text: language.text(
-                "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game.",
-                "公司目前虧損。自由模式沒有收入，蓋東西仍要花錢，切過去就什麼都蓋不了。請先讓餘額回到零以上，或開新遊戲。"
+                "The company is in the red. Bring the balance back above zero before switching to free play, or start a new game.",
+                "公司目前虧損。請先讓餘額回到零以上再切換到自由模式，或開新遊戲。"
             ))
             return
         }
@@ -1703,8 +1758,8 @@ public final class GameSession {
         }
         _ = try? performCommand(.edit(.setEconomyMode(mode)))
         message = StatusMessage(kind: .success, text: language.text(
-            "Free play: no fares or running costs, and you set each station's ridership.",
-            "自由模式：不收票價，也沒有營運成本；各站的客源由你設定。"
+            "Free play: no fares or running costs, building costs nothing, and you set each station's ridership.",
+            "自由模式：不收票價，也沒有營運成本，蓋東西不用錢；各站的客源由你設定。"
         ))
     }
 
@@ -1717,6 +1772,16 @@ public final class GameSession {
     }
 
     /// Why ``isFreePlayLocked`` keeps the game managed.
+    /// What the confirmation before switching to free play says (decision
+    /// 46; HANG2 P2-5, decision 497): what free play is, that the cash
+    /// stays where it is, and that the switch goes one way.
+    public static func freePlaySwitchText(in language: DisplayLanguage) -> String {
+        language.text(
+            "Free play has no fares or running costs, and you set each station's ridership. Building and buying cost nothing from then on, and achievements are no longer counted. It cannot become a managed company again.",
+            "自由模式不收票價、沒有營運成本，各站的客源由你設定。之後蓋東西、買車都不用錢，也不再計成就。切換後無法再改回經營模式。"
+        )
+    }
+
     public static func freePlayLockedText(in language: DisplayLanguage) -> String {
         language.text(
             "A challenge is being played: its goals are judged only for a managed company. Finish it, or start a new game for free play.",
@@ -1922,7 +1987,11 @@ public final class GameSession {
         // Decision 175: the secretary room reads what the step changed.
         meter.measure(.stepNews) { observeNews(closedBefore: closedBefore) }
         if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
-            meter.measure(.stepMidnight) { onMidnight?() }
+            meter.measure(.stepMidnight) {
+                // Decision 509: before the achievements, which say theirs last.
+                noteZonedCellsBuiltOn()
+                onMidnight?()
+            }
         }
         // Decision 305: the night's skip goes on, ends or starts.
         meter.measure(.stepNightSkip) { continueNightSkip(aheadOffTheMainActor: fromLoop) }
@@ -2079,14 +2148,19 @@ public final class GameSession {
     /// for the world as it is now: read with the tick that made it, off
     /// the main actor, or else (after a command) here, once.
     public var trafficOverlay: TrafficOverlay {
-        trafficReading().overlay
+        _ = trafficReadingsTaken
+        return trafficReading().overlay
     }
 
     /// ``GameCore/GameWorld/routeWaitText(of:in:)`` of the world as it is
     /// now, in ``language``: the selected train's read with the tick, and
     /// none searched for a train the tick's reading shows waits for nothing.
     public func routeWaitText(of id: TrainID) -> String? {
+        _ = trafficReadingsTaken
         var reading = trafficReading()
+        // Decision 497 (P2-3): while the reading after a command is worked
+        // out, the words the last one has, none searched for here.
+        guard trafficMemo?.revision == worldRevision else { return reading.texts[id] ?? nil }
         let text = reading.waitText(of: id, in: world, language: language)
         trafficMemo = (worldRevision, reading)
         return text
@@ -2094,9 +2168,60 @@ public final class GameSession {
 
     private func trafficReading() -> TrafficReading {
         if let memo = trafficMemo, memo.revision == worldRevision { return memo.reading }
+        // Decision 497 (P2-3): after a command, the last reading until the
+        // new one, worked out off the main actor, is in. Only the game as
+        // it opens is read here.
+        if let last = trafficMemo?.reading {
+            readTrafficOffTheMainActor(after: last)
+            return last
+        }
+        trafficReadOnTheMainActor += 1
         let reading = TrafficReading(world: world, in: language)
         trafficMemo = (worldRevision, reading)
         return reading
+    }
+
+    /// Works out the reading of traffic control of the world as it is
+    /// now off the main actor, as the game loop's tick does, and keeps it
+    /// if the world is still as it was then. Once for each world.
+    private func readTrafficOffTheMainActor(after last: TrafficReading) {
+        let revision = worldRevision
+        guard trafficReadTask?.revision != revision else { return }
+        let (world, train, language) = (world, selectedTrainID, language)
+        let task = Task { [weak self] in
+            let reading = await Task.detached(priority: .userInitiated) {
+                TrafficReading(world: world, train: train, in: language, previous: last)
+            }.value
+            guard let self, worldRevision == revision else { return }
+            trafficMemo = (revision, reading)
+            trafficReadingsTaken &+= 1
+        }
+        trafficReadTask = (revision, task)
+    }
+
+    /// Works out ``situationAlerts`` of the world as it is now off the
+    /// main actor (decision 497, P2-3), and puts them on the map if no
+    /// command changed the world meanwhile and no tick brought fresher
+    /// ones. Once for each command.
+    func workOutSituationAlertsOffTheMainActor() {
+        let revision = commandRevision
+        guard situationAlertsTask?.revision != revision else { return }
+        let world = world
+        let task = Task { [weak self] in
+            let (period, alerts) = await Task.detached(priority: .userInitiated) {
+                (world.clock.now.seconds / GameSession.situationAlertsPeriod, world.situationAlerts())
+            }.value
+            guard let self, commandRevision == revision, situationAlertsMemo?.revision != revision else { return }
+            situationAlertsMemo = SituationAlertsMemo(revision: revision, period: period, alerts: alerts)
+            refreshMapMarks()
+        }
+        situationAlertsTask = (revision, task)
+    }
+
+    /// Returns once the map's readings begun off the main actor are in.
+    func mapReadsSettled() async {
+        await situationAlertsTask?.task.value
+        await trafficReadTask?.task.value
     }
 
     /// Ends `tick` with what ``LoopTick/work()`` made of it: the world

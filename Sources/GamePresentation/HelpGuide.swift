@@ -86,8 +86,8 @@ public enum HelpGuide {
             "firstLine", .building,
             question: ("How do I build my first line?", "如何建造第一條路線？"),
             answer: (
-                "Tap Build, the hammer at the bottom left: the track tools open with Network chosen. Tap the track's start on the map, then its end, then ✓. Choose Platform and tap the track to add a station: a line needs two. Then tap Done, open Lines, tap Pick on Map and tap your two stations, then give the line a train. Until then the Lines panel says at its top what is missing, with a button that takes you there. The station master tells you the next step, and the Tutorial in the game menu walks you through it.",
-                "點左下的鐵鎚「建設」，地圖左邊會出現建設工具，已經選好「路網」。在地圖上點軌道的起點，再點終點，按 ✓。選「月台」再點軌道，蓋一座車站：一條路線至少兩站。接著點「完成」，打開「路線」，按「在地圖上選站」再點你的兩座車站，然後幫路線配一列車。還沒有路線時，「路線」最上面會寫還缺什麼，按它的按鈕就會帶你過去。站長會告訴你下一步；遊戲選單裡的「教學」會一步步帶你做。"
+                "Tap Build, the hammer at the bottom left: the track tools open with Network chosen. Tap the track's start on the map, then its end, then ✓. Choose Station and tap the track to add a station: a line needs two. Then tap Done, open Lines, tap Pick on Map and tap your two stations, then give the line a train. Until then the Lines panel says at its top what is missing, with a button that takes you there. The station master tells you the next step, and the Tutorial in the game menu walks you through it.",
+                "點左下的鐵鎚「建設」，地圖左邊會出現建設工具，已經選好「路網」。在地圖上點軌道的起點，再點終點，按 ✓。選「車站」再點軌道，蓋一座車站：一條路線至少兩站。接著點「完成」，打開「路線」，按「在地圖上選站」再點你的兩座車站，然後幫路線配一列車。還沒有路線時，「路線」最上面會寫還缺什麼，按它的按鈕就會帶你過去。站長會告訴你下一步；遊戲選單裡的「教學」會一步步帶你做。"
             ),
             keywords: "create line track station 第一條 建立 開始 新手"
         ),
@@ -95,10 +95,10 @@ public enum HelpGuide {
             "addStation", .building,
             question: ("How do I add a station?", "如何增設車站？"),
             answer: (
-                "Build track first, then use the building tools to put a platform on it. Put stations where people live and work: the Population layer in Map Layers shows where. Stations less than about 800 m apart share the same people, so spread them out.",
-                "先鋪好軌道，再用建設工具在軌道上設置月台。車站要蓋在有人居住或工作的地方，「地圖圖層」的人口圖層會告訴你在哪。相距不到約 800 公尺的車站會分攤同一批人，所以盡量拉開距離。"
+                "Build track first, then choose Station in the building tools and tap the track. Put stations where people live and work: the Population layer in Map Layers shows where. Stations less than about 800 m apart share the same people, so spread them out.",
+                "先鋪好軌道，再選建設工具的「車站」並點軌道。車站要蓋在有人居住或工作的地方，「地圖圖層」的人口圖層會告訴你在哪。相距不到約 800 公尺的車站會分攤同一批人，所以盡量拉開距離。"
             ),
-            keywords: "platform node 月台 節點 新增 蓋站"
+            keywords: "platform station node 月台 車站 節點 新增 蓋站"
         ),
         HelpEntry(
             "moveRemoveStation", .building,
@@ -167,10 +167,10 @@ public enum HelpGuide {
             "crowdedButLowLoad", .running,
             question: ("Why is my station full while the peak load is low?", "車站客滿，尖峰載客率卻不高，為什麼？"),
             answer: (
-                "A station is full at 4,000 waiting. Each of them waits for one line and one way and boards only a train that stops where they are going; people changing trains wait there too. So one way of one line can fill the station while the other trains leave part empty. The peak load is the fullest departure of the day, not the average. When a line has closed for the night its passengers wait for the first train, so a station can be full overnight. Open the station panel: it lists who waits for each line and way. Run more trains on the busiest one, lengthen its service hours, or build a line to where they are going.",
-                "候車達 4,000 人時車站就客滿。每位乘客只等一條路線的一個方向，只上會停他目的地的車；轉乘的乘客也在站內等。所以可能某條路線的某個方向就把車站擠滿，其他列車卻沒坐滿。尖峰載客率是當天最滿的那一班，不是平均。路線收班後，乘客會留在站內等首班車，所以半夜車站也可能是滿的。打開車站面板，會依路線和方向列出候車人數；在最多人等的那條加開列車、延長營運時間，或開一條到他們目的地的路線。"
+                "A station is full at 4,000 waiting, or 8,000 and 16,000 once expanded. Each of them waits for one line and one way and boards only a train that stops where they are going; people changing trains wait there too. So one way of one line can fill the station while the other trains leave part empty. The peak load is the fullest departure of the day, not the average. When a line has closed for the night its passengers wait for the first train, so a station can be full overnight. Open the station panel: it lists who waits for each line and way. Run more trains on the busiest one, lengthen its service hours, or build a line to where they are going. A busy station that is often full can also be expanded in its panel, but more room only helps when the trains have seats.",
+                "候車達 4,000 人時車站就客滿，擴建後是 8,000、16,000 人。每位乘客只等一條路線的一個方向，只上會停他目的地的車；轉乘的乘客也在站內等。所以可能某條路線的某個方向就把車站擠滿，其他列車卻沒坐滿。尖峰載客率是當天最滿的那一班，不是平均。路線收班後，乘客會留在站內等首班車，所以半夜車站也可能是滿的。打開車站面板，會依路線和方向列出候車人數；在最多人等的那條加開列車、延長營運時間，或開一條到他們目的地的路線。人多又常客滿的車站也可以在面板裡擴建，但列車有空位，多出來的空間才有用。"
             ),
-            keywords: "full crowded station waiting peak load transfer closed overnight 客滿 擁擠 滿了 候車 載客率 尖峰 轉乘 收班"
+            keywords: "full crowded station waiting peak load transfer closed overnight expand expansion 客滿 擴建 擁擠 滿了 候車 載客率 尖峰 轉乘 收班"
         ),
         HelpEntry(
             "whyLosing", .money,

@@ -66,6 +66,21 @@ extension GameWorld {
         return copy
     }
 
+    /// A ``pricingCopy()`` for previewing track while it is being laid
+    /// (decision 521, cause two): its steps leave the passengers alone, as
+    /// the steps of an edit made as one do (``editTrackAsOne(_:)``,
+    /// decision 275), and nothing sends away the ones left unserved after
+    /// them. A step's price, refusal, geometry and cleared buildings never
+    /// depend on the passengers, so it measures them as ``pricingCopy()``
+    /// does, without going through every waiting group after each step.
+    /// Only for measuring and throwing away: the game never plays on it,
+    /// and its passengers are not what the command leaves.
+    public func trackPreviewCopy() -> GameWorld {
+        var copy = pricingCopy()
+        copy.trackEditDepth += 1
+        return copy
+    }
+
     /// Sets the network's fare rules. From then on fares change demand
     /// (see ``FareRules/demandFactor(fare:)``) while the company is managed.
     /// Free.

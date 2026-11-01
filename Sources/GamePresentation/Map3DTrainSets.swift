@@ -31,6 +31,10 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 435: and ``Slot/fourth``, a fourth car in the cycle (the
     /// EMU900's), its back half's ``Cars/fourthBack``.
     var cycle: [Slot] = []
+    /// Decision 541: ``cycle`` from the car behind the head to the car
+    /// before the tail, in that order and over again, with no back half
+    /// (a hauled set's coach roles behind its locomotive).
+    var cycleFromFront = false
     enum Slot: Sendable { case middle, pantograph, centre, fourth }
     /// Decision 399: the cars drawn at their models' own lengths
     /// (``Map3DModelPack/layout(forType:count:)``), not stretched to the
@@ -45,6 +49,11 @@ public struct Map3DTrainSet: Sendable {
     /// ``reach(of:)`` but within ``Map3DTrains/modelReach``: a lighter
     /// model of the same train.
     var far: String? = nil
+    /// Decision 539: the key of the set whose head car this set draws as
+    /// its own, so the pack holds that model once (the freight train's
+    /// R200 is the R200 Chu-Kuang's); this set's ``Cars/head`` is not put
+    /// in the pack.
+    var headOf: String? = nil
     let build: @Sendable () -> Cars
 
     struct Cars {
@@ -76,7 +85,7 @@ public struct Map3DTrainSet: Sendable {
     }
 
     /// The models' names in the pack.
-    var headName: String { "set-\(key)-head" }
+    var headName: String { "set-\(headOf ?? key)-head" }
     var middleName: String { "set-\(key)-car" }
     var tailName: String { "set-\(key)-tail" }
     var singleName: String { "set-\(key)-single" }
@@ -88,7 +97,15 @@ public struct Map3DTrainSet: Sendable {
     var pantographBackName: String { "set-\(key)-pantoBack" }
     var fourthName: String { "set-\(key)-fourth" }
     var fourthBackName: String { "set-\(key)-fourthBack" }
-    func unitName(_ unit: String) -> String { "set-\(key)-\(unit)" }
+    func unitName(_ unit: String) -> String { unit == "head" ? headName : "set-\(key)-\(unit)" }
+
+    /// The unit `name` (a model's name in the pack) is of this set
+    /// ("head", "car", "tail"…), or `nil` when it is not one of its own.
+    func unit(of name: String) -> String? {
+        if name == headName { return "head" }
+        let prefix = "set-\(key)-"
+        return name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : nil
+    }
 
     /// The four model names and their models, in the pack's order.
     func models() -> [Map3DModelPack.Model] {
@@ -99,7 +116,7 @@ public struct Map3DTrainSet: Sendable {
         func named(_ model: Map3DModelPack.Model, _ name: String) -> Map3DModelPack.Model {
             Map3DModelPack.Model(name: name, vertices: model.vertices, minimum: model.minimum, maximum: model.maximum)
         }
-        var models = [named(cars.head, headName)]
+        var models = headOf == nil ? [named(cars.head, headName)] : []
         if let middle = cars.middle { models.append(named(middle, middleName)) }
         if let tail = cars.tail { models.append(named(tail, tailName)) }
         if let single = cars.single { models.append(named(single, singleName)) }
@@ -128,13 +145,15 @@ public struct Map3DTrainSet: Sendable {
             hauled("E200CK", head: { lit(Map3DTrainShapeRefresh.model("refresh-e200"), front: true) }, coach: chuKuang, far: true),
             e500Hauled("E500CK", coach: chuKuang),
             e500Hauled("E500CK", far: true, coach: chuKuang),
-            hauled("R100CK", locomotive: .r100, coach: chuKuang),
-            hauled("R100CK", locomotive: .r100, coach: chuKuang, far: true),
-            hauled("R200CK", locomotive: .r200, coach: chuKuang),
-            hauled("R200CK", locomotive: .r200, coach: chuKuang, far: true),
-            // Decision 286: the Blue Train's R135 and its old blue coaches.
-            hauled("BLUE", locomotive: .r135,
-                   coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
+            r100Hauled(),
+            r100Hauled(far: true),
+            // Preserve upstream decision 529 R200 binding.
+            r200Hauled("R200CK", coach: chuKuang),
+            r200Hauled("R200CK", far: true, coach: chuKuang),
+            // Decision 541: the Blue Train as it ran on 2026-05-22, two
+            // blue R100s and #1671's restored coaches, near and far.
+            breezyBlue(),
+            breezyBlue(far: true),
             // Decision 286, later: the Ming-Ri's black coaches with their
             // orange line; decision 483: as #1480's E200 and Chu-Kuang
             // coaches in the Ming-Ri's black and orange, near and far.
@@ -247,6 +266,10 @@ public struct Map3DTrainSet: Sendable {
             // in its own silver and orange, near and from 500 m out.
             dr1000Railcar(livery: .dr3100),
             dr1000Railcar(far: true, livery: .dr3100),
+            // Decision 531: the Alishan Forest Railway's mountain train, the
+            // DL-38 and its coaches, near and from 500 m out.
+            alishan(),
+            alishan(far: true),
             // Decision 331: the light metro as the green low-floor tram.
             lowFloorTram("greenTram"),
             // Decision 331, later: a two-car commuter as the green
@@ -272,6 +295,11 @@ public struct Map3DTrainSet: Sendable {
             ownLength("blueSeven", head: Map3DSevenCarBlue.model(.leading), middle: Map3DSevenCarBlue.model(.middleOne),
                       tail: Map3DSevenCarBlue.model(.trailing), cars: 7,
                       lamps: Lamps(x: 4.02, height: 1.005, across: 0.65, width: 0.32, tall: 0.17)),
+            // Decision 539: a freight line's train, whatever its type, as an
+            // R200 and container flat wagons, and from 500 m out their light
+            // versions; last, so no set's models before them move.
+            freight(),
+            freight(far: true),
         ]
     }()
 
@@ -311,9 +339,9 @@ public struct Map3DTrainSet: Sendable {
     /// Kaohsiung and Taichung Green line's (their far sets).
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
-    static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
+    static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
-                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis"]
+                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -485,10 +513,90 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
+    /// Native R100 only for the existing R100CK identity. +X is the
+    /// short-hood/cab end. Keep the same coach roles, count, lighting and
+    /// fallback rules; own lengths prevent stretching the locomotive to 19.4 m.
+    static func r100Hauled(far: Bool = false) -> Map3DTrainSet {
+        let key = "R100CK"
+        let legacy = hauled(key, head: { Map3DR100.model(livery: .orange, far: far) }, coach: chuKuangCoach, far: far)
+        return Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true,
+                            far: far ? nil : key + "Far", build: legacy.build)
+    }
+
+    /// Decision 541: the Blue Train (藍皮解憂號) as reported on 2026-05-22
+    /// (`tools/tra-r100/formation.json`, `docs/art/tra-r100/blue-sources.json`):
+    /// two blue R100s at the front, R122 its short (cab) end forward and
+    /// R129 turned round, its short end toward the coaches, drawn as one
+    /// 31.6 m head unit; then #1671's restored coaches in the reported
+    /// role order, mixed (40TPK32200), exhibition and long-seat (35TP32850),
+    /// rotating-seat (35SPK32700), and a mixed coach last. A train of
+    /// another length keeps the order from the front and over again, the
+    /// last coach always a mixed one. Coach numbers and which way each
+    /// coach faces are UNVERIFIED: every coach faces forward.
+    static func breezyBlue(far: Bool = false) -> Map3DTrainSet {
+        let key = "BLUE"
+        // The exhibition and long-seat coaches are both 35TP32850s, the same
+        // outside (#1671 models no interior): one model, the cycle's
+        // pantograph slot twice.
+        return Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.middle, .pantograph, .pantograph, .fourth],
+                             cycleFromFront: true, ownLengths: true, far: far ? nil : key + "Far") {
+            let locomotive = Map3DR100.model(livery: .breezyBlue, far: far)
+            let half = Map3DR100.length / 2
+            var builder = StationKitBuilder()
+            builder.add(locomotive, at: Map3DPoint(half, 0, 0))
+            builder.add(locomotive, at: Map3DPoint(-half, 0, 0), angle: .pi)
+            let head = litLenses(.flat(named: key, from: builder.mesh), front: true)
+            func coach(_ role: Map3DBreezyBlueCoaches.Role) -> Map3DModelPack.Model { Map3DBreezyBlueCoaches.model(role, far: far) }
+            return Cars(head: head, middle: coach(.mixed), tail: breezyBlueTail(far: far), single: nil,
+                        pantograph: coach(.exhibition), fourth: coach(.rotatingSeat))
+        }
+    }
+
+    /// Decision 541: the Blue Train's last coach, a mixed one, its two red
+    /// marker lenses at the back end (the recipe's own, `0x9D413A`) lit.
+    static func breezyBlueTail(far: Bool) -> Map3DModelPack.Model {
+        let coach = Map3DBreezyBlueCoaches.model(.mixed, far: far)
+        let marker = Map3DColor.rgb(0x9D413A)
+        var vertices = coach.vertices
+        for start in stride(from: 0, to: vertices.count, by: 3) where vertices[start].color == marker {
+            guard vertices[start ..< start + 3].allSatisfy({ $0.x < 0 }) else { continue }
+            for i in start ..< start + 3 {
+                vertices[i].color = Map3DPalette.lantern
+                vertices[i].layer = Map3DVertex.glowing
+            }
+        }
+        return Map3DModelPack.Model(name: coach.name, vertices: vertices, minimum: coach.minimum, maximum: coach.maximum)
+    }
+
     /// E500-only substitution. Retains the original coaches and all pack/lock/fallback lookup rules.
     static func e500Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
         let legacy = hauled(key, head: { Map3DE500.model(far: far) }, coach: coach, far: far)
         return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
+    }
+
+    /// Decision 529: R200-only substitution, as ``e500Hauled``: the same
+    /// coaches and pack lookups, the locomotive at its own 20.01 m, the
+    /// lamps of its front cab lit (it has a cab at each end).
+    static func r200Hauled(_ key: String, far: Bool = false, coach: Coach) -> Map3DTrainSet {
+        let legacy = hauled(key, head: { litLenses(Map3DR200.model(far: far), front: true) }, coach: coach, far: far)
+        return Map3DTrainSet(key: far ? key+"Far" : key, ownLengths: true, far: far ? nil : key+"Far", build: legacy.build)
+    }
+
+    /// Decision 539: the key of the set a freight line's train is drawn
+    /// as, whatever its type (``Map3DTrains/frame(_:progress:heights:in:models:eye:palette:ringed:reach:)``).
+    public static let freightKey = "FREIGHT"
+
+    /// Decision 539: the freight train: the R200 (decision 529's, its
+    /// front lamps lit; the R200 Chu-Kuang's model itself, ``headOf``) and ``Map3DContainerWagon``s at their own lengths,
+    /// the wagons' loads cycling 40 ft rust, two 20 ft, 40 ft green from
+    /// each end inward, the last wagon the one with the red tail marker.
+    static func freight(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? freightKey + "Far" : freightKey, cycle: [.middle, .fourth, .centre], ownLengths: true,
+                      far: far ? nil : freightKey + "Far", headOf: far ? "R200CKFar" : "R200CK") {
+            Cars(head: litLenses(Map3DR200.model(far: far), front: true),
+                 middle: Map3DContainerWagon.model(.forty, far: far), tail: Map3DContainerWagon.model(.tail, far: far), single: nil,
+                 centre: Map3DContainerWagon.model(.fortyGreen, far: far), fourth: Map3DContainerWagon.model(.twenties, far: far))
+        }
     }
 
     static func hauled(_ key: String, locomotive: Map3DTrainLocomotive, coach: Coach, lastIsLocomotive: Bool = false,
@@ -768,6 +876,18 @@ public struct Map3DTrainSet: Sendable {
             let car = Map3D45DR1000.model(far: far, livery: livery)
             return Cars(head: lit(car, front: true), middle: car, tail: lit(car.turned, front: false),
                         single: lit(lit(car, front: true), front: false))
+        }
+    }
+
+    /// Decision 531: the Alishan Forest Railway's mountain train
+    /// (``Map3DAlishan``): the DL-38 at the front, its radiator lamps lit,
+    /// the coaches behind, the last one's back lamps lit red, each car its
+    /// own length. `far`: their light versions.
+    static func alishan(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "ALISHANFar" : "ALISHAN", ownLengths: true, far: far ? nil : "ALISHANFar") {
+            let coach = Map3DAlishan.coach(far: far)
+            return Cars(head: lit(Map3DAlishan.locomotive(far: far), front: true), middle: coach,
+                        tail: lit(coach, front: false), single: nil)
         }
     }
 

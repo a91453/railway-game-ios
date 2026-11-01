@@ -183,8 +183,8 @@ public enum FirstLineGuide {
             }
             if networkMode != .platform {
                 return Hint(target: .networkModes, symbol: nil,
-                            english: "Tap Platform, then tap your track where the station goes.",
-                            chinese: "點「月台」，再點軌道上要蓋車站的地方。")
+                            english: "Tap Station, then tap your track where the station goes.",
+                            chinese: "點「車站」，再點軌道上要蓋車站的地方。")
             }
             return world.stations.isEmpty
                 ? Hint(target: nil, symbol: nil,
@@ -196,8 +196,8 @@ public enum FirstLineGuide {
         }
         if building {
             return Hint(target: .selectTool, symbol: "xmark",
-                        english: "Two stations. Tap Done, under the tools on the left, to stop building.",
-                        chinese: "兩座車站好了。點左邊工具最下面的「完成」結束建造。")
+                        english: "Two stations. Tap Done at the bottom left to stop building.",
+                        chinese: "兩座車站好了。點左下的「完成」結束建造。")
         }
         if !linesPanelShown {
             return Hint(target: .linesButton, symbol: linesSymbol,

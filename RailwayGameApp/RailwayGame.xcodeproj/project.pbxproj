@@ -45,6 +45,7 @@
 		24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = FD2BB5E656E35262DF9997FA /* MapLibre */; };
 		2517C778FB306F8732C9F41B /* garbage-truck.caf in Resources */ = {isa = PBXBuildFile; fileRef = DF53C2E1CD8814F61A774072 /* garbage-truck.caf */; };
 		266AA81B04211B92B8550B73 /* real_buses_Taipei.json in Resources */ = {isa = PBXBuildFile; fileRef = 86EFBF7E9AB1A12807716F74 /* real_buses_Taipei.json */; };
+		268977C94707C3D57AE3DACC /* StationExpansionSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47D770745D4E808F41B30FD1 /* StationExpansionSection.swift */; };
 		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
 		2829D526B58B594CFF039231 /* StationPairDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */; };
 		292756D8D1D213C17C8217E1 /* ticket-issued.wav in Resources */ = {isa = PBXBuildFile; fileRef = B9E396F04F921CD6475423B8 /* ticket-issued.wav */; };
@@ -132,7 +133,6 @@
 		823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */; };
 		82725CA6F6CD81AB9D1385E2 /* real_buses_MiaoliCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = 8DD7AC937959CBAB6BEAEB18 /* real_buses_MiaoliCounty.json */; };
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
-		84064E106987C284B4E4FEF1 /* tra-dr3100-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = AFF4530BB0DF6E37DF8B54E1 /* tra-dr3100-schedule.json */; };
 		84A1D1C6352E4D84E1A55FB4 /* GameCenterLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D9DBA602A1D4B5ECC848F8 /* GameCenterLink.swift */; };
 		85C1FCAF943A8E51ED75EC46 /* horn-diesel.wav in Resources */ = {isa = PBXBuildFile; fileRef = 536AA1661B8D1E023E8B015C /* horn-diesel.wav */; };
 		866964714A9713149D8697CD /* CoverageShortcutUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */; };
@@ -252,6 +252,7 @@
 		F720FC931D713539D1AF8CCC /* tmrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 10BAAEA97DA689ABA4004F2A /* tmrt.json */; };
 		F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3934A6F628AA98414B2B952D /* Theme.swift */; };
 		FA57C7F457ADE1E1971249E7 /* sanying_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */; };
+		FC241AD56D15C8B70E94CAD5 /* tra-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC17DC0E166BCC6795AF34 /* tra-schedule.json */; };
 		FC5DF7D86135072E69D33064 /* MapCoverageButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C672FB058D7EDDE7177AF07E /* MapCoverageButton.swift */; };
 		FC698A6F5A2379335FC7CC65 /* NewsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */; };
 		FC936165E05580706AC8015F /* ntmc_circular_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = 60AD430078BC348CA2F99EFB /* ntmc_circular_ridership.json */; };
@@ -294,6 +295,7 @@
 		150E696C9936773A65399191 /* tra_station_info.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_info.json; sourceTree = "<group>"; };
 		15F8BB42601B157F11A9F8ED /* horn-metro.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "horn-metro.wav"; sourceTree = "<group>"; };
 		17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinesPanel.swift; sourceTree = "<group>"; };
+		1ACC17DC0E166BCC6795AF34 /* tra-schedule.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tra-schedule.json"; sourceTree = "<group>"; };
 		1CAB3E0CCFE9D4ED77A05057 /* city-bus.m3dmodel */ = {isa = PBXFileReference; path = "city-bus.m3dmodel"; sourceTree = "<group>"; };
 		1CEAC255D3FFB54FF35BCF39 /* MapMarkTapUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarkTapUITests.swift; sourceTree = "<group>"; };
 		1D8FCC5E34CD27136469F2A8 /* chime-local-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-local-motif.wav"; sourceTree = "<group>"; };
@@ -337,6 +339,7 @@
 		4353DE6A285346A08373E79A /* kenney-pine.m3dmodel */ = {isa = PBXFileReference; path = "kenney-pine.m3dmodel"; sourceTree = "<group>"; };
 		464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldMapUITests.swift; sourceTree = "<group>"; };
 		47720F48E44581B39E9D45A6 /* RealLineAcquisitionCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealLineAcquisitionCards.swift; sourceTree = "<group>"; };
+		47D770745D4E808F41B30FD1 /* StationExpansionSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationExpansionSection.swift; sourceTree = "<group>"; };
 		4908C3743931AF833974C7B0 /* real_buses_TaitungCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_TaitungCounty.json; sourceTree = "<group>"; };
 		4966256D18F5622FE1A080BB /* station-chime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "station-chime.wav"; sourceTree = "<group>"; };
 		4A3F11B85E0A47AF52471E65 /* LoadChartUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadChartUITests.swift; sourceTree = "<group>"; };
@@ -436,7 +439,6 @@
 		AD5081F4C37E2CEB7CCECB73 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		AD6E3ED548E183F6E79E0111 /* rail-joint.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "rail-joint.wav"; sourceTree = "<group>"; };
 		AFA812528CA2F00BD6143418 /* MapStationTagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapStationTagView.swift; sourceTree = "<group>"; };
-		AFF4530BB0DF6E37DF8B54E1 /* tra-dr3100-schedule.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tra-dr3100-schedule.json"; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2B258E67922BFC5C37DA76C /* real_buses_LienchiangCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_LienchiangCounty.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
@@ -627,7 +629,7 @@
 				F34F5FAD9996ED6204B4F23C /* tra_station_class.json */,
 				150E696C9936773A65399191 /* tra_station_info.json */,
 				95B22F52AC2B7370C697A499 /* tra_track_sections.json */,
-				AFF4530BB0DF6E37DF8B54E1 /* tra-dr3100-schedule.json */,
+				1ACC17DC0E166BCC6795AF34 /* tra-schedule.json */,
 				6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */,
 				FAA79D875396E732FE48A605 /* tra.json */,
 				D8A3D706AFEA85A7941D8933 /* track_lines.geojson */,
@@ -710,6 +712,7 @@
 				0DEE960E35A07A7E3B307632 /* SharedNetworkViews.swift */,
 				A23CAC8DC027701B44D9FEF2 /* StartView.swift */,
 				CE177E709243BF5670A3607B /* StationCommerceSection.swift */,
+				47D770745D4E808F41B30FD1 /* StationExpansionSection.swift */,
 				BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */,
 				24B425FF34AEB844CE2FA815 /* StationMasterView.swift */,
 				5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */,
@@ -1099,7 +1102,7 @@
 				F720FC931D713539D1AF8CCC /* tmrt.json in Resources */,
 				481A5F7BE0BA94DF2592045D /* tmrt_ridership.json in Resources */,
 				BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */,
-				84064E106987C284B4E4FEF1 /* tra-dr3100-schedule.json in Resources */,
+				FC241AD56D15C8B70E94CAD5 /* tra-schedule.json in Resources */,
 				6469EAB1A8C4CFA2DD9C80F2 /* tra-yilan-schedule.json in Resources */,
 				0CAEF26EBDE94052FA874ABE /* tra.json in Resources */,
 				E8D91661A60476AD32234249 /* tra_branch_runs.json in Resources */,
@@ -1206,6 +1209,7 @@
 				9EA1EEFC5B90497C518B4A03 /* SharedNetworkViews.swift in Sources */,
 				AF80C7D3AA57530427081DFF /* StartView.swift in Sources */,
 				CE87C0C107D2EBA7DF932407 /* StationCommerceSection.swift in Sources */,
+				268977C94707C3D57AE3DACC /* StationExpansionSection.swift in Sources */,
 				8D4B39BDE96607C94B4FF902 /* StationLineChips.swift in Sources */,
 				9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */,
 				F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */,

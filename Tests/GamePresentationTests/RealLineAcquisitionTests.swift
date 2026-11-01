@@ -31,6 +31,26 @@ final class RealLineAcquisitionTests: XCTestCase {
         try XCTUnwrap(session.buyableRealLines.first { $0.network == network }, "\(network) on sale")
     }
 
+    /// Decision 528: the Pingxi Line bought, removed and bought again,
+    /// over the track it left: the same riders and trains paid for, the
+    /// stations it left not built again.
+    func testThePingxiLineIsBoughtAgainAfterItIsRemoved() throws {
+        let session = try Self.game(round: "PINGXI")
+        let first = session.realLineOffer(for: try line("PINGXI", in: session))
+        XCTAssertTrue(session.acquireRealLine(first), session.message?.text ?? "")
+        session.selectLine(try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI")?.line))
+        session.removeSelectedLine()
+        XCTAssertNil(session.world.acquisition(of: "tra:PINGXI"))
+        let again = session.realLineOffer(for: try line("PINGXI", in: session))
+        XCTAssertNotNil(again.acquisition?.clearing, again.problem ?? "")
+        XCTAssertEqual(again.price?.riders, first.price?.riders)
+        XCTAssertEqual(again.price?.trains, first.price?.trains)
+        XCTAssertLessThan(try XCTUnwrap(again.price?.building), try XCTUnwrap(first.price?.building))
+        XCTAssertTrue(session.acquireRealLine(again), session.message?.text ?? "")
+        XCTAssertEqual(session.world.lines.count, 1)
+        XCTAssertEqual(session.world.stations.count, 7)
+    }
+
     func testThePingxiLineIsBoughtAsOneCommandAndRunsItsRealTrains() throws {
         let session = try Self.game(round: "PINGXI")
         let pingxi = try line("PINGXI", in: session)
@@ -130,7 +150,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertTrue(trains.allSatisfy { session.world.train(id: $0) == nil })
         XCTAssertEqual(session.world.economy.balance, world.economy.balance + proceeds)
-        XCTAssertNotNil(session.world.acquisition(of: "tra:PINGXI"), "the real line is still the company's")
+        XCTAssertNil(session.world.acquisition(of: "tra:PINGXI"), "decision 528: on sale again")
         var after = session.world
         XCTAssertEqual(demolish(&after), [])
         XCTAssertTrue(after.network.edges.isEmpty)
@@ -159,6 +179,28 @@ final class RealLineAcquisitionTests: XCTestCase {
             }
             XCTAssertEqual(missed.count, 0, "\(network): runs not sent out yesterday: \(missed.count) of \(runs.runs.count)")
         }
+    }
+
+    /// BUGHUNT_BUILD P3-3: a depot of the player's nearer the junction
+    /// than any station is not taken as the line's junction station (the
+    /// purchase was refused, a depot being no line's stop).
+    func testADepotByTheJunctionIsNotTheJunctionStation() throws {
+        let scratch = try Self.game(round: "NEIWAN", side: 1 << 21)
+        let neiwan = try line("NEIWAN", in: scratch)
+        XCTAssertTrue(scratch.acquireRealLine(scratch.realLineOffer(for: neiwan)), scratch.message?.text ?? "")
+        let junction = try XCTUnwrap(scratch.world.stations.first { $0.name == neiwan.stops[0] }, neiwan.stops[0]).location
+
+        var world = try Self.game(round: "NEIWAN", side: 1 << 21).world
+        let depot = try world.buildStation(named: "機廠", at: PlanPoint(x: junction.x + 100 * WorldCoordinate.unitsPerMetre, y: junction.y))
+        try world.setStationDepot(depot.id, to: true)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.railways = scratch.railways
+        let offer = session.realLineOffer(for: try line("NEIWAN", in: session))
+        XCTAssertNil(offer.problem)
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        let bought = try XCTUnwrap(session.world.line(id: try XCTUnwrap(session.world.acquisition(of: neiwan.id)?.line)))
+        XCTAssertFalse(bought.stops.contains(depot.id))
+        XCTAssertEqual(session.world.station(id: depot.id)?.isDepot, true)
     }
 
     /// Decision 462: the Liujia and Neiwan Lines part at Zhuzhong, the
@@ -261,9 +303,9 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// Mountain Line with its depot too (`DanhaiDepotTests`, decision 489).
     /// Not on sale: the other metro lines, whose ends stand more trains at
     /// once than the game lays tracks
-    /// (`extract_metro_runs.py`); the Ankeng LRT, not yet
-    /// (docs/HANDOFF.md); Kaohsiung's Circular Light Rail, which runs one
-    /// way round its loop; and the Wenhu Line, its curves too tight.
+    /// (`extract_metro_runs.py`); Kaohsiung's Circular Light Rail, which
+    /// runs round its loop; and the Wenhu Line. The Ankeng LRT is on sale
+    /// too (`AnkengLineTests`, decision 535 continued).
     func testTheLightRailsAndMetrosAreBoughtAndRunTheirRealDay() throws {
         let lines: [(id: String, type: TrainType, tier: LineAcquisition.Tier)] = [
             ("ntdlrt:VB", .c, .lightRail), ("trtc:R_XBT", .a, .metro), ("trtc:G_XBT", .a, .metro),
@@ -280,7 +322,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// on sale is offered, and every run of the second day was sent out.
     static func buyAndRunRealDay(_ id: String, type: TrainType, tier: LineAcquisition.Tier, rules: NewGameRules) throws {
         let absent = [
-            "ntalrt:K", "krtc:C", "trtc:BR", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
+            "krtc:C", "trtc:BR", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
             "tymc:A", "krtc:KR", "krtc:KO", "tmrt:TG",
         ]
         let session = try game(round: id, side: 1 << 21, heights: true, rules: rules)

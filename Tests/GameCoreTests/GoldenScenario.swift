@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 75
+    static let schemaVersion = 76
 
     var description: String
     var initialState: InitialState
@@ -1226,6 +1226,14 @@ extension StepOutcome: Codable {
             self = .rejected(.stationCommerceMaxedOut)
         case "noStationCommerce":
             self = try .rejected(.noStationCommerce(container.decodeStation(forKey: .station)))
+        case "stationIsExpanded":
+            self = try .rejected(.stationIsExpanded(container.decodeStation(forKey: .station)))
+        case "stationExpansionMaxedOut":
+            self = .rejected(.stationExpansionMaxedOut)
+        case "stationTooQuietToExpand":
+            self = try .rejected(.stationTooQuietToExpand(needed: container.decode(Int64.self, forKey: .required)))
+        case "stationNotFullToExpand":
+            self = .rejected(.stationNotFullToExpand)
         case "lineAlreadyAcquired":
             self = .rejected(.lineAlreadyAcquired)
         case "invalidAcquisition":
@@ -1664,6 +1672,16 @@ extension StepOutcome: Codable {
         case .rejected(.noStationCommerce(let id)):
             try container.encode("noStationCommerce", forKey: .result)
             try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.stationIsExpanded(let id)):
+            try container.encode("stationIsExpanded", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.stationExpansionMaxedOut):
+            try container.encode("stationExpansionMaxedOut", forKey: .result)
+        case .rejected(.stationTooQuietToExpand(let needed)):
+            try container.encode("stationTooQuietToExpand", forKey: .result)
+            try container.encode(needed, forKey: .required)
+        case .rejected(.stationNotFullToExpand):
+            try container.encode("stationNotFullToExpand", forKey: .result)
         case .rejected(.lineAlreadyAcquired):
             try container.encode("lineAlreadyAcquired", forKey: .result)
         case .rejected(.invalidAcquisition):
@@ -1692,6 +1710,11 @@ extension StepOutcome: Codable {
         // schema reads none of these back.
         case .rejected(.unknownBusRoute), .rejected(.invalidBusRoute), .rejected(.busStopOffRoad), .rejected(.busStopsNotConnected), .rejected(.roadInUse):
             try container.encode("busRouteRefused", forKey: .result)
+        // Decision 515: no golden scenario lays mountain track, and the
+        // golden schema does not read it back.
+        case .rejected(.trainCannotClimb(let id)):
+            try container.encode("trainCannotClimb", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):

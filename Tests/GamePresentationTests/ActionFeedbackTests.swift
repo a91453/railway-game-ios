@@ -19,12 +19,12 @@ final class ActionFeedbackTests: XCTestCase {
         var board = FareFloatBoard()
         board.add([fare(1, 1, 12), fare(2, 1, 5)], at: 10)
         board.add([fare(1, 2, 8)], at: 10.5)
-        XCTAssertEqual(board.floats.map(\.text), ["+\(TrainRoster.shortMoney(Money(2_000)))", "+\(TrainRoster.shortMoney(Money(500)))"], "the second train's fares join the first's float")
+        XCTAssertEqual(board.floats.map { $0.text(in: .english) }, ["+\(TrainRoster.shortMoney(Money(2_000), in: .english))", "+\(TrainRoster.shortMoney(Money(500), in: .english))"], "the second train's fares join the first's float")
         XCTAssertEqual(board.floats.first?.trains, [TrainID(rawValue: 1), TrainID(rawValue: 2)])
         board.add([fare(1, 1, 3)], at: 11.1)
-        XCTAssertEqual(board.floats.map(\.text), ["+\(TrainRoster.shortMoney(Money(2_000)))", "+\(TrainRoster.shortMoney(Money(500)))", "+\(TrainRoster.shortMoney(Money(300)))"], "a second later, a float of its own")
+        XCTAssertEqual(board.floats.map { $0.text(in: .english) }, ["+\(TrainRoster.shortMoney(Money(2_000), in: .english))", "+\(TrainRoster.shortMoney(Money(500), in: .english))", "+\(TrainRoster.shortMoney(Money(300), in: .english))"], "a second later, a float of its own")
         board.expire(at: 11.25)
-        XCTAssertEqual(board.floats.map(\.text), ["+\(TrainRoster.shortMoney(Money(300)))"], "the first two are gone after 1.2 s")
+        XCTAssertEqual(board.floats.map { $0.text(in: .english) }, ["+\(TrainRoster.shortMoney(Money(300), in: .english))"], "the first two are gone after 1.2 s")
         board.expire(at: 12.3)
         XCTAssertTrue(board.floats.isEmpty)
     }
@@ -43,7 +43,7 @@ final class ActionFeedbackTests: XCTestCase {
         XCTAssertGreaterThan(FareFloatBoard.hold, 0.5)
         var board = FareFloatBoard()
         board.add([fare(1, 1, 13_400)], at: 0)
-        XCTAssertEqual(board.floats.first?.text, "+\(TrainRoster.shortMoney(Money(1_300_000)))")
+        XCTAssertEqual(board.floats.first?.text(in: .english), "+\(TrainRoster.shortMoney(Money(1_300_000), in: .english))")
     }
 
     func testAtHighSpeedOnlyTheFollowedTrainAndTheMiddleStationsFloat() {

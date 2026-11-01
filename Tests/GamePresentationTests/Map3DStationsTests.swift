@@ -10,11 +10,12 @@ final class Map3DStationsTests: XCTestCase {
     /// A builder with one platform 120 m long along x, on the right (+z)
     /// of its track at z 0, and the other `tracks` (their z), each laid
     /// as `structure` carries it.
-    private func builder(_ structure: TrackStructure = .surface, tracks: [Float] = []) -> Map3DScene.Builder {
+    private func builder(_ structure: TrackStructure = .surface, tracks: [Float] = [], world: GameWorld = .newGame(),
+                         station: StationID = station) -> Map3DScene.Builder {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
-                                         world: GameWorld.newGame())
+                                         world: world)
         func line(_ z: Float) -> [Map3DPoint] { stride(from: Float(-60), through: 60, by: 2).map { Map3DPoint($0, Map3DScene.railLift, z) } }
-        builder.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: Self.station, line: line(0), offset: 3.5, width: 3.2, structure: structure)]
+        builder.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: station, line: line(0), offset: 3.5, width: 3.2, structure: structure)]
         builder.trackLines = ([0] + tracks).map { (line($0), TrackSectionKind.surface) }
         return builder
     }
@@ -98,6 +99,87 @@ final class Map3DStationsTests: XCTestCase {
             XCTAssertEqual(mesh.vertices, b.nearMeshes[key]?.vertices)
             XCTAssertEqual(mesh.indices, b.nearMeshes[key]?.indices)
         }
+    }
+
+    // MARK: - Expanded stations (decision 506, later)
+
+    /// A new game's first line, its first station expanded to `level`
+    /// (written into the saved world, as GameCore keeps the field to its
+    /// own command), and that station.
+    private func expandedWorld(_ level: StationExpansion?) throws -> (GameWorld, StationID) {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        let world = try newGameLine(through: [towns[0], towns[1]])
+        let id = try XCTUnwrap(world.stations.first { !$0.isDepot }?.id)
+        guard let level else { return (world, id) }
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        var stations = try XCTUnwrap(json["stations"] as? [[String: Any]])
+        let index = try XCTUnwrap(stations.firstIndex { ($0["id"] as? Int) == id.rawValue })
+        stations[index]["expansion"] = level.rawValue
+        json["stations"] = stations
+        let expanded = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(expanded.station(id: id)?.expansion, level)
+        return (expanded, id)
+    }
+
+    /// Each level's builder after its stations are laid.
+    private func expandedBuilders(_ structure: TrackStructure = .surface) throws -> [Map3DScene.Builder] {
+        try [nil, StationExpansion.concourse, .hall].map { level in
+            let (world, id) = try expandedWorld(level)
+            var b = builder(structure, tracks: [-5], world: world, station: id)
+            _ = stations(&b)
+            return b
+        }
+    }
+
+    func testAnExpandedStationsCanopyCoversMoreOfThePlatform() throws {
+        // The 120 m platform: three fifths, four fifths, then all but
+        // three metres at each end.
+        let reaches = try expandedBuilders().map { b in
+            b.nearMeshes.values.flatMap(\.vertices).filter { $0.color == Map3DPalette.canopy && $0.z < 6 }.map(\.x).max() ?? 0
+        }
+        XCTAssertEqual(reaches[0], 36, accuracy: 0.5)
+        XCTAssertEqual(reaches[1], 48, accuracy: 0.5)
+        XCTAssertEqual(reaches[2], 57, accuracy: 0.5)
+    }
+
+    func testAnExpandedStationsBuildingGrowsAlongItsPlatforms() throws {
+        // The building's recipe alone: along the platforms (z) and up.
+        for station in [
+            Map3DStationKit.recipe(for: Self.station, at: (0, 0), layout: .surface(platforms: 2, longest: 160), frame: nil),
+            Map3DStationKit.recipe(for: Self.station, at: (0, 0), layout: .surface(platforms: 1, longest: 60), frame: nil),
+        ] + Map3DStationKit.stations.filter({ [.taipei, .hsinchu, .banqiao].contains($0.profile) }).prefix(3) {
+            let built = [nil, StationExpansion.concourse, .hall].map { level -> (bounds: (min: Map3DPoint, max: Map3DPoint), triangles: Int) in
+                var kit = StationKitBuilder()
+                kit.house(station, expansion: level)
+                return (kit.mesh.bounds!, kit.mesh.indices.count / 3)
+            }
+            let lengths = built.map { $0.bounds.max.z - $0.bounds.min.z }
+            XCTAssertGreaterThanOrEqual(lengths[1], lengths[0] + 20, "\(station.profile): a concourse wing at each end")
+            XCTAssertEqual(lengths[2], lengths[1], accuracy: 1, "\(station.profile): the hall builds up and out front")
+            XCTAssertGreaterThan(built[2].bounds.max.x, built[1].bounds.max.x - 0.01, "\(station.profile): its front canopy")
+            XCTAssertLessThan(built[0].triangles, built[1].triangles)
+            XCTAssertLessThan(built[1].triangles, built[2].triangles)
+            // Its back stays where the platforms are.
+            XCTAssertEqual(built[1].bounds.min.x, built[0].bounds.min.x, accuracy: 0.01)
+        }
+        // In the scene too: more drawn close up.
+        let near = try expandedBuilders().map { $0.nearMeshes.values.map(\.indices.count).reduce(0, +) }
+        XCTAssertLessThan(near[0], near[1])
+        XCTAssertLessThan(near[1], near[2])
+    }
+
+    func testAnExpandedViaductStationHasMoreStairs() throws {
+        let reaches = try expandedBuilders(.elevated).map { b in
+            b.nearMeshes.values.flatMap(\.vertices).filter { $0.y < 0.5 }.map { abs($0.x) }.max() ?? 0
+        }
+        XCTAssertLessThan(reaches[0], 20, "a stair each way, 12 m from the middle")
+        XCTAssertGreaterThan(reaches[1], 30, "and a pair 36 m out")
+        XCTAssertGreaterThan(reaches[2], 55, "and a pair 60 m out")
+    }
+
+    func testTheSceneIsBuiltAgainWhenAStationIsExpanded() throws {
+        let signatures = try [nil, StationExpansion.concourse, .hall].map { Map3DStationKit.expansionSignature(of: try expandedWorld($0).0) }
+        XCTAssertEqual(signatures, [0, 1, 2])
     }
 
     // MARK: - Recipes

@@ -61,6 +61,9 @@ public struct AssetRecord: Hashable, Sendable {
         case souvenirShop
         /// A level of the shops of station ``owner`` (decision 222).
         case stationCommerce
+        /// An expansion of station ``owner`` (decision 506), a record a
+        /// step, written down as stations are.
+        case stationExpansion
         /// What line ``owner``, a real line bought, cost for its riders
         /// (decision 315), written down as track is.
         case acquiredLine
@@ -68,7 +71,7 @@ public struct AssetRecord: Hashable, Sendable {
         public var assetClass: AssetClass {
             switch self {
             case .track, .acquiredLine: .track
-            case .station: .stations
+            case .station, .stationExpansion: .stations
             case .train, .cars: .rollingStock
             case .building: .buildings
             case .mapTile: .land
@@ -465,6 +468,7 @@ extension GameWorld {
         var carsByTrain: [Int: Int] = [:]
         var shopLevels: [Int: Int] = [:]
         var commerceLevels: [Int: Int] = [:]
+        var expansionSteps: [Int: Int] = [:]
         var total: Int64 = 0
         for record in accounts.assets {
             let exists = switch record.kind {
@@ -474,6 +478,7 @@ extension GameWorld {
             case .building: placedBuilding(id: PlacedBuildingID(rawValue: record.owner)) != nil
             case .souvenirShop: tourism?.attractions.contains { $0.id.rawValue == record.owner && $0.souvenir > 0 } ?? false
             case .stationCommerce: station(id: StationID(rawValue: record.owner))?.commerce != nil
+            case .stationExpansion: station(id: StationID(rawValue: record.owner))?.expansion != nil
             case .acquiredLine: line(id: LineID(rawValue: record.owner)) != nil
             case .mapTile: mapExpansion.map { record.owner >= 0 && $0.owns(MapTile(row: record.owner / mapTileColumns, column: record.owner % mapTileColumns)) } ?? false
             }
@@ -496,6 +501,13 @@ extension GameWorld {
                 let level = station(id: StationID(rawValue: record.owner))?.commerce?.rawValue ?? 0
                 guard record.cars == 0, commerceLevels[record.owner, default: 0] <= level else {
                     return "A station's shops have at most one asset record a level."
+                }
+            } else if record.kind == .stationExpansion {
+                // A record a step (decision 506).
+                expansionSteps[record.owner, default: 0] += 1
+                let steps = station(id: StationID(rawValue: record.owner))?.expansion?.rawValue ?? 0
+                guard record.cars == 0, expansionSteps[record.owner, default: 0] <= steps else {
+                    return "A station has at most one asset record an expansion."
                 }
             } else {
                 guard record.cars == 0, owners.insert("\(record.kind.rawValue) \(record.owner)").inserted else {

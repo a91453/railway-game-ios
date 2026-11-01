@@ -52,6 +52,7 @@ struct EconomyPanel: View {
                 }
                 faresSection
                 dayPassSection
+                punctualitySection
                 fleetSection
                 if today == nil || showsAllReports {
                     trendSection
@@ -119,6 +120,21 @@ struct EconomyPanel: View {
             Text(verbatim: today.note(in: language))
         }
         .accessibilityIdentifier("economy.today")
+    }
+
+    /// Decision 524, later: every passenger line's trips on time over the
+    /// last seven settled days, beside Taiwan Railway's past year, the
+    /// same figure the line card shows for one line. Nothing below ten
+    /// trips or without realistic operation.
+    @ViewBuilder
+    private var punctualitySection: some View {
+        if let weekly = session.world.companyWeeklyPunctuality() {
+            Section {
+                Text(verbatim: weekly.companyText(in: session.language))
+                    .monospacedDigit()
+                    .accessibilityIdentifier("economy.weeklyPunctuality")
+            }
+        }
     }
 
     /// Decision 336, later: the trains and their sale, from
@@ -208,14 +224,40 @@ struct EconomyPanel: View {
                     Text("Balance")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
-                    // Decision 200: "∞" with unlimited funds.
-                    Text(verbatim: session.world.economy.cashText)
+                    // Decision 200: "∞" with unlimited funds. Decision 523,
+                    // continued: in 萬 or 億 in Chinese, every dollar under it.
+                    Text(verbatim: session.world.economy.cashText(in: session.language))
                         .font(.title3.weight(.bold))
                         .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.textPrimary)
                         .monospacedDigit()
+                    // Decision 523: a rough US dollar figure under the
+                    // balance, English only.
+                    if !session.world.economy.unlimitedFunds,
+                       let reference = session.world.economy.balance.usDollarReferenceText(in: session.language) {
+                        Text(verbatim: reference)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .monospacedDigit()
+                            .accessibilityIdentifier("economy.balance.usd")
+                    }
+                    if !session.world.economy.unlimitedFunds,
+                       session.world.economy.balance.compactText(in: session.language) != session.world.economy.balance.moneyText {
+                        Text(verbatim: session.world.economy.balance.moneyText)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .monospacedDigit()
+                            .accessibilityIdentifier("economy.balance.exact")
+                    }
                 }
             }
             .padding(.vertical, 4)
+            // Decision 523: the currency, said once in English.
+            if let note = Money.currencyNoteText(in: session.language) {
+                Text(verbatim: note)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("economy.currencyNote")
+            }
 
             LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
             // Decision 160: the tiles of the map owned, and what the next
@@ -259,7 +301,7 @@ struct EconomyPanel: View {
                         session.setEconomyMode(.free)
                     }
                 } message: {
-                    Text("Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again.")
+                    Text(verbatim: GameSession.freePlaySwitchText(in: session.language))
                 }
                 if session.isFreePlayLocked {
                     Text(verbatim: GameSession.freePlayLockedText(in: session.language))
@@ -538,7 +580,8 @@ struct EconomyPanel: View {
                         closingCash: session.world.economy.unlimitedFunds ? nil : (cash, cash - report.current.netCashFlow),
                         in: session.language
                     ),
-                currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
+                currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期"),
+                language: session.language
             )
             // Decision 480: the period's income and costs by kind.
             FinanceCompositionChart(
@@ -562,7 +605,8 @@ struct EconomyPanel: View {
             StatementGrid(
                 rows: sheet.rows(previous: closed?.closing, in: session.language),
                 currentTitle: session.language.text("Now", "目前"),
-                previousTitle: closed.map { session.language.text("\($0.yearText(in: session.language)) end", "\($0.yearText(in: session.language))底") }
+                previousTitle: closed.map { session.language.text("\($0.yearText(in: session.language)) end", "\($0.yearText(in: session.language))底") },
+                language: session.language
             )
             .accessibilityIdentifier("economy.balanceSheet")
         } header: {

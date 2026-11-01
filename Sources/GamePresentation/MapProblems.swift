@@ -57,10 +57,11 @@ public enum MapProblems {
 
         public static func < (lhs: Crowding, rhs: Crowding) -> Bool { lhs.rawValue < rhs.rawValue }
 
-        public init(waiting: Int64) {
-            if waiting >= StationPassengers.capacity {
+        /// At a station holding `holds` (more once expanded, decision 506).
+        public init(waiting: Int64, holds: Int64 = StationPassengers.capacity) {
+            if waiting >= holds {
                 self = .full
-            } else if waiting * 2 >= StationPassengers.capacity {
+            } else if waiting * 2 >= holds {
                 self = .crowded
             } else {
                 self = .normal
@@ -86,17 +87,22 @@ public enum MapProblems {
 
     /// How much of the room is taken, 0 to 1: how far round the crowded
     /// ring goes.
-    public static func fill(waiting: Int64) -> Double {
-        min(1, max(0, Double(waiting) / Double(StationPassengers.capacity)))
+    public static func fill(waiting: Int64, holds: Int64 = StationPassengers.capacity) -> Double {
+        min(1, max(0, Double(waiting) / Double(max(1, holds))))
     }
 
     /// The stations with passengers waiting, in the order their pills are
     /// placed: full first, then crowded, then the most waiting, then by ID.
-    public static func stationOrder(_ counts: [StationID: Int64]) -> [(station: StationID, waiting: Int64)] {
-        counts.filter { $0.value > 0 }
+    /// `holds` gives the expanded stations' room (decision 506); any other
+    /// holds ``GameCore/StationPassengers/capacity``.
+    public static func stationOrder(_ counts: [StationID: Int64],
+                                    holds: [StationID: Int64] = [:]) -> [(station: StationID, waiting: Int64)] {
+        func room(_ id: StationID) -> Int64 { holds[id] ?? StationPassengers.capacity }
+        return counts.filter { $0.value > 0 }
             .map { (station: $0.key, waiting: $0.value) }
             .sorted {
-                let a = Crowding(waiting: $0.waiting), b = Crowding(waiting: $1.waiting)
+                let a = Crowding(waiting: $0.waiting, holds: room($0.station))
+                let b = Crowding(waiting: $1.waiting, holds: room($1.station))
                 if a != b { return a > b }
                 if $0.waiting != $1.waiting { return $0.waiting > $1.waiting }
                 return $0.station < $1.station

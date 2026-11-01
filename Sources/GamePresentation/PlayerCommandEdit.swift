@@ -50,6 +50,14 @@ extension PlayerCommand {
         /// runs none (``GameSession/assignSelectedTrainToSelectedLine(pattern:)``).
         case assignTrain(TrainID, LineID, pattern: Int?)
         case unassignTrain(TrainID)
+        /// Off its line, if on one, and to another line's own service as
+        /// ``assignTrain(_:_:pattern:)`` does (decision 512: the roster's
+        /// drag).
+        case moveTrainToLine(TrainID, LineID)
+        /// Its own repeating timetable `by` seconds later, its service
+        /// stopped and started again where it waits at its first stop
+        /// (decision 512: the roster's drag).
+        case shiftTrainTimetable(TrainID, by: Int64)
         /// On a platform of a station, the way nearer `heading`
         /// (``GameSession/placeSelectedTrain()``).
         case placeTrain(TrainID, at: StationID, heading: CompassHeading)
@@ -136,6 +144,8 @@ extension PlayerCommand {
         case buildStationCommerce(StationID)
         case upgradeStationCommerce(StationID)
         case demolishStationCommerce(StationID)
+        /// A station expanded a step (decision 506).
+        case expandStation(StationID)
 
         // MARK: Buses (decision 400, 10i-5)
         /// A bus route to a station through its stops, the farthest first.
@@ -233,7 +243,12 @@ extension GameSession {
         case .setTrafficControl(let enabled): try world.setTrafficControl(enabled)
         case .setDisruptions(let disruptions): world.setDisruptions(disruptions)
         case .setPassengerRoutingMode(let mode): world.setPassengerRoutingMode(mode)
-        case .setEconomyMode(let mode): world.setEconomyMode(mode)
+        case .setEconomyMode(let mode):
+            // Decision 497 (P2-5, B): a managed company switching to free
+            // play gets unlimited funds, as free play earns nothing.
+            let wasManaged = world.accounts.mode == .management
+            world.setEconomyMode(mode)
+            if mode == .free, wasManaged { world.setUnlimitedFunds(true) }
         case .setFareRules(let rules): try world.setFareRules(rules)
         case .setDayPass(let price): try world.setDayPass(price)
         case .borrow(let amount): try world.borrow(amount)
@@ -286,6 +301,19 @@ extension GameSession {
                 }
             }
         case .unassignTrain(let id): try world.unassignTrain(id)
+        case .moveTrainToLine(let id, let lineID):
+            if world.assignedLine(of: id) != nil { try world.unassignTrain(id) }
+            outcome = try apply(.assignTrain(id, lineID, pattern: nil), to: &world)
+        case .shiftTrainTimetable(let id, let seconds):
+            guard let train = world.train(id: id) else { throw .unknownTrain(id) }
+            guard let stops = TrainRosterDrag.shiftedTimetable(of: train, by: seconds) else { throw .invalidTimetable }
+            let running = train.execution != nil
+            if running { try world.stopTrainService(id) }
+            try world.setTrainTimetable(id, to: stops, repeatingEvery: train.timetablePeriod)
+            if running {
+                try world.startTrainService(id)
+                try world.useTrainPerformanceForMovement(id)
+            }
         case .placeTrain(let id, let station, let heading):
             outcome.placed = try Self.place(id, atPlatformOf: station, heading: heading, in: &world)
         case .staffLine(let id, let headway, let type, let cars, let language):
@@ -372,6 +400,7 @@ extension GameSession {
         case .buildStationCommerce(let id): try world.buildStationCommerce(at: id)
         case .upgradeStationCommerce(let id): try world.upgradeStationCommerce(at: id)
         case .demolishStationCommerce(let id): try world.demolishStationCommerce(at: id)
+        case .expandStation(let id): try world.expandStation(at: id)
         }
         return outcome
     }

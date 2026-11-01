@@ -272,8 +272,10 @@ extension GameWorld {
     /// The train types a train may be given (decision 153): the
     /// scenario's era's, or without an era the reference's and (decision
     /// 168) the high-speed set, which leave out the era-only steam train.
+    /// Decision 539: and without the types no longer sold
+    /// (``TrainType/withdrawnFromSale``); a train already of one keeps it.
     public var offeredTrainTypes: [TrainType] {
-        scenario?.scenario.trainTypes ?? TrainType.offered
+        scenario?.scenario.trainTypes ?? TrainType.offered.filter { !TrainType.withdrawnFromSale.contains($0) }
     }
 
     /// Whether a train may have the standard car: not in an era with types
@@ -373,4 +375,13 @@ extension Challenge {
             }
         }
     }
+}
+
+extension TrainType {
+    /// Decision 539: the types the menus no longer offer a new train: the
+    /// Chu-Kuang behind an R200, as the real R200s haul freight (and troop
+    /// and relief trains), not passengers. GameCore keeps the type and its
+    /// row, so a save's trains of it load, run and look as before; a freight
+    /// line's trains are drawn behind an R200 instead.
+    public static let withdrawnFromSale: Set<TrainType> = [.r200ChuKuang]
 }

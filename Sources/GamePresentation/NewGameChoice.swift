@@ -28,7 +28,7 @@ public enum NewGameChoice: String, CaseIterable, Sendable {
         case .blank:
             options.funds == .unlimited
                 ? language.text("An empty map with unlimited funds", "空白地圖，資金無限")
-                : language.text("An empty map and \(options.startingBalance.moneyText) to build with", "空白地圖，起始資金 \(options.startingBalance.moneyText)")
+                : language.text("An empty map and \(options.startingBalance.moneyTextWithReference(in: .english)) to build with", "空白地圖，起始資金 \(options.startingBalance.compactText(in: .traditionalChinese))")
         case .realWorld:
             language.text("Build on a map of a real place", "在真實地點的地圖上建造")
         }
@@ -72,7 +72,7 @@ public enum NewGameChoice: String, CaseIterable, Sendable {
 
     /// The options' row: the rules, the difficulty and the cash.
     public static func optionsSummary(_ options: NewGameOptions, in language: DisplayLanguage) -> String {
-        let cash = options.funds == .unlimited ? "∞" : options.startingBalance.moneyText
+        let cash = options.funds == .unlimited ? "∞" : options.startingBalance.compactText(in: language)
         return language.text(
             "New Game Options · \(options.rules.title(in: language)) · \(options.difficulty.title(in: language)) · \(cash)",
             "新遊戲選項 · \(options.rules.title(in: language))規則 · \(options.difficulty.title(in: language)) · \(cash)"

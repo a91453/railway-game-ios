@@ -205,7 +205,47 @@ struct RailwayGameApp: App {
         // Decision 165: the website screenshot test opens a scene set up
         // for it, paused at the moment it shows.
         if let name = DebugLaunch.value(of: "-screenshot-scene"), let scene = ScreenshotScene(rawValue: name) {
-            launcher.openScreenshotScene(scene)
+            let opening = launcher.openScreenshotScene(scene)
+            // Decision 522: the zoning drag held down, its far cells grey.
+            if scene == .zoning, DebugLaunch.isSet("-screenshot-zone-drag") {
+                Task {
+                    await opening.value
+                    launcher.session?.holdScreenshotZoningDrag()
+                }
+            }
+            // Decision 536: a train of a bought real line picked and
+            // followed, for its card and the 3D map.
+            if let real = DebugLaunch.value(of: "-screenshot-follow-bought") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let line = session.world.acquisition(of: real)?.line,
+                       let train = session.world.line(id: line)?.assignedTrains.first(where: { session.world.train(id: $0)?.position != nil }) {
+                        session.selectTrain(train)
+                        session.toggleFollowTrain(train)
+                    }
+                }
+            }
+            // Decision 539: the first freight train on the track picked and
+            // followed, for the 3D map's R200 and container wagons.
+            if DebugLaunch.isSet("-screenshot-follow-freight") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session,
+                       let train = session.world.trains.first(where: { $0.position != nil && session.world.isFreightTrain($0.id) })?.id {
+                        session.selectTrain(train)
+                        session.toggleFollowTrain(train)
+                    }
+                }
+            }
+            // Decision 517 續: a station picked, for the 3D map's tag.
+            if DebugLaunch.isSet("-screenshot-select-station") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let station = session.world.stations.first {
+                        session.selectStation(station.id)
+                    }
+                }
+            }
         }
         #endif
         return launcher
@@ -305,6 +345,14 @@ struct RailwayGameApp: App {
                     try library.save(GameWorld.newGame(), as: .manual, at: now.addingTimeInterval(-86_400), named: "空白地圖練習")
                     try library.save(DemoWorld.make(in: .traditionalChinese), as: .manual, at: now.addingTimeInterval(-3 * 86_400))
                     try library.save(world, as: .autosave, at: now.addingTimeInterval(-300), row: row.id)
+                }
+                // Decision 497 (P2-6): a folder no save can be written
+                // to, as on a full phone, for the screenshot of Back to
+                // Start's question to leave without saving.
+                if DebugLaunch.isSet("-unwritable-saves") {
+                    let blocked = directory.appendingPathComponent("unwritable")
+                    try Data("x".utf8).write(to: blocked)
+                    return SaveLibrary(directory: blocked)
                 }
                 return SaveLibrary(directory: directory)
             } catch {

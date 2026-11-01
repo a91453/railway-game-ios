@@ -609,6 +609,77 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 533: a school or a hospital beside the last station of the
+    /// first line and of the line between two towns (built on day 10),
+    /// against the same line without one: the riders it brings, the fares
+    /// and operating profit they add, the balance, the busiest hour at the
+    /// building's station on the first Monday after, and the riders who
+    /// gave up waiting.
+    func testASchoolOrAHospitalBringingRiders() throws {
+        let days = try requestedDays()
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        let scenarios: [(String, GameWorld)] = [
+            ("First line", try firstLine()),
+            ("Two towns", try newGameLine(through: [towns[0], towns[1]])),
+        ]
+        var lines = [
+            "### A school or a hospital beside the last station (built on day 10)",
+            "",
+            "| Line | Building | Cost | Riders a day (mean, days 11–\(days)) | Fares a day (mean) | Operating profit a day (mean) | Balance day \(days) | Gain a day after day 10 | Pays back | Monday 7–8 exits / busiest hour | Abandoned |",
+            "| --- | --- | --: | --: | --: | --: | --: | --: | --: | --- | --: |",
+        ]
+        for (title, start) in scenarios {
+            var base = start
+            let station = try XCTUnwrap(base.stations.last)
+            let kinds: [PlacedBuildingKind?] = [nil, .school, .hospital]
+            var worlds = Array(repeating: base, count: kinds.count)
+            for index in worlds.indices { try worlds[index].advance(ticks: 1) }
+            base = worlds[0]
+            var cost = [Int64](repeating: 0, count: kinds.count), riders = cost, fares = cost, profit = cost, atBuild = cost
+            var monday = [String](repeating: "—", count: kinds.count)
+            for day in 1...days {
+                for index in worlds.indices { try worlds[index].advance(ticks: 1_440) }
+                if day == 10 {
+                    for index in worlds.indices {
+                        worlds[index].economy.earn(Money(3_000_000_000))
+                        guard let kind = kinds[index] else { continue }
+                        let offsets: [(Int64, Int64)] = [(3_000, -6_000), (3_000, 6_000), (-3_000, -6_000), (-3_000, 6_000), (6_000, -9_000), (6_000, 9_000)]
+                        var built: PlacedBuilding?
+                        for (dx, dy) in offsets where built == nil {
+                            built = try? worlds[index].placeBuilding(kind, at: PlanPoint(x: station.point.x + dx, y: station.point.y + dy))
+                        }
+                        cost[index] = try XCTUnwrap(built, "\(title): no site for \(kind)").cost.amount
+                    }
+                    for index in worlds.indices { atBuild[index] = worlds[index].economy.balance.amount }
+                }
+                guard day > 10 else { continue }
+                for index in worlds.indices {
+                    let report = worlds[index].financeReport(.day).previous
+                    fares[index] += report.fareRevenue.amount
+                    profit[index] += report.operatingProfit.amount
+                    riders[index] += worlds[index].civicRiders(at: station.id).reduce(0) { $0 + $1.riders } // CIVIC
+                    // The day just begun is a Monday: its hours as planned.
+                    if monday[index] == "—", StationDemand.weekday(ofDay: Int64(day)) == 1, let flow = worlds[index].stationFlow(of: station.id) {
+                        let busiest = flow.exits.indices.max { flow.exits[$0] < flow.exits[$1] }!
+                        monday[index] = "\(flow.exits[7]) / \(busiest):00 \(flow.exits[busiest])"
+                    }
+                }
+            }
+            let counted = Int64(max(1, days - 10))
+            for index in worlds.indices {
+                let world = worlds[index]
+                let gain = (world.economy.balance.amount - atBuild[index]) - (worlds[0].economy.balance.amount - atBuild[0])
+                let perDay = gain / counted
+                let payback = kinds[index] == nil ? "—" : perDay > 0 ? "\(cost[index] / perDay) days" : "never"
+                let abandoned = world.stations.reduce(Int64(0)) { $0 + world.passengerLedger(of: $1.id).abandoned }
+                lines.append("| \(title) | \(kinds[index].map { "\($0)" } ?? "none") | \(dollars(cost[index])) | \(riders[index] / counted) | "
+                    + "\(dollars(fares[index] / counted)) | \(dollars(profit[index] / counted)) | \(dollars(world.economy.balance.amount)) | "
+                    + "\(dollars(perDay)) | \(payback) | \(monday[index]) | \(abandoned) |")
+            }
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// Decision 183: the first line with the city's requests, against the
     /// same line without them, sights off in both. Every midnight the
     /// company takes on the best paying offers of riders and residents it

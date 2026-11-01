@@ -60,7 +60,10 @@ import GameCore
 ///   a set turns back. Every set calls on the loops, as at the real side
 ///   platforms, but the expresses at Taipei and Banqiao, whose island
 ///   platforms serve the through tracks (``islandStations``); an express
-///   passes a station on its through track (decision 228).
+///   passes a station on its through track (decision 228). A set that
+///   calls goes to another free loop, or keeps its own when the set on it
+///   leaves in time, and stops on the through track only when every loop
+///   of its way there is taken over its time (decision 518).
 /// - Its trains are high-speed sets (`TrainType.highSpeed`, twelve cars
 ///   rated 80 each), planned at `PERF_HSR`; the lines are high-speed lines
 ///   (decision 168), so their stations draw the people round them and their
@@ -282,8 +285,10 @@ public enum HighSpeedDemo {
         world.setRealCarLengths(false)
         // Decision 319: its demand keeps the hours it was measured by.
         world.setTidalDemand(false)
-        // Decision 174: nor do tourists come to its sights.
-        world.setTourism(nil)
+        // Decision 525: tourists come to Taiwan's sights (a new
+        // whole-Taiwan game's, decision 174), and people change at its
+        // stations from the real railways (decision 298).
+        world.setRealTransfers(true)
         // Decision 183: nor does the city ask it for anything.
         world.setCityRequests(seed: nil)
         return world
@@ -798,7 +803,7 @@ public enum HighSpeedDemo {
         }
 
         /// What building it costs at `costs` (the prices of
-        /// ``GameWorld/buildTrackEdge(from:to:curve:profile:structure:)``,
+        /// ``GameWorld/buildTrackEdge(from:to:curve:profile:structure:mountain:)``,
         /// ``GameWorld/buildStation(named:at:)``, ``GameWorld/purchaseTrain(named:)``
         /// and ``GameWorld/setTrainCars(_:to:)``; every track is on the
         /// ground).
@@ -1189,7 +1194,12 @@ extension RealWorldDemo.TrackPlan {
     /// Where two nodes in a row stand off by the same, the edge between
     /// runs beside `plan`'s that far off it;
     /// where they differ, it is a ramp from the one to the other.
-    init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double]) {
+    /// `following`, each edge's handles are as much longer or shorter
+    /// than a third of `plan`'s stretch as its chord is than `plan`'s
+    /// (decision 535, continued): on a curve, the track outside it is
+    /// longer, and with the same handles bulged in to within 4 m of the
+    /// other in the middle (the Ankeng LRT's tight curves).
+    init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double], following: Bool = false) {
         let distances = indices.map { plan.distances[$0] }
         let nodes = zip(indices, offsets).map { index, offset in
             let node = plan.nodes[index], direction = node.direction.unit
@@ -1201,7 +1211,12 @@ extension RealWorldDemo.TrackPlan {
         self.nodes = nodes
         heights = indices.map { plan.heights[$0] }
         curves = distances.indices.dropLast().map { index in
-            let handle = (distances[index + 1] - distances[index]) / 3
+            var handle = (distances[index + 1] - distances[index]) / 3
+            if following {
+                let chord = (WorldVector(plan.nodes[indices[index + 1]].point) - WorldVector(plan.nodes[indices[index]].point)).length
+                let beside = (WorldVector(nodes[index + 1].point) - WorldVector(nodes[index].point)).length
+                if chord > 0 { handle *= beside / chord }
+            }
             let c1 = WorldVector(nodes[index].point) + nodes[index].direction * handle
             let c2 = WorldVector(nodes[index + 1].point) - nodes[index + 1].direction * handle
             return .cubic(c1.plan, c2.plan)

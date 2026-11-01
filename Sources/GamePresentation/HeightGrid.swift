@@ -30,6 +30,9 @@ public struct HeightGrid: Sendable {
     /// ends.
     let offsets: [Int]
     let body: [UInt8]
+    /// The blocks' corners ``ground(of:frame:)`` has worked out, shared by
+    /// every copy of this grid.
+    let groundMemo = GroundMemo()
 
     /// Reads the app's heights file. Throws for a file out of shape: the
     /// wrong magic or version, a grid of no cells, or offsets out of order
@@ -164,7 +167,17 @@ public struct HeightGrid: Sendable {
     /// (decision 124), each the height there rounded to whole metres, by
     /// row and then column of the blocks; the same corner of two blocks
     /// gets the same height.
+    ///
+    /// A block's corners are worked out once for each frame and kept
+    /// (TRACELAG, decision 521): reading one decodes some twenty of the
+    /// grid's rows, and the build tool's preview reads the same blocks
+    /// into a copy of the world at every step of a drag.
     public func ground(of blocks: [LandBlock], frame: RealWorldFrame) -> [GroundBlock] {
+        groundMemo.ground(of: blocks.sorted(), frame: frame) { workOutGround(of: $0, frame: frame) }
+    }
+
+    /// ``ground(of:frame:)`` worked out from the rows, kept nowhere.
+    func workOutGround(of blocks: [LandBlock], frame: RealWorldFrame) -> [GroundBlock] {
         var reader = Reader(self)
         let side = GroundBlock.side, length = Double(Land.cellLength)
         return blocks.sorted().compactMap { block in
@@ -180,6 +193,59 @@ public struct HeightGrid: Sendable {
                 longitudes.map { longitude in Int16(clamping: Int(reader.height(latitude: latitude, longitude: longitude).rounded())) }
             }
             return GroundBlock(block: block, heights: heights)
+        }
+    }
+}
+
+extension HeightGrid {
+    /// The blocks' corners worked out for one frame (TRACELAG, decision
+    /// 521). Locked, since the grid is read off the main actor too; the
+    /// corners are worked out outside the lock, and the same block worked
+    /// out twice at once comes out the same.
+    final class GroundMemo: @unchecked Sendable {
+        /// At most this many blocks (some 600 bytes each) are kept; past
+        /// it the memo starts again.
+        static let limit = 4_096
+
+        private let lock = NSLock()
+        private var frame: RealWorldFrame?
+        private var blocks: [LandBlock: GroundBlock] = [:]
+        private var workedOut = 0
+
+        /// `wanted`'s corners, in its order: those kept, and the rest from
+        /// `workOut`, which are kept from now on.
+        func ground(of wanted: [LandBlock], frame: RealWorldFrame, workOut: ([LandBlock]) -> [GroundBlock]) -> [GroundBlock] {
+            var kept: [LandBlock: GroundBlock] = [:]
+            lock.withLock {
+                if self.frame != frame {
+                    self.frame = frame
+                    blocks = [:]
+                }
+                for block in wanted {
+                    kept[block] = blocks[block]
+                }
+            }
+            let missing = wanted.filter { kept[$0] == nil }
+            if !missing.isEmpty {
+                let fresh = workOut(missing)
+                for block in fresh {
+                    kept[block.block] = block
+                }
+                lock.withLock {
+                    workedOut += fresh.count
+                    guard self.frame == frame else { return }
+                    if blocks.count + fresh.count > Self.limit { blocks = [:] }
+                    for block in fresh {
+                        blocks[block.block] = block
+                    }
+                }
+            }
+            return wanted.compactMap { kept[$0] }
+        }
+
+        /// How many blocks have been worked out from the rows.
+        var blocksWorkedOut: Int {
+            lock.withLock { workedOut }
         }
     }
 }

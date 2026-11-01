@@ -81,6 +81,20 @@ extension GameSession {
         return zone(rectangle)
     }
 
+    /// Decision 522: for the zoning scene's screenshot, opens the zoning
+    /// tool and holds ``ScreenshotScene/zoningDrag(in:)`` down, the map
+    /// showing it whole. Changes nothing in the world.
+    public func holdScreenshotZoningDrag() {
+        let drag = ScreenshotScene.zoningDrag(in: world)
+        choose(.zoning)
+        let margin = Double(4 * Land.cellLength)
+        lookOver(WorldRegion(
+            minX: Double(min(drag.from.x, drag.to.x)) - margin, minY: Double(min(drag.from.y, drag.to.y)) - margin,
+            maxX: Double(max(drag.from.x, drag.to.x)) + margin, maxY: Double(max(drag.from.y, drag.to.y)) + margin
+        ))
+        dragZone(from: drag.from, to: drag.to)
+    }
+
     /// The drag was cancelled: nothing is zoned.
     public func cancelZoneDrag() {
         zoneDrag = nil
@@ -92,7 +106,7 @@ extension GameSession {
     @discardableResult
     public func zone(_ rectangle: CellRectangle) -> Bool {
         let zone = zoningZone
-        return perform(.setZone(.init(zone), rows: rectangle.rows, columns: rectangle.columns)) { outcome, _, _ in
+        let zoned = perform(.setZone(.init(zone), rows: rectangle.rows, columns: rectangle.columns)) { outcome, _, _ in
             let changed = outcome.number
             guard changed > 0 else {
                 return language.text("No cell changed.", "沒有格子改變。")
@@ -102,11 +116,136 @@ extension GameSession {
                     changed == 1 ? "Cleared the zone of 1 cell." : "Cleared the zones of \(changed) cells.", "清除 \(changed) 格的分區。"
                 )
             }
-            return language.text(
+            let zoned = language.text(
                 changed == 1 ? "Zoned 1 cell: \(zone.title(in: .english))." : "Zoned \(changed) cells: \(zone.title(in: .english)).",
                 "劃設\(zone.title(in: .traditionalChinese)) \(changed) 格。"
             )
+            return [zoned, outlookNote(of: rectangle)].compactMap(\.self).joined(separator: language.text(" ", ""))
         } != nil
+        if zoned { awaitBuilding(on: rectangle, for: zone) }
+        return zoned
+    }
+
+    /// Decision 509: keeps the empty cells of `rectangle` just zoned for a
+    /// use, to say when the city first builds on one; forgets those
+    /// cleared or zoned to keep the city off.
+    private func awaitBuilding(on rectangle: CellRectangle, for zone: Zone?) {
+        for row in rectangle.rows {
+            for column in rectangle.columns {
+                let cell = CellPosition(row: row, column: column)
+                if zone?.use != nil, world.zones.zone(row: row, column: column) == zone,
+                   world.zonedUseBuilt(row: row, column: column) == nil {
+                    zonedCellsAwaitingBuilding.insert(cell)
+                } else {
+                    zonedCellsAwaitingBuilding.remove(cell)
+                }
+            }
+        }
+    }
+
+    /// Decision 509: after a midnight, says once that the city built on a
+    /// cell the player zoned empty, the first time it does, and stops
+    /// waiting; cells whose zone was taken back (Undo) are forgotten.
+    /// Zoning again waits again.
+    func noteZonedCellsBuiltOn() {
+        guard !zonedCellsAwaitingBuilding.isEmpty else { return }
+        zonedCellsAwaitingBuilding = zonedCellsAwaitingBuilding.filter {
+            world.zones.zone(row: $0.row, column: $0.column)?.use != nil
+        }
+        guard let zone = Self.firstBuilt(on: zonedCellsAwaitingBuilding, in: world)?.zone else { return }
+        zonedCellsAwaitingBuilding = []
+        let say = { (language: DisplayLanguage) in
+            language.text(
+                "The town has put up its first building on land you zoned: \(zone.title(in: .english)).",
+                "你劃的分區蓋起第一棟建物了：\(zone.title(in: .traditionalChinese))。"
+            )
+        }
+        news.add(day: world.clock.now.seconds / GameTime.secondsPerDay, .growth, text: say)
+        isMessageKeptOutOfNews = true
+        message = StatusMessage(kind: .success, text: say(language))
+        isMessageKeptOutOfNews = false
+    }
+
+    /// Decision 509: the first of `cells`, by row and then column, the
+    /// city has built on while it is still zoned for a use, and its zone;
+    /// `nil` while it has built on none.
+    static func firstBuilt(on cells: Set<CellPosition>, in world: GameWorld) -> (cell: CellPosition, zone: Zone)? {
+        for cell in cells.sorted() {
+            guard let zone = world.zones.zone(row: cell.row, column: cell.column), zone.use != nil,
+                  world.zonedUseBuilt(row: cell.row, column: cell.column) != nil
+            else { continue }
+            return (cell, zone)
+        }
+        return nil
+    }
+
+    /// Decision 509: the station master's "zone here" (``StationMasterAdvice/zoneNearStation(station:name:cells:)``):
+    /// the map goes to the station and the zoning tool opens, zoning
+    /// the use the city wants most (``suggestedZoningZone``) unless a use
+    /// is chosen.
+    public func zone(near station: StationID) {
+        guard allows(.building), let station = world.station(id: station) else { return }
+        lookAt(station.location)
+        choose(.zoning)
+        if zoningZone?.use == nil { zoningZone = suggestedZoningZone }
+    }
+
+    /// Decision 522: the zone the zoning mode opens on until the player
+    /// picks one: the use the city's demand (decision 139) wants most
+    /// (homes, then shops, then offices on a tie); public facilities, which
+    /// the demand does not hold back, when it wants none of them; homes
+    /// where the demand steers nothing (``cityDemandSteersGrowth``).
+    public var suggestedZoningZone: Zone {
+        guard cityDemandSteersGrowth else { return .residential }
+        let levels = world.cityDemandLevels
+        let ranked: [(Zone, Int64)] = [(.residential, levels.homes), (.commercial, levels.shops), (.office, levels.work)]
+        let best = ranked.dropFirst().reduce(ranked[0]) { $1.1 > $0.1 ? $1 : $0 }
+        return best.1 < 0 ? .civic : best.0
+    }
+
+    /// Decision 522: the cells of `rectangle` no open station's catchment
+    /// reaches (800 m, measured from a cell's middle as the city's growth
+    /// does), which the city never builds on, as runs along each row;
+    /// a zoning drag greys them before the finger lifts.
+    public func cellsOutOfReach(in rectangle: CellRectangle) -> [CellRectangle] {
+        ZoningOutlook.runsOutOfReach(
+            in: rectangle, of: world.stations.filter { $0.operationMode != .closed }.map(\.location)
+        )
+    }
+
+    /// Decision 514: after zoning `rectangle` for a use, what its empty
+    /// cells' outlook (``ZoneOutlook``) asks of the player: how many are too
+    /// far from a station, else that they wait for the station to grow when
+    /// none will be built yet; `nil` when some will be built and none is too
+    /// far.
+    func outlookNote(of rectangle: CellRectangle) -> String? {
+        let outlook = ZoningOutlook(world: world)
+        var counts: [ZoneOutlook: Int] = [:]
+        for row in rectangle.rows {
+            for column in rectangle.columns {
+                guard let zone = world.zones.zone(row: row, column: column),
+                      let kind = outlook.outlook(row: row, column: column, zone: zone, in: world)
+                else { continue }
+                counts[kind, default: 0] += 1
+            }
+        }
+        if let far = counts[.tooFar], far > 0 {
+            let total = counts.values.reduce(0, +)
+            return far == total
+                ? language.text("No station is near enough for the town to build here.", "這裡離車站太遠，城市不會來蓋。")
+                : language.text(
+                    far == 1 ? "1 of them is too far from a station to be built." : "\(far) of them are too far from a station to be built.",
+                    "其中 \(far) 格離車站太遠，不會蓋。"
+                )
+        }
+        guard (counts[.builds] ?? 0) == 0 else { return nil }
+        if (counts[.waitsForStation] ?? 0) > 0 {
+            return ZoneOutlook.waitsForStation.explanation(in: language)
+        }
+        if (counts[.notWanted] ?? 0) > 0 {
+            return ZoneOutlook.notWanted.explanation(in: language)
+        }
+        return nil
     }
 
     /// How many cells are zoned, for the zoning tool.
@@ -170,5 +309,16 @@ extension GameSession {
                 "只有城市需要這種用途（需求不是負的）時才會蓋。"
             )
         }
+    }
+}
+
+extension GameWorld {
+    /// What the city has built on a cell, as zoning counts it (decision
+    /// 509): its building's use where the world has city buildings, its
+    /// land's use otherwise (L3-8, #1581's review: a world without city
+    /// buildings, an older save among them, grows land on zoned cells
+    /// all the same); `nil` while it has built nothing there.
+    func zonedUseBuilt(row: Int, column: Int) -> LandUse? {
+        cityBuildings ? buildings.building(row: row, column: column)?.use : land.cell(row: row, column: column)?.use
     }
 }

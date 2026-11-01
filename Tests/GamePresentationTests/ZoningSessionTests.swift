@@ -23,7 +23,7 @@ final class ZoningSessionTests: XCTestCase {
         // (5,000, 9,000) lies in row 2, column 1.
         XCTAssertTrue(session.tapBuildingTool(at: PlanPoint(x: 5_000, y: 9_000), reach: 0))
         XCTAssertEqual(session.world.zones.zone(row: 2, column: 1), .residential)
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Zoned 1 cell: Homes."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Zoned 1 cell: Homes. No station is near enough for the town to build here."))
 
         // While the finger is down the map shows the rectangle and nothing
         // is zoned; from row 2, column 1 to row 4, column 3.
@@ -38,7 +38,7 @@ final class ZoningSessionTests: XCTestCase {
         XCTAssertNil(session.zoneDrag)
         XCTAssertEqual(session.world.zones.cells.count, 9)
         XCTAssertEqual(session.world.zones.zone(row: 2, column: 1), .commercial)
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Zoned 9 cells: Shops."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Zoned 9 cells: Shops. No station is near enough for the town to build here."))
         XCTAssertEqual(session.zonedCellsText, "9 cells zoned")
 
         // One drag is one edit.

@@ -44,6 +44,39 @@ extension GameWorld {
         return held + "\n" + language.text(
             "Short last night: the town grew at a quarter. A raise takes 31 to 169 t, a new block 16 t.",
             "昨晚缺建材：城市只長了四分之一。升級一棟要 31 到 169 噸，新的一格 16 噸。"
+        ) + "\n" + materialsNextStep(at: station, in: language)
+    }
+
+    /// Decision 519: the next thing the player does to bring station
+    /// `station` building materials by train, read from what is built: its
+    /// yard, a yard sending materials, a freight line calling at both.
+    func materialsNextStep(at station: StationID, in language: DisplayLanguage) -> String {
+        let name = self.station(id: station)?.name ?? ""
+        guard freightFacility(at: station) != nil else {
+            return language.text(
+                "Next: build a freight yard here (the button below); trains let materials off only at a yard.",
+                "下一步：在這站蓋一座貨運場（下方的按鈕）；列車只在貨運場卸建材。"
+            )
+        }
+        let senders = (freight?.facilities ?? []).filter { $0.product == .materials && $0.station != station }.map(\.station)
+        guard !senders.isEmpty else {
+            return language.text(
+                "Next: have another station's freight yard send building materials (in its Freight section).",
+                "下一步：讓另一站的貨運場改出建材（在那站的「貨運」）。"
+            )
+        }
+        let carried = lines.contains { line in
+            line.isFreight && line.stops.contains(station) && line.stops.contains { senders.contains($0) }
+        }
+        guard carried else {
+            return language.text(
+                "Next: in Lines, make a line calling here and at a yard sending materials a freight line. A freight track of your own needs a platform of \(name): tap it with the network tool's Station mode and choose \(name).",
+                "下一步：到「路線」把停靠這站和出建材那站的路線設成貨運路線。自己拉的貨運軌道要有「\(name)」的月台：用路網工具的「車站」點那條軌道，車站選「\(name)」。"
+            )
+        }
+        return language.text(
+            "A freight line already brings materials here; more trains on it bring more.",
+            "已有貨運路線送建材來這站；加開列車就送得更多。"
         )
     }
 

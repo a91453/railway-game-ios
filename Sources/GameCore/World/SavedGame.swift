@@ -401,9 +401,30 @@
 ///     (times 10 in all). A build that reads only an
 ///     earlier version would take the amounts for dollars, three times what
 ///     they are, so it says the save is newer than it instead.
+/// 77. Mountain track (decision 515): an edge can be `"mountain": true`,
+///     steeper than 40 in 1000 up to 70, and a train's `"type"` can be
+///     `"ALISHAN"`. A build that reads only an earlier version would call
+///     such an edge too steep and cannot read the type, so it says the save
+///     is newer than it instead.
+/// 78. Station expansion (decision 506): a station can have its
+///     `"expansion"` (1 or 2), holding 8,000 or 16,000 waiting, and its
+///     records more than 4,000 waiting; the asset records can be a
+///     `"stationExpansion"`. A build that reads only an earlier version
+///     would drop the expansion and refuse the queue as more than the
+///     station holds, so it says the save is newer than it instead.
+/// 79. Buying a removed line again (decision 528): a railway's purchase
+///     can have its `"track"` (the edges it laid), and the world its
+///     `"leftTrack"` (what lines bought and removed left). A build that
+///     reads only an earlier version would drop both and could no longer
+///     take up the old line's track, so it says the save is newer than it
+///     instead.
+/// 80. Runs of a ring (decision 535): a ring can have runs, each with its
+///     `"way"` round (`"inner"` or `"outer"`). A build that reads only an
+///     earlier version would read such a run as one from end to end and
+///     refuse the whole line, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 76
+    public static let currentVersion = 80
 
     public let world: GameWorld
 
@@ -602,6 +623,16 @@ extension SavedGame: Codable {
         // read times 3; the real high-speed fares, kept at NT$10 to the
         // dollar, become the real table's own New Taiwan dollars
         // (``GameWorld/convertHighSpeedFaresToNewTaiwanDollars()``).
+        // Version 76 to 77: every edge of a world before version 77 is
+        // ordinary track, as an edge without `"mountain"` reads, and no
+        // train is the Alishan Forest Railway's.
+        // Version 77 to 78: a station without `"expansion"` is not expanded
+        // (decision 506): nothing to turn.
+        // Version 78 to 79: a purchase without `"track"` laid none it
+        // knows of and a world without `"leftTrack"` has none left
+        // (decision 528): nothing to turn.
+        // Version 79 to 80: no ring of a world before version 80 has runs,
+        // and no run a way (decision 535): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

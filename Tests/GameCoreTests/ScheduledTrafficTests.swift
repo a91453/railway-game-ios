@@ -469,6 +469,37 @@ final class ScheduledTrafficTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    /// Decision 497 (P2-7): the westbound train standing at F with no way
+    /// to M says so once its departure is due, with traffic control on or
+    /// off; before then, and for the eastbound train, nothing is held.
+    func testATrainWithNoWayOnIsHeldByTheTrack() throws {
+        var world = try SingleTrackMeet.world()
+        let beyond = try world.buildTrackNode(at: WorldCoordinate(x: 35_840, y: 4_096))
+        let edge = try world.buildTrackEdge(from: .node(4), to: beyond)
+        let terminus = try world.buildStation(named: "F", at: PlanPoint(x: 35_840, y: 8_192)).id
+        try world.addTrackPlatform(terminus, on: edge, from: 512, to: 1_536)
+        let east = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        let west = try SingleTrackMeet.stand(&world, edge: .init(edge: edge, direction: .forward), offset: 1_536, cars: 1)
+        try world.setTrainTimetable(east, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 60)),
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 660), departure: .init(seconds: 720)),
+        ])
+        try world.setTrainTimetable(west, to: [
+            .init(station: terminus, arrival: .init(seconds: 0), departure: .init(seconds: 120)),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 400), departure: .init(seconds: 460)),
+        ])
+        try world.startTrainService(east)
+        try world.startTrainService(west)
+        XCTAssertNil(world.heldDeparture(of: west), "not due yet")
+        try world.advance(ticks: 3)
+        XCTAssertEqual(world.train(id: west)?.execution, .waitingAtStop(0, cycle: 0))
+        XCTAssertEqual(world.heldDeparture(of: west), .noRoute(to: SingleTrackMeet.middle))
+        XCTAssertNil(world.heldDeparture(of: east))
+        XCTAssertEqual(world.heldDepartures(), [west: .noRoute(to: SingleTrackMeet.middle)])
+        try world.setTrafficControl(true)
+        XCTAssertEqual(world.heldDepartures(), [west: .noRoute(to: SingleTrackMeet.middle)])
+    }
+
     /// A service that has ended without visiting the station waited at
     /// (here it saw only its first stop) will not come: the wait ends.
     func testAWaitForAServiceThatHasEndedEnds() throws {

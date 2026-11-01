@@ -19,6 +19,31 @@ public enum SidePanelWidth {
     }
 }
 
+/// Where the title of a page in a panel beside the map stands (IPHLAND,
+/// review L2-2). In the navigation bar's middle it shares the panel's
+/// width with the bar's buttons; on a phone on its side the panel is at
+/// most ``SidePanelWidth/panel(screenWidth:compactHeight:)``'s 300 points
+/// and the bar is low, so a station's name between its menu and its Go
+/// To and Done was cut to a character or two, and a second line did not
+/// fit the bar's height. There it stands on a row of its own under the
+/// bar, as wide as the panel.
+public enum PanelTitlePlacement: Equatable, Sendable {
+    /// In the bar's middle, on up to ``lineLimit`` lines.
+    case bar
+    /// On a row under the bar, the panel's width, on up to ``lineLimit``
+    /// lines; the bar keeps its buttons only.
+    case belowBar
+
+    /// How many lines the title takes before it is cut.
+    public static let lineLimit = 2
+
+    /// Where the title stands on a compact height (a phone on its side)
+    /// or not.
+    public static func place(compactHeight: Bool) -> PanelTitlePlacement {
+        compactHeight ? .belowBar : .bar
+    }
+}
+
 /// Decision 300: the map's bottom-trailing buttons (coverage, 3D, zoom) on
 /// a phone on its side, beside a panel. Beside it they stood in the middle
 /// of the map, over the stations being picked (the panel is a little under

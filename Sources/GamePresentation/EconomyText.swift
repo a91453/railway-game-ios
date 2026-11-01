@@ -10,9 +10,88 @@ extension Money {
     /// The sign every amount of money the game shows begins with. Every
     /// amount is written by the functions here (``moneyText``,
     /// ``wholeText``, ``centsText``, ``signedText``,
-    /// ``TrainRoster/shortMoney(_:)``), never with a `$` of its own, so
+    /// ``TrainRoster/shortMoney(_:in:)``), never with a `$` of its own, so
     /// the currency changes in one place (`MoneyTextSourceTests`).
-    public static let currencySymbol = "$"
+    /// New Taiwan dollars: the currency of where the map is (decisions 499
+    /// and 523).
+    public static let currencySymbol = "NT$"
+
+    /// New Taiwan dollars to one US dollar, for the rough reference the
+    /// English interface shows beside large amounts (decision 523). A
+    /// round figure, not a live rate.
+    public static let usDollarReferenceRate: Int64 = 30
+
+    /// The smallest amount, either way, that gets the US dollar
+    /// reference: NT$1,000. Fares, a day pass and other small amounts
+    /// are read in New Taiwan dollars alone.
+    public static let usDollarReferenceMinimum = Money(100_000)
+
+    /// "≈ US$300,000" beside a large amount in the English interface, the
+    /// New Taiwan dollars ÷ ``usDollarReferenceRate`` to the nearest whole
+    /// US dollar (half up, as ``moneyText`` rounds); `nil` in Chinese and
+    /// for an amount under ``usDollarReferenceMinimum`` (decision 523).
+    /// Only shown: every amount the player enters stays in NT$. The space
+    /// after "≈" does not break, so a wrapped line keeps the two together.
+    public func usDollarReferenceText(in language: DisplayLanguage) -> String? {
+        guard language == .english, amount.magnitude >= Self.usDollarReferenceMinimum.amount.magnitude else { return nil }
+        let centsPerDollar = Self.usDollarReferenceRate * 100
+        let remainder = amount % centsPerDollar + centsPerDollar / 2
+        let dollars = amount / centsPerDollar + (remainder >= centsPerDollar ? 1 : remainder < 0 ? -1 : 0)
+        return "≈\u{00A0}US$" + dollars.groupedText
+    }
+
+    /// ``moneyText`` with the US dollar reference after it where there is
+    /// one: "NT$ 9,000,000 (≈ US$300,000)" in English, "NT$ 9,000,000" in
+    /// Chinese (decision 523).
+    public func moneyTextWithReference(in language: DisplayLanguage) -> String {
+        usDollarReferenceText(in: language).map { "\(moneyText) (\($0))" } ?? moneyText
+    }
+
+    /// The amount as the Chinese interface writes it where room is short
+    /// or the figure is large (decision 523, continued): from NT$10,000
+    /// in 萬 to one decimal ("NT$ 900 萬", "NT$ 1,234.6 萬"), from 1 億
+    /// in 億 to two ("NT$ 1.23 億"), rounded half away from zero, with no
+    /// trailing zero after the point; below NT$10,000, and in English,
+    /// ``moneyText``. The cash in the status bar, the economy panel's
+    /// balance, the price of a build and the new game's starting cash;
+    /// the ledger and the statements keep every dollar.
+    public func compactText(in language: DisplayLanguage) -> String {
+        let dollars = wholeDollars
+        let size = dollars.magnitude
+        guard language == .traditionalChinese, size >= 10_000 else { return moneyText }
+        let sign = dollars < 0 ? "-" : ""
+        // Thousands are tenths of 萬; a figure that rounds up to 10,000
+        // 萬 is written as 1 億.
+        let thousands = (size + 500) / 1_000
+        let figure = thousands < 100_000
+            ? Self.decimalText(thousands, places: 1) + " 萬"
+            : Self.decimalText((size + 500_000) / 1_000_000, places: 2) + " 億"
+        return Self.currencySymbol + " " + sign + figure
+    }
+
+    /// ``compactText(in:)`` with the US dollar reference after it in
+    /// English (``moneyTextWithReference(in:)``): the new game's starting
+    /// cash.
+    public func compactTextWithReference(in language: DisplayLanguage) -> String {
+        usDollarReferenceText(in: language).map { "\(moneyText) (\($0))" } ?? compactText(in: language)
+    }
+
+    /// `value` with its last `places` digits after a point, thousands
+    /// grouped, trailing zeros after the point dropped: "1,234.6", "900".
+    static func decimalText(_ value: UInt64, places: Int) -> String {
+        var unit: UInt64 = 1
+        for _ in 0..<places { unit *= 10 }
+        var fraction = String(value % unit)
+        fraction = String(repeating: "0", count: places - fraction.count) + fraction
+        while fraction.last == "0" { fraction.removeLast() }
+        return (value / unit).groupedText + (fraction.isEmpty ? "" : "." + fraction)
+    }
+
+    /// What the English interface says once about the currency, beside
+    /// the balance; `nil` in Chinese (decision 523).
+    public static func currencyNoteText(in language: DisplayLanguage) -> String? {
+        language == .english ? "Prices are in New Taiwan dollars (NT$); the US$ figures are a rough guide." : nil
+    }
 
     /// The amount in whole dollars, as the reference shows money
     /// (`metroEconomyMoneyText`: `"$ " + Math.round(dollars)` with thousands
@@ -94,6 +173,12 @@ extension GameEconomy {
     /// "∞" with free play's unlimited funds (decision 200).
     public var cashText: String {
         unlimitedFunds ? "∞" : balance.moneyText
+    }
+
+    /// ``cashText`` in 萬／億 in Chinese (``Money/compactText(in:)``): the
+    /// status bar and the economy panel's balance (decision 523, continued).
+    public func cashText(in language: DisplayLanguage) -> String {
+        unlimitedFunds ? "∞" : balance.compactText(in: language)
     }
 
     /// Whether the cash is shown as in the red: never with unlimited funds.
@@ -292,6 +377,22 @@ extension GameWorld {
         let groups = waitingText(at: id, in: language)
         guard !groups.isEmpty else { return nil }
         return language.text("waiting \(groups.joined(separator: ", "))", "候車 \(groups.joined(separator: "、"))")
+    }
+
+    /// Who waits at station `id` for the inspector card, one line each so a
+    /// narrow card wraps none of them away: "waiting" first, then up to
+    /// `maxGroups` of ``waitingText(at:in:)`` (the busiest are not sorted
+    /// out: lines by ID), and "+2 more" if there are more (the station
+    /// panel lists them all). Empty if nobody waits.
+    public func waitingLines(at id: StationID, maxGroups: Int = 3, in language: DisplayLanguage) -> [String] {
+        let groups = waitingText(at: id, in: language)
+        guard !groups.isEmpty else { return [] }
+        var lines = [language.text("Waiting", "候車")] + groups.prefix(maxGroups)
+        if groups.count > maxGroups {
+            let rest = groups.count - maxGroups
+            lines.append(language.text("+\(rest) more", "還有 \(rest) 項"))
+        }
+        return lines
     }
 
     /// Whether train `id`'s load is tons: it is on a freight line, or was

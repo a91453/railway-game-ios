@@ -93,6 +93,8 @@ struct LinesPanel: View {
     @AppStorage("linesPanel.foldedGroups") private var storedFoldedGroups = ""
     /// Decision 206: whether the selected line's train diagram is open.
     @State private var showsDiagram = false
+    /// Decision 512: whether the selected line's train roster is open.
+    @State private var showsRoster = false
     /// Decision 196, later: the player's choice for the "Advanced" switch,
     /// or `nil` for the device's default (folded on a phone).
     @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
@@ -431,7 +433,9 @@ struct LinesPanel: View {
     /// page is opened for it.
     private var networkPage: some View {
         Form {
-            trafficSection
+            // The page's title already names it (IPHLAND: on a phone on
+            // its side the two stood one under the other).
+            trafficSection(titled: false)
             serviceDaySection
         }
         .panelTitle(NetworkSwitches.title(in: session.language))
@@ -700,11 +704,13 @@ struct LinesPanel: View {
     @ViewBuilder
     private var networkSection: some View {
         if session.allows(UnlockableTool.lineDetails) {
-            trafficSection
+            trafficSection(titled: true)
         }
     }
 
-    private var trafficSection: some View {
+    /// `titled`: with the block's name as its header, where no page title
+    /// above names it.
+    private func trafficSection(titled: Bool) -> some View {
         Section {
             Toggle("Traffic control", isOn: Binding(
                 get: { session.world.isTrafficControlEnabled },
@@ -715,7 +721,9 @@ struct LinesPanel: View {
                 set: { session.setPassengerRoutingMode($0 ? .network : .direct) }
             ))
         } header: {
-            Text(verbatim: NetworkSwitches.title(in: session.language))
+            if titled {
+                Text(verbatim: NetworkSwitches.title(in: session.language))
+            }
         } footer: {
             Text("When on, a train takes its whole route before it leaves, and other trains wait until it has cleared it.")
             Text("With network routes, passengers change lines and walk to stations nearby; otherwise they ride only a line serving both stations.")
@@ -1216,12 +1224,17 @@ struct LinesPanel: View {
                     if let report {
                         ViewThatFits(in: .horizontal) {
                             reportText(report, report.compactRowText(in: session.language), id: line.id)
+                            // No ForEach here (CRASH101, 2026-11-01): its row
+                            // closure is main-actor code, and SwiftUI's
+                            // asynchronous renderer built a narrow row's
+                            // items off the main thread while measuring this
+                            // ViewThatFits, which stopped the app. The two
+                            // lines are built here, with the row.
+                            let lines = report.compactRowLines(in: session.language)
                             VStack(alignment: .leading, spacing: 1) {
-                                ForEach(report.compactRowParts(in: session.language), id: \.self) { part in
-                                    Text(verbatim: part)
-                                        .font(.caption2.monospacedDigit())
-                                        .foregroundStyle(report.lostMoneyYesterday ? Theme.error : Theme.textSecondary)
-                                        .lineLimit(1)
+                                compactRowLine(lines.first, lostMoney: report.lostMoneyYesterday)
+                                if let second = lines.second {
+                                    compactRowLine(second, lostMoney: report.lostMoneyYesterday)
                                 }
                             }
                             .accessibilityElement(children: .combine)
@@ -1243,6 +1256,14 @@ struct LinesPanel: View {
                     .accessibilityHidden(true)
             }
         }
+    }
+
+    /// One line of a narrow row's riders and profit (decision 486).
+    private func compactRowLine(_ text: String, lostMoney: Bool) -> some View {
+        Text(verbatim: text)
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(lostMoney ? Theme.error : Theme.textSecondary)
+            .lineLimit(1)
     }
 
     /// A row's name and its marks: ring, high-speed, needs a look.
@@ -1600,25 +1621,13 @@ struct LinesPanel: View {
                     Text(verbatim: session.language.text("Remove Line", "刪除路線"))
                 }
             } message: {
-                Text(verbatim: removalText(line))
+                Text(verbatim: session.lineRemovalText(line.id))
             }
         } header: {
             Text(verbatim: "\(line.name) · \(line.window.displayText(in: session.language))")
         } footer: {
             Text(verbatim: session.world.serviceDay.summaryText(in: session.language))
         }
-    }
-
-    /// What removing `line` does to its trains (decision 327).
-    private func removalText(_ line: ServiceLine) -> String {
-        let sale = session.world.lineRemovalSale(line.id)
-        guard sale.trains > 0 else {
-            return session.language.text("The line has no trains.", "這條路線沒有列車。")
-        }
-        return session.language.text(
-            "Its \(sale.trains) \(sale.trains == 1 ? "train is" : "trains are") sold with it, for \(sale.proceeds.moneyText).",
-            "它的 \(sale.trains) 列車會一起賣掉，取得 \(sale.proceeds.moneyText)。"
-        )
     }
 
     // MARK: - The selected line's stops (Stage C2)
@@ -1647,6 +1656,18 @@ struct LinesPanel: View {
                 }
             }
             .accessibilityIdentifier("line.trainDiagram")
+            // Decision 512: the line's trains on the roster, where they
+            // can be moved.
+            Button {
+                showsRoster = true
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Train roster", "列車運用表"))
+                } icon: {
+                    Image(systemName: "chart.bar.doc.horizontal")
+                }
+            }
+            .accessibilityIdentifier("line.trainRoster")
             ForEach(Array(line.stops.enumerated()), id: \.offset) { index, station in
                 HStack {
                     Text(verbatim: "\(index + 1). \(name(of: station))")
@@ -2588,6 +2609,11 @@ extension LinesPanel {
                     TrainDiagramView(session: session, line: id)
                 }
             }
+            .fullScreenCover(isPresented: active ? $showsRoster : .constant(false)) {
+                if let id = session.selectedLineID {
+                    TrainRosterView(session: session, line: id)
+                }
+            }
     }
 
     /// Whether the panel removal `removal` is the one asking first.
@@ -2627,6 +2653,15 @@ private struct LineLossCard: View, Equatable {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("line.costs")
+            // NEXT_PRIORITIES §22.17: the last seven days' punctuality,
+            // with Taiwan Railway's real year beside it.
+            if let weekly = diagnosis.weeklyPunctuality {
+                Text(verbatim: weekly.text(in: language))
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("line.weeklyPunctuality")
+            }
             // Decision 207: with realistic operation, how many trips were
             // on time.
             if let punctuality = diagnosis.punctualityText(in: language) {

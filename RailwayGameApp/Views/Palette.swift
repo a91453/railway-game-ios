@@ -301,6 +301,11 @@ enum MapGlyph: String {
     case shops1 = "MapGlyphShops1"
     case shops2 = "MapGlyphShops2"
     case shops3 = "MapGlyphShops3"
+    /// Decision 506 續 (BADGE): a station's expansion, a station house
+    /// with three doors for the bigger concourse and with a set-back upper
+    /// storey for the grand hall (`docs/UI_THEME.md`).
+    case stationConcourse = "MapGlyphStationConcourse"
+    case stationHall = "MapGlyphStationHall"
     /// Decision 167, later: a tile of the map not bought yet, shut until
     /// the best day unlocks it, open after.
     case lock = "MapGlyphLock"
@@ -312,6 +317,14 @@ enum MapGlyph: String {
         case .convenienceStore: .shops1
         case .arcade: .shops2
         case .mall: .shops3
+        }
+    }
+
+    /// The glyph of a station expanded to `expansion`.
+    static func station(_ expansion: StationExpansion) -> MapGlyph {
+        switch expansion {
+        case .concourse: .stationConcourse
+        case .hall: .stationHall
         }
     }
 
