@@ -389,10 +389,13 @@ public struct RealLineOffer: Sendable {
     public func summaryText(in language: DisplayLanguage) -> String {
         let stops = line.stops.count
         guard let acquisition else { return language.text("\(stops) stations", "\(stops) 站") }
-        return language.text(
+        let summary = language.text(
             "\(line.stops.first ?? "") to \(line.stops.last ?? ""): \(stops) stations, \(acquisition.trains.count) trains and the real timetable",
             "\(line.stops.first ?? "")—\(line.stops.last ?? "")：\(stops) 站、\(acquisition.trains.count) 列車與真實班次"
         )
+        // Decision 528: what it takes up first.
+        guard let clearing = acquisition.clearing else { return summary }
+        return summary + language.text(". ", "。") + clearing.text(in: language)
     }
 
     /// What the company still lacks to buy it with `balance`, or `nil`
@@ -643,30 +646,34 @@ extension RealLineLaying {
     /// whichever it was.
     func offer(for line: RealBranchLine) -> RealLineOffer {
         let laid = laidOffer(for: line)
-        // Decision 528: refused for the track the same line left when it
-        // was bought and removed before, laid again on the world without
-        // it, and that track taken up first.
-        guard laid.offer.acquisition == nil, let first = laid.laid,
-              let clearing = RealLineClearing.clearing(in: world, under: first.pieces) else { return laid.offer }
+        // Decision 528: refused where the same line, bought and removed
+        // before, left its track, laid again on the world without that
+        // track, which is taken up first. A first purchase, or one nothing
+        // is in the way of, takes nothing up.
+        guard laid.offer.acquisition == nil, let clearing = RealLineClearing.clearing(in: world, for: line) else { return laid.offer }
+        func refusal(_ error: GameError) -> RealLineOffer {
+            RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(
+                "The track the line left cannot be taken up: ", "這條線之前留下的軌道拆不掉："
+            ) + error.playerMessage(in: language))
+        }
         var cleared = world.pricingCopy()
         do throws(GameError) {
             try clearing.apply(to: &cleared)
         } catch {
-            return laid.offer
+            return refusal(error)
         }
         let again = RealLineLaying(
             world: cleared, railways: railways, traces: traces, language: language, population: population, places: places, water: water,
             coverage: coverage, heights: heights
         ).laidOffer(for: line)
-        guard let acquisition = again.offer.acquisition else { return laid.offer }
-        let taken = RealLineClearing.clearing(in: world, under: acquisition.pieces) ?? clearing
-        let bought = acquisition.clearing(taken)
+        guard let acquisition = again.offer.acquisition else { return again.offer }
+        let bought = acquisition.clearing(clearing)
         var probe = world.pricingCopy()
         do throws(GameError) {
             let price = try build(bought, in: &probe)
             return RealLineOffer(line: line, acquisition: bought, price: price, problem: nil)
         } catch {
-            return laid.offer
+            return refusal(error)
         }
     }
 
@@ -1246,6 +1253,7 @@ extension RealLineLaying {
         let landed = world.economy.balance
         // Decision 528: what the same line left when it was removed.
         try acquisition.clearing?.apply(to: &world)
+        let standing = Set(world.network.edges.map(\.id))
         var nodes: [[TrackNodeID]] = []
         var edges: [[TrackEdgeID]] = []
         for piece in acquisition.pieces {
@@ -1361,8 +1369,12 @@ extension RealLineLaying {
         }
         let bought = world.economy.balance
         if recording {
+            // Decision 528: the track it laid, standing, left behind if
+            // the line is removed.
+            let laid = world.network.edges.map(\.id).filter { !standing.contains($0) }
             try world.recordLineAcquisition(
-                line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders, tier: acquisition.tier ?? .branch
+                line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders, tier: acquisition.tier ?? .branch,
+                track: laid.isEmpty ? nil : laid
             )
         }
         return RealLineAcquisitionPrice(

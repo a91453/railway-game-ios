@@ -208,6 +208,99 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
 
+    /// Decision 528: a purchase keeps the track it laid; the line removed
+    /// leaves what of it stands, which the same real line bought again
+    /// forgets. The track left saves and loads.
+    func testABoughtLineRemovedLeavesItsTrack() throws {
+        var world = try world(balance: 100_000_000)
+        let laid = world.network.edges.map(\.id)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: laid)
+        XCTAssertEqual(world.acquisition(of: pingxi)?.track, laid)
+        XCTAssertEqual(world.trackLeft(by: pingxi), [], "nothing left while it runs")
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        try world.removeLine(main)
+        XCTAssertEqual(world.leftTrack, [LeftTrack(realLine: pingxi, edges: laid)])
+        XCTAssertEqual(world.trackLeft(by: pingxi), laid)
+        XCTAssertEqual(world.trackLeft(by: "tra:JIJI"), [])
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        // An edge taken up is no longer left.
+        let free = try XCTUnwrap(laid.last)
+        for platform in world.network.platforms(on: free) {
+            try world.removeTrackPlatform(platform.station, on: free, from: platform.start)
+        }
+        try world.removeTrackEdge(free)
+        XCTAssertEqual(world.trackLeft(by: pingxi), laid.filter { $0 != free })
+        // Bought again, the track it left is forgotten.
+        let other = try world.createLine(named: "Other", stops: [alpha, beta]).id
+        try world.setLineRuns(other, to: [LineRun(from: 0, to: 1, times: [LineRunTime(arrival: 22_200, departure: 22_200), LineRunTime(arrival: 22_500, departure: 22_500)])])
+        try world.recordLineAcquisition(line: other, realLine: pingxi, dailyRiders: 2)
+        XCTAssertEqual(world.leftTrack, [])
+        XCTAssertEqual(world.trackLeft(by: pingxi), [])
+    }
+
+    /// A purchase naming track that is not there, or an edge twice, is
+    /// refused and changes nothing.
+    func testAPurchaseWithTrackNotThereIsRefused() throws {
+        var world = try world()
+        let before = world
+        let edge = try XCTUnwrap(world.network.edges.first?.id)
+        XCTAssertThrowsGameError(try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: [.edge(999)]), .invalidAcquisition)
+        XCTAssertThrowsGameError(try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: [edge, edge]), .invalidAcquisition)
+        XCTAssertThrowsGameError(try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: []), .invalidAcquisition)
+        XCTAssertEqual(world, before)
+    }
+
+    /// A hand-made save with bad track left is refused.
+    func testTrackLeftIsChecked() throws {
+        var world = try world(balance: 100_000_000)
+        let laid = world.network.edges.map(\.id)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: laid)
+        try world.removeLine(main)
+        let data = try JSONEncoder().encode(world)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertNotNil(object["leftTrack"])
+        func decodes(_ change: (inout [String: Any]) -> Void) -> Bool {
+            var edited = object
+            change(&edited)
+            guard let data = try? JSONSerialization.data(withJSONObject: edited) else { return false }
+            return (try? JSONDecoder().decode(GameWorld.self, from: data)) != nil
+        }
+        let good: [String: Any] = ["realLine": pingxi, "edges": [(laid[0].networkNumber ?? -1)]]
+        XCTAssertTrue(decodes { $0["leftTrack"] = [good] })
+        XCTAssertTrue(decodes { $0["leftTrack"] = nil })
+        XCTAssertFalse(decodes { $0["leftTrack"] = [] }, "an empty list is not written")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good, good] }, "a line leaves track once")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": []]) { $1 }] })
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [(laid[0].networkNumber ?? -1), (laid[0].networkNumber ?? -1)]]) { $1 }] })
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["edges": [9_999]]) { $1 }] }, "an edge not handed out")
+        XCTAssertFalse(decodes { $0["leftTrack"] = [good.merging(["realLine": ""]) { $1 }] })
+    }
+
+    /// Version 79 (decision 528): Main bought as Pingxi with the track it
+    /// laid, then removed, leaving that track; it saves byte for byte and
+    /// is the world this build makes.
+    func testVersionSeventyNineKeepsTheTrackLeft() throws {
+        var world = try world(balance: 100_000_000)
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 2, track: world.network.edges.map(\.id))
+        try world.removeLine(main)
+        try world.advance(ticks: 60)
+
+        let url = SavedGameTests.fixtures.appendingPathComponent("v79-track-left.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["TRACK_LEFT_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: world)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 79)
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.trackLeft(by: pingxi).count, 6)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 79,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+    }
+
     // MARK: - Saving
 
     /// A world without purchases writes no key; one with them round-trips,

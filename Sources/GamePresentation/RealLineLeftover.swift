@@ -3,15 +3,13 @@ import GameCore
 // Decision 528: a real line bought and then removed is on sale again, but
 // its track, platforms and depot stay where they were, on the very place
 // the line is laid again, so GameCore refuses the new track beside them.
-// The purchase takes them up first: every edge whose whole centre line
-// lies on the track laid again, with the platforms on it of stations no
-// line calls at, then the nodes left with no edge and a depot left with no
-// platform. Track of a line still running (a platform of a station a line
-// calls at), crossing the way, or beside it farther off than a few metres
-// is not the line's and stays; where it is in the way, the purchase is
-// refused as before. Track joined to what is taken up goes with it while
-// none of that joined track has a platform of a station a line calls at:
-// what the old line left past where the new one parts from it.
+// GameCore keeps what each purchase laid and, the line removed, what of it
+// still stands (``GameWorld/trackLeft(by:)``). Bought again, and only when
+// the plain layout is refused, the purchase takes that track up first, and
+// nothing else: not track the player laid, not another line's, and not an
+// edge any line still runs over (a platform of a station a line calls at,
+// the way between two of a line's stops, the way to its depot, a route it
+// keeps to). Old saves kept no track, so nothing is taken up there.
 
 /// What a purchase takes up before it lays its track (decision 528): the
 /// track left by the same line bought and removed before.
@@ -31,94 +29,93 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
     /// Depots left with no platform and no line.
     public let stations: [StationID]
 
-    /// How near the track laid again every point of an edge lies for it to
-    /// be that track: the same layout lays it within centimetres, and the
-    /// nearest other track a train may run beside is 4 m off.
-    static let reach = 2 * RealLineAcquisition.metre
-    /// How far apart the points of the track laid again are looked at.
-    static let step = 2 * RealLineAcquisition.metre
-
-    /// What lies in the way of `pieces` in `world` and is the old line's,
-    /// or `nil` for nothing.
-    static func clearing(in world: GameWorld, under pieces: [RealLineAcquisition.Piece]) -> RealLineClearing? {
-        // The track to be laid, as points 2 m apart, in 4 m squares.
-        let cell = 2 * reach
-        func key(_ x: Double, _ y: Double) -> GridKey { GridKey(x: Int64((x / cell).rounded(.down)), y: Int64((y / cell).rounded(.down))) }
-        var laid: [GridKey: [WorldVector]] = [:]
-        for piece in pieces {
-            for index in piece.curves.indices {
-                guard let geometry = TrackGeometry(from: piece.nodes[index], to: piece.nodes[index + 1], curve: piece.curves[index]) else { continue }
-                let points = geometry.points.map { WorldVector($0.plan) }
-                for (a, b) in zip(points, points.dropFirst()) {
-                    let count = max(1, Int(((b - a).length / step).rounded(.up)))
-                    for part in 0...count {
-                        let point = a + (b - a) * (Double(part) / Double(count))
-                        laid[key(point.x, point.y), default: []].append(point)
-                    }
-                }
-            }
+    /// The real lines whose track buying `line` takes up: its own, and
+    /// that of the line it shares its first stations with, either way
+    /// (`ntdlrt:V` and `ntdlrt:VB`), which lies on the same ground.
+    static func realLines(of line: RealBranchLine) -> [String] {
+        let shares = RealBranchLine.urbanLines.compactMap { rail -> (String, String)? in
+            guard let shared = rail.shares else { return nil }
+            return ("\(RealBranchLine.dataSystem(of: rail.system)):\(rail.network)", shared)
         }
-        guard !laid.isEmpty else { return nil }
-        func onTheWay(_ point: WorldVector) -> Bool {
-            let x = Int64((point.x / cell).rounded(.down)), y = Int64((point.y / cell).rounded(.down))
-            for dx: Int64 in -1...1 {
-                for dy: Int64 in -1...1 {
-                    if laid[GridKey(x: x + dx, y: y + dy)]?.contains(where: { ($0 - point).length <= reach }) == true { return true }
-                }
-            }
-            return false
+        var names = [line.id]
+        for (one, other) in shares {
+            if one == line.id, !names.contains(other) { names.append(other) }
+            if other == line.id, !names.contains(one) { names.append(one) }
         }
+        return names
+    }
 
+    /// The edges some line runs over in `world`: those holding a platform
+    /// of a station a line calls at, the ways between each line's
+    /// consecutive stops (and its patterns' calls) and to and from its
+    /// depots, and the routes lines keep to.
+    static func edgesInUse(in world: GameWorld) -> Set<TrackEdgeID> {
+        var used: Set<TrackEdgeID> = []
         let called = Set(world.lines.flatMap { $0.stops + $0.depots })
-        var edges: [TrackEdgeID] = []
-        var platforms: [Platform] = []
-        for edge in world.network.edges {
-            guard let from = world.network.node(edge.from), let to = world.network.node(edge.to),
-                  onTheWay(WorldVector(from.position.plan)), onTheWay(WorldVector(to.position.plan)),
-                  let geometry = TrackGeometry(from: from.position, to: to.position, curve: edge.curve) else { continue }
-            let points = geometry.points.map { WorldVector($0.plan) }
-            guard zip(points, points.dropFirst()).allSatisfy({ a, b in
-                let count = max(1, Int(((b - a).length / step).rounded(.up)))
-                return (0...count).allSatisfy { onTheWay(a + (b - a) * (Double($0) / Double(count))) }
-            }) else { continue }
-            let on = world.network.platforms(on: edge.id)
-            guard on.allSatisfy({ !called.contains($0.station) }) else { continue }
-            edges.append(edge.id)
-            platforms += on.map { Platform(station: $0.station, edge: $0.edge.number, start: $0.start) }
+        for platform in world.network.platforms where called.contains(platform.station) {
+            used.insert(platform.edge)
         }
-        guard !edges.isEmpty else { return nil }
-        // The rest of the track joined to it, where none of it is a
-        // station's that a line calls at: what is left of the old line
-        // past where the new one parts from it (the Green Mountain Line's
-        // way to Kanding and its depot, under the Blue Coast Line bought
-        // after it was removed). Joined to a line still running (a branch
-        // line's junction on the main line), only what lies on the way.
-        var joined = Set(edges), queue = edges
-        var dead = true
-        while dead, let next = queue.popLast() {
-            guard let edge = world.network.edge(next) else { continue }
-            for node in [edge.from, edge.to] {
-                for end in world.network.node(node)?.ends ?? [] where !joined.contains(end.edge) {
-                    if world.network.platforms(on: end.edge).contains(where: { called.contains($0.station) }) {
-                        dead = false
-                        break
+        func connect(_ from: StationID, _ to: StationID) {
+            for platform in world.network.platforms where platform.station == from {
+                for direction in [TrackEdgeDirection.forward, .backward] {
+                    let offset = direction == .forward ? platform.end : (world.network.edge(platform.edge)?.length ?? 0) - platform.start
+                    let start = TrainPosition.onEdge(TrackTraversal(edge: platform.edge, direction: direction), offset: offset)
+                    for traversal in world.path(from: start, toStation: to)?.traversals ?? [] {
+                        used.insert(traversal.edge)
                     }
-                    joined.insert(end.edge)
-                    queue.append(end.edge)
                 }
             }
         }
-        if dead {
-            let matched = Set(edges)
-            for id in joined.sorted() where !matched.contains(id) {
-                edges.append(id)
-                platforms += world.network.platforms(on: id).map { Platform(station: $0.station, edge: $0.edge.number, start: $0.start) }
+        for line in world.lines {
+            for (from, to) in zip(line.stops, line.stops.dropFirst()) {
+                connect(from, to)
+                connect(to, from)
             }
+            for pattern in line.patterns {
+                let calls = pattern.calls.compactMap { line.stops.indices.contains($0) ? line.stops[$0] : nil }
+                for (from, to) in zip(calls, calls.dropFirst()) {
+                    connect(from, to)
+                    connect(to, from)
+                }
+                for route in pattern.routePreferences {
+                    used.formUnion(route.tracks.map(\.edge))
+                }
+            }
+            for route in line.routePreferences {
+                used.formUnion(route.tracks.map(\.edge))
+            }
+            for depot in line.depots {
+                for end in [line.stops.first, line.stops.last].compactMap({ $0 }) {
+                    connect(depot, end)
+                    connect(end, depot)
+                }
+            }
+        }
+        return used
+    }
+
+    /// What buying `line` in `world` takes up: the track it (or the line
+    /// sharing its first stations) left when it was removed, but for the
+    /// edges a line runs over; `nil` for none.
+    static func clearing(in world: GameWorld, for line: RealBranchLine) -> RealLineClearing? {
+        var left: [TrackEdgeID] = []
+        for name in realLines(of: line) {
+            for edge in world.trackLeft(by: name) where !left.contains(edge) {
+                left.append(edge)
+            }
+        }
+        guard !left.isEmpty else { return nil }
+        let used = edgesInUse(in: world)
+        let edges = left.filter { !used.contains($0) }
+        guard !edges.isEmpty else { return nil }
+        let platforms = edges.flatMap { edge in
+            world.network.platforms(on: edge).map { Platform(station: $0.station, edge: $0.edge.number, start: $0.start) }
         }
         let taken = Set(edges)
         let nodes = world.network.nodes.filter { node in
             !node.ends.isEmpty && node.ends.allSatisfy { taken.contains($0.edge) }
         }.map(\.id)
+        let called = Set(world.lines.flatMap { $0.stops + $0.depots })
         let emptied = Set(platforms.map(\.station))
         let stations = world.stations.filter { station in
             station.isDepot && emptied.contains(station.id) && !called.contains(station.id)
@@ -157,10 +154,19 @@ public struct RealLineClearing: Hashable, Sendable, Codable {
             try world.removeStation(station)
         }
     }
-}
 
-/// A square of ``RealLineClearing``'s grid.
-private struct GridKey: Hashable {
-    let x: Int64
-    let y: Int64
+    /// What the offer card says it takes up, in a sentence.
+    func text(in language: DisplayLanguage) -> String {
+        let pieces = edges.count, depots = stations.count
+        if depots == 0 {
+            return language.text(
+                "Buying it first takes up \(pieces) \(pieces == 1 ? "piece" : "pieces") of track the line left when it was removed.",
+                "收購時會先拆掉這條線刪掉時留下的 \(pieces) 段軌道。"
+            )
+        }
+        return language.text(
+            "Buying it first takes up \(pieces) \(pieces == 1 ? "piece" : "pieces") of track and \(depots) \(depots == 1 ? "depot" : "depots") the line left when it was removed.",
+            "收購時會先拆掉這條線刪掉時留下的 \(pieces) 段軌道與 \(depots) 座機廠。"
+        )
+    }
 }

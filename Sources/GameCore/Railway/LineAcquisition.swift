@@ -28,6 +28,10 @@ public struct LineAcquisition: Hashable, Sendable {
     public let day: Int64
     /// What its riders cost (``LineAcquisition/value(ofDailyRiders:tier:)``).
     public let value: Money
+    /// Decision 528: the track a railway's purchase laid, by edge, which
+    /// stays as the line's ``LeftTrack`` when the line is removed; `nil`
+    /// for a bus route's and a purchase saved before version 79.
+    public let track: [TrackEdgeID]?
 
     /// What kind of railway a line bought is, which sets what each of its
     /// riders costs (decision 400, 10j-3).
@@ -84,14 +88,15 @@ public struct LineAcquisition: Hashable, Sendable {
         return time.seconds - day * GameTime.secondsPerDay < sameDayCutoff ? day : day + 1
     }
 
-    /// Railway `realLine`, bought as `line`.
-    public init(realLine: String, line: LineID, day: Int64, value: Money) {
+    /// Railway `realLine`, bought as `line`, laying `track`.
+    public init(realLine: String, line: LineID, day: Int64, value: Money, track: [TrackEdgeID]? = nil) {
         kind = .railway
         self.realLine = realLine
         self.line = line
         busRoute = nil
         self.day = day
         self.value = value
+        self.track = track
     }
 
     /// Bus route `realLine`, bought as `busRoute`.
@@ -102,17 +107,19 @@ public struct LineAcquisition: Hashable, Sendable {
         self.busRoute = busRoute
         self.day = day
         self.value = value
+        track = nil
     }
 
     var isValid: Bool {
         !realLine.isEmpty && realLine.count <= Self.maximumNameLength && day >= 0 && value >= .zero
             && (kind == .railway) == (line != nil) && (kind == .bus) == (busRoute != nil)
+            && (kind == .railway || track == nil) && track.map { !$0.isEmpty && Set($0).count == $0.count } ?? true
     }
 }
 
 extension LineAcquisition: Codable {
     private enum CodingKeys: String, CodingKey {
-        case kind, realLine, line, busRoute, day, value
+        case kind, realLine, line, busRoute, day, value, track
     }
 
     /// A railway's without `"kind"` (saves before version 73), a bus
@@ -125,6 +132,7 @@ extension LineAcquisition: Codable {
         busRoute = kind == .bus ? try container.decode(BusRouteID.self, forKey: .busRoute) : nil
         day = try container.decode(Int64.self, forKey: .day)
         value = try container.decode(Money.self, forKey: .value)
+        track = try container.decodeIfPresent([Int].self, forKey: .track)?.map(TrackEdgeID.edge)
         guard isValid else {
             throw DecodingError.dataCorruptedError(forKey: .realLine, in: container, debugDescription: "A line bought has a name, a day and a value of at least 0.")
         }
@@ -140,6 +148,48 @@ extension LineAcquisition: Codable {
         try container.encodeIfPresent(busRoute, forKey: .busRoute)
         try container.encode(day, forKey: .day)
         try container.encode(value, forKey: .value)
+        try container.encodeIfPresent(track?.compactMap(\.networkNumber), forKey: .track)
+    }
+}
+
+/// Decision 528: the track a real line bought laid, left where it was when
+/// the line was removed: what buying that line (or the one sharing its
+/// first stations) again takes up first, and only that.
+public struct LeftTrack: Hashable, Sendable {
+    /// The real line's name in the app's data (``LineAcquisition/realLine``).
+    public let realLine: String
+    /// Its edges still standing when the line was removed. Some may have
+    /// been taken up since.
+    public let edges: [TrackEdgeID]
+
+    public init(realLine: String, edges: [TrackEdgeID]) {
+        self.realLine = realLine
+        self.edges = edges
+    }
+
+    var isValid: Bool {
+        !realLine.isEmpty && realLine.count <= LineAcquisition.maximumNameLength && !edges.isEmpty && Set(edges).count == edges.count
+    }
+}
+
+extension LeftTrack: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case realLine, edges
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        realLine = try container.decode(String.self, forKey: .realLine)
+        edges = try container.decode([Int].self, forKey: .edges).map(TrackEdgeID.edge)
+        guard isValid else {
+            throw DecodingError.dataCorruptedError(forKey: .edges, in: container, debugDescription: "Track left has a line's name and its edges, each once.")
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(realLine, forKey: .realLine)
+        try container.encode(edges.compactMap(\.networkNumber), forKey: .edges)
     }
 }
 
@@ -159,30 +209,57 @@ extension GameWorld {
     ///   ``GameError/invalidAcquisition`` for an empty
     ///   or too long name, riders outside 0 to
     ///   ``LineAcquisition/maximumDailyRiders``, or a line without runs or
-    ///   one that has run one; ``GameError/insufficientFunds(required:available:)``.
+    ///   one that has run one, or `track` naming an edge twice or one
+    ///   not standing; ``GameError/insufficientFunds(required:available:)``.
     ///   The world is then unchanged.
-    public mutating func recordLineAcquisition(line id: LineID, realLine: String, dailyRiders: Int64, tier: LineAcquisition.Tier = .branch) throws(GameError) {
+    ///
+    /// Decision 528: `track` is the track the purchase laid, kept with it
+    /// and left as its ``LeftTrack`` when the line is removed; the track
+    /// `realLine` left before, and what of any track left is gone, is then
+    /// forgotten.
+    public mutating func recordLineAcquisition(
+        line id: LineID, realLine: String, dailyRiders: Int64, tier: LineAcquisition.Tier = .branch, track: [TrackEdgeID]? = nil
+    ) throws(GameError) {
         let index = try lineIndex(of: id)
         guard !acquisitions.contains(where: { $0.realLine == realLine || $0.line == id }) else { throw .lineAlreadyAcquired }
         let line = lines[index]
         guard !realLine.isEmpty, realLine.count <= LineAcquisition.maximumNameLength,
               (0...LineAcquisition.maximumDailyRiders).contains(dailyRiders),
-              !line.runs.isEmpty, line.runDays.allSatisfy({ $0 == nil }) else {
+              !line.runs.isEmpty, line.runDays.allSatisfy({ $0 == nil }),
+              track.map({ !$0.isEmpty && Set($0).count == $0.count && $0.allSatisfy { network.edge($0) != nil } }) ?? true else {
             throw .invalidAcquisition
         }
         let value = LineAcquisition.value(ofDailyRiders: dailyRiders, tier: tier)
         try economy.spend(value)
         let lastDayDone = LineAcquisition.firstServiceDay(at: clock.now) - 1
         setRunsDone(ofLine: index, through: lastDayDone >= 0 ? lastDayDone : nil)
-        acquisitions.append(LineAcquisition(realLine: realLine, line: id, day: dayIndex(of: clock.now), value: value))
+        acquisitions.append(LineAcquisition(realLine: realLine, line: id, day: dayIndex(of: clock.now), value: value, track: track))
         acquireAsset(.acquiredLine, owner: id.rawValue, cost: value)
+        leftTrack = leftTrack.compactMap { left in
+            let standing = left.edges.filter { network.edge($0) != nil }
+            return left.realLine == realLine || standing.isEmpty ? nil : LeftTrack(realLine: left.realLine, edges: standing)
+        }
     }
 
     /// Decision 528: drops the purchase line `id` runs, as the line is
     /// removed, so its real line is on sale again. What it cost was
     /// written off with the line's asset.
+    /// What of the track it laid still stands is left as its
+    /// ``LeftTrack``, in place of what it left before.
     mutating func forgetAcquisition(ofLine id: LineID) {
-        acquisitions.removeAll { $0.line == id }
+        guard let index = acquisitions.firstIndex(where: { $0.line == id }) else { return }
+        let bought = acquisitions.remove(at: index)
+        let standing = (bought.track ?? []).filter { network.edge($0) != nil }
+        leftTrack.removeAll { $0.realLine == bought.realLine }
+        if !standing.isEmpty {
+            leftTrack.append(LeftTrack(realLine: bought.realLine, edges: standing))
+        }
+    }
+
+    /// Decision 528: the track real line `realLine` left when it was
+    /// removed, still standing; none if it left none.
+    public func trackLeft(by realLine: String) -> [TrackEdgeID] {
+        (leftTrack.first { $0.realLine == realLine }?.edges ?? []).filter { network.edge($0) != nil }
     }
 
     // MARK: - Queries
@@ -201,6 +278,13 @@ extension GameWorld {
               Set(acquisitions.compactMap(\.line)).count == acquisitions.filter({ $0.kind == .railway }).count,
               Set(acquisitions.compactMap(\.busRoute)).count == acquisitions.filter({ $0.kind == .bus }).count else {
             return "Each line or bus route bought is well formed, a number handed out, and bought once."
+        }
+        let edgesHandedOut = network.nextEdgeNumber
+        func handedOut(_ edges: [TrackEdgeID]) -> Bool { edges.allSatisfy { ($0.networkNumber ?? 0) < edgesHandedOut } }
+        guard acquisitions.allSatisfy({ handedOut($0.track ?? []) }),
+              leftTrack.allSatisfy({ left in left.isValid && handedOut(left.edges) && !acquisitions.contains(where: { $0.realLine == left.realLine }) }),
+              Set(leftTrack.map(\.realLine)).count == leftTrack.count else {
+            return "Each track left or laid by a purchase is edges handed out, of a line not bought now, once."
         }
         return nil
     }

@@ -193,6 +193,11 @@ public struct GameWorld: Equatable, Sendable {
     /// bought them. None in a new world and in saves from before it. Set by
     /// ``recordLineAcquisition(line:realLine:dailyRiders:tier:)`` only.
     public internal(set) var acquisitions: [LineAcquisition] = []
+    /// Decision 528: the track real lines bought and removed left, what
+    /// buying them again takes up. None in a new world and in saves from
+    /// before version 79. Set by ``recordLineAcquisition(line:realLine:dailyRiders:tier:track:)``
+    /// and removing a line bought only.
+    public internal(set) var leftTrack: [LeftTrack] = []
     /// The roads on the land's grid (decision 400), or `nil` for a world
     /// without them. Off in a new world and in saves from before it; the
     /// player's new games turn them on. Set by ``enableRoads(towns:)``,
@@ -1265,8 +1270,11 @@ public struct GameWorld: Equatable, Sendable {
         }
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
-        // Decision 400, 10i-2: the bus routes feeding it close.
-        busRoutes.removeAll { $0.station == id }
+        // Decision 400, 10i-2: the bus routes feeding it close; decision
+        // 528, a real route bought goes on sale again.
+        let closing = Set(busRoutes.filter { $0.station == id }.map(\.id))
+        busRoutes.removeAll { closing.contains($0.id) }
+        acquisitions.removeAll { $0.busRoute.map(closing.contains) ?? false }
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
@@ -4881,7 +4889,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID
     }
 
@@ -5013,6 +5021,10 @@ extension GameWorld: Codable {
         acquisitions = try container.decodeIfPresent([LineAcquisition].self, forKey: .acquisitions) ?? []
         if container.contains(.acquisitions), acquisitions.isEmpty {
             throw DecodingError.dataCorruptedError(forKey: .acquisitions, in: container, debugDescription: "A world is written with \"acquisitions\" only when it bought a line.")
+        }
+        leftTrack = try container.decodeIfPresent([LeftTrack].self, forKey: .leftTrack) ?? []
+        if container.contains(.leftTrack), leftTrack.isEmpty {
+            throw DecodingError.dataCorruptedError(forKey: .leftTrack, in: container, debugDescription: "A world is written with \"leftTrack\" only when a line bought left some.")
         }
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
@@ -5195,6 +5207,9 @@ extension GameWorld: Codable {
         }
         if !tripLog.isEmpty {
             try container.encode(tripLog, forKey: .tripLog)
+        }
+        if !leftTrack.isEmpty {
+            try container.encode(leftTrack, forKey: .leftTrack)
         }
         if !acquisitions.isEmpty {
             try container.encode(acquisitions, forKey: .acquisitions)
