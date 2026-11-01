@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 @testable import GamePresentation
 import XCTest
@@ -124,5 +125,39 @@ final class TrainCarsTests: XCTestCase {
 
     func testNoBodyNoCars() {
         XCTAssertTrue(TrainCars.cars(body: [], heading: Point(x: 1, y: 0), count: 3).isEmpty)
+    }
+    /// Decision 538 (104.1, Zhuzhong): on a curve of 100 m radius, with the
+    /// track ahead of the head and past the tail given, every car's two
+    /// ends stand on the curve; laid straight on, as before, the last
+    /// car's back end stood metres off it.
+    func testTheEndCarsFollowTheTrackRoundACurve() {
+        let radius = 100 * Double(WorldCoordinate.unitsPerMetre)
+        // Anticlockwise round the origin, `along` world units from angle 0.
+        func arc(_ from: Double, _ to: Double) -> [Point] {
+            let steps = 200
+            return (0...steps).map { step in
+                let angle = (from + (to - from) * Double(step) / Double(steps)) / radius
+                return Point(x: radius * cos(angle), y: radius * sin(angle))
+            }
+        }
+        // The head at 80 m along, going anticlockwise; a body of 40 m back.
+        let head = 80 * Double(WorldCoordinate.unitsPerMetre), body = 40 * Double(WorldCoordinate.unitsPerMetre)
+        let angle = head / radius
+        let heading = Point(x: -sin(angle), y: cos(angle))
+        let laid = arc(head, head - body)
+        let track = (ahead: arc(head, head + car), behind: arc(head, head - body - 2 * car))
+        func off(_ cars: [[Point]]) -> Double {
+            cars.flatMap { [$0.first!, $0.last!] }.map { abs(($0.x * $0.x + $0.y * $0.y).squareRoot() - radius) }.max()!
+                / Double(WorldCoordinate.unitsPerMetre)
+        }
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        for cars in [TrainCars.cars(body: laid, heading: heading, count: 3, gap: 0.6 * metre, track: track),
+                     TrainCars.cars(body: laid, heading: heading, lengths: [21 * metre, 20 * metre, 21 * metre],
+                                    gaps: [0.6 * metre, 0.6 * metre], track: track)] {
+            XCTAssertEqual(cars.count, 3)
+            // The chords' ends on the sampled arc: within its sag.
+            XCTAssertLessThan(off(cars), 0.05)
+        }
+        XCTAssertGreaterThan(off(TrainCars.cars(body: laid, heading: heading, count: 3, gap: 0.6 * metre)), 1)
     }
 }
