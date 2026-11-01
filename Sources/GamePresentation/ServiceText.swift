@@ -388,7 +388,11 @@ extension GameWorld {
                 ? language.text("Waiting at \(station) to meet \(name)", "在 \(station) 等候 \(name) 交會")
                 : language.text("Standing aside at \(station) for \(name)", "在 \(station) 待避 \(name)")
         }
-        guard let holder = trainHoldingRoute(of: id) else { return nil }
+        guard let holder = trainHoldingRoute(of: id) else {
+            // Decision 497 (P2-7): held by no train, but by the track or
+            // a full depot.
+            return heldDeparture(of: id).map { heldText($0, in: language) }
+        }
         let name = train(id: holder)?.name ?? "#\(holder.rawValue)"
         if deadlockedTrains().contains(id) {
             return language.text("Deadlocked with \(name)", "與 \(name) 互相卡住（死結）")
@@ -408,14 +412,41 @@ extension GameWorld {
         return language.text("\(text) (\(name): \(still.text(in: language)))", "\(text)（\(name)：\(still.text(in: language))）")
     }
 
+    /// What train `id`'s card says when it is held by no train but by
+    /// `held` (decision 497, P2-7).
+    func heldText(_ held: HeldDeparture, in language: DisplayLanguage) -> String {
+        switch held {
+        case .noRoute(let station):
+            let name = stationName(station)
+            return language.text("No way on to \(name): check the track to it", "沒有路可以開到 \(name)：檢查往那裡的軌道")
+        case .depotFull(let depot):
+            let name = stationName(depot)
+            return language.text("No free siding at \(name): waiting here", "\(name) 沒有空的停車股道，在這裡等")
+        }
+    }
+
     /// Why train `id` stands where it is and will not move off by itself
     /// (decision 497, P2-7), or `nil`: stopped by the player (its speed at
-    /// 0), on no line, or parked while its line is closed. A train waiting
+    /// 0), no way on to its next stop or no siding left in the depot its
+    /// line sends it to (``GameWorld/heldDeparture(of:)``), on no line, or
+    /// parked while its line is closed. A train waiting
     /// for one of these is not in a deadlock (it counts as one that will
     /// go), yet waits until the player moves it or the line opens.
     public func standingStill(_ id: TrainID) -> StandingStill? {
+        standingStill(id, held: heldDeparture(of: id))
+    }
+
+    /// ``standingStill(_:)`` with train `id`'s ``GameWorld/heldDeparture(of:)``
+    /// already worked out (see ``GameWorld/heldDepartures()``).
+    func standingStill(_ id: TrainID, held: HeldDeparture?) -> StandingStill? {
         guard let train = train(id: id), train.position != nil else { return nil }
         if train.movement.rate == 0 { return .stoppedByPlayer }
+        // Decision 497 (P2-7): no way on, or a full depot, before the line.
+        switch held {
+        case .noRoute(let station)?: return .noRoute(to: stationName(station))
+        case .depotFull(let depot)?: return .depotFull(stationName(depot))
+        case nil: break
+        }
         guard train.execution == nil else { return nil }
         guard let lineID = assignedLine(of: id), let line = line(id: lineID) else { return .onNoLine }
         return line.window.contains(minuteOfDay: clock.now.minuteOfDay) ? nil : .outOfHours
@@ -425,10 +456,16 @@ extension GameWorld {
 /// See ``GameWorld/standingStill(_:)``.
 public enum StandingStill: Hashable, Sendable {
     case stoppedByPlayer, onNoLine, outOfHours
+    /// No way leads on to its next stop, named.
+    case noRoute(to: String)
+    /// The depot its line sends it to, named, has no siding left for it.
+    case depotFull(String)
 
     public func text(in language: DisplayLanguage) -> String {
         switch self {
         case .stoppedByPlayer: language.text("stopped by you", "被你停下了")
+        case .noRoute(let station): language.text("no way on to \(station)", "沒有路可以開到 \(station)")
+        case .depotFull(let depot): language.text("\(depot) has no free siding", "\(depot) 沒有空的停車股道")
         case .onNoLine: language.text("on no line", "沒有派給任何路線")
         case .outOfHours: language.text("parked until its line opens", "停著等路線開始營運")
         }
