@@ -37,7 +37,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     /// Decision 533: the demo map with a school and a hospital of the
     /// company's beside its first station, run on to half past seven on
-    /// the first morning, a school day, when the students are on their
+    /// the second morning, a school day, when the students are on their
     /// way: the station panel's row of the riders they bring. For the
     /// screenshot review of the pull request that added it.
     case commute
@@ -55,16 +55,25 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     // MARK: - Commute
 
-    /// Half past seven on the first morning (a Monday).
-    static let commuteRunSeconds: Int64 = 7 * 3_600 + 30 * 60
+    /// Half past seven on the second morning, a Tuesday: the first is the
+    /// New Year holiday, with no school.
+    static let commuteRunSeconds: Int64 = 31 * 3_600 + 30 * 60
 
     private static func commuteWorld(in language: DisplayLanguage) -> GameWorld {
         var world = DemoWorld.make(in: language)
         do throws(GameError) {
             guard let station = world.stations.first else { throw .unknownStation(StationID(rawValue: 1)) }
-            // The first sites round the station a building can stand on.
-            let offsets: [(Int64, Int64)] = [(0, -6_000), (0, 6_000), (-6_000, -6_000), (6_000, -6_000), (-6_000, 6_000), (6_000, 6_000),
-                                             (0, -10_000), (0, 10_000), (-10_000, 0), (10_000, 0)]
+            // A school and a hospital cost more than the demo holds.
+            try world.borrow(CompanyAccounts.maximumLoan)
+            // The first sites round the station a building can stand on,
+            // nearest first, within its 800 m.
+            let directions: [(Int64, Int64)] = [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]
+            var offsets: [(Int64, Int64)] = []
+            for distance in stride(from: Int64(6_000), through: 42_000, by: 4_000) {
+                for (dx, dy) in directions {
+                    offsets.append((dx * distance, dy * distance))
+                }
+            }
             for kind in [PlacedBuildingKind.school, .hospital] {
                 var refused: GameError?
                 for (dx, dy) in offsets {
