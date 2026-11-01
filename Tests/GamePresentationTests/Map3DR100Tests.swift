@@ -45,7 +45,7 @@ final class Map3DR100Tests: XCTestCase {
         for livery in Map3DR100.Livery.allCases {
             for far in [false,true] {
                 let m=Map3DR100.model(livery:livery,far:far)
-                let roof=m.vertices.filter { $0.x > 0.8 && $0.x < 2.8 && $0.z > 3.30 && $0.nz > 0.5 }
+                let roof=m.vertices.filter { $0.x < 3.19 && abs($0.z - 3.53) < 0.001 && abs($0.y) < 1.0 && $0.nz > 0.9 }
                 XCTAssertFalse(roof.isEmpty)
                 XCTAssertTrue(roof.allSatisfy { $0.color==livery.roof })
                 XCTAssertFalse(m.vertices.contains { $0.x < -6 && $0.z > 2.9 && $0.color==Map3DTrainStyle.glass })

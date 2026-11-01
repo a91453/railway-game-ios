@@ -1,0 +1,28 @@
+{
+  "producer": "7b0ce7c726e0fde40da9e479f00ac9920a5f9496",
+  "technical_checks": "VERIFIED individual reports; complete asset qualification remains UNVERIFIED due to coach-specific adversarial visibility/support coverage and source gaps",
+  "swift": "Swift6.4 warnings-as-errors build; 45 scoped tests initial 6 failures (size pin and empty roof sample), corrected 6 scoped retests passed; no other initial failures",
+  "resident": {
+    "models": 664,
+    "vertices": 4383288,
+    "model_bytes_each_copy": 175331520,
+    "added_vertices": 25356,
+    "added_bytes_cpu_plus_gpu": 2028480
+  },
+  "full_check": {
+    "status": "UNVERIFIED full gate green",
+    "inherited_failures": 33,
+    "baseline": "c4592d787835749a210146563280e95e69e4be22",
+    "detail": "32 existing lock mismatches and TEMU2000 formation near-car budget; reproduced on unchanged main; no gate/other locks fixed"
+  },
+  "unverified": [
+    "Current 2026 orange service",
+    "Exact numbered full Breezy Blue coach order and orientations",
+    "R122/R129 2026 fitting equivalence to R1232023",
+    "coach-specific adversarial glazing/support/equipment coverage",
+    "file:// blocked by browser administrator",
+    "user acceptance",
+    "BLUE complete operating integration",
+    "Simulator/device Metal, dynamic running, animation and performance"
+  ]
+}

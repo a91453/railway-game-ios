@@ -1,0 +1,115 @@
+{
+  "status": "VERIFIED",
+  "transport": "loopback HTTP",
+  "models": [
+    {
+      "id": "tra-r100-r122-orange-locomotive",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-r100-r122-orange-locomotive-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-r100-r123-breezy-blue-locomotive",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-r100-r123-breezy-blue-locomotive-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-mixed",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-mixed-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-exhibition-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-long-seat-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "tra-breezy-blue-coach-rotating-seat-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "breezy-blue-five-coach-role-study-unverified",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "breezy-blue-five-coach-role-study-unverified-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    }
+  ],
+  "orbit_zoom_changed_pixels": true,
+  "mobile_width": 390,
+  "file_protocol": {
+    "status": "UNVERIFIED",
+    "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+  },
+  "errors": [],
+  "external_requests": 0,
+  "limits": [
+    "Browser WebGL only; no device Metal, animation or appearance acceptance."
+  ]
+}
