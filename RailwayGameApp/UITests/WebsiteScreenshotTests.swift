@@ -985,6 +985,34 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("line-weekly-punctuality", app)
     }
 
+    /// Decision 524, later: the economy panel shows every passenger line's
+    /// last seven days' punctuality, Taiwan Railway's past year beside it.
+    func testCompanyWeeklyPunctuality() {
+        let app = launch(extra: ["-screenshot-scene", "punctuality"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        tapButton("entry.economy", in: app)
+        let bar = app.navigationBars["經濟明細"].firstMatch
+        if !bar.appears(within: 10) {
+            tapButton("entry.economy", in: app)
+        }
+        XCTAssertTrue(bar.appears(within: 10), "The economy panel opens")
+        bar.waitUntilSettled()
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let weekly = app.descendants(matching: .any)["economy.weeklyPunctuality"].firstMatch
+        // Swipe, not drag: the rows above it are mostly fare controls
+        // (`currencyShots`).
+        for _ in 0..<30 where !weekly.exists {
+            list?.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(weekly, in: list, below: bar.frame.maxY, clearOf: .button),
+                      "The company's week of punctuality shows")
+        weekly.waitUntilSettled()
+        settle(seconds: 1)
+        keep("company-weekly-punctuality", app)
+    }
+
     /// Decision 512: a line's page opens its train roster, which lets the
     /// trains be arranged: the roster of one line, then Arrange.
     func testTrainRosterOfALine() {
