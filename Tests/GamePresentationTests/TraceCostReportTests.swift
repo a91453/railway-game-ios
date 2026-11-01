@@ -73,6 +73,24 @@ final class TraceCostReportTests: XCTestCase {
             let plan = session.traceAlong(from: start, to: end)
             let planTime = ContinuousClock.now - planClock
             print("TRACE_COST   traceAlong alone \(planTime)")
+            if ProcessInfo.processInfo.environment["TRACE_COST_PARTS"] != nil,
+               let a = session.world.position(of: start, height: 0), let b = session.world.position(of: end, height: 0) {
+                var clock = ContinuousClock.now
+                let way = session.tracedWay(from: a, to: b, reach: GameSession.traceReach(NetworkBuilding.minimumSpacing * 2))
+                print("TRACE_COST   tracedWay \(ContinuousClock.now - clock) \(way?.count ?? -1) points")
+                if let way {
+                    let smooth = WorldPath(way).smoothed()
+                    clock = ContinuousClock.now
+                    let near = TraceOverlap.Edge.near(smooth, in: session.world)
+                    print("TRACE_COST   Edge.near \(ContinuousClock.now - clock) \(near.count) edges")
+                    clock = ContinuousClock.now
+                    let runs = TraceOverlap.runs(along: smooth, edges: near)
+                    print("TRACE_COST   runs \(ContinuousClock.now - clock) \(runs.count) runs")
+                }
+                clock = ContinuousClock.now
+                _ = session.tracePlan(from: start, to: end)
+                print("TRACE_COST   tracePlan \(ContinuousClock.now - clock)")
+            }
             print(String(
                 format: "TRACE_COST %@→%@ double=%@: median %.0f ms (min %.0f, max %.0f); %d stretches, %d buildable, %d existing runs, %d m, cost %@, problem %@",
                 a, b, "\(preview?.tracedDouble ?? false || !(preview?.crossovers.isEmpty ?? true))", times[1], times[0], times[2],

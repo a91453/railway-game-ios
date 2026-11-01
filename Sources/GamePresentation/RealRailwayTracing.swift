@@ -263,8 +263,12 @@ struct TracePlan {
     /// first ``buildable`` stretches built on it, as the trace found them,
     /// for the preview to price instead of building the chain again; `nil`
     /// where GameCore refused an edge (a refused edge may leave its first
-    /// node in the copy) or the trace was put together from pieces.
+    /// node in the copy). Decision 521's fourth sequel: a trace put
+    /// together from pieces builds them all on one copy, so it has one too.
     var built: GameWorld?
+    /// The edges of those stretches on ``built``, in order; empty where it
+    /// is `nil`.
+    var builtEdges: [TrackEdgeID] = []
 
     var stopped: Bool { buildable < stretches.count || stopsAfter }
 }
@@ -396,9 +400,15 @@ extension GameSession {
     /// Decision 401's sequel: `system`, the real line's system, sets the
     /// tightest curve (``traceMinimumRadius(ofSystem:)``; the line at the
     /// start's where none is given).
+    ///
+    /// Decision 521's fourth sequel: GameCore builds the edges on `base`
+    /// where one is given (a preview copy with the pieces of the trace
+    /// before this one built on it, ``traceAlong(from:to:)``), else on a
+    /// preview copy of the world; the way is planned on the world either
+    /// way.
     func tracePlan(
         from start: NetworkAnchor, to end: NetworkAnchor, along given: [WorldVector]? = nil, platforms: [(WorldVector, WorldVector)] = [],
-        onGround: Bool = false, system: String? = nil
+        onGround: Bool = false, system: String? = nil, buildingOn base: GameWorld? = nil
     ) -> TracePlan? {
         let networkHeight = onGround ? 0 : self.networkHeight
         let networkStructure = onGround ? TrackStructure.automatic : self.networkStructure
@@ -576,8 +586,9 @@ extension GameSession {
         // GameCore's answer, edge by edge, on the copy; an edge whose curve
         // turns tighter than the tool lays stops it first. Cash does not
         // stop it (decision 245): the preview weighs the whole price.
-        draft = draft.trackPreviewCopy()
+        var copy = base ?? draft.trackPreviewCopy()
         var built = 0
+        var builtEdges: [TrackEdgeID] = []
         var problem: String?
         var previous: TrackNodeID?
         var refused = false
@@ -592,12 +603,14 @@ extension GameSession {
             }
             let next = stretch.starting(at: previous)
             do throws(GameError) {
-                previous = try next.build(in: &draft, heights: heights).to
+                let edge = try next.build(in: &copy, heights: heights)
+                previous = edge.to
+                builtEdges.append(edge.edge)
                 built += 1
             } catch {
                 // Decision 513: which check, where GameCore's error covers
                 // several; asked of the world before the trace, as a
-                // refused stretch may leave its first node in the draft.
+                // refused stretch may leave its first node in the copy.
                 // Decision 515: mountain track's own limit.
                 problem = stretch.mountain && error == .trackTooSteep ? language.text(
                     "That track would be too steep. Mountain track may climb or fall at most 70 in 1000.",
@@ -608,7 +621,10 @@ extension GameSession {
             }
         }
         var found = TracePlan(stretches: stretches, buildable: built, problem: problem)
-        if !refused { found.built = draft }
+        if !refused {
+            found.built = copy
+            found.builtEdges = builtEdges
+        }
         found.platformStretches = spans.map { span in
             plan.distances.indices.dropLast().first {
                 abs(plan.distances[$0] - span.lowerBound) < 1 && abs(plan.distances[$0 + 1] - span.upperBound) < 1
@@ -684,7 +700,7 @@ extension GameSession {
         let decided = plan.existing.isEmpty ? tracedDouble(built) : (double: false, real: nil)
         var double: Result<DoubleChainPlan, TraceDoubleProblem>?
         if decided.double, !built.isEmpty {
-            double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped)
+            double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped, traced: plan)
         }
         switch double {
         case .success(let found)?:
@@ -808,8 +824,11 @@ extension GameSession {
     /// (decision 247), on ``networkDoubleSide``, and a crossover at each
     /// end that joins track (the far end only when the trace gets there);
     /// or why not, as the player reads it.
+    ///
+    /// Decision 521's fourth sequel: on the copy `traced` built `built` on
+    /// where it has one (``TracePlan/built``), not built again.
     func tracedDoublePlan(
-        _ built: [PlayerCommand.TrackStretch], from start: NetworkAnchor, to end: NetworkAnchor, reachesEnd: Bool
+        _ built: [PlayerCommand.TrackStretch], from start: NetworkAnchor, to end: NetworkAnchor, reachesEnd: Bool, traced: TracePlan? = nil
     ) -> Result<DoubleChainPlan, TraceDoubleProblem> {
         guard let parallel = parallelChain(beside: built.map(ChainSegment.init), side: networkDoubleSide, in: world) else {
             return .failure(TraceDoubleProblem(text: Self.noParallelText(in: language)))
@@ -817,7 +836,8 @@ extension GameSession {
         do throws(GameError) {
             return .success(try planDoubleChain(
                 main: built, run: [], parallel: parallel, platforms: [],
-                wantsCrossover: (needsCrossover(start, in: world), reachesEnd && needsCrossover(end, in: world)), in: world
+                wantsCrossover: (needsCrossover(start, in: world), reachesEnd && needsCrossover(end, in: world)), in: world,
+                mainBuilt: traced.flatMap { plan in plan.built.map { (world: $0, edges: plan.builtEdges) } }
             ))
         } catch {
             return .failure(TraceDoubleProblem(text: error.playerMessage(in: language)))
@@ -838,7 +858,7 @@ extension GameSession {
         var crossovers = DoubleTrack.CrossoverOutcome.none
         let decided = plan.existing.isEmpty ? tracedDouble(stretches) : (double: false, real: nil)
         if decided.double {
-            switch tracedDoublePlan(stretches, from: start, to: end, reachesEnd: !plan.stopped) {
+            switch tracedDoublePlan(stretches, from: start, to: end, reachesEnd: !plan.stopped, traced: plan) {
             case .success(let found):
                 command = found.command
                 crossovers = found.outcome

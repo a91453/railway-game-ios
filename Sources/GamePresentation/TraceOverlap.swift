@@ -64,14 +64,18 @@ struct TraceOverlap {
             let away: Double
         }
         var following: [Following] = []
+        let index = Index(way)
         for edge in edges where edge.points.count > 1 {
             guard edge.points.contains(where: { $0.x >= minX && $0.x <= maxX && $0.y >= minY && $0.y <= maxY }) else { continue }
+            // Decision 521's fourth sequel: an edge no piece of the way comes
+            // within reach of has no point within reach, so none along it.
+            guard index.comesWithin(reach, of: edge.points) else { continue }
             // Every point within reach of the way, but those beyond either
             // end of it: an edge the trace starts or ends partway along.
             var places: [(along: Double, away: Double)?] = []
             var fits = true
             for point in edge.points {
-                let place = way.nearest(point)
+                let place = index.nearest(point)
                 if place.away <= reach {
                     places.append(place)
                 } else if place.along <= 0 || place.along >= way.length {
@@ -131,6 +135,69 @@ struct TraceOverlap {
     }
 }
 
+extension TraceOverlap {
+    /// Decision 521's fourth sequel: a traced way in pieces of
+    /// ``Index/chunk`` segments, each with its box, so a point's nearest
+    /// place on the way looks only at the pieces that can hold it. It
+    /// gives what ``WorldPath/nearest(_:)`` gives, segment for segment:
+    /// a long trace over a large network asked it of a thousand edges,
+    /// each time of every 5 m of the way, and that was most of the
+    /// preview's time.
+    struct Index {
+        static let chunk = 32
+        let way: WorldPath
+        /// For each piece, its first segment and the box its points lie in.
+        let pieces: [(first: Int, minX: Double, minY: Double, maxX: Double, maxY: Double)]
+
+        init(_ way: WorldPath) {
+            self.way = way
+            let segments = way.points.count - 1
+            pieces = stride(from: 0, to: max(segments, 0), by: Self.chunk).map { first in
+                let points = way.points[first...min(first + Self.chunk, segments)]
+                let xs = points.map(\.x), ys = points.map(\.y)
+                return (first, xs.min()!, ys.min()!, xs.max()!, ys.max()!)
+            }
+        }
+
+        /// Whether some segment of the way may come within `reach` of some
+        /// point of `points`: false only where none can.
+        func comesWithin(_ reach: Double, of points: [WorldVector]) -> Bool {
+            let xs = points.map(\.x), ys = points.map(\.y)
+            guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return false }
+            // A unit (under 2 cm) over, against rounding.
+            let reach = reach + 1
+            return pieces.contains { piece in
+                piece.minX <= maxX + reach && minX - reach <= piece.maxX && piece.minY <= maxY + reach && minY - reach <= piece.maxY
+            }
+        }
+
+        /// ``WorldPath/nearest(_:)``: the same segments in the same order,
+        /// passing over a piece whose box lies farther than the nearest
+        /// found so far (by more than a unit, against rounding), as
+        /// none of its segments could be nearer.
+        func nearest(_ point: WorldVector) -> (along: Double, away: Double) {
+            let points = way.points, distances = way.distances
+            var best = (along: 0.0, away: Double.infinity)
+            for piece in pieces {
+                let dx = max(piece.minX - point.x, 0, point.x - piece.maxX)
+                let dy = max(piece.minY - point.y, 0, point.y - piece.maxY)
+                guard (dx * dx + dy * dy).squareRoot() - 1 <= best.away else { continue }
+                for index in piece.first..<min(piece.first + Self.chunk, points.count - 1) {
+                    let a = points[index], b = points[index + 1]
+                    let along = b - a
+                    let squared = along.dot(along)
+                    let t = squared > 0 ? max(0, min(1, (point - a).dot(along) / squared)) : 0
+                    let away = (a + along * t - point).length
+                    if away < best.away {
+                        best = (distances[index] + t * (distances[index + 1] - distances[index]), away)
+                    }
+                }
+            }
+            return best
+        }
+    }
+}
+
 extension TraceOverlap.Edge {
     /// The edges of `world`'s network that may follow `way`, in plan: an
     /// end within ``TraceOverlap/reach`` of its box (the other may lie
@@ -178,15 +245,22 @@ extension GameSession {
         var existing: [(after: Int, points: [WorldCoordinate])] = []
         var refusedWay: [WorldCoordinate] = []
         var cursor = (anchor: start, point: WorldVector(from.plan), along: 0.0, fromRun: false)
+        // Decision 521's fourth sequel: each piece built on the copy the
+        // pieces before it were built on, so the whole chain is built once,
+        // as the command builds it, and the preview prices that copy.
+        var built: GameWorld? = world.trackPreviewCopy()
+        var builtEdges: [TrackEdgeID] = []
 
         // One piece of the way, traced; false where it stops the trace.
         func trace(to anchor: NetworkAnchor, at point: WorldVector) -> Bool {
             let a = raw.nearest(cursor.point).along, b = raw.nearest(point).along
             let given = [cursor.point] + (a < b ? raw.points(from: a, to: b) : []) + [point]
-            guard let piece = tracePlan(from: cursor.anchor, to: anchor, along: given) else {
+            guard let piece = tracePlan(from: cursor.anchor, to: anchor, along: given, buildingOn: built) else {
                 problem = language.text("This stretch cannot be traced.", "這段無法描線。")
                 return false
             }
+            built = piece.built
+            builtEdges += piece.builtEdges
             buildable = stretches.count + piece.buildable
             stretches += piece.stretches
             if piece.stopped || piece.stretches.isEmpty {
@@ -241,6 +315,8 @@ extension GameSession {
         }
         plan.endNode = reached ? endNode : nil
         plan.stopsAfter = !reached && buildable == stretches.count
+        plan.built = built
+        plan.builtEdges = built == nil ? [] : builtEdges
         return plan
     }
 }
