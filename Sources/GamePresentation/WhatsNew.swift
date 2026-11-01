@@ -31,6 +31,37 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         Entry(
+            id: "2026-11-02-105-1",
+            items: [
+                Line(
+                    english: "The Breezy Blue train now has two blue R100 locomotives pulling its blue coaches.",
+                    chinese: "藍皮解憂號換成兩台藍色 R100 機車重連，拉著藍皮客車。"
+                ),
+                Line(
+                    english: "Freight trains on the 3D map are an R200 locomotive pulling container wagons, with a diesel horn.",
+                    chinese: "貨運線的列車在 3D 地圖上是 R200 機車拉貨櫃車，汽笛也換成柴油機車的。"
+                ),
+                Line(
+                    english: "Chu-Kuang trains behind an R100 have a new orange R100 locomotive.",
+                    chinese: "R100 牽引的莒光號換上新的橘色 R100 機車。"
+                ),
+                Line(
+                    english: "The R200 now hauls freight, so R200 Chu-Kuang trains are no longer sold; the ones you have keep running.",
+                    chinese: "R200 改拉貨運，買車時不再有 R200 莒光號；已經有的照常行駛。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "On the 3D map, sloping ground no longer shows sharp spikes.",
+                    chinese: "3D 地圖上，坡地的地面不再冒出尖尖的三角形。"
+                ),
+                Line(
+                    english: "On the 3D map, a train at a curved platform keeps its front and back cars on the track.",
+                    chinese: "3D 地圖上，停在彎道月台的列車，頭尾不再甩出軌道外。"
+                ),
+            ]
+        ),
+        Entry(
             id: "2026-11-01-104-1",
             items: [
                 Line(
