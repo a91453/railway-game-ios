@@ -216,7 +216,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
         riders.tap()
         settle()
-        let row = app.descendants(matching: .any)["station.civicRiders.school"].firstMatch
+        // By its words too: in the list the row's identifier was not found
+        // though it showed (run 41281919190's recording).
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@ OR label BEGINSWITH %@", "station.civicRiders.school", "學校 ·")).firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(row, in: list), "The riders row comes into view")
         settle()
         keep("station-civic-riders", app)

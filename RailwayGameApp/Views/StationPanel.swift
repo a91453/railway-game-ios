@@ -1490,6 +1490,7 @@ struct StationPanel: View {
                         .foregroundStyle(Theme.primary)
                         .accessibilityHidden(true)
                 }
+                .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("station.civicRiders.\(entry.kind.rawValue)")
             }
         } header: {
