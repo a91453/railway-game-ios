@@ -162,49 +162,50 @@ extension Map3DTriangulationScanTests {
         let station = try BundledRealData.station(name, in: "tra_sched")
         let centre = try BundledRealData.point(station.coordinate, in: bought)
         let x = Double(centre.x), y = Double(centre.y)
-        let scene = Map3DScene(world: bought, snapshot: bought.railwaySnapshot(), skyline: CitySkyline(world: bought), focus: (x, y), baseMap: baseMap,
-                               footprints: footprints, heights: data.heights, railways: railways)
+        let cityTiles = CityTileArea.areas(in: resources.appendingPathComponent("BaseMap/city"))
+        let temples = try RealTemples(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan_temples.json")))
+        let noBuild = try RealNoBuildLand(data: Data(contentsOf: resources.appendingPathComponent("RealWorld/taiwan_no_build.json")))
+        let snapshot = bought.railwaySnapshot(), skyline = CitySkyline(world: bought)
+        let bands = Map3DLineBands(world: bought, palette: .standard)
+        let scene = Map3DScene(world: bought, snapshot: snapshot, skyline: skyline, focus: (x, y), baseMap: baseMap, cityTiles: cityTiles,
+                               footprints: footprints, heights: data.heights, lineBands: bands, railways: railways, temples: temples, noBuild: noBuild)
         print("ORIGIN", scene.originX - x, scene.originY - y)
-        let metre = Double(WorldCoordinate.unitsPerMetre)
-        var onTrack = Set<[Int]>()
-        for edge in bought.railwaySnapshot().edges {
-            for p in edge.geometry.points {
-                let sx = (Double(p.x) - scene.originX) / metre, sz = (Double(p.y) - scene.originY) / metre
-                guard abs(sx) < 2000, abs(sz) < 2000 else { continue }
-                onTrack.insert([Int((sx / 4).rounded()), Int((sz / 4).rounded())])
-            }
-        }
-        func near(_ p: Map3DPoint) -> Bool {
-            let cx = Int((p.x / 4).rounded()), cz = Int((p.z / 4).rounded())
-            for dx in -3...3 { for dz in -3...3 where onTrack.contains([cx + dx, cz + dz]) { return true } }
-            return false
-        }
-        for chunk in scene.chunks {
-            for mesh in [chunk.mesh, chunk.farWithBoxes, chunk.close, chunk.standIn] {
-                let v = mesh.vertices
-                for i in stride(from: 0, to: mesh.indices.count, by: 3) {
-                    let ps = [v[Int(mesh.indices[i])].position, v[Int(mesh.indices[i + 1])].position, v[Int(mesh.indices[i + 2])].position]
-                    let nears = ps.map(near)
-                    guard nears.contains(true), nears.contains(false) else { continue }
-                    let longest = max((ps[1] - ps[0]).length, (ps[2] - ps[1]).length, (ps[0] - ps[2]).length)
-                    guard longest > 40 else { continue }
-                    let a = v[Int(mesh.indices[i])]
-                    print("SPIKE", String(a.color, radix: 16), a.layer, Int(longest), ps[0], ps[1], ps[2])
+        func scan(_ label: String, _ chunks: [Map3DScene.Chunk], shift: (x: Float, z: Float) = (0, 0)) {
+            var seen: [String: Int] = [:]
+            for chunk in chunks {
+                for (kind, mesh) in [("mesh", chunk.mesh), ("far", chunk.far), ("farBoxes", chunk.farWithBoxes), ("close", chunk.close), ("standIn", chunk.standIn), ("shadows", chunk.shadows)] {
+                    let v = mesh.vertices
+                    for i in stride(from: 0, to: mesh.indices.count, by: 3) {
+                        let ps = [v[Int(mesh.indices[i])].position, v[Int(mesh.indices[i + 1])].position, v[Int(mesh.indices[i + 2])].position]
+                        let longest = max((ps[1] - ps[0]).length, (ps[2] - ps[1]).length, (ps[0] - ps[2]).length)
+                        let a = v[Int(mesh.indices[i])]
+                        let flat = abs(Self.normalY(ps)) > 0.5
+                        guard longest > (flat ? 92 : 120) else { continue }
+                        let key = "\(label) \(kind) \(String(a.color, radix: 16)) \(a.layer)"
+                        seen[key, default: 0] += 1
+                        if seen[key]! <= 3 { print("BIG", key, Int(longest), ps.map { "(\(Int($0.x + shift.x)),\(Int($0.y)),\(Int($0.z + shift.z)))" }.joined(separator: " ")) }
+                    }
                 }
             }
+            for (key, count) in seen.sorted(by: { $0.key < $1.key }) { print("COUNT", key, count) }
         }
-        for chunk in [Map3DScene.Chunk]() {
-            for mesh in [chunk.mesh] {
-                let v = mesh.vertices
-                for i in stride(from: 0, to: mesh.indices.count, by: 3) {
-                    let a = v[Int(mesh.indices[i])], b = v[Int(mesh.indices[i + 1])], c = v[Int(mesh.indices[i + 2])]
-                    let pa = a.position, pb = b.position, pc = c.position
-                    let longest = max((pb - pa).length, (pc - pb).length, (pa - pc).length)
-                    let mid = Map3DPoint((pa.x + pb.x + pc.x) / 3, (pa.y + pb.y + pc.y) / 3, (pa.z + pb.z + pc.z) / 3)
-                    guard longest > 40, abs(mid.x) < 1500, abs(mid.z) < 1500 else { continue }
-                    print("JIJI", String(a.color, radix: 16), a.layer, Int(longest), pa, pb, pc)
-                }
-            }
+        scan("whole", scene.chunks)
+        let grid = Map3DStreaming(originX: scene.originX, originY: scene.originY, map: WorldRegion(bounds: bought.bounds))
+        let cover = scene.trackCover
+        for first in [-2, 1] {
+            let keys = (-2..<2).flatMap { row in (0..<3).map { Map3DStreaming.Key(column: first + $0, row: row) } }
+            scan("stream\(first)", Map3DScene.chunks(keys, of: grid, world: bought, snapshot: snapshot, skyline: skyline, baseMap: baseMap,
+                                                     cityTiles: cityTiles, footprints: footprints, heights: data.heights, lineBands: bands,
+                                                     railways: railways, temples: temples, noBuild: noBuild, trackCover: cover, detail: Map3DPoint(0, 0, 0)))
         }
+    }
+}
+
+extension Map3DTriangulationScanTests {
+    static func normalY(_ ps: [Map3DPoint]) -> Float {
+        let u = ps[1] - ps[0], w = ps[2] - ps[0]
+        let n = Map3DPoint(u.y * w.z - u.z * w.y, u.z * w.x - u.x * w.z, u.x * w.y - u.y * w.x)
+        let l = n.length
+        return l > 0 ? n.y / l : 0
     }
 }
