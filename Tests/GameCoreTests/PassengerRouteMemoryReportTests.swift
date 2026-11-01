@@ -15,8 +15,8 @@ import XCTest
 /// every five, both ways, of 12 to 21 stations, with walks between
 /// stations near each other. Each origin asks every destination its three
 /// routes, as a passenger plan does. The checksum of the routes compares
-/// two builds. `PASSENGER_ROUTE_LIMITS=<checkpoints>,<searches>,<labels>`
-/// sets the limits of ``PassengerRouteSearches``.
+/// two builds. `PASSENGER_ROUTE_LIMITS=<searches>,<labels>` sets the
+/// limits of ``PassengerRouteSearches``.
 final class PassengerRouteMemoryReportTests: XCTestCase {
     func testEveryRouteOfASyntheticNetwork() throws {
         guard let stations = Int(ProcessInfo.processInfo.environment["PASSENGER_ROUTE_SYNTHETIC"] ?? "") else {
@@ -49,9 +49,8 @@ final class PassengerRouteMemoryReportTests: XCTestCase {
         }
         let graph = PassengerRouteGraph(paths: paths, walks: walks, closed: [])
         let limits = (ProcessInfo.processInfo.environment["PASSENGER_ROUTE_LIMITS"] ?? "").split(separator: ",").compactMap { Int($0) }
-        var searches = limits.count == 3
-            ? PassengerRouteSearches(graph: graph, checkpointLimit: limits[0], searchLimit: limits[1],
-                                     labelBudget: limits[2])
+        var searches = limits.count == 2
+            ? PassengerRouteSearches(graph: graph, searchLimit: limits[0], labelBudget: limits[1])
             : PassengerRouteSearches(graph: graph)
         var checksum: UInt64 = 0xcbf2_9ce4_8422_2325
         var routes = 0
