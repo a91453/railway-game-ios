@@ -1,6 +1,6 @@
 > iPhone 橫拿三件畫面修正（派工單 IPHLAND，`claude/iphone-landscape-fixes`，決策號不動，2026-10-31）：側邊面板頁的標題在 compact height 時改放在導覽列下方一列、和面板一樣寬（`PanelTitlePlacement`，`Theme.swift` 的 `panelTitle`），修掉車站卡站名被工具列夾成一兩個字與審查 L2-2；實景新局右側的空框是小地圖（沒有軌道與車站、或畫面已經看到整張地圖時不畫，`MiniMap.isShown(beside:)`）。Linux `MapFocusTests`、`MiniMapTests` VERIFIED；畫面靠截圖驗收，iPad 與 iPhone SE 沒拍。
 
-> 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次；第二個 PR（`tracelag-build-once`，決策 521「續」）讓預覽副本不在每段之後清點等車的旅客。描線預覽把整串蓋兩次：單線、不分段的描線已改成沿用描線時蓋好的副本（UIFIX，決策 521「續二」）；分段描線與雙線仍蓋兩次，留在「續二」的下一步。描線預覽看起來像兩條（底下亮的真實路線、雙線光暈疊深）已由 TRACE2 改成只看到一條（決策 521「續三」）；那兩種的計算仍蓋兩次。實機 UNVERIFIED。
+> 鋪軌拖曳卡頓（派工單 TRACELAG，[決策 521](decisions/521.md)，`tracelag-trace-preview`，100.2）：拖曳每步重讀高度檔的地面區塊，已改成每塊只讀一次；第二個 PR（`tracelag-build-once`，決策 521「續」）讓預覽副本不在每段之後清點等車的旅客。描線預覽把整串蓋兩次：單線、不分段的描線已改成沿用描線時蓋好的副本（UIFIX，決策 521「續二」）；分段描線與雙線仍蓋兩次，留在「續二」的下一步。描線預覽看起來像兩條（底下亮的真實路線、雙線光暈疊深）已由 TRACE2 改成只看到一條（決策 521「續三」）。分段描線與雙線的預覽也只蓋一次了，找沿途已鋪軌道改用路線索引（TRACE3，決策 521「續四」）；被擋下的描線仍重蓋前面幾段、GameCore 蓋 edge 本身未動，在「續四」下一步。實機 UNVERIFIED。
 
 > main full lane 連三次紅（派工單 FLANE，session_01YGNNuovKC4vUNueQF95y3C，`flane-full-lane`，2026-10-31）：`RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner` 是測試過期（決策 510 給月台長度 Stepper 加了 identifier，它的按鈕改叫 `network.platformCars-Decrement`，舊的 `== 'Decrement'` 找不到），已改。`ShellLayoutUITests.testTheStatusBarKeepsItsWidthAsTheDaysGoBy` 的 6000× 其實選到了（失敗訊息讀到 6000×），是等待唯一一次查詢卡在 App 的幾秒停頓裡；`chooseSpeed` 改成等完再讀一次 label。`FinanceCompositionUITests` 紅過兩種：447891f 的「Timed out while evaluating UI query」是模擬器上 App 主執行緒 50 秒停頓（`ui-smoke-trace`），沒改程式；分支上 only_testing（run 41195369563）是按「資料」的觸控 150 ms 後被取消（trace「touch cancelled」，接著 885 ms 沒畫面，正是站長泡泡 7 秒到時收起），照 HUDAlignmentUITests 的做法沒開就再按一次。兩者都不是 3acace6..447891f 的退步：Linux 上貨運場景與 6000× 午夜在 3acace6 和 447891f 一樣快，7ac6649、3acace6 的 trace 也有 10–37 秒的停頓，前兩輪 `second`／`lessons` 紅的四支（LineRoutePreference、HUDAlignment 站長泡泡、MapInteraction 改站名、Settings 音量）各只紅一次、下一輪就綠。**還沒查到的**：full lane 裡 App 為什麼常有幾秒到幾十秒的主執行緒停頓（錄影看貨運場景是建物圖層畫出來前那段）；要在 Mac 上用 Instruments 量，Linux 量不到。
 
@@ -493,7 +493,7 @@
   - P2-5 的 B 案（§4.31）。
   - P2-7 的 `.noRoute` 與機廠滿了（動 GameCore）。
   - P3-5 刪掉的線可以買回（§4.33，動 GameCore）。
-  - 決策 521「續」的下一步：描線預覽蓋兩次（UIFIX 做了單線不分段的，見「續二」；分段與雙線的計算還在；畫面看起來像兩條由 TRACE2 改了，見「續三」）。
+  - 決策 521「續」的下一步：描線預覽蓋兩次（UIFIX 做了單線不分段的，見「續二」；畫面看起來像兩條由 TRACE2 改了，見「續三」；分段與雙線由 TRACE3 改成只蓋一次，見「續四」，剩被擋下的描線與 GameCore 蓋 edge 的成本）。
   - 決策 522 的下一步：拖曳預覽的填色（UIFIX 做了，見 522「續」）。
 - **號碼**：
   - 存檔：main 是 77，78 給 STATIONEXP。
