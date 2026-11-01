@@ -277,13 +277,13 @@ final class DanhaiDepotTests: XCTestCase {
         XCTAssertNotNil(player.world.path(from: standing, toStation: newTown), "the train still reaches Danhai New Town")
     }
 
-    /// `ids` bought in turn on a game round the Green Mountain Line under
-    /// `rules`, then played to three in the morning of the third day,
-    /// hour by hour: no train in a deadlock at any hour, none more than
-    /// half an hour behind its timetable, and every run of each line's
-    /// second day sent out.
-    static func buyAndRun(_ ids: [String], rules: NewGameRules) throws {
-        let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: rules)
+    /// `ids` bought in turn on a game round `round` (the Green Mountain
+    /// Line) under `rules`, then played to three in the morning of the
+    /// third day, hour by hour: no train in a deadlock at any hour, none
+    /// more than half an hour behind its timetable, and every run of each
+    /// line's second day sent out.
+    static func buyAndRun(_ ids: [String], round: String = "ntdlrt:V", rules: NewGameRules) throws {
+        let session = try RealLineAcquisitionTests.game(round: round, side: 1 << 21, heights: true, rules: rules)
         for id in ids {
             let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale after \(ids)")
             let offer = session.realLineOffer(for: line)

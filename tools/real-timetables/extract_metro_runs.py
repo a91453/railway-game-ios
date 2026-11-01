@@ -55,7 +55,10 @@ the line does not need them, so its ends are not held to the tracks the
 game lays for the trains standing overnight. Its `tracks` count only the
 trains the line needs at a station within the look ahead the game's depot
 uses (`depot_tracks`), and an end may have up to `DEPOT_END_TRACKS`, its
-loops three deep either side. Not listed: the Kaohsiung Circular Light
+loops three deep either side. The Wenhu Line is bought with its two, at
+Muzha and Neihu (decision 535, PR W); its ends would hold 16 trains each
+within the look ahead, so they are laid with `DEPOT_END_TRACKS` and the
+game sends the rest into the depots. Not listed: the Kaohsiung Circular Light
 Rail. Its trains run round the loop and come back to Lizihnei; a line's
 runs of the game run end to end (decision 535).
 
@@ -263,6 +266,12 @@ def main(folder, out):
         if depots and not problem:
             line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, depots)
             ends = (stops[0], stops[-1])
+            # Decision 535 (PR W): an end with a depot beyond it is laid
+            # with no more than `DEPOT_END_TRACKS`; the game sends the
+            # trains it cannot hold into the depot (decisions 221 and 297).
+            for end in ends:
+                if end in depots:
+                    line["tracks"][end] = min(line["tracks"][end], DEPOT_END_TRACKS)
             worst = {s: n for s, n in line["tracks"].items() if n > (DEPOT_END_TRACKS if s in ends else 3)}
             if worst:
                 problem = f"stations need more tracks than the game lays, with the depot: {worst}"

@@ -43,6 +43,7 @@ public enum RealLineStock {
         case "danhaiLRT": language.text("Danhai light rail train", "淡海輕軌列車")
         case "ankengLRT": language.text("Ankeng light rail train", "安坑輕軌列車")
         case "metroC371": language.text("Taipei Metro C371", "北捷 C371")
+        case "wenhu": language.text("Wenhu Line train", "文湖線列車")
         case Map3DTrainSet.sanyingKey: language.text("Sanying Line train", "三鶯線列車")
         default: nil
         }
