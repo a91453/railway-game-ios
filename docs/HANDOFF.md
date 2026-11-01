@@ -353,6 +353,7 @@
 7. 發版前紅了：立刻告訴作者「先不要發」，並說明原因。
 
 **發版前**（作者 2026-10-23：「改成我說可以發你才能替我發」。發不發由作者決定；作者在遊戲規劃 session 裡說「發」之後，遊戲規劃照下面確認，都綠才用 `workflow_dispatch` 在 `main` 跑一次 `testflight.yml`，輸入照作者上一次發版的 run，作者另外指定的話照作者說的。不是綠的就告訴作者哪裡紅，等作者再說一次才發。作者也可以自己按。實作 session 一律不碰。第 84 版（2026-10-23）遊戲規劃去按時被 session 的權限檢查（自動模式，理由「正式發布」）擋下，由作者自己按；要遊戲規劃替作者按，作者須在那個 session 的權限設定允許啟動 `testflight.yml`，否則照舊告訴作者「可以發（commit X）」與輸入，請作者按）：
+- **作者先發、遊戲規劃後報（作者 2026-11-01：「以後都這樣我自己先試 你再告訴我結果省效率」）**：作者想發就自己按 `testflight.yml`，不等完整 `ci.yml` 與 full lane。遊戲規劃照常替那個 commit 跑完整 `ci.yml` 與 full lane（還沒跑的話），跑完把結果報給作者；紅的寫原因、會不會影響玩家，並記進 PLAYER_FEEDBACK。所以 What to Test 和「這版新增」卡不能等作者說「發」才寫：遊戲規劃每合一批玩家看得到的 PR，就在同一批（或緊接的 PR）更新 `.github/testflight-whats-new.md` 與 `WhatsNew.entries` 最前面那一則（寫成「下一版」，版號照上一版加一），讓作者任何時候按都是對的。103.1 就是作者先按、這兩份還停在 102.1：App Store Connect 的 What to Test 由遊戲規劃把寫好的文字交給作者貼上，App 裡的卡沒有 103.1 那一則，下一版的那一則把 103.1 的新增一起寫進去。遊戲規劃自己替作者按（作者說「發」）時，下面的條件照舊。
 - **先寫 What to Test**：`.github/testflight-whats-new.md` 寫好這一版給玩家看的說明（照 83.1 的格式：新增的、修好的、沿用的、請幫忙看），合進 main，這個合併的 commit 才是要發的 commit。沒寫就不說「可以發」：`testflight-changes.py` 只在這個檔案自上一版之後改過才用它，否則填 PR 標題，作者不要那個（84.1 漏寫，作者：「每次都改我這個 說了幾次」）。
 - **同一個 PR 改「這版新增」卡**：`WhatsNew.entries` 最前面那一則寫這版給玩家的新增與修好的（兩種語言；決策 415 的步驟）。沒改的話更新上來的玩家看到的是上一版的內容，或沒有卡。
 - 要發的 commit 就是 main HEAD，它要有一輪綠的**完整** `ci.yml`（跑了全部分片的：每晚台灣 01:37 那輪，或用 `workflow_dispatch` 手動跑的；push run 從決策 413 起只跑它的 tier，不算），它自己的 full lane 也要綠。HEAD 是當天晚上之後才合的，就手動跑一輪 `ci.yml`（`actions_run_trigger` 的 run_workflow，workflow `ci.yml`，ref main）。
