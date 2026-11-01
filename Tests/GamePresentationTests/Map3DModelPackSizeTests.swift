@@ -38,9 +38,12 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Alishan train's DL-38 and coaches, near and far (10 models with
         // the coaches' windows' models, 62,580 vertices more, 2.5 MB a
         // copy, drawn from photographs of the real cars).
-        XCTAssertEqual(pack.models.count, 674)
-        XCTAssertEqual(vertices, 4_445_868)
         // R100 native heads and new cab window light: +25,356 vertices.
+        // Decision 540: the Blue Train's two R100s and #1671's four coach
+        // roles, near and far, in place of the R135 set (14 models more with
+        // the windows' models, 295,182 vertices more, 11.8 MB a copy).
+        XCTAssertEqual(pack.models.count, 688)
+        XCTAssertEqual(vertices, 4_741_050)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

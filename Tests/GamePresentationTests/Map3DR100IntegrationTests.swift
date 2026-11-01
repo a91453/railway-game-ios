@@ -109,16 +109,16 @@ final class Map3DR100IntegrationTests: XCTestCase {
         XCTAssertEqual(pack.model(head, forType: "R100CK", count: 6, at: 251, reach: lower), far)
     }
 
-    func testTheLegacyCoachesAndBlueSubstituteArePreserved() throws {
+    func testTheLegacyCoachesArePreserved() throws {
         let pack = Map3DModelPack.unbaked
         for far in [false, true] {
             let prefix = far ? "set-R100CKFar" : "set-R100CK"
             XCTAssertEqual(payload(try model(prefix + "-car", in: pack)), payload(Map3DChuKuangPassenger.model(.standard, far: far)))
             XCTAssertEqual(payload(try model(prefix + "-tail", in: pack)), payload(Map3DTrainSet.chuKuangTail(far: far)))
         }
-        XCTAssertEqual(payload(try model("set-BLUE-head", in: pack)), payload(Map3DTrainLocomotive.r135.model))
-        XCTAssertNil(Map3DTrainSet.named("BLUEFar"))
-        XCTAssertNil(pack.layout(forType: "BLUE", count: 6))
+        // Decision 540: the Blue Train no longer runs the R135 stand-in; its
+        // set is pinned by Map3DBreezyBlueIntegrationTests.
+        XCTAssertNotNil(Map3DTrainSet.named("BLUEFar"))
     }
 
     func testBothRealLampEndsAreUsedAndTheModelIsNotReversedTwice() throws {

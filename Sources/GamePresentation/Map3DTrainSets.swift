@@ -31,6 +31,10 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 435: and ``Slot/fourth``, a fourth car in the cycle (the
     /// EMU900's), its back half's ``Cars/fourthBack``.
     var cycle: [Slot] = []
+    /// Decision 540: ``cycle`` from the car behind the head to the car
+    /// before the tail, in that order and over again, with no back half
+    /// (a hauled set's coach roles behind its locomotive).
+    var cycleFromFront = false
     enum Slot: Sendable { case middle, pantograph, centre, fourth }
     /// Decision 399: the cars drawn at their models' own lengths
     /// (``Map3DModelPack/layout(forType:count:)``), not stretched to the
@@ -133,9 +137,10 @@ public struct Map3DTrainSet: Sendable {
             // Preserve upstream decision 529 R200 binding.
             r200Hauled("R200CK", coach: chuKuang),
             r200Hauled("R200CK", far: true, coach: chuKuang),
-            // Decision 286: the Blue Train's R135 and its old blue coaches.
-            hauled("BLUE", locomotive: .r135,
-                   coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
+            // Decision 540: the Blue Train as it ran on 2026-05-22, two
+            // blue R100s and #1671's restored coaches, near and far.
+            breezyBlue(),
+            breezyBlue(far: true),
             // Decision 286, later: the Ming-Ri's black coaches with their
             // orange line; decision 483: as #1480's E200 and Chu-Kuang
             // coaches in the Ming-Ri's black and orange, near and far.
@@ -316,7 +321,7 @@ public struct Map3DTrainSet: Sendable {
     /// Kaohsiung and Taichung Green line's (their far sets).
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
-    static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "highSpeed", "n700sG", "emu3000",
+    static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN"]
 
@@ -498,6 +503,51 @@ public struct Map3DTrainSet: Sendable {
         let legacy = hauled(key, head: { Map3DR100.model(livery: .orange, far: far) }, coach: chuKuangCoach, far: far)
         return Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true,
                             far: far ? nil : key + "Far", build: legacy.build)
+    }
+
+    /// Decision 540: the Blue Train (藍皮解憂號) as reported on 2026-05-22
+    /// (`tools/tra-r100/formation.json`, `docs/art/tra-r100/blue-sources.json`):
+    /// two blue R100s at the front, R122 its short (cab) end forward and
+    /// R129 turned round, its short end toward the coaches, drawn as one
+    /// 31.6 m head unit; then #1671's restored coaches in the reported
+    /// role order, mixed (40TPK32200), exhibition and long-seat (35TP32850),
+    /// rotating-seat (35SPK32700), and a mixed coach last. A train of
+    /// another length keeps the order from the front and over again, the
+    /// last coach always a mixed one. Coach numbers and which way each
+    /// coach faces are UNVERIFIED: every coach faces forward.
+    static func breezyBlue(far: Bool = false) -> Map3DTrainSet {
+        let key = "BLUE"
+        // The exhibition and long-seat coaches are both 35TP32850s, the same
+        // outside (#1671 models no interior): one model, the cycle's
+        // pantograph slot twice.
+        return Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.middle, .pantograph, .pantograph, .fourth],
+                             cycleFromFront: true, ownLengths: true, far: far ? nil : key + "Far") {
+            let locomotive = Map3DR100.model(livery: .breezyBlue, far: far)
+            let half = Map3DR100.length / 2
+            var builder = StationKitBuilder()
+            builder.add(locomotive, at: Map3DPoint(half, 0, 0))
+            builder.add(locomotive, at: Map3DPoint(-half, 0, 0), angle: .pi)
+            let head = litLenses(.flat(named: key, from: builder.mesh), front: true)
+            func coach(_ role: Map3DBreezyBlueCoaches.Role) -> Map3DModelPack.Model { Map3DBreezyBlueCoaches.model(role, far: far) }
+            return Cars(head: head, middle: coach(.mixed), tail: breezyBlueTail(far: far), single: nil,
+                        pantograph: coach(.exhibition), fourth: coach(.rotatingSeat))
+        }
+    }
+
+    /// Decision 540: the Blue Train's last coach, a mixed one, its two red
+    /// marker lenses at the back end (the recipe's own, `0x9D413A`) lit.
+    static func breezyBlueTail(far: Bool) -> Map3DModelPack.Model {
+        let coach = Map3DBreezyBlueCoaches.model(.mixed, far: far)
+        let marker = Map3DColor.rgb(0x9D413A)
+        var vertices = coach.vertices
+        for start in stride(from: 0, to: vertices.count, by: 3) where vertices[start].color == marker {
+            guard vertices[start ..< start + 3].allSatisfy({ $0.x < 0 }) else { continue }
+            for i in start ..< start + 3 {
+                vertices[i].color = Map3DPalette.lantern
+                vertices[i].layer = Map3DVertex.glowing
+            }
+        }
+        return Map3DModelPack.Model(name: coach.name, vertices: vertices, minimum: coach.minimum, maximum: coach.maximum)
     }
 
     /// E500-only substitution. Retains the original coaches and all pack/lock/fallback lookup rules.

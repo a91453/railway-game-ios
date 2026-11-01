@@ -814,16 +814,16 @@
       "triangles" : 52
     },
     "light-set-BLUE-car" : {
-      "hash" : "16dd39ef4f1d9938",
-      "triangles" : 472
+      "hash" : "6fe99a27fbed96e9",
+      "triangles" : 1528
     },
     "light-set-BLUE-head" : {
-      "hash" : "6f945beab3888257",
-      "triangles" : 14
+      "hash" : "502c0402ade19b5e",
+      "triangles" : 620
     },
     "light-set-BLUE-tail" : {
-      "hash" : "5334d881abcefe8f",
-      "triangles" : 356
+      "hash" : "229d50dd8cb05a7",
+      "triangles" : 1440
     },
     "light-set-blueSeven-car" : {
       "hash" : "480dfdde653457e5",
@@ -2042,16 +2042,16 @@
       "triangles" : 7294
     },
     "set-BLUE-car" : {
-      "hash" : "cdaf3d84d3d86c31",
-      "triangles" : 1528
+      "hash" : "560bf1929022813c",
+      "triangles" : 13194
     },
     "set-BLUE-head" : {
-      "hash" : "3ffc000f5a0f04cf",
-      "triangles" : 1320
+      "hash" : "308636d30e2a3af1",
+      "triangles" : 14636
     },
     "set-BLUE-tail" : {
-      "hash" : "809f6b07576e1c79",
-      "triangles" : 1588
+      "hash" : "55d2203e05c29cd5",
+      "triangles" : 13194
     },
     "set-blueSeven-car" : {
       "hash" : "928a8d6893b17a7",
@@ -3472,6 +3472,62 @@
     "tra-breezy-blue-coach-rotating-seat-far": {
       "hash": "8e90e16859922caf",
       "triangles": 4950
+    },
+    "light-set-BLUE-fourth": {
+      "hash": "a13a2b00a0cffc32",
+      "triangles": 1368
+    },
+    "light-set-BLUE-panto": {
+      "hash": "b862e0f3af85ce8a",
+      "triangles": 1528
+    },
+    "light-set-BLUEFar-car": {
+      "hash": "207485f4d239efdd",
+      "triangles": 616
+    },
+    "light-set-BLUEFar-fourth": {
+      "hash": "8504571f7c9f4108",
+      "triangles": 552
+    },
+    "light-set-BLUEFar-head": {
+      "hash": "19921e885f068230",
+      "triangles": 84
+    },
+    "light-set-BLUEFar-panto": {
+      "hash": "ac90f8c7e8372125",
+      "triangles": 616
+    },
+    "light-set-BLUEFar-tail": {
+      "hash": "d0131736f750cdf9",
+      "triangles": 576
+    },
+    "set-BLUE-fourth": {
+      "hash": "ed4d15ceedce24ad",
+      "triangles": 12234
+    },
+    "set-BLUE-panto": {
+      "hash": "b65343f403175c64",
+      "triangles": 13278
+    },
+    "set-BLUEFar-car": {
+      "hash": "4a3e3a61fd7944b4",
+      "triangles": 5478
+    },
+    "set-BLUEFar-fourth": {
+      "hash": "8e90e16859922caf",
+      "triangles": 4950
+    },
+    "set-BLUEFar-head": {
+      "hash": "e68df960b8d871b8",
+      "triangles": 6932
+    },
+    "set-BLUEFar-panto": {
+      "hash": "717ed9b78b1f3788",
+      "triangles": 5370
+    },
+    "set-BLUEFar-tail": {
+      "hash": "51bde485e21d2f79",
+      "triangles": 5478
     }
   }
 }
