@@ -807,14 +807,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// where the glows meet). For the screenshot review of its pull
     /// request; drawn by the Debug app through the tool's own taps.
     func testTracePreviewDouble() {
-        tracePreviewShot(argument: "-ui-test-trace-double", station: "羅東", search: "羅東", name: "trace-preview-double", zoomSteps: 7)
+        tracePreviewShot(argument: "-ui-test-trace-double", station: "羅東", search: "羅東", name: "trace-preview-double")
     }
 
     func testTracePreviewJoined() {
-        tracePreviewShot(argument: "-ui-test-trace-joined", station: "羅東", search: "羅東", name: "trace-preview-joined", zoomSteps: 4)
+        tracePreviewShot(argument: "-ui-test-trace-joined", station: "羅東", search: "羅東", name: "trace-preview-joined")
     }
 
-    private func tracePreviewShot(argument: String, station: String, search text: String, name: String, zoomSteps: Int) {
+    private func tracePreviewShot(argument: String, station: String, search text: String, name: String) {
         let app = launch(extra: [argument])
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
@@ -845,8 +845,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // By its label, which the app shows in Chinese here.
         let zoomIn = app.buttons.matching(NSPredicate(format: "label IN %@", ["Zoom in", "放大"])).firstMatch
         XCTAssertTrue(zoomIn.becomesHittable(within: 10), "The zoom-in button")
-        // The double close enough to tell its two tracks 5 m apart.
-        for _ in 0..<zoomSteps {
+        for _ in 0..<4 {
             zoomIn.tap()
             settle(seconds: 1)
         }
