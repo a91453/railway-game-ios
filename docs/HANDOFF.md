@@ -443,6 +443,27 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 39 任交給第 40 任（2026-11-01 約 04:00 UTC，session_01YGNNupwLVxuPiWcrdA6NPs，壓縮 3 次）**：第 40 任由第 39 任用 `create_session` 開，是第 2 層（opus 5.5 高）。作者對合併的話：「都行綠了就合」「綠了就合」，綠的 PR 照批次規則合。
+- **102.1 已發**，full lane 的紅是測試自己的問題，#1646 修好（only_testing 41266541046 綠），不用補版。玩家回報（97.1 樹林死機、101.1 卡頓）與分析在 `research/PLAYER_FEEDBACK.md`。
+- **103 的排序**：NEXT_PRIORITIES §24 與 §24.4（作者同意的新功能 COMMUTE、TRATT）。
+- **已合**（main bd3e91f 以前）：#1640、#1641 PUNCT-2、#1637 BUILD3D-2 PR 2、#1644、#1645、#1642 R200IN（決策 529）、#1646 FLANE2、#1636 BUYBACK（決策 528、存檔 79）。
+- **等著合的**（接手先看 main bd3e91f 的 `ci.yml` 41268413477 綠了沒，綠了才合下一批）：
+  - #1647 STATIONEXP-3D：ready、clean，總覽圖看過，可以合。
+  - #1643 ALISHAN3（決策 531）：已合 main 解衝突（7b9dc70），CI 綠了就合。預覽看過。
+  - #1639 UIFIX：截圖看過（「7.2萬 · 82%」沒被切）。跟 main 衝突，已請 UIFIX（session_01YGNNunwJCYnpcqxRuffiNA，壓縮過，只收尾這個）合 main，綠了就合。
+  - #1648 TRATT（session_01YGNNuoCeSLVEr7McMF547B，決策 532，只動 GamePresentation）：ready。合之前要 (1) 車站卡台鐵「下一班」的截圖（決策 482），(2) TRATT 回答 debug 下建台鐵交通 0.61 秒是不是在主執行緒；超過約 100 ms 就要搬到背景或延後。
+  - #1649 PLANDAY（session_01YGNNuqEZL9bfYRQGsEEG44，動 GameCore，決策 470「續」）：draft，等 CI 綠、轉 ready。
+- **在跑的**：HANG2-P3（session_01YGNNupgWmUe97NHqztN8tb，動 GameCore，決策 497「續」，存檔 80 只有第 2 項需要才用）。
+- **還沒派的**：
+  - COMMUTE（§24.4 5a，動 GameCore）：PLANDAY 合了再派；存檔若要用，跟 HANG2-P3 協調（80 已留給 HANG2-P3，COMMUTE 取 81）。同時最多 2 個動 GameCore。
+  - TRACE2：#1639 合了再派。
+  - BUILD3D-3：PR 3–5 另開新 session，接手點在 §4.42。
+  - LOOP-2、ZSWITCH、STATIONEXP-2 的 GameCore 那半（條件：車站常常客滿）。
+  - 小項：經濟圓餅圖中間的「NT$ 294,…」在 main 上被切掉（UIFIX 看到的，不在 #1639 裡）。
+- **號碼**：決策下一個 533（530、533 都釋出了；528、529、531、532 用掉）、存檔 80 留給 HANG2-P3、下一個 81、golden schema 下一個 76。取號前還是先查 #1579。
+- **可以封存的**：PUNCT-2／STATIONEXP-3D（#1647 合了以後）、ALISHAN3（#1643 合了以後）、FLANE2、BUYBACK-2、BUYBACK、BUILD3D-2、R200IN。第 37、38、39 任留給作者決定。
+- **回報**：這一輪的實作 session 都回報給第 39 任；第 40 任接手後在 #1579 留言，並對還在做的（UIFIX、TRATT、PLANDAY、HANG2-P3、ALISHAN3、STATIONEXP-3D）送一則「改回報給 <第 40 任 session>」。
+
 **第 39 任現況（2026-11-01 約 01:30 UTC，session_01YGNNupwLVxuPiWcrdA6NPs，第 1 層，壓縮 2 次）**：約 300k tokens 時交給第 40 任（第 2 層，可以自己用 `create_session` 開）。
 - **102.1 已發**：作者 01:05 UTC 自己按（「跟上次一樣，你合併完 full lane 前先發」），testflight.yml run 41259679262，main e985fb6（#1638）。發版凍結已解除。完整 `ci.yml` 41259207094 與 full lane 的結果出來後，補進 `research/PLAYER_FEEDBACK.md`。
 - **下一版（103）的排序**：NEXT_PRIORITIES §24（取代 §23；§23 的 16 項都做完了）。
