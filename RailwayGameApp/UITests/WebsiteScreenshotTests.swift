@@ -243,7 +243,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(app.dragUntilWhollyOnScreen(free, in: list, below: bar.frame.maxY), "The free play switch comes into reach")
         free.tap()
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "現金會停在現在的數字")).firstMatch.appears(within: 10), "The confirmation says the cash stays")
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "蓋東西、買車都不用錢")).firstMatch.appears(within: 10), "The confirmation says building costs nothing")
         settle(seconds: 1)
         keep("free-play-switch-confirmation", app)
     }

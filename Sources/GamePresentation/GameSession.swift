@@ -1711,9 +1711,12 @@ public final class GameSession {
     /// (`MetroSaveModePolicy`): its ridership would be the player's, not
     /// the city's.
     ///
-    /// A company in the red cannot switch: building still costs money in
-    /// free play, which has no income, so a negative balance could never be
-    /// built out of and the switch cannot be undone. Nor can a company with
+    /// Decision 497 (P2-5, B): the switch turns unlimited funds on (in the
+    /// edit itself, ``PlayerCommand/Edit/setEconomyMode(_:)``, so the
+    /// command log replays it), so
+    /// building and buying cost nothing from then on. A company in the red
+    /// still cannot switch: free play is not a way out of going bankrupt.
+    /// Nor can a company with
     /// a loan: interest is paid only by a managed company (decision 67), so
     /// the loan would become money it never pays for. Nor can a challenge
     /// being played (``isFreePlayLocked``).
@@ -1732,8 +1735,8 @@ public final class GameSession {
         }
         guard world.economy.balance >= .zero else {
             message = StatusMessage(kind: .failure, text: language.text(
-                "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game.",
-                "公司目前虧損。自由模式沒有收入，蓋東西仍要花錢，切過去就什麼都蓋不了。請先讓餘額回到零以上，或開新遊戲。"
+                "The company is in the red. Bring the balance back above zero before switching to free play, or start a new game.",
+                "公司目前虧損。請先讓餘額回到零以上再切換到自由模式，或開新遊戲。"
             ))
             return
         }
@@ -1746,8 +1749,8 @@ public final class GameSession {
         }
         _ = try? performCommand(.edit(.setEconomyMode(mode)))
         message = StatusMessage(kind: .success, text: language.text(
-            "Free play: no fares or running costs, and you set each station's ridership.",
-            "自由模式：不收票價，也沒有營運成本；各站的客源由你設定。"
+            "Free play: no fares or running costs, building costs nothing, and you set each station's ridership.",
+            "自由模式：不收票價，也沒有營運成本，蓋東西不用錢；各站的客源由你設定。"
         ))
     }
 
@@ -1765,8 +1768,8 @@ public final class GameSession {
     /// stays where it is, and that the switch goes one way.
     public static func freePlaySwitchText(in language: DisplayLanguage) -> String {
         language.text(
-            "Free play has no fares or running costs, and you set each station's ridership. Your cash stays at what it is now and will not grow. It cannot become a managed company again.",
-            "自由模式不收票價、沒有營運成本，各站的客源由你設定。現金會停在現在的數字，之後不會再增加。切換後無法再改回經營模式。"
+            "Free play has no fares or running costs, and you set each station's ridership. Building and buying cost nothing from then on, and achievements are no longer counted. It cannot become a managed company again.",
+            "自由模式不收票價、沒有營運成本，各站的客源由你設定。之後蓋東西、買車都不用錢，也不再計成就。切換後無法再改回經營模式。"
         )
     }
 
