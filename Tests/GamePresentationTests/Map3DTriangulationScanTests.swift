@@ -12,8 +12,16 @@ final class Map3DTriangulationScanTests: XCTestCase {
         func ty(_ lat: Double) -> Int { let r = lat * .pi / 180; return Int((1 - log(tan(r) + 1 / cos(r)) / .pi) / 2 * 65536) }
         var buildings = 0, bad = 0, transportBad = 0
         var worst: [(ratio: Double, x: Int, y: Int, use: Int, rings: Int, pts: Int, net: Double)] = []
-        for y in ty(26.5)...ty(21.8) {
-            for x in tx(118.1)...tx(122.1) {
+        let geo = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealRailways/track_stations.geojson"))) as! [String: Any]
+        var keys = Set<[Int]>()
+        for f in geo["features"] as! [[String: Any]] {
+            let c = (f["geometry"] as! [String: Any])["coordinates"] as! [Double]
+            for dy in -1...1 { for dx in -1...1 { keys.insert([tx(c[0]) + dx, ty(c[1]) + dy]) } }
+        }
+        print("SCAN tiles", keys.count, "chuoshui", tx(120.704726), ty(23.834496))
+        for key in keys.sorted(by: { $0.lexicographicallyPrecedes($1) }) {
+            let x = key[0], y = key[1]
+            do {
                 guard let bytes = try? tiles.archive.tile(zoom: 16, x: x, y: y), let decoded = try? Map3DFootprints.decode(bytes) else { continue }
                 for b in decoded {
                     buildings += 1
@@ -36,6 +44,7 @@ final class Map3DTriangulationScanTests: XCTestCase {
                         bad += 1
                         if b.use == 13 { transportBad += 1 }
                         worst.append((sum / max(net, 1), x, y, b.use, rings.count, pts.count, net))
+                        if abs(x - tx(120.704726)) <= 1 && abs(y - ty(23.834496)) <= 1 { print("SCAN CHUOSHUI", x, y, b.use, b.storeys, b.rings) }
                     }
                 }
             }
@@ -43,5 +52,87 @@ final class Map3DTriangulationScanTests: XCTestCase {
         worst.sort { $0.ratio > $1.ratio }
         print("SCAN buildings \(buildings) bad \(bad) transport \(transportBad)")
         for w in worst.prefix(40) { print("SCAN", w) }
+    }
+}
+
+extension Map3DTriangulationScanTests {
+    func testScanSceneAtChuoshui() throws {
+        guard ProcessInfo.processInfo.environment["TRI_SCAN"] != nil else { throw XCTSkip("TRI_SCAN") }
+        let resources = Map3DRealTrainsTests.resources
+        let world = GameWorld.newGame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, land: [])
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let heights = try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat"))
+        let tiles = try BaseMapTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped))
+        let footprints = try FootprintTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped))
+        let city = CityTileArea.areas(in: resources.appendingPathComponent("BaseMap/city"))
+        let temples = try RealTemples(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan_temples.json")))
+        let railways = try XCTUnwrap(Map3DRealTrainsTests.railways)
+        let at = frame.worldPosition(latitude: 23.834496, longitude: 120.704726)
+        let origin = (x: at.x.rounded(), y: at.y.rounded())
+        let half = Map3DScene.reach * Double(WorldCoordinate.unitsPerMetre)
+        let region = WorldRegion(minX: origin.x - half, minY: origin.y - half, maxX: origin.x + half, maxY: origin.y + half)
+        let scene = Map3DScene(world: world, snapshot: world.railwaySnapshot(), skyline: CitySkyline(world: world), frame: (region, origin.x, origin.y),
+                               baseMap: tiles, cityTiles: city, footprints: footprints, heights: heights, lineBands: nil, railways: railways, temples: temples)
+        var byColor: [UInt32: (count: Int, longest: Float, at: Map3DPoint)] = [:]
+        for chunk in scene.chunks {
+            for mesh in [chunk.mesh, chunk.farWithBoxes, chunk.close, chunk.standIn, chunk.shadows] {
+                let v = mesh.vertices
+                for i in stride(from: 0, to: mesh.indices.count, by: 3) {
+                    let a = v[Int(mesh.indices[i])], b = v[Int(mesh.indices[i + 1])], c = v[Int(mesh.indices[i + 2])]
+                    let pa = a.position, pb = b.position, pc = c.position
+                    let longest = max((pb - pa).length, (pc - pb).length, (pa - pc).length)
+                    guard longest > 40 else { continue }
+                    let mid = Map3DPoint((pa.x + pb.x + pc.x) / 3, (pa.y + pb.y + pc.y) / 3, (pa.z + pb.z + pc.z) / 3)
+                    let triArea = (pb - pa).cross(pc - pa).length / 2
+                    if [0xffbcbfc0, 0xffc2cbcf, 0xffc6c9cb].contains(a.color) && longest > 60 { print(triArea, "NEAR", String(a.color, radix: 16), a.layer, pa, pb, pc, "chunk", chunk.column, chunk.row) }
+                    let old = byColor[a.color]
+                    if old == nil || longest > old!.longest { byColor[a.color] = ((old?.count ?? 0) + 1, longest, mid) } else { byColor[a.color]!.count += 1 }
+                }
+            }
+        }
+        for (color, e) in byColor.sorted(by: { $0.value.longest > $1.value.longest }) {
+            print("SCENE", String(color, radix: 16), e.count, e.longest, e.at)
+        }
+    }
+}
+
+extension Map3DTriangulationScanTests {
+    @MainActor
+    func testScanDemoAtChuoshui() async throws {
+        guard ProcessInfo.processInfo.environment["TRI_SCAN"] != nil else { throw XCTSkip("TRI_SCAN") }
+        let name = ProcessInfo.processInfo.environment["TRI_STATION"] ?? "濁水"
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        let tra = try BundledRealData.station(name, in: "tra_sched")
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor))
+        try world.mapGround()
+        world.setUnlimitedFunds(true)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        let heights = try HeightGrid(data: Data(contentsOf: BundledRealData.directory.deletingLastPathComponent().appendingPathComponent("RealWorld/taiwan_heights.dat")))
+        session.heights = heights
+        session.railways = try BundledRealData.railways()
+        session.news.isDemo = true
+        let centre = try BundledRealData.point(tra.coordinate, in: world)
+        let x = Double(centre.x), y = Double(centre.y), reach = Double(ProcessInfo.processInfo.environment["TRI_REACH"] ?? "5000")! * metre
+        let skip = ProcessInfo.processInfo.environment["TRI_EMPTY"] != nil
+        let laid = skip ? nil : await session.layDemoRealLines(in: WorldRegion(minX: x - reach, minY: y - reach, maxX: x + reach, maxY: y + reach))
+        print("LAID", laid as Any, session.message as Any, session.world.network.edges.count, session.world.network.platforms.count)
+        let resources = Map3DRealTrainsTests.resources
+        let tiles = try BaseMapTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped))
+        let footprints = try FootprintTiles(data: Data(contentsOf: resources.appendingPathComponent("BaseMap/taiwan_buildings.pmtiles"), options: .alwaysMapped))
+        let scene = Map3DScene(world: session.world, focus: (x, y), baseMap: tiles, footprints: footprints, heights: heights, railways: session.railways)
+        print("ORIGIN", scene.originX - x, scene.originY - y)
+        for chunk in scene.chunks {
+            for mesh in [chunk.mesh, chunk.farWithBoxes, chunk.close, chunk.standIn, chunk.shadows] {
+                let v = mesh.vertices
+                for i in stride(from: 0, to: mesh.indices.count, by: 3) {
+                    let a = v[Int(mesh.indices[i])], b = v[Int(mesh.indices[i + 1])], c = v[Int(mesh.indices[i + 2])]
+                    let pa = a.position, pb = b.position, pc = c.position
+                    let longest = max((pb - pa).length, (pc - pb).length, (pa - pc).length)
+                    let mid = Map3DPoint((pa.x + pb.x + pc.x) / 3, (pa.y + pb.y + pc.y) / 3, (pa.z + pb.z + pc.z) / 3)
+                    guard longest > 50 else { continue }
+                    print("DEMO", String(a.color, radix: 16), a.layer, Int(longest), Int(mid.x / 50) * 50, Int(mid.z / 50) * 50, pa, pb, pc)
+                }
+            }
+        }
     }
 }
