@@ -389,7 +389,7 @@ struct TrainRosterView: View {
                         .lineLimit(1)
                 }
                 if !compact {
-                    Text(verbatim: TrainRoster.shortMoney(row.revenue) + " · " + "\(row.utilisation)%")
+                    Text(verbatim: TrainRoster.shortMoney(row.revenue, in: language) + " · " + "\(row.utilisation)%")
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
@@ -561,7 +561,7 @@ struct TrainRosterView: View {
         layer.clip(to: shape)
         let late = cell.lateText.map { " " + $0 } ?? ""
         if compact {
-            let line = cell.isLate ? (cell.lateText ?? "") : cell.state == .planned ? "" : TrainRoster.shortMoney(cell.fare)
+            let line = cell.isLate ? (cell.lateText ?? "") : cell.state == .planned ? "" : TrainRoster.shortMoney(cell.fare, in: language)
             layer.draw(Text(verbatim: line).font(.caption2.weight(.bold).monospacedDigit()).foregroundStyle(color),
                        at: CGPoint(x: box.minX + 4, y: box.midY), anchor: .leading)
         } else {
@@ -725,7 +725,7 @@ struct TrainRosterView: View {
     }
 
     private func spoken(_ row: TrainRoster.Row) -> String {
-        var parts = [row.name, TrainRoster.shortMoney(row.revenue), language.text("in use \(row.utilisation)%", "使用率 \(row.utilisation)%")]
+        var parts = [row.name, TrainRoster.shortMoney(row.revenue, in: language), language.text("in use \(row.utilisation)%", "使用率 \(row.utilisation)%")]
         if let note = row.dispatchText(in: language) { parts.append(note) }
         parts += row.cells.map { $0.spokenText(in: language) }
         return parts.joined(separator: "；")

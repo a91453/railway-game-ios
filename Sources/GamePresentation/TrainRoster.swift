@@ -77,7 +77,7 @@ public struct TrainRoster: Equatable, Sendable {
             if state == .interrupted { return language.text("Stopped", "中斷") }
             let number = number.map { language.text("No. \($0)", "第 \($0) 趟") } ?? ""
             if state == .planned { return number + " · " + language.text("Planned", "預定") }
-            return number + " · " + TrainRoster.shortMoney(fare)
+            return number + " · " + TrainRoster.shortMoney(fare, in: language)
         }
 
         /// What a screen reader says of the cell.
@@ -92,7 +92,7 @@ public struct TrainRoster: Equatable, Sendable {
             case .interrupted: parts.append(language.text("stopped", "中斷"))
             case .planned: parts.append(language.text("planned", "預定"))
             }
-            if !isEmptyRun, state != .planned { parts.append(TrainRoster.shortMoney(fare)) }
+            if !isEmptyRun, state != .planned { parts.append(TrainRoster.shortMoney(fare, in: language)) }
             return parts.joined(separator: "，")
         }
     }
@@ -264,8 +264,20 @@ public struct TrainRoster: Equatable, Sendable {
         return trips
     }
 
-    /// Money in short: "$850", "$5.4k", "$1.2M".
-    public static func shortMoney(_ money: Money) -> String {
+    /// Money in short: "NT$850", "NT$5.4k", "NT$1.2M". In Chinese
+    /// (decision 523, continued): ``Money/compactText(in:)``'s 萬 and 億,
+    /// with no spaces and the sign first, as here: "NT$5,432",
+    /// "NT$1.2萬", "-NT$404.7萬", "NT$1.23億".
+    public static func shortMoney(_ money: Money, in language: DisplayLanguage) -> String {
+        guard language == .traditionalChinese else { return shortMoney(money) }
+        var compact = money.compactText(in: language).filter { $0 != " " }
+        guard let minus = compact.firstIndex(of: "-") else { return compact }
+        compact.remove(at: minus)
+        return "-" + compact
+    }
+
+    /// ``shortMoney(_:in:)`` in English.
+    private static func shortMoney(_ money: Money) -> String {
         let dollars = money.amount / 100
         let sign = dollars < 0 ? "-" : ""
         let size = dollars.magnitude

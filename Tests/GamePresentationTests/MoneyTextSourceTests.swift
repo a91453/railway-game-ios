@@ -5,7 +5,7 @@ import XCTest
 
 /// Every amount of money the game shows is written by `Money`'s format
 /// functions (``Money/moneyText``, ``Money/wholeText``, ``Money/centsText``,
-/// ``Money/signedText``, ``TrainRoster/shortMoney(_:)``), and the tests
+/// ``Money/signedText``, ``TrainRoster/shortMoney(_:in:)``), and the tests
 /// expect what those functions write, so the currency changes in one place
 /// (the New Taiwan dollar, docs/research/NT_DOLLAR_SWITCH_2026-10-27.md
 /// §5.2 PR-0).
@@ -81,7 +81,7 @@ final class MoneyTextSourceTests: XCTestCase {
         XCTAssertEqual(Money(30_000_000_000).roundText(in: .english), sign + "300 million")
         XCTAssertEqual(Money(30_000_000_000).roundText(in: .traditionalChinese), "3 億")
         XCTAssertEqual(Money(123_456).roundText(in: .english), Money(123_456).wholeText)
-        XCTAssertEqual(TrainRoster.shortMoney(Money(210_000)), sign + "2.1k")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(210_000), in: .english), sign + "2.1k")
         XCTAssertEqual(IncomePulse(amount: Money(-4_000_000), serial: 1).text, "\u{2212}" + sign + "40k")
     }
 }

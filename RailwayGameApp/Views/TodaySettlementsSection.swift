@@ -62,7 +62,7 @@ struct TodaySettlementsSection: View {
         HStack(spacing: 0) {
             figure(language.text("Trips", "完成班次"), "\(settled.completed)")
             figure(language.text("On time", "準點率"), settled.onTimePercent.map { "\($0)%" } ?? "—")
-            figure(language.text("Fares", "票收"), "+" + TrainRoster.shortMoney(settled.fares), tint: Theme.success)
+            figure(language.text("Fares", "票收"), "+" + TrainRoster.shortMoney(settled.fares, in: language), tint: Theme.success)
         }
         .accessibilityElement(children: .combine)
     }
@@ -103,7 +103,7 @@ struct TodaySettlementsSection: View {
             }
             .lineLimit(1)
             Spacer(minLength: 4)
-            Text(verbatim: entry.fareText)
+            Text(verbatim: entry.fareText(in: language))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.success)
                 .monospacedDigit()

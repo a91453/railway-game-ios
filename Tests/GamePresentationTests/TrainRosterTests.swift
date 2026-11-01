@@ -240,9 +240,9 @@ final class TrainRosterTests: XCTestCase {
                                     fare: Money(210_000), state: .late(minutes: 6), isEmptyRun: false)
         XCTAssertTrue(late.isLate)
         XCTAssertEqual(late.lateText, "+6")
-        XCTAssertEqual(late.detailText(in: .english), "No. 4 · \(TrainRoster.shortMoney(Money(210_000)))")
-        XCTAssertEqual(late.detailText(in: .traditionalChinese), "第 4 趟 · \(TrainRoster.shortMoney(Money(210_000)))")
-        XCTAssertEqual(late.spokenText(in: .english), "Taipei → Hsinchu，01:00–01:20，6 min late，\(TrainRoster.shortMoney(Money(210_000)))")
+        XCTAssertEqual(late.detailText(in: .english), "No. 4 · \(TrainRoster.shortMoney(Money(210_000), in: .english))")
+        XCTAssertEqual(late.detailText(in: .traditionalChinese), "第 4 趟 · NT$2,100")
+        XCTAssertEqual(late.spokenText(in: .english), "Taipei → Hsinchu，01:00–01:20，6 min late，\(TrainRoster.shortMoney(Money(210_000), in: .english))")
         let running = TrainRoster.Cell(number: 5, from: "A", to: "B", start: 0, end: 60, fare: .zero, state: .running(lateMinutes: 0), isEmptyRun: false)
         XCTAssertFalse(running.isLate)
         XCTAssertNil(running.lateText)
@@ -251,12 +251,28 @@ final class TrainRosterTests: XCTestCase {
     }
 
     func testShortMoney() {
-        XCTAssertEqual(TrainRoster.shortMoney(Money(85_000)), "\(Money.currencySymbol)850")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(540_000)), "\(Money.currencySymbol)5.4k")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(999_960_00)), "\(Money.currencySymbol)1.0M")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(12_345_600)), "\(Money.currencySymbol)123k")
-        XCTAssertEqual(TrainRoster.shortMoney(Money(120_000_000)), "\(Money.currencySymbol)1.2M")
-        XCTAssertEqual(TrainRoster.shortMoney(.zero), "\(Money.currencySymbol)0")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(85_000), in: .english), "\(Money.currencySymbol)850")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(540_000), in: .english), "\(Money.currencySymbol)5.4k")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(999_960_00), in: .english), "\(Money.currencySymbol)1.0M")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(12_345_600), in: .english), "\(Money.currencySymbol)123k")
+        XCTAssertEqual(TrainRoster.shortMoney(Money(120_000_000), in: .english), "\(Money.currencySymbol)1.2M")
+        XCTAssertEqual(TrainRoster.shortMoney(.zero, in: .english), "\(Money.currencySymbol)0")
+    }
+
+    /// Decision 523, continued: in Chinese, every dollar below NT$10,000,
+    /// then 萬 to one decimal and 億 to two, as the status bar writes them,
+    /// with no spaces and the sign first.
+    func testShortMoneyInChinese() {
+        func short(_ cents: Int64) -> String { TrainRoster.shortMoney(Money(cents), in: .traditionalChinese) }
+        XCTAssertEqual(short(85_000), "NT$850")
+        XCTAssertEqual(short(543_200), "NT$5,432")
+        XCTAssertEqual(short(999_900), "NT$9,999")
+        XCTAssertEqual(short(1_000_000), "NT$1萬")
+        XCTAssertEqual(short(12_345_600), "NT$12.3萬")
+        XCTAssertEqual(short(-40_470_000), "-NT$40.5萬")
+        XCTAssertEqual(short(9_999_960_000), "NT$1億")
+        XCTAssertEqual(short(12_345_678_900), "NT$1.23億")
+        XCTAssertEqual(short(0), "NT$0")
     }
 
     /// On an iPhone held sideways, many trains take the short rows.

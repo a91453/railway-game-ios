@@ -564,7 +564,8 @@ struct EconomyPanel: View {
                         closingCash: session.world.economy.unlimitedFunds ? nil : (cash, cash - report.current.netCashFlow),
                         in: session.language
                     ),
-                currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
+                currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期"),
+                language: session.language
             )
             // Decision 480: the period's income and costs by kind.
             FinanceCompositionChart(
@@ -588,7 +589,8 @@ struct EconomyPanel: View {
             StatementGrid(
                 rows: sheet.rows(previous: closed?.closing, in: session.language),
                 currentTitle: session.language.text("Now", "目前"),
-                previousTitle: closed.map { session.language.text("\($0.yearText(in: session.language)) end", "\($0.yearText(in: session.language))底") }
+                previousTitle: closed.map { session.language.text("\($0.yearText(in: session.language)) end", "\($0.yearText(in: session.language))底") },
+                language: session.language
             )
             .accessibilityIdentifier("economy.balanceSheet")
         } header: {
