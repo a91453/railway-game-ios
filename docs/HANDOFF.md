@@ -2469,7 +2469,7 @@
 - **還沒做的**（HANG2 壓縮一次後依規則停下，`docs/research/BUGHUNT_HANG_2026-10-30.md` 的順序，一項一個 PR，決策 497 接著寫一節）：
   - ~~P2-3~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-3-command-reads`，決策 497 的 P2-3 一節。
   - ~~P2-4~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-4-night-skip`，決策 497 的 P2-4 一節。
-  - ~~P2-5：欠錢轉自由模式就卡住~~：做了 A（確認框說現金會停住，決策 497 P2-5，`hang2-p2-5-free-play-cash`）。**下一步 B**（留給 BH3 或之後的經濟規則決定，要動 GameCore、佔一個名額）：轉自由模式時順便打開無限資金（`GameWorld.setEconomyMode`，`Operations.swift`），已經轉成自由模式的舊存檔要不要也打開一併決定。
+  - ~~P2-5：欠錢轉自由模式就卡住~~：做了 A（確認框說現金會停住，決策 497 P2-5，`hang2-p2-5-free-play-cash`）。B 由 HANG2-P3（session_01YGNNupgWmUe97NHqztN8tb）做了，`hang2-p3-free-cash`，決策 497 的「P2-5 續」：轉自由模式時打開無限資金，舊存檔在開局時也打開，存檔不升版。
   - ~~P2-6~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了，`hang2-p2-6-leave-unsaved`，決策 497 的 P2-6 一節。
   - ~~P2-7~~：HANG2-P2（session_01YGNNumzMVAszUPgVLu26iP）做了提示的部分，`hang2-p2-7-parked-holder`，決策 497 的 P2-7 一節。`.noRoute` 與機廠滿了由 HANG2-P3（session_01YGNNupgWmUe97NHqztN8tb）做了，`hang2-p3-norout`，決策 497 的「P2-7 續」。讓派車員移開停著的車是調度規則，公測後由 BH2 決定。
   - `GameLauncher.init` 仍在主執行緒同步讀一次清單；檔頭快取後只有更新後第一次開 App（快取還沒有）會慢。
