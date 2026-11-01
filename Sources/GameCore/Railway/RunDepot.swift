@@ -92,7 +92,27 @@ extension GameWorld {
     /// waiting for its route (see ``trainsInTheWay(memo:)``) goes in too,
     /// however soon its next run there (decision 297).
     func runTrainEnteringDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
+        for index in runDepotEntryCandidates(of: line, memo: &memo) {
+            guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
+            // Decision 280: under traffic control, only with a siding
+            // for it; without one it stays where it waits.
+            if isTrafficControlEnabled, let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
+            if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
+               case .held = reservingDeparture(leaving, memo: &memo.directions) {
+                continue
+            }
+            return (index, trip)
+        }
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
+        return makingWay(of: line)
+    }
+
+    /// The trains ``runTrainEnteringDepot(of:memo:)`` would send into a
+    /// depot, by index, in the order it tries them, before it asks for an
+    /// empty run, a siding (decision 280) or a route: shared with
+    /// ``waitsForDepotRoom(_:)`` (decision 497, P2-7).
+    func runDepotEntryCandidates(of line: ServiceLine, memo: inout DispatchMemo) -> [Int] {
+        guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return [] }
         var stations: [StationID] = []
         for id in line.trains {
             guard let train = train(id: id), train.execution == nil, train.placement != nil, train.movement.rate > 0,
@@ -102,6 +122,7 @@ extension GameWorld {
         }
         let horizon = clock.now.seconds + Self.runDepotLookahead
         var inTheWay: Set<TrainID>?
+        var candidates: [Int] = []
         for station in stations {
             let waiting = runTrainsWaiting(of: line, at: station)
             let wanted = pendingRunStarts(of: line, from: station).count { $0 <= horizon }
@@ -118,18 +139,10 @@ extension GameWorld {
             }
             for index in leaving {
                 if due, cameOutOfDepot(trains[index], to: station) { continue }
-                guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
-                // Decision 280: under traffic control, only with a siding
-                // for it; without one it stays where it waits.
-                if isTrafficControlEnabled, let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
-                if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-                   case .held = reservingDeparture(leaving, memo: &memo.directions) {
-                    continue
-                }
-                return (index, trip)
+                candidates.append(index)
             }
         }
-        return makingWay(of: line)
+        return candidates
     }
 
     /// Decision 228: with traffic control off, a train of `line` waiting
