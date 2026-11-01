@@ -151,10 +151,27 @@ public struct LedgerCount: Hashable, Sendable {
 public struct StationRidership: Hashable, Sendable {
     public let flow: StationFlow?
     public let pairs: [StationDemandPair]
+    /// Decision 533: the riders the company's schools and hospitals near
+    /// the station bring today.
+    public let civic: [CivicRiders]
 
-    public init(flow: StationFlow?, pairs: [StationDemandPair]) {
+    public init(flow: StationFlow?, pairs: [StationDemandPair], civic: [CivicRiders] = []) {
         self.flow = flow
         self.pairs = pairs
+        self.civic = civic
+    }
+}
+
+extension CivicRiders {
+    /// "School · about 500 students today, in the morning and home after
+    /// school"; "學校 · 今天約 500 名學生搭車，早上到校、放學回家".
+    public func text(in language: DisplayLanguage) -> String {
+        let count = riders.groupedText
+        return kind == .school
+            ? language.text("School · about \(count) \(riders == 1 ? "student" : "students") ride here today, in the morning and home after school",
+                            "學校 · 今天約 \(count) 名學生搭車來，早上到校、放學回家")
+            : language.text("Hospital · about \(count) \(riders == 1 ? "patient or visitor rides" : "patients and visitors ride") here today and home again",
+                            "醫院 · 今天約 \(count) 位看病、探病的旅客搭車來回")
     }
 }
 
@@ -237,6 +254,8 @@ public struct RidershipInputs: Equatable, Sendable {
     let tourismStars: [Int]
     /// Decision 332: who takes a scooter or a car instead.
     let modeShift: ModeShift?
+    /// Decision 533: the company's schools and hospitals bring riders.
+    let civicBuildings: [PlacedBuilding]
 
     public init(world: GameWorld) {
         day = world.clock.now.seconds / GameTime.secondsPerDay
@@ -268,6 +287,7 @@ public struct RidershipInputs: Equatable, Sendable {
         tourism = world.tourism
         tourismStars = world.tourism?.attractions.map { world.stars(of: $0) } ?? []
         modeShift = world.modeShift
+        civicBuildings = world.placedBuildings.filter(\.kind.bringsRiders)
     }
 }
 
@@ -286,6 +306,7 @@ extension GameWorld {
     /// station, each day worked out once for all of them.
     func stationRidership(of id: StationID, days: [StationID: [StationID: Int64]]?) -> StationRidership {
         guard let demand = stationDemand(of: id) else { return StationRidership(flow: nil, pairs: []) }
+        let civic = days == nil ? civicRiders(at: id) : []
         let outbound = days?[id] ?? dailyDemands(from: id)
         var entries = Array(repeating: Int64(0), count: 24)
         var exits = entries
@@ -304,7 +325,7 @@ extension GameWorld {
             }
         }
         guard entries.allSatisfy({ $0 == 0 }), exits.allSatisfy({ $0 == 0 }) else {
-            return StationRidership(flow: StationFlow(entries: entries, exits: exits, isShape: false), pairs: pairs)
+            return StationRidership(flow: StationFlow(entries: entries, exits: exits, isShape: false), pairs: pairs, civic: civic)
         }
         // B4 of the #911–#944 review: today's hours, as GameCore shares a
         // pair's trips (`hourly(_:from:to:weekend:tidal:)`): a weekend or
@@ -316,7 +337,7 @@ extension GameWorld {
             exits: Self.shared(demand.dailyTrips, by: demand.arrivalShape(tidal: tide), tidal: tidalDemand, weekend: weekend),
             isShape: true
         )
-        return StationRidership(flow: shape, pairs: pairs)
+        return StationRidership(flow: shape, pairs: pairs, civic: civic)
     }
 
     /// The trips that start and end at station `id` in each hour (see

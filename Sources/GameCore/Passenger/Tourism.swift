@@ -215,6 +215,11 @@ struct TouristFlows: Sendable {
     struct Pair: Sendable {
         var outbound: Int64 = 0
         var back: Int64 = 0
+        /// Decision 533: the riders of the company's schools and
+        /// hospitals, already shared among the 24 hours (empty for none).
+        var hours: [Int64] = []
+
+        var total: Int64 { outbound + back + hours.reduce(0, +) }
     }
 
     var pairs: [StationID: [StationID: Pair]] = [:]
@@ -222,8 +227,7 @@ struct TouristFlows: Sendable {
     var isEmpty: Bool { pairs.isEmpty }
 
     func trips(from origin: StationID, to destination: StationID) -> Int64 {
-        guard let pair = pairs[origin]?[destination] else { return 0 }
-        return pair.outbound + pair.back
+        pairs[origin]?[destination]?.total ?? 0
     }
 
     /// The pair's trips in each hour: the outbound by the scenic arrival
@@ -232,7 +236,8 @@ struct TouristFlows: Sendable {
         guard let pair = pairs[origin]?[destination] else { return Array(repeating: 0, count: 24) }
         let out = GameWorld.apportion(pair.outbound, by: Self.weights(arrival: true))
         let back = GameWorld.apportion(pair.back, by: Self.weights(arrival: false))
-        return zip(out, back).map { $0 + $1 }
+        let tourists = zip(out, back).map { $0 + $1 }
+        return pair.hours.isEmpty ? tourists : zip(tourists, pair.hours).map { $0 + $1 }
     }
 
     private static func weights(arrival: Bool) -> [Int64] {
@@ -244,6 +249,13 @@ struct TouristFlows: Sendable {
         var pair = pairs[origin]?[destination] ?? Pair()
         pair.outbound += outbound
         pair.back += back
+        pairs[origin, default: [:]][destination] = pair
+    }
+
+    /// Adds riders already shared among the 24 hours (decision 533).
+    mutating func add(hours: [Int64], from origin: StationID, to destination: StationID) {
+        var pair = pairs[origin]?[destination] ?? Pair()
+        pair.hours = pair.hours.isEmpty ? hours : zip(pair.hours, hours).map { $0 + $1 }
         pairs[origin, default: [:]][destination] = pair
     }
 }
@@ -733,11 +745,22 @@ extension GameWorld {
 
     /// Today's tourist trips as the passenger model reaches them now (an
     /// empty set without tourism).
+    /// Since decision 533 with the riders of the company's schools and
+    /// hospitals too (``passengerExtraFlows(onDay:reaches:)``).
     func currentTouristFlows() -> TouristFlows {
-        guard tourism != nil else { return TouristFlows() }
+        guard tourism != nil || !civicRiderBuildings.isEmpty else { return TouristFlows() }
         let world = self
         let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
-        return world.touristFlows(onDay: dayIndex(of: clock.now)) { world.reaches(from: $0, to: $1, graph: graph) }.flows
+        return world.passengerExtraFlows(onDay: dayIndex(of: clock.now)) { world.reaches(from: $0, to: $1, graph: graph) }
+    }
+
+    /// The trips the passenger plan adds to the stations' own on game day
+    /// `day`: the tourists' (decision 174, none without tourism) and the
+    /// riders of the company's schools and hospitals (decision 533).
+    func passengerExtraFlows(onDay day: Int64, reaches: (StationID, StationID) -> Bool) -> TouristFlows {
+        var flows = tourism == nil ? TouristFlows() : touristFlows(onDay: day, reaches: reaches).flows
+        addCivicFlows(onDay: day, to: &flows, reaches: reaches)
+        return flows
     }
 
     // MARK: - Midnight
