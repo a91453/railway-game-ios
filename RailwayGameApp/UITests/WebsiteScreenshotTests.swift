@@ -206,14 +206,11 @@ final class WebsiteScreenshotTests: XCTestCase {
             }
         }
         settle()
-        // West to the middle, by a drag begun clear of the stations (a
-        // hold on one opens its panel); the zoom closes in on the middle.
-        guard let point = west() else { return XCTFail("The scene has stations") }
-        let origin = map.coordinate(withNormalizedOffset: .zero)
-        let start = origin.withOffset(CGVector(dx: point.x, dy: point.y + 140))
-        let end = origin.withOffset(CGVector(dx: map.frame.width / 2, dy: map.frame.height / 2 + 140))
-        start.press(forDuration: 0.1, thenDragTo: end)
-        settle()
+        // Zoom in first (the badges are drawn only at full detail), then
+        // drag West to the middle; the zoom does not keep a point in place,
+        // so the drag comes after it and reads West again. The drag starts
+        // between the side rail and the stations (a hold on a station opens
+        // its panel) and is slow, so the map does not coast past.
         let zoomIn = app.buttons[english ? "Zoom in" : "放大"]
         XCTAssertTrue(zoomIn.appears(within: 5), "The zoom buttons show")
         for _ in 0..<3 where zoomIn.isEnabled {
@@ -222,7 +219,21 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle(seconds: 1)
         }
         settle()
+        guard let point = west() else { return XCTFail("The scene has stations") }
+        let middle = CGPoint(x: map.frame.width / 2, y: map.frame.height / 2)
+        let shift = CGVector(dx: middle.x - point.x, dy: middle.y - point.y)
+        let from = CGVector(dx: middle.x - shift.dx / 2, dy: middle.y + 120 - shift.dy / 2)
+        let origin = map.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(from).press(
+            forDuration: 0.1,
+            thenDragTo: origin.withOffset(CGVector(dx: from.dx + shift.dx, dy: from.dy + shift.dy)),
+            withVelocity: .slow,
+            thenHoldForDuration: 0.3)
+        settle()
         keep("station-tier-mark-\(english ? "en" : "zh")", app)
+        if let moved = west() {
+            XCTAssertLessThan(abs(moved.x - middle.x), map.frame.width / 4, "West is near the middle (\(moved))")
+        }
     }
 
     private func fullDaysShot(english: Bool) {
