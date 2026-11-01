@@ -3,8 +3,8 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// 103.1 (TRI3D): on a real-world map's slopes the 3D map showed big
-/// triangles of paving beside the track. A city lot the real track
+/// 103.1 and 104.1 (TRI3D): on a real-world map's slopes the 3D map
+/// showed big triangles of paving beside the track (濁水, 竹中). A city lot the real track
 /// crosses gets a plaza, and an open lot a field or a park, each a square
 /// of the 64 m cell; they were laid flat at the lot's middle, while the
 /// ground under them is drawn as the cell's two sloping triangles, so the
