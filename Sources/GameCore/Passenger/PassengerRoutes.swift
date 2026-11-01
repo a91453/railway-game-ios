@@ -871,7 +871,9 @@ struct PassengerRouteSearches {
     /// At most this many banned searches are kept.
     let searchLimit: Int
     /// The banned searches kept hold at most this many labels, but for
-    /// the one asked last.
+    /// the one asked last. 200,000 since 派工單 PLANDAY (400,000 before),
+    /// as each label now also keeps its history and order node: about the
+    /// memory the old budget took.
     let labelBudget: Int
     private var origin: StationID?
     private var unbanned: PassengerRouteSearch?
@@ -886,7 +888,7 @@ struct PassengerRouteSearches {
     /// The labels of the banned searches kept.
     private var held = 0
 
-    init(graph: PassengerRouteGraph, searchLimit: Int = 512, labelBudget: Int = 400_000) {
+    init(graph: PassengerRouteGraph, searchLimit: Int = 512, labelBudget: Int = 200_000) {
         self.graph = graph
         self.searchLimit = max(1, searchLimit)
         self.labelBudget = max(0, labelBudget)
