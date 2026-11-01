@@ -62,7 +62,7 @@ final class TraceCostReportTests: XCTestCase {
             }
             var times: [Double] = []
             var preview: NetworkPreview?
-            for _ in 0..<3 {
+            for _ in 0..<5 {
                 let clock = ContinuousClock.now
                 preview = session.tracePreview(from: start, to: end)?.0
                 let elapsed = ContinuousClock.now - clock
@@ -90,10 +90,32 @@ final class TraceCostReportTests: XCTestCase {
                 clock = ContinuousClock.now
                 _ = session.tracePlan(from: start, to: end)
                 print("TRACE_COST   tracePlan \(ContinuousClock.now - clock)")
+                if let plan {
+                    let built = Array(plan.stretches.prefix(plan.buildable))
+                    clock = ContinuousClock.now
+                    let decided = session.tracedDouble(built)
+                    print("TRACE_COST   tracedDouble \(ContinuousClock.now - clock) \(decided)")
+                    clock = ContinuousClock.now
+                    _ = session.tracedSaleLine(from: start, to: end)
+                    print("TRACE_COST   tracedSaleLine \(ContinuousClock.now - clock)")
+                    if let traced = plan.built {
+                        clock = ContinuousClock.now
+                        let cleared = session.world.placedBuildings(clearedIn: traced)
+                        print("TRACE_COST   placedBuildings(clearedIn:) \(ContinuousClock.now - clock) \(cleared.count)")
+                    }
+                    if decided.double, plan.existing.isEmpty, !built.isEmpty {
+                        clock = ContinuousClock.now
+                        let reused = session.tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped, traced: plan)
+                        print("TRACE_COST   tracedDoublePlan reusing \(ContinuousClock.now - clock) \((try? reused.get()) != nil)")
+                        clock = ContinuousClock.now
+                        _ = session.tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped)
+                        print("TRACE_COST   tracedDoublePlan afresh \(ContinuousClock.now - clock)")
+                    }
+                }
             }
             print(String(
                 format: "TRACE_COST %@→%@ double=%@: median %.0f ms (min %.0f, max %.0f); %d stretches, %d buildable, %d existing runs, %d m, cost %@, problem %@",
-                a, b, "\(preview?.tracedDouble ?? false || !(preview?.crossovers.isEmpty ?? true))", times[1], times[0], times[2],
+                a, b, "\(preview?.tracedDouble ?? false || !(preview?.crossovers.isEmpty ?? true))", times[2], times[0], times[4],
                 plan?.stretches.count ?? 0, plan?.buildable ?? 0, plan?.existing.count ?? 0,
                 Int((preview?.length ?? 0) / Int64(WorldCoordinate.unitsPerMetre)),
                 "\(preview?.cost.map { "\($0.amount)" } ?? "nil")", preview?.problem ?? preview?.traceNote ?? "nil"

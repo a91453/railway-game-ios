@@ -171,25 +171,33 @@ extension TraceOverlap {
             }
         }
 
-        /// ``WorldPath/nearest(_:)``: the same segments in the same order,
-        /// passing over a piece whose box lies farther than the nearest
-        /// found so far (by more than a unit, against rounding), as
-        /// none of its segments could be nearer.
+        /// ``WorldPath/nearest(_:)``: the nearest segment, the first of
+        /// those as near. The pieces are looked at nearest first, passing
+        /// over one whose box lies farther than the nearest found so far
+        /// (by more than a unit, against rounding), as none of its
+        /// segments could be nearer.
         func nearest(_ point: WorldVector) -> (along: Double, away: Double) {
             let points = way.points, distances = way.distances
-            var best = (along: 0.0, away: Double.infinity)
-            for piece in pieces {
+            let order = pieces.indices.map { index -> (Double, Int) in
+                let piece = pieces[index]
                 let dx = max(piece.minX - point.x, 0, point.x - piece.maxX)
                 let dy = max(piece.minY - point.y, 0, point.y - piece.maxY)
-                guard (dx * dx + dy * dy).squareRoot() - 1 <= best.away else { continue }
-                for index in piece.first..<min(piece.first + Self.chunk, points.count - 1) {
+                return ((dx * dx + dy * dy).squareRoot(), index)
+            }.sorted { $0 < $1 }
+            var best = (along: 0.0, away: Double.infinity)
+            var bestIndex = Int.max
+            for (low, piece) in order {
+                guard low - 1 <= best.away else { break }
+                let first = pieces[piece].first
+                for index in first..<min(first + Self.chunk, points.count - 1) {
                     let a = points[index], b = points[index + 1]
                     let along = b - a
                     let squared = along.dot(along)
                     let t = squared > 0 ? max(0, min(1, (point - a).dot(along) / squared)) : 0
                     let away = (a + along * t - point).length
-                    if away < best.away {
+                    if away < best.away || (away == best.away && index < bestIndex) {
                         best = (distances[index] + t * (distances[index + 1] - distances[index]), away)
+                        bestIndex = index
                     }
                 }
             }
