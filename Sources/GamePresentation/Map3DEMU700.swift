@@ -193,7 +193,7 @@ private struct EMU700Recipe {
             }
             for sign:Float in [-1,1] {
                 kit.beam(.init(bogie-1.3,0.53,sign*0.84),.init(bogie+1.3,0.53,sign*0.84),0.17,dark)
-                for xx:Float in [-0.7,0.7] {cylinder(bogie+xx,0.69,sign*0.72,radius:0.19,height:0.17,color:rubber,sides:far ? 4 : 12)}
+                for xx:Float in [-0.7,0.7] {cylinder(bogie+xx,0.69,sign*0.72,radius:0.19,height:0.29,color:rubber,sides:far ? 4 : 12)}
             }
             kit.beam(.init(bogie,0.59,-0.86),.init(bogie,0.59,0.86),0.2,dark)
         }
@@ -269,6 +269,6 @@ private struct EMU700Recipe {
         }
         // Role equipment volumes are simplified; do not imply a full BOM.
         let boxes:[Float]=role == .et ? [-3.7,-1.6,1.0,3.4] : (role == .ep ? [-3.7,-0.8,2.3] : [-3.6,-1.1,1.5,3.5])
-        for x in boxes {kit.box(x,0.48,0,1.35,1.60,0.47,steel)}
+        for x in boxes {kit.box(x,0.48,0,1.35,1.60,0.50,steel)}
     }
 }
