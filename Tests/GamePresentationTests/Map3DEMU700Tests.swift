@@ -8,7 +8,7 @@ final class Map3DEMU700Tests: XCTestCase {
             let near = Map3DEMU700.model(role), far = Map3DEMU700.model(role, far: true)
             XCTAssertLessThanOrEqual(near.triangleCount, 15_000)
             XCTAssertLessThanOrEqual(far.triangleCount, 15_000)
-            XCTAssertGreaterThan(near.triangleCount, far.triangleCount)
+            XCTAssertLessThan(far.triangleCount, near.triangleCount / 2)
             XCTAssertEqual(near.minimum.z, 0, accuracy: 0.0001)
             XCTAssertEqual(far.minimum.z, 0, accuracy: 0.0001)
             XCTAssertEqual(near.minimum.x, far.minimum.x, accuracy: 0.001)
