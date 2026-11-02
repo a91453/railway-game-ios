@@ -173,7 +173,7 @@ private struct EMU700Recipe {
         let a=(0..<n).map { i -> Map3DPoint in let t=Float(i)*2*Float.pi/Float(n);return .init(x+0.43*cosf(t),0.43+0.43*sinf(t),z-0.065) }
         prism(a,a.map {$0 + .init(0,0,0.13)},rubber)
     }
-    mutating func endDetails(_ sign:Float,_ junction:Bool) {
+    mutating func endDetails(_ sign:Float) {
         let x=sign*(end-0.29)
         kit.box(x,1.32,0,0.04,0.95,1.75,dark)
         kit.box(x+sign*0.025,1.36,0,0.04,0.74,1.64,steel)
@@ -182,7 +182,7 @@ private struct EMU700Recipe {
         kit.box(x+sign*0.10,3.11,0,0.20,1.28,0.10,rubber)
         // Central EM-EM interface and ordinary car ends share semi-permanent
         // couplers; additional protected end equipment remains a source gap.
-        kit.box(sign*(end-0.12),0.77,0,0.24,junction ? 0.28 : 0.23,0.16,dark)
+        kit.box(sign*(end-0.12),0.77,0,0.24,0.23,0.16,dark)
     }
     mutating func details() {
         kit.box(0,0.98,0,18.9,2.50,0.14,dark)
@@ -229,8 +229,8 @@ private struct EMU700Recipe {
                 for h:Float in [1.38,1.46,1.54] {sidePanel(-0.8,h,17.2,0.014,sign,steel)}
             }
         }
-        endDetails(-1,role == .em)
-        if !cab {endDetails(1,false)}
+        endDetails(-1)
+        if !cab {endDetails(1)}
         if cab {
             frontPanel(2.34,0,2.47,0.89,dark)
             frontPanel(2.40,0,2.33,0.76,glass)
