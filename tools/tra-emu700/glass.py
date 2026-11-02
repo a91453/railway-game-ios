@@ -70,7 +70,10 @@ def equipment(t,role):
   ray=hits(t[support],np.array([center[0],0,3.71]),np.array([0.,0,-1.]))
   assert len(ray) and min(ray)<.012,'AC roof contact'
  high=t.reshape(-1,3);high=high[high[:,2]>4.1]
- if role=='ep':assert len(high)>0 and high[:,0].min()>6.9 and high[:,0].max()<8.7,'pantograph absent or wrong station'
+ if role=='ep':
+  assert len(high)>0 and high[:,0].min()>7.1 and high[:,0].max()<8.9,'pantograph absent or wrong station'
+  knee=high[(high[:,2]>4.40)&(high[:,2]<4.46)];top=high[high[:,2]>4.91]
+  assert len(knee) and len(top) and knee[:,0].max()>8.7 and abs(top[:,0].mean()-7.75)<.05,'pantograph reversed' 
  else:assert not len(high),'unexpected pantograph'
  return ac
 
@@ -109,6 +112,10 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
   broken=t.copy()
   for g in pant:broken[g,:,0]-=3
   reject(lambda:equipment(broken,role))
+  reversed_pant=t.copy()
+  for g in pant:
+   reversed_pant[g,:,0]=16-reversed_pant[g,:,0];reversed_pant[g,:,1]*=-1
+  reject(lambda:equipment(reversed_pant,role))
  ids=glazing(t,f);groups=components(t);tested=[]
  for g in groups:
   chosen=np.intersect1d(g,ids)
