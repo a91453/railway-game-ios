@@ -199,7 +199,9 @@ private struct EMU700Recipe {
         }
         for sign:Float in [-1,1] {
             for door:Float in [-6.4,0,6.4] {
-                sidePanel(door,1.184,1.38,2.02,sign,steel)
+                // Recess the backing plate: a coplanar full-height plate would
+                // cover the segmented leaf paint in the actual renderer.
+                kit.box(door,1.184,sign*1.4445,1.38,0.012,2.02,steel)
                 for dx:Float in [-0.345,0.345] {
                     // Paint belongs to each closed door panel, not a floating
                     // stripe over an unpainted door or a duplicated shell.
