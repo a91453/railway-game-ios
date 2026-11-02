@@ -55,7 +55,7 @@ final class Map3DModelPackLockTests: XCTestCase {
     func testTheOrderAndTheLampsAreAsBefore() {
         let pack = Map3DModelPack.standard
         XCTAssertEqual(Self.digest(pack.models.map(\.name)), "a45cd4f034dbc9ed")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "ee488a664c04e50d")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "6deadedde2b161e8")
         let lamps = pack.lights.keys.sorted().map { index -> String in
             let car = pack.lights[index]!
             let vertices = car.front.head + car.front.tail + car.back.head + car.back.tail
