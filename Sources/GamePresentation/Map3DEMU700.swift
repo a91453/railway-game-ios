@@ -168,7 +168,7 @@ private struct EMU700Recipe {
         prism(p,p.map{$0 + .init(0,height,0)},color)
     }
     mutating func wheel(_ x:Float,_ z:Float) {
-        let n=far ? 12 : 20
+        let n=far ? 8 : 20
         let a=(0..<n).map { i -> Map3DPoint in let t=Float(i)*2*Float.pi/Float(n);return .init(x+0.43*cosf(t),0.43+0.43*sinf(t),z-0.065) }
         prism(a,a.map {$0 + .init(0,0,0.13)},rubber)
     }
@@ -192,7 +192,7 @@ private struct EMU700Recipe {
             }
             for sign:Float in [-1,1] {
                 kit.beam(.init(bogie-1.3,0.53,sign*0.84),.init(bogie+1.3,0.53,sign*0.84),0.17,dark)
-                for xx:Float in [-0.7,0.7] {cylinder(bogie+xx,0.69,sign*0.72,radius:0.19,height:0.17,color:rubber,sides:far ? 6 : 12)}
+                for xx:Float in [-0.7,0.7] {cylinder(bogie+xx,0.69,sign*0.72,radius:0.19,height:0.17,color:rubber,sides:far ? 4 : 12)}
             }
             kit.beam(.init(bogie,0.59,-0.86),.init(bogie,0.59,0.86),0.2,dark)
         }
@@ -213,7 +213,7 @@ private struct EMU700Recipe {
             }
             if role == .ep || (role == .et && sign<0) {
                 let x:Float=role == .ep ? 8.45 : -8.45
-                let n=far ? 12 : 20
+                let n=far ? 8 : 20
                 let p=(0..<n).map { i -> Map3DPoint in
                     let t=Float(i)*2*Float.pi/Float(n)
                     return .init(x+0.18*cosf(t),2.56+0.18*sinf(t),sign*1.449)
