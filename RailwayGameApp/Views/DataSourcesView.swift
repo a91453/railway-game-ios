@@ -64,6 +64,13 @@ struct DataSourcesView: View {
                         Text(verbatim: language.text("Files that could not be read", "無法讀取的檔案"))
                     }
                 }
+                Section {
+                    Text(verbatim: language.text(
+                        "© 2026 a91453. All rights reserved.",
+                        "© 2026 a91453 著作權所有"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Data Sources")
