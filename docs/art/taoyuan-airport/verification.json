@@ -1,5 +1,5 @@
 {
-  "producer": "a38118a1e4102042e0d5bb1a5e3fc410f37d006a",
+  "producer": "e1139b62881d7f6e0af78622dfe297f887b36420",
   "platform": "Linux, Swift6.4 warnings-as-errors; Chromium WebGL; Blender4.3.2",
   "technical_checks": {
     "geometry": {
@@ -57,5 +57,6 @@
     "user acceptance of this producer",
     "operational identity propagation, operating lamps/LOD motion and actual use",
     "device Metal/performance/animation"
-  ]
+  ],
+  "manifest_lod_pairs": "VERIFIED; 18 units and 4 assemblies explicitly paired by producer pipeline"
 }

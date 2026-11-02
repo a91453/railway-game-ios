@@ -1,11 +1,11 @@
 {
-  "producer": "a38118a1e4102042e0d5bb1a5e3fc410f37d006a",
+  "producer": "e1139b62881d7f6e0af78622dfe297f887b36420",
   "toolchain": "Swift6.4 official signed toolchain, Node24.19, Chromium, Blender4.3.2",
   "files": {
     "Sources/GamePresentation/Map3DTaoyuanAirport.swift": "de51798fcc62691e1cf7cd1fa2605dbfe9d1cdc4c4af421cd4507cf92efb5d04",
     "Sources/GamePresentation/Map3DModels.swift": "210b7460dad9a212ac39366deb82bf25a8651a5c4a80389a1040542b531546a7",
     "tools/taoyuan-airport/assembly.json": "3e6033cfde6e615084488237370ca72b66444f0de1f94aa176facf0e950f8f93",
-    "tools/taoyuan-airport/rebuild.sh": "ef817f1be678264e24d65309572cc441ff9f6cecb74681e6e26ea993c76fa912",
+    "tools/taoyuan-airport/rebuild.sh": "7a58ee47ff993c1162af6299a1964bc92d74ea908333d3bba8a45e204370660f",
     "tools/taoyuan-airport/render.sh": "04d8819844ffff0d5b796e7d48b7a7c75ef2d5c54d3821a7d8a93ee3d6c9f5ad",
     "tools/taoyuan-airport/sheets.py": "f872a4432a6718b9345b7eff0a3c4de062a42ccb7d5c29ade6fa6cdaf24bbc0c",
     "tools/taoyuan-airport/common-scale.mjs": "ca8a6bdae430758bb55eb68b7b978681d4dd8024229d895a23832b0173269527",
