@@ -1,0 +1,186 @@
+{
+  "assemblies": [
+    {
+      "id": "taoyuan-airport-1000-formation",
+      "placements": [
+        {
+          "unit": "taoyuan-airport-dmc1",
+          "translation": [
+            30.64,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-mc1",
+          "translation": [
+            10.125,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-mc2",
+          "translation": [
+            -10.125,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-dmc2",
+          "translation": [
+            -30.64,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    },
+    {
+      "id": "taoyuan-airport-1000-formation-far",
+      "placements": [
+        {
+          "unit": "taoyuan-airport-dmc1-far",
+          "translation": [
+            30.64,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-mc1-far",
+          "translation": [
+            10.125,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-mc2-far",
+          "translation": [
+            -10.125,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-dmc2-far",
+          "translation": [
+            -30.64,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    },
+    {
+      "id": "taoyuan-airport-2000-formation",
+      "placements": [
+        {
+          "unit": "taoyuan-airport-dme1",
+          "translation": [
+            40.765,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-me1",
+          "translation": [
+            20.25,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-me3",
+          "translation": [
+            0.0,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-me4",
+          "translation": [
+            -20.25,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-dmb",
+          "translation": [
+            -40.765,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    },
+    {
+      "id": "taoyuan-airport-2000-formation-far",
+      "placements": [
+        {
+          "unit": "taoyuan-airport-dme1-far",
+          "translation": [
+            40.765,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-me1-far",
+          "translation": [
+            20.25,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-me3-far",
+          "translation": [
+            0.0,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-me4-far",
+          "translation": [
+            -20.25,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "taoyuan-airport-dmb-far",
+          "translation": [
+            -40.765,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    }
+  ]
+}

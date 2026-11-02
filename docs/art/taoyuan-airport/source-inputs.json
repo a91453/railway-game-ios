@@ -1,0 +1,22 @@
+{
+  "producer": "e1139b62881d7f6e0af78622dfe297f887b36420",
+  "toolchain": "Swift6.4 official signed toolchain, Node24.19, Chromium, Blender4.3.2",
+  "files": {
+    "Sources/GamePresentation/Map3DTaoyuanAirport.swift": "de51798fcc62691e1cf7cd1fa2605dbfe9d1cdc4c4af421cd4507cf92efb5d04",
+    "Sources/GamePresentation/Map3DModels.swift": "210b7460dad9a212ac39366deb82bf25a8651a5c4a80389a1040542b531546a7",
+    "tools/taoyuan-airport/assembly.json": "3e6033cfde6e615084488237370ca72b66444f0de1f94aa176facf0e950f8f93",
+    "tools/taoyuan-airport/rebuild.sh": "7a58ee47ff993c1162af6299a1964bc92d74ea908333d3bba8a45e204370660f",
+    "tools/taoyuan-airport/render.sh": "04d8819844ffff0d5b796e7d48b7a7c75ef2d5c54d3821a7d8a93ee3d6c9f5ad",
+    "tools/taoyuan-airport/sheets.py": "f872a4432a6718b9345b7eff0a3c4de062a42ccb7d5c29ade6fa6cdaf24bbc0c",
+    "tools/taoyuan-airport/common-scale.mjs": "ca8a6bdae430758bb55eb68b7b978681d4dd8024229d895a23832b0173269527",
+    "tools/train-models/export.swift": "8a3fedcd7824632f1a98c10595d7c75e644fbdf6de2d4664d67075021edd08f6",
+    "tools/train-models/assemble.mjs": "2175152a80038888e812b8eb11b8fe149bb1ba061385fd12cb5af262100dbf9d",
+    "tools/train-models/package.mjs": "186a3dbacbda52ab383d9fae3a4d118d462d05053b6f6b75fa927be1a0df7c4f",
+    "tools/train-models/render.mjs": "6a8c5924cb2c4a71a1e94a513ef6ce726d8d89eac967644a27a8ec7ea3ce0205",
+    "tools/train-models/renderer.js": "a26942a43464f1c898db6c81abd8f71a7608ddcdf64715b296ede51b9e630e7e",
+    "tools/train-models/inspect.mjs": "5b5d8fe00bc8b64935ab250f975b21a187d9822e9f372a4326ddf720f2bc2659",
+    "tools/train-models/deliver.py": "2f8eba0b81db592e8926a90a3befb7d169dae7a7aecdcf1d3d03013e0aaa41d6",
+    "docs/art/taoyuan-airport/source-record.json": "1fcf4b3ee9a5523547a22fc282cd9724caa68c505fd0dd2982101d8d3c75eeda"
+  },
+  "scope": "All tracked producer source fixed by commit. This explicit subset includes geometry, assembly, renderer, viewer, source and curation inputs; no private raw photo in generated geometry or viewer."
+}

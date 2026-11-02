@@ -1,0 +1,62 @@
+{
+  "producer": "e1139b62881d7f6e0af78622dfe297f887b36420",
+  "platform": "Linux, Swift6.4 warnings-as-errors; Chromium WebGL; Blender4.3.2",
+  "technical_checks": {
+    "geometry": {
+      "status": "VERIFIED",
+      "models": 22,
+      "sha256": "a76fe6b08ba541f4dfdce5cc80157a83cc06c112caeff0125b9cd605c9b57e77"
+    },
+    "specialized": {
+      "status": "VERIFIED",
+      "models": 18,
+      "sha256": "7aa26f97a5f095c5be8d0edbbb94a787ff76a6cbbece23471eaffb32e280ea93"
+    },
+    "glb_import": {
+      "status": "VERIFIED",
+      "models": 22,
+      "sha256": "62ecdb9757f1c8987a6cd52ec7705445f5d574a96706d2bd928de0093cb56fd7"
+    }
+  },
+  "swift_tests": {
+    "model_registration_tests": {
+      "status": "VERIFIED",
+      "count": 8,
+      "note": "same registration producer geometry prior to final shape-only refinements"
+    },
+    "final_role_tests": {
+      "status": "VERIFIED",
+      "count": 2,
+      "file": "Map3DTaoyuanAirportTests"
+    }
+  },
+  "independent_swift_assembly": {
+    "status": "VERIFIED",
+    "vertices": 136668,
+    "max_error_m": 7.6293945e-06,
+    "colour": "all equal"
+  },
+  "existing_models": {
+    "status": "VERIFIED",
+    "count": 892,
+    "payload": "all byte-identical",
+    "vertex_fields": "all FNV-1a identical",
+    "report": "preservation.json"
+  },
+  "four_states": {
+    "asset": "UNVERIFIED",
+    "appearance": "UNVERIFIED",
+    "integration": "UNVERIFIED",
+    "device": "UNVERIFIED"
+  },
+  "remaining_unverified": [
+    "file:// navigation blocked by browser administration",
+    "exact representative consists/date in 2026 service",
+    "orthogonal roof/underside and reverse-side equipment",
+    "engineering-level/full-surface collision and every conceivable duplicate-component defect",
+    "user acceptance of this producer",
+    "operational identity propagation, operating lamps/LOD motion and actual use",
+    "device Metal/performance/animation"
+  ],
+  "manifest_lod_pairs": "VERIFIED; 18 units and 4 assemblies explicitly paired by producer pipeline"
+}

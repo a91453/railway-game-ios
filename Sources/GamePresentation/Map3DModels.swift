@@ -117,6 +117,9 @@ public struct Map3DModelPack: Sendable {
     /// models are. Only the tools and the model hashes read them.
     init(studiesBaked baked: Bool) {
         var models: [Model] = []
+        for role in Map3DTaoyuanAirport.Role.allCases {
+            for far in [false, true] { models.append(Map3DTaoyuanAirport.model(role, far: far)) }
+        }
         // Independent R100 liveries and the Breezy Blue coaches; decision 541
         // runs the blue ones as the BLUE set (`set-BLUE…`).
         for livery in Map3DR100.Livery.allCases {
