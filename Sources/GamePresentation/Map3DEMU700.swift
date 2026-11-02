@@ -215,6 +215,7 @@ private struct EMU700Recipe {
                 }
                 if !far {
                     for edge:Float in [-0.685,0.685] {kit.box(door+edge,1.22,sign*1.460,0.020,0.010,1.96,dark)}
+                    kit.box(door,1.22,sign*1.460,1.38,0.010,0.020,dark)
                     kit.box(door,3.16,sign*1.460,1.38,0.010,0.020,dark)
                 }
                 sidePanel(door,1.22,0.025,1.92,sign,dark)
