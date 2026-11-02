@@ -1,0 +1,530 @@
+{
+  "producer": "42214527e0115fa612711bdea10c697e36959a05",
+  "previous_producer": "e1139b62881d7f6e0af78622dfe297f887b36420",
+  "previous_acceptance": "UNVERIFIED; true previous, not accepted",
+  "author_review": "All 20 sheets individually opened; downloaded real photos compared locally; not user acceptance",
+  "directions": [
+    "front",
+    "back",
+    "left",
+    "right",
+    "top",
+    "bottom",
+    "isometric"
+  ],
+  "states": [
+    "day",
+    "night",
+    "clay",
+    "silhouette"
+  ],
+  "comparison": {
+    "metres": true,
+    "same_camera_and_light": true,
+    "unit_extent": [
+      10.39,
+      1.6,
+      1.98
+    ],
+    "formation_extent": [
+      51.155,
+      1.6,
+      1.98
+    ],
+    "centre": [
+      0,
+      0,
+      1.98
+    ]
+  },
+  "components": [
+    {
+      "part": "cab section, sloping glazing, emergency door, upswept lamps",
+      "result": "已符合可見特徵；原廠曲率與燈內部仍合理簡化"
+    },
+    {
+      "part": "passenger/baggage door and window rhythm",
+      "result": "已符合；passenger 3 double doors per side; DMB 5 solid double doors, no saloon windows"
+    },
+    {
+      "part": "bogies, wheels and third-rail equipment",
+      "result": "八輪、官方軸位與共同軌面已符合；隱藏設備及集電靴細部合理簡化"
+    },
+    {
+      "part": "roof and underframe",
+      "result": "斜視支持主要配置；正交頂底、反側逐項設備資料不足"
+    },
+    {
+      "part": "near/far and complete formations",
+      "result": "尺度、端向、角色、主色界與設備分布已符合；遠景移除細接縫／通風柵細分"
+    },
+    {
+      "part": "night and operating lamps",
+      "result": "靜態日夜素材已查看；動態燈狀態與營運未驗"
+    }
+  ],
+  "models": [
+    {
+      "id": "taoyuan-airport-dmc1",
+      "triangles": 13752,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "7528aa3308f2b35aa12c5456265cae478c3ad51a6f663b184b1c194078070a40"
+    },
+    {
+      "id": "taoyuan-airport-dmc1-far",
+      "triangles": 6820,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "7647778bee57302b0dea273ea93ed9a98d3ef71def989873464821fe74bb164c"
+    },
+    {
+      "id": "taoyuan-airport-mc1",
+      "triangles": 9944,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "c9c1ec2b24dde695318978095b57243233b4c5273689d7a11089635607d8797e"
+    },
+    {
+      "id": "taoyuan-airport-mc1-far",
+      "triangles": 4576,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "147e632bc293e30b729a747f411678d3b1f34b7d8227e531872851d88e039742"
+    },
+    {
+      "id": "taoyuan-airport-mc2",
+      "triangles": 9944,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "6043a138aef6c309b63ad98b101bbe3aa01e358cdb0eefd90e900ed420ec3c68"
+    },
+    {
+      "id": "taoyuan-airport-mc2-far",
+      "triangles": 4576,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "92949956a40cb833633b68e40674b74cec7e307cbbf41e97950b839b63787a43"
+    },
+    {
+      "id": "taoyuan-airport-dmc2",
+      "triangles": 13752,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "0e83e9355e6814dd5565a95b3c22b5e194767120651e7b59821c200b9904a2cc"
+    },
+    {
+      "id": "taoyuan-airport-dmc2-far",
+      "triangles": 6820,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "43b3b842d73f9d505cbdffb61727783d6048548e5d89a469b69043319f7013d9"
+    },
+    {
+      "id": "taoyuan-airport-dme1",
+      "triangles": 13752,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "624f7696a81b05eea5d5dfc6b468da034f486057ec86a6c9dc7f7fd3a7cb8176"
+    },
+    {
+      "id": "taoyuan-airport-dme1-far",
+      "triangles": 6820,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "8a270e4d946cfb45edb0a7fd1eb239d4899c5863e29a37ffdf6954f009dbaf88"
+    },
+    {
+      "id": "taoyuan-airport-me1",
+      "triangles": 9944,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "323290e102174b7155a612ec3aad21abce8147fdf0b9cee85d4c6423c61345b3"
+    },
+    {
+      "id": "taoyuan-airport-me1-far",
+      "triangles": 4576,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "216e33db04903e326882ee0829bb16f485f8dfda82afd573ac902c9d60d6d26d"
+    },
+    {
+      "id": "taoyuan-airport-me3",
+      "triangles": 9764,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "730478ac1349c3ad1b4051a8466026766b9731ad730651b93683471f623467d8"
+    },
+    {
+      "id": "taoyuan-airport-me3-far",
+      "triangles": 4564,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "05ff88cdeb0d10b62d672560862fc46d0a04795137b1e6cc394cac9270b1a281"
+    },
+    {
+      "id": "taoyuan-airport-me4",
+      "triangles": 9944,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "1b52cc622fecba57f37fda349681bab7d70ec01d616804b57428ce8da9efd39f"
+    },
+    {
+      "id": "taoyuan-airport-me4-far",
+      "triangles": 4576,
+      "bounds": {
+        "minimum": [
+          -10.125,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          10.125,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "655374168863d51d83361864a036a177e6903bfd9ff7b47f15e7142d236dbaf4"
+    },
+    {
+      "id": "taoyuan-airport-dmb",
+      "triangles": 10572,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5499999523162842,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5499999523162842,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "df08e8c6f5914a796ebfed3bbc733f1fb9f47461415bab18d86d571017daec32"
+    },
+    {
+      "id": "taoyuan-airport-dmb-far",
+      "triangles": 5212,
+      "bounds": {
+        "minimum": [
+          -10.390000343322754,
+          -1.5500000715255737,
+          0
+        ],
+        "maximum": [
+          10.390000343322754,
+          1.5500000715255737,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "e23f1570aba104054e116b760bb2b29a1cccd401caceba4d994af7f1f6f481d3"
+    },
+    {
+      "id": "taoyuan-airport-1000-formation",
+      "triangles": 47392,
+      "bounds": {
+        "minimum": [
+          -41.029998779296875,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          41.029998779296875,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "96da6ca4d9b16771c026dadb575bf90159ee968a980c32edf6785b0766d3a7cb"
+    },
+    {
+      "id": "taoyuan-airport-1000-formation-far",
+      "triangles": 22792,
+      "bounds": {
+        "minimum": [
+          -41.029998779296875,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          41.029998779296875,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "6112257f316930b5458585e5c2034e75fdfff6ab92e2b63e946a6408e70bc18e"
+    },
+    {
+      "id": "taoyuan-airport-2000-formation",
+      "triangles": 53976,
+      "bounds": {
+        "minimum": [
+          -51.154998779296875,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          51.154998779296875,
+          1.5520000457763672,
+          3.926999807357788
+        ]
+      },
+      "native_sha256": "a7c6152118f7aff79a83b3296ca5cf5b83ef724a719b2ac604848cee20a8dc8d"
+    },
+    {
+      "id": "taoyuan-airport-2000-formation-far",
+      "triangles": 25748,
+      "bounds": {
+        "minimum": [
+          -51.154998779296875,
+          -1.5520000457763672,
+          0
+        ],
+        "maximum": [
+          51.154998779296875,
+          1.5520000457763672,
+          3.927000045776367
+        ]
+      },
+      "native_sha256": "e7415457af6cccdfd89e0087a2659b198bf83049a6cdd6d7e0add277ceb14351"
+    }
+  ],
+  "sheets": [
+    {
+      "file": "formation-1000.png",
+      "sha256": "ba391c0c6e6ba318f9afd0fcb92faf3b2fd2e2f14f4b803160ec3e11ede1de49"
+    },
+    {
+      "file": "formation-2000.png",
+      "sha256": "0a1fde962bd73e99444bc32d0ffa6e02291fa157b19396ba8a0d02f7703204cf"
+    },
+    {
+      "file": "taoyuan-airport-dmb-far.png",
+      "sha256": "74e533ba8be247afa30e8c4e88149fc7a1429c140c7273473b4dd683c0702239"
+    },
+    {
+      "file": "taoyuan-airport-dmb.png",
+      "sha256": "1f340c7cf25a956e7903feb24b1c8d3037849aa737824f1e92b2155ec6ebd98f"
+    },
+    {
+      "file": "taoyuan-airport-dmc1-far.png",
+      "sha256": "816f4a9215ddf992473c55164d3c3b075056806d08ed339e94901e13918e641f"
+    },
+    {
+      "file": "taoyuan-airport-dmc1.png",
+      "sha256": "4fa5eee7cd477cf9da9d357e8664c67b901c99ec4958d53632cc0cbd3b7ec9b8"
+    },
+    {
+      "file": "taoyuan-airport-dmc2-far.png",
+      "sha256": "e75692126b56ffd66029b93d3bdaabffcc38f16db44779a2e2742fa4ee570106"
+    },
+    {
+      "file": "taoyuan-airport-dmc2.png",
+      "sha256": "429ac8d1e87ea5bd38441b5c27e338f4c6aa4dbd57def2240d9a9912cf0b7fbf"
+    },
+    {
+      "file": "taoyuan-airport-dme1-far.png",
+      "sha256": "d72bb0b33a96372b5d7db9e7938a4c51c51295101ce92a3e73b779eae76adeb1"
+    },
+    {
+      "file": "taoyuan-airport-dme1.png",
+      "sha256": "b36cc01a7857524878cf863695f065ca4bce6e2cc177a5c5d5d17e20aa593ca1"
+    },
+    {
+      "file": "taoyuan-airport-mc1-far.png",
+      "sha256": "ffd06c440069978c517d0cfd9e1187eff541a258fdc4b4a17150f4018c947c7b"
+    },
+    {
+      "file": "taoyuan-airport-mc1.png",
+      "sha256": "9835dc77523818a282ae710990f0ce04002f161eb0c7c55c71f43a553dedcbb2"
+    },
+    {
+      "file": "taoyuan-airport-mc2-far.png",
+      "sha256": "81861e489ece890ae812155d5806ffee820747b46d6bcf374f2a240e5da23cf6"
+    },
+    {
+      "file": "taoyuan-airport-mc2.png",
+      "sha256": "9117f324e1dcd06f4f31b81973cfe3c3cde718871c344597d4d6d24ef76b2837"
+    },
+    {
+      "file": "taoyuan-airport-me1-far.png",
+      "sha256": "225171026d213844525b58e5b0caafd3af0e20f8f818b9bc16860b1663f73236"
+    },
+    {
+      "file": "taoyuan-airport-me1.png",
+      "sha256": "152a9ff7072999ee7ae60f16cbece221bfb0b057f82a5c615718738b345b12ea"
+    },
+    {
+      "file": "taoyuan-airport-me3-far.png",
+      "sha256": "cb969431f656ea37ae6aa10d12f3800ad3e0db05c2db9022754d8a726c181740"
+    },
+    {
+      "file": "taoyuan-airport-me3.png",
+      "sha256": "a58561da577b014b042488e55d2ae57d4c594f07435941cc18c5c66292a6f538"
+    },
+    {
+      "file": "taoyuan-airport-me4-far.png",
+      "sha256": "354af5d0d4b89277b036a32e56368081f0074bb92cd7797bdaaa2717e6f5a996"
+    },
+    {
+      "file": "taoyuan-airport-me4.png",
+      "sha256": "46a9233d200c9ea6c89b7b45464082d5add209a3be250f38fe7f4a96334dfd8c"
+    }
+  ],
+  "limits": [
+    "Visual display approximation, not engineering certification",
+    "Exact representative consist/date in 2026 not verified",
+    "Opposite-side equipment, orthogonal roof/underside and hidden fittings incomplete",
+    "No explicit producer appearance acceptance, operation or device verification"
+  ]
+}

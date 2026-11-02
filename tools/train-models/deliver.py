@@ -119,7 +119,13 @@ def deliver(run, spec, dest):
             'Older rounds retain PNG/README/source records; recover models by their producer commit. '
             'index.html is a self-contained WebGL inspector; its PNG download renders the current view. '
             'Selected reference previews are listed in manifest.json. No ZIP.\n')
-        subprocess.run(['node', str(Path(__file__).with_name('inspect.mjs')), str(staging), str(staging/'index.html')], check=True)
+        compression = spec.get('viewer_compression', 'none')
+        if compression not in ('none', 'gzip'):
+            raise ValueError('Unsupported viewer compression')
+        inspector = ['node', str(Path(__file__).with_name('inspect.mjs')), str(staging), str(staging/'index.html')]
+        if compression == 'gzip':
+            inspector.append('--gzip')
+        subprocess.run(inspector, check=True)
         paths = [p for p in staging.rglob('*') if p.is_file()]
         if any(p.stat().st_size > 50*1024*1024 for p in paths) or sum(p.stat().st_size for p in paths) > 200*1024*1024:
             raise ValueError('Final round including embedded viewer exceeds size limits')

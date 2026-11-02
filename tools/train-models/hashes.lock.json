@@ -3560,6 +3560,78 @@
     "set-BLUEFar-tail": {
       "hash": "51bde485e21d2f79",
       "triangles": 5478
+    },
+    "taoyuan-airport-dmb": {
+      "hash": "996a779bbba26623",
+      "triangles": 10572
+    },
+    "taoyuan-airport-dmb-far": {
+      "hash": "bbb214f2e96f6599",
+      "triangles": 5212
+    },
+    "taoyuan-airport-dmc1": {
+      "hash": "8d1446f10cced00e",
+      "triangles": 13752
+    },
+    "taoyuan-airport-dmc1-far": {
+      "hash": "f19aa818b5b8a07b",
+      "triangles": 6820
+    },
+    "taoyuan-airport-dmc2": {
+      "hash": "8d1446f10cced00e",
+      "triangles": 13752
+    },
+    "taoyuan-airport-dmc2-far": {
+      "hash": "f19aa818b5b8a07b",
+      "triangles": 6820
+    },
+    "taoyuan-airport-dme1": {
+      "hash": "d3bee14c72acb473",
+      "triangles": 13752
+    },
+    "taoyuan-airport-dme1-far": {
+      "hash": "9dfed6fedf528f5e",
+      "triangles": 6820
+    },
+    "taoyuan-airport-mc1": {
+      "hash": "897549d74c1cf146",
+      "triangles": 9944
+    },
+    "taoyuan-airport-mc1-far": {
+      "hash": "4de7a7bc101a3118",
+      "triangles": 4576
+    },
+    "taoyuan-airport-mc2": {
+      "hash": "897549d74c1cf146",
+      "triangles": 9944
+    },
+    "taoyuan-airport-mc2-far": {
+      "hash": "4de7a7bc101a3118",
+      "triangles": 4576
+    },
+    "taoyuan-airport-me1": {
+      "hash": "6d5c07ec72166a8f",
+      "triangles": 9944
+    },
+    "taoyuan-airport-me1-far": {
+      "hash": "21472fd9524381bd",
+      "triangles": 4576
+    },
+    "taoyuan-airport-me3": {
+      "hash": "6a3e27f85e20eedb",
+      "triangles": 9764
+    },
+    "taoyuan-airport-me3-far": {
+      "hash": "2c9ad8000ab96fc7",
+      "triangles": 4564
+    },
+    "taoyuan-airport-me4": {
+      "hash": "6d5c07ec72166a8f",
+      "triangles": 9944
+    },
+    "taoyuan-airport-me4-far": {
+      "hash": "21472fd9524381bd",
+      "triangles": 4576
     }
   }
 }

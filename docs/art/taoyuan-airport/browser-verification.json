@@ -1,0 +1,173 @@
+{
+  "status": "VERIFIED",
+  "transport": "loopback HTTP",
+  "models": [
+    {
+      "id": "taoyuan-airport-dmc1",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-dmc1-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-mc1",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-mc1-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-mc2",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-mc2-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-dmc2",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-dmc2-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-dme1",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-dme1-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-me1",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-me1-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-me3",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-me3-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-me4",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-me4-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-dmb",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-dmb-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-1000-formation",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-1000-formation-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-2000-formation",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    },
+    {
+      "id": "taoyuan-airport-2000-formation-far",
+      "views": 7,
+      "lights": 2,
+      "native_glb_download_bytes": true,
+      "png_download": true
+    }
+  ],
+  "orbit_zoom_changed_pixels": true,
+  "mobile_width": 390,
+  "file_protocol": {
+    "status": "UNVERIFIED",
+    "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+  },
+  "errors": [],
+  "external_requests": 0,
+  "limits": [
+    "Browser WebGL only; no device Metal, animation or appearance acceptance."
+  ],
+  "producer": "42214527e0115fa612711bdea10c697e36959a05",
+  "viewer_sha256": "3442d886611692905bbfefbb3598a1ddcdb16d4b3e81898bbc33f82c29e0ba73"
+}

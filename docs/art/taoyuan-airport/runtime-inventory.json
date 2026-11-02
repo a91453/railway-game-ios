@@ -1,0 +1,4571 @@
+{
+  "device_peak_memory" : "UNVERIFIED; byte counts are vertex buffers, not total process or measured Metal memory",
+  "operating_added_cars" : 0,
+  "producer" : "42214527e0115fa612711bdea10c697e36959a05",
+  "standard" : {
+    "count" : 696,
+    "models" : [
+      {
+        "id" : "commuter-cab",
+        "vertex_bytes" : 268080,
+        "vertices" : 6702
+      },
+      {
+        "id" : "commuter-car",
+        "vertex_bytes" : 191040,
+        "vertices" : 4776
+      },
+      {
+        "id" : "express-cab",
+        "vertex_bytes" : 369600,
+        "vertices" : 9240
+      },
+      {
+        "id" : "express-car",
+        "vertex_bytes" : 209760,
+        "vertices" : 5244
+      },
+      {
+        "id" : "highSpeed-cab",
+        "vertex_bytes" : 365280,
+        "vertices" : 9132
+      },
+      {
+        "id" : "highSpeed-car",
+        "vertex_bytes" : 220200,
+        "vertices" : 5505
+      },
+      {
+        "id" : "highSpeed-panto",
+        "vertex_bytes" : 225960,
+        "vertices" : 5649
+      },
+      {
+        "id" : "metro-cab",
+        "vertex_bytes" : 270240,
+        "vertices" : 6756
+      },
+      {
+        "id" : "metro-car",
+        "vertex_bytes" : 203520,
+        "vertices" : 5088
+      },
+      {
+        "id" : "peopleMover-cab",
+        "vertex_bytes" : 245040,
+        "vertices" : 6126
+      },
+      {
+        "id" : "peopleMover-car",
+        "vertex_bytes" : 161280,
+        "vertices" : 4032
+      },
+      {
+        "id" : "prop-tree",
+        "vertex_bytes" : 9120,
+        "vertices" : 228
+      },
+      {
+        "id" : "prop-lamp",
+        "vertex_bytes" : 4320,
+        "vertices" : 108
+      },
+      {
+        "id" : "prop-pole",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "prop-signalGo",
+        "vertex_bytes" : 9120,
+        "vertices" : 228
+      },
+      {
+        "id" : "prop-signalStop",
+        "vertex_bytes" : 9120,
+        "vertices" : 228
+      },
+      {
+        "id" : "prop-signalAmber",
+        "vertex_bytes" : 9120,
+        "vertices" : 228
+      },
+      {
+        "id" : "prop-busStop",
+        "vertex_bytes" : 34560,
+        "vertices" : 864
+      },
+      {
+        "id" : "prop-vending",
+        "vertex_bytes" : 4560,
+        "vertices" : 114
+      },
+      {
+        "id" : "scenery-pineTall",
+        "vertex_bytes" : 9120,
+        "vertices" : 228
+      },
+      {
+        "id" : "scenery-pine",
+        "vertex_bytes" : 6240,
+        "vertices" : 156
+      },
+      {
+        "id" : "scenery-pineYoung",
+        "vertex_bytes" : 4800,
+        "vertices" : 120
+      },
+      {
+        "id" : "scenery-bushes",
+        "vertex_bytes" : 4800,
+        "vertices" : 120
+      },
+      {
+        "id" : "scenery-bushesLarge",
+        "vertex_bytes" : 7200,
+        "vertices" : 180
+      },
+      {
+        "id" : "scenery-tank",
+        "vertex_bytes" : 6000,
+        "vertices" : 150
+      },
+      {
+        "id" : "scenery-postBoxes",
+        "vertex_bytes" : 12960,
+        "vertices" : 324
+      },
+      {
+        "id" : "scenery-busStopPole",
+        "vertex_bytes" : 6960,
+        "vertices" : 174
+      },
+      {
+        "id" : "walk-stop",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-dark",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-0",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-1",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-2",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-3",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-4",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-5",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-6",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "walk-tens-1",
+        "vertex_bytes" : 480,
+        "vertices" : 12
+      },
+      {
+        "id" : "walk-tens-2",
+        "vertex_bytes" : 1200,
+        "vertices" : 30
+      },
+      {
+        "id" : "walk-tens-3",
+        "vertex_bytes" : 1200,
+        "vertices" : 30
+      },
+      {
+        "id" : "walk-tens-4",
+        "vertex_bytes" : 960,
+        "vertices" : 24
+      },
+      {
+        "id" : "walk-tens-5",
+        "vertex_bytes" : 1200,
+        "vertices" : 30
+      },
+      {
+        "id" : "walk-tens-6",
+        "vertex_bytes" : 1440,
+        "vertices" : 36
+      },
+      {
+        "id" : "walk-tens-7",
+        "vertex_bytes" : 720,
+        "vertices" : 18
+      },
+      {
+        "id" : "walk-tens-8",
+        "vertex_bytes" : 1680,
+        "vertices" : 42
+      },
+      {
+        "id" : "walk-tens-9",
+        "vertex_bytes" : 1440,
+        "vertices" : 36
+      },
+      {
+        "id" : "walk-ones-0",
+        "vertex_bytes" : 1440,
+        "vertices" : 36
+      },
+      {
+        "id" : "walk-ones-1",
+        "vertex_bytes" : 480,
+        "vertices" : 12
+      },
+      {
+        "id" : "walk-ones-2",
+        "vertex_bytes" : 1200,
+        "vertices" : 30
+      },
+      {
+        "id" : "walk-ones-3",
+        "vertex_bytes" : 1200,
+        "vertices" : 30
+      },
+      {
+        "id" : "walk-ones-4",
+        "vertex_bytes" : 960,
+        "vertices" : 24
+      },
+      {
+        "id" : "walk-ones-5",
+        "vertex_bytes" : 1200,
+        "vertices" : 30
+      },
+      {
+        "id" : "walk-ones-6",
+        "vertex_bytes" : 1440,
+        "vertices" : 36
+      },
+      {
+        "id" : "walk-ones-7",
+        "vertex_bytes" : 720,
+        "vertices" : 18
+      },
+      {
+        "id" : "walk-ones-8",
+        "vertex_bytes" : 1680,
+        "vertices" : 42
+      },
+      {
+        "id" : "walk-ones-9",
+        "vertex_bytes" : 1440,
+        "vertices" : 36
+      },
+      {
+        "id" : "life-walking",
+        "vertex_bytes" : 8400,
+        "vertices" : 210
+      },
+      {
+        "id" : "life-standing",
+        "vertex_bytes" : 8400,
+        "vertices" : 210
+      },
+      {
+        "id" : "life-scooter",
+        "vertex_bytes" : 19200,
+        "vertices" : 480
+      },
+      {
+        "id" : "life-scooterPair",
+        "vertex_bytes" : 25200,
+        "vertices" : 630
+      },
+      {
+        "id" : "life-car",
+        "vertex_bytes" : 13200,
+        "vertices" : 330
+      },
+      {
+        "id" : "life-van",
+        "vertex_bytes" : 13200,
+        "vertices" : 330
+      },
+      {
+        "id" : "life-bus",
+        "vertex_bytes" : 15600,
+        "vertices" : 390
+      },
+      {
+        "id" : "life-shuttleBus",
+        "vertex_bytes" : 172080,
+        "vertices" : 4302
+      },
+      {
+        "id" : "life-lowFloorBus",
+        "vertex_bytes" : 265440,
+        "vertices" : 6636
+      },
+      {
+        "id" : "life-coachBus",
+        "vertex_bytes" : 346080,
+        "vertices" : 8652
+      },
+      {
+        "id" : "life-midiBus",
+        "vertex_bytes" : 315240,
+        "vertices" : 7881
+      },
+      {
+        "id" : "life-garbageTruck",
+        "vertex_bytes" : 16800,
+        "vertices" : 420
+      },
+      {
+        "id" : "life-recyclingTruck",
+        "vertex_bytes" : 18000,
+        "vertices" : 450
+      },
+      {
+        "id" : "life-stepScooter",
+        "vertex_bytes" : 45600,
+        "vertices" : 1140
+      },
+      {
+        "id" : "life-stepScooterPair",
+        "vertex_bytes" : 48720,
+        "vertices" : 1218
+      },
+      {
+        "id" : "life-electricScooter",
+        "vertex_bytes" : 45840,
+        "vertices" : 1146
+      },
+      {
+        "id" : "life-deliveryScooter",
+        "vertex_bytes" : 45120,
+        "vertices" : 1128
+      },
+      {
+        "id" : "set-E200CK-head",
+        "vertex_bytes" : 661440,
+        "vertices" : 16536
+      },
+      {
+        "id" : "set-E200CK-car",
+        "vertex_bytes" : 777120,
+        "vertices" : 19428
+      },
+      {
+        "id" : "set-E200CK-tail",
+        "vertex_bytes" : 780000,
+        "vertices" : 19500
+      },
+      {
+        "id" : "set-E200CKFar-head",
+        "vertex_bytes" : 661440,
+        "vertices" : 16536
+      },
+      {
+        "id" : "set-E200CKFar-car",
+        "vertex_bytes" : 480960,
+        "vertices" : 12024
+      },
+      {
+        "id" : "set-E200CKFar-tail",
+        "vertex_bytes" : 483840,
+        "vertices" : 12096
+      },
+      {
+        "id" : "set-E500CK-head",
+        "vertex_bytes" : 1195680,
+        "vertices" : 29892
+      },
+      {
+        "id" : "set-E500CK-car",
+        "vertex_bytes" : 777120,
+        "vertices" : 19428
+      },
+      {
+        "id" : "set-E500CK-tail",
+        "vertex_bytes" : 780000,
+        "vertices" : 19500
+      },
+      {
+        "id" : "set-E500CKFar-head",
+        "vertex_bytes" : 479040,
+        "vertices" : 11976
+      },
+      {
+        "id" : "set-E500CKFar-car",
+        "vertex_bytes" : 480960,
+        "vertices" : 12024
+      },
+      {
+        "id" : "set-E500CKFar-tail",
+        "vertex_bytes" : 483840,
+        "vertices" : 12096
+      },
+      {
+        "id" : "set-R100CK-head",
+        "vertex_bytes" : 878160,
+        "vertices" : 21954
+      },
+      {
+        "id" : "set-R100CK-car",
+        "vertex_bytes" : 777120,
+        "vertices" : 19428
+      },
+      {
+        "id" : "set-R100CK-tail",
+        "vertex_bytes" : 780000,
+        "vertices" : 19500
+      },
+      {
+        "id" : "set-R100CKFar-head",
+        "vertex_bytes" : 415920,
+        "vertices" : 10398
+      },
+      {
+        "id" : "set-R100CKFar-car",
+        "vertex_bytes" : 480960,
+        "vertices" : 12024
+      },
+      {
+        "id" : "set-R100CKFar-tail",
+        "vertex_bytes" : 483840,
+        "vertices" : 12096
+      },
+      {
+        "id" : "set-R200CK-head",
+        "vertex_bytes" : 1524240,
+        "vertices" : 38106
+      },
+      {
+        "id" : "set-R200CK-car",
+        "vertex_bytes" : 777120,
+        "vertices" : 19428
+      },
+      {
+        "id" : "set-R200CK-tail",
+        "vertex_bytes" : 780000,
+        "vertices" : 19500
+      },
+      {
+        "id" : "set-R200CKFar-head",
+        "vertex_bytes" : 611760,
+        "vertices" : 15294
+      },
+      {
+        "id" : "set-R200CKFar-car",
+        "vertex_bytes" : 480960,
+        "vertices" : 12024
+      },
+      {
+        "id" : "set-R200CKFar-tail",
+        "vertex_bytes" : 483840,
+        "vertices" : 12096
+      },
+      {
+        "id" : "set-BLUE-head",
+        "vertex_bytes" : 1756320,
+        "vertices" : 43908
+      },
+      {
+        "id" : "set-BLUE-car",
+        "vertex_bytes" : 1583280,
+        "vertices" : 39582
+      },
+      {
+        "id" : "set-BLUE-tail",
+        "vertex_bytes" : 1583280,
+        "vertices" : 39582
+      },
+      {
+        "id" : "set-BLUE-panto",
+        "vertex_bytes" : 1593360,
+        "vertices" : 39834
+      },
+      {
+        "id" : "set-BLUE-fourth",
+        "vertex_bytes" : 1468080,
+        "vertices" : 36702
+      },
+      {
+        "id" : "set-BLUEFar-head",
+        "vertex_bytes" : 831840,
+        "vertices" : 20796
+      },
+      {
+        "id" : "set-BLUEFar-car",
+        "vertex_bytes" : 657360,
+        "vertices" : 16434
+      },
+      {
+        "id" : "set-BLUEFar-tail",
+        "vertex_bytes" : 657360,
+        "vertices" : 16434
+      },
+      {
+        "id" : "set-BLUEFar-panto",
+        "vertex_bytes" : 644400,
+        "vertices" : 16110
+      },
+      {
+        "id" : "set-BLUEFar-fourth",
+        "vertex_bytes" : 594000,
+        "vertices" : 14850
+      },
+      {
+        "id" : "set-MINGRI-head",
+        "vertex_bytes" : 661440,
+        "vertices" : 16536
+      },
+      {
+        "id" : "set-MINGRI-car",
+        "vertex_bytes" : 777120,
+        "vertices" : 19428
+      },
+      {
+        "id" : "set-MINGRI-tail",
+        "vertex_bytes" : 780000,
+        "vertices" : 19500
+      },
+      {
+        "id" : "set-MINGRIFar-head",
+        "vertex_bytes" : 661440,
+        "vertices" : 16536
+      },
+      {
+        "id" : "set-MINGRIFar-car",
+        "vertex_bytes" : 480960,
+        "vertices" : 12024
+      },
+      {
+        "id" : "set-MINGRIFar-tail",
+        "vertex_bytes" : 483840,
+        "vertices" : 12096
+      },
+      {
+        "id" : "set-STAR-head",
+        "vertex_bytes" : 1195680,
+        "vertices" : 29892
+      },
+      {
+        "id" : "set-STAR-car",
+        "vertex_bytes" : 183360,
+        "vertices" : 4584
+      },
+      {
+        "id" : "set-STAR-tail",
+        "vertex_bytes" : 190560,
+        "vertices" : 4764
+      },
+      {
+        "id" : "set-STARFar-head",
+        "vertex_bytes" : 479040,
+        "vertices" : 11976
+      },
+      {
+        "id" : "set-STARFar-car",
+        "vertex_bytes" : 183360,
+        "vertices" : 4584
+      },
+      {
+        "id" : "set-STARFar-tail",
+        "vertex_bytes" : 190560,
+        "vertices" : 4764
+      },
+      {
+        "id" : "set-SUMMER-head",
+        "vertex_bytes" : 1211040,
+        "vertices" : 30276
+      },
+      {
+        "id" : "set-SUMMER-car",
+        "vertex_bytes" : 777120,
+        "vertices" : 19428
+      },
+      {
+        "id" : "set-SUMMER-tail",
+        "vertex_bytes" : 780000,
+        "vertices" : 19500
+      },
+      {
+        "id" : "set-SUMMER-tender",
+        "vertex_bytes" : 480000,
+        "vertices" : 12000
+      },
+      {
+        "id" : "set-SUMMERFar-head",
+        "vertex_bytes" : 1211040,
+        "vertices" : 30276
+      },
+      {
+        "id" : "set-SUMMERFar-car",
+        "vertex_bytes" : 480960,
+        "vertices" : 12024
+      },
+      {
+        "id" : "set-SUMMERFar-tail",
+        "vertex_bytes" : 483840,
+        "vertices" : 12096
+      },
+      {
+        "id" : "set-SUMMERFar-tender",
+        "vertex_bytes" : 480000,
+        "vertices" : 12000
+      },
+      {
+        "id" : "set-STEAM-head",
+        "vertex_bytes" : 971040,
+        "vertices" : 24276
+      },
+      {
+        "id" : "set-STEAM-car",
+        "vertex_bytes" : 183360,
+        "vertices" : 4584
+      },
+      {
+        "id" : "set-STEAM-tail",
+        "vertex_bytes" : 190560,
+        "vertices" : 4764
+      },
+      {
+        "id" : "set-STEAM-tender",
+        "vertex_bytes" : 365760,
+        "vertices" : 9144
+      },
+      {
+        "id" : "set-pushPull-head",
+        "vertex_bytes" : 1195680,
+        "vertices" : 29892
+      },
+      {
+        "id" : "set-pushPull-car",
+        "vertex_bytes" : 980640,
+        "vertices" : 24516
+      },
+      {
+        "id" : "set-pushPullFar-head",
+        "vertex_bytes" : 479040,
+        "vertices" : 11976
+      },
+      {
+        "id" : "set-pushPullFar-car",
+        "vertex_bytes" : 473280,
+        "vertices" : 11832
+      },
+      {
+        "id" : "set-pushPullE1000-head",
+        "vertex_bytes" : 766560,
+        "vertices" : 19164
+      },
+      {
+        "id" : "set-pushPullE1000-car",
+        "vertex_bytes" : 980640,
+        "vertices" : 24516
+      },
+      {
+        "id" : "set-pushPullE1000Far-head",
+        "vertex_bytes" : 415200,
+        "vertices" : 10380
+      },
+      {
+        "id" : "set-pushPullE1000Far-car",
+        "vertex_bytes" : 473280,
+        "vertices" : 11832
+      },
+      {
+        "id" : "set-emu3000-head",
+        "vertex_bytes" : 1075440,
+        "vertices" : 26886
+      },
+      {
+        "id" : "set-emu3000-car",
+        "vertex_bytes" : 671040,
+        "vertices" : 16776
+      },
+      {
+        "id" : "set-emu3000-panto",
+        "vertex_bytes" : 699840,
+        "vertices" : 17496
+      },
+      {
+        "id" : "set-emu3000-et",
+        "vertex_bytes" : 684480,
+        "vertices" : 17112
+      },
+      {
+        "id" : "set-emu3000-em6",
+        "vertex_bytes" : 654720,
+        "vertices" : 16368
+      },
+      {
+        "id" : "set-emu3000-ep7",
+        "vertex_bytes" : 699840,
+        "vertices" : 17496
+      },
+      {
+        "id" : "set-emu3000-ep10",
+        "vertex_bytes" : 716160,
+        "vertices" : 17904
+      },
+      {
+        "id" : "set-emu3000-tail",
+        "vertex_bytes" : 1075440,
+        "vertices" : 26886
+      },
+      {
+        "id" : "set-emu3000Far-head",
+        "vertex_bytes" : 460080,
+        "vertices" : 11502
+      },
+      {
+        "id" : "set-emu3000Far-car",
+        "vertex_bytes" : 307200,
+        "vertices" : 7680
+      },
+      {
+        "id" : "set-emu3000Far-panto",
+        "vertex_bytes" : 322560,
+        "vertices" : 8064
+      },
+      {
+        "id" : "set-emu3000Far-et",
+        "vertex_bytes" : 314880,
+        "vertices" : 7872
+      },
+      {
+        "id" : "set-emu3000Far-em6",
+        "vertex_bytes" : 296640,
+        "vertices" : 7416
+      },
+      {
+        "id" : "set-emu3000Far-ep7",
+        "vertex_bytes" : 322560,
+        "vertices" : 8064
+      },
+      {
+        "id" : "set-emu3000Far-ep10",
+        "vertex_bytes" : 333120,
+        "vertices" : 8328
+      },
+      {
+        "id" : "set-emu3000Far-tail",
+        "vertex_bytes" : 460080,
+        "vertices" : 11502
+      },
+      {
+        "id" : "set-highSpeed-head",
+        "vertex_bytes" : 1095120,
+        "vertices" : 27378
+      },
+      {
+        "id" : "set-highSpeed-car",
+        "vertex_bytes" : 672240,
+        "vertices" : 16806
+      },
+      {
+        "id" : "set-highSpeed-tail",
+        "vertex_bytes" : 1095120,
+        "vertices" : 27378
+      },
+      {
+        "id" : "set-highSpeed-panto",
+        "vertex_bytes" : 687600,
+        "vertices" : 17190
+      },
+      {
+        "id" : "set-highSpeedFar-head",
+        "vertex_bytes" : 144960,
+        "vertices" : 3624
+      },
+      {
+        "id" : "set-highSpeedFar-car",
+        "vertex_bytes" : 61680,
+        "vertices" : 1542
+      },
+      {
+        "id" : "set-highSpeedFar-tail",
+        "vertex_bytes" : 144960,
+        "vertices" : 3624
+      },
+      {
+        "id" : "set-highSpeedFar-panto",
+        "vertex_bytes" : 67440,
+        "vertices" : 1686
+      },
+      {
+        "id" : "set-n700sG-head",
+        "vertex_bytes" : 838680,
+        "vertices" : 20967
+      },
+      {
+        "id" : "set-n700sG-car",
+        "vertex_bytes" : 722880,
+        "vertices" : 18072
+      },
+      {
+        "id" : "set-n700sG-tail",
+        "vertex_bytes" : 838680,
+        "vertices" : 20967
+      },
+      {
+        "id" : "set-n700sG-panto",
+        "vertex_bytes" : 721920,
+        "vertices" : 18048
+      },
+      {
+        "id" : "set-n700sG-carBack",
+        "vertex_bytes" : 722880,
+        "vertices" : 18072
+      },
+      {
+        "id" : "set-n700sG-pantoBack",
+        "vertex_bytes" : 721920,
+        "vertices" : 18048
+      },
+      {
+        "id" : "set-n700sGFar-head",
+        "vertex_bytes" : 117240,
+        "vertices" : 2931
+      },
+      {
+        "id" : "set-n700sGFar-car",
+        "vertex_bytes" : 48960,
+        "vertices" : 1224
+      },
+      {
+        "id" : "set-n700sGFar-tail",
+        "vertex_bytes" : 117240,
+        "vertices" : 2931
+      },
+      {
+        "id" : "set-n700sGFar-panto",
+        "vertex_bytes" : 178560,
+        "vertices" : 4464
+      },
+      {
+        "id" : "set-n700sGFar-carBack",
+        "vertex_bytes" : 48960,
+        "vertices" : 1224
+      },
+      {
+        "id" : "set-n700sGFar-pantoBack",
+        "vertex_bytes" : 178560,
+        "vertices" : 4464
+      },
+      {
+        "id" : "set-metroGeneric-head",
+        "vertex_bytes" : 283200,
+        "vertices" : 7080
+      },
+      {
+        "id" : "set-metroGeneric-car",
+        "vertex_bytes" : 216000,
+        "vertices" : 5400
+      },
+      {
+        "id" : "set-metroGeneric-tail",
+        "vertex_bytes" : 283200,
+        "vertices" : 7080
+      },
+      {
+        "id" : "set-wenhu-head",
+        "vertex_bytes" : 231960,
+        "vertices" : 5799
+      },
+      {
+        "id" : "set-wenhu-car",
+        "vertex_bytes" : 157440,
+        "vertices" : 3936
+      },
+      {
+        "id" : "set-wenhu-tail",
+        "vertex_bytes" : 231960,
+        "vertices" : 5799
+      },
+      {
+        "id" : "set-puyuma-head",
+        "vertex_bytes" : 837600,
+        "vertices" : 20940
+      },
+      {
+        "id" : "set-puyuma-car",
+        "vertex_bytes" : 216000,
+        "vertices" : 5400
+      },
+      {
+        "id" : "set-puyuma-tail",
+        "vertex_bytes" : 831840,
+        "vertices" : 20796
+      },
+      {
+        "id" : "set-puyuma-panto",
+        "vertex_bytes" : 234240,
+        "vertices" : 5856
+      },
+      {
+        "id" : "set-puyuma-centre",
+        "vertex_bytes" : 217440,
+        "vertices" : 5436
+      },
+      {
+        "id" : "set-puyuma-pantoBack",
+        "vertex_bytes" : 234240,
+        "vertices" : 5856
+      },
+      {
+        "id" : "set-puyumaFar-head",
+        "vertex_bytes" : 337440,
+        "vertices" : 8436
+      },
+      {
+        "id" : "set-puyumaFar-car",
+        "vertex_bytes" : 91200,
+        "vertices" : 2280
+      },
+      {
+        "id" : "set-puyumaFar-tail",
+        "vertex_bytes" : 343200,
+        "vertices" : 8580
+      },
+      {
+        "id" : "set-puyumaFar-panto",
+        "vertex_bytes" : 99840,
+        "vertices" : 2496
+      },
+      {
+        "id" : "set-puyumaFar-centre",
+        "vertex_bytes" : 92640,
+        "vertices" : 2316
+      },
+      {
+        "id" : "set-puyumaFar-pantoBack",
+        "vertex_bytes" : 99840,
+        "vertices" : 2496
+      },
+      {
+        "id" : "set-taroko-head",
+        "vertex_bytes" : 331920,
+        "vertices" : 8298
+      },
+      {
+        "id" : "set-taroko-car",
+        "vertex_bytes" : 168960,
+        "vertices" : 4224
+      },
+      {
+        "id" : "set-taroko-tail",
+        "vertex_bytes" : 331440,
+        "vertices" : 8286
+      },
+      {
+        "id" : "set-taroko-panto",
+        "vertex_bytes" : 181440,
+        "vertices" : 4536
+      },
+      {
+        "id" : "set-tarokoFar-head",
+        "vertex_bytes" : 126960,
+        "vertices" : 3174
+      },
+      {
+        "id" : "set-tarokoFar-car",
+        "vertex_bytes" : 67200,
+        "vertices" : 1680
+      },
+      {
+        "id" : "set-tarokoFar-tail",
+        "vertex_bytes" : 126960,
+        "vertices" : 3174
+      },
+      {
+        "id" : "set-tarokoFar-panto",
+        "vertex_bytes" : 75840,
+        "vertices" : 1896
+      },
+      {
+        "id" : "set-emu800-head",
+        "vertex_bytes" : 1380720,
+        "vertices" : 34518
+      },
+      {
+        "id" : "set-emu800-car",
+        "vertex_bytes" : 624000,
+        "vertices" : 15600
+      },
+      {
+        "id" : "set-emu800-tail",
+        "vertex_bytes" : 1380720,
+        "vertices" : 34518
+      },
+      {
+        "id" : "set-emu800-panto",
+        "vertex_bytes" : 644640,
+        "vertices" : 16116
+      },
+      {
+        "id" : "set-emu800-centre",
+        "vertex_bytes" : 625440,
+        "vertices" : 15636
+      },
+      {
+        "id" : "set-emu800-carBack",
+        "vertex_bytes" : 624000,
+        "vertices" : 15600
+      },
+      {
+        "id" : "set-emu800-pantoBack",
+        "vertex_bytes" : 644640,
+        "vertices" : 16116
+      },
+      {
+        "id" : "set-emu800-centreBack",
+        "vertex_bytes" : 625440,
+        "vertices" : 15636
+      },
+      {
+        "id" : "set-emu800Far-head",
+        "vertex_bytes" : 290160,
+        "vertices" : 7254
+      },
+      {
+        "id" : "set-emu800Far-car",
+        "vertex_bytes" : 132000,
+        "vertices" : 3300
+      },
+      {
+        "id" : "set-emu800Far-tail",
+        "vertex_bytes" : 290160,
+        "vertices" : 7254
+      },
+      {
+        "id" : "set-emu800Far-panto",
+        "vertex_bytes" : 139200,
+        "vertices" : 3480
+      },
+      {
+        "id" : "set-emu800Far-centre",
+        "vertex_bytes" : 133440,
+        "vertices" : 3336
+      },
+      {
+        "id" : "set-emu800Far-carBack",
+        "vertex_bytes" : 132000,
+        "vertices" : 3300
+      },
+      {
+        "id" : "set-emu800Far-pantoBack",
+        "vertex_bytes" : 139200,
+        "vertices" : 3480
+      },
+      {
+        "id" : "set-emu800Far-centreBack",
+        "vertex_bytes" : 133440,
+        "vertices" : 3336
+      },
+      {
+        "id" : "set-emu500-head",
+        "vertex_bytes" : 545760,
+        "vertices" : 13644
+      },
+      {
+        "id" : "set-emu500-car",
+        "vertex_bytes" : 545760,
+        "vertices" : 13644
+      },
+      {
+        "id" : "set-emu500-tail",
+        "vertex_bytes" : 545760,
+        "vertices" : 13644
+      },
+      {
+        "id" : "set-emu500-panto",
+        "vertex_bytes" : 353280,
+        "vertices" : 8832
+      },
+      {
+        "id" : "set-emu500-centre",
+        "vertex_bytes" : 340800,
+        "vertices" : 8520
+      },
+      {
+        "id" : "set-emu500-carBack",
+        "vertex_bytes" : 545760,
+        "vertices" : 13644
+      },
+      {
+        "id" : "set-emu500-pantoBack",
+        "vertex_bytes" : 353280,
+        "vertices" : 8832
+      },
+      {
+        "id" : "set-emu500-centreBack",
+        "vertex_bytes" : 340800,
+        "vertices" : 8520
+      },
+      {
+        "id" : "set-emu500Far-head",
+        "vertex_bytes" : 208800,
+        "vertices" : 5220
+      },
+      {
+        "id" : "set-emu500Far-car",
+        "vertex_bytes" : 208800,
+        "vertices" : 5220
+      },
+      {
+        "id" : "set-emu500Far-tail",
+        "vertex_bytes" : 208800,
+        "vertices" : 5220
+      },
+      {
+        "id" : "set-emu500Far-panto",
+        "vertex_bytes" : 137280,
+        "vertices" : 3432
+      },
+      {
+        "id" : "set-emu500Far-centre",
+        "vertex_bytes" : 128640,
+        "vertices" : 3216
+      },
+      {
+        "id" : "set-emu500Far-carBack",
+        "vertex_bytes" : 208800,
+        "vertices" : 5220
+      },
+      {
+        "id" : "set-emu500Far-pantoBack",
+        "vertex_bytes" : 137280,
+        "vertices" : 3432
+      },
+      {
+        "id" : "set-emu500Far-centreBack",
+        "vertex_bytes" : 128640,
+        "vertices" : 3216
+      },
+      {
+        "id" : "set-emu900-head",
+        "vertex_bytes" : 1110720,
+        "vertices" : 27768
+      },
+      {
+        "id" : "set-emu900-car",
+        "vertex_bytes" : 609600,
+        "vertices" : 15240
+      },
+      {
+        "id" : "set-emu900-tail",
+        "vertex_bytes" : 1110720,
+        "vertices" : 27768
+      },
+      {
+        "id" : "set-emu900-panto",
+        "vertex_bytes" : 631680,
+        "vertices" : 15792
+      },
+      {
+        "id" : "set-emu900-centre",
+        "vertex_bytes" : 604800,
+        "vertices" : 15120
+      },
+      {
+        "id" : "set-emu900-carBack",
+        "vertex_bytes" : 609600,
+        "vertices" : 15240
+      },
+      {
+        "id" : "set-emu900-pantoBack",
+        "vertex_bytes" : 631680,
+        "vertices" : 15792
+      },
+      {
+        "id" : "set-emu900-centreBack",
+        "vertex_bytes" : 604800,
+        "vertices" : 15120
+      },
+      {
+        "id" : "set-emu900-fourth",
+        "vertex_bytes" : 599040,
+        "vertices" : 14976
+      },
+      {
+        "id" : "set-emu900-fourthBack",
+        "vertex_bytes" : 621120,
+        "vertices" : 15528
+      },
+      {
+        "id" : "set-emu900Far-head",
+        "vertex_bytes" : 262560,
+        "vertices" : 6564
+      },
+      {
+        "id" : "set-emu900Far-car",
+        "vertex_bytes" : 108960,
+        "vertices" : 2724
+      },
+      {
+        "id" : "set-emu900Far-tail",
+        "vertex_bytes" : 262560,
+        "vertices" : 6564
+      },
+      {
+        "id" : "set-emu900Far-panto",
+        "vertex_bytes" : 131040,
+        "vertices" : 3276
+      },
+      {
+        "id" : "set-emu900Far-centre",
+        "vertex_bytes" : 105600,
+        "vertices" : 2640
+      },
+      {
+        "id" : "set-emu900Far-carBack",
+        "vertex_bytes" : 108960,
+        "vertices" : 2724
+      },
+      {
+        "id" : "set-emu900Far-pantoBack",
+        "vertex_bytes" : 131040,
+        "vertices" : 3276
+      },
+      {
+        "id" : "set-emu900Far-centreBack",
+        "vertex_bytes" : 105600,
+        "vertices" : 2640
+      },
+      {
+        "id" : "set-emu900Far-fourth",
+        "vertex_bytes" : 104160,
+        "vertices" : 2604
+      },
+      {
+        "id" : "set-emu900Far-fourthBack",
+        "vertex_bytes" : 126240,
+        "vertices" : 3156
+      },
+      {
+        "id" : "set-metroC341-head",
+        "vertex_bytes" : 467280,
+        "vertices" : 11682
+      },
+      {
+        "id" : "set-metroC341-car",
+        "vertex_bytes" : 396720,
+        "vertices" : 9918
+      },
+      {
+        "id" : "set-metroC341-tail",
+        "vertex_bytes" : 467280,
+        "vertices" : 11682
+      },
+      {
+        "id" : "set-metroC341-centre",
+        "vertex_bytes" : 398160,
+        "vertices" : 9954
+      },
+      {
+        "id" : "set-metroC341Far-head",
+        "vertex_bytes" : 210480,
+        "vertices" : 5262
+      },
+      {
+        "id" : "set-metroC341Far-car",
+        "vertex_bytes" : 162480,
+        "vertices" : 4062
+      },
+      {
+        "id" : "set-metroC341Far-tail",
+        "vertex_bytes" : 210480,
+        "vertices" : 5262
+      },
+      {
+        "id" : "set-metroC341Far-centre",
+        "vertex_bytes" : 163920,
+        "vertices" : 4098
+      },
+      {
+        "id" : "set-metroC371-head",
+        "vertex_bytes" : 642960,
+        "vertices" : 16074
+      },
+      {
+        "id" : "set-metroC371-car",
+        "vertex_bytes" : 262560,
+        "vertices" : 6564
+      },
+      {
+        "id" : "set-metroC371-tail",
+        "vertex_bytes" : 642960,
+        "vertices" : 16074
+      },
+      {
+        "id" : "set-metroC371-centre",
+        "vertex_bytes" : 264000,
+        "vertices" : 6600
+      },
+      {
+        "id" : "set-metroC371Far-head",
+        "vertex_bytes" : 244560,
+        "vertices" : 6114
+      },
+      {
+        "id" : "set-metroC371Far-car",
+        "vertex_bytes" : 104640,
+        "vertices" : 2616
+      },
+      {
+        "id" : "set-metroC371Far-tail",
+        "vertex_bytes" : 244560,
+        "vertices" : 6114
+      },
+      {
+        "id" : "set-metroC371Far-centre",
+        "vertex_bytes" : 106080,
+        "vertices" : 2652
+      },
+      {
+        "id" : "set-metroC381-head",
+        "vertex_bytes" : 837120,
+        "vertices" : 20928
+      },
+      {
+        "id" : "set-metroC381-car",
+        "vertex_bytes" : 216480,
+        "vertices" : 5412
+      },
+      {
+        "id" : "set-metroC381-tail",
+        "vertex_bytes" : 837120,
+        "vertices" : 20928
+      },
+      {
+        "id" : "set-metroC381-centre",
+        "vertex_bytes" : 217920,
+        "vertices" : 5448
+      },
+      {
+        "id" : "set-metroC381Far-head",
+        "vertex_bytes" : 348480,
+        "vertices" : 8712
+      },
+      {
+        "id" : "set-metroC381Far-car",
+        "vertex_bytes" : 104640,
+        "vertices" : 2616
+      },
+      {
+        "id" : "set-metroC381Far-tail",
+        "vertex_bytes" : 348480,
+        "vertices" : 8712
+      },
+      {
+        "id" : "set-metroC381Far-centre",
+        "vertex_bytes" : 106080,
+        "vertices" : 2652
+      },
+      {
+        "id" : "set-circular610-head",
+        "vertex_bytes" : 438000,
+        "vertices" : 10950
+      },
+      {
+        "id" : "set-circular610-car",
+        "vertex_bytes" : 338880,
+        "vertices" : 8472
+      },
+      {
+        "id" : "set-circular610-tail",
+        "vertex_bytes" : 438000,
+        "vertices" : 10950
+      },
+      {
+        "id" : "set-circular610-carBack",
+        "vertex_bytes" : 338880,
+        "vertices" : 8472
+      },
+      {
+        "id" : "set-circular610Far-head",
+        "vertex_bytes" : 196560,
+        "vertices" : 4914
+      },
+      {
+        "id" : "set-circular610Far-car",
+        "vertex_bytes" : 150240,
+        "vertices" : 3756
+      },
+      {
+        "id" : "set-circular610Far-tail",
+        "vertex_bytes" : 196560,
+        "vertices" : 4914
+      },
+      {
+        "id" : "set-circular610Far-carBack",
+        "vertex_bytes" : 150240,
+        "vertices" : 3756
+      },
+      {
+        "id" : "set-sanying-head",
+        "vertex_bytes" : 516720,
+        "vertices" : 12918
+      },
+      {
+        "id" : "set-sanying-tail",
+        "vertex_bytes" : 516720,
+        "vertices" : 12918
+      },
+      {
+        "id" : "set-sanyingFar-head",
+        "vertex_bytes" : 246960,
+        "vertices" : 6174
+      },
+      {
+        "id" : "set-sanyingFar-tail",
+        "vertex_bytes" : 246960,
+        "vertices" : 6174
+      },
+      {
+        "id" : "set-kaohsiung-head",
+        "vertex_bytes" : 694800,
+        "vertices" : 17370
+      },
+      {
+        "id" : "set-kaohsiung-car",
+        "vertex_bytes" : 277440,
+        "vertices" : 6936
+      },
+      {
+        "id" : "set-kaohsiung-tail",
+        "vertex_bytes" : 694800,
+        "vertices" : 17370
+      },
+      {
+        "id" : "set-kaohsiungFar-head",
+        "vertex_bytes" : 322320,
+        "vertices" : 8058
+      },
+      {
+        "id" : "set-kaohsiungFar-car",
+        "vertex_bytes" : 118080,
+        "vertices" : 2952
+      },
+      {
+        "id" : "set-kaohsiungFar-tail",
+        "vertex_bytes" : 322320,
+        "vertices" : 8058
+      },
+      {
+        "id" : "set-taichungGreen-head",
+        "vertex_bytes" : 576480,
+        "vertices" : 14412
+      },
+      {
+        "id" : "set-taichungGreen-tail",
+        "vertex_bytes" : 576480,
+        "vertices" : 14412
+      },
+      {
+        "id" : "set-taichungGreenFar-head",
+        "vertex_bytes" : 264960,
+        "vertices" : 6624
+      },
+      {
+        "id" : "set-taichungGreenFar-tail",
+        "vertex_bytes" : 264960,
+        "vertices" : 6624
+      },
+      {
+        "id" : "set-danhaiLRT-head",
+        "vertex_bytes" : 2980560,
+        "vertices" : 74514
+      },
+      {
+        "id" : "set-danhaiLRT-tail",
+        "vertex_bytes" : 3020880,
+        "vertices" : 75522
+      },
+      {
+        "id" : "set-danhaiLRTFar-head",
+        "vertex_bytes" : 1396080,
+        "vertices" : 34902
+      },
+      {
+        "id" : "set-danhaiLRTFar-tail",
+        "vertex_bytes" : 1422000,
+        "vertices" : 35550
+      },
+      {
+        "id" : "set-ankengLRT-head",
+        "vertex_bytes" : 1797840,
+        "vertices" : 44946
+      },
+      {
+        "id" : "set-ankengLRT-tail",
+        "vertex_bytes" : 1792080,
+        "vertices" : 44802
+      },
+      {
+        "id" : "set-ankengLRTFar-head",
+        "vertex_bytes" : 881040,
+        "vertices" : 22026
+      },
+      {
+        "id" : "set-ankengLRTFar-tail",
+        "vertex_bytes" : 875280,
+        "vertices" : 21882
+      },
+      {
+        "id" : "set-klrtCAF-head",
+        "vertex_bytes" : 2554560,
+        "vertices" : 63864
+      },
+      {
+        "id" : "set-klrtCAF-tail",
+        "vertex_bytes" : 2477280,
+        "vertices" : 61932
+      },
+      {
+        "id" : "set-klrtCAFFar-head",
+        "vertex_bytes" : 1137600,
+        "vertices" : 28440
+      },
+      {
+        "id" : "set-klrtCAFFar-tail",
+        "vertex_bytes" : 1163520,
+        "vertices" : 29088
+      },
+      {
+        "id" : "set-klrtCitadis-head",
+        "vertex_bytes" : 1887360,
+        "vertices" : 47184
+      },
+      {
+        "id" : "set-klrtCitadis-tail",
+        "vertex_bytes" : 1840320,
+        "vertices" : 46008
+      },
+      {
+        "id" : "set-klrtCitadisFar-head",
+        "vertex_bytes" : 852480,
+        "vertices" : 21312
+      },
+      {
+        "id" : "set-klrtCitadisFar-tail",
+        "vertex_bytes" : 865440,
+        "vertices" : 21636
+      },
+      {
+        "id" : "set-dieselRailcar-head",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselRailcar-car",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselRailcar-tail",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselRailcar-single",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselRailcarFar-head",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-dieselRailcarFar-car",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-dieselRailcarFar-tail",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-dieselRailcarFar-single",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-dieselExpress-head",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselExpress-car",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselExpress-tail",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselExpress-single",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "set-dieselExpressFar-head",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-dieselExpressFar-car",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-dieselExpressFar-tail",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-dieselExpressFar-single",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "set-ALISHAN-head",
+        "vertex_bytes" : 925440,
+        "vertices" : 23136
+      },
+      {
+        "id" : "set-ALISHAN-car",
+        "vertex_bytes" : 478560,
+        "vertices" : 11964
+      },
+      {
+        "id" : "set-ALISHAN-tail",
+        "vertex_bytes" : 478560,
+        "vertices" : 11964
+      },
+      {
+        "id" : "set-ALISHANFar-head",
+        "vertex_bytes" : 277920,
+        "vertices" : 6948
+      },
+      {
+        "id" : "set-ALISHANFar-car",
+        "vertex_bytes" : 164640,
+        "vertices" : 4116
+      },
+      {
+        "id" : "set-ALISHANFar-tail",
+        "vertex_bytes" : 164640,
+        "vertices" : 4116
+      },
+      {
+        "id" : "set-greenTram-head",
+        "vertex_bytes" : 348000,
+        "vertices" : 8700
+      },
+      {
+        "id" : "set-greenTram-car",
+        "vertex_bytes" : 365760,
+        "vertices" : 9144
+      },
+      {
+        "id" : "set-greenTram-tail",
+        "vertex_bytes" : 358080,
+        "vertices" : 8952
+      },
+      {
+        "id" : "set-greenTram-single",
+        "vertex_bytes" : 340320,
+        "vertices" : 8508
+      },
+      {
+        "id" : "set-greenCommuter-head",
+        "vertex_bytes" : 297360,
+        "vertices" : 7434
+      },
+      {
+        "id" : "set-greenCommuter-car",
+        "vertex_bytes" : 297360,
+        "vertices" : 7434
+      },
+      {
+        "id" : "set-greenCommuter-tail",
+        "vertex_bytes" : 297360,
+        "vertices" : 7434
+      },
+      {
+        "id" : "set-threeCarUrban-head",
+        "vertex_bytes" : 314400,
+        "vertices" : 7860
+      },
+      {
+        "id" : "set-threeCarUrban-car",
+        "vertex_bytes" : 282720,
+        "vertices" : 7068
+      },
+      {
+        "id" : "set-threeCarUrban-tail",
+        "vertex_bytes" : 314400,
+        "vertices" : 7860
+      },
+      {
+        "id" : "set-fiveSectionLRT-head",
+        "vertex_bytes" : 315360,
+        "vertices" : 7884
+      },
+      {
+        "id" : "set-fiveSectionLRT-tail",
+        "vertex_bytes" : 330720,
+        "vertices" : 8268
+      },
+      {
+        "id" : "set-sevenSectionLRT-head",
+        "vertex_bytes" : 293280,
+        "vertices" : 7332
+      },
+      {
+        "id" : "set-sevenSectionLRT-car",
+        "vertex_bytes" : 326400,
+        "vertices" : 8160
+      },
+      {
+        "id" : "set-sevenSectionLRT-tail",
+        "vertex_bytes" : 308640,
+        "vertices" : 7716
+      },
+      {
+        "id" : "set-fourCarMetro-head",
+        "vertex_bytes" : 242400,
+        "vertices" : 6060
+      },
+      {
+        "id" : "set-fourCarMetro-car",
+        "vertex_bytes" : 235200,
+        "vertices" : 5880
+      },
+      {
+        "id" : "set-fourCarMetro-tail",
+        "vertex_bytes" : 242400,
+        "vertices" : 6060
+      },
+      {
+        "id" : "set-blueSeven-head",
+        "vertex_bytes" : 241440,
+        "vertices" : 6036
+      },
+      {
+        "id" : "set-blueSeven-car",
+        "vertex_bytes" : 242880,
+        "vertices" : 6072
+      },
+      {
+        "id" : "set-blueSeven-tail",
+        "vertex_bytes" : 226080,
+        "vertices" : 5652
+      },
+      {
+        "id" : "set-FREIGHT-car",
+        "vertex_bytes" : 391200,
+        "vertices" : 9780
+      },
+      {
+        "id" : "set-FREIGHT-tail",
+        "vertex_bytes" : 394080,
+        "vertices" : 9852
+      },
+      {
+        "id" : "set-FREIGHT-centre",
+        "vertex_bytes" : 391200,
+        "vertices" : 9780
+      },
+      {
+        "id" : "set-FREIGHT-fourth",
+        "vertex_bytes" : 440160,
+        "vertices" : 11004
+      },
+      {
+        "id" : "set-FREIGHTFar-car",
+        "vertex_bytes" : 119040,
+        "vertices" : 2976
+      },
+      {
+        "id" : "set-FREIGHTFar-tail",
+        "vertex_bytes" : 121920,
+        "vertices" : 3048
+      },
+      {
+        "id" : "set-FREIGHTFar-centre",
+        "vertex_bytes" : 119040,
+        "vertices" : 2976
+      },
+      {
+        "id" : "set-FREIGHTFar-fourth",
+        "vertex_bytes" : 150720,
+        "vertices" : 3768
+      },
+      {
+        "id" : "duplex-locomotive",
+        "vertex_bytes" : 969600,
+        "vertices" : 24240
+      },
+      {
+        "id" : "duplex-tender",
+        "vertex_bytes" : 365760,
+        "vertices" : 9144
+      },
+      {
+        "id" : "duplex-formation",
+        "vertex_bytes" : 1335360,
+        "vertices" : 33384
+      },
+      {
+        "id" : "green-tram-head",
+        "vertex_bytes" : 162240,
+        "vertices" : 4056
+      },
+      {
+        "id" : "green-tram-middle",
+        "vertex_bytes" : 182880,
+        "vertices" : 4572
+      },
+      {
+        "id" : "green-tram-tail",
+        "vertex_bytes" : 172320,
+        "vertices" : 4308
+      },
+      {
+        "id" : "green-tram-formation",
+        "vertex_bytes" : 517440,
+        "vertices" : 12936
+      },
+      {
+        "id" : "green-commuter-leading",
+        "vertex_bytes" : 294480,
+        "vertices" : 7362
+      },
+      {
+        "id" : "green-commuter-trailing",
+        "vertex_bytes" : 294480,
+        "vertices" : 7362
+      },
+      {
+        "id" : "green-commuter-formation",
+        "vertex_bytes" : 588960,
+        "vertices" : 14724
+      },
+      {
+        "id" : "temu1000-leading",
+        "vertex_bytes" : 329040,
+        "vertices" : 8226
+      },
+      {
+        "id" : "temu1000-middle",
+        "vertex_bytes" : 168960,
+        "vertices" : 4224
+      },
+      {
+        "id" : "temu1000-pantograph",
+        "vertex_bytes" : 181440,
+        "vertices" : 4536
+      },
+      {
+        "id" : "temu1000-trailing",
+        "vertex_bytes" : 328560,
+        "vertices" : 8214
+      },
+      {
+        "id" : "temu1000-formation",
+        "vertex_bytes" : 1696320,
+        "vertices" : 42408
+      },
+      {
+        "id" : "urban-three-leading",
+        "vertex_bytes" : 311520,
+        "vertices" : 7788
+      },
+      {
+        "id" : "urban-three-middle",
+        "vertex_bytes" : 282720,
+        "vertices" : 7068
+      },
+      {
+        "id" : "urban-three-trailing",
+        "vertex_bytes" : 311520,
+        "vertices" : 7788
+      },
+      {
+        "id" : "urban-three-formation",
+        "vertex_bytes" : 905760,
+        "vertices" : 22644
+      },
+      {
+        "id" : "lrt-five-leading",
+        "vertex_bytes" : 158400,
+        "vertices" : 3960
+      },
+      {
+        "id" : "lrt-five-suspendedFront",
+        "vertex_bytes" : 34560,
+        "vertices" : 864
+      },
+      {
+        "id" : "lrt-five-middle",
+        "vertex_bytes" : 138720,
+        "vertices" : 3468
+      },
+      {
+        "id" : "lrt-five-suspendedRear",
+        "vertex_bytes" : 34560,
+        "vertices" : 864
+      },
+      {
+        "id" : "lrt-five-trailing",
+        "vertex_bytes" : 173760,
+        "vertices" : 4344
+      },
+      {
+        "id" : "lrt-five-formation",
+        "vertex_bytes" : 540000,
+        "vertices" : 13500
+      },
+      {
+        "id" : "lrt-seven-leading",
+        "vertex_bytes" : 168960,
+        "vertices" : 4224
+      },
+      {
+        "id" : "lrt-seven-suspendedFront",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "lrt-seven-middleFront",
+        "vertex_bytes" : 146880,
+        "vertices" : 3672
+      },
+      {
+        "id" : "lrt-seven-suspendedCentre",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "lrt-seven-middleRear",
+        "vertex_bytes" : 146880,
+        "vertices" : 3672
+      },
+      {
+        "id" : "lrt-seven-suspendedRear",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "lrt-seven-trailing",
+        "vertex_bytes" : 184320,
+        "vertices" : 4608
+      },
+      {
+        "id" : "lrt-seven-formation",
+        "vertex_bytes" : 770880,
+        "vertices" : 19272
+      },
+      {
+        "id" : "metro-four-leading",
+        "vertex_bytes" : 239520,
+        "vertices" : 5988
+      },
+      {
+        "id" : "metro-four-middleFront",
+        "vertex_bytes" : 235200,
+        "vertices" : 5880
+      },
+      {
+        "id" : "metro-four-middleRear",
+        "vertex_bytes" : 235200,
+        "vertices" : 5880
+      },
+      {
+        "id" : "metro-four-trailing",
+        "vertex_bytes" : 239520,
+        "vertices" : 5988
+      },
+      {
+        "id" : "metro-four-formation",
+        "vertex_bytes" : 949440,
+        "vertices" : 23736
+      },
+      {
+        "id" : "blue-seven-leading",
+        "vertex_bytes" : 238560,
+        "vertices" : 5964
+      },
+      {
+        "id" : "blue-seven-middleOne",
+        "vertex_bytes" : 242880,
+        "vertices" : 6072
+      },
+      {
+        "id" : "blue-seven-middleTwo",
+        "vertex_bytes" : 242880,
+        "vertices" : 6072
+      },
+      {
+        "id" : "blue-seven-middleThree",
+        "vertex_bytes" : 242880,
+        "vertices" : 6072
+      },
+      {
+        "id" : "blue-seven-middleFour",
+        "vertex_bytes" : 242880,
+        "vertices" : 6072
+      },
+      {
+        "id" : "blue-seven-middleFive",
+        "vertex_bytes" : 242880,
+        "vertices" : 6072
+      },
+      {
+        "id" : "blue-seven-trailing",
+        "vertex_bytes" : 223200,
+        "vertices" : 5580
+      },
+      {
+        "id" : "blue-seven-formation",
+        "vertex_bytes" : 1676160,
+        "vertices" : 41904
+      },
+      {
+        "id" : "refresh-e200",
+        "vertex_bytes" : 661440,
+        "vertices" : 16536
+      },
+      {
+        "id" : "refresh-700t-cab",
+        "vertex_bytes" : 1095120,
+        "vertices" : 27378
+      },
+      {
+        "id" : "refresh-700t-middle",
+        "vertex_bytes" : 672240,
+        "vertices" : 16806
+      },
+      {
+        "id" : "refresh-700t-panto",
+        "vertex_bytes" : 687600,
+        "vertices" : 17190
+      },
+      {
+        "id" : "refresh-700t-tail",
+        "vertex_bytes" : 1095120,
+        "vertices" : 27378
+      },
+      {
+        "id" : "steam-locomotive",
+        "vertex_bytes" : 1209600,
+        "vertices" : 30240
+      },
+      {
+        "id" : "steam-tender",
+        "vertex_bytes" : 480000,
+        "vertices" : 12000
+      },
+      {
+        "id" : "steam-formation",
+        "vertex_bytes" : 1689600,
+        "vertices" : 42240
+      },
+      {
+        "id" : "life-lowFloorBus-route",
+        "vertex_bytes" : 265440,
+        "vertices" : 6636
+      },
+      {
+        "id" : "light-commuter-cab",
+        "vertex_bytes" : 64800,
+        "vertices" : 1620
+      },
+      {
+        "id" : "light-commuter-car",
+        "vertex_bytes" : 60480,
+        "vertices" : 1512
+      },
+      {
+        "id" : "light-express-cab",
+        "vertex_bytes" : 62280,
+        "vertices" : 1557
+      },
+      {
+        "id" : "light-express-car",
+        "vertex_bytes" : 72000,
+        "vertices" : 1800
+      },
+      {
+        "id" : "light-highSpeed-cab",
+        "vertex_bytes" : 52800,
+        "vertices" : 1320
+      },
+      {
+        "id" : "light-highSpeed-car",
+        "vertex_bytes" : 99360,
+        "vertices" : 2484
+      },
+      {
+        "id" : "light-highSpeed-panto",
+        "vertex_bytes" : 99000,
+        "vertices" : 2475
+      },
+      {
+        "id" : "light-metro-cab",
+        "vertex_bytes" : 63840,
+        "vertices" : 1596
+      },
+      {
+        "id" : "light-metro-car",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-peopleMover-cab",
+        "vertex_bytes" : 31200,
+        "vertices" : 780
+      },
+      {
+        "id" : "light-peopleMover-car",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-E200CK-car",
+        "vertex_bytes" : 100320,
+        "vertices" : 2508
+      },
+      {
+        "id" : "light-set-E200CK-tail",
+        "vertex_bytes" : 82560,
+        "vertices" : 2064
+      },
+      {
+        "id" : "light-set-E200CKFar-car",
+        "vertex_bytes" : 56160,
+        "vertices" : 1404
+      },
+      {
+        "id" : "light-set-E200CKFar-tail",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-E500CK-car",
+        "vertex_bytes" : 100320,
+        "vertices" : 2508
+      },
+      {
+        "id" : "light-set-E500CK-tail",
+        "vertex_bytes" : 82560,
+        "vertices" : 2064
+      },
+      {
+        "id" : "light-set-E500CKFar-car",
+        "vertex_bytes" : 56160,
+        "vertices" : 1404
+      },
+      {
+        "id" : "light-set-E500CKFar-tail",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-R100CK-head",
+        "vertex_bytes" : 28320,
+        "vertices" : 708
+      },
+      {
+        "id" : "light-set-R100CK-car",
+        "vertex_bytes" : 100320,
+        "vertices" : 2508
+      },
+      {
+        "id" : "light-set-R100CK-tail",
+        "vertex_bytes" : 82560,
+        "vertices" : 2064
+      },
+      {
+        "id" : "light-set-R100CKFar-car",
+        "vertex_bytes" : 56160,
+        "vertices" : 1404
+      },
+      {
+        "id" : "light-set-R100CKFar-tail",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-R200CK-head",
+        "vertex_bytes" : 9120,
+        "vertices" : 228
+      },
+      {
+        "id" : "light-set-R200CK-car",
+        "vertex_bytes" : 100320,
+        "vertices" : 2508
+      },
+      {
+        "id" : "light-set-R200CK-tail",
+        "vertex_bytes" : 82560,
+        "vertices" : 2064
+      },
+      {
+        "id" : "light-set-R200CKFar-head",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-R200CKFar-car",
+        "vertex_bytes" : 56160,
+        "vertices" : 1404
+      },
+      {
+        "id" : "light-set-R200CKFar-tail",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-BLUE-head",
+        "vertex_bytes" : 74400,
+        "vertices" : 1860
+      },
+      {
+        "id" : "light-set-BLUE-car",
+        "vertex_bytes" : 183360,
+        "vertices" : 4584
+      },
+      {
+        "id" : "light-set-BLUE-tail",
+        "vertex_bytes" : 172800,
+        "vertices" : 4320
+      },
+      {
+        "id" : "light-set-BLUE-panto",
+        "vertex_bytes" : 183360,
+        "vertices" : 4584
+      },
+      {
+        "id" : "light-set-BLUE-fourth",
+        "vertex_bytes" : 164160,
+        "vertices" : 4104
+      },
+      {
+        "id" : "light-set-BLUEFar-head",
+        "vertex_bytes" : 10080,
+        "vertices" : 252
+      },
+      {
+        "id" : "light-set-BLUEFar-car",
+        "vertex_bytes" : 73920,
+        "vertices" : 1848
+      },
+      {
+        "id" : "light-set-BLUEFar-tail",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-BLUEFar-panto",
+        "vertex_bytes" : 73920,
+        "vertices" : 1848
+      },
+      {
+        "id" : "light-set-BLUEFar-fourth",
+        "vertex_bytes" : 66240,
+        "vertices" : 1656
+      },
+      {
+        "id" : "light-set-MINGRI-car",
+        "vertex_bytes" : 100320,
+        "vertices" : 2508
+      },
+      {
+        "id" : "light-set-MINGRI-tail",
+        "vertex_bytes" : 82560,
+        "vertices" : 2064
+      },
+      {
+        "id" : "light-set-MINGRIFar-car",
+        "vertex_bytes" : 56160,
+        "vertices" : 1404
+      },
+      {
+        "id" : "light-set-MINGRIFar-tail",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-STAR-car",
+        "vertex_bytes" : 56640,
+        "vertices" : 1416
+      },
+      {
+        "id" : "light-set-STAR-tail",
+        "vertex_bytes" : 42720,
+        "vertices" : 1068
+      },
+      {
+        "id" : "light-set-STARFar-car",
+        "vertex_bytes" : 56640,
+        "vertices" : 1416
+      },
+      {
+        "id" : "light-set-STARFar-tail",
+        "vertex_bytes" : 42720,
+        "vertices" : 1068
+      },
+      {
+        "id" : "light-set-SUMMER-car",
+        "vertex_bytes" : 100320,
+        "vertices" : 2508
+      },
+      {
+        "id" : "light-set-SUMMER-tail",
+        "vertex_bytes" : 82560,
+        "vertices" : 2064
+      },
+      {
+        "id" : "light-set-SUMMERFar-car",
+        "vertex_bytes" : 56160,
+        "vertices" : 1404
+      },
+      {
+        "id" : "light-set-SUMMERFar-tail",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-STEAM-head",
+        "vertex_bytes" : 3840,
+        "vertices" : 96
+      },
+      {
+        "id" : "light-set-STEAM-car",
+        "vertex_bytes" : 56640,
+        "vertices" : 1416
+      },
+      {
+        "id" : "light-set-STEAM-tail",
+        "vertex_bytes" : 42720,
+        "vertices" : 1068
+      },
+      {
+        "id" : "light-set-pushPull-car",
+        "vertex_bytes" : 91680,
+        "vertices" : 2292
+      },
+      {
+        "id" : "light-set-pushPullFar-car",
+        "vertex_bytes" : 51360,
+        "vertices" : 1284
+      },
+      {
+        "id" : "light-set-pushPullE1000-car",
+        "vertex_bytes" : 91680,
+        "vertices" : 2292
+      },
+      {
+        "id" : "light-set-pushPullE1000Far-car",
+        "vertex_bytes" : 51360,
+        "vertices" : 1284
+      },
+      {
+        "id" : "light-set-emu3000-head",
+        "vertex_bytes" : 59520,
+        "vertices" : 1488
+      },
+      {
+        "id" : "light-set-emu3000-car",
+        "vertex_bytes" : 40320,
+        "vertices" : 1008
+      },
+      {
+        "id" : "light-set-emu3000-panto",
+        "vertex_bytes" : 37920,
+        "vertices" : 948
+      },
+      {
+        "id" : "light-set-emu3000-et",
+        "vertex_bytes" : 40320,
+        "vertices" : 1008
+      },
+      {
+        "id" : "light-set-emu3000-em6",
+        "vertex_bytes" : 33120,
+        "vertices" : 828
+      },
+      {
+        "id" : "light-set-emu3000-ep7",
+        "vertex_bytes" : 35520,
+        "vertices" : 888
+      },
+      {
+        "id" : "light-set-emu3000-ep10",
+        "vertex_bytes" : 40320,
+        "vertices" : 1008
+      },
+      {
+        "id" : "light-set-emu3000-tail",
+        "vertex_bytes" : 60720,
+        "vertices" : 1518
+      },
+      {
+        "id" : "light-set-emu3000Far-head",
+        "vertex_bytes" : 21600,
+        "vertices" : 540
+      },
+      {
+        "id" : "light-set-emu3000Far-car",
+        "vertex_bytes" : 23040,
+        "vertices" : 576
+      },
+      {
+        "id" : "light-set-emu3000Far-panto",
+        "vertex_bytes" : 21600,
+        "vertices" : 540
+      },
+      {
+        "id" : "light-set-emu3000Far-et",
+        "vertex_bytes" : 23040,
+        "vertices" : 576
+      },
+      {
+        "id" : "light-set-emu3000Far-em6",
+        "vertex_bytes" : 18720,
+        "vertices" : 468
+      },
+      {
+        "id" : "light-set-emu3000Far-ep7",
+        "vertex_bytes" : 20160,
+        "vertices" : 504
+      },
+      {
+        "id" : "light-set-emu3000Far-ep10",
+        "vertex_bytes" : 23040,
+        "vertices" : 576
+      },
+      {
+        "id" : "light-set-emu3000Far-tail",
+        "vertex_bytes" : 22440,
+        "vertices" : 561
+      },
+      {
+        "id" : "light-set-highSpeed-head",
+        "vertex_bytes" : 131520,
+        "vertices" : 3288
+      },
+      {
+        "id" : "light-set-highSpeed-car",
+        "vertex_bytes" : 96000,
+        "vertices" : 2400
+      },
+      {
+        "id" : "light-set-highSpeed-tail",
+        "vertex_bytes" : 131520,
+        "vertices" : 3288
+      },
+      {
+        "id" : "light-set-highSpeed-panto",
+        "vertex_bytes" : 96000,
+        "vertices" : 2400
+      },
+      {
+        "id" : "light-set-highSpeedFar-head",
+        "vertex_bytes" : 6720,
+        "vertices" : 168
+      },
+      {
+        "id" : "light-set-highSpeedFar-car",
+        "vertex_bytes" : 9600,
+        "vertices" : 240
+      },
+      {
+        "id" : "light-set-highSpeedFar-tail",
+        "vertex_bytes" : 6720,
+        "vertices" : 168
+      },
+      {
+        "id" : "light-set-highSpeedFar-panto",
+        "vertex_bytes" : 9600,
+        "vertices" : 240
+      },
+      {
+        "id" : "light-set-n700sG-head",
+        "vertex_bytes" : 78480,
+        "vertices" : 1962
+      },
+      {
+        "id" : "light-set-n700sG-car",
+        "vertex_bytes" : 85320,
+        "vertices" : 2133
+      },
+      {
+        "id" : "light-set-n700sG-tail",
+        "vertex_bytes" : 78480,
+        "vertices" : 1962
+      },
+      {
+        "id" : "light-set-n700sG-panto",
+        "vertex_bytes" : 83280,
+        "vertices" : 2082
+      },
+      {
+        "id" : "light-set-n700sG-carBack",
+        "vertex_bytes" : 85320,
+        "vertices" : 2133
+      },
+      {
+        "id" : "light-set-n700sG-pantoBack",
+        "vertex_bytes" : 83280,
+        "vertices" : 2082
+      },
+      {
+        "id" : "light-set-n700sGFar-head",
+        "vertex_bytes" : 8160,
+        "vertices" : 204
+      },
+      {
+        "id" : "light-set-n700sGFar-car",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-n700sGFar-tail",
+        "vertex_bytes" : 8160,
+        "vertices" : 204
+      },
+      {
+        "id" : "light-set-n700sGFar-panto",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-n700sGFar-carBack",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-n700sGFar-pantoBack",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-metroGeneric-head",
+        "vertex_bytes" : 73440,
+        "vertices" : 1836
+      },
+      {
+        "id" : "light-set-metroGeneric-car",
+        "vertex_bytes" : 78720,
+        "vertices" : 1968
+      },
+      {
+        "id" : "light-set-metroGeneric-tail",
+        "vertex_bytes" : 73440,
+        "vertices" : 1836
+      },
+      {
+        "id" : "light-set-wenhu-head",
+        "vertex_bytes" : 36000,
+        "vertices" : 900
+      },
+      {
+        "id" : "light-set-wenhu-car",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "light-set-wenhu-tail",
+        "vertex_bytes" : 36000,
+        "vertices" : 900
+      },
+      {
+        "id" : "light-set-puyuma-head",
+        "vertex_bytes" : 26400,
+        "vertices" : 660
+      },
+      {
+        "id" : "light-set-puyuma-car",
+        "vertex_bytes" : 31680,
+        "vertices" : 792
+      },
+      {
+        "id" : "light-set-puyuma-tail",
+        "vertex_bytes" : 23520,
+        "vertices" : 588
+      },
+      {
+        "id" : "light-set-puyuma-panto",
+        "vertex_bytes" : 32880,
+        "vertices" : 822
+      },
+      {
+        "id" : "light-set-puyuma-centre",
+        "vertex_bytes" : 31680,
+        "vertices" : 792
+      },
+      {
+        "id" : "light-set-puyuma-pantoBack",
+        "vertex_bytes" : 32880,
+        "vertices" : 822
+      },
+      {
+        "id" : "light-set-puyumaFar-head",
+        "vertex_bytes" : 3360,
+        "vertices" : 84
+      },
+      {
+        "id" : "light-set-puyumaFar-car",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-puyumaFar-tail",
+        "vertex_bytes" : 4320,
+        "vertices" : 108
+      },
+      {
+        "id" : "light-set-puyumaFar-panto",
+        "vertex_bytes" : 3360,
+        "vertices" : 84
+      },
+      {
+        "id" : "light-set-puyumaFar-centre",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-puyumaFar-pantoBack",
+        "vertex_bytes" : 3360,
+        "vertices" : 84
+      },
+      {
+        "id" : "light-set-taroko-head",
+        "vertex_bytes" : 10680,
+        "vertices" : 267
+      },
+      {
+        "id" : "light-set-taroko-car",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-taroko-tail",
+        "vertex_bytes" : 10680,
+        "vertices" : 267
+      },
+      {
+        "id" : "light-set-taroko-panto",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-tarokoFar-head",
+        "vertex_bytes" : 1080,
+        "vertices" : 27
+      },
+      {
+        "id" : "light-set-tarokoFar-car",
+        "vertex_bytes" : 960,
+        "vertices" : 24
+      },
+      {
+        "id" : "light-set-tarokoFar-tail",
+        "vertex_bytes" : 1080,
+        "vertices" : 27
+      },
+      {
+        "id" : "light-set-tarokoFar-panto",
+        "vertex_bytes" : 960,
+        "vertices" : 24
+      },
+      {
+        "id" : "light-set-emu800-head",
+        "vertex_bytes" : 88320,
+        "vertices" : 2208
+      },
+      {
+        "id" : "light-set-emu800-car",
+        "vertex_bytes" : 92160,
+        "vertices" : 2304
+      },
+      {
+        "id" : "light-set-emu800-tail",
+        "vertex_bytes" : 88320,
+        "vertices" : 2208
+      },
+      {
+        "id" : "light-set-emu800-panto",
+        "vertex_bytes" : 88320,
+        "vertices" : 2208
+      },
+      {
+        "id" : "light-set-emu800-centre",
+        "vertex_bytes" : 92160,
+        "vertices" : 2304
+      },
+      {
+        "id" : "light-set-emu800-carBack",
+        "vertex_bytes" : 92160,
+        "vertices" : 2304
+      },
+      {
+        "id" : "light-set-emu800-pantoBack",
+        "vertex_bytes" : 88320,
+        "vertices" : 2208
+      },
+      {
+        "id" : "light-set-emu800-centreBack",
+        "vertex_bytes" : 92160,
+        "vertices" : 2304
+      },
+      {
+        "id" : "light-set-emu800Far-head",
+        "vertex_bytes" : 11040,
+        "vertices" : 276
+      },
+      {
+        "id" : "light-set-emu800Far-car",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu800Far-tail",
+        "vertex_bytes" : 11040,
+        "vertices" : 276
+      },
+      {
+        "id" : "light-set-emu800Far-panto",
+        "vertex_bytes" : 11040,
+        "vertices" : 276
+      },
+      {
+        "id" : "light-set-emu800Far-centre",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu800Far-carBack",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu800Far-pantoBack",
+        "vertex_bytes" : 11040,
+        "vertices" : 276
+      },
+      {
+        "id" : "light-set-emu800Far-centreBack",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu500-head",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "light-set-emu500-car",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "light-set-emu500-tail",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "light-set-emu500-panto",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-emu500-centre",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-emu500-carBack",
+        "vertex_bytes" : 41280,
+        "vertices" : 1032
+      },
+      {
+        "id" : "light-set-emu500-pantoBack",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-emu500-centreBack",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-emu500Far-head",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-emu500Far-car",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-emu500Far-tail",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-emu500Far-panto",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu500Far-centre",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu500Far-carBack",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-emu500Far-pantoBack",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu500Far-centreBack",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900-head",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-emu900-car",
+        "vertex_bytes" : 66240,
+        "vertices" : 1656
+      },
+      {
+        "id" : "light-set-emu900-tail",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-emu900-panto",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-emu900-centre",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-emu900-carBack",
+        "vertex_bytes" : 66240,
+        "vertices" : 1656
+      },
+      {
+        "id" : "light-set-emu900-pantoBack",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-emu900-centreBack",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-emu900-fourth",
+        "vertex_bytes" : 69120,
+        "vertices" : 1728
+      },
+      {
+        "id" : "light-set-emu900-fourthBack",
+        "vertex_bytes" : 66240,
+        "vertices" : 1656
+      },
+      {
+        "id" : "light-set-emu900Far-head",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900Far-car",
+        "vertex_bytes" : 11040,
+        "vertices" : 276
+      },
+      {
+        "id" : "light-set-emu900Far-tail",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900Far-panto",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900Far-centre",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900Far-carBack",
+        "vertex_bytes" : 11040,
+        "vertices" : 276
+      },
+      {
+        "id" : "light-set-emu900Far-pantoBack",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900Far-centreBack",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900Far-fourth",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-emu900Far-fourthBack",
+        "vertex_bytes" : 11040,
+        "vertices" : 276
+      },
+      {
+        "id" : "light-set-metroC341-head",
+        "vertex_bytes" : 43200,
+        "vertices" : 1080
+      },
+      {
+        "id" : "light-set-metroC341-car",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-metroC341-tail",
+        "vertex_bytes" : 43200,
+        "vertices" : 1080
+      },
+      {
+        "id" : "light-set-metroC341-centre",
+        "vertex_bytes" : 46080,
+        "vertices" : 1152
+      },
+      {
+        "id" : "light-set-metroC341Far-head",
+        "vertex_bytes" : 14400,
+        "vertices" : 360
+      },
+      {
+        "id" : "light-set-metroC341Far-car",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-metroC341Far-tail",
+        "vertex_bytes" : 14400,
+        "vertices" : 360
+      },
+      {
+        "id" : "light-set-metroC341Far-centre",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-metroC371-head",
+        "vertex_bytes" : 14400,
+        "vertices" : 360
+      },
+      {
+        "id" : "light-set-metroC371-car",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-metroC371-tail",
+        "vertex_bytes" : 14400,
+        "vertices" : 360
+      },
+      {
+        "id" : "light-set-metroC371-centre",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-metroC371Far-head",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-metroC371Far-car",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-metroC371Far-tail",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-metroC371Far-centre",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-metroC381-head",
+        "vertex_bytes" : 14400,
+        "vertices" : 360
+      },
+      {
+        "id" : "light-set-metroC381-car",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-metroC381-tail",
+        "vertex_bytes" : 14400,
+        "vertices" : 360
+      },
+      {
+        "id" : "light-set-metroC381-centre",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-metroC381Far-head",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-metroC381Far-car",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-metroC381Far-tail",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-metroC381Far-centre",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-circular610-head",
+        "vertex_bytes" : 28800,
+        "vertices" : 720
+      },
+      {
+        "id" : "light-set-circular610-car",
+        "vertex_bytes" : 28800,
+        "vertices" : 720
+      },
+      {
+        "id" : "light-set-circular610-tail",
+        "vertex_bytes" : 28800,
+        "vertices" : 720
+      },
+      {
+        "id" : "light-set-circular610-carBack",
+        "vertex_bytes" : 28800,
+        "vertices" : 720
+      },
+      {
+        "id" : "light-set-circular610Far-head",
+        "vertex_bytes" : 9600,
+        "vertices" : 240
+      },
+      {
+        "id" : "light-set-circular610Far-car",
+        "vertex_bytes" : 9600,
+        "vertices" : 240
+      },
+      {
+        "id" : "light-set-circular610Far-tail",
+        "vertex_bytes" : 9600,
+        "vertices" : 240
+      },
+      {
+        "id" : "light-set-circular610Far-carBack",
+        "vertex_bytes" : 9600,
+        "vertices" : 240
+      },
+      {
+        "id" : "light-set-sanying-head",
+        "vertex_bytes" : 57600,
+        "vertices" : 1440
+      },
+      {
+        "id" : "light-set-sanying-tail",
+        "vertex_bytes" : 57600,
+        "vertices" : 1440
+      },
+      {
+        "id" : "light-set-sanyingFar-head",
+        "vertex_bytes" : 19200,
+        "vertices" : 480
+      },
+      {
+        "id" : "light-set-sanyingFar-tail",
+        "vertex_bytes" : 19200,
+        "vertices" : 480
+      },
+      {
+        "id" : "light-set-kaohsiung-head",
+        "vertex_bytes" : 40320,
+        "vertices" : 1008
+      },
+      {
+        "id" : "light-set-kaohsiung-car",
+        "vertex_bytes" : 40320,
+        "vertices" : 1008
+      },
+      {
+        "id" : "light-set-kaohsiung-tail",
+        "vertex_bytes" : 40320,
+        "vertices" : 1008
+      },
+      {
+        "id" : "light-set-kaohsiungFar-head",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-kaohsiungFar-car",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-kaohsiungFar-tail",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-taichungGreen-head",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-taichungGreen-tail",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-taichungGreenFar-head",
+        "vertex_bytes" : 8640,
+        "vertices" : 216
+      },
+      {
+        "id" : "light-set-taichungGreenFar-tail",
+        "vertex_bytes" : 8640,
+        "vertices" : 216
+      },
+      {
+        "id" : "light-set-danhaiLRT-head",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-danhaiLRT-tail",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-danhaiLRTFar-head",
+        "vertex_bytes" : 6240,
+        "vertices" : 156
+      },
+      {
+        "id" : "light-set-danhaiLRTFar-tail",
+        "vertex_bytes" : 6240,
+        "vertices" : 156
+      },
+      {
+        "id" : "light-set-ankengLRT-head",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-ankengLRT-tail",
+        "vertex_bytes" : 13440,
+        "vertices" : 336
+      },
+      {
+        "id" : "light-set-ankengLRTFar-head",
+        "vertex_bytes" : 6240,
+        "vertices" : 156
+      },
+      {
+        "id" : "light-set-ankengLRTFar-tail",
+        "vertex_bytes" : 6240,
+        "vertices" : 156
+      },
+      {
+        "id" : "light-set-klrtCAF-head",
+        "vertex_bytes" : 23280,
+        "vertices" : 582
+      },
+      {
+        "id" : "light-set-klrtCAF-tail",
+        "vertex_bytes" : 24720,
+        "vertices" : 618
+      },
+      {
+        "id" : "light-set-klrtCAFFar-head",
+        "vertex_bytes" : 15840,
+        "vertices" : 396
+      },
+      {
+        "id" : "light-set-klrtCAFFar-tail",
+        "vertex_bytes" : 16800,
+        "vertices" : 420
+      },
+      {
+        "id" : "light-set-klrtCitadis-head",
+        "vertex_bytes" : 17520,
+        "vertices" : 438
+      },
+      {
+        "id" : "light-set-klrtCitadis-tail",
+        "vertex_bytes" : 18720,
+        "vertices" : 468
+      },
+      {
+        "id" : "light-set-klrtCitadisFar-head",
+        "vertex_bytes" : 10080,
+        "vertices" : 252
+      },
+      {
+        "id" : "light-set-klrtCitadisFar-tail",
+        "vertex_bytes" : 10320,
+        "vertices" : 258
+      },
+      {
+        "id" : "light-set-dieselRailcar-head",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselRailcar-car",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselRailcar-tail",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselRailcar-single",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselRailcarFar-head",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-dieselRailcarFar-car",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-dieselRailcarFar-tail",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-dieselRailcarFar-single",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-dieselExpress-head",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselExpress-car",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselExpress-tail",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselExpress-single",
+        "vertex_bytes" : 7680,
+        "vertices" : 192
+      },
+      {
+        "id" : "light-set-dieselExpressFar-head",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-dieselExpressFar-car",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-dieselExpressFar-tail",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-dieselExpressFar-single",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-ALISHAN-car",
+        "vertex_bytes" : 5760,
+        "vertices" : 144
+      },
+      {
+        "id" : "light-set-ALISHAN-tail",
+        "vertex_bytes" : 5760,
+        "vertices" : 144
+      },
+      {
+        "id" : "light-set-ALISHANFar-car",
+        "vertex_bytes" : 960,
+        "vertices" : 24
+      },
+      {
+        "id" : "light-set-ALISHANFar-tail",
+        "vertex_bytes" : 960,
+        "vertices" : 24
+      },
+      {
+        "id" : "light-set-greenTram-head",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-greenTram-car",
+        "vertex_bytes" : 19200,
+        "vertices" : 480
+      },
+      {
+        "id" : "light-set-greenTram-tail",
+        "vertex_bytes" : 15360,
+        "vertices" : 384
+      },
+      {
+        "id" : "light-set-greenTram-single",
+        "vertex_bytes" : 11520,
+        "vertices" : 288
+      },
+      {
+        "id" : "light-set-greenCommuter-head",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-greenCommuter-car",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-greenCommuter-tail",
+        "vertex_bytes" : 10560,
+        "vertices" : 264
+      },
+      {
+        "id" : "light-set-threeCarUrban-head",
+        "vertex_bytes" : 14160,
+        "vertices" : 354
+      },
+      {
+        "id" : "light-set-threeCarUrban-car",
+        "vertex_bytes" : 16800,
+        "vertices" : 420
+      },
+      {
+        "id" : "light-set-threeCarUrban-tail",
+        "vertex_bytes" : 14160,
+        "vertices" : 354
+      },
+      {
+        "id" : "light-set-fiveSectionLRT-head",
+        "vertex_bytes" : 21120,
+        "vertices" : 528
+      },
+      {
+        "id" : "light-set-fiveSectionLRT-tail",
+        "vertex_bytes" : 21120,
+        "vertices" : 528
+      },
+      {
+        "id" : "light-set-sevenSectionLRT-head",
+        "vertex_bytes" : 8640,
+        "vertices" : 216
+      },
+      {
+        "id" : "light-set-sevenSectionLRT-car",
+        "vertex_bytes" : 8640,
+        "vertices" : 216
+      },
+      {
+        "id" : "light-set-sevenSectionLRT-tail",
+        "vertex_bytes" : 8640,
+        "vertices" : 216
+      },
+      {
+        "id" : "light-set-fourCarMetro-head",
+        "vertex_bytes" : 5760,
+        "vertices" : 144
+      },
+      {
+        "id" : "light-set-fourCarMetro-car",
+        "vertex_bytes" : 6720,
+        "vertices" : 168
+      },
+      {
+        "id" : "light-set-fourCarMetro-tail",
+        "vertex_bytes" : 5760,
+        "vertices" : 144
+      },
+      {
+        "id" : "light-set-blueSeven-head",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      },
+      {
+        "id" : "light-set-blueSeven-car",
+        "vertex_bytes" : 6720,
+        "vertices" : 168
+      },
+      {
+        "id" : "light-set-blueSeven-tail",
+        "vertex_bytes" : 2880,
+        "vertices" : 72
+      }
+    ],
+    "vertex_bytes" : 191769360
+  },
+  "standard_added_models" : 0,
+  "standard_added_vertex_bytes" : 0,
+  "studies" : {
+    "count" : 214,
+    "models" : [
+      {
+        "id" : "taoyuan-airport-dmc1",
+        "vertex_bytes" : 1650240,
+        "vertices" : 41256
+      },
+      {
+        "id" : "taoyuan-airport-dmc1-far",
+        "vertex_bytes" : 818400,
+        "vertices" : 20460
+      },
+      {
+        "id" : "taoyuan-airport-mc1",
+        "vertex_bytes" : 1193280,
+        "vertices" : 29832
+      },
+      {
+        "id" : "taoyuan-airport-mc1-far",
+        "vertex_bytes" : 549120,
+        "vertices" : 13728
+      },
+      {
+        "id" : "taoyuan-airport-mc2",
+        "vertex_bytes" : 1193280,
+        "vertices" : 29832
+      },
+      {
+        "id" : "taoyuan-airport-mc2-far",
+        "vertex_bytes" : 549120,
+        "vertices" : 13728
+      },
+      {
+        "id" : "taoyuan-airport-dmc2",
+        "vertex_bytes" : 1650240,
+        "vertices" : 41256
+      },
+      {
+        "id" : "taoyuan-airport-dmc2-far",
+        "vertex_bytes" : 818400,
+        "vertices" : 20460
+      },
+      {
+        "id" : "taoyuan-airport-dme1",
+        "vertex_bytes" : 1650240,
+        "vertices" : 41256
+      },
+      {
+        "id" : "taoyuan-airport-dme1-far",
+        "vertex_bytes" : 818400,
+        "vertices" : 20460
+      },
+      {
+        "id" : "taoyuan-airport-me1",
+        "vertex_bytes" : 1193280,
+        "vertices" : 29832
+      },
+      {
+        "id" : "taoyuan-airport-me1-far",
+        "vertex_bytes" : 549120,
+        "vertices" : 13728
+      },
+      {
+        "id" : "taoyuan-airport-me3",
+        "vertex_bytes" : 1171680,
+        "vertices" : 29292
+      },
+      {
+        "id" : "taoyuan-airport-me3-far",
+        "vertex_bytes" : 547680,
+        "vertices" : 13692
+      },
+      {
+        "id" : "taoyuan-airport-me4",
+        "vertex_bytes" : 1193280,
+        "vertices" : 29832
+      },
+      {
+        "id" : "taoyuan-airport-me4-far",
+        "vertex_bytes" : 549120,
+        "vertices" : 13728
+      },
+      {
+        "id" : "taoyuan-airport-dmb",
+        "vertex_bytes" : 1268640,
+        "vertices" : 31716
+      },
+      {
+        "id" : "taoyuan-airport-dmb-far",
+        "vertex_bytes" : 625440,
+        "vertices" : 15636
+      },
+      {
+        "id" : "tra-r100-r122-orange-locomotive",
+        "vertex_bytes" : 878160,
+        "vertices" : 21954
+      },
+      {
+        "id" : "tra-r100-r122-orange-locomotive-far",
+        "vertex_bytes" : 415920,
+        "vertices" : 10398
+      },
+      {
+        "id" : "tra-r100-r123-breezy-blue-locomotive",
+        "vertex_bytes" : 878160,
+        "vertices" : 21954
+      },
+      {
+        "id" : "tra-r100-r123-breezy-blue-locomotive-far",
+        "vertex_bytes" : 415920,
+        "vertices" : 10398
+      },
+      {
+        "id" : "tra-breezy-blue-coach-mixed",
+        "vertex_bytes" : 1583280,
+        "vertices" : 39582
+      },
+      {
+        "id" : "tra-breezy-blue-coach-mixed-far",
+        "vertex_bytes" : 657360,
+        "vertices" : 16434
+      },
+      {
+        "id" : "tra-breezy-blue-coach-exhibition",
+        "vertex_bytes" : 1593360,
+        "vertices" : 39834
+      },
+      {
+        "id" : "tra-breezy-blue-coach-exhibition-far",
+        "vertex_bytes" : 644400,
+        "vertices" : 16110
+      },
+      {
+        "id" : "tra-breezy-blue-coach-long-seat",
+        "vertex_bytes" : 1593360,
+        "vertices" : 39834
+      },
+      {
+        "id" : "tra-breezy-blue-coach-long-seat-far",
+        "vertex_bytes" : 644400,
+        "vertices" : 16110
+      },
+      {
+        "id" : "tra-breezy-blue-coach-rotating-seat",
+        "vertex_bytes" : 1468080,
+        "vertices" : 36702
+      },
+      {
+        "id" : "tra-breezy-blue-coach-rotating-seat-far",
+        "vertex_bytes" : 594000,
+        "vertices" : 14850
+      },
+      {
+        "id" : "tra-r200-r216-locomotive",
+        "vertex_bytes" : 1524240,
+        "vertices" : 38106
+      },
+      {
+        "id" : "tra-r200-r216-locomotive-far",
+        "vertex_bytes" : 611760,
+        "vertices" : 15294
+      },
+      {
+        "id" : "temu2000-leading",
+        "vertex_bytes" : 837600,
+        "vertices" : 20940
+      },
+      {
+        "id" : "temu2000-tema",
+        "vertex_bytes" : 216000,
+        "vertices" : 5400
+      },
+      {
+        "id" : "temu2000-tep",
+        "vertex_bytes" : 234240,
+        "vertices" : 5856
+      },
+      {
+        "id" : "temu2000-temb",
+        "vertex_bytes" : 217440,
+        "vertices" : 5436
+      },
+      {
+        "id" : "temu2000-trailing",
+        "vertex_bytes" : 831840,
+        "vertices" : 20796
+      },
+      {
+        "id" : "temu2000-leading-far",
+        "vertex_bytes" : 337440,
+        "vertices" : 8436
+      },
+      {
+        "id" : "temu2000-tema-far",
+        "vertex_bytes" : 91200,
+        "vertices" : 2280
+      },
+      {
+        "id" : "temu2000-tep-far",
+        "vertex_bytes" : 99840,
+        "vertices" : 2496
+      },
+      {
+        "id" : "temu2000-temb-far",
+        "vertex_bytes" : 92640,
+        "vertices" : 2316
+      },
+      {
+        "id" : "temu2000-trailing-far",
+        "vertex_bytes" : 343200,
+        "vertices" : 8580
+      },
+      {
+        "id" : "temu2000-formation",
+        "vertex_bytes" : 3004800,
+        "vertices" : 75120
+      },
+      {
+        "id" : "pp-ppm2500",
+        "vertex_bytes" : 842880,
+        "vertices" : 21072
+      },
+      {
+        "id" : "pp-pph1300",
+        "vertex_bytes" : 963840,
+        "vertices" : 24096
+      },
+      {
+        "id" : "pp-ppc1400",
+        "vertex_bytes" : 982080,
+        "vertices" : 24552
+      },
+      {
+        "id" : "pp-ppt1000",
+        "vertex_bytes" : 980640,
+        "vertices" : 24516
+      },
+      {
+        "id" : "pp-ppm2500-far",
+        "vertex_bytes" : 399360,
+        "vertices" : 9984
+      },
+      {
+        "id" : "pp-pph1300-far",
+        "vertex_bytes" : 462720,
+        "vertices" : 11568
+      },
+      {
+        "id" : "pp-ppc1400-far",
+        "vertex_bytes" : 473280,
+        "vertices" : 11832
+      },
+      {
+        "id" : "pp-ppt1000-far",
+        "vertex_bytes" : 473280,
+        "vertices" : 11832
+      },
+      {
+        "id" : "e1000",
+        "vertex_bytes" : 766560,
+        "vertices" : 19164
+      },
+      {
+        "id" : "e1000-far",
+        "vertex_bytes" : 415200,
+        "vertices" : 10380
+      },
+      {
+        "id" : "emu800-ed",
+        "vertex_bytes" : 1380720,
+        "vertices" : 34518
+      },
+      {
+        "id" : "emu800-ed-reverse",
+        "vertex_bytes" : 1380720,
+        "vertices" : 34518
+      },
+      {
+        "id" : "emu800-ema",
+        "vertex_bytes" : 624000,
+        "vertices" : 15600
+      },
+      {
+        "id" : "emu800-ema-reverse",
+        "vertex_bytes" : 624000,
+        "vertices" : 15600
+      },
+      {
+        "id" : "emu800-ep",
+        "vertex_bytes" : 644640,
+        "vertices" : 16116
+      },
+      {
+        "id" : "emu800-ep-reverse",
+        "vertex_bytes" : 644640,
+        "vertices" : 16116
+      },
+      {
+        "id" : "emu800-emb",
+        "vertex_bytes" : 625440,
+        "vertices" : 15636
+      },
+      {
+        "id" : "emu800-emb-reverse",
+        "vertex_bytes" : 625440,
+        "vertices" : 15636
+      },
+      {
+        "id" : "emu800-ed-far",
+        "vertex_bytes" : 725520,
+        "vertices" : 18138
+      },
+      {
+        "id" : "emu800-ed-reverse-far",
+        "vertex_bytes" : 725520,
+        "vertices" : 18138
+      },
+      {
+        "id" : "emu800-ema-far",
+        "vertex_bytes" : 349920,
+        "vertices" : 8748
+      },
+      {
+        "id" : "emu800-ema-reverse-far",
+        "vertex_bytes" : 349920,
+        "vertices" : 8748
+      },
+      {
+        "id" : "emu800-ep-far",
+        "vertex_bytes" : 370560,
+        "vertices" : 9264
+      },
+      {
+        "id" : "emu800-ep-reverse-far",
+        "vertex_bytes" : 370560,
+        "vertices" : 9264
+      },
+      {
+        "id" : "emu800-emb-far",
+        "vertex_bytes" : 351360,
+        "vertices" : 8784
+      },
+      {
+        "id" : "emu800-emb-reverse-far",
+        "vertex_bytes" : 351360,
+        "vertices" : 8784
+      },
+      {
+        "id" : "haifeng-emu500-emc",
+        "vertex_bytes" : 969120,
+        "vertices" : 24228
+      },
+      {
+        "id" : "haifeng-emu500-ep",
+        "vertex_bytes" : 352320,
+        "vertices" : 8808
+      },
+      {
+        "id" : "haifeng-emu500-et",
+        "vertex_bytes" : 375840,
+        "vertices" : 9396
+      },
+      {
+        "id" : "haifeng-emu500-em",
+        "vertex_bytes" : 969120,
+        "vertices" : 24228
+      },
+      {
+        "id" : "haifeng-emu500-emc-far",
+        "vertex_bytes" : 410400,
+        "vertices" : 10260
+      },
+      {
+        "id" : "haifeng-emu500-ep-far",
+        "vertex_bytes" : 133920,
+        "vertices" : 3348
+      },
+      {
+        "id" : "haifeng-emu500-et-far",
+        "vertex_bytes" : 139680,
+        "vertices" : 3492
+      },
+      {
+        "id" : "haifeng-emu500-em-far",
+        "vertex_bytes" : 410400,
+        "vertices" : 10260
+      },
+      {
+        "id" : "shanlan-emu500-emc",
+        "vertex_bytes" : 969120,
+        "vertices" : 24228
+      },
+      {
+        "id" : "shanlan-emu500-ep",
+        "vertex_bytes" : 352320,
+        "vertices" : 8808
+      },
+      {
+        "id" : "shanlan-emu500-et",
+        "vertex_bytes" : 375840,
+        "vertices" : 9396
+      },
+      {
+        "id" : "shanlan-emu500-em",
+        "vertex_bytes" : 969120,
+        "vertices" : 24228
+      },
+      {
+        "id" : "shanlan-emu500-emc-far",
+        "vertex_bytes" : 410400,
+        "vertices" : 10260
+      },
+      {
+        "id" : "shanlan-emu500-ep-far",
+        "vertex_bytes" : 133920,
+        "vertices" : 3348
+      },
+      {
+        "id" : "shanlan-emu500-et-far",
+        "vertex_bytes" : 139680,
+        "vertices" : 3492
+      },
+      {
+        "id" : "shanlan-emu500-em-far",
+        "vertex_bytes" : 410400,
+        "vertices" : 10260
+      },
+      {
+        "id" : "emu500-emc",
+        "vertex_bytes" : 545760,
+        "vertices" : 13644
+      },
+      {
+        "id" : "emu500-ep",
+        "vertex_bytes" : 353280,
+        "vertices" : 8832
+      },
+      {
+        "id" : "emu500-et",
+        "vertex_bytes" : 340800,
+        "vertices" : 8520
+      },
+      {
+        "id" : "emu500-em",
+        "vertex_bytes" : 545760,
+        "vertices" : 13644
+      },
+      {
+        "id" : "emu500-formation",
+        "vertex_bytes" : 1785600,
+        "vertices" : 44640
+      },
+      {
+        "id" : "c341-dm",
+        "vertex_bytes" : 467280,
+        "vertices" : 11682
+      },
+      {
+        "id" : "c341-t",
+        "vertex_bytes" : 396720,
+        "vertices" : 9918
+      },
+      {
+        "id" : "c341-m",
+        "vertex_bytes" : 398160,
+        "vertices" : 9954
+      },
+      {
+        "id" : "c341-rear",
+        "vertex_bytes" : 467280,
+        "vertices" : 11682
+      },
+      {
+        "id" : "emu900-ed",
+        "vertex_bytes" : 1110720,
+        "vertices" : 27768
+      },
+      {
+        "id" : "emu900-ed-reverse",
+        "vertex_bytes" : 1110720,
+        "vertices" : 27768
+      },
+      {
+        "id" : "emu900-ed-light",
+        "vertex_bytes" : 262560,
+        "vertices" : 6564
+      },
+      {
+        "id" : "emu900-ed-reverse-light",
+        "vertex_bytes" : 262560,
+        "vertices" : 6564
+      },
+      {
+        "id" : "emu900-emToilet",
+        "vertex_bytes" : 609600,
+        "vertices" : 15240
+      },
+      {
+        "id" : "emu900-emToilet-reverse",
+        "vertex_bytes" : 609600,
+        "vertices" : 15240
+      },
+      {
+        "id" : "emu900-emToilet-light",
+        "vertex_bytes" : 108960,
+        "vertices" : 2724
+      },
+      {
+        "id" : "emu900-emToilet-reverse-light",
+        "vertex_bytes" : 108960,
+        "vertices" : 2724
+      },
+      {
+        "id" : "emu900-emSIV",
+        "vertex_bytes" : 604800,
+        "vertices" : 15120
+      },
+      {
+        "id" : "emu900-emSIV-reverse",
+        "vertex_bytes" : 604800,
+        "vertices" : 15120
+      },
+      {
+        "id" : "emu900-emSIV-light",
+        "vertex_bytes" : 105600,
+        "vertices" : 2640
+      },
+      {
+        "id" : "emu900-emSIV-reverse-light",
+        "vertex_bytes" : 105600,
+        "vertices" : 2640
+      },
+      {
+        "id" : "emu900-emCrew",
+        "vertex_bytes" : 599040,
+        "vertices" : 14976
+      },
+      {
+        "id" : "emu900-emCrew-reverse",
+        "vertex_bytes" : 599040,
+        "vertices" : 14976
+      },
+      {
+        "id" : "emu900-emCrew-light",
+        "vertex_bytes" : 104160,
+        "vertices" : 2604
+      },
+      {
+        "id" : "emu900-emCrew-reverse-light",
+        "vertex_bytes" : 104160,
+        "vertices" : 2604
+      },
+      {
+        "id" : "emu900-epCompressor",
+        "vertex_bytes" : 631680,
+        "vertices" : 15792
+      },
+      {
+        "id" : "emu900-epCompressor-reverse",
+        "vertex_bytes" : 631680,
+        "vertices" : 15792
+      },
+      {
+        "id" : "emu900-epCompressor-light",
+        "vertex_bytes" : 131040,
+        "vertices" : 3276
+      },
+      {
+        "id" : "emu900-epCompressor-reverse-light",
+        "vertex_bytes" : 131040,
+        "vertices" : 3276
+      },
+      {
+        "id" : "emu900-epAccessible",
+        "vertex_bytes" : 621120,
+        "vertices" : 15528
+      },
+      {
+        "id" : "emu900-epAccessible-reverse",
+        "vertex_bytes" : 621120,
+        "vertices" : 15528
+      },
+      {
+        "id" : "emu900-epAccessible-light",
+        "vertex_bytes" : 126240,
+        "vertices" : 3156
+      },
+      {
+        "id" : "emu900-epAccessible-reverse-light",
+        "vertex_bytes" : 126240,
+        "vertices" : 3156
+      },
+      {
+        "id" : "emu900-ed-far",
+        "vertex_bytes" : 645600,
+        "vertices" : 16140
+      },
+      {
+        "id" : "emu900-ed-reverse-far",
+        "vertex_bytes" : 645600,
+        "vertices" : 16140
+      },
+      {
+        "id" : "emu900-emToilet-far",
+        "vertex_bytes" : 340320,
+        "vertices" : 8508
+      },
+      {
+        "id" : "emu900-emToilet-reverse-far",
+        "vertex_bytes" : 340320,
+        "vertices" : 8508
+      },
+      {
+        "id" : "emu900-emSIV-far",
+        "vertex_bytes" : 335040,
+        "vertices" : 8376
+      },
+      {
+        "id" : "emu900-emSIV-reverse-far",
+        "vertex_bytes" : 335040,
+        "vertices" : 8376
+      },
+      {
+        "id" : "emu900-emCrew-far",
+        "vertex_bytes" : 333600,
+        "vertices" : 8340
+      },
+      {
+        "id" : "emu900-emCrew-reverse-far",
+        "vertex_bytes" : 333600,
+        "vertices" : 8340
+      },
+      {
+        "id" : "emu900-epCompressor-far",
+        "vertex_bytes" : 362400,
+        "vertices" : 9060
+      },
+      {
+        "id" : "emu900-epCompressor-reverse-far",
+        "vertex_bytes" : 362400,
+        "vertices" : 9060
+      },
+      {
+        "id" : "emu900-epAccessible-far",
+        "vertex_bytes" : 355680,
+        "vertices" : 8892
+      },
+      {
+        "id" : "emu900-epAccessible-reverse-far",
+        "vertex_bytes" : 355680,
+        "vertices" : 8892
+      },
+      {
+        "id" : "c371-dm",
+        "vertex_bytes" : 642960,
+        "vertices" : 16074
+      },
+      {
+        "id" : "c371-t",
+        "vertex_bytes" : 262560,
+        "vertices" : 6564
+      },
+      {
+        "id" : "c371-m",
+        "vertex_bytes" : 264000,
+        "vertices" : 6600
+      },
+      {
+        "id" : "c371-rear",
+        "vertex_bytes" : 642960,
+        "vertices" : 16074
+      },
+      {
+        "id" : "c381-dm",
+        "vertex_bytes" : 837120,
+        "vertices" : 20928
+      },
+      {
+        "id" : "c381-t",
+        "vertex_bytes" : 216480,
+        "vertices" : 5412
+      },
+      {
+        "id" : "c381-m",
+        "vertex_bytes" : 217920,
+        "vertices" : 5448
+      },
+      {
+        "id" : "c381-rear",
+        "vertex_bytes" : 837120,
+        "vertices" : 20928
+      },
+      {
+        "id" : "taipei610-a",
+        "vertex_bytes" : 438000,
+        "vertices" : 10950
+      },
+      {
+        "id" : "taipei610-a-far",
+        "vertex_bytes" : 206640,
+        "vertices" : 5166
+      },
+      {
+        "id" : "taipei610-a-light",
+        "vertex_bytes" : 196560,
+        "vertices" : 4914
+      },
+      {
+        "id" : "taipei610-c",
+        "vertex_bytes" : 338880,
+        "vertices" : 8472
+      },
+      {
+        "id" : "taipei610-c-far",
+        "vertex_bytes" : 164640,
+        "vertices" : 4116
+      },
+      {
+        "id" : "taipei610-c-light",
+        "vertex_bytes" : 150240,
+        "vertices" : 3756
+      },
+      {
+        "id" : "taipei610-d",
+        "vertex_bytes" : 338880,
+        "vertices" : 8472
+      },
+      {
+        "id" : "taipei610-d-far",
+        "vertex_bytes" : 164640,
+        "vertices" : 4116
+      },
+      {
+        "id" : "taipei610-d-light",
+        "vertex_bytes" : 150240,
+        "vertices" : 3756
+      },
+      {
+        "id" : "taipei610-b",
+        "vertex_bytes" : 438000,
+        "vertices" : 10950
+      },
+      {
+        "id" : "taipei610-b-far",
+        "vertex_bytes" : 206640,
+        "vertices" : 5166
+      },
+      {
+        "id" : "taipei610-b-light",
+        "vertex_bytes" : 196560,
+        "vertices" : 4914
+      },
+      {
+        "id" : "sanying-a",
+        "vertex_bytes" : 516720,
+        "vertices" : 12918
+      },
+      {
+        "id" : "sanying-a-far",
+        "vertex_bytes" : 246960,
+        "vertices" : 6174
+      },
+      {
+        "id" : "sanying-b",
+        "vertex_bytes" : 516720,
+        "vertices" : 12918
+      },
+      {
+        "id" : "sanying-b-far",
+        "vertex_bytes" : 246960,
+        "vertices" : 6174
+      },
+      {
+        "id" : "taichung-green-dm1",
+        "vertex_bytes" : 576480,
+        "vertices" : 14412
+      },
+      {
+        "id" : "taichung-green-dm2",
+        "vertex_bytes" : 576480,
+        "vertices" : 14412
+      },
+      {
+        "id" : "taichung-green-dm1-far",
+        "vertex_bytes" : 264960,
+        "vertices" : 6624
+      },
+      {
+        "id" : "taichung-green-dm2-far",
+        "vertex_bytes" : 264960,
+        "vertices" : 6624
+      },
+      {
+        "id" : "kaohsiung-dm1",
+        "vertex_bytes" : 694800,
+        "vertices" : 17370
+      },
+      {
+        "id" : "kaohsiung-t",
+        "vertex_bytes" : 277440,
+        "vertices" : 6936
+      },
+      {
+        "id" : "kaohsiung-dm2",
+        "vertex_bytes" : 694800,
+        "vertices" : 17370
+      },
+      {
+        "id" : "kaohsiung-dm1-far",
+        "vertex_bytes" : 322320,
+        "vertices" : 8058
+      },
+      {
+        "id" : "kaohsiung-t-far",
+        "vertex_bytes" : 118080,
+        "vertices" : 2952
+      },
+      {
+        "id" : "kaohsiung-dm2-far",
+        "vertex_bytes" : 322320,
+        "vertices" : 8058
+      },
+      {
+        "id" : "g12-r21",
+        "vertex_bytes" : 770400,
+        "vertices" : 19260
+      },
+      {
+        "id" : "g12-r21-far",
+        "vertex_bytes" : 351840,
+        "vertices" : 8796
+      },
+      {
+        "id" : "45dr1000-drc1025",
+        "vertex_bytes" : 432480,
+        "vertices" : 10812
+      },
+      {
+        "id" : "45dr1000-drc1025-far",
+        "vertex_bytes" : 190080,
+        "vertices" : 4752
+      },
+      {
+        "id" : "e200mingri-style-head",
+        "vertex_bytes" : 661440,
+        "vertices" : 16536
+      },
+      {
+        "id" : "e200mingri-style-car",
+        "vertex_bytes" : 777120,
+        "vertices" : 19428
+      },
+      {
+        "id" : "e200mingri-style-tail",
+        "vertex_bytes" : 780000,
+        "vertices" : 19500
+      },
+      {
+        "id" : "e200mingri-style-head-far",
+        "vertex_bytes" : 661440,
+        "vertices" : 16536
+      },
+      {
+        "id" : "e200mingri-style-car-far",
+        "vertex_bytes" : 480960,
+        "vertices" : 12024
+      },
+      {
+        "id" : "e200mingri-style-tail-far",
+        "vertex_bytes" : 483840,
+        "vertices" : 12096
+      },
+      {
+        "id" : "klrt-caf-c1",
+        "vertex_bytes" : 1692000,
+        "vertices" : 42300
+      },
+      {
+        "id" : "klrt-caf-s1",
+        "vertex_bytes" : 516480,
+        "vertices" : 12912
+      },
+      {
+        "id" : "klrt-caf-r",
+        "vertex_bytes" : 359520,
+        "vertices" : 8988
+      },
+      {
+        "id" : "klrt-caf-s2",
+        "vertex_bytes" : 522240,
+        "vertices" : 13056
+      },
+      {
+        "id" : "klrt-caf-c2",
+        "vertex_bytes" : 1671840,
+        "vertices" : 41796
+      },
+      {
+        "id" : "klrt-citadis-m1",
+        "vertex_bytes" : 990240,
+        "vertices" : 24756
+      },
+      {
+        "id" : "klrt-citadis-sc1",
+        "vertex_bytes" : 535200,
+        "vertices" : 13380
+      },
+      {
+        "id" : "klrt-citadis-np",
+        "vertex_bytes" : 372480,
+        "vertices" : 9312
+      },
+      {
+        "id" : "klrt-citadis-sc2",
+        "vertex_bytes" : 569760,
+        "vertices" : 14244
+      },
+      {
+        "id" : "klrt-citadis-m2",
+        "vertex_bytes" : 967200,
+        "vertices" : 24180
+      },
+      {
+        "id" : "klrt-caf-c1-far",
+        "vertex_bytes" : 784800,
+        "vertices" : 19620
+      },
+      {
+        "id" : "klrt-caf-s1-far",
+        "vertex_bytes" : 188640,
+        "vertices" : 4716
+      },
+      {
+        "id" : "klrt-caf-r-far",
+        "vertex_bytes" : 166080,
+        "vertices" : 4152
+      },
+      {
+        "id" : "klrt-caf-s2-far",
+        "vertex_bytes" : 197280,
+        "vertices" : 4932
+      },
+      {
+        "id" : "klrt-caf-c2-far",
+        "vertex_bytes" : 776160,
+        "vertices" : 19404
+      },
+      {
+        "id" : "klrt-citadis-m1-far",
+        "vertex_bytes" : 479520,
+        "vertices" : 11988
+      },
+      {
+        "id" : "klrt-citadis-sc1-far",
+        "vertex_bytes" : 192960,
+        "vertices" : 4824
+      },
+      {
+        "id" : "klrt-citadis-np-far",
+        "vertex_bytes" : 170400,
+        "vertices" : 4260
+      },
+      {
+        "id" : "klrt-citadis-sc2-far",
+        "vertex_bytes" : 192960,
+        "vertices" : 4824
+      },
+      {
+        "id" : "klrt-citadis-m2-far",
+        "vertex_bytes" : 470880,
+        "vertices" : 11772
+      },
+      {
+        "id" : "ankeng-lrt-m1",
+        "vertex_bytes" : 1252320,
+        "vertices" : 31308
+      },
+      {
+        "id" : "ankeng-lrt-m2",
+        "vertex_bytes" : 349920,
+        "vertices" : 8748
+      },
+      {
+        "id" : "ankeng-lrt-m3",
+        "vertex_bytes" : 171360,
+        "vertices" : 4284
+      },
+      {
+        "id" : "ankeng-lrt-m4",
+        "vertex_bytes" : 344160,
+        "vertices" : 8604
+      },
+      {
+        "id" : "ankeng-lrt-m5",
+        "vertex_bytes" : 1252320,
+        "vertices" : 31308
+      },
+      {
+        "id" : "danhai-lrt-m1",
+        "vertex_bytes" : 1742880,
+        "vertices" : 43572
+      },
+      {
+        "id" : "danhai-lrt-m2",
+        "vertex_bytes" : 791520,
+        "vertices" : 19788
+      },
+      {
+        "id" : "danhai-lrt-m3",
+        "vertex_bytes" : 557280,
+        "vertices" : 13932
+      },
+      {
+        "id" : "danhai-lrt-m4",
+        "vertex_bytes" : 808800,
+        "vertices" : 20220
+      },
+      {
+        "id" : "danhai-lrt-m5",
+        "vertex_bytes" : 1742880,
+        "vertices" : 43572
+      },
+      {
+        "id" : "ankeng-lrt-m1-far",
+        "vertex_bytes" : 623040,
+        "vertices" : 15576
+      },
+      {
+        "id" : "ankeng-lrt-m2-far",
+        "vertex_bytes" : 152640,
+        "vertices" : 3816
+      },
+      {
+        "id" : "ankeng-lrt-m3-far",
+        "vertex_bytes" : 72480,
+        "vertices" : 1812
+      },
+      {
+        "id" : "ankeng-lrt-m4-far",
+        "vertex_bytes" : 146880,
+        "vertices" : 3672
+      },
+      {
+        "id" : "ankeng-lrt-m5-far",
+        "vertex_bytes" : 623040,
+        "vertices" : 15576
+      },
+      {
+        "id" : "danhai-lrt-m1-far",
+        "vertex_bytes" : 860160,
+        "vertices" : 21504
+      },
+      {
+        "id" : "danhai-lrt-m2-far",
+        "vertex_bytes" : 336960,
+        "vertices" : 8424
+      },
+      {
+        "id" : "danhai-lrt-m3-far",
+        "vertex_bytes" : 193440,
+        "vertices" : 4836
+      },
+      {
+        "id" : "danhai-lrt-m4-far",
+        "vertex_bytes" : 334080,
+        "vertices" : 8352
+      },
+      {
+        "id" : "danhai-lrt-m5-far",
+        "vertex_bytes" : 860160,
+        "vertices" : 21504
+      }
+    ],
+    "vertex_bytes" : 125473920
+  },
+  "studies_added_vertex_bytes" : 17988960,
+  "vertex_stride_bytes" : 40
+}

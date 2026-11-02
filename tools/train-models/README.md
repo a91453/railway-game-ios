@@ -115,3 +115,5 @@ python3 tools/train-models/deliver.py OUT DELIVERY.json /assets/game-art-preview
 R200 獨立完整機車 studies：[`tools/tra-r200`](../tra-r200/README.md)，不替換舊 R200CK 單駕駛室代用營運模型。
 
 R100兩款有年代實據機車與藍皮解憂客車角色／配置研究：[tools/tra-r100](../tra-r100/README.md)。實號完整編組與BLUE營運缺口分開標示，不以靜態角色配置取代。
+
+桃園機場捷運1000／2000（含DMB行李車）角色與四／五車通用配置：[tools/taoyuan-airport](../taoyuan-airport/README.md)，服務kind傳遞不足時維持studies。

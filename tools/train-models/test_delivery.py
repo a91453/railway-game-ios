@@ -58,6 +58,18 @@ class DeliveryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             delivery.deliver(self.run, self.spec, self.dest)
 
+    def test_gzip_viewer_preserves_complete_original_document(self):
+        import base64, gzip, re
+        self.spec['viewer_compression'] = 'gzip'
+        delivery.deliver(self.run, self.spec, self.dest)
+        page = (self.dest/'index.html').read_text()
+        encoded = re.search(r'id="packed" type="application/octet-stream">([^<]+)', page).group(1)
+        decoded = gzip.decompress(base64.b64decode(encoded)).decode()
+        self.assertIn('window.inspectorReady=true', decoded)
+        self.assertIn(base64.b64encode((self.run/'models/a.m3dmodel').read_bytes()).decode(), decoded)
+        self.assertIn(base64.b64encode((self.run/'models/a.glb').read_bytes()).decode(), decoded)
+        self.assertIn('DecompressionStream', page)
+
     def test_rejects_22_previews_and_duplicates(self):
         for pngs in [['front.png']*22, ['front.png']*2]:
             self.spec['pngs'] = pngs

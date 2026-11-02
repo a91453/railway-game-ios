@@ -2,6 +2,7 @@
 // node inspect.mjs RUN OUT.html (use a curated run for a <=50 MB delivery).
 import {readFileSync, writeFileSync, existsSync} from 'node:fs';
 import {resolve, basename} from 'node:path';
+import {gzipSync} from 'node:zlib';
 const [rootArg, out] = process.argv.slice(2), root = resolve(rootArg);
 const manifest = JSON.parse(readFileSync(resolve(root, 'manifest.json')));
 const models = manifest.models.map(m => ({...m, files: ['native', 'glb'].filter(k => m[k]).map(kind => ({
@@ -35,5 +36,14 @@ $('canvas').onpointerdown=e=>{drag=[e.clientX,e.clientY];$('canvas').setPointerC
 $('canvas').onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*.01;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-drag[1])*.01));drag=[e.clientX,e.clientY];orbit=true;draw()};
 $('canvas').onpointerup=$('canvas').onpointercancel=()=>drag=null;window.onresize=draw;load();window.inspectorReady=true;
 </script></html>`;
-writeFileSync(resolve(out), html);
+let output = html;
+if (process.argv.includes('--gzip')) {
+  // Opt-in transport compression only. Native/GLB downloads remain the
+  // exact original bytes; no model format, loader or budget is changed.
+  const packed = gzipSync(Buffer.from(html), {level: 9}).toString('base64');
+  output = `<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>列車素材檢視</title><body><p id="message">正在開啟列車素材…</p><script id="packed" type="application/octet-stream">${packed}</script><script>
+(async()=>{const bytes=Uint8Array.from(atob(document.getElementById('packed').textContent),c=>c.charCodeAt(0));const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));const html=await new Response(stream).text();document.open();document.write(html);document.close()})().catch(error=>{document.getElementById('message').textContent='此瀏覽器無法開啟檢視器，請改用較新的瀏覽器。';console.error(error)});
+</script></body></html>`;
+}
+writeFileSync(resolve(out), output);
 console.log(`wrote native inspector: ${models.length} models`);
