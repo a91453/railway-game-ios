@@ -201,8 +201,21 @@ private struct EMU700Recipe {
             for door:Float in [-6.4,0,6.4] {
                 sidePanel(door,1.184,1.38,2.02,sign,steel)
                 for dx:Float in [-0.345,0.345] {
-                    sidePanel(door+dx,1.22,0.66,1.94,sign,silver)
+                    // Paint belongs to each closed door panel, not a floating
+                    // stripe over an unpainted door or a duplicated shell.
+                    for (h,height,color):(Float,Float,UInt32) in [(1.22,0.46,silver),(1.68,0.08,orange),(1.76,0.10,silver),(1.86,0.16,blue),(2.02,1.14,silver)] {
+                        sidePanel(door+dx,h,0.66,height,sign,color)
+                    }
                     roundedSide(door+dx,2.20,0.44,0.75,sign)
+                    if !far {
+                        for edge:Float in [-0.31,0.31] {
+                            kit.box(door+dx+edge,1.26,sign*1.460,0.014,0.010,1.86,dark)
+                        }
+                    }
+                }
+                if !far {
+                    for edge:Float in [-0.685,0.685] {kit.box(door+edge,1.22,sign*1.460,0.020,0.010,1.96,dark)}
+                    kit.box(door,3.16,sign*1.460,1.38,0.010,0.020,dark)
                 }
                 sidePanel(door,1.22,0.025,1.92,sign,dark)
             }
@@ -222,8 +235,13 @@ private struct EMU700Recipe {
                 prism(p,p.map{$0 + .init(0,0,sign*0.024)},glass)
             }
             if cab {
-                sidePanel(8.45,1.28,0.62,1.95,sign,steel)
+                // No crew side door: the source explicitly identifies a cab
+                // side window followed by the traction motor intake grille.
                 roundedSide(8.45,2.35,0.42,0.67,sign)
+                sidePanel(7.75,2.42,0.42,0.32,sign,steel)
+                for k in 0..<(far ? 2 : 5) {
+                    kit.box(7.75,2.44+Float(k)*(far ? 0.13 : 0.055),sign*1.459,0.38,0.010,0.012,dark)
+                }
             }
             if !far {
                 for h:Float in [1.38,1.46,1.54] {sidePanel(-0.8,h,17.2,0.014,sign,steel)}
