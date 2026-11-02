@@ -213,6 +213,25 @@ extension GameWorld {
         return path(from: start, toStation: station, length: train.length, eligible: free, keepingLeft: true, memo: &memo)
     }
 
+    /// Decision 547: the way out of depot `depot` to station `call` for
+    /// `train`, with traffic control off, when `nearest`, its shortest way,
+    /// runs over track where another train stands: as decision 228 has
+    /// the way into a depot, a train of real runs keeps off it where
+    /// another way serves. A depot beyond a station's platforms is left
+    /// through one of them, and a train standing there for a run later
+    /// kept the empty run behind it until it left. `nil` when the way may
+    /// stay as it is.
+    func pathOutOfDepot(_ depot: StationID, to call: StationID, from start: TrainPosition, for train: Train, nearest: TrainPath) -> TrainPath? {
+        guard !isTrafficControlEnabled, station(id: depot)?.isDepot == true, followsRealTimetable(train) else { return nil }
+        let standing = Set(trains.filter { $0.id != train.id && !isMoving($0) }.flatMap { bodyStretches(of: $0).map(\.traversal.edge) })
+        guard nearest.traversals.contains(where: { standing.contains($0.edge) }) else { return nil }
+        let kept = path(from: start, toStation: call, length: train.length, eligible: Set(berths(of: call, length: train.length)), keepingLeft: false, avoiding: standing)
+        // Only a way that does keep off them: through a standing train is
+        // no better than the shortest.
+        guard let kept, !kept.traversals.contains(where: { standing.contains($0.edge) }) else { return nil }
+        return kept
+    }
+
     /// Whether `train` is on its way: travelling to a stop of its service.
     private func isMoving(_ train: Train) -> Bool {
         if case .travellingToStop? = train.execution { return true }

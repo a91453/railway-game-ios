@@ -2370,6 +2370,8 @@ enum MapArt {
         let view = context.clipBoundingRect
         let near = view.insetBy(dx: -160, dy: -60)
         let radius = max(5, projection.referenceSize * 0.32)
+        // Past the crowded ring, as at full detail (review L5-4).
+        let nameTop = MapProblems.nameTop(stationRadius: radius)
         let points = Dictionary(uniqueKeysWithValues: world.stations.map { ($0.id, $0) })
         var placed: [CGRect] = []
         var measured = 0
@@ -2381,11 +2383,11 @@ enum MapArt {
             measured += 1
             let name = context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink))
             let size = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
-            let rect = CGRect(x: center.x - size.width / 2, y: center.y + radius + 2, width: size.width, height: size.height)
+            let rect = CGRect(x: center.x - size.width / 2, y: center.y + nameTop, width: size.width, height: size.height)
             guard rect.intersects(view), !placed.contains(where: { $0.insetBy(dx: -3, dy: -1).intersects(rect) }) else { continue }
             placed.append(rect)
             context.fill(Path(roundedRect: rect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
-            context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 2), anchor: .top)
+            context.draw(name, at: CGPoint(x: center.x, y: center.y + nameTop), anchor: .top)
         }
     }
 

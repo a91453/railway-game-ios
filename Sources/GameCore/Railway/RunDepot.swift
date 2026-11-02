@@ -126,9 +126,11 @@ extension GameWorld {
     func runTrainEnteringDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for index in runDepotEntryCandidates(of: line, memo: &memo) {
             guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
-            // Decision 280: under traffic control, only with a siding
-            // for it; without one it stays where it waits.
-            if isTrafficControlEnabled, let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
+            // Decision 280: only with a siding for it; without one it
+            // stays where it waits. Decision 547: with traffic control off
+            // too, where it ran onto a siding a train stood on and stood
+            // behind it for good.
+            if let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
@@ -214,7 +216,9 @@ extension GameWorld {
             guard let station = stationsStoppedAt(by: id).first, self.station(id: station)?.isDepot == false, !isInDepot(train, of: line),
                   let arrival = edges.compactMap({ edge in bound[edge].flatMap { $0.station == station ? $0.arrival : nil } }).min(),
                   (runLeaving(of: train, at: station, readyAt: now) ?? .max) > arrival - Self.platformClearance,
-                  let trip = emptyRun(of: line, for: train, to: line.depots) else { continue }
+                  let trip = emptyRun(of: line, for: train, to: line.depots),
+                  // Decision 547: only with a siding for it (decision 280).
+                  trip.deadhead.map({ depotHasRoom($0.to, for: train) }) ?? true else { continue }
             return (index, trip)
         }
         return nil
