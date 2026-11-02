@@ -28,4 +28,20 @@ final class Map3DTaoyuanAirportTests: XCTestCase {
         }
         XCTAssertTrue(sideGlass.isEmpty)
     }
+    func testDrivingWindscreensHaveThePhotographedSlopingSill() {
+        for role in [Map3DTaoyuanAirport.Role.dmc1,.dmc2,.dme1,.dmb] {
+            for far in [false,true] {
+                let model=Map3DTaoyuanAirport.model(role,far:far)
+                let glass=model.vertices.filter {
+                    $0.color == Map3DTrainStyle.glass && $0.x>9 && $0.z>1.95 && abs($0.y)>0.45
+                }
+                let inner=glass.filter { abs($0.y)<0.65 }.map(\.z).min()
+                let outer=glass.filter { abs($0.y)>1.20 }.map(\.z).min()
+                XCTAssertNotNil(inner);XCTAssertNotNil(outer)
+                if let inner,let outer { XCTAssertGreaterThan(outer-inner,0.12) }
+                XCTAssertEqual(model.maximum.x,role.pitch/2,accuracy:0.0001)
+            }
+        }
+    }
+
 }

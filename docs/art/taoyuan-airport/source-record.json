@@ -459,6 +459,45 @@
       "kind": "real train photo",
       "car_number_from_page_caption": "2110",
       "caption_read": true
+    },
+    {
+      "url": "https://2427junction.com/63c-1c124.jpg",
+      "file": "63c-1c124.jpg",
+      "sha256": "983380f2d2e0175b72c8fa4c0e6e0eb2576dc2aeac5e23ee042d37f75abff390",
+      "author": "2427junction",
+      "license": "All rights reserved; observation only",
+      "date": "UNVERIFIED",
+      "public_use": false,
+      "opened": "individual local image, 2026-11-02",
+      "kind": "real train photo",
+      "status": "side destination display; this tight crop alone does not distinguish fleet or dated consist",
+      "caption_read": true
+    },
+    {
+      "url": "https://2427junction.com/63c-1c219.jpg",
+      "file": "63c-1c219.jpg",
+      "sha256": "7290fb4e0d64951b3da7220e2d44d08fbecf1e6ae96969d995780e85d5b97912",
+      "author": "2427junction",
+      "license": "All rights reserved; observation only",
+      "date": "UNVERIFIED",
+      "public_use": false,
+      "opened": "individual local image, 2026-11-02",
+      "kind": "real train photo",
+      "status": "express front destination display; exact dated consist UNVERIFIED",
+      "caption_read": true
+    },
+    {
+      "url": "https://2427junction.com/63c-1c223.jpg",
+      "file": "63c-1c223.jpg",
+      "sha256": "26c9f8f39daf3f09c3506e668b7e9021bbdf1f9649f8b5be558c105d5add2f20",
+      "author": "2427junction",
+      "license": "All rights reserved; observation only",
+      "date": "UNVERIFIED",
+      "public_use": false,
+      "opened": "individual local image, 2026-11-02",
+      "kind": "real train photo",
+      "status": "express cab and passenger doorway; 2109 visible on body",
+      "caption_read": true
     }
   ],
   "gaps": [

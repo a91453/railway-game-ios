@@ -45,15 +45,79 @@ def rejected(fn):
  try:fn()
  except AssertionError:return
  raise AssertionError('fault escaped')
+def components(t):
+ parent=list(range(len(t)));edge={}
+ def find(i):
+  while parent[i]!=i:parent[i]=parent[parent[i]];i=parent[i]
+  return i
+ points=np.rint(t*1e5).astype(np.int64)
+ for i,tri in enumerate(points):
+  keys=[tuple(p) for p in tri]
+  for j in range(3):
+   k=tuple(sorted((keys[j],keys[(j+1)%3])))
+   if k in edge:parent[find(i)]=find(edge[k])
+   else:edge[k]=i
+ groups={}
+ for i in range(len(t)):groups.setdefault(find(i),[]).append(i)
+ return [np.array(v,dtype=int) for v in groups.values()]
+def no_duplicates(t):
+ seen=set()
+ for tri in np.rint(t*1e5).astype(np.int64):
+  keys=[tuple(p) for p in tri];key=min(tuple(keys[i:]+keys[:i]) for i in range(3))
+  assert key not in seen,'same-oriented duplicated surface/equipment'
+  seen.add(key)
+def wheels_components(t,groups):
+ found=[]
+ for ids in groups:
+  p=t[ids].reshape(-1,3);lo=p.min(axis=0);hi=p.max(axis=0);size=hi-lo;c=(lo+hi)/2
+  if abs(c[2]-.425)<.001 and size[0]>.848 and size[2]>.848 and .095<size[1]<.105:found.append((ids,c))
+ assert len(found)==8,('missing/extra solid tyre',len(found))
+ expected=[(x,y) for x in [-7.8,-5.7,5.7,7.8] for y in [-.7675,.7675]]
+ for x,y in expected:assert sum(abs(c[0]-x)+abs(c[1]-y)<.001 for _,c in found)==1,'wrong axle station/gauge'
+ return [ids for ids,_ in found]
+def hvac_components(t,groups,baggage):
+ found=[]
+ for ids in groups:
+  p=t[ids].reshape(-1,3);lo=p.min(axis=0);hi=p.max(axis=0);size=hi-lo;c=(lo+hi)/2
+  if abs(lo[2]-3.763)<.0001 and size[0]>1.7 and abs(size[1]-1.35)<.001 and abs(size[2]-.14)<.001:found.append((ids,c))
+ expected=[8.05] if baggage else [-6.25,6.25]
+ assert len(found)==len(expected),'missing/duplicated HVAC shell'
+ for x in expected:assert sum(abs(c[0]-x)<.001 for _,c in found)==1,'HVAC moved'
+ return [ids for ids,_ in found]
+def socket(t,half):
+ ds=hits(t,np.array([half+.20,0,.805]),np.array([-1.,0,0]))
+ assert len(ds) and min(ds)>.35,'coupler socket filled or plate protrudes'
 root=Path(sys.argv[1]);manifest=json.loads((root/'manifest.json').read_text());rows=[]
 for m in manifest['models']:
  if m.get('native_kind')=='assembly':continue
- t,f=read(root/m['native']);ids=glazing(t,f);wheels(t);roof(t,'-dmb' in m['id'])
- q=t.copy();q[ids]-=normals(t)[ids,None,:]*.15;rejected(lambda:glazing(q,f))
- q=t.copy();q[ids]+=normals(t)[ids,None,:]*.15;rejected(lambda:glazing(q,f))
- q=t.copy();mask=(q[:,:,2].max(axis=1)<.851);q[mask,:,2]+=.04;rejected(lambda:wheels(q))
- q=t.copy();mask=(q[:,:,2].min(axis=1)>=3.763-.00001);q[mask,:,2]+=.08;rejected(lambda:roof(q,'-dmb' in m['id']))
- rows.append({'id':m['id'],'glass_samples':len(ids),'eight_wheels':True,'roof_support':True,'four_faults_rejected':True})
+ t,f=read(root/m['native']);groups=components(t);ids=glazing(t,f);wheels(t);roof(t,'-dmb' in m['id']);no_duplicates(t)
+ tyres=wheels_components(t,groups);hvac=hvac_components(t,groups,'-dmb' in m['id'])
+ # Move each actual connected glass solid, including its backing and walls.
+ glass_set=set(int(i) for i in ids)
+ glass_groups=[g for g in groups if any(int(i) in glass_set for i in g)]
+ q=t.copy()
+ for group in glass_groups:
+  chosen=[i for i in group if int(i) in glass_set];direction=normals(t)[chosen].mean(axis=0);direction/=np.linalg.norm(direction)
+  q[group]-=direction*.15
+ rejected(lambda:glazing(q,f))
+ q=t.copy()
+ for group in glass_groups:
+  chosen=[i for i in group if int(i) in glass_set];direction=normals(t)[chosen].mean(axis=0);direction/=np.linalg.norm(direction)
+  q[group]+=direction*.15
+ rejected(lambda:glazing(q,f))
+ q=t.copy();q[tyres[0],:,2]+=.04;rejected(lambda:wheels_components(q,components(q)))
+ keep=np.ones(len(t),dtype=bool);keep[tyres[0]]=False;rejected(lambda:wheels_components(t[keep],components(t[keep])))
+ q=t.copy();q[tyres[0],:,0]+=.20;rejected(lambda:wheels_components(q,components(q)))
+ q=t.copy();q[hvac[0],:,2]+=.08;rejected(lambda:hvac_components(q,components(q),'-dmb' in m['id']))
+ q=np.concatenate([t,t[hvac[0]]]);rejected(lambda:no_duplicates(q))
+ shifted=t[hvac[0]].copy();shifted[:,:,0]+=.20;q=np.concatenate([t,shifted]);rejected(lambda:hvac_components(q,components(q),'-dmb' in m['id']))
+ q=np.concatenate([t,t[:20]]);rejected(lambda:no_duplicates(q))
+ cab=any('-'+r in m['id'] for r in ['dmc1','dmc2','dme1','dmb'])
+ if cab:
+  socket(t,10.39)
+  plug=np.array([[[10.39,-.11,.69],[10.39,.11,.69],[10.39,.11,.92]],[[10.39,-.11,.69],[10.39,.11,.92],[10.39,-.11,.92]]])
+  rejected(lambda:socket(np.concatenate([t,plug]),10.39))
+ rows.append({'id':m['id'],'glass_samples':len(ids),'glass_solids':len(glass_groups),'solid_tyres':len(tyres),'hvac_shells':len(hvac),'nine_actual_geometry_faults_rejected':True,'coupler_socket_and_plate_fault':cab})
 def formation(spec, fleet, far):
  suffix='-far' if far else ''
  roles=['dmc1','mc1','mc2','dmc2'] if fleet=='1000' else ['dme1','me1','me3','me4','dmb']
@@ -73,5 +137,5 @@ for m in manifest['models']:
  q=copy.deepcopy(spec);q['placements'][-1]['rotation_degrees']=0;rejected(lambda:formation(q,fleet,far))
  q=copy.deepcopy(spec);q['placements'][0]['translation'][0]+=.1;rejected(lambda:formation(q,fleet,far))
  q=copy.deepcopy(spec);q['placements'][0],q['placements'][1]=q['placements'][1],q['placements'][0];rejected(lambda:formation(q,fleet,far))
-(root/'taoyuan-verification.json').write_text(json.dumps({'status':'VERIFIED','models':rows,'limits':'centroid visibility/support rays, eight tyre envelopes and roof central support only; not exhaustive self-intersection proof'},indent=2)+'\n')
-print('VERIFIED',len(rows),'units and four actual-geometry fault examples each')
+(root/'taoyuan-verification.json').write_text(json.dumps({'status':'VERIFIED','models':rows,'assembly_faults':['lost baggage/role','wrong order','double reversal','100mm misplaced car'],'limits':'actual connected solids and centroid visibility/support rays; not exhaustive collision or engineering certification'},indent=2)+'\n')
+print('VERIFIED',len(rows),'units, nine actual-geometry faults each and four assembly fault classes')

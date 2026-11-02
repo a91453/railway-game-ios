@@ -8,7 +8,7 @@
 export NODE_GLOBAL=/opt/codex/cua_node/lib/node_modules/
 export CHROMIUM_PATH=/usr/bin/chromium
 tools/taoyuan-airport/rebuild.sh /absolute/output
-tools/taoyuan-airport/render.sh /absolute/output
+tools/taoyuan-airport/render.sh /absolute/output /absolute/previous-output
 swift test -Xswiftc -warnings-as-errors --filter 'Map3DTaoyuanAirportTests|Map3DModelTests'
 ```
 
@@ -17,3 +17,19 @@ swift test -Xswiftc -warnings-as-errors --filter 'Map3DTaoyuanAirportTests|Map3D
 `compare-assembly.swift` independently reads legal final native units through the Swift importer and assembles four complete configurations with independently computed metre centres; every resulting position/colour is compared against JS assembly payloads. The GLB check uses the existing vehicle-neutral loop in `tools/taichung-green/import-glb.py`; no old vehicle geometry or dimensions are taken from it.
 
 `common-scale.mjs` fixes centre=[0,0,1.98], extent=[51.155,1.55,1.98], one camera/light across both complete trains and both LODs. `sheets.py` writes precisely 18 role sheets + 2 complete-train sheets, each containing all seven directions in colour/day/night/clay/silhouette. The public overview uses the common metre frames; role-detail sheets have their own disclosed framing. Full local renders are not all submitted.
+
+
+For a reproducible true-before comparison, independently check out previous producer
+`e1139b62881d7f6e0af78622dfe297f887b36420` in another worktree and run its
+`tools/taoyuan-airport/rebuild.sh /absolute/previous-output` first. The second
+render argument is optional for normal unit sheets, and required for the public
+before/after overview. No previous PNG or source-photo pixels influence geometry.
+The new windscreen test rejects the actual previous producer. The connected-solid
+audit tests missing tyres, misplaced/lifted equipment, coincident/shifted duplicate
+HVAC, entire glass solids moved inside/outside, duplicate shell triangles and a
+real plate obstructing the cab coupler socket. It does not claim exhaustive
+intersection detection.
+
+`deliver.py` optionally accepts `"viewer_compression":"gzip"`; the default is
+unchanged. This reduces the self-contained HTML transport size and preserves
+all downloadable bytes. Browser DecompressionStream support is required.

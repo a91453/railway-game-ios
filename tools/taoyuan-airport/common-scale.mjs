@@ -17,4 +17,25 @@ for(const m of manifest.models.filter(m=>m.id.includes('formation'))){
   writeFileSync(root+'/common/'+m.id+'-'+view+'.png',Buffer.from(png.split(',')[1],'base64'));
  }
 }
+// Optional true-producer comparison. Both versions share metre framing,
+// centre, view vectors and lighting; never re-fit either version separately.
+const previousArg=process.argv[3];
+if(previousArg){
+ const before=resolve(previousArg),old=JSON.parse(readFileSync(before+'/manifest.json'));
+ mkdirSync(root+'/comparison',{recursive:true});
+ for(const m of manifest.models){
+  const prior=old.models.find(x=>x.id===m.id);if(!prior)throw Error('missing true previous '+m.id);
+  for(const [tag,base,record] of [['before',before,prior],['after',root,m]]){
+   const data=readFileSync(resolve(base,record.native)).toString('base64');
+   for(const view of ['front','back','left','right','top','bottom','isometric']){
+    const png=await page.evaluate(({data,view,formation})=>{
+     r.load(Uint8Array.from(atob(data),c=>c.charCodeAt(0)).buffer);
+     r.centre=[0,0,1.98];r.extent=[formation?51.155:10.39,1.60,1.98];
+     r.render(view,{width:(view==='front'||view==='back')?600:1400,height:(view==='front'||view==='back')?600:400,time:'day'});return r.png();
+    },{data,view,formation:m.id.includes('formation')});
+    writeFileSync(root+'/comparison/'+tag+'-'+m.id+'-'+view+'.png',Buffer.from(png.split(',')[1],'base64'));
+   }
+  }
+ }
+}
 await browser.close();server.close();

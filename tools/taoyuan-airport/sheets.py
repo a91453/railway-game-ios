@@ -18,8 +18,21 @@ def sheet(name,ids):
 for m in models:
  if m.get('native_kind')!='assembly':sheet(m['id'],[m['id']])
 for fleet in ['1000','2000']:sheet(f'formation-{fleet}',[f'taoyuan-airport-{fleet}-formation',f'taoyuan-airport-{fleet}-formation-far'])
-s=Image.new('RGBA',(1400,1220),(0,0,0,0));d=ImageDraw.Draw(s)
-for i,(fleet,view) in enumerate([('1000','left'),('2000','left'),('1000','isometric'),('2000','isometric')]):
- im=Image.open(root/'common'/f'taoyuan-airport-{fleet}-formation-{view}.png');s.alpha_composite(im,(0,i*300+20));d.text((12,i*300+4),f'{fleet} - shared metre scale, same camera and day light',fill=(70,75,100,255))
+# One public overview: true previous producer versus this revision. Every pair
+# uses the same metre camera/light; source-photo pixels are never included.
+s=Image.new('RGBA',(1600,1860),(0,0,0,0));d=ImageDraw.Draw(s)
+d.text((20,8),'Airport MRT | previous e1139b6 (UNACCEPTED) / revised native geometry',fill=(60,65,90,255))
+for row,(role,view) in enumerate([('dmc1','front'),('dme1','isometric'),('dmb','left')]):
+ for col,tag in enumerate(['before','after']):
+  p=root/'comparison'/f'{tag}-taoyuan-airport-{role}-{view}.png'
+  if not p.exists():continue
+  im=Image.open(p);im.thumbnail((780,350));x=col*800+(800-im.width)//2;y=35+row*390
+  s.alpha_composite(im,(x,y+20));d.text((col*800+20,y),f'{tag} | {role} {view} | identical metre framing',fill=(60,65,90,255))
+for row,fleet in enumerate(['1000','2000']):
+ for col,tag in enumerate(['before','after']):
+  p=root/'comparison'/f'{tag}-taoyuan-airport-{fleet}-formation-left.png'
+  if not p.exists():continue
+  im=Image.open(p);im.thumbnail((780,220));y=1220+row*290
+  s.alpha_composite(im,(col*800+(800-im.width)//2,y+25));d.text((col*800+20,y),f'{tag} | {fleet} full formation | shared 102.31m framing',fill=(60,65,90,255))
 s.save(root/'overview.png',optimize=True)
 print('curated',len(list(out.glob('*.png'))),'private PNG + 1 overview')
