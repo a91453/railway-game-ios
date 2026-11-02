@@ -47,6 +47,36 @@ public enum TrainCars {
         }
     }
 
+    /// Decision 538 (continued): the cars the 2D map draws of `run` at
+    /// `progress`, ``drawnCarLength`` each, its first car's nose half a car
+    /// ahead of its head the way it faces then: along the track past the
+    /// body's two ends, as the 3D map lays them
+    /// (``Map3DTrains/cars(of:progress:heights:models:)``), so a car on a
+    /// curve, through a switch or across a ring's seam stays on the track.
+    ///
+    /// The same cars as ``cars(body:heading:count:gap:track:)`` given
+    /// ``TrainMotion/Run/track(at:)``, but read straight off the run's
+    /// trail (which goes on past its tail along the track) and the track
+    /// ahead, without building the spine each frame; the general way only
+    /// where the track runs out (a buffer stop) or the train jumped.
+    public static func mapCars(of run: TrainMotion.Run, progress: Double) -> [[TrainMotion.Point]] {
+        guard let head = run.head(at: progress) else { return [] }
+        let count = count(length: run.length, carPitch: run.carPitch)
+        let along = run.lag * (1 - min(max(progress, 0), 1))
+        // Where the nose is along the trail: before its start (negative),
+        // on the track ahead of the head now.
+        let nose = along - drawnCarLength / 2
+        let trail = run.trail, ahead = run.aheadTrail
+        if nose + drawnCarLength * Double(count) <= trail.length, -nose <= ahead.length {
+            return (0..<count).map { index in
+                let front = nose + Double(index) * drawnCarLength, back = front + drawnCarLength
+                guard front < 0 else { return trail.points(from: front, to: back) }
+                return Array(ahead.points(from: 0, to: -front).reversed()) + trail.points(from: 0, to: back).dropFirst()
+            }
+        }
+        return cars(body: run.body(at: progress), heading: head.heading, count: count, track: run.track(at: progress))
+    }
+
     /// Decision 399: the cars of a train drawn at their own `lengths`
     /// (world units, front to back), `gaps[i]` between car `i` and the
     /// next, the first one's nose where every train's is, half a
