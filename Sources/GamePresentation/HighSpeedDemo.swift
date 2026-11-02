@@ -1198,7 +1198,13 @@ extension RealWorldDemo.TrackPlan {
     /// than a third of `plan`'s stretch as its chord is than `plan`'s
     /// (decision 535, continued): on a curve, the track outside it is
     /// longer, and with the same handles bulged in to within 4 m of the
-    /// other in the middle (the Ankeng LRT's tight curves).
+    /// other in the middle (the Ankeng LRT's tight curves). Only where the
+    /// two nodes stand off by the same: a ramp keeps a third of `plan`'s
+    /// stretch, as the first track's edge it leaves beside does, so at the
+    /// switch the two leave along the same tangent and a train keeping left
+    /// (decision 202) tells them apart by the side they lead to, not by the
+    /// rounding of tangents of different lengths (the Wenhu Line's trains
+    /// toward the zoo took the other way's track and stood head to head).
     init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double], following: Bool = false) {
         let distances = indices.map { plan.distances[$0] }
         let nodes = zip(indices, offsets).map { index, offset in
@@ -1212,7 +1218,7 @@ extension RealWorldDemo.TrackPlan {
         heights = indices.map { plan.heights[$0] }
         curves = distances.indices.dropLast().map { index in
             var handle = (distances[index + 1] - distances[index]) / 3
-            if following {
+            if following, offsets[index] == offsets[index + 1] {
                 let chord = (WorldVector(plan.nodes[indices[index + 1]].point) - WorldVector(plan.nodes[indices[index]].point)).length
                 let beside = (WorldVector(nodes[index + 1].point) - WorldVector(nodes[index].point)).length
                 if chord > 0 { handle *= beside / chord }
