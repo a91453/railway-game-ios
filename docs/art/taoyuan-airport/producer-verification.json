@@ -1,0 +1,354 @@
+{
+  "status": "VERIFIED",
+  "producer": "a38118a1e4102042e0d5bb1a5e3fc410f37d006a",
+  "method": "fresh independent detached checkout, Swift6.4 warnings-as-errors; rebuild.sh builds legal units, generic assemblies and GLB, then independent Swift assembly and Blender import",
+  "models_and_payloads": [
+    {
+      "file": "models/taoyuan-airport-dmc1.m3dmodel",
+      "bytes": 206296,
+      "sha256": "369f8352de4db41b37c86c78a8151115396406bbd029a938bdbb2aea9dba9e1b"
+    },
+    {
+      "file": "models/taoyuan-airport-dmc1.glb",
+      "bytes": 381948,
+      "sha256": "3dbdb456437e2ce442eafc12d391133a6df9f71a03a24fd5335d630c54e506e6"
+    },
+    {
+      "file": "models/taoyuan-airport-dmc1-far.m3dmodel",
+      "bytes": 102508,
+      "sha256": "fea8ac3275c9aee3d3cff87d5d575a0471edec8c94699efc2de51557d3306154"
+    },
+    {
+      "file": "models/taoyuan-airport-dmc1-far.glb",
+      "bytes": 190328,
+      "sha256": "035cf26e33691a2ea99f97c3a2d6506f98771e61b5c4daf1b6f651dae7adfde2"
+    },
+    {
+      "file": "models/taoyuan-airport-mc1.m3dmodel",
+      "bytes": 168540,
+      "sha256": "e412d46ccc0fb911f9f851f316d96ab4267e0618e1ed364ce0cdacd538250318"
+    },
+    {
+      "file": "models/taoyuan-airport-mc1.glb",
+      "bytes": 312220,
+      "sha256": "7cd75933fa16c45e410a5157791582a06fae514007c352a0b3ee25125952b3e9"
+    },
+    {
+      "file": "models/taoyuan-airport-mc1-far.m3dmodel",
+      "bytes": 66416,
+      "sha256": "a7e4ef918c3e1713943b8f17617d092c69bd6ca1fa7573e14dae2d5b98ec7676"
+    },
+    {
+      "file": "models/taoyuan-airport-mc1-far.glb",
+      "bytes": 123676,
+      "sha256": "976b32dc9d121aacf2e5fac1dc20583478166fc4b8d7b83ef50897e95c6a99b2"
+    },
+    {
+      "file": "models/taoyuan-airport-mc2.m3dmodel",
+      "bytes": 168540,
+      "sha256": "c211bd3c8a6c3911e2f76711aca24521fec8990b1c7c1f3700ac6dbe81caafc2"
+    },
+    {
+      "file": "models/taoyuan-airport-mc2.glb",
+      "bytes": 312220,
+      "sha256": "be575436e7350265a5ed80d70ce2d995c2ca6d1ae5f1f8a121bed0e5c13790aa"
+    },
+    {
+      "file": "models/taoyuan-airport-mc2-far.m3dmodel",
+      "bytes": 66416,
+      "sha256": "fb6d255bc02f19200f892e71b31b559ffec35fd5ddbfba4816c29c392ea895a1"
+    },
+    {
+      "file": "models/taoyuan-airport-mc2-far.glb",
+      "bytes": 123676,
+      "sha256": "0bff8f98d6e397f3b4fda2b9f1155eeb6fc1c3faf301c4eb22b907f54793f8ff"
+    },
+    {
+      "file": "models/taoyuan-airport-dmc2.m3dmodel",
+      "bytes": 206296,
+      "sha256": "fa7e645539f6a5ed55de55b82f0b65b39e9010d1db5c3e3dfa8f8126ef9b64fb"
+    },
+    {
+      "file": "models/taoyuan-airport-dmc2.glb",
+      "bytes": 381948,
+      "sha256": "f178fb1a6ee6eca032b3256e9a72d4ee44ed4851abd23cbbe28c37750baec283"
+    },
+    {
+      "file": "models/taoyuan-airport-dmc2-far.m3dmodel",
+      "bytes": 102508,
+      "sha256": "24feafb9f94e4b60f16573b677b7db0960f3fe1d66f64e38321fe99154898d44"
+    },
+    {
+      "file": "models/taoyuan-airport-dmc2-far.glb",
+      "bytes": 190328,
+      "sha256": "cdd7da6ff4ca28008b958ab4d98f1f06b09980dabdf54477ef0900f8fe9f3560"
+    },
+    {
+      "file": "models/taoyuan-airport-dme1.m3dmodel",
+      "bytes": 206296,
+      "sha256": "b84658aa9bdb6594a0b45c69178d05bb060b87658631f3c38eb5bd93c208d901"
+    },
+    {
+      "file": "models/taoyuan-airport-dme1.glb",
+      "bytes": 381948,
+      "sha256": "31ae53f6e7d81675e181e1c53ae8f792f779eb05c4727021b67e016ef1d844dc"
+    },
+    {
+      "file": "models/taoyuan-airport-dme1-far.m3dmodel",
+      "bytes": 102508,
+      "sha256": "55a29002787c08e5449ecd56fa8baa786905e1499d7250be7cdade9a9b4b9dda"
+    },
+    {
+      "file": "models/taoyuan-airport-dme1-far.glb",
+      "bytes": 190328,
+      "sha256": "2608affbf822442ca203ae8e81b8c6eeebd25ae7ded406d6d8bd525b430dc918"
+    },
+    {
+      "file": "models/taoyuan-airport-me1.m3dmodel",
+      "bytes": 168540,
+      "sha256": "f7367baa8ce31dc3be283a08463242639c0ae78506f1a60d15202be3a8e7466b"
+    },
+    {
+      "file": "models/taoyuan-airport-me1.glb",
+      "bytes": 312220,
+      "sha256": "fbfec285dae08f919261e8f3d1c95f3e8a40e9c51da6b042663f24e46cf33e9e"
+    },
+    {
+      "file": "models/taoyuan-airport-me1-far.m3dmodel",
+      "bytes": 66416,
+      "sha256": "73f8d7c8230d1a654d35d394700be7f4ea4288b43e3b534250addc1ac054ee47"
+    },
+    {
+      "file": "models/taoyuan-airport-me1-far.glb",
+      "bytes": 123676,
+      "sha256": "a3612d431b0374545b6486e11420622b5353477ec519bd608333ca577fc4c485"
+    },
+    {
+      "file": "models/taoyuan-airport-me3.m3dmodel",
+      "bytes": 164796,
+      "sha256": "1aa0a33f6124612de210991566a88e8659a1b13496e1bb76b3b7c8626e66472f"
+    },
+    {
+      "file": "models/taoyuan-airport-me3.glb",
+      "bytes": 305308,
+      "sha256": "043b2900cd2fe84564fd9daa31718bdab5a712699f910723ba940a532ab33ac9"
+    },
+    {
+      "file": "models/taoyuan-airport-me3-far.m3dmodel",
+      "bytes": 65792,
+      "sha256": "dfc2e249c267dcd4727c12d2e43903d6271ff8dd6af7cf36a3f3ceea2e7894d0"
+    },
+    {
+      "file": "models/taoyuan-airport-me3-far.glb",
+      "bytes": 122524,
+      "sha256": "913ce81ee741cf3bd32dee784603cba29ef71cca9fd44ae3a6795cd51b7eedce"
+    },
+    {
+      "file": "models/taoyuan-airport-me4.m3dmodel",
+      "bytes": 168540,
+      "sha256": "e0b0e5314f813a62148bbfeee42ff3c59874c8ea13106b7f78771e4b815e8c09"
+    },
+    {
+      "file": "models/taoyuan-airport-me4.glb",
+      "bytes": 312220,
+      "sha256": "2c8e1a04b4e54968e1e9d6721962bdb3d7d8b1edae0fc5411aa6afdad0307196"
+    },
+    {
+      "file": "models/taoyuan-airport-me4-far.m3dmodel",
+      "bytes": 66416,
+      "sha256": "f219039ed01c6c571a09390b5f87382d207ec71d372773a7bc4dd3b46359ca4e"
+    },
+    {
+      "file": "models/taoyuan-airport-me4-far.glb",
+      "bytes": 123676,
+      "sha256": "0b229fff234097eed822563923526fb7be832f68e22a707beecc4a20866bf662"
+    },
+    {
+      "file": "models/taoyuan-airport-dmb.m3dmodel",
+      "bytes": 188820,
+      "sha256": "22df55c224c40e3011cc1942c37403e10af63085da0001943df1e4622db31d02"
+    },
+    {
+      "file": "models/taoyuan-airport-dmb.glb",
+      "bytes": 349688,
+      "sha256": "1f7629aa5fa4333ccdb8fc834190bd42abad58bfb4ce67f9bff919bb919527b2"
+    },
+    {
+      "file": "models/taoyuan-airport-dmb-far.m3dmodel",
+      "bytes": 84408,
+      "sha256": "3c12a6aad40535b1388260a306643b632d19348585c23fc9f1d01d9dad5fa2b7"
+    },
+    {
+      "file": "models/taoyuan-airport-dmb-far.glb",
+      "bytes": 156920,
+      "sha256": "43af21b79f08bf3c4e00f00438b772a631534bdb6c490135975d57b1e96bb71e"
+    },
+    {
+      "file": "models/taoyuan-airport-1000-formation.m3dscene.json",
+      "bytes": 1000371,
+      "sha256": "3f28497c3ca09f5c05bd7cb2c2c5d7705797965d037ad89c8885b06e9944b6cb"
+    },
+    {
+      "file": "models/taoyuan-airport-1000-formation.glb",
+      "bytes": 1384724,
+      "sha256": "674c4838a2a33a134a21fef7b67850e001449cba019d098759c5856f98a1a306"
+    },
+    {
+      "file": "models/taoyuan-airport-1000-formation.triangles.bin",
+      "bytes": 749424,
+      "sha256": "9421671e4bc460ad5fd6235f324584021e2fc4e64b9a3c14206ac51726b62d26"
+    },
+    {
+      "file": "models/taoyuan-airport-1000-formation-far.m3dscene.json",
+      "bytes": 451307,
+      "sha256": "28e5d4122a2fcd4a22b31b6c880eac295dfdf424d9bb6e844b36f4957f743567"
+    },
+    {
+      "file": "models/taoyuan-airport-1000-formation-far.glb",
+      "bytes": 624400,
+      "sha256": "e61d97f52539a343569b0a156bf30a9f3ed662016cfd4d82de1719e5fe05eda9"
+    },
+    {
+      "file": "models/taoyuan-airport-1000-formation-far.triangles.bin",
+      "bytes": 337584,
+      "sha256": "aced6e7b4b04de56b9ed887eeb2bc5ff0e909e2e666fc3e72b11bc5ce4534836"
+    },
+    {
+      "file": "models/taoyuan-airport-2000-formation.m3dscene.json",
+      "bytes": 1196966,
+      "sha256": "589f56a34d9812a065c6ede09491fcfcc33172cca4ec0288a5462a4289cae060"
+    },
+    {
+      "file": "models/taoyuan-airport-2000-formation.glb",
+      "bytes": 1656596,
+      "sha256": "b77a7a139bab076dea447c38448ae9e8af5d1670aabe8bd99192a4837a42d523"
+    },
+    {
+      "file": "models/taoyuan-airport-2000-formation.triangles.bin",
+      "bytes": 896688,
+      "sha256": "e9ff31c82742a050be3bf61f7a6fd7a02fcded2da802a0706ad9dc852a8c0b3b"
+    },
+    {
+      "file": "models/taoyuan-airport-2000-formation-far.m3dscene.json",
+      "bytes": 515074,
+      "sha256": "bf2799b154e3b0ffaa49b883ad8be89062153218e6bf1244f94a6550c25c1300"
+    },
+    {
+      "file": "models/taoyuan-airport-2000-formation-far.glb",
+      "bytes": 712336,
+      "sha256": "b2010d7f1fe0aff7dba6c10cb8568f2d5f0a1b9d87a9847018db19437991ab15"
+    },
+    {
+      "file": "models/taoyuan-airport-2000-formation-far.triangles.bin",
+      "bytes": 385216,
+      "sha256": "c1e4035a34e8c873dadb381443f70c2c09843bc88baa0c30022fc798e65cdc06"
+    }
+  ],
+  "pngs": [
+    {
+      "file": "overview.png",
+      "sha256": "cdf26839693eec2a411872e6461925fbde919be018dbcd7113f8c5855834d67d",
+      "bytes": 72978
+    },
+    {
+      "file": "sheets/formation-1000.png",
+      "sha256": "7b47e7b8bbb0a89478be1f366a18583196e78a15d0630b39ccb7db50f4a5cd94",
+      "bytes": 278491
+    },
+    {
+      "file": "sheets/formation-2000.png",
+      "sha256": "61af4acc379b3b952a4bcecbbf7a4d1f309edf49cebe1e12d858007ee6206cce",
+      "bytes": 270748
+    },
+    {
+      "file": "sheets/taoyuan-airport-dmb-far.png",
+      "sha256": "2e0356e9d833b3bd99f0e1d0138ed5cda404fd0c67d042329f02321279a262be",
+      "bytes": 113034
+    },
+    {
+      "file": "sheets/taoyuan-airport-dmb.png",
+      "sha256": "e0ae610cc61848fef25cb53eaae12d38bd4dba148ed4303a4197688affd24837",
+      "bytes": 124741
+    },
+    {
+      "file": "sheets/taoyuan-airport-dmc1-far.png",
+      "sha256": "b30d542344d0ce1fd827beaad03f5906c2db247040c77f4d5fa225d56fe7454a",
+      "bytes": 122256
+    },
+    {
+      "file": "sheets/taoyuan-airport-dmc1.png",
+      "sha256": "cd37ef42d405fd987fcee6c7a185fb7d66fb03064048ccad67b462ed1a83b7ea",
+      "bytes": 133017
+    },
+    {
+      "file": "sheets/taoyuan-airport-dmc2-far.png",
+      "sha256": "086846f358d0096a6eb51be130e7283baec5234e5e5538b32fa5a75e1f193793",
+      "bytes": 122536
+    },
+    {
+      "file": "sheets/taoyuan-airport-dmc2.png",
+      "sha256": "2418dc036299a41055326be0b7aafaadbe739a671f6e030b4bbcad2df2156270",
+      "bytes": 133292
+    },
+    {
+      "file": "sheets/taoyuan-airport-dme1-far.png",
+      "sha256": "d1c7a90e43241c8274ebefb4e588953f40d64ee354cc92281ef397a5efb21257",
+      "bytes": 122236
+    },
+    {
+      "file": "sheets/taoyuan-airport-dme1.png",
+      "sha256": "a2a9bc28b1092226db82af027d37c33d8da4f9d4ee46eab90d755d5c0ced3bb2",
+      "bytes": 132841
+    },
+    {
+      "file": "sheets/taoyuan-airport-mc1-far.png",
+      "sha256": "ea8e80e9239100f088f518ff9ab19d12786e1dd2177b1f01609490726f47819e",
+      "bytes": 109973
+    },
+    {
+      "file": "sheets/taoyuan-airport-mc1.png",
+      "sha256": "11ef1c66a715fa5805b71e1574c480008ec33e9b0b4ee6f0f6705340929ea0b6",
+      "bytes": 118673
+    },
+    {
+      "file": "sheets/taoyuan-airport-mc2-far.png",
+      "sha256": "56a83989d03753c632661b90289b4680c756e915974b6a49e9ea756042358753",
+      "bytes": 110254
+    },
+    {
+      "file": "sheets/taoyuan-airport-mc2.png",
+      "sha256": "405659fdf818a7ce0b5cd44edcd533df20a6c4026a47349ce07f7491f6f7be39",
+      "bytes": 118994
+    },
+    {
+      "file": "sheets/taoyuan-airport-me1-far.png",
+      "sha256": "3359604a62e0e2fd440d08554eb005549eda1db3d59cceb245cdca9fcc8b3a60",
+      "bytes": 109731
+    },
+    {
+      "file": "sheets/taoyuan-airport-me1.png",
+      "sha256": "3a587aea8782c6a72c1b26f8a9e4e170f1d157f8f53b73eb1e11798d1c6d92ae",
+      "bytes": 118620
+    },
+    {
+      "file": "sheets/taoyuan-airport-me3-far.png",
+      "sha256": "e80d7db3d8324b3b8f6a936c5f7730fc67882c83015cea3d9e26b599f76585bb",
+      "bytes": 108699
+    },
+    {
+      "file": "sheets/taoyuan-airport-me3.png",
+      "sha256": "4c756d11c4a10b3a601234f4653418590e4f07a19d5cf9f94ff62b829aac1be7",
+      "bytes": 117368
+    },
+    {
+      "file": "sheets/taoyuan-airport-me4-far.png",
+      "sha256": "e9b8bd7faf969125cd8080bf5c30d4522a8b196fe912328709fcee88452c8d2d",
+      "bytes": 109937
+    },
+    {
+      "file": "sheets/taoyuan-airport-me4.png",
+      "sha256": "b2f459d69ee5f1dbc0b223c6b040436a1595076900b3b24fbc137eb46f674b35",
+      "bytes": 118792
+    }
+  ]
+}
