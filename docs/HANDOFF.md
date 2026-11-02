@@ -453,6 +453,29 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 42 任的現況（2026-11-02 約 03:05 UTC，session_01YGNNum8LvQvgmgwxKHRvQ7，第 4 層，壓縮 1 次）**：
+
+- **105.1 已發**（run 105，`1722509`，作者先發），full ci 與 full lane 都綠，記在 PLAYER_FEEDBACK。之後合了：#1694 CIOPT-4（決策 544，Linux 上 GameCore 用 -O，完整 tier 24.2 → 17.7 分）、#1695 CURVE2D（決策 538「續」）。main `39aaec0` 的 `ci.yml` 綠。
+- **在做的 session**（都回報給第 42 任）：
+
+  | session | 工作 | PR | 合的條件 |
+  | --- | --- | --- | --- |
+  | WENHUBISECT session_01YGNNuoMs4r88NXSnHKf5Lu | 文湖線死結（#1668 的 `following: true`），決策 543 | #1696 | 51 小時量測（文湖、淡海綠山、安坑、三鶯，main 對修正）、安坑節點 6 玩家會不會碰到、文湖線重新開賣的五方。L4-1 已確認不同原因 |
+  | FLANE5 session_01YGNNuoP3GPQUr2Re5tXEjv | full lane 三支 UI 測試修穩 | #1693 | only_testing 兩輪綠、轉 ready |
+  | LOOP-3 session_01YGNNupLv3dQQgQdCsuUghb | 接手 LOOP-2 的 #1698（決策 542，GameCore，分支 `claude/loop-2-live-overtake`） | #1698 | CI 綠、REV1698 的 P1 修完、高鐵「五站」組與台鐵掉班變多查清楚 |
+  | REV1698 session_01YGNNuq6NxikbXRuVRtvTeZ | #1698 獨立審查 | — | 報告轉給 LOOP-3 |
+  | L4FIX session_01YGNNukwKePUQsGwMTzJ4nB | L4-1：號誌關時停站列車越過渡線停到對向月台（#1601 退步），GameCore | 未開 | 回歸測試修前紅修後綠 |
+  | CIWEIGHT session_01YGNNuoKedEApQtVTHLoo6o | -O 之後重算分片權重 | #1697 | 完整 tier 綠 |
+  | OPEN3D session_01YGNNunVxxTjzneuBjw86MX | 3D 不等列車模型包就開（模型雜湊不變） | 未開 | 截圖、雜湊相同 |
+  | MISSRUN session_01YGNNunWH4Ac5y58XXAqvt1 | 可買的線少發的班次（安坑 4/182、淡海 6/152、高鐵 1/191） | 未開 | — |
+  | REVIEW-L5 session_01YGNNumgF4LtnNX2bguZNyr | 105.1 後的固定審查（#1666–#1695） | #1699 | 只改文件 |
+  | CRASHSWEEP session_01YGNNuqBiBoZ7aZwjVL5ybQ | iPad 非同步算圖閃退同型清查（PLAYER_FEEDBACK 105.1 #1） | 未開 | 第二級截圖 |
+
+- **GameCore 名額**：#1698、L4FIX、#1697（完整 tier）同時最多 2 個在跑 CI。
+- **之後要派的**：ZSWITCH（#1698 合了再派）；L4-2 寫進 KLRT 規格（KLRT 等作者下載 data.kcg.gov.tw）；BUILD3D 3b／4、STALL97 等作者；車擋前的車比軌道長（決策 538「下一步（續）」）。
+- **106 的說明**：玩家看得到的 PR 合了就補 WhatsNew 最前面那則與 `.github/testflight-whats-new.md`（目前有 #1695 2D 彎道車廂）。
+- **號碼**：決策 542（#1698）、543（#1696）已留，544 已用；下一個 545。存檔下一個 81、golden schema 下一個 77。取號前先查 #1579。
+
 **第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
 
 - **105.1 還不能發**。內容都合了，說明也寫好了（WhatsNew `2026-11-02-105-1`、`.github/testflight-whats-new.md` 0.5.0 (105.1)，#1686、#1691）。卡在**文湖線早上死結**：
