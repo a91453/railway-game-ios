@@ -419,7 +419,7 @@ extension GameWorld {
         // there, unless a line names it for its call there (an island
         // platform's).
         let approach = cut.flatMap { cut in network.edge(cut.traversal.edge).map { (cut.traversal, $0.length) } } ?? (first, offset)
-        let straightPath = self.path(from: .onEdge(approach.0, offset: approach.1), toStation: id, length: train.length, eligible: Set(all), memo: &memo)
+        let straightPath = self.path(from: .onEdge(approach.0, offset: approach.1), toStation: id, length: train.length, eligible: Set(all), keepingLeft: true, memo: &memo)
         let straight = straightPath.map { ($0.traversals.last ?? approach.0).edge }
         guard own > 0 || target == straight else { return nil }
         let beside = all.filter { $0.traversal.edge != straight || calling.contains($0.traversal.edge) }
@@ -437,7 +437,7 @@ extension GameWorld {
             return found
         }
         guard own > 1 else { return nil }
-        return freePlatformPath(path, from: start, toStation: id, for: train, among: all, waits: waits, below: own, cut: cut, memo: &memo)
+        return freePlatformPath(path, from: start, toStation: id, for: train, among: all, waits: waits, below: own, cut: cut, rejoining: rejoining, memo: &memo)
     }
 
     /// ``freePlatformPath(_:from:toStation:for:next:memo:)`` among

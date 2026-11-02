@@ -53,10 +53,11 @@ final class DepotReturnReportTests: XCTestCase {
         try report("hsr", HighSpeedDemoTests.opened.get())
     }
 
-    /// A game round real line `id` with it bought, under realistic rules.
-    static func bought(_ id: String) throws -> GameWorld {
+    /// A game round real line `id` with it bought, under realistic rules
+    /// (simple with `DEPOT_RETURN_SIMPLE`), or under `rules`.
+    static func bought(_ id: String, rules: NewGameRules? = nil) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
-        let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true, rules: simple ? .simple : .realistic)
+        let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true, rules: rules ?? (simple ? .simple : .realistic))
         // Decision 535 (continued): the Wenhu Line is not on sale yet
         // (decision 543); it is laid as its row in `RealBranchLine.urbanLines`
         // would offer it.
