@@ -106,6 +106,9 @@ public enum Map3DShowcase {
         // Decision 539: what a freight line's train is drawn as.
         Entry("FREIGHT", "Container freight, R200 diesel", "貨櫃列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
         Entry("BLUE", "Blue Train sightseeing train", "藍皮解憂號", .taiwanRailway, cars: 6, most: 10),
+        // Decision 554: the Hai-Feng and Shan-Lan, four cars as they run.
+        Entry("HAIFENG", "Hai-Feng sightseeing train", "海風號", .taiwanRailway, cars: 4, fixed: true),
+        Entry("SHANLAN", "Shan-Lan sightseeing train", "山嵐號", .taiwanRailway, cars: 4, fixed: true),
         Entry("MINGRI", "Ming-Ri sightseeing train", "鳴日號", .taiwanRailway, cars: 8, most: 10),
         Entry("SUMMER", "Midsummer Formosa steam train", "仲夏寶島號", .taiwanRailway, cars: 6, most: 10),
         Entry("STAR", "Formosa Star sightseeing train", "環島之星", .taiwanRailway, cars: 8, most: 10),
