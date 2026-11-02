@@ -2723,16 +2723,9 @@ private struct LineLossCard: View, Equatable {
                 Text(verbatim: bar.amount.moneyText)
                     .font(.footnote.monospacedDigit())
             }
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Theme.chip)
-                    Capsule()
-                        .fill(bar.isFares ? Theme.success : Theme.error)
-                        .frame(width: max(CGFloat(bar.permille > 0 ? 3 : 0), proxy.size.width * CGFloat(bar.permille) / 1_000))
-                }
-            }
-            .frame(height: 6)
+            MeterBar(fraction: CGFloat(bar.permille) / 1_000, fill: bar.isFares ? Theme.success : Theme.error, track: Theme.chip,
+                     minimumWidth: CGFloat(bar.permille > 0 ? 3 : 0))
+                .frame(height: 6)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: bar.text))
@@ -2877,16 +2870,9 @@ private struct LineSatisfactionCard: View, Equatable {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: item.spokenText(in: language)))
             if let score = item.score {
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Theme.chip)
-                        Capsule()
-                            .fill(Self.colour(of: item.grade))
-                            .frame(width: max(CGFloat(score > 0 ? 3 : 0), proxy.size.width * CGFloat(score) / 100))
-                    }
-                }
-                .frame(height: 6)
+                MeterBar(fraction: CGFloat(score) / 100, fill: Self.colour(of: item.grade), track: Theme.chip,
+                         minimumWidth: CGFloat(score > 0 ? 3 : 0))
+                    .frame(height: 6)
                 .padding(.leading, 28)
                 .accessibilityHidden(true)
             }
@@ -3236,16 +3222,8 @@ private struct LineTrendStrip: View {
                         LineSparkline(values: sparkline)
                     }
                     if let gauge {
-                        GeometryReader { proxy in
-                            ZStack(alignment: .leading) {
-                                Capsule()
-                                    .fill(Theme.panelBorder)
-                                Capsule()
-                                    .fill(gauge.isOverload ? Theme.error : Theme.textPrimary)
-                                    .frame(width: proxy.size.width * gauge.fraction)
-                            }
-                        }
-                        .frame(height: 5)
+                        MeterBar(fraction: CGFloat(gauge.fraction), fill: gauge.isOverload ? Theme.error : Theme.textPrimary, track: Theme.panelBorder)
+                            .frame(height: 5)
                         .frame(maxWidth: 120)
                         .accessibilityHidden(true)
                     }

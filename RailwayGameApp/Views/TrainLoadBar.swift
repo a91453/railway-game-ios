@@ -29,16 +29,8 @@ struct TrainLoadBar: View {
                     .font(.caption.weight(.bold).monospacedDigit())
             }
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Theme.panelBorder)
-                    Capsule()
-                        .fill(load.isOverload ? Theme.error : Theme.textPrimary)
-                        .frame(width: proxy.size.width * load.barFraction)
-                }
-            }
-            .frame(height: 5)
+            MeterBar(fraction: CGFloat(load.barFraction), fill: load.isOverload ? Theme.error : Theme.textPrimary, track: Theme.panelBorder)
+                .frame(height: 5)
             // A progress bar fills steadily (motion skill §2); at once with Reduce Motion.
             .animation(reduceMotion ? nil : .linear(duration: 0.2), value: load.barFraction)
 
@@ -54,6 +46,54 @@ struct TrainLoadBar: View {
         .accessibilityLabel(Text(verbatim: load.titleText(in: language)))
         // The detail line names the unit: tons for a freight train.
         .accessibilityValue(Text(verbatim: "\(load.percentage)%, \(load.detailText(in: language))"))
+    }
+}
+
+/// A capsule filled to `fraction` of the width it is given, from the
+/// leading edge (or the trailing one), over a `track` capsule when there
+/// is one; at least `minimumWidth` wide. The bars of the load, the
+/// lines' costs and scores, the station master's title and the like.
+///
+/// The width comes from a `GeometryReader` whose closure is sendable, not
+/// main-actor code (CRASHSWEEP-2): SwiftUI calls it again whenever the
+/// bar's size changes, as during an animated layout, which its
+/// asynchronous renderer may run off the main thread, where a main-actor
+/// closure stops the app (CRASH101).
+struct MeterBar: View {
+    let fraction: CGFloat
+    let fill: Color
+    var track: Color? = nil
+    var minimumWidth: CGFloat = 0
+    var trailing = false
+
+    var body: some View {
+        let fraction = fraction, fill = fill, track = track, minimumWidth = minimumWidth, trailing = trailing
+        GeometryReader { @Sendable proxy in
+            MeterBarFill(width: proxy.size.width, fraction: fraction, fill: fill, track: track, minimumWidth: minimumWidth, trailing: trailing)
+        }
+    }
+}
+
+/// ``MeterBar`` drawn at the width it was given.
+private struct MeterBarFill: View {
+    let width: CGFloat
+    let fraction: CGFloat
+    let fill: Color
+    let track: Color?
+    let minimumWidth: CGFloat
+    let trailing: Bool
+
+    var body: some View {
+        ZStack(alignment: trailing ? .trailing : .leading) {
+            if let track {
+                Capsule()
+                    .fill(track)
+            }
+            Capsule()
+                .fill(fill)
+                .frame(width: max(minimumWidth, width * fraction))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: trailing ? .trailing : .leading)
     }
 }
 

@@ -488,14 +488,9 @@ struct StationMasterCorner: View {
                     .padding(.vertical, 1)
                     .background(Theme.accent, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(Palette.ink, lineWidth: 1.5))
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Theme.panel)
-                        Capsule().fill(Theme.primary).frame(width: proxy.size.width * title.progress)
-                    }
+                MeterBar(fraction: CGFloat(title.progress), fill: Theme.primary, track: Theme.panel)
                     .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1))
-                }
-                .frame(width: 40, height: 5)
+                    .frame(width: 40, height: 5)
             }
             .frame(minWidth: 44, minHeight: 28)
             .contentShape(Rectangle())

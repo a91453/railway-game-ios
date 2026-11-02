@@ -16,6 +16,15 @@ import XCTest
 /// is built when it opens, not measured with the layout (the HUD's game
 /// menu, rows and all, stands in each of the HUD's four layouts, which a
 /// tick changes every second, and no crash has come from it).
+///
+/// CRASHSWEEP-2 adds the other places SwiftUI builds views as it lays
+/// them out rather than when a `body` runs: a lazy stack's or grid's
+/// cells (built as they come into the laid-out area), read the same way
+/// from each `LazyVGrid`, `LazyHGrid`, `LazyVStack` and `LazyHStack`; and
+/// every `GeometryReader`, whose closure SwiftUI calls again whenever its
+/// size changes, as an animated layout does frame by frame. The readers
+/// not yet changed are listed in ``geometryReadersLeft``, a list that
+/// only shrinks.
 final class AsyncRenderClosureSourceTests: XCTestCase {
     private static let views = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -29,18 +38,62 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
         "ControlPanel": ["QuickEntries", "BuildEntry"],
     ]
 
+    /// CRASHSWEEP-2: the `GeometryReader`s still written as main-actor
+    /// code, by file, and why each waits. Each stands where its size moves
+    /// only with the window, the screen or a sheet (no recorded crash has
+    /// come from one in 100 releases); the next sweeps change them, and
+    /// take them off here. A new reader is sendable from the start.
+    private static let geometryReadersLeft = [
+        "ContentView.swift": 1, // the whole screen's layout
+        "MapView.swift": 1, // the 2D map's viewport
+        "Map3D/Map3DPreviewScreen.swift": 1, // the 3D station tag's viewport
+        "TutorialOverlay.swift": 1, // the lesson card's viewport
+        "TrainRosterView.swift": 1, // the roster's table height
+        "TrainDiagramView.swift": 1, // the diagram's canvas
+        "RealWorldPicker.swift": 1, // the sheet's turn to landscape
+        "RealWorldLoadingView.swift": 1, // the loading screen
+        "PostcardView.swift": 1, // the postcard sheet's scale
+        "SharedNetworkViews.swift": 1, // a shared postcard's scale
+        "StationStampPassportView.swift": 1, // a passport page
+        "PromotionLineView.swift": 1, // the promotion sheet's line
+        "RollingStockCatalogView.swift": 1, // a catalog card's train
+    ]
+
     func testNoMainActorClosureIsMeasuredOffTheMainThread() throws {
-        let files = try XCTUnwrap(FileManager.default.enumerator(atPath: Self.views.path))
-            .compactMap { $0 as? String }.filter { $0.hasSuffix(".swift") }.sorted()
-        var sources: [String: String] = [:]
-        for file in files {
-            sources[file] = Self.strip(try String(contentsOf: Self.views.appendingPathComponent(file), encoding: .utf8))
-        }
+        let sources = try Self.readViews()
         let found = Self.scan(sources)
         XCTAssertGreaterThan(found.measured, 20, "the scan finds the app's ViewThatFits")
         XCTAssertEqual(found.problems, [], """
             a closure SwiftUI keeps and calls later stands in a ViewThatFits: \
             make it @Sendable and build a view of its own there (CRASH101)
+            """)
+    }
+
+    /// CRASHSWEEP-2: a lazy grid's or stack's cells, and what they make.
+    func testNoMainActorClosureIsBuiltInALazyContainer() throws {
+        let sources = try Self.readViews()
+        let found = Self.scan(sources, roots: Self.lazyContainers)
+        XCTAssertGreaterThanOrEqual(found.measured, 6, "the scan finds the app's lazy grids")
+        XCTAssertEqual(found.problems, [], """
+            a closure SwiftUI keeps and calls later stands in a lazy grid or \
+            stack, which builds its cells as it lays them out: make it \
+            @Sendable and build a view of its own there (CRASHSWEEP-2)
+            """)
+    }
+
+    /// CRASHSWEEP-2: every `GeometryReader` is sendable, but those left.
+    func testGeometryReadersAreSendable() throws {
+        let sources = try Self.readViews()
+        var left: [String: Int] = [:]
+        for (file, text) in sources {
+            let count = Self.matches(#"\bGeometryReader\s*\{(?!\s*@Sendable)"#, in: text).count
+            if count > 0 { left[file] = count }
+        }
+        XCTAssertEqual(left, Self.geometryReadersLeft, """
+            a GeometryReader's closure runs again whenever its size changes, \
+            which the asynchronous renderer may do off the main thread: make \
+            a new one @Sendable and build a view of its own there; when one \
+            on the list is changed, take it off (CRASHSWEEP-2)
             """)
     }
 
@@ -76,7 +129,61 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
         XCTAssertEqual(found.problems, ["Bar.swift:3 ForEach(items, id: \\.self)", "Bar.swift:3 GeometryReader"])
     }
 
+    /// The scan reads lazy grids' cells, and what they make, as it reads
+    /// a ViewThatFits.
+    func testTheScanFindsALazyGridsCells() {
+        let sources = ["Grid.swift": Self.strip("""
+            struct Grid: View {
+                var body: some View {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3)) {
+                        ForEach(kinds, id: \\.self) { kind in Text(kind) }
+                        ForEach(kinds, id: \\.self) { @Sendable kind in Cell(kind: kind) }
+                    }
+                }
+            }
+            struct Cell: View {
+                var body: some View {
+                    Canvas { context, size in }
+                    Canvas { @Sendable context, size in }
+                }
+            }
+            """)]
+        let found = Self.scan(sources, roots: Self.lazyContainers)
+        XCTAssertEqual(found.measured, 1)
+        XCTAssertEqual(found.problems, ["Grid.swift:3 Canvas", "Grid.swift:3 ForEach(kinds, id: \\.self)"])
+    }
+
     // MARK: - Reading the sources
+
+    private static func readViews() throws -> [String: String] {
+        let files = try XCTUnwrap(FileManager.default.enumerator(atPath: views.path))
+            .compactMap { $0 as? String }.filter { $0.hasSuffix(".swift") }.sorted()
+        var sources: [String: String] = [:]
+        for file in files {
+            sources[file] = strip(try String(contentsOf: views.appendingPathComponent(file), encoding: .utf8))
+        }
+        return sources
+    }
+
+    /// Where a container's content opens: the `{` after its arguments, if
+    /// any (which may hold brackets of their own, as a grid's columns do).
+    private typealias Roots = @Sendable (String, [UInt16]) -> [Int]
+
+    private static let viewThatFits: Roots = { text, _ in
+        matches(#"ViewThatFits\([^)]*\)\s*\{"#, in: text).map { $0.range.upperBound - 1 }
+    }
+
+    private static let lazyContainers: Roots = { text, utf16 in
+        matches(#"\bLazy[VH](?:Grid|Stack)\b"#, in: text).compactMap { match in
+            var index = match.range.upperBound
+            while index < utf16.count, utf16[index] == 32 || utf16[index] == 10 { index += 1 }
+            if index < utf16.count, utf16[index] == UInt16(UInt8(ascii: "(")) {
+                index = close(utf16, from: index, "(", ")") + 1
+                while index < utf16.count, utf16[index] == 32 || utf16[index] == 10 { index += 1 }
+            }
+            return index < utf16.count && utf16[index] == UInt16(UInt8(ascii: "{")) ? index : nil
+        }
+    }
 
     private struct TypeBlock {
         let name: String
@@ -84,7 +191,7 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
         let range: Range<Int>
     }
 
-    private static func scan(_ sources: [String: String]) -> (measured: Int, problems: [String]) {
+    private static func scan(_ sources: [String: String], roots: Roots = viewThatFits) -> (measured: Int, problems: [String]) {
         var types: [TypeBlock] = []
         var helpers: [String: [String: [String]]] = [:]
         for (file, text) in sources {
@@ -115,10 +222,9 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
         for file in sources.keys.sorted() {
             let text = sources[file]!
             let utf16 = Array(text.utf16)
-            for match in matches(#"ViewThatFits\([^)]*\)\s*\{"#, in: text) {
-                guard let block = scope(file, match.range.location) else { continue }
+            for open in roots(text, utf16) {
+                guard let block = scope(file, open) else { continue }
                 measured += 1
-                let open = match.range.upperBound - 1
                 var work = [(substring(text, NSRange(location: open, length: close(utf16, from: open, "{", "}") - open + 1)), key(block))]
                 var seen: Set<String> = []
                 var reached = ""
@@ -141,7 +247,7 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
                         }
                     }
                 }
-                let line = text.utf16.prefix(match.range.location).filter { $0 == 10 }.count + 1
+                let line = text.utf16.prefix(open).filter { $0 == 10 }.count + 1
                 problems += kept(in: reached).map { "\(file):\(line) \($0)" }
             }
         }
@@ -170,7 +276,7 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
             (#"\.chartBackground\s*\{(?!\s*@Sendable)"#, "chartBackground"),
             (#"\.chartOverlay\s*\{(?!\s*@Sendable)"#, "chartOverlay"),
             (#"\.alignmentGuide\("#, "alignmentGuide"),
-            (#"\bCanvas\s*[({]"#, "Canvas"),
+            (#"\bCanvas\s*(?:\([^)]*\))?\s*\{(?!\s*@Sendable)"#, "Canvas"),
             (#"\bTimelineView\("#, "TimelineView"),
         ] {
             found += matches(pattern, in: text).map { _ in name }

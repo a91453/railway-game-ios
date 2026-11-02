@@ -351,6 +351,7 @@ struct PopulationLegendView: View {
     // with the map's colours when its renderer is replaced.
     @ViewBuilder
     private var scale: some View {
+        let language = language
         switch mode {
         case .population:
             LinearGradient(
@@ -390,23 +391,12 @@ struct PopulationLegendView: View {
             .frame(height: 12)
             .clipShape(Capsule())
         case .landUse:
+            // Sendable closures, not main-actor code (CRASHSWEEP-2): a lazy
+            // grid builds its cells as it lays them out, which SwiftUI's
+            // asynchronous renderer may do off the main thread (CRASH101).
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 3) {
-                ForEach(Array(CityMap.useNames.enumerated()), id: \.offset) { _, use in
-                    HStack(spacing: 6) {
-                        Text(verbatim: language.text(use.english, use.chinese))
-                            .font(.caption2)
-                            .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .frame(width: 52, alignment: .leading)
-                        HStack(spacing: 0) {
-                            ForEach(1...4, id: \.self) { density in
-                                Color(CityMap.useColor(use: use.use, density: density))
-                            }
-                        }
-                        .frame(height: 10)
-                        .clipShape(Capsule())
-                    }
+                ForEach(Array(CityMap.useNames.enumerated()), id: \.offset) { @Sendable _, use in
+                    LandUseLegendRow(use: use.use, name: language.text(use.english, use.chinese))
                 }
             }
             .accessibilityIdentifier("map.landUseLegend")
@@ -450,29 +440,15 @@ struct PopulationLegendView: View {
         case .zoning:
             // Decision 98: each zone's colour.
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 3) {
-                ForEach(Zone.allCases, id: \.self) { zone in
-                    HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2).fill(Color(CityMap.zoneColor(zone))).frame(width: 14, height: 10)
-                        Text(verbatim: zone.title(in: language))
-                            .font(.caption2)
-                            .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
+                ForEach(Zone.allCases, id: \.self) { @Sendable zone in
+                    ZoneLegendRow(zone: zone, language: language)
                 }
             }
             .accessibilityIdentifier("map.zoningLegend")
             // Decision 514: what an empty zoned cell will do, and why.
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 3) {
-                ForEach(ZoneOutlook.allCases, id: \.self) { outlook in
-                    HStack(spacing: 6) {
-                        ZoneOutlookSwatch(outlook: outlook).frame(width: 14, height: 10)
-                        Text(verbatim: outlook.title(in: language))
-                            .font(.caption2)
-                            .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
+                ForEach(ZoneOutlook.allCases, id: \.self) { @Sendable outlook in
+                    ZoneOutlookLegendRow(outlook: outlook, language: language)
                 }
             }
             .accessibilityIdentifier("map.zoneOutlookLegend")
@@ -603,6 +579,67 @@ struct PopulationLegendView: View {
     }
 }
 
+/// One land use in the land-use layer's key: its name, and its colour at
+/// each of the four densities.
+private struct LandUseLegendRow: View {
+    let use: Int
+    let name: String
+
+    var body: some View {
+        let use = use
+        HStack(spacing: 6) {
+            Text(verbatim: name)
+                .font(.caption2)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 52, alignment: .leading)
+            HStack(spacing: 0) {
+                ForEach(1...4, id: \.self) { @Sendable density in
+                    Color(CityMap.useColor(use: use, density: density))
+                }
+            }
+            .frame(height: 10)
+            .clipShape(Capsule())
+        }
+    }
+}
+
+/// One zone in the zoning layer's key (decision 98): its colour and name.
+private struct ZoneLegendRow: View {
+    let zone: Zone
+    let language: DisplayLanguage
+
+    var body: some View {
+        HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 2).fill(Color(CityMap.zoneColor(zone))).frame(width: 14, height: 10)
+            Text(verbatim: zone.title(in: language))
+                .font(.caption2)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+    }
+}
+
+/// One of decision 514's outlooks in the zoning layer's key: its swatch
+/// and name.
+private struct ZoneOutlookLegendRow: View {
+    let outlook: ZoneOutlook
+    let language: DisplayLanguage
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ZoneOutlookSwatch(outlook: outlook).frame(width: 14, height: 10)
+            Text(verbatim: outlook.title(in: language))
+                .font(.caption2)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+    }
+}
+
 /// The steep slopes' hatching in the height layer's key (decision 124,
 /// H3), as the map draws it.
 private struct SteepSwatch: View {
@@ -625,7 +662,10 @@ private struct ZoneOutlookSwatch: View {
     let outlook: ZoneOutlook
 
     var body: some View {
-        Canvas { context, size in
+        let outlook = outlook
+        // A sendable closure (CRASHSWEEP-2): the swatch stands in a lazy
+        // grid's cell (``ZoneOutlookLegendRow``).
+        Canvas { @Sendable context, size in
             let rect = CGRect(origin: .zero, size: size)
             context.fill(Path(rect), with: .color(Color(CityMap.zoneColor(.residential))))
             var lines = Path()
