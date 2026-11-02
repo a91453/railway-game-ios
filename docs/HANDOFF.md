@@ -455,6 +455,18 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 44 任交給 pro（2026-11-02 約 15:20 UTC，session_01YGNNukkhfPybvPTy9Pnp8C，作者開的，週額度剩 2%，2026-11-03 22:00 台灣時間重置）**：作者請另一個帳號（pro）**當一天遊戲規劃**（同角色：派工、審查、合併、發版前檢查），額度重置後交回。不開新 session（作者：「不要再做新session了」）。
+
+- **108.1 發版中**：作者 15:05 UTC 在 `ef92919`（#1722 的合併）按了 TestFlight，run 41468139355。同一個 commit 的檢查：完整 `ci.yml` 41468098590、full lane（`ios-build.yml` 手動）41468104214、Release archive 41468122850。全部完成後在 `docs/research/PLAYER_FEEDBACK.md` 照 107.1 那段的格式記 0.5.0 (108.1)（文件 PR）；紅的查原因。What to Test 是 `.github/testflight-whats-new.md`（#1722）。出口合規 #1721 已合：確認 App Store Connect 這版不再顯示 Missing Compliance。
+- **為了空出 macOS 取消的**：舊 `50aea37` 的 full lane 41458126462、#1723 的 iOS App Build 41466839274（#1723 下次推會重跑）。
+- **第 44 任已合**：#1714 CIWARN、#1716 COPYLINE、#1718 CRASHSWEEP-2（`b3f90c1`）。作者自己合：#1721 出口合規、#1722 108.1 說明（`ef92919`）。
+- **還開著**：**#1723 WENHUCAP（決策 549，GameCore，draft）**：文湖線號誌關時改停的月台要接回自己方向。PR 自己寫「擬實」「簡單＋行車控制」兩項量測還沒補完。不進 108.1。轉 ready、CI 綠（完整 tier）、量測補齊後審過再合；文湖線上架（決策 549 下一步 1）由規劃看量測決定。
+- **派出去的**：Antigravity 的 **SKLTOWER 新光摩天大樓（決策 550）**：第三級，規劃看過截圖才合。pro 的下一張：**CRASHSWEEP-3**（#1718 說明最後的「下一批」：13 個整頁 `GeometryReader`、3D 列車標籤的 `alignmentGuide`、`Chart { ForEach }`）。
+- **號碼**：決策 549 WENHUCAP、550 SKLTOWER 保留，551 已用；**下一個 552**。存檔 81、golden schema 77 不動。
+- **沒派的**：照下面第 43 任交接的「沒派的」1–5（第 6 點著作權行已由 #1716 做完）。
+- **Threads**：105.1＋107.1＋108.1 合一篇的草稿已交給作者（不 commit）；`docs/research/THREADS_WRITING.md` §5 還沒更新。
+- **合併規則照舊**：每批 3–5 個，用 `expectedHeadSha`，等 main 的 `ci.yml` 綠再下一批；不取消 main 的 push run；`testflight.yml` 只在作者說發版時按，且 main 那個 commit 的完整 ci.yml 與 full lane 都綠。
+
 **第 43 任交接（2026-11-02 約 14:10 UTC，session_01YGNNunC2SwRgFTbo4rham5，第 5 層，壓縮 3 次，這是最後一版）**：作者說快到每週上限，**不再開新 session**（2026-11-02：「不要再做新session了」）。作者用另一個帳號（pro）與 Antigravity（Gemini）照遊戲規劃寫的派工卡做；pro 不合併，合併由遊戲規劃做。**下一任遊戲規劃由作者在 claude.ai 開**（第 43 任不開 session）。
 
 - **發版**：
