@@ -170,7 +170,8 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 **這個 commit 的檢查**：
 - 完整 `ci.yml` run 41432630652（workflow_dispatch，68a4cfc）：綠。
 - `release-archive.yml` run 41432640570（68a4cfc）：綠。
-- full lane run 41432636112（68a4cfc）：11:30 UTC 還在跑，下一任補記。#1713 動到的那支（`testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser`）已在 only_testing run 41426564615 綠。
+- full lane run 41432636112（68a4cfc）：紅。`testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack`（3D 捏出沒回 2D：模型在打開的 3D 上做，場景還沒出來就捏出；`a48121b` 也紅過一次）、`StoryCardUITests.testTheCardKeepsClearHeldUpright`（每次查詢 8–15 秒，40 秒內只查 4 次）、主 job 在 95 分上限前沒做完字串匯出。都是 Simulator 上測試的時間問題，玩家不受影響；修在 FLANE6（`claude/flane6`）。#1713 動到的那支（`testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser`）已在 only_testing run 41426564615 綠。
+- TestFlight run 41432853094：成功（上傳與 App Store Connect 處理都過）。What to Test 這次沒有寫 107.1 的玩家說明，作者手動貼上。
 - 前一個 commit `a48121b`：完整 `ci.yml` run 41406240845 綠；full lane run 41406244046 紅 3 支，重跑 41416405737 只剩 1 支（上面那支，模型暖機在 `.background` 240 秒做不完），其餘兩支（縮小、Apple Pencil 改名）是時好時壞。
 
 **這版請測試者看**：打開 3D 地圖不再等列車模型（決策 546）；捏近或開遊戲 8 秒後列車換成正式模型。

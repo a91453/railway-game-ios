@@ -27,13 +27,18 @@ final class StoryCardUITests: XCTestCase {
         // and that it gives way to the building tools, not how long it stays.
         app.launchArguments = ["-ui-testing", "-ui-test-world", "story", "-story-card-ms", "120000",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // Each look for the card took 8 to 15 s, and four of them used the
+        // 40 s (main 68a4cfc's full lane, run 41432636112): XCTest's log
+        // copied to the app's standard error holds its main thread up
+        // (MENUSTALL, #1712), so it is not copied, and the card has 90 s.
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game opens")
 
         // The first beat, at the challenge's next midnight.
         let card = app.descendants(matching: .any)["storyCard"].firstMatch
-        XCTAssertTrue(card.appears(within: 40), "The story card shows")
+        XCTAssertTrue(card.appears(within: 90), "The story card shows")
         card.waitUntilSettled()
         // One snapshot of the whole screen: asking each button in turn takes
         // longer than the card stays up (14 s), and it would go mid-check.

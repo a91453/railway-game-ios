@@ -321,8 +321,11 @@ jobs:
     # the Simulator now takes 4 to 6 minutes, and the string export up to 5.
     # A pull request's UI step stops at 25, so its job keeps 60. 95 for the
     # full lane since its UI step got 75 (below): on 2026-10-15 the job took
-    # some 72 of its 80 minutes (main 2ec70b2, run 38720199489).
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 95 }}
+    # some 72 of its 80 minutes (main 2ec70b2, run 38720199489). 115 since
+    # its UI step got 90 (below): on 2026-11-02 the Simulator took 6 minutes
+    # to boot, the warm-up 5, the UI step 74 and the string export 10, and
+    # the job was cut at 95 in the export (main 68a4cfc, run 41432636112).
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 115 }}
     steps:
       # Depth 2: a pull request's checkout is the pull request merged into its
       # base, and the archivable-products check below compares the two.
@@ -545,8 +548,9 @@ jobs:
         # took 38m51s to some 55 minutes on main on 2026-10-14 and 10-15
         # (9a88ef0, 237f194 44m51s, 6e86506, 2ec70b2: 53 minutes of tests
         # alone, run 38720199489), 5 minutes short of the 60: 75 leaves a
-        # slow runner room and still stops a hang.
-        timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 75 }}
+        # slow runner room and still stops a hang. 90 since it took 74 of
+        # its 75 on 2026-11-02 (main 68a4cfc, run 41432636112).
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 90 }}
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
         run: |

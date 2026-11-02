@@ -1443,10 +1443,20 @@ final class MapInteractionTests: XCTestCase {
     func testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // The train models made at launch and waited for on the 2D map, as
+        // the other 3D tests do (FLANE5): since decision 546 the pinch that
+        // rests near the 3D map starts them, and made over the open 3D map
+        // they kept each look 7 to 15 s and the scene unbuilt, so both
+        // pinches out came before there was a scene to hand back from
+        // (main 68a4cfc's full lane, run 41432636112; a48121b's, run
+        // 41406244046). XCTest's log is not copied to standard error
+        // (MENUSTALL, #1712).
+        app.launchArguments = ["-ui-testing", "-ui-test-3d-models-first", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         app.openDemo("demo.simple")
+        app.waitForThreeDModels()
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
         let close = app.buttons["map3D.close"]
@@ -1457,6 +1467,8 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(close.appears(within: 20), "A pinch past the closest zoom, let go, hands the 2D map over to the 3D map")
         let view = app.descendants(matching: .any)["map3D.view"].firstMatch
         XCTAssertTrue(view.appears(within: 10))
+        // A pinch out hands back from the scene shown, not from its spinner.
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 60), "The 3D scene is shown")
         view.pinch(withScale: 0.1, velocity: -3)
         if !close.disappears(within: 5) { view.pinch(withScale: 0.1, velocity: -3) }
         XCTAssertTrue(close.disappears(within: 10), "A pinch out hands the 3D map back")
