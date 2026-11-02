@@ -100,6 +100,13 @@ public struct Tourism: Hashable, Sendable {
     public internal(set) var nextID: Int
 
     public static let maximumSouvenirLevel = 2
+
+    /// When on game day `day` the network its tourists rode is read, to
+    /// count them at midnight (decision 551): noon, when every line with
+    /// service hours runs.
+    static func countedAt(day: Int64) -> GameTime {
+        GameTime(seconds: day * GameTime.secondsPerDay + GameTime.secondsPerDay / 2)
+    }
     /// What a hotel within ``SubsidiaryRules/reach`` of an attraction adds to
     /// its rating, in hundredths of a star, and how many count (decision
     /// 174, a later fix): two hotels, half a star.
@@ -636,7 +643,9 @@ extension GameWorld {
         let day = dayIndex(of: clock.now)
         if typhoons(onDay: day).contains(where: { $0.isActive(onDay: day) && $0.covers(attraction.point) }) { return .typhoon }
         guard let station = servingStation(at: attraction.point) else { return .noStation }
-        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
+        // Decision 551: the network at today's noon, as the day is counted,
+        // so a sight does not read "nobody can ride there" at night.
+        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self, at: Tourism.countedAt(day: day)) : nil
         let sources = touristSources(excluding: station, among: touristCandidates())
         return sources.contains { reaches(from: $0.station, to: station, graph: graph) } ? .ok : .noSource
     }
@@ -770,7 +779,11 @@ extension GameWorld {
     mutating func closeTourismDay(_ day: Int64) {
         guard var tourism, day >= 0 else { return }
         let world = self
-        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
+        // Decision 551: the network as it ran at noon of the day that
+        // ended, not at midnight, when a line with service hours is closed
+        // and its graph has no paths: counted then, every sight's day was
+        // 0 (107.1's player report: yesterday, this year and last 0).
+        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self, at: Tourism.countedAt(day: day)) : nil
         let arrived = world.touristFlows(onDay: day) { world.reaches(from: $0, to: $1, graph: graph) }.arrivals
         let year = day / FinancePeriod.year.days
         if year != tourism.year {
