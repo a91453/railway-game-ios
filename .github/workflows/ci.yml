@@ -344,6 +344,10 @@ jobs:
           # test, not once per class: on #1189's full run campaigns-11 passed
           # 20 minutes (decision 404).
           SWIFT_TEST_WORKERS: 1
+          # The job's timeout-minutes above: the warnings name it, and they
+          # come at 25 and 27.5 minutes of it (decision 544, CIWARN).
+          # swift-shards-selftest.sh fails when the two differ.
+          SHARD_LIMIT_MINUTES: 30
 
   # A cancelled pull request run: was it replaced by a newer push? Then the
   # newer run gives the verdict and the gate is skipped here, not red on a

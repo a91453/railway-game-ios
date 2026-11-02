@@ -1095,16 +1095,24 @@ unpack_build() {
 
 # Decision 404: say so before a shard reaches its job limit, not after.
 # Every rebalance above came after a red main, when a shard had drifted
-# past ci.yml's 20 minutes (timeout-minutes) as classes were added or grew;
-# a cancelled job prints no summary, so its class times had to be read off
-# the whole job log. JOB_STARTED (epoch seconds, set by the job's first step
-# in ci.yml) gives the job's time so far; the container's start, some 40 s,
-# comes before it. Without it (locally) only the class checks run.
+# past the job's limit (ci.yml's timeout-minutes) as classes were added or
+# grew; a cancelled job prints no summary, so its class times had to be read
+# off the whole job log. JOB_STARTED (epoch seconds, set by the job's first
+# step in ci.yml) gives the job's time so far; the container's start, some
+# 40 s, comes before it. Without it (locally) only the class checks run.
 # The warning line was 15 minutes; decision 405 put it at 17, since the
 # rebalanced shards run to about 16.5 on slow runners and a warning on
 # most runs goes unread.
-SHARD_WARN_SECONDS="${SHARD_WARN_SECONDS:-1020}"
-SHARD_WATCHDOG_SECONDS="${SHARD_WATCHDOG_SECONDS:-1110}"
+# Decision 544 (continuation, CIWARN): the limit is 30 minutes since
+# decision 540, and shards take about 7 (up to 12 on a slow runner), so the
+# lines keep decision 405's place in the limit (17 of 20, 18.5 of 20): the
+# warning at 25 minutes, the watchdog at 27.5, and the messages name the
+# limit from SHARD_LIMIT_MINUTES instead of a number in their text. ci.yml
+# sets SHARD_LIMIT_MINUTES next to the job's timeout-minutes, and
+# swift-shards-selftest.sh fails when the two differ.
+SHARD_LIMIT_MINUTES="${SHARD_LIMIT_MINUTES:-30}"
+SHARD_WARN_SECONDS="${SHARD_WARN_SECONDS:-1500}"
+SHARD_WATCHDOG_SECONDS="${SHARD_WATCHDOG_SECONDS:-1650}"
 # A class this long whose weight is missing, or less than half its time,
 # is reported: the selected parts are dealt by weight (selected_part).
 CLASS_WARN_SECONDS="${CLASS_WARN_SECONDS:-60}"
@@ -1157,8 +1165,8 @@ job_seconds() {
 time_warnings() {
   local shard="$1" times="$2" job
   if job="$(job_seconds)" && ((job >= SHARD_WARN_SECONDS)); then
-    echo "::warning title=Shard $shard near its 20-minute limit::$shard took $((job / 60))m$(printf '%02d' $((job % 60)))s of its 20 minutes (slowest: $(slowest_text <"$times")). Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
-    [[ -z "${GITHUB_STEP_SUMMARY:-}" ]] || echo "- :warning: $((job / 60))m$(printf '%02d' $((job % 60)))s of the job's 20 minutes (warns from $((SHARD_WARN_SECONDS / 60)))" >>"$GITHUB_STEP_SUMMARY"
+    echo "::warning title=Shard $shard near its ${SHARD_LIMIT_MINUTES}-minute limit::$shard took $((job / 60))m$(printf '%02d' $((job % 60)))s of its ${SHARD_LIMIT_MINUTES} minutes (slowest: $(slowest_text <"$times")). Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
+    [[ -z "${GITHUB_STEP_SUMMARY:-}" ]] || echo "- :warning: $((job / 60))m$(printf '%02d' $((job % 60)))s of the job's ${SHARD_LIMIT_MINUTES} minutes (warns from $((SHARD_WARN_SECONDS / 60)))" >>"$GITHUB_STEP_SUMMARY"
   fi
   local secs class weight
   while read -r secs class; do
@@ -1190,7 +1198,7 @@ watchdog() {
     # A parallel run prints a test only once it ends: name those still running.
     what="$what; still running: $(started_tests "$@" | comm -23 "$WATCH_EXPECTED" - | awk 'NR <= 4 { printf "%s%s", (NR > 1 ? ", " : ""), $0 }')"
   fi
-  echo "::warning title=Shard $shard about to reach its 20-minute limit::$shard has run $((SHARD_WATCHDOG_SECONDS / 60))m$(printf '%02d' $((SHARD_WATCHDOG_SECONDS % 60)))s; $what. Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
+  echo "::warning title=Shard $shard about to reach its ${SHARD_LIMIT_MINUTES}-minute limit::$shard has run $((SHARD_WATCHDOG_SECONDS / 60))m$(printf '%02d' $((SHARD_WATCHDOG_SECONDS % 60)))s; $what. Move a class to a shorter shard in classes_of (.github/scripts/swift-shards.sh, decision 404)."
 }
 
 run_shard() {
