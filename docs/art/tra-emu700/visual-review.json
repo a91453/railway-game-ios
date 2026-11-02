@@ -1,5 +1,5 @@
 {
-  "geometry_producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "geometry_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
   "user_appearance_acceptance": "UNVERIFIED",
   "accepted_producer": null,
   "observer": "Codex author self-inspection only",
@@ -105,7 +105,21 @@
       "part": "2026 same-day numbered representative train",
       "status": "資料不足",
       "evidence": "Dated 2011–2020 photographs and 2020 pair caption are separate from 2026 status."
+    },
+    {
+      "part": "cab intake without crew door and visible passenger door paint",
+      "status": "已符合",
+      "evidence": "Source explicitly says no crew door; final geometry and actual predecessor rejection, exposed painted face probes and real backing-cover mutation."
     }
   ],
-  "before_version": "No accepted dedicated native EMU700 predecessor; the private Q-proportioned mesh is not a dimensional or accepted before-version."
+  "before_version": "No accepted dedicated native EMU700 predecessor; the private Q-proportioned mesh is not a dimensional or accepted before-version.",
+  "unaccepted_previous": {
+    "producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+    "asset_commit": "9448fd67",
+    "acceptance": "UNVERIFIED",
+    "withdrawn_claim": "Door completeness: actual tall cab panel and missing/covered passenger-door stripes were found and corrected.",
+    "same_scale_comparison": "Same 20.8m metre camera/light on predecessor and final raw right views; sheets recoverable from the respective asset git commits, no duplicate heavy archive.",
+    "coplanar_cover_before_producer": "3edd8c7fb0faf61248b5f2b84a585c9d422eb81a",
+    "actual_before_rejection": "Final doors.mjs rejects the actual coplanar door-cover geometry at 3edd8c7f, and the cab/paint defects of CCC native payloads whose SHA is fixed per role."
+  }
 }

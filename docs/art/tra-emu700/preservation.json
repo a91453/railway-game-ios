@@ -5474,8 +5474,9 @@
     "tra-emu700-et-far"
   ],
   "limits": "FNV over x/y/z/nx/ny/nz/color/u/v/layer plus native bytes; no device memory certification",
-  "baseline_commit": "a4dddd40ae97d003aa2d32405e950c6ebe2a0f7a",
-  "candidate_geometry_producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "baseline_commit": "e7cb277f5297d1eb9703fff71d383d36e8660b38",
+  "initial_main_commit": "a4dddd40ae97d003aa2d32405e950c6ebe2a0f7a",
+  "candidate_geometry_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
   "unlocked_existing_ids": [
     "scenery-busStopPole",
     "scenery-postBoxes"
@@ -6404,12 +6405,12 @@
       "tra-emu700-em",
       "tra-emu700-em-far"
     ],
-    "studies_vertex_bytes": 129921120
+    "studies_vertex_bytes": 130770720
   },
   "standard_model_count": 696,
   "studies_model_count": 222,
   "standard_vertex_bytes_delta": 0,
-  "new_study_vertex_bytes": 4447200,
+  "new_study_vertex_bytes": 5296800,
   "registration_commit": "ef0a18ac",
   "existing_order_and_indices_preserved": true
 }

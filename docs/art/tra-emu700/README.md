@@ -30,12 +30,12 @@
 
 實際選用：只預備studies，standard常駐增量0；實際standard+studies全量原生bytes與十欄頂點FNV保護記錄見preservation.json；不改Map3DTrainSets／Trains／RealTrains、燈或回退。現有localTrain是比例挑其他EMU，沒有可靠EMU700身份／正式角色／八車映射，不能按區間車名稱冒認。本PR合併也不會自動出現在營運。動態行駛、裝置Metal、Simulator、使用者接受各自UNVERIFIED。
 
-技術結果見 verification.json、producer-verification.json、preservation.json 與 visual-review.json；此頁在兩庫draft PR完成後固定連結。真正幾何producer `ccc21854a16f21cb2d4f188749efaf6affd81d39`，驗證工具／文件head與素材commit另記，不倒填producer。此producer包含全部四種角色近遠、完整八車兩LOD；近景49,612三角，遠景24,508三角。每單元近景≤15,000；遠景逐角色少於近景一半，bounds同框。連結器與空調／車底殼體保留閉合實體，框架與孔洞為實際留空。
+技術結果見 verification.json、producer-verification.json、preservation.json 與 visual-review.json；此頁在兩庫draft PR完成後固定連結。真正幾何producer `553b3a2207bf87e6d02819d687b673860055a84a`，驗證工具／文件head與素材commit另記，不倒填producer。此producer包含全部四種角色近遠、完整八車兩LOD；近景59,068三角，遠景29,212三角。每單元近景≤15,000；遠景逐角色少於近景一半，bounds同框。連結器與空調／車底殼體保留閉合實體，框架與孔洞為實際留空。
 
 可執行重建（Swift 6.4、Node、既有Chromium／Playwright、Python/Pillow、Blender依共用工具README準備）：
 
 ```sh
-git worktree add --detach ../emu700-producer ccc21854a16f21cb2d4f188749efaf6affd81d39
+git worktree add --detach ../emu700-producer 553b3a2207bf87e6d02819d687b673860055a84a
 cd ../emu700-producer
 pwd
 git rev-parse HEAD
@@ -52,11 +52,11 @@ python3 tools/tra-emu700/sheets.py /tmp/emu700-rebuild
 
 近遠比較的20.8m單車框與163.286m全列框均固定，相同相機與光線；互動viewer則為每個項目自行適配鏡頭，不能用它的auto-fit畫面作定量尺度比較。夜景為靜態未啟動燈具材質，不宣稱已接上營運頭尾燈。更詳細的實際選用路徑與缺口見integration.json。
 
-完整包與可旋轉縮放下載viewer：[私有素材分支](https://github.com/a91453/railway-assets-private/tree/codex/tra-emu700-native-2026-11-02/game-art-previews/docs/art/tra-emu700/revision-1)。以兩張互鏈draft PR的最新head為準。
+完整包與可旋轉縮放下載viewer：[私有素材分支](https://github.com/a91453/railway-assets-private/tree/codex/tra-emu700-native-2026-11-02/game-art-previews/docs/art/tra-emu700/revision-1)。以兩張互鏈draft PR的最新head為準。素材draft：[#45](https://github.com/a91453/railway-assets-private/pull/45)。
 
 本輪原創配方、原生／GLB及文件依公開庫 [LICENSE.md](https://github.com/a91453/railway-game-ios/blob/main/LICENSE.md)：Copyright © 2026 a91453，著作權所有。照片與技術文章維持各原作者權利，未作為交付素材。瀏覽器實測為Linux Chromium／SwiftShader，Safari、Firefox及行動裝置實際載入未驗；不需解壓API，viewer未壓縮。
 
-最終註冊head僅將本型追加於studies末端；既有910個模型的順序／索引、原生bytes及十欄FNV均與未改main相同。standard 696件、studies 214→222件；standard頂點陣列增量0，本型studies增加4,447,200 bytes，不等於裝置GPU配置實測。幾何producer不因註冊順序、驗證工具或文件提交而改寫。
+最終註冊head僅將本型追加於studies末端；既有910個模型的順序／索引、原生bytes及十欄FNV均與未改main相同。standard 696件、studies 214→222件；standard頂點陣列增量0，本型studies增加5,296,800 bytes，不等於裝置GPU配置實測。幾何producer不因註冊順序、驗證工具或文件提交而改寫。
 
 重建完整inventory與保護（從最終文件head呼叫本型專用helper，第二參數必須是實際乾淨checkout；共享exporter預設只匯出部分車輛）：
 
@@ -72,3 +72,11 @@ python3 tools/tra-emu700/protect.py /tmp/emu700-main-inventory /tmp/emu700-final
 node tools/train-models/inspect.mjs /absolute/revision-1 /tmp/emu700-viewer.html
 cmp /tmp/emu700-viewer.html /absolute/revision-1/index.html
 ```
+
+檢查命令與既有全量gate問題見 [validation-commands.md](validation-commands.md)；接手查重與相關已合併PR的head／payload／接受證據見 [pr-audit.json](pr-audit.json)。
+
+CCC前稿（素材commit `9448fd67`，未接受）末檢發現駕駛側窗下方直板誤像側門、客門色帶中斷，撤回此前對門面完整性的較寬自評。原文明確記「未設有乘務員專用車門」，本輪移除直板、補引風格柵並將客門面直接分色與完整膠條。doors.mjs在最終實際頂點檢查門面，對真正CCC前稿及實際改色故障拒收；原前稿native SHA固定在door-verification結果，前後sheet均可由各producer與素材git恢復。相機／光線／公尺框相同，沒有把其他EMU當前稿。
+
+門面外露另以原生三角中心的法向投影檢查，拒收同平面底板蓋色；已對3edd8c7f實際前稿重現，修正為退入6mm的門底板，並以移動最終真實底板的反例驗證。這項檢查仍僅覆蓋指定門面三角中心。
+
+同相機前後核對：[CCC未接受前稿的EMC sheet](https://github.com/a91453/railway-assets-private/blob/9448fd67/game-art-previews/docs/art/tra-emu700/revision-1/sheets/tra-emu700-emc.png)／[本輪EMC sheet](https://github.com/a91453/railway-assets-private/blob/codex/tra-emu700-native-2026-11-02/game-art-previews/docs/art/tra-emu700/revision-1/sheets/tra-emu700-emc.png)。全角色前稿與原生bytes亦固定於該素材commit及CCC producer，未增加重複PNG或重檔。

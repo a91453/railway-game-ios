@@ -210,7 +210,7 @@
       "date_evidence": "Caption in downloaded article HTML, read directly; filenames used only to match the captioned image.",
       "visible_vehicle_number": null,
       "kind": "real_vehicle_photo",
-      "supports": "Oblique station view: cab side door and side glass, lower housings and overall consist."
+      "supports": "Oblique station view: cab side window/intake and first passenger door, lower housings and overall consist."
     },
     {
       "url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhhs74WFiHFVrA7L0JpXnrPSy5pwuK8KQ9fFoKBvwbkQNxKDzQspAWSEQRKcQv9SXUZlSB5-2sDN2_BKimUZHcFRMByEEOkrUP4xgG2AfZkkPP-5U1R8C8mGwf4XBVXDN6MdeKQ27KbwS4/s1600/DSC00844.JPG",
@@ -817,7 +817,7 @@
       "public_use": false,
       "download_filename": "EMU700_3-3.JPG",
       "viewed": "local contact sheet; side composites are not engineering drawings",
-      "supports": "Cab side: driving-room window, first door, roof AC and motor bogie position.",
+      "supports": "Cab side: driving-room window/intake, first passenger door, roof AC and motor bogie position.",
       "kind": "real_vehicle_photo"
     },
     {
@@ -1148,5 +1148,10 @@
       "protected EM-EM end fittings",
       "absolute axle end offsets and suspension detail"
     ]
+  },
+  "cab_side_correction": {
+    "source": "https://emu300ct.web.fc2.com/index/traemu/EMU700.htm",
+    "quote": "駕駛窗後方設有馬達引風道，而未設有乘務員專用車門",
+    "effect": "Remove previous full-height side panel; keep driving window and model intake louvres."
   }
 }

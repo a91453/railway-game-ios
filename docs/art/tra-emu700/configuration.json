@@ -1,5 +1,5 @@
 {
-  "geometry_producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "geometry_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
   "identity": "TRA EMU700 ordinary livery, mass-production representative 739+740",
   "period": "2020 historical representative; exact 2026 pair status UNVERIFIED",
   "native_axes": {
@@ -196,5 +196,6 @@
       "far_unit": "tra-emu700-emc-far"
     }
   ],
-  "formation_positive_x_end": "Car 1 EMC739; the adopted formation diagram places the Kaohsiung/Pingtung side here, not a verified real-world heading of the dated photographs."
+  "formation_positive_x_end": "Car 1 EMC739; the adopted formation diagram places the Kaohsiung/Pingtung side here, not a verified real-world heading of the dated photographs.",
+  "cab_side": "Driver side window and traction motor intake; no crew side door per KASHIWA source text."
 }
