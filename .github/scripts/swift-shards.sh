@@ -5,9 +5,8 @@
 #   swift-shards.sh build            `swift build --build-tests -Xswiftc
 #                                    -warnings-as-errors`, once more when
 #                                    swift-build itself crashes (build_package)
-#                                    (CI_BUILD_CACHE=restored: a build from
-#                                    the cache that fails is built again
-#                                    from nothing, decision 545)
+#                                    (a build on the cache that fails is
+#                                    built again from nothing, decision 545)
 #   swift-shards.sh stamp            set every tracked file's modification
 #                                    time from .build's source stamps, so a
 #                                    build restored from the cache recompiles
@@ -977,22 +976,33 @@ build_package() {
 # The new list is written into .build, so the cache saved after the build
 # carries the times its build record holds. Content decides, not the time a
 # commit was made, so no git history is needed.
+#
+# The cache is used only when GameCore and Package.swift are what it was
+# built from (CACHE_DISCARDING): a GameCore change compiled on a cache took
+# longer than from nothing (decision 545's table: 349 s against 265 s; every
+# module above it is compiled again, one after another), so such a change
+# deletes the restored .build and builds from nothing, as before. CACHE_MARK says the build that
+# follows stands on the cache (build_with_cache).
 SOURCE_STAMPS="${SOURCE_STAMPS:-.build/ci-source-stamps}"
+CACHE_MARK="${CACHE_MARK:-.build/ci-built-on-cache}"
+CACHE_DISCARDING='^(Sources/GameCore/|Package\.swift$)'
 STAMP_EPOCH=946684800 # 2000-01-01T00:00:00Z
 stamp_sources() {
-  local old="" new
+  local old="" new rc=0
+  rm -f "$CACHE_MARK"
   [[ -s "$SOURCE_STAMPS" ]] && old="$SOURCE_STAMPS"
   mkdir -p "$(dirname "$SOURCE_STAMPS")"
   new="$SOURCE_STAMPS.new"
   # Records end in NUL, so any path is safe. Links (120000) and
   # submodules (160000) are left alone: utime would follow the link.
+  # Exit code 3: the cached build is not to be used.
   git ls-files -s -z | perl -0 -e '
-    my ($old, $new, $epoch) = @ARGV;
+    my ($old, $new, $epoch, $discarding) = @ARGV;
     my (%time, %blob);
     my $latest = $epoch;
+    local $/ = "\0";
     if ($old ne "") {
       open(my $in, "<", $old) or die "cannot read $old: $!";
-      local $/ = "\0";
       while (my $r = <$in>) {
         chomp $r;
         my ($t, $b, $p) = split(/ /, $r, 3);
@@ -1000,15 +1010,29 @@ stamp_sources() {
         $latest = $t if $t > $latest;
       }
     }
-    my $later = $latest + 1;
-    open(my $out, ">", $new) or die "cannot write $new: $!";
-    my ($same, $changed) = (0, 0);
-    local $/ = "\0";
+    my @files;
     while (my $r = <STDIN>) {
       chomp $r;
       my ($meta, $p) = split(/\t/, $r, 2);
       my ($mode, $b) = split(/ /, $meta);
       next if $mode eq "120000" || $mode eq "160000";
+      push @files, [$p, $b];
+    }
+    if ($old ne "") {
+      my %now = map { $_->[0] => 1 } @files;
+      my @changed = map { $_->[0] } grep { !exists $blob{$_->[0]} || $blob{$_->[0]} ne $_->[1] } @files;
+      my @gone = grep { !$now{$_} } keys %blob;
+      my @moved = sort grep { /$discarding/ } (@changed, @gone);
+      if (@moved) {
+        print "The cached build is not used: GameCore or Package.swift changed since it was built (", scalar(@moved), " files, first $moved[0]).\n";
+        exit 3;
+      }
+    }
+    my $later = $latest + 1;
+    open(my $out, ">", $new) or die "cannot write $new: $!";
+    my ($same, $changed) = (0, 0);
+    for my $f (@files) {
+      my ($p, $b) = @$f;
       my $t;
       if ($old eq "") { $t = $epoch; }
       elsif (exists $blob{$p} && $blob{$p} eq $b) { $t = $time{$p}; $same++; }
@@ -1019,16 +1043,23 @@ stamp_sources() {
     close($out) or die "cannot write $new: $!";
     if ($old eq "") { print "No source stamps: every file stamped $epoch (a build from nothing).\n"; }
     else { print "Source stamps: $same files unchanged since the cached build, $changed changed or new (stamped $later).\n"; }
-  ' "$old" "$new" "$STAMP_EPOCH"
+  ' "$old" "$new" "$STAMP_EPOCH" "$CACHE_DISCARDING" || rc=$?
+  if ((rc == 3)); then
+    rm -rf .build
+    stamp_sources
+    return
+  fi
+  ((rc == 0)) || die "Could not stamp the sources (exit code $rc)."
   mv "$new" "$SOURCE_STAMPS"
+  [[ -z "$old" ]] || : >"$CACHE_MARK"
 }
 
-# Decision 545: with CI_BUILD_CACHE=restored, a build on the restored
-# .build that fails (a compile error, or a crash built twice) is built once
-# more from nothing, so a stale cache can never be the reason a change turns
-# red; a real compile error fails again and is reported as before.
+# Decision 545: a build standing on the restored cache (CACHE_MARK) that
+# fails (a compile error, or a crash built twice) is built once more from
+# nothing, so a stale cache can never be the reason a change turns red; a
+# real compile error fails again and is reported as before.
 build_with_cache() {
-  if [[ "${CI_BUILD_CACHE:-}" != restored ]]; then
+  if [[ ! -e "$CACHE_MARK" ]]; then
     build_package
     return
   fi

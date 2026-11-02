@@ -852,16 +852,66 @@ else
   failures=$((failures + 1))
 fi
 
-# A failing build on a restored cache is built once more from nothing
-# (fresh stamps); a real compile error still fails, and so does a build
-# with no cache.
+# on_cache <yes|no> <description>: whether the next build stands on the cache.
+on_cache() {
+  local is=no
+  [[ -e "$repo/.build/ci-built-on-cache" ]] && is=yes
+  if [[ "$is" == "$1" ]]; then
+    echo "ok   pass  $2"
+  else
+    echo "FAIL $2: on the cache is $is, not $1"
+    failures=$((failures + 1))
+  fi
+}
+on_cache yes "stamp: a build on the cache is marked"
+
+# A change to GameCore or Package.swift deletes the cache
+# and stamps from nothing; a removed GameCore file does too.
+mkdir -p "$repo/Sources/GameCore" "$repo/Sources/GamePresentation"
+printf 'core\n' >"$repo/Sources/GameCore/World.swift"
+printf 'view\n' >"$repo/Sources/GamePresentation/View.swift"
+git -C "$repo" add -A
+expect pass "stamp: new files under GameCore" in_dir "$repo" "$script" stamp
+on_cache no "stamp: a new GameCore file builds from nothing"
+stamped "stamp: from nothing, every file gets one time" a.swift=$epoch Sources/GameCore/World.swift=$epoch
+printf 'view2\n' >"$repo/Sources/GamePresentation/View.swift"
+git -C "$repo" add -A
+expect pass "stamp: a GamePresentation change" in_dir "$repo" "$script" stamp
+on_cache yes "stamp: a GamePresentation change builds on the cache"
+stamped "stamp: only the GamePresentation file is later" Sources/GamePresentation/View.swift=$((epoch + 1)) Sources/GameCore/World.swift=$epoch
+for change in "printf 'core2\\n' >Sources/GameCore/World.swift" "printf 'tests\\n' >Package.swift" "git rm -qf Sources/GameCore/World.swift"; do
+  in_dir "$repo" "$script" stamp >/dev/null
+  (cd "$repo" && eval "$change" && git add -A)
+  expect pass "stamp: $change" in_dir "$repo" "$script" stamp
+  on_cache no "stamp: after $change the build is from nothing"
+  if [[ "$(mtime a.swift)" == "$epoch" && ! -e "$repo/.build/ci-built-on-cache" ]]; then
+    echo "ok   pass  stamp: after $change every file is stamped from nothing"
+  else
+    echo "FAIL stamp: after $change a.swift is $(mtime a.swift)"
+    failures=$((failures + 1))
+  fi
+done
+
+# A failing build on the cache is built once more from nothing (fresh
+# stamps); a real compile error still fails, and so does a build from
+# nothing.
 rm -f "$work/count"
-CI_BUILD_CACHE=restored FAKE_BUILD="1 0" expect pass "build: a failing build on the cache builds again from nothing" in_dir "$repo" "$script" build
+printf 'a3\n' >"$repo/a.swift"
+git -C "$repo" add -A
+in_dir "$repo" "$script" stamp >/dev/null
+on_cache yes "build: set up a build on the cache"
+FAKE_BUILD="1 0" expect pass "build: a failing build on the cache builds again from nothing" in_dir "$repo" "$script" build
 calls 2
 stamped "build: built again from nothing with fresh stamps" a.swift=$epoch b.swift=$epoch
-CI_BUILD_CACHE=restored FAKE_BUILD="1 1" WHY='swift build failed \(exit code 1\)' expect fail "build: a compile error on the cache fails from nothing too" in_dir "$repo" "$script" build
+on_cache no "build: the second build is from nothing"
+printf 'a4\n' >"$repo/a.swift"
+git -C "$repo" add -A
+in_dir "$repo" "$script" stamp >/dev/null
+FAKE_BUILD="1 1" WHY='swift build failed \(exit code 1\)' expect fail "build: a compile error on the cache fails from nothing too" in_dir "$repo" "$script" build
 calls 2
-CI_BUILD_CACHE=none FAKE_BUILD="1 0" WHY='swift build failed \(exit code 1\)' expect fail "build: without a cache a compile error is not built again" in_dir "$repo" "$script" build
+rm -rf "$repo/.build"
+in_dir "$repo" "$script" stamp >/dev/null
+FAKE_BUILD="1 0" WHY='swift build failed \(exit code 1\)' expect fail "build: from nothing a compile error is not built again" in_dir "$repo" "$script" build
 calls 1
 
 if [[ "$failures" -ne 0 ]]; then

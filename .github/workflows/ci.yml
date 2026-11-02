@@ -225,11 +225,11 @@ jobs:
           echo "key=$(swift --version 2>&1 | sha256sum | cut -c1-16)" >>"$GITHUB_OUTPUT"
 
       # Decision 545: a pull request or a push to main builds on the .build
-      # of an earlier run of main (the newest with the same Swift and
-      # Package.swift, else the newest with the same Swift), so only the
-      # changed files and what depends on them are compiled. The key says
-      # which build is the nearest; it does not decide what is compiled
-      # again: the source stamps do (next step). A manual run and the
+      # of the newest run of main with the same Swift and Package.swift, so
+      # only the changed files and what depends on them are compiled; a
+      # change to GameCore builds from nothing all the same (the stamp step:
+      # on a cache it took longer). The key only finds the nearest build;
+      # it does not decide what is compiled again: the source stamps do. A manual run and the
       # nightly run build from nothing, so the full run a release needs
       # (decision 413) never uses the cache. A failure to read it builds
       # from nothing.
@@ -243,7 +243,6 @@ jobs:
           key: swift-build-v1-${{ steps.swift.outputs.key }}-${{ hashFiles('Package.swift') }}-${{ github.sha }}
           restore-keys: |
             swift-build-v1-${{ steps.swift.outputs.key }}-${{ hashFiles('Package.swift') }}-
-            swift-build-v1-${{ steps.swift.outputs.key }}-
 
       # Each tracked file's modification time from the cached build's
       # stamps: unchanged files keep the time that build recorded, changed
@@ -261,8 +260,6 @@ jobs:
       # compile error is not built again, except that a build on a restored
       # cache that fails is built once more from nothing (decision 545).
       - name: Build (warnings as errors)
-        env:
-          CI_BUILD_CACHE: ${{ steps.cache.outputs.cache-matched-key != '' && 'restored' || 'none' }}
         run: .github/scripts/swift-shards.sh build
 
       # tar keeps the links (.build/debug points into swift-build's own
