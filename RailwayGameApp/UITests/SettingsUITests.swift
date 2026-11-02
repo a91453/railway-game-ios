@@ -240,7 +240,8 @@ final class SettingsUITests: XCTestCase {
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
 
-        tapHittable("hud.menu", in: app)
+        // Menu's place, from the copy a finger reaches.
+        let spot = tapHittable("hud.menu", in: app)
         tapHittable("menu.ambient", in: app)
         let curtain = app.descendants(matching: .any)["ambient.curtain"].firstMatch
         XCTAssertTrue(curtain.appears(within: 10), "The idle mode starts")
@@ -251,16 +252,15 @@ final class SettingsUITests: XCTestCase {
         // the idle mode instead of opening the menu. Not by `isHittable`:
         // asked of a control of no opacity under the curtain, XCTest can
         // fail the test outright ("Activation point invalid", FLANE5's
-        // run 41369678903). Once the menu has opened, `hud.menu` can name
-        // more than one element, one of them in no place on the screen (as
-        // `tapHittable` says): the one on the screen is touched.
+        // run 41369678903). Once the menu has opened, `hud.menu` names more
+        // than one element, and the frame of the first one on the screen
+        // was not Menu's (FLANE5's run 41378431752 touched (654, 44), Menu
+        // being at (741, 35)): the place is the one touched above.
+        guard let spot else { return }
         let bounds = app.frame
-        let spots = app.buttons.matching(identifier: "hud.menu").allElementsBoundByIndex
-            .map(\.frame).filter { !$0.isEmpty && bounds.contains(CGPoint(x: $0.midX, y: $0.midY)) }
-        XCTAssertEqual(spots.count, 1, "Menu is put away in its place")
-        guard let spot = spots.first else { return }
-        app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: spot.midX - bounds.minX, dy: spot.midY - bounds.minY)).tap()
+        let menuSpot = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: spot.midX - bounds.minX, dy: spot.midY - bounds.minY))
+        menuSpot.tap()
         XCTAssertTrue(curtain.disappears(within: 10), "A tap on Menu's place ends it: Menu took no touch")
         // The controls are back: a finger on Menu's place opens the menu
         // again, and the idle mode starts from it again (a menu item's copy
@@ -268,8 +268,6 @@ final class SettingsUITests: XCTestCase {
         // looked for). Touched where it is, not by `isHittable`: XCTest
         // never found Menu hittable again in 10 to 15 s although it showed
         // (FLANE5's runs 41371388190 and 41376494125, screen recording).
-        let menuSpot = app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: spot.midX - bounds.minX, dy: spot.midY - bounds.minY))
         menuSpot.tap()
         tapHittable("menu.ambient", in: app)
         XCTAssertTrue(curtain.appears(within: 10), "The controls are back")
@@ -278,18 +276,22 @@ final class SettingsUITests: XCTestCase {
     /// Taps the copy of the button `identifier` that can be touched: a
     /// native menu can hold an unplaced copy of an action
     /// (`WebsiteScreenshotTests.tapButton`).
-    private func tapHittable(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15) {
+    /// Returns the frame of the copy it tapped.
+    @discardableResult
+    private func tapHittable(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15) -> CGRect? {
         let buttons = app.buttons.matching(identifier: identifier)
         XCTAssertTrue(buttons.firstMatch.appears(within: timeout), "Missing \(identifier)")
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
             if let button = buttons.allElementsBoundByIndex.first(where: { $0.isHittable && $0.isEnabled }) {
+                let frame = button.frame
                 button.tap()
-                return
+                return frame
             }
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
         XCTFail("\(identifier) cannot be tapped")
+        return nil
     }
 
     /// Opens the game menu and chooses Settings, and waits for its music
