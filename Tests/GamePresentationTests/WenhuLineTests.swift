@@ -3,10 +3,11 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 543: the Wenhu Line on sale, bought with its two real depots,
-/// Muzha past Taipei Zoo and Neihu past Nangang Exhibition Center
-/// (decision 535 continued), and its 44 four-car people movers, half
-/// standing in each depot overnight. Its trains stood still from 07:14 on
+/// Decision 543: the Wenhu Line, laid as it would be bought (it is not on
+/// sale yet: with signals off it sends too few of its runs), with its two
+/// real depots, Muzha past Taipei Zoo and Neihu past Nangang Exhibition
+/// Center (decision 535 continued), and its 44 four-car people movers,
+/// half standing in each depot overnight. Its trains stood still from 07:14 on
 /// their first morning while the second track's ramps were laid with
 /// handles of another length than the first track's (#1668): at the
 /// switch the two left along the same way but with tangents of different
@@ -16,7 +17,8 @@ import XCTest
 final class WenhuLineTests: XCTestCase {
     func testTheLineIsBoughtWithItsTwoRealDepots() throws {
         let session = try RealLineAcquisitionTests.game(round: "trtc:BR", side: 1 << 21, heights: true)
-        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "trtc:BR" }, "the Wenhu Line on sale")
+        XCTAssertFalse(session.buyableRealLines.contains { $0.id == "trtc:BR" }, "not on sale yet")
+        let line = try XCTUnwrap(DepotReturnReportTests.wenhu("trtc:BR", in: session))
         let offer = session.realLineOffer(for: line)
         let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
         let depots = [acquisition.depot].compactMap(\.self) + (acquisition.moreDepots ?? [])

@@ -57,10 +57,22 @@ final class DepotReturnReportTests: XCTestCase {
     static func bought(_ id: String) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true, rules: simple ? .simple : .realistic)
-        guard let line = session.buyableRealLines.first(where: { $0.id == id }) else { throw XCTSkip("\(id) is not on sale") }
+        // Decision 535 (continued): the Wenhu Line is not on sale yet
+        // (decision 543); it is laid as its row in `RealBranchLine.urbanLines`
+        // would offer it.
+        guard let line = session.buyableRealLines.first(where: { $0.id == id }) ?? wenhu(id, in: session) else {
+            throw XCTSkip("\(id) is not on sale")
+        }
         let offer = session.realLineOffer(for: line)
         XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
         return session.world
+    }
+
+    /// The Wenhu Line, not on sale, as it would be offered (decision 543).
+    static func wenhu(_ id: String, in session: GameSession) -> RealBranchLine? {
+        guard id == "trtc:BR", let railways = session.railways,
+              let runs = RealBranchLine.metroRuns(of: id, after: nil, in: railways) else { return nil }
+        return RealBranchLine(network: "BR", english: "Wenhu Line", chinese: "文湖線", stops: runs.stops, system: "mrt", tier: .metro)
     }
 
     private func report(_ name: String, _ opened: GameWorld) throws {

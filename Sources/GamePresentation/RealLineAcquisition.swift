@@ -107,10 +107,11 @@ public struct RealBranchLine: Hashable, Sendable {
     /// first station. A line is on sale where `metro_runs.json` has its
     /// runs (`tools/real-timetables/extract_metro_runs.py` says why the
     /// others are not). Kaohsiung's Circular Light Rail is not listed:
-    /// the game's runs do not go round a ring yet (decision 535). The
-    /// Wenhu Line is, with its two depots (decision 535 continued; its
-    /// trains stood still on their first morning until the second track's
-    /// ramps kept the first track's handles, decision 543).
+    /// the game's runs do not go round a ring yet (decision 535). Nor is
+    /// the Wenhu Line yet: its runs and its two depots are ready, but its
+    /// trains stood still on its first morning (decision 535 continued,
+    /// next step); its row, `("mrt", "BR", "Wenhu Line", "文湖線", nil,
+    /// .metro, false)`, goes back here once they run.
     static let urbanLines: [(system: String, network: String, english: String, chinese: String, shares: String?, tier: LineAcquisition.Tier, leavesALine: Bool)] = [
         ("ntdlrt", "V", "Danhai LRT Green Mountain Line", "淡海輕軌綠山線", "ntdlrt:VB", .lightRail, false),
         ("ntdlrt", "VB", "Danhai LRT Blue Coast Line", "淡海輕軌藍海線", "ntdlrt:V", .lightRail, false),
@@ -118,7 +119,6 @@ public struct RealBranchLine: Hashable, Sendable {
         ("mrt", "R_XBT", "Xinbeitou Branch Line", "新北投支線", nil, .metro, true),
         ("mrt", "G_XBT", "Xiaobitan Branch Line", "小碧潭支線", nil, .metro, true),
         ("sanying", "LB", "Sanying Line", "三鶯線", nil, .metro, false),
-        ("mrt", "BR", "Wenhu Line", "文湖線", nil, .metro, false),
     ]
 
     public func name(in language: DisplayLanguage) -> String {
