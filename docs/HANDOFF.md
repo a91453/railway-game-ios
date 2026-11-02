@@ -36,6 +36,8 @@
 
 > 號誌關時文湖線的運量（派工單 WENHUCAP，[決策 549](decisions/549.md)，`claude/intelligent-planck-ta8q3l`，#1723）：原因是號誌關時有車改停到對向的月台、整條線逆向跑；改了以後文湖線擬實、簡單兩天都 532/532，淡海、安坑、三鶯不變。**留下的**（決策 549「下一步」）：文湖線上架與量價格，上架前先量完「簡單＋行車控制」（這次跑到第 42 小時被停掉）；`waitsForPlatform` 等待值已過去仍等；號誌關時沒有死結偵測。
 
+> 文湖線上架（派工單 WENHULIST，[決策 552](decisions/552.md)，`claude/wenhulist-brown-line`）：放回 `urbanLines`。真實開局（讀水）本來買不到：木柵機廠單側梯形從動物園拉出約 1.5 km，過景美溪不夠高、又伸上山坡上的水格。改成兩側輪流排（`compact`），機廠底下有水時抬到水面上 5 m（坡度不夠就沿方向往外移，最多 240 m），規劃時讀到機廠底下的地面。台北開局約 NT$ 2.3 億（開局現金加貸款的約 9.6 倍），其他線價格不變。新局預設（簡單＋行車控制）第二天 532 班漏 4 班（早上 08:48–08:57 三班、19:26 一班，沒有死結；main 漏 7 班），查原因是決策 552 下一步 1；`AcquisitionReportTests` 的文湖線逐分跑（一天一跑會死結），360 天很久，只量了 2 天。實機 UNVERIFIED（3D 裡的木柵機廠樣子、收購卡）。
+
 # 交接
 
 > Codex G12／R21 原生 studies（公開 draft [#1485](https://github.com/a91453/railway-game-ios/pull/1485) ↔ 私庫 draft [#26](https://github.com/a91453/railway-assets-private/pull/26)，producer `723d08f8`）：revision-1 `b073c6c6` 整體外觀、revision-2 `69de18da` 正面均遭使用者否定；revision-3 `501f339a` 自檢發現前端白帶被底架遮住而撤回，revision-4 `aa1fb2c8` 解遮擋。現版再依 R21 原圖加兩端實體燈座、角燈孔、可見連結器及長端小型警示牌；保留低白帶、正向黃黑 V、扶手與短端白 V。只用 1960 首批臺鐵 R20 型 EMD G12 的 R21 橘色時期；原圖、估算、比對、重建與四種狀態見 [G12 交接](art/g12-2026-10-29/README.md)。公開只放配方、工具、來源與一張總覽，完整近遠景與 viewer 在私庫 `g12/revision-5/`（前四輪僅留 PNG／README／來源）。現有 SceneKit R20 與全部營運映射不變；此 producer 的使用者外觀接受、營運接入、iOS Metal／真機均 **UNVERIFIED**。不合併／auto-merge／TestFlight。

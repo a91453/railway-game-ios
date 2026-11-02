@@ -79,12 +79,15 @@ struct RealLineDepotSite: Sendable {
     /// and 307449196), and the middle of its stabling tracks' near ends and
     /// of their far ends (ways 71380030, 71380035 and 71380037;
     /// `tools/rail-depots`). Its sidings hold the trains the real timetable
-    /// leaves at Taipei Zoo overnight, one each.
+    /// leaves at Taipei Zoo overnight, one each. Decision 549 (continued):
+    /// its sidings either side in turn, as a light rail's (`compact`): the
+    /// one-sided ladder ran some 1.5 km past the zoo, over the Jingmei
+    /// River at less than a bridge's height and on into the hill.
     static let muzha = RealLineDepotSite(
         line: "trtc:BR", english: "Muzha Depot", chinese: "木柵機廠",
         junction: (24.998574, 121.579812),
         yard: ((25.001219, 121.584390), (25.001219, 121.585408)),
-        sidings: 22, beyond: "動物園", compact: false
+        sidings: 22, beyond: "動物園", compact: true
     )
 
     /// Decision 535 (PR W): the Neihu depot (內湖機廠, way 499801370) of
@@ -145,6 +148,9 @@ enum RealLineDepotLayout {
     static let armReach = 70 * metre
     /// The lead's grade down to the yard: under GameCore's 4 %.
     static let grade = 0.03
+    /// Decision 549 (continued): how much further along its way a yard
+    /// may move for its lead to climb clear over water.
+    static let furthestYardShift = 240 * metre
     /// Straight between a crossover and a turnout of the wye.
     static let gap = RealWorldDemo.shortestEdge
 
@@ -211,7 +217,8 @@ extension RealLineDepotLayout {
     /// same place. `nil` where the lead cannot get down at its grade.
     static func lay(
         _ site: RealLineDepotSite, points: [WorldVector], along path: WorldPath, at j: Double, second: RealWorldDemo.TrackPlan,
-        marks: [(main: Int, second: Int)], first: Int, length: Int64, ground: (WorldVector) -> Double, in language: DisplayLanguage
+        marks: [(main: Int, second: Int)], first: Int, length: Int64, ground: (WorldVector) -> Double,
+        water: (WorldVector) -> Bool = { _ in false }, in language: DisplayLanguage
     ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
         guard marks.count == 6, points.count == 3, site.sidings > 0 else { return nil }
         func node(_ mark: (main: Int, second: Int)) -> (point: WorldVector, direction: WorldVector, height: Int64) {
@@ -250,9 +257,39 @@ extension RealLineDepotLayout {
         ]
         guard let laid = yard(
             site, points: points, foot: foot, height: footHeight, at: footNode, leaving: lead, toward: path.tangent(at: j),
-            first: first + pieces.count, length: length, ground: ground, in: language
+            first: first + pieces.count, length: length, ground: ground, water: water, in: language
         ) else { return nil }
         return (pieces + laid.pieces, laid.depot)
+    }
+
+    /// Where along a yard of `site` its platforms `length` long start and
+    /// end: past the outermost siding's bend, clear of its node.
+    static func extent(of site: RealLineDepotSite, length: Int64) -> (start: Double, far: Double) {
+        let count = site.sidings
+        let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
+        let start = (count > 1 ? (1..<count).map { ladder.turnout($0) + ladder.reach }.max()! : ladder.straight) + RealWorldDemo.platformMargin
+        return (start, start + Double(length) + RealWorldDemo.platformMargin)
+    }
+
+    /// Decision 549 (continued): the ground a yard of `site` laid past a
+    /// line's end (``lay(_:beyond:first:length:ground:water:in:)``) may
+    /// stand on, every `step` either side of the real yard's way
+    /// (`points`, ``RealLineDepotSite``'s junction and yard) from `back`
+    /// short of its near end, as far as it may be moved along it: the
+    /// offer reads it in before it lays the yard, which otherwise reads
+    /// no ground (and no height over the water) past the real yard.
+    static func groundSamples(beyond points: [WorldVector], site: RealLineDepotSite, length: Int64, back: Double, step: Double) -> [PlanPoint] {
+        guard points.count == 3, site.beyond != nil else { return [] }
+        let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
+        let way = (points[2] - points[1]).unit, origin = points[1] - way * back
+        let along = back + ladder.straight + furthestYardShift + extent(of: site, length: length).far
+        let widest = (0..<max(1, site.sidings)).map { abs(ladder.offset($0)) }.max() ?? 0
+        let across = Double(widest + 1) * Double(DepotYard.spacing)
+        return (0...Int(along / step)).flatMap { a in
+            (-Int(across / step) - 1...Int(across / step) + 1).map { c in
+                (origin + way * (Double(a) * step) + way.normal * (Double(c) * step)).plan
+            }
+        }
     }
 
     /// Decision 489: the depot's pieces, from piece `first` on, and the
@@ -261,14 +298,14 @@ extension RealLineDepotLayout {
     /// the line has turned into the real yard's).
     static func lay(
         _ site: RealLineDepotSite, beyond end: (at: RealLineAcquisition.NodeAt, point: WorldVector, height: Int64, way: WorldVector),
-        first: Int, length: Int64, ground: (WorldVector) -> Double, in language: DisplayLanguage
+        first: Int, length: Int64, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool = { _ in false }, in language: DisplayLanguage
     ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
         guard site.sidings > 0 else { return nil }
         let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
         let yard = end.point + end.way * ladder.straight
         return self.yard(
             site, points: [end.point, yard, yard + end.way * ladder.reach], foot: end.point, height: end.height, at: end.at, leaving: end.way,
-            toward: end.way, first: first, length: length, ground: ground, in: language
+            toward: end.way, first: first, length: length, ground: ground, water: water, in: language
         )
     }
 
@@ -279,23 +316,47 @@ extension RealLineDepotLayout {
     /// pieces from `first` on, and the depot.
     private static func yard(
         _ site: RealLineDepotSite, points: [WorldVector], foot: WorldVector, height footHeight: Int64, at footNode: RealLineAcquisition.NodeAt,
-        leaving lead: WorldVector, toward: WorldVector, first: Int, length: Int64, ground: (WorldVector) -> Double, in language: DisplayLanguage
+        leaving lead: WorldVector, toward: WorldVector, first: Int, length: Int64, ground: (WorldVector) -> Double,
+        water: (WorldVector) -> Bool, in language: DisplayLanguage
     ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
-        let yard = points[1], way = (points[2] - points[1]).unit
-        // The yard within the grade of the foot, as near the ground as
-        // that lets it.
-        let low = Double(footHeight) - grade * (yard - foot).length, high = Double(footHeight) + grade * (yard - foot).length
-        let yardHeight = Int64(max(low, min(high, ground(yard))).rounded())
-
+        let way = (points[2] - points[1]).unit
         let count = site.sidings
         let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
         let spacing = Double(DepotYard.spacing), reach = ladder.reach
         // The sidings fan out toward the junction.
         let fan = way.normal.dot(toward) < 0 ? way.normal : way.normal.reversed
+        let (start, far) = extent(of: site, length: length)
+        // The yard within the grade of the foot, as near the ground as
+        // that lets it. Decision 549 (continued): and clear over any water
+        // under its lead and sidings, as the line's own track is
+        // (``TrackRise/waterClearance``), the yard moved on along its way,
+        // a lead's length at a time, until the lead's grade reaches that
+        // high; where no place within ``furthestYardShift`` does, where it
+        // was (and GameCore refuses the track over the water). The Muzha
+        // depot's sidings cross the Jingmei River.
+        func placed(_ shift: Double) -> (yard: WorldVector, height: Double, clear: Bool) {
+            let yard = points[1] + way * shift
+            let climb = grade * (yard - foot).length
+            let low = Double(footHeight) - climb, high = Double(footHeight) + climb
+            let step = TrackRise.spacing
+            let ends = [(foot, yard)] + (0..<count).map { siding in
+                (0...1).map { yard + way * (Double($0) * far) + fan * (Double(ladder.offset(siding)) * spacing) }
+            }.map { ($0[0], $0[1]) }
+            let wet = ends.flatMap { a, b in
+                (0...Int((b - a).length / step)).map { a + (b - a).unit * (Double($0) * step) }
+            }.filter(water)
+            let needed = wet.map { ground($0) + TrackRise.waterClearance }.max() ?? -.infinity
+            let height = max(low, min(high, max(ground(yard), needed)))
+            return (yard, height, height >= needed)
+        }
+        var chosen = placed(0)
+        for shift in stride(from: TrackRise.spacing, through: Self.furthestYardShift, by: TrackRise.spacing) where !chosen.clear {
+            let moved = placed(shift)
+            if moved.clear { chosen = moved }
+        }
+        let yard = chosen.yard, yardHeight = Int64(chosen.height.rounded())
         func at(_ distance: Double, _ siding: Int) -> WorldVector { yard + way * distance + fan * (Double(ladder.offset(siding)) * spacing) }
-        // The platforms past the outermost siding's bend, clear of its node.
-        let start = (count > 1 ? (1..<count).map { ladder.turnout($0) + reach }.max()! : ladder.straight) + RealWorldDemo.platformMargin
-        let far = start + Double(length) + RealWorldDemo.platformMargin
+
         // The sidings leaving each one, in order along it.
         let children = (0..<count).map { k in (1..<max(1, count)).filter { ladder.parent($0) == k } }
 

@@ -59,22 +59,12 @@ final class DepotReturnReportTests: XCTestCase {
     static func bought(_ id: String, rules: NewGameRules? = nil) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true, rules: rules ?? (simple ? .simple : .realistic))
-        // Decision 535 (continued): the Wenhu Line is not on sale yet
-        // (decision 543); it is laid as its row in `RealBranchLine.urbanLines`
-        // would offer it.
-        guard let line = session.buyableRealLines.first(where: { $0.id == id }) ?? wenhu(id, in: session) else {
+        guard let line = session.buyableRealLines.first(where: { $0.id == id }) else {
             throw XCTSkip("\(id) is not on sale")
         }
         let offer = session.realLineOffer(for: line)
         XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(offer.problem ?? session.message?.text ?? "")")
         return session.world
-    }
-
-    /// The Wenhu Line, not on sale, as it would be offered (decision 543).
-    static func wenhu(_ id: String, in session: GameSession) -> RealBranchLine? {
-        guard id == "trtc:BR", let railways = session.railways,
-              let runs = RealBranchLine.metroRuns(of: id, after: nil, in: railways) else { return nil }
-        return RealBranchLine(network: "BR", english: "Wenhu Line", chinese: "文湖線", stops: runs.stops, system: "mrt", tier: .metro)
     }
 
     private func report(_ name: String, _ opened: GameWorld) throws {
@@ -125,6 +115,13 @@ final class DepotReturnReportTests: XCTestCase {
             let yesterday = zip(ran.runs, ran.runDays).filter { run, _ in run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 }
             runs += yesterday.count
             missed += yesterday.count { _, day in (day ?? -1) < today - 1 }
+            // Decision 552: each run not sent out, from where, to where
+            // and when it was due to leave.
+            for (run, day) in yesterday where (day ?? -1) < today - 1 {
+                let leaves = run.times.first.map { $0.departure % GameTime.secondsPerDay } ?? 0
+                let names = [run.from, run.to].map { ran.stops.indices.contains($0) ? world.station(id: ran.stops[$0])?.name ?? "?" : "?" }
+                FileHandle.standardError.write(Data(String(format: "DEPOT_RETURN \(name): not sent \(names[0]) to \(names[1]) at %02d:%02d\n", leaves / 3_600, leaves % 3_600 / 60).utf8))
+            }
         }
         let most = standing.sorted { $0.key.rawValue < $1.key.rawValue }
             .map { "\(world.station(id: $0.key)?.name ?? "?") \($0.value)" }.joined(separator: ", ")

@@ -32,7 +32,7 @@ import XCTest
 ///   the most it can borrow buy it (A.5's $8 million).
 @MainActor
 final class AcquisitionReportTests: XCTestCase {
-    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "ntdlrt:VB", "ntalrt:K", "trtc:R_XBT", "trtc:G_XBT"]
+    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "ntdlrt:VB", "ntalrt:K", "trtc:R_XBT", "trtc:G_XBT", "trtc:BR"]
     static let checkpoints: [Int64] = [1, 2, 7, 30, 180, 360, 720]
 
     private func requestedDays() throws -> Int64 {
@@ -50,7 +50,7 @@ final class AcquisitionReportTests: XCTestCase {
         let days = try requestedDays()
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
         var rows = [
-            "| Line | Riders a day (real) | Building | Trains | Riders' value | Price | ÷ $3M start | ÷ own build | Trips day 1 bought / own | Operating profit a day, days 30–\(days) | Payback | Cash change by day \(min(days, 360)): bought / own |",
+            "| Line | Riders a day (real) | Building | Trains | Riders' value | Price | ÷ $3M start | ÷ own build | Trips day 1 bought / own | Operating profit a day, days \(min(days, 30))–\(days) | Payback | Cash change by day \(min(days, 360)): bought / own |",
             "| --- | --: | --: | --: | --: | --: | --: | --: | --- | --: | --: | --- |",
         ]
         var trace: [String] = []
@@ -59,7 +59,7 @@ final class AcquisitionReportTests: XCTestCase {
             let bought = try play(network, recording: true, days: days, data: data)
             let own = try play(network, recording: false, days: days, data: data)
             let price = bought.price, ownCost = price.building + price.trains
-            let profit = bought.averageProfit(from: 30)
+            let profit = bought.averageProfit(from: Int(min(days, 30)))
             let payback = profit > 0 ? "\(price.total.amount / profit) days" : "never"
             let year = min(days, 360)
             rows.append(
@@ -186,7 +186,13 @@ final class AcquisitionReportTests: XCTestCase {
         let latitude = stations.map(\.coordinate.latitude).reduce(0, +) / Double(stations.count)
         let longitude = stations.map(\.coordinate.longitude).reduce(0, +) / Double(stations.count)
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
-        var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(20_000_000_000), land: [], rules: .simple)
+        // Decision 552: the Wenhu Line costs more than the others' $200
+        // million, and is played minute by minute (a day in one call
+        // leaves its trains standing, decision 535 continued, next step 2).
+        let wenhu = network == "trtc:BR"
+        var world = GameWorld.newGame(
+            anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(wenhu ? 200_000_000_000 : 20_000_000_000), land: [], rules: .simple
+        )
         world.setLandOnDemand()
         world.setRealTransfers(true)
         try world.mapGround()
@@ -208,7 +214,11 @@ final class AcquisitionReportTests: XCTestCase {
         world = built.world
         var played = Played(price: price, dailyRiders: acquisition.dailyRiders, before: before)
         for day in 1...days {
-            try world.advance(ticks: 1_440)
+            if wenhu {
+                for _ in 0..<1_440 { try world.advance(ticks: 1) }
+            } else {
+                try world.advance(ticks: 1_440)
+            }
             played.cash[day] = world.economy.balance.amount
             played.trips[day] = world.lastDayTrips()
             played.profits.append(world.accounts.days.last.map(operatingProfit) ?? 0)
