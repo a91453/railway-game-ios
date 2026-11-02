@@ -465,6 +465,7 @@
 - **還開著，合併順序**（每批等 main 的 `ci.yml` 綠）：
   1. **108.1 第一批**：#1698 LOOP-3（決策 542，可合）、#1704 LABELFIX、#1710 MISSRUN（決策 547）。三個都綠過；合前看 head 沒變。
   2. #1712 MENUSTALL（pro 做的，審過可以進 108.1）：AVAudioSession 的設定移到自己的佇列，加 Debug 才有的 StallSampler；查出的「選單停 27–70 秒」是 XCTest 自己造成的，不是玩家會碰到的。和 #1713 改了同一段 `MapView.swift`，**合 main 解衝突時留 main 的版本**。實機要看：切回前景後有沒有聲音、和別的 App 的音樂能不能一起放。
+     **MENUSTALL 查完（2026-11-02，session_01JMHz9cVoZGH8UUVWdm1MRq，分支 `claude/inspiring-brown-u52h9z`）**：新的 Debug 啟動參數 `-ui-test-stall-stacks` 在主執行緒超過 1 秒沒畫格時抄它的呼叫堆疊進 UI test trace（`StallSampler`，RailwayGameApp.swift）。run 41409109160：選單打開後的 5.4 s 是 **XCTest 自己的查詢**在 App 主執行緒裡跑，22 次取樣有 21 次在把 XCTest 的 log 同步寫到 stderr（`_os_log_impl_mirror_to_stderr`），實機不會發生；另有 App 變成 active 時 `AVAudioSession.setCategory` 等音效服務 3.2 s（實機也在主執行緒，已移到 `GameAudio` 自己的 queue，`AudioSessionSourceTests` 鎖住）。放空測試以 `OS_ACTIVITY_DT_MODE=NO` 啟動後，選單打開後最長 1.8–3.0 s（四輪），取樣都在系統第一次做的事：UIKit 建選單的 cell、XCTest 打開的無障礙 bundle 載入、鍵盤與聽寫（`UIDictationController`）第一次讀設定、Swift runtime 查 protocol conformance、延遲載入 framework；啟動第一格 Simulator 的 Metal 編 pipeline（`MTLSimDriver`）2.2–2.8 s。都不是 App 的程式，所以派工單「trace 沒有超過 2 秒的停頓」沒有全部達到，交給規劃判斷。**之後**：其他 UI 測試（故事世界停 6–11 s、開 3D 的查詢逾時）多半也是 XCTest 的 log 抄到 stderr，可在各測試的 `launchEnvironment` 加同一行再量；查別的停頓時加 `-ui-test-stall-stacks` 看 trace。不要在 dyld 的載入回呼裡做事（`_dyld_register_func_for_add_image`）：試過記下延遲載入的 framework，App 啟動就卡住（run 41416655310、41419012356）。
   3. #1714 CIWARN（pro 做的，決策 544 續二：分片警告線與看門狗）：剛開，還沒審。
   4. #1711 高雄 85 大樓（決策 548，draft）：新的 3D 模型是第三級，**遊戲規劃要先看截圖**才合。
   5. #1700 Codex 桃園機捷 1000／2000（作者的，draft）。

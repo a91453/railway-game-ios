@@ -58,7 +58,11 @@ final class GameAudio {
     /// Decision 379: the cues' players, played on a queue of their own.
     @ObservationIgnored private let cues = CuePlayers()
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
+    /// Whether the app is active and the audio session set for it: only
+    /// then is anything played (``setActive(_:)``).
     @ObservationIgnored private var isActive = false
+    /// Whether the app is active, as the scene last said.
+    @ObservationIgnored private var appIsActive = false
     /// Decision 184: the latest tap of the phone a cue asked for, which
     /// the app's scene gives (`sensoryFeedback`): a refusal, a warning or
     /// something put up.
@@ -179,15 +183,47 @@ final class GameAudio {
 
     /// Follows the app in and out of the foreground: the music plays only
     /// while it is active, and resumes where it stopped.
+    ///
+    /// MENUSTALL: the audio session is set off the main thread. Setting
+    /// its category and making it active wait for the system's audio
+    /// server; on CI's Simulator that held the main thread 3.2 s each time
+    /// the app became active (run 41409109160). Nothing plays until it is
+    /// set: the default session (solo ambient) would stop the player's own
+    /// music, which the ambient one mixes with.
     func setActive(_ active: Bool) {
-        guard active != isActive else { return }
-        isActive = active
-        if active {
-            // Without the session the players still play, as the default
-            // (solo ambient) session does.
-            _ = try? AVAudioSession.sharedInstance().setCategory(.ambient)
-            _ = try? AVAudioSession.sharedInstance().setActive(true)
+        guard active != appIsActive else { return }
+        appIsActive = active
+        guard active else {
+            isActive = false
+            updatePlayers()
+            return
         }
+        // With nothing to play (the UI tests) no session is needed.
+        guard plays else {
+            isActive = true
+            updatePlayers()
+            return
+        }
+        Self.sessionQueue.async {
+            let session = AVAudioSession.sharedInstance()
+            _ = try? session.setCategory(.ambient)
+            _ = try? session.setActive(true)
+            Task { @MainActor in self.sessionIsSet() }
+        }
+    }
+
+    /// The queue the audio session is set on.
+    private static let sessionQueue = DispatchQueue(label: "RailwayGame.audioSession", qos: .userInitiated)
+
+    /// The session is set: play, unless the app has left the foreground
+    /// since.
+    private func sessionIsSet() {
+        guard appIsActive, !isActive else { return }
+        isActive = true
+        updatePlayers()
+    }
+
+    private func updatePlayers() {
         updateMusic()
         updateRunning()
         updateWeather()

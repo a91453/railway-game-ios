@@ -234,8 +234,17 @@ final class SettingsUITests: XCTestCase {
         // for 30 to 50 s while the 3D map loads (main 6ebf8c7's full lane,
         // run 41353036789). The 3D path is `docs/HANDOFF.md` §7.5's to
         // check on a device.
+        // MENUSTALL: the trace gets the main thread's call stack whenever
+        // it draws nothing for over a second.
         app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-map3D.quality", "off",
+                               "-ui-test-stall-stacks",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // MENUSTALL: with the game menu open, XCTest's own queries ran in
+        // the app's main thread for 5.4 s, 21 of 22 looks waiting to copy
+        // XCTest's log lines to the app's standard error (run 41409109160,
+        // `_os_log_impl_mirror_to_stderr`). The unified log, where the
+        // trace is read, keeps them without the copy.
+        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
