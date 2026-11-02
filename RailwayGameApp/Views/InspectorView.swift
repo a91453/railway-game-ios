@@ -485,26 +485,43 @@ struct TrainTripProgressBar: View {
     var marker: CGFloat = 22
 
     var body: some View {
-        GeometryReader { proxy in
-            let width = proxy.size.width
-            let head = width * min(1, max(0, progress))
-            ZStack(alignment: .leading) {
-                Capsule().fill(Theme.chip).frame(height: height)
-                Capsule().fill(Theme.primary).frame(width: max(height, head), height: height)
-                MapGlyph.train.image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: marker * 0.68, height: marker * 0.68)
-                    .foregroundStyle(Palette.stationSymbol)
-                    .frame(width: marker, height: marker)
-                    .background(Palette.station, in: Circle())
-                    .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 1.5))
-                    .offset(x: min(max(0, head - marker / 2), max(0, width - marker)))
-            }
-            .frame(height: marker)
+        let progress = progress
+        let height = height
+        let marker = marker
+        // A sendable closure, not main-actor code (CRASHSWEEP): the follow
+        // bar stands in a ViewThatFits, whose layouts SwiftUI's
+        // asynchronous renderer may measure off the main thread (CRASH101).
+        GeometryReader { @Sendable proxy in
+            TrainTripProgressTrack(width: proxy.size.width, progress: progress, height: height, marker: marker)
         }
         .frame(height: marker)
         .accessibilityHidden(true)
+    }
+}
+
+/// ``TrainTripProgressBar`` drawn at the width it was given.
+private struct TrainTripProgressTrack: View {
+    let width: CGFloat
+    let progress: Double
+    let height: CGFloat
+    let marker: CGFloat
+
+    var body: some View {
+        let head = width * min(1, max(0, progress))
+        ZStack(alignment: .leading) {
+            Capsule().fill(Theme.chip).frame(height: height)
+            Capsule().fill(Theme.primary).frame(width: max(height, head), height: height)
+            MapGlyph.train.image
+                .resizable()
+                .scaledToFit()
+                .frame(width: marker * 0.68, height: marker * 0.68)
+                .foregroundStyle(Palette.stationSymbol)
+                .frame(width: marker, height: marker)
+                .background(Palette.station, in: Circle())
+                .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 1.5))
+                .offset(x: min(max(0, head - marker / 2), max(0, width - marker)))
+        }
+        .frame(height: marker)
     }
 }
 

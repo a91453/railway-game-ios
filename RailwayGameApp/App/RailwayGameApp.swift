@@ -93,12 +93,13 @@ struct RailwayGameApp: App {
     }
 
     var body: some Scene {
+        // The window's content reads nothing that changes (CRASHSWEEP): a
+        // closure here is main-actor code, which SwiftUI may run again on
+        // its asynchronous render thread when what it reads changes, and
+        // that stops the app (CRASH101's kind). So the haptic it follows is
+        // read in ``AppRoot``'s body.
         WindowGroup {
-            RootView(launcher: launcher)
-                .environment(audio)
-                .environment(gameCenter)
-                // Decision 184: the taps the sounds' cues ask for.
-                .sensoryFeedback(trigger: audio.haptic) { _, pulse in pulse?.feedback }
+            AppRoot(launcher: launcher, audio: audio, gameCenter: gameCenter)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // One game loop for the whole app, however many windows are
@@ -554,6 +555,22 @@ private final class BackgroundSave {
         guard task != .invalid else { return }
         UIApplication.shared.endBackgroundTask(task)
         task = .invalid
+    }
+}
+
+/// The window's content: the root view with the app's audio and Game
+/// Center, and the taps the sounds' cues ask for (decision 184).
+private struct AppRoot: View {
+    let launcher: GameLauncher
+    let audio: GameAudio
+    let gameCenter: GameCenterLink
+
+    var body: some View {
+        RootView(launcher: launcher)
+            .environment(audio)
+            .environment(gameCenter)
+            // Sendable: SwiftUI keeps it and calls it when a tap comes.
+            .sensoryFeedback(trigger: audio.haptic) { @Sendable _, pulse in pulse?.feedback }
     }
 }
 
