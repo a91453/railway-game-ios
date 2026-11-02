@@ -74,13 +74,13 @@ final class BatchCadenceReportTests: XCTestCase {
         }
     }
 
-    private func run(_ opened: GameWorld, at speed: GameSpeed, hours: Int64) throws -> Outcome {
+    private func run(_ opened: GameWorld, at speed: GameSpeed, ticks: Int = 1, hours: Int64) throws -> Outcome {
         var world = opened
         world.setSpeed(speed)
         let end = world.clock.now.seconds + hours * GameTime.secondsPerHour
         var outcome = Outcome()
         while world.clock.now.seconds < end {
-            try world.advance(ticks: 1)
+            try world.advance(ticks: ticks)
             outcome.mostDeadlocked = max(outcome.mostDeadlocked, world.deadlockedTrains().count)
         }
         for line in world.lines {
@@ -106,10 +106,12 @@ final class BatchCadenceReportTests: XCTestCase {
         // To the start of a day and two days on, so both days close.
         let day = GameTime.secondsPerDay
         let hours = (2 * day + day - opened.clock.now.seconds % day) / GameTime.secondsPerHour
-        for speed in [GameSpeed.normal, .double, .fast] {
+        // The game loop's cadences (one tick a call), then an hour a call
+        // at 600x, as the long tests run.
+        for (speed, ticks) in [(GameSpeed.normal, 1), (.double, 1), (.fast, 1), (.normal, 60)] {
             let started = Date()
-            let outcome = try run(opened, at: speed, hours: hours)
-            FileHandle.standardError.write(Data("BATCH_CADENCE \(name)\(simple ? " simple" : "") \(speed): \(outcome); \(String(format: "%.0f", Date().timeIntervalSince(started))) s\n".utf8))
+            let outcome = try run(opened, at: speed, ticks: ticks, hours: hours)
+            FileHandle.standardError.write(Data("BATCH_CADENCE \(name)\(simple ? " simple" : "") \(speed)\(ticks > 1 ? " ×\(ticks) a call" : ""): \(outcome); \(String(format: "%.0f", Date().timeIntervalSince(started))) s\n".utf8))
         }
     }
 }
