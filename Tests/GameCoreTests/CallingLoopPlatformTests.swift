@@ -145,4 +145,69 @@ final class CallingLoopPlatformTests: XCTestCase {
         guard case .onEdge(let traversal, _)? = world.train(id: blue)?.position else { return XCTFail("Blue is on the track") }
         XCTAssertEqual(traversal.edge, track.edge(3))
     }
+
+    /// L4-1 (decision 518, continued): on double track with a crossover
+    /// less than a kilometre short of X, the platform of the other way's
+    /// track is not beside the through track. Local calls on its own
+    /// way's platform and runs on to Q along its own track; before, it
+    /// crossed over, stood at the other way's platform and ran on along
+    /// the other way's track.
+    ///
+    ///   P ──e1── J1 ──────────── e2 (X, east) ──────────── (Q, east)
+    ///              \
+    ///   ───e5───── K ─────────── e4 (X, west) ──────────── (Q, west)
+    private func makeDoubleTrack() throws -> Scene {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 262_144, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            clock: GameClock(now: GameTime(minutes: 600), speed: .normal)
+        )
+        let pe = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
+        let j1 = try world.buildTrackNode(at: WorldCoordinate(x: 82_944, y: 8_192))
+        let ee = try world.buildTrackNode(at: WorldCoordinate(x: 246_784, y: 8_192))
+        let k = try world.buildTrackNode(at: WorldCoordinate(x: 103_424, y: 9_216))
+        let ew = try world.buildTrackNode(at: WorldCoordinate(x: 246_784, y: 9_216))
+        let pw = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 9_216))
+        try world.buildTrackEdge(from: pe, to: j1)  // e1
+        try world.buildTrackEdge(from: j1, to: ee)  // e2: the east track
+        try world.buildTrackEdge(from: j1, to: k)   // e3: the crossover
+        try world.buildTrackEdge(from: k, to: ew)   // e4: the west track
+        try world.buildTrackEdge(from: pw, to: k)   // e5
+        func length(_ edge: Int) throws -> Int64 { try XCTUnwrap(world.trackEdge(.edge(edge))?.length) }
+        let pStation = try world.buildStation(named: "P", at: PlanPoint(x: 4_096, y: 4_096)).id
+        let x = try world.buildStation(named: "X", at: PlanPoint(x: 124_000, y: 12_288)).id
+        let qStation = try world.buildStation(named: "Q", at: PlanPoint(x: 240_000, y: 12_288)).id
+        try world.addTrackPlatform(pStation, on: .edge(1), from: try length(1) - 20_480, to: try length(1) - 12_288)
+        // X's two platforms side by side, 120,000 to 128,192 along.
+        try world.addTrackPlatform(x, on: .edge(2), from: 120_000 - 82_944, to: 128_192 - 82_944)
+        try world.addTrackPlatform(x, on: .edge(4), from: 120_000 - 103_424, to: 128_192 - 103_424)
+        try world.addTrackPlatform(qStation, on: .edge(2), from: try length(2) - 10_240, to: try length(2) - 2_048)
+        try world.addTrackPlatform(qStation, on: .edge(4), from: try length(4) - 10_240, to: try length(4) - 2_048)
+        try world.setTrafficControl(false)
+        let stops = [pStation, x, qStation]
+        let localLine = try world.createLine(named: "Local", stops: stops).id
+        try world.setLineRuns(localLine, to: [LineRun(from: 0, to: 2, times: [at(605), LineRunTime(arrival: 612 * 60, departure: 613 * 60), at(620)])])
+        let local = try world.purchaseTrain(named: "L").id
+        try world.setTrainCars(local, to: 2)
+        try world.placeTrain(local, at: .onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: try length(1) - 12_288))
+        try world.setTrainContinuation(local, along: [], stoppingAt: try length(1) - 12_288)
+        try world.setTrainMovementRate(local, to: 4_096)
+        try world.assignTrain(local, to: localLine)
+        return Scene(world: world, local: local, x: x)
+    }
+
+    func testItDoesNotCrossOverToTheOtherWaysPlatform() throws {
+        let scene = try makeDoubleTrack()
+        var world = scene.world
+        try world.advance(ticks: 12)
+        world.setSpeed(.x10)
+        try world.advance(ticks: 30)
+        XCTAssertEqual(world.stationsStoppedAt(by: scene.local), [scene.x], "Local is at X")
+        guard case .onEdge(let atX, _)? = world.train(id: scene.local)?.position else { return XCTFail("Local is on the track") }
+        XCTAssertEqual(atX.edge, .edge(2), "Local calls at X on its own way's track")
+        world.setSpeed(.normal)
+        try world.advance(ticks: 8)
+        XCTAssertEqual(world.stationsStoppedAt(by: scene.local).count, 1, "Local is at Q")
+        guard case .onEdge(let atQ, _)? = world.train(id: scene.local)?.position else { return XCTFail("Local is on the track") }
+        XCTAssertNotEqual(atQ.edge, .edge(4), "Local runs on to Q along its own way's track")
+    }
 }
