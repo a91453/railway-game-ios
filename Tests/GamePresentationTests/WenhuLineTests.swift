@@ -114,4 +114,30 @@ final class WenhuLineTests: XCTestCase {
         XCTAssertEqual(missed.count, 0, "runs not sent out by nine: \(missed.count) of \(due.count)")
         XCTAssertEqual(deadlocked, 0)
     }
+
+    /// Decision 549: under simple rules with traffic control off, as the
+    /// bought lines play, the first morning's runs all go out by eleven.
+    /// Before it, a train whose platform at the next station was taken went
+    /// to the other way's platform there (the shortest way out of a
+    /// terminus's single throat, not kept left, was taken for the through
+    /// track) and ran on along the other way's track; the trains coming
+    /// towards it waited for it and it for them, and from eight on the line
+    /// sent out some six runs an hour of its 26 to 49.
+    func testTheMorningRunsWithSignalsOff() throws {
+        var world = try DepotReturnReportTests.bought("trtc:BR", rules: .simple)
+        try world.setTrafficControl(false)
+        let line = try XCTUnwrap(world.lines.first)
+        let day = world.clock.now.seconds / GameTime.secondsPerDay
+        let until = day * GameTime.secondsPerDay + 11 * GameTime.secondsPerHour
+        while world.clock.now.seconds < until {
+            try world.advance(ticks: 1)
+        }
+        let ran = try XCTUnwrap(world.line(id: line.id))
+        let due = zip(ran.runs, ran.runDays).filter { run, _ in
+            run.runs(onDay: day) && run.start(onDay: day) + LineRun.latestDispatch < world.clock.now.seconds
+        }
+        let missed = due.filter { _, sent in (sent ?? -1) < day }
+        XCTAssertGreaterThan(due.count, 150)
+        XCTAssertEqual(missed.count, 0, "runs not sent out by eleven: \(missed.count) of \(due.count)")
+    }
 }
