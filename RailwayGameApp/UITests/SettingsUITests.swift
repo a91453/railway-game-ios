@@ -192,10 +192,12 @@ final class SettingsUITests: XCTestCase {
     func testTheMapAndMenuShortcutsOpenTheirScreens() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-ui-test-3d-models-first",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+        app.waitForThreeDModels()
 
         tapHittable("map.open3D", in: app)
         XCTAssertTrue(app.buttons["map3D.close"].appears(within: 15), "The 3D button opens the 3D map")
@@ -226,44 +228,70 @@ final class SettingsUITests: XCTestCase {
     func testTheIdleModePutsTheControlsAwayUntilATap() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // On the 2D map alone (3D off in Settings): the director's first
+        // shot is 2D or 3D by a seed from the clock, so each run took
+        // either path, and on the 3D one the Simulator answers no UI query
+        // for 30 to 50 s while the 3D map loads (main 6ebf8c7's full lane,
+        // run 41353036789). The 3D path is `docs/HANDOFF.md` §7.5's to
+        // check on a device.
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-map3D.quality", "off",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
 
-        tapHittable("hud.menu", in: app)
+        // Menu's place, from the copy a finger reaches.
+        let spot = tapHittable("hud.menu", in: app)
         tapHittable("menu.ambient", in: app)
         let curtain = app.descendants(matching: .any)["ambient.curtain"].firstMatch
         XCTAssertTrue(curtain.appears(within: 10), "The idle mode starts")
         // Put away, not taken out: `ambientHidden` keeps the controls in
         // place with no opacity and no touches, and the UI tests still find
         // them (the full lane of d9c3c68d), so ask that they cannot be
-        // touched rather than that they are gone.
-        let menu = app.buttons["hud.menu"]
-        let deadline = Date().addingTimeInterval(5)
-        while menu.exists, menu.isHittable, Date() < deadline { Thread.sleep(forTimeInterval: 0.1) }
-        XCTAssertFalse(menu.exists && menu.isHittable, "The controls are put away")
-        // On the 2D map or over the 3D one, whichever the first shot is.
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        XCTAssertTrue(curtain.disappears(within: 10), "A tap ends it")
-        XCTAssertTrue(app.buttons["hud.menu"].becomesHittable(within: 10), "The controls are back")
+        // touched rather than that they are gone: a tap right on Menu ends
+        // the idle mode instead of opening the menu. Not by `isHittable`:
+        // asked of a control of no opacity under the curtain, XCTest can
+        // fail the test outright ("Activation point invalid", FLANE5's
+        // run 41369678903). Once the menu has opened, `hud.menu` names more
+        // than one element, and the frame of the first one on the screen
+        // was not Menu's (FLANE5's run 41378431752 touched (654, 44), Menu
+        // being at (741, 35)): the place is the one touched above.
+        guard let spot else { return }
+        let bounds = app.frame
+        let menuSpot = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: spot.midX - bounds.minX, dy: spot.midY - bounds.minY))
+        menuSpot.tap()
+        XCTAssertTrue(curtain.disappears(within: 10), "A tap on Menu's place ends it: Menu took no touch")
+        // The controls are back: a finger on Menu's place opens the menu
+        // again, and the idle mode starts from it again (a menu item's copy
+        // can exist while the menu is shut, so it is chosen, not just
+        // looked for). Touched where it is, not by `isHittable`: XCTest
+        // never found Menu hittable again in 10 to 15 s although it showed
+        // (FLANE5's runs 41371388190 and 41376494125, screen recording).
+        menuSpot.tap()
+        tapHittable("menu.ambient", in: app)
+        XCTAssertTrue(curtain.appears(within: 10), "The controls are back")
     }
 
     /// Taps the copy of the button `identifier` that can be touched: a
     /// native menu can hold an unplaced copy of an action
     /// (`WebsiteScreenshotTests.tapButton`).
-    private func tapHittable(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15) {
+    /// Returns the frame of the copy it tapped.
+    @discardableResult
+    private func tapHittable(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15) -> CGRect? {
         let buttons = app.buttons.matching(identifier: identifier)
         XCTAssertTrue(buttons.firstMatch.appears(within: timeout), "Missing \(identifier)")
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
             if let button = buttons.allElementsBoundByIndex.first(where: { $0.isHittable && $0.isEnabled }) {
+                let frame = button.frame
                 button.tap()
-                return
+                return frame
             }
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
         XCTFail("\(identifier) cannot be tapped")
+        return nil
     }
 
     /// Opens the game menu and chooses Settings, and waits for its music

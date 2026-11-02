@@ -163,6 +163,21 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (105.1)，2026-11-02
+
+從 `main` `1722509`（#1689 的合併）建置。TestFlight `testflight.yml` run 41376752661（run 105），作者 02:15 UTC 自己按，02:51 成功（作者先發、遊戲規劃後報，HANDOFF §1.2）。內容與說明見 #1686、#1691（WhatsNew `2026-11-02-105-1`、`.github/testflight-whats-new.md` 0.5.0 (105.1)）。
+
+**這個 commit 的檢查**：
+- 完整 `ci.yml` run 41373985078（workflow_dispatch，1722509）：綠。
+- full lane run 41368956701（7b24d14；到 1722509 之間只多了 #1689 的報告測試，App 相同）：綠。
+- 不在這版的：文湖線早上死結的修正 #1696（WENHUBISECT，決策 543）。原因是 #1668 收購鋪軌的 `following: true`，只動 GamePresentation；同一個原因也讓安坑的一個節點選錯，玩家實際會不會碰到由 #1696 的量測回答，再決定是否另發 105.2。文湖線本來就不賣。
+
+**玩家回報**（2026-11-02，作者轉來，附當機紀錄）：
+
+| # | 分類 | 意見摘要 | 狀態 |
+|---|---|---|---|
+| 1 | bug | iPad（第 9 代，iPad12,1）、iPadOS 18.6.2，101.1：「在新增路線車站時當機跳掉」 | 附當機紀錄（全文在作者手上）。和 101.1 的 CRASH101 同一型：`EXC_BREAKPOINT`，崩在 SwiftUI 非同步算圖執行緒（`DisplayLink.asyncThread` → `ViewGraph.updateOutputsAsync` → `ViewThatFits` → `ForEachState.item`），在 `LinesPanel.lineRow` 的 closure 裡 `swift_task_isCurrentExecutor` → `_dispatch_assert_queue_fail`。**這一處修在 #1656（103.1 起）**，玩家還在 101.1；請玩家更新到 105.1。第二台 iPad 碰到，所以派 CRASHSWEEP（session_01YGNNuqBiBoZ7aZwjVL5ybQ）清查全 App 在 `ViewThatFits` 等會被非同步量尺寸的容器裡、還有沒有同型的 `ForEach`／`@MainActor` closure。待實機確認 |
+
 ### 0.5.0 (104.1)，2026-11-01
 
 從 `main` `7b09afa`（#1675 的合併）建置。TestFlight `testflight.yml` run 41314317437（run 104），作者 14:04 UTC 自己按，成功，已發給玩家。

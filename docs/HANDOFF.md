@@ -1,4 +1,4 @@
-> 3D 彎道上列車頭尾兩節（派工單 CURVE3D，[決策 538](decisions/538.md)，`curve3d-train-on-curve`，104.1 竹中六家線）：車身外的前半節、後半節改沿軌道放（`TrainTrackReach`），不再直直伸出彎道；Linux `LiujiaLineTrainsTests.testTheLiujiaTrainsAtZhuzhongKeepEveryCarOnTheCurve` 舊放法 8.8 m、新 0 m。留下的：2D 地圖仍直直放、快轉滑行時車身外的高度，見決策 538「下一步」。實機 UNVERIFIED。
+> 3D 彎道上列車頭尾兩節（派工單 CURVE3D，[決策 538](decisions/538.md)，`curve3d-train-on-curve`，104.1 竹中六家線）：車身外的前半節、後半節改沿軌道放（`TrainTrackReach`），不再直直伸出彎道；Linux `LiujiaLineTrainsTests.testTheLiujiaTrainsAtZhuzhongKeepEveryCarOnTheCurve` 舊放法 8.8 m、新 0 m。2D 地圖也改成沿軌道放（CURVE2D，決策 538「續」，`claude/curve2d-train-on-curve`；竹中 2D 舊 8.2 m、新 0 m，每幀放車 42 → 11.6 µs）。留下的：快轉滑行時車身外的高度、車擋前畫的車比軌道長，見決策 538「下一步」與「下一步（續）」。實機 UNVERIFIED。
 
 > iPhone 橫拿三件畫面修正（派工單 IPHLAND，`claude/iphone-landscape-fixes`，決策號不動，2026-10-31）：側邊面板頁的標題在 compact height 時改放在導覽列下方一列、和面板一樣寬（`PanelTitlePlacement`，`Theme.swift` 的 `panelTitle`），修掉車站卡站名被工具列夾成一兩個字與審查 L2-2；實景新局右側的空框是小地圖（沒有軌道與車站、或畫面已經看到整張地圖時不畫，`MiniMap.isShown(beside:)`）。Linux `MapFocusTests`、`MiniMapTests` VERIFIED；畫面靠截圖驗收，iPad 與 iPhone SE 沒拍。
 
@@ -452,6 +452,46 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 42 任交給第 43 任（2026-11-02 約 03:15 UTC，session_01YGNNum8LvQvgmgwxKHRvQ7，第 4 層，壓縮 2 次）**：第 43 任由第 42 任用 `create_session` 開，是第 5 層（opus 5.5）。
+
+- **105.1 已發**（run 105，`1722509`，作者先發），full ci 與 full lane 都綠，記在 PLAYER_FEEDBACK。之後合了：
+  - #1694 CIOPT-4：決策 544，Linux 上 GameCore 用 -O，完整 tier 從 24.2 分降到 17.7 分。
+  - #1695 CURVE2D：決策 538「續」。
+  - #1699 REVIEW-L5：審了 #1666–#1695，只改文件，沒有 P1／P2，有 7 個 P3。
+    - L5-1 交給 CIWEIGHT。
+    - L5-3、L5-4、L5-7 交給 LABELFIX。
+    - L5-2、L5-5、L5-6 只記錄。
+    - 下一輪審查從 #1696 看起。
+- **105.1 玩家回報**：iPad 第 9 代在 101.1 新增路線車站時閃退，和 CRASH101 同一型，已修在 #1656。請玩家更新到 105.1；同型清查交給 CRASHSWEEP。
+- **在做的 session**：接手後各送一則「改回報給第 43 任 <session>」。
+
+  | session | 工作 | PR | 合的條件 |
+  | --- | --- | --- | --- |
+  | WENHUBISECT session_01YGNNuoMs4r88NXSnHKf5Lu | 文湖線死結，決策 543。原因是 #1668 的 `following: true` 連坡道把手也縮放，修正只動 GamePresentation | #1696 | 51 小時量測（文湖、淡海綠山、安坑、三鶯，main 對修正）；一句話說 105.1 玩家會不會碰到安坑節點 6（決定要不要出 105.2）；文湖線重新開賣的五方。L4-1 已確認是不同原因 |
+  | FLANE5 session_01YGNNuoP3GPQUr2Re5tXEjv | full lane 三支 UI 測試修穩 | #1693 | only_testing 兩輪綠、轉 ready |
+  | LOOP-3 session_01YGNNupLv3dQQgQdCsuUghb | 接手 LOOP-2 的 #1698（決策 542，GameCore，分支 `claude/loop-2-live-overtake`） | #1698 | CI 綠；REV1698 的 P1 修完；查清高鐵「五站」組變差（丟班 36→39、最晚 212→359 分）和台鐵丟班變多（41→44） |
+  | REV1698 session_01YGNNuq6NxikbXRuVRtvTeZ | #1698 獨立審查 | — | 報告轉給 LOOP-3 |
+  | L4FIX session_01YGNNukwKePUQsGwMTzJ4nB | L4-1：號誌關時，停站列車越過渡線停到對向月台（#1601 退步，`RunSpacing.swift` `freePlatformPath`），GameCore | 未開 | 回歸測試修前紅、修後綠 |
+  | CIWEIGHT session_01YGNNuoKedEApQtVTHLoo6o | -O 之後重算分片權重（完整 tier 23→17 job），加上 L5-1 | #1697 | 完整 tier 綠 |
+  | OPEN3D session_01YGNNunVxxTjzneuBjw86MX | 3D 不等列車模型包就開（模型雜湊不變） | 未開 | 截圖、雜湊相同 |
+  | MISSRUN session_01YGNNunWH4Ac5y58XXAqvt1 | 可買的線少發的班次（安坑 4/182、淡海 6/152、高鐵 1/191） | 未開 | — |
+  | CRASHSWEEP session_01YGNNuqBiBoZ7aZwjVL5ybQ | 非同步算圖閃退的同型清查（`ViewThatFits` 裡的 `ForEach`） | 未開 | 第二級截圖 |
+  | LABELFIX session_01YGNNuocthhKPw48aa8rW6z（sonnet） | L5-3、L5-4、L5-7（站名避讓框） | 未開 | 依 PR 的截圖級別 |
+  | RINGBOARD session_01YGNNuowX8LSdfrRsdCSvDD | L4-2：`DepartureBoard.runRows`、`TrainDiagram.runTrips` 改用 `line.calls(of: run)`，環狀線跨接縫不閃退；KLRT 之前要合 | 未開 | Linux 回歸測試修前紅 |
+
+- **不是我們派的**：#1700（桃園機場捷運 studies，codex 分支，draft）由作者的另一個工具在做，不改營運。作者轉 ready、CI 綠後照一般規則看。截圖屬第三級（新模型），要規劃看過總覽圖。
+- **GameCore 名額**：#1698、L4FIX、#1697（完整 tier）同時最多 2 個在跑 CI。
+- **之後要派的**：
+  - ZSWITCH：#1698 合了再派。
+  - KLRT：等作者下載 data.kcg.gov.tw，而且 RINGBOARD 要先合。
+  - BUILD3D 3b／4、STALL97：等作者。
+  - 車擋前的車比軌道長：決策 538「下一步（續）」。
+  - 固定三件事（§1.1）的下一輪：審查從 #1696 開始；CI 看 #1697 之後 build 成了瓶頸，決策 544「續」寫了方案 A，`.build` 快取；除錯看 MISSRUN 的結果。
+- **106 的說明**：玩家看得到的 PR 合了，就補 WhatsNew 最前面那則與 `.github/testflight-whats-new.md`。目前有 #1695 2D 彎道車廂。
+- **號碼**：決策 542（#1698）、543（#1696）已留，544 已用，下一個 545。存檔下一個 81，golden schema 下一個 77。取號前先查 #1579。
+- **排程**：第 42 任的巡查已刪；第 43 任自己排。
+- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 留給作者刪。
 
 **第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
 
@@ -3054,7 +3094,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 - 問題回報的卡住紀錄（決策 418）：實機玩到卡一下（或從背景回來被重開），隔天按「回報問題」，訊息最後有沒有「這台裝置記下的卡住與結束」一段；照決策 418「怎麼讀」用那個 build 的 dSYM 換一層 `RailwayGame` 的位址，看換不換得出函式名。沒有那段就查 MetricKit 是否要「與 App 開發者分享」打開。
 - 畫面節奏紀錄（決策 421 V1）：TestFlight 新版裝上後，先在 2D 地圖玩一兩分鐘（切幾次速度），再開 3D 環繞、跟車各一分鐘，回 2D 後按「回報問題」，看訊息最後有沒有「這台裝置最近的畫面節奏」一段：要有 3D（「3D 上螢幕間隔」，有沒上螢幕的格數、CPU／GPU、三角形）與 2D（標明「2D 節拍…不是上螢幕的時間」）兩種，各有中位數、p95、p99、三段停頓次數、嚴重停頓與最長停頓。玩到明顯卡一下的話，看最長停頓有沒有對到那一下、2D 那段有沒有寫是哪一部分。記憶體一行在實機要有 MB 數（模擬器沒有「最少剩」）。讀法見決策 421。
 - 畫面節奏測試（決策 421 V2）：TestFlight 版的設定裡連點「版本」五下，演示模式下面多一列「畫面節奏測試」，列出台北 1／5／10／20 線 × 2D 平移縮放、3D 環繞、3D 跟車共 12 項。每一項跑三次，每次之前先把 App 從多工畫面滑掉（冷啟動），再進設定按那一項：它開新遊戲、鋪線（20 線要等一兩分鐘）、等 5 秒、自己動一分鐘，期間不要碰螢幕，最後上方的卡片寫 p95 與嚴重停頓次數。三次跑完，清單上那項寫「3／3 次」，p95 差超過 20% 或嚴重停頓次數不同的標「不穩定」（橘字），那項要重跑或注意當時有沒有發燙。全部跑完按「複製結果」貼回來，或直接「回報問題」（結果附在訊息最後）。要確認的：3D 環繞時鏡頭真的繞著台北轉、跟車時真的跟著一列車、2D 時地圖左右上下畫 8 字並縮放；結果一行有沒有寫裝置型號；模擬器跑的要有「只當 CPU 端的參考」。
-- 放空模式（決策 414）：選單最後一列「放空模式」找不找得到；放空時 3D 與 2D 切換有沒有閃白或卡頓；碰一下回來時按鈕是不是都回來、暫停狀態和打開前一樣；「減少動態效果」打開時只在 2D；開著 VoiceOver 放空時，左右滑還讀不讀得到收起的按鈕（UI 測試在放空時仍找得到 `hud.menu`，只是碰不到：`ambientHidden` 只設透明與不接觸，若 VoiceOver 也讀得到，要再想不改變 view 身分的隱藏法）。
+- 放空模式（決策 414）：選單最後一列「放空模式」找不找得到；放空時 3D 與 2D 切換有沒有閃白或卡頓；碰一下回來時按鈕是不是都回來、暫停狀態和打開前一樣；「減少動態效果」打開時只在 2D；開著 VoiceOver 放空時，左右滑還讀不讀得到收起的按鈕（UI 測試在放空時仍找得到 `hud.menu`，只是碰不到：`ambientHidden` 只設透明與不接觸，若 VoiceOver 也讀得到，要再想不改變 view 身分的隱藏法）。**在 3D 鏡頭時碰一下回來**，選單鈕要馬上按得到：main 6ebf8c7 的 full lane（run 41353036789）在 Simulator 上從 3D 鏡頭碰回來後，錄影裡按鈕都回來了，`hud.menu` 卻 10 秒都不是 hittable；FLANE5 在 2D 也看到一樣的情形（run 41371388190、41376494125：按鈕都回來了，XCTest 15 秒內仍說 `hud.menu` 每一份都不是 hittable），原因沒查出來；測試改成手指碰 Menu 的位置，確認選單打得開、放空模式再開得起來，這樣玩家碰得到才算過。UI 測試 `testTheIdleModePutsTheControlsAwayUntilATap` 關掉 3D 只走 2D（導演的第一個鏡頭是 2D 還是 3D 看時鐘的種子；3D 鏡頭時 Simulator 30–50 秒不回 UI 查詢），所以 3D 這條只剩實機看。
 - 2D／3D 交接（決策 313）：「拉近自動變 3D」預設開，放手才判斷之後是不是還會誤進 3D。常誤觸就把預設改成關（`Map3DHandoff.pinchOpensKey` 的 `@AppStorage` 預設值，在 `MapView.swift` 與 `SettingsView.swift`），不必重做；也看 3D 左上的「2D」「建設」兩顆鈕找不找得到、會不會擋到景。
 - 3D 開在 2D 看的地方（2026-10-21，決策 313 的「後來」）：高鐵示範從台北按 3D、實景新遊戲按 3D，是不是都開在 2D 看的地方；2D 移到很遠再按 3D，等候是不是只有第一次。
 - 3D 的列車標籤與路線色帶（決策 314）：拉近到 400 m 以內，畫面中間最多三列車頭上的「線號＋載客／定員」標籤大小、位置對不對、跟著車走順不順；軌道旁 0.3 m 的線色細帶看不看得到、會不會閃。標籤太小或太擠就調 `Map3DTrainLabels` 的 `reach`、`most`、`middle`；色帶太細或太粗就調 `Map3DLineBands.width`。
