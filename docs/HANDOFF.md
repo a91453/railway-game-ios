@@ -455,39 +455,29 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
-**第 43 任交接（2026-11-02 約 11:30 UTC，session_01YGNNunC2SwRgFTbo4rham5，第 5 層，壓縮 2 次）**：作者說快到每週上限，**不再開新 session**（2026-11-02：「不要再做新session了」）。作者用另一個帳號（pro）照遊戲規劃寫的派工卡做；pro 不合併，合併由遊戲規劃做。下一任遊戲規劃由作者在 claude.ai 開（第 43 任不開 session）。
+**第 43 任交接（2026-11-02 約 14:10 UTC，session_01YGNNunC2SwRgFTbo4rham5，第 5 層，壓縮 3 次，這是最後一版）**：作者說快到每週上限，**不再開新 session**（2026-11-02：「不要再做新session了」）。作者用另一個帳號（pro）與 Antigravity（Gemini）照遊戲規劃寫的派工卡做；pro 不合併，合併由遊戲規劃做。**下一任遊戲規劃由作者在 claude.ai 開**（第 43 任不開 session）。
 
 - **發版**：
-  - **106 失敗**（run 41426172323，`a48121b`）：Release archive 編譯錯，`MapView.swift` 裡 `#else let uiTesting = false` 後的 `guard !uiTesting` 在 Release 是「will never be executed」，App 設 warnings-as-errors。PR 的 CI 不跑 `release-archive.yml`（只在改專案設定、入口、資產時跑），所以 #1702 的 Release-only 錯沒被擋。**修在 #1713**（決策 546 續）。
-  - **107.1**：作者自己按（run 41432853094，`68a4cfc`，#1713 的合併），11:30 UTC 還在跑；106 跳過。結果與這個 commit 的檢查記在 `docs/research/PLAYER_FEEDBACK.md` 0.5.0 (107.1)。**作者要回答 App Store Connect 的出口合規，測試員才拿得到。**
-  - **下一批是 108.1**。
-- **已合**（第 43 任全部）：#1693 FLANE5、#1697 CIWEIGHT、#1703 RINGBOARD（L4-2）、#1706 L4FIX（L4-1）、#1705 CRASHSWEEP、#1707 CIOPT-5（決策 545，`.build` 快取）、#1696 WENHUBISECT（決策 543，不出 105.2）、#1702 OPEN3D（決策 546）、#1708、#1709（交接）、#1713（決策 546 續：UI 測試的模型暖機改 `.utility`，`a48121b` full lane 41406244046 在 240 秒內等不到 `debug.map3DModelsReady`；加上 Release 修正）。
-- **還開著，合併順序**（每批等 main 的 `ci.yml` 綠）：
-  1. **108.1 第一批**：#1698 LOOP-3（決策 542，可合）、#1704 LABELFIX、#1710 MISSRUN（決策 547）。三個都綠過；合前看 head 沒變。
-  2. #1712 MENUSTALL（pro 做的，審過可以進 108.1）：AVAudioSession 的設定移到自己的佇列，加 Debug 才有的 StallSampler；查出的「選單停 27–70 秒」是 XCTest 自己造成的，不是玩家會碰到的。和 #1713 改了同一段 `MapView.swift`，**合 main 解衝突時留 main 的版本**。實機要看：切回前景後有沒有聲音、和別的 App 的音樂能不能一起放。
-     **MENUSTALL 查完（2026-11-02，session_01JMHz9cVoZGH8UUVWdm1MRq，分支 `claude/inspiring-brown-u52h9z`）**：新的 Debug 啟動參數 `-ui-test-stall-stacks` 在主執行緒超過 1 秒沒畫格時抄它的呼叫堆疊進 UI test trace（`StallSampler`，RailwayGameApp.swift）。run 41409109160：選單打開後的 5.4 s 是 **XCTest 自己的查詢**在 App 主執行緒裡跑，22 次取樣有 21 次在把 XCTest 的 log 同步寫到 stderr（`_os_log_impl_mirror_to_stderr`），實機不會發生；另有 App 變成 active 時 `AVAudioSession.setCategory` 等音效服務 3.2 s（實機也在主執行緒，已移到 `GameAudio` 自己的 queue，`AudioSessionSourceTests` 鎖住）。放空測試以 `OS_ACTIVITY_DT_MODE=NO` 啟動後，選單打開後最長 1.8–3.0 s（四輪），取樣都在系統第一次做的事：UIKit 建選單的 cell、XCTest 打開的無障礙 bundle 載入、鍵盤與聽寫（`UIDictationController`）第一次讀設定、Swift runtime 查 protocol conformance、延遲載入 framework；啟動第一格 Simulator 的 Metal 編 pipeline（`MTLSimDriver`）2.2–2.8 s。都不是 App 的程式，所以派工單「trace 沒有超過 2 秒的停頓」沒有全部達到，交給規劃判斷。**之後**：其他 UI 測試（故事世界停 6–11 s、開 3D 的查詢逾時）多半也是 XCTest 的 log 抄到 stderr，可在各測試的 `launchEnvironment` 加同一行再量；查別的停頓時加 `-ui-test-stall-stacks` 看 trace。不要在 dyld 的載入回呼裡做事（`_dyld_register_func_for_add_image`）：試過記下延遲載入的 framework，App 啟動就卡住（run 41416655310、41419012356）。
-  3. #1714 CIWARN（pro 做的，決策 544 續二：分片警告線與看門狗）：剛開，還沒審。
-  4. #1711 高雄 85 大樓（決策 548，draft）：新的 3D 模型是第三級，**遊戲規劃要先看截圖**才合。
-  5. #1700 Codex 桃園機捷 1000／2000（作者的，draft）。
-- **號碼**：決策 545、546 已用；547 MISSRUN（#1710）；548 #1711；**下一個 549**（MENUSTALL 若要決策就用 549，WENHUCAP 用再下一個）。存檔 81、golden schema 77 不動。
-- **pro 的派工卡與順序**（一次一張，做完再給下一張；模型照卡）：
-  1. MENUSTALL：做完（#1712）。
-  2. CIWARN：做完（#1714），待審。
-  3. COPYLINE（Sonnet high）：等 107.1 發完。
-  4. WENHUCAP（Opus）：等 #1698、#1710 合併後再做（文湖線號誌關時第二天 455/532 班沒發，決策 543 下一步）。
-  5. CRASHSWEEP-2（Opus）：其餘約 200 個 `ForEach` 有新當機紀錄再修；`-disable-dynamic-actor-isolation` 是備案，沒採用。
+  - 106 失敗（Release archive 編譯錯，#1713 修了）。**107.1 成功**（run 41432853094，`68a4cfc`，上傳與處理都過），結果記在 `docs/research/PLAYER_FEEDBACK.md` 0.5.0 (107.1)；What to Test 是遊戲規劃寫好、作者手貼的。
+  - **出口合規**：作者說「上次忘記了」。問過作者要不要開 PR 在 Info.plist 加 `ITSAppUsesNonExemptEncryption = NO`（以後每版不用再答），**作者還沒回答**；下一任先問。
+  - **下一版 108.1**：發前要寫 `.github/testflight-whats-new.md`（玩家看的話，一兩句一項）。目前會進去的：#1698 LOOP-3（決策 542）、#1704 LABELFIX、#1710 MISSRUN（決策 547）、#1712 MENUSTALL（切回前景的音效 session 不卡主執行緒）、#1711 高雄 85 大樓（決策 548）、#1700 桃園機捷 1000／2000，與下面開著的 #1719、#1717 合併後的修正。發前照 CLAUDE.md 看 main 那個 commit 的 full `ci.yml` 與 full lane 都綠。
+- **已合**（第 43 任全部）：#1693、#1697、#1703、#1706、#1705、#1707（決策 545）、#1696（決策 543）、#1702（決策 546）、#1708、#1709、#1713、#1715（交接與 107.1 紀錄）、108.1 第一批 #1698、#1704、#1710（main `a13bc52` ci 綠）、#1712 MENUSTALL（`50aea37`）。#1711、#1700 是作者自己合的。
+- **還開著**（每批 3–5 個，等 main 的 `ci.yml` 綠再下一批）：
+  1. **#1719 TOURCOUNT（決策 551，GameCore，玩家回報）**：0.5.0（107.1）iPad Air 5「景點人次只有今日，昨日、今年、去年都是 0」。原因：午夜結算時用的是那一刻的路網，`.standard` 營業時間（06:00–24:00）外沒有線，所以路網模式（新遊戲預設）的遊戲每天都數到 0；商店收入、旅館住客、廟與夜市人次、委託進度也跟著是 0。改成用那一天中午的路網（`Tourism.countedAt(day:)`，`closeTourismDay` 與 `attractionStatus` 都改）。`TourismTests.testMidnightCountsTheDayWhileTheNetworkIsClosed` 改前紅（0 對 240）、改後綠。CI 綠（GameCore 全 tier）且 GamePresentation 的平衡測試沒動到才合；若動到，照決策逐值說明，不改 golden 期望值。合後要進 108.1。
+  2. **#1717 FLANE6**：修 `68a4cfc` full lane（41432636112）紅的三個：捏開 3D 那支測試等模型做好（`-ui-test-3d-models-first`＋`waitForThreeDModels()`＋等 `map3D.loading` 消失）、StoryCard 等卡片 40→90 秒，兩支都設 `OS_ACTIVITY_DT_MODE=NO`；full lane 的 build job 逾時 95→115 分、UI 步驟 75→90 分。PR 的 CI 綠（41447255761）。only_testing（41447267874）第一次是 Simulator 啟動逾時（「Timed out while launching application」），14:00 UTC 重跑中；綠了就合。若再啟動逾時，查是不是 `OS_ACTIVITY_DT_MODE` 或 `-ui-test-3d-models-first` 讓 App 啟動卡住。
+  3. **#1714 CIWARN**（pro 做的，決策 544 續二：分片警告線與看門狗）：還沒審。
+- **號碼**：549 WENHUCAP（pro）、550 SKLTOWER（Antigravity）、551 TOURCOUNT（#1719）；**下一個 552**。存檔 81、golden schema 77 不動。
+- **派出去的卡**（作者轉交，做完回報給遊戲規劃）：
+  - pro（一次一張）：**WENHUCAP（Opus，決策 549）** 現在可以做（#1698、#1710 已合；文湖線號誌關時第二天 455/532 班沒發，決策 543 下一步）；**COPYLINE（Sonnet high）**；之後 CRASHSWEEP-2（Opus，其餘約 200 個 `ForEach` 有新當機紀錄再修）。
+  - Antigravity：**SKLTOWER 新光摩天大樓（決策 550）**，單一 3D 模型，照 #1711 85 大樓的做法；第三級，**遊戲規劃看過截圖才合**。
 - **沒派的（建議順序）**：
-  1. **PR 的 CI 也編 Release**（建議下一個做）：至少讓改到 `RailwayGameApp/` 的 PR 編一次 Release 設定，106 這種錯才擋得住。注意 macOS runner 只有 5 台。
+  1. **PR 的 CI 也編 Release**：至少改到 `RailwayGameApp/` 的 PR 編一次 Release 設定，106 這種錯才擋得住（macOS runner 只有 5 台）。
   2. #1702 的後續：`useModels` 那 192 MB 的 `makeBuffer` 移出主執行緒；TrainShowcase 第二份模型；實機量時間。
-  3. REV1698 的 P3-1：#1698 合併後，`followsRealTimetable(l.train) || followsRealTimetable(x.train)` 那一處。
-  4. 其他 UI 測試也設 `OS_ACTIVITY_DT_MODE=NO`（MENUSTALL 發現 XCTest 的 log 會拖住主執行緒）。
-  5. 海風號、山嵐號接上專用模型：`Map3DModels.swift` 的 `styleByType` 把 `HAIFENG`、`SHANLAN` 畫成 commuter 樣式加塗裝；模型包裡已經做好的 `Map3DTourismEMU500`（EMU573／EMU583）沒接進 `Map3DTrainSet`。Opus、照 rolling-stock skill、第三級截圖。其他沒用到的研究車（EMU800／EMU900／E1000／PP）之後再說。
+  3. REV1698 的 P3-1：`followsRealTimetable(l.train) || followsRealTimetable(x.train)` 那一處。
+  4. 其他 UI 測試也設 `OS_ACTIVITY_DT_MODE=NO`（#1717 只改了兩支）。MENUSTALL（#1712）查到：選單打開後的長停頓是 XCTest 自己的查詢把 log 同步寫到 stderr，實機不會；剩下 1.8–3.0 s 是系統第一次做的事（無障礙 bundle、聽寫設定、Simulator 的 Metal 編 pipeline），不是 App 的程式。查別的停頓加 Debug 啟動參數 `-ui-test-stall-stacks` 看 trace；不要在 dyld 的載入回呼（`_dyld_register_func_for_add_image`）裡做事，試過 App 啟動就卡住。
+  5. 海風號、山嵐號接上專用模型（`Map3DTourismEMU500` 已在模型包，沒接進 `Map3DTrainSet`）；Opus、rolling-stock skill、第三級截圖。
   6. 「關於／資料來源」頁加「© 2026 a91453 著作權所有」。
-- **等作者的**：
-  - 實機：3D 回 2D 後 Menu 按不按得到；108.1 的聲音（#1712）。
-  - E1：App Store 上架前，演示模式要改成編譯旗標（現在靠 `TestBuild.isTest` 擋，§5）；要動 `testflight.yml` 的參數，需作者同意。
-  - KLRT、BUILD3D、STALL97 等作者。
-  - 新運具若要開始做，纜車最簡單（固定兩點、不用排班與號誌），再來是渡輪，飛機最後（`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md` §6）。
+- **等作者的**：出口合規與 `ITSAppUsesNonExemptEncryption`（上面）；實機看 3D 回 2D 後 Menu 按不按得到、108.1 切回前景後有沒有聲音、和別的 App 的音樂能不能一起放；E1（上架前演示模式改編譯旗標，要動 `testflight.yml` 參數需作者同意）；KLRT、BUILD3D、STALL97；新運具先做纜車，再渡輪，飛機最後（`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md` §6）。
 - **玩家問答**（2026-11-02）：「雙線雙向，列車都只在同一軌來回」：回覆「路線 → 進階」每一段可選進路；中間站兩條軌都要有月台；新遊戲靠左行車；還是一樣就「回報問題」附存檔。
 
 **第 42 任交給第 43 任（2026-11-02 約 03:15 UTC，session_01YGNNum8LvQvgmgwxKHRvQ7，第 4 層，壓縮 2 次）**：第 43 任由第 42 任用 `create_session` 開，是第 5 層（opus 5.5）。
