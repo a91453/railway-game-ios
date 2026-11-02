@@ -201,21 +201,36 @@ says() {
     failures=$((failures + 1))
   fi
 }
-JOB_STARTED=$(($(date +%s) - 1050)) says 'warning title=Shard campaigns-2 near its 20-minute limit::campaigns-2 took 1[78]m' \
+JOB_STARTED=$(($(date +%s) - 1550)) says 'warning title=Shard campaigns-2 near its 30-minute limit::campaigns-2 took 25m[0-9]+s of its 30 minutes' \
   "a shard past SHARD_WARN_SECONDS of its job warns" "$script" run campaigns-2
-JOB_STARTED="$(date +%s)" says '!near its 20-minute limit' "a short job does not warn" "$script" run campaigns-2
-says '!near its 20-minute limit' "without JOB_STARTED (locally) no job warning" "$script" run campaigns-2
+JOB_STARTED="$(date +%s)" says '!near its .*-minute limit' "a short job does not warn" "$script" run campaigns-2
+says '!near its .*-minute limit' "without JOB_STARTED (locally) no job warning" "$script" run campaigns-2
 FAKE_SECONDS=70 says 'warning title=UnitTests has no weight::UnitTests took 70 s in rest' \
   "a slow class with no weight warns" "$script" run rest
 FAKE_SECONDS=40 says 'warning title=SingleTrackCapacityPropertyTests weight out of date::.*took 80 s.*says 3 ' \
   "a class past twice its weight warns" "$script" run campaigns-2
 FAKE_SECONDS=40 says '!ServicePropertyTests (has no weight|weight out of date)' \
   "a class within its weight does not warn" "$script" run campaigns-12
-JOB_STARTED=$(($(date +%s) - 1108)) FAKE_SLEEP=4 says 'warning title=Shard rest about to reach its 20-minute limit::rest has run 18m30s; slowest classes so far: ' \
+JOB_STARTED=$(($(date +%s) - 1648)) FAKE_SLEEP=4 says 'warning title=Shard rest about to reach its 30-minute limit::rest has run 27m30s; slowest classes so far: ' \
   "the watchdog warns before the limit, with the slowest classes so far" "$script" run rest
 JOB_STARTED=$(($(date +%s) - 1000)) says '!about to reach' "the watchdog is stopped when the tests end first" "$script" run rest
-JOB_STARTED=$(($(date +%s) - 1108)) SWIFT_TEST_WORKERS=2 FAKE_MODE=held-last FAKE_SLEEP=4 says 'about to reach its 20-minute limit::.*still running: [A-Za-z]+\.test' \
+JOB_STARTED=$(($(date +%s) - 1648)) SWIFT_TEST_WORKERS=2 FAKE_MODE=held-last FAKE_SLEEP=4 says 'about to reach its 30-minute limit::.*still running: [A-Za-z]+\.test' \
   "in a parallel run the watchdog names the tests still running" "$script" run campaigns-2
+# The messages name the limit from SHARD_LIMIT_MINUTES (decision 544, CIWARN),
+# and ci.yml's test job sets it to its own timeout-minutes: a limit changed in
+# one place and not the other would make the warnings name the wrong number.
+SHARD_LIMIT_MINUTES=45 JOB_STARTED=$(($(date +%s) - 1550)) says 'near its 45-minute limit::.*of its 45 minutes' \
+  "the warning names SHARD_LIMIT_MINUTES, not a fixed number" "$script" run campaigns-2
+ci_yml="$(cd "$(dirname "$script")/../workflows" && pwd)/ci.yml"
+ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^    timeout-minutes:/ { print $2; exit }' "$ci_yml")"
+ci_limit="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^ *SHARD_LIMIT_MINUTES:/ { print $2; exit }' "$ci_yml")"
+script_limit="$(sed -n 's/^SHARD_LIMIT_MINUTES="\${SHARD_LIMIT_MINUTES:-\([0-9]*\)}"$/\1/p' "$script")"
+if [[ -n "$ci_timeout" && "$ci_timeout" == "$ci_limit" && "$ci_timeout" == "$script_limit" ]]; then
+  echo "ok   says  the shard job's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"
+else
+  echo "FAIL the shard job's timeout-minutes ('$ci_timeout'), ci.yml's SHARD_LIMIT_MINUTES ('$ci_limit') and the script's default ('$script_limit') must be the same number"
+  failures=$((failures + 1))
+fi
 
 # swift test --parallel (decision 404): SWIFT_TEST_WORKERS > 1 asks for it,
 # with --verbose so XCTest's lines still reach the log; 1 and unset do not.
