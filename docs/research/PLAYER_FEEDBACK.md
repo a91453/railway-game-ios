@@ -163,6 +163,18 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (108.1)，2026-11-02
+
+從 `main` `ef92919`（#1722 的合併）建置。TestFlight `testflight.yml` run 41468139355（run 108），作者 15:05 UTC 自己按，15:34 成功（上傳、App Store Connect 處理、自動填 What to Test 都過；作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (108.1)（#1722）。出口合規：#1721（Info.plist `ITSAppUsesNonExemptEncryption = NO`）起的第一版，App Store Connect 還要作者看一次是不是不再顯示 Missing Compliance。
+
+**這個 commit 的檢查**（全部綠）：
+- 完整 `ci.yml` run 41468098590（workflow_dispatch，ef92919）：綠。
+- full lane run 41468104214（`ios-build.yml` 手動，ef92919）：綠，16:46 UTC 跑完。#1717 FLANE6 修的三支（3D 捏出、StoryCard、build job 逾時）這次都過。
+- `release-archive.yml` run 41468122850（ef92919）：綠。
+- 107.1 之後進來的：#1698 LOOP-3（決策 542）、#1704 LABELFIX、#1710 MISSRUN（決策 547）、#1712 MENUSTALL、#1711 高雄 85 大樓（決策 548）、#1719 TOURCOUNT（決策 551）、#1717 FLANE6、#1714 CIWARN、#1716 COPYLINE、#1718 CRASHSWEEP-2、#1721 出口合規、#1722 說明。不在這版：#1723 WENHUCAP（決策 549，文湖線號誌關時的月台）。
+
+**這版請測試者看**：觀光景點「昨天、今年、去年」人次有數字（玩家回報的 0 已修）；快慢車同線時慢車進待避線讓快車；3D 高雄 85 大樓；從別的 App 切回遊戲時音效照常、不停頓。
+
 ### 0.5.0 (107.1)，2026-11-02
 
 從 `main` `68a4cfc`（#1713 的合併）建置。TestFlight `testflight.yml` run 41432853094（run 107），作者 10:57 UTC 自己按，檢查還沒跑完就先發（作者先發、遊戲規劃後報，HANDOFF §1.2）；11:30 UTC 還在跑，結果由下一任補記。**106 跳過**：run 41426172323（`a48121b`）在 Release archive 編譯失敗（`MapView.swift` 一個只在 Release 成立的「will never be executed」；PR 的 CI 不編 Release），修在 #1713。
