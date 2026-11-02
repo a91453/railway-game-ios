@@ -453,6 +453,30 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
+
+- **105.1 還不能發**。內容都合了，說明也寫好了（WhatsNew `2026-11-02-105-1`、`.github/testflight-whats-new.md` 0.5.0 (105.1)，#1686、#1691）。卡在**文湖線早上死結**：
+  - main（446bf7f 之後）買文湖線的模擬 98 班：42 班沒發、44 班從 07:22 卡住（寫實運轉）；簡單規則 07:14 卡住。446bf7f 上正常。
+  - 文湖線本來就不賣（決策 535「續」，#1690）；但同樣的原因可能也影響已經能買的線，所以要先查清楚。淡海、三鶯、安坑、台鐵與高鐵示範量過都正常。
+  - WENHUBISECT（session_01YGNNuoMs4r88NXSnHKf5Lu，決策 543）在二分：wt-e＝tip 但 GamePresentation／GameCore 倒回 446bf7f；wt-f＝只拿掉 #1668 在 `RealLineAcquisition.swift` 加的 `following: true`。範圍內動 GameCore 的只有 #1669（乘客 A*）和 #1676（非環狀線沒有作用，REVIEW-L4 看過）。
+  - 接手要做：等它回報。原因找到、玩家看得到的線沒受影響（或修好合了），就手動跑 main HEAD 的完整 `ci.yml`（workflow_dispatch），確認 full lane 綠，再跟作者說 105.1 可以發（作者自己按）。
+  - L4-1（#1601 起的舊退步，`docs/archive/PR1601_1686_REVIEW_HANDOFF.md`）：WENHUBISECT 會說是不是同一個原因。不是的話，另派一個 GameCore 修正。
+- **還開著的 session**（都回報給第 41 任，接手後各送一則「改回報給 <第 42 任 session>」）：
+  - WENHUBISECT：見上。可能開 GameCore PR。
+  - DEBUG-BATCH（session_01YGNNunTUt7aXu7pMTNAzrn，#1689 draft）：同一張圖逐分跑和 6000× 一次多分鐘跑兩天，比較少發的車。
+  - CIOPT-4（session_01YGNNum7L9Kr67QKSyFJN5D）：找最慢的測試，目標 PR 那一層少 20%。
+  - LOOP-2（session_01YGNNumuPL6Nr9TcLqkfGPH，決策 542，動 GameCore）：PR 開了以後，合之前要另外做一次獨立審查。
+  - 已經結束、可以封存：WENHU、ANKENGDEPOT、RINGNAME、REVIEW-L4、R200FRT。
+- **固定三件事（§1.1）上一輪**：PR 審查 REVIEW-L4（#1688，看到 #1686）；CI 優化 CIOPT-4（進行中）；除錯 DEBUG-BATCH 與 WENHUBISECT（進行中）。下一輪照 §1.1 的條件派。
+- **之後要派的**：
+  - ZSWITCH：LOOP-2 合了再派。
+  - KLRT（決策 535 PR 2）：要作者下載 data.kcg.gov.tw 的「高雄環狀輕軌各站進出量」；派的時候把 L4-2 寫進規格。
+  - BUILD3D PR 3b／4：等作者在 TestFlight 鋪完軌道後送「回報問題」。
+  - STALL97：等作者。
+  - CURVE3D 剩下的部分。
+- **號碼**：決策 542（LOOP-2）、543（WENHUBISECT）已留；下一個 544。存檔 main 是 80，下一個 81；golden schema 下一個 77。取號前還是先查 #1579。
+- **排程**：第 41 任的巡查 trig_015FVSXWhVvoGyQJRMtLzCu7（00:43 UTC）會送回第 41 任；第 42 任自己排。
+
 **第 40 任交給第 41 任（2026-11-01 約 14:10 UTC，session_01YGNNuoSiXAJiUsqe53Fe24，第 2 層，壓縮 2 次，約 275k tokens）**：第 41 任由第 40 任用 `create_session` 開，是第 3 層（opus 5.5）。
 
 - **作者 2026-11-01 的新規則**：
