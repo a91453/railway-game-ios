@@ -134,6 +134,46 @@ final class MapLabelPlacementTests: XCTestCase {
         }
     }
 
+    /// Decision 477 續 (LABELFIX, review L5-3): the plate the labels keep off
+    /// starts where the map draws the name (`MapProblems.nameTop`), at any zoom.
+    func testNameBoxStartsWhereTheNameIsDrawn() {
+        let station = MapLabelPlacement.Station(x: 100, y: 200, name: "臺北")
+        for radius in [5.0, 10, 20, 40, 80] {
+            XCTAssertEqual(MapLabelPlacement.nameBox(of: station, radius: radius).minY,
+                           200 + MapProblems.nameTop(stationRadius: radius), "radius \(radius)")
+        }
+    }
+
+    /// Zoomed in (radius 80) a bubble or fare must not land on the neighbour's
+    /// name, which the map draws 112 points under the neighbour's middle.
+    func testZoomedInLabelsKeepOffTheNameUnderTheStationAbove() {
+        let radius = 80.0
+        let stations = [
+            MapLabelPlacement.Station(x: 400, y: 100, name: "北站"),
+            MapLabelPlacement.Station(x: 400, y: 100 + radius * 2.6, name: "南站"),
+        ]
+        let drawn = Box(x: 400 - 15, y: 100 + MapProblems.nameTop(stationRadius: radius), width: 30, height: 15)
+        let bubble = MapLabelPlacement.Bubble(x: stations[1].x, y: stations[1].y, text: "缺建材", hasReason: false)
+        let point = MapLabelPlacement.placeBubbles([bubble], stations: stations, lift: radius + 30, radius: radius)[0]
+        XCTAssertFalse(overlaps(bubbleBox(bubble, at: point), drawn), "The bubble covers the drawn name")
+        let text = "+\(TrainRoster.shortMoney(Money(150_000), in: .english))"
+        let fare = MapLabelPlacement.placeFares([(x: stations[1].x, y: stations[1].y, text: text)], stations: stations, radius: radius)[0]
+        let width = MapLabelPlacement.textWidth(text, size: 12) + 12
+        XCTAssertFalse(overlaps(Box(x: fare.x - width / 2, y: fare.y - 10, width: width, height: 20), drawn), "The fare covers the drawn name")
+    }
+
+    /// Review L5-7: the station tag lies under the station; zoomed in it must
+    /// not cover the name of the very station it belongs to.
+    func testStationTagKeepsOffItsOwnStationsName() {
+        let clear = Box(x: 0, y: 0, width: 1000, height: 1000)
+        for radius in [5.0, 10, 20, 40, 80] {
+            let station = MapLabelPlacement.Station(x: 500, y: 300, name: "臺北")
+            let tag = MapLabelPlacement.stationTag(at: ScreenPoint(x: 500, y: 300), width: 150, height: 44, clear: clear,
+                                                   avoiding: [], keepingOff: [], stationRadius: radius)
+            XCTAssertFalse(overlaps(tag, MapLabelPlacement.nameBox(of: station, radius: radius)), "radius \(radius): \(tag)")
+        }
+    }
+
     func testABubbleWithRoomStaysOverItsStation() {
         let alone = [MapLabelPlacement.Station(x: 200, y: 200, name: "臺北")]
         let bubble = MapLabelPlacement.Bubble(x: 200, y: 200, text: "Crowded", hasReason: false)

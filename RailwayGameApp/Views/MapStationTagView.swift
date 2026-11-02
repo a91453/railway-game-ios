@@ -82,7 +82,7 @@ struct MapStationTagView: View {
         let stations = MapLabelPlacement.obstacles(MapAlertBubbles.stationsOnScreen(session: session, camera: camera, viewport: viewport),
                                                    radius: MapArt.stationRadius(camera), own: (point.x, point.y))
         let box = MapLabelPlacement.stationTag(at: point, width: Double(size.width), height: Double(size.height), clear: clear, avoiding: bubbles,
-                                               keepingOff: stations)
+                                               keepingOff: stations, stationRadius: MapArt.stationRadius(camera))
         return CGSize(width: box.minX, height: box.minY)
     }
 }
