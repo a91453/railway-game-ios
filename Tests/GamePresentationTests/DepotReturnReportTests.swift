@@ -115,6 +115,13 @@ final class DepotReturnReportTests: XCTestCase {
             let yesterday = zip(ran.runs, ran.runDays).filter { run, _ in run.days & (1 << StationDemand.weekday(ofDay: today - 1)) != 0 }
             runs += yesterday.count
             missed += yesterday.count { _, day in (day ?? -1) < today - 1 }
+            // Decision 552: each run not sent out, from where, to where
+            // and when it was due to leave.
+            for (run, day) in yesterday where (day ?? -1) < today - 1 {
+                let leaves = run.times.first.map { $0.departure % GameTime.secondsPerDay } ?? 0
+                let names = [run.from, run.to].map { ran.stops.indices.contains($0) ? world.station(id: ran.stops[$0])?.name ?? "?" : "?" }
+                FileHandle.standardError.write(Data(String(format: "DEPOT_RETURN \(name): not sent \(names[0]) to \(names[1]) at %02d:%02d\n", leaves / 3_600, leaves % 3_600 / 60).utf8))
+            }
         }
         let most = standing.sorted { $0.key.rawValue < $1.key.rawValue }
             .map { "\(world.station(id: $0.key)?.name ?? "?") \($0.value)" }.joined(separator: ", ")
