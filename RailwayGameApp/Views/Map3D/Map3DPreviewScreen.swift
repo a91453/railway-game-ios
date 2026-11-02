@@ -422,8 +422,8 @@ struct Map3DPreviewScreen: View {
 /// once, off the main thread: ahead, a while after a game opens (when 3D
 /// is on and the device keeps a scene built, decision 460) or when a pinch
 /// rests near the 3D map, or when the 3D map opens, which shows its scene
-/// before them. Always at a low priority (`.utility`; FLANE5's UI test at
-/// `.background`), never raised: they are made on every core at once
+/// before them. Always at a low priority (`.utility`, a UI test's warm-up
+/// too), never raised: they are made on every core at once
 /// (``Map3DModelPack``, ``Map3DTrainOcclusion``), and made at the 3D map's
 /// priority the Simulator's main thread stood still for 61 s (#1693). So
 /// whoever waits for them waits on a continuation, which raises nothing,
@@ -1791,7 +1791,7 @@ struct Map3DSnapshotSheet: View {
 /// answered no UI query for 50 to 90 s, past XCTest's 100 s (main
 /// 6ebf8c7's full lane, run 41354792858). Their marker,
 /// `debug.map3DModelsReady`, is on the 2D map, where a query answers at
-/// once. Made at background priority: their shade is baked on every core
+/// once. Made at the game's low priority (`.utility`): their shade is baked on every core
 /// at once (`Map3DTrainOcclusion.baked`), and made at the 3D map's
 /// priority before it the Simulator's main thread stood still for 61 s
 /// and a query failed (FLANE5's run 41371388190).
@@ -1806,8 +1806,12 @@ final class Map3DModelsWarmUp {
         guard !started else { return }
         started = true
         Task {
-            // Decision 546: the same making as the game's, at background priority.
-            await Map3DTrainModels.shared.make(priority: .background)
+            // Decision 546: the same making as the game's, at its priority.
+            // At `.background` a busy Simulator did not finish them in 240 s
+            // (main a48121b's full lane, run 41406244046, and its rerun
+            // 41416405737); `.utility` is still below the 3D map's priority,
+            // which stood the main thread still for 61 s (#1693).
+            await Map3DTrainModels.shared.make(priority: .utility)
             isReady = true
         }
     }
