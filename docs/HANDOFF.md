@@ -459,7 +459,7 @@
 - **還開著**：#1698 LOOP-3（決策 542；REV1698 的 P1 綠山線死結本機已修，綠了請 REV1698 session_01YGNNuq6NxikbXRuVRtvTeZ 複審）、#1704 LABELFIX（iOS 的 Simulator 啟動逾時重跑中）、MISSRUN（session_01YGNNunWH4Ac5y58XXAqvt1，決策 547）、#1700 Codex 桃園機場捷運（作者的）。
 - **號碼**：決策 545、546 已用，547 給 MISSRUN，下一個 548；存檔 81、golden schema 77 不動。
 - **沒派的**：
-  1. 打開遊戲選單時主執行緒停 27–70 秒（3D 關著也會），原因沒查（FLANE5，§7.5）。
+  1. 打開遊戲選單時主執行緒停 27–70 秒（3D 關著也會），原因沒查（FLANE5，§7.5）。**MENUSTALL 查完（2026-11-02，session_01JMHz9cVoZGH8UUVWdm1MRq，分支 `claude/inspiring-brown-u52h9z`）**：新的 Debug 啟動參數 `-ui-test-stall-stacks` 在主執行緒超過 1 秒沒畫格時抄它的呼叫堆疊進 UI test trace（`StallSampler`，RailwayGameApp.swift）。run 41409109160：選單打開後的 5.4 s 是 **XCTest 自己的查詢**在 App 主執行緒裡跑，22 次取樣有 21 次在把 XCTest 的 log 同步寫到 stderr（`_os_log_impl_mirror_to_stderr`），實機不會發生；另有 App 變成 active 時 `AVAudioSession.setCategory` 等音效服務 3.2 s（實機也在主執行緒，已移到 `GameAudio` 自己的 queue，`AudioSessionSourceTests` 鎖住）。放空測試以 `OS_ACTIVITY_DT_MODE=NO` 啟動後，選單打開後最長 1.8 s。**之後**：其他 UI 測試（故事世界停 6–11 s、開 3D 的查詢逾時）多半是同一件事，可在各測試的 `launchEnvironment` 加同一行再量；查別的停頓時加 `-ui-test-stall-stacks` 看 trace。啟動第一格 Simulator 的 Metal 編 pipeline（MTLSimDriver）約 2.6 s，是系統的，不是 App 的。
   2. 從 3D 鏡頭碰回 2D 後 Menu 按不按得到，只有實機能看（FLANE5，§7.5）；請作者下次在 TestFlight 試。
   3. 「關於／資料來源」頁加一行「© 2026 a91453 著作權所有」（作者問 3D 模型會不會被偷；結論：不加密，repo 公開時配方本來就看得到，靠 LICENSE.md 和 DMCA；模型裡藏識別記號留到下次改模型時）。
   4. 文湖線號誌關（簡單規則）第二天 455/532 班沒發，main 一樣，GameCore 號誌關的運量問題（決策 543 下一步）。
