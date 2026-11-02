@@ -453,6 +453,19 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 43 任進度（2026-11-02 約 06:20 UTC，session_01YGNNunC2SwRgFTbo4rham5，第 5 層）**：作者說快到每週上限，**不再開新 session**（2026-11-02：「不要再做新session了」）；下面沒派的留給之後，或作者用別的帳號照派工單做。
+
+- **已合**：#1693 FLANE5、#1697 CIWEIGHT、#1703 RINGBOARD（L4-2）、#1706 L4FIX（L4-1）、#1705 CRASHSWEEP、#1707 CIOPT-5（決策 545，`.build` 快取：GP tier 21.4→13.1 分）、#1696 WENHUBISECT（決策 543，**不出 105.2**：105.1 玩家碰不到安坑節點 6 的問題）、#1702 OPEN3D（決策 546）、#1708。
+- **還開著**：#1698 LOOP-3（決策 542；REV1698 的 P1 綠山線死結本機已修，綠了請 REV1698 session_01YGNNuq6NxikbXRuVRtvTeZ 複審）、#1704 LABELFIX（iOS 的 Simulator 啟動逾時重跑中）、MISSRUN（session_01YGNNunWH4Ac5y58XXAqvt1，決策 547）、#1700 Codex 桃園機場捷運（作者的）。
+- **號碼**：決策 545、546 已用，547 給 MISSRUN，下一個 548；存檔 81、golden schema 77 不動。
+- **沒派的**：
+  1. 打開遊戲選單時主執行緒停 27–70 秒（3D 關著也會），原因沒查（FLANE5，§7.5）。
+  2. 從 3D 鏡頭碰回 2D 後 Menu 按不按得到，只有實機能看（FLANE5，§7.5）；請作者下次在 TestFlight 試。
+  3. 「關於／資料來源」頁加一行「© 2026 a91453 著作權所有」（作者問 3D 模型會不會被偷；結論：不加密，repo 公開時配方本來就看得到，靠 LICENSE.md 和 DMCA；模型裡藏識別記號留到下次改模型時）。
+  4. 文湖線號誌關（簡單規則）第二天 455/532 班沒發，main 一樣，GameCore 號誌關的運量問題（決策 543 下一步）。
+  5. 決策 544「續的下一步」第 3 點：CI 警告線與看門狗。
+  6. CRASHSWEEP 只清了 `ViewThatFits` 裡的；其餘約 200 個 `ForEach` 有新當機紀錄再修。`-disable-dynamic-actor-isolation` 是備案（#1705 留言的評估），沒採用。
+
 **第 42 任交給第 43 任（2026-11-02 約 03:15 UTC，session_01YGNNum8LvQvgmgwxKHRvQ7，第 4 層，壓縮 2 次）**：第 43 任由第 42 任用 `create_session` 開，是第 5 層（opus 5.5）。
 
 - **105.1 已發**（run 105，`1722509`，作者先發），full ci 與 full lane 都綠，記在 PLAYER_FEEDBACK。之後合了：
