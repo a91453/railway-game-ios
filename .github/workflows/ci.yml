@@ -207,20 +207,58 @@ jobs:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
-    # About 8 minutes to build since decision 544 (GameCore and its tests
-    # with -O; about 5 before), up to 16 when it is built twice, and about
-    # a minute to pack and upload.
+    # About 8 minutes to build from nothing since decision 544 (GameCore and
+    # its tests with -O; about 5 before), up to 16 when it is built twice,
+    # less on a restored cache (decision 545; a failing build on it is
+    # built once more from nothing), and about a minute to pack and upload.
     timeout-minutes: 30
     container: swift:6.4-noble
     steps:
       - uses: actions/checkout@v5
 
+      # The cache key's first part: the toolchain, so a new Swift never
+      # builds on another's products.
       - name: Swift version
-        run: swift --version
+        id: swift
+        run: |
+          swift --version
+          echo "key=$(swift --version 2>&1 | sha256sum | cut -c1-16)" >>"$GITHUB_OUTPUT"
+
+      # Decision 545: a pull request or a push to main builds on the .build
+      # of the newest run of main with the same Swift and Package.swift, so
+      # only the changed files and what depends on them are compiled; a
+      # change to GameCore builds from nothing all the same (the stamp step:
+      # on a cache it took longer). The key only finds the nearest build;
+      # it does not decide what is compiled again: the source stamps do. A manual run and the
+      # nightly run build from nothing, so the full run a release needs
+      # (decision 413) never uses the cache. A failure to read it builds
+      # from nothing.
+      - name: Restore an earlier build (cache)
+        id: cache
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: .build
+          key: swift-build-v1-${{ steps.swift.outputs.key }}-${{ hashFiles('Package.swift') }}-${{ github.sha }}
+          restore-keys: |
+            swift-build-v1-${{ steps.swift.outputs.key }}-${{ hashFiles('Package.swift') }}-
+
+      # Each tracked file's modification time from the cached build's
+      # stamps: unchanged files keep the time that build recorded, changed
+      # and new ones get a later time, so the compiler driver compiles them
+      # again (swift-shards.sh stamp_sources). Without a cache every file
+      # gets one fixed time. The container's git runs as root on the
+      # runner's checkout, so it is told the checkout is safe.
+      - name: Stamp the sources
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          .github/scripts/swift-shards.sh stamp
 
       # swift build --build-tests -Xswiftc -warnings-as-errors, built once
       # more when swift-build itself is killed by a signal (decision 329); a
-      # compile error is not built again.
+      # compile error is not built again, except that a build on a restored
+      # cache that fails is built once more from nothing (decision 545).
       - name: Build (warnings as errors)
         run: .github/scripts/swift-shards.sh build
 
@@ -241,6 +279,19 @@ jobs:
           compression-level: 0
           retention-days: 1
           overwrite: true
+
+      # Decision 545: main's builds are the cache pull requests and later
+      # pushes build on (a pull request's cache could only be read by its
+      # own later runs). The key names the run, so a re-run and the nightly
+      # run of the same commit save their own. Only after a passing build;
+      # a failure to save does not fail the job.
+      - name: Save the build for later runs (cache)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .build
+          key: swift-build-v1-${{ steps.swift.outputs.key }}-${{ hashFiles('Package.swift') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   swift-current:
     name: Swift 6.4 (Linux) / ${{ matrix.shard }}

@@ -283,7 +283,10 @@ final class HolidayTests: XCTestCase {
     /// Taiwan's holidays are worked out for each year (decision 211), so a
     /// lookup costs a year's days off: a passenger plan asks once, not for
     /// every pair of stations, and takes about as long as with a country
-    /// whose holidays stay on the same days.
+    /// whose holidays stay on the same days. Each sample makes ten plans,
+    /// so it lasts tens of milliseconds even with GameCore optimized
+    /// (decision 545, L5-1): the 10 ms allowance is then a small part of
+    /// the comparison, not most of it.
     func testAPlanAsksForTodaysHolidayOnce() throws {
         func world(_ country: String) throws -> GameWorld {
             var world = GameWorld(
@@ -309,7 +312,9 @@ final class HolidayTests: XCTestCase {
             var best = Double.infinity
             for _ in 0..<3 {
                 let start = Date()
-                XCTAssertNotNil(world.makePassengerPlan())
+                for _ in 0..<10 {
+                    XCTAssertNotNil(world.makePassengerPlan())
+                }
                 best = min(best, Date().timeIntervalSince(start))
             }
             return best
