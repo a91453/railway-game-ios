@@ -94,8 +94,8 @@ public enum Map3DTrainOcclusion {
         DispatchQueue.concurrentPerform(iterations: order.count) { u in
             shared[u] = shades(of: models[order[u]])
         }
-        let shades = Array(results), slots = slot
-        return Map3DParallel.map(models.count) { slots[$0] < 0 ? models[$0] : applying(shades[slots[$0]], to: models[$0]) }
+        let worked = Array(results), slots = slot
+        return Map3DParallel.map(models.count) { slots[$0] < 0 ? models[$0] : applying(worked[slots[$0]], to: models[$0]) }
     }
 
     /// Model `model` with its shade baked in, or as it was when it is not
