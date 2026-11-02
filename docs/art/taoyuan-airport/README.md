@@ -24,7 +24,7 @@
 | 塗裝 | 殼面高度分區 | 普通藍腰帶＋紫上帶，直達紫帶；不使用照片貼圖、商標、品牌字 |
 | 反側／正交頂底 | 資料不足 | 支持區與假設另記；無透視像素推正式尺寸 |
 
-最初primitive基線為公開main 39aaec02；本次保護基準為最新main dd9ea3a616708fa44b4cb9e0469d6dc723775a7b。幾何方法僅沿用該commit的StationKitBuilder primitive與Model.flat轉軸；沒有匯入參考庫bin、GLB或第三方mesh。
+最初primitive基線為公開main 39aaec02；本次保護基準為最新main a48121b72145cbaf927c50bf77939d76ae89fc8b。幾何方法僅沿用該commit的StationKitBuilder primitive與Model.flat轉軸；沒有匯入參考庫bin、GLB或第三方mesh。
 
 ## 尺度、方向與編組
 
@@ -67,3 +67,6 @@ Swift6.4、warnings-as-errors；使用 tools/train-models 通用匯出、assembl
 近遠全角色、兩套完整編組的七向前後比較由真實native頂點生成，相同公尺尺度、相機、光線，單車與完整編組各有固定尺度。公開只保留一張總覽，私庫18角色sheet＋2編組sheet，合計21PNG；不新增重複輪次重檔。曲面分格曾產生細微邊界T接點，已由共享邊界座標與封閉輪廓修正；未改通用audit容差或gate。新增斜風擋測試會拒收真正前稿，實際幾何測試能拒收缺輪、浮輪、重複或移位空調、玻璃內移／外移、重殼及連結器封板。
 
 自含viewer採可選gzip容器，解壓後仍為原本離線WebGL inspector與原始native／GLB下載bytes；沒有放寬50MiB限制，遊戲loader不變。需要支援DecompressionStream的瀏覽器；本環境Chromium HTTP實載另記，其他瀏覽器／file://／iOS裝置不由此推定通過。素材包producer、全部輸入SHA、獨立重建及最新CI以驗證文件及兩draft PR為準。
+
+
+最終producer `42214527e0115fa612711bdea10c697e36959a05`：獨立checkout重建48模型／payload、21PNG與gzip viewer逐bytes一致，8模型註冊＋3角色Swift6.4 WAE測試及7工具測試通過。最新main a48121b7已合共用模型包平行化，與本輪分開判讀；其892個standard／studies實際payload及全部頂點欄位對本producer逐一相同（含未入鎖者），本輪standard常駐增量0。詳producer-verification、preservation、runtime-inventory及visual-review。

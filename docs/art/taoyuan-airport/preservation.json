@@ -6266,5 +6266,8 @@
     "taoyuan-airport-me4",
     "taoyuan-airport-me4-far"
   ],
-  "limits": "all runtime standard/studies vertex fields and native payload bytes; not device performance"
+  "limits": "all runtime standard/studies vertex fields and native payload bytes; not device performance",
+  "baseline": "a48121b72145cbaf927c50bf77939d76ae89fc8b",
+  "producer": "42214527e0115fa612711bdea10c697e36959a05",
+  "upstream_changes": "main merged shared model-pack parallel generation (decision546), async UI fixes and CI cache changes after producer. Fresh actual main output compared; all 892 native bytes and vertex fields remain identical. These are upstream changes, not this PR."
 }

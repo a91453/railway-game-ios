@@ -56,7 +56,8 @@
       "7b0ce7c726e0fde40da9e479f00ac9920a5f9496"
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-assets-private",
@@ -70,7 +71,11 @@
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
     "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
-    "changed_file_count": 58
+    "changed_file_count": 58,
+    "file_count": 58,
+    "file_list_sha256": "a89f58c8ef97651888d4e822af0f7fc47524eb09a219cefc4acaad8da1470e0a",
+    "private_payload_scope": "Native/GLB/assembly, preview and source records inspected privately; internal paths omitted from public audit.",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -95,7 +100,8 @@
     ],
     "producer_candidates": [],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -140,7 +146,8 @@
       "9c87ea5c94e23b5810ff4a48a9455bbc6fa03732"
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-assets-private",
@@ -154,7 +161,11 @@
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
     "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
-    "changed_file_count": 100
+    "changed_file_count": 100,
+    "file_count": 100,
+    "file_list_sha256": "8cea46eea1d0aa8e982a53c895b70d81b30c44a33152d502bea668e5560d60d8",
+    "private_payload_scope": "Native/GLB/assembly, preview and source records inspected privately; internal paths omitted from public audit.",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -191,7 +202,8 @@
     ],
     "producer_candidates": [],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-assets-private",
@@ -203,7 +215,11 @@
     "producer_candidates": [],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
     "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
-    "changed_file_count": 22
+    "changed_file_count": 22,
+    "file_count": 22,
+    "file_list_sha256": "1a595a9286824cd130e04de35827b6ba593d69a8dc60d247cfe86f9cbdb4825c",
+    "private_payload_scope": "Native/GLB/assembly, preview and source records inspected privately; internal paths omitted from public audit.",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -232,7 +248,8 @@
     ],
     "producer_candidates": [],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -274,7 +291,8 @@
       "0e2f38a244db7ea0301169cdb4b6d81f0c340a78"
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-assets-private",
@@ -288,7 +306,11 @@
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
     "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
-    "changed_file_count": 66
+    "changed_file_count": 66,
+    "file_count": 66,
+    "file_list_sha256": "d84b03311a78b27f4cfcd822ade079ee66a047c719fe6bb87063ae2c30e478a3",
+    "private_payload_scope": "Native/GLB/assembly, preview and source records inspected privately; internal paths omitted from public audit.",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -328,7 +350,8 @@
       "770db3956877e842b62c6197b4a993a584bc297f"
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -355,7 +378,8 @@
     ],
     "producer_candidates": [],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -376,7 +400,8 @@
     ],
     "producer_candidates": [],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -419,7 +444,8 @@
       "5298a4eeee56d4b545700e4463fb3dfe9022b383"
     ],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
   },
   {
     "repository": "a91453/railway-game-ios",
@@ -454,6 +480,32 @@
     ],
     "producer_candidates": [],
     "acceptance": "UNVERIFIED unless exact producer and explicit user statement are attached; do not infer from merge",
-    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately"
+    "payload_inspection": "latest main recipes and corresponding asset README; binary preservation checked separately",
+    "rechecked": "2026-11-02"
+  },
+  {
+    "repository": "a91453/railway-game-ios",
+    "pr": 1702,
+    "acceptance": "UNVERIFIED; source optimization is not appearance acceptance",
+    "payload_inspection": "Merged decision546 parallel generation; fresh main a48121b7 actual892 native payloads and every vertex field matched this producer. No geometry or operating mapping change by this task.",
+    "state": "MERGED",
+    "head": "beab248508800862a2e1e798e1f543db27a5bc59",
+    "branch": "claude/open3d-model-pack",
+    "base": "main",
+    "files": [
+      "RailwayGameApp/UITests/PromoMaterialTests.swift",
+      "RailwayGameApp/UITests/WebsiteScreenshotTests.swift",
+      "RailwayGameApp/Views/Map3D/Map3DPreviewScreen.swift",
+      "RailwayGameApp/Views/MapView.swift",
+      "Sources/GamePresentation/Map3DModels.swift",
+      "Sources/GamePresentation/Map3DParallel.swift",
+      "Sources/GamePresentation/Map3DTrainLights.swift",
+      "Sources/GamePresentation/Map3DTrainMaterial.swift",
+      "Sources/GamePresentation/Map3DTrainOcclusion.swift",
+      "Tests/GamePresentationTests/Map3DModelPackLockTests.swift",
+      "docs/HANDOFF.md",
+      "docs/decisions/546.md"
+    ],
+    "rechecked": "2026-11-02"
   }
 ]
