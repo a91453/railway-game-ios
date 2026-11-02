@@ -244,6 +244,16 @@ private struct EMU700Recipe {
             if !far {
                 for z:Float in [-0.66,0.66] {kit.beam(.init(noseX(2.4,z)+0.04,2.4,z),.init(noseX(2.59,z-0.30)+0.04,2.59,z-0.30),0.022,dark)}
             }
+            // Photo-fit lower apron (not a published clearance dimension).
+            // Side cheeks conceal the running frame; the central jaw bay is
+            // genuinely open between 0.72m and the shell floor at 1.12m.
+            for side:Float in [-1,1] {
+                func cheek(_ w:Float)->[Map3DPoint] {
+                    [.init(end-0.85,1.12,w),.init(noseX(1.12,w)-0.02,0.62,w),.init(noseX(1.12,w),1.12,w)]
+                }
+                prism(cheek(side*0.38),cheek(side*1.30),blue)
+            }
+            kit.box(end-0.27,0.62,0,0.20,0.76,0.10,blue)
             // Normal closed FRP cover, with the drawgear and open jaw below
             // its lower edge. The visible cavity is empty space, not a black
             // panel. The raised-cover maintenance state is not this study.
