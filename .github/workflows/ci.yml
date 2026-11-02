@@ -207,9 +207,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
-    # About 5 minutes to build, up to 10 when it is built twice, and about
+    # About 8 minutes to build since decision 544 (GameCore and its tests
+    # with -O; about 5 before), up to 16 when it is built twice, and about
     # a minute to pack and upload.
-    timeout-minutes: 20
+    timeout-minutes: 30
     container: swift:6.4-noble
     steps:
       - uses: actions/checkout@v5
@@ -250,7 +251,7 @@ jobs:
     # classes take up to 1.7 times as long on a slow one (campaigns-13: 11m18s
     # in one full-tier run, 19m18s in the next), which reaches the old 20
     # minutes. 30 still stops a test that is really stuck (decision 540). The
-    # build job keeps its 20.
+    # build job has 30 too since decision 544.
     timeout-minutes: 30
     container: swift:6.4-noble
     strategy:
