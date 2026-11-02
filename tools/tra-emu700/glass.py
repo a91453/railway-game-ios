@@ -93,9 +93,9 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
   coupler(t);bars=[]
   for g in components(t):
    lo=t[g].reshape(-1,3).min(axis=0);hi=t[g].reshape(-1,3).max(axis=0)
-   if np.max(np.abs((hi-lo)-np.array([.16,.48,.08])))<.001 and abs(lo[2]-1.0)<.001:bars.append(g)
+   if np.max(np.abs((hi-lo)-np.array([.16,.48,.32])))<.001 and abs(lo[2]-.76)<.001:bars.append(g)
   assert len(bars)==1,'coupler upper jaw identity'
-  broken=t.copy();g=bars[0];broken[g,:,2]=1.08+(broken[g,:,2]-1.08)*3
+  broken=t.copy();g=bars[0];local=broken[g].copy();local[:,:,2][np.isclose(local[:,:,2],1.0,atol=.0001)]=.85;broken[g]=local
   reject(lambda:coupler(broken))
 
  g=ac[0][0];broken=t.copy();broken[g,:,2]+=.10;reject(lambda:equipment(broken,role))

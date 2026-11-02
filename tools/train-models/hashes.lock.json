@@ -1,6 +1,38 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
+    "tra-emu700-emc" : {
+      "hash" : "dc3beea27751f49a",
+      "triangles" : 10142
+    },
+    "tra-emu700-emc-far" : {
+      "hash" : "df55ac070f9f06cf",
+      "triangles" : 4306
+    },
+    "tra-emu700-ep" : {
+      "hash" : "3d8ca1df6939a15e",
+      "triangles" : 4952
+    },
+    "tra-emu700-ep-far" : {
+      "hash" : "36b386f604949660",
+      "triangles" : 2464
+    },
+    "tra-emu700-et" : {
+      "hash" : "320db34b9564aba2",
+      "triangles" : 4836
+    },
+    "tra-emu700-et-far" : {
+      "hash" : "4eef30dbab6a513d",
+      "triangles" : 2388
+    },
+    "tra-emu700-em" : {
+      "hash" : "423442093fa13865",
+      "triangles" : 4848
+    },
+    "tra-emu700-em-far" : {
+      "hash" : "ebc243c2e54bc123",
+      "triangles" : 2384
+    },
     "tra-r200-r216-locomotive" : {
       "hash" : "e2c38748a7e6cbcd",
       "triangles" : 12702
