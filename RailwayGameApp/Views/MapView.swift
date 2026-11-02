@@ -1267,12 +1267,12 @@ struct MapView: View {
             // them; not with 3D off, nor on a device of little memory
             // (decision 460), nor under a UI test, whose Simulator they
             // would keep busy.
+            // Only in Debug: in Release a guard of a constant false is
+            // code that never runs, an error there (MENUSTALL, run
+            // 41421850011).
             #if DEBUG
-            let uiTesting = ProcessInfo.processInfo.arguments.contains("-ui-testing")
-            #else
-            let uiTesting = false
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing") { return }
             #endif
-            guard !uiTesting else { return }
             try? await Task.sleep(for: Map3DTrainModels.aheadAfter)
             guard !Task.isCancelled, map3DQuality.shows3D, FrameTimeRecorder.memoryTier.keepsSceneBuilt else { return }
             Map3DTrainModels.shared.start()
