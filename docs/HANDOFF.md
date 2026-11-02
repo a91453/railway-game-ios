@@ -453,6 +453,46 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 42 任交給第 43 任（2026-11-02 約 03:15 UTC，session_01YGNNum8LvQvgmgwxKHRvQ7，第 4 層，壓縮 2 次）**：第 43 任由第 42 任用 `create_session` 開，是第 5 層（opus 5.5）。
+
+- **105.1 已發**（run 105，`1722509`，作者先發），full ci 與 full lane 都綠，記在 PLAYER_FEEDBACK。之後合了：
+  - #1694 CIOPT-4：決策 544，Linux 上 GameCore 用 -O，完整 tier 從 24.2 分降到 17.7 分。
+  - #1695 CURVE2D：決策 538「續」。
+  - #1699 REVIEW-L5：審了 #1666–#1695，只改文件，沒有 P1／P2，有 7 個 P3。
+    - L5-1 交給 CIWEIGHT。
+    - L5-3、L5-4、L5-7 交給 LABELFIX。
+    - L5-2、L5-5、L5-6 只記錄。
+    - 下一輪審查從 #1696 看起。
+- **105.1 玩家回報**：iPad 第 9 代在 101.1 新增路線車站時閃退，和 CRASH101 同一型，已修在 #1656。請玩家更新到 105.1；同型清查交給 CRASHSWEEP。
+- **在做的 session**：接手後各送一則「改回報給第 43 任 <session>」。
+
+  | session | 工作 | PR | 合的條件 |
+  | --- | --- | --- | --- |
+  | WENHUBISECT session_01YGNNuoMs4r88NXSnHKf5Lu | 文湖線死結，決策 543。原因是 #1668 的 `following: true` 連坡道把手也縮放，修正只動 GamePresentation | #1696 | 51 小時量測（文湖、淡海綠山、安坑、三鶯，main 對修正）；一句話說 105.1 玩家會不會碰到安坑節點 6（決定要不要出 105.2）；文湖線重新開賣的五方。L4-1 已確認是不同原因 |
+  | FLANE5 session_01YGNNuoP3GPQUr2Re5tXEjv | full lane 三支 UI 測試修穩 | #1693 | only_testing 兩輪綠、轉 ready |
+  | LOOP-3 session_01YGNNupLv3dQQgQdCsuUghb | 接手 LOOP-2 的 #1698（決策 542，GameCore，分支 `claude/loop-2-live-overtake`） | #1698 | CI 綠；REV1698 的 P1 修完；查清高鐵「五站」組變差（丟班 36→39、最晚 212→359 分）和台鐵丟班變多（41→44） |
+  | REV1698 session_01YGNNuq6NxikbXRuVRtvTeZ | #1698 獨立審查 | — | 報告轉給 LOOP-3 |
+  | L4FIX session_01YGNNukwKePUQsGwMTzJ4nB | L4-1：號誌關時，停站列車越過渡線停到對向月台（#1601 退步，`RunSpacing.swift` `freePlatformPath`），GameCore | 未開 | 回歸測試修前紅、修後綠 |
+  | CIWEIGHT session_01YGNNuoKedEApQtVTHLoo6o | -O 之後重算分片權重（完整 tier 23→17 job），加上 L5-1 | #1697 | 完整 tier 綠 |
+  | OPEN3D session_01YGNNunVxxTjzneuBjw86MX | 3D 不等列車模型包就開（模型雜湊不變） | 未開 | 截圖、雜湊相同 |
+  | MISSRUN session_01YGNNunWH4Ac5y58XXAqvt1 | 可買的線少發的班次（安坑 4/182、淡海 6/152、高鐵 1/191） | 未開 | — |
+  | CRASHSWEEP session_01YGNNuqBiBoZ7aZwjVL5ybQ | 非同步算圖閃退的同型清查（`ViewThatFits` 裡的 `ForEach`） | 未開 | 第二級截圖 |
+  | LABELFIX session_01YGNNuocthhKPw48aa8rW6z（sonnet） | L5-3、L5-4、L5-7（站名避讓框） | 未開 | 依 PR 的截圖級別 |
+  | RINGBOARD session_01YGNNuowX8LSdfrRsdCSvDD | L4-2：`DepartureBoard.runRows`、`TrainDiagram.runTrips` 改用 `line.calls(of: run)`，環狀線跨接縫不閃退；KLRT 之前要合 | 未開 | Linux 回歸測試修前紅 |
+
+- **不是我們派的**：#1700（桃園機場捷運 studies，codex 分支，draft）由作者的另一個工具在做，不改營運。作者轉 ready、CI 綠後照一般規則看。截圖屬第三級（新模型），要規劃看過總覽圖。
+- **GameCore 名額**：#1698、L4FIX、#1697（完整 tier）同時最多 2 個在跑 CI。
+- **之後要派的**：
+  - ZSWITCH：#1698 合了再派。
+  - KLRT：等作者下載 data.kcg.gov.tw，而且 RINGBOARD 要先合。
+  - BUILD3D 3b／4、STALL97：等作者。
+  - 車擋前的車比軌道長：決策 538「下一步（續）」。
+  - 固定三件事（§1.1）的下一輪：審查從 #1696 開始；CI 看 #1697 之後 build 成了瓶頸，決策 544「續」寫了方案 A，`.build` 快取；除錯看 MISSRUN 的結果。
+- **106 的說明**：玩家看得到的 PR 合了，就補 WhatsNew 最前面那則與 `.github/testflight-whats-new.md`。目前有 #1695 2D 彎道車廂。
+- **號碼**：決策 542（#1698）、543（#1696）已留，544 已用，下一個 545。存檔下一個 81，golden schema 下一個 77。取號前先查 #1579。
+- **排程**：第 42 任的巡查已刪；第 43 任自己排。
+- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 留給作者刪。
+
 **第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
 
 - **105.1 還不能發**。內容都合了，說明也寫好了（WhatsNew `2026-11-02-105-1`、`.github/testflight-whats-new.md` 0.5.0 (105.1)，#1686、#1691）。卡在**文湖線早上死結**：
