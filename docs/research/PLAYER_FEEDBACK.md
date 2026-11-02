@@ -163,6 +163,18 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (107.1)，2026-11-02
+
+從 `main` `68a4cfc`（#1713 的合併）建置。TestFlight `testflight.yml` run 41432853094（run 107），作者 10:57 UTC 自己按，檢查還沒跑完就先發（作者先發、遊戲規劃後報，HANDOFF §1.2）；11:30 UTC 還在跑，結果由下一任補記。**106 跳過**：run 41426172323（`a48121b`）在 Release archive 編譯失敗（`MapView.swift` 一個只在 Release 成立的「will never be executed」；PR 的 CI 不編 Release），修在 #1713。
+
+**這個 commit 的檢查**：
+- 完整 `ci.yml` run 41432630652（workflow_dispatch，68a4cfc）：綠。
+- `release-archive.yml` run 41432640570（68a4cfc）：綠。
+- full lane run 41432636112（68a4cfc）：11:30 UTC 還在跑，下一任補記。#1713 動到的那支（`testTheButtonsThreeDMapStaysThreeDWhenPinchedCloser`）已在 only_testing run 41426564615 綠。
+- 前一個 commit `a48121b`：完整 `ci.yml` run 41406240845 綠；full lane run 41406244046 紅 3 支，重跑 41416405737 只剩 1 支（上面那支，模型暖機在 `.background` 240 秒做不完），其餘兩支（縮小、Apple Pencil 改名）是時好時壞。
+
+**這版請測試者看**：打開 3D 地圖不再等列車模型（決策 546）；捏近或開遊戲 8 秒後列車換成正式模型。
+
 ### 0.5.0 (105.1)，2026-11-02
 
 從 `main` `1722509`（#1689 的合併）建置。TestFlight `testflight.yml` run 41376752661（run 105），作者 02:15 UTC 自己按，02:51 成功（作者先發、遊戲規劃後報，HANDOFF §1.2）。內容與說明見 #1686、#1691（WhatsNew `2026-11-02-105-1`、`.github/testflight-whats-new.md` 0.5.0 (105.1)）。

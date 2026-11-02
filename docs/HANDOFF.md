@@ -453,18 +453,39 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
-**第 43 任進度（2026-11-02 約 06:20 UTC，session_01YGNNunC2SwRgFTbo4rham5，第 5 層）**：作者說快到每週上限，**不再開新 session**（2026-11-02：「不要再做新session了」）；下面沒派的留給之後，或作者用別的帳號照派工單做。
+**第 43 任交接（2026-11-02 約 11:30 UTC，session_01YGNNunC2SwRgFTbo4rham5，第 5 層，壓縮 2 次）**：作者說快到每週上限，**不再開新 session**（2026-11-02：「不要再做新session了」）。作者用另一個帳號（pro）照遊戲規劃寫的派工卡做；pro 不合併，合併由遊戲規劃做。下一任遊戲規劃由作者在 claude.ai 開（第 43 任不開 session）。
 
-- **已合**：#1693 FLANE5、#1697 CIWEIGHT、#1703 RINGBOARD（L4-2）、#1706 L4FIX（L4-1）、#1705 CRASHSWEEP、#1707 CIOPT-5（決策 545，`.build` 快取：GP tier 21.4→13.1 分）、#1696 WENHUBISECT（決策 543，**不出 105.2**：105.1 玩家碰不到安坑節點 6 的問題）、#1702 OPEN3D（決策 546）、#1708。
-- **還開著**：#1698 LOOP-3（決策 542；REV1698 的 P1 綠山線死結本機已修，綠了請 REV1698 session_01YGNNuq6NxikbXRuVRtvTeZ 複審）、#1704 LABELFIX（iOS 的 Simulator 啟動逾時重跑中）、MISSRUN（session_01YGNNunWH4Ac5y58XXAqvt1，決策 547）、#1700 Codex 桃園機場捷運（作者的）。
-- **號碼**：決策 545、546 已用，547 給 MISSRUN，下一個 548；存檔 81、golden schema 77 不動。
-- **沒派的**：
-  1. 打開遊戲選單時主執行緒停 27–70 秒（3D 關著也會），原因沒查（FLANE5，§7.5）。
-  2. 從 3D 鏡頭碰回 2D 後 Menu 按不按得到，只有實機能看（FLANE5，§7.5）；請作者下次在 TestFlight 試。
-  3. 「關於／資料來源」頁加一行「© 2026 a91453 著作權所有」（作者問 3D 模型會不會被偷；結論：不加密，repo 公開時配方本來就看得到，靠 LICENSE.md 和 DMCA；模型裡藏識別記號留到下次改模型時）。
-  4. 文湖線號誌關（簡單規則）第二天 455/532 班沒發，main 一樣，GameCore 號誌關的運量問題（決策 543 下一步）。
-  5. 決策 544「續的下一步」第 3 點：CI 警告線與看門狗。
-  6. CRASHSWEEP 只清了 `ViewThatFits` 裡的；其餘約 200 個 `ForEach` 有新當機紀錄再修。`-disable-dynamic-actor-isolation` 是備案（#1705 留言的評估），沒採用。
+- **發版**：
+  - **106 失敗**（run 41426172323，`a48121b`）：Release archive 編譯錯，`MapView.swift` 裡 `#else let uiTesting = false` 後的 `guard !uiTesting` 在 Release 是「will never be executed」，App 設 warnings-as-errors。PR 的 CI 不跑 `release-archive.yml`（只在改專案設定、入口、資產時跑），所以 #1702 的 Release-only 錯沒被擋。**修在 #1713**（決策 546 續）。
+  - **107.1**：作者自己按（run 41432853094，`68a4cfc`，#1713 的合併），11:30 UTC 還在跑；106 跳過。結果與這個 commit 的檢查記在 `docs/research/PLAYER_FEEDBACK.md` 0.5.0 (107.1)。**作者要回答 App Store Connect 的出口合規，測試員才拿得到。**
+  - **下一批是 108.1**。
+- **已合**（第 43 任全部）：#1693 FLANE5、#1697 CIWEIGHT、#1703 RINGBOARD（L4-2）、#1706 L4FIX（L4-1）、#1705 CRASHSWEEP、#1707 CIOPT-5（決策 545，`.build` 快取）、#1696 WENHUBISECT（決策 543，不出 105.2）、#1702 OPEN3D（決策 546）、#1708、#1709（交接）、#1713（決策 546 續：UI 測試的模型暖機改 `.utility`，`a48121b` full lane 41406244046 在 240 秒內等不到 `debug.map3DModelsReady`；加上 Release 修正）。
+- **還開著，合併順序**（每批等 main 的 `ci.yml` 綠）：
+  1. **108.1 第一批**：#1698 LOOP-3（決策 542，可合）、#1704 LABELFIX、#1710 MISSRUN（決策 547）。三個都綠過；合前看 head 沒變。
+  2. #1712 MENUSTALL（pro 做的，審過可以進 108.1）：AVAudioSession 的設定移到自己的佇列，加 Debug 才有的 StallSampler；查出的「選單停 27–70 秒」是 XCTest 自己造成的，不是玩家會碰到的。和 #1713 改了同一段 `MapView.swift`，**合 main 解衝突時留 main 的版本**。實機要看：切回前景後有沒有聲音、和別的 App 的音樂能不能一起放。
+  3. #1714 CIWARN（pro 做的，決策 544 續二：分片警告線與看門狗）：剛開，還沒審。
+  4. #1711 高雄 85 大樓（決策 548，draft）：新的 3D 模型是第三級，**遊戲規劃要先看截圖**才合。
+  5. #1700 Codex 桃園機捷 1000／2000（作者的，draft）。
+- **號碼**：決策 545、546 已用；547 MISSRUN（#1710）；548 #1711；**下一個 549**（MENUSTALL 若要決策就用 549，WENHUCAP 用再下一個）。存檔 81、golden schema 77 不動。
+- **pro 的派工卡與順序**（一次一張，做完再給下一張；模型照卡）：
+  1. MENUSTALL：做完（#1712）。
+  2. CIWARN：做完（#1714），待審。
+  3. COPYLINE（Sonnet high）：等 107.1 發完。
+  4. WENHUCAP（Opus）：等 #1698、#1710 合併後再做（文湖線號誌關時第二天 455/532 班沒發，決策 543 下一步）。
+  5. CRASHSWEEP-2（Opus）：其餘約 200 個 `ForEach` 有新當機紀錄再修；`-disable-dynamic-actor-isolation` 是備案，沒採用。
+- **沒派的（建議順序）**：
+  1. **PR 的 CI 也編 Release**（建議下一個做）：至少讓改到 `RailwayGameApp/` 的 PR 編一次 Release 設定，106 這種錯才擋得住。注意 macOS runner 只有 5 台。
+  2. #1702 的後續：`useModels` 那 192 MB 的 `makeBuffer` 移出主執行緒；TrainShowcase 第二份模型；實機量時間。
+  3. REV1698 的 P3-1：#1698 合併後，`followsRealTimetable(l.train) || followsRealTimetable(x.train)` 那一處。
+  4. 其他 UI 測試也設 `OS_ACTIVITY_DT_MODE=NO`（MENUSTALL 發現 XCTest 的 log 會拖住主執行緒）。
+  5. 海風號、山嵐號接上專用模型：`Map3DModels.swift` 的 `styleByType` 把 `HAIFENG`、`SHANLAN` 畫成 commuter 樣式加塗裝；模型包裡已經做好的 `Map3DTourismEMU500`（EMU573／EMU583）沒接進 `Map3DTrainSet`。Opus、照 rolling-stock skill、第三級截圖。其他沒用到的研究車（EMU800／EMU900／E1000／PP）之後再說。
+  6. 「關於／資料來源」頁加「© 2026 a91453 著作權所有」。
+- **等作者的**：
+  - 實機：3D 回 2D 後 Menu 按不按得到；108.1 的聲音（#1712）。
+  - E1：App Store 上架前，演示模式要改成編譯旗標（現在靠 `TestBuild.isTest` 擋，§5）；要動 `testflight.yml` 的參數，需作者同意。
+  - KLRT、BUILD3D、STALL97 等作者。
+  - 新運具若要開始做，纜車最簡單（固定兩點、不用排班與號誌），再來是渡輪，飛機最後（`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md` §6）。
+- **玩家問答**（2026-11-02）：「雙線雙向，列車都只在同一軌來回」：回覆「路線 → 進階」每一段可選進路；中間站兩條軌都要有月台；新遊戲靠左行車；還是一樣就「回報問題」附存檔。
 
 **第 42 任交給第 43 任（2026-11-02 約 03:15 UTC，session_01YGNNum8LvQvgmgwxKHRvQ7，第 4 層，壓縮 2 次）**：第 43 任由第 42 任用 `create_session` 開，是第 5 層（opus 5.5）。
 
