@@ -6,7 +6,8 @@ import XCTest
 /// Decision 535 (PR W): how the lines with runs and depots fare, run only
 /// when asked (`DEPOT_RETURN_REPORT=1`, some minutes in a release build;
 /// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, danhai, ankeng, sanying,
-/// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off). Each is played from where it opens or is bought
+/// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off,
+/// and `DEPOT_RETURN_CONTROLLED=1` as well to keep it on). Each is played from where it opens or is bought
 /// for 51 hours, minute by minute, and says how many of its second day's
 /// runs were not sent out, how many empty runs went into a depot and came
 /// out of one, about how far the empty runs drove, the most trains in a
@@ -80,7 +81,10 @@ final class DepotReturnReportTests: XCTestCase {
         var world = opened
         // The demos open under traffic control; with DEPOT_RETURN_SIMPLE
         // they play without, as the bought lines then do.
-        if ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil { try world.setTrafficControl(false) }
+        // Decision 549: `DEPOT_RETURN_CONTROLLED=1` keeps it on under
+        // simple rules too, as a new game has it.
+        let environment = ProcessInfo.processInfo.environment
+        if environment["DEPOT_RETURN_SIMPLE"] != nil, environment["DEPOT_RETURN_CONTROLLED"] == nil { try world.setTrafficControl(false) }
         let started = Date()
         var into: Set<String> = [], outOf: Set<String> = []
         // The empty runs' length: what each had still to go, along the
