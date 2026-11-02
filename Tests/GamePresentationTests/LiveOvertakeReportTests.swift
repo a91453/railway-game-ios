@@ -3,8 +3,8 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 542's measurement: a day of the TRA demo and of a single-track
-/// line with a passing loop, under traffic control, printed, and only on
+/// Decision 542's measurement: a day of the TRA demo and of the Pingxi
+/// challenge's single-track line with passing loops, under traffic control, printed, and only on
 /// request (the high-speed demo's day is `TrafficControlTimingReportTests`
 /// with `TRAFFIC_TIMING_ON=1`):
 ///
@@ -86,73 +86,25 @@ final class LiveOvertakeReportTests: XCTestCase {
         try measure("TRA demo, traffic control on", &world, minutes: 24 * 60)
     }
 
-    /// A single track about 8 km long, W – A – M – B – E, M with a loop
-    /// beside the main track, W and E each with a bay beside their main
-    /// platform: a stopping train (all five) and an express (W, E) out of
-    /// W every hour from 06:00 to 21:00, the express 3 minutes behind, and
-    /// each back from E half an hour later. The stopping train's timetable
-    /// allows it less time than it needs, so it runs late and the express
-    /// catches it up.
-    func testASingleTrackWithAPassingLoop() throws {
+    /// The Pingxi challenge (decision 90): the Pingxi Line, single track
+    /// with passing loops, beside the Yilan and Shen'ao Lines, a day from
+    /// the start with traffic control on as it can be.
+    func testThePingxiChallenge() throws {
         try skipUnlessAsked()
-        let scale: Int64 = 16
-        var world = try GameWorld(
-            bounds: WorldBounds(width: 36_864 * scale, height: 10_240 * scale),
-            economy: GameEconomy(balance: 100_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)),
-            clock: GameClock(speed: .normal)
-        )
-        // Nodes: 1 W main end, 2 W bay end, 3 W turnout, 4 loop start, 5
-        // loop end, 6 E turnout, 7 E main end, 8 E bay end, 9 and 10 the
-        // loop's ends.
-        for (x, y): (Int64, Int64) in [(1_024, 4_096), (1_024, 2_048), (7_168, 4_096), (11_264, 4_096), (25_600, 4_096), (29_696, 4_096),
-                                       (35_840, 4_096), (35_840, 2_048), (15_360, 6_144), (21_504, 6_144)] {
-            try world.buildTrackNode(at: WorldCoordinate(x: x * scale, y: y * scale))
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        func file(_ name: String) throws -> Data {
+            try Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealRailways/\(name)"))
         }
-        func point(_ x: Int64, _ y: Int64) -> PlanPoint { PlanPoint(x: x * scale, y: y * scale) }
-        try world.buildTrackEdge(from: .node(1), to: .node(3)) // e1 W main
-        try world.buildTrackEdge(from: .node(2), to: .node(3), curve: .cubic(point(4_096, 2_048), point(4_096, 4_096))) // e2 W bay
-        try world.buildTrackEdge(from: .node(3), to: .node(4)) // e3
-        try world.buildTrackEdge(from: .node(4), to: .node(5)) // e4 M main
-        try world.buildTrackEdge(from: .node(4), to: .node(9), curve: .cubic(point(13_312, 4_096), point(13_312, 6_144))) // e5
-        try world.buildTrackEdge(from: .node(9), to: .node(10)) // e6 M loop
-        try world.buildTrackEdge(from: .node(10), to: .node(5), curve: .cubic(point(23_552, 6_144), point(23_552, 4_096))) // e7
-        try world.buildTrackEdge(from: .node(5), to: .node(6)) // e8
-        try world.buildTrackEdge(from: .node(6), to: .node(7)) // e9 E main
-        try world.buildTrackEdge(from: .node(6), to: .node(8), curve: .cubic(point(32_768, 4_096), point(32_768, 2_048))) // e10 E bay
-        var ids: [StationID] = []
-        for (name, x) in [("W", Int64(4_096)), ("A", 9_216), ("M", 18_432), ("B", 27_648), ("E", 32_768)] {
-            ids.append(try world.buildStation(named: name, at: PlanPoint(x: x * scale, y: 8_192 * scale)).id)
-        }
-        func length(_ edge: Int) throws -> Int64 { try XCTUnwrap(world.trackEdge(.edge(edge))?.length) }
-        for (station, edge) in [(0, 1), (0, 2), (1, 3), (2, 4), (2, 6), (3, 8), (4, 9), (4, 10)] {
-            let l = try length(edge)
-            try world.addTrackPlatform(ids[station], on: .edge(edge), from: l / 2 - 1_024 * scale, to: l / 2 + 1_024 * scale)
-        }
-        func at(_ seconds: Int64, _ dwell: Int64 = 0) -> LineRunTime { LineRunTime(arrival: seconds, departure: seconds + dwell) }
-        let local = try world.createLine(named: "Local", stops: ids).id
-        let express = try world.createLine(named: "Express", stops: [ids[0], ids[4]]).id
-        var localRuns: [LineRun] = [], expressRuns: [LineRun] = []
-        for hour in Int64(6)...21 {
-            let t = hour * 3_600
-            localRuns.append(LineRun(from: 0, to: 4, times: [at(t), at(t + 90, 30), at(t + 210, 30), at(t + 330, 30), at(t + 450)]))
-            localRuns.append(LineRun(from: 4, to: 0, times: [at(t + 1_800), at(t + 1_890, 30), at(t + 2_010, 30), at(t + 2_130, 30), at(t + 2_250)]))
-            expressRuns.append(LineRun(from: 0, to: 1, times: [at(t + 180), at(t + 600)]))
-            expressRuns.append(LineRun(from: 1, to: 0, times: [at(t + 1_980), at(t + 2_400)]))
-        }
-        try world.setLineRuns(local, to: localRuns)
-        try world.setLineRuns(express, to: expressRuns)
-        for (line, edge) in [(local, 1), (express, 2)] {
-            let id = try world.purchaseTrain(named: line == local ? "Local" : "Express").id
-            let offset = try length(edge) / 2 + 1_024 * scale
-            try world.setTrainCars(id, to: 2)
-            try world.placeTrain(id, at: .onEdge(TrackTraversal(edge: .edge(edge), direction: .forward), offset: offset))
-            try world.setTrainContinuation(id, along: [], stoppingAt: offset)
-            try world.setTrainMovementRate(id, to: 1_024)
-            try world.assignTrain(id, to: line)
-        }
-        world.setKeepLeft(true)
-        try world.setTrafficControl(true)
+        let railways = try RealRailways(lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"))
+        var world = PingxiChallenge.make(in: .english, railways: railways)
         world.setSpeed(.normal)
-        try measure("single track with a passing loop", &world, minutes: 24 * 60)
+        var minutes = 0
+        while (try? world.setTrafficControl(true)) == nil {
+            try world.advance(ticks: 1)
+            minutes += 1
+            guard minutes < 24 * 60 else { return XCTFail("traffic control never turned on") }
+        }
+        say("Pingxi: \(world.trains.count) trains, \(world.lines.map { "\($0.name) \($0.hasRuns ? "runs" : "headway")" }), traffic control on after \(minutes) min")
+        try measure("Pingxi challenge, traffic control on", &world, minutes: 24 * 60)
     }
 }
