@@ -803,6 +803,67 @@ WHY='already exists' expect fail "unpack: not over an existing .build" in_dir "$
 WHY='No build to unpack' expect fail "unpack: a missing download" in_dir "$work/unpacked" "$script" unpack "$work/nothing.tar.gz"
 WHY='No .build to pack' expect fail "pack: nothing built" in_dir "$work/unpacked/.build" "$script" pack "$work/none.tar.gz"
 
+# Decision 545: the source stamps. In a git repository of its own, never
+# the checkout the self-test runs in (stamp rewrites file times).
+repo="$work/stamps"
+mkdir -p "$repo"
+git -C "$repo" init -q
+printf 'a\n' >"$repo/a.swift"
+printf 'b\n' >"$repo/b.swift"
+printf 'c d\n' >"$repo/with space.swift"
+ln -s a.swift "$repo/link.swift"
+printf '.build/\n' >"$repo/.gitignore"
+git -C "$repo" add -A
+mtime() { stat -c %Y "$repo/$1"; }
+# stamped <description> <file=time>...: every file has that time.
+stamped() {
+  local what="$1" pair bad=""
+  shift
+  for pair in "$@"; do
+    [[ "$(mtime "${pair%=*}")" == "${pair#*=}" ]] || bad+=" ${pair%=*} is $(mtime "${pair%=*}"), not ${pair#*=};"
+  done
+  if [[ -z "$bad" ]]; then
+    echo "ok   pass  $what"
+  else
+    echo "FAIL $what:$bad"
+    failures=$((failures + 1))
+  fi
+}
+epoch=946684800
+expect pass "stamp: no stamps stamps every file with one time" in_dir "$repo" "$script" stamp
+stamped "stamp: a build from nothing" a.swift=$epoch b.swift=$epoch "with space.swift=$epoch"
+expect pass "stamp: the same sources again" in_dir "$repo" "$script" stamp
+stamped "stamp: unchanged files keep their time" a.swift=$epoch b.swift=$epoch "with space.swift=$epoch"
+printf 'b2\n' >"$repo/b.swift"
+printf 'new\n' >"$repo/new.swift"
+git -C "$repo" add -A
+touch "$repo/a.swift" # a checkout's time; the contents decide
+expect pass "stamp: a changed and a new file" in_dir "$repo" "$script" stamp
+stamped "stamp: changed and new files get a later time, unchanged ones keep theirs" a.swift=$epoch b.swift=$((epoch + 1)) new.swift=$((epoch + 1)) "with space.swift=$epoch"
+printf 'a2\n' >"$repo/a.swift"
+git -C "$repo" add -A
+touch "$repo/b.swift"
+expect pass "stamp: another change" in_dir "$repo" "$script" stamp
+stamped "stamp: the next change is later than every recorded time" a.swift=$((epoch + 2)) b.swift=$((epoch + 1)) new.swift=$((epoch + 1))
+if [[ -L "$repo/link.swift" && "$(mtime a.swift)" == $((epoch + 2)) ]]; then
+  echo "ok   pass  stamp: a link is left alone"
+else
+  echo "FAIL stamp: the link changed"
+  failures=$((failures + 1))
+fi
+
+# A failing build on a restored cache is built once more from nothing
+# (fresh stamps); a real compile error still fails, and so does a build
+# with no cache.
+rm -f "$work/count"
+CI_BUILD_CACHE=restored FAKE_BUILD="1 0" expect pass "build: a failing build on the cache builds again from nothing" in_dir "$repo" "$script" build
+calls 2
+stamped "build: built again from nothing with fresh stamps" a.swift=$epoch b.swift=$epoch
+CI_BUILD_CACHE=restored FAKE_BUILD="1 1" WHY='swift build failed \(exit code 1\)' expect fail "build: a compile error on the cache fails from nothing too" in_dir "$repo" "$script" build
+calls 2
+CI_BUILD_CACHE=none FAKE_BUILD="1 0" WHY='swift build failed \(exit code 1\)' expect fail "build: without a cache a compile error is not built again" in_dir "$repo" "$script" build
+calls 1
+
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."
   exit 1

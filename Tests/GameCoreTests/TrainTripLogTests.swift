@@ -214,6 +214,10 @@ final class TrainTripLogTests: XCTestCase {
     /// Riders credited to a train's running trip find it without walking
     /// the log: on a log of 20,000 trips of other trains, crediting takes
     /// about as long as on a short one (the log is ordered by train).
+    /// Decision 545 (L5-1): the first credit copies the log (copy on
+    /// write), once, so it is made before the clock starts; and enough
+    /// credits are timed to last tens of milliseconds with GameCore
+    /// optimized, so the 10 ms allowance does not decide the comparison.
     func testCreditingATripDoesNotWalkTheLog() throws {
         var world = try build()
         let one = TrainID(rawValue: 1)
@@ -233,8 +237,9 @@ final class TrainTripLogTests: XCTestCase {
         }
         func seconds(_ world: GameWorld) -> Double {
             var world = world
+            world.creditTrip(of: one, fare: Money(100), boarded: 1)
             let start = Date()
-            for _ in 0..<2_000 {
+            for _ in 0..<400_000 {
                 world.creditTrip(of: one, fare: Money(100), boarded: 1)
             }
             return Date().timeIntervalSince(start)

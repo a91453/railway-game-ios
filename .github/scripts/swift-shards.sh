@@ -5,6 +5,14 @@
 #   swift-shards.sh build            `swift build --build-tests -Xswiftc
 #                                    -warnings-as-errors`, once more when
 #                                    swift-build itself crashes (build_package)
+#                                    (CI_BUILD_CACHE=restored: a build from
+#                                    the cache that fails is built again
+#                                    from nothing, decision 545)
+#   swift-shards.sh stamp            set every tracked file's modification
+#                                    time from .build's source stamps, so a
+#                                    build restored from the cache recompiles
+#                                    exactly the changed files (decision 545;
+#                                    CI only: it rewrites the checkout's times)
 #   swift-shards.sh pack <file>      pack .build into <file> (tar, gzip -1)
 #   swift-shards.sh unpack <file>    unpack it where it was built (decision
 #                                    411, shared build)
@@ -955,6 +963,84 @@ build_package() {
   done
 }
 
+# Decision 545: ci.yml's swift-build job restores .build from the cache
+# (actions/cache) and builds on it. SwiftPM's compiler driver skips a source
+# file whose modification time equals the one its build record holds, and a
+# checkout sets every file's time to now, so the job first sets each tracked
+# file's time from SOURCE_STAMPS, the list the cached build was built from
+# (time, blob, path for every file): a file with the same blob (git's hash of
+# its contents) gets the time the record holds and is not compiled again; a
+# changed or new file gets a time later than every time in the list, so it
+# cannot equal any time a record holds and is compiled again, along with
+# whatever depends on it (the driver's own dependency tracking). Without a
+# list (no cache, or a build from nothing) every file gets STAMP_EPOCH.
+# The new list is written into .build, so the cache saved after the build
+# carries the times its build record holds. Content decides, not the time a
+# commit was made, so no git history is needed.
+SOURCE_STAMPS="${SOURCE_STAMPS:-.build/ci-source-stamps}"
+STAMP_EPOCH=946684800 # 2000-01-01T00:00:00Z
+stamp_sources() {
+  local old="" new
+  [[ -s "$SOURCE_STAMPS" ]] && old="$SOURCE_STAMPS"
+  mkdir -p "$(dirname "$SOURCE_STAMPS")"
+  new="$SOURCE_STAMPS.new"
+  # Records end in NUL, so any path is safe. Links (120000) and
+  # submodules (160000) are left alone: utime would follow the link.
+  git ls-files -s -z | perl -0 -e '
+    my ($old, $new, $epoch) = @ARGV;
+    my (%time, %blob);
+    my $latest = $epoch;
+    if ($old ne "") {
+      open(my $in, "<", $old) or die "cannot read $old: $!";
+      local $/ = "\0";
+      while (my $r = <$in>) {
+        chomp $r;
+        my ($t, $b, $p) = split(/ /, $r, 3);
+        $time{$p} = $t; $blob{$p} = $b;
+        $latest = $t if $t > $latest;
+      }
+    }
+    my $later = $latest + 1;
+    open(my $out, ">", $new) or die "cannot write $new: $!";
+    my ($same, $changed) = (0, 0);
+    local $/ = "\0";
+    while (my $r = <STDIN>) {
+      chomp $r;
+      my ($meta, $p) = split(/\t/, $r, 2);
+      my ($mode, $b) = split(/ /, $meta);
+      next if $mode eq "120000" || $mode eq "160000";
+      my $t;
+      if ($old eq "") { $t = $epoch; }
+      elsif (exists $blob{$p} && $blob{$p} eq $b) { $t = $time{$p}; $same++; }
+      else { $t = $later; $changed++; }
+      utime($t, $t, $p) or die "cannot set the time of $p: $!";
+      print $out "$t $b $p\0";
+    }
+    close($out) or die "cannot write $new: $!";
+    if ($old eq "") { print "No source stamps: every file stamped $epoch (a build from nothing).\n"; }
+    else { print "Source stamps: $same files unchanged since the cached build, $changed changed or new (stamped $later).\n"; }
+  ' "$old" "$new" "$STAMP_EPOCH"
+  mv "$new" "$SOURCE_STAMPS"
+}
+
+# Decision 545: with CI_BUILD_CACHE=restored, a build on the restored
+# .build that fails (a compile error, or a crash built twice) is built once
+# more from nothing, so a stale cache can never be the reason a change turns
+# red; a real compile error fails again and is reported as before.
+build_with_cache() {
+  if [[ "${CI_BUILD_CACHE:-}" != restored ]]; then
+    build_package
+    return
+  fi
+  if (build_package); then
+    return 0
+  fi
+  echo "::warning::The build on the cached .build failed; building once more from nothing, to rule the cache out (decision 545)."
+  rm -rf .build
+  stamp_sources
+  build_package
+}
+
 # Decision 411, shared build: ci.yml's swift-build job builds once and packs
 # .build; each shard job unpacks it in the same container and workspace path
 # and runs swift test --skip-build, which reads the built products and does
@@ -1871,7 +1957,10 @@ superseded() {
 
 case "${1:-}" in
   build)
-    build_package
+    build_with_cache
+    ;;
+  stamp)
+    stamp_sources
     ;;
   pack)
     [[ $# -eq 2 ]] || die "usage: $0 pack <file>"
@@ -1930,6 +2019,6 @@ case "${1:-}" in
     superseded
     ;;
   *)
-    die "usage: $0 build | pack <file> | unpack <file> | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | head-full-run | gate | ios-gate | superseded"
+    die "usage: $0 build | stamp | pack <file> | unpack <file> | run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | head-full-run | gate | ios-gate | superseded"
     ;;
 esac
