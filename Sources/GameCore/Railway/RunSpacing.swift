@@ -419,11 +419,21 @@ extension GameWorld {
         // there, unless a line names it for its call there (an island
         // platform's).
         let approach = cut.flatMap { cut in network.edge(cut.traversal.edge).map { (cut.traversal, $0.length) } } ?? (first, offset)
-        let straight = self.path(from: .onEdge(approach.0, offset: approach.1), toStation: id, length: train.length, eligible: Set(all), memo: &memo)
-            .map { ($0.traversals.last ?? approach.0).edge }
+        let straightPath = self.path(from: .onEdge(approach.0, offset: approach.1), toStation: id, length: train.length, eligible: Set(all), memo: &memo)
+        let straight = straightPath.map { ($0.traversals.last ?? approach.0).edge }
         guard own > 0 || target == straight else { return nil }
         let beside = all.filter { $0.traversal.edge != straight || calling.contains($0.traversal.edge) }
-        if let found = freePlatformPath(path, from: start, toStation: id, for: train, among: beside, waits: waits, below: max(own, 1), cut: cut, across: straight, memo: &memo) {
+        // L4-1 (decision 518, continued): beside it only where the way on
+        // from there joins the through track's way on, as a loop does; not
+        // the other way's track across a crossover, which a train would
+        // run on along against the trains coming the other way.
+        var rejoining: (next: StationID, way: Set<TrackTraversal>)?
+        if let straightPath, let after = train.call(after: next.stop, cycle: next.cycle), train.timetable.indices.contains(next.stop),
+           !train.timetable[next.stop].reverses, train.timetable.indices.contains(after.stop),
+           let way = onwardWay(after: straightPath, from: approach.0, to: train.timetable[after.stop].station, length: train.length, memo: &memo) {
+            rejoining = (train.timetable[after.stop].station, Set(way.map(\.traversal)))
+        }
+        if let found = freePlatformPath(path, from: start, toStation: id, for: train, among: beside, waits: waits, below: max(own, 1), cut: cut, across: straight, rejoining: rejoining, memo: &memo) {
             return found
         }
         guard own > 1 else { return nil }
@@ -439,7 +449,7 @@ extension GameWorld {
     private func freePlatformPath(
         _ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, among berths: [Berth],
         waits: [TrackEdgeID: Int64], below own: Int64, cut: (index: Int, traversal: TrackTraversal, distance: Int64)?,
-        across: TrackEdgeID? = nil, memo: inout PathMemo
+        across: TrackEdgeID? = nil, rejoining: (next: StationID, way: Set<TrackTraversal>)? = nil, memo: inout PathMemo
     ) -> TrainPath? {
         guard case .onEdge(let first, _) = start else { return nil }
         for limit in Set(waits.values).sorted() where limit < own {
@@ -456,11 +466,34 @@ extension GameWorld {
                 }
                 let reached = (found.traversals.last ?? first).edge
                 let crosses = across.map { across in ([first] + found.traversals).dropLast().contains { $0.edge == across } } ?? false
-                guard crosses || trainLeavingTowards(train, along: [first] + found.traversals) != nil else { return found }
+                let strays = rejoining.map { rejoining in
+                    guard let way = onwardWay(after: found, from: first, to: rejoining.next, length: train.length, memo: &memo) else { return true }
+                    return !way.contains { $0.start <= Self.platformApproach && rejoining.way.contains($0.traversal) }
+                } ?? false
+                guard crosses || strays || trainLeavingTowards(train, along: [first] + found.traversals) != nil else { return found }
                 eligible = eligible.filter { $0.traversal.edge != reached }
             }
         }
         return nil
+    }
+
+    /// L4-1 (decision 518, continued): the way a train standing where
+    /// `path` (from traversal `first`) ends goes on to station `next`: each
+    /// traversal it enters and how far from where it stands that begins.
+    /// `nil` when no way goes on from there.
+    private func onwardWay(after path: TrainPath, from first: TrackTraversal, to next: StationID, length: Int64, memo: inout PathMemo) -> [(traversal: TrackTraversal, start: Int64)]? {
+        let standing = path.traversals.last ?? first
+        guard let edge = network.edge(standing.edge) else { return nil }
+        let offset = path.end ?? edge.length
+        guard let onward = self.path(from: .onEdge(standing, offset: offset), toStation: next, length: length, memo: &memo) else { return nil }
+        var start = edge.length - offset
+        var way: [(traversal: TrackTraversal, start: Int64)] = []
+        for traversal in onward.traversals {
+            way.append((traversal, start))
+            let (sum, overflow) = start.addingReportingOverflow(network.edge(traversal.edge)?.length ?? 0)
+            start = overflow ? .max : sum
+        }
+        return way
     }
 
     /// Decision 518: the edges of station `id`'s platforms that the lines
