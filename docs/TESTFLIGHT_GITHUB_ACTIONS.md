@@ -127,7 +127,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 8. **發佈**：GitHub → Actions → **TestFlight** → Run workflow → Branch 選 `main`，`archive_signing` 維持預設的 `adhoc`；自己測試選 `testing_scope: internal`，要給朋友外部測試則選 `testing_scope: external` → Run workflow。
 9. **上傳之後**：
    - App Store Connect 會先處理（processing），通常數分鐘到數十分鐘。workflow 的 processing job 會等它處理完，在執行頁面（Summary）寫出結果與 TestFlight 的狀態，並填好 What to Test（見〈重試、處理檢查與 What to Test〉）。
-   - TestFlight 若顯示 **Missing Compliance**，依實際情況回答出口合規問題（見 XCODE_CLOUD_ONBOARDING.md〈出口合規〉；本專案不替你預設答案）。processing job 看到這個狀態時會在執行頁面提醒。
+   - 出口合規：作者 2026-11-02 同意在 `RailwayGameApp/Info.plist` 寫 `ITSAppUsesNonExemptEncryption = NO`（App 只用 iOS 內建、豁免的加密：地圖圖磚的 HTTPS、Game Center），之後的 build 不再顯示 **Missing Compliance**。App 若加了自己的加密，要改這個值並重新回答（見 XCODE_CLOUD_ONBOARDING.md〈出口合規〉）。processing job 看到 Missing Compliance 時仍會在執行頁面提醒。
    - `internal`：照原本方式在內部群組安裝。
    - `external`：在 App Store Connect → TestFlight → External Testing 將新 build 加到外部群組（例如 `Friends Beta`），填測試資訊並送 Beta App Review；核准後再以 Email 或 Public Link 邀請朋友。
 
