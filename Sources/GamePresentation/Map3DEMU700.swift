@@ -243,8 +243,12 @@ private struct EMU700Recipe {
             if !far {
                 for z:Float in [-0.66,0.66] {kit.beam(.init(noseX(2.4,z)+0.04,2.4,z),.init(noseX(2.59,z-0.30)+0.04,2.59,z-0.30),0.022,dark)}
             }
-            // Normal running position: closed automatic coupler cover. The
-            // maintenance/open-coupler state is not claimed by this study.
+            // Normal closed FRP cover, with the drawgear and open jaw below
+            // its lower edge. The visible cavity is empty space, not a black
+            // panel. The raised-cover maintenance state is not this study.
+            kit.box(end-0.90,0.78,0,1.10,0.18,0.15,dark)
+            for h:Float in [0.76,1.00] {kit.box(end-0.36,h,0,0.16,0.48,0.08,dark)}
+            for z:Float in [-0.20,0.20] {kit.box(end-0.36,0.84,z,0.16,0.08,0.16,dark)}
         }
         let airConditioners:[Float]=role == .ep ? [-6.45,3.40] : [-6.45,6.45]
         for x in airConditioners {
