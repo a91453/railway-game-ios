@@ -115,6 +115,9 @@ public struct Map3DModelPack: Sendable {
     /// models are. Only the tools and the model hashes read them.
     init(studiesBaked baked: Bool) {
         var models: [Model] = []
+        for role in Map3DEMU700.Role.allCases {
+            for far in [false, true] { models.append(Map3DEMU700.model(role, far: far)) }
+        }
         for role in Map3DTaoyuanAirport.Role.allCases {
             for far in [false, true] { models.append(Map3DTaoyuanAirport.model(role, far: far)) }
         }

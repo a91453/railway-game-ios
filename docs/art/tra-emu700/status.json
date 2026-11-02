@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "UNVERIFIED",
+    "evidence": "Work in progress; see README for exact missing evidence"
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "Work in progress; see README for exact missing evidence",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Work in progress; see README for exact missing evidence"
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "Work in progress; see README for exact missing evidence"
+  }
+}
