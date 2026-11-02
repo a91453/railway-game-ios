@@ -421,24 +421,42 @@ struct Map3DPreviewScreen: View {
 /// Decision 546: the 3D map's train models (``Map3DView/models``), made
 /// once, off the main thread: ahead, a while after a game opens (when 3D
 /// is on and the device keeps a scene built, decision 460) or when a pinch
-/// rests near the 3D map, at a low priority; at once when the 3D map
-/// opens, which shows its scene before them.
+/// rests near the 3D map, or when the 3D map opens, which shows its scene
+/// before them. Always at a low priority (`.utility`; FLANE5's UI test at
+/// `.background`), never raised: they are made on every core at once
+/// (``Map3DModelPack``, ``Map3DTrainOcclusion``), and made at the 3D map's
+/// priority the Simulator's main thread stood still for 61 s (#1693). So
+/// whoever waits for them waits on a continuation, which raises nothing,
+/// not on the task's value, which would raise it to the waiter's priority.
 @MainActor
 final class Map3DTrainModels {
     static let shared = Map3DTrainModels()
-    private var making: Task<Void, Never>?
+    private var started = false
+    private var made = false
+    private var waiting: [CheckedContinuation<Void, Never>] = []
 
     /// Starts making them, unless made or under way.
     func start(priority: TaskPriority = .utility) {
-        guard making == nil else { return }
-        making = Task.detached(priority: priority) { _ = Map3DView.models?.models.count }
+        guard !started else { return }
+        started = true
+        Task.detached(priority: priority) {
+            _ = Map3DView.models?.models.count
+            await Map3DTrainModels.shared.finished()
+        }
     }
 
-    /// Once they are made, starting them at the 3D map's priority if
-    /// nothing has (a low one under way is raised while this waits).
-    func make() async {
-        start(priority: .userInitiated)
-        await making?.value
+    /// Once they are made, starting them if nothing has.
+    func make(priority: TaskPriority = .utility) async {
+        start(priority: priority)
+        guard !made else { return }
+        await withCheckedContinuation { waiting.append($0) }
+    }
+
+    private func finished() {
+        made = true
+        let woken = waiting
+        waiting = []
+        for continuation in woken { continuation.resume() }
     }
 
     /// How long after a game opens they are made ahead: past its first
@@ -1772,7 +1790,8 @@ final class Map3DModelsWarmUp {
         guard !started else { return }
         started = true
         Task {
-            _ = await Task.detached(priority: .background) { Map3DView.models?.models.count }.value
+            // Decision 546: the same making as the game's, at background priority.
+            await Map3DTrainModels.shared.make(priority: .background)
             isReady = true
         }
     }
