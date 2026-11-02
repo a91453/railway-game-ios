@@ -2863,7 +2863,10 @@ public struct GameWorld: Equatable, Sendable {
             let trafficKey = memo.directions.traffic?.key
             memo.directions.stepTraffic = traffic
             recordTrafficVisits(traffic, before: nil)
-            if runServices(at: start, unroutable: &unroutable, held: &held, memo: &memo) {
+            // Decision 542: whether a train turning aside on its way for
+            // an overtake found the track it needs held.
+            var turningAside = false
+            if runServices(at: start, unroutable: &unroutable, held: &held, turningAside: &turningAside, memo: &memo) {
                 changed = true
             }
             // Stage V2: once a minute, the dispatcher sends a service of a
@@ -2902,6 +2905,9 @@ public struct GameWorld: Equatable, Sendable {
                let freed = secondsUntilARouteFrees(held, from: start, within: span, moves: &moves, memo: &memo) {
                 span = freed
             }
+            // Decision 542: a train turning aside on its way tries again
+            // at the next second, as it would stepping a second at a time.
+            if turningAside { span = 1 }
             if !traffic.waits.isEmpty {
                 // Decision 59: a plan that schedules a wait is worked out
                 // again at the next second when this step changed what it
@@ -3516,7 +3522,8 @@ public struct GameWorld: Equatable, Sendable {
     /// (see ``departService(_:at:unroutable:held:)``); every train whose service
     /// travels and was held up on its run sets off again if it can (Stage
     /// W2c, see ``resumeRun(_:at:)``). Returns whether any service changed.
-    private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
+    private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute], turningAside: inout Bool,
+                                      memo: inout DispatchMemo) -> Bool {
         var changed = false
         // Decision 228: where trains stand as the phase begins (a train only
         // leaves them in it).
@@ -3540,6 +3547,20 @@ public struct GameWorld: Equatable, Sendable {
             if let path = freePlatformOnTheWay(of: train, standing: standing, moving: moving, memo: &memo.directions.paths) {
                 follow(path, &trains[index])
                 changed = true
+            }
+            // Decision 542: into a siding of a station ahead, for an
+            // overtake planned after it set off; or, past a train standing
+            // aside for it there, onto the straight track. Its run is kept,
+            // as above.
+            let plan = trafficPlan(memo: &memo.directions)
+            switch standingAsideOnTheWay(train, plan: plan, memo: &memo.directions) ?? keepingStraightOnTheWay(train, plan: plan, memo: &memo.directions) {
+            case .granted(let turned)?:
+                trains[index] = turned
+                changed = true
+            case .held?:
+                turningAside = true
+            case nil:
+                break
             }
             if resumeRun(index, at: now) {
                 changed = true

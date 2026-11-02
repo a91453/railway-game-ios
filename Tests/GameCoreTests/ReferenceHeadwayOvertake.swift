@@ -64,7 +64,7 @@ extension ReferenceWorld {
         else { return nil }
         // Is the fast one behind?
         if k != b.j {
-            guard fast.visits[k].arr + b.late >= mine.arrival else { return nil }
+            guard fast.visits[k].arr + b.late >= mine.arrival || heldBehind(slow, a, fast, b, k) else { return nil }
         } else if b.waiting {
             if a.waiting && here.dep + a.late >= fast.visits[k].dep + b.late { return nil }
         } else {
@@ -91,7 +91,7 @@ extension ReferenceWorld {
             let (i, m) = stretch[n], v = slow.visits[i]
             if n == 0 {
                 guard a.waiting, case .onEdge(let standing, _)? = slow.train.position, standing.edge.number != here.run.edge else { return false }
-            } else if v.stop <= here.stop + (a.waiting ? 0 : 1) {
+            } else if v.stop <= here.stop {
                 return false
             }
             return hasScheduledLoop(v, slow.train) && freeOvertakeTrack(&plan, s, i, max(v.dep, fast.visits[m].dep + b.late - a.late + 30))
@@ -112,5 +112,24 @@ extension ReferenceWorld {
                                         other: TrainID(rawValue: fast.train.id), otherStop: w.stop, otherCycle: w.cycle,
                                         kind: .overtake, departure: GameTime(seconds: v.dep), clearance: 30, hold: 300)
         return (i, wait, w.arr + b.late)
+    }
+
+    /// Decision 542: the slow one waits, and the fast one waits at, or left
+    /// later than the slow one did, a call the slow one passed before, both
+    /// running from there through the same stations on the same runs, with
+    /// no loop between where the fast one could have gone by.
+    func heldBehind(_ slow: PlannedService, _ a: (j: Int, waiting: Bool, late: Int64), _ fast: PlannedService,
+                    _ b: (j: Int, waiting: Bool, late: Int64), _ k: Int) -> Bool {
+        guard a.waiting else { return false }
+        let from = fast.visits[b.j].station
+        guard let back = (0..<a.j).reversed().first(where: { slow.visits[$0].station == from }), a.j - back == k - b.j else { return false }
+        for d in 1...(a.j - back) {
+            let v = slow.visits[back + d], w = fast.visits[b.j + d]
+            if v.station != w.station || v.run != w.run { return false }
+            if d < a.j - back, hasScheduledLoop(v, slow.train) { return false }
+        }
+        if b.waiting { return true }
+        guard let left = fast.train.service?.departure else { return false }
+        return left > slow.visits[back].dep + a.late
     }
 }

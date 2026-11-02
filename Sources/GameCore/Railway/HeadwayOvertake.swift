@@ -21,7 +21,10 @@ extension GameWorld {
     /// wait already holds is left to it.
     func planHeadwayOvertakes(_ plan: inout TrafficPlan) {
         var headway: Set<TrainID> = []
-        for line in lines where !line.hasRuns {
+        // Decision 542: and of lines with runs (decision 133), whose real
+        // timetables decision 59 and 294 plan by, from where the trains
+        // actually are once one runs late.
+        for line in lines {
             for service in 0..<line.serviceCount { headway.formUnion(line.trains(ofService: service)) }
         }
         let eligible = plan.services.indices.filter { s in
@@ -88,7 +91,7 @@ extension GameWorld {
         } else if start == fp.point {
             guard !lp.waiting, let left = l.train.times?.departure, let followed = x.train.times?.departure, left < followed else { return nil }
         } else {
-            guard start > fp.point, x.points[start].arrival + fp.late >= arrived.seconds else { return nil }
+            guard start > fp.point, x.points[start].arrival + fp.late >= arrived.seconds || keptBehind(l, lp, x, fp, start, plan: &plan) else { return nil }
         }
         // The points both run through next, along the same track.
         var common: [(l: Int, x: Int)] = [(lp.point, start)]
@@ -110,12 +113,18 @@ extension GameWorld {
         guard let caught else { return nil }
         // The slow one's route is chosen as it leaves a call, so it can
         // stand aside only beyond the call it waits at or left, or at that
-        // call if it already stands on a siding there.
+        // call if it already stands on a siding there. Decision 542: or on
+        // the way to the call it travels to: the route it set off on may
+        // already go to a siding there (the wait was planned before it
+        // left), or it turns aside while it still can (see
+        // ``standingAsideOnTheWay(_:plan:memo:)``).
         func choosable(_ n: Int) -> Bool {
             let p = l.points[common[n].l]
-            guard n == 0 else { return p.stop > (lp.waiting ? at.stop : at.stop + 1) }
+            guard n == 0 else { return p.stop > at.stop }
             guard lp.waiting, case .onEdge(let standing, _)? = l.train.position else { return false }
-            return standing.edge != at.berth.traversal.edge
+            // Decision 542: off the straight track, which decision 526 makes
+            // the main where keeping left takes the nominal way into a loop.
+            return standing.edge != at.berth.traversal.edge && standing.edge != trafficStraightBerth(l, at: lp.point).traversal.edge
         }
         func usable(_ n: Int) -> Bool {
             let c = common[n]
@@ -138,5 +147,104 @@ extension GameWorld {
                                         kind: .overtake, departure: GameTime(seconds: p.departure), clearance: 30,
                                         hold: Self.timetabledOvertakeHold)
         return (c.l, wait, q.arrival + fp.late)
+    }
+}
+
+extension GameWorld {
+    /// Decision 542: whether `x` (the fast one, at `fp`, its point at the
+    /// slow one's call `start`) is behind `l` (the slow one, waiting at its
+    /// call `lp`) although its times say it would have passed that call
+    /// before the slow one came: it waits, or set off later than the slow
+    /// one would have, at the call it is at or last left, which the slow one
+    /// passed on its way, and from there both run along the same track
+    /// through the same stations, none of them with a siding the fast one
+    /// could have passed it at. Trains on one track keep their order; an
+    /// express held up behind a stopping train is as late as that, not as
+    /// its own departure says.
+    func keptBehind(_ l: TrafficService, _ lp: (point: Int, waiting: Bool, late: Int64), _ x: TrafficService,
+                    _ fp: (point: Int, waiting: Bool, late: Int64), _ start: Int, plan: inout TrafficPlan) -> Bool {
+        let from = x.points[fp.point]
+        guard lp.waiting, let back = l.points[..<lp.point].lastIndex(where: { $0.station == from.station }),
+              start - fp.point == lp.point - back else { return false }
+        for k in 1...(lp.point - back) {
+            let a = l.points[back + k], b = x.points[fp.point + k]
+            guard a.station == b.station, a.berth.traversal == b.berth.traversal else { return false }
+            if k < lp.point - back, trafficHasSiding(at: a, train: l.train, known: &plan.hasSiding) { return false }
+        }
+        if fp.waiting { return true }
+        guard let left = x.train.times?.departure else { return false }
+        return left.seconds > l.points[back].departure + lp.late
+    }
+
+    /// Decision 542: `train`, travelling to its next call, turned aside for
+    /// an overtake decision 366, 294 or 542 has it wait for on the way (one
+    /// with a ``ScheduledTrafficWait/hold``), when the way it is on would
+    /// stand it on the straight track the faster train comes along, or run
+    /// it through the station it waits at: along its scheduled way from
+    /// where it is now (see ``scheduledPath(for:from:to:plan:memo:)``), its
+    /// run kept, with the reservation traffic control gives it, or the train
+    /// holding track it needs. `nil` when there is no such wait, or no other
+    /// way to a berth off the straight track there (it has passed the
+    /// turnout), and for a train of a line with runs (decision 133): on the
+    /// TRA demo's day with traffic control on, turning those aside on the
+    /// way jammed the line from the afternoon on (decision 542's results).
+    func standingAsideOnTheWay(_ train: Train, plan: TrafficPlan, memo: inout DirectionMemo) -> Reserving? {
+        guard isTrafficControlEnabled, !followsRealTimetable(train), case .travellingToStop(let stop, let cycle)? = train.execution,
+              let position = train.position, case .onEdge(let traversal, _) = position,
+              let wait = plan.waits.first(where: { $0.train == train.id && $0.kind == .overtake && $0.hold != nil && $0.stop == stop && $0.cycle == cycle }),
+              !train.trafficVisits.contains(where: { $0.station == wait.station && $0.stop == stop && $0.cycle == cycle }),
+              let s = plan.services.firstIndex(where: { $0.train.id == train.id }),
+              let j = plan.services[s].points.firstIndex(where: { $0.station == wait.station && $0.stop == stop && $0.cycle == cycle })
+        else { return nil }
+        let call = train.timetable[stop].station
+        let straight = trafficStraightBerth(plan.services[s], at: j).traversal.edge
+        let end = train.movement.remainingEdges.last ?? traversal.edge
+        // Already bound for a berth off the straight track there.
+        if wait.station == call, end != straight { return nil }
+        guard let chosen = scheduledPath(for: train, from: position, to: call, plan: plan, memo: &memo.paths) else { return nil }
+        let chosenEnd = chosen.path.traversals.last?.edge ?? traversal.edge
+        guard chosenEnd != straight, chosenEnd != end || chosen.path.end != train.movement.end,
+              network.platforms(of: wait.station).contains(where: { $0.edge == chosenEnd })
+        else { return nil }
+        var moved = train
+        follow(chosen.path, &moved)
+        return reserving(moved, following: blockSections, memo: &memo)
+    }
+}
+
+extension GameWorld {
+    /// Decision 542: `train`, travelling to its next call and due to pass a
+    /// station on the way where another train stands aside for it (a wait
+    /// of decision 366, 294 or 542, one with a
+    /// ``ScheduledTrafficWait/hold``) along a berth off that station's
+    /// straight track (keeping left, decision 202, took it there when it
+    /// set off, before the wait was planned), turned onto its scheduled way
+    /// from where it is now, which keeps to the straight track there (see
+    /// ``scheduledPath(for:from:to:plan:memo:)``, decision 526): its run
+    /// kept, with the reservation traffic control gives it, or the train
+    /// holding track it needs. `nil` when there is no such station, or no
+    /// such way.
+    func keepingStraightOnTheWay(_ train: Train, plan: TrafficPlan, memo: inout DirectionMemo) -> Reserving? {
+        guard isTrafficControlEnabled, case .travellingToStop(let stop, let cycle)? = train.execution,
+              let position = train.position, case .onEdge(let traversal, _) = position,
+              plan.waits.contains(where: { $0.other == train.id && $0.hold != nil && $0.otherStop == stop && $0.otherCycle == cycle }),
+              let s = plan.services.firstIndex(where: { $0.train.id == train.id }) else { return nil }
+        let service = plan.services[s]
+        let ahead = Set(train.movement.remainingEdges)
+        guard let j = service.points.indices.first(where: { j in
+            let p = service.points[j]
+            guard !p.calls, p.stop == stop, p.cycle == cycle,
+                  plan.waits.contains(where: { $0.other == train.id && $0.kind == .overtake && $0.hold != nil && $0.station == p.station && $0.otherStop == stop && $0.otherCycle == cycle }),
+                  !train.trafficVisits.contains(where: { $0.station == p.station && $0.stop == stop && $0.cycle == cycle }) else { return false }
+            return network.platforms(of: p.station).contains { ahead.contains($0.edge) }
+        }) else { return nil }
+        let straight = trafficStraightBerth(service, at: j).traversal.edge
+        guard straight != traversal.edge, !ahead.contains(straight),
+              let chosen = scheduledPath(for: train, from: position, to: train.timetable[stop].station, plan: plan, memo: &memo.paths),
+              chosen.path.traversals.contains(where: { $0.edge == straight })
+        else { return nil }
+        var moved = train
+        follow(chosen.path, &moved)
+        return reserving(moved, following: blockSections, memo: &memo)
     }
 }
