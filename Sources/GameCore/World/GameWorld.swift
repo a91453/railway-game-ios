@@ -3551,9 +3551,11 @@ public struct GameWorld: Equatable, Sendable {
             // Decision 542: into a siding of a station ahead, for an
             // overtake planned after it set off; or, past a train standing
             // aside for it there, onto the straight track. Its run is kept,
-            // as above.
+            // as above. The train as it is now, on the way it may just
+            // have been given.
             let plan = trafficPlan(memo: &memo.directions)
-            switch standingAsideOnTheWay(train, plan: plan, memo: &memo.directions) ?? keepingStraightOnTheWay(train, plan: plan, memo: &memo.directions) {
+            let current = trains[index]
+            switch standingAsideOnTheWay(current, plan: plan, memo: &memo.directions) ?? keepingStraightOnTheWay(current, plan: plan, memo: &memo.directions) {
             case .granted(let turned)?:
                 trains[index] = turned
                 changed = true

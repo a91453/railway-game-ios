@@ -101,14 +101,20 @@ extension GameWorld {
             common.append((last.l + 1, last.x + 1))
         }
         // The first point the fast one would reach before the slow one has
-        // left it, within 25 km.
+        // left it, within 25 km. Decision 542: of a line with runs, a point
+        // the fast one would also leave first, and go on from. Two runs of
+        // one stopping pattern both standing at the terminus they start
+        // from are not an overtake (the one behind comes in before the one
+        // ahead leaves, but leaves after it), nor is a run that ends there.
+        let timetabled = followsRealTimetable(l.train)
         var caught: Int?
         var look: Int64 = 0
         for (n, c) in common.enumerated() {
             if n > 0 { look += l.points[c.l].distance }
             if look > 25 * 64_000 { break }
             if n == 0, !lp.waiting { continue }
-            if x.points[c.x].arrival + fp.late < l.points[c.l].departure + lp.late { caught = n; break }
+            let leaves = l.points[c.l].departure + lp.late
+            if x.points[c.x].arrival + fp.late < leaves, !timetabled || (x.points[c.x].departure + fp.late < leaves && c.x + 1 < x.points.count) { caught = n; break }
         }
         guard let caught else { return nil }
         // The slow one's route is chosen as it leaves a call, so it can
@@ -223,7 +229,10 @@ extension GameWorld {
     /// ``scheduledPath(for:from:to:plan:memo:)``, decision 526): its run
     /// kept, with the reservation traffic control gives it, or the train
     /// holding track it needs. `nil` when there is no such station, or no
-    /// such way.
+    /// such way. Unlike ``standingAsideOnTheWay(_:plan:memo:)`` it is for
+    /// trains of lines with runs too: the express of a run whose way goes
+    /// through the loop the stopping train stands aside in would otherwise
+    /// stop behind it there (`LiveOvertakeTests`).
     func keepingStraightOnTheWay(_ train: Train, plan: TrafficPlan, memo: inout DirectionMemo) -> Reserving? {
         guard isTrafficControlEnabled, case .travellingToStop(let stop, let cycle)? = train.execution,
               let position = train.position, case .onEdge(let traversal, _) = position,

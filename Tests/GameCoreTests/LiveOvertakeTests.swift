@@ -122,6 +122,49 @@ final class LiveOvertakeTests: XCTestCase {
         XCTAssertLessThan(fast, stopping, "the express reached East first")
     }
 
+    /// Two runs of one stopping pattern from West, both trains standing at
+    /// West's two platforms: the second comes in (9:00) before the first
+    /// leaves (10:00) but leaves after it (13:20). Not an overtake: the
+    /// second one never gets by. Before this was ruled out, the plan
+    /// held the first train for the second one (on the Danhai light rail's
+    /// Green Mountain Line, at Kanding where its runs start, which left a
+    /// train four minutes late and two trains deadlocked nine minutes on).
+    func testTheNextRunOfTheSamePatternAtTheTerminusIsNoOvertake() throws {
+        var (world, line, ids) = try LocalPassTests.world()
+        func at(_ seconds: Int64, _ dwell: Int64 = 0) -> LineRunTime { LineRunTime(arrival: seconds, departure: seconds + dwell) }
+        try world.setLineRuns(line, to: [
+            LineRun(from: 0, to: 4, times: [at(360, 240), at(780, 60), at(1_020, 60), at(1_260, 60), at(1_500)]),
+            LineRun(from: 0, to: 4, times: [at(540, 260), at(980, 60), at(1_220, 60), at(1_460, 60), at(1_700)]),
+        ])
+        var trains: [TrainID] = []
+        for (i, position) in [TrainPosition.onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 14_336),
+                              .onEdge(TrackTraversal(edge: .edge(6), direction: .forward), offset: 14_336)].enumerated() {
+            let id = try world.purchaseTrain(named: "T\(i + 1)").id
+            try world.setTrainCars(id, to: 2)
+            try world.placeTrain(id, at: position)
+            if case .onEdge(_, let offset) = position { try world.setTrainContinuation(id, along: [], stoppingAt: offset) }
+            try world.setTrainMovementRate(id, to: 1_024)
+            try world.assignTrain(id, to: line)
+            trains.append(id)
+        }
+        try world.setTrafficControl(true)
+        world.setSpeed(.x1)
+        var bothWaited = false
+        var waits: [ScheduledTrafficWait] = []
+        var arrived: [TrainID: Int] = [:]
+        for second in 1...2_000 {
+            try world.advance(ticks: 10)
+            if trains.allSatisfy({ if case .waitingAtStop(0, _)? = world.train(id: $0)!.execution { true } else { false } }) { bothWaited = true }
+            for wait in world.scheduledTrafficWaits() where !waits.contains(wait) { waits.append(wait) }
+            for id in trains where arrived[id] == nil && world.isStopped(world.train(id: id)!, at: ids[4]) { arrived[id] = second }
+        }
+        XCTAssertTrue(bothWaited, "both runs stood at West at once")
+        XCTAssertEqual(waits, [], "no wait planned")
+        // The first run is due at East at 25:00 (East's one eastbound
+        // platform then keeps the second run's train out).
+        XCTAssertLessThanOrEqual(try XCTUnwrap(arrived.values.min(), "the first run reached East"), 1_560, "within a minute of its time")
+    }
+
     /// Advancing at once ends where advancing second by second does, with
     /// trains turning aside on their way (the commands given at the same
     /// seconds).
