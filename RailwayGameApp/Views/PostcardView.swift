@@ -286,9 +286,10 @@ struct PostcardSheet: View {
         NavigationStack {
             let postcard = NetworkPostcard(world: world, companyName: companyName, in: language)
             let key = PostcardPictureKey(companyName: companyName, appearance: chosen, mapReady: map != nil)
-            let world = world
-            let map = map
-            let skyline = skyline
+            // Copies for the reader's sendable closure.
+            let cardWorld = world
+            let cardMap = map
+            let cardSkyline = skyline
             ScrollView {
                 VStack(spacing: 16) {
                     // A sendable closure, not main-actor code (CRASHSWEEP-3):
@@ -296,7 +297,7 @@ struct PostcardSheet: View {
                     // whenever its size changes, which its asynchronous
                     // renderer may do off the main thread (CRASH101).
                     GeometryReader { @Sendable proxy in
-                        PostcardCardFit(postcard: postcard, world: world, map: map, skyline: skyline, size: proxy.size)
+                        PostcardCardFit(postcard: postcard, world: cardWorld, map: cardMap, skyline: cardSkyline, size: proxy.size)
                     }
                     .environment(\.colorScheme, chosen.colorScheme)
                     .environment(\.regionStyle, region)
