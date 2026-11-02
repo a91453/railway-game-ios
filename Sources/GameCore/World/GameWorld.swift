@@ -4056,6 +4056,9 @@ public struct GameWorld: Equatable, Sendable {
                 return (path, nil)
             }
             guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
+            // Decision 547: out of a depot with traffic control off, off the
+            // track where other trains stand, as decision 228 has it in.
+            if let kept = pathOutOfDepot(train.timetable[stop].station, to: call, from: start, for: train, nearest: nearest) { nearest = kept }
             // Decision 527: an empty run keeps off track its line takes
             // only the other way.
             let against = lineAgainst(for: train, memo: &memo)
