@@ -325,19 +325,36 @@ private struct CatalogTrain: View {
     let cars: Int
 
     var body: some View {
-        GeometryReader { proxy in
-            let count = max(1, cars)
-            let gap: CGFloat = 2
-            let width = (proxy.size.width - gap * CGFloat(count - 1)) / CGFloat(count)
-            let height = min(proxy.size.height - 6, width * 0.45)
-            HStack(spacing: gap) {
-                ForEach(0..<count, id: \.self) { index in
-                    car(width: width, height: height, isFront: index == count - 1)
-                }
-            }
-            .frame(maxHeight: .infinity, alignment: .bottom)
+        let stripe = stripe
+        let cars = cars
+        // A sendable closure, not main-actor code (CRASHSWEEP-3): SwiftUI
+        // calls a GeometryReader's closure again whenever its size
+        // changes, which its asynchronous renderer may do off the main
+        // thread (CRASH101).
+        GeometryReader { @Sendable proxy in
+            CatalogTrainCars(stripe: stripe, cars: cars, size: proxy.size)
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// ``CatalogTrain``'s cars at the size its reader gives.
+private struct CatalogTrainCars: View {
+    let stripe: Color
+    let cars: Int
+    let size: CGSize
+
+    var body: some View {
+        let count = max(1, cars)
+        let gap: CGFloat = 2
+        let width = (size.width - gap * CGFloat(count - 1)) / CGFloat(count)
+        let height = min(size.height - 6, width * 0.45)
+        HStack(spacing: gap) {
+            ForEach(0..<count, id: \.self) { index in
+                car(width: width, height: height, isFront: index == count - 1)
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .bottom)
     }
 
     private func car(width: CGFloat, height: CGFloat, isFront: Bool) -> some View {

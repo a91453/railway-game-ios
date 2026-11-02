@@ -54,9 +54,6 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
         "RealWorldLoadingView.swift": 1, // the loading screen
         "PostcardView.swift": 1, // the postcard sheet's scale
         "SharedNetworkViews.swift": 1, // a shared postcard's scale
-        "StationStampPassportView.swift": 1, // a passport page
-        "PromotionLineView.swift": 1, // the promotion sheet's line
-        "RollingStockCatalogView.swift": 1, // a catalog card's train
     ]
 
     func testNoMainActorClosureIsMeasuredOffTheMainThread() throws {

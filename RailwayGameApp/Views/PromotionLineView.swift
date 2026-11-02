@@ -12,51 +12,68 @@ struct PromotionLineView: View {
     let language: DisplayLanguage
 
     var body: some View {
-        GeometryReader { proxy in
-            let count = line.titles.count
-            let inset: CGFloat = 14
-            let width = proxy.size.width - 2 * inset
-            let x = { (index: Double) in inset + width * index / Double(max(1, count - 1)) }
-            ZStack(alignment: .topLeading) {
-                Capsule()
-                    .fill(Theme.chip)
-                    .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1.5))
-                    .frame(width: width, height: 8)
-                    .offset(x: inset, y: 10)
-                Capsule()
-                    .fill(Theme.primary)
-                    .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1.5))
-                    .frame(width: max(8, x(line.position) - inset), height: 8)
-                    .offset(x: inset, y: 10)
-                ForEach(Array(line.titles.enumerated()), id: \.offset) { index, title in
-                    let reached = line.isReached(index)
-                    Circle()
-                        .fill(reached ? Palette.ink : Palette.markerFill)
-                        .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 2))
-                        .frame(width: 14, height: 14)
-                        .offset(x: x(Double(index)) - 7, y: 7)
-                    if index == Int(line.position) || index == Int(line.position) + 1 {
-                        Text(verbatim: title.title(in: language))
-                            .font(.system(size: 10, weight: index == Int(line.position) ? .heavy : .medium))
-                            .foregroundStyle(index == Int(line.position) ? Theme.textPrimary : Theme.textSecondary)
-                            .fixedSize()
-                            .frame(width: 80)
-                            .offset(x: min(max(0, x(Double(index)) - 40), proxy.size.width - 80), y: 26)
-                    }
-                }
-                MapGlyph.train.image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(Palette.stationSymbol)
-                    .frame(width: 28, height: 28)
-                    .background(Palette.station, in: Circle())
-                    .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 2))
-                    .offset(x: x(line.position) - 14, y: 0)
-            }
+        // A sendable closure, not main-actor code (CRASHSWEEP-3): SwiftUI
+        // calls a GeometryReader's closure again whenever its size
+        // changes, which its asynchronous renderer may do off the main
+        // thread (CRASH101).
+        let line = line
+        let language = language
+        GeometryReader { @Sendable proxy in
+            PromotionLineTrack(line: line, language: language, size: proxy.size)
         }
         .frame(height: 44)
         .accessibilityHidden(true)
+    }
+}
+
+/// ``PromotionLineView``'s line at the size its reader gives.
+private struct PromotionLineTrack: View {
+    let line: PromotionLine
+    let language: DisplayLanguage
+    let size: CGSize
+
+    var body: some View {
+        let count = line.titles.count
+        let inset: CGFloat = 14
+        let width = size.width - 2 * inset
+        let x = { (index: Double) in inset + width * index / Double(max(1, count - 1)) }
+        ZStack(alignment: .topLeading) {
+            Capsule()
+                .fill(Theme.chip)
+                .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1.5))
+                .frame(width: width, height: 8)
+                .offset(x: inset, y: 10)
+            Capsule()
+                .fill(Theme.primary)
+                .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1.5))
+                .frame(width: max(8, x(line.position) - inset), height: 8)
+                .offset(x: inset, y: 10)
+            ForEach(Array(line.titles.enumerated()), id: \.offset) { index, title in
+                let reached = line.isReached(index)
+                Circle()
+                    .fill(reached ? Palette.ink : Palette.markerFill)
+                    .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 2))
+                    .frame(width: 14, height: 14)
+                    .offset(x: x(Double(index)) - 7, y: 7)
+                if index == Int(line.position) || index == Int(line.position) + 1 {
+                    Text(verbatim: title.title(in: language))
+                        .font(.system(size: 10, weight: index == Int(line.position) ? .heavy : .medium))
+                        .foregroundStyle(index == Int(line.position) ? Theme.textPrimary : Theme.textSecondary)
+                        .fixedSize()
+                        .frame(width: 80)
+                        .offset(x: min(max(0, x(Double(index)) - 40), size.width - 80), y: 26)
+                }
+            }
+            MapGlyph.train.image
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .foregroundStyle(Palette.stationSymbol)
+                .frame(width: 28, height: 28)
+                .background(Palette.station, in: Circle())
+                .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 2))
+                .offset(x: x(line.position) - 14, y: 0)
+        }
     }
 }
 

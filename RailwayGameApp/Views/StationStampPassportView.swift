@@ -129,27 +129,46 @@ private struct StationStampPage: View {
     let language: DisplayLanguage
 
     var body: some View {
+        let stamps = stamps
+        let number = number
+        let language = language
         let layout = StationStampPassport.layout(stamps.map(\.id))
-        GeometryReader { proxy in
-            let size = proxy.size
-            ZStack(alignment: .topLeading) {
-                ForEach(stamps.indices, id: \.self) { index in
-                    let place = layout[index]
-                    let side = size.width * place.width / 100
-                    StationStampMark(stamp: stamps[index], language: language, side: side)
-                        .rotationEffect(.degrees(place.angle))
-                        .position(x: size.width * place.x / 100, y: size.height * place.y / 100)
-                }
-                Text(verbatim: String(format: "%02d", number))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(Theme.textSecondary)
-                    .position(x: size.width / 2, y: size.height - 14)
-                    .accessibilityHidden(true)
-            }
+        // A sendable closure, not main-actor code (CRASHSWEEP-3): SwiftUI
+        // calls a GeometryReader's closure again whenever its size
+        // changes, which its asynchronous renderer may do off the main
+        // thread (CRASH101).
+        GeometryReader { @Sendable proxy in
+            StationStampPageFace(stamps: stamps, layout: layout, number: number, language: language, size: proxy.size)
         }
         .aspectRatio(0.73, contentMode: .fit)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.panelBorder, lineWidth: 1))
+    }
+}
+
+/// ``StationStampPage``'s stamps and number at the size its reader gives.
+private struct StationStampPageFace: View {
+    let stamps: [StationStamp]
+    let layout: [StationStampPassport.Placement]
+    let number: Int
+    let language: DisplayLanguage
+    let size: CGSize
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(stamps.indices, id: \.self) { index in
+                let place = layout[index]
+                let side = size.width * place.width / 100
+                StationStampMark(stamp: stamps[index], language: language, side: side)
+                    .rotationEffect(.degrees(place.angle))
+                    .position(x: size.width * place.x / 100, y: size.height * place.y / 100)
+            }
+            Text(verbatim: String(format: "%02d", number))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(Theme.textSecondary)
+                .position(x: size.width / 2, y: size.height - 14)
+                .accessibilityHidden(true)
+        }
     }
 }
 
