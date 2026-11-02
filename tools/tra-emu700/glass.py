@@ -77,6 +77,23 @@ def equipment(t,role):
  else:assert not len(high),'unexpected pantograph'
  return ac
 
+def underfloor(t,role):
+ groups=components(t);cases=[]
+ for g in groups:
+  lo=t[g].reshape(-1,3).min(axis=0);hi=t[g].reshape(-1,3).max(axis=0)
+  if np.max(np.abs((hi-lo)-np.array([1.35,1.60,.50])))<.001:cases.append((g,lo,hi))
+ expected={'ep':[-3.7,-.8,2.3],'et':[-3.7,-1.6,1.,3.4]}.get(role,[-3.6,-1.1,1.5,3.5])
+ assert len(cases)==len(expected),'underfloor case missing'
+ centers=sorted(float((lo[0]+hi[0])/2) for _,lo,hi in cases)
+ assert np.max(np.abs(np.array(centers)-expected))<.001,'underfloor case station'
+ support=np.ones(len(t),dtype=bool)
+ for g,_,_ in cases:support[g]=False
+ for g,lo,hi in cases:
+  assert len(g)==12 and abs(hi[2]-.98)<.0001,'underfloor floats or duplicated'
+  ds=hits(t[support],np.array([(lo[0]+hi[0])/2,0,.979]),np.array([0.,0,1.]))
+  assert len(ds) and min(ds)<.003,'underfloor chassis contact'
+ return cases
+
 def coupler(t):
  end=20.743/2
  ds=hits(t,np.array([end+.1,0,.92]),np.array([-1.,0,0]))
@@ -92,6 +109,10 @@ root=Path(sys.argv[1]);rows=[]
 for m in json.loads((root/'manifest.json').read_text())['models']:
  if m.get('native_kind')=='assembly':continue
  t,f=read(root/m['native']);role=m['id'].split('-')[2];ac=equipment(t,role)
+ cases=underfloor(t,role);g=cases[0][0];broken=t.copy();broken[g,:,2]-=.1;reject(lambda:underfloor(broken,role))
+ broken=t.copy();broken[g,:,0]+=.3;reject(lambda:underfloor(broken,role))
+ reject(lambda:underfloor(np.concatenate([t,t[g]]),role))
+
  if role=='emc':
   coupler(t);bars=[]
   for g in components(t):
@@ -127,6 +148,6 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
    except AssertionError:pass
    else:raise AssertionError(('actual glass solid fault escaped',m['id'],distance,'group',len(g),'chosen',len(chosen),'direction',direction.tolist(),'bounds',t[g].reshape(-1,3).min(axis=0).tolist(),t[g].reshape(-1,3).max(axis=0).tolist()))
   tested.append(len(g))
- rows.append({'id':m['id'],'coupler_opening_and_actual_sealed_bar_fault':role=='emc','ac_contact_and_three_actual_faults':True,'ep_missing_and_wrong_station_faults':role=='ep','front_centroid_samples':len(ids),'glass_solids_tested':len(tested),'buried_200mm_rejected':True,'floating_200mm_rejected':True})
+ rows.append({'id':m['id'],'coupler_opening_and_actual_sealed_bar_fault':role=='emc','underfloor_contact_and_three_actual_faults':True,'ac_contact_and_three_actual_faults':True,'ep_missing_and_wrong_station_faults':role=='ep','front_centroid_samples':len(ids),'glass_solids_tested':len(tested),'buried_200mm_rejected':True,'floating_200mm_rejected':True})
 (root/'glass-verification.json').write_text(json.dumps({'status':'VERIFIED','models':rows,'limits':'Centroid rays on outward side and cab/end glass faces, and actual connected glass solid displacement; no exhaustive surface or engineering collision proof.'},indent=2)+'\n')
 print('VERIFIED',len(rows),'units: visible supported glass and connected-solid displacement faults')
