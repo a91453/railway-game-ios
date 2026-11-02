@@ -50,6 +50,9 @@ struct TrainRosterView: View {
     /// what lay under the finger).
     @State private var nameTarget: (start: CGPoint, line: LineID?)?
     @State private var heldBox: (start: CGPoint, train: TrainID?)?
+    /// The table's size, measured rather than read in a GeometryReader
+    /// (CRASHSWEEP-3).
+    @State private var tableSize: CGSize = .zero
 
     /// A train's name being dragged over the rows.
     private struct LineDrag {
@@ -320,54 +323,69 @@ struct TrainRosterView: View {
 
     // MARK: Table
 
+    /// CRASHSWEEP-3: the table's size comes from `onGeometryChange`, whose
+    /// measuring closure is sendable, not from a GeometryReader's closure,
+    /// which SwiftUI calls again whenever the size changes (the rows'
+    /// height does as arranging starts and ends) and its asynchronous
+    /// renderer may call off the main thread (CRASH101). The rows wait for
+    /// the first size, so the focused train is scrolled to at its height.
     private func table(_ roster: TrainRoster) -> some View {
-        GeometryReader { proxy in
-            // Decision 512: arranging keeps the full rows, so a name to
-            // hold is at least 44 points high.
-            let compact = !arranging
-                && TrainRosterLayout.usesCompactRows(rows: roster.rows.count, height: Double(proxy.size.height - Self.axisHeight))
-            let rowHeight = CGFloat(compact ? TrainRosterLayout.compactRowHeight : TrainRosterLayout.fullRowHeight)
-            ScrollViewReader { reader in
-                ScrollView(.vertical) {
-                    HStack(alignment: .top, spacing: 0) {
-                        VStack(spacing: 0) {
-                            Color.clear.frame(height: Self.axisHeight)
-                            ForEach(Array(roster.rows.enumerated()), id: \.element.id) { index, row in
-                                nameCell(row, compact: compact)
-                                    .frame(width: nameWidth, height: rowHeight)
-                                    .background(index.isMultiple(of: 2) ? Theme.chip : Color.clear)
-                                    .overlay {
-                                        if row.train == focus {
-                                            Rectangle().strokeBorder(Palette.ink, lineWidth: 2)
-                                        }
-                                    }
-                                    .contentShape(Rectangle())
-                                    .gesture(nameDrag(row, roster: roster, rowHeight: rowHeight), including: arranging ? .all : .subviews)
-                                    .accessibilityElement(children: .ignore)
-                                    .accessibilityLabel(Text(verbatim: spoken(row)))
-                                    .accessibilityActions { if arranging { arrangeActions(row) } }
-                                    .id(row.train)
-                            }
-                        }
-                        // As wide as the table leaves: the hours' scroll
-                        // view took more and pushed the names right
-                        // (decision 512's screenshot review).
-                        hours(roster, rowHeight: rowHeight, compact: compact)
-                            .frame(width: max(0, proxy.size.width - nameWidth))
-                    }
-                    .frame(width: proxy.size.width, alignment: .leading)
-                    .coordinateSpace(.named(Self.table))
-                    .overlay(alignment: .topLeading) { lineDragMarks(rowHeight: rowHeight, width: proxy.size.width) }
-                }
-                .onAppear {
-                    if let focus { reader.scrollTo(focus, anchor: .center) }
-                }
+        ZStack(alignment: .topLeading) {
+            if tableSize != .zero {
+                tableRows(roster, size: tableSize)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { tableSize = $0 }
         .background(Theme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.panelBorder))
         .padding(.horizontal, 8)
+    }
+
+    @ViewBuilder
+    private func tableRows(_ roster: TrainRoster, size: CGSize) -> some View {
+        // Decision 512: arranging keeps the full rows, so a name to
+        // hold is at least 44 points high.
+        let compact = !arranging
+            && TrainRosterLayout.usesCompactRows(rows: roster.rows.count, height: Double(size.height - Self.axisHeight))
+        let rowHeight = CGFloat(compact ? TrainRosterLayout.compactRowHeight : TrainRosterLayout.fullRowHeight)
+        ScrollViewReader { reader in
+            ScrollView(.vertical) {
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: Self.axisHeight)
+                        ForEach(Array(roster.rows.enumerated()), id: \.element.id) { index, row in
+                            nameCell(row, compact: compact)
+                                .frame(width: nameWidth, height: rowHeight)
+                                .background(index.isMultiple(of: 2) ? Theme.chip : Color.clear)
+                                .overlay {
+                                    if row.train == focus {
+                                        Rectangle().strokeBorder(Palette.ink, lineWidth: 2)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                                .gesture(nameDrag(row, roster: roster, rowHeight: rowHeight), including: arranging ? .all : .subviews)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(Text(verbatim: spoken(row)))
+                                .accessibilityActions { if arranging { arrangeActions(row) } }
+                                .id(row.train)
+                        }
+                    }
+                    // As wide as the table leaves: the hours' scroll
+                    // view took more and pushed the names right
+                    // (decision 512's screenshot review).
+                    hours(roster, rowHeight: rowHeight, compact: compact)
+                        .frame(width: max(0, size.width - nameWidth))
+                }
+                .frame(width: size.width, alignment: .leading)
+                .coordinateSpace(.named(Self.table))
+                .overlay(alignment: .topLeading) { lineDragMarks(rowHeight: rowHeight, width: size.width) }
+            }
+            .onAppear {
+                if let focus { reader.scrollTo(focus, anchor: .center) }
+            }
+        }
     }
 
     private func nameCell(_ row: TrainRoster.Row, compact: Bool) -> some View {

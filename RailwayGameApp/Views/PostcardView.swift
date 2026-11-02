@@ -202,6 +202,23 @@ struct PostcardCard: View {
 }
 
 /// The light and dark postcards (decision 215).
+/// A postcard scaled down to the width its reader gives, from the top
+/// (the postcard sheet and a shared network's).
+struct PostcardCardFit: View {
+    let postcard: NetworkPostcard
+    let world: GameWorld
+    let map: PostcardMap?
+    let skyline: CitySkyline?
+    let size: CGSize
+
+    var body: some View {
+        let scale = min(1, size.width / PostcardLayout.size.width)
+        PostcardCard(postcard: postcard, world: world, map: map, skyline: skyline)
+            .scaleEffect(scale, anchor: .top)
+            .frame(width: size.width, height: size.height, alignment: .top)
+    }
+}
+
 enum PostcardAppearance: String, CaseIterable, Identifiable {
     case light, dark
 
@@ -269,14 +286,21 @@ struct PostcardSheet: View {
         NavigationStack {
             let postcard = NetworkPostcard(world: world, companyName: companyName, in: language)
             let key = PostcardPictureKey(companyName: companyName, appearance: chosen, mapReady: map != nil)
+            // Copies for the reader's sendable closure.
+            let cardWorld = world
+            let cardMap = map
+            let cardSkyline = skyline
             ScrollView {
                 VStack(spacing: 16) {
-                    GeometryReader { proxy in
-                        let scale = min(1, proxy.size.width / PostcardLayout.size.width)
-                        card(postcard, appearance: chosen)
-                            .scaleEffect(scale, anchor: .top)
-                            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                    // A sendable closure, not main-actor code (CRASHSWEEP-3):
+                    // SwiftUI calls a GeometryReader's closure again
+                    // whenever its size changes, which its asynchronous
+                    // renderer may do off the main thread (CRASH101).
+                    GeometryReader { @Sendable proxy in
+                        PostcardCardFit(postcard: postcard, world: cardWorld, map: cardMap, skyline: cardSkyline, size: proxy.size)
                     }
+                    .environment(\.colorScheme, chosen.colorScheme)
+                    .environment(\.regionStyle, region)
                     .aspectRatio(PostcardLayout.size.width / PostcardLayout.size.height, contentMode: .fit)
                     .frame(maxWidth: PostcardLayout.size.width)
                     .accessibilityElement(children: .ignore)

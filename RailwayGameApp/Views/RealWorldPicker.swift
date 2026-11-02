@@ -61,6 +61,9 @@ struct RealWorldPicker: View {
     /// How wide the map is, so a tap on the location button's corner is
     /// not also taken as a tap on the map.
     @State private var mapWidth: CGFloat = 0
+    /// The sheet's size, measured rather than read in a GeometryReader
+    /// (CRASHSWEEP-3).
+    @State private var size: CGSize = .zero
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -73,23 +76,32 @@ struct RealWorldPicker: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { proxy in
-                if proxy.size.width > proxy.size.height {
-                    HStack(spacing: 0) {
-                        preview
-                        Divider()
-                        places
-                            .frame(width: min(360, proxy.size.width / 2))
-                    }
-                } else {
-                    VStack(spacing: 0) {
-                        preview
-                            .frame(height: (proxy.size.height * 0.5).rounded())
-                        Divider()
-                        places
+            // CRASHSWEEP-3: the size from `onGeometryChange`, whose
+            // measuring closure is sendable, not a GeometryReader's
+            // closure, which SwiftUI calls again as the sheet turns and its
+            // asynchronous renderer may call off the main thread
+            // (CRASH101). The halves wait for the first size.
+            ZStack(alignment: .topLeading) {
+                if size != .zero {
+                    if size.width > size.height {
+                        HStack(spacing: 0) {
+                            preview
+                            Divider()
+                            places
+                                .frame(width: min(360, size.width / 2))
+                        }
+                    } else {
+                        VStack(spacing: 0) {
+                            preview
+                                .frame(height: (size.height * 0.5).rounded())
+                            Divider()
+                            places
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
             .navigationTitle("Real-World Map")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for a place")
