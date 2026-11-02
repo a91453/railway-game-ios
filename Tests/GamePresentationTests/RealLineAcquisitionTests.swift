@@ -304,9 +304,8 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// Not on sale: the other metro lines, whose ends stand more trains at
     /// once than the game lays tracks
     /// (`extract_metro_runs.py`); Kaohsiung's Circular Light Rail, which
-    /// runs round its loop. The Ankeng LRT is on sale too
-    /// (`AnkengLineTests`, decision 535 continued). The Wenhu Line is not,
-    /// yet: with signals off it sends too few of its runs (decision 543).
+    /// runs round its loop; and the Wenhu Line. The Ankeng LRT is on sale
+    /// too (`AnkengLineTests`, decision 535 continued).
     func testTheLightRailsAndMetrosAreBoughtAndRunTheirRealDay() throws {
         let lines: [(id: String, type: TrainType, tier: LineAcquisition.Tier)] = [
             ("ntdlrt:VB", .c, .lightRail), ("trtc:R_XBT", .a, .metro), ("trtc:G_XBT", .a, .metro),
@@ -323,8 +322,8 @@ final class RealLineAcquisitionTests: XCTestCase {
     /// on sale is offered, and every run of the second day was sent out.
     static func buyAndRunRealDay(_ id: String, type: TrainType, tier: LineAcquisition.Tier, rules: NewGameRules) throws {
         let absent = [
-            "krtc:C", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
-            "tymc:A", "krtc:KR", "krtc:KO", "tmrt:TG", "trtc:BR",
+            "krtc:C", "trtc:BR", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
+            "tymc:A", "krtc:KR", "krtc:KO", "tmrt:TG",
         ]
         let session = try game(round: id, side: 1 << 21, heights: true, rules: rules)
         for absent in absent {
