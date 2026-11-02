@@ -246,9 +246,13 @@ private struct EMU700Recipe {
             // Normal running position: closed automatic coupler cover. The
             // maintenance/open-coupler state is not claimed by this study.
         }
-        for x:Float in [-4.35,4.35] {kit.box(x,3.70,0,2.9,1.84,0.25,steel)}
+        let airConditioners:[Float]=role == .ep ? [-6.45,3.40] : [-6.45,6.45]
+        for x in airConditioners {
+            let p=[Map3DPoint(x-1.55,3.70,-0.92),.init(x+1.55,3.70,-0.92),.init(x+1.32,3.95,-0.92),.init(x-1.32,3.95,-0.92)]
+            prism(p,p.map{$0 + .init(0,0,1.84)},steel)
+        }
         if role == .ep {
-            let x:Float = 7.1
+            let x:Float = 8.0
             kit.box(x,3.70,0,1.55,1.3,0.10,dark)
             for z:Float in [-0.48,0.48] {cylinder(x,3.80,z,radius:0.10,height:0.17,color:silver,sides:8)}
             for z:Float in [-0.35,0.35] {
