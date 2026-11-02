@@ -1,0 +1,200 @@
+{
+  "geometry_producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "identity": "TRA EMU700 ordinary livery, mass-production representative 739+740",
+  "period": "2020 historical representative; exact 2026 pair status UNVERIFIED",
+  "native_axes": {
+    "+X": "toward cab of the local four-car subunit",
+    "+Y": "left when facing +X",
+    "+Z": "up",
+    "rail_plane_z_m": 0
+  },
+  "overall_coupling_pitch_m": 163.286,
+  "coupling_gap_added_m": 0,
+  "ordinary_shell_gap_m": 0.6,
+  "wheel_geometry": {
+    "diameter_new_m": 0.86,
+    "prototype_worn_diameter_m": 0.78,
+    "centre_z_m": 0.43,
+    "axle_x_m": [
+      -8.3,
+      -6,
+      6,
+      8.3
+    ],
+    "tyre_centre_y_m": [
+      -0.6,
+      0.6
+    ],
+    "model_inner_face_distance_m": 1.07,
+    "prototype_track_gauge_m": 1.067,
+    "limits": "Wheel flanges, wear and engineering wheel/rail profiles are simplified.",
+    "absolute_station_basis": "Symmetric model-origin stations; official bogie centre distance and axle wheelbase, but exact end-relative offsets are not confirmed by a dimensioned plan."
+  },
+  "envelopes": {
+    "body_width_m": 2.889,
+    "with_glazing_trim_m": 2.946,
+    "roof_m": 3.7,
+    "with_AC_m": 3.95,
+    "raised_pantograph_model_m": 4.9775,
+    "nominal_head_pitch_m": 20.743,
+    "nominal_middle_pitch_m": 20.3,
+    "limits": "Roof/nominal pitches from TRSC; glazing projection and raised arm are photo fits. Published secondary heights have different or unclear measurement states."
+  },
+  "central_junction": {
+    "between_indices": [
+      4,
+      5
+    ],
+    "ends": "EM739 negative-X / EM740 negative-X, latter rotated once by assembly",
+    "coupling": "semi-permanent per TRSC middle-car description",
+    "gangway": "simplified end portal and flexible side members",
+    "limits": "Unique centre-interface fittings are UNVERIFIED; no invented special coupling width or cab ends."
+  },
+  "cars": [
+    {
+      "unit": "tra-emu700-emc",
+      "translation": [
+        71.2715,
+        0,
+        0
+      ],
+      "rotation_degrees": 0,
+      "index": 1,
+      "formal_role": "45EMC700",
+      "vehicle_number": "45EMC739",
+      "unit_role": "emc",
+      "pitch_m": 20.743,
+      "power": "motor",
+      "pantograph": false,
+      "cab": true,
+      "far_unit": "tra-emu700-emc-far"
+    },
+    {
+      "unit": "tra-emu700-ep",
+      "translation": [
+        50.75,
+        0,
+        0
+      ],
+      "rotation_degrees": 0,
+      "index": 2,
+      "formal_role": "45EP700",
+      "vehicle_number": "45EP739",
+      "unit_role": "ep",
+      "pitch_m": 20.3,
+      "power": "trailer",
+      "pantograph": true,
+      "cab": false,
+      "far_unit": "tra-emu700-ep-far"
+    },
+    {
+      "unit": "tra-emu700-et",
+      "translation": [
+        30.45,
+        0,
+        0
+      ],
+      "rotation_degrees": 0,
+      "index": 3,
+      "formal_role": "40ET700",
+      "vehicle_number": "40ET739",
+      "unit_role": "et",
+      "pitch_m": 20.3,
+      "power": "trailer",
+      "pantograph": false,
+      "cab": false,
+      "far_unit": "tra-emu700-et-far"
+    },
+    {
+      "unit": "tra-emu700-em",
+      "translation": [
+        10.15,
+        0,
+        0
+      ],
+      "rotation_degrees": 0,
+      "index": 4,
+      "formal_role": "45EM700",
+      "vehicle_number": "45EM739",
+      "unit_role": "em",
+      "pitch_m": 20.3,
+      "power": "motor",
+      "pantograph": false,
+      "cab": false,
+      "far_unit": "tra-emu700-em-far"
+    },
+    {
+      "unit": "tra-emu700-em",
+      "translation": [
+        -10.15,
+        0,
+        0
+      ],
+      "rotation_degrees": 180,
+      "index": 5,
+      "formal_role": "45EM700",
+      "vehicle_number": "45EM740",
+      "unit_role": "em",
+      "pitch_m": 20.3,
+      "power": "motor",
+      "pantograph": false,
+      "cab": false,
+      "far_unit": "tra-emu700-em-far"
+    },
+    {
+      "unit": "tra-emu700-et",
+      "translation": [
+        -30.45,
+        0,
+        0
+      ],
+      "rotation_degrees": 180,
+      "index": 6,
+      "formal_role": "40ET700",
+      "vehicle_number": "40ET740",
+      "unit_role": "et",
+      "pitch_m": 20.3,
+      "power": "trailer",
+      "pantograph": false,
+      "cab": false,
+      "far_unit": "tra-emu700-et-far"
+    },
+    {
+      "unit": "tra-emu700-ep",
+      "translation": [
+        -50.75,
+        0,
+        0
+      ],
+      "rotation_degrees": 180,
+      "index": 7,
+      "formal_role": "45EP700",
+      "vehicle_number": "45EP740",
+      "unit_role": "ep",
+      "pitch_m": 20.3,
+      "power": "trailer",
+      "pantograph": true,
+      "cab": false,
+      "far_unit": "tra-emu700-ep-far"
+    },
+    {
+      "unit": "tra-emu700-emc",
+      "translation": [
+        -71.2715,
+        0,
+        0
+      ],
+      "rotation_degrees": 180,
+      "index": 8,
+      "formal_role": "45EMC700",
+      "vehicle_number": "45EMC740",
+      "unit_role": "emc",
+      "pitch_m": 20.743,
+      "power": "motor",
+      "pantograph": false,
+      "cab": true,
+      "far_unit": "tra-emu700-emc-far"
+    }
+  ],
+  "formation_positive_x_end": "Car 1 EMC739; the adopted formation diagram places the Kaohsiung/Pingtung side here, not a verified real-world heading of the dated photographs."
+}

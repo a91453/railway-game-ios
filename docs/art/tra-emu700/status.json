@@ -1,19 +1,27 @@
 {
   "asset": {
     "status": "UNVERIFIED",
-    "evidence": "Work in progress; see README for exact missing evidence"
+    "evidence": "Native/GLB, topology, actual glass/tyre/AC/pantograph/coupler faults, Swift assembly, Blender, PNG and HTTP viewer checks have individual reports. file:// navigation is blocked by managed Chromium policy; not substituted by HTTP success.",
+    "scope": {
+      "45EMC700": "UNVERIFIED overall; see individual technical reports",
+      "45EP700": "UNVERIFIED overall; see individual technical reports",
+      "40ET700": "UNVERIFIED overall; see individual technical reports",
+      "45EM700": "UNVERIFIED overall; see individual technical reports",
+      "EM-EM junction": "UNVERIFIED overall; see individual technical reports",
+      "complete 739+740 eight-car near/far": "UNVERIFIED overall; see individual technical reports"
+    }
   },
   "appearance": {
     "status": "UNVERIFIED",
-    "evidence": "Work in progress; see README for exact missing evidence",
-    "accepted_producer": null
+    "accepted_producer": null,
+    "evidence": "No explicit user acceptance of the geometry producer; author inspection is separately recorded in visual-review.json."
   },
   "integration": {
     "status": "UNVERIFIED",
-    "evidence": "Work in progress; see README for exact missing evidence"
+    "evidence": "Studies only. TRA local schedules do not reliably supply EMU700 identity, formal roles or eight-car direction. No random/proportional replacement and no operating changes."
   },
   "device": {
     "status": "UNVERIFIED",
-    "evidence": "Work in progress; see README for exact missing evidence"
+    "evidence": "Linux native/WebGL/Blender only; no Simulator appearance, iPhone Metal, device CPU/GPU memory, animation or moving-train acceptance."
   }
 }

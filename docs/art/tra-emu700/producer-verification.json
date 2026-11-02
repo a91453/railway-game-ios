@@ -1,0 +1,2919 @@
+{
+  "geometry_producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "method": "A detached checkout executed build, render, sheet curation, independent Swift, Blender and geometry probes with its own directory as cwd; native bytes equal the separate public exporter. All selected sheets and overview equal the separate public renderer on hash-identical final native inputs.",
+  "native_glb_assembly_files": 22,
+  "selected_png_files": 11,
+  "files": [
+    {
+      "file": "models/tra-emu700-739-740-formation-far.glb",
+      "sha256": "659f587b9404880e313334d1412cb2adfc9be6372d6b5656042e7212f19d6857",
+      "bytes": 2353940
+    },
+    {
+      "file": "models/tra-emu700-739-740-formation-far.m3dscene.json",
+      "sha256": "9508e45f2915b1fba81ecb0f08bddacb6bb1da19770c614ae1a5546e1eab542f",
+      "bytes": 851308
+    },
+    {
+      "file": "models/tra-emu700-739-740-formation-far.triangles.bin",
+      "sha256": "9bf42cabb1140176a9ff611e6042cf281ea3feb51ef07ba5b2efb49e0cd3d6a6",
+      "bytes": 1274416
+    },
+    {
+      "file": "models/tra-emu700-739-740-formation.glb",
+      "sha256": "c71f4549f36c4fc265745f4c7a0bfe9cb459808e6a595d9464517959418932e1",
+      "bytes": 4763928
+    },
+    {
+      "file": "models/tra-emu700-739-740-formation.m3dscene.json",
+      "sha256": "7533971170f09f857cc645869d0991d5c1288aa2afb38877aef2fdbeeefb6fc4",
+      "bytes": 1721512
+    },
+    {
+      "file": "models/tra-emu700-739-740-formation.triangles.bin",
+      "sha256": "800f9f7ce313a3127104f7781e238490ac5ef6852ce466763caed55e28d51f08",
+      "bytes": 2579824
+    },
+    {
+      "file": "models/tra-emu700-em-far.glb",
+      "sha256": "26888bcf28fe301fd5426272c2842bee729d4728795ffd788c419fae26eda323",
+      "bytes": 230064
+    },
+    {
+      "file": "models/tra-emu700-em-far.m3dmodel",
+      "sha256": "f1330d489f96cda7adcf417aeba42e1dd2c8e2e0a4470dd4e026869d6ef0c884",
+      "bytes": 124028
+    },
+    {
+      "file": "models/tra-emu700-em.glb",
+      "sha256": "d96373258046f6b2050adb3e4a92a144d5d271001ffb007b06fddd507d47d110",
+      "bytes": 466612
+    },
+    {
+      "file": "models/tra-emu700-em.m3dmodel",
+      "sha256": "db70ebceddefe30243b06aa101e34abf099466d0099e9436373b6f2ecbc4a6b2",
+      "bytes": 252152
+    },
+    {
+      "file": "models/tra-emu700-emc-far.glb",
+      "sha256": "896748a4c843c0743d3c770414355576b0a74dcb0a5c72a9ca968dbfdae765de",
+      "bytes": 482936
+    },
+    {
+      "file": "models/tra-emu700-emc-far.m3dmodel",
+      "sha256": "ceafbfc921c907236d67a28277b6996a6a4f66c16abab65165ad6ce9834296d4",
+      "bytes": 260996
+    },
+    {
+      "file": "models/tra-emu700-emc.glb",
+      "sha256": "2aa1638021781363bc729e5f6d3cd7c5225bf91b7897bb2d92c9c6f36d6ed09c",
+      "bytes": 977528
+    },
+    {
+      "file": "models/tra-emu700-emc.m3dmodel",
+      "sha256": "532e57ab1c1f99133b0748a33df4a63ea265272fc0d5d052ae31e9343ac47871",
+      "bytes": 528896
+    },
+    {
+      "file": "models/tra-emu700-ep-far.glb",
+      "sha256": "0c5453dcb0f93169ba38b84e0043694cf553e10f2e691f3f7da76d636f10bbe9",
+      "bytes": 237744
+    },
+    {
+      "file": "models/tra-emu700-ep-far.m3dmodel",
+      "sha256": "312ea4a9120c573db45ab40c638aee968c2939d983cea25319120ec8cc19bdad",
+      "bytes": 128188
+    },
+    {
+      "file": "models/tra-emu700-ep.glb",
+      "sha256": "321717a5e4778524c0dfa0a29cc4e15796d05e702d3f13f0ebe8a3392f90efe3",
+      "bytes": 476596
+    },
+    {
+      "file": "models/tra-emu700-ep.m3dmodel",
+      "sha256": "af80dc7cc77b93810fe6115b8672cc01f59c49821172c93294062ebf0c65d92a",
+      "bytes": 257560
+    },
+    {
+      "file": "models/tra-emu700-et-far.glb",
+      "sha256": "8588af8c50560d07c394dc4b7f12a6fb85c2aad6ff29b888237b5badacc4b3da",
+      "bytes": 230448
+    },
+    {
+      "file": "models/tra-emu700-et-far.m3dmodel",
+      "sha256": "111600124a73a6dc1d9d3ce419936d4269785d73e5d0d1461cb9602aede095fc",
+      "bytes": 124236
+    },
+    {
+      "file": "models/tra-emu700-et.glb",
+      "sha256": "1651425ac21668455c15dbf1c24e0d1980a5213aa6d178d71b366606783f419f",
+      "bytes": 465460
+    },
+    {
+      "file": "models/tra-emu700-et.m3dmodel",
+      "sha256": "402ec9209d895fd951154984f81523303acaf0e0b7cae6ddbf1f1809ce832a07",
+      "bytes": 251528
+    },
+    {
+      "file": "sheets/tra-emu700-739-740-formation-far.png",
+      "sha256": "b9ec1dbe5f963204729dac5d20976beb6c430af77bc5269056f5ce31d226f235",
+      "bytes": 119112
+    },
+    {
+      "file": "sheets/tra-emu700-739-740-formation.png",
+      "sha256": "297634f2c52901e7be54ee739884b6a34dcc399e347e7d0a8ef6de435e76a95b",
+      "bytes": 116430
+    },
+    {
+      "file": "sheets/tra-emu700-em-far.png",
+      "sha256": "e24794efc977c032a249c4e2fc94a88053b397dd03929c3ddd368f7d7fb15fee",
+      "bytes": 120483
+    },
+    {
+      "file": "sheets/tra-emu700-em.png",
+      "sha256": "9ab0f5451d6ac61f90033b1c8affc1584192321e5470d19719953eeea6426d82",
+      "bytes": 119132
+    },
+    {
+      "file": "sheets/tra-emu700-emc-far.png",
+      "sha256": "5a6f6dc4ba38d5272667c0a2f41cd383a2484c87dc6feac44387c53b014d059f",
+      "bytes": 134528
+    },
+    {
+      "file": "sheets/tra-emu700-emc.png",
+      "sha256": "12a955463e434fba99b29c5c05407f29711c31f9c9a5cb1a974a4653f40ab786",
+      "bytes": 132674
+    },
+    {
+      "file": "sheets/tra-emu700-ep-far.png",
+      "sha256": "584b38bc951a1d3dab292126d2f4c379dd538b455ba52165fda1ca3c8247a3e0",
+      "bytes": 131374
+    },
+    {
+      "file": "sheets/tra-emu700-ep.png",
+      "sha256": "1c474fde8f858ae94454faab6648e50bd10dc0989a0a01d83ed2a41cf1d4fab1",
+      "bytes": 131125
+    },
+    {
+      "file": "sheets/tra-emu700-et-far.png",
+      "sha256": "daa144129589d3e1a3bc0a2e61c61c658fa114370cc30de3ef7c7318a41c2bcf",
+      "bytes": 120860
+    },
+    {
+      "file": "sheets/tra-emu700-et.png",
+      "sha256": "cc7ac39d490fd616683656a73090bc3faea9277ce9e5c215c2a5a4088ec47062",
+      "bytes": 119868
+    },
+    {
+      "file": "overview.png",
+      "sha256": "64b63682d8544bfe756ee19a17b5ecd2941b725691d41572d18b3fe06b8dfad6",
+      "bytes": 256581
+    }
+  ],
+  "repository_input_sha256": [
+    {
+      "file": "Sources/GameCore/City/Building.swift",
+      "sha256": "4206a07bb26d05be6ce587628d54093ec381336c2104108282f5d05c5bcd8c21"
+    },
+    {
+      "file": "Sources/GameCore/City/BuildingSale.swift",
+      "sha256": "a89bb67e4c48ffbc46788f97c241c0c83ad21e3b8542ecd83fda2a77a63ffead"
+    },
+    {
+      "file": "Sources/GameCore/City/CityDemand.swift",
+      "sha256": "31808484b7c3a4407bf3ebc39ad88f4b6c4d05dbd34c1e01a7008bbbc52c0a68"
+    },
+    {
+      "file": "Sources/GameCore/City/CompanyBuildings.swift",
+      "sha256": "219e40d841647196427702b3258cdb261c22defd9280f53860fb8b8747a98d63"
+    },
+    {
+      "file": "Sources/GameCore/City/Ground.swift",
+      "sha256": "e9f5a05972ed29065731d7364e6a512f0a94e6faa3301195b3def90f69128642"
+    },
+    {
+      "file": "Sources/GameCore/City/Land.swift",
+      "sha256": "72014de79e5c8eb08c65e3240c641ddd1b893016e596b8698561c9a32d28beb9"
+    },
+    {
+      "file": "Sources/GameCore/City/LandBlocks.swift",
+      "sha256": "e0c58a7e4f1089ba12b3a1e235a2984ddff60d62915dd7b59a87bf4d083acff8"
+    },
+    {
+      "file": "Sources/GameCore/City/LandDemand.swift",
+      "sha256": "02187c71c4803d65bfb3bee1e03edc5911e398538997676257b411f034972453"
+    },
+    {
+      "file": "Sources/GameCore/City/LandValue.swift",
+      "sha256": "f52850af7223d0d1be57ec15f603c82d56b1d2c6da40dc575f16b52ca607f84d"
+    },
+    {
+      "file": "Sources/GameCore/City/PlacedBuilding.swift",
+      "sha256": "36f03bab1c587c31940e8f81eab5e9cd36046819a8227b29d4ad562c779ed46a"
+    },
+    {
+      "file": "Sources/GameCore/City/RoadGrid.swift",
+      "sha256": "481aca106b56e14134d9de607edcd4a4b57efbd08d6bbfa1c3133cd898c40eb6"
+    },
+    {
+      "file": "Sources/GameCore/City/StationCommerce.swift",
+      "sha256": "1cddc1b438991499e89c9c9c00b1c0b98e7a8cb9ee364829af12bf7442949775"
+    },
+    {
+      "file": "Sources/GameCore/City/Subsidiary.swift",
+      "sha256": "7829673339256580ba11fc62127b22b39571902447499f3f5c985d3350bf6172"
+    },
+    {
+      "file": "Sources/GameCore/City/Terrain.swift",
+      "sha256": "7eaf9431de1918e01a958664839054dc74d83ac121575299b97546d79fc7e254"
+    },
+    {
+      "file": "Sources/GameCore/City/Zoning.swift",
+      "sha256": "e77657c52e93756dabc925c4f01aed1730a9f9d8a92fa8d33b3ca49b80e24be0"
+    },
+    {
+      "file": "Sources/GameCore/Economy/Accounts.swift",
+      "sha256": "15efaa03477ae2781a1e112ce8378a5c0269e4917be21c786b1c5d416e62a64b"
+    },
+    {
+      "file": "Sources/GameCore/Economy/Assets.swift",
+      "sha256": "c1416dedddc5553167008c055fdded3856bb0f40d3ba57b5f3067bb3320e7e51"
+    },
+    {
+      "file": "Sources/GameCore/Economy/DayPass.swift",
+      "sha256": "110a1641188ea782f035e810c2e36537e84d2e064333abacd7fc21c38d29ef88"
+    },
+    {
+      "file": "Sources/GameCore/Economy/Fares.swift",
+      "sha256": "7be6617cbdbc4c25bb4ea2f6c038bf4bc331b7d7923866b967369efcc0e97639"
+    },
+    {
+      "file": "Sources/GameCore/Economy/GameEconomy.swift",
+      "sha256": "f51fd890a8b8c7cb196ec7b445269e7e69aa09cfbd3949c60760fc931df22347"
+    },
+    {
+      "file": "Sources/GameCore/Economy/Goals.swift",
+      "sha256": "e2fe31b49ca26a52b51c0e26c45e5f4b17ece1c645cdf2c9712f54edccb01c8d"
+    },
+    {
+      "file": "Sources/GameCore/Economy/LineAccounts.swift",
+      "sha256": "41e995316d06bd1739a9050a4ab7174896471f9decba5c213b92c0f1be7deb10"
+    },
+    {
+      "file": "Sources/GameCore/Economy/Money.swift",
+      "sha256": "8e63d4c5464b3d41d2f78e82648d587d0a488ef3d44de4b1428ff8f0cc0433ad"
+    },
+    {
+      "file": "Sources/GameCore/Economy/Operations.swift",
+      "sha256": "3006da5d95c6cd2bcd97d0bec4e9c9bf27f035bb3b0a767ffef7635f3bacff12"
+    },
+    {
+      "file": "Sources/GameCore/Economy/Requests.swift",
+      "sha256": "7bdd2258d24f4206a21caa38626e3ee951764104a25c675a16c8efb708ba7c97"
+    },
+    {
+      "file": "Sources/GameCore/Freight/Freight.swift",
+      "sha256": "cd267fd524ebcc2ef25d4c2dd7db746afc2f89c607d2e2d5df7e16dee12e9968"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/FixedPoint.swift",
+      "sha256": "cfa508cdc936283404888a980822fed7cf1c72aa8ceee61094ca30a15ecaaa17"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/TrackClearance.swift",
+      "sha256": "b0d21aef9c506b49636e1fa1d269cca5bc862bba87bd0312aee5325ab9d8ad75"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/TrackFouling.swift",
+      "sha256": "4fa8c86a18a7b6a65c32c25426a7dd0b3ad1d50d904baf31040c95074575380f"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/TrackGeometry.swift",
+      "sha256": "a2507377c0d48cf476542759e7bca3455b05dd686a0d9e18c400cc128f8b4652"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/TrackProfile.swift",
+      "sha256": "f5eaae5233f9fef0f64f27e9363c387bc8b4103a56ad0f6633fcb8bdb4d358c9"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/TrackSpacing.swift",
+      "sha256": "1620461e667fc57d7ec76837242cc50a2c0a925742bcc5127002d90b1944bf4e"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/WideInteger.swift",
+      "sha256": "687bd1d097359864b4a2e6ea7c5a09e64b4ce4f95840546a0d03b8951603874c"
+    },
+    {
+      "file": "Sources/GameCore/Geometry/WorldCoordinate.swift",
+      "sha256": "6191839a061bcd035d0dabdb224fa9ca67af7efbdd9bdf36023a69e51ba62f48"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/Boarding.swift",
+      "sha256": "4c810cb6242ba9e5467476e9ada6dfebaccec00693cc9cb81cdd08ce8e0285e4"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/BusRoute.swift",
+      "sha256": "003793a36405cc998a50bc77c82916c873f5d650581990e9a4d508328f82e909"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/CivicRiders.swift",
+      "sha256": "e7e5094660aba23a3f875f0a68149a0d1b82ec4e7675eb5ce7cc4994e8a03239"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/DemandEvents.swift",
+      "sha256": "14f45ac15a6e7aaa9132f34c991fbe26b38ca843cba8252d2747da6742faa353"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/DistanceDemand.swift",
+      "sha256": "9a116fe7975e0031e13c7f74b3fd358236b2d4512c57c9d4ddfa91018b21a666"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/HighSpeed.swift",
+      "sha256": "f9183d41b3b65560f83d70216e46a946851458fde59cf1d9488697530b612fc8"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/Holidays.swift",
+      "sha256": "140483e92fccf35bf1e78abf3dc5a409093bdae6b0c74bb862e76b3c87dde337"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/ModeShift.swift",
+      "sha256": "8e8244738786215b71b6df6ad29dd3a8f8fa1c2817c1743dfcbbb8500a1f7a1d"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/PassengerCrowding.swift",
+      "sha256": "5e443ad2787f51043597c5c1010ea266a5679dac53227c903939d669dce7d680"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/PassengerDemand.swift",
+      "sha256": "9d0a677450075568408fbf2467b825fa530310dcd33923fbb2f8f92704c4ed7d"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/PassengerJourney.swift",
+      "sha256": "aa1cccac332ca454141b563c676c4bc52ddd4d973509477abb724e739c163cd6"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/PassengerLegFlows.swift",
+      "sha256": "873f0f00effad9db0ab876427f15baa34c287a4a25761858065215a1faba92c8"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/PassengerRouteCache.swift",
+      "sha256": "5ab32c45ec4fd795502fda3daf538fa9dd192c3e52beba4c5441cb9ab549b9bd"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/PassengerRoutes.swift",
+      "sha256": "6f1dce877e8ebe224af78be183c07d003f6e268c8f79df5da1ecd44cda756b03"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/StationDemand.swift",
+      "sha256": "ac3504de81fbbda720a5cd6c8f704cb3095a91ad41da28639bb938b234209164"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/StationPassengers.swift",
+      "sha256": "eb1b3cd1d908b0ee998400987abc6030ffe4ac911c8e304f932b15ced8f2e561"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/TaiwanHolidays.swift",
+      "sha256": "9c08a578298d99696b372a8095b6308be99f6d2fe0f909724afec76626a41a46"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/Tourism.swift",
+      "sha256": "4c6fc3b11c42940a04eaee4ee2eb52b4efecedbd2aaa0c4902881e877a18470a"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/TownGrowth.swift",
+      "sha256": "f885e2bfcaa39e1c8fdc974efd90611ee8d2a401d3c095136473518772c632e0"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/TransferDemand.swift",
+      "sha256": "2c7a7ea3a67fdb647fa94134b8f10058cd1eeebc0af3066a0567bdb95a38d972"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/TransferGroup.swift",
+      "sha256": "897b1f6122735a65b1b55fe29db6f5d5a2383731917240fd7b441ea0d0ec8cd3"
+    },
+    {
+      "file": "Sources/GameCore/Passenger/Weather.swift",
+      "sha256": "e1233baf43ff871488736b59a3171a8e0f108e0f4ac091212949bd44a6430ed1"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ApproachLocking.swift",
+      "sha256": "84fe6e6e373f19769f81c29eb08fb29636faed4c635408d55d90154d41f13391"
+    },
+    {
+      "file": "Sources/GameCore/Railway/BlockSections.swift",
+      "sha256": "298933125242bdff6dc58f33a51226ebfa7361ae591df345a891e3d16ba5e7f0"
+    },
+    {
+      "file": "Sources/GameCore/Railway/CurveSpeedLimit.swift",
+      "sha256": "a82218c9bc0bb34298411f04625e000b029cfae178273102b9a7271052df1de7"
+    },
+    {
+      "file": "Sources/GameCore/Railway/CurveSpeedRuns.swift",
+      "sha256": "9ad346997067a7ac23e8782e4e968ddc1c85ea20238a2447170c7c61974fd66c"
+    },
+    {
+      "file": "Sources/GameCore/Railway/Deadlock.swift",
+      "sha256": "7a4b1081ffa8c9d441cda7bd39e8c73821c3df01b7f126048460b8f36820af6b"
+    },
+    {
+      "file": "Sources/GameCore/Railway/Depot.swift",
+      "sha256": "fe62aa3d0fd67256fc2ec6d8fc043691eae7e6f67bd59a27bad19bcd96de5a8b"
+    },
+    {
+      "file": "Sources/GameCore/Railway/DispatchPattern.swift",
+      "sha256": "c12e496d4c4799de61e5ec8df068001c2e56f182fae1270172a506f70f6ddf1a"
+    },
+    {
+      "file": "Sources/GameCore/Railway/DoorCrowding.swift",
+      "sha256": "4d79bab5d7d2079635d90ce39d718f90a7d78270ac3dbf7cf38ef35361f4b84b"
+    },
+    {
+      "file": "Sources/GameCore/Railway/FlexDispatch.swift",
+      "sha256": "b3a6af8e7709385de7c58df6d42be4a6f11c75abbf8776f353fdec5020af42b5"
+    },
+    {
+      "file": "Sources/GameCore/Railway/HeadwayOvertake.swift",
+      "sha256": "b47b699ebebce0b59d428490ac718c0350662157a6ac87a52a58859fede631d1"
+    },
+    {
+      "file": "Sources/GameCore/Railway/HeldDeparture.swift",
+      "sha256": "3442168b5212f9d14d30cdf7dd1614109c0150e5337824cf20ce747c0e46e746"
+    },
+    {
+      "file": "Sources/GameCore/Railway/KeepLeft.swift",
+      "sha256": "05d0d54a740316ada95c975d98814f7b906e6ae10a6ae7bed639c4fa792dd4c3"
+    },
+    {
+      "file": "Sources/GameCore/Railway/LimitedRunningCurve.swift",
+      "sha256": "c2d977ce97809dfb9271ecf40626fa6c18800228a40e564cf608fd4e2bd55234"
+    },
+    {
+      "file": "Sources/GameCore/Railway/LineAcquisition.swift",
+      "sha256": "5136a8b9a738ad57d3584c7e4f771636f94c5d187e9fbd11d01ff67426056ee2"
+    },
+    {
+      "file": "Sources/GameCore/Railway/LineCapacity.swift",
+      "sha256": "82c2b83b9736a6b054402255d4d0fa21175f1f3d86d789bf12f66298c04eefa3"
+    },
+    {
+      "file": "Sources/GameCore/Railway/LineDispatchHold.swift",
+      "sha256": "1115e68a03fec22533c93f830a158f18665624c21b98f3bce4d9e0d28c57c91d"
+    },
+    {
+      "file": "Sources/GameCore/Railway/LineJourney.swift",
+      "sha256": "6001c1678e7cb3d2fe620477ad2c6b904b56ebc9c676c693214538baff079d03"
+    },
+    {
+      "file": "Sources/GameCore/Railway/LineRoutePreference.swift",
+      "sha256": "8988a047be673d97d4284fed61ae2180af76b90be6e056fda18defac9fa1f9da"
+    },
+    {
+      "file": "Sources/GameCore/Railway/LineRuns.swift",
+      "sha256": "cc3493a4cf2944bb6881330f947d4f1ca46c22edc1bb82adaae21fdf327a10a6"
+    },
+    {
+      "file": "Sources/GameCore/Railway/MountainTrack.swift",
+      "sha256": "48dae1c37687cc18d6ac9307872d548ed9a744a206fa019b3d34b9122d3d0c5f"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RailwayNetwork.swift",
+      "sha256": "7a3493f9bf707bc47f0ad6c3f429401c799de081b4bb7be718bc4274a0ab412f"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RailwayNetworkTrains.swift",
+      "sha256": "b85559279103f8fa02d49c5e1cb21e3cb90aafdba451cdc0fe3f26df48564169"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RailwaySnapshot.swift",
+      "sha256": "84543f08699c912b9d34c6592cb78c41ef189e08abc05da06b8c48ab3c2215c2"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RealisticOperation.swift",
+      "sha256": "6a2c274c5d6094c564f51927755e9a8a8b9d1e7106ea69754d1bd95db8d92b34"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RollingStock.swift",
+      "sha256": "9cb50bac3673b32277263a5d630a491696e46b5065b75f23cdcc7b131e9d0a80"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RouteReservation.swift",
+      "sha256": "286fc65cf8e97afdf651c1178c9eae17bb50ed13e096a88951ae11959ead5ad1"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RunDepot.swift",
+      "sha256": "4b635e80f9bd27a6b473f1035513c82e0f379157a5e09df7396a4c0a1723f5a2"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RunSpacing.swift",
+      "sha256": "c7d5481a9e214bf22d37e828cc9e57348f8657e107fa53bad6dea9055ccc83ff"
+    },
+    {
+      "file": "Sources/GameCore/Railway/RunningCurve.swift",
+      "sha256": "685d9f69339abf43ae3c3eea34cb2d565d04f98675df35a94f42303216355394"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ScheduledOvertakeTracks.swift",
+      "sha256": "8d907dcd8e2e6e3b1fb86dfb7bff6806690c2cdd84c0fd7c46f4a6e010251ed4"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ScheduledTraffic.swift",
+      "sha256": "75adff921621484d43640ced78ad75b4f1f1cf9440735b6f5bb9f53185d32172"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ServiceDirections.swift",
+      "sha256": "285953b8d5237df026c1abb16095ebfaed9dc832467e0ebce5bb08f2944dd918"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ServiceDwell.swift",
+      "sha256": "7a412fccb009b5607fff9846b2b6dbe52de59c5d988377c9016ad3d30cdbf4f1"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ServiceLine.swift",
+      "sha256": "712ff4cbc78cb11663894e50d06a7780e08053955aeeeb817948c7eb53df49fe"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ServicePath.swift",
+      "sha256": "1a1471275455c2cf0adf25492b6a096b743a8f844b96baded90a6e849dc46e4d"
+    },
+    {
+      "file": "Sources/GameCore/Railway/ServiceRun.swift",
+      "sha256": "c78d47805bfcde70df2c2f5cace4316e7163a8bbdba1e991b06f600827ca68ae"
+    },
+    {
+      "file": "Sources/GameCore/Railway/Station.swift",
+      "sha256": "220d1e7a56cef7631f780e60efb844afbe2bc8cebeadc921455785485a2ac70a"
+    },
+    {
+      "file": "Sources/GameCore/Railway/StationDwell.swift",
+      "sha256": "1868d8949973265d716b22737cee2176c63f137fcb53e9ba79911c17db7a366a"
+    },
+    {
+      "file": "Sources/GameCore/Railway/StationExpansion.swift",
+      "sha256": "26bdb015493ec59561b76a38636f5bd51c2285f6b7dca1e040e80dcfb115f317"
+    },
+    {
+      "file": "Sources/GameCore/Railway/StationStop.swift",
+      "sha256": "f976d667eb5b4ee81622905632790224f0bb1e42fa90de655df038ea9699cfd0"
+    },
+    {
+      "file": "Sources/GameCore/Railway/Terminus.swift",
+      "sha256": "dd118f3f15cfa789c679a64bfac051711e71f025287ad185c1508ec6f2091827"
+    },
+    {
+      "file": "Sources/GameCore/Railway/Timetable.swift",
+      "sha256": "ec620e0f0d8a99ca0298d764efea836800b543e72fcd551cc563cf3dd27ffef8"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TimetableExecution.swift",
+      "sha256": "873dae31cf93ca8301aa9f4d23a448338570b3ae110b4b0abed5dcd8ab8acf2b"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrackGraph.swift",
+      "sha256": "d25feef57e94092c3a214aa26842fa06a028953c7e3f1edc083ff3a3eaf301cb"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrackPlatform.swift",
+      "sha256": "bb1dd39f499f1d859bca8e89678cd860717ed308646978ee33226fa02bcf67e4"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrackResources.swift",
+      "sha256": "7614ec02f0d39fbc27aa4ac36f08c052f6f6851980510d6841a00a1f0f375413"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrackSections.swift",
+      "sha256": "2f824727ab5a40f9d800a6b7810f9036eca741de9f98085c2b790d72d944ef26"
+    },
+    {
+      "file": "Sources/GameCore/Railway/Train.swift",
+      "sha256": "9963b4b78667d6d35ab7635ac452ff1a8ad125c8cebf5c39cef731ca5e7724ab"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainLength.swift",
+      "sha256": "ed40f43fdddc61c43bf47a0e5dec6b80f081b62066eb68d6dfac92fed160049a"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainMovement.swift",
+      "sha256": "9fdc3f87368628b31a3054947cd38cfb8a4adf4805f0a9bf2c4d6c32f3fa0779"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainPerformanceCatalog.swift",
+      "sha256": "19080e67b159ffb96a9e013f4203bb35f072374647391102bd21c7bf75337250"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainPosition.swift",
+      "sha256": "2404e7ce09bbfb4d43f5aee7f4bfd7368bd112aed544ae5905b58cc7678a3f82"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainRoute.swift",
+      "sha256": "a685db75cff82a53f724a1378c81d7904abe2811eaf8252494f42c96eba69e6d"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainTrips.swift",
+      "sha256": "98bf534c7128111c920089a9b074ed30f003a5c2d5753b2cb1c993196502cc96"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainType.swift",
+      "sha256": "913e4cbc4104b44cbbd54786aa80620aa1f175e5b511254dbbbab598cce4b5ae"
+    },
+    {
+      "file": "Sources/GameCore/Railway/TrainTypeCatalog.swift",
+      "sha256": "5e651d4c7be5eeabd5bbdca7b710226d43469ea7067a4a318538a288bc39f800"
+    },
+    {
+      "file": "Sources/GameCore/Time/GameClock.swift",
+      "sha256": "d5f07e6e7698a7556a77d86eae9989c50817ddc60490fc7a9791f0731f0b7988"
+    },
+    {
+      "file": "Sources/GameCore/World/GameError.swift",
+      "sha256": "d4a042d8304d41f70f1e63077aea9b68ae0c67bd764dade391504f1ad02d8f2c"
+    },
+    {
+      "file": "Sources/GameCore/World/GameWorld.swift",
+      "sha256": "60d1a6ed1cb4cbd36acc7c08f9f68f33fd63cc4f1b0937a328a896cb4216825c"
+    },
+    {
+      "file": "Sources/GameCore/World/GeoAnchor.swift",
+      "sha256": "de8dd618e425bf165d2eee19b04db7cbcd5fe9d9929c634ba11250f247f157ae"
+    },
+    {
+      "file": "Sources/GameCore/World/LegacyGrid.swift",
+      "sha256": "2a38cdc9a93fd3f1f3cd4cc39d7245a5af117db99686b2490748136c2d0e34ee"
+    },
+    {
+      "file": "Sources/GameCore/World/MapExpansion.swift",
+      "sha256": "82af0581c477be12a5c3d848837a91095d152f93bb6df26a8662f19a37b98b8c"
+    },
+    {
+      "file": "Sources/GameCore/World/SavedGame.swift",
+      "sha256": "f27d105d02afae2ecfab5e98413af2f733e8032b73e3c630d243040ff04295b5"
+    },
+    {
+      "file": "Sources/GameCore/World/WorldBounds.swift",
+      "sha256": "bd6c4441df8b1b70608c9f2d39b039cf700ee45d2e05bfd979859d5b69c03ebc"
+    },
+    {
+      "file": "Sources/GamePresentation/Achievements.swift",
+      "sha256": "250474638639fa2b49c8454503bbaa8f5468467e83c0be28662b5f53ed3de1fe"
+    },
+    {
+      "file": "Sources/GamePresentation/ActionFeedback.swift",
+      "sha256": "0b0be9b9c0668cb64b86e0cae9b15c3764b5663687b7340759729569f9fefb7d"
+    },
+    {
+      "file": "Sources/GamePresentation/AdvancedDetails.swift",
+      "sha256": "0f8c0811ccb77faae1764efb8e105fd1d929ef6fb26354b39f7f342d230e1fd0"
+    },
+    {
+      "file": "Sources/GamePresentation/AmbientDirector.swift",
+      "sha256": "d625bc5bc958c17833b6e629b6ed8b074413c859060ab3e89835da5b73a97a5b"
+    },
+    {
+      "file": "Sources/GamePresentation/AttractionCatalog.swift",
+      "sha256": "d4456b3574426c632f4710726fad456ba00509350ea4e6c8afc68109c7fdf7ff"
+    },
+    {
+      "file": "Sources/GamePresentation/AutoService.swift",
+      "sha256": "766ff520edd8965eec7d737d18f2201582af01a028fa612f4bcfe33270f3c220"
+    },
+    {
+      "file": "Sources/GamePresentation/BaseMapFollowing.swift",
+      "sha256": "0571f1eec0e5d09b914d04f236543d6da1621ad6d1ab174d7565bb4be3515779"
+    },
+    {
+      "file": "Sources/GamePresentation/BaseMapStyle.swift",
+      "sha256": "153b6f1f079694c8bf2016309469d44a08800746e4c55fbd4484ef6a98175dc4"
+    },
+    {
+      "file": "Sources/GamePresentation/BranchLineChallenge.swift",
+      "sha256": "f95df26d93539f511cd198459861118441aee706b2ce68f23ea27159812b64e0"
+    },
+    {
+      "file": "Sources/GamePresentation/BuildConfirmLayout.swift",
+      "sha256": "a092beab1c771734cc2e0f6622d64af7db96e73660531f719684691725adf7e2"
+    },
+    {
+      "file": "Sources/GamePresentation/BuildToolbar.swift",
+      "sha256": "f1a30903035d736b98fde7852639176758a54a316692e9031a4d422642c000b0"
+    },
+    {
+      "file": "Sources/GamePresentation/BuildingSaleSession.swift",
+      "sha256": "73436ffcd6305322848abccff75e16f399858369c768a578e94d2ad5d849f809"
+    },
+    {
+      "file": "Sources/GamePresentation/BuildingSession.swift",
+      "sha256": "b537ad7f1f81fa8c9d0a3ac9139817019ca66e166377e03e23fa5c79d639052a"
+    },
+    {
+      "file": "Sources/GamePresentation/BusMotion.swift",
+      "sha256": "4236eb6b6769c9ba77f175261a4fda20c0123f4a0a566f8d75086d9d0f32a945"
+    },
+    {
+      "file": "Sources/GamePresentation/BusOwnRoads.swift",
+      "sha256": "ddc74b1b14ab42a550b992f309ec07435d16dc565609b911000314ba132ca576"
+    },
+    {
+      "file": "Sources/GamePresentation/BusRoadNetwork.swift",
+      "sha256": "f7a44e5e14cb38fb3513287c733a83110f47a8c46a7f85caff1640cbf7693cfc"
+    },
+    {
+      "file": "Sources/GamePresentation/BusRouteEditor.swift",
+      "sha256": "467a638b097713f41ce9c124c2b532036dea8a3f0019238e1b7dc40d6cf1d8a4"
+    },
+    {
+      "file": "Sources/GamePresentation/BusStopLabels.swift",
+      "sha256": "d160eeb3a0d13a62f0116df30cab7089d5c5e72297ae7c35f84042074a830ef2"
+    },
+    {
+      "file": "Sources/GamePresentation/ChallengeStory.swift",
+      "sha256": "c5beb827ec0eeaad025ae1194709095f2306a044f32872dcf8106f60a6f14512"
+    },
+    {
+      "file": "Sources/GamePresentation/CityMap.swift",
+      "sha256": "f9ca3021f45e1aa68f4e6a910f78e29a3e03e04df011bbc233c4aa6bcf3f353d"
+    },
+    {
+      "file": "Sources/GamePresentation/CitySkyline.swift",
+      "sha256": "ca22f0f4572b7ed2e002f62420970244b39e276d5e2bf9c7e0000afba487c931"
+    },
+    {
+      "file": "Sources/GamePresentation/CityTile.swift",
+      "sha256": "c6b1cc19257545d9d02ba86fe0c56fca79f1d744835f6b6fe28c9aad977c174d"
+    },
+    {
+      "file": "Sources/GamePresentation/CityViewPage.swift",
+      "sha256": "a3dbee55d455c07b82f479b750d7602ff954edb55612cea3931b8e2922819ee7"
+    },
+    {
+      "file": "Sources/GamePresentation/CommandLog.swift",
+      "sha256": "87246456adae43e4e4b121fd7cccd13ba95243967123ed91705e9bb7c05fe0ac"
+    },
+    {
+      "file": "Sources/GamePresentation/CommandLogReport.swift",
+      "sha256": "99397d54e2903db64d852ac5803d701094c9074c35bd207a28627d710fc61d99"
+    },
+    {
+      "file": "Sources/GamePresentation/CompanyRank.swift",
+      "sha256": "6b6ae243db2468683ae2c2d87d80bb2e9e9fa82b3a4e278c652dc0688ae06e65"
+    },
+    {
+      "file": "Sources/GamePresentation/ConstructionTool.swift",
+      "sha256": "aaf2b2920a299c1db33278244cc9c7801eea7182ed5ac74ccc412e9be10b8dbb"
+    },
+    {
+      "file": "Sources/GamePresentation/CountryBorders.swift",
+      "sha256": "a784a7f6ded5dad23d1f9e96a76f3090e3d2736bbb433fb99d3f467d19f8096b"
+    },
+    {
+      "file": "Sources/GamePresentation/CountryLookup.swift",
+      "sha256": "efabe5c83286596aef0feae09adebe8c9724e787465d18eb282bb54d1b98d7c7"
+    },
+    {
+      "file": "Sources/GamePresentation/CoverageGrid.swift",
+      "sha256": "70978a656abd174f443c2b769704c41dac91868f7075ffb2645b44b855caf92b"
+    },
+    {
+      "file": "Sources/GamePresentation/CoverageSummary.swift",
+      "sha256": "9af817032270e27ce6acf79f7d30fb636b94bae831c213376c412cdde8868e90"
+    },
+    {
+      "file": "Sources/GamePresentation/CoveredMap.swift",
+      "sha256": "761caa6c1cab21b50ad50704acd8967224e0da9e2efcfe6ef80a2be3a06324d2"
+    },
+    {
+      "file": "Sources/GamePresentation/CurveSpeedText.swift",
+      "sha256": "a5b8d1d4438ed719ed7c4a3d49d947575d22bb783a84a9f58449867c9f482040"
+    },
+    {
+      "file": "Sources/GamePresentation/DataSourceCredits.swift",
+      "sha256": "42d6290c63b7153fbc207320fbdf1f8f07917f407a5c77ca85ec5f2ed2ef282a"
+    },
+    {
+      "file": "Sources/GamePresentation/DayNight.swift",
+      "sha256": "8192e491eef504d1b7d62a6470ab5690af345bdda7c402829d7ecbcc1facdfc4"
+    },
+    {
+      "file": "Sources/GamePresentation/DayPassCard.swift",
+      "sha256": "0e4fde0b30c72ef0be69bebd53effa62becdf1b86f4998733540ef29857b0011"
+    },
+    {
+      "file": "Sources/GamePresentation/DemoMode.swift",
+      "sha256": "fde6d600de6c8e745204c0e960ec0add7c266de28dbb69b4d49d0335218dc379"
+    },
+    {
+      "file": "Sources/GamePresentation/DemoRealLines.swift",
+      "sha256": "f1485304cdc47388fb533ff2482603e5da84703aadd88b04c57d3197108db1c2"
+    },
+    {
+      "file": "Sources/GamePresentation/DepartureBoard.swift",
+      "sha256": "548f282369366de41650bdf4791f73da4ba0943b1166d312bd722638a8ed7662"
+    },
+    {
+      "file": "Sources/GamePresentation/DepartureBoardPlatforms.swift",
+      "sha256": "5321773f8e4b01f2379eb26025c4747c17a3978351b3ecd5d4e5930fc83b03da"
+    },
+    {
+      "file": "Sources/GamePresentation/DepotText.swift",
+      "sha256": "f8e5fb7c06940c39e41584c1a00182815c3d3a1c4253c8b5abc95c3f401d794c"
+    },
+    {
+      "file": "Sources/GamePresentation/DepotYard.swift",
+      "sha256": "f78d2856ff9c3b62bfcda12d0d1b31a6653f87e942c8523e4b879574f27ef7c1"
+    },
+    {
+      "file": "Sources/GamePresentation/DetailsCardLayout.swift",
+      "sha256": "5a7775c387fefcd4f57b40c6e5a244254e4d558d17f53ea7125f6ee94fa02163"
+    },
+    {
+      "file": "Sources/GamePresentation/DeviceDiagnostics.swift",
+      "sha256": "d8d44d6833e0fe2db234ce3ecd51be094607bea7ca01dc0476f0bc6d348f3d8e"
+    },
+    {
+      "file": "Sources/GamePresentation/DeviceLoad.swift",
+      "sha256": "15493892c717a508eb660f4a2b29513e258141bbbb95df6853c909341326730e"
+    },
+    {
+      "file": "Sources/GamePresentation/DisplayLanguage.swift",
+      "sha256": "3d577bd15785506459507aa4e9496caba66ce6d089e60a3a1c0cd9a63ce0428b"
+    },
+    {
+      "file": "Sources/GamePresentation/DisplayText.swift",
+      "sha256": "087f6950e2d674627a0c8718c377623ec6506017f480c4bcc8e9e3de75f5088f"
+    },
+    {
+      "file": "Sources/GamePresentation/DoubleTrack.swift",
+      "sha256": "5bf11fafc7a9fd6ff87c522ecb387f03bdf7247531ba242b05628c0a48bff0a3"
+    },
+    {
+      "file": "Sources/GamePresentation/DoubleTrackChain.swift",
+      "sha256": "8d05962ad9b61b61b77ae10177f4a705230d97f9d730853c80445302fdb050b7"
+    },
+    {
+      "file": "Sources/GamePresentation/DoubleTrackCrossover.swift",
+      "sha256": "cc03d92d99e922612be59f58e6e618cf8f0b1e73941924db22373232f071eb8a"
+    },
+    {
+      "file": "Sources/GamePresentation/DoubleTrackPlatform.swift",
+      "sha256": "0c7406a8142fb8de6c8b120b89b9e5582692ea0b582bd1fb317ba907b769ebf1"
+    },
+    {
+      "file": "Sources/GamePresentation/DragLoupe.swift",
+      "sha256": "aa7461903366556a9132e3ce9b87f4ea855e2062181f7779b4cfbded7f05c1c1"
+    },
+    {
+      "file": "Sources/GamePresentation/Earcut.swift",
+      "sha256": "bee49df24d2018165501981df86f5b0d9bf4b74e3c09a6f745b3177ce1bdcda6"
+    },
+    {
+      "file": "Sources/GamePresentation/EconomyText.swift",
+      "sha256": "4d75e0e349e9f6f213a08437ee76b497f80b05c543d23dae651227ac720d68c6"
+    },
+    {
+      "file": "Sources/GamePresentation/FareBandScale.swift",
+      "sha256": "d81be0f47dfb90fba4165b2abe95d552e94908a6588f7b294c7b235d022ee662"
+    },
+    {
+      "file": "Sources/GamePresentation/FareDemandHint.swift",
+      "sha256": "9b27b1c2c330db25a0a3d1e1d08110c78c4515e91a636dbd0f5962cde3ed8e80"
+    },
+    {
+      "file": "Sources/GamePresentation/FinanceChartSpec.swift",
+      "sha256": "11c529034874ee0ab9ac8fff496d16043e4a11010af11da21201a646af158bca"
+    },
+    {
+      "file": "Sources/GamePresentation/FinanceComposition.swift",
+      "sha256": "bb0c7411085711fbadfc887668d44a1d4eafaebf9eb78a42dd8f3f89778a3671"
+    },
+    {
+      "file": "Sources/GamePresentation/FinanceHistory.swift",
+      "sha256": "470fa36492901daddb05335d341ddb073c78c9cb8744d5906cde6237535ce63f"
+    },
+    {
+      "file": "Sources/GamePresentation/FinancialStatements.swift",
+      "sha256": "06f847293a674b1a2e0f1f9b31b52a43aef3f186d4799585dbc734a1ee563151"
+    },
+    {
+      "file": "Sources/GamePresentation/FirstLineGuide.swift",
+      "sha256": "442a6f9440809e5b7234138a1cb67d3755b219e4b65e03b7976be2e15279b4ba"
+    },
+    {
+      "file": "Sources/GamePresentation/FollowBarFacts.swift",
+      "sha256": "bea598651acaea9ec97a449987a31a2b6ff9335bf1a399bb35e54003a1cedbba"
+    },
+    {
+      "file": "Sources/GamePresentation/FollowBarText.swift",
+      "sha256": "8e71d78dc739b31601a8530d13a0d9157fd4d87f487dde3b7eb299d3208c252e"
+    },
+    {
+      "file": "Sources/GamePresentation/FollowCamera.swift",
+      "sha256": "e998c4855f36921039f7da306ac17373bb3a875fe62e12c1665422a940cc62ab"
+    },
+    {
+      "file": "Sources/GamePresentation/FrameCostMeter.swift",
+      "sha256": "8111f8fef284ee03b197fc932c03c4d92e790d7554501f93838294e10d06269a"
+    },
+    {
+      "file": "Sources/GamePresentation/FrameTimeBench.swift",
+      "sha256": "c851212238a6fa4d204ff37e51348b5e45a90e86a4afc760904f349abb8db888"
+    },
+    {
+      "file": "Sources/GamePresentation/FrameTimeRecord.swift",
+      "sha256": "cc2234f53290ac6cf60db19620f8f905bd47784828b618e3d26135863b7044b5"
+    },
+    {
+      "file": "Sources/GamePresentation/FreightText.swift",
+      "sha256": "2561e26a05ab54dc3e6891964045fffdfd3ba0d05889df72e4fd6c7998ba2ae4"
+    },
+    {
+      "file": "Sources/GamePresentation/GameCenterMapping.swift",
+      "sha256": "4954dc66fb12320be1e6a75f2923bedd288a0fb39dbbc8917720b73eadc53056"
+    },
+    {
+      "file": "Sources/GamePresentation/GameFeedback.swift",
+      "sha256": "fc346c4a9e54cb0333407d75496421009ab1b11e8314e8225dbdefaccca77984"
+    },
+    {
+      "file": "Sources/GamePresentation/GameLauncher.swift",
+      "sha256": "ca362579f6703a7025dce4871772bbdf294a51166039644d55adf8d0c9d51d64"
+    },
+    {
+      "file": "Sources/GamePresentation/GameMenuLayout.swift",
+      "sha256": "75a0d02ce2ab2c1811acfb29854e0086fb3f55b0dcd577e1ea564deeaae47242"
+    },
+    {
+      "file": "Sources/GamePresentation/GameSession.swift",
+      "sha256": "1aa71739f8dc882c0f24001cd3d12e0587e7882df625fbe997b81efe8db4f6cb"
+    },
+    {
+      "file": "Sources/GamePresentation/HUDMargins.swift",
+      "sha256": "5871324ada39c57d1747244b7e4e59f5b0b3c7b2173cbf9002cc57921b85c4f1"
+    },
+    {
+      "file": "Sources/GamePresentation/HeadlessCommandLine.swift",
+      "sha256": "2c009d1c32620fe72dbcca60ddf241df155069ed185269304b67f481bc0e0922"
+    },
+    {
+      "file": "Sources/GamePresentation/HeadlessGame.swift",
+      "sha256": "e7324a986c72bf5745ae57909e491f28230c440db6456136c52fb9aaff55ea65"
+    },
+    {
+      "file": "Sources/GamePresentation/HeightGrid.swift",
+      "sha256": "eed89c3541962fceb5c8b86fd2e87dfdae4256cd01cb2cbb2946c19affb706fb"
+    },
+    {
+      "file": "Sources/GamePresentation/HelpGuide.swift",
+      "sha256": "0876151130bec3e91c4d7d00577ea68777ed8ed8ec1fd1c75ab2b8145c8a1a4c"
+    },
+    {
+      "file": "Sources/GamePresentation/HighSpeedDemo.swift",
+      "sha256": "949480460272b8fbb5fe4a9b1e7a238298f975180cde5d6aa26446d7eb5d397e"
+    },
+    {
+      "file": "Sources/GamePresentation/HighSpeedFares.swift",
+      "sha256": "9bc81350ab22e8a9db2e7b7f9170bfd4542d12e622601adb22f9c1305aaf4819"
+    },
+    {
+      "file": "Sources/GamePresentation/HighSpeedText.swift",
+      "sha256": "e805bd88f2e6d9c9547663521a16387bdcaf1eb9a5b99c0fc7ae12af7d3fd569"
+    },
+    {
+      "file": "Sources/GamePresentation/HighSpeedTimetable.swift",
+      "sha256": "b70a568f7085f16486d1959accae12d7ac1688ca0cdc0c41c3e1506fddc07335"
+    },
+    {
+      "file": "Sources/GamePresentation/HolidayText.swift",
+      "sha256": "d8ee08e6e51998c02ebd29b7fed0f07f6227093a98be966f140fa629f0fa9d16"
+    },
+    {
+      "file": "Sources/GamePresentation/Inflate.swift",
+      "sha256": "e9e0b5fa1dd31dc4992718537c7f0c27935f90d0a99ad96aaf739a7196660924"
+    },
+    {
+      "file": "Sources/GamePresentation/InterfaceMotion.swift",
+      "sha256": "2a376177b6e110373105aeb3cba207d9e30e2cfb08ad3bff462bdb0be19dabe7"
+    },
+    {
+      "file": "Sources/GamePresentation/JijiStory.swift",
+      "sha256": "079b3f56f1b9d923bc2652d2e98c37d2d4b7af5c270c896e3bd63fbae5de39a9"
+    },
+    {
+      "file": "Sources/GamePresentation/JourneyPlan.swift",
+      "sha256": "13f13495362bb2afa3dcf79d977238f2438ad52876a5e83f7100424e4018abfa"
+    },
+    {
+      "file": "Sources/GamePresentation/JourneyPlanRows.swift",
+      "sha256": "e064a4a4e3f367560b5ebd452b31ce9e90cfcbc419180199f9036fd43b86a732"
+    },
+    {
+      "file": "Sources/GamePresentation/JourneyTrace.swift",
+      "sha256": "98dea258abb9b0c9ba2140d7642b1391a18306fe7b7be69743bf143ee9839438"
+    },
+    {
+      "file": "Sources/GamePresentation/LandImport.swift",
+      "sha256": "4bbf55e374cea606cda42efeea88770cb7dfb4e43b4ace195f87df679f784475"
+    },
+    {
+      "file": "Sources/GamePresentation/LandMap.swift",
+      "sha256": "b422e805488b3499d6afec341ad216e608ba64b3335688553a3a679cdd0e9860"
+    },
+    {
+      "file": "Sources/GamePresentation/LanguageChoice.swift",
+      "sha256": "4aa28cccd45a0497ba4e2a032fdce9356bbbf9791b6ec2535732d9bafca4f60f"
+    },
+    {
+      "file": "Sources/GamePresentation/LauncherPreferences.swift",
+      "sha256": "9c0fc4cf06ef17725c18db9799c547c7eae463d54c130c8bcdef6f773792120a"
+    },
+    {
+      "file": "Sources/GamePresentation/LegendFold.swift",
+      "sha256": "43800d000acf126521cda3775656c75a3f5b7713008d2dcd4a5c07a60e9f3148"
+    },
+    {
+      "file": "Sources/GamePresentation/LessObviousEntries.swift",
+      "sha256": "6eeea240089ba0a40d5586de8833174ac9c3b1522c7fea50b1b204f832026f37"
+    },
+    {
+      "file": "Sources/GamePresentation/LessonTrainTypes.swift",
+      "sha256": "253a8cb8ede99d77b3cd7b8fdd969ffd5fd6b44d40c837214c29b009d1aecb31"
+    },
+    {
+      "file": "Sources/GamePresentation/Lessons.swift",
+      "sha256": "f3477bd8844064b39a76c7623b61acd00a77cfc28731501f062e170ae55d7dc3"
+    },
+    {
+      "file": "Sources/GamePresentation/LevelPlatformTrack.swift",
+      "sha256": "57d4d5b3fea9f850907c040bb5334b9c29609454bb5edd63961891b9a1009cc3"
+    },
+    {
+      "file": "Sources/GamePresentation/LineBadge.swift",
+      "sha256": "55ba01af7f51bf6d99408659487ea585202337d6b681f95fa5667dbfd49639cd"
+    },
+    {
+      "file": "Sources/GamePresentation/LineConfirmation.swift",
+      "sha256": "d7be4019eeae7ea7d9bd9719aa24e00ff0486dab3de74fb80f0b77136a7792d9"
+    },
+    {
+      "file": "Sources/GamePresentation/LineDispatchPatternChoice.swift",
+      "sha256": "6f91dd0bcfb0ab68dab019a8f7b36d5a33c7a3a824bdba1d0f528c992712651b"
+    },
+    {
+      "file": "Sources/GamePresentation/LineDispatchText.swift",
+      "sha256": "cc0f19fea8857355bb5a626b9f2557f8797cf049042b11981c3a2e7a9dc3b849"
+    },
+    {
+      "file": "Sources/GamePresentation/LineDraftRoute.swift",
+      "sha256": "d175cd604b93e530eaa0e063f2833879851117a13cb85cb6bb04060dffa6d3bd"
+    },
+    {
+      "file": "Sources/GamePresentation/LineDraftSummary.swift",
+      "sha256": "b03600229cabce26bcfcaa321a0602bae718646b2858f3ec307a3909bb177611"
+    },
+    {
+      "file": "Sources/GamePresentation/LineEditing.swift",
+      "sha256": "4e946828f3ec70525b8d6eaa05afa6a192824e1e57eb95c2f8fb8f507643eb9a"
+    },
+    {
+      "file": "Sources/GamePresentation/LineFeedback.swift",
+      "sha256": "c1c85832695e76cb8d6fad24a70fa61fc9feee92d0de460305cdf99b15f35b7f"
+    },
+    {
+      "file": "Sources/GamePresentation/LineGroups.swift",
+      "sha256": "5b5eced806381e9f268bc3a1beb09f51a171e0a37f838a50cc1e32c8d9f1063c"
+    },
+    {
+      "file": "Sources/GamePresentation/LineGuidance.swift",
+      "sha256": "30b9b922c21568f5cea2f1c25f6d1ce22042525ad3284b94bf2f5cb3210d6cae"
+    },
+    {
+      "file": "Sources/GamePresentation/LineLossDiagnosis.swift",
+      "sha256": "585115677d7285cbe0646c20675ffded09658cd46a0d1c8b5a15de7db0439b62"
+    },
+    {
+      "file": "Sources/GamePresentation/LineLossFixes.swift",
+      "sha256": "675c40ed3088475e67ea0f1d631a8023bc88f754f8da9344be9f51582f0923dd"
+    },
+    {
+      "file": "Sources/GamePresentation/LineMap.swift",
+      "sha256": "8c17e7cfd2ec4dde11dcdef99cc73a6c7a7489229d1ed8932526aa21561a566e"
+    },
+    {
+      "file": "Sources/GamePresentation/LinePanelMemo.swift",
+      "sha256": "7c1e859f7fda766b4f78b8dd69abf6f3c4f018b3f33f8eb0e1bd6dc7c99ad3c8"
+    },
+    {
+      "file": "Sources/GamePresentation/LineRemoval.swift",
+      "sha256": "8c6a19b8ad5d3c4301a0d68e25a871b88887016265c01ba345f3c1874792bc39"
+    },
+    {
+      "file": "Sources/GamePresentation/LineReportText.swift",
+      "sha256": "1c116392d0a07bd3e06d4cb816bf02496b532dfbe2aa4f6c2f62030da8ae1983"
+    },
+    {
+      "file": "Sources/GamePresentation/LineSatisfaction.swift",
+      "sha256": "1c0c3fa5e6b2aecd4128ccbb3257c31f516a174c4cadedad760145322980b700"
+    },
+    {
+      "file": "Sources/GamePresentation/LineStaffing.swift",
+      "sha256": "9de971de39e85a95412c2c65016bfbc291ea27abf1f8235b50a271a45803cd81"
+    },
+    {
+      "file": "Sources/GamePresentation/LineTrainCount.swift",
+      "sha256": "8ef4f4133aa3f1fbddb71d41de208c860e925f8105490370c964c9760d6a4d7f"
+    },
+    {
+      "file": "Sources/GamePresentation/LineTrainDots.swift",
+      "sha256": "bfdd666944bf9108ef249d01adae9c1821c48043941126f1805529495b1d9c67"
+    },
+    {
+      "file": "Sources/GamePresentation/LinesPanelNavigation.swift",
+      "sha256": "b001f4ba91c8bdd9170ae2992a93d858f5975f54e05be6cd9d6d2df8c5bddc7f"
+    },
+    {
+      "file": "Sources/GamePresentation/ListSearch.swift",
+      "sha256": "39c432c7b4ddecbc5ee9c10f4610fb44c439ec8015572f38e1cd49b2ab52170f"
+    },
+    {
+      "file": "Sources/GamePresentation/LiuMingchuanChallenge.swift",
+      "sha256": "44385a7d882a408950e7abea223d290c3318b2f11855b476c3060bde38a4a267"
+    },
+    {
+      "file": "Sources/GamePresentation/LiuMingchuanStory.swift",
+      "sha256": "6132aa77ae98bfc56abd92a559b821150bb8c7a093fce3ce30703d47d3dbf6b2"
+    },
+    {
+      "file": "Sources/GamePresentation/LoadCharts.swift",
+      "sha256": "c6496e64655d3cbf5bb7cd001d7379c592e8cbb89edd80d00007ecab7f485c8b"
+    },
+    {
+      "file": "Sources/GamePresentation/LoanPreview.swift",
+      "sha256": "b08f36e71b8d016e8ea57c3068369acc67f47d62f16aa9d6be7f76face12f397"
+    },
+    {
+      "file": "Sources/GamePresentation/LongSectionChart.swift",
+      "sha256": "09998b199f54da02497c6482d5e8ad1f2a7ff4e71db17fee0b27d3b321d1d86e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3D45DR1000.swift",
+      "sha256": "b011fbbf19a41a31ee318bceff877b8916085d5761f31d158fc56eb90e35a9ad"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DAlishan.swift",
+      "sha256": "acfebf455600ef369e84a988be148b95d664dc29e2837e6f6420eb88883e4e39"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DAnkengLRT.swift",
+      "sha256": "4b29b509d2442a717e0ab9614204a1b29ae76194cf24fa813d51aa94ca1fd07e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DBaseMap.swift",
+      "sha256": "805a864c7389804bef52efaf9463b6b9712b3577a0a38d14e83b1f2db2a30349"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DBoxInstances.swift",
+      "sha256": "e38d2237ed34a8f18b50f3b119e54baccf662e813485e6acb3f3f3bc6c888206"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DBreezyBlueCoaches.swift",
+      "sha256": "4d1bed81b3d3c40aedbcdf1b4bc4fa9e59f70b5a6055c0bb0ea566176fe8af50"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DBuildReturn.swift",
+      "sha256": "89239bbfc3275bf122d22fbc946f8abde4c192fa9fe6f8e0fdce90b26d71193f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DBuildings.swift",
+      "sha256": "c48c761525cce4c2a3950f12ef57531abf4b4a233b74be5f2e536b1a75a2d3f9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DBusLayer.swift",
+      "sha256": "839d41f6e90924eaca0a5d2538c0643637fb2013d7ae363de8577f7b37956fd4"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DBuses.swift",
+      "sha256": "8a028b8e0cbc6fc672a621a49fda068f0c0a4e460b860afdeab1fab274e717c3"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DC341.swift",
+      "sha256": "33bf8705c79e0f4fa9d15bdc1a46b15ab06357b28e8b0af3a8dbf5c1cb8122fb"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DC371.swift",
+      "sha256": "b5d4e1c6c17f607d8bb3c9f08fa0b51e2422d268dd9b0b0ba82167655c7d3d68"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DC381.swift",
+      "sha256": "405dc0d36062d7db49611b85a8ea1cd8da10c4db7d0baee4587487e26a74bac2"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCamera.swift",
+      "sha256": "503683e5916f6f9df9b63b9c2942461cd382946fa7db5633dab9f958cc4e2fe7"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DChineseRoof.swift",
+      "sha256": "59b8b75971965f9b9fbdb860d56255b9531aeebb991faeef0f04896da162902a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DChuKuangPassenger.swift",
+      "sha256": "0efe96f238575f1c08ee02bedda032832c6fdb665eb686cd7b41ea6c5337037f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCityBus.swift",
+      "sha256": "c341653b41fbe0ee3d72abc223c59a393d244f312ed1d33f95bcdf6b2441c1fe"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCivicKit.swift",
+      "sha256": "bea264faf809996cf60d2f78b7354f21ec0cc93c5394efa18eb3ce85e5d358c4"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCivicKitBuildings.swift",
+      "sha256": "02cae18ef52c048cc76a97a6db4a42269e0592629325081906c24d626447f58a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCivicKitCulture.swift",
+      "sha256": "ae1144a74f785a3af4d25eb88acfcad2a8a27e4e9a38bd2f8fdac40dee1fd1f2"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCivicKitExamples.swift",
+      "sha256": "216228b72666cb99bfb1866d060d058d5811ba75684740a85d108b90e1125a57"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCivicKitFurniture.swift",
+      "sha256": "59446e934b6d98a7ce96a678ded78ee6ca7b3734829df857354477feace20ced"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCivicKitGeometry.swift",
+      "sha256": "6637e2978b7ab645c91fab8d988e5209822138d40dc56d0aad62da859ec3a7a1"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCoachBus.swift",
+      "sha256": "6044bca37b6d29ca6464a0cb2abb6ac2031b891979567780ceb1509303e9d6ff"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCoastalKit.swift",
+      "sha256": "d596ef1bbbee7f4f25a5d4324c04b774eb6dcfb3c72e6e82abe3bceb97aa9b6e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCoastalKitCamp.swift",
+      "sha256": "f5d570d15b2280613b3dc8fa5912420c00c7c209dc6b5d01ad4523a2635026cb"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCoastalKitExamples.swift",
+      "sha256": "e2fc8b1968cf5fe9da2b0ab9ea55c7514d9a15f24371f8ce98fe27c79443335f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCoastalKitGeometry.swift",
+      "sha256": "0fa4032aec817d7833e96be3f5eb81b029a34d218da9ef7566a4bab1ab50e565"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCoastalKitHarbor.swift",
+      "sha256": "aa1149619edead672310c886d9f9e33d8c726a96b7308dda6381694b13ffdba0"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCoastalKitStructures.swift",
+      "sha256": "22966c27b8f517c3dbeece95020e5437cc09bf0daef1c04d71de74011bcf5baa"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCommercialKit.swift",
+      "sha256": "181a31ddbd76cc89ff336c3b95b6ec2bb8920017e7f834e4e317363d038fcdcf"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCommercialKitBuildings.swift",
+      "sha256": "e2dbf4614ac6b1ece422c6e3a09b8a1401d291c80f9994ad0e3cd6c1f20eb7b9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCommercialKitExamples.swift",
+      "sha256": "bcc48787f2b49c6c5afd788a99202e3f2b1c1b999158c98133345766e43d006a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCommercialKitFacilities.swift",
+      "sha256": "8895020cc54c548b169aac780ff172db233f82a5348b43a8f95855d3caf1dbbe"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCommercialKitGeometry.swift",
+      "sha256": "2dd843afdaca93bf6a4a1b0fea52b7e3ca6011c595b53e55eb0a1618660dee36"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DCommercialKitShops.swift",
+      "sha256": "a77e432958d508af05026a9f314adb9478f98418933c883d614ac59b3a30b291"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DContainerWagon.swift",
+      "sha256": "cf0e8cda9097dcee1c798aeed3dfcfcd1bb9f2da3aef16d1841ef93f3847cbe6"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDanhaiLRT.swift",
+      "sha256": "e1331fdb1033497550f1111ff419875d0327815ebeb0a88ef7ffc2dc65541c5e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDepotFacilities.swift",
+      "sha256": "ec688b60d101abeeb3790c7f3e9160ca1f7c29633b2d3c447ee852ffb8ad8cda"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDetailKit.swift",
+      "sha256": "378cedec687244d59e3607092f57dc8b87981c065ccd5dc9eb2c418dbc5f6dc5"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDetailKitExamples.swift",
+      "sha256": "0ee3da7d4cf7cea863e975713f52f1b3515243370a1d1b6fc84049cdae06feb1"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDetailKitGeometry.swift",
+      "sha256": "caf3d7d395678ea0e9b0c402e69dabda3e7c3bcd2bc53608cb74d2c896e707c6"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDetailKitInteriorStreet.swift",
+      "sha256": "4273bf47b33ac77ef0cddff1399187cdac3c44ba068777ed64c1d738f820b0e9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDetailKitLifeMoving.swift",
+      "sha256": "6ae8b99ea44caca7e29b4abc87a73d1662199364623d6cb9036ccc14f4bc1f40"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDetailKitParts.swift",
+      "sha256": "1e24f32747d5055915e2fa3e1e1f9c6c9808f902486296fc5ae80a3dbec2c1a9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDetailKitRailBuilding.swift",
+      "sha256": "53368bc57200b7b07cd430bce9a9a7c87e6ac4b37696a3a8008d295c7fd0b559"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDrawScale.swift",
+      "sha256": "a896fd06fcc1e5b4f81427782edbb94131dd65927864e70b302073766fbe8bac"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDriverHUD.swift",
+      "sha256": "6f8c73bedd3ba321850139e4fa0f3b24b4abadfca4b99cf23d5baaf48e45089d"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DDuplexSteam.swift",
+      "sha256": "13fc47710f86642fb531d45c830d62a8090fb148136d22e42418684ce7322152"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DE1000.swift",
+      "sha256": "73477f10b879c14689db6ff9904821880b6fbabc22f7aebd45f5d4416ab8938a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DE200MingriStyle.swift",
+      "sha256": "28011450a02df426d62016add92109088d44b782062fb112dc295e1e25a737a3"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DE500.swift",
+      "sha256": "d0b5241d55a25aa12cf0166a5be495c0b11f92b27157c716dc650385552c1e53"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEMU3000.swift",
+      "sha256": "6a845fadb0ecddc2a2b095a926afb8f496678540bd4d63048dbe7680e6c9a571"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEMU500.swift",
+      "sha256": "1b1da574d91bd527e075d0a0e3fd4eda71d7282809e39eb797536732c3816d8e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEMU700.swift",
+      "sha256": "2c746ccce4027257fc5d711de642f8f71aaed04702a06aee51717ec1521c4db8"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEMU800.swift",
+      "sha256": "742d10a72c034f19d78257f0dbe6c0be52b2f863dd0b97a992992756032fd12d"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEMU900.swift",
+      "sha256": "c14376cdf8217f6ef04f52747030893f791d4fb057dc2afcab933cec3a1f1178"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEstateKit.swift",
+      "sha256": "d36f6076f55114122fe3473d11a394e9bb4b27dc5f87d68c85dfed329ad86a71"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEstateKitCommercial.swift",
+      "sha256": "f2aa9efb6c2348139f049a31d9db481a41879645e5b6b492a97f5444f90e9d13"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEstateKitExamples.swift",
+      "sha256": "954cd022a6f8206a48e2143d0cac0cb5d793d678addf1e7b03e4e4d8039dfd78"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEstateKitGeometry.swift",
+      "sha256": "505a4c397a37ecec4bda1066f605102947bc17111fc0a69a6e0d9fe21a4577c8"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEstateKitHotels.swift",
+      "sha256": "f764f52e2eb0c811215228b6f9331194a66aa8bd5a416da9f5ccfed79b8b200e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEstateKitLeisure.swift",
+      "sha256": "bf0ddf97f3e5e7ffcff48eea8fefc1a1f840c61bed7fa6a1e97d03996ef3e342"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DEstateKitResidential.swift",
+      "sha256": "aba2d0e80267473912ad4668652440e0cd031aa727f7d3da5a3fc5fd425c9a7b"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DFiveSectionLRT.swift",
+      "sha256": "b000a7ebae5bfcfa5224959d6c1f51d13e9969a6b6897851ccb47b85acd3b14c"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DFollow.swift",
+      "sha256": "078560557adeb96e13c7b3736f6bfd2a44bf3598cc6558e8e8bac0d597ad6d51"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DFollowSpeed.swift",
+      "sha256": "64a812a88beb8a4f61b4c77a4f316e07255a28e4291b71604373338246431a28"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DFootprints.swift",
+      "sha256": "16c2b07df73eed212ad2d86c37611532be7013c256176fbc4fc686fbcbd631d2"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DFourCarMetro.swift",
+      "sha256": "41864679955beeab72d5e271776ebbdc322ca24dce51e6757366dada4f4b54af"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DFrontage.swift",
+      "sha256": "ef82220e4c24306ff3afda3af511bbe4761242048c45526d348968d3d7d834a9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DG12.swift",
+      "sha256": "0a523af33b2102508e0c8c1819b8513f51961929a4647bb32fcc5b8a7131b875"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DGarbageTruck.swift",
+      "sha256": "bb75795c61e58131c27ab0d3076a22ae5aabc50eb360f369e59bb629adffdaab"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DGeometry.swift",
+      "sha256": "e78e2ef6547b75b60c577e5f6f072dbc1b8f361c1679f14d66ca512165ef9612"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DGrade.swift",
+      "sha256": "2335d60d70d42a5bc1ec94d040e31cad672eee505b54c5411132ebb867c0633a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DGreenCommuter.swift",
+      "sha256": "11f9e78618f59ef93cac9ad5c1f28c3c317e0ac8dc5719f6d068d146c5e8d024"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DGreenTram.swift",
+      "sha256": "a89ff8e8c29ad48ef506b784d2fbb52fe371af2df737ab4aac43490b64d90ece"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DGroundGrid.swift",
+      "sha256": "4942f2a21941858bbae7d829e75ee05944fd2a939f25e8a548145e7b60a95bca"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DHandoff.swift",
+      "sha256": "846d1401369984d09419a73a91ff91fadfaa94a3b5e15b8a865be0055f6515d2"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DHeadSigns.swift",
+      "sha256": "ef7cc43e7a518b52e2770fd5cd25bdb19a3283d7ae0319549390165c59d50659"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DKaohsiung.swift",
+      "sha256": "ce5bea7e2c8f4425ad90bfd6932b7f0f9addd2ca31842da8504f354d03307c9d"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DKaohsiungCAF.swift",
+      "sha256": "dbb76e6f5bcdfc819959a8fbeb3b7a9a369e6c0fb479c9b4137ff4415cbefcab"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DKaohsiungCitadis.swift",
+      "sha256": "b81070400d5c71b3bcaab91fb4741bcb918f02f1fadee467ef1ba30c1a49ee29"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DKaohsiungLRTGeometry.swift",
+      "sha256": "7f404b0588d1bdb001277d8d679d9157ff986a34962c0fba8dbfd691dea8c1fd"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DLandmarks.swift",
+      "sha256": "b3600628cd296b7b768686dc9235039d9415772319bac3c4c22b6f3bea61e356"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DLineBands.swift",
+      "sha256": "278c6788389fd5995f34b1ee259840ea306cf86fb2697f139004806a6453331f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DLook.swift",
+      "sha256": "73392d588075802f53053ecedf91fe9b2edce157ae59a5c1b3aecfa3647ac05a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DLowFloorBus.swift",
+      "sha256": "faf19fd96a31aad89420704bc672c51444346e2da50256d7709a512fe065023b"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DMeshSimplifier.swift",
+      "sha256": "2840a6bafdcbdaeedd875f40a94b093522780ce43b6587f40489649160a0b7d9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DMetroStudyGeometry.swift",
+      "sha256": "d617889a9f8393902c8c65d18ba9d6a90233c53d5c01a08b141218c37f2dd72e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DMidiBus.swift",
+      "sha256": "023e5eb5e0a7be914bf0756eebb9d9aa3f49ba3952f5b528987e4a14f3b791fc"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DModelFile.swift",
+      "sha256": "e694713eaf3ed0cb26d0d58fa63c491902e24870c8d530c309b815a296b1f9b8"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DModels.swift",
+      "sha256": "f08ce503c006d4a0ced5afe781cd7720e0ae1fbf5d5baa0952fc3739248f3498"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DMotionBudget.swift",
+      "sha256": "d53ad79cf8b2cc2471bc16414a446974f505c2875b4d22c7b77d06ffc94c3c59"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DN700SG.swift",
+      "sha256": "1511b3f2bc24fb94335f168c0a4a54c607740877fba49628b6bd500fbc549845"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DN700SGFarMesh.swift",
+      "sha256": "f956cc3fc359b256a6b011c0b1dcd91fe7e4917e122888bcbbdefbc1ec567035"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DN700SGMesh.swift",
+      "sha256": "52ef89bc7bf479eacf9511386ceafbf8a7e9dc2d215d719946571eedf85ba6a2"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DNewTaipeiLRTGeometry.swift",
+      "sha256": "421c1ad9c28b58751c7107cba12109853a100a572b1b5a4f577d08233b089a55"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DNextDeparture.swift",
+      "sha256": "3c47d582d80fc5c1e57d7054acd4c12f4f5f999a23f2429d5038830ea4c84030"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DOverheadLine.swift",
+      "sha256": "fc4025f7d91057277e53a08a22d744ffbc59a8c297ef671b2a38486115798007"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DPPPassenger.swift",
+      "sha256": "ab43c7dd93f046715587bd734f5b6f31639bc61bcfbd374e7352bb8f39abf411"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParallel.swift",
+      "sha256": "a881f6e35bd90d462a96bfef16b631b0c78bcd2a1c49050f3fb32428c8c5258d"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParkKit.swift",
+      "sha256": "ba6fb5fe1d7ede9ce2491e72003fd5df8d0aa7a67cd347b3e149f010ef96da8d"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParkKitExamples.swift",
+      "sha256": "d51a2cb205768fa799c4f22fcbf0f027edd113ad64737be65c1cb98b9d0e471a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParkKitGarden.swift",
+      "sha256": "064979f83839783f4ac8c30623fb884f5bf28dc8e6753160b4b186e41cb8cb53"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParkKitGeometry.swift",
+      "sha256": "2451b0ef051c251585c9651668c404fa9dd9dc2d7b007ea22c4ce03394d00f0b"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParkKitPlayground.swift",
+      "sha256": "aef9dc560aab3b680e217e8fd5f8162bed27016f8d65e5d8e71bd644a8756455"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParkKitSports.swift",
+      "sha256": "8af5373d40b511f8645d3dc5d78d8ce5c58f9a1c20a747b688cf63e7c7d5f8d6"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DParks.swift",
+      "sha256": "e37a9c3294608954d28ddea005e230b589fdcbd82b130980d1837ff3239b9ba7"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DPedestrianSignals.swift",
+      "sha256": "28d41a63968fac35c8b23dd1b64f96adbb59c51f08bb76a0c9e39bcc7a5f7349"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DPick.swift",
+      "sha256": "3fd9c21ae6327574966c97e17a765d325df3eed4703c44dd36410e922025a57f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DPlacedBuildingKits.swift",
+      "sha256": "33aa68a34bd0ec5376e0da6e6b68db44a17e053c92e2c83fb2e4a59431896001"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DPlacedGround.swift",
+      "sha256": "4c11e246e89928b70a3c03f86b9db25ee0ace645d437cb0238b082347535134f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DPlatformProps.swift",
+      "sha256": "0b3ab893c39580109ba7deddd99a57c0ac05562efb2e67dfcc59d468711632fd"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DProps.swift",
+      "sha256": "ecaf7d3b1cbec68652b0d52b5008d4c3296ee265d824608fcea384abc833a260"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DQuality.swift",
+      "sha256": "ad747f91e9255af8ec30aa4f117cb13018d9ad3876c36469670f126370293bdc"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DR100.swift",
+      "sha256": "c24e602a1d5525e4a6d8b083e98cc424834e619072d1331ab055a4e23ad2e2ed"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DR200.swift",
+      "sha256": "2b6cb0089bb4228c715bba84d202eb466b4dd917a43d2c3be1f9f38aca20d31e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRain.swift",
+      "sha256": "ba7845fdb3c044f0fb651b71713963008193816a428645f43b15b9437aa2b29a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRealBuildings.swift",
+      "sha256": "a47b44319a5d42c254823bdbd293105fcd0265ae2cedb3b90863a7e45bbffcd2"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRealGround.swift",
+      "sha256": "54e96528c1233e2275bb6376a1fead59dd3f06a4da0bb53749f811f3da4ef270"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRealTrains.swift",
+      "sha256": "24662971eed8b09dcfdf7b82aa150946beef89ca9db5157bba2943cbccf73161"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRecreationKit.swift",
+      "sha256": "edbfcb85cde66f1a242f15a9d0aab34a2a67f1d98b2ae8d564c972c19e256ef8"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRecreationKitAquatic.swift",
+      "sha256": "37bf2a41cbc8f89b4e37779131d568f67791dbbff3548a61164e79bd4afea2b0"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRecreationKitExamples.swift",
+      "sha256": "cfb85dea06180f70ef40834af94366ff4622e8a92d33551fd46b62e1d88c7d56"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRecreationKitFitness.swift",
+      "sha256": "ecc959bcc937aa7db56c581a5fb77d551aaa570eea02585c8cdfce86e16cda55"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRecreationKitGeometry.swift",
+      "sha256": "e21196f853edfe2361df0052a221d3843add259108d60d73cdb2020e08c4f40e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRecreationKitSport.swift",
+      "sha256": "a91a164c29f90b3cbd7220c4c38204577e373a9797edcda8198bcd3b760ad742"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRecreationKitVenues.swift",
+      "sha256": "4937feeb81d37742ed664315e7d7b1488ad7428a3d0c6208127e21527b6518b4"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DReflection.swift",
+      "sha256": "c20091d01ccd99677333acdc87c5866042ac63dde7834148c237d5d9922f017e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DResidentialKit.swift",
+      "sha256": "fd42a1ed0860a8fcd97fe38a12a7218b6fc59ef3a14aed7153dd14a77d161ea7"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DResidentialKitExamples.swift",
+      "sha256": "e8a80ec5b10d9e9f784ce5e61deadb914bb85d9dde23f31a2735c596441d2b4e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DResidentialKitGeometry.swift",
+      "sha256": "8f1c2d141d23cdc81caaffa11bfb61ea9a00375bd2b4f60d11cd0bacae8798ef"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DResidentialKitParts.swift",
+      "sha256": "42980bc68a059ddebdb58426c3b91874e0fb024a576f1a727f96a68fa78d04b1"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRoadBridge.swift",
+      "sha256": "6a463f7eca607d4423ca1e3e9cf4a84ede0aabcea92253d9332442e335d3ea28"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRoadMarkings.swift",
+      "sha256": "2cd81387089b4b3590e39384e64b224a952349815f9eef00ab4a191df64f0fe0"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSanying.swift",
+      "sha256": "9ce924e93dbd76de61bc5bed1c609a5a2715bbb8a70401a60c618e05cbddf5a5"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DScene.swift",
+      "sha256": "a6cf7036a4f64fb7d8b353a48f78d03db396680fafe6fdae3d3270c2ead4a778"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneBuildLog.swift",
+      "sha256": "87f4abae3018764bdaea97e88546d8ce4373790299980f4b5aebcf5f60ebc95a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneHold.swift",
+      "sha256": "0e35cc86fc5e2adebc523e1604df4e5496b6be12343fa1cade37043e78e658ad"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneKit.swift",
+      "sha256": "236f75297838732b3b01444504b5bc6b100d9ef11027aaf9cdc6b747024594e8"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneKitBuildings.swift",
+      "sha256": "abea9f370eea453b8cd951d77866e01fceac4b069aaf703479057a0ac9b5a749"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneKitCabs.swift",
+      "sha256": "ee117b75746c190895f933ac22391decfad34cb8eb4d8c5a08d37e6538e659fa"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneKitGeometry.swift",
+      "sha256": "040ae34fadebb08b10f6c7d9eae1119dc27d1281064abcb0e00ca744ca81de85"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneKitPlaces.swift",
+      "sha256": "f32baf13d4621d49f82650145f626a9ffc7407962679e702f73f771e4da0cb42"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneKitTransport.swift",
+      "sha256": "48a0ac3632931f612188236c67c949709a97aa245082428574963f2967a4449e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSceneryProps.swift",
+      "sha256": "f3f0991b5468dc86548235805f5d618b904c43246c5279fdff2c9b249eea0b9b"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DScooters.swift",
+      "sha256": "78b6f1e4b3dcf8106645e91b280fab1c9b48de6c84fbdbf53e612b9a01dc5f8c"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSeeThrough.swift",
+      "sha256": "6dce7646ab4ccbf119b3ac1406febf8896ca1a523c6a44e2f3ca80951e59d340"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSevenCarBlue.swift",
+      "sha256": "2ed4b5b6fea16055dd6464ff48f32501cc9ee2cac8961885c6a6fc1fc7b46203"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSevenSectionLRT.swift",
+      "sha256": "c816eb0ed0254d10a89eed25b46ede91f9ee468c2b4e4dffb30205162721bddb"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DShapes.swift",
+      "sha256": "eb451565917f13a8072d9d09f6b24871f89b955e343a6c788eaf8b8795eb7658"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DShopStreet.swift",
+      "sha256": "2dfa936a472cc93aee3950f2ae8817364732bb7541eb43cf56ad90f0b487495f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DShowcase.swift",
+      "sha256": "12937b10af62f4611ec61206db336ca4b2da9fe35ba2b436fb7416aaf38e2f65"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DShuttleBus.swift",
+      "sha256": "2171bf746357b76b4afd4419f2a2073164eaa798688889733b0e1355f76c35e7"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSignPlacement.swift",
+      "sha256": "cb8bed5e558214122d9d4fab98d77236ff8da72d41ce6bb36cdb4af3ebc5657d"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSignalTiming.swift",
+      "sha256": "030b046807ebc47502a5f3091c9410193274e446aeb02640442df661dd190ea7"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSigns.swift",
+      "sha256": "d32ec0dd7759235293306c6cc50fd288bfec7f67f0080675e3f6d5eb45ab341e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSimplifiedCache.swift",
+      "sha256": "725422a18ead71d5851246bdc43ab86aa6516824fc9f29b458d33937cfc68de9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSky.swift",
+      "sha256": "bd686d0e56c9311703536bd1e86d57f2319d61d1caf0e79cc59a4a00243c9cd5"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationCommerce.swift",
+      "sha256": "2f02c86dd889dd3a269d8aa5778719c62aeb11f2c48628986020d5e82a5fe741"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKit.swift",
+      "sha256": "21015bb31370cd6efeadb12ac44bf763dad5589eae2201ff8050ba190f8f7326"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitBuildings.swift",
+      "sha256": "372bafe5814903968995f3c53224303ebca842e872279d1566c06335623599f1"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitCatalog.swift",
+      "sha256": "a443760686ccddae201447aaa33b8c6b2862df5482e23ba03a8d7325750e4c2e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitGeometry.swift",
+      "sha256": "88eebe8d7d2ef9b79dda3fbd195ea6ccfe12a76b1e27ebbed03ac04be5738433"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitPartGeometry.swift",
+      "sha256": "a3b63a34005cd65e21b17c2632f4e8e63a365b478c7bdeca6fe62fce3703d6ff"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStationKitParts.swift",
+      "sha256": "145ed8491101c8143dad135e42d1f8aaa928bbf1f2a564a93281edc7009cb0e1"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStations.swift",
+      "sha256": "1f3505f880ae25340eae9883dd27f2e9712a868d0f0d678482bdb8f40044fc2b"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSteamTender.swift",
+      "sha256": "6b34f104dc882ae1c2bb93a92d37b56c54bdb6ffec1f8b04168946ceadd2a3e6"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStreaming.swift",
+      "sha256": "f77f78d3ef0f51f11ca06e63f347052ea85b3f4b80c2266d22cecf3973f3579a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStreetLife.swift",
+      "sha256": "fe544d5c834aa2f8394c39365ead31e85befbdcebc3fd987d92bb04efed4d2bb"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DStreets.swift",
+      "sha256": "8ec650bc5dd50c80ff753e50d3522b674a69f6b25469a128b416d64165513d99"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DSunShadow.swift",
+      "sha256": "88bb14fca67c4a77d381529734f4d01bed25a8ffd035365137d11a4a1a15566f"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTEMU1000.swift",
+      "sha256": "932bb14672cf1585c04404675c397d4a9e1d9a916686e002955dd638723fbd2a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTEMU2000.swift",
+      "sha256": "9ecb679fb58f3c68b165eaa9593b8289a27f905c6c048b7eae436a15db8b9361"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTaichungGreen.swift",
+      "sha256": "2c91ce693c097689f561dc5133e24dcbc9bcf99dc31e4311f755fb2138c40451"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTaipei610.swift",
+      "sha256": "6de1ca41a96418df0b295a476ad07190d1fa07e8a595008deebb864d8879226e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTaipeiLandmarks.swift",
+      "sha256": "dc939836e28d411f4cb3853e98c0858112759bfab0b0c6cdcdf8743f678495b0"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTaipeiPalaces.swift",
+      "sha256": "836e30b5c91eb024992f3784595df71d22f940d9032d0e72cb44de4faa1787ae"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTaoyuanAirport.swift",
+      "sha256": "a0d074ccde1d3253b034c792dc57cf6bebeff9ddd514cbd6bf598b9aaa24f1d9"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTap.swift",
+      "sha256": "e94d13d83ec98b81c3de60fcc7b8a9e06459de3fbdec6565742adf519ee8ad02"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DThreeCarUrban.swift",
+      "sha256": "2b6d72f6a51f0f82dbcbe59c27bc584c4fbe56447377a97d13e4bcf79c77b121"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTourismEMU500.swift",
+      "sha256": "f3bf9bc928bead093e2358176a9822bebbb7550b2c47eeefbd78a81f6d7b4ef4"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrackCover.swift",
+      "sha256": "3f121e30fbb8e792c0911e002bff95099abc4f15091081f738ee1e3ebfcc2ed4"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainLabels.swift",
+      "sha256": "123a255cc3821e1aa2a58db0679cfe023cfd0b2ea41a26120d75a0dfd5375974"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainLights.swift",
+      "sha256": "6cf983c5daa3f244d8236591212b40fcb76ea2011b3357b1e2559ee490a4dde5"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainLocomotives.swift",
+      "sha256": "8cbb87bb2d2473813b44b0233fc0fc4b256564e80ca1a3e451d8d89034817d20"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainMaterial.swift",
+      "sha256": "40679d5babd4928fcee3e6d5be7c2bf61597bd208143f75ab79ac56da934a31c"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainOcclusion.swift",
+      "sha256": "1d87755b085f52ec38d8edae033c3d25763d13c68a22e7de6e7f78a9eede7c74"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainSets.swift",
+      "sha256": "23f16649d31657f44b1cbd82da321d4998fc3560ed92db57e1a77b17ea0a647b"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainShapeRefresh.swift",
+      "sha256": "41eae49a4ee3cbff4c1b90f6a4fa4d5e7f40d71081b99ebb6c1051e779842cf6"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrainShell.swift",
+      "sha256": "2b65aa4985de36b04cdce4de737f04a64c02bb5f30a331fa97950262fbded79a"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrains.swift",
+      "sha256": "680bdf516317e1077f0a53b23101f5809fbdf85186c0490df29f53c041e3e7f2"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrench.swift",
+      "sha256": "339918d7930ece78fb3189bf67fe318323238e9335e6cf1ec7cc22ec2f74b31c"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTunnels.swift",
+      "sha256": "301fbd3a8f916895a52729b5f8f01858e352a2d88672e261855c58ff00054b28"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DUnderground.swift",
+      "sha256": "cc45fa058d57c5bbc1e55f636862ae0b3d57502ab1a6ca170e1e906b02d60978"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DViaducts.swift",
+      "sha256": "291256f183f1f36efc795a962df77f1d76660dd7b2d6ec31e9a4e8fbfa7e6a4c"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWeather.swift",
+      "sha256": "f6e8ad5e439d19e7ee59afa80790e97a7eaf319a45b22f2ec508a24e9ae444d4"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWorksKit.swift",
+      "sha256": "447a472cb24790326d021c588b28b22ff9c9e0e8559beca383410c279a36a9df"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWorksKitAnimals.swift",
+      "sha256": "89e722735035c997ed17b2bd7bde06469f3367b6cc13fd5e32541993c085798e"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWorksKitExamples.swift",
+      "sha256": "dfe6df4693b8fba9d47fb63a744383c71c6a0b237837f8d3b09d437f28d63948"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWorksKitFreight.swift",
+      "sha256": "21bcbb1ba6af27f4ffe82e8e57c8efc8d0205b8616f4e8158586677c45f29f35"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWorksKitGeometry.swift",
+      "sha256": "43b9d58bc893d0afa5afe2ab28557083c27bfc04aa3cb12693ce23db39e64202"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWorksKitNature.swift",
+      "sha256": "9442e121a24d1ffad963405d3599b4b8443fa45dfac8cffa81281da163a7751b"
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DWorksKitVehicles.swift",
+      "sha256": "0cfb89b7e6b99e1eac7856ce37cc928f828f5ff764af32bbb2d9f286cb7aa8e0"
+    },
+    {
+      "file": "Sources/GamePresentation/MapAlerts.swift",
+      "sha256": "21e0e1dbfabf823b69334a2b425d991038753e1749647a8513e23cb145218a2f"
+    },
+    {
+      "file": "Sources/GamePresentation/MapCamera.swift",
+      "sha256": "e60f7d5060197ff22fa810e1a78a7b559b5772be6fbf41604e95d30fc2da61dd"
+    },
+    {
+      "file": "Sources/GamePresentation/MapClutter.swift",
+      "sha256": "7b992b42643688da064b0d767d5c94140bc9d7fcb5a809096c5d5bc8701dc9a2"
+    },
+    {
+      "file": "Sources/GamePresentation/MapExpansionSession.swift",
+      "sha256": "5dd639ca80d983e7d5267e4d289148a0d4f52f422bdbb77475751317c79bce4a"
+    },
+    {
+      "file": "Sources/GamePresentation/MapFocus.swift",
+      "sha256": "c7ce8552c2b77844a6911c63919e61125038160cf3bef4c1871782d4bbb2bf89"
+    },
+    {
+      "file": "Sources/GamePresentation/MapInspection.swift",
+      "sha256": "aa4333acd107d246ae0f8618e50dd0f056caaa7490e586c1f83b0e33569934c4"
+    },
+    {
+      "file": "Sources/GamePresentation/MapLabelPlacement.swift",
+      "sha256": "e29a992ee014264965653704c5da5958fd91890922e0c2864a94c46976f01c99"
+    },
+    {
+      "file": "Sources/GamePresentation/MapLayers.swift",
+      "sha256": "13fb5bc933a84d593f736f4736cf029307c07fbd6781514cd3467c8cc927cbd2"
+    },
+    {
+      "file": "Sources/GamePresentation/MapLineDraft.swift",
+      "sha256": "00ee6cce7b068af00b5e9ac08533b7d505c46dd380e060e8a917fbbb3fac9895"
+    },
+    {
+      "file": "Sources/GamePresentation/MapMarks.swift",
+      "sha256": "f96d45a57f5f6b833b57d95a1c21f34bdda07a41e8de1a13338af059c86e077e"
+    },
+    {
+      "file": "Sources/GamePresentation/MapProblems.swift",
+      "sha256": "c4d37dca66c0226782076d8e1cd73cb0c15aa23cf3ee03d5a2340a8240b2388e"
+    },
+    {
+      "file": "Sources/GamePresentation/MapQuickLayers.swift",
+      "sha256": "13e10b2086a8209dad9a0cb6e3d703ad7b0a668185aa57c3382eef959eef677a"
+    },
+    {
+      "file": "Sources/GamePresentation/MapRedraw.swift",
+      "sha256": "0046073275e450481a801e901cfad6d81bd536534c08fd9a197a73d1063c565f"
+    },
+    {
+      "file": "Sources/GamePresentation/MapScale.swift",
+      "sha256": "8a158e19a282b72abb3004711c63a8ec793ea91176513510cc7f9a5359ff435d"
+    },
+    {
+      "file": "Sources/GamePresentation/MapStationTag.swift",
+      "sha256": "81ea8a841c2f50a78c97550ba16e2f14ec30927f5952b77dc0e7f64db8413281"
+    },
+    {
+      "file": "Sources/GamePresentation/MapTopRow.swift",
+      "sha256": "a06ade3394c9ecac815f85752757dd4e04b29847e3c672a3f01bb99468f2387b"
+    },
+    {
+      "file": "Sources/GamePresentation/MapWeather.swift",
+      "sha256": "57fb2d9f54a234470c9e00a75ca74a84b824aff714c2ae23c9058548977c428f"
+    },
+    {
+      "file": "Sources/GamePresentation/MenuChoices.swift",
+      "sha256": "02ca00be7dd7965a2e499e51a6a2cd5262b1401090f94ffa0109ec9ec28bbe3a"
+    },
+    {
+      "file": "Sources/GamePresentation/MiniMap.swift",
+      "sha256": "85a26d387b3c8409cefd1371f687a10deaa573ba6e31f550a6956be3e1aad0ab"
+    },
+    {
+      "file": "Sources/GamePresentation/ModeShiftCounties.swift",
+      "sha256": "5c2eb3b0f0111b9889f52537892437a91bd1975e301af9b0297aca560919a861"
+    },
+    {
+      "file": "Sources/GamePresentation/ModeShiftText.swift",
+      "sha256": "1a49f7ce45583216a8a9ffa237d4c53efd38519439b18e4434c4395209301b01"
+    },
+    {
+      "file": "Sources/GamePresentation/MonthlyReportText.swift",
+      "sha256": "3db535e04163a03a393aa03cab724d0823c3d776466864f6954e3ad29a64ea77"
+    },
+    {
+      "file": "Sources/GamePresentation/MusicDuck.swift",
+      "sha256": "e760e62cc66b7616ba90586a102260a89c96bc3a9bd73f9202449b26ac0c3361"
+    },
+    {
+      "file": "Sources/GamePresentation/MyLocationStart.swift",
+      "sha256": "b70fe9d17ffffebec33efce6a44d51015affba823df4a0a87b7230721fadc233"
+    },
+    {
+      "file": "Sources/GamePresentation/MyLocationTrace.swift",
+      "sha256": "9ccbe1904b40fe3c88d3959dc6deb50c6d857f977677d6cd6acb34767ed73286"
+    },
+    {
+      "file": "Sources/GamePresentation/NetworkBuilding.swift",
+      "sha256": "2f75deddf91c9a7cd52011fb5ae1bbd86e6433ad5690997c5050c4dd0a53160c"
+    },
+    {
+      "file": "Sources/GamePresentation/NetworkCrossover.swift",
+      "sha256": "271da2eeafe0a8720093ed75ac769ebcd7dc6a1a1e63a0bb78816884bfa5d457"
+    },
+    {
+      "file": "Sources/GamePresentation/NetworkDrag.swift",
+      "sha256": "d25d6bdfba659ef30dce8e0be1a239b22f8e2d7bc111a8ca807cb16db92c89b7"
+    },
+    {
+      "file": "Sources/GamePresentation/NetworkFlowReport.swift",
+      "sha256": "6ea13015389b0a54f6b98ee42d082fa28e4c7df85506224007d6da121faa3b1c"
+    },
+    {
+      "file": "Sources/GamePresentation/NetworkPlanCoding.swift",
+      "sha256": "797cf6a4dbcda7cfe0aa92700f1e27c1ee8460cc4af48e76aa376fa9a273970e"
+    },
+    {
+      "file": "Sources/GamePresentation/NetworkPostcard.swift",
+      "sha256": "9a8515a1464f2fa7d964fbf3c9ed5d04f60ee92c1796f21eebc14854e8999286"
+    },
+    {
+      "file": "Sources/GamePresentation/NetworkSession.swift",
+      "sha256": "2b8e674f0d861d3ef2b106499f0f8857b3a7e01f88801a4367bf25c072550619"
+    },
+    {
+      "file": "Sources/GamePresentation/NewGame.swift",
+      "sha256": "b7088b58edc68e38c85435373bf6c3ded1d5d71e0ea77cb5c6abb307c5a44980"
+    },
+    {
+      "file": "Sources/GamePresentation/NewGameChoice.swift",
+      "sha256": "93f6e82596b633c8eb8b12d97963658388d1f7bbba62dd0409b5e02aafa81b40"
+    },
+    {
+      "file": "Sources/GamePresentation/NewsLog.swift",
+      "sha256": "0f22f8004e2381bb36fc1968fc10d46d93ae9a5d50f7bdc7ec084adbbbfab18b"
+    },
+    {
+      "file": "Sources/GamePresentation/NextSteps.swift",
+      "sha256": "d313998df4403b437078acc53bc0490d109b69faf741ab6a34d8bb882bae5d9d"
+    },
+    {
+      "file": "Sources/GamePresentation/NightSkip.swift",
+      "sha256": "567c56dd8fc016517f1cb9272fa1384349255f372ae4d9e70c35a46e2c467c72"
+    },
+    {
+      "file": "Sources/GamePresentation/OpenStreetMapBase.swift",
+      "sha256": "e649ca8bd675b6157b2cae0fbf62f922f9274a2cc2d5ffd654b44fd0e46a59fc"
+    },
+    {
+      "file": "Sources/GamePresentation/PMTilesArchive.swift",
+      "sha256": "9bb36938d69e15c5c631554e8d961a4a1866a4e0cc7501f69be8b8c2abeee360"
+    },
+    {
+      "file": "Sources/GamePresentation/PassengerRoutesAhead.swift",
+      "sha256": "94174cb0083097d7eedb502a9801eb0dbf9c53a4e3d6f7fd82cb0163713523b4"
+    },
+    {
+      "file": "Sources/GamePresentation/PassingLoop.swift",
+      "sha256": "c54b1dc740b81ccfa8f8082afa3597031f377f886539517f187911d38fdc0b4f"
+    },
+    {
+      "file": "Sources/GamePresentation/PassingLoopHints.swift",
+      "sha256": "1550287105cbd8df7e342cd2df41d0d85c188ed4b61144aea3f2a9df47a03a1f"
+    },
+    {
+      "file": "Sources/GamePresentation/PerformanceText.swift",
+      "sha256": "be7f0ba6340fffe52948b7670273f5ba4a02725e33180d6b62949cce06a207c7"
+    },
+    {
+      "file": "Sources/GamePresentation/PingxiChallenge.swift",
+      "sha256": "1eaa19a45563a31fadff0cb8f8026444eb5fe4a95f2c993cb61fb6d393990d2a"
+    },
+    {
+      "file": "Sources/GamePresentation/PingxiStory.swift",
+      "sha256": "02f22da9109240d732fe66be99840e5347685a34376edb9416f2205a3680f1d2"
+    },
+    {
+      "file": "Sources/GamePresentation/PlaceGrid.swift",
+      "sha256": "506500cb91ac305e91aeaebcfb7b3bc92aa25300bc5f9d5c0887db9c42165ddb"
+    },
+    {
+      "file": "Sources/GamePresentation/PlaceNames.swift",
+      "sha256": "557d8924aeac9fef6268e76f9fd710f694c4a32eab0ff584cc274f5c7d38b4bf"
+    },
+    {
+      "file": "Sources/GamePresentation/PlatformTrack.swift",
+      "sha256": "e969d4c951a2962820967ebfd59f5c8ecea86b188b84f37a77a70582352ac326"
+    },
+    {
+      "file": "Sources/GamePresentation/PlayerCommand.swift",
+      "sha256": "1f717d25ed4d320166d825f43cb9fa5289e7e4a836a983eb67839994a0708012"
+    },
+    {
+      "file": "Sources/GamePresentation/PlayerCommandEdit.swift",
+      "sha256": "f7b2723ccb9e7a63c23c45439ce66fed4d02b388c05ece292152b7e01f38bec3"
+    },
+    {
+      "file": "Sources/GamePresentation/Policy.swift",
+      "sha256": "02e4744577712dce2f6d3810a4c67ca80deea17f9d73ba7353f217379b85742a"
+    },
+    {
+      "file": "Sources/GamePresentation/PolylineDetail.swift",
+      "sha256": "f9a54a90d32f35e40413a28b43b18da3c9799311cb560adab78a2cc5af43ac7c"
+    },
+    {
+      "file": "Sources/GamePresentation/PopTravel.swift",
+      "sha256": "16565dfcedd9e683472a06a54145b4556945da05fd12a6eb33fb337ab5dd94af"
+    },
+    {
+      "file": "Sources/GamePresentation/PopulationGrid.swift",
+      "sha256": "6b50597f10787c2eb22ff24137d9f927c4e901745e5d6b61d8600069ff1c775d"
+    },
+    {
+      "file": "Sources/GamePresentation/PopulationHeatmap.swift",
+      "sha256": "ba14f08c8564b66994657f860b22a12aa6295f191254ae6fd8426f1f4a01d265"
+    },
+    {
+      "file": "Sources/GamePresentation/PostcardNetwork.swift",
+      "sha256": "748315a43874b772a3df144f764f3146129ac83aa939f6b775b78fbed00efa94"
+    },
+    {
+      "file": "Sources/GamePresentation/PostcardSea.swift",
+      "sha256": "73957fd03890fd4703eb9dfafa7bac971eb1cd7722c1aa59dda16c06cf7b7f87"
+    },
+    {
+      "file": "Sources/GamePresentation/ProblemReport.swift",
+      "sha256": "b89636d01fbe9e90052caaaacb50f834508703c10a6553f4e33a464a88ea0662"
+    },
+    {
+      "file": "Sources/GamePresentation/PromotionLine.swift",
+      "sha256": "c5e669883eae349ac3d2b81353c5996a1d9e78ed4a9e2f8358e0415aa3a972dd"
+    },
+    {
+      "file": "Sources/GamePresentation/RealBuses.swift",
+      "sha256": "e1a223b452a603f1c35fa1906cd21ce3334fc577e03b8155f104b1d5cf467c7e"
+    },
+    {
+      "file": "Sources/GamePresentation/RealLineAcquisition.swift",
+      "sha256": "21618ee6a18cec79f6f00838409f82c2db20c0d60895519406f1682d657b23ea"
+    },
+    {
+      "file": "Sources/GamePresentation/RealLineDemoSpec.swift",
+      "sha256": "0e3316604394e8b0e4fb50a804be291e6073dd35be76bbf7273f2a7c0afe8cac"
+    },
+    {
+      "file": "Sources/GamePresentation/RealLineDepot.swift",
+      "sha256": "0dbc00c9aee49e93b608a8a7ab034c2fb81ef68ceaf7f1b94fdaf7dc888099e7"
+    },
+    {
+      "file": "Sources/GamePresentation/RealLineLeftover.swift",
+      "sha256": "13ad3e2b275c3bb39691a771ad1ec8a3762aa5a35886772a0d6395519dfe59f1"
+    },
+    {
+      "file": "Sources/GamePresentation/RealLineStock.swift",
+      "sha256": "5d2265af6d593522c7ec6bfc4a32dec5b7940557baa24b82402d1b9d33fb1cdb"
+    },
+    {
+      "file": "Sources/GamePresentation/RealNoBuildLand.swift",
+      "sha256": "19f466a19dedb3c9ce8cc2abd2c6e46035352fedccb2a2f8d9bebde1633cdc0d"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRailStructures.swift",
+      "sha256": "0cc37cd0b36502786f7358bf8eece5409ada32b53c433c1b98036edf2f15f9ec"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRailTracks.swift",
+      "sha256": "71dc2540d4262540427b044a25d81542b532b94003e950705e725d5a39a9c2e3"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRailwayGameplay.swift",
+      "sha256": "2da3b54389ce1d1c3b105da78a6ce28a537c5b26fdf5485c4d8a82e9d375c501"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRailwayOperations.swift",
+      "sha256": "805196dda6befe88d6f24b36ea6f5006e2817d2154374f3f0e1732147d96cc0a"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRailwayTracing.swift",
+      "sha256": "f9d41f1121a6a9df6874a4813563e3ae333826ae1c62dd56b741abbcb082e780"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRailwayYield.swift",
+      "sha256": "5ff4a46e1d2935510df83389fad4b6a809eac5ef6a1a4d4f13dde5355b96e380"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRailways.swift",
+      "sha256": "16d911ef41583fca621f4b19e3a65d387c5192e2777dd35e70b02ad2a5122074"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRidership.swift",
+      "sha256": "05c718f1bc372e81b01f8144160455d440c1f67e673ea29ff41d0d737516b171"
+    },
+    {
+      "file": "Sources/GamePresentation/RealRoadCells.swift",
+      "sha256": "733c602da08cafb71e33930b8d92992ffa8142e05d88e42a6334983008e3d9fb"
+    },
+    {
+      "file": "Sources/GamePresentation/RealStationData.swift",
+      "sha256": "4e603651ef054bc6ebaa7dae8ebed4a5c63be6d6f2ecaf9b5fe228b9ac5d8b8c"
+    },
+    {
+      "file": "Sources/GamePresentation/RealStationPurchase.swift",
+      "sha256": "4e77ee378a12ee0512d0d614a1cf3dcc7bb7e2b3735afce1eec5a0bef7461c8f"
+    },
+    {
+      "file": "Sources/GamePresentation/RealStationSuggestions.swift",
+      "sha256": "a86ee2f247604c51f62583f249f1558ae019ea1e0c0bac93d88258ffd5df8cb5"
+    },
+    {
+      "file": "Sources/GamePresentation/RealStationTransfers.swift",
+      "sha256": "53a4bcabd6f316ccb0690a0ab0544a1b1edd203d50990dc6e2f98034ba17f6a3"
+    },
+    {
+      "file": "Sources/GamePresentation/RealTemples.swift",
+      "sha256": "ce515d6c751b16cb3743fce0648f0da1089e4417e8a3ed0f7795c5a9238386a8"
+    },
+    {
+      "file": "Sources/GamePresentation/RealTimetables.swift",
+      "sha256": "d8badfb1a413c4719a49a950af69e5780e4a018eded780c178e183b9056f8294"
+    },
+    {
+      "file": "Sources/GamePresentation/RealTrainMotion.swift",
+      "sha256": "ecabd8030296d542d0e3dbb82d32f94d482dc9cd096acf159d53b54334c3f5c4"
+    },
+    {
+      "file": "Sources/GamePresentation/RealTransfers.swift",
+      "sha256": "e55e1ed794f39bbf8d0d6b60b2f525cb4c7e199021ff0e28192d3626d65b95a4"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldDemo.swift",
+      "sha256": "b23b9d598d662c0ffa7cd9e3c47282e0d99b4c631e58792406ebd74fbec26a3a"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldDemoGround.swift",
+      "sha256": "4e6f400c7d52154195f1d7794bc2c4038136ed23f21bed2c71bd2ba2f74dc0cf"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldExpansion.swift",
+      "sha256": "9da1d5a6fa9fd78295e0b30e61c1aeee176009f13b836924ea23a98dbab04348"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldLoading.swift",
+      "sha256": "dec273ba08e075947d12b262618c15d1e922426d9d479a3325c42599994269be"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldMap.swift",
+      "sha256": "89b4c158a04ec5273823f29242939d3ce1d36c5a634ab5a0ee93f8c1836a7f90"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldPlaceGroups.swift",
+      "sha256": "dec3df630ec290eb6b64b7d3d13227a08d234586b0b85fb926d5368b0a72f60d"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldStartArea.swift",
+      "sha256": "c444aa90a2a66271138a3be4af10b4b96c18aa475a672878f6d20faf4cce6f04"
+    },
+    {
+      "file": "Sources/GamePresentation/RealWorldStations.swift",
+      "sha256": "bd6a1aebabb6b75be55b2d53f793350c185ad55efbbde239ea6080483e03e648"
+    },
+    {
+      "file": "Sources/GamePresentation/RemovalConfirmation.swift",
+      "sha256": "0b5302e16d0fdf5b76a1d129e0081bee1850f3093c8bd9c16304b1fc874c9d45"
+    },
+    {
+      "file": "Sources/GamePresentation/RequestsOnMap.swift",
+      "sha256": "7b28a8d12f54838d31c2dd6e3e3317bc3aed8db4d606a989405ae7467b80a813"
+    },
+    {
+      "file": "Sources/GamePresentation/RequestsText.swift",
+      "sha256": "278cb347a5afdbd9ae78b1e08cb9ad98252ebdbacd3568b4c4b7ccffaf69f263"
+    },
+    {
+      "file": "Sources/GamePresentation/RoadCentreLines.swift",
+      "sha256": "8fadfbeea3f88d3bf44e667615426cce88fb18856ef287526cb4880803cbda59"
+    },
+    {
+      "file": "Sources/GamePresentation/RoadDraft.swift",
+      "sha256": "a926a8f00f3d5db6cf3feeb9344b3fbcd8d4938be0a4b285c540dc6e84033a06"
+    },
+    {
+      "file": "Sources/GamePresentation/RoadsTurnOn.swift",
+      "sha256": "94d4eb367fc26b0ae035032d3571bf5f45f27a07758de5566e29d055b795a4c0"
+    },
+    {
+      "file": "Sources/GamePresentation/RollingStockCatalog.swift",
+      "sha256": "bfe53b0168c4b552a095011bb931f73a770f53f8e00ef2de0064cf0d06d45da9"
+    },
+    {
+      "file": "Sources/GamePresentation/RollingStockText.swift",
+      "sha256": "0a87facb2e365ef6540a51b8b8a6f302a647ef7d80d3abc15614c73e9beab975"
+    },
+    {
+      "file": "Sources/GamePresentation/RouteHint.swift",
+      "sha256": "8690f277583169db619adcf601572dc2e238c4f1c4bd00beda8539c9303c7b3a"
+    },
+    {
+      "file": "Sources/GamePresentation/RoutePreview.swift",
+      "sha256": "2bdfd2fe323db46ea127d4b4b47d120e4a6dd8eb130197f16db19327f84ffe9a"
+    },
+    {
+      "file": "Sources/GamePresentation/RunningSound.swift",
+      "sha256": "e09e15ce0d18e1272cc1531b7c6dd722d0702a58f35af954a154780a16041676"
+    },
+    {
+      "file": "Sources/GamePresentation/SandboxStories.swift",
+      "sha256": "ce104c1d6669611c9ecad517c7ea15ca177f0c0a9b637edddf9a39a5133eb93d"
+    },
+    {
+      "file": "Sources/GamePresentation/SaveLibrary.swift",
+      "sha256": "13a8eb0a56f1e6db8fd295acfa31771d01ab8ccdc9117d0eaedd2fa9ab09e096"
+    },
+    {
+      "file": "Sources/GamePresentation/SaveSync.swift",
+      "sha256": "80be93b9582594065164b1819865381d784b0e66cc0a8f7e927e58e34ecc9624"
+    },
+    {
+      "file": "Sources/GamePresentation/Scenarios.swift",
+      "sha256": "b30ba2eb6cd94a69230840da5196c30e772fda38f79c70b0c9c1284fbff5de25"
+    },
+    {
+      "file": "Sources/GamePresentation/ScreenFacts.swift",
+      "sha256": "4b10d9ded41c0a8078005dc2db24cda34d3447521f144e7d9bc832df58a90092"
+    },
+    {
+      "file": "Sources/GamePresentation/ScreenTools.swift",
+      "sha256": "65e31e092ca6f2b72b5ef584bb318a0d6ea22edcc71352692b0ada07cda8246d"
+    },
+    {
+      "file": "Sources/GamePresentation/ScreenshotScene.swift",
+      "sha256": "2ae0026b768947999b0de6f3f0ecdca8171a75bd94578c5c1517cffb5ce21227"
+    },
+    {
+      "file": "Sources/GamePresentation/SecretaryRoom.swift",
+      "sha256": "b2bad84a1a1f2112a3117e2ddc2eae5993204558ee9d67871575580f457a3ccc"
+    },
+    {
+      "file": "Sources/GamePresentation/SectionFlow.swift",
+      "sha256": "2d63636716d53ff316a16dade3e84db4c7343c7a3b10416d6f3ae93c0a7b1c11"
+    },
+    {
+      "file": "Sources/GamePresentation/SeededStreetPlan.swift",
+      "sha256": "a2c8faea02d00b9c9c9f37be79e30687fe6651983471b5e3ab51270102d112d5"
+    },
+    {
+      "file": "Sources/GamePresentation/SelectionHeadLayout.swift",
+      "sha256": "eb3ed001a9fab85e94d694ee2754961676e810c68edc8eac7dc0f89c1c876eee"
+    },
+    {
+      "file": "Sources/GamePresentation/ServiceText.swift",
+      "sha256": "c42f71eabc8c889a7166b2d21aa6f596bdb42b60cefec783a9c09c12548ca6a1"
+    },
+    {
+      "file": "Sources/GamePresentation/SharedNetwork.swift",
+      "sha256": "232253d453c5b19b70d65e7862d1cc24047fb4e5bfceda24f7452dfe84624906"
+    },
+    {
+      "file": "Sources/GamePresentation/SightMarks.swift",
+      "sha256": "013955393e810d681446375cbd9661e1ff2a4cd59f00b478e5f368953792aed7"
+    },
+    {
+      "file": "Sources/GamePresentation/SkylineGrowth.swift",
+      "sha256": "4320bee3b01ec70748c496e3d71329807a7ef2d66a73e71414a22299bef0f388"
+    },
+    {
+      "file": "Sources/GamePresentation/SoundCue.swift",
+      "sha256": "5d8bbc332f1c48bb4b8808417a79de776cc434bc925e1f821710cc65dad9fd68"
+    },
+    {
+      "file": "Sources/GamePresentation/SoundVolumes.swift",
+      "sha256": "9d08868c210cc73a4c8042f7efb2c5d426758adae6694d31c7ab2649c7af2463"
+    },
+    {
+      "file": "Sources/GamePresentation/SpeedLagHint.swift",
+      "sha256": "5552b30581d908ef8da661ec0978c742de92fc2f7cd53bf83c4d4cdfc0b8f49c"
+    },
+    {
+      "file": "Sources/GamePresentation/StartMenu.swift",
+      "sha256": "4f439120c42264d7108c5dbc960581da232562dd566c6f31387022f7439f2e23"
+    },
+    {
+      "file": "Sources/GamePresentation/StationChime.swift",
+      "sha256": "0cea16ae088065f744cc4ba8eecfdd291cc0e377af2f390e9e731b4c5739419d"
+    },
+    {
+      "file": "Sources/GamePresentation/StationCommerceText.swift",
+      "sha256": "3efa791ddeca76a3dc012da8fa63ceeca98ebfecffa06a0b465ad9cd26bc02e6"
+    },
+    {
+      "file": "Sources/GamePresentation/StationDemandText.swift",
+      "sha256": "34ab317191a72c307130102381d30709b62c635cf6e2b7a62d043dede50d361e"
+    },
+    {
+      "file": "Sources/GamePresentation/StationExpansionText.swift",
+      "sha256": "d1f826b16f2278b29aa11edbdd686902ee0eb5cc12f2109ca990f5d87c746abb"
+    },
+    {
+      "file": "Sources/GamePresentation/StationLabels.swift",
+      "sha256": "2ab0319ff6812f55549013df905f3fbffc2b8f68953cfe7938d8361a665d6609"
+    },
+    {
+      "file": "Sources/GamePresentation/StationLayout.swift",
+      "sha256": "7f71dc9cd6b51e5b0bd009ab51f2c81bf9afe08f4154960aba67b3f01afb71e9"
+    },
+    {
+      "file": "Sources/GamePresentation/StationMasterAdvice.swift",
+      "sha256": "339c411320ad04f851cc255717feeb17174cea3fdd2d0c2766c0dc6f5eabc7b0"
+    },
+    {
+      "file": "Sources/GamePresentation/StationOperations.swift",
+      "sha256": "e29f18206d614dac4d5757bb2f7e81799bc6024dedbc20861790d59ec4edde6b"
+    },
+    {
+      "file": "Sources/GamePresentation/StationPairComparison.swift",
+      "sha256": "bbcd99c17b20683d9f1b3405fbc52d2b463ec23f12213894733f3fc8a87e7003"
+    },
+    {
+      "file": "Sources/GamePresentation/StationPairDrawerLayout.swift",
+      "sha256": "1f048cb437290b4e7e8ae4dd276d9098e5f7455222027feda81edf0c1ace7b87"
+    },
+    {
+      "file": "Sources/GamePresentation/StationPanelGroups.swift",
+      "sha256": "3a134f139f4bcd950443f954d6c6aec1e29bcbf1311e70a1bf46d67bf8909195"
+    },
+    {
+      "file": "Sources/GamePresentation/StationPotentialMap.swift",
+      "sha256": "ce25b2d0473accd24792fcde0c65cacfcf6a3f854b2db199109682cfe3d3fadd"
+    },
+    {
+      "file": "Sources/GamePresentation/StationRemoval.swift",
+      "sha256": "ca3838ff641987be3c11b26973bac6c3ec2b5cf3f43e63285b901b527bd29c13"
+    },
+    {
+      "file": "Sources/GamePresentation/StationRoad.swift",
+      "sha256": "76abdc94cecac65cd4683b36694fb9ed9305a8b000e366d475e7f06d55f0499d"
+    },
+    {
+      "file": "Sources/GamePresentation/StationSiting.swift",
+      "sha256": "6ae277073a48d6f2251c5e3f9edd32fae7ce8eb185101636ef5531202c4e2a9b"
+    },
+    {
+      "file": "Sources/GamePresentation/StationStamps.swift",
+      "sha256": "fb5e5134930c71682cb745cec716010f03c0893ef9b295b9d40d33a988b3504f"
+    },
+    {
+      "file": "Sources/GamePresentation/StationWaitBreakdown.swift",
+      "sha256": "2880866832837732b106767f7b0c25703cfef9aa15e55c75a6e99c0f7788ad57"
+    },
+    {
+      "file": "Sources/GamePresentation/StatisticsCharts.swift",
+      "sha256": "855021a3fb56ee0490f9b715d0fbe709a97db8c16ef4f4db9eccd1470a60e530"
+    },
+    {
+      "file": "Sources/GamePresentation/StatusBarWidths.swift",
+      "sha256": "05f8f400e1d4829ebc931e4db8e3b8af3981dbb36cc5ed92ec05d93de0f00daf"
+    },
+    {
+      "file": "Sources/GamePresentation/SubsidiaryText.swift",
+      "sha256": "13dfc5cfbbd2df42a03a72982e8676a2a5a28ff662f91b15771787cba24f25c7"
+    },
+    {
+      "file": "Sources/GamePresentation/TRADemo.swift",
+      "sha256": "49c677667225785ec518a1a65a7f32eac475dbd0b9baec52105c88a735fda148"
+    },
+    {
+      "file": "Sources/GamePresentation/TerrainMap.swift",
+      "sha256": "03aba0340517fc07b98e6580c816c5101900fa24983ffc195e3cfda142a004d4"
+    },
+    {
+      "file": "Sources/GamePresentation/TickAccumulator.swift",
+      "sha256": "e53efd956360fe4255d730303d5e35cf66405c753edad83f836fe03ac1aebc81"
+    },
+    {
+      "file": "Sources/GamePresentation/TimetableEditing.swift",
+      "sha256": "c8a31f7a211fc2f312213de006a02d775e1659c72b106ab888ff86b8a3aefa08"
+    },
+    {
+      "file": "Sources/GamePresentation/TodayAccount.swift",
+      "sha256": "8ec3a37c82f665728974393e2194c56df81cba7195fb1a9234e5aed687c1ff56"
+    },
+    {
+      "file": "Sources/GamePresentation/ToolColumn.swift",
+      "sha256": "533202a34c957931bd0c72d72f44c3b10c0bf1cd70659b499071148a5ffba4ee"
+    },
+    {
+      "file": "Sources/GamePresentation/TourismText.swift",
+      "sha256": "1f2940a3fe8f0d21b6586f76b64c18ff8d473aa4dfdf87eb7c1caa6003139861"
+    },
+    {
+      "file": "Sources/GamePresentation/TraceOverlap.swift",
+      "sha256": "4bf4dc8c8d7571250b19f1b4e5cd9b8089a72c548f6fa70610d2a0840b46a811"
+    },
+    {
+      "file": "Sources/GamePresentation/TracedSale.swift",
+      "sha256": "53117322ca8c6e1866ec6883fdcd17a5d26d98cdb4e2e5f8e382ac6ba466a5cf"
+    },
+    {
+      "file": "Sources/GamePresentation/TrackGeometryProblem.swift",
+      "sha256": "65e3ed3f88e3c1d558f46667d9a17ac9769dcef07456c4992b885542f09915e6"
+    },
+    {
+      "file": "Sources/GamePresentation/TrackInfoText.swift",
+      "sha256": "3f2dccfc7f103f642c59b94c7be18c2dcc54605f617c368e871ecd684dcc8035"
+    },
+    {
+      "file": "Sources/GamePresentation/TrackSlopes.swift",
+      "sha256": "5bae8342b86f5568ec05c8da4af8fe47b8fbf301614c0c2464fc2c780000521f"
+    },
+    {
+      "file": "Sources/GamePresentation/TrackUpgrade.swift",
+      "sha256": "a48f280f54c2c4ad8dcec2f3c1d34cbbaf615b3e95dc13b18e745c7624b027aa"
+    },
+    {
+      "file": "Sources/GamePresentation/TrafficOverlay.swift",
+      "sha256": "73f30240b47a027b05879f23a3818262b99de5ef4efe83a41dc5d0e8005b5a92"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainCard.swift",
+      "sha256": "964b103b5b6c839b2546499623268af96075d78d7100d76baab08ea590627f56"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainCars.swift",
+      "sha256": "14018a5104da4abbde0b76a73af3588760836ef1a78019aa65b4633ffc883803"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainDiagram.swift",
+      "sha256": "cfa233ec658208e074a5a6a153a6e4853c69ae14cbf7ad801431525255c7a07a"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainHorn.swift",
+      "sha256": "6144ef4342b1bed440c587daaa8ad70125409c9cc6f494355d069798e0488988"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainLivery.swift",
+      "sha256": "798b39d79291c4ce62be624d3e14b3ac27404f9df59694bd9156b6af21ae94ff"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainMotion.swift",
+      "sha256": "264bb931e76d87109091fe5814f40e468d93ac6c2673232ccd33e0f8b1fdc231"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainPack.swift",
+      "sha256": "5f2bea1f62d6320860c824904ef7620413154a8cc1016dd59127c848c74eeaed"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainPicking.swift",
+      "sha256": "3f4b8025c8d646488f4bf5bf381a147dee78bdd446998d9db72efb85a4873a0b"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainRoster.swift",
+      "sha256": "683ed61784921e736c4748d2d0821b5cc71e27ddbeac41114d99ee053affc982"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainRosterDrag.swift",
+      "sha256": "32bcbf52c37834fb1c9e445ec2491b80d2159e261e09151589ffb6b4d78fd9a3"
+    },
+    {
+      "file": "Sources/GamePresentation/TrainTrackReach.swift",
+      "sha256": "bc8e3be0ba09aded76f4281dc284431ec69c1ee43ef4d9dc9b4aa9d35531ac3a"
+    },
+    {
+      "file": "Sources/GamePresentation/TransferGroups.swift",
+      "sha256": "34c4172778cdc97cff03683cab2ee21c2693c34eb7ea8922b906bab843497117"
+    },
+    {
+      "file": "Sources/GamePresentation/TravelDemandMap.swift",
+      "sha256": "ecd290427a9dfd3540d48232cdfab5dd4d237ddba361ed49632eded64c71cb84"
+    },
+    {
+      "file": "Sources/GamePresentation/TripSettlements.swift",
+      "sha256": "f0bbc79f3610c7088a1a04fb5642dc49e7842acb746d1fe5fba5a735fda7ef05"
+    },
+    {
+      "file": "Sources/GamePresentation/TripStamp.swift",
+      "sha256": "b44cdf58b31d3f13df1a7aa90eb17b4fb8f3f3a27cd2cb7bb2eae6e58eed7b14"
+    },
+    {
+      "file": "Sources/GamePresentation/Tutorial.swift",
+      "sha256": "67bd4f036776b8cd6d335f9c67ecddf082134406d2574ca11a3d29560c248a86"
+    },
+    {
+      "file": "Sources/GamePresentation/TutorialCardPlacement.swift",
+      "sha256": "91453c1689b005d42fa4fbb6eca8abbbc19e076fbd884b7618dba5cc268d6e66"
+    },
+    {
+      "file": "Sources/GamePresentation/TutorialSession.swift",
+      "sha256": "ac6330a6d27924835a4772088abf817613c6cee06c46464e0e1bf5b8da591aa6"
+    },
+    {
+      "file": "Sources/GamePresentation/UnsavedLeaving.swift",
+      "sha256": "57111d1fda5825844c6a4c8ae2005a5e8f23477ac0450e4cdbfc42b010d237e9"
+    },
+    {
+      "file": "Sources/GamePresentation/UnservedCluster.swift",
+      "sha256": "11fbca71c49215a8244af9eb2eb6016c32ad07970824fa36b285283970f2fd7f"
+    },
+    {
+      "file": "Sources/GamePresentation/VectorTile.swift",
+      "sha256": "2cccc67807f4f7880e5258ccb2a13868f1404b509240e4fe8c4e1117539c6b58"
+    },
+    {
+      "file": "Sources/GamePresentation/ViewingSpeed.swift",
+      "sha256": "9e08799f5b02c55f2891cde304388beff2951d1bb3801315506531d1303989bb"
+    },
+    {
+      "file": "Sources/GamePresentation/WaterGrid.swift",
+      "sha256": "bf3251d2730a0ec57b0832e938946c7ed42a18dc0c2e56c5d60dfad5601e3d30"
+    },
+    {
+      "file": "Sources/GamePresentation/WeatherSound.swift",
+      "sha256": "296bf2d27c8732755f65bf4512203b72c085e93eeae4a37c7858aa76578e69dc"
+    },
+    {
+      "file": "Sources/GamePresentation/WeeklyChallenge.swift",
+      "sha256": "1f08d22d3d959a14119db87636b70bdb49d8a6c815c0f40354e7b95056b54a47"
+    },
+    {
+      "file": "Sources/GamePresentation/WeeklyPunctuality.swift",
+      "sha256": "e63e245043c6daa96a2b07c64ce9e19d6e5a175c9cc612980f1d1bdad9256205"
+    },
+    {
+      "file": "Sources/GamePresentation/WhatsNew.swift",
+      "sha256": "9007226466bca83ac6d62679129ba6f49024a5d090e60fa60dab0609b637dc31"
+    },
+    {
+      "file": "Sources/GamePresentation/WholeTaiwan.swift",
+      "sha256": "447109795ad31b4856ad7d4cdfcfb487f46a18f8ef2c2afc89767f8461728a68"
+    },
+    {
+      "file": "Sources/GamePresentation/ZoningOutlook.swift",
+      "sha256": "5771d50f684da6129ec168df91d5964b750c4c95fb9cbc904308a2467fc71a66"
+    },
+    {
+      "file": "Sources/GamePresentation/ZoningSession.swift",
+      "sha256": "e871e96c2dab7da7ae80457f52bb86584e9f35c095afd9f74932800f1dbc8be9"
+    },
+    {
+      "file": "Sources/GameSim/main.swift",
+      "sha256": "1289652f4bbe4174037dbc3d6c2e99232f2b4a814e9223a1a76cd76f4caf5f99"
+    },
+    {
+      "file": "tools/emu900-native/scene.js",
+      "sha256": "472b225f683e25ae83435a9737fab7af5a499f20566e69dd358d8d2305bf94df"
+    },
+    {
+      "file": "tools/station-kit/README.md",
+      "sha256": "72e6479c330ff78c795235712078712ce5b1805ec5d4f336dcb485dcdc9baa0b"
+    },
+    {
+      "file": "tools/station-kit/browser-check.mjs",
+      "sha256": "b7e8d1eec65a5299c1ca0c363fb299dc1e9be6df932ede04c9c4185d8382256b"
+    },
+    {
+      "file": "tools/station-kit/catalog.py",
+      "sha256": "6ee09d296e4d9bf3cb4604c35abb72fe6918cb905613636a191c50ee36bf124a"
+    },
+    {
+      "file": "tools/station-kit/export.sh",
+      "sha256": "e61a876cc793e5f4bef40738f30835f5e0452e1b85ae472769fca6d12a2bb0c6"
+    },
+    {
+      "file": "tools/station-kit/export.swift",
+      "sha256": "6124c71379803a11794cafdd3131786108a881936a56e006720a56a936091f58"
+    },
+    {
+      "file": "tools/station-kit/package.mjs",
+      "sha256": "adf54ffdc7bcf9caa09924007afb4d0d22fbd8b65b136e301bdf3b4597df79c8"
+    },
+    {
+      "file": "tools/station-kit/package.test.mjs",
+      "sha256": "b7f4bb7b7d8807e5364f7ef888c87afbbcf0ee093dfb14adfeea9bd0db541a65"
+    },
+    {
+      "file": "tools/station-kit/rebuild.sh",
+      "sha256": "d01b11912ead4b0616bf0c16fb8192047752acbc113b6f77415638bb88553b7e"
+    },
+    {
+      "file": "tools/station-kit/render.mjs",
+      "sha256": "fd410d84e107333fa18b554d1605aacdb9125e8b933af530b1d0e85877972a42"
+    },
+    {
+      "file": "tools/station-kit/renderer.js",
+      "sha256": "e1bead8791c1acf1d4fcbd844b1f44221ff85284399669da7018964863195a55"
+    },
+    {
+      "file": "tools/station-kit/verify.mjs",
+      "sha256": "f3b16ad89bc1adbe2ec2bcf876d4f0189f2b8fe98c514841113679b3c49443d9"
+    },
+    {
+      "file": "tools/station-kit/viewer.html",
+      "sha256": "87636600434ae4aab77c76004462c4132ce30c330db2db849b6d22e0a2de5184"
+    },
+    {
+      "file": "tools/tra-emu700/README.md",
+      "sha256": "ccd61af80044b93bba4ef4f818a6e839e0ba3e6f12fd43abe6da5c2a1fe06608"
+    },
+    {
+      "file": "tools/tra-emu700/assembly.json",
+      "sha256": "34fc293b5750cda7fc2d79952a57b9f1f9c6dac64c9c8a222724da11d60c3b5a"
+    },
+    {
+      "file": "tools/tra-emu700/build.sh",
+      "sha256": "3b8af7ccdbf5d28edfe8e3103f73a3a99e166f3790a86c10f21523663b1daf63"
+    },
+    {
+      "file": "tools/tra-emu700/glass.py",
+      "sha256": "93171a26abe7a5dd8e7ac4da144e0f230756f0e864490943a94fcab77e1ea884"
+    },
+    {
+      "file": "tools/tra-emu700/lod.mjs",
+      "sha256": "1281e6c781721a704024895cc7342085b6ede0278daa0c75bdda3f45f021e699"
+    },
+    {
+      "file": "tools/tra-emu700/protect.py",
+      "sha256": "fb1743707ad6fc13e05d4cf3e374436797fd9a5239b488be1e4c7ab009fdc101"
+    },
+    {
+      "file": "tools/tra-emu700/render.mjs",
+      "sha256": "f84ffb9d81b3543c2d4c319be11f7f3e0c2e7d690b5546af3904bcf010f430d1"
+    },
+    {
+      "file": "tools/tra-emu700/sheets.py",
+      "sha256": "23747ac4a3776863bf3e33732a0b1d3c6b17a92049534f297d4fef8fc2585ba6"
+    },
+    {
+      "file": "tools/tra-emu700/wheels.mjs",
+      "sha256": "03d7bfb61b07db8fbabf7d4e5549e69bc730500c74bdc98ac098399fba3a61d8"
+    },
+    {
+      "file": "tools/train-models/README.md",
+      "sha256": "f9dcebcb3f10e87bc15bdd5cf2fc4564f4bec772162d3db5e316000d68f10c88"
+    },
+    {
+      "file": "tools/train-models/assemble.mjs",
+      "sha256": "2175152a80038888e812b8eb11b8fe149bb1ba061385fd12cb5af262100dbf9d"
+    },
+    {
+      "file": "tools/train-models/audit.mjs",
+      "sha256": "e5ceb3cbfd4fdcc28c37c1fafd47f02ecf5aa720140d79483660025fafd4d6f7"
+    },
+    {
+      "file": "tools/train-models/browser-check.mjs",
+      "sha256": "da54c14ce6834bf557b8ffc39db27923db2f1e88370ecf138e62ee0c243eafb2"
+    },
+    {
+      "file": "tools/train-models/budgets.json",
+      "sha256": "8d573d3a69d455e14d3287fc382e4d2090e8d767b29c1da13060d65d15607c44"
+    },
+    {
+      "file": "tools/train-models/check.mjs",
+      "sha256": "d8cf8ee8b7c67e1ed2f97c042506877fe8c5eb8674e7dc23f9b572f99e14d213"
+    },
+    {
+      "file": "tools/train-models/deliver.py",
+      "sha256": "092454b3dc312034d0654ba2f725899ff14d30179a27acb20738d288ed86c366"
+    },
+    {
+      "file": "tools/train-models/export.swift",
+      "sha256": "8a3fedcd7824632f1a98c10595d7c75e644fbdf6de2d4664d67075021edd08f6"
+    },
+    {
+      "file": "tools/train-models/g12-verify.mjs",
+      "sha256": "d6e6020e41224f1d0e6e53f490898bae8038eb177db23599eaa2c50e995164c6"
+    },
+    {
+      "file": "tools/train-models/hashes.lock.json",
+      "sha256": "f77acb3f73b17ac5866f27b1b7fc45753678ab88444f84820a2354a4dfc1715b"
+    },
+    {
+      "file": "tools/train-models/inspect.mjs",
+      "sha256": "f2f317d32526f63204fd9747f07f5a5070f55224017434029beed76e5eef5c02"
+    },
+    {
+      "file": "tools/train-models/native.mjs",
+      "sha256": "0b9c0fe73023880d0c305eb7472da24382e220ad48bf4e88beb36eb8d0cd4cf9"
+    },
+    {
+      "file": "tools/train-models/overview.py",
+      "sha256": "f3f93ed313d395103b44b1a4543f7ca43e84a6dee99e7120f0c6ef8529cc26b6"
+    },
+    {
+      "file": "tools/train-models/package.mjs",
+      "sha256": "186a3dbacbda52ab383d9fae3a4d118d462d05053b6f6b75fa927be1a0df7c4f"
+    },
+    {
+      "file": "tools/train-models/render.mjs",
+      "sha256": "6a8c5924cb2c4a71a1e94a513ef6ce726d8d89eac967644a27a8ec7ea3ce0205"
+    },
+    {
+      "file": "tools/train-models/renderer.js",
+      "sha256": "a26942a43464f1c898db6c81abd8f71a7608ddcdf64715b296ede51b9e630e7e"
+    },
+    {
+      "file": "tools/train-models/run.sh",
+      "sha256": "64ed8b7068324c6890474073372381e0239c7a393f7d7863493bfb74be23327b"
+    },
+    {
+      "file": "tools/train-models/status-template.json",
+      "sha256": "cb7ee71fc9f8c69891c79b905a93c0dfb82db0a4e762d446a92cb5b7e02ec1d0"
+    },
+    {
+      "file": "tools/train-models/test.mjs",
+      "sha256": "1bfa6f7cc73805de56e12af61800ad658f899c6dd45e1414b940a8e03c7a2859"
+    },
+    {
+      "file": "tools/train-models/test_delivery.py",
+      "sha256": "2c483fd530d3295ae6eda5a107ef51a424bd5b6f1ccef2c6048bfe05a5161cf7"
+    },
+    {
+      "file": "tools/train-models/viewer.mjs",
+      "sha256": "8c62b49d481c6dda92d833cb33a1e1413b98cb4e41cae4c1ee906684cfa7bdd3"
+    }
+  ],
+  "lighting_sha256": "c9efb1582a02635ee739c071f82e5b6bb2ba33db61f067ada7d6a8d3b4239b81",
+  "viewer_sha256": "2da645daea35bb0ad3f82fb2424ac72fd4ebcc2b3d1560ba16c5165a11bb0218",
+  "viewer_bytes_equal": true,
+  "metadata_inputs": [
+    {
+      "file": "source-record.json",
+      "sha256": "a26382af37146681fd63e9d88327c4d8038fa02bd5a7c6a783a441020b72a68c"
+    },
+    {
+      "file": "status.json",
+      "sha256": "93ea129a9656ca988f3a4754750443204efd274fdec80cad095ec5bdb235b705"
+    },
+    {
+      "file": "configuration.json",
+      "sha256": "254a057810b7ae0481a5a82a0a02ccbe28cad6567bf576ea03b0c17c6c3cbf27"
+    }
+  ],
+  "validation_tools_commit": "297994f8",
+  "validation_method": "Additional vehicle-specific support limit is 45mm from its own 42mm panel stack; validation tools are separate from the unchanged geometry producer.",
+  "registration_commit": "ef0a18ac",
+  "final_head_native_bytes_equal_producer": true,
+  "viewer_input_sha256": [
+    {
+      "file": "manifest.json",
+      "sha256": "71b42a0647a336d3e19608bc9e4d2ea633960b5cdcd747bda3dc4dad15434063"
+    },
+    {
+      "file": "status.json",
+      "sha256": "93ea129a9656ca988f3a4754750443204efd274fdec80cad095ec5bdb235b705"
+    }
+  ],
+  "viewer_rebuilt_from_delivered_package_bytes_equal": true
+}

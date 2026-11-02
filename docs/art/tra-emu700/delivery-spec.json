@@ -1,0 +1,20 @@
+{
+  "repo": "../emu700-producer",
+  "producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "rebuild": "git worktree add --detach ../emu700-producer ccc21854a16f21cb2d4f188749efaf6affd81d39\ncd ../emu700-producer\ntools/tra-emu700/build.sh /tmp/emu700\nnode tools/tra-emu700/render.mjs /tmp/emu700\npython3 tools/tra-emu700/sheets.py /tmp/emu700",
+  "sources": "source-record.json",
+  "status": "status.json",
+  "license_files": [],
+  "pngs": [
+    "sheets/tra-emu700-739-740-formation-far.png",
+    "sheets/tra-emu700-739-740-formation.png",
+    "sheets/tra-emu700-em-far.png",
+    "sheets/tra-emu700-em.png",
+    "sheets/tra-emu700-emc-far.png",
+    "sheets/tra-emu700-emc.png",
+    "sheets/tra-emu700-ep-far.png",
+    "sheets/tra-emu700-ep.png",
+    "sheets/tra-emu700-et-far.png",
+    "sheets/tra-emu700-et.png"
+  ]
+}

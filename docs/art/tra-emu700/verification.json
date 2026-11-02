@@ -1,0 +1,1841 @@
+{
+  "geometry_producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "local_platform": "Linux; Swift 6.4 warnings-as-errors; Chromium/SwiftShader; Blender 4.3.2",
+  "swift_tests": {
+    "status": "VERIFIED",
+    "tests": 10,
+    "failures": 0,
+    "scope": "Map3DEMU700Tests + Map3DModelTests; final geometry source identical to the producer"
+  },
+  "native_glb_topology": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "tra-emu700-emc",
+        "balanced_edges": 13412,
+        "positive_components": 140,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-emc-far",
+        "balanced_edges": 6984,
+        "positive_components": 132,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-ep",
+        "balanced_edges": 7424,
+        "positive_components": 128,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-ep-far",
+        "balanced_edges": 3692,
+        "positive_components": 120,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-et",
+        "balanced_edges": 7250,
+        "positive_components": 121,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-et-far",
+        "balanced_edges": 3578,
+        "positive_components": 115,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-em",
+        "balanced_edges": 7268,
+        "positive_components": 122,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-em-far",
+        "balanced_edges": 3572,
+        "positive_components": 116,
+        "precision_metres": 1e-05,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-739-740-formation",
+        "balanced_edges": 70680,
+        "positive_components": 1015,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      },
+      {
+        "id": "tra-emu700-739-740-formation-far",
+        "balanced_edges": 35624,
+        "positive_components": 959,
+        "precision_metres": 1e-05,
+        "assembly_shift_100mm_detected": true,
+        "missing_and_reversed_face_rejected": true
+      }
+    ],
+    "limits": [
+      "GLB is checked against the shared writer; run an independent importer separately.",
+      "No vehicle-specific glass visibility, equipment support, tyre/rail or clearance proof.",
+      "No exhaustive intersections, engineering precision, appearance acceptance or device performance.",
+      "Assembly payload is a JS expansion check; independently compare a Swift formation when available."
+    ]
+  },
+  "actual_glass_equipment_faults": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "tra-emu700-emc",
+        "coupler_opening_and_actual_sealed_bar_fault": true,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": false,
+        "front_centroid_samples": 290,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      },
+      {
+        "id": "tra-emu700-emc-far",
+        "coupler_opening_and_actual_sealed_bar_fault": true,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": false,
+        "front_centroid_samples": 130,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      },
+      {
+        "id": "tra-emu700-ep",
+        "coupler_opening_and_actual_sealed_bar_fault": false,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": true,
+        "front_centroid_samples": 84,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      },
+      {
+        "id": "tra-emu700-ep-far",
+        "coupler_opening_and_actual_sealed_bar_fault": false,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": true,
+        "front_centroid_samples": 60,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      },
+      {
+        "id": "tra-emu700-et",
+        "coupler_opening_and_actual_sealed_bar_fault": false,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": false,
+        "front_centroid_samples": 68,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      },
+      {
+        "id": "tra-emu700-et-far",
+        "coupler_opening_and_actual_sealed_bar_fault": false,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": false,
+        "front_centroid_samples": 56,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      },
+      {
+        "id": "tra-emu700-em",
+        "coupler_opening_and_actual_sealed_bar_fault": false,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": false,
+        "front_centroid_samples": 52,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      },
+      {
+        "id": "tra-emu700-em-far",
+        "coupler_opening_and_actual_sealed_bar_fault": false,
+        "underfloor_contact_and_three_actual_faults": true,
+        "ac_contact_and_three_actual_faults": true,
+        "ep_missing_and_wrong_station_faults": false,
+        "front_centroid_samples": 52,
+        "glass_solids_tested": 26,
+        "buried_200mm_rejected": true,
+        "floating_200mm_rejected": true
+      }
+    ],
+    "limits": "Centroid rays on outward side and cab/end glass faces, and actual connected glass solid displacement; no exhaustive surface or engineering collision proof."
+  },
+  "glass_support_limit_m": 0.045,
+  "actual_tyres": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "tra-emu700-emc",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      },
+      {
+        "id": "tra-emu700-emc-far",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      },
+      {
+        "id": "tra-emu700-ep",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      },
+      {
+        "id": "tra-emu700-ep-far",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      },
+      {
+        "id": "tra-emu700-et",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      },
+      {
+        "id": "tra-emu700-et-far",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      },
+      {
+        "id": "tra-emu700-em",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      },
+      {
+        "id": "tra-emu700-em-far",
+        "tyres": [
+          {
+            "low": [
+              -8.730000495910645,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -8.730000495910645,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -7.87000036239624,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              -6.429999828338623,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              -5.570000171661377,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              -6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              5.570000171661377,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              6.429999828338623,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              6,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              0.5350000262260437,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              0.6650000214576721,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              0.6000000238418579,
+              0.4300000071525574
+            ]
+          },
+          {
+            "low": [
+              7.87000036239624,
+              -0.6650000214576721,
+              0
+            ],
+            "high": [
+              8.730000495910645,
+              -0.5350000262260437,
+              0.8600000143051147
+            ],
+            "center": [
+              8.300000429153442,
+              -0.6000000238418579,
+              0.4300000071525574
+            ]
+          }
+        ],
+        "actual_tyres_lift_100mm_rejected": true,
+        "actual_axle_shift_200mm_rejected": true,
+        "actual_missing_tyre_rejected": true
+      }
+    ],
+    "limits": "Connected tyre solids and documented static centres only; no flanges, worn wheels, full collision, glass, equipment or dynamics proof."
+  },
+  "lod": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "role": "emc",
+        "near_triangles": 10170,
+        "far_triangles": 5018,
+        "orange_surface_triangles": 136,
+        "actual_paint_colour_fault_rejected": true,
+        "metre_bounds_equal": true
+      },
+      {
+        "role": "ep",
+        "near_triangles": 4952,
+        "far_triangles": 2464,
+        "orange_surface_triangles": 24,
+        "actual_paint_colour_fault_rejected": true,
+        "metre_bounds_equal": true
+      },
+      {
+        "role": "et",
+        "near_triangles": 4836,
+        "far_triangles": 2388,
+        "orange_surface_triangles": 24,
+        "actual_paint_colour_fault_rejected": true,
+        "metre_bounds_equal": true
+      },
+      {
+        "role": "em",
+        "near_triangles": 4848,
+        "far_triangles": 2384,
+        "orange_surface_triangles": 24,
+        "actual_paint_colour_fault_rejected": true,
+        "metre_bounds_equal": true
+      }
+    ],
+    "limits": "Actual orange surface and envelope comparison; rounded window trim and small mechanical tessellation differ. Not a device LOD animation test."
+  },
+  "swift_assembly": {
+    "arithmetic": "Float32 multiplication then Float32 addition; native Z-up, yaw 0/180 degrees only; no scale.",
+    "assemblies": [
+      {
+        "all_vertex_fields_fnv64": "53aa9bb4b3a3cadd",
+        "assembly_payload": "models/tra-emu700-739-740-formation.triangles.bin",
+        "configured_placements_equal": true,
+        "embedded_unit_bytes_equal": true,
+        "faults": [
+          {
+            "configuration_rejected": true,
+            "fault": "wrong_order",
+            "mutated_payload_bytes": 2579824,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "configuration_rejected": true,
+            "fault": "wrong_direction",
+            "mutated_payload_bytes": 2579824,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "configuration_rejected": true,
+            "fault": "double_reversal",
+            "mutated_payload_bytes": 2579824,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "configuration_rejected": true,
+            "fault": "wrong_translation",
+            "mutated_payload_bytes": 2579824,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "fault": "different_embedded_unit_bytes",
+            "payload_rejected": true,
+            "reference_bytes_rejected": true,
+            "state": "VERIFIED"
+          }
+        ],
+        "id": "tra-emu700-739-740-formation",
+        "maximum": [
+          81.593,
+          1.473,
+          4.9775
+        ],
+        "minimum": [
+          -81.593,
+          -1.473,
+          0
+        ],
+        "native": "models/tra-emu700-739-740-formation.m3dscene.json",
+        "native_sha256": "7533971170f09f857cc645869d0991d5c1288aa2afb38877aef2fdbeeefb6fc4",
+        "payload_bytes_equal": true,
+        "payload_sha256": "800f9f7ce313a3127104f7781e238490ac5ef6852ce466763caed55e28d51f08",
+        "placements": 8,
+        "state": "VERIFIED",
+        "triangles": 49612,
+        "units": [
+          {
+            "bytes": 252152,
+            "id": "tra-emu700-em",
+            "native": "models/tra-emu700-em.m3dmodel",
+            "sha256": "db70ebceddefe30243b06aa101e34abf099466d0099e9436373b6f2ecbc4a6b2"
+          },
+          {
+            "bytes": 528896,
+            "id": "tra-emu700-emc",
+            "native": "models/tra-emu700-emc.m3dmodel",
+            "sha256": "532e57ab1c1f99133b0748a33df4a63ea265272fc0d5d052ae31e9343ac47871"
+          },
+          {
+            "bytes": 257560,
+            "id": "tra-emu700-ep",
+            "native": "models/tra-emu700-ep.m3dmodel",
+            "sha256": "af80dc7cc77b93810fe6115b8672cc01f59c49821172c93294062ebf0c65d92a"
+          },
+          {
+            "bytes": 251528,
+            "id": "tra-emu700-et",
+            "native": "models/tra-emu700-et.m3dmodel",
+            "sha256": "402ec9209d895fd951154984f81523303acaf0e0b7cae6ddbf1f1809ce832a07"
+          }
+        ],
+        "vertices": 148836
+      },
+      {
+        "all_vertex_fields_fnv64": "be9235fb54837f7d",
+        "assembly_payload": "models/tra-emu700-739-740-formation-far.triangles.bin",
+        "configured_placements_equal": true,
+        "embedded_unit_bytes_equal": true,
+        "faults": [
+          {
+            "configuration_rejected": true,
+            "fault": "wrong_order",
+            "mutated_payload_bytes": 1274416,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "configuration_rejected": true,
+            "fault": "wrong_direction",
+            "mutated_payload_bytes": 1274416,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "configuration_rejected": true,
+            "fault": "double_reversal",
+            "mutated_payload_bytes": 1274416,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "configuration_rejected": true,
+            "fault": "wrong_translation",
+            "mutated_payload_bytes": 1274416,
+            "payload_rejected": true,
+            "state": "VERIFIED"
+          },
+          {
+            "fault": "different_embedded_unit_bytes",
+            "payload_rejected": true,
+            "reference_bytes_rejected": true,
+            "state": "VERIFIED"
+          }
+        ],
+        "id": "tra-emu700-739-740-formation-far",
+        "maximum": [
+          81.593,
+          1.473,
+          4.9775
+        ],
+        "minimum": [
+          -81.593,
+          -1.473,
+          0
+        ],
+        "native": "models/tra-emu700-739-740-formation-far.m3dscene.json",
+        "native_sha256": "9508e45f2915b1fba81ecb0f08bddacb6bb1da19770c614ae1a5546e1eab542f",
+        "payload_bytes_equal": true,
+        "payload_sha256": "9bf42cabb1140176a9ff611e6042cf281ea3feb51ef07ba5b2efb49e0cd3d6a6",
+        "placements": 8,
+        "state": "VERIFIED",
+        "triangles": 24508,
+        "units": [
+          {
+            "bytes": 124028,
+            "id": "tra-emu700-em-far",
+            "native": "models/tra-emu700-em-far.m3dmodel",
+            "sha256": "f1330d489f96cda7adcf417aeba42e1dd2c8e2e0a4470dd4e026869d6ef0c884"
+          },
+          {
+            "bytes": 260996,
+            "id": "tra-emu700-emc-far",
+            "native": "models/tra-emu700-emc-far.m3dmodel",
+            "sha256": "ceafbfc921c907236d67a28277b6996a6a4f66c16abab65165ad6ce9834296d4"
+          },
+          {
+            "bytes": 128188,
+            "id": "tra-emu700-ep-far",
+            "native": "models/tra-emu700-ep-far.m3dmodel",
+            "sha256": "312ea4a9120c573db45ab40c638aee968c2939d983cea25319120ec8cc19bdad"
+          },
+          {
+            "bytes": 124236,
+            "id": "tra-emu700-et-far",
+            "native": "models/tra-emu700-et-far.m3dmodel",
+            "sha256": "111600124a73a6dc1d9d3ce419936d4269785d73e5d0d1461cb9602aede095fc"
+          }
+        ],
+        "vertices": 73524
+      }
+    ],
+    "configuration_sha256": "34fc293b5750cda7fc2d79952a57b9f1f9c6dac64c9c8a222724da11d60c3b5a",
+    "faults_tested": [
+      "different_embedded_unit_bytes",
+      "double_reversal",
+      "wrong_direction",
+      "wrong_order",
+      "wrong_translation"
+    ],
+    "implementation": "Independent Foundation-only Swift; no JS or GamePresentation imports.",
+    "limits": "Static configuration/native/payload verification only; does not establish real-world formation evidence, coupler compatibility, runtime selection or device validation.",
+    "manifest_sha256": "eeecd0ae15f0c97900f7ecf228bab0e548427412f911f34d13d9ae439ea6bcf3",
+    "state": "VERIFIED",
+    "stored_fields": "Every triangle flag and every corner Float32 XYZ / UInt32 RGBA compared byte-for-byte; derived Float32 normals and native material flags included in all-vertex FNV64."
+  },
+  "independent_glb": {
+    "importer": "4.3.2",
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "tra-emu700-emc",
+        "triangles": 10170,
+        "minimum": [
+          -10.371500015258789,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.321499824523926,
+          1.4730000495910645,
+          3.950000047683716
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-emc-far",
+        "triangles": 5018,
+        "minimum": [
+          -10.371500015258789,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.321499824523926,
+          1.4730000495910645,
+          3.950000047683716
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-ep",
+        "triangles": 4952,
+        "minimum": [
+          -10.149999618530273,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.149999618530273,
+          1.4730000495910645,
+          4.977499961853027
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-ep-far",
+        "triangles": 2464,
+        "minimum": [
+          -10.149999618530273,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.149999618530273,
+          1.4730000495910645,
+          4.977499961853027
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-et",
+        "triangles": 4836,
+        "minimum": [
+          -10.149999618530273,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.149999618530273,
+          1.4730000495910645,
+          3.950000047683716
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-et-far",
+        "triangles": 2388,
+        "minimum": [
+          -10.149999618530273,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.149999618530273,
+          1.4730000495910645,
+          3.950000047683716
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-em",
+        "triangles": 4848,
+        "minimum": [
+          -10.149999618530273,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.149999618530273,
+          1.4730000495910645,
+          3.950000047683716
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-em-far",
+        "triangles": 2384,
+        "minimum": [
+          -10.149999618530273,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          10.149999618530273,
+          1.4730000495910645,
+          3.950000047683716
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-739-740-formation",
+        "triangles": 49612,
+        "minimum": [
+          -81.59300231933594,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          81.59300231933594,
+          1.4730000495910645,
+          4.977499961853027
+        ],
+        "vertex_colors": true
+      },
+      {
+        "id": "tra-emu700-739-740-formation-far",
+        "triangles": 24508,
+        "minimum": [
+          -81.59300231933594,
+          -1.4730000495910645,
+          0.0
+        ],
+        "maximum": [
+          81.59300231933594,
+          1.4730000495910645,
+          4.977499961853027
+        ],
+        "vertex_colors": true
+      }
+    ]
+  },
+  "final_viewer": {
+    "status": "VERIFIED",
+    "transport": "loopback HTTP",
+    "models": [
+      {
+        "id": "tra-emu700-emc",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-emc-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-ep",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-ep-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-et",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-et-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-em",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-em-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-739-740-formation",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      },
+      {
+        "id": "tra-emu700-739-740-formation-far",
+        "views": 7,
+        "lights": 2,
+        "native_glb_download_bytes": true,
+        "png_download": true
+      }
+    ],
+    "orbit_zoom_changed_pixels": true,
+    "mobile_width": 390,
+    "file_protocol": {
+      "status": "UNVERIFIED",
+      "reason": "Browser administration blocks file:// navigation; loopback checks passed."
+    },
+    "errors": [],
+    "external_requests": 0,
+    "limits": [
+      "Browser WebGL only; no device Metal, animation or appearance acceptance."
+    ]
+  },
+  "limits": [
+    "Glass rays cover outward optical face centroids, exclude only actual thin wiper solids and exclude whole glass solids from their own support.",
+    "Roof and underfloor checks cover the modeled primary boxes and fixed stations, not an exact prototype BOM.",
+    "Wheel/rail checks are static; tyre flanges and engineering profile are simplified.",
+    "file:// is blocked by browser administration. HTTP success is separate.",
+    "No Simulator appearance, device Metal/memory/performance, driving, animation, exhaustive collision or user acceptance."
+  ],
+  "full_inventory_gate": {
+    "status": "UNVERIFIED overall",
+    "baseline_failures": 33,
+    "candidate_failures": 33,
+    "identical_failure_lines": true,
+    "new_vehicle_failures": 0,
+    "evidence": "Exact same shared check.mjs on untouched main full inventory and final full inventory; existing lock mismatches are unchanged and not repaired or allowed here."
+  },
+  "png_full_decode": {
+    "status": "VERIFIED",
+    "files": 291,
+    "selected_private": 10,
+    "selected_public": 1,
+    "max_selected_png_bytes": 256581
+  }
+}

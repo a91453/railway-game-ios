@@ -1,0 +1,111 @@
+{
+  "geometry_producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
+  "user_appearance_acceptance": "UNVERIFIED",
+  "accepted_producer": null,
+  "observer": "Codex author self-inspection only",
+  "inspected": {
+    "roles": [
+      "EMC near/far",
+      "EP near/far",
+      "ET near/far",
+      "EM near/far"
+    ],
+    "assemblies": [
+      "complete eight-car near",
+      "complete eight-car far"
+    ],
+    "views": [
+      "front",
+      "back",
+      "left",
+      "right",
+      "top",
+      "bottom",
+      "isometric"
+    ],
+    "materials": [
+      "colour day",
+      "colour night",
+      "clay",
+      "silhouette"
+    ],
+    "common_camera": "unit extent 10.4m in X; whole-train extent 81.643m in X; all share metre axes, lighting and fixed centres",
+    "central_detail_camera": {
+      "centre": [
+        0,
+        0,
+        2.1
+      ],
+      "extent": [
+        2.2,
+        1.5,
+        2.1
+      ],
+      "views": [
+        "left",
+        "top",
+        "bottom",
+        "isometric"
+      ],
+      "scope": "Local close inspection of the actual full native assembly; cropped by the camera, not alternate geometry."
+    }
+  },
+  "items": [
+    {
+      "part": "primary dimensions and roles",
+      "status": "合理簡化",
+      "evidence": "Official coupling pitches, body width, roof height, bogie centre distance and wheelbase; end offsets and glazing trim are fitted."
+    },
+    {
+      "part": "cab silhouette, windscreen, lamps and lower apron",
+      "status": "合理簡化",
+      "evidence": "Opened cab photographs, colour/clay/silhouette checks; lower apron height is a photo fit, not a published clearance."
+    },
+    {
+      "part": "visible supported glazing and open jaw",
+      "status": "已符合",
+      "evidence": "Final native rays, connected solids and buried/floating/sealed-jaw faults."
+    },
+    {
+      "part": "doors, window rhythm and toilet-side differences",
+      "status": "合理簡化",
+      "evidence": "Three door pairs per side; both role-side source composites opened; trim tessellation differs at far LOD."
+    },
+    {
+      "part": "EP positions and knee direction",
+      "status": "已符合",
+      "evidence": "EP at cars 2/7, knee toward its own cab, cabward electrical equipment; actual missing, moved and reversed panto faults."
+    },
+    {
+      "part": "roof and underfloor exact BOM",
+      "status": "資料不足",
+      "evidence": "Primary housings supported; hidden piping, exact case shapes and batch retrofit BOM unknown."
+    },
+    {
+      "part": "tyres and axle positions",
+      "status": "合理簡化",
+      "evidence": "Eight actual tyre solids/four axles, new-wheel diameter and rail plane checked; absolute end offsets, flange and suspension detail simplified."
+    },
+    {
+      "part": "near/far colour and envelope",
+      "status": "已符合",
+      "evidence": "Actual orange shell triangle sets and metre bounds match; altered real vertex colour rejected."
+    },
+    {
+      "part": "complete eight-car order and direction",
+      "status": "已符合",
+      "evidence": "Shared spec plus independent Swift expansion and actual placement faults."
+    },
+    {
+      "part": "unique centre-interface fittings",
+      "status": "資料不足",
+      "evidence": "EM-EM interface uses documented semi-permanent coupling, not two cabs; unique protected end fittings not confirmed."
+    },
+    {
+      "part": "2026 same-day numbered representative train",
+      "status": "資料不足",
+      "evidence": "Dated 2011–2020 photographs and 2020 pair caption are separate from 2026 status."
+    }
+  ],
+  "before_version": "No accepted dedicated native EMU700 predecessor; the private Q-proportioned mesh is not a dimensional or accepted before-version."
+}
