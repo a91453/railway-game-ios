@@ -2737,6 +2737,10 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
   - **PR 3b 鋪完不等重蓋**：開工先在實機量現在重蓋 3D 場景要幾秒；只重蓋經過的區塊，找 `Map3DSceneCache`（`Map3DPreviewScreen.swift`、`MapView.swift`、`RailwayGameApp.swift` 用它）。
   - **PR 4 3D 裡的平面鋪軌**（改畫面，要截圖）：點的入口已經有了，`Map3DPreviewScreen.swift` 的 `tapped(_:at:)` → `Map3DPick.pick` → `GameSession.tapMap3D`（`Map3DTap.swift`）；路網工具時改交給 `NetworkSession`（加收「節點或地面點」的入口，reach 用 `Map3DTap.reach(at:camera:)`），草稿用 Metal 帶狀網格，✓ ✕ 泡泡放在 `Map3DCamera.screenPoint(of:)`；名牌的跟鏡頭擺法（`Map3DStationTagState.place(seenBy:)`、`Map3DTap.tagOrigin`）可照抄。現在只在選取工具收點（`tapMap3D` 的 guard）。
   - **PR 5**：看實機數據再定建物、分區、公車要不要進 3D。
+
+### 4.43 打開 3D 不等列車模型包（決策 546，派工單 OPEN3D，session_01YGNNunVxxTjzneuBjw86MX，`claude/open3d-model-pack`，2026-11-02）
+
+做了的在 [決策 546](decisions/546.md)：模型包分核心做（Linux release 4 核 3.95 → 0.72 s，模型位元相同，`Map3DModelPackLockTests`）、遊戲開了 8 秒後先在背景做、3D 場景先顯示（列車先是方塊）。留下的（決策 546「下一步」）：實機量開 3D 要等多久與記憶體提早多 192 MB 的影響（UNVERIFIED）；`useModels` 在主執行緒複製 192 MB 到 GPU 緩衝，可移到背景；FLANE5 的 `-ui-test-3d-models-first`（#1693）仍有用（UI 測試不先做模型包），沒有刪，改成走同一個 `Map3DTrainModels`（`.background`）；做模型包一律 `.utility` 以下、不會被提高。
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

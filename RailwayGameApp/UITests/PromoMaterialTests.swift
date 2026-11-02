@@ -477,6 +477,8 @@ final class PromoMaterialTests: XCTestCase {
     /// map's spinner is small, one of the map large.
     private func waitForPicture(in app: XCUIApplication, timeout: TimeInterval) {
         let deadline = Date().addingTimeInterval(timeout)
+        // Decision 546: and its trains' models, not the boxes before them.
+        _ = app.descendants(matching: .any)["map3D.trainsLoading"].firstMatch.disappears(within: timeout)
         while Date() < deadline {
             if XCUIScreen.main.screenshot().pngRepresentation.count > 600_000 { return }
             Thread.sleep(forTimeInterval: 2)

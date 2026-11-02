@@ -59,56 +59,54 @@ public struct Map3DModelPack: Sendable {
     }
 
     init(styles: [Map3DTrainStyle], baked: Bool) {
-        var models: [Model] = []
+        // Decision 546: each group of recipes below made on whichever core
+        // is free, put together in this order (the same models, to the
+        // bit, as made one after another).
+        var groups: [@Sendable () -> [Model]] = []
         for style in styles {
             // Decision 410: as the 700T and the N700S-G are built.
-            models.append(Map3DTrainShell(style: style, cab: true).model(named: style.name + "-cab"))
-            models.append(Map3DTrainShell(style: style, cab: false).model(named: style.name + "-car"))
-            if !style.pantographCars.isEmpty {
-                models.append(Map3DTrainShell(style: style, cab: false, pantograph: true).model(named: style.name + "-panto"))
+            groups.append {
+                var models = [Map3DTrainShell(style: style, cab: true).model(named: style.name + "-cab"),
+                              Map3DTrainShell(style: style, cab: false).model(named: style.name + "-car")]
+                if !style.pantographCars.isEmpty {
+                    models.append(Map3DTrainShell(style: style, cab: false, pantograph: true).model(named: style.name + "-panto"))
+                }
+                return models
             }
         }
         // Decision 244: and the street furniture.
         // Decision 370: in the model look, as the city round them; the
         // signals keeping their colours (decision 451).
-        models += Map3DProp.allCases.map { Map3DLook.restyle($0.model()) }
+        groups.append { Map3DProp.allCases.map { Map3DLook.restyle($0.model()) } }
         // Decision 458: and the conifers, bushes and tanks' stand-ins.
-        models += Map3DSceneryProp.allCases.map { Map3DLook.restyle($0.model()) }
+        groups.append { Map3DSceneryProp.allCases.map { Map3DLook.restyle($0.model()) } }
         // Decision 445: and the pedestrian signals' faces and countdowns.
-        models += Map3DPedestrianSignal.models()
+        groups.append { Map3DPedestrianSignal.models() }
         // Decision 259: and the people, scooters and cars.
-        models += Map3DStreetModel.allCases.map { $0.model() }
+        groups.append { Map3DStreetModel.allCases.map { $0.model() } }
         // Decision 318: and the sets that had none.
-        models += Map3DTrainSet.all.flatMap { $0.models() }
+        groups += Map3DTrainSet.all.map { set in { set.models() } }
         // Independent second steam asset (decision 399: the steam train's
         // set is built from it).
-        models += Map3DDuplexSteam.Unit.allCases.map { Map3DDuplexSteam.model($0) }
-        models.append(Map3DDuplexSteam.formation())
+        groups.append { Map3DDuplexSteam.Unit.allCases.map { Map3DDuplexSteam.model($0) } + [Map3DDuplexSteam.formation()] }
         // Static low-floor tram parts and a full formation for scene authors.
-        models += Map3DGreenTram.Section.allCases.map { Map3DGreenTram.model($0) }
-        models.append(Map3DGreenTram.formation())
+        groups.append { Map3DGreenTram.Section.allCases.map { Map3DGreenTram.model($0) } + [Map3DGreenTram.formation()] }
         // Separate high-floor two-car commuter set from the low-floor tram.
-        models += Map3DGreenCommuter.Unit.allCases.map { Map3DGreenCommuter.model($0) }
-        models.append(Map3DGreenCommuter.formation())
-        models += Map3DTEMU1000.Unit.allCases.map { Map3DTEMU1000.model($0) }
-        models.append(Map3DTEMU1000.formation())
-        models += Map3DThreeCarUrban.Unit.allCases.map { Map3DThreeCarUrban.model($0) }
-        models.append(Map3DThreeCarUrban.formation())
+        groups.append { Map3DGreenCommuter.Unit.allCases.map { Map3DGreenCommuter.model($0) } + [Map3DGreenCommuter.formation()] }
+        groups.append { Map3DTEMU1000.Unit.allCases.map { Map3DTEMU1000.model($0) } + [Map3DTEMU1000.formation()] }
+        groups.append { Map3DThreeCarUrban.Unit.allCases.map { Map3DThreeCarUrban.model($0) } + [Map3DThreeCarUrban.formation()] }
         // Independent static five-section articulated LRT; no operating type binding.
-        models += Map3DFiveSectionLRT.Unit.allCases.map { Map3DFiveSectionLRT.model($0) }
-        models.append(Map3DFiveSectionLRT.formation())
-        models += Map3DSevenSectionLRT.Unit.allCases.map { Map3DSevenSectionLRT.model($0) }
-        models.append(Map3DSevenSectionLRT.formation())
-        models += Map3DFourCarMetro.Unit.allCases.map { Map3DFourCarMetro.model($0) }
-        models.append(Map3DFourCarMetro.formation())
-        models += Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) }
-        models.append(Map3DSevenCarBlue.formation())
-        models += Map3DTrainShapeRefresh.ids.map { Map3DTrainShapeRefresh.model($0) }
-        models += Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) }
-        models.append(Map3DSteamTender.formation())
+        groups.append { Map3DFiveSectionLRT.Unit.allCases.map { Map3DFiveSectionLRT.model($0) } + [Map3DFiveSectionLRT.formation()] }
+        groups.append { Map3DSevenSectionLRT.Unit.allCases.map { Map3DSevenSectionLRT.model($0) } + [Map3DSevenSectionLRT.formation()] }
+        groups.append { Map3DFourCarMetro.Unit.allCases.map { Map3DFourCarMetro.model($0) } + [Map3DFourCarMetro.formation()] }
+        groups.append { Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) } + [Map3DSevenCarBlue.formation()] }
+        groups += Map3DTrainShapeRefresh.ids.map { id in { [Map3DTrainShapeRefresh.model(id)] } }
+        groups.append { Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) } + [Map3DSteamTender.formation()] }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
-        models.append(Map3DLowFloorBus.routeModel())
+        groups.append { [Map3DLowFloorBus.routeModel()] }
+        let made = groups
+        let models = Map3DParallel.map(made.count) { made[$0]() }.flatMap { $0 }
         self.init(recipes: models, baked: baked)
     }
 
