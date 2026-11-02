@@ -234,7 +234,10 @@ final class SettingsUITests: XCTestCase {
         // for 30 to 50 s while the 3D map loads (main 6ebf8c7's full lane,
         // run 41353036789). The 3D path is `docs/HANDOFF.md` §7.5's to
         // check on a device.
+        // MENUSTALL: the trace gets the main thread's call stack whenever
+        // it draws nothing for over a second.
         app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-map3D.quality", "off",
+                               "-ui-test-stall-stacks",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }

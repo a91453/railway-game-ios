@@ -421,6 +421,12 @@ enum UITestTrace {
     }
 
     #if DEBUG
+    /// Writes one line of ``StallSampler``'s report.
+    static func stall(_ text: String) {
+        guard isOn else { return }
+        log.notice("stall \(text, privacy: .public)")
+    }
+
     /// Writes a touch's phase, its point in the window, the view it was
     /// delivered to (with the nearest accessibility identifier above it)
     /// and its window.
@@ -502,12 +508,170 @@ final class FrameMeter: NSObject {
         if last > 0 { longest = max(longest, now - last) } else { windowStart = now }
         last = now
         frames += 1
+        StallSampler.shared.beat(at: now)
         guard now - windowStart >= 2 else { return }
         UITestTrace.action("frames \(frames) in \(Int((now - windowStart) * 1_000)) ms, longest gap \(Int(longest * 1_000)) ms")
         frames = 0
         longest = 0
         windowStart = now
     }
+}
+
+/// MENUSTALL: with `-ui-test-stall-stacks` under `-ui-testing`, what the
+/// main thread is doing while ``FrameMeter`` sees it draw nothing. A
+/// thread of its own looks five times a second; once the main thread has
+/// drawn no frame for over a second, each look stops it for an instant,
+/// copies its return addresses (frame pointers, always kept on arm64) and
+/// lets it go. When frames come again, the trace gets the stall's length,
+/// the functions the looks most often found running, and the call stack
+/// most of the looks shared, each frame with how many looks it was in.
+/// Debug and the Simulator's arm64 only; nothing else runs it.
+final class StallSampler: @unchecked Sendable {
+    static let shared = StallSampler()
+    private let lock = NSLock()
+    private var lastBeat: CFTimeInterval = 0
+    private var started = false
+    /// Symbol names by address; used by the sampler's thread alone.
+    private var names: [UInt: String] = [:]
+
+    /// The main thread drew a frame at `time` (``CACurrentMediaTime()``).
+    func beat(at time: CFTimeInterval) {
+        lock.withLock { lastBeat = time }
+    }
+
+    @MainActor
+    func start() {
+        #if arch(arm64)
+        guard !started else { return }
+        started = true
+        let main = pthread_self()
+        let target = Target(
+            thread: pthread_mach_thread_np(main),
+            stackTop: UInt(bitPattern: pthread_get_stackaddr_np(main)),
+            stackSize: UInt(pthread_get_stacksize_np(main))
+        )
+        beat(at: CACurrentMediaTime())
+        let thread = Thread { [self] in run(target) }
+        thread.name = "StallSampler"
+        thread.qualityOfService = .userInteractive
+        thread.start()
+        #endif
+    }
+
+    #if arch(arm64)
+    private struct Target: Sendable {
+        let thread: thread_act_t
+        let stackTop: UInt
+        let stackSize: UInt
+    }
+
+    private func run(_ target: Target) {
+        // Allocated once: nothing may allocate while the main thread is
+        // stopped (it can hold the allocator's lock).
+        let state = UnsafeMutablePointer<UInt64>.allocate(capacity: 34)
+        let frames = UnsafeMutablePointer<UInt>.allocate(capacity: 128)
+        var samples: [[UInt]] = []
+        var stallStart: CFTimeInterval = 0
+        while true {
+            Thread.sleep(forTimeInterval: 0.2)
+            let now = CACurrentMediaTime()
+            let last = lock.withLock { lastBeat }
+            if now - last > 1 {
+                if stallStart == 0 { stallStart = last }
+                if samples.count < 300 {
+                    let count = Self.sample(target, state: state, frames: frames)
+                    if count > 0 { samples.append(Array(UnsafeBufferPointer(start: frames, count: count))) }
+                }
+            } else if stallStart > 0 {
+                report(samples, milliseconds: Int((last - stallStart) * 1_000))
+                samples = []
+                stallStart = 0
+            }
+        }
+    }
+
+    /// Stops the main thread, copies its program counter, link register
+    /// and the return addresses of its frame records into `frames`, and
+    /// lets it go; returns how many it copied.
+    private static func sample(_ target: Target, state: UnsafeMutablePointer<UInt64>, frames: UnsafeMutablePointer<UInt>) -> Int {
+        let mask: UInt = 0x0000_FFFF_FFFF_FFFF
+        let bottom = target.stackTop - target.stackSize
+        let top = target.stackTop
+        guard thread_suspend(target.thread) == KERN_SUCCESS else { return 0 }
+        // ARM_THREAD_STATE64 (6): x0–x28, fp, lr, sp, pc, cpsr and a pad,
+        // 68 words of 32 bits.
+        var stateCount = mach_msg_type_number_t(68)
+        let got = state.withMemoryRebound(to: natural_t.self, capacity: 68) {
+            thread_get_state(target.thread, thread_state_flavor_t(6), $0, &stateCount)
+        }
+        var count = 0
+        if got == KERN_SUCCESS {
+            frames[0] = UInt(state[32]) & mask
+            frames[1] = UInt(state[30]) & mask
+            count = 2
+            var fp = UInt(state[29])
+            while count < 128, fp >= bottom, fp + 16 <= top, fp & 7 == 0 {
+                let record = UnsafePointer<UInt>(bitPattern: fp)!
+                let next = record[0]
+                let returnAddress = record[1] & mask
+                guard returnAddress != 0 else { break }
+                frames[count] = returnAddress
+                count += 1
+                guard next > fp else { break }
+                fp = next
+            }
+        }
+        thread_resume(target.thread)
+        return count
+    }
+
+    /// The function at `address`: its image and symbol.
+    private func name(_ address: UInt) -> String {
+        if let known = names[address] { return known }
+        var info = Dl_info()
+        var text = "0x" + String(address, radix: 16)
+        if dladdr(UnsafeRawPointer(bitPattern: address), &info) != 0 {
+            let image = info.dli_fname.map { String(cString: $0) }.flatMap { $0.split(separator: "/").last.map(String.init) } ?? "?"
+            if let symbol = info.dli_sname {
+                text = "\(image) \(String(cString: symbol))"
+            } else {
+                text = "\(image) +0x\(String(address - UInt(bitPattern: info.dli_fbase), radix: 16))"
+            }
+        }
+        names[address] = text
+        return text
+    }
+
+    private func report(_ samples: [[UInt]], milliseconds: Int) {
+        guard !samples.isEmpty else { return }
+        let total = samples.count
+        // A return address is just after its call: look up the byte
+        // before it, so a call at a function's end names that function.
+        let named = samples.map { stack in stack.enumerated().map { index, address in name(index == 0 ? address : address - 1) } }
+        var inclusive: [String: Int] = [:]
+        var leaves: [String: Int] = [:]
+        for stack in named {
+            for function in Set(stack) { inclusive[function, default: 0] += 1 }
+            if let leaf = stack.first { leaves[leaf, default: 0] += 1 }
+        }
+        UITestTrace.stall("\(milliseconds) ms, \(total) looks")
+        for (leaf, count) in leaves.sorted(by: { $0.value > $1.value }).prefix(milliseconds >= 2_000 ? 8 : 3) {
+            UITestTrace.stall("running \(count)/\(total) \(leaf)")
+        }
+        guard milliseconds >= 2_000 else { return }
+        let typical = named.max { lhs, rhs in
+            lhs.reduce(0) { $0 + inclusive[$1, default: 0] } < rhs.reduce(0) { $0 + inclusive[$1, default: 0] }
+        } ?? []
+        for (index, function) in typical.prefix(90).enumerated() {
+            UITestTrace.stall("#\(index) \(inclusive[function, default: 0])/\(total) \(function)")
+        }
+        let shown = Set(typical)
+        let others = inclusive.filter { !shown.contains($0.key) && $0.value * 4 >= total }
+        for (function, count) in others.sorted(by: { $0.value > $1.value }).prefix(30) {
+            UITestTrace.stall("also \(count)/\(total) \(function)")
+        }
+    }
+    #endif
 }
 
 /// Puts a ``TouchTraceRecognizer`` on the window it is shown in, once.
@@ -518,6 +682,9 @@ private struct TouchTraceInstaller: UIViewRepresentable {
             guard let window, !(window.gestureRecognizers ?? []).contains(where: { $0 is TouchTraceRecognizer }) else { return }
             window.addGestureRecognizer(TouchTraceRecognizer.make())
             FrameMeter.shared.start()
+            if DebugLaunch.isSet("-ui-test-stall-stacks") {
+                StallSampler.shared.start()
+            }
         }
     }
 
