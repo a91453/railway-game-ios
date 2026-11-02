@@ -8,6 +8,10 @@ public enum Map3DTourismEMU500 {
     public static let order: [Unit] = [.emc, .ep, .et, .em]
     public static let centres: [Float] = [30.495,10.165,-10.165,-30.495]
     public static let rotations: [Float] = [0,0,0,.pi]
+    /// Decision 554: the roof shell's dark grey, as in the photographs of
+    /// both trains (the EMU500's light grey roof was not repainted lighter;
+    /// the air conditioners' covers stay the baseline's).
+    static let roof = Map3DColor.rgb(0x5A5F65)
     public static func model(_ fleet: Fleet, _ unit: Unit, far: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
         b.tourismEMU500(fleet,unit,far:far)
@@ -22,8 +26,10 @@ public enum Map3DTourismEMU500 {
     /// These are painted derivatives, not the baseline's warm white/turquoise livery.
     static func paint(_ fleet: Fleet, _ height: Float, _ x: Float = 0) -> UInt32 {
         let t=max(0,min(1,(height-1.15)/2.3))
-        let low: [Float] = fleet == .haifeng ? [225,244,232] : [242,246,213]
-        let high: [Float] = fleet == .haifeng ? [160,224,211] : [220,233,136]
+        // Decision 554: the Shan-Lan's lime from its photographs; the paler,
+        // greyer pair read olive on the cab's end under the front light.
+        let low: [Float] = fleet == .haifeng ? [225,244,232] : [236,246,168]
+        let high: [Float] = fleet == .haifeng ? [160,224,211] : [214,236,96]
         let channels=(0..<3).map { UInt32((low[$0]*(1-t)+high[$0]*t).rounded()) }
         return 0xff000000 | channels[0] | channels[1]<<8 | channels[2]<<16
     }
@@ -122,7 +128,7 @@ extension StationKitBuilder {
         for i in section.indices {
             let p=section[i],q=section[(i+1)%section.count]
             let panel=[Map3DPoint(a,p.0,p.1),Map3DPoint(b,p.0,p.1),Map3DPoint(b,q.0,q.1),Map3DPoint(a,q.0,q.1)]
-            if min(p.0,q.0)>=3.55 { face(panel,inside:Map3DPoint(0,2.2,0),color:Map3DEMU500.roofColor) }
+            if min(p.0,q.0)>=3.55 { face(panel,inside:Map3DPoint(0,2.2,0),color:Map3DTourismEMU500.roof) }
             else { tourismPaintFace(panel,inside:Map3DPoint(0,2.2,0),fleet:fleet) }
         }
         if cab {

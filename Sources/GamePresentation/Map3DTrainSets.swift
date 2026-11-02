@@ -300,6 +300,14 @@ public struct Map3DTrainSet: Sendable {
             // versions; last, so no set's models before them move.
             freight(),
             freight(far: true),
+            // Decision 554: the Hai-Feng and Shan-Lan as #1539's converted
+            // EMU500 units (EMU573, EMU583), near and from 500 m out their
+            // light units; after the freight train, so no set's models
+            // before them move.
+            tourismEMU500(.haifeng),
+            tourismEMU500(.haifeng, far: true),
+            tourismEMU500(.shanlan),
+            tourismEMU500(.shanlan, far: true),
         ]
     }()
 
@@ -341,7 +349,8 @@ public struct Map3DTrainSet: Sendable {
     /// far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
-                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey]
+                                "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
+                                "HAIFENG", "SHANLAN"]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -742,6 +751,23 @@ public struct Map3DTrainSet: Sendable {
             return Cars(head: lit(part(.emc), front: true), middle: part(.em).turned, tail: lit(part(.emc).turned, front: false), single: nil,
                         pantograph: part(.ep), centre: part(.et), middleBack: part(.em),
                         pantographBack: part(.ep).turned, centreBack: part(.et).turned)
+        }
+    }
+
+    /// Decision 554: the Hai-Feng (`HAIFENG`, EMU573) and Shan-Lan
+    /// (`SHANLAN`, EMU583) sightseeing trains as #1539's converted EMU500
+    /// units (``Map3DTourismEMU500``): the EMC at the front, the EP (its
+    /// pantograph) and the ET from the front over again, the EM turned
+    /// round at the back (EMC EP ET EM at four cars, as they run). Each car
+    /// its own length, the cabs' lamp lenses lit at the two ends only, the
+    /// paint the fleet's own, not the line's. `far`: the light units.
+    static func tourismEMU500(_ fleet: Map3DTourismEMU500.Fleet, far: Bool = false) -> Map3DTrainSet {
+        let key = fleet == .haifeng ? "HAIFENG" : "SHANLAN"
+        return Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.pantograph, .middle], cycleFromFront: true, ownLengths: true,
+                             far: far ? nil : key + "Far") {
+            func part(_ unit: Map3DEMU500.Unit) -> Map3DModelPack.Model { Map3DTourismEMU500.model(fleet, unit, far: far) }
+            return Cars(head: lit(part(.emc), front: true), middle: part(.et), tail: lit(part(.em).turned, front: false), single: nil,
+                        pantograph: part(.ep))
         }
     }
 

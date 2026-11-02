@@ -1,5 +1,7 @@
 # 臺鐵海風號／山嵐號 EMU500 改造 studies
 
+> **2026-11-02，決策 554**：兩款已接進營運（`set-HAIFENG…`、`set-SHANLAN…`，近景與遠景，[operating-554.png](operating-554.png)）。改了兩處：車頂改深灰（#5A5F65）；山嵐號的漸層改成實車的黃綠（下 #ECF6A8 → 上 #D6EC60）。所以本頁下面寫的「只增加studies」「兩款均不出現在遊戲」，以及 revision-2 素材的配色，已經不是現狀；revision-2 素材沒有重做。見 [決策 554](../../decisions/554.md)。
+
 目前為第二輪修整。兩款各自仍沒有已接受前版；上一輪交付 producer `f036e7f79279586f5831c7cb9bf9d8cce3444558` 只是未接受的前稿。
 
 真正producer：`0e2f38a244db7ea0301169cdb4b6d81f0c340a78`。素材draft [#35](https://github.com/a91453/railway-assets-private/pull/35)。

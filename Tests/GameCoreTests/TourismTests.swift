@@ -327,6 +327,66 @@ final class TourismTests: XCTestCase {
         XCTAssertEqual(world.attractionStatus(of: AttractionID(rawValue: 1)), .ok)
     }
 
+    /// Decision 551, continued (review L6-1): a line whose hours leave noon
+    /// out is counted at the middle of its hours, so its tourists are not 0
+    /// and its sight does not read "nobody can ride there".
+    func testALineThatDoesNotRunAtNoonCountsItsTourists() throws {
+        // 13:00 to 01:00 (as #1719 left it: 0 and `.noSource`; before #1719,
+        // 240) and 06:00 to 11:00 (0 before and after #1719).
+        for window in [ServiceWindow.hours(open: 780, close: 1500), .hours(open: 360, close: 660)] {
+            var world = try touristLineWorld(window: window)
+            try world.advance(ticks: 1_442)
+            let attraction = try XCTUnwrap(world.attraction(id: AttractionID(rawValue: 1)))
+            XCTAssertEqual(attraction.yesterday, 240, "\(window)")
+            XCTAssertEqual(attraction.thisYear, 240, "\(window)")
+            XCTAssertEqual(world.attractionStatus(of: AttractionID(rawValue: 1)), .ok, "\(window)")
+        }
+    }
+
+    func testTheTimeALineIsCountedAtIsWithinItsHours() {
+        let day: Int64 = 3
+        let noon = GameTime(seconds: day * GameTime.secondsPerDay + 12 * GameTime.secondsPerHour)
+        XCTAssertEqual(Tourism.countedAt(day: day, window: .allDay), noon)
+        XCTAssertEqual(Tourism.countedAt(day: day, window: .standard), noon)
+        XCTAssertEqual(Tourism.countedAt(day: day, window: .hours(open: 780, close: 1500)),
+                       GameTime(seconds: day * GameTime.secondsPerDay + 19 * GameTime.secondsPerHour))
+        // 23:00 to 05:00: 02:00 of the same day, which the hours count as the night's.
+        XCTAssertEqual(Tourism.countedAt(day: day, window: .hours(open: 1380, close: 1740)),
+                       GameTime(seconds: day * GameTime.secondsPerDay + 2 * GameTime.secondsPerHour))
+        for open in stride(from: 0, to: 1440, by: 10) {
+            for close in stride(from: open + 60, through: ServiceWindow.latestClose, by: 70) {
+                let window = ServiceWindow.hours(open: open, close: close)
+                XCTAssertTrue(window.contains(minuteOfDay: Tourism.countedAt(day: day, window: window).minuteOfDay), "\(open)-\(close)")
+            }
+        }
+    }
+
+    /// The four-station line of ``testMidnightCountsTheDayWhileTheNetworkIsClosed()``
+    /// with hours `window`, network routing and a sight by its last station.
+    private func touristLineWorld(window: ServiceWindow) throws -> GameWorld {
+        var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 4_096), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts))
+        let track = TestLine(tiles: 14)
+        try track.build(in: &world)
+        let ids = (1...4).map { StationID(rawValue: $0) }
+        for (index, x) in [1, 5, 9, 13].enumerated() {
+            try track.buildStation(named: "S\(index)", beside: x, at: 1, in: &world)
+        }
+        let line = try world.createLine(named: "L", stops: ids).id
+        try world.setLineServiceWindow(line, to: window)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(try world.purchaseTrain(named: "T").id, to: line)
+        for (index, id) in ids.enumerated() {
+            try world.setStationDemand(id, to: StationDemand(kind: index == 3 ? .scenic : .residential, dailyTrips: index == 3 ? 0 : 1_000))
+        }
+        world.setPassengerRoutingMode(.network)
+        world.setOutsideConnections(true)
+        let last = try XCTUnwrap(world.station(id: ids[3]))
+        world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "x", englishName: "x",
+                                     point: PlanPoint(x: last.point.x + 1_000, y: last.point.y), kind: .town, baseStars: 300)])
+        world.setSpeed(.normal)
+        return world
+    }
+
     func testTheYearTurnsAtThreeHundredAndSixtyDays() throws {
         var world = try world()
         world.setSpeed(.normal)
