@@ -786,6 +786,17 @@ extension XCUIApplication {
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: timeout), .completed, "The demo never became enabled: \(identifier)")
         demo.tap()
     }
+
+    /// Waits, on the 2D map, for the 3D map's train models an app launched
+    /// with `-ui-test-3d-models-first` makes at launch (some 30 s of the
+    /// Simulator's CPU), before a test opens the 3D map. Made over the open
+    /// 3D map instead, they kept every UI query unanswered for 50 to 90 s,
+    /// and XCTest gives one up at 100 s (main 6ebf8c7's full lane, run
+    /// 41354792858: the pinch test failed at its first look for Close).
+    func waitForThreeDModels(file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(descendants(matching: .any)["debug.map3DModelsReady"].firstMatch.appears(within: 120),
+                      "The 3D map's train models are made", file: file, line: line)
+    }
 }
 
 /// TestFlight, 2026-10-16: the phone's tools column and the station card on
