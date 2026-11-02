@@ -1298,23 +1298,30 @@ private struct Map3DStationTagView: View {
     let open: (_ rename: Bool) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var size = CGSize(width: 160, height: 44)
+    /// The map's viewport, measured rather than read in a GeometryReader
+    /// (CRASHSWEEP-3).
+    @State private var viewport: CGSize = .zero
 
     /// The controls along the top and the hint along the bottom, kept clear.
     private static let clear: (top: Float, leading: Float, bottom: Float, trailing: Float) = (72, 0, 64, 0)
 
+    // CRASHSWEEP-3: the viewport from `onGeometryChange`, whose measuring
+    // closure is sendable, not a GeometryReader's closure, which SwiftUI
+    // calls again as the map's size changes and its asynchronous renderer
+    // may call off the main thread (CRASH101). The tag waits for the
+    // first size.
     var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .topLeading) {
-                if let tag, let origin = origin(in: proxy.size) {
-                    StationTagCard(tag: tag, session: session, details: { open(false) }, rename: { open(true) }, identifier: "map3D.stationTag")
-                        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
-                        .offset(origin)
-                        .transition(.pop(anchor: .top, reduceMotion: reduceMotion))
-                }
+        ZStack(alignment: .topLeading) {
+            if viewport != .zero, let tag, let origin = origin(in: viewport) {
+                StationTagCard(tag: tag, session: session, details: { open(false) }, rename: { open(true) }, identifier: "map3D.stationTag")
+                    .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+                    .offset(origin)
+                    .transition(.pop(anchor: .top, reduceMotion: reduceMotion))
             }
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-            .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: state.station)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { viewport = $0 }
+        .animation(MotionRule.pop.layout(reduceMotion: reduceMotion), value: state.station)
     }
 
     private var tag: StationTag? {
@@ -1405,11 +1412,14 @@ private struct Map3DTrainLabelsView: View {
     let world: GameWorld
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        // CRASHSWEEP-3: each tag's foot placed by a Layout of the app's own,
+        // which SwiftUI calls as plain (not main-actor) code, rather than
+        // by alignment guides, whose closures are main-actor code that its
+        // asynchronous renderer may call off the main thread (CRASH101).
+        Map3DTrainLabelsLayout {
             ForEach(state.labels, id: \.train) { label in
                 tag(label.info)
-                    .alignmentGuide(.leading) { $0[HorizontalAlignment.center] - CGFloat(label.x) }
-                    .alignmentGuide(.top) { $0[.bottom] - CGFloat(label.y) }
+                    .layoutValue(key: Map3DTrainLabelFoot.self, value: CGPoint(x: CGFloat(label.x), y: CGFloat(label.y)))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -1432,6 +1442,31 @@ private struct Map3DTrainLabelsView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: DisplayLanguage.app.text("Line \(info.code), \(info.riders) riding of \(info.capacity)",
                                                                     "\(info.code) 線，載客 \(info.riders)／定員 \(info.capacity)")))
+    }
+}
+
+/// Where a train's tag points, in the 3D map's points: the middle of the
+/// tag's bottom edge (``Map3DTrainLabelsLayout``).
+private struct Map3DTrainLabelFoot: LayoutValueKey {
+    static let defaultValue = CGPoint.zero
+}
+
+/// ``Map3DTrainLabelsView``'s tags, each with the middle of its bottom
+/// edge at its ``Map3DTrainLabelFoot``. As large as it is offered. (The
+/// alignment guides it replaced placed the tags only against one another:
+/// the stack shrank to them, so a lone tag sat in the screen's top-left
+/// corner rather than over its train.)
+private struct Map3DTrainLabelsLayout: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for subview in subviews {
+            let foot = subview[Map3DTrainLabelFoot.self]
+            subview.place(at: CGPoint(x: bounds.minX + foot.x, y: bounds.minY + foot.y), anchor: .bottom,
+                          proposal: ProposedViewSize(bounds.size))
+        }
     }
 }
 
