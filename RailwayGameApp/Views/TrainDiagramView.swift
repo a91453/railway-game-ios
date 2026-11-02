@@ -26,6 +26,9 @@ struct TrainDiagramView: View {
     /// The viewport when the pinch or the drag in progress began.
     @State private var gestureStart: TrainDiagramViewport?
     @State private var lastDrag: CGSize = .zero
+    /// The chart's size, measured rather than read in a GeometryReader
+    /// (CRASHSWEEP-3).
+    @State private var chartSize: CGSize = .zero
 
     /// How often the diagram is built again, in real seconds.
     private static let refresh: Duration = .milliseconds(500)
@@ -198,18 +201,22 @@ struct TrainDiagramView: View {
     private static let header: CGFloat = 22
     private static let inset: CGFloat = 10
 
+    /// CRASHSWEEP-3: the chart's size comes from `onGeometryChange`, whose
+    /// measuring closure is sendable, not from a GeometryReader's closure,
+    /// which SwiftUI calls again whenever the size changes and its
+    /// asynchronous renderer may call off the main thread (CRASH101).
     private func chart(_ diagram: TrainDiagram, viewport: TrainDiagramViewport) -> some View {
-        GeometryReader { proxy in
-            let plot = CGRect(x: gutter, y: Self.header + Self.inset,
-                              width: max(1, proxy.size.width - gutter - Self.inset),
-                              height: max(1, proxy.size.height - Self.header - 2 * Self.inset))
-            Canvas { context, _ in
-                draw(diagram, viewport: viewport, in: plot, context: &context)
-            }
-            .contentShape(Rectangle())
-            .gesture(pinch(plot: plot).simultaneously(with: drag(plot: plot)))
-            .accessibilityLabel(Text(verbatim: accessibilityText(diagram)))
+        let plot = CGRect(x: gutter, y: Self.header + Self.inset,
+                          width: max(1, chartSize.width - gutter - Self.inset),
+                          height: max(1, chartSize.height - Self.header - 2 * Self.inset))
+        return Canvas { context, _ in
+            draw(diagram, viewport: viewport, in: plot, context: &context)
         }
+        .contentShape(Rectangle())
+        .gesture(pinch(plot: plot).simultaneously(with: drag(plot: plot)))
+        .accessibilityLabel(Text(verbatim: accessibilityText(diagram)))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { chartSize = $0 }
         .background(Theme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.panelBorder))
