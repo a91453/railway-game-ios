@@ -347,7 +347,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   reproduce a CI failure, or to measure shard times). Report the local checks
   as VERIFIED and the rest as left to CI.
   CI builds once (`swift build --build-tests -Xswiftc -warnings-as-errors`
-  in the `swift-build` job, decision 411's shared build), and each shard
+  in the `swift-build` job, decision 411's shared build; a pull request
+  and a push to `main` build on `main`'s cached `.build` unless GameCore or
+  `Package.swift` changed, and the nightly and manual runs build from
+  nothing, decision 545), and each shard
   downloads that `.build` and runs with `swift test --skip-build` (plain
   `swift test` would rebuild everything);
   `.github/scripts/swift-shards.sh run <shard>` runs one shard the same way. A
