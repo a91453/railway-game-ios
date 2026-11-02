@@ -39,13 +39,14 @@ public enum MapLabelPlacement {
         }
     }
 
-    /// The plate of a station's name (``MapArt``'s `drawStationName`): an
-    /// 11-point caption from `radius` + 4 under the middle, 2 points wider
-    /// each side. Not the row of its lines' badges under it (decision 216),
+    /// The plate of a station's name (``MapArt``'s `drawStationName` and
+    /// `drawOverviewNames`): an 11-point caption from
+    /// ``MapProblems/nameTop(stationRadius:)`` under the middle (past the
+    /// crowded ring, decision 477 續), 2 points wider each side. Not the row of its lines' badges under it (decision 216),
     /// which a label may lie on sooner than on a name.
     public static func nameBox(of station: Station, radius: Double) -> Box {
         let width = textWidth(station.name, size: 11) + 4
-        return Box(x: station.x - width / 2, y: station.y + radius + 4, width: width, height: 15)
+        return Box(x: station.x - width / 2, y: station.y + MapProblems.nameTop(stationRadius: radius), width: width, height: 15)
     }
 
     /// A station's mark and the waiting count's pill over it (decision 210).
@@ -160,8 +161,10 @@ public enum MapLabelPlacement {
     /// screenshot review put the middle station's tag on its west
     /// neighbour.
     public static func stationTag(at point: ScreenPoint, width: Double, height: Double, clear: Box, avoiding bubbles: [Box],
-                                  keepingOff stations: [Box] = []) -> Box {
-        let clearance = 34.0
+                                  keepingOff stations: [Box] = [], stationRadius: Double = 0) -> Box {
+        // Under the station's own name too (review L5-7): zoomed in the name
+        // reaches past 34 points.
+        let clearance = max(34.0, MapProblems.nameTop(stationRadius: stationRadius) + 15 + 4)
         func inside(x: Double, y: Double) -> Box {
             Box(x: min(max(x, clear.minX), max(clear.minX, clear.maxX - width)),
                 y: min(max(y, clear.minY), max(clear.minY, clear.maxY - height)), width: width, height: height)
