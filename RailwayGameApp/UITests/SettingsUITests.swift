@@ -231,10 +231,9 @@ final class SettingsUITests: XCTestCase {
         // On the 2D map alone (3D off in Settings): the director's first
         // shot is 2D or 3D by a seed from the clock, so each run took
         // either path, and on the 3D one the Simulator answers no UI query
-        // for 30 to 50 s while the 3D map loads; leaving from it, Menu was
-        // back on screen yet never hittable in 10 s (main 6ebf8c7's full
-        // lane, run 41353036789, screen recording). The 3D path is
-        // `docs/HANDOFF.md` §7.5's to check on a device.
+        // for 30 to 50 s while the 3D map loads (main 6ebf8c7's full lane,
+        // run 41353036789). The 3D path is `docs/HANDOFF.md` §7.5's to
+        // check on a device.
         app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-map3D.quality", "off",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -252,15 +251,25 @@ final class SettingsUITests: XCTestCase {
         // the idle mode instead of opening the menu. Not by `isHittable`:
         // asked of a control of no opacity under the curtain, XCTest can
         // fail the test outright ("Activation point invalid", FLANE5's
-        // run 41369678903).
-        let menu = app.buttons["hud.menu"]
-        XCTAssertTrue(menu.exists, "Menu is put away in place")
-        let spot = menu.frame
-        XCTAssertFalse(spot.isEmpty, "Menu keeps its place")
+        // run 41369678903). Once the menu has opened, `hud.menu` names more
+        // than one element, one of them in no place on the screen (as
+        // `tapHittable` says): the one on the screen is asked, and that
+        // copy was never hittable in 10 s although Menu showed (run
+        // 41371388190's recording).
+        let bounds = app.frame
+        let spots = app.buttons.matching(identifier: "hud.menu").allElementsBoundByIndex
+            .map(\.frame).filter { !$0.isEmpty && bounds.contains(CGPoint(x: $0.midX, y: $0.midY)) }
+        XCTAssertEqual(spots.count, 1, "Menu is put away in its place")
+        guard let spot = spots.first else { return }
         app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: spot.midX - app.frame.minX, dy: spot.midY - app.frame.minY)).tap()
+            .withOffset(CGVector(dx: spot.midX - bounds.minX, dy: spot.midY - bounds.minY)).tap()
         XCTAssertTrue(curtain.disappears(within: 10), "A tap on Menu's place ends it: Menu took no touch")
-        XCTAssertTrue(app.buttons["hud.menu"].becomesHittable(within: 10), "The controls are back")
+        // The controls are back: Menu opens the menu again, and the idle
+        // mode starts from it again (a menu item's copy can exist while the
+        // menu is shut, so it is chosen, not just looked for).
+        tapHittable("hud.menu", in: app)
+        tapHittable("menu.ambient", in: app)
+        XCTAssertTrue(curtain.appears(within: 10), "The controls are back")
     }
 
     /// Taps the copy of the button `identifier` that can be touched: a

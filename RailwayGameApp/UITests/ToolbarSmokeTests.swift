@@ -794,7 +794,7 @@ extension XCUIApplication {
     /// and XCTest gives one up at 100 s (main 6ebf8c7's full lane, run
     /// 41354792858: the pinch test failed at its first look for Close).
     func waitForThreeDModels(file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertTrue(descendants(matching: .any)["debug.map3DModelsReady"].firstMatch.appears(within: 120),
+        XCTAssertTrue(descendants(matching: .any)["debug.map3DModelsReady"].firstMatch.appears(within: 240),
                       "The 3D map's train models are made", file: file, line: line)
     }
 }

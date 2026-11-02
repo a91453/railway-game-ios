@@ -1704,7 +1704,10 @@ struct Map3DSnapshotSheet: View {
 /// answered no UI query for 50 to 90 s, past XCTest's 100 s (main
 /// 6ebf8c7's full lane, run 41354792858). Their marker,
 /// `debug.map3DModelsReady`, is on the 2D map, where a query answers at
-/// once.
+/// once. Made at background priority: their shade is baked on every core
+/// at once (`Map3DTrainOcclusion.baked`), and made at the 3D map's
+/// priority before it the Simulator's main thread stood still for 61 s
+/// and a query failed (FLANE5's run 41371388190).
 @MainActor
 @Observable
 final class Map3DModelsWarmUp {
@@ -1716,7 +1719,7 @@ final class Map3DModelsWarmUp {
         guard !started else { return }
         started = true
         Task {
-            _ = await Task.detached(priority: .userInitiated) { Map3DView.models?.models.count }.value
+            _ = await Task.detached(priority: .background) { Map3DView.models?.models.count }.value
             isReady = true
         }
     }
