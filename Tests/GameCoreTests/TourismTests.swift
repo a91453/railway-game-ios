@@ -294,6 +294,39 @@ final class TourismTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
 
+    /// Decision 551: with network routing and the line closed at midnight
+    /// (06:00–24:00), the day's tourists are still counted at midnight
+    /// (107.1's report: yesterday, this year and last year 0).
+    func testMidnightCountsTheDayWhileTheNetworkIsClosed() throws {
+        var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 4_096), economy: fixtureEconomy(balance: 1_000_000_000, costs: testCosts))
+        let track = TestLine(tiles: 14)
+        try track.build(in: &world)
+        let ids = (1...4).map { StationID(rawValue: $0) }
+        for (index, x) in [1, 5, 9, 13].enumerated() {
+            try track.buildStation(named: "S\(index)", beside: x, at: 1, in: &world)
+        }
+        let line = try world.createLine(named: "L", stops: ids).id
+        try world.setLineServiceWindow(line, to: .standard)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(try world.purchaseTrain(named: "T").id, to: line)
+        for (index, id) in ids.enumerated() {
+            try world.setStationDemand(id, to: StationDemand(kind: index == 3 ? .scenic : .residential, dailyTrips: index == 3 ? 0 : 1_000))
+        }
+        world.setPassengerRoutingMode(.network)
+        world.setOutsideConnections(true)
+        let last = try XCTUnwrap(world.station(id: ids[3]))
+        world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "x", englishName: "x",
+                                     point: PlanPoint(x: last.point.x + 1_000, y: last.point.y), kind: .town, baseStars: 300)])
+        world.setSpeed(.normal)
+        try world.advance(ticks: 1_442)
+        // Monday's 240 (testNetworkTouristsRideTheTrackAndTheNetworkPlanAgrees).
+        let attraction = try XCTUnwrap(world.attraction(id: AttractionID(rawValue: 1)))
+        XCTAssertEqual(attraction.yesterday, 240)
+        XCTAssertEqual(attraction.thisYear, 240)
+        // And at 00:02 it still reads as reached, not "nobody can ride there".
+        XCTAssertEqual(world.attractionStatus(of: AttractionID(rawValue: 1)), .ok)
+    }
+
     func testTheYearTurnsAtThreeHundredAndSixtyDays() throws {
         var world = try world()
         world.setSpeed(.normal)
