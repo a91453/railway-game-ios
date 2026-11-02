@@ -537,6 +537,13 @@ final class StallSampler: @unchecked Sendable {
     /// Symbol names by address; used by the sampler's thread alone.
     private var names: [UInt: String] = [:]
 
+    /// Images loaded since the sampler last wrote them.
+    private var loadedImages: [UInt] = []
+
+    func noteImage(_ address: UInt) {
+        lock.withLock { loadedImages.append(address) }
+    }
+
     /// The main thread drew a frame at `time` (``CACurrentMediaTime()``).
     func beat(at time: CFTimeInterval) {
         lock.withLock { lastBeat = time }
@@ -556,12 +563,13 @@ final class StallSampler: @unchecked Sendable {
         beat(at: CACurrentMediaTime())
         // Each image loaded from now on (a framework opened when first
         // used can hold the main thread): the images already loaded are
-        // reported during the registration, and left out.
+        // reported during the registration, and left out. The callback
+        // runs under dyld's lock, so it only notes the address: looking
+        // the name up there (`dladdr`) hung the app at its launch (run
+        // 41416655310); the sampler's thread looks it up.
         _dyld_register_func_for_add_image { header, _ in
             guard StallSampler.tracesImages, let header else { return }
-            var info = Dl_info()
-            guard dladdr(header, &info) != 0, let path = info.dli_fname else { return }
-            UITestTrace.stall("loaded \(String(cString: path).split(separator: "/").last.map(String.init) ?? "?")")
+            StallSampler.shared.noteImage(UInt(bitPattern: header))
         }
         Self.tracesImages = true
         let thread = Thread { [self] in run(target) }
@@ -588,7 +596,15 @@ final class StallSampler: @unchecked Sendable {
         while true {
             Thread.sleep(forTimeInterval: 0.2)
             let now = CACurrentMediaTime()
-            let last = lock.withLock { lastBeat }
+            let (last, images) = lock.withLock {
+                defer { loadedImages.removeAll() }
+                return (lastBeat, loadedImages)
+            }
+            for image in images {
+                var info = Dl_info()
+                let path = dladdr(UnsafeRawPointer(bitPattern: image), &info) != 0 ? info.dli_fname.map { String(cString: $0) } : nil
+                UITestTrace.stall("loaded \(path?.split(separator: "/").last.map(String.init) ?? "?")")
+            }
             if now - last > 1 {
                 if stallStart == 0 { stallStart = last }
                 if samples.count < 300 {
