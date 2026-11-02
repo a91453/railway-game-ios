@@ -60,6 +60,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The size check of waitForPicture passed the spinner here; wait
         // for the spinner itself to go.
         XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 240), "The 3D map is drawn")
+        // Decision 546: and its trains' models, not the boxes before them.
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.trainsLoading"].firstMatch.disappears(within: 240), "The trains are drawn")
         settle(seconds: 8)
         keep("freight-3d", app)
     }
@@ -1991,6 +1993,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// the spinner is about 240 KB, one of the map far more.
     private func waitForPicture(timeout: TimeInterval) {
         let deadline = Date().addingTimeInterval(timeout)
+        // Decision 546: and its trains' models, not the boxes before them.
+        _ = XCUIApplication().descendants(matching: .any)["map3D.trainsLoading"].firstMatch.disappears(within: timeout)
         while Date() < deadline {
             if XCUIScreen.main.screenshot().pngRepresentation.count > 600_000 { return }
             Thread.sleep(forTimeInterval: 2)

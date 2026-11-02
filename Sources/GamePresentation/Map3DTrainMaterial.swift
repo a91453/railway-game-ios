@@ -83,7 +83,8 @@ public enum Map3DTrainMaterial {
     /// (``marked(_:)``); not a train's (``Map3DTrainOcclusion/isTrain(_:)``)
     /// as it was.
     static func marked(_ models: [Map3DModelPack.Model]) -> [Map3DModelPack.Model] {
-        models.map(marked)
+        // Decision 546: each model on whichever core is free.
+        Map3DParallel.map(models.count) { marked(models[$0]) }
     }
 
     /// Model `model` with its glass and stainless faces marked, by

@@ -88,14 +88,22 @@ public enum Map3DTrainLights {
         var out = shaded
         var cars: [Int: Car] = [:]
         var windows: [Map3DModelPack.Model] = []
-        for (index, model) in recipes.enumerated() where isRunning(model.name) {
-            var car = car(model)
-            if let pane = windowModel(of: model) {
+        // Decision 546: each running car's lamps, windows and unlit model
+        // made on whichever core is free; the windows' models numbered in
+        // the cars' order, as before.
+        let running = recipes.indices.filter { isRunning(recipes[$0].name) }
+        let made = Map3DParallel.map(running.count) { at -> (car: Car, pane: Map3DModelPack.Model?, unlit: Map3DModelPack.Model) in
+            let index = running[at]
+            return (car(recipes[index]), windowModel(of: recipes[index]), unlit(shaded[index]))
+        }
+        for (at, index) in running.enumerated() {
+            var car = made[at].car
+            if let pane = made[at].pane {
                 car.windows = recipes.count + windows.count
                 windows.append(pane)
             }
             cars[index] = car
-            out[index] = unlit(shaded[index])
+            out[index] = made[at].unlit
         }
         return (out + windows, cars)
     }
