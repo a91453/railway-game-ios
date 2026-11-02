@@ -48,12 +48,7 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
         "MapView.swift": 1, // the 2D map's viewport
         "Map3D/Map3DPreviewScreen.swift": 1, // the 3D station tag's viewport
         "TutorialOverlay.swift": 1, // the lesson card's viewport
-        "TrainRosterView.swift": 1, // the roster's table height
         "TrainDiagramView.swift": 1, // the diagram's canvas
-        "RealWorldPicker.swift": 1, // the sheet's turn to landscape
-        "RealWorldLoadingView.swift": 1, // the loading screen
-        "PostcardView.swift": 1, // the postcard sheet's scale
-        "SharedNetworkViews.swift": 1, // a shared postcard's scale
     ]
 
     func testNoMainActorClosureIsMeasuredOffTheMainThread() throws {

@@ -21,6 +21,9 @@ struct RealWorldLoadingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var shown = Date.now
+    /// The screen's height, measured rather than read in a GeometryReader
+    /// (CRASHSWEEP-3).
+    @State private var height: CGFloat?
 
     var body: some View {
         let company = NetworkPostcard.companyName(companyName, in: language)
@@ -28,33 +31,42 @@ struct RealWorldLoadingView: View {
         // Decision 473: sideways on an iPhone (compact height) the lines
         // sit left of the text so the whole screen fits.
         let sideBySide = verticalSizeClass == .compact
-        GeometryReader { geometry in
-            let side = LoadingLayout.mapSide(height: geometry.size.height, sideBySide: sideBySide)
-            let layout = sideBySide ? AnyLayout(HStackLayout(spacing: 24)) : AnyLayout(VStackLayout(spacing: 20))
-            layout {
-                TimelineView(.animation(paused: reduceMotion)) { timeline in
-                    Canvas { context, size in
-                        draw(in: &context, size: size, elapsed: timeline.date.timeIntervalSince(shown))
+        // CRASHSWEEP-3: the height from `onGeometryChange`, whose
+        // measuring closure is sendable, not a GeometryReader's closure,
+        // which SwiftUI calls again as the screen turns and its
+        // asynchronous renderer may call off the main thread (CRASH101).
+        // The lines and text wait for the first height.
+        ZStack {
+            if let height {
+                let side = LoadingLayout.mapSide(height: height, sideBySide: sideBySide)
+                let layout = sideBySide ? AnyLayout(HStackLayout(spacing: 24)) : AnyLayout(VStackLayout(spacing: 20))
+                layout {
+                    TimelineView(.animation(paused: reduceMotion)) { timeline in
+                        Canvas { context, size in
+                            draw(in: &context, size: size, elapsed: timeline.date.timeIntervalSince(shown))
+                        }
                     }
-                }
-                .frame(width: side, height: side)
-                .accessibilityHidden(true)
-                VStack(spacing: 20) {
-                    titles(company: company, preparing: preparing)
-                    progress
-                    Button(action: cancel) {
-                        Text(verbatim: loading.cancelTitle(in: language))
-                            .font(.body.weight(.semibold))
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 44)
+                    .frame(width: side, height: side)
+                    .accessibilityHidden(true)
+                    VStack(spacing: 20) {
+                        titles(company: company, preparing: preparing)
+                        progress
+                        Button(action: cancel) {
+                            Text(verbatim: loading.cancelTitle(in: language))
+                                .font(.body.weight(.semibold))
+                                .padding(.horizontal, 16)
+                                .frame(minHeight: 44)
+                        }
+                        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                        .accessibilityIdentifier("loading.cancel")
                     }
-                    .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-                    .accessibilityIdentifier("loading.cancel")
+                    .frame(maxWidth: sideBySide ? 320 : nil)
                 }
-                .frame(maxWidth: sideBySide ? 320 : nil)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         .background(Theme.background)
     }
 
