@@ -29,12 +29,16 @@ struct StatementGrid: View {
         .monospacedDigit()
     }
 
-    /// The amount columns: this period's and, when there is one, the last.
-    private var amountColumns: Int { previousTitle == nil ? 1 : 2 }
+    // The rows are built in sendable closures, not main-actor code
+    // (CRASHSWEEP): the grids stand in a ViewThatFits, whose layouts
+    // SwiftUI's asynchronous renderer may measure, and build, off the main
+    // thread, where a main-actor ForEach closure stops the app (CRASH101).
 
     /// Each title above its amounts, the amounts at the trailing edge.
     private func stackedGrid(short: Bool) -> some View {
-        Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 2) {
+        let hasPrevious = previousTitle != nil
+        let language = language
+        return Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 2) {
             GridRow {
                 Color.clear.frame(width: 0, height: 0)
                 Text(verbatim: currentTitle).fontWeight(.semibold)
@@ -42,32 +46,82 @@ struct StatementGrid: View {
                     Text(verbatim: previousTitle).fontWeight(.semibold)
                 }
             }
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                if row.style == .section {
-                    GridRow {
-                        stackedTitle(row.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.textSecondary)
-                            .padding(.top, 6)
-                            .gridCellColumns(amountColumns + 1)
-                    }
-                } else {
-                    GridRow {
-                        stackedTitle(row.title)
-                            .padding(.top, 4)
-                            .gridCellColumns(amountColumns + 1)
-                    }
-                    .fontWeight(row.style == .item ? .regular : .semibold)
-                    GridRow {
-                        Spacer(minLength: 0)
-                        amount(row.current, row.style, short: short)
-                        if previousTitle != nil {
-                            amount(row.previous, row.style, short: short)
-                        }
-                    }
-                    .fontWeight(row.style == .item ? .regular : .semibold)
+            ForEach(Array(rows.enumerated()), id: \.offset) { @Sendable _, row in
+                StatementStackedRows(row: row, hasPrevious: hasPrevious, short: short, language: language)
+            }
+        }
+    }
+
+    /// The titles beside their amounts, all on one line.
+    private var besideGrid: some View {
+        let hasPrevious = previousTitle != nil
+        let language = language
+        return Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 4) {
+            GridRow {
+                Text(verbatim: "").gridColumnAlignment(.leading)
+                Text(verbatim: currentTitle).fontWeight(.semibold)
+                if let previousTitle {
+                    Text(verbatim: previousTitle).fontWeight(.semibold)
                 }
             }
+            ForEach(Array(rows.enumerated()), id: \.offset) { @Sendable _, row in
+                StatementBesideRow(row: row, hasPrevious: hasPrevious, language: language)
+            }
+        }
+    }
+}
+
+/// One of ``StatementGrid``'s amounts on one line, red for a loss below
+/// a heading.
+private struct StatementAmount: View {
+    let money: Money?
+    let style: StatementRow.Style
+    let short: Bool
+    let language: DisplayLanguage
+
+    var body: some View {
+        Text(verbatim: StatementRow.amountText(money, short: short, in: language))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundStyle(style != .item && (money ?? .zero) < .zero ? Theme.error : Theme.textPrimary)
+    }
+}
+
+/// A row of ``StatementGrid``'s stacked layout: its title on a line across
+/// the grid, then its amounts.
+private struct StatementStackedRows: View {
+    let row: StatementRow
+    let hasPrevious: Bool
+    let short: Bool
+    let language: DisplayLanguage
+
+    /// The amount columns: this period's and, when there is one, the last.
+    private var amountColumns: Int { hasPrevious ? 2 : 1 }
+
+    var body: some View {
+        if row.style == .section {
+            GridRow {
+                stackedTitle(row.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.top, 6)
+                    .gridCellColumns(amountColumns + 1)
+            }
+        } else {
+            GridRow {
+                stackedTitle(row.title)
+                    .padding(.top, 4)
+                    .gridCellColumns(amountColumns + 1)
+            }
+            .fontWeight(row.style == .item ? .regular : .semibold)
+            GridRow {
+                Spacer(minLength: 0)
+                StatementAmount(money: row.current, style: row.style, short: short, language: language)
+                if hasPrevious {
+                    StatementAmount(money: row.previous, style: row.style, short: short, language: language)
+                }
+            }
+            .fontWeight(row.style == .item ? .regular : .semibold)
         }
     }
 
@@ -79,48 +133,37 @@ struct StatementGrid: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(minWidth: 0, idealWidth: 0, maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    /// The titles beside their amounts, all on one line.
-    private var besideGrid: some View {
-        Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 4) {
+/// A row of ``StatementGrid``'s layout with the titles beside their
+/// amounts.
+private struct StatementBesideRow: View {
+    let row: StatementRow
+    let hasPrevious: Bool
+    let language: DisplayLanguage
+
+    var body: some View {
+        if row.style == .section {
             GridRow {
-                Text(verbatim: "").gridColumnAlignment(.leading)
-                Text(verbatim: currentTitle).fontWeight(.semibold)
-                if let previousTitle {
-                    Text(verbatim: previousTitle).fontWeight(.semibold)
+                Text(verbatim: row.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.top, 6)
+                    .gridCellColumns(hasPrevious ? 3 : 2)
+                    .gridCellAnchor(.leading)
+            }
+        } else {
+            GridRow {
+                Text(verbatim: row.title)
+                    .lineLimit(1)
+                    .gridColumnAlignment(.leading)
+                StatementAmount(money: row.current, style: row.style, short: false, language: language)
+                if hasPrevious {
+                    StatementAmount(money: row.previous, style: row.style, short: false, language: language)
                 }
             }
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                if row.style == .section {
-                    GridRow {
-                        Text(verbatim: row.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.textSecondary)
-                            .padding(.top, 6)
-                            .gridCellColumns(previousTitle == nil ? 2 : 3)
-                            .gridCellAnchor(.leading)
-                    }
-                } else {
-                    GridRow {
-                        Text(verbatim: row.title)
-                            .lineLimit(1)
-                            .gridColumnAlignment(.leading)
-                        amount(row.current, row.style, short: false)
-                        if previousTitle != nil {
-                            amount(row.previous, row.style, short: false)
-                        }
-                    }
-                    .fontWeight(row.style == .item ? .regular : .semibold)
-                }
-            }
+            .fontWeight(row.style == .item ? .regular : .semibold)
         }
-    }
-
-    private func amount(_ money: Money?, _ style: StatementRow.Style, short: Bool) -> some View {
-        Text(verbatim: StatementRow.amountText(money, short: short, in: language))
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .foregroundStyle(style != .item && (money ?? .zero) < .zero ? Theme.error : Theme.textPrimary)
     }
 }
 

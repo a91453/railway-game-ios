@@ -1106,9 +1106,14 @@ struct LinesPanel: View {
     }
 
     private var lineFilterPicker: some View {
-        Picker(selection: $lineFilter) {
-            ForEach(session.world.lineFilters, id: \.self) { filter in
-                Text(verbatim: filter.displayName(in: session.language)).tag(filter)
+        let language = session.language
+        return Picker(selection: $lineFilter) {
+            // A sendable closure, not main-actor code (CRASHSWEEP): the
+            // segments stand in a ViewThatFits, whose layouts SwiftUI's
+            // asynchronous renderer may measure off the main thread
+            // (CRASH101).
+            ForEach(session.world.lineFilters, id: \.self) { @Sendable filter in
+                LineFilterSegment(filter: filter, language: language)
             }
         } label: {
             Text(verbatim: session.language.text("Show", "顯示"))
@@ -3264,17 +3269,14 @@ private struct LineTrendStrip: View {
 private struct LineSparkline: View {
     let values: [Int64]
 
-    /// Not literals: a literal here would be a string to translate.
-    private static let dayAxis = "Day"
-    private static let ridersAxis = "Riders"
-
     var body: some View {
         if !values.isEmpty {
-            Chart(Array(values.enumerated()), id: \.offset) { day in
-                LineMark(x: .value(Self.dayAxis, day.offset), y: .value(Self.ridersAxis, day.element))
-                    .foregroundStyle(Theme.chartBlue)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                    .interpolationMethod(.monotone)
+            // A sendable closure, not main-actor code (CRASHSWEEP): the
+            // trend stands in the list row's ViewThatFits, whose layouts
+            // SwiftUI's asynchronous renderer may measure off the main
+            // thread (CRASH101).
+            Chart(Array(values.enumerated()), id: \.offset) { @Sendable day in
+                LineSparklineDay(day: day.offset, riders: day.element)
             }
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
@@ -3282,5 +3284,32 @@ private struct LineSparkline: View {
             .frame(width: 64, height: 18)
             .accessibilityHidden(true)
         }
+    }
+}
+
+/// One day of ``LineSparkline``'s trend.
+private struct LineSparklineDay: ChartContent {
+    let day: Int
+    let riders: Int64
+
+    /// Not literals: a literal here would be a string to translate.
+    private static let dayAxis = "Day"
+    private static let ridersAxis = "Riders"
+
+    var body: some ChartContent {
+        LineMark(x: .value(Self.dayAxis, day), y: .value(Self.ridersAxis, riders))
+            .foregroundStyle(Theme.chartBlue)
+            .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+            .interpolationMethod(.monotone)
+    }
+}
+
+/// One of the lines list's filters (decision 184) as a segment.
+private struct LineFilterSegment: View {
+    let filter: LineFilter
+    let language: DisplayLanguage
+
+    var body: some View {
+        Text(verbatim: filter.displayName(in: language)).tag(filter)
     }
 }

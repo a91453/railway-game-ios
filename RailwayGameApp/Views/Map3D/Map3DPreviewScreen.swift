@@ -1364,6 +1364,33 @@ private struct Map3DTrainLabelsView: View {
     }
 }
 
+/// One of ``Map3DFollowBar``'s places to follow the train from.
+private struct Map3DFollowChoice: View {
+    let option: Map3DFollow.View
+    @Binding var selection: Map3DFollow.View
+    let language: DisplayLanguage
+
+    var body: some View {
+        Button {
+            selection = option
+        } label: {
+            Text(verbatim: option.text(in: language))
+                .font(.caption.weight(.bold))
+                .fixedSize()
+                .padding(.horizontal, 8)
+                .frame(minHeight: 26)
+                .background(selection == option ? Theme.primary : Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .foregroundStyle(selection == option ? Theme.onPrimary : Theme.textPrimary)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(Text(verbatim: option.hint(in: language)))
+        .accessibilityAddTraits(selection == option ? .isSelected : [])
+        .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
+    }
+}
+
 /// Decision 333: at the foot of the 3D map while the camera follows a
 /// train (``GameSession/followedTrain``): the train's line badge and name,
 /// the places to follow it from (Mini Tokyo 3D's back and top back; the
@@ -1420,24 +1447,13 @@ private struct Map3DFollowBar: View {
     }
 
     private var choices: some View {
-        ForEach(Map3DFollow.View.allCases, id: \.self) { option in
-            Button {
-                view = option
-            } label: {
-                Text(verbatim: option.text(in: session.language))
-                    .font(.caption.weight(.bold))
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .frame(minHeight: 26)
-                    .background(view == option ? Theme.primary : Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .foregroundStyle(view == option ? Theme.onPrimary : Theme.textPrimary)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(Text(verbatim: option.hint(in: session.language)))
-            .accessibilityAddTraits(view == option ? .isSelected : [])
-            .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
+        let selection = $view
+        let language = session.language
+        // A sendable closure, not main-actor code (CRASHSWEEP): the bar's
+        // two layouts stand in a ViewThatFits, which SwiftUI's asynchronous
+        // renderer may measure, and build, off the main thread (CRASH101).
+        return ForEach(Map3DFollow.View.allCases, id: \.self) { @Sendable option in
+            Map3DFollowChoice(option: option, selection: selection, language: language)
         }
     }
 

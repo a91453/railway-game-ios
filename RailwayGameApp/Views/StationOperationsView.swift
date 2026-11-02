@@ -117,13 +117,16 @@ private struct PlatformTrackRow: View {
     private func busyLine(_ busy: StationOperations.Busyness, text: String, percent: Int, bar: Bool) -> some View {
         HStack(spacing: 4) {
             if bar {
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Theme.chip)
-                        Capsule().fill(color(busy)).frame(width: proxy.size.width * Double(percent) / 100)
-                    }
+                // No GeometryReader (CRASHSWEEP): this line stands in a
+                // ViewThatFits, whose layouts SwiftUI's asynchronous
+                // renderer may measure off the main thread, where a reader's
+                // main-actor closure stops the app (CRASH101). The bar is
+                // always this wide.
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.chip)
+                    Capsule().fill(color(busy)).frame(width: Self.barWidth * Double(percent) / 100)
                 }
-                .frame(width: 44, height: 6)
+                .frame(width: Self.barWidth, height: 6)
             }
             Text(verbatim: text)
                 .font(.caption2.weight(.bold).monospacedDigit())
@@ -137,6 +140,9 @@ private struct PlatformTrackRow: View {
                 .fixedSize()
         }
     }
+
+    /// The busy bar's width.
+    private static let barWidth: CGFloat = 44
 
     private func color(_ busy: StationOperations.Busyness) -> Color {
         switch busy {

@@ -32,7 +32,9 @@ struct FinanceCompositionChart: View {
         .accessibilityIdentifier("economy.composition")
     }
 
-    static func color(_ category: FinanceComposition.Category) -> Color {
+    /// Nonisolated: a slice's chart content (``CompositionSector``) asks
+    /// for it too.
+    nonisolated static func color(_ category: FinanceComposition.Category) -> Color {
         switch category.colorSlot {
         case 1: Theme.chartBlue
         case 2: Theme.chartOrange
@@ -127,29 +129,25 @@ private struct CompositionRing: View {
         }
     }
 
+    // The ring stands in a ViewThatFits, whose layouts SwiftUI's
+    // asynchronous renderer may measure, and build, off the main thread,
+    // where a main-actor closure handed to SwiftUI or Charts stops the app
+    // (CRASH101). So the slices are built in sendable closures, and the
+    // total stands behind the chart rather than in a chart background's
+    // GeometryReader: a ring has no axes or legend, so its plot is the
+    // whole chart (CRASHSWEEP).
     private var chart: some View {
         let spec = ring.chart(in: language)
-        return Chart(ring.slices) { slice in
-            SectorMark(
-                angle: .value(spec.yTitle, Double(slice.amount.amount) / 100),
-                innerRadius: .ratio(0.62),
-                angularInset: 1
-            )
-            .cornerRadius(3)
-            .foregroundStyle(FinanceCompositionChart.color(slice.category))
-            .opacity(selected == nil || selected == slice ? 1 : 0.45)
+        let yTitle = spec.yTitle
+        let selected = selected
+        return Chart(ring.slices) { @Sendable slice in
+            CompositionSector(slice: slice, yTitle: yTitle, dimmed: selected != nil && selected != slice)
         }
         .chartAngleSelection(value: $touched)
         .chartLegend(.hidden)
-        .chartBackground { proxy in
-            GeometryReader { geometry in
-                if let frame = proxy.plotFrame {
-                    let plot = geometry[frame]
-                    centre
-                        .frame(width: plot.width * 0.58)
-                    .position(x: plot.midX, y: plot.midY)
-                }
-            }
+        .background {
+            centre
+                .frame(width: diameter * 0.58)
         }
         .frame(width: diameter, height: diameter)
         .accessibilityLabel(Text(verbatim: spec.title))
@@ -159,31 +157,70 @@ private struct CompositionRing: View {
     }
 
     private var rows: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(ring.slices) { slice in
-                Button {
-                    pinned = pinned == slice.category ? nil : slice.category
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .fill(FinanceCompositionChart.color(slice.category))
-                            .frame(width: 10, height: 10)
-                        Text(verbatim: slice.category.displayName(in: language))
-                            .foregroundStyle(Theme.textPrimary)
-                            .fontWeight(selected == slice ? .semibold : .regular)
-                        Spacer(minLength: 8)
-                        Text(verbatim: "\(slice.amount.moneyText) · \(ring.percentText(of: slice))")
-                            .foregroundStyle(Theme.textSecondary)
-                            .monospacedDigit()
-                    }
-                    .font(.caption)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(verbatim: ring.detailText(of: slice, in: language)))
-                .accessibilityAddTraits(pinned == slice.category ? .isSelected : [])
-                .accessibilityIdentifier("\(identifier).\(slice.category.rawValue)")
+        let ring = ring
+        let language = language
+        let selected = selected
+        let identifier = identifier
+        let pinned = $pinned
+        return VStack(alignment: .leading, spacing: 6) {
+            ForEach(ring.slices) { @Sendable slice in
+                CompositionSliceRow(ring: ring, slice: slice, language: language, isSelected: selected == slice,
+                                    pinned: pinned, identifier: identifier)
             }
         }
+    }
+}
+
+/// One slice of a ``CompositionRing``'s donut.
+private struct CompositionSector: ChartContent {
+    let slice: FinanceComposition.Slice
+    let yTitle: String
+    let dimmed: Bool
+
+    var body: some ChartContent {
+        SectorMark(
+            angle: .value(yTitle, Double(slice.amount.amount) / 100),
+            innerRadius: .ratio(0.62),
+            angularInset: 1
+        )
+        .cornerRadius(3)
+        .foregroundStyle(FinanceCompositionChart.color(slice.category))
+        .opacity(dimmed ? 0.45 : 1)
+    }
+}
+
+/// One slice listed beside a ``CompositionRing``: its colour, name, amount
+/// and share; a tap pins it, a second tap lets it go.
+private struct CompositionSliceRow: View {
+    let ring: FinanceComposition.Ring
+    let slice: FinanceComposition.Slice
+    let language: DisplayLanguage
+    let isSelected: Bool
+    @Binding var pinned: FinanceComposition.Category?
+    let identifier: String
+
+    var body: some View {
+        Button {
+            pinned = pinned == slice.category ? nil : slice.category
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(FinanceCompositionChart.color(slice.category))
+                    .frame(width: 10, height: 10)
+                Text(verbatim: slice.category.displayName(in: language))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                Spacer(minLength: 8)
+                Text(verbatim: "\(slice.amount.moneyText) · \(ring.percentText(of: slice))")
+                    .foregroundStyle(Theme.textSecondary)
+                    .monospacedDigit()
+            }
+            .font(.caption)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: ring.detailText(of: slice, in: language)))
+        .accessibilityAddTraits(pinned == slice.category ? .isSelected : [])
+        .accessibilityIdentifier("\(identifier).\(slice.category.rawValue)")
     }
 }

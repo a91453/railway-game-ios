@@ -146,20 +146,13 @@ struct FollowBar: View {
     /// Decision 195: real time or ten times it, one tap each, through the
     /// speed the speed menu sets; following stops without changing it back.
     private func speeds(_ language: DisplayLanguage) -> some View {
-        ForEach(FollowBarInfo.speedShortcuts, id: \.self) { speed in
-            let isCurrent = facts.runningSpeed == speed
-            Button {
-                session.setSpeed(speed)
-            } label: {
-                Text(verbatim: speed.label(in: language))
-                    .font(.caption.weight(.bold))
-                    .monospacedDigit()
-            }
-            .buttonStyle(FollowSpeedButtonStyle(isCurrent: isCurrent))
-            .disabled(session.isLayingDemoRealLines)
-            .accessibilityLabel(Text(verbatim: speed.accessibilityName(in: language)))
-            .accessibilityAddTraits(isCurrent ? .isSelected : [])
-            .accessibilityIdentifier("follow.speed.\(speed.rawValue)")
+        let session = session
+        let running = facts.runningSpeed
+        // A sendable closure, not main-actor code (CRASH101, CRASHSWEEP):
+        // the bar's rows stand in a ViewThatFits, whose layouts SwiftUI's
+        // asynchronous renderer may measure, and build, off the main thread.
+        return ForEach(FollowBarInfo.speedShortcuts, id: \.self) { @Sendable speed in
+            FollowSpeedButton(session: session, speed: speed, isCurrent: running == speed, language: language)
         }
     }
 
@@ -233,6 +226,29 @@ private struct FollowBarProgress: View {
 /// filled while the game runs at its speed, touched over at least 44 by 44 points.
 /// The touch area belongs to the style's body, as the status pill's
 /// buttons have it (a touch area set inside a button's label is not used).
+/// One of ``FollowBar``'s speed shortcuts (decision 195).
+private struct FollowSpeedButton: View {
+    let session: GameSession
+    let speed: GameSpeed
+    let isCurrent: Bool
+    let language: DisplayLanguage
+
+    var body: some View {
+        Button {
+            session.setSpeed(speed)
+        } label: {
+            Text(verbatim: speed.label(in: language))
+                .font(.caption.weight(.bold))
+                .monospacedDigit()
+        }
+        .buttonStyle(FollowSpeedButtonStyle(isCurrent: isCurrent))
+        .disabled(session.isLayingDemoRealLines)
+        .accessibilityLabel(Text(verbatim: speed.accessibilityName(in: language)))
+        .accessibilityAddTraits(isCurrent ? .isSelected : [])
+        .accessibilityIdentifier("follow.speed.\(speed.rawValue)")
+    }
+}
+
 private struct FollowSpeedButtonStyle: ButtonStyle {
     let isCurrent: Bool
 
