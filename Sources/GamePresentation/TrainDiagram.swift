@@ -339,7 +339,8 @@ extension TrainDiagram {
     }
 
     /// The runs of a fixed timetable (decision 133) no train has taken out,
-    /// on the days that reach into `from...to`.
+    /// on the days that reach into `from...to`; a ring's (decision 535) the
+    /// ring's way round, broken where it goes round (``lines(through:rows:)``).
     static func runTrips(of line: ServiceLine, rows: Rows, from: Int64, to: Int64, now: Int64) -> [Trip] {
         guard !line.runs.isEmpty else { return [] }
         let day = GameTime.secondsPerDay
@@ -353,7 +354,8 @@ extension TrainDiagram {
                 let base = date * day
                 // A run no train took out in time was dropped for the day.
                 guard now <= base + (run.times.first?.departure ?? 0) + LineRun.latestDispatch else { continue }
-                let stops = zip(run.calls, run.times).map { call, time in
+                // A ring's run (decision 535) goes the ring's way round, past its seam.
+                let stops = zip(run.calls(stopCount: line.stops.count), run.times).map { call, time in
                     (station: line.stops[call], arrival: base + time.arrival, departure: base + time.departure)
                 }
                 guard let a = stops.first, let b = stops.last, b.departure >= from, a.arrival <= to else { continue }

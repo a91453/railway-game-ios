@@ -282,29 +282,36 @@ public struct DepartureBoard: Equatable, Sendable {
     // MARK: - From a fixed timetable
 
     /// The runs of `line` that call at `station` and have not been sent out,
-    /// at their timetable's time.
+    /// at their timetable's time. A ring's run (decision 535) calls at the
+    /// stops the ring's way round, past its seam; a whole lap leaves its
+    /// first stop and comes back to end there, so it is listed there twice.
     static func runRows(of line: ServiceLine, at station: StationID, in world: GameWorld, now: Int64) -> [Row] {
         guard !line.runs.isEmpty else { return [] }
         let today = now >= 0 ? now / GameTime.secondsPerDay : 0
         var rows: [Row] = []
         for (index, run) in line.runs.enumerated() {
-            let calls = run.calls
-            guard let position = calls.firstIndex(where: { line.stops[$0] == station }) else { continue }
+            let calls = run.calls(stopCount: line.stops.count)
+            guard calls.count == run.times.count else { continue }
             let sent = line.runDays.indices.contains(index) ? line.runDays[index] : nil
-            for day in max(0, today - 1)...(today + 1) {
-                guard run.days & (1 << StationDemand.weekday(ofDay: day)) != 0, (sent ?? -1) < day else { continue }
-                let time = day * GameTime.secondsPerDay + run.times[position].arrival
-                guard time >= now - 30, time - now <= horizonSeconds else { continue }
-                // A run no train took out in time is dropped for the day
-                // (``LineRun/latestDispatch``): it is no train coming.
-                guard now <= day * GameTime.secondsPerDay + run.times[0].departure + LineRun.latestDispatch else { continue }
-                let last = position == calls.count - 1
-                rows.append(Row(
-                    id: "r\(line.id.rawValue)|\(index)|\(day)", train: nil, trainName: "",
-                    line: line.id, lineName: line.name, color: line.color,
-                    destination: last ? station : line.stops[run.to], endsHere: last, passes: false, isBoarding: false,
-                    expected: GameTime(seconds: time), secondsAway: max(0, time - now), lateMinutes: 0,
-                    scheduled: GameTime(seconds: time), comesFrom: position > 0 ? line.stops[calls[position - 1]] : nil))
+            for position in calls.indices where line.stops[calls[position]] == station {
+                for day in max(0, today - 1)...(today + 1) {
+                    guard run.days & (1 << StationDemand.weekday(ofDay: day)) != 0, (sent ?? -1) < day else { continue }
+                    let time = day * GameTime.secondsPerDay + run.times[position].arrival
+                    guard time >= now - 30, time - now <= horizonSeconds else { continue }
+                    // A run no train took out in time is dropped for the day
+                    // (``LineRun/latestDispatch``): it is no train coming.
+                    guard now <= day * GameTime.secondsPerDay + run.times[0].departure + LineRun.latestDispatch else { continue }
+                    let last = position == calls.count - 1
+                    // A whole lap's return to its first stop is a row of its own.
+                    let id = position > 0 && line.stops[calls[0]] == station
+                        ? "r\(line.id.rawValue)|\(index)|\(day)|end" : "r\(line.id.rawValue)|\(index)|\(day)"
+                    rows.append(Row(
+                        id: id, train: nil, trainName: "",
+                        line: line.id, lineName: line.name, color: line.color,
+                        destination: last ? station : line.stops[run.to], endsHere: last, passes: false, isBoarding: false,
+                        expected: GameTime(seconds: time), secondsAway: max(0, time - now), lateMinutes: 0,
+                        scheduled: GameTime(seconds: time), comesFrom: position > 0 ? line.stops[calls[position - 1]] : nil))
+                }
             }
         }
         return rows
