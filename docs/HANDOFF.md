@@ -490,6 +490,7 @@
   3. REV1698 的 P3-1：`followsRealTimetable(l.train) || followsRealTimetable(x.train)` 那一處。
   4. 其他 UI 測試也設 `OS_ACTIVITY_DT_MODE=NO`（#1717 只改了兩支）。MENUSTALL（#1712）查到：選單打開後的長停頓是 XCTest 自己的查詢把 log 同步寫到 stderr，實機不會；剩下 1.8–3.0 s 是系統第一次做的事（無障礙 bundle、聽寫設定、Simulator 的 Metal 編 pipeline），不是 App 的程式。查別的停頓加 Debug 啟動參數 `-ui-test-stall-stacks` 看 trace；不要在 dyld 的載入回呼（`_dyld_register_func_for_add_image`）裡做事，試過 App 啟動就卡住。
   5. 海風號、山嵐號接上專用模型（`Map3DTourismEMU500` 已在模型包，沒接進 `Map3DTrainSet`）；Opus、rolling-stock skill、第三級截圖。
+     → TOURMODEL（決策 554，`claude/tourism-emu500-3d`）接上：`set-HAIFENG…`、`set-SHANLAN…` 近景與遠景。遊戲規劃看過截圖後，車頂改深灰、山嵐號調成黃綠（同一個 PR）；外觀仍等作者在實機接受，其餘寫在 `docs/decisions/554.md` 下一步。
   6. 「關於／資料來源」頁加「© 2026 a91453 著作權所有」。
 - **等作者的**：出口合規與 `ITSAppUsesNonExemptEncryption`（上面）；實機看 3D 回 2D 後 Menu 按不按得到、108.1 切回前景後有沒有聲音、和別的 App 的音樂能不能一起放；E1（上架前演示模式改編譯旗標，要動 `testflight.yml` 參數需作者同意）；KLRT、BUILD3D、STALL97；新運具先做纜車，再渡輪，飛機最後（`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md` §6）。
 - **玩家問答**（2026-11-02）：「雙線雙向，列車都只在同一軌來回」：回覆「路線 → 進階」每一段可選進路；中間站兩條軌都要有月台；新遊戲靠左行車；還是一樣就「回報問題」附存檔。

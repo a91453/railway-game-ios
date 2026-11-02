@@ -45,8 +45,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Decision 539: the freight train's container wagons, near and
         // far, behind the R200 Chu-Kuang's own R200 model (8 models, no
         // window models, 53,184 vertices more, 2.1 MB a copy).
-        XCTAssertEqual(pack.models.count, 696)
-        XCTAssertEqual(vertices, 4_794_234)
+        // Decision 554: the Hai-Feng and Shan-Lan as #1539's converted
+        // EMU500 units, near and far (32 models with the windows' models,
+        // 197,880 vertices more, 7.9 MB a copy).
+        XCTAssertEqual(pack.models.count, 728)
+        XCTAssertEqual(vertices, 4_992_114)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
