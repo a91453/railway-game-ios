@@ -1695,3 +1695,48 @@ struct Map3DSnapshotSheet: View {
         }
     }
 }
+
+#if DEBUG
+/// A UI test's train models made before it opens the 3D map
+/// (`-ui-test-3d-models-first`, Debug builds only). Made where the 3D map
+/// makes them (``Map3DView/models``), at launch: on the Simulator they take
+/// some 30 s of CPU, and while they were made over an open 3D map the app
+/// answered no UI query for 50 to 90 s, past XCTest's 100 s (main
+/// 6ebf8c7's full lane, run 41354792858). Their marker,
+/// `debug.map3DModelsReady`, is on the 2D map, where a query answers at
+/// once. Made at background priority: their shade is baked on every core
+/// at once (`Map3DTrainOcclusion.baked`), and made at the 3D map's
+/// priority before it the Simulator's main thread stood still for 61 s
+/// and a query failed (FLANE5's run 41371388190).
+@MainActor
+@Observable
+final class Map3DModelsWarmUp {
+    static let shared = Map3DModelsWarmUp()
+    private(set) var isReady = false
+    private var started = false
+
+    func start() {
+        guard !started else { return }
+        started = true
+        Task {
+            _ = await Task.detached(priority: .background) { Map3DView.models?.models.count }.value
+            isReady = true
+        }
+    }
+}
+
+/// ``Map3DModelsWarmUp``'s marker for a UI test: an element of no size
+/// that takes no touch.
+struct Map3DModelsWarmUpMarker: View {
+    var body: some View {
+        if Map3DModelsWarmUp.shared.isReady {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityLabel(Text(verbatim: "3D models ready"))
+                .accessibilityIdentifier("debug.map3DModelsReady")
+        }
+    }
+}
+#endif
