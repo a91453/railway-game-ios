@@ -33,8 +33,9 @@ def glazing(t,f,required=None):
   if np.any((f[g]&2)!=0):support[g]=False
  for i in ids:
   ds=hits(t[visible],c[i]+n[i]*.30,-n[i]);assert len(ds) and min(ds)>.297,('glass occluded',int(i),c[i].tolist(),float(min(ds)) if len(ds) else None)
-  # Interior support within 65mm of actual glass front, excluding glass itself.
-  ds=hits(t[support],c[i]-n[i]*.001,-n[i]);assert len(ds) and min(ds)<.065,('glass floats',i,c[i].tolist(),float(min(ds)) if len(ds) else None)
+  # Interior support within 45mm: this recipe has at most 42mm of panel
+  # offset/layer stack, plus 3mm sampling tolerance; not a prototype limit.
+  ds=hits(t[support],c[i]-n[i]*.001,-n[i]);assert len(ds) and min(ds)<.045,('glass floats',i,c[i].tolist(),float(min(ds)) if len(ds) else None)
  return ids
 
 def components(t):
