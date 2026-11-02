@@ -44,6 +44,28 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("bought-lines-list", app)
     }
 
+    /// Decision 538 (continued): a train of a bought real line followed on
+    /// the 2D map, close up: its cars along the curves of the Danhai light
+    /// rail and the Neiwan Line, not swung straight off them. For the
+    /// screenshot review of the pull request that laid them so.
+    func testTrainCarsOnCurves2D() {
+        for (real, name) in [("ntdlrt:V", "danhai"), ("tra:NEIWAN", "neiwan")] {
+            let app = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-follow-bought", real])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 30), "\(real): the train is followed")
+            let zoomIn = app.buttons["放大"]
+            if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+                for _ in 0..<6 {
+                    zoomIn.tap()
+                    settle(seconds: 1)
+                }
+            }
+            settle(seconds: 3)
+            keep("curve2d-\(name)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 539: a freight line's train, followed on the 3D map, is
     /// the R200 hauling container wagons (not grey boxes). For the
     /// screenshot review of the pull request that drew it so.

@@ -109,8 +109,12 @@ public struct TrainMotion: Sendable {
             let a = min(max(start, 0), length), b = min(max(end, a), length)
             guard let first = point(at: a), let last = point(at: b) else { return [] }
             var stretch = [first]
-            for index in points.indices where distances[index] > a && distances[index] < b {
-                stretch.append(points[index])
+            // Decision 538 (continued): from the segment `a` is on, not
+            // every point (the 2D map lays each car every frame).
+            var index = segment(at: a) + 1
+            while index < points.count, distances[index] < b {
+                if distances[index] > a { stretch.append(points[index]) }
+                index += 1
             }
             stretch.append(last)
             return stretch
@@ -186,8 +190,10 @@ public struct TrainMotion: Sendable {
         public let heading: Point
         /// Decision 538: the track ahead of its head now, head first
         /// (``TrainTrackReach/front(of:in:)``), where its first car's front
-        /// half is laid.
-        var ahead: [Point] = []
+        /// half is laid; a ``Trail`` worked out once a tick, not each frame
+        /// (decision 538, continued).
+        var aheadTrail = Trail([])
+        var ahead: [Point] { aheadTrail.points }
         /// Decision 538: how far along ``trail`` its body as it was at the
         /// last tick ends: past it, ``trail`` goes on along the track past
         /// its tail. `nil`: all of ``trail``.
@@ -361,7 +367,7 @@ public struct TrainMotion: Sendable {
                 train: train.id, look: looks[train.id] ?? .plain, isHighSpeed: train.type?.isHighSpeed == true,
                 livery: TrainLivery.of(type: train.type, performance: train.performance),
                 trail: trail, lag: lag, length: Double(train.length), carPitch: Double(train.carPitch), heading: heading,
-                ahead: TrainTrackReach.front(of: train, in: world).map(Point.init), bodyEnd: bodyEnd
+                aheadTrail: Trail(TrainTrackReach.front(of: train, in: world).map(Point.init)), bodyEnd: bodyEnd
             ))
         }
         self.runs = runs

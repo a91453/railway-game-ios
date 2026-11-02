@@ -1,4 +1,4 @@
-> 3D 彎道上列車頭尾兩節（派工單 CURVE3D，[決策 538](decisions/538.md)，`curve3d-train-on-curve`，104.1 竹中六家線）：車身外的前半節、後半節改沿軌道放（`TrainTrackReach`），不再直直伸出彎道；Linux `LiujiaLineTrainsTests.testTheLiujiaTrainsAtZhuzhongKeepEveryCarOnTheCurve` 舊放法 8.8 m、新 0 m。留下的：2D 地圖仍直直放、快轉滑行時車身外的高度，見決策 538「下一步」。實機 UNVERIFIED。
+> 3D 彎道上列車頭尾兩節（派工單 CURVE3D，[決策 538](decisions/538.md)，`curve3d-train-on-curve`，104.1 竹中六家線）：車身外的前半節、後半節改沿軌道放（`TrainTrackReach`），不再直直伸出彎道；Linux `LiujiaLineTrainsTests.testTheLiujiaTrainsAtZhuzhongKeepEveryCarOnTheCurve` 舊放法 8.8 m、新 0 m。2D 地圖也改成沿軌道放（CURVE2D，決策 538「續」，`claude/curve2d-train-on-curve`；竹中 2D 舊 8.2 m、新 0 m，每幀放車 42 → 11.6 µs）。留下的：快轉滑行時車身外的高度、車擋前畫的車比軌道長，見決策 538「下一步」與「下一步（續）」。實機 UNVERIFIED。
 
 > iPhone 橫拿三件畫面修正（派工單 IPHLAND，`claude/iphone-landscape-fixes`，決策號不動，2026-10-31）：側邊面板頁的標題在 compact height 時改放在導覽列下方一列、和面板一樣寬（`PanelTitlePlacement`，`Theme.swift` 的 `panelTitle`），修掉車站卡站名被工具列夾成一兩個字與審查 L2-2；實景新局右側的空框是小地圖（沒有軌道與車站、或畫面已經看到整張地圖時不畫，`MiniMap.isShown(beside:)`）。Linux `MapFocusTests`、`MiniMapTests` VERIFIED；畫面靠截圖驗收，iPad 與 iPhone SE 沒拍。
 

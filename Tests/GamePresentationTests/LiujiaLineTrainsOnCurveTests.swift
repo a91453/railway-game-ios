@@ -7,7 +7,8 @@ import XCTest
 /// rounding the curved platform on the viaduct (decision 462) had its last
 /// car swung off the curve, its far end hanging out over the ground
 /// platform below. Every car's two ends (where its bogies stand) must be on
-/// the track the map draws (decision 538). In this class, whose shard
+/// the track the map draws (decision 538), in 3D and on the 2D map
+/// (decision 538, continued). In this class, whose shard
 /// already builds the Zhuzhong map (`swift-shards.sh`, campaigns-13).
 extension LiujiaLineTrainsTests {
     /// The farthest a car's end may stand from the track's centre line, in
@@ -88,6 +89,33 @@ extension LiujiaLineTrainsTests {
         return strays
     }
 
+    /// Decision 538 (continued): the same on the 2D map
+    /// (``TrainCars/mapCars(of:progress:)``), on the plan only.
+    static func mapStrays(in world: GameWorld, near centre: TrainMotion.Point, radius: Double, motion: TrainMotion,
+                          progresses: [Double] = [0, 0.5, 1], checked: inout Int) -> [String] {
+        let reach = radius * Double(WorldCoordinate.unitsPerMetre)
+        let track = track(of: world, near: centre, radius: reach + 400 * Double(WorldCoordinate.unitsPerMetre))
+        var strays: [String] = []
+        for run in motion.runs {
+            for progress in progresses {
+                guard let head = run.head(at: progress)?.point, TrainMotion.Trail.distance(head, centre) < reach else { continue }
+                let cars = TrainCars.mapCars(of: run, progress: progress)
+                checked += cars.count
+                for (index, car) in cars.enumerated() {
+                    for (end, point) in [("front", car.first), ("back", car.last)] {
+                        guard let point else { continue }
+                        let off = offTrack(point, height: 0, on: track).plan
+                        if off > curveTolerance {
+                            strays.append("2D train \(run.train.rawValue) car \(index + 1)/\(cars.count) \(end) "
+                                + "\(String(format: "%.1f", off)) m off the track at progress \(progress)")
+                        }
+                    }
+                }
+            }
+        }
+        return strays
+    }
+
     /// The Liujia and Neiwan lines bought at Zhuzhong; through the
     /// morning, every Liujia train near Zhuzhong has each car's two ends
     /// on the track, stopped at the curved viaduct platform or rounding it.
@@ -103,15 +131,17 @@ extension LiujiaLineTrainsTests {
         let models = Map3DModelPack.standard
         var motion = TrainMotion(world: world, time: 0)
         var strays: [String] = []
-        var seen = 0
+        var seen = 0, seenOnTheMap = 0
         // 06:00 to 09:00, a game minute at a time.
         while world.clock.now.seconds < 6 * 3600 { try world.advance(ticks: 1) }
         while world.clock.now.seconds < 9 * 3600, strays.count < 20 {
             try world.advance(ticks: 1)
             motion = TrainMotion(world: world, previous: motion, time: Double(world.clock.now.seconds))
             strays += Self.strays(in: world, near: centre, radius: 600, motion: motion, models: models, checked: &seen)
+            strays += Self.mapStrays(in: world, near: centre, radius: 600, motion: motion, checked: &seenOnTheMap)
         }
         XCTAssertGreaterThan(seen, 200, "too few cars near Zhuzhong")
+        XCTAssertGreaterThan(seenOnTheMap, 200, "too few cars near Zhuzhong on the 2D map")
         XCTAssertEqual(strays, [], "cars off the curve:\n" + strays.prefix(20).joined(separator: "\n"))
     }
 }

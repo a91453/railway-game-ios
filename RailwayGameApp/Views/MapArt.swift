@@ -326,12 +326,13 @@ enum MapArt {
             }
             if projection.detail == .full {
                 // Decision 205: close up, its cars. A tail may still be
-                // visible when its head is offscreen.
+                // visible when its head is offscreen. Decision 538
+                // (continued): along the track past its two ends.
                 let cars = TrainCars.count(length: run.length, carPitch: run.carPitch)
                 let reach = run.length + run.lag + TrainCars.drawnCarLength * Double(cars)
                 guard region.expanded(by: reach).contains(x: head.point.x, y: head.point.y) else { continue }
                 drawCars(
-                    TrainCars.cars(body: run.body(at: progress), heading: head.heading, count: cars),
+                    TrainCars.mapCars(of: run, progress: progress),
                     colour: colour, livery: run.livery, painted: !plain, isSelected: isSelected, projection: projection, in: context
                 )
                 continue
