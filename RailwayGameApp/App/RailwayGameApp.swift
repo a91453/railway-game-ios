@@ -524,25 +524,15 @@ final class FrameMeter: NSObject {
 /// copies its return addresses (frame pointers, always kept on arm64) and
 /// lets it go. When frames come again, the trace gets the stall's length,
 /// the functions the looks most often found running, and the call stack
-/// most of the looks shared, each frame with how many looks it was in;
-/// and the name of each image (a framework) loaded after it started.
+/// most of the looks shared, each frame with how many looks it was in.
 /// Debug and the Simulator's arm64 only; nothing else runs it.
 final class StallSampler: @unchecked Sendable {
     static let shared = StallSampler()
     private let lock = NSLock()
     private var lastBeat: CFTimeInterval = 0
     private var started = false
-    /// Whether images loaded are written to the trace.
-    nonisolated(unsafe) private static var tracesImages = false
     /// Symbol names by address; used by the sampler's thread alone.
     private var names: [UInt: String] = [:]
-
-    /// Images loaded since the sampler last wrote them.
-    private var loadedImages: [UInt] = []
-
-    func noteImage(_ address: UInt) {
-        lock.withLock { loadedImages.append(address) }
-    }
 
     /// The main thread drew a frame at `time` (``CACurrentMediaTime()``).
     func beat(at time: CFTimeInterval) {
@@ -561,17 +551,6 @@ final class StallSampler: @unchecked Sendable {
             stackSize: UInt(pthread_get_stacksize_np(main))
         )
         beat(at: CACurrentMediaTime())
-        // Each image loaded from now on (a framework opened when first
-        // used can hold the main thread): the images already loaded are
-        // reported during the registration, and left out. The callback
-        // runs under dyld's lock, so it only notes the address: looking
-        // the name up there (`dladdr`) hung the app at its launch (run
-        // 41416655310); the sampler's thread looks it up.
-        _dyld_register_func_for_add_image { header, _ in
-            guard StallSampler.tracesImages, let header else { return }
-            StallSampler.shared.noteImage(UInt(bitPattern: header))
-        }
-        Self.tracesImages = true
         let thread = Thread { [self] in run(target) }
         thread.name = "StallSampler"
         thread.qualityOfService = .userInteractive
@@ -596,15 +575,7 @@ final class StallSampler: @unchecked Sendable {
         while true {
             Thread.sleep(forTimeInterval: 0.2)
             let now = CACurrentMediaTime()
-            let (last, images) = lock.withLock {
-                defer { loadedImages.removeAll() }
-                return (lastBeat, loadedImages)
-            }
-            for image in images {
-                var info = Dl_info()
-                let path = dladdr(UnsafeRawPointer(bitPattern: image), &info) != 0 ? info.dli_fname.map { String(cString: $0) } : nil
-                UITestTrace.stall("loaded \(path?.split(separator: "/").last.map(String.init) ?? "?")")
-            }
+            let last = lock.withLock { lastBeat }
             if now - last > 1 {
                 if stallStart == 0 { stallStart = last }
                 if samples.count < 300 {
