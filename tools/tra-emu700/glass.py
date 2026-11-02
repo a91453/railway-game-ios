@@ -74,6 +74,12 @@ def equipment(t,role):
  else:assert not len(high),'unexpected pantograph'
  return ac
 
+def coupler(t):
+ end=20.743/2
+ ds=hits(t,np.array([end+.1,0,.92]),np.array([-1.,0,0]))
+ assert len(ds) and .44<min(ds)<.50,'coupler opening blocked or shank absent'
+ return True
+
 def reject(fn):
  try:fn()
  except AssertionError:return
@@ -83,6 +89,15 @@ root=Path(sys.argv[1]);rows=[]
 for m in json.loads((root/'manifest.json').read_text())['models']:
  if m.get('native_kind')=='assembly':continue
  t,f=read(root/m['native']);role=m['id'].split('-')[2];ac=equipment(t,role)
+ if role=='emc':
+  coupler(t);bars=[]
+  for g in components(t):
+   lo=t[g].reshape(-1,3).min(axis=0);hi=t[g].reshape(-1,3).max(axis=0)
+   if np.max(np.abs((hi-lo)-np.array([.16,.48,.08])))<.001 and abs(lo[2]-1.0)<.001:bars.append(g)
+  assert len(bars)==1,'coupler upper jaw identity'
+  broken=t.copy();g=bars[0];broken[g,:,2]=1.08+(broken[g,:,2]-1.08)*3
+  reject(lambda:coupler(broken))
+
  g=ac[0][0];broken=t.copy();broken[g,:,2]+=.10;reject(lambda:equipment(broken,role))
  broken=t.copy();broken[g,:,0]+=.30;reject(lambda:equipment(broken,role))
  reject(lambda:equipment(np.concatenate([t,t[g]]),role))
@@ -105,6 +120,6 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
    except AssertionError:pass
    else:raise AssertionError(('actual glass solid fault escaped',m['id'],distance,'group',len(g),'chosen',len(chosen),'direction',direction.tolist(),'bounds',t[g].reshape(-1,3).min(axis=0).tolist(),t[g].reshape(-1,3).max(axis=0).tolist()))
   tested.append(len(g))
- rows.append({'id':m['id'],'ac_contact_and_three_actual_faults':True,'ep_missing_and_wrong_station_faults':role=='ep','front_centroid_samples':len(ids),'glass_solids_tested':len(tested),'buried_200mm_rejected':True,'floating_200mm_rejected':True})
+ rows.append({'id':m['id'],'coupler_opening_and_actual_sealed_bar_fault':role=='emc','ac_contact_and_three_actual_faults':True,'ep_missing_and_wrong_station_faults':role=='ep','front_centroid_samples':len(ids),'glass_solids_tested':len(tested),'buried_200mm_rejected':True,'floating_200mm_rejected':True})
 (root/'glass-verification.json').write_text(json.dumps({'status':'VERIFIED','models':rows,'limits':'Centroid rays on outward side and cab/end glass faces, and actual connected glass solid displacement; no exhaustive surface or engineering collision proof.'},indent=2)+'\n')
 print('VERIFIED',len(rows),'units: visible supported glass and connected-solid displacement faults')
