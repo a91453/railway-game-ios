@@ -20,7 +20,13 @@ final class StoryCardUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = orientation
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-test-world", "story", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // The card stays two minutes, not 14 s: the Simulator's main thread
+        // stands still up to 11 s at a time in this world, and the looks
+        // below then outlasted the card (main 6ebf8c7's full lane, run
+        // 41353036789: gone mid-settle). What is checked is where it stands
+        // and that it gives way to the building tools, not how long it stays.
+        app.launchArguments = ["-ui-testing", "-ui-test-world", "story", "-story-card-ms", "120000",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game opens")

@@ -96,8 +96,8 @@ permissions:
 #   request at once. Push a change when it is ready, not piece by piece.
 # - Merge in batches of 3 to 5 green pull requests, then wait for this
 #   workflow to turn green on main before the next batch. Keep at most 2
-#   pull requests that change GameCore running CI at once (a full tier is 22
-#   jobs of the account's 40).
+#   pull requests that change GameCore running CI at once (a full tier is 17
+#   jobs of the account's 40 since decision 544's continuation).
 concurrency:
   group: ${{ github.event_name == 'push' && 'ci-main' || format('ci-{0}', github.event_name == 'pull_request' && github.ref || github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -247,11 +247,10 @@ jobs:
     needs: [changes, swift-build]
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-24.04
-    # A shard has about 680 to 760 s of tests on a fast runner; the same
-    # classes take up to 1.7 times as long on a slow one (campaigns-13: 11m18s
-    # in one full-tier run, 19m18s in the next), which reaches the old 20
-    # minutes. 30 still stops a test that is really stuck (decision 540). The
-    # build job has 30 too since decision 544.
+    # A shard has about 290 s of tests since decision 544 (-O) and its
+    # continuation (13 campaign shards); the same classes take up to 1.7
+    # times as long on a slow runner. 30 minutes (decision 540) only stops a
+    # test that is really stuck. The build job has 30 too since decision 544.
     timeout-minutes: 30
     container: swift:6.4-noble
     strategy:

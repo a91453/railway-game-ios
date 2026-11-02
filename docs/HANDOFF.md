@@ -338,7 +338,7 @@
 - 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
-- 同時最多 2 個要跑完整 tier（23 個 job：決策 405 的 21 個、決策 411 續篇的 build job 與決策 495 的 campaigns-19）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
+- 同時最多 2 個要跑完整 tier（17 個 job：決策 544 續把測試片從 20 減到 14，加上 Changes、決策 411 續篇的 build job 與 gate）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
 - session 問能不能推：當下在跑的完整 tier 不到 2 個就答可以。
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
@@ -454,6 +454,46 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 42 任交給第 43 任（2026-11-02 約 03:15 UTC，session_01YGNNum8LvQvgmgwxKHRvQ7，第 4 層，壓縮 2 次）**：第 43 任由第 42 任用 `create_session` 開，是第 5 層（opus 5.5）。
+
+- **105.1 已發**（run 105，`1722509`，作者先發），full ci 與 full lane 都綠，記在 PLAYER_FEEDBACK。之後合了：
+  - #1694 CIOPT-4：決策 544，Linux 上 GameCore 用 -O，完整 tier 從 24.2 分降到 17.7 分。
+  - #1695 CURVE2D：決策 538「續」。
+  - #1699 REVIEW-L5：審了 #1666–#1695，只改文件，沒有 P1／P2，有 7 個 P3。
+    - L5-1 交給 CIWEIGHT。
+    - L5-3、L5-4、L5-7 交給 LABELFIX。
+    - L5-2、L5-5、L5-6 只記錄。
+    - 下一輪審查從 #1696 看起。
+- **105.1 玩家回報**：iPad 第 9 代在 101.1 新增路線車站時閃退，和 CRASH101 同一型，已修在 #1656。請玩家更新到 105.1；同型清查交給 CRASHSWEEP。
+- **在做的 session**：接手後各送一則「改回報給第 43 任 <session>」。
+
+  | session | 工作 | PR | 合的條件 |
+  | --- | --- | --- | --- |
+  | WENHUBISECT session_01YGNNuoMs4r88NXSnHKf5Lu | 文湖線死結，決策 543。原因是 #1668 的 `following: true` 連坡道把手也縮放，修正只動 GamePresentation | #1696 | 51 小時量測（文湖、淡海綠山、安坑、三鶯，main 對修正）；一句話說 105.1 玩家會不會碰到安坑節點 6（決定要不要出 105.2）；文湖線重新開賣的五方。L4-1 已確認是不同原因 |
+  | FLANE5 session_01YGNNuoP3GPQUr2Re5tXEjv | full lane 三支 UI 測試修穩 | #1693 | only_testing 兩輪綠、轉 ready |
+  | LOOP-3 session_01YGNNupLv3dQQgQdCsuUghb | 接手 LOOP-2 的 #1698（決策 542，GameCore，分支 `claude/loop-2-live-overtake`） | #1698 | CI 綠；REV1698 的 P1 修完；查清高鐵「五站」組變差（丟班 36→39、最晚 212→359 分）和台鐵丟班變多（41→44） |
+  | REV1698 session_01YGNNuq6NxikbXRuVRtvTeZ | #1698 獨立審查 | — | 報告轉給 LOOP-3 |
+  | L4FIX session_01YGNNukwKePUQsGwMTzJ4nB | L4-1：號誌關時，停站列車越過渡線停到對向月台（#1601 退步，`RunSpacing.swift` `freePlatformPath`），GameCore | 未開 | 回歸測試修前紅、修後綠 |
+  | CIWEIGHT session_01YGNNuoKedEApQtVTHLoo6o | -O 之後重算分片權重（完整 tier 23→17 job），加上 L5-1 | #1697 | 完整 tier 綠 |
+  | OPEN3D session_01YGNNunVxxTjzneuBjw86MX | 3D 不等列車模型包就開（模型雜湊不變） | 未開 | 截圖、雜湊相同 |
+  | MISSRUN session_01YGNNunWH4Ac5y58XXAqvt1 | 可買的線少發的班次（安坑 4/182、淡海 6/152、高鐵 1/191） | 未開 | — |
+  | CRASHSWEEP session_01YGNNuqBiBoZ7aZwjVL5ybQ | 非同步算圖閃退的同型清查（`ViewThatFits` 裡的 `ForEach`） | 未開 | 第二級截圖 |
+  | LABELFIX session_01YGNNuocthhKPw48aa8rW6z（sonnet） | L5-3、L5-4、L5-7（站名避讓框） | 未開 | 依 PR 的截圖級別 |
+  | RINGBOARD session_01YGNNuowX8LSdfrRsdCSvDD | L4-2：`DepartureBoard.runRows`、`TrainDiagram.runTrips` 改用 `line.calls(of: run)`，環狀線跨接縫不閃退；KLRT 之前要合 | 未開 | Linux 回歸測試修前紅 |
+
+- **不是我們派的**：#1700（桃園機場捷運 studies，codex 分支，draft）由作者的另一個工具在做，不改營運。作者轉 ready、CI 綠後照一般規則看。截圖屬第三級（新模型），要規劃看過總覽圖。
+- **GameCore 名額**：#1698、L4FIX、#1697（完整 tier）同時最多 2 個在跑 CI。
+- **之後要派的**：
+  - ZSWITCH：#1698 合了再派。
+  - KLRT：等作者下載 data.kcg.gov.tw，而且 RINGBOARD 要先合。
+  - BUILD3D 3b／4、STALL97：等作者。
+  - 車擋前的車比軌道長：決策 538「下一步（續）」。
+  - 固定三件事（§1.1）的下一輪：審查從 #1696 開始；CI 看 #1697 之後 build 成了瓶頸，決策 544「續」寫了方案 A，`.build` 快取；除錯看 MISSRUN 的結果。
+- **106 的說明**：玩家看得到的 PR 合了，就補 WhatsNew 最前面那則與 `.github/testflight-whats-new.md`。目前有 #1695 2D 彎道車廂。
+- **號碼**：決策 542（#1698）、543（#1696）已留，544 已用，下一個 545。存檔下一個 81，golden schema 下一個 77。取號前先查 #1579。
+- **排程**：第 42 任的巡查已刪；第 43 任自己排。
+- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 留給作者刪。
 
 **第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
 
@@ -2714,7 +2754,7 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 | 高雄環狀輕軌收購與環線照時刻表跑：計畫寫在[決策 535](decisions/535.md)的「下一步」：PR 1 LOOPRUN 動 GameCore，存檔與 golden schema 各升一版，等 PLANDAY-2 合併後開工；PR 2 收購輕軌，要先有作者下載的輕軌各站運量；PR 3 橘線加大寮機廠；PR 4 紅線加南、北機廠 | 作者 2026-11-01「要排高雄輕軌收購嗎」，派工單 LOOPLRT；PR 1 派工單 LOOPRUN（session_01YGNNuomimDKTog34anyzJv，`claude/looprun-ring-runs`，存檔 80、golden schema 76） | **PR 1 做了，待合併**（#1676，[決策 535「續」](decisions/535.md)；LOOPRUN 在 CI 跑完前第 2 次壓縮停下，LOOPRUN-2（session_01YGNNunSdYHQKfpVxCxmY1U）接手修了審查 REV1676 的 P2，P3 寫在決策 535「續」的「下一步」）。PR 1 留下的：(1) 路線與派車的 campaign（`LineDispatchPropertyTests`、`BoardingPropertyTests` 等）還不產生班次，要抽環線班次得先讓 campaign 會產生班次；(2) 環線上每個方向的組數要比閉塞區間少的檢查放在 PR 2 的收購工具（第 4 點）；(3) 某一側月台根本開不到時，環線的車照決策 535「續」的規則掉頭開（不再來回空跑），真實的線用不到。PR 2 以後照「下一步」 |
 | 安坑輕軌加真實的安坑機廠（照三鶯的 `RealLineDepotSite.sanxia`、淡海的 `.danhai` 做）。**位置**（OSM，ODbL，`tools/rail-depots/depot_site.py` 量）：新北捷運安坑機廠是 landuse way 724086719，約在 (24.9433, 121.4873)，就在雙城站（24.946321, 121.489645，`ntalrt:K` 的第 0 站）南邊、線的盡頭之後。兩條正線過了雙城還往南延伸到約 (24.9430, 121.4872)；渡線是 way 1137757771／72（約 24.9455, 121.489）和 1137758430／31（約 24.944, 121.488）；場內股道是 way 1140796064–1140796091 和 1270807262，側線 525679928、724086715 從 (24.9456, 121.4863) 到 (24.9431, 121.4868)。junction 與 yard 兩端照 `depot_site.py` 從這些 way 量。**接法**：`beyond: "雙城"`、`compact: true`（輕軌，同淡海），加進 `RealLineDepotSite.site(of:)`。**股道數**：7，照時刻表的 7 組車（`metro_runs.json` 的 `ntalrt:K`），晚上全部回廠。**工具**：`extract_metro_runs.py` 的 `DEPOT_ENDS` 加 `"ntalrt:K": "雙城"`，過夜檢查要每組車都回廠。現在雙城放不下的 2 組停在台北小城、玫瑰中國城，靠 `extract_branch_runs.beyond` 從遠端開進去；有了機廠，這些回送和中間站過夜應該都會消失，重跑後確認 `AnkengLineTests` 第一個測試仍成立或改寫。**驗收**：一般與寫實規則各跑兩天，所有班次發出、死結 0（`AnkengLineTests.testTheAnkengLRTIsBoughtAndRunsTwoRealDays` 改成連機廠一起買），數字寫進決策 535「續」，`tools/rail-depots/README.md` 補安坑。只動 GamePresentation 與 tools，不動 GameCore、存檔、golden。**要和 WENHU 錯開**：WENHU（#1666，`claude/wenhu-acquisition`）把 `DEPOT_ENDS` 改成 tuple、加 `depot_tracks` 參數，也改 `RealLineDepotSite` 的機廠區段、`urbanLines`、`trainType`、`cars`；它的資料等 GameCore 決策 537。等 #1666 合併後再在它的結構上加安坑，或先跟 WENHU 用 send_message 說好誰改哪幾行 | 遊戲規劃第 40 任追加給 ANKENG（2026-11-01）；ANKENG 壓縮 1 次後照規定不接，查好位置後交接 | **派工單 ANKENGDEPOT 做了**（session_01YGNNukqVtoWmeBfzAmC3o4，`claude/ankeng-depot`，[決策 535「續」](decisions/535.md) 最後一段）：入出庫線改從第二組渡線轉進機廠（遊戲的線不會折回頭），7 股，晚上 6 組在機廠、1 組在十四張；兩種規則逐分兩天全發、死結 0；價格 NT$ 26,491,424。剩下：真實那一圈從北端進場的走法（要能折回的入出庫線） |
 | CI 的 `CLASS_WEIGHTS`（`.github/scripts/swift-shards.sh`）過時，PR 那一層的 GamePresentation 第七部分貼著 20 分鐘上限：`DanhaiDepotTests` 實際約 110 秒（#1668 run 41300975020 的 selected-7 105 秒、ACQSTOCK run 41300823555 111 秒、WENHU run 41298713161 111 秒），表上寫 11；`DemoSightsAndTransfersTests` 約 87–151 秒，表上沒有（算 1 秒）；`HighSpeedDemoBatchTests` 約 133 秒，表上 95；`AnkengLineTests` 約 76 秒，表上沒有。那幾個 PR 的第七部分都約 1,060 秒的測試，#1668 第一次就撞到上限被取消，重跑才過。改權重會讓該 PR 跑全部 shard（動到 CI 腳本），所以單獨開一個小 PR，順便看要不要把 `PRESENTATION_PARTS` 從 7 加到 8 | ANKENG（2026-11-01，#1668 的 CI） | **已做**（CIWEIGHT，`ciweight-refresh`）：DanhaiDepot 110、DemoSightsAndTransfers 150、HighSpeedDemoBatch 135、AnkengLine 76，另 Map3DBuses 89、Map3DStreetLife 58、NightSkip 66、PassengerCheckOnce 74；`PRESENTATION_PARTS` 7→8（每份約 825 秒權重） |
-| CI 測試加速（[決策 544](decisions/544.md)）的後續：Linux 上 GameCore 與 GameCoreTests 用 -O 後，完整 tier 24.2 → 17.7 分，但分片權重（`CLASS_WEIGHTS`）是 debug 的秒數，rest 8.5 分最慢、campaigns-9／-12 只 2.5 分；GamePresentation PR tier 的改後時間還沒實測 | CIOPT-4（session_01YGNNum7L9Kr67QKSyFJN5D，#1694） | 沒派；做法在決策 544「下一步」：用 run 41370019390 的類別秒數重算權重、考慮 20 片減到約 10 片 |
+| CI 測試加速（[決策 544](decisions/544.md)）的後續：Linux 上 GameCore 與 GameCoreTests 用 -O 後，完整 tier 24.2 → 17.7 分，但分片權重（`CLASS_WEIGHTS`）是 debug 的秒數，rest 8.5 分最慢、campaigns-9／-12 只 2.5 分；GamePresentation PR tier 的改後時間還沒實測 | CIOPT-4（session_01YGNNum7L9Kr67QKSyFJN5D，#1694） | **已做**（CIWEIGHT，`claude/ci-weights-o`，決策 544「續」）：權重照三個 -O 完整 tier 重算，20 片減到 14 片（13 campaign＋rest），每批 100,000 字。還沒做：build 快取（決策 544「續」方案 A）、L5-1 計時測試的寬限、警告線與看門狗照 30 分逾時調整、GP tier 實測（決策 544「續的下一步」） |
 | 輕軌收購（決策 400 10j-2）剩下的：(1) 安坑輕軌：**派工單 ANKENG 做了**（[決策 535「續」](decisions/535.md)，`claude/ankeng-lrt`）：急彎上鋪不下，是因為第二條正線的曲線把手和第一條一樣長；06:12 停住，是因為工具把夜間回送從雙城開到台北小城，車停在第二條正線上擋住早班車。兩個都修好，開放收購（`AnkengLineTests`）。(2) 淡海綠山線：**派工單 DHG 做了**（[決策 489](decisions/489.md)，`claude/danhai-green-depot`）：收購時一起蓋崁頂後面真實的淡海機廠，9 組晚上回廠，單買、先綠山再藍海都開放（`DanhaiDepotTests`，兩天一般與寫實規則全部發出、死結 0）。#1510 已合併。**先藍海線、再綠山線**：派工單 BLG 做了（[決策 493](decisions/493.md)，`claude/danhai-blue-then-green`）：綠山線在藍海線之後照整條（紅樹林起）連同淡海機廠收購，紅樹林到濱海沙崙鋪在藍海線旁 30 m，共用的 9 站月台併進藍海線的站；兩天一般與寫實規則見決策 493 的表。兩條線真的共用軌道（真實的樣子）還沒做，要另一套鋪法。 (3) 轉乘站併站（450 m 內同名車站）程式在、沒有測試。(4) $800 萬的價格目標：10j-3 定了輕軌每位旅客 $70，淡水開局的藍海線 $796 萬 | session_011Aw4FB9UV6Nx5P2kPZUH2E（10j-2，壓縮兩次後停下） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-2 |
 | 捷運收購（決策 400 10j-3）剩下的：(1) 三鶯線（`sanying:LB`）：**派工單 BY 做了**（`claude/sanying-line`，10/31 後合）：停住的原因是工具把 4 組車晚上送到中間站時停在反方向的正線上，擋住當晚最後幾班；工具改了（`extract_branch_runs.facing`），開放收購，兩天的真實班次一般、寫實規則都全部發出。還剩**號誌的效能**：白天一個遊戲小時約 10 s（debug，藍海線 0.6 s），51 小時一般規則 365 s、寫實 229–243 s，CI 因此把它拆成兩個測試類別（`SanyingLineSimpleDayTests`、`SanyingLineRealisticDayTests`）。gdb 取樣：約四成在被擋住的車估等多久（`secondsUntilARouteFrees` → `reservingDeparture` → `alternativeRoute` → `networkPath`／`TrainRoute.shortest`），其餘在 `trafficPlan`、`planTrafficOvertakes`、`moveTrains`；把 `runTrip` 記住沒有用（量過）。2026-10-29 派工單 SY（作者 94 實機「收購完會卡住」）：地圖的卡車泡泡改在背景 tick 算（`SanyingLineFreezeTests`），主執行緒不再每個 tick 搜死結；早上 6 點起的死結：國華、長壽山、永吉公園晚上各停 1 列在正線上（那幾站沒有側線），直通車開到就被擋，平日 06:32–06:54 的回送開走才解開（週末沒有這幾班回送）。作者要真實的機廠：[決策 479](decisions/479.md)（`claude/sanying-depot`）收購時一起蓋三峽機廠，這 4 列晚上回廠，死結沒了（`SanyingDepotTests`；實機 UNVERIFIED）。要做是 GameCore、要逐位元不變的另一件，沒派。(2) 其他捷運線的終點站要 6–25 條過夜軌道（數字在 `tools/real-timetables/README.md`），要 GameCore 的停車場或回送機廠，和淡海綠山線同一件；中和新蘆線的共用主線也在它之後。(3) 臺中、高雄的實景開局沒有一條線在 $800 萬以內（地圖框裡沒有可收購的線；臺北、新北、桃園有） | session_012tPPoF95rAooSb1w8yot6q（10j-3） | 沒派；數字與原因在 [決策 400](decisions/400.md)「量到的」10j-3 |
 | 路網分析（決策 416）剩下的：GameCore 只記每站開局以來的滿站走掉、等到停駛走掉與被滿車留下，沒有每天、也沒有分到站對，所以「流失」只列汽機車與票價；沒有路線連的站對沒有 GameCore 的需求數字，用分配規則估；沒有車站的聚落沒列進來；等不到車固定 30 分；沒有 UI 測試；路線面板標題列在手機橫放時擠不擠要實機看 | session_01695GDiVgssy47EmyircfE4（§22.2 第 22 名） | 沒派；做法在 [決策 416](decisions/416.md)「下一步」 |
@@ -3052,7 +3092,7 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 - 問題回報的卡住紀錄（決策 418）：實機玩到卡一下（或從背景回來被重開），隔天按「回報問題」，訊息最後有沒有「這台裝置記下的卡住與結束」一段；照決策 418「怎麼讀」用那個 build 的 dSYM 換一層 `RailwayGame` 的位址，看換不換得出函式名。沒有那段就查 MetricKit 是否要「與 App 開發者分享」打開。
 - 畫面節奏紀錄（決策 421 V1）：TestFlight 新版裝上後，先在 2D 地圖玩一兩分鐘（切幾次速度），再開 3D 環繞、跟車各一分鐘，回 2D 後按「回報問題」，看訊息最後有沒有「這台裝置最近的畫面節奏」一段：要有 3D（「3D 上螢幕間隔」，有沒上螢幕的格數、CPU／GPU、三角形）與 2D（標明「2D 節拍…不是上螢幕的時間」）兩種，各有中位數、p95、p99、三段停頓次數、嚴重停頓與最長停頓。玩到明顯卡一下的話，看最長停頓有沒有對到那一下、2D 那段有沒有寫是哪一部分。記憶體一行在實機要有 MB 數（模擬器沒有「最少剩」）。讀法見決策 421。
 - 畫面節奏測試（決策 421 V2）：TestFlight 版的設定裡連點「版本」五下，演示模式下面多一列「畫面節奏測試」，列出台北 1／5／10／20 線 × 2D 平移縮放、3D 環繞、3D 跟車共 12 項。每一項跑三次，每次之前先把 App 從多工畫面滑掉（冷啟動），再進設定按那一項：它開新遊戲、鋪線（20 線要等一兩分鐘）、等 5 秒、自己動一分鐘，期間不要碰螢幕，最後上方的卡片寫 p95 與嚴重停頓次數。三次跑完，清單上那項寫「3／3 次」，p95 差超過 20% 或嚴重停頓次數不同的標「不穩定」（橘字），那項要重跑或注意當時有沒有發燙。全部跑完按「複製結果」貼回來，或直接「回報問題」（結果附在訊息最後）。要確認的：3D 環繞時鏡頭真的繞著台北轉、跟車時真的跟著一列車、2D 時地圖左右上下畫 8 字並縮放；結果一行有沒有寫裝置型號；模擬器跑的要有「只當 CPU 端的參考」。
-- 放空模式（決策 414）：選單最後一列「放空模式」找不找得到；放空時 3D 與 2D 切換有沒有閃白或卡頓；碰一下回來時按鈕是不是都回來、暫停狀態和打開前一樣；「減少動態效果」打開時只在 2D；開著 VoiceOver 放空時，左右滑還讀不讀得到收起的按鈕（UI 測試在放空時仍找得到 `hud.menu`，只是碰不到：`ambientHidden` 只設透明與不接觸，若 VoiceOver 也讀得到，要再想不改變 view 身分的隱藏法）。
+- 放空模式（決策 414）：選單最後一列「放空模式」找不找得到；放空時 3D 與 2D 切換有沒有閃白或卡頓；碰一下回來時按鈕是不是都回來、暫停狀態和打開前一樣；「減少動態效果」打開時只在 2D；開著 VoiceOver 放空時，左右滑還讀不讀得到收起的按鈕（UI 測試在放空時仍找得到 `hud.menu`，只是碰不到：`ambientHidden` 只設透明與不接觸，若 VoiceOver 也讀得到，要再想不改變 view 身分的隱藏法）。**在 3D 鏡頭時碰一下回來**，選單鈕要馬上按得到：main 6ebf8c7 的 full lane（run 41353036789）在 Simulator 上從 3D 鏡頭碰回來後，錄影裡按鈕都回來了，`hud.menu` 卻 10 秒都不是 hittable；FLANE5 在 2D 也看到一樣的情形（run 41371388190、41376494125：按鈕都回來了，XCTest 15 秒內仍說 `hud.menu` 每一份都不是 hittable），原因沒查出來；測試改成手指碰 Menu 的位置，確認選單打得開、放空模式再開得起來，這樣玩家碰得到才算過。UI 測試 `testTheIdleModePutsTheControlsAwayUntilATap` 關掉 3D 只走 2D（導演的第一個鏡頭是 2D 還是 3D 看時鐘的種子；3D 鏡頭時 Simulator 30–50 秒不回 UI 查詢），所以 3D 這條只剩實機看。
 - 2D／3D 交接（決策 313）：「拉近自動變 3D」預設開，放手才判斷之後是不是還會誤進 3D。常誤觸就把預設改成關（`Map3DHandoff.pinchOpensKey` 的 `@AppStorage` 預設值，在 `MapView.swift` 與 `SettingsView.swift`），不必重做；也看 3D 左上的「2D」「建設」兩顆鈕找不找得到、會不會擋到景。
 - 3D 開在 2D 看的地方（2026-10-21，決策 313 的「後來」）：高鐵示範從台北按 3D、實景新遊戲按 3D，是不是都開在 2D 看的地方；2D 移到很遠再按 3D，等候是不是只有第一次。
 - 3D 的列車標籤與路線色帶（決策 314）：拉近到 400 m 以內，畫面中間最多三列車頭上的「線號＋載客／定員」標籤大小、位置對不對、跟著車走順不順；軌道旁 0.3 m 的線色細帶看不看得到、會不會閃。標籤太小或太擠就調 `Map3DTrainLabels` 的 `reach`、`most`、`middle`；色帶太細或太粗就調 `Map3DLineBands.width`。

@@ -1470,10 +1470,12 @@ final class MapInteractionTests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused", "-ui-test-3d-models-first",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The demo map opens")
+        app.waitForThreeDModels()
 
         let open3D = app.buttons["map.open3D"]
         XCTAssertTrue(open3D.appears(within: 10))
@@ -1516,10 +1518,11 @@ final class MapInteractionTests: XCTestCase {
         // had no time left to take the pinch (main d657300's full lane:
         // "Timed out while synthesizing event" at the first pinch).
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-                               "-map3D.quality", "saving"]
+                               "-map3D.quality", "saving", "-ui-test-3d-models-first"]
         app.launch()
         defer { app.terminate() }
         app.openDemo("demo.simple")
+        app.waitForThreeDModels()
         let open3D = app.buttons["map.open3D"]
         XCTAssertTrue(open3D.appears(within: 10))
         XCTAssertTrue(open3D.becomesHittable(within: 10))

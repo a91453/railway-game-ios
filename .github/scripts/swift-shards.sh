@@ -32,7 +32,7 @@
 #                                    replaced by a newer push (superseded)
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-19   the long property, differential and mutation
+#   campaigns-1 .. campaigns-13   the long property, differential and mutation
 #                                campaigns, and the golden scenarios, named
 #                                below
 #   rest                         every test that no campaign shard names: the
@@ -640,31 +640,41 @@ set -euo pipefail
 # campaigns-19 (no measurement in that run) is unchanged. Twenty shards
 # cannot hold every shard under 15 minutes on a runner 1.8 times slower: the
 # next step is another shard (decision 495's way).
+# 2026-11-02 (decision 544, continued): with GameCore and GameCoreTests
+# built -O on Linux, the whole package's tests fell from about 14,500 s to
+# 3,500-3,900 s, and every weight above was a debug time: on the full tiers
+# of runs 41370019390, 41374181013 and 41376957404 rest took 8.6, 6.8 and
+# 8.7 minutes, campaigns-9 and -12 as little as 2.5. Each job also spends
+# about 95 s before its tests (container, checkout, download and unpacking
+# of the build, `swift test list`) and about 26 s to start each `swift
+# test` batch. So the shards went from 19 campaigns to 13: every class of
+# 2 s or more (176, the slowest of its three times in those runs, 3,985 s
+# together) was dealt out heaviest first to the lightest shard, about 307 s
+# each, with no other rule (the old rules kept halves of a split campaign
+# apart and pack readers together; with about 300 s a shard neither moves
+# the slowest job by more than half a minute). rest keeps the 551 smaller
+# classes (160 s of tests, more in starts) and anything added later. A job
+# should take about 7 minutes on top of the build, and a full tier is 17
+# jobs.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "ScheduledTrafficPropertyTests RealRailwayTracingTests NetworkServicePropertyTests Map3DTrainLabelsTests Map3DRealTrainsTests LineAccountsTests" ;;
-    campaigns-2) echo "ServicePropertyTests SanyingLineRealisticDayTests DanhaiBlueThenGreenSimpleDayTests WeeklyPunctualityTests ReplayFixtureTests FreightSessionTests" ;;
-    campaigns-3) echo "ServiceRepeatingPropertyTests NewGameSavePropertyTests LineRoutePreferencePropertyTests Map3DStreetLifeTests Map3DModelTests" ;;
-    campaigns-4) echo "Map3DSceneMemoryTests KernelDifferentialTests DeadlockPropertyTests LocalPassTests" ;;
-    campaigns-5) echo "SaveMutationSecondHalfTests Map3DPlatformClearanceTests FrameTimeBenchTests Map3DTrainOcclusionTests Map3DTrainSetTests LoopLineBoardingTests Map3DRealTracksTests BusRouteTests DanhaiGreenLineDayTests" ;;
-    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests CityRequestsTests Map3DTests LineLossDiagnosisTests SanyingDepotTests BusOneWayAndTunnelRealMapTests SanyingLineFreezeTests Map3DSceneryPropsTests DemoRealLinesTests Map3DC341Tests" ;;
-    campaigns-7) echo "SaveMutationTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests Map3DRealGroundTests ReservationShortcutTests PolicyTests RoadsTurnOnTests Map3DEMU800IntegrationTests Map3DFrontageTests BusReadAheadTests LoadTrackCheckIndexTests NetworkPostcardTests" ;;
-    campaigns-8) echo "LineDispatchPropertyTests NewGameBalanceTests DanhaiBlueThenGreenRealisticDayTests DeadlockSearchCostTests RealLineOfferPreparingTests FlexDispatchPropertyTests TownGrowthTests NetworkSectionPropertyTests" ;;
-    campaigns-9) echo "EconomySecondHalfPropertyTests VerticalRailwayPropertyTests SanyingLineSimpleDayTests" ;;
-    campaigns-10) echo "GoldenScenarioTests ScheduledOvertakeTrackLastPropertyTests OnboardingTests WorldStateMachineTests Map3DEMU900IntegrationTests Map3DBusesTests Map3DOpenEveryStartTests Map3DChuKuangIntegrationTests Map3DFarSets420Tests Map3DFarSets422Tests Map3DHighSpeedSetsTests Map3DLightRail496Tests Map3DMetroSets483Tests Map3DPPIntegrationTests Map3DSanying466Tests Map3DScootersTests Map3DShowcaseTests Map3DTEMU2000Tests Map3DTaipeiMetro461Tests Map3DTrainLightsTests Map3DTrainMaterialTests Map3DC371C381Tests Map3DE500Tests RealWorldDemoTests" ;;
-    campaigns-11) echo "LinePatternPropertyTests ScheduledTrafficSecondHalfPropertyTests LongLegReplayTests DemoSightsAndTransfersTests PassengerPropertyTests Map3DBuildingsTests LoadJourneyCacheTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests LineConfirmationTests SparseCityLandTests Map3DStationKitTests LinePanelMemoTests LessonTests DanhaiDepotTests SingleTrackCapacityPropertyTests" ;;
-    campaigns-13) echo "BoardingPropertyTests OccupiedRoutingPropertyTests TurnbackPropertyTests Map3DStreamingTests LineLossFixesTests LiujiaLineTrainsTests ScreenshotSceneTests AnkengLineTests TRADemoTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests CommandLogTests ScheduledTrafficTests IdleTrainDeadlockTests Map3DEMU3000Tests MapMarksTests Map3DC341IntegrationTests Map3DBoxInstanceTests TrafficSpeedTests CityGrowthTests ScheduledOvertakeTrackMiddlePropertyTests" ;;
-    campaigns-15) echo "TrafficFollowingPropertyTests Map3DStreetsTests MetroStructuresTests NewGameCampaignTests PingxiChallengeTests Map3DShadowTests RealWorldExpansionTests ShortTurnCardTests Map3DBuildReturnTests SharedNetworkTests Map3DRealBuildingsTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests ScheduledOvertakeTrackFinalPropertyTests Map3DSurfaceTests NewsSessionTests Map3DPropsTests Map3DNightAndGroundTests DemoAtTests SeededStreetPlanTests Map3DNextDepartureTests TutorialSessionTests Map3DSignTests AutoServiceTests Map3DHandoffTests Map3DDetailTests" ;;
-    campaigns-17) echo "PassengerPlanKeyTests EconomyPropertyTests LessonGuideTests Map3DTaipeiLandmarksTests TrainPackTests Map3DParksTests Map3DSceneKitTests TimetablePropertyTests ScheduledOvertakeTrackPropertyTests NightSkipTests" ;;
-    campaigns-18) echo "HighSpeedDemoTests TRADemoDayTests DemoRealLinesTrackTests AchievementsTests RealWorldDemoRoadsTests TrainNightLightsReadBackTests RealBusesTests PassengerRouteSearchTests StationCommerceCardTests Map3DBusLayerTests PassengerCheckOnceTests TurnbackTests" ;;
-    campaigns-19) echo "RealLineAcquisitionTests DanhaiBothLinesDayTests ContinuousTrackPropertyTests Map3DCoarseChunkTests Map3DTourismEMU500Tests" ;;
+    campaigns-1) echo "Map3DSceneMemoryTests KernelDifferentialTests ScheduledOvertakeTrackLastPropertyTests BusReadAheadTests RoadDrawRealMapTests NightSkipTests RoadsTurnOnTests CityRequestsTests TraceDragCostTests BusRouteTests" ;;
+    campaigns-2) echo "SaveMutationSecondHalfTests Map3DBuildingsTests Map3DSurfaceTests Map3DRealBuildingsTests ScheduledOvertakeTrackMiddlePropertyTests VerticalRailwayPropertyTests OnboardingTests Map3DChuKuangPassengerTests Map3DPPIntegrationTests Map3DStationsTests SingleTrackCapacityPropertyTests PolicyTests PingxiChallengeTests" ;;
+    campaigns-3) echo "Map3DBusesTests DemoRealLinesTrackTests ScheduledTrafficSecondHalfPropertyTests Map3DBoxInstanceTests EconomySecondHalfPropertyTests Map3DPropsTests RealWorldDataLoadTests FlexDispatchPropertyTests Map3DC341Tests LessonGuideTests RealRoadCellsTests RealWorldExpansionTests Map3DTEMU2000Tests CityGrowthTests" ;;
+    campaigns-4) echo "Map3DBusLayerTests NetworkServicePropertyTests TrafficFollowingPropertyTests Map3DRealTracksTests Map3DC341IntegrationTests TRADemoTests Map3DSignTests RealBusesTests NetworkSectionPropertyTests Map3DEMU500Tests RealWorldDemoRoadsTests Map3DRoadBridgeTests CoverageGridTests Map3DLandmarksTests" ;;
+    campaigns-5) echo "Map3DModelTests GoldenScenarioTests Map3DDetailTests SeededStreetPlanTests DemoSightsAndTransfersTests DeadlockPropertyTests Map3DBreezyBlueIntegrationTests Map3DTaichungGreenTests Map3DTaipeiLandmarksTests PassengerRouteSearchTests SanyingLineFreezeTests RealLineOfferPreparingTests Map3DEstateKitTests RealLineStockTests" ;;
+    campaigns-6) echo "RealLineAcquisitionTests Map3DTests DanhaiBlueThenGreenSimpleDayTests Map3DStreetsTests EconomyPropertyTests DanhaiGreenLineDayTests NewGameSavePropertyTests MetroStructuresTests FrameTimeBenchTests Map3DTrainLabelsTests TurnbackTests WeeklyPunctualityTests Map3DLotGroundTests Map3DEMU800Tests" ;;
+    campaigns-7) echo "HighSpeedDemoTests Map3DStreetLifeTests Map3DBuildReturnTests HighSpeedDemoBatchTests Map3DTrainSetTests Map3DNextDepartureTests DanhaiDepotTests Map3DC371C381Tests ScreenshotSceneTests DemoRealLinesTests WorldStateMachineTests ReplayFixtureTests Map3DMeshSimplifierTests TraceOverlapTests" ;;
+    campaigns-8) echo "LineDispatchPropertyTests BoardingPropertyTests ReservationShortcutTests Map3DFrontageTests Map3DSceneryPropsTests ScheduledOvertakeTrackFinalPropertyTests AnkengLineTests LocalPassTests OccupiedRoutingPropertyTests Map3DEMU900IntegrationTests BusRoadsRealMapTests LineAccountsTests LessonTests LoopLineBoardingTests" ;;
+    campaigns-9) echo "SaveMutationTests Map3DPlatformClearanceTests ScheduledTrafficPropertyTests DanhaiBothLinesDayTests SanyingLineRealisticDayTests RealRailwayTracingTests ContinuousTrackPropertyTests DeadlockSearchCostTests LineLossFixesTests NetworkPostcardTests LoadJourneyCacheTests WaterGridTests BusStopLabelsRealMapTests Map3DTrainShapeRefreshTests" ;;
+    campaigns-10) echo "ServiceLinePropertyTests ServiceRepeatingSecondHalfPropertyTests BusOneWayAndTunnelRealMapTests PassengerPlanKeyTests Map3DTEMU1000Tests ScheduledOvertakeTrackPropertyTests TRADemoDayTests CommandLogTests RealWorldDemoTests ScheduledTrafficTests SparseCityLandTests WholeTaiwanTests Map3DFreightTrainTests Map3DKaohsiungLightRailTests" ;;
+    campaigns-11) echo "LiujiaLineTrainsTests Map3DCoarseChunkTests SanyingLineSimpleDayTests Map3DRealTrainsTests Map3DEMU800IntegrationTests TimetablePropertyTests Map3DTourismEMU500Tests Map3DShadowTests Map3DEMU3000Tests Map3DStationKitTests SharedNetworkTests LineRoutePreferencePropertyTests MoneyTextSourceTests" ;;
+    campaigns-12) echo "ServicePropertyTests TrafficControlPropertyTests HighSpeedDemoDayTests Map3DParksTests DanhaiBlueThenGreenRealisticDayTests Map3DRealGroundTests Map3DHandoffTests PassengerPropertyTests RealWorldDemoGroundTests Map3DSceneKitTests Map3DEMU900Tests LandImportTests Map3DTrainMaterialTests OneRowPerGameTests" ;;
+    campaigns-13) echo "ServiceRepeatingPropertyTests LinePatternPropertyTests PassengerCheckOnceTests Map3DTrainOcclusionTests Map3DStreamingTests Map3DChuKuangIntegrationTests Map3DNightAndGroundTests Map3DOpenEveryStartTests IdleTrainDeadlockTests SanyingDepotTests TurnbackPropertyTests TrafficSpeedTests SavedGameTests NewGameBalanceTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""
@@ -716,97 +726,94 @@ selected_pattern() {
 }
 
 # Seconds of tests per class, for dealing a selection out into parts
-# (selected_part). GameCore's: the slowest of each class in the five full
-# runs of main the balance note above names, 2026-10-14. GamePresentation's
-# (from HighSpeedDemoTests on): the slowest of each class in the nine
-# selected-N jobs of pull request runs 39980434405, 39981278980 and
-# 39983144028, 2026-10-23, where TRADemoTests (121 s) and LessonGuideTests
-# (62 s) had no weight and counted as a second each. Every class of 3 s or
-# more, in either module, is listed: a partial tier is not only GamePresentation's
-# classes, as a fixture directory or an edited test file adds GameCore ones
-# (GoldenScenarioTests 333 s, ReservationShortcutTests 154 s), which with the
-# default weight once counted like a class of a second and could load one
-# part with minutes more than the others. Any other class counts
-# CLASS_WEIGHT_DEFAULT (the 272 GamePresentation classes under 3 s took
-# 0.5 s each on average, 2026-10-23). Only the proportions matter: a stale or missing weight moves a
-# class to another part, never out of the selection. Decision 405 raised
-# the weights its five full runs found slower (HighSpeedDemoTests,
-# Map3DSceneMemoryTests, ReservationShortcutTests, GoldenScenarioTests and six more).
-CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
-  ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 TrafficFollowingPropertyTests:434
-  PassengerPlanKeyTests:405 LinePatternPropertyTests:401
-  ServicePropertyTests:398 ServiceRepeatingSecondHalfPropertyTests:395
-  ServiceRepeatingPropertyTests:390 SaveMutationTests:359
-  EconomySecondHalfPropertyTests:350 GoldenScenarioTests:398
-  NetworkServicePropertyTests:289 EconomyPropertyTests:288
-  ScheduledTrafficSecondHalfPropertyTests:268
-  ScheduledTrafficPropertyTests:260 VerticalRailwayPropertyTests:217
-  ScheduledOvertakeTrackFinalPropertyTests:177
-  ScheduledOvertakeTrackMiddlePropertyTests:175 TimetablePropertyTests:168
-  ScheduledOvertakeTrackPropertyTests:165 ContinuousTrackPropertyTests:165
-  KernelDifferentialTests:163 FlexDispatchPropertyTests:161
-  ReservationShortcutTests:227 DeadlockPropertyTests:135
-  PassengerPropertyTests:132 ScheduledOvertakeTrackLastPropertyTests:128
-  OccupiedRoutingPropertyTests:78 WorldStateMachineTests:65
-  NetworkSectionPropertyTests:50 IdleTrainDeadlockTests:48 DeadlockSearchCostTests:66
-  PassengerCheckOnceTests:74 PassengerRouteSearchTests:35
-  ScheduledTrafficTests:46 LineAccountsTests:35 TurnbackPropertyTests:33
-  TurnbackTests:32 ReplayFixtureTests:28 CityRequestsTests:26
-  LoadJourneyCacheTests:25 LineRoutePreferencePropertyTests:24
-  SingleTrackCapacityPropertyTests:24 LoadTrackCheckIndexTests:17
-  CityGrowthTests:13 TrainTripLogTests:12 TownGrowthTests:10
-  ScheduledOvertakeTrackTests:10 PassengerTransferTests:9
-  EconomyAccountsTests:9 CurveSpeedRunTests:8 ReferenceWorldGoldenTests:8
-  LoadFoulingIndexTests:7 LineRoutePreferenceTests:7 RunDepotTests:6
-  SavedGameTests:6 DeadlockTests:6 LineDispatchTests:5 TrafficControlTests:5
-  TrackCheckShortcutTests:4 ContinuousTrackTests:4 BuildingTests:4
-  BlockSectionsTests:4 LandDemandTests:4 HighSpeedTests:4 BoardingTests:3
-  LocalPassTests:59 LongLegReplayTests:16
-  HighSpeedDemoTests:400 HighSpeedDemoDayTests:328 TRADemoTests:121
-  HighSpeedDemoBatchTests:135 NewGameSavePropertyTests:92 TRADemoDayTests:59
-  OnboardingTests:92 CommandLogTests:66 LessonGuideTests:62
-  RealLineAcquisitionTests:290 SanyingLineSimpleDayTests:192 SanyingLineRealisticDayTests:226 DemoRealLinesTrackTests:160 NetworkPostcardTests:64 Map3DSceneMemoryTests:136
-  Map3DPlatformClearanceTests:113
-  NightSkipTests:66 RealWorldDemoTests:51 LineLossFixesTests:71
-  Map3DCoarseChunkTests:31 Map3DStreetLifeTests:58 RealRailwayTracingTests:43
-  DemoRealLinesTests:26 Map3DStreamingTests:25 Map3DStreetsTests:48
-  Map3DOpenEveryStartTests:23 DemoSightsAndTransfersTests:150 AnkengLineTests:76 MonthlyReportTests:19 Map3DSurfaceTests:35
-  Map3DTests:44 RealWorldDataLoadTests:18 LessonTests:17
-  NewGameBalanceTests:17 NewsSessionTests:17 PolicyTests:17
-  RealWorldDemoGroundTests:17 Map3DRealBuildingsTests:37
-  StationCommerceCardTests:14 LineConfirmationTests:13
-  LineLossDiagnosisTests:13 ScreenshotSceneTests:13 DemoAtTests:12
-  MetroStructuresTests:12 AchievementsTests:11 SeededStreetPlanTests:33
-  FreightSessionTests:10 LoopLineBoardingTests:10 Map3DRealGroundTests:24
-  AutoServiceTests:9 Map3DBuildingsTests:17 MapMarksTests:9
-  PingxiChallengeTests:9 Map3DHandoffTests:8 Map3DNextDepartureTests:21
-  Map3DSignTests:16 NewGameCampaignTests:8 SparseCityLandTests:8
-  TrainSessionPropertyTests:8 TutorialSessionTests:8 CompanyRankTests:7
-  LinePanelMemoTests:7 Map3DModelTests:30 Map3DNightAndGroundTests:7
-  Map3DPropsTests:21 Map3DStationKitTests:7 Map3DDetailTests:16
-  Map3DRealTrainsTests:6 Map3DShadowTests:15 RealWorldExpansionTests:6
-  ScreenFactsTests:6 StationDemandSessionTests:6 DepartureBoardTests:5
-  HeadlessGameTests:5 HolidayTextTests:5 NextStepsTests:5 ShortTurnCardTests:5
-  StationOperationsTests:5 BackgroundSaveTests:4 LineSatisfactionTests:4
-  Map3DTaipeiLandmarksTests:4 Map3DTrainLabelsTests:4 MenuChoicesTests:4
-  TrainRosterTests:4 WaterGridTests:4 WebsiteTimelineTests:4
-  WholeTaiwanTests:4 AutosaveSlotsTests:3 DemoWorldTests:3
-  DoubleTrackUpgradeTests:3 GameLauncherTests:3 JourneyTraceTests:3
-  LandImportTests:3 LineDraftSummaryTests:3 Map3DParksTests:3
-  Map3DSceneKitTests:3 Map3DStationsTests:3 SimpleRulesTests:3
-  TodayAccountTests:3 TrafficOverlayTests:3
-  DanhaiBothLinesDayTests:300 DanhaiGreenLineDayTests:185
-  LiujiaLineTrainsTests:108 Map3DBusLayerTests:36 DanhaiDepotTests:110
-  FrameTimeBenchTests:22 RealWorldDemoRoadsTests:12 Map3DSceneryPropsTests:26
-  Map3DTrainOcclusionTests:13 SanyingLineFreezeTests:17 SanyingDepotTests:42
-  Map3DTrainSetTests:17 BusReadAheadTests:12 RealBusesTests:11
-  Map3DBusesTests:89 SharedNetworkTests:47 Map3DFrontageTests:13
-  Map3DEMU800IntegrationTests:16 RoadsTurnOnTests:14
-  BusOneWayAndTunnelRealMapTests:12 Map3DC341IntegrationTests:10
-  DanhaiBlueThenGreenSimpleDayTests:410 DanhaiBlueThenGreenRealisticDayTests:410
-  Map3DBuildReturnTests:24 Map3DTourismEMU500Tests:12 Map3DRealTracksTests:10
-  Map3DC341Tests:9 RealLineOfferPreparingTests:9"
+# (selected_part): every class that took 2 s or more, the slowest of its
+# three times in the full-tier runs 41370019390, 41374181013 and
+# 41376957404 (2026-11-02, the first with GameCore and GameCoreTests built
+# -O, decision 544 continued),
+# rounded; heaviest first. A partial tier is not only GamePresentation's
+# classes, as a fixture directory or an edited test file adds GameCore
+# ones, so both modules are listed. Any other class counts
+# CLASS_WEIGHT_DEFAULT (the 551 classes under 2 s took 0.3 s each on
+# average). Only the proportions matter: a stale or missing weight moves a
+# class to another part, never out of the selection. The debug weights
+# before (decisions 404, 405 and the 2026-10-23 measurement) are in this
+# file's history.
+CLASS_WEIGHTS="Map3DSceneMemoryTests:226 SaveMutationSecondHalfTests:111
+  Map3DBusesTests:91 Map3DBusLayerTests:84 Map3DModelTests:82
+  RealLineAcquisitionTests:80 HighSpeedDemoTests:78
+  LineDispatchPropertyTests:78 SaveMutationTests:74
+  ServiceLinePropertyTests:74 LiujiaLineTrainsTests:70
+  ServicePropertyTests:70 ServiceRepeatingPropertyTests:66
+  LinePatternPropertyTests:62 Map3DCoarseChunkTests:62
+  TrafficControlPropertyTests:62 ServiceRepeatingSecondHalfPropertyTests:61
+  Map3DPlatformClearanceTests:59 BoardingPropertyTests:56
+  Map3DStreetLifeTests:50 Map3DTests:46 GoldenScenarioTests:44
+  NetworkServicePropertyTests:42 DemoRealLinesTrackTests:41
+  Map3DBuildingsTests:40 DanhaiBlueThenGreenSimpleDayTests:40
+  Map3DDetailTests:40 TrafficFollowingPropertyTests:40
+  Map3DBuildReturnTests:39 PassengerCheckOnceTests:37
+  HighSpeedDemoDayTests:37 SanyingLineSimpleDayTests:37
+  ScheduledTrafficSecondHalfPropertyTests:36 ReservationShortcutTests:36
+  ScheduledTrafficPropertyTests:36 BusOneWayAndTunnelRealMapTests:36
+  Map3DSurfaceTests:36 Map3DStreetsTests:36 Map3DTrainOcclusionTests:35
+  SeededStreetPlanTests:34 Map3DRealTracksTests:34 HighSpeedDemoBatchTests:33
+  Map3DBoxInstanceTests:33 Map3DParksTests:32 Map3DRealTrainsTests:32
+  DanhaiBothLinesDayTests:32 Map3DFrontageTests:32 PassengerPlanKeyTests:32
+  Map3DRealBuildingsTests:32 DemoSightsAndTransfersTests:31
+  Map3DC341IntegrationTests:31 Map3DTrainSetTests:30 Map3DStreamingTests:30
+  DanhaiBlueThenGreenRealisticDayTests:30 Map3DEMU800IntegrationTests:29
+  EconomySecondHalfPropertyTests:29 EconomyPropertyTests:29
+  SanyingLineRealisticDayTests:28 Map3DSceneryPropsTests:26
+  Map3DTEMU1000Tests:26 ScheduledOvertakeTrackMiddlePropertyTests:24
+  KernelDifferentialTests:24 ScheduledOvertakeTrackFinalPropertyTests:23
+  ScheduledOvertakeTrackPropertyTests:22 Map3DPropsTests:22
+  DanhaiGreenLineDayTests:21 TimetablePropertyTests:20
+  Map3DRealGroundTests:20 RealRailwayTracingTests:20
+  Map3DChuKuangIntegrationTests:19 Map3DNextDepartureTests:19 TRADemoTests:19
+  DeadlockPropertyTests:19 VerticalRailwayPropertyTests:18
+  ScheduledOvertakeTrackLastPropertyTests:17 Map3DNightAndGroundTests:17
+  Map3DBreezyBlueIntegrationTests:17 Map3DSignTests:17 DanhaiDepotTests:16
+  ContinuousTrackPropertyTests:15 Map3DHandoffTests:15
+  Map3DTourismEMU500Tests:14 NewGameSavePropertyTests:14 AnkengLineTests:13
+  RealWorldDataLoadTests:13 TRADemoDayTests:13 OnboardingTests:13
+  Map3DShadowTests:12 MetroStructuresTests:12 CommandLogTests:11
+  FlexDispatchPropertyTests:11 LocalPassTests:11 DeadlockSearchCostTests:11
+  Map3DC371C381Tests:11 PassengerPropertyTests:11 BusReadAheadTests:11
+  Map3DOpenEveryStartTests:11 RealBusesTests:11 Map3DTaichungGreenTests:10
+  Map3DChuKuangPassengerTests:10 Map3DC341Tests:10
+  OccupiedRoutingPropertyTests:10 RealWorldDemoTests:9 FrameTimeBenchTests:9
+  Map3DEMU3000Tests:9 LineLossFixesTests:9 ScreenshotSceneTests:9
+  RealWorldDemoGroundTests:8 Map3DTaipeiLandmarksTests:8
+  RoadDrawRealMapTests:8 IdleTrainDeadlockTests:8
+  NetworkSectionPropertyTests:8 Map3DPPIntegrationTests:8
+  Map3DSceneKitTests:8 SanyingDepotTests:8 Map3DEMU500Tests:8
+  Map3DTrainLabelsTests:8 PassengerRouteSearchTests:8 ScheduledTrafficTests:7
+  NightSkipTests:7 DemoRealLinesTests:7 Map3DStationKitTests:7
+  NetworkPostcardTests:7 Map3DEMU900IntegrationTests:7 LessonGuideTests:7
+  Map3DStationsTests:7 WorldStateMachineTests:6 RoadsTurnOnTests:6
+  SharedNetworkTests:6 LoadJourneyCacheTests:5 BusRoadsRealMapTests:5
+  SparseCityLandTests:5 RealWorldDemoRoadsTests:5 RealRoadCellsTests:5
+  TurnbackTests:5 TurnbackPropertyTests:5 SanyingLineFreezeTests:4
+  Map3DEMU900Tests:4 RealLineOfferPreparingTests:4 LandImportTests:4
+  TrafficSpeedTests:4 RealWorldExpansionTests:4 WeeklyPunctualityTests:4
+  LineAccountsTests:4 WaterGridTests:4 WholeTaiwanTests:4
+  Map3DRoadBridgeTests:4 LineRoutePreferencePropertyTests:3
+  SingleTrackCapacityPropertyTests:3 CityRequestsTests:3 ReplayFixtureTests:3
+  Map3DEstateKitTests:3 MoneyTextSourceTests:3 Map3DTrainMaterialTests:3
+  CoverageGridTests:3 PolicyTests:3 TraceDragCostTests:3 LessonTests:3
+  BusStopLabelsRealMapTests:2 Map3DFreightTrainTests:2 Map3DLotGroundTests:2
+  Map3DMeshSimplifierTests:2 Map3DTEMU2000Tests:2 SavedGameTests:2
+  Map3DEMU800Tests:2 Map3DTrainShapeRefreshTests:2
+  Map3DKaohsiungLightRailTests:2 PingxiChallengeTests:2 TraceOverlapTests:2
+  BusRouteTests:2 LoopLineBoardingTests:2 Map3DLandmarksTests:2
+  CityGrowthTests:2 NewGameBalanceTests:2 OneRowPerGameTests:2
+  RealLineStockTests:2 LongLegReplayTests:2 Map3DWorksKitTests:2
+  StationCommerceCardTests:2 DemoAtTests:2 Map3DTaipeiMetro461Tests:2
+  NewsSessionTests:2 TrainSessionPropertyTests:2 Map3DTrenchTests:2
+  RealTRAScheduleTests:2 TrainTripLogTests:2 AchievementsTests:2
+  Map3DSimplifiedCacheTests:2 NewGameCampaignTests:2 LineLossDiagnosisTests:2
+  Map3DBreezyBlueTests:2 Map3DFarSets422Tests:2 MonthlyReportTests:2
+  ScheduledOvertakeTrackTests:2"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
@@ -872,9 +879,11 @@ select_ids() {
 # longer than 128 KiB ("Argument list too long"): `rest` went past it at 1,656
 # tests. So a shard runs one `swift test --filter` per batch, each selecting
 # at most SWIFT_SHARD_BATCH_CHARS characters of test IDs (a class bigger than
-# that is a batch of its own).
+# that is a batch of its own). It was 60,000 until 2026-11-02; each batch
+# costs about 26 s to start, and rest's 4,334 tests (some 350,000
+# characters) took six, so it is 100,000, still 31,000 under the limit.
 batch_classes() {
-  select_ids "$1" "$2" | awk -v limit="${SWIFT_SHARD_BATCH_CHARS:-60000}" '
+  select_ids "$1" "$2" | awk -v limit="${SWIFT_SHARD_BATCH_CHARS:-100000}" '
     {
       split($0, id, "/"); split(id[1], name, ".")
       if (!(name[2] in size)) order[++count] = name[2]

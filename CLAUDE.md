@@ -454,9 +454,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.
 - The account runs at most 40 jobs at once, 5 of them macOS; a full Swift
-  tier is 23 jobs (ARCHITECTURE decision 187; decision 228 added a shard,
-  decisions 404, 405 and 495 one each, decision 411's shared build the build job,
-  `docs/research/CI_INCIDENT_2026-10-12.md`). So:
+  tier is 17 jobs (ARCHITECTURE decision 187; decision 411's shared build
+  added the build job, decision 544's continuation cut the shards from 20
+  to 14; `docs/research/CI_INCIDENT_2026-10-12.md`). So:
   - Never cancel a push run of `main` (`ci.yml`), by hand or from a session:
     its concurrency group already keeps a burst of merges to the run in
     progress and the newest one, and a cancelled run leaves a commit with no

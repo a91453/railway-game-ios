@@ -105,8 +105,22 @@ struct StationMasterCorner: View {
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
-    /// How long a story card stays: a longer line than the advice's.
-    private static let storyTime = Duration.seconds(14)
+    /// How long a story card stays: a longer line than the advice's. A UI
+    /// test can make it longer (`-story-card-ms`, Debug builds only): the
+    /// Simulator's main thread can stand still 6 to 11 s of the 14 in the
+    /// story world, and the test's looks at the card then outlast it
+    /// (main 6ebf8c7's full lane, run 41353036789; 0c6e5ce's had the same
+    /// stalls and passed).
+    private static let storyTime: Duration = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-story-card-ms"), arguments.indices.contains(index + 1),
+           let milliseconds = Int(arguments[index + 1]) {
+            return .milliseconds(milliseconds)
+        }
+        #endif
+        return .seconds(14)
+    }()
     /// The avatar's side.
     static let avatarSize: CGFloat = 44
     /// How tall the avatar stands with the title under it (the title's

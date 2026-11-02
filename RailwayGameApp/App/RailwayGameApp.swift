@@ -57,6 +57,11 @@ struct RailwayGameApp: App {
                 UserDefaults.standard.set(false, forKey: BuildingLayerShortcut.autoShowsKey)
             }
         }
+        // The 3D map's train models made at launch, for a UI test that
+        // opens the 3D map (``Map3DModelsWarmUp``).
+        if DebugLaunch.isSet("-ui-test-3d-models-first") {
+            Map3DModelsWarmUp.shared.start()
+        }
         // And silently: the music and sounds only take the runner's CPU
         // (``GameAudio/init(defaults:plays:)``); no test listens to them.
         let plays = !DebugLaunch.isSet("-ui-testing")
@@ -599,6 +604,7 @@ private struct RootView: View {
                     .accessibilityHidden(true)
             }
         }
+        .overlay(alignment: .topLeading) { Map3DModelsWarmUpMarker() }
         #endif
     }
 }
