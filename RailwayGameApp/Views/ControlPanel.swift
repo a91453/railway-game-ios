@@ -709,40 +709,14 @@ private struct BuildingControls: View {
     private var buildOptions: some View {
         // Three a row, as the zones: five in one row cut a phone's names to
         // "小…" and "漁…".
+        let session = session
+        let cardArtSize = cardArtSize
+        // A sendable closure, not main-actor code (CRASHSWEEP-2): a lazy
+        // grid builds its cells as it lays them out, which SwiftUI's
+        // asynchronous renderer may do off the main thread (CRASH101).
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(PlacedBuildingKind.allCases, id: \.self) { kind in
-                let isActive = session.buildingKind == kind
-                Button {
-                    session.buildingKind = kind
-                } label: {
-                    VStack(spacing: 2) {
-                        // Decision 122, later: the kind's picture over its
-                        // name, as a building card.
-                        Image(kind.cardArt)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: cardArtSize, height: cardArtSize)
-                            .accessibilityHidden(true)
-                        Text(kind.title(in: session.language))
-                            .font(.subheadline.weight(isActive ? .bold : .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                        // Decision 103: what each costs before its land.
-                        if let cost = session.buildingStartingCost(kind) {
-                            Text(verbatim: cost.moneyText)
-                                .font(.caption2)
-                                .monospacedDigit()
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 38)
-                }
-                .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
-                .accessibilityIdentifier("building.kind.\(kind.rawValue)")
-                .accessibilityAddTraits(isActive ? .isSelected : [])
-                // Decision 376: lesson 9's step points at the hotel.
-                .tutorialTarget(kind == .hotel ? .hotelKind : nil)
+            ForEach(PlacedBuildingKind.allCases, id: \.self) { @Sendable kind in
+                BuildingKindButton(session: session, kind: kind, cardArtSize: cardArtSize)
             }
         }
         // Decision 361: the kind's looks, and what a park or a temple does.
@@ -856,31 +830,11 @@ extension BuildingControls {
     @ViewBuilder
     private var zoneOptions: some View {
         let choices: [Zone?] = Zone.allCases.map { $0 } + [nil]
+        let session = session
+        // A sendable closure, as the building kinds' (CRASHSWEEP-2).
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(Array(choices.enumerated()), id: \.offset) { _, zone in
-                let isActive = session.zoningZone == zone
-                Button {
-                    session.zoningZone = zone
-                } label: {
-                    HStack(spacing: 4) {
-                        if let zone {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color(CityMap.zoneColor(zone)))
-                                .frame(width: 10, height: 10)
-                        } else {
-                            Image(systemName: "eraser")
-                                .font(.caption.weight(.semibold))
-                        }
-                        Text(verbatim: zone?.title(in: session.language) ?? session.language.text("Clear", "清除"))
-                            .font(.caption.weight(isActive ? .bold : .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 34)
-                }
-                .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
-                .accessibilityIdentifier("building.zone.\(zone?.rawValue ?? "clear")")
-                .accessibilityAddTraits(isActive ? .isSelected : [])
+            ForEach(Array(choices.enumerated()), id: \.offset) { @Sendable _, zone in
+                ZoneChoiceButton(session: session, zone: zone)
             }
         }
         Label {
@@ -901,6 +855,81 @@ extension BuildingControls {
                 .monospacedDigit()
                 .accessibilityIdentifier("building.cityDemand")
         }
+    }
+}
+
+/// One of ``BuildingControls``' building kinds: its picture, name and
+/// starting cost (decisions 103, 122), chosen with a tap.
+private struct BuildingKindButton: View {
+    let session: GameSession
+    let kind: PlacedBuildingKind
+    let cardArtSize: Double
+
+    var body: some View {
+        let isActive = session.buildingKind == kind
+        Button {
+            session.buildingKind = kind
+        } label: {
+            VStack(spacing: 2) {
+                // Decision 122, later: the kind's picture over its
+                // name, as a building card.
+                Image(kind.cardArt)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: cardArtSize, height: cardArtSize)
+                    .accessibilityHidden(true)
+                Text(kind.title(in: session.language))
+                    .font(.subheadline.weight(isActive ? .bold : .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                // Decision 103: what each costs before its land.
+                if let cost = session.buildingStartingCost(kind) {
+                    Text(verbatim: cost.moneyText)
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 38)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .accessibilityIdentifier("building.kind.\(kind.rawValue)")
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+        // Decision 376: lesson 9's step points at the hotel.
+        .tutorialTarget(kind == .hotel ? .hotelKind : nil)
+    }
+}
+
+/// One of ``BuildingControls``' zones, or clearing them (decision 98).
+private struct ZoneChoiceButton: View {
+    let session: GameSession
+    let zone: Zone?
+
+    var body: some View {
+        let isActive = session.zoningZone == zone
+        Button {
+            session.zoningZone = zone
+        } label: {
+            HStack(spacing: 4) {
+                if let zone {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(CityMap.zoneColor(zone)))
+                        .frame(width: 10, height: 10)
+                } else {
+                    Image(systemName: "eraser")
+                        .font(.caption.weight(.semibold))
+                }
+                Text(verbatim: zone?.title(in: session.language) ?? session.language.text("Clear", "清除"))
+                    .font(.caption.weight(isActive ? .bold : .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity, minHeight: 34)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .accessibilityIdentifier("building.zone.\(zone?.rawValue ?? "clear")")
+        .accessibilityAddTraits(isActive ? .isSelected : [])
     }
 }
 

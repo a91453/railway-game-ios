@@ -128,12 +128,8 @@ struct NetworkFlowSheet: View {
                     .monospacedDigit()
                     .foregroundStyle(Theme.textSecondary)
             }
-            GeometryReader { proxy in
-                Capsule()
-                    .fill(color)
-                    .frame(width: max(4, proxy.size.width * share))
-            }
-            .frame(height: 6)
+            MeterBar(fraction: CGFloat(share), fill: color, minimumWidth: 4)
+                .frame(height: 6)
             .accessibilityHidden(true)
         }
         .contentShape(Rectangle())

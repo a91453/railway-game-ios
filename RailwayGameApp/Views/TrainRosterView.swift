@@ -406,13 +406,13 @@ struct TrainRosterView: View {
                 }
             }
             Spacer(minLength: 0)
-            // How much of the day it ran, as a short upright bar.
-            GeometryReader { bar in
-                ZStack(alignment: .bottom) {
-                    Theme.chip
-                    Theme.primary
-                        .frame(height: bar.size.height * CGFloat(row.utilisation) / 100)
-                }
+            // How much of the day it ran, as a short upright bar. A
+            // sendable closure, not main-actor code (CRASHSWEEP-2): SwiftUI
+            // reads the bar again when the row's height changes, which its
+            // asynchronous renderer may do off the main thread (CRASH101).
+            let utilisation = CGFloat(row.utilisation)
+            GeometryReader { @Sendable bar in
+                TrainRosterUtilisationBar(height: bar.size.height, utilisation: utilisation)
             }
             .frame(width: 4)
             .padding(.vertical, 4)
@@ -742,5 +742,20 @@ struct TrainRosterView: View {
         if let note = row.dispatchText(in: language) { parts.append(note) }
         parts += row.cells.map { $0.spokenText(in: language) }
         return parts.joined(separator: "；")
+    }
+}
+
+/// A roster row's day of running (``TrainRoster/Row/utilisation``, in
+/// percent) as an upright bar `height` points high, filled from the foot.
+private struct TrainRosterUtilisationBar: View {
+    let height: CGFloat
+    let utilisation: CGFloat
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Theme.chip
+            Theme.primary
+                .frame(height: height * utilisation / 100)
+        }
     }
 }

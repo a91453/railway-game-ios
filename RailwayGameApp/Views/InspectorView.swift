@@ -460,13 +460,8 @@ struct TrainCardView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             if let fill {
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Theme.chip)
-                        Capsule().fill(Palette.ink).frame(width: proxy.size.width * fill)
-                    }
-                }
-                .frame(height: 4)
+                MeterBar(fraction: CGFloat(fill), fill: Palette.ink, track: Theme.chip)
+                    .frame(height: 4)
             }
         }
         .padding(.horizontal, 6)

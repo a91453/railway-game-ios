@@ -11,6 +11,7 @@ struct NetworkOverview: View {
     @State private var search = ListSearch()
 
     var body: some View {
+        let session = session
         let world = session.world
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
@@ -44,19 +45,31 @@ struct NetworkOverview: View {
                 if shown.isEmpty {
                     ListSearchEmpty(text: session.language.text("No station matches.", "沒有符合的車站。"))
                 }
+                // A sendable closure, not main-actor code (CRASHSWEEP-2): a
+                // lazy grid builds its cells as it lays them out, which
+                // SwiftUI's asynchronous renderer may do off the main
+                // thread (CRASH101).
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 8)], alignment: .leading, spacing: 8) {
-                    ForEach(shown) { station in
-                        stationButton(station)
+                    ForEach(shown) { @Sendable station in
+                        NetworkStationButton(session: session, station: station)
                     }
                 }
             }
         }
     }
 
-    private func stationButton(_ station: Station) -> some View {
+}
+
+/// One of ``NetworkOverview``'s stations: its name and place, selected
+/// with a tap.
+private struct NetworkStationButton: View {
+    let session: GameSession
+    let station: Station
+
+    var body: some View {
         let isSelected = session.selectedStation?.id == station.id
         let place = station.placeText(in: session.language)
-        return Button {
+        Button {
             session.selectStation(station.id)
         } label: {
             HStack(spacing: 8) {

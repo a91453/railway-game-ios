@@ -153,24 +153,15 @@ struct StationPairDrawer: View {
             Text(verbatim: StationPairComparison.valueText(comparison.from.value(measure)))
                 .font(.caption.weight(.bold).monospacedDigit())
                 .frame(width: 52, alignment: .trailing)
-            GeometryReader { proxy in
-                Capsule()
-                    .fill(Theme.textPrimary)
-                    .frame(width: proxy.size.width * comparison.fraction(measure, of: comparison.from))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-            .frame(height: 9)
+            MeterBar(fraction: CGFloat(comparison.fraction(measure, of: comparison.from)), fill: Theme.textPrimary, trailing: true)
+                .frame(height: 9)
             Text(verbatim: measure.title(in: language))
                 .font(.caption2.weight(.heavy))
                 .frame(width: 58)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            GeometryReader { proxy in
-                Capsule()
-                    .fill(Theme.primary)
-                    .frame(width: proxy.size.width * comparison.fraction(measure, of: comparison.to))
-            }
-            .frame(height: 9)
+            MeterBar(fraction: CGFloat(comparison.fraction(measure, of: comparison.to)), fill: Theme.primary)
+                .frame(height: 9)
             Text(verbatim: StationPairComparison.valueText(comparison.to.value(measure)))
                 .font(.caption.weight(.bold).monospacedDigit())
                 .frame(width: 52, alignment: .leading)
