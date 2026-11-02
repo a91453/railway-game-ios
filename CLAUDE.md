@@ -334,7 +334,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   together.
 - Whenever the package changes, run only the fast checks locally before
   pushing, not the whole suite:
-  `swift build --build-tests -Xswiftc -warnings-as-errors` (keep it clean),
+  `swift build --build-tests -Xswiftc -warnings-as-errors` (keep it clean;
+  on Linux `Package.swift` builds GameCore and GameCoreTests with -O,
+  decision 544),
   then the tests the change touches with
   `swift test --skip-build --filter <Class>`, and the shard of any campaign
   whose code or behaviour it changes with
