@@ -1261,6 +1261,22 @@ struct MapView: View {
         .task(id: RealRailwayYieldKey(world: session.world, hasData: session.railways != nil)) {
             await workOutRealRailwayYield()
         }
+        .task {
+            // Decision 546: the 3D map's train models made ahead, a while
+            // after the game opens, so opening the 3D map does not wait for
+            // them; not with 3D off, nor on a device of little memory
+            // (decision 460), nor under a UI test, whose Simulator they
+            // would keep busy.
+            #if DEBUG
+            let uiTesting = ProcessInfo.processInfo.arguments.contains("-ui-testing")
+            #else
+            let uiTesting = false
+            #endif
+            guard !uiTesting else { return }
+            try? await Task.sleep(for: Map3DTrainModels.aheadAfter)
+            guard !Task.isCancelled, map3DQuality.shows3D, FrameTimeRecorder.memoryTier.keepsSceneBuilt else { return }
+            Map3DTrainModels.shared.start()
+        }
         .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
             FrameCostMeter.shared.measure(.mapTick) { mapWeather = MapWeather(world: session.world) }
         }
@@ -1622,6 +1638,8 @@ struct MapView: View {
             guard !Task.isCancelled, !screen.showsMap3D, map3DQuality.shows3D,
                   let now = camera, Map3DHandoff.buildsAhead(referenceSize: now.referenceSize) else { return }
             Map3DSceneCache.shared.prepare(for: session, focus: (x: now.centerX, y: now.centerY), palette: linePalette)
+            // Decision 546: and its trains' models.
+            Map3DTrainModels.shared.start()
         }
     }
 

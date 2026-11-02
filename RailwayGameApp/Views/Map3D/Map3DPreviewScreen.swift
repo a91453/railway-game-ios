@@ -54,7 +54,7 @@ struct Map3DPreviewScreen: View {
     private var scene: Map3DScene? { built?.scene }
     @State private var sceneVersion = 0
     /// K1-1, K2-4: whether ``Map3DView/models`` is made, off the main
-    /// thread, before the view shows the first scene.
+    /// thread; decision 546: the scene is shown before they are.
     @State private var modelsReady = false
     @State private var stats: Map3DMetalView.Stats?
     @State private var showsDetails = false
@@ -108,10 +108,20 @@ struct Map3DPreviewScreen: View {
                 }
                 .ignoresSafeArea()
             }
-            if built == nil || !modelsReady {
+            if built == nil {
                 ProgressView()
                     .controlSize(.large)
                     .accessibilityIdentifier("map3D.loading")
+            } else if !modelsReady {
+                // Decision 546: the scene up, its trains' models still being
+                // made (boxes meanwhile); nothing drawn, for VoiceOver and a
+                // screenshot test to wait on.
+                Color.clear
+                    .frame(width: 1, height: 1)
+                    .allowsHitTesting(false)
+                    .accessibilityElement()
+                    .accessibilityLabel(Text(verbatim: language.text("Loading trains", "列車載入中")))
+                    .accessibilityIdentifier("map3D.trainsLoading")
             }
             VStack {
                 HStack(alignment: .top) {
@@ -247,8 +257,9 @@ struct Map3DPreviewScreen: View {
         }
         .task {
             // K1-1, K2-4: the train models (and their baked shade), made
-            // once on another thread, as the train showcase makes them.
-            _ = await Task.detached(priority: .userInitiated) { Map3DView.models?.models.count }.value
+            // once on another thread, as the train showcase makes them;
+            // decision 546: often made already, after the game opened.
+            await Map3DTrainModels.shared.make()
             modelsReady = true
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
@@ -405,6 +416,52 @@ struct Map3DPreviewScreen: View {
         .padding(.vertical, 8)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
+}
+
+/// Decision 546: the 3D map's train models (``Map3DView/models``), made
+/// once, off the main thread: ahead, a while after a game opens (when 3D
+/// is on and the device keeps a scene built, decision 460) or when a pinch
+/// rests near the 3D map, or when the 3D map opens, which shows its scene
+/// before them. Always at a low priority (`.utility`; FLANE5's UI test at
+/// `.background`), never raised: they are made on every core at once
+/// (``Map3DModelPack``, ``Map3DTrainOcclusion``), and made at the 3D map's
+/// priority the Simulator's main thread stood still for 61 s (#1693). So
+/// whoever waits for them waits on a continuation, which raises nothing,
+/// not on the task's value, which would raise it to the waiter's priority.
+@MainActor
+final class Map3DTrainModels {
+    static let shared = Map3DTrainModels()
+    private var started = false
+    private var made = false
+    private var waiting: [CheckedContinuation<Void, Never>] = []
+
+    /// Starts making them, unless made or under way.
+    func start(priority: TaskPriority = .utility) {
+        guard !started else { return }
+        started = true
+        Task.detached(priority: priority) {
+            _ = Map3DView.models?.models.count
+            await Map3DTrainModels.shared.finished()
+        }
+    }
+
+    /// Once they are made, starting them if nothing has.
+    func make(priority: TaskPriority = .utility) async {
+        start(priority: priority)
+        guard !made else { return }
+        await withCheckedContinuation { waiting.append($0) }
+    }
+
+    private func finished() {
+        made = true
+        let woken = waiting
+        waiting = []
+        for continuation in woken { continuation.resume() }
+    }
+
+    /// How long after a game opens they are made ahead: past its first
+    /// moves, which the cores are left to.
+    static let aheadAfter: Duration = .seconds(8)
 }
 
 /// Decision 269: the last scene built, kept while the world it shows
@@ -909,11 +966,16 @@ private struct Map3DView: UIViewRepresentable {
                 }
             }
         }
-        guard let scene, modelsReady, context.coordinator.shownVersion != sceneVersion else { return }
-        let first = context.coordinator.shownVersion == nil
-        if first, let models = Self.models {
+        // Decision 546: the scene shown as soon as it is built, its trains
+        // as boxes and its street furniture left out until the models are
+        // made (``Map3DTrainModels``), then drawn with them.
+        if modelsReady, !context.coordinator.hasModels, let models = Self.models {
+            context.coordinator.hasModels = true
             view.useModels(models)
+            if let scene, context.coordinator.shownVersion != nil { showTrains(in: scene, on: view, context: context) }
         }
+        guard let scene, context.coordinator.shownVersion != sceneVersion else { return }
+        let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
         // Decision 358: the chunks built ahead that the scene built anew
         // round the same place does not hold, kept until built again.
@@ -926,18 +988,8 @@ private struct Map3DView: UIViewRepresentable {
             Map3DSceneBuildLog.shared.shown(number, seconds: Double(took.components.seconds) + Double(took.components.attoseconds) * 1e-18)
         }
         context.coordinator.streamer.start(built, kept: kept)
-        // Decision 338: the train pack's sets as before them until it is
-        // unlocked.
-        let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest,
-                                            switchOn: UserDefaults.standard.bool(forKey: TrainPack.testUnlockKey))
-        let pushPullE1000 = UserDefaults.standard.bool(forKey: TrainPack.pushPullE1000Key)
-        let feed = feed, models = Map3DView.models.map { pack in
-            var pack = pack
-            pack.locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: pushPullE1000)
-            return pack
-        }
-        view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed, reach: reach) }
-        let labels = trainLabels, tag = stationTag
+        showTrains(in: scene, on: view, context: context)
+        let feed = feed, labels = trainLabels, tag = stationTag
         view.trainHeads = { heads, camera in
             labels.show(feed.labels(heads: heads, camera: camera))
             tag.place(seenBy: camera)
@@ -962,10 +1014,29 @@ private struct Map3DView: UIViewRepresentable {
         context.coordinator.showHeading()
     }
 
+    /// Draws `scene`'s trains on `view`: with the models once they are
+    /// made (decision 546), boxes before.
+    private func showTrains(in scene: Map3DScene, on view: Map3DMetalView, context: Context) {
+        // Decision 338: the train pack's sets as before them until it is
+        // unlocked.
+        let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest,
+                                            switchOn: UserDefaults.standard.bool(forKey: TrainPack.testUnlockKey))
+        let pushPullE1000 = UserDefaults.standard.bool(forKey: TrainPack.pushPullE1000Key)
+        // Never read before they are made: the main thread would wait for them.
+        let feed = feed, models = context.coordinator.hasModels ? Map3DView.models.map { pack in
+            var pack = pack
+            pack.locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: pushPullE1000)
+            return pack
+        } : nil
+        view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed, reach: reach) }
+    }
+
     @MainActor
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         weak var view: Map3DMetalView?
         var shownVersion: Int?
+        /// Decision 546: whether the view has the train models.
+        var hasModels = false
         /// Decision 358.
         let streamer = Map3DChunkStreamer()
         /// Decision 334: the departure last flown to.
@@ -1719,7 +1790,8 @@ final class Map3DModelsWarmUp {
         guard !started else { return }
         started = true
         Task {
-            _ = await Task.detached(priority: .background) { Map3DView.models?.models.count }.value
+            // Decision 546: the same making as the game's, at background priority.
+            await Map3DTrainModels.shared.make(priority: .background)
             isReady = true
         }
     }

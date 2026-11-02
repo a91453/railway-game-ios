@@ -72,8 +72,12 @@ public enum Map3DTrainOcclusion {
     static func baked(_ models: [Map3DModelPack.Model]) -> [Map3DModelPack.Model] {
         var first: [Key: Int] = [:], unique: [Int] = []
         var slot = [Int](repeating: -1, count: models.count)
-        for (index, model) in models.enumerated() where isTrain(model.name) && !model.vertices.isEmpty {
-            let key = Key(model)
+        // Decision 546: the keys hashed on whichever core is free.
+        let keys = Map3DParallel.map(models.count) { index -> Key? in
+            isTrain(models[index].name) && !models[index].vertices.isEmpty ? Key(models[index]) : nil
+        }
+        for index in models.indices {
+            guard let key = keys[index] else { continue }
             if let known = first[key] {
                 slot[index] = known
             } else {
@@ -90,7 +94,8 @@ public enum Map3DTrainOcclusion {
         DispatchQueue.concurrentPerform(iterations: order.count) { u in
             shared[u] = shades(of: models[order[u]])
         }
-        return models.indices.map { slot[$0] < 0 ? models[$0] : applying(results[slot[$0]], to: models[$0]) }
+        let worked = Array(results), slots = slot
+        return Map3DParallel.map(models.count) { slots[$0] < 0 ? models[$0] : applying(worked[slots[$0]], to: models[$0]) }
     }
 
     /// Model `model` with its shade baked in, or as it was when it is not
