@@ -51,5 +51,11 @@
 	     it and deletes the copy; the game never edits it where it is. -->
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
+	<!-- Export compliance (owner, 2026-11-02): the app uses only the
+	     encryption built into iOS (HTTPS for map tiles, Game Center), which
+	     is exempt, so App Store Connect stops asking for each build. If the
+	     app ever adds its own encryption, change this and answer again. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
