@@ -254,8 +254,8 @@ private struct EMU700Recipe {
         if role == .ep {
             let x:Float = 8.0
             kit.box(x,3.70,0,1.55,1.3,0.10,dark)
-            for z:Float in [-0.48,0.48] {cylinder(x,3.80,z,radius:0.10,height:0.17,color:silver,sides:8)}
-            for z:Float in [-0.35,0.35] {
+            for z:Float in [-0.48,0.48] {cylinder(x,3.80,z,radius:0.10,height:0.17,color:silver,sides:far ? 4 : 8)}
+            for z:Float in (far ? [0] : [-0.35,0.35]) {
                 kit.beam(.init(x+0.55,3.97,z),.init(x-0.8,4.43,z),0.065,dark)
                 kit.beam(.init(x-0.8,4.43,z),.init(x+0.25,4.95,z),0.045,dark)
             }
