@@ -1452,9 +1452,10 @@ private struct Map3DTrainLabelFoot: LayoutValueKey {
 }
 
 /// ``Map3DTrainLabelsView``'s tags, each with the middle of its bottom
-/// edge at its ``Map3DTrainLabelFoot``, as the alignment guides
-/// (`center - x`, `bottom - y`) of a top-leading stack put it. As large as
-/// it is offered.
+/// edge at its ``Map3DTrainLabelFoot``. As large as it is offered. (The
+/// alignment guides it replaced placed the tags only against one another:
+/// the stack shrank to them, so a lone tag sat in the screen's top-left
+/// corner rather than over its train.)
 private struct Map3DTrainLabelsLayout: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()

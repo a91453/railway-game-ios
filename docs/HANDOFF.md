@@ -3326,7 +3326,7 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 
 ### 4.44 非同步算圖閃退清查第三批（CRASHSWEEP-3 續，session_01JMHz9a4LouMp2c5EkX4EPs，#1727、`claude/crashsweep-3-batch2`，2026-11-02）
 
-- **做了的**：`geometryReadersLeft` 從 10 個減到 3 個。#1727：運用表、真實地圖選地、載入畫面改用 `onGeometryChange` 量大小；兩張明信片改 `@Sendable` reader 建 `PostcardCardFit`。第二批：運行圖畫布、3D 車站標籤改 `onGeometryChange`；3D 列車標籤的 `.alignmentGuide` 改成自己的 `Map3DTrainLabelsLayout`（`Layout` 不是 main-actor），`testNoAlignmentGuides` 守著。
+- **做了的**：`geometryReadersLeft` 從 10 個減到 3 個。#1727：運用表、真實地圖選地、載入畫面改用 `onGeometryChange` 量大小；兩張明信片改 `@Sendable` reader 建 `PostcardCardFit`。第二批：運行圖畫布、3D 車站標籤改 `onGeometryChange`；3D 列車標籤的 `.alignmentGuide` 改成自己的 `Map3DTrainLabelsLayout`（`Layout` 不是 main-actor），`testNoAlignmentGuides` 守著。順帶修了一個舊錯：原本的 guide 只把標籤彼此對齊，堆疊縮成標籤那麼大，只有一個標籤時它跑到畫面左上角；現在標籤在列車頭上（`testFreightTrainIn3D` 截圖可見）。
 - **留下的**：
   - `ContentView`、`MapView`、`TutorialOverlay` 三個整頁 `GeometryReader`：closure 讀 proxy 本身（`frame(in: .global)`、`safeAreaInsets`、錨點），又從 session 建整個畫面，換成子 View 或量大小都等於重寫畫面。大小只隨轉向與視窗變，一百多版沒有閃退紀錄；有紀錄再做。
   - `Chart { ForEach }`（9 處，8 個檔案）：沒查到 Charts 何時展開標記的公開資料或同型回報（Apple 論壇 802729 只講 SwiftUI 的 `ForEach`）。Linux 看不到 Charts 的 swiftinterface；要查就在 macOS 讀 `Charts.swiftinterface` 裡 `ForEach: ChartContent` 的 init 是否 `@Sendable`／`@preconcurrency`，或在 iPad 上開圖表動畫跑一次 Thread Sanitizer。查清楚前不改。
