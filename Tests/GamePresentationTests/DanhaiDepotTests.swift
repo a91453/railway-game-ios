@@ -281,8 +281,9 @@ final class DanhaiDepotTests: XCTestCase {
     /// `rules`, then played to three in the morning of the third day,
     /// hour by hour: no train in a deadlock at any hour, none more than
     /// half an hour behind its timetable, and every run of each line's
-    /// second day sent out.
-    static func buyAndRun(_ ids: [String], rules: NewGameRules) throws {
+    /// second day sent out. Without `trafficControl` (decision 547) the
+    /// player has turned it off.
+    static func buyAndRun(_ ids: [String], rules: NewGameRules, trafficControl: Bool = true) throws {
         let session = try RealLineAcquisitionTests.game(round: "ntdlrt:V", side: 1 << 21, heights: true, rules: rules)
         for id in ids {
             let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale after \(ids)")
@@ -291,6 +292,7 @@ final class DanhaiDepotTests: XCTestCase {
             XCTAssertTrue(session.acquireRealLine(offer), "\(id): \(session.message?.text ?? "")")
         }
         var world = session.world
+        if !trafficControl { try world.setTrafficControl(false) }
         let started = Date()
         var deadlocked = 0, late: Int64 = 0
         for _ in 0..<51 {
@@ -298,7 +300,7 @@ final class DanhaiDepotTests: XCTestCase {
             deadlocked = max(deadlocked, world.deadlockedTrains().count)
             late = max(late, world.trains.compactMap { world.lateness(of: $0.id) }.max() ?? 0)
         }
-        let label = "\(ids.joined(separator: " then ")) (\(rules))"
+        let label = "\(ids.joined(separator: " then ")) (\(rules)\(trafficControl ? "" : ", traffic control off"))"
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         var report: [String] = []
         for id in ids {
@@ -326,6 +328,14 @@ final class DanhaiGreenLineDayTests: XCTestCase {
         for rules in [NewGameRules.simple, .realistic] {
             try DanhaiDepotTests.buyAndRun(["ntdlrt:V"], rules: rules)
         }
+    }
+
+    /// Decision 547: with traffic control turned off, the runs out of the
+    /// depot past Kanding for Hongshulin's 00:14 and 00:31 keep off
+    /// Kanding's platform where a train stands for the 00:57 empty run;
+    /// behind it they came fifty minutes late and both runs were dropped.
+    func testTheGreenMountainLineRunsTwoRealDaysWithoutTrafficControl() throws {
+        try DanhaiDepotTests.buyAndRun(["ntdlrt:V"], rules: .simple, trafficControl: false)
     }
 }
 
