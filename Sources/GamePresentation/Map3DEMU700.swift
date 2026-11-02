@@ -145,8 +145,9 @@ private struct EMU700Recipe {
     mutating func frontPanel(_ h:Float,_ w:Float,_ width:Float,_ height:Float,_ color:UInt32) {
         let columns=max(1,Int(ceilf(width/(far ? 0.32 : 0.16)))),rows=max(1,Int(ceilf(height/(far ? 0.24 : 0.12))))
         let offset:Float=color == glass ? 0.026 : 0.010
-        for i in 0..<rows {for j in 0..<columns {
-            let h0=h+height*Float(i)/Float(rows),h1=h+height*Float(i+1)/Float(rows)
+        let cuts=Array(Set((0...rows).map{h+height*Float($0)/Float(rows)} + [Float(1.12),1.6,1.95,2.15,2.4,3.12,3.36,3.70].filter{$0>h && $0<h+height})).sorted()
+        for i in 0..<(cuts.count-1) {for j in 0..<columns {
+            let h0=cuts[i],h1=cuts[i+1]
             let w0=w-width/2+width*Float(j)/Float(columns),w1=w-width/2+width*Float(j+1)/Float(columns)
             let p=[Map3DPoint(noseX(h0,w0)+offset,h0,w0),.init(noseX(h0,w1)+offset,h0,w1),.init(noseX(h1,w1)+offset,h1,w1),.init(noseX(h1,w0)+offset,h1,w0)]
             prism(p,p.map{$0 + .init(0.016,0,0)},color)
