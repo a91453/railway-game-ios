@@ -163,6 +163,20 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (109.1)，2026-11-03
+
+從 `main` `efb9652`（#1735 的合併）建置。TestFlight `testflight.yml` run 41561636787（run 109），作者 01:43 UTC 自己按，02:05 成功（上傳、處理、What to Test 都過）。full lane 還沒跑完就先發（作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (109.1)（#1735）。
+
+**這個 commit 的檢查**：
+- 完整 `ci.yml` run 41556623087（workflow_dispatch，efb9652）：綠，01:19 UTC。
+- full lane run 41556631784（`ios-build.yml` 手動，efb9652）：**紅**，02:17 UTC 跑完（發版之後）。second、lessons、iPad 都綠；build job 的 UI smoke 紅一支：`StartSaveFlowSmokeTests.testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（第 706 行，「Local EMU」按鈕 Activation point invalid）。前一次 `1b3712f` 的 full lane 41530938433 也紅，是另兩支同類（Activation point invalid／鍵盤沒到）：`MapMarkTapUITests.testAnAlertsBubbleTakesATapOnItsMiddle`、`MapInteractionTests.testTheStationTagsPencilRenamesAtOnce`；這次那兩支過了。查原因的派工在 HANDOFF。
+- 108.1 之後進來的：#1723 WENHUCAP（決策 549）、#1725／#1727／#1728 CRASHSWEEP-3、#1731 TOURFIX2（決策 551 續）、#1732 TOURMODEL（決策 554）、#1733 WENHULIST（決策 552）、#1735 說明；文件 #1724、#1726、#1729。
+
+**這版請測試者看**：文湖線收購與木柵機廠；只開早晚的線景點人次；3D 海風號、山嵐號外觀。
+
+**回報**：
+- 作者（iPad，高鐵示範開局，有收購線）：文湖線收購頁顯示「這段軌道會與另一段軌道交叉，但兩者的高度差不到 8 公尺」，買不到。修理派給 WENHUFIX（決策 552 續，110）。
+
 ### 0.5.0 (108.1)，2026-11-02
 
 從 `main` `ef92919`（#1722 的合併）建置。TestFlight `testflight.yml` run 41468139355（run 108），作者 15:05 UTC 自己按，15:34 成功（上傳、App Store Connect 處理、自動填 What to Test 都過；作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (108.1)（#1722）。出口合規：#1721（Info.plist `ITSAppUsesNonExemptEncryption = NO`）起的第一版，App Store Connect 還要作者看一次是不是不再顯示 Missing Compliance。
