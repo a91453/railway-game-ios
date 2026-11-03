@@ -31,6 +31,13 @@ public struct Map3DCamera: Hashable, Sendable {
     /// of ``fieldOfView``: the cab view's wider lens (``Map3DFollow``).
     /// `nil` is ``fieldOfView``.
     public var lens: Float?
+    /// Decision 555: the tilt two fingers dragged up the screen add, in
+    /// radians, beyond ``tilt(atDistance:from:)``'s, at most up to
+    /// ``mostLean`` (``tilt(atDistance:from:lean:)``). It stays when the
+    /// fingers lift, and fades with the distance's own tilt, so a camera
+    /// pulled out past ``flatFrom`` looks straight down as before. 0 (the
+    /// default) is the distance's tilt alone (decisions 269 and 313).
+    public var lean: Float = 0
 
     public static let nearest: Float = 60
     public static let farthest: Float = 12_000
@@ -46,6 +53,13 @@ public struct Map3DCamera: Hashable, Sendable {
     public static let flatFrom: Float = 800
     public static let tiltedFrom: Float = 120
     public static let mostTilt: Float = 42 * .pi / 180
+    /// Decision 555: the most two fingers lean the view over (60°),
+    /// short of where the ground's far edge leaves what the scene draws
+    /// in full and the sun's shadows reach (the horizon shows past 72.5°).
+    public static let mostLean: Float = 60 * .pi / 180
+    /// Decision 555: degrees of tilt a point two fingers drag up the
+    /// screen (MapLibre's `degreesPerPixelMoved`, 0.5).
+    public static let leanPerPoint: Float = 0.5 * .pi / 180
 
     public init(target: Map3DPoint = .zero, distance: Float = 1_200, heading: Float = 0, viewport: (width: Float, height: Float) = (390, 844)) {
         self.target = target
@@ -56,7 +70,7 @@ public struct Map3DCamera: Hashable, Sendable {
 
     public static func == (a: Map3DCamera, b: Map3DCamera) -> Bool {
         a.target == b.target && a.distance == b.distance && a.heading == b.heading && a.tiltsFrom == b.tiltsFrom && a.pitch == b.pitch
-            && a.lens == b.lens
+            && a.lens == b.lens && a.lean == b.lean
             && a.viewport.width == b.viewport.width && a.viewport.height == b.viewport.height
     }
 
@@ -67,6 +81,7 @@ public struct Map3DCamera: Hashable, Sendable {
         hasher.combine(tiltsFrom)
         hasher.combine(pitch)
         hasher.combine(lens)
+        hasher.combine(lean)
     }
 
     /// The tilt from straight down at `distance`, in radians: 0 from
@@ -89,7 +104,52 @@ public struct Map3DCamera: Hashable, Sendable {
         min(tiltedFrom, max(nearest, flat * 0.45))
     }
 
-    public var tilt: Float { pitch ?? Self.tilt(atDistance: distance, from: tiltsFrom) }
+    /// Decision 555: the tilt at `distance` with `lean` added, as a share
+    /// of how far the distance's own tilt leans (all of it from
+    /// ``mostTiltedDistance(flatFrom:)`` in, none from `flat` out), at most
+    /// ``mostLean``. With no lean, ``tilt(atDistance:from:)``.
+    public static func tilt(atDistance distance: Float, from flat: Float = flatFrom, lean: Float) -> Float {
+        let own = tilt(atDistance: distance, from: flat)
+        guard lean > 0 else { return own }
+        return min(own + lean * own / mostTilt, max(own, mostLean))
+    }
+
+    public var tilt: Float { pitch ?? Self.tilt(atDistance: distance, from: tiltsFrom, lean: lean) }
+
+    /// Decision 555: the camera as two fingers drag up the screen `dy`
+    /// points (down is positive, so up leans over): the tilt
+    /// ``leanPerPoint`` a point more, between the distance's own and
+    /// ``mostLean``. A camera with its tilt set outright (``pitch``: a
+    /// followed train, a flight) or looking straight down at its distance
+    /// does not lean.
+    public func leaned(dy: Float) -> Map3DCamera {
+        guard pitch == nil, dy.isFinite else { return self }
+        let own = Self.tilt(atDistance: distance, from: tiltsFrom)
+        guard own > 0 else { return self }
+        let wanted = min(max(tilt - dy * Self.leanPerPoint, own), max(own, Self.mostLean))
+        var camera = self
+        camera.lean = min(max((wanted - own) * Self.mostTilt / own, 0), Self.mostLean)
+        return camera
+    }
+
+    /// Decision 555: where the view's four corners meet the ground at the
+    /// target's height, in the order bottom left, bottom right, top
+    /// left, top right; a corner looking above the horizon meets it at
+    /// the far plane. For the sun's shadows' square (``Map3DSunShadow``).
+    public var groundCorners: [Map3DPoint] {
+        let eye = eye
+        let look = (target - eye).normalized ?? Map3DPoint(0, -1, 0)
+        let side = right
+        let up = (-look).cross(side).normalized ?? forward
+        let tall = tanf(fieldOfViewTall / 2), wide = tall * max(viewport.width, 1) / max(viewport.height, 1)
+        let far = depthRange.far
+        return [(-1, -1), (1, -1), (-1, 1), (1, 1)].map { (x: Float, y: Float) in
+            let ray = look + side * (x * wide) + up * (y * tall)
+            let along = ray.y < -1e-6 ? (target.y - eye.y) / ray.y : .infinity
+            let length = ray.length
+            return eye + ray * min(along, far / max(length, 1e-6))
+        }
+    }
 
     /// The view's height as an angle: ``lens``, or ``fieldOfView``.
     public var fieldOfViewTall: Float { lens ?? Self.fieldOfView }

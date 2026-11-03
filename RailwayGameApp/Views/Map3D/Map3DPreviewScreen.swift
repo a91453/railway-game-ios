@@ -226,10 +226,10 @@ struct Map3DPreviewScreen: View {
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else {
                     Text(verbatim: handedOver == nil
-                         ? language.text("Pinch closer to tilt the map. Drag to move, two fingers to turn.",
-                                         "兩指拉近，地圖就會傾斜。拖曳移動，兩指旋轉。")
-                         : language.text("Pinch closer to tilt the map, or pinch out and let go to go back. Drag to move, two fingers to turn.",
-                                         "兩指拉近地圖就傾斜，拉遠放手就回到平面地圖。拖曳移動，兩指旋轉。"))
+                         ? language.text("Pinch closer to tilt the map, and push two fingers up to tilt it more. Drag to move, two fingers to turn.",
+                                         "兩指拉近，地圖就會傾斜；兩指往上推，斜得更多。拖曳移動，兩指旋轉。")
+                         : language.text("Pinch closer to tilt the map and push two fingers up to tilt it more, or pinch out and let go to go back. Drag to move, two fingers to turn.",
+                                         "兩指拉近地圖就傾斜，兩指往上推斜得更多，拉遠放手就回到平面地圖。拖曳移動，兩指旋轉。"))
                         .font(.footnote)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -923,9 +923,13 @@ private struct Map3DView: UIViewRepresentable {
         pan.maximumNumberOfTouches = 1
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
         let rotation = UIRotationGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.rotate(_:)))
+        // Decision 555: two fingers dragged up or down lean the map over.
+        let tilt = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tilt(_:)))
+        tilt.minimumNumberOfTouches = 2
+        tilt.maximumNumberOfTouches = 2
         // Decision 517 續: a tap, which a drag, a pinch or a turn is not.
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
-        for recognizer in [pan, pinch, rotation, tap] as [UIGestureRecognizer] {
+        for recognizer in [pan, pinch, rotation, tilt, tap] as [UIGestureRecognizer] {
             recognizer.delegate = context.coordinator
             view.addGestureRecognizer(recognizer)
         }
@@ -1011,8 +1015,27 @@ private struct Map3DView: UIViewRepresentable {
             let target = openedAt.map { scene.point(worldX: $0.x, worldY: $0.y, height: 0) } ?? .zero
             view.camera = Map3DCamera(target: target, distance: max(width, height) * 0.9, viewport: view.camera.viewport)
         }
+        #if DEBUG
+        // Decision 555: a screenshot's camera, over its scene's place.
+        if first, let camera = Self.screenshotCamera(in: scene, of: world, viewport: view.camera.viewport) { view.camera = camera }
+        #endif
         context.coordinator.showHeading()
     }
+
+    #if DEBUG
+    /// Decision 555: the camera `-screenshot-3d-view` asks for over the
+    /// place of the `-screenshot-scene` (Debug builds only).
+    private static func screenshotCamera(in scene: Map3DScene, of world: GameWorld, viewport: (width: Float, height: Float)) -> Map3DCamera? {
+        let arguments = ProcessInfo.processInfo.arguments
+        func value(_ name: String) -> String? {
+            guard let index = arguments.firstIndex(of: name), arguments.indices.contains(index + 1) else { return nil }
+            return arguments[index + 1]
+        }
+        guard let asked = value("-screenshot-3d-view").flatMap(Map3DScreenshotView.init),
+              let place = value("-screenshot-scene").flatMap(ScreenshotScene.init(rawValue:))?.place else { return nil }
+        return asked.camera(at: place, in: scene, of: world, viewport: viewport)
+    }
+    #endif
 
     /// Draws `scene`'s trains on `view`: with the models once they are
     /// made (decision 546), boxes before.
@@ -1049,6 +1072,14 @@ private struct Map3DView: UIViewRepresentable {
         private var handedBack = false
         /// Decision 313: the distance as the pinch under way began.
         private var pinchFrom: Float?
+        /// Decision 555: the two fingers under way, whether they lean the
+        /// map, the camera as they touched down and how far down the
+        /// screen the lean has taken them so far.
+        private var tiltDrag: Map3DTiltDrag?
+        private var tiltStart: Map3DCamera?
+        private var tiltDropped: Float = 0
+        /// Whether two fingers are leaning the map: the pinch and the turn wait.
+        private var leaning: Bool { tiltDrag?.verdict == .leans }
         private let compass: Map3DCompassState
         /// The turn back to north running, a frame at a time.
         private var northLink: CADisplayLink?
@@ -1126,6 +1157,12 @@ private struct Map3DView: UIViewRepresentable {
                 recognizer.scale = 1
                 return
             }
+            // Decision 555: two fingers leaning the map do not zoom it.
+            guard !leaning else {
+                recognizer.scale = 1
+                pinchFrom = nil
+                return
+            }
             view.stopFlyingBack()
             if recognizer.state == .began { pinchFrom = view.camera.distance }
             view.camera = view.camera.zoomed(by: Float(recognizer.scale))
@@ -1145,6 +1182,56 @@ private struct Map3DView: UIViewRepresentable {
             pinchFrom = nil
         }
 
+        /// Decision 555: two fingers dragged up the screen lean the map
+        /// over, down stand it up again, as far as the distance's own
+        /// tilt (``Map3DCamera/leaned(dy:)``); following a train they do
+        /// nothing. Until ``Map3DTiltDrag`` tells a lean from a pinch or a
+        /// turn, those act; once it leans, the camera's distance and
+        /// heading go back to where the fingers touched down. The tilt
+        /// follows the fingers, with no animation of its own, so Reduce
+        /// Motion leaves it as it is.
+        @objc func tilt(_ recognizer: UIPanGestureRecognizer) {
+            guard let view else { return }
+            func fingers() -> (Map3DTiltDrag.Point, Map3DTiltDrag.Point)? {
+                guard recognizer.numberOfTouches == 2 else { return nil }
+                let a = recognizer.location(ofTouch: 0, in: view), b = recognizer.location(ofTouch: 1, in: view)
+                return ((Float(a.x), Float(a.y)), (Float(b.x), Float(b.y)))
+            }
+            switch recognizer.state {
+            case .began:
+                stopTurningNorth()
+                tiltDrag = nil
+                tiltStart = nil
+                tiltDropped = 0
+                guard view.following == nil, let (a, b) = fingers() else { return }
+                tiltDrag = Map3DTiltDrag(a, b)
+                tiltStart = view.camera
+            case .changed:
+                guard var drag = tiltDrag, view.following == nil, let (a, b) = fingers() else { return }
+                let was = drag.verdict
+                guard drag.move(a, b) == .leans else {
+                    tiltDrag = drag
+                    return
+                }
+                tiltDrag = drag
+                if was != .leans, let start = tiltStart {
+                    view.stopFlyingBack()
+                    var camera = view.camera
+                    camera.distance = start.distance
+                    camera.heading = start.heading
+                    view.camera = camera
+                    showHeading()
+                }
+                let drop = drag.drop(a, b)
+                view.camera = view.camera.leaned(dy: drop - tiltDropped)
+                tiltDropped = drop
+            default:
+                tiltDrag = nil
+                tiltStart = nil
+                tiltDropped = 0
+            }
+        }
+
         /// Decision 517 續: following a train, a tap does nothing here.
         @objc func tap(_ recognizer: UITapGestureRecognizer) {
             guard recognizer.state == .ended, let view, view.following == nil, let onTap else { return }
@@ -1154,7 +1241,7 @@ private struct Map3DView: UIViewRepresentable {
         @objc func rotate(_ recognizer: UIRotationGestureRecognizer) {
             if recognizer.state == .began { stopTurningNorth() }
             guard let view else { return }
-            guard view.following == nil else {
+            guard view.following == nil, !leaning else {
                 recognizer.rotation = 0
                 return
             }
