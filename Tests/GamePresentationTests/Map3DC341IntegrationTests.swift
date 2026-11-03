@@ -145,7 +145,7 @@ final class Map3DC341IntegrationTests: XCTestCase {
         // Not locked behind the train pack, and no other train is touched: the light metro, the people mover, the Wenhu car.
         XCTAssertFalse(TrainPack.sets.contains("metroC341"))
         XCTAssertEqual(Map3DTrainSet.variant(of: "A", number: 2, locked: TrainPack.sets), "metroC341")
-        for key in ["C", "APM", "wenhu", "greenTram", "taroko", "puyuma", "dieselExpress", "metroC341", "metroC371", "metroGeneric", "circular610", ""] {
+        for key in ["C", "wenhu", "greenTram", "taroko", "puyuma", "dieselExpress", "metroC341", "metroC371", "metroGeneric", "circular610", ""] {
             XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key, key)
         }
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 7), "emu500", "decision 432, decision 435's shares")
@@ -166,6 +166,8 @@ final class Map3DC341IntegrationTests: XCTestCase {
             }
             // The other lines' sets are as they were.
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "trtc", key: "wenhu", number: number), "wenhu")
+            // Decision 558: the Wenhu line's two fleets by number.
+            XCTAssertEqual(Map3DRealTrains.variantKey(system: "trtc", key: "wenhu370", number: number), Map3DTrainSet.wenhuLine(number: number))
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "krtc", key: "greenTram", number: number), "greenTram")
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "tra", key: "emu800", number: number), Map3DTrainSet.localTrain(number: number))
             XCTAssertEqual(Map3DRealTrains.variantKey(system: "thsr", key: "highSpeed", number: number), number % 2 != 0 ? "n700sG" : "highSpeed")

@@ -48,8 +48,12 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Decision 554: the Hai-Feng and Shan-Lan as #1539's converted
         // EMU500 units, near and far (32 models with the windows' models,
         // 197,880 vertices more, 7.9 MB a copy).
-        XCTAssertEqual(pack.models.count, 728)
-        XCTAssertEqual(vertices, 4_992_114)
+        // Decision 558: the Wenhu line's VAL256 and 370 as #1742's A and
+        // B units, near and far (32 models with the windows' models,
+        // 441,888 vertices more, 17.7 MB a copy); the old generic car
+        // stays, drawn only before them.
+        XCTAssertEqual(pack.models.count, 760)
+        XCTAssertEqual(vertices, 5_434_002)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

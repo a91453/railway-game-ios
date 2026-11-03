@@ -3342,3 +3342,7 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 ### 4.45 3D 鏡頭兩指可再斜到 60°（決策 555，派工單 TILT60，session_01JMHz9cKsW7rXnjBvxxa4yp，`claude/tilt60`，2026-11-03）
 
 做了的在 [決策 555](decisions/555.md)：兩指往上拖可斜到 60°，預設距離曲線不變、放手保持、拉遠回平；太陽影子正方形往視線方向挪。留下的（決策 555「下一步」）：實機量 60° 的幀數與 GPU 時間（橫式 260 m 最重）、手勢誤判的手感、TILT75（地平線、霧、遠景一級）。
+
+### 4.46 文湖線 VAL256 與 370 型接進營運（決策 558，派工單 WENHUTRN，session_01JMHz9ZoBVGyQkvmiA5uieN，`claude/wenhutrn-operation`，2026-11-03）
+
+做了的在 [決策 558](decisions/558.md)：實景文湖線與玩家的 `APM` 改畫 #1742 的兩款車，A-B-A-B 兩對、每節 13.78 m，照車次約三列一列 VAL256（51 對比 101 對），不混編；舊的 `wenhu` 只在模型包沒有新車時當後備。第三級截圖：`WebsiteScreenshotTests.testWenhuTrains`，遊戲規劃看過才合。留下的（決策 558「下一步」）：實機幀數與 500 m 換遠景、A-B-A-B／A-B-B-A 等實號資料再定（UNVERIFIED）、兩款外觀等作者接受。
