@@ -1884,19 +1884,22 @@ head_full_run() {
 #   CHANGES       the change detection's result
 #   SWIFT_NEEDED  its swift output
 #   TIER          its tier output
+#   SELFTEST      the shard script's self-test job's result (decision 563)
 #   BUILD         the swift-build job's result (decision 411, shared build)
 #   CURRENT       the test jobs' combined result (failure if any job failed,
 #                 cancelled if any was cancelled, skipped if none ran)
 # Passes only when the detection succeeded and either the build and every
 # test job of the tier succeeded or none was needed and none ran.
 ci_gate() {
-  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}"
+  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; self-test: ${SELFTEST:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}"
   [[ "${CHANGES:-}" == success ]] || die "The change detection did not succeed (${CHANGES:-no result})."
   if [[ "${SWIFT_NEEDED:-}" == true ]]; then
+    [[ "${SELFTEST:-}" == success ]] || die "The shard script's self-test did not succeed (${SELFTEST:-no result})."
     [[ "${BUILD:-}" == success ]] || die "The Swift build did not succeed (${BUILD:-no result}); the test jobs need it."
     [[ "${CURRENT:-}" == success ]] || die "A Swift job of tier ${TIER:-?} did not succeed (Swift 6.4: ${CURRENT:-no result})."
     echo "The build and every Swift 6.4 job of tier ${TIER:-?} passed."
   elif [[ "${SWIFT_NEEDED:-}" == false ]]; then
+    [[ "${SELFTEST:-}" == skipped ]] || die "The Swift jobs were not needed but the self-test did not skip (${SELFTEST:-no result})."
     [[ "${BUILD:-}" == skipped ]] || die "The Swift jobs were not needed but the build did not skip (${BUILD:-no result})."
     [[ "${CURRENT:-}" == skipped ]] || die "The Swift jobs were not needed but did not skip (Swift 6.4: ${CURRENT:-no result})."
     echo "No file that can change the Swift package changed; the Swift jobs were skipped."

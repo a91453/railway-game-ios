@@ -4,7 +4,7 @@
 # when a shard runs exactly its tests and fails when it does not. A check that
 # cannot fail proves nothing.
 #
-# Run by ci.yml's change-detection job on every run that tests the package.
+# Run by ci.yml's selftest job on every run that tests the package.
 set -euo pipefail
 
 script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/swift-shards.sh"
@@ -703,22 +703,25 @@ expect_decision true full full "a pull request whose files could not be listed" 
 # The gate: red when the detection or any Swift job of the tier did not
 # succeed (a failed or cancelled job makes the combined result so), green
 # when every job passed or none was needed and none ran.
-gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u BUILD -u CURRENT "$@" "$script" gate; }
-expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=success CURRENT=success
-expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation BUILD=success CURRENT=success
-expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=skipped
-WHY='did not succeed \(Swift 6.4: failure\)' expect fail "gate: a selected job failed" gate CHANGES=success SWIFT_NEEDED=true TIER=tests-only BUILD=success CURRENT=failure
-WHY='did not succeed \(Swift 6.4: cancelled\)' expect fail "gate: a selected job was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=fixtures BUILD=success CURRENT=cancelled
-WHY='did not succeed \(Swift 6.4: skipped\)' expect fail "gate: needed jobs that did not run" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=success CURRENT=skipped
-WHY='not needed but did not skip' expect fail "gate: unneeded jobs that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=success
-WHY='change detection did not succeed' expect fail "gate: the detection failed" gate CHANGES=failure SWIFT_NEEDED= TIER= BUILD=skipped CURRENT=skipped
-WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none BUILD=skipped CURRENT=skipped
-WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= BUILD=skipped CURRENT=skipped
+gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u SELFTEST -u BUILD -u CURRENT "$@" "$script" gate; }
+expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD=success CURRENT=success
+expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation SELFTEST=success BUILD=success CURRENT=success
+expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped
+WHY='did not succeed \(Swift 6.4: failure\)' expect fail "gate: a selected job failed" gate CHANGES=success SWIFT_NEEDED=true TIER=tests-only SELFTEST=success BUILD=success CURRENT=failure
+WHY='did not succeed \(Swift 6.4: cancelled\)' expect fail "gate: a selected job was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=fixtures SELFTEST=success BUILD=success CURRENT=cancelled
+WHY='did not succeed \(Swift 6.4: skipped\)' expect fail "gate: needed jobs that did not run" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD=success CURRENT=skipped
+WHY='not needed but did not skip' expect fail "gate: unneeded jobs that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=success
+WHY='change detection did not succeed' expect fail "gate: the detection failed" gate CHANGES=failure SWIFT_NEEDED= TIER= SELFTEST=skipped BUILD=skipped CURRENT=skipped
+WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=skipped CURRENT=skipped
+WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= SELFTEST=skipped BUILD=skipped CURRENT=skipped
 # Decision 411, shared build: the test jobs need the one build job.
-WHY='Swift build did not succeed \(failure\)' expect fail "gate: the build failed, so the tests were skipped" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD=failure CURRENT=skipped
-WHY='Swift build did not succeed \(cancelled\)' expect fail "gate: the build was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation BUILD=cancelled CURRENT=skipped
-WHY='Swift build did not succeed \(no result\)' expect fail "gate: no build result" gate CHANGES=success SWIFT_NEEDED=true TIER=full BUILD= CURRENT=success
-WHY='build did not skip \(success\)' expect fail "gate: an unneeded build that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none BUILD=success CURRENT=skipped
+WHY='self-test did not succeed \(failure\)' expect fail "gate: the shard script's self-test failed" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=failure BUILD=success CURRENT=success
+WHY='self-test did not succeed \(no result\)' expect fail "gate: no self-test result" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation SELFTEST= BUILD=success CURRENT=success
+WHY='self-test did not skip \(success\)' expect fail "gate: an unneeded self-test that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=success BUILD=skipped CURRENT=skipped
+WHY='Swift build did not succeed \(failure\)' expect fail "gate: the build failed, so the tests were skipped" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD=failure CURRENT=skipped
+WHY='Swift build did not succeed \(cancelled\)' expect fail "gate: the build was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation SELFTEST=success BUILD=cancelled CURRENT=skipped
+WHY='Swift build did not succeed \(no result\)' expect fail "gate: no build result" gate CHANGES=success SWIFT_NEEDED=true TIER=full SELFTEST=success BUILD= CURRENT=success
+WHY='build did not skip \(success\)' expect fail "gate: an unneeded build that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none SELFTEST=skipped BUILD=success CURRENT=skipped
 
 # A pull request's gate waits for its iOS App Build run (ios-gate). A fake
 # `gh` answers each look in turn with the next of FAKE_IOS's words: a run as
