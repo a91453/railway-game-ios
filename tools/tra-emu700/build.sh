@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 ids=''
-for role in emc ep et em; do
+for role in emc-cab ep et em; do
  for suffix in '' -far; do ids="${ids}${ids:+,}tra-emu700-${role}${suffix}"; done
 done
 tools/train-models/run.sh "$1" --ids "$ids" --assembly-spec tools/tra-emu700/assembly.json

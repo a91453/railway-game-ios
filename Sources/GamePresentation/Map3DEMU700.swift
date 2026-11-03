@@ -9,7 +9,7 @@ public enum Map3DEMU700 {
         var r = EMU700Recipe(role: role, far: far)
         r.shell()
         if !shellOnly { r.details() }
-        return .flat(named: "tra-emu700-" + role.rawValue + (far ? "-far" : "") + (shellOnly ? "-shell" : ""), from: r.kit.mesh)
+        return .flat(named: "tra-emu700-" + role.rawValue + (role == .emc ? "-cab" : "") + (far ? "-far" : "") + (shellOnly ? "-shell" : ""), from: r.kit.mesh)
     }
 }
 

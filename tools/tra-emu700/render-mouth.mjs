@@ -17,7 +17,7 @@ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'
 const page=await browser.newPage();await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.ready);await page.evaluate(l=>window.make(l),manifests.after.lighting);
 const inputs=[];
 for(const tag of ['before','after'])for(const suffix of ['','-far']){
- const m=manifests[tag].models.find(m=>m.id==='tra-emu700-emc'+suffix),bytes=readFileSync(resolve(roots[tag],m.native));inputs.push({tag,id:m.id,native_sha256:createHash('sha256').update(bytes).digest('hex')});
+ const m=manifests[tag].models.find(m=>m.id.startsWith('tra-emu700-emc')&&m.id.endsWith('-far')===Boolean(suffix)),bytes=readFileSync(resolve(roots[tag],m.native));inputs.push({tag,id:m.id,native_sha256:createHash('sha256').update(bytes).digest('hex')});
  for(const state of ['color','clay','silhouette'])for(const view of ['front','isometric']){
   const png=await page.evaluate(async({url,state,view})=>{r.load(await(await fetch(url)).arrayBuffer(),state);r.centre=[9.7,0,2.2];r.extent=[1.4,1.6,1.65];r.render(view,{width:720,height:720,time:'day'});return r.png();},{url:'/'+tag+'/'+m.native,state,view});writeFileSync(resolve(root,'mouth',`${tag}${suffix}-${state}-${view}.png`),Buffer.from(png.split(',')[1],'base64'));
  }

@@ -4,7 +4,7 @@
       "id": "tra-emu700-739-740-formation",
       "placements": [
         {
-          "unit": "tra-emu700-emc",
+          "unit": "tra-emu700-emc-cab",
           "translation": [
             71.2715,
             0,
@@ -67,7 +67,7 @@
           "rotation_degrees": 180
         },
         {
-          "unit": "tra-emu700-emc",
+          "unit": "tra-emu700-emc-cab",
           "translation": [
             -71.2715,
             0,
@@ -81,7 +81,7 @@
       "id": "tra-emu700-739-740-formation-far",
       "placements": [
         {
-          "unit": "tra-emu700-emc-far",
+          "unit": "tra-emu700-emc-cab-far",
           "translation": [
             71.2715,
             0,
@@ -144,7 +144,7 @@
           "rotation_degrees": 180
         },
         {
-          "unit": "tra-emu700-emc-far",
+          "unit": "tra-emu700-emc-cab-far",
           "translation": [
             -71.2715,
             0,

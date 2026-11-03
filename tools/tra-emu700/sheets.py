@@ -16,7 +16,7 @@ for col,tag in enumerate(['before','after']):
  im=Image.open(r/'mouth'/f'{tag}-color-front.png');im.load();im.thumbnail((400,400));s.alpha_composite(im,(col*800+200,55));d.text((col*800+20,35),'553b3a22 USER REJECTED' if tag=='before' else 'CURRENT: not user accepted',fill=(60,65,90,255))
 for row,role in enumerate(['emc','ep','et','em']):
  for col,suffix in enumerate(['','-far']):
-  name='tra-emu700-'+role+suffix;im=Image.open(r/'png/day'/f'{name}-isometric.png');im.thumbnail((780,245));s.alpha_composite(im,(col*800+10,500+row*270));d.text((col*800+20,495+row*270),name,fill=(60,65,90,255))
+  name='tra-emu700-'+('emc-cab' if role=='emc' else role)+suffix;im=Image.open(r/'png/day'/f'{name}-isometric.png');im.thumbnail((780,245));s.alpha_composite(im,(col*800+10,500+row*270));d.text((col*800+20,495+row*270),name,fill=(60,65,90,255))
 for col,suffix in enumerate(['','-far']):
  im=Image.open(r/'png/day'/f'tra-emu700-739-740-formation{suffix}-left.png');im.thumbnail((780,220));s.alpha_composite(im,(col*800+10,1610))
 s.save(r/'overview.png',optimize=True)

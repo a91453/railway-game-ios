@@ -41,4 +41,11 @@ final class Map3DEMU700Tests: XCTestCase {
             XCTAssertGreaterThan(high - low, 0.4)
         }
     }
+
+    func testActualCabModelsDoNotReceiveFictitiousMiddleCarEndShade() {
+        for far in [false, true] {
+            let cab = Map3DEMU700.model(.emc, far: far)
+            XCTAssertFalse(Map3DTrainOcclusion.isMiddle(cab.name))
+        }
+    }
 }
