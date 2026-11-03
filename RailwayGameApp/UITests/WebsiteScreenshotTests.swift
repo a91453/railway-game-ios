@@ -44,6 +44,37 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("bought-lines-list", app)
     }
 
+    /// Decision 564: the Wenhu Line bought on a real map of Taipei and run
+    /// on to 07:40, a train near its middle followed: on the 2D map and in
+    /// 3D, each way's trains on the track to their right, as the real
+    /// Taipei Metro's run. For the screenshot review of the pull request
+    /// that put them there.
+    func testWenhuRunsOnTheRight() {
+        let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-follow-bought", "trtc:BR",
+                                 "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 180), "The line is bought and its train followed")
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<6 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("wenhu-right-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("wenhu-right-3d", app)
+    }
+
     /// Decision 538 (continued): a train of a bought real line followed on
     /// the 2D map, close up: its cars along the curves of the Danhai light
     /// rail and the Neiwan Line, not swung straight off them. For the

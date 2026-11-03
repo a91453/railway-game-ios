@@ -69,6 +69,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case taipeiMain
     case taipei101
 
+    /// Decision 564: an empty real-world map round the Wenhu Line, for the
+    /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
+    /// run on to the morning (``GameSession/buyForScreenshot(_:until:)``):
+    /// its trains each on the track to their right, as the real ones run.
+    /// For the screenshot review of the pull request that put them there.
+    case wenhu
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -76,6 +83,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        case .wenhu: (25.0600, 121.5600)
         default: nil
         }
     }
@@ -94,7 +102,22 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .wenhu: Self.wenhuWorld(in: language)
         }
+    }
+
+    // MARK: - Wenhu
+
+    /// Decision 564: a new game's map, twice the usual a side as the
+    /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
+    /// with money enough for it; bought once the app's real data is read.
+    private static func wenhuWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let place = ScreenshotScene.wenhu.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
+              let bounds = try? WorldBounds(width: 1 << 21, height: 1 << 21) else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
+        try? world.mapGround()
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Expansion
@@ -410,5 +433,36 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         try world.setTrainContinuation(train, along: [], stoppingAt: berth)
         try world.setTrainMovementRate(train, to: 512)
         try world.assignTrain(train, to: line)
+    }
+}
+
+extension GameSession {
+    /// Decision 564: real line `id` bought (``ScreenshotScene/wenhu``) and
+    /// run on to `seconds` into the day, then paused; `false` when it is
+    /// not on sale (the real data not read yet) or not bought.
+    public func buyForScreenshot(_ id: String, until seconds: Int64) -> Bool {
+        guard let line = buyableRealLines.first(where: { $0.id == id }), acquireRealLine(realLineOffer(for: line)) else { return false }
+        return perform { (world: inout GameWorld) throws(GameError) in
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            let now = world.clock.now.seconds % GameTime.secondsPerDay
+            if seconds > now { try world.advance(ticks: Int((seconds - now) / 600)) }
+            world.setSpeed(.normal)
+            world.setSpeed(.paused)
+            return ""
+        }
+    }
+
+    /// Decision 564: the train of real line `id` bought nearest its middle
+    /// station, for the screenshot to follow along its double track.
+    public func screenshotTrainMidway(on id: String) -> TrainID? {
+        guard let line = world.acquisition(of: id)?.line.flatMap({ world.line(id: $0) }), !line.stops.isEmpty,
+              let middle = world.station(id: line.stops[line.stops.count / 2])?.location else { return nil }
+        let placed = line.assignedTrains.compactMap { id in
+            world.train(id: id).flatMap(\.position).flatMap { world.location(of: $0) }.map { (id, $0.position.plan) }
+        }
+        return placed.min { a, b in
+            (WorldVector(a.1) - WorldVector(middle)).length < (WorldVector(b.1) - WorldVector(middle)).length
+        }?.0
     }
 }

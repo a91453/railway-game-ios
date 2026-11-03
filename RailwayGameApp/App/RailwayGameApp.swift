@@ -224,6 +224,20 @@ struct RailwayGameApp: App {
             if let real = DebugLaunch.value(of: "-screenshot-follow-bought") {
                 Task {
                     await opening.value
+                    // Decision 564: the real line bought first, once the
+                    // app's real data is read, and run on to 07:40; its
+                    // train nearest the middle followed.
+                    if DebugLaunch.value(of: "-screenshot-buy-real") == real, let session = launcher.session {
+                        for _ in 0..<240 {
+                            if session.buyForScreenshot(real, until: 7 * 3_600 + 40 * 60) { break }
+                            try? await Task.sleep(for: .milliseconds(500))
+                        }
+                        if let train = session.screenshotTrainMidway(on: real) {
+                            session.selectTrain(train)
+                            session.toggleFollowTrain(train)
+                        }
+                        return
+                    }
                     if let session = launcher.session, let line = session.world.acquisition(of: real)?.line,
                        let train = session.world.line(id: line)?.assignedTrains.first(where: { session.world.train(id: $0)?.position != nil }) {
                         session.selectTrain(train)

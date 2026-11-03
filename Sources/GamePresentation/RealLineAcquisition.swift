@@ -68,6 +68,18 @@ public struct RealBranchLine: Hashable, Sendable {
     /// Whether it is a light rail or a metro rather than a TRA branch line.
     var isUrban: Bool { system != Self.tra }
 
+    /// Decision 564: whether its trains keep to the right on its double
+    /// track, as the real ones drawn on it before it was bought do
+    /// (``Map3DRealTrains/rightHand``: the metros and light rails); the
+    /// TRA's keep left (decision 202).
+    var keepsRight: Bool { Self.keepsRight(realLine: id) }
+
+    /// ``keepsRight``, of the line bought as `realLine` (its ``id``).
+    static func keepsRight(realLine: String) -> Bool {
+        guard let network = realLine.split(separator: ":", maxSplits: 1).first.map(String.init) else { return false }
+        return Map3DRealTrains.rightHand.contains(network == "trtc" ? "mrt" : network)
+    }
+
     /// Whether it is laid with a second track beside the first.
     var isDoubleTrack: Bool { isUrban || Self.doubleTrack.contains(network) }
 
@@ -1042,7 +1054,9 @@ extension RealLineLaying {
         }
         // A double track's second track, for the trains toward the
         // terminal, on their left (Taiwan's trains keep left, and the
-        // game's choose that track by keeping left, decision 202): beside the
+        // game's choose that track by keeping left, decision 202; decision
+        // 564: on a metro or light rail, whose trains keep right, the
+        // trains toward the junction take it, ``routePreferences(_:stops:keepingRight:)``): beside the
         // first from past the junction's station to short of the
         // terminal's, as the high-speed demo's up track (decision 281); the
         // trains toward the junction keep to the first. Each end station is
@@ -1238,7 +1252,9 @@ extension RealLineLaying {
             var forward = stop < lastStop
             if double, stop > 0, stop < lastStop {
                 forward = 2 * stop > lastStop
-                tracks = forward ? tracks.filter { $0.piece != 0 } + tracks.filter { $0.piece == 0 } : tracks
+                // Facing up the line, on the second track; decision 564,
+                // on the first where the trains keep right.
+                tracks = forward != line.keepsRight ? tracks.filter { $0.piece != 0 } + tracks.filter { $0.piece == 0 } : tracks
             }
             guard count <= tracks.count else {
                 return refused("The line's trains have no room to stand overnight.", "這條線的列車晚上沒有地方停。")
@@ -1363,11 +1379,17 @@ extension RealLineLaying {
     /// on the track its route names waited for it all day. With the
     /// junction last and each way's track named, its other tracks are
     /// planned by nobody and are free to take; the terminals have one.
-    static func routePreferences(_ platformsOf: [Int: [TrackPlatform]], stops: Int) -> [LineRoutePreference] {
+    /// Decision 564: where the trains keep right (a metro or light rail,
+    /// ``RealBranchLine/keepsRight``), a station between the ends the other
+    /// way round: from the terminal's side on the second track, from the
+    /// junction's on the main, which then lie on each train's right.
+    static func routePreferences(_ platformsOf: [Int: [TrackPlatform]], stops: Int, keepingRight: Bool = false) -> [LineRoutePreference] {
         var routes: [LineRoutePreference] = []
         for (stop, platforms) in platformsOf.sorted(by: { $0.key < $1.key }) where platforms.count > 1 {
-            if stop > 0 { routes.append(LineRoutePreference(from: stop - 1, to: stop, platform: platforms[0])) }
-            if stop < stops - 1 { routes.append(LineRoutePreference(from: stop + 1, to: stop, platform: platforms[stop == 0 ? 0 : 1])) }
+            let between = stop > 0 && stop < stops - 1
+            let (down, up) = between && keepingRight ? (1, 0) : (0, stop == 0 ? 0 : 1)
+            if stop > 0 { routes.append(LineRoutePreference(from: stop - 1, to: stop, platform: platforms[down])) }
+            if stop < stops - 1 { routes.append(LineRoutePreference(from: stop + 1, to: stop, platform: platforms[up])) }
         }
         return routes
     }
@@ -1477,7 +1499,7 @@ extension RealLineLaying {
         GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
 
         // The line runs from its terminal to its junction: see
-        // ``routePreferences(_:stops:)``.
+        // ``routePreferences(_:stops:keepingRight:)``.
         let last = stations.count - 1
         let line = try world.createLine(named: acquisition.lineName, stops: stations.reversed())
         if let color = acquisition.color { try world.setLineColor(line.id, to: color) }
@@ -1485,7 +1507,9 @@ extension RealLineLaying {
         try world.setLineRuns(line.id, to: acquisition.runs.map { run in
             LineRun(from: last - run.from, to: last - run.to, times: run.times, days: run.days)
         })
-        try world.setLineRoutePreferences(line.id, to: Self.routePreferences(platformsOf, stops: stations.count))
+        try world.setLineRoutePreferences(line.id, to: Self.routePreferences(
+            platformsOf, stops: stations.count, keepingRight: RealBranchLine.keepsRight(realLine: acquisition.realLine)
+        ))
         // Decision 479: the depot, a platform along each siding, the line's.
         // Decision 535: and its others, the Wenhu Line's two.
         var depots: [StationID] = []
