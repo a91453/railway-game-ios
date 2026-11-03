@@ -1,0 +1,19 @@
+{
+  "asset": {
+    "status": "UNVERIFIED",
+    "evidence": "Draft recipe only; technical/visual acceptance incomplete."
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "evidence": "No user acceptance of this producer.",
+    "accepted_producer": null
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "No simulator or physical-device test."
+  }
+}

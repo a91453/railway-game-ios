@@ -1,0 +1,168 @@
+{
+  "assemblies": [
+    {
+      "id": "wenhu-val256-formation",
+      "placements": [
+        {
+          "unit": "wenhu-val256-a",
+          "translation": [
+            20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-val256-b",
+          "translation": [
+            6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-val256-a",
+          "translation": [
+            -6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-val256-b",
+          "translation": [
+            -20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    },
+    {
+      "id": "wenhu-val256-formation-far",
+      "placements": [
+        {
+          "unit": "wenhu-val256-a-far",
+          "translation": [
+            20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-val256-b-far",
+          "translation": [
+            6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-val256-a-far",
+          "translation": [
+            -6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-val256-b-far",
+          "translation": [
+            -20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    },
+    {
+      "id": "wenhu-apm256-formation",
+      "placements": [
+        {
+          "unit": "wenhu-apm256-a",
+          "translation": [
+            20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-apm256-b",
+          "translation": [
+            6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-apm256-a",
+          "translation": [
+            -6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-apm256-b",
+          "translation": [
+            -20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    },
+    {
+      "id": "wenhu-apm256-formation-far",
+      "placements": [
+        {
+          "unit": "wenhu-apm256-a-far",
+          "translation": [
+            20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-apm256-b-far",
+          "translation": [
+            6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-apm256-a-far",
+          "translation": [
+            -6.89,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "wenhu-apm256-b-far",
+          "translation": [
+            -20.67,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        }
+      ]
+    }
+  ]
+}
