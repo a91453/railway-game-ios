@@ -166,8 +166,6 @@ jobs:
       # Each kept attachment as <name>.png, whether or not every test passed.
       - name: Export the screenshots
         if: always() && inputs.kind != 'promo' && steps.screenshots.outcome != 'skipped'
-        env:
-          DEVICE: ${{ inputs.device }}
         run: |
           out="$RUNNER_TEMP/attachments"
           mkdir -p "$out" "$RUNNER_TEMP/website-screenshots"
@@ -195,11 +193,11 @@ jobs:
           # The screen's screenshot is the display as it is built, upright:
           # a phone on its side comes out turned a quarter. Turn it back, a
           # quarter anticlockwise (sips turns clockwise).
-          # An iPad's stay as they are (decision 568): it may be upright,
-          # and on the runner's Simulator it stays upright.
+          # A shot the test saw upright (an iPad's, its name ending in
+          # -portrait, decision 568) stays as it is.
           for shot in "$RUNNER_TEMP"/website-screenshots/*.png; do
             [[ -e "$shot" ]] || continue
-            [[ "$DEVICE" == ipad ]] && continue
+            [[ "$shot" == *-portrait.png ]] && continue
             width=$(sips -g pixelWidth "$shot" | awk '/pixelWidth/ { print $2 }')
             height=$(sips -g pixelHeight "$shot" | awk '/pixelHeight/ { print $2 }')
             if (( width < height )); then

@@ -2148,17 +2148,23 @@ final class WebsiteScreenshotTests: XCTestCase {
             coverage.tap()
         }
         settle(seconds: 3)
-        keep(name, app)
+        keep(name + upright(app), app)
 
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
         XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
         settle(seconds: 3)
-        keep("\(name)-panel", app)
-        // An iPhone is held on its side only (project.yml); the runner's
-        // iPad Simulator stays upright whatever the test asks, so an iPad
-        // run shows it upright (decision 568).
+        keep("\(name)-panel" + upright(app), app)
+    }
+
+    /// "-portrait" when the app shows upright: an iPhone is held on its
+    /// side only (project.yml), but the runner's iPad Simulator turns or
+    /// not whatever the test asks, and the workflow turns every other
+    /// shot a quarter back (decision 568).
+    private func upright(_ app: XCUIApplication) -> String {
+        let frame = app.windows.firstMatch.frame
+        return frame.width < frame.height ? "-portrait" : ""
     }
 
     /// Decision 497 (P2-6): Back to Start when the autosave cannot be
