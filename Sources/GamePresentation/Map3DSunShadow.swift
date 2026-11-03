@@ -82,7 +82,13 @@ public enum Map3DSunShadow {
 
     /// Half the square's side for a camera `distance` away.
     public static func extent(distance: Float) -> Float {
-        let want = min(max(distance * reachPerDistance, nearest), farthest)
+        extent(reach: distance * reachPerDistance)
+    }
+
+    /// Half the square's side that holds `reach` metres each way, in the
+    /// steps of ``extent(distance:)``.
+    static func extent(reach: Float) -> Float {
+        let want = min(max(reach, nearest), farthest)
         let steps = (logf(want / nearest) / logf(step) - 1e-4).rounded(.up)
         return nearest * powf(step, max(steps, 0))
     }
@@ -157,6 +163,54 @@ public enum Map3DSunShadow {
         func snapped(_ value: Float) -> Float { (value / grid).rounded() * grid }
         let centre = Map3DPoint(snapped(target.x), snapped(target.y), snapped(target.z))
         return Region(centre: centre, extent: extent, sun: sunWay(sun), size: size)
+    }
+
+    /// Decision 555: the region for `camera`. Leaning no more than its
+    /// distance tilts it (``Map3DCamera/lean`` 0), the square round its
+    /// target as ``region(target:distance:sun:size:)`` gives it. Leaned
+    /// further, the ground in view reaches farther ahead than behind, so
+    /// the square's middle moves ahead along the view to where the
+    /// ground's nearest and farthest corners (``Map3DCamera/groundCorners``)
+    /// are equally far, and it grows, if it must, until they all fall
+    /// short of where the shadows fade (``fadeFrom``). A square holds at
+    /// least a circle of its half side on the ground, whichever way the
+    /// sun shines: across it the sun's way is level, and up it the ground
+    /// is foreshortened, never stretched.
+    public static func region(camera: Map3DCamera, sun: Map3DPoint, size: Int) -> Region? {
+        guard camera.lean > 0, camera.pitch == nil else {
+            return region(target: camera.target, distance: camera.distance, sun: sun, size: size)
+        }
+        guard camera.distance <= farthestCamera, size > 0 else { return nil }
+        let (ahead, offset, reach) = fit(camera)
+        let extent = max(extent(distance: camera.distance), extent(reach: reach / fadeFrom))
+        let grid = extent * moveShare
+        func snapped(_ value: Float) -> Float { (value / grid).rounded() * grid }
+        let middle = camera.target + ahead * offset
+        let centre = Map3DPoint(snapped(middle.x), snapped(camera.target.y), snapped(middle.z))
+        return Region(centre: centre, extent: extent, sun: sunWay(sun), size: size)
+    }
+
+    /// The level way `camera` faces, how far along it from the target the
+    /// square's middle goes, and how far from there its farthest corner
+    /// on the ground is, in metres.
+    static func fit(_ camera: Map3DCamera) -> (ahead: Map3DPoint, offset: Float, reach: Float) {
+        let ahead = camera.forward, side = camera.right
+        let corners = camera.groundCorners.map { corner -> (along: Float, across: Float) in
+            let from = corner - camera.target
+            return (from.dot(ahead), abs(from.dot(side)))
+        }
+        // The near pair and the far pair mirror each other across the view.
+        let near = corners[0].along < corners[2].along ? corners[0] : corners[2]
+        let far = corners[0].along < corners[2].along ? corners[2] : corners[0]
+        let span = far.along - near.along
+        var offset = span > 1e-3
+            ? (far.along * far.along - near.along * near.along + far.across * far.across - near.across * near.across) / (2 * span)
+            : 0
+        offset = min(max(offset, near.along), far.along)
+        func reach(_ c: (along: Float, across: Float)) -> Float {
+            ((c.along - offset) * (c.along - offset) + c.across * c.across).squareRoot()
+        }
+        return (ahead, offset, max(reach(near), reach(far)))
     }
 
     /// How strong the sun's shadows are under `lighting`: by day, gone as

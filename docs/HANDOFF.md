@@ -3334,3 +3334,7 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **留下的**：
   - `ContentView`、`MapView`、`TutorialOverlay` 三個整頁 `GeometryReader`：closure 讀 proxy 本身（`frame(in: .global)`、`safeAreaInsets`、錨點），又從 session 建整個畫面，換成子 View 或量大小都等於重寫畫面。大小只隨轉向與視窗變，一百多版沒有閃退紀錄；有紀錄再做。
   - `Chart { ForEach }`（9 處，8 個檔案）：沒查到 Charts 何時展開標記的公開資料或同型回報（Apple 論壇 802729 只講 SwiftUI 的 `ForEach`）。Linux 看不到 Charts 的 swiftinterface；要查就在 macOS 讀 `Charts.swiftinterface` 裡 `ForEach: ChartContent` 的 init 是否 `@Sendable`／`@preconcurrency`，或在 iPad 上開圖表動畫跑一次 Thread Sanitizer。查清楚前不改。
+
+### 4.45 3D 鏡頭兩指可再斜到 60°（決策 555，派工單 TILT60，session_01JMHz9cKsW7rXnjBvxxa4yp，`claude/tilt60`，2026-11-03）
+
+做了的在 [決策 555](decisions/555.md)：兩指往上拖可斜到 60°，預設距離曲線不變、放手保持、拉遠回平；太陽影子正方形往視線方向挪。留下的（決策 555「下一步」）：實機量 60° 的幀數與 GPU 時間（橫式 260 m 最重）、手勢誤判的手感、TILT75（地平線、霧、遠景一級）。
