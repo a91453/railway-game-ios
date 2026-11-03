@@ -58,6 +58,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu800" ? ([set.headName, set.tailName].contains(name) ? 11_000...12_000 : 5_000...5_500)
                     // Decision 435: #1339's EMU900 near units, 9,256 a cab and 4,990 to 5,270 the others.
                     : set.key == "emu900" ? ([set.headName, set.tailName].contains(name) ? 9_000...9_500 : 4_900...5_300)
+                    // Decision 560: #1730's EMU700, 13,740 a cab and 5,988 to 6,104 the others near, its far cab 6,728.
+                    : set.key == "emu700" ? ([set.headName, set.tailName].contains(name) ? 13_500...14_000 : 5_900...6_200)
+                    : set.key == "emu700Far" && [set.headName, set.tailName].contains(name) ? 6_600...6_800
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
@@ -134,7 +137,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
                     // Decision 554: and #1539's EP's, 5.0 m.
-                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) || Self.tourism.contains(set.key) ? 3.4...5.3
+                    // Decision 560: and #1730's EMU700's EP, 4.98 m.
+                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far", "emu700", "emu700Far"].contains(set.key) || Self.tourism.contains(set.key) ? 3.4...5.3
                     // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
                     : alishan ? 3.0...3.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")

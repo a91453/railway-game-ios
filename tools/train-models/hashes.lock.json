@@ -3952,6 +3952,134 @@
     "set-wenhuVAL256Far-tail" : {
       "hash" : "da9d5760ead82dd1",
       "triangles" : 5716
+    },
+    "set-emu700-car": {
+      "hash": "6545c04e201068fb",
+      "triangles": 6000
+    },
+    "set-emu700-carBack": {
+      "hash": "58b1fbb71ca10cee",
+      "triangles": 6000
+    },
+    "set-emu700-centre": {
+      "hash": "3e08330146bdb980",
+      "triangles": 5988
+    },
+    "set-emu700-centreBack": {
+      "hash": "f4aea96048e01693",
+      "triangles": 5988
+    },
+    "set-emu700-head": {
+      "hash": "75e546d19ed74229",
+      "triangles": 13740
+    },
+    "set-emu700-panto": {
+      "hash": "fd692e9215c686ca",
+      "triangles": 6104
+    },
+    "set-emu700-pantoBack": {
+      "hash": "1554c773badbae98",
+      "triangles": 6104
+    },
+    "set-emu700-tail": {
+      "hash": "4b92eed9376567e",
+      "triangles": 13740
+    },
+    "set-emu700Far-car": {
+      "hash": "6f007e664a9e7480",
+      "triangles": 2960
+    },
+    "set-emu700Far-carBack": {
+      "hash": "4211a6bed8f0afe",
+      "triangles": 2960
+    },
+    "set-emu700Far-centre": {
+      "hash": "10bc863c9a9af1e",
+      "triangles": 2964
+    },
+    "set-emu700Far-centreBack": {
+      "hash": "ab31854acee46deb",
+      "triangles": 2964
+    },
+    "set-emu700Far-head": {
+      "hash": "7dc86862639e6c8e",
+      "triangles": 6728
+    },
+    "set-emu700Far-panto": {
+      "hash": "188d4c4cbd9be7df",
+      "triangles": 3040
+    },
+    "set-emu700Far-pantoBack": {
+      "hash": "4db2df716bc3f7e2",
+      "triangles": 3040
+    },
+    "set-emu700Far-tail": {
+      "hash": "99123118b7067f0f",
+      "triangles": 6728
+    },
+    "light-set-emu700-car": {
+      "hash": "d55dc5f89bae1dc5",
+      "triangles": 1024
+    },
+    "light-set-emu700-carBack": {
+      "hash": "5b943a794d182c5",
+      "triangles": 1024
+    },
+    "light-set-emu700-centre": {
+      "hash": "86a55145aaa95da5",
+      "triangles": 1020
+    },
+    "light-set-emu700-centreBack": {
+      "hash": "9a11cd3c382813a5",
+      "triangles": 1020
+    },
+    "light-set-emu700-head": {
+      "hash": "3f9e85da30c3e0fd",
+      "triangles": 912
+    },
+    "light-set-emu700-panto": {
+      "hash": "4786eba9ea237b59",
+      "triangles": 1008
+    },
+    "light-set-emu700-pantoBack": {
+      "hash": "4d2c1b3a70647659",
+      "triangles": 1008
+    },
+    "light-set-emu700-tail": {
+      "hash": "5aeb9a6030ccbcfd",
+      "triangles": 912
+    },
+    "light-set-emu700Far-car": {
+      "hash": "8fe98508c93d43e5",
+      "triangles": 136
+    },
+    "light-set-emu700Far-carBack": {
+      "hash": "dd0cdc3e38a47ae5",
+      "triangles": 136
+    },
+    "light-set-emu700Far-centre": {
+      "hash": "96453535da4cfed3",
+      "triangles": 144
+    },
+    "light-set-emu700Far-centreBack": {
+      "hash": "123bdfd96f88dbd3",
+      "triangles": 144
+    },
+    "light-set-emu700Far-head": {
+      "hash": "735521113b6e4cfd",
+      "triangles": 120
+    },
+    "light-set-emu700Far-panto": {
+      "hash": "e9292cfa3ca5a1e1",
+      "triangles": 156
+    },
+    "light-set-emu700Far-pantoBack": {
+      "hash": "1c4dfd00105277e1",
+      "triangles": 156
+    },
+    "light-set-emu700Far-tail": {
+      "hash": "f0d8246f4af0fffd",
+      "triangles": 120
     }
   }
 }

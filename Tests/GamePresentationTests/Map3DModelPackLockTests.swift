@@ -52,19 +52,22 @@ final class Map3DModelPackLockTests: XCTestCase {
     /// the Hai-Feng and Shan-Lan sets last (16 cars, 16 lamp sets); with
     /// them left out, the names, hashes, lamps and signs are main e7cb277's
     /// to the digest. Decision 558 added the Wenhu line's VAL256 and 370
-    /// sets, near and far, after them (32 cars, 16 lamp sets).
+    /// sets, near and far, after them (32 cars, 16 lamp sets); decision 560
+    /// the EMU700 sets after those (16 cars, 16 lamp sets, no sign:
+    /// `Map3DHeadSigns.services` has no `emu700`). The models before them
+    /// are as they were (`hashes.lock.json`).
     func testTheOrderAndTheLampsAreAsBefore() {
         let pack = Map3DModelPack.standard
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "171a4196bbb8a41d")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "9ca160825cbdcc53")
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "24ccb42e91611a3d")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "a19f440dc8a06e1f")
         let lamps = pack.lights.keys.sorted().map { index -> String in
             let car = pack.lights[index]!
             let vertices = car.front.head + car.front.tail + car.back.head + car.back.tail
             let model = Map3DModelPack.Model(name: "", vertices: vertices, minimum: .zero, maximum: .zero)
             return "\(index) \(car.windows ?? -1) \(Self.hash(model))"
         }
-        XCTAssertEqual(lamps.count, 336)
-        XCTAssertEqual(Self.digest(lamps), "2f401168a5703fb")
+        XCTAssertEqual(lamps.count, 352)
+        XCTAssertEqual(Self.digest(lamps), "bc708f6c3479d438")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a422495a9c229fba")
     }
 

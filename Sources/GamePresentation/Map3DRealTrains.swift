@@ -143,13 +143,15 @@ public struct Map3DRealTrains: Sendable {
     /// Decision 435: the formation a train of a line of `system` whose
     /// trains are `line`, numbered `number`, is drawn as: its set
     /// ``variantKey(system:key:number:locked:)``, as many cars as the line's,
-    /// but the EMU900 ten, as it always runs.
+    /// but the EMU900 ten, as it always runs. Decision 560: and the EMU700
+    /// eight, as it always runs.
     /// Decision 461: and a line's ``Formation/alternate`` for its
     /// odd-numbered trains.
     static func formation(of line: Formation, system: String, number: Int, locked: Set<String> = []) -> Formation {
         let key = line.alternate.map { number % 2 != 0 ? $0 : line.key }
             ?? variantKey(system: system, key: line.key, number: number, locked: locked)
-        return Formation(key: key, cars: key == "emu900" ? Map3DEMU900.sequence.count : line.cars)
+        let cars = key == "emu900" ? Map3DEMU900.sequence.count : key == "emu700" ? Map3DEMU700.formationCars : line.cars
+        return Formation(key: key, cars: cars)
     }
 
     /// Decision 511: the DR3100 diesel express, three cars, one set as

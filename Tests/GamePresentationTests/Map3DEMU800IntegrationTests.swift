@@ -121,10 +121,11 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
 
     /// Decision 435 replaced the odd and even numbers with the three
     /// fleets' shares (``Map3DTrainSet/localTrain(number:)``); the EMU500 is
-    /// still one of them, the EMU800 another.
+    /// still one of them, the EMU800 another. Decision 560: four fleets
+    /// (2 is the EMU800 and −3 the EMU700 now, so 4 and −4, −1 stand in).
     func testSomeLocalTrainsAreEMU500AndSomeEMU800() {
-        for number in [2, 7, 1_107, -1] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu500", "\(number)") }
-        for number in [5, 8, 1_108, -3] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu800", "\(number)") }
+        for number in [4, 7, 1_107, -4] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu500", "\(number)") }
+        for number in [5, 8, 1_108, -1] { XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), "emu800", "\(number)") }
         // The real trains' number is the one at the end of their key.
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: Map3DTrainSet.number(ofRealTrain: "tra-1107")), "emu500")
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: Map3DTrainSet.number(ofRealTrain: "tra-1108")), "emu800")

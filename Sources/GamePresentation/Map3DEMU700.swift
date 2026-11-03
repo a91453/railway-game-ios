@@ -5,6 +5,9 @@ import Foundation
 public enum Map3DEMU700 {
     public enum Role: String, CaseIterable, Sendable { case emc, ep, et, em }
     public static func pitch(_ role: Role) -> Float { role == .emc ? 20.743 : 20.3 }
+    /// Decision 560: the cars of a train as it runs (two four-car units,
+    /// EMC EP ET EM | EM ET EP EMC).
+    public static let formationCars = 8
     public static func model(_ role: Role, far: Bool = false, shellOnly: Bool = false) -> Map3DModelPack.Model {
         var r = EMU700Recipe(role: role, far: far)
         r.shell()

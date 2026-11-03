@@ -1833,6 +1833,40 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 560: the EMU700 local train in the garage (the 3D map's
+    /// own models, eight cars), by day: the front close up and the side,
+    /// near models, then the far models from the side and the front. For
+    /// the screenshot review of the pull request that put it in service.
+    func testEMU700Train() {
+        // The garage opened on the EMU700 alone (`-screenshot-showcase`, as
+        // decision 558's test): scrolling the picker's sheet on a phone on
+        // its side ran past the 8 minutes (run 41620016563).
+        let app = launch(extra: ["-screenshot-showcase", "emu700"])
+        defer { app.terminate() }
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+        garage.tap()
+        let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+        XCTAssertTrue(closeUp.appears(within: 120), "The garage did not open")
+        let far = app.segmentedControls["trainShowcase.far"]
+        far.buttons.element(boundBy: 0).tap()
+        closeUp.tap()
+        settle(seconds: 6)
+        keep("emu700-near-front", app)
+        app.buttons["trainShowcase.camera.side"].tap()
+        settle(seconds: 4)
+        keep("emu700-near-side", app)
+        far.buttons.element(boundBy: 1).tap()
+        settle(seconds: 6)
+        keep("emu700-far-side", app)
+        closeUp.tap()
+        settle(seconds: 4)
+        keep("emu700-far-front", app)
+    }
+
     /// Decision 558: the Wenhu line's two fleets in the garage (the 3D
     /// map's own models), one at a time, by day: the front close up and
     /// the side, near models, then the far models from the side.

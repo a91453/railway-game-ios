@@ -319,6 +319,12 @@ public struct Map3DTrainSet: Sendable {
             wenhuVAL256(far: true),
             wenhu370(),
             wenhu370(far: true),
+            // Decision 560: and #1730's EMU700 (by ``variant(of:number:locked:)``
+            // as many as its share of the four fleets' cars), from 500 m
+            // out its far cars; after the sets before it (decision 558's
+            // Wenhu sets too), so none of their models move.
+            emu700(),
+            emu700(far: true),
         ]
     }()
 
@@ -354,13 +360,14 @@ public struct Map3DTrainSet: Sendable {
     /// 4,500 triangles a cab car.
     /// Decision 433: and the C341 (its far set), 3,900 a cab car.
     /// Decision 435: and the EMU900 (its far set), 9,300 a cab car.
+    /// Decision 560: and the EMU700 (its far set).
     /// Decision 461: and the C371, C381 and 610 (their far sets).
     /// Decision 466: and the Sanying line's; decision 483: and the
     /// Kaohsiung and Taichung Green line's (their far sets).
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
+                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
                                 "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key]
 
@@ -401,14 +408,16 @@ public struct Map3DTrainSet: Sendable {
     }
 
     /// Decision 435: the set a Taiwan Railway local train numbered `number`
-    /// is drawn as, as many of each as its share of the three fleets' cars
-    /// (EMU900 520, EMU500 344, EMU800 296: 9, 6 and 5 in 20): of seven
-    /// times the number's remainder by 20, 0 to 8 the EMU900, 9 to 14 the
-    /// EMU500, 15 to 19 the EMU800. Times seven, so that trains numbered one
-    /// after another are not the same kind in a run.
+    /// is drawn as, as many of each as its share of the fleets' cars.
+    /// Decision 560: four fleets (EMU900 520, EMU500 344, EMU800 296,
+    /// EMU700 160: 8, 5, 4 and 3 in 20, of 1,320 cars 7.9, 5.2, 4.5 and
+    /// 2.4): of seven times the number's remainder by 20, 0 to 7 the EMU900,
+    /// 8 to 12 the EMU500, 13 to 16 the EMU800, 17 to 19 the EMU700. Times
+    /// seven, so that trains numbered one after another are not the same
+    /// kind in a run.
     static func localTrain(number: Int) -> String {
         let share = ((number % 20 + 20) % 20) * 7 % 20
-        return share < 9 ? "emu900" : share < 15 ? "emu500" : "emu800"
+        return share < 8 ? "emu900" : share < 13 ? "emu500" : share < 17 ? "emu800" : "emu700"
     }
 
     /// Decision 461: the set a player's metro train numbered `number` is
@@ -817,6 +826,26 @@ public struct Map3DTrainSet: Sendable {
                         single: nil, pantograph: part(.epCompressor), centre: part(.emSIV), middleBack: part(.emToilet, reversed: true),
                         pantographBack: part(.epCompressor, reversed: true), centreBack: part(.emSIV, reversed: true),
                         fourth: part(.emCrew), fourthBack: part(.epAccessible, reversed: true))
+        }
+    }
+
+    /// Decision 560: #1730's EMU700 units: an EMC at each end (turned round
+    /// at the back), then EP, ET and EM over and over, the back half the
+    /// front's mirror image, every car of it turned round (each unit's +x
+    /// is toward its own four-car unit's cab); eight cars are the static
+    /// formation EMC EP ET EM | EM ET EP EMC, the two EMs (no cab) coupled
+    /// back to back in the middle. Each car its own length, the pantographs
+    /// on the EPs, the cabs' lamp lenses lit at the two ends only
+    /// (``litLenses(_:front:)``: the EMU700 paints them the headlamp white,
+    /// not decision 408's tunnel lamp). `far`: ``Map3DEMU700/model(_:far:shellOnly:)``'s
+    /// far units.
+    static func emu700(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "emu700Far" : "emu700", cycle: [.pantograph, .centre, .middle], ownLengths: true,
+                      far: far ? nil : "emu700Far") {
+            func part(_ role: Map3DEMU700.Role) -> Map3DModelPack.Model { Map3DEMU700.model(role, far: far) }
+            return Cars(head: litLenses(part(.emc), front: true), middle: part(.em), tail: litLenses(part(.emc).turned, front: false),
+                        single: nil, pantograph: part(.ep), centre: part(.et), middleBack: part(.em).turned,
+                        pantographBack: part(.ep).turned, centreBack: part(.et).turned)
         }
     }
 
