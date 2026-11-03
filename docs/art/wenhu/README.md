@@ -51,4 +51,14 @@ node tools/wenhu/render.mjs /absolute/output
 
 通用GLB/package/audit、native讀回的實際執行結果另記。共同尺度渲染固定單車13.80m框／完整55.12m框，兩款與近遠同相機光線；單車與全列框不同，沒有各自auto-fit。WebGL不代表Metal／Simulator／實機或動態碰撞。
 
-尚缺：正式角色方向與有時期四車實號編組、完整逐向來源（特別完整車底／輪組）、白模先行的完整檢查紀錄、逐玻璃／設備／走行支承與遮擋、全部真固體／assembly專用故障反例、近遠跳變、Swift獨立assembly、獨立GLB importer、全部PNG驗收、最終viewer互動及HTTP/file下載bytes、獨立producer checkout逐bytes重建、最終staged/HEAD guard與最新head CI收尾。四態維持UNVERIFIED；不可把通用audit代替這些。
+尚缺：正式角色方向與有時期四車實號編組、完整逐向來源（特別完整車底／輪組）、白模先行的完整檢查紀錄、逐玻璃／設備／走行支承與遮擋、全部真固體／assembly專用故障反例、近遠跳變與實照旁置逐項通過、file://及裝置驗證。其餘已實際執行項目見下段與報告，不將分項成功當成全部完成。四態維持UNVERIFIED；不可把通用audit代替這些。
+
+## 本輪實際驗證與自檢（未完成結論不變）
+
+Producer `91a31f0837b4076b6c17f5f4ffe0bea81b504ed9`。Swift6.4 WAE build及10測試通過；12份native/assembly共用audit、4份獨立Swift組裝（265,632頂點，位置誤差0、顏色相同）、Blender4.3.2獨立匯入通過。343張本機PNG完整解碼／透明／非空／留白驗證，提交僅6私庫PNG＋公開1PNG；兩款各6項viewer HTTP實載／七向日夜／旋轉縮放／下載bytes通過，file://受管理政策阻擋維持UNVERIFIED。完整950舊模型逐bytes／全頂點欄FNV／索引保持；未改main與候選均同33項既有hash gate失敗，不放寬gate。
+
+近/遠三角：VAL A 8132/3476、B 8168/3512；APM A 7452/3004、B 7488/3040；四車VAL 32600/13976、APM 29880/12088，遠景各角色少於近景一半。所有獨立單元低於15000；完整車列用合法assembly。
+
+親看最終6張角色／編組七向日夜／白模／剪影共同尺度表：**仍不符合**端下真開口、連結器機構／燈具凹槽的細化，車底目前過於簡化；A/B屋頂設備對應未確認。**合理簡化**為省略小螺絲／管線；**資料不足**為輪組安全機構、正式角色方向、近期完整實號列車、完整正交屋頂／車底。沒有使用者接受。不能用技術測試掩蓋這些外觀與來源問題。
+
+執行證據見 verification.json、png-verification.json、protection.json；independent producer重建另記provenance。

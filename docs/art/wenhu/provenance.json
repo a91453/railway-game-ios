@@ -1,0 +1,267 @@
+{
+  "geometry_producer": "91a31f0837b4076b6c17f5f4ffe0bea81b504ed9",
+  "base_main": "f1a6a2d50b700837416139013079b56dfed46ae9",
+  "reference_commit": "ea6f78771f2a0f47e98966b1a99d6f33c7827b8c",
+  "asset_base": "0ec7187ee4e2a57a298468b3ec34d13f76416f45",
+  "inputs": [
+    {
+      "path": "Sources/GamePresentation/Map3DWenhuVAL256.swift",
+      "sha256": "b62724a5fc0dec25364a168e9125a1f129f09c1a5fe43e4b3450a30e4dcf251d"
+    },
+    {
+      "path": "Sources/GamePresentation/Map3DWenhuPrimitives.swift",
+      "sha256": "e17979ab266387cdeef079cb7bbff31d1baab5aed1ef9a1cfe6152e3c96915f7"
+    },
+    {
+      "path": "Sources/GamePresentation/Map3DWenhuAPM256.swift",
+      "sha256": "ffa41d064110d119430b3e1819ace27e8c61b953efc0b7e796097b0aa10cd960"
+    },
+    {
+      "path": "tools/wenhu/protect.py",
+      "sha256": "eb127bc01f561933caf48b5e25d01810c091744db1dacf40ddac89f97ab4cc46"
+    },
+    {
+      "path": "tools/wenhu/compare-assembly.sh",
+      "sha256": "7972d574aeeace87f2d10fb737611d790e4c9d61323a7e38b15382e72351b01e"
+    },
+    {
+      "path": "tools/wenhu/assembly.json",
+      "sha256": "c5abd13326efd946caaedfc1ce0b853ba25357c2971bd49049437bb4eae4297b"
+    },
+    {
+      "path": "tools/wenhu/curate.py",
+      "sha256": "c73ea191d95c2e4555437ebb3de0ac8be35078e2a83a6afbf3bdf91f5fc3e513"
+    },
+    {
+      "path": "tools/wenhu/sheets.py",
+      "sha256": "2cd2e78a5847c93727409e245744f952f30489c3a5a442ed586a4e7bac0ea301"
+    },
+    {
+      "path": "tools/wenhu/rebuild.sh",
+      "sha256": "9f026a99992992ff2c1e2de18f8240da454ec1e3165f1ec28467a5f56058a365"
+    },
+    {
+      "path": "tools/wenhu/compare-assembly.swift",
+      "sha256": "8c0f314020ee0a21d6c13c3215d0eb6030318f096fc406507f5073bce587a36c"
+    },
+    {
+      "path": "tools/wenhu/render.mjs",
+      "sha256": "5f157e5cd89c44640106dcfac3b7e2124c1f24e60cfcbaac6e0a59b663d83cd5"
+    },
+    {
+      "path": "tools/wenhu/README.md",
+      "sha256": "739fbcbfda117f0fc2c3676a29b263fc0dbb517d5d1dddebc95a98ab5d26256d"
+    },
+    {
+      "path": "tools/train-models/export.swift",
+      "sha256": "8a3fedcd7824632f1a98c10595d7c75e644fbdf6de2d4664d67075021edd08f6"
+    },
+    {
+      "path": "tools/train-models/run.sh",
+      "sha256": "64ed8b7068324c6890474073372381e0239c7a393f7d7863493bfb74be23327b"
+    },
+    {
+      "path": "tools/train-models/renderer.js",
+      "sha256": "a26942a43464f1c898db6c81abd8f71a7608ddcdf64715b296ede51b9e630e7e"
+    },
+    {
+      "path": "tools/train-models/inspect.mjs",
+      "sha256": "f2f317d32526f63204fd9747f07f5a5070f55224017434029beed76e5eef5c02"
+    },
+    {
+      "path": "tools/train-models/deliver.py",
+      "sha256": "092454b3dc312034d0654ba2f725899ff14d30179a27acb20738d288ed86c366"
+    },
+    {
+      "path": "tools/train-models/assemble.mjs",
+      "sha256": "2175152a80038888e812b8eb11b8fe149bb1ba061385fd12cb5af262100dbf9d"
+    },
+    {
+      "path": "tools/train-models/package.mjs",
+      "sha256": "186a3dbacbda52ab383d9fae3a4d118d462d05053b6f6b75fa927be1a0df7c4f"
+    },
+    {
+      "path": "tools/train-models/native.mjs",
+      "sha256": "0b9c0fe73023880d0c305eb7472da24382e220ad48bf4e88beb36eb8d0cd4cf9"
+    },
+    {
+      "path": "tools/emu900-native/scene.js",
+      "sha256": "472b225f683e25ae83435a9737fab7af5a499f20566e69dd358d8d2305bf94df"
+    },
+    {
+      "path": "Sources/GamePresentation/Map3DStationKitGeometry.swift",
+      "sha256": "88eebe8d7d2ef9b79dda3fbd195ea6ccfe12a76b1e27ebbed03ac04be5738433"
+    },
+    {
+      "path": "docs/art/wenhu/sources.json",
+      "sha256": "bb88ae7f84e3d1710b062d9d51d5f90136008151d2e2e43d0c72a295f9c04654"
+    },
+    {
+      "path": "docs/art/wenhu/val256-status.json",
+      "sha256": "5aedfeaf9d4ff6679059dbd0d8069dce8cc79ab07052d0844ebe7aa1e66513e6"
+    },
+    {
+      "path": "docs/art/wenhu/apm256-status.json",
+      "sha256": "5aedfeaf9d4ff6679059dbd0d8069dce8cc79ab07052d0844ebe7aa1e66513e6"
+    }
+  ],
+  "independent_checkout": {
+    "status": "VERIFIED",
+    "producer": "91a31f0837b4076b6c17f5f4ffe0bea81b504ed9",
+    "actual_cwd_separate_checkout": true,
+    "payloads_pngs_viewers": [
+      {
+        "file": "models/wenhu-apm256-a-far.glb",
+        "sha256": "d0ed72f73d940b9459ce80812abaf8f1c018bcb316b5c66950682be8d0795118"
+      },
+      {
+        "file": "models/wenhu-apm256-a-far.m3dmodel",
+        "sha256": "e154714b2af0d535f40128d8f8371a95f420af2dac5fbbc7bfd582cc5483d106"
+      },
+      {
+        "file": "models/wenhu-apm256-a.glb",
+        "sha256": "d9c4d43df6257f009f079e5a84297cfb546cb52a04a735cb8edb0e770830e037"
+      },
+      {
+        "file": "models/wenhu-apm256-a.m3dmodel",
+        "sha256": "d6272abcb610cd1268554de4623f4c95b9e74cd6e89666d182828f467db00a7d"
+      },
+      {
+        "file": "models/wenhu-apm256-b-far.glb",
+        "sha256": "bcea046bd4e0bc622ab01bf52c2b72f2ae56a3fa4a0fb10befdc53d50702a3e6"
+      },
+      {
+        "file": "models/wenhu-apm256-b-far.m3dmodel",
+        "sha256": "8d034b222fed9084ddbf8eb9d54c6e7e4ed7d94373efa4ece14df70c0bf51cec"
+      },
+      {
+        "file": "models/wenhu-apm256-b.glb",
+        "sha256": "4b1a01a1d3b5e0d59dc2f9302e3d4713b011253977fd35b0b78741073ad3ffc8"
+      },
+      {
+        "file": "models/wenhu-apm256-b.m3dmodel",
+        "sha256": "79e3f8d8792b649d9b6c66f80887c0f0aa4eeec22b5bd3cd8f9fda9ebb80432d"
+      },
+      {
+        "file": "models/wenhu-apm256-formation-far.glb",
+        "sha256": "f0b06844135ac8da0c3e1ae7f09d906e23a9bba1d3607191a2b4e449fb303f47"
+      },
+      {
+        "file": "models/wenhu-apm256-formation-far.m3dscene.json",
+        "sha256": "43d9b64d9bf755b55507cec1803c3f40c8e83a11cf72d3d8f126ec433ff69560"
+      },
+      {
+        "file": "models/wenhu-apm256-formation-far.triangles.bin",
+        "sha256": "d08a38d702193384a1b5834a71953cb5cffd38164882330545f78f35d3e6a4b3"
+      },
+      {
+        "file": "models/wenhu-apm256-formation.glb",
+        "sha256": "79bc700e352b73b4f019880076344b0dc962a41c25caa4633fc856c8652837dc"
+      },
+      {
+        "file": "models/wenhu-apm256-formation.m3dscene.json",
+        "sha256": "5c990d3a29b4a492b3452c786f72d4447bc91089aaacbe3d516858bcb91fc9f5"
+      },
+      {
+        "file": "models/wenhu-apm256-formation.triangles.bin",
+        "sha256": "3987eaa1eaa07629c6af858a842b520eaec2c22f7b7bfea01ec1b2dac9b9d870"
+      },
+      {
+        "file": "models/wenhu-val256-a-far.glb",
+        "sha256": "1fbdb0f65591e50cc12f0db4e5b931cbf0965bc6fa9f3869690c25b649027ea3"
+      },
+      {
+        "file": "models/wenhu-val256-a-far.m3dmodel",
+        "sha256": "7b66e421858f154f6a0d15595eed94b800a82a97543ed0ab539fec8c831b1adf"
+      },
+      {
+        "file": "models/wenhu-val256-a.glb",
+        "sha256": "052e91e728ca5883ff02ddf200a51b05c722505d3b8987cd16c41729a42f5bd8"
+      },
+      {
+        "file": "models/wenhu-val256-a.m3dmodel",
+        "sha256": "83822ffefbc8e69703692dba71aa44f615303eb5b061fdf71caadb0cc14225b2"
+      },
+      {
+        "file": "models/wenhu-val256-b-far.glb",
+        "sha256": "d7421f6d566e1d19a7000aa31df7ecba5fe9070b125924a5d68ebed682b83a79"
+      },
+      {
+        "file": "models/wenhu-val256-b-far.m3dmodel",
+        "sha256": "5b1ad9209c1b4e31d54743ec4beabe9da516fba84e2ac266007483c6aadeed20"
+      },
+      {
+        "file": "models/wenhu-val256-b.glb",
+        "sha256": "ade2c1a4d5f7b50cf75f0e207a44e34045539c101ac4cb35aa9e51d9d360d904"
+      },
+      {
+        "file": "models/wenhu-val256-b.m3dmodel",
+        "sha256": "6fd35495e28dfd7c12bab1a9d3b26396f784a519241eec7780bca8a3351a8eef"
+      },
+      {
+        "file": "models/wenhu-val256-formation-far.glb",
+        "sha256": "40a2b364e74f3dea1a7a55f0a7a2ee6ba6c465a88ba426310368af75ac379d2e"
+      },
+      {
+        "file": "models/wenhu-val256-formation-far.m3dscene.json",
+        "sha256": "c953702b7bc4ff8c5ef7a6c03fa9b9193294572bfa8630f6ba92a2ecd4d5b958"
+      },
+      {
+        "file": "models/wenhu-val256-formation-far.triangles.bin",
+        "sha256": "0230d35a2ead0f4fe2e70b320fadbf562a3ae01052cbdcf144139ba9f008b778"
+      },
+      {
+        "file": "models/wenhu-val256-formation.glb",
+        "sha256": "e1b0c2426f827f8cc6e2cacd6ec1799600bcaa8a829e6814cc684d403c9c879d"
+      },
+      {
+        "file": "models/wenhu-val256-formation.m3dscene.json",
+        "sha256": "8d71ed8a2e419fb2971385ced6d97dd36c0e4789bbd9b45ff0829c4ea1a53b4e"
+      },
+      {
+        "file": "models/wenhu-val256-formation.triangles.bin",
+        "sha256": "93afc4d686efbfcab0ad7f86200e8ef05dbc0b2a9fdd8005ccfeeff998900a9d"
+      },
+      {
+        "file": "sheets/val256-a.png",
+        "sha256": "4b273fcab6f1baacf20423500502f5dec2dbfaad876ff1016096f8c6fbc9aa06"
+      },
+      {
+        "file": "sheets/val256-b.png",
+        "sha256": "10b7c8f3194a43fbffb88c7d7d72857d6f2ee46f38e25cb9bd9a5522fa4faea4"
+      },
+      {
+        "file": "sheets/apm256-a.png",
+        "sha256": "6c074f41a041b7450249618f4bb03cff3988316ef1353a13e1953443ce82c8b3"
+      },
+      {
+        "file": "sheets/val256-formation.png",
+        "sha256": "0859f0482560568edee11a54e86d50b7bf856fe6ee21abc69075dc40d1028d73"
+      },
+      {
+        "file": "sheets/apm256-b.png",
+        "sha256": "f8569233d51f7d9e39ec056ae23249c8440173fdecb94e13d3484b49bae14881"
+      },
+      {
+        "file": "sheets/apm256-formation.png",
+        "sha256": "a80b6b34bcaff5ed47fee68c07c93e7cea10c46ea01202eb8b6cec3c8d1cd70f"
+      },
+      {
+        "file": "overview.png",
+        "sha256": "46403d2d9f0d537c260b100efbe6c738c3ef2324f7f59da9b20dd8ee1c699802"
+      },
+      {
+        "file": "wenhu-val256/index.html",
+        "bytes": 2243025,
+        "sha256": "befc6049f81cb4c650df15e1238c41b0b64dac9d486a80b9f0fdf6473bd5d639"
+      },
+      {
+        "file": "wenhu-apm256/index.html",
+        "bytes": 2070665,
+        "sha256": "764f476ed031ffd25a104a498e201c7fdf4b7605df02c8af8c023ecdefb96ad7"
+      }
+    ],
+    "scope": "native/GLB/assembly/triangle payloads, 6 selected PNGs + overview and both final embedded viewers byte-identical; no appearance or device claim"
+  },
+  "renderer": "NativeRenderer; game soft model light, fixed unit/formation framing; WebGL not Metal"
+}
