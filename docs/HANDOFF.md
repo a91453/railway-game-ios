@@ -2816,6 +2816,30 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 ### 4.43 打開 3D 不等列車模型包（決策 546，派工單 OPEN3D，session_01YGNNunVxxTjzneuBjw86MX，`claude/open3d-model-pack`，2026-11-02）
 
 做了的在 [決策 546](decisions/546.md)：模型包分核心做（Linux release 4 核 3.95 → 0.72 s，模型位元相同，`Map3DModelPackLockTests`）、遊戲開了 8 秒後先在背景做、3D 場景先顯示（列車先是方塊）。留下的（決策 546「下一步」）：實機量開 3D 要等多久與記憶體提早多 192 MB 的影響（UNVERIFIED）；`useModels` 在主執行緒複製 192 MB 到 GPU 緩衝，可移到背景；FLANE5 的 `-ui-test-3d-models-first`（#1693）仍有用（UI 測試不先做模型包），沒有刪，改成走同一個 `Map3DTrainModels`（`.background`）；做模型包一律 `.utility` 以下、不會被提高。
+### 4.44 買下的捷運、輕軌靠右行駛（決策 564，派工單 WENHUSIDE，session_01YGNNunZGPiV2XFNuJMZEsQ，`claude/wenhu-side`，PR #1767，2026-11-03，未完成）
+
+作者 110.1 的優先 bug：買下文湖線後列車走對向的軌。改法與理由在 [決策 564](decisions/564.md)。這個 session 第 2 次壓縮時停在這裡，PR 還是 draft、CI 紅。號碼：決策 564、存檔版本 82（`SaveFixtures/v82-keeps-right.json` 已加），golden、`ReplayFixtures/` 的值都沒動。
+
+已做（Linux VERIFIED）：
+
+- GamePresentation：`RealBranchLine.keepsRight`（照 `Map3DRealTrains.rightHand`，`trtc` 對到 `mrt`、`tymc` 在名單裡）、`routePreferences(_:stops:keepingRight:)` 中間站兩方向月台對調、過夜車的排法、買下時 `setLineKeepsRight`。
+- GameCore：`ServiceLine.keepsRight`、`GameWorld.setLineKeepsRight(_:to:)`、`keepsRight(toward:)`（停靠或收車的線全都靠右才算）、`networkPath` 往這種車站時懲罰不是最右邊的出口（`rightOfLeftmost(after:among:mirrored:)`）。存檔 82 只在為真時寫 `"keepsRight": true`。
+- 綠的：`KeepRightTests`、`KeepLeftTests`、`SavedGameTests`、`GoldenScenarioTests`、`ReplayFixtureTests`、`WenhuLineTests`、`RealLineAcquisitionTests`（淡海藍海擬實 212/212）、`ScreenshotSceneTests`、`Map3DScreenshotViewTests`。
+- `RUNNING_SIDE_REPORT=1` 的 `RealLineRunningSideTests`：文湖 V 530／0、淡海 VB 229／0、安坑 K 372／0、三鶯 LB 760／0、台北開局 2,970／0（靠右／靠左的取樣數）。main 的文湖三小時是 0／2,321。
+
+還沒做、接手要做的：
+
+1. **CI 紅（PR #1767，head `096b219`）**：
+   - campaigns-11：`SanyingLineSimpleDayTests` 398 班漏 292（三鶯，簡單規則）。死結在第一天 07:20。追到一半：車 5 從鶯桃福德（stop 0，edge 121）往頂埔，走第二條（230、225 … 163、162），到 162 後經 34、33 換回第一條（主線），停在橫溪（stop 8）的 edge 33，沒照指定的 `7->8 edge(151)`。懷疑龍埔到橫溪之間有接到第一條的連接（渡線，或決策 479 中途機廠接第二條那一側的 Y 線，機廠在站 13），簡單規則下退回找路或決策 549 的「正線」把車帶上去；也要查那段的 `keepsRight(toward:)` 是不是某站為假。修法要讓三鶯回到 main 的 0 漏。
+   - campaigns-6（2 個失敗）與 campaigns-9（1 個失敗）：名字還沒讀，可能是淡海兩線或三鶯擬實的一日測試、`RealLineAcquisitionTests`。先讀 job log。
+2. **高鐵示範開局**：`RealLineRunningSideTests` 量到 812 靠右、**139 靠左**（測試紅）。還沒查是哪條線、哪一段。
+3. `RealLineRunningSideTests.testTheOtherLinesKeepToTheirSide` 的 R_XBT、G_XBT（太短、量不到雙線）與六家、沙崙只印不判；安坑的空車回送有 2 次靠左，看要不要判。
+4. **機廠量測**：派工單要的四條線（文湖、淡海、安坑、三鶯）兩天三種規則、改前改後，用 `DepotReturnReportTests` 的 `DEPOT_RETURN_REPORT=1`（release、`--scratch-path` 分開建）。上次的數字：文湖 0/532、淡海 0/152、安坑 0/178、三鶯 0/292。其他線的價格不能變。填進決策 564「量到的」（現在寫「待填」）。
+5. **截圖**：`website-screenshots.yml` 的 `testWenhuRunsOnTheRight`（存 wenhu-right-2d、wenhu-right-3d）已在 `claude/wenhu-side` 排過一次，還沒看結果；第 2 級，自己審、附進 PR。
+6. 111.1 的玩家修正說明（已在 PR）：「修正：買下文湖線等捷運、輕軌後，列車改走自己方向的那條軌道，和買下前一樣靠右行駛。」
+7. 收尾：CI 綠 → ready → #1579 留「可合併」→ send_message 告訴遊戲規劃。PR 說明要寫存檔遷移（舊存檔照舊靠左）、哪些線靠右與 `rightHand` 的對應（含 `tymc`）、golden／replay 值不動。
+8. 桃園機捷（#1743，TYMCLIST3 session_01YGNNup5FDQbQYoyKCqHySs）：已告訴他們 `tymc` 在名單裡，要走 `RealLineLaying.build` 或自己呼叫 `setLineKeepsRight`。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
