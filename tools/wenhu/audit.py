@@ -47,13 +47,13 @@ def glazing(t,f):
   ds=hits(t[(f&2)==0],c[i]-n[i]*.002,-n[i]);assert len(ds) and min(ds)<.065,('glass lacks backing',int(i),float(min(ds)) if len(ds) else None)
  return ids
 
-def parts(t,groups,roof):
+def parts(t,groups,roof,cap):
  tyres=[];guides=[];hvac=[]
  for ids in groups:
   p=t[ids].reshape(-1,3);lo=p.min(axis=0);hi=p.max(axis=0);size=hi-lo;c=(hi+lo)/2
   if np.max(abs(size-np.array([.8,.26,.8])))<.0002:tyres.append((ids,c,lo,hi))
   if np.max(abs(size-np.array([.4,.4,.15])))<.0002:guides.append((ids,c,lo,hi))
-  if abs(size[0]-2.45)<.0002 and abs(size[1]-1.62)<.0002 and .149<size[2]<.231:hvac.append((ids,c,lo,hi))
+  if abs(size[0]-2.45)<.0002 and abs(size[1]-1.62)<.0002 and abs(size[2]-cap)<.0002:hvac.append((ids,c,lo,hi))
  assert len(tyres)==4,('missing or wrong tyre type',len(tyres))
  assert len(guides)==8,('missing or wrong guide wheel type',len(guides))
  assert len(hvac)==2,('missing/duplicate HVAC',len(hvac))
@@ -86,7 +86,7 @@ def reject(fn):
 root=Path(sys.argv[1]);manifest=json.loads((root/'manifest.json').read_text());rows=[]
 for m in manifest['models']:
  if m.get('native_kind')=='assembly':continue
- t,f=read(root/m['native']);groups=components(t);no_duplicates(t);glass=glazing(t,f);roof=3.30 if 'val256' in m['id'] else 3.38;tyres,guides,hvac=parts(t,groups,roof)
+ t,f=read(root/m['native']);groups=components(t);no_duplicates(t);glass=glazing(t,f);roof=3.30 if 'val256' in m['id'] else 3.38;cap=(.23 if roof==3.30 else .15)-(0 if m['id'].endswith('-far') else .008);tyres,guides,hvac=parts(t,groups,roof,cap)
  exterior=set(int(i) for i in glass);glass_groups=[g for g in groups if any(int(i) in exterior for i in g)]
  for sign in [-1,1]:
   q=t.copy()
@@ -94,14 +94,14 @@ for m in manifest['models']:
    chosen=[i for i in group if int(i) in exterior];direction=normals(t)[chosen].mean(axis=0);direction/=np.linalg.norm(direction);q[group]+=sign*.15*direction
   reject(lambda:glazing(q,f))
  for axis,delta,ids in [(2,.04,tyres[0][0]),(0,.20,tyres[0][0]),(0,.20,guides[0][0]),(2,.08,hvac[0][0])]:
-  q=t.copy();q[ids,:,axis]+=delta;reject(lambda:parts(q,components(q),roof))
- keep=np.ones(len(t),dtype=bool);keep[tyres[0][0]]=False;reject(lambda:parts(t[keep],components(t[keep]),roof))
+  q=t.copy();q[ids,:,axis]+=delta;reject(lambda:parts(q,components(q),roof,cap))
+ keep=np.ones(len(t),dtype=bool);keep[tyres[0][0]]=False;reject(lambda:parts(t[keep],components(t[keep]),roof,cap))
  # Wrong rolling axis and axial tyre profile mutate the actual complete tyre solid.
- ids,c,_,_=tyres[0];q=t.copy();local=q[ids]-c;q[ids]=local[:,:,[0,2,1]]+c;reject(lambda:parts(q,components(q),roof))
- q=t.copy();q[ids,:,1]=c[1]+(q[ids,:,1]-c[1])*.5;reject(lambda:parts(q,components(q),roof))
- keep=np.ones(len(t),dtype=bool);keep[guides[0][0]]=False;reject(lambda:parts(t[keep],components(t[keep]),roof))
+ ids,c,_,_=tyres[0];q=t.copy();local=q[ids]-c;q[ids]=local[:,:,[0,2,1]]+c;reject(lambda:parts(q,components(q),roof,cap))
+ q=t.copy();q[ids,:,1]=c[1]+(q[ids,:,1]-c[1])*.5;reject(lambda:parts(q,components(q),roof,cap))
+ keep=np.ones(len(t),dtype=bool);keep[guides[0][0]]=False;reject(lambda:parts(t[keep],components(t[keep]),roof,cap))
  reject(lambda:no_duplicates(np.concatenate([t,t[hvac[0][0]]])))
- q=t[hvac[0][0]].copy();q[:,:,0]+=.2;reject(lambda:parts(np.concatenate([t,q]),components(np.concatenate([t,q])),roof))
+ q=t[hvac[0][0]].copy();q[:,:,0]+=.2;reject(lambda:parts(np.concatenate([t,q]),components(np.concatenate([t,q])),roof,cap))
  body=max(groups,key=len);reject(lambda:no_duplicates(np.concatenate([t,t[body]])))
  rows.append({'id':m['id'],'glass_front_centroid_rays':len(glass),'actual_glass_groups':len(glass_groups),'load_tyres':4,'guide_wheels':8,'hvac':2,'thirteen_actual_geometry_faults_rejected':True})
 (root/'contact-verification.json').write_text(json.dumps({'status':'VERIFIED','models':rows,'limits':'Exterior glass centroid visibility/backing rays, connected tyres/guide wheels/HVAC and fixed photo-fit envelope/contact probes. Hidden safety/turnout gear remains a source gap. Not all intersections, all pixels, engineering accuracy or device proof.'},indent=2)+'\n');print('VERIFIED',len(rows),'role/LOD contact and visibility probes; 13 actual-geometry failures each')
