@@ -72,8 +72,10 @@ struct NewTrainArrivalCard: View {
 }
 
 /// The picture with the car `drop` of the way down; animatable, so the car
-/// is lowered onto the quay.
-private struct ArrivalScene: View, Animatable {
+/// is lowered onto the quay. Nonisolated, so the `Animatable` conformance
+/// (a nonisolated protocol) does not cross into the main actor; `body` is
+/// still on the main actor through `View`.
+private nonisolated struct ArrivalScene: View, Animatable {
     let arrival: NewTrainArrival
     var drop: Double
 
