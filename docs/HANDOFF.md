@@ -461,6 +461,27 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**pro 交回第 44 任（2026-11-03，pro 的遊戲規劃 session_01JMHz9YRiP23RXrrfdsaGsq，交回時間 14:00 UTC＝台灣 22:00）**：pro 當了一天遊戲規劃，照下面接回。和下面「第 44 任交給 pro」不同時以這段為準。
+
+- **發了 109.1**：作者 11-03 01:43 UTC 在 `efb9652`（#1735）按 TestFlight，run 41561636787（run 109）成功。同 commit 完整 `ci.yml` 41556623087 綠；full lane 41556631784 **紅**（`StartSaveFlowSmokeTests` 706 行）→ 派 FLANE7 查，結論是偶發（時鐘重畫換掉元素、鍵盤第一眼就等超過 20 秒），#1739 只改 UI 測試，已合；之後 `f1a6a2d` 的 full lane 綠。`PLAYER_FEEDBACK.md` 的 109.1 一段在這張 PR。作者要自己確認：App Store Connect 這版不再顯示 Missing Compliance。
+- **pro 期間合併的**（全部用 `expectedHeadSha`，每批後等 main 的 `ci.yml` 綠）：
+  - 11-02：#1723 WENHUCAP（決策 549）、#1725／#1727／#1728 CRASHSWEEP-3 三批（`GeometryReader` 改 `onGeometryChange`、3D 列車標籤改自訂 `Layout`）、#1726 108.1 紀錄、#1729 審查 L6、#1731 TOURFIX2（決策 551 續）、#1732 海風號山嵐號（決策 554）。
+  - 11-03：#1733 WENHULIST 文湖線上架（決策 552）、#1734 新光摩天大樓（決策 550，Antigravity 做的）、#1735 109.1 說明、#1736 ImmersiveMap 研究、#1738 TILT60 兩指上推斜到 60°（決策 555）、#1739 FLANE7、#1737 SUNPCF 太陽影子 tent PCF＋16 位元深度（決策 357 續）、#1740 WENHUFIX 文湖線跨過高鐵示範開局的南港機廠股道（決策 552 續；作者回報 109.1 高鐵示範開局買不到文湖線）。作者自己合了 Codex 的 #1730 EMU700。
+- **還開著（交回時）**：
+  - **TYMCLIST 桃園機場捷運上架（決策 556）**：session_01JMHz9cZgULsjQ6iT7rqEKp，`claude/tymclist-airport-line`，在修午後列車卡在山鼻／長庚；和 WENHUFIX 只在 `RealLineAcquisition.swift` 的 `guard let rise` 那行重疊，雙方說好後合的保留兩邊。轉 ready、CI 綠、兩天逐分量測齊再合。
+  - **DEPOTADD 舊存檔已收購的線加建真實機廠（決策 557）**：#1741，session_01JMHz9cgsomZ3fRPda6Di5h。作者說不要自動加（「那就照你的」），做成路線頁一顆按鈕＋確認框，收班後才生效。路線頁多一列與確認框是第二級截圖（自己看）。轉 ready、CI 綠就合。
+  - Codex 的 #1742 文湖線 VAL256／370 型原生 studies（draft，不是規劃派的）。
+- **號碼**：決策 549–552、554、555 已用；556 TYMCLIST、557 DEPOTADD 保留；553 是 UIA-B1 保留後釋出的，沒有人用（#1579 11-02 20:37 的留言）；**下一個 558**。存檔 81、golden schema 77 不動。
+- **沒派、留給第 44 任排的**：
+  1. **信義的台北 101 地標沒出現**：TILT60 的截圖（`docs/art/tilt60-2026-11-03/overview.jpg`，信義 260 m 兩張）只有一般大樓，看不到決策 370 的 101 模型。要查是載入距離、串流範圍還是截圖場景本來就沒放。
+  2. **ImmersiveMap 研究的排名**（`docs/research/IMMERSIVEMAP_STUDY_2026-11-03.md`）：1 SUNPCF、2 TILT60 已做；3 TRAINSHADOW、4 RELIEF30、5 SUN2WIN、6 TILT75 沒派，研究寫了各自的前提（多半要先有 SUNPCF／TILT60 的實機結果）。不升最低 iOS 18。
+  3. **審查 L6 的 L6-2～L6-5**（#1729 的審查交接）還沒派；#1693 還沒審。
+  4. **CRASHSWEEP 剩下的**：`ContentView`、`MapView`、`TutorialOverlay` 的整頁 `GeometryReader`，以及 `Chart { ForEach }`（細節在 §4.44）。
+  5. 決策 554（海風號山嵐號）與 552（文湖線）各自「下一步」裡的項目。
+  6. 網友提的「用手機 GPS 顯示自己在哪條線上」只記下，沒排。
+- **作者要刪的 branch**（session 被擋、規劃也被擋）：`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`（都指向 main 上已有的 commit）、`sunpcf-before`（SUNPCF 改前截圖用）。
+- **Antigravity**：作者電腦上的，規劃接不了；它做的 PR（如 #1734）照一般 PR 審、合。
+
 **第 44 任交給 pro（2026-11-02 約 15:20 UTC，session_01YGNNukkhfPybvPTy9Pnp8C，作者開的，週額度剩 2%，2026-11-03 22:00 台灣時間重置）**：作者請另一個帳號（pro）**當一天遊戲規劃**（同角色：派工、審查、合併、發版前檢查），額度重置後交回。不開新 session（作者：「不要再做新session了」）。
 
 - **108.1 發版中**：作者 15:05 UTC 在 `ef92919`（#1722 的合併）按了 TestFlight，run 41468139355。同一個 commit 的檢查：完整 `ci.yml` 41468098590、full lane（`ios-build.yml` 手動）41468104214、Release archive 41468122850。全部完成後在 `docs/research/PLAYER_FEEDBACK.md` 照 107.1 那段的格式記 0.5.0 (108.1)（文件 PR）；紅的查原因。What to Test 是 `.github/testflight-whats-new.md`（#1722）。出口合規 #1721 已合：確認 App Store Connect 這版不再顯示 Missing Compliance。
