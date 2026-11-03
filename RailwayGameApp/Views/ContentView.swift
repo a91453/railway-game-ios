@@ -519,7 +519,7 @@ struct ContentView: View {
             // Decision 509: Done stands beside Build while building.
             let doneBesideFoot = toolsColumn && showsRail
             let toggleBesideFoot = doneBesideFoot && session.tutorial?.step.usesDetailsCard != true
-            let showsFootRow = doneBesideFoot || ControlPanel.showsEdits(session)
+            let showsFootRow = doneBesideFoot || ControlPanel.showsEdits(session, linesPanelOpen: screen.panel == .lines)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             // Decision 224 (5B): the layer strip under the pill, while not
             // building and not in the tutorial; on a phone the building
@@ -527,7 +527,10 @@ struct ContentView: View {
             // its fold with it, PR #644's gate). The map's round layers
             // button, which opens the same list, shows only while the strip
             // does not (decision 226, 2026-10-15).
-            let showsLayerStrip = !showsRail && session.tutorial == nil
+            // Decision 568: while a new line is picked on the map, the
+            // layers, the next step and Undo put away; back after ✓ or ✕.
+            let drawing = session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines)
+            let showsLayerStrip = !showsRail && session.tutorial == nil && drawing.showsLayers
             // Decision 226 (2026-10-15, the owner): the follow bar beside
             // the strip, in the row under the pill, rather than squeezed
             // between the tools and the card lower down.
@@ -841,6 +844,7 @@ struct ContentView: View {
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: toolsColumn)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: sidePanel)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.lineDraft.count >= 2)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: drawing)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followBar?.train)
         }
     }

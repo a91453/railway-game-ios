@@ -2119,6 +2119,48 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("settings-rules", app)
     }
 
+    /// Decision 568: a new line picked on the map (five stations, the
+    /// potential layer on, as in the owner's report), on the map alone and
+    /// beside the lines panel; on its side and upright. The shots upright
+    /// end in `-portrait` and are not turned (website-screenshots.yml).
+    func testRouteDrawing() {
+        shootRouteDrawing(extra: [], name: "route-draw")
+    }
+
+    /// Decision 568: the same at the largest accessibility text size.
+    func testRouteDrawingLargeText() {
+        shootRouteDrawing(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"], name: "route-draw-large-text")
+    }
+
+    private func shootRouteDrawing(extra: [String], name: String) {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-line-draft", "-mapPopTravelMode", "potential"] + extra)
+        defer {
+            app.terminate()
+            XCUIDevice.shared.orientation = .landscapeLeft
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 30), "The new line's pill shows")
+        settle(seconds: 3)
+        keep(name, app)
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 3)
+        keep("\(name)-panel", app)
+
+        XCUIDevice.shared.orientation = .portrait
+        settle(seconds: 4)
+        keep("\(name)-panel-portrait", app)
+        let done = app.navigationBars["路線"].firstMatch.buttons["完成"]
+        if done.exists {
+            done.tap()
+            settle(seconds: 3)
+            keep("\(name)-portrait", app)
+        }
+    }
+
     /// Decision 497 (P2-6): Back to Start when the autosave cannot be
     /// written asks whether to leave without saving, and leaving reaches
     /// the start screen.

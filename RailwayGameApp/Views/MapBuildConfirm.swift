@@ -278,7 +278,8 @@ struct MapBuildConfirm: View {
         let highest = top <= bottom - height ? top : max(0, min(Double(mapTop) + margin, bottom - height))
         y = min(max(y, highest), max(highest, bottom - height))
         let placed = BuildConfirmLayout.keepingOff(
-            avoiding.map { ScreenFrame($0) }, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest
+            avoiding.map { ScreenFrame($0) }, x: x, y: y, width: width, height: height, minX: minX, maxX: maxX, highest: highest,
+            lowest: max(highest, bottom - height)
         )
         return CGSize(width: placed.x, height: placed.y)
     }
@@ -341,8 +342,9 @@ private struct BuildConfirmation {
         // picks the line's stations (MapView's tap): beside the lines
         // panel, or with Select while no tile is being chosen; else the
         // ✓ of the tool or the tile comes first.
-        if session.networkPreview == nil,
-           linesPanelOpen || (session.tool == .select && !session.isChoosingMapTile),
+        // Decision 568: the same test the screen puts its other controls
+        // away by (``GameSession/drawsLineOnMap(linesPanelOpen:)``).
+        if session.drawsLineOnMap(linesPanelOpen: linesPanelOpen),
            let draft = session.mapLineDraft {
             start = nil
             flaggedEnd = nil

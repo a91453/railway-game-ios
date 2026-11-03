@@ -89,6 +89,9 @@ struct MapView: View {
     /// card (``LegendFold/isFolded(stored:compactHeight:besideCard:openedBesideCard:)``);
     /// forgotten when the card goes.
     @State private var legendOpenedBesideCard = false
+    /// Decision 568: the legend folded while a new line is picked on the
+    /// map, until the player opens it; set as drawing starts and ends.
+    @State private var legendFoldsWhileDrawing = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     /// Decision 182: whether the map shows the time of day and the
     /// weather (the settings' switches, on the device).
@@ -803,11 +806,18 @@ struct MapView: View {
                                 tracksLevel: terrainMap?.tracksLevel ?? false,
                                 isFolded: Binding(
                                     get: {
-                                        LegendFold.isFolded(stored: legendFold, compactHeight: verticalSizeClass == .compact,
-                                                            besideCard: legendBesideCard, openedBesideCard: legendOpenedBesideCard)
+                                        // Decision 568: folded to its title row while a
+                                        // new line is picked, so the pill has room.
+                                        legendFoldsWhileDrawing || LegendFold.isFolded(
+                                            stored: legendFold, compactHeight: verticalSizeClass == .compact,
+                                            besideCard: legendBesideCard, openedBesideCard: legendOpenedBesideCard
+                                        )
                                     },
                                     set: { folded in
-                                        if legendBesideCard {
+                                        // Opened while drawing: for now, not stored.
+                                        if legendFoldsWhileDrawing {
+                                            legendFoldsWhileDrawing = folded
+                                        } else if legendBesideCard {
                                             legendOpenedBesideCard = !folded
                                         } else {
                                             legendFold = LegendFold.stored(folded: folded)
@@ -896,6 +906,9 @@ struct MapView: View {
                 .onChange(of: buttonsUnderPanel && rowInBand, initial: true) { _, inBand in
                     screen.mapRowInBand = inBand
                 }
+                .onChange(of: session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).foldsLegend, initial: true) { _, folds in
+                    legendFoldsWhileDrawing = folds
+                }
                 .overlay(alignment: .bottomLeading) {
                     // On a phone's bottom row, one above the other beside the
                     // station master (decision 226, 2026-10-15, the owner).
@@ -905,15 +918,18 @@ struct MapView: View {
                     // Decision 226, step 3: the map style is chosen in the
                     // layer list; here the expansion, and the layer list's
                     // own button while the strip does not show.
+                    // Decision 568: put away while a new line is picked on
+                    // the map; back after its ✓ or ✕.
+                    let drawing = session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines)
                     rowLayout {
-                        if !showsLayerStrip {
+                        if !showsLayerStrip, drawing.showsLayers {
                             mapLayersButton
                         }
                         // Not while building: beside the tools' Done
                         // button it was tapped by mistake (TestFlight 56.1).
                         // Not among the building tools either: a phone held
                         // sideways has no height for a fifth (decision 226).
-                        if session.showsMapExpansionButton {
+                        if session.showsMapExpansionButton, drawing.showsMapExpansion {
                             mapExpansionButton(viewport: viewport, cover: cover)
                         }
                         // Decision 351: the demo mode's real lines, in view.
