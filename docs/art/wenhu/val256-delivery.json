@@ -1,0 +1,16 @@
+{
+  "repo": ".",
+  "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+  "previous_producer": "91a31f0837b4076b6c17f5f4ffe0bea81b504ed9 (unaccepted first candidate)",
+  "rebuild": "tools/wenhu/rebuild.sh \"$OUT\" && node tools/wenhu/render.mjs \"$OUT\" \"$BEFORE\" && python3 tools/wenhu/sheets.py \"$OUT\" && python3 tools/wenhu/curate.py \"$OUT\"",
+  "sources": "source-record.json",
+  "status": "status.json",
+  "license_files": [],
+  "pngs": [
+    "sheets/val256-a.png",
+    "sheets/val256-b.png",
+    "sheets/val256-formation.png",
+    "sheets/val256-comparison.png"
+  ],
+  "viewer_compression": "gzip"
+}

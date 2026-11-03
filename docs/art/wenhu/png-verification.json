@@ -1,0 +1,4195 @@
+{
+  "status": "VERIFIED",
+  "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+  "count": 465,
+  "published_private_png": 8,
+  "published_public_png": 1,
+  "checks": "full decode / RGBA / transparency / nonempty / alpha bbox margin; canonical images, no duplicate curated counts",
+  "files": [
+    {
+      "file": "comparison/after-wenhu-apm256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47484,
+      "sha256": "320c510671a16e3802154921ab45b8f6668d79a3f2817f6c517ede27ca099a8e"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48809,
+      "sha256": "b3fc87695e5908a39b584625271e90ff2701587cabeb2fc899390a8f2dd5fca4"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45644,
+      "sha256": "d92484d188ec268b64cace7de1d4654e9ed3c6b6f7d8e2f3032933022e72c479"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40141,
+      "sha256": "c5ac67f9b5eb7a12aaa1197edf57532ff468f592557de29446ce06c63bab616e"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36514,
+      "sha256": "554ffd4d89bae28193cfe3c8958335a765e1148ce89559c74d0393ab15dbe428"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51548,
+      "sha256": "a77e1eda59561bfa10b234ec9a4545e2b988ccac8849a43c59a5894ed31793f9"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 55478,
+      "sha256": "33f57450160af224628bde9d4d9a300e4d552e746d45460a88ffb81701414afc"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45312,
+      "sha256": "db71a355125bbd451abf99586267f2fdbcc93884a67fbc4c992777c832c3210b"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48012,
+      "sha256": "48521ebf6d164ac68f4c3fddf2b93c22bb2f82a1765d29dc85d032b20ac736de"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47341,
+      "sha256": "9512db2f846cd994501dace159db3013b2c230e04086398420ec4ff1fa0ab46b"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47888,
+      "sha256": "51c15d38ef30953fa788462831cfa00f39bb73c3d972fd2a64c487de332461fe"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38948,
+      "sha256": "78e129b801df60243b7d0d6fd7a9bd49643d540899331f1ea84fad8662ef3881"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45051,
+      "sha256": "eb42aea1d1b52310ce08c421eb323c3bc10f5bc8156f8922e1d38edb5a601efd"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40364,
+      "sha256": "c9041cb28f4370be318dd5a7833e8a58b5afb6a34a931dd95396ddad6d027928"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36264,
+      "sha256": "95ac944462a2a4f4e73aaa7df3464b13941d35658def2ccba43c29ebcddd68ce"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47221,
+      "sha256": "1ce5d23c4af8a7688f6b4caf3b7a51dc1d0d63acd1533045e938cd75384daa42"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 54720,
+      "sha256": "1cb99f52d367a033231bd236e7305a21af23aaf7595435ddeb00f3e37d5929fb"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45758,
+      "sha256": "259ed7397bae7c3830bfa1cbba24024352474e6f8da28d87036115aca61011e2"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47872,
+      "sha256": "c2b552570a312cc38ec9d2eabe3c1c8847fe5742b2de527d046cb76d7152ef5a"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37986,
+      "sha256": "7c852504c22988afbd2d704862b227becf50aef0203b7f6906c62f32068f9704"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37475,
+      "sha256": "6ed02180ccee6ebd2a1050cd0a35b3349c8944d6f73acca3ad761fb8e0170309"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 50880,
+      "sha256": "e0d88e5d87b7e5f307d63a172de260352712e5791730de207481a6f812db16f9"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32072,
+      "sha256": "34cbbf2c2fabe7114e8a5faf356a5d39a1ca58890d519bced28bf2a561a109ed"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 27949,
+      "sha256": "cf5ab836f7db4bec17430a793c702fd89d77cefc229a6d07dec0e3dade905fb2"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51551,
+      "sha256": "2e60a34d29555cc30d7fc12416360333e3bbef0806fddaa04d13ef13fcdab6cf"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 58931,
+      "sha256": "b69e083c8f7be2ac2da40bed3640958d5c4ba72c68d82fb5336dffa09ee0c13d"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34361,
+      "sha256": "7289c43bdeeee900bc6d61e03efb2a70e992e34e23f36bdaab5e36eddb8a3e03"
+    },
+    {
+      "file": "comparison/after-wenhu-apm256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34661,
+      "sha256": "69684c2e0be2edd4e0d661a8feec4c1936370ff4a8bb859149958e27b9344003"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46794,
+      "sha256": "260c4a48127fc586cd2bb72bde942633bb6173df9ab4c4f5b76086e2b60fb7d9"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46723,
+      "sha256": "3b052c2afb06307ea802ba27a09e1de27a3d26d087e673d5bc632db80986fc54"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47426,
+      "sha256": "01fdb0e3b5b792cb6b88831ea9b0521be44785f1b1ede84847738a0401ee591b"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37049,
+      "sha256": "1014563ef89f8c4734be3f137a5a4667735c475ce4f18027f30e88168bdad499"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41250,
+      "sha256": "1f10532cf509ed21b8b154372bea75ed3107a7f53deb659d7f8cbce4053df3dc"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46654,
+      "sha256": "552acda0a489ee2a5b2cb7cc60e192bb76fe07978eab19a9b2c5df4056a823b1"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 56316,
+      "sha256": "5062fb63a1b511d9fa4321c6f33a2a0e2365f109a345da8995b06303f63ad184"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40634,
+      "sha256": "7d8b6dce92be01a3b560e4359050488da800de6966ae654ff41f783babb128b0"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 49079,
+      "sha256": "1a7e57e6449070d4f6da11be0c0ccc08bee38f64ccde8a3a690326a9d46fefa0"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47839,
+      "sha256": "6024e04f14c8fcb83e1d41718652c34e24f0243bf539f4b5a12bc3ed6c0db286"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46631,
+      "sha256": "e88963c67b5d3fc747a063b98a06fe0c844ed98db6e733010b3e25381741fb2c"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36893,
+      "sha256": "2a0e4ad3f84d92667469f5ebf5324eabd7495d7f3ea48b3fb15fb5015623e655"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46676,
+      "sha256": "6c519926efdf634510206c5b45af0ec3d9b8fa518293562fdf774b5337eabb98"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36507,
+      "sha256": "a0fd87a3bd50a68604acc43bd43f2a0b1dc8762b6b793e109ffa97d0bba96d52"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41001,
+      "sha256": "83baaa1b7a4cd24996b45af2154a8809d58d1c00479fa8a34a17ad5ef544367e"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40035,
+      "sha256": "4e083b2698a58e1f6f0e2d5eefd4d9fc0f1f2a135134341050f4dd2e973a271a"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 55403,
+      "sha256": "26f36e3eec319b38cf933decf1b514b1745542eb7df73c9ea07ffa0a6de50c01"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41075,
+      "sha256": "1fb2e32228746e52fa4c26475dea3c5ab0da1bd272216ab5f2383196bd1015e2"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48684,
+      "sha256": "8940b59dec68fcb04f05634ecc1d6fc735a4eb291bf7671dedce387985ddce39"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 39402,
+      "sha256": "fa73bbbaf4d72ed0a159c7a1c943c8032535a546de28b08c803ff62d180d2ff0"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38261,
+      "sha256": "ffebf6154832c2fc81f0474ea25fe43e7d5138325e0a7683bd8bacfbbb4970e9"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 52770,
+      "sha256": "32c5243bf90f588df05bd4768ac7d1ac711928578d260b06bd6dbaab86102c90"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31000,
+      "sha256": "ba7ccda49d28f65846e4fdc4f635e0d54abed48c04c50012bb04f75c5b94d03c"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29944,
+      "sha256": "3f602e90e17793a8ff85091df505a526d2600852be5426b07ca50624c41c8120"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46678,
+      "sha256": "c81f418d3ed3f6e8231713b05d1142fdfea5c69d0c754ab326359e11ce2ec7e9"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 60120,
+      "sha256": "d65b6f61ce0c7cd257b569a8e77612b47aca7bb0037502f0ad947a1e13bcd3f3"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33147,
+      "sha256": "6d00d26d79a32400413d729d5953a169483afa04a167c850de41d286f71fe953"
+    },
+    {
+      "file": "comparison/after-wenhu-val256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36699,
+      "sha256": "7101ed6680738f94166797d94669baca4de860d66a7601ea344cc85d9037c888"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38712,
+      "sha256": "6c27fa21e298df5412a2cade48ab2572dde2ec48b4407b3af6df77998c1479a1"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38164,
+      "sha256": "d10cf25020addfedf56d90cd11811da7fe7c10dcd1e968871b1e625dc19d8c87"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36984,
+      "sha256": "0e8c14dde59a74f97a584b08baf8616df1a54deda83057bb679779b090b73b52"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43721,
+      "sha256": "ce70bbc4357fedd5e21918e91aabd601a912bfdc71983bf68c5c356fe6a69913"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37360,
+      "sha256": "44b0325e9beee6c1486390a70ac367786d018549d300999334eec5d401a0a999"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37538,
+      "sha256": "50c1a16fd9ed9dcb11a1fc4d2640583b99bf158fa42daae16b99b77cc6edcca4"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47143,
+      "sha256": "cb3263c7ba58ea8d65574e58639cfa17108f5b43590e65506bf81249866eca19"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 52959,
+      "sha256": "def4fdee0dbf3e0f696908b7a880b11d9b3e9617cab5863af59b73301d3fa591"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42683,
+      "sha256": "04caccdd603499434de7690e076c1bc740b368d73b271bd6bc46b9f5ff42bb09"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43675,
+      "sha256": "11c84fc00c7f40591527480e9c0ffda13eab491837755c2afdd7e2f14787e1e1"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37761,
+      "sha256": "02bbbc2bdd7848cda89033e9e7d9a3d52456676085f7e6434bbba7ba63673d96"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38328,
+      "sha256": "a2edfc069dfef51a1ed861d09ef8cacdc86ce10be0e9b9b1a6ebdc07ce8ac146"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34501,
+      "sha256": "c6cf9cc5418b03c9913a02c3fff792ca2873b2091d668182d9c66224227d0b27"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42891,
+      "sha256": "74e9ba83704939acbb99c849157b7b5ffee87026e5cd598f1b01e2d36c7736d3"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37372,
+      "sha256": "8f302db8b788d71648f5ebb36b12e1d9c7ee10b3578c16729bd2d12f68c45632"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37454,
+      "sha256": "cd4311455ad1288b172f299449901149b1e9e3d0efe658f3bba02c6b9f8c5d3b"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42076,
+      "sha256": "7d8cf7a9a7d672ad2024e0e7a38c75ddd7e315a095a9c37434f9c2a9f5ab2a65"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 52357,
+      "sha256": "3667f288cb9d7320bdf45084ad56c7f9ee86050a73a851dcb262baf8f048bb99"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42828,
+      "sha256": "27e5dbbb5071b116df59499b972a6e0e81ef078aaedad63ee83bf9cfdd174b0c"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43519,
+      "sha256": "730b89920bf2f1e6b3776128acb979afba7de282aae0bb2c69875ecbde05530f"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32012,
+      "sha256": "65e077f35e6b1adbc4d04fc204dfc09a035e7fd54ba517041a0f0d08a7fa16c8"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31568,
+      "sha256": "fa36b27ccd38e52e37bea9733de99fcfd517561d9eccc3c25f6e5f41bacf2c45"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36984,
+      "sha256": "0e8c14dde59a74f97a584b08baf8616df1a54deda83057bb679779b090b73b52"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 49539,
+      "sha256": "99542545271b883be43a3b9db1528bc8c07cf424f5bd1c8f876cc3ec45901ece"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30583,
+      "sha256": "31ae86b6a115da4a0334f082cb0b3c80ad939e1bace42360b8dfda42a41437f4"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 27797,
+      "sha256": "178c95bd548d14f698b8b8f172675e48375117649170dd6f01e52fa42e0f80df"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47143,
+      "sha256": "cb3263c7ba58ea8d65574e58639cfa17108f5b43590e65506bf81249866eca19"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 57846,
+      "sha256": "e11254610c881f9c63c87b9fc1d68f73f648599ea6272ec50fab7aa28c65bb21"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32685,
+      "sha256": "f44c55713b7307331bbf4ae5119f55d7995eb04cacce1479de319d1098eda9bc"
+    },
+    {
+      "file": "comparison/before-wenhu-apm256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33498,
+      "sha256": "fde3b22f78f0fda85d69dfd51e38e2bf1256d9b7b1852931f4332708a827636a"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36737,
+      "sha256": "ed4d1f025bef4c38735696a1bec1821107d1bb2921ad4086299fab42bca5db21"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35061,
+      "sha256": "687a1525bea786aaacb90ac69ddf92d9fbdabf0ff0d1e3e7c7708c7c086fd404"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37995,
+      "sha256": "b3561440429fa23dd4b5a53cbe5107d961e55b183ebf122f9707fd2d660bea61"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46169,
+      "sha256": "b96709c6468f897d135800eee0bdb339f820fbfd8b6f00248c42d8ea55259e95"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34049,
+      "sha256": "b48bd072dda18f55d14236a232cd2da890a82b90a35530fa61223b8da445a823"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43172,
+      "sha256": "194d798792b9a6780e4da23b17e1f8af82b7a31f5179253fb888d3a85266dba8"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42172,
+      "sha256": "311884069918d1ecee08d43da7869d3f5d80d18830befc5de7cae98f67a53f2c"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 52204,
+      "sha256": "30c95b2120c3ba0540b4460c4dc3837e2d104c983a9eb30d176801889d7fc41d"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38516,
+      "sha256": "f845b5ad1cde38d27e53064a4d8239628aaab0a2ddcd0e806674f99289eacc3b"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43516,
+      "sha256": "b992d6a0af399a1c9a12a1550a5fa1e56ca34193eabab47d2c115cd74b932a8d"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36143,
+      "sha256": "ef89b29552850f96183a09a0297cd740e8f893b5f97b74a70e0ace808d137df3"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34834,
+      "sha256": "d0b38888aa3ed3d48b5625fbb9995280addfd19cbdacf69ea9d34f7a7dbe2373"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33758,
+      "sha256": "82d764217023e56bb6e50858a232ee191775f2acf6de654ea666a8fe18b3f73d"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45576,
+      "sha256": "609864db258258231634cdc0ce4f9954d1953a8238f46970359431037a36993d"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34064,
+      "sha256": "424371d6f2f5034fc38a221eca50c325d6fc3ddad79a0a061dfa23bd925557c2"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42168,
+      "sha256": "b8ae00379e2d6e571210d05c75d964d1ff5fb42ea69b8036e2cd1f23b6199b35"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37818,
+      "sha256": "7bc1250f63872a6bcb2169583bfc9c718be7b068c612c0317befea46e1b92a38"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51446,
+      "sha256": "a56df1b9ffba59816f8811bf1b52b6af72aefc9087ff7677ebeeb397bdf579be"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38556,
+      "sha256": "a2917ed13e8558bf35760d650b42ee222af7fabef3039188a3126555aa4c4d5b"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43435,
+      "sha256": "b8a44695b942fcd992d983a70cdd5db6d7e16e505aba2d39e0eaeb1207ff6777"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31439,
+      "sha256": "c7bc4a7ca3164adf2ddf38a5c1851253b05e8e846fb59025cbce49f8e0cc6a3a"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29849,
+      "sha256": "8e1dc898062c97efa45a05da076b39c8994d838404b4d8184a473e51a940d9e2"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37997,
+      "sha256": "f06e2dfa265ede1e6d56bf112a0f8116f2456ad190ad20c9bfae9ba12a27e2bd"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51941,
+      "sha256": "5430c18f91f844ab575a6f1108a6c3e025cf1a715cdf1b636c8081f2b2a94e11"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 28481,
+      "sha256": "ebcfbdc2325f0bff5951d633450318b593e454df07cdd9045b23032c16974aa2"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31922,
+      "sha256": "fd35622e3cffbfec70dca22f49a513c4c5a0f8e7ab081aa69f8639edb36fc6b4"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42169,
+      "sha256": "64832640b79c9e3b685261fa845a48ad446dc211c9e549374b113dc8217f4224"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 57289,
+      "sha256": "50ae516894099a7dc2a892c7374c58a73c2975f65194b59b8412c5cc072de13e"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30452,
+      "sha256": "5abb4db78d6821763fa78a27ee9dbdfa17e6a5bd72bc4b2b3f3cd4129e3fb4e1"
+    },
+    {
+      "file": "comparison/before-wenhu-val256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33480,
+      "sha256": "775120bb5b8e68116e428d8418ba1caf37aef79e7ee52ee948aa0bd4f97a64b7"
+    },
+    {
+      "file": "overview.png",
+      "size": [
+        1600,
+        1400
+      ],
+      "bytes": 268253,
+      "sha256": "5b4cc791cf8b36c57a6f9e518dc462380f0fc19af1a9803ec23c192204fc0b51"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 17300,
+      "sha256": "92ae2e9c66130c0523adc749f3d3677a7fe2967c4900a8e613af4c66ed377b4f"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16097,
+      "sha256": "8b49a334c6effda710f23b92fa5d13582b213ad933b524ed113b15383c40b47c"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 18270,
+      "sha256": "2331999542ca794874565d538908583da98209cab54425bcab2870c7dc25a18b"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15805,
+      "sha256": "7c5aa026dfd33cfefef796565c1b698bdce327210b70355d96e24d970edba4cc"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14874,
+      "sha256": "c0aa06d5a67a753bfdacb60e7968ffbe38b5934e6d2974f0c53d7d9b69c70e68"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29568,
+      "sha256": "a62843317259442da83141e876626a955c48700013b039d9e94e3c84b4640d6b"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19469,
+      "sha256": "452b327f1340d3b0e69f00ab5a5ec4cffc32c9a09291f18add8620588ea53a03"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21262,
+      "sha256": "d18075e4b7f14df9c18d10ff8ee6948fac3ad2492e3c7b8821c6ed1ec24faf92"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21491,
+      "sha256": "ee053f447b8cb8ec40346c770b82a8f065c6193a1f0b03300e557b72ef846ba6"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14612,
+      "sha256": "86c6fd464a17ccdbf7c133ac0c76316420f592759dd59257641a37d7130a465c"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32641,
+      "sha256": "b3682f2a34a4194fac82fe2a32e23c73a12202caddcc755098eb733e272fc6ad"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20234,
+      "sha256": "802155a58b78c2d2ed6eb7fef7034430ef14313ee91ea27fbff4a555f277b234"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21919,
+      "sha256": "834859ffa5821ca68e01e00c4dbdd10af552b8226b8d3a9722963d90130d37af"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 23142,
+      "sha256": "258acb55978093055e404262e5b1db080ece01ac08d4abb366418133fe1c80ce"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 18451,
+      "sha256": "7b41d6f5ef3c278cf97a7f8e3e414dfa2c2e19a214937c42d2d06e7ace832e81"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16189,
+      "sha256": "d06fb60f82160dc8467322a067808b39416ce0872e1b23420a9fba3867c24cec"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19542,
+      "sha256": "73a7d762731683da157e71df8954bbbd5013a2d7568f43c233fb906864a6a7ac"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15932,
+      "sha256": "57f4395b6c6fb5ad7a306ec1c7ae37b691e33ac4b945aea814d3b72cdf0e32bc"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14755,
+      "sha256": "f2c252cd1a00a997cf26c948d04c44ebf7a135f8f636e1d689daa6e126bd8ae9"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29115,
+      "sha256": "7eeb8cc4b2d66b0d012d9941a7b35c09364fc967ce1dce9e0a41fda226b87d6b"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19656,
+      "sha256": "4e2098adf5e17965ac5c0aa01ed779f8b9539379ea9179604f4e757e078ff469"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21364,
+      "sha256": "f30fbfbc413e297d169f525a0d0dc66baa62a57babd02a2f98f35669e34a2631"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21347,
+      "sha256": "074da8ecea2cced2d642f2e632b99a953f1ad7c92ab61c00ed09367c2980fdc1"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14614,
+      "sha256": "b734e038a26b1fb0e397104008110771a7301635fe6d2e0c09b5105690826163"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32110,
+      "sha256": "8b4da9793437fe687357d749872dcb487206d6faff7eb2cebc35d1b7a305f6cf"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20377,
+      "sha256": "973aac970b92bcb349c395c97ed884ba414540ba9a7ba32396826453ca35c324"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 22007,
+      "sha256": "b670bc4306a6143a958459a96a7b4b3ec8ebac438022b3b1e5e08f26346b7267"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 22944,
+      "sha256": "2e301524edbc657eecb3cd51b4ffe5a29f8c7876add4a8c94efe527750a4d51d"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 18451,
+      "sha256": "7b41d6f5ef3c278cf97a7f8e3e414dfa2c2e19a214937c42d2d06e7ace832e81"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16785,
+      "sha256": "c82446cb1510d5259c6c186e6c52e19570bc3c12a9cbaaa4569afa6a659cb352"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19542,
+      "sha256": "73a7d762731683da157e71df8954bbbd5013a2d7568f43c233fb906864a6a7ac"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16457,
+      "sha256": "c84fabb2c2734c3401beedb009187f2be3b05d6d5963ea2b95d0e2eb53870623"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14874,
+      "sha256": "c0aa06d5a67a753bfdacb60e7968ffbe38b5934e6d2974f0c53d7d9b69c70e68"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33999,
+      "sha256": "f737457edae6f06b4c9f08e676ea000287617f534fb591a84e7150101734164b"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 18797,
+      "sha256": "012ef60d599e1f0227fd6b7f613ffe1c03663d50e0ad0fcccc512a2f43e2a9e1"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20207,
+      "sha256": "7ac18272c002ab892fabf891a41d049b6713ce8ec26ad757b88b878b85d795cc"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19638,
+      "sha256": "5213e34305370617982872adec7998a6a7c18227b445d6ddba0e1b6dca8eca6c"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14612,
+      "sha256": "86c6fd464a17ccdbf7c133ac0c76316420f592759dd59257641a37d7130a465c"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36282,
+      "sha256": "1c6b76fe6811319d2e7ea35863c9e996d09b5a7533a4b9ca525414517cdb0c24"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19758,
+      "sha256": "70c212fdb240a27e38e43fcee2a9524b76f3c2ce4dc2cddf9a9b9cec9b48437e"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20827,
+      "sha256": "b842cbfce30589e5f1f72a8d46ce995e989b731ad960b6dd4cb2df0aedb0a211"
+    },
+    {
+      "file": "png/clay/wenhu-apm256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20034,
+      "sha256": "98078e726f1bc5d733621b3ef05e83e20c59deb08adc46b756620bceb40a3fb9"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16934,
+      "sha256": "6a39004684adc1faed8079774ecc99a9860fd46f3ef5ae84c2604af5be7bb115"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16273,
+      "sha256": "bba62c2351acdcb2a03fcdd4de3e162559e27d38b73bd4efdc6356bf5cf77d7e"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 17111,
+      "sha256": "9203c6112638992ce0bfe743eb6c590130d70c75c23b643cca6484c57c732a2f"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15983,
+      "sha256": "f21b7d8daaca6fc750bf8a087489ca894ed84798ab89fd73ae8cbb71683770e1"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14646,
+      "sha256": "ee072fee0e2a5cde282b5277d347441e280f7f1a89ae210ae63ac41f01df8d4f"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30419,
+      "sha256": "c14b789c90d6159e93f33eb50ec0301d1022eb853b6b58c47e3329bf49dc4833"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19765,
+      "sha256": "843a7854066c5f4a369c11cca11b63329e1e9fcc8ca358b3ca9ff4ab6907a4d7"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21449,
+      "sha256": "b9a4e89f30a2e1c0c09dea3c541d39244be3220453729db953f3484e18c62ad0"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20316,
+      "sha256": "85116c028709a3d46fbf704a5fd9e6d67da8953dcbcb77f5778e4a03fee6b928"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15049,
+      "sha256": "5752c6ccea9ce9c917c292069897fa6f8726ff12b9d0807d12b8c9a376fab564"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33380,
+      "sha256": "31b3a429fbf1338891d70c96c41da10f52342f456153b00aa04f69ad907acabd"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20793,
+      "sha256": "56a3cb790d43da160d27e77e9ddc687a565064f88cd78e88cf9e8a3cfa1ba1ec"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 22466,
+      "sha256": "0be3b2a4a332104097f9cb0a0544682cb005b73ea12a2784aa193446265faac5"
+    },
+    {
+      "file": "png/clay/wenhu-val256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 22310,
+      "sha256": "3a86eab9d2b7be665e4e4a4fe5b5ac45ae5ea40e5da48f78f8897b4127573082"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19955,
+      "sha256": "09c2cccdd4118a6b95f99456044303a5a858ac4ad94605002d4e05ec40035bbe"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16783,
+      "sha256": "b44a64336249ba7948ef0a98c9869a272a9e4fe7ac08f62eb57552332c15eb1b"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19831,
+      "sha256": "68aba833160074813c2d41e3c9b56bf625ebf3a97e2dff145261abfef2460bf7"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16595,
+      "sha256": "3bfc115a99fec7329121682fa6952152f0c172f86bfbd773cda1eebda2f6ebcd"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14359,
+      "sha256": "1cdc2166d456f9b6175fa825291d34a5e1142b98316b3772a06fab728026f511"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29723,
+      "sha256": "f4ac493c0062c06c77ac8ce04b559036c107c16aab0c783e77cc7c43d08120d3"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19973,
+      "sha256": "dcde407b4b2640a2f6e6b54ea0e28b1f326fc80879aa61c0944c47675caa6ae0"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21650,
+      "sha256": "6d8d0a0d32a38c90fe1ead1660e60ac384c2d9a0f316bf6a69f3a11cf2b6155b"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20347,
+      "sha256": "e69250dccba63a836c79fb26bcd94af7f4ba51b6af38197a027e57adcdcc0ae6"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14745,
+      "sha256": "92c130e657e8ba618299d3155119be8f90238570a322efe080b32e66f34e3dc9"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32517,
+      "sha256": "16ad5d4f2608e6763a46211e955721f56ffe9c71f86290929b64f8b449e38179"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20948,
+      "sha256": "41f3497e72c4d01a589f29a8a0d67a0094fb7d5ca406ec85e11a80efbfa0df82"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 22657,
+      "sha256": "8a08afd25a99dcbba665254e230fd0c7151b03e6ecc14aadd1129527747cd403"
+    },
+    {
+      "file": "png/clay/wenhu-val256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 22252,
+      "sha256": "b8b7a6617ef20e6bc985e456e6fa134f48612975944729ed0f96fe8ebfbd2393"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20009,
+      "sha256": "0ac101dfa3b45a0d488ae20ffe93a6efb26925e27b33636244c7e9aad2a35d51"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16657,
+      "sha256": "1a2898e77d0a84ba7fcf380b4582c4970ae3dda416a0f391744b282cf532538f"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19877,
+      "sha256": "672b59144edad993793641bcdd4eecceaa7cef86c15216759bba24da973b5e8b"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16693,
+      "sha256": "bbbafcb1f50bee9ce506e19d9ee0dc605933afc7c812146323f866ade19bdfcf"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14646,
+      "sha256": "ee072fee0e2a5cde282b5277d347441e280f7f1a89ae210ae63ac41f01df8d4f"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33822,
+      "sha256": "fd6649f5647c93196ae7023905c00df4f05722250035e622ef28c4a9d36be299"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19042,
+      "sha256": "71b7bdbed53f6e2086e553eeacf85e4adc3b007e1d59195401f43e27f616d7fa"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20443,
+      "sha256": "29849e47ec08186bb7de1a5f2bdd90eda9fcdeac17929c5039bd2eed030db3f1"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19436,
+      "sha256": "6bf2a9b1050f4e0a6a8c222acd876e80b4a18abce77f457a6e7962770dc31d4e"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15049,
+      "sha256": "5752c6ccea9ce9c917c292069897fa6f8726ff12b9d0807d12b8c9a376fab564"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36564,
+      "sha256": "01b9ebde79b3ee6f99ee89b7a8c618ccc3e0ea202a0fa2bea4f48a60a5c46224"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 20078,
+      "sha256": "946b15924c375340b4ff6e3ed212f10549626d79f0348af400a1f295e70bb3c5"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 21230,
+      "sha256": "a3a94ddf278928e9f53a0c82ce0b79feebacccdc013d1404dbb8227d8d026509"
+    },
+    {
+      "file": "png/clay/wenhu-val256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 19696,
+      "sha256": "21deeb72ede4f5f05c01162e120d9d32ee955ffc71a7d498e009f2b7ff4809a0"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46263,
+      "sha256": "5946d3d43eafeff822982c76bbe70aac7c9a3871f6c52f5795eb623b52f2582a"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47484,
+      "sha256": "320c510671a16e3802154921ab45b8f6668d79a3f2817f6c517ede27ca099a8e"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 49173,
+      "sha256": "f5d15792d02d7a28dbcf87d7127d6219b79c2cce68f07b45aa4539e6c5ba2563"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48809,
+      "sha256": "b3fc87695e5908a39b584625271e90ff2701587cabeb2fc899390a8f2dd5fca4"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45644,
+      "sha256": "d92484d188ec268b64cace7de1d4654e9ed3c6b6f7d8e2f3032933022e72c479"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40141,
+      "sha256": "c5ac67f9b5eb7a12aaa1197edf57532ff468f592557de29446ce06c63bab616e"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 39105,
+      "sha256": "c18fd83737e523b572d0aa3ac4b1ebaa6ce4cd66283fd7dcc933c559cab579ea"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36514,
+      "sha256": "554ffd4d89bae28193cfe3c8958335a765e1148ce89559c74d0393ab15dbe428"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51548,
+      "sha256": "a77e1eda59561bfa10b234ec9a4545e2b988ccac8849a43c59a5894ed31793f9"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 55478,
+      "sha256": "33f57450160af224628bde9d4d9a300e4d552e746d45460a88ffb81701414afc"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45312,
+      "sha256": "db71a355125bbd451abf99586267f2fdbcc93884a67fbc4c992777c832c3210b"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 44398,
+      "sha256": "88382793c989c2f9308e0044744cdd352eccd69cade29683077d67d7bdfc539b"
+    },
+    {
+      "file": "png/day/wenhu-apm256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48012,
+      "sha256": "48521ebf6d164ac68f4c3fddf2b93c22bb2f82a1765d29dc85d032b20ac736de"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51109,
+      "sha256": "8cf616574c869156f5dcadf8a9476b713d5c047f631c96630f4b4387ea2c3024"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47341,
+      "sha256": "9512db2f846cd994501dace159db3013b2c230e04086398420ec4ff1fa0ab46b"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 52830,
+      "sha256": "3712246be7ecec8213e6595cc36a1041ce50502f481e81bc3dbbe6e3077772bc"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47888,
+      "sha256": "51c15d38ef30953fa788462831cfa00f39bb73c3d972fd2a64c487de332461fe"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38948,
+      "sha256": "78e129b801df60243b7d0d6fd7a9bd49643d540899331f1ea84fad8662ef3881"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45051,
+      "sha256": "eb42aea1d1b52310ce08c421eb323c3bc10f5bc8156f8922e1d38edb5a601efd"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40364,
+      "sha256": "c9041cb28f4370be318dd5a7833e8a58b5afb6a34a931dd95396ddad6d027928"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 39294,
+      "sha256": "3eb5e457ed838a825a466f90b90c61c70e91da9d18bede1742c6ad0e4ab66575"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36264,
+      "sha256": "95ac944462a2a4f4e73aaa7df3464b13941d35658def2ccba43c29ebcddd68ce"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47221,
+      "sha256": "1ce5d23c4af8a7688f6b4caf3b7a51dc1d0d63acd1533045e938cd75384daa42"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 54720,
+      "sha256": "1cb99f52d367a033231bd236e7305a21af23aaf7595435ddeb00f3e37d5929fb"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 45758,
+      "sha256": "259ed7397bae7c3830bfa1cbba24024352474e6f8da28d87036115aca61011e2"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 44960,
+      "sha256": "ad8edbcb8845d24454ddd71fa5ecb5745674b90a3602c82476ed20d9ea5fb705"
+    },
+    {
+      "file": "png/day/wenhu-apm256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47872,
+      "sha256": "c2b552570a312cc38ec9d2eabe3c1c8847fe5742b2de527d046cb76d7152ef5a"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51124,
+      "sha256": "8d71c687c32bceb7af3c59e3505ddb0aedce5373d9526210dab49d6ba945506f"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37986,
+      "sha256": "7c852504c22988afbd2d704862b227becf50aef0203b7f6906c62f32068f9704"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 52833,
+      "sha256": "adb133152f5545c17275bcfe9e2b0083044d93f0eca7f9a618a2274f55ef1808"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37475,
+      "sha256": "6ed02180ccee6ebd2a1050cd0a35b3349c8944d6f73acca3ad761fb8e0170309"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 50880,
+      "sha256": "e0d88e5d87b7e5f307d63a172de260352712e5791730de207481a6f812db16f9"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32072,
+      "sha256": "34cbbf2c2fabe7114e8a5faf356a5d39a1ca58890d519bced28bf2a561a109ed"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31204,
+      "sha256": "954d37535ed021370900005214269e66d71f8a18e45b33544e3b7e9cfa084683"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 27949,
+      "sha256": "cf5ab836f7db4bec17430a793c702fd89d77cefc229a6d07dec0e3dade905fb2"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51551,
+      "sha256": "2e60a34d29555cc30d7fc12416360333e3bbef0806fddaa04d13ef13fcdab6cf"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 58931,
+      "sha256": "b69e083c8f7be2ac2da40bed3640958d5c4ba72c68d82fb5336dffa09ee0c13d"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34361,
+      "sha256": "7289c43bdeeee900bc6d61e03efb2a70e992e34e23f36bdaab5e36eddb8a3e03"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34480,
+      "sha256": "3564314997a84ee6b81e913f89e40c5c8176ddf1a282b1e220a7c7e0a581599e"
+    },
+    {
+      "file": "png/day/wenhu-apm256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34661,
+      "sha256": "69684c2e0be2edd4e0d661a8feec4c1936370ff4a8bb859149958e27b9344003"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43070,
+      "sha256": "ea1018cfdce67a53f3b210af8c91122a9720db39f8e0e61e3abc509ff770d1b5"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46794,
+      "sha256": "260c4a48127fc586cd2bb72bde942633bb6173df9ab4c4f5b76086e2b60fb7d9"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 51114,
+      "sha256": "0497be9e8690577e2788f3f4601161b3c50ea4f8f82eddbe342ec3c8e9e4febc"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46723,
+      "sha256": "3b052c2afb06307ea802ba27a09e1de27a3d26d087e673d5bc632db80986fc54"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47426,
+      "sha256": "01fdb0e3b5b792cb6b88831ea9b0521be44785f1b1ede84847738a0401ee591b"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37049,
+      "sha256": "1014563ef89f8c4734be3f137a5a4667735c475ce4f18027f30e88168bdad499"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37835,
+      "sha256": "3df509aa6d6473e41faa142bbc7b4f35fe5d1bde31e164fb566cddd1cb00b93d"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41250,
+      "sha256": "1f10532cf509ed21b8b154372bea75ed3107a7f53deb659d7f8cbce4053df3dc"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46654,
+      "sha256": "552acda0a489ee2a5b2cb7cc60e192bb76fe07978eab19a9b2c5df4056a823b1"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 56316,
+      "sha256": "5062fb63a1b511d9fa4321c6f33a2a0e2365f109a345da8995b06303f63ad184"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40634,
+      "sha256": "7d8b6dce92be01a3b560e4359050488da800de6966ae654ff41f783babb128b0"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41948,
+      "sha256": "d5816c56fb19a7fb99515b20b8318a7f2c0e869e83e39677f5de5a11f018b0e1"
+    },
+    {
+      "file": "png/day/wenhu-val256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 49079,
+      "sha256": "1a7e57e6449070d4f6da11be0c0ccc08bee38f64ccde8a3a690326a9d46fefa0"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48345,
+      "sha256": "cb9ec75f0400c1f87346c7ada076c8af4fdb5857ff728397738dc8b1abbfe84e"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47839,
+      "sha256": "6024e04f14c8fcb83e1d41718652c34e24f0243bf539f4b5a12bc3ed6c0db286"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 56343,
+      "sha256": "68a19b274d0e82d0c4d7d8458b58ffca1c491f529073eb5460a7e12ad4acb743"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46631,
+      "sha256": "e88963c67b5d3fc747a063b98a06fe0c844ed98db6e733010b3e25381741fb2c"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36893,
+      "sha256": "2a0e4ad3f84d92667469f5ebf5324eabd7495d7f3ea48b3fb15fb5015623e655"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46676,
+      "sha256": "6c519926efdf634510206c5b45af0ec3d9b8fa518293562fdf774b5337eabb98"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36507,
+      "sha256": "a0fd87a3bd50a68604acc43bd43f2a0b1dc8762b6b793e109ffa97d0bba96d52"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37957,
+      "sha256": "38925340fde5866fca8d66aac733df84bdcc363aaa8c1885a9883bc38b4074f7"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41001,
+      "sha256": "83baaa1b7a4cd24996b45af2154a8809d58d1c00479fa8a34a17ad5ef544367e"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40035,
+      "sha256": "4e083b2698a58e1f6f0e2d5eefd4d9fc0f1f2a135134341050f4dd2e973a271a"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 55403,
+      "sha256": "26f36e3eec319b38cf933decf1b514b1745542eb7df73c9ea07ffa0a6de50c01"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41075,
+      "sha256": "1fb2e32228746e52fa4c26475dea3c5ab0da1bd272216ab5f2383196bd1015e2"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42267,
+      "sha256": "12f5ff4c5ecdfd8715502b42db629abf01d669232224ff4d8860ac3e5d1df0be"
+    },
+    {
+      "file": "png/day/wenhu-val256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48684,
+      "sha256": "8940b59dec68fcb04f05634ecc1d6fc735a4eb291bf7671dedce387985ddce39"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48309,
+      "sha256": "e9674cdd1b84d9cc801f37d70c0695736a944f253d9827b1f8e780093a5a9ad8"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 39402,
+      "sha256": "fa73bbbaf4d72ed0a159c7a1c943c8032535a546de28b08c803ff62d180d2ff0"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 56330,
+      "sha256": "1a6b758838c6ee7269166e28ec514a91dc6729dd6d4dbf38716a801896db9a04"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38261,
+      "sha256": "ffebf6154832c2fc81f0474ea25fe43e7d5138325e0a7683bd8bacfbbb4970e9"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 52770,
+      "sha256": "32c5243bf90f588df05bd4768ac7d1ac711928578d260b06bd6dbaab86102c90"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31000,
+      "sha256": "ba7ccda49d28f65846e4fdc4f635e0d54abed48c04c50012bb04f75c5b94d03c"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31083,
+      "sha256": "941264a79aab6d4ccec98180e6af8005894e35811f6ff18fad935bc1e16052a1"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29944,
+      "sha256": "3f602e90e17793a8ff85091df505a526d2600852be5426b07ca50624c41c8120"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46678,
+      "sha256": "c81f418d3ed3f6e8231713b05d1142fdfea5c69d0c754ab326359e11ce2ec7e9"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 60120,
+      "sha256": "d65b6f61ce0c7cd257b569a8e77612b47aca7bb0037502f0ad947a1e13bcd3f3"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33147,
+      "sha256": "6d00d26d79a32400413d729d5953a169483afa04a167c850de41d286f71fe953"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33584,
+      "sha256": "9486a65171c3b2f2dd2d9b95ef3f138c25bcfb441deac6f16aa90d1234c20a4e"
+    },
+    {
+      "file": "png/day/wenhu-val256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36699,
+      "sha256": "7101ed6680738f94166797d94669baca4de860d66a7601ea344cc85d9037c888"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31980,
+      "sha256": "e5ea6987b0ab8674491c3c8146a62c83038a2d6c417d810958485a98350cc677"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35119,
+      "sha256": "07c142b1bb081b45185d720678e279905dec86513469093f600994d4c36e67ee"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34138,
+      "sha256": "bc5efd3605d13e50b0bbe0ba4e326159098745e0fae9817a89f6a21b1422c3c0"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35922,
+      "sha256": "32329cfe2e734d8578c611e9f6c0b1707964f82820e8ed97d4d5f5262f33e7f8"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32522,
+      "sha256": "7e6241bbb54d8d65b8ad8d42f8644d423086a74c46cfa46ef0c8ad4b186b1707"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 41432,
+      "sha256": "1453db7b728471578b4846dbca4cd7f6b692d7f6c19a519d98bc8f81ed11b47c"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32855,
+      "sha256": "19f38a4c34c92dffe04e310ed375d1a74396215ccd1afbdf17db8c462f441b4a"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32868,
+      "sha256": "ba9178371914c147822218907fd3e9720c3f683a50dc928fd616a192dc3395e6"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30145,
+      "sha256": "c6e35f82cdb9a5980439803cf55c8af9d867396f0f70d49d1ad9fe27a1064117"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38688,
+      "sha256": "97f1c0b98341c4167bc6220de200ecd72ffa7b2cedd580f8d53d32bc9250b574"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 49865,
+      "sha256": "fb8c586a4575751b4c46bec4a156797a74856bf86318963c064d0adf070fc441"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36094,
+      "sha256": "28caf7439cc2f99e5dfcd616729da87ef6a1cc3a2045a0a4e910cf9ce026651f"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35729,
+      "sha256": "adfc774aefd37fcac248d19bb6816a4c1921277110ca4f5f28468e253de676cd"
+    },
+    {
+      "file": "png/night/wenhu-apm256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37609,
+      "sha256": "78d5c8080acd994211aae87fc7955fcdebe1c0df7df21e27461bb1e8b7366429"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35543,
+      "sha256": "9ac374080eb9b7d62cead015d4477b0e58d9bf2818788092e56d4fc1dcb7c224"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35013,
+      "sha256": "053ed4fda5a3bb42580d5570dd47e5e3294e78e9d7170fbadb8c2789609325e0"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37259,
+      "sha256": "362a5afba2adc1d4403e7d3d71b6381e7dfdc2091a445c5d57bf081061b9575e"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35476,
+      "sha256": "77c0dac48cead2ab6f2c132fda927c9df61bca6a507165957b765cc2fc804b83"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29372,
+      "sha256": "356d78d05d11606cefee97d775759bccbc930ac8350aa1b5123c03fc3e6a68d9"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 40832,
+      "sha256": "9009a16c61d486677e6ea2a4f165c50c43a48fb927a7225a88eb2b7e42553519"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33074,
+      "sha256": "540668b954dcdb528400c851cd47e3f0db20f6c6eb6fdb0dd43e751ff7628c1d"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32975,
+      "sha256": "6f7ca9ad30ca3ad2e595cbd4576fef46082c47ba39e2f916b080c4778b8e9536"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30044,
+      "sha256": "b9de223577395c799267c05ba6ab6554a59ff9f9657000009824d67757af3e4f"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35109,
+      "sha256": "3a163936579880ba525cc5294a00617a0060f91f74d57fead6cbf6b790e8a71a"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 49008,
+      "sha256": "df78f8b3de42159e71983ad88ce2c277ef3971a4e221694f364e409c213b9580"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 36164,
+      "sha256": "13ae0c471f31aa77b97ce4f4a82334909bea8717952b3c0592d554a30093fac3"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35908,
+      "sha256": "bbb9b6d90ad837dc00578fa2e0d9005b9b78427a17e23b9e46a29e50ed0317f0"
+    },
+    {
+      "file": "png/night/wenhu-apm256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37542,
+      "sha256": "2c379f0bdf4b3e91560117e7110069ecf24b42cf8fd679cca9b6e86602e989aa"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 35540,
+      "sha256": "18aeeef4960bfdcd74462799b3d3976fa9f64eaa6aa38cb19c6fc4ee961b9c37"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30755,
+      "sha256": "a26e15b989cf01696382bef85f2d4771aadccd5b41718a8985a7ae90085b3f51"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37259,
+      "sha256": "f24a5d9dee49ef0c2e308b2264294663a37bfb03eb1edd40a377346f6eca4048"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30658,
+      "sha256": "19986126642ed2f5ff1a4b1b94a0feb8a32d7682147a8db9fd6b62ef27a89c11"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32522,
+      "sha256": "7e6241bbb54d8d65b8ad8d42f8644d423086a74c46cfa46ef0c8ad4b186b1707"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 46302,
+      "sha256": "31035e3e91c9ea48895bb7512b9e81b944fd9cd9b4376921c5f7cdfb33345775"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29083,
+      "sha256": "67e4883d0a3aa3f63196ef731410701fccfde74091646c04d5822529be0acafe"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 28542,
+      "sha256": "3dac416448a14b2ff97148b384494f4418d410f72c141962827ced33aaa3a69b"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 24899,
+      "sha256": "f9b822a47328c65d8fc0409fce7a22c4281594d9e20a69582267ac0b2dc34554"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38685,
+      "sha256": "95546879aa19992835b0f712a20c86955d64793992787ef6a4ee2c9e009ad33b"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 53554,
+      "sha256": "40c020f379086215ec683467ccfae7b6ab03260b79d7090ab8feb9c1eba43d73"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30424,
+      "sha256": "3a8165e76135997ff5d641a39febd54afb0a3b0f5ecab6131669b7118ab6a578"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30427,
+      "sha256": "778013b029c34f89e523b40d918781f93c683ab12af8e79ce6c5a32a8de12f29"
+    },
+    {
+      "file": "png/night/wenhu-apm256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30255,
+      "sha256": "4cf38db6937502293ed7562fbd98e99168cc93e04034c65c967e4f4ee8dc3978"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30255,
+      "sha256": "25c8ec82e19d5123df9ed70f1226215d5e461d5338956b57332257454f9d0a28"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34666,
+      "sha256": "83e136e98e23fb158d4774898fdce7d1c84c58292b9238b5b610d67179490b34"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34613,
+      "sha256": "97fd0a7055b39af1b13c865d76c449251cf52ff62fa74d2eadd9d8f6138710e6"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33485,
+      "sha256": "aa76b1f84f842c18dcc0245a150c1976be88ed37cb814bc91c0b8eff7c3d2071"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31531,
+      "sha256": "1451909a17317909af4c221fc95612ace5b2a7712df719ebd02ca64a79f346f7"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 43149,
+      "sha256": "f9157cb25c43c5513f6bc1edb1156b92918949a0756563d58a51c4d4a7e54b68"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30390,
+      "sha256": "8983696ab8fd8f2a6f5a749ecc45c23a967bb019daece7e5986494a980a752a6"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31770,
+      "sha256": "e9a562058be2176073625a58645a50a9db9ba28a1a0106227b773a78136a88b3"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32891,
+      "sha256": "b34cb53c8ed7adc9c36b910cbaaed6b62fef3e6ce580c0f9bea0a1ac884d34d8"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34653,
+      "sha256": "4385e9f2e26c0cc3a3d70d132aac585ed2f527f3bc8de1d8ec8cc528797cfc0a"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 49548,
+      "sha256": "eca124ea1a5f3c50cb34fd54cd7f37a0619c25905a2cde7756cd9ea98324faa9"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33035,
+      "sha256": "2069c904edc4a2a183e3c66e4c84fea465bda9065ed53c13b04535efe073fef9"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33996,
+      "sha256": "428fe021aa53d94c6a271ac78de8abdbafdddebdef8dd9bb859db92f568853d9"
+    },
+    {
+      "file": "png/night/wenhu-val256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37455,
+      "sha256": "8d10572c4d93807399393a61d1f77eea9d66acce11f4baa583aec5893bb0157a"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34237,
+      "sha256": "2d24408428f4d7c768823f6b3fa4dc9b85c1651cb1293662659bd554b6944c16"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34588,
+      "sha256": "d2fa76463903632b9202cd11cfa4594280543bbd29e0be2a009762fbb04a80b8"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38596,
+      "sha256": "365d6dea2adb114c2115d113c627ea66f3641bfee7cd8dc9de53a6c0d5812c06"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33243,
+      "sha256": "61cc190f81a12ba7deac892c432da02bab3a1208ea67abc99c860a57ac19ed05"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 26830,
+      "sha256": "030b7ca0a86da64ed2b765b9aa85aeae0873e4dc9b9c5637243728245bb847f0"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 42591,
+      "sha256": "10b745d3b73bccdf2697514d9c6b99d01ee21fbad94f61c2fea49634b93cf007"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30169,
+      "sha256": "6571ad05498647e65cd398bf377625649d3505f82a0a12ece23657cf0208c548"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31678,
+      "sha256": "02f6511a987180cb1ea126ee60a47d454fd59eae1d6497fd4f945feea67f0431"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 32790,
+      "sha256": "fe0111e72a64cc37321566f7b7bd9dedfe6af45fb93e68c106c48f794dd9b418"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29974,
+      "sha256": "d62dd80e3098fe6176086fac2c98be5cff1a673064b5eb60dc23558d8ed92a11"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 48809,
+      "sha256": "3235337cc86c3a9eb279dcc35cc9231f2b20131c3ce9219431ade2a6a440257c"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 33171,
+      "sha256": "ef825bac6fd11709515eaaa4c6063905a946dd6138eb82215781d6ac8a8096c7"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34207,
+      "sha256": "c1d75417099fb55db4a312c5795584f331bf4d4e4737ce913a64b9a624fbb788"
+    },
+    {
+      "file": "png/night/wenhu-val256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 37472,
+      "sha256": "0dcf47d9e828d69830d689acd308d509b856e1332e69045d25e41225fff118a5"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34237,
+      "sha256": "2d24408428f4d7c768823f6b3fa4dc9b85c1651cb1293662659bd554b6944c16"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31703,
+      "sha256": "08d25605ab2aea165f885e8fe4502896431afc60a56ae082d617bdb497017001"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 38584,
+      "sha256": "2a9a75efb8e4bfa61af16e23e92cc535649a124e1ba95c80505f53117dacff84"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31176,
+      "sha256": "d1a3263941a0c42f52d02869098539bd900f3585fa38cfa73321d104ada8be67"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 31524,
+      "sha256": "4e8d463856817ea8ee61e6869b517cd4913acfc5fdbc44c7a065bdeedbb77ac9"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 47370,
+      "sha256": "1f23ce34b5896a0abd9f711c274bdb707dcf15829d5366951b9a0e06d851b6e2"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 27758,
+      "sha256": "d102b8668475f7bee174fe2b1da8dfadd748b2b9db59f783c2e4df2904db671a"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 28210,
+      "sha256": "a4e0285f10734a45dd6e2e0a558bf40aad521b90cc4db774d30c2403f1c392cc"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 27081,
+      "sha256": "c4beb227be3d807c10414c9019408c61f8b6f19854f8e17b4c68b8f0570f9a3a"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 34651,
+      "sha256": "8df94857a3398623091c06f271081919d1f25a1a0a0fc09a2305c33093e2bc08"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 53381,
+      "sha256": "4c8b8a083058f1b7428af384b2df9af843e1c79fdfba8ad6f1e922504bc7251f"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29523,
+      "sha256": "adc6a7c9e3e44f3155dc75a4c719363ee99035605ccce7f75691e64e5833e79b"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 29811,
+      "sha256": "0b2e18d1df1988d461b4934204dfb5959b569ab166f7c4f518fc473720b2afbb"
+    },
+    {
+      "file": "png/night/wenhu-val256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 30755,
+      "sha256": "c4a574c498b6eff72d15030c7344d69338ce0b9dda7eb191a9245606faaf628c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14292,
+      "sha256": "5f5d1bdfed22c56feac8b740d742f9f75799e8c8d6f7c454775733f4176818f0"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14163,
+      "sha256": "ef1d900bdb93461dd8ed42c12d299aca77be1c2a65d96d3abfdec34ccb4e5281"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16152,
+      "sha256": "1b3eb976fb4748f49eaba6a84cf32c96ec8f417b4ecaeae3851cf44206c1c980"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15195,
+      "sha256": "b9b467313c9f9c0b13401d5112e68a35f8223916b38f8c99adf069ff3f3dbb2c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15218,
+      "sha256": "6f5481d81ded0774eb64106e80cfdb8a2b837b2455b59ead94b031457f37afec"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14176,
+      "sha256": "9c1e550083d7d75f513670fcb4561ba2142e6503890fbea1e41bb2a0f0cc693d"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16142,
+      "sha256": "99d7138371e62157e7ade285d6b062132e2a424200a04d3316644ab0c69a820f"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15313,
+      "sha256": "a9bf81a7446a9653f6932853bc879cae3a8418344144a175440d6bb856d64e44"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15333,
+      "sha256": "64d7299390093beac762a03e51ba0d9315f5a8d373c7c76b7e4c8785c659c2a4"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14270,
+      "sha256": "21541a960cf23126ad0f2eddd62a3c8adb979d64a8676bc85595b68a3ac7755b"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14284,
+      "sha256": "386de0866cc8ec4f4866cfc8781267a957d0e6ebd5a0ee65e8e8e8f8d6bd62a3"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14176,
+      "sha256": "9c1e550083d7d75f513670fcb4561ba2142e6503890fbea1e41bb2a0f0cc693d"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16093,
+      "sha256": "04d8b440c0cf6c20105468dc4a9f0f7c18906dae494d51f9c2a194b089e90ff4"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15272,
+      "sha256": "0d56eefefe88b69c6d4e9ecbff2c64dcf0fe582b18617564cddc22bf79e9bd47"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15278,
+      "sha256": "7989eb16a611a8bba02d2e74d2899984cfbcb9d001392b9fa80c96bbd63455ec"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14163,
+      "sha256": "ef1d900bdb93461dd8ed42c12d299aca77be1c2a65d96d3abfdec34ccb4e5281"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16094,
+      "sha256": "6fb1b1aa06d28bd7d2410e17e0429ab9308cb1b8a0964a5cc0de226b3f46a6db"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15398,
+      "sha256": "1c6391bbf4ba9c46c435867c2247597303711f926c10b24431422e330672f948"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15393,
+      "sha256": "009d8367b23cdbc4acc6623a832af5d1cb030b43ce922935354d565a4cfefa74"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14274,
+      "sha256": "1e45c7a8489454a320311b3ac797ac9042de1283c41d40149d7c484a757c60c2"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14946,
+      "sha256": "b9a28a18d3140582ad78544394042159f25aad823467c38d36f3ca46356a92d2"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14867,
+      "sha256": "cc245d173c6a3c1202f44f2906a8406b3bfa27e51913dcdb3d3311fe8f6c0395"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 17942,
+      "sha256": "69f0c1c0567ffeed8643624bd16b42aeca6cba55ece5204ede8abf3135833853"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15777,
+      "sha256": "21ca75dab1b149f2b1f843e70bf91a680b99f8443f7fcb789985381216b5fa43"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15832,
+      "sha256": "79e3eeb53a7aa77c6246a467fee15040dc80347f89a4931d885d32f2cbbf8f7d"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14867,
+      "sha256": "cc245d173c6a3c1202f44f2906a8406b3bfa27e51913dcdb3d3311fe8f6c0395"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 17928,
+      "sha256": "205649a8ca61b83b32ffec308912038e4b3e3d9c1ca3cd789267989d9090537b"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16274,
+      "sha256": "bdcf695bfff333e15aa9edf2ec5d000609e64b4e657a24cda549686ea10b7ff5"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16313,
+      "sha256": "efda71b2e8ba2b22069d3f15f1e8bca5e51b2a3673cbadd6accf4437f29604f8"
+    },
+    {
+      "file": "png/silhouette/wenhu-apm256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14906,
+      "sha256": "5efa31eea0db4894980d5cf4a8f107abc9fb5ec950f1fc92f293c1e3058826d9"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13907,
+      "sha256": "58940a53726776c8a50ef098d94aba66f97f1404963f4f438fc54bcab0159a26"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13755,
+      "sha256": "2d8a1f7d0d7dded2a24192db8171d1f86ee3d371d15665ae072f2382ce34da2f"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16474,
+      "sha256": "483eb1018af4282ad3dc8fdd6ccc9a3160f2aa7b59586ec15d57f89d561d70a1"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15140,
+      "sha256": "1a8b75e51b60198a68f9384cef502fc4e67c715d4fe4e1ddf829dadd442a6db3"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15167,
+      "sha256": "9c58901668186509e5a7ac79b50452e3a28fa91c603a451117f11f7d00f0ed2a"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13805,
+      "sha256": "fe75df68ee48bb499e0a7bc8c5b0db9ba2d97f6ce689276a5b49ad6eb345df7b"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16464,
+      "sha256": "1c50b3dc9106f72d40aacd660fcda2cea9bcd5786ad6a79cad800a21d2fe2943"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15450,
+      "sha256": "e8f4eacb136b0402520984d29dd7a633c1cdd4407abb984127887a4e1c7d53e4"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15498,
+      "sha256": "bcfe9f7bf4d5bfc155f005ecc13c455e8929acea7353f01f3e82bc611d16836f"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-a-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13905,
+      "sha256": "8c67defcdd7f793f3b6abf8126c81dd7da1d5a30a5340b24e97a7fa749c1ec7f"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13944,
+      "sha256": "63022396667479ee3949453c3d85cf6af835a88d69c22bab425124408188465b"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13805,
+      "sha256": "fe75df68ee48bb499e0a7bc8c5b0db9ba2d97f6ce689276a5b49ad6eb345df7b"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16148,
+      "sha256": "895cce9099476edba7e4271a1a46d619f110cdcdaec5ad391353af7621661bee"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15275,
+      "sha256": "00cf6f20c541c198a3a7a993d018dd98cdfd5847cf94646a1c77d4ed8a2d7dff"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15255,
+      "sha256": "6dea48fb0b7e2bd3e2c7baf8ca199239213feca58e83aaad1fbf1f663e457384"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13755,
+      "sha256": "2d8a1f7d0d7dded2a24192db8171d1f86ee3d371d15665ae072f2382ce34da2f"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16160,
+      "sha256": "1e6e33d79b28be54a7a92f8e5737e13dffed629e2ff07b7beb18fbbc0eca58ae"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15590,
+      "sha256": "bd7b111ea4173814f6badcaba2c251ab623353b8dafeef380ebc6f1c4841f014"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 15581,
+      "sha256": "66681a17ef765364b6448a793f5ca8ee9b2bd79747f2de4453110a6e1be4d0c3"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-b-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13865,
+      "sha256": "e9a16efa3a1561d4e4f41660706061eb1adc2ff43730222c139f919099e94665"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14478,
+      "sha256": "1d2d46262894513e01e3fcb168c5bd00561af41f7db44fe390040c4c73730b96"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-far-back.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-far-bottom.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14541,
+      "sha256": "3e01dec017106ff5ac59fbb772acbbfc7777b51f496b20ade8e4f415d452f959"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-far-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-far-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 18269,
+      "sha256": "ee8d9ed9b84aa0a6807f3f70cc8fd20c8ed50ea2ec1bdd04685d25ff39b38f83"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-far-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16481,
+      "sha256": "b4e540a0c590777373e7e562d48fec8002d6838730e57da0c2892d1560013d25"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-far-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16466,
+      "sha256": "9cbe61fbb7087b86f5541bc19f346502ff8446542e60c25efa8e5c3a84646bfd"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-far-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14541,
+      "sha256": "3e01dec017106ff5ac59fbb772acbbfc7777b51f496b20ade8e4f415d452f959"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-front.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-isometric.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 18224,
+      "sha256": "95342f41f46cfd83b60ffa62fa3dfc2b2d191a47cf41f913ba5cd0084265c12d"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-left.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16973,
+      "sha256": "7a024f0bb9dfb881bd95f4b3f0820c518f4c5ee5ac6e24c1534dd397800eba9c"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-right.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 16960,
+      "sha256": "46955008cfbed8e5d4490b6a6b8cce62c8c07110ac91c7d800941c8808934668"
+    },
+    {
+      "file": "png/silhouette/wenhu-val256-formation-top.png",
+      "size": [
+        1200,
+        420
+      ],
+      "bytes": 14612,
+      "sha256": "e4dada5e29af4e4bc55a57d3294e261857e316d40b0a69090bae0944083285b5"
+    },
+    {
+      "file": "sheets/apm256-a.png",
+      "size": [
+        2100,
+        1440
+      ],
+      "bytes": 293269,
+      "sha256": "a2136d3062cd2fdfc8d1d098a860cc034f240a1dab28d491e13fcc5550476993"
+    },
+    {
+      "file": "sheets/apm256-b.png",
+      "size": [
+        2100,
+        1440
+      ],
+      "bytes": 298428,
+      "sha256": "733a3e455240c10dc50343f848b57c74edb00f54b7583e7cc83adea4f18e11e5"
+    },
+    {
+      "file": "sheets/apm256-comparison.png",
+      "size": [
+        1600,
+        1700
+      ],
+      "bytes": 227214,
+      "sha256": "83fd80e87bf00943c85f37fa795e1c2d82ec3bab25b59a583e6ed36a6b1cf143"
+    },
+    {
+      "file": "sheets/apm256-formation.png",
+      "size": [
+        2100,
+        1440
+      ],
+      "bytes": 291704,
+      "sha256": "b0840198e0bf9b196ccbd7851c5b6b9889917e0b3ba93f2e10b691f474a21b89"
+    },
+    {
+      "file": "sheets/val256-a.png",
+      "size": [
+        2100,
+        1440
+      ],
+      "bytes": 290033,
+      "sha256": "fb83d78b1200faead7a94021a2d6d41ca18737129fe6e43737fbd2bcb3260e01"
+    },
+    {
+      "file": "sheets/val256-b.png",
+      "size": [
+        2100,
+        1440
+      ],
+      "bytes": 293601,
+      "sha256": "34152820f3dd5d8c73d5f9d2733973e97b60c5547941c560bb2d22f47b0cf6e7"
+    },
+    {
+      "file": "sheets/val256-comparison.png",
+      "size": [
+        1600,
+        1700
+      ],
+      "bytes": 217256,
+      "sha256": "5977d0f460b83c5ef8eabec9b53d6f14c8aee37175914dda9ed9cc382475bc3f"
+    },
+    {
+      "file": "sheets/val256-formation.png",
+      "size": [
+        2100,
+        1440
+      ],
+      "bytes": 293461,
+      "sha256": "fc0df106cc8871d17013608419ce8854fc3fa2e43d732ce099fb60dbb1fd8936"
+    }
+  ]
+}

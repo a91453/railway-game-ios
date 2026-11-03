@@ -193,6 +193,10 @@ public struct Map3DModelPack: Sendable {
         for role in Map3DEMU700.Role.allCases {
             for far in [false, true] { models.append(Map3DEMU700.model(role, far: far)) }
         }
+        for far in [false, true] {
+            models += Map3DWenhuVAL256.Role.allCases.map { Map3DWenhuVAL256.model($0, far: far) }
+            models += Map3DWenhuAPM256.Role.allCases.map { Map3DWenhuAPM256.model($0, far: far) }
+        }
         self.init(recipes: models, baked: baked)
     }
 
