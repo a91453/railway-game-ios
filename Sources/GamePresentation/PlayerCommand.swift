@@ -64,6 +64,11 @@ public enum PlayerCommand: Hashable, Sendable {
     /// its track, stations, trains and real timetable, and the purchase
     /// GameCore records, all or none.
     case acquireRealLine(RealLineAcquisition)
+    /// A real depot added to a line bought before it came with one
+    /// (decision 557, ``GameSession/realDepotOffer(for:site:)``): its
+    /// track from the end of the line's, the depot and its sidings, made
+    /// one of the line's depots, all or none.
+    case addRealLineDepot(RealLineDepotAddition)
     /// A real station bought (decision 400 A.8, ``GameSession/realStationOffer(for:system:)``):
     /// a short stretch of track along the real line, traced as
     /// ``buildTrackChain(_:)`` lays it, and the station's platform the
@@ -225,6 +230,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildDoubleTrackChain: "buildDoubleTrackChain"
         case .autoService: "autoService"
         case .acquireRealLine: "acquireRealLine"
+        case .addRealLineDepot: "addRealLineDepot"
         case .buyRealStation: "buyRealStation"
         case .buildStationLayout: "buildStationLayout"
         }
@@ -317,6 +323,9 @@ extension GameSession {
         case .acquireRealLine(let acquisition):
             _ = try build(acquisition, in: &world)
             outcome.line = world.acquisition(of: acquisition.realLine)?.line.flatMap { world.line(id: $0) }
+        case .addRealLineDepot(let addition):
+            try build(addition, in: &world)
+            outcome.line = world.line(id: addition.line)
         case .buyRealStation(let purchase):
             outcome.station = try build(purchase, in: &world)
         case .buildStationLayout(let plan):
@@ -399,6 +408,8 @@ extension PlayerCommand: Codable {
         var autoService: AutoService?
         /// Decision 315.
         var acquisition: RealLineAcquisition?
+        /// Decision 557.
+        var realDepot: RealLineDepotAddition?
         var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
         /// Decision 285: the platform's twin on the track beside it;
@@ -523,6 +534,9 @@ extension PlayerCommand: Codable {
         case "acquireRealLine":
             guard let acquisition = record.acquisition else { throw invalid("a line bought needs its layout") }
             self = .acquireRealLine(acquisition)
+        case "addRealLineDepot":
+            guard let addition = record.realDepot else { throw invalid("a depot added needs its layout") }
+            self = .addRealLineDepot(addition)
         case "buyRealStation":
             let stretches = try (record.stretches ?? []).map { command in
                 guard case .buildTrack(let stretch) = command else { throw invalid("a chain's piece is a stretch") }
@@ -655,6 +669,8 @@ extension PlayerCommand: Codable {
             record.autoService = plan
         case .acquireRealLine(let acquisition):
             record.acquisition = acquisition
+        case .addRealLineDepot(let addition):
+            record.realDepot = addition
         case .buyRealStation(let purchase):
             record.stretches = purchase.stretches.map(PlayerCommand.buildTrack)
             record.platformStretch = purchase.platform
@@ -721,6 +737,8 @@ extension PlayerCommand {
             }
         case .acquireRealLine(let acquisition):
             language.text("buy \(acquisition.lineName)", "收購\(acquisition.lineName)")
+        case .addRealLineDepot(let addition):
+            language.text("add \(addition.depot.name)", "加建\(addition.depot.name)")
         case .buyRealStation(let purchase):
             language.text("buy \(purchase.name) station", "收購\(purchase.name)站")
         case .removePlatform, .removeTrack:
