@@ -11,5 +11,6 @@ for fleet in ['val256','apm256']:
  (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
  shutil.copy2(repo/'docs/art/wenhu/sources.json',out/'source-record.json')
  shutil.copy2(repo/f'docs/art/wenhu/{fleet}-status.json',out/'status.json')
- for role in ['a','b','formation']:
+ for role in ['a','b','formation','comparison']:
+  if not (root/f'sheets/{fleet}-{role}.png').exists():continue
   (out/'sheets').mkdir(exist_ok=True);shutil.copy2(root/f'sheets/{fleet}-{role}.png',out/f'sheets/{fleet}-{role}.png')

@@ -27,4 +27,23 @@ for(const state of ['day','night','clay','silhouette']){
   }
  }
 }
+const previous=process.argv[3];
+if(previous){
+ const before=resolve(previous),prior=JSON.parse(readFileSync(before+'/manifest.json'));
+ mkdirSync(root+'/comparison',{recursive:true});
+ for(const m of manifest.models){
+  const old=prior.models.find(a=>a.id===m.id);if(!old)throw Error('Missing real previous model '+m.id);
+  for(const [tag,source,record]of [['before',before,old],['after',root,m]]){
+   const data=readFileSync(resolve(source,record.native)).toString('base64');
+   for(const view of ['front','left','bottom','top','isometric']){
+    const png=await page.evaluate(({data,view,formation})=>{
+     r.load(Uint8Array.from(atob(data),c=>c.charCodeAt(0)).buffer);
+     r.centre=[0,0,1.8];r.extent=[formation?27.56:6.90,1.4,1.8];
+     r.render(view,{width:1200,height:420,time:'day'});return r.png();
+    },{data,view,formation:m.native_kind==='assembly'});
+    writeFileSync(root+'/comparison/'+tag+'-'+m.id+'-'+view+'.png',Buffer.from(png.split(',')[1],'base64'));
+   }
+  }
+ }
+}
 await browser.close();server.close();console.log('Rendered 12 models, 7 directions, 4 states; fixed metre framing.');
