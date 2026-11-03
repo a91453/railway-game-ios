@@ -3825,6 +3825,134 @@
       "hash": "46fb9835a778c345",
       "triangles": 3420
     },
+    "light-set-wenhu370-car" : {
+      "hash" : "b66f61e4c3eb570f",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370-centre" : {
+      "hash" : "3d75a79a1cc4b447",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370-head" : {
+      "hash" : "3d75a79a1cc4b447",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370-tail" : {
+      "hash" : "b66f61e4c3eb570f",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370Far-car" : {
+      "hash" : "a6ea95c7d8a82587",
+      "triangles" : 384
+    },
+    "light-set-wenhu370Far-centre" : {
+      "hash" : "c97888e981a357a9",
+      "triangles" : 384
+    },
+    "light-set-wenhu370Far-head" : {
+      "hash" : "c97888e981a357a9",
+      "triangles" : 384
+    },
+    "light-set-wenhu370Far-tail" : {
+      "hash" : "a6ea95c7d8a82587",
+      "triangles" : 384
+    },
+    "light-set-wenhuVAL256-car" : {
+      "hash" : "142e305921842221",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256-centre" : {
+      "hash" : "f46f3bf24e15b5c7",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256-head" : {
+      "hash" : "f46f3bf24e15b5c7",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256-tail" : {
+      "hash" : "142e305921842221",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256Far-car" : {
+      "hash" : "30d889d3fb513cb9",
+      "triangles" : 500
+    },
+    "light-set-wenhuVAL256Far-centre" : {
+      "hash" : "f9ab5538bb9a6679",
+      "triangles" : 500
+    },
+    "light-set-wenhuVAL256Far-head" : {
+      "hash" : "f9ab5538bb9a6679",
+      "triangles" : 500
+    },
+    "light-set-wenhuVAL256Far-tail" : {
+      "hash" : "30d889d3fb513cb9",
+      "triangles" : 500
+    },
+    "set-wenhu370-car" : {
+      "hash" : "55828b1b5481a2e6",
+      "triangles" : 10892
+    },
+    "set-wenhu370-centre" : {
+      "hash" : "23ed01337e7a75a",
+      "triangles" : 10856
+    },
+    "set-wenhu370-head" : {
+      "hash" : "ac3273eac66d76da",
+      "triangles" : 10856
+    },
+    "set-wenhu370-tail" : {
+      "hash" : "48cae56aaf6749ea",
+      "triangles" : 10892
+    },
+    "set-wenhu370Far-car" : {
+      "hash" : "cf26235d7105a5e2",
+      "triangles" : 5036
+    },
+    "set-wenhu370Far-centre" : {
+      "hash" : "e6818c192893904",
+      "triangles" : 5000
+    },
+    "set-wenhu370Far-head" : {
+      "hash" : "acb5bd84f8b0b70d",
+      "triangles" : 5000
+    },
+    "set-wenhu370Far-tail" : {
+      "hash" : "ce7bf801b41c0096",
+      "triangles" : 5036
+    },
+    "set-wenhuVAL256-car" : {
+      "hash" : "2c22d31401252ea4",
+      "triangles" : 12172
+    },
+    "set-wenhuVAL256-centre" : {
+      "hash" : "8cde807f78e0906a",
+      "triangles" : 12136
+    },
+    "set-wenhuVAL256-head" : {
+      "hash" : "fc0d22fc56c8bc78",
+      "triangles" : 12136
+    },
+    "set-wenhuVAL256-tail" : {
+      "hash" : "e79c8cf0a6c5863d",
+      "triangles" : 12172
+    },
+    "set-wenhuVAL256Far-car" : {
+      "hash" : "90e3f73a46eb3b4",
+      "triangles" : 5716
+    },
+    "set-wenhuVAL256Far-centre" : {
+      "hash" : "87edc21b0b2654c8",
+      "triangles" : 5680
+    },
+    "set-wenhuVAL256Far-head" : {
+      "hash" : "7b739342f1ef22a0",
+      "triangles" : 5680
+    },
+    "set-wenhuVAL256Far-tail" : {
+      "hash" : "da9d5760ead82dd1",
+      "triangles" : 5716
+    },
     "set-emu700-car": {
       "hash": "6545c04e201068fb",
       "triangles": 6000

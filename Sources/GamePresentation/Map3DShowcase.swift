@@ -132,7 +132,9 @@ public enum Map3DShowcase {
         Entry("kaohsiung", "Kaohsiung Metro Red and Orange lines", "高雄捷運紅線、橘線", .metro, cars: 3, fixed: true),
         Entry("taichungGreen", "Taichung Metro Green line", "台中捷運綠線", .metro, cars: 2, fixed: true),
         Entry("metroGeneric", "Metro train (Taoyuan)", "捷運列車（桃園）", .metro, cars: 3, most: 6, stripe: 0xE3002C),
-        Entry("wenhu", "Taipei Metro Wenhu line", "台北捷運文湖線", .metro, cars: 4, stripe: 0xC48C31),
+        // Decision 558: the Wenhu line's two fleets, two pairs each.
+        Entry(Map3DTrainSet.wenhuVAL256Key, "Taipei Metro Wenhu line VAL256", "台北捷運文湖線 VAL256", .metro, cars: 4, most: 6),
+        Entry(Map3DTrainSet.wenhu370Key, "Taipei Metro Wenhu line Type 370", "台北捷運文湖線 370 型", .metro, cars: 4, most: 6),
         Entry("fourCarMetro", "Four-car metro", "四節捷運列車", .metro, cars: 4, most: 6),
         // Light rail.
         Entry("greenTram", "Green low-floor tram", "綠色低地板電車", .lightRail, cars: 2, most: 4),

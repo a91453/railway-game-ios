@@ -1867,6 +1867,41 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("emu700-far-front", app)
     }
 
+    /// Decision 558: the Wenhu line's two fleets in the garage (the 3D
+    /// map's own models), one at a time, by day: the front close up and
+    /// the side, near models, then the far models from the side.
+    func testWenhuTrains() {
+        // The garage opened on one train at a time (`-screenshot-showcase`):
+        // scrolling the picker's half-height sheet on a phone on its side
+        // ran past the 8 minutes (run 41613797939).
+        for (key, name) in [("wenhuVAL256", "val256"), ("wenhu370", "370")] {
+            let app = launch(extra: ["-screenshot-showcase", key])
+            defer { app.terminate() }
+            let settings = app.buttons["start.settings"]
+            XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+            settings.tap()
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+            garage.tap()
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The garage did not open")
+            let far = app.segmentedControls["trainShowcase.far"]
+            far.buttons.element(boundBy: 0).tap()
+            closeUp.tap()
+            settle(seconds: 6)
+            keep("wenhu-\(name)-near-front", app)
+            app.buttons["trainShowcase.camera.side"].tap()
+            settle(seconds: 4)
+            keep("wenhu-\(name)-near-side", app)
+            far.buttons.element(boundBy: 1).tap()
+            settle(seconds: 6)
+            keep("wenhu-\(name)-far-side", app)
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("wenhu-\(name)-far-front", app)
+        }
+    }
+
     // MARK: - Helpers
 
     /// Drags `list` back towards its top until `element` exists below

@@ -11,6 +11,8 @@ final class Map3DTrainSetTests: XCTestCase {
     /// Decision 496: the real light rails' sets, near and far.
     static let lightRails: Set = ["danhaiLRT", "danhaiLRTFar", "ankengLRT", "ankengLRTFar", "klrtCAF", "klrtCAFFar",
                                   "klrtCitadis", "klrtCitadisFar"]
+    /// Decision 558: the Wenhu line's two fleets, near and far.
+    static let wenhu: Set = ["wenhuVAL256", "wenhuVAL256Far", "wenhu370", "wenhu370Far"]
     private var pack: Map3DModelPack { .standard }
     /// The recipes, their lamps lit as drawn (decision 449 lights a
     /// running car's in the pack only at its train's ends).
@@ -85,7 +87,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 554: #1539's EMC and EM, 8,076 near and 3,420 far.
                     : Self.tourism.contains(set.key) && [set.headName, set.tailName].contains(name) ? 3_400...8_100
                     // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
-                    : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000 : 100...4_100
+                    : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000
+                    // Decision 558: #1742's Wenhu line cars, near and far.
+                    : Self.wenhu.contains(set.key) ? 4_900...12_200 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -103,6 +107,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     // 610's 16.7 and 17.6 m.
                     : ["taroko", "tarokoFar", "metroC341", "metroC341Far", "metroC371", "metroC371Far", "metroC381", "metroC381Far"].contains(set.key) ? 23...24.5
                     : ["circular610", "circular610Far"].contains(set.key) ? 16.5...17.7 : set.key == "wenhu" ? 12...13.5
+                    // Decision 558: #1742's Wenhu line cars, 13.78 m with their couplers.
+                    : Self.wenhu.contains(set.key) ? 13.7...13.85
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
@@ -294,7 +300,8 @@ final class Map3DTrainSetTests: XCTestCase {
         // 399: four the seven-section car).
         XCTAssertEqual(names("C", 1), ["set-greenTram-single"])
         XCTAssertEqual(names("C", 5), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
-        XCTAssertEqual(names("APM", 2), ["set-wenhu-head", "set-wenhu-tail"])
+        // Decision 558: the people mover is the Wenhu line's 370.
+        XCTAssertEqual(names("APM", 2), ["set-wenhu370-head", "set-wenhu370-tail"])
     }
 
     /// Decision 331: a tram car is two of the tram's sections, as long as

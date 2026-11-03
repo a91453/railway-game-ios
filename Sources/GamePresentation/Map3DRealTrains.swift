@@ -133,8 +133,11 @@ public struct Map3DRealTrains: Sendable {
     /// as the player's metro is; the other cities' are their own sets
     /// (decision 483: Kaohsiung's and Taichung's) or `metroGeneric`,
     /// which no variant splits.
+    /// Decision 558: but the Wenhu line's trains split between its two
+    /// fleets (``Map3DTrainSet/wenhuLine(number:)``).
     static func variantKey(system: String, key: String, number: Int, locked: Set<String> = []) -> String {
-        system == "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
+        if key == Map3DTrainSet.wenhu370Key { return Map3DTrainSet.wenhuLine(number: number) }
+        return system == "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
     }
 
     /// Decision 435: the formation a train of a line of `system` whose
@@ -214,8 +217,10 @@ public struct Map3DRealTrains: Sendable {
             // has (the C301 and C321 have none: the line's other fleet
             // stands in for them).
             switch id {
-            // The Wenhu line's four cars (`wenhu`).
-            case "BR": return Formation(key: "wenhu", cars: 4)
+            // Decision 558: the Wenhu line's four cars, two pairs of its
+            // 370 or, a third of its trains, its VAL256
+            // (``Map3DTrainSet/wenhuLine(number:)``).
+            case "BR": return Formation(key: Map3DTrainSet.wenhu370Key, cars: 4)
             // The Circular line's four-car 610.
             case "Y": return Formation(key: "circular610", cars: 4)
             // The branch shuttles' three-car C371s.

@@ -54,6 +54,9 @@ public struct Map3DTrainSet: Sendable {
     /// R200 is the R200 Chu-Kuang's); this set's ``Cars/head`` is not put
     /// in the pack.
     var headOf: String? = nil
+    /// Decision 558: the key of the set drawn in this one's place while
+    /// the pack has none of its models (the Wenhu line's generic car).
+    var fallback: String? = nil
     let build: @Sendable () -> Cars
 
     struct Cars {
@@ -308,10 +311,18 @@ public struct Map3DTrainSet: Sendable {
             tourismEMU500(.haifeng, far: true),
             tourismEMU500(.shanlan),
             tourismEMU500(.shanlan, far: true),
+            // Decision 558: the Wenhu line's two fleets as #1742's cars
+            // (the VAL256 and the 370, its INNOVIA APM256), near and from
+            // 500 m out their light cars; last, so no set's models before
+            // them move.
+            wenhuVAL256(),
+            wenhuVAL256(far: true),
+            wenhu370(),
+            wenhu370(far: true),
             // Decision 560: and #1730's EMU700 (by ``variant(of:number:locked:)``
             // as many as its share of the four fleets' cars), from 500 m
-            // out its far cars; after the sets before it, so none of their
-            // models move.
+            // out its far cars; after the sets before it (decision 558's
+            // Wenhu sets too), so none of their models move.
             emu700(),
             emu700(far: true),
         ]
@@ -322,10 +333,11 @@ public struct Map3DTrainSet: Sendable {
     /// The types drawn as a set of another key: the EMU3000 and the
     /// high-speed set as their models, every metro size but the light
     /// metro as the C381, the light metro as the green tram (decision 331)
-    /// and the people mover as the Wenhu line's car.
+    /// and the people mover as the Wenhu line's car; decision 558: as the
+    /// Wenhu line's 370 (a third of them its VAL256, ``wenhuLine(number:)``).
     static let byType: [String: String] = [
         "EMU3000": "emu3000", "HSR": "highSpeed",
-        "A": "metroC381", "B": "metroC381", "C": "greenTram", "L": "metroC381", "D": "metroC381", "APM": "wenhu",
+        "A": "metroC381", "B": "metroC381", "C": "greenTram", "L": "metroC381", "D": "metroC381", "APM": wenhu370Key,
     ]
 
     /// How far from the eye a car of `key` is drawn with its model, in
@@ -357,7 +369,7 @@ public struct Map3DTrainSet: Sendable {
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
-                                "HAIFENG", "SHANLAN"]
+                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -386,6 +398,8 @@ public struct Map3DTrainSet: Sendable {
             return localTrain(number: number)
         case "klrtCitadis":
             return kaohsiungLightRail(number: number)
+        case wenhu370Key:
+            return wenhuLine(number: number)
         case "pushPull" where !locked.contains("pushPullE1000"):
             return "pushPullE1000"
         default:
@@ -428,6 +442,20 @@ public struct Map3DTrainSet: Sendable {
         let share = ((number % 8 + 8) % 8) * 3 % 8
         return share < 3 ? "klrtCAF" : "klrtCitadis"
     }
+
+    /// Decision 558: the set a Wenhu line train numbered `number` (the real
+    /// line's and a people mover of the player's) is drawn as, as many of
+    /// each as the fleets' pairs: the VAL256's 51 and the 370's 101, about
+    /// 1 in 3 and 2 in 3: the number's remainder by 3 is 0 for the VAL256,
+    /// 1 or 2 for the 370. A train is one fleet's, never both (the two do
+    /// not couple).
+    static func wenhuLine(number: Int) -> String {
+        (number % 3 + 3) % 3 == 0 ? wenhuVAL256Key : wenhu370Key
+    }
+
+    /// Decision 558: the keys of the Wenhu line's two fleets' sets.
+    static let wenhuVAL256Key = "wenhuVAL256"
+    static let wenhu370Key = "wenhu370"
 
     /// Decision 408: the number at the end of a real train's key
     /// (``RealTrainTraffic/places(of:at:on:dayBefore:)``: its run on the
@@ -1011,6 +1039,36 @@ public struct Map3DTrainSet: Sendable {
         fiveModuleLRT("klrtCitadis", far: far, centres: [12.775, 5.325, 0, -5.325, -12.775]) {
             Map3DKaohsiungCitadis.Unit.allCases.map { Map3DKaohsiungCitadis.model($0, far: far) }
         }
+    }
+
+    /// Decision 558: a Wenhu line train (#1742's units, `tools/wenhu/assembly.json`):
+    /// pairs of an A car and a B car, A-B-A-B (four cars, the line's), each
+    /// unit as the recipe has it, none turned round: the A car's +x end
+    /// (AX) and the B car's −x end (BY) are a pair's outer ends, with the
+    /// automatic coupler and the lamps; AY and BX the pair's semi-permanent
+    /// inner ends. So the head is an A, the tail a B, and the cars between
+    /// B, A, B… from the front (``cycleFromFront``): two cars are one pair,
+    /// six three. Each car at its own length; the ends' lamp lenses lit
+    /// (``litLenses(_:front:)``). Before the pack has its models, the old
+    /// generic car (``fallback``).
+    static func wenhu(_ key: String, far: Bool, a: @escaping @Sendable () -> Map3DModelPack.Model,
+                      b: @escaping @Sendable () -> Map3DModelPack.Model) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.middle, .centre], cycleFromFront: true, ownLengths: true,
+                      far: far ? nil : key + "Far", fallback: "wenhu") {
+            let a = a(), b = b()
+            return Cars(head: litLenses(a, front: true), middle: b, tail: litLenses(b, front: false), single: nil, centre: a)
+        }
+    }
+
+    /// Decision 558: the Wenhu line's VAL256 (#1742's ``Map3DWenhuVAL256``).
+    static func wenhuVAL256(far: Bool = false) -> Map3DTrainSet {
+        wenhu(wenhuVAL256Key, far: far, a: { Map3DWenhuVAL256.model(.a, far: far) }, b: { Map3DWenhuVAL256.model(.b, far: far) })
+    }
+
+    /// Decision 558: the Wenhu line's 370, the INNOVIA APM256 (#1742's
+    /// ``Map3DWenhuAPM256``).
+    static func wenhu370(far: Bool = false) -> Map3DTrainSet {
+        wenhu(wenhu370Key, far: far, a: { Map3DWenhuAPM256.model(.a, far: far) }, b: { Map3DWenhuAPM256.model(.b, far: far) })
     }
 
     /// Decision 466: the key of ``sanying(far:)``, the Sanying line's real
