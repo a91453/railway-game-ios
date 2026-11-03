@@ -27,21 +27,23 @@ final class CounterflowDeadlockTests: XCTestCase {
         let aMain: TrackEdgeID
     }
 
-    private func makeScene() throws -> Scene {
+    /// `farther` moves the two free berths, W2 and E1, that much farther
+    /// out (the rest of the scene that much east).
+    private func makeScene(farther: Int64 = 0) throws -> Scene {
         var world = try GameWorld(
-            bounds: WorldBounds(width: 229_376, height: 65_536), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            bounds: WorldBounds(width: 229_376 + 131_072, height: 65_536), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
         )
         // Track A, y 40,000.
-        let w1 = try world.buildTrackNode(at: WorldCoordinate(x: 20_000, y: 40_000))
-        let n6 = try world.buildTrackNode(at: WorldCoordinate(x: 26_528, y: 40_000))
-        let n7 = try world.buildTrackNode(at: WorldCoordinate(x: 202_272, y: 40_000))
-        let e1 = try world.buildTrackNode(at: WorldCoordinate(x: 212_000, y: 40_000))
+        let w1 = try world.buildTrackNode(at: WorldCoordinate(x: 20_000 + farther, y: 40_000))
+        let n6 = try world.buildTrackNode(at: WorldCoordinate(x: 26_528 + farther, y: 40_000))
+        let n7 = try world.buildTrackNode(at: WorldCoordinate(x: 202_272 + farther, y: 40_000))
+        let e1 = try world.buildTrackNode(at: WorldCoordinate(x: 212_000 + 2 * farther, y: 40_000))
         // Track B, 320 units (5 m) beside it.
         let w2 = try world.buildTrackNode(at: WorldCoordinate(x: 20_000, y: 39_680))
-        let n5 = try world.buildTrackNode(at: WorldCoordinate(x: 29_728, y: 39_680))
-        let n8 = try world.buildTrackNode(at: WorldCoordinate(x: 205_472, y: 39_680))
-        let e2 = try world.buildTrackNode(at: WorldCoordinate(x: 212_000, y: 39_680))
+        let n5 = try world.buildTrackNode(at: WorldCoordinate(x: 29_728 + farther, y: 39_680))
+        let n8 = try world.buildTrackNode(at: WorldCoordinate(x: 205_472 + farther, y: 39_680))
+        let e2 = try world.buildTrackNode(at: WorldCoordinate(x: 212_000 + farther, y: 39_680))
         let aWest = try world.buildTrackEdge(from: w1, to: n6)
         let aEast = try world.buildTrackEdge(from: n7, to: e1)
         let bWest = try world.buildTrackEdge(from: w2, to: n5)
@@ -50,19 +52,19 @@ final class CounterflowDeadlockTests: XCTestCase {
         // path takes the lower numbered edge first, as on the player's map
         // (the platform tool's crossovers split the tracks it was laid
         // on), so each way crosses over where it sets off.
-        _ = try world.buildTrackEdge(from: n5, to: n6, curve: .cubic(PlanPoint(x: 28_128, y: 39_680), PlanPoint(x: 28_128, y: 40_000))) // x7
-        _ = try world.buildTrackEdge(from: n7, to: n8, curve: .cubic(PlanPoint(x: 203_872, y: 40_000), PlanPoint(x: 203_872, y: 39_680))) // x12
+        _ = try world.buildTrackEdge(from: n5, to: n6, curve: .cubic(PlanPoint(x: 28_128 + farther, y: 39_680), PlanPoint(x: 28_128 + farther, y: 40_000))) // x7
+        _ = try world.buildTrackEdge(from: n7, to: n8, curve: .cubic(PlanPoint(x: 203_872 + farther, y: 40_000), PlanPoint(x: 203_872 + farther, y: 39_680))) // x12
         let aMain = try world.buildTrackEdge(from: n6, to: n7)
         _ = try world.buildTrackEdge(from: n5, to: n8)
 
         // W1 and E2 end 700 units nearer the other station than W2 and E1:
         // the nearest berths, through the crossovers.
-        let w = try world.buildStation(named: "W", at: PlanPoint(x: 22_560, y: 42_048)).id
+        let w = try world.buildStation(named: "W", at: PlanPoint(x: 22_560 + farther, y: 42_048)).id
         try world.addTrackPlatform(w, on: aWest, from: 700, to: 5_120)
         try world.addTrackPlatform(w, on: bWest, from: 1, to: 5_120)
-        let e = try world.buildStation(named: "E", at: PlanPoint(x: 209_440, y: 42_048)).id
+        let e = try world.buildStation(named: "E", at: PlanPoint(x: 209_440 + farther, y: 42_048)).id
         try world.addTrackPlatform(e, on: bEast, from: 1_408, to: 5_828)
-        try world.addTrackPlatform(e, on: aEast, from: 4_608, to: 9_727)
+        try world.addTrackPlatform(e, on: aEast, from: 4_608 + farther, to: 9_727 + farther)
 
         let x = try stand(&world, at: TrackTraversal(edge: aWest, direction: .forward), offset: 5_120)
         let y = try stand(&world, at: TrackTraversal(edge: bEast, direction: .backward), offset: 6_528 - 1_408)
@@ -118,5 +120,22 @@ final class CounterflowDeadlockTests: XCTestCase {
         }
         XCTAssertEqual(arrived, [scene.x, scene.y], "deadlocked: \(scene.world.deadlockedTrains())")
         XCTAssertTrue(usedA, "X went along A")
+    }
+
+    /// A free berth is taken only within ``GameWorld/detourAllowance`` of
+    /// the train's route: W2 and E1 moved farther than that leave the two
+    /// waiting (as before), and well within it, they go.
+    func testAFreeBerthFartherThanTheDetourAllowanceIsNotTaken() throws {
+        let allowance = GameWorld.detourAllowance
+        for (farther, taken) in [(allowance - 2_048, true), (allowance + 512, false)] {
+            var scene = try makeScene(farther: farther)
+            var usedA = false
+            for _ in 0..<20 {
+                try scene.world.advance(ticks: 1)
+                if scene.world.train(id: scene.x)?.movement.edges.contains(scene.aMain) == true { usedA = true }
+            }
+            XCTAssertEqual(usedA, taken, "\(farther) farther")
+            XCTAssertEqual(scene.world.deadlockedTrains().isEmpty, taken, "\(farther) farther")
+        }
     }
 }
