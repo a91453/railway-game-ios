@@ -49,12 +49,28 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
     private static let kaohsiung85Width: Float = 68.21
     private static let kaohsiung85Height: Float = 378.0
     private static let kaohsiung85CrownHeight: Float = 347.5
+    /// Decision 550: Taipei Shin Kong Life Tower (OSM way 204711206 outer
+    /// footprint 84.90 m × 40.26 m, building:levels = 51, height = 244.15 m;
+    /// stepped podium ways 644774205..644774218 height = 46.56 m & 63.20 m,
+    /// way 644774201 height = 78.56 m, north 18F turret way 644774185
+    /// height = 86.24 m; main tower shaft way 644774181 height = 211.04 m
+    /// with 44F/46F/48F setbacks ways 644774184..644774200 at 187.36 m,
+    /// 195.68 m & 203.36 m; crown collar way 644774173 height = 214.88 m &
+    /// stepped crown penthouse way 644774171 height = 237.67 m).
+    private static let shinKongLength: Float = 84.90
+    private static let shinKongWidth: Float = 40.26
+    private static let shinKongHeight: Float = 244.15
+    private static let shinKongPodiumHeight: Float = 78.56
+    private static let shinKongNorthTurretHeight: Float = 86.24
+    private static let shinKongShaftHeight: Float = 211.04
+    private static let shinKongCrownHeight: Float = 237.67
 
     /// The landmarks as OSM has their plans and heights: 101 508 m to its
     /// spire, Taipei Main Station's roof 30 m, Kaohsiung Main Station's
     /// canopy 23 m (way 1298938821) with the Imperial Crown old station
     /// (way 257770396), Kaohsiung 85 Sky Tower 378 m to its spire (way
-    /// 345038767); each within the ground it clears, lit by finite
+    /// 345038767), Taipei Shin Kong Life Tower 244.15 m to its spire (way
+    /// 204711206); each within the ground it clears, lit by finite
     /// unit outward normals, drawn with the line patterns; from afar,
     /// fewer triangles.
     func testTheModels() {
@@ -70,6 +86,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             case .taipeiMainStation: 30
             case .kaohsiungMainStation: Self.kaohsiungHotelHeight
             case .kaohsiung85SkyTower: Self.kaohsiung85Height
+            case .shinKongLifeTower: Self.shinKongHeight
             case .chiangKaiShekMemorialHall: 70
             case .libertySquareGate, .sunYatSenMemorialHall: 30
             case .nationalTheater, .nationalConcertHall: 37
@@ -98,7 +115,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             }
             let used = Set(full.vertices.map(\.layer))
             let expectedLayers: Set<Float> = switch landmark {
-            case .taipei101, .kaohsiung85SkyTower:
+            case .taipei101, .kaohsiung85SkyTower, .shinKongLifeTower:
                 [Map3DVertex.curtainGlass, Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
             case .taipeiMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles]
             case .kaohsiungMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines]
@@ -112,7 +129,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertTrue(used.isSuperset(of: expectedLayers), "\(landmark)")
         }
         // Pin Taipei 101 and Taipei Main Station triangle counts so adding
-        // new landmarks never alters them; check Kaohsiung's budget.
+        // new landmarks never alters them; check Kaohsiung's and Shin Kong's budgets.
         XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: true).indices.count / 3, 5_804)
         XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: false).indices.count / 3, 2_580)
         XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: true).indices.count / 3, 4_194)
@@ -127,6 +144,11 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertLessThanOrEqual(tower85Full.indices.count / 3, 6_000)
         XCTAssertLessThanOrEqual(tower85Far.indices.count / 3, 2_500)
         XCTAssertLessThan(tower85Far.indices.count, tower85Full.indices.count)
+        let shinKongFull = Map3DTaipeiLandmark.shinKongLifeTower.model(full: true)
+        let shinKongFar = Map3DTaipeiLandmark.shinKongLifeTower.model(full: false)
+        XCTAssertLessThanOrEqual(shinKongFull.indices.count / 3, 6_000)
+        XCTAssertLessThanOrEqual(shinKongFar.indices.count / 3, 2_500)
+        XCTAssertLessThan(shinKongFar.indices.count, shinKongFull.indices.count)
     }
 
     /// Decision 457: the Chinese roof is a part of its own: any plan, any
@@ -215,7 +237,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertLessThanOrEqual(landmark.model(full: true).indices.count / 3, 6_000, "\(landmark)")
             XCTAssertLessThanOrEqual(landmark.model(full: false).indices.count / 3, 2_500, "\(landmark)")
         }
-        XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 4)
+        XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 5)
         // Each stands within 2 m of its way's minimum box's middle.
         let middles: [Map3DTaipeiLandmark: (Double, Double)] = [
             .chiangKaiShekMemorialHall: (25.03468, 121.52172), .libertySquareGate: (25.03665, 121.51772),
@@ -346,6 +368,58 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), [tower])
     }
 
+    /// Decision 550: Taipei Shin Kong Life Tower's outer footprint and
+    /// height (OSM way 204711206: 84.90 m × 40.26 m × 244.15 m), stepped
+    /// department store podium (ways 644774205..644774218 & 644774201),
+    /// north 18-level turret (way 644774185), main shaft with upper
+    /// setbacks (ways 644774181..644774200), and stepped crown (ways
+    /// 644774173 & 644774171) match OpenStreetMap's dimensions within 2 m,
+    /// and stand clear of surface track while allowing underground track.
+    func testShinKongLifeTower() throws {
+        let tower = Map3DTaipeiLandmark.shinKongLifeTower
+        let brick = Map3DColor.rgb(0xDDA996)
+        let podiumRoof = Map3DColor.rgb(0xEDEEF0)
+        for model in [tower.model(full: true), tower.model(full: false)] {
+            let xs = model.vertices.map(\.x), ys = model.vertices.map(\.y), zs = model.vertices.map(\.z)
+            XCTAssertEqual((xs.max() ?? 0) - (xs.min() ?? 0), Self.shinKongLength, accuracy: 2.0)
+            XCTAssertEqual((ys.max() ?? 0) - (ys.min() ?? 0), Self.shinKongWidth, accuracy: 2.0)
+            XCTAssertEqual((zs.max() ?? 0) - (zs.min() ?? 0), Self.shinKongHeight, accuracy: 0.01)
+            let ground = model.vertices.filter { $0.z < 0.01 }
+            let gxs = ground.map(\.x), gys = ground.map(\.y)
+            XCTAssertEqual((gxs.max() ?? 0) - (gxs.min() ?? 0), Self.shinKongLength, accuracy: 2.0)
+            XCTAssertEqual((gys.max() ?? 0) - (gys.min() ?? 0), Self.shinKongWidth, accuracy: 2.0)
+            XCTAssertEqual(((gxs.max() ?? 0) + (gxs.min() ?? 0)) / 2, 0, accuracy: 2.0)
+            XCTAssertEqual(((gys.max() ?? 0) + (gys.min() ?? 0)) / 2, 0, accuracy: 2.0)
+            // Stepped podium roof (way 644774201: 78.56 m), north 18-level
+            // turret (way 644774185: 86.24 m), and main shaft top (way 644774181: 211.04 m).
+            let decks = model.vertices.filter { $0.color == podiumRoof }.map(\.z)
+            XCTAssertTrue(decks.contains { abs($0 - Self.shinKongPodiumHeight) < 0.1 })
+            XCTAssertTrue(decks.contains { abs($0 - Self.shinKongNorthTurretHeight) < 0.1 })
+            XCTAssertTrue(decks.contains { abs($0 - Self.shinKongShaftHeight) < 0.1 })
+            // Stepped ziggurat crown penthouse (way 644774171: 237.67 m).
+            let crown = model.vertices.filter { $0.color == brick && $0.z > 220 }
+            XCTAssertEqual(crown.map(\.z).max() ?? 0, Self.shinKongCrownHeight, accuracy: 2.0)
+            XCTAssertFalse(model.vertices.contains { $0.color == Self.wall })
+        }
+        let towerAnchor = GeoAnchor(latitudeDegrees: tower.latitude, longitudeDegrees: tower.longitude)!
+        let world = GameWorld.newGame(anchor: towerAnchor)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        var builder = builder(world)
+        let built = builder.addTaipeiLandmarks(frame: frame)
+        let taken = try XCTUnwrap(built[tower])
+        XCTAssertGreaterThanOrEqual(taken.count, 4)
+        let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
+        XCTAssertTrue(taken.contains(builder.chunk(of: middle)))
+        XCTAssertTrue(builder.keptColours.contains(brick))
+        let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 10) }
+        var blocked = self.builder(world)
+        blocked.trackLines = [(line, .surface)]
+        XCTAssertNil(blocked.addTaipeiLandmarks(frame: frame)[tower])
+        var tunnel = self.builder(world)
+        tunnel.trackLines = [(line, .tunnel)]
+        XCTAssertNotNil(tunnel.addTaipeiLandmarks(frame: frame)[tower])
+    }
+
     /// Stood where it is, the station is in full close by and simpler from
     /// afar, in its own colours, and clears the ground under it.
     func testWhereItStands() throws {
@@ -354,9 +428,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         var builder = builder(world)
         let built = builder.addTaipeiLandmarks(frame: frame)
         let station = Map3DTaipeiLandmark.taipeiMainStation
-        // With it, decision 457's central Taipei within the scene; 101,
-        // the Sun Yat-sen Memorial Hall and the Grand Hotel are not.
-        XCTAssertTrue(Set(built.keys).isSuperset(of: [station, .northGate, .presidentialOffice, .chiangKaiShekMemorialHall]))
+        // With it, decision 457's central Taipei and decision 550's Shin
+        // Kong Life Tower within the scene; 101, the Sun Yat-sen Memorial
+        // Hall and the Grand Hotel are not.
+        XCTAssertTrue(Set(built.keys).isSuperset(of: [station, .shinKongLifeTower, .northGate, .presidentialOffice, .chiangKaiShekMemorialHall]))
         XCTAssertTrue(built.keys.allSatisfy { ![.taipei101, .sunYatSenMemorialHall, .grandHotel, .kaohsiungMainStation, .kaohsiung85SkyTower].contains($0) })
         let taken = try XCTUnwrap(built[station])
         XCTAssertEqual(triangles(builder.nearMeshes), built.keys.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })

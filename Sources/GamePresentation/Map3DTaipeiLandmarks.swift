@@ -12,10 +12,10 @@ import GameCore
 // (`PALETTES[1.0]`), in the reference repository's
 // `Railway/game-art-previews/docs/art/map3d-mapbox-look-2026-10-23/scripts/`.
 
-/// Decision 370, 431, 457, 548: the landmarks, each built in its own metres (x right,
+/// Decision 370, 431, 457, 548, 550: the landmarks, each built in its own metres (x right,
 /// y back, z up, its middle at the origin), then stood where it is.
 enum Map3DTaipeiLandmark: CaseIterable, Sendable {
-    case taipei101, taipeiMainStation, kaohsiungMainStation, kaohsiung85SkyTower
+    case taipei101, taipeiMainStation, kaohsiungMainStation, kaohsiung85SkyTower, shinKongLifeTower
     // Decision 457: central Taipei's palace-style landmarks and old gates.
     case chiangKaiShekMemorialHall, libertySquareGate, nationalTheater, nationalConcertHall, presidentialOffice, ximenRedHouse
     case sunYatSenMemorialHall, grandHotel, northGate, eastGate, southGate, smallSouthGate
@@ -29,6 +29,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipeiMainStation: 25.0477174
         case .kaohsiungMainStation: 22.6394462
         case .kaohsiung85SkyTower: 22.611616109117193
+        case .shinKongLifeTower: 25.04598631427511
         case .chiangKaiShekMemorialHall: 25.0346856
         case .libertySquareGate: 25.0366529
         case .nationalTheater: 25.0353161
@@ -49,6 +50,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipeiMainStation: 121.51711425
         case .kaohsiungMainStation: 120.3025654
         case .kaohsiung85SkyTower: 120.3001601108381
+        case .shinKongLifeTower: 121.51531117744537
         case .chiangKaiShekMemorialHall: 121.5217163
         case .libertySquareGate: 121.5177174
         case .nationalTheater: 121.5182223
@@ -69,6 +71,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipeiMainStation: 169.5
         case .kaohsiungMainStation: 0
         case .kaohsiung85SkyTower: 108.5
+        case .shinKongLifeTower: 90.5
         case .chiangKaiShekMemorialHall: 242
         case .libertySquareGate: 242
         case .nationalTheater: 152
@@ -93,6 +96,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipeiMainStation: (92, 80)
         case .kaohsiungMainStation: (336, 170)
         case .kaohsiung85SkyTower: (78, 40)
+        case .shinKongLifeTower: (48, 25)
         case .chiangKaiShekMemorialHall: (66, 76)
         case .libertySquareGate: (39.5, 10.5)
         case .nationalTheater: (55, 52.5)
@@ -113,6 +117,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipeiMainStation: (78.4, 66.8)
         case .kaohsiungMainStation: (162, 142)
         case .kaohsiung85SkyTower: (71.5, 34.1)
+        case .shinKongLifeTower: (42.5, 20.2)
         case .chiangKaiShekMemorialHall: (62.2, 73.8)
         case .libertySquareGate: (37.4, 8.5)
         case .nationalTheater: (54, 51.7)
@@ -158,6 +163,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .taipeiMainStation: mesh.station()
         case .kaohsiungMainStation: mesh.kaohsiungMainStation()
         case .kaohsiung85SkyTower: mesh.kaohsiung85SkyTower()
+        case .shinKongLifeTower: mesh.shinKongLifeTower()
         case .chiangKaiShekMemorialHall: mesh.chiangKaiShekMemorialHall()
         case .libertySquareGate: mesh.libertySquareGate()
         case .nationalTheater: mesh.performingArtsHall(53.95, 48.65, kind: .hipped)
@@ -1079,6 +1085,26 @@ struct LandmarkMesh {
         quad((x0, y1, z), (x1, y1, z), (x1, y0, z), (x0, y0, z), color, Self.plain)
     }
 
+    /// A rectangle centered at `(cx, cy)` of half-sides `hx` and `hy`, with
+    /// corner rectangular notches of `(nx, ny)` at all four corners.
+    static func notchedRing(_ cx: Float, _ cy: Float, _ hx: Float, _ hy: Float, _ nx: Float, _ ny: Float) -> [P2] {
+        [(cx - hx + nx, cy - hy), (cx + hx - nx, cy - hy),
+         (cx + hx - nx, cy - hy + ny), (cx + hx, cy - hy + ny),
+         (cx + hx, cy + hy - ny), (cx + hx - nx, cy + hy - ny),
+         (cx + hx - nx, cy + hy), (cx - hx + nx, cy + hy),
+         (cx - hx + nx, cy + hy - ny), (cx - hx, cy + hy - ny),
+         (cx - hx, cy - hy + ny), (cx - hx + nx, cy - hy + ny)]
+    }
+
+    static func cornerRing(_ hx: Float, _ hy: Float, x0: Float = 0, y0: Float = 0) -> [P2] {
+        [(x0 - hx, y0 - hy), (x0 + hx, y0 - hy), (x0 + hx, y0 + hy), (x0 - hx, y0 + hy)]
+    }
+
+    mutating func box(hx: Float, hy: Float, z0: Float, z1: Float, _ color: UInt32, _ layer: Float,
+                      top: UInt32? = nil, x0: Float = 0, y0: Float = 0) {
+        box(x0 - hx, y0 - hy, z0, x0 + hx, y0 + hy, z1, color, layer, top: top)
+    }
+
     /// Decision 548: Kaohsiung 85 Sky Tower (OSM way 34170948 podium
     /// 143.00 m × 68.21 m, height = 50 m; twin wings ways 344740871 &
     /// 344740872 height = 190 m flanking the central hollow portal;
@@ -1265,6 +1291,277 @@ struct LandmarkMesh {
         wallBand(s0, 354.5, s1, 374, spire, floodlit)
         wallBand(s1, 374, s2, 378, ornament, glowing)
         cap(s2, 378, ornament, glowing)
+    }
+
+    /// Decision 550: Taipei Shin Kong Life Tower (OSM way 204711206:
+    /// 84.90 m × 40.26 m, height = 244.15 m; stepped podium ways 644774205..644774218
+    /// height = 46.56 m & 63.20 m, way 644774201 height = 78.56 m, north 18F
+    /// turret way 644774185 height = 86.24 m; main shaft way 644774181 height =
+    /// 211.04 m with 44F/46F/48F setbacks ways 644774184..644774200 at 187.36 m,
+    /// 195.68 m & 203.36 m; crown collar way 644774173 height = 214.88 m &
+    /// stepped crown penthouse way 644774171 height = 237.67 m).
+    mutating func shinKongLifeTower() {
+        let rose = colour("roof")
+        let brick = colour("brick")
+        let crownSlope = colour("stationRoof")
+        let podium = colour("podium")
+        let trim = colour("trim")
+        let plinth = colour("plinth")
+        let flatRoof = colour("flatRoof")
+        let podiumRoof = colour("podiumRoof")
+        let glass = colour("glass")
+        let glassTop = colour("glassTop")
+        let groundGlass = colour("groundGlass")
+        let louver = colour("doorway")
+        let ornament = colour("ornament")
+        let vermilion = colour("vermilion")
+        let spire = colour("spire")
+
+        let towerGlass = Map3DVertex.towerGlass, floodlit = Map3DVertex.floodlit, glowing = Map3DVertex.glowing
+
+        // 1. Ground Plinth & North Semicircular Entrance Plaza (OSM way 204711206:
+        //    84.90 m × 40.26 m, x in [-42.45, 42.45], y in [-20.13, 20.13];
+        //    north entrance ways 616097083, 644774202, 644774176, 644774178;
+        //    west 4F arcade strip way 644774180 height = 19.68 m).
+        let baseRing = Self.cornerRing(42.45, 20.13)
+        wallBand(baseRing, 0, baseRing, 4.5, plinth, Self.floors)
+        cap(baseRing, 4.5, flatRoof)
+
+        // Flanking 2-level north plaza wings (ways 644774176 & 644774178)
+        for sy: Float in [-1, 1] {
+            box(hx: 2.49, hy: 4.64, z0: 4.5, z1: 9.6, rose, Self.floors, top: flatRoof, x0: 34.36, y0: sy * 11.81)
+            if full {
+                box(hx: 2.55, hy: 4.70, z0: 9.1, z1: 9.7, podium, Self.floors, top: flatRoof, x0: 34.36, y0: sy * 11.81)
+            }
+        }
+
+        // North 3-level semicircular entrance rotunda (way 644774202) & 2-level porch (way 616097083)
+        let archSegs = full ? 8 : 4
+        var archRing: [P2] = [(31.87, -7.0)]
+        for i in 0...archSegs {
+            let ang = -Float.pi / 2 + Float.pi * Float(i) / Float(archSegs)
+            archRing.append((31.87 + 7.05 * cos(ang), 7.0 * sin(ang)))
+        }
+        archRing.append((31.87, 7.0))
+        wallBand(archRing, 4.5, archRing, 14.0, rose, Self.floors)
+        cap(archRing, 14.0, flatRoof)
+
+        var glassArch: [P2] = [(32.0, -5.6)]
+        for i in 0...archSegs {
+            let ang = -Float.pi / 2 + Float.pi * Float(i) / Float(archSegs)
+            glassArch.append((32.0 + 7.02 * cos(ang), 5.6 * sin(ang)))
+        }
+        glassArch.append((32.0, 5.6))
+        wallBand(glassArch, 5.2, glassArch, 12.6, groundGlass, Self.curtain)
+        box(hx: 1.975, hy: 4.99, z0: 0.0, z1: 9.2, podium, Self.floors, top: flatRoof, x0: 40.475, y0: 0.0)
+        box(hx: 2.00, hy: 3.6, z0: 0.8, z1: 7.8, groundGlass, Self.curtain, x0: 40.45, y0: 0.0)
+
+        if full {
+            box(hx: 9.47, hy: 0.12, z0: 4.5, z1: 19.68, brick, Self.floors, top: flatRoof, x0: -5.63, y0: 20.01)
+        }
+
+        // 2. Stepped Department Store Podium (Shin Kong Mitsukoshi Taipei Station Store):
+        //    - 10F lower podium (ways 644774205, 644774211, 644774215, 644774218: height = 46.56 m,
+        //      x in [-42.45, 31.87], y in [-20.13, 20.13], 74.32 m × 40.26 m)
+        //    - 13F middle stepped podium (ways 644774203..644774217: height = 63.20 m, stepped in to
+        //      notched ring and side setback)
+        //    - 16F upper stepped podium (way 644774201: height = 78.56 m on rear/sides, stepping to 71.0 m on North shoulders)
+        let podX0: Float = -5.29
+        let podHX: Float = 37.16
+        let podHY: Float = 20.13
+
+        let pod10Ring = Self.cornerRing(podHX - 0.16, podHY - 0.16, x0: podX0, y0: 0)
+        wallBand(pod10Ring, 4.5, pod10Ring, 46.56, brick, Self.floors)
+        cap(Self.cornerRing(podHX, podHY, x0: podX0, y0: 0), 46.56, flatRoof)
+
+        // Alternating warm-beige stone bands on 1F-10F podium (proud of brick wall)
+        let podBands: [Float] = full ? [8.5, 13.0, 17.5, 22.0, 26.5, 31.0, 35.5, 40.0, 44.8] : [14.0, 28.0, 44.8]
+        for bz in podBands {
+            let bRing = Self.cornerRing(podHX, podHY, x0: podX0, y0: 0)
+            wallBand(bRing, bz, bRing, bz + 1.25, podium, Self.floors)
+        }
+
+        // 8F-10F wide horizontal blue-glass window bands on North podium face (seen in lead photo above golden logo)
+        let windowBands: [Float] = full ? [32.6, 37.1, 41.6] : [33.5, 40.5]
+        for wz in windowBands {
+            box(hx: 0.18, hy: 13.2, z0: wz, z1: wz + 2.5, glass, Self.curtain, x0: 31.74, y0: 0.0)
+        }
+        // Lower central window strips (4F-6F) & Golden oval Shin Kong emblem (7F, z ~ 28.0..30.6 m)
+        box(hx: 0.18, hy: 5.2, z0: 15.0, z1: 26.0, groundGlass, Self.curtain, x0: 31.74, y0: 0.0)
+        box(hx: 0.22, hy: 2.5, z0: 28.0, z1: 30.6, ornament, glowing, x0: 31.76, y0: 0.0)
+
+        // 11F-13F First Wedding-Cake Podium Setback (z = 46.56 .. 63.20 m, OSM ways 644774203..644774217)
+        let pod13Ring = Self.notchedRing(podX0, 0, podHX - 2.95, podHY - 3.15, 3.0, 3.1)
+        wallBand(pod13Ring, 46.56, pod13Ring, 63.20, brick, Self.floors)
+        cap(Self.notchedRing(podX0, 0, podHX - 2.80, podHY - 3.00, 3.0, 3.1), 63.20, flatRoof)
+        // Corner 13F shoulders
+        box(hx: podHX - 2.95, hy: podHY - 0.15, z0: 46.56, z1: 54.8, rose, Self.floors, top: flatRoof, x0: podX0, y0: 0)
+        box(hx: podHX - 0.15, hy: podHY - 3.15, z0: 46.56, z1: 54.8, rose, Self.floors, top: flatRoof, x0: podX0, y0: 0)
+        if full {
+            for bz: Float in [51.2, 56.5, 61.8] {
+                let bRing = Self.notchedRing(podX0, 0, podHX - 2.80, podHY - 3.00, 3.0, 3.1)
+                wallBand(bRing, bz, bRing, bz + 1.1, podium, Self.floors)
+            }
+            // 11F dark mechanical louver openings on North face (3 dark slots seen in lead photo)
+            box(hx: 0.22, hy: 9.5, z0: 47.6, z1: 50.4, louver, Self.plain, x0: 28.92, y0: 0.0)
+        }
+
+        // 14F-16F Second Wedding-Cake Podium Setback (z = 63.20 .. 78.56 m, OSM way 644774201: height = 78.56 m)
+        let pod16Ring = Self.notchedRing(-9.4, 0, 29.95, 13.90, 3.2, 3.0)
+        wallBand(pod16Ring, 63.20, pod16Ring, 78.56, brick, Self.floors)
+        cap(Self.notchedRing(-9.4, 0, 30.10, 14.05, 3.2, 3.0), 78.56, podiumRoof)
+        // North 15F intermediate shoulder (z = 63.20 .. 71.5 m) flanking the 18F turret
+        box(hx: 5.6, hy: 12.4, z0: 63.20, z1: 71.5, rose, Self.floors, top: flatRoof, x0: 21.5, y0: 0)
+        if full {
+            for bz: Float in [67.8, 72.8, 77.4] {
+                let bRing = Self.notchedRing(-9.4, 0, 30.10, 14.05, 3.2, 3.0)
+                wallBand(bRing, bz, bRing, bz + 1.0, podium, Self.floors)
+            }
+        }
+
+        // 3. North 18-Level Stepped Front Turret (OSM way 644774185:
+        //    building:levels = 18, height = 86.24 m, x in [17.43, 31.05], y in [-7.16, 7.17])
+        let turretX0: Float = 24.24
+        let turretRing = Self.notchedRing(turretX0, 0, 6.68, 7.04, 1.42, 1.35)
+        wallBand(turretRing, 63.20, turretRing, 86.24, brick, Self.floors)
+        cap(Self.notchedRing(turretX0, 0, 6.81, 7.16, 1.42, 1.35), 86.24, podiumRoof)
+        box(hx: 0.22, hy: 4.8, z0: 65.5, z1: 83.0, glassTop, Self.curtain, x0: 30.82, y0: 0.0)
+        if full {
+            for tz: Float in [67.5, 72.5, 77.5, 84.8] {
+                let tRing = Self.notchedRing(turretX0, 0, 6.81, 7.16, 1.42, 1.35)
+                wallBand(tRing, tz, tRing, tz + 0.9, podium, Self.floors)
+            }
+        }
+
+        // 4. Main Tower Shaft & Stepped Upper Setbacks (OSM ways 644774181..644774200):
+        //    Tower center X0 = -5.55 m, Y0 = 0.0 m:
+        //    - Outer tower span (ways 644774192 & 644774197 + 44F/46F/48F setbacks):
+        //      x in [-28.65, 17.45] (46.10 m, hx = 23.05), y in [-17.05, 17.05] (34.10 m, hy = 17.05)
+        //    - 44F corner setback top: z = 187.36 m (ways 644774188, 644774191, 644774195, 644774199)
+        //    - 46F setback top: z = 195.68 m (ways 644774187, 644774189, 644774196, 644774198)
+        //    - 48F N/S & E/W shoulders top: z = 203.36 m (ways 644774184, 644774192..644774194, 644774197, 644774200)
+        //    - 50F main shaft core top: z = 211.04 m (way 644774181: 40.74 m × 34.11 m, x in [-25.88, 14.86])
+        let tx0: Float = -5.55
+        let shaftGlassRing = Self.notchedRing(tx0, 0, 22.75, 16.75, 3.0, 3.0)
+        for (z0_s, z1_s): (Float, Float) in [(78.56, 105.76), (105.76, 132.96), (132.96, 160.16), (160.16, 187.36)] {
+            wallBand(shaftGlassRing, z0_s, shaftGlassRing, z1_s, glass, towerGlass)
+        }
+
+        // Notched rose-granite corner pier clusters (44F ways -> 187.36 m, 46F ways -> 195.68 m, 48F ways -> 203.36 m)
+        for sx: Float in [-1, 1] {
+            for sy: Float in [-1, 1] {
+                box(hx: 1.52, hy: 1.52, z0: 78.56, z1: 187.36, brick, Self.floors, top: flatRoof, x0: tx0 + sx * 21.53, y0: sy * 12.55)
+                box(hx: 1.52, hy: 1.52, z0: 78.56, z1: 195.68, brick, Self.floors, top: flatRoof, x0: tx0 + sx * 21.53, y0: sy * 9.55)
+                box(hx: 1.52, hy: 1.52, z0: 78.56, z1: 203.36, brick, Self.floors, top: flatRoof, x0: tx0 + sx * 18.53, y0: sy * 15.53)
+            }
+        }
+
+        // Horizontal rose-granite + warm-stone spandrel bands wrapping all 4 sides of the main shaft (78.56 .. 187.36 m)
+        let shaftStep: Float = full ? 4.35 : 13.05
+        var z: Float = 81.8
+        var idxBand = 0
+        while z < 186.5 {
+            let sRing = Self.notchedRing(tx0, 0, 23.05, 17.05, 3.0, 3.0)
+            let col = (idxBand % 2 == 0) ? rose : podium
+            wallBand(sRing, z, sRing, z + 1.35, col, Self.floors)
+            z += shaftStep
+            idxBand += 1
+        }
+        cap(Self.notchedRing(tx0, 0, 23.05, 17.05, 3.0, 3.0), 187.36, flatRoof)
+
+        // Slender vertical window mullions (proud of glass 22.75/16.75, recessed behind horizontal spandrel bands 23.05/17.05)
+        if full {
+            for my: Float in [-4.0, 4.0] {
+                for sx: Float in [-1, 1] {
+                    box(hx: 0.14, hy: 0.34, z0: 78.56, z1: 203.36, brick, Self.floors, x0: tx0 + sx * 22.84, y0: my)
+                }
+            }
+            for mx: Float in [-11.4, -5.7, 0.0, 5.7, 11.4] {
+                for sy: Float in [-1, 1] {
+                    box(hx: 0.34, hy: 0.14, z0: 78.56, z1: 211.04, brick, Self.floors, x0: tx0 + mx, y0: sy * 16.84)
+                }
+            }
+        }
+
+        // 46F & 48F Upper Setback Tiers (z = 187.36 .. 203.36 m, ways 644774192 & 644774197)
+        let tier46Glass = Self.notchedRing(tx0, 0, 22.80, 15.35, 2.85, 4.40)
+        let tier46Band = Self.notchedRing(tx0, 0, 23.05, 15.60, 2.85, 4.40)
+        wallBand(tier46Glass, 187.36, tier46Glass, 195.68, glassTop, towerGlass)
+        cap(tier46Band, 195.68, flatRoof)
+        let t46Bands: [Float] = full ? [189.6, 192.4, 194.8] : [191.2, 194.8]
+        for tz in t46Bands {
+            wallBand(tier46Band, tz, tier46Band, tz + 0.85, brick, Self.floors)
+        }
+
+        let tier48Glass = Self.notchedRing(tx0, 0, 22.80, 13.95, 5.80, 6.20)
+        let tier48Band = Self.notchedRing(tx0, 0, 23.05, 14.20, 5.80, 6.20)
+        wallBand(tier48Glass, 195.68, tier48Glass, 203.36, glassTop, towerGlass)
+        cap(tier48Band, 203.36, flatRoof)
+        let t48Bands: [Float] = full ? [197.8, 200.4, 202.5] : [199.4, 202.5]
+        for tz in t48Bands {
+            wallBand(tier48Band, tz, tier48Band, tz + 0.85, brick, Self.floors)
+        }
+
+        // 50F Main Tower Top Core (OSM way 644774181: height = 211.04 m,
+        // x in [-25.88, 14.86] -> width 40.74 m (hx = 20.37), y in [-17.05, 17.05] -> depth 34.10 m)
+        let tier50Ring = Self.notchedRing(tx0, 0, 20.37, 14.20, 4.20, 3.80)
+        wallBand(tier50Ring, 203.36, tier50Ring, 211.04, brick, Self.floors)
+        cap(tier50Ring, 211.04, podiumRoof)
+        box(hx: 15.8, hy: 10.0, z0: 204.6, z1: 209.4, glassTop, towerGlass, x0: tx0, y0: 0.0)
+        if full {
+            box(hx: 16.0, hy: 10.2, z0: 206.4, z1: 207.8, louver, Self.plain, x0: tx0, y0: 0.0)
+        }
+
+        // 5. Stepped Art-Deco Ziggurat Crown (OSM way 644774173 height = 214.88 m & way 644774171 height = 237.67 m):
+        let collar51Ring = Self.notchedRing(tx0, 0, 11.55, 11.56, 2.4, 2.4)
+        wallBand(collar51Ring, 211.04, collar51Ring, 214.88, brick, floodlit)
+        cap(Self.notchedRing(tx0, 0, 11.69, 11.70, 2.4, 2.4), 214.88, flatRoof, floodlit)
+
+        let drumRing = Self.notchedRing(tx0, 0, 9.28, 9.38, 2.0, 2.0)
+        wallBand(drumRing, 214.88, drumRing, 222.0, brick, floodlit)
+        cap(Self.notchedRing(tx0, 0, 9.42, 9.52, 2.0, 2.0), 222.0, flatRoof, floodlit)
+
+        let pentRing0 = Self.notchedRing(tx0, 0, 6.90, 7.06, 1.6, 1.6)
+        wallBand(pentRing0, 222.0, pentRing0, 231.0, brick, floodlit)
+        cap(Self.notchedRing(tx0, 0, 7.02, 7.18, 1.6, 1.6), 231.0, flatRoof, floodlit)
+
+        let pentRing1 = Self.notchedRing(tx0, 0, 4.98, 5.08, 1.2, 1.2)
+        wallBand(pentRing1, 231.0, pentRing1, 237.67, brick, floodlit)
+        cap(Self.notchedRing(tx0, 0, 5.10, 5.20, 1.2, 1.2), 237.67, flatRoof, floodlit)
+
+        if full {
+            let crownBands: [(cz: Float, hx: Float, hy: Float, n: Float)] = [
+                (213.5, 11.69, 11.70, 2.4),
+                (218.2, 9.42, 9.52, 2.0),
+                (220.9, 9.42, 9.52, 2.0),
+                (226.2, 7.02, 7.18, 1.6),
+                (229.8, 7.02, 7.18, 1.6),
+                (234.2, 5.10, 5.20, 1.2),
+                (236.8, 5.10, 5.20, 1.2),
+            ]
+            for (cz, hx_c, hy_c, n_c) in crownBands {
+                let cRing = Self.notchedRing(tx0, 0, hx_c, hy_c, n_c, n_c)
+                wallBand(cRing, cz, cRing, cz + 0.70, podium, floodlit)
+            }
+            // Dark observation/mechanical window slots on the crown tiers (seen in both real photos)
+            box(hx: 4.6, hy: 9.50, z0: 216.0, z1: 218.0, louver, Self.plain, x0: tx0, y0: 0.0)
+            box(hx: 9.40, hy: 4.6, z0: 216.0, z1: 218.0, louver, Self.plain, x0: tx0, y0: 0.0)
+            box(hx: 3.4, hy: 7.16, z0: 223.8, z1: 225.8, louver, Self.plain, x0: tx0, y0: 0.0)
+            box(hx: 7.00, hy: 3.4, z0: 223.8, z1: 225.8, louver, Self.plain, x0: tx0, y0: 0.0)
+        }
+
+        // 6. Pyramidal Cap & Lightning Spire (z = 237.67 .. 244.15 m, OSM way 204711206 height = 244.15 m)
+        let capBase = Self.chamferRing(tx0, 0, 3.80, 3.88, 0.70)
+        let capTop = Self.chamferRing(tx0, 0, 1.15, 1.18, 0.25)
+        wallBand(capBase, 237.67, capTop, 241.2, crownSlope, floodlit)
+        cap(capTop, 241.2, trim, floodlit)
+
+        let s0 = Self.chamferRing(tx0, 0, 0.45, 0.45, 0.12)
+        let s1 = Self.chamferRing(tx0, 0, 0.22, 0.22, 0.06)
+        let s2 = Self.chamferRing(tx0, 0, 0.12, 0.12, 0.03)
+        wallBand(s0, 241.2, s1, 243.4, spire, floodlit)
+        wallBand(s1, 243.4, s2, 244.15, ornament, glowing)
+        cap(s2, 244.15, vermilion, glowing)
     }
 
     /// The model stood in the scene (x east, y up, z south) with its
