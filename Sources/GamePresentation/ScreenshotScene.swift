@@ -453,9 +453,9 @@ extension GameSession {
     }
 
     /// Decision 564: the game run on by at most ten minutes towards
-    /// `seconds` into the day, then paused; `true` once it is there. A
-    /// little at a time, so the app answers between (a UI test waiting on
-    /// it times out on a main thread busy for a minute).
+    /// `seconds` into the day, then paused; `true` once it is there. For
+    /// tests: the app runs the screenshot's morning on with its own ticks,
+    /// off the main thread, since a tick here runs on the caller's.
     public func advanceForScreenshot(until seconds: Int64) -> Bool {
         let now = world.clock.now.seconds % GameTime.secondsPerDay
         guard seconds > now else { return true }
