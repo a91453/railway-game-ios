@@ -214,36 +214,77 @@ extension GameWorld {
 
     /// Decision 562: with block sections a train following others holds
     /// only the track it has taken (decision 212), so a train could take
-    /// the rest of its route ahead of it, one it may never follow (see
-    /// ``isLeading(_:onto:for:)``) and could only wait for:
+    /// the rest of its route ahead of it, standing where the follower must
+    /// pass, and then never move again:
     ///
     /// - one that ends its service or turns round at the call it travels
-    ///   to, standing for it on the follower's route: a train turning back
-    ///   leaves the way it came, perhaps over the track the follower stands
-    ///   on (Taoyuan Airport MRT 18 and 29 at Airport Terminal 2, decision
-    ///   556);
-    /// - one that runs along the follower's route the other way: it comes
-    ///   at the follower (the same line's 1, westbound into Kengkou, and
-    ///   26, an empty train leaving Luzhu depot eastbound on that track).
+    ///   to: a train turning back leaves the way it came, perhaps over the
+    ///   track the follower stands on, and one whose service ends stands
+    ///   (Taoyuan Airport MRT 18 and 29 at Airport Terminal 2, decision
+    ///   556); the follower never follows either (see
+    ///   ``isLeading(_:onto:for:)``);
+    /// - one that comes along the follower's route the other way and goes
+    ///   on along it, back past where the follower will wait short of it
+    ///   (see ``followerWaitsInTheWay(_:of:going:memo:)``): each waits for
+    ///   the other (the same line's 1, westbound into Kengkou, and 26, an
+    ///   empty train out of Luzhu depot eastbound on that track).
     ///
-    /// Neither ever moves again. The lowest numbered such follower
-    /// `candidate`, about to take its route, whole or following the trains
-    /// ahead, would cut off, so it waits for it; `nil` when there is none,
-    /// or when `candidate` stands on the follower's route already (the
-    /// follower waits for it whatever it does).
+    /// The lowest numbered such follower `candidate`, about to take its
+    /// route, whole or following the trains ahead, would cut off, so it
+    /// waits for it; `nil` when there is none. A train that stands on the
+    /// follower's route already, or whose route passes over the follower,
+    /// is not held: the follower waits for the one, and the other is behind
+    /// it and can only follow it.
     func followerCutOff(by candidate: Train, memo: inout DirectionMemo) -> TrainID? {
         guard case .travellingToStop(let stop, let cycle)? = candidate.execution else { return nil }
-        let ends = candidate.timetable[stop].reverses || candidate.call(after: stop, cycle: cycle) == nil
+        let next = candidate.timetable[stop].reverses ? nil : candidate.call(after: stop, cycle: cycle)
         let standing = occupied(candidate)
-        let against = Set((bodyStretches(of: candidate) + routeStretches(of: candidate).stretches).map(\.traversal.reversed))
+        let path = cover(of: routeStretches(of: candidate).stretches)
+        var arrived: Train?
         for other in trains where other.id != candidate.id && other.position != nil {
             guard let (_, envelopes) = authority(of: other, memo: &memo) else { continue }
             let route = followingCover(of: other, envelopes, memo: &memo)
-            guard !standing.contains(where: route.contains) else { continue }
-            if ends, stopsOn(route, candidate) { return other.id }
-            if (bodyStretches(of: other) + envelopes.stretches).contains(where: { against.contains($0.traversal) }) { return other.id }
+            guard !standing.contains(where: route.contains), !occupied(other).contains(where: path.contains),
+                  stopsOn(route, candidate) else { continue }
+            guard let next else { return other.id }
+            if arrived == nil {
+                var train = candidate
+                train.reservation = []
+                let end = travelling(train, distance: routeLength(of: candidate), memo: &memo)
+                train.position = end.position
+                train.movement.cursor = end.cursor
+                arrived = train
+            }
+            if followerWaitsInTheWay(other, of: arrived!, going: candidate.timetable[next.stop].station, envelopes) { return other.id }
         }
         return nil
+    }
+
+    /// Whether `train`, standing on `follower`'s route facing against it,
+    /// goes on toward `station` back along that route over where the
+    /// follower will wait short of it: the last block boundary at least
+    /// ``followingGap`` before its head (see ``blockBoundary(_:atOrBefore:)``),
+    /// or the follower itself.
+    func followerWaitsInTheWay(_ follower: Train, of train: Train, going station: StationID, _ envelopes: AuthorityEnvelopes) -> Bool {
+        guard case .onEdge(let traversal, let offset)? = train.position,
+              let length = network.edge(traversal.edge)?.length else { return false }
+        // The follower's offset of the train's head, which faces it.
+        let along = length - offset
+        guard let index = envelopes.stretches.firstIndex(where: {
+            $0.traversal == traversal.reversed && $0.from <= along && along <= $0.to
+        }) else { return false }
+        let start = { (index: Int) in index == 0 ? 0 : envelopes.ends[index - 1] }
+        let head = start(index) + along - envelopes.stretches[index].from
+        // Back along the follower's route as far as its way goes with it.
+        var shared = index
+        if let onward = path(from: .onEdge(traversal, offset: offset), toStation: station, length: train.length) {
+            for step in onward.traversals {
+                guard shared > 0, envelopes.stretches[shared - 1].traversal == step.reversed else { break }
+                shared -= 1
+            }
+        }
+        if shared == 0 { return true }
+        return blockBoundary(envelopes, atOrBefore: head - Self.followingGap) > start(shared)
     }
 
     /// Decision 57: a service's departure takes its default route whole,
