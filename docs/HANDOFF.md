@@ -469,6 +469,22 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 44 任接回（2026-11-03 14:10 UTC，session_01YGNNukw5koUxDsjkSBmJJy，作者在 claude.ai 開的，第 0 層）**：照下面「pro 交回第 44 任」接手；兩段不同時以這段為準。
+
+- **110.1 已發**（作者 13:29 UTC，`2494e5a`，run 110）：完整 `ci.yml` 與 full lane 都綠，記在 `PLAYER_FEEDBACK.md`。下一版 111.1（作者：「明天111.1在一起更新吧」）：合 #1750（App 內這版新增，補 108.1–110.1），再加 111.1 自己的，並改 `.github/testflight-whats-new.md`。
+- **已合**：#1744（pro 交回）、#1754 REVIEW-L7（審查 #1725–#1751＋#1693，下一輪從 #1752 起）、#1747（決策 559，TYMCLIST2 的號誌關讓月台）、#1752 LANDMARK101（決策 555 續，截圖場景的線改到地點北 300 m，101 與台北車站地標出現；Simulator 上地標吃幀數，實機 UNVERIFIED）。
+- **派出去的**（全部 Opus；作者：實作 session 預設「中」，要「高」的由規劃說，見 §1.1）：
+  - WENHUSIDE（session_01YGNNunZGPiV2XFNuJMZEsQ，`claude/wenhu-side`，決策 564，存檔 82／golden 78 需要時，請作者改高）：作者回報 110.1「收購文湖線後列車走對向軌道」。線索：收購前 3D 真實捷運靠右（`Map3DRealTrains.rightHand`），收購後走 GameCore 的靠左（決策 202）。淡海、安坑、三鶯、機場捷運一起查。
+  - DAYPASS（session_01YGNNuq4pwmnoH6UaGRauhk，`claude/daypass-midnight`，決策 551 續，請作者改高）：L7-1 新局一日券午夜結算成 0、L7-2。
+  - L6FIX（session_01YGNNumXkb2bxJTzSaV4NcC，`claude/l6fix`，決策 542／547 續，請作者改高）：L6-3、L6-4、L6-5。
+  - DEPOTADD-2（session_01YGNNupgR4efBZiUSdbSW96，`claude/depotadd-2`，決策 557 續）：L7-3、L7-4。
+  - HEALTH-110（session_01YGNNuooXQbC3CXJv5fdYkZ，`claude/health-110`）：發版後健檢。
+  - CIOPT-6（session_01YGNNuqW3jzUqN2iQY2U5YW，`claude/ciopt-6`，決策 563 需要時）：完整 ci 17.7→20–22 分、GP PR tier 13→22–27 分。
+  - GameCore 完整 tier 名額：WENHUSIDE ＞ DAYPASS ＞ L6FIX。
+- **桃園機場捷運 #1743（決策 556，draft）**：TYMCLIST2 在 pro 帳號，這個帳號的 session 傳不到訊息（send_message 回 not found）。剩下的照決策 556「下一步」：擬實與行車控制下傍晚機場第二航廈的真死結（GameCore）、行車控制 320/333 沒發與很慢、直達跳站與長庚待避。已請作者決定要 TYMCLIST2 收尾交接或做完。
+- **固定三件事這一輪**：審查 REVIEW-L7（到 #1751）、CI CIOPT-6、除錯 HEALTH-110，都是第 44 任 2026-11-03 派的。
+- **號碼**：556 保留（#1743）；559、555 續已用；562 釋出（空著，下一個要用的可以先取）、563（CIOPT-6）、564（WENHUSIDE）保留；**下一個 565**。存檔 81（82 保留給 WENHUSIDE 需要時）、golden schema 77（78 同）。
+
 **pro 交回第 44 任（2026-11-03，pro 的遊戲規劃 session_01JMHz9YRiP23RXrrfdsaGsq，交回時間 14:00 UTC＝台灣 22:00）**：pro 當了一天遊戲規劃，照下面接回。和下面「第 44 任交給 pro」不同時以這段為準。
 
 - **發了 109.1**：作者 11-03 01:43 UTC 在 `efb9652`（#1735）按 TestFlight，run 41561636787（run 109）成功。同 commit 完整 `ci.yml` 41556623087 綠；full lane 41556631784 **紅**（`StartSaveFlowSmokeTests` 706 行）→ 派 FLANE7 查，結論是偶發（時鐘重畫換掉元素、鍵盤第一眼就等超過 20 秒），#1739 只改 UI 測試，已合；之後 `f1a6a2d` 的 full lane 綠。`PLAYER_FEEDBACK.md` 的 109.1 一段在這張 PR。作者要自己確認：App Store Connect 這版不再顯示 Missing Compliance。
