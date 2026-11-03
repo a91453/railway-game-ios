@@ -35,6 +35,8 @@ struct LinesPanel: View {
     @State private var renamingLine: String?
     /// Whether the selected line's removal is being confirmed (decision 327).
     @State private var confirmsRemoval = false
+    /// Decision 557: the real depot being offered to the selected line.
+    @State private var realDepotOffer: RealLineDepotOffer?
     /// The panel removal asking first (UI review 2026-10-28, A): Undo is
     /// emptied by the next tick, and the panel leaves the game running.
     @State private var confirmingPanelRemoval: RemovalConfirmation?
@@ -1337,10 +1339,52 @@ struct LinesPanel: View {
     /// or with Advanced unfolded to say how to get one.
     @ViewBuilder
     private func depotSection(_ line: ServiceLine) -> some View {
-        if let row = session.selectedLineDepotRow, !row.chosen.isEmpty || !row.choices.isEmpty || showsAdvanced {
+        let missingDepot = session.missingRealDepots(of: line.id).first
+        if let row = session.selectedLineDepotRow, !row.chosen.isEmpty || !row.choices.isEmpty || showsAdvanced || missingDepot != nil {
             let language = session.language
             Section {
-                if row.choices.isEmpty {
+                // Decision 557: the real depot a line bought before it
+                // came with one can still have.
+                if let missingDepot {
+                    Button {
+                        realDepotOffer = session.selectedLineRealDepotOffer
+                    } label: {
+                        HStack(spacing: 10) {
+                            MapGlyph.depot.image
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 18, height: 18)
+                                .accessibilityHidden(true)
+                            Text(verbatim: language.text("Add \(missingDepot)", "加建\(missingDepot)"))
+                                .foregroundStyle(Theme.primary)
+                            Spacer(minLength: 8)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityIdentifier("line.addRealDepot")
+                    .confirmationDialog(
+                        Text(verbatim: realDepotOffer.map { language.text("Add \($0.name)?", "加建\($0.name)？") } ?? ""),
+                        isPresented: Binding(get: { realDepotOffer != nil }, set: { if !$0 { realDepotOffer = nil } }),
+                        titleVisibility: .visible,
+                        presenting: realDepotOffer
+                    ) { offer in
+                        if offer.addition != nil, offer.shortfallText(balance: session.world.economy.balance, in: language) == nil {
+                            Button {
+                                session.addRealDepot(offer)
+                            } label: {
+                                Text(verbatim: language.text("Add for \(offer.price?.moneyText ?? "")", "加建（\(offer.price?.moneyText ?? "")）"))
+                            }
+                            .accessibilityIdentifier("line.addRealDepot.confirm")
+                        }
+                        Button(role: .cancel) {} label: {
+                            Text(verbatim: language.text("Cancel", "取消"))
+                        }
+                    } message: { offer in
+                        Text(verbatim: [offer.summaryText(in: language), offer.shortfallText(balance: session.world.economy.balance, in: language)]
+                            .compactMap(\.self).joined(separator: "\n"))
+                    }
+                }
+                if row.choices.isEmpty, missingDepot == nil {
                     Text(verbatim: row.problem ?? "")
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
@@ -1380,7 +1424,12 @@ struct LinesPanel: View {
             } header: {
                 Text(verbatim: language.text("Depots", "所屬機廠"))
             } footer: {
-                if !row.choices.isEmpty {
+                if missingDepot != nil, row.choices.isEmpty {
+                    Text(verbatim: language.text(
+                        "This line came without its real depot. Add it and the line's trains go back to it at night.",
+                        "這條線收購時沒有帶真實機廠。加建後，列車晚上回機廠過夜。"
+                    ))
+                } else if !row.choices.isEmpty {
                     Text(verbatim: language.text(
                         "Tick the depots this line's trains go back to at night; standing there they pay only upkeep. With none ticked they stay at the line's ends.",
                         "勾選這條線的列車晚上回哪些機廠，停在機廠只付保養費。都不勾時，列車停在路線兩端。"

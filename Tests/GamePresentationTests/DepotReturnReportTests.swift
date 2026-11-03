@@ -5,7 +5,7 @@ import XCTest
 
 /// Decision 535 (PR W): how the lines with runs and depots fare, run only
 /// when asked (`DEPOT_RETURN_REPORT=1`, some minutes in a release build;
-/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, danhai, ankeng, sanying,
+/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, danhai, ankeng, ankeng-added, sanying,
 /// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off,
 /// and `DEPOT_RETURN_CONTROLLED=1` as well to keep it on). Each is played from where it opens or is bought
 /// for 51 hours, minute by minute, and says how many of its second day's
@@ -37,6 +37,17 @@ final class DepotReturnReportTests: XCTestCase {
     func testTheAnkengLRT() throws {
         try wanted("ankeng")
         try report("ankeng", Self.bought("ntalrt:K"))
+    }
+
+    /// Decision 557: the Ankeng LRT bought as it was before its depot came
+    /// with it, the depot then added from the line's panel.
+    func testTheAnkengLRTWithItsDepotAdded() throws {
+        try wanted("ankeng-added")
+        let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
+        let (session, id) = try RealLineDepotAdditionTests.ankengBoughtWithoutItsDepot(rules: simple ? .simple : .realistic)
+        session.selectLine(id)
+        XCTAssertTrue(session.addRealDepot(try XCTUnwrap(session.selectedLineRealDepotOffer)), session.message?.text ?? "")
+        try report("ankeng-added", session.world)
     }
 
     func testTheSanyingLine() throws {
