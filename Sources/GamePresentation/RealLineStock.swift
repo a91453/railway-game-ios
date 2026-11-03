@@ -44,15 +44,22 @@ public enum RealLineStock {
         case "ankengLRT": language.text("Ankeng light rail train", "安坑輕軌列車")
         case "metroC371": language.text("Taipei Metro C371", "北捷 C371")
         case "wenhu": language.text("Wenhu Line train", "文湖線列車")
+        case Map3DTrainSet.wenhuVAL256Key: language.text("Wenhu Line VAL256", "文湖線 VAL256")
+        case Map3DTrainSet.wenhu370Key: language.text("Wenhu Line Type 370", "文湖線 370 型")
         case Map3DTrainSet.sanyingKey: language.text("Sanying Line train", "三鶯線列車")
         default: nil
         }
     }
 
     /// What the trains of a line drawn as set `key` are called: as
-    /// ``name(ofSet:in:)``, but a local line's three fleets together.
+    /// ``name(ofSet:in:)``, but a local line's three fleets together;
+    /// decision 558: and the Wenhu line's two.
     static func lineName(ofSet key: String, in language: DisplayLanguage) -> String? {
-        key == "emu800" ? language.text("EMU500 / 800 / 900 local", "EMU500／800／900 區間車") : name(ofSet: key, in: language)
+        switch key {
+        case "emu800": language.text("EMU500 / 800 / 900 local", "EMU500／800／900 區間車")
+        case Map3DTrainSet.wenhu370Key: language.text("Wenhu Line VAL256 / Type 370", "文湖線 VAL256／370 型")
+        default: name(ofSet: key, in: language)
+        }
     }
 }
 

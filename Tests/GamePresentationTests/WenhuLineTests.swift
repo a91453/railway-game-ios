@@ -37,7 +37,7 @@ final class WenhuLineTests: XCTestCase {
             // Overnight: the 22 the real timetable leaves at its end.
             XCTAssertEqual(world.trains.count { world.stationsStoppedAt(by: $0.id).contains(station.id) }, 22, site.english)
         }
-        XCTAssertEqual(RealLineStock.setKey(ofRealLine: "trtc:BR"), "wenhu")
+        XCTAssertEqual(RealLineStock.setKey(ofRealLine: "trtc:BR"), "wenhu370")
     }
 
     /// Where the second track's ramp leaves the first (two ways on from a

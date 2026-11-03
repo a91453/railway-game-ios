@@ -10,7 +10,10 @@ final class Map3DShowcaseTests: XCTestCase {
     func testEveryNearSetIsInTheCatalogOnce() {
         let keys = Map3DShowcase.catalog.map(\.key)
         XCTAssertEqual(Set(keys).count, keys.count, "a train listed twice")
-        let near = Map3DTrainSet.all.map(\.key).filter { !$0.hasSuffix("Far") }
+        // Decision 558: a set drawn only in another's place (the Wenhu
+        // line's old generic car) is not listed.
+        let fallbacks = Set(Map3DTrainSet.all.compactMap(\.fallback))
+        let near = Map3DTrainSet.all.map(\.key).filter { !$0.hasSuffix("Far") && !fallbacks.contains($0) }
         XCTAssertEqual(Set(keys), Set(near))
     }
 

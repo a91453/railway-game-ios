@@ -55,7 +55,7 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertEqual(try formation("trtc", "R_XBT"), .init(key: "metroC371", cars: 3))
         XCTAssertEqual(try formation("trtc", "G_XBT"), .init(key: "metroC371", cars: 3))
         XCTAssertEqual(try formation("trtc", "Y"), .init(key: "circular610", cars: 4))
-        XCTAssertEqual(try formation("trtc", "BR"), .init(key: "wenhu", cars: 4))
+        XCTAssertEqual(try formation("trtc", "BR"), .init(key: "wenhu370", cars: 4))
         // Decision 466: the Sanying line its own two cars.
         XCTAssertEqual(try formation("sanying", "LB"), .init(key: "sanying", cars: 2))
         // Decision 483: Kaohsiung's and Taichung's their own trains.
