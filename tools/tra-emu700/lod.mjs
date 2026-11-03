@@ -1,0 +1,11 @@
+// Compare actual metre bounds and orange-painted surface triangles at both LODs.
+// This is not a perceptual metric or a full silhouette equivalence certificate.
+import assert from'node:assert/strict';import{readFileSync,writeFileSync}from'node:fs';import{resolve}from'node:path';import{model,bounds}from'../train-models/native.mjs';
+function paint(v){const rows=[];for(let i=0;i<v.length;i+=3){const c=v[i].color;if(c[0]>c[1]*1.1&&c[1]>c[2]*1.5&&c[0]>c[2]*1.9)rows.push({at:i,key:v.slice(i,i+3).map(x=>x.position.map(p=>Math.round(p*1e5)).join(',')).sort().join('|')})}return rows}
+function compare(a,b){const p=paint(a),q=paint(b);assert(p.length>0&&q.length>0,'missing paint');assert.equal(new Set(p.map(x=>x.key)).size,p.length,'duplicate painted surface');assert.equal(new Set(q.map(x=>x.key)).size,q.length,'duplicate painted surface');assert.deepEqual(p.map(x=>x.key).sort(),q.map(x=>x.key).sort(),'LOD paint surface jump');}
+const root=resolve(process.argv[2]),manifest=JSON.parse(readFileSync(root+'/manifest.json')),rows=[];
+for(const role of ['emc','ep','et','em']){const key=role==='emc'?'emc-cab':role,ids=['tra-emu700-'+key,'tra-emu700-'+key+'-far'],records=ids.map(id=>manifest.models.find(m=>m.id===id)),[near,far]=records.map(m=>model(readFileSync(resolve(root,m.native))).vertices);assert(far.length<near.length/2,'far half-near budget');
+ const a=bounds(near),b=bounds(far);for(const k of ['minimum','maximum'])for(let i=0;i<3;i++)assert(Math.abs(a[k][i]-b[k][i])<.001,'LOD envelope jump');compare(near,far);
+ const faulty=structuredClone(far),at=paint(far)[0].at;for(let i=at;i<at+3;i++)faulty[i].color=[52,75,128,255];assert.throws(()=>compare(near,faulty),/paint/);
+ rows.push({role,near_triangles:near.length/3,far_triangles:far.length/3,orange_surface_triangles:paint(near).length,actual_paint_colour_fault_rejected:true,metre_bounds_equal:true});}
+writeFileSync(root+'/lod-verification.json',JSON.stringify({status:'VERIFIED',models:rows,limits:'Actual orange surface and envelope comparison; rounded window trim and small mechanical tessellation differ. Not a device LOD animation test.'},null,2)+'\n');console.log('VERIFIED four role LOD envelopes, paint surfaces and actual colour mutations');
