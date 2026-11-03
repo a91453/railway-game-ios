@@ -133,6 +133,10 @@ public enum WhatsNew {
                     english: "Adding a depot charges the price shown when you add it.",
                     chinese: "加建機廠照按下那一刻的價格收費。"
                 ),
+                Line(
+                    english: "Platforms set on both tracks of a double track get crossovers beside them, so trains in each direction can pass instead of meeting head-on.",
+                    chinese: "在複線兩條都設月台時，旁邊會自動加渡線，兩個方向的車能錯開，不再頂住。"
+                ),
             ]
         ),
         Entry(
