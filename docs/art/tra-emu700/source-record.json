@@ -1153,5 +1153,17 @@
     "source": "https://emu300ct.web.fc2.com/index/traemu/EMU700.htm",
     "quote": "駕駛窗後方設有馬達引風道，而未設有乘務員專用車門",
     "effect": "Remove previous full-height side panel; keep driving window and model intake louvres."
+  },
+  "cab_mouth_revision": {
+    "date": "2026-11-03",
+    "rejected_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
+    "photo_observations": [
+      "DSC07789.JPG",
+      "DSC07787.JPG",
+      "EMU740+DSC05843.JPG"
+    ],
+    "observations": "Continuous deeper lower orange bowl, grey clearance under the windscreen around four lower lamps, and ordinary closed FRP nose without a frontal square jaw. Raised-cover test photo is not the normal state.",
+    "measurement_basis": "Photo-fitted geometry, not official metre dimensions derived from perspective pixels.",
+    "licence": "Original photographs observation only; no redistribution in either PR."
   }
 }

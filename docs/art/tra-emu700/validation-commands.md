@@ -9,6 +9,8 @@ node tools/train-models/audit.mjs OUT
 node tools/tra-emu700/wheels.mjs OUT
 python3 tools/tra-emu700/glass.py OUT
 node tools/tra-emu700/lod.mjs OUT
+node tools/tra-emu700/mouth.mjs OUT
+node tools/tra-emu700/duplicates.mjs OUT /absolute/producer-checkout
 node tools/tra-emu700/doors.mjs OUT /absolute/ccc-producer-before-run
 swift -swift-version 6 -warnings-as-errors tools/tra-r100/assembly-check.swift OUT tools/tra-emu700/assembly.json
 blender -b --python tools/taichung-green/import-glb.py -- OUT
@@ -33,6 +35,8 @@ node tools/train-models/check.mjs /absolute/unmodified-main-full-inventory
 node tools/train-models/check.mjs /absolute/final-full-inventory
 ```
 
-此輪兩者均有相同33項既有鎖值不符，未改他車鎖、未加入allow、未放寬gate。全部910個既有runtime模型的實際bytes與十欄FNV另比對相同，本型8件鎖值與幾何預算通過。全量gate不能寫成全綠；具體結果見verification.json。
+此輪兩者均有相同33項既有鎖值不符，未改他車鎖、未加入allow、未放寬gate。全部942個既有runtime模型的實際bytes與十欄FNV另比對相同，本型8件鎖值與幾何預算通過。全量gate不能寫成全綠；具體結果見verification.json。
 
-asset_guard於兩庫真正staged tree提交前，以及commit後HEAD分別執行；PNG另完整解碼並檢查RGBA、非空、透明、四邊留白及2MiB。每輪私庫10張、公開1張。
+asset_guard於兩庫真正staged tree提交前，以及commit後HEAD分別執行；PNG另完整解碼並檢查RGBA、非空、透明、四邊留白及2MiB。每輪私庫11張、公開1張。
+
+嘴形舊稿553原生在mouth.mjs以「thin or raised moustache」拒收；新候選覆蓋兩個EMC單元與兩列八車的兩端，共6個真實車端。檢查曲線色界與正常閉罩、下方空腔兩條固定射線；壓扁實際橘色頂點與移除真鼻罩三角形的反例須拒收。美觀仍須使用者看圖，不能由此自動接受。

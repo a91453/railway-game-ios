@@ -292,5 +292,14 @@
     "initial_main": "a4dddd40ae97d003aa2d32405e950c6ebe2a0f7a",
     "new_main": "e7cb277f5297d1eb9703fff71d383d36e8660b38",
     "upstream_scope": "Control/UI/docs changes only; not credited to this work; actual model inventory separately compared."
+  },
+  "mouth_follow_up": {
+    "date": "2026-11-03",
+    "public_pr_state_at_resume": "OPEN draft head29574d98",
+    "asset_pr_state_at_resume": "OPEN draft head36434179",
+    "rejected_geometry_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
+    "feedback": "他的車頭嘴巴還是很醜",
+    "latest_main_for_preservation": "82e5e894",
+    "upstream_preserved_separately": "Tourism EMU500 main changes through #1732; own merge981f6723. No shared occlusion changes."
   }
 }

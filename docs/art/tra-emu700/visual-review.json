@@ -1,125 +1,74 @@
 {
-  "geometry_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
-  "user_appearance_acceptance": "UNVERIFIED",
+  "geometry_producer": "7464630b1fd82fb997af3809442d67f50d2f95b1",
   "accepted_producer": null,
-  "observer": "Codex author self-inspection only",
-  "inspected": {
-    "roles": [
-      "EMC near/far",
-      "EP near/far",
-      "ET near/far",
-      "EM near/far"
-    ],
-    "assemblies": [
-      "complete eight-car near",
-      "complete eight-car far"
-    ],
-    "views": [
-      "front",
-      "back",
-      "left",
-      "right",
-      "top",
-      "bottom",
-      "isometric"
-    ],
-    "materials": [
-      "colour day",
-      "colour night",
-      "clay",
-      "silhouette"
-    ],
-    "common_camera": "unit extent 10.4m in X; whole-train extent 81.643m in X; all share metre axes, lighting and fixed centres",
-    "central_detail_camera": {
+  "user_appearance_acceptance": "UNVERIFIED",
+  "rejected_before": {
+    "producer": "553b3a2207bf87e6d02819d687b673860055a84a",
+    "asset_commit": "36434179e8b629584b7c4ad4ae0591a7feafb3da",
+    "feedback": "他的車頭嘴巴還是很醜",
+    "date": "2026-11-03"
+  },
+  "withdrawn_claim": "Previous no-known-appearance-fault assessment and frontal square-jaw normal-state claim withdrawn.",
+  "observer": "Codex author inspection only",
+  "views": [
+    "all role near/far sheets",
+    "both complete eight-car sheets",
+    "front/back/left/right/top/bottom/isometric",
+    "colour day/night/clay/silhouette",
+    "fixed-metre real rejected/current cab comparison"
+  ],
+  "same_camera": {
+    "units": "fixed20.8m",
+    "formation": "fixed163.286m",
+    "cab_detail": {
       "centre": [
+        9.7,
         0,
-        0,
-        2.1
+        2.2
       ],
       "extent": [
-        2.2,
-        1.5,
-        2.1
+        1.4,
+        1.6,
+        1.65
       ],
-      "views": [
-        "left",
-        "top",
-        "bottom",
-        "isometric"
-      ],
-      "scope": "Local close inspection of the actual full native assembly; cropped by the camera, not alternate geometry."
+      "width": 720,
+      "height": 720,
+      "scope": "Fixed cab-detail crop of the complete native car, not a separate replacement mesh; full car views are in the role sheets."
     }
   },
   "items": [
     {
-      "part": "primary dimensions and roles",
+      "part": "bowl and lamp clearance",
       "status": "合理簡化",
-      "evidence": "Official coupling pitches, body width, roof height, bogie centre distance and wheelbase; end offsets and glazing trim are fitted."
+      "evidence": "Actual source photographs and native shared curved paint rows; measured model positions are photo fits."
     },
     {
-      "part": "cab silhouette, windscreen, lamps and lower apron",
-      "status": "合理簡化",
-      "evidence": "Opened cab photographs, colour/clay/silhouette checks; lower apron height is a photo fit, not a published clearance."
-    },
-    {
-      "part": "visible supported glazing and open jaw",
+      "part": "closed ordinary apron and real underside cavity",
       "status": "已符合",
-      "evidence": "Final native rays, connected solids and buried/floating/sealed-jaw faults."
+      "evidence": "Ordinary-service photographs contradict old frontal square jaw. Native cover/under-cavity rays plus true hood removal fault."
     },
     {
-      "part": "doors, window rhythm and toilet-side differences",
-      "status": "合理簡化",
-      "evidence": "Three door pairs per side; both role-side source composites opened; trim tessellation differs at far LOD."
-    },
-    {
-      "part": "EP positions and knee direction",
+      "part": "nose staircase and real flattened-vertex regression",
       "status": "已符合",
-      "evidence": "EP at cars 2/7, knee toward its own cab, cabward electrical equipment; actual missing, moved and reversed panto faults."
+      "evidence": "Rejected553 payload fails; current six native cab ends pass independent geometry checks."
     },
     {
-      "part": "roof and underfloor exact BOM",
-      "status": "資料不足",
-      "evidence": "Primary housings supported; hidden piping, exact case shapes and batch retrofit BOM unknown."
-    },
-    {
-      "part": "tyres and axle positions",
-      "status": "合理簡化",
-      "evidence": "Eight actual tyre solids/four axles, new-wheel diameter and rail plane checked; absolute end offsets, flange and suspension detail simplified."
-    },
-    {
-      "part": "near/far colour and envelope",
+      "part": "EMC cab naming / no false front neighbour shade",
       "status": "已符合",
-      "evidence": "Actual orange shell triangle sets and metre bounds match; altered real vertex colour rejected."
+      "evidence": "Only two own model IDs and their own references change, existing occlusion unchanged."
     },
     {
-      "part": "complete eight-car order and direction",
+      "part": "six other near/far role payloads",
       "status": "已符合",
-      "evidence": "Shared spec plus independent Swift expansion and actual placement faults."
+      "evidence": "Native bytes and full FNV equal the553 producer."
     },
     {
-      "part": "unique centre-interface fittings",
-      "status": "資料不足",
-      "evidence": "EM-EM interface uses documented semi-permanent coupling, not two cabs; unique protected end fittings not confirmed."
+      "part": "exact roof/underfloor BOM, central unique fittings, end-relative axle stations",
+      "status": "資料不足"
     },
     {
-      "part": "2026 same-day numbered representative train",
-      "status": "資料不足",
-      "evidence": "Dated 2011–2020 photographs and 2020 pair caption are separate from 2026 status."
-    },
-    {
-      "part": "cab intake without crew door and visible passenger door paint",
-      "status": "已符合",
-      "evidence": "Source explicitly says no crew door; final geometry and actual predecessor rejection, exposed painted face probes and real backing-cover mutation."
+      "part": "2026 same-day readable eight-number739+740 train",
+      "status": "資料不足"
     }
-  ],
-  "before_version": "No accepted dedicated native EMU700 predecessor; the private Q-proportioned mesh is not a dimensional or accepted before-version.",
-  "unaccepted_previous": {
-    "producer": "ccc21854a16f21cb2d4f188749efaf6affd81d39",
-    "asset_commit": "9448fd67",
-    "acceptance": "UNVERIFIED",
-    "withdrawn_claim": "Door completeness: actual tall cab panel and missing/covered passenger-door stripes were found and corrected.",
-    "same_scale_comparison": "Same 20.8m metre camera/light on predecessor and final raw right views; sheets recoverable from the respective asset git commits, no duplicate heavy archive.",
-    "coplanar_cover_before_producer": "3edd8c7fb0faf61248b5f2b84a585c9d422eb81a",
-    "actual_before_rejection": "Final doors.mjs rejects the actual coplanar door-cover geometry at 3edd8c7f, and the cab/paint defects of CCC native payloads whose SHA is fixed per role."
-  }
+  ]
 }

@@ -1,82 +1,72 @@
-# 臺鐵 EMU700 原生近遠研究與完整八車交付
+# 臺鐵EMU700：車頭嘴形續修、四角色近遠與完整八車
 
-本輪為獨立配方，不沿用其他EMU整殼。現有私庫Q版EMU700不具工程尺度，非已接受前稿。全部使用者外觀接受為UNVERIFIED。
+使用者於2026-11-03明確回覆「他的車頭嘴巴還是很醜」，因此前稿producer `553b3a2207bf87e6d02819d687b673860055a84a` 的車頭外觀**未通過**。撤回先前「沒有已知必須重做外觀故障」的較寬自評。這次實際改幾何與殼面分色；新候選的使用者接受仍UNVERIFIED，不能由作者看圖或CI代替。
 
-正式身份：EMU700通勤交流電聯車；不是將「阿福號」當作正式型號。日本車輛／台灣車輛製造；2005採購，2007–2008交付計畫。前三個四車子單元日本製、後續台灣車輛在技轉下生產的細分，尚需原廠逐組交付紀錄。不能將採購公告的計畫年份當實際驗收日期。東芝電機系統供應責任仍待原廠文件補核。
+真正幾何producer：`7464630b1fd82fb997af3809442d67f50d2f95b1`。公開／文件head及素材commit另見[公開draft #1730](https://github.com/a91453/railway-game-ios/pull/1730) ↔ [素材draft #45](https://github.com/a91453/railway-assets-private/pull/45)，不回填為幾何producer。
 
-來源：日本車輛[產品頁](https://www.n-sharyo.co.jp/business/tetsudo/pages/ztaiw_emu700.htm)、[採購公告](https://www.n-sharyo.co.jp/business/tetsudo/topics/tp050609.html)，台灣車輛[產品頁](https://www.trsc.com.tw/train/tran-58acf525031f4)，實車觀察[Blair Yu攝影文章](https://blair-train.blogspot.com/2011/09/emu740.html)，角色交叉核對[維基條目](https://zh.wikipedia.org/wiki/台鐵EMU700型電聯車)。原始照片僅本機觀察，未發布、未做貼圖、未送生成服務。文章版權所有；文章2011-09發布，照片圖說另有2011–2020日期；逐圖日期見來源JSON。已從下載原文對應圖說，沒有把文章日期代替每張照片日期，也未拼接成2026現役證據。
+## 修正與來源
 
-台灣車輛頁的ED／EMA／EP／EMB與其他角色原文矛盾；本輪明列此差異，採EMC／EP／ET／EM交叉定義，尚待官方編組圖補核。
+原生前稿把嘴形以格子中點判色，結果是過高、過薄的階梯狀橘帶；四盞下燈擠在風擋與橘帶之間。正常連結器罩還被做成前方可見的方孔。新配方將橘色下緣直接作為殼面的連續弧形頂點列，下移、拉深橘色弧面並留出灰色燈座區；下燈位置與大小依實照配適。鼻罩改成薄的連續FRP幾何，罩後與下方仍有真空間及引桿，不用黑平板假裝洞，也不把罩後填成整個大實心塊。維修升罩狀態不屬此一般營運版本。
 
-候選代表為739+740，來源照片可讀EMC740、EM740；其餘六車號由編組表支持。原文另列739+740於2020-10-05的2133次運用，僅當歷史代表期證據，沒有完整八號同日可讀照片，不宣稱指定列2026營運。排除701+702京急彩繪、原型舊黑面、試車及模型照片。
+親看來源仍為已下載且固定SHA的實照：Blair Yu的[EMC740文章](https://blair-train.blogspot.com/2011/09/emu740.html)，其中DSC07789、DSC07787及2011正斜視；[KASHIWA技術／角色頁](https://emu300ct.web.fc2.com/index/traemu/EMU700.htm)另有普通連結器罩及升罩試車照片，後者只供分辨狀態，未套成一般營運。原照、逐張日期／車號／授權／下載檔名／SHA及支持部件見[source-record.json](source-record.json)。照片著作權屬原作者，只在本機合法觀察，沒有發布原照、照片貼圖、第三方幾何、私有來源內部路徑或送外部生成服務。
 
-供應責任與時序：日本車輛2005-06-08公告以台灣車輛為主契約者、住友商事參與商務／當地化支援，交付2007–2008為當時計畫。日車提供設計／技轉及前三組原型、台車量產組裝的細分由KASHIWA原文交叉支持；740實照製造牌為2007。東芝牽引／輔助系統、Nabtesco HRA軔機由技術文章記述，ET的TOSHIBA牌另有實照；FAIVELEY CX弓由攝影原文圖說支持，分供合約未取得。不能將行銷「全車自製」解讀成每一個零件均在台灣製造。
+橘色區1.40–1.86m、下燈與鼻罩曲面是有實照支持的模型配適值，**不是透視像素換算出的官方尺寸**。新mouth.mjs只驗實際原生色界、六個近遠車端、閉罩正面與下方兩條固定射線，並修改最終真實頂點／移除真鼻罩三角形作故障；不構成完整外觀接受或工程碰撞認證。
 
-2007-08-28啟用、翌日上線及驗收曾因資訊設備延宕，依技術文章；各組確切交付／驗收日期未取得。電軔優先改造文字稱2015初完成，原驗收表未取得；無階化改造為2016年的二次來源記錄，2020年實照已顯示無階化門。原型與量產ET主風泵的歷史外觀有兩張不同實照，本包僅量產739+740，不把試驗／原型圖套成現役變體，也不由此捏造鼻形差異。2026指定編組狀態仍未驗。
+[完整素材與自含旋轉縮放下載viewer](https://github.com/a91453/railway-assets-private/tree/codex/tra-emu700-native-2026-11-02/game-art-previews/docs/art/tra-emu700/revision-1)，其中mouth-before-after sheet以同一公尺相機及光線比較真正被否定的553前稿與本候選；前稿原生SHA與相機固定在mouth-comparison.json。角色sheet是完整單車；車頭細部比較明示為裁切鏡頭，不用它冒充完整單車視圖。
 
-八車配置：+X端← EMC739 / EP739 / ET739 / EM739 | EM740 / ET740 / EP740 / EMC740 →-X端。前四單元不旋轉，後四單元僅assembly旋轉180度一次。EP兩車為受電弓車；EMC與EM為動力車，ET拖車含無障礙設備。EM–EM中央交界屬半永久連結，不是兩個駕駛頭互接；中央端面與普通車間端的完整實物差異仍資料不足。
+EMC兩個未接受study ID改為`tra-emu700-emc-cab`／`tra-emu700-emc-cab-far`，讓既有遮蔽規則辨識真實駕駛端，不再虛構車頭前方的鄰車。這只改本型ID與自有引用，共用遮蔽不變；舊ID不保留重複別名，前稿由553 producer及素材git恢復。
 
-原生公尺，+X朝本子單元駕駛端、+Y左、+Z上，軌面Z0；左右從+X朝向定義。EMC連結面距20.743m、其他20.3m，總長163.286m，非每車平均長；連結面貼接，殼端退讓產生間距，不再額外加縫。台灣車輛頁寬2.890m，其他資料2.889m，配方採2.889m；車頂3.7m、含AC約3.95m、弓升起包絡另列，不能把含設備高度當殼高。模型台車中心±7.15m（對稱原點假設，端部絕對距離未取得工程圖）、官方中心距14.3m／軸距2.3m、輪徑新輪0.86m／磨耗0.78m、軌距1.067m；配方採新輪。輪心高度0.43m，軸位±7.15±1.15m。
+## 身分、批次與代表期
 
-| 部件 | 決策及證據 |
+正式型式為臺鐵EMU700通勤交流電聯車，「阿福號」僅作搜尋線索。原廠[日本車輛產品頁](https://www.n-sharyo.co.jp/business/tetsudo/pages/ztaiw_emu700.htm)、[2005採購公告](https://www.n-sharyo.co.jp/business/tetsudo/topics/tp050609.html)及[台灣車輛產品頁](https://www.trsc.com.tw/train/tran-58acf525031f4)支持製造與尺寸。台灣車輛為主契約者、日本車輛設計／技轉、住友商事參與商務／當地化；2007–2008是當時計畫，不等於逐車實際驗收。KASHIWA記前三個四車子單元701–703共12輛日製、704–740共148輛由台灣車輛生產；分供合約及逐組交付／驗收表未取得。東芝牽引／輔助系統、Nabtesco HRA軔機、FAIVELEY CX弓有技術文字或實照圖說，責任細分仍待原廠文件。
+
+台灣車輛頁的ED／EMA／EP／EMB表頭與本型其他角色原文矛盾，沒有直接照抄；採EMC／EP／ET／EM交叉定義，官方完整編組圖仍待補。2007-08-28啟用、翌日營運、2015電軔優先及2016無階化的文字與來源差異均在source-record，不能當逐組驗收日期。
+
+本包為量產一般塗裝、無階化後739+740的**2020歷史代表**。照片可讀EMC740、EM740，其餘號由編組表支持；文章另記2020-10-05的739+740配對運用。沒有同日八號皆可讀照片，也沒有指定列2026營運證據。原型舊黑面、試車、701+702京急彩繪與模型作品排除，不捏造批次鼻形變體。
+
+## 八車、尺度與共用範圍
+
+全列+X端為EMC739：
+
+`45EMC739 / 45EP739 / 40ET739 / 45EM739 | 45EM740 / 40ET740 / 45EP740 / 45EMC740`
+
+EMC為駕駛動力車、EP為受電弓拖車、ET為無障礙廁所拖車、EM為中間動力車，4M4T。前四不轉、後四僅assembly轉180度一次；EP在2／7，弓肘朝本子單元駕駛端。中央為EM–EM半永久連結，非兩個駕駛頭；其獨有設備仍不足，維持已知的簡化端門／風擋及連結器，不捏造專屬寬度。
+
+原生公尺，單元+X朝本子單元駕駛端、+Y左、+Z上、軌面Z0。EMC連結面距20.743m、其他20.3m，名義全列163.286m；殼端退讓產生間距，不另加展示縫，也不平均車長。正式車寬來源2.889／2.890m，採2.889；車頂3.7m，AC約3.95m，升弓包絡另列，不能混為殼高。台車中心距14.3m、軸距2.3m、新輪0.86m／磨耗0.78m、軌距1.067m；原點對稱配置軸位±8.3／±6m與輪心Z0.43m，端部絕對站位仍為假設。完整配置／bounds見configuration.json及素材manifest。
+
+| 部件 | 共用／獨立／未知 |
 |---|---|
-| primitive、轉軸 | 沿用main StationKitBuilder.box／beam及Model.flat（main a4dddd40）；輪與圓柱以本型獨立共用環頂點生成，沒有沿用他車整殼；producer隨最終commit固定 |
-| 殼／鼻／色界 | 本型獨立截面及前部曲面，色界直接切殼；多方向自檢見visual-review.json |
-| 駕駛窗／上雙燈／下燈群 | 實照支持位置；獨立幾何，工程站位推估 |
-| 門窗 | 每側三門；EP／ET廁所盲窗分配目前僅合理簡化，反側設備須補逐車圖 |
-| 台車／車底 | 正式軸距與中心距支持；框架及設備箱合理簡化，BOM與管路未知 |
-| 弓／AC | 單臂弓實照已開啟；EP車位交叉來源支持，弓肘朝駕駛端、端部高壓設備在其駕駛端一側；依左右側照片核對，工程站位仍屬照片配適 |
-| 鼻下連結器 | 照片顯示一般關閉罩；一般營運關閉罩，下方已有實際開放連結器框／引桿；升罩維修狀態未製作，凹區工程形狀屬簡化 |
+| Primitive與轉軸 | 沿用StationKitBuilder.box／beam、Model.flat及已記錄的構面／clip方法；原producer與範圍見source-record；無他EMU整殼 |
+| EMC嘴形／下鼻／鼻罩 | 本型獨立殼面重建；前稿553被否定，新候選由作者親看，使用者接受仍未驗 |
+| 其餘EMC門窗、輪組、設備 | 原本EMU700配方接續；嘴形之外不任意改位置或車型 |
+| EP／ET／EM各近遠 | 六單元對553前稿逐bytes保護，角色門窗與受電弓保持 |
+| 台車／車底／屋頂設備 | 主要設備有實照支持但合理簡化；隱藏BOM、正交屋頂與完整管路未知 |
+| 中央特殊件與近期同列 | 資料不足，未宣稱已證實 |
 
-實際選用：只預備studies，standard常駐增量0；實際standard+studies全量原生bytes與十欄頂點FNV保護記錄見preservation.json；不改Map3DTrainSets／Trains／RealTrains、燈或回退。現有localTrain是比例挑其他EMU，沒有可靠EMU700身份／正式角色／八車映射，不能按區間車名稱冒認。本PR合併也不會自動出現在營運。動態行駛、裝置Metal、Simulator、使用者接受各自UNVERIFIED。
+單車共同固定20.8m框、全列163.286m框，相同相機／光線；車頭細部另用固定公尺裁切鏡頭並明示。互動viewer逐項auto-fit只供檢視，不能拿來定量比較。夜景為靜態未啟動燈具，非營運頭尾燈驗收。
 
-技術結果見 verification.json、producer-verification.json、preservation.json 與 visual-review.json；此頁在兩庫draft PR完成後固定連結。真正幾何producer `553b3a2207bf87e6d02819d687b673860055a84a`，驗證工具／文件head與素材commit另記，不倒填producer。此producer包含全部四種角色近遠、完整八車兩LOD；近景59,068三角，遠景29,212三角。每單元近景≤15,000；遠景逐角色少於近景一半，bounds同框。連結器與空調／車底殼體保留閉合實體，框架與孔洞為實際留空。
+## 重建、驗證與選用
 
-可執行重建（Swift 6.4、Node、既有Chromium／Playwright、Python/Pillow、Blender依共用工具README準備）：
+先fetch本分支，在明確producer的兩個checkout執行（Swift6.4、Node≥22、既有Chromium/Playwright、Python/Pillow、Blender）：
 
 ```sh
-git worktree add --detach ../emu700-producer 553b3a2207bf87e6d02819d687b673860055a84a
-cd ../emu700-producer
+git worktree add --detach /tmp/emu700-before-src 553b3a2207bf87e6d02819d687b673860055a84a
+git worktree add --detach /tmp/emu700-candidate-src 7464630b1fd82fb997af3809442d67f50d2f95b1
+cd /tmp/emu700-before-src
+tools/train-models/run.sh /tmp/emu700-before-run --ids tra-emu700-emc,tra-emu700-emc-far
+cd /tmp/emu700-candidate-src
 pwd
 git rev-parse HEAD
-tools/tra-emu700/build.sh /tmp/emu700-rebuild
-node tools/tra-emu700/render.mjs /tmp/emu700-rebuild
-python3 tools/tra-emu700/sheets.py /tmp/emu700-rebuild
+tools/tra-emu700/build.sh /tmp/emu700-candidate-run
+node tools/tra-emu700/render.mjs /tmp/emu700-candidate-run
+node tools/tra-emu700/render-mouth.mjs /tmp/emu700-candidate-run /tmp/emu700-before-run
+python3 tools/tra-emu700/sheets.py /tmp/emu700-candidate-run
 ```
 
-驗證工具沿用：通用audit／package／inspect／browser-check；獨立Swift編組解碼器使用main的tools/tra-r100/assembly-check.swift，獨立GLB匯入器使用tools/taichung-green/import-glb.py。新工具tools/tra-emu700/wheels.mjs及glass.py讀取實際原生頂點／連通固體，檢查八輪、輪軌、玻璃、屋頂設備、弓及連結器，修改實際輪胎／玻璃／AC／弓／框架做反例。射線只查指定外露面的三角中心與設備接點；雨刷例外僅識別出的兩個真實細長固體，不是整片風擋豁免；玻璃完整固體含未標玻璃的背面不作自己的支承。不是完整表面、自交、工程碰撞或動態證明。
+其餘命令見validation-commands.md；結果見verification.json、producer-verification.json、preservation.json、visual-review.json與素材mouth／duplicate報告。真實頂點／連通固體／assembly故障不以標籤或toy fixture代替。射線與同位同向面檢查有明列覆蓋範圍，不宣稱完整自交／工程碰撞或動態證明。
 
-仍缺：指定739+740的近期八號同日可讀營運照片、批次逐車交付／驗收與改造時序、屋頂正交／車底BOM、中央交界完整獨有設備，以及裝置Metal／效能與行駛。四態均UNVERIFIED：已跑技術項逐一記錄，但file://被瀏覽器管理政策阻擋；沒有明確producer的使用者外觀接受；營運未接入；Simulator／裝置未驗。HTTP viewer成功不代替離線直開、Metal或動態列車。沒有已接受EMU700前版，其他EMU只作風格參考。
+上游main `82e5e894`的海風／山嵐配方與營運接入先獨立merge保留；其新增或修正不算本輪。保護以未改該main的實際standard+studies完整inventory為基線，含未入鎖者，逐native bytes／十欄FNV及既有索引比對；本型仍僅studies，standard增量0。不改GameCore、存檔、fixtures、班表、購車／解鎖、動畫、控制、共用palette／loader／格式／gate。
 
-公開僅此配方／必要studies註冊、專用檢查／配置／來源與驗證，以及一張共同公尺尺度總覽。私庫10張sheet涵蓋每單元及完整八車、七向／日夜／白模／剪影；全輪加公開總覽共11張，沒有照片、第三方幾何、ZIP或重複舊重檔。輪組及設備下方接觸與其餘機械隱藏結構仍為模型簡化，未稱工程複製。
+實際選用仍僅studies；現有配車沒有可靠EMU700型式／角色／方向契約，合併後不自動替換營運列車。詳細路徑及缺口見integration.json。四態仍UNVERIFIED：技術分項有報告，但file://受管理政策阻擋；沒有本候選使用者接受；營運未接入；本車Simulator外觀／裝置Metal／效能／動態未驗。Safari／Firefox未驗。指定2026同列、逐組驗收時序、正交屋頂、完整車底BOM、中央特殊件、精確端部軸位仍缺。
 
-近遠比較的20.8m單車框與163.286m全列框均固定，相同相機與光線；互動viewer則為每個項目自行適配鏡頭，不能用它的auto-fit畫面作定量尺度比較。夜景為靜態未啟動燈具材質，不宣稱已接上營運頭尾燈。更詳細的實際選用路徑與缺口見integration.json。
-
-完整包與可旋轉縮放下載viewer：[私有素材分支](https://github.com/a91453/railway-assets-private/tree/codex/tra-emu700-native-2026-11-02/game-art-previews/docs/art/tra-emu700/revision-1)。以兩張互鏈draft PR的最新head為準。素材draft：[#45](https://github.com/a91453/railway-assets-private/pull/45)。
-
-本輪原創配方、原生／GLB及文件依公開庫 [LICENSE.md](https://github.com/a91453/railway-game-ios/blob/main/LICENSE.md)：Copyright © 2026 a91453，著作權所有。照片與技術文章維持各原作者權利，未作為交付素材。瀏覽器實測為Linux Chromium／SwiftShader，Safari、Firefox及行動裝置實際載入未驗；不需解壓API，viewer未壓縮。
-
-最終註冊head僅將本型追加於studies末端；既有910個模型的順序／索引、原生bytes及十欄FNV均與未改main相同。standard 696件、studies 214→222件；standard頂點陣列增量0，本型studies增加5,296,800 bytes，不等於裝置GPU配置實測。幾何producer不因註冊順序、驗證工具或文件提交而改寫。
-
-重建完整inventory與保護（從最終文件head呼叫本型專用helper，第二參數必須是實際乾淨checkout；共享exporter預設只匯出部分車輛）：
-
-```sh
-tools/tra-emu700/inventory.sh /tmp/emu700-main-inventory /absolute/unmodified-main-checkout
-tools/tra-emu700/inventory.sh /tmp/emu700-final-inventory /absolute/final-checkout
-python3 tools/tra-emu700/protect.py /tmp/emu700-main-inventory /tmp/emu700-final-inventory /tmp/preservation.json
-```
-
-獨立重建viewer：於幾何producer checkout執行下式，輸入為素材PR的完整revision-1資料夾；manifest／status／原生／GLB及渲染器SHA均在producer-verification.json固定。輸出應與交付index.html逐bytes相同：
-
-```sh
-node tools/train-models/inspect.mjs /absolute/revision-1 /tmp/emu700-viewer.html
-cmp /tmp/emu700-viewer.html /absolute/revision-1/index.html
-```
-
-檢查命令與既有全量gate問題見 [validation-commands.md](validation-commands.md)；接手查重與相關已合併PR的head／payload／接受證據見 [pr-audit.json](pr-audit.json)。
-
-CCC前稿（素材commit `9448fd67`，未接受）末檢發現駕駛側窗下方直板誤像側門、客門色帶中斷，撤回此前對門面完整性的較寬自評。原文明確記「未設有乘務員專用車門」，本輪移除直板、補引風格柵並將客門面直接分色與完整膠條。doors.mjs在最終實際頂點檢查門面，對真正CCC前稿及實際改色故障拒收；原前稿native SHA固定在door-verification結果，前後sheet均可由各producer與素材git恢復。相機／光線／公尺框相同，沒有把其他EMU當前稿。
-
-門面外露另以原生三角中心的法向投影檢查，拒收同平面底板蓋色；已對3edd8c7f實際前稿重現，修正為退入6mm的門底板，並以移動最終真實底板的反例驗證。這項檢查仍僅覆蓋指定門面三角中心。
-
-同相機前後核對：[CCC未接受前稿的EMC sheet](https://github.com/a91453/railway-assets-private/blob/9448fd67/game-art-previews/docs/art/tra-emu700/revision-1/sheets/tra-emu700-emc.png)／[本輪EMC sheet](https://github.com/a91453/railway-assets-private/blob/codex/tra-emu700-native-2026-11-02/game-art-previews/docs/art/tra-emu700/revision-1/sheets/tra-emu700-emc.png)。全角色前稿與原生bytes亦固定於該素材commit及CCC producer，未增加重複PNG或重檔。
+完整包私庫11張PNG加公開1張總覽，共12張；同一revision-1取代前稿重檔，不新增ZIP／history／backup。原始前稿由git與producer恢復。自含viewer不壓縮，單檔仍≤50MiB；PNG≤2MiB、素材PR≤200MiB。原創配方／原生／GLB與文件依公開庫LICENSE.md，Copyright © 2026 a91453，著作權所有；原照維持原作者權利。

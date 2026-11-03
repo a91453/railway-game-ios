@@ -1,5 +1,5 @@
 {
-  "geometry_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
+  "geometry_producer": "7464630b1fd82fb997af3809442d67f50d2f95b1",
   "identity": "TRA EMU700 ordinary livery, mass-production representative 739+740",
   "period": "2020 historical representative; exact 2026 pair status UNVERIFIED",
   "native_axes": {
@@ -52,7 +52,7 @@
   },
   "cars": [
     {
-      "unit": "tra-emu700-emc",
+      "unit": "tra-emu700-emc-cab",
       "translation": [
         71.2715,
         0,
@@ -67,7 +67,7 @@
       "power": "motor",
       "pantograph": false,
       "cab": true,
-      "far_unit": "tra-emu700-emc-far"
+      "far_unit": "tra-emu700-emc-cab-far"
     },
     {
       "unit": "tra-emu700-ep",
@@ -178,7 +178,7 @@
       "far_unit": "tra-emu700-ep-far"
     },
     {
-      "unit": "tra-emu700-emc",
+      "unit": "tra-emu700-emc-cab",
       "translation": [
         -71.2715,
         0,
@@ -193,9 +193,165 @@
       "power": "motor",
       "pantograph": false,
       "cab": true,
-      "far_unit": "tra-emu700-emc-far"
+      "far_unit": "tra-emu700-emc-cab-far"
     }
   ],
   "formation_positive_x_end": "Car 1 EMC739; the adopted formation diagram places the Kaohsiung/Pingtung side here, not a verified real-world heading of the dated photographs.",
-  "cab_side": "Driver side window and traction motor intake; no crew side door per KASHIWA source text."
+  "cab_side": "Driver side window and traction motor intake; no crew side door per KASHIWA source text.",
+  "cab_mouth": {
+    "state": "ordinary closed FRP cover, underside drawgear cavity",
+    "paint_bowl_low_m": 1.4,
+    "paint_bowl_top_m": 1.86,
+    "basis": "photo fit, not surveyed dimensions",
+    "front_square_jaw": "removed as unsupported normal-state geometry",
+    "source_before": "553b3a2207bf87e6d02819d687b673860055a84a",
+    "source_before_acceptance": "USER REJECTED"
+  },
+  "measured_model_bounds": [
+    {
+      "id": "tra-emu700-emc-cab",
+      "triangles": 13188,
+      "minimum": [
+        -10.3715,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.3112135,
+        1.473,
+        3.95
+      ]
+    },
+    {
+      "id": "tra-emu700-emc-cab-far",
+      "triangles": 6584,
+      "minimum": [
+        -10.3715,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.3112135,
+        1.473,
+        3.95
+      ]
+    },
+    {
+      "id": "tra-emu700-ep",
+      "triangles": 6104,
+      "minimum": [
+        -10.15,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.15,
+        1.473,
+        4.9775
+      ]
+    },
+    {
+      "id": "tra-emu700-ep-far",
+      "triangles": 3040,
+      "minimum": [
+        -10.15,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.15,
+        1.473,
+        4.9775
+      ]
+    },
+    {
+      "id": "tra-emu700-et",
+      "triangles": 5988,
+      "minimum": [
+        -10.15,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.15,
+        1.473,
+        3.95
+      ]
+    },
+    {
+      "id": "tra-emu700-et-far",
+      "triangles": 2964,
+      "minimum": [
+        -10.15,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.15,
+        1.473,
+        3.95
+      ]
+    },
+    {
+      "id": "tra-emu700-em",
+      "triangles": 6000,
+      "minimum": [
+        -10.15,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.15,
+        1.473,
+        3.95
+      ]
+    },
+    {
+      "id": "tra-emu700-em-far",
+      "triangles": 2960,
+      "minimum": [
+        -10.15,
+        -1.473,
+        0
+      ],
+      "maximum": [
+        10.15,
+        1.473,
+        3.95
+      ]
+    },
+    {
+      "id": "tra-emu700-739-740-formation",
+      "triangles": 62560,
+      "minimum": [
+        -81.58271026611328,
+        -1.4730000495910645,
+        0
+      ],
+      "maximum": [
+        81.58271026611328,
+        1.4730000495910645,
+        4.977499961853027
+      ]
+    },
+    {
+      "id": "tra-emu700-739-740-formation-far",
+      "triangles": 31096,
+      "minimum": [
+        -81.58271026611328,
+        -1.4730000495910645,
+        0
+      ],
+      "maximum": [
+        81.58271026611328,
+        1.4730000495910645,
+        4.977499961853027
+      ]
+    }
+  ],
+  "model_id_revision": {
+    "tra-emu700-emc": "tra-emu700-emc-cab",
+    "tra-emu700-emc-far": "tra-emu700-emc-cab-far",
+    "reason": "EMC is a cab, not an occlusion middle car; no old aliases registered."
+  }
 }

@@ -14,7 +14,11 @@
   "appearance": {
     "status": "UNVERIFIED",
     "accepted_producer": null,
-    "evidence": "No explicit user acceptance of the geometry producer; author inspection is separately recorded in visual-review.json."
+    "evidence": "User explicitly rejected the 553b3a22 cab mouth on 2026-11-03. Candidate is independently rebuilt and author inspected; no user acceptance of the new producer.",
+    "rejected_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
+    "feedback": "他的車頭嘴巴還是很醜",
+    "feedback_scope": "EMC cab mouth and both ends of the complete train",
+    "feedback_date": "2026-11-03"
   },
   "integration": {
     "status": "UNVERIFIED",
