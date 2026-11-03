@@ -36,7 +36,9 @@ final class FollowerCutOffTests: XCTestCase {
         let la: StationID
     }
 
-    private func makeScene() throws -> Scene {
+    /// With `siding`, a track e5 from n6 into n3 and a station S4 on it,
+    /// where O stands off L's way.
+    private func makeScene(siding: Bool = false) throws -> Scene {
         let length = Self.edgeLength
         var world = try GameWorld(
             bounds: WorldBounds(width: 3 * length + 4_096, height: 16_384), economy: fixtureEconomy(balance: 100_000_000, costs: testCosts),
@@ -63,6 +65,12 @@ final class FollowerCutOffTests: XCTestCase {
         try world.addTrackPlatform(s3, on: .edge(3), from: 60_000, to: 80_000)
         let lz = try world.buildStation(named: "LZ", at: PlanPoint(x: 1_024 + 3 * length - 20_000, y: 2_048)).id
         try world.addTrackPlatform(lz, on: .edge(3), from: length - 40_000, to: length - 20_000)
+        if siding {
+            let n6 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024 + 3 * length, y: 14_336))
+            try world.buildTrackEdge(from: n6, to: n3)  // e5
+            let s4 = try world.buildStation(named: "S4", at: PlanPoint(x: 1_024 + 3 * length - 30_000, y: 14_336)).id
+            try world.addTrackPlatform(s4, on: .edge(5), from: 20_000, to: 40_000)
+        }
         world.setBlockSections(true)
 
         func service(_ name: String, on edge: Int, at end: Int64, _ calls: [(StationID, Int64, Int64)]) throws -> TrainID {
@@ -118,18 +126,18 @@ final class FollowerCutOffTests: XCTestCase {
 
     /// The rule itself, at 1:06: F follows L, and C, ending its service at
     /// S2 on F's route, is held by F. Going on from S2 to S3 it could be
-    /// followed, and is not held. O, at S3 bound west for S2 and LA, runs
-    /// along F's route the other way, and is held by F.
+    /// followed, and is not held. O, at S4 off n3 bound west for S2 and LA,
+    /// runs along F's route the other way, and is held by F.
     func testOnlyATrainTheFollowerCouldNeverFollowIsHeld() throws {
-        var scene = try makeScene()
+        var scene = try makeScene(siding: true)
+        let s4 = try XCTUnwrap(scene.world.stations.first { $0.name == "S4" }?.id)
         let o = try scene.world.purchaseTrain(named: "O").id
         try scene.world.setTrainCars(o, to: 2)
-        let back = TrackTraversal(edge: .edge(3), direction: .backward)
-        try scene.world.placeTrain(o, at: .onEdge(back, offset: Self.edgeLength - 60_000))
+        try scene.world.placeTrain(o, at: .onEdge(forward(5), offset: 40_000))
         try scene.world.setTrainMovementRate(o, to: 4_096)
-        try scene.world.setTrainContinuation(o, along: [], stoppingAt: Self.edgeLength - 60_000)
+        try scene.world.setTrainContinuation(o, along: [], stoppingAt: 40_000)
         try scene.world.setTrainTimetable(o, to: [
-            ScheduledStop(station: scene.s3, arrival: GameTime(seconds: 0), departure: GameTime(seconds: 3_000)),
+            ScheduledStop(station: s4, arrival: GameTime(seconds: 0), departure: GameTime(seconds: 3_000)),
             ScheduledStop(station: scene.s2, arrival: GameTime(seconds: 3_300), departure: GameTime(seconds: 3_360)),
             ScheduledStop(station: scene.la, arrival: GameTime(seconds: 3_600), departure: GameTime(seconds: 3_600)),
         ])
