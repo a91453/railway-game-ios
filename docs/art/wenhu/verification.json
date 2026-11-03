@@ -1,95 +1,95 @@
 {
-  "producer": "91a31f0837b4076b6c17f5f4ffe0bea81b504ed9",
-  "local_build": "Swift6.4 --build-tests -warnings-as-errors passed; final build 21.82s",
-  "tests": "10 tests passed, 0 failures; test run 77.999s",
-  "old_model_protection": "950 actual runtime models: native bytes, all vertex-field FNV and order preserved; standard additions 0",
+  "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+  "local_build": "Swift 6.4 build --build-tests -Xswiftc -warnings-as-errors passed; 17.55s",
+  "tests": "11 selected tests passed, 0 failures; 62.164s",
+  "old_model_protection": "950 actual standard/studies models native bytes, vertex-field FNV and order preserved; 8 studies added, 0 standard added",
   "common_geometry": {
     "status": "VERIFIED",
     "models": [
       {
         "id": "wenhu-val256-a",
-        "balanced_edges": 11002,
-        "positive_components": 93,
+        "balanced_edges": 14862,
+        "positive_components": 99,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-b",
-        "balanced_edges": 11056,
-        "positive_components": 96,
+        "balanced_edges": 14916,
+        "positive_components": 102,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-a-far",
-        "balanced_edges": 4610,
-        "positive_components": 63,
+        "balanced_edges": 6698,
+        "positive_components": 69,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-b-far",
-        "balanced_edges": 4664,
-        "positive_components": 66,
+        "balanced_edges": 6752,
+        "positive_components": 72,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-a",
-        "balanced_edges": 10278,
-        "positive_components": 93,
+        "balanced_edges": 13590,
+        "positive_components": 99,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-b",
-        "balanced_edges": 10332,
-        "positive_components": 96,
+        "balanced_edges": 13644,
+        "positive_components": 102,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-a-far",
-        "balanced_edges": 4198,
-        "positive_components": 63,
+        "balanced_edges": 6102,
+        "positive_components": 69,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-b-far",
-        "balanced_edges": 4252,
-        "positive_components": 66,
+        "balanced_edges": 6156,
+        "positive_components": 72,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-formation",
-        "balanced_edges": 44104,
-        "positive_components": 375,
+        "balanced_edges": 59524,
+        "positive_components": 399,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-formation-far",
-        "balanced_edges": 18536,
-        "positive_components": 255,
+        "balanced_edges": 26868,
+        "positive_components": 279,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-formation",
-        "balanced_edges": 41208,
-        "positive_components": 375,
+        "balanced_edges": 54436,
+        "positive_components": 399,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-formation-far",
-        "balanced_edges": 16888,
-        "positive_components": 255,
+        "balanced_edges": 24484,
+        "positive_components": 279,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
@@ -102,13 +102,240 @@
       "Assembly payload is a JS expansion check; independently compare a Swift formation when available."
     ]
   },
+  "end_openings": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "wenhu-val256-a",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.3553103723605675,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      },
+      {
+        "id": "wenhu-val256-b",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.3553103615630695,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      },
+      {
+        "id": "wenhu-val256-a-far",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.3497143766581452,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      },
+      {
+        "id": "wenhu-val256-b-far",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.34971437137817674,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-a",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.32914536801509353,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-b",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.3291453831314808,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-a-far",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.318880261028716,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-b-far",
+        "coupler_lumen_first_hits_x_m": [
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432,
+          6.650000095367432
+        ],
+        "pocket_depth_relative_to_flank_m": 0.3188802513429092,
+        "actual_head_inner_vertices_collapsed_rejected": true,
+        "actual_nose_pocket_vertices_flattened_rejected": true
+      }
+    ],
+    "coverage": "Four axial coupler-lumen rays plus two lower-nose rays per role/LOD; actual native vertex faults. Photo-fit display thresholds, not complete collision, glass/gear certification or appearance acceptance."
+  },
+  "contact_visibility_and_real_faults": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "wenhu-val256-a",
+        "glass_front_centroid_rays": 988,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      },
+      {
+        "id": "wenhu-val256-b",
+        "glass_front_centroid_rays": 988,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      },
+      {
+        "id": "wenhu-val256-a-far",
+        "glass_front_centroid_rays": 444,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      },
+      {
+        "id": "wenhu-val256-b-far",
+        "glass_front_centroid_rays": 444,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-a",
+        "glass_front_centroid_rays": 800,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-b",
+        "glass_front_centroid_rays": 800,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-a-far",
+        "glass_front_centroid_rays": 319,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      },
+      {
+        "id": "wenhu-apm256-b-far",
+        "glass_front_centroid_rays": 319,
+        "actual_glass_groups": 18,
+        "load_tyres": 4,
+        "guide_wheels": 8,
+        "hvac": 2,
+        "thirteen_actual_geometry_faults_rejected": true
+      }
+    ],
+    "limits": "Exterior glass centroid visibility/backing rays, connected tyres/guide wheels/HVAC and fixed photo-fit envelope/contact probes. Hidden safety/turnout gear remains a source gap. Not all intersections, all pixels, engineering accuracy or device proof."
+  },
+  "real_assembly_faults": {
+    "status": "VERIFIED",
+    "models": [
+      {
+        "id": "wenhu-val256-formation",
+        "actual_assembly_faults_rejected": [
+          "replace B with A",
+          "wrong order",
+          "missing central role",
+          "wrong centre/gap",
+          "reversed B / wrong pair interface"
+        ]
+      },
+      {
+        "id": "wenhu-val256-formation-far",
+        "actual_assembly_faults_rejected": [
+          "replace B with A",
+          "wrong order",
+          "missing central role",
+          "wrong centre/gap",
+          "reversed B / wrong pair interface"
+        ]
+      },
+      {
+        "id": "wenhu-apm256-formation",
+        "actual_assembly_faults_rejected": [
+          "replace B with A",
+          "wrong order",
+          "missing central role",
+          "wrong centre/gap",
+          "reversed B / wrong pair interface"
+        ]
+      },
+      {
+        "id": "wenhu-apm256-formation-far",
+        "actual_assembly_faults_rejected": [
+          "replace B with A",
+          "wrong order",
+          "missing central role",
+          "wrong centre/gap",
+          "reversed B / wrong pair interface"
+        ]
+      }
+    ],
+    "limits": "Actual final assemblies mutated and compared with baseline payload independently checked through Swift; validates study configuration, not unresolved official A/B directions or contemporary fleet identity."
+  },
+  "independent_swift_assembly": "VERIFIED independent Swift formation: 376128 vertices, maximum position error 0.0m; all colours equal",
   "independent_glb": {
     "importer": "4.3.2",
     "status": "VERIFIED",
     "models": [
       {
         "id": "wenhu-val256-a",
-        "triangles": 8132,
+        "triangles": 11424,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -117,13 +344,13 @@
         "maximum": [
           6.889999866485596,
           1.3275001049041748,
-          3.5399999618530273
+          3.5299997329711914
         ],
         "vertex_colors": true
       },
       {
         "id": "wenhu-val256-b",
-        "triangles": 8168,
+        "triangles": 11460,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -132,13 +359,13 @@
         "maximum": [
           6.889999866485596,
           1.3275001049041748,
-          3.5399999618530273
+          3.5299997329711914
         ],
         "vertex_colors": true
       },
       {
         "id": "wenhu-val256-a-far",
-        "triangles": 3476,
+        "triangles": 5192,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -153,7 +380,7 @@
       },
       {
         "id": "wenhu-val256-b-far",
-        "triangles": 3512,
+        "triangles": 5228,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -168,7 +395,7 @@
       },
       {
         "id": "wenhu-apm256-a",
-        "triangles": 7452,
+        "triangles": 10144,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -177,13 +404,13 @@
         "maximum": [
           6.889999866485596,
           1.3174999952316284,
-          3.5399999618530273
+          3.5299999713897705
         ],
         "vertex_colors": true
       },
       {
         "id": "wenhu-apm256-b",
-        "triangles": 7488,
+        "triangles": 10180,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -192,13 +419,13 @@
         "maximum": [
           6.889999866485596,
           1.3174999952316284,
-          3.5399999618530273
+          3.5300002098083496
         ],
         "vertex_colors": true
       },
       {
         "id": "wenhu-apm256-a-far",
-        "triangles": 3004,
+        "triangles": 4512,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -213,7 +440,7 @@
       },
       {
         "id": "wenhu-apm256-b-far",
-        "triangles": 3040,
+        "triangles": 4548,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -228,7 +455,7 @@
       },
       {
         "id": "wenhu-val256-formation",
-        "triangles": 32600,
+        "triangles": 45768,
         "minimum": [
           -27.559999465942383,
           -1.3275001049041748,
@@ -237,13 +464,13 @@
         "maximum": [
           27.559999465942383,
           1.3275001049041748,
-          3.5399999618530273
+          3.5299997329711914
         ],
         "vertex_colors": true
       },
       {
         "id": "wenhu-val256-formation-far",
-        "triangles": 13976,
+        "triangles": 20840,
         "minimum": [
           -27.559999465942383,
           -1.3275001049041748,
@@ -258,7 +485,7 @@
       },
       {
         "id": "wenhu-apm256-formation",
-        "triangles": 29880,
+        "triangles": 40648,
         "minimum": [
           -27.559999465942383,
           -1.3174999952316284,
@@ -267,13 +494,13 @@
         "maximum": [
           27.559999465942383,
           1.3174999952316284,
-          3.5399999618530273
+          3.5300002098083496
         ],
         "vertex_colors": true
       },
       {
         "id": "wenhu-apm256-formation-far",
-        "triangles": 12088,
+        "triangles": 18120,
         "minimum": [
           -27.559999465942383,
           -1.3174999952316284,
@@ -288,8 +515,58 @@
       }
     ]
   },
-  "independent_swift_assembly": "VERIFIED independent Swift formation: 265632 vertices, maximum position error 0.0m; all colours equal",
-  "viewers": {
+  "existing_gate_failures": [
+    "FAIL: temu2000-formation: 25040 triangles, over the near car budget 20000 (decision 417)",
+    "FAIL: set-E200CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-E200CK-car",
+    "FAIL: set-E200CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-E200CK-tail",
+    "FAIL: set-E500CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-E500CK-car",
+    "FAIL: set-E500CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-E500CK-tail",
+    "FAIL: set-R100CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-R100CK-car",
+    "FAIL: set-R100CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-R100CK-tail",
+    "FAIL: set-R200CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-R200CK-car",
+    "FAIL: set-R200CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-R200CK-tail",
+    "FAIL: set-MINGRI-car: hash 89c4ac3b30d3f0fc (6476 triangles), the lock has 6247d707c1bfdf2c (6476); a deliberate change is named with --allow set-MINGRI-car",
+    "FAIL: set-MINGRI-tail: hash 2d86c51a3177c38d (6500 triangles), the lock has 46f6e3705b72555 (6500); a deliberate change is named with --allow set-MINGRI-tail",
+    "FAIL: set-SUMMER-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-SUMMER-car",
+    "FAIL: set-SUMMER-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-SUMMER-tail",
+    "FAIL: set-emu3000-head: hash a861643f224f49cf (8962 triangles), the lock has b519a5bc93e4527 (8962); a deliberate change is named with --allow set-emu3000-head",
+    "FAIL: set-emu3000-car: hash 4d2fe71ec0e677cf (5592 triangles), the lock has a11a65f68fd83180 (5592); a deliberate change is named with --allow set-emu3000-car",
+    "FAIL: set-emu3000-panto: hash e5f0588393f5c66a (5832 triangles), the lock has 434011a058dfb0a5 (5832); a deliberate change is named with --allow set-emu3000-panto",
+    "FAIL: set-emu3000-et: hash 2971ac0d17033c43 (5704 triangles), the lock has 18a66070e97c408c (5704); a deliberate change is named with --allow set-emu3000-et",
+    "FAIL: set-emu3000-em6: hash 74048dfbcdfbca5b (5456 triangles), the lock has a0925ea90550d424 (5456); a deliberate change is named with --allow set-emu3000-em6",
+    "FAIL: set-emu3000-ep7: hash 98b9dbdd1939afc6 (5832 triangles), the lock has e772f6b09e38a521 (5832); a deliberate change is named with --allow set-emu3000-ep7",
+    "FAIL: set-emu3000-ep10: hash e453b796347d7319 (5968 triangles), the lock has f1ef266dc8369346 (5968); a deliberate change is named with --allow set-emu3000-ep10",
+    "FAIL: set-emu3000-tail: hash 3c2182d899c09503 (8962 triangles), the lock has aec24e038833fb97 (8962); a deliberate change is named with --allow set-emu3000-tail",
+    "FAIL: set-emu3000Far-head: hash 662e1aff98e262dc (3834 triangles), the lock has c029467de7e9018e (3834); a deliberate change is named with --allow set-emu3000Far-head",
+    "FAIL: set-emu3000Far-car: hash cc63c05ba12288b1 (2560 triangles), the lock has 309559e60aefc529 (2560); a deliberate change is named with --allow set-emu3000Far-car",
+    "FAIL: set-emu3000Far-panto: hash 33a204c793707ee9 (2688 triangles), the lock has 7a098677d8cec03c (2688); a deliberate change is named with --allow set-emu3000Far-panto",
+    "FAIL: set-emu3000Far-et: hash 8e97cd296034f2ee (2624 triangles), the lock has f19e1d848782a42e (2624); a deliberate change is named with --allow set-emu3000Far-et",
+    "FAIL: set-emu3000Far-em6: hash 271b8144c5b340d3 (2472 triangles), the lock has 75fc73c42f1c2572 (2472); a deliberate change is named with --allow set-emu3000Far-em6",
+    "FAIL: set-emu3000Far-ep7: hash 79fc5e4e22551c79 (2688 triangles), the lock has d822ebfa063f4964 (2688); a deliberate change is named with --allow set-emu3000Far-ep7",
+    "FAIL: set-emu3000Far-ep10: hash b8b9aac7aca0fa5d (2776 triangles), the lock has 625333991309e9e1 (2776); a deliberate change is named with --allow set-emu3000Far-ep10",
+    "FAIL: set-emu3000Far-tail: hash 8b2a43ae19b24984 (3834 triangles), the lock has e7032f429defc8aa (3834); a deliberate change is named with --allow set-emu3000Far-tail",
+    "FAIL: light-set-emu3000-head: hash 93a55abbf3d3973d (496 triangles), the lock has a46d46de986590d8 (496); a deliberate change is named with --allow light-set-emu3000-head",
+    "FAIL: light-set-emu3000-tail: hash 35e74169de55d2c4 (506 triangles), the lock has ea82a910238c66dd (506); a deliberate change is named with --allow light-set-emu3000-tail",
+    "FAIL: e200mingri-style-car: hash 89c4ac3b30d3f0fc (6476 triangles), the lock has 6247d707c1bfdf2c (6476); a deliberate change is named with --allow e200mingri-style-car",
+    "FAIL: e200mingri-style-tail: hash 2d86c51a3177c38d (6500 triangles), the lock has 46f6e3705b72555 (6500); a deliberate change is named with --allow e200mingri-style-tail"
+  ],
+  "fixed_failures": [
+    {
+      "check": "Map3DWenhuTests.testLODsPreserveMetricEnvelopeWithinBudget",
+      "before": "near 3.54m, far 3.53m; four failures",
+      "fix": "HVAC near cap and ribs meet at 3.53m, far cap preserves same outer envelope; exact per-type/LOD contact dimensions; no tolerance relaxed"
+    },
+    {
+      "check": "contact audit after exact roof-cap change",
+      "before": "APM near HVAC height 0.142m not found by older broad 0.149..0.231 detector",
+      "fix": "Exact cap heights by fleet/LOD replace broad dimensions; all 13 actual-solid faults still rejected"
+    }
+  ],
+  "appearance": "UNVERIFIED: no user acceptance; author inspection cannot establish actual hidden gear or formal role allocation",
+  "source": "UNVERIFIED formal role/direction conflict, no dated readable full four-number representative train, incomplete orthographic roof/underbody/gear photo coverage",
+  "integration": "UNVERIFIED: BR identifies line only; existing wenhu selection and fallbacks unchanged",
+  "device": "UNVERIFIED: no Metal, Simulator, physical device, animation or engineering collision certification",
+  "browser": {
     "val": {
       "status": "VERIFIED",
       "transport": "loopback HTTP",
@@ -409,43 +686,14 @@
       ]
     }
   },
-  "existing_gate_failures": [
-    "FAIL: temu2000-formation: 25040 triangles, over the near car budget 20000 (decision 417)",
-    "FAIL: set-E200CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-E200CK-car",
-    "FAIL: set-E200CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-E200CK-tail",
-    "FAIL: set-E500CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-E500CK-car",
-    "FAIL: set-E500CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-E500CK-tail",
-    "FAIL: set-R100CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-R100CK-car",
-    "FAIL: set-R100CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-R100CK-tail",
-    "FAIL: set-R200CK-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-R200CK-car",
-    "FAIL: set-R200CK-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-R200CK-tail",
-    "FAIL: set-MINGRI-car: hash 89c4ac3b30d3f0fc (6476 triangles), the lock has 6247d707c1bfdf2c (6476); a deliberate change is named with --allow set-MINGRI-car",
-    "FAIL: set-MINGRI-tail: hash 2d86c51a3177c38d (6500 triangles), the lock has 46f6e3705b72555 (6500); a deliberate change is named with --allow set-MINGRI-tail",
-    "FAIL: set-SUMMER-car: hash 7c585dfaaf454fdb (6476 triangles), the lock has 9f2aebebb2477e4b (6476); a deliberate change is named with --allow set-SUMMER-car",
-    "FAIL: set-SUMMER-tail: hash 197686ab7443eee2 (6500 triangles), the lock has ac77eb322d524d1a (6500); a deliberate change is named with --allow set-SUMMER-tail",
-    "FAIL: set-emu3000-head: hash a861643f224f49cf (8962 triangles), the lock has b519a5bc93e4527 (8962); a deliberate change is named with --allow set-emu3000-head",
-    "FAIL: set-emu3000-car: hash 4d2fe71ec0e677cf (5592 triangles), the lock has a11a65f68fd83180 (5592); a deliberate change is named with --allow set-emu3000-car",
-    "FAIL: set-emu3000-panto: hash e5f0588393f5c66a (5832 triangles), the lock has 434011a058dfb0a5 (5832); a deliberate change is named with --allow set-emu3000-panto",
-    "FAIL: set-emu3000-et: hash 2971ac0d17033c43 (5704 triangles), the lock has 18a66070e97c408c (5704); a deliberate change is named with --allow set-emu3000-et",
-    "FAIL: set-emu3000-em6: hash 74048dfbcdfbca5b (5456 triangles), the lock has a0925ea90550d424 (5456); a deliberate change is named with --allow set-emu3000-em6",
-    "FAIL: set-emu3000-ep7: hash 98b9dbdd1939afc6 (5832 triangles), the lock has e772f6b09e38a521 (5832); a deliberate change is named with --allow set-emu3000-ep7",
-    "FAIL: set-emu3000-ep10: hash e453b796347d7319 (5968 triangles), the lock has f1ef266dc8369346 (5968); a deliberate change is named with --allow set-emu3000-ep10",
-    "FAIL: set-emu3000-tail: hash 3c2182d899c09503 (8962 triangles), the lock has aec24e038833fb97 (8962); a deliberate change is named with --allow set-emu3000-tail",
-    "FAIL: set-emu3000Far-head: hash 662e1aff98e262dc (3834 triangles), the lock has c029467de7e9018e (3834); a deliberate change is named with --allow set-emu3000Far-head",
-    "FAIL: set-emu3000Far-car: hash cc63c05ba12288b1 (2560 triangles), the lock has 309559e60aefc529 (2560); a deliberate change is named with --allow set-emu3000Far-car",
-    "FAIL: set-emu3000Far-panto: hash 33a204c793707ee9 (2688 triangles), the lock has 7a098677d8cec03c (2688); a deliberate change is named with --allow set-emu3000Far-panto",
-    "FAIL: set-emu3000Far-et: hash 8e97cd296034f2ee (2624 triangles), the lock has f19e1d848782a42e (2624); a deliberate change is named with --allow set-emu3000Far-et",
-    "FAIL: set-emu3000Far-em6: hash 271b8144c5b340d3 (2472 triangles), the lock has 75fc73c42f1c2572 (2472); a deliberate change is named with --allow set-emu3000Far-em6",
-    "FAIL: set-emu3000Far-ep7: hash 79fc5e4e22551c79 (2688 triangles), the lock has d822ebfa063f4964 (2688); a deliberate change is named with --allow set-emu3000Far-ep7",
-    "FAIL: set-emu3000Far-ep10: hash b8b9aac7aca0fa5d (2776 triangles), the lock has 625333991309e9e1 (2776); a deliberate change is named with --allow set-emu3000Far-ep10",
-    "FAIL: set-emu3000Far-tail: hash 8b2a43ae19b24984 (3834 triangles), the lock has e7032f429defc8aa (3834); a deliberate change is named with --allow set-emu3000Far-tail",
-    "FAIL: light-set-emu3000-head: hash 93a55abbf3d3973d (496 triangles), the lock has a46d46de986590d8 (496); a deliberate change is named with --allow light-set-emu3000-head",
-    "FAIL: light-set-emu3000-tail: hash 35e74169de55d2c4 (506 triangles), the lock has ea82a910238c66dd (506); a deliberate change is named with --allow light-set-emu3000-tail",
-    "FAIL: e200mingri-style-car: hash 89c4ac3b30d3f0fc (6476 triangles), the lock has 6247d707c1bfdf2c (6476); a deliberate change is named with --allow e200mingri-style-car",
-    "FAIL: e200mingri-style-tail: hash 2d86c51a3177c38d (6500 triangles), the lock has 46f6e3705b72555 (6500); a deliberate change is named with --allow e200mingri-style-tail"
-  ],
-  "appearance": "UNVERIFIED: geometric self-review still identifies crude couplers, missing nose recess/undercut and unconfirmed running gear/equipment; not final acceptable appearance",
-  "source": "UNVERIFIED formal role/direction conflicts and no dated complete four-number representative formation",
-  "specialist_faults": "UNVERIFIED: no complete actual-solid fault rejection for glass/equipment/wheel/guide contact or role interfaces",
-  "device": "UNVERIFIED; WebGL and importer checks do not establish Metal or device behaviour"
+  "png": "465 canonical PNGs fully decoded; only 8 private sheets + 1 public overview delivered; independent selected bytes equal",
+  "self_review": {
+    "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+    "viewed": "All six role/formation sheets near/far, day/night/clay/silhouette, seven directions; two true previous comparison sheets; both final viewer mobile screens; source photos 63a-11a17 and 63a-cb04tw reopened",
+    "compliant": "Visible nose profile, supported glazing, real undercut and hollow coupler, recessed light rings; fixed metre near/far envelope",
+    "reasonable_simplification": "Small fasteners/piping and photo-fit dimensions",
+    "not_compliant": "Complete actual-role running gear and source photo coverage",
+    "insufficient_evidence": "Safety/turnout wheels, exact collector and role equipment allocation; formal directions and dated full-number representative train",
+    "acceptance": "UNVERIFIED: author inspection is not user acceptance"
+  }
 }

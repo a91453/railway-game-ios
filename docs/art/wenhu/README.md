@@ -32,7 +32,7 @@
 
 沿用最新main的StationKitBuilder.box／face等primitive；本輪WenhuMesh僅封閉prism、輪圓柱、裁切及圓角窗等primitive。兩款分開的截面、鼻面函式、配色及端面位置，不匯入既有Q比例車殼。原參考套件的engineeringDimensions為空或Q比例bounds、short2明標illustrative，不取代實車尺寸與四車證據。外部沒有匯入程式或新依賴。
 
-鼻部／車頂／輪組量測基準、A/B獨有設備、左右非對稱與外端燈具狀態、底部安全構造：資料不足。草稿中對稱補全及尺寸配適不算已確認。兩款首輪自檢發現矩形風擋、灰門割斷色帶、燈具不足與屋頂方盒，已開始修真幾何；需要從修後最終頂點重新看圖與驗證，不能沿用首輪結果。
+鼻部／車頂／輪組量測基準、A/B獨有設備、左右非對稱與外端燈具狀態、底部安全構造：資料不足。草稿中對稱補全及尺寸配適不算已確認。首輪矩形風擋、門葉色界、燈具與屋頂方盒已以真正頂點續修；前稿未獲使用者接受。
 
 ## 營運與保護
 
@@ -45,22 +45,31 @@
 Swift6.4 warnings-as-errors；從公開checkout根目錄：
 
 ```sh
+git worktree add --detach /absolute/before-checkout 91a31f0837b4076b6c17f5f4ffe0bea81b504ed9
+(cd /absolute/before-checkout && tools/wenhu/rebuild.sh /absolute/before-output)
+# 本輪幾何 producer f9b1550a5d67f1f25f9361092b76fcb357ba9ceb
 tools/wenhu/rebuild.sh /absolute/output
-node tools/wenhu/render.mjs /absolute/output
+node tools/wenhu/render.mjs /absolute/output /absolute/before-output
+python3 tools/wenhu/sheets.py /absolute/output
+python3 tools/wenhu/curate.py /absolute/output
 ```
 
 通用GLB/package/audit、native讀回的實際執行結果另記。共同尺度渲染固定單車13.80m框／完整55.12m框，兩款與近遠同相機光線；單車與全列框不同，沒有各自auto-fit。WebGL不代表Metal／Simulator／實機或動態碰撞。
 
-尚缺：正式角色方向與有時期四車實號編組、完整逐向來源（特別完整車底／輪組）、白模先行的完整檢查紀錄、逐玻璃／設備／走行支承與遮擋、全部真固體／assembly專用故障反例、近遠跳變與實照旁置逐項通過、file://及裝置驗證。其餘已實際執行項目見下段與報告，不將分項成功當成全部完成。四態維持UNVERIFIED；不可把通用audit代替這些。
+尚缺：正式角色方向與有時期四車實號編組、完整逐向來源（特別完整車底／輪組）、白模先行的完整檢查紀錄、近遠跳變與實照旁置全部部件通過、file://及裝置驗證。其餘已實際執行項目見下段與報告，不將分項成功當成全部完成。四態維持UNVERIFIED；不可把通用audit代替這些。
 
-## 本輪實際驗證與自檢（未完成結論不變）
+以本文件head的兩份delivery JSON（producer固定f9b1550a5）搭配上述輸出，可執行：`python3 tools/train-models/deliver.py /absolute/output/val256 docs/art/wenhu/val256-delivery.json /absolute/delivery/wenhu-val256/revision-1`，APM相應替換；輸出不得已存在。該設定產生最終自含viewer；後加README／驗證報告不影響viewer。
 
-Producer `91a31f0837b4076b6c17f5f4ffe0bea81b504ed9`。Swift6.4 WAE build及10測試通過；12份native/assembly共用audit、4份獨立Swift組裝（265,632頂點，位置誤差0、顏色相同）、Blender4.3.2獨立匯入通過。343張本機PNG完整解碼／透明／非空／留白驗證，提交僅6私庫PNG＋公開1PNG；兩款各6項viewer HTTP實載／七向日夜／旋轉縮放／下載bytes通過，file://受管理政策阻擋維持UNVERIFIED。完整950舊模型逐bytes／全頂點欄FNV／索引保持；未改main與候選均同33項既有hash gate失敗，不放寬gate。
+原生車體截面寬VAL2.56m／APM2.54m，含外凸門構件的整體bounds寬為2.655／2.635m；官方車寬的量測包絡未確認，不把它們視為同一正式量測基準。車列全長55.12m同樣採13.78m連結面距假設。
 
-近/遠三角：VAL A 8132/3476、B 8168/3512；APM A 7452/3004、B 7488/3040；四車VAL 32600/13976、APM 29880/12088，遠景各角色少於近景一半。所有獨立單元低於15000；完整車列用合法assembly。
+## 本輪實際驗證
 
-親看最終6張角色／編組七向日夜／白模／剪影共同尺度表：**仍不符合**端下真開口、連結器機構／燈具凹槽的細化，車底目前過於簡化；A/B屋頂設備對應未確認。**合理簡化**為省略小螺絲／管線；**資料不足**為輪組安全機構、正式角色方向、近期完整實號列車、完整正交屋頂／車底。沒有使用者接受。不能用技術測試掩蓋這些外觀與來源問題。
+最終producer、每項輸出SHA、真前稿91a31f0（未接受）的同尺度比較與獨立checkout讀回，見provenance.json；最終執行結果見verification.json、png-verification.json、protection.json。幾何producer、文件head與素材commit分開，不從文件head猜producer。
 
-執行證據見 verification.json、png-verification.json、protection.json；independent producer重建另記provenance。
+端下凹腔已由鼻面頂點形成，外端連結器為有孔八角環體與支承桿，燈座為環體。玻璃分格依同一鼻面breakpoints貼合，不以黑板封口；行走輪與導引輪包絡分開。近遠共同輪廓高度3.53m，細節不越出遠景包絡。外觀仍須與不足的來源分開判斷。
 
-互鏈 [公開draft #1742](https://github.com/a91453/railway-game-ios/pull/1742) ↔ [素材draft #47](https://github.com/a91453/railway-assets-private/pull/47)。兩款仍未完成上述來源、形體與專用故障驗收，保持draft。
+專用檢查覆蓋全部8單元：每個外向玻璃面質心的可見及65mm內支承、4行走輪／8水平導引輪／2HVAC之連通固體與接觸、導引輪包絡、端孔4射線與端下凹腔2射線。每單元13類真正頂點／連通固體故障及2類端部破壞必須拒收；每份真正四車assembly另5類錯序／漏角色／間距／反向故障。共用audit另拒收缺面／反面。這些是具體取樣與包絡檢查，不是完整工程碰撞認證；不能驗證尚無來源的安全輪或集電器BOM。
+
+親看紀錄分為「已符合」可見的原生鼻面分段、色界、玻璃支承、凹腔及近遠共框；「合理簡化」小螺絲、管線與可見輪組配適；「資料不足」正式角色方向、各角色設備、隱藏安全／轉轍輪、完整集電機構、帶時期完整實號編組；「仍不符合」全部實車角色與完整走行裝置的來源驗收、完整正交屋頂／車底逐圖覆蓋。沒有已接受前版，未獲本producer的使用者外觀接受。
+
+互鏈 [公開draft #1742](https://github.com/a91453/railway-game-ios/pull/1742) ↔ [素材draft #47](https://github.com/a91453/railway-assets-private/pull/47)。來源與裝置等缺口使整體交付仍未完成，保持draft。
