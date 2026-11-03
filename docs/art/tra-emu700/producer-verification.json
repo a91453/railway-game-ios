@@ -1,29 +1,29 @@
 {
-  "geometry_producer": "7464630b1fd82fb997af3809442d67f50d2f95b1",
-  "independent_checkout": "Detached source checkout at the producer; its actual cwd/HEAD were asserted before running build/render/Swift/Blender/native faults.",
+  "geometry_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+  "independent_checkout": "Actual cwd and source HEAD asserted before independent build/render/Swift/Blender/native faults; separate public checkout output byte comparison.",
   "native_glb_assembly_files": 22,
   "selected_png_files": 12,
   "comparison_configuration_bytes_equal": true,
   "files": [
     {
       "file": "models/tra-emu700-emc-cab.m3dmodel",
-      "sha256": "02ad32de9bc80ab880b3dc359f1fb7c6722e893978de19f4016f6e73f4eeac6e",
-      "bytes": 685836
+      "sha256": "41c78ec361840ed89821533c722f6d8def863072274225197bc0755a196dbe46",
+      "bytes": 687708
     },
     {
       "file": "models/tra-emu700-emc-cab.glb",
-      "sha256": "2928b48d0c017b526ab3353b24793d4b60507ee6ca17704dffab7a354ffc9656",
-      "bytes": 1267260
+      "sha256": "4768a0f51324f94fc7565b0b8db3f05cbb1d90b08b58529491b4a44f8328ca25",
+      "bytes": 1270716
     },
     {
       "file": "models/tra-emu700-emc-cab-far.m3dmodel",
-      "sha256": "3f8918b7ffcc64896dc837e025c33c472cfc5c59c8b8460faa8626c375a98e5c",
-      "bytes": 342432
+      "sha256": "721589e3325d9e9a50b7c857da1bd65089cb03c665f9a4e334ef4425491da32a",
+      "bytes": 343056
     },
     {
       "file": "models/tra-emu700-emc-cab-far.glb",
-      "sha256": "5703fda5f5151ecf31ae20e9974af217bf3ea939237f76567d869b6923b58bed",
-      "bytes": 633276
+      "sha256": "68795420648d6a39e17957811588fede2062f81320b787a91796fb2d9531a737",
+      "bytes": 634428
     },
     {
       "file": "models/tra-emu700-ep.m3dmodel",
@@ -87,43 +87,43 @@
     },
     {
       "file": "models/tra-emu700-739-740-formation.m3dscene.json",
-      "sha256": "616ce0d71a8cbec2b82b92a3cd6e368c3cbf3d58545ef57c06e1dc6df2c84509",
-      "bytes": 2170392
+      "sha256": "e12ecf07a4b82c4453ee2b450ddba434ba245d39a0690dc8edf20a9a598feb1d",
+      "bytes": 2172888
     },
     {
       "file": "models/tra-emu700-739-740-formation.glb",
-      "sha256": "ec4cabb6502a2af46c8638bedd646df11b91afc22316fc266af5ec493f0ce01e",
-      "bytes": 6006936
+      "sha256": "8182a2f590052c57c78ae06b88681973f9b96b8f81498373bdfdd1ac1544af0f",
+      "bytes": 6013848
     },
     {
       "file": "models/tra-emu700-739-740-formation.triangles.bin",
-      "sha256": "b578b9be5ad593ef831f70fd2588ad081684378863c38b49a21ba1be4596b85b",
-      "bytes": 3253120
+      "sha256": "cd73fc5a2325cdd8b374f088efa4a5fdc809df5bcaae452ae0b4b31522c76136",
+      "bytes": 3256864
     },
     {
       "file": "models/tra-emu700-739-740-formation-far.m3dscene.json",
-      "sha256": "22923b8a752cfbd361b5865179155e56c69661ffc792307f3a548795a349ba80",
-      "bytes": 1079708
+      "sha256": "5ef432d4651dbf93db9aadad02ea991478fefed071c34af382f85561d61faa8d",
+      "bytes": 1080540
     },
     {
       "file": "models/tra-emu700-739-740-formation-far.glb",
-      "sha256": "a4d110ae3b4de398b2a0042d3062913e6bd1d7110ddee88e1625b9f98ace4065",
-      "bytes": 2986388
+      "sha256": "edbc44f84fb0c4b53e1e56a9ce8fb156ce9d8f395e0d54efe9ee55b49bf55b44",
+      "bytes": 2988692
     },
     {
       "file": "models/tra-emu700-739-740-formation-far.triangles.bin",
-      "sha256": "6a1c14c7155b6922dc07da938d0c6282df610c7b599e0423864fa0274591a8f3",
-      "bytes": 1616992
+      "sha256": "22f9cc51f813e4dce6da3aab4836e9ac08f60633d956990880f2d4f596c8f448",
+      "bytes": 1618240
     },
     {
       "file": "sheets/tra-emu700-739-740-formation-far.png",
-      "sha256": "7ca75054f34ccae78541bd16e1861adf2b2b8b9275b9025e898977363f04e099",
-      "bytes": 120679
+      "sha256": "e0c89a967b95ddd8c61bc8b69e33c30e2c80da110dfb132921848dd052c46bfd",
+      "bytes": 120729
     },
     {
       "file": "sheets/tra-emu700-739-740-formation.png",
-      "sha256": "f27644d788a0edd8db490a4af6a0733c175baff49f8a6ffbc7fef1de03bfe555",
-      "bytes": 124892
+      "sha256": "d67fe123b8b26231462c2e55f829e6206dba7b5c3795d062b03a5711ca933a58",
+      "bytes": 124835
     },
     {
       "file": "sheets/tra-emu700-em-far.png",
@@ -137,13 +137,13 @@
     },
     {
       "file": "sheets/tra-emu700-emc-cab-far.png",
-      "sha256": "d62ed1e87229312848d67920d1778261b4507fd3a10cc587c405b0f9fb123ad8",
-      "bytes": 129544
+      "sha256": "81b6a753e1d0d46a0156a5a0536ecc442007bc80df308421c343e3dc5dacd024",
+      "bytes": 129411
     },
     {
       "file": "sheets/tra-emu700-emc-cab.png",
-      "sha256": "38c6f83cb1883968782b12b5b7124e619d01783f6ab52f7d1c4ae07a8e162624",
-      "bytes": 141100
+      "sha256": "46418f23ba37dff004ebaed6eaae0851db7bf5f2cbd4346ff2032e610f9e2575",
+      "bytes": 140938
     },
     {
       "file": "sheets/tra-emu700-ep-far.png",
@@ -167,26 +167,26 @@
     },
     {
       "file": "sheets/tra-emu700-mouth-before-after.png",
-      "sha256": "ac846edab2f2e2abd979e11f6c1a169e2af17dd042f77c5eaf4d152f7f624813",
-      "bytes": 373820
+      "sha256": "617956d8dd15ef6cfc49b52ba0d2327e5df44790c132524ed647427d9755f40e",
+      "bytes": 374351
     },
     {
       "file": "overview.png",
-      "sha256": "bebaa13738e919ed35d995785857c944600f0e0c1a911c315514ca6562a1727c",
-      "bytes": 363306
+      "sha256": "8b0f3d69f7a5ffff685753eacfa07ae3bc72578fd93a60cf221934726d7d2b18",
+      "bytes": 363439
     },
     {
       "file": "mouth-comparison.json",
-      "sha256": "587851f9c0749504146a8c52a5420a8ea478b14080402e63e524089e01ff5f6b",
+      "sha256": "69d51485230d980699d17bb7457486c66fbce98ac9c9e83813eab38cee07e6da",
       "bytes": 2587
     }
   ],
   "viewer_bytes_equal": true,
-  "viewer_sha256": "ce6058c841ceb017efb6d024c2fda12bcac3542c102551880f1225fca4ba731c",
+  "viewer_sha256": "a7541efd93f40e9d6d05babad73a19b8e65d7fbabfea6a66175d4facfcabbe9b",
   "viewer_input_sha256": [
     {
       "file": "manifest.json",
-      "sha256": "0819cad1744fb7f6d22b1d14a9223db07a35f0b8ac34524a9438ca794dba8020"
+      "sha256": "ab5e3ab62706fb1ec390974a366176dc8c45089b004292c27c8d681c4baba8b7"
     },
     {
       "file": "status.json",
@@ -317,12 +317,12 @@
       {
         "tag": "after",
         "id": "tra-emu700-emc-cab",
-        "native_sha256": "02ad32de9bc80ab880b3dc359f1fb7c6722e893978de19f4016f6e73f4eeac6e"
+        "native_sha256": "41c78ec361840ed89821533c722f6d8def863072274225197bc0755a196dbe46"
       },
       {
         "tag": "after",
         "id": "tra-emu700-emc-cab-far",
-        "native_sha256": "3f8918b7ffcc64896dc837e025c33c472cfc5c59c8b8460faa8626c375a98e5c"
+        "native_sha256": "721589e3325d9e9a50b7c857da1bd65089cb03c665f9a4e334ef4425491da32a"
       }
     ]
   },
@@ -1534,7 +1534,7 @@
     },
     {
       "file": "Sources/GamePresentation/Map3DEMU700.swift",
-      "sha256": "f9595e3ba7a9db1b19c536e3519c91f1ee7c943914af8b91188d3b629da7800e"
+      "sha256": "4435044a1c513df8c1b4fd1540357e0a6cb7e523974517eb23835698ed5e0ed8"
     },
     {
       "file": "Sources/GamePresentation/Map3DEMU800.swift",
@@ -3022,7 +3022,7 @@
     },
     {
       "file": "tools/train-models/hashes.lock.json",
-      "sha256": "d693d14fccdadbbbec0d921eff742722f2d418617061b86ccf4bb131ba8dff14"
+      "sha256": "82125ea85f0cb42476a153be684ea25ebf79354228bafc07d4990cf48b13c19e"
     },
     {
       "file": "tools/train-models/inspect.mjs",
@@ -3080,12 +3080,17 @@
     },
     {
       "file": "configuration.json",
-      "sha256": "3b987e8242453ce82bc917604d56ef61bff11769d20ce3ba02bfac87dc993175"
+      "sha256": "df6daeb0d836665c623b5fa806fd65f8f1fd12f652dbfbef42ad1c3a1676cdbd"
     },
     {
       "file": "delivery-spec.json",
-      "sha256": "074b8a0fc021410e2190fedcd692acbf3ab73e4126f660e8a5301b8034b8ced7"
+      "sha256": "e72af36d5b13895f1eba886ae72f44d3ef02cec5778a9b0813312c09e3189450"
     }
   ],
-  "lighting_sha256": "c9efb1582a02635ee739c071f82e5b6bb2ba33db61f067ada7d6a8d3b4239b81"
+  "lighting_sha256": "c9efb1582a02635ee739c071f82e5b6bb2ba33db61f067ada7d6a8d3b4239b81",
+  "validation_input": {
+    "hash_lock": "tools/train-models/hashes.lock.json in final documentation checkout",
+    "sha256": "4cdd881a3bd927e1d1252c9284d8f857809c36c0518fdb1ad8f7e193551512c0",
+    "geometry_generation_reads_lock": false
+  }
 }

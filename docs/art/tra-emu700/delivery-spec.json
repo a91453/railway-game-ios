@@ -1,8 +1,8 @@
 {
   "repo": "../emu700-mouth-producer",
-  "producer": "7464630b1fd82fb997af3809442d67f50d2f95b1",
+  "producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
   "previous_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
-  "rebuild": "Follow public docs/art/tra-emu700/README.md: build 553b3a22 before native EMC units, then in 7464630b checkout run tools/tra-emu700/build.sh OUT; node tools/tra-emu700/render.mjs OUT; node tools/tra-emu700/render-mouth.mjs OUT BEFORE_RUN; python3 tools/tra-emu700/sheets.py OUT.",
+  "rebuild": "In explicit553b3a22 and53f264bc checkouts follow public docs/art/tra-emu700/README.md; build before EMC native, then build.sh OUT, render.mjs OUT, render-mouth.mjs OUT BEFORE_RUN, sheets.py OUT.",
   "sources": "source-record.json",
   "status": "status.json",
   "license_files": [],

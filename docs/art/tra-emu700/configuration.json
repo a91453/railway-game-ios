@@ -1,5 +1,5 @@
 {
-  "geometry_producer": "7464630b1fd82fb997af3809442d67f50d2f95b1",
+  "geometry_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
   "identity": "TRA EMU700 ordinary livery, mass-production representative 739+740",
   "period": "2020 historical representative; exact 2026 pair status UNVERIFIED",
   "native_axes": {
@@ -210,7 +210,7 @@
   "measured_model_bounds": [
     {
       "id": "tra-emu700-emc-cab",
-      "triangles": 13188,
+      "triangles": 13224,
       "minimum": [
         -10.3715,
         -1.473,
@@ -224,7 +224,7 @@
     },
     {
       "id": "tra-emu700-emc-cab-far",
-      "triangles": 6584,
+      "triangles": 6596,
       "minimum": [
         -10.3715,
         -1.473,
@@ -322,7 +322,7 @@
     },
     {
       "id": "tra-emu700-739-740-formation",
-      "triangles": 62560,
+      "triangles": 62632,
       "minimum": [
         -81.58271026611328,
         -1.4730000495910645,
@@ -336,7 +336,7 @@
     },
     {
       "id": "tra-emu700-739-740-formation-far",
-      "triangles": 31096,
+      "triangles": 31120,
       "minimum": [
         -81.58271026611328,
         -1.4730000495910645,

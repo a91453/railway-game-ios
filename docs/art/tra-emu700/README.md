@@ -2,11 +2,11 @@
 
 使用者於2026-11-03明確回覆「他的車頭嘴巴還是很醜」，因此前稿producer `553b3a2207bf87e6d02819d687b673860055a84a` 的車頭外觀**未通過**。撤回先前「沒有已知必須重做外觀故障」的較寬自評。這次實際改幾何與殼面分色；新候選的使用者接受仍UNVERIFIED，不能由作者看圖或CI代替。
 
-真正幾何producer：`7464630b1fd82fb997af3809442d67f50d2f95b1`。公開／文件head及素材commit另見[公開draft #1730](https://github.com/a91453/railway-game-ios/pull/1730) ↔ [素材draft #45](https://github.com/a91453/railway-assets-private/pull/45)，不回填為幾何producer。
+真正幾何producer：`53f264bc2410449e3af15b07d0a2c9aaffa68455`。公開／文件head及素材commit另見[公開draft #1730](https://github.com/a91453/railway-game-ios/pull/1730) ↔ [素材draft #45](https://github.com/a91453/railway-assets-private/pull/45)，不回填為幾何producer。
 
 ## 修正與來源
 
-原生前稿把嘴形以格子中點判色，結果是過高、過薄的階梯狀橘帶；四盞下燈擠在風擋與橘帶之間。正常連結器罩還被做成前方可見的方孔。新配方將橘色下緣直接作為殼面的連續弧形頂點列，下移、拉深橘色弧面並留出灰色燈座區；下燈位置與大小依實照配適。鼻罩改成薄的連續FRP幾何，罩後與下方仍有真空間及引桿，不用黑平板假裝洞，也不把罩後填成整個大實心塊。維修升罩狀態不屬此一般營運版本。
+原生前稿把嘴形以格子中點判色，結果是過高、過薄的階梯狀橘帶；四盞下燈擠在風擋與橘帶之間。正常連結器罩還被做成前方可見的方孔。新配方將橘色下緣直接作為殼面的連續弧形頂點列，下移、拉深橘色弧面並留出灰色燈座區；下燈位置與大小依實照配適；方向幕改回實照的駕駛左側（正視右邊），不做品牌字。鼻罩改成薄的連續FRP幾何，罩後與下方仍有真空間及引桿，不用黑平板假裝洞，也不把罩後填成整個大實心塊。維修升罩狀態不屬此一般營運版本。
 
 親看來源仍為已下載且固定SHA的實照：Blair Yu的[EMC740文章](https://blair-train.blogspot.com/2011/09/emu740.html)，其中DSC07789、DSC07787及2011正斜視；[KASHIWA技術／角色頁](https://emu300ct.web.fc2.com/index/traemu/EMU700.htm)另有普通連結器罩及升罩試車照片，後者只供分辨狀態，未套成一般營運。原照、逐張日期／車號／授權／下載檔名／SHA及支持部件見[source-record.json](source-record.json)。照片著作權屬原作者，只在本機合法觀察，沒有發布原照、照片貼圖、第三方幾何、私有來源內部路徑或送外部生成服務。
 
@@ -51,7 +51,7 @@ EMC為駕駛動力車、EP為受電弓拖車、ET為無障礙廁所拖車、EM�
 
 ```sh
 git worktree add --detach /tmp/emu700-before-src 553b3a2207bf87e6d02819d687b673860055a84a
-git worktree add --detach /tmp/emu700-candidate-src 7464630b1fd82fb997af3809442d67f50d2f95b1
+git worktree add --detach /tmp/emu700-candidate-src 53f264bc2410449e3af15b07d0a2c9aaffa68455
 cd /tmp/emu700-before-src
 tools/train-models/run.sh /tmp/emu700-before-run --ids tra-emu700-emc,tra-emu700-emc-far
 cd /tmp/emu700-candidate-src

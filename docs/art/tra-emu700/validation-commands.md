@@ -31,9 +31,11 @@ HTTP成功、旋轉／縮放、兩LOD全部10個項目的native／GLB下載bytes
 全量保護用README的inventory.sh取得真正standard+studies枚舉，再執行protect.py；不可假設共享exporter的預設範圍或`--all`有此語意。另跑相同共享gate：
 
 ```sh
-node tools/train-models/check.mjs /absolute/unmodified-main-full-inventory
-node tools/train-models/check.mjs /absolute/final-full-inventory
+node tools/train-models/check.mjs /absolute/unmodified-main-full-inventory --lock /absolute/unmodified-main-checkout/tools/train-models/hashes.lock.json
+node tools/train-models/check.mjs /absolute/final-full-inventory --lock /absolute/final-documentation-checkout/tools/train-models/hashes.lock.json
 ```
+
+鎖值驗證使用最終文件checkout的鎖檔；幾何producer53f264bc的原生生成不讀取此檔，不將文件head冒充幾何producer。
 
 此輪兩者均有相同33項既有鎖值不符，未改他車鎖、未加入allow、未放寬gate。全部942個既有runtime模型的實際bytes與十欄FNV另比對相同，本型8件鎖值與幾何預算通過。全量gate不能寫成全綠；具體結果見verification.json。
 
