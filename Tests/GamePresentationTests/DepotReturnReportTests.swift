@@ -251,10 +251,11 @@ final class DepotReturnReportTests: XCTestCase {
         if deadlocked > 0 { summary += " (first \(deadlockedWhere); deadlocked in \(deadlockedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
         summary += "; \(lines.count) of \(world.lines.count) lines with runs and depots; \(seconds) s\n"
         FileHandle.standardError.write(Data(summary.utf8))
-        // `DEPOT_RETURN_STRICT=1`: fails on a run not sent out or a deadlock,
+        // `DEPOT_RETURN_STRICT=1`: fails on a run not sent out, a late trip or a deadlock,
         // so a finding is a command that turns red (diagnosing-bugs).
         if environment["DEPOT_RETURN_STRICT"] != nil {
             XCTAssertEqual(missed, 0, "\(label): runs not sent out")
+            XCTAssertEqual(late, 0, "\(label): trips more than five minutes late")
             XCTAssertEqual(deadlocked, 0, "\(label): trains deadlocked, first \(deadlockedWhere)")
         }
     }
