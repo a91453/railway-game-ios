@@ -232,15 +232,7 @@ struct RailwayGameApp: App {
                             if session.buyForScreenshot(real) { break }
                             try? await Task.sleep(for: .milliseconds(500))
                         }
-                        // The game's own ticks, off the main thread (the
-                        // 06:00 passenger plan takes minutes in a Debug
-                        // build), paused at 07:40.
-                        let until: Int64 = 7 * 3_600 + 40 * 60
-                        session.setSpeed(.normal)
-                        for _ in 0..<1_800 where session.world.clock.now.seconds % GameTime.secondsPerDay < until {
-                            try? await Task.sleep(for: .milliseconds(500))
-                        }
-                        session.setSpeed(.paused)
+                        await session.runForScreenshot(until: 7 * 3_600 + 40 * 60)
                         if let train = session.screenshotTrainMidway(on: real) {
                             session.selectTrain(train)
                             session.toggleFollowTrain(train)

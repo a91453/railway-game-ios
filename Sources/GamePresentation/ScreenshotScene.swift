@@ -452,21 +452,26 @@ extension GameSession {
         }
     }
 
-    /// Decision 564: the game run on by at most ten minutes towards
-    /// `seconds` into the day, then paused; `true` once it is there. For
-    /// tests: the app runs the screenshot's morning on with its own ticks,
-    /// off the main thread, since a tick here runs on the caller's.
-    public func advanceForScreenshot(until seconds: Int64) -> Bool {
-        let now = world.clock.now.seconds % GameTime.secondsPerDay
-        guard seconds > now else { return true }
-        _ = perform { (world: inout GameWorld) throws(GameError) in
-            // .normal is a minute a tick.
+    /// Decision 564: the game run on to `seconds` into the day, then
+    /// paused, on a copy of the world off the main thread, put back as
+    /// one edit: the app's main thread stays free (the 06:00 passenger
+    /// plan of a city map takes minutes in a Debug build, and a UI test's
+    /// queries time out).
+    public func runForScreenshot(until seconds: Int64) async {
+        let start = world
+        let ran = await Task.detached(priority: .userInitiated) { () -> GameWorld in
+            var world = start
             world.setSpeed(.normal)
-            try world.advance(ticks: Int(max(1, min(10, (seconds - now) / 60))))
+            while world.clock.now.seconds % GameTime.secondsPerDay < seconds {
+                do throws(GameError) { try world.advance(ticks: 1) } catch { break }
+            }
             world.setSpeed(.paused)
+            return world
+        }.value
+        _ = perform { (world: inout GameWorld) throws(GameError) in
+            world = ran
             return ""
         }
-        return world.clock.now.seconds % GameTime.secondsPerDay >= seconds
     }
 
     /// Decision 564: the train of real line `id` bought nearest its middle
