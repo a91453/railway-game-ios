@@ -1507,9 +1507,11 @@ extension RealLineLaying {
         try world.setLineRuns(line.id, to: acquisition.runs.map { run in
             LineRun(from: last - run.from, to: last - run.to, times: run.times, days: run.days)
         })
-        try world.setLineRoutePreferences(line.id, to: Self.routePreferences(
-            platformsOf, stops: stations.count, keepingRight: RealBranchLine.keepsRight(realLine: acquisition.realLine)
-        ))
+        // Decision 564: a metro's or light rail's trains keep right, the
+        // platforms it names and every other way its trains find.
+        let keepsRight = RealBranchLine.keepsRight(realLine: acquisition.realLine)
+        try world.setLineRoutePreferences(line.id, to: Self.routePreferences(platformsOf, stops: stations.count, keepingRight: keepsRight))
+        if keepsRight { try world.setLineKeepsRight(line.id, to: true) }
         // Decision 479: the depot, a platform along each siding, the line's.
         // Decision 535: and its others, the Wenhu Line's two.
         var depots: [StationID] = []

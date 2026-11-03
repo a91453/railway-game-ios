@@ -210,6 +210,8 @@ extension GameWorld {
     private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, clear: ((TrackStretch) -> Bool)? = nil, forbidden: Set<TrackTraversal> = [], forbids: ((TrackTraversal) -> Bool)? = nil, berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil, keepingLeft: Bool = true) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         let keepsLeft = keepLeft && keepingLeft
+        // Decision 564: to a station of lines keeping right, keeping right.
+        let mirrored = keepsLeft && keepsRight(toward: id)
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
         for berth in berths(of: id, length: length) where (only == nil || berth == only) && eligible?.contains(berth) != false {
@@ -240,8 +242,9 @@ extension GameWorld {
                 .map { (BerthSearch.berth(traversal, $0), $0 - from + (berthPenalty[Berth(traversal: traversal, offset: $0)] ?? 0) + (edgePenalty[traversal.edge] ?? 0)) }
             guard allowed(to: edgeLength) else { return stops }
             let exits = transitions(after: traversal)
-            // Decision 202: a way on right of the leftmost counts longer.
-            let right = keepsLeft ? rightOfLeftmost(after: traversal, among: exits) : []
+            // Decision 202: a way on right of the leftmost counts longer;
+            // decision 564, left of the rightmost to a station keeping right.
+            let right = keepsLeft ? rightOfLeftmost(after: traversal, among: exits, mirrored: mirrored) : []
             return stops + exits.map { (.entered($0), edgeLength - from + (edgePenalty[traversal.edge] ?? 0) + (right.contains($0) ? Self.keepLeftMargin : 0)) }
         }
         guard let route, case .berth(let last, let end)? = route.last else { return nil }

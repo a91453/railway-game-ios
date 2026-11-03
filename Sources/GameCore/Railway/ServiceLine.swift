@@ -364,6 +364,14 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// facility, and no passenger rides it. Set by
     /// ``GameWorld/setLineFreight(_:to:)`` only.
     public internal(set) var isFreight: Bool = false
+    /// Whether the line's trains keep to the right on double track, as a
+    /// metro or light rail does, rather than to the left (decision 564):
+    /// with the world's ``GameWorld/keepLeft`` on, a way to one of its
+    /// stops or depots takes the rightmost way on at each switch unless
+    /// another is ``GameWorld/keepLeftMargin`` shorter
+    /// (``GameWorld/keepsRight(toward:)``). Set by
+    /// ``GameWorld/setLineKeepsRight(_:to:)`` only.
+    public internal(set) var keepsRight: Bool = false
     /// How far, in all, the line's trains have driven empty to one of its
     /// ends (decision 172), in world units (``WorldCoordinate/unitsPerMetre``
     /// to the metre). Counted when such a train sets off; a run to the
@@ -1025,7 +1033,7 @@ extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
         case runs, runDays, freight, deadheadDistance, dwellSeconds, depot, depots, code
-        case dispatchPattern, endLastDispatch, opensPair
+        case dispatchPattern, endLastDispatch, opensPair, keepsRight
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -1071,6 +1079,12 @@ extension ServiceLine: Codable {
         runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)
         // Decision 155 (save version 38): a freight line has `"freight": true`.
         isFreight = try container.decodeIfPresent(Bool.self, forKey: .freight) ?? false
+        // Decision 564 (save version 82): a line keeping right has
+        // `"keepsRight": true`.
+        keepsRight = try container.decodeIfPresent(Bool.self, forKey: .keepsRight) ?? false
+        guard !container.contains(.keepsRight) || keepsRight else {
+            throw DecodingError.dataCorruptedError(forKey: .keepsRight, in: container, debugDescription: "Line \(id.rawValue): \"keepsRight\" is written only as true.")
+        }
         // Decision 172 (save version 45): the world units driven empty.
         deadheadDistance = try container.decodeIfPresent(Int64.self, forKey: .deadheadDistance) ?? 0
         guard deadheadDistance >= 0, !container.contains(.deadheadDistance) || deadheadDistance > 0 else {
@@ -1208,6 +1222,9 @@ extension ServiceLine: Codable {
         try container.encodeIfPresent(code, forKey: .code)
         if isFreight {
             try container.encode(true, forKey: .freight)
+        }
+        if keepsRight {
+            try container.encode(true, forKey: .keepsRight)
         }
         if deadheadDistance > 0 {
             try container.encode(deadheadDistance, forKey: .deadheadDistance)

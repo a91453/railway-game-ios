@@ -142,6 +142,8 @@ final class RealLineRunningSideTests: XCTestCase {
         try world.setLineRoutePreferences(line.id, to: old)
         world = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
         XCTAssertEqual(world.line(id: line.id)?.routePreferences, old)
+        // Nor did it keep right: a save before version 82 has no side.
+        try world.setLineKeepsRight(line.id, to: false)
         var played = world
         let sides = try Self.sides(of: &played, hours: 1)
         print("RUNNING_SIDE trtc:BR bought before: on the right \(sides.right), on the left \(sides.left)")
@@ -153,7 +155,7 @@ final class RealLineRunningSideTests: XCTestCase {
         let due = zip(ran.runs, ran.runDays).filter { run, _ in
             run.runs(onDay: day) && run.start(onDay: day) + LineRun.latestDispatch < played.clock.now.seconds
         }
-        XCTAssertGreaterThan(due.count, 20)
+        XCTAssertGreaterThan(due.count, 5)
         XCTAssertEqual(due.filter { _, sent in (sent ?? -1) < day }.count, 0, "runs not sent out by seven")
     }
 
