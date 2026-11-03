@@ -57,7 +57,7 @@ final class TaoyuanAirportLineTests: XCTestCase {
                     if built < piece.curves.count {
                         let a = piece.nodes[built], b = piece.nodes[min(built + 1, piece.nodes.count - 1)]
                         print("TYMC_DIAG \(problem) \(error): piece \(index) of \(acquisition.pieces.count), edge \(built) of \(piece.curves.count), from \(a) to \(b), distances \(piece.distances[built])")
-                        if case .trackConflict(let other) = error as? GameError {
+                        if case .trackConflict(let other) = error {
                             let mine = session.world.network.edge(other) == nil
                             let ends = probe.network.edge(other).flatMap { e in [e.from, e.to].compactMap { probe.network.node($0)?.position } }
                             print("TYMC_DIAG conflicting edge \(other): new with the line \(mine), ends \(ends ?? []), edges before \(before)")
@@ -130,7 +130,7 @@ final class TaoyuanAirportLineTests: XCTestCase {
                 if case .onEdge(let traversal, let offset) = train.position { edgeText = "edge \(traversal.edge) \(traversal.direction) @\(offset)" }
                 var routable = "-"
                 if let position = train.position, let execution = train.execution {
-                    let stop: Int? = switch execution { case .travellingToStop(let s, _): s; case .waitingAtStop(let s, _): s + 1 < train.timetable.count ? s + 1 : nil; default: nil }
+                    let stop: Int? = switch execution { case .travellingToStop(let s, _): s; case .waitingAtStop(let s, _): s + 1 < train.timetable.count ? s + 1 : nil }
                     if let stop { routable = world.path(from: position, toStation: train.timetable[stop].station) == nil ? "NO ROUTE" : "route" }
                 }
                 lines.append("  \(train.name): near \(near), \(edgeText), \(routable), exec \(String(describing: train.execution).prefix(120)), held \(String(describing: world.heldDeparture(of: id))), path \(train.movement.hasRemainingPath), deadheading \(train.isDeadheading), at \(world.stationsStoppedAt(by: id).map(name)); plan \(plan.prefix(300))")
