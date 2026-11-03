@@ -480,10 +480,9 @@
   - DEPOTADD-2（session_01YGNNupgR4efBZiUSdbSW96，`claude/depotadd-2`，決策 557 續）：L7-3、L7-4。
   - HEALTH-110（session_01YGNNuooXQbC3CXJv5fdYkZ，`claude/health-110`）：發版後健檢。
   - CIOPT-6（session_01YGNNuqW3jzUqN2iQY2U5YW，`claude/ciopt-6`，決策 563 需要時）：完整 ci 17.7→20–22 分、GP PR tier 13→22–27 分。
-  - GameCore 完整 tier 名額：WENHUSIDE ＞ DAYPASS ＞ L6FIX。
-- **桃園機場捷運 #1743（決策 556，draft）**：TYMCLIST2 在 pro 帳號，這個帳號的 session 傳不到訊息（send_message 回 not found）。剩下的照決策 556「下一步」：擬實與行車控制下傍晚機場第二航廈的真死結（GameCore）、行車控制 320/333 沒發與很慢、直達跳站與長庚待避。已請作者決定要 TYMCLIST2 收尾交接或做完。
+- **桃園機場捷運 #1743（決策 556，draft）**：TYMCLIST2（pro）照作者選的收尾停手，交接在 #1755（main 的本檔最上面一行）。接手的是 **TYMCLIST3**（session_01YGNNup5FDQbQYoyKCqHySs，Opus，請作者改高）：A 傍晚機場第二航廈跟進折返車月台的死結，GameCore，**決策 562**，`claude/tymc-follow-turnback`；B 接手 #1743 重量、回本、轉 ready，和 WENHUSIDE 對齊機場捷運靠右。GameCore 名額 DAYPASS ＞ TYMCLIST3 ＞ L6FIX（WENHUSIDE 目前不動 GameCore）。
 - **固定三件事這一輪**：審查 REVIEW-L7（到 #1751）、CI CIOPT-6、除錯 HEALTH-110，都是第 44 任 2026-11-03 派的。
-- **號碼**：556 保留（#1743）；559、555 續已用；562 釋出（空著，下一個要用的可以先取）、563（CIOPT-6）、564（WENHUSIDE）保留；**下一個 565**。存檔 81（82 保留給 WENHUSIDE 需要時）、golden schema 77（78 同）。
+- **號碼**：556 保留（#1743）；559、555 續已用；562（TYMCLIST3）、563（CIOPT-6）、564（WENHUSIDE）保留；**下一個 565**。存檔 81（82 保留給 WENHUSIDE 需要時）、golden schema 77（78 同）。
 
 **pro 交回第 44 任（2026-11-03，pro 的遊戲規劃 session_01JMHz9YRiP23RXrrfdsaGsq，交回時間 14:00 UTC＝台灣 22:00）**：pro 當了一天遊戲規劃，照下面接回。和下面「第 44 任交給 pro」不同時以這段為準。
 
