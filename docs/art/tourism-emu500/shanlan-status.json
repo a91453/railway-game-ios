@@ -9,8 +9,8 @@
     "accepted_producer": null
   },
   "integration": {
-    "status": "UNVERIFIED",
-    "evidence": "studies only; no player selection or operating mapping"
+    "status": "VERIFIED",
+    "evidence": "Decision 554: HAIFENG / SHANLAN run set-HAIFENG… / set-SHANLAN… near and far (Map3DTrainSet.tourismEMU500); Linux tests only, Simulator and device UNVERIFIED"
   },
   "device": {
     "status": "UNVERIFIED",

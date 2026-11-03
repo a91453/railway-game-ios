@@ -107,11 +107,9 @@ public struct RealBranchLine: Hashable, Sendable {
     /// first station. A line is on sale where `metro_runs.json` has its
     /// runs (`tools/real-timetables/extract_metro_runs.py` says why the
     /// others are not). Kaohsiung's Circular Light Rail is not listed:
-    /// the game's runs do not go round a ring yet (decision 535). Nor is
-    /// the Wenhu Line yet: its runs and its two depots are ready, but its
-    /// trains stood still on its first morning (decision 535 continued,
-    /// next step); its row, `("mrt", "BR", "Wenhu Line", "文湖線", nil,
-    /// .metro, false)`, goes back here once they run.
+    /// the game's runs do not go round a ring yet (decision 535). The
+    /// Wenhu Line is, with its two depots, since its two days run under
+    /// every rule (decision 549 continued).
     static let urbanLines: [(system: String, network: String, english: String, chinese: String, shares: String?, tier: LineAcquisition.Tier, leavesALine: Bool)] = [
         ("ntdlrt", "V", "Danhai LRT Green Mountain Line", "淡海輕軌綠山線", "ntdlrt:VB", .lightRail, false),
         ("ntdlrt", "VB", "Danhai LRT Blue Coast Line", "淡海輕軌藍海線", "ntdlrt:V", .lightRail, false),
@@ -119,6 +117,7 @@ public struct RealBranchLine: Hashable, Sendable {
         ("mrt", "R_XBT", "Xinbeitou Branch Line", "新北投支線", nil, .metro, true),
         ("mrt", "G_XBT", "Xiaobitan Branch Line", "小碧潭支線", nil, .metro, true),
         ("sanying", "LB", "Sanying Line", "三鶯線", nil, .metro, false),
+        ("mrt", "BR", "Wenhu Line", "文湖線", nil, .metro, false),
     ]
 
     public func name(in language: DisplayLanguage) -> String {
@@ -915,6 +914,14 @@ extension RealLineLaying {
                 return [(-side, -side), (-side, side), (side, -side), (side, side)].map { dx, dy in WorldVector(x: point.x + dx, y: point.y + dy).plan }
             }
         }
+        // Decision 549 (continued): and the ground under a yard past an
+        // end, as far as its ladder may reach (the Muzha depot's, past the
+        // real yard, over the Jingmei River), read but not bought.
+        let yardSamples = depotEnds.flatMap { _, site, points in
+            RealLineDepotLayout.groundSamples(
+                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step
+            )
+        }
         // Decision 401: on a map bought tile by tile, the tiles under the
         // way not owned yet are bought with the line, their land and water
         // read in before the track is laid over them.
@@ -930,7 +937,7 @@ extension RealLineLaying {
                 GameSession.readLand(roundStationsOf: &draft, population: population, places: places, water: self.water, coverage: coverage)
             }
         }
-        try? draft.readGround(under: samples, from: heights)
+        try? draft.readGround(under: samples + yardSamples, from: heights)
         let mapped = draft.ground.isMapped
         let planning = draft
         func ground(_ point: WorldVector) -> Double {
@@ -1144,7 +1151,7 @@ extension RealLineLaying {
         var depotsLaid: [(stop: Int?, depot: RealLineAcquisition.Depot)] = []
         if let site = depotSite, let points = depotPoints, let j = depotAt, let laid = RealLineDepotLayout.lay(
             site, points: points, along: path, at: j, second: plans[1].plan, marks: depotMarks, first: pieces.count, length: platformLength,
-            ground: ground, in: language
+            ground: ground, water: water, in: language
         ) {
             pieces += laid.pieces
             depotsLaid.append((nil, laid.depot))
@@ -1156,7 +1163,7 @@ extension RealLineLaying {
             let way = end == 0 ? path.tangent(at: 0).reversed : path.tangent(at: path.length)
             guard let laid = RealLineDepotLayout.lay(
                 site, beyond: (RealLineAcquisition.NodeAt(piece: 0, node: last), WorldVector(main.nodes[last].point), main.heights[last], way),
-                first: pieces.count, length: platformLength, ground: ground, in: language
+                first: pieces.count, length: platformLength, ground: ground, water: water, in: language
             ) else {
                 return refused("The line's depot does not fit here.", "這條線的機廠放不下。")
             }

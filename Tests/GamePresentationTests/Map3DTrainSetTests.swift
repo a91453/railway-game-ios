@@ -6,6 +6,8 @@ import XCTest
 /// Decision 318: the trains that were drawn as boxes, with models built
 /// from the scene kit's train recipes, one per car.
 final class Map3DTrainSetTests: XCTestCase {
+    /// Decision 554: the Hai-Feng and Shan-Lan, near and far.
+    static let tourism: Set = ["HAIFENG", "HAIFENGFar", "SHANLAN", "SHANLANFar"]
     /// Decision 496: the real light rails' sets, near and far.
     static let lightRails: Set = ["danhaiLRT", "danhaiLRTFar", "ankengLRT", "ankengLRTFar", "klrtCAF", "klrtCAFFar",
                                   "klrtCitadis", "klrtCitadisFar"]
@@ -77,6 +79,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && ["E200CK", "E200CKFar", "MINGRIFar"].contains(set.key) ? 5_000...6_000
                     // Decision 529: #1589's R200, 12,702 near and 5,098 far.
                     : name == set.headName && ["R200CK", "R200CKFar", "FREIGHT", "FREIGHTFar"].contains(set.key) ? 5_000...12_800
+                    // Decision 554: #1539's EMC and EM, 8,076 near and 3,420 far.
+                    : Self.tourism.contains(set.key) && [set.headName, set.tailName].contains(name) ? 3_400...8_100
                     // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
                     : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
@@ -123,7 +127,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
-                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) ? 3.4...5.3
+                    // Decision 554: and #1539's EP's, 5.0 m.
+                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) || Self.tourism.contains(set.key) ? 3.4...5.3
                     // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
                     : alishan ? 3.0...3.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")

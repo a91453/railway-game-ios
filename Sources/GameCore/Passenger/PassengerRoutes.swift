@@ -226,12 +226,13 @@ struct PassengerRouteGraph: Equatable {
 
     /// The graph of `world` at its clock's time, or at `time` (decision
     /// 470: the graph a call of ``GameWorld/advance(ticks:)`` will plan on
-    /// when the service levels change during it).
-    init(world: GameWorld, at time: GameTime? = nil) {
+    /// when the service levels change during it), or each line at the time
+    /// `lineTime` gives it (decision 551, continued).
+    init(world: GameWorld, at time: GameTime? = nil, lineTime: ((ServiceLine) -> GameTime)? = nil) {
         var included: [ServicePath] = []
         var calls: [StationID: [PassengerRouteNode]] = [:]
         for line in world.lines where !line.isFreight {
-            guard let level = world.serviceLevel(of: line.id, at: time ?? world.clock.now) else { continue }
+            guard let level = world.serviceLevel(of: line.id, at: lineTime?(line) ?? time ?? world.clock.now) else { continue }
             // What `lineHeadway` and `lineJourney` give for each service,
             // driving each service once: a service's plan depends on its
             // own and the earlier services' round trips and capacities.

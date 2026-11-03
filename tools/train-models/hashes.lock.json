@@ -50,67 +50,67 @@
       "triangles" : 1584
     },
     "haifeng-emu500-em" : {
-      "hash" : "c40d1a31c0ba14f",
+      "hash" : "8c6cc4ce7e3e9b83",
       "triangles" : 8076
     },
     "haifeng-emu500-em-far" : {
-      "hash" : "af04d780f8f064ec",
+      "hash" : "5b189f9628e77fd0",
       "triangles" : 3420
     },
     "haifeng-emu500-emc" : {
-      "hash" : "c40d1a31c0ba14f",
+      "hash" : "8c6cc4ce7e3e9b83",
       "triangles" : 8076
     },
     "haifeng-emu500-emc-far" : {
-      "hash" : "af04d780f8f064ec",
+      "hash" : "5b189f9628e77fd0",
       "triangles" : 3420
     },
     "haifeng-emu500-ep" : {
-      "hash" : "6167e154711dc59b",
+      "hash" : "24496a08ee0d19b3",
       "triangles" : 2936
     },
     "haifeng-emu500-ep-far" : {
-      "hash" : "7e07e67c05fc09ba",
+      "hash" : "50f2b5bce06b6d62",
       "triangles" : 1116
     },
     "haifeng-emu500-et" : {
-      "hash" : "af6a5d5b0435f268",
+      "hash" : "b698ed4defd205b0",
       "triangles" : 3132
     },
     "haifeng-emu500-et-far" : {
-      "hash" : "d9ea81c5b58a8da2",
+      "hash" : "d661e1c5a5bca63a",
       "triangles" : 1164
     },
     "shanlan-emu500-em" : {
-      "hash" : "1d7d244c073a2ab7",
+      "hash" : "f201595956ad1c8",
       "triangles" : 8076
     },
     "shanlan-emu500-em-far" : {
-      "hash" : "4ca8279dd90b3633",
+      "hash" : "3d3788d99e92b637",
       "triangles" : 3420
     },
     "shanlan-emu500-emc" : {
-      "hash" : "1d7d244c073a2ab7",
+      "hash" : "f201595956ad1c8",
       "triangles" : 8076
     },
     "shanlan-emu500-emc-far" : {
-      "hash" : "4ca8279dd90b3633",
+      "hash" : "3d3788d99e92b637",
       "triangles" : 3420
     },
     "shanlan-emu500-ep" : {
-      "hash" : "64b0cda9bd1e77cb",
+      "hash" : "c6ae452f34cf71b9",
       "triangles" : 2936
     },
     "shanlan-emu500-ep-far" : {
-      "hash" : "942fb0cbed4bbd8",
+      "hash" : "5b97692c47391c43",
       "triangles" : 1116
     },
     "shanlan-emu500-et" : {
-      "hash" : "274bbc4c1f14a710",
+      "hash" : "9b6a069c2abb1579",
       "triangles" : 3132
     },
     "shanlan-emu500-et-far" : {
-      "hash" : "eab1c44c506da216",
+      "hash" : "5cf132902a378b3e",
       "triangles" : 1164
     },
     "ankeng-lrt-m1" : {
@@ -3664,6 +3664,134 @@
     "taoyuan-airport-me4-far": {
       "hash": "21472fd9524381bd",
       "triangles": 4576
+    },
+    "light-set-HAIFENG-car": {
+      "hash": "1ec1b27eddc2bff9",
+      "triangles": 376
+    },
+    "light-set-HAIFENG-head": {
+      "hash": "b96c4086abd67b01",
+      "triangles": 336
+    },
+    "light-set-HAIFENG-panto": {
+      "hash": "7e3fb59f6005ffa9",
+      "triangles": 276
+    },
+    "light-set-HAIFENG-tail": {
+      "hash": "e6aef62931a2cf01",
+      "triangles": 336
+    },
+    "light-set-HAIFENGFar-car": {
+      "hash": "67c848699997ec25",
+      "triangles": 88
+    },
+    "light-set-HAIFENGFar-head": {
+      "hash": "d7bd4a58c102b201",
+      "triangles": 80
+    },
+    "light-set-HAIFENGFar-panto": {
+      "hash": "540e6ab5bcebef79",
+      "triangles": 68
+    },
+    "light-set-HAIFENGFar-tail": {
+      "hash": "ff2d6993a67eeb01",
+      "triangles": 80
+    },
+    "light-set-SHANLAN-car": {
+      "hash": "1ec1b27eddc2bff9",
+      "triangles": 376
+    },
+    "light-set-SHANLAN-head": {
+      "hash": "b96c4086abd67b01",
+      "triangles": 336
+    },
+    "light-set-SHANLAN-panto": {
+      "hash": "7e3fb59f6005ffa9",
+      "triangles": 276
+    },
+    "light-set-SHANLAN-tail": {
+      "hash": "e6aef62931a2cf01",
+      "triangles": 336
+    },
+    "light-set-SHANLANFar-car": {
+      "hash": "67c848699997ec25",
+      "triangles": 88
+    },
+    "light-set-SHANLANFar-head": {
+      "hash": "d7bd4a58c102b201",
+      "triangles": 80
+    },
+    "light-set-SHANLANFar-panto": {
+      "hash": "540e6ab5bcebef79",
+      "triangles": 68
+    },
+    "light-set-SHANLANFar-tail": {
+      "hash": "ff2d6993a67eeb01",
+      "triangles": 80
+    },
+    "set-HAIFENG-car": {
+      "hash": "b698ed4defd205b0",
+      "triangles": 3132
+    },
+    "set-HAIFENG-head": {
+      "hash": "2c4f8bf1098c05cb",
+      "triangles": 8076
+    },
+    "set-HAIFENG-panto": {
+      "hash": "24496a08ee0d19b3",
+      "triangles": 2936
+    },
+    "set-HAIFENG-tail": {
+      "hash": "dcf131b386d52dea",
+      "triangles": 8076
+    },
+    "set-HAIFENGFar-car": {
+      "hash": "d661e1c5a5bca63a",
+      "triangles": 1164
+    },
+    "set-HAIFENGFar-head": {
+      "hash": "59146db48b3e5afb",
+      "triangles": 3420
+    },
+    "set-HAIFENGFar-panto": {
+      "hash": "50f2b5bce06b6d62",
+      "triangles": 1116
+    },
+    "set-HAIFENGFar-tail": {
+      "hash": "5accbac7ed219df4",
+      "triangles": 3420
+    },
+    "set-SHANLAN-car": {
+      "hash": "9b6a069c2abb1579",
+      "triangles": 3132
+    },
+    "set-SHANLAN-head": {
+      "hash": "5bb35e4a8e0b41a",
+      "triangles": 8076
+    },
+    "set-SHANLAN-panto": {
+      "hash": "c6ae452f34cf71b9",
+      "triangles": 2936
+    },
+    "set-SHANLAN-tail": {
+      "hash": "322ec850981f4b19",
+      "triangles": 8076
+    },
+    "set-SHANLANFar-car": {
+      "hash": "5cf132902a378b3e",
+      "triangles": 1164
+    },
+    "set-SHANLANFar-head": {
+      "hash": "f4e5aa265dba10f3",
+      "triangles": 3420
+    },
+    "set-SHANLANFar-panto": {
+      "hash": "5b97692c47391c43",
+      "triangles": 1116
+    },
+    "set-SHANLANFar-tail": {
+      "hash": "46fb9835a778c345",
+      "triangles": 3420
     }
   }
 }

@@ -36,6 +36,10 @@
 
 > Codex PP #1291 CI修正：新增PP註冊移到既有route bus之前，保留route bus最後的索引約定；原失敗Map3DBusesTests已在舊head重現。同步最新main，模型幾何不變；既有61c6969c素材producer仍有效，最新程式CI看本PR新head。E1000車頭外觀另在#1296修訂，不能沿用2be9daca已符合自評。
 
+> 號誌關時文湖線的運量（派工單 WENHUCAP，[決策 549](decisions/549.md)，`claude/intelligent-planck-ta8q3l`，#1723）：原因是號誌關時有車改停到對向的月台、整條線逆向跑；改了以後文湖線擬實、簡單兩天都 532/532，淡海、安坑、三鶯不變。**留下的**（決策 549「下一步」）：文湖線上架與量價格，上架前先量完「簡單＋行車控制」（這次跑到第 42 小時被停掉）；`waitsForPlatform` 等待值已過去仍等；號誌關時沒有死結偵測。
+
+> 文湖線上架（派工單 WENHULIST，[決策 552](decisions/552.md)，`claude/wenhulist-brown-line`）：放回 `urbanLines`。真實開局（讀水）本來買不到：木柵機廠單側梯形從動物園拉出約 1.5 km，過景美溪不夠高、又伸上山坡上的水格。改成兩側輪流排（`compact`），機廠底下有水時抬到水面上 5 m（坡度不夠就沿方向往外移，最多 240 m），規劃時讀到機廠底下的地面。台北開局約 NT$ 2.3 億（開局現金加貸款的約 9.6 倍），其他線價格不變。新局預設（簡單＋行車控制）第二天 532 班漏 4 班（早上 08:48–08:57 三班、19:26 一班，沒有死結；main 漏 7 班），查原因是決策 552 下一步 1；`AcquisitionReportTests` 的文湖線逐分跑（一天一跑會死結），360 天很久，只量了 2 天。實機 UNVERIFIED（3D 裡的木柵機廠樣子、收購卡）。
+
 # 交接
 
 > Codex G12／R21 原生 studies（公開 draft [#1485](https://github.com/a91453/railway-game-ios/pull/1485) ↔ 私庫 draft [#26](https://github.com/a91453/railway-assets-private/pull/26)，producer `723d08f8`）：revision-1 `b073c6c6` 整體外觀、revision-2 `69de18da` 正面均遭使用者否定；revision-3 `501f339a` 自檢發現前端白帶被底架遮住而撤回，revision-4 `aa1fb2c8` 解遮擋。現版再依 R21 原圖加兩端實體燈座、角燈孔、可見連結器及長端小型警示牌；保留低白帶、正向黃黑 V、扶手與短端白 V。只用 1960 首批臺鐵 R20 型 EMD G12 的 R21 橘色時期；原圖、估算、比對、重建與四種狀態見 [G12 交接](art/g12-2026-10-29/README.md)。公開只放配方、工具、來源與一張總覽，完整近遠景與 viewer 在私庫 `g12/revision-5/`（前四輪僅留 PNG／README／來源）。現有 SceneKit R20 與全部營運映射不變；此 producer 的使用者外觀接受、營運接入、iOS Metal／真機均 **UNVERIFIED**。不合併／auto-merge／TestFlight。
@@ -490,6 +494,7 @@
   3. REV1698 的 P3-1：`followsRealTimetable(l.train) || followsRealTimetable(x.train)` 那一處。
   4. 其他 UI 測試也設 `OS_ACTIVITY_DT_MODE=NO`（#1717 只改了兩支）。MENUSTALL（#1712）查到：選單打開後的長停頓是 XCTest 自己的查詢把 log 同步寫到 stderr，實機不會；剩下 1.8–3.0 s 是系統第一次做的事（無障礙 bundle、聽寫設定、Simulator 的 Metal 編 pipeline），不是 App 的程式。查別的停頓加 Debug 啟動參數 `-ui-test-stall-stacks` 看 trace；不要在 dyld 的載入回呼（`_dyld_register_func_for_add_image`）裡做事，試過 App 啟動就卡住。
   5. 海風號、山嵐號接上專用模型（`Map3DTourismEMU500` 已在模型包，沒接進 `Map3DTrainSet`）；Opus、rolling-stock skill、第三級截圖。
+     → TOURMODEL（決策 554，`claude/tourism-emu500-3d`）接上：`set-HAIFENG…`、`set-SHANLAN…` 近景與遠景。遊戲規劃看過截圖後，車頂改深灰、山嵐號調成黃綠（同一個 PR）；外觀仍等作者在實機接受，其餘寫在 `docs/decisions/554.md` 下一步。
   6. 「關於／資料來源」頁加「© 2026 a91453 著作權所有」。
 - **等作者的**：出口合規與 `ITSAppUsesNonExemptEncryption`（上面）；實機看 3D 回 2D 後 Menu 按不按得到、108.1 切回前景後有沒有聲音、和別的 App 的音樂能不能一起放；E1（上架前演示模式改編譯旗標，要動 `testflight.yml` 參數需作者同意）；KLRT、BUILD3D、STALL97；新運具先做纜車，再渡輪，飛機最後（`docs/research/GEO_SCENE_REFERENCE_2026-10-20.md` §6）。
 - **玩家問答**（2026-11-02）：「雙線雙向，列車都只在同一軌來回」：回覆「路線 → 進階」每一段可選進路；中間站兩條軌都要有月台；新遊戲靠左行車；還是一樣就「回報問題」附存檔。
@@ -3322,3 +3327,10 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 [R100來源、契約與交接](art/tra-r100/README.md)：獨立橘R122年代版／藍R123 2023-01-22、四種官方客車角色近遠。2026現役原色尚無證據；2025年底全退是計畫，2026藍皮實拍仍有R100。2026-05-22雙機五客的角色順序可讀，客車實號／方向與R122/R129設備改造未齊；整列只可標role-layout study，不能稱可靠實號完整編組交付。BLUE營運保持代用，缺接點明列，外觀接受／裝置UNVERIFIED。橘R100CK針對接點、原生尺度與燈契約另驗，不更改其他柴油映射。工作登記#1579 comment6551910190。最新main c4592d78已合R200IN，本輪保護其新營運payload，上游R200增量與本輪分開。真正producer、獨立重建、847舊runtime保護及兩庫draft／CI以自有verification與PR最新head為準；尚未通過項目不能以初版測試替代。不推main／merge／auto-merge／TestFlight。
 
 互鏈draft：公開[#1671](https://github.com/a91453/railway-game-ios/pull/1671) ↔ 素材[#40](https://github.com/a91453/railway-assets-private/pull/40)。producer `7b0ce7c726e0fde40da9e479f00ac9920a5f9496`；20私庫sheet＋1公開總覽、66交付檔獨立重建一致。後續客車48實際反例另記公開報告，不覆寫原producer素材status。公開PR因main新增ALISHAN/ACQSTOCK再merge，保留所有上游角色與接點；最新head及整包保護／CI見自有verification和PR。完整實車編組資料缺口及全部未驗仍保留，不稱已完成完整原任務。
+
+### 4.44 非同步算圖閃退清查第三批（CRASHSWEEP-3 續，session_01JMHz9a4LouMp2c5EkX4EPs，#1727、`claude/crashsweep-3-batch2`，2026-11-02）
+
+- **做了的**：`geometryReadersLeft` 從 10 個減到 3 個。#1727：運用表、真實地圖選地、載入畫面改用 `onGeometryChange` 量大小；兩張明信片改 `@Sendable` reader 建 `PostcardCardFit`。第二批：運行圖畫布、3D 車站標籤改 `onGeometryChange`；3D 列車標籤的 `.alignmentGuide` 改成自己的 `Map3DTrainLabelsLayout`（`Layout` 不是 main-actor），`testNoAlignmentGuides` 守著。順帶修了一個舊錯：原本的 guide 只把標籤彼此對齊，堆疊縮成標籤那麼大，只有一個標籤時它跑到畫面左上角；現在標籤在列車頭上（`testFreightTrainIn3D` 截圖可見）。
+- **留下的**：
+  - `ContentView`、`MapView`、`TutorialOverlay` 三個整頁 `GeometryReader`：closure 讀 proxy 本身（`frame(in: .global)`、`safeAreaInsets`、錨點），又從 session 建整個畫面，換成子 View 或量大小都等於重寫畫面。大小只隨轉向與視窗變，一百多版沒有閃退紀錄；有紀錄再做。
+  - `Chart { ForEach }`（9 處，8 個檔案）：沒查到 Charts 何時展開標記的公開資料或同型回報（Apple 論壇 802729 只講 SwiftUI 的 `ForEach`）。Linux 看不到 Charts 的 swiftinterface；要查就在 macOS 讀 `Charts.swiftinterface` 裡 `ForEach: ChartContent` 的 init 是否 `@Sendable`／`@preconcurrency`，或在 iPad 上開圖表動畫跑一次 Thread Sanitizer。查清楚前不改。

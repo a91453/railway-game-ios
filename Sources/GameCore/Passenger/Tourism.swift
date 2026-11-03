@@ -107,6 +107,24 @@ public struct Tourism: Hashable, Sendable {
     static func countedAt(day: Int64) -> GameTime {
         GameTime(seconds: day * GameTime.secondsPerDay + GameTime.secondsPerDay / 2)
     }
+
+    /// Decision 551, continued (review L6-1): when on game day `day` a
+    /// line with hours `window` is read for its tourists: noon, when it
+    /// runs then; otherwise the middle of its hours, so a line that runs
+    /// only in the afternoon and night, or only in the morning, is counted
+    /// too.
+    static func countedAt(day: Int64, window: ServiceWindow) -> GameTime {
+        let noon = countedAt(day: day)
+        guard case .hours(let open, let close) = window, !window.contains(minuteOfDay: noon.minuteOfDay) else { return noon }
+        let middle = Int64((open + close) / 2) % GameTime.minutesPerDay
+        return GameTime(seconds: day * GameTime.secondsPerDay + middle * GameTime.secondsPerMinute)
+    }
+
+    /// Decision 551, continued: the network the tourists of game day `day`
+    /// are counted on, each line as it runs at ``countedAt(day:window:)``.
+    static func countingGraph(of world: GameWorld, day: Int64) -> PassengerRouteGraph {
+        PassengerRouteGraph(world: world, lineTime: { countedAt(day: day, window: $0.window) })
+    }
     /// What a hotel within ``SubsidiaryRules/reach`` of an attraction adds to
     /// its rating, in hundredths of a star, and how many count (decision
     /// 174, a later fix): two hotels, half a star.
@@ -644,8 +662,9 @@ extension GameWorld {
         if typhoons(onDay: day).contains(where: { $0.isActive(onDay: day) && $0.covers(attraction.point) }) { return .typhoon }
         guard let station = servingStation(at: attraction.point) else { return .noStation }
         // Decision 551: the network at today's noon, as the day is counted,
-        // so a sight does not read "nobody can ride there" at night.
-        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self, at: Tourism.countedAt(day: day)) : nil
+        // so a sight does not read "nobody can ride there" at night; each
+        // line within its hours (decision 551, continued).
+        let graph = passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil
         let sources = touristSources(excluding: station, among: touristCandidates())
         return sources.contains { reaches(from: $0.station, to: station, graph: graph) } ? .ok : .noSource
     }
@@ -783,7 +802,9 @@ extension GameWorld {
         // ended, not at midnight, when a line with service hours is closed
         // and its graph has no paths: counted then, every sight's day was
         // 0 (107.1's player report: yesterday, this year and last 0).
-        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self, at: Tourism.countedAt(day: day)) : nil
+        // Decision 551, continued: a line that does not run at noon, at
+        // the middle of its hours.
+        let graph = passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil
         let arrived = world.touristFlows(onDay: day) { world.reaches(from: $0, to: $1, graph: graph) }.arrivals
         let year = day / FinancePeriod.year.days
         if year != tourism.year {

@@ -44,19 +44,14 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
     /// come from one in 100 releases); the next sweeps change them, and
     /// take them off here. A new reader is sendable from the start.
     private static let geometryReadersLeft = [
+        // CRASHSWEEP-3 left these three: each reads the proxy itself
+        // (anchors, frames in other coordinate spaces, the safe area), not
+        // only its size, and builds the whole screen or map from the
+        // session, so neither a sendable view of its own nor a measured
+        // size replaces it without rebuilding the screen.
         "ContentView.swift": 1, // the whole screen's layout
         "MapView.swift": 1, // the 2D map's viewport
-        "Map3D/Map3DPreviewScreen.swift": 1, // the 3D station tag's viewport
         "TutorialOverlay.swift": 1, // the lesson card's viewport
-        "TrainRosterView.swift": 1, // the roster's table height
-        "TrainDiagramView.swift": 1, // the diagram's canvas
-        "RealWorldPicker.swift": 1, // the sheet's turn to landscape
-        "RealWorldLoadingView.swift": 1, // the loading screen
-        "PostcardView.swift": 1, // the postcard sheet's scale
-        "SharedNetworkViews.swift": 1, // a shared postcard's scale
-        "StationStampPassportView.swift": 1, // a passport page
-        "PromotionLineView.swift": 1, // the promotion sheet's line
-        "RollingStockCatalogView.swift": 1, // a catalog card's train
     ]
 
     func testNoMainActorClosureIsMeasuredOffTheMainThread() throws {
@@ -95,6 +90,15 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
             a new one @Sendable and build a view of its own there; when one \
             on the list is changed, take it off (CRASHSWEEP-2)
             """)
+    }
+
+    /// CRASHSWEEP-3: SwiftUI computes an alignment guide as it lays out,
+    /// so its closure is main-actor code the asynchronous renderer may call
+    /// off the main thread; the 3D trains' tags use a `Layout` instead.
+    func testNoAlignmentGuides() throws {
+        let sources = try Self.readViews()
+        let found = sources.filter { !Self.matches(#"\.alignmentGuide\("#, in: $0.value).isEmpty }.keys.sorted()
+        XCTAssertEqual(found, [], "place it with a Layout of its own, which is not main-actor code (CRASHSWEEP-3)")
     }
 
     /// The scan itself: it finds a row closure in a helper and in a view
