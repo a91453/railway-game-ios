@@ -11,8 +11,10 @@ final class Map3DWenhuTests: XCTestCase {
                 XCTAssertLessThanOrEqual(model.triangleCount,15_000)
                 XCTAssertEqual(model.minimum.z,0,accuracy:0.001)
                 XCTAssertLessThan(model.maximum.z,3.6)
-                for x: Float in [-4.65,4.65] {
-                    for y: Float in [-0.94,0.94] {
+                let axle: Float = model.name.contains("apm256") ? 5.0 : 4.65
+                let lateral: Float = model.name.contains("apm256") ? 0.99 : 0.94
+                for x in [-axle,axle] {
+                    for y in [-lateral,lateral] {
                         XCTAssertTrue(model.vertices.contains { abs($0.x-x)<0.001 && abs($0.y-y)<0.14 && abs($0.z)<0.001 }, "Each of four load tyres must reach the running surface")
                     }
                 }

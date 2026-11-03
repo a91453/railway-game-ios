@@ -92,12 +92,21 @@ private struct APM256Recipe {
     }
     func signX(_ t: Float,_ h: Float,_ w: Float) -> Float { t*endX(h,w) }
     mutating func details() {
-        // Four load tyres on two single-axle assemblies, not steel-wheel bogies.
-        for x: Float in [-4.65,4.65] {
-            m.kit.box(x,0.32,0,0.22,1.62,0.16,grey)
+        // DORTS 2005 design: 10m wheelbase, 1.98m load-wheel centre spacing.
+        // Design-stage drawings are not as-built operational certification.
+        for x: Float in [-5.0,5.0] {
+            m.kit.box(x,0.32,0,0.22,1.72,0.16,grey)
+            m.kit.cylinder(x,0.48,0,radius:0.16,height:0.40,color:grey,sides:far ? 8:12)
+            for support: Float in [-0.56,0.56] { m.kit.cylinder(x,0.48,support,radius:0.18,height:0.40,color:rubber,sides:far ? 8:12) }
+            // Inboard guide cradle and outboard bearing arms avoid passing through load tyres.
+            for rail: Float in [-0.56,0.56] { m.kit.box(x,0.46,rail,1.36,0.10,0.10,grey) }
+            for arm: Float in [-0.68,0.68] {
+                m.kit.box(x+arm,0.46,0,0.10,2.04,0.10,grey)
+                for bearing: Float in [-1.02,1.02] { m.kit.cylinder(x+arm,0.35,bearing,radius:0.045,height:0.21,color:grey,sides:far ? 8:12) }
+            }
             for side: Float in [-1,1] {
-                m.wheel(x,0.40,side*0.94,radius:0.40,width:0.26,horizontal:false,color:rubber,sides:far ? 8:24)
-                if !far { m.wheel(x,0.40,side*1.075,radius:0.16,width:0.025,horizontal:false,color:grey,sides:12) }
+                m.wheel(x,0.40,side*0.99,radius:0.40,width:0.26,horizontal:false,color:rubber,sides:far ? 8:24)
+                if !far { m.wheel(x,0.40,side*1.125,radius:0.16,width:0.025,horizontal:false,color:grey,sides:12) }
                 for dx: Float in [-0.68,0.68] {
                     m.wheel(x+dx,0.31,side*1.02,radius:0.20,width:0.15,horizontal:true,color:rubber,sides:far ? 8:16)
                 }

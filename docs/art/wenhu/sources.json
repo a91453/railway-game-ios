@@ -285,5 +285,61 @@
       "url": "https://www.bfginternational.com/transportation/projects/taipei-metro-neihu-line-taiwan",
       "supports": "供應商原文：Project INNOVIA256、101 sets、Train Builder Bombardier Transportation；BFG負責FRP內裝與front ends。其Handover2005指BFG部件專案，不當全列驗收／營運日期。"
     }
+  ],
+  "design_stage_addendum": {
+    "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no33/files/basic-html/page30.html",
+    "title": "內湖線新型中運量電聯車",
+    "authors": [
+      "田榮生",
+      "歐陽成"
+    ],
+    "publisher": "臺北市政府捷運工程局",
+    "publication_date": "2005-08",
+    "read_pages": "printed 23–33 / web pages29–39; full text opened, pages33/34 engineering illustrations individually downloaded and opened",
+    "type": "official pre-manufacture detailed-design paper; not an operating photo or as-built confirmation",
+    "supports": [
+      "two married pairs, four fixed cars",
+      "A/B pair interior semi-permanent and exterior automatic couplers",
+      "10m axle spacing",
+      "two single-axle bolster bogies per car, two AC traction motors",
+      "750V DC third rail with side-contact shoes",
+      "two rooftop HVAC per car",
+      "guides fore and aft of load wheels; two switch discs on guidance structure",
+      "1.98m load-wheel centre spacing in figure3 dimension annotation",
+      "headlamps off in automatic normal service; direction lamps white/red"
+    ],
+    "conflicts_or_limits": [
+      "page24 says still detailed-design stage and unbuilt; as-built dimensions unverified",
+      "page23 says planned local assembly101cars, later official record51pairs102cars; do not equate planned and final quantities",
+      "drawing does not establish exact in-service wheel/collector BOM, formal A/B directions or complete dated train numbers"
+    ]
+  },
+  "engineering_illustrations": [
+    {
+      "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no33/files/mobile/33.jpg",
+      "author": "DORTS paper by 田榮生／歐陽成",
+      "date": "2005-08",
+      "file": "no33-33.jpg",
+      "bytes": 535367,
+      "sha256": "a836b7ad20adeed140976541c3ac4be63cedccfb4102bf041c0b108f6880dc9a",
+      "type": "engineering design illustration, not actual vehicle photograph",
+      "inspected": true,
+      "license": "Publication rights retained by source; observation only, not redistributed",
+      "public_use": false,
+      "supports": "body cross-section / bolster bogie guidance and dimension annotations"
+    },
+    {
+      "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no33/files/mobile/34.jpg",
+      "author": "DORTS paper by 田榮生／歐陽成",
+      "date": "2005-08",
+      "file": "no33-34.jpg",
+      "bytes": 456865,
+      "sha256": "6271dba7c6ca644419c31b39554491afc07d78722240ee27dcd7c79aebdd105c",
+      "type": "engineering design illustration, not actual vehicle photograph",
+      "inspected": true,
+      "license": "Publication rights retained by source; observation only, not redistributed",
+      "public_use": false,
+      "supports": "body cross-section / bolster bogie guidance and dimension annotations"
+    }
   ]
 }
