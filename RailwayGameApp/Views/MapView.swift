@@ -824,6 +824,7 @@ struct MapView: View {
                                         }
                                     }
                                 ),
+                                titleOnly: legendFoldsWhileDrawing,
                                 coverage: mode == .coverage ? cityMap?.coverage : nil,
                                 building: buildingLayer.isOn ? buildingLegend : nil,
                                 onShowRanking: mode == .sectionFlow && session.showsNetworkFlowReport
