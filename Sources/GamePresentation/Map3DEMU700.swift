@@ -272,7 +272,7 @@ private struct EMU700Recipe {
             for z:Float in [-0.21,0.21] {frontOval(3.39,z,0.21,0.19,Map3DTrainStyle.headlamp)}
             // Frontal photographs put the blank destination box on the
             // driver-left side: builder -Z becomes native +Y.
-            frontPanel(3.38,-0.98,0.48,0.21,dark)
+            frontPanel(3.34,-0.98,0.48,0.21,dark)
             for z:Float in [-0.99,-0.67,0.67,0.99] {
                 frontOval(1.95,z,0.26,0.26,steel)
                 frontOval(2.005,z,0.15,0.15,abs(z)>0.9 ? Map3DColor.rgb(0xA54E56) : Map3DTrainStyle.headlamp)
