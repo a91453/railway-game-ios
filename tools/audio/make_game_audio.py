@@ -306,6 +306,74 @@ def running(kind):
     return from_zero(x)
 
 
+# Decision 567: the diesel running loops, made to the Gepponkoku's
+# (Simulation Country GAPAN 月本國, https://gepponkoku.nation.jp) recording
+# of a KiHa 41 2000 on the Bantan Line (`measure_diesel_engine.py`; the
+# files, the stretches measured and the site's terms are in README.md and
+# decision 567). Each: the engine's fundamental in Hz, the level of its
+# first 12 harmonics and the third-octave bands of the noise under them
+# (31.5 Hz to 12.5 kHz), in dB below the noise's loudest band.
+DIESEL_ENGINES = {
+    # Standing, the engine idling (`dc40r_stn`, 0–2 s).
+    "dieselIdle": {
+        "f0": 33.75,
+        "harmonics": [-5, 2, -10, -9, -7, 1, -17, -2, -2, -15, -6, -11],
+        "floor": [-17, -18, -19, -13, -12, -14, -11, -8, -3, 0, -3, -7, -8, -9,
+                  -12, -10, -10, -13, -12, -14, -17, -20, -22, -19, -20, -19, -20],
+    },
+    # Pulling away, the engine notched up (`dc40r_go-a`, 26–38 s).
+    "diesel": {
+        "f0": 38.25,
+        "harmonics": [-23, 7, 4, -2, -7, -7, 7, -7, -8, -14, -22, -13],
+        "floor": [-19, -18, -17, -11, -7, -8, -6, -7, -2, 0, -1, -4, -2, -5,
+                  -9, -12, -11, -12, -12, -15, -17, -20, -20, -14, -11, -13, -19],
+    },
+    # Coasting to a stop, the engine back at idle under the wheels
+    # (`dc40r_i-stop`, 0–32 s).
+    "dieselCoast": {
+        "f0": 33.75,
+        "harmonics": [-9, -2, -10, -18, -19, 1, -19, -8, -10, -13, -12, -20],
+        "floor": [-19, -18, -16, -10, -9, -5, -4, -4, -1, 0, -2, -4, -4, -5,
+                  -10, -12, -13, -15, -15, -17, -20, -22, -24, -22, -22, -23, -26],
+    },
+}
+# The idle loop is 4 s (no wheels, nothing slow to repeat); the others 8 s,
+# as the running loops. Every harmonic of each fundamental runs a whole
+# number of cycles in its loop (33.75 Hz × 4 s = 135, 38.25 Hz × 8 s = 306).
+DIESEL_FRAMES = {"dieselIdle": 4 * SR, "diesel": 8 * SR, "dieselCoast": 8 * SR}
+
+
+def diesel(kind):
+    """A loop of a diesel railcar: seeded noise shaped to the measured floor
+    (`shaped`) and, over it, the engine's 12 harmonics at their measured
+    levels, the fundamental wavering by about half a percent twice in each
+    4 seconds as a real engine's does; moving (not idling), the electric
+    loop's swell and rail joints (`running`)."""
+    engine = DIESEL_ENGINES[kind]
+    n = DIESEL_FRAMES[kind]
+    x = shaped(engine["floor"], n, 567 + len(kind))
+    # The noise is RMS 1: the bands' power together is 1, so a level of 0 dB
+    # is that over the bands' sum.
+    reference = 1 / np.sum(10 ** (np.array(engine["floor"]) / 10))
+    t = np.arange(n) / SR
+    waver = 0.4 * np.sin(2 * np.pi * 0.5 * t)
+    phases = np.random.default_rng(567).uniform(0, 2 * np.pi, len(engine["harmonics"]))
+    for k, (level, phase) in enumerate(zip(engine["harmonics"], phases), start=1):
+        amplitude = np.sqrt(2 * reference * 10 ** (level / 10))
+        x += amplitude * np.sin(2 * np.pi * k * engine["f0"] * t + k * waver + phase)
+    if kind != "dieselIdle":
+        k = np.arange(n) / n
+        x *= 1 + 0.06 * np.sin(2 * np.pi * k) + 0.04 * np.sin(2 * np.pi * 3 * k + 1) + 0.03 * np.sin(2 * np.pi * 5 * k + 2)
+        joint = clack()
+        joint = joint / np.abs(joint).max() * 2.5 * np.sqrt(np.mean(x**2))
+        for start in np.arange(0.4, 8, 1.6):
+            for at, strength in [(0, 1.0), (0.126, 0.8), (0.84, 0.5), (0.966, 0.4)]:
+                first = int(round((start + at) * SR))
+                where = (first + np.arange(len(joint))) % n
+                x[where] += strength * joint
+    return from_zero(x)
+
+
 # Decision 346: the weather's rain and the thunder of its storms, made to
 # recordings of rain and thunder in Taipei and Tamsui
 # (`measure_running_spectrum.py` and `measure_thunder.py`; the recordings,
@@ -658,6 +726,9 @@ SYNTH_SOURCES = {
     "warning.wav": "bell(), decision 184",
     "run-electric.caf": "running(\"electric\"), decision 343",
     "run-highspeed.caf": "running(\"highSpeed\"), decision 343",
+    "run-diesel.caf": "diesel(\"diesel\"), decision 567",
+    "run-diesel-idle.caf": "diesel(\"dieselIdle\"), decision 567",
+    "run-diesel-coast.caf": "diesel(\"dieselCoast\"), decision 567",
     "rain-steady.caf": "weather(\"rain\"), decision 346",
     "rain-typhoon.caf": "weather(\"typhoon\"), decision 346",
     "thunder.caf": "thunder(), decision 346",
@@ -725,6 +796,10 @@ def main(out_dir):
     # Decision 343: the running loops.
     write_caf(os.path.join(out_dir, "run-electric.caf"), normalized(running("electric"), 0.5))
     write_caf(os.path.join(out_dir, "run-highspeed.caf"), normalized(running("highSpeed"), 0.5))
+    # Decision 567: the diesel railcar's three.
+    write_caf(os.path.join(out_dir, "run-diesel.caf"), normalized(diesel("diesel"), 0.5))
+    write_caf(os.path.join(out_dir, "run-diesel-idle.caf"), normalized(diesel("dieselIdle"), 0.5))
+    write_caf(os.path.join(out_dir, "run-diesel-coast.caf"), normalized(diesel("dieselCoast"), 0.5))
     # Decision 346: the weather's loops and its thunder.
     write_caf(os.path.join(out_dir, "rain-steady.caf"), normalized(weather("rain"), 0.5))
     write_caf(os.path.join(out_dir, "rain-typhoon.caf"), normalized(weather("typhoon"), 0.5))
