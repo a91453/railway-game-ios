@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Decision 558: with traffic control off, a train of real runs does not
+/// Decision 559: with traffic control off, a train of real runs does not
 /// wait for a platform (decision 228) that another train is due on when
 /// that train can only come to it past this one: its way ahead runs over
 /// the track this one stands on. The Taoyuan Airport MRT bought under the

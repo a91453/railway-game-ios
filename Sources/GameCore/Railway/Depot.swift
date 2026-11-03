@@ -152,7 +152,7 @@ extension GameWorld {
     /// there until it leaves (see ``platformTimes(of:stop:cycle:)`` and
     /// ``runLeaving(of:at:readyAt:)``), or runs there for its own time
     /// there; each is kept ``platformClearance`` apart from `train`'s. One
-    /// on its way there only past `train` is not due first (decision 558,
+    /// on its way there only past `train` is not due first (decision 559,
     /// ``comesPast(_:_:)``). `nil` when traffic control is on (it keeps trains apart itself), for
     /// a train of a line without real runs (``followsRealTimetable(_:)``:
     /// it goes where it always did), when the station is a depot (see
@@ -184,7 +184,7 @@ extension GameWorld {
                 let until = platformTimes(of: other, stop: at, cycle: cycle).until
                 for stretch in bodyStretches(of: other) { due(stretch.traversal.edge, (clock.now.seconds, until), standing: true) }
             case .travellingToStop(let next, let cycle)? where other.timetable[next].station == station:
-                // Decision 558: not one that comes there only past `train`.
+                // Decision 559: not one that comes there only past `train`.
                 if comesPast(train, other) { break }
                 if let last = other.movement.edges.last { due(last, platformTimes(of: other, stop: next, cycle: cycle)) }
                 else if case .onEdge(let traversal, _)? = other.position { due(traversal.edge, platformTimes(of: other, stop: next, cycle: cycle)) }
@@ -200,7 +200,7 @@ extension GameWorld {
         return waits
     }
 
-    /// Decision 558: whether `other`, on its way, can come to its call only
+    /// Decision 559: whether `other`, on its way, can come to its call only
     /// past `train`: its way ahead runs over track `train` stands on, or it
     /// is behind `train` on the edge `train`'s body is on, the same way
     /// round. It cannot be at the call before `train` has gone on, so a
