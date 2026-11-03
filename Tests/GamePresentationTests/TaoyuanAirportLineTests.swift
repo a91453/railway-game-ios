@@ -93,19 +93,65 @@ final class TaoyuanAirportLineTests: XCTestCase {
     /// Where each train of a deadlock stands and what it is doing, the
     /// first time one forms, played minute by minute (`TYMC_DIAG=1`;
     /// `DEPOT_RETURN_SIMPLE` and `DEPOT_RETURN_CONTROLLED` as the depot
-    /// report reads them). Only when asked.
+    /// report reads them). Only when asked. Decision 556 (continued):
+    /// `TYMC_DIAG_SAVE=<file>` saves the world at minute
+    /// `TYMC_DIAG_SAVE_AT` (360) and `TYMC_DIAG_LOAD=<file>` with
+    /// `TYMC_DIAG_FROM=<minute>` plays on from it, in seconds rather than
+    /// minutes; `TYMC_DIAG_UNTIL=<minute>` stops; `TYMC_DIAG_TRACK=2,11`
+    /// prints those trains every minute with who holds their way;
+    /// `TYMC_DIAG_SUMMARY=1` prints every 15 minutes how many trains the
+    /// deadlock search finds and which have stood 20 minutes or more;
+    /// `TYMC_DIAG_OUT=<file>` writes it all there. A train the search
+    /// finds for a minute is not one that stands: under the realistic
+    /// rules it flags one now and then that is on its way again the next.
     func testWhereADeadlockForms() throws {
         let environment = ProcessInfo.processInfo.environment
         guard environment["TYMC_DIAG"] != nil else { throw XCTSkip("Set TYMC_DIAG=1.") }
-        var world = try DepotReturnReportTests.bought(Self.id, side: 1 << 22)
-        if environment["DEPOT_RETURN_SIMPLE"] != nil, environment["DEPOT_RETURN_CONTROLLED"] == nil { try world.setTrafficControl(false) }
+        var world: GameWorld
+        var start = 0
+        if let load = environment["TYMC_DIAG_LOAD"] {
+            world = try JSONDecoder().decode(GameWorld.self, from: Data(contentsOf: URL(fileURLWithPath: load)))
+            start = Int(environment["TYMC_DIAG_FROM"] ?? "") ?? 0
+        } else {
+            world = try DepotReturnReportTests.bought(Self.id, side: 1 << 22)
+            if environment["DEPOT_RETURN_SIMPLE"] != nil, environment["DEPOT_RETURN_CONTROLLED"] == nil { try world.setTrafficControl(false) }
+        }
         let hours = Int(environment["TYMC_DIAG_HOURS"] ?? "") ?? 30
         var seen: Set<TrainID> = []
         var still: [TrainID: (place: String, since: Int)] = [:]
         func name(_ id: StationID?) -> String { id.flatMap { world.station(id: $0)?.name } ?? "?" }
         func clock(_ t: GameTime) -> String { String(format: "%02d:%02d", t.seconds % 86_400 / 3_600, t.seconds % 3_600 / 60) }
-        for minute in 0..<(hours * 60) {
+        let until = Int(environment["TYMC_DIAG_UNTIL"] ?? "") ?? hours * 60
+        var out = ""
+        defer {
+            if let path = environment["TYMC_DIAG_OUT"] { try? Data(out.utf8).write(to: URL(fileURLWithPath: path)) }
+        }
+        for minute in start..<until {
+            if let save = environment["TYMC_DIAG_SAVE"], minute == Int(environment["TYMC_DIAG_SAVE_AT"] ?? "") ?? 360 {
+                try JSONEncoder().encode(world).write(to: URL(fileURLWithPath: save))
+            }
             try world.advance(ticks: 1)
+            if let track = environment["TYMC_DIAG_TRACK"] {
+                let names = Set(track.split(separator: ",").map { "桃園機場捷運列車 \($0)" })
+                for train in world.trains where names.contains(train.name) {
+                    var memo = GameWorld.DirectionMemo()
+                    let holder = world.holder(of: world.envelopeCover(of: train), except: train.id, holders: world.trackHolders(memo: &memo))
+                    out += "TRACK \(clock(world.clock.now)) \(train.name) \(String(describing: train.position)) rate \(train.movement.rate) following \(world.isFollowing(train)) exec \(String(describing: train.execution).prefix(70)) envelope held by \(holder.flatMap { world.train(id: $0)?.name } ?? "-") reservation \(train.reservation.count)\n"
+                }
+            }
+            if environment["TYMC_DIAG_SUMMARY"] != nil {
+                for train in world.trains {
+                    let place = String(describing: train.position)
+                    if still[train.id]?.place != place { still[train.id] = (place, minute) }
+                }
+                if minute % 15 == 0 {
+                    let flagged = world.deadlockedTrains()
+                    let standing = world.trains.filter { $0.execution != nil && minute - (still[$0.id]?.since ?? minute) >= 20 }
+                    out += "SUMMARY \(clock(world.clock.now)) flagged \(flagged.count) standing20 \(standing.map { "\($0.name.replacingOccurrences(of: "桃園機場捷運列車 ", with: ""))@\(world.stationsStoppedAt(by: $0.id).map(name))" })\n"
+                    try? Data(out.utf8).write(to: URL(fileURLWithPath: environment["TYMC_DIAG_OUT"] ?? "/dev/null"))
+                }
+                continue
+            }
             var stuck = world.deadlockedTrains().filter { !seen.contains($0) }
             for train in world.trains {
                 let place = String(describing: train.position)
@@ -133,9 +179,21 @@ final class TaoyuanAirportLineTests: XCTestCase {
                     let stop: Int? = switch execution { case .travellingToStop(let s, _): s; case .waitingAtStop(let s, _): s + 1 < train.timetable.count ? s + 1 : nil }
                     if let stop { routable = world.path(from: position, toStation: train.timetable[stop].station) == nil ? "NO ROUTE" : "route" }
                 }
-                lines.append("  \(train.name): near \(near), \(edgeText), \(routable), exec \(String(describing: train.execution).prefix(120)), held \(String(describing: world.heldDeparture(of: id))), path \(train.movement.hasRemainingPath), deadheading \(train.isDeadheading), at \(world.stationsStoppedAt(by: id).map(name)); plan \(plan.prefix(300))")
+                var memo = GameWorld.DirectionMemo()
+                var waits = "-"
+                if let wait = world.waitingRoute(of: train, memo: &memo) {
+                    if case .held(let by) = world.reservingDeparture(wait.candidate, memo: &memo) {
+                        waits = "held by \(world.train(id: by)?.name ?? "?") (departs \(wait.departs))"
+                    } else { waits = "waiting, granted?" }
+                } else if let request = world.departureRequest(of: train, memo: &memo) {
+                    waits = "request \(String(describing: world.reserving(request, memo: &memo)).prefix(60))"
+                } else { waits = "no request, traffic wait \(String(describing: world.currentTrafficWait(train, plan: world.trafficPlan(memo: &memo), memo: &memo)).prefix(160))" }
+                lines.append("  WAITS \(waits)")
+                lines.append("  \(train.name): near \(near), \(edgeText), \(routable), exec \(String(describing: train.execution).prefix(120)), held \(String(describing: world.heldDeparture(of: id))), path \(train.movement.hasRemainingPath) to \(train.movement.edges.last.map { "\($0)" } ?? "-") end \(String(describing: train.movement.end)) following \(world.isFollowing(train)) reserved \(train.reservation.count), deadheading \(train.isDeadheading), at \(world.stationsStoppedAt(by: id).map(name)); plan \(plan.prefix(300))")
             }
-            FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
+            if environment["TYMC_DIAG_OUT"] != nil { out += lines.joined(separator: "\n") + "\n" } else {
+                FileHandle.standardError.write(Data((lines.joined(separator: "\n") + "\n").utf8))
+            }
         }
     }
 }

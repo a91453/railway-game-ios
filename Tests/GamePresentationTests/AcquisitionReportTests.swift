@@ -32,7 +32,7 @@ import XCTest
 ///   the most it can borrow buy it (A.5's $8 million).
 @MainActor
 final class AcquisitionReportTests: XCTestCase {
-    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "ntdlrt:VB", "ntalrt:K", "trtc:R_XBT", "trtc:G_XBT", "trtc:BR"]
+    static let networks = ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "ntdlrt:VB", "ntalrt:K", "trtc:R_XBT", "trtc:G_XBT", "trtc:BR", "tymc:A"]
     static let checkpoints: [Int64] = [1, 2, 7, 30, 180, 360, 720]
 
     private func requestedDays() throws -> Int64 {
@@ -189,9 +189,13 @@ final class AcquisitionReportTests: XCTestCase {
         // Decision 552: the Wenhu Line costs more than the others' $200
         // million, and is played minute by minute (a day in one call
         // leaves its trains standing, decision 535 continued, next step 2).
-        let wenhu = network == "trtc:BR"
+        // Decision 556: the Taoyuan Airport MRT, as the Wenhu Line, on a
+        // map wide enough for its 51 km.
+        let tymc = network == "tymc:A"
+        let wenhu = network == "trtc:BR" || tymc
+        let side: Int64 = tymc ? 1 << 22 : 1 << 21
         var world = GameWorld.newGame(
-            anchor: anchor, bounds: try WorldBounds(width: 1 << 21, height: 1 << 21), balance: Money(wenhu ? 200_000_000_000 : 20_000_000_000), land: [], rules: .simple
+            anchor: anchor, bounds: try WorldBounds(width: side, height: side), balance: Money(wenhu ? 200_000_000_000 : 20_000_000_000), land: [], rules: .simple
         )
         world.setLandOnDemand()
         world.setRealTransfers(true)
