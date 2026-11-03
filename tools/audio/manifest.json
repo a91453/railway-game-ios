@@ -260,6 +260,42 @@
       "endLevel": 0.0
     },
     {
+      "file": "run-diesel-coast.caf",
+      "kind": "running",
+      "synth": "make_game_audio.py diesel(\"dieselCoast\"), decision 567",
+      "sha256": "338c39a8f09f3b08af0b9e5469ae77082ae0f8c3f47f58505127a33b22e6a846",
+      "frames": 384000,
+      "seconds": 8.0,
+      "peakDbfs": -6.05,
+      "rmsDbfs": -17.89,
+      "largestStep": 0.13,
+      "loopSeam": 0.00186
+    },
+    {
+      "file": "run-diesel-idle.caf",
+      "kind": "running",
+      "synth": "make_game_audio.py diesel(\"dieselIdle\"), decision 567",
+      "sha256": "39dfe4c30330a252ae5c42bca4b0d953165ed8c386307f06972315ba24c16262",
+      "frames": 192000,
+      "seconds": 4.0,
+      "peakDbfs": -6.03,
+      "rmsDbfs": -17.36,
+      "largestStep": 0.08069,
+      "loopSeam": 0.00543
+    },
+    {
+      "file": "run-diesel.caf",
+      "kind": "running",
+      "synth": "make_game_audio.py diesel(\"diesel\"), decision 567",
+      "sha256": "ada25309bb83dd30805226d709f4ebdc0ba4efafa6b68c7a65c8ced10e8d9939",
+      "frames": 384000,
+      "seconds": 8.0,
+      "peakDbfs": -6.04,
+      "rmsDbfs": -19.97,
+      "largestStep": 0.10742,
+      "loopSeam": 0.00641
+    },
+    {
       "file": "run-electric.caf",
       "kind": "running",
       "synth": "make_game_audio.py running(\"electric\"), decision 343",
