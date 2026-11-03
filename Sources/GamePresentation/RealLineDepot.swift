@@ -154,12 +154,15 @@ struct RealLineDepotSite: Sendable {
     /// 497405856, 542844200); the game's leave it further north (way
     /// 479042997, 25.0278, 121.2171), clear of Linghang's platforms,
     /// the yard laid from the stabling tracks' north-west ends to their
-    /// south-east ends.
+    /// south-east ends. Its sidings either side of the lead on short
+    /// turnouts (``compact``), as its real ladders are short: on the
+    /// depot tool's one-sided ladder the yard ran some 900 m on and
+    /// crossed the line where it bends toward it past Linghang.
     static let qingpu = RealLineDepotSite(
         line: "tymc:A", english: "Qingpu Depot", chinese: "青埔機廠",
         junction: (25.027806, 121.217032),
         yard: ((25.026300, 121.220050), (25.024350, 121.221500)),
-        sidings: 12, beyond: nil, compact: false
+        sidings: 12, beyond: nil, compact: true
     )
 
     /// The real depots line `line` is bought with (decision 535: the
@@ -169,6 +172,12 @@ struct RealLineDepotSite: Sendable {
     static func sites(of line: String) -> [RealLineDepotSite] {
         [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu].filter { $0.line == line }
     }
+
+    /// Decision 556: whether its sidings fan out away from the line, not
+    /// toward its junction: the Taoyuan Airport MRT's yards run almost
+    /// alongside it, and fanned toward the junction the Qingpu yard's
+    /// crossed the line's own track.
+    var fansAwayFromLine: Bool { line == "tymc:A" }
 
     func name(in language: DisplayLanguage) -> String {
         language.text(english, chinese)
@@ -292,7 +301,8 @@ extension RealLineDepotLayout {
             ),
         ]
         guard let laid = yard(
-            site, points: points, foot: foot, height: footHeight, at: footNode, leaving: lead, toward: path.tangent(at: j),
+            site, points: points, foot: foot, height: footHeight, at: footNode, leaving: lead,
+            toward: site.fansAwayFromLine ? path.point(at: path.nearest(points[1]).along) - points[1] : path.tangent(at: j),
             first: first + pieces.count, length: length, ground: ground, water: water, in: language
         ) else { return nil }
         return (pieces + laid.pieces, laid.depot)
@@ -315,7 +325,14 @@ extension RealLineDepotLayout {
     /// offer reads it in before it lays the yard, which otherwise reads
     /// no ground (and no height over the water) past the real yard.
     static func groundSamples(beyond points: [WorldVector], site: RealLineDepotSite, length: Int64, back: Double, step: Double) -> [PlanPoint] {
-        guard points.count == 3, site.beyond != nil else { return [] }
+        guard site.beyond != nil else { return [] }
+        return groundSamples(of: points, site: site, length: length, back: back, step: step)
+    }
+
+    /// Decision 556: ``groundSamples(beyond:site:length:back:step:)`` of
+    /// a yard beside the line too, its ladder fanning either way.
+    static func groundSamples(of points: [WorldVector], site: RealLineDepotSite, length: Int64, back: Double, step: Double) -> [PlanPoint] {
+        guard points.count == 3 else { return [] }
         let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
         let way = (points[2] - points[1]).unit, origin = points[1] - way * back
         let along = back + ladder.straight + furthestYardShift + extent(of: site, length: length).far

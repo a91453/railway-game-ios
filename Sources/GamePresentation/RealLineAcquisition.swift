@@ -90,6 +90,14 @@ public struct RealBranchLine: Hashable, Sendable {
     /// Terminal 2, its shuttles at Terminal 1 and Huanbei).
     var turnsBackBetween: Bool { isTaoyuanAirport }
 
+    /// Decision 556: whether the ground under its depots beside the line
+    /// is read in as far as their ladders may reach, as under a yard past
+    /// an end (decision 549, continued), so a yard over water (Qingpu's,
+    /// over the ponds of the Taoyuan tableland) is raised clear of it.
+    /// Only the Taoyuan Airport MRT, so the Danhai and Ankeng depots and
+    /// their prices stay as they were.
+    var readsGroundBesideYards: Bool { isTaoyuanAirport }
+
     /// Whether it is the Taoyuan Airport MRT (decision 556).
     var isTaoyuanAirport: Bool { system == "tymc" && network == "A" }
 
@@ -948,6 +956,10 @@ extension RealLineLaying {
             RealLineDepotLayout.groundSamples(
                 beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step
             )
+        } + (depot && line.readsGroundBesideYards ? midDepotSites : []).flatMap { site in
+            RealLineDepotLayout.groundSamples(
+                of: worldPoints(site), site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step
+            )
         }
         // Decision 401: on a map bought tile by tile, the tiles under the
         // way not owned yet are bought with the line, their land and water
@@ -1102,7 +1114,7 @@ extension RealLineLaying {
             }).compactMap { runs.stops.firstIndex(of: $0) }.filter { $0 > 0 && $0 < runs.stops.count - 1 }.sorted()
             for stop in turning {
                 let span = spans[stop]
-                for (low, high) in [(span.lowerBound - gap - ramp, span.lowerBound - gap), (span.upperBound + gap, span.upperBound + gap + ramp)] {
+                for (low, high) in [(span.lowerBound - 2 * gap - ramp, span.lowerBound - 2 * gap), (span.upperBound + 2 * gap, span.upperBound + 2 * gap + ramp)] {
                     let reach = (low - gap)...(high + gap)
                     guard low > second.a + ramp + gap, high < second.b - ramp - gap,
                           !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) else { continue }
