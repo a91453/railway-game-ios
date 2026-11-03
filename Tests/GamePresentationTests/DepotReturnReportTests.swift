@@ -157,6 +157,7 @@ final class DepotReturnReportTests: XCTestCase {
         // HEALTH-110: the samples (minutes, or ten-minute ticks) with any
         // train deadlocked, to tell one cleared at once from one that stays.
         var deadlockedSamples = 0
+        var lastStuck: [TrainID] = []
         let timetabled = world.lines.filter(\.hasRuns)
         let lines = timetabled.filter { !$0.depots.isEmpty }
         let ends = Set(lines.flatMap { [$0.stops.first, $0.stops.last].compactMap(\.self) })
@@ -175,6 +176,16 @@ final class DepotReturnReportTests: XCTestCase {
             try world.advance(ticks: 1)
             let stuck = world.deadlockedTrains()
             if !stuck.isEmpty { deadlockedSamples += 1 }
+            // `DEPOT_RETURN_EPISODES=1`: each deadlock as it begins and ends.
+            if environment["DEPOT_RETURN_EPISODES"] != nil, Set(stuck) != Set(lastStuck) {
+                let names = stuck.compactMap { id -> String? in
+                    guard let train = world.train(id: id) else { return nil }
+                    let at = world.stationsStoppedAt(by: id).compactMap { world.station(id: $0)?.name }.joined(separator: "/")
+                    return "\(train.name) at \(at.isEmpty ? "line" : at)"
+                }
+                FileHandle.standardError.write(Data("DEPOT_RETURN \(label) deadlock \(clock(world.clock.now.seconds)): \(names.isEmpty ? "cleared" : names.joined(separator: "; "))\n".utf8))
+            }
+            lastStuck = stuck
             if stuck.count > deadlocked {
                 deadlocked = stuck.count
                 let places = stuck.compactMap { id -> String? in
@@ -240,5 +251,11 @@ final class DepotReturnReportTests: XCTestCase {
         if deadlocked > 0 { summary += " (first \(deadlockedWhere); deadlocked in \(deadlockedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
         summary += "; \(lines.count) of \(world.lines.count) lines with runs and depots; \(seconds) s\n"
         FileHandle.standardError.write(Data(summary.utf8))
+        // `DEPOT_RETURN_STRICT=1`: fails on a run not sent out or a deadlock,
+        // so a finding is a command that turns red (diagnosing-bugs).
+        if environment["DEPOT_RETURN_STRICT"] != nil {
+            XCTAssertEqual(missed, 0, "\(label): runs not sent out")
+            XCTAssertEqual(deadlocked, 0, "\(label): trains deadlocked, first \(deadlockedWhere)")
+        }
     }
 }
