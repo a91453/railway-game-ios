@@ -1,5 +1,5 @@
 {
-  "geometry_producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+  "geometry_producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
   "base_main": "f1a6a2d50b700837416139013079b56dfed46ae9",
   "reference_commit": "ea6f78771f2a0f47e98966b1a99d6f33c7827b8c",
   "asset_base": "0ec7187ee4e2a57a298468b3ec34d13f76416f45",
@@ -1782,7 +1782,7 @@
     },
     {
       "path": "Sources/GamePresentation/Map3DWenhuAPM256.swift",
-      "sha256": "4a5d9cf4c15e13a636c8d77ef551ed7badbae30d28bc61067e2e78f5cfddbc50"
+      "sha256": "29953083be5406c5bf7d1e8f2098e5e7b3194a019c163df55c2a0ca91af5cf8b"
     },
     {
       "path": "Sources/GamePresentation/Map3DWenhuPrimitives.swift",
@@ -1790,7 +1790,7 @@
     },
     {
       "path": "Sources/GamePresentation/Map3DWenhuVAL256.swift",
-      "sha256": "5ba23578701e63db71f63e084e44e3983f781f54d5c1180df683c9bd9f99da7e"
+      "sha256": "b11b9d0e0eaf77e6968de1e9beb9565ef0ae1592950271f51805fc2872d99477"
     },
     {
       "path": "Sources/GamePresentation/Map3DWorksKit.swift",
@@ -2570,7 +2570,7 @@
     },
     {
       "path": "docs/art/wenhu/sources.json",
-      "sha256": "d546fb25f538d2153eddcb967c2e3a6f22e42766e5f65ec285f8d913c7c11e0d"
+      "sha256": "7f7873d23abace815e0ece725b8a5ed94c8fc65c535d60e3cdcb6b04fb72c7b7"
     },
     {
       "path": "docs/art/wenhu/val256-status.json",
@@ -2618,7 +2618,7 @@
     },
     {
       "path": "tools/train-models/hashes.lock.json",
-      "sha256": "a1d17f000ec57f26e56488c3ba04dd071210f59b569c56afd9e9d9962179feb5"
+      "sha256": "5b13cd794d31709886f3d1e640f7f5b70dd3ea24b2fe1358a7a50d580f211bd3"
     },
     {
       "path": "tools/train-models/inspect.mjs",
@@ -2666,7 +2666,7 @@
     },
     {
       "path": "tools/wenhu/README.md",
-      "sha256": "ce7af1cd857c2fc38465e279aee23ce17256db43efdc50dfbec72eebbd8e93ef"
+      "sha256": "b9951918697f8bf10be8f9b414120d6e5920886b40884c6fc829d91e959bf4ef"
     },
     {
       "path": "tools/wenhu/assembly-audit.mjs",
@@ -2678,7 +2678,7 @@
     },
     {
       "path": "tools/wenhu/audit.py",
-      "sha256": "971049bf7e586ddd4051f1d1085eb32de4fcd5188da6b397621e3c99642d5b2e"
+      "sha256": "d231b6852a3fbba69bdc571c3878921a7523e38e0b620e72c6191c03a6525bb5"
     },
     {
       "path": "tools/wenhu/compare-assembly.sh",
@@ -2715,203 +2715,203 @@
   ],
   "independent_checkout": {
     "status": "VERIFIED",
-    "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+    "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
     "actual_cwd_separate_checkout": true,
     "payloads_pngs_viewers": [
       {
         "file": "models/wenhu-val256-a.m3dmodel",
-        "bytes": 594104,
-        "sha256": "894b4d0d375ba4de5c799ae5282d48541aa332806d816f592f5d8d9eb6dcfc8f"
+        "bytes": 631128,
+        "sha256": "46243d271e51b103f5807d46c1ca61e191b3d76bd29762b1eae8ede81005ed23"
       },
       {
         "file": "models/wenhu-val256-a.glb",
-        "bytes": 1097912,
-        "sha256": "2f8ec3aa4d51dffd3743d6af005743b0678df48c1e65985e896779a8aee96c1d"
+        "bytes": 1166264,
+        "sha256": "2e80a79e0cb41b088dca323c0563f881586c8ff2a68b49ff1f66656a098670ff"
       },
       {
         "file": "models/wenhu-val256-b.m3dmodel",
-        "bytes": 595976,
-        "sha256": "94a255a78a23c9e52c16debc6c202e6fa6c710918367546e7c588c0d0854fda6"
+        "bytes": 633000,
+        "sha256": "b09aca901773c6b9ee2fff2018adb633972daf77edb189c86f22498a0159d3ba"
       },
       {
         "file": "models/wenhu-val256-b.glb",
-        "bytes": 1101368,
-        "sha256": "6c32d33f237287ae32762e7d14a5d8849dac04fdaf20478bc10355e0ae125407"
+        "bytes": 1169720,
+        "sha256": "2d2740f1875178789773a9e0f1f1dd8b8b8cccc457b583d1e3d95bff165cd9a5"
       },
       {
         "file": "models/wenhu-val256-a-far.m3dmodel",
-        "bytes": 270044,
-        "sha256": "a66fc2d4e5cd865e8179a0e411a7f9902725c82eee5207b508e9a7a4e478d879"
+        "bytes": 295420,
+        "sha256": "4610fbd2c1e46f8e533631c021c66d07873834c9b2710585aa27b91cbc78cf0c"
       },
       {
         "file": "models/wenhu-val256-a-far.glb",
-        "bytes": 499640,
-        "sha256": "5637a533b472965bf4ca2087927fae6188f9e0ba5fcaf47d458cfd206941dfb5"
+        "bytes": 546488,
+        "sha256": "96b05d01b3d2d68f7f7179f64641924d63ac99fe6f5cda294a63443d11c59a76"
       },
       {
         "file": "models/wenhu-val256-b-far.m3dmodel",
-        "bytes": 271916,
-        "sha256": "eb10e8517f7cdab45d445056956db2339fb1578b0f3c4e0cc5a97b37894d9453"
+        "bytes": 297292,
+        "sha256": "4dd50c95f9e358b55826f665d042a69b2d3216ac9b543504703d9686020d7cfb"
       },
       {
         "file": "models/wenhu-val256-b-far.glb",
-        "bytes": 503096,
-        "sha256": "5dd6071850df9ac62b8eec96797a9431bd2536204d99c525b0d830b00a7bb9a8"
+        "bytes": 549944,
+        "sha256": "ff761c8ee8aa3b08b4e837a6edbe08f20c626c1d7c79effb4825e7889d1de19c"
       },
       {
         "file": "models/wenhu-apm256-a.m3dmodel",
-        "bytes": 527544,
-        "sha256": "495feb1e185c7368ff2eae57f49a1db25a7b47ffbe10a43e7bb304fd1c630226"
+        "bytes": 564568,
+        "sha256": "97894bfdd986e188d9cb13ec99e3475e302641bb214e5300d02f59589bd5cade"
       },
       {
         "file": "models/wenhu-apm256-a.glb",
-        "bytes": 975028,
-        "sha256": "f7a61b9d9bcdd7698538609b7e6e09f09913cffe38f141dea4fae5b6296a7384"
+        "bytes": 1043384,
+        "sha256": "6866a002424b42455dc48bec7e533ee64a90a98e8a6654af33b39b972aef6de0"
       },
       {
         "file": "models/wenhu-apm256-b.m3dmodel",
-        "bytes": 529416,
-        "sha256": "2187d40ef8d38a4d1bb7f9ce2c14b3d7ed0653b52ed04270ff746a17cfdfcfad"
+        "bytes": 566440,
+        "sha256": "b60e6595eb79d7168bc2a84c419300c63fc120ac80418d538f31ad959163acc3"
       },
       {
         "file": "models/wenhu-apm256-b.glb",
-        "bytes": 978484,
-        "sha256": "25c4a93358a4d3e3f336ca5a04186572e3686fb43dd960a5af107e652e0ca548"
+        "bytes": 1046840,
+        "sha256": "afc43a4babdaff094b1e18e5cae9e1fa90bad8ae25c1fffa7a528621ca39c9d1"
       },
       {
         "file": "models/wenhu-apm256-a-far.m3dmodel",
-        "bytes": 234684,
-        "sha256": "fd4142aa2f544bc6634e1986fc71db5126df24cc2f3758487d4fb2a318d0331e"
+        "bytes": 260060,
+        "sha256": "47d21296c25d5539bdb35823e66adc67e3b716306bb92b36395c352afd46aa1a"
       },
       {
         "file": "models/wenhu-apm256-a-far.glb",
-        "bytes": 434360,
-        "sha256": "a8ca26dcdc08374e2537250c5f9ac411cb4ea1ae2a43240580a96bb7cca2752f"
+        "bytes": 481208,
+        "sha256": "fdd7295e3a517bc20b73b8e51f6e82e913daff1780cfacb3fec16e7394ebc09c"
       },
       {
         "file": "models/wenhu-apm256-b-far.m3dmodel",
-        "bytes": 236556,
-        "sha256": "e7bff51727cabed2ca16373ec12fb08412113b44580f3358897648aa2690e21e"
+        "bytes": 261932,
+        "sha256": "42d2a2f68e2fda5b99072a0838e42e1281867d868384c4081dbf98b4e3aee0fb"
       },
       {
         "file": "models/wenhu-apm256-b-far.glb",
-        "bytes": 437816,
-        "sha256": "b78dab4006eedfabf5852f337c7c76900ebb78ed53ea3d20bd17ae5666ffbbbb"
+        "bytes": 484664,
+        "sha256": "2fff7b8d89c62f530d2f98ca8fccb2fa538e2727c38a2e9fa87d66de4d1fe6bf"
       },
       {
         "file": "models/wenhu-val256-formation.m3dscene.json",
-        "bytes": 1587477,
-        "sha256": "f4a505dede66bff2a463a6ca01ce17a958b6a36a1ff8a18c1f5c6593a91b68cf"
+        "bytes": 1686205,
+        "sha256": "2a959d48eecb1592a18f79f40ceca01ed46044d4fffa5f691d44d4e089c684e0"
       },
       {
         "file": "models/wenhu-val256-formation.glb",
-        "bytes": 4394908,
-        "sha256": "d5b7922d5311be2e20f79644cc045fb751c870f6d500a4599417dff921611e33"
+        "bytes": 4668316,
+        "sha256": "302b4519aec9520b7e30a1205cd3b3ab369b1b4cc2f4836f5e545c7cfe987b92"
       },
       {
         "file": "models/wenhu-val256-formation.triangles.bin",
-        "bytes": 2379936,
-        "sha256": "1d007667ad0e18456f6d59af7c5beb2eedab32125d965a842ea64c887ce08ec2"
+        "bytes": 2528032,
+        "sha256": "c57e898d9609ae0e64802c11eceddf812afc2b7ecd96fb2418d9852fd81ee370"
       },
       {
         "file": "models/wenhu-val256-formation-far.m3dscene.json",
-        "bytes": 723341,
-        "sha256": "b12edb8bce2419650bfbf8670d269e1d2ade9657d7ed7481ba283bbfbc16e8ce"
+        "bytes": 791013,
+        "sha256": "2d5163ff2d5d3899771c89957bd703b44129385f5abd73baa2375e758010a52f"
       },
       {
         "file": "models/wenhu-val256-formation-far.glb",
-        "bytes": 2001812,
-        "sha256": "123eb6b291f7afa11a18e4c3c32b0dee77a2adab5a2af136ba675ae7d4927f4f"
+        "bytes": 2189204,
+        "sha256": "cb527c33a3a7eb82458437ee311e1567727a56453948e58a48c60b8bbf50b90b"
       },
       {
         "file": "models/wenhu-val256-formation-far.triangles.bin",
-        "bytes": 1083680,
-        "sha256": "738df65ede448ee0219100031ae11623490a05864eb7a8ff71b207620e2b89f8"
+        "bytes": 1185184,
+        "sha256": "f10c28406dd5d0b9f9ff7ce07539ff3d975d93c90fa48dc3ec0f126244705863"
       },
       {
         "file": "models/wenhu-apm256-formation.m3dscene.json",
-        "bytes": 1409981,
-        "sha256": "4d5f32da03786d913d4f53c81e2f05d7a7f89f5e2e9303c1fdd429869a80f95f"
+        "bytes": 1508717,
+        "sha256": "89dd33f668e011893c61d76517772d0a22a06f893483ab909319455483b63d2e"
       },
       {
         "file": "models/wenhu-apm256-formation.glb",
-        "bytes": 3903388,
-        "sha256": "05be5656927e5209df286b66695591fb5f5abed64641aede5fec5ff07bdfe12c"
+        "bytes": 4176796,
+        "sha256": "c5b942e28d7fb9358b34811c608a5dd9aea5966da9759fa70f31e065c4c4cfa4"
       },
       {
         "file": "models/wenhu-apm256-formation.triangles.bin",
-        "bytes": 2113696,
-        "sha256": "0a21c071ba6e69ac77a6a8f6de24aa9b96b82660687f49d67161610041c83ba6"
+        "bytes": 2261792,
+        "sha256": "e66e88c3386a2946c14d1440acd780da2d454894c231084a2da111e485907e5b"
       },
       {
         "file": "models/wenhu-apm256-formation-far.m3dscene.json",
-        "bytes": 629045,
-        "sha256": "683f6d450bf06f517e05eaec884191eace70520773a66be6ee9dc351bc2d9c60"
+        "bytes": 696717,
+        "sha256": "6e6ae996db16a1bc79e0fc0b2e7946dfa21b687b02623d4bf5b9dc400366fe26"
       },
       {
         "file": "models/wenhu-apm256-formation-far.glb",
-        "bytes": 1740692,
-        "sha256": "25f1692d35e886fa41c6a9d9862daeebf2a95b32c5f7212c358cbdee6d5bb006"
+        "bytes": 1928084,
+        "sha256": "74f8948068d0e5bfb86daa0658432eb99810b5d53a907cb051bb32e63ac8ba1a"
       },
       {
         "file": "models/wenhu-apm256-formation-far.triangles.bin",
-        "bytes": 942240,
-        "sha256": "d6c75c51264cbe73aa4a09bf112fd99ec6dc63745561a9439a67f096d72f351f"
+        "bytes": 1043744,
+        "sha256": "c95d1a526ac387c808b4cd4d058ae5193e549e1d9081bc91d3bc394b5054391b"
       },
       {
         "file": "sheets/apm256-a.png",
-        "bytes": 287195,
-        "sha256": "32c56912b264b1d556387ddcaaddd9aae48cc3fabb2c31385d6f13bd9d18a6f5"
+        "bytes": 293269,
+        "sha256": "a2136d3062cd2fdfc8d1d098a860cc034f240a1dab28d491e13fcc5550476993"
       },
       {
         "file": "sheets/apm256-b.png",
-        "bytes": 291812,
-        "sha256": "67df8f452cef46fb88f1f9157e3487d266d7d4262a48e7317977f7959d386273"
+        "bytes": 298428,
+        "sha256": "733a3e455240c10dc50343f848b57c74edb00f54b7583e7cc83adea4f18e11e5"
       },
       {
         "file": "sheets/apm256-comparison.png",
-        "bytes": 218967,
-        "sha256": "91e9c1e7f4d576390e7773035cf3d3a3cfaff29d179959f2922deb57721590e9"
+        "bytes": 227214,
+        "sha256": "83fd80e87bf00943c85f37fa795e1c2d82ec3bab25b59a583e6ed36a6b1cf143"
       },
       {
         "file": "sheets/apm256-formation.png",
-        "bytes": 288241,
-        "sha256": "1d8bef5e881e30b33bbde4f971c36d9b3ab67798bd9519f3e1a2739907e70e61"
+        "bytes": 291704,
+        "sha256": "b0840198e0bf9b196ccbd7851c5b6b9889917e0b3ba93f2e10b691f474a21b89"
       },
       {
         "file": "sheets/val256-a.png",
-        "bytes": 283024,
-        "sha256": "b51043d6f88900bd3bfcf926da5de20c0c0f72dabc8bcf9b328f3c9f092dcc68"
+        "bytes": 290033,
+        "sha256": "fb83d78b1200faead7a94021a2d6d41ca18737129fe6e43737fbd2bcb3260e01"
       },
       {
         "file": "sheets/val256-b.png",
-        "bytes": 286451,
-        "sha256": "c32e2d8e5def8d90f302fdbeccc6efe7d4e8eab14b6c02979a0f65812a40f151"
+        "bytes": 293601,
+        "sha256": "34152820f3dd5d8c73d5f9d2733973e97b60c5547941c560bb2d22f47b0cf6e7"
       },
       {
         "file": "sheets/val256-comparison.png",
-        "bytes": 212315,
-        "sha256": "5f37c42de32a91b1dce9f8247603fb3bcbac1e1f91953ac1b5189c3f0bb66f21"
+        "bytes": 217256,
+        "sha256": "5977d0f460b83c5ef8eabec9b53d6f14c8aee37175914dda9ed9cc382475bc3f"
       },
       {
         "file": "sheets/val256-formation.png",
-        "bytes": 287632,
-        "sha256": "367251fd777e07cfe2743a904cf553ae4d23b5d5c56ec117ceeb01c773c10e69"
+        "bytes": 293461,
+        "sha256": "fc0df106cc8871d17013608419ce8854fc3fa2e43d732ce099fb60dbb1fd8936"
       },
       {
         "file": "overview.png",
-        "bytes": 255707,
-        "sha256": "ab0adf03d938ba758b3049c1dd63fcc1c6c4bc1ec49da2c3dba2d0a82ec86e39"
+        "bytes": 268253,
+        "sha256": "5b4cc791cf8b36c57a6f9e518dc462380f0fc19af1a9803ec23c192204fc0b51"
       },
       {
         "file": "wenhu-val256/index.html",
-        "bytes": 3367493,
-        "sha256": "4e768623ce1b90878e750055132ec04a946aff9feaef517a65719db433d34532"
+        "bytes": 3610685,
+        "sha256": "37b820f047efc734030d3f022850ece6dc8d101da118e13081eca63b02ce3e08"
       },
       {
         "file": "wenhu-apm256/index.html",
-        "bytes": 3058705,
-        "sha256": "a3dfc6e08a1c2abbe90280fa309197a09cd3d9cbe7a56cb596baf7be3a38ca14"
+        "bytes": 3294137,
+        "sha256": "66704255622ad8f0aeba0c0c167fb61f84ffba15b2ac030864006b33143e08b4"
       }
     ],
     "scope": "28 native/GLB/assembly payloads, 8 private selected sheets + public overview, both embedded final viewers; all 39 files byte-identical"
@@ -3039,11 +3039,11 @@
   "delivery_specs": [
     {
       "file": "val256-delivery.json",
-      "sha256": "b23ab930ef7ec327e97203e8fba6b251efc624343ac008b1634013003df960d9"
+      "sha256": "97947d7eb499eaa42698e31d08899fc1b2731cb0991963822487d606f7dbfa2d"
     },
     {
       "file": "apm256-delivery.json",
-      "sha256": "1d0c661a4dc4b3edd46cbb6458ba65fbf7b77957dc2b5d2063c3163924bd4fe1"
+      "sha256": "30bec3477c0f25ac5ae748de0904560d0a47e8d8fb0b17d23dbc2d91f7367eba"
     }
   ],
   "producer_checkout": "Detached independent checkout, cwd and HEAD printed before rebuilding; no metadata relabelling",

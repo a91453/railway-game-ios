@@ -1,10 +1,10 @@
 {
   "status": "VERIFIED",
-  "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+  "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
   "count": 465,
   "published_private_png": 8,
   "published_public_png": 1,
-  "checks": "full PNG decode / RGBA / transparency / nonempty / alpha bbox margin; canonical images only, curated copies not counted twice",
+  "checks": "full decode / RGBA / transparency / nonempty / alpha bbox margin; canonical images, no duplicate curated counts",
   "files": [
     {
       "file": "comparison/after-wenhu-apm256-a-bottom.png",
@@ -12,8 +12,8 @@
         1200,
         420
       ],
-      "bytes": 48876,
-      "sha256": "c76e90dc5ab392195abd1278c54688a1a891fb891b033a9ae8614da70927c349"
+      "bytes": 47484,
+      "sha256": "320c510671a16e3802154921ab45b8f6668d79a3f2817f6c517ede27ca099a8e"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-far-bottom.png",
@@ -21,8 +21,8 @@
         1200,
         420
       ],
-      "bytes": 49015,
-      "sha256": "d190ee43a959e85d42884a5dfdb5fae7dc17c3bd4d0c126d38035e754c620c7b"
+      "bytes": 48809,
+      "sha256": "b3fc87695e5908a39b584625271e90ff2701587cabeb2fc899390a8f2dd5fca4"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-far-front.png",
@@ -30,8 +30,8 @@
         1200,
         420
       ],
-      "bytes": 41509,
-      "sha256": "87012e368695fd911fb3ca028162851fe1190ceaffab2a02a20dabb3ce3e9da8"
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-far-isometric.png",
@@ -39,8 +39,8 @@
         1200,
         420
       ],
-      "bytes": 44548,
-      "sha256": "34d547c638b353ed0d12c7fcae03aeed6a22b51fc94673f58245c19e9dda479e"
+      "bytes": 45644,
+      "sha256": "d92484d188ec268b64cace7de1d4654e9ed3c6b6f7d8e2f3032933022e72c479"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-far-left.png",
@@ -48,8 +48,8 @@
         1200,
         420
       ],
-      "bytes": 38999,
-      "sha256": "1a99bb80dd027c8e4d366dcb31aa5be4e892c538b3209ddb492dbb44c25fc294"
+      "bytes": 40141,
+      "sha256": "c5ac67f9b5eb7a12aaa1197edf57532ff468f592557de29446ce06c63bab616e"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-far-top.png",
@@ -66,8 +66,8 @@
         1200,
         420
       ],
-      "bytes": 50219,
-      "sha256": "9c7c715cf9fd351154c637e90d3e30ebf8901e6676ee6ccc67fa3eab62e520d5"
+      "bytes": 51548,
+      "sha256": "a77e1eda59561bfa10b234ec9a4545e2b988ccac8849a43c59a5894ed31793f9"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-isometric.png",
@@ -75,8 +75,8 @@
         1200,
         420
       ],
-      "bytes": 54503,
-      "sha256": "d93811f49540f72004b4c681c4c5e1a6388cd9c14b5e20aae5d111feabd33897"
+      "bytes": 55478,
+      "sha256": "33f57450160af224628bde9d4d9a300e4d552e746d45460a88ffb81701414afc"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-left.png",
@@ -84,8 +84,8 @@
         1200,
         420
       ],
-      "bytes": 44643,
-      "sha256": "2e54f0bc622894d8b66e2293765e09a7a062e372584a90b8ce1e6cde5c0abdb5"
+      "bytes": 45312,
+      "sha256": "db71a355125bbd451abf99586267f2fdbcc93884a67fbc4c992777c832c3210b"
     },
     {
       "file": "comparison/after-wenhu-apm256-a-top.png",
@@ -102,8 +102,8 @@
         1200,
         420
       ],
-      "bytes": 48473,
-      "sha256": "795cbf2df495939663f3357a728f4a34243eac3e09b1d2b2ff04373394bde0da"
+      "bytes": 47341,
+      "sha256": "9512db2f846cd994501dace159db3013b2c230e04086398420ec4ff1fa0ab46b"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-far-bottom.png",
@@ -111,8 +111,8 @@
         1200,
         420
       ],
-      "bytes": 49309,
-      "sha256": "47a78dc6c816771e326b2367b82c603e9408f866167cb58ddf526278f639b98b"
+      "bytes": 47888,
+      "sha256": "51c15d38ef30953fa788462831cfa00f39bb73c3d972fd2a64c487de332461fe"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-far-front.png",
@@ -120,8 +120,8 @@
         1200,
         420
       ],
-      "bytes": 38662,
-      "sha256": "3278aaa88efaf8b03a6243309f55cee8765551f917c4d417038e4d4abcc5a950"
+      "bytes": 38948,
+      "sha256": "78e129b801df60243b7d0d6fd7a9bd49643d540899331f1ea84fad8662ef3881"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-far-isometric.png",
@@ -129,8 +129,8 @@
         1200,
         420
       ],
-      "bytes": 43640,
-      "sha256": "06f6e7a6b3a2004ae5d35c615e923ff1097361b5b6720096a812239f90623269"
+      "bytes": 45051,
+      "sha256": "eb42aea1d1b52310ce08c421eb323c3bc10f5bc8156f8922e1d38edb5a601efd"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-far-left.png",
@@ -138,8 +138,8 @@
         1200,
         420
       ],
-      "bytes": 39271,
-      "sha256": "a91231c2a4bb31a4128b3c2c7cace5d182aac0421a420168426db2e2c3858d9c"
+      "bytes": 40364,
+      "sha256": "c9041cb28f4370be318dd5a7833e8a58b5afb6a34a931dd95396ddad6d027928"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-far-top.png",
@@ -156,8 +156,8 @@
         1200,
         420
       ],
-      "bytes": 46411,
-      "sha256": "8cc672d01194926760a880fc18acfed1c71ad162ff82f3317f2a15fb646b8a8b"
+      "bytes": 47221,
+      "sha256": "1ce5d23c4af8a7688f6b4caf3b7a51dc1d0d63acd1533045e938cd75384daa42"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-isometric.png",
@@ -165,8 +165,8 @@
         1200,
         420
       ],
-      "bytes": 53549,
-      "sha256": "08d64f3dabe0b1729d4144d2c1d4b88460e9452586130102296ecf5f7b3c1e5e"
+      "bytes": 54720,
+      "sha256": "1cb99f52d367a033231bd236e7305a21af23aaf7595435ddeb00f3e37d5929fb"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-left.png",
@@ -174,8 +174,8 @@
         1200,
         420
       ],
-      "bytes": 45163,
-      "sha256": "39011e3d5f390ed18021d9d52f9c2e6954ecf2d83dae9987ceb1422c0adc4db9"
+      "bytes": 45758,
+      "sha256": "259ed7397bae7c3830bfa1cbba24024352474e6f8da28d87036115aca61011e2"
     },
     {
       "file": "comparison/after-wenhu-apm256-b-top.png",
@@ -192,8 +192,8 @@
         1200,
         420
       ],
-      "bytes": 38418,
-      "sha256": "648353a790242b0d98c431eeffc0e47f4598b1a486f12b9ca02a217f69b1353b"
+      "bytes": 37986,
+      "sha256": "7c852504c22988afbd2d704862b227becf50aef0203b7f6906c62f32068f9704"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-far-bottom.png",
@@ -201,8 +201,8 @@
         1200,
         420
       ],
-      "bytes": 38543,
-      "sha256": "f19734e6f676c5b0d40ff6d08ceea07fcd15fbdea447a84902c1dd0d08cbca4f"
+      "bytes": 37475,
+      "sha256": "6ed02180ccee6ebd2a1050cd0a35b3349c8944d6f73acca3ad761fb8e0170309"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-far-front.png",
@@ -210,8 +210,8 @@
         1200,
         420
       ],
-      "bytes": 41509,
-      "sha256": "87012e368695fd911fb3ca028162851fe1190ceaffab2a02a20dabb3ce3e9da8"
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-far-isometric.png",
@@ -219,8 +219,8 @@
         1200,
         420
       ],
-      "bytes": 50203,
-      "sha256": "9e1d831a1ae3dda8b54c27a1119e2dbe5e61a7f92f3b844739f93f2c0dda3547"
+      "bytes": 50880,
+      "sha256": "e0d88e5d87b7e5f307d63a172de260352712e5791730de207481a6f812db16f9"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-far-left.png",
@@ -228,8 +228,8 @@
         1200,
         420
       ],
-      "bytes": 32287,
-      "sha256": "57e76099111b1fc74ece713cc732dd092fa1e1b59341cfdbedbeb3d407ae24eb"
+      "bytes": 32072,
+      "sha256": "34cbbf2c2fabe7114e8a5faf356a5d39a1ca58890d519bced28bf2a561a109ed"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-far-top.png",
@@ -246,8 +246,8 @@
         1200,
         420
       ],
-      "bytes": 50216,
-      "sha256": "abd8b7c5db79c51e15264f1923570cbac53bef47fc57026d98f4f6d6f2878c5a"
+      "bytes": 51551,
+      "sha256": "2e60a34d29555cc30d7fc12416360333e3bbef0806fddaa04d13ef13fcdab6cf"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-isometric.png",
@@ -255,8 +255,8 @@
         1200,
         420
       ],
-      "bytes": 58376,
-      "sha256": "f4be1ce6890d55de02f2233c94a2542a2683fabe05db72137a5867508ab70389"
+      "bytes": 58931,
+      "sha256": "b69e083c8f7be2ac2da40bed3640958d5c4ba72c68d82fb5336dffa09ee0c13d"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-left.png",
@@ -264,8 +264,8 @@
         1200,
         420
       ],
-      "bytes": 34634,
-      "sha256": "8acc5cb6cafec928467588cf232c2f499e2ef8c3288de6a5fd7253debb607f09"
+      "bytes": 34361,
+      "sha256": "7289c43bdeeee900bc6d61e03efb2a70e992e34e23f36bdaab5e36eddb8a3e03"
     },
     {
       "file": "comparison/after-wenhu-apm256-formation-top.png",
@@ -282,8 +282,8 @@
         1200,
         420
       ],
-      "bytes": 45774,
-      "sha256": "cb03f6e45eaf2e1fdcf4a1f54db9b6ff2616c33ebad49fe779555c6da460e505"
+      "bytes": 46794,
+      "sha256": "260c4a48127fc586cd2bb72bde942633bb6173df9ab4c4f5b76086e2b60fb7d9"
     },
     {
       "file": "comparison/after-wenhu-val256-a-far-bottom.png",
@@ -291,8 +291,8 @@
         1200,
         420
       ],
-      "bytes": 44813,
-      "sha256": "b2cfb31cd9e1bc9682873e9979ade4dd68315b453a2ec193c1c2338019f8faa7"
+      "bytes": 46723,
+      "sha256": "3b052c2afb06307ea802ba27a09e1de27a3d26d087e673d5bc632db80986fc54"
     },
     {
       "file": "comparison/after-wenhu-val256-a-far-front.png",
@@ -300,8 +300,8 @@
         1200,
         420
       ],
-      "bytes": 41637,
-      "sha256": "48b3bdfc8b3b3548f0fd6548d1258d7adcfc49308d1e7816adf9b10c6051fe3b"
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
     },
     {
       "file": "comparison/after-wenhu-val256-a-far-isometric.png",
@@ -309,8 +309,8 @@
         1200,
         420
       ],
-      "bytes": 46626,
-      "sha256": "fc229d02dafb28a6c35b72b0964fa3ed6e5d11ed07b96a34e2b0e80f493f6779"
+      "bytes": 47426,
+      "sha256": "01fdb0e3b5b792cb6b88831ea9b0521be44785f1b1ede84847738a0401ee591b"
     },
     {
       "file": "comparison/after-wenhu-val256-a-far-left.png",
@@ -318,8 +318,8 @@
         1200,
         420
       ],
-      "bytes": 35663,
-      "sha256": "eb559a8ab9d1f4d8d4745bb9d6d38829e96233de9ace5a497052bdad5f56f525"
+      "bytes": 37049,
+      "sha256": "1014563ef89f8c4734be3f137a5a4667735c475ce4f18027f30e88168bdad499"
     },
     {
       "file": "comparison/after-wenhu-val256-a-far-top.png",
@@ -336,8 +336,8 @@
         1200,
         420
       ],
-      "bytes": 45880,
-      "sha256": "6699acf136130e6a3be823ebc26755005c7e37b7110825b4a9228cbb234829fe"
+      "bytes": 46654,
+      "sha256": "552acda0a489ee2a5b2cb7cc60e192bb76fe07978eab19a9b2c5df4056a823b1"
     },
     {
       "file": "comparison/after-wenhu-val256-a-isometric.png",
@@ -345,8 +345,8 @@
         1200,
         420
       ],
-      "bytes": 55665,
-      "sha256": "7bdd097e3300459f0e34f0666c2bb9fd54d7e97c7c94442cf6490edb047814a9"
+      "bytes": 56316,
+      "sha256": "5062fb63a1b511d9fa4321c6f33a2a0e2365f109a345da8995b06303f63ad184"
     },
     {
       "file": "comparison/after-wenhu-val256-a-left.png",
@@ -354,8 +354,8 @@
         1200,
         420
       ],
-      "bytes": 39710,
-      "sha256": "537b5561040578d697f9f96d49000c8fe83c7d256a55ef36ef839105b638329b"
+      "bytes": 40634,
+      "sha256": "7d8b6dce92be01a3b560e4359050488da800de6966ae654ff41f783babb128b0"
     },
     {
       "file": "comparison/after-wenhu-val256-a-top.png",
@@ -372,8 +372,8 @@
         1200,
         420
       ],
-      "bytes": 45219,
-      "sha256": "8c60d8c04604e727fff9452d85ac99ccd1b8dffb647ad710f36e6ab9d7a40b5b"
+      "bytes": 47839,
+      "sha256": "6024e04f14c8fcb83e1d41718652c34e24f0243bf539f4b5a12bc3ed6c0db286"
     },
     {
       "file": "comparison/after-wenhu-val256-b-far-bottom.png",
@@ -381,8 +381,8 @@
         1200,
         420
       ],
-      "bytes": 44482,
-      "sha256": "69681866c6bd5b877e9462877aca3e4b4447ac4fed74308ab0dc0e086c8522fe"
+      "bytes": 46631,
+      "sha256": "e88963c67b5d3fc747a063b98a06fe0c844ed98db6e733010b3e25381741fb2c"
     },
     {
       "file": "comparison/after-wenhu-val256-b-far-front.png",
@@ -390,8 +390,8 @@
         1200,
         420
       ],
-      "bytes": 35905,
-      "sha256": "1baa1472645d3760b09736caa0ec9fce3de1bbeb0ed2ec5be56bdc8fde9ac07c"
+      "bytes": 36893,
+      "sha256": "2a0e4ad3f84d92667469f5ebf5324eabd7495d7f3ea48b3fb15fb5015623e655"
     },
     {
       "file": "comparison/after-wenhu-val256-b-far-isometric.png",
@@ -399,8 +399,8 @@
         1200,
         420
       ],
-      "bytes": 45893,
-      "sha256": "26c696b5e576ca794b569c050b3ac2cc31f4d093e89caa9ced680488f7e833a0"
+      "bytes": 46676,
+      "sha256": "6c519926efdf634510206c5b45af0ec3d9b8fa518293562fdf774b5337eabb98"
     },
     {
       "file": "comparison/after-wenhu-val256-b-far-left.png",
@@ -408,8 +408,8 @@
         1200,
         420
       ],
-      "bytes": 35153,
-      "sha256": "bcd52ba3de6f39fab641d1bfa5ffbf176fd6b8b6fc30ef0ad4fb0cf14d6dd1f0"
+      "bytes": 36507,
+      "sha256": "a0fd87a3bd50a68604acc43bd43f2a0b1dc8762b6b793e109ffa97d0bba96d52"
     },
     {
       "file": "comparison/after-wenhu-val256-b-far-top.png",
@@ -426,8 +426,8 @@
         1200,
         420
       ],
-      "bytes": 39514,
-      "sha256": "8fb6d392435a81ca8178b5adbc23fb94c230227c97861be13f23bcf382fb5060"
+      "bytes": 40035,
+      "sha256": "4e083b2698a58e1f6f0e2d5eefd4d9fc0f1f2a135134341050f4dd2e973a271a"
     },
     {
       "file": "comparison/after-wenhu-val256-b-isometric.png",
@@ -435,8 +435,8 @@
         1200,
         420
       ],
-      "bytes": 54814,
-      "sha256": "46e22f56a1de8f07cd346d9d629737704e2abb6edaaed0b5d04869f863a8889a"
+      "bytes": 55403,
+      "sha256": "26f36e3eec319b38cf933decf1b514b1745542eb7df73c9ea07ffa0a6de50c01"
     },
     {
       "file": "comparison/after-wenhu-val256-b-left.png",
@@ -444,8 +444,8 @@
         1200,
         420
       ],
-      "bytes": 40164,
-      "sha256": "57b6e93e0838d0a5757c4a9ffdbab7a8f584bf474fba458f72330801d5b16469"
+      "bytes": 41075,
+      "sha256": "1fb2e32228746e52fa4c26475dea3c5ab0da1bd272216ab5f2383196bd1015e2"
     },
     {
       "file": "comparison/after-wenhu-val256-b-top.png",
@@ -462,8 +462,8 @@
         1200,
         420
       ],
-      "bytes": 37021,
-      "sha256": "e2080957673eb25a1ca9495c598bbb8db2bf50c7ff83d8081411da085a6e748b"
+      "bytes": 39402,
+      "sha256": "fa73bbbaf4d72ed0a159c7a1c943c8032535a546de28b08c803ff62d180d2ff0"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-far-bottom.png",
@@ -471,8 +471,8 @@
         1200,
         420
       ],
-      "bytes": 36362,
-      "sha256": "c80635cec9c337bf50cdea0acf61257442104c9a3d242ae6e6aca0c414b7dce4"
+      "bytes": 38261,
+      "sha256": "ffebf6154832c2fc81f0474ea25fe43e7d5138325e0a7683bd8bacfbbb4970e9"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-far-front.png",
@@ -480,8 +480,8 @@
         1200,
         420
       ],
-      "bytes": 41637,
-      "sha256": "48b3bdfc8b3b3548f0fd6548d1258d7adcfc49308d1e7816adf9b10c6051fe3b"
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-far-isometric.png",
@@ -489,8 +489,8 @@
         1200,
         420
       ],
-      "bytes": 52136,
-      "sha256": "54f9e97c71c7a188c359847bee516c83aa60f4885f7d01073e1820c9fdbadcca"
+      "bytes": 52770,
+      "sha256": "32c5243bf90f588df05bd4768ac7d1ac711928578d260b06bd6dbaab86102c90"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-far-left.png",
@@ -498,8 +498,8 @@
         1200,
         420
       ],
-      "bytes": 29958,
-      "sha256": "0e8a88a22a07c108922d4593228300eb3ef3e414607320801ae29e17fea2d476"
+      "bytes": 31000,
+      "sha256": "ba7ccda49d28f65846e4fdc4f635e0d54abed48c04c50012bb04f75c5b94d03c"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-far-top.png",
@@ -516,8 +516,8 @@
         1200,
         420
       ],
-      "bytes": 45919,
-      "sha256": "515414fa0a41bb87ef239b535dab81531d838c2583c8252300c279f0c1eff344"
+      "bytes": 46678,
+      "sha256": "c81f418d3ed3f6e8231713b05d1142fdfea5c69d0c754ab326359e11ce2ec7e9"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-isometric.png",
@@ -525,8 +525,8 @@
         1200,
         420
       ],
-      "bytes": 59626,
-      "sha256": "4861ce198e3620d676f5720b1b253d1dd68b2c1bcc03637749d723ee276fde55"
+      "bytes": 60120,
+      "sha256": "d65b6f61ce0c7cd257b569a8e77612b47aca7bb0037502f0ad947a1e13bcd3f3"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-left.png",
@@ -534,8 +534,8 @@
         1200,
         420
       ],
-      "bytes": 32161,
-      "sha256": "d6b4fdd4a774674a3e8d54e5af689529142a247dbb3211b6b4e04cd4558ca6dd"
+      "bytes": 33147,
+      "sha256": "6d00d26d79a32400413d729d5953a169483afa04a167c850de41d286f71fe953"
     },
     {
       "file": "comparison/after-wenhu-val256-formation-top.png",
@@ -544,7 +544,7 @@
         420
       ],
       "bytes": 36699,
-      "sha256": "60fef9926b8051fa8c7d333d490b71efbcc7a44ef380bc2d6a31cf42e2747e9a"
+      "sha256": "7101ed6680738f94166797d94669baca4de860d66a7601ea344cc85d9037c888"
     },
     {
       "file": "comparison/before-wenhu-apm256-a-bottom.png",
@@ -1092,8 +1092,8 @@
         1600,
         1400
       ],
-      "bytes": 255707,
-      "sha256": "ab0adf03d938ba758b3049c1dd63fcc1c6c4bc1ec49da2c3dba2d0a82ec86e39"
+      "bytes": 268253,
+      "sha256": "5b4cc791cf8b36c57a6f9e518dc462380f0fc19af1a9803ec23c192204fc0b51"
     },
     {
       "file": "png/clay/wenhu-apm256-a-back.png",
@@ -1101,8 +1101,8 @@
         1200,
         420
       ],
-      "bytes": 16970,
-      "sha256": "9824d31ad83f2e22e138b71a13eda749ab1d898d9b6631d0d054a339f6c6f9da"
+      "bytes": 17300,
+      "sha256": "92ae2e9c66130c0523adc749f3d3677a7fe2967c4900a8e613af4c66ed377b4f"
     },
     {
       "file": "png/clay/wenhu-apm256-a-bottom.png",
@@ -1110,8 +1110,8 @@
         1200,
         420
       ],
-      "bytes": 16185,
-      "sha256": "eec911c56d2a312c6e97a97e55ffce1dc4d7d003d6a26d5a572a7767859334b8"
+      "bytes": 16097,
+      "sha256": "8b49a334c6effda710f23b92fa5d13582b213ad933b524ed113b15383c40b47c"
     },
     {
       "file": "png/clay/wenhu-apm256-a-far-back.png",
@@ -1119,8 +1119,8 @@
         1200,
         420
       ],
-      "bytes": 18023,
-      "sha256": "3268897021a59a21b0a366372d0acc705ab7be90e42adf7ca0aaed706c30564e"
+      "bytes": 18270,
+      "sha256": "2331999542ca794874565d538908583da98209cab54425bcab2870c7dc25a18b"
     },
     {
       "file": "png/clay/wenhu-apm256-a-far-bottom.png",
@@ -1128,8 +1128,8 @@
         1200,
         420
       ],
-      "bytes": 15836,
-      "sha256": "568bdac250dbe227cd16e9dd4c8f20391bd1028e92854f0d01ecc2e08ce33554"
+      "bytes": 15805,
+      "sha256": "7c5aa026dfd33cfefef796565c1b698bdce327210b70355d96e24d970edba4cc"
     },
     {
       "file": "png/clay/wenhu-apm256-a-far-front.png",
@@ -1137,8 +1137,8 @@
         1200,
         420
       ],
-      "bytes": 14712,
-      "sha256": "2fac0ddb243e330a8df0ad9c3a699727db0aa268c6a64000b0ab0db93a10426c"
+      "bytes": 14874,
+      "sha256": "c0aa06d5a67a753bfdacb60e7968ffbe38b5934e6d2974f0c53d7d9b69c70e68"
     },
     {
       "file": "png/clay/wenhu-apm256-a-far-isometric.png",
@@ -1146,8 +1146,8 @@
         1200,
         420
       ],
-      "bytes": 28942,
-      "sha256": "934272cbefbd41950196534504297988646785fc0d31dc62658582539007e076"
+      "bytes": 29568,
+      "sha256": "a62843317259442da83141e876626a955c48700013b039d9e94e3c84b4640d6b"
     },
     {
       "file": "png/clay/wenhu-apm256-a-far-left.png",
@@ -1155,8 +1155,8 @@
         1200,
         420
       ],
-      "bytes": 19577,
-      "sha256": "adf2808253a7e33e87d05f3eafc12caf0226694d8b4d9b3eb54b5048d3be1b5a"
+      "bytes": 19469,
+      "sha256": "452b327f1340d3b0e69f00ab5a5ec4cffc32c9a09291f18add8620588ea53a03"
     },
     {
       "file": "png/clay/wenhu-apm256-a-far-right.png",
@@ -1164,8 +1164,8 @@
         1200,
         420
       ],
-      "bytes": 20932,
-      "sha256": "3c89f199dcfbe4e263c5539dc22edb879bd03ed2e6f48aa967e347a4fef93de8"
+      "bytes": 21262,
+      "sha256": "d18075e4b7f14df9c18d10ff8ee6948fac3ad2492e3c7b8821c6ed1ec24faf92"
     },
     {
       "file": "png/clay/wenhu-apm256-a-far-top.png",
@@ -1182,8 +1182,8 @@
         1200,
         420
       ],
-      "bytes": 14476,
-      "sha256": "b28b4c2800562804e05bd6904bd30354d94de70ab273fb4757f46741beacd2cc"
+      "bytes": 14612,
+      "sha256": "86c6fd464a17ccdbf7c133ac0c76316420f592759dd59257641a37d7130a465c"
     },
     {
       "file": "png/clay/wenhu-apm256-a-isometric.png",
@@ -1191,8 +1191,8 @@
         1200,
         420
       ],
-      "bytes": 31830,
-      "sha256": "74d74aa14f058f3e9272db01f0dfb22017a6559b9eecc9eb76aa62addf4536f6"
+      "bytes": 32641,
+      "sha256": "b3682f2a34a4194fac82fe2a32e23c73a12202caddcc755098eb733e272fc6ad"
     },
     {
       "file": "png/clay/wenhu-apm256-a-left.png",
@@ -1200,8 +1200,8 @@
         1200,
         420
       ],
-      "bytes": 20333,
-      "sha256": "8c919d07d17cf81741fb435b9504a1f34c20184e663269f12030c8c29b2ce0cc"
+      "bytes": 20234,
+      "sha256": "802155a58b78c2d2ed6eb7fef7034430ef14313ee91ea27fbff4a555f277b234"
     },
     {
       "file": "png/clay/wenhu-apm256-a-right.png",
@@ -1209,8 +1209,8 @@
         1200,
         420
       ],
-      "bytes": 21836,
-      "sha256": "732a0b66d4bc72006fa70986578a66c70f96fdf429f6c2ba7fa1641dee06a86d"
+      "bytes": 21919,
+      "sha256": "834859ffa5821ca68e01e00c4dbdd10af552b8226b8d3a9722963d90130d37af"
     },
     {
       "file": "png/clay/wenhu-apm256-a-top.png",
@@ -1227,8 +1227,8 @@
         1200,
         420
       ],
-      "bytes": 17958,
-      "sha256": "4f76db5bf58bec879ccdda3c27b3a7687f3f2208f322a17dac0fb86ac61d87e7"
+      "bytes": 18451,
+      "sha256": "7b41d6f5ef3c278cf97a7f8e3e414dfa2c2e19a214937c42d2d06e7ace832e81"
     },
     {
       "file": "png/clay/wenhu-apm256-b-bottom.png",
@@ -1236,8 +1236,8 @@
         1200,
         420
       ],
-      "bytes": 16277,
-      "sha256": "c931de5a6de5d88093da1b5c0f5697adaf223eee1828c83bfaf67fb3d0bd76c5"
+      "bytes": 16189,
+      "sha256": "d06fb60f82160dc8467322a067808b39416ce0872e1b23420a9fba3867c24cec"
     },
     {
       "file": "png/clay/wenhu-apm256-b-far-back.png",
@@ -1245,8 +1245,8 @@
         1200,
         420
       ],
-      "bytes": 19148,
-      "sha256": "bc0840e7b2cae2d00a118cd11a77deea5dfa5be339ac7f47d695385b683877f0"
+      "bytes": 19542,
+      "sha256": "73a7d762731683da157e71df8954bbbd5013a2d7568f43c233fb906864a6a7ac"
     },
     {
       "file": "png/clay/wenhu-apm256-b-far-bottom.png",
@@ -1254,8 +1254,8 @@
         1200,
         420
       ],
-      "bytes": 15957,
-      "sha256": "4b926b70294d6cb7ed7170f11f0c8b7868425a687f69931b61dd4fb59221fcfa"
+      "bytes": 15932,
+      "sha256": "57f4395b6c6fb5ad7a306ec1c7ae37b691e33ac4b945aea814d3b72cdf0e32bc"
     },
     {
       "file": "png/clay/wenhu-apm256-b-far-front.png",
@@ -1263,8 +1263,8 @@
         1200,
         420
       ],
-      "bytes": 14633,
-      "sha256": "484ebd44cc8015572d4b510cbf3a4adeac9d776b47ea5f9e052d85ad44266cc1"
+      "bytes": 14755,
+      "sha256": "f2c252cd1a00a997cf26c948d04c44ebf7a135f8f636e1d689daa6e126bd8ae9"
     },
     {
       "file": "png/clay/wenhu-apm256-b-far-isometric.png",
@@ -1272,8 +1272,8 @@
         1200,
         420
       ],
-      "bytes": 28228,
-      "sha256": "30bf1d485a3233380802a5b626b850cd7c36d0dae146b83b2f0d9139c1126a34"
+      "bytes": 29115,
+      "sha256": "7eeb8cc4b2d66b0d012d9941a7b35c09364fc967ce1dce9e0a41fda226b87d6b"
     },
     {
       "file": "png/clay/wenhu-apm256-b-far-left.png",
@@ -1281,8 +1281,8 @@
         1200,
         420
       ],
-      "bytes": 19752,
-      "sha256": "57ecd141bd8be6536f7fe49cfbf6674847d6116643d56478106bf1383b144266"
+      "bytes": 19656,
+      "sha256": "4e2098adf5e17965ac5c0aa01ed779f8b9539379ea9179604f4e757e078ff469"
     },
     {
       "file": "png/clay/wenhu-apm256-b-far-right.png",
@@ -1290,8 +1290,8 @@
         1200,
         420
       ],
-      "bytes": 21038,
-      "sha256": "f94dd74a61a1ebbf00ba7cbce2543c75a235e450d206b13d57a2d69531619163"
+      "bytes": 21364,
+      "sha256": "f30fbfbc413e297d169f525a0d0dc66baa62a57babd02a2f98f35669e34a2631"
     },
     {
       "file": "png/clay/wenhu-apm256-b-far-top.png",
@@ -1308,8 +1308,8 @@
         1200,
         420
       ],
-      "bytes": 14478,
-      "sha256": "0b6afc08d828e316a2308e5c3568ad2ad7412a36afddbbec7b57ff9cfb2d12cc"
+      "bytes": 14614,
+      "sha256": "b734e038a26b1fb0e397104008110771a7301635fe6d2e0c09b5105690826163"
     },
     {
       "file": "png/clay/wenhu-apm256-b-isometric.png",
@@ -1317,8 +1317,8 @@
         1200,
         420
       ],
-      "bytes": 31054,
-      "sha256": "517b066dbdf6fd84fca8cb0b3b3b9c4df68798cf8ef5c79d9753562abd4b52ef"
+      "bytes": 32110,
+      "sha256": "8b4da9793437fe687357d749872dcb487206d6faff7eb2cebc35d1b7a305f6cf"
     },
     {
       "file": "png/clay/wenhu-apm256-b-left.png",
@@ -1326,8 +1326,8 @@
         1200,
         420
       ],
-      "bytes": 20472,
-      "sha256": "dbea18aaf8de6e4a14d9b69772411e21f65d2d5028143049bfb350510a334404"
+      "bytes": 20377,
+      "sha256": "973aac970b92bcb349c395c97ed884ba414540ba9a7ba32396826453ca35c324"
     },
     {
       "file": "png/clay/wenhu-apm256-b-right.png",
@@ -1335,8 +1335,8 @@
         1200,
         420
       ],
-      "bytes": 21924,
-      "sha256": "2de3f71400f9f1c7964967220629cdd8bf36e663b71b80b2eda9a81a60a7b6b2"
+      "bytes": 22007,
+      "sha256": "b670bc4306a6143a958459a96a7b4b3ec8ebac438022b3b1e5e08f26346b7267"
     },
     {
       "file": "png/clay/wenhu-apm256-b-top.png",
@@ -1353,8 +1353,8 @@
         1200,
         420
       ],
-      "bytes": 17958,
-      "sha256": "4f76db5bf58bec879ccdda3c27b3a7687f3f2208f322a17dac0fb86ac61d87e7"
+      "bytes": 18451,
+      "sha256": "7b41d6f5ef3c278cf97a7f8e3e414dfa2c2e19a214937c42d2d06e7ace832e81"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-bottom.png",
@@ -1362,8 +1362,8 @@
         1200,
         420
       ],
-      "bytes": 16794,
-      "sha256": "d5b022c883a2825e667179c798cb7052cd8b1dd4392366506a2a2dcc09bd381e"
+      "bytes": 16785,
+      "sha256": "c82446cb1510d5259c6c186e6c52e19570bc3c12a9cbaaa4569afa6a659cb352"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-far-back.png",
@@ -1371,8 +1371,8 @@
         1200,
         420
       ],
-      "bytes": 19148,
-      "sha256": "bc0840e7b2cae2d00a118cd11a77deea5dfa5be339ac7f47d695385b683877f0"
+      "bytes": 19542,
+      "sha256": "73a7d762731683da157e71df8954bbbd5013a2d7568f43c233fb906864a6a7ac"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-far-bottom.png",
@@ -1380,8 +1380,8 @@
         1200,
         420
       ],
-      "bytes": 16556,
-      "sha256": "9bf6bcaef01c9489c4c5f497d6396d47235b62969588f4e0f0be10040278c4e5"
+      "bytes": 16457,
+      "sha256": "c84fabb2c2734c3401beedb009187f2be3b05d6d5963ea2b95d0e2eb53870623"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-far-front.png",
@@ -1389,8 +1389,8 @@
         1200,
         420
       ],
-      "bytes": 14712,
-      "sha256": "2fac0ddb243e330a8df0ad9c3a699727db0aa268c6a64000b0ab0db93a10426c"
+      "bytes": 14874,
+      "sha256": "c0aa06d5a67a753bfdacb60e7968ffbe38b5934e6d2974f0c53d7d9b69c70e68"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-far-isometric.png",
@@ -1398,8 +1398,8 @@
         1200,
         420
       ],
-      "bytes": 33272,
-      "sha256": "81112b9d98bf2c5fd45cd5c1026c64362ea7a6e6a93aed09627e021639e3d022"
+      "bytes": 33999,
+      "sha256": "f737457edae6f06b4c9f08e676ea000287617f534fb591a84e7150101734164b"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-far-left.png",
@@ -1407,8 +1407,8 @@
         1200,
         420
       ],
-      "bytes": 19058,
-      "sha256": "9e7569bceb02cf8ca6f06f310fdf12825a04c4bd27841e49a271a04680b3669c"
+      "bytes": 18797,
+      "sha256": "012ef60d599e1f0227fd6b7f613ffe1c03663d50e0ad0fcccc512a2f43e2a9e1"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-far-right.png",
@@ -1416,8 +1416,8 @@
         1200,
         420
       ],
-      "bytes": 20260,
-      "sha256": "b823e180db7da267a7705d2519e0fcabb15bcdbdac6accde0fa208680011555c"
+      "bytes": 20207,
+      "sha256": "7ac18272c002ab892fabf891a41d049b6713ce8ec26ad757b88b878b85d795cc"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-far-top.png",
@@ -1434,8 +1434,8 @@
         1200,
         420
       ],
-      "bytes": 14476,
-      "sha256": "b28b4c2800562804e05bd6904bd30354d94de70ab273fb4757f46741beacd2cc"
+      "bytes": 14612,
+      "sha256": "86c6fd464a17ccdbf7c133ac0c76316420f592759dd59257641a37d7130a465c"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-isometric.png",
@@ -1443,8 +1443,8 @@
         1200,
         420
       ],
-      "bytes": 35598,
-      "sha256": "7bb2b853974b724dc6ff35923766529dc1d6a84bd6a3ef209e68247e257ba1b5"
+      "bytes": 36282,
+      "sha256": "1c6b76fe6811319d2e7ea35863c9e996d09b5a7533a4b9ca525414517cdb0c24"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-left.png",
@@ -1452,8 +1452,8 @@
         1200,
         420
       ],
-      "bytes": 19801,
-      "sha256": "44df2f1bb6ff58e810cc55c32f78f663e702016a7e46081fe9e093554f4071f8"
+      "bytes": 19758,
+      "sha256": "70c212fdb240a27e38e43fcee2a9524b76f3c2ce4dc2cddf9a9b9cec9b48437e"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-right.png",
@@ -1461,8 +1461,8 @@
         1200,
         420
       ],
-      "bytes": 20946,
-      "sha256": "067e2de4913dc4fe13a920d79e52429f67649b7a0bd5b7242a35989b40dbd087"
+      "bytes": 20827,
+      "sha256": "b842cbfce30589e5f1f72a8d46ce995e989b731ad960b6dd4cb2df0aedb0a211"
     },
     {
       "file": "png/clay/wenhu-apm256-formation-top.png",
@@ -1479,8 +1479,8 @@
         1200,
         420
       ],
-      "bytes": 16540,
-      "sha256": "b2130e6eaa0ef944310c9e5626f99aa7baa921dd7d36336c3760a14471c1911f"
+      "bytes": 16934,
+      "sha256": "6a39004684adc1faed8079774ecc99a9860fd46f3ef5ae84c2604af5be7bb115"
     },
     {
       "file": "png/clay/wenhu-val256-a-bottom.png",
@@ -1497,8 +1497,8 @@
         1200,
         420
       ],
-      "bytes": 16815,
-      "sha256": "cc2765f7d274d2e3a9748192f7a6adf067c0e6f0dc0e7d323b912baa23317a94"
+      "bytes": 17111,
+      "sha256": "9203c6112638992ce0bfe743eb6c590130d70c75c23b643cca6484c57c732a2f"
     },
     {
       "file": "png/clay/wenhu-val256-a-far-bottom.png",
@@ -1515,8 +1515,8 @@
         1200,
         420
       ],
-      "bytes": 14459,
-      "sha256": "bdaa38731ae9cfcc2f73afd9e00b5e35a6710dcd69ce0b24ce66d99db0763359"
+      "bytes": 14646,
+      "sha256": "ee072fee0e2a5cde282b5277d347441e280f7f1a89ae210ae63ac41f01df8d4f"
     },
     {
       "file": "png/clay/wenhu-val256-a-far-isometric.png",
@@ -1524,8 +1524,8 @@
         1200,
         420
       ],
-      "bytes": 29933,
-      "sha256": "13ccc57494d73346151633a46013de3ac1598e11b5ff0816182cc29d35f98c57"
+      "bytes": 30419,
+      "sha256": "c14b789c90d6159e93f33eb50ec0301d1022eb853b6b58c47e3329bf49dc4833"
     },
     {
       "file": "png/clay/wenhu-val256-a-far-left.png",
@@ -1533,8 +1533,8 @@
         1200,
         420
       ],
-      "bytes": 19821,
-      "sha256": "b3d7414072f1929deb77c98b1a5e1d4e11d7a823ab3d1830eb63e60bab087eb2"
+      "bytes": 19765,
+      "sha256": "843a7854066c5f4a369c11cca11b63329e1e9fcc8ca358b3ca9ff4ab6907a4d7"
     },
     {
       "file": "png/clay/wenhu-val256-a-far-right.png",
@@ -1542,8 +1542,8 @@
         1200,
         420
       ],
-      "bytes": 21077,
-      "sha256": "2d6bc86dccf634c0d4f2a0f6fa87252e25d60731e3e696356904f831d74160ba"
+      "bytes": 21449,
+      "sha256": "b9a4e89f30a2e1c0c09dea3c541d39244be3220453729db953f3484e18c62ad0"
     },
     {
       "file": "png/clay/wenhu-val256-a-far-top.png",
@@ -1560,8 +1560,8 @@
         1200,
         420
       ],
-      "bytes": 14905,
-      "sha256": "5af8b54ccaa911d46f8993b71f36579da323d11fb4bb68719faa3d51ad687c5f"
+      "bytes": 15049,
+      "sha256": "5752c6ccea9ce9c917c292069897fa6f8726ff12b9d0807d12b8c9a376fab564"
     },
     {
       "file": "png/clay/wenhu-val256-a-isometric.png",
@@ -1569,8 +1569,8 @@
         1200,
         420
       ],
-      "bytes": 32857,
-      "sha256": "e0a84cbe7fc66f209fca0fb6751eb725c36cc0bdd5320c8e3d15e6e64a7fff5f"
+      "bytes": 33380,
+      "sha256": "31b3a429fbf1338891d70c96c41da10f52342f456153b00aa04f69ad907acabd"
     },
     {
       "file": "png/clay/wenhu-val256-a-left.png",
@@ -1578,8 +1578,8 @@
         1200,
         420
       ],
-      "bytes": 20698,
-      "sha256": "5957797e30c0b28ffe35a93b063e2174e9cd796f4a9d8ab8f25fa133f37c56ba"
+      "bytes": 20793,
+      "sha256": "56a3cb790d43da160d27e77e9ddc687a565064f88cd78e88cf9e8a3cfa1ba1ec"
     },
     {
       "file": "png/clay/wenhu-val256-a-right.png",
@@ -1587,8 +1587,8 @@
         1200,
         420
       ],
-      "bytes": 22088,
-      "sha256": "0dedb8c32bbf936c8a5750b569186d1ae1714a4815199652c614fa40b8729efc"
+      "bytes": 22466,
+      "sha256": "0be3b2a4a332104097f9cb0a0544682cb005b73ea12a2784aa193446265faac5"
     },
     {
       "file": "png/clay/wenhu-val256-a-top.png",
@@ -1605,8 +1605,8 @@
         1200,
         420
       ],
-      "bytes": 19436,
-      "sha256": "d184c7f0d6b0a77bc0210d9d09cefe1704e436a0b5e4af6bad3016a1879f3a61"
+      "bytes": 19955,
+      "sha256": "09c2cccdd4118a6b95f99456044303a5a858ac4ad94605002d4e05ec40035bbe"
     },
     {
       "file": "png/clay/wenhu-val256-b-bottom.png",
@@ -1623,8 +1623,8 @@
         1200,
         420
       ],
-      "bytes": 19419,
-      "sha256": "f3f6cc19365f7139256bc9ad3e2aadf151d7e50c63abbba292e070914b6bb5dd"
+      "bytes": 19831,
+      "sha256": "68aba833160074813c2d41e3c9b56bf625ebf3a97e2dff145261abfef2460bf7"
     },
     {
       "file": "png/clay/wenhu-val256-b-far-bottom.png",
@@ -1641,8 +1641,8 @@
         1200,
         420
       ],
-      "bytes": 14208,
-      "sha256": "bad46f8ed8ced6c6628d4fbd656b44cf30db887657fc8f3e1e2b96d4dc3d73ca"
+      "bytes": 14359,
+      "sha256": "1cdc2166d456f9b6175fa825291d34a5e1142b98316b3772a06fab728026f511"
     },
     {
       "file": "png/clay/wenhu-val256-b-far-isometric.png",
@@ -1650,8 +1650,8 @@
         1200,
         420
       ],
-      "bytes": 29181,
-      "sha256": "301c55641b16da077ec69b4667bc00faf4cc860b0669fe165c386dddcfde792a"
+      "bytes": 29723,
+      "sha256": "f4ac493c0062c06c77ac8ce04b559036c107c16aab0c783e77cc7c43d08120d3"
     },
     {
       "file": "png/clay/wenhu-val256-b-far-left.png",
@@ -1659,8 +1659,8 @@
         1200,
         420
       ],
-      "bytes": 20033,
-      "sha256": "ca382d6e569e0ace16a0ddb4828f7e729e0df8d8ed625b95a0d9e8d3642d29dc"
+      "bytes": 19973,
+      "sha256": "dcde407b4b2640a2f6e6b54ea0e28b1f326fc80879aa61c0944c47675caa6ae0"
     },
     {
       "file": "png/clay/wenhu-val256-b-far-right.png",
@@ -1668,8 +1668,8 @@
         1200,
         420
       ],
-      "bytes": 21265,
-      "sha256": "c8f314cef419bee841f0907d5b38935a29190d8298c76843fea4e87ac340c832"
+      "bytes": 21650,
+      "sha256": "6d8d0a0d32a38c90fe1ead1660e60ac384c2d9a0f316bf6a69f3a11cf2b6155b"
     },
     {
       "file": "png/clay/wenhu-val256-b-far-top.png",
@@ -1686,8 +1686,8 @@
         1200,
         420
       ],
-      "bytes": 14604,
-      "sha256": "8990693063c5d1c32276c06b5e31a1ecd3f117f564b0f37a90f5a4d5a4f7f9a6"
+      "bytes": 14745,
+      "sha256": "92c130e657e8ba618299d3155119be8f90238570a322efe080b32e66f34e3dc9"
     },
     {
       "file": "png/clay/wenhu-val256-b-isometric.png",
@@ -1695,8 +1695,8 @@
         1200,
         420
       ],
-      "bytes": 32035,
-      "sha256": "31d9815d7743b4299421488b93e5426d69f71deacae3870fb5f3d34551cd6040"
+      "bytes": 32517,
+      "sha256": "16ad5d4f2608e6763a46211e955721f56ffe9c71f86290929b64f8b449e38179"
     },
     {
       "file": "png/clay/wenhu-val256-b-left.png",
@@ -1704,8 +1704,8 @@
         1200,
         420
       ],
-      "bytes": 20855,
-      "sha256": "8822bff84db0c6362794729f47eb653dd5f6b1d4489083ff1dac084949876bdd"
+      "bytes": 20948,
+      "sha256": "41f3497e72c4d01a589f29a8a0d67a0094fb7d5ca406ec85e11a80efbfa0df82"
     },
     {
       "file": "png/clay/wenhu-val256-b-right.png",
@@ -1713,8 +1713,8 @@
         1200,
         420
       ],
-      "bytes": 22246,
-      "sha256": "f46e1e62ffd1f32e006e017af8c07dcb9c6e5710db218e66d0859d7416e95f8b"
+      "bytes": 22657,
+      "sha256": "8a08afd25a99dcbba665254e230fd0c7151b03e6ecc14aadd1129527747cd403"
     },
     {
       "file": "png/clay/wenhu-val256-b-top.png",
@@ -1731,8 +1731,8 @@
         1200,
         420
       ],
-      "bytes": 19489,
-      "sha256": "49c74acb835e1427d4bdda1774aa9cc8412fe7b3d5bc80c3675d3e81e79f8dca"
+      "bytes": 20009,
+      "sha256": "0ac101dfa3b45a0d488ae20ffe93a6efb26925e27b33636244c7e9aad2a35d51"
     },
     {
       "file": "png/clay/wenhu-val256-formation-bottom.png",
@@ -1749,8 +1749,8 @@
         1200,
         420
       ],
-      "bytes": 19461,
-      "sha256": "155b03f64fd215dc1f5a9a9d09c815846659150b5b7e3d2546d894d1e31c9d76"
+      "bytes": 19877,
+      "sha256": "672b59144edad993793641bcdd4eecceaa7cef86c15216759bba24da973b5e8b"
     },
     {
       "file": "png/clay/wenhu-val256-formation-far-bottom.png",
@@ -1767,8 +1767,8 @@
         1200,
         420
       ],
-      "bytes": 14459,
-      "sha256": "bdaa38731ae9cfcc2f73afd9e00b5e35a6710dcd69ce0b24ce66d99db0763359"
+      "bytes": 14646,
+      "sha256": "ee072fee0e2a5cde282b5277d347441e280f7f1a89ae210ae63ac41f01df8d4f"
     },
     {
       "file": "png/clay/wenhu-val256-formation-far-isometric.png",
@@ -1776,8 +1776,8 @@
         1200,
         420
       ],
-      "bytes": 33165,
-      "sha256": "793c340a85f72fc598a53126006afe7679f5c964dd5dec7529c38393d9e3fbbf"
+      "bytes": 33822,
+      "sha256": "fd6649f5647c93196ae7023905c00df4f05722250035e622ef28c4a9d36be299"
     },
     {
       "file": "png/clay/wenhu-val256-formation-far-left.png",
@@ -1785,8 +1785,8 @@
         1200,
         420
       ],
-      "bytes": 18719,
-      "sha256": "84a9b79e2ed095b514fe0b196573c46b531f2d2a17a346cbf12cc976cd37d8b0"
+      "bytes": 19042,
+      "sha256": "71b7bdbed53f6e2086e553eeacf85e4adc3b007e1d59195401f43e27f616d7fa"
     },
     {
       "file": "png/clay/wenhu-val256-formation-far-right.png",
@@ -1794,8 +1794,8 @@
         1200,
         420
       ],
-      "bytes": 19769,
-      "sha256": "c653739edf97c49dd68bb7caa2e4fc20f6a1262cd24e89fd4dd11585305d8c95"
+      "bytes": 20443,
+      "sha256": "29849e47ec08186bb7de1a5f2bdd90eda9fcdeac17929c5039bd2eed030db3f1"
     },
     {
       "file": "png/clay/wenhu-val256-formation-far-top.png",
@@ -1812,8 +1812,8 @@
         1200,
         420
       ],
-      "bytes": 14905,
-      "sha256": "5af8b54ccaa911d46f8993b71f36579da323d11fb4bb68719faa3d51ad687c5f"
+      "bytes": 15049,
+      "sha256": "5752c6ccea9ce9c917c292069897fa6f8726ff12b9d0807d12b8c9a376fab564"
     },
     {
       "file": "png/clay/wenhu-val256-formation-isometric.png",
@@ -1821,8 +1821,8 @@
         1200,
         420
       ],
-      "bytes": 35855,
-      "sha256": "a6aa67d007f16dd3c869c4a9fff6fc92c95bb3f12fc3bf8820b2add35900700b"
+      "bytes": 36564,
+      "sha256": "01b9ebde79b3ee6f99ee89b7a8c618ccc3e0ea202a0fa2bea4f48a60a5c46224"
     },
     {
       "file": "png/clay/wenhu-val256-formation-left.png",
@@ -1830,8 +1830,8 @@
         1200,
         420
       ],
-      "bytes": 19492,
-      "sha256": "f5be209a4725453ee76f2d536a57830ef84141d0e5c412593c215e4589a6495f"
+      "bytes": 20078,
+      "sha256": "946b15924c375340b4ff6e3ed212f10549626d79f0348af400a1f295e70bb3c5"
     },
     {
       "file": "png/clay/wenhu-val256-formation-right.png",
@@ -1839,8 +1839,8 @@
         1200,
         420
       ],
-      "bytes": 20402,
-      "sha256": "427e51f2ee3d4e652b2fc877fcba591fcf83faf34acb0d9cb91aa7b4b3bef78d"
+      "bytes": 21230,
+      "sha256": "a3a94ddf278928e9f53a0c82ce0b79feebacccdc013d1404dbb8227d8d026509"
     },
     {
       "file": "png/clay/wenhu-val256-formation-top.png",
@@ -1857,8 +1857,8 @@
         1200,
         420
       ],
-      "bytes": 45478,
-      "sha256": "da1fc1733de981e9441209853bcd608080d7d9f7ecf37b6720faf0205307f690"
+      "bytes": 46263,
+      "sha256": "5946d3d43eafeff822982c76bbe70aac7c9a3871f6c52f5795eb623b52f2582a"
     },
     {
       "file": "png/day/wenhu-apm256-a-bottom.png",
@@ -1866,8 +1866,8 @@
         1200,
         420
       ],
-      "bytes": 48876,
-      "sha256": "c76e90dc5ab392195abd1278c54688a1a891fb891b033a9ae8614da70927c349"
+      "bytes": 47484,
+      "sha256": "320c510671a16e3802154921ab45b8f6668d79a3f2817f6c517ede27ca099a8e"
     },
     {
       "file": "png/day/wenhu-apm256-a-far-back.png",
@@ -1875,8 +1875,8 @@
         1200,
         420
       ],
-      "bytes": 48221,
-      "sha256": "8ecf060a907c930f047d214bc0d058b83d7ec11a530e09fbaff0b4c592175c70"
+      "bytes": 49173,
+      "sha256": "f5d15792d02d7a28dbcf87d7127d6219b79c2cce68f07b45aa4539e6c5ba2563"
     },
     {
       "file": "png/day/wenhu-apm256-a-far-bottom.png",
@@ -1884,8 +1884,8 @@
         1200,
         420
       ],
-      "bytes": 49015,
-      "sha256": "d190ee43a959e85d42884a5dfdb5fae7dc17c3bd4d0c126d38035e754c620c7b"
+      "bytes": 48809,
+      "sha256": "b3fc87695e5908a39b584625271e90ff2701587cabeb2fc899390a8f2dd5fca4"
     },
     {
       "file": "png/day/wenhu-apm256-a-far-front.png",
@@ -1893,8 +1893,8 @@
         1200,
         420
       ],
-      "bytes": 41509,
-      "sha256": "87012e368695fd911fb3ca028162851fe1190ceaffab2a02a20dabb3ce3e9da8"
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
     },
     {
       "file": "png/day/wenhu-apm256-a-far-isometric.png",
@@ -1902,8 +1902,8 @@
         1200,
         420
       ],
-      "bytes": 44548,
-      "sha256": "34d547c638b353ed0d12c7fcae03aeed6a22b51fc94673f58245c19e9dda479e"
+      "bytes": 45644,
+      "sha256": "d92484d188ec268b64cace7de1d4654e9ed3c6b6f7d8e2f3032933022e72c479"
     },
     {
       "file": "png/day/wenhu-apm256-a-far-left.png",
@@ -1911,8 +1911,8 @@
         1200,
         420
       ],
-      "bytes": 38999,
-      "sha256": "1a99bb80dd027c8e4d366dcb31aa5be4e892c538b3209ddb492dbb44c25fc294"
+      "bytes": 40141,
+      "sha256": "c5ac67f9b5eb7a12aaa1197edf57532ff468f592557de29446ce06c63bab616e"
     },
     {
       "file": "png/day/wenhu-apm256-a-far-right.png",
@@ -1920,8 +1920,8 @@
         1200,
         420
       ],
-      "bytes": 38258,
-      "sha256": "da8d170aef2571f38d8a233723a1c7933bfb3e675070eea550f1ec204bdce12c"
+      "bytes": 39105,
+      "sha256": "c18fd83737e523b572d0aa3ac4b1ebaa6ce4cd66283fd7dcc933c559cab579ea"
     },
     {
       "file": "png/day/wenhu-apm256-a-far-top.png",
@@ -1938,8 +1938,8 @@
         1200,
         420
       ],
-      "bytes": 50219,
-      "sha256": "9c7c715cf9fd351154c637e90d3e30ebf8901e6676ee6ccc67fa3eab62e520d5"
+      "bytes": 51548,
+      "sha256": "a77e1eda59561bfa10b234ec9a4545e2b988ccac8849a43c59a5894ed31793f9"
     },
     {
       "file": "png/day/wenhu-apm256-a-isometric.png",
@@ -1947,8 +1947,8 @@
         1200,
         420
       ],
-      "bytes": 54503,
-      "sha256": "d93811f49540f72004b4c681c4c5e1a6388cd9c14b5e20aae5d111feabd33897"
+      "bytes": 55478,
+      "sha256": "33f57450160af224628bde9d4d9a300e4d552e746d45460a88ffb81701414afc"
     },
     {
       "file": "png/day/wenhu-apm256-a-left.png",
@@ -1956,8 +1956,8 @@
         1200,
         420
       ],
-      "bytes": 44643,
-      "sha256": "2e54f0bc622894d8b66e2293765e09a7a062e372584a90b8ce1e6cde5c0abdb5"
+      "bytes": 45312,
+      "sha256": "db71a355125bbd451abf99586267f2fdbcc93884a67fbc4c992777c832c3210b"
     },
     {
       "file": "png/day/wenhu-apm256-a-right.png",
@@ -1965,8 +1965,8 @@
         1200,
         420
       ],
-      "bytes": 43899,
-      "sha256": "a0e65b82209fa3c4674dc5983ec38223d382334d9fa8832234852df5f1b45eed"
+      "bytes": 44398,
+      "sha256": "88382793c989c2f9308e0044744cdd352eccd69cade29683077d67d7bdfc539b"
     },
     {
       "file": "png/day/wenhu-apm256-a-top.png",
@@ -1983,8 +1983,8 @@
         1200,
         420
       ],
-      "bytes": 50617,
-      "sha256": "8aa1211f6b05c1dacfd4c9fe532b4a1e3317bfbbf8878c0dba03555f840082c3"
+      "bytes": 51109,
+      "sha256": "8cf616574c869156f5dcadf8a9476b713d5c047f631c96630f4b4387ea2c3024"
     },
     {
       "file": "png/day/wenhu-apm256-b-bottom.png",
@@ -1992,8 +1992,8 @@
         1200,
         420
       ],
-      "bytes": 48473,
-      "sha256": "795cbf2df495939663f3357a728f4a34243eac3e09b1d2b2ff04373394bde0da"
+      "bytes": 47341,
+      "sha256": "9512db2f846cd994501dace159db3013b2c230e04086398420ec4ff1fa0ab46b"
     },
     {
       "file": "png/day/wenhu-apm256-b-far-back.png",
@@ -2001,8 +2001,8 @@
         1200,
         420
       ],
-      "bytes": 52160,
-      "sha256": "6b2d16cb2ffeb07ac4ee543241185eb71d49ff4f5f362a75038d5ef852427e8e"
+      "bytes": 52830,
+      "sha256": "3712246be7ecec8213e6595cc36a1041ce50502f481e81bc3dbbe6e3077772bc"
     },
     {
       "file": "png/day/wenhu-apm256-b-far-bottom.png",
@@ -2010,8 +2010,8 @@
         1200,
         420
       ],
-      "bytes": 49309,
-      "sha256": "47a78dc6c816771e326b2367b82c603e9408f866167cb58ddf526278f639b98b"
+      "bytes": 47888,
+      "sha256": "51c15d38ef30953fa788462831cfa00f39bb73c3d972fd2a64c487de332461fe"
     },
     {
       "file": "png/day/wenhu-apm256-b-far-front.png",
@@ -2019,8 +2019,8 @@
         1200,
         420
       ],
-      "bytes": 38662,
-      "sha256": "3278aaa88efaf8b03a6243309f55cee8765551f917c4d417038e4d4abcc5a950"
+      "bytes": 38948,
+      "sha256": "78e129b801df60243b7d0d6fd7a9bd49643d540899331f1ea84fad8662ef3881"
     },
     {
       "file": "png/day/wenhu-apm256-b-far-isometric.png",
@@ -2028,8 +2028,8 @@
         1200,
         420
       ],
-      "bytes": 43640,
-      "sha256": "06f6e7a6b3a2004ae5d35c615e923ff1097361b5b6720096a812239f90623269"
+      "bytes": 45051,
+      "sha256": "eb42aea1d1b52310ce08c421eb323c3bc10f5bc8156f8922e1d38edb5a601efd"
     },
     {
       "file": "png/day/wenhu-apm256-b-far-left.png",
@@ -2037,8 +2037,8 @@
         1200,
         420
       ],
-      "bytes": 39271,
-      "sha256": "a91231c2a4bb31a4128b3c2c7cace5d182aac0421a420168426db2e2c3858d9c"
+      "bytes": 40364,
+      "sha256": "c9041cb28f4370be318dd5a7833e8a58b5afb6a34a931dd95396ddad6d027928"
     },
     {
       "file": "png/day/wenhu-apm256-b-far-right.png",
@@ -2046,8 +2046,8 @@
         1200,
         420
       ],
-      "bytes": 38501,
-      "sha256": "67d40fdd2450f82e5258e95a75cacd62c7429c2879963ed3eaae1dd6377fee80"
+      "bytes": 39294,
+      "sha256": "3eb5e457ed838a825a466f90b90c61c70e91da9d18bede1742c6ad0e4ab66575"
     },
     {
       "file": "png/day/wenhu-apm256-b-far-top.png",
@@ -2064,8 +2064,8 @@
         1200,
         420
       ],
-      "bytes": 46411,
-      "sha256": "8cc672d01194926760a880fc18acfed1c71ad162ff82f3317f2a15fb646b8a8b"
+      "bytes": 47221,
+      "sha256": "1ce5d23c4af8a7688f6b4caf3b7a51dc1d0d63acd1533045e938cd75384daa42"
     },
     {
       "file": "png/day/wenhu-apm256-b-isometric.png",
@@ -2073,8 +2073,8 @@
         1200,
         420
       ],
-      "bytes": 53549,
-      "sha256": "08d64f3dabe0b1729d4144d2c1d4b88460e9452586130102296ecf5f7b3c1e5e"
+      "bytes": 54720,
+      "sha256": "1cb99f52d367a033231bd236e7305a21af23aaf7595435ddeb00f3e37d5929fb"
     },
     {
       "file": "png/day/wenhu-apm256-b-left.png",
@@ -2082,8 +2082,8 @@
         1200,
         420
       ],
-      "bytes": 45163,
-      "sha256": "39011e3d5f390ed18021d9d52f9c2e6954ecf2d83dae9987ceb1422c0adc4db9"
+      "bytes": 45758,
+      "sha256": "259ed7397bae7c3830bfa1cbba24024352474e6f8da28d87036115aca61011e2"
     },
     {
       "file": "png/day/wenhu-apm256-b-right.png",
@@ -2091,8 +2091,8 @@
         1200,
         420
       ],
-      "bytes": 44631,
-      "sha256": "7798cbc1ffbc99440ba2ee978abacb006dec09771790eaac055f0b0854bc2272"
+      "bytes": 44960,
+      "sha256": "ad8edbcb8845d24454ddd71fa5ecb5745674b90a3602c82476ed20d9ea5fb705"
     },
     {
       "file": "png/day/wenhu-apm256-b-top.png",
@@ -2109,8 +2109,8 @@
         1200,
         420
       ],
-      "bytes": 50673,
-      "sha256": "8895f962be1b8283821b75afb1ea6f356cb5bae6a3e1ab0ffc8e1925af17dd1b"
+      "bytes": 51124,
+      "sha256": "8d71c687c32bceb7af3c59e3505ddb0aedce5373d9526210dab49d6ba945506f"
     },
     {
       "file": "png/day/wenhu-apm256-formation-bottom.png",
@@ -2118,8 +2118,8 @@
         1200,
         420
       ],
-      "bytes": 38418,
-      "sha256": "648353a790242b0d98c431eeffc0e47f4598b1a486f12b9ca02a217f69b1353b"
+      "bytes": 37986,
+      "sha256": "7c852504c22988afbd2d704862b227becf50aef0203b7f6906c62f32068f9704"
     },
     {
       "file": "png/day/wenhu-apm256-formation-far-back.png",
@@ -2127,8 +2127,8 @@
         1200,
         420
       ],
-      "bytes": 52147,
-      "sha256": "40a11b40042b72ce13d7c6ff6b4f4623ae7b9e89fb314a2bdb25e83756c57697"
+      "bytes": 52833,
+      "sha256": "adb133152f5545c17275bcfe9e2b0083044d93f0eca7f9a618a2274f55ef1808"
     },
     {
       "file": "png/day/wenhu-apm256-formation-far-bottom.png",
@@ -2136,8 +2136,8 @@
         1200,
         420
       ],
-      "bytes": 38543,
-      "sha256": "f19734e6f676c5b0d40ff6d08ceea07fcd15fbdea447a84902c1dd0d08cbca4f"
+      "bytes": 37475,
+      "sha256": "6ed02180ccee6ebd2a1050cd0a35b3349c8944d6f73acca3ad761fb8e0170309"
     },
     {
       "file": "png/day/wenhu-apm256-formation-far-front.png",
@@ -2145,8 +2145,8 @@
         1200,
         420
       ],
-      "bytes": 41509,
-      "sha256": "87012e368695fd911fb3ca028162851fe1190ceaffab2a02a20dabb3ce3e9da8"
+      "bytes": 42653,
+      "sha256": "409f0b65021e43611227ed32c1780f5c4b333716730416b3ac7e78ba1da7931b"
     },
     {
       "file": "png/day/wenhu-apm256-formation-far-isometric.png",
@@ -2154,8 +2154,8 @@
         1200,
         420
       ],
-      "bytes": 50203,
-      "sha256": "9e1d831a1ae3dda8b54c27a1119e2dbe5e61a7f92f3b844739f93f2c0dda3547"
+      "bytes": 50880,
+      "sha256": "e0d88e5d87b7e5f307d63a172de260352712e5791730de207481a6f812db16f9"
     },
     {
       "file": "png/day/wenhu-apm256-formation-far-left.png",
@@ -2163,8 +2163,8 @@
         1200,
         420
       ],
-      "bytes": 32287,
-      "sha256": "57e76099111b1fc74ece713cc732dd092fa1e1b59341cfdbedbeb3d407ae24eb"
+      "bytes": 32072,
+      "sha256": "34cbbf2c2fabe7114e8a5faf356a5d39a1ca58890d519bced28bf2a561a109ed"
     },
     {
       "file": "png/day/wenhu-apm256-formation-far-right.png",
@@ -2172,8 +2172,8 @@
         1200,
         420
       ],
-      "bytes": 31792,
-      "sha256": "962487a1fcf6497005a491de0d74227650f6d544c060c524561783d6e5ed8c73"
+      "bytes": 31204,
+      "sha256": "954d37535ed021370900005214269e66d71f8a18e45b33544e3b7e9cfa084683"
     },
     {
       "file": "png/day/wenhu-apm256-formation-far-top.png",
@@ -2190,8 +2190,8 @@
         1200,
         420
       ],
-      "bytes": 50216,
-      "sha256": "abd8b7c5db79c51e15264f1923570cbac53bef47fc57026d98f4f6d6f2878c5a"
+      "bytes": 51551,
+      "sha256": "2e60a34d29555cc30d7fc12416360333e3bbef0806fddaa04d13ef13fcdab6cf"
     },
     {
       "file": "png/day/wenhu-apm256-formation-isometric.png",
@@ -2199,8 +2199,8 @@
         1200,
         420
       ],
-      "bytes": 58376,
-      "sha256": "f4be1ce6890d55de02f2233c94a2542a2683fabe05db72137a5867508ab70389"
+      "bytes": 58931,
+      "sha256": "b69e083c8f7be2ac2da40bed3640958d5c4ba72c68d82fb5336dffa09ee0c13d"
     },
     {
       "file": "png/day/wenhu-apm256-formation-left.png",
@@ -2208,8 +2208,8 @@
         1200,
         420
       ],
-      "bytes": 34634,
-      "sha256": "8acc5cb6cafec928467588cf232c2f499e2ef8c3288de6a5fd7253debb607f09"
+      "bytes": 34361,
+      "sha256": "7289c43bdeeee900bc6d61e03efb2a70e992e34e23f36bdaab5e36eddb8a3e03"
     },
     {
       "file": "png/day/wenhu-apm256-formation-right.png",
@@ -2217,8 +2217,8 @@
         1200,
         420
       ],
-      "bytes": 34934,
-      "sha256": "827193051efdbbc2c2dbd6559e41ad590d40e1496da9c1f2639aed727ad02761"
+      "bytes": 34480,
+      "sha256": "3564314997a84ee6b81e913f89e40c5c8176ddf1a282b1e220a7c7e0a581599e"
     },
     {
       "file": "png/day/wenhu-apm256-formation-top.png",
@@ -2235,8 +2235,8 @@
         1200,
         420
       ],
-      "bytes": 42059,
-      "sha256": "16e5906a3e9c6255abaa8d981b6d4c844b88cbb07b93aaf8b380aef4c09dc365"
+      "bytes": 43070,
+      "sha256": "ea1018cfdce67a53f3b210af8c91122a9720db39f8e0e61e3abc509ff770d1b5"
     },
     {
       "file": "png/day/wenhu-val256-a-bottom.png",
@@ -2244,8 +2244,8 @@
         1200,
         420
       ],
-      "bytes": 45774,
-      "sha256": "cb03f6e45eaf2e1fdcf4a1f54db9b6ff2616c33ebad49fe779555c6da460e505"
+      "bytes": 46794,
+      "sha256": "260c4a48127fc586cd2bb72bde942633bb6173df9ab4c4f5b76086e2b60fb7d9"
     },
     {
       "file": "png/day/wenhu-val256-a-far-back.png",
@@ -2253,8 +2253,8 @@
         1200,
         420
       ],
-      "bytes": 50529,
-      "sha256": "8d1bf765ec4701c443aaaef5fdcd383864fef7ac5f8fef3d36d9e2a170c700de"
+      "bytes": 51114,
+      "sha256": "0497be9e8690577e2788f3f4601161b3c50ea4f8f82eddbe342ec3c8e9e4febc"
     },
     {
       "file": "png/day/wenhu-val256-a-far-bottom.png",
@@ -2262,8 +2262,8 @@
         1200,
         420
       ],
-      "bytes": 44813,
-      "sha256": "b2cfb31cd9e1bc9682873e9979ade4dd68315b453a2ec193c1c2338019f8faa7"
+      "bytes": 46723,
+      "sha256": "3b052c2afb06307ea802ba27a09e1de27a3d26d087e673d5bc632db80986fc54"
     },
     {
       "file": "png/day/wenhu-val256-a-far-front.png",
@@ -2271,8 +2271,8 @@
         1200,
         420
       ],
-      "bytes": 41637,
-      "sha256": "48b3bdfc8b3b3548f0fd6548d1258d7adcfc49308d1e7816adf9b10c6051fe3b"
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
     },
     {
       "file": "png/day/wenhu-val256-a-far-isometric.png",
@@ -2280,8 +2280,8 @@
         1200,
         420
       ],
-      "bytes": 46626,
-      "sha256": "fc229d02dafb28a6c35b72b0964fa3ed6e5d11ed07b96a34e2b0e80f493f6779"
+      "bytes": 47426,
+      "sha256": "01fdb0e3b5b792cb6b88831ea9b0521be44785f1b1ede84847738a0401ee591b"
     },
     {
       "file": "png/day/wenhu-val256-a-far-left.png",
@@ -2289,8 +2289,8 @@
         1200,
         420
       ],
-      "bytes": 35663,
-      "sha256": "eb559a8ab9d1f4d8d4745bb9d6d38829e96233de9ace5a497052bdad5f56f525"
+      "bytes": 37049,
+      "sha256": "1014563ef89f8c4734be3f137a5a4667735c475ce4f18027f30e88168bdad499"
     },
     {
       "file": "png/day/wenhu-val256-a-far-right.png",
@@ -2298,8 +2298,8 @@
         1200,
         420
       ],
-      "bytes": 36550,
-      "sha256": "dd0ba22e313282f32ae07bd6cb7d20ac45b75ff19baa63c2655640c092cd7d14"
+      "bytes": 37835,
+      "sha256": "3df509aa6d6473e41faa142bbc7b4f35fe5d1bde31e164fb566cddd1cb00b93d"
     },
     {
       "file": "png/day/wenhu-val256-a-far-top.png",
@@ -2316,8 +2316,8 @@
         1200,
         420
       ],
-      "bytes": 45880,
-      "sha256": "6699acf136130e6a3be823ebc26755005c7e37b7110825b4a9228cbb234829fe"
+      "bytes": 46654,
+      "sha256": "552acda0a489ee2a5b2cb7cc60e192bb76fe07978eab19a9b2c5df4056a823b1"
     },
     {
       "file": "png/day/wenhu-val256-a-isometric.png",
@@ -2325,8 +2325,8 @@
         1200,
         420
       ],
-      "bytes": 55665,
-      "sha256": "7bdd097e3300459f0e34f0666c2bb9fd54d7e97c7c94442cf6490edb047814a9"
+      "bytes": 56316,
+      "sha256": "5062fb63a1b511d9fa4321c6f33a2a0e2365f109a345da8995b06303f63ad184"
     },
     {
       "file": "png/day/wenhu-val256-a-left.png",
@@ -2334,8 +2334,8 @@
         1200,
         420
       ],
-      "bytes": 39710,
-      "sha256": "537b5561040578d697f9f96d49000c8fe83c7d256a55ef36ef839105b638329b"
+      "bytes": 40634,
+      "sha256": "7d8b6dce92be01a3b560e4359050488da800de6966ae654ff41f783babb128b0"
     },
     {
       "file": "png/day/wenhu-val256-a-right.png",
@@ -2343,8 +2343,8 @@
         1200,
         420
       ],
-      "bytes": 40980,
-      "sha256": "a5e2d2cc043137681735af9b496a21acaba284a74d49ef84871660eb792a2f4d"
+      "bytes": 41948,
+      "sha256": "d5816c56fb19a7fb99515b20b8318a7f2c0e869e83e39677f5de5a11f018b0e1"
     },
     {
       "file": "png/day/wenhu-val256-a-top.png",
@@ -2361,8 +2361,8 @@
         1200,
         420
       ],
-      "bytes": 47264,
-      "sha256": "395e5e2a44f2cd394a91b9534a0f9c6f172827af715fc3297369b3bb1ea1d4f7"
+      "bytes": 48345,
+      "sha256": "cb9ec75f0400c1f87346c7ada076c8af4fdb5857ff728397738dc8b1abbfe84e"
     },
     {
       "file": "png/day/wenhu-val256-b-bottom.png",
@@ -2370,8 +2370,8 @@
         1200,
         420
       ],
-      "bytes": 45219,
-      "sha256": "8c60d8c04604e727fff9452d85ac99ccd1b8dffb647ad710f36e6ab9d7a40b5b"
+      "bytes": 47839,
+      "sha256": "6024e04f14c8fcb83e1d41718652c34e24f0243bf539f4b5a12bc3ed6c0db286"
     },
     {
       "file": "png/day/wenhu-val256-b-far-back.png",
@@ -2379,8 +2379,8 @@
         1200,
         420
       ],
-      "bytes": 55789,
-      "sha256": "2c824fb56fb04a88e023c6173abff7d2cd36a121585df3d581635e0ba5b6eb68"
+      "bytes": 56343,
+      "sha256": "68a19b274d0e82d0c4d7d8458b58ffca1c491f529073eb5460a7e12ad4acb743"
     },
     {
       "file": "png/day/wenhu-val256-b-far-bottom.png",
@@ -2388,8 +2388,8 @@
         1200,
         420
       ],
-      "bytes": 44482,
-      "sha256": "69681866c6bd5b877e9462877aca3e4b4447ac4fed74308ab0dc0e086c8522fe"
+      "bytes": 46631,
+      "sha256": "e88963c67b5d3fc747a063b98a06fe0c844ed98db6e733010b3e25381741fb2c"
     },
     {
       "file": "png/day/wenhu-val256-b-far-front.png",
@@ -2397,8 +2397,8 @@
         1200,
         420
       ],
-      "bytes": 35905,
-      "sha256": "1baa1472645d3760b09736caa0ec9fce3de1bbeb0ed2ec5be56bdc8fde9ac07c"
+      "bytes": 36893,
+      "sha256": "2a0e4ad3f84d92667469f5ebf5324eabd7495d7f3ea48b3fb15fb5015623e655"
     },
     {
       "file": "png/day/wenhu-val256-b-far-isometric.png",
@@ -2406,8 +2406,8 @@
         1200,
         420
       ],
-      "bytes": 45893,
-      "sha256": "26c696b5e576ca794b569c050b3ac2cc31f4d093e89caa9ced680488f7e833a0"
+      "bytes": 46676,
+      "sha256": "6c519926efdf634510206c5b45af0ec3d9b8fa518293562fdf774b5337eabb98"
     },
     {
       "file": "png/day/wenhu-val256-b-far-left.png",
@@ -2415,8 +2415,8 @@
         1200,
         420
       ],
-      "bytes": 35153,
-      "sha256": "bcd52ba3de6f39fab641d1bfa5ffbf176fd6b8b6fc30ef0ad4fb0cf14d6dd1f0"
+      "bytes": 36507,
+      "sha256": "a0fd87a3bd50a68604acc43bd43f2a0b1dc8762b6b793e109ffa97d0bba96d52"
     },
     {
       "file": "png/day/wenhu-val256-b-far-right.png",
@@ -2424,8 +2424,8 @@
         1200,
         420
       ],
-      "bytes": 36659,
-      "sha256": "3fc9637dabcedc7a91f1e256547ca4fb1f57d65a792be0fdf2a8cb577aeebd85"
+      "bytes": 37957,
+      "sha256": "38925340fde5866fca8d66aac733df84bdcc363aaa8c1885a9883bc38b4074f7"
     },
     {
       "file": "png/day/wenhu-val256-b-far-top.png",
@@ -2442,8 +2442,8 @@
         1200,
         420
       ],
-      "bytes": 39514,
-      "sha256": "8fb6d392435a81ca8178b5adbc23fb94c230227c97861be13f23bcf382fb5060"
+      "bytes": 40035,
+      "sha256": "4e083b2698a58e1f6f0e2d5eefd4d9fc0f1f2a135134341050f4dd2e973a271a"
     },
     {
       "file": "png/day/wenhu-val256-b-isometric.png",
@@ -2451,8 +2451,8 @@
         1200,
         420
       ],
-      "bytes": 54814,
-      "sha256": "46e22f56a1de8f07cd346d9d629737704e2abb6edaaed0b5d04869f863a8889a"
+      "bytes": 55403,
+      "sha256": "26f36e3eec319b38cf933decf1b514b1745542eb7df73c9ea07ffa0a6de50c01"
     },
     {
       "file": "png/day/wenhu-val256-b-left.png",
@@ -2460,8 +2460,8 @@
         1200,
         420
       ],
-      "bytes": 40164,
-      "sha256": "57b6e93e0838d0a5757c4a9ffdbab7a8f584bf474fba458f72330801d5b16469"
+      "bytes": 41075,
+      "sha256": "1fb2e32228746e52fa4c26475dea3c5ab0da1bd272216ab5f2383196bd1015e2"
     },
     {
       "file": "png/day/wenhu-val256-b-right.png",
@@ -2469,8 +2469,8 @@
         1200,
         420
       ],
-      "bytes": 41299,
-      "sha256": "85ad56dabca0c10c1c0ece1fe315a954a469ad82235c862d50a62dcf3dba9638"
+      "bytes": 42267,
+      "sha256": "12f5ff4c5ecdfd8715502b42db629abf01d669232224ff4d8860ac3e5d1df0be"
     },
     {
       "file": "png/day/wenhu-val256-b-top.png",
@@ -2487,8 +2487,8 @@
         1200,
         420
       ],
-      "bytes": 47250,
-      "sha256": "f26a28903dfee27e3c32a28b35f3e19f3a8112771316a7886b9180c32743fb43"
+      "bytes": 48309,
+      "sha256": "e9674cdd1b84d9cc801f37d70c0695736a944f253d9827b1f8e780093a5a9ad8"
     },
     {
       "file": "png/day/wenhu-val256-formation-bottom.png",
@@ -2496,8 +2496,8 @@
         1200,
         420
       ],
-      "bytes": 37021,
-      "sha256": "e2080957673eb25a1ca9495c598bbb8db2bf50c7ff83d8081411da085a6e748b"
+      "bytes": 39402,
+      "sha256": "fa73bbbaf4d72ed0a159c7a1c943c8032535a546de28b08c803ff62d180d2ff0"
     },
     {
       "file": "png/day/wenhu-val256-formation-far-back.png",
@@ -2505,8 +2505,8 @@
         1200,
         420
       ],
-      "bytes": 55780,
-      "sha256": "c9d7d6040b02acc1aee8fbaec7f846bff979871fb12a8ff393147fc905b253ba"
+      "bytes": 56330,
+      "sha256": "1a6b758838c6ee7269166e28ec514a91dc6729dd6d4dbf38716a801896db9a04"
     },
     {
       "file": "png/day/wenhu-val256-formation-far-bottom.png",
@@ -2514,8 +2514,8 @@
         1200,
         420
       ],
-      "bytes": 36362,
-      "sha256": "c80635cec9c337bf50cdea0acf61257442104c9a3d242ae6e6aca0c414b7dce4"
+      "bytes": 38261,
+      "sha256": "ffebf6154832c2fc81f0474ea25fe43e7d5138325e0a7683bd8bacfbbb4970e9"
     },
     {
       "file": "png/day/wenhu-val256-formation-far-front.png",
@@ -2523,8 +2523,8 @@
         1200,
         420
       ],
-      "bytes": 41637,
-      "sha256": "48b3bdfc8b3b3548f0fd6548d1258d7adcfc49308d1e7816adf9b10c6051fe3b"
+      "bytes": 42739,
+      "sha256": "6a85a79bb20b6dcd3e8b7da86459386f1c873278c53a766d470bce564d549e40"
     },
     {
       "file": "png/day/wenhu-val256-formation-far-isometric.png",
@@ -2532,8 +2532,8 @@
         1200,
         420
       ],
-      "bytes": 52136,
-      "sha256": "54f9e97c71c7a188c359847bee516c83aa60f4885f7d01073e1820c9fdbadcca"
+      "bytes": 52770,
+      "sha256": "32c5243bf90f588df05bd4768ac7d1ac711928578d260b06bd6dbaab86102c90"
     },
     {
       "file": "png/day/wenhu-val256-formation-far-left.png",
@@ -2541,8 +2541,8 @@
         1200,
         420
       ],
-      "bytes": 29958,
-      "sha256": "0e8a88a22a07c108922d4593228300eb3ef3e414607320801ae29e17fea2d476"
+      "bytes": 31000,
+      "sha256": "ba7ccda49d28f65846e4fdc4f635e0d54abed48c04c50012bb04f75c5b94d03c"
     },
     {
       "file": "png/day/wenhu-val256-formation-far-right.png",
@@ -2550,8 +2550,8 @@
         1200,
         420
       ],
-      "bytes": 29959,
-      "sha256": "cfb1bae471fe808d2a5ac959f848cfcc67be4e0844b321865fa8b9ce560e76f8"
+      "bytes": 31083,
+      "sha256": "941264a79aab6d4ccec98180e6af8005894e35811f6ff18fad935bc1e16052a1"
     },
     {
       "file": "png/day/wenhu-val256-formation-far-top.png",
@@ -2568,8 +2568,8 @@
         1200,
         420
       ],
-      "bytes": 45919,
-      "sha256": "515414fa0a41bb87ef239b535dab81531d838c2583c8252300c279f0c1eff344"
+      "bytes": 46678,
+      "sha256": "c81f418d3ed3f6e8231713b05d1142fdfea5c69d0c754ab326359e11ce2ec7e9"
     },
     {
       "file": "png/day/wenhu-val256-formation-isometric.png",
@@ -2577,8 +2577,8 @@
         1200,
         420
       ],
-      "bytes": 59626,
-      "sha256": "4861ce198e3620d676f5720b1b253d1dd68b2c1bcc03637749d723ee276fde55"
+      "bytes": 60120,
+      "sha256": "d65b6f61ce0c7cd257b569a8e77612b47aca7bb0037502f0ad947a1e13bcd3f3"
     },
     {
       "file": "png/day/wenhu-val256-formation-left.png",
@@ -2586,8 +2586,8 @@
         1200,
         420
       ],
-      "bytes": 32161,
-      "sha256": "d6b4fdd4a774674a3e8d54e5af689529142a247dbb3211b6b4e04cd4558ca6dd"
+      "bytes": 33147,
+      "sha256": "6d00d26d79a32400413d729d5953a169483afa04a167c850de41d286f71fe953"
     },
     {
       "file": "png/day/wenhu-val256-formation-right.png",
@@ -2595,8 +2595,8 @@
         1200,
         420
       ],
-      "bytes": 32555,
-      "sha256": "84534e746d8ebd42271be7629752bcba9d82ce519024afc0067304fa83ab30bd"
+      "bytes": 33584,
+      "sha256": "9486a65171c3b2f2dd2d9b95ef3f138c25bcfb441deac6f16aa90d1234c20a4e"
     },
     {
       "file": "png/day/wenhu-val256-formation-top.png",
@@ -2605,7 +2605,7 @@
         420
       ],
       "bytes": 36699,
-      "sha256": "60fef9926b8051fa8c7d333d490b71efbcc7a44ef380bc2d6a31cf42e2747e9a"
+      "sha256": "7101ed6680738f94166797d94669baca4de860d66a7601ea344cc85d9037c888"
     },
     {
       "file": "png/night/wenhu-apm256-a-back.png",
@@ -2613,8 +2613,8 @@
         1200,
         420
       ],
-      "bytes": 31568,
-      "sha256": "5fc3c285818d16fb04fb1d2ad3e192f1244591e1d758846e7dfd98c46995344c"
+      "bytes": 31980,
+      "sha256": "e5ea6987b0ab8674491c3c8146a62c83038a2d6c417d810958485a98350cc677"
     },
     {
       "file": "png/night/wenhu-apm256-a-bottom.png",
@@ -2622,8 +2622,8 @@
         1200,
         420
       ],
-      "bytes": 35833,
-      "sha256": "566ea9521eba44c9cc2e81e3a0ab80a9ce07a8238c2a46bab7963d0b0a73166f"
+      "bytes": 35119,
+      "sha256": "07c142b1bb081b45185d720678e279905dec86513469093f600994d4c36e67ee"
     },
     {
       "file": "png/night/wenhu-apm256-a-far-back.png",
@@ -2631,8 +2631,8 @@
         1200,
         420
       ],
-      "bytes": 33843,
-      "sha256": "f4436d0c41c3ae57172b19fa02ba44172ccfd0768c2801ca9a551df1025e6bb3"
+      "bytes": 34138,
+      "sha256": "bc5efd3605d13e50b0bbe0ba4e326159098745e0fae9817a89f6a21b1422c3c0"
     },
     {
       "file": "png/night/wenhu-apm256-a-far-bottom.png",
@@ -2640,8 +2640,8 @@
         1200,
         420
       ],
-      "bytes": 35063,
-      "sha256": "f0760d63ca95873f0cd89399295f8a5bf6e3be480b359b27bea1739ff54f6521"
+      "bytes": 35922,
+      "sha256": "32329cfe2e734d8578c611e9f6c0b1707964f82820e8ed97d4d5f5262f33e7f8"
     },
     {
       "file": "png/night/wenhu-apm256-a-far-front.png",
@@ -2649,8 +2649,8 @@
         1200,
         420
       ],
-      "bytes": 31604,
-      "sha256": "d149b728c9de873e52210c23fcdf304383db8a76616d16fcda705219fbb671ee"
+      "bytes": 32522,
+      "sha256": "7e6241bbb54d8d65b8ad8d42f8644d423086a74c46cfa46ef0c8ad4b186b1707"
     },
     {
       "file": "png/night/wenhu-apm256-a-far-isometric.png",
@@ -2658,8 +2658,8 @@
         1200,
         420
       ],
-      "bytes": 40584,
-      "sha256": "90bf7ce0be7153611893b662944f239e00249e950a55662f969aba84a6545e09"
+      "bytes": 41432,
+      "sha256": "1453db7b728471578b4846dbca4cd7f6b692d7f6c19a519d98bc8f81ed11b47c"
     },
     {
       "file": "png/night/wenhu-apm256-a-far-left.png",
@@ -2667,8 +2667,8 @@
         1200,
         420
       ],
-      "bytes": 32089,
-      "sha256": "3a12cb1ec8317b5f4636ba6e051a156bb7630aa4be1995eec74b4882c4764e54"
+      "bytes": 32855,
+      "sha256": "19f38a4c34c92dffe04e310ed375d1a74396215ccd1afbdf17db8c462f441b4a"
     },
     {
       "file": "png/night/wenhu-apm256-a-far-right.png",
@@ -2676,8 +2676,8 @@
         1200,
         420
       ],
-      "bytes": 32219,
-      "sha256": "b6413dcb7ce2b5b042d2eee175e4b4b2d116995126dc4bfc8d06872158437c4f"
+      "bytes": 32868,
+      "sha256": "ba9178371914c147822218907fd3e9720c3f683a50dc928fd616a192dc3395e6"
     },
     {
       "file": "png/night/wenhu-apm256-a-far-top.png",
@@ -2694,8 +2694,8 @@
         1200,
         420
       ],
-      "bytes": 37964,
-      "sha256": "107b7912045f6d0c4e2c5a3f54f1de27c1fec8053d3ff035ade0cbc01d8edf6d"
+      "bytes": 38688,
+      "sha256": "97f1c0b98341c4167bc6220de200ecd72ffa7b2cedd580f8d53d32bc9250b574"
     },
     {
       "file": "png/night/wenhu-apm256-a-isometric.png",
@@ -2703,8 +2703,8 @@
         1200,
         420
       ],
-      "bytes": 48797,
-      "sha256": "c7cdc2d2f576e135978ff618036d591267b86ec41cf1d559307192178cdf034a"
+      "bytes": 49865,
+      "sha256": "fb8c586a4575751b4c46bec4a156797a74856bf86318963c064d0adf070fc441"
     },
     {
       "file": "png/night/wenhu-apm256-a-left.png",
@@ -2712,8 +2712,8 @@
         1200,
         420
       ],
-      "bytes": 35800,
-      "sha256": "5b2d3fda8079e378fb2f9025883eb68adb2ec2784b0f7de358427bc7ace8c671"
+      "bytes": 36094,
+      "sha256": "28caf7439cc2f99e5dfcd616729da87ef6a1cc3a2045a0a4e910cf9ce026651f"
     },
     {
       "file": "png/night/wenhu-apm256-a-right.png",
@@ -2721,8 +2721,8 @@
         1200,
         420
       ],
-      "bytes": 35627,
-      "sha256": "45bead0565a7a6e68140ecb40357c0a2685842fb24c3302fc1636291e2433353"
+      "bytes": 35729,
+      "sha256": "adfc774aefd37fcac248d19bb6816a4c1921277110ca4f5f28468e253de676cd"
     },
     {
       "file": "png/night/wenhu-apm256-a-top.png",
@@ -2739,8 +2739,8 @@
         1200,
         420
       ],
-      "bytes": 35405,
-      "sha256": "bd2339ad65a99908c4127548626988815d6db35d99730a441f270f060f16258a"
+      "bytes": 35543,
+      "sha256": "9ac374080eb9b7d62cead015d4477b0e58d9bf2818788092e56d4fc1dcb7c224"
     },
     {
       "file": "png/night/wenhu-apm256-b-bottom.png",
@@ -2748,8 +2748,8 @@
         1200,
         420
       ],
-      "bytes": 35502,
-      "sha256": "a72bcf10681f5ed7282b2506e6368a6088b1b5cf129f6c743b2eeea86b2c55ec"
+      "bytes": 35013,
+      "sha256": "053ed4fda5a3bb42580d5570dd47e5e3294e78e9d7170fbadb8c2789609325e0"
     },
     {
       "file": "png/night/wenhu-apm256-b-far-back.png",
@@ -2757,8 +2757,8 @@
         1200,
         420
       ],
-      "bytes": 37057,
-      "sha256": "dda8b216f58cc31a3ce341d3714f17ced81dee3b8b9733957362aed6fd65c577"
+      "bytes": 37259,
+      "sha256": "362a5afba2adc1d4403e7d3d71b6381e7dfdc2091a445c5d57bf081061b9575e"
     },
     {
       "file": "png/night/wenhu-apm256-b-far-bottom.png",
@@ -2766,8 +2766,8 @@
         1200,
         420
       ],
-      "bytes": 35241,
-      "sha256": "75adb6e6c39a46f84b0cc8fd5a9b998bc20efc69e5f1eb2349e49f4c66293e58"
+      "bytes": 35476,
+      "sha256": "77c0dac48cead2ab6f2c132fda927c9df61bca6a507165957b765cc2fc804b83"
     },
     {
       "file": "png/night/wenhu-apm256-b-far-front.png",
@@ -2775,8 +2775,8 @@
         1200,
         420
       ],
-      "bytes": 28792,
-      "sha256": "035f5faa24921ad14f08982c5c8b7d84609f3f0d5c9d5b87a5a7208e637c77b4"
+      "bytes": 29372,
+      "sha256": "356d78d05d11606cefee97d775759bccbc930ac8350aa1b5123c03fc3e6a68d9"
     },
     {
       "file": "png/night/wenhu-apm256-b-far-isometric.png",
@@ -2784,8 +2784,8 @@
         1200,
         420
       ],
-      "bytes": 39852,
-      "sha256": "722b759069c92b125b2aaf3fa97cb0028ce338881ffeab278f45954c91d46715"
+      "bytes": 40832,
+      "sha256": "9009a16c61d486677e6ea2a4f165c50c43a48fb927a7225a88eb2b7e42553519"
     },
     {
       "file": "png/night/wenhu-apm256-b-far-left.png",
@@ -2793,8 +2793,8 @@
         1200,
         420
       ],
-      "bytes": 32295,
-      "sha256": "1ad63fb5fbad01189608677998e64ffca5ded20d57b1fdd7d8be37467657465b"
+      "bytes": 33074,
+      "sha256": "540668b954dcdb528400c851cd47e3f0db20f6c6eb6fdb0dd43e751ff7628c1d"
     },
     {
       "file": "png/night/wenhu-apm256-b-far-right.png",
@@ -2802,8 +2802,8 @@
         1200,
         420
       ],
-      "bytes": 32310,
-      "sha256": "9d2e2a94dd873ae42073961bc9ec8e3f44adf385e4a6650c4dbca02531814aa6"
+      "bytes": 32975,
+      "sha256": "6f7ca9ad30ca3ad2e595cbd4576fef46082c47ba39e2f916b080c4778b8e9536"
     },
     {
       "file": "png/night/wenhu-apm256-b-far-top.png",
@@ -2820,8 +2820,8 @@
         1200,
         420
       ],
-      "bytes": 34588,
-      "sha256": "061798709bb85e73f21ba4198446e9e0b1d3fdec83244f665f2ccaa33e6309f3"
+      "bytes": 35109,
+      "sha256": "3a163936579880ba525cc5294a00617a0060f91f74d57fead6cbf6b790e8a71a"
     },
     {
       "file": "png/night/wenhu-apm256-b-isometric.png",
@@ -2829,8 +2829,8 @@
         1200,
         420
       ],
-      "bytes": 47833,
-      "sha256": "6d775f74dbaf67fe5c95672760a81cdc05c82d0217aaa2bc591ce194791c7887"
+      "bytes": 49008,
+      "sha256": "df78f8b3de42159e71983ad88ce2c277ef3971a4e221694f364e409c213b9580"
     },
     {
       "file": "png/night/wenhu-apm256-b-left.png",
@@ -2838,8 +2838,8 @@
         1200,
         420
       ],
-      "bytes": 35911,
-      "sha256": "2abd63126f1c1d54ef02ddbcfe23b840a1e66f37c711b4a96657b72ff61483b8"
+      "bytes": 36164,
+      "sha256": "13ae0c471f31aa77b97ce4f4a82334909bea8717952b3c0592d554a30093fac3"
     },
     {
       "file": "png/night/wenhu-apm256-b-right.png",
@@ -2847,8 +2847,8 @@
         1200,
         420
       ],
-      "bytes": 35804,
-      "sha256": "1a6ce7bfac85c4065bb6c060eba3ffbc768b59f5afc0b046d62789c8663c759f"
+      "bytes": 35908,
+      "sha256": "bbb9b6d90ad837dc00578fa2e0d9005b9b78427a17e23b9e46a29e50ed0317f0"
     },
     {
       "file": "png/night/wenhu-apm256-b-top.png",
@@ -2865,8 +2865,8 @@
         1200,
         420
       ],
-      "bytes": 35401,
-      "sha256": "c5c7ba0d7a4e8ffd495cc1eaac76db361d9fab09128b4a67b9846861b9729fab"
+      "bytes": 35540,
+      "sha256": "18aeeef4960bfdcd74462799b3d3976fa9f64eaa6aa38cb19c6fc4ee961b9c37"
     },
     {
       "file": "png/night/wenhu-apm256-formation-bottom.png",
@@ -2874,8 +2874,8 @@
         1200,
         420
       ],
-      "bytes": 31188,
-      "sha256": "952f27bd8f403b5401614f02cfd6d4c63bc73b4b9095fe1ffd2d678fe3accd55"
+      "bytes": 30755,
+      "sha256": "a26e15b989cf01696382bef85f2d4771aadccd5b41718a8985a7ae90085b3f51"
     },
     {
       "file": "png/night/wenhu-apm256-formation-far-back.png",
@@ -2883,8 +2883,8 @@
         1200,
         420
       ],
-      "bytes": 37057,
-      "sha256": "3d8c3044f725db53574f3a554fa31687d1ce18feb7426ac108392889f7c32e5f"
+      "bytes": 37259,
+      "sha256": "f24a5d9dee49ef0c2e308b2264294663a37bfb03eb1edd40a377346f6eca4048"
     },
     {
       "file": "png/night/wenhu-apm256-formation-far-bottom.png",
@@ -2892,8 +2892,8 @@
         1200,
         420
       ],
-      "bytes": 30841,
-      "sha256": "b35e05f1508ef2cd01fbab2bbe860434c094a50c747490bd26fb9b9dab01b64d"
+      "bytes": 30658,
+      "sha256": "19986126642ed2f5ff1a4b1b94a0feb8a32d7682147a8db9fd6b62ef27a89c11"
     },
     {
       "file": "png/night/wenhu-apm256-formation-far-front.png",
@@ -2901,8 +2901,8 @@
         1200,
         420
       ],
-      "bytes": 31604,
-      "sha256": "d149b728c9de873e52210c23fcdf304383db8a76616d16fcda705219fbb671ee"
+      "bytes": 32522,
+      "sha256": "7e6241bbb54d8d65b8ad8d42f8644d423086a74c46cfa46ef0c8ad4b186b1707"
     },
     {
       "file": "png/night/wenhu-apm256-formation-far-isometric.png",
@@ -2910,8 +2910,8 @@
         1200,
         420
       ],
-      "bytes": 45677,
-      "sha256": "d4291cf0831fbc4d3e8d3db3f7e0226676a09af3c285df6ed3edb2bf281a1151"
+      "bytes": 46302,
+      "sha256": "31035e3e91c9ea48895bb7512b9e81b944fd9cd9b4376921c5f7cdfb33345775"
     },
     {
       "file": "png/night/wenhu-apm256-formation-far-left.png",
@@ -2919,8 +2919,8 @@
         1200,
         420
       ],
-      "bytes": 29153,
-      "sha256": "ffde126b19800a9cd3ea4bb060b754004a1ba63ca503d592287a432badd29133"
+      "bytes": 29083,
+      "sha256": "67e4883d0a3aa3f63196ef731410701fccfde74091646c04d5822529be0acafe"
     },
     {
       "file": "png/night/wenhu-apm256-formation-far-right.png",
@@ -2928,8 +2928,8 @@
         1200,
         420
       ],
-      "bytes": 28783,
-      "sha256": "a9a1e52f629de6efa6d62e30dde00b7822eb1ec746445fb04fc7ff95d543e472"
+      "bytes": 28542,
+      "sha256": "3dac416448a14b2ff97148b384494f4418d410f72c141962827ced33aaa3a69b"
     },
     {
       "file": "png/night/wenhu-apm256-formation-far-top.png",
@@ -2946,8 +2946,8 @@
         1200,
         420
       ],
-      "bytes": 37961,
-      "sha256": "408cfe9c2a70cc43770ebfbe26890345ff7a0a84a30ccb5d46a37333b7196c71"
+      "bytes": 38685,
+      "sha256": "95546879aa19992835b0f712a20c86955d64793992787ef6a4ee2c9e009ad33b"
     },
     {
       "file": "png/night/wenhu-apm256-formation-isometric.png",
@@ -2955,8 +2955,8 @@
         1200,
         420
       ],
-      "bytes": 52815,
-      "sha256": "60182a81713cb3f7979b04a3f5faffe9deaf299d407a6447ba885859a9b93e31"
+      "bytes": 53554,
+      "sha256": "40c020f379086215ec683467ccfae7b6ab03260b79d7090ab8feb9c1eba43d73"
     },
     {
       "file": "png/night/wenhu-apm256-formation-left.png",
@@ -2964,8 +2964,8 @@
         1200,
         420
       ],
-      "bytes": 30629,
-      "sha256": "7363dd31408b15e9f9fc2289b9a8f0a61c8fe550b18eac797a026e10c0578d99"
+      "bytes": 30424,
+      "sha256": "3a8165e76135997ff5d641a39febd54afb0a3b0f5ecab6131669b7118ab6a578"
     },
     {
       "file": "png/night/wenhu-apm256-formation-right.png",
@@ -2973,8 +2973,8 @@
         1200,
         420
       ],
-      "bytes": 30704,
-      "sha256": "3e27dfe53402c4d943caacc52ff4e860072a9aa869b163ce48c883d999f0729c"
+      "bytes": 30427,
+      "sha256": "778013b029c34f89e523b40d918781f93c683ab12af8e79ce6c5a32a8de12f29"
     },
     {
       "file": "png/night/wenhu-apm256-formation-top.png",
@@ -2991,8 +2991,8 @@
         1200,
         420
       ],
-      "bytes": 29583,
-      "sha256": "7bb310f17bf059ffbff9e51ebe5eac0ca02359fc70574fb00da026da2408d3a7"
+      "bytes": 30255,
+      "sha256": "25c8ec82e19d5123df9ed70f1226215d5e461d5338956b57332257454f9d0a28"
     },
     {
       "file": "png/night/wenhu-val256-a-bottom.png",
@@ -3000,8 +3000,8 @@
         1200,
         420
       ],
-      "bytes": 33229,
-      "sha256": "cf863106c5960659e181339c60b09c74ef2e10ae631a57893c1750ec30997dd6"
+      "bytes": 34666,
+      "sha256": "83e136e98e23fb158d4774898fdce7d1c84c58292b9238b5b610d67179490b34"
     },
     {
       "file": "png/night/wenhu-val256-a-far-back.png",
@@ -3009,8 +3009,8 @@
         1200,
         420
       ],
-      "bytes": 34427,
-      "sha256": "b8eb1b332e9616785fba0607a955e2975d61d1216631629417dad0daec5d8084"
+      "bytes": 34613,
+      "sha256": "97fd0a7055b39af1b13c865d76c449251cf52ff62fa74d2eadd9d8f6138710e6"
     },
     {
       "file": "png/night/wenhu-val256-a-far-bottom.png",
@@ -3018,8 +3018,8 @@
         1200,
         420
       ],
-      "bytes": 31861,
-      "sha256": "d2fc41887e6b3d1991a82d6bff522bbaae40c3fc901fdc5b56836885c4bbbf11"
+      "bytes": 33485,
+      "sha256": "aa76b1f84f842c18dcc0245a150c1976be88ed37cb814bc91c0b8eff7c3d2071"
     },
     {
       "file": "png/night/wenhu-val256-a-far-front.png",
@@ -3027,8 +3027,8 @@
         1200,
         420
       ],
-      "bytes": 30942,
-      "sha256": "5139d8c9769f4791c267f16abf254aa39c4bf7b09359baf71e5f65338f03295c"
+      "bytes": 31531,
+      "sha256": "1451909a17317909af4c221fc95612ace5b2a7712df719ebd02ca64a79f346f7"
     },
     {
       "file": "png/night/wenhu-val256-a-far-isometric.png",
@@ -3036,8 +3036,8 @@
         1200,
         420
       ],
-      "bytes": 42575,
-      "sha256": "4581983f3ac2a91dbc554d274a83a8068dc07d403914b47dd77b9555adf097f9"
+      "bytes": 43149,
+      "sha256": "f9157cb25c43c5513f6bc1edb1156b92918949a0756563d58a51c4d4a7e54b68"
     },
     {
       "file": "png/night/wenhu-val256-a-far-left.png",
@@ -3045,8 +3045,8 @@
         1200,
         420
       ],
-      "bytes": 29471,
-      "sha256": "e732a27978b677fc10447a9f27d2ee49af14b9da6c6fe053c427eceab0e66647"
+      "bytes": 30390,
+      "sha256": "8983696ab8fd8f2a6f5a749ecc45c23a967bb019daece7e5986494a980a752a6"
     },
     {
       "file": "png/night/wenhu-val256-a-far-right.png",
@@ -3054,8 +3054,8 @@
         1200,
         420
       ],
-      "bytes": 30932,
-      "sha256": "1d937523d31bf111aadb5d4109108162fa778741debd8903680cfeeac674f1e2"
+      "bytes": 31770,
+      "sha256": "e9a562058be2176073625a58645a50a9db9ba28a1a0106227b773a78136a88b3"
     },
     {
       "file": "png/night/wenhu-val256-a-far-top.png",
@@ -3072,8 +3072,8 @@
         1200,
         420
       ],
-      "bytes": 34042,
-      "sha256": "40d90b81b802c7e0eb1702034d674cb63d665ec26bab0a165a4efd25b09ab1db"
+      "bytes": 34653,
+      "sha256": "4385e9f2e26c0cc3a3d70d132aac585ed2f527f3bc8de1d8ec8cc528797cfc0a"
     },
     {
       "file": "png/night/wenhu-val256-a-isometric.png",
@@ -3081,8 +3081,8 @@
         1200,
         420
       ],
-      "bytes": 48847,
-      "sha256": "bfea7fa5c950a9ef333221e9e705873f1b0e97e73aa46dee8007471d2b2576bd"
+      "bytes": 49548,
+      "sha256": "eca124ea1a5f3c50cb34fd54cd7f37a0619c25905a2cde7756cd9ea98324faa9"
     },
     {
       "file": "png/night/wenhu-val256-a-left.png",
@@ -3090,8 +3090,8 @@
         1200,
         420
       ],
-      "bytes": 32331,
-      "sha256": "b8f231c0dddbbf8705321638fde5a8f4e50265100f064fc80783e088e058387e"
+      "bytes": 33035,
+      "sha256": "2069c904edc4a2a183e3c66e4c84fea465bda9065ed53c13b04535efe073fef9"
     },
     {
       "file": "png/night/wenhu-val256-a-right.png",
@@ -3099,8 +3099,8 @@
         1200,
         420
       ],
-      "bytes": 33321,
-      "sha256": "fa16f7233c8428e8d39a9b0dc53bf7b08dcdc6923b42a7989d2a56ad713b0f8c"
+      "bytes": 33996,
+      "sha256": "428fe021aa53d94c6a271ac78de8abdbafdddebdef8dd9bb859db92f568853d9"
     },
     {
       "file": "png/night/wenhu-val256-a-top.png",
@@ -3117,8 +3117,8 @@
         1200,
         420
       ],
-      "bytes": 33662,
-      "sha256": "780c0d1443eb8062eacad51be6f872fe65712cdbd8456152f26aad62fb59312d"
+      "bytes": 34237,
+      "sha256": "2d24408428f4d7c768823f6b3fa4dc9b85c1651cb1293662659bd554b6944c16"
     },
     {
       "file": "png/night/wenhu-val256-b-bottom.png",
@@ -3126,8 +3126,8 @@
         1200,
         420
       ],
-      "bytes": 32799,
-      "sha256": "b3b3aa070685c7577d0ca4ff5a8714596b490810dcce2ead45c9dc4e664c3a3c"
+      "bytes": 34588,
+      "sha256": "d2fa76463903632b9202cd11cfa4594280543bbd29e0be2a009762fbb04a80b8"
     },
     {
       "file": "png/night/wenhu-val256-b-far-back.png",
@@ -3135,8 +3135,8 @@
         1200,
         420
       ],
-      "bytes": 38301,
-      "sha256": "ebeca226fee6a275bcd062b75a997ca3d85c237d555fa1b5c1a8a164fa5c55e2"
+      "bytes": 38596,
+      "sha256": "365d6dea2adb114c2115d113c627ea66f3641bfee7cd8dc9de53a6c0d5812c06"
     },
     {
       "file": "png/night/wenhu-val256-b-far-bottom.png",
@@ -3144,8 +3144,8 @@
         1200,
         420
       ],
-      "bytes": 31477,
-      "sha256": "b14dc1c31d19afe7dc3f05d47fc336d0e22c342c7f7a8a5d1c3681bea6512ddb"
+      "bytes": 33243,
+      "sha256": "61cc190f81a12ba7deac892c432da02bab3a1208ea67abc99c860a57ac19ed05"
     },
     {
       "file": "png/night/wenhu-val256-b-far-front.png",
@@ -3153,8 +3153,8 @@
         1200,
         420
       ],
-      "bytes": 26203,
-      "sha256": "fb159b823b7cba84c77e22459c647d7e79e7c61cff768d6573a1e7179f8bbd8e"
+      "bytes": 26830,
+      "sha256": "030b7ca0a86da64ed2b765b9aa85aeae0873e4dc9b9c5637243728245bb847f0"
     },
     {
       "file": "png/night/wenhu-val256-b-far-isometric.png",
@@ -3162,8 +3162,8 @@
         1200,
         420
       ],
-      "bytes": 42089,
-      "sha256": "06c6963330bc762a4563fde39ac15a205d5c5be0950fb941459960a41e8e2b4d"
+      "bytes": 42591,
+      "sha256": "10b745d3b73bccdf2697514d9c6b99d01ee21fbad94f61c2fea49634b93cf007"
     },
     {
       "file": "png/night/wenhu-val256-b-far-left.png",
@@ -3171,8 +3171,8 @@
         1200,
         420
       ],
-      "bytes": 29230,
-      "sha256": "46be7c6ffe5fcd50b1de8b476770ac6fd02f1a5c1fc093d1db6f61495c267a98"
+      "bytes": 30169,
+      "sha256": "6571ad05498647e65cd398bf377625649d3505f82a0a12ece23657cf0208c548"
     },
     {
       "file": "png/night/wenhu-val256-b-far-right.png",
@@ -3180,8 +3180,8 @@
         1200,
         420
       ],
-      "bytes": 30766,
-      "sha256": "3f7fb2c62f677df9856776978229b61717448c4eaa3ac1a925781b330a3f588e"
+      "bytes": 31678,
+      "sha256": "02f6511a987180cb1ea126ee60a47d454fd59eae1d6497fd4f945feea67f0431"
     },
     {
       "file": "png/night/wenhu-val256-b-far-top.png",
@@ -3198,8 +3198,8 @@
         1200,
         420
       ],
-      "bytes": 29307,
-      "sha256": "9f6af43d87a480aef83968afebc432bd2707a45d705e58c39b057c319f869b2b"
+      "bytes": 29974,
+      "sha256": "d62dd80e3098fe6176086fac2c98be5cff1a673064b5eb60dc23558d8ed92a11"
     },
     {
       "file": "png/night/wenhu-val256-b-isometric.png",
@@ -3207,8 +3207,8 @@
         1200,
         420
       ],
-      "bytes": 48193,
-      "sha256": "4d7ba8b965f9e9f02d31d8074d27951f07bb365d766d6517a711592b23fbecde"
+      "bytes": 48809,
+      "sha256": "3235337cc86c3a9eb279dcc35cc9231f2b20131c3ce9219431ade2a6a440257c"
     },
     {
       "file": "png/night/wenhu-val256-b-left.png",
@@ -3216,8 +3216,8 @@
         1200,
         420
       ],
-      "bytes": 32506,
-      "sha256": "d042b63cad36317f3c43a19b05c954d7ef702ae94e0c3c9f40c98e3167f9f5ad"
+      "bytes": 33171,
+      "sha256": "ef825bac6fd11709515eaaa4c6063905a946dd6138eb82215781d6ac8a8096c7"
     },
     {
       "file": "png/night/wenhu-val256-b-right.png",
@@ -3225,8 +3225,8 @@
         1200,
         420
       ],
-      "bytes": 33455,
-      "sha256": "c07825ff10404e823391527f928b3dc5af31e8be0c015c69acc9864ac3f3b461"
+      "bytes": 34207,
+      "sha256": "c1d75417099fb55db4a312c5795584f331bf4d4e4737ce913a64b9a624fbb788"
     },
     {
       "file": "png/night/wenhu-val256-b-top.png",
@@ -3243,8 +3243,8 @@
         1200,
         420
       ],
-      "bytes": 33662,
-      "sha256": "780c0d1443eb8062eacad51be6f872fe65712cdbd8456152f26aad62fb59312d"
+      "bytes": 34237,
+      "sha256": "2d24408428f4d7c768823f6b3fa4dc9b85c1651cb1293662659bd554b6944c16"
     },
     {
       "file": "png/night/wenhu-val256-formation-bottom.png",
@@ -3252,8 +3252,8 @@
         1200,
         420
       ],
-      "bytes": 29591,
-      "sha256": "6c7b222595098897c4ce2f5a0dbfd54f279ecd5a01529188e42d83a302757492"
+      "bytes": 31703,
+      "sha256": "08d25605ab2aea165f885e8fe4502896431afc60a56ae082d617bdb497017001"
     },
     {
       "file": "png/night/wenhu-val256-formation-far-back.png",
@@ -3261,8 +3261,8 @@
         1200,
         420
       ],
-      "bytes": 38289,
-      "sha256": "ff6f4aece73e0a2ac062b6426b5293ce6bf5ac375160765824c162c433949a9e"
+      "bytes": 38584,
+      "sha256": "2a9a75efb8e4bfa61af16e23e92cc535649a124e1ba95c80505f53117dacff84"
     },
     {
       "file": "png/night/wenhu-val256-formation-far-bottom.png",
@@ -3270,8 +3270,8 @@
         1200,
         420
       ],
-      "bytes": 29220,
-      "sha256": "59b3d610e2eb1b290778cba21bb531ccc2b3d007aa60ed69b870b610e163c87d"
+      "bytes": 31176,
+      "sha256": "d1a3263941a0c42f52d02869098539bd900f3585fa38cfa73321d104ada8be67"
     },
     {
       "file": "png/night/wenhu-val256-formation-far-front.png",
@@ -3279,8 +3279,8 @@
         1200,
         420
       ],
-      "bytes": 30935,
-      "sha256": "7ff61252f4b82b94f0a22489e26f26304bfa03761dab81e169b7087393b627ce"
+      "bytes": 31524,
+      "sha256": "4e8d463856817ea8ee61e6869b517cd4913acfc5fdbc44c7a065bdeedbb77ac9"
     },
     {
       "file": "png/night/wenhu-val256-formation-far-isometric.png",
@@ -3288,8 +3288,8 @@
         1200,
         420
       ],
-      "bytes": 46827,
-      "sha256": "1535f44165aaec8fe1831e0fae62c2033da14e711c4c495ed1f2301d3d0c8660"
+      "bytes": 47370,
+      "sha256": "1f23ce34b5896a0abd9f711c274bdb707dcf15829d5366951b9a0e06d851b6e2"
     },
     {
       "file": "png/night/wenhu-val256-formation-far-left.png",
@@ -3297,8 +3297,8 @@
         1200,
         420
       ],
-      "bytes": 26852,
-      "sha256": "bfec6c545f82b0b0217cf0999c211398a8b31ba4593d86736e90ae69df876d5d"
+      "bytes": 27758,
+      "sha256": "d102b8668475f7bee174fe2b1da8dfadd748b2b9db59f783c2e4df2904db671a"
     },
     {
       "file": "png/night/wenhu-val256-formation-far-right.png",
@@ -3306,8 +3306,8 @@
         1200,
         420
       ],
-      "bytes": 27283,
-      "sha256": "c5c2dedf2502100fcf8d47462403fbb9c95026fbb0347b3f5795198444ba6beb"
+      "bytes": 28210,
+      "sha256": "a4e0285f10734a45dd6e2e0a558bf40aad521b90cc4db774d30c2403f1c392cc"
     },
     {
       "file": "png/night/wenhu-val256-formation-far-top.png",
@@ -3324,8 +3324,8 @@
         1200,
         420
       ],
-      "bytes": 34041,
-      "sha256": "449bafaffe6a297e3934dcf2b1b3d6a5584f847b4c017a2f12d1232efc1ff98c"
+      "bytes": 34651,
+      "sha256": "8df94857a3398623091c06f271081919d1f25a1a0a0fc09a2305c33093e2bc08"
     },
     {
       "file": "png/night/wenhu-val256-formation-isometric.png",
@@ -3333,8 +3333,8 @@
         1200,
         420
       ],
-      "bytes": 52775,
-      "sha256": "89eb375059367f866eb0e8bdd77f0675b65a898b389fa4b7c3ff1174b9f570d7"
+      "bytes": 53381,
+      "sha256": "4c8b8a083058f1b7428af384b2df9af843e1c79fdfba8ad6f1e922504bc7251f"
     },
     {
       "file": "png/night/wenhu-val256-formation-left.png",
@@ -3342,8 +3342,8 @@
         1200,
         420
       ],
-      "bytes": 28636,
-      "sha256": "d13fb6236305c861501d6b3a582bf3c4aa842d65ddeff5ea5e095eeaa4dc0e27"
+      "bytes": 29523,
+      "sha256": "adc6a7c9e3e44f3155dc75a4c719363ee99035605ccce7f75691e64e5833e79b"
     },
     {
       "file": "png/night/wenhu-val256-formation-right.png",
@@ -3351,8 +3351,8 @@
         1200,
         420
       ],
-      "bytes": 29058,
-      "sha256": "9fa5dab6f4fdc3d186a7add0ade9322ec1f5879cc44a7c5d23d2912d11d04497"
+      "bytes": 29811,
+      "sha256": "0b2e18d1df1988d461b4934204dfb5959b569ab166f7c4f518fc473720b2afbb"
     },
     {
       "file": "png/night/wenhu-val256-formation-top.png",
@@ -3360,8 +3360,8 @@
         1200,
         420
       ],
-      "bytes": 30758,
-      "sha256": "f1ac88988cb7afd36f997af85ae38b6a31e3c7c2c09f9e304102744d5ca7782e"
+      "bytes": 30755,
+      "sha256": "c4a574c498b6eff72d15030c7344d69338ce0b9dda7eb191a9245606faaf628c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-back.png",
@@ -3369,8 +3369,8 @@
         1200,
         420
       ],
-      "bytes": 13521,
-      "sha256": "b4b0ec341a1acb1477b2224ccad12c6d7bfc22ff1eff5f8857a457675dc61f60"
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-bottom.png",
@@ -3387,8 +3387,8 @@
         1200,
         420
       ],
-      "bytes": 13400,
-      "sha256": "f8f005901554a5b4f92e15b40d08c14cb1afe4a7335552d3f8b0e5143dbbb8f3"
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-far-bottom.png",
@@ -3405,8 +3405,8 @@
         1200,
         420
       ],
-      "bytes": 13400,
-      "sha256": "f8f005901554a5b4f92e15b40d08c14cb1afe4a7335552d3f8b0e5143dbbb8f3"
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-far-isometric.png",
@@ -3414,8 +3414,8 @@
         1200,
         420
       ],
-      "bytes": 16366,
-      "sha256": "ddd6c33099ba49d2271fc623fe01053b5ad715f3651a42246188ec2f4bde3227"
+      "bytes": 16152,
+      "sha256": "1b3eb976fb4748f49eaba6a84cf32c96ec8f417b4ecaeae3851cf44206c1c980"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-far-left.png",
@@ -3423,8 +3423,8 @@
         1200,
         420
       ],
-      "bytes": 15342,
-      "sha256": "016d77888c6f6ca75f99ef97eeea6bdd18d20313e9283e75dd82a1560057b218"
+      "bytes": 15195,
+      "sha256": "b9b467313c9f9c0b13401d5112e68a35f8223916b38f8c99adf069ff3f3dbb2c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-far-right.png",
@@ -3432,8 +3432,8 @@
         1200,
         420
       ],
-      "bytes": 15356,
-      "sha256": "04fa8c3129af07b3f35d380be8c665e132f750c3ba090917321ea4cfd39a913e"
+      "bytes": 15218,
+      "sha256": "6f5481d81ded0774eb64106e80cfdb8a2b837b2455b59ead94b031457f37afec"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-far-top.png",
@@ -3450,8 +3450,8 @@
         1200,
         420
       ],
-      "bytes": 13521,
-      "sha256": "b4b0ec341a1acb1477b2224ccad12c6d7bfc22ff1eff5f8857a457675dc61f60"
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-isometric.png",
@@ -3459,8 +3459,8 @@
         1200,
         420
       ],
-      "bytes": 16256,
-      "sha256": "71ee09ca865ab19b5a05897002d989526de9653e3fe4938044c50ca171906dfb"
+      "bytes": 16142,
+      "sha256": "99d7138371e62157e7ade285d6b062132e2a424200a04d3316644ab0c69a820f"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-left.png",
@@ -3468,8 +3468,8 @@
         1200,
         420
       ],
-      "bytes": 15606,
-      "sha256": "9886ac76f07e37206053077c04eab209707fb82e364d02cf7cff112d9663d725"
+      "bytes": 15313,
+      "sha256": "a9bf81a7446a9653f6932853bc879cae3a8418344144a175440d6bb856d64e44"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-right.png",
@@ -3477,8 +3477,8 @@
         1200,
         420
       ],
-      "bytes": 15631,
-      "sha256": "75c2efd639ad6102edf4496b329a48b86cfafae7d88421fdfa79014adc67fa5d"
+      "bytes": 15333,
+      "sha256": "64d7299390093beac762a03e51ba0d9315f5a8d373c7c76b7e4c8785c659c2a4"
     },
     {
       "file": "png/silhouette/wenhu-apm256-a-top.png",
@@ -3495,8 +3495,8 @@
         1200,
         420
       ],
-      "bytes": 13521,
-      "sha256": "b4b0ec341a1acb1477b2224ccad12c6d7bfc22ff1eff5f8857a457675dc61f60"
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-bottom.png",
@@ -3513,8 +3513,8 @@
         1200,
         420
       ],
-      "bytes": 13400,
-      "sha256": "f8f005901554a5b4f92e15b40d08c14cb1afe4a7335552d3f8b0e5143dbbb8f3"
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-far-bottom.png",
@@ -3531,8 +3531,8 @@
         1200,
         420
       ],
-      "bytes": 13400,
-      "sha256": "f8f005901554a5b4f92e15b40d08c14cb1afe4a7335552d3f8b0e5143dbbb8f3"
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-far-isometric.png",
@@ -3540,8 +3540,8 @@
         1200,
         420
       ],
-      "bytes": 16082,
-      "sha256": "9ac05e45ff27c93d60f8db8b495f34a4fa432260bf3c154a8cd9a8ba5528fc01"
+      "bytes": 16093,
+      "sha256": "04d8b440c0cf6c20105468dc4a9f0f7c18906dae494d51f9c2a194b089e90ff4"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-far-left.png",
@@ -3549,8 +3549,8 @@
         1200,
         420
       ],
-      "bytes": 15423,
-      "sha256": "e89d814bf1343e41be419d9abf4004835eca219da312ed42d04ef1cfc6f4ed9f"
+      "bytes": 15272,
+      "sha256": "0d56eefefe88b69c6d4e9ecbff2c64dcf0fe582b18617564cddc22bf79e9bd47"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-far-right.png",
@@ -3558,8 +3558,8 @@
         1200,
         420
       ],
-      "bytes": 15414,
-      "sha256": "ae3033d849075d63c650faf1985cff7133e18b79b4fa7e5193c1a6591f6aebdb"
+      "bytes": 15278,
+      "sha256": "7989eb16a611a8bba02d2e74d2899984cfbcb9d001392b9fa80c96bbd63455ec"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-far-top.png",
@@ -3576,8 +3576,8 @@
         1200,
         420
       ],
-      "bytes": 13521,
-      "sha256": "b4b0ec341a1acb1477b2224ccad12c6d7bfc22ff1eff5f8857a457675dc61f60"
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-isometric.png",
@@ -3585,8 +3585,8 @@
         1200,
         420
       ],
-      "bytes": 16036,
-      "sha256": "ca57dc593b6a5aceb9cf6d35595beddc3aa1a9fd48105e69c106e5db0d8dba09"
+      "bytes": 16094,
+      "sha256": "6fb1b1aa06d28bd7d2410e17e0429ab9308cb1b8a0964a5cc0de226b3f46a6db"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-left.png",
@@ -3594,8 +3594,8 @@
         1200,
         420
       ],
-      "bytes": 15682,
-      "sha256": "eb74b5805ec99b536949d0dfeb71f6b914db37f3d009b56b797c7874b2cae8da"
+      "bytes": 15398,
+      "sha256": "1c6391bbf4ba9c46c435867c2247597303711f926c10b24431422e330672f948"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-right.png",
@@ -3603,8 +3603,8 @@
         1200,
         420
       ],
-      "bytes": 15694,
-      "sha256": "38126fab1b3cba0b15b84fa5ada1254036fa196fd4f2d1dd2241d8e35d0aadf2"
+      "bytes": 15393,
+      "sha256": "009d8367b23cdbc4acc6623a832af5d1cb030b43ce922935354d565a4cfefa74"
     },
     {
       "file": "png/silhouette/wenhu-apm256-b-top.png",
@@ -3621,8 +3621,8 @@
         1200,
         420
       ],
-      "bytes": 13521,
-      "sha256": "b4b0ec341a1acb1477b2224ccad12c6d7bfc22ff1eff5f8857a457675dc61f60"
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-bottom.png",
@@ -3639,8 +3639,8 @@
         1200,
         420
       ],
-      "bytes": 13400,
-      "sha256": "f8f005901554a5b4f92e15b40d08c14cb1afe4a7335552d3f8b0e5143dbbb8f3"
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-far-bottom.png",
@@ -3657,8 +3657,8 @@
         1200,
         420
       ],
-      "bytes": 13400,
-      "sha256": "f8f005901554a5b4f92e15b40d08c14cb1afe4a7335552d3f8b0e5143dbbb8f3"
+      "bytes": 13436,
+      "sha256": "cf432e92b47d59e55a1d3fbc4793d670a60a28594a260654f1fb8d6ad2b17b0c"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-far-isometric.png",
@@ -3666,8 +3666,8 @@
         1200,
         420
       ],
-      "bytes": 18125,
-      "sha256": "b4360f598622898ca5a01bf6a35a4cdd02ae3ac54c72508341bb3c30b4f19937"
+      "bytes": 17942,
+      "sha256": "69f0c1c0567ffeed8643624bd16b42aeca6cba55ece5204ede8abf3135833853"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-far-left.png",
@@ -3675,8 +3675,8 @@
         1200,
         420
       ],
-      "bytes": 16181,
-      "sha256": "4b8eea32cb5f67a56b745fd038441414387e0b5cbef81c92234d901a4ed04b78"
+      "bytes": 15777,
+      "sha256": "21ca75dab1b149f2b1f843e70bf91a680b99f8443f7fcb789985381216b5fa43"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-far-right.png",
@@ -3684,8 +3684,8 @@
         1200,
         420
       ],
-      "bytes": 16189,
-      "sha256": "21db7e0d0a7beba11ccc1534df55a8e5e27b8131eb7023c75ea260531b66b803"
+      "bytes": 15832,
+      "sha256": "79e3eeb53a7aa77c6246a467fee15040dc80347f89a4931d885d32f2cbbf8f7d"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-far-top.png",
@@ -3702,8 +3702,8 @@
         1200,
         420
       ],
-      "bytes": 13521,
-      "sha256": "b4b0ec341a1acb1477b2224ccad12c6d7bfc22ff1eff5f8857a457675dc61f60"
+      "bytes": 13558,
+      "sha256": "9b04e88b48b4fa31020532c220a1d981531dce8b60b801a1704179f9a381b7f6"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-isometric.png",
@@ -3711,8 +3711,8 @@
         1200,
         420
       ],
-      "bytes": 18017,
-      "sha256": "7306341b8d9f417fc15724c3ee77e1247d277cac9ccf073a607f1a4e3c23fc9f"
+      "bytes": 17928,
+      "sha256": "205649a8ca61b83b32ffec308912038e4b3e3d9c1ca3cd789267989d9090537b"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-left.png",
@@ -3720,8 +3720,8 @@
         1200,
         420
       ],
-      "bytes": 16519,
-      "sha256": "53b278c5e249bc952bcce65b29c1585b2019520bd295b380ad85307108bfa821"
+      "bytes": 16274,
+      "sha256": "bdcf695bfff333e15aa9edf2ec5d000609e64b4e657a24cda549686ea10b7ff5"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-right.png",
@@ -3729,8 +3729,8 @@
         1200,
         420
       ],
-      "bytes": 16533,
-      "sha256": "71305e60fc7b59f02ac593bb9f85dbf5602c3b3bf0af7640642714c4d98ab7b5"
+      "bytes": 16313,
+      "sha256": "efda71b2e8ba2b22069d3f15f1e8bca5e51b2a3673cbadd6accf4437f29604f8"
     },
     {
       "file": "png/silhouette/wenhu-apm256-formation-top.png",
@@ -3747,8 +3747,8 @@
         1200,
         420
       ],
-      "bytes": 13395,
-      "sha256": "86ed7dc6d915d134951578d0b7630e21d216750cc26cd2255462334d53c95feb"
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-bottom.png",
@@ -3765,8 +3765,8 @@
         1200,
         420
       ],
-      "bytes": 13273,
-      "sha256": "5b4287140c3ddbefdb10642c5facdb33789f7c021470abd96d87b85624cdac2d"
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-far-bottom.png",
@@ -3783,8 +3783,8 @@
         1200,
         420
       ],
-      "bytes": 13273,
-      "sha256": "5b4287140c3ddbefdb10642c5facdb33789f7c021470abd96d87b85624cdac2d"
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-far-isometric.png",
@@ -3792,8 +3792,8 @@
         1200,
         420
       ],
-      "bytes": 16535,
-      "sha256": "0454d320c47283448fb989627cf8190553cb74dbcc8abf99cd2aae4d867d89a9"
+      "bytes": 16474,
+      "sha256": "483eb1018af4282ad3dc8fdd6ccc9a3160f2aa7b59586ec15d57f89d561d70a1"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-far-left.png",
@@ -3801,8 +3801,8 @@
         1200,
         420
       ],
-      "bytes": 15336,
-      "sha256": "4566af3b1bd206377955692a666ea098887ccc74b9aedd3c006f3db4cf074914"
+      "bytes": 15140,
+      "sha256": "1a8b75e51b60198a68f9384cef502fc4e67c715d4fe4e1ddf829dadd442a6db3"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-far-right.png",
@@ -3810,8 +3810,8 @@
         1200,
         420
       ],
-      "bytes": 15375,
-      "sha256": "957d21c73aea42e95a7c3337cd46aa40d4e097b52fb89b87b9258da576c0f5d6"
+      "bytes": 15167,
+      "sha256": "9c58901668186509e5a7ac79b50452e3a28fa91c603a451117f11f7d00f0ed2a"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-far-top.png",
@@ -3828,8 +3828,8 @@
         1200,
         420
       ],
-      "bytes": 13395,
-      "sha256": "86ed7dc6d915d134951578d0b7630e21d216750cc26cd2255462334d53c95feb"
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-isometric.png",
@@ -3837,8 +3837,8 @@
         1200,
         420
       ],
-      "bytes": 16442,
-      "sha256": "1a0845f3223a4874b6d8ed2c9a2aa37e1a1678a1efd8cb2f4584b3663f5300c9"
+      "bytes": 16464,
+      "sha256": "1c50b3dc9106f72d40aacd660fcda2cea9bcd5786ad6a79cad800a21d2fe2943"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-left.png",
@@ -3846,8 +3846,8 @@
         1200,
         420
       ],
-      "bytes": 15604,
-      "sha256": "c1e1390bf35cda73b32849a60b74ac108b0d9fabf50b22973266015178437aa0"
+      "bytes": 15450,
+      "sha256": "e8f4eacb136b0402520984d29dd7a633c1cdd4407abb984127887a4e1c7d53e4"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-right.png",
@@ -3855,8 +3855,8 @@
         1200,
         420
       ],
-      "bytes": 15657,
-      "sha256": "0be798021a02efeb7bc794321cf29c5600f7161e7efab93419eee008c293ed62"
+      "bytes": 15498,
+      "sha256": "bcfe9f7bf4d5bfc155f005ecc13c455e8929acea7353f01f3e82bc611d16836f"
     },
     {
       "file": "png/silhouette/wenhu-val256-a-top.png",
@@ -3873,8 +3873,8 @@
         1200,
         420
       ],
-      "bytes": 13395,
-      "sha256": "86ed7dc6d915d134951578d0b7630e21d216750cc26cd2255462334d53c95feb"
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-bottom.png",
@@ -3891,8 +3891,8 @@
         1200,
         420
       ],
-      "bytes": 13273,
-      "sha256": "5b4287140c3ddbefdb10642c5facdb33789f7c021470abd96d87b85624cdac2d"
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-far-bottom.png",
@@ -3909,8 +3909,8 @@
         1200,
         420
       ],
-      "bytes": 13273,
-      "sha256": "5b4287140c3ddbefdb10642c5facdb33789f7c021470abd96d87b85624cdac2d"
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-far-isometric.png",
@@ -3918,8 +3918,8 @@
         1200,
         420
       ],
-      "bytes": 16232,
-      "sha256": "97b1f13421ac45cc8de5b3929da1916be51c12fb0cb830ee415efbf325dd1a9e"
+      "bytes": 16148,
+      "sha256": "895cce9099476edba7e4271a1a46d619f110cdcdaec5ad391353af7621661bee"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-far-left.png",
@@ -3927,8 +3927,8 @@
         1200,
         420
       ],
-      "bytes": 15485,
-      "sha256": "2f35d7bf6852a28217f29196c81527d0f80fe91fdb7927b6e82857da13716539"
+      "bytes": 15275,
+      "sha256": "00cf6f20c541c198a3a7a993d018dd98cdfd5847cf94646a1c77d4ed8a2d7dff"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-far-right.png",
@@ -3936,8 +3936,8 @@
         1200,
         420
       ],
-      "bytes": 15450,
-      "sha256": "f68eca3ffb124883a6129739c1cd8f9ecc6cff5ae2aa5d55514ef60d4bbe92d8"
+      "bytes": 15255,
+      "sha256": "6dea48fb0b7e2bd3e2c7baf8ca199239213feca58e83aaad1fbf1f663e457384"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-far-top.png",
@@ -3954,8 +3954,8 @@
         1200,
         420
       ],
-      "bytes": 13395,
-      "sha256": "86ed7dc6d915d134951578d0b7630e21d216750cc26cd2255462334d53c95feb"
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-isometric.png",
@@ -3963,8 +3963,8 @@
         1200,
         420
       ],
-      "bytes": 16172,
-      "sha256": "e0e5109aa5c06772b4265fc9ca425362d46dd89002866ee881a6764d9dc3956a"
+      "bytes": 16160,
+      "sha256": "1e6e33d79b28be54a7a92f8e5737e13dffed629e2ff07b7beb18fbbc0eca58ae"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-left.png",
@@ -3972,8 +3972,8 @@
         1200,
         420
       ],
-      "bytes": 15748,
-      "sha256": "ba58f61631e19d35e4371a3ff6d9a6fcc14e72bbb973720fa5a22b86b0c44806"
+      "bytes": 15590,
+      "sha256": "bd7b111ea4173814f6badcaba2c251ab623353b8dafeef380ebc6f1c4841f014"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-right.png",
@@ -3981,8 +3981,8 @@
         1200,
         420
       ],
-      "bytes": 15734,
-      "sha256": "b445fc4cc80f336b12231be5e0fa0cc2b86c87164445e23a9fd07e4bc17b9051"
+      "bytes": 15581,
+      "sha256": "66681a17ef765364b6448a793f5ca8ee9b2bd79747f2de4453110a6e1be4d0c3"
     },
     {
       "file": "png/silhouette/wenhu-val256-b-top.png",
@@ -3999,8 +3999,8 @@
         1200,
         420
       ],
-      "bytes": 13395,
-      "sha256": "86ed7dc6d915d134951578d0b7630e21d216750cc26cd2255462334d53c95feb"
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-bottom.png",
@@ -4017,8 +4017,8 @@
         1200,
         420
       ],
-      "bytes": 13273,
-      "sha256": "5b4287140c3ddbefdb10642c5facdb33789f7c021470abd96d87b85624cdac2d"
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-far-bottom.png",
@@ -4035,8 +4035,8 @@
         1200,
         420
       ],
-      "bytes": 13273,
-      "sha256": "5b4287140c3ddbefdb10642c5facdb33789f7c021470abd96d87b85624cdac2d"
+      "bytes": 13305,
+      "sha256": "0968cf6dc933067edfc3132a3e1334c86c1d7eb6878ccf5c476f4d1759f314f7"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-far-isometric.png",
@@ -4044,8 +4044,8 @@
         1200,
         420
       ],
-      "bytes": 18168,
-      "sha256": "1d46f9238c2144a08c0a0bf515eb4436cce654a5a945620af9090a5a216926b4"
+      "bytes": 18269,
+      "sha256": "ee8d9ed9b84aa0a6807f3f70cc8fd20c8ed50ea2ec1bdd04685d25ff39b38f83"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-far-left.png",
@@ -4053,8 +4053,8 @@
         1200,
         420
       ],
-      "bytes": 16270,
-      "sha256": "9b9ecf3cce219d2d1959600d8a507df572a7f62637a1142d9110feb6dd774016"
+      "bytes": 16481,
+      "sha256": "b4e540a0c590777373e7e562d48fec8002d6838730e57da0c2892d1560013d25"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-far-right.png",
@@ -4062,8 +4062,8 @@
         1200,
         420
       ],
-      "bytes": 16259,
-      "sha256": "3b7a8f7580968b01b70bfb0d07c39db03ae786748e56862be1a7c0de1f49540d"
+      "bytes": 16466,
+      "sha256": "9cbe61fbb7087b86f5541bc19f346502ff8446542e60c25efa8e5c3a84646bfd"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-far-top.png",
@@ -4080,8 +4080,8 @@
         1200,
         420
       ],
-      "bytes": 13395,
-      "sha256": "86ed7dc6d915d134951578d0b7630e21d216750cc26cd2255462334d53c95feb"
+      "bytes": 13421,
+      "sha256": "18c04414992a65e0c6992d7e3a5fc7ac0bb9c5678af81296e1132a795ff19ad2"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-isometric.png",
@@ -4089,8 +4089,8 @@
         1200,
         420
       ],
-      "bytes": 18095,
-      "sha256": "af701d18af141a15ba8730cc36734c86c9e581171cf708f6ef1103e8fa025d4a"
+      "bytes": 18224,
+      "sha256": "95342f41f46cfd83b60ffa62fa3dfc2b2d191a47cf41f913ba5cd0084265c12d"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-left.png",
@@ -4098,8 +4098,8 @@
         1200,
         420
       ],
-      "bytes": 16615,
-      "sha256": "ff7b9817f505f31960a4d1a72ea7ed2d2d77b48494a983cac4558f3c63d2a38a"
+      "bytes": 16973,
+      "sha256": "7a024f0bb9dfb881bd95f4b3f0820c518f4c5ee5ac6e24c1534dd397800eba9c"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-right.png",
@@ -4107,8 +4107,8 @@
         1200,
         420
       ],
-      "bytes": 16619,
-      "sha256": "858f6bd59833e7b72afe9165113439b20a88692db83bf8ecf495d01359f2d493"
+      "bytes": 16960,
+      "sha256": "46955008cfbed8e5d4490b6a6b8cce62c8c07110ac91c7d800941c8808934668"
     },
     {
       "file": "png/silhouette/wenhu-val256-formation-top.png",
@@ -4125,8 +4125,8 @@
         2100,
         1440
       ],
-      "bytes": 287195,
-      "sha256": "32c56912b264b1d556387ddcaaddd9aae48cc3fabb2c31385d6f13bd9d18a6f5"
+      "bytes": 293269,
+      "sha256": "a2136d3062cd2fdfc8d1d098a860cc034f240a1dab28d491e13fcc5550476993"
     },
     {
       "file": "sheets/apm256-b.png",
@@ -4134,8 +4134,8 @@
         2100,
         1440
       ],
-      "bytes": 291812,
-      "sha256": "67df8f452cef46fb88f1f9157e3487d266d7d4262a48e7317977f7959d386273"
+      "bytes": 298428,
+      "sha256": "733a3e455240c10dc50343f848b57c74edb00f54b7583e7cc83adea4f18e11e5"
     },
     {
       "file": "sheets/apm256-comparison.png",
@@ -4143,8 +4143,8 @@
         1600,
         1700
       ],
-      "bytes": 218967,
-      "sha256": "91e9c1e7f4d576390e7773035cf3d3a3cfaff29d179959f2922deb57721590e9"
+      "bytes": 227214,
+      "sha256": "83fd80e87bf00943c85f37fa795e1c2d82ec3bab25b59a583e6ed36a6b1cf143"
     },
     {
       "file": "sheets/apm256-formation.png",
@@ -4152,8 +4152,8 @@
         2100,
         1440
       ],
-      "bytes": 288241,
-      "sha256": "1d8bef5e881e30b33bbde4f971c36d9b3ab67798bd9519f3e1a2739907e70e61"
+      "bytes": 291704,
+      "sha256": "b0840198e0bf9b196ccbd7851c5b6b9889917e0b3ba93f2e10b691f474a21b89"
     },
     {
       "file": "sheets/val256-a.png",
@@ -4161,8 +4161,8 @@
         2100,
         1440
       ],
-      "bytes": 283024,
-      "sha256": "b51043d6f88900bd3bfcf926da5de20c0c0f72dabc8bcf9b328f3c9f092dcc68"
+      "bytes": 290033,
+      "sha256": "fb83d78b1200faead7a94021a2d6d41ca18737129fe6e43737fbd2bcb3260e01"
     },
     {
       "file": "sheets/val256-b.png",
@@ -4170,8 +4170,8 @@
         2100,
         1440
       ],
-      "bytes": 286451,
-      "sha256": "c32e2d8e5def8d90f302fdbeccc6efe7d4e8eab14b6c02979a0f65812a40f151"
+      "bytes": 293601,
+      "sha256": "34152820f3dd5d8c73d5f9d2733973e97b60c5547941c560bb2d22f47b0cf6e7"
     },
     {
       "file": "sheets/val256-comparison.png",
@@ -4179,8 +4179,8 @@
         1600,
         1700
       ],
-      "bytes": 212315,
-      "sha256": "5f37c42de32a91b1dce9f8247603fb3bcbac1e1f91953ac1b5189c3f0bb66f21"
+      "bytes": 217256,
+      "sha256": "5977d0f460b83c5ef8eabec9b53d6f14c8aee37175914dda9ed9cc382475bc3f"
     },
     {
       "file": "sheets/val256-formation.png",
@@ -4188,8 +4188,8 @@
         2100,
         1440
       ],
-      "bytes": 287632,
-      "sha256": "367251fd777e07cfe2743a904cf553ae4d23b5d5c56ec117ceeb01c773c10e69"
+      "bytes": 293461,
+      "sha256": "fc0df106cc8871d17013608419ce8854fc3fa2e43d732ce099fb60dbb1fd8936"
     }
   ]
 }

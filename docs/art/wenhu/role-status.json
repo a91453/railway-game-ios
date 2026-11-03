@@ -1,13 +1,13 @@
 {
-  "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+  "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
   "limits": "Roles A/B and all-zero study directions are provisional; no user accepted producer, no dated readable complete four-number prototype; no device proof. Status entries follow status-template four states.",
   "models": [
     {
       "id": "wenhu-val256-a",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 11424,
-      "native_sha256": "894b4d0d375ba4de5c799ae5282d48541aa332806d816f592f5d8d9eb6dcfc8f",
+      "triangles": 12136,
+      "native_sha256": "46243d271e51b103f5807d46c1ca61e191b3d76bd29762b1eae8ede81005ed23",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -30,10 +30,10 @@
     },
     {
       "id": "wenhu-val256-b",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 11460,
-      "native_sha256": "94a255a78a23c9e52c16debc6c202e6fa6c710918367546e7c588c0d0854fda6",
+      "triangles": 12172,
+      "native_sha256": "b09aca901773c6b9ee2fff2018adb633972daf77edb189c86f22498a0159d3ba",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -56,10 +56,10 @@
     },
     {
       "id": "wenhu-val256-a-far",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 5192,
-      "native_sha256": "a66fc2d4e5cd865e8179a0e411a7f9902725c82eee5207b508e9a7a4e478d879",
+      "triangles": 5680,
+      "native_sha256": "4610fbd2c1e46f8e533631c021c66d07873834c9b2710585aa27b91cbc78cf0c",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -82,10 +82,10 @@
     },
     {
       "id": "wenhu-val256-b-far",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 5228,
-      "native_sha256": "eb10e8517f7cdab45d445056956db2339fb1578b0f3c4e0cc5a97b37894d9453",
+      "triangles": 5716,
+      "native_sha256": "4dd50c95f9e358b55826f665d042a69b2d3216ac9b543504703d9686020d7cfb",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -108,10 +108,10 @@
     },
     {
       "id": "wenhu-apm256-a",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 10144,
-      "native_sha256": "495feb1e185c7368ff2eae57f49a1db25a7b47ffbe10a43e7bb304fd1c630226",
+      "triangles": 10856,
+      "native_sha256": "97894bfdd986e188d9cb13ec99e3475e302641bb214e5300d02f59589bd5cade",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -134,10 +134,10 @@
     },
     {
       "id": "wenhu-apm256-b",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 10180,
-      "native_sha256": "2187d40ef8d38a4d1bb7f9ce2c14b3d7ed0653b52ed04270ff746a17cfdfcfad",
+      "triangles": 10892,
+      "native_sha256": "b60e6595eb79d7168bc2a84c419300c63fc120ac80418d538f31ad959163acc3",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -160,10 +160,10 @@
     },
     {
       "id": "wenhu-apm256-a-far",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 4512,
-      "native_sha256": "fd4142aa2f544bc6634e1986fc71db5126df24cc2f3758487d4fb2a318d0331e",
+      "triangles": 5000,
+      "native_sha256": "47d21296c25d5539bdb35823e66adc67e3b716306bb92b36395c352afd46aa1a",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -186,10 +186,10 @@
     },
     {
       "id": "wenhu-apm256-b-far",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 4548,
-      "native_sha256": "e7bff51727cabed2ca16373ec12fb08412113b44580f3358897648aa2690e21e",
+      "triangles": 5036,
+      "native_sha256": "42d2a2f68e2fda5b99072a0838e42e1281867d868384c4081dbf98b4e3aee0fb",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -212,10 +212,10 @@
     },
     {
       "id": "wenhu-val256-formation",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 45768,
-      "native_sha256": "f4a505dede66bff2a463a6ca01ce17a958b6a36a1ff8a18c1f5c6593a91b68cf",
+      "triangles": 48616,
+      "native_sha256": "2a959d48eecb1592a18f79f40ceca01ed46044d4fffa5f691d44d4e089c684e0",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -238,10 +238,10 @@
     },
     {
       "id": "wenhu-val256-formation-far",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 20840,
-      "native_sha256": "b12edb8bce2419650bfbf8670d269e1d2ade9657d7ed7481ba283bbfbc16e8ce",
+      "triangles": 22792,
+      "native_sha256": "2d5163ff2d5d3899771c89957bd703b44129385f5abd73baa2375e758010a52f",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -264,10 +264,10 @@
     },
     {
       "id": "wenhu-apm256-formation",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 40648,
-      "native_sha256": "4d5f32da03786d913d4f53c81e2f05d7a7f89f5e2e9303c1fdd429869a80f95f",
+      "triangles": 43496,
+      "native_sha256": "89dd33f668e011893c61d76517772d0a22a06f893483ab909319455483b63d2e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -290,10 +290,10 @@
     },
     {
       "id": "wenhu-apm256-formation-far",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "formal_role_status": "UNVERIFIED",
-      "triangles": 18120,
-      "native_sha256": "683f6d450bf06f517e05eaec884191eace70520773a66be6ee9dc351bc2d9c60",
+      "triangles": 20072,
+      "native_sha256": "6e6ae996db16a1bc79e0fc0b2e7946dfa21b687b02623d4bf5b9dc400366fe26",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -321,7 +321,7 @@
       "lod": "near",
       "junction": "1-2",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -347,7 +347,7 @@
       "lod": "near",
       "junction": "2-3",
       "study_coupler": "between married pairs, automatic",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -373,7 +373,7 @@
       "lod": "near",
       "junction": "3-4",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -399,7 +399,7 @@
       "lod": "far",
       "junction": "1-2",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -425,7 +425,7 @@
       "lod": "far",
       "junction": "2-3",
       "study_coupler": "between married pairs, automatic",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -451,7 +451,7 @@
       "lod": "far",
       "junction": "3-4",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -477,7 +477,7 @@
       "lod": "near",
       "junction": "1-2",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -503,7 +503,7 @@
       "lod": "near",
       "junction": "2-3",
       "study_coupler": "between married pairs, automatic",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -529,7 +529,7 @@
       "lod": "near",
       "junction": "3-4",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -555,7 +555,7 @@
       "lod": "far",
       "junction": "1-2",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -581,7 +581,7 @@
       "lod": "far",
       "junction": "2-3",
       "study_coupler": "between married pairs, automatic",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",
@@ -607,7 +607,7 @@
       "lod": "far",
       "junction": "3-4",
       "study_coupler": "same married pair, semi-permanent",
-      "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
       "status": {
         "asset": {
           "status": "UNVERIFIED",

@@ -1,95 +1,95 @@
 {
-  "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
-  "local_build": "Swift 6.4 build --build-tests -Xswiftc -warnings-as-errors passed; 17.55s",
-  "tests": "11 selected tests passed, 0 failures; 62.164s",
+  "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+  "local_build": "Swift6.4 build --build-tests -Xswiftc -warnings-as-errors passed; 11.12s",
+  "tests": "11 selected tests passed, 0 failures; 82.753s",
   "old_model_protection": "950 actual standard/studies models native bytes, vertex-field FNV and order preserved; 8 studies added, 0 standard added",
   "common_geometry": {
     "status": "VERIFIED",
     "models": [
       {
         "id": "wenhu-val256-a",
-        "balanced_edges": 14862,
-        "positive_components": 99,
+        "balanced_edges": 15930,
+        "positive_components": 121,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-b",
-        "balanced_edges": 14916,
-        "positive_components": 102,
+        "balanced_edges": 15984,
+        "positive_components": 124,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-a-far",
-        "balanced_edges": 6698,
-        "positive_components": 69,
+        "balanced_edges": 7430,
+        "positive_components": 91,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-b-far",
-        "balanced_edges": 6752,
-        "positive_components": 72,
+        "balanced_edges": 7484,
+        "positive_components": 94,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-a",
-        "balanced_edges": 13590,
-        "positive_components": 99,
+        "balanced_edges": 14658,
+        "positive_components": 121,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-b",
-        "balanced_edges": 13644,
-        "positive_components": 102,
+        "balanced_edges": 14712,
+        "positive_components": 124,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-a-far",
-        "balanced_edges": 6102,
-        "positive_components": 69,
+        "balanced_edges": 6834,
+        "positive_components": 91,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-b-far",
-        "balanced_edges": 6156,
-        "positive_components": 72,
+        "balanced_edges": 6888,
+        "positive_components": 94,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-formation",
-        "balanced_edges": 59524,
-        "positive_components": 399,
+        "balanced_edges": 63796,
+        "positive_components": 487,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-val256-formation-far",
-        "balanced_edges": 26868,
-        "positive_components": 279,
+        "balanced_edges": 29796,
+        "positive_components": 367,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-formation",
-        "balanced_edges": 54436,
-        "positive_components": 399,
+        "balanced_edges": 58708,
+        "positive_components": 487,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "wenhu-apm256-formation-far",
-        "balanced_edges": 24484,
-        "positive_components": 279,
+        "balanced_edges": 27412,
+        "positive_components": 367,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
@@ -212,6 +212,8 @@
         "glass_front_centroid_rays": 988,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -221,6 +223,8 @@
         "glass_front_centroid_rays": 988,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -230,6 +234,8 @@
         "glass_front_centroid_rays": 444,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -239,6 +245,8 @@
         "glass_front_centroid_rays": 444,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -248,6 +256,8 @@
         "glass_front_centroid_rays": 800,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -257,6 +267,8 @@
         "glass_front_centroid_rays": 800,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -266,6 +278,8 @@
         "glass_front_centroid_rays": 319,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -275,6 +289,8 @@
         "glass_front_centroid_rays": 319,
         "actual_glass_groups": 18,
         "load_tyres": 4,
+        "pivot_supports": 2,
+        "air_springs": 4,
         "guide_wheels": 8,
         "hvac": 2,
         "thirteen_actual_geometry_faults_rejected": true
@@ -328,14 +344,14 @@
     ],
     "limits": "Actual final assemblies mutated and compared with baseline payload independently checked through Swift; validates study configuration, not unresolved official A/B directions or contemporary fleet identity."
   },
-  "independent_swift_assembly": "VERIFIED independent Swift formation: 376128 vertices, maximum position error 0.0m; all colours equal",
+  "independent_swift_assembly": "VERIFIED independent Swift formation: 404928 vertices, maximum position error 0.0m; all colours equal",
   "independent_glb": {
     "importer": "4.3.2",
     "status": "VERIFIED",
     "models": [
       {
         "id": "wenhu-val256-a",
-        "triangles": 11424,
+        "triangles": 12136,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -350,7 +366,7 @@
       },
       {
         "id": "wenhu-val256-b",
-        "triangles": 11460,
+        "triangles": 12172,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -365,7 +381,7 @@
       },
       {
         "id": "wenhu-val256-a-far",
-        "triangles": 5192,
+        "triangles": 5680,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -380,7 +396,7 @@
       },
       {
         "id": "wenhu-val256-b-far",
-        "triangles": 5228,
+        "triangles": 5716,
         "minimum": [
           -6.889999866485596,
           -1.3275001049041748,
@@ -395,7 +411,7 @@
       },
       {
         "id": "wenhu-apm256-a",
-        "triangles": 10144,
+        "triangles": 10856,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -410,7 +426,7 @@
       },
       {
         "id": "wenhu-apm256-b",
-        "triangles": 10180,
+        "triangles": 10892,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -425,7 +441,7 @@
       },
       {
         "id": "wenhu-apm256-a-far",
-        "triangles": 4512,
+        "triangles": 5000,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -440,7 +456,7 @@
       },
       {
         "id": "wenhu-apm256-b-far",
-        "triangles": 4548,
+        "triangles": 5036,
         "minimum": [
           -6.889999866485596,
           -1.3174999952316284,
@@ -455,7 +471,7 @@
       },
       {
         "id": "wenhu-val256-formation",
-        "triangles": 45768,
+        "triangles": 48616,
         "minimum": [
           -27.559999465942383,
           -1.3275001049041748,
@@ -470,7 +486,7 @@
       },
       {
         "id": "wenhu-val256-formation-far",
-        "triangles": 20840,
+        "triangles": 22792,
         "minimum": [
           -27.559999465942383,
           -1.3275001049041748,
@@ -485,7 +501,7 @@
       },
       {
         "id": "wenhu-apm256-formation",
-        "triangles": 40648,
+        "triangles": 43496,
         "minimum": [
           -27.559999465942383,
           -1.3174999952316284,
@@ -500,7 +516,7 @@
       },
       {
         "id": "wenhu-apm256-formation-far",
-        "triangles": 18120,
+        "triangles": 20072,
         "minimum": [
           -27.559999465942383,
           -1.3174999952316284,
@@ -560,6 +576,11 @@
       "check": "contact audit after exact roof-cap change",
       "before": "APM near HVAC height 0.142m not found by older broad 0.149..0.231 detector",
       "fix": "Exact cap heights by fleet/LOD replace broad dimensions; all 13 actual-solid faults still rejected"
+    },
+    {
+      "check": "DORTS2005 APM design dimensions",
+      "before": "APM used 9.3m photo-fit wheelbase and1.88m transverse wheel centres; unsupported guide cradles",
+      "fix": "APM10m wheelbase,1.98m load-wheel centres from official design; supported bolster pivots, air springs and inboard guide cradle added to both studies; as-built conformity and exact VAL gear remain UNVERIFIED"
     }
   ],
   "appearance": "UNVERIFIED: no user acceptance; author inspection cannot establish actual hidden gear or formal role allocation",
@@ -688,12 +709,18 @@
   },
   "png": "465 canonical PNGs fully decoded; only 8 private sheets + 1 public overview delivered; independent selected bytes equal",
   "self_review": {
-    "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
-    "viewed": "All six role/formation sheets near/far, day/night/clay/silhouette, seven directions; two true previous comparison sheets; both final viewer mobile screens; source photos 63a-11a17 and 63a-cb04tw reopened",
+    "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+    "viewed": "Final six role/formation sheets, near/far ×day/night/clay/silhouette ×seven directions, final two before/after sheets and public overview; local source-oblique side-by-side comparison and design figures1–4 opened. Source perspective is not matched and no pixel engineering dimensions inferred.",
     "compliant": "Visible nose profile, supported glazing, real undercut and hollow coupler, recessed light rings; fixed metre near/far envelope",
     "reasonable_simplification": "Small fasteners/piping and photo-fit dimensions",
     "not_compliant": "Complete actual-role running gear and source photo coverage",
-    "insufficient_evidence": "Safety/turnout wheels, exact collector and role equipment allocation; formal directions and dated full-number representative train",
+    "insufficient_evidence": "Safety/turnout wheels, exact collector and role equipment allocation; formal directions and dated full-number representative train; official2005 design is not as-built certification",
     "acceptance": "UNVERIFIED: author inspection is not user acceptance"
+  },
+  "source_design_addendum": "Official DORTS2005 paper, full text and figures1–4 opened: APMaxle spacing10m and load-wheel transverse centres1.98m; design-stage source, not as-built. Two single-axle bolsters, suspension and guidance principle; detailed actual BOM still unknown.",
+  "source_comparison": {
+    "sha256": "fb2d54e16d422a0a1d02cdfa6726e460d56f3bf9bd0feed6deb922a63a918bb7",
+    "published": false,
+    "scope": "VAL49 and APM134 oblique photos with final native isometric; no dates inferred, no orthographic or full BOM claim"
   }
 }

@@ -1,6 +1,6 @@
 {
   "repo": ".",
-  "producer": "f9b1550a5d67f1f25f9361092b76fcb357ba9ceb",
+  "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
   "previous_producer": "91a31f0837b4076b6c17f5f4ffe0bea81b504ed9 (unaccepted first candidate)",
   "rebuild": "tools/wenhu/rebuild.sh \"$OUT\" && node tools/wenhu/render.mjs \"$OUT\" \"$BEFORE\" && python3 tools/wenhu/sheets.py \"$OUT\" && python3 tools/wenhu/curate.py \"$OUT\"",
   "sources": "source-record.json",
