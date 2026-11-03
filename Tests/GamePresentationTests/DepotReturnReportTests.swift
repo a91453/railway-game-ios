@@ -123,7 +123,9 @@ final class DepotReturnReportTests: XCTestCase {
     /// (simple with `DEPOT_RETURN_SIMPLE`), or under `rules`.
     static func bought(_ id: String, rules: NewGameRules? = nil) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
-        let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true, rules: rules ?? (simple ? .simple : .realistic))
+        // The Taiwan Railway branch lines are found by their network alone.
+        let round = id.hasPrefix("tra:") ? String(id.dropFirst(4)) : id
+        let session = try RealLineAcquisitionTests.game(round: round, side: 1 << 21, heights: true, rules: rules ?? (simple ? .simple : .realistic))
         guard let line = session.buyableRealLines.first(where: { $0.id == id }) else {
             throw XCTSkip("\(id) is not on sale")
         }
