@@ -164,4 +164,20 @@ final class PlatformStopTests: XCTestCase {
         XCTAssertNil(world.lineDispatchHold(of: train), "it runs")
         XCTAssertTrue(assigned.hasSuffix("停站時最後一節會在月台外：把月台加長到 100 公尺，或把列車移出軌道、減到 4 節。"), assigned)
     }
+
+    /// Decision 565's screenshot scene: its train stands at the far
+    /// platform of a real-map line, every car inside it on both maps.
+    func testThePlatformStopSceneStandsItsTrainInsideTheFarPlatform() throws {
+        let world = ScreenshotScene.platformStop.make(in: .traditionalChinese)
+        XCTAssertTrue(world.realCarLengths)
+        let train = try XCTUnwrap(world.trains.first)
+        XCTAssertEqual(train.cars, 4)
+        let motion = TrainMotion(world: world, time: Double(world.clock.now.seconds))
+        let found = Self.overruns(in: world, motion: motion, models: .standard).filter { $0.train == train.id }
+        let stop = try XCTUnwrap(found.first, "the train is not standing at a platform")
+        XCTAssertEqual(stop.platform, 80, accuracy: 0.01)
+        XCTAssertLessThanOrEqual(stop.drawn3D, 0.5, stop.description)
+        XCTAssertLessThanOrEqual(stop.drawn2D, 0.5, stop.description)
+        XCTAssertEqual(world.station(id: world.stations[1].id)?.name, "S1", "it stands at the far station")
+    }
 }

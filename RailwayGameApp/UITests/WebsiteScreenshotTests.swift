@@ -66,6 +66,35 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 565: a train of four 20 m cars standing at a platform four
+    /// cars long on a real map, close up on the 2D map and on the 3D one:
+    /// every car inside the platform, its nose at the platform's end. For
+    /// the screenshot review of the pull request that stopped it so.
+    func testPlatformStop() {
+        let app = launch(extra: ["-screenshot-scene", "platformStop", "-screenshot-follow-train", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 30), "The train is followed")
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<6 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("platform-stop-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("platform-stop-3d", app)
+    }
+
     /// Decision 539: a freight line's train, followed on the 3D map, is
     /// the R200 hauling container wagons (not grey boxes). For the
     /// screenshot review of the pull request that drew it so.
