@@ -315,6 +315,8 @@
     - 規劃可以自己用 `create_session` 開下一任，`model: "claude-opus-5-5"`。
     - 開之前用 `get_session`（不帶 id）看自己的 `lineage.depth`（上限 8）。下一任會到第 7 層時，改請作者在 claude.ai 開。
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
+    - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
+    - **預設「中」**（作者 2026-11-03：「好 預設中 需要高的你跟我說」）：實作 session 一律維持中，只有上面三種在派工當下跟作者說「這個請改高」並寫上 session 標題；量測、抓資料、改 CI、照現成寫法的小畫面、只寫文件都用中。
     - 下面 2026-10-24 那條只在快到第 7 層時適用。
     - 規劃自己開下一任後，在 #1041 和對話裡請作者到 app 把新 session 的強度改成「高」；作者不方便改時，就請作者從 claude.ai 開。實作 session 不用改強度（作者 2026-10-27：「結果還是需要我自己改高」）。
   - **實作 session 照難易度選模型**（2026-10-27，作者：「根據派工單難易度 給session決定opus 或是sonnet」）：`create_session` 的 `model` 一定要寫，不寫就沿用規劃的 Opus。
@@ -468,6 +470,21 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 44 任接回（2026-11-03 14:10 UTC，session_01YGNNukw5koUxDsjkSBmJJy，作者在 claude.ai 開的，第 0 層）**：照下面「pro 交回第 44 任」接手；兩段不同時以這段為準。
+
+- **110.1 已發**（作者 13:29 UTC，`2494e5a`，run 110）：完整 `ci.yml` 與 full lane 都綠，記在 `PLAYER_FEEDBACK.md`。下一版 111.1（作者：「明天111.1在一起更新吧」）：合 #1750（App 內這版新增，補 108.1–110.1），再加 111.1 自己的，並改 `.github/testflight-whats-new.md`。
+- **已合**：#1744（pro 交回）、#1754 REVIEW-L7（審查 #1725–#1751＋#1693，下一輪從 #1752 起）、#1747（決策 559，TYMCLIST2 的號誌關讓月台）、#1752 LANDMARK101（決策 555 續，截圖場景的線改到地點北 300 m，101 與台北車站地標出現；Simulator 上地標吃幀數，實機 UNVERIFIED）。
+- **派出去的**（全部 Opus；作者：實作 session 預設「中」，要「高」的由規劃說，見 §1.1）：
+  - WENHUSIDE（session_01YGNNunZGPiV2XFNuJMZEsQ，`claude/wenhu-side`，決策 564，存檔 82／golden 78 需要時，請作者改高）：作者回報 110.1「收購文湖線後列車走對向軌道」。線索：收購前 3D 真實捷運靠右（`Map3DRealTrains.rightHand`），收購後走 GameCore 的靠左（決策 202）。淡海、安坑、三鶯、機場捷運一起查。
+  - DAYPASS（session_01YGNNuq4pwmnoH6UaGRauhk，`claude/daypass-midnight`，決策 551 續，請作者改高）：L7-1 新局一日券午夜結算成 0、L7-2。
+  - L6FIX（session_01YGNNumXkb2bxJTzSaV4NcC，`claude/l6fix`，決策 542／547 續，請作者改高）：L6-3、L6-4、L6-5。
+  - DEPOTADD-2（session_01YGNNupgR4efBZiUSdbSW96，`claude/depotadd-2`，決策 557 續）：L7-3、L7-4。
+  - HEALTH-110（session_01YGNNuooXQbC3CXJv5fdYkZ，`claude/health-110`）：發版後健檢。
+  - CIOPT-6（session_01YGNNuqW3jzUqN2iQY2U5YW，`claude/ciopt-6`，決策 563 需要時）：完整 ci 17.7→20–22 分、GP PR tier 13→22–27 分。
+- **桃園機場捷運 #1743（決策 556，draft）**：TYMCLIST2（pro）照作者選的收尾停手，交接在 #1755（main 的本檔最上面一行）。接手的是 **TYMCLIST3**（session_01YGNNup5FDQbQYoyKCqHySs，Opus，請作者改高）：A 傍晚機場第二航廈跟進折返車月台的死結，GameCore，**決策 562**，`claude/tymc-follow-turnback`；B 接手 #1743 重量、回本、轉 ready，和 WENHUSIDE 對齊機場捷運靠右。GameCore 名額 DAYPASS ＞ TYMCLIST3 ＞ L6FIX（WENHUSIDE 目前不動 GameCore）。
+- **固定三件事這一輪**：審查 REVIEW-L7（到 #1751）、CI CIOPT-6、除錯 HEALTH-110，都是第 44 任 2026-11-03 派的。
+- **號碼**：556 保留（#1743）；559、555 續已用；562（TYMCLIST3）、563（CIOPT-6）、564（WENHUSIDE）保留；**下一個 565**。存檔 81（82 保留給 WENHUSIDE 需要時）、golden schema 77（78 同）。
 
 **pro 交回第 44 任（2026-11-03，pro 的遊戲規劃 session_01JMHz9YRiP23RXrrfdsaGsq，交回時間 14:00 UTC＝台灣 22:00）**：pro 當了一天遊戲規劃，照下面接回。和下面「第 44 任交給 pro」不同時以這段為準。
 
