@@ -2133,13 +2133,20 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     private func shootRouteDrawing(extra: [String], name: String) {
-        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-line-draft", "-map-layer", "potential"] + extra)
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-line-draft"] + extra)
         defer {
             app.terminate()
             XCUIDevice.shared.orientation = .landscapeLeft
         }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 30), "The new line's pill shows")
+        // Where people are (decision 311), its legend over the map, as the
+        // owner had it.
+        let coverage = app.buttons["map.coverageShortcut"]
+        if coverage.appears(within: 10) {
+            coverage.waitUntilSettled()
+            coverage.tap()
+        }
         settle(seconds: 3)
         keep(name, app)
 
