@@ -83,6 +83,9 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        // Its far station, 400 m east and 300 m north of Taipei Main
+        // Station (a metre at the anchor's latitude, as RealWorldFrame).
+        case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         default: nil
         }
     }

@@ -179,5 +179,11 @@ final class PlatformStopTests: XCTestCase {
         XCTAssertLessThanOrEqual(stop.drawn3D, 0.5, stop.description)
         XCTAssertLessThanOrEqual(stop.drawn2D, 0.5, stop.description)
         XCTAssertEqual(world.station(id: world.stations[1].id)?.name, "S1", "it stands at the far station")
+        // The 3D screenshot looks at the far station.
+        let place = try XCTUnwrap(ScreenshotScene.platformStop.place)
+        let at = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: place.latitude, longitude: place.longitude)
+        let s1 = world.stations[1].point
+        XCTAssertEqual(at.x, Double(s1.x), accuracy: 2 * Self.metre)
+        XCTAssertEqual(at.y, Double(s1.y), accuracy: 2 * Self.metre)
     }
 }

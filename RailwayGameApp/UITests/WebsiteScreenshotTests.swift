@@ -71,7 +71,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// every car inside the platform, its nose at the platform's end. For
     /// the screenshot review of the pull request that stopped it so.
     func testPlatformStop() {
-        let app = launch(extra: ["-screenshot-scene", "platformStop", "-screenshot-follow-train", "-map3D.quality", "saving"])
+        let app = launch(extra: ["-screenshot-scene", "platformStop", "-screenshot-follow-train",
+                                 "-screenshot-3d-view", "160,0,55", "-map3D.quality", "high"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         // The train's card has no stock row (no real line's stock): let the
@@ -92,8 +93,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(open3D.becomesHittable(within: 10))
         open3D.tap()
         XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
-        waitForPicture(timeout: 150)
-        settle(seconds: 5)
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        settle(seconds: 12)
         keep("platform-stop-3d", app)
     }
 
