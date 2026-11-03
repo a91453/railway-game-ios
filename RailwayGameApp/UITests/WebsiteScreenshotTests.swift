@@ -2140,12 +2140,6 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 30), "The new line's pill shows")
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            // An iPad left upright before the launch opens upright: on its
-            // side first, as the phone.
-            XCUIDevice.shared.orientation = .landscapeLeft
-            settle(seconds: 4)
-        }
         // Where people are (decision 311), its legend over the map, as the
         // owner had it.
         let coverage = app.buttons["map.coverageShortcut"]
@@ -2162,19 +2156,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
         settle(seconds: 3)
         keep("\(name)-panel", app)
-
-        // An iPhone is held on its side only (project.yml); an iPad
-        // upright too.
-        guard UIDevice.current.userInterfaceIdiom == .pad else { return }
-        XCUIDevice.shared.orientation = .portrait
-        settle(seconds: 4)
-        keep("\(name)-panel-portrait", app)
-        let done = app.navigationBars["路線"].firstMatch.buttons["完成"]
-        if done.exists {
-            done.tap()
-            settle(seconds: 3)
-            keep("\(name)-portrait", app)
-        }
+        // An iPhone is held on its side only (project.yml); the runner's
+        // iPad Simulator stays upright whatever the test asks, so an iPad
+        // run shows it upright (decision 568).
     }
 
     /// Decision 497 (P2-6): Back to Start when the autosave cannot be
