@@ -2140,6 +2140,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 30), "The new line's pill shows")
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            // An iPad left upright before the launch opens upright: on its
+            // side first, as the phone.
+            XCUIDevice.shared.orientation = .landscapeLeft
+            settle(seconds: 4)
+        }
         // Where people are (decision 311), its legend over the map, as the
         // owner had it.
         let coverage = app.buttons["map.coverageShortcut"]
