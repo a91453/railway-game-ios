@@ -2394,8 +2394,13 @@ public final class GameSession {
             let count = Train.carsText(cars, in: language)
             // Added cars are paid for (decision 46).
             let paid = balance - world.economy.balance
-            guard paid > .zero else { return language.text("\(train.name) now has \(count).", "\(train.name) 現在有 \(count)。") }
-            return language.text("\(train.name) now has \(count), for \(paid.moneyText).", "\(train.name) 現在有 \(count)，花費 \(paid.moneyText)。")
+            // Decision 565: and when it is now longer than a platform of
+            // its line, which and what to do.
+            let short = world.shortPlatformCall(ofTrain: train.id).map { short in
+                language.text(" ", "") + world.shortPlatformText(short, in: language) + language.text(".", "。")
+            } ?? ""
+            guard paid > .zero else { return language.text("\(train.name) now has \(count).", "\(train.name) 現在有 \(count)。") + short }
+            return language.text("\(train.name) now has \(count), for \(paid.moneyText).", "\(train.name) 現在有 \(count)，花費 \(paid.moneyText)。") + short
         }
     }
 

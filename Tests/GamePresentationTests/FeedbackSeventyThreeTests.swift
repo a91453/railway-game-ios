@@ -155,14 +155,15 @@ final class FeedbackSeventyThreeTests: XCTestCase {
         XCTAssertEqual(world.lineDispatchHold(of: train), .noRoundTrip(firstStop: world.stations[0].id))
         let short = try XCTUnwrap(world.shortPlatformCall(ofTrain: train))
         XCTAssertEqual(short.station, world.stations[0].id, "the first call it does not fit")
-        XCTAssertEqual(short.cars, 7, "110 m holds 7 cars")
+        XCTAssertEqual(short.cars, 6, "110 m holds 6 whole cars of 16 m (decision 565)")
+        XCTAssertFalse(short.overhangs)
         XCTAssertEqual(
             world.lineDispatchHoldText(of: train, in: .traditionalChinese),
-            "列車比 West 的月台長：把月台加長到 112 公尺，或把列車移出軌道、減到 7 節"
+            "列車比 West 的月台長：把月台加長到 128 公尺，或把列車移出軌道、減到 6 節"
         )
         XCTAssertEqual(
             world.lineDispatchHoldText(of: train, in: .english),
-            "Too long for the platforms at West: lengthen one to 112 m, or take the train off the track and shorten it to 7 cars"
+            "Too long for the platforms at West: lengthen one to 128 m, or take the train off the track and shorten it to 6 cars"
         )
         // It never leaves: the reason stays true.
         try world.advance(ticks: 3_600)
@@ -184,7 +185,7 @@ final class FeedbackSeventyThreeTests: XCTestCase {
         let assigning = GameSession(world: w, language: .traditionalChinese)
         assigning.assignTrain(train, toLine: line)
         let text = try XCTUnwrap(assigning.message?.text)
-        XCTAssertTrue(text.hasSuffix("列車比 West 的月台長：把月台加長到 48 公尺，或把列車移出軌道、減到 1 節。"), text)
+        XCTAssertTrue(text.hasSuffix("列車比 West 的月台長：把月台加長到 64 公尺，或把列車移出軌道、減到 1 節。"), text)
     }
 
     func testATrainThatFitsIsNotTold() throws {

@@ -68,8 +68,8 @@ final class MapTrainCarsOnTrackTests: XCTestCase {
         for run in motion.runs {
             for progress in progresses {
                 let along = run.lag * (1 - progress)
-                let drawn = TrainCars.drawnCarLength * Double(TrainCars.count(length: run.length, carPitch: run.carPitch))
-                guard along + drawn - TrainCars.drawnCarLength / 2 <= run.trail.length else { continue }
+                let drawn = TrainCars.carLength(pitch: run.carPitch) * Double(TrainCars.count(length: run.length, carPitch: run.carPitch))
+                guard along + drawn - TrainCars.noseLead(pitch: run.carPitch) <= run.trail.length else { continue }
                 for car in cars(run, progress) {
                     for point in [car.first, car.last].compactMap({ $0 }) {
                         off = max(off, track.distance(point))
@@ -85,7 +85,8 @@ final class MapTrainCarsOnTrackTests: XCTestCase {
     /// body's two ends.
     static func straight(_ run: TrainMotion.Run, _ progress: Double) -> [[Point]] {
         guard let head = run.head(at: progress) else { return [] }
-        return TrainCars.cars(body: run.body(at: progress), heading: head.heading, count: TrainCars.count(length: run.length, carPitch: run.carPitch))
+        return TrainCars.cars(body: run.body(at: progress), heading: head.heading, count: TrainCars.count(length: run.length, carPitch: run.carPitch),
+                              length: TrainCars.carLength(pitch: run.carPitch), lead: TrainCars.noseLead(pitch: run.carPitch))
     }
 
     /// The general way (``TrainCars/cars(body:heading:count:gap:track:)``
@@ -94,6 +95,7 @@ final class MapTrainCarsOnTrackTests: XCTestCase {
     static func general(_ run: TrainMotion.Run, _ progress: Double) -> [[Point]] {
         guard let head = run.head(at: progress) else { return [] }
         return TrainCars.cars(body: run.body(at: progress), heading: head.heading, count: TrainCars.count(length: run.length, carPitch: run.carPitch),
+                              length: TrainCars.carLength(pitch: run.carPitch), lead: TrainCars.noseLead(pitch: run.carPitch),
                               track: run.track(at: progress))
     }
 
