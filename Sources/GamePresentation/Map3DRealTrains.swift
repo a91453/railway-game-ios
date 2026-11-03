@@ -182,8 +182,13 @@ public struct Map3DRealTrains: Sendable {
     /// trains are `line` is drawn as: decision 532, a Taiwan Railway
     /// train's by its model (``traFormation(model:)``); any other
     /// ``formation(of:system:number:locked:)`` by its number.
+    /// Decision 561: and a Taoyuan Airport MRT express trip
+    /// (``RealTrainTraffic/isExpress(place:)``), the 2000's five cars.
     static func formation(of line: Formation, system: String, place: String, locked: Set<String> = []) -> Formation {
         let number = Map3DTrainSet.number(ofRealTrain: place)
+        if system == "tymc", RealTrainTraffic.isExpress(place: place) {
+            return Formation(key: Map3DTrainSet.taoyuanAirport2000Key, cars: 5)
+        }
         if system == "tra", let model = RealTrainTraffic.traModel(ofPlace: place), let own = traFormation(model: model) {
             return formation(of: own, system: system, number: number, locked: locked)
         }
@@ -242,8 +247,10 @@ public struct Map3DRealTrains: Sendable {
             // Decision 483: the Red and Orange lines' Siemens three cars.
             return Formation(key: "kaohsiung", cars: 3)
         case "tymc":
-            // The commuter train's four (`airportunknown`).
-            return Formation(key: "metroGeneric", cars: 4)
+            // Decision 561: the commuter train's four cars, its 1000; an
+            // express trip's train the 2000's five
+            // (``formation(of:system:place:locked:)``).
+            return Formation(key: Map3DTrainSet.taoyuanAirport1000Key, cars: 4)
         case "tmrt":
             // Decision 483: the Green line's own two cars.
             return Formation(key: "taichungGreen", cars: 2)

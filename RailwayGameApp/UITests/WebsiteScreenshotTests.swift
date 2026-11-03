@@ -1902,6 +1902,38 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 561: the Taoyuan Airport MRT's two fleets in the garage
+    /// (the 3D map's own models), one at a time, as decision 558's test:
+    /// the front close up and the side, near models, then the far models.
+    func testTaoyuanAirportTrains() {
+        for (key, name) in [("taoyuanAirport1000", "1000"), ("taoyuanAirport2000", "2000")] {
+            let app = launch(extra: ["-screenshot-showcase", key])
+            defer { app.terminate() }
+            let settings = app.buttons["start.settings"]
+            XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+            settings.tap()
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+            garage.tap()
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The garage did not open")
+            let far = app.segmentedControls["trainShowcase.far"]
+            far.buttons.element(boundBy: 0).tap()
+            closeUp.tap()
+            settle(seconds: 6)
+            keep("tymc-\(name)-near-front", app)
+            app.buttons["trainShowcase.camera.side"].tap()
+            settle(seconds: 4)
+            keep("tymc-\(name)-near-side", app)
+            far.buttons.element(boundBy: 1).tap()
+            settle(seconds: 6)
+            keep("tymc-\(name)-far-side", app)
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("tymc-\(name)-far-front", app)
+        }
+    }
+
     // MARK: - Helpers
 
     /// Drags `list` back towards its top until `element` exists below

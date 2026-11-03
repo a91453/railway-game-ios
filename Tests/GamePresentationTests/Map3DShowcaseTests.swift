@@ -66,9 +66,11 @@ final class Map3DShowcaseTests: XCTestCase {
     // MARK: - The rows
 
     func testTwoTrainsAreTwoParallelRowsTheirHeadsLevel() {
-        // Decision 461: the generic metro car, 20 m a car (the C381's own units are not).
-        let rows = Map3DShowcase.layout(keys: ["emu800", "metroGeneric"], cars: [:], far: false)
-        XCTAssertEqual(rows.map(\.key), ["emu800", "metroGeneric"])
+        // Decision 461: the generic metro car, 20 m a car (the C381's own
+        // units are not); decision 561: it is not listed now, so the
+        // two-car green EMU, 20 m a car too.
+        let rows = Map3DShowcase.layout(keys: ["emu800", "greenCommuter"], cars: [:], far: false)
+        XCTAssertEqual(rows.map(\.key), ["emu800", "greenCommuter"])
         XCTAssertEqual(rows[1].z - rows[0].z, Map3DShowcase.rowSpacing)
         for row in rows {
             // Every car along the row, on its rails.
@@ -82,12 +84,12 @@ final class Map3DShowcaseTests: XCTestCase {
             XCTAssertEqual(max(head.front.x, head.back.x), 0, accuracy: 0.0001, row.key)
             XCTAssertGreaterThan(head.front.x, head.back.x, row.key)
         }
-        // A train of 20 m cars: three of them, 20.5 m apart, the last its
+        // A train of 20 m cars: two of them, 20.5 m apart, the last its
         // set's own tail.
-        XCTAssertEqual(rows[1].cars.count, 3)
+        XCTAssertEqual(rows[1].cars.count, 2)
         XCTAssertEqual(rows[1].cars[0].back.x - rows[1].cars[1].back.x, 20.5, accuracy: 0.0001)
-        let last = rows[1].cars[2]
-        XCTAssertEqual(pack.models[last.model].name, Map3DTrainSet.byKey["metroGeneric"]!.tailName)
+        let last = rows[1].cars[1]
+        XCTAssertEqual(pack.models[last.model].name, Map3DTrainSet.byKey["greenCommuter"]!.tailName)
         XCTAssertEqual(abs(last.front.x - last.back.x), 20, accuracy: 0.0001)
     }
 
