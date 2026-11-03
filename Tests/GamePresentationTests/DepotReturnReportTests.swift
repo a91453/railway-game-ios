@@ -154,6 +154,9 @@ final class DepotReturnReportTests: XCTestCase {
         var standing: [StationID: Int] = [:]
         var deadlocked = 0
         var deadlockedWhere = ""
+        // HEALTH-110: the samples (minutes, or ten-minute ticks) with any
+        // train deadlocked, to tell one cleared at once from one that stays.
+        var deadlockedSamples = 0
         let timetabled = world.lines.filter(\.hasRuns)
         let lines = timetabled.filter { !$0.depots.isEmpty }
         let ends = Set(lines.flatMap { [$0.stops.first, $0.stops.last].compactMap(\.self) })
@@ -171,6 +174,7 @@ final class DepotReturnReportTests: XCTestCase {
         while world.clock.now.seconds < end {
             try world.advance(ticks: 1)
             let stuck = world.deadlockedTrains()
+            if !stuck.isEmpty { deadlockedSamples += 1 }
             if stuck.count > deadlocked {
                 deadlocked = stuck.count
                 let places = stuck.compactMap { id -> String? in
@@ -233,7 +237,7 @@ final class DepotReturnReportTests: XCTestCase {
         var summary = "DEPOT_RETURN \(label): second day \(missed) of \(runs) runs not sent out; \(late) of \(trips) trips late; "
         summary += "\(into.count) empty runs into a depot, \(outOf.count) out, \(emptyKilometres) km empty in all; "
         summary += "most standing at the ends: \(most); most deadlocked \(deadlocked)"
-        if deadlocked > 0 { summary += " (first \(deadlockedWhere))" }
+        if deadlocked > 0 { summary += " (first \(deadlockedWhere); deadlocked in \(deadlockedSamples) \(fast ? "ten-minute ticks" : "minutes"))" }
         summary += "; \(lines.count) of \(world.lines.count) lines with runs and depots; \(seconds) s\n"
         FileHandle.standardError.write(Data(summary.utf8))
     }
