@@ -282,8 +282,19 @@ final class MapInteractionTests: XCTestCase {
         // once in about 4 s (main 584bddd's full lane, run 40051175469: one
         // look in 5 s, at 33.1 s, and none after), so the wait is long
         // enough for several looks; the field still gets no tap.
-        let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
-        XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 20), .completed, "The rename field takes the keyboard by itself")
+        // One look can itself outlast a wait: in main 1b3712f's full lane
+        // (run 41530938433) and FLANE7's run 41575317899 the first look
+        // found nothing for 19 s and 35 s and the 20 s wait ended with that
+        // one look; where the test passed, the first look already found the
+        // keyboard. So the wait starts again, each time with a new look,
+        // for up to 90 s.
+        let focusDeadline = Date().addingTimeInterval(90)
+        var hasKeyboard = false
+        repeat {
+            let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
+            hasKeyboard = XCTWaiter.wait(for: [focused], timeout: 15) == .completed
+        } while !hasKeyboard && Date() < focusDeadline
+        XCTAssertTrue(hasKeyboard, "The rename field takes the keyboard by itself")
         // A letter at a time, each waited for in the field. Typed at once
         // into an app drawing some 5 frames a second, the last letters
         // were lost and the field held "Central Pl" (main c4fc5b6's full
