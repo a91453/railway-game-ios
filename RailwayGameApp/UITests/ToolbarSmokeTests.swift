@@ -376,6 +376,36 @@ extension XCUIElement {
         !exists || waitForNonExistence(timeout: timeout)
     }
 
+    /// `isHittable`, but false rather than a failed test when the element
+    /// is made anew while XCTest asks about it. A row of a panel or menu
+    /// that the running clock redraws can be gone between the query that
+    /// found it and the read of its frame ({inf, inf},
+    /// kAXErrorInvalidUIElement), and `isHittable` then fails the test
+    /// outright ("Failed to determine hittability … Activation point
+    /// invalid"; FLANE7: main 1b3712f's full lane, run 41530938433,
+    /// `station.materials` 5 times at {548, 310.7} then gone in the 6th
+    /// look, and main efb9652's, run 41556631784, the performance menu's
+    /// "Local EMU" just after it opened). A copy whose snapshot has no
+    /// frame is not asked at all; for one that goes after its snapshot,
+    /// that one failure is expected, and the next look asks again.
+    var isHittableNow: Bool {
+        guard let frame = try? snapshot().frame, !frame.isNull, !frame.isEmpty else { return false }
+        var hittable = false
+        Self.forgivingHittabilityFailure { hittable = isHittable }
+        return hittable
+    }
+
+    /// Runs `body`, taking XCTest's "Failed to determine hittability" as
+    /// expected, not as the test's failure; any other failure still fails
+    /// the test. `HittabilityHelperUITests` checks that the test goes on
+    /// after it with `continueAfterFailure` false.
+    static func forgivingHittabilityFailure(_ body: () -> Void) {
+        let options = XCTExpectedFailure.Options()
+        options.isStrict = false
+        options.issueMatcher = { $0.compactDescription.contains("Failed to determine hittability") }
+        XCTExpectFailure("The element was made anew while XCTest asked where to touch it", options: options, failingBlock: body)
+    }
+
     /// Whether the element can be touched within `timeout` seconds, looking
     /// every tenth of a second. An element that slides in, turns with the
     /// screen or is uncovered exists before it comes to rest, and
@@ -385,7 +415,7 @@ extension XCUIElement {
     /// the phone turned).
     func becomesHittable(within timeout: TimeInterval = 2) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        while !(exists && isHittable) {
+        while !(exists && isHittableNow) {
             guard Date() < deadline else { return false }
             Thread.sleep(forTimeInterval: 0.1)
         }
@@ -413,7 +443,7 @@ extension XCUIElement {
             Thread.sleep(forTimeInterval: 0.25)
             let now = frame
             steady = now == last ? steady + 1 : 0
-            if steady >= 2, isHittable { return }
+            if steady >= 2, isHittableNow { return }
             last = now
         }
         XCTFail("\(self) did not settle")

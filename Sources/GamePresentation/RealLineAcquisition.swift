@@ -747,7 +747,16 @@ extension RealLineLaying {
             let laid = self.offer(for: line, raising: .viaducts, depot: depot)
             guard laid.crossesTrack else { return (laid.offer, laid.laid) }
             let raised = self.offer(for: line, raising: .viaductsAndShared, depot: depot)
-            return raised.offer.problem == nil ? (raised.offer, raised.laid) : (laid.offer, laid.laid)
+            if raised.offer.problem == nil { return (raised.offer, raised.laid) }
+            // Decision 552 (continued): still meeting another track at one
+            // level, the line is laid once more held clear over (or under)
+            // each track it crosses. Only where both refused, so a line
+            // nothing is in the way of is laid as before.
+            for raising in [StationRaising.viaducts, .viaductsAndShared] {
+                let clear = self.offer(for: line, raising: raising, depot: depot, clearingTrack: true)
+                if clear.offer.problem == nil { return (clear.offer, clear.laid) }
+            }
+            return (laid.offer, laid.laid)
         }
         // Decision 479: without its depot where that cannot be laid; not
         // a line whose end has no room for its trains without it
@@ -773,7 +782,14 @@ extension RealLineLaying {
     /// whether GameCore refused it for its track meeting another's at one
     /// level (``GameError/trackConflict(_:)``), and the line as laid where
     /// GameCore refused it (decision 528).
-    func offer(for line: RealBranchLine, raising: StationRaising, depot: Bool = true) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
+    ///
+    /// Decision 552 (continued): with `clearingTrack`, the line's track is
+    /// held at least ``TrackStructure/clearance`` and a margin over each
+    /// track of the company's it crosses (under it, where the line as
+    /// first laid runs lower), as a real line bridges another.
+    func offer(
+        for line: RealBranchLine, raising: StationRaising, depot: Bool = true, clearingTrack: Bool = false
+    ) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
         func refused(_ english: String, _ chinese: String) -> (offer: RealLineOffer, crossesTrack: Bool, laid: RealLineAcquisition?) {
             (RealLineOffer(line: line, acquisition: nil, price: nil, problem: language.text(english, chinese)), false, nil)
         }
@@ -1056,11 +1072,22 @@ extension RealLineLaying {
                 depotAt = j
             }
         }
-        guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, carried: carried) else {
+        guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, carried: carried) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
                 "沿這條線的高低差超過遊戲的坡度上限，鋪不上去。"
             )
+        }
+        if clearingTrack {
+            let crossings = RealLineLaying.crossingLevels(of: world.network, along: path, rise: rise)
+            guard !crossings.isEmpty,
+                  let clear = TrackRise(path: path, ground: ground, water: water, levels: levels + crossings, carried: carried) else {
+                return refused(
+                    "The track cannot climb along this line within the steepest grade.",
+                    "沿這條線的高低差超過遊戲的坡度上限，鋪不上去。"
+                )
+            }
+            rise = clear
         }
         // Not cut close over the second track's ramps: an edge of the
         // first cut short in one would meet the second's whole ramp at the
@@ -1272,6 +1299,47 @@ extension RealLineLaying {
                 return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)
             }
         }
+    }
+
+    /// Decision 552 (continued): how far beside the path a point of
+    /// another track counts as crossing it: the second track's offset
+    /// and a little, so both tracks clear it.
+    static let crossingReach = HighSpeedDemo.trackOffset + 4 * RealLineAcquisition.metre
+    /// And how far beyond ``TrackStructure/clearance`` the line is held
+    /// from it, for its edges' grade straying from the line between
+    /// samples (``TrackRise/fit``) and its height rounding.
+    static let crossingMargin = 2 * RealLineAcquisition.metre
+
+    /// Decision 552 (continued): where `path` crosses a track of
+    /// `network`, the height the line must keep there, as a level of no
+    /// length at each point of that track within ``crossingReach`` of the
+    /// path: at least ``TrackStructure/clearance`` and ``crossingMargin``
+    /// over it where `rise` runs above it there, as far under it where
+    /// it runs below. Sampled every 4 m along each track.
+    static func crossingLevels(of network: RailwayNetwork, along path: WorldPath, rise: TrackRise) -> [TrackRise.Level] {
+        let step = Int64(4 * RealLineAcquisition.metre)
+        let keep = Double(TrackStructure.clearance) + crossingMargin
+        var found: [Int: TrackRise.Level] = [:]
+        let xs = path.points.map(\.x), ys = path.points.map(\.y)
+        guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return [] }
+        let box = (x: (minX - crossingReach)...(maxX + crossingReach), y: (minY - crossingReach)...(maxY + crossingReach))
+        for edge in network.edges {
+            guard let from = network.node(edge.from), let to = network.node(edge.to),
+                  let geometry = TrackGeometry(from: from.position, to: to.position, curve: edge.curve, profile: edge.profile) else { continue }
+            for distance in stride(from: Int64(0), through: geometry.length, by: Int(step)) {
+                let position = geometry.location(at: distance).position
+                guard box.x.contains(Double(position.x)), box.y.contains(Double(position.y)) else { continue }
+                let near = path.nearest(WorldVector(position.plan))
+                guard near.away <= crossingReach, near.along > 0, near.along < path.length else { continue }
+                let other = Double(position.z)
+                let level = rise.height(at: near.along) >= other
+                    ? TrackRise.Level(near.along...near.along, from: other + keep, to: other + keep + TrackRise.highest)
+                    : TrackRise.Level(near.along...near.along, from: other - keep - TrackRise.highest, to: other - keep)
+                // One level a metre of the path (the last track sampled there).
+                found[Int((near.along / RealLineAcquisition.metre).rounded())] = level
+            }
+        }
+        return found.keys.sorted().compactMap { found[$0] }
     }
 
     // MARK: - Building it

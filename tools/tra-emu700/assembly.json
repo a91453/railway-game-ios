@@ -1,0 +1,158 @@
+{
+  "assemblies": [
+    {
+      "id": "tra-emu700-739-740-formation",
+      "placements": [
+        {
+          "unit": "tra-emu700-emc-cab",
+          "translation": [
+            71.2715,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-ep",
+          "translation": [
+            50.75,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-et",
+          "translation": [
+            30.45,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-em",
+          "translation": [
+            10.15,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-em",
+          "translation": [
+            -10.15,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        },
+        {
+          "unit": "tra-emu700-et",
+          "translation": [
+            -30.45,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        },
+        {
+          "unit": "tra-emu700-ep",
+          "translation": [
+            -50.75,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        },
+        {
+          "unit": "tra-emu700-emc-cab",
+          "translation": [
+            -71.2715,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    },
+    {
+      "id": "tra-emu700-739-740-formation-far",
+      "placements": [
+        {
+          "unit": "tra-emu700-emc-cab-far",
+          "translation": [
+            71.2715,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-ep-far",
+          "translation": [
+            50.75,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-et-far",
+          "translation": [
+            30.45,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-em-far",
+          "translation": [
+            10.15,
+            0,
+            0
+          ],
+          "rotation_degrees": 0
+        },
+        {
+          "unit": "tra-emu700-em-far",
+          "translation": [
+            -10.15,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        },
+        {
+          "unit": "tra-emu700-et-far",
+          "translation": [
+            -30.45,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        },
+        {
+          "unit": "tra-emu700-ep-far",
+          "translation": [
+            -50.75,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        },
+        {
+          "unit": "tra-emu700-emc-cab-far",
+          "translation": [
+            -71.2715,
+            0,
+            0
+          ],
+          "rotation_degrees": 180
+        }
+      ]
+    }
+  ]
+}

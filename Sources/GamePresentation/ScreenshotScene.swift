@@ -61,6 +61,25 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// request that drew them so.
     case acquired
 
+    /// Decision 555: a real-world map of Taipei round Taipei Main Station
+    /// (``taipeiMain``) or Taipei 101 (``taipei101``), a short line laid
+    /// through it so the map opens there: for the screenshots of the 3D
+    /// map leaned to 60° beside its own tilt (`-screenshot-3d-view`,
+    /// ``Map3DScreenshotView``), at 10:00, so the sun's shadows show.
+    case taipeiMain
+    case taipei101
+
+    /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
+    /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
+    /// ``Map3DTaipeiLandmark/taipei101``).
+    public var place: (latitude: Double, longitude: Double)? {
+        switch self {
+        case .taipeiMain: (25.0478, 121.5170)
+        case .taipei101: (25.033946307135494, 121.56455513294843)
+        default: nil
+        }
+    }
+
     /// The real lines ``acquired`` records its first two lines as, in order.
     public static let acquiredLines = ["tra:NEIWAN", "ntdlrt:V"]
 
@@ -74,6 +93,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
+        case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         }
     }
 
@@ -121,6 +141,25 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     /// Seven in the morning of the second day: the trains out.
     static let acquiredRunSeconds: Int64 = 31 * 3_600
+
+    /// Decision 555: a new real-world game at `place`, a line 1.6 km long
+    /// laid west to east through it, at 10:00 of the first day.
+    private static func taipeiWorld(at place: (latitude: Double, longitude: Double), in language: DisplayLanguage) -> GameWorld {
+        guard let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude) else { return DemoWorld.make(in: language) }
+        let world = GameWorld.newGame(anchor: anchor)
+        guard let frame = RealWorldFrame(world: world) else { return world }
+        let middle = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
+        let half = 800 * Double(WorldCoordinate.unitsPerMetre)
+        let line = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: Int64(middle.y)),
+                                                   PlanPoint(x: Int64(middle.x + half), y: Int64(middle.y))], in: world)
+        var opened = line ?? world
+        // On to 10:00, the sun high in the south-east (.fast is ten minutes a tick).
+        opened.setSpeed(.fast)
+        try? opened.advance(ticks: 60)
+        opened.setSpeed(.normal)
+        opened.setSpeed(.paused)
+        return opened
+    }
 
     private static func acquiredWorld(in language: DisplayLanguage) -> GameWorld {
         var world = DemoWorld.make(in: language)

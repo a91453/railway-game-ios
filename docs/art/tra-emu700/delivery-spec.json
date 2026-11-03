@@ -1,0 +1,22 @@
+{
+  "repo": "../emu700-mouth-producer",
+  "producer": "cd01a6f906770731874b0b447325052e3afd67f9",
+  "previous_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+  "rebuild": "In explicit53f264bc andcd01a6f9 checkouts follow public docs/art/tra-emu700/README.md. Export before EMC-cab native, then candidate build.sh OUT, render.mjs OUT, render-mouth.mjs OUT BEFORE_RUN and sheets.py OUT.",
+  "sources": "source-record.json",
+  "status": "status.json",
+  "license_files": [],
+  "pngs": [
+    "sheets/tra-emu700-739-740-formation-far.png",
+    "sheets/tra-emu700-739-740-formation.png",
+    "sheets/tra-emu700-em-far.png",
+    "sheets/tra-emu700-em.png",
+    "sheets/tra-emu700-emc-cab-far.png",
+    "sheets/tra-emu700-emc-cab.png",
+    "sheets/tra-emu700-ep-far.png",
+    "sheets/tra-emu700-ep.png",
+    "sheets/tra-emu700-et-far.png",
+    "sheets/tra-emu700-et.png",
+    "sheets/tra-emu700-mouth-before-after.png"
+  ]
+}

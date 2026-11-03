@@ -1,0 +1,32 @@
+{
+  "asset": {
+    "status": "UNVERIFIED",
+    "evidence": "Native/GLB, topology, actual glass/tyre/AC/pantograph/coupler faults, Swift assembly, Blender, PNG and HTTP viewer checks have individual reports. file:// navigation is blocked by managed Chromium policy; not substituted by HTTP success.",
+    "scope": {
+      "45EMC700": "UNVERIFIED overall; see individual technical reports",
+      "45EP700": "UNVERIFIED overall; see individual technical reports",
+      "40ET700": "UNVERIFIED overall; see individual technical reports",
+      "45EM700": "UNVERIFIED overall; see individual technical reports",
+      "EM-EM junction": "UNVERIFIED overall; see individual technical reports",
+      "complete 739+740 eight-car near/far": "UNVERIFIED overall; see individual technical reports"
+    }
+  },
+  "appearance": {
+    "status": "UNVERIFIED",
+    "accepted_producer": null,
+    "evidence": "553 mouth explicitly rejected by user. Author re-reviewed53 candidate and found flat moulding/vertical lower nose inadequate; user authorized continuation. Current moulded candidate author inspected, no user acceptance.",
+    "rejected_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
+    "feedback": "他的車頭嘴巴還是很醜",
+    "feedback_scope": "EMC cab mouth and both ends of the complete train",
+    "feedback_date": "2026-11-03",
+    "unaccepted_predecessor": "53f264bc2410449e3af15b07d0a2c9aaffa68455"
+  },
+  "integration": {
+    "status": "UNVERIFIED",
+    "evidence": "Studies only. TRA local schedules do not reliably supply EMU700 identity, formal roles or eight-car direction. No random/proportional replacement and no operating changes."
+  },
+  "device": {
+    "status": "UNVERIFIED",
+    "evidence": "Linux native/WebGL/Blender only; no Simulator appearance, iPhone Metal, device CPU/GPU memory, animation or moving-train acceptance."
+  }
+}
