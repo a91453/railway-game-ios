@@ -472,8 +472,9 @@
 - **還開著（交回時）**：
   - **TYMCLIST 桃園機場捷運上架（決策 556）**：draft #1743（`claude/tymclist-airport-line`）。第一個 session（session_01JMHz9cZgULsjQ6iT7rqEKp）做了上架、桃園開局買得到、兩座線中間機廠、中途折返渡線，壓縮後停手；**TYMCLIST2（session_01JMHz9aCrGxwKjwmKNpAC9t，Opus）接手**：(1) 擬實 06:14–08:43 的 9 列死結（機場第一航廈 7、興南 2）與兩天三規則量測、價格、回本，在 #1743；(2) 號誌關時起站車與回送車互等 `waitsForPlatform`（決策 549 下一步 2），動 GameCore、**另開 PR**，若要新決策用 559；(3) 直達車跳站、長庚待避不做，寫進下一步。#1743 和已合的 WENHUFIX 在 `RealLineAcquisition.swift` 的 `guard let rise` 那行重疊，合 main 時兩邊都留。轉 ready、CI 綠、量測齊再合。
   - **WENHUTRN 文湖線 VAL256／370 型接進營運（決策 558）**：session_01JMHz9ZoBVGyQkvmiA5uieN（Opus），branch `claude/wenhutrn-operation`。作者 11-03：「幫我順便上文湖線」。Codex 的 #1742（`6f694dc`，作者合的）只加了兩款車的原生 studies、刻意沒接營運；這張把它們接進文湖線（BR）與 `APM`，舊 `wenhu` 留作 fallback。**第三級**：看過截圖才合。
+  - **EMU700TRN 台鐵 EMU700 接進區間車（決策 560）**：session_01JMHz9bwMg4kn5kXb9145c2（Opus），branch `claude/emu700-operation`。作者 11-03：「還有 emu700」。Codex 的 #1730 有模型、沒接營運；照決策 435 加進 `localTrain(number:)` 的比例（EMU900 520、EMU500 344、EMU800 296、EMU700 160 輛）。和 WENHUTRN 改同幾個檔，說好後合的兩邊都留。**第三級**：看過截圖才合。
   - **已在交回前合**：#1741 DEPOTADD（`0c08ede`，決策 557）：路線頁一顆「加建○○機廠」按鈕＋確認框，收班後才生效；截圖照 ui-review 暫緩條款沒拍，要看的是安坑線舊存檔的「所屬機廠」那列與確認框三種狀態。留給之後：三峽機廠（線中間）、地圖上預覽機廠位置、加建的軌道沒進收購紀錄的 track（要新 GameCore 指令）。
-- **號碼**：決策 549–552、554、555 已用；557 DEPOTADD 已用；556 TYMCLIST 保留（TYMCLIST2 沿用）、558 WENHUTRN 保留、559 給 TYMCLIST2 的 GameCore 互等（需要時）；553 是 UIA-B1 保留後釋出的，沒有人用（#1579 11-02 20:37 的留言）；**下一個 560**。存檔 81、golden schema 77 不動。
+- **號碼**：決策 549–552、554、555 已用；557 DEPOTADD 已用；556 TYMCLIST 保留（TYMCLIST2 沿用）、558 WENHUTRN 保留、559 給 TYMCLIST2 的 GameCore 互等（需要時）、560 EMU700TRN 保留；553 是 UIA-B1 保留後釋出的，沒有人用（#1579 11-02 20:37 的留言）；**下一個 561**。存檔 81、golden schema 77 不動。
 - **沒派、留給第 44 任排的**：
   1. **信義的台北 101 地標沒出現**：TILT60 的截圖（`docs/art/tilt60-2026-11-03/overview.jpg`，信義 260 m 兩張）只有一般大樓，看不到決策 370 的 101 模型。要查是載入距離、串流範圍還是截圖場景本來就沒放。
   2. **ImmersiveMap 研究的排名**（`docs/research/IMMERSIVEMAP_STUDY_2026-11-03.md`）：1 SUNPCF、2 TILT60 已做；3 TRAINSHADOW、4 RELIEF30、5 SUN2WIN、6 TILT75 沒派，研究寫了各自的前提（多半要先有 SUNPCF／TILT60 的實機結果）。不升最低 iOS 18。
