@@ -62,3 +62,5 @@ Producer `91a31f0837b4076b6c17f5f4ffe0bea81b504ed9`。Swift6.4 WAE build及10測
 親看最終6張角色／編組七向日夜／白模／剪影共同尺度表：**仍不符合**端下真開口、連結器機構／燈具凹槽的細化，車底目前過於簡化；A/B屋頂設備對應未確認。**合理簡化**為省略小螺絲／管線；**資料不足**為輪組安全機構、正式角色方向、近期完整實號列車、完整正交屋頂／車底。沒有使用者接受。不能用技術測試掩蓋這些外觀與來源問題。
 
 執行證據見 verification.json、png-verification.json、protection.json；independent producer重建另記provenance。
+
+互鏈 [公開draft #1742](https://github.com/a91453/railway-game-ios/pull/1742) ↔ [素材draft #47](https://github.com/a91453/railway-assets-private/pull/47)。兩款仍未完成上述來源、形體與專用故障驗收，保持draft。
