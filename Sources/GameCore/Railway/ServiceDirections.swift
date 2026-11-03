@@ -522,9 +522,13 @@ extension GameWorld {
 
     /// Decision 527: `path`, the way `train` would go from `start` to
     /// station `id`, changed to keep off `against` (``lineAgainst(for:memo:)``);
-    /// `nil` when it keeps off it already, or no way does.
-    func lineDirectionPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, against: Set<TrackTraversal>) -> TrainPath? {
+    /// `nil` when it keeps off it already, or no way does. Decision 547
+    /// (L6-4): keeping off the edges of `standing` too where another way
+    /// serves, as the way out of a depot it changes did
+    /// (``pathOutOfDepot(_:to:from:for:nearest:)``).
+    func lineDirectionPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, against: Set<TrackTraversal>, avoiding standing: Set<TrackEdgeID> = []) -> TrainPath? {
         guard path.traversals.contains(where: against.contains) else { return nil }
+        guard standing.isEmpty else { return self.path(from: start, toStation: id, length: train.length, forbidden: against, avoiding: standing) }
         return self.path(from: start, toStation: id, length: train.length, avoiding: Set<TrackResource>(), forbidden: against)
     }
 

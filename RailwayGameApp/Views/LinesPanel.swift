@@ -1421,6 +1421,14 @@ struct LinesPanel: View {
                     DepotBadge(text: language.text("\(row.inDepot) in depot", "在庫 \(row.inDepot) 列"))
                         .accessibilityIdentifier("line.inDepot")
                 }
+                // Decision 547 (L6-3): a depot whose sidings are all too
+                // short for the line's trains.
+                if let tooShort = row.tooShort {
+                    Text(verbatim: tooShort)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.warning)
+                        .accessibilityIdentifier("line.depotTooShort")
+                }
             } header: {
                 Text(verbatim: language.text("Depots", "所屬機廠"))
             } footer: {
