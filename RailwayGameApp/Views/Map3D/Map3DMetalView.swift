@@ -377,7 +377,7 @@ final class Map3DMetalView: MTKView {
             let sun = MTLRenderPipelineDescriptor()
             sun.vertexFunction = sunVertex
             sun.vertexDescriptor = vertexDescriptor
-            sun.depthAttachmentPixelFormat = .depth32Float
+            sun.depthAttachmentPixelFormat = .depth16Unorm
             let sunDepth = MTLDepthStencilDescriptor()
             sunDepth.depthCompareFunction = .less
             sunDepth.isDepthWriteEnabled = true
@@ -452,7 +452,7 @@ final class Map3DMetalView: MTKView {
     /// Decision 357: a depth texture `side` texels square for the sun's
     /// shadow map, cleared to the farthest (nothing in the sun's way).
     private func makeSunMap(device: MTLDevice, side: Int) -> MTLTexture? {
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .depth32Float, width: side, height: side, mipmapped: false)
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .depth16Unorm, width: side, height: side, mipmapped: false)
         descriptor.usage = [.renderTarget, .shaderRead]
         descriptor.storageMode = .private
         guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }

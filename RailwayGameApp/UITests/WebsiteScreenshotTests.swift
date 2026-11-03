@@ -114,6 +114,24 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep(name, app)
     }
 
+    /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
+    /// (quality High), for the before/after of the tent filter.
+    func testSunShadowsIn3D() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-select-station", "1", "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 240), "The 3D map is drawn")
+        // Close in and tilted, where a shadow's edge is wide enough to see.
+        for _ in 0..<3 { app.pinch(withScale: 3, velocity: 2) }
+        settle(seconds: 8)
+        keep("sun-shadows-3d", app)
+    }
+
     /// Decision 517 續: the station picked on the 2D map keeps its tag on
     /// the 3D map, under the station there; a tap on the tag opens its
     /// details back on the 2D map.
