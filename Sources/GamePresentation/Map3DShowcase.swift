@@ -131,7 +131,12 @@ public enum Map3DShowcase {
         // Green line's two; the generic car is Taoyuan's now.
         Entry("kaohsiung", "Kaohsiung Metro Red and Orange lines", "高雄捷運紅線、橘線", .metro, cars: 3, fixed: true),
         Entry("taichungGreen", "Taichung Metro Green line", "台中捷運綠線", .metro, cars: 2, fixed: true),
-        Entry("metroGeneric", "Metro train (Taoyuan)", "捷運列車（桃園）", .metro, cars: 3, most: 6, stripe: 0xE3002C),
+        // Decision 561: the Taoyuan Airport MRT's own two, the commuter
+        // train's four cars and the express's five; the generic car,
+        // Taoyuan's before, is no line's now, drawn only in their place
+        // (``Map3DTrainSet/fallback``), and not listed.
+        Entry(Map3DTrainSet.taoyuanAirport1000Key, "Taoyuan Airport MRT Type 1000 (commuter)", "桃園機場捷運 1000 型（普通車）", .metro, cars: 4, fixed: true),
+        Entry(Map3DTrainSet.taoyuanAirport2000Key, "Taoyuan Airport MRT Type 2000 (express)", "桃園機場捷運 2000 型（直達車）", .metro, cars: 5, fixed: true),
         // Decision 558: the Wenhu line's two fleets, two pairs each.
         Entry(Map3DTrainSet.wenhuVAL256Key, "Taipei Metro Wenhu line VAL256", "台北捷運文湖線 VAL256", .metro, cars: 4, most: 6),
         Entry(Map3DTrainSet.wenhu370Key, "Taipei Metro Wenhu line Type 370", "台北捷運文湖線 370 型", .metro, cars: 4, most: 6),

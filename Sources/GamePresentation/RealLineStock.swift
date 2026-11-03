@@ -47,6 +47,7 @@ public enum RealLineStock {
         case Map3DTrainSet.wenhuVAL256Key: language.text("Wenhu Line VAL256", "文湖線 VAL256")
         case Map3DTrainSet.wenhu370Key: language.text("Wenhu Line Type 370", "文湖線 370 型")
         case Map3DTrainSet.sanyingKey: language.text("Sanying Line train", "三鶯線列車")
+        case Map3DTrainSet.taoyuanAirport1000Key: language.text("Airport MRT Type 1000", "機場捷運 1000 型")
         default: nil
         }
     }

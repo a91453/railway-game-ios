@@ -13,6 +13,7 @@ final class Map3DTrainSetTests: XCTestCase {
                                   "klrtCitadis", "klrtCitadisFar"]
     /// Decision 558: the Wenhu line's two fleets, near and far.
     static let wenhu: Set = ["wenhuVAL256", "wenhuVAL256Far", "wenhu370", "wenhu370Far"]
+    static let taoyuanAirport: Set = ["taoyuanAirport1000", "taoyuanAirport1000Far", "taoyuanAirport2000", "taoyuanAirport2000Far"]
     private var pack: Map3DModelPack { .standard }
     /// The recipes, their lamps lit as drawn (decision 449 lights a
     /// running car's in the pack only at its train's ends).
@@ -89,7 +90,11 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
                     : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000
                     // Decision 558: #1742's Wenhu line cars, near and far.
-                    : Self.wenhu.contains(set.key) ? 4_900...12_200 : 100...4_100
+                    : Self.wenhu.contains(set.key) ? 4_900...12_200
+                    // Decision 561: #1700's Airport MRT cars, 13,752 a cab
+                    // (the DMB 10,572) and 9,764 to 9,944 the others near,
+                    // 4,564 to 6,820 far.
+                    : Self.taoyuanAirport.contains(set.key) ? 4_500...13_800 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
