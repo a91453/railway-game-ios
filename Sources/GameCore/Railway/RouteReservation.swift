@@ -187,6 +187,12 @@ extension GameWorld {
         // Its route envelope (see ``routeEnvelope(of:)``), asked a resource
         // at a time, and gathered only to be taken.
         let route = routeStretches(of: candidate)
+        // Decision 562: with block sections, never onto a following train's
+        // route ahead of it as a train it could never follow, whole or
+        // following the trains ahead.
+        if route.moves, blockSections, let follower = followerCutOff(by: candidate, memo: &memo) {
+            return .held(by: follower)
+        }
         // Decision 294: a long leg of a line with runs, only part of the way.
         if route.moves, blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
             let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
@@ -204,6 +210,40 @@ extension GameWorld {
         var train = candidate
         train.reservation = route.moves ? Set(envelope.resources).sorted() : []
         return .granted(train)
+    }
+
+    /// Decision 562: with block sections a train following others holds
+    /// only the track it has taken (decision 212), so a train could take
+    /// the rest of its route ahead of it, one it may never follow (see
+    /// ``isLeading(_:onto:for:)``) and could only wait for:
+    ///
+    /// - one that ends its service or turns round at the call it travels
+    ///   to, standing for it on the follower's route: a train turning back
+    ///   leaves the way it came, perhaps over the track the follower stands
+    ///   on (Taoyuan Airport MRT 18 and 29 at Airport Terminal 2, decision
+    ///   556);
+    /// - one that runs along the follower's route the other way: it comes
+    ///   at the follower (the same line's 1, westbound into Kengkou, and
+    ///   26, an empty train leaving Luzhu depot eastbound on that track).
+    ///
+    /// Neither ever moves again. The lowest numbered such follower
+    /// `candidate`, about to take its route, whole or following the trains
+    /// ahead, would cut off, so it waits for it; `nil` when there is none,
+    /// or when `candidate` stands on the follower's route already (the
+    /// follower waits for it whatever it does).
+    func followerCutOff(by candidate: Train, memo: inout DirectionMemo) -> TrainID? {
+        guard case .travellingToStop(let stop, let cycle)? = candidate.execution else { return nil }
+        let ends = candidate.timetable[stop].reverses || candidate.call(after: stop, cycle: cycle) == nil
+        let standing = occupied(candidate)
+        let against = Set((bodyStretches(of: candidate) + routeStretches(of: candidate).stretches).map(\.traversal.reversed))
+        for other in trains where other.id != candidate.id && other.position != nil {
+            guard let (_, envelopes) = authority(of: other, memo: &memo) else { continue }
+            let route = followingCover(of: other, envelopes, memo: &memo)
+            guard !standing.contains(where: route.contains) else { continue }
+            if ends, stopsOn(route, candidate) { return other.id }
+            if (bodyStretches(of: other) + envelopes.stretches).contains(where: { against.contains($0.traversal) }) { return other.id }
+        }
+        return nil
     }
 
     /// Decision 57: a service's departure takes its default route whole,
