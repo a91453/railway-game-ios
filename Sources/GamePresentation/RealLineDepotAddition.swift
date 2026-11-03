@@ -37,6 +37,10 @@ public struct RealLineDepotAddition: Hashable, Sendable, Codable {
     /// name (``RealLineAcquisition/NodeAt``), piece 0 being `anchor`.
     let pieces: [RealLineAcquisition.Piece]
     public let depot: RealLineAcquisition.Depot
+    /// The line's runs from then on, in its stops' order: the real
+    /// timetable a line bought with the depot runs, whose trains stand in
+    /// it overnight, not at stations between; `nil` to keep the line's.
+    let runs: [LineRun]?
 }
 
 /// What the line panel's "add the depot" card shows (decision 557).
@@ -56,6 +60,15 @@ public struct RealLineDepotOffer: Sendable {
     /// The company's buildings in its way, which come down with it.
     public let demolished: [String]
     public let problem: String?
+    /// Whether the line's trains are out on their runs, or one is about to
+    /// leave: its timetable changes with the depot, so it is added only
+    /// once the day's last train is in (``GameWorld/setLineRuns(_:to:)``).
+    public let waitsForTheLastTrain: Bool
+
+    /// Whether the card's button adds it now, with `balance` in hand.
+    public func canAdd(balance: Money) -> Bool {
+        addition != nil && !waitsForTheLastTrain && shortfallText(balance: balance, in: .english) == nil
+    }
 
     /// The whole price.
     public var price: Money? {
@@ -77,6 +90,12 @@ public struct RealLineDepotOffer: Sendable {
             "\(name), past \(beyond) where the real one stands: \(sidings) sidings, for \(cost). The line's trains then go back to it at night.",
             "\(name)建在\(beyond)過去、真實機廠的位置：\(sidings) 股停車線，\(cost)。加建後這條線的列車晚上回機廠過夜。"
         )
+        if waitsForTheLastTrain {
+            text += language.text(
+                " The line's timetable changes with it: add it after the day's last train, while no train is running.",
+                "班次會跟著換成有機廠的時刻表：請在今天收班後、沒有列車在跑時加建。"
+            )
+        }
         if !demolished.isEmpty {
             let names = demolished.joined(separator: language.text(", ", "、"))
             text += language.text(" Comes down: \(names).", "要拆：\(names)。")
@@ -141,8 +160,8 @@ extension GameSession {
     /// with the message saying why, where it cannot be.
     @discardableResult
     public func addRealDepot(_ offer: RealLineDepotOffer) -> Bool {
-        guard let addition = offer.addition else {
-            message = StatusMessage(kind: .failure, text: offer.problem ?? "")
+        guard let addition = offer.addition, !offer.waitsForTheLastTrain else {
+            message = StatusMessage(kind: .failure, text: offer.problem ?? offer.summaryText(in: language))
             return false
         }
         let name = offer.name
@@ -175,7 +194,7 @@ extension RealLineDepotAddition {
         func refused(_ english: String, _ chinese: String, beyond: String = "") -> RealLineDepotOffer {
             RealLineDepotOffer(
                 line: id, name: name, beyond: beyond, sidings: site.sidings, addition: nil, land: nil, building: nil, demolished: [],
-                problem: language.text(english, chinese)
+                problem: language.text(english, chinese), waitsForTheLastTrain: false
             )
         }
         guard let line = world.line(id: id), let beyondName = site.beyond, let urban, let railways = laying.railways,
@@ -290,13 +309,36 @@ extension RealLineDepotAddition {
             return refused("The depot's track cannot get down to the yard here.", "機廠的入出庫線在這裡接不到停車場。", beyond: beyond)
         }
 
+        // The real timetable a line bought with the depot runs, in the
+        // line's stops' order (the purchase laid them from the terminal):
+        // the runs of the line's stops, from where it parts from the line
+        // bought before it where it was laid so (decision 400).
+        let runs: [LineRun]? = {
+            let candidates = [urban.shares.flatMap { RealBranchLine.metroRuns(of: site.line, after: $0, in: railways) }, railways.metroRuns[site.line]]
+            guard let real = candidates.compactMap(\.self).first(where: { $0.stops.count == line.stops.count }) else { return nil }
+            let last = real.stops.count - 1
+            return real.runs.map { run in
+                LineRun(
+                    from: last - (real.stops.firstIndex(of: run.calls[0].station) ?? 0),
+                    to: last - (real.stops.firstIndex(of: run.calls[run.calls.count - 1].station) ?? 0),
+                    times: run.calls.map { LineRunTime(arrival: $0.arrival, departure: $0.departure) },
+                    days: run.days.reduce(0) { $0 | 1 << $1 }
+                )
+            }
+        }()
+        let waits = runs != nil && !Self.isAtRest(line, runs: runs ?? [], in: world)
+
         // GameCore's answer and the price, on a funded copy. A tile the
         // track reaches between the samples is bought with the others.
         while true {
             let addition = RealLineDepotAddition(
-                line: id, realLine: site.line, anchor: anchor, tiles: tiles.isEmpty ? nil : tiles, pieces: [connector] + laid.pieces, depot: laid.depot
+                line: id, realLine: site.line, anchor: anchor, tiles: tiles.isEmpty ? nil : tiles, pieces: [connector] + laid.pieces, depot: laid.depot,
+                runs: runs
             )
             var probe = world.pricingCopy()
+            // Priced with the line's trains at rest: the runs are set only
+            // while none is out (``waitsForTheLastTrain``).
+            if waits { probe = Self.atRest(probe, line: id) }
             let opening = probe.economy.balance
             let standing = probe.placedBuildings
             do throws(GameError) {
@@ -310,7 +352,8 @@ extension RealLineDepotAddition {
                 let gone = standing.filter { building in !probe.placedBuildings.contains { $0.id == building.id } }
                 return RealLineDepotOffer(
                     line: id, name: name, beyond: beyond, sidings: site.sidings, addition: addition, land: opening - landed,
-                    building: landed - probe.economy.balance, demolished: gone.map { $0.kind.title(in: language) }, problem: nil
+                    building: landed - probe.economy.balance, demolished: gone.map { $0.kind.title(in: language) }, problem: nil,
+                    waitsForTheLastTrain: waits
                 )
             } catch {
                 if case .mapTileNotOwned(let tile) = error, let owned = world.mapExpansion?.owned, !tiles.contains(tile),
@@ -320,10 +363,43 @@ extension RealLineDepotAddition {
                 }
                 return RealLineDepotOffer(
                     line: id, name: name, beyond: beyond, sidings: site.sidings, addition: nil, land: nil, building: nil, demolished: [],
-                    problem: language.text("\(name) cannot be added: ", "\(name)加建不了：") + error.playerMessage(in: language)
+                    problem: language.text("\(name) cannot be added: ", "\(name)加建不了：") + error.playerMessage(in: language),
+                    waitsForTheLastTrain: false
                 )
             }
         }
+    }
+}
+
+extension RealLineDepotAddition {
+    /// Whether none of `line`'s trains is out on a run and none of `runs`
+    /// (or the line's own) leaves within the time a run may still be sent
+    /// out late or early (``LineRun/latestDispatch``): the line's runs can
+    /// change without one sent twice or dropped.
+    static func isAtRest(_ line: ServiceLine, runs: [LineRun], in world: GameWorld) -> Bool {
+        guard !line.trains.contains(where: { world.train(id: $0)?.execution != nil }) else { return false }
+        let now = Self.modulo(world.clock.now.seconds, GameTime.secondsPerDay)
+        return !(runs + line.runs).contains { run in
+            guard let start = run.times.first?.departure else { return false }
+            let behind = Self.modulo(now - start, GameTime.secondsPerDay)
+            let ahead = Self.modulo(start - now, GameTime.secondsPerDay)
+            return behind <= LineRun.latestDispatch || ahead <= LineRun.earliestDispatch
+        }
+    }
+
+    private static func modulo(_ value: Int64, _ divisor: Int64) -> Int64 {
+        let remainder = value % divisor
+        return remainder < 0 ? remainder + divisor : remainder
+    }
+
+    /// `world` with line `id`'s trains taken off their runs, for the price.
+    static func atRest(_ world: GameWorld, line id: LineID) -> GameWorld {
+        var world = world
+        guard let line = world.line(id: id) else { return world }
+        for train in line.trains {
+            try? world.unassignTrain(train)
+        }
+        return world
     }
 }
 
@@ -384,6 +460,7 @@ extension RealLineLaying {
             }
             try world.setStationDepot(station.id, to: true)
             try world.setLineDepots(line.id, to: line.depots + [station.id])
+            if let runs = addition.runs { try world.setLineRuns(line.id, to: runs) }
         }
     }
 }

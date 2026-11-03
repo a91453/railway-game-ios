@@ -1368,7 +1368,7 @@ struct LinesPanel: View {
                         titleVisibility: .visible,
                         presenting: realDepotOffer
                     ) { offer in
-                        if offer.addition != nil, offer.shortfallText(balance: session.world.economy.balance, in: language) == nil {
+                        if offer.canAdd(balance: session.world.economy.balance) {
                             Button {
                                 session.addRealDepot(offer)
                             } label: {

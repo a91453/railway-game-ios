@@ -35,21 +35,31 @@ final class RealLineDepotAdditionTests: XCTestCase {
     func testAnAnkengLineBoughtWithoutItsDepotIsOfferedIt() throws {
         let (session, id) = try Self.ankengBoughtWithoutItsDepot()
         XCTAssertEqual(session.missingRealDepots(of: id), ["安坑機廠"])
+        // Two in the morning: the last train of the day in.
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 2 * 60)
+            return ""
+        })
         session.selectLine(id)
         let offer = try XCTUnwrap(session.selectedLineRealDepotOffer)
         XCTAssertNil(offer.problem, offer.problem ?? "")
         let price = try XCTUnwrap(offer.price)
         FileHandle.standardError.write(Data("Ankeng depot added: \(price.amount) (land \(offer.land?.amount ?? 0)), demolished \(offer.demolished)\n".utf8))
         XCTAssertGreaterThan(price, .zero)
-        if let addition = offer.addition {
-            for (index, piece) in addition.pieces.enumerated() {
-                FileHandle.standardError.write(Data("piece \(index): \(Int((piece.distances.last ?? 0) / RealLineAcquisition.metre)) m, z \(piece.nodes.map(\.z))\n".utf8))
-            }
-        }
         XCTAssertEqual(offer.buttonTitle(in: .traditionalChinese), "加建安坑機廠")
+        let unbuilt = session.world
         let before = session.world.economy.balance
         XCTAssertTrue(session.addRealDepot(offer), session.message?.text ?? "")
         XCTAssertEqual(before - session.world.economy.balance, price)
+        // The command log keeps it (decision 193) and replays it alike.
+        let command = PlayerCommand.addRealLineDepot(try XCTUnwrap(offer.addition))
+        let decoded = try JSONDecoder().decode(PlayerCommand.self, from: JSONEncoder().encode(command))
+        XCTAssertEqual(decoded, command)
+        var replayed = unbuilt
+        _ = try session.apply(decoded, to: &replayed)
+        XCTAssertEqual(replayed.economy.balance, session.world.economy.balance)
+        XCTAssertEqual(replayed.network.edges.count, session.world.network.edges.count)
+        XCTAssertEqual(replayed.line(id: id)?.runs, session.world.line(id: id)?.runs)
 
         let world = session.world
         let depot = try XCTUnwrap(world.stations.first(where: \.isDepot))
@@ -61,6 +71,27 @@ final class RealLineDepotAdditionTests: XCTestCase {
         XCTAssertLessThan((WorldVector(depot.location) - real).length / RealLineAcquisition.metre, 300)
         XCTAssertEqual(session.missingRealDepots(of: id), [])
         XCTAssertNil(session.selectedLineRealDepotOffer)
+    }
+
+    /// By day, with the line's trains out, the card says to add it after
+    /// the last train, and nothing is built.
+    func testByDayItWaitsForTheLastTrain() throws {
+        let (session, id) = try Self.ankengBoughtWithoutItsDepot()
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 9 * 60)
+            return ""
+        })
+        session.selectLine(id)
+        let offer = try XCTUnwrap(session.selectedLineRealDepotOffer)
+        XCTAssertNotNil(offer.addition)
+        XCTAssertNotNil(offer.price)
+        XCTAssertTrue(offer.waitsForTheLastTrain)
+        XCTAssertFalse(offer.canAdd(balance: session.world.economy.balance))
+        XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix("請在今天收班後、沒有列車在跑時加建。"))
+        let balance = session.world.economy.balance
+        XCTAssertFalse(session.addRealDepot(offer))
+        XCTAssertEqual(session.world.economy.balance, balance)
+        XCTAssertFalse(session.world.stations.contains(where: \.isDepot))
     }
 
     /// A line bought with its depot is offered none.
@@ -78,7 +109,12 @@ final class RealLineDepotAdditionTests: XCTestCase {
     /// refused: the demo's line recorded as the Green Mountain Line.
     func testNoDepotIsOfferedOffARealWorldMap() throws {
         var world = DemoWorld.make(in: .traditionalChinese)
-        let id = try XCTUnwrap(world.lines.first?.id)
+        let line = try XCTUnwrap(world.lines.first)
+        let id = line.id
+        let stops = line.stops.count
+        try world.setLineRuns(id, to: [LineRun(from: 0, to: stops - 1, times: (0..<stops).map { stop in
+            LineRunTime(arrival: Int64(6 * 3_600 + stop * 180), departure: Int64(6 * 3_600 + stop * 180))
+        })])
         try world.recordLineAcquisition(line: id, realLine: "ntdlrt:V", dailyRiders: 0, tier: .lightRail)
         let session = GameSession(world: world, language: .traditionalChinese)
         session.railways = try BundledRealData.railways()
@@ -139,9 +175,17 @@ final class RealLineDepotAdditionTests: XCTestCase {
             }
             return (missed, runs, deadlocked)
         }
+        // A day of the old line, the depot added at two in the morning,
+        // after the last train.
         let (session, id) = try Self.ankengBoughtWithoutItsDepot()
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 26 * 60)
+            return ""
+        })
         session.selectLine(id)
-        XCTAssertTrue(session.addRealDepot(try XCTUnwrap(session.selectedLineRealDepotOffer)), session.message?.text ?? "")
+        let offer = try XCTUnwrap(session.selectedLineRealDepotOffer)
+        XCTAssertFalse(offer.waitsForTheLastTrain)
+        XCTAssertTrue(session.addRealDepot(offer), session.message?.text ?? "")
         let added = try missed(session.world)
         let bought = try missed(DepotReturnReportTests.bought("ntalrt:K", rules: .realistic))
         FileHandle.standardError.write(Data("Ankeng two days: depot added \(added), bought with it \(bought)\n".utf8))

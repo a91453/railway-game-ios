@@ -40,11 +40,17 @@ final class DepotReturnReportTests: XCTestCase {
     }
 
     /// Decision 557: the Ankeng LRT bought as it was before its depot came
-    /// with it, the depot then added from the line's panel.
+    /// with it, run a day, the depot then added from the line's panel at
+    /// two in the morning; played 51 hours from there.
     func testTheAnkengLRTWithItsDepotAdded() throws {
         try wanted("ankeng-added")
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let (session, id) = try RealLineDepotAdditionTests.ankengBoughtWithoutItsDepot(rules: simple ? .simple : .realistic)
+        // A day of the old line; the depot added at two in the morning.
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 26 * 60)
+            return ""
+        })
         session.selectLine(id)
         XCTAssertTrue(session.addRealDepot(try XCTUnwrap(session.selectedLineRealDepotOffer)), session.message?.text ?? "")
         try report("ankeng-added", session.world)
