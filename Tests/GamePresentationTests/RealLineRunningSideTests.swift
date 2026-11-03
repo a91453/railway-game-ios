@@ -194,7 +194,10 @@ final class RealLineRunningSideTests: XCTestCase {
         scene.heights = data.heights
         scene.coverage = data.coverage
         scene.railways = data.railways
-        XCTAssertTrue(scene.buyForScreenshot("trtc:BR", until: 7 * 3_600 + 40 * 60), scene.message?.text ?? "")
+        XCTAssertTrue(scene.buyForScreenshot("trtc:BR"), scene.message?.text ?? "")
+        var steps = 0
+        while !scene.advanceForScreenshot(until: 7 * 3_600 + 40 * 60) { steps += 1 }
+        XCTAssertLessThan(steps, 200)
         XCTAssertEqual(scene.world.clock.now.seconds % GameTime.secondsPerDay, 7 * 3_600 + 40 * 60)
         XCTAssertNotNil(scene.screenshotTrainMidway(on: "trtc:BR"))
         let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == "Taipei" })

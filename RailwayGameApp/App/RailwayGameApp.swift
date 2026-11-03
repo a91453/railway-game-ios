@@ -229,8 +229,11 @@ struct RailwayGameApp: App {
                     // train nearest the middle followed.
                     if DebugLaunch.value(of: "-screenshot-buy-real") == real, let session = launcher.session {
                         for _ in 0..<240 {
-                            if session.buyForScreenshot(real, until: 7 * 3_600 + 40 * 60) { break }
+                            if session.buyForScreenshot(real) { break }
                             try? await Task.sleep(for: .milliseconds(500))
+                        }
+                        for _ in 0..<1_000 where !session.advanceForScreenshot(until: 7 * 3_600 + 40 * 60) {
+                            try? await Task.sleep(for: .milliseconds(50))
                         }
                         if let train = session.screenshotTrainMidway(on: real) {
                             session.selectTrain(train)

@@ -71,7 +71,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     /// Decision 564: an empty real-world map round the Wenhu Line, for the
     /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
-    /// run on to the morning (``GameSession/buyForScreenshot(_:until:)``):
+    /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/advanceForScreenshot(until:)``):
     /// its trains each on the track to their right, as the real ones run.
     /// For the screenshot review of the pull request that put them there.
     case wenhu
@@ -437,20 +437,32 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 }
 
 extension GameSession {
-    /// Decision 564: real line `id` bought (``ScreenshotScene/wenhu``) and
-    /// run on to `seconds` into the day, then paused; `false` when it is
-    /// not on sale (the real data not read yet) or not bought.
-    public func buyForScreenshot(_ id: String, until seconds: Int64) -> Bool {
+    /// Decision 564: real line `id` bought (``ScreenshotScene/wenhu``),
+    /// the game paused; `false` when it is not on sale (the real data not
+    /// read yet) or not bought.
+    public func buyForScreenshot(_ id: String) -> Bool {
         guard let line = buyableRealLines.first(where: { $0.id == id }), acquireRealLine(realLineOffer(for: line)) else { return false }
         return perform { (world: inout GameWorld) throws(GameError) in
-            // .fast is ten minutes a tick.
-            world.setSpeed(.fast)
-            let now = world.clock.now.seconds % GameTime.secondsPerDay
-            if seconds > now { try world.advance(ticks: Int((seconds - now) / 600)) }
-            world.setSpeed(.normal)
             world.setSpeed(.paused)
             return ""
         }
+    }
+
+    /// Decision 564: the game run on by at most ten minutes towards
+    /// `seconds` into the day, then paused; `true` once it is there. A
+    /// little at a time, so the app answers between (a UI test waiting on
+    /// it times out on a main thread busy for a minute).
+    public func advanceForScreenshot(until seconds: Int64) -> Bool {
+        let now = world.clock.now.seconds % GameTime.secondsPerDay
+        guard seconds > now else { return true }
+        _ = perform { (world: inout GameWorld) throws(GameError) in
+            // .normal is a minute a tick.
+            world.setSpeed(.normal)
+            try world.advance(ticks: Int(max(1, min(10, (seconds - now) / 60))))
+            world.setSpeed(.paused)
+            return ""
+        }
+        return world.clock.now.seconds % GameTime.secondsPerDay >= seconds
     }
 
     /// Decision 564: the train of real line `id` bought nearest its middle
