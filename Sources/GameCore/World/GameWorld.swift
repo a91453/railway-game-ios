@@ -4093,11 +4093,13 @@ public struct GameWorld: Equatable, Sendable {
             guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
             // Decision 547: out of a depot with traffic control off, off the
             // track where other trains stand, as decision 228 has it in.
-            if let kept = pathOutOfDepot(train.timetable[stop].station, to: call, from: start, for: train, nearest: nearest) { nearest = kept }
+            var standing: Set<TrackEdgeID> = []
+            if let kept = pathOutOfDepot(train.timetable[stop].station, to: call, from: start, for: train, nearest: nearest) { (nearest, standing) = kept }
             // Decision 527: an empty run keeps off track its line takes
-            // only the other way.
+            // only the other way; decision 547 (L6-4): and, out of a
+            // depot, still off the track where other trains stand.
             let against = lineAgainst(for: train, memo: &memo)
-            if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against) { nearest = kept }
+            if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against, avoiding: standing) { nearest = kept }
             // Decision 228: with traffic control off, a free platform first;
             // decision 527: not one only that track reaches.
             if let next = train.call(after: stop, cycle: cycle),

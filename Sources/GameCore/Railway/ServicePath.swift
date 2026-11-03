@@ -188,6 +188,18 @@ extension GameWorld {
         }
     }
 
+    /// Decision 547 (L6-4): a way to station `id` forbidden `forbidden`
+    /// (decision 527), keeping off the edges of `avoiding` where another
+    /// way serves, as ``path(from:toStation:length:eligible:keepingLeft:avoiding:)``
+    /// does.
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, forbidden: Set<TrackTraversal>, avoiding edges: Set<TrackEdgeID>) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, forbidden: forbidden,
+                        edgePenalty: Dictionary(uniqueKeysWithValues: edges.map { ($0, Self.standingPenalty) }))
+        }
+    }
+
     /// How much longer an edge where a train stands counts for a way that
     /// keeps off it (decision 228): a thousand kilometres.
     static let standingPenalty: Int64 = 1_000_000 * WorldCoordinate.unitsPerMetre

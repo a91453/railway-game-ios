@@ -25,6 +25,14 @@ extension DoubleTrack {
     /// How far along the crossover runs while it goes over the 5 m: as a
     /// side platform track's turnout (``PlatformTrackLayout/reach``, 50 m).
     static let crossoverReach: Int64 = PlatformTrackLayout.side.reach
+    /// Decision 571: how near a turnout keeps a station's two tracks
+    /// joined, so the platform tool sets a platform on the track tapped
+    /// only (decision 285): within a station's throat, 200 m.
+    static let stationThroat: Int64 = 200 * WorldCoordinate.unitsPerMetre
+    /// Decision 571: how near a turnout makes a station's own crossover on
+    /// that side needless: within 1 km the two tracks already meet, or a
+    /// junction's switches stand.
+    static let stationCrossoverReach: Int64 = 1_000 * WorldCoordinate.unitsPerMetre
 
     /// What became of the crossovers a double track wanted.
     public enum CrossoverOutcome: Hashable, Sendable {

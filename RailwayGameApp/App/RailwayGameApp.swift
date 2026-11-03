@@ -260,6 +260,13 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 566: new-train cards, for their screenshot review.
+            if let keys = DebugLaunch.value(of: "-screenshot-new-train") {
+                Task {
+                    await opening.value
+                    launcher.session?.showTrainArrivals(keys.split(separator: ",").map(String.init))
+                }
+            }
             // Decision 517 續: a station picked, for the 3D map's tag.
             if DebugLaunch.isSet("-screenshot-select-station") {
                 Task {

@@ -75,6 +75,33 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("wenhu-right-3d", app)
     }
 
+    /// Decision 566: the new-train card, the Puyuma's with another
+    /// waiting ("Skip all"), then the EMU3000's, and in English the 700T's.
+    /// For the screenshot review of the pull request that added it.
+    func testNewTrainArrivalCard() {
+        let app = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-new-train", "puyuma,emu3000"])
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let welcome = app.buttons["newTrain.welcome"]
+        XCTAssertTrue(welcome.appears(within: 30), "The card shows")
+        XCTAssertTrue(welcome.becomesHittable(within: 10))
+        settle()
+        keep("new-train-puyuma", app)
+        welcome.tap()
+        XCTAssertTrue(app.staticTexts["newTrain.title"].firstMatch.appears(within: 10))
+        settle()
+        keep("new-train-emu3000", app)
+        app.buttons["newTrain.skip"].tap()
+        XCTAssertTrue(app.buttons["newTrain.welcome"].disappears(within: 10), "Skip closes it")
+        app.terminate()
+
+        let english = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-new-train", "highSpeed"], english: true)
+        defer { english.terminate() }
+        XCTAssertTrue(english.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(english.buttons["newTrain.welcome"].appears(within: 30), "The card shows")
+        settle()
+        keep("new-train-700t-english", english)
+    }
+
     /// Decision 538 (continued): a train of a bought real line followed on
     /// the 2D map, close up: its cars along the curves of the Danhai light
     /// rail and the Neiwan Line, not swung straight off them. For the

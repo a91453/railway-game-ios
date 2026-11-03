@@ -116,6 +116,58 @@ final class RealLineDepotAdditionTests: XCTestCase {
         XCTAssertEqual(session.world.line(id: id)?.depots.count, 1)
     }
 
+    /// The card stays open while the game runs (decision 557, continued;
+    /// review L7-3): an offer taken in the night and confirmed after the
+    /// first train has left is refused, and no train is taken off its run.
+    func testAnOfferConfirmedAfterTheFirstTrainWaits() throws {
+        let (session, id) = try Self.ankengBoughtWithoutItsDepot(rules: .simple)
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 26 * 60)
+            return ""
+        })
+        session.selectLine(id)
+        let offer = try XCTUnwrap(session.selectedLineRealDepotOffer)
+        XCTAssertFalse(offer.waitsForTheLastTrain)
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 6 * 60)
+            return ""
+        })
+        let trains = try XCTUnwrap(session.world.line(id: id)?.trains)
+        let running = trains.filter { session.world.train(id: $0)?.execution != nil }
+        XCTAssertFalse(running.isEmpty)
+        let balance = session.world.economy.balance
+        XCTAssertFalse(session.addRealDepot(offer))
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertTrue(session.message?.text.contains("末班車收班後") == true || session.message?.text.contains("last train") == true, session.message?.text ?? "")
+        XCTAssertEqual(session.world.economy.balance, balance)
+        XCTAssertFalse(session.world.stations.contains(where: \.isDepot))
+        XCTAssertEqual(session.world.line(id: id)?.depots, [])
+        for train in running {
+            XCTAssertNotNil(session.world.train(id: train)?.execution)
+        }
+    }
+
+    /// Review L7-4: asked for a depot the line does not miss, the offer is
+    /// refused rather than reading past the end of an empty list.
+    func testAnOfferForNoMissingDepotIsRefused() throws {
+        let (session, id) = try Self.ankengBoughtWithoutItsDepot()
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 2 * 60)
+            return ""
+        })
+        session.selectLine(id)
+        XCTAssertTrue(session.addRealDepot(try XCTUnwrap(session.selectedLineRealDepotOffer)), session.message?.text ?? "")
+        XCTAssertEqual(session.missingRealDepots(of: id), [])
+        let offer = session.realDepotOffer(for: id, site: "安坑機廠")
+        XCTAssertNil(offer.addition)
+        XCTAssertNotNil(offer.problem)
+        XCTAssertFalse(offer.canAdd(balance: session.world.economy.balance))
+        // Confirming the first offer again adds no second depot.
+        let balance = session.world.economy.balance
+        XCTAssertFalse(session.addRealDepot(offer))
+        XCTAssertEqual(session.world.economy.balance, balance)
+    }
+
     /// A line bought with its depot is offered none.
     func testALineBoughtWithItsDepotIsOfferedNone() throws {
         let session = try RealLineAcquisitionTests.game(round: "ntalrt:K", side: 1 << 21, heights: true)

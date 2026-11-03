@@ -63,7 +63,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     /// Decision 555: a real-world map of Taipei round Taipei Main Station
     /// (``taipeiMain``) or Taipei 101 (``taipei101``), a short line laid
-    /// through it so the map opens there: for the screenshots of the 3D
+    /// 300 m north of it so the map opens there: for the screenshots of the 3D
     /// map leaned to 60° beside its own tilt (`-screenshot-3d-view`,
     /// ``Map3DScreenshotView``), at 10:00, so the sun's shadows show.
     case taipeiMain
@@ -172,9 +172,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let world = GameWorld.newGame(anchor: anchor)
         guard let frame = RealWorldFrame(world: world) else { return world }
         let middle = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
-        let half = 800 * Double(WorldCoordinate.unitsPerMetre)
-        let line = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: Int64(middle.y)),
-                                                   PlanPoint(x: Int64(middle.x + half), y: Int64(middle.y))], in: world)
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 800 * metre
+        // Decision 555 續 (LANDMARK101): 300 m north of the place, clear of
+        // its landmark (101's ground is 82 m from its middle), which gives
+        // way to track on the ground through it (decision 370); y is south.
+        let y = Int64(middle.y - 300 * metre)
+        let line = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
+                                                   PlanPoint(x: Int64(middle.x + half), y: y)], in: world)
         var opened = line ?? world
         // On to 10:00, the sun high in the south-east (.fast is ten minutes a tick).
         opened.setSpeed(.fast)

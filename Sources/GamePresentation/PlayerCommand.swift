@@ -140,6 +140,8 @@ public enum PlayerCommand: Hashable, Sendable {
     /// new station; on a grade, on the level edge `levelling` builds first
     /// (decision 190). Decision 285: with `beside`, the same station's
     /// platform on the other track of a double line, built after it.
+    /// Decision 571: then the `crossovers` joining the two tracks past its
+    /// ends, in order.
     public struct PlatformAddition: Hashable, Sendable {
         public let edge: TrackEdgeID
         public let start: Int64
@@ -147,10 +149,11 @@ public enum PlayerCommand: Hashable, Sendable {
         public let station: PlatformStation
         public let levelling: PlatformLevelling?
         public let beside: BesidePlatform?
+        public let crossovers: [TrackStretch]
 
         public init(
             edge: TrackEdgeID, start: Int64, end: Int64, station: PlatformStation, levelling: PlatformLevelling? = nil,
-            beside: BesidePlatform? = nil
+            beside: BesidePlatform? = nil, crossovers: [TrackStretch] = []
         ) {
             self.edge = edge
             self.start = start
@@ -158,6 +161,7 @@ public enum PlayerCommand: Hashable, Sendable {
             self.station = station
             self.levelling = levelling
             self.beside = beside
+            self.crossovers = crossovers
         }
     }
 
@@ -286,6 +290,10 @@ extension GameSession {
                     outcome.levellingCost = Money((outcome.levellingCost?.amount ?? 0) + balance.amount - world.economy.balance.amount)
                 }
                 try world.addTrackPlatform(station.id, on: other.edge, from: other.start, to: other.end)
+            }
+            // Decision 571: the crossovers past its ends.
+            for crossover in addition.crossovers {
+                _ = try crossover.build(in: &world, heights: heights)
             }
             // Decision 88: the land round a new station is read in after the
             // edit; read it now, so the opening message counts who it reaches.
@@ -417,8 +425,9 @@ extension PlayerCommand: Codable {
         var beside: Beside?
         /// The double track's parallel, as a `buildTrack` of its own.
         var parallel: PlayerCommand?
-        /// The double track's crossovers, each a `buildTrack`; absent for
-        /// none (and in logs from before them).
+        /// The double track's crossovers, and (decision 571) a platform's
+        /// on both tracks, each a `buildTrack`; absent for none (and in
+        /// logs from before them).
         var crossovers: [PlayerCommand]?
         /// A chain's stretches, each a `buildTrack`.
         var stretches: [PlayerCommand]?
@@ -506,8 +515,13 @@ extension PlayerCommand: Codable {
             let beside = record.beside.map {
                 BesidePlatform(edge: .edge($0.edge), start: $0.startDistance, end: $0.endDistance, levelling: $0.levelling)
             }
+            let crossovers = try (record.crossovers ?? []).map { command in
+                guard case .buildTrack(let crossover) = command else { throw invalid("a crossover is a stretch") }
+                return crossover
+            }
             self = .addPlatform(PlatformAddition(
-                edge: .edge(edge), start: start, end: end, station: station, levelling: record.levelling, beside: beside
+                edge: .edge(edge), start: start, end: end, station: station, levelling: record.levelling, beside: beside,
+                crossovers: crossovers
             ))
         case "removePlatform":
             guard let station = record.station, let edge = record.edge, let start = record.startDistance, let end = record.endDistance else {
@@ -632,6 +646,7 @@ extension PlayerCommand: Codable {
             record.beside = addition.beside.map {
                 Record.Beside(edge: $0.edge.number, startDistance: $0.start, endDistance: $0.end, levelling: $0.levelling)
             }
+            record.crossovers = addition.crossovers.isEmpty ? nil : addition.crossovers.map(PlayerCommand.buildTrack)
             switch addition.station {
             case .existing(let id):
                 record.station = id.rawValue

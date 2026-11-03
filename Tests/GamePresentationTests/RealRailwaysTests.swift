@@ -362,7 +362,7 @@ final class RealRailwaysTests: XCTestCase {
                 "worldPop", "ridership", "travelSurvey", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "wikidata", "worldUrbanizationProspects",
                 "map3DGround", "temples", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "meshy", "kenney", "taipeiGarbageTrucks",
-                "proceduralTokyo", "polyHaven", "runningSound", "weatherSound",
+                "proceduralTokyo", "polyHaven", "runningSound", "dieselSound", "weatherSound",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

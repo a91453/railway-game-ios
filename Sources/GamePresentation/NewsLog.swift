@@ -14,6 +14,8 @@ public enum NewsCategory: String, Codable, CaseIterable, Sendable {
     case advice, success, failure, goal, scenario, yearEnd, monthly, land, holiday, typhoon, fuel, growth, materials, debt, deadline
     /// An achievement unlocked (decision 181).
     case achievement
+    /// A model new to the fleet (decision 566).
+    case newTrain
 
     /// The item's SF Symbol.
     public var symbolName: String {
@@ -34,6 +36,7 @@ public enum NewsCategory: String, Codable, CaseIterable, Sendable {
         case .debt: "banknote.fill"
         case .deadline: "hourglass"
         case .achievement: "rosette"
+        case .newTrain: "tram.fill"
         }
     }
 
