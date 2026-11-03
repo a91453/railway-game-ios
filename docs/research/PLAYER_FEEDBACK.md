@@ -165,22 +165,36 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 
 ### 0.5.0 (110.1)，2026-11-03
 
-從 `main` `2494e5a`（#1749 的合併）建置。TestFlight `testflight.yml` run 41644800997（run 110），作者 13:29 UTC 自己按，14:01 成功（作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (110.1)（#1749）。App 內「這版新增」卡片 108.1、109.1、110.1 都沒加，補在 111.1 那一則（#1750）。
+從 `main` `2494e5a`（#1749 的合併）建置。TestFlight `testflight.yml` run 41644800997（run 110），作者 13:29 UTC 自己按，14:01 成功。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (110.1)（#1749）。App 內「這版新增」卡片 108.1、109.1、110.1 都沒加，補在 111.1 那一則（#1750）。
 
-**這個 commit 的檢查**（全部綠）：
-- 完整 `ci.yml` run 41646134590（workflow_dispatch，2494e5a）：綠。
-- full lane run 41646171004（`ios-build.yml` 手動，2494e5a）：綠，15:16 UTC 跑完。前幾輪偶爾紅的改站名鍵盤、開始畫面音樂開關都過。為了讓出 macOS，取消了 #1746 合併（`175fc02`）那輪 full lane（run 41643861509）。
-- 109.1 之後進來的：#1736 研究、#1734 新光摩天大樓（決策 550）、#1730 EMU700 模型、#1738 TILT60（決策 555）、#1739 FLANE7、#1737 SUNPCF（決策 357 續）、#1740 WENHUFIX、#1741 DEPOTADD（決策 557）、#1742 文湖線模型、#1745 WENHUTRN（決策 558）、#1746 EMU700 接營運（決策 560）、#1748 機場捷運 1000／2000 型（決策 561）、#1749 說明。不在這版：#1743 TYMCLIST（機場捷運收購，draft）。
+**這個 commit 的檢查**（作者先發、遊戲規劃後報，HANDOFF §1.2）：
+- 完整 `ci.yml` run 41646134590（workflow_dispatch，2494e5a）：綠，14:00 UTC。
+- full lane run 41646171004（`ios-build.yml` 手動，2494e5a）：**綠**，15:16 UTC（build、second、lessons、iPad 四個 job 都過）。
+- 109.1 之後進來的：#1736 ImmersiveMap 研究、#1734 新光摩天大樓（決策 550）、#1730 Codex 的 EMU700 模型、#1738 TILT60（決策 555）、#1739 FLANE7、#1737 SUNPCF（決策 357 續）、#1740 WENHUFIX（決策 552 續）、#1741 DEPOTADD（決策 557）、#1742 Codex 的文湖線兩款車模型、#1745 WENHUTRN（決策 558）、#1746 EMU700 進營運（決策 560）、#1748 機場捷運 1000／2000 型（決策 561）、#1749 說明。
 
-**這版請測試者看**：3D 文湖線、機場捷運、EMU700 的樣子與車多時順不順；兩指斜鏡頭與影子；舊存檔加建機廠後列車晚上回廠、早上出車。
+**這版請測試者看**：3D 的文湖線、機場捷運、EMU700 像不像、車多時卡不卡；兩指上推斜到 60° 的手勢與影子；舊存檔加建機廠後列車晚上回廠、早上照班表出來。
+
+**回報**：
+- 作者（110.1 實機）：「收購文湖線後列車跑錯方向」，追問後是走在對向的軌道。派 WENHUSIDE（決策 564，session_01YGNNunZGPiV2XFNuJMZEsQ）。
+- 審查 L7（#1754）查到的舊 bug，不是這版造成的：新局的一日券在午夜結算成 0（L7-1），派 DAYPASS；加建機廠的確認框用舊報價（L7-3），派 DEPOTADD-2。三個都要進 111.1。
+- 玩家（TestFlight）：「列車進站會超越月台約1節車廂」，派 PLATSTOP（決策 565，#1764，趕不上 111.1）。
+- 另一位玩家：「功能介面可以稍微簡化一點，比如說可以用折疊的方式」，沒說是哪個畫面；作者認為目前的優化已經夠，不排。作者自己另提「畫新路線時版面有點雜」，派 ROUTEUI（決策 568，#1760）。
+- 玩家：「完成教學關卡，可是一般遊玩時，為什麼有複線軌道加號誌站，月台全部使用最大的，但車子永遠是死結無法避讓？」派 AUTOXO（決策 571，#1768）與 AUTOXO-2（一般規則終點站，GameCore）。
+- 玩家問會卡卡是否正常：作者回 2D 比較順，3D 較挑裝置，可在設定調 3D 畫質。
 
 ### 0.5.0 (109.1)，2026-11-03
 
-從 `main` `efb9652`（#1735 的合併）建置。TestFlight `testflight.yml` run 41561636787（run 109），作者 01:43 UTC 自己按，02:05 成功。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (109.1)（#1735）。（110.1 時補記。）
+從 `main` `efb9652`（#1735 的合併）建置。TestFlight `testflight.yml` run 41561636787（run 109），作者 01:43 UTC 自己按，02:05 成功（上傳、處理、What to Test 都過）。full lane 還沒跑完就先發（作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (109.1)（#1735）。
 
 **這個 commit 的檢查**：
-- 完整 `ci.yml` run 41556623087（workflow_dispatch，efb9652）：綠。
-- full lane run 41556631784（efb9652）：紅一支，`StartSaveFlowSmokeTests.testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（「Local EMU」按鈕的 hittability 查詢失敗，選單列重建時 XCTest 讀不到點擊點）。Simulator 上測試的問題，玩家不受影響；修在 #1739 FLANE7，110.1 的 full lane 已過。
+- 完整 `ci.yml` run 41556623087（workflow_dispatch，efb9652）：綠，01:19 UTC。
+- full lane run 41556631784（`ios-build.yml` 手動，efb9652）：**紅**，02:17 UTC 跑完（發版之後）。second、lessons、iPad 都綠；build job 的 UI smoke 紅一支：`StartSaveFlowSmokeTests.testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（第 706 行，「Local EMU」按鈕 Activation point invalid）。前一次 `1b3712f` 的 full lane 41530938433 也紅，是另兩支同類（Activation point invalid／鍵盤沒到）：`MapMarkTapUITests.testAnAlertsBubbleTakesATapOnItsMiddle`、`MapInteractionTests.testTheStationTagsPencilRenamesAtOnce`；這次那兩支過了。查原因的派工在 HANDOFF。
+- 108.1 之後進來的：#1723 WENHUCAP（決策 549）、#1725／#1727／#1728 CRASHSWEEP-3、#1731 TOURFIX2（決策 551 續）、#1732 TOURMODEL（決策 554）、#1733 WENHULIST（決策 552）、#1735 說明；文件 #1724、#1726、#1729。
+
+**這版請測試者看**：文湖線收購與木柵機廠；只開早晚的線景點人次；3D 海風號、山嵐號外觀。
+
+**回報**：
+- 作者（iPad，高鐵示範開局，有收購線）：文湖線收購頁顯示「這段軌道會與另一段軌道交叉，但兩者的高度差不到 8 公尺」，買不到。修理派給 WENHUFIX（決策 552 續，110）。
 
 ### 0.5.0 (108.1)，2026-11-02
 

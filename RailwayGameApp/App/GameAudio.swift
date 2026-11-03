@@ -443,6 +443,8 @@ final class GameAudio {
         // Decision 315: as loud as the goal-met tune.
         case .lineAcquired: 0.55
         case .ticketIssued: 0.5
+        // Decision 566: as loud as the line-acquired tune.
+        case .newTrain: 0.55
         // Decision 403 (續二): over the running sound (0.35), a little
         // under a watched train's chime, which comes after it at the stop.
         case .horn: 0.45
@@ -479,6 +481,8 @@ final class GameAudio {
         case .goalMet: .seconds(2)
         case .lineAcquired: .seconds(2)
         case .ticketIssued: .milliseconds(700)
+        // Decision 566: one card after another, a fanfare each.
+        case .newTrain: .seconds(1)
         // Decision 403 (續二): a tap while the horn still sounds blows it
         // again, but not faster than about two blows a second.
         case .horn: .milliseconds(450)
@@ -490,7 +494,7 @@ final class GameAudio {
         switch cue {
         case .refused: .error
         case .warning: .warning
-        case .built, .goalMet, .lineAcquired: .success
+        case .built, .goalMet, .lineAcquired, .newTrain: .success
         case .arrival, .track, .transition, .income, .ticketIssued, .horn: nil
         }
     }

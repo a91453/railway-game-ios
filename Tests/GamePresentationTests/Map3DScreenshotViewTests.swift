@@ -4,14 +4,14 @@ import GameCore
 import XCTest
 
 /// Decision 555: the screenshot scenes round Taipei Main Station and
-/// Taipei 101 open by day, a line laid through each, and
+/// Taipei 101 open by day, a line laid by each, and
 /// `-screenshot-3d-view` sets the 3D camera over the place, leaned as asked.
 final class Map3DScreenshotViewTests: XCTestCase {
     func testTheTaipeiScenesAreSetRoundTheirPlaces() throws {
         for scene in [ScreenshotScene.taipeiMain, .taipei101] {
             let world = scene.make(in: .english)
             XCTAssertNotNil(world.geoAnchor, "\(scene): a real-world map")
-            XCTAssertEqual(world.lines.count, 1, "\(scene): a line through the place")
+            XCTAssertEqual(world.lines.count, 1, "\(scene): a line by the place")
             let hour = Double(world.clock.now.seconds % GameTime.secondsPerDay) / 3_600
             XCTAssertGreaterThan(Map3DSunShadow.strength(Map3DLighting(at: world.clock.now)), 0.9, "\(scene): by day, the sun's shadows drawn (\(hour) h)")
             XCTAssertNotNil(scene.place)
@@ -34,7 +34,9 @@ final class Map3DScreenshotViewTests: XCTestCase {
         let own = try XCTUnwrap(Map3DScreenshotView("200,225,0")?.camera(at: place, in: scene, of: world, viewport: (874, 402)))
         XCTAssertEqual(own.tilt, Map3DCamera.tilt(atDistance: 200))
         XCTAssertEqual(own.target, camera.target)
-        // The place is where the line runs through, the scene's middle.
-        XCTAssertLessThan(Map3DPoint(own.target.x, 0, own.target.z).length, 50)
+        // The place is 300 m south of the line, which the scene is set
+        // round (decision 555 續: the line runs clear of the landmark).
+        XCTAssertEqual(own.target.x, 0, accuracy: 50)
+        XCTAssertEqual(Map3DPoint(own.target.x, 0, own.target.z).length, 300, accuracy: 50)
     }
 }

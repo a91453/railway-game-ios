@@ -36,6 +36,14 @@ public enum WhatsNew {
             id: "2026-11-04-111-1",
             items: [
                 Line(
+                    english: "The first time you buy a model of train, a card shows its first set coming ashore in Taiwan.",
+                    chinese: "第一次買到某一款車時，會跳出一張卡片，看它的第一批車在港口上岸。"
+                ),
+                Line(
+                    english: "Following a diesel train, you hear its engine idle at stations, roar as it pulls away and settle as it coasts.",
+                    chinese: "跟隨柴油車時聽得到引擎聲：停站時怠轉，起步時加速變大聲，滑行時回到怠轉。"
+                ),
+                Line(
                     english: "The Wenhu Line can be bought on the real maps of Taipei, New Taipei and Taoyuan, with the Muzha depot by the zoo.",
                     chinese: "台北、新北、桃園的真實地圖可以收購捷運文湖線，連同動物園旁的木柵機廠。"
                 ),
@@ -104,6 +112,26 @@ public enum WhatsNew {
                 Line(
                     english: "More places where the game could close during an animation are fixed.",
                     chinese: "修掉更多畫面在動畫進行中可能讓遊戲閃退的地方。"
+                ),
+                Line(
+                    english: "Day passes are paid in every midnight, and amusement parks and the other businesses get their pass holders too.",
+                    chinese: "一日券每天午夜都會入帳了，遊樂園等子公司也有一日券客人。"
+                ),
+                Line(
+                    english: "Trains leaving a depot no longer run through parked trains, and a slow train on a timetable also lets a faster one overtake it.",
+                    chinese: "出機廠的列車不再穿過停著的車；照班次開的慢車也會讓快車越行。"
+                ),
+                Line(
+                    english: "The Lines page says when a depot's sidings are all too short for the line's trains.",
+                    chinese: "機廠的停車線都比列車短時，路線頁會提醒。"
+                ),
+                Line(
+                    english: "With traffic control off, a train no longer waits for a platform held for a train that cannot reach it.",
+                    chinese: "行車控制關閉時，列車不再為了一列過不來的車空等月台。"
+                ),
+                Line(
+                    english: "Adding a depot charges the price shown when you add it.",
+                    chinese: "加建機廠照按下那一刻的價格收費。"
                 ),
             ]
         ),

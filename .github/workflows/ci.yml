@@ -96,8 +96,8 @@ permissions:
 #   request at once. Push a change when it is ready, not piece by piece.
 # - Merge in batches of 3 to 5 green pull requests, then wait for this
 #   workflow to turn green on main before the next batch. Keep at most 2
-#   pull requests that change GameCore running CI at once (a full tier is 17
-#   jobs of the account's 40 since decision 544's continuation).
+#   pull requests that change GameCore running CI at once (a full tier is 18
+#   jobs of the account's 40 since decision 563's self-test job).
 concurrency:
   group: ${{ github.event_name == 'push' && 'ci-main' || format('ci-{0}', github.event_name == 'pull_request' && github.ref || github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -189,10 +189,21 @@ jobs:
             echo "Swift jobs: skipped, no changed file can change what the package builds or tests." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
 
-      # The shard script is what proves the Swift jobs ran every test once;
-      # this shows, without Swift, that its checks fail when they should.
+  # The shard script is what proves the Swift jobs ran every test once;
+  # this shows, without Swift, that its checks fail when they should. A job
+  # of its own beside the build since decision 563: as the change
+  # detection's last step it held every build back by about 30 s. The gate
+  # needs it, so a failing self-test still turns the run red.
+  selftest:
+    name: Self-test the shard script
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
       - name: Self-test the shard script
-        if: steps.detect.outputs.swift == 'true'
         run: .github/scripts/swift-shards-selftest.sh
 
   # The one build of the tier (decision 411, shared build): every shard job
@@ -213,6 +224,8 @@ jobs:
     # built once more from nothing), and about a minute to pack and upload.
     timeout-minutes: 30
     container: swift:6.4-noble
+    outputs:
+      cache-key: ${{ steps.key.outputs.key }}
     steps:
       - uses: actions/checkout@v5
 
@@ -280,18 +293,49 @@ jobs:
           retention-days: 1
           overwrite: true
 
-      # Decision 545: main's builds are the cache pull requests and later
-      # pushes build on (a pull request's cache could only be read by its
-      # own later runs). The key names the run, so a re-run and the nightly
-      # run of the same commit save their own. Only after a passing build;
-      # a failure to save does not fail the job.
-      - name: Save the build for later runs (cache)
+      # The key main's build is saved under (the swift-build-cache job, below).
+      - name: Name the cache entry
+        id: key
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: echo "key=swift-build-v1-${{ steps.swift.outputs.key }}-${{ hashFiles('Package.swift') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}" >>"$GITHUB_OUTPUT"
+
+  # Decision 545: main's builds are the cache pull requests and later pushes
+  # build on (a pull request's cache could only be read by its own later
+  # runs). The key names the run, so a re-run and the nightly run of the
+  # same commit save their own. Only after a passing build; a failure to
+  # save does not fail the run. Saving took about 60 s at the end of the
+  # build job, which every shard waited for; since decision 563 this job
+  # saves the uploaded build beside the shards (same container and path, so
+  # the entry is the one the build job would have saved). The gate does not
+  # wait for it.
+  swift-build-cache:
+    name: Save the Swift build for later runs
+    needs: swift-build
+    if: needs.swift-build.outputs.cache-key != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container: swift:6.4-noble
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Download the build
+        uses: actions/download-artifact@v8
+        with:
+          name: swift-build
+          path: ${{ runner.temp }}/swift-build
+
+      - name: Unpack the build
+        run: .github/scripts/swift-shards.sh unpack "$RUNNER_TEMP/swift-build/swift-build.tar.gz"
+
+      - name: Save the build (cache)
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: .build
-          key: swift-build-v1-${{ steps.swift.outputs.key }}-${{ hashFiles('Package.swift') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ needs.swift-build.outputs.cache-key }}
 
   swift-current:
     name: Swift 6.4 (Linux) / ${{ matrix.shard }}
@@ -355,7 +399,7 @@ jobs:
   # pull request's head is not superseded and keeps its red gate.
   superseded:
     name: Superseded by a newer push?
-    needs: [changes, swift-build, swift-current]
+    needs: [changes, selftest, swift-build, swift-current]
     if: ${{ cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -377,7 +421,7 @@ jobs:
 
   gate:
     name: Swift CI (gate)
-    needs: [changes, swift-build, swift-current, superseded]
+    needs: [changes, selftest, swift-build, swift-current, superseded]
     # A push run of main that was cancelled (by hand, or replaced while
     # waiting) has no verdict to give, so the gate is skipped there rather
     # than red on a commit where no test failed; the next push run tests its
@@ -406,6 +450,7 @@ jobs:
           CHANGES: ${{ needs.changes.result }}
           SWIFT_NEEDED: ${{ needs.changes.outputs.swift }}
           TIER: ${{ needs.changes.outputs.tier }}
+          SELFTEST: ${{ needs.selftest.result }}
           BUILD: ${{ needs.swift-build.result }}
           CURRENT: ${{ needs.swift-current.result }}
         run: .github/scripts/swift-shards.sh gate

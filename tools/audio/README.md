@@ -90,6 +90,9 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 | `warning.wav` | 兩個相隔一個全音的短鈴（A、B） | 新聞紀錄多了一則警訊：負債、期限、颱風、缺建材（決策 184） |
 | `run-electric.caf` | 8 秒、可無縫循環的一般電車行駛聲：照兩段台灣列車錄音的頻譜塑形的雜訊，每 1.6 秒一處鐵軌接縫（近的轉向架兩軸「喀噠」、遠的轉向架小聲一次）；IMA4 | 跟隨的列車（不是高速列車）在 60 倍速以下、5 km/h 以上行駛時循環播放，越快越大聲、音調越高（決策 343），跟「音效」的音量 |
 | `run-highspeed.caf` | 8 秒、可無縫循環的高速列車行駛聲：照 KTX 車廂連接處錄音的頻譜塑形的雜訊，沒有接縫聲；IMA4 | 同上，跟隨的是高速列車時（決策 343） |
+| `run-diesel.caf` | 8 秒、可無縫循環的柴油客車起步加速聲：照キハ40 系錄音加速段的底噪頻譜塑形的雜訊，疊上引擎 38.25 Hz 的 12 個諧波（照量到的大小，基頻微微晃動），每 1.6 秒一處鐵軌接縫；IMA4 | 跟隨的是柴油車（決策 567）、5 km/h 以上、加速或保持速度時；越快越大聲、引擎越高，跟「音效」的音量 |
+| `run-diesel-idle.caf` | 4 秒、可無縫循環的柴油引擎怠轉：同上，照停車怠轉段，33.75 Hz，沒有接縫聲；IMA4 | 同上，5 km/h 以下（停站時也播） |
+| `run-diesel-coast.caf` | 8 秒、可無縫循環的柴油客車惰行聲：同上，照惰行到停車那段，引擎回到 33.75 Hz 的怠轉，有接縫聲；IMA4 | 同上，5 km/h 以上、在減速（惰行或煞車）時 |
 | `rain-steady.caf` | 8 秒、可無縫循環的雨聲：照台北、淡水三段雨聲錄音的頻譜塑形的雜訊，音量照錄音每半秒的起伏（標準差 1.8 dB）緩緩漂動；IMA4 | 地圖下雨時循環播放（雷雨時大聲，下雨小 6 dB），跟「音效」的音量（決策 346） |
 | `rain-typhoon.caf` | 12 秒、可無縫循環的颱風風雨聲：照淡水颱風錄音的頻譜塑形的雜訊，一陣一陣的風（每半秒的起伏標準差 3 dB、約一秒一陣）；IMA4 | 颱風吹過地圖時循環播放（決策 346） |
 | `thunder.caf` | 10 秒的一聲雷：照三段雷聲錄音第一秒頻譜的「霹」，下面是照隆隆聲頻譜、每 1.5 到 2 秒滾一次、照量到的速度（每秒 −1.2 dB）消失的雷鳴，最後 1.5 秒淡出；IMA4（單次，不循環） | 雷雨與颱風時，地圖每道閃電之後 1 到 4 秒（越遠越小聲、越低沉，決策 346） |
@@ -112,6 +115,22 @@ python3 -I tools/audio/measure_running_spectrum.py KTX.mp3 0 826
 python3 -I tools/audio/measure_running_spectrum.py SoundMap2012020110.ogg 0 166 soundmap201610191.ogg 0 140
 ```
 
+柴油車的行駛聲（決策 567）也一樣，量的是月本國（ごとりん）「てつおん素材 Lite」的「キハ40系旧国鉄一般形気動車(更新車)」（キハ41 2000 番台，播但線），在 [Simulation Country GAPAN 月本國](https://gepponkoku.nation.jp) 的 `tetsuon/lite.html`。網站的條款（`homusho.html` 與「ゲーム素材屋さんに100の質問」）：商用、加工都可以，未加工素材不能轉載，公開的作品要寫網站名「Simulation Country GAPAN 月本國」與網址 `https://gepponkoku.nation.jp`；細節在決策 567。`measure_diesel_engine.py` 量引擎的基頻（25–90 Hz，取到 0.125 Hz）、12 個諧波高出底噪多少，與底噪的三分之一八度頻帶（每 4 秒一窗的中位數），結果寫在 `make_game_audio.py` 的 `DIESEL_ENGINES`：
+
+| 錄音（`.ogg`） | 量的段落 | 用在 |
+| --- | --- | --- |
+| `dc40r_stn`（停車中・怠轉，2 秒循環） | 0–2 秒（全段） | `run-diesel-idle.caf` |
+| `dc40r_go-a`（發車→加速） | 26–38 秒（基頻最穩、最高的一段） | `run-diesel.caf` |
+| `dc40r_i-stop`（惰行→停車） | 0–32 秒 | `run-diesel-coast.caf` |
+
+```sh
+python3 -I tools/audio/measure_diesel_engine.py dc40r_stn.ogg 0 2
+python3 -I tools/audio/measure_diesel_engine.py dc40r_go-a.ogg 26 38
+python3 -I tools/audio/measure_diesel_engine.py dc40r_i-stop.ogg 0 32
+```
+
+資料來源頁的「聲音」多了一筆（`DataSourceCredits` 的 `dieselSound`），寫素材名、網站名與網址。
+
 板橋那段是 CC BY 3.0：遊戲的資料來源頁（`DataSourceCredits` 的「聲音」）寫明錄音者、標題、授權與連結，並說明遊戲的聲音是照它重新合成的。研究文件 §7.2 列的 OtoLogic 與 Freesound 在這個環境打不開（403），維基共享資源的原檔一直回 429，所以改用這三段。
 
 雨聲、颱風與雷聲（決策 346）也一樣：只取錄音的數字，錄音本身不提交、不打包。雨與颱風用同一支 `measure_running_spectrum.py` 量（結果在 `WEATHER_SPECTRA`）；雷聲用 `measure_thunder.py`：給每聲雷開始的秒數與之前一段沒有雷的雨，量雷聲第一秒與 2 到 10 秒後的隆隆聲各自高出雨聲多少（三分之一八度，每 0.25 秒一窗），以及每秒最大的那 0.25 秒照直線消失的速度（結果在 `THUNDER`）。雨聲每半秒起伏的大小與快慢（`WEATHER_SWING`）是同樣的錄音每半秒的音量算的標準差與自相關。量的錄音都是吳燦政（Wu, Tsan-Cheng）錄的、CC BY 3.0，都在 radio aporee ::: maps：
@@ -133,4 +152,4 @@ python3 -I tools/audio/measure_thunder.py SoundMap201504211.mp3 75.4 0 74 SoundM
 
 資料來源頁的「聲音」多了一筆（`DataSourceCredits` 的 `weatherSound`），寫六段的標題、錄音者、授權與連結。
 
-音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒），雨聲 8 秒、颱風 12 秒、雷聲 10 秒，也都是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。
+音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。行駛聲每段 384,000 個取樣（8 秒；柴油的怠轉 192,000 個，4 秒），雨聲 8 秒、颱風 12 秒、雷聲 10 秒，也都是整數倍；而且從零點附近開始：IMA4 的封包從靜音解起，離零點開始的循環每一圈都會「喀」一聲。

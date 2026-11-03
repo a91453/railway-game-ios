@@ -1,3 +1,7 @@
+> 柴油車的行駛聲（派工單 DIESEL，session_01YGNNumDcBCK97mmQUfHHjy，`claude/diesel-sound`，決策 567，2026-11-03）：NEXT_PRIORITIES §22.2 第 7a 項做完（怠轉、起步加速、惰行三個循環，照月本國キハ40 系錄音的頻譜與引擎基頻合成，錄音不提交）。實機聽感 UNVERIFIED，請作者實機聽。7b（電車加減速的馬達聲）沒做，做法建議寫在 `docs/decisions/567.md`「下一步」。
+
+> 桃園機場捷運上架（派工單 TYMCLIST、TYMCLIST2，決策 556（檔案在 #1743 分支 `7fabe2b`，合併後才在 main），`claude/tymclist-airport-line` #1743，draft；TYMCLIST2 session_01JMHz9aCrGxwKjwmKNpAC9t 於 2026-11-03 停）：線上架、真實桃園開局買得到，蘆竹、青埔兩座線中間的真實機廠，中途折返站兩側渡線，3.8 % 坡。三種規則兩天已量；價格已量，其他線一元不變。號誌關早上在長庚醫院卡死，已由[決策 559](decisions/559.md)（#1747，已合併）修好：315/333 → 0/333。**剩下**（逐項見決策 556「下一步」）：1 傍晚機場第二航廈 17:16–17:31 直達車折返卡死，要改 GameCore（跟車授權讓車跟進要折返的車停著的月台，不走空的第三股；重現指令在 `7fabe2b` 的 docs/decisions/556.md「下一步」1）；2 簡單＋行車控制 320/333 沒發；3 行車控制時模擬很慢（GameCore `trafficPlan` 越車規劃）；4 直達車跳站、長庚待避線不做；5 回本沒量完。
+
 > Codex 文湖線兩款 studies（2026-11-03，[公開draft #1742](https://github.com/a91453/railway-game-ios/pull/1742) ↔ [素材draft #47](https://github.com/a91453/railway-assets-private/pull/47)）：producer `538a985c795ef57dd034fa57a226270354a8ae8e`，各A/B近遠及完整四車近遠、原生／GLB／通用assembly與自含viewer；11測試、13類真幾何故障／2類端部故障／5類assembly故障、獨立Swift與Blender及39份獨立重建bytes均通過，950舊模型保持，standard新增0。私庫8PNG＋公開1PNG。[來源／驗證與未完成項](art/wenhu/README.md)：官方A-B-A-B與A-B-B-A衝突，正式角色方向、帶日期完整四車實號、隱藏安全輪／集電器與設備分配仍缺；四態UNVERIFIED，file://政策阻擋，未獲使用者外觀接受。合併後僅studies，不改營運wenhu；不動EMU700 #1730／素材#45及其他成果。未推main／merge／auto-merge／TestFlight。 續核2005第33期細設專文與工程原圖，APM修正軸距10m／輪心橫距1.98m，新增承樑支承與空氣彈簧／導引架；設計值不等於竣工營運確認。
 
 > Codex EMU700立體鼻罩續修（2026-11-03，[公開draft #1730](https://github.com/a91453/railway-game-ios/pull/1730) ↔ [素材draft #45](https://github.com/a91453/railway-assets-private/pull/45)）：53候選未接受，作者重審其平面嘴形／直板下鼻仍不足，使用者同意繼續。新producer `cd01a6f906770731874b0b447325052e3afd67f9` 重建橘色罩面前凸、收回下緣與環向肩面、薄藍色下裙；引桿框退罩後0.14m防外露，不改連結面。近遠橘色曲面相同。全部四角色／完整八車重出，六個中間單元對53逐bytes保護；最新main efb96529完整942模型保護、standard增量0。源圖／形體配適與真深度壓平、下鼻壓平、引桿穿罩故障見本型README及verification。四態與file://／裝置／營運／近期編組來源缺口仍UNVERIFIED，無使用者接受。最終文件head、素材head、最新CI另見互鏈draft；不推main、合併、auto-merge或TestFlight。
@@ -313,6 +317,8 @@
     - 規劃可以自己用 `create_session` 開下一任，`model: "claude-opus-5-5"`。
     - 開之前用 `get_session`（不帶 id）看自己的 `lineage.depth`（上限 8）。下一任會到第 7 層時，改請作者在 claude.ai 開。
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
+    - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
+    - **預設「中」**（作者 2026-11-03：「好 預設中 需要高的你跟我說」）：實作 session 一律維持中，只有上面三種在派工當下跟作者說「這個請改高」並寫上 session 標題；量測、抓資料、改 CI、照現成寫法的小畫面、只寫文件都用中。
     - 下面 2026-10-24 那條只在快到第 7 層時適用。
     - 規劃自己開下一任後，在 #1041 和對話裡請作者到 app 把新 session 的強度改成「高」；作者不方便改時，就請作者從 claude.ai 開。實作 session 不用改強度（作者 2026-10-27：「結果還是需要我自己改高」）。
   - **實作 session 照難易度選模型**（2026-10-27，作者：「根據派工單難易度 給session決定opus 或是sonnet」）：`create_session` 的 `model` 一定要寫，不寫就沿用規劃的 Opus。
@@ -350,7 +356,7 @@
 - 先合正在等的那一個：有 PR 為了解衝突重跑 CI 時，先不要合另一個也改 OVERVIEW、ARCHITECTURE 或這份的 PR，否則它要再解一次（2026-10-21：先合 #876，#875 第二次衝突）。
 
 **GameCore 名額**：
-- 同時最多 2 個要跑完整 tier（17 個 job：決策 544 續把測試片從 20 減到 14，加上 Changes、決策 411 續篇的 build job 與 gate）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
+- 同時最多 2 個要跑完整 tier（18 個 job：決策 544 續把測試片從 20 減到 14，加上 Changes、決策 563 的自我檢查 job、決策 411 續篇的 build job 與 gate）的 PR 在跑 CI。改 `.github/scripts/swift-shards.sh` 這類 CI 腳本也算完整 tier。
 - session 問能不能推：當下在跑的完整 tier 不到 2 個就答可以。
 - GameCore PR 的 base 比另一個已經合進去的 GameCore 改動舊時，請它 merge main（不要 rebase），重跑完整 tier 再合。
 
@@ -466,6 +472,44 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 44 任接回（2026-11-03 14:10 UTC，session_01YGNNukw5koUxDsjkSBmJJy，作者在 claude.ai 開的，第 0 層）**：照下面「pro 交回第 44 任」接手；兩段不同時以這段為準。
+
+- **110.1 已發**（作者 13:29 UTC，`2494e5a`，run 110）：完整 `ci.yml` 與 full lane 都綠，記在 `PLAYER_FEEDBACK.md`。下一版 111.1（作者：「明天111.1在一起更新吧」）：合 #1750（App 內這版新增，補 108.1–110.1），再加 111.1 自己的，並改 `.github/testflight-whats-new.md`。
+- **已合**：#1744（pro 交回）、#1754 REVIEW-L7（審查 #1725–#1751＋#1693，下一輪從 #1752 起）、#1747（決策 559，TYMCLIST2 的號誌關讓月台）、#1752 LANDMARK101（決策 555 續，截圖場景的線改到地點北 300 m，101 與台北車站地標出現；Simulator 上地標吃幀數，實機 UNVERIFIED）。
+- **派出去的**（全部 Opus；作者：實作 session 預設「中」，要「高」的由規劃說，見 §1.1）：
+  - WENHUSIDE（session_01YGNNunZGPiV2XFNuJMZEsQ，`claude/wenhu-side`，決策 564，存檔 82／golden 78 需要時，請作者改高）：作者回報 110.1「收購文湖線後列車走對向軌道」。線索：收購前 3D 真實捷運靠右（`Map3DRealTrains.rightHand`），收購後走 GameCore 的靠左（決策 202）。淡海、安坑、三鶯、機場捷運一起查。
+  - DAYPASS（session_01YGNNuq4pwmnoH6UaGRauhk，`claude/daypass-midnight`，決策 551 續，請作者改高）：L7-1 新局一日券午夜結算成 0、L7-2。
+  - L6FIX（session_01YGNNumXkb2bxJTzSaV4NcC，`claude/l6fix`，決策 542／547 續，請作者改高）：L6-3、L6-4、L6-5。
+  - DEPOTADD-2（session_01YGNNupgR4efBZiUSdbSW96，`claude/depotadd-2`，決策 557 續）：L7-3、L7-4。
+  - HEALTH-110（session_01YGNNuooXQbC3CXJv5fdYkZ，`claude/health-110`）：發版後健檢。
+  - CIOPT-6（session_01YGNNuqW3jzUqN2iQY2U5YW，`claude/ciopt-6`，決策 563 需要時）：完整 ci 17.7→20–22 分、GP PR tier 13→22–27 分。
+- **桃園機場捷運 #1743（決策 556，draft）**：TYMCLIST2（pro）照作者選的收尾停手，交接在 #1755（main 的本檔最上面一行）。接手的是 **TYMCLIST3**（session_01YGNNup5FDQbQYoyKCqHySs，Opus，請作者改高）：A 傍晚機場第二航廈跟進折返車月台的死結，GameCore，**決策 562**，`claude/tymc-follow-turnback`；B 接手 #1743 重量、回本、轉 ready，和 WENHUSIDE 對齊機場捷運靠右。GameCore 名額 DAYPASS ＞ TYMCLIST3 ＞ L6FIX（WENHUSIDE 目前不動 GameCore）。
+- **固定三件事這一輪**：審查 REVIEW-L7（到 #1751）、CI CIOPT-6、除錯 HEALTH-110，都是第 44 任 2026-11-03 派的。
+- **號碼**：556 保留（#1743）；559、555 續已用；562（TYMCLIST3）、563（CIOPT-6）、564（WENHUSIDE）保留；**下一個 565**。存檔 81（82 保留給 WENHUSIDE 需要時）、golden schema 77（78 同）。
+
+**pro 交回第 44 任（2026-11-03，pro 的遊戲規劃 session_01JMHz9YRiP23RXrrfdsaGsq，交回時間 14:00 UTC＝台灣 22:00）**：pro 當了一天遊戲規劃，照下面接回。和下面「第 44 任交給 pro」不同時以這段為準。
+
+- **發了 109.1**：作者 11-03 01:43 UTC 在 `efb9652`（#1735）按 TestFlight，run 41561636787（run 109）成功。同 commit 完整 `ci.yml` 41556623087 綠；full lane 41556631784 **紅**（`StartSaveFlowSmokeTests` 706 行）→ 派 FLANE7 查，結論是偶發（時鐘重畫換掉元素、鍵盤第一眼就等超過 20 秒），#1739 只改 UI 測試，已合；之後 `f1a6a2d` 的 full lane 綠。`PLAYER_FEEDBACK.md` 的 109.1 一段在這張 PR。作者要自己確認：App Store Connect 這版不再顯示 Missing Compliance。
+- **pro 期間合併的**（全部用 `expectedHeadSha`，每批後等 main 的 `ci.yml` 綠）：
+  - 11-02：#1723 WENHUCAP（決策 549）、#1725／#1727／#1728 CRASHSWEEP-3 三批（`GeometryReader` 改 `onGeometryChange`、3D 列車標籤改自訂 `Layout`）、#1726 108.1 紀錄、#1729 審查 L6、#1731 TOURFIX2（決策 551 續）、#1732 海風號山嵐號（決策 554）。
+  - 11-03：#1733 WENHULIST 文湖線上架（決策 552）、#1734 新光摩天大樓（決策 550，Antigravity 做的）、#1735 109.1 說明、#1736 ImmersiveMap 研究、#1738 TILT60 兩指上推斜到 60°（決策 555）、#1739 FLANE7、#1737 SUNPCF 太陽影子 tent PCF＋16 位元深度（決策 357 續）、#1740 WENHUFIX 文湖線跨過高鐵示範開局的南港機廠股道（決策 552 續；作者回報 109.1 高鐵示範開局買不到文湖線）、#1741 DEPOTADD（決策 557）、#1745 WENHUTRN（決策 558）；作者合了 #1746 EMU700（決策 560）、#1748 機場捷運車型（決策 561）、#1749。作者自己合了 Codex 的 #1730 EMU700、#1742 文湖線兩款車 studies。
+- **還開著（交回時）**：
+  - **TYMCLIST 桃園機場捷運上架（決策 556）**：draft #1743（`claude/tymclist-airport-line`）。第一個 session（session_01JMHz9cZgULsjQ6iT7rqEKp）做了上架、桃園開局買得到、兩座線中間機廠、中途折返渡線，壓縮後停手；**TYMCLIST2（session_01JMHz9aCrGxwKjwmKNpAC9t，Opus）接手**：(1) 擬實 06:14–08:43 的 9 列死結（機場第一航廈 7、興南 2）與兩天三規則量測、價格、回本，在 #1743；(2) 號誌關時起站車與回送車互等 `waitsForPlatform`（決策 549 下一步 2），動 GameCore、**另開 PR**，若要新決策用 559；(3) 直達車跳站、長庚待避不做，寫進下一步。#1743 和已合的 WENHUFIX 在 `RealLineAcquisition.swift` 的 `guard let rise` 那行重疊，合 main 時兩邊都留。轉 ready、CI 綠、量測齊再合。
+  - **已在交回前合**：#1745 WENHUTRN（`5951b52`，決策 558）：文湖線（BR）與 `APM` 改畫 #1742 的兩款車，車次除以 3 餘 0 畫 VAL256、其他畫 370 型（51 對比 101 對），四車兩對、不混編；模型包沒載好時畫舊 `wenhu`。A-B-A-B 方向 UNVERIFIED。截圖 `docs/art/wenhu-558-2026-11-03/overview.png` 規劃看過。
+  - **已在交回前合（作者合）**：#1746 EMU700TRN（`175fc02`，決策 560）：EMU700 加進區間車比例；pro 事後看了截圖（Website screenshots run 41623307578），不用改。#1748 TYMCTRN（`9728f2c`，決策 561，第 43 任派的）：機場捷運實景列車畫成 1000 型／直達 2000 型。#1749 110.1 的這版新增（`2494e5a`）。
+  - **#1747（TYMCLIST2 的 GameCore 互等，號誌關時不為排在後面、過不來的車讓月台）**：draft，PR 原本寫決策 558，和已合的 WENHUTRN 撞號；pro 已請它改成 **559**。完整 tier，審過再合。#1750（App 內這版新增 111.1）是別的 session 的 draft。#1751（EMU700TRN 補 `docs/art/emu700-560/overview.png`，只改文件）：CI 綠就可以合。
+  - **已在交回前合**：#1741 DEPOTADD（`0c08ede`，決策 557）：路線頁一顆「加建○○機廠」按鈕＋確認框，收班後才生效；截圖照 ui-review 暫緩條款沒拍，要看的是安坑線舊存檔的「所屬機廠」那列與確認框三種狀態。留給之後：三峽機廠（線中間）、地圖上預覽機廠位置、加建的軌道沒進收購紀錄的 track（要新 GameCore 指令）。
+- **號碼**：決策 549–552、554、555 已用；557 DEPOTADD 已用；556 TYMCLIST 保留（TYMCLIST2 沿用）、558 WENHUTRN 已用、559 給 TYMCLIST2 的 GameCore 互等（#1747）、560 EMU700 與 561 機場捷運車型已用；553 是 UIA-B1 保留後釋出的，沒有人用（#1579 11-02 20:37 的留言）；**下一個 562**。存檔 81、golden schema 77 不動。
+- **沒派、留給第 44 任排的**：
+  1. **信義的台北 101 地標沒出現**：TILT60 的截圖（`docs/art/tilt60-2026-11-03/overview.jpg`，信義 260 m 兩張）只有一般大樓，看不到決策 370 的 101 模型。要查是載入距離、串流範圍還是截圖場景本來就沒放。
+  2. **ImmersiveMap 研究的排名**（`docs/research/IMMERSIVEMAP_STUDY_2026-11-03.md`）：1 SUNPCF、2 TILT60 已做；3 TRAINSHADOW、4 RELIEF30、5 SUN2WIN、6 TILT75 沒派，研究寫了各自的前提（多半要先有 SUNPCF／TILT60 的實機結果）。不升最低 iOS 18。
+  3. **審查 L6 的 L6-2～L6-5**（#1729 的審查交接）還沒派；#1693 還沒審。
+  4. **CRASHSWEEP 剩下的**：`ContentView`、`MapView`、`TutorialOverlay` 的整頁 `GeometryReader`，以及 `Chart { ForEach }`（細節在 §4.44）。
+  5. 決策 554（海風號山嵐號）與 552（文湖線）各自「下一步」裡的項目。
+  6. 網友提的「用手機 GPS 顯示自己在哪條線上」只記下，沒排。
+- **作者要刪的 branch**（session 被擋、規劃也被擋）：`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`（都指向 main 上已有的 commit）、`sunpcf-before`（SUNPCF 改前截圖用）。
+- **Antigravity**：作者電腦上的，規劃接不了；它做的 PR（如 #1734）照一般 PR 審、合。
 
 **第 44 任交給 pro（2026-11-02 約 15:20 UTC，session_01YGNNukkhfPybvPTy9Pnp8C，作者開的，週額度剩 2%，2026-11-03 22:00 台灣時間重置）**：作者請另一個帳號（pro）**當一天遊戲規劃**（同角色：派工、審查、合併、發版前檢查），額度重置後交回。不開新 session（作者：「不要再做新session了」）。
 

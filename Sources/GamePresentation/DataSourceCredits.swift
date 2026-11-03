@@ -99,6 +99,9 @@ public enum DataSourceCredits {
     static let banqiaoRecordingURL = "https://archive.org/details/aporee_34085_39187"
     static let guishanRecordingURL = "https://archive.org/details/aporee_17319_20158"
     static let ktxRecordingURL = "https://archive.org/details/aporee_65051_75140"
+    /// Decision 567: the site whose KiHa 40 recordings the diesel loops are
+    /// made to (its terms want the address in lower case).
+    static let gepponkokuURL = "https://gepponkoku.nation.jp"
     /// Decision 346: the recordings the rain, the typhoon and the thunder
     /// are made to, by Wu, Tsan-Cheng, on radio aporee ::: maps.
     static let weatherRecordings: [(title: String, place: (english: String, chinese: String), id: String)] = [
@@ -876,6 +879,25 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Guishan recording", "龜山錄音"), url: guishanRecordingURL),
                             DataSourceCredit.Link(title: language.text("KTX recording", "KTX 錄音"), url: ktxRecordingURL),
                             DataSourceCredit.Link(title: "CC BY 3.0", url: ccBy3URL),
+                        ]
+                    ),
+                    // Decision 567: the diesel railcar's running sounds, made
+                    // the same way. The site's terms ask for its name, as
+                    // written here, and its address wherever its sounds are
+                    // used, changed or not.
+                    DataSourceCredit(
+                        id: "dieselSound",
+                        title: language.text("Diesel railcar recordings", "柴油客車錄音"),
+                        detail: language.text(
+                            "The engine of a diesel train you follow, idling, pulling away and coasting, which the game makes to sound like these recordings of a KiHa 40 series railcar in Japan.",
+                            "跟隨柴油車時的引擎聲：怠轉、起步加速與惰行，遊戲照這些日本キハ40 系柴油客車的錄音自己合成。"
+                        ),
+                        notice: language.text(
+                            "Railway sound materials (てつおん素材), KiHa 40 series (renewed), from Simulation Country GAPAN 月本國, https://gepponkoku.nation.jp. The game plays none of the recordings themselves: its sounds are made after them.",
+                            "てつおん素材「キハ40系旧国鉄一般形気動車(更新車)」，出自 Simulation Country GAPAN 月本國，https://gepponkoku.nation.jp。遊戲不播放錄音本身，聲音是照它們合成的。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Simulation Country GAPAN 月本國", url: gepponkokuURL),
                         ]
                     ),
                     // Decision 346: the weather's sounds, made the same way.
