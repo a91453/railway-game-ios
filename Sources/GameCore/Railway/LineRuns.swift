@@ -487,6 +487,39 @@ extension GameWorld {
         return nil
     }
 
+    /// Decision 570: whether the run ``dueRunDeparture(of:on:)`` would send
+    /// `train` out on is due to leave its first stop by now. A run sends
+    /// its train out up to ``LineRun/earliestDispatch`` before that, to
+    /// take on passengers; until then a train kept from being sent out is
+    /// no later than a service standing before its departure time.
+    func dueRunHasStarted(of train: Train, on line: ServiceLine) -> Bool {
+        guard train.execution == nil, train.placement != nil, train.movement.rate > 0 else { return false }
+        for (index, day) in line.dueRuns(at: clock.now) {
+            let run = line.runs[index]
+            guard isStopped(train, at: line.stops[run.from]), runTrip(of: line, run, for: train) != nil else { continue }
+            return run.start(onDay: day) <= clock.now.seconds
+        }
+        return false
+    }
+
+    /// Decision 570: ``dueRunDeparture(of:on:)`` along the route `line`
+    /// names for the run's first leg (decision 323), as
+    /// ``readyRunTrain(of:_:day:)`` tries it when the run's own route is
+    /// held, whether or not it is free. `nil` where the line names none.
+    func dueRunPreferredDeparture(of train: Train, on line: ServiceLine) -> Train? {
+        guard train.execution == nil, train.placement != nil, train.movement.rate > 0 else { return nil }
+        for (index, day) in line.dueRuns(at: clock.now) {
+            let run = line.runs[index]
+            guard isStopped(train, at: line.stops[run.from]), let trip = runTrip(of: line, run, for: train) else { continue }
+            var memo = PathMemo()
+            guard case .setsOff(let preferred, _)? = preferredLeaving(dispatched(train, on: trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now)),
+                                                                       stop: 0, cycle: 0, memo: &memo)
+            else { return nil }
+            return preferred
+        }
+        return nil
+    }
+
     /// Whether some run of `line` is due now with a train ready (see
     /// ``readyRunTrain(of:_:day:)``).
     func hasReadyRun(_ line: ServiceLine) -> Bool {

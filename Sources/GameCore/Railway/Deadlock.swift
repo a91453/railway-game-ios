@@ -127,6 +127,29 @@ extension GameWorld {
         }
     }
 
+    /// Decision 570: the departure train `train` (see
+    /// ``departureRequest(of:memo:)``) would make along the route its line
+    /// names for the leg (decisions 61, 323), whether or not that route is
+    /// free: a service due to leave a stop, a line's train a due run would
+    /// send out, or a service going on from a passing place. The
+    /// dispatcher sets off along it whenever it is free, so a train whose
+    /// own route another train of a deadlock keeps is not in that deadlock
+    /// while this one is free of them. `nil` where the line names no route.
+    func preferredDepartureRequest(of train: Train, memo: inout DirectionMemo) -> Train? {
+        switch train.execution {
+        case .waitingAtStop(let stop, let cycle)?:
+            guard let due = departureDue(of: train), due <= clock.now,
+                  case .setsOff(let preferred, _)? = preferredLeaving(train, stop: stop, cycle: cycle, memo: &memo.paths)
+            else { return nil }
+            return preferred
+        case .travellingToStop?:
+            return preferredGoingOn(train)
+        case nil:
+            guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), line.hasRuns else { return nil }
+            return dueRunPreferredDeparture(of: train, on: line)
+        }
+    }
+
     /// Whether `train` is a spare of its line (decision 58, a later fix):
     /// assigned to a line that sends its trains out by headway (not by
     /// runs, decision 133), without a service, standing where its path
@@ -195,10 +218,14 @@ extension GameWorld {
     /// the trains, only those `among` kept their track: its route is free
     /// of theirs, or, for a departure, an alternative route (decision 57)
     /// is. Following them is never possible: they all wait.
-    private func couldGo(_ request: (candidate: Train, departs: Bool), among ids: Set<TrainID>, memo: inout DirectionMemo) -> Bool {
+    ///
+    /// Decision 570: or its line's preferred route (see
+    /// ``preferredDepartureRequest(of:memo:)``), `preferred`, is.
+    private func couldGo(_ request: (candidate: Train, departs: Bool), preferred: Train?, among ids: Set<TrainID>, memo: inout DirectionMemo) -> Bool {
         let candidate = request.candidate
         let blocked = blockedTrack(except: candidate.id, among: ids, holders: trackHolders(memo: &memo))
         if !blocked.blocks(envelopeCover(of: candidate), in: network) { return true }
+        if let preferred, !blocked.blocks(envelopeCover(of: preferred), in: network) { return true }
         guard request.departs, case .travellingToStop(let stop, _)? = candidate.execution,
               let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: blocked, memo: &memo)
         else { return false }
@@ -221,8 +248,18 @@ extension GameWorld {
     /// traffic control is off.
     func deadlock(memo: inout DirectionMemo) -> [TrainID: (candidate: Train, departs: Bool)] {
         var waiting: [TrainID: (candidate: Train, departs: Bool)] = [:]
+        // Decision 570: the line's preferred route of each that departs.
+        var preferred: [TrainID: Train] = [:]
         for train in trains {
-            if let request = waitingRoute(of: train, memo: &memo) { waiting[train.id] = request }
+            // Decision 570: a line's train a run would send out waits only
+            // once the run is due to leave, as a service does (see
+            // ``departureDue(of:)``), not while it may be sent out early.
+            if train.execution == nil, let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), line.hasRuns,
+               !dueRunHasStarted(of: train, on: line) { continue }
+            if let request = waitingRoute(of: train, memo: &memo) {
+                waiting[train.id] = request
+                if request.departs { preferred[train.id] = preferredDepartureRequest(of: train, memo: &memo) }
+            }
         }
         var dispatch = DispatchMemo()
         let spares = waiting.isEmpty ? [] : Set(trains.filter { waiting[$0.id] == nil && isSpare($0, memo: &dispatch) }.map(\.id))
@@ -231,7 +268,7 @@ extension GameWorld {
             changed = false
             for id in waiting.keys.sorted() {
                 let others = Set(waiting.keys).union(spares).subtracting([id])
-                if couldGo(waiting[id]!, among: others, memo: &memo) {
+                if couldGo(waiting[id]!, preferred: preferred[id], among: others, memo: &memo) {
                     waiting[id] = nil
                     changed = true
                 }
