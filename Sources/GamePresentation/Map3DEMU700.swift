@@ -84,7 +84,7 @@ private struct EMU700Recipe {
     }
     mutating func shell() {
         let levels:[Float]=[1.12,1.24,1.6,1.68,1.76,1.8,1.86,1.95,2.02,2.08,2.15,2.4,2.7,3.12,3.25,3.33,3.36,3.56,3.68,3.70]
-        let hs = cab ? (levels + (far ? [1.83] : [1.815,1.83,1.845])).sorted() : levels
+        let hs = cab ? (levels + [1.815,1.83,1.845]).sorted() : levels
         // Both LODs share the real colour-boundary vertices. In particular the
         // bowl is a curved row in the shell, not cells classified by midpoint.
         let cabWidths:[Float]=[-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
@@ -292,7 +292,7 @@ private struct EMU700Recipe {
             // Ordinary service has a continuous closed FRP nose cover. The
             // previous frontal square jaw was unsupported by the normal-state
             // photographs. Keep a thin cover and a genuine cavity behind it.
-            let apronWidths:[Float]=far ? [-1,-0.94,-0.86,-0.7,-0.5,-0.2,0,0.2,0.5,0.7,0.86,0.94,1] : [-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
+            let apronWidths:[Float]=far ? [-1,-0.86,-0.5,0,0.5,0.86,1] : [-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
             for i in 0..<(apronWidths.count-1) {
                 func edge(_ share:Float)->[Map3DPoint] {
                     let upper=share*1.32,lower=share*1.27
