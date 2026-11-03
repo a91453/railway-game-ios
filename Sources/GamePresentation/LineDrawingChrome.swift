@@ -20,7 +20,10 @@ public struct LineDrawingChrome: Equatable, Sendable {
     /// The layer strip under the status pill, with the night skip and the
     /// next step beside it, or the map's round layers button in its place.
     public var showsLayers: Bool { !isDrawing }
-    /// The map's button that starts expanding the map.
+    /// The map's bubbles over its stations (what needs the player) and the
+    /// city's requests: they stood over the pill.
+    public var showsAlerts: Bool { !isDrawing }
+        /// The map's button that starts expanding the map.
     public var showsMapExpansion: Bool { !isDrawing }
     /// The game's Undo and Redo: the pill's ↶ takes back the last stop
     /// instead, the one taking back while drawing.

@@ -2121,7 +2121,7 @@ final class WebsiteScreenshotTests: XCTestCase {
 
     /// Decision 568: a new line picked on the map (five stations, the
     /// potential layer on, as in the owner's report), on the map alone and
-    /// beside the lines panel; on its side and upright. The shots upright
+    /// beside the lines panel; on an iPad upright too. The shots upright
     /// end in `-portrait` and are not turned (website-screenshots.yml).
     func testRouteDrawing() {
         shootRouteDrawing(extra: [], name: "route-draw")
@@ -2133,7 +2133,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     private func shootRouteDrawing(extra: [String], name: String) {
-        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-line-draft", "-mapPopTravelMode", "potential"] + extra)
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-line-draft", "-map-layer", "potential"] + extra)
         defer {
             app.terminate()
             XCUIDevice.shared.orientation = .landscapeLeft
@@ -2150,6 +2150,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 3)
         keep("\(name)-panel", app)
 
+        // An iPhone is held on its side only (project.yml); an iPad
+        // upright too.
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return }
         XCUIDevice.shared.orientation = .portrait
         settle(seconds: 4)
         keep("\(name)-panel-portrait", app)

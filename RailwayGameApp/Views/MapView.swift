@@ -995,14 +995,20 @@ struct MapView: View {
                                        clearTop: max(clear.top, topColumnDepth))
                 }
                 // Decision 109: what needs the player, over its stations.
+                // Decision 568: not while a new line is picked on the map,
+                // where they stood over its pill.
                 .overlay(alignment: .topLeading) {
-                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
-                                    clearTop: max(clear.top, topColumnDepth))
-                        .ambientHidden(screen.ambient != nil)
+                    if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                        MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
+                                        clearTop: max(clear.top, topColumnDepth))
+                            .ambientHidden(screen.ambient != nil)
+                    }
                 }
                 // Decision 246: where the city's requests point.
                 .overlay(alignment: .topLeading) {
-                    MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                    if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                        MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                    }
                 }
                 // Decision 119: the station selected, looked at.
                 .overlay(alignment: .topLeading) {

@@ -47,6 +47,7 @@ final class LineDrawingChromeTests: XCTestCase {
             XCTAssertFalse(chrome.panelShowsSummary, "the pill says it; the panel does not again")
             XCTAssertFalse(chrome.showsLayers)
             XCTAssertFalse(chrome.showsMapExpansion)
+            XCTAssertFalse(chrome.showsAlerts, "the station bubbles stood over the pill")
             XCTAssertFalse(chrome.showsWorldEdits, "the pill's ↶ is the one taking back")
             XCTAssertTrue(chrome.foldsLegend)
         }
@@ -66,6 +67,7 @@ final class LineDrawingChromeTests: XCTestCase {
         XCTAssertFalse(chrome.isDrawing)
         XCTAssertTrue(chrome.showsLayers)
         XCTAssertTrue(chrome.showsMapExpansion)
+        XCTAssertTrue(chrome.showsAlerts)
         XCTAssertTrue(chrome.showsWorldEdits)
         XCTAssertFalse(chrome.foldsLegend)
     }
