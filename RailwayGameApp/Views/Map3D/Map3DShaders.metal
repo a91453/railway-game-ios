@@ -156,6 +156,8 @@ float3 map3dFinish(float3 colour) {
 // along `normal`, 0 to 1: the sun's shadow map (Map3DSunShadow) looked up
 // a texel out along the normal and a little nearer the sun, a tent filter
 // of four taps, faded out at the square's edge.
+// The map is 16-bit depth (about 12 cm a step over its 8 km): the 0.3 m
+// depth bias in `sunShadow.w` clears the rounding, so none is added here.
 float map3dSunSeen(float3 world, float3 normal, constant Map3DUniforms &uniforms, depth2d<float> sunShadow) {
     float strength = uniforms.sunShadow.x;
     if (strength <= 0.0 || dot(normal, uniforms.sunDirection.xyz) <= 0.0) { return 1.0; }
