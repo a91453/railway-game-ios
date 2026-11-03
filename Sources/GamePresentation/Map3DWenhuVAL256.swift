@@ -184,9 +184,10 @@ private struct VAL256Recipe {
         }
         // Roof housings: photo-fit section, two per car, neither a pantograph nor generic boxes.
         for x: Float in [-4.1,4.1] {
+            let capHeight: Float = far ? 0.23 : 0.222
             let base: Float = 3.30
-            m.prism([Map3DPoint(x-1.225,base,-0.81),Map3DPoint(x-1.225,base+0.23,-0.65),Map3DPoint(x-1.225,base+0.23,0.65),Map3DPoint(x-1.225,base,0.81)],offset:Map3DPoint(2.45,0,0),color:white)
-            if !far { for dx in stride(from:Float(-0.85),through:0.85,by:0.17) { m.kit.box(x+dx,base+0.232,0,0.045,1.2,0.008,grey) } }
+            m.prism([Map3DPoint(x-1.225,base,-0.81),Map3DPoint(x-1.225,base+capHeight,-0.65),Map3DPoint(x-1.225,base+capHeight,0.65),Map3DPoint(x-1.225,base,0.81)],offset:Map3DPoint(2.45,0,0),color:white)
+            if !far { for dx in stride(from:Float(-0.85),through:0.85,by:0.17) { m.kit.box(x+dx,base+0.222,0,0.045,1.2,0.008,grey) } }
         }
         if role == .b { for x: Float in [-1.0,0,1.0] { m.kit.box(x,3.30,0,0.22,0.22,0.15,grey) } }
     }

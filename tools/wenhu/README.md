@@ -4,6 +4,9 @@
 
 ```sh
 tools/wenhu/rebuild.sh /absolute/output
+node tools/wenhu/render.mjs /absolute/output /absolute/previous-91a31f0-output
+python3 tools/wenhu/sheets.py /absolute/output
+python3 tools/wenhu/curate.py /absolute/output
 ```
 
 採通用 assembly-spec，沒有修改共用 exporter、loader 或格式。四車中心為 +20.67、+6.89、-6.89、-20.67 m，每車連結面間距暫按官方列示車長13.78m；此尺寸是否為嚴格連結面距尚未確認，不能當工程連結面認證。原生 +X／+Y左／+Z上、跑道面Z0。A車+X暫對AX、B車+X暫對BX，組裝不再次反轉。角色方向、隱藏輪組與A/B設備分配仍未確認。
@@ -19,3 +22,5 @@ tools/wenhu/rebuild.sh /absolute/output
 `assembly-audit.mjs`修改最終真正assembly，拒收替錯角色、錯序、漏中央車、100mm間距錯誤、B車反向導致車對接合錯誤。基準payload另由獨立Swift importer組裝核對；這只驗研究配置，不能消除官方角色方向來源衝突。
 
 導引輪配適軸位x=±4.65±0.68、y=±1.02、z=0.385m，水平半徑0.20m；與行走輪保留80mm縱向包絡餘量。這些為可檢查的展示假設，並非原廠工程位置；隱藏安全／轉轍輪與精確集電機構仍缺來源。驗證是指定取樣／包絡與真故障，不是完整工程碰撞或外觀接受。
+
+同尺度前後對照採真前稿91a31f0原生bytes，前稿從未獲使用者接受；render第二參數必須指向該producer重建輸出，不能以標籤或後稿冒充。
