@@ -280,6 +280,36 @@ final class DepotToolsTests: XCTestCase {
 }
 
 extension DepotToolsTests {
+    /// Decision 547 (L6-3): a depot whose every siding is shorter than the
+    /// line's longest train keeps none of them overnight (they stay at the
+    /// line's ends), and the line panel says so, naming it; a train that
+    /// fits one, and a line keeping no depot, say nothing.
+    func testTheLinePanelSaysWhenADepotsSidingsAreTooShort() throws {
+        var (world, west, east, _) = try world()
+        let main = try world.createLine(named: "Main", stops: [west, east]).id
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 12_288))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 5_120, y: 12_288))
+        let siding = try world.buildTrackEdge(from: a, to: b)
+        let yard = try world.buildStation(named: "Yard", at: PlanPoint(x: 3_072, y: 12_800)).id
+        try world.addTrackPlatform(yard, on: siding, from: 512, to: 3_584)
+        try world.setStationDepot(yard, to: true)
+        let train = try world.purchaseTrain(named: "T1").id
+        try world.setTrainCars(train, to: 2)
+        try world.assignTrain(train, to: main)
+        XCTAssertNil(GameSession(world: world, language: .traditionalChinese).selectingLine(main).selectedLineDepotRow?.tooShort, "no depot kept")
+        try world.setLineDepots(main, to: [yard])
+        XCTAssertNil(GameSession(world: world, language: .traditionalChinese).selectingLine(main).selectedLineDepotRow?.tooShort, "two cars fit")
+        try world.unassignTrain(train)
+        try world.setTrainCars(train, to: 6)
+        try world.assignTrain(train, to: main)
+        XCTAssertGreaterThan(try XCTUnwrap(world.train(id: train)).length, 3_072)
+        XCTAssertEqual(
+            GameSession(world: world, language: .traditionalChinese).selectingLine(main).selectedLineDepotRow?.tooShort,
+            "「Yard」的停車線都比這條線最長的列車短，放不下的列車晚上會留在路線兩端。請把停車線加長。"
+        )
+        XCTAssertEqual(GameSession(world: world, language: .english).selectingLine(main).selectedLineDepotRow?.tooShort?.hasPrefix("Yard: every siding is shorter"), true)
+    }
+
     /// Decision 221: the line panel ticks several depots. The list stands
     /// nearest the line's ends first, the line keeps its ticked depots in
     /// that order, unticking the last leaves its trains at its ends, a
@@ -334,5 +364,12 @@ extension DepotToolsTests {
     func testTheHelpPageHasADepotEntry() {
         XCTAssertTrue(HelpGuide.entries(matching: "機廠").contains { $0.id == "depot" })
         XCTAssertTrue(HelpGuide.entries(matching: "depot sidings").contains { $0.id == "depot" })
+    }
+}
+
+private extension GameSession {
+    func selectingLine(_ id: LineID) -> GameSession {
+        selectLine(id)
+        return self
     }
 }

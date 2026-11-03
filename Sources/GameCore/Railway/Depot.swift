@@ -51,6 +51,14 @@ extension GameWorld {
         return free.isEmpty ? nil : Set(free)
     }
 
+    /// Decision 547 (L6-3): whether depot `station` has a siding at all a
+    /// train `length` long fits on. A train fits none is never sent in
+    /// (``depotHasRoom(_:for:)``) and stays at its line's ends overnight;
+    /// the line panel says so.
+    public func depotFits(_ station: StationID, length: Int64) -> Bool {
+        !berths(of: station, length: length).isEmpty
+    }
+
     /// Decision 280: whether depot `station` has a siding for `train`
     /// beyond those the trains already on their way in will take: more of
     /// the sidings it fits have no train's head on them than trains bound
@@ -220,8 +228,8 @@ extension GameWorld {
     /// another way serves. A depot beyond a station's platforms is left
     /// through one of them, and a train standing there for a run later
     /// kept the empty run behind it until it left. `nil` when the way may
-    /// stay as it is.
-    func pathOutOfDepot(_ depot: StationID, to call: StationID, from start: TrainPosition, for train: Train, nearest: TrainPath) -> TrainPath? {
+    /// stay as it is; with the way, the edges it keeps off.
+    func pathOutOfDepot(_ depot: StationID, to call: StationID, from start: TrainPosition, for train: Train, nearest: TrainPath) -> (path: TrainPath, standing: Set<TrackEdgeID>)? {
         guard !isTrafficControlEnabled, station(id: depot)?.isDepot == true, followsRealTimetable(train) else { return nil }
         let standing = Set(trains.filter { $0.id != train.id && !isMoving($0) }.flatMap { bodyStretches(of: $0).map(\.traversal.edge) })
         guard nearest.traversals.contains(where: { standing.contains($0.edge) }) else { return nil }
@@ -229,7 +237,7 @@ extension GameWorld {
         // Only a way that does keep off them: through a standing train is
         // no better than the shortest.
         guard let kept, !kept.traversals.contains(where: { standing.contains($0.edge) }) else { return nil }
-        return kept
+        return (kept, standing)
     }
 
     /// Whether `train` is on its way: travelling to a stop of its service.

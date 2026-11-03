@@ -106,7 +106,9 @@ extension GameWorld {
         // one stopping pattern both standing at the terminus they start
         // from are not an overtake (the one behind comes in before the one
         // ahead leaves, but leaves after it), nor is a run that ends there.
-        let timetabled = followsRealTimetable(l.train)
+        // L6-5: either of the two, as a line of the player's at a headway
+        // can share track with one of runs.
+        let timetabled = followsRealTimetable(l.train) || followsRealTimetable(x.train)
         var caught: Int?
         var look: Int64 = 0
         for (n, c) in common.enumerated() {
