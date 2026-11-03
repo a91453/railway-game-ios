@@ -24,4 +24,21 @@ final class Map3DEMU700Tests: XCTestCase {
             else { XCTAssertLessThan(model.maximum.z, 4.1) }
         }
     }
+
+    func testCabNoseBandIsALowerBowlWithSpaceBelowTheLamps() throws {
+        // Photo-fitted acceptance bounds, not surveyed engineering dimensions.
+        // The rejected producer's central band started at 1.80m and reached
+        // 2.15m, crowding the lamps and leaving a thin stepped moustache.
+        let paint = Map3DColor.rgb(0xE9AD59)
+        for far in [false, true] {
+            let vertices = Map3DEMU700.model(.emc, far: far).vertices.filter {
+                $0.x > 9 && abs($0.y) < 1.35 && $0.z < 2.1 && $0.color == paint
+            }
+            let low = try XCTUnwrap(vertices.map(\.z).min())
+            let high = try XCTUnwrap(vertices.map(\.z).max())
+            XCTAssertLessThan(low, 1.5)
+            XCTAssertLessThanOrEqual(high, 1.9)
+            XCTAssertGreaterThan(high - low, 0.4)
+        }
+    }
 }

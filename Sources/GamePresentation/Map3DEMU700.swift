@@ -38,7 +38,7 @@ private struct EMU700Recipe {
     ]
     func noseX(_ h: Float,_ w: Float) -> Float {
         // Characteristic projecting lower nose, recessed broad windscreen.
-        let points: [(Float,Float)] = [(1.12,0.10),(1.6,0.0),(1.95,0.06),(2.15,0.31),(2.4,0.60),(3.12,0.83),(3.36,0.91),(3.70,1.10)]
+        let points: [(Float,Float)] = [(1.12,0.10),(1.6,0.0),(1.95,0.12),(2.15,0.32),(2.4,0.60),(3.12,0.83),(3.36,0.91),(3.70,1.10)]
         var setback=points.last!.1
         for i in 0..<(points.count-1) where h>=points[i].0 && h<=points[i+1].0 {
             let t=(h-points[i].0)/(points[i+1].0-points[i].0)
@@ -81,8 +81,12 @@ private struct EMU700Recipe {
         }
     }
     mutating func shell() {
-        let hs:[Float]=[1.12,1.24,1.6,1.68,1.76,1.8,1.86,1.95,2.02,2.08,2.15,2.4,2.7,3.12,3.25,3.33,3.36,3.56,3.68,3.70]
-        let ws:[Float]=(far && !cab) ? [-1,-0.92,0,0.92,1] : [-1,-0.92,-0.8,-0.62,-0.38,0,0.38,0.62,0.8,0.92,1]
+        let levels:[Float]=[1.12,1.24,1.6,1.68,1.76,1.8,1.86,1.95,2.02,2.08,2.15,2.4,2.7,3.12,3.25,3.33,3.36,3.56,3.68,3.70]
+        let hs = cab ? (levels + [1.83]).sorted() : levels
+        // Both LODs share the real colour-boundary vertices. In particular the
+        // bowl is a curved row in the shell, not cells classified by midpoint.
+        let cabWidths:[Float]=[-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
+        let ws:[Float]=cab ? cabWidths : (far ? [-1,-0.92,0,0.92,1] : [-1,-0.92,-0.8,-0.62,-0.38,0,0.38,0.62,0.8,0.92,1])
         func width(_ h:Float)->Float {
             if h<=3.12 {return h<1.24 ? 1.32+(h-1.12)/0.12*0.1245 : 1.4445}
             if h<3.36 {return 1.4445-(h-3.12)/0.24*0.0445}
@@ -112,11 +116,20 @@ private struct EMU700Recipe {
             if cab {shellFace([b[i],b[j],n[j],n[i]],.init(front-0.1,2.3,0),blue)}
         }
         guard cab else{return}
+        func frontPoint(_ level:Float,_ across:Float)->Map3DPoint {
+            let bowl:Float=1.40+0.40*across*across
+            let h:Float
+            if level<=1.8 { h=1.12+(level-1.12)/(1.8-1.12)*(bowl-1.12) }
+            else if level<1.86 { h=bowl+(level-1.8)/(1.86-1.8)*(1.86-bowl) }
+            else { h=level }
+            let w=across*width(h)
+            return .init(noseX(h,w),h,w)
+        }
         for i in 0..<(hs.count-1) {for j in 0..<(ws.count-1) {
             let h0=hs[i],h1=hs[i+1],w0=ws[j],w1=ws[j+1]
-            let p=[Map3DPoint(noseX(h0,w0*width(h0)),h0,w0*width(h0)),Map3DPoint(noseX(h0,w1*width(h0)),h0,w1*width(h0)),Map3DPoint(noseX(h1,w1*width(h1)),h1,w1*width(h1)),Map3DPoint(noseX(h1,w0*width(h1)),h1,w0*width(h1))]
-            let h=(h0+h1)/2,w=abs((w0+w1)/2),smile:Float=1.80+0.28*w*w
-            let color:UInt32=h<smile ? blue : (h<2.15 && w<0.93 ? orange : (w>0.93 ? blue : silver))
+            let p=[frontPoint(h0,w0),frontPoint(h0,w1),frontPoint(h1,w1),frontPoint(h1,w0)]
+            let h=(h0+h1)/2,w=abs((w0+w1)/2)
+            let color:UInt32=w>0.975 || h<1.8 ? blue : ((h<1.86 || w>0.94) ? orange : silver)
             shellFace(p,.init(front,2.3,0),color)
         }}
     }
@@ -143,7 +156,7 @@ private struct EMU700Recipe {
         kit.box(x,h+0.045,sign*1.467,width-0.11,0.012,height-0.09,glass)
     }
     mutating func frontPanel(_ h:Float,_ w:Float,_ width:Float,_ height:Float,_ color:UInt32) {
-        let columns=max(1,Int(ceilf(width/(far ? 0.32 : 0.16)))),rows=max(1,Int(ceilf(height/(far ? 0.24 : 0.12))))
+        let columns=max(1,Int(ceilf(width/(far ? 1.30 : 0.16)))),rows=max(1,Int(ceilf(height/(far ? 0.24 : 0.12))))
         let offset:Float=color == glass ? 0.026 : 0.010
         let cuts=Array(Set((0...rows).map{h+height*Float($0)/Float(rows)} + [Float(1.12),1.6,1.95,2.15,2.4,3.12,3.36,3.70].filter{$0>h && $0<h+height})).sorted()
         for i in 0..<(cuts.count-1) {for j in 0..<columns {
@@ -258,26 +271,34 @@ private struct EMU700Recipe {
             frontOval(3.34,0,0.82,0.29,dark)
             for z:Float in [-0.21,0.21] {frontOval(3.39,z,0.21,0.19,Map3DTrainStyle.headlamp)}
             frontPanel(3.38,0.98,0.48,0.21,dark)
-            for z:Float in [-0.95,-0.69,0.69,0.95] {
-                frontOval(2.13,z,0.20,0.20,steel)
-                frontOval(2.17,z,0.11,0.11,abs(z)>0.9 ? Map3DColor.rgb(0xA54E56) : Map3DTrainStyle.headlamp)
+            for z:Float in [-0.99,-0.67,0.67,0.99] {
+                frontOval(1.95,z,0.26,0.26,steel)
+                frontOval(2.005,z,0.15,0.15,abs(z)>0.9 ? Map3DColor.rgb(0xA54E56) : Map3DTrainStyle.headlamp)
             }
             if !far {
                 for z:Float in [-0.66,0.66] {kit.beam(.init(noseX(2.4,z)+0.04,2.4,z),.init(noseX(2.59,z-0.30)+0.04,2.59,z-0.30),0.022,dark)}
             }
-            // Photo-fit lower apron (not a published clearance dimension).
-            // Side cheeks conceal the running frame; the central jaw bay is
-            // genuinely open between 0.72m and the shell floor at 1.12m.
+            // Ordinary service has a continuous closed FRP nose cover. The
+            // previous frontal square jaw was unsupported by the normal-state
+            // photographs. Keep a thin cover and a genuine cavity behind it.
+            let apronWidths:[Float]=[-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
+            for i in 0..<(apronWidths.count-1) {
+                func edge(_ share:Float)->[Map3DPoint] {
+                    let upper=share*1.32,lower=share*1.30
+                    return [.init(noseX(1.12,upper),1.12,upper),
+                            .init(noseX(1.12,lower)-0.035,0.68+0.10*(1-share*share),lower)]
+                }
+                let left=edge(apronWidths[i]),right=edge(apronWidths[i+1])
+                let front=[left[0],right[0],right[1],left[1]]
+                prism(front,front.map{$0 + .init(-0.06,0,0)},blue)
+            }
             for side:Float in [-1,1] {
                 func cheek(_ w:Float)->[Map3DPoint] {
-                    [.init(end-0.85,1.12,w),.init(noseX(1.12,w)-0.02,0.62,w),.init(noseX(1.12,w),1.12,w)]
+                    [.init(end-0.85,1.12,w),.init(noseX(1.12,w)-0.035,0.68,w),.init(noseX(1.12,w),1.12,w)]
                 }
-                prism(cheek(side*0.38),cheek(side*1.30),blue)
+                prism(cheek(side*1.21),cheek(side*1.30),blue)
             }
-            kit.box(end-0.27,0.62,0,0.20,0.76,0.10,blue)
-            // Normal closed FRP cover, with the drawgear and open jaw below
-            // its lower edge. The visible cavity is empty space, not a black
-            // panel. The raised-cover maintenance state is not this study.
+            // Drawgear remains behind the thin cover, accessible from below.
             kit.box(end-0.90,0.78,0,1.10,0.18,0.15,dark)
             for h:Float in [0.76,1.00] {kit.box(end-0.36,h,0,0.16,0.48,0.08,dark)}
             for z:Float in [-0.20,0.20] {kit.box(end-0.36,0.84,z,0.16,0.08,0.16,dark)}

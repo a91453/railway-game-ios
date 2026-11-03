@@ -97,8 +97,12 @@ def underfloor(t,role):
 
 def coupler(t):
  end=20.743/2
- ds=hits(t,np.array([end+.1,0,.92]),np.array([-1.,0,0]))
- assert len(ds) and .44<min(ds)<.50,'coupler opening blocked or shank absent'
+ # Ordinary service photographs show a continuous closed FRP front, not
+ # the previous square frontal jaw. Its real cavity is accessed from below.
+ ds=hits(t,np.array([end+.12,0,.92]),np.array([-1.,0,0]))
+ assert len(ds) and .15<min(ds)<.36,'normal nose cover absent'
+ under=hits(t,np.array([end-.36,0,.40]),np.array([0.,0,1.]))
+ assert len(under) and .30<min(under)<.50,'underside coupler cavity blocked'
  return True
 
 def reject(fn):
@@ -120,7 +124,7 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
    lo=t[g].reshape(-1,3).min(axis=0);hi=t[g].reshape(-1,3).max(axis=0)
    if np.max(np.abs((hi-lo)-np.array([.16,.48,.32])))<.001 and abs(lo[2]-.76)<.001:bars.append(g)
   assert len(bars)==1,'coupler upper jaw identity'
-  broken=t.copy();g=bars[0];local=broken[g].copy();local[:,:,2][np.isclose(local[:,:,2],1.0,atol=.0001)]=.85;broken[g]=local
+  broken=t.copy();g=bars[0];local=broken[g].copy();local[:,:,2][np.isclose(local[:,:,2],.76,atol=.0001)]=.55;broken[g]=local
   reject(lambda:coupler(broken))
 
  g=ac[0][0];broken=t.copy();broken[g,:,2]+=.10;reject(lambda:equipment(broken,role))
@@ -149,6 +153,6 @@ for m in json.loads((root/'manifest.json').read_text())['models']:
    except AssertionError:pass
    else:raise AssertionError(('actual glass solid fault escaped',m['id'],distance,'group',len(g),'chosen',len(chosen),'direction',direction.tolist(),'bounds',t[g].reshape(-1,3).min(axis=0).tolist(),t[g].reshape(-1,3).max(axis=0).tolist()))
   tested.append(len(g))
- rows.append({'id':m['id'],'coupler_opening_and_actual_sealed_bar_fault':role=='emc','underfloor_contact_and_three_actual_faults':True,'ac_contact_and_three_actual_faults':True,'ep_missing_and_wrong_station_faults':role=='ep','front_centroid_samples':len(ids),'glass_solids_tested':len(tested),'buried_200mm_rejected':True,'floating_200mm_rejected':True})
+ rows.append({'id':m['id'],'closed_cover_underside_cavity_and_actual_blocked_bar_fault':role=='emc','underfloor_contact_and_three_actual_faults':True,'ac_contact_and_three_actual_faults':True,'ep_missing_and_wrong_station_faults':role=='ep','front_centroid_samples':len(ids),'glass_solids_tested':len(tested),'buried_200mm_rejected':True,'floating_200mm_rejected':True})
 (root/'glass-verification.json').write_text(json.dumps({'status':'VERIFIED','models':rows,'limits':'Centroid rays on outward side and cab/end glass faces, and actual connected glass solid displacement; no exhaustive surface or engineering collision proof.'},indent=2)+'\n')
 print('VERIFIED',len(rows),'units: visible supported glass and connected-solid displacement faults')
