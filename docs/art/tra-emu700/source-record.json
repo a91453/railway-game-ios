@@ -1165,5 +1165,25 @@
     "observations": "Continuous deeper lower orange bowl, grey clearance under the windscreen around four lower lamps, and ordinary closed FRP nose without a frontal square jaw. Raised-cover test photo is not the normal state.",
     "measurement_basis": "Photo-fitted geometry, not official metre dimensions derived from perspective pixels.",
     "licence": "Original photographs observation only; no redistribution in either PR."
+  },
+  "cab_moulded_nose_revision": {
+    "previous_candidate_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+    "acceptance": "UNVERIFIED; author judged flat cover inadequate; user authorized continuation",
+    "observations": [
+      "Blair19 frontal EMC740: lower orange cover is a shaped moulding with a rolled lower edge, not a flat smile colour patch.",
+      "Blair15 opposite oblique: curved cover wraps into blue lower cheeks; normal cover closed.",
+      "Blair18 oblique: orange centre projects below the grey lamp panel and rolls back at its painted lower edge."
+    ],
+    "geometry_fit": "Central orange low1.35m/top1.86m, up to0.105m native +X projection, transverse shoulder roll and0.045m apron wall; fitted observations, not prototype survey dimensions.",
+    "simplifications": [
+      "Moulding access hatch seam and hinges omitted rather than guessed.",
+      "Far lower apron has fewer width segments, orange face is identical near/far."
+    ],
+    "rights": "Same downloaded photos/SHA/date/authors as existing records; local observation only, never redistributed or sent to external generation.",
+    "source_photos": [
+      "DSC07789.JPG",
+      "DSC07787.JPG",
+      "EMU740+DSC05843.JPG"
+    ]
   }
 }

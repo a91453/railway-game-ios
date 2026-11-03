@@ -1,5 +1,5 @@
 {
-  "geometry_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+  "geometry_producer": "cd01a6f906770731874b0b447325052e3afd67f9",
   "local_platform": "Swift6.4 WAE / Linux / Chromium154 SwiftShader / Blender4.3.2",
   "swift_tests": {
     "status": "VERIFIED",
@@ -11,15 +11,15 @@
     "models": [
       {
         "id": "tra-emu700-emc-cab",
-        "balanced_edges": 17677,
+        "balanced_edges": 18300,
         "positive_components": 197,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
       {
         "id": "tra-emu700-emc-cab-far",
-        "balanced_edges": 9479,
-        "positive_components": 135,
+        "balanced_edges": 9724,
+        "positive_components": 136,
         "precision_metres": 1e-05,
         "missing_and_reversed_face_rejected": true
       },
@@ -67,7 +67,7 @@
       },
       {
         "id": "tra-emu700-739-740-formation",
-        "balanced_edges": 88426,
+        "balanced_edges": 89672,
         "positive_components": 1417,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
@@ -75,8 +75,8 @@
       },
       {
         "id": "tra-emu700-739-740-formation-far",
-        "balanced_edges": 44646,
-        "positive_components": 965,
+        "balanced_edges": 45136,
+        "positive_components": 967,
         "precision_metres": 1e-05,
         "assembly_shift_100mm_detected": true,
         "missing_and_reversed_face_rejected": true
@@ -1346,9 +1346,9 @@
     "models": [
       {
         "role": "emc",
-        "near_triangles": 13224,
-        "far_triangles": 6596,
-        "orange_surface_triangles": 432,
+        "near_triangles": 13740,
+        "far_triangles": 6728,
+        "orange_surface_triangles": 592,
         "actual_paint_colour_fault_rejected": true,
         "metre_bounds_equal": true
       },
@@ -1495,89 +1495,131 @@
       {
         "id": "tra-emu700-emc-cab",
         "end": 1,
-        "native_sha256": "41c78ec361840ed89821533c722f6d8def863072274225197bc0755a196dbe46",
-        "orange_low_z_m": 1.399999976158142,
+        "native_sha256": "b1c5de28887a9524075476c697648bb2a09c463146433bc59ffe3d3f32f1ffb9",
+        "orange_low_z_m": 1.350000023841858,
         "orange_high_z_m": 1.8600000143051147,
         "boundary_edges": 16,
         "wide_horizontal_steps": 0,
-        "front_cover_distance_m": 0.2905887045612693,
+        "front_cover_distance_m": 0.3850001136859194,
         "under_cavity_entry_distance_m": 0.3599999904632568,
+        "front_drawgear_occlusion_rays": 9,
+        "central_cover_projection_from_chord_m": 0.08850740117106604,
+        "lower_apron_roll_back_m": 0.07375013183182766,
+        "coverage": "Three centreline orange rays and two blue apron rays; oblique/shoulder shape separately inspected.",
+        "actual_drawgear_protrusion_rejected": true,
+        "actual_orange_cover_flattened_in_depth_rejected": true,
+        "actual_blue_apron_flattened_in_depth_rejected": true,
         "actual_flattened_paint_vertices_rejected": true,
         "actual_front_hood_triangles_removed_rejected": true
       },
       {
         "id": "tra-emu700-emc-cab-far",
         "end": 1,
-        "native_sha256": "721589e3325d9e9a50b7c857da1bd65089cb03c665f9a4e334ef4425491da32a",
-        "orange_low_z_m": 1.399999976158142,
+        "native_sha256": "1bbe8fdf34ae199457cbe764269661d8dfa6bceb0571c43f40210d16792dd851",
+        "orange_low_z_m": 1.350000023841858,
         "orange_high_z_m": 1.8600000143051147,
         "boundary_edges": 16,
         "wide_horizontal_steps": 0,
-        "front_cover_distance_m": 0.2905887045612693,
+        "front_cover_distance_m": 0.3850001136859194,
         "under_cavity_entry_distance_m": 0.3599999904632568,
+        "front_drawgear_occlusion_rays": 9,
+        "central_cover_projection_from_chord_m": 0.08850740117106604,
+        "lower_apron_roll_back_m": 0.07375013183182766,
+        "coverage": "Three centreline orange rays and two blue apron rays; oblique/shoulder shape separately inspected.",
+        "actual_drawgear_protrusion_rejected": true,
+        "actual_orange_cover_flattened_in_depth_rejected": true,
+        "actual_blue_apron_flattened_in_depth_rejected": true,
         "actual_flattened_paint_vertices_rejected": true,
         "actual_front_hood_triangles_removed_rejected": true
       },
       {
         "id": "tra-emu700-739-740-formation",
         "end": 1,
-        "native_sha256": "e12ecf07a4b82c4453ee2b450ddba434ba245d39a0690dc8edf20a9a598feb1d",
-        "orange_low_z_m": 1.399999976158142,
+        "native_sha256": "517c987b9eb6c2e7129fce77da75e1eb795acb942c8ca54f5cb6efc99900dc25",
+        "orange_low_z_m": 1.350000023841858,
         "orange_high_z_m": 1.8600000143051147,
         "boundary_edges": 16,
         "wide_horizontal_steps": 0,
-        "front_cover_distance_m": 0.29058968785536454,
+        "front_cover_distance_m": 0.38499910236739576,
         "under_cavity_entry_distance_m": 0.3599999904632568,
+        "front_drawgear_occlusion_rays": 9,
+        "central_cover_projection_from_chord_m": 0.0885038500961084,
+        "lower_apron_roll_back_m": 0.07374700589905814,
+        "coverage": "Three centreline orange rays and two blue apron rays; oblique/shoulder shape separately inspected.",
+        "actual_drawgear_protrusion_rejected": true,
+        "actual_orange_cover_flattened_in_depth_rejected": true,
+        "actual_blue_apron_flattened_in_depth_rejected": true,
         "actual_flattened_paint_vertices_rejected": true,
         "actual_front_hood_triangles_removed_rejected": true
       },
       {
         "id": "tra-emu700-739-740-formation",
         "end": -1,
-        "native_sha256": "e12ecf07a4b82c4453ee2b450ddba434ba245d39a0690dc8edf20a9a598feb1d",
-        "orange_low_z_m": 1.399999976158142,
+        "native_sha256": "517c987b9eb6c2e7129fce77da75e1eb795acb942c8ca54f5cb6efc99900dc25",
+        "orange_low_z_m": 1.350000023841858,
         "orange_high_z_m": 1.8600000143051147,
         "boundary_edges": 16,
         "wide_horizontal_steps": 0,
-        "front_cover_distance_m": 0.29058968785536454,
+        "front_cover_distance_m": 0.38499910236739576,
         "under_cavity_entry_distance_m": 0.3599999904632568,
+        "front_drawgear_occlusion_rays": 9,
+        "central_cover_projection_from_chord_m": 0.0885038500961084,
+        "lower_apron_roll_back_m": 0.07374700589905814,
+        "coverage": "Three centreline orange rays and two blue apron rays; oblique/shoulder shape separately inspected.",
+        "actual_drawgear_protrusion_rejected": true,
+        "actual_orange_cover_flattened_in_depth_rejected": true,
+        "actual_blue_apron_flattened_in_depth_rejected": true,
         "actual_flattened_paint_vertices_rejected": true,
         "actual_front_hood_triangles_removed_rejected": true
       },
       {
         "id": "tra-emu700-739-740-formation-far",
         "end": 1,
-        "native_sha256": "5ef432d4651dbf93db9aadad02ea991478fefed071c34af382f85561d61faa8d",
-        "orange_low_z_m": 1.399999976158142,
+        "native_sha256": "12acc988374ab3ec22998d2b897e6a3788769580a5978cee7c33de1a6c745e27",
+        "orange_low_z_m": 1.350000023841858,
         "orange_high_z_m": 1.8600000143051147,
         "boundary_edges": 16,
         "wide_horizontal_steps": 0,
-        "front_cover_distance_m": 0.29058968785536454,
+        "front_cover_distance_m": 0.3849991023673958,
         "under_cavity_entry_distance_m": 0.3599999904632568,
+        "front_drawgear_occlusion_rays": 9,
+        "central_cover_projection_from_chord_m": 0.0885038500961084,
+        "lower_apron_roll_back_m": 0.07374700589905814,
+        "coverage": "Three centreline orange rays and two blue apron rays; oblique/shoulder shape separately inspected.",
+        "actual_drawgear_protrusion_rejected": true,
+        "actual_orange_cover_flattened_in_depth_rejected": true,
+        "actual_blue_apron_flattened_in_depth_rejected": true,
         "actual_flattened_paint_vertices_rejected": true,
         "actual_front_hood_triangles_removed_rejected": true
       },
       {
         "id": "tra-emu700-739-740-formation-far",
         "end": -1,
-        "native_sha256": "5ef432d4651dbf93db9aadad02ea991478fefed071c34af382f85561d61faa8d",
-        "orange_low_z_m": 1.399999976158142,
+        "native_sha256": "12acc988374ab3ec22998d2b897e6a3788769580a5978cee7c33de1a6c745e27",
+        "orange_low_z_m": 1.350000023841858,
         "orange_high_z_m": 1.8600000143051147,
         "boundary_edges": 16,
         "wide_horizontal_steps": 0,
-        "front_cover_distance_m": 0.29058968785536454,
+        "front_cover_distance_m": 0.3849991023673958,
         "under_cavity_entry_distance_m": 0.3599999904632568,
+        "front_drawgear_occlusion_rays": 9,
+        "central_cover_projection_from_chord_m": 0.0885038500961084,
+        "lower_apron_roll_back_m": 0.07374700589905814,
+        "coverage": "Three centreline orange rays and two blue apron rays; oblique/shoulder shape separately inspected.",
+        "actual_drawgear_protrusion_rejected": true,
+        "actual_orange_cover_flattened_in_depth_rejected": true,
+        "actual_blue_apron_flattened_in_depth_rejected": true,
         "actual_flattened_paint_vertices_rejected": true,
         "actual_front_hood_triangles_removed_rejected": true
       }
     ],
-    "limits": "Specified native paint boundary and two fixed static rays; photo-fitted thresholds, no complete visual acceptance, surface coverage or collision certification."
+    "limits": "Specified native paint boundary, cover/cavity rays and five mould-profile rays; photo-fitted thresholds, no complete visual acceptance, surface coverage or collision certification."
   },
   "swift_assembly": {
     "arithmetic": "Float32 multiplication then Float32 addition; native Z-up, yaw 0/180 degrees only; no scale.",
     "assemblies": [
       {
-        "all_vertex_fields_fnv64": "f066ac042997e635",
+        "all_vertex_fields_fnv64": "65c09f8fef8eee9d",
         "assembly_payload": "models/tra-emu700-739-740-formation.triangles.bin",
         "configured_placements_equal": true,
         "embedded_unit_bytes_equal": true,
@@ -1585,28 +1627,28 @@
           {
             "configuration_rejected": true,
             "fault": "wrong_order",
-            "mutated_payload_bytes": 3256864,
+            "mutated_payload_bytes": 3310528,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
           {
             "configuration_rejected": true,
             "fault": "wrong_direction",
-            "mutated_payload_bytes": 3256864,
+            "mutated_payload_bytes": 3310528,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
           {
             "configuration_rejected": true,
             "fault": "double_reversal",
-            "mutated_payload_bytes": 3256864,
+            "mutated_payload_bytes": 3310528,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
           {
             "configuration_rejected": true,
             "fault": "wrong_translation",
-            "mutated_payload_bytes": 3256864,
+            "mutated_payload_bytes": 3310528,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
@@ -1619,22 +1661,22 @@
         ],
         "id": "tra-emu700-739-740-formation",
         "maximum": [
-          81.58271,
+          81.608246,
           1.473,
           4.9775
         ],
         "minimum": [
-          -81.58271,
+          -81.608246,
           -1.473,
           0
         ],
         "native": "models/tra-emu700-739-740-formation.m3dscene.json",
-        "native_sha256": "e12ecf07a4b82c4453ee2b450ddba434ba245d39a0690dc8edf20a9a598feb1d",
+        "native_sha256": "517c987b9eb6c2e7129fce77da75e1eb795acb942c8ca54f5cb6efc99900dc25",
         "payload_bytes_equal": true,
-        "payload_sha256": "cd73fc5a2325cdd8b374f088efa4a5fdc809df5bcaae452ae0b4b31522c76136",
+        "payload_sha256": "96fd96899cd2fdb8b8040cfb14efdcf662a3c2ed8ea8b18b4243a4ee202d4785",
         "placements": 8,
         "state": "VERIFIED",
-        "triangles": 62632,
+        "triangles": 63664,
         "units": [
           {
             "bytes": 312056,
@@ -1643,10 +1685,10 @@
             "sha256": "ba382acdbb3fde2345ad82b12262f7151e0371740ba641a3fce5fe761d7fa072"
           },
           {
-            "bytes": 687708,
+            "bytes": 714540,
             "id": "tra-emu700-emc-cab",
             "native": "models/tra-emu700-emc-cab.m3dmodel",
-            "sha256": "41c78ec361840ed89821533c722f6d8def863072274225197bc0755a196dbe46"
+            "sha256": "b1c5de28887a9524075476c697648bb2a09c463146433bc59ffe3d3f32f1ffb9"
           },
           {
             "bytes": 317464,
@@ -1661,10 +1703,10 @@
             "sha256": "a3a5586d38600cdf9aadd556fb7a11473b70922dcb8c300a12dd71ef21a8c3b4"
           }
         ],
-        "vertices": 187896
+        "vertices": 190992
       },
       {
-        "all_vertex_fields_fnv64": "be4aa443125f2959",
+        "all_vertex_fields_fnv64": "95f9874ba0c14601",
         "assembly_payload": "models/tra-emu700-739-740-formation-far.triangles.bin",
         "configured_placements_equal": true,
         "embedded_unit_bytes_equal": true,
@@ -1672,28 +1714,28 @@
           {
             "configuration_rejected": true,
             "fault": "wrong_order",
-            "mutated_payload_bytes": 1618240,
+            "mutated_payload_bytes": 1631968,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
           {
             "configuration_rejected": true,
             "fault": "wrong_direction",
-            "mutated_payload_bytes": 1618240,
+            "mutated_payload_bytes": 1631968,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
           {
             "configuration_rejected": true,
             "fault": "double_reversal",
-            "mutated_payload_bytes": 1618240,
+            "mutated_payload_bytes": 1631968,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
           {
             "configuration_rejected": true,
             "fault": "wrong_translation",
-            "mutated_payload_bytes": 1618240,
+            "mutated_payload_bytes": 1631968,
             "payload_rejected": true,
             "state": "VERIFIED"
           },
@@ -1706,22 +1748,22 @@
         ],
         "id": "tra-emu700-739-740-formation-far",
         "maximum": [
-          81.58271,
+          81.608246,
           1.473,
           4.9775
         ],
         "minimum": [
-          -81.58271,
+          -81.608246,
           -1.473,
           0
         ],
         "native": "models/tra-emu700-739-740-formation-far.m3dscene.json",
-        "native_sha256": "5ef432d4651dbf93db9aadad02ea991478fefed071c34af382f85561d61faa8d",
+        "native_sha256": "12acc988374ab3ec22998d2b897e6a3788769580a5978cee7c33de1a6c745e27",
         "payload_bytes_equal": true,
-        "payload_sha256": "22f9cc51f813e4dce6da3aab4836e9ac08f60633d956990880f2d4f596c8f448",
+        "payload_sha256": "d5fadf0a24da34217dfbf0c05b1b08f1261152720d60f42b060ecae4af4ffcfe",
         "placements": 8,
         "state": "VERIFIED",
-        "triangles": 31120,
+        "triangles": 31384,
         "units": [
           {
             "bytes": 153980,
@@ -1730,10 +1772,10 @@
             "sha256": "717a06b1abd70c84f0a1a5f08563c6634dba760aca1e1edbf63593e3eac75931"
           },
           {
-            "bytes": 343056,
+            "bytes": 349920,
             "id": "tra-emu700-emc-cab-far",
             "native": "models/tra-emu700-emc-cab-far.m3dmodel",
-            "sha256": "721589e3325d9e9a50b7c857da1bd65089cb03c665f9a4e334ef4425491da32a"
+            "sha256": "1bbe8fdf34ae199457cbe764269661d8dfa6bceb0571c43f40210d16792dd851"
           },
           {
             "bytes": 158140,
@@ -1748,7 +1790,7 @@
             "sha256": "94dc7e33a519dc67a7181a2154934f50b193c5482aae1285a091b1a1423e5a38"
           }
         ],
-        "vertices": 93360
+        "vertices": 94152
       }
     ],
     "configuration_sha256": "620808339a6732e086a2f92eb4692c9c04c45df5e7e2da4a3d15227ee8cc27e1",
@@ -1761,7 +1803,7 @@
     ],
     "implementation": "Independent Foundation-only Swift; no JS or GamePresentation imports.",
     "limits": "Static configuration/native/payload verification only; does not establish real-world formation evidence, coupler compatibility, runtime selection or device validation.",
-    "manifest_sha256": "b061bc02d43bbcc7f7739375eaf53f5aee1cea64d0b085305b635cee936a9099",
+    "manifest_sha256": "32d90f3fa03cf22fab142fab1332f386f9d26ad6c9447b7fd4fd57c02f3a9932",
     "state": "VERIFIED",
     "stored_fields": "Every triangle flag and every corner Float32 XYZ / UInt32 RGBA compared byte-for-byte; derived Float32 normals and native material flags included in all-vertex FNV64."
   },
@@ -1771,14 +1813,14 @@
     "models": [
       {
         "id": "tra-emu700-emc-cab",
-        "triangles": 13224,
+        "triangles": 13740,
         "minimum": [
           -10.371500015258789,
           -1.4730000495910645,
           0.0
         ],
         "maximum": [
-          10.311213493347168,
+          10.336749076843262,
           1.4730000495910645,
           3.950000047683716
         ],
@@ -1786,14 +1828,14 @@
       },
       {
         "id": "tra-emu700-emc-cab-far",
-        "triangles": 6596,
+        "triangles": 6728,
         "minimum": [
           -10.371500015258789,
           -1.4730000495910645,
           0.0
         ],
         "maximum": [
-          10.311213493347168,
+          10.336749076843262,
           1.4730000495910645,
           3.950000047683716
         ],
@@ -1891,14 +1933,14 @@
       },
       {
         "id": "tra-emu700-739-740-formation",
-        "triangles": 62632,
+        "triangles": 63664,
         "minimum": [
-          -81.58271026611328,
+          -81.60824584960938,
           -1.4730000495910645,
           0.0
         ],
         "maximum": [
-          81.58271026611328,
+          81.60824584960938,
           1.4730000495910645,
           4.977499961853027
         ],
@@ -1906,14 +1948,14 @@
       },
       {
         "id": "tra-emu700-739-740-formation-far",
-        "triangles": 31120,
+        "triangles": 31384,
         "minimum": [
-          -81.58271026611328,
+          -81.60824584960938,
           -1.4730000495910645,
           0.0
         ],
         "maximum": [
-          81.58271026611328,
+          81.60824584960938,
           1.4730000495910645,
           4.977499961853027
         ],
@@ -2052,7 +2094,7 @@
   },
   "limits": [
     "Photo-fitted mouth dimensions, not engineering or user-acceptance certification.",
-    "Glass samples outward optical triangle centroids; mouth uses its paint boundary and two fixed rays.",
+    "Glass samples outward optical triangle centroids; nose audit covers paint boundary, two cover/cavity rays, five profile rays and nine drawgear-occlusion rays per cab end.",
     "Equipment covers modeled primary housings; no exact BOM or exhaustive intersections.",
     "Static tyres and rail plane, no wheel profile/wear/dynamic certification.",
     "file:// blocked by managed browser policy; HTTP does not replace it.",
@@ -2060,7 +2102,7 @@
   ],
   "png_full_decode": {
     "whole_model_and_curated": 292,
-    "cab_detail_crops": 24,
+    "cab_detail_crops": 48,
     "selected_private": 11,
     "selected_public": 1,
     "status": "VERIFIED",

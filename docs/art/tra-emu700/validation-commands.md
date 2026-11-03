@@ -35,10 +35,10 @@ node tools/train-models/check.mjs /absolute/unmodified-main-full-inventory --loc
 node tools/train-models/check.mjs /absolute/final-full-inventory --lock /absolute/final-documentation-checkout/tools/train-models/hashes.lock.json
 ```
 
-鎖值驗證使用最終文件checkout的鎖檔；幾何producer53f264bc的原生生成不讀取此檔，不將文件head冒充幾何producer。
+鎖值驗證使用最終文件checkout的鎖檔；幾何producer cd01a6f9的原生生成不讀取此檔，不將文件head冒充幾何producer。
 
 此輪兩者均有相同33項既有鎖值不符，未改他車鎖、未加入allow、未放寬gate。全部942個既有runtime模型的實際bytes與十欄FNV另比對相同，本型8件鎖值與幾何預算通過。全量gate不能寫成全綠；具體結果見verification.json。
 
 asset_guard於兩庫真正staged tree提交前，以及commit後HEAD分別執行；PNG另完整解碼並檢查RGBA、非空、透明、四邊留白及2MiB。每輪私庫11張、公開1張。
 
-嘴形舊稿553原生在mouth.mjs以「thin or raised moustache」拒收；新候選覆蓋兩個EMC單元與兩列八車的兩端，共6個真實車端。檢查曲線色界與正常閉罩、下方空腔兩條固定射線；壓扁實際橘色頂點與移除真鼻罩三角形的反例須拒收。美觀仍須使用者看圖，不能由此自動接受。
+嘴形舊稿553的階梯細帶原生已拒收；上一輪53候選以「flat colour patch without the observed projecting fold」在新深度檢查拒收；新候選覆蓋兩個EMC單元與兩列八車的兩端，共6個真實車端。檢查曲線色界、正常閉罩與下方空腔兩條射線、五條深度剖面及九條引桿遮蔽射線；壓平實際橘色／藍色頂點深度、前移引桿、壓扁橘色高度與移除真鼻罩三角形的反例須拒收。美觀仍須使用者看圖，不能由此自動接受。

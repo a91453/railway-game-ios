@@ -5666,20 +5666,20 @@
     "tra-emu700-et-far"
   ],
   "limits": "FNV over x/y/z/nx/ny/nz/color/u/v/layer plus native bytes; no device memory certification",
-  "baseline_commit": "82e5e894f22ae8a3d0022a8ad38d617fc93be5a1",
-  "candidate_geometry_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+  "baseline_commit": "efb9652902d513b9c5d10a77083c12c38f1befd6",
+  "candidate_geometry_producer": "cd01a6f906770731874b0b447325052e3afd67f9",
   "baseline_standard": 728,
   "baseline_studies": 214,
   "candidate_standard": 728,
   "candidate_studies": 222,
   "standard_vertex_bytes_delta": 0,
-  "new_study_vertex_bytes": 5625120,
+  "new_study_vertex_bytes": 5702880,
   "existing_order_and_indices_preserved": true,
   "unlocked_existing_ids": [
     "scenery-busStopPole",
     "scenery-postBoxes"
   ],
-  "unchanged_six_emu700_units_from_553": [
+  "unchanged_six_emu700_units_from_53": [
     {
       "id": "tra-emu700-ep",
       "native_sha256": "5af227b91ad5910434de9c98ce05bf8f8f6f681956bffd433c6118927b7fc2ab",
@@ -5711,5 +5711,31 @@
       "all_vertex_fields_fnv": "1bd0373fc6b71b"
     }
   ],
-  "upstream_changes": "Main tourism EMU500 roof/livery/operating work is preserved in separate merge981f6723; those changes are not attributed to this cab revision."
+  "upstream_changes": "Main efb96529 is kept in separate merge9f174abd; its delta from82 is release-note markdown only. Previous tourism EMU500 integration remains preserved, not attributed to this nose revision.",
+  "six_middle_role_full_view_sheet_bytes_equal_to_53": [
+    {
+      "id": "tra-emu700-ep",
+      "sheet_sha256": "75051fecb978c1f5ee826aed21a83de45a423577dbc046cc474b6029cf3922e7"
+    },
+    {
+      "id": "tra-emu700-ep-far",
+      "sheet_sha256": "1fd15fb2041a7e7df174a1086aef6efed85026a93a40968721c2914dfd42ee13"
+    },
+    {
+      "id": "tra-emu700-et",
+      "sheet_sha256": "70dbcf1de40571b7e998a1ae7fb5e70eb53dcd9f10ded2489b9c42895cb7910b"
+    },
+    {
+      "id": "tra-emu700-et-far",
+      "sheet_sha256": "08b52141fce90415d29c3b0b13225cae986e7386eb364b091a1665b8e8a05d99"
+    },
+    {
+      "id": "tra-emu700-em",
+      "sheet_sha256": "70dd3328070f293ac4d6797d74179a208ffce5ea09a77b78dcbe4dc056d993f8"
+    },
+    {
+      "id": "tra-emu700-em-far",
+      "sheet_sha256": "0bf3de9e2ee85b84fa4cbee1877a45063f7b41df374552f1022b87bc34f354eb"
+    }
+  ]
 }

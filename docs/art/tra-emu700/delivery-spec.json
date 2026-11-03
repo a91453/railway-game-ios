@@ -1,8 +1,8 @@
 {
   "repo": "../emu700-mouth-producer",
-  "producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
-  "previous_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
-  "rebuild": "In explicit553b3a22 and53f264bc checkouts follow public docs/art/tra-emu700/README.md; build before EMC native, then build.sh OUT, render.mjs OUT, render-mouth.mjs OUT BEFORE_RUN, sheets.py OUT.",
+  "producer": "cd01a6f906770731874b0b447325052e3afd67f9",
+  "previous_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+  "rebuild": "In explicit53f264bc andcd01a6f9 checkouts follow public docs/art/tra-emu700/README.md. Export before EMC-cab native, then candidate build.sh OUT, render.mjs OUT, render-mouth.mjs OUT BEFORE_RUN and sheets.py OUT.",
   "sources": "source-record.json",
   "status": "status.json",
   "license_files": [],

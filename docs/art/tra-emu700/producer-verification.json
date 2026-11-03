@@ -1,5 +1,5 @@
 {
-  "geometry_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+  "geometry_producer": "cd01a6f906770731874b0b447325052e3afd67f9",
   "independent_checkout": "Actual cwd and source HEAD asserted before independent build/render/Swift/Blender/native faults; separate public checkout output byte comparison.",
   "native_glb_assembly_files": 22,
   "selected_png_files": 12,
@@ -7,23 +7,23 @@
   "files": [
     {
       "file": "models/tra-emu700-emc-cab.m3dmodel",
-      "sha256": "41c78ec361840ed89821533c722f6d8def863072274225197bc0755a196dbe46",
-      "bytes": 687708
+      "sha256": "b1c5de28887a9524075476c697648bb2a09c463146433bc59ffe3d3f32f1ffb9",
+      "bytes": 714540
     },
     {
       "file": "models/tra-emu700-emc-cab.glb",
-      "sha256": "4768a0f51324f94fc7565b0b8db3f05cbb1d90b08b58529491b4a44f8328ca25",
-      "bytes": 1270716
+      "sha256": "495812a1657dccff29f368f3e72c3eed30a574dcf43e038ea619d3f562692dc3",
+      "bytes": 1320252
     },
     {
       "file": "models/tra-emu700-emc-cab-far.m3dmodel",
-      "sha256": "721589e3325d9e9a50b7c857da1bd65089cb03c665f9a4e334ef4425491da32a",
-      "bytes": 343056
+      "sha256": "1bbe8fdf34ae199457cbe764269661d8dfa6bceb0571c43f40210d16792dd851",
+      "bytes": 349920
     },
     {
       "file": "models/tra-emu700-emc-cab-far.glb",
-      "sha256": "68795420648d6a39e17957811588fede2062f81320b787a91796fb2d9531a737",
-      "bytes": 634428
+      "sha256": "14d71cb92f506927e86f6b8898fdf7b8e1c8ed1c0e309bca2fa1f916376c9cf2",
+      "bytes": 647100
     },
     {
       "file": "models/tra-emu700-ep.m3dmodel",
@@ -87,43 +87,43 @@
     },
     {
       "file": "models/tra-emu700-739-740-formation.m3dscene.json",
-      "sha256": "e12ecf07a4b82c4453ee2b450ddba434ba245d39a0690dc8edf20a9a598feb1d",
-      "bytes": 2172888
+      "sha256": "517c987b9eb6c2e7129fce77da75e1eb795acb942c8ca54f5cb6efc99900dc25",
+      "bytes": 2208664
     },
     {
       "file": "models/tra-emu700-739-740-formation.glb",
-      "sha256": "8182a2f590052c57c78ae06b88681973f9b96b8f81498373bdfdd1ac1544af0f",
-      "bytes": 6013848
+      "sha256": "cb08f3b63f7a709cbda700ce6b2f63a84b895eeed980d3de23f9ecdd8d166b7a",
+      "bytes": 6112920
     },
     {
       "file": "models/tra-emu700-739-740-formation.triangles.bin",
-      "sha256": "cd73fc5a2325cdd8b374f088efa4a5fdc809df5bcaae452ae0b4b31522c76136",
-      "bytes": 3256864
+      "sha256": "96fd96899cd2fdb8b8040cfb14efdcf662a3c2ed8ea8b18b4243a4ee202d4785",
+      "bytes": 3310528
     },
     {
       "file": "models/tra-emu700-739-740-formation-far.m3dscene.json",
-      "sha256": "5ef432d4651dbf93db9aadad02ea991478fefed071c34af382f85561d61faa8d",
-      "bytes": 1080540
+      "sha256": "12acc988374ab3ec22998d2b897e6a3788769580a5978cee7c33de1a6c745e27",
+      "bytes": 1089692
     },
     {
       "file": "models/tra-emu700-739-740-formation-far.glb",
-      "sha256": "edbc44f84fb0c4b53e1e56a9ce8fb156ce9d8f395e0d54efe9ee55b49bf55b44",
-      "bytes": 2988692
+      "sha256": "2fa1873d6fccc5dd3086813698cfc1340f07b26845f499a77fd6eb79dbba0189",
+      "bytes": 3014036
     },
     {
       "file": "models/tra-emu700-739-740-formation-far.triangles.bin",
-      "sha256": "22f9cc51f813e4dce6da3aab4836e9ac08f60633d956990880f2d4f596c8f448",
-      "bytes": 1618240
+      "sha256": "d5fadf0a24da34217dfbf0c05b1b08f1261152720d60f42b060ecae4af4ffcfe",
+      "bytes": 1631968
     },
     {
       "file": "sheets/tra-emu700-739-740-formation-far.png",
-      "sha256": "e0c89a967b95ddd8c61bc8b69e33c30e2c80da110dfb132921848dd052c46bfd",
-      "bytes": 120729
+      "sha256": "01988922e59545907c3279ec5165deb4c614518dd225f6636ea070c0a026cafc",
+      "bytes": 124017
     },
     {
       "file": "sheets/tra-emu700-739-740-formation.png",
-      "sha256": "d67fe123b8b26231462c2e55f829e6206dba7b5c3795d062b03a5711ca933a58",
-      "bytes": 124835
+      "sha256": "2e49f46725645bffb6fb1fb8c2e544f7089df2823febdf8d65c054fa17fb735a",
+      "bytes": 126551
     },
     {
       "file": "sheets/tra-emu700-em-far.png",
@@ -137,13 +137,13 @@
     },
     {
       "file": "sheets/tra-emu700-emc-cab-far.png",
-      "sha256": "81b6a753e1d0d46a0156a5a0536ecc442007bc80df308421c343e3dc5dacd024",
-      "bytes": 129411
+      "sha256": "153c2700521a0f083b32a29360825a7820915b8aadd7f352e5c1d7782bee81fe",
+      "bytes": 131216
     },
     {
       "file": "sheets/tra-emu700-emc-cab.png",
-      "sha256": "46418f23ba37dff004ebaed6eaae0851db7bf5f2cbd4346ff2032e610f9e2575",
-      "bytes": 140938
+      "sha256": "9145f32a424f57a9d3f253c8839d15ac7d11bdd59da4a3a82de34eff34d7e09f",
+      "bytes": 142049
     },
     {
       "file": "sheets/tra-emu700-ep-far.png",
@@ -167,35 +167,35 @@
     },
     {
       "file": "sheets/tra-emu700-mouth-before-after.png",
-      "sha256": "617956d8dd15ef6cfc49b52ba0d2327e5df44790c132524ed647427d9755f40e",
-      "bytes": 374351
+      "sha256": "077fa82f79f1041390ed6473214e40bb4116b77c74239f16e98afec843fe739a",
+      "bytes": 370840
     },
     {
       "file": "overview.png",
-      "sha256": "8b0f3d69f7a5ffff685753eacfa07ae3bc72578fd93a60cf221934726d7d2b18",
-      "bytes": 363439
+      "sha256": "2f76f2fe141f5945b787c39954918cc0819c5857057aa4aedbe85007b211cdf8",
+      "bytes": 351795
     },
     {
       "file": "mouth-comparison.json",
-      "sha256": "69d51485230d980699d17bb7457486c66fbce98ac9c9e83813eab38cee07e6da",
-      "bytes": 2587
+      "sha256": "1db02e1045b36a1fc548c003c98c30f74750dd673029b775052fbcaf5f409166",
+      "bytes": 2658
     }
   ],
   "viewer_bytes_equal": true,
-  "viewer_sha256": "a7541efd93f40e9d6d05babad73a19b8e65d7fbabfea6a66175d4facfcabbe9b",
+  "viewer_sha256": "9b6995c7b074882a875426775a481e89c3e5bc3c4a5a1b5fb21627713368cff4",
   "viewer_input_sha256": [
     {
       "file": "manifest.json",
-      "sha256": "ab5e3ab62706fb1ec390974a366176dc8c45089b004292c27c8d681c4baba8b7"
+      "sha256": "6d77d6732c719e45f3276e10f0068e2b65569c740386a24ff347ea7f6b707b87"
     },
     {
       "file": "status.json",
-      "sha256": "f08219e85e6f4341e667affc55384abfe216eeee594829d8f9850969e71c53c5"
+      "sha256": "07209577f46de50aa40d89ccaf245e5542391903442477177275031ebfe50189"
     }
   ],
   "before_actual_native_and_camera": {
-    "before_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
-    "before_acceptance": "USER REJECTED: cab mouth",
+    "before_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+    "before_acceptance": "UNVERIFIED; author withdrew completion assessment; user requested further nose revision",
     "camera": {
       "centre": [
         9.7,
@@ -306,23 +306,23 @@
     "inputs": [
       {
         "tag": "before",
-        "id": "tra-emu700-emc",
-        "native_sha256": "027b3f497b718c5fdb0be41088fcd59ed1e41eacadf3381b20ac62030110277d"
-      },
-      {
-        "tag": "before",
-        "id": "tra-emu700-emc-far",
-        "native_sha256": "0aa735f163a56b2f4ad068c4ef373991498739e4e30298669d421f466c67fca4"
-      },
-      {
-        "tag": "after",
         "id": "tra-emu700-emc-cab",
         "native_sha256": "41c78ec361840ed89821533c722f6d8def863072274225197bc0755a196dbe46"
       },
       {
-        "tag": "after",
+        "tag": "before",
         "id": "tra-emu700-emc-cab-far",
         "native_sha256": "721589e3325d9e9a50b7c857da1bd65089cb03c665f9a4e334ef4425491da32a"
+      },
+      {
+        "tag": "after",
+        "id": "tra-emu700-emc-cab",
+        "native_sha256": "b1c5de28887a9524075476c697648bb2a09c463146433bc59ffe3d3f32f1ffb9"
+      },
+      {
+        "tag": "after",
+        "id": "tra-emu700-emc-cab-far",
+        "native_sha256": "1bbe8fdf34ae199457cbe764269661d8dfa6bceb0571c43f40210d16792dd851"
       }
     ]
   },
@@ -1534,7 +1534,7 @@
     },
     {
       "file": "Sources/GamePresentation/Map3DEMU700.swift",
-      "sha256": "4435044a1c513df8c1b4fd1540357e0a6cb7e523974517eb23835698ed5e0ed8"
+      "sha256": "90b38b9c689fbefd6abc2ed43e91d68396ea5dbc717d59b0b13a93be53d51ec6"
     },
     {
       "file": "Sources/GamePresentation/Map3DEMU800.swift",
@@ -2930,7 +2930,7 @@
     },
     {
       "file": "tools/tra-emu700/README.md",
-      "sha256": "aac6893ac022c5a12dfe1158bc7618776dc7bc6e88d9bf859be1954ee8f8b9be"
+      "sha256": "ff60b450135c1a0485780bdfd5836c9341ab695ae224fd14d6eaede1a530f012"
     },
     {
       "file": "tools/tra-emu700/assembly.json",
@@ -2950,7 +2950,7 @@
     },
     {
       "file": "tools/tra-emu700/glass.py",
-      "sha256": "5bfb73ae9c4d9e825e91b37511a7021cf8e64dacc1fff3a88c2ae2a666106ee0"
+      "sha256": "8e78c74f59cc259a0fc86b49d2f58d537b47445ee0453e2137a7bdf5427b7972"
     },
     {
       "file": "tools/tra-emu700/inventory.sh",
@@ -2962,7 +2962,7 @@
     },
     {
       "file": "tools/tra-emu700/mouth.mjs",
-      "sha256": "ce54ca947fdbf9cb4f6900a63835fcb0a89512ca4aa7bf406524b87139c6ee10"
+      "sha256": "81bc7ef9d8b56acaa8cb54ee9664b18e48035e06608c6a80c604ede566f63893"
     },
     {
       "file": "tools/tra-emu700/protect.py",
@@ -2970,7 +2970,7 @@
     },
     {
       "file": "tools/tra-emu700/render-mouth.mjs",
-      "sha256": "4848c67e4f5a2d54032bf0070bfa3fccc9342e61ba0f651ad4a0ebaf7bc2d2bc"
+      "sha256": "48aca762b323c496828d680bf675cf8dceb9ee694f6ec0ad1b8de789e992f6ba"
     },
     {
       "file": "tools/tra-emu700/render.mjs",
@@ -2978,7 +2978,7 @@
     },
     {
       "file": "tools/tra-emu700/sheets.py",
-      "sha256": "1bf6449c2c85515f5be5affd3c0e63602b705754defbe48105f72bb81c774cc0"
+      "sha256": "b750d526d2bc7039c9ee6f60e265dba258d892e22d065daf58d41c3ed8c9daf7"
     },
     {
       "file": "tools/tra-emu700/wheels.mjs",
@@ -3022,7 +3022,7 @@
     },
     {
       "file": "tools/train-models/hashes.lock.json",
-      "sha256": "82125ea85f0cb42476a153be684ea25ebf79354228bafc07d4990cf48b13c19e"
+      "sha256": "4cdd881a3bd927e1d1252c9284d8f857809c36c0518fdb1ad8f7e193551512c0"
     },
     {
       "file": "tools/train-models/inspect.mjs",
@@ -3072,25 +3072,25 @@
   "metadata_inputs": [
     {
       "file": "source-record.json",
-      "sha256": "4ac231932cd1de0a4ec675059d33df7000dc7d160f72d355c848a6ed41f8ca75"
+      "sha256": "ebba96121572f6b259f8227912bde9332ede8005fec4a81071e3b176c88bff2b"
     },
     {
       "file": "status.json",
-      "sha256": "f08219e85e6f4341e667affc55384abfe216eeee594829d8f9850969e71c53c5"
+      "sha256": "07209577f46de50aa40d89ccaf245e5542391903442477177275031ebfe50189"
     },
     {
       "file": "configuration.json",
-      "sha256": "df6daeb0d836665c623b5fa806fd65f8f1fd12f652dbfbef42ad1c3a1676cdbd"
+      "sha256": "2a56679947819e63d6b194f241a262bd5ef56b3347949002c583eb1a985db805"
     },
     {
       "file": "delivery-spec.json",
-      "sha256": "e72af36d5b13895f1eba886ae72f44d3ef02cec5778a9b0813312c09e3189450"
+      "sha256": "941aa915328a0ca2c0138989b437e48b09dfd83393fad7137bbcdf1211eab2aa"
     }
   ],
   "lighting_sha256": "c9efb1582a02635ee739c071f82e5b6bb2ba33db61f067ada7d6a8d3b4239b81",
   "validation_input": {
     "hash_lock": "tools/train-models/hashes.lock.json in final documentation checkout",
-    "sha256": "4cdd881a3bd927e1d1252c9284d8f857809c36c0518fdb1ad8f7e193551512c0",
+    "sha256": "e5454f72636533a42a4d941e7cad8007d25f73834c919d21eae211861162e9e8",
     "geometry_generation_reads_lock": false
   }
 }

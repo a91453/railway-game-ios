@@ -301,5 +301,17 @@
     "feedback": "他的車頭嘴巴還是很醜",
     "latest_main_for_preservation": "82e5e894",
     "upstream_preserved_separately": "Tourism EMU500 main changes through #1732; own merge981f6723. No shared occlusion changes."
+  },
+  "moulded_nose_continuation": {
+    "public_pr": 1730,
+    "asset_pr": 45,
+    "state_at_resume": "both OPEN DRAFT, base main, MERGEABLE, autoMergeRequest null",
+    "public_head_at_resume": "d93deaa7aafc6aad3b9e4acdf50c33589913a742",
+    "asset_head_at_resume": "ddd20af6d7d144beb9f5c93c88796bb5412e26ef",
+    "actual_previous_geometry_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+    "appearance_acceptance": "UNVERIFIED; author withdrew assessment; user authorized further work",
+    "previous_head_ci": "public Swift WAE,8 selected shards,gate and Simulator build SUCCESS; optional UI/iPad SKIPPED; asset guard SUCCESS. Do not transfer these results to new head.",
+    "current_main": "efb96529",
+    "upstream_delta": "Only TestFlight release-note markdown since82e5e894; kept separate, no runtime code delta."
   }
 }

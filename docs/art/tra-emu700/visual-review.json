@@ -1,21 +1,21 @@
 {
-  "geometry_producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+  "geometry_producer": "cd01a6f906770731874b0b447325052e3afd67f9",
   "accepted_producer": null,
   "user_appearance_acceptance": "UNVERIFIED",
-  "rejected_before": {
-    "producer": "553b3a2207bf87e6d02819d687b673860055a84a",
-    "asset_commit": "36434179e8b629584b7c4ad4ae0591a7feafb3da",
-    "feedback": "他的車頭嘴巴還是很醜",
-    "date": "2026-11-03"
+  "unaccepted_before": {
+    "producer": "53f264bc2410449e3af15b07d0a2c9aaffa68455",
+    "asset_commit": "ddd20af6d7d144beb9f5c93c88796bb5412e26ef",
+    "assessment": "Author re-reviewed and found flat moulding/vertical lower nose inadequate; user authorized continued correction."
   },
-  "withdrawn_claim": "Previous no-known-appearance-fault assessment and frontal square-jaw normal-state claim withdrawn.",
+  "user_rejected_earlier_producer": "553b3a2207bf87e6d02819d687b673860055a84a",
+  "withdrawn_claim": "Previous implication that curved paint alone completed cab appearance.",
   "observer": "Codex author inspection only",
   "views": [
     "all role near/far sheets",
     "both complete eight-car sheets",
     "front/back/left/right/top/bottom/isometric",
     "colour day/night/clay/silhouette",
-    "fixed-metre real rejected/current cab comparison"
+    "fixed-metre real53/current cab detail front/right/top/isometric"
   ],
   "same_camera": {
     "units": "fixed20.8m",
@@ -38,29 +38,29 @@
   },
   "items": [
     {
-      "part": "bowl and lamp clearance",
+      "part": "projecting orange mould and rolled lower edge",
       "status": "合理簡化",
-      "evidence": "Actual source photographs and native shared curved paint rows; measured model positions are photo fits."
+      "evidence": "Blair15/18/19 actual photographs; author colour/clay/side inspection; actual depth profile plus flattened-native-depth faults. Fitted dimensions, no engineering survey claim."
     },
     {
-      "part": "closed ordinary apron and real underside cavity",
+      "part": "lower blue apron thickness, shoulder roll and retracted drawgear",
       "status": "已符合",
-      "evidence": "Ordinary-service photographs contradict old frontal square jaw. Native cover/under-cavity rays plus true hood removal fault."
+      "evidence": "Thin actual geometry; front nine-ray occlusion plus underside cavity. First probe exposed frame; final frame moved behind cover, actual protrusion fault rejected."
     },
     {
-      "part": "nose staircase and real flattened-vertex regression",
+      "part": "near/far orange face",
       "status": "已符合",
-      "evidence": "Rejected553 payload fails; current six native cab ends pass independent geometry checks."
-    },
-    {
-      "part": "EMC cab naming / no false front neighbour shade",
-      "status": "已符合",
-      "evidence": "Only two own model IDs and their own references change, existing occlusion unchanged."
+      "evidence": "Identical actual orange triangle geometry across LODs; lower blue apron separately simplified."
     },
     {
       "part": "six other near/far role payloads",
       "status": "已符合",
-      "evidence": "Native bytes and full FNV equal the553 producer."
+      "evidence": "Native bytes and ten-field FNV equal53; also unchanged from553."
+    },
+    {
+      "part": "mould access-hatch seam and hinges",
+      "status": "合理簡化",
+      "evidence": "Omitted small seam details; main volume and edge shape take priority."
     },
     {
       "part": "exact roof/underfloor BOM, central unique fittings, end-relative axle stations",
