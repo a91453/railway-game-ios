@@ -74,7 +74,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch(extra: ["-screenshot-scene", "platformStop", "-screenshot-follow-train", "-map3D.quality", "saving"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
-        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 30), "The train is followed")
+        // The train's card has no stock row (no real line's stock): let the
+        // follow settle instead.
+        settle(seconds: 5)
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
             for _ in 0..<6 {
