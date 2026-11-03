@@ -103,7 +103,9 @@ struct ContentView: View {
             .overlay {
                 ZStack {
                     if let arrival = session.trainArrivals.first {
-                        Theme.textPrimary.opacity(0.35)
+                        // The icon's navy in both appearances, so the
+                        // game dims behind the card in dark mode too.
+                        Theme.onAccent.opacity(0.45)
                             .ignoresSafeArea()
                             .contentShape(Rectangle())
                             .onTapGesture { session.dismissTrainArrival(all: true) }
