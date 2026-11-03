@@ -2201,6 +2201,7 @@ public struct RealWorldData: Sendable {
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
     /// `taiwan_water.json`, `taiwan_heights.dat`, `taiwan_coverage.dat`
     /// (decision 147), `taiwan_place_names.json` (decision 159),
+    /// `taiwan_station_landmarks.json` (decision 569),
     /// `taiwan_no_build.json` (decision 385 (續)), the real bus stops' index
     /// `real_buses_index.json` (decision 424, C2; its city files are read
     /// later, when the bus tool asks) and the
@@ -2226,7 +2227,9 @@ public struct RealWorldData: Sendable {
         let water = grid("taiwan_water", WaterGrid.init(data:))
         let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
         let coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))
-        let placeNames = grid("taiwan_place_names", PlaceNames.init(data:))
+        var placeNames = grid("taiwan_place_names", PlaceNames.init(data:))
+        // Decision 569: the landmarks go with the place names.
+        placeNames?.landmarks = grid("taiwan_station_landmarks", StationLandmarks.init(data:))
         let railways = RealRailways.load(file: file)
         let realBuses = grid("real_buses_index") { try RealBusLibrary(index: $0, file: file) }
         return RealWorldData(

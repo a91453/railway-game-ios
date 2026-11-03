@@ -91,6 +91,10 @@ extension GameSession {
             if let name {
                 stationName = name
                 automaticStationName = name
+                stationNameChoices = Self.stationNameChoices(
+                    for: world, at: geometry.location(at: (stretch.start + stretch.end) / 2).position.plan, in: language,
+                    railways: railways, placeNames: placeNames
+                )
             } else {
                 suggestStationName(at: geometry.location(at: (stretch.start + stretch.end) / 2).position.plan)
             }
@@ -685,9 +689,8 @@ extension GameSession {
         }
         if let built {
             // The typed name went to the new station: suggest the next.
-            let suggestion = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways, placeNames: placeNames)
-            stationName = suggestion
-            automaticStationName = suggestion
+            stationName = automaticStationName
+            suggestStationName(at: middle)
             platformStationID = built
         }
     }

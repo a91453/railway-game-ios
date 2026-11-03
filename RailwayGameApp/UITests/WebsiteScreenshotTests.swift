@@ -877,15 +877,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
-    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
-    /// on the real-world demo where the track climbs, with where people
-    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
-    /// in a place of its own, the key folded while the pill shows. The
-    /// longest platform, so its stretch is the likeliest not to level; a
-    /// stretch that levels still shows the pill, banner and key together.
-    func testPlatformLevellingWithTheLayer() {
-        let app = launch(extra: ["-show-building-layer"])
-        defer { app.terminate() }
+    /// The real-world demo with a stretch of track built across the
+    /// middle of the map and a platform's site picked on it (the platform
+    /// mode open, at its longest), for a test to shoot; its ✓.
+    private func pickPlatformSiteOnTheRealWorldDemo(_ app: XCUIApplication) -> XCUIElement {
         app.openDemo("demo.realWorld", timeout: 60)
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 60), "The demo starts")
@@ -943,6 +938,43 @@ final class WebsiteScreenshotTests: XCTestCase {
             siteX = covering.minX - 40
         }
         origin.withOffset(CGVector(dx: siteX, dy: middle)).tap()
+        return confirm
+    }
+
+    /// Decision 569: the names offered under a new station's name on a
+    /// real-world map, then one of them picked.
+    func testStationNameChoices() {
+        let app = launch()
+        defer { app.terminate() }
+        _ = pickPlatformSiteOnTheRealWorldDemo(app)
+        let first = app.buttons["network.stationNameChoice.0"]
+        XCTAssertTrue(first.appears(within: 10), "The names show under the name")
+        if !first.isHittable {
+            let field = app.textFields.firstMatch
+            for _ in 0..<4 where !first.isHittable {
+                (field.exists ? field : first).swipeUp()
+            }
+        }
+        settle()
+        keep("station-name-choices", app)
+        let second = app.buttons["network.stationNameChoice.1"]
+        if second.exists, second.isHittable {
+            second.tap()
+            settle()
+            keep("station-name-choice-picked", app)
+        }
+    }
+
+    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
+    /// on the real-world demo where the track climbs, with where people
+    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
+    /// in a place of its own, the key folded while the pill shows. The
+    /// longest platform, so its stretch is the likeliest not to level; a
+    /// stretch that levels still shows the pill, banner and key together.
+    func testPlatformLevellingWithTheLayer() {
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        let confirm = pickPlatformSiteOnTheRealWorldDemo(app)
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         settle()
         keep("platform-levelling-pill", app)
