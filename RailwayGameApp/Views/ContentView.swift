@@ -98,6 +98,29 @@ struct ContentView: View {
             // screen with the controls it must not cover.
             .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets, mapSites: screen.tutorialMapSites,
                              firstLineGuide: launcher.preferences.firstLineGuide)
+            // Decision 566: a model new to the fleet, its card; under any
+            // sheet, so it shows once the sheet it was bought in closes.
+            .overlay {
+                ZStack {
+                    if let arrival = session.trainArrivals.first {
+                        Theme.textPrimary.opacity(0.35)
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture { session.dismissTrainArrival(all: true) }
+                            .accessibilityHidden(true)
+                            .transition(.opacity)
+                        NewTrainArrivalCard(
+                            arrival: arrival, waiting: session.trainArrivals.count - 1, language: session.language,
+                            next: { session.dismissTrainArrival() },
+                            skip: { session.dismissTrainArrival(all: true) },
+                            playSound: { session.playSound?(.newTrain) }
+                        )
+                        .id(arrival.id)
+                        .transition(.pop(from: 0.9, reduceMotion: reduceMotion))
+                    }
+                }
+                .animation(MotionRule.cardIn.running(reduceMotion: reduceMotion)?.animation, value: session.trainArrivals.first?.id)
+            }
             // L1-3 (#1549's review): while Back to Start writes the
             // autosave, nothing takes a touch, so nothing done then is left
             // out of it.
