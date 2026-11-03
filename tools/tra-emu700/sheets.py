@@ -13,7 +13,7 @@ for m in models:
 s=Image.new('RGBA',(1600,1900),(0,0,0,0));d=ImageDraw.Draw(s)
 d.text((20,10),'EMU700 | unaccepted study | units: fixed 20.8m / formation: 163.286m',fill=(60,65,90,255))
 for col,tag in enumerate(['before','after']):
- im=Image.open(r/'mouth'/f'{tag}-color-front.png');im.load();im.thumbnail((400,400));s.alpha_composite(im,(col*800+200,55));d.text((col*800+20,35),'553b3a22 USER REJECTED' if tag=='before' else 'CURRENT: not user accepted',fill=(60,65,90,255))
+ im=Image.open(r/'mouth'/f'{tag}-color-front.png');im.load();im.thumbnail((400,400));s.alpha_composite(im,(col*800+200,55));d.text((col*800+20,35),'53f264bc UNACCEPTED' if tag=='before' else 'CURRENT: not user accepted',fill=(60,65,90,255))
 for row,role in enumerate(['emc','ep','et','em']):
  for col,suffix in enumerate(['','-far']):
   name='tra-emu700-'+('emc-cab' if role=='emc' else role)+suffix;im=Image.open(r/'png/day'/f'{name}-isometric.png');im.thumbnail((780,245));s.alpha_composite(im,(col*800+10,500+row*270));d.text((col*800+20,495+row*270),name,fill=(60,65,90,255))
@@ -22,10 +22,10 @@ for col,suffix in enumerate(['','-far']):
 s.save(r/'overview.png',optimize=True)
 
 # One curated comparison sheet; raw reference photographs are never embedded.
-s=Image.new('RGBA',(1600,1690),(0,0,0,0));d=ImageDraw.Draw(s)
+s=Image.new('RGBA',(1600,2490),(0,0,0,0));d=ImageDraw.Draw(s)
 d.text((10,10),'Fixed metre cab-detail crops / same light; full native cars in role sheets',fill=(60,65,90,255))
-columns=[('before','','553b3a22 REJECTED near'),('after','','current near UNVERIFIED'),('before','-far','553b3a22 REJECTED far'),('after','-far','current far UNVERIFIED')]
-rows=[('color','front'),('clay','front'),('silhouette','front'),('color','isometric')]
+columns=[('before','','53f264bc unaccepted near'),('after','','current near UNVERIFIED'),('before','-far','53f264bc unaccepted far'),('after','-far','current far UNVERIFIED')]
+rows=[('color','front'),('clay','front'),('silhouette','front'),('color','isometric'),('clay','isometric'),('silhouette','right')]
 for col,(tag,suffix,label) in enumerate(columns):
  d.text((col*400+8,32),label,fill=(60,65,90,255))
  for row,(state,view) in enumerate(rows):

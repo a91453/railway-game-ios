@@ -38,13 +38,15 @@ private struct EMU700Recipe {
     ]
     func noseX(_ h: Float,_ w: Float) -> Float {
         // Characteristic projecting lower nose, recessed broad windscreen.
-        let points: [(Float,Float)] = [(1.12,0.10),(1.6,0.0),(1.95,0.12),(2.15,0.32),(2.4,0.60),(3.12,0.83),(3.36,0.91),(3.70,1.10)]
+        let points: [(Float,Float)] = [(1.12,0.16),(1.4,0.13),(1.6,0.09),(1.8,0.08),(1.95,0.12),(2.15,0.32),(2.4,0.60),(3.12,0.83),(3.36,0.91),(3.70,1.10)]
         var setback=points.last!.1
         for i in 0..<(points.count-1) where h>=points[i].0 && h<=points[i+1].0 {
             let t=(h-points[i].0)/(points[i+1].0-points[i].0)
             setback=points[i].1+(points[i+1].1-points[i].1)*t
         }
-        return end-0.05-setback-0.075*powf(abs(w)/1.4445,2)
+        let shoulder = max(0, min(1, (1.95-h)/0.35))
+        let across = abs(w)/1.4445
+        return end-0.05-setback-0.075*powf(across,2)-0.14*shoulder*powf(across,4)
     }
     mutating func face(_ p: [Map3DPoint],_ inside: Map3DPoint,_ c: UInt32) {
         let center=p.reduce(.zero,+)*(1/Float(p.count))
@@ -82,7 +84,7 @@ private struct EMU700Recipe {
     }
     mutating func shell() {
         let levels:[Float]=[1.12,1.24,1.6,1.68,1.76,1.8,1.86,1.95,2.02,2.08,2.15,2.4,2.7,3.12,3.25,3.33,3.36,3.56,3.68,3.70]
-        let hs = cab ? (levels + [1.83]).sorted() : levels
+        let hs = cab ? (levels + (far ? [1.83] : [1.815,1.83,1.845])).sorted() : levels
         // Both LODs share the real colour-boundary vertices. In particular the
         // bowl is a curved row in the shell, not cells classified by midpoint.
         let cabWidths:[Float]=[-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
@@ -117,13 +119,20 @@ private struct EMU700Recipe {
         }
         guard cab else{return}
         func frontPoint(_ level:Float,_ across:Float)->Map3DPoint {
-            let bowl:Float=1.40+0.40*across*across
+            let bowl:Float=1.35+0.45*across*across
             let h:Float
             if level<=1.8 { h=1.12+(level-1.12)/(1.8-1.12)*(bowl-1.12) }
             else if level<1.86 { h=bowl+(level-1.8)/(1.86-1.8)*(1.86-bowl) }
             else { h=level }
             let w=across*width(h)
-            return .init(noseX(h,w),h,w)
+            // A moulded cover, not a coloured patch on a planar nose. Its
+            // centre projects, then rolls back into the lower painted edge;
+            // both LODs retain the ridge and the identical outer seam. All
+            // offsets are observation-fitted, not surveyed dimensions.
+            let t=max(0,min(1,(level-1.8)/0.06))
+            let ridge=4*t*(1-t)
+            let projection:Float=0.105*ridge*(1-powf(abs(across),4))
+            return .init(noseX(h,w)+projection,h,w)
         }
         for i in 0..<(hs.count-1) {for j in 0..<(ws.count-1) {
             let h0=hs[i],h1=hs[i+1],w0=ws[j],w1=ws[j+1]
@@ -283,27 +292,30 @@ private struct EMU700Recipe {
             // Ordinary service has a continuous closed FRP nose cover. The
             // previous frontal square jaw was unsupported by the normal-state
             // photographs. Keep a thin cover and a genuine cavity behind it.
-            let apronWidths:[Float]=[-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
+            let apronWidths:[Float]=far ? [-1,-0.94,-0.86,-0.7,-0.5,-0.2,0,0.2,0.5,0.7,0.86,0.94,1] : [-1,-0.975,-0.94,-0.92,-0.86,-0.8,-0.7,-0.62,-0.5,-0.38,-0.2,0,0.2,0.38,0.5,0.62,0.7,0.8,0.86,0.92,0.94,0.975,1]
             for i in 0..<(apronWidths.count-1) {
                 func edge(_ share:Float)->[Map3DPoint] {
-                    let upper=share*1.32,lower=share*1.30
+                    let upper=share*1.32,lower=share*1.27
                     return [.init(noseX(1.12,upper),1.12,upper),
-                            .init(noseX(1.12,lower)-0.035,0.68+0.10*(1-share*share),lower)]
+                            .init(noseX(1.12,share*1.31)-0.045,0.96,share*1.31),
+                            .init(noseX(1.12,lower)-0.09,0.68+0.10*(1-share*share),lower)]
                 }
                 let left=edge(apronWidths[i]),right=edge(apronWidths[i+1])
-                let front=[left[0],right[0],right[1],left[1]]
-                prism(front,front.map{$0 + .init(-0.06,0,0)},blue)
+                for row in 0..<2 {
+                    let front=[left[row],right[row],right[row+1],left[row+1]]
+                    prism(front,front.map{$0 + .init(-0.045,0,0)},blue)
+                }
             }
             for side:Float in [-1,1] {
                 func cheek(_ w:Float)->[Map3DPoint] {
-                    [.init(end-0.85,1.12,w),.init(noseX(1.12,w)-0.035,0.68,w),.init(noseX(1.12,w),1.12,w)]
+                    [.init(end-0.85,1.12,w),.init(noseX(1.12,w)-0.09,0.68,w),.init(noseX(1.12,w),1.12,w)]
                 }
-                prism(cheek(side*1.21),cheek(side*1.30),blue)
+                prism(cheek(side*1.21),cheek(side*1.27),blue)
             }
             // Drawgear remains behind the thin cover, accessible from below.
             kit.box(end-0.90,0.78,0,1.10,0.18,0.15,dark)
-            for h:Float in [0.76,1.00] {kit.box(end-0.36,h,0,0.16,0.48,0.08,dark)}
-            for z:Float in [-0.20,0.20] {kit.box(end-0.36,0.84,z,0.16,0.08,0.16,dark)}
+            for h:Float in [0.76,1.00] {kit.box(end-0.50,h,0,0.16,0.48,0.08,dark)}
+            for z:Float in [-0.20,0.20] {kit.box(end-0.50,0.84,z,0.16,0.08,0.16,dark)}
         }
         let airConditioners:[Float]=role == .ep ? [-6.45,3.40] : [-6.45,6.45]
         for x in airConditioners {

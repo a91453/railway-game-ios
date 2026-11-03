@@ -100,8 +100,8 @@ def coupler(t):
  # Ordinary service photographs show a continuous closed FRP front, not
  # the previous square frontal jaw. Its real cavity is accessed from below.
  ds=hits(t,np.array([end+.12,0,.92]),np.array([-1.,0,0]))
- assert len(ds) and .15<min(ds)<.36,'normal nose cover absent'
- under=hits(t,np.array([end-.36,0,.40]),np.array([0.,0,1.]))
+ assert len(ds) and .15<min(ds)<.45,'normal nose cover absent'
+ under=hits(t,np.array([end-.50,0,.40]),np.array([0.,0,1.]))
  assert len(under) and .30<min(under)<.50,'underside coupler cavity blocked'
  return True
 

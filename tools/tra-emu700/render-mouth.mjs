@@ -18,10 +18,10 @@ const page=await browser.newPage();await page.goto('http://127.0.0.1:'+server.ad
 const inputs=[];
 for(const tag of ['before','after'])for(const suffix of ['','-far']){
  const m=manifests[tag].models.find(m=>m.id.startsWith('tra-emu700-emc')&&m.id.endsWith('-far')===Boolean(suffix)),bytes=readFileSync(resolve(roots[tag],m.native));inputs.push({tag,id:m.id,native_sha256:createHash('sha256').update(bytes).digest('hex')});
- for(const state of ['color','clay','silhouette'])for(const view of ['front','isometric']){
+ for(const state of ['color','clay','silhouette'])for(const view of ['front','right','top','isometric']){
   const png=await page.evaluate(async({url,state,view})=>{r.load(await(await fetch(url)).arrayBuffer(),state);r.centre=[9.7,0,2.2];r.extent=[1.4,1.6,1.65];r.render(view,{width:720,height:720,time:'day'});return r.png();},{url:'/'+tag+'/'+m.native,state,view});writeFileSync(resolve(root,'mouth',`${tag}${suffix}-${state}-${view}.png`),Buffer.from(png.split(',')[1],'base64'));
  }
 }
 await browser.close();server.close();
-writeFileSync(resolve(root,'mouth-comparison.json'),JSON.stringify({before_producer:'553b3a2207bf87e6d02819d687b673860055a84a',before_acceptance:'USER REJECTED: cab mouth',camera:{centre:[9.7,0,2.2],extent:[1.4,1.6,1.65],width:720,height:720,scope:'Fixed cab-detail crop of the complete native car, not a separate replacement mesh; full car views are in the role sheets.'},lighting:manifests.after.lighting,inputs},null,2)+'\n');
+writeFileSync(resolve(root,'mouth-comparison.json'),JSON.stringify({before_producer:'53f264bc2410449e3af15b07d0a2c9aaffa68455',before_acceptance:'UNVERIFIED; author withdrew completion assessment; user requested further nose revision',camera:{centre:[9.7,0,2.2],extent:[1.4,1.6,1.65],width:720,height:720,scope:'Fixed cab-detail crop of the complete native car, not a separate replacement mesh; full car views are in the role sheets.'},lighting:manifests.after.lighting,inputs},null,2)+'\n');
 console.log('Rendered fixed-metre rejected/current native cab comparisons');
