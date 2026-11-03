@@ -12,6 +12,31 @@ struct WenhuMesh {
             kit.face([ring[i],ring[j],ring[j]+offset,ring[i]+offset], inside: centre, color: color)
         }
     }
+    // A closed annular solid: the central opening contains no cap triangles.
+    mutating func ringShell(_ outer: [Map3DPoint], _ inner: [Map3DPoint], offset: Map3DPoint, color: UInt32) {
+        precondition(outer.count == inner.count)
+        for i in outer.indices {
+            let j=(i+1)%outer.count
+            let inside=(outer[i]+outer[j]+inner[i]+inner[j])*0.25+offset*0.5
+            for face in [[outer[i],outer[j],inner[j],inner[i]],
+                         [outer[i]+offset,inner[i]+offset,inner[j]+offset,outer[j]+offset],
+                         [outer[i],outer[i]+offset,outer[j]+offset,outer[j]],
+                         [inner[i],inner[j],inner[j]+offset,inner[i]+offset]] {
+                kit.face(face,inside:inside,color:color)
+            }
+        }
+    }
+    mutating func coupler(_ sign: Float, outer: Bool, color: UInt32) {
+        kit.beam(Map3DPoint(sign*5.70,0.86,0),Map3DPoint(sign*(outer ? 6.65:6.89),0.86,0),outer ? 0.16:0.12,color)
+        if outer {
+            let section: [(Float,Float)] = [(-0.26,-0.07),(-0.18,-0.145),(0.18,-0.145),(0.26,-0.07),(0.26,0.07),(0.18,0.145),(-0.18,0.145),(-0.26,0.07)]
+            let a=section.map { Map3DPoint(sign*6.60,0.86+$0.1,$0.0) }
+            let b=section.map { Map3DPoint(sign*6.60,0.86+$0.1*0.48,$0.0*0.48) }
+            ringShell(a,b,offset:Map3DPoint(sign*0.29,0,0),color:color)
+        } else {
+            kit.cylinder(sign*6.72,0.70,0,radius:0.075,height:0.32,color:color,sides:8)
+        }
+    }
     func clip(_ poly: [Map3DPoint], axis: Int, level: Float, above: Bool) -> [Map3DPoint] {
         guard !poly.isEmpty else { return [] }
         func value(_ p: Map3DPoint) -> Float { (axis == 0 ? p.y : p.z) - level }

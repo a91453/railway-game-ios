@@ -30,4 +30,17 @@ final class Map3DWenhuTests: XCTestCase {
             XCTAssertFalse(b.vertices.contains { $0.x>6.6 && abs($0.y)>0.20 })
         }
     }
+    func testLODsPreserveMetricEnvelopeWithinBudget() {
+        let pairs = Map3DWenhuVAL256.Role.allCases.map { (Map3DWenhuVAL256.model($0),Map3DWenhuVAL256.model($0,far:true)) }
+            + Map3DWenhuAPM256.Role.allCases.map { (Map3DWenhuAPM256.model($0),Map3DWenhuAPM256.model($0,far:true)) }
+        for (near,far) in pairs {
+            XCTAssertLessThan(far.triangleCount*2,near.triangleCount)
+            for (a,b) in [(near.minimum.x,far.minimum.x),(near.maximum.x,far.maximum.x),
+                          (near.minimum.y,far.minimum.y),(near.maximum.y,far.maximum.y),
+                          (near.minimum.z,far.minimum.z),(near.maximum.z,far.maximum.z)] {
+                XCTAssertEqual(a,b,accuracy:0.0001)
+            }
+        }
+    }
+
 }

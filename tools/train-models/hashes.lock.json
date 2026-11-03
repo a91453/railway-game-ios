@@ -2,36 +2,36 @@
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "wenhu-val256-a" : {
-      "hash" : "135b7f37d8ab1a2",
-      "triangles" : 8132
+      "hash" : "2605c39fdc68dc8a",
+      "triangles" : 11424
     },
     "wenhu-val256-b" : {
-      "hash" : "c6c6f507b072f382",
-      "triangles" : 8168
+      "hash" : "b846ae0d7003f1d9",
+      "triangles" : 11460
     },
     "wenhu-val256-a-far" : {
-      "hash" : "27e929141b175074",
-      "triangles" : 3476
+      "hash" : "f132c0bf209337f9",
+      "triangles" : 5192
     },
     "wenhu-val256-b-far" : {
-      "hash" : "ee8955c633a97642",
-      "triangles" : 3512
+      "hash" : "96896ee080971e40",
+      "triangles" : 5228
     },
     "wenhu-apm256-a" : {
-      "hash" : "ea16764f29eb8054",
-      "triangles" : 7452
+      "hash" : "8c5a26036fea2965",
+      "triangles" : 10144
     },
     "wenhu-apm256-b" : {
-      "hash" : "d14cb04c1ce9873f",
-      "triangles" : 7488
+      "hash" : "34cb196e4bc67",
+      "triangles" : 10180
     },
     "wenhu-apm256-a-far" : {
-      "hash" : "8c336bb09e5357a6",
-      "triangles" : 3004
+      "hash" : "24257109377efb7",
+      "triangles" : 4512
     },
     "wenhu-apm256-b-far" : {
-      "hash" : "af8b8f0d04097b92",
-      "triangles" : 3040
+      "hash" : "b8646af2a195a5bb",
+      "triangles" : 4548
     },
     "tra-emu700-emc-cab" : {
       "hash" : "9a6e7ce8a4e7a01",

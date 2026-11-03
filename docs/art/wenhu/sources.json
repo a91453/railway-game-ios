@@ -276,6 +276,14 @@
     {
       "url": "https://www.metro.taipei/cp.aspx?n=CCF30033E6ED8008&s=405306CC7ACD137B",
       "supports": "兩對四車、膠輪、水泥與鋼製行駛面；兩款共存，BR不識別車型"
+    },
+    {
+      "url": "https://www.dorts.ntpc.gov.tw/documentary/articleInfo/gMbm0reldyo0?page=273",
+      "supports": "2020-09-02官方文字使用INNOVIA APM256名稱，文湖線四節、各客室不貫通；配圖轉引wikiwand不當原始攝影或工程資料。"
+    },
+    {
+      "url": "https://www.bfginternational.com/transportation/projects/taipei-metro-neihu-line-taiwan",
+      "supports": "供應商原文：Project INNOVIA256、101 sets、Train Builder Bombardier Transportation；BFG負責FRP內裝與front ends。其Handover2005指BFG部件專案，不當全列驗收／營運日期。"
     }
   ]
 }

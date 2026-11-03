@@ -31,18 +31,20 @@ private struct APM256Recipe {
         for i in 0..<(hs.count-1) where h<=hs[i+1] {
             let t=max(0,(h-hs[i])/(hs[i+1]-hs[i]));x=xs[i]+t*(xs[i+1]-xs[i]);break
         }
-        return x - powf(abs(w)/1.27,4)*0.32
+        let pocket=max(0,min(1,(0.68-abs(w))/0.23))*max(0,min(1,(1.28-h)/0.30))
+        return x - powf(abs(w)/1.27,4)*0.32 - 0.58*pocket
     }
     func paint(_ h: Float) -> UInt32 {
         h < 1.02 ? rubber : (h < 1.42 ? blue : (h < 1.47 ? white : (h < 1.52 ? green : (h > 1.80 && h < 2.98 ? windowBand : white))))
     }
     func frontPaint(_ h: Float) -> UInt32 { h<1.02 ? rubber : (h<1.42 ? blue:(h<1.47 ? white:(h<1.52 ? green:white))) }
+    var faceHeights: [Float] { Array(Set(far ? [0.86,0.88,0.98,1.02,1.06,1.18,1.28,1.35,1.40,1.50,1.85,1.90,2.45,2.60,1.42,1.47,1.52,1.55,1.80,1.90,2.02,2.98,3.02,3.03,3.08,3.15,3.20,3.30,3.38] : [0.86,0.88,0.98,1.02,1.06,1.18,1.28,1.35,1.40,1.50,1.85,1.90,2.45,2.60,1.42,1.47,1.52,1.55,1.80,1.90,2.02,2.35,2.38,2.75,2.80,2.98,3.02,3.03,3.08,3.15,3.20,3.30,3.38])).sorted() }
+    var faceWidths: [Float] { far ? [-1.28,-0.99,-0.68,-0.45,0,0.45,0.68,0.99,1.28] : [-1.28,-1.27,-1.20,-1.12,-0.99,-0.85,-0.68,-0.5,-0.45,0,0.45,0.5,0.68,0.85,0.99,1.12,1.20,1.27,1.28] }
     mutating func body() {
         // Explicit rings include colour levels: paint changes cut the shell itself.
         var sec: [(Float,Float)] = []
-        let levels: [Float] = far ? [0.86,0.88,1.02,1.06,1.18,1.35,1.40,1.50,1.85,1.90,2.45,2.60,1.42,1.47,1.52,1.55,1.80,1.90,2.02,2.98,3.02,3.03,3.08,3.15,3.20,3.30,3.38] : [0.86,0.88,1.02,1.06,1.18,1.35,1.40,1.50,1.85,1.90,2.45,2.60,1.42,1.47,1.52,1.55,1.80,1.90,2.02,2.35,2.38,2.75,2.80,2.98,3.02,3.03,3.08,3.15,3.20,3.30,3.38]
-        let sortedLevels=Array(Set(levels)).sorted()
-        let ws: [Float] = far ? [-1.28,-0.99,0,0.99,1.28] : [-1.28,-1.27,-1.20,-1.12,-0.99,-0.85,-0.5,0,0.5,0.85,0.99,1.12,1.20,1.27,1.28]
+        let sortedLevels=faceHeights
+        let ws=faceWidths
         for i in section.indices {
             let a=section[i],b=section[(i+1)%section.count]
             var cuts: [(Float,Float)] = [(0,a.1)]
@@ -58,7 +60,7 @@ private struct APM256Recipe {
                 sec.append((a.0+(b.0-a.0)*t,h));last=t
             }
         }
-        let stations: [Float] = [-1,-0.92,0.92,1]
+        let stations: [Float] = [-1,-0.88,0.88,1]
         func point(_ i: Int,_ t: Float) -> Map3DPoint {
             let (w,h)=sec[i]
             let x=abs(t)==1 ? endX(h,w)*(t<0 ? -1:1) : t*6.0
@@ -81,7 +83,10 @@ private struct APM256Recipe {
                 poly=m.clip(poly,axis:1,level:ws[j],above:true)
                 poly=m.clip(poly,axis:1,level:ws[j+1],above:false)
                 poly=poly.map { Map3DPoint(signX(t,$0.y,$0.z),$0.y,$0.z) }
-                if poly.count>=3 { m.kit.face(poly,inside:Map3DPoint(0,2,0),color:frontPaint((hs[i]+hs[i+1])/2)) }
+                if poly.count>=3 {
+                    let centre=poly.reduce(Map3DPoint.zero) { $0+$1*(1/Float(poly.count)) }
+                    m.kit.face(poly,inside:centre-Map3DPoint(t*0.10,0,0),color:frontPaint((hs[i]+hs[i+1])/2))
+                }
             } }
         }
     }
@@ -89,11 +94,11 @@ private struct APM256Recipe {
     mutating func details() {
         // Four load tyres on two single-axle assemblies, not steel-wheel bogies.
         for x: Float in [-4.65,4.65] {
-            m.kit.box(x,0.35,0,0.55,1.88,0.24,grey)
+            m.kit.box(x,0.32,0,0.22,1.62,0.16,grey)
             for side: Float in [-1,1] {
                 m.wheel(x,0.40,side*0.94,radius:0.40,width:0.26,horizontal:false,color:rubber,sides:far ? 8:24)
                 if !far { m.wheel(x,0.40,side*1.075,radius:0.16,width:0.025,horizontal:false,color:grey,sides:12) }
-                for dx: Float in [-0.48,0.48] {
+                for dx: Float in [-0.68,0.68] {
                     m.wheel(x+dx,0.31,side*1.02,radius:0.20,width:0.15,horizontal:true,color:rubber,sides:far ? 8:16)
                 }
                 // Hidden safety/turnout detail remains a declared source gap.
@@ -132,8 +137,8 @@ private struct APM256Recipe {
                     contour.append(Map3DPoint(0,h+sinf(angle)*radius,w+cosf(angle)*radius))
                 }
             }
-            let heights: [Float] = [low,2.35,2.38,2.45,2.60,2.75,2.80,2.98,3.02,3.03,3.08,high]
-            let widths: [Float] = far ? [-half,-0.99,0,0.99,half].sorted() : [-half,-0.99,-0.85,-0.5,0,0.5,0.85,0.99,half].sorted()
+            let heights=Array(Set(faceHeights.filter { $0>=low && $0<=high }+[low,high])).sorted()
+            let widths=Array(Set(faceWidths.filter { abs($0)<half }+[-half,half])).sorted()
             for i in 0..<(widths.count-1) where widths[i+1]-widths[i]>0.00001 { for j in 0..<(heights.count-1) {
                 var poly=m.clip(contour,axis:0,level:heights[j],above:true)
                 poly=m.clip(poly,axis:0,level:heights[j+1],above:false)
@@ -144,7 +149,7 @@ private struct APM256Recipe {
             } }
             // Outer AX (A) and BY (B) have automatic heads; AY/BX are semi-permanent.
             let outer = (role == .a && sign>0) || (role == .b && sign<0)
-            m.kit.box(sign*6.58,0.73,0,0.62,outer ? 0.52:0.26,outer ? 0.29:0.20,grey)
+            m.coupler(sign,outer:outer,color:grey)
             if outer {
                 for side: Float in [-1,1] {
                     let h: Float = 1.76
@@ -156,6 +161,18 @@ private struct APM256Recipe {
                         return Map3DPoint(sign*(endX(y,z)+0.01),y,z)
                     }
                     m.prism(ring,offset:Map3DPoint(sign*0.025,0,0),color:Map3DTrainStyle.headlamp)
+                    for centre in [w,w-side*0.23] {
+                        let count=far ? 8:20
+                        let outerRing=(0..<count).map { i -> Map3DPoint in
+                            let a=Float(i)*2*Float.pi/Float(count),y=h+cosf(a)*(radius+0.035),z=centre+sinf(a)*(radius+0.035)
+                            return Map3DPoint(sign*(endX(y,z)+0.004),y,z)
+                        }
+                        let innerRing=(0..<count).map { i -> Map3DPoint in
+                            let a=Float(i)*2*Float.pi/Float(count),y=h+cosf(a)*radius,z=centre+sinf(a)*radius
+                            return Map3DPoint(sign*(endX(y,z)+0.004),y,z)
+                        }
+                        m.ringShell(outerRing,innerRing,offset:Map3DPoint(sign*0.065,0,0),color:grey)
+                    }
                     let marker=ring.map { p -> Map3DPoint in
                         let z=p.z-side*0.23
                         return Map3DPoint(sign*(endX(p.y,z)+0.01),p.y,z)
