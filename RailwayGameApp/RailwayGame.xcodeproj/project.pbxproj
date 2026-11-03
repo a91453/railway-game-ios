@@ -157,6 +157,7 @@
 		90D833E8F70651BA68429E5D /* run-electric.caf in Resources */ = {isa = PBXBuildFile; fileRef = A0AD6227FA521E0662955DEC /* run-electric.caf */; };
 		9108B7149F1546CA165D177A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */; };
 		92F90DD1D5DAE3F80BACEB39 /* MapMarkTapUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEAC255D3FFB54FF35BCF39 /* MapMarkTapUITests.swift */; };
+		9318EBDD8C16334A8B3ECF84 /* new-train.wav in Resources */ = {isa = PBXBuildFile; fileRef = B658BFC2CA2CFA2AF98A57BF /* new-train.wav */; };
 		945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8363C536E3BE341871325469 /* MapLayerSheet.swift */; };
 		94E81FC86FD208CF85F36A0E /* taiwan_no_build.json in Resources */ = {isa = PBXBuildFile; fileRef = 69236EA935C27C1BCE988215 /* taiwan_no_build.json */; };
 		95294AB1D11D0C95F25EA89B /* tra_pingxi_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */; };
@@ -226,6 +227,7 @@
 		D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */; };
 		D6C8E62EEC74F3D1A20A0B5B /* rail_structures.json in Resources */ = {isa = PBXBuildFile; fileRef = 4C1017DDE782DF1CF07D561E /* rail_structures.json */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
+		D9912E6736BD79286A858D14 /* NewTrainArrivalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32833128D187CEF43A7B4B6 /* NewTrainArrivalCard.swift */; };
 		D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */; };
 		DB028E61572348A753DCDD57 /* real_buses_NewTaipei.json in Resources */ = {isa = PBXBuildFile; fileRef = 342CDDB898DA16D1D8AABD24 /* real_buses_NewTaipei.json */; };
 		DB2FE7BBEFE807A46D6E91D7 /* kenney-pine-tall.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = C467DEF8CB249B8BDA4705A9 /* kenney-pine-tall.m3dmodel */; };
@@ -449,6 +451,7 @@
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2B258E67922BFC5C37DA76C /* real_buses_LienchiangCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_LienchiangCounty.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
+		B658BFC2CA2CFA2AF98A57BF /* new-train.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "new-train.wav"; sourceTree = "<group>"; };
 		B6A892CF809FFA4CC868018A /* real_buses_index.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_index.json; sourceTree = "<group>"; };
 		B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialJourneyUITests.swift; sourceTree = "<group>"; };
 		B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sanying_ridership.json; sourceTree = "<group>"; };
@@ -512,6 +515,7 @@
 		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
 		F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NotoSans-OFL.txt"; sourceTree = "<group>"; };
 		F124C2763D812BDC46B49132 /* NetworkFlowSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkFlowSheet.swift; sourceTree = "<group>"; };
+		F32833128D187CEF43A7B4B6 /* NewTrainArrivalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewTrainArrivalCard.swift; sourceTree = "<group>"; };
 		F34F5FAD9996ED6204B4F23C /* tra_station_class.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_class.json; sourceTree = "<group>"; };
 		F390F949C4A3FC86EC095654 /* run-diesel-coast.caf */ = {isa = PBXFileReference; path = "run-diesel-coast.caf"; sourceTree = "<group>"; };
 		F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialOverlay.swift; sourceTree = "<group>"; };
@@ -701,6 +705,7 @@
 				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
 				6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */,
 				DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */,
+				F32833128D187CEF43A7B4B6 /* NewTrainArrivalCard.swift */,
 				22B3E573D7A6A1CB02F279FF /* NextStepChip.swift */,
 				12998D87B1570EBD259935E7 /* NightSkipChip.swift */,
 				3D5BF8179644D02716F92269 /* OneShotLocation.swift */,
@@ -851,6 +856,7 @@
 				10C0D6A5386F14390430D99A /* horn-steam.wav */,
 				64FC0E6D263BA9DF11A366DD /* line-acquired.wav */,
 				37971520DEDE438F5E6272D6 /* music-loop.caf */,
+				B658BFC2CA2CFA2AF98A57BF /* new-train.wav */,
 				AD6E3ED548E183F6E79E0111 /* rail-joint.wav */,
 				EC04F05461D58759373672F0 /* rain-steady.caf */,
 				284ACFB4CDE85B405F4FC6FA /* rain-typhoon.caf */,
@@ -1054,6 +1060,7 @@
 				D4861912DD9779D9E4B843F5 /* meshy-post-boxes.m3dmodel in Resources */,
 				E6499A0C099D064E114AE300 /* metro_runs.json in Resources */,
 				54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */,
+				9318EBDD8C16334A8B3ECF84 /* new-train.wav in Resources */,
 				86EB45BA9705BF6B815B4D1B /* ntalrt.json in Resources */,
 				09D332A24DB65CBE7CF3B474 /* ntalrt_ridership.json in Resources */,
 				2EAE2F5727457C096F6FB7CD /* ntalrt_times.json in Resources */,
@@ -1203,6 +1210,7 @@
 				97798F204464B6B8C8086DA7 /* NetworkFlowSheet.swift in Sources */,
 				72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */,
 				AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */,
+				D9912E6736BD79286A858D14 /* NewTrainArrivalCard.swift in Sources */,
 				FC698A6F5A2379335FC7CC65 /* NewsLogView.swift in Sources */,
 				1C7C007EECCD097E32432661 /* NextStepChip.swift in Sources */,
 				230CF50ABD22FC093F7C16FD /* NightSkipChip.swift in Sources */,

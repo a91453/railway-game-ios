@@ -212,6 +212,19 @@
       "loopSeam": 0.00635
     },
     {
+      "file": "new-train.wav",
+      "score": "tools/audio/scores/new-train.score.json",
+      "scoreSha256": "66cf0ca8af7866d1fd62a70b0d972f107c1112589328c3057ebdd5b86c4992e3",
+      "kind": "tune",
+      "sha256": "5a265051b88a8887a269904b73a8e77b674d1856f44f078e083ffc4527d752fa",
+      "frames": 115200,
+      "seconds": 2.4,
+      "peakDbfs": -4.44,
+      "rmsDbfs": -20.88,
+      "largestStep": 0.16028,
+      "endLevel": 0.0
+    },
+    {
       "file": "rail-joint.wav",
       "kind": "sound",
       "synth": "make_game_audio.py clack()",

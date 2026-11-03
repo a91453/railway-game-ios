@@ -662,6 +662,8 @@ TUNES = [
     ("goal-met", "goal-met.wav"),
     # Decision 315: a real line bought.
     ("line-acquired", "line-acquired.wav"),
+    # Decision 566: a model new to the fleet came ashore.
+    ("new-train", "new-train.wav"),
 ]
 
 
