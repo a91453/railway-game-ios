@@ -10,6 +10,7 @@ public struct StationNameChoice: Hashable, Sendable, Identifiable {
         case place
         case landmark(StationLandmarks.Kind)
         case attraction
+        case busStop
         case road
         case crossing
     }
@@ -31,6 +32,7 @@ public struct StationNameChoice: Hashable, Sendable, Identifiable {
         case .landmark(.market): language.text("Market", "商圈")
         case .landmark(.mall): language.text("Shopping", "百貨")
         case .attraction: language.text("Sight", "景點")
+        case .busStop: language.text("Bus stop", "公車站")
         case .road: language.text("Road", "路名")
         case .crossing: language.text("Crossroads", "路口")
         }

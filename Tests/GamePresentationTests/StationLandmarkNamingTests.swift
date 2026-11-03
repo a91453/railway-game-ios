@@ -148,14 +148,13 @@ final class StationLandmarkNamingTests: XCTestCase {
         let world = try world(at: at.latitude, at.longitude)
         let here = try BundledRealData.point(at, in: world)
         let choices = GameSession.stationNameChoices(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names)
-        XCTAssertLessThanOrEqual(choices.count, 5)
+        XCTAssertLessThanOrEqual(choices.count, GameSession.stationNameChoiceLimit)
         XCTAssertEqual(
             choices.first?.name,
             GameSession.suggestedStationName(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names)
         )
         XCTAssertEqual(Set(choices.map(\.name)).count, choices.count, "Each name once")
-        XCTAssertTrue(choices.contains { $0.kind == .road }, "\(choices)")
-        XCTAssertTrue(choices.contains { $0.kind == .crossing }, "\(choices)")
+        XCTAssertTrue(choices.contains { $0.kind == .crossing || $0.kind == .road }, "\(choices)")
         for choice in choices where choice.kind != .realStation {
             XCTAssertTrue(railways.stations(named: choice.name, near: nil).isEmpty, "\(choice.name) is a real station's name")
         }
@@ -175,6 +174,34 @@ final class StationLandmarkNamingTests: XCTestCase {
         XCTAssertNotEqual(next, "大安森林公園")
         let choices = GameSession.stationNameChoices(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names)
         XCTAssertFalse(choices.contains { $0.name == "大安森林公園" })
+    }
+
+    func testABusStopsNameIsTidiedForAStation() {
+        XCTAssertEqual(GameSession.busStopStationName("前鎮高中(中山四路)"), "前鎮高中")
+        XCTAssertEqual(GameSession.busStopStationName("五分埔商圈（中坡北）"), "五分埔商圈")
+        XCTAssertEqual(GameSession.busStopStationName("榮總(往石牌)"), "榮總")
+        // A station's own stops.
+        XCTAssertNil(GameSession.busStopStationName("捷運三多商圈站(中山二路)"))
+        XCTAssertNil(GameSession.busStopStationName("臺北車站(忠孝)"))
+        XCTAssertNil(GameSession.busStopStationName("高鐵左營站"))
+        XCTAssertNil(GameSession.busStopStationName("鳳山火車站"))
+        XCTAssertNil(GameSession.busStopStationName("(往市區)"))
+    }
+
+    func testTheNearestBusStopIsOfferedTidied() throws {
+        let names = try bundled()
+        let at = RealRailways.Coordinate(latitude: 25.0300, longitude: 121.5355)
+        let world = try world(at: at.latitude, at.longitude)
+        let here = try BundledRealData.point(at, in: world)
+        // Two stops: a metro station's (left out) and a school's.
+        let files = try BusStopLabelsTests.busFiles([
+            ("捷運大安森林公園站(新生南路)", at.latitude + 0.0003, at.longitude),
+            ("某某高中(新生南路)", at.latitude + 0.0006, at.longitude),
+        ])
+        let buses = try RealBusLibrary(index: files.index, file: files.file)
+                let choices = GameSession.stationNameChoices(for: world, at: here, in: .traditionalChinese, placeNames: names, realBuses: buses)
+        XCTAssertTrue(choices.contains(StationNameChoice(name: "某某高中", kind: .busStop)), "\(choices)")
+        XCTAssertFalse(choices.contains { $0.name.contains("捷運") })
     }
 
     func testAMapWithoutRealGroundHasNoChoices() throws {

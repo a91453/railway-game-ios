@@ -1,6 +1,6 @@
 # 新車站命名用的地標、道路與路口
 
-實景地圖上建新車站時，800 m 內沒有真實車站，就先看 300 m 內有沒有夠大的地標（大學、高中、醫院、大公園、夜市商圈、百貨），再用聚落、村里、鄉鎮命名；取名欄下另有一排候選（地名、最近的地標、最近的公園、路名、路口名），點一下就換（決策 569，接決策 159）。資料來自 OpenStreetMap（ODbL 1.0），由 `build_station_landmarks.py` 離線讀出，打包成 `RailwayGameApp/Resources/RealWorld/taiwan_station_landmarks.json`，由 `GamePresentation` 的 `StationLandmarks` 讀取（掛在 `PlaceNames.landmarks`）。
+實景地圖上建新車站時，800 m 內沒有真實車站，就先看 300 m 內有沒有夠大的地標（大學、高中、醫院、大公園、夜市商圈、百貨），再用聚落、村里、鄉鎮命名；取名欄下另有一排最多 4 個候選（地名、最近的地標、公車站牌、路口名、公園、路名），點一下就換（決策 569，接決策 159）。資料來自 OpenStreetMap（ODbL 1.0），由 `build_station_landmarks.py` 離線讀出，打包成 `RailwayGameApp/Resources/RealWorld/taiwan_station_landmarks.json`，由 `GamePresentation` 的 `StationLandmarks` 讀取（掛在 `PlaceNames.landmarks`）。
 
 ## 產生
 
@@ -32,6 +32,6 @@ python3 -I tools/station-landmarks/build_station_landmarks.py taiwan.pbf \
 
 2026-11-03 的資料（osmtoday.com 的檔，2026-11-03 下載）：地標 1,717（大學 193、高中 414、醫院 199、公園 563、夜市商圈 221、百貨 127），道路 4,175 條名字、12,342 條線，路口 10,591，1.07 MB。
 
-## 為什麼不用公車站牌
+## 公車站牌
 
-作者提過用公車站牌命名。路口名從道路直接算得到；站牌名多半是村里名（已經有）或「捷運某某站」「某某國小」，和現有的重複，或繞回車站自己。見決策 569。
+候選裡的公車站牌名不在這個檔：用遊戲已打包的真實站牌（決策 424 的 `real_buses_*`），見決策 569。

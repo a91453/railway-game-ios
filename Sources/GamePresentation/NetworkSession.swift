@@ -93,7 +93,7 @@ extension GameSession {
                 automaticStationName = name
                 stationNameChoices = Self.stationNameChoices(
                     for: world, at: geometry.location(at: (stretch.start + stretch.end) / 2).position.plan, in: language,
-                    railways: railways, placeNames: placeNames
+                    railways: railways, placeNames: placeNames, realBuses: realBuses
                 )
             } else {
                 suggestStationName(at: geometry.location(at: (stretch.start + stretch.end) / 2).position.plan)

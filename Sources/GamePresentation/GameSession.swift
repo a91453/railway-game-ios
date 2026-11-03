@@ -3622,6 +3622,30 @@ public final class GameSession {
     nonisolated static let landmarkChoiceDistanceMetres = 600.0
     nonisolated static let roadChoiceDistanceMetres = 150.0
     nonisolated static let crossingChoiceDistanceMetres = 400.0
+    nonisolated static let busStopChoiceDistanceMetres = 150.0
+    /// How many names show under the name: one row, so the panel grows by
+    /// no more than a line.
+    nonisolated public static let stationNameChoiceLimit = 4
+
+    /// A real bus stop's name as a station's (decision 569), or `nil`:
+    /// without what is in brackets (前鎮高中(中山四路) → 前鎮高中, 「(往XX)」),
+    /// and none that names a station itself (捷運三多商圈站, 臺北車站,
+    /// 高鐵左營站) or is less than two characters.
+    nonisolated public static func busStopStationName(_ stop: String) -> String? {
+        var name = ""
+        var depth = 0
+        for character in stop {
+            switch character {
+            case "(", "（", "[", "［", "【": depth += 1
+            case ")", "）", "]", "］", "】": depth = max(0, depth - 1)
+            default: if depth == 0 { name.append(character) }
+            }
+        }
+        name = name.trimmingCharacters(in: .whitespaces)
+        let station = ["捷運", "車站", "火車站", "高鐵", "輕軌", "轉運站", "總站"]
+        guard name.count >= 2, !station.contains(where: name.contains), !name.hasSuffix("站") else { return nil }
+        return name
+    }
     /// The longest landmark name taken by default (臺北榮民總醫院 is seven);
     /// a longer one is only offered as a choice.
     nonisolated static let landmarkDefaultNameLength = 8
@@ -3683,17 +3707,20 @@ public final class GameSession {
     }
 
     /// The names offered under a new station's name on a real-world map
-    /// (decision 569), each a tap away: the suggested one
+    /// (decision 569), each a tap away, at most ``stationNameChoiceLimit``
+    /// in this order: the suggested one
     /// (``suggestedStationName(for:at:in:railways:placeNames:maximumDistanceMetres:)``),
-    /// the place's, the nearest landmark's, the nearest park's, the road's
-    /// and the crossing's, each not yet taken and not a real station's
-    /// elsewhere, each name once, at most five. None on other maps.
+    /// the place's, the nearest landmark's, the nearest real bus stop's
+    /// (``busStopStationName(_:)``), the crossing's, the nearest park's and
+    /// the road's; each not yet taken and not a real station's elsewhere,
+    /// each name once. None on other maps.
     nonisolated public static func stationNameChoices(
         for world: GameWorld,
         at location: PlanPoint?,
         in language: DisplayLanguage,
         railways: RealRailways? = nil,
-        placeNames: PlaceNames? = nil
+        placeNames: PlaceNames? = nil,
+        realBuses: RealBusLibrary? = nil
     ) -> [StationNameChoice] {
         guard let location, let placeNames, let naming = StationNaming(world: world, railways: railways) else { return [] }
         let here = naming.coordinate(location)
@@ -3712,23 +3739,36 @@ public final class GameSession {
         if let landmark = landmarks.first(where: { $0.kind != .landmark(.park) }) {
             offer(landmark.name.name(in: language), landmark.kind)
         }
+        if let realBuses {
+            let stops = realBuses.stops(around: location, frame: naming.frame, within: busStopChoiceDistanceMetres).stops
+            func distance(_ stop: RealBusStops.Stop) -> Int64 {
+                let dx = stop.point.x - location.x, dy = stop.point.y - location.y
+                return dx * dx + dy * dy
+            }
+            let reach = Int64(busStopChoiceDistanceMetres * Double(WorldCoordinate.unitsPerMetre))
+            let name = stops.filter { distance($0) <= reach * reach }
+                .sorted { distance($0) != distance($1) ? distance($0) < distance($1) : $0.name < $1.name }
+                .lazy
+                .compactMap { busStopStationName($0.name) }
+                .first { naming.isFree(PlaceNames.Name(chinese: $0, english: nil), in: language) }
+            offer(name, .busStop)
+        }
+        let streets = placeNames.landmarks
+        if let crossing = streets?.crossings(near: here, within: crossingChoiceDistanceMetres)
+            .first(where: { naming.isFree($0.thing, in: language) })?.thing {
+            offer(crossing.name(in: language), .crossing)
+        }
         if let park = landmarks.first(where: { $0.kind == .landmark(.park) }) {
             offer(park.name.name(in: language), park.kind)
         }
-        if let streets = placeNames.landmarks {
-            if let road = streets.road(near: here, within: roadChoiceDistanceMetres)?.thing, naming.isFree(road, in: language) {
-                offer(road.name(in: language), .road)
-            }
-            if let crossing = streets.crossings(near: here, within: crossingChoiceDistanceMetres)
-                .first(where: { naming.isFree($0.thing, in: language) })?.thing {
-                offer(crossing.name(in: language), .crossing)
-            }
+        if let road = streets?.road(near: here, within: roadChoiceDistanceMetres)?.thing, naming.isFree(road, in: language) {
+            offer(road.name(in: language), .road)
         }
         // The suggestion first, whatever it is.
         if let index = choices.firstIndex(where: { $0.name == suggestion }), index > 0 {
             choices.insert(choices.remove(at: index), at: 0)
         }
-        return Array(choices.prefix(5))
+        return Array(choices.prefix(stationNameChoiceLimit))
     }
 
     /// The names the world's stations take, and what step 1 to 4 of
@@ -3867,7 +3907,9 @@ public final class GameSession {
             stationName = suggestion
         }
         automaticStationName = suggestion
-        stationNameChoices = Self.stationNameChoices(for: world, at: location, in: language, railways: railways, placeNames: placeNames)
+        stationNameChoices = Self.stationNameChoices(
+            for: world, at: location, in: language, railways: railways, placeNames: placeNames, realBuses: realBuses
+        )
     }
 
     /// "Line N" (or "路線 N") with the lowest N from the next line number
