@@ -324,7 +324,7 @@ final class RealLineAcquisitionTests: XCTestCase {
     static func buyAndRunRealDay(_ id: String, type: TrainType, tier: LineAcquisition.Tier, rules: NewGameRules) throws {
         let absent = [
             "krtc:C", "trtc:R", "trtc:G", "trtc:O_XINZHUANG", "trtc:O_LUZHOU", "trtc:BL", "trtc:Y",
-            "tymc:A", "krtc:KR", "krtc:KO", "tmrt:TG",
+            "krtc:KR", "krtc:KO", "tmrt:TG",
         ]
         let session = try game(round: id, side: 1 << 21, heights: true, rules: rules)
         for absent in absent {

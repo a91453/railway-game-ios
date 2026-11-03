@@ -699,7 +699,7 @@ struct TrackRise {
     /// grade can.
     init?(
         path: WorldPath, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, levels: [Level], grade: Double = RealWorldDemo.rulingGrade,
-        carried: [Carried] = []
+        carried: [Carried] = [], slack: [Double] = TrackRise.slack
     ) {
         let count = max(1, Int((path.length / Self.spacing).rounded(.up)))
         let grid = (0...count).map { min(Double($0) * Self.spacing, path.length) }
@@ -751,7 +751,7 @@ struct TrackRise {
         let bounds = Self.bounds(distances: distances, carried: carried, wet: wet, levels: levels.map(\.range))
         // Where no grade reaches the water's either way, the stations may
         // stand further from the ground, a few metres at a time.
-        for slack in Self.slack {
+        for slack in slack {
             var low = [Double](repeating: -.infinity, count: distances.count)
             var high = ground.map { $0 + Self.highest }
             for level in levels {

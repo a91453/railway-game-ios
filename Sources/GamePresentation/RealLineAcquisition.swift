@@ -84,6 +84,31 @@ public struct RealBranchLine: Hashable, Sendable {
     /// medium-capacity trains are the game's APM.
     var isWenhu: Bool { system == "mrt" && network == "BR" }
 
+    /// Decision 556: whether its runs turn back at stations between its
+    /// ends, so it is laid with a crossover either side of each such
+    /// station (the Taoyuan Airport MRT's expresses turn at Airport
+    /// Terminal 2, its shuttles at Terminal 1 and Huanbei).
+    var turnsBackBetween: Bool { isTaoyuanAirport }
+
+    /// Whether it is the Taoyuan Airport MRT (decision 556).
+    var isTaoyuanAirport: Bool { system == "tymc" && network == "A" }
+
+    /// Decision 556: the steepest grade its track is laid at. The Taoyuan
+    /// Airport MRT climbs some 226 m onto the Linkou plateau in the 4.5 km
+    /// from Taishan Guihe to the National Taiwan Sport University, some
+    /// 5 % (the ground the game reads), past the game's 4 %
+    /// (``TrackProfile/maximumGrade``): it is laid at 3.8 %, just under
+    /// it, and its stations may stand further from the ground (``stationSlack``),
+    /// up to 48 m, on a viaduct below the plateau and in a cutting or a
+    /// tunnel on it. Every other line at the demo's 2.5 %.
+    var rulingGrade: Double { isTaoyuanAirport ? 0.038 : RealWorldDemo.rulingGrade }
+
+    /// Decision 556: how much further from the ground than they ask its
+    /// stations may stand, tried in turn (``TrackRise/slack``).
+    var stationSlack: [Double] {
+        isTaoyuanAirport ? TrackRise.slack + [24.0, 36, 48].map { $0 * RealWorldDemo.metre } : TrackRise.slack
+    }
+
     /// Whether its price pays for the riders of its first station: not at a
     /// branch line's junction, which is the main line's, nor where a light
     /// rail joins the one bought before, whose riders that paid for.
@@ -118,6 +143,7 @@ public struct RealBranchLine: Hashable, Sendable {
         ("mrt", "G_XBT", "Xiaobitan Branch Line", "小碧潭支線", nil, .metro, true),
         ("sanying", "LB", "Sanying Line", "三鶯線", nil, .metro, false),
         ("mrt", "BR", "Wenhu Line", "文湖線", nil, .metro, false),
+        ("tymc", "A", "Taoyuan Airport MRT", "桃園機場捷運", nil, .metro, false),
     ]
 
     public func name(in language: DisplayLanguage) -> String {
@@ -823,8 +849,9 @@ extension RealLineLaying {
         func worldPoints(_ site: RealLineDepotSite) -> [WorldVector] {
             [site.junction, site.yard.start, site.yard.end].map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
         }
-        let depotSite = depotSites.first { $0.beyond == nil }
-        let depotPoints = depotSite.map(worldPoints)
+        // Decision 556: every depot beside the line between its ends
+        // (the Taoyuan Airport MRT has two).
+        let midDepotSites = depotSites.filter { $0.beyond == nil }
         // Decision 489: past the end its depot stands beyond, the line
         // runs on as the real one does, straight to where its leads leave
         // it and round into the yard's way, not straight on.
@@ -1044,19 +1071,50 @@ extension RealLineLaying {
         // Decision 479: the depot's wye and crossovers, on the second
         // track's side of the line, clear of the stations and the second
         // track's ramps.
-        var depotAt: Double?
-        if depot, depotSite?.beyond == nil, let points = depotPoints, let second {
-            let j = path.nearest(points[0]).along
-            let marks = RealLineDepotLayout.marks(at: j)
-            let reach = marks[0]...marks[marks.count - 1]
-            let side = (points[1] - path.point(at: j)).dot(path.tangent(at: j).normal)
-            if side < 0, reach.lowerBound > second.a + ramp + gap, reach.upperBound < second.b - ramp - gap,
-               !spans.contains(where: { $0.overlaps(reach) }) {
-                forced += marks
-                depotAt = j
+        var depotsAt: [(site: RealLineDepotSite, points: [WorldVector], j: Double)] = []
+        var taken: [ClosedRange<Double>] = []
+        if depot, let second {
+            for site in midDepotSites {
+                let points = worldPoints(site)
+                let j = path.nearest(points[0]).along
+                let marks = RealLineDepotLayout.marks(at: j)
+                let reach = marks[0]...marks[marks.count - 1]
+                let side = (points[1] - path.point(at: j)).dot(path.tangent(at: j).normal)
+                if side < 0, reach.lowerBound > second.a + ramp + gap, reach.upperBound < second.b - ramp - gap,
+                   !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) {
+                    forced += marks
+                    depotsAt.append((site, points, j))
+                    taken.append(reach)
+                }
             }
         }
-        guard let rise = TrackRise(path: path, ground: ground, water: water, levels: levels, carried: carried) else {
+        // Decision 556: a crossover either side of each station between
+        // the ends a run starts or ends at, so a train turning back there
+        // crosses to the other track: on the junction's side from the
+        // second track to the first, on the terminal's from the first to
+        // the second, each trailing for the trains running through.
+        // Where one does not fit clear of the stations, the depots' wyes
+        // and the second track's ramps, it is left out.
+        var turnbacks: [(low: Double, high: Double)] = []
+        if line.turnsBackBetween, let second {
+            let turning = Set(runs.runs.filter { !$0.positioning }.flatMap { run in
+                [run.calls[0].station, run.calls[run.calls.count - 1].station]
+            }).compactMap { runs.stops.firstIndex(of: $0) }.filter { $0 > 0 && $0 < runs.stops.count - 1 }.sorted()
+            for stop in turning {
+                let span = spans[stop]
+                for (low, high) in [(span.lowerBound - gap - ramp, span.lowerBound - gap), (span.upperBound + gap, span.upperBound + gap + ramp)] {
+                    let reach = (low - gap)...(high + gap)
+                    guard low > second.a + ramp + gap, high < second.b - ramp - gap,
+                          !spans.contains(where: { $0.overlaps(reach) }), !taken.contains(where: { $0.overlaps(reach) }) else { continue }
+                    forced += [low, high]
+                    turnbacks.append((low, high))
+                    taken.append(reach)
+                }
+            }
+        }
+        guard let rise = TrackRise(
+            path: path, ground: ground, water: water, levels: levels, grade: line.rulingGrade, carried: carried, slack: line.stationSlack
+        ) else {
             return refused(
                 "The track cannot climb along this line within the steepest grade.",
                 "沿這條線的高低差超過遊戲的坡度上限，鋪不上去。"
@@ -1119,12 +1177,14 @@ extension RealLineLaying {
         // first before it to the first track, the second after it from
         // the first track, as the second track's ramps are laid.
         let mainNode = { (distance: Double) in main.distances.firstIndex { abs($0 - distance) < 1 } }
-        var depotMarks: [(main: Int, second: Int)] = []
-        if let j = depotAt {
-            depotMarks = RealLineDepotLayout.marks(at: j).compactMap { mark in
-                mainNode(mark).flatMap { node in besideNodes.firstIndex(of: node).map { (node, $0) } }
+        var depotMarks: [[(main: Int, second: Int)]] = []
+        for (_, _, j) in depotsAt {
+            let marks: [(main: Int, second: Int)] = RealLineDepotLayout.marks(at: j).compactMap { mark in
+                mainNode(mark).flatMap { node in besideNodes.firstIndex(of: node).map { (main: node, second: $0) } }
             }
-            if depotMarks.count == 6 {
+            depotMarks.append(marks)
+            if marks.count == 6 {
+                let depotMarks = marks
                 let offset = -HighSpeedDemo.trackOffset
                 plans.append((
                     RealWorldDemo.TrackPlan(beside: main, at: [depotMarks[0].main, depotMarks[1].main], offsets: [0, offset]),
@@ -1135,6 +1195,15 @@ extension RealLineLaying {
                     RealLineAcquisition.NodeAt(piece: 1, node: depotMarks[4].second), RealLineAcquisition.NodeAt(piece: 0, node: depotMarks[5].main), true
                 ))
             }
+        }
+        // Decision 556: the turn-back crossovers, each from the first track
+        // nearer the junction to the second further from it.
+        for (low, high) in turnbacks {
+            guard let a = mainNode(low), let b = mainNode(high), let onSecond = besideNodes.firstIndex(of: b), besideNodes.contains(a) else { continue }
+            plans.append((
+                RealWorldDemo.TrackPlan(beside: main, at: [a, b], offsets: [0, -HighSpeedDemo.trackOffset]),
+                RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 1, node: onSecond), true
+            ))
         }
         var pieces = plans.map { entry in
             let plan = entry.plan
@@ -1149,11 +1218,15 @@ extension RealLineLaying {
             )
         }
         var depotsLaid: [(stop: Int?, depot: RealLineAcquisition.Depot)] = []
-        if let site = depotSite, let points = depotPoints, let j = depotAt, let laid = RealLineDepotLayout.lay(
-            site, points: points, along: path, at: j, second: plans[1].plan, marks: depotMarks, first: pieces.count, length: platformLength,
-            ground: ground, water: water, in: language
-        ) {
+        // Decision 556: where along the line each depot beside it stands.
+        var depotAlong: [Int: Double] = [:]
+        for ((site, points, j), marks) in zip(depotsAt, depotMarks) {
+            guard let laid = RealLineDepotLayout.lay(
+                site, points: points, along: path, at: j, second: plans[1].plan, marks: marks, first: pieces.count, length: platformLength,
+                ground: ground, water: water, in: language
+            ) else { continue }
             pieces += laid.pieces
+            depotAlong[depotsLaid.count] = j
             depotsLaid.append((nil, laid.depot))
         }
         // Decision 489: a depot past an end, its lead on from the main
@@ -1197,16 +1270,21 @@ extension RealLineLaying {
             var count = overnight
             // The depot past this end, or, on a line with none past an
             // end, the one beside the line for a station between.
-            let room = depotEnds.isEmpty
-                ? (stop > 0 && stop < lastStop ? depotsLaid.firstIndex { $0.stop == nil } : nil)
-                : depotsLaid.firstIndex { $0.stop == stop }
-            if let room {
+            // Decision 556: the nearest beside the line first, then the
+            // next nearest while the station has trains left.
+            let rooms = depotEnds.isEmpty
+                ? (stop > 0 && stop < lastStop
+                    ? depotsLaid.indices.filter { depotsLaid[$0].stop == nil }
+                    .sorted { abs((depotAlong[$0] ?? 0) - along[stop].along) < abs((depotAlong[$1] ?? 0) - along[stop].along) }
+                    : [])
+                : depotsLaid.indices.filter { depotsLaid[$0].stop == stop }
+            for room in rooms {
                 while count > 0, !depotRooms[room].isEmpty {
                     starts.append(RealLineAcquisition.Start(name: "", at: depotRooms[room].removeFirst(), forward: true))
                     count -= 1
                 }
-                if count == 0 { continue }
             }
+            if count == 0 { continue }
             var tracks = platformsAt.filter { $0.stop == stop }
             var forward = stop < lastStop
             if double, stop > 0, stop < lastStop {
