@@ -848,7 +848,10 @@ struct MapView: View {
                                 }
                             }
                             .transition(.scale.combined(with: .opacity))
-                        } else if insets.trailing == 0, miniMap?.isShown(beside: projection.visibleRegion) ?? false {
+                        } else if insets.trailing == 0, session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsMapExtras,
+                                  miniMap?.isShown(beside: projection.visibleRegion) ?? false {
+                            // Decision 568: not while a new line is picked,
+                            // where the pill went over it.
                             // Decision 116: the whole map, small; it gives
                             // way to a layer's legend, which needs the height,
                             // and to the details card or a panel at the

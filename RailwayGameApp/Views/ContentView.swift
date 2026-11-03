@@ -745,6 +745,11 @@ struct ContentView: View {
                         )
                         .padding(.leading, beside + margin)
                         .padding(.bottom, strip + margin)
+                        // Decision 568: out of sight while a new line is
+                        // picked (its bubble stood over the pill), kept so
+                        // it remembers what it has said.
+                        .opacity(drawing.showsMapExtras ? 1 : 0)
+                        .allowsHitTesting(drawing.showsMapExtras)
                     }
                 }
                 // Decision 224 (3B): the last two stations picked for a new

@@ -23,6 +23,9 @@ public struct LineDrawingChrome: Equatable, Sendable {
     /// The map's bubbles over its stations (what needs the player) and the
     /// city's requests: they stood over the pill.
     public var showsAlerts: Bool { !isDrawing }
+        /// The station master in the corner, whose bubble stood over the pill,
+    /// and the small map of the whole world, which the pill went over.
+    public var showsMapExtras: Bool { !isDrawing }
         /// The map's button that starts expanding the map.
     public var showsMapExpansion: Bool { !isDrawing }
     /// The game's Undo and Redo: the pill's ↶ takes back the last stop
