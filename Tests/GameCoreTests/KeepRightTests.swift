@@ -42,6 +42,27 @@ final class KeepRightTests: XCTestCase {
         XCTAssertEqual(world.path(from: KeepLeftTests.fromWest, toStation: east)?.traversals, KeepLeftTests.eastbound)
     }
 
+    /// A crossover laid as an S-curve leaves its node along the track but
+    /// for the tangents' rounding: here a hair to the right (south, going
+    /// east) while it bends away north. Which side it is on comes from the
+    /// chords (on the Sanying Line before this, a train keeping right took
+    /// such a crossover onto the other way's track: 292 of 398 runs not
+    /// sent out on the second day, simple rules).
+    func testACrossoverStartingAlongTheTrackIsOnTheSideItBendsTo() throws {
+        var world = try GameWorld(bounds: WorldBounds(width: 40_960, height: 20_480), economy: fixtureEconomy(balance: 1_000_000, costs: ConstructionCosts(track: 0, station: 0, train: 0)), clock: GameClock(speed: .normal))
+        for (x, y): (Int64, Int64) in [(2_048, 10_240), (10_240, 10_240), (16_640, 10_240), (16_640, 9_216)] {
+            try world.buildTrackNode(at: WorldCoordinate(x: x, y: y))
+        }
+        let arrival = try world.buildTrackEdge(from: .node(1), to: .node(2))
+        let through = try world.buildTrackEdge(from: .node(2), to: .node(3))
+        let crossover = try world.buildTrackEdge(from: .node(2), to: .node(4), curve: .cubic(PlanPoint(x: 12_373, y: 10_241), PlanPoint(x: 14_507, y: 9_216)))
+        let after = TrackTraversal(edge: arrival, direction: .forward)
+        let exits = world.transitions(after: after)
+        XCTAssertEqual(Set(exits), [TrackTraversal(edge: through, direction: .forward), TrackTraversal(edge: crossover, direction: .forward)])
+        XCTAssertEqual(world.rightOfLeftmost(after: after, among: exits), [TrackTraversal(edge: through, direction: .forward)], "the crossover, north, is the leftmost")
+        XCTAssertEqual(world.rightOfLeftmost(after: after, among: exits, mirrored: true), [TrackTraversal(edge: crossover, direction: .forward)], "and not the rightmost")
+    }
+
     func testTheSideIsSavedOnlyWhenRightAndACopyKeepsIt() throws {
         var (world, _, _, line) = try Self.world(keepsRight: true)
         let data = try JSONEncoder().encode(world)

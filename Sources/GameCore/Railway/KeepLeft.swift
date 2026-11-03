@@ -18,6 +18,13 @@ extension GameWorld {
     /// a curve over a few hundred metres; shorter than a detour.
     public static let keepLeftMargin: Int64 = 3_200
 
+    /// Decision 564: two ways on whose end tangents differ by less than a
+    /// slope of 1 in this leave the node the same way, and their chords
+    /// order them. A crossover laid as an S-curve starts along its track
+    /// but for the tangents' rounding (a slope of some 1 in 15,000 seen on
+    /// the Sanying Line), which alone would put it on the wrong side.
+    static let sameWaySlope: Int64 = 256
+
     /// Turns keeping left on or off (decision 202). A train already on its
     /// way keeps the route it was given.
     public mutating func setKeepLeft(_ enabled: Bool) {
@@ -31,7 +38,8 @@ extension GameWorld {
     ///
     /// The ways on are ordered by the way each leaves the node (its end
     /// tangent), then, where two leave it the same way (a turnout's curve
-    /// starts along the straight), by the chord to its far node. x grows
+    /// starts along the straight; decision 564, to within a slope of 1 in
+    /// ``sameWaySlope``), by the chord to its far node. x grows
     /// east and y south, so a way is left of another when the cross product
     /// from the other to it is negative. Every way on leaves within 1 in 16
     /// of straight on (see ``PlanVector/isOpposite(to:)``), so the order is
@@ -48,7 +56,7 @@ extension GameWorld {
         // Whether `a` is left of `b`.
         func isLeft(_ a: (exit: TrackTraversal, tangent: PlanVector, chord: PlanVector), of b: (exit: TrackTraversal, tangent: PlanVector, chord: PlanVector)) -> Bool {
             let turn = b.tangent.cross(a.tangent)
-            return turn != 0 ? turn < 0 : b.chord.cross(a.chord) < 0
+            return abs(turn) > b.tangent.dot(a.tangent) / Self.sameWaySlope ? turn < 0 : b.chord.cross(a.chord) < 0
         }
         return Set(ways.filter { way in ways.contains { mirrored ? isLeft(way, of: $0) : isLeft($0, of: way) } }.map(\.exit))
     }
