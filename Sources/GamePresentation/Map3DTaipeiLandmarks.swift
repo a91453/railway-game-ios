@@ -236,7 +236,7 @@ struct LandmarkMesh {
         }
     }
 
-    mutating func cap(_ ring: [P2], _ z: Float, _ color: UInt32, _ layer: Float) {
+    mutating func cap(_ ring: [P2], _ z: Float, _ color: UInt32, _ layer: Float = Self.plain) {
         let n = Float(ring.count)
         let c = (x: ring.reduce(0) { $0 + $1.x } / n, y: ring.reduce(0) { $0 + $1.y } / n)
         for k in ring.indices {
@@ -1325,7 +1325,7 @@ struct LandmarkMesh {
         //    west 4F arcade strip way 644774180 height = 19.68 m).
         let baseRing = Self.cornerRing(42.45, 20.13)
         wallBand(baseRing, 0, baseRing, 4.5, plinth, Self.floors)
-        cap(baseRing, 4.5, flatRoof)
+        cap(baseRing, 4.5, flatRoof, Self.plain)
 
         // Flanking 2-level north plaza wings (ways 644774176 & 644774178)
         for sy: Float in [-1, 1] {
@@ -1344,7 +1344,7 @@ struct LandmarkMesh {
         }
         archRing.append((31.87, 7.0))
         wallBand(archRing, 4.5, archRing, 14.0, rose, Self.floors)
-        cap(archRing, 14.0, flatRoof)
+        cap(archRing, 14.0, flatRoof, Self.plain)
 
         var glassArch: [P2] = [(32.0, -5.6)]
         for i in 0...archSegs {
@@ -1372,7 +1372,7 @@ struct LandmarkMesh {
 
         let pod10Ring = Self.cornerRing(podHX - 0.16, podHY - 0.16, x0: podX0, y0: 0)
         wallBand(pod10Ring, 4.5, pod10Ring, 46.56, brick, Self.floors)
-        cap(Self.cornerRing(podHX, podHY, x0: podX0, y0: 0), 46.56, flatRoof)
+        cap(Self.cornerRing(podHX, podHY, x0: podX0, y0: 0), 46.56, flatRoof, Self.plain)
 
         // Alternating warm-beige stone bands on 1F-10F podium (proud of brick wall)
         let podBands: [Float] = full ? [8.5, 13.0, 17.5, 22.0, 26.5, 31.0, 35.5, 40.0, 44.8] : [14.0, 28.0, 44.8]
@@ -1393,7 +1393,7 @@ struct LandmarkMesh {
         // 11F-13F First Wedding-Cake Podium Setback (z = 46.56 .. 63.20 m, OSM ways 644774203..644774217)
         let pod13Ring = Self.notchedRing(podX0, 0, podHX - 2.95, podHY - 3.15, 3.0, 3.1)
         wallBand(pod13Ring, 46.56, pod13Ring, 63.20, brick, Self.floors)
-        cap(Self.notchedRing(podX0, 0, podHX - 2.80, podHY - 3.00, 3.0, 3.1), 63.20, flatRoof)
+        cap(Self.notchedRing(podX0, 0, podHX - 2.80, podHY - 3.00, 3.0, 3.1), 63.20, flatRoof, Self.plain)
         // Corner 13F shoulders
         box(hx: podHX - 2.95, hy: podHY - 0.15, z0: 46.56, z1: 54.8, rose, Self.floors, top: flatRoof, x0: podX0, y0: 0)
         box(hx: podHX - 0.15, hy: podHY - 3.15, z0: 46.56, z1: 54.8, rose, Self.floors, top: flatRoof, x0: podX0, y0: 0)
@@ -1409,7 +1409,7 @@ struct LandmarkMesh {
         // 14F-16F Second Wedding-Cake Podium Setback (z = 63.20 .. 78.56 m, OSM way 644774201: height = 78.56 m)
         let pod16Ring = Self.notchedRing(-9.4, 0, 29.95, 13.90, 3.2, 3.0)
         wallBand(pod16Ring, 63.20, pod16Ring, 78.56, brick, Self.floors)
-        cap(Self.notchedRing(-9.4, 0, 30.10, 14.05, 3.2, 3.0), 78.56, podiumRoof)
+        cap(Self.notchedRing(-9.4, 0, 30.10, 14.05, 3.2, 3.0), 78.56, podiumRoof, Self.plain)
         // North 15F intermediate shoulder (z = 63.20 .. 71.5 m) flanking the 18F turret
         box(hx: 5.6, hy: 12.4, z0: 63.20, z1: 71.5, rose, Self.floors, top: flatRoof, x0: 21.5, y0: 0)
         if full {
@@ -1424,7 +1424,7 @@ struct LandmarkMesh {
         let turretX0: Float = 24.24
         let turretRing = Self.notchedRing(turretX0, 0, 6.68, 7.04, 1.42, 1.35)
         wallBand(turretRing, 63.20, turretRing, 86.24, brick, Self.floors)
-        cap(Self.notchedRing(turretX0, 0, 6.81, 7.16, 1.42, 1.35), 86.24, podiumRoof)
+        cap(Self.notchedRing(turretX0, 0, 6.81, 7.16, 1.42, 1.35), 86.24, podiumRoof, Self.plain)
         box(hx: 0.22, hy: 4.8, z0: 65.5, z1: 83.0, glassTop, Self.curtain, x0: 30.82, y0: 0.0)
         if full {
             for tz: Float in [67.5, 72.5, 77.5, 84.8] {
@@ -1467,7 +1467,7 @@ struct LandmarkMesh {
             z += shaftStep
             idxBand += 1
         }
-        cap(Self.notchedRing(tx0, 0, 23.05, 17.05, 3.0, 3.0), 187.36, flatRoof)
+        cap(Self.notchedRing(tx0, 0, 23.05, 17.05, 3.0, 3.0), 187.36, flatRoof, Self.plain)
 
         // Slender vertical window mullions (proud of glass 22.75/16.75, recessed behind horizontal spandrel bands 23.05/17.05)
         if full {
@@ -1487,7 +1487,7 @@ struct LandmarkMesh {
         let tier46Glass = Self.notchedRing(tx0, 0, 22.80, 15.35, 2.85, 4.40)
         let tier46Band = Self.notchedRing(tx0, 0, 23.05, 15.60, 2.85, 4.40)
         wallBand(tier46Glass, 187.36, tier46Glass, 195.68, glassTop, towerGlass)
-        cap(tier46Band, 195.68, flatRoof)
+        cap(tier46Band, 195.68, flatRoof, Self.plain)
         let t46Bands: [Float] = full ? [189.6, 192.4, 194.8] : [191.2, 194.8]
         for tz in t46Bands {
             wallBand(tier46Band, tz, tier46Band, tz + 0.85, brick, Self.floors)
@@ -1496,7 +1496,7 @@ struct LandmarkMesh {
         let tier48Glass = Self.notchedRing(tx0, 0, 22.80, 13.95, 5.80, 6.20)
         let tier48Band = Self.notchedRing(tx0, 0, 23.05, 14.20, 5.80, 6.20)
         wallBand(tier48Glass, 195.68, tier48Glass, 203.36, glassTop, towerGlass)
-        cap(tier48Band, 203.36, flatRoof)
+        cap(tier48Band, 203.36, flatRoof, Self.plain)
         let t48Bands: [Float] = full ? [197.8, 200.4, 202.5] : [199.4, 202.5]
         for tz in t48Bands {
             wallBand(tier48Band, tz, tier48Band, tz + 0.85, brick, Self.floors)
@@ -1506,7 +1506,7 @@ struct LandmarkMesh {
         // x in [-25.88, 14.86] -> width 40.74 m (hx = 20.37), y in [-17.05, 17.05] -> depth 34.10 m)
         let tier50Ring = Self.notchedRing(tx0, 0, 20.37, 14.20, 4.20, 3.80)
         wallBand(tier50Ring, 203.36, tier50Ring, 211.04, brick, Self.floors)
-        cap(tier50Ring, 211.04, podiumRoof)
+        cap(tier50Ring, 211.04, podiumRoof, Self.plain)
         box(hx: 15.8, hy: 10.0, z0: 204.6, z1: 209.4, glassTop, towerGlass, x0: tx0, y0: 0.0)
         if full {
             box(hx: 16.0, hy: 10.2, z0: 206.4, z1: 207.8, louver, Self.plain, x0: tx0, y0: 0.0)
