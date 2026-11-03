@@ -181,6 +181,37 @@ final class Map3DFrameCostReportTests: XCTestCase {
                           lineBands: bands ? Map3DLineBands(world: line, palette: .standard) : nil, temples: temples)
     }
 
+    /// Decision 555: the chunks in view and the triangles they draw round
+    /// Taipei Main Station at the distance's tilt and leaned to 60°,
+    /// upright and sideways, facing the four ways.
+    func testTheLeanedView() throws {
+        guard ProcessInfo.processInfo.environment["MAP3D_FRAME_REPORT"] != nil else { throw XCTSkip("Set MAP3D_FRAME_REPORT=1.") }
+        let scene = try Self.taipeiScene()
+        func count(_ camera: Map3DCamera) -> (chunks: Int, triangles: Int) {
+            let matrix = camera.viewProjection
+            var chunks = 0, triangles = 0
+            for chunk in scene.chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: matrix) {
+                chunks += 1
+                let detailed = camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum)
+                triangles += detailed ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.farTriangleCount
+            }
+            return (chunks, triangles)
+        }
+        for viewport in [(402, 874), (874, 402)] as [(width: Float, height: Float)] {
+            for distance in [120, 200, 260] as [Float] {
+                var own = (chunks: 0, triangles: 0), leaned = own
+                for heading in [0, 0.5, 1, 1.5].map({ Float($0) * .pi }) {
+                    let camera = Map3DCamera(target: .zero, distance: distance, heading: heading, viewport: viewport)
+                    let a = count(camera), b = count(camera.leaned(dy: -1_000))
+                    own = (max(own.chunks, a.chunks), max(own.triangles, a.triangles))
+                    leaned = (max(leaned.chunks, b.chunks), max(leaned.triangles, b.triangles))
+                }
+                print("\(Int(viewport.width))×\(Int(viewport.height)) \(Int(distance)) m: own tilt \(own.chunks) chunks \(own.triangles) triangles, "
+                      + "60° \(leaned.chunks) chunks \(leaned.triangles) triangles (the most of four headings)")
+            }
+        }
+    }
+
     /// Decision 314: what the line's colour bands add, in the near meshes
     /// only (no draw call of their own); the trains' labels are a few
     /// SwiftUI views over the map and add no triangles.

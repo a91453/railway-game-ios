@@ -476,7 +476,7 @@ final class Map3DMetalView: MTKView {
     /// Saving, or out past ``Map3DSunShadow/farthestCamera``.
     private func wantedSunRegion(at now: CFTimeInterval) -> (drawn: Map3DSunShadow.Region?, redraw: Map3DSunShadow.Region?) {
         guard sunDrawing != nil, let plan = sunPlan, Map3DSunShadow.strength(shown) > 0, let device,
-              let wanted = Map3DSunShadow.region(target: camera.target, distance: camera.distance, sun: shown.sunDirection, size: plan.size)
+              let wanted = Map3DSunShadow.region(camera: camera, sun: shown.sunDirection, size: plan.size)
         else { return (nil, nil) }
         if let drawn = sunDrawn {
             if !sunSceneChanged, !drawn.isStale(for: wanted) { return (drawn, nil) }

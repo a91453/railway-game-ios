@@ -190,6 +190,9 @@ public struct Map3DModelPack: Sendable {
             models += Map3DAnkengLRT.Unit.allCases.map { Map3DAnkengLRT.model($0, far: far) }
             models += Map3DDanhaiLRT.Unit.allCases.map { Map3DDanhaiLRT.model($0, far: far) }
         }
+        for role in Map3DEMU700.Role.allCases {
+            for far in [false, true] { models.append(Map3DEMU700.model(role, far: far)) }
+        }
         self.init(recipes: models, baked: baked)
     }
 

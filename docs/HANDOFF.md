@@ -1,3 +1,5 @@
+> Codex EMU700立體鼻罩續修（2026-11-03，[公開draft #1730](https://github.com/a91453/railway-game-ios/pull/1730) ↔ [素材draft #45](https://github.com/a91453/railway-assets-private/pull/45)）：53候選未接受，作者重審其平面嘴形／直板下鼻仍不足，使用者同意繼續。新producer `cd01a6f906770731874b0b447325052e3afd67f9` 重建橘色罩面前凸、收回下緣與環向肩面、薄藍色下裙；引桿框退罩後0.14m防外露，不改連結面。近遠橘色曲面相同。全部四角色／完整八車重出，六個中間單元對53逐bytes保護；最新main efb96529完整942模型保護、standard增量0。源圖／形體配適與真深度壓平、下鼻壓平、引桿穿罩故障見本型README及verification。四態與file://／裝置／營運／近期編組來源缺口仍UNVERIFIED，無使用者接受。最終文件head、素材head、最新CI另見互鏈draft；不推main、合併、auto-merge或TestFlight。
+
 > 3D 彎道上列車頭尾兩節（派工單 CURVE3D，[決策 538](decisions/538.md)，`curve3d-train-on-curve`，104.1 竹中六家線）：車身外的前半節、後半節改沿軌道放（`TrainTrackReach`），不再直直伸出彎道；Linux `LiujiaLineTrainsTests.testTheLiujiaTrainsAtZhuzhongKeepEveryCarOnTheCurve` 舊放法 8.8 m、新 0 m。2D 地圖也改成沿軌道放（CURVE2D，決策 538「續」，`claude/curve2d-train-on-curve`；竹中 2D 舊 8.2 m、新 0 m，每幀放車 42 → 11.6 µs）。留下的：快轉滑行時車身外的高度、車擋前畫的車比軌道長，見決策 538「下一步」與「下一步（續）」。實機 UNVERIFIED。
 
 > Codex 桃園機捷續修（公開draft #1700 ↔ 素材draft #43）：真正producer `42214527e0115fa612711bdea10c697e36959a05`，前稿e1139b6未接受；車頭曲面、斜風擋、逃生門、燈罩、圓角門窗、台車及凹口連結器已重建。18近遠角色與4完整assembly，獨立48模型／payload、21PNG及自含gzip viewer逐bytes一致；8註冊＋3角色WAE測試、7工具測試及真正前稿拒收已驗。最新main a48121b7的共用平行化屬上游，892現有runtime payload及全頂點欄位實際保持；standard增量0，沒動營運、燈或回退。tymc的kind傳遞缺口仍僅studies；四態、指定車號2026日期、正交頂底／反側設備及受政策擋住的file://均保留UNVERIFIED。詳 [本型交接](art/taoyuan-airport/README.md) 及驗證。不推main／merge／auto-merge／TestFlight。
@@ -3332,3 +3334,7 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **留下的**：
   - `ContentView`、`MapView`、`TutorialOverlay` 三個整頁 `GeometryReader`：closure 讀 proxy 本身（`frame(in: .global)`、`safeAreaInsets`、錨點），又從 session 建整個畫面，換成子 View 或量大小都等於重寫畫面。大小只隨轉向與視窗變，一百多版沒有閃退紀錄；有紀錄再做。
   - `Chart { ForEach }`（9 處，8 個檔案）：沒查到 Charts 何時展開標記的公開資料或同型回報（Apple 論壇 802729 只講 SwiftUI 的 `ForEach`）。Linux 看不到 Charts 的 swiftinterface；要查就在 macOS 讀 `Charts.swiftinterface` 裡 `ForEach: ChartContent` 的 init 是否 `@Sendable`／`@preconcurrency`，或在 iPad 上開圖表動畫跑一次 Thread Sanitizer。查清楚前不改。
+
+### 4.45 3D 鏡頭兩指可再斜到 60°（決策 555，派工單 TILT60，session_01JMHz9cKsW7rXnjBvxxa4yp，`claude/tilt60`，2026-11-03）
+
+做了的在 [決策 555](decisions/555.md)：兩指往上拖可斜到 60°，預設距離曲線不變、放手保持、拉遠回平；太陽影子正方形往視線方向挪。留下的（決策 555「下一步」）：實機量 60° 的幀數與 GPU 時間（橫式 260 m 最重）、手勢誤判的手感、TILT75（地平線、霧、遠景一級）。

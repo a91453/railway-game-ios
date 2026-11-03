@@ -1,0 +1,54 @@
+{
+  "status": "UNVERIFIED",
+  "delivery": "static studies registration only",
+  "actual_paths": [
+    {
+      "file": "Sources/GamePresentation/Map3DTrainSets.swift",
+      "functions": [
+        "variant(of:number:locked:)",
+        "localTrain(number:)"
+      ],
+      "finding": "Generic emu800 traffic key delegates to existing number-based EMU900/500/800 split; no reliable EMU700 identity."
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DRealTrains.swift",
+      "functions": [
+        "variantKey(system:key:number:locked:)",
+        "formation(of:system:number:locked:)"
+      ],
+      "finding": "TRA delegates to the same set selector and generic formation contract."
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DTrains.swift",
+      "functions": [
+        "cars(...)",
+        "Heights.type(of:)"
+      ],
+      "finding": "Uses heights.type(of: run.train) and run number; no formal EMU700 role sequence supplied."
+    },
+    {
+      "file": "Sources/GamePresentation/Map3DModels.swift",
+      "functions": [
+        "init(studiesBaked:)"
+      ],
+      "finding": "Only eight independent studies appended; standard models, operating modelIndex, lights, packs and fallback unchanged."
+    }
+  ],
+  "missing_contract": [
+    "explicit EMU700 type for a train/run",
+    "complete fixed eight-car roles and direction without a number-based guess",
+    "operating set lengths/lighting/near-far/fallback tests",
+    "device driving and memory verification"
+  ],
+  "post_merge_behaviour": "No operating replacement; tools can select tra-emu700-* study IDs and the shared assembly-spec reconstructs the full eight-car train.",
+  "existing_model_protection": "All actual standard+studies runtime model native bytes and ten-field FNV are compared, including the two unlocked scenery models.",
+  "forbidden_changes_avoided": [
+    "GameCore",
+    "save format",
+    "golden/replay/save fixtures",
+    "purchase/unlocks",
+    "schedule",
+    "animation/control",
+    "shared shell/palette/loader/format/gates"
+  ]
+}
