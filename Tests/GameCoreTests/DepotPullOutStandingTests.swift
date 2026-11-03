@@ -19,8 +19,8 @@ final class DepotPullOutStandingTests: XCTestCase {
     /// The world, traffic control `trafficControl`, Main from West to East
     /// with real runs, a train of Main's in East's depot facing west and,
     /// with `standing`, another stood on the north track.
-    private func makeWorld(trafficControl: Bool = false, standing: Bool = true) throws -> (world: GameWorld, train: TrainID, west: StationID, yard: StationID) {
-        var (world, west, east) = try KeepLeftTests.world(keepLeft: false)
+    private func makeWorld(trafficControl: Bool = false, standing: Bool = true, keepLeft: Bool = false, standingOn edge: Int = 4) throws -> (world: GameWorld, train: TrainID, west: StationID, yard: StationID) {
+        var (world, west, east) = try KeepLeftTests.world(keepLeft: keepLeft)
         try world.setTrafficControl(trafficControl)
         try world.buildTrackNode(at: WorldCoordinate(x: 40_896, y: 5_120)) // node 9
         try world.buildTrackEdge(from: .node(8), to: .node(9)) // e9, 1,984 long
@@ -35,7 +35,7 @@ final class DepotPullOutStandingTests: XCTestCase {
         try world.assignTrain(train, to: line)
         if standing {
             let other = try world.purchaseTrain(named: "U").id
-            try world.placeTrain(other, at: .onEdge(TrackTraversal(edge: .edge(4), direction: .backward), offset: 10_240))
+            try world.placeTrain(other, at: .onEdge(TrackTraversal(edge: .edge(edge), direction: .backward), offset: 10_240))
             try world.assignTrain(other, to: line)
         }
         return (world, train, west, yard)
@@ -67,5 +67,27 @@ final class DepotPullOutStandingTests: XCTestCase {
         XCTAssertEqual(try leavingTheDepot(free.world, free.train, west: free.west, yard: free.yard), Self.north)
         let on = try makeWorld(trafficControl: true)
         XCTAssertEqual(try leavingTheDepot(on.world, on.train, west: on.west, yard: on.yard), Self.north)
+    }
+
+    /// Decision 547 (L6-4): keeping left, Main's trains run west on the
+    /// south track (e7, e5, e3), so the north one taken west is track Main
+    /// takes only the other way (decision 527). A third track between the
+    /// two, a little longer than either, runs from the south track's
+    /// turnouts (e10, e11, e12). With a train standing on the south track,
+    /// the way kept off it is the north track; before the way kept off
+    /// that was worked out keeping off the standing train too, it went
+    /// back to the south track, past the train standing there.
+    func testTheRunOutKeptOffTheOtherWaysTrackStillKeepsOffTheStandingTrain() throws {
+        func run(standing: Bool) throws -> [Int] {
+            var (world, train, west, yard) = try makeWorld(standing: standing, keepLeft: true, standingOn: 5)
+            try world.buildTrackNode(at: WorldCoordinate(x: 13_312, y: 5_120)) // node 10
+            try world.buildTrackNode(at: WorldCoordinate(x: 26_624, y: 5_120)) // node 11
+            try world.buildTrackEdge(from: .node(4), to: .node(10), curve: .cubic(PlanPoint(x: 11_264, y: 6_144), PlanPoint(x: 11_264, y: 5_120))) // e10
+            try world.buildTrackEdge(from: .node(10), to: .node(11)) // e11
+            try world.buildTrackEdge(from: .node(11), to: .node(6), curve: .cubic(PlanPoint(x: 28_672, y: 5_120), PlanPoint(x: 28_672, y: 6_144))) // e12
+            return try leavingTheDepot(world, train, west: west, yard: yard)
+        }
+        XCTAssertEqual(try run(standing: false), [7, 5, 3, 1], "keeping left, the south track")
+        XCTAssertEqual(try run(standing: true), [7, 12, 11, 10, 3, 1], "the third track, neither past the standing train nor on the north one")
     }
 }

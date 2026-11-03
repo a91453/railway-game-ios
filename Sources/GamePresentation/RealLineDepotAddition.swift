@@ -148,20 +148,42 @@ extension GameSession {
 
     /// Real depot `name` (``missingRealDepots(of:)``) laid out for line
     /// `id` on a copy of the world and priced: what it takes or why it
-    /// cannot be added here.
+    /// cannot be added here; refused for a line that misses none (review
+    /// L7-4).
     public func realDepotOffer(for id: LineID, site name: String) -> RealLineDepotOffer {
         let sites = missingRealDepotSites(of: id)
-        let site = sites.first { $0.name(in: language) == name } ?? sites[0]
+        guard let site = sites.first(where: { $0.name(in: language) == name }) ?? sites.first else {
+            return RealLineDepotOffer(
+                line: id, name: name, beyond: "", sidings: 0, addition: nil, land: nil, building: nil, demolished: [],
+                problem: language.text("This line has no depot to add.", "這條線沒有可以加建的機廠。"), waitsForTheLastTrain: false
+            )
+        }
         return RealLineDepotAddition.offer(site: site, line: id, laying: realLineLaying)
     }
 
     /// Adds the depot of `offer` (decision 557), paying for it: its track,
     /// the depot and its sidings, made one of the line's depots. `false`,
     /// with the message saying why, where it cannot be.
+    ///
+    /// The card stays open while the game runs (decision 557, continued;
+    /// review L7-3), so the offer is taken again from the world as it is
+    /// now: once the first train is due it waits for the last one, and
+    /// where the depot no longer lays or prices as the card said, the
+    /// player is asked to look again rather than charged otherwise.
     @discardableResult
     public func addRealDepot(_ offer: RealLineDepotOffer) -> Bool {
-        guard let addition = offer.addition, !offer.waitsForTheLastTrain else {
-            message = StatusMessage(kind: .failure, text: offer.problem ?? offer.summaryText(in: language))
+        let current = realDepotOffer(for: offer.line, site: offer.name)
+        guard let addition = current.addition, !current.waitsForTheLastTrain, addition == offer.addition else {
+            let changed = current.problem == nil && !current.waitsForTheLastTrain && offer.addition != nil
+            message = StatusMessage(
+                kind: .failure,
+                text: changed
+                    ? language.text(
+                        "\(offer.name) has changed since the card opened: open it again for its price now.",
+                        "\(offer.name)的狀況在打開後變了，請重新打開看現在的價格。"
+                    )
+                    : current.problem ?? current.summaryText(in: language)
+            )
             return false
         }
         let name = offer.name

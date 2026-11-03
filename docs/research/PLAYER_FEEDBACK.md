@@ -163,6 +163,21 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (110.1)，2026-11-03
+
+從 `main` `2494e5a`（#1749 的合併）建置。TestFlight `testflight.yml` run 41644800997（run 110），作者 13:29 UTC 自己按，14:01 成功。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (110.1)（#1749）。
+
+**這個 commit 的檢查**（作者先發、遊戲規劃後報，HANDOFF §1.2）：
+- 完整 `ci.yml` run 41646134590（workflow_dispatch，2494e5a）：綠，14:00 UTC。
+- full lane run 41646171004（`ios-build.yml` 手動，2494e5a）：**綠**，15:16 UTC（build、second、lessons、iPad 四個 job 都過）。
+- 109.1 之後進來的：#1736 ImmersiveMap 研究、#1734 新光摩天大樓（決策 550）、#1730 Codex 的 EMU700 模型、#1738 TILT60（決策 555）、#1739 FLANE7、#1737 SUNPCF（決策 357 續）、#1740 WENHUFIX（決策 552 續）、#1741 DEPOTADD（決策 557）、#1742 Codex 的文湖線兩款車模型、#1745 WENHUTRN（決策 558）、#1746 EMU700 進營運（決策 560）、#1748 機場捷運 1000／2000 型（決策 561）、#1749 說明。
+
+**這版請測試者看**：3D 的文湖線、機場捷運、EMU700 像不像、車多時卡不卡；兩指上推斜到 60° 的手勢與影子；舊存檔加建機廠後列車晚上回廠、早上照班表出來。
+
+**回報**：
+- 作者（110.1 實機）：「收購文湖線後列車跑錯方向」，追問後是走在對向的軌道。派 WENHUSIDE（決策 564，session_01YGNNunZGPiV2XFNuJMZEsQ）。
+- 審查 L7（#1754）查到的舊 bug，不是這版造成的：新局的一日券在午夜結算成 0（L7-1），派 DAYPASS；加建機廠的確認框用舊報價（L7-3），派 DEPOTADD-2。三個都要進 111.1。
+
 ### 0.5.0 (109.1)，2026-11-03
 
 從 `main` `efb9652`（#1735 的合併）建置。TestFlight `testflight.yml` run 41561636787（run 109），作者 01:43 UTC 自己按，02:05 成功（上傳、處理、What to Test 都過）。full lane 還沒跑完就先發（作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (109.1)（#1735）。

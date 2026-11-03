@@ -745,82 +745,99 @@ selected_pattern() {
 # class to another part, never out of the selection. The debug weights
 # before (decisions 404, 405 and the 2026-10-23 measurement) are in this
 # file's history.
-CLASS_WEIGHTS="Map3DSceneMemoryTests:226 SaveMutationSecondHalfTests:111
-  Map3DBusesTests:91 Map3DBusLayerTests:84 Map3DModelTests:82
-  RealLineAcquisitionTests:80 HighSpeedDemoTests:78
-  LineDispatchPropertyTests:78 SaveMutationTests:74
-  ServiceLinePropertyTests:74 LiujiaLineTrainsTests:70
-  ServicePropertyTests:70 ServiceRepeatingPropertyTests:66
-  LinePatternPropertyTests:62 Map3DCoarseChunkTests:62
-  TrafficControlPropertyTests:62 ServiceRepeatingSecondHalfPropertyTests:61
-  Map3DPlatformClearanceTests:59 BoardingPropertyTests:56
-  Map3DStreetLifeTests:50 Map3DTests:46 GoldenScenarioTests:44
-  NetworkServicePropertyTests:42 DemoRealLinesTrackTests:41
-  Map3DBuildingsTests:40 DanhaiBlueThenGreenSimpleDayTests:40
-  Map3DDetailTests:40 TrafficFollowingPropertyTests:40
-  Map3DBuildReturnTests:39 PassengerCheckOnceTests:37
-  HighSpeedDemoDayTests:37 SanyingLineSimpleDayTests:37
-  ScheduledTrafficSecondHalfPropertyTests:36 ReservationShortcutTests:36
-  ScheduledTrafficPropertyTests:36 BusOneWayAndTunnelRealMapTests:36
-  Map3DSurfaceTests:36 Map3DStreetsTests:36 Map3DTrainOcclusionTests:35
-  SeededStreetPlanTests:34 Map3DRealTracksTests:34 HighSpeedDemoBatchTests:33
-  Map3DBoxInstanceTests:33 Map3DParksTests:32 Map3DRealTrainsTests:32
-  DanhaiBothLinesDayTests:32 Map3DFrontageTests:32 PassengerPlanKeyTests:32
-  Map3DRealBuildingsTests:32 DemoSightsAndTransfersTests:31
-  Map3DC341IntegrationTests:31 Map3DTrainSetTests:30 Map3DStreamingTests:30
-  DanhaiBlueThenGreenRealisticDayTests:30 Map3DEMU800IntegrationTests:29
-  EconomySecondHalfPropertyTests:29 EconomyPropertyTests:29
-  SanyingLineRealisticDayTests:28 Map3DSceneryPropsTests:26
-  Map3DTEMU1000Tests:26 ScheduledOvertakeTrackMiddlePropertyTests:24
-  KernelDifferentialTests:24 ScheduledOvertakeTrackFinalPropertyTests:23
-  ScheduledOvertakeTrackPropertyTests:22 Map3DPropsTests:22
-  DanhaiGreenLineDayTests:21 TimetablePropertyTests:20
-  Map3DRealGroundTests:20 RealRailwayTracingTests:20
-  Map3DChuKuangIntegrationTests:19 Map3DNextDepartureTests:19 TRADemoTests:19
-  DeadlockPropertyTests:19 VerticalRailwayPropertyTests:18
-  ScheduledOvertakeTrackLastPropertyTests:17 Map3DNightAndGroundTests:17
-  Map3DBreezyBlueIntegrationTests:17 Map3DSignTests:17 DanhaiDepotTests:16
-  ContinuousTrackPropertyTests:15 Map3DHandoffTests:15
-  Map3DTourismEMU500Tests:14 NewGameSavePropertyTests:14 AnkengLineTests:13
-  RealWorldDataLoadTests:13 TRADemoDayTests:13 OnboardingTests:13
-  Map3DShadowTests:12 MetroStructuresTests:12 CommandLogTests:11
-  FlexDispatchPropertyTests:11 LocalPassTests:11 DeadlockSearchCostTests:11
-  Map3DC371C381Tests:11 PassengerPropertyTests:11 BusReadAheadTests:11
-  Map3DOpenEveryStartTests:11 RealBusesTests:11 Map3DTaichungGreenTests:10
-  Map3DChuKuangPassengerTests:10 Map3DC341Tests:10
-  OccupiedRoutingPropertyTests:10 RealWorldDemoTests:9 FrameTimeBenchTests:9
-  Map3DEMU3000Tests:9 LineLossFixesTests:9 ScreenshotSceneTests:9
-  RealWorldDemoGroundTests:8 Map3DTaipeiLandmarksTests:8
-  RoadDrawRealMapTests:8 IdleTrainDeadlockTests:8
-  NetworkSectionPropertyTests:8 Map3DPPIntegrationTests:8
-  Map3DSceneKitTests:8 SanyingDepotTests:8 Map3DEMU500Tests:8
-  Map3DTrainLabelsTests:8 PassengerRouteSearchTests:8 ScheduledTrafficTests:7
-  NightSkipTests:7 DemoRealLinesTests:7 Map3DStationKitTests:7
-  NetworkPostcardTests:7 Map3DEMU900IntegrationTests:7 LessonGuideTests:7
-  Map3DStationsTests:7 WorldStateMachineTests:6 RoadsTurnOnTests:6
-  SharedNetworkTests:6 LoadJourneyCacheTests:5 BusRoadsRealMapTests:5
-  SparseCityLandTests:5 RealWorldDemoRoadsTests:5 RealRoadCellsTests:5
-  TurnbackTests:5 TurnbackPropertyTests:5 SanyingLineFreezeTests:4
-  Map3DEMU900Tests:4 RealLineOfferPreparingTests:4 LandImportTests:4
-  TrafficSpeedTests:4 RealWorldExpansionTests:4 WeeklyPunctualityTests:4
-  LineAccountsTests:4 WaterGridTests:4 WholeTaiwanTests:4
-  Map3DRoadBridgeTests:4 LineRoutePreferencePropertyTests:3
-  SingleTrackCapacityPropertyTests:3 CityRequestsTests:3 ReplayFixtureTests:3
-  Map3DEstateKitTests:3 MoneyTextSourceTests:3 Map3DTrainMaterialTests:3
-  CoverageGridTests:3 PolicyTests:3 TraceDragCostTests:3 LessonTests:3
-  BusStopLabelsRealMapTests:2 Map3DFreightTrainTests:2 Map3DLotGroundTests:2
-  Map3DMeshSimplifierTests:2 Map3DTEMU2000Tests:2 SavedGameTests:2
-  Map3DEMU800Tests:2 Map3DTrainShapeRefreshTests:2
-  Map3DKaohsiungLightRailTests:2 PingxiChallengeTests:2 TraceOverlapTests:2
-  BusRouteTests:2 LoopLineBoardingTests:2 Map3DLandmarksTests:2
-  CityGrowthTests:2 NewGameBalanceTests:2 OneRowPerGameTests:2
-  RealLineStockTests:2 LongLegReplayTests:2 Map3DWorksKitTests:2
-  StationCommerceCardTests:2 DemoAtTests:2 Map3DTaipeiMetro461Tests:2
-  NewsSessionTests:2 TrainSessionPropertyTests:2 Map3DTrenchTests:2
-  RealTRAScheduleTests:2 TrainTripLogTests:2 AchievementsTests:2
-  Map3DSimplifiedCacheTests:2 NewGameCampaignTests:2 LineLossDiagnosisTests:2
-  Map3DBreezyBlueTests:2 Map3DFarSets422Tests:2 MonthlyReportTests:2
-  ScheduledOvertakeTrackTests:2"
+# Decision 563 (CIOPT-6, 2026-11-03): every class measured at 2 s or more in
+# four GamePresentation pull request tiers (runs 41623817021, 41638327376,
+# 41646101866, 41650455897) and the full run 41646134590 takes the slowest
+# of those times; the others keep the times above. WenhuLineTests (139 s),
+# Map3DModelPackLockTests (100 s) and 14 more had no weight, and two of
+# them in one part made selected-1 or selected-5 take 460-510 s of tests
+# while others took 180-250; dealt by these weights the same runs' parts
+# come to 341-375 s.
+CLASS_WEIGHTS="Map3DSceneMemoryTests:221 WenhuLineTests:139 SaveMutationSecondHalfTests:107
+  Map3DModelPackLockTests:100 Map3DBusesTests:84 RealLineAcquisitionTests:81
+  SaveMutationTests:80 Map3DBusLayerTests:79 HighSpeedDemoTests:77
+  LiujiaLineTrainsTests:71 HighSpeedDemoDayTests:70 ServicePropertyTests:70
+  ServiceRepeatingPropertyTests:66 Map3DStreetLifeTests:62
+  TrafficControlPropertyTests:61 LinePatternPropertyTests:60
+  Map3DPlatformClearanceTests:58 LineDispatchPropertyTests:55
+  Map3DCoarseChunkTests:54 Map3DModelTests:54 GoldenScenarioTests:47
+  TrafficFollowingPropertyTests:46 Map3DC341IntegrationTests:45
+  Map3DTests:45 ServiceLinePropertyTests:45 TaoyuanAirportLineTests:45
+  Map3DStreetsTests:44 Map3DBuildReturnTests:43
+  NetworkServicePropertyTests:43 DemoRealLinesTrackTests:42
+  BoardingPropertyTests:40 SanyingLineSimpleDayTests:40
+  Map3DRealBuildingsTests:39 Map3DTrainSetTests:37
+  PassengerCheckOnceTests:37 ServiceRepeatingSecondHalfPropertyTests:37
+  Map3DSurfaceTests:36 DanhaiBothLinesDayTests:34
+  DemoSightsAndTransfersTests:33 HighSpeedDemoBatchTests:33
+  Map3DNightAndGroundTests:33 ScheduledTrafficPropertyTests:33
+  SeededStreetPlanTests:33 DanhaiBlueThenGreenSimpleDayTests:32
+  Map3DBuildingsTests:32 Map3DEMU800Tests:32 Map3DHandoffTests:32
+  DanhaiBlueThenGreenRealisticDayTests:30 Map3DC341Tests:30
+  Map3DStreamingTests:30 Map3DChuKuangPassengerTests:29
+  ReservationShortcutTests:29 SanyingLineRealisticDayTests:29
+  DanhaiGreenLineDayTests:26 EconomyPropertyTests:26
+  Map3DEMU900IntegrationTests:26 Map3DSceneryPropsTests:26
+  Map3DEMU700IntegrationTests:25 RealLineDepotAdditionTests:25
+  KernelDifferentialTests:24 Map3DRealGroundTests:24
+  ScheduledOvertakeTrackMiddlePropertyTests:24
+  Map3DEMU800IntegrationTests:23 Map3DPropsTests:22
+  Map3DTrainOcclusionTests:22 PassengerPlanKeyTests:22
+  Map3DPPIntegrationTests:21 ScheduledTrafficSecondHalfPropertyTests:21
+  Map3DEMU3000Tests:20 Map3DEMU500Tests:20 TimetablePropertyTests:20
+  DeadlockPropertyTests:19 EconomySecondHalfPropertyTests:19
+  Map3DNextDepartureTests:19 RealRailwayTracingTests:19
+  VerticalRailwayPropertyTests:18 BusOneWayAndTunnelRealMapTests:17
+  Map3DSignTests:17 ScheduledOvertakeTrackLastPropertyTests:17
+  TRADemoTests:17 DanhaiDepotTests:16 Map3DChuKuangIntegrationTests:16
+  Map3DTourismEMU500Tests:16 NewGameSavePropertyTests:16
+  RealWorldDataLoadTests:16 ContinuousTrackPropertyTests:15
+  Map3DDetailTests:15 Map3DShadowTests:15
+  ScheduledOvertakeTrackFinalPropertyTests:15 AnkengLineTests:14
+  Map3DBoxInstanceTests:14 Map3DC371C381Tests:14 Map3DFrontageTests:14
+  Map3DKaohsiungLightRailTests:14 Map3DMeshSimplifierTests:14
+  Map3DTrainMaterialTests:14 OnboardingTests:14 Map3DNewTaipeiLRTTests:13
+  Map3DTaichungGreenTests:13 MetroStructuresTests:13 TRADemoDayTests:13
+  BusReadAheadTests:12 CommandLogTests:12 Map3DE500Tests:12
+  Map3DKaohsiungTests:12 Map3DTEMU2000Tests:12 RealBusesTests:12
+  ScheduledOvertakeTrackPropertyTests:12 Map3DBreezyBlueIntegrationTests:11
+  Map3DHighSpeedSetsTests:11 Map3DOpenEveryStartTests:11
+  PassengerPropertyTests:11 RealWorldDemoGroundTests:11
+  DeadlockSearchCostTests:10 Map3DDuplexSteamTests:10
+  Map3DRealTracksTests:10 TrainNightLightsReadBackTests:10
+  LineLossFixesTests:9 Map3DTaipeiLandmarksTests:9 RealWorldDemoTests:9
+  RoadDrawRealMapTests:9 ScreenshotSceneTests:9 FrameTimeBenchTests:8
+  IdleTrainDeadlockTests:8 Map3DParksTests:8 Map3DRealTrainsTests:8
+  Map3DSceneKitTests:8 Map3DTrainLabelsTests:8 NetworkPostcardTests:8
+  NetworkSectionPropertyTests:8 NightSkipTests:8 SanyingDepotTests:8
+  DemoRealLinesTests:7 LessonGuideTests:7 LocalPassTests:7
+  Map3DStationKitTests:7 Map3DStationsTests:7 OccupiedRoutingPropertyTests:7
+  PassengerRouteSearchTests:7 RoadsTurnOnTests:7 SharedNetworkTests:7
+  FlexDispatchPropertyTests:6 RealWorldDemoRoadsTests:6
+  WorldStateMachineTests:6 BusRoadsRealMapTests:5 RealWorldExpansionTests:5
+  SparseCityLandTests:5 TurnbackPropertyTests:5 TurnbackTests:5
+  LandImportTests:4 LineRoutePreferencePropertyTests:4
+  LoadJourneyCacheTests:4 Map3DEMU900Tests:4 Map3DEstateKitTests:4
+  Map3DRoadBridgeTests:4 Map3DTaoyuanAirportTests:4 PolicyTests:4
+  RealLineOfferPreparingTests:4 RealRoadCellsTests:4
+  SanyingLineFreezeTests:4 ScheduledTrafficTests:4 TrafficSpeedTests:4
+  WeeklyPunctualityTests:4 WholeTaiwanTests:4 BusStopLabelsRealMapTests:3
+  CityRequestsTests:3 CoverageGridTests:3 LiveOvertakeTests:3
+  Map3DLotGroundTests:3 MoneyTextSourceTests:3 PingxiChallengeTests:3
+  ReplayFixtureTests:3 SingleTrackCapacityPropertyTests:3
+  TraceDragCostTests:3 WaterGridTests:3 AchievementsTests:2
+  AsyncRenderClosureSourceTests:2 BusRouteTests:2 CityGrowthTests:2
+  DemoAtTests:2 LessonTests:2 LineAccountsTests:2 LineLossDiagnosisTests:2
+  LongLegReplayTests:2 LoopLineBoardingTests:2 Map3DBreezyBlueTests:2
+  Map3DEMU700Tests:2 Map3DFarSets422Tests:2 Map3DFreightTrainTests:2
+  Map3DLandmarksTests:2 Map3DSimplifiedCacheTests:2 Map3DTEMU1000Tests:2
+  Map3DTaipeiMetro461Tests:2 Map3DTrainShapeRefreshTests:2
+  Map3DTrenchTests:2 Map3DWorksKitTests:2 MapTrainCarsOnTrackTests:2
+  MonthlyReportTests:2 NewGameBalanceTests:2 NewGameCampaignTests:2
+  NewsSessionTests:2 OneRowPerGameTests:2 RealLineStockTests:2
+  RealTRAScheduleTests:2 SavedGameTests:2 ScheduledOvertakeTrackTests:2
+  StationCommerceCardTests:2 TraceOverlapTests:2 TrafficControlTests:2
+  TrainSessionPropertyTests:2 TrainTripLogTests:2 TutorialSessionTests:2"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
@@ -1884,19 +1901,22 @@ head_full_run() {
 #   CHANGES       the change detection's result
 #   SWIFT_NEEDED  its swift output
 #   TIER          its tier output
+#   SELFTEST      the shard script's self-test job's result (decision 563)
 #   BUILD         the swift-build job's result (decision 411, shared build)
 #   CURRENT       the test jobs' combined result (failure if any job failed,
 #                 cancelled if any was cancelled, skipped if none ran)
 # Passes only when the detection succeeded and either the build and every
 # test job of the tier succeeded or none was needed and none ran.
 ci_gate() {
-  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}"
+  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; self-test: ${SELFTEST:-}; build: ${BUILD:-}; Swift 6.4: ${CURRENT:-}"
   [[ "${CHANGES:-}" == success ]] || die "The change detection did not succeed (${CHANGES:-no result})."
   if [[ "${SWIFT_NEEDED:-}" == true ]]; then
+    [[ "${SELFTEST:-}" == success ]] || die "The shard script's self-test did not succeed (${SELFTEST:-no result})."
     [[ "${BUILD:-}" == success ]] || die "The Swift build did not succeed (${BUILD:-no result}); the test jobs need it."
     [[ "${CURRENT:-}" == success ]] || die "A Swift job of tier ${TIER:-?} did not succeed (Swift 6.4: ${CURRENT:-no result})."
     echo "The build and every Swift 6.4 job of tier ${TIER:-?} passed."
   elif [[ "${SWIFT_NEEDED:-}" == false ]]; then
+    [[ "${SELFTEST:-}" == skipped ]] || die "The Swift jobs were not needed but the self-test did not skip (${SELFTEST:-no result})."
     [[ "${BUILD:-}" == skipped ]] || die "The Swift jobs were not needed but the build did not skip (${BUILD:-no result})."
     [[ "${CURRENT:-}" == skipped ]] || die "The Swift jobs were not needed but did not skip (Swift 6.4: ${CURRENT:-no result})."
     echo "No file that can change the Swift package changed; the Swift jobs were skipped."

@@ -120,10 +120,31 @@ public struct Tourism: Hashable, Sendable {
         return GameTime(seconds: day * GameTime.secondsPerDay + middle * GameTime.secondsPerMinute)
     }
 
+    /// Decision 551, continued (review L7-2): when on game day `day` `line`
+    /// is read for its tourists: at ``countedAt(day:window:)`` when it is
+    /// set to run a train then; otherwise at the first minute of the day,
+    /// within its hours, of a service level it runs trains at (the start of
+    /// a level's band, or the opening of its hours), so a line with no
+    /// train off-peak is counted at the peak. A line that runs none at any
+    /// level keeps ``countedAt(day:window:)``, where it adds nothing.
+    static func countedAt(day: Int64, line: ServiceLine, serviceDay: ServiceDay) -> GameTime {
+        let preferred = countedAt(day: day, window: line.window)
+        func runs(_ minute: Int) -> Bool {
+            line.window.contains(minuteOfDay: minute) && line.setsTrains(at: serviceDay.level(atMinuteOfDay: minute))
+        }
+        guard !runs(preferred.minuteOfDay) else { return preferred }
+        var starts = serviceDay.bands.map(\.start)
+        if case .hours(let open, _) = line.window { starts.append(open) }
+        guard let minute = starts.sorted().first(where: runs) else { return preferred }
+        return GameTime(seconds: day * GameTime.secondsPerDay + Int64(minute) * GameTime.secondsPerMinute)
+    }
+
     /// Decision 551, continued: the network the tourists of game day `day`
-    /// are counted on, each line as it runs at ``countedAt(day:window:)``.
+    /// are counted on, each line as it runs at
+    /// ``countedAt(day:line:serviceDay:)``. Since review L7-1 the day
+    /// passes (and the subsidiaries' pass holders) are read on it too.
     static func countingGraph(of world: GameWorld, day: Int64) -> PassengerRouteGraph {
-        PassengerRouteGraph(world: world, lineTime: { countedAt(day: day, window: $0.window) })
+        PassengerRouteGraph(world: world, lineTime: { countedAt(day: day, line: $0, serviceDay: world.serviceDay) })
     }
     /// What a hotel within ``SubsidiaryRules/reach`` of an attraction adds to
     /// its rating, in hundredths of a star, and how many count (decision
