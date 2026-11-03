@@ -20,7 +20,7 @@ public enum Map3DSunShadow {
         public var interval: Double
     }
 
-    /// The texels a side of the map: 2048 (16 MB of depth), half once the
+    /// The texels a side of the map: 2048 (8 MB of 16-bit depth), half once the
     /// GPU keeps over its budget (``Map3DDrawScale``) or the phone is
     /// about to slow itself down for heat.
     public static let size = 2_048
