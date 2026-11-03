@@ -60,9 +60,9 @@ public struct RealLineDepotOffer: Sendable {
     /// The company's buildings in its way, which come down with it.
     public let demolished: [String]
     public let problem: String?
-    /// Whether the line's trains are out on their runs, or one is about to
-    /// leave: its timetable changes with the depot, so it is added only
-    /// once the day's last train is in (``GameWorld/setLineRuns(_:to:)``).
+    /// Whether a run of the line is due or under way: its timetable
+    /// changes with the depot, so it is added only once the day's last
+    /// train is in (``GameWorld/setLineRuns(_:to:)``).
     public let waitsForTheLastTrain: Bool
 
     /// Whether the card's button adds it now, with `balance` in hand.
@@ -92,8 +92,8 @@ public struct RealLineDepotOffer: Sendable {
         )
         if waitsForTheLastTrain {
             text += language.text(
-                " The line's timetable changes with it: add it after the day's last train, while no train is running.",
-                "班次會跟著換成有機廠的時刻表：請在今天收班後、沒有列車在跑時加建。"
+                " The line's timetable changes with it: add it after the day's last train is in.",
+                "班次會跟著換成有機廠的時刻表：請在今天末班車收班後加建。"
             )
         }
         if !demolished.isEmpty {
@@ -372,18 +372,20 @@ extension RealLineDepotAddition {
 }
 
 extension RealLineDepotAddition {
-    /// Whether none of `line`'s trains is out on a run and none of `runs`
-    /// (or the line's own) leaves within the time a run may still be sent
-    /// out late or early (``LineRun/latestDispatch``): the line's runs can
-    /// change without one sent twice or dropped.
+    /// Whether no run of `runs` (or the line's own) is due or under way:
+    /// none leaves within the time it may still be sent out early
+    /// (``LineRun/earliestDispatch``), and each that left has been in
+    /// longer than a run may be sent out late (``LineRun/latestDispatch``).
+    /// The line's runs can then change without one sent twice or dropped;
+    /// a train still out is stuck, and the build takes it off its run.
     static func isAtRest(_ line: ServiceLine, runs: [LineRun], in world: GameWorld) -> Bool {
-        guard !line.trains.contains(where: { world.train(id: $0)?.execution != nil }) else { return false }
         let now = Self.modulo(world.clock.now.seconds, GameTime.secondsPerDay)
         return !(runs + line.runs).contains { run in
             guard let start = run.times.first?.departure else { return false }
+            let end = max(start, run.times.last?.arrival ?? start)
             let behind = Self.modulo(now - start, GameTime.secondsPerDay)
             let ahead = Self.modulo(start - now, GameTime.secondsPerDay)
-            return behind <= LineRun.latestDispatch || ahead <= LineRun.earliestDispatch
+            return behind <= end - start + LineRun.latestDispatch || ahead <= LineRun.earliestDispatch
         }
     }
 
@@ -460,7 +462,22 @@ extension RealLineLaying {
             }
             try world.setStationDepot(station.id, to: true)
             try world.setLineDepots(line.id, to: line.depots + [station.id])
-            if let runs = addition.runs { try world.setLineRuns(line.id, to: runs) }
+            if let runs = addition.runs {
+                // A train still on a run this late is stuck (traffic
+                // control off can leave one waiting for good): taken off
+                // its run and put back on the line, it waits for the new
+                // timetable like the others.
+                var lifted: [(TrainID, Int?)] = []
+                for id in line.trains where world.train(id: id)?.execution != nil {
+                    lifted.append((id, world.assignedPattern(of: id)))
+                    try world.unassignTrain(id)
+                    try world.stopTrainService(id)
+                }
+                try world.setLineRuns(line.id, to: runs)
+                for (id, pattern) in lifted {
+                    try world.assignTrain(id, to: line.id, pattern: pattern)
+                }
+            }
         }
     }
 }

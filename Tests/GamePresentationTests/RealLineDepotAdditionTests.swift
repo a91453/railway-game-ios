@@ -87,11 +87,33 @@ final class RealLineDepotAdditionTests: XCTestCase {
         XCTAssertNotNil(offer.price)
         XCTAssertTrue(offer.waitsForTheLastTrain)
         XCTAssertFalse(offer.canAdd(balance: session.world.economy.balance))
-        XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix("請在今天收班後、沒有列車在跑時加建。"))
+        XCTAssertTrue(offer.summaryText(in: .traditionalChinese).hasSuffix("請在今天末班車收班後加建。"))
         let balance = session.world.economy.balance
         XCTAssertFalse(session.addRealDepot(offer))
         XCTAssertEqual(session.world.economy.balance, balance)
         XCTAssertFalse(session.world.stations.contains(where: \.isDepot))
+    }
+
+    /// With traffic control off the old line can leave a train waiting at
+    /// a stop for good; after the last train it is taken off its run and
+    /// back on the line, so the depot is still added.
+    func testAStuckTrainDoesNotHoldItBack() throws {
+        let (session, id) = try Self.ankengBoughtWithoutItsDepot(rules: .simple)
+        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
+            try world.advance(ticks: 26 * 60)
+            return ""
+        })
+        let trains = try XCTUnwrap(session.world.line(id: id)?.trains)
+        let stuck = trains.filter { session.world.train(id: $0)?.execution != nil }
+        session.selectLine(id)
+        let offer = try XCTUnwrap(session.selectedLineRealDepotOffer)
+        XCTAssertFalse(offer.waitsForTheLastTrain)
+        XCTAssertTrue(session.addRealDepot(offer), session.message?.text ?? "")
+        XCTAssertEqual(session.world.line(id: id)?.trains, trains)
+        for train in stuck {
+            XCTAssertNil(session.world.train(id: train)?.execution)
+        }
+        XCTAssertEqual(session.world.line(id: id)?.depots.count, 1)
     }
 
     /// A line bought with its depot is offered none.
