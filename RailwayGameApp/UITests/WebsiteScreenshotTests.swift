@@ -100,6 +100,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         open3D.tap()
         XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
         XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 240), "The 3D map is drawn")
+        // Close in and tilted, where a shadow's edge is wide enough to see.
+        let map = app.descendants(matching: .any)["map3D.close"].firstMatch
+        XCTAssertTrue(map.exists)
+        for _ in 0..<3 { app.pinch(withScale: 3, velocity: 2) }
         settle(seconds: 8)
         keep("sun-shadows-3d", app)
     }
