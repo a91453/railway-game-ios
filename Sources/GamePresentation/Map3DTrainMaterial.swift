@@ -23,9 +23,9 @@ public enum Map3DTrainMaterial {
 
     /// The sets of unpainted stainless steel, by the key their models are
     /// named with (`set-<key>-…`, `set-<key>Far-…`, `<key>-…`): the
-    /// EMU500, EMU800, EMU900, the Taipei Metro's C341 and C381, the
+    /// EMU500, EMU700 (decision 560), EMU800, EMU900, the Taipei Metro's C341 and C381, the
     /// DR1000 railcar and the DR3100 diesel express.
-    static let stainlessSets: Set<String> = ["emu500", "emu800", "emu900", "c341", "c371", "c381", "metroC341", "metroC371", "metroC381", "metroGeneric",
+    static let stainlessSets: Set<String> = ["emu500", "emu700", "emu800", "emu900", "c341", "c371", "c381", "metroC341", "metroC371", "metroC381", "metroGeneric",
                                              "dieselRailcar", "dieselExpress"]
 
     /// A face looking down more than this (its normal's z) is neither: an

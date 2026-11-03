@@ -1833,6 +1833,48 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 560: the EMU700 local train in the garage (the 3D map's
+    /// own models, eight cars), by day: the front close up and the side,
+    /// near models, then the far models from the side and the front. For
+    /// the screenshot review of the pull request that put it in service.
+    func testEMU700Train() {
+        let app = launch()
+        defer { app.terminate() }
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+        garage.tap()
+        let pick = app.buttons["trainShowcase.pick"]
+        XCTAssertTrue(pick.appears(within: 120), "The garage did not open")
+        pick.waitUntilSettled()
+        pick.tap()
+        let done = app.buttons["trainShowcase.pick.done"]
+        XCTAssertTrue(done.appears(within: 10), "The train list opens")
+        let list = app.collectionViews.firstMatch
+        for row in ["emu3000", "emu800", "metroC341", "highSpeed", "puyuma", "emu700"] {
+            let button = app.buttons["trainShowcase.pick.\(row)"]
+            if app.dragUntilWhollyOnScreen(button, in: list) { button.tap() }
+        }
+        done.tap()
+        XCTAssertTrue(done.disappears(within: 10))
+        let far = app.segmentedControls["trainShowcase.far"]
+        far.buttons.element(boundBy: 0).tap()
+        app.buttons["trainShowcase.camera.closeUp"].tap()
+        settle(seconds: 6)
+        keep("emu700-near-front", app)
+        app.buttons["trainShowcase.camera.side"].tap()
+        settle(seconds: 4)
+        keep("emu700-near-side", app)
+        far.buttons.element(boundBy: 1).tap()
+        settle(seconds: 6)
+        keep("emu700-far-side", app)
+        app.buttons["trainShowcase.camera.closeUp"].tap()
+        settle(seconds: 4)
+        keep("emu700-far-front", app)
+    }
+
     // MARK: - Helpers
 
     /// Drags `list` back towards its top until `element` exists below
