@@ -9,7 +9,7 @@
 // exact length. A line's chosen route (``LineRoutePreference``) is followed
 // as before. Decision 564: a way to a station only lines keeping right
 // (metros and light rails, ``ServiceLine/keepsRight``) serve keeps right
-// instead, the same margin to the right.
+// instead, the same margin to the right, with keepLeft on or off.
 
 extension GameWorld {
     /// What the route search adds for each switch where a train keeping

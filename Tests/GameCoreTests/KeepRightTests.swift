@@ -21,14 +21,25 @@ final class KeepRightTests: XCTestCase {
         XCTAssertEqual(world.path(from: KeepLeftTests.fromEast, toStation: west)?.traversals, KeepLeftTests.westboundNorth, "north, on the right going west")
     }
 
-    func testALineKeepingLeftAndAWorldNotKeepingLeftAreAsBefore() throws {
+    func testALineKeepingLeftIsAsBefore() throws {
         let (left, west, east, _) = try Self.world(keepsRight: false)
         XCTAssertFalse(left.keepsRight(toward: east))
         XCTAssertEqual(left.path(from: KeepLeftTests.fromWest, toStation: east)?.traversals, KeepLeftTests.eastbound)
         XCTAssertEqual(left.path(from: KeepLeftTests.fromEast, toStation: west)?.traversals, KeepLeftTests.westboundLeft)
-        var off = try Self.world(keepsRight: true).world
+        var off = left
         off.setKeepLeft(false)
         XCTAssertEqual(off.path(from: KeepLeftTests.fromWest, toStation: east)?.traversals, KeepLeftTests.eastbound, "the first of equally short ways, as with keeping left off")
+    }
+
+    /// The side is the line's: in a world whose trains do not keep left
+    /// (the high-speed demo), a line keeping right still keeps right
+    /// (bought there before this, the Wenhu Line's trains ran 139 of 951
+    /// minutes on the left in the first three hours).
+    func testALineKeepingRightKeepsRightInAWorldNotKeepingLeft() throws {
+        var (world, west, east, _) = try Self.world(keepsRight: true)
+        world.setKeepLeft(false)
+        XCTAssertEqual(world.path(from: KeepLeftTests.fromWest, toStation: east)?.traversals, Self.eastboundSouth)
+        XCTAssertEqual(world.path(from: KeepLeftTests.fromEast, toStation: west)?.traversals, KeepLeftTests.westboundNorth)
     }
 
     /// A station a line keeping left serves too keeps left, and so does

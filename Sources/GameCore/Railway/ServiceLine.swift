@@ -366,8 +366,8 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     public internal(set) var isFreight: Bool = false
     /// Whether the line's trains keep to the right on double track, as a
     /// metro or light rail does, rather than to the left (decision 564):
-    /// with the world's ``GameWorld/keepLeft`` on, a way to one of its
-    /// stops or depots takes the rightmost way on at each switch unless
+    /// whether or not the world's ``GameWorld/keepLeft`` is on, a way to
+    /// one of its stops or depots takes the rightmost way on at each switch unless
     /// another is ``GameWorld/keepLeftMargin`` shorter
     /// (``GameWorld/keepsRight(toward:)``). Set by
     /// ``GameWorld/setLineKeepsRight(_:to:)`` only.
