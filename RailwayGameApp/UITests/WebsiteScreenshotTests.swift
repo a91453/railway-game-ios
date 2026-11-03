@@ -949,12 +949,18 @@ final class WebsiteScreenshotTests: XCTestCase {
         _ = pickPlatformSiteOnTheRealWorldDemo(app)
         let first = app.buttons["network.stationNameChoice.0"]
         XCTAssertTrue(first.appears(within: 10), "The names show under the name")
-        if !first.isHittable {
-            let field = app.textFields.firstMatch
-            for _ in 0..<4 where !first.isHittable {
-                (field.exists ? field : first).swipeUp()
-            }
+        // The name sits below the card's short middle (on an iPhone held
+        // sideways it shows some 70 points): drag inside it, slowly.
+        let middle = app.scrollViews["details.scroll.middle"]
+        for _ in 0..<12 where !first.isHittable && middle.exists {
+            let box = middle.frame
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let from = origin.withOffset(CGVector(dx: box.midX, dy: box.maxY - 6))
+            let to = origin.withOffset(CGVector(dx: box.midX, dy: box.minY + 6))
+            from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 0.5)
         }
+        XCTAssertTrue(first.isHittable, "The names can be reached")
         settle()
         keep("station-name-choices", app)
         let second = app.buttons["network.stationNameChoice.1"]
