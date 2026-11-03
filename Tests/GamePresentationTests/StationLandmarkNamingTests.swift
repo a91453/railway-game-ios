@@ -188,6 +188,7 @@ final class StationLandmarkNamingTests: XCTestCase {
         XCTAssertNil(GameSession.busStopStationName("(往市區)"))
     }
 
+    @MainActor
     func testTheNearestBusStopIsOfferedTidied() throws {
         let names = try bundled()
         let at = RealRailways.Coordinate(latitude: 25.0300, longitude: 121.5355)
