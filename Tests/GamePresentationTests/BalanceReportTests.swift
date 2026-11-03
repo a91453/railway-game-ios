@@ -741,7 +741,7 @@ final class BalanceReportTests: XCTestCase {
             stops.append(station)
         }
         let line = try world.createLine(named: "Line 1", stops: stops).id
-        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineServiceWindow(line, to: ProcessInfo.processInfo.environment["BALANCE_STANDARD_HOURS"] != "1" ? .allDay : .standard)
         try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         let train = try world.purchaseTrain(named: "Train 1").id
         if let type { try world.setTrainType(train, to: type) }

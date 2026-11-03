@@ -89,16 +89,20 @@ extension GameWorld {
 
     // MARK: - Queries
 
-    /// The passes of game day `day` as the passenger model reaches them
-    /// now: none unless the company is managed, has tourism and sells one.
+    /// The passes of game day `day` on that day's network: none unless the
+    /// company is managed, has tourism and sells one. Since decision 551,
+    /// continued (review L7-1), the network is the one its tourists are
+    /// counted on (``Tourism/countingGraph(of:day:)``), not the network of
+    /// the clock's time, so midnight, when lines of the standard hours have
+    /// closed, settles what the day sold.
     public func dayPassDay(onDay day: Int64) -> DayPassDay {
         guard accounts.mode == .management, accounts.dayPass != nil, tourism != nil else { return DayPassDay() }
         let world = self
-        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
+        let graph = passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil
         return world.touristFlows(onDay: day) { world.reaches(from: $0, to: $1, graph: graph) }.passes
     }
 
-    /// Today's passes as the passenger model reaches them now.
+    /// Today's passes, on today's network (``dayPassDay(onDay:)``).
     public func dayPassToday() -> DayPassDay {
         dayPassDay(onDay: dayIndex(of: clock.now))
     }

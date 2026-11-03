@@ -645,6 +645,18 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         }
     }
 
+    /// Whether any service of the line is set to run a train at `level`
+    /// (decision 551, continued, review L7-2): a line with runs when it has
+    /// a train, otherwise a count or a target headway at that level (a
+    /// ring's count runs half each way, so it needs two). Whether a train
+    /// is assigned, or the line can be driven, is not asked.
+    func setsTrains(at level: ServiceLevel) -> Bool {
+        if hasRuns { return !trains.isEmpty }
+        let least = isRing ? 2 : 1
+        if targetHeadways[level] != nil || trainsInService[level] >= least { return true }
+        return patterns.contains { $0.targetHeadways[level] != nil || $0.trainsInService[level] >= least }
+    }
+
     /// How many trains the line's own service runs at `level`, and the
     /// minutes between them, for a round trip of `roundTrip` minutes; `nil`
     /// when it runs none then. Other services on the line never take room
