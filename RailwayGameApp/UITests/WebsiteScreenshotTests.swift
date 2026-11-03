@@ -950,9 +950,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         let first = app.buttons["network.stationNameChoice.0"]
         XCTAssertTrue(first.appears(within: 10), "The names show under the name")
         // The name sits below the card's short middle (on an iPhone held
-        // sideways it shows some 70 points): drag inside it, slowly.
+        // sideways it shows some 70 points): drag inside it, slowly, until
+        // the whole first name shows, not only its top edge.
         let middle = app.scrollViews["details.scroll.middle"]
-        for _ in 0..<12 where !first.isHittable && middle.exists {
+        func shown() -> Bool {
+            first.isHittable && (!middle.exists || first.frame.maxY <= middle.frame.maxY + 1)
+        }
+        for _ in 0..<12 where !shown() && middle.exists {
             let box = middle.frame
             let origin = app.coordinate(withNormalizedOffset: .zero)
             let from = origin.withOffset(CGVector(dx: box.midX, dy: box.maxY - 6))
@@ -960,7 +964,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
             settle(seconds: 0.5)
         }
-        XCTAssertTrue(first.isHittable, "The names can be reached")
+        XCTAssertTrue(shown(), "The names can be reached")
         settle()
         keep("station-name-choices", app)
         let second = app.buttons["network.stationNameChoice.1"]
