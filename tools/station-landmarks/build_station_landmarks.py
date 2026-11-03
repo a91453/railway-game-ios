@@ -72,9 +72,9 @@ SHOP_BRANDS = re.compile(r'全聯|小北|五金|生活百貨|皮件|鐘錶')
 
 def short_name(name, kind):
     """The name a station would take."""
-    name = re.sub(r'[\s(（].*$', '', name) or name
+    name = re.sub(r'[\s(（,，、].*$', '', name) or name
     name = re.sub(r'^(國立|私立|天主教|基督教)', '', name)
-    name = re.sub(r'^[一-鿿]{2}[市縣](市立|縣立|私立)', '', name)
+    name = re.sub(r'^[一-鿿]{2}[市縣](市立|縣立|私立|立)', '', name)
     name = re.sub(r'^(市立|縣立|私立)', '', name)
     name = re.sub(r'^(天主教|基督教)', '', name)
     if kind == 'school':

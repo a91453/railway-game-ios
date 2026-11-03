@@ -83,7 +83,7 @@ final class StationLandmarkNamingTests: XCTestCase {
         let kaixuanZhonghua = RealRailways.Coordinate(latitude: 22.59352, longitude: 120.30988)
         XCTAssertEqual(file.crossings(near: kaixuanZhonghua, within: 150).first?.thing.chinese, "凱旋中華")
         // The road: Minquan West Road, west of the station of that name.
-        let minquan = RealRailways.Coordinate(latitude: 25.06250, longitude: 121.51000)
+        let minquan = RealRailways.Coordinate(latitude: 25.06270, longitude: 121.51800)
         XCTAssertEqual(file.road(near: minquan, within: 150)?.thing.chinese, "民權西路")
     }
 
@@ -94,7 +94,7 @@ final class StationLandmarkNamingTests: XCTestCase {
                 .filter { $0.thing.kind == kind }.map(\.thing.name.chinese)
         }
         XCTAssertTrue(names(25.0173, 121.5397, .university).contains("臺灣大學"), "\(names(25.0173, 121.5397, .university))")
-        XCTAssertTrue(names(25.0300, 121.5130, .school).contains("建國高中"), "\(names(25.0300, 121.5130, .school))")
+        XCTAssertTrue(names(25.0373, 121.5126, .school).contains("第一女中"), "\(names(25.0373, 121.5126, .school))")
         XCTAssertTrue(names(25.1200, 121.5200, .hospital).contains { $0.contains("榮民總醫院") }, "\(names(25.1200, 121.5200, .hospital))")
         XCTAssertTrue(names(25.0320, 121.5360, .park).contains("大安森林公園"), "\(names(25.0320, 121.5360, .park))")
         XCTAssertTrue(names(22.6219, 120.2983, .park).contains { $0.contains("中央公園") }, "\(names(22.6219, 120.2983, .park))")
@@ -110,20 +110,38 @@ final class StationLandmarkNamingTests: XCTestCase {
     func testALandmarkRightThereNamesTheStation() throws {
         let railways = try BundledRealData.railways()
         let names = try bundled()
-        // Daan Forest Park's middle: its real stations (Daan Park, Daan)
-        // are more than 800 m away? No: Daan Park station is at its north
-        // side. So the middle is named after the station; with the real
-        // stations out of reach, after the park.
+        // No real station within 800 m of any of them.
+        let examples: [(Double, Double, String, String)] = [
+            (25.02381, 121.50554, "青年公園", "Youth Park"),  // Taipei, Wanhua
+            (22.67968, 120.32393, "高雄榮民總醫院", "Kaohsiung Veterans General Hospital"),  // Kaohsiung, Zuoying
+            (22.62144, 120.31390, "復華高中", "Fuhwa Senior High School"),  // Kaohsiung, Lingya
+        ]
+        for (latitude, longitude, chinese, english) in examples {
+            let at = RealRailways.Coordinate(latitude: latitude, longitude: longitude)
+            XCTAssertNil(railways.nearestStation(to: at, maximumDistanceMetres: GameSession.realStationNamingDistanceMetres), chinese)
+            let world = try world(at: latitude, longitude)
+            let here = try BundledRealData.point(at, in: world)
+            XCTAssertEqual(GameSession.suggestedStationName(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names), chinese)
+            let shown = GameSession.suggestedStationName(for: world, at: here, in: .english, railways: railways, placeNames: names)
+            XCTAssertTrue(shown == english || shown == chinese, "\(chinese): \(shown)")
+            // Without the landmarks, the place, as before.
+            var plain = names
+            plain.landmarks = nil
+            XCTAssertNotEqual(GameSession.suggestedStationName(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: plain), chinese)
+        }
+    }
+
+    func testALandmarkThatIsARealStationsNameIsNotOffered() throws {
+        let railways = try BundledRealData.railways()
+        let names = try bundled()
+        // Daan Forest Park is a Taipei Metro station's name: away from the
+        // station, the park does not name another.
         let middle = RealRailways.Coordinate(latitude: 25.0300, longitude: 121.5355)
         let world = try world(at: middle.latitude, middle.longitude)
         let here = try BundledRealData.point(middle, in: world)
-        XCTAssertEqual(
+        XCTAssertNotEqual(
             GameSession.suggestedStationName(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names, maximumDistanceMetres: 0),
             "大安森林公園"
-        )
-        XCTAssertEqual(
-            GameSession.suggestedStationName(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names),
-            "大安森林公園", "No real station within 800 m"
         )
     }
 
@@ -166,14 +184,15 @@ final class StationLandmarkNamingTests: XCTestCase {
     func testATakenLandmarkIsNotOfferedAgain() throws {
         let railways = try BundledRealData.railways()
         let names = try bundled()
-        let middle = RealRailways.Coordinate(latitude: 25.0300, longitude: 121.5355)
-        var world = try world(at: middle.latitude, middle.longitude)
-        let here = try BundledRealData.point(middle, in: world)
-        _ = try world.buildStation(named: "大安森林公園", at: PlanPoint(x: here.x + 50, y: here.y))
+        let park = RealRailways.Coordinate(latitude: 25.02381, longitude: 121.50554)
+        var world = try world(at: park.latitude, park.longitude)
+        let here = try BundledRealData.point(park, in: world)
+        _ = try world.buildStation(named: "青年公園", at: PlanPoint(x: here.x + 50, y: here.y))
         let next = GameSession.suggestedStationName(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names)
-        XCTAssertNotEqual(next, "大安森林公園")
+        XCTAssertNotEqual(next, "青年公園")
+        XCTAssertFalse(next.hasPrefix("車站"), next)
         let choices = GameSession.stationNameChoices(for: world, at: here, in: .traditionalChinese, railways: railways, placeNames: names)
-        XCTAssertFalse(choices.contains { $0.name == "大安森林公園" })
+        XCTAssertFalse(choices.contains { $0.name == "青年公園" })
     }
 
     func testABusStopsNameIsTidiedForAStation() {

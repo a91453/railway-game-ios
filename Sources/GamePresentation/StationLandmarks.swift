@@ -164,7 +164,7 @@ public struct StationLandmarks: Sendable {
         }
         guard let kind = ["大道", "路", "街"].first(where: { name.hasSuffix($0) }) else { return nil }
         name = name.dropLast(kind.count)
-        while let last = name.last, numerals.contains(last), name.count > 2 { name = name.dropLast() }
+        while let last = name.last, numerals.contains(last), name.count > 1 { name = name.dropLast() }
         if let last = name.last, sides.contains(last), name.count > 2 { name = name.dropLast() }
         return name.count >= 2 ? String(name) : nil
     }
