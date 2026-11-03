@@ -700,10 +700,13 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// menu row can close between the query listing it and this read (main
     /// 584bddd's full lane, run 40051175469: Train 5 was chosen, the menu
     /// closed, and its row, listed 2 s before, was read as an element).
+    /// A row made anew between that snapshot and the question is asked
+    /// with `isHittableNow` (FLANE7: main efb9652's full lane, run
+    /// 41556631784, "Local EMU" just after the menu opened).
     private func touchable(_ element: XCUIElement) -> Bool {
         guard let frame = try? element.snapshot().frame, !frame.isEmpty,
               XCUIApplication().frame.contains(CGPoint(x: frame.midX, y: frame.midY)) else { return false }
-        return element.exists && element.isHittable
+        return element.exists && element.isHittableNow
     }
 
     private func requiredButton(_ query: XCUIElementQuery, name: String) -> XCUIElement {

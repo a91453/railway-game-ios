@@ -88,6 +88,50 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("freight-3d", app)
     }
 
+    /// Decision 555: the 3D map at its own tilt and leaned by two fingers
+    /// to 60°, round Taipei Main Station (the Shin Kong Life Tower to the
+    /// south-west) and round Taipei 101. For the screenshot review of the
+    /// pull request that let it lean. One shot a test: each takes some two
+    /// minutes on the Simulator, past XCTest's eight minutes a test for six.
+    func testLeanedStation140() { shootLean("taipeiMain", "140,225,0", "lean-station-own") }
+    func testLeanedStation140At60() { shootLean("taipeiMain", "140,225,60", "lean-station-60") }
+    func testLeanedStation200() { shootLean("taipeiMain", "200,225,0", "lean-station-200-own") }
+    func testLeanedStation200At60() { shootLean("taipeiMain", "200,225,60", "lean-station-200-60") }
+    func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
+    func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
+
+    private func shootLean(_ scene: String, _ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        settle(seconds: 12)
+        keep(name, app)
+    }
+
+    /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
+    /// (quality High), for the before/after of the tent filter.
+    func testSunShadowsIn3D() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-select-station", "1", "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 240), "The 3D map is drawn")
+        // Close in and tilted, where a shadow's edge is wide enough to see.
+        for _ in 0..<3 { app.pinch(withScale: 3, velocity: 2) }
+        settle(seconds: 8)
+        keep("sun-shadows-3d", app)
+    }
+
     /// Decision 517 續: the station picked on the 2D map keeps its tag on
     /// the 3D map, under the station there; a tap on the tag opens its
     /// details back on the 2D map.
@@ -1786,6 +1830,107 @@ final class WebsiteScreenshotTests: XCTestCase {
             _ = app.buttons["fleet.done"].appears(within: 10)
             settle()
             keep("trains-fleet", app)
+        }
+    }
+
+    /// Decision 560: the EMU700 local train in the garage (the 3D map's
+    /// own models, eight cars), by day: the front close up and the side,
+    /// near models, then the far models from the side and the front. For
+    /// the screenshot review of the pull request that put it in service.
+    func testEMU700Train() {
+        // The garage opened on the EMU700 alone (`-screenshot-showcase`, as
+        // decision 558's test): scrolling the picker's sheet on a phone on
+        // its side ran past the 8 minutes (run 41620016563).
+        let app = launch(extra: ["-screenshot-showcase", "emu700"])
+        defer { app.terminate() }
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+        garage.tap()
+        let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+        XCTAssertTrue(closeUp.appears(within: 120), "The garage did not open")
+        let far = app.segmentedControls["trainShowcase.far"]
+        far.buttons.element(boundBy: 0).tap()
+        closeUp.tap()
+        settle(seconds: 6)
+        keep("emu700-near-front", app)
+        app.buttons["trainShowcase.camera.side"].tap()
+        settle(seconds: 4)
+        keep("emu700-near-side", app)
+        far.buttons.element(boundBy: 1).tap()
+        settle(seconds: 6)
+        keep("emu700-far-side", app)
+        closeUp.tap()
+        settle(seconds: 4)
+        keep("emu700-far-front", app)
+    }
+
+    /// Decision 558: the Wenhu line's two fleets in the garage (the 3D
+    /// map's own models), one at a time, by day: the front close up and
+    /// the side, near models, then the far models from the side.
+    func testWenhuTrains() {
+        // The garage opened on one train at a time (`-screenshot-showcase`):
+        // scrolling the picker's half-height sheet on a phone on its side
+        // ran past the 8 minutes (run 41613797939).
+        for (key, name) in [("wenhuVAL256", "val256"), ("wenhu370", "370")] {
+            let app = launch(extra: ["-screenshot-showcase", key])
+            defer { app.terminate() }
+            let settings = app.buttons["start.settings"]
+            XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+            settings.tap()
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+            garage.tap()
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The garage did not open")
+            let far = app.segmentedControls["trainShowcase.far"]
+            far.buttons.element(boundBy: 0).tap()
+            closeUp.tap()
+            settle(seconds: 6)
+            keep("wenhu-\(name)-near-front", app)
+            app.buttons["trainShowcase.camera.side"].tap()
+            settle(seconds: 4)
+            keep("wenhu-\(name)-near-side", app)
+            far.buttons.element(boundBy: 1).tap()
+            settle(seconds: 6)
+            keep("wenhu-\(name)-far-side", app)
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("wenhu-\(name)-far-front", app)
+        }
+    }
+
+    /// Decision 561: the Taoyuan Airport MRT's two fleets in the garage
+    /// (the 3D map's own models), one at a time, as decision 558's test:
+    /// the front close up and the side, near models, then the far models.
+    func testTaoyuanAirportTrains() {
+        for (key, name) in [("taoyuanAirport1000", "1000"), ("taoyuanAirport2000", "2000")] {
+            let app = launch(extra: ["-screenshot-showcase", key])
+            defer { app.terminate() }
+            let settings = app.buttons["start.settings"]
+            XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+            settings.tap()
+            let garage = app.buttons["settings.trainGarage"]
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the garage row")
+            garage.tap()
+            let closeUp = app.buttons["trainShowcase.camera.closeUp"]
+            XCTAssertTrue(closeUp.appears(within: 120), "The garage did not open")
+            let far = app.segmentedControls["trainShowcase.far"]
+            far.buttons.element(boundBy: 0).tap()
+            closeUp.tap()
+            settle(seconds: 6)
+            keep("tymc-\(name)-near-front", app)
+            app.buttons["trainShowcase.camera.side"].tap()
+            settle(seconds: 4)
+            keep("tymc-\(name)-near-side", app)
+            far.buttons.element(boundBy: 1).tap()
+            settle(seconds: 6)
+            keep("tymc-\(name)-far-side", app)
+            closeUp.tap()
+            settle(seconds: 4)
+            keep("tymc-\(name)-far-front", app)
         }
     }
 

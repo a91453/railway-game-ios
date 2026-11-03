@@ -137,28 +137,30 @@ final class Map3DEMU900IntegrationTests: XCTestCase {
     // MARK: Which trains are EMU900s
 
     func testTheLocalTrainsSplitThreeWays() {
-        // Seven times the number's remainder by 20: 0 to 8 the EMU900, 9 to 14 the EMU500, 15 to 19 the EMU800.
-        let expected: [Int: String] = [0: "emu900", 1: "emu900", 2: "emu500", 3: "emu900", 4: "emu900", 5: "emu800",
-                                       6: "emu900", 7: "emu500", 8: "emu800", 9: "emu900", 10: "emu500", 11: "emu800",
-                                       12: "emu900", 13: "emu500", 14: "emu800", 15: "emu900", 16: "emu500", 17: "emu800",
-                                       18: "emu900", 19: "emu500"]
+        // Decision 560: four ways now. Seven times the number's remainder by 20:
+        // 0 to 7 the EMU900, 8 to 12 the EMU500, 13 to 16 the EMU800, 17 to 19 the EMU700.
+        let expected: [Int: String] = [0: "emu900", 1: "emu900", 2: "emu800", 3: "emu900", 4: "emu500", 5: "emu800",
+                                       6: "emu900", 7: "emu500", 8: "emu800", 9: "emu900", 10: "emu500", 11: "emu700",
+                                       12: "emu900", 13: "emu500", 14: "emu700", 15: "emu900", 16: "emu500", 17: "emu700",
+                                       18: "emu900", 19: "emu800"]
         for (number, key) in expected {
             XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), key, "\(number)")
             XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number + 2_000), key, "\(number + 2_000)")
         }
-        // 9, 6 and 5 in every 20, as the fleets' cars (520, 344, 296).
+        // 8, 5, 4 and 3 in every 20, as the fleets' cars (520, 344, 296, 160).
         let counts = Dictionary(grouping: 0..<20) { Map3DTrainSet.variant(of: "emu800", number: $0) }.mapValues(\.count)
-        XCTAssertEqual(counts, ["emu900": 9, "emu500": 6, "emu800": 5])
-        XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: -3), "emu800")
+        XCTAssertEqual(counts, ["emu900": 8, "emu500": 5, "emu800": 4, "emu700": 3])
+        XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: -3), "emu700")
         // Not locked behind the train pack.
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 1, locked: TrainPack.sets), "emu900")
-        for key in ["emu900", "emu500", "taroko", "puyuma"] { XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key, key) }
+        for key in ["emu900", "emu500", "emu700", "taroko", "puyuma"] { XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key, key) }
     }
 
     /// The player's trains: a train of the local train's type numbered so
     /// is drawn as each of the three.
     func testThePlayersLocalTrainsAreEachOfTheThree() throws {
-        for (number, key) in [(1, "emu900"), (2, "emu500"), (5, "emu800")] {
+        // Decision 560: 2 is the EMU800 now (4 the EMU500), and 11 the EMU700.
+        for (number, key) in [(1, "emu900"), (4, "emu500"), (5, "emu800"), (11, "emu700")] {
             XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: number), key)
             XCTAssertNotNil(pack.layout(forType: key, count: 8), key)
         }
@@ -168,7 +170,8 @@ final class Map3DEMU900IntegrationTests: XCTestCase {
     /// ten cars, the others the line's eight.
     func testTheRealLocalTrainsAreEachOfTheThree() {
         let line = Map3DRealTrains.Formation(key: "emu800", cars: 8)
-        for (train, key, count) in [("tra-1106", "emu900", 10), ("tra-1107", "emu500", 8), ("tra-1108", "emu800", 8)] {
+        // Decision 560: and the EMU700 eight.
+        for (train, key, count) in [("tra-1106", "emu900", 10), ("tra-1107", "emu500", 8), ("tra-1108", "emu800", 8), ("tra-1111", "emu700", 8)] {
             let formation = Map3DRealTrains.formation(of: line, system: "tra", number: Map3DTrainSet.number(ofRealTrain: train))
             XCTAssertEqual(formation, .init(key: key, cars: count), train)
         }

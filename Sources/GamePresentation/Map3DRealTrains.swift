@@ -133,20 +133,25 @@ public struct Map3DRealTrains: Sendable {
     /// as the player's metro is; the other cities' are their own sets
     /// (decision 483: Kaohsiung's and Taichung's) or `metroGeneric`,
     /// which no variant splits.
+    /// Decision 558: but the Wenhu line's trains split between its two
+    /// fleets (``Map3DTrainSet/wenhuLine(number:)``).
     static func variantKey(system: String, key: String, number: Int, locked: Set<String> = []) -> String {
-        system == "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
+        if key == Map3DTrainSet.wenhu370Key { return Map3DTrainSet.wenhuLine(number: number) }
+        return system == "trtc" ? key : Map3DTrainSet.variant(of: key, number: number, locked: locked)
     }
 
     /// Decision 435: the formation a train of a line of `system` whose
     /// trains are `line`, numbered `number`, is drawn as: its set
     /// ``variantKey(system:key:number:locked:)``, as many cars as the line's,
-    /// but the EMU900 ten, as it always runs.
+    /// but the EMU900 ten, as it always runs. Decision 560: and the EMU700
+    /// eight, as it always runs.
     /// Decision 461: and a line's ``Formation/alternate`` for its
     /// odd-numbered trains.
     static func formation(of line: Formation, system: String, number: Int, locked: Set<String> = []) -> Formation {
         let key = line.alternate.map { number % 2 != 0 ? $0 : line.key }
             ?? variantKey(system: system, key: line.key, number: number, locked: locked)
-        return Formation(key: key, cars: key == "emu900" ? Map3DEMU900.sequence.count : line.cars)
+        let cars = key == "emu900" ? Map3DEMU900.sequence.count : key == "emu700" ? Map3DEMU700.formationCars : line.cars
+        return Formation(key: key, cars: cars)
     }
 
     /// Decision 511: the DR3100 diesel express, three cars, one set as
@@ -177,8 +182,13 @@ public struct Map3DRealTrains: Sendable {
     /// trains are `line` is drawn as: decision 532, a Taiwan Railway
     /// train's by its model (``traFormation(model:)``); any other
     /// ``formation(of:system:number:locked:)`` by its number.
+    /// Decision 561: and a Taoyuan Airport MRT express trip
+    /// (``RealTrainTraffic/isExpress(place:)``), the 2000's five cars.
     static func formation(of line: Formation, system: String, place: String, locked: Set<String> = []) -> Formation {
         let number = Map3DTrainSet.number(ofRealTrain: place)
+        if system == "tymc", RealTrainTraffic.isExpress(place: place) {
+            return Formation(key: Map3DTrainSet.taoyuanAirport2000Key, cars: 5)
+        }
         if system == "tra", let model = RealTrainTraffic.traModel(ofPlace: place), let own = traFormation(model: model) {
             return formation(of: own, system: system, number: number, locked: locked)
         }
@@ -212,8 +222,10 @@ public struct Map3DRealTrains: Sendable {
             // has (the C301 and C321 have none: the line's other fleet
             // stands in for them).
             switch id {
-            // The Wenhu line's four cars (`wenhu`).
-            case "BR": return Formation(key: "wenhu", cars: 4)
+            // Decision 558: the Wenhu line's four cars, two pairs of its
+            // 370 or, a third of its trains, its VAL256
+            // (``Map3DTrainSet/wenhuLine(number:)``).
+            case "BR": return Formation(key: Map3DTrainSet.wenhu370Key, cars: 4)
             // The Circular line's four-car 610.
             case "Y": return Formation(key: "circular610", cars: 4)
             // The branch shuttles' three-car C371s.
@@ -235,8 +247,10 @@ public struct Map3DRealTrains: Sendable {
             // Decision 483: the Red and Orange lines' Siemens three cars.
             return Formation(key: "kaohsiung", cars: 3)
         case "tymc":
-            // The commuter train's four (`airportunknown`).
-            return Formation(key: "metroGeneric", cars: 4)
+            // Decision 561: the commuter train's four cars, its 1000; an
+            // express trip's train the 2000's five
+            // (``formation(of:system:place:locked:)``).
+            return Formation(key: Map3DTrainSet.taoyuanAirport1000Key, cars: 4)
         case "tmrt":
             // Decision 483: the Green line's own two cars.
             return Formation(key: "taichungGreen", cars: 2)

@@ -1,0 +1,345 @@
+{
+  "origin": "Official DORTS/TRTC publications plus observation-only photographs",
+  "date": "2026-11-03",
+  "license": "Original procedural code; source photographs not redistributed; linked publications retain their rights",
+  "public_use": "Only original geometry and source facts; no photographs, textures, logos or source geometry",
+  "photographs": [
+    {
+      "file": "63a-11a01.jpg",
+      "url": "https://2427junction.com/63a-11a01.jpg",
+      "sha256": "514515b5bfd45cb592eed90feae4fcb6c1bc474ec1e101db7d6bfde604bb1a83",
+      "bytes": 128188,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "09號可讀；正斜視與四輛。日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a02.jpg",
+      "url": "https://2427junction.com/63a-11a02.jpg",
+      "sha256": "c8c8e0c7e66319f946f7141dfb9332ab039e4b8179ae9aa5c1cf498caa6986f2",
+      "bytes": 179218,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "50號可讀；反向斜視四輛。日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a04.jpg",
+      "url": "https://2427junction.com/63a-11a04.jpg",
+      "sha256": "c778062eb8f1749821209dd7a8cb8dd66e2677ee531a611eaaa6a595dafe141d",
+      "bytes": 123220,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "完整四車側面，號碼不可讀，日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a06.jpg",
+      "url": "https://2427junction.com/63a-11a06.jpg",
+      "sha256": "7b89b3b383527ae14e5754ad3aa8e7caf7bd459d472aa01a4e8d3b657b6e79b4",
+      "bytes": 158391,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "彩繪廣告，排除一般塗裝證據。",
+      "inspected": false,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a07.jpg",
+      "url": "https://2427junction.com/63a-11a07.jpg",
+      "sha256": "22cde43d42c576746a307d77fba36d2c1ef312fabc582e764f733b8a2669a1db",
+      "bytes": 92514,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "同對半永久連結器；號碼未證實，無貫通風擋。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a08.jpg",
+      "url": "https://2427junction.com/63a-11a08.jpg",
+      "sha256": "7f10f59f2c582fb4500ffe59b2a963918da987ebbfc0a2fefe66bd6bbdd35567",
+      "bytes": 94151,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "30與16可讀，車對間自動連結器；日期未知，不能冒稱近期。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a14.jpg",
+      "url": "https://2427junction.com/63a-11a14.jpg",
+      "sha256": "9de7f3a5779dc5e9b8d723783cba296c29d7a5ab28e0d8f9f372e02fbe76f146",
+      "bytes": 48965,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "MATRA系統銘板，不能單憑此稱為整車廠。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a15.jpg",
+      "url": "https://2427junction.com/63a-11a15.jpg",
+      "sha256": "8b2c058fa818004f65c3b047b391e0a091551c74d1da82b2cd60075d5757c551",
+      "bytes": 44410,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "GEC ALSTHOM TRANSPORT銘板，1991製造字樣。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a17.jpg",
+      "url": "https://2427junction.com/63a-11a17.jpg",
+      "sha256": "6d5b400485c14c4d2428a3350d8a6c007aac0d8c9129fdb0184e97d863b746dc",
+      "bytes": 149477,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "49可讀，改裝後四車斜視；日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a18.jpg",
+      "url": "https://2427junction.com/63a-11a18.jpg",
+      "sha256": "df4895b827d3431267f4684e22f8439905a14fc1552959fbe3d1ae32987be41c",
+      "bytes": 75294,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "雙圓燈具凹槽，LED紅尾燈與白燈，日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-11a19.jpg",
+      "url": "https://2427junction.com/63a-11a19.jpg",
+      "sha256": "629ab3cc3236ed01133364f5de674c19ac0304bdb3b5610c5db7890fa5715e41",
+      "bytes": 71171,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "未LED化燈具，作歷史差異，非最終目標。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb01tw.jpg",
+      "url": "https://2427junction.com/63a-cb01tw.jpg",
+      "sha256": "2078859d70fcb7b4f59e1b2f9a3abbfa691a5cd7abe77d061aa34968570dc24d",
+      "bytes": 160092,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "174可讀，四車營運正斜視；日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb02tw.jpg",
+      "url": "https://2427junction.com/63a-cb02tw.jpg",
+      "sha256": "59a22f9c82594ba190bb34c54d6ba1ce1eadd3cd81d56c63120869a52fc44d33",
+      "bytes": 159684,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "201可讀，四車彎道斜視及屋頂；日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb04tw.jpg",
+      "url": "https://2427junction.com/63a-cb04tw.jpg",
+      "sha256": "e812a32f80e38dae473f130b4e26ca0f78a12a6f021160f5c3017abe98898024",
+      "bytes": 133878,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "134可讀，側面門窗、四圓燈與端下開口；日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb05tw.jpg",
+      "url": "https://2427junction.com/63a-cb05tw.jpg",
+      "sha256": "2e985638f7c879006e710cd9358da09e7d52378e4545e9ac7d4ab3dc883b05b7",
+      "bytes": 112521,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "115同對半永久連結；四行走輪之一可見，不能證全數。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb06tw.jpg",
+      "url": "https://2427junction.com/63a-cb06tw.jpg",
+      "sha256": "8fe145a532db101df51c1a13210718b4f9dcd9e786681e27b50837694cf6bf1f",
+      "bytes": 119844,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "130+114可讀，車對交界自動連結，日期未知。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb07tw.jpg",
+      "url": "https://2427junction.com/63a-cb07tw.jpg",
+      "sha256": "8754031271c09832d2639c73894dee82f025cfeb371ababb14e4754b72718328",
+      "bytes": 136681,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "屋頂斜視：兩HVAC與三低矮設備；各車A/B字母不可讀。",
+      "inspected": true,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb09tw.jpg",
+      "url": "https://2427junction.com/63a-cb09tw.jpg",
+      "sha256": "e96c55e52cc59da50ef6edf0bad23209c3e5c87df8075dc9061717a01bb49810",
+      "bytes": 144647,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "客室內裝；不能證明外觀輪組。",
+      "inspected": false,
+      "public_use": false
+    },
+    {
+      "file": "63a-cb10tw.jpg",
+      "url": "https://2427junction.com/63a-cb10tw.jpg",
+      "sha256": "456823c89901dc44508e29f05f58cb2fd3fb4b0e497cc62fa45175878f319bdf",
+      "bytes": 122837,
+      "author": "2427junction",
+      "license": "No redistribution permission identified; observation only",
+      "date": null,
+      "type": "real vehicle photo",
+      "observation": "行李架；不能證明外觀輪組。",
+      "inspected": false,
+      "public_use": false
+    }
+  ],
+  "official": [
+    {
+      "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no48/files/basic-html/page138.html",
+      "supports": "VAL256 1991出廠、1996-03-28營運；每車13.78x2.56x3.53m、每側2門、兩對四車、無車間通道"
+    },
+    {
+      "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no48/files/basic-html/page139.html",
+      "supports": "370共101對202輛；匹茲堡製造，其中51對唐榮組裝；13.78x2.54x3.53m；2009-06-30正式上線（與營運通車日期區分）"
+    },
+    {
+      "url": "https://data.taipei/api/frontstage/tpeod/dataset/resource.download?rid=a8131447-7fad-4f60-bfae-b1e63ac8e3da",
+      "supports": "370專文：2009-07-04營運通車；A/B端均有控制臺；AX/BY有偵障桿；不採英文摘要2010誤植作通車證據"
+    },
+    {
+      "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no48/files/basic-html/page148.html",
+      "supports": "同步控制表文湖線A-B-A-B"
+    },
+    {
+      "url": "https://ebook.dorts.gov.taipei/ebook/no1/files/basic-html/page140.html",
+      "supports": "相互衝突：A-B-B-A及僅A駕駛設備；尚待專型原始配置釐清"
+    },
+    {
+      "url": "https://www.metro.taipei/cp.aspx?n=CCF30033E6ED8008&s=405306CC7ACD137B",
+      "supports": "兩對四車、膠輪、水泥與鋼製行駛面；兩款共存，BR不識別車型"
+    },
+    {
+      "url": "https://www.dorts.ntpc.gov.tw/documentary/articleInfo/gMbm0reldyo0?page=273",
+      "supports": "2020-09-02官方文字使用INNOVIA APM256名稱，文湖線四節、各客室不貫通；配圖轉引wikiwand不當原始攝影或工程資料。"
+    },
+    {
+      "url": "https://www.bfginternational.com/transportation/projects/taipei-metro-neihu-line-taiwan",
+      "supports": "供應商原文：Project INNOVIA256、101 sets、Train Builder Bombardier Transportation；BFG負責FRP內裝與front ends。其Handover2005指BFG部件專案，不當全列驗收／營運日期。"
+    }
+  ],
+  "design_stage_addendum": {
+    "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no33/files/basic-html/page30.html",
+    "title": "內湖線新型中運量電聯車",
+    "authors": [
+      "田榮生",
+      "歐陽成"
+    ],
+    "publisher": "臺北市政府捷運工程局",
+    "publication_date": "2005-08",
+    "read_pages": "printed 23–33 / web pages29–39; full text opened, pages33/34 engineering illustrations individually downloaded and opened",
+    "type": "official pre-manufacture detailed-design paper; not an operating photo or as-built confirmation",
+    "supports": [
+      "two married pairs, four fixed cars",
+      "A/B pair interior semi-permanent and exterior automatic couplers",
+      "10m axle spacing",
+      "two single-axle bolster bogies per car, two AC traction motors",
+      "750V DC third rail with side-contact shoes",
+      "two rooftop HVAC per car",
+      "guides fore and aft of load wheels; two switch discs on guidance structure",
+      "1.98m load-wheel centre spacing in figure3 dimension annotation",
+      "headlamps off in automatic normal service; direction lamps white/red"
+    ],
+    "conflicts_or_limits": [
+      "page24 says still detailed-design stage and unbuilt; as-built dimensions unverified",
+      "page23 says planned local assembly101cars, later official record51pairs102cars; do not equate planned and final quantities",
+      "drawing does not establish exact in-service wheel/collector BOM, formal A/B directions or complete dated train numbers"
+    ]
+  },
+  "engineering_illustrations": [
+    {
+      "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no33/files/mobile/33.jpg",
+      "author": "DORTS paper by 田榮生／歐陽成",
+      "date": "2005-08",
+      "file": "no33-33.jpg",
+      "bytes": 535367,
+      "sha256": "a836b7ad20adeed140976541c3ac4be63cedccfb4102bf041c0b108f6880dc9a",
+      "type": "engineering design illustration, not actual vehicle photograph",
+      "inspected": true,
+      "license": "Publication rights retained by source; observation only, not redistributed",
+      "public_use": false,
+      "supports": "body cross-section / bolster bogie guidance and dimension annotations"
+    },
+    {
+      "url": "https://ebook.dorts.gov.taipei/JRTST/ebook/no33/files/mobile/34.jpg",
+      "author": "DORTS paper by 田榮生／歐陽成",
+      "date": "2005-08",
+      "file": "no33-34.jpg",
+      "bytes": 456865,
+      "sha256": "6271dba7c6ca644419c31b39554491afc07d78722240ee27dcd7c79aebdd105c",
+      "type": "engineering design illustration, not actual vehicle photograph",
+      "inspected": true,
+      "license": "Publication rights retained by source; observation only, not redistributed",
+      "public_use": false,
+      "supports": "body cross-section / bolster bogie guidance and dimension annotations"
+    }
+  ]
+}

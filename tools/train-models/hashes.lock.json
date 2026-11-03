@@ -1,6 +1,70 @@
 {
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
+    "wenhu-val256-a" : {
+      "hash" : "8cde807f78e0906a",
+      "triangles" : 12136
+    },
+    "wenhu-val256-b" : {
+      "hash" : "2c22d31401252ea4",
+      "triangles" : 12172
+    },
+    "wenhu-val256-a-far" : {
+      "hash" : "87edc21b0b2654c8",
+      "triangles" : 5680
+    },
+    "wenhu-val256-b-far" : {
+      "hash" : "90e3f73a46eb3b4",
+      "triangles" : 5716
+    },
+    "wenhu-apm256-a" : {
+      "hash" : "23ed01337e7a75a",
+      "triangles" : 10856
+    },
+    "wenhu-apm256-b" : {
+      "hash" : "55828b1b5481a2e6",
+      "triangles" : 10892
+    },
+    "wenhu-apm256-a-far" : {
+      "hash" : "e6818c192893904",
+      "triangles" : 5000
+    },
+    "wenhu-apm256-b-far" : {
+      "hash" : "cf26235d7105a5e2",
+      "triangles" : 5036
+    },
+    "tra-emu700-emc-cab" : {
+      "hash" : "9a6e7ce8a4e7a01",
+      "triangles" : 13740
+    },
+    "tra-emu700-emc-cab-far" : {
+      "hash" : "6877b01b99faf1c7",
+      "triangles" : 6728
+    },
+    "tra-emu700-ep" : {
+      "hash" : "29774c360c3fd6b2",
+      "triangles" : 6104
+    },
+    "tra-emu700-ep-far" : {
+      "hash" : "23a655ceae5e462a",
+      "triangles" : 3040
+    },
+    "tra-emu700-et" : {
+      "hash" : "68654beb46bb6cde",
+      "triangles" : 5988
+    },
+    "tra-emu700-et-far" : {
+      "hash" : "63e6355cc8e12115",
+      "triangles" : 2964
+    },
+    "tra-emu700-em" : {
+      "hash" : "bf8c22e5f8a9a901",
+      "triangles" : 6000
+    },
+    "tra-emu700-em-far" : {
+      "hash" : "1bd0373fc6b71b",
+      "triangles" : 2960
+    },
     "tra-r200-r216-locomotive" : {
       "hash" : "e2c38748a7e6cbcd",
       "triangles" : 12702
@@ -3760,6 +3824,402 @@
     "set-SHANLANFar-tail": {
       "hash": "46fb9835a778c345",
       "triangles": 3420
+    },
+    "light-set-wenhu370-car" : {
+      "hash" : "b66f61e4c3eb570f",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370-centre" : {
+      "hash" : "3d75a79a1cc4b447",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370-head" : {
+      "hash" : "3d75a79a1cc4b447",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370-tail" : {
+      "hash" : "b66f61e4c3eb570f",
+      "triangles" : 1008
+    },
+    "light-set-wenhu370Far-car" : {
+      "hash" : "a6ea95c7d8a82587",
+      "triangles" : 384
+    },
+    "light-set-wenhu370Far-centre" : {
+      "hash" : "c97888e981a357a9",
+      "triangles" : 384
+    },
+    "light-set-wenhu370Far-head" : {
+      "hash" : "c97888e981a357a9",
+      "triangles" : 384
+    },
+    "light-set-wenhu370Far-tail" : {
+      "hash" : "a6ea95c7d8a82587",
+      "triangles" : 384
+    },
+    "light-set-wenhuVAL256-car" : {
+      "hash" : "142e305921842221",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256-centre" : {
+      "hash" : "f46f3bf24e15b5c7",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256-head" : {
+      "hash" : "f46f3bf24e15b5c7",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256-tail" : {
+      "hash" : "142e305921842221",
+      "triangles" : 1188
+    },
+    "light-set-wenhuVAL256Far-car" : {
+      "hash" : "30d889d3fb513cb9",
+      "triangles" : 500
+    },
+    "light-set-wenhuVAL256Far-centre" : {
+      "hash" : "f9ab5538bb9a6679",
+      "triangles" : 500
+    },
+    "light-set-wenhuVAL256Far-head" : {
+      "hash" : "f9ab5538bb9a6679",
+      "triangles" : 500
+    },
+    "light-set-wenhuVAL256Far-tail" : {
+      "hash" : "30d889d3fb513cb9",
+      "triangles" : 500
+    },
+    "set-wenhu370-car" : {
+      "hash" : "55828b1b5481a2e6",
+      "triangles" : 10892
+    },
+    "set-wenhu370-centre" : {
+      "hash" : "23ed01337e7a75a",
+      "triangles" : 10856
+    },
+    "set-wenhu370-head" : {
+      "hash" : "ac3273eac66d76da",
+      "triangles" : 10856
+    },
+    "set-wenhu370-tail" : {
+      "hash" : "48cae56aaf6749ea",
+      "triangles" : 10892
+    },
+    "set-wenhu370Far-car" : {
+      "hash" : "cf26235d7105a5e2",
+      "triangles" : 5036
+    },
+    "set-wenhu370Far-centre" : {
+      "hash" : "e6818c192893904",
+      "triangles" : 5000
+    },
+    "set-wenhu370Far-head" : {
+      "hash" : "acb5bd84f8b0b70d",
+      "triangles" : 5000
+    },
+    "set-wenhu370Far-tail" : {
+      "hash" : "ce7bf801b41c0096",
+      "triangles" : 5036
+    },
+    "set-wenhuVAL256-car" : {
+      "hash" : "2c22d31401252ea4",
+      "triangles" : 12172
+    },
+    "set-wenhuVAL256-centre" : {
+      "hash" : "8cde807f78e0906a",
+      "triangles" : 12136
+    },
+    "set-wenhuVAL256-head" : {
+      "hash" : "fc0d22fc56c8bc78",
+      "triangles" : 12136
+    },
+    "set-wenhuVAL256-tail" : {
+      "hash" : "e79c8cf0a6c5863d",
+      "triangles" : 12172
+    },
+    "set-wenhuVAL256Far-car" : {
+      "hash" : "90e3f73a46eb3b4",
+      "triangles" : 5716
+    },
+    "set-wenhuVAL256Far-centre" : {
+      "hash" : "87edc21b0b2654c8",
+      "triangles" : 5680
+    },
+    "set-wenhuVAL256Far-head" : {
+      "hash" : "7b739342f1ef22a0",
+      "triangles" : 5680
+    },
+    "set-wenhuVAL256Far-tail" : {
+      "hash" : "da9d5760ead82dd1",
+      "triangles" : 5716
+    },
+    "set-emu700-car": {
+      "hash": "6545c04e201068fb",
+      "triangles": 6000
+    },
+    "set-emu700-carBack": {
+      "hash": "58b1fbb71ca10cee",
+      "triangles": 6000
+    },
+    "set-emu700-centre": {
+      "hash": "3e08330146bdb980",
+      "triangles": 5988
+    },
+    "set-emu700-centreBack": {
+      "hash": "f4aea96048e01693",
+      "triangles": 5988
+    },
+    "set-emu700-head": {
+      "hash": "75e546d19ed74229",
+      "triangles": 13740
+    },
+    "set-emu700-panto": {
+      "hash": "fd692e9215c686ca",
+      "triangles": 6104
+    },
+    "set-emu700-pantoBack": {
+      "hash": "1554c773badbae98",
+      "triangles": 6104
+    },
+    "set-emu700-tail": {
+      "hash": "4b92eed9376567e",
+      "triangles": 13740
+    },
+    "set-emu700Far-car": {
+      "hash": "6f007e664a9e7480",
+      "triangles": 2960
+    },
+    "set-emu700Far-carBack": {
+      "hash": "4211a6bed8f0afe",
+      "triangles": 2960
+    },
+    "set-emu700Far-centre": {
+      "hash": "10bc863c9a9af1e",
+      "triangles": 2964
+    },
+    "set-emu700Far-centreBack": {
+      "hash": "ab31854acee46deb",
+      "triangles": 2964
+    },
+    "set-emu700Far-head": {
+      "hash": "7dc86862639e6c8e",
+      "triangles": 6728
+    },
+    "set-emu700Far-panto": {
+      "hash": "188d4c4cbd9be7df",
+      "triangles": 3040
+    },
+    "set-emu700Far-pantoBack": {
+      "hash": "4db2df716bc3f7e2",
+      "triangles": 3040
+    },
+    "set-emu700Far-tail": {
+      "hash": "99123118b7067f0f",
+      "triangles": 6728
+    },
+    "light-set-emu700-car": {
+      "hash": "d55dc5f89bae1dc5",
+      "triangles": 1024
+    },
+    "light-set-emu700-carBack": {
+      "hash": "5b943a794d182c5",
+      "triangles": 1024
+    },
+    "light-set-emu700-centre": {
+      "hash": "86a55145aaa95da5",
+      "triangles": 1020
+    },
+    "light-set-emu700-centreBack": {
+      "hash": "9a11cd3c382813a5",
+      "triangles": 1020
+    },
+    "light-set-emu700-head": {
+      "hash": "3f9e85da30c3e0fd",
+      "triangles": 912
+    },
+    "light-set-emu700-panto": {
+      "hash": "4786eba9ea237b59",
+      "triangles": 1008
+    },
+    "light-set-emu700-pantoBack": {
+      "hash": "4d2c1b3a70647659",
+      "triangles": 1008
+    },
+    "light-set-emu700-tail": {
+      "hash": "5aeb9a6030ccbcfd",
+      "triangles": 912
+    },
+    "light-set-emu700Far-car": {
+      "hash": "8fe98508c93d43e5",
+      "triangles": 136
+    },
+    "light-set-emu700Far-carBack": {
+      "hash": "dd0cdc3e38a47ae5",
+      "triangles": 136
+    },
+    "light-set-emu700Far-centre": {
+      "hash": "96453535da4cfed3",
+      "triangles": 144
+    },
+    "light-set-emu700Far-centreBack": {
+      "hash": "123bdfd96f88dbd3",
+      "triangles": 144
+    },
+    "light-set-emu700Far-head": {
+      "hash": "735521113b6e4cfd",
+      "triangles": 120
+    },
+    "light-set-emu700Far-panto": {
+      "hash": "e9292cfa3ca5a1e1",
+      "triangles": 156
+    },
+    "light-set-emu700Far-pantoBack": {
+      "hash": "1c4dfd00105277e1",
+      "triangles": 156
+    },
+    "light-set-emu700Far-tail": {
+      "hash": "f0d8246f4af0fffd",
+      "triangles": 120
+    },
+    "set-taoyuanAirport1000-head": {
+      "hash": "9e97810f7393bb43",
+      "triangles": 13752
+    },
+    "set-taoyuanAirport1000-car": {
+      "hash": "897549d74c1cf146",
+      "triangles": 9944
+    },
+    "set-taoyuanAirport1000-centre": {
+      "hash": "897549d74c1cf146",
+      "triangles": 9944
+    },
+    "set-taoyuanAirport1000-tail": {
+      "hash": "b0ec0fbe8a2396da",
+      "triangles": 13752
+    },
+    "light-set-taoyuanAirport1000-head": {
+      "hash": "153b721ca44a34d1",
+      "triangles": 1016
+    },
+    "light-set-taoyuanAirport1000-car": {
+      "hash": "661a7b0dd8424c45",
+      "triangles": 1128
+    },
+    "light-set-taoyuanAirport1000-centre": {
+      "hash": "661a7b0dd8424c45",
+      "triangles": 1128
+    },
+    "light-set-taoyuanAirport1000-tail": {
+      "hash": "660821aeed3859d1",
+      "triangles": 1016
+    },
+    "set-taoyuanAirport1000Far-head": {
+      "hash": "d3e4711d0517754d",
+      "triangles": 6820
+    },
+    "set-taoyuanAirport1000Far-car": {
+      "hash": "4de7a7bc101a3118",
+      "triangles": 4576
+    },
+    "set-taoyuanAirport1000Far-centre": {
+      "hash": "4de7a7bc101a3118",
+      "triangles": 4576
+    },
+    "set-taoyuanAirport1000Far-tail": {
+      "hash": "2535fd401a3bb501",
+      "triangles": 6820
+    },
+    "light-set-taoyuanAirport1000Far-head": {
+      "hash": "a2f678c91fe3b131",
+      "triangles": 472
+    },
+    "light-set-taoyuanAirport1000Far-car": {
+      "hash": "f9f71666f5a1fcad",
+      "triangles": 504
+    },
+    "light-set-taoyuanAirport1000Far-centre": {
+      "hash": "f9f71666f5a1fcad",
+      "triangles": 504
+    },
+    "light-set-taoyuanAirport1000Far-tail": {
+      "hash": "8fa0265bdc98e031",
+      "triangles": 472
+    },
+    "set-taoyuanAirport2000-head": {
+      "hash": "c40a1e8ba1586dde",
+      "triangles": 13752
+    },
+    "set-taoyuanAirport2000-car": {
+      "hash": "6d5c07ec72166a8f",
+      "triangles": 9944
+    },
+    "set-taoyuanAirport2000-centre": {
+      "hash": "6a3e27f85e20eedb",
+      "triangles": 9764
+    },
+    "set-taoyuanAirport2000-fourth": {
+      "hash": "6d5c07ec72166a8f",
+      "triangles": 9944
+    },
+    "set-taoyuanAirport2000-tail": {
+      "hash": "7933816a82e35abb",
+      "triangles": 10572
+    },
+    "light-set-taoyuanAirport2000-head": {
+      "hash": "2202d07791131491",
+      "triangles": 1016
+    },
+    "light-set-taoyuanAirport2000-car": {
+      "hash": "973f09a1ee73d45d",
+      "triangles": 1128
+    },
+    "light-set-taoyuanAirport2000-centre": {
+      "hash": "973f09a1ee73d45d",
+      "triangles": 1128
+    },
+    "light-set-taoyuanAirport2000-fourth": {
+      "hash": "973f09a1ee73d45d",
+      "triangles": 1128
+    },
+    "light-set-taoyuanAirport2000-tail": {
+      "hash": "416bad8b9e94d019",
+      "triangles": 128
+    },
+    "set-taoyuanAirport2000Far-head": {
+      "hash": "a87743072a0ae41a",
+      "triangles": 6820
+    },
+    "set-taoyuanAirport2000Far-car": {
+      "hash": "21472fd9524381bd",
+      "triangles": 4576
+    },
+    "set-taoyuanAirport2000Far-centre": {
+      "hash": "2c9ad8000ab96fc7",
+      "triangles": 4564
+    },
+    "set-taoyuanAirport2000Far-fourth": {
+      "hash": "21472fd9524381bd",
+      "triangles": 4576
+    },
+    "set-taoyuanAirport2000Far-tail": {
+      "hash": "9dd9752d397bb59f",
+      "triangles": 5212
+    },
+    "light-set-taoyuanAirport2000Far-head": {
+      "hash": "171d7df48524b45",
+      "triangles": 472
+    },
+    "light-set-taoyuanAirport2000Far-car": {
+      "hash": "9a3934ff452f1949",
+      "triangles": 504
+    },
+    "light-set-taoyuanAirport2000Far-centre": {
+      "hash": "9a3934ff452f1949",
+      "triangles": 504
+    },
+    "light-set-taoyuanAirport2000Far-fourth": {
+      "hash": "9a3934ff452f1949",
+      "triangles": 504
     }
   }
 }

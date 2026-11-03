@@ -1,0 +1,632 @@
+{
+  "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+  "limits": "Roles A/B and all-zero study directions are provisional; no user accepted producer, no dated readable complete four-number prototype; no device proof. Status entries follow status-template four states.",
+  "models": [
+    {
+      "id": "wenhu-val256-a",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 12136,
+      "native_sha256": "46243d271e51b103f5807d46c1ca61e191b3d76bd29762b1eae8ede81005ed23",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-val256-b",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 12172,
+      "native_sha256": "b09aca901773c6b9ee2fff2018adb633972daf77edb189c86f22498a0159d3ba",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-val256-a-far",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 5680,
+      "native_sha256": "4610fbd2c1e46f8e533631c021c66d07873834c9b2710585aa27b91cbc78cf0c",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-val256-b-far",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 5716,
+      "native_sha256": "4dd50c95f9e358b55826f665d042a69b2d3216ac9b543504703d9686020d7cfb",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-apm256-a",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 10856,
+      "native_sha256": "97894bfdd986e188d9cb13ec99e3475e302641bb214e5300d02f59589bd5cade",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-apm256-b",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 10892,
+      "native_sha256": "b60e6595eb79d7168bc2a84c419300c63fc120ac80418d538f31ad959163acc3",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-apm256-a-far",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 5000,
+      "native_sha256": "47d21296c25d5539bdb35823e66adc67e3b716306bb92b36395c352afd46aa1a",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-apm256-b-far",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 5036,
+      "native_sha256": "42d2a2f68e2fda5b99072a0838e42e1281867d868384c4081dbf98b4e3aee0fb",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-val256-formation",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 48616,
+      "native_sha256": "2a959d48eecb1592a18f79f40ceca01ed46044d4fffa5f691d44d4e089c684e0",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-val256-formation-far",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 22792,
+      "native_sha256": "2d5163ff2d5d3899771c89957bd703b44129385f5abd73baa2375e758010a52f",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-apm256-formation",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 43496,
+      "native_sha256": "89dd33f668e011893c61d76517772d0a22a06f893483ab909319455483b63d2e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "id": "wenhu-apm256-formation-far",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "formal_role_status": "UNVERIFIED",
+      "triangles": 20072,
+      "native_sha256": "6e6ae996db16a1bc79e0fc0b2e7946dfa21b687b02623d4bf5b9dc400366fe26",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Native/GLB/common audit and scoped contact/end/assembly checks passed; actual role/equipment fidelity incomplete. See verification.json."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    }
+  ],
+  "junctions": [
+    {
+      "fleet": "val256",
+      "lod": "near",
+      "junction": "1-2",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "val256",
+      "lod": "near",
+      "junction": "2-3",
+      "study_coupler": "between married pairs, automatic",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "val256",
+      "lod": "near",
+      "junction": "3-4",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "val256",
+      "lod": "far",
+      "junction": "1-2",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "val256",
+      "lod": "far",
+      "junction": "2-3",
+      "study_coupler": "between married pairs, automatic",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "val256",
+      "lod": "far",
+      "junction": "3-4",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "apm256",
+      "lod": "near",
+      "junction": "1-2",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "apm256",
+      "lod": "near",
+      "junction": "2-3",
+      "study_coupler": "between married pairs, automatic",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "apm256",
+      "lod": "near",
+      "junction": "3-4",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "apm256",
+      "lod": "far",
+      "junction": "1-2",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "apm256",
+      "lod": "far",
+      "junction": "2-3",
+      "study_coupler": "between married pairs, automatic",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    },
+    {
+      "fleet": "apm256",
+      "lod": "far",
+      "junction": "3-4",
+      "study_coupler": "same married pair, semi-permanent",
+      "producer": "538a985c795ef57dd034fa57a226270354a8ae8e",
+      "status": {
+        "asset": {
+          "status": "UNVERIFIED",
+          "evidence": "Final actual assembly configuration rejects wrong role, order, missing unit, spacing and reversed B; precise formal directions and equipment remain unverified."
+        },
+        "appearance": {
+          "status": "UNVERIFIED",
+          "evidence": "No user acceptance of this producer.",
+          "accepted_producer": null
+        },
+        "integration": {
+          "status": "UNVERIFIED",
+          "evidence": "BR has no reliable type and role contract; operating wenhu unchanged."
+        },
+        "device": {
+          "status": "UNVERIFIED",
+          "evidence": "No simulator or physical-device test."
+        }
+      }
+    }
+  ]
+}

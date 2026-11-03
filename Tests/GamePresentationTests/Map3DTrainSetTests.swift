@@ -11,6 +11,9 @@ final class Map3DTrainSetTests: XCTestCase {
     /// Decision 496: the real light rails' sets, near and far.
     static let lightRails: Set = ["danhaiLRT", "danhaiLRTFar", "ankengLRT", "ankengLRTFar", "klrtCAF", "klrtCAFFar",
                                   "klrtCitadis", "klrtCitadisFar"]
+    /// Decision 558: the Wenhu line's two fleets, near and far.
+    static let wenhu: Set = ["wenhuVAL256", "wenhuVAL256Far", "wenhu370", "wenhu370Far"]
+    static let taoyuanAirport: Set = ["taoyuanAirport1000", "taoyuanAirport1000Far", "taoyuanAirport2000", "taoyuanAirport2000Far"]
     private var pack: Map3DModelPack { .standard }
     /// The recipes, their lamps lit as drawn (decision 449 lights a
     /// running car's in the pack only at its train's ends).
@@ -56,6 +59,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu800" ? ([set.headName, set.tailName].contains(name) ? 11_000...12_000 : 5_000...5_500)
                     // Decision 435: #1339's EMU900 near units, 9,256 a cab and 4,990 to 5,270 the others.
                     : set.key == "emu900" ? ([set.headName, set.tailName].contains(name) ? 9_000...9_500 : 4_900...5_300)
+                    // Decision 560: #1730's EMU700, 13,740 a cab and 5,988 to 6,104 the others near, its far cab 6,728.
+                    : set.key == "emu700" ? ([set.headName, set.tailName].contains(name) ? 13_500...14_000 : 5_900...6_200)
+                    : set.key == "emu700Far" && [set.headName, set.tailName].contains(name) ? 6_600...6_800
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
                     : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
                     : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
@@ -82,7 +88,13 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 554: #1539's EMC and EM, 8,076 near and 3,420 far.
                     : Self.tourism.contains(set.key) && [set.headName, set.tailName].contains(name) ? 3_400...8_100
                     // Decision 531: the DL-38 drawn from photographs, 7,712 near and 2,316 far.
-                    : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000 : 100...4_100
+                    : name == set.headName && ["ALISHAN", "ALISHANFar"].contains(set.key) ? 2_000...8_000
+                    // Decision 558: #1742's Wenhu line cars, near and far.
+                    : Self.wenhu.contains(set.key) ? 4_900...12_200
+                    // Decision 561: #1700's Airport MRT cars, 13,752 a cab
+                    // (the DMB 10,572) and 9,764 to 9,944 the others near,
+                    // 4,564 to 6,820 far.
+                    : Self.taoyuanAirport.contains(set.key) ? 4_500...13_800 : 100...4_100
                 XCTAssertTrue(triangles.contains(model.triangleCount), "\(name): \(model.triangleCount) triangles")
                 // #900's 700T is 24 m, its Wenhu car 12.6 m, #988's urban
                 // EMU 15 m; drawn at the train's car length.
@@ -100,6 +112,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     // 610's 16.7 and 17.6 m.
                     : ["taroko", "tarokoFar", "metroC341", "metroC341Far", "metroC371", "metroC371Far", "metroC381", "metroC381Far"].contains(set.key) ? 23...24.5
                     : ["circular610", "circular610Far"].contains(set.key) ? 16.5...17.7 : set.key == "wenhu" ? 12...13.5
+                    // Decision 558: #1742's Wenhu line cars, 13.78 m with their couplers.
+                    : Self.wenhu.contains(set.key) ? 13.7...13.85
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
                     : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
@@ -128,7 +142,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
                     // Decision 554: and #1539's EP's, 5.0 m.
-                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far"].contains(set.key) || Self.tourism.contains(set.key) ? 3.4...5.3
+                    // Decision 560: and #1730's EMU700's EP, 4.98 m.
+                    : ["emu800", "emu800Far", "emu500", "emu500Far", "emu900", "emu900Far", "emu700", "emu700Far"].contains(set.key) || Self.tourism.contains(set.key) ? 3.4...5.3
                     // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
                     : alishan ? 3.0...3.3 : 3.4...4.6
                 XCTAssertTrue(height.contains(model.maximum.z), "\(name): \(model.maximum.z) m tall")
@@ -290,7 +305,8 @@ final class Map3DTrainSetTests: XCTestCase {
         // 399: four the seven-section car).
         XCTAssertEqual(names("C", 1), ["set-greenTram-single"])
         XCTAssertEqual(names("C", 5), ["set-greenTram-head", "set-greenTram-car", "set-greenTram-car", "set-greenTram-car", "set-greenTram-tail"])
-        XCTAssertEqual(names("APM", 2), ["set-wenhu-head", "set-wenhu-tail"])
+        // Decision 558: the people mover is the Wenhu line's 370.
+        XCTAssertEqual(names("APM", 2), ["set-wenhu370-head", "set-wenhu370-tail"])
     }
 
     /// Decision 331: a tram car is two of the tram's sections, as long as

@@ -2,6 +2,8 @@
 
 新車使用本工具，專用的門窗／支承／輪軌驗收才另開目錄。既有配方與工具不重寫，模型／雜湊不因工具更新而改變。先讀 [rolling-stock](../../.claude/skills/rolling-stock/SKILL.md)、[原生手冊](../../docs/art/native-vehicle-modeling/README.md) 與兩庫 AGENTS.md。
 
+EMU700：四正式角色近遠與完整八車研究的配方、assembly及專用驗收見 [tools/tra-emu700](../tra-emu700/README.md)；營運接入見決策 560（`emu700`／`emu700Far` set），外觀接受未驗。
+
 需要 Swift 6.4、Node 22以上、既有 Playwright／Chromium、Python／Pillow；獨立 GLB 匯入仍用既有 Blender。輸出放公開 checkout 外。
 
 ## 匯出、預算與圖片

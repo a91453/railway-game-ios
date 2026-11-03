@@ -54,6 +54,9 @@ public struct Map3DTrainSet: Sendable {
     /// R200 is the R200 Chu-Kuang's); this set's ``Cars/head`` is not put
     /// in the pack.
     var headOf: String? = nil
+    /// Decision 558: the key of the set drawn in this one's place while
+    /// the pack has none of its models (the Wenhu line's generic car).
+    var fallback: String? = nil
     let build: @Sendable () -> Cars
 
     struct Cars {
@@ -194,7 +197,8 @@ public struct Map3DTrainSet: Sendable {
             n700sGFar(),
             // Decision 461: the scene kit's generic metro car, line-coloured,
             // for the metros that are not Taipei's (Kaohsiung, Taoyuan,
-            // Taichung); it was `metroC381` before.
+            // Taichung); it was `metroC381` before. Decision 561: no
+            // line's now, drawn only in the Airport MRT sets' place.
             multipleUnit("metroGeneric", asset: "02_HSR_MRT_3x2-02", lineColoured: true),
             multipleUnit("wenhu", asset: "02_HSR_MRT_3x2-03", lineColoured: true),
             // Decisions 426, 484: the Puyuma as #1456's TEMU2000, and its light
@@ -308,6 +312,28 @@ public struct Map3DTrainSet: Sendable {
             tourismEMU500(.haifeng, far: true),
             tourismEMU500(.shanlan),
             tourismEMU500(.shanlan, far: true),
+            // Decision 558: the Wenhu line's two fleets as #1742's cars
+            // (the VAL256 and the 370, its INNOVIA APM256), near and from
+            // 500 m out their light cars; last, so no set's models before
+            // them move.
+            wenhuVAL256(),
+            wenhuVAL256(far: true),
+            wenhu370(),
+            wenhu370(far: true),
+            // Decision 560: and #1730's EMU700 (by ``variant(of:number:locked:)``
+            // as many as its share of the four fleets' cars), from 500 m
+            // out its far cars; after the sets before it (decision 558's
+            // Wenhu sets too), so none of their models move.
+            emu700(),
+            emu700(far: true),
+            // Decision 561: the Taoyuan Airport MRT's two fleets as #1700's
+            // cars (the commuter 1000, the express 2000), near and from
+            // 500 m out their light cars; last, so no set's models before
+            // them move.
+            taoyuanAirport1000(),
+            taoyuanAirport1000(far: true),
+            taoyuanAirport2000(),
+            taoyuanAirport2000(far: true),
         ]
     }()
 
@@ -316,10 +342,11 @@ public struct Map3DTrainSet: Sendable {
     /// The types drawn as a set of another key: the EMU3000 and the
     /// high-speed set as their models, every metro size but the light
     /// metro as the C381, the light metro as the green tram (decision 331)
-    /// and the people mover as the Wenhu line's car.
+    /// and the people mover as the Wenhu line's car; decision 558: as the
+    /// Wenhu line's 370 (a third of them its VAL256, ``wenhuLine(number:)``).
     static let byType: [String: String] = [
         "EMU3000": "emu3000", "HSR": "highSpeed",
-        "A": "metroC381", "B": "metroC381", "C": "greenTram", "L": "metroC381", "D": "metroC381", "APM": "wenhu",
+        "A": "metroC381", "B": "metroC381", "C": "greenTram", "L": "metroC381", "D": "metroC381", "APM": wenhu370Key,
     ]
 
     /// How far from the eye a car of `key` is drawn with its model, in
@@ -342,15 +369,18 @@ public struct Map3DTrainSet: Sendable {
     /// 4,500 triangles a cab car.
     /// Decision 433: and the C341 (its far set), 3,900 a cab car.
     /// Decision 435: and the EMU900 (its far set), 9,300 a cab car.
+    /// Decision 560: and the EMU700 (its far set).
+    /// Decision 561: and the Taoyuan Airport MRT's 1000 and 2000 (their
+    /// far sets).
     /// Decision 461: and the C371, C381 and 610 (their far sets).
     /// Decision 466: and the Sanying line's; decision 483: and the
     /// Kaohsiung and Taichung Green line's (their far sets).
     /// Decision 496: and the real light rails' five-module trains (their
     /// far sets).
     static let nearOnly: Set = ["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "STEAM", "BLUE", "highSpeed", "n700sG", "emu3000",
-                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "metroC371", "metroC381", "circular610", "sanying",
+                                "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
-                                "HAIFENG", "SHANLAN"]
+                                "HAIFENG", "SHANLAN", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key]
 
     /// Decision 408: the set a train of `key` numbered `number` is drawn
     /// as: half the high-speed trains, the odd-numbered, the N700S-G, the
@@ -379,6 +409,8 @@ public struct Map3DTrainSet: Sendable {
             return localTrain(number: number)
         case "klrtCitadis":
             return kaohsiungLightRail(number: number)
+        case wenhu370Key:
+            return wenhuLine(number: number)
         case "pushPull" where !locked.contains("pushPullE1000"):
             return "pushPullE1000"
         default:
@@ -387,14 +419,16 @@ public struct Map3DTrainSet: Sendable {
     }
 
     /// Decision 435: the set a Taiwan Railway local train numbered `number`
-    /// is drawn as, as many of each as its share of the three fleets' cars
-    /// (EMU900 520, EMU500 344, EMU800 296: 9, 6 and 5 in 20): of seven
-    /// times the number's remainder by 20, 0 to 8 the EMU900, 9 to 14 the
-    /// EMU500, 15 to 19 the EMU800. Times seven, so that trains numbered one
-    /// after another are not the same kind in a run.
+    /// is drawn as, as many of each as its share of the fleets' cars.
+    /// Decision 560: four fleets (EMU900 520, EMU500 344, EMU800 296,
+    /// EMU700 160: 8, 5, 4 and 3 in 20, of 1,320 cars 7.9, 5.2, 4.5 and
+    /// 2.4): of seven times the number's remainder by 20, 0 to 7 the EMU900,
+    /// 8 to 12 the EMU500, 13 to 16 the EMU800, 17 to 19 the EMU700. Times
+    /// seven, so that trains numbered one after another are not the same
+    /// kind in a run.
     static func localTrain(number: Int) -> String {
         let share = ((number % 20 + 20) % 20) * 7 % 20
-        return share < 9 ? "emu900" : share < 15 ? "emu500" : "emu800"
+        return share < 8 ? "emu900" : share < 13 ? "emu500" : share < 17 ? "emu800" : "emu700"
     }
 
     /// Decision 461: the set a player's metro train numbered `number` is
@@ -419,6 +453,25 @@ public struct Map3DTrainSet: Sendable {
         let share = ((number % 8 + 8) % 8) * 3 % 8
         return share < 3 ? "klrtCAF" : "klrtCitadis"
     }
+
+    /// Decision 558: the set a Wenhu line train numbered `number` (the real
+    /// line's and a people mover of the player's) is drawn as, as many of
+    /// each as the fleets' pairs: the VAL256's 51 and the 370's 101, about
+    /// 1 in 3 and 2 in 3: the number's remainder by 3 is 0 for the VAL256,
+    /// 1 or 2 for the 370. A train is one fleet's, never both (the two do
+    /// not couple).
+    static func wenhuLine(number: Int) -> String {
+        (number % 3 + 3) % 3 == 0 ? wenhuVAL256Key : wenhu370Key
+    }
+
+    /// Decision 558: the keys of the Wenhu line's two fleets' sets.
+    static let wenhuVAL256Key = "wenhuVAL256"
+    static let wenhu370Key = "wenhu370"
+
+    /// Decision 561: the keys of the Taoyuan Airport MRT's two fleets' sets:
+    /// the commuter train's 1000 (every stop) and the express's 2000.
+    static let taoyuanAirport1000Key = "taoyuanAirport1000"
+    static let taoyuanAirport2000Key = "taoyuanAirport2000"
 
     /// Decision 408: the number at the end of a real train's key
     /// (``RealTrainTraffic/places(of:at:on:dayBefore:)``: its run on the
@@ -792,6 +845,26 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
+    /// Decision 560: #1730's EMU700 units: an EMC at each end (turned round
+    /// at the back), then EP, ET and EM over and over, the back half the
+    /// front's mirror image, every car of it turned round (each unit's +x
+    /// is toward its own four-car unit's cab); eight cars are the static
+    /// formation EMC EP ET EM | EM ET EP EMC, the two EMs (no cab) coupled
+    /// back to back in the middle. Each car its own length, the pantographs
+    /// on the EPs, the cabs' lamp lenses lit at the two ends only
+    /// (``litLenses(_:front:)``: the EMU700 paints them the headlamp white,
+    /// not decision 408's tunnel lamp). `far`: ``Map3DEMU700/model(_:far:shellOnly:)``'s
+    /// far units.
+    static func emu700(far: Bool = false) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? "emu700Far" : "emu700", cycle: [.pantograph, .centre, .middle], ownLengths: true,
+                      far: far ? nil : "emu700Far") {
+            func part(_ role: Map3DEMU700.Role) -> Map3DModelPack.Model { Map3DEMU700.model(role, far: far) }
+            return Cars(head: litLenses(part(.emc), front: true), middle: part(.em), tail: litLenses(part(.emc).turned, front: false),
+                        single: nil, pantograph: part(.ep), centre: part(.et), middleBack: part(.em).turned,
+                        pantographBack: part(.ep).turned, centreBack: part(.et).turned)
+        }
+    }
+
     /// Decision 433: #1323's C341 units in the Taipei Metro's high-capacity
     /// train: a DM at the front and a rear DM (turned round, its tail lamps
     /// red) at the back, T and M between them over and over, the back half
@@ -982,6 +1055,66 @@ public struct Map3DTrainSet: Sendable {
         fiveModuleLRT("klrtCitadis", far: far, centres: [12.775, 5.325, 0, -5.325, -12.775]) {
             Map3DKaohsiungCitadis.Unit.allCases.map { Map3DKaohsiungCitadis.model($0, far: far) }
         }
+    }
+
+    /// Decision 558: a Wenhu line train (#1742's units, `tools/wenhu/assembly.json`):
+    /// pairs of an A car and a B car, A-B-A-B (four cars, the line's), each
+    /// unit as the recipe has it, none turned round: the A car's +x end
+    /// (AX) and the B car's −x end (BY) are a pair's outer ends, with the
+    /// automatic coupler and the lamps; AY and BX the pair's semi-permanent
+    /// inner ends. So the head is an A, the tail a B, and the cars between
+    /// B, A, B… from the front (``cycleFromFront``): two cars are one pair,
+    /// six three. Each car at its own length; the ends' lamp lenses lit
+    /// (``litLenses(_:front:)``). Before the pack has its models, the old
+    /// generic car (``fallback``).
+    static func wenhu(_ key: String, far: Bool, a: @escaping @Sendable () -> Map3DModelPack.Model,
+                      b: @escaping @Sendable () -> Map3DModelPack.Model) -> Map3DTrainSet {
+        Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.middle, .centre], cycleFromFront: true, ownLengths: true,
+                      far: far ? nil : key + "Far", fallback: "wenhu") {
+            let a = a(), b = b()
+            return Cars(head: litLenses(a, front: true), middle: b, tail: litLenses(b, front: false), single: nil, centre: a)
+        }
+    }
+
+    /// Decision 558: the Wenhu line's VAL256 (#1742's ``Map3DWenhuVAL256``).
+    static func wenhuVAL256(far: Bool = false) -> Map3DTrainSet {
+        wenhu(wenhuVAL256Key, far: far, a: { Map3DWenhuVAL256.model(.a, far: far) }, b: { Map3DWenhuVAL256.model(.b, far: far) })
+    }
+
+    /// Decision 558: the Wenhu line's 370, the INNOVIA APM256 (#1742's
+    /// ``Map3DWenhuAPM256``).
+    static func wenhu370(far: Bool = false) -> Map3DTrainSet {
+        wenhu(wenhu370Key, far: far, a: { Map3DWenhuAPM256.model(.a, far: far) }, b: { Map3DWenhuAPM256.model(.b, far: far) })
+    }
+
+    /// Decision 561: a Taoyuan Airport MRT train (#1700's units,
+    /// `tools/taoyuan-airport/assembly.json`): `roles` from the front, a
+    /// cab car at each end, the back one turned round, the cars between
+    /// them in their order (``cycleFromFront``), none turned: the commuter
+    /// 1000's DMC1 MC1 MC2 DMC2, the express 2000's DME1 ME1 ME3 ME4 DMB
+    /// (the baggage car at the back). Each car at its own length (20.78 m
+    /// a cab car, 20.25 m the others); the ends' lamp lenses lit
+    /// (``litLenses(_:front:)``); no pantograph (the third rail). Before
+    /// the pack has its models, the generic metro car (``fallback``).
+    static func taoyuanAirport(_ key: String, far: Bool, roles: [Map3DTaoyuanAirport.Role]) -> Map3DTrainSet {
+        let slots: [Slot] = [.middle, .centre, .fourth]
+        return Map3DTrainSet(key: far ? key + "Far" : key, cycle: Array(slots.prefix(roles.count - 2)), cycleFromFront: true,
+                             ownLengths: true, far: far ? nil : key + "Far", fallback: "metroGeneric") {
+            let cars = roles.map { Map3DTaoyuanAirport.model($0, far: far) }
+            let between = Array(cars.dropFirst().dropLast())
+            return Cars(head: litLenses(cars[0], front: true), middle: between.first, tail: litLenses(cars[cars.count - 1].turned, front: false),
+                        single: nil, centre: between.count > 1 ? between[1] : nil, fourth: between.count > 2 ? between[2] : nil)
+        }
+    }
+
+    /// Decision 561: the commuter train's four cars.
+    static func taoyuanAirport1000(far: Bool = false) -> Map3DTrainSet {
+        taoyuanAirport(taoyuanAirport1000Key, far: far, roles: [.dmc1, .mc1, .mc2, .dmc2])
+    }
+
+    /// Decision 561: the express's five.
+    static func taoyuanAirport2000(far: Bool = false) -> Map3DTrainSet {
+        taoyuanAirport(taoyuanAirport2000Key, far: far, roles: [.dme1, .me1, .me3, .me4, .dmb])
     }
 
     /// Decision 466: the key of ``sanying(far:)``, the Sanying line's real

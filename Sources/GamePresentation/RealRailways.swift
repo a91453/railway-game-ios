@@ -363,7 +363,7 @@ public struct RealRailways: Sendable {
     /// Decision 400 (10j-2): the real trips of the light rails a player
     /// can buy (`metro_runs.json`), by the purchase's name (`ntdlrt:VB`,
     /// ``RealLineRuns/metroLines(data:)``); empty without the file.
-    public let metroRuns: [String: RealLineRuns]
+    public internal(set) var metroRuns: [String: RealLineRuns]
     /// Where the real TRA lines are on bridges and in tunnels
     /// (`rail_structures.json`, decision 279).
     public let structures: RealRailStructures?

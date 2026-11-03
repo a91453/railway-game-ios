@@ -94,6 +94,8 @@ public enum Map3DShowcase {
         Entry("emu800", "EMU800 local", "EMU800 區間車", .taiwanRailway, cars: 8),
         Entry("puyuma", "TEMU2000 Puyuma", "TEMU2000 普悠瑪號", .taiwanRailway, cars: 8, fixed: true),
         Entry("taroko", "TEMU1000 Taroko", "TEMU1000 太魯閣號", .taiwanRailway, cars: 8, fixed: true),
+        // Decision 560: and the EMU700, eight cars as it runs.
+        Entry("emu700", "EMU700 local", "EMU700 區間車", .taiwanRailway, cars: 8),
         Entry("dieselRailcar", "DR1000 railcar", "DR1000 柴油客車", .taiwanRailway, cars: 2, most: 3),
         Entry("dieselExpress", "DR3100 diesel Tze-Chiang", "DR3100 柴聯自強號", .taiwanRailway, cars: 3, most: 9),
         Entry("pushPullE1000", "Push-pull Tze-Chiang, E1000", "推拉式自強號（E1000）", .taiwanRailway, cars: 12, most: 14),
@@ -129,8 +131,15 @@ public enum Map3DShowcase {
         // Green line's two; the generic car is Taoyuan's now.
         Entry("kaohsiung", "Kaohsiung Metro Red and Orange lines", "高雄捷運紅線、橘線", .metro, cars: 3, fixed: true),
         Entry("taichungGreen", "Taichung Metro Green line", "台中捷運綠線", .metro, cars: 2, fixed: true),
-        Entry("metroGeneric", "Metro train (Taoyuan)", "捷運列車（桃園）", .metro, cars: 3, most: 6, stripe: 0xE3002C),
-        Entry("wenhu", "Taipei Metro Wenhu line", "台北捷運文湖線", .metro, cars: 4, stripe: 0xC48C31),
+        // Decision 561: the Taoyuan Airport MRT's own two, the commuter
+        // train's four cars and the express's five; the generic car,
+        // Taoyuan's before, is no line's now, drawn only in their place
+        // (``Map3DTrainSet/fallback``), and not listed.
+        Entry(Map3DTrainSet.taoyuanAirport1000Key, "Taoyuan Airport MRT Type 1000 (commuter)", "桃園機場捷運 1000 型（普通車）", .metro, cars: 4, fixed: true),
+        Entry(Map3DTrainSet.taoyuanAirport2000Key, "Taoyuan Airport MRT Type 2000 (express)", "桃園機場捷運 2000 型（直達車）", .metro, cars: 5, fixed: true),
+        // Decision 558: the Wenhu line's two fleets, two pairs each.
+        Entry(Map3DTrainSet.wenhuVAL256Key, "Taipei Metro Wenhu line VAL256", "台北捷運文湖線 VAL256", .metro, cars: 4, most: 6),
+        Entry(Map3DTrainSet.wenhu370Key, "Taipei Metro Wenhu line Type 370", "台北捷運文湖線 370 型", .metro, cars: 4, most: 6),
         Entry("fourCarMetro", "Four-car metro", "四節捷運列車", .metro, cars: 4, most: 6),
         // Light rail.
         Entry("greenTram", "Green low-floor tram", "綠色低地板電車", .lightRail, cars: 2, most: 4),

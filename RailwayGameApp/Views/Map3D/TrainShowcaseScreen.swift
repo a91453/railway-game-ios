@@ -23,7 +23,16 @@ struct TrainShowcaseScreen: View {
         let defaults = UserDefaults.standard
         let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest, switchOn: defaults.bool(forKey: TrainPack.testUnlockKey))
         let locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: defaults.bool(forKey: TrainPack.pushPullE1000Key))
-        _selection = State(initialValue: Map3DShowcase.Selection(hiding: locked))
+        var keys = Map3DShowcase.defaultKeys
+        #if DEBUG
+        // Decision 558: `-screenshot-showcase key,key` opens the garage on
+        // those trains, for the website's screenshots (Debug builds only).
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-screenshot-showcase"), arguments.indices.contains(index + 1) {
+            keys = arguments[index + 1].split(separator: ",").map(String.init)
+        }
+        #endif
+        _selection = State(initialValue: Map3DShowcase.Selection(keys: keys, hiding: locked))
     }
     @State private var far = false
     @State private var light = Map3DShowcase.Light.day

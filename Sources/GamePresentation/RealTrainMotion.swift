@@ -541,7 +541,16 @@ public struct RealTrainTraffic: Sendable {
         } else if let timetable = operations.timetable(forSystem: system)?.lines[line.id] {
             var sets: [String: Runs] = [:]
             for (name, trips) in timetable.sets {
-                sets[name] = Runs(trips.compactMap { RealTrainRun(trip: $0, line: line, stationKm: stationKm) })
+                if trips.contains(where: { $0.kind != nil }) {
+                    // Decision 561: a set whose trips have kinds (the
+                    // Airport MRT's), each run keyed by its trip
+                    // (``expressKey(trip:kind:)``).
+                    sets[name] = Runs(keyed: trips.enumerated().compactMap { index, trip in
+                        RealTrainRun(trip: trip, line: line, stationKm: stationKm).map { (Self.expressKey(trip: index, kind: trip.kind), $0) }
+                    })
+                } else {
+                    sets[name] = Runs(trips.compactMap { RealTrainRun(trip: $0, line: line, stationKm: stationKm) })
+                }
             }
             schedule = .sets(timetable, sets)
         } else if let day = operations.schedule(forSystem: system), operations.lines(inSystem: system).count == 1 {
@@ -618,6 +627,21 @@ public struct RealTrainTraffic: Sendable {
     /// formation (``Map3DRealTrains/formation(of:system:place:locked:)``).
     static func traKey(model: String, number: String) -> String {
         "\(model)#\(number)"
+    }
+
+    /// Decision 561: the key of a run of a timetable whose trips have
+    /// kinds (the Airport MRT's, ``RealTimetableTrip/kind``): the trip's
+    /// index in its set, after an `E` for an express trip (kind `2`).
+    static func expressKey(trip index: Int, kind: Character?) -> String {
+        kind == "2" ? "E\(index)" : "\(index)"
+    }
+
+    /// Decision 561: whether a train's place key
+    /// (``places(of:at:on:dayBefore:)``) is an express trip's
+    /// (``expressKey(trip:kind:)``).
+    static func isExpress(place key: String) -> Bool {
+        let run = key.lastIndex(of: "#").map { key[key.index(after: $0)...] } ?? key[...]
+        return run.first == "E"
     }
 
     /// The model in a Taiwan Railway train's place key

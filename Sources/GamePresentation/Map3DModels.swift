@@ -190,6 +190,13 @@ public struct Map3DModelPack: Sendable {
             models += Map3DAnkengLRT.Unit.allCases.map { Map3DAnkengLRT.model($0, far: far) }
             models += Map3DDanhaiLRT.Unit.allCases.map { Map3DDanhaiLRT.model($0, far: far) }
         }
+        for role in Map3DEMU700.Role.allCases {
+            for far in [false, true] { models.append(Map3DEMU700.model(role, far: far)) }
+        }
+        for far in [false, true] {
+            models += Map3DWenhuVAL256.Role.allCases.map { Map3DWenhuVAL256.model($0, far: far) }
+            models += Map3DWenhuAPM256.Role.allCases.map { Map3DWenhuAPM256.model($0, far: far) }
+        }
         self.init(recipes: models, baked: baked)
     }
 
@@ -237,7 +244,7 @@ public struct Map3DModelPack: Sendable {
     /// (or a set's key, ``Map3DTrainSet/key(type:performance:)``), or `nil`
     /// when it has none.
     public func models(forType code: String) -> (head: Int, middle: Int)? {
-        if let set = Map3DTrainSet.named(code) {
+        if let set = Map3DTrainSet.named(code).map(drawn) {
             // Decision 466: a set only ever two cars long has no middle car.
             guard let head = index(of: set.headName) else { return nil }
             return (head, index(of: set.middleName) ?? head)
@@ -246,11 +253,24 @@ public struct Map3DModelPack: Sendable {
         return (head, middle)
     }
 
+    /// Decision 558: `set`, or the set in its place (``Map3DTrainSet/fallback``)
+    /// while the pack has no model of it.
+    func drawn(_ set: Map3DTrainSet) -> Map3DTrainSet {
+        guard index(of: set.headName) == nil, let fallback = set.fallback.flatMap({ Map3DTrainSet.byKey[$0] }) else { return set }
+        return fallback
+    }
+
+    /// ``Map3DTrainSet/set(forKey:count:locked:)`` for this pack's
+    /// ``locked``, as ``drawn(_:)``.
+    func drawnSet(forKey code: String, count: Int) -> Map3DTrainSet? {
+        Map3DTrainSet.set(forKey: code, count: count, locked: locked).map(drawn)
+    }
+
     /// The model index for car `carIndex` (0-indexed) in a `count`-car train
     /// of type `code`, using the pantograph car model on cars listed in the
     /// style's `pantographCars`.
     public func modelIndex(forType code: String, carIndex: Int, count: Int) -> Int? {
-        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) {
+        if let set = drawnSet(forKey: code, count: count) {
             return modelIndex(of: set, carIndex: carIndex, count: count)
         }
         guard let styleName = Self.styleByType[code] else { return nil }
@@ -309,7 +329,7 @@ public struct Map3DModelPack: Sendable {
     /// same car of its set's ``Map3DTrainSet/far`` set; `nil` when there
     /// is none (a box is drawn).
     public func farModel(of model: Int, forType code: String, count: Int) -> Int? {
-        guard models.indices.contains(model), let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked),
+        guard models.indices.contains(model), let set = drawnSet(forKey: code, count: count),
               let far = set.far.flatMap({ Map3DTrainSet.byKey[$0] }) else { return nil }
         // Decision 539: or the head it borrows (``Map3DTrainSet/headOf``).
         guard let unit = set.unit(of: models[model].name) else { return nil }
@@ -350,7 +370,7 @@ public struct Map3DModelPack: Sendable {
     /// middle units between (as many as its fixed formation has); `nil`
     /// for a train drawn 20 m a car.
     public func layout(forType code: String, count: Int) -> [LaidCar]? {
-        guard let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked), set.ownLengths,
+        guard let set = drawnSet(forKey: code, count: count), set.ownLengths,
               let head = index(of: set.headName) else { return nil }
         // Decision 466: a set only ever two cars long has no middle car.
         let middle = index(of: set.middleName) ?? head
@@ -375,7 +395,7 @@ public struct Map3DModelPack: Sendable {
     /// tail of its own or the train is one car.
     public func isTurned(forType code: String, carIndex: Int, count: Int) -> Bool {
         guard count > 1, carIndex == count - 1 else { return false }
-        if let set = Map3DTrainSet.set(forKey: code, count: count, locked: locked) { return index(of: set.tailName) == nil }
+        if let set = drawnSet(forKey: code, count: count) { return index(of: set.tailName) == nil }
         return true
     }
 }

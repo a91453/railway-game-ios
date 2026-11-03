@@ -1,3 +1,9 @@
+> Codex 文湖線兩款 studies（2026-11-03，[公開draft #1742](https://github.com/a91453/railway-game-ios/pull/1742) ↔ [素材draft #47](https://github.com/a91453/railway-assets-private/pull/47)）：producer `538a985c795ef57dd034fa57a226270354a8ae8e`，各A/B近遠及完整四車近遠、原生／GLB／通用assembly與自含viewer；11測試、13類真幾何故障／2類端部故障／5類assembly故障、獨立Swift與Blender及39份獨立重建bytes均通過，950舊模型保持，standard新增0。私庫8PNG＋公開1PNG。[來源／驗證與未完成項](art/wenhu/README.md)：官方A-B-A-B與A-B-B-A衝突，正式角色方向、帶日期完整四車實號、隱藏安全輪／集電器與設備分配仍缺；四態UNVERIFIED，file://政策阻擋，未獲使用者外觀接受。合併後僅studies，不改營運wenhu；不動EMU700 #1730／素材#45及其他成果。未推main／merge／auto-merge／TestFlight。 續核2005第33期細設專文與工程原圖，APM修正軸距10m／輪心橫距1.98m，新增承樑支承與空氣彈簧／導引架；設計值不等於竣工營運確認。
+
+> Codex EMU700立體鼻罩續修（2026-11-03，[公開draft #1730](https://github.com/a91453/railway-game-ios/pull/1730) ↔ [素材draft #45](https://github.com/a91453/railway-assets-private/pull/45)）：53候選未接受，作者重審其平面嘴形／直板下鼻仍不足，使用者同意繼續。新producer `cd01a6f906770731874b0b447325052e3afd67f9` 重建橘色罩面前凸、收回下緣與環向肩面、薄藍色下裙；引桿框退罩後0.14m防外露，不改連結面。近遠橘色曲面相同。全部四角色／完整八車重出，六個中間單元對53逐bytes保護；最新main efb96529完整942模型保護、standard增量0。源圖／形體配適與真深度壓平、下鼻壓平、引桿穿罩故障見本型README及verification。四態與file://／裝置／營運／近期編組來源缺口仍UNVERIFIED，無使用者接受。最終文件head、素材head、最新CI另見互鏈draft；不推main、合併、auto-merge或TestFlight。
+
+> 3D 的台鐵區間車加上 EMU700（派工單 EMU700TRN，[決策 560](decisions/560.md)，`claude/emu700-operation`）：Codex #1730 的 `Map3DEMU700` 接成 `emu700`／`emu700Far`，四款照車輛數分（每 20 車次 EMU900 8、EMU500 5、EMU800 4、EMU700 3），實景 EMU700 固定八輛；遠景照派工用 #1730 的 `far`（一列八輛 31,384，比 EMU800 `light` 重 2.7 倍）。**留下的**（決策 560「下一步」）：車頭外觀作者還沒接受（#1730 的缺口）；實機幀數；太重時給 EMU700 做 `light` 遠景。
+
 > 3D 彎道上列車頭尾兩節（派工單 CURVE3D，[決策 538](decisions/538.md)，`curve3d-train-on-curve`，104.1 竹中六家線）：車身外的前半節、後半節改沿軌道放（`TrainTrackReach`），不再直直伸出彎道；Linux `LiujiaLineTrainsTests.testTheLiujiaTrainsAtZhuzhongKeepEveryCarOnTheCurve` 舊放法 8.8 m、新 0 m。2D 地圖也改成沿軌道放（CURVE2D，決策 538「續」，`claude/curve2d-train-on-curve`；竹中 2D 舊 8.2 m、新 0 m，每幀放車 42 → 11.6 µs）。留下的：快轉滑行時車身外的高度、車擋前畫的車比軌道長，見決策 538「下一步」與「下一步（續）」。實機 UNVERIFIED。
 
 > Codex 桃園機捷續修（公開draft #1700 ↔ 素材draft #43）：真正producer `42214527e0115fa612711bdea10c697e36959a05`，前稿e1139b6未接受；車頭曲面、斜風擋、逃生門、燈罩、圓角門窗、台車及凹口連結器已重建。18近遠角色與4完整assembly，獨立48模型／payload、21PNG及自含gzip viewer逐bytes一致；8註冊＋3角色WAE測試、7工具測試及真正前稿拒收已驗。最新main a48121b7的共用平行化屬上游，892現有runtime payload及全頂點欄位實際保持；standard增量0，沒動營運、燈或回退。tymc的kind傳遞缺口仍僅studies；四態、指定車號2026日期、正交頂底／反側設備及受政策擋住的file://均保留UNVERIFIED。詳 [本型交接](art/taoyuan-airport/README.md) 及驗證。不推main／merge／auto-merge／TestFlight。
@@ -39,6 +45,8 @@
 > 桃園機場捷運上架（派工單 TYMCLIST、TYMCLIST2，[決策 556](decisions/556.md)，`claude/tymclist-airport-line` #1743）：線上架、真實桃園開局買得到，蘆竹、青埔兩座線中間的真實機廠，中途折返站兩側渡線，3.8 % 坡；三種規則兩天、價格（其他線一元不變）、回本已量。號誌關早上在長庚醫院卡死已由[決策 559](decisions/559.md)（#1747，GameCore，另審）修好（315/333 → 0/333）。**剩下（GameCore，要先問遊戲規劃）**：擬實與簡單＋行車控制傍晚在機場第二航廈的死結（跟車授權讓車跟進要折返的車停著的月台，不走空的第三股）；行車控制開著時越車規劃很慢。直達車跳站與長庚醫院待避線依遊戲規劃不做。逐項見決策 556「下一步」。
 
 > 文湖線上架（派工單 WENHULIST，[決策 552](decisions/552.md)，`claude/wenhulist-brown-line`）：放回 `urbanLines`。真實開局（讀水）本來買不到：木柵機廠單側梯形從動物園拉出約 1.5 km，過景美溪不夠高、又伸上山坡上的水格。改成兩側輪流排（`compact`），機廠底下有水時抬到水面上 5 m（坡度不夠就沿方向往外移，最多 240 m），規劃時讀到機廠底下的地面。台北開局約 NT$ 2.3 億（開局現金加貸款的約 9.6 倍），其他線價格不變。新局預設（簡單＋行車控制）第二天 532 班漏 4 班（早上 08:48–08:57 三班、19:26 一班，沒有死結；main 漏 7 班），查原因是決策 552 下一步 1；`AcquisitionReportTests` 的文湖線逐分跑（一天一跑會死結），360 天很久，只量了 2 天。實機 UNVERIFIED（3D 裡的木柵機廠樣子、收購卡）。
+
+> 舊存檔已收購的線加建真實機廠（派工單 DEPOTADD，[決策 557](decisions/557.md)，`claude/depotadd-real-depot`）：路線頁「所屬機廠」多一列「加建○○機廠」，只給端點外的機廠（安坑、淡海、木柵、內湖）；加建時班次也換成有機廠的真實時刻表，所以只在收班後可以按。**留下的**（決策 557「下一步」）：三峽機廠（路線中間，要切開正線）沒做；確認框只用文字說位置；加建的機廠軌道不在收購記錄的 `track` 裡（刪線再買回可能被擋）；截圖驗收暫緩、實機 UNVERIFIED。
 
 # 交接
 
@@ -3334,3 +3342,11 @@ Linux 靜態技術驗證不代表 iOS Metal／真機／動態關節。未推 mai
 - **留下的**：
   - `ContentView`、`MapView`、`TutorialOverlay` 三個整頁 `GeometryReader`：closure 讀 proxy 本身（`frame(in: .global)`、`safeAreaInsets`、錨點），又從 session 建整個畫面，換成子 View 或量大小都等於重寫畫面。大小只隨轉向與視窗變，一百多版沒有閃退紀錄；有紀錄再做。
   - `Chart { ForEach }`（9 處，8 個檔案）：沒查到 Charts 何時展開標記的公開資料或同型回報（Apple 論壇 802729 只講 SwiftUI 的 `ForEach`）。Linux 看不到 Charts 的 swiftinterface；要查就在 macOS 讀 `Charts.swiftinterface` 裡 `ForEach: ChartContent` 的 init 是否 `@Sendable`／`@preconcurrency`，或在 iPad 上開圖表動畫跑一次 Thread Sanitizer。查清楚前不改。
+
+### 4.45 3D 鏡頭兩指可再斜到 60°（決策 555，派工單 TILT60，session_01JMHz9cKsW7rXnjBvxxa4yp，`claude/tilt60`，2026-11-03）
+
+做了的在 [決策 555](decisions/555.md)：兩指往上拖可斜到 60°，預設距離曲線不變、放手保持、拉遠回平；太陽影子正方形往視線方向挪。留下的（決策 555「下一步」）：實機量 60° 的幀數與 GPU 時間（橫式 260 m 最重）、手勢誤判的手感、TILT75（地平線、霧、遠景一級）。
+
+### 4.46 文湖線 VAL256 與 370 型接進營運（決策 558，派工單 WENHUTRN，session_01JMHz9ZoBVGyQkvmiA5uieN，`claude/wenhutrn-operation`，2026-11-03）
+
+做了的在 [決策 558](decisions/558.md)：實景文湖線與玩家的 `APM` 改畫 #1742 的兩款車，A-B-A-B 兩對、每節 13.78 m，照車次約三列一列 VAL256（51 對比 101 對），不混編；舊的 `wenhu` 只在模型包沒有新車時當後備。第三級截圖：`WebsiteScreenshotTests.testWenhuTrains`，遊戲規劃看過才合。留下的（決策 558「下一步」）：實機幀數與 500 m 換遠景、A-B-A-B／A-B-B-A 等實號資料再定（UNVERIFIED）、兩款外觀等作者接受。

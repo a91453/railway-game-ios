@@ -377,7 +377,7 @@ final class Map3DMetalView: MTKView {
             let sun = MTLRenderPipelineDescriptor()
             sun.vertexFunction = sunVertex
             sun.vertexDescriptor = vertexDescriptor
-            sun.depthAttachmentPixelFormat = .depth32Float
+            sun.depthAttachmentPixelFormat = .depth16Unorm
             let sunDepth = MTLDepthStencilDescriptor()
             sunDepth.depthCompareFunction = .less
             sunDepth.isDepthWriteEnabled = true
@@ -452,7 +452,7 @@ final class Map3DMetalView: MTKView {
     /// Decision 357: a depth texture `side` texels square for the sun's
     /// shadow map, cleared to the farthest (nothing in the sun's way).
     private func makeSunMap(device: MTLDevice, side: Int) -> MTLTexture? {
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .depth32Float, width: side, height: side, mipmapped: false)
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .depth16Unorm, width: side, height: side, mipmapped: false)
         descriptor.usage = [.renderTarget, .shaderRead]
         descriptor.storageMode = .private
         guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
@@ -476,7 +476,7 @@ final class Map3DMetalView: MTKView {
     /// Saving, or out past ``Map3DSunShadow/farthestCamera``.
     private func wantedSunRegion(at now: CFTimeInterval) -> (drawn: Map3DSunShadow.Region?, redraw: Map3DSunShadow.Region?) {
         guard sunDrawing != nil, let plan = sunPlan, Map3DSunShadow.strength(shown) > 0, let device,
-              let wanted = Map3DSunShadow.region(target: camera.target, distance: camera.distance, sun: shown.sunDirection, size: plan.size)
+              let wanted = Map3DSunShadow.region(camera: camera, sun: shown.sunDirection, size: plan.size)
         else { return (nil, nil) }
         if let drawn = sunDrawn {
             if !sunSceneChanged, !drawn.isStale(for: wanted) { return (drawn, nil) }

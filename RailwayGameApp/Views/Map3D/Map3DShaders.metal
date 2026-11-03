@@ -154,8 +154,10 @@ float3 map3dFinish(float3 colour) {
 // and finished. Decision 352: the signs end the same way.
 // Decision 357: how much of the sun reaches `world` on a face looking
 // along `normal`, 0 to 1: the sun's shadow map (Map3DSunShadow) looked up
-// a texel out along the normal and a little nearer the sun, four taps of
-// two by two each, faded out at the square's edge.
+// a texel out along the normal and a little nearer the sun, a tent filter
+// of four taps, faded out at the square's edge.
+// The map is 16-bit depth (about 12 cm a step over its 8 km): the 0.3 m
+// depth bias in `sunShadow.w` clears the rounding, so none is added here.
 float map3dSunSeen(float3 world, float3 normal, constant Map3DUniforms &uniforms, depth2d<float> sunShadow) {
     float strength = uniforms.sunShadow.x;
     if (strength <= 0.0 || dot(normal, uniforms.sunDirection.xyz) <= 0.0) { return 1.0; }
@@ -165,12 +167,24 @@ float map3dSunSeen(float3 world, float3 normal, constant Map3DUniforms &uniforms
     constexpr sampler s(coord::normalized, filter::linear, address::clamp_to_edge, compare_func::less_equal);
     float2 uv = float2(at.x * 0.5 + 0.5, 0.5 - at.y * 0.5);
     float texel = uniforms.sunShadow.y, depth = at.z - uniforms.sunShadow.w;
+    // Tent PCF, four bilinear compares weighted to a 3x3 tent (Castano,
+    // The Witness; after ImmersiveMap's shadowWindowVisibility in
+    // Render/Shaders/Shared/RenderUniforms.h, MIT, Copyright (c) 2025-2026
+    // ImmersiveMap contributors): the edge ramps over the same two texels at
+    // every angle, not in steps along the grid.
+    float2 coords = uv / texel;
+    float2 base = floor(coords + 0.5);
+    float2 f = coords + 0.5 - base;
+    float2 baseUV = (base - 0.5) * texel;
+    float2 w0 = 3.0 - 2.0 * f, w1 = 1.0 + 2.0 * f;
+    float2 o0 = (2.0 - f) / w0 - 1.0, o1 = f / w1 + 1.0;
     float seen = 0.0;
-    seen += sunShadow.sample_compare(s, uv + float2(-texel, -texel), depth);
-    seen += sunShadow.sample_compare(s, uv + float2(texel, -texel), depth);
-    seen += sunShadow.sample_compare(s, uv + float2(-texel, texel), depth);
-    seen += sunShadow.sample_compare(s, uv + float2(texel, texel), depth);
-    return mix(1.0, seen * 0.25, strength * (1.0 - smoothstep(0.85, 1.0, edge)));
+    seen += w0.x * w0.y * sunShadow.sample_compare(s, baseUV + float2(o0.x, o0.y) * texel, depth);
+    seen += w1.x * w0.y * sunShadow.sample_compare(s, baseUV + float2(o1.x, o0.y) * texel, depth);
+    seen += w0.x * w1.y * sunShadow.sample_compare(s, baseUV + float2(o0.x, o1.y) * texel, depth);
+    seen += w1.x * w1.y * sunShadow.sample_compare(s, baseUV + float2(o1.x, o1.y) * texel, depth);
+    seen *= 1.0 / 16.0;
+    return mix(1.0, seen, strength * (1.0 - smoothstep(0.85, 1.0, edge)));
 }
 
 // Decision 357: `sunSeen` the share of the sun that reaches it.

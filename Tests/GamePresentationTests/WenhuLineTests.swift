@@ -37,7 +37,7 @@ final class WenhuLineTests: XCTestCase {
             // Overnight: the 22 the real timetable leaves at its end.
             XCTAssertEqual(world.trains.count { world.stationsStoppedAt(by: $0.id).contains(station.id) }, 22, site.english)
         }
-        XCTAssertEqual(RealLineStock.setKey(ofRealLine: "trtc:BR"), "wenhu")
+        XCTAssertEqual(RealLineStock.setKey(ofRealLine: "trtc:BR"), "wenhu370")
     }
 
     /// Where the second track's ramp leaves the first (two ways on from a
@@ -164,5 +164,34 @@ final class WenhuLineTests: XCTestCase {
         XCTAssertNil(offer.problem, offer.problem ?? "")
         let acquisition = try XCTUnwrap(offer.acquisition)
         XCTAssertEqual(([acquisition.depot].compactMap(\.self) + (acquisition.moreDepots ?? [])).map(\.platforms.count), [22, 22])
+    }
+
+    /// Decision 552 (continued, WENHUFIX): on the high-speed demo, with
+    /// the rivers read, the line is offered and bought. Its track past
+    /// Nangang Exhibition Center ran some 6.6 m over the demo's Nangang
+    /// depot track, under the 8 m track must keep crossing track, and the
+    /// offer said it would cross another track (a player's report on
+    /// 109.1); it is now laid clear over it.
+    func testItIsOfferedOverTheHighSpeedDemosNangangDepot() throws {
+        let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
+        let world = try HighSpeedDemo.make(
+            in: .english, railways: XCTUnwrap(data.railways), population: data.population, places: data.places, water: data.water,
+            coverage: data.coverage, heights: data.heights
+        )
+        let session = GameSession(world: world, language: .english)
+        session.population = data.population
+        session.places = data.places
+        session.water = data.water
+        session.heights = data.heights
+        session.coverage = data.coverage
+        session.railways = data.railways
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "trtc:BR" }, "on sale")
+        let offer = session.realLineOffer(for: line)
+        XCTAssertNil(offer.problem, offer.problem ?? "")
+        let acquisition = try XCTUnwrap(offer.acquisition)
+        XCTAssertEqual(([acquisition.depot].compactMap(\.self) + (acquisition.moreDepots ?? [])).map(\.platforms.count), [22, 22])
+        // Built on a funded copy: GameCore takes it.
+        var built = session.world.pricingCopy()
+        XCTAssertNoThrow(try session.build(acquisition, in: &built, recording: false))
     }
 }

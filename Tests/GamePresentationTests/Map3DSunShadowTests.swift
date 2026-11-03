@@ -179,4 +179,27 @@ final class Map3DSunShadowTests: XCTestCase {
         XCTAssertTrue(view.contains("slopeScale: Map3DSunShadow.slopeScale, clamp: Map3DSunShadow.slopeClampDepth"))
         XCTAssertTrue(view.contains("Map3DSunShadow.blobStrength("))
     }
+
+    /// Decision 357 (continued): the map is 16-bit depth, in its texture and
+    /// in the pipeline that draws it, and a step of it is finer than the
+    /// depth bias, so the bias still clears the rounding at the far reach.
+    func testTheMapIsSixteenBitDepthFinerThanTheBias() throws {
+        let view = try String(contentsOf: Self.app.appendingPathComponent("Map3DMetalView.swift"), encoding: .utf8)
+        XCTAssertTrue(view.contains("pixelFormat: .depth16Unorm, width: side"))
+        XCTAssertTrue(view.contains("sun.depthAttachmentPixelFormat = .depth16Unorm"))
+        let step = 2 * Map3DSunShadow.depthReach / 65_535
+        XCTAssertLessThan(step, 0.13)
+        XCTAssertGreaterThan(Map3DSunShadow.depthBias, 2 * step)
+        XCTAssertLessThan(Map3DSunShadow.slopeClamp, Map3DSunShadow.depthReach)
+    }
+
+    /// The shader's four taps are weighted to a tent (weights 16 in all),
+    /// not averaged.
+    func testTheShaderFiltersWithATent() throws {
+        let shaders = try String(contentsOf: Self.app.appendingPathComponent("Map3DShaders.metal"), encoding: .utf8)
+        XCTAssertTrue(shaders.contains("float2 w0 = 3.0 - 2.0 * f, w1 = 1.0 + 2.0 * f;"))
+        XCTAssertTrue(shaders.contains("seen *= 1.0 / 16.0;"))
+        XCTAssertEqual(shaders.components(separatedBy: "sunShadow.sample_compare(").count - 1, 4)
+        XCTAssertTrue(shaders.contains("Copyright (c) 2025-2026"))
+    }
 }
