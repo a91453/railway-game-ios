@@ -232,13 +232,16 @@ final class StationLandmarkNamingTests: XCTestCase {
         let at = RealRailways.Coordinate(latitude: 25.0300, longitude: 121.5355)
         let world = try world(at: at.latitude, at.longitude)
         let here = try BundledRealData.point(at, in: world)
-        let files = try BusStopLabelsTests.busFiles([("某某高中(新生南路)", at.latitude + 0.0006, at.longitude)])
+        let files = try BusStopLabelsTests.busFiles([
+            ("捷運大安森林公園站(新生南路)", at.latitude + 0.0003, at.longitude),
+            ("某某高中(新生南路)", at.latitude + 0.0006, at.longitude),
+        ])
         let buses = try RealBusLibrary(index: files.index, file: files.file)
         let english = GameSession.stationNameChoices(for: world, at: here, in: .english, placeNames: names, realBuses: buses)
         XCTAssertFalse(english.contains { $0.kind == .busStop }, "\(english)")
         XCTAssertFalse(english.contains { $0.name.contains("某") }, "\(english)")
         let chinese = GameSession.stationNameChoices(for: world, at: here, in: .traditionalChinese, placeNames: names, realBuses: buses)
-        XCTAssertTrue(chinese.contains { $0.kind == .busStop })
+        XCTAssertTrue(chinese.contains(StationNameChoice(name: "某某高中", kind: .busStop)), "\(chinese)")
     }
 
     func testAMapWithoutRealGroundHasNoChoices() throws {
