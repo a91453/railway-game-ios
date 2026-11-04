@@ -29,7 +29,7 @@ final class XiaogangHangReportTests: XCTestCase {
         options.funds = .unlimited
         var world = GameLauncher.newWorld(
             at: anchor, options: options,
-            data: .init(population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights)
+            data: .init(population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: nil)
         )
         let tile = try XCTUnwrap(world.mapExpansion?.owned.first)
         let metre = WorldCoordinate.unitsPerMetre, length = MapExpansion.tileLength
