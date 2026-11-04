@@ -138,6 +138,49 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 574: the Maokong Gondola on a real map of Muzha, its rope
+    /// and stations on the 2D map, then the network tool's cable car mode
+    /// with the gondola's card, in Chinese and in English (six modes in
+    /// the row). For the screenshot review of the pull request that added
+    /// the mode.
+    func testCablewayMode() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "maokong"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            if !english { keep("cableway-map", app) }
+            let build = app.buttons["dock.build"]
+            if build.appears(within: 10) { build.tap() }
+            let network = app.buttons["tool.network"]
+            XCTAssertTrue(network.appears(within: 10))
+            network.waitUntilSettled()
+            if !network.isSelected { network.tap() }
+            let mode = app.segmentedControls.buttons[english ? "Cable car" : "纜車"].firstMatch
+            XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
+            // In English the row slides sideways: the last mode is past its end.
+            // Drag the row that holds the mode, from inside its visible
+            // part: the row is wider than the panel, so its frame's middle
+            // (where a swipe starts) is at the panel's clipped edge.
+            let row = app.segmentedControls.containing(NSPredicate(format: "label == %@", english ? "Cable car" : "纜車")).firstMatch
+            for _ in 0..<3 where !mode.becomesHittable(within: 2) {
+                let left = row.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+                left.withOffset(CGVector(dx: 180, dy: 0))
+                    .press(forDuration: 0.05, thenDragTo: left.withOffset(CGVector(dx: 10, dy: 0)), withVelocity: .fast, thenHoldForDuration: 0.1)
+            }
+            XCTAssertTrue(mode.becomesHittable(within: 10))
+            mode.tap()
+            let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
+            XCTAssertTrue(card.appears(within: 10), "The gondola's card")
+            // The card is below the mode's options, under the panel's edge:
+            // the options (in view) drag it up, rows and all.
+            let angle = app.descendants(matching: .any)["network.cablewayAngle"].firstMatch
+            if angle.appears(within: 5) { angle.swipeUp() }
+            settle()
+            keep(english ? "cableway-mode-english" : "cableway-mode", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 578: the 3D follow views: the window of a car, the platform
     /// of the next stop (a short gap), and the station view greyed out
     /// while the next stop is a high-speed gap away.

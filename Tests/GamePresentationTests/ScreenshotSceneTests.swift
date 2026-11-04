@@ -34,6 +34,26 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertTrue(world.lines.filter { !$0.isFreight }.allSatisfy { !$0.assignedTrains.isEmpty }, "the demo's lines still run")
     }
 
+    /// Decision 574: the Maokong scene, at 10:00 of its second day: the
+    /// gondola built with its real 4,033 m, its first day settled.
+    func testTheMaokongSceneHasTheGondolaRunning() throws {
+        let world = ScreenshotScene.maokong.make(in: .traditionalChinese)
+        XCTAssertEqual(world.clock.speed, .paused)
+        XCTAssertEqual(world.clock.now.seconds / 3_600, 34)
+        let gondola = try XCTUnwrap(world.cableways.first)
+        XCTAssertEqual(world.cableways.count, 1)
+        XCTAssertEqual(gondola.metres, 4_033)
+        XCTAssertEqual(gondola.stops.filter(\.boards).count, 4)
+        XCTAssertTrue(world.cablewayIsOpen(gondola.id, onDay: 1) || world.weather(onDay: 1) == .thunderstorm)
+        XCTAssertEqual(gondola.days.map(\.day), [0], "the first day is settled")
+        // The map opens on the gondola: its stops are what is built.
+        let opening = try XCTUnwrap(WorldRegion.opening(in: world))
+        for stop in gondola.stops {
+            XCTAssertTrue(opening.contains(WorldCoordinate(x: stop.cell.middle.x, y: stop.cell.middle.y)))
+        }
+        XCTAssertLessThan(opening.width, Double(Land.cellLength) * 40, "only the gondola, not the whole map")
+    }
+
     /// Decision 580 (FOLLOWBUS): the follow-a-bus scene has a feeder route
     /// with buses out at half past nine, and following its route follows one.
     func testTheFollowBusSceneHasABusOutToFollow() async throws {

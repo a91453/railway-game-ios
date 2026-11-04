@@ -794,6 +794,7 @@ extension PlayerCommand {
             case .buildStationRoad: language.text("build the station road", "鋪站前路")
             case .createBusRoute, .createCityBusRoute: language.text("open this bus route", "開這條公車路線")
             case .buildRoad: language.text("build this road", "鋪這段路")
+            case .createCableway: language.text("build this cable car", "蓋這條纜車")
             case .reviseBusRoute: language.text("change this bus route", "改這條公車路線")
             case .setBusCount: language.text("add buses", "加公車")
             case .investInSouvenirShop: language.text("invest in the souvenir shop", "投資紀念品店")

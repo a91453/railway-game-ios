@@ -153,6 +153,10 @@ enum Palette {
     static let metroPurple = dynamic(light: (0.48, 0.28, 0.82), dark: (0.65, 0.48, 0.95))
     static let metroCyan = dynamic(light: (0.05, 0.60, 0.72), dark: (0.20, 0.75, 0.88))
     static let metroRed = dynamic(light: (0.85, 0.24, 0.24), dark: (0.95, 0.38, 0.38))
+    /// Decision 574: a cable car's rope, the Maokong Gondola's line colour
+    /// on Taipei Metro's maps (#06B8E6, the geo-scene reference's `MK`),
+    /// a little deeper on the light map so it reads over water and parks.
+    static let cableway = dynamic(light: (0.00, 0.60, 0.80), dark: (0.02, 0.72, 0.90))
 
     /// The casing under a train's movement authority (Stage V4e): the
     /// `Railway/` site's `followCase` (#fffdf6 light, #10141c dark), which
