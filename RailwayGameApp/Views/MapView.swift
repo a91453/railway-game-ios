@@ -365,7 +365,7 @@ struct MapView: View {
             // Once for the map and its loupe, not once for each canvas.
             let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
             let networkOverlay = session.networkOverlay, buildingOverlay = session.buildingOverlay, busOverlay = session.busMapOverlay
-            let roadOverlay = session.roadMapOverlay
+            let roadOverlay = session.roadMapOverlay, cablewayOverlay = session.cablewayMapOverlay
             let expansionOverlay = session.mapExpansionOverlay, routePreview = session.routePreview
             let lineCodes = LineBadge.codes(for: session.world.lines)
 
@@ -439,6 +439,7 @@ struct MapView: View {
                             journeyProgress: journeyProgress,
                             buses: busOverlay,
                             roads: roadOverlay,
+                            cableways: cablewayOverlay,
                             drawsLabels: false,
                             part: part
                         )
@@ -2348,6 +2349,8 @@ private struct MapCanvas: View, Equatable {
     var buses: BusMapOverlay?
     /// Decision 438: the player's roads and the road the bus tool draws.
     var roads: RoadMapOverlay?
+    /// Decision 574: the company's cable cars and the one being drawn.
+    var cableways: CablewayMapOverlay?
     /// Whether the stations' names and waiting counts, the network tool's
     /// preview and the tracks' numbers are drawn here; the map draws them
     /// over the trains instead, in ``MapLabelCanvas``.
@@ -2377,7 +2380,7 @@ private struct MapCanvas: View, Equatable {
             if lhs.flowVersion != rhs.flowVersion { return .flow }
             if lhs.lineCodes != rhs.lineCodes { return .lineCodes }
             if lhs.journey != rhs.journey || lhs.journeyProgress != rhs.journeyProgress { return .journey }
-            if lhs.buses != rhs.buses || lhs.roads != rhs.roads { return .buses }
+            if lhs.buses != rhs.buses || lhs.roads != rhs.roads || lhs.cableways != rhs.cableways { return .buses }
             return nil
         }
         if lhs.part == .railway, rhs.part == .railway, lhs.drawsLabels == rhs.drawsLabels {
@@ -2419,7 +2422,7 @@ private struct MapCanvas: View, Equatable {
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, expansionClear = expansionClear, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
-        let buses = buses, roads = roads
+        let buses = buses, roads = roads, cableways = cableways
         return Canvas { context, size in
             // Decision 328: timed for the frame readout; decision 377, each
             // canvas on a line of its own (the loupe's with the railway).
@@ -2450,6 +2453,7 @@ private struct MapCanvas: View, Equatable {
                     journeyProgress: journeyProgress,
                     buses: buses,
                     roads: roads,
+                    cableways: cableways,
                     drawsLabels: drawsLabels,
                     part: part,
                     in: context

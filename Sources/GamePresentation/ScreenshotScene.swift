@@ -76,6 +76,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// with every car inside its platform, on the 2D map and the 3D one.
     case platformStop
 
+    /// Decision 574: a new real-world game round Muzha with the Maokong
+    /// Gondola built as the cable car mode lays it
+    /// (``RealCableway/maokong``), run on to 10:00 of the second day, so
+    /// its card has a day's account: the rope and its stations on the 2D
+    /// map, and the mode's card.
+    case maokong
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -86,6 +93,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
+        // Between Taipei Zoo South and Zhinan Temple stations.
+        case .maokong: (24.9825, 121.584)
         default: nil
         }
     }
@@ -105,7 +114,25 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .platformStop: Self.platformStopWorld(in: language)
+        case .maokong: Self.maokongWorld(in: language)
         }
+    }
+
+    /// Decision 574: the Maokong Gondola on a new game of Muzha, at 10:00
+    /// of the second day.
+    private static func maokongWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let place = Self.maokong.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor)
+        if let stops = RealCableway.maokong.stops(in: world) {
+            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+        }
+        // On to 10:00 of day 1 (.fast is ten minutes a tick).
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 34 * 6)
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Expansion

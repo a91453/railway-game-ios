@@ -63,6 +63,7 @@ enum MapArt {
         journeyProgress: Double = 1,
         buses: BusMapOverlay? = nil,
         roads: RoadMapOverlay? = nil,
+        cableways: CablewayMapOverlay? = nil,
         drawsLabels: Bool = true,
         part: MapPart = .all,
         in context: GraphicsContext
@@ -70,7 +71,7 @@ enum MapArt {
         if part != .trafficAndStations {
             drawRailway(world, network: overlay, expansion: expansion, expansionClear: expansionClear, projection: projection, edges: edges, layers: layers, lines: lines,
                         routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
-                        journeyProgress: journeyProgress, buses: buses, roads: roads, latitude: latitude, in: context)
+                        journeyProgress: journeyProgress, buses: buses, roads: roads, cableways: cableways, latitude: latitude, in: context)
         }
         if part != .railway {
             drawTrafficAndStations(
@@ -112,6 +113,7 @@ enum MapArt {
         journeyProgress: Double,
         buses: BusMapOverlay?,
         roads: RoadMapOverlay?,
+        cableways: CablewayMapOverlay?,
         latitude: Double,
         in context: GraphicsContext
     ) {
@@ -162,6 +164,12 @@ enum MapArt {
         // lines and under the transfers (docs/MAP_LAYERS.md, 24.8).
         if let buses {
             drawBusRoutes(buses, projection: projection, in: context)
+        }
+        // Decision 574: the cable cars, over the lines and the buses
+        // (they run above them) and under the transfers
+        // (docs/MAP_LAYERS.md, 24.9).
+        if let cableways {
+            drawCableways(cableways, projection: projection, in: context)
         }
         drawTransfers(lines, projection: projection, in: context)
         // Decision 220: the held station's busiest trips (docs/MAP_LAYERS.md, 25.5).
@@ -1075,6 +1083,57 @@ enum MapArt {
                 context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
             }
         }
+    }
+
+    /// Decision 574: each cable car's rope as a thin line in its colour
+    /// over a pale casing, straight from stop to stop; a station as a
+    /// white disc ringed in the rope's colour with a cabin in it, an angle
+    /// station as a small dot on the rope. A cable car standing still
+    /// today is faint; the one being drawn is dashed until it can be built.
+    private static func drawCableways(_ cableways: CablewayMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        let view = context.clipBoundingRect
+        let width = max(1.5, lineWidth(projection) * 0.5)
+        let radius = max(5, width * 2.6)
+        func path(_ points: [PlanPoint]) -> Path {
+            var path = Path()
+            guard let first = points.first else { return path }
+            path.move(to: cgPoint(projection.screenPoint(of: first)))
+            for point in points.dropFirst() { path.addLine(to: cgPoint(projection.screenPoint(of: point))) }
+            return path
+        }
+        func draw(_ rope: CablewayMapOverlay.Rope, opacity: Double, dashed: Bool) {
+            let way = path(rope.points)
+            if way.boundingRect.insetBy(dx: -radius - 2, dy: -radius - 2).intersects(view) {
+                context.stroke(way, with: .color(Palette.followCase.opacity(0.9 * opacity)),
+                               style: StrokeStyle(lineWidth: width + 3, lineCap: .round, lineJoin: .round))
+                context.stroke(way, with: .color(Palette.cableway.opacity(opacity)), style: StrokeStyle(
+                    lineWidth: width, lineCap: .round, lineJoin: .round, dash: dashed ? [max(4, width * 3), max(3, width * 2)] : []
+                ))
+            }
+            for (point, boards) in zip(rope.points, rope.boards) {
+                let centre = cgPoint(projection.screenPoint(of: point))
+                let r = boards ? radius : max(2.5, width * 1.2)
+                let rect = CGRect(x: centre.x - r, y: centre.y - r, width: r * 2, height: r * 2)
+                guard rect.intersects(view) else { continue }
+                let disc = Path(ellipseIn: rect)
+                if boards {
+                    context.fill(disc, with: .color(Palette.markerFill.opacity(opacity)))
+                    context.stroke(disc, with: .color(Palette.cableway.opacity(opacity)), lineWidth: max(1.5, width))
+                    // The cabin: a rounded box hung from a short hanger.
+                    let cabin = CGRect(x: centre.x - r * 0.42, y: centre.y - r * 0.2, width: r * 0.84, height: r * 0.62)
+                    context.fill(Path(roundedRect: cabin, cornerRadius: r * 0.16), with: .color(Palette.ink.opacity(opacity)))
+                    var hanger = Path()
+                    hanger.move(to: CGPoint(x: centre.x, y: centre.y - r * 0.2))
+                    hanger.addLine(to: CGPoint(x: centre.x, y: centre.y - r * 0.6))
+                    context.stroke(hanger, with: .color(Palette.ink.opacity(opacity)), lineWidth: max(1, r * 0.12))
+                } else {
+                    context.fill(disc, with: .color(Palette.cableway.opacity(opacity)))
+                    context.stroke(disc, with: .color(Palette.ink.opacity(opacity)), lineWidth: 1)
+                }
+            }
+        }
+        for rope in cableways.ropes { draw(rope, opacity: rope.runs ? 1 : 0.45, dashed: false) }
+        if let draft = cableways.draft { draw(draft, opacity: cableways.draftIsBuildable ? 1 : 0.7, dashed: !cableways.draftIsBuildable) }
     }
 
     /// Each transfer group as a white link with a navy edge through its

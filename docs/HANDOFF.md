@@ -1,4 +1,5 @@
 > 纜車（派工單 CABLE，session_01YGNNumrJnt5AkQzWrdhAms，`claude/cable-maokong`，[決策 574](decisions/574.md)，存檔 83，2026-11-04）：PR-1 只做 GameCore（`Cableway`：站與轉角站、直線纜線、土地分配與轉乘、NT$180 單一票價、週一／雷雨／颱風停駛、日結）與存檔 83。**留下的**：PR-2 的建造工具、2D 圖示、站卡與纜車卡、吊廂位置 `CablewayCabins`（給 CABLE3D，決策 575）、貓空示範與站點座標（OSM 下載不到，UNVERIFIED），逐項見決策 574「下一步」。
+> 纜車 PR-2（CABLE-2，session_01YGNNunZBgaB8JeDKJxh4xV，`claude/cable-2`，存檔不動，2026-11-04）：路網工具的纜車模式、預覽與指令、2D 纜線與站圖示、纜車卡與車站面板列、吊廂位置 `CablewayCabins`（給 CABLE3D）、貓空真實路線與截圖場景 `maokong`。**留下的**：模式列圖示、新功能提示、點地圖選纜車、2D 吊廂、六個模式在 iPhone 橫拿大字放不放得下，見[決策 574](decisions/574.md)「下一步」第 1 項。
 
 > 新車站用地標、路名與路口命名（派工單 STNAME，[決策 569](decisions/569.md)，`claude/station-name-landmarks`）：實景地圖預設名多一步「300 m 內地標」，取名欄下最多 4 個候選（地名、地標、公車站牌、路口、公園、路名）。**留下的**（決策 569「下一步」）：網站致謝頁 `Website/site/credits.html` 跟著 `DataSourceCredits` 加「地標與道路」；iPad、iPhone SE 的候選列沒截圖；只畫成點的學校、醫院沒收。
 
