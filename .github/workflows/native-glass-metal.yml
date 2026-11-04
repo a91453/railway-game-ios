@@ -29,7 +29,9 @@ jobs:
           python3 "$RUNNER_TEMP/sunmoon-recipe/tools/sunmoon-cabin-studies/produce.py" "$RUNNER_TEMP/glass-fixtures/sunmoon" --kind red
           python3 "$RUNNER_TEMP/sunmoon-recipe/tools/sunmoon-cabin-studies/produce.py" "$RUNNER_TEMP/glass-fixtures/sunmoon" --kind crystal
       - name: Compile real shaders and Swift, then probe Metal if available
-        run: tools/native-glass/run-metal.sh "$RUNNER_TEMP/native-glass" "$RUNNER_TEMP/glass-fixtures"
+        run: |
+          tools/native-glass/run-metal.sh "$RUNNER_TEMP/native-glass" "$RUNNER_TEMP/glass-fixtures"
+          tools/native-glass/check-cabins.sh "$RUNNER_TEMP/glass-fixtures" "$RUNNER_TEMP/native-glass/native-cabin-cpu-verification.json"
       - name: Retain actual compilation / GPU status and native images
         if: always()
         uses: actions/upload-artifact@v7

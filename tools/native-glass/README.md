@@ -13,6 +13,8 @@ git worktree add --detach /tmp/sunmoon-glass-recipe 074b085c03329edcda9f21292778
 python3 /tmp/sunmoon-glass-recipe/tools/sunmoon-cabin-studies/produce.py /tmp/glass-fixtures/sunmoon --kind red
 python3 /tmp/sunmoon-glass-recipe/tools/sunmoon-cabin-studies/produce.py /tmp/glass-fixtures/sunmoon --kind crystal
 tools/native-glass/run-metal.sh /tmp/native-glass-proof /tmp/glass-fixtures
+# 真原生材質／幾何／排序檢查也可單獨在Linux Swift6.4執行：
+tools/native-glass/check-cabins.sh /tmp/glass-fixtures /tmp/native-cabin-cpu-verification.json
 ```
 
 輸出metal-verification.json及GPU可用時的PNG。保留真Metal執行狀態，無裝置時明寫UNVERIFIED。工廠由App原檔標記區抽出，同步防止測試／App blend或depth設定各走各的。fixtures不commit，也不安裝新套件／引擎；不跑發版workflow。

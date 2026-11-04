@@ -19,7 +19,7 @@ let pack = Map3DTransparentGlass.studyPack([source])
 
 ## 驗證
 
-Linux：Swift6.4 `swift build --build-tests -Xswiftc -warnings-as-errors`，`swift test --skip-build --filter 'Map3D(TransparentGlass|ModelFile|TrainMaterial|TrainLights|Reflection|CableCar)Tests'`。驗材質選擇、水平玻璃／夜燈、有限值、跨實例及模型內三角視深排序、鏡頭反向、同深穩定順序、非等比變換法線、塗裝alpha不冒充透明、零透明與非法輸入、standard沒有opt-in。
+**VERIFIED（Linux）**：Swift6.4 `swift build --build-tests -Xswiftc -warnings-as-errors`，`swift test --skip-build --filter 'Map3D(TransparentGlass|ModelFile|TrainMaterial|TrainLights|Reflection|CableCar)Tests'`，52個相關測試通過（其中9個新材質測試）。另以 `tools/native-glass/check-cabins.sh FIXTURES REPORT.json` 真正讀回貓空／日月潭8個近遠景M3DM，驗玻璃／水平玻璃設定、opaque全屬性保持、雙實例world normals與全局排序；見native-cabin-cpu-verification.json。驗材質選擇、水平玻璃／夜燈、有限值、跨實例及模型內三角視深排序、鏡頭反向、同深穩定順序、非等比變換法線、塗裝alpha不冒充透明、零透明與非法輸入、standard沒有opt-in。
 
 macOS：`tools/native-glass/run-metal.sh OUTPUT FIXTURES`。腳本抽出Map3DMetalView真正使用的pipeline工廠，編譯同份Map3DShaders.metal及Swift，沒有另造一個近似shader。Metal可用時做真offscreen blending／透明地板／不透明遮擋／depth不寫入／跨實例排序／1x與4xMSAA，以及關閉blend、錯depth write、倒序三種故障反例；再畫真吊廂日夜／斜面／底面及不透明基準。runner若沒有MTLDevice，JSON明寫GPU UNVERIFIED，不會拿編譯當出圖。
 
