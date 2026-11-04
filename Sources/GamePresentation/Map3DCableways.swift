@@ -310,11 +310,13 @@ public struct Map3DCableways: Sendable {
     /// side, so the walls, the floor and the hanger by it stand within the
     /// near plane (1.2 m, ``Map3DCamera/depthRange``) and are not drawn
     /// over the view. Looking a little down from the rope's height; from a
-    /// crystal cabin, down through its glass floor.
+    /// crystal cabin a little more, through its glass floor, with the
+    /// horizon still a third of the way down the view (the window's lens
+    /// is 68° tall: tan 13° is a third of tan 34°).
     public static let cabinSeatHeight: Float = 1.15
     public static let cabinSeatAcross: Float = 0.45
     public static let cabinLookDown: Float = 10 * .pi / 180
-    public static let crystalLookDown: Float = 38 * .pi / 180
+    public static let crystalLookDown: Float = 13 * .pi / 180
 
     /// The cabins' rope point and level way on `line` at `glide`.
     func place(_ glide: CablewayCabins.Glide, on line: Line) -> (point: Map3DPoint, along: Map3DPoint) {
