@@ -77,7 +77,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case platformStop
 
     /// Decision 578: a new real-world game round Taipei Main Station, a
-    /// line of two stations 30 km apart (a high-speed gap) with its train
+    /// line of two stations 14 km apart (a new map is 16 km wide; the longest gap it holds, over the station view's reach) with its train
     /// running to the far one: for the screenshot of the 3D follow bar's
     /// station view greyed out while the next stop is too far.
     case farStops
@@ -92,8 +92,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
-        // Decision 578: its first station, 15 km west and 300 m north of it.
-        case .farStops: (25.0478 + 0.0026949, 121.5170 - 15_000 * 0.00000991)
+        // Decision 578: its first station, 7 km west and 300 m north of it.
+        case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
         }
     }
@@ -223,7 +223,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let world = GameWorld.newGame(anchor: anchor)
         guard let frame = RealWorldFrame(world: world) else { return world }
         let middle = frame.worldPosition(latitude: 25.0478, longitude: 121.5170)
-        let metre = Double(WorldCoordinate.unitsPerMetre), half = 15_000 * metre
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 7_000 * metre
         let y = Int64(middle.y - 300 * metre)
         guard var opened = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
                                                            PlanPoint(x: Int64(middle.x + half), y: y)], in: world) else { return world }
