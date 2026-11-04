@@ -55,7 +55,7 @@ struct NightSkipChip: View {
                     label(title: title, symbol: symbol)
                 }
             }
-            .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .glassBackground(cornerRadius: 14)
         }
         .buttonStyle(.plain)
         .background {

@@ -488,6 +488,31 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 45 任交第 46 任（2026-11-04 UTC，session_01YGNNuknU5VzGGHzf2twGfS，壓縮 2 次）**：照這段接手；和下面不同時以這段為準。
+
+- **111.1 已發**（作者 00:02 UTC，`273dab2`，run 111；`PLAYER_FEEDBACK.md` 已記）。下一版還沒定。
+- **第 45 任已合**：#1760 ROUTEUI、#1764 PLATSTOP、#1766 STNAME、#1769 STUCKFIX、#1772、#1774、#1775 AUTOXO-2、#1777（Views 審查技能）、#1771 TYMCLIST3（決策 562）。
+- **作者這一輪定的**（五方在 #1579）：
+  - 纜車示範用**貓空纜車**；纜車是「路網」工具的一個模式（`NetworkToolMode.cableway`），不加第六顆建造鈕。
+  - 做渡輪時，「公車」鈕改名**「接駁」**，裡面分「公車」「渡輪」兩個模式（不叫「路線」或「轉乘」）。
+  - 機場捷運（#1743）的死結修正**優先佔 GameCore CI 名額**。
+  - 先不做第一人稱走路視角；做「窗外」視角（像駕駛艙，只換鏡頭，不做車內模型）；「從車站看」修成提早建下一站、太遠就變灰。
+  - 跟隨公車和列車一樣，先畫前方與附近（決策 358 的 `ahead`）。
+  - 等 full lane 跑完再合下一批（作者：「等 full lane 跑完再合」）。
+- **合併順序**（每批 3–5 個，用完整 SHA，等 main `ci.yml` 綠；merge 前確認 iOS App Build 綠）：
+  1. #1767 WENHUSIDE（決策 564，存檔 82）→ #1776 DEPOTLINK（573）、#1778 OLDXO（572）、#1779 VIEWFIX PR-A。
+  2. TYMCLIST4 的 GameCore PR（決策 577，`claude/tymc-berth-sw…`，機場捷運死結，優先）、#1780 FESTIVAL（576，存檔 84）。
+  3. #1781 CABLE PR-1（574，存檔 83；FESTIVAL 先合就改 85）、CABLE PR-2、#1782 CABLE3D（575，第三級，規劃看截圖）、VIEWFIX PR-B（`claude/viewfix-concentric`，ConcentricRectangle，第二級）、FOLLOWBUS（不佔號）、FOLLOWVIEW（578）。
+  4. 最後 #1743 機場捷運上架（556）。
+  - TYMCLIST4 推 GameCore PR 時 Linux 塞，就取消 #1781 的 PR run 讓它先。
+- **派出去的**（session、模型、branch、決策）：
+  - WENHUSIDE-2 session_01YGNNuovdoMPJsiiJsYuTw1（壓縮 2 次，只收尾 #1767）。
+  - TYMCLIST4 session_01YGNNuoGwQ9ntd6Att99u7c（Opus）：#1767 合後做 #1743 剩的：19:31 兩航廈三列換月台死結（`berthChange`）、號誌＋行車控制（新局預設）第 2 天 333 班 320 班沒發、行車控制每遊戲分鐘約 2.5 秒、回本。
+  - CABLE session_01YGNNumrJnt5AkQzWrdhAms（壓縮 1 次，只收尾 #1781）、CABLE-2 session_01YGNNunZBgaB8JeDKJxh4xV（Opus，`claude/cable-2`，PR-2）、CABLE3D session_01YGNNuoMbCbtbGZqCQtvZPT（#1782）、FESTIVAL session_01YGNNup5hkNxUynJYvy9zLD（#1780）、VIEWFIX session_01YGNNunwjkHJ2a9XYEkHiSD（Sonnet，#1779＋PR-B）、DEPOTLINK session_01YGNNuoWbBvCiDrgKwADV7x（壓縮 1 次）、OLDXO session_01YGNNum5m8pAyi87KoX3iP7（壓縮 1 次）、FOLLOWBUS session_01YGNNumWYtfHA3GoZVamQAd（Sonnet，`claude/follow-bus`，不佔號）、FLANE8 session_01YGNNuotMdcm499iKgZ7gLG（Sonnet，`claude/flane8`，full lane 偶發 UI 測試）、FOLLOWVIEW session_01YGNNukiQGJ1RXBDHyFPJkh（Sonnet，`claude/follow-window-station`，578）。FOLLOWBUS 與 FOLLOWVIEW 同改 `Map3DFollow`，後合的合 main。
+  - 做完的 session 就封存。
+- **沒派的**：纜車吊廂跟隨與窗外（CABLE PR-2 與 #1782 之後）；公車窗外（FOLLOWBUS／FOLLOWVIEW 後合的那個之後）；渡輪（連同「接駁」改名）→ 飛機；節慶之後的新景點（廟、夜市、博物館）；REVIEW-L（下一輪從 #1760 起）、CIOPT、DEBUG 固定三件；L8-1。
+- **號碼**：572–578 已保留（572 OLDXO、573 DEPOTLINK、574 CABLE、575 CABLE3D、576 FESTIVAL、577 TYMCLIST4、578 FOLLOWVIEW、579 Codex 渡輪與碼頭 studies，指令在 #1579）；**下一個 580**。存檔 82（#1767）、83（CABLE）、84（FESTIVAL）保留，**下一個 85**。
+
 **第 44 任交第 45 任（2026-11-03 20:50 UTC，session_01YGNNukw5koUxDsjkSBmJJy，壓縮 2 次、快到第 3 次）**：作者去睡了，早上自己按 111.1（作者：「綠了就合吧 紅了就修復 我早上才要發111.1」）。第 45 任照這段接手；和下面不同時以這段為準。
 
 - **111.1 發版準備（第一件事）**：
@@ -3082,11 +3107,11 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 | --- | --- | --- |
 | 空白地圖「一鍵全開」 | 決策 200 第 6 點 | 併進核心玩法第 4 個 PR 之後的沙盒選項（關卡解鎖後才出現） |
 | 颱風一年 1.5 個（氣象署平均 3.6 個），「留給作者決定」 | 決策 208 | **遊戲規劃決定：維持 1.5**。玩家：簡單規則是預設，颱風太頻繁會打斷剛學會的玩家；開發：不用動 golden；美術：無；音樂：無。寫實規則之後可以考慮照 3.6 |
-| 劇本節慶（天燈節等）跟著農曆移動（要改存檔） | 決策 211 | 併進 §15.3「台灣節慶」那一項一起做 |
+| 劇本節慶（天燈節等）跟著農曆移動（要改存檔） | 決策 211 | **做完**（FESTIVAL，決策 576，存檔 84）：`ScenarioEvent.follows`；平溪挑戰已改，舊存檔維持每年同一天 |
 | 票價需求提示、借錢前試算、課程裡未解鎖車型的後續（§22.2 第 18 名做完，session_01QTjYzbHDE2QFpRux5BQSsW，`claude/adoring-fermat-lcewix`） | 決策 374「下一步」 | 都是可做可不做的小事：(1) iPhone 橫拿時票價段落多兩行、貸款段落多三行，TestFlight 看會不會太擠（UNVERIFIED，沒有 UI 測試）；(2) 觀光列車第 9 關才開，若玩家想早點用就把 `Lesson.number(unlocking:)` 的 9 提前；(3) 分期還款要動 GameCore 與存檔（決策 67 的貸款沒有期限），沒有排 |
 | 彎道限速沒做的：道岔側向限速、節點折角、坡道影響速度、授權終點前照煞車曲線減速、擺式列車過彎加速、交會停站改用 RunCurve、出發時車尾在彎道內、跨呼叫的快取 | 決策 217 第 10 點 | 寫實規則的加深，排在核心玩法之後；簡單規則不受影響 |
 | 長按路線看旅程（用車上與候車的乘客）、鏡頭自動縮放、弧線端點記號 | 決策 220 | 併進「回饋第二批」（第 3 節航空手感那一列） |
-| 景點新種類：廟宇、夜市、博物館（新圖示、新季節係數） | 決策 250 | 併進 §15.3「台灣節慶」或觀光列車；廟宇可以和 3D 的廟埕一起做 |
+| 景點新種類：廟宇、夜市、博物館（新圖示、新季節係數） | 決策 250 | 台灣節慶第一個 PR（決策 576）沒做這項，**留給下一個 PR**：媽祖駐駕廟（南瑤宮、福興宮、奉天宮）可一起放；廟宇可以和 3D 的廟埕一起做。決策 576 的「下一步」還有：節慶只加在晚上與延後末班（改小時分配）、其他節慶 |
 | 放空模式的後續：群車視角（鏡頭在列車最密的路段慢慢漂移）、放空專屬配樂、沒有車的夜晚接上「跳過安靜的夜晚」 | 決策 414「沒做的」 | 都是可做可不做；配樂等有第二首曲子再接 |
 | 真正的機客分離：機車掛上、摘下、換端（要改列車模型與存檔） | 決策 252 | 長期；觀光列車（§15.3）之後再評估 |
 | 觀光列車的後續：加價、故事（車種圖鑑）、季節、3D 模型（含真正的蒸汽機車）、到站旋律（含汽笛）；具名列車五款已做完 | 決策 286「下一步」 | 第一步（藍皮解憂號、海風號，停靠景點旁加 0.5★）#819 已合併；山嵐號（`SHANLAN`，數字照海風號）#826 已合併；鳴日號（`MINGRI`，E500＋豪華客車，停靠景點旁加 1★，3D 用現成的 E500 與黑色客車）#1045 已合併；環島之星（`STAR`，E500＋6 客車，加 0.75★，價錢在海風號與鳴日號之間，3D 用 E500＋粉紅客車）#1047 已合併；仲夏寶島號（另加一列 `SUMMER`，`STEAM` 不動；CT273＋莒光客車，加 1.25★，買得便宜、營運最貴、起步最慢，2D 黑色圓頭，3D 暫用現成機車外形塗黑金）在 `claude/tourist-train-summer`。具名列車做完；下一步照決策 286「後來（第四次）」最後一點的順序，一個 PR 一項：加價（先決定誰付）、故事、季節（不做開關）、3D 模型（含蒸汽機車）、到站旋律（含汽笛）。**3D 的蒸汽機車**：決策 399 把仲夏寶島號換成 #1103 的蒸汽機車＋煤水車（不稱 CT273），蒸汽列車 `STEAM` 用 #1118 |

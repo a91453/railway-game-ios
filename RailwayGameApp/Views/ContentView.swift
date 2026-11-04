@@ -1037,7 +1037,7 @@ private struct StatusPill: View {
         HUDView(session: session, launcher: launcher)
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
-            .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .glassBackground(cornerRadius: 22)
             .hudFrameMark("hud.bar")
     }
 }
@@ -1066,7 +1066,7 @@ private struct ControlDock: View {
         }
         .fixedSize()
         .padding(8)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .glassBackground(cornerRadius: 22)
     }
 }
 
@@ -1335,7 +1335,7 @@ private struct DetailsCard: View {
         .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) {
             pinned = nil
         }
-        .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .glassBackground(cornerRadius: 24)
         .hudFrameMark("hud.card")
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("details.card")

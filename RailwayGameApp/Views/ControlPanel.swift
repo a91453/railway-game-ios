@@ -122,7 +122,7 @@ extension View {
     func controlTile(vertical: CGFloat = ToolColumnStyle.tilePadding) -> some View {
         padding(.horizontal, ToolColumnStyle.tilePadding)
             .padding(.vertical, vertical)
-            .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassBackground(cornerRadius: 16)
     }
 
     /// The thin frame round Build, and round the lines and the figures, in
