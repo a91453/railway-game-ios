@@ -71,7 +71,7 @@ final class Map3DFollowViewsTests: XCTestCase {
 
     /// From the station the eye stays where the lookout stands, looking at
     /// the front of the train half way up it; a pinch does not move it.
-    /// With no platform to stand on, it follows from behind.
+    /// With no platform to stand on, it follows from above and behind.
     func testFromTheStationTheEyeStaysOnThePlatform() {
         let eye = Map3DPoint(500, 4.75, -3.2)
         var follow = Map3DFollow(train: train, view: .station)
@@ -88,7 +88,8 @@ final class Map3DFollowViewsTests: XCTestCase {
         follow.lookout = nil
         let running = head(x: 0, z: 0, heading: 0, length: 100)
         let behind = follow.camera(following: running, from: Map3DCamera(viewport: (390, 844)), elapsed: 0, turnsAtOnce: true)
-        let back = Map3DFollow(train: train).camera(following: running, from: Map3DCamera(viewport: (390, 844)), elapsed: 0, turnsAtOnce: true)
+        // Decision 578: from above and behind.
+        let back = Map3DFollow(train: train, view: .aboveBack).camera(following: running, from: Map3DCamera(viewport: (390, 844)), elapsed: 0, turnsAtOnce: true)
         XCTAssertEqual(behind, back)
     }
 
@@ -186,5 +187,149 @@ final class Map3DFollowViewsTests: XCTestCase {
             XCTAssertEqual(stop.station, a)
         }
         XCTAssertEqual(seenB, true, "B watched while the train still runs to it")
+    }
+}
+
+/// Decision 578: the window view, and the station view built ahead.
+final class Map3DWindowAndStationAheadTests: XCTestCase {
+    private let train = TrainID(rawValue: 7)
+
+    private func head(heading: Float, inTunnel: Bool = false) -> Map3DTrains.Head {
+        let forward = Map3DPoint(sinf(heading), 0, -cosf(heading))
+        let middle = Map3DPoint(100, 2, -50)
+        let nose = middle + forward * 50
+        var head = Map3DTrains.Head(train: train, point: nose + Map3DPoint(0, Map3DTrains.carHeight + Map3DTrains.headClearance, 0),
+                                    forward: forward, nose: nose, ground: nil, inTunnel: inTunnel)
+        head.middle = middle
+        head.length = 100
+        return head
+    }
+
+    /// The eye in the middle car, 2 m up, just outside its left side (the
+    /// body's side and stripe, then 0.1 m), looking across the line and a
+    /// little down, through the cab's lens; the pinch does nothing.
+    func testTheWindowLooksOutOfTheLeftOfTheMiddleCar() {
+        let running = head(heading: .pi / 2)  // east: left is north
+        for scale: Float in [1, 0.3] {
+            let camera = Map3DFollow(train: train, view: .window).zoomed(by: scale)
+                .camera(following: running, from: Map3DCamera(viewport: (844, 390)), elapsed: 0)
+            XCTAssertEqual(camera.eye.x, running.middle!.x, accuracy: 0.01)
+            XCTAssertEqual(camera.eye.z, running.middle!.z - Map3DFollow.windowEyeAcross, accuracy: 0.01, "north of a train running east")
+            XCTAssertEqual(camera.eye.y, running.middle!.y + Map3DFollow.windowEyeHeight, accuracy: 0.01)
+            let look = (camera.target - camera.eye).normalized!
+            XCTAssertEqual(look.z, -cosf(Map3DFollow.windowLookDown), accuracy: 0.001, "out to the north")
+            XCTAssertLessThan(look.y, 0, "a little down")
+            XCTAssertEqual(camera.fieldOfViewTall, Map3DFollow.cabLens)
+            // The car's side is behind the near plane, so its shell is not drawn over the view.
+            XCTAssertGreaterThan(camera.depthRange.near, Map3DFollow.windowEyeAcross - Map3DTrains.carWidth / 2)
+        }
+        XCTAssertGreaterThan(Map3DFollow.windowEyeAcross, Map3DTrains.carWidth / 2 + 0.04, "outside the livery stripe")
+    }
+
+    /// It is turned with the train at once, whatever the camera faced.
+    func testTheWindowTurnsWithTheTrain() {
+        let follow = Map3DFollow(train: train, view: .window)
+        let first = follow.camera(following: head(heading: 0), from: Map3DCamera(viewport: (844, 390)), elapsed: 0)
+        let turned = follow.camera(following: head(heading: 0.8), from: first, elapsed: 1 / 60)
+        XCTAssertEqual(Map3DCamera.turnFromNorth(turned.heading - first.heading), 0.8, accuracy: 0.0001)
+    }
+
+    /// The window view is under the ground like the cab's.
+    func testTheWindowInATunnelDrawsOnlyWhatIsUnder() {
+        var underground = Map3DUnderground()
+        let camera = Map3DCamera(viewport: (844, 390))
+        underground.update(view: .window, head: head(heading: 0, inTunnel: true), flying: false, camera: camera, openings: [])
+        XCTAssertTrue(underground.isUnderground)
+        underground.update(view: .window, head: head(heading: 0, inTunnel: false), flying: false, camera: camera, openings: [])
+        XCTAssertFalse(underground.isUnderground)
+        underground.update(view: .side, head: head(heading: 0, inTunnel: true), flying: false, camera: camera, openings: [])
+        XCTAssertFalse(underground.isUnderground)
+    }
+
+    func testTheWindowButtonSaysWhatItDoes() {
+        XCTAssertEqual(Map3DFollow.View.window.text(in: .english), "Window")
+        XCTAssertEqual(Map3DFollow.View.window.text(in: .traditionalChinese), "車窗")
+        XCTAssertEqual(Map3DFollow.View.window.hint(in: .traditionalChinese), "坐在車廂裡看窗外。")
+        let all = Map3DFollow.View.allCases
+        XCTAssertEqual(all.firstIndex(of: .window), all.firstIndex(of: .cab).map { $0 + 1 }, "beside the cab")
+    }
+
+    /// Station view with no platform built yet (no lookout): above and behind.
+    func testTheStationViewWithoutALookoutIsAboveAndBehind() {
+        let running = head(heading: 0)
+        let viewport = Map3DCamera(viewport: (390, 844))
+        let station = Map3DFollow(train: train, view: .station).camera(following: running, from: viewport, elapsed: 0, turnsAtOnce: true)
+        let above = Map3DFollow(train: train, view: .aboveBack).camera(following: running, from: viewport, elapsed: 0, turnsAtOnce: true)
+        XCTAssertEqual(station, above)
+    }
+
+    /// A high-speed gap of 30 km is too far for the station view; a city
+    /// stop a few kilometres off is not; no run known, offered.
+    func testTheStationViewIsNotOfferedForAFarStop() {
+        XCTAssertTrue(Map3DFollow.stationViewIsOffered(remainingMetres: nil))
+        XCTAssertTrue(Map3DFollow.stationViewIsOffered(remainingMetres: 0))
+        XCTAssertTrue(Map3DFollow.stationViewIsOffered(remainingMetres: 6_900), "Taipei to Banqiao")
+        XCTAssertFalse(Map3DFollow.stationViewIsOffered(remainingMetres: 30_000), "Taoyuan to Hsinchu")
+        XCTAssertEqual(Map3DFollow.stationTooFarText(in: .traditionalChinese), "下一站太遠。")
+    }
+
+    /// The world's own distance to the stop ahead: the whole gap on
+    /// leaving, less as it runs, and the stop after the one it stands at.
+    func testTheDistanceToTheStopAheadShrinksAsItRuns() throws {
+        var (world, train, _, b) = try Self.world(between: 640_000)  // 10 km between the platforms
+        var last: Double?
+        var departed = false
+        for _ in 0..<3_000 {
+            try world.advance(ticks: 1)
+            if departed, case .waitingAtStop? = world.train(id: train)?.execution { break }
+            guard case .travellingToStop? = world.train(id: train)?.execution, let metres = world.map3DMetresToStopAhead(of: train) else { continue }
+            departed = true
+            XCTAssertEqual(world.map3DStopAhead(of: train), b)
+            if let last { XCTAssertLessThanOrEqual(metres, last + 0.001) }
+            last = metres
+        }
+        XCTAssertTrue(departed)
+        let start = try XCTUnwrap(last)
+        XCTAssertLessThan(start, 11_000)
+    }
+
+    /// Decision 578's screenshot scene: a running train whose next stop is
+    /// a high-speed gap away, so the station view is not offered.
+    func testTheFarStopsSceneIsTooFarForTheStationView() throws {
+        let world = ScreenshotScene.farStops.make(in: .traditionalChinese)
+        let train = try XCTUnwrap(world.trains.first { $0.position != nil })
+        let metres = try XCTUnwrap(world.map3DMetresToStopAhead(of: train.id))
+        XCTAssertGreaterThan(metres, Map3DFollow.stationReach)
+        XCTAssertFalse(Map3DFollow.stationViewIsOffered(remainingMetres: metres))
+        XCTAssertNotNil(ScreenshotScene.farStops.place)
+    }
+
+    static func world(between: Int64) throws -> (GameWorld, TrainID, StationID, StationID) {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 1_000_000, height: 262_144),
+            economy: GameEconomy(balance: 1_000_000_000_000, costs: ConstructionCosts(track: 100, station: 1_000, train: 500))
+        )
+        let x: Int64 = 8_192, y: Int64 = 8_192
+        let points = [WorldCoordinate(x: x, y: y), WorldCoordinate(x: x + 4_096, y: y), WorldCoordinate(x: x + 4_096 + between, y: y),
+                      WorldCoordinate(x: x + 8_192 + between, y: y)]
+        let nodes = try points.map { try world.buildTrackNode(at: $0) }
+        let first = try world.buildTrackEdge(from: nodes[0], to: nodes[1])
+        _ = try world.buildTrackEdge(from: nodes[1], to: nodes[2])
+        let last = try world.buildTrackEdge(from: nodes[2], to: nodes[3])
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: x + 2_048, y: y + 512)).id
+        try world.addTrackPlatform(a, on: first, from: 0, to: 4_096)
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: x + 6_144 + between, y: y + 512)).id
+        try world.addTrackPlatform(b, on: last, from: 0, to: 4_096)
+        try world.createLine(named: "Main", stops: [a, b])
+        let line = LineID(rawValue: 1)
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        world.setRealisticOperation(true)
+        let train = try world.purchaseTrain(named: "Blue").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: first, direction: .forward), offset: 4_096))
+        try world.setTrainMovementRate(train, to: 1024)
+        try world.assignTrain(train, to: line)
+        world.setSpeed(.x10)
+        return (world, train, a, b)
     }
 }

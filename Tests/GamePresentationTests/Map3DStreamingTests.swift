@@ -348,4 +348,46 @@ final class Map3DStreamingTests: XCTestCase {
         still.update(target: .zero, at: 2.0 / 60)
         XCTAssertLessThan(abs(still.velocity.x), Map3DStreaming.still * 4)
     }
+
+    // MARK: - Decision 578: the stop ahead
+
+    /// The stop 30 km down the line: once nothing the target wants is
+    /// missing, the chunks round the stop are built (the nearest to it
+    /// first, in full), kept while it is a stop, and the target's own order
+    /// is not changed.
+    func testTheChunksRoundTheStopAheadAreBuiltOnceTheTargetsAreDone() {
+        var window = window(generation: 1)
+        let stop = Map3DPoint(30_000, 0, 0)
+        let target = Map3DPoint.zero
+        let area = Set(window.grid.area(round: stop, radius: Map3DStreaming.stationRadius))
+        XCTAssertFalse(area.isEmpty)
+        XCTAssertFalse(window.isBuilt(round: stop))
+        var seconds = 0.0
+        var order: [Key] = []
+        for _ in 0..<400 {
+            let step = window.step(target: target, at: seconds, stops: [stop])
+            order += step.build
+            seconds += 0.3
+            if !window.building.isEmpty { _ = window.finished(window.building, generation: 1) }
+        }
+        XCTAssertTrue(area.isSubset(of: window.built), "the stop's surroundings are built")
+        XCTAssertTrue(window.isBuilt(round: stop))
+        // The target's own chunks come first: none of the stop's before the last of them.
+        let wanted = Set(window.grid.wanted(target: target, velocity: .zero))
+        let lastOwn = order.lastIndex { wanted.contains($0) } ?? -1
+        let firstStop = order.firstIndex { area.contains($0) } ?? Int.max
+        XCTAssertLessThan(lastOwn, firstStop)
+        // Kept while it is a stop ahead, let go when it is not.
+        _ = window.step(target: target, at: seconds + 1, stops: [stop])
+        XCTAssertTrue(area.isSubset(of: window.built))
+        let without = window.step(target: target, at: seconds + 2, stops: [])
+        XCTAssertTrue(Set(without.drop).isSuperset(of: area))
+        XCTAssertFalse(window.isBuilt(round: stop))
+    }
+
+    /// A stop off the map has no chunks to wait for.
+    func testAStopOffTheMapIsReadyWithNothingToBuild() {
+        let window = window()
+        XCTAssertTrue(window.isBuilt(round: Map3DPoint(900_000, 0, 0)))
+    }
 }

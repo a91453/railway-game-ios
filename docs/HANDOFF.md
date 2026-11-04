@@ -1,3 +1,5 @@
+> 跟車「車窗」視角與「從車站看」修正（派工單 FOLLOWVIEW，[決策 578](decisions/578.md)，`claude/follow-window-station`，2026-11-04）：3D 跟車多「車窗」（中段車廂左窗、眼高 2 m，不畫窗框與車廂內部）；「從車站看」離站即提前蓋下一站周圍、沒蓋好前維持上後方、下一站超過 12 km 時選項灰掉。**留下的**（決策 578「下一步」）：窗框、車窗選左右、公車車窗（FOLLOWBUS 後合者接上，用 Head 轉接）、放空模式加車窗、彎道上車窗朝向用中段切線；12 km 門檻與串流蓋一站的時間是估計，實機 UNVERIFIED。
+
 > 纜車（派工單 CABLE，session_01YGNNumrJnt5AkQzWrdhAms，`claude/cable-maokong`，[決策 574](decisions/574.md)，存檔 83，2026-11-04）：PR-1 只做 GameCore（`Cableway`：站與轉角站、直線纜線、土地分配與轉乘、NT$180 單一票價、週一／雷雨／颱風停駛、日結）與存檔 83。**留下的**：PR-2 的建造工具、2D 圖示、站卡與纜車卡、吊廂位置 `CablewayCabins`（給 CABLE3D，決策 575）、貓空示範與站點座標（OSM 下載不到，UNVERIFIED），逐項見決策 574「下一步」。
 
 > 新車站用地標、路名與路口命名（派工單 STNAME，[決策 569](decisions/569.md)，`claude/station-name-landmarks`）：實景地圖預設名多一步「300 m 內地標」，取名欄下最多 4 個候選（地名、地標、公車站牌、路口、公園、路名）。**留下的**（決策 569「下一步」）：網站致謝頁 `Website/site/credits.html` 跟著 `DataSourceCredits` 加「地標與道路」；iPad、iPhone SE 的候選列沒截圖；只畫成點的學校、醫院沒收。
