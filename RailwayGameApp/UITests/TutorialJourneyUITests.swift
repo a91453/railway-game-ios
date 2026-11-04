@@ -291,7 +291,10 @@ private final class TutorialJourney {
         } while Date() < deadline
         let frame = element.exists ? "\(element.frame)" : "gone"
         if let covering {
-            XCTFail(failure("\(covering) covers \(name) (\(frame))"))
+            // FLANE8: the cash button's frame was 150 × 62 in main 5dfb97a's
+            // full lane (run 41761810864), twice a row's height; the
+            // element's tree says what stands in it.
+            XCTFail(failure("\(covering) covers \(name) (\(frame)). \(element.exists ? element.debugDescription : "gone")"))
         } else {
             XCTFail(failure("\(name) cannot be tapped (\(frame))"))
         }

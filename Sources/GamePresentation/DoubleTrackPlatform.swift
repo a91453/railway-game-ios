@@ -98,8 +98,12 @@ extension GameSession {
     }
 
     /// Whether a turnout lies along the track from the `forward` end (its
-    /// `end`, else its `start`) of `stretch` within `limit`.
-    func turnout(from stretch: (edge: TrackEdgeID, start: Int64, end: Int64), forward: Bool, within limit: Int64) -> Bool {
+    /// `end`, else its `start`) of `stretch` within `limit`, in `base`
+    /// (this session's world by default).
+    func turnout(
+        from stretch: (edge: TrackEdgeID, start: Int64, end: Int64), forward: Bool, within limit: Int64, in base: GameWorld? = nil
+    ) -> Bool {
+        let world = base ?? self.world
         guard let edge = world.network.edge(stretch.edge) else { return false }
         var travelled = forward ? edge.length - stretch.end : stretch.start
         var node = forward ? edge.to : edge.from
@@ -126,21 +130,28 @@ extension GameSession {
     /// before; a crossover GameCore refuses there (too steep, in the way)
     /// is left out, and one it refuses for want of money is kept, so the
     /// command is refused as a whole.
+    ///
+    /// Decision 572: `lookingIn`, the world whose track `stretch` and the
+    /// track beside are read from, this session's by default (the platform
+    /// tool's `world` is it with platforms added); a station's missing
+    /// crossovers (``missingStationCrossovers(of:in:)``) are looked for in
+    /// the draft itself.
     func stationCrossovers(
-        of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), in world: GameWorld
+        of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), in world: GameWorld, lookingIn: GameWorld? = nil
     ) -> [PlayerCommand.TrackStretch] {
-        guard let geometry = self.world.trackGeometry(of: stretch.edge) else { return [] }
+        let track = lookingIn ?? self.world
+        guard let geometry = track.trackGeometry(of: stretch.edge) else { return [] }
         let margin = DoubleTrack.crossoverMargin, reach = DoubleTrack.crossoverReach
         var pairs: [(onBeside: WorldCoordinate, onTrack: WorldCoordinate)] = []
         for forward in [false, true] {
-            guard !turnout(from: stretch, forward: forward, within: DoubleTrack.stationCrossoverReach) else { continue }
+            guard !turnout(from: stretch, forward: forward, within: DoubleTrack.stationCrossoverReach, in: track) else { continue }
             // Along the tapped edge: the turnout on it, then where the
             // crossover meets the track beside, one reach further out.
             let near = forward ? stretch.end + margin : stretch.start - margin
             let far = forward ? near + reach : near - reach
             guard min(near, far) >= margin, max(near, far) <= geometry.length - margin,
-                  let beside = trackBeside(stretch.edge, near: geometry.location(at: far).position.plan)?.beside,
-                  let other = self.world.trackGeometry(of: beside.edge),
+                  let beside = trackBeside(stretch.edge, near: geometry.location(at: far).position.plan, in: track)?.beside,
+                  let other = track.trackGeometry(of: beside.edge),
                   beside.distance >= margin, beside.distance <= other.length - margin
             else { continue }
             pairs.append((other.location(at: beside.distance).position, geometry.location(at: near).position))

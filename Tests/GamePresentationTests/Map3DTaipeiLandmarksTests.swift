@@ -64,13 +64,24 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
     private static let shinKongNorthTurretHeight: Float = 86.24
     private static let shinKongShaftHeight: Float = 211.04
     private static let shinKongCrownHeight: Float = 237.67
+    /// Decision 581: Changhua Roundhouse (OSM way 220285047 outer footprint
+    /// 85.03 m × 49.79 m, railway = roundhouse, building = garages,
+    /// building:levels = 1; turntable way 220285048; 12 radial stall tracks
+    /// ways 307329549..307329565 & 966441326; front portal cornice 7.06 m,
+    /// raised clerestory monitor roof 8.85 m, 12 smokejack caps 10.28 m).
+    private static let changhuaRoundhouseLength: Float = 85.03
+    private static let changhuaRoundhouseWidth: Float = 49.79
+    private static let changhuaRoundhouseHeight: Float = 10.28
+    private static let changhuaRoundhouseMonitorHeight: Float = 8.85
+    private static let changhuaRoundhouseCorniceHeight: Float = 7.06
 
     /// The landmarks as OSM has their plans and heights: 101 508 m to its
     /// spire, Taipei Main Station's roof 30 m, Kaohsiung Main Station's
     /// canopy 23 m (way 1298938821) with the Imperial Crown old station
     /// (way 257770396), Kaohsiung 85 Sky Tower 378 m to its spire (way
     /// 345038767), Taipei Shin Kong Life Tower 244.15 m to its spire (way
-    /// 204711206); each within the ground it clears, lit by finite
+    /// 204711206), Changhua Roundhouse 10.28 m to its 12 smokejack caps
+    /// (way 220285047); each within the ground it clears, lit by finite
     /// unit outward normals, drawn with the line patterns; from afar,
     /// fewer triangles.
     func testTheModels() {
@@ -87,6 +98,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             case .kaohsiungMainStation: Self.kaohsiungHotelHeight
             case .kaohsiung85SkyTower: Self.kaohsiung85Height
             case .shinKongLifeTower: Self.shinKongHeight
+            case .changhuaRoundhouse: Self.changhuaRoundhouseHeight
             case .chiangKaiShekMemorialHall: 70
             case .libertySquareGate, .sunYatSenMemorialHall: 30
             case .nationalTheater, .nationalConcertHall: 37
@@ -119,6 +131,8 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
                 [Map3DVertex.curtainGlass, Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
             case .taipeiMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles]
             case .kaohsiungMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines]
+            case .changhuaRoundhouse:
+                [Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines, Map3DVertex.floodlit]
             case .chiangKaiShekMemorialHall, .libertySquareGate, .northGate, .eastGate, .southGate, .smallSouthGate:
                 [Map3DVertex.plain, Map3DVertex.roofTiles]
             case .nationalTheater, .nationalConcertHall, .sunYatSenMemorialHall, .grandHotel:
@@ -129,7 +143,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertTrue(used.isSuperset(of: expectedLayers), "\(landmark)")
         }
         // Pin Taipei 101 and Taipei Main Station triangle counts so adding
-        // new landmarks never alters them; check Kaohsiung's and Shin Kong's budgets.
+        // new landmarks never alters them; check Kaohsiung's, Shin Kong's and Changhua's budgets.
         XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: true).indices.count / 3, 5_804)
         XCTAssertEqual(Map3DTaipeiLandmark.taipei101.model(full: false).indices.count / 3, 2_580)
         XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: true).indices.count / 3, 4_194)
@@ -149,6 +163,11 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertLessThanOrEqual(shinKongFull.indices.count / 3, 6_000)
         XCTAssertLessThanOrEqual(shinKongFar.indices.count / 3, 2_500)
         XCTAssertLessThan(shinKongFar.indices.count, shinKongFull.indices.count)
+        let roundhouseFull = Map3DTaipeiLandmark.changhuaRoundhouse.model(full: true)
+        let roundhouseFar = Map3DTaipeiLandmark.changhuaRoundhouse.model(full: false)
+        XCTAssertLessThanOrEqual(roundhouseFull.indices.count / 3, 6_000)
+        XCTAssertLessThanOrEqual(roundhouseFar.indices.count / 3, 2_500)
+        XCTAssertLessThan(roundhouseFar.indices.count, roundhouseFull.indices.count)
     }
 
     /// Decision 457: the Chinese roof is a part of its own: any plan, any
@@ -237,7 +256,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertLessThanOrEqual(landmark.model(full: true).indices.count / 3, 6_000, "\(landmark)")
             XCTAssertLessThanOrEqual(landmark.model(full: false).indices.count / 3, 2_500, "\(landmark)")
         }
-        XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 5)
+        XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 6)
         // Each stands within 2 m of its way's minimum box's middle.
         let middles: [Map3DTaipeiLandmark: (Double, Double)] = [
             .chiangKaiShekMemorialHall: (25.03468, 121.52172), .libertySquareGate: (25.03665, 121.51772),
@@ -420,6 +439,62 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertNotNil(tunnel.addTaipeiLandmarks(frame: frame)[tower])
     }
 
+    /// Decision 581: Changhua Roundhouse's fan-shaped footprint (OSM way
+    /// 220285047: 85.03 m × 49.79 m), 12 radiating stalls, front portal
+    /// cornice (7.06 m), raised clerestory monitor roof (8.85 m), and 12
+    /// roof smokejack caps (10.28 m) match OpenStreetMap's dimensions
+    /// within 2 m, keep the south turntable courtyard open above ground,
+    /// and stand clear of surface track while allowing underground track.
+    func testChanghuaRoundhouse() throws {
+        let roundhouse = Map3DTaipeiLandmark.changhuaRoundhouse
+        let trim = Map3DColor.rgb(0xFBF9F4)
+        let crownRoof = Map3DColor.rgb(0xC6CFD6)
+        let doorway = Map3DColor.rgb(0x5E676D)
+        for model in [roundhouse.model(full: true), roundhouse.model(full: false)] {
+            let xs = model.vertices.map(\.x), ys = model.vertices.map(\.y), zs = model.vertices.map(\.z)
+            XCTAssertEqual((xs.max() ?? 0) - (xs.min() ?? 0), Self.changhuaRoundhouseLength, accuracy: 2.0)
+            XCTAssertEqual((ys.max() ?? 0) - (ys.min() ?? 0), Self.changhuaRoundhouseWidth, accuracy: 2.0)
+            XCTAssertEqual((zs.max() ?? 0) - (zs.min() ?? 0), Self.changhuaRoundhouseHeight, accuracy: 0.01)
+            let ground = model.vertices.filter { $0.z < 0.01 }
+            let gxs = ground.map(\.x), gys = ground.map(\.y)
+            XCTAssertEqual((gxs.max() ?? 0) - (gxs.min() ?? 0), Self.changhuaRoundhouseLength, accuracy: 2.0)
+            XCTAssertEqual((gys.max() ?? 0) - (gys.min() ?? 0), Self.changhuaRoundhouseWidth, accuracy: 2.0)
+            XCTAssertEqual(((gxs.max() ?? 0) + (gxs.min() ?? 0)) / 2, 0, accuracy: 2.0)
+            XCTAssertEqual(((gys.max() ?? 0) + (gys.min() ?? 0)) / 2, 0, accuracy: 2.0)
+            // Front portal cornice (7.06 m), raised clerestory monitor roof
+            // (8.85 m), and 12 roof smokejack caps (10.28 m).
+            let cornices = model.vertices.filter { $0.color == trim }.map(\.z)
+            XCTAssertTrue(cornices.contains { abs($0 - Self.changhuaRoundhouseCorniceHeight) < 0.1 })
+            let monitors = model.vertices.filter { $0.color == crownRoof }.map(\.z)
+            XCTAssertTrue(monitors.contains { abs($0 - Self.changhuaRoundhouseMonitorHeight) < 0.1 })
+            let caps = model.vertices.filter { $0.color == doorway && $0.z > 9.5 }
+            XCTAssertEqual(caps.map(\.z).max() ?? 0, Self.changhuaRoundhouseHeight, accuracy: 0.05)
+            // The concave south courtyard around Decision 441's turntable
+            // (3.47, -19.53) stays open above the ground tracks (z > 0.5 m).
+            XCTAssertFalse(model.vertices.contains {
+                (($0.x - 3.47) * ($0.x - 3.47) + ($0.y + 19.53) * ($0.y + 19.53)).squareRoot() < 13.5 && $0.z > 0.5
+            })
+            XCTAssertFalse(model.vertices.contains { $0.color == Self.wall })
+        }
+        let roundhouseAnchor = GeoAnchor(latitudeDegrees: roundhouse.latitude, longitudeDegrees: roundhouse.longitude)!
+        let world = GameWorld.newGame(anchor: roundhouseAnchor)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        var builder = builder(world)
+        let built = builder.addTaipeiLandmarks(frame: frame)
+        XCTAssertEqual(Set(built.keys), [roundhouse])
+        XCTAssertEqual(triangles(builder.nearMeshes), roundhouse.model(full: true).indices.count / 3)
+        XCTAssertEqual(triangles(builder.farMeshes), roundhouse.model(full: false).indices.count / 3)
+        XCTAssertTrue(builder.keptColours.contains(crownRoof))
+        let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
+        let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 10) }
+        var blocked = self.builder(world)
+        blocked.trackLines = [(line, .surface)]
+        XCTAssertTrue(blocked.addTaipeiLandmarks(frame: frame).isEmpty)
+        var tunnel = self.builder(world)
+        tunnel.trackLines = [(line, .tunnel)]
+        XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), [roundhouse])
+    }
+
     /// Stood where it is, the station is in full close by and simpler from
     /// afar, in its own colours, and clears the ground under it.
     func testWhereItStands() throws {
@@ -432,7 +507,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         // Kong Life Tower within the scene; 101, the Sun Yat-sen Memorial
         // Hall and the Grand Hotel are not.
         XCTAssertTrue(Set(built.keys).isSuperset(of: [station, .shinKongLifeTower, .northGate, .presidentialOffice, .chiangKaiShekMemorialHall]))
-        XCTAssertTrue(built.keys.allSatisfy { ![.taipei101, .sunYatSenMemorialHall, .grandHotel, .kaohsiungMainStation, .kaohsiung85SkyTower].contains($0) })
+        XCTAssertTrue(built.keys.allSatisfy { ![.taipei101, .sunYatSenMemorialHall, .grandHotel, .kaohsiungMainStation, .kaohsiung85SkyTower, .changhuaRoundhouse].contains($0) })
         let taken = try XCTUnwrap(built[station])
         XCTAssertEqual(triangles(builder.nearMeshes), built.keys.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
         XCTAssertEqual(triangles(builder.farMeshes), built.keys.reduce(0) { $0 + $1.model(full: false).indices.count / 3 })

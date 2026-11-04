@@ -54,6 +54,7 @@ struct PopulationLegendView: View {
     var maxHeight: CGFloat = .infinity
     var onDismiss: (() -> Void)? = nil
     @State private var showsInfo = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// How tall the title row and what is below it are, for ``maxHeight``.
     @State private var titleHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
@@ -71,7 +72,7 @@ struct PopulationLegendView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { isFolded.toggle() }
+                    withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { isFolded.toggle() }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: isFolded ? "chevron.up" : "chevron.down")

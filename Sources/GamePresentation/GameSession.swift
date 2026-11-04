@@ -173,6 +173,9 @@ public final class GameSession {
     /// Decision 571: the crossovers the platform picked would get, kept
     /// for the pick and command as ``platformBesideMemo`` is.
     @ObservationIgnored var stationCrossoverMemo: (key: PlatformBesideMemo.Key, crossovers: [PlayerCommand.TrackStretch])?
+    /// Decision 572: the crossovers the station panel offers, kept for the
+    /// station and command (``stationCrossoverOffer(for:)``).
+    @ObservationIgnored var stationCrossoverOfferMemo: StationCrossoverOfferMemo?
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
@@ -893,6 +896,9 @@ public final class GameSession {
     @ObservationIgnored private var isEditGestureOpen = false
     /// Whether the open gesture has already kept its snapshot.
     @ObservationIgnored private var editGestureHasSnapshot = false
+    /// Whether ``beginEditGesture()`` is open (decision 573's
+    /// ``asOneEdit(_:)`` joins it rather than closing it).
+    var isEditGestureInProgress: Bool { isEditGestureOpen }
 
     /// Plays the sounds the session's changes call for (``SoundCue``): a
     /// train in service arriving at a station, track built, another tool.
@@ -3991,12 +3997,16 @@ public struct StatusMessage: Hashable, Sendable {
     /// For a refusal by a train standing on no line, that train: the
     /// banner offers to sell it (decision 327).
     public let sellableTrain: TrainID?
+    /// For a new depot near several lines with none, those lines: the
+    /// banner offers to make it each one's depot (decision 573).
+    public let depotOffer: DepotLinkOffer?
 
-    public init(kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil) {
+    public init(kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil, depotOffer: DepotLinkOffer? = nil) {
         self.kind = kind
         self.text = text
         self.fundsNeeded = fundsNeeded
         self.sellableTrain = sellableTrain
+        self.depotOffer = depotOffer
     }
 
     /// How long the banner shows the message before clearing it: a success
@@ -4007,7 +4017,10 @@ public struct StatusMessage: Hashable, Sendable {
     /// `notify()`, `min(9, 3.2 + length × 0.09)` s). The banner keeps a
     /// problem until dismissed while VoiceOver runs.
     public var autoDismissDelay: Duration {
-        switch kind {
+        // Decision 573: an offer stays as long as a problem would, so a
+        // finger has time to reach its buttons.
+        if depotOffer != nil { return .seconds(10) }
+        return switch kind {
         case .success: .seconds(4)
         case .failure: .milliseconds(min(10_000, max(6_000, 4_000 + 100 * text.count)))
         }

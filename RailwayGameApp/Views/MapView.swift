@@ -147,6 +147,9 @@ struct MapView: View {
     @State private var landTilesVersion = 0
     /// The population tooltip of the last tapped cell, and where it was
     /// tapped (`pop-grid-tooltip`).
+    /// Counts the holds that opened a station or a line; the medium tap
+    /// the finger feels follows it.
+    @State private var holdFeedback = 0
     @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
     /// The city layers' map (Phase 6d, ``CityMap``): made only while one is
     /// shown, and again only when the land, its buildings, the stations or
@@ -690,7 +693,7 @@ struct MapView: View {
                             cityTooltip = nil
                             terrainTooltip = nil
                             sectionFlowTooltip = nil
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            holdFeedback += 1
                             screen.panel = held != nil ? .station : .lines
                         }
                     }, onPinchCloser: { pinched in
@@ -1136,6 +1139,7 @@ struct MapView: View {
                 stationReadout(projection)
                 expansionTileReadout(projection)
             }
+            .sensoryFeedback(.impact(weight: .medium), trigger: holdFeedback)
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
                 if zoning {

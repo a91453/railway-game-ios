@@ -12,10 +12,10 @@ import GameCore
 // (`PALETTES[1.0]`), in the reference repository's
 // `Railway/game-art-previews/docs/art/map3d-mapbox-look-2026-10-23/scripts/`.
 
-/// Decision 370, 431, 457, 548, 550: the landmarks, each built in its own metres (x right,
+/// Decision 370, 431, 457, 548, 550, 581: the landmarks, each built in its own metres (x right,
 /// y back, z up, its middle at the origin), then stood where it is.
 enum Map3DTaipeiLandmark: CaseIterable, Sendable {
-    case taipei101, taipeiMainStation, kaohsiungMainStation, kaohsiung85SkyTower, shinKongLifeTower
+    case taipei101, taipeiMainStation, kaohsiungMainStation, kaohsiung85SkyTower, shinKongLifeTower, changhuaRoundhouse
     // Decision 457: central Taipei's palace-style landmarks and old gates.
     case chiangKaiShekMemorialHall, libertySquareGate, nationalTheater, nationalConcertHall, presidentialOffice, ximenRedHouse
     case sunYatSenMemorialHall, grandHotel, northGate, eastGate, southGate, smallSouthGate
@@ -30,6 +30,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiungMainStation: 22.6394462
         case .kaohsiung85SkyTower: 22.611616109117193
         case .shinKongLifeTower: 25.04598631427511
+        case .changhuaRoundhouse: 24.0858608
         case .chiangKaiShekMemorialHall: 25.0346856
         case .libertySquareGate: 25.0366529
         case .nationalTheater: 25.0353161
@@ -51,6 +52,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiungMainStation: 120.3025654
         case .kaohsiung85SkyTower: 120.3001601108381
         case .shinKongLifeTower: 121.51531117744537
+        case .changhuaRoundhouse: 120.5401168
         case .chiangKaiShekMemorialHall: 121.5217163
         case .libertySquareGate: 121.5177174
         case .nationalTheater: 121.5182223
@@ -72,6 +74,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiungMainStation: 0
         case .kaohsiung85SkyTower: 108.5
         case .shinKongLifeTower: 90.5
+        case .changhuaRoundhouse: 0
         case .chiangKaiShekMemorialHall: 242
         case .libertySquareGate: 242
         case .nationalTheater: 152
@@ -97,6 +100,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiungMainStation: (336, 170)
         case .kaohsiung85SkyTower: (78, 40)
         case .shinKongLifeTower: (48, 25)
+        case .changhuaRoundhouse: (48, 30)
         case .chiangKaiShekMemorialHall: (66, 76)
         case .libertySquareGate: (39.5, 10.5)
         case .nationalTheater: (55, 52.5)
@@ -118,6 +122,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiungMainStation: (162, 142)
         case .kaohsiung85SkyTower: (71.5, 34.1)
         case .shinKongLifeTower: (42.5, 20.2)
+        case .changhuaRoundhouse: (43, 25.5)
         case .chiangKaiShekMemorialHall: (62.2, 73.8)
         case .libertySquareGate: (37.4, 8.5)
         case .nationalTheater: (54, 51.7)
@@ -164,6 +169,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiungMainStation: mesh.kaohsiungMainStation()
         case .kaohsiung85SkyTower: mesh.kaohsiung85SkyTower()
         case .shinKongLifeTower: mesh.shinKongLifeTower()
+        case .changhuaRoundhouse: mesh.changhuaRoundhouse()
         case .chiangKaiShekMemorialHall: mesh.chiangKaiShekMemorialHall()
         case .libertySquareGate: mesh.libertySquareGate()
         case .nationalTheater: mesh.performingArtsHall(53.95, 48.65, kind: .hipped)
@@ -1562,6 +1568,406 @@ struct LandmarkMesh {
         wallBand(s0, 241.2, s1, 243.4, spire, floodlit)
         wallBand(s1, 243.4, s2, 244.15, ornament, glowing)
         cap(s2, 244.15, vermilion, glowing)
+    }
+
+    // MARK: - Decision 581: Changhua Roundhouse
+
+    /// Decision 581: Changhua Roundhouse (OSM way 220285047: 85.03 m × 49.79 m,
+    /// railway = roundhouse, building = garages, building:levels = 1; turntable
+    /// way 220285048; 12 radial stall tracks ways 307329549..307329565 &
+    /// 966441326, ODbL), centered at the bounding-box midpoint (24.0858608°N,
+    /// 120.5401168°E), rotation 0°. Rebuilt procedurally from the reference
+    /// proportions (`historic-buildings-v2/changhua-roundhouse/model.json` and
+    /// `tw3d-reference-clean/source/js/cities/changhua/landmarks/catalog.json`):
+    /// 12 radiating fan stalls with stepped rear walls, 13 concrete portal
+    /// piers with corner haunches, twin blue-framed transom windows over each
+    /// open stall doorway, sloped radial roof with raised clerestory monitor
+    /// roof (8.85 m), 12 cylindrical roof smokejacks with rain caps (10.28 m),
+    /// east and west brick service wings, curved wooden pedestrian boardwalk,
+    /// and 12 radial stall and approach tracks with inspection pits meeting
+    /// Decision 441's turntable rim in the south courtyard.
+    mutating func changhuaRoundhouse() {
+        let stone = colour("stone")
+        let podium = colour("podium")
+        let hallWall = colour("hallWall")
+        let brick = colour("brick")
+        let gateStone = colour("gateStone")
+        let trim = colour("trim")
+        let slate = colour("slate")
+        let crownRoof = colour("crownRoof")
+        let flatRoof = colour("flatRoof")
+        let glass = colour("glass")
+        let blueRidge = colour("blueRidge")
+        let doorway = colour("doorway")
+        let column = colour("column")
+        let spire = colour("spire")
+        let ornament = colour("ornament")
+        let floodlit = Map3DVertex.floodlit
+
+        // Focal center of the 12 radiating stalls (OSM turntable way 220285048
+        // relative to way 220285047's bounding-box midpoint) and Decision 441's
+        // turntable center in the courtyard (`Map3DDepotFacilities.turntablePlace`).
+        let fx: Float = 6.64, fy: Float = -32.91
+        let ttx: Float = 3.47, tty: Float = -19.53
+
+        func polar(_ r: Float, _ deg: Float) -> P2 {
+            let rad = deg * .pi / 180
+            return (fx + r * cos(rad), fy + r * sin(rad))
+        }
+
+        func octRing(_ cx: Float, _ cy: Float, _ r: Float) -> [P2] {
+            (0..<8).map { k in
+                let a = Float(k) * .pi / 4
+                return (cx + r * cos(a), cy + r * sin(a))
+            }
+        }
+
+        func orientedRect(_ p0: P2, _ p1: P2, _ halfW: Float) -> [P2] {
+            let dx = p1.x - p0.x, dy = p1.y - p0.y
+            let len = max(0.001, (dx * dx + dy * dy).squareRoot())
+            let nx = -dy / len * halfW, ny = dx / len * halfW
+            return [
+                (p0.x - nx, p0.y - ny),
+                (p1.x - nx, p1.y - ny),
+                (p1.x + nx, p1.y + ny),
+                (p0.x + nx, p0.y + ny),
+            ]
+        }
+
+        // 13 pier angles (degrees around (fx, fy)) bounding Stalls 1..12 (East to West),
+        // aligned with the stepped outer rear wall of OSM way 220285047:
+        let stallBounds: [Float] = [
+            55.65, 64.10, 72.55, 81.00, 91.72,
+            98.42, 105.12, 111.82, 118.52,
+            123.72, 134.98, 146.24, 157.50,
+        ]
+        let stallRIn: [Float] = [
+            28.60, 28.65, 28.85, 28.95,
+            29.10, 29.20, 29.40, 29.55,
+            29.50, 29.65, 29.95, 30.35,
+        ]
+        // Stepped outer rear wall radii from OSM way 220285047:
+        //   Stalls 1–4 (v12..v16): ~52.4 m
+        //   Stalls 5–8 (v07..v11): ~58.4 m (reaching y = +24.895 m)
+        //   Stall 9 (v05..v06):    ~55.9 m
+        //   Stalls 10–12 (v00..v04): ~52.9 m (reaching x = -42.515 m)
+        let stallROut: [Float] = [
+            52.20, 52.35, 52.48, 52.60,
+            57.76, 58.44, 58.65, 58.40,
+            55.90,
+            52.72, 52.90, 53.20,
+        ]
+
+        // 1. 12 Radiating Fan Stalls (Stalls 1..12)
+        let rMid: Float = 39.50
+        for i in 0..<12 {
+            let a0 = stallBounds[i], a1 = stallBounds[i + 1]
+            let aMid = 0.5 * (a0 + a1)
+            let rIn = stallRIn[i], rOut = stallROut[i]
+
+            let fe = polar(rIn, a0), be = polar(rOut, a0)
+            let bw = polar(rOut, a1), fw = polar(rIn, a1)
+            let feIn = polar(rIn + 0.35, a0), fwIn = polar(rIn + 0.35, a1)
+            let lowerRing: [P2] = [feIn, be, bw, fwIn]
+            let upperRing: [P2] = [fe, be, bw, fw]
+
+            // Plinth base (z = 0.00 .. 0.46 m), lower brick dado (0.46 .. 1.80 m) & mid wall (1.80 .. 4.55 m)
+            wallBand(lowerRing, 0.00, lowerRing, 0.46, gateStone, Self.plain)
+            wallBand(lowerRing, 0.46, lowerRing, 1.80, brick, Self.floors)
+            wallBand(lowerRing, 1.80, lowerRing, 4.55, hallWall, Self.floors)
+
+            // Dark stall doorway opening at the front entrance arc (z = 0.00 .. 4.55 m)
+            let doorRing: [P2] = [fe, feIn, fwIn, fw]
+            wallBand(doorRing, 0.00, doorRing, 4.55, doorway, Self.plain)
+
+            // Upper spandrel wall above doorway (z = 4.55 .. 6.80 m)
+            wallBand(upperRing, 4.55, upperRing, 6.80, hallWall, Self.floors)
+
+            // Sloped radial roof in two pitches (rIn at 6.80 m -> rMid at 8.00 m -> rOut at 6.80 m)
+            let me = polar(rMid, a0), mw = polar(rMid, a1)
+            let frontRoof: [P2] = [fe, me, mw, fw]
+            let rearRoof: [P2] = [me, be, bw, mw]
+            band(frontRoof, [6.60, 6.60, 6.60, 6.60], frontRoof, [6.80, 8.00, 8.00, 6.80], hallWall, Self.floors)
+            band(rearRoof, [6.60, 6.60, 6.60, 6.60], rearRoof, [8.00, 6.80, 6.80, 8.00], hallWall, Self.floors)
+            quad((fe.x, fe.y, 6.80), (me.x, me.y, 8.00), (mw.x, mw.y, 8.00), (fw.x, fw.y, 6.80),
+                 slate, Self.tiles, [fe, me, mw, fw])
+            quad((me.x, me.y, 8.00), (be.x, be.y, 6.80), (bw.x, bw.y, 6.80), (mw.x, mw.y, 8.00),
+                 slate, Self.tiles, [me, be, bw, mw])
+
+            // Front continuous concrete lintel (z = 4.50 .. 4.78 m) & top cornice (z = 6.54 .. 7.06 m)
+            let cRing: [P2] = [
+                polar(rIn - 0.24, a0),
+                polar(rIn + 0.12, a0),
+                polar(rIn + 0.12, a1),
+                polar(rIn - 0.24, a1),
+            ]
+            wallBand(cRing, 4.50, cRing, 4.78, stone, Self.floors)
+            wallBand(cRing, 6.54, cRing, 7.06, trim, floodlit)
+            cap(cRing, 7.06, trim, floodlit)
+
+            // Twin blue-framed transom windows above each doorway (z = 4.82 .. 6.40 m)
+            if full {
+                for (wt0, wt1): (Float, Float) in [(0.16, 0.46), (0.54, 0.84)] {
+                    let wa0 = a0 + wt0 * (a1 - a0), wa1 = a0 + wt1 * (a1 - a0)
+                    let fRing: [P2] = [
+                        polar(rIn - 0.16, wa0),
+                        polar(rIn + 0.02, wa0),
+                        polar(rIn + 0.02, wa1),
+                        polar(rIn - 0.16, wa1),
+                    ]
+                    wallBand(fRing, 4.82, fRing, 6.40, blueRidge, Self.floors)
+                    let gRing: [P2] = [
+                        polar(rIn - 0.22, wa0 + 0.18),
+                        polar(rIn - 0.02, wa0 + 0.18),
+                        polar(rIn - 0.02, wa1 - 0.18),
+                        polar(rIn - 0.22, wa1 - 0.18),
+                    ]
+                    wallBand(gRing, 4.92, gRing, 6.30, glass, Self.curtain)
+                }
+                // Portal corner haunches / brackets at the top corners of each doorway (z = 3.80 .. 4.50 m)
+                for (ha0, ha1): (Float, Float) in [(a0 + 0.06 * (a1 - a0), a0 + 0.20 * (a1 - a0)),
+                                                   (a1 - 0.20 * (a1 - a0), a1 - 0.06 * (a1 - a0))] {
+                    let hRing: [P2] = [
+                        polar(rIn - 0.18, ha0),
+                        polar(rIn + 0.35, ha0),
+                        polar(rIn + 0.35, ha1),
+                        polar(rIn - 0.18, ha1),
+                    ]
+                    wallBand(hRing, 3.80, hRing, 4.50, stone, Self.floors)
+                }
+                // Stall number plate centered over doorway lintel (z = 4.52 .. 4.78 m)
+                let npRing: [P2] = [
+                    polar(rIn - 0.28, aMid - 0.55),
+                    polar(rIn - 0.05, aMid - 0.55),
+                    polar(rIn - 0.05, aMid + 0.55),
+                    polar(rIn - 0.28, aMid + 0.55),
+                ]
+                wallBand(npRing, 4.52, npRing, 4.78, ornament, floodlit)
+            } else {
+                let wa0 = a0 + 0.18 * (a1 - a0), wa1 = a0 + 0.82 * (a1 - a0)
+                let gRing: [P2] = [
+                    polar(rIn - 0.18, wa0),
+                    polar(rIn + 0.02, wa0),
+                    polar(rIn + 0.02, wa1),
+                    polar(rIn - 0.18, wa1),
+                ]
+                wallBand(gRing, 4.90, gRing, 6.30, glass, Self.curtain)
+            }
+
+            // Stepped rear outer wall concrete tie-beams & multi-pane industrial windows
+            if full {
+                let rearBeam: [P2] = [
+                    polar(rOut - 0.22, a0),
+                    polar(rOut - 0.02, a0),
+                    polar(rOut - 0.02, a1),
+                    polar(rOut - 0.22, a1),
+                ]
+                wallBand(rearBeam, 1.72, rearBeam, 1.88, podium, Self.floors)
+                wallBand(rearBeam, 3.92, rearBeam, 4.08, podium, Self.floors)
+                wallBand(rearBeam, 6.45, rearBeam, 6.80, podium, Self.floors)
+                for (rwt0, rwt1): (Float, Float) in [(0.16, 0.45), (0.55, 0.84)] {
+                    let rwa0 = a0 + rwt0 * (a1 - a0), rwa1 = a0 + rwt1 * (a1 - a0)
+                    let rwRing: [P2] = [
+                        polar(rOut - 0.18, rwa0),
+                        polar(rOut - 0.01, rwa0),
+                        polar(rOut - 0.01, rwa1),
+                        polar(rOut - 0.18, rwa1),
+                    ]
+                    wallBand(rwRing, 2.00, rwRing, 5.80, glass, Self.curtain)
+                }
+            }
+
+            // Raised Clerestory Monitor Roof (r = 37.80 .. 42.60 m, z = 7.65 .. 8.85 m)
+            let monRing: [P2] = [
+                polar(37.80, a0),
+                polar(42.60, a0),
+                polar(42.60, a1),
+                polar(37.80, a1),
+            ]
+            wallBand(monRing, 7.65, monRing, 8.85, crownRoof, Self.floors)
+            cap(monRing, 8.85, crownRoof, Self.tiles)
+            if full {
+                let ma0 = a0 + 0.12 * (a1 - a0), ma1 = a1 - 0.12 * (a1 - a0)
+                let mfRing: [P2] = [
+                    polar(37.68, ma0),
+                    polar(37.90, ma0),
+                    polar(37.90, ma1),
+                    polar(37.68, ma1),
+                ]
+                let mbRing: [P2] = [
+                    polar(42.50, ma0),
+                    polar(42.72, ma0),
+                    polar(42.72, ma1),
+                    polar(42.50, ma1),
+                ]
+                wallBand(mfRing, 8.05, mfRing, 8.68, glass, Self.curtain)
+                wallBand(mbRing, 8.05, mbRing, 8.68, glass, Self.curtain)
+            }
+
+            // Cylindrical Smokejack / Chimney on each stall roof (r = 34.20 m, z = 7.45 .. 10.28 m)
+            let (cx, cy) = polar(34.20, aMid)
+            if full {
+                let cBase = octRing(cx, cy, 0.54)
+                let cShaft = octRing(cx, cy, 0.39)
+                let cNeck = octRing(cx, cy, 0.46)
+                let cCap = octRing(cx, cy, 0.74)
+                wallBand(cBase, 7.45, cBase, 8.20, podium, floodlit)
+                cap(cBase, 8.20, podium, floodlit)
+                wallBand(cShaft, 8.20, cShaft, 9.92, column, floodlit)
+                wallBand(cNeck, 9.92, cCap, 10.12, slate, floodlit)
+                wallBand(cCap, 10.12, cCap, 10.28, doorway, floodlit)
+                cap(cCap, 10.28, doorway, floodlit)
+            } else {
+                let cBox: [P2] = [(cx - 0.45, cy - 0.45), (cx + 0.45, cy - 0.45), (cx + 0.45, cy + 0.45), (cx - 0.45, cy + 0.45)]
+                wallBand(cBox, 7.50, cBox, 10.28, column, floodlit)
+                cap(cBox, 10.28, doorway, floodlit)
+            }
+        }
+
+        // 2. 13 Front Concrete Portal Piers between stalls (j = 0..12)
+        for (j, pDeg) in stallBounds.enumerated() {
+            let rInP = stallRIn[min(j, 11)]
+            let pRing: [P2] = [
+                polar(rInP - 0.34, pDeg - 0.52),
+                polar(rInP + 0.45, pDeg - 0.52),
+                polar(rInP + 0.45, pDeg + 0.52),
+                polar(rInP - 0.34, pDeg + 0.52),
+            ]
+            wallBand(pRing, 0.00, pRing, 7.06, stone, floodlit)
+            cap(pRing, 7.06, trim, floodlit)
+            if full {
+                let rOutP = max(stallROut[max(0, j - 1)], stallROut[min(11, j)])
+                let ribRing: [P2] = [
+                    polar(rInP, pDeg - 0.16),
+                    polar(rOutP - 0.12, pDeg - 0.16),
+                    polar(rOutP - 0.12, pDeg + 0.16),
+                    polar(rInP, pDeg + 0.16),
+                ]
+                wallBand(ribRing, 6.80, ribRing, 8.06, slate, Self.tiles)
+                cap(ribRing, 8.06, slate, Self.tiles)
+            }
+        }
+
+        // 3. East Service Annex Wing (OSM way 220285047 vertices v17..v21, reaching x = +42.515 m)
+        let eastRing: [P2] = [
+            polar(26.18, 54.55),
+            polar(27.32, 41.31),
+            (42.515, 8.84),
+            polar(54.22, 55.65),
+            polar(28.60, 55.65),
+        ]
+        wallBand(eastRing, 0.00, eastRing, 0.46, gateStone, Self.plain)
+        wallBand(eastRing, 0.46, eastRing, 5.80, brick, Self.floors)
+        wallBand(eastRing, 5.80, eastRing, 6.20, podium, Self.floors)
+        cap(eastRing, 6.20, flatRoof, Self.tiles)
+        if full {
+            let p19 = polar(27.32, 41.31), p18: P2 = (42.515, 8.84)
+            for (t0, t1): (Float, Float) in [(0.15, 0.36), (0.44, 0.65), (0.72, 0.88)] {
+                let wa: P2 = (p19.x + t0 * (p18.x - p19.x), p19.y + t0 * (p18.y - p19.y))
+                let wb: P2 = (p19.x + t1 * (p18.x - p19.x), p19.y + t1 * (p18.y - p19.y))
+                let wRing = orientedRect(wa, wb, 0.14)
+                wallBand(wRing, 1.90, wRing, 4.90, glass, Self.curtain)
+            }
+        }
+
+        // 4. West Workshop Annex Wing (OSM way 220285047 vertices v00, v38..v41, reaching x = -42.515 m, y = -24.895 m)
+        let westRing: [P2] = [
+            polar(30.35, 157.50),
+            (-42.515, -12.54),
+            polar(41.14, 159.26),
+            polar(41.46, 163.62),
+            (-23.84, -24.895),
+        ]
+        wallBand(westRing, 0.00, westRing, 0.46, gateStone, Self.plain)
+        wallBand(westRing, 0.46, westRing, 5.60, brick, Self.floors)
+        wallBand(westRing, 5.60, westRing, 6.00, podium, Self.floors)
+        cap(westRing, 6.00, flatRoof, Self.tiles)
+        if full {
+            let p38 = polar(30.35, 157.50), p00: P2 = (-42.515, -12.54)
+            for (t0, t1): (Float, Float) in [(0.18, 0.44), (0.54, 0.78)] {
+                let wa: P2 = (p38.x + t0 * (p00.x - p38.x), p38.y + t0 * (p00.y - p38.y))
+                let wb: P2 = (p38.x + t1 * (p00.x - p38.x), p38.y + t1 * (p00.y - p38.y))
+                let wRing = orientedRect(wa, wb, 0.14)
+                wallBand(wRing, 1.90, wRing, 4.80, glass, Self.curtain)
+            }
+        }
+
+        // 5. 12 Radial Stall & Approach Tracks (ways 307329549..307329565 & 966441326,
+        //    connecting Decision 441's turntable rim r = 13.05 m around (3.47, -19.53)
+        //    through each stall doorway to the back of the stall):
+        for i in 0..<12 {
+            let a0 = stallBounds[i], a1 = stallBounds[i + 1]
+            let aMid = 0.5 * (a0 + a1)
+            let rIn = stallRIn[i], rOut = stallROut[i]
+
+            let doorPt = polar(rIn, aMid)
+            let backPt = polar(rOut - 2.00, aMid)
+            let dxT = doorPt.x - ttx, dyT = doorPt.y - tty
+            let lenT = max(0.001, (dxT * dxT + dyT * dyT).squareRoot())
+            let rimPt: P2 = (ttx + dxT / lenT * 13.05, tty + dyT / lenT * 13.05)
+
+            for (segA, segB) in [(rimPt, doorPt), (doorPt, backPt)] {
+                let bedRing = orientedRect(segA, segB, 0.96)
+                wallBand(bedRing, 0.00, bedRing, 0.08, gateStone, Self.plain)
+                cap(bedRing, 0.08, gateStone, Self.plain)
+            }
+
+            if full {
+                // Sunken inspection pit between the rails inside each stall
+                let pitA = polar(rIn + 0.40, aMid), pitB = polar(rOut - 3.20, aMid)
+                let pitRing = orientedRect(pitA, pitB, 0.38)
+                wallBand(pitRing, 0.00, pitRing, 0.11, doorway, Self.plain)
+                cap(pitRing, 0.11, doorway, Self.plain)
+
+                // Two steel rails (1.067 m narrow gauge -> ±0.5335 m offset)
+                for (segA, segB) in [(rimPt, doorPt), (doorPt, backPt)] {
+                    let sdx = segB.x - segA.x, sdy = segB.y - segA.y
+                    let slen = max(0.001, (sdx * sdx + sdy * sdy).squareRoot())
+                    let snx = -sdy / slen, sny = sdx / slen
+                    for side: Float in [-0.5335, 0.5335] {
+                        let rp0: P2 = (segA.x + snx * side, segA.y + sny * side)
+                        let rp1: P2 = (segB.x + snx * side, segB.y + sny * side)
+                        let rRing = orientedRect(rp0, rp1, 0.055)
+                        wallBand(rRing, 0.08, rRing, 0.19, spire, Self.plain)
+                        cap(rRing, 0.19, spire, Self.plain)
+                    }
+                }
+
+                // Wooden cross-sleepers along the open courtyard approach
+                for st: Float in [0.18, 0.38, 0.58, 0.88] {
+                    let sx = rimPt.x + st * (doorPt.x - rimPt.x)
+                    let sy = rimPt.y + st * (doorPt.y - rimPt.y)
+                    let ux = dxT / lenT * 0.13, uy = dyT / lenT * 0.13
+                    let sRing = orientedRect((sx - ux, sy - uy), (sx + ux, sy + uy), 0.88)
+                    wallBand(sRing, 0.08, sRing, 0.13, brick, Self.plain)
+                    cap(sRing, 0.13, brick, Self.plain)
+                }
+            }
+        }
+
+        // 6. Curved Wooden Pedestrian Boardwalk across the 12 approach tracks
+        for k in 0..<12 {
+            let ba0 = stallBounds[k], ba1 = stallBounds[k + 1]
+            let rBw0 = stallRIn[k] - 2.30, rBw1 = stallRIn[k] - 1.05
+            let bwRing: [P2] = [
+                polar(rBw0, ba0),
+                polar(rBw1, ba0),
+                polar(rBw1, ba1),
+                polar(rBw0, ba1),
+            ]
+            wallBand(bwRing, 0.00, bwRing, 0.15, brick, Self.plain)
+            cap(bwRing, 0.15, brick, Self.plain)
+            if full {
+                let curbRing: [P2] = [
+                    polar(rBw0 - 0.12, ba0),
+                    polar(rBw0 + 0.08, ba0),
+                    polar(rBw0 + 0.08, ba1),
+                    polar(rBw0 - 0.12, ba1),
+                ]
+                wallBand(curbRing, 0.00, curbRing, 0.18, ornament, floodlit)
+                cap(curbRing, 0.18, ornament, floodlit)
+            }
+        }
     }
 
     /// The model stood in the scene (x east, y up, z south) with its
