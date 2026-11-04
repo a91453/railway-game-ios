@@ -152,7 +152,7 @@ final class LocalizationTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇要放置它的車站。"))
             session.tapMap(at: PlanPoint(x: 1_536, y: 512), reach: 0)
             session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "請選擇要放置 列車 1 的車站。"))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "先點地圖上的車站，再把 列車 1 放在那裡。"))
 
             session.selectTool(.network)
             session.setNetworkMode(.platform)

@@ -37,7 +37,7 @@ final class ToolActionTests: XCTestCase {
             session.tapMap(at: Self.point, reach: 0)
 
             session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select a station to place T1 at."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tap a station on the map first, then place T1 there."))
             session.tapMap(at: Self.point, reach: 0)
             XCTAssertNotNil(session.message, "tapping the same point keeps the message")
             session.tapMap(at: PlanPoint(x: 512, y: 512), reach: 0)

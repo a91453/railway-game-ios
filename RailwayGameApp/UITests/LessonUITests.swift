@@ -150,7 +150,7 @@ final class LessonUITests: XCTestCase {
             tap(app.buttons["dock.build"])
             XCTAssertTrue(mode("Lay").appears(within: 5))
             if number == 7 {
-                tap(mode("Depot"))
+                tap(app.networkMode("Depot"))
                 XCTAssertTrue(element("network.depotSidings").appears(within: 5))
                 XCTAssertTrue(element("network.depotSidings").becomesHittable(within: 5))
             } else {
@@ -271,7 +271,7 @@ final class LessonUITests: XCTestCase {
     }
 
     private func mode(_ name: String) -> XCUIElement {
-        app.segmentedControls.buttons[name].firstMatch
+        app.networkModeElement(name)
     }
 
     private func launch(stars: String? = nil, step: String? = nil, paused: Bool = false) {

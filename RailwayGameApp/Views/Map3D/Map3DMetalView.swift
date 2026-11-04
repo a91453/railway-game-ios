@@ -106,6 +106,8 @@ final class Map3DMetalView: MTKView {
     /// the follow camera reads a vehicle (``Map3DFollow/Pose``); `nil` when
     /// it is not out.
     var busPose: (@MainActor (BusID) -> Map3DFollow.Pose?)?
+    /// Decision 583 (CABLEFOLLOW): the same for the cable car cabin followed.
+    var cabinPose: (@MainActor (CabinID) -> Map3DFollow.Pose?)?
     /// Decision 259: the people and vehicles for this frame, seen with the
     /// camera given, with the city's lights on so far; decision 417: within
     /// the budget given (the trains' triangles this frame among it).
@@ -821,6 +823,9 @@ final class Map3DMetalView: MTKView {
         let pose: Map3DFollow.Pose
         if let bus = following.bus {
             guard let found = busPose?(bus) else { return }
+            pose = found
+        } else if let cabin = following.cabin {
+            guard let found = cabinPose?(cabin) else { return }
             pose = found
         } else {
             guard let head = heads.first(where: { $0.train == following.train }) else { return }

@@ -27,17 +27,20 @@ struct NetworkControls: View {
     /// Decision 574: the cable car the player asked to take down, for
     /// the confirmation.
     @State private var removingCableway: CablewayID?
+    /// Decision 583 (CABLEFOLLOW): the card's follow button opens the 3D map.
+    @Environment(GameScreenState.self) private var screen: GameScreenState?
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Decision 574: six modes do not fit a phone's panel in
             // English; then the row keeps its words whole and slides
-            // sideways instead of cutting them short.
+            // sideways instead of cutting them short. Its next step: the
+            // chosen mode is scrolled into view, and an end with more past
+            // it fades out.
             ViewThatFits(in: .horizontal) {
                 modePicker
-                ScrollView(.horizontal, showsIndicators: false) {
-                    modePicker.fixedSize()
-                }
+                NetworkModeScrollRow(session: session, modes: modes)
             }
             .tutorialTarget(.networkModes)
             switch session.networkMode {
@@ -361,13 +364,19 @@ struct NetworkControls: View {
         }
     }
 
+    /// The modes the row shows. Decision 266: in a lesson, only the modes
+    /// it has unlocked.
+    private var modes: [NetworkToolMode] {
+        let session = session
+        return NetworkToolMode.allCases.filter { session.allows($0) }
+    }
+
     /// The network tool's modes, one segment each. It stands in a
     /// ViewThatFits, so its row closure is sendable and makes a view of
     /// its own (CRASH101).
     private var modePicker: some View {
         let session = session
-        // Decision 266: in a lesson, only the modes it has unlocked.
-        let modes = NetworkToolMode.allCases.filter { session.allows($0) }
+        let modes = self.modes
         let language = session.language
         return Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
             ForEach(modes, id: \.self) { @Sendable mode in
@@ -432,6 +441,21 @@ struct NetworkControls: View {
                         Text(verbatim: card.title)
                             .font(.subheadline.weight(.semibold))
                         Spacer()
+                        // Decision 583 (CABLEFOLLOW): ride a cabin on the 3D map.
+                        if let screen, session.tutorial == nil, map3DQuality.shows3D {
+                            Button {
+                                session.followCabin(on: card.id)
+                                screen.map3DHandoff = nil
+                                screen.showsMap3D = true
+                            } label: {
+                                Text(verbatim: language.text("Follow", "跟隨"))
+                            }
+                            .buttonStyle(.borderless)
+                            .font(.footnote)
+                            .accessibilityHint(Text(verbatim: language.text("Rides along in a cabin on the 3D map.", "在 3D 地圖上跟著一台吊廂。")))
+                            .accessibilityIdentifier("network.cablewayFollow")
+                            .disabled(!session.hasCabinToFollow(on: card.id))
+                        }
                         Button(role: .destructive) {
                             removingCableway = card.id
                         } label: {
@@ -800,6 +824,104 @@ private struct TracedSaleRow: View {
             .accessibilityIdentifier("network.forSale.buy")
         }
         .padding(.top, 2)
+    }
+}
+
+/// The mode row when it does not fit (decision 574's next step): a row of
+/// chips that scrolls sideways, keeps the chosen mode in view (each time
+/// it shows, as when the panel opens again, and whenever the choice
+/// changes, by a tap, a lesson or another way into a mode), and fades out
+/// at an end with more past it (``ScrollEdgeFade``). Chips, not the
+/// segmented control: a scroll view does not take a drag that starts on a
+/// control, and the segments filled the row, so it slid only now and then
+/// (the owner on 112.1; runs 41830206452 and 41833421660). With Reduce
+/// Motion the row jumps to the mode instead of sliding; the fades follow
+/// the scroll position and are never animated.
+private struct NetworkModeScrollRow: View {
+    let session: GameSession
+    let modes: [NetworkToolMode]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// How far the row is scrolled, how wide it is and how wide the room
+    /// it shows through: transient view state, for the fades.
+    @State private var offset = 0.0
+    @State private var rowWidth = 0.0
+    @State private var viewWidth = 0.0
+
+    var body: some View {
+        let session = session
+        let selection = session.networkMode
+        let fade = ScrollEdgeFade(offset: offset, contentWidth: rowWidth, viewportWidth: viewWidth)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    // It stands in a ViewThatFits: the row closure is
+                    // sendable and makes a view of its own (CRASH101).
+                    ForEach(modes, id: \.self) { @Sendable mode in
+                        NetworkModeChip(session: session, mode: mode)
+                    }
+                }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("network.modeRow")) } action: { frame in
+                    offset = -Double(frame.minX)
+                    rowWidth = Double(frame.width)
+                }
+            }
+            // Where the scroll position is read. The name is written out at
+            // both ends: the geometry closure is sendable, so it reads no
+            // property of this main-actor view.
+            .coordinateSpace(.named("network.modeRow"))
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = Double($0) }
+            .accessibilityIdentifier("network.modeRow")
+            .mask { EdgeFadeMask(fade: fade) }
+            .onAppear { proxy.scrollTo(selection, anchor: .center) }
+            .onChange(of: selection) { _, mode in
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    proxy.scrollTo(mode, anchor: .center)
+                }
+            }
+            .onChange(of: modes) { _, _ in proxy.scrollTo(selection, anchor: .center) }
+        }
+    }
+}
+
+/// One mode in the scrolling row: its name, filled when chosen, 44 points
+/// high to touch.
+private struct NetworkModeChip: View {
+    let session: GameSession
+    let mode: NetworkToolMode
+
+    var body: some View {
+        let chosen = session.networkMode == mode
+        Button {
+            session.setNetworkMode(mode)
+        } label: {
+            Text(mode.title(in: session.language))
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 12)
+                .frame(minHeight: 36)
+        }
+        // The style's 4 points above and below make it 44 high.
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: chosen))
+        .accessibilityAddTraits(chosen ? .isSelected : [])
+        .id(mode)
+    }
+}
+
+/// The mask that fades a sideways row out at its ends, as strongly as
+/// ``ScrollEdgeFade`` says: the row itself turns see-through toward the
+/// edge, so no colour is laid over the panel.
+private struct EdgeFadeMask: View {
+    let fade: ScrollEdgeFade
+
+    var body: some View {
+        HStack(spacing: 0) {
+            LinearGradient(colors: [.black.opacity(1 - fade.leading), .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: ScrollEdgeFade.width)
+            Rectangle()
+            LinearGradient(colors: [.black, .black.opacity(1 - fade.trailing)], startPoint: .leading, endPoint: .trailing)
+                .frame(width: ScrollEdgeFade.width)
+        }
     }
 }
 
