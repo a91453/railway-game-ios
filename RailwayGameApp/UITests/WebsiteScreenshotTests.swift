@@ -275,13 +275,15 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// passenger boat and Gushan–Cijin's double-ended ferry close up at
     /// their piers (near models), each crossing from far (far models), and
     /// Gushan–Cijin at dusk with its lamps lit. For the screenshot review
-    /// of the pull request that drew them.
+    /// of the pull request that drew them. The far shots stand 600 m off,
+    /// past the near models' 350 m: from 1,100 m over Tamsui the app's
+    /// main thread was busy past the UI query's limit (run 41900993132).
     func testFerriesIn3D() {
         let shots: [(name: String, scene: String, view: String, onBoat: Bool)] = [
             ("ferry-3d-tamsui-near", "tamsuiFerry", "75,35,62", true),
-            ("ferry-3d-tamsui-far", "tamsuiFerry", "1100,20,50", false),
+            ("ferry-3d-tamsui-far", "tamsuiFerry", "600,20,50", false),
             ("ferry-3d-gushan-near", "gushanFerry", "85,35,62", true),
-            ("ferry-3d-gushan-far", "gushanFerry", "800,20,50", false),
+            ("ferry-3d-gushan-far", "gushanFerry", "600,20,50", false),
             ("ferry-3d-gushan-evening", "gushanFerryEvening", "110,215,64", true),
         ]
         for shot in shots {
