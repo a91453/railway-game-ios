@@ -160,7 +160,9 @@ final class WebsiteScreenshotTests: XCTestCase {
             let window = app.buttons["map3D.follow.window"]
             XCTAssertTrue(window.becomesHittable(within: 10))
             window.tap()
-            settle(seconds: 8)
+            settle(seconds: 2)
+            print("diag window.isSelected \(window.isSelected) back.isSelected \(app.buttons["map3D.follow.back"].isSelected)")
+            settle(seconds: 6)
             keep("follow-window", app)
             let station = app.buttons["map3D.follow.station"]
             XCTAssertTrue(station.becomesHittable(within: 10))

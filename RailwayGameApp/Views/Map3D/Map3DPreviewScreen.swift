@@ -285,6 +285,9 @@ struct Map3DPreviewScreen: View {
             stationTag.show(id, at: Map3DTap.anchor(of: id, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)),
                             seenBy: camera)
         }
+        .onChange(of: followView) { old, new in
+            UITestTrace.action("diag followView \(old.rawValue) -> \(new.rawValue)")
+        }
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
@@ -1641,7 +1644,9 @@ private struct Map3DFollowChoice: View {
     var body: some View {
         let blocked = unavailable != nil && selection != option
         Button {
+            UITestTrace.action("diag follow choice \(option.rawValue) tapped, was \(selection.rawValue)")
             selection = option
+            UITestTrace.action("diag follow choice now \(selection.rawValue)")
         } label: {
             Text(verbatim: option.text(in: language))
                 .font(.caption.weight(.bold))
