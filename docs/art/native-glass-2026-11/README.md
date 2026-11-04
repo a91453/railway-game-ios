@@ -32,3 +32,5 @@ iOS SDK／Metal真實渲染以本PR CI實際結果為準；真機效能、作者
 `a6a9587` 的 [Swift CI](https://github.com/a91453/railway-game-ios/actions/runs/41844401938) 與 [iOS build／Simulator smoke](https://github.com/a91453/railway-game-ios/actions/runs/41844401425) 已成功（VERIFIED；iOS 使用 runner 的 Apple SDK，不等於真機或透明玻璃出圖）。獨立 [Metal probe 41844401509](https://github.com/a91453/railway-game-ios/actions/runs/41844401509) 在版本檢查停止：Xcode 26.6 隨附 Apple Swift 6.3.3，未符合 SwiftPM 檢查限定的 6.4。沒有執行 GPU，也沒有圖像。workflow 現明確下載／檢查簽章／安裝 swift.org 官方 6.4.0 pkg，僅替此獨立 job 選用 toolchain；版本檢查保留，完整顯示版本訊息。修後 Metal 編譯與出圖仍以新 run 實際結果為準（未跑前 UNVERIFIED），不放寬版本要求來消除紅燈。
 
 第二次 probe 41928962732 已用官方 Swift 6.4 完成實際 Metal shader 與 GamePresentation WAE 編譯（VERIFIED），接著工具的固定中間目錄定位失敗，GPU 未執行。現抽出共用 build-inputs.sh，依模組實際位置尋找 SwiftBuild 產物、接受檔案或目錄型 swiftmodule；test-build-inputs.sh 覆蓋 classic／SwiftBuild、不同套件及 target 名稱，不將定位修正算成 GPU 驗證。
+
+第三次 probe 41930196047 的診斷確認實際目錄為 `Objects-normal/arm64/GameCore.swiftmodule`（旁邊即 objects），不含 Modules/ 子目錄；共用定位器及測試再加入此實際配置，避免把目錄定位測試當成 Apple SDK／GPU 證據。後續 fixture fetch 限定 depth=1，不抓完整歷史。

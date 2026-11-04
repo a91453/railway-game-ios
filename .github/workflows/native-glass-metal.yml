@@ -35,9 +35,9 @@ jobs:
           echo "${toolchains[0]}/usr/bin" >> "$GITHUB_PATH"
       - name: Pinned cabin recipes (temporary, no private assets or credentials)
         run: |
-          git fetch --no-tags origin 5cfec2954bde648ad3a40f43f8ec18ff89d11bdf
+          git fetch --depth=1 --no-tags origin 5cfec2954bde648ad3a40f43f8ec18ff89d11bdf
           git worktree add --detach "$RUNNER_TEMP/maokong-recipe" 5cfec2954bde648ad3a40f43f8ec18ff89d11bdf
-          git fetch --no-tags origin 074b085c03329edcda9f212927783b5787857adc
+          git fetch --depth=1 --no-tags origin 074b085c03329edcda9f212927783b5787857adc
           git worktree add --detach "$RUNNER_TEMP/sunmoon-recipe" 074b085c03329edcda9f212927783b5787857adc
           python3 "$RUNNER_TEMP/maokong-recipe/tools/maokong-cabin-refine/produce.py" "$RUNNER_TEMP/glass-fixtures/maokong"
           python3 "$RUNNER_TEMP/sunmoon-recipe/tools/sunmoon-cabin-studies/produce.py" "$RUNNER_TEMP/glass-fixtures/sunmoon" --kind red

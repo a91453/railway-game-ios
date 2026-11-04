@@ -2,7 +2,7 @@
 # Sourced by both standalone checkers. SwiftBuild can emit a .swiftmodule
 # directory and does not promise a particular package's intermediate name.
 native_glass_build_inputs() {
- local build_root="$1" bin_path="$2" component module target found
+ local build_root="$1" bin_path="$2" component module module_dir target found
  includes=(); objects=()
  if [[ -d "$bin_path/GamePresentation.build" ]]; then
   includes=(-I "$bin_path/Modules")
@@ -11,13 +11,15 @@ native_glass_build_inputs() {
   for component in GameCore GamePresentation; do
    found=false
    while IFS= read -r -d '' module; do
-    target="${module%/Modules/$component.swiftmodule}"
+    module_dir="${module%/$component.swiftmodule}"
+    target="${module_dir%/Modules}"
     if [[ -e "$module" ]]; then
-     includes+=(-I "$target/Modules")
-     objects+=("$target"/*.o "$target"/Modules/*.o)
+     includes+=(-I "$module_dir")
+     objects+=("$target"/*.o)
+     if [[ "$module_dir" != "$target" ]]; then objects+=("$module_dir"/*.o); fi
      found=true; break
     fi
-   done < <(find "$build_root/.build" -path "*/Objects-normal/*/Modules/$component.swiftmodule" -print0)
+   done < <(find "$build_root/.build" -path "*/Objects-normal/*/$component.swiftmodule" -print0)
    "$found" || { echo "Missing $component build in $build_root/.build" >&2; find "$build_root/.build" -name "$component.swiftmodule" -print >&2; return 1; }
   done
  fi

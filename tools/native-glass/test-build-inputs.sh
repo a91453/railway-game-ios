@@ -10,16 +10,23 @@ mkdir -p "$bin/Modules" "$bin/GameCore.build" "$bin/GamePresentation.build"
 touch "$bin/GameCore.build/core.swift.o" "$bin/GamePresentation.build/presentation.swift.o"
 native_glass_build_inputs "$fixture/classic" "$bin"
 [[ ${#objects[@]} -eq 2 && ${#includes[@]} -eq 2 ]]
-# SwiftBuild: either file or directory modules, arbitrary package intermediate.
-for kind in file directory; do
- root="$fixture/$kind"
+# SwiftBuild: module alongside objects (observed on macOS Swift 6.4), or
+# inside Modules/, either file or directory, arbitrary package intermediate.
+for layout in flat nested; do
+ for kind in file directory; do
+ root="$fixture/$layout-$kind"
  for component in GameCore GamePresentation; do
   target="$root/.build/out/Intermediates.noindex/OtherPackage.build/Debug/$component-arbitrary-id.build/Objects-normal/arm64"
-  mkdir -p "$target/Modules"
-  if [[ "$kind" == file ]]; then touch "$target/Modules/$component.swiftmodule"; else mkdir "$target/Modules/$component.swiftmodule"; fi
-  touch "$target/$component.o" "$target/Modules/$component.o"
+  modules="$target"
+  if [[ "$layout" == nested ]]; then modules="$target/Modules"; fi
+  mkdir -p "$modules"
+  if [[ "$kind" == file ]]; then touch "$modules/$component.swiftmodule"; else mkdir "$modules/$component.swiftmodule"; fi
+  touch "$target/object.o"
+  if [[ "$layout" == nested ]]; then touch "$modules/module.o"; fi
  done
  native_glass_build_inputs "$root" "$root/unused-bin"
- [[ ${#objects[@]} -eq 4 && ${#includes[@]} -eq 4 ]]
+ expected=2; if [[ "$layout" == nested ]]; then expected=4; fi
+ [[ ${#objects[@]} -eq $expected && ${#includes[@]} -eq 4 ]]
+ done
 done
 echo 'VERIFIED classic and SwiftBuild file/directory module discovery'
