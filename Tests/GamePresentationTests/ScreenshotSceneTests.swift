@@ -46,6 +46,12 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertEqual(gondola.stops.filter(\.boards).count, 4)
         XCTAssertTrue(world.cablewayIsOpen(gondola.id, onDay: 1) || world.weather(onDay: 1) == .thunderstorm)
         XCTAssertEqual(gondola.days.map(\.day), [0], "the first day is settled")
+        // The map opens on the gondola: its stops are what is built.
+        let opening = try XCTUnwrap(WorldRegion.opening(in: world))
+        for stop in gondola.stops {
+            XCTAssertTrue(opening.contains(WorldCoordinate(x: stop.cell.middle.x, y: stop.cell.middle.y)))
+        }
+        XCTAssertLessThan(opening.width, Double(Land.cellLength) * 40, "only the gondola, not the whole map")
     }
 
     /// Decision 506 續二: the expansion scene, on its fourth morning: West

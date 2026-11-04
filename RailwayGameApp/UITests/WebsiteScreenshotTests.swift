@@ -114,7 +114,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
             XCTAssertTrue(mode.becomesHittable(within: 10))
             mode.tap()
-            XCTAssertTrue(app.descendants(matching: .any)["network.cablewayCard"].firstMatch.appears(within: 10), "The gondola's card")
+            let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
+            XCTAssertTrue(card.appears(within: 10), "The gondola's card")
+            // The card is below the mode's options: up into view, rows and all.
+            card.swipeUp()
             settle()
             keep(english ? "cableway-mode-english" : "cableway-mode", app)
             app.terminate()
