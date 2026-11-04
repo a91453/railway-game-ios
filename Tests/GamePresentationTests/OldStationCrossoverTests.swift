@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -249,6 +249,34 @@ final class OldStationCrossoverTests: XCTestCase {
             session.undo()
             XCTAssertEqual(session.world.network.edges.count, edges)
             XCTAssertNotNil(session.stationCrossoverOffer(for: station), "offered again")
+        }
+    }
+
+    /// L9-3 (decision 572, continued): the button's "short of cash" was
+    /// worked out once per command, so fares bringing the cash up to the
+    /// price (no command between) left it grey, and the day's costs
+    /// taking it below left it pressable. It reads the cash in hand each
+    /// time.
+    func testCrossoverButtonReadsTheCashInHandNow() throws {
+        for rules in [NewGameRules.simple, .realistic] {
+            let built = try oldStations(rules: rules)
+            let station = built.world.stations[0].id
+            let cost = try XCTUnwrap(built.stationCrossoverOffer(for: station)).cost
+            _ = plus(built, try line(built), to: 1)
+            var world = built.world
+            world.economy = GameEconomy(balance: Money(cost.amount - 1), costs: world.economy.costs)
+            let session = GameSession(world: world, language: .english)
+            let short = try XCTUnwrap(session.stationCrossoverOffer(for: station))
+            XCTAssertTrue(short.problem?.contains(session.world.economy.balance.moneyText) ?? false, "\(rules): \(short.problem ?? "")")
+            let revision = session.commandRevision
+            for _ in 0..<400 where session.world.economy.balance < cost {
+                session.advance(ticks: 60)
+            }
+            XCTAssertGreaterThanOrEqual(session.world.economy.balance, cost, "\(rules): the train's fares came in")
+            XCTAssertEqual(session.commandRevision, revision, "\(rules): with no command between")
+            let offer = try XCTUnwrap(session.stationCrossoverOffer(for: station))
+            XCTAssertEqual(offer.cost, cost, "\(rules)")
+            XCTAssertNil(offer.problem, "\(rules): the button can be pressed again")
         }
     }
 
