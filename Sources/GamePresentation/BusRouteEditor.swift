@@ -629,6 +629,12 @@ extension GameSession {
         world.roads != nil && offersBusTool
     }
 
+    /// Whether the transit tool's ferry mode can be used (decision 585):
+    /// wherever the tool is offered, roads or not.
+    public var allowsFerryMode: Bool {
+        offersBusTool
+    }
+
     /// A tap with the bus tool at `point`, reaching `reach`: the first picks
     /// the station the route feeds (one a road reaches), or on a road away
     /// from a station puts the first stop of a city route (decision 438);
@@ -636,6 +642,13 @@ extension GameSession {
     /// it away. In the roads mode a tap picks a road of the player's to
     /// take up (``tapRoadTool(at:)``). Never changes the world.
     public func tapBusTool(at point: PlanPoint, reach: Int64) {
+        // Decision 585: piers stand by the water, roads or not.
+        if busMode == .ferries {
+            guard world.bounds.contains(point) else { return }
+            message = nil
+            tapFerry(at: point)
+            return
+        }
         guard world.bounds.contains(point), let roads = world.roads else { return }
         message = nil
         if busMode == .roads {
@@ -815,6 +828,8 @@ extension GameSession {
         busDraft = BusRouteDraft()
         busPreview = nil
         busDraftPath = []
+        ferryDraft = []
+        ferryDraftLegs = nil
     }
 
     /// Sets the drawn route's headway.

@@ -258,9 +258,9 @@ final class RoadsTurnOnTests: XCTestCase {
         XCTAssertNil(session.busRoads, "stops go along the player's road cells, not the base map's")
         XCTAssertEqual(
             RoadsOffer.ownRoadsOnly.text(in: .english),
-            "This map has no roads of its own. Turn roads on, then lay your own in the Buses tool and run buses on them."
+            "This map has no roads of its own. Turn roads on, then lay your own in the Transit tool and run buses on them."
         )
-        XCTAssertEqual(RoadsOffer.ownRoadsOnly.text(in: .traditionalChinese), "這張地圖沒有現成的道路。打開後，可以在「公車」工具自己鋪路，再開公車。")
+        XCTAssertEqual(RoadsOffer.ownRoadsOnly.text(in: .traditionalChinese), "這張地圖沒有現成的道路。打開後，可以在「接駁」工具自己鋪路，再開公車。")
     }
 
     /// The real railways the Pingxi challenge and the real-world demo are

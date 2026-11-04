@@ -106,6 +106,8 @@ public struct WorldRegion: Hashable, Sendable {
         // Decision 574: a cable car's stops, so a game with only a cable
         // car opens on it.
         points += world.cableways.flatMap { $0.stops.map { WorldCoordinate(x: $0.cell.middle.x, y: $0.cell.middle.y) } }
+        // Decision 585: and a ferry's piers.
+        points += world.ferryRoutes.flatMap { $0.piers.map { WorldCoordinate(x: $0.middle.x, y: $0.middle.y) } }
         return WorldRegion(enclosing: points)
     }
 

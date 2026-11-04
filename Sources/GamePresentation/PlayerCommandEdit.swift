@@ -177,6 +177,15 @@ extension PlayerCommand {
         case createCableway(stops: [CablewayStop], legMetres: [Int64]? = nil, meetsNear: PlanPoint? = nil)
         case removeCableway(CablewayID)
 
+        // MARK: Ferries (decision 585)
+        /// A ferry route through its piers in order; `legMetres`, one fewer
+        /// than the piers, are a real one's crossings, or none for the
+        /// straight lines between the cells' middles.
+        case createFerryRoute(piers: [BusStop], legMetres: [Int64]? = nil, service: BusService, boats: Int)
+        case setFerryBoats(FerryRouteID, boats: Int)
+        case setFerryRuns(FerryRouteID, BusService)
+        case removeFerryRoute(FerryRouteID)
+
         /// A bus stop's land cell; a road's too (decision 438).
         public struct BusStop: Hashable, Sendable, Codable {
             public let row: Int
@@ -365,6 +374,11 @@ extension GameSession {
         case .removeRoads(let cells): try world.removeRoads(cells.map(\.cell))
         case .createCableway(let stops, let legMetres, let meetsNear): try world.createCableway(stops: stops, legMetres: legMetres, meetsNear: meetsNear)
         case .removeCableway(let id): try world.removeCableway(id)
+        case .createFerryRoute(let piers, let legMetres, let service, let boats):
+            try world.createFerryRoute(piers: piers.map(\.cell), legMetres: legMetres, service: service, boats: boats)
+        case .setFerryBoats(let id, let boats): try world.setFerryBoats(id, to: boats)
+        case .setFerryRuns(let id, let service): try world.setFerryRuns(id, to: service)
+        case .removeFerryRoute(let id): try world.removeFerryRoute(id)
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
 

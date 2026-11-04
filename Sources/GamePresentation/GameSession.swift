@@ -646,6 +646,17 @@ public final class GameSession {
     /// ``cablewayPreview``, kept for the stops and the money it was
     /// worked out for: the map reads it many times a frame.
     @ObservationIgnored var cablewayPreviewMemo: (key: CablewayPreviewKey, preview: CablewayPreview)?
+    /// Decision 585 (PR-2): the piers the transit tool's ferry mode has
+    /// picked, in order, the real crossings' metres when they came from a
+    /// real ferry (``traceRealFerry(_:)``), and the boats and headway the
+    /// route opens with; nothing is built until ``buildFerryRoute()``.
+    public internal(set) var ferryDraft: [CellPosition] = []
+    public internal(set) var ferryDraftLegs: [Int64]?
+    public internal(set) var ferryDraftBoats = 2
+    public internal(set) var ferryDraftMinutesApart: Int64 = 15
+    /// ``ferryPreview``, kept for the piers and the money it was worked
+    /// out for.
+    @ObservationIgnored var ferryPreviewMemo: (key: FerryPreviewKey, preview: FerryPreview)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
