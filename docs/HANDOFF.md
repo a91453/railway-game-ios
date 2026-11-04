@@ -308,6 +308,8 @@
   - 不要憑記憶說版本號，查 `testflight.yml` 的 run。2026-10-16 把 66.1 當成 64.1。
   - 發版前要收工時，叫 session「做完再停」，不要叫它把做一半的東西留給之後（作者 2026-10-16：「記得不要暫停讓他們做完」「不要限制 可以任意開 pr 但就是收工」）。
   - session 停下來，不一定是因為發版。重開之前先讀那個 session 自己的紀錄與 #231。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
+  - **改前截圖不開另一個分支**（作者 2026-11-04：「好 寫進HANDOFF」）：session 和規劃都刪不掉分支（session 的 git 被擋 403，規劃的 `gh api` 刪 ref 被自動模式當成破壞性操作擋下，允許規則也解不開），每個 `*-before` 分支都要作者自己刪（例：`claude/platstop-before`、`claude/route-draw-clutter-before`、`sunpcf-before`、`claude/curve2d-screenshot-before`）。所以派工單寫明：要改前改後對照時，**先在 PR 自己的分支只推截圖場景與 `WebsiteScreenshotTests` 那一個 commit**（這時分支＝main＋截圖場景），在那個分支跑 `website-screenshots.yml` 拍改前，再推真正的改動、拍改後。不另開 `-before`、`-at-<sha>` 之類的分支或 tag。已經開了的，在交接寫上請作者刪。
+  - **已合併的分支**（作者 2026-11-04）：repo 設定已打開「Automatically delete head branches」，PR 一合併分支就自動刪。以前留下的約 1,600 個，由作者在 Actions 頁面手動按 `prune-merged-branches.yml`（#1774；預設 dry run 只列出）。session 用的是作者的帳號，GitHub 分不出誰按的，所以**session 和規劃都不按這個 workflow**。
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
   - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256；2026-10-17：#774 與 #776 都用 271，照登記先後 #776 改成 272）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
 
@@ -321,12 +323,18 @@
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
     - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
     - **預設「中」**（作者 2026-11-03：「好 預設中 需要高的你跟我說」）：實作 session 一律維持中，只有上面三種在派工當下跟作者說「這個請改高」並寫上 session 標題；量測、抓資料、改 CI、照現成寫法的小畫面、只寫文件都用中。
+    - **代開時一定指定 repo**（作者 2026-11-04：「規劃代開下一任時，一定要指定 repo」）：
+      - 起因：第 44 任用 `create_session` 開第 45 任時沒帶 `source_url`，新 session 沒掛任何 repo。`add_repo`、`gh api` 的留言、合併、取消 run 都被自動模式擋下，111.1 的收尾只好交回第 44 任。直到作者在新 session 說「把 railway-game-ios 加進來（push）」與「在 GitHub 留言、合併 PR、啟動 CI 都可以做」才放行；取消 run 那時沒說，仍被擋。
+      - 做法（作者 2026-11-04：「直接接手的時候就有完整權限」）：作者在 `main` 的 `.claude/settings.json` 加了 `permissions.allow`：`Bash(gh api:*)`、`mcp__claude-code-remote__add_repo`、`mcp__claude-code-remote__subscribe_pr_activity`（#1773）。`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`，新 session 就會載入這份設定，留言、合併、起 workflow、取消 run 都不用作者再說話。session 自己改不了這個檔（自動模式擋「修改自己的權限」），要改只能作者改。允許規則能不能讓自動模式不擋，下一個新 session 才驗證得到（第 45 任開工時這份設定還沒有）。
+      - 這份設定對所有 session 都有效，實作 session 也拿得到 `gh api`；它們不合併、不取消別人的 run，靠的是 CLAUDE.md 的規則。
+      - 新任開工第一件事是在 #1579 登記，順便確認寫得進 GitHub。被擋就馬上告訴作者，不要等到要合併或發版時才發現。
     - 下面 2026-10-24 那條只在快到第 7 層時適用。
     - 規劃自己開下一任後，在 #1041 和對話裡請作者到 app 把新 session 的強度改成「高」；作者不方便改時，就請作者從 claude.ai 開。實作 session 不用改強度（作者 2026-10-27：「結果還是需要我自己改高」）。
   - **實作 session 照難易度選模型**（2026-10-27，作者：「根據派工單難易度 給session決定opus 或是sonnet」）：`create_session` 的 `model` 一定要寫，不寫就沿用規劃的 Opus。
     - `claude-sonnet-5-5`：只寫文件、研究整理、抓資料、照現成寫法的小 UI 改動、單純的測試或 workflow 調整。
     - `claude-opus-5-5`：動 GameCore、決定性或存檔，新決策要寫程式的，3D、美術、聲音，難查的 bug 和 CI 紅。拿不準就選 Opus。
-    - 派工單和 #1041 的登記寫上用了哪個模型。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
+    - 派工單和 #1041 的登記寫上用了哪個模型。
+    - **先拆再選**（作者 2026-11-04：「之前不是要你根據難易度用sonnet或是opus嗎怎麼全部給我opus」）：第 45 任把 DEPOTLINK（鋪機廠自動選路線＋「回報問題」補說明）整件給 Opus，其中補說明只是文字。一件派工裡混了難的和簡單的，把簡單的（文字、照現成寫法的小畫面、workflow）拆成另一個 Sonnet session；派工單寫一句「選這個模型的理由」。「新決策要寫程式」不是一律 Opus：只動 GamePresentation 的小規則、照現成函式就能做的，也可以 Sonnet。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
   - **下一任由作者從 claude.ai 直接開，不要由 session 用 `create_session` 開**（2026-10-24）：session 開的 session 會多一層，到第 8 層就不能再 `create_session`、`send_later`、建排程（session_01PGibJmGNcvu2d7dJWWhWVb 就是第 8 層，只剩合併、留言、`send_message`），規劃就不能派工。換手時前任把交接寫進 §2.0、開文件 PR，再請作者在 claude.ai 開一個新 session，貼上一句「你是遊戲規劃兼派工，照 docs/HANDOFF.md §1 與 §2.0 最上面一段接手」。實作 session 照舊由規劃開（規劃那時是第 1 層，實作是第 2 層）。
 
 ### 1.2 合併與發版的檢查
@@ -498,7 +506,7 @@
   - HEALTH-110 第 1 項：文湖擬實 281/532 班誤點超過 5 分，等 WENHUSIDE-2 合了重量。
   - 玩家回報複線＋號誌站、月台最大仍死結：已請玩家用「回報問題」附存檔，收到就派除錯（可能和 AUTOXO-2 同源）。
 - **111.1 之後的新功能順序**（作者同意）：台灣節慶（§22 第 20 項）→ 纜車 → 渡輪 → 飛機（機場樞紐、自動航班，不是玩家經營航空公司）。一次一種，都動 GameCore、升存檔。之後還有 7b 馬達聲。作者不要把介面摺疊起來。
-- **號碼**：556、562、564、565、566、567、568、569、570、571 已用或保留；**下一個 572**。存檔 82 保留給 #1767；golden schema 78 需要時。
+- **號碼**：556、562、564、565、566、567、568、569、570、571 已用或保留；**下一個 572**（第 45 任：572 OLDXO、573 DEPOTLINK 已保留，下一個 574）。存檔 82 保留給 #1767；golden schema 78 需要時。
 - **固定三件事這一輪**：審查 REVIEW-L8（到 #1759）、除錯 HEALTH-110；CI 優化上一輪 CIOPT-6。發 111.1 之後照 §1.1 再派。
 
 **第 44 任接回（2026-11-03 14:10 UTC，session_01YGNNukw5koUxDsjkSBmJJy，作者在 claude.ai 開的，第 0 層）**：照下面「pro 交回第 44 任」接手；兩段不同時以這段為準。
@@ -536,7 +544,7 @@
   4. **CRASHSWEEP 剩下的**：`ContentView`、`MapView`、`TutorialOverlay` 的整頁 `GeometryReader`，以及 `Chart { ForEach }`（細節在 §4.44）。
   5. 決策 554（海風號山嵐號）與 552（文湖線）各自「下一步」裡的項目。
   6. 網友提的「用手機 GPS 顯示自己在哪條線上」只記下，沒排。
-- **作者要刪的 branch**（session 被擋、規劃也被擋）：`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`（都指向 main 上已有的 commit）、`sunpcf-before`（SUNPCF 改前截圖用）。
+- **作者要刪的 branch**：作者 2026-11-04 已全部刪掉（`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`、`sunpcf-before`、`claude/curve2d-screenshot-before`、`claude/platstop-before`、`claude/route-draw-clutter-before`）。
 - **Antigravity**：作者電腦上的，規劃接不了；它做的 PR（如 #1734）照一般 PR 審、合。
 
 **第 44 任交給 pro（2026-11-02 約 15:20 UTC，session_01YGNNukkhfPybvPTy9Pnp8C，作者開的，週額度剩 2%，2026-11-03 22:00 台灣時間重置）**：作者請另一個帳號（pro）**當一天遊戲規劃**（同角色：派工、審查、合併、發版前檢查），額度重置後交回。不開新 session（作者：「不要再做新session了」）。
@@ -615,7 +623,7 @@
 - **106 的說明**：玩家看得到的 PR 合了，就補 WhatsNew 最前面那則與 `.github/testflight-whats-new.md`。目前有 #1695 2D 彎道車廂。
 - **號碼**：決策 542（#1698）、543（#1696）已留，544 已用，下一個 545。存檔下一個 81，golden schema 下一個 77。取號前先查 #1579。
 - **排程**：第 42 任的巡查已刪；第 43 任自己排。
-- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 留給作者刪。
+- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 作者 2026-11-04 已刪。
 
 **第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
 
