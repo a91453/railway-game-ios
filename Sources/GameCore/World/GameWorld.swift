@@ -212,6 +212,12 @@ public struct GameWorld: Equatable, Sendable {
     public internal(set) var busRoutes: [BusRoute] = []
     /// The next bus route's number.
     public internal(set) var nextBusRouteID = 1
+    /// The company's cableways (decision 574), by ascending number; none in
+    /// a new world and in saves from before them (save version 83). Set by
+    /// ``createCableway(stops:legMetres:)`` and ``removeCableway(_:)`` only.
+    public internal(set) var cableways: [Cableway] = []
+    /// The next cableway's number.
+    public internal(set) var nextCablewayID = 1
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -1278,6 +1284,13 @@ public struct GameWorld: Equatable, Sendable {
         let closing = Set(busRoutes.filter { $0.station == id }.map(\.id))
         busRoutes.removeAll { closing.contains($0.id) }
         acquisitions.removeAll { $0.busRoute.map(closing.contains) ?? false }
+        // Decision 574: a cableway meeting it meets none until the land is
+        // shared out again.
+        for index in cableways.indices where cableways[index].transfer?.station == id {
+            cableways[index].transfer = nil
+            cableways[index].feederTrips = 0
+            cableways[index].feederMinutes = 0
+        }
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
@@ -2177,6 +2190,8 @@ public struct GameWorld: Equatable, Sendable {
         copy.color = original.color
         // Decision 155: a freight line's copy carries freight too.
         copy.isFreight = original.isFreight
+        // Decision 564: and keeps to the same side.
+        copy.keepsRight = original.keepsRight
         copy.runs = original.runs
         copy.runDays = Array(repeating: nil, count: original.runs.count)
         nextLineID = nextID
@@ -2491,6 +2506,16 @@ public struct GameWorld: Equatable, Sendable {
                 lines[index].patterns[pattern].trains.removeAll { !climbers.contains($0) }
             }
         }
+    }
+
+    /// Makes line `id` keep to the right on double track, or to the left
+    /// again (decision 564; ``ServiceLine/keepsRight``). Free. A train
+    /// already on its way keeps the route it was given.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func setLineKeepsRight(_ id: LineID, to keepsRight: Bool) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        lines[index].keepsRight = keepsRight
     }
 
     /// Makes line `id` a freight line, or a passenger line again. Free.
@@ -4962,7 +4987,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, cableways, nextCablewayID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -5134,6 +5159,8 @@ extension GameWorld: Codable {
         }
         busRoutes = try container.decodeIfPresent([BusRoute].self, forKey: .busRoutes) ?? []
         nextBusRouteID = try container.decodeIfPresent(Int.self, forKey: .nextBusRouteID) ?? 1
+        cableways = try container.decodeIfPresent([Cableway].self, forKey: .cableways) ?? []
+        nextCablewayID = try container.decodeIfPresent(Int.self, forKey: .nextCablewayID) ?? 1
         // Decision 528: a purchase whose line or bus route was removed
         // before it went with it is dropped, so the real line is on sale
         // again; nothing is paid back or booked again. One naming a number
@@ -5307,6 +5334,12 @@ extension GameWorld: Codable {
         }
         if nextBusRouteID != 1 {
             try container.encode(nextBusRouteID, forKey: .nextBusRouteID)
+        }
+        if !cableways.isEmpty {
+            try container.encode(cableways, forKey: .cableways)
+        }
+        if nextCablewayID != 1 {
+            try container.encode(nextCablewayID, forKey: .nextCablewayID)
         }
         if cityFootprints {
             try container.encode(true, forKey: .cityFootprints)
@@ -5583,7 +5616,7 @@ extension GameWorld: Codable {
         }
         return land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
             ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds)
-            ?? busRoutesProblem()
+            ?? busRoutesProblem() ?? cablewaysProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

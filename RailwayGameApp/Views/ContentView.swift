@@ -266,25 +266,23 @@ struct ContentView: View {
                     screen.panel = .goals
                 }
             }
-            .sheet(isPresented: Binding(get: { lessonResult != nil }, set: { if !$0 { lessonResult = nil } })) {
-                if let result = lessonResult {
-                    LessonResultCard(
-                        result: result, language: session.language,
-                        next: {
-                            lessonResult = nil
-                            if let next = result.next { launcher.startLesson(next) }
-                        },
-                        again: {
-                            lessonResult = nil
-                            launcher.startLesson(Lesson.all[result.lesson - 1])
-                        },
-                        keepPlaying: {
-                            lessonResult = nil
-                            session.keepPlaying()
-                        }
-                    )
-                    .presentationDetents([.medium, .large])
-                }
+            .sheet(item: $lessonResult) { result in
+                LessonResultCard(
+                    result: result, language: session.language,
+                    next: {
+                        lessonResult = nil
+                        if let next = result.next { launcher.startLesson(next) }
+                    },
+                    again: {
+                        lessonResult = nil
+                        launcher.startLesson(Lesson.all[result.lesson - 1])
+                    },
+                    keepPlaying: {
+                        lessonResult = nil
+                        session.keepPlaying()
+                    }
+                )
+                .presentationDetents([.medium, .large])
             }
             // Decision 315: a real branch line offered, and in the same
             // sheet the card its purchase ends on. Decision 497: open while

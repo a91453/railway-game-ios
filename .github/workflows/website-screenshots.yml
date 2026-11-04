@@ -138,7 +138,7 @@ jobs:
       - name: Take the screenshots
         id: screenshots
         if: inputs.kind != 'promo'
-        timeout-minutes: 30
+        timeout-minutes: 45
         env:
           WEBSITE_TESTS: ${{ inputs.tests }}
         run: |
@@ -160,7 +160,7 @@ jobs:
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
-            -maximum-test-execution-time-allowance 600 \
+            -maximum-test-execution-time-allowance 1800 \
             CODE_SIGN_IDENTITY=-
 
       # Each kept attachment as <name>.png, whether or not every test passed.

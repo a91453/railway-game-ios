@@ -623,6 +623,13 @@ extension GameError {
                 "This line runs on mountain track, which only a mountain train such as the Alishan Forest Railway's can climb. Choose that type.",
                 "這條路線有登山軌道，只有阿里山林鐵這類登山列車爬得上去。請改用登山車種。"
             )
+        case .unknownCableway:
+            language.text("That cableway no longer exists.", "這條纜車已經不在了。")
+        case .invalidCableway:
+            language.text(
+                "A cableway needs 2 to 8 stops with stations at both ends, each span at most 5 km.",
+                "纜車要有 2 到 8 站，兩端都是車站，每段最長 5 公里。"
+            )
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:

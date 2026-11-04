@@ -169,12 +169,11 @@ final class DepotToolsTests: XCTestCase {
         session.tapNetwork(at: PlanPoint(x: 16_384, y: 8_192), reach: 64)
         session.addDepotYard()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        // Decision 573: the only line it serves keeps it at once.
         session.selectLine(main)
         let row = try XCTUnwrap(session.selectedLineDepotRow)
         XCTAssertNil(row.problem)
         let depot = try XCTUnwrap(row.choices.first).station
-        session.toggleSelectedLineDepot(depot)
-        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertEqual(session.world.line(id: main)?.depot, depot)
         XCTAssertEqual(session.selectedLineDepotRow?.chosen, [depot])
 

@@ -14,6 +14,7 @@ struct TourismPanel: View {
     /// The sight tapped on the map (``SightFocus``), or `nil` from the menu.
     var focus: AttractionID?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var marked: AttractionID?
 
     var body: some View {
@@ -77,9 +78,9 @@ struct TourismPanel: View {
                     marked = target
                     // Once the sheet has laid its rows out.
                     try? await Task.sleep(for: .milliseconds(150))
-                    withAnimation { proxy.scrollTo(target, anchor: .top) }
+                    withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .top) }
                     try? await Task.sleep(for: .seconds(SightFocus.highlightSeconds))
-                    withAnimation { marked = nil }
+                    withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { marked = nil }
                 }
             }
             .navigationTitle(Text(verbatim: language.text("Sights", "觀光景點")))
