@@ -60,16 +60,30 @@ final class Map3DModelPackLockTests: XCTestCase {
     /// (`hashes.lock.json`).
     func testTheOrderAndTheLampsAreAsBefore() {
         let pack = Map3DModelPack.standard
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "27484d82f073fb79")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "25d1ff1a4a7bd8cd")
-        let lamps = pack.lights.keys.sorted().map { index -> String in
-            let car = pack.lights[index]!
-            let vertices = car.front.head + car.front.tail + car.back.head + car.back.tail
-            let model = Map3DModelPack.Model(name: "", vertices: vertices, minimum: .zero, maximum: .zero)
-            return "\(index) \(car.windows ?? -1) \(Self.hash(model))"
+        // Decision 575 續 (CABLEMAP): the cable car's 13 models after the
+        // route bus, before the windows' models (which each move 13 on);
+        // with them left out and the windows moved back, all as before.
+        let cable = Set(Map3DCableCar.drawn.map(\.name))
+        let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
+        let before = pack.models.filter { !cable.contains($0.name) }
+        XCTAssertEqual(Self.digest(before.map(\.name)), "27484d82f073fb79")
+        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "25d1ff1a4a7bd8cd")
+        XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "77335e9dffb1b9a1")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "ecb430ba00d6283")
+        func lamps(movingBack moved: Int) -> [String] {
+            pack.lights.keys.sorted().map { index -> String in
+                let car = pack.lights[index]!
+                let vertices = car.front.head + car.front.tail + car.back.head + car.back.tail
+                let model = Map3DModelPack.Model(name: "", vertices: vertices, minimum: .zero, maximum: .zero)
+                let windows = car.windows.map { $0 > firstCable ? $0 - moved : $0 } ?? -1
+                return "\(index) \(windows) \(Self.hash(model))"
+            }
         }
-        XCTAssertEqual(lamps.count, 370)
-        XCTAssertEqual(Self.digest(lamps), "7da72c10c44b91fb")
+        XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
+        XCTAssertEqual(lamps(movingBack: 0).count, 370)
+        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count)), "7da72c10c44b91fb")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "9387d0b5ab4ef3e7")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a422495a9c229fba")
     }
 
