@@ -528,6 +528,7 @@
   - **113.1 先開的**：FERRY session_01YGNNuq9mMU5enSXVHDB56q（`claude/ferry`，決策 **585**、存檔 **85**；NEXT_PRIORITIES §24.5 第 1 項：「公車」鈕改「接駁」分公車／渡輪、接決策 579 的渡輪與碼頭 studies、車庫改「圖鑑」分頁；PR-1 動 GameCore）；REVIEW-L9 session_01YGNNundD2a5m59NVZtGmcG（審 #1760–#1802，報告 `docs/archive/PR1760_1802_REVIEW_HANDOFF.md`）；HEALTH-112 session_01YGNNumT2ZTmGxCGuTCkBSH（`bef26cae` 發版後健檢，13 條可收購線與示範，逐分與最高速各兩天，對照 #1761）。CIOPT 這輪不開（CIOPT-7 #1794 今天剛做）。
   - 已封存：CABLE-2、MACSETUP、CABLEMAP、WHATSNEW-112、FOLLOWVIEW-2 等。做完的 session 就封存。
 - **作者要刪的 branch**：`claude/follow-window-diag`（session 刪不了）。
+- **待派：文湖擬實第二天誤點**（HEALTH-112，[報告](research/HEALTH_112_2026-11-04.md) §4 第 1 項；HEALTH-110 4.1）：WENHUSIDE（決策 564）合併後重量仍是 281/532 班晚超過 5 分，逐分與最高倍速一樣；GameCore 名額空出來就派（第 47 任）。重現（release，約 40 分；紅在 `trips more than five minutes late`）：`swift build -c release -Xswiftc -enable-testing --build-tests` 後 `DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=wenhu DEPOT_RETURN_FAST=1 DEPOT_RETURN_STRICT=1 .build/out/Products/Release-linux-x86_64/GamePresentationTests-test-runner GamePresentationTests.DepotReturnReportTests/testTheWenhuLine`。
 - **沒派的**：決策 574 纜車卡片捲動、貓空「動物園」站被上方列蓋住；575 下一步（地形、車站近景、實機 fps）；578 車窗左右選擇與閃爍；577 下一步；FLANE8 留下的偶發（教學現金重疊、Finance 甜甜圈逾時、效能選單）；渡輪之後依序：國道客運 → 飛機（§24.5）。
 - **號碼**：583 CABLEFOLLOW、584 NEWBIE-PLACE、585 FERRY 保留；**下一個 586**。存檔 85 保留給 FERRY，**下一個 86**（main 是 84）。
 
