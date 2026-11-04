@@ -153,6 +153,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// follow a bus. One shot a test, as the leaned views.
     func testFollowBusAboveBehind() { shootFollowBus("aboveBack", "follow-bus-above") }
     func testFollowBusCab() { shootFollowBus("cab", "follow-bus-cab") }
+    func testFollowBusSide() { shootFollowBus("side", "follow-bus-side") }
 
     private func shootFollowBus(_ view: String, _ name: String) {
         let app = launch(extra: ["-screenshot-scene", "followBus", "-screenshot-follow-bus", "-map3DFollowView", view,
