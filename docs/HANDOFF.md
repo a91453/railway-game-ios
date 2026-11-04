@@ -540,7 +540,7 @@
   4. **CRASHSWEEP 剩下的**：`ContentView`、`MapView`、`TutorialOverlay` 的整頁 `GeometryReader`，以及 `Chart { ForEach }`（細節在 §4.44）。
   5. 決策 554（海風號山嵐號）與 552（文湖線）各自「下一步」裡的項目。
   6. 網友提的「用手機 GPS 顯示自己在哪條線上」只記下，沒排。
-- **作者要刪的 branch**（session 被擋、規劃也被擋）：`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`（都指向 main 上已有的 commit）、`sunpcf-before`（SUNPCF 改前截圖用）。
+- **作者要刪的 branch**：作者 2026-11-04 已全部刪掉（`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`、`sunpcf-before`、`claude/curve2d-screenshot-before`、`claude/platstop-before`、`claude/route-draw-clutter-before`）。
 - **Antigravity**：作者電腦上的，規劃接不了；它做的 PR（如 #1734）照一般 PR 審、合。
 
 **第 44 任交給 pro（2026-11-02 約 15:20 UTC，session_01YGNNukkhfPybvPTy9Pnp8C，作者開的，週額度剩 2%，2026-11-03 22:00 台灣時間重置）**：作者請另一個帳號（pro）**當一天遊戲規劃**（同角色：派工、審查、合併、發版前檢查），額度重置後交回。不開新 session（作者：「不要再做新session了」）。
@@ -619,7 +619,7 @@
 - **106 的說明**：玩家看得到的 PR 合了，就補 WhatsNew 最前面那則與 `.github/testflight-whats-new.md`。目前有 #1695 2D 彎道車廂。
 - **號碼**：決策 542（#1698）、543（#1696）已留，544 已用，下一個 545。存檔下一個 81，golden schema 下一個 77。取號前先查 #1579。
 - **排程**：第 42 任的巡查已刪；第 43 任自己排。
-- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 留給作者刪。
+- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 作者 2026-11-04 已刪。
 
 **第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
 
