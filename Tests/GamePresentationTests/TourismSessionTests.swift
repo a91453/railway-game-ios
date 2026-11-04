@@ -39,7 +39,7 @@ final class TourismSessionTests: XCTestCase {
         for skipped in ["s03", "s05", "s10", "s13", "s14", "s19", "s22", "s24"] {
             XCTAssertFalse(ids.contains(skipped), skipped)
         }
-        XCTAssertEqual(AttractionCatalog.spots.count, 214, "decision 250: 25 and 189 more")
+        XCTAssertEqual(AttractionCatalog.spots.count, 215, "decision 250: 25 and 189 more; decision 589: Bali")
         XCTAssertEqual(Set(AttractionCatalog.spots.map(\.kind)), Set(AttractionKind.allCases), "the hot springs are added")
         XCTAssertTrue(AttractionCatalog.spots.allSatisfy { (100...500).contains($0.stars) && $0.latitude > 21.5 && $0.latitude < 25.5 })
         XCTAssertEqual(ids.count, AttractionCatalog.spots.count, "each once")
@@ -47,7 +47,7 @@ final class TourismSessionTests: XCTestCase {
         // Decision 250: the sights added stay below the alert bubbles'
         // rating, so the map asks for no more lines than before.
         let added = AttractionCatalog.spots.filter { $0.id.hasPrefix("t") }
-        XCTAssertEqual(added.count, 189)
+        XCTAssertEqual(added.count, 190)
         XCTAssertTrue(added.allSatisfy { (200...350).contains($0.stars) && $0.stars < GameWorld.alertedSightStars })
         XCTAssertLessThanOrEqual(AttractionCatalog.spots.count, Tourism.maximumAttractions, "the whole of Taiwan holds them all")
     }

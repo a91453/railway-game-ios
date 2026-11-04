@@ -251,6 +251,8 @@ public enum AttractionCatalog {
         Spot("t187", "苑裡藺草文化館", "Yuanli Rush Weaving Museum", .town, 200, 24.414, 120.651),
         Spot("t188", "初鹿牧場", "Chulu Ranch", .mountain, 250, 22.802, 121.074),
         Spot("t189", "雲中街生活聚落", "Yunzhong Street Settlement", .town, 200, 23.70835, 120.53995),
+        // Decision 589: the Bali end of the Tamsui–Bali ferry.
+        Spot("t190", "八里渡船頭老街", "Bali Old Street", .town, 250, 25.15853, 121.4348),
     ]
 
     /// The spots that lie inside a world of `bounds` laid over the Earth as

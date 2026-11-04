@@ -30,11 +30,12 @@
 /// by train to ``station``, then on by ``feeder``
 /// (``GameWorld/feederAccess(to:onDay:)``).
 struct FeederAccess: Hashable, Sendable {
-    /// What takes them on from the station: a cableway, or since
-    /// decision 587 a bus route.
+    /// What takes them on from the station: a cableway, since decision
+    /// 587 a bus route, or since decision 589 a ferry route.
     enum Feeder: Hashable, Sendable {
         case cableway(CablewayID)
         case bus(BusRouteID)
+        case ferry(FerryRouteID)
     }
 
     let station: StationID
@@ -600,8 +601,10 @@ extension GameWorld {
     /// ended (``TouristFlows/feederRides``), to each cableway's riders of
     /// that day, before it is settled; since decision 587 to each bus
     /// route's too, whose riders stay at most what its buses hold
-    /// (``BusRoute/dailyCapacity``) when it is settled. In management mode
-    /// only, as the riders from the trains.
+    /// (``BusRoute/dailyCapacity``) when it is settled; since decision 589
+    /// to each ferry route's, at most what its boats hold
+    /// (``FerryRoute/dailyCapacity(onDay:)``). In management mode only, as
+    /// the riders from the trains.
     mutating func countFeederRides(_ rides: [FeederAccess.Feeder: Int64]) {
         guard accounts.mode == .management, !rides.isEmpty else { return }
         for index in cableways.indices {
@@ -611,6 +614,10 @@ extension GameWorld {
         for index in busRoutes.indices {
             guard let count = rides[.bus(busRoutes[index].id)], count > 0 else { continue }
             busRoutes[index].ridersToday = min(Self.maximumHourly, busRoutes[index].ridersToday + count)
+        }
+        for index in ferryRoutes.indices {
+            guard let count = rides[.ferry(ferryRoutes[index].id)], count > 0 else { continue }
+            ferryRoutes[index].ridersToday = min(Self.maximumHourly, ferryRoutes[index].ridersToday + count)
         }
     }
 
