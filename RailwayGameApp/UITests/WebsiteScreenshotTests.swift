@@ -1364,19 +1364,40 @@ final class WebsiteScreenshotTests: XCTestCase {
         // only.
         let pinned = app.descendants(matching: .any)["details.scroll.middle"].firstMatch
         let middle = pinned.appears(within: 5) ? pinned : app.descendants(matching: .any)["details.scroll.whole"].firstMatch
-        let shown = app.dragUntilWhollyOnScreen(second, in: middle, drags: 16, at: middle.frame.midX)
+        let shown = scroll(second, into: middle, of: app)
         settle()
         keep("platform-choice", app)
         XCTAssertTrue(shown, "Platform 2 shows")
         let picksFirst = second.isSelected
         let other = picksFirst ? first : second
         if picksFirst {
-            XCTAssertTrue(app.dragUntilWhollyOnScreen(first, in: middle, drags: 16, at: middle.frame.midX), "Platform 1 shows")
+            XCTAssertTrue(scroll(first, into: middle, of: app), "Platform 1 shows")
         }
         other.tap()
         settle()
         XCTAssertTrue(other.isSelected, "The tapped platform is picked")
         keep("platform-choice-picked", app)
+    }
+
+    /// Drags `list`, a short scrolling band, by as far as `row` still lies
+    /// outside it, until the row shows whole: the band's fixed short drags
+    /// moved some 8 pt a time past the touch's slop (run 41885513636).
+    private func scroll(_ row: XCUIElement, into list: XCUIElement, of app: XCUIApplication) -> Bool {
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<12 {
+            let band = list.frame.insetBy(dx: 0, dy: 6)
+            let place = row.frame
+            if row.exists, place.minY >= band.minY, place.maxY <= band.maxY, row.isHittable { return true }
+            let up = !row.exists || place.maxY > band.maxY
+            let gap = row.exists ? (up ? place.maxY - band.maxY : band.minY - place.minY) : band.height
+            let distance = min(max(gap + 16, 24), band.height)
+            let startY = up ? band.maxY - 2 : band.minY + 2
+            let start = origin.withOffset(CGVector(dx: band.midX - app.frame.minX, dy: startY - app.frame.minY))
+            let end = start.withOffset(CGVector(dx: 0, dy: up ? -distance : distance))
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        let band = list.frame.insetBy(dx: 0, dy: 6)
+        return row.exists && row.frame.minY >= band.minY && row.frame.maxY <= band.maxY && row.isHittable
     }
 
     /// Decision 507: the platform mode's layout menu on a double track,
