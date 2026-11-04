@@ -163,6 +163,22 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (111.1)，2026-11-04
+
+從 `main` `273dab2`（#1750 的合併）建置。TestFlight `testflight.yml` run 41743760420（run 111），作者 00:02 UTC 自己按，等 macOS 空位約 20 分（取消了 #1767 的 Website screenshots 與 iOS App Build 讓位），00:44 成功。What to Test 與 App 內「這版新增」是 0.5.0 (111.1)（#1750）。
+
+**這個 commit 的檢查**（作者先發、遊戲規劃後報，HANDOFF §1.2）：
+- 完整 `ci.yml` run 41739320014（workflow_dispatch，273dab2）：綠，23:49 UTC。
+- full lane run 41739324188（`ios-build.yml` 手動，273dab2）：第一次 Xcode build job 紅 1 支（`FinanceCompositionUITests.testTheIncomeAndCostDonutsShowAndTheirRowsAnswerATap`，「The economy panel opens」逾時：那時模擬器慢，地圖 31 秒才出現、點完等閒置 17 秒；和 b43e814、5464210 兩次 full lane 一樣是逾時，沒有斷言結果不對）。重跑失敗的 job 一次：**綠**，01:55 UTC。second、lessons、iPad 三個 job 第一次就綠。
+- 110.1 之後進來的：#1747、#1757、#1758 DAYPASS、#1759 L6FIX、#1761 HEALTH-110、#1762 NEWCAR（決策 566）、#1763 DIESEL（567）、#1765 REVIEW-L8、#1768 AUTOXO（571）、#1750 說明。
+
+**這版請測試者看**：新車抵台卡；跟隨柴油車的引擎聲；在複線上用「月台」工具設站，兩頭會自動加渡線，多放幾列車不再兩頭卡死；一日券午夜結算。
+
+**回報**：
+- 玩家：「按回報問題沒有自動帶入email，不知道要回報去哪？」程式沒有收件人，只開分享選單。五方決定：程式裡不放 email（repo 公開），在回報畫面寫清楚 TestFlight 測試者怎麼送。派 DEPOTLINK（決策 573，session_01YGNNuoWbBvCiDrgKwADV7x）。
+- 同一位玩家：「渡線的問題，不知道能不能夠在蓋車站時，在車站前後的軌道自動帶入？因為我現在有兩列車了，但第三列車還是加不進來」。111.1 起新設的複線月台會加渡線（決策 571），但已經蓋好的站與「升級為複線」不會。派 OLDXO（決策 572，session_01YGNNum5m8pAyi87KoX3iP7）。手動放車兩頭互卡的另一半由 AUTOXO-2（決策 571 續）處理。
+- 玩家：「車站後面放機庫，但是停運的時候列車會停在車站，不會停去後面的機庫，導致其他列車會一直顯示等候」。鋪好機廠後沒有替路線選所屬機廠（完成字只寫「到路線面板替路線選這個機廠」）。回覆玩家到「路線 → 所屬機廠」勾選；並派 DEPOTLINK 讓鋪機廠時自動選上。
+
 ### 0.5.0 (110.1)，2026-11-03
 
 從 `main` `2494e5a`（#1749 的合併）建置。TestFlight `testflight.yml` run 41644800997（run 110），作者 13:29 UTC 自己按，14:01 成功。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (110.1)（#1749）。App 內「這版新增」卡片 108.1、109.1、110.1 都沒加，補在 111.1 那一則（#1750）。
