@@ -152,6 +152,11 @@ extension ReferenceWorld {
         guard request.departs, let service = candidate.service, !service.waiting else { return false }
         let start = standing(candidate)
         let target = candidate.timetable[service.stop].station
+        // Decision 570: or the way its line names for the leg, as a
+        // departure takes it when free.
+        if service.stop > 0, let r = routePreference(candidate, from: service.stop - 1, to: service.stop),
+           let path = preferenceRoute(from: start.position!, r, length: Self.length(candidate)),
+           !foul(needs(routed(start, path)).resources, blocked) { return true }
         guard let path = defaultRoute(from: start, to: target),
               let other = alternative(from: start, to: target, default: path, avoiding: blocked)
         else { return false }

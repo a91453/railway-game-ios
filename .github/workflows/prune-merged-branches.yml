@@ -1,0 +1,118 @@
+name: Prune merged branches
+
+# Deletes the branches of pull requests that were merged, by hand only, from
+# the Actions tab (owner, 2026-11-04: 「做一個只能你在 Actions 頁面手動按的
+# workflow」). Since 2026-11-04 the repository deletes a pull request's branch
+# when it is merged ("Automatically delete head branches"); this clears the
+# some 1,600 branches left from before that. Sessions cannot delete branches
+# (their git is refused and auto mode stops a deleting `gh api`), so only the
+# owner presses it. Sessions use the owner's account, so GitHub cannot tell
+# them apart: no session starts this workflow (docs/HANDOFF.md §1.1).
+#
+# A branch is deleted only when all of these hold:
+# - a merged pull request had it as its head, from this repository;
+# - the branch still points at that pull request's last commit, so nothing
+#   was pushed to it after the merge;
+# - no open pull request has it as its head or its base;
+# - it is not main.
+# Branches with no pull request, those of closed (not merged) pull requests,
+# and those with commits after the merge are listed and kept.
+#
+# `dry_run` (on by default) only lists what would go. Branches are deleted
+# with `git push --delete`, a hundred at a time, so the run does not spend the
+# token's API requests (about a thousand an hour) on one call per branch.
+# Deleting a branch does not touch its pull request, and a deleted branch can
+# be restored from the pull request's page.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only list the branches that would be deleted
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: prune-merged-branches
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    name: Delete merged pull requests' branches
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Find and delete
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/prune"
+          mkdir -p "$work"
+
+          # Every branch and the commit it points at.
+          git ls-remote --heads origin | sed 's#refs/heads/##' | awk '{print $2" "$1}' | sort > "$work/branches"
+
+          # Merged pull requests from this repository: head branch and last commit.
+          gh pr list -R "$GITHUB_REPOSITORY" --state merged --limit 5000 \
+            --json headRefName,headRefOid,headRepositoryOwner \
+            -q ".[] | select(.headRepositoryOwner.login == \"${GITHUB_REPOSITORY_OWNER}\") | \"\(.headRefName) \(.headRefOid)\"" \
+            | sort -u > "$work/merged"
+
+          # Branches an open pull request still uses, as head or base.
+          gh pr list -R "$GITHUB_REPOSITORY" --state open --limit 1000 --json headRefName,baseRefName \
+            -q '.[] | .headRefName, .baseRefName' | sort -u > "$work/open"
+
+          : > "$work/delete"; : > "$work/moved"
+          while read -r name sha; do
+            [ "$name" = main ] && continue
+            grep -qxF "$name" "$work/open" && continue
+            merged="$(awk -v n="$name" '$1 == n {print $2}' "$work/merged")"
+            [ -z "$merged" ] && continue
+            if grep -qxF "$sha" <<< "$merged"; then
+              echo "$name" >> "$work/delete"
+            else
+              echo "$name" >> "$work/moved"
+            fi
+          done < "$work/branches"
+
+          total=$(wc -l < "$work/branches")
+          gone=$(wc -l < "$work/delete")
+          moved=$(wc -l < "$work/moved")
+          {
+            echo "### Prune merged branches"
+            echo
+            echo "- Branches: $total"
+            echo "- Merged and unchanged since (deleted unless dry run): $gone"
+            echo "- Merged but with commits after the merge (kept): $moved"
+            echo "- Dry run: $DRY_RUN"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$moved" -gt 0 ]; then
+            { echo; echo "Kept, commits after the merge:"; echo; sed 's/^/- `/; s/$/`/' "$work/moved"; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$DRY_RUN" = true ]; then
+            echo "Dry run: would delete $gone branches."
+            cat "$work/delete"
+            exit 0
+          fi
+
+          # A hundred at a time over git, not one API call each.
+          split -l 100 "$work/delete" "$work/batch."
+          for batch in "$work"/batch.*; do
+            [ -s "$batch" ] || continue
+            # A branch deleted meanwhile fails alone; the rest of the batch still goes.
+            xargs git push --no-verify origin --delete < "$batch" || echo "::warning::Some branches in $(basename "$batch") were not deleted"
+          done
+          echo "Deleted $gone branches."

@@ -118,6 +118,96 @@ final class DoubleTrackDeadlockTests: XCTestCase {
         }
     }
 
+    /// `start` run a day a minute at a time: the legs each train ran, and
+    /// the longest run of minutes some train was in a deadlock.
+    func longestDeadlock(_ start: GameWorld) throws -> (legs: [Int], longest: Int) {
+        var world = start
+        world.setSpeed(.normal)
+        var legs: [TrainID: Int] = [:]
+        var last: [TrainID: Int] = [:]
+        var run = 0
+        var longest = 0
+        for _ in 0..<GameTime.minutesPerDay {
+            try world.advance(ticks: 1)
+            run = world.deadlockedTrains().isEmpty ? 0 : run + 1
+            longest = max(longest, run)
+            for train in world.trains {
+                let stop: Int? = switch train.execution {
+                case .waitingAtStop(let stop, _)?, .travellingToStop(let stop, _)?: stop
+                default: nil
+                }
+                guard let stop, last[train.id] != stop else { continue }
+                if last[train.id] != nil { legs[train.id, default: 0] += 1 }
+                last[train.id] = stop
+            }
+        }
+        return (world.trains.map { legs[$0.id, default: 0] }, longest)
+    }
+
+    /// Decision 571, continued: the player tapped one track at one end and
+    /// the other at the other. The line's two ways cross over at the end
+    /// each sets off from, so each way reaches one berth at each end, and
+    /// under simple rules with traffic control (a new game's) the two
+    /// trains each waited all day for the berth the other stood on (1,065
+    /// minutes). Now the dispatcher sends one to the free berth along the
+    /// other main track, and no deadlock lasts past the minute it looks.
+    func testTwoTrainsOnTracksTappedAtEitherEndRunAllDay() throws {
+        var world = GameWorld.newGame(rules: .simple)
+        world.setSpeed(.normal)
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.network)
+        session.networkBuildsDouble = true
+        session.tapNetwork(at: PlanPoint(x: Self.west, y: Self.y), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: Self.east, y: Self.y), reach: 16)
+        session.buildNetworkTrack()
+        let other = try XCTUnwrap(session.world.network.nodes.map(\.position.y).first { $0 != Self.y })
+        session.setNetworkMode(.platform)
+        for (x, y) in [(Self.west + 2_000, Self.y), (Self.east - 2_000, other)] {
+            session.platformStationID = nil
+            session.tapNetwork(at: PlanPoint(x: x, y: y), reach: 64)
+            session.addNetworkPlatform()
+            XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        }
+        session.selectTool(.select)
+        for station in session.world.stations {
+            session.selectStation(station.id)
+            session.addSelectedStationToLineDraft()
+        }
+        session.createLineFromDraft()
+        let line = try XCTUnwrap(session.world.lines.first).id
+        session.selectLine(line)
+        for _ in 0..<2 where (session.world.line(id: line)?.trains.count ?? 0) < 2 { session.addTrainToSelectedLine() }
+        XCTAssertEqual(session.world.line(id: line)?.trains.count, 2)
+        let day = try longestDeadlock(session.world)
+        XCTAssertLessThanOrEqual(day.longest, 1, "\(day)")
+        for legs in day.legs { XCTAssertGreaterThan(legs, 100, "\(day)") }
+    }
+
+    /// Decision 571, continued: under simple rules with traffic control
+    /// the line runs one train (its round trip is its headway); trains
+    /// bought and set at either end by hand are its spares, standing on a
+    /// berth. The train it runs waited all day for the berth a spare stood
+    /// on (1,074 minutes, no leg run). Now it takes the free one.
+    func testTheRunningTrainPassesSparesSetAtEitherEnd() throws {
+        for count in [2, 3] {
+            let (session, line) = try playerLine(rules: .simple)
+            let stations = session.world.stations.map(\.id)
+            for index in 0..<count {
+                session.purchaseTrain()
+                let train = try XCTUnwrap(session.world.trains.last).id
+                session.selectStation(stations[index % 2])
+                session.selectTrain(train)
+                session.placeSelectedTrain()
+                session.assignTrain(train, toLine: line)
+            }
+            session.selectLine(line)
+            for level in ServiceLevel.allCases { session.setSelectedLineTrains(count, at: level) }
+            let day = try longestDeadlock(session.world)
+            XCTAssertLessThanOrEqual(day.longest, 1, "\(count) trains: \(day)")
+            XCTAssertGreaterThan(day.legs.max() ?? 0, 200, "\(count) trains: \(day)")
+        }
+    }
+
     /// The platform tool on a double track whose tracks never meet says,
     /// before the tap on ✓, that a crossover comes with the platforms, and
     /// draws it; after, that one was laid, and the two tracks then count

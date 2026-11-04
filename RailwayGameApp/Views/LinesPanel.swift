@@ -2498,6 +2498,9 @@ struct LinesPanel: View {
         let language = session.language
         let draft = session.lineDraft
         let stops = session.lineDraftStops
+        // Decision 568: the map's pill says the draft's line and what
+        // opening it brings; the panel keeps the stations.
+        let drawsOnMap = !session.lineDrawingChrome(linesPanelOpen: true).panelShowsSummary
         return Section {
             if draft.isEmpty, let need = session.linesPanelFirstLineNeed {
                 // Decision 508: with no line yet, what this form is for, its
@@ -2512,8 +2515,11 @@ struct LinesPanel: View {
                 .foregroundStyle(Theme.textSecondary)
             } else {
                 // CTM study 4.2 (M0): stops, length, time and price, or
-                // why no track joins them.
-                LineDraftSummaryRow(session: session)
+                // why no track joins them. Decision 568: not while the
+                // map's pill says it, beside the last station picked.
+                if !drawsOnMap {
+                    LineDraftSummaryRow(session: session)
+                }
                 LabeledContent {
                     Text(verbatim: names(draft))
                 } label: {
@@ -2570,7 +2576,7 @@ struct LinesPanel: View {
                 .accessibilityIdentifier("line.draft.stops")
                 // Decision 264: under simple rules, the train and the
                 // passing loop the line opens with, and their price.
-                if let opening = session.lineOpeningPreview {
+                if !drawsOnMap, let opening = session.lineOpeningPreview {
                     Text(verbatim: opening.contentsText(in: language))
                         .font(.footnote.monospacedDigit())
                         .foregroundStyle(Theme.textSecondary)

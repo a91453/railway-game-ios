@@ -308,6 +308,8 @@
   - 不要憑記憶說版本號，查 `testflight.yml` 的 run。2026-10-16 把 66.1 當成 64.1。
   - 發版前要收工時，叫 session「做完再停」，不要叫它把做一半的東西留給之後（作者 2026-10-16：「記得不要暫停讓他們做完」「不要限制 可以任意開 pr 但就是收工」）。
   - session 停下來，不一定是因為發版。重開之前先讀那個 session 自己的紀錄與 #231。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
+  - **改前截圖不開另一個分支**（作者 2026-11-04：「好 寫進HANDOFF」）：session 和規劃都刪不掉分支（session 的 git 被擋 403，規劃的 `gh api` 刪 ref 被自動模式當成破壞性操作擋下，允許規則也解不開），每個 `*-before` 分支都要作者自己刪（例：`claude/platstop-before`、`claude/route-draw-clutter-before`、`sunpcf-before`、`claude/curve2d-screenshot-before`）。所以派工單寫明：要改前改後對照時，**先在 PR 自己的分支只推截圖場景與 `WebsiteScreenshotTests` 那一個 commit**（這時分支＝main＋截圖場景），在那個分支跑 `website-screenshots.yml` 拍改前，再推真正的改動、拍改後。不另開 `-before`、`-at-<sha>` 之類的分支或 tag。已經開了的，在交接寫上請作者刪。
+  - **已合併的分支**（作者 2026-11-04）：repo 設定已打開「Automatically delete head branches」，PR 一合併分支就自動刪。以前留下的約 1,600 個，由作者在 Actions 頁面手動按 `prune-merged-branches.yml`（#1774；預設 dry run 只列出）。session 用的是作者的帳號，GitHub 分不出誰按的，所以**session 和規劃都不按這個 workflow**。
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
   - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256；2026-10-17：#774 與 #776 都用 271，照登記先後 #776 改成 272）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
 
@@ -321,12 +323,18 @@
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
     - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
     - **預設「中」**（作者 2026-11-03：「好 預設中 需要高的你跟我說」）：實作 session 一律維持中，只有上面三種在派工當下跟作者說「這個請改高」並寫上 session 標題；量測、抓資料、改 CI、照現成寫法的小畫面、只寫文件都用中。
+    - **代開時一定指定 repo**（作者 2026-11-04：「規劃代開下一任時，一定要指定 repo」）：
+      - 起因：第 44 任用 `create_session` 開第 45 任時沒帶 `source_url`，新 session 沒掛任何 repo。`add_repo`、`gh api` 的留言、合併、取消 run 都被自動模式擋下，111.1 的收尾只好交回第 44 任。直到作者在新 session 說「把 railway-game-ios 加進來（push）」與「在 GitHub 留言、合併 PR、啟動 CI 都可以做」才放行；取消 run 那時沒說，仍被擋。
+      - 做法（作者 2026-11-04：「直接接手的時候就有完整權限」）：作者在 `main` 的 `.claude/settings.json` 加了 `permissions.allow`：`Bash(gh api:*)`、`mcp__claude-code-remote__add_repo`、`mcp__claude-code-remote__subscribe_pr_activity`（#1773）。`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`，新 session 就會載入這份設定，留言、合併、起 workflow、取消 run 都不用作者再說話。session 自己改不了這個檔（自動模式擋「修改自己的權限」），要改只能作者改。允許規則能不能讓自動模式不擋，下一個新 session 才驗證得到（第 45 任開工時這份設定還沒有）。
+      - 這份設定對所有 session 都有效，實作 session 也拿得到 `gh api`；它們不合併、不取消別人的 run，靠的是 CLAUDE.md 的規則。
+      - 新任開工第一件事是在 #1579 登記，順便確認寫得進 GitHub。被擋就馬上告訴作者，不要等到要合併或發版時才發現。
     - 下面 2026-10-24 那條只在快到第 7 層時適用。
     - 規劃自己開下一任後，在 #1041 和對話裡請作者到 app 把新 session 的強度改成「高」；作者不方便改時，就請作者從 claude.ai 開。實作 session 不用改強度（作者 2026-10-27：「結果還是需要我自己改高」）。
   - **實作 session 照難易度選模型**（2026-10-27，作者：「根據派工單難易度 給session決定opus 或是sonnet」）：`create_session` 的 `model` 一定要寫，不寫就沿用規劃的 Opus。
     - `claude-sonnet-5-5`：只寫文件、研究整理、抓資料、照現成寫法的小 UI 改動、單純的測試或 workflow 調整。
     - `claude-opus-5-5`：動 GameCore、決定性或存檔，新決策要寫程式的，3D、美術、聲音，難查的 bug 和 CI 紅。拿不準就選 Opus。
-    - 派工單和 #1041 的登記寫上用了哪個模型。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
+    - 派工單和 #1041 的登記寫上用了哪個模型。
+    - **先拆再選**（作者 2026-11-04：「之前不是要你根據難易度用sonnet或是opus嗎怎麼全部給我opus」）：第 45 任把 DEPOTLINK（鋪機廠自動選路線＋「回報問題」補說明）整件給 Opus，其中補說明只是文字。一件派工裡混了難的和簡單的，把簡單的（文字、照現成寫法的小畫面、workflow）拆成另一個 Sonnet session；派工單寫一句「選這個模型的理由」。「新決策要寫程式」不是一律 Opus：只動 GamePresentation 的小規則、照現成函式就能做的，也可以 Sonnet。Claude Pro 的模型由作者在 Pro 選，派工單裡寫建議的模型。
   - **下一任由作者從 claude.ai 直接開，不要由 session 用 `create_session` 開**（2026-10-24）：session 開的 session 會多一層，到第 8 層就不能再 `create_session`、`send_later`、建排程（session_01PGibJmGNcvu2d7dJWWhWVb 就是第 8 層，只剩合併、留言、`send_message`），規劃就不能派工。換手時前任把交接寫進 §2.0、開文件 PR，再請作者在 claude.ai 開一個新 session，貼上一句「你是遊戲規劃兼派工，照 docs/HANDOFF.md §1 與 §2.0 最上面一段接手」。實作 session 照舊由規劃開（規劃那時是第 1 層，實作是第 2 層）。
 
 ### 1.2 合併與發版的檢查
@@ -498,7 +506,7 @@
   - HEALTH-110 第 1 項：文湖擬實 281/532 班誤點超過 5 分，等 WENHUSIDE-2 合了重量。
   - 玩家回報複線＋號誌站、月台最大仍死結：已請玩家用「回報問題」附存檔，收到就派除錯（可能和 AUTOXO-2 同源）。
 - **111.1 之後的新功能順序**（作者同意）：台灣節慶（§22 第 20 項）→ 纜車 → 渡輪 → 飛機（機場樞紐、自動航班，不是玩家經營航空公司）。一次一種，都動 GameCore、升存檔。之後還有 7b 馬達聲。作者不要把介面摺疊起來。
-- **號碼**：556、562、564、565、566、567、568、569、570、571 已用或保留；**下一個 572**。存檔 82 保留給 #1767；golden schema 78 需要時。
+- **號碼**：556、562、564、565、566、567、568、569、570、571 已用或保留；**下一個 572**（第 45 任：572 OLDXO、573 DEPOTLINK 已保留，下一個 574）。存檔 82 保留給 #1767；golden schema 78 需要時。
 - **固定三件事這一輪**：審查 REVIEW-L8（到 #1759）、除錯 HEALTH-110；CI 優化上一輪 CIOPT-6。發 111.1 之後照 §1.1 再派。
 
 **第 44 任接回（2026-11-03 14:10 UTC，session_01YGNNukw5koUxDsjkSBmJJy，作者在 claude.ai 開的，第 0 層）**：照下面「pro 交回第 44 任」接手；兩段不同時以這段為準。
@@ -536,7 +544,7 @@
   4. **CRASHSWEEP 剩下的**：`ContentView`、`MapView`、`TutorialOverlay` 的整頁 `GeometryReader`，以及 `Chart { ForEach }`（細節在 §4.44）。
   5. 決策 554（海風號山嵐號）與 552（文湖線）各自「下一步」裡的項目。
   6. 網友提的「用手機 GPS 顯示自己在哪條線上」只記下，沒排。
-- **作者要刪的 branch**（session 被擋、規劃也被擋）：`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`（都指向 main 上已有的 commit）、`sunpcf-before`（SUNPCF 改前截圖用）。
+- **作者要刪的 branch**：作者 2026-11-04 已全部刪掉（`claude/flane7-at-ef92919`、`claude/flane7-at-1b3712f`、`sunpcf-before`、`claude/curve2d-screenshot-before`、`claude/platstop-before`、`claude/route-draw-clutter-before`）。
 - **Antigravity**：作者電腦上的，規劃接不了；它做的 PR（如 #1734）照一般 PR 審、合。
 
 **第 44 任交給 pro（2026-11-02 約 15:20 UTC，session_01YGNNukkhfPybvPTy9Pnp8C，作者開的，週額度剩 2%，2026-11-03 22:00 台灣時間重置）**：作者請另一個帳號（pro）**當一天遊戲規劃**（同角色：派工、審查、合併、發版前檢查），額度重置後交回。不開新 session（作者：「不要再做新session了」）。
@@ -615,7 +623,7 @@
 - **106 的說明**：玩家看得到的 PR 合了，就補 WhatsNew 最前面那則與 `.github/testflight-whats-new.md`。目前有 #1695 2D 彎道車廂。
 - **號碼**：決策 542（#1698）、543（#1696）已留，544 已用，下一個 545。存檔下一個 81，golden schema 下一個 77。取號前先查 #1579。
 - **排程**：第 42 任的巡查已刪；第 43 任自己排。
-- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 留給作者刪。
+- **還沒封存的**：作者自己的「遊戲規劃第 38 任交接」與「遊戲檔案分析與更新」留給作者。暫時分支 `claude/curve2d-screenshot-before` 作者 2026-11-04 已刪。
 
 **第 41 任交給第 42 任（2026-11-02 約 00:50 UTC，session_01YGNNunAdcksLhSB1H1495m，第 3 層，壓縮 3 次）**：第 42 任由第 41 任用 `create_session` 開，是第 4 層（opus 5.5，作者把 effort 設成「高」）。
 
@@ -2902,8 +2910,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 | 3D：擋住列車的建物變透明、深度閃爍、道具穿模、真的台灣車與站房 | F 台灣版＋「定案前要補」 | 3D 生活感那條線之後 |
 | 參考庫 2026-10-18 新增的兩個資料夾，不是新工作，是讓排好的項目省工的素材（照 NEXT_PRIORITIES §16 的順序用，不插隊）。`Railway/taiwan-rail-reference-clean/` 是 `site_archive_clean` 的新版：(1) 高鐵票價表 `source/data/thsr_fare.json`（TDX ODFare，全部站對、票種與車廂；補上 ARCHITECTURE「沒有真實高鐵的票價表」的缺口），給高鐵示範（§16 第 4 項）或「新台幣」那輪（§16 第 5.7 項）；(2) 台鐵時刻表 10-16 版、`thsr_schedule_dense.json`、國土測繪中心的橋隧改判 `rail_structures_official.json` 與較新的 `rail-3d/physical/`（`network.json`、`level-profiles.json` 都和 `site_archive_clean` 不同），給決策 279 的後續與重跑 `tools/real-railways/`、`tools/real-timetables/`；(3) 62 款車型、附出處的編組 `rail-3d/integration/formations.js`、12 個站區模型 `rail-3d/assets/stations/`，給上一行「真的台灣車與站房」。`Railway/world-rail-reference-clean/`：12 個海外城市的路網與班表、120 款車型，可補上上面「台灣以外的實景地圖沒有真實鐵路」那一行；單城班表 26–55 MB，要像平溪線一樣只抽需要的部分，署名照各檔 `source_notes`；`nyc_schedule_dense.lite.json` 的 `source_notes` 寫成 Entur（挪威），用之前先核對 | 參考庫 `058f833`；session_01B2b7QLdd5dVnXNZLmQbcQX 盤點 | (1) 的高鐵票價表已用在高鐵示範：決策 325（session_01YEY1CSzE5zYPKVPqDAMBAy，`claude/hsr-real-fares`，存檔 69），剩下的寫在決策 325「之後」（商務車廂、新台幣那輪換掉 NT$10＝$1）。其他沒有人接；各自跟著它服務的項目做 |
 | 從空地畫的複線兩條之間沒有渡線：玩家在兩站點了不同的一條就不相連（70.1 的回報）。決策 284 只讓開新路線的字說出原因與接法；根本的做法是畫複線時兩端自動加渡線，或「月台」工具在複線上一次設兩條的月台，兩個都改建造規則，預覽寫在決策 284「沒選的」 | 決策 284、285、PLAYER_FEEDBACK 70.1 | **做了**（`claude/double-track-platforms`，決策 285）：選了第二種。「月台」工具點在複線的一條上、而旁邊那條和它不相連時，同一個動作兩條都設月台（同一站），兩站點了不同的一條也相連。兩條已經相連（有渡線）時照舊只設點的那條。剩下：從空地畫複線時兩端自動加渡線（第一種）沒有做，預覽在決策 285「沒選的」；待實機確認 |
-| 一般規則、行車控制開：手動買車放在兩頭再設列數時，線只排 1 列（往返 10 分＝目標班距），多的車是備用車（決策 58）停在月台上，跑的那列要進的月台被占著就整天「互相卡住」。換月台的路在（只長 5 個單位），但 `alternativeRoute` 給 nil，`spareStandingAside` 也找不到；修前就有，用線上的「＋」加車不會遇到 | [決策 571](decisions/571.md)「還沒解決的」，110.1 回報 | AUTOXO（session_01YGNNuptW6LsEWEMiD7BFEf，`claude/double-track-crossovers`）做了月台內側自動渡線，這一項要改 GameCore（`RouteReservation.alternativeRoute`、`Deadlock.spareStandingAside`），沒動；等遊戲規劃排 |
-| 決策 571 之後仍會卡的複線（玩家補充：「複線軌道加號誌站，月台全部使用最大的」）：一般＋行車控制下，兩站點在**不同的一條**（混點），或兩站設好後再「升級為複線」並在站旁加渡線時，兩列在兩頭的月台互等對方占著的月台，一天 1,065 分死結（寫實規則不會：227／170 段）。每頭各一組渡線、或改成每頭一組反向雙渡線都一樣。推測根源在 GameCore：`Terminus.swift:34` 的 `guard blockSections else { return [] }` 讓一般規則沒有終點站豁免，`alternativeRoute` 的對向方向限制把換到空月台的路擋掉（和上一列的備用車是同一個根）。所以 #1768 只在「月台」工具兩條都設月台時加渡線，升級為複線與雙渡線沒放進去（試過的改法：`stationCrossovers(of:in:)` 傳入草稿世界、每頭兩組反向渡線，`doubleTrackUpgrade` 對每站第一個月台呼叫它並併入 `.buildDoubleTrackChain` 的 `crossovers`；混點與升級在一般＋行車控制仍 1,065 分，純複線反而變差 205／153 段，所以沒提交）。量到的（最長月台 16 節）：main 上複線＋號誌站一般＋行車控制死結 171 分，#1768 上 0；純複線與升級在 main 只排 1 列；混點在這個分支是 1,065 分，main 沒量（main 上它沒有渡線，應是只排 1 列，所以不會比 main 更差這點沒驗證） | [決策 571](decisions/571.md)「還沒解決的」，110.1 回報 | AUTOXO 第 2 次壓縮停手，沒動 GameCore；要先改 `Terminus.terminusTraversals`（一般規則也給終點豁免）或 `alternativeRoute` 的方向限制，再把混點與升級的情況加進 `DoubleTrackDeadlockTests`。玩家的存檔還沒拿到，拿到後先重播確認是哪一種配置 |
+| 一般規則、行車控制開：手動買車放在兩頭再設列數時，線只排 1 列（往返 10 分＝目標班距），多的車是備用車（決策 58）停在月台上，跑的那列要進的月台被占著就整天「互相卡住」。換月台的路在（只長 5 個單位），但 `alternativeRoute` 給 nil，`spareStandingAside` 也找不到；修前就有，用線上的「＋」加車不會遇到 | [決策 571](decisions/571.md)「還沒解決的」，110.1 回報 | AUTOXO（session_01YGNNuptW6LsEWEMiD7BFEf，`claude/double-track-crossovers`）做了月台內側自動渡線。**做了**（AUTOXO-2，`claude/terminus-simple-rules`，[決策 571「續」](decisions/571.md)）：死結裡別的辦法都不行時，調度員准該發車的車逆線進同站的空月台（整段保留）；跑的那列一天 215 段（修前 0 段、1,074 分死結）。剩下：每趟進站時有一次不到 1 分鐘的「互相卡住」，見決策 571「續」的下一步 |
+| 決策 571 之後仍會卡的複線（玩家補充：「複線軌道加號誌站，月台全部使用最大的」）：一般＋行車控制下，兩站點在**不同的一條**（混點），或兩站設好後再「升級為複線」並在站旁加渡線時，兩列在兩頭的月台互等對方占著的月台，一天 1,065 分死結（寫實規則不會：227／170 段）。每頭各一組渡線、或改成每頭一組反向雙渡線都一樣。推測根源在 GameCore：`Terminus.swift:34` 的 `guard blockSections else { return [] }` 讓一般規則沒有終點站豁免，`alternativeRoute` 的對向方向限制把換到空月台的路擋掉（和上一列的備用車是同一個根）。所以 #1768 只在「月台」工具兩條都設月台時加渡線，升級為複線與雙渡線沒放進去（試過的改法：`stationCrossovers(of:in:)` 傳入草稿世界、每頭兩組反向渡線，`doubleTrackUpgrade` 對每站第一個月台呼叫它並併入 `.buildDoubleTrackChain` 的 `crossovers`；混點與升級在一般＋行車控制仍 1,065 分，純複線反而變差 205／153 段，所以沒提交）。量到的（最長月台 16 節）：main 上複線＋號誌站一般＋行車控制死結 171 分，#1768 上 0；純複線與升級在 main 只排 1 列；混點在這個分支是 1,065 分，main 沒量（main 上它沒有渡線，應是只排 1 列，所以不會比 main 更差這點沒驗證） | [決策 571](decisions/571.md)「還沒解決的」，110.1 回報 | AUTOXO 第 2 次壓縮停手，沒動 GameCore。**混點做了**（AUTOXO-2，`claude/terminus-simple-rules`，[決策 571「續」](decisions/571.md)）：量到擋住的不是終點豁免，是正線的方向保護；改成死結裡別的辦法都不行時准逆線進空月台，混點一般＋行車控制兩列 147／195 段（修前 1,065 分死結），每次死結不到 1 分鐘。剩下：那 1 分鐘的「互相卡住」與「升級為複線」只排 1 列，見決策 571「續」的下一步；玩家的存檔還沒拿到，拿到後先重播確認是哪一種配置 |
 | 73.1 的「終點無法折返」只從截圖推斷是列車比月台長（決策 284 改了字）。玩家的實際配置沒有存檔：下一版請測試者用「回報問題」附存檔，確認不是別的原因（例如終點的盡頭線放不下整列車） | 決策 284、PLAYER_FEEDBACK 73.1 | 待實機確認 |
 | 提早折返（決策 255）後，列車卡的「本趟」仍從沒去的那一站算（74.1 截圖的「扒子岡 13:52 發」）。決策 288 已讓它照一般停站開走、時刻往前移，但卡片與跟隨列還沒說「在龜山提早折返」（決策 255 的「下一步」）。74.1 的玩家配置沒有存檔，下一版請測試者確認不再卡在那一站 | 決策 255、288，PLAYER_FEEDBACK 74.1 | **做了**（`claude/short-turn-card`，決策 255 的第二則「後來」）：卡片與跟隨列的本趟從折返站算，多一行「在龜山提早折返」。剩下：重複的時刻表認不出折返；74.1 待實機確認 |
 | NEXT_PRIORITIES §17 的乙線「現實路網」：~~真實車站當建議站點~~（決策 295，`claude/real-station-suggestions`）→ ~~R1 轉乘站~~（決策 298，`claude/r1-transfer-stations`，存檔 64）→ ~~R2 電腦的車照已打包的時刻表在 2D 地圖上跑（只畫）~~（決策 304，`claude/r2-real-trains`）。甲線（M0 之後的 M1–M3、確認路線卡、空窗快轉）由做 M0 的 session 接著做 | 75.1 玩家建議（PLAYER_FEEDBACK 75.1 #1）、競品研究 #832；排序 2026-10-20 | 建議站點：決策 295 已合併（圖釘的大小與好不好點待實機）。R1：決策 298 做完（session_01TePLuBqSCAQxMhhJBTJ8Cq）；待實機：車站卡那一行、新遊戲的開關；決策 298「下一步」列了 R2 要接的地方。R2：決策 304 做完（session_0193ujbBhjzFo37QWceGdzcX）：捷運與輕軌逐班、高鐵一天的班次、台鐵照班距；車站卡列下一班；設定「真實列車」可關。待實機：膠囊的大小與淡度（`RealTrainTraffic.look`）、畫 157 列的時間、iPad 整張地圖。加減速：決策 304 的「後來」（2026-10-22，`claude/real-train-accel`）站間照網站的 `buildProfile` 加速出站、減速進站，高鐵有惰行，解不出時用 Mini Tokyo 3D 的退路；待實機看樣子。剩下的在決策 304「下一步」：3D 的真實列車、台鐵逐班時刻表（要打包參考庫的 2026-10-16 時刻表）、路線名與站名的英文；R3 照 §19 的順序 |

@@ -37,6 +37,10 @@ struct PopulationLegendView: View {
     /// Folded to its title and colour bar (TestFlight 59.1, ``LegendFold``):
     /// the opacity, the timeline and the rest show when it opens.
     @Binding var isFolded: Bool
+    /// Decision 568: folded to the title row alone, its switches and bar
+    /// too, while a new line is picked on the map, so the line's pill has
+    /// room above it; opened, it shows all as before.
+    var titleOnly = false
     /// Decision 292: how many of the residents and jobs the stations reach,
     /// under the coverage layer's title; `nil` while it is worked out.
     var coverage: CoverageSummary? = nil
@@ -135,7 +139,9 @@ struct PopulationLegendView: View {
             // reached up behind the status bar; what does not fit under
             // the title scrolls.
             let room = maxHeight - titleHeight - 6 - 2 * 8
-            if contentHeight > room {
+            if titleOnly && isFolded {
+                EmptyView()
+            } else if contentHeight > room {
                 ScrollView(.vertical) {
                     measuredContent
                 }

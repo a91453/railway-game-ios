@@ -2251,6 +2251,54 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("report-where-to-send", app)
     }
 
+    /// Decision 568: a new line picked on the map (five stations, the
+    /// potential layer on, as in the owner's report), on the map alone and
+    /// beside the lines panel; on an iPad upright too. The shots upright
+    /// end in `-portrait` and are not turned (website-screenshots.yml).
+    func testRouteDrawing() {
+        shootRouteDrawing(extra: [], name: "route-draw")
+    }
+
+    /// Decision 568: the same at the largest accessibility text size.
+    func testRouteDrawingLargeText() {
+        shootRouteDrawing(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"], name: "route-draw-large-text")
+    }
+
+    private func shootRouteDrawing(extra: [String], name: String) {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-line-draft"] + extra)
+        defer {
+            app.terminate()
+            XCUIDevice.shared.orientation = .landscapeLeft
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 30), "The new line's pill shows")
+        // Where people are (decision 311), its legend over the map, as the
+        // owner had it.
+        let coverage = app.buttons["map.coverageShortcut"]
+        if coverage.appears(within: 10) {
+            coverage.waitUntilSettled()
+            coverage.tap()
+        }
+        settle(seconds: 3)
+        keep(name + upright(app), app)
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 3)
+        keep("\(name)-panel" + upright(app), app)
+    }
+
+    /// "-portrait" when the app shows upright: an iPhone is held on its
+    /// side only (project.yml), but the runner's iPad Simulator turns or
+    /// not whatever the test asks, and the workflow turns every other
+    /// shot a quarter back (decision 568).
+    private func upright(_ app: XCUIApplication) -> String {
+        let frame = app.windows.firstMatch.frame
+        return frame.width < frame.height ? "-portrait" : ""
+    }
+
     /// Decision 497 (P2-6): Back to Start when the autosave cannot be
     /// written asks whether to leave without saving, and leaving reaches
     /// the start screen.

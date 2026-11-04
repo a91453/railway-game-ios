@@ -35,6 +35,9 @@ struct ControlPanel: View {
 
     let session: GameSession
     let arrangement: Arrangement
+    /// Whether the lines panel is open (decision 568's Undo); absent where
+    /// the screen is not.
+    @Environment(GameScreenState.self) private var screen: GameScreenState?
 
     /// Whether the details card has an inspector to show: the building
     /// tool's taps pick a site, not a station, so the selection row only
@@ -54,8 +57,12 @@ struct ControlPanel: View {
     /// never in the tutorial, as the details toggle is not, so its steps'
     /// spotlights stay where they were (the session refuses Undo then too,
     /// ``GameSession/canUndo``).
-    static func showsEdits(_ session: GameSession) -> Bool {
+    /// Decision 568: not while a new line is picked on the map, whose
+    /// pill's ↶ takes back its last stop: two kinds of taking back side by
+    /// side, the player could not tell apart.
+    static func showsEdits(_ session: GameSession, linesPanelOpen: Bool) -> Bool {
         session.tutorial == nil && (session.canUndo || session.canRedo)
+            && session.lineDrawingChrome(linesPanelOpen: linesPanelOpen).showsWorldEdits
     }
 
     var body: some View {
@@ -69,7 +76,7 @@ struct ControlPanel: View {
                 // Decision 104: the lines and the company's figures, named,
                 // beside the tools.
                 QuickEntries(session: session, vertical: false)
-                if Self.showsEdits(session) {
+                if Self.showsEdits(session, linesPanelOpen: screen?.panel == .lines) {
                     UndoButton(session: session)
                     RedoButton(session: session)
                 }
@@ -84,7 +91,7 @@ struct ControlPanel: View {
             BuildEntry(session: session)
                 .controlTile()
         case .editsRow:
-            if Self.showsEdits(session) {
+            if Self.showsEdits(session, linesPanelOpen: screen?.panel == .lines) {
                 HStack(spacing: 4) {
                     UndoButton(session: session)
                     RedoButton(session: session)
