@@ -127,6 +127,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
               let bounds = try? WorldBounds(width: 1 << 21, height: 1 << 21) else { return DemoWorld.make(in: language) }
         var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
         try? world.mapGround()
+        // On to 05:30 while the map is empty, ten minutes a tick: the Debug
+        // app then runs only the morning itself after it buys the line.
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 33)
         world.setSpeed(.paused)
         return world
     }
