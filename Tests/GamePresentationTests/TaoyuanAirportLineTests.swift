@@ -207,7 +207,7 @@ final class TaoyuanAirportLineTests: XCTestCase {
                         case .travellingToStop(let stop, _)?: name(train.timetable[stop].station)
                         default: "-"
                         }
-                        out += "  WHY at \(stops) next \(next) holder \(world.trainHoldingRoute(of: train.id).flatMap { world.train(id: $0)?.name } ?? "-") request edges \(request?.movement.edges.map { "\($0)" }.joined(separator: ",") ?? "-") \(verdict) timetable \(train.timetable.map { "\(name($0.station))\($0.reverses ? "R" : "")@\(clock($0.departure))" }.joined(separator: " "))\n"
+                        out += "  WHY at \(stops) next \(next) holder \(world.trainHoldingRoute(of: train.id).flatMap { world.train(id: $0)?.name } ?? "-") request edges \(request?.movement.edges.map { "\($0)" }.joined(separator: ",") ?? "-") \(verdict) route \(train.movement.edges.map { "\($0)" }.joined(separator: ",")) timetable \(train.timetable.map { "\(name($0.station))\($0.reverses ? "R" : "")@\(clock($0.departure))" }.joined(separator: " "))\n"
                     }
                 }
             }
