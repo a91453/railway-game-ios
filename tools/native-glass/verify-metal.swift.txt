@@ -23,7 +23,7 @@ let identity: [Float] = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
     u[96]=1;u[99]=1;u[100]=0.35;u[101]=0.55;u[102]=0.75;u[32]=0.50;u[33]=0.65;u[34]=0.80
     u.replaceSubrange(108..<124,with:identity);return u
 }
-@MainActor func buffer<T>(_ data: [T]) -> MTLBuffer? { data.withUnsafeBytes { b in b.baseAddress.flatMap { device.makeBuffer(bytes:$0,length:b.count,options:.storageModeShared) } } }
+@MainActor func buffer<T>(_ data: [T]) -> MTLBuffer? { guard !data.isEmpty else { return nil };return data.withUnsafeBytes { b in b.baseAddress.flatMap { device.makeBuffer(bytes:$0,length:b.count,options:.storageModeShared) } } }
 @MainActor func pipeline(_ fragment: String, samples: Int) throws -> MTLRenderPipelineState {
     let d=MTLRenderPipelineDescriptor();d.vertexFunction=library.makeFunction(name:"map3dVertex");d.fragmentFunction=library.makeFunction(name:fragment);d.vertexDescriptor=descriptor
     d.colorAttachments[0].pixelFormat = .bgra8Unorm;d.depthAttachmentPixelFormat = .depth32Float;d.rasterSampleCount=samples
