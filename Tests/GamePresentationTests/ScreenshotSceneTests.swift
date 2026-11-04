@@ -54,6 +54,27 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertLessThan(opening.width, Double(Land.cellLength) * 40, "only the gondola, not the whole map")
     }
 
+    /// Decision 585: the Tamsui–Bali ferry on a new game of Tamsui, its
+    /// first day settled, and the map opening on its piers.
+    func testTamsuiFerrySceneOpensTheRealFerry() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let water = try WaterGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_water.json")))
+        let world = ScreenshotScene.tamsuiFerry.make(in: .traditionalChinese, water: water)
+        XCTAssertEqual(world.clock.speed, .paused)
+        XCTAssertEqual(world.clock.now.seconds / 3_600, 34)
+        let ferry = try XCTUnwrap(world.ferryRoutes.first, "the real map has water at the river mouth")
+        XCTAssertEqual(world.ferryRoutes.count, 1)
+        XCTAssertEqual(ferry.piers.count, 2)
+        XCTAssertEqual(ferry.boats, 2)
+        XCTAssertEqual(ferry.metres, RealFerry.tamsuiBali.legMetres.reduce(0, +))
+        XCTAssertEqual(ferry.days.map(\.day), [0], "the first day is settled")
+        let opening = try XCTUnwrap(WorldRegion.opening(in: world))
+        for pier in ferry.piers {
+            XCTAssertTrue(opening.contains(WorldCoordinate(x: pier.middle.x, y: pier.middle.y)))
+        }
+        XCTAssertLessThan(opening.width, Double(Land.cellLength) * 40, "only the ferry, not the whole map")
+    }
+
     /// Decision 580 (FOLLOWBUS): the follow-a-bus scene has a feeder route
     /// with buses out at half past nine, and following its route follows one.
     func testTheFollowBusSceneHasABusOutToFollow() async throws {

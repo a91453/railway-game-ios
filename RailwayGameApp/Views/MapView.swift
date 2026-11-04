@@ -368,7 +368,7 @@ struct MapView: View {
             // Once for the map and its loupe, not once for each canvas.
             let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
             let networkOverlay = session.networkOverlay, buildingOverlay = session.buildingOverlay, busOverlay = session.busMapOverlay
-            let roadOverlay = session.roadMapOverlay, cablewayOverlay = session.cablewayMapOverlay
+            let roadOverlay = session.roadMapOverlay, cablewayOverlay = session.cablewayMapOverlay, ferryOverlay = session.ferryMapOverlay
             let expansionOverlay = session.mapExpansionOverlay, routePreview = session.routePreview
             let lineCodes = LineBadge.codes(for: session.world.lines)
 
@@ -443,6 +443,7 @@ struct MapView: View {
                             buses: busOverlay,
                             roads: roadOverlay,
                             cableways: cablewayOverlay,
+                            ferries: ferryOverlay,
                             drawsLabels: false,
                             part: part
                         )
@@ -1736,7 +1737,9 @@ struct MapView: View {
             bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world),
             keeping: session.world.stations.map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
                 // Decision 574: and the cable cars' stops.
-                + session.world.cableways.flatMap { $0.stops.map { WorldCoordinate(x: $0.cell.middle.x, y: $0.cell.middle.y) } },
+                + session.world.cableways.flatMap { $0.stops.map { WorldCoordinate(x: $0.cell.middle.x, y: $0.cell.middle.y) } }
+                // Decision 585: and the ferries' piers.
+                + session.world.ferryRoutes.flatMap { $0.piers.map { WorldCoordinate(x: $0.middle.x, y: $0.middle.y) } },
             clearOf: framing
         )
     }
@@ -2358,6 +2361,8 @@ private struct MapCanvas: View, Equatable {
     var roads: RoadMapOverlay?
     /// Decision 574: the company's cable cars and the one being drawn.
     var cableways: CablewayMapOverlay?
+    /// Decision 585: the company's ferry routes and the one being drawn.
+    var ferries: FerryMapOverlay?
     /// Whether the stations' names and waiting counts, the network tool's
     /// preview and the tracks' numbers are drawn here; the map draws them
     /// over the trains instead, in ``MapLabelCanvas``.
@@ -2387,7 +2392,7 @@ private struct MapCanvas: View, Equatable {
             if lhs.flowVersion != rhs.flowVersion { return .flow }
             if lhs.lineCodes != rhs.lineCodes { return .lineCodes }
             if lhs.journey != rhs.journey || lhs.journeyProgress != rhs.journeyProgress { return .journey }
-            if lhs.buses != rhs.buses || lhs.roads != rhs.roads || lhs.cableways != rhs.cableways { return .buses }
+            if lhs.buses != rhs.buses || lhs.roads != rhs.roads || lhs.cableways != rhs.cableways || lhs.ferries != rhs.ferries { return .buses }
             return nil
         }
         if lhs.part == .railway, rhs.part == .railway, lhs.drawsLabels == rhs.drawsLabels {
@@ -2429,7 +2434,7 @@ private struct MapCanvas: View, Equatable {
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, expansionClear = expansionClear, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels, part = part
-        let buses = buses, roads = roads, cableways = cableways
+        let buses = buses, roads = roads, cableways = cableways, ferries = ferries
         return Canvas { context, size in
             // Decision 328: timed for the frame readout; decision 377, each
             // canvas on a line of its own (the loupe's with the railway).
@@ -2461,6 +2466,7 @@ private struct MapCanvas: View, Equatable {
                     buses: buses,
                     roads: roads,
                     cableways: cableways,
+                    ferries: ferries,
                     drawsLabels: drawsLabels,
                     part: part,
                     in: context

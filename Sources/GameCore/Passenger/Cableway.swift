@@ -26,6 +26,21 @@
 // Maokong Gondola's figures come from its operator's pages (gondola.taipei)
 // and, where those are silent, Wikipedia: decision 574 lists each one.
 
+/// Decision 586: how tourists reach a sight no station serves on foot:
+/// by train to ``station``, then on by ``feeder``
+/// (``GameWorld/feederAccess(to:onDay:)``).
+struct FeederAccess: Hashable, Sendable {
+    /// What takes them on from the station: a cableway, or since
+    /// decision 587 a bus route.
+    enum Feeder: Hashable, Sendable {
+        case cableway(CablewayID)
+        case bus(BusRouteID)
+    }
+
+    let station: StationID
+    let feeder: Feeder
+}
+
 /// A cableway's number, handed out in order and never used again.
 public struct CablewayID: RawRepresentable, Hashable, Comparable, Codable, Sendable {
     public let rawValue: Int
@@ -88,8 +103,15 @@ public struct Cableway: Hashable, Sendable {
     public internal(set) var localTrips: Int64 = 0
     public internal(set) var localMinutes: Int64 = 0
     /// The station it meets: the nearest within ``BusRoute/stopReach`` of
-    /// a boarding stop, and that stop; `nil` when none is.
+    /// a boarding stop, and that stop; `nil` when none is. With
+    /// ``meetsNear`` (decision 586), the station nearest that point within
+    /// ``namedTransferReach`` of a boarding stop instead.
     public internal(set) var transfer: BusTransfer?
+    /// Decision 586: where the station a real cableway meets stands (the
+    /// Maokong Gondola's, MRT Taipei Zoo), given when it is built, so it
+    /// meets that station once one stands there, whenever it is built;
+    /// `nil` for one that meets the nearest.
+    public internal(set) var meetsNear: PlanPoint?
     /// Riders today brought to or from the trains, and the thousandths of
     /// one carried over.
     public internal(set) var ridersToday: Int64 = 0
@@ -99,6 +121,11 @@ public struct Cableway: Hashable, Sendable {
 
     /// The most stops a cableway has.
     public static let maximumStops = 8
+    /// Decision 586: how far a boarding stop may be from the station a
+    /// cableway is given to meet (``meetsNear``): 500 m, so the Maokong
+    /// Gondola's Taipei Zoo stop, 413 m from MRT Taipei Zoo (447 m once on
+    /// the map's cells), meets it.
+    public static let namedTransferReach: Int64 = 500 * WorldCoordinate.unitsPerMetre
     /// The longest span between two stops: 5 km. The Maokong Gondola's
     /// longest is under 2 km; its towers stand between, and the rope does
     /// not care what lies below.
@@ -221,7 +248,7 @@ extension CablewayStop: Codable {
 
 extension Cableway: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, stops, legMetres, feederTrips, feederMinutes, localTrips, localMinutes, transfer, ridersToday, riderThousandths, days
+        case id, stops, legMetres, feederTrips, feederMinutes, localTrips, localMinutes, transfer, meetsNear, ridersToday, riderThousandths, days
     }
 
     /// The cableway, with its derived figures and takings; refused when
@@ -240,6 +267,7 @@ extension Cableway: Codable {
         localTrips = try container.decodeIfPresent(Int64.self, forKey: .localTrips) ?? 0
         localMinutes = try container.decodeIfPresent(Int64.self, forKey: .localMinutes) ?? 0
         transfer = try container.decodeIfPresent(BusTransfer.self, forKey: .transfer)
+        meetsNear = try container.decodeIfPresent(PlanPoint.self, forKey: .meetsNear)
         ridersToday = try container.decodeIfPresent(Int64.self, forKey: .ridersToday) ?? 0
         riderThousandths = try container.decodeIfPresent(Int64.self, forKey: .riderThousandths) ?? 0
         days = try container.decodeIfPresent([CablewayDay].self, forKey: .days) ?? []
@@ -261,6 +289,7 @@ extension Cableway: Codable {
         if localTrips != 0 { try container.encode(localTrips, forKey: .localTrips) }
         if localMinutes != 0 { try container.encode(localMinutes, forKey: .localMinutes) }
         try container.encodeIfPresent(transfer, forKey: .transfer)
+        try container.encodeIfPresent(meetsNear, forKey: .meetsNear)
         if ridersToday != 0 { try container.encode(ridersToday, forKey: .ridersToday) }
         if riderThousandths != 0 { try container.encode(riderThousandths, forKey: .riderThousandths) }
         if !days.isEmpty { try container.encode(days, forKey: .days) }
@@ -273,21 +302,32 @@ extension GameWorld {
     /// Builds a cableway through `stops` (decision 574), paying
     /// ``Cableway/price(of:metres:)``. With `legMetres` (a real one's, one
     /// fewer than the stops) its spans are those lengths; without, the
-    /// straight line between the cells' middles, a metre at least.
+    /// straight line between the cells' middles, a metre at least. With
+    /// `meetsNear` (decision 586, a real one's station) it meets the
+    /// station nearest that point (``Cableway/meetsNear``).
     ///
     /// - Throws, checked in this order: ``GameError/idsExhausted`` once the
     ///   numbers run out; ``GameError/invalidCableway`` for fewer than 2
     ///   stops or more than ``Cableway/maximumStops``, an end that boards
-    ///   no one, two stops in a row on one cell, a stop off the world, or a
-    ///   span not 1 to ``Cableway/maximumLegMetres`` m;
+    ///   no one, two stops in a row on one cell, a stop off the world, a
+    ///   span not 1 to ``Cableway/maximumLegMetres`` m, or a `meetsNear`
+    ///   farther than ``Cableway/namedTransferReach`` from every boarding
+    ///   stop;
     ///   ``GameError/insufficientFunds(required:available:)``. The world is
     ///   then unchanged.
     @discardableResult
-    public mutating func createCableway(stops: [CablewayStop], legMetres: [Int64]? = nil) throws(GameError) -> Cableway {
+    public mutating func createCableway(stops: [CablewayStop], legMetres: [Int64]? = nil, meetsNear: PlanPoint? = nil) throws(GameError) -> Cableway {
         let (id, next) = try Self.allocateID(from: nextCablewayID)
         let legs = try cablewayLegs(stops: stops, given: legMetres)
-        let cableway = Cableway(id: CablewayID(rawValue: id), stops: stops, legMetres: legs)
+        var cableway = Cableway(id: CablewayID(rawValue: id), stops: stops, legMetres: legs)
         guard cableway.isValid else { throw .invalidCableway }
+        if let meetsNear {
+            let reach = Cableway.namedTransferReach * Cableway.namedTransferReach
+            guard stops.contains(where: { $0.boards && Self.squaredDistance(Self.middle(of: $0.cell), meetsNear) <= reach }) else {
+                throw .invalidCableway
+            }
+            cableway.meetsNear = meetsNear
+        }
         try spendOnCableways(Cableway.price(of: stops, metres: cableway.metres))
         cableways.append(cableway)
         nextCablewayID = next
@@ -448,6 +488,10 @@ extension GameWorld {
     mutating func refreshCablewayTransfers(among stations: [Station]) {
         let reach = BusRoute.stopReach * BusRoute.stopReach
         for position in cableways.indices {
+            if let near = cableways[position].meetsNear {
+                cableways[position].transfer = Self.namedTransfer(of: cableways[position], near: near, among: stations)
+                continue
+            }
             var best: (squared: Int64, station: Int, stop: Int)?
             for (stop, point) in cableways[position].stops.enumerated() where point.boards {
                 let middle = Self.middle(of: point.cell)
@@ -460,6 +504,23 @@ extension GameWorld {
             }
             cableways[position].transfer = best.map { BusTransfer(station: StationID(rawValue: $0.station), stop: $0.stop) }
         }
+    }
+
+    /// Decision 586: the station `cableway` meets when it is given one
+    /// near `near`: of `stations` within ``Cableway/namedTransferReach`` of
+    /// a boarding stop, the nearest `near` (then the lower station ID),
+    /// with its nearest boarding stop (then the earlier); `nil` when none is.
+    static func namedTransfer(of cableway: Cableway, near: PlanPoint, among stations: [Station]) -> BusTransfer? {
+        let reach = Cableway.namedTransferReach * Cableway.namedTransferReach
+        let boarding = cableway.stops.indices.filter { cableway.stops[$0].boards }
+        var best: (squared: Int64, station: Int, stop: Int)?
+        for station in stations {
+            let stops = boarding.map { (squaredDistance(middle(of: cableway.stops[$0].cell), station.location), $0) }.filter { $0.0 <= reach }
+            guard let stop = stops.min(by: { $0 < $1 }) else { continue }
+            let candidate = (squaredDistance(near, station.location), station.id.rawValue, stop.1)
+            if best.map({ (candidate.0, candidate.1) < ($0.squared, $0.station) }) ?? true { best = candidate }
+        }
+        return best.map { BusTransfer(station: StationID(rawValue: $0.station), stop: $0.stop) }
     }
 
     /// The trips between each cableway's stops, worked out afresh into its
@@ -532,6 +593,24 @@ extension GameWorld {
             let thousandths = cableways[index].riderThousandths + boarded * min(trips, cableways[index].feederTrips) * 1_000 / trips
             cableways[index].ridersToday = min(Self.maximumHourly, cableways[index].ridersToday + thousandths / 1_000)
             cableways[index].riderThousandths = thousandths % 1_000
+        }
+    }
+
+    /// Decision 586: adds `rides`, the tourists' rides on of the day that
+    /// ended (``TouristFlows/feederRides``), to each cableway's riders of
+    /// that day, before it is settled; since decision 587 to each bus
+    /// route's too, whose riders stay at most what its buses hold
+    /// (``BusRoute/dailyCapacity``) when it is settled. In management mode
+    /// only, as the riders from the trains.
+    mutating func countFeederRides(_ rides: [FeederAccess.Feeder: Int64]) {
+        guard accounts.mode == .management, !rides.isEmpty else { return }
+        for index in cableways.indices {
+            guard let count = rides[.cableway(cableways[index].id)], count > 0 else { continue }
+            cableways[index].ridersToday = min(Self.maximumHourly, cableways[index].ridersToday + count)
+        }
+        for index in busRoutes.indices {
+            guard let count = rides[.bus(busRoutes[index].id)], count > 0 else { continue }
+            busRoutes[index].ridersToday = min(Self.maximumHourly, busRoutes[index].ridersToday + count)
         }
     }
 

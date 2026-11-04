@@ -224,6 +224,26 @@ final class StationLandmarkNamingTests: XCTestCase {
         XCTAssertFalse(choices.contains { $0.name.contains("捷運") })
     }
 
+    /// L9-11: a bus stop's name has no English, so in English it is not
+    /// offered (the station would be named in Chinese).
+    @MainActor
+    func testABusStopIsNotOfferedInEnglish() throws {
+        let names = try bundled()
+        let at = RealRailways.Coordinate(latitude: 25.0300, longitude: 121.5355)
+        let world = try world(at: at.latitude, at.longitude)
+        let here = try BundledRealData.point(at, in: world)
+        let files = try BusStopLabelsTests.busFiles([
+            ("捷運大安森林公園站(新生南路)", at.latitude + 0.0003, at.longitude),
+            ("某某高中(新生南路)", at.latitude + 0.0006, at.longitude),
+        ])
+        let buses = try RealBusLibrary(index: files.index, file: files.file)
+        let english = GameSession.stationNameChoices(for: world, at: here, in: .english, placeNames: names, realBuses: buses)
+        XCTAssertFalse(english.contains { $0.kind == .busStop }, "\(english)")
+        XCTAssertFalse(english.contains { $0.name.contains("某") }, "\(english)")
+        let chinese = GameSession.stationNameChoices(for: world, at: here, in: .traditionalChinese, placeNames: names, realBuses: buses)
+        XCTAssertTrue(chinese.contains(StationNameChoice(name: "某某高中", kind: .busStop)), "\(chinese)")
+    }
+
     func testAMapWithoutRealGroundHasNoChoices() throws {
         XCTAssertEqual(
             GameSession.stationNameChoices(

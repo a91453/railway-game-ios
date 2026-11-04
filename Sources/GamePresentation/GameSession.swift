@@ -641,12 +641,27 @@ public final class GameSession {
     /// ``buildCableway()``.
     public internal(set) var cablewayDraft: [CablewayStop] = []
     public internal(set) var cablewayDraftLegs: [Int64]?
+    /// Decision 586: where the station the real cable car drawn meets
+    /// stands (``RealCableway/meetsNear(in:)``); `nil` for one drawn stop
+    /// by stop.
+    public internal(set) var cablewayDraftMeets: PlanPoint?
     /// Whether the next tap puts down an angle station, where the rope
     /// turns and no one boards, rather than a station.
     public var cablewayPlacesAngle = false
     /// ``cablewayPreview``, kept for the stops and the money it was
     /// worked out for: the map reads it many times a frame.
     @ObservationIgnored var cablewayPreviewMemo: (key: CablewayPreviewKey, preview: CablewayPreview)?
+    /// Decision 585 (PR-2): the piers the transit tool's ferry mode has
+    /// picked, in order, the real crossings' metres when they came from a
+    /// real ferry (``traceRealFerry(_:)``), and the boats and headway the
+    /// route opens with; nothing is built until ``buildFerryRoute()``.
+    public internal(set) var ferryDraft: [CellPosition] = []
+    public internal(set) var ferryDraftLegs: [Int64]?
+    public internal(set) var ferryDraftBoats = 2
+    public internal(set) var ferryDraftMinutesApart: Int64 = 15
+    /// ``ferryPreview``, kept for the piers and the money it was worked
+    /// out for.
+    @ObservationIgnored var ferryPreviewMemo: (key: FerryPreviewKey, preview: FerryPreview)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
@@ -3826,11 +3841,13 @@ public final class GameSession {
         }
         offer(naming.placeStationName(at: location, here, language: language, placeNames: placeNames), .place)
         let landmarks = naming.landmarks(near: here, placeNames: placeNames, within: landmarkChoiceDistanceMetres)
-            .filter { naming.isFree($0.name, in: language) }
+            .filter { naming.isFree($0.name, in: language) && $0.name.isShown(in: language) }
         if let landmark = landmarks.first(where: { $0.kind != .landmark(.park) }) {
             offer(landmark.name.name(in: language), landmark.kind)
         }
-        if let realBuses {
+        // A bus stop's name has no English: in English the choice is not
+        // listed, rather than naming the station in Chinese.
+        if let realBuses, language != .english {
             let stops = realBuses.stops(around: location, frame: naming.frame, within: busStopChoiceDistanceMetres).stops
             func distance(_ stop: RealBusStops.Stop) -> Int64 {
                 let dx = stop.point.x - location.x, dy = stop.point.y - location.y
@@ -3846,13 +3863,13 @@ public final class GameSession {
         }
         let streets = placeNames.landmarks
         if let crossing = streets?.crossings(near: here, within: crossingChoiceDistanceMetres)
-            .first(where: { naming.isFree($0.thing, in: language) })?.thing {
+            .first(where: { naming.isFree($0.thing, in: language) && $0.thing.isShown(in: language) })?.thing {
             offer(crossing.name(in: language), .crossing)
         }
         if let park = landmarks.first(where: { $0.kind == .landmark(.park) }) {
             offer(park.name.name(in: language), park.kind)
         }
-        if let road = streets?.road(near: here, within: roadChoiceDistanceMetres)?.thing, naming.isFree(road, in: language) {
+        if let road = streets?.road(near: here, within: roadChoiceDistanceMetres)?.thing, naming.isFree(road, in: language), road.isShown(in: language) {
             offer(road.name(in: language), .road)
         }
         // The suggestion first, whatever it is.

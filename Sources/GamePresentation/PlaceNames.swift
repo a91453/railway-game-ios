@@ -33,6 +33,12 @@ public struct PlaceNames: Sendable {
         public func name(in language: DisplayLanguage) -> String {
             language.text(english ?? chinese, chinese)
         }
+
+        /// Whether the name is in `language` itself, not the Chinese one
+        /// shown for want of an English name.
+        public func isShown(in language: DisplayLanguage) -> Bool {
+            language != .english || english != nil
+        }
     }
 
     /// A named point.

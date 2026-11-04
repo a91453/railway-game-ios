@@ -35,8 +35,8 @@ final class ConstructionToolTests: XCTestCase {
     func testTheToolsAreSelectNetworkTrainAndBuild() {
         XCTAssertEqual(ConstructionTool.allCases, [.select, .network, .train, .building, .bus])
         XCTAssertEqual(ConstructionTool.networkTools, ConstructionTool.allCases)
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .english) }, ["Select", "Network", "Train", "Buildings", "Buses"])
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .traditionalChinese) }, ["選取", "路網", "列車", "建物", "公車"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .english) }, ["Select", "Network", "Train", "Buildings", "Transit"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: .traditionalChinese) }, ["選取", "路網", "列車", "建物", "接駁"])
     }
 
     func testCompassHeadingsAreNamed() {

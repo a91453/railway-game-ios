@@ -185,6 +185,68 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 585: the Tamsui–Bali ferry on a real map of the river
+    /// mouth, its crossing and piers on the 2D map, then the transit
+    /// tool's ferry mode with the route's card, in Chinese and in English;
+    /// and the collection's ferry page in Settings. For the screenshot
+    /// review of the pull request that added the mode.
+    func testFerryMode() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "tamsuiFerry"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+            settle(seconds: 5)
+            // The scene opens close on the river: one step out shows both piers.
+            let zoomOut = app.buttons[english ? "Zoom out" : "縮小"]
+            if zoomOut.appears(within: 5), zoomOut.isEnabled { zoomOut.tap() }
+            settle()
+            if !english { keep("ferry-map", app) }
+            let build = app.buttons["dock.build"]
+            if build.appears(within: 10) { build.tap() }
+            let transit = app.buttons["tool.bus"]
+            XCTAssertTrue(transit.appears(within: 10))
+            transit.waitUntilSettled()
+            if !transit.isSelected { transit.tap() }
+            let mode = app.segmentedControls.buttons[english ? "Ferries" : "渡輪"].firstMatch
+            XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
+            // The panel may still be settling after the tool opens: tap
+            // until the segment reads selected.
+            for _ in 0..<3 where !mode.isSelected {
+                mode.tap()
+                settle(seconds: 1)
+            }
+            XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
+            let card = app.descendants(matching: .any)["ferry.card"].firstMatch
+            XCTAssertTrue(card.appears(within: 10), "The ferry's card")
+            // The mode's instruction is the card at the top, and the
+            // route's card comes first under the modes, so the panel opens
+            // on it without scrolling.
+            XCTAssertTrue(app.descendants(matching: .any)["ferry.hint"].firstMatch.appears(within: 5), "The ferry mode's instruction")
+            settle()
+            keep(english ? "ferry-mode-english" : "ferry-mode", app)
+            app.terminate()
+        }
+        let app = launch()
+        defer { app.terminate() }
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        // Neither the picker's identifier nor its segment under
+        // `segmentedControls` reached the drag inside the settings list
+        // (runs 41849781799 and 41856636503). Bring the garage row up as
+        // the train garage tests do; the picker is the row above it, and
+        // its ferry segment is found by its label whatever its type.
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+        let ferries = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "渡輪")).firstMatch
+        XCTAssertTrue(ferries.becomesHittable(within: 10), "Missing the collection's ferry page")
+        ferries.tap()
+        let boat = app.descendants(matching: .any)["settings.ferry.shunfeng166"].firstMatch
+        XCTAssertTrue(boat.appears(within: 10), "The ferry page")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.ferry.gushanCijin"].firstMatch, clearOf: .slider))
+        settle()
+        keep("collection-ferries", app)
+    }
+
     /// Decision 575 續 (CABLEMAP): the Maokong Gondola on the 3D map: its
     /// cabins, towers and ropes close up over a span, from just over the
     /// ground up at the cabins' floors (the crystal cabins' glass), and

@@ -163,7 +163,7 @@ private struct StationStampPageFace: View {
                     .rotationEffect(.degrees(place.angle))
                     .position(x: size.width * place.x / 100, y: size.height * place.y / 100)
             }
-            Text(verbatim: number.formatted(.number.precision(.integerLength(2))))
+            Text(verbatim: number.formatted(.number.precision(.integerLength(2...))))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Theme.textSecondary)
                 .position(x: size.width / 2, y: size.height - 14)

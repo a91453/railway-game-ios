@@ -329,7 +329,7 @@ private struct BuildConfirmation {
     var buysLine = false
 
     enum Kind {
-        case track, platform, building, sale, mapTile, line, addStop, busRoute, road, roadRemoval
+        case track, platform, building, sale, mapTile, line, addStop, busRoute, road, roadRemoval, ferryRoute
     }
 
     /// `linesPanelOpen`: whether the lines panel is open, where a station
@@ -489,6 +489,21 @@ private struct BuildConfirmation {
             cancel = { session.clearBuildingSite() }
             confirm = { _ = session.confirmBuilding() }
             expandsMap = session.offersMapExpansion(for: preview.problem)
+        case .bus where session.busMode == .ferries:
+            // Decision 585: the ferry route drawn, beside its last pier.
+            guard let preview = session.ferryPreview, let last = session.ferryDraft.last else { return nil }
+            start = nil
+            flaggedEnd = nil
+            anchor = last.middle
+            clearance = 18
+            cost = preview.price > .zero ? preview.price : nil
+            canConfirm = preview.problem == nil
+            kind = .ferryRoute
+            caption = preview.problem
+            showsCatchment = false
+            cancel = { session.clearBusDraft() }
+            confirm = { _ = session.buildFerryRoute() }
+            undo = { session.undoFerryPier() }
         case .bus where session.busMode == .roads:
             // Decision 438: the road drawn, beside its last cell; or the
             // stretch of the player's road picked to take up.
@@ -548,6 +563,7 @@ private struct BuildConfirmation {
         case .busRoute: language.text("Open this bus route", "開這條公車路線")
         case .road: language.text("Build this road", "鋪這段路")
         case .roadRemoval: language.text("Take up this road", "拆掉這段路")
+        case .ferryRoute: language.text("Open this ferry route", "開這條渡輪航線")
         }
         guard let cost else { return what }
         return "\(what), \(cost.compactText(in: language))"
