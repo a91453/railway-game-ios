@@ -3,54 +3,45 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 586: what the Maokong Gondola (``RealCableway/maokong``) carries
-/// and earns, run only when asked (`CABLE_TOURISM_REPORT=<days>`, a few
-/// minutes in a release build). The Wenhu Line is bought on a real-world
-/// map twice the usual a side, so the gondola meets Taipei Zoo station; the
-/// gondola is built as the cable car mode lays it and the game is played
-/// at the top speed (ten minutes a tick) for the days asked. Each day's
-/// riders, fares, running and balance are printed, with the Maokong sight's
-/// tourists, as a Markdown table. It asserts nothing: the numbers are in
-/// the decision.
+/// Decision 586: the tourists the Maokong sight (`AttractionCatalog`'s
+/// `t009`) sends up the Maokong Gondola (``RealCableway/maokong``) once it
+/// meets a station, run only when asked (`CABLE_TOURISM_REPORT=<days>`,
+/// seconds in a debug build). On the Maokong demo's map (a new real-world
+/// game round Muzha, as ``ScreenshotScene/maokong``), for each day from
+/// day 0: whether the gondola runs, the tourists the sight draws
+/// (``GameWorld/touristsExpected(for:onDay:)``, the rail stations' own
+/// rule), their rides up and down, those rides' fares, and the gondola's
+/// running. It plays no minutes: the riders it already has (those between
+/// its stops, HEALTH-112's 667 a day) are added in the decision. It asserts
+/// nothing: the numbers are in the decision.
 @MainActor
 final class CablewayTourismReportTests: XCTestCase {
-    func testTheMaokongGondolasDays() throws {
-        guard let wanted = ProcessInfo.processInfo.environment["CABLE_TOURISM_REPORT"], let days = Int(wanted), days > 0 else {
-            throw XCTSkip("Set CABLE_TOURISM_REPORT=<days> to measure the Maokong Gondola (decision 586).")
+    func testTheMaokongSightsTourists() throws {
+        guard let wanted = ProcessInfo.processInfo.environment["CABLE_TOURISM_REPORT"], let days = Int64(wanted), days > 0 else {
+            throw XCTSkip("Set CABLE_TOURISM_REPORT=<days> to measure the Maokong Gondola's tourists (decision 586).")
         }
-        let session = try RealLineAcquisitionTests.game(round: "trtc:BR", side: 1 << 21)
-        let wenhu = try XCTUnwrap(session.buyableRealLines.first { $0.id == "trtc:BR" })
-        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: wenhu)), session.message?.text ?? "")
-        let stops = try XCTUnwrap(RealCableway.maokong.stops(in: session.world))
-        XCTAssertTrue(session.perform { (world: inout GameWorld) throws(GameError) in
-            try world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
-            world.setSpeed(.fast)
-            return ""
-        })
-        let start = session.world.dayIndex(of: session.world.clock.now)
-        var world = session.world
-        let ticks = days * 144 + 1
-        try world.advance(ticks: ticks)
-        let cableway = try XCTUnwrap(world.cableways.first)
-        let met = cableway.transfer.flatMap { world.station(id: $0.station)?.name } ?? "-"
-        let sight = world.tourism?.attractions.first { $0.englishName == "Maokong" }
+        let place = try XCTUnwrap(ScreenshotScene.maokong.place)
+        var world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)))
+        let stops = try XCTUnwrap(RealCableway.maokong.stops(in: world))
+        let cableway = try world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+        let sight = try XCTUnwrap(world.tourism?.attractions.first { $0.englishName == "Maokong" })
         print("""
 
-        ### Maokong Gondola (decision 586), from day \(start), \(days) days
-        meets: \(met); feeder trips \(cableway.feederTrips), local trips \(cableway.localTrips); \
-        Maokong sight: \(sight.map { "\($0.stars) stars, this year \($0.thisYear)" } ?? "none")
+        ### Maokong sight's tourists up the gondola (decision 586), days 0 to \(days - 1)
+        sight: \(sight.stars) hundredths of a star, \(sight.kind); gondola running NT$\(cableway.dailyCost.amount / 100) a day
 
-        | day | weekday | open | riders | fares | running | balance |
-        | --: | --: | --- | --: | --: | --: | --: |
+        | day | weekday | holiday | runs | tourists | rides | fares |
+        | --: | --: | --- | --- | --: | --: | --: |
         """)
-        var riders: Int64 = 0, fares = Money.zero, cost = Money.zero
-        for day in cableway.days {
-            riders += day.riders
-            fares = fares + day.fares
-            cost = cost + day.cost
-            print("| \(day.day) | \(StationDemand.weekday(ofDay: day.day)) | \(day.closed ? "no" : "yes") | \(day.riders) "
-                + "| \(day.fares.amount / 100) | \(day.cost.amount / 100) | \((day.fares - day.cost).amount / 100) |")
+        var rides: Int64 = 0, open: Int64 = 0
+        for day in 0..<days {
+            let runs = world.cablewayIsOpen(cableway.id, onDay: day)
+            let tourists = runs ? world.touristsExpected(for: sight, onDay: day) : 0
+            rides += 2 * tourists
+            if runs { open += 1 }
+            print("| \(day) | \(StationDemand.weekday(ofDay: day)) | \(world.holiday(onDay: day) != nil ? "yes" : "") | \(runs ? "yes" : "no") "
+                + "| \(tourists) | \(2 * tourists) | \(2 * tourists * Cableway.fare.amount / 100) |")
         }
-        print("| all | | | \(riders) | \(fares.amount / 100) | \(cost.amount / 100) | \((fares - cost).amount / 100) |\n")
+        print("| all | | | \(open) days | | \(rides) | \(rides * Cableway.fare.amount / 100) |\n")
     }
 }
