@@ -12,10 +12,11 @@ import Foundation
 /// 4,105 m), four stations, 47 towers, 147 cabins at 6 m/s; a standard cabin
 /// takes 8 sitting (640 kg), a crystal cabin 5 (400 kg) and has a 48 mm
 /// laminated glass floor (30 cabins, from 2010-03-30) — Wikipedia "Maokong
-/// Gondola", poma.net, Taipei Fun Pass. The cabin's body size, the hanger's
-/// length, the rope spacing, the tower height, the hall sizes and every
-/// colour are UNVERIFIED design values; no photograph was taken from the
-/// reference repositories (nothing there: `docs/art/cable-maokong-2026-11-04`).
+/// Gondola", poma.net, Taipei Fun Pass. The cabins and the station
+/// furnishings are Codex's studies (#1791, #1786) in Swift, see
+/// ``CableParts``; the rope spacing, the tower height, the hall sizes and the
+/// tower's and halls' colours are UNVERIFIED design values; no photograph was
+/// taken from the reference repositories (`docs/art/cable-maokong-2026-11-04`).
 ///
 /// Space: native, +x along the rope (the way the cabin faces), +y left, +z
 /// up, metres. A cabin's origin is its rope (z 0, the grip on it, the body
@@ -24,22 +25,29 @@ import Foundation
 public enum Map3DCableCar {
     public enum Cabin: String, CaseIterable, Sendable { case standard, crystal }
     public enum Station: String, CaseIterable, Sendable { case through, corner, terminal }
+    /// Station furnishings that stand alone (the platform, gate and queue
+    /// rails are part of the stations): Codex's studies, #1786.
+    public enum Support: String, CaseIterable, Sendable { case gate, kiosk, catwalk }
 
     /// The two ropes' distance apart, up line and down line.
     public static let ropeSpacing: Float = 5.2
     /// How far the corner station turns the line, to the right (−y).
     public static let cornerAngle: Float = 24 * .pi / 180
-    /// The ropes' height above the platform in a station: the cabin floor
-    /// 0.6 m above the platform, plus the hanger's and the body's 3.6 m.
-    public static let stationRopeHeight: Float = 4.2
+    /// The boarding platform's top above the station floor's foot (Codex's
+    /// study, #1786).
+    public static let platformHeight: Float = 0.60
+    /// The ropes' height in a station: the cabin floor level with the
+    /// platform, plus the cabin's drop.
+    public static let stationRopeHeight: Float = platformHeight + cabinDrop
     public static let towerHeight: Float = 14
 
-    /// Where the cabin's floor is below the rope.
-    public static let cabinDrop: Float = 3.6
-    /// The cabin body: length along the rope, width across it, sitting
-    /// height. UNVERIFIED.
-    public static let cabinLength: Float = 2.2
-    public static let cabinWidth: Float = 1.7
+    /// Where the cabin's floor is below the rope (Codex's study, #1791: the
+    /// body hangs 0.78 m lower than the first draft's 3.6 m).
+    public static let cabinDrop: Float = -CableParts.cabinFloor
+    /// The cabin body: length along the rope, width across it. From the
+    /// customer-service figure 1.98 × 1.873 m (UNVERIFIED, not a drawing).
+    public static let cabinLength: Float = 1.98
+    public static let cabinWidth: Float = 1.873
 
     /// All the studies, in the order the models pack takes them.
     public static var models: [Map3DModelPack.Model] {
@@ -48,6 +56,7 @@ public enum Map3DCableCar {
             for cabin in Cabin.allCases { made.append(model(cabin, far: far)) }
             made.append(tower(far: far))
             for station in Station.allCases { made.append(model(station, far: far)) }
+            for support in Support.allCases { made.append(model(support, far: far)) }
         }
         made.append(span())
         return made
@@ -55,8 +64,20 @@ public enum Map3DCableCar {
 
     public static func model(_ cabin: Cabin, far: Bool = false) -> Map3DModelPack.Model {
         var m = CableMesh()
-        CableCabinRecipe(cabin: cabin, far: far).build(&m)
+        CableSolids.cabin(crystal: cabin == .crystal, far: far).append(to: &m.kit.mesh)
         return .flat(named: "cablecar-cabin-" + cabin.rawValue + (far ? "-far" : ""), from: m.kit.mesh)
+    }
+
+    public static func model(_ support: Support, far: Bool = false) -> Map3DModelPack.Model {
+        var m = CableMesh()
+        let part: CableSolids
+        switch support {
+        case .gate: part = .gate(far: far)
+        case .kiosk: part = .kiosk(far: far)
+        case .catwalk: part = .catwalk(far: far)
+        }
+        part.append(to: &m.kit.mesh)
+        return .flat(named: "cablecar-" + support.rawValue + (far ? "-far" : ""), from: m.kit.mesh)
     }
 
     public static func tower(height: Float = towerHeight, far: Bool = false) -> Map3DModelPack.Model {
@@ -173,87 +194,6 @@ struct CableMesh {
     }
 }
 
-// MARK: - Cabin
-
-private struct CableCabinRecipe {
-    let cabin: Map3DCableCar.Cabin
-    let far: Bool
-
-    func build(_ m: inout CableMesh) {
-        let L = Map3DCableCar.cabinLength, W = Map3DCableCar.cabinWidth
-        let floor = -Map3DCableCar.cabinDrop
-        let skirtTop = floor + 0.70, glassTop = floor + 1.72, roofBase = glassTop
-        let accent = cabin == .crystal ? CableColor.yellow : CableColor.teal
-        let segs = far ? 2 : 4
-        let corner: Float = 0.24
-        // Floor: a steel slab, or for the crystal cabin a glass panel in a
-        // steel frame, seen from below.
-        if cabin == .crystal {
-            for sign: Float in [-1, 1] {
-                m.kit.box(0, floor, sign * (W / 2 - 0.07), L - 0.3, 0.14, 0.14, CableColor.dark)
-                m.kit.box(sign * (L / 2 - 0.07), floor, 0, 0.14, W - 0.3, 0.14, CableColor.dark)
-            }
-            m.kit.box(0, floor + 0.04, 0, L - 0.30, W - 0.30, 0.05, CableColor.glass)
-            if !far {
-                // The bearers under the glass.
-                for x: Float in [-0.55, 0.55] { m.kit.box(x, floor - 0.06, 0, 0.08, W - 0.1, 0.06, CableColor.steel) }
-            }
-        } else {
-            m.rounded(L, W, radius: corner, y: floor, height: 0.14, color: CableColor.dark, segments: segs)
-        }
-        // Skirt and its band.
-        m.rounded(L, W, radius: corner, y: floor + 0.14, height: skirtTop - floor - 0.14, color: CableColor.white, segments: segs)
-        m.rounded(L + 0.02, W + 0.02, radius: corner, y: skirtTop - 0.18, height: 0.16, color: accent, segments: segs)
-        // Glazing all round, between a sill and a lintel; pillars, the door
-        // frames and seats near.
-        m.rounded(L - 0.10, W - 0.10, radius: corner - 0.05, y: skirtTop, height: glassTop - skirtTop, color: CableColor.glass, segments: segs)
-        m.rounded(L - 0.02, W - 0.02, radius: corner, y: skirtTop, height: 0.05, color: CableColor.white, segments: segs)
-        m.rounded(L - 0.02, W - 0.02, radius: corner, y: glassTop - 0.07, height: 0.07, color: CableColor.white, segments: segs)
-        if !far {
-            let dx = L / 2 - corner * 0.30, dz = W / 2 - corner * 0.30
-            for sx: Float in [-1, 1] {
-                for sz: Float in [-1, 1] {
-                    m.kit.box(sx * dx, skirtTop, sz * dz, 0.08, 0.08, glassTop - skirtTop, CableColor.white)
-                }
-            }
-            // The door's frame and seam on each long side.
-            for sz: Float in [-1, 1] {
-                for x: Float in [-0.42, 0.42] { m.kit.box(x, skirtTop, sz * (W / 2 - 0.045), 0.06, 0.05, glassTop - skirtTop, CableColor.white) }
-                m.kit.box(0, skirtTop + 0.50, sz * (W / 2 - 0.02), 0.84, 0.02, 0.04, CableColor.dark)
-                // A grab handle and the door's rail.
-                m.kit.box(0, skirtTop + 0.30, sz * (W / 2 + 0.01), 0.60, 0.03, 0.03, CableColor.steel)
-            }
-            // Seats seen through the glass: a bench and back at each end.
-            for sx: Float in [-1, 1] {
-                m.kit.box(sx * (L / 2 - 0.30), floor + 0.14, 0, 0.42, W - 0.30, 0.34, CableColor.steel)
-                m.kit.box(sx * (L / 2 - 0.12), floor + 0.14, 0, 0.08, W - 0.30, 0.78, CableColor.steel)
-            }
-        }
-        // Roof: a slab overhanging the glass, two low steps on it.
-        m.rounded(L + 0.10, W + 0.10, radius: corner + 0.05, y: roofBase, height: 0.14, color: CableColor.white, segments: segs)
-        m.rounded(L - 0.20, W - 0.20, radius: corner, y: roofBase + 0.14, height: 0.08, color: CableColor.roof, segments: segs)
-        m.rounded(L - 0.8, W - 0.5, radius: corner, y: roofBase + 0.22, height: 0.06, color: CableColor.roof, segments: segs)
-        // The hanger: yoke on the roof, arm up to the grip, two braces.
-        let saddle = roofBase + 0.28 + 0.06
-        m.kit.box(0, saddle - 0.12, 0, 0.50, 0.60, 0.20, CableColor.dark)
-        m.kit.beam(Map3DPoint(0, saddle, 0), Map3DPoint(0, -0.20, 0), far ? 0.16 : 0.13, CableColor.steel)
-        if !far {
-            for sz: Float in [-1, 1] {
-                m.kit.beam(Map3DPoint(0, saddle - 0.02, sz * 0.26), Map3DPoint(0, saddle + 0.55, sz * 0.05), 0.07, CableColor.steel)
-            }
-        }
-        // The grip on the rope: body, jaws round the rope, the carriage's
-        // two small wheels on top.
-        m.kit.box(0, -0.22, 0, far ? 0.46 : 0.52, 0.28, 0.34, CableColor.dark)
-        m.kit.box(0, -0.02, 0, 0.62, 0.12, 0.10, CableColor.steel)
-        if !far {
-            for x: Float in [-0.16, 0.16] {
-                m.wheel(x, 0.04, 0, radius: 0.07, width: 0.06, horizontal: false, color: CableColor.steel, sides: 8)
-            }
-        }
-    }
-}
-
 // MARK: - Tower
 
 private struct CableTowerRecipe {
@@ -352,7 +292,7 @@ private struct CableStationRecipe {
             lanes(&m, at: .zero, yaw: 0, from: -half, to: 0)
             lanes(&m, at: .zero, yaw: a, from: 0, to: half)
             platform(&m, at: .zero, yaw: 0, from: -half + 2, to: -1)
-            platform(&m, at: .zero, yaw: a, from: 1, to: half - 2)
+            platform(&m, at: .zero, yaw: a, from: 1, to: half - 2, furnished: false)
             m.wheel(0, railY - 0.35, 0, radius: lane - 0.25, width: 0.30, horizontal: true, color: CableColor.steel, sides: far ? 10 : 20)
             if !far { m.kit.cylinder(0, 0.35, 0, radius: 0.40, height: railY - 0.35, color: CableColor.dark, sides: 10) }
         }
@@ -387,8 +327,8 @@ private struct CableStationRecipe {
             case .wall:
                 m.rbox(p, u, 0, 0.30, t, width, wall - 0.30, yaw: yaw, color: CableColor.white)
             case .portal:
-                // Two openings for the ropes' lanes, 2.6 m wide, 5.4 m high.
-                let open: Float = 2.6, high: Float = 5.4
+                // Two openings for the ropes' lanes, 2.6 m wide, 5.9 m high.
+                let open: Float = 2.6, high: Float = 5.9
                 let outer = (width - 2 * (lane + open / 2)) / 2
                 for side: Float in [-1, 1] {
                     m.rbox(p, u, side * (width / 2 - outer / 2), 0.30, t, outer, wall - 0.30, yaw: yaw, color: CableColor.white)
@@ -424,13 +364,27 @@ private struct CableStationRecipe {
         }
     }
 
-    /// The boarding platform between the lanes, 0.6 m above the floor, with
-    /// a yellow edge each side.
-    func platform(_ m: inout CableMesh, at p: Map3DPoint, yaw: Float, from: Float, to: Float) {
-        let w = 2 * lane - 2 * 1.1
-        m.rbox(p, (from + to) / 2, 0, 0.30, to - from, w, 0.60, yaw: yaw, color: CableColor.concrete)
+    /// Puts a furnishing (native, +x along the hall's axis) `u` along the
+    /// turned axis, `v` to the right of it, `h` up.
+    func put(_ part: CableSolids, _ m: inout CableMesh, at p: Map3DPoint, yaw: Float, u: Float, v: Float = 0, h: Float = 0) {
+        let c = cosf(yaw), s = sinf(yaw)
+        part.append(to: &m.kit.mesh) { q in
+            let along = q.x + u, right = -q.y + v
+            return Map3DPoint(p.x + c * along - s * right, h + q.z, p.z + s * along + c * right)
+        }
+    }
+
+    /// The boarding platform between the lanes (Codex's island, top 0.60 m,
+    /// steps at its −x end), and with `furnished` the gate and a queue rail
+    /// each side of it near the steps.
+    func platform(_ m: inout CableMesh, at p: Map3DPoint, yaw: Float, from: Float, to: Float, furnished: Bool = true) {
+        put(.platform(length: to - from, far: far), &m, at: p, yaw: yaw, u: (from + to) / 2)
+        guard furnished else { return }
+        let gate = from + 3.4, top = Map3DCableCar.platformHeight
+        put(.gate(far: far), &m, at: p, yaw: yaw, u: gate, h: top)
         for side: Float in [-1, 1] {
-            m.rbox(p, (from + to) / 2, side * (w / 2 - 0.08), 0.90, to - from, 0.16, 0.02, yaw: yaw, color: CableColor.yellow)
+            put(.queue(far: far), &m, at: p, yaw: yaw, u: gate - 1.3, v: side * 0.85, h: top)
+            put(.queue(far: far), &m, at: p, yaw: yaw, u: gate + 2.4, v: side * 0.85, h: top)
         }
     }
 }

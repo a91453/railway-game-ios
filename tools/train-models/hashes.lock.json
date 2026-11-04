@@ -4222,48 +4222,72 @@
       "triangles": 504
     },
     "cablecar-cabin-crystal": {
-      "hash": "a12b8c89a4a7967e",
-      "triangles": 1012
+      "hash": "5f691d69504b15d8",
+      "triangles": 3268
     },
     "cablecar-cabin-crystal-far": {
-      "hash": "c2f6a7616a1f5efa",
-      "triangles": 460
+      "hash": "b01a183aa5608f4a",
+      "triangles": 1632
     },
     "cablecar-cabin-standard": {
-      "hash": "dcfbfa604a4affc1",
-      "triangles": 1004
+      "hash": "b78d75ea2a5f842e",
+      "triangles": 3220
     },
     "cablecar-cabin-standard-far": {
-      "hash": "d637f8da7a7ed5e",
-      "triangles": 444
+      "hash": "ca66a26dc53e2f8e",
+      "triangles": 1584
+    },
+    "cablecar-catwalk": {
+      "hash": "f132fbe1406a2547",
+      "triangles": 408
+    },
+    "cablecar-catwalk-far": {
+      "hash": "2f68c8a59c646137",
+      "triangles": 132
+    },
+    "cablecar-gate": {
+      "hash": "63c117dc53907651",
+      "triangles": 192
+    },
+    "cablecar-gate-far": {
+      "hash": "e8cd6a4ae2ad1d97",
+      "triangles": 156
+    },
+    "cablecar-kiosk": {
+      "hash": "5b13bdf09f7d27d9",
+      "triangles": 156
+    },
+    "cablecar-kiosk-far": {
+      "hash": "b0ab0d3f31a423a6",
+      "triangles": 132
     },
     "cablecar-span": {
       "hash": "3ff7a3d1e0a7d221",
       "triangles": 576
     },
     "cablecar-station-corner": {
-      "hash": "8784ae6767062533",
-      "triangles": 956
+      "hash": "250913223d18efbf",
+      "triangles": 1808
     },
     "cablecar-station-corner-far": {
-      "hash": "c1b12be314870f71",
-      "triangles": 536
+      "hash": "db3cc52031b67110",
+      "triangles": 1016
     },
     "cablecar-station-terminal": {
-      "hash": "fe2e5639b6b7b239",
-      "triangles": 576
+      "hash": "9140824a14520efa",
+      "triangles": 1374
     },
     "cablecar-station-terminal-far": {
-      "hash": "a47105902a6f8ff4",
-      "triangles": 272
+      "hash": "ca1a868dd55aca9",
+      "triangles": 710
     },
     "cablecar-station-through": {
-      "hash": "930b9755bb656bfb",
-      "triangles": 496
+      "hash": "70c5d4dbb73510d8",
+      "triangles": 1318
     },
     "cablecar-station-through-far": {
-      "hash": "1c8f7e0daf773646",
-      "triangles": 256
+      "hash": "c5fc672458c259f4",
+      "triangles": 694
     },
     "cablecar-tower": {
       "hash": "8922e5412f7e1ec4",

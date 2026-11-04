@@ -8,10 +8,10 @@ final class Map3DCableCarTests: XCTestCase {
         stride(from: 0, to: model.vertices.count, by: 3).map { Array(model.vertices[$0..<$0 + 3]) }
     }
 
-    func testTheStudiesAreThirteenNamedModelsInThePack() {
+    func testTheStudiesAreNineteenNamedModelsInThePack() {
         let models = Map3DCableCar.models
-        XCTAssertEqual(models.count, 13)
-        XCTAssertEqual(Set(models.map(\.name)).count, 13)
+        XCTAssertEqual(models.count, 19)
+        XCTAssertEqual(Set(models.map(\.name)).count, 19)
         for model in models {
             XCTAssertTrue(model.name.hasPrefix("cablecar-"), model.name)
             XCTAssertNotNil(Map3DModelPack.studies.index(of: model.name), model.name)
@@ -32,13 +32,13 @@ final class Map3DCableCarTests: XCTestCase {
         for kind in Map3DCableCar.Cabin.allCases {
             let m = Map3DCableCar.model(kind)
             // The grip is on the rope (z 0), the carriage wheels just over it.
-            XCTAssertEqual(m.maximum.z, 0.11, accuracy: 0.03, "\(kind)")
+            XCTAssertEqual(m.maximum.z, 0.24, accuracy: 0.05, "\(kind): the opener lever over the grip")
             // The floor is cabinDrop below, the crystal's bearers a hand lower.
             XCTAssertEqual(m.minimum.z, -Map3DCableCar.cabinDrop, accuracy: 0.1, "\(kind)")
-            XCTAssertEqual(m.length, 2.3, accuracy: 0.2, "roof slab over the body")
-            XCTAssertEqual(m.maximum.y - m.minimum.y, Map3DCableCar.cabinWidth + 0.1, accuracy: 0.1)
-            // A hanger runs on the rope's axis from the grip to the roof.
-            let hanger = m.vertices.filter { abs($0.y) < 0.08 && $0.z < -0.3 && $0.z > -1.6 }
+            XCTAssertEqual(m.length, Map3DCableCar.cabinLength, accuracy: 0.06)
+            XCTAssertEqual(m.maximum.y - m.minimum.y, Map3DCableCar.cabinWidth, accuracy: 0.06)
+            // The bent hanger swings out to the left (+y) between the roof and the grip.
+            let hanger = m.vertices.filter { $0.y > 0.3 && $0.y < 0.6 && $0.z < -0.4 && $0.z > -1.0 }
             XCTAssertGreaterThan(hanger.count, 12, "\(kind): the arm")
             XCTAssertGreaterThan(m.triangleCount, 300)
             XCTAssertLessThan(m.triangleCount, 4_000)
@@ -47,9 +47,9 @@ final class Map3DCableCarTests: XCTestCase {
 
     func testOnlyTheCrystalCabinHasAGlassFloor() {
         func glassFacingDown(_ kind: Map3DCableCar.Cabin, far: Bool) -> Int {
-            let floor = -Map3DCableCar.cabinDrop
+            // The 48 mm panel's underside, in the study's green.
             let down = Map3DCableCar.model(kind, far: far).vertices.filter { (v: Map3DVertex) -> Bool in
-                v.nz < -0.9 && v.color == Map3DColor.shaded(CableColor.glass, 0.7) && abs(v.z - (floor + 0.04)) < 0.02
+                v.nz < -0.9 && v.color == CableParts.Paint.green && abs(v.z - (CableParts.cabinFloor - 0.048)) < 0.02
             }
             return down.count / 3
         }
@@ -71,9 +71,31 @@ final class Map3DCableCarTests: XCTestCase {
         for kind in Map3DCableCar.Cabin.allCases { pair(Map3DCableCar.model(kind), Map3DCableCar.model(kind, far: true)) }
         pair(Map3DCableCar.tower(), Map3DCableCar.tower(far: true))
         for kind in Map3DCableCar.Station.allCases { pair(Map3DCableCar.model(kind), Map3DCableCar.model(kind, far: true)) }
+        for kind in Map3DCableCar.Support.allCases { pair(Map3DCableCar.model(kind), Map3DCableCar.model(kind, far: true)) }
         for kind in Map3DCableCar.Cabin.allCases {
             let near = Map3DCableCar.model(kind), far = Map3DCableCar.model(kind, far: true)
             XCTAssertLessThan(far.triangleCount * 2, near.triangleCount, "\(kind): under half")
+        }
+    }
+
+    func testEveryPartIsMadeOfClosedSolids() {
+        for far in [false, true] {
+            let parts: [(String, CableSolids)] = [
+                ("standard", .cabin(crystal: false, far: far)), ("crystal", .cabin(crystal: true, far: far)),
+                ("platform", .platform(far: far)), ("gate", .gate(far: far)), ("queue", .queue(far: far)),
+                ("catwalk", .catwalk(far: far)), ("kiosk", .kiosk(far: far)),
+            ]
+            for (name, part) in parts { XCTAssertEqual(part.openSolids(), [], "\(name) far \(far)") }
+        }
+    }
+
+    func testTheCabinFloorIsLevelWithThePlatformInAStation() {
+        XCTAssertEqual(Map3DCableCar.stationRopeHeight + CableParts.cabinFloor, Map3DCableCar.platformHeight, accuracy: 1e-4)
+        for kind in Map3DCableCar.Station.allCases {
+            let m = Map3DCableCar.model(kind)
+            // Platform tops (0.60) are there, the old 0.90 ones are not.
+            XCTAssertGreaterThan(m.vertices.filter { abs($0.z - 0.60) < 0.001 && $0.nz > 0.9 }.count, 6, "\(kind)")
+            XCTAssertEqual(m.vertices.filter { abs($0.z - 0.90) < 0.001 && $0.nz > 0.9 && abs($0.y) < 1.7 }.count, 0, "\(kind)")
         }
     }
 
