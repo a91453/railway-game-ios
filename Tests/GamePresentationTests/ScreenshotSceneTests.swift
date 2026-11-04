@@ -118,11 +118,20 @@ final class ScreenshotSceneTests: XCTestCase {
             for (index, cell) in route.piers.enumerated() {
                 let scene = Map3DScene(world: world, focus: (Double(cell.middle.x), Double(cell.middle.y)), baseMap: tiles)
                 let pier = try XCTUnwrap(Map3DFerries(world: world, scene: scene).lines.first).piers[index]
-                let drawn = scene.drawnWater(round: pier.origin, radius: 80)
+                let drawn = scene.drawnWater(round: pier.origin, radius: 160)
                 let shelter = pier.origin - pier.out * 13
                 XCTAssertFalse(drawn.isWater(x: shelter.x, z: shelter.z), "\(shot) pier \(index): the shelter on the land")
                 XCTAssertTrue(drawn.isWater(x: pier.origin.x, z: pier.origin.z), "\(shot) pier \(index): the pontoon on the water")
                 XCTAssertTrue(drawn.isWater(x: pier.berth.x, z: pier.berth.z), "\(shot) pier \(index): the berth on the water")
+                // And its boats leave toward the other pier over water,
+                // not over a quay (run 41919543916).
+                let other = route.piers[index == 0 ? 1 : 0].middle
+                let to = scene.point(worldX: Double(other.x), worldY: Double(other.y), height: 0)
+                let leave = try XCTUnwrap(Map3DPoint(to.x - pier.berth.x, 0, to.z - pier.berth.z).normalized)
+                for s in stride(from: Float(0), through: Map3DFerries.clearWay, by: 4) {
+                    let p = pier.berth + leave * s
+                    XCTAssertTrue(drawn.isWater(x: p.x, z: p.z), "\(shot) pier \(index): water \(s) m out")
+                }
             }
         }
     }

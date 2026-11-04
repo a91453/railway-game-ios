@@ -83,8 +83,8 @@ public struct Map3DFerries: Sendable {
                 let other = route.piers[index == route.piers.count - 1 ? index - 1 : index + 1]
                 let middle = flat(cell.middle)
                 let edge: Map3DPoint, out: Map3DPoint
-                if let shore = Self.shore(from: middle, toward: flat(other.middle),
-                                          in: scene.drawnWater(round: middle, radius: Self.shoreReach + 8)) {
+                if let shore = Self.shore(from: middle, toward: flat(other.middle), boat: boat.length,
+                                          in: scene.drawnWater(round: middle, radius: Self.shoreReach + Self.clearWay + 60)) {
                     (edge, out) = shore
                 } else {
                     let side = Self.waterSide(of: cell, toward: other, in: world)
@@ -110,43 +110,65 @@ public struct Map3DFerries: Sendable {
     static let shoreReach: Float = 320
     static let shoreStep: Float = 2
 
+    /// How far past a berth toward the next pier the water must be clear
+    /// for a shore to be taken, metres: out of a basin behind a quay the
+    /// boats would sail over the quay.
+    static let clearWay: Float = 60
+
     /// The shore the pier at `middle` (its cell's middle) stands out
-    /// from, `toward` being the next pier's: of 16 ways round, those not
-    /// turned from `toward`, the one whose drawn water begins nearest, a
-    /// way more toward `toward` counting nearer (up to 5/3 times, so
-    /// the pier faces the crossing and its boats berth along it), and
-    /// where. The game's 64 m cells and the shores drawn differ (a pier
-    /// cell beside a water cell can lie 100 m and more inland of the real
-    /// harbour's quay), so the water drawn decides. From a middle drawn
-    /// as water, the shore behind it on the way from `toward`. `nil` with
-    /// no shore within ``shoreReach``.
-    static func shore(from middle: Map3DPoint, toward: Map3DPoint,
+    /// from, `toward` being the next pier's, for boats `boat` metres
+    /// long: of 16 ways round, those not turned from `toward`, each place
+    /// along it where the land drawn gives way to water, the nearest
+    /// whose pontoon lies on the water and whose boats leave the berth
+    /// toward `toward` over ``clearWay`` of water, a way more toward
+    /// `toward` counting nearer (up to 5/3 times, so the pier faces the
+    /// crossing); with none clear, the nearest. The game's 64 m cells and
+    /// the shores drawn differ (a pier cell beside a water cell can lie
+    /// 100 m and more inland of the real harbour's quay), so the water
+    /// drawn decides. From a middle drawn as water, the shore behind it
+    /// on the way from `toward`. `nil` with no shore within
+    /// ``shoreReach``.
+    static func shore(from middle: Map3DPoint, toward: Map3DPoint, boat: Float,
                       in drawn: Map3DScene.DrawnWater) -> (edge: Map3DPoint, out: Map3DPoint)? {
         guard let ahead = Map3DPoint(toward.x - middle.x, 0, toward.z - middle.z).normalized else { return nil }
-        func water(_ way: Map3DPoint, _ s: Float) -> Bool {
-            let p = middle + way * s
-            return drawn.isWater(x: p.x, z: p.z)
-        }
+        func water(_ p: Map3DPoint) -> Bool { drawn.isWater(x: p.x, z: p.z) }
         let steps = Int(shoreReach / shoreStep)
-        if water(ahead, 0) {
+        if water(middle) {
             // Back to the land, the edge the last water before it.
-            for step in 1...steps where !water(ahead, -Float(step) * shoreStep) {
+            for step in 1...steps where !water(middle + ahead * (-Float(step) * shoreStep)) {
                 return (middle + ahead * (-Float(step - 1) * shoreStep), ahead)
             }
             return nil
         }
-        var best: (cost: Float, step: Int, way: Map3DPoint)?
+        func clear(_ edge: Map3DPoint, _ way: Map3DPoint) -> Bool {
+            let pontoon = Map3DFerry.pierOffshore + Map3DFerry.pontoonReach
+            for s in stride(from: shoreStep, through: pontoon, by: shoreStep) where !water(edge + way * s) { return false }
+            let berth = edge + way * (pontoon + berthGap + boat / 2)
+            guard let leave = Map3DPoint(toward.x - berth.x, 0, toward.z - berth.z).normalized else { return true }
+            let reach = min(clearWay, Map3DPoint(toward.x - berth.x, 0, toward.z - berth.z).length)
+            for s in stride(from: 0, through: reach, by: 4) where !water(berth + leave * s) { return false }
+            return true
+        }
+        var best: (clear: Bool, cost: Float, edge: Map3DPoint, way: Map3DPoint)?
         for turn in 0..<16 {
             let angle = Float(turn) * .pi / 8
             let way = Map3DPoint(cos(angle), 0, sin(angle))
             let lean = way.x * ahead.x + way.z * ahead.z
             guard lean > -1e-4 else { continue }
-            guard let step = (1...steps).first(where: { water(way, Float($0) * shoreStep) }) else { continue }
-            let cost = Float(step) * (1.25 - 0.5 * lean)
-            if best.map({ cost < $0.cost }) ?? true { best = (cost, step, way) }
+            var wet = false
+            for step in 1...steps {
+                let edge = middle + way * (Float(step) * shoreStep)
+                let now = water(edge)
+                defer { wet = now }
+                guard now, !wet else { continue }
+                let isClear = clear(edge, way), cost = Float(step) * (1.25 - 0.5 * lean)
+                let better = best.map { isClear != $0.clear ? isClear : cost < $0.cost } ?? true
+                if better { best = (isClear, cost, edge, way) }
+                if isClear { break }
+            }
         }
         guard let best else { return nil }
-        return (middle + best.way * (Float(best.step) * shoreStep), best.way)
+        return (best.edge, best.way)
     }
 
     /// The side (row and column steps) of `cell` whose neighbour is water
