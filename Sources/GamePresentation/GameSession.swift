@@ -2414,19 +2414,26 @@ public final class GameSession {
 
     /// Puts the selected train on a platform of the selected station on
     /// the track network (Stage C1; see ``place(_:atPlatformOf:)``).
+    ///
+    /// Decision 584: a placement that would be refused says why, tried
+    /// first on a copy: no station picked, no platform, whose train holds
+    /// the platform (with "Go" to it), or how short the platform is.
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        guard let station = selectedStation else {
-            message = StatusMessage(kind: .failure, text: language.text("Select a station to place \(train.name) at.", "請選擇要放置 \(train.name) 的車站。"))
-            return
+        if train.position == nil,
+           let problem = world.trainPlacementProblem(train.id, at: selectedStation?.id, heading: placementHeading) {
+            if case .refused = problem {
+                // GameCore's own refusal, as the command reports it.
+            } else {
+                var holder: TrainID?
+                if case .held(_, let by) = problem { holder = by }
+                message = StatusMessage(
+                    kind: .failure, text: world.trainPlacementProblemText(problem, train: train.id, in: language), goToTrain: holder
+                )
+                return
+            }
         }
-        guard !world.trackPlatforms(of: station.id).isEmpty else {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "\(station.name) has no platform yet. Add one with the network tool.",
-                "\(station.name) 還沒有月台。請用路網工具加上月台。"
-            ))
-            return
-        }
+        guard let station = selectedStation else { return }
         place(train, atPlatformOf: station)
     }
 
@@ -4001,12 +4008,20 @@ public struct StatusMessage: Hashable, Sendable {
     /// banner offers to make it each one's depot (decision 573).
     public let depotOffer: DepotLinkOffer?
 
-    public init(kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil, depotOffer: DepotLinkOffer? = nil) {
+    /// Decision 584: a train the message names as being in the way: the
+    /// banner offers to go to it.
+    public let goToTrain: TrainID?
+
+    public init(
+        kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil, depotOffer: DepotLinkOffer? = nil,
+        goToTrain: TrainID? = nil
+    ) {
         self.kind = kind
         self.text = text
         self.fundsNeeded = fundsNeeded
         self.sellableTrain = sellableTrain
         self.depotOffer = depotOffer
+        self.goToTrain = goToTrain
     }
 
     /// How long the banner shows the message before clearing it: a success

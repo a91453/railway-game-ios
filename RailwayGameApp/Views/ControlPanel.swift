@@ -1043,6 +1043,8 @@ private struct ActionButton: View {
             if session.buildingMode == .sell { return session.salePreview != nil }
             return session.buildingPreview.map { $0.problem == nil } ?? false
         }
+        // Decision 584: the train tool acts on a picked station only.
+        if session.tool == .train { return session.trainActionIsReady }
         guard session.tool == .network else { return session.selectedPoint != nil }
         switch session.networkMode {
         case .build: return session.networkPreview != nil
@@ -1147,6 +1149,8 @@ private struct ActionButton: View {
         case .train:
             // Placing and sending both act on the selected train.
             guard let train = session.selectedTrain else { return nil }
+            // Decision 584: with no station picked, the button asks for one.
+            guard session.trainActionIsReady else { return session.trainActionTitle }
             return train.position == nil ? String(localized: "Place \(train.name) Here") : String(localized: "Send \(train.name) Here")
         }
     }
@@ -1254,6 +1258,21 @@ struct StatusBanner: View {
                     .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
                     .foregroundStyle(Theme.textPrimary)
                     .accessibilityIdentifier("banner.sellTrain")
+                }
+                // Decision 584: the train in the way, to go and see it.
+                if let id = message.goToTrain, session.world.train(id: id)?.position != nil {
+                    Button {
+                        session.goToTrain(id)
+                    } label: {
+                        Text(verbatim: session.goToTrainTitle(id))
+                            .font(.caption.weight(.bold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Theme.chip, in: Capsule())
+                    }
+                    .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
+                    .foregroundStyle(Theme.textPrimary)
+                    .accessibilityIdentifier("banner.goToTrain")
                 }
                 // Decision 336: land not bought yet; this ends building and
                 // starts choosing a tile.

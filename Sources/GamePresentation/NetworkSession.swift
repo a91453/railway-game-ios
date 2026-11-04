@@ -879,7 +879,7 @@ extension GameSession {
 
     /// The platforms of `station` in the order a train is tried on them:
     /// those as long as it in track order, then the rest, longest first.
-    static func platforms(for train: Train, at station: StationID, in world: GameWorld) -> [TrackPlatform] {
+    nonisolated static func platforms(for train: Train, at station: StationID, in world: GameWorld) -> [TrackPlatform] {
         let platforms = world.trackPlatforms(of: station)
         return platforms.filter { $0.length >= train.length }
             + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
@@ -889,7 +889,7 @@ extension GameSession {
     /// takes it on, facing the way nearer `heading` (decision 193: the
     /// command ``PlayerCommand/Edit/placeTrain(_:at:heading:)``). Returns
     /// the edge and whether it faces along it; throws the first refusal.
-    static func place(
+    nonisolated static func place(
         _ id: TrainID, atPlatformOf station: StationID, heading: CompassHeading, in world: inout GameWorld
     ) throws(GameError) -> (edge: TrackEdgeID, forward: Bool) {
         guard let train = world.train(id: id) else { throw .unknownTrain(id) }

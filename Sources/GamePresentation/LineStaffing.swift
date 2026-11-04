@@ -101,7 +101,7 @@ extension GameSession {
             ))
             return
         }
-        perform(.staffLine(line.id, headway: headway, type: chosen, cars: cars, language: language)) { outcome, _, world in
+        let outcome = perform(.staffLine(line.id, headway: headway, type: chosen, cars: cars, language: language)) { outcome, _, world in
             let (held, unfit) = (outcome.held, outcome.unfit)
             let first = world.station(id: line.stops[0])?.name ?? line.name
             let running = plan.trains - held - unfit
@@ -120,7 +120,13 @@ extension GameSession {
                         + "\(line.name) now runs \(running) \(running == 1 ? "train" : "trains") from \(first).",
                     "買了 \(plan.trains) 列車，花費 \(plan.cost.moneyText)；\(line.name) 現在有 \(running) 列車從\(first)出發。"
                 )
-                if held > 0 {
+                if held > 0, let blocked = world.lineStartBlockedText(line.id, in: language) {
+                    // Decision 584: whose train holds the first stop.
+                    text += language.text(
+                        " \(held) more \(held == 1 ? "stays" : "stay") off the track, not assigned to the line: ",
+                        "另外 \(held) 列沒有放上軌道，也沒有配屬給路線："
+                    ) + blocked.text
+                } else if held > 0 {
                     text += language.text(
                         " \(held) more \(held == 1 ? "stays" : "stay") off the track, not assigned to the line: "
                             + "traffic control lets only one train wait at \(first)'s platform. "
@@ -145,6 +151,7 @@ extension GameSession {
             if outcome.highSpeed { text += language.nowHighSpeedText(line.name) }
             return text
         }
+        pointToLineStartBlocker(line.id, after: outcome)
     }
 
     /// Runs line `id` every `headway` minutes in `world`, as
