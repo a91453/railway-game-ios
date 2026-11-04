@@ -1238,8 +1238,10 @@ private struct HeightCap: ViewModifier {
 /// options in its middle scroll, between the inspector at its head and the
 /// action button at its foot, which stay put: with the whole card
 /// scrolling, reaching the button took the status away (TestFlight 54.1).
-/// Where those two leave the middle too little room, the whole card
-/// scrolls as before. It floats over the map, so its height changing as
+/// Where those two leave the middle too little room, the foot alone stays
+/// put and the head scrolls away with the options (decision 588: a phone
+/// held on its side left the options some 70 pt); where even the foot
+/// does, the whole card scrolls as before. It floats over the map, so its height changing as
 /// the game runs moves nothing else.
 private struct DetailsCard: View {
     let session: GameSession
@@ -1249,9 +1251,9 @@ private struct DetailsCard: View {
     @State private var headHeight: CGFloat = 0
     @State private var middleHeight: CGFloat = 0
     @State private var footHeight: CGFloat = 0
-    /// The layout the card keeps for what it shows (``pinsEnds``); `nil`
+    /// The layout the card keeps for what it shows (``layout``); `nil`
     /// until its heights have changed since it began to show it.
-    @State private var pinned: Bool?
+    @State private var kept: DetailsCardLayout?
 
     /// The card's inner margin, and the gap between its parts.
     private static let padding: CGFloat = 14
@@ -1273,23 +1275,40 @@ private struct DetailsCard: View {
 
     /// The heights of the parts the card shows: a part it stopped showing
     /// keeps the last height it reported.
-    private var ends: CGFloat {
-        (hasHead ? headHeight : 0) + (hasFoot ? footHeight : 0)
+    private var shownHead: CGFloat { hasHead ? headHeight : 0 }
+    private var shownFoot: CGFloat { hasFoot ? footHeight : 0 }
+    private var ends: CGFloat { shownHead + shownFoot }
+
+    /// Which of the parts stay put, the rest scrolling. Something new to
+    /// show decides afresh; the same thing keeps its layout until another
+    /// is needed (``DetailsCardLayout``), so a head a line longer or
+    /// shorter, as a train's when it stops and starts, does not rebuild
+    /// the middle, putting it back at its top and closing a menu open in
+    /// it (TestFlight 56.1).
+    private var layout: DetailsCardLayout {
+        kept ?? choose(nil)
     }
 
-    /// Whether the head and foot stay put, the middle scrolling between.
-    /// Something new to show decides afresh; the same thing keeps its
-    /// layout until the other is needed (``DetailsCardLayout``), so a head
-    /// a line longer or shorter, as a train's when it stops and starts,
-    /// does not rebuild the middle, putting it back at its top and closing
-    /// a menu open in it (TestFlight 56.1).
-    private var pinsEnds: Bool {
-        pinned ?? DetailsCardLayout.pinsEnds(ends: ends, maxHeight: maxHeight, pinned: nil)
+    private func choose(_ current: DetailsCardLayout?) -> DetailsCardLayout {
+        DetailsCardLayout.layout(head: Double(shownHead), foot: Double(shownFoot), maxHeight: Double(maxHeight), current: current)
+    }
+
+    /// The scrolled part fades into the pinned parts instead of being cut
+    /// off at a hard edge.
+    private func fades(top: Bool, bottom: Bool) -> some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                .frame(height: top ? Self.fade : 0)
+            Color.black
+            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: bottom ? Self.fade : 0)
+        }
     }
 
     var body: some View {
         Group {
-            if pinsEnds {
+            switch layout {
+            case .pinned:
                 VStack(spacing: 0) {
                     if hasHead { head }
                     ScrollView {
@@ -1298,23 +1317,30 @@ private struct DetailsCard: View {
                     .scrollBounceBehavior(.basedOnSize)
                     .scrollIndicatorsFlash(onAppear: true)
                     .scrollIndicatorsFlash(trigger: session.tool)
-                    .mask {
-                        // Scrolled options fade into the head and foot
-                        // instead of being cut off at a hard edge.
-                        VStack(spacing: 0) {
-                            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-                                .frame(height: hasHead ? Self.fade : 0)
-                            Color.black
-                            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                                .frame(height: hasFoot ? Self.fade : 0)
-                        }
-                    }
+                    .mask { fades(top: hasHead, bottom: hasFoot) }
                     .tutorialClip()
-                    // Which of the two layouts shows, for the UI tests.
+                    // Which of the layouts shows, for the UI tests.
                     .accessibilityIdentifier("details.scroll.middle")
                     if hasFoot { foot }
                 }
-            } else {
+            case .footPinned:
+                // Decision 588: the head scrolls away with the options.
+                VStack(spacing: 0) {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            if hasHead { head }
+                            middle
+                        }
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicatorsFlash(onAppear: true)
+                    .scrollIndicatorsFlash(trigger: session.tool)
+                    .mask { fades(top: false, bottom: hasFoot) }
+                    .tutorialClip()
+                    .accessibilityIdentifier("details.scroll.foot")
+                    if hasFoot { foot }
+                }
+            case .whole:
                 ScrollView {
                     VStack(spacing: 0) {
                         if hasHead { head }
@@ -1329,11 +1355,11 @@ private struct DetailsCard: View {
             }
         }
         .frame(height: min(max(ends + middleHeight, 1), maxHeight), alignment: .top)
-        .onChange(of: [ends, maxHeight]) {
-            pinned = DetailsCardLayout.pinsEnds(ends: ends, maxHeight: maxHeight, pinned: pinned)
+        .onChange(of: [shownHead, shownFoot, maxHeight]) {
+            kept = choose(kept)
         }
         .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) {
-            pinned = nil
+            kept = nil
         }
         .glassBackground(cornerRadius: 24)
         .hudFrameMark("hud.card")
@@ -1380,7 +1406,7 @@ private struct DetailsCard: View {
     private var foot: some View {
         ControlPanel(session: session, arrangement: .action)
             .padding([.bottom, .horizontal], Self.padding)
-            .padding(.top, pinsEnds ? Self.spacing : Self.spacing - Self.fade)
+            .padding(.top, layout == .whole ? Self.spacing - Self.fade : Self.spacing)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footHeight = $0 }
     }
 }
