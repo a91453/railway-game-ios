@@ -240,3 +240,15 @@ date through the lunar calendar. Earlier saves have none and read as before
 (their scenario festivals keep their day of the year); a build before
 version 84 refuses a version 84 save rather than dropping them.
 There is no migration step: a save of any earlier version reads as it is. `v84-festivals.json` has four places and the Lantern Festival announced.
+
+Since version 85 (decision 585) a world can hold its `"ferryRoutes"` and
+`"nextFerryRouteID"`. Earlier saves have none and read as before; a build
+before version 85 refuses a version 85 save rather than dropping the routes
+and boats bought. There is no migration step. `v85-ferry.json` is
+`FerryTests`' world (CablewayTests' with a channel of water across rows 4
+and 5: stations A and B, a train between them, 1,000 residents at A, five
+cells of 200 residents out of A's reach, 1,000 office jobs at B) with the
+ferry route from the pier (6, 6) by A to the pier (6, 26), one crossing of
+1,280 m, two boats every 15 minutes, meeting A; saved at 00:30 of day 2
+with its days 0 and 1. Written by the version 85 build
+(`FerryTests.testVersionEightyFiveKeepsTheFerry`, `FERRY_SAVE_NEW=1`).

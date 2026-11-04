@@ -1714,6 +1714,10 @@ extension StepOutcome: Codable {
         // schema reads none of these back.
         case .rejected(.unknownCableway), .rejected(.invalidCableway):
             try container.encode("cablewayRefused", forKey: .result)
+        // Decision 585: no golden scenario opens a ferry route, and the
+        // golden schema reads none of these back.
+        case .rejected(.unknownFerryRoute), .rejected(.invalidFerryRoute), .rejected(.pierNotBesideWater):
+            try container.encode("ferryRouteRefused", forKey: .result)
         // Decision 515: no golden scenario lays mountain track, and the
         // golden schema does not read it back.
         case .rejected(.trainCannotClimb(let id)):

@@ -279,8 +279,14 @@ extension GameWorld {
         // Decision 574: the cableways' land first; the buses draw none of
         // the cells they take.
         let cabled = refreshCablewayFeeders()
-        var fed = refreshBusFeeders(excluding: cabled.cells)
+        // Decision 585: the ferries' land next, none of the cableways'; the
+        // buses draw none of either's.
+        let sailed = refreshFerryFeeders(excluding: cabled.cells)
+        var fed = refreshBusFeeders(excluding: cabled.cells.union(sailed.cells))
         for (station, share) in cabled.shares {
+            fed[station, default: LandDemand.Share()].add(share)
+        }
+        for (station, share) in sailed.shares {
             fed[station, default: LandDemand.Share()].add(share)
         }
         guard drawsDemandFromLand else { return }
