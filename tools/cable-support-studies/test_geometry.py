@@ -39,4 +39,8 @@ class CableSupportTests(unittest.TestCase):
    a,b=Mesh(),Mesh();a.support(kind);b.support(kind,True);self.assertLess(len(b.t),len(a.t))
   for kind in ['gate','kiosk']:
    m=Mesh();m.support(kind);self.assertTrue(any(g==1 for t,c,g in m.t))
+ def test_assembly_range_starts_at_actual_moving_solid(self):
+  m=Mesh();meta=m.support('assembly');j=meta['joints'][0]
+  first=next(s for s in m.solids if s['name']=='leaf-top')
+  self.assertEqual(j['movingTriangleStart'],first['start'])
 if __name__=='__main__':unittest.main()

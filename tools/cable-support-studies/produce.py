@@ -109,7 +109,7 @@ class Mesh:
    for part,offset in placements:
     start=len(self.t);meta=self.support(part,lod);self.transform(start,lambda p:add(p,offset))
     if 'joint' in meta:
-     j=meta['joint'];j['pivot']=list(add(j['pivot'],offset));j['movingTriangleStart']+=start;joints.append(j)
+     j=meta['joint'];j['pivot']=list(add(j['pivot'],offset));joints.append(j)
    # A separate supported maintenance module at an illustrative service bay.
    for x in (-1.7,1.7):self.box('service-stand',x,6,0,.25,1.0,2.0,'steel')
    start=len(self.t);self.support('catwalk',lod);self.transform(start,lambda p:add(p,(0,6,2)))
