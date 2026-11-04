@@ -99,6 +99,16 @@ public struct RealCableway: Hashable, Sendable {
         }
         return placed
     }
+
+    /// The real cable cars the mode lays.
+    public static let all: [RealCableway] = [.maokong]
+
+    /// The real cable car `cableway` was laid as (decision 583: its stops'
+    /// names for the follow bar): the same stops on the same cells, the
+    /// same spans; `nil` for one the player laid stop by stop.
+    public static func matching(_ cableway: Cableway, in world: GameWorld) -> RealCableway? {
+        all.first { $0.legMetres == cableway.legMetres && $0.stops(in: world) == cableway.stops }
+    }
 }
 
 extension GameSession {

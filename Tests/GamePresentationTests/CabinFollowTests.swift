@@ -253,4 +253,37 @@ final class CabinFollowTests: XCTestCase {
         }
         XCTAssertGreaterThan(texts.count, 2)
     }
+
+    /// Decision 583: the Maokong demo's stops keep their real names in
+    /// the bar; a cable car laid stop by stop has none to match.
+    func testTheBarNamesARealCableCarsStops() throws {
+        let world = Self.world
+        guard CablewayCabins.runs(Self.gondola.id, in: world, at: world.clock.now) else {
+            throw XCTSkip("the scene's morning stands still")
+        }
+        XCTAssertEqual(RealCableway.matching(Self.gondola, in: world), .maokong)
+        let real = Set(["Taipei Zoo station", "Taipei Zoo South station", "Zhinan Temple station", "Maokong station"])
+        for number in stride(from: 0, to: CablewayCabins.count(of: Self.gondola), by: 5) {
+            let facts = try XCTUnwrap(world.cabinFollowFacts(of: CabinID(cableway: Self.gondola.id, number: number), in: .english))
+            XCTAssertFalse(facts.stopText.contains("Station "), facts.stopText)
+            XCTAssertTrue(real.contains { facts.directionText.hasSuffix($0) }, facts.directionText)
+        }
+        let chinese = try XCTUnwrap(world.cabinFollowFacts(of: CabinID(cableway: Self.gondola.id, number: 0), in: .traditionalChinese))
+        XCTAssertTrue(chinese.directionText.hasSuffix("貓空站") || chinese.directionText.hasSuffix("動物園站"), chinese.directionText)
+    }
+
+    /// The screenshots' cabin is out over the longest span, near its middle.
+    func testTheCabinOverTheLongestSpanIsOutOnIt() throws {
+        let world = Self.world
+        guard CablewayCabins.runs(Self.gondola.id, in: world, at: world.clock.now) else {
+            throw XCTSkip("the scene's morning stands still")
+        }
+        let cabin = try XCTUnwrap(world.cabinOverLongestSpan(on: Self.gondola.id))
+        let longest = try XCTUnwrap(Self.gondola.legMetres.indices.max { Self.gondola.legMetres[$0] < Self.gondola.legMetres[$1] })
+        guard case .span(let leg, let share, _) = CablewayCabins.glide(of: cabin.number, on: Self.gondola, atSecond: Double(world.clock.now.seconds)) else {
+            return XCTFail("not out on a span")
+        }
+        XCTAssertEqual(leg, longest)
+        XCTAssertLessThan(abs(share - 0.5), 0.4)
+    }
 }

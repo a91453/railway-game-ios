@@ -44,14 +44,39 @@ extension GameWorld {
         return number.map { CabinID(cableway: id, number: $0) }
     }
 
-    /// The text for the bar: where a followed cabin is and goes. The
-    /// stops are counted among those that board (the angle stations are
-    /// passed through); the one that meets a railway station takes its
-    /// name.
+    /// A cabin of cable car `id` out over its longest span, a crystal one
+    /// when one is there, the nearest the span's middle first (the
+    /// screenshots' window view, decision 583); `nil` while it stands
+    /// still or none is out on that span.
+    public func cabinOverLongestSpan(on id: CablewayID) -> CabinID? {
+        guard let cableway = cableway(id: id), CablewayCabins.runs(id, in: self, at: clock.now),
+              let longest = cableway.legMetres.indices.max(by: { cableway.legMetres[$0] < cableway.legMetres[$1] }) else { return nil }
+        let second = Double(clock.now.seconds)
+        let out = (0..<CablewayCabins.count(of: cableway)).compactMap { number -> (number: Int, offMiddle: Double)? in
+            guard case .span(let leg, let share, _) = CablewayCabins.glide(of: number, on: cableway, atSecond: second), leg == longest else { return nil }
+            return (number, abs(share - 0.5))
+        }
+        let best = out.min { a, b in
+            let crystalA = CablewayCabins.isCrystal(a.number), crystalB = CablewayCabins.isCrystal(b.number)
+            return crystalA != crystalB ? crystalA : a.offMiddle < b.offMiddle
+        }
+        return best.map { CabinID(cableway: id, number: $0.number) }
+    }
+
+    /// The text for the bar: where a followed cabin is and goes. A real
+    /// cable car's stops take their real names (Taipei Zoo, Zhinan
+    /// Temple…); others are counted among those that board (the angle
+    /// stations are passed through), the one that meets a railway station
+    /// taking its name.
     func cabinFollowFacts(of id: CabinID, in language: DisplayLanguage) -> CabinFollowFacts? {
         guard cabinRuns(id), let cableway = cableway(id: id.cableway) else { return nil }
         let boarding = cableway.stops.indices.filter { cableway.stops[$0].boards }
+        let real = RealCableway.matching(cableway, in: self)
         func name(_ stop: Int) -> String {
+            if let real, real.stops.indices.contains(stop) {
+                let named = real.stops[stop]
+                return language.text("\(named.englishName) station", "\(named.name)站")
+            }
             if let transfer = cableway.transfer, transfer.stop == stop, let station = station(id: transfer.station) {
                 return language.text("\(station.name) station", "\(station.name)站")
             }
