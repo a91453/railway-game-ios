@@ -54,9 +54,12 @@ final class WebsiteScreenshotTests: XCTestCase {
                                  "-map3D.quality", "saving"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
-        // The Debug app on a Simulator runs the morning on to 07:40 a few
-        // minutes at a time (more than three minutes on CI's runner).
-        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        // The Debug app on a Simulator buys the line and runs the morning
+        // on to 07:40 for minutes, its main thread busy for a minute at a
+        // time, longer than a UI query waits: the test asks nothing of it
+        // for eight minutes first (the step has thirty).
+        Thread.sleep(forTimeInterval: 480)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 600), "The line is bought and its train followed")
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
             for _ in 0..<6 {
