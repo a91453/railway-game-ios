@@ -61,8 +61,13 @@ public struct ScenarioEvent: Hashable, Codable, Sendable {
     public let days: Int64
     public let boost: Int64
     public let notice: Int64
+    /// The named festival whose date it follows year by year, the lunar
+    /// calendar's (decision 576), instead of `dayOfYear`: `nil` for a fixed
+    /// day of the year, as every scenario before save version 84.
+    public let follows: FestivalKind?
 
-    public init(station: StationID, dayOfYear: Int64, days: Int64, boost: Int64, notice: Int64) {
+    public init(station: StationID, dayOfYear: Int64, days: Int64, boost: Int64, notice: Int64, follows: FestivalKind? = nil) {
+        self.follows = follows
         self.station = station
         self.dayOfYear = dayOfYear
         self.days = days

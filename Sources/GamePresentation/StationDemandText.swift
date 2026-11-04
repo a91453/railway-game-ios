@@ -612,7 +612,7 @@ extension GameWorld {
         let today = clock.now.seconds / GameTime.secondsPerDay
         return (demandEvents?.events ?? []).filter { $0.station == id && today < $0.end }.map { event in
             let percent = (event.boost + 5) / 10
-            let title = event.kind.title(in: language)
+            let title = event.festival?.title(in: language) ?? event.kind.title(in: language)
             if event.start > today {
                 let wait = event.start - today
                 let days = event.end - event.start

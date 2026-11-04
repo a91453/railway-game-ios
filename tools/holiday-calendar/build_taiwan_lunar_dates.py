@@ -44,8 +44,17 @@ def lunar_day(text):
     raise ValueError(text)
 
 
+KEYS = ("springFestival", "qingming", "dragonBoat", "midAutumn")
+TITLE = "Lunar New Year, Qingming, Dragon Boat, Mid-Autumn"
+
+
 def main():
+    global KEYS, TITLE
     folder, first, last = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+    if len(sys.argv) > 4 and sys.argv[4] == "festivals":
+        # Decision 576: the named festivals' dates.
+        KEYS = ("lantern", "mazu")
+        TITLE = "Lantern Festival (lunar 1/15), first day of the third lunar month (the Dajia Mazu pilgrimage)"
     found = {}
     month = None  # (number, leap)
     day = None
@@ -68,14 +77,14 @@ def main():
                     row.setdefault("qingming", []).append(mmdd)
                 if month is None or month[1]:
                     continue
-                for key, (lm, ld) in {"springFestival": (1, 1), "dragonBoat": (5, 5), "midAutumn": (8, 15)}.items():
+                for key, (lm, ld) in {"springFestival": (1, 1), "dragonBoat": (5, 5), "midAutumn": (8, 15), "lantern": (1, 15), "mazu": (3, 1)}.items():
                     if (month[0], day) == (lm, ld):
                         row.setdefault(key, []).append(mmdd)
-    print(f"        // {first} to {last}: Lunar New Year, Qingming, Dragon Boat, Mid-Autumn (MMDD).")
+    print(f"        // {first} to {last}: {TITLE} (MMDD).")
     for year in range(first, last + 1):
         row = found[year]
         values = []
-        for key in ("springFestival", "qingming", "dragonBoat", "midAutumn"):
+        for key in KEYS:
             dates = row.get(key, [])
             if len(dates) != 1:
                 raise SystemExit(f"{year} {key}: {dates}")

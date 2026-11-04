@@ -121,7 +121,7 @@ struct MapRequestMarks: View {
         }
         .padding(.leading, 12)
         .padding(.vertical, 4)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassBackground(cornerRadius: 16)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("map.request.card")
     }

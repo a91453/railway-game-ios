@@ -226,7 +226,7 @@ extension GameSession {
         // A drag, pinch or zoom ends following a train, as the reference's
         // `dragstart`, `zoomstart` and `rotatestart` do
         // (`metroCancelCameraFollowForUserGesture`).
-        if followedTrainID != nil { stopFollowingTrain() }
+        if isFollowingVehicle { stopFollowingTrain() }
         guard var shown = tutorial, shown.awaitsMapMove else { return }
         shown.noteMapMoved()
         tutorial = shown
