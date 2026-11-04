@@ -71,7 +71,7 @@ final class Map3DFollowViewsTests: XCTestCase {
 
     /// From the station the eye stays where the lookout stands, looking at
     /// the front of the train half way up it; a pinch does not move it.
-    /// With no platform to stand on, it follows from behind.
+    /// With no platform to stand on, it follows from above and behind.
     func testFromTheStationTheEyeStaysOnThePlatform() {
         let eye = Map3DPoint(500, 4.75, -3.2)
         var follow = Map3DFollow(train: train, view: .station)
@@ -88,7 +88,8 @@ final class Map3DFollowViewsTests: XCTestCase {
         follow.lookout = nil
         let running = head(x: 0, z: 0, heading: 0, length: 100)
         let behind = follow.camera(following: running, from: Map3DCamera(viewport: (390, 844)), elapsed: 0, turnsAtOnce: true)
-        let back = Map3DFollow(train: train).camera(following: running, from: Map3DCamera(viewport: (390, 844)), elapsed: 0, turnsAtOnce: true)
+        // Decision 578: from above and behind.
+        let back = Map3DFollow(train: train, view: .aboveBack).camera(following: running, from: Map3DCamera(viewport: (390, 844)), elapsed: 0, turnsAtOnce: true)
         XCTAssertEqual(behind, back)
     }
 
@@ -280,6 +281,7 @@ final class Map3DWindowAndStationAheadTests: XCTestCase {
         var departed = false
         for _ in 0..<3_000 {
             try world.advance(ticks: 1)
+            if departed, case .waitingAtStop? = world.train(id: train)?.execution { break }
             guard case .travellingToStop? = world.train(id: train)?.execution, let metres = world.map3DMetresToStopAhead(of: train) else { continue }
             departed = true
             XCTAssertEqual(world.map3DStopAhead(of: train), b)
