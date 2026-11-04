@@ -213,11 +213,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
             let card = app.descendants(matching: .any)["ferry.card"].firstMatch
             XCTAssertTrue(card.appears(within: 10), "The ferry's card")
-            // The card is below the mode's options: drag them up.
-            // Swipe on what is in view (the mode's first line): the
-            // options below it may already be past the panel's edge.
-            let hint = app.descendants(matching: .any)["ferry.hint"].firstMatch
-            for _ in 0..<3 where hint.becomesHittable(within: 3) && !card.isHittable { hint.swipeUp() }
+            // The mode's instruction is the card at the top, and the
+            // route's card comes first under the modes, so the panel opens
+            // on it without scrolling.
+            XCTAssertTrue(app.descendants(matching: .any)["ferry.hint"].firstMatch.appears(within: 5), "The ferry mode's instruction")
             settle()
             keep(english ? "ferry-mode-english" : "ferry-mode", app)
             app.terminate()

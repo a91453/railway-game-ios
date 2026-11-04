@@ -24,6 +24,9 @@ final class FerryCollectionTests: XCTestCase {
         XCTAssertTrue(chinese[1].lines.contains { $0.contains("170 人") })
         let routes = FerryCollection.routes(in: .traditionalChinese)
         XCTAssertTrue(routes[0].lines[0].contains(RealFerry.tamsuiBali.legMetres.reduce(0, +).groupedText))
+        // Both crossings give their hours and fare.
+        XCTAssertTrue(routes[0].lines.contains { $0.contains(FerryRoute.fare.moneyText) })
+        XCTAssertTrue(routes[1].lines.contains { $0.contains(FerryCollection.gushanCijinFare.moneyText) && $0.contains("5:00") })
     }
 
     /// Both real crossings find their piers on the shore of the game's own

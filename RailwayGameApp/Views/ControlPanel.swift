@@ -388,15 +388,14 @@ private struct FerryControls: View {
     var body: some View {
         let language = session.language
         VStack(alignment: .leading, spacing: 8) {
-            Label {
-                Text(verbatim: session.ferryDraftText())
-            } icon: {
-                Image(systemName: "hand.tap")
+            // The routes already sailing come first, whole, so the panel
+            // opens on them; the new route's options follow. The mode's
+            // instruction is the card at the top (InspectorView).
+            let cards = session.world.ferryRoutes.compactMap { session.ferryCard($0.id) }
+            ForEach(cards) { card in
+                routeCard(card)
             }
-            .font(.footnote)
-            .foregroundStyle(session.ferryPreview?.problem == nil ? Theme.textSecondary : Theme.error)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityIdentifier("ferry.hint")
+            if !cards.isEmpty { Divider() }
             Picker(selection: Binding(get: { session.ferryDraftMinutesApart }, set: { session.setFerryDraftMinutesApart($0) })) {
                 ForEach(choices(including: session.ferryDraftMinutesApart), id: \.self) { minutes in
                     Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
@@ -462,10 +461,6 @@ private struct FerryControls: View {
             .font(.caption)
             .foregroundStyle(Theme.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
-            let cards = session.world.ferryRoutes.compactMap { session.ferryCard($0.id) }
-            ForEach(cards) { card in
-                routeCard(card)
-            }
         }
         .confirmationDialog(
             Text(verbatim: language.text("Close this ferry route?", "要撤掉這條渡輪航線嗎？")),
@@ -1179,7 +1174,7 @@ private struct ActionButton: View {
                 act()
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: session.tool.systemImage)
+                    Image(systemName: session.tool == .bus && session.busMode == .ferries ? "ferry.fill" : session.tool.systemImage)
                         .font(.body.weight(.bold))
                     Text(title)
                         .font(.headline.weight(.bold))

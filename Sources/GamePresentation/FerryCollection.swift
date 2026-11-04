@@ -4,6 +4,11 @@ import GameCore
 /// game's ferries are drawn from (decision 579's studies) and the two real
 /// crossings its demo lays, in words a player reads.
 public enum FerryCollection {
+    /// The Gushan–Cijin full fare: NT$30 a rider since 2024-11 (decision
+    /// 585: the game charges one fare a mode, Tamsui–Bali's, so this is the
+    /// collection's text only).
+    public static let gushanCijinFare = Money(3_000)
+
     /// One entry: a name and the lines under it.
     public struct Entry: Hashable, Sendable, Identifiable {
         public let id: String
@@ -61,7 +66,10 @@ public enum FerryCollection {
                     "About \(RealFerry.gushanCijin.legMetres.reduce(0, +).groupedText) m across Kaohsiung Harbour",
                     "橫越高雄港約 \(RealFerry.gushanCijin.legMetres.reduce(0, +).groupedText) 公尺"
                 ),
-                language.text("About 5 minutes across", "船程約 5 分"),
+                language.text(
+                    "About 5 minutes across · 5:00 to 2:00 the next day · \(Self.gushanCijinFare.moneyText) a ride",
+                    "船程約 5 分 · 5:00 到翌日 2:00 · 每人 \(Self.gushanCijinFare.moneyText)"
+                ),
             ]),
         ]
     }
