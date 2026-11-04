@@ -422,9 +422,15 @@
 ///     `"way"` round (`"inner"` or `"outer"`). A build that reads only an
 ///     earlier version would read such a run as one from end to end and
 ///     refuse the whole line, so it says the save is newer than it instead.
+/// 83. Cableways (decision 574): a world can have its `"cableways"` and
+///     `"nextCablewayID"`. A build that reads only an earlier version would
+///     drop them, and the cableways built would be lost, so it says the
+///     save is newer than it instead. (81 and 82 were reserved by other
+///     work in progress when this was written: whichever lands later
+///     renumbers or keeps the gap.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 80
+    public static let currentVersion = 83
 
     public let world: GameWorld
 
@@ -633,6 +639,8 @@ extension SavedGame: Codable {
         // (decision 528): nothing to turn.
         // Version 79 to 80: no ring of a world before version 80 has runs,
         // and no run a way (decision 535): nothing to turn.
+        // Version 80 to 83: a world without `"cableways"` has none
+        // (decision 574): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {
