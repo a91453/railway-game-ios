@@ -231,6 +231,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("freight-3d", app)
     }
 
+    /// Decision 580 (FOLLOWBUS): a feeder bus followed on the 3D map, from
+    /// above and behind and from the driver's seat, with the follow bar.
+    /// For the screenshot review of the pull request that let the camera
+    /// follow a bus. One shot a test, as the leaned views.
+    func testFollowBusAboveBehind() { shootFollowBus("aboveBack", "follow-bus-above") }
+    func testFollowBusCab() { shootFollowBus("cab", "follow-bus-cab") }
+    func testFollowBusSide() { shootFollowBus("side", "follow-bus-side") }
+
+    private func shootFollowBus(_ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", "followBus", "-screenshot-follow-bus", "-map3DFollowView", view,
+                                 "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The bus is followed")
+        settle(seconds: 12)
+        keep(name, app)
+    }
+
     /// Decision 555: the 3D map at its own tilt and leaned by two fingers
     /// to 60°, round Taipei Main Station (the Shin Kong Life Tower to the
     /// south-west) and round Taipei 101. For the screenshot review of the

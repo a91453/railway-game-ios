@@ -125,7 +125,7 @@ extension GameSession {
 
     private func focusMap(onStation id: StationID) {
         guard let station = world.station(id: id) else { return }
-        if isFollowingTrain { stopFollowingTrain() }
+        if isFollowingVehicle { stopFollowingTrain() }
         lookAt(station.location)
     }
 

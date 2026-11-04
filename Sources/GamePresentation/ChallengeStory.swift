@@ -341,7 +341,10 @@ extension StoryMoment {
         // (``GameWorld/startDemandEventDay``).
         let year = FinancePeriod.year.days
         func isFestivalStart(_ start: Int64, _ event: ScenarioEvent) -> Bool {
-            start > state.startDay && ((start - event.dayOfYear) % year + year) % year == 0
+            // Decision 576: one that follows a named festival starts on its
+            // lunar date.
+            if let named = event.follows { return start > state.startDay && named.starts(onDay: start) }
+            return start > state.startDay && ((start - event.dayOfYear) % year + year) % year == 0
         }
         let festivals = world.demandEvents == nil ? [] : state.scenario.events.filter { world.station(id: $0.station) != nil }
         if festivals.contains(where: { isFestivalStart(today + $0.notice, $0) }) { moments.append(.festivalAnnounced) }

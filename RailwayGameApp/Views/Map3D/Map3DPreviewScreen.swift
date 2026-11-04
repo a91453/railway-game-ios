@@ -89,7 +89,7 @@ struct Map3DPreviewScreen: View {
             Map3DView(built: built, sceneVersion: sceneVersion, lighting: Map3DLighting(at: session.world.clock.now),
                       weather: Map3DWeather(MapWeather(world: session.world)), feed: feed, trainLabels: trainLabels,
                       start: handedOver, openedAt: openedAt, resumes: resumes, farOut: farOut, compass: compass, cameraLink: cameraLink, quality: quality.drawn,
-                      follow: session.followedTrain.map { Map3DFollow(train: $0.id, view: ambient?.view3D ?? followView) },
+                      follow: followed(ambient: ambient),
                       departure: departure, world: session.world, modelsReady: modelsReady,
                       stationTag: stationTag,
                       onTap: openStation == nil || ambient != nil ? nil : { @MainActor camera, point in tapped(camera, at: point) },
@@ -176,7 +176,7 @@ struct Map3DPreviewScreen: View {
                                                                             "回到這裡的平面地圖，打開軌道、列車與建物的工具。")))
                             .accessibilityIdentifier("map3D.build")
                         }
-                        if session.followedTrain == nil {
+                        if !session.isFollowingVehicle {
                             Map3DCompassButton(state: compass)
                         }
                     }
@@ -224,6 +224,9 @@ struct Map3DPreviewScreen: View {
                 if let train = session.followedTrain {
                     Map3DFollowBar(train: train, session: session, view: $followView, takePhoto: takePhoto)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                } else if let bus = session.busFollowBar {
+                    Map3DBusFollowBar(facts: bus, session: session, view: $followView, takePhoto: takePhoto)
+                        .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else {
                     Text(verbatim: handedOver == nil
                          ? language.text("Pinch closer to tilt the map, and push two fingers up to tilt it more. Drag to move, two fingers to turn.",
@@ -240,6 +243,7 @@ struct Map3DPreviewScreen: View {
             // 16 points of a plain padding, so nothing jumps between them.
             .padding(CGFloat(HUDMargins.edge))
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.busFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
             .ambientHidden(ambient != nil)
             // Decision 414: the idle mode's veil and caption, and its tap.
@@ -310,7 +314,7 @@ struct Map3DPreviewScreen: View {
     /// over it, to share as the postcard is shared (decision 215).
     private func takePhoto() {
         guard let view = cameraLink.view else { return }
-        let title = session.followedTrain.map(\.name) ?? DisplayLanguage.app.text("3D Map", "3D 地圖")
+        let title = session.followedTrain.map(\.name) ?? session.busFollowBar?.routeName ?? DisplayLanguage.app.text("3D Map", "3D 地圖")
         let photo = photo
         // A real-world map's data, written on the photo as the postcard
         // writes its credit (decision 215).
@@ -347,12 +351,28 @@ struct Map3DPreviewScreen: View {
         }
     }
 
+    /// Decision 333: what the camera follows, a train or (decision 400,
+    /// FOLLOWBUS) a bus; a bus has no platform, so its station view is from
+    /// behind.
+    private func followed(ambient: AmbientScreen?) -> Map3DFollow? {
+        let view = ambient?.view3D ?? followView
+        if let train = session.followedTrain { return Map3DFollow(train: train.id, view: view) }
+        if let bus = session.followedBusID, session.busFollowBar != nil { return Map3DFollow(bus: bus, view: view == .station ? .back : view) }
+        return nil
+    }
+
     /// Decision 517 續: a tap at `point` seen by `camera` does to the
     /// station under it what a tap on the 2D map does: selects it, its tag
     /// under it; elsewhere lets go. Not while following a train.
     private func tapped(_ camera: Map3DCamera, at point: CGPoint) {
-        guard let scene, session.followedTrain == nil,
-              let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
+        guard let scene, !session.isFollowingVehicle else { return }
+        // Decision 400 (FOLLOWBUS): a bus under the finger is followed.
+        if session.tool == .select, session.tutorial == nil,
+           let bus = feed.bus(atX: Float(point.x), y: Float(point.y), camera: camera, in: scene) {
+            session.followBus(bus)
+            return
+        }
+        guard let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
         else { return }
         let id = session.tapMap3D(at: hit, reach: Map3DTap.reach(at: hit.point, camera: camera))
         let space = Map3DPick.Space(scene: scene)
@@ -768,6 +788,8 @@ final class Map3DTrainFeed {
     private var busClock: RealTrainClock?
     private var busGlides = true
     private let buses = Map3DBuses.Layer()
+    /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
+    var followedBus: BusID?
     /// Decision 437: told the evening garbage truck's tune as heard from
     /// the camera each frame (``GameAudio/setGarbageTruck(_:)``, which
     /// acts only on a change), `nil` when there is none near.
@@ -809,7 +831,24 @@ final class Map3DTrainFeed {
         guard let world = busWorld, let signature = busSignature, let clock = busClock,
               let laid = buses.buses(signature, world: world, in: scene, palette: busPalette, roads: busRoads) else { return .init() }
         return laid.frame(second: clock.second(at: now, glides: busGlides), target: camera.target, distance: camera.distance,
-                          detail: detail, most: most)
+                          detail: detail, most: most, followed: followedBus)
+    }
+
+    /// Decision 400 (FOLLOWBUS): where bus `id` is now, as the follow
+    /// camera reads it, at the clock the buses are drawn at.
+    func busPose(_ id: BusID, in scene: Map3DScene) -> Map3DFollow.Pose? {
+        guard let world = busWorld, let signature = busSignature, let clock = busClock,
+              let laid = buses.buses(signature, world: world, in: scene, palette: busPalette, roads: busRoads) else { return nil }
+        return laid.pose(of: id, second: clock.second(at: Date().timeIntervalSinceReferenceDate, glides: busGlides))
+    }
+
+    /// Decision 400 (FOLLOWBUS): the bus drawn under the finger at
+    /// (`x`, `y`), if any, for a tap on the map.
+    func bus(atX x: Float, y: Float, camera: Map3DCamera, in scene: Map3DScene) -> BusID? {
+        guard let world = busWorld, let signature = busSignature, let clock = busClock,
+              let laid = buses.buses(signature, world: world, in: scene, palette: busPalette, roads: busRoads) else { return nil }
+        return laid.bus(atX: x, y: y, camera: camera, second: clock.second(at: Date().timeIntervalSinceReferenceDate, glides: busGlides),
+                        within: Map3DBuses.tapReach)
     }
 
     /// Decision 314: the labels of the trains whose fronts are at `heads`.
@@ -962,6 +1001,7 @@ private struct Map3DView: UIViewRepresentable {
             // flight starts from it.
             // Decision 403 (續): from the station, where it stands now.
             var follow = follow
+            feed.followedBus = follow?.bus
             if let id = follow?.train, follow?.view == .station, let scene {
                 follow?.lookout = Map3DFollow.lookout(of: id, in: world, scene: scene)
             }
@@ -970,7 +1010,7 @@ private struct Map3DView: UIViewRepresentable {
             // offered.
             context.coordinator.streamer.stops = context.coordinator.stopsAhead(of: follow?.train, in: world, scene: scene)
             if context.coordinator.shownVersion != nil,
-               view.following?.train != follow?.train || view.following?.view != follow?.view || view.following?.lookout != follow?.lookout {
+               view.following?.subject != follow?.subject || view.following?.view != follow?.view || view.following?.lookout != follow?.lookout {
                 view.follow(follow, reduceMotion: context.environment.accessibilityReduceMotion)
                 if follow == nil { context.coordinator.showHeading() }
             }
@@ -1013,6 +1053,7 @@ private struct Map3DView: UIViewRepresentable {
             tag.place(seenBy: camera)
         }
         view.streetLife = { camera, lights, budget in feed.streetLife(in: scene, camera: camera, lights: lights, budget: budget) }
+        view.busPose = { id in feed.busPose(id, in: scene) }
         if first, let start {
             // Decision 269: where the 2D map was, as close, straight down.
             view.camera = Map3DHandoff.camera(from: start, in: scene, viewport: view.camera.viewport)
@@ -1444,7 +1485,7 @@ private struct Map3DStationTagView: View {
     }
 
     private var tag: StationTag? {
-        guard session.tool == .select, session.tutorial == nil, session.followedTrain == nil,
+        guard session.tool == .select, session.tutorial == nil, !session.isFollowingVehicle,
               let id = state.station, id == session.selectedStationID else { return nil }
         return StationTag(world: session.world, station: id)
     }
@@ -1741,6 +1782,97 @@ private struct Map3DFollowBar: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: session.language.text("Stop following", "取消跟隨")))
         .accessibilityIdentifier("map3D.follow.stop")
+    }
+}
+
+/// Decision 400 (FOLLOWBUS): the bar over the 3D map while the camera
+/// follows a bus: the route's name, where the bus is going and the stop it
+/// comes to next, the places to follow it from (not the station view: a
+/// bus has no platform), the photo and the stop.
+private struct Map3DBusFollowBar: View {
+    let facts: BusFollowFacts
+    let session: GameSession
+    @Binding var view: Map3DFollow.View
+    let takePhoto: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 9) {
+                title
+                choices
+                actions
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 9) {
+                    title
+                    Spacer(minLength: 0)
+                    actions
+                }
+                HStack(spacing: 9) { choices }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 2)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .hudFrameMark("map3D.busFollowBar")
+        .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
+    }
+
+    private var title: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(facts.color.map { Palette.color($0) } ?? Palette.train)
+                .frame(width: 9, height: 9)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: facts.routeName + " · " + facts.directionText)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Text(verbatim: facts.stopText)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var choices: some View {
+        let selection = $view
+        let language = session.language
+        return ForEach(Map3DFollow.View.allCases.filter { $0 != .station }, id: \.self) { @Sendable option in
+            Map3DFollowChoice(option: option, selection: selection, language: language)
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button(action: takePhoto) {
+            round("camera.fill")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Take Photo", "拍照")))
+        .accessibilityHint(Text(verbatim: session.language.text("Saves the 3D view as a picture to share.", "把現在的 3D 畫面存成照片，可以分享。")))
+        .accessibilityIdentifier("map3D.follow.photo")
+        Button {
+            session.stopFollowingBus()
+        } label: {
+            round("xmark").foregroundStyle(Theme.onError).background(Theme.error, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Stop following", "取消跟隨")))
+        .accessibilityIdentifier("map3D.follow.stop")
+    }
+
+    private func round(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.caption.weight(.heavy))
+            .frame(width: 26, height: 26)
+            .background(Theme.chip, in: Circle())
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
     }
 }
 

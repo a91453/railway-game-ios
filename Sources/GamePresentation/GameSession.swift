@@ -380,12 +380,24 @@ public final class GameSession {
     /// a drag, pinch or zoom of the map through ``mapDidMove()``, closing the
     /// train with ``clearSelection()``), or when the train leaves the track,
     /// stops existing or its line is removed.
-    public private(set) var followedTrainID: TrainID? {
+    public internal(set) var followedTrainID: TrainID? {
         didSet {
             if followedTrainID != oldValue { updateMap3DSpeedCap() }
             refreshFollowBar()
         }
     }
+
+    /// Decision 400 (FOLLOWBUS): the bus the camera follows, in place of a
+    /// train (the two never at once). An ID only; read the bus through
+    /// ``followedBus``, which is `nil` once the route is gone or the bus
+    /// is no longer out. See `FollowBus.swift`.
+    public internal(set) var followedBusID: BusID? {
+        didSet { refreshBusFollow() }
+    }
+
+    /// What the follow bar shows of the bus followed (kept as
+    /// ``followBar`` is, changing only when what it shows does).
+    public internal(set) var busFollowBar: BusFollowFacts?
 
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
@@ -1256,6 +1268,7 @@ public final class GameSession {
     /// the selection.
     public func followTrain(_ id: TrainID) {
         guard let train = world.train(id: id), train.position != nil else { return }
+        followedBusID = nil
         followedTrainID = id
         updateFollowSounds()
     }
@@ -1263,6 +1276,7 @@ public final class GameSession {
     /// Stops following (the follow bar's unfollow button).
     public func stopFollowingTrain() {
         followedTrainID = nil
+        followedBusID = nil
         updateFollowSounds()
     }
 
@@ -1319,6 +1333,7 @@ public final class GameSession {
         if followedTrainID != nil, followedTrain == nil {
             followedTrainID = nil
         }
+        keepFollowingBus()
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
@@ -1421,6 +1436,9 @@ public final class GameSession {
     public func setMap3DOpen(_ open: Bool) {
         guard open != isMap3DOpen else { return }
         isMap3DOpen = open
+        // Decision 400 (FOLLOWBUS): the flat map draws no buses, so a bus
+        // followed in 3D is let go when 3D closes.
+        if !open, followedBusID != nil { followedBusID = nil }
         updateMap3DSpeedCap()
     }
 
@@ -1466,8 +1484,10 @@ public final class GameSession {
     /// lowered.
     @ObservationIgnored private var speedBefore3D: GameSpeed?
 
+    func updateMap3DSpeedCapForBus() { updateMap3DSpeedCap() }
+
     private func updateMap3DSpeedCap() {
-        let capped = isMap3DOpen && followedTrainID != nil
+        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil)
         guard capped != isSpeedCappedIn3D else { return }
         applyHeldSpeed()
         isSpeedCappedIn3D = capped

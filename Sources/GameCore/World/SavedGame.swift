@@ -432,9 +432,17 @@
 ///     drop them, and the cableways built would be lost, so it says the
 ///     save is newer than it instead. (81 is reserved by another task in
 ///     the work registry.)
+/// 84. Taiwan's named festivals (decision 576): the demand events can have
+///     `"sites"`, the places festivals are held at, an event can name its
+///     `"festival"`, and a scenario's festival can `"follows"` a named
+///     festival's date through the lunar calendar. A build that reads only
+///     an earlier version would drop them and fix the festival to one day
+///     of the year, so it says the save is newer than it instead. A save of
+///     any earlier version needs no step: the new fields are optional and
+///     read as before.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 83
+    public static let currentVersion = 84
 
     public let world: GameWorld
 
@@ -647,6 +655,9 @@ extension SavedGame: Codable {
         // left, as every line did (decision 564): nothing to turn.
         // Version 80, 81 or 82 to 83: a world without `"cableways"` has none
         // (decision 574): nothing to turn.
+        // Version 83 or earlier to 84: a world without festival `"sites"`, an
+        // event's `"festival"` or a scenario event's `"follows"` has none
+        // (decision 576): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

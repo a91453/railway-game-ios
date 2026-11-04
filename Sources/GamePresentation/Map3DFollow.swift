@@ -113,7 +113,66 @@ public struct Map3DFollow: Hashable, Sendable {
         }
     }
 
-    public let train: TrainID
+    /// Decision 400 (FOLLOWBUS): what the camera follows. A train, or a bus
+    /// of a player's bus route; the camera reads either through a
+    /// ``Pose``, so another vehicle (a cable car's cabin) joins by making
+    /// one.
+    public enum Subject: Hashable, Sendable {
+        case train(TrainID)
+        case bus(BusID)
+    }
+
+    /// Where a followed vehicle is and which way it faces, in the scene's
+    /// space: what the camera needs of it, for any vehicle. A train's is
+    /// its ``Map3DTrains/Head``'s (``Map3DTrains/Head/pose``); a bus's
+    /// comes from ``Map3DBuses/pose(of:second:)``.
+    public struct Pose: Equatable, Sendable {
+        /// The way the front faces, level, one metre long.
+        public var forward: Map3DPoint
+        /// The front of the vehicle on its way (the rail, the road), where
+        /// the cab view looks out from.
+        public var nose: Map3DPoint
+        /// The way under the vehicle, where the following camera looks.
+        public var rail: Map3DPoint
+        /// The middle of the vehicle on the way, and how long it runs in
+        /// metres, for the view from beside it.
+        public var middle: Map3DPoint?
+        public var length: Float
+        /// The drawn ground at ``nose`` the camera stays over (a tunnel, a
+        /// cutting); `nil` off the player's track.
+        public var ground: Float?
+        public var inTunnel: Bool
+        /// How high the driver's eye is over ``nose``'s way; `nil` for the
+        /// train's (``Map3DFollow/cabEyeHeight``).
+        public var eyeHeight: Float?
+        /// How tall the body stands over the way, which the side view
+        /// looks at the middle of.
+        public var bodyHeight: Float
+
+        public init(forward: Map3DPoint, nose: Map3DPoint, rail: Map3DPoint, middle: Map3DPoint? = nil, length: Float = 0,
+                    ground: Float? = nil, inTunnel: Bool = false, eyeHeight: Float? = nil,
+                    bodyHeight: Float = Map3DTrains.carHeight) {
+            self.bodyHeight = bodyHeight
+            self.forward = forward
+            self.nose = nose
+            self.rail = rail
+            self.middle = middle
+            self.length = length
+            self.ground = ground
+            self.inTunnel = inTunnel
+            self.eyeHeight = eyeHeight
+        }
+    }
+
+    public let subject: Subject
+    /// The train followed; `nil` when it is a bus.
+    public var train: TrainID? {
+        if case .train(let id) = subject { id } else { nil }
+    }
+    /// The bus followed; `nil` when it is a train.
+    public var bus: BusID? {
+        if case .bus(let id) = subject { id } else { nil }
+    }
     public var view: View
     /// Decision 403 (續): where the station view stands; `nil` follows
     /// from behind instead.
@@ -123,7 +182,14 @@ public struct Map3DFollow: Hashable, Sendable {
     public var scale: Float = 1
 
     public init(train: TrainID, view: View = .back) {
-        self.train = train
+        subject = .train(train)
+        self.view = view
+    }
+
+    /// Decision 400 (FOLLOWBUS): following a bus. It has no platform to
+    /// watch from, so its ``View/station`` is from behind.
+    public init(bus: BusID, view: View = .back) {
+        subject = .bus(bus)
         self.view = view
     }
 
@@ -294,6 +360,11 @@ public struct Map3DFollow: Hashable, Sendable {
     /// it instead, so the camera stays out of the ground (decision 359).
     public func camera(following head: Map3DTrains.Head, from camera: Map3DCamera, elapsed: Double,
                        turnsAtOnce: Bool = false) -> Map3DCamera {
+        self.camera(following: head.pose, from: camera, elapsed: elapsed, turnsAtOnce: turnsAtOnce)
+    }
+
+    /// The same for any followed vehicle (``Pose``).
+    public func camera(following head: Pose, from camera: Map3DCamera, elapsed: Double, turnsAtOnce: Bool = false) -> Map3DCamera {
         var next = camera
         if view == .side {
             // Turned after the train as from behind, its heading read back
@@ -303,7 +374,7 @@ public struct Map3DFollow: Hashable, Sendable {
             let share = turnsAtOnce ? 1 : Self.headingShare(elapsed: elapsed)
             let turned = was + Map3DCamera.turnFromNorth(wanted - was) * share
             let forward = Map3DPoint(sinf(turned), 0, -cosf(turned)), left = Map3DPoint(forward.z, 0, -forward.x)
-            var target = (head.middle ?? head.rail) + Map3DPoint(0, Map3DTrains.carHeight / 2, 0)
+            var target = (head.middle ?? head.rail) + Map3DPoint(0, head.bodyHeight / 2, 0)
             if let ground = head.ground { target.y = max(target.y, ground) }
             let k = Self.sideScale(length: head.length, viewport: camera.viewport) * scale
             let eye = target + left * (Self.sideAcross * k) - forward * (Self.sideBack * k) + Map3DPoint(0, Self.sideUp * k, 0)
@@ -337,11 +408,12 @@ public struct Map3DFollow: Hashable, Sendable {
             next.pitch = view.tilt
             next.lens = Self.cabLens
             next.distance = Map3DCamera.nearest
-            var eye = head.nose + head.forward * Self.cabLead + Map3DPoint(0, Self.cabEyeHeight, 0)
+            let height = head.eyeHeight ?? Self.cabEyeHeight
+            var eye = head.nose + head.forward * Self.cabLead + Map3DPoint(0, height, 0)
             // Decision 359: over the ground where it covers the track (a
             // deep cutting), not in it; decision 359 (續): in a tunnel, in
             // its bore.
-            if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + Self.cabEyeHeight) }
+            if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + height) }
             next.target = eye + next.forward * (next.distance * sinf(view.tilt)) - Map3DPoint(0, next.distance * cosf(view.tilt), 0)
             return next
         }
