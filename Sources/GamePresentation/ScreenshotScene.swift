@@ -224,7 +224,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         else { return DemoWorld.make(in: language) }
         var world = GameWorld.newGame(anchor: anchor)
         if let stops = RealCableway.maokong.stops(in: world) {
-            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres, meetsNear: RealCableway.maokong.meetsNear(in: world))
         }
         // On to 10:00 of day 1 (.fast is ten minutes a tick).
         world.setSpeed(.fast)

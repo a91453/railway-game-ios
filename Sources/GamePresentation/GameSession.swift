@@ -636,6 +636,10 @@ public final class GameSession {
     /// ``buildCableway()``.
     public internal(set) var cablewayDraft: [CablewayStop] = []
     public internal(set) var cablewayDraftLegs: [Int64]?
+    /// Decision 586: where the station the real cable car drawn meets
+    /// stands (``RealCableway/meetsNear(in:)``); `nil` for one drawn stop
+    /// by stop.
+    public internal(set) var cablewayDraftMeets: PlanPoint?
     /// Whether the next tap puts down an angle station, where the rope
     /// turns and no one boards, rather than a station.
     public var cablewayPlacesAngle = false
