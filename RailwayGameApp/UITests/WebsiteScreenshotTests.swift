@@ -1358,10 +1358,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         let first = app.buttons["train.platform.1"].firstMatch
         let second = app.buttons["train.platform.2"].firstMatch
         XCTAssertTrue(first.appears(within: 10), "The station's platforms are listed")
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(second, in: card), "Both platforms show")
-        second.waitUntilSettled()
+        // Down the card's middle: its left edge is not its scrolling list
+        // (run 41872784387's drags there moved nothing).
+        let shown = app.dragUntilWhollyOnScreen(second, in: card, drags: 12, at: card.frame.midX)
         settle()
         keep("platform-choice", app)
+        XCTAssertTrue(shown, "Both platforms show")
         let other = first.isSelected ? second : first
         other.tap()
         settle()
