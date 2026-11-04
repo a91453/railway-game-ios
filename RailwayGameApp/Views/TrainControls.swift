@@ -96,6 +96,10 @@ struct TrainControls: View {
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)
                     }
+                    // Decision 584: at a station of two or more platforms,
+                    // which one it goes on; first, as the middle of the
+                    // card on a phone shows some 70 pt at once.
+                    PlacementPlatformPicker(session: session)
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
                     TrainTypeMenu(
@@ -105,9 +109,6 @@ struct TrainControls: View {
                     }
                     .equatable()
                     headingPicker
-                    // Decision 584: at a station of two or more platforms,
-                    // which one it goes on.
-                    PlacementPlatformPicker(session: session)
                 } else {
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {

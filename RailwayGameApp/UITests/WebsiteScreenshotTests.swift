@@ -1334,13 +1334,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// picked, then the other picked by hand.
     func testPlacementPlatformChoice() {
         let app = launch(extra: ["-ui-test-world", "platform-choice"])
-        // Upright: on its side the card's scrolling band is some 24 pt,
-        // shorter than a platform's row (run 41880284408's shot).
-        XCUIDevice.shared.orientation = .portrait
-        defer {
-            app.terminate()
-            XCUIDevice.shared.orientation = .landscapeLeft
-        }
+        defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 30), "The world opens")
         map.waitUntilSettled()
@@ -1364,13 +1358,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         let first = app.buttons["train.platform.1"].firstMatch
         let second = app.buttons["train.platform.2"].firstMatch
         XCTAssertTrue(first.appears(within: 10), "The station's platforms are listed")
-        // Down the card's middle: its left edge is not its scrolling list
-        // (run 41872784387's drags there moved nothing).
-        let shown = app.dragUntilWhollyOnScreen(second, in: card, drags: 16, at: card.frame.midX)
+        // In the card's scrolling middle, some 70 pt between its head and
+        // its Place button on a phone (runs 41872784387 and 41880284408
+        // dragged beside it and nothing moved); the phone runs on its side
+        // only.
+        let pinned = app.descendants(matching: .any)["details.scroll.middle"].firstMatch
+        let middle = pinned.appears(within: 5) ? pinned : app.descendants(matching: .any)["details.scroll.whole"].firstMatch
+        let shown = app.dragUntilWhollyOnScreen(second, in: middle, drags: 16, at: middle.frame.midX)
         settle()
         keep("platform-choice", app)
-        XCTAssertTrue(shown, "Both platforms show")
-        let other = first.isSelected ? second : first
+        XCTAssertTrue(shown, "Platform 2 shows")
+        let picksFirst = second.isSelected
+        let other = picksFirst ? first : second
+        if picksFirst {
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(first, in: middle, drags: 16, at: middle.frame.midX), "Platform 1 shows")
+        }
         other.tap()
         settle()
         XCTAssertTrue(other.isSelected, "The tapped platform is picked")
