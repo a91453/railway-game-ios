@@ -30,13 +30,15 @@ struct NetworkControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
-                // Decision 266: in a lesson, only the modes it has unlocked.
-                ForEach(NetworkToolMode.allCases.filter { session.allows($0) }, id: \.self) { mode in
-                    Text(mode.title(in: session.language)).tag(mode)
+            // Decision 574: six modes do not fit a phone's panel in
+            // English; then the row keeps its words whole and slides
+            // sideways instead of cutting them short.
+            ViewThatFits(in: .horizontal) {
+                modePicker
+                ScrollView(.horizontal, showsIndicators: false) {
+                    modePicker.fixedSize()
                 }
             }
-            .pickerStyle(.segmented)
             .tutorialTarget(.networkModes)
             switch session.networkMode {
             case .build:
@@ -357,6 +359,22 @@ struct NetworkControls: View {
                 .accessibilityIdentifier("network.depotSide")
             }
         }
+    }
+
+    /// The network tool's modes, one segment each. It stands in a
+    /// ViewThatFits, so its row closure is sendable and makes a view of
+    /// its own (CRASH101).
+    private var modePicker: some View {
+        let session = session
+        // Decision 266: in a lesson, only the modes it has unlocked.
+        let modes = NetworkToolMode.allCases.filter { session.allows($0) }
+        let language = session.language
+        return Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
+            ForEach(modes, id: \.self) { @Sendable mode in
+                NetworkModeSegment(mode: mode, language: language)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     // MARK: - Cable car
@@ -782,5 +800,15 @@ private struct TracedSaleRow: View {
             .accessibilityIdentifier("network.forSale.buy")
         }
         .padding(.top, 2)
+    }
+}
+
+/// One segment of the network tool's mode row, tagged with its mode.
+private struct NetworkModeSegment: View {
+    let mode: NetworkToolMode
+    let language: DisplayLanguage
+
+    var body: some View {
+        Text(mode.title(in: language)).tag(mode)
     }
 }
