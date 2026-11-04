@@ -105,6 +105,9 @@ struct TrainControls: View {
                     }
                     .equatable()
                     headingPicker
+                    // Decision 584: at a station of two or more platforms,
+                    // which one it goes on.
+                    PlacementPlatformPicker(session: session)
                 } else {
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
@@ -589,6 +592,54 @@ private struct TrainTypeMenu: View, Equatable {
         } else {
             Text(verbatim: title)
             Text(verbatim: detail)
+        }
+    }
+}
+
+/// Decision 584: the platforms of the selected station the selected train
+/// can be placed on, when it has two or more; the one it will go on is
+/// highlighted. Nothing at a station of one platform.
+private struct PlacementPlatformPicker: View {
+    let session: GameSession
+
+    var body: some View {
+        let choices = session.placementPlatformChoices
+        if !choices.isEmpty {
+            let picked = session.placementPlatform
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: session.language.text("Platform", "月台"))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                ForEach(choices) { choice in
+                    let isActive = choice.platform == picked
+                    let note = session.placementPlatformNote(choice)
+                    Button {
+                        session.pickPlacementPlatform(choice.platform)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(verbatim: choice.title(in: session.language))
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                            Spacer(minLength: 4)
+                            if let note {
+                                Label {
+                                    Text(verbatim: note)
+                                } icon: {
+                                    Image(systemName: choice.holder != nil || choice.isShort ? "exclamationmark.triangle" : "point.3.connected.trianglepath.dotted")
+                                }
+                                .font(.caption)
+                                .foregroundStyle(isActive ? Theme.onPrimary : (choice.holder != nil || choice.isShort ? Theme.warning : Theme.textSecondary))
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                    }
+                    .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(isActive ? .isSelected : [])
+                    .accessibilityIdentifier("train.platform.\(choice.number)")
+                }
+            }
         }
     }
 }

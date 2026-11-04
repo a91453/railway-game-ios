@@ -1328,6 +1328,47 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("idle-train-banner", app)
     }
 
+    /// Decision 584, PR-2: the train tool at 海岸, a station of two
+    /// platforms on two tracks that do not meet, with 列車 3 off the track
+    /// and given 海岸線: the platforms listed, the one on 海岸線's track
+    /// picked, then the other picked by hand.
+    func testPlacementPlatformChoice() {
+        let app = launch(extra: ["-ui-test-world", "platform-choice"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 5), build.becomesHittable(within: 5) { build.tap() }
+        let trainTool = app.buttons["tool.train"]
+        XCTAssertTrue(trainTool.appears(within: 10), "The train tool shows")
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).tap()
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 10), "The train tool's card shows")
+        let first = app.buttons["train.platform.1"].firstMatch
+        let second = app.buttons["train.platform.2"].firstMatch
+        XCTAssertTrue(first.appears(within: 10), "The station's platforms are listed")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(second, in: card), "Both platforms show")
+        second.waitUntilSettled()
+        settle()
+        keep("platform-choice", app)
+        let other = first.isSelected ? second : first
+        other.tap()
+        settle()
+        XCTAssertTrue(other.isSelected, "The tapped platform is picked")
+        keep("platform-choice-picked", app)
+    }
+
     /// Decision 507: the platform mode's layout menu on a double track,
     /// with a place picked, then the menu open (the single-track layouts
     /// greyed with why).
