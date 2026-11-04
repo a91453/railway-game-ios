@@ -155,18 +155,9 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(network.appears(within: 10))
             network.waitUntilSettled()
             if !network.isSelected { network.tap() }
-            let mode = app.segmentedControls.buttons[english ? "Cable car" : "纜車"].firstMatch
-            XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
-            // In English the row slides sideways: the last mode is past its end.
-            // Drag the row that holds the mode, from inside its visible
-            // part: the row is wider than the panel, so its frame's middle
-            // (where a swipe starts) is at the panel's clipped edge.
-            let row = app.segmentedControls.containing(NSPredicate(format: "label == %@", english ? "Cable car" : "纜車")).firstMatch
-            for _ in 0..<3 where !mode.becomesHittable(within: 2) {
-                let left = row.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
-                left.withOffset(CGVector(dx: 180, dy: 0))
-                    .press(forDuration: 0.05, thenDragTo: left.withOffset(CGVector(dx: 10, dy: 0)), withVelocity: .fast, thenHoldForDuration: 0.1)
-            }
+            // The row slides sideways when the modes do not fit.
+            let mode = app.networkMode(english ? "Cable car" : "纜車")
+            XCTAssertTrue(mode.exists, "The mode is in the row, not under More")
             XCTAssertTrue(mode.becomesHittable(within: 10))
             mode.tap()
             let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
@@ -177,6 +168,19 @@ final class WebsiteScreenshotTests: XCTestCase {
             if angle.appears(within: 5) { angle.swipeUp() }
             settle()
             keep(english ? "cableway-mode-english" : "cableway-mode", app)
+            // Decision 574's next step: the panel closed and opened again
+            // shows the chosen mode in view, the row not slid by hand.
+            let done = app.buttons["tool.select"]
+            if done.becomesHittable(within: 10) {
+                done.tap()
+                if build.appears(within: 10) { build.tap() }
+                XCTAssertTrue(network.appears(within: 10))
+                network.waitUntilSettled()
+                if !network.isSelected { network.tap() }
+                XCTAssertTrue(app.networkModeElement(english ? "Cable car" : "纜車").appears(within: 10))
+                settle()
+                keep(english ? "cableway-mode-reopened-english" : "cableway-mode-reopened", app)
+            }
             app.terminate()
         }
     }
@@ -1158,7 +1162,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped")
         builder.tap()
         settle()
-        let platform = app.segmentedControls.buttons["車站"].firstMatch
+        let platform = app.networkMode("車站")
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }
@@ -1286,7 +1290,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let build = app.buttons["dock.build"]
         XCTAssertTrue(build.appears(within: 10))
         build.tap()
-        let platformMode = app.segmentedControls.buttons["車站"].firstMatch
+        let platformMode = app.networkMode("車站")
         if !platformMode.appears(within: 10) {
             let controls = app.buttons["controls.toggle"]
             if controls.appears(within: 5), controls.label == "展開控制項" { controls.tap() }
@@ -1324,7 +1328,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         if !card.appears(within: 60), folded.exists { folded.tap() }
         XCTAssertTrue(card.appears(within: 10), "The tutorial's card shows")
-        let mode = app.segmentedControls.buttons["車站"].firstMatch
+        let mode = app.networkMode("車站")
         if !mode.appears(within: 10), app.buttons["dock.build"].exists { app.buttons["dock.build"].tap() }
         XCTAssertTrue(mode.appears(within: 10), "The Station mode shows")
         settle(seconds: 3)
