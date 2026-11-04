@@ -26,6 +26,20 @@
 // Maokong Gondola's figures come from its operator's pages (gondola.taipei)
 // and, where those are silent, Wikipedia: decision 574 lists each one.
 
+/// Decision 586: how tourists reach a sight no station serves on foot:
+/// by train to ``station``, then on by ``feeder``
+/// (``GameWorld/feederAccess(to:onDay:)``).
+struct FeederAccess: Hashable, Sendable {
+    /// What takes them on from the station: a cableway (a city bus route
+    /// could join it later).
+    enum Feeder: Hashable, Sendable {
+        case cableway(CablewayID)
+    }
+
+    let station: StationID
+    let feeder: Feeder
+}
+
 /// A cableway's number, handed out in order and never used again.
 public struct CablewayID: RawRepresentable, Hashable, Comparable, Codable, Sendable {
     public let rawValue: Int
@@ -532,6 +546,18 @@ extension GameWorld {
             let thousandths = cableways[index].riderThousandths + boarded * min(trips, cableways[index].feederTrips) * 1_000 / trips
             cableways[index].ridersToday = min(Self.maximumHourly, cableways[index].ridersToday + thousandths / 1_000)
             cableways[index].riderThousandths = thousandths % 1_000
+        }
+    }
+
+    /// Decision 586: adds `rides`, the tourists' rides on of the day that
+    /// ended (``TouristFlows/feederRides``), to each cableway's riders of
+    /// that day, before it is settled. In management mode only, as the
+    /// riders from the trains.
+    mutating func countFeederRides(_ rides: [FeederAccess.Feeder: Int64]) {
+        guard accounts.mode == .management, !rides.isEmpty else { return }
+        for index in cableways.indices {
+            guard let count = rides[.cableway(cableways[index].id)], count > 0 else { continue }
+            cableways[index].ridersToday = min(Self.maximumHourly, cableways[index].ridersToday + count)
         }
     }
 
