@@ -158,7 +158,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             let mode = app.segmentedControls.buttons[english ? "Cable car" : "纜車"].firstMatch
             XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
             // In English the row slides sideways: the last mode is past its end.
-            if !mode.becomesHittable(within: 3) { app.segmentedControls.firstMatch.swipeLeft() }
+            // Swipe the row that holds the mode: the panel has other
+            // segmented rows above it.
+            let row = app.segmentedControls.containing(NSPredicate(format: "label == %@", english ? "Cable car" : "纜車")).firstMatch
+            for _ in 0..<3 where !mode.becomesHittable(within: 2) { row.swipeLeft() }
             XCTAssertTrue(mode.becomesHittable(within: 10))
             mode.tap()
             let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
