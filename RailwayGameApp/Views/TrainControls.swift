@@ -618,9 +618,13 @@ private struct PlacementPlatformPicker: View {
                         session.pickPlacementPlatform(choice.platform)
                     } label: {
                         HStack(spacing: 6) {
+                            // Whole: the note gives way, not the title
+                            // (run 41894932019 broke "64 公尺" in two).
                             Text(verbatim: choice.title(in: session.language))
                                 .font(.subheadline.weight(.semibold))
                                 .monospacedDigit()
+                                .lineLimit(1)
+                                .layoutPriority(1)
                             Spacer(minLength: 4)
                             if let note {
                                 Label {
@@ -629,6 +633,7 @@ private struct PlacementPlatformPicker: View {
                                     Image(systemName: choice.holder != nil || choice.isShort ? "exclamationmark.triangle" : "point.3.connected.trianglepath.dotted")
                                 }
                                 .font(.caption)
+                                .lineLimit(2)
                                 .foregroundStyle(isActive ? Theme.onPrimary : (choice.holder != nil || choice.isShort ? Theme.warning : Theme.textSecondary))
                             }
                         }
