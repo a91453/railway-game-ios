@@ -197,6 +197,8 @@ public struct Map3DModelPack: Sendable {
             models += Map3DWenhuVAL256.Role.allCases.map { Map3DWenhuVAL256.model($0, far: far) }
             models += Map3DWenhuAPM256.Role.allCases.map { Map3DWenhuAPM256.model($0, far: far) }
         }
+        // Decision 575: the Maokong Gondola's cabins, tower, rope and halls.
+        models += Map3DCableCar.models
         self.init(recipes: models, baked: baked)
     }
 
