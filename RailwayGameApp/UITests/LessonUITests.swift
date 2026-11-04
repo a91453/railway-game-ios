@@ -271,7 +271,7 @@ final class LessonUITests: XCTestCase {
     }
 
     private func mode(_ name: String) -> XCUIElement {
-        app.segmentedControls.buttons[name].firstMatch
+        app.networkModeElement(name)
     }
 
     private func launch(stars: String? = nil, step: String? = nil, paused: Bool = false) {

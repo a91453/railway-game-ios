@@ -37,7 +37,7 @@ struct NetworkControls: View {
             // it fades out.
             ViewThatFits(in: .horizontal) {
                 modePicker
-                NetworkModeScrollRow(modes: modes, selection: session.networkMode, picker: modePicker)
+                NetworkModeScrollRow(session: session, modes: modes)
             }
             .tutorialTarget(.networkModes)
             switch session.networkMode {
@@ -809,16 +809,19 @@ private struct TracedSaleRow: View {
     }
 }
 
-/// The mode row when it does not fit (decision 574's next step): it
-/// scrolls sideways, keeps the chosen mode in view (when it first shows,
-/// and whenever the choice changes, by a tap, a lesson or another way into
-/// a mode), and fades out at an end with more past it (``ScrollEdgeFade``).
-/// With Reduce Motion the row jumps to the mode instead of sliding; the
-/// fades follow the scroll position and are never animated.
-private struct NetworkModeScrollRow<Row: View>: View {
+/// The mode row when it does not fit (decision 574's next step): a row of
+/// chips that scrolls sideways, keeps the chosen mode in view (each time
+/// it shows, as when the panel opens again, and whenever the choice
+/// changes, by a tap, a lesson or another way into a mode), and fades out
+/// at an end with more past it (``ScrollEdgeFade``). Chips, not the
+/// segmented control: a scroll view does not take a drag that starts on a
+/// control, and the segments filled the row, so it slid only now and then
+/// (the owner on 112.1; runs 41830206452 and 41833421660). With Reduce
+/// Motion the row jumps to the mode instead of sliding; the fades follow
+/// the scroll position and are never animated.
+private struct NetworkModeScrollRow: View {
+    let session: GameSession
     let modes: [NetworkToolMode]
-    let selection: NetworkToolMode
-    let picker: Row
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// How far the row is scrolled, how wide it is and how wide the room
     /// it shows through: transient view state, for the fades.
@@ -827,32 +830,26 @@ private struct NetworkModeScrollRow<Row: View>: View {
     @State private var viewWidth = 0.0
 
     var body: some View {
+        let session = session
+        let selection = session.networkMode
         let fade = ScrollEdgeFade(offset: offset, contentWidth: rowWidth, viewportWidth: viewWidth)
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                picker
-                    .fixedSize()
-                    // A segmented picker's segments are one width each: a
-                    // clear stand-in over each is what the row scrolls to.
-                    .background {
-                        HStack(spacing: 0) {
-                            // It stands in a ViewThatFits: the row closure
-                            // is sendable and makes a view of its own
-                            // (CRASH101).
-                            ForEach(modes, id: \.self) { @Sendable mode in
-                                NetworkModeAnchor(mode: mode)
-                            }
-                        }
-                        .accessibilityHidden(true)
+                HStack(spacing: 6) {
+                    // It stands in a ViewThatFits: the row closure is
+                    // sendable and makes a view of its own (CRASH101).
+                    ForEach(modes, id: \.self) { @Sendable mode in
+                        NetworkModeChip(session: session, mode: mode)
                     }
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("network.modeRow")) } action: { frame in
-                        offset = -Double(frame.minX)
-                        rowWidth = Double(frame.width)
-                    }
+                }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("network.modeRow")) } action: { frame in
+                    offset = -Double(frame.minX)
+                    rowWidth = Double(frame.width)
+                }
             }
             // Where the scroll position is read. The name is written out at
             // both ends: the geometry closure is sendable, so it reads no
-            // property of this generic, main-actor view.
+            // property of this main-actor view.
             .coordinateSpace(.named("network.modeRow"))
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = Double($0) }
             .accessibilityIdentifier("network.modeRow")
@@ -868,14 +865,28 @@ private struct NetworkModeScrollRow<Row: View>: View {
     }
 }
 
-/// A clear stand-in over one mode's segment, for the row to scroll to.
-private struct NetworkModeAnchor: View {
+/// One mode in the scrolling row: its name, filled when chosen, 44 points
+/// high to touch.
+private struct NetworkModeChip: View {
+    let session: GameSession
     let mode: NetworkToolMode
 
     var body: some View {
-        Color.clear
-            .frame(maxWidth: .infinity)
-            .id(mode)
+        let chosen = session.networkMode == mode
+        Button {
+            session.setNetworkMode(mode)
+        } label: {
+            Text(mode.title(in: session.language))
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 12)
+                .frame(minHeight: 36)
+        }
+        // The style's 4 points above and below make it 44 high.
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: chosen))
+        .accessibilityAddTraits(chosen ? .isSelected : [])
+        .id(mode)
     }
 }
 

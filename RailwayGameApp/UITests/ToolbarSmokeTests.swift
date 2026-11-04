@@ -485,36 +485,34 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
-    /// The network tool's mode `name` (a segment's label), slid into view.
-    /// Decision 574: when the six modes do not fit the panel, the row
-    /// scrolls sideways, and the modes past its edge cannot be touched (the
-    /// 112.1 full lane, run 41817301541: "Depot" in two tests). So, as a
-    /// player would, it drags the row by a mode that is in view, toward
-    /// the one wanted, until that one can be touched. Never by the chosen
-    /// mode: a drag that starts there slides the choice to another mode
-    /// instead of scrolling the row (run 41830206452).
+    /// The network tool's mode `name` as it shows: a segment where the six
+    /// modes fit, else a chip in the row that scrolls sideways
+    /// (`network.modeRow`, decision 574). Not slid into view: for asking
+    /// whether a mode is there.
+    func networkModeElement(_ name: String) -> XCUIElement {
+        let chip = scrollViews["network.modeRow"].firstMatch.buttons[name].firstMatch
+        return chip.exists ? chip : segmentedControls.buttons[name].firstMatch
+    }
+
+    /// The network tool's mode `name`, slid into view to be touched. Where
+    /// the modes do not fit, the row scrolls sideways and the modes past
+    /// its edge cannot be touched (the 112.1 full lane, run 41817301541:
+    /// "Depot" in two tests); so, as a player would, it swipes the row
+    /// toward the one wanted until that one can be touched.
     func networkMode(_ name: String) -> XCUIElement {
-        let mode = segmentedControls.buttons[name].firstMatch
-        guard mode.appears(within: 10) else { return mode }
-        let row = segmentedControls.containing(NSPredicate(format: "label == %@", name)).firstMatch
-        let scroller = scrollViews["network.modeRow"].firstMatch
-        for attempt in 0..<8 where !mode.becomesHittable(within: 1) {
-            let inView = row.buttons.allElementsBoundByIndex.filter { $0.isHittable && !$0.isSelected }
-            let towardStart = inView.first.map { mode.frame.midX < $0.frame.midX } ?? false
-            print("networkMode \(name) attempt \(attempt): mode \(mode.frame) row \(row.frame) scroller \(scroller.exists ? "\(scroller.frame)" : "none") in view \(inView.map(\.label))")
-            if attempt % 2 == 1, scroller.exists {
-                // The row's own scroll view, from the middle of what shows.
-                if towardStart { scroller.swipeRight(velocity: .slow) } else { scroller.swipeLeft(velocity: .slow) }
-                continue
-            }
-            // The mode in view nearest the wanted one: the drag runs away
-            // from it, across the modes in view.
-            guard let grip = towardStart ? inView.first : inView.last else { break }
-            let start = grip.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: towardStart ? 120 : -120, dy: 0)),
-                        withVelocity: .fast, thenHoldForDuration: 0.1)
+        let row = scrollViews["network.modeRow"].firstMatch
+        let chip = row.buttons[name].firstMatch
+        let segment = segmentedControls.buttons[name].firstMatch
+        let deadline = Date().addingTimeInterval(10)
+        while Date() < deadline, !chip.exists, !segment.exists {
+            Thread.sleep(forTimeInterval: 0.2)
         }
-        return mode
+        guard chip.exists else { return segment }
+        for attempt in 0..<8 where !chip.becomesHittable(within: 1) {
+            print("networkMode \(name) attempt \(attempt): chip \(chip.frame) row \(row.frame)")
+            if chip.frame.midX < row.frame.midX { row.swipeRight() } else { row.swipeLeft() }
+        }
+        return chip
     }
 
     /// Chooses the speed `name` (a row's label, as `GameSpeed.accessibilityName`
