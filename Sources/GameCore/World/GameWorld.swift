@@ -3756,12 +3756,24 @@ public struct GameWorld: Equatable, Sendable {
         // Decision 577: with nothing else to do, a service due to leave
         // whose route only the track trains following others wait for
         // (decision 56, point 6) keeps it from, those trains waiting in
-        // the deadlock too, takes its route whole all the same. Such a
-        // claim reaches as far as the follower's route goes, against the
-        // way of the trains it crosses as well: an empty train bound for
-        // the Taoyuan Airport MRT's Luzhu depot, still past Linkou behind
-        // trains that waited for the service, kept it from leaving Kengkou
-        // over the track the empty train would cross into the depot.
+        // the deadlock too, takes its route whole all the same.
+        return departureIgnoringFollowerClaims(in: stuck, memo: &memo)
+    }
+
+    /// Decision 577: the last resort of ``resolveDeadlock(memo:)``. In the
+    /// deadlock `stuck`, the first service in ID order due to leave whose
+    /// route only the track the trains following others there wait for
+    /// (decision 56, point 6) keeps it from takes its route whole and sets
+    /// off. Such a claim reaches as far as the follower's route goes,
+    /// against the way of the trains it crosses as well: an empty train
+    /// bound for the Taoyuan Airport MRT's Luzhu depot, still past Linkou
+    /// behind trains that waited for the service, kept it from leaving
+    /// Kengkou over the track the empty train would cross into the depot.
+    /// Returns the train's ID, or `nil`. Never inlined: in the deadlock
+    /// path alone, its locals stay off the stack of every tick, which a
+    /// WebAssembly build's small stack cannot spare.
+    @inline(never)
+    private mutating func departureIgnoringFollowerClaims(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
         let followers = Set(stuck.filter { !$0.value.departs }.keys)
         guard !followers.isEmpty else { return nil }
         for id in stuck.keys.sorted() {
