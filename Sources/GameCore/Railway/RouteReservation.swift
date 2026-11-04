@@ -312,6 +312,23 @@ extension GameWorld {
         return overflow || path.distance <= limit ? path : nil
     }
 
+    /// Decision 571, continued: ``alternativeRoute(of:to:avoiding:memo:)``
+    /// without decision 57's direction protection, for a service the
+    /// dispatcher finds in a deadlock (see `resolveDeadlock(memo:)`): the
+    /// shortest route to any berth of `station` that avoids `blocked`, at
+    /// most ``detourAllowance`` longer than its default route; or `nil`.
+    /// Run against the planned way only to clear a deadlock nothing else
+    /// clears, and only taken whole, so no train meets it head on: a
+    /// controller's wrong-line move into the free berth beside.
+    func counterflowRoute(of candidate: Train, to station: StationID, avoiding blocked: BlockedTrack) -> TrainPath? {
+        guard let position = candidate.position else { return nil }
+        let (limit, overflow) = routeLength(of: candidate).addingReportingOverflow(Self.detourAllowance)
+        guard let free = path(from: position, toStation: station, length: candidate.length, avoiding: blocked),
+              overflow || free.distance <= limit
+        else { return nil }
+        return free
+    }
+
     /// The lowest numbered train other than `id` that holds any of
     /// `resources` (see ``held(_:)``), or track that fouls any of them
     /// (Stage F2b, see ``RailwayNetwork/fouls(_:_:)``), or that follows
