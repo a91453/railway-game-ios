@@ -70,12 +70,18 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
         public let frames: [Frame]
         /// How many frames further out than ``mostFrames`` were not kept.
         public let framesLeft: Int
+        /// DIAG-HANG: the payload's time as MetricKit wrote it, kept when
+        /// ``time`` could not be read from it, so a report still says when
+        /// (111.1's report said "?" for every one).
+        public var stamp: String?
 
         public init(
-            kind: Kind, time: Double?, duration: Double?, detail: String?, app: String?, system: String?, frames: [Frame], framesLeft: Int
+            kind: Kind, time: Double?, duration: Double?, detail: String?, app: String?, system: String?, frames: [Frame], framesLeft: Int,
+            stamp: String? = nil
         ) {
             self.kind = kind
             self.time = time
+            self.stamp = stamp
             self.duration = duration
             self.detail = detail
             self.app = app
@@ -115,8 +121,22 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
         public let background: [String: Int]
         /// The freezes of the day, by length (`histogrammedAppHangTime`).
         public let hangs: [Bucket]
+        /// DIAG-HANG: the times as MetricKit wrote them, kept when
+        /// ``begin`` or ``end`` could not be read from them.
+        public var beginStamp: String?
+        public var endStamp: String?
+        /// DIAG-HANG: the app's version and build the day was recorded in
+        /// (the payload's `appVersion` and `metaData`), so its freezes can
+        /// be told from an older build's.
+        public var app: String?
 
-        public init(begin: Double?, end: Double?, foreground: [String: Int], background: [String: Int], hangs: [Bucket]) {
+        public init(
+            begin: Double?, end: Double?, foreground: [String: Int], background: [String: Int], hangs: [Bucket],
+            beginStamp: String? = nil, endStamp: String? = nil, app: String? = nil
+        ) {
+            self.beginStamp = beginStamp
+            self.endStamp = endStamp
+            self.app = app
             self.begin = begin
             self.end = end
             self.foreground = foreground
@@ -147,6 +167,7 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
     public mutating func record(diagnostics json: Data) {
         guard let payload = try? JSONDecoder().decode(RawDiagnosticPayload.self, from: json) else { return }
         let time = Self.time(payload.timeStampEnd) ?? Self.time(payload.timeStampBegin)
+        let stamp = time == nil ? payload.timeStampEnd ?? payload.timeStampBegin : nil
         let groups: [(Event.Kind, [RawDiagnostic]?)] = [
             (.hang, payload.hangDiagnostics), (.crash, payload.crashDiagnostics), (.cpu, payload.cpuExceptionDiagnostics),
             (.diskWrites, payload.diskWriteExceptionDiagnostics), (.launch, payload.appLaunchDiagnostics),
@@ -154,7 +175,8 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
         var added = false
         for (kind, diagnostics) in groups {
             for diagnostic in diagnostics ?? [] {
-                let event = Self.event(kind, diagnostic, time: time)
+                var event = Self.event(kind, diagnostic, time: time)
+                event.stamp = stamp
                 if !events.contains(event) {
                     events.append(event)
                     added = true
@@ -178,11 +200,17 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
                 return Bucket(start: bucket.bucketStart ?? "?", end: bucket.bucketEnd ?? "?", count: count)
             }
         guard exits != nil || !buckets.isEmpty else { return }
+        let begin = Self.time(payload.timeStampBegin), end = Self.time(payload.timeStampEnd)
+        let version = payload.appVersion ?? payload.latestApplicationVersion ?? payload.metaData?.appVersion
+        let build = payload.metaData?.appBuildVersion
+        let app = version.map { version in build.map { "\(version) (\($0))" } ?? version } ?? build
         let day = Day(
-            begin: Self.time(payload.timeStampBegin), end: Self.time(payload.timeStampEnd), foreground: foreground, background: background,
-            hangs: buckets
+            begin: begin, end: end, foreground: foreground, background: background, hangs: buckets,
+            beginStamp: begin == nil ? payload.timeStampBegin : nil, endStamp: end == nil ? payload.timeStampEnd : nil, app: app
         )
-        days.removeAll { $0.begin == day.begin && $0.end == day.end }
+        days.removeAll {
+            $0.begin == day.begin && $0.end == day.end && $0.beginStamp == day.beginStamp && $0.endStamp == day.endStamp && $0.app == day.app
+        }
         days.append(day)
         trim()
     }
@@ -246,7 +274,8 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
             lines.append(language.text("\(older) older ones not shown.", "另有 \(older) 筆較早的沒有列出。"))
         }
         if let day = days.first {
-            let span = "\(Self.timeText(day.begin)) – \(Self.timeText(day.end))"
+            var span = "\(Self.timeText(day.begin, stamp: day.beginStamp)) – \(Self.timeText(day.end, stamp: day.endStamp))"
+            if let app = day.app { span += " (\(app))" }
             lines.append(language.text(
                 "Exits \(span): on screen: \(Self.countsText(day.foreground, in: language)); in the background: \(Self.countsText(day.background, in: language)).",
                 "結束 \(span)：畫面上：\(Self.countsText(day.foreground, in: language))；背景：\(Self.countsText(day.background, in: language))。"
@@ -260,7 +289,7 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
     }
 
     private static func headline(of event: Event, in language: DisplayLanguage) -> String {
-        let when = timeText(event.time)
+        let when = timeText(event.time, stamp: event.stamp)
         let length = event.duration.map(secondsText) ?? ""
         let what: String
         switch event.kind {
@@ -378,12 +407,25 @@ public struct DeviceDiagnostics: Codable, Hashable, Sendable {
     }
 
     /// "2026-10-25 21:03:00 +0000", as MetricKit writes its times.
+    /// DIAG-HANG: and as other dates with a zone ("+08:00", ISO 8601);
+    /// one with no zone is not guessed at (``timeText(_:stamp:)`` shows it
+    /// as written).
     static func time(_ text: String?) -> Double? {
-        guard let text else { return nil }
+        guard let text = text?.trimmingCharacters(in: .whitespaces), !text.isEmpty else { return nil }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-        return formatter.date(from: text)?.timeIntervalSince1970
+        for format in ["yyyy-MM-dd HH:mm:ss Z", "yyyy-MM-dd HH:mm:ss ZZZZZ", "yyyy-MM-dd'T'HH:mm:ssZZZZZ", "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"] {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: text) { return date.timeIntervalSince1970 }
+        }
+        return nil
+    }
+
+    /// ``timeText(_:)``, or `stamp` as MetricKit wrote it when the time
+    /// could not be read.
+    static func timeText(_ time: Double?, stamp: String?) -> String {
+        if time == nil, let stamp, !stamp.isEmpty { return stamp }
+        return timeText(time)
     }
 
     static func timeText(_ time: Double?) -> String {
@@ -549,13 +591,20 @@ private struct RawFrame: Decodable {
 
 private struct RawMetricPayload: Decodable {
     var timeStampBegin, timeStampEnd: String?
+    var appVersion, latestApplicationVersion: String?
+    var metaData: RawMetaData?
     var applicationExitMetrics: RawExitMetrics?
     var applicationResponsivenessMetrics: RawResponsiveness?
 
-    enum CodingKeys: String, CodingKey { case timeStampBegin, timeStampEnd, applicationExitMetrics, applicationResponsivenessMetrics }
+    enum CodingKeys: String, CodingKey {
+        case timeStampBegin, timeStampEnd, appVersion, latestApplicationVersion, metaData, applicationExitMetrics, applicationResponsivenessMetrics
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        appVersion = c.lenient(.appVersion)
+        latestApplicationVersion = c.lenient(.latestApplicationVersion)
+        metaData = c.lenient(.metaData)
         timeStampBegin = c.lenient(.timeStampBegin)
         timeStampEnd = c.lenient(.timeStampEnd)
         applicationExitMetrics = c.lenient(.applicationExitMetrics)
