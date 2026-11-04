@@ -102,6 +102,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// out: for the screenshots of the 3D map following a bus
     /// (`-screenshot-follow-bus`).
     case followBus
+    /// Decision 574: a new real-world game round Muzha with the Maokong
+    /// Gondola built as the cable car mode lays it
+    /// (``RealCableway/maokong``), run on to 10:00 of the second day, so
+    /// its card has a day's account: the rope and its stations on the 2D
+    /// map, and the mode's card.
+    case maokong
 
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
@@ -116,6 +122,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
+        // Between Taipei Zoo South and Zhinan Temple stations.
+        case .maokong: (24.9825, 121.584)
         default: nil
         }
     }
@@ -140,6 +148,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
         case .depotOffer: Self.pausedDemo(in: language)
         case .followBus: Self.followBusWorld(in: language)
+        case .maokong: Self.maokongWorld(in: language)
         }
     }
 
@@ -203,6 +212,23 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // app then runs only the morning itself after it buys the line.
         world.setSpeed(.fast)
         try? world.advance(ticks: 33)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Decision 574: the Maokong Gondola on a new game of Muzha, at 10:00
+    /// of the second day.
+    private static func maokongWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let place = Self.maokong.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor)
+        if let stops = RealCableway.maokong.stops(in: world) {
+            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+        }
+        // On to 10:00 of day 1 (.fast is ten minutes a tick).
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 34 * 6)
+        world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
     }

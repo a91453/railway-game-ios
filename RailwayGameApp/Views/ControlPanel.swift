@@ -1049,6 +1049,7 @@ private struct ActionButton: View {
         case .platform, .remove: return session.networkEdgePoint != nil
         case .passingLoop: return session.networkLoopPreview.map { $0.problem == nil } ?? false
         case .depot: return session.networkDepotPreview.map { $0.problem == nil } ?? false
+        case .cableway: return session.cablewayPreview.map { $0.problem == nil } ?? false
         }
     }
 
@@ -1079,6 +1080,7 @@ private struct ActionButton: View {
         case .remove: session.removeNetworkEdge()
         case .passingLoop: session.addPassingLoop()
         case .depot: session.addDepotYard()
+        case .cableway: session.buildCableway()
         }
     }
 
@@ -1130,6 +1132,10 @@ private struct ActionButton: View {
                 // Decision 214: the sidings and the depot, for what.
                 guard let cost = session.networkDepotPreview?.cost else { return session.language.text("Lay Depot Sidings", "鋪機廠停車線") }
                 return session.language.text("Lay Depot Sidings · \(cost.moneyText)", "鋪機廠停車線 · \(cost.moneyText)")
+            case .cableway:
+                // Decision 574: the stations, the rope and its cabins, for what.
+                guard let price = session.cablewayPreview?.price else { return session.language.text("Build Cable Car", "蓋纜車") }
+                return session.language.text("Build Cable Car · \(price.moneyText)", "蓋纜車 · \(price.moneyText)")
             }
         case .bus:
             // Decision 428: none until the game has roads.

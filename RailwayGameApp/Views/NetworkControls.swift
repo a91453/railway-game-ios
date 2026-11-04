@@ -24,16 +24,21 @@ struct NetworkControls: View {
     /// The map's population and travel layer (``MapView``'s preference of
     /// the same key), which the platform mode can turn to population.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    /// Decision 574: the cable car the player asked to take down, for
+    /// the confirmation.
+    @State private var removingCableway: CablewayID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
-                // Decision 266: in a lesson, only the modes it has unlocked.
-                ForEach(NetworkToolMode.allCases.filter { session.allows($0) }, id: \.self) { mode in
-                    Text(mode.title(in: session.language)).tag(mode)
+            // Decision 574: six modes do not fit a phone's panel in
+            // English; then the row keeps its words whole and slides
+            // sideways instead of cutting them short.
+            ViewThatFits(in: .horizontal) {
+                modePicker
+                ScrollView(.horizontal, showsIndicators: false) {
+                    modePicker.fixedSize()
                 }
             }
-            .pickerStyle(.segmented)
             .tutorialTarget(.networkModes)
             switch session.networkMode {
             case .build:
@@ -46,6 +51,8 @@ struct NetworkControls: View {
                 passingLoopOptions
             case .depot:
                 depotOptions
+            case .cableway:
+                cablewayOptions
             }
         }
     }
@@ -351,6 +358,108 @@ struct NetworkControls: View {
                 .font(.footnote)
                 .accessibilityIdentifier("network.depotSide")
             }
+        }
+    }
+
+    /// The network tool's modes, one segment each.
+    private var modePicker: some View {
+        Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
+            // Decision 266: in a lesson, only the modes it has unlocked.
+            ForEach(NetworkToolMode.allCases.filter { session.allows($0) }, id: \.self) { mode in
+                Text(mode.title(in: session.language)).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    // MARK: - Cable car
+
+    /// Decision 574: the cable car mode. Taps put down the stops in turn;
+    /// here whether the next is an angle station, the last taken back, the
+    /// real cable car on this map laid as it is, and the company's cable
+    /// cars, each on a card that can take it down.
+    private var cablewayOptions: some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 8) {
+            ChipFlow(spacing: 8) {
+                Toggle(isOn: $session.cablewayPlacesAngle) {
+                    Text(verbatim: language.text("Angle station", "轉角站"))
+                }
+                .toggleStyle(.button)
+                .accessibilityIdentifier("network.cablewayAngle")
+                Button {
+                    session.undoCablewayStop()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Last Stop", "上一站"))
+                    } icon: {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                }
+                .disabled(session.cablewayDraft.isEmpty)
+                .accessibilityIdentifier("network.cablewayUndo")
+                if let real = session.realCablewayOffer {
+                    Button {
+                        session.traceRealCableway(real)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Lay the \(real.englishName)", "照真實路線拉\(real.name)"))
+                        } icon: {
+                            Image(systemName: "cablecar")
+                        }
+                    }
+                    .accessibilityIdentifier("network.cablewayReal")
+                }
+            }
+            .buttonStyle(.bordered)
+            .font(.footnote)
+            Text(verbatim: language.text(
+                "Cabins come with the line: no trains to buy and no timetable. It stands still on Mondays and in thunderstorms.",
+                "吊廂跟著纜線一起來，不用買車、不用排班。週一保養與雷雨時停駛。"
+            ))
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            let cards = session.world.cableways.compactMap { session.cablewayCard($0.id) }
+            ForEach(cards) { card in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(verbatim: card.title)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Button(role: .destructive) {
+                            removingCableway = card.id
+                        } label: {
+                            Text(verbatim: language.text("Take Down", "拆除"))
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.footnote)
+                        .accessibilityIdentifier("network.cablewayRemove")
+                    }
+                    ForEach(Array(card.rows.enumerated()), id: \.element) { index, row in
+                        Text(verbatim: row)
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(index == 2 && !card.runs ? Theme.warning : Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("network.cablewayCard")
+            }
+        }
+        .confirmationDialog(
+            Text(verbatim: language.text("Take this cable car down?", "要拆掉這條纜車嗎？")),
+            isPresented: Binding(get: { removingCableway != nil }, set: { if !$0 { removingCableway = nil } }),
+            titleVisibility: .visible,
+            presenting: removingCableway
+        ) { id in
+            Button(role: .destructive) {
+                session.removeCableway(id)
+            } label: {
+                Text(verbatim: language.text("Take Down", "拆除"))
+            }
+        } message: { _ in
+            Text(verbatim: language.text("Its stations, rope and cabins go. Nothing is refunded.", "車站、纜線與吊廂都會拆掉。不退還費用。"))
         }
     }
 

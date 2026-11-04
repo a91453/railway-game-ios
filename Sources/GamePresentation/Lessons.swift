@@ -968,6 +968,8 @@ extension GameSession {
         switch mode {
         case .passingLoop: allows(UnlockableTool.passingLoop)
         case .depot: allows(UnlockableTool.depot)
+        // Decision 574: not in the lessons, which teach the railway.
+        case .cableway: lesson == nil
         default: true
         }
     }
