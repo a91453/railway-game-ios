@@ -44,6 +44,51 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("bought-lines-list", app)
     }
 
+    /// Decision 564: the Wenhu Line bought on a real map of Taipei and run
+    /// on to 07:40, a train near its middle followed: on the 2D map and in
+    /// 3D, each way's trains on the track to their right, as the real
+    /// Taipei Metro's run. For the screenshot review of the pull request
+    /// that put them there.
+    func testWenhuRunsOnTheRight() {
+        // The buying and the morning take most of it (the workflow allows
+        // up to 30 minutes a test).
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-follow-bought", "trtc:BR",
+                                 "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The Debug app on a Simulator buys the line and runs the morning
+        // on to 07:40 for minutes, its main thread busy for a minute at a
+        // time, longer than a UI query waits: the test asks nothing of it
+        // for six minutes first.
+        Thread.sleep(forTimeInterval: 360)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        // The bought card first.
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+        }
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<6 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("wenhu-right-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("wenhu-right-3d", app)
+    }
+
     /// Decision 566: the new-train card, the Puyuma's with another
     /// waiting ("Skip all"), then the EMU3000's, and in English the 700T's.
     /// For the screenshot review of the pull request that added it.
@@ -1082,6 +1127,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         confirm.tap()
         settle()
         keep("platform-levelling-layer", app)
+    }
+
+    /// Decision 572: a station on both tracks of a double track with no
+    /// crossover between them (built before decision 571): the station
+    /// panel's button that lays one, then what it says once laid.
+    func testOldStationCrossovers() {
+        let app = launch(extra: ["-ui-test-world", "old-crossovers"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let select = app.buttons["tool.select"]
+        if select.appears(within: 5), select.becomesHittable(within: 5) { select.tap() }
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).press(forDuration: 1)
+        XCTAssertTrue(app.descendants(matching: .any)["station.operations"].firstMatch.appears(within: 10), "The station panel opens")
+        let button = app.buttons["station.crossovers"].firstMatch
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.appears(within: 10))
+        list.waitUntilStill()
+        // Clear of the bar's scroll edge too, which hides a row's top
+        // line just under the bar (the first round's shot).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(button, in: list, below: app.navigationBars.firstMatch.frame.maxY + 32), "The button shows")
+        button.waitUntilSettled()
+        settle()
+        keep("station-crossovers-button", app)
+        button.tap()
+        XCTAssertTrue(button.disappears(within: 10), "Laid, it goes")
+        settle()
+        keep("station-crossovers-laid", app)
     }
 
     /// Decision 507: the platform mode's layout menu on a double track,
@@ -2249,6 +2331,37 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(scrollScreen(to: rules, in: app), "The Rules row shows")
         settle(seconds: 1)
         keep("settings-rules", app)
+    }
+
+    /// Decision 573: a depot laid near two lines with none offers each on
+    /// the banner, and the game menu's Report a Problem says where to
+    /// send it. For the screenshot review of the pull request that added
+    /// them, not the website.
+    func testDepotOfferAndWhereToReport() {
+        let app = launch(extra: ["-screenshot-scene", "depotOffer"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The offer stays 10 s: shot as soon as it shows.
+        let offer = app.buttons["banner.depotLine"].firstMatch
+        XCTAssertTrue(offer.appears(within: 10), "The banner offers the lines")
+        settle(seconds: 1)
+        keep("depot-offer", app)
+
+        app.buttons["banner.depotLine"].firstMatch.tap()
+        settle(seconds: 1)
+        keep("depot-offer-chosen", app)
+
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let report = app.buttons["menu.report"]
+        XCTAssertTrue(report.appears(within: 30), "The menu opens")
+        report.waitUntilSettled()
+        let frame = report.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["report.whereToSend"].firstMatch.appears(within: 10), "The report says where to send it")
+        settle(seconds: 1)
+        keep("report-where-to-send", app)
     }
 
     /// Decision 568: a new line picked on the map (five stations, the

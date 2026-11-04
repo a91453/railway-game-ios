@@ -11,7 +11,7 @@ enum FeatureUITestWorld {
     static func make(_ name: String) throws -> GameWorld {
         if name == "big-grid" || name == "big-grid-night" { return try bigGrid(night: name == "big-grid-night") }
         if name == "story" { return try story() }
-        guard ["separate-tracks", "missing-platform", "double-platform", "catalog", "sightseeing", "quiet-night"].contains(name) else {
+        guard ["separate-tracks", "missing-platform", "double-platform", "old-crossovers", "catalog", "sightseeing", "quiet-night"].contains(name) else {
             preconditionFailure("Unknown -ui-test-world: \(name)")
         }
         let bounds = try WorldBounds(width: 40_960, height: 20_480)
@@ -35,6 +35,15 @@ enum FeatureUITestWorld {
         let eastY: Int64 = name == "separate-tracks" ? 9_920 : 10_240
         let east = try world.buildStation(named: "山邊", at: PlanPoint(x: 30_720, y: eastY)).id
         try addPlatform(to: west, at: PlanPoint(x: 6_144, y: 10_240), in: &world)
+        if name == "old-crossovers" {
+            // Decision 572: both stations on both tracks with no crossover
+            // between them, as the platform tool left them before decision
+            // 571: the station panel offers to lay one.
+            try addPlatform(to: west, at: PlanPoint(x: 6_144, y: 9_920), in: &world)
+            try addPlatform(to: east, at: PlanPoint(x: 30_720, y: 10_240), in: &world)
+            try addPlatform(to: east, at: PlanPoint(x: 30_720, y: 9_920), in: &world)
+            return world
+        }
         if name != "missing-platform" {
             try addPlatform(to: east, at: PlanPoint(x: 30_720, y: eastY), in: &world)
         }

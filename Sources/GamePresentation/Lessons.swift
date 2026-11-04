@@ -976,7 +976,8 @@ extension GameSession {
 }
 
 /// How a lesson ended (decision 266), for its result card.
-public struct LessonResult: Hashable, Sendable {
+public struct LessonResult: Hashable, Sendable, Identifiable {
+    public var id: Int { lesson }
     public let lesson: Int
     /// 1 to 3 stars, or 0 when the days ran out.
     public let stars: Int

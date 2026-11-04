@@ -74,7 +74,11 @@ extension GameSession {
 
     /// The track beside the picked track where it was tapped (decision
     /// 247): a different edge about 5 m to one side, running along it.
-    func trackBeside(_ id: TrackEdgeID, near point: PlanPoint?) -> (place: NetworkEdgePoint, beside: NetworkEdgePoint)? {
+    ///
+    /// `base`: the world to look in, this session's by default (decision
+    /// 572 looks in a draft with crossovers already planned in it).
+    func trackBeside(_ id: TrackEdgeID, near point: PlanPoint?, in base: GameWorld? = nil) -> (place: NetworkEdgePoint, beside: NetworkEdgePoint)? {
+        let world = base ?? self.world
         guard let geometry = world.trackGeometry(of: id) else { return nil }
         let place = point.flatMap { world.nearestPoint(onEdge: id, to: $0) } ?? NetworkEdgePoint(edge: id, distance: geometry.length / 2)
         let location = geometry.location(at: min(max(0, place.distance), geometry.length))
@@ -298,7 +302,21 @@ extension GameSession {
                 track: parallel.map(\.geometryPoints), cost: nil, problem: error.playerMessage(in: language), note: nil
             ), command: nil)
         }
-        let cost = Money(GameWorld.pricingBalance.amount - plan.built.economy.balance.amount)
+        // Decision 572: the crossovers its stations lack past their
+        // platforms (decision 571's), laid with it: the run's own end
+        // crossovers can lie outside a station's platforms.
+        var built = plan.built
+        var command = plan.command
+        var stationCrossovers: [PlayerCommand.TrackStretch] = []
+        for station in stations.sorted() {
+            let found = missingStationCrossovers(of: station, in: built)
+            built = found.built
+            stationCrossovers += found.stretches
+        }
+        if !stationCrossovers.isEmpty, case .buildDoubleTrackChain(let main, let parallel, let platforms, let crossovers) = command {
+            command = .buildDoubleTrackChain(main: main, parallel: parallel, platforms: platforms, crossovers: crossovers + stationCrossovers)
+        }
+        let cost = Money(GameWorld.pricingBalance.amount - built.economy.balance.amount)
         var note = language.text(
             "\(NetworkBuilding.distanceText(length, in: language)) of second track.",
             "第二條軌道 \(NetworkBuilding.distanceText(length, in: language))。"
@@ -322,10 +340,18 @@ extension GameSession {
                 "經過的 \(stations.count) 個車站在第二條軌道也加月台。"
             )
         }
+        if !stationCrossovers.isEmpty {
+            note += language.text(
+                stationCrossovers.count == 1
+                    ? " A crossover goes in beside a station, so trains can pass there."
+                    : " \(stationCrossovers.count) crossovers go in beside its stations, so trains can pass there.",
+                "車站旁加 \(stationCrossovers.count) 組渡線，列車可以在站內交會。"
+            )
+        }
         return TrackUpgradeMemo(key: key, preview: TrackUpgradePreview(
-            track: [plan.parallelPoints] + plan.crossoverPoints, cost: cost,
-            problem: shortfallText(cost, doing: plan.command), note: note
-        ), command: plan.command)
+            track: [plan.parallelPoints] + plan.crossoverPoints + stationCrossovers.map(\.geometryPoints), cost: cost,
+            problem: shortfallText(cost, doing: command), note: note
+        ), command: command)
     }
 
     // MARK: - X crossover

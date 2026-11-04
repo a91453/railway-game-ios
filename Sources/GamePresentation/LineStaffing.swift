@@ -207,9 +207,15 @@ extension GameSession {
                 world = placed
             } catch {
                 var far = world
-                if case .trackReserved = error, orAtTheFarEnd, let back = Self.farEndJourney(of: id, in: world),
-                   (try? Self.placeAtStart(train.id, of: back, in: &far)) != nil {
+                let back = orAtTheFarEnd ? Self.farEndJourney(of: id, in: world) : nil
+                if case .trackReserved = error, let back, (try? Self.placeAtStart(train.id, of: back, in: &far)) != nil {
                     world = far
+                } else if case .trackReserved = error, orAtTheFarEnd,
+                          let beside = Self.placeBeside(train.id, of: id, journeys: [journey, back].compactMap { $0 }, in: world) {
+                    // Decision 572: both ends' berths held, a platform
+                    // beside one of them (a double-track station's other
+                    // track) takes it, facing the same way.
+                    world = beside
                 } else {
                     if case .trackReserved = error { held += 1 } else { unfit += 1 }
                     continue
@@ -232,6 +238,50 @@ extension GameSession {
     /// there to be sent out. Throws what placing it throws.
     static func placeAtStart(_ id: TrainID, of journey: LineJourney, in world: inout GameWorld) throws(GameError) {
         try placeAtStartOnly(id, of: journey, in: &world)
+    }
+
+    /// Decision 572 (TestFlight 111.1, "two trains now, but the third still
+    /// will not go on"): a line's trips start at one berth at each end
+    /// (``LineJourney/start``), so with a train standing at each, a new
+    /// train was left off the track although each end station had a
+    /// platform on the double track's other track free. This places train
+    /// `id` at such a berth: a platform of the station where one of the
+    /// `journeys` starts, other than the one it starts at, with the
+    /// train's head at the platform's far end facing the way that journey
+    /// sets off, as GameCore's berths are (``GameWorld/path(from:toStation:length:)``).
+    /// Returns the world with it placed, or `nil` where none takes it.
+    static func placeBeside(_ id: TrainID, of line: LineID, journeys: [LineJourney], in world: GameWorld) -> GameWorld? {
+        guard let stops = world.line(id: line)?.stops, stops.count >= 2 else { return nil }
+        // The way a position faces on the plan.
+        func heading(_ position: TrainPosition, in world: GameWorld) -> (dx: Double, dy: Double)? {
+            guard case .onEdge(let traversal, let offset) = position, let geometry = world.trackGeometry(of: traversal.edge) else { return nil }
+            let forward = traversal.direction == .forward
+            let way = geometry.location(at: min(max(0, forward ? offset : geometry.length - offset), geometry.length)).direction
+            return forward ? (Double(way.dx), Double(way.dy)) : (-Double(way.dx), -Double(way.dy))
+        }
+        for (index, journey) in journeys.enumerated() {
+            guard case .onEdge(let started, _) = journey.start, let way = heading(journey.start, in: world) else { continue }
+            let (station, next) = index == 0 ? (stops[0], stops[1]) : (stops[stops.count - 1], stops[stops.count - 2])
+            for platform in world.network.platforms(of: station) where platform.edge != started.edge {
+                guard let edge = world.network.edge(platform.edge) else { continue }
+                let berths: [TrainPosition] = [
+                    .onEdge(TrackTraversal(edge: platform.edge, direction: .forward), offset: platform.end),
+                    .onEdge(TrackTraversal(edge: platform.edge, direction: .backward), offset: edge.length - platform.start),
+                ]
+                for berth in berths {
+                    // Facing the way the trips set off, with a way on to
+                    // the next call from there (not a bay's dead end).
+                    guard let facing = heading(berth, in: world), facing.dx * way.dx + facing.dy * way.dy > 0,
+                          world.path(from: berth, toStation: next) != nil
+                    else { continue }
+                    var placed = world
+                    let beside = LineJourney(start: berth, legs: [], roundTripSeconds: 0)
+                    guard (try? Self.placeAtStart(id, of: beside, in: &placed)) != nil else { continue }
+                    return placed
+                }
+            }
+        }
+        return nil
     }
 
     /// Line `id`'s journey the other way round, from its last stop: where a

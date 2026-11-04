@@ -462,10 +462,28 @@ extension GameSession {
     /// the platform picked (decision 571), planned on `probe`, the world
     /// with its platforms built; kept for the pick and command, as the
     /// preview asks every frame.
-    func networkStationCrossovers(of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), on probe: GameWorld) -> [PlayerCommand.TrackStretch] {
+    ///
+    /// Decision 572: from the platform beside instead (`beside`, when it
+    /// was not levelled) where its track meets another station's own
+    /// crossover nearer that station's platform than the tapped track
+    /// does (``nearTurnoutDistance(from:station:in:)``), so that the near
+    /// turnouts at both ends of a line lie on the same track: tapping one
+    /// track at one end and the other at the other left three trains of a
+    /// line deadlocked all day under simple rules.
+    func networkStationCrossovers(
+        of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), beside: PlayerCommand.BesidePlatform? = nil, on probe: GameWorld
+    ) -> [PlayerCommand.TrackStretch] {
         let key = PlatformBesideMemo.Key(edge: stretch.edge, start: stretch.start, end: stretch.end, commandRevision: commandRevision)
         if let memo = stationCrossoverMemo, memo.key == key { return memo.crossovers }
-        let crossovers = stationCrossovers(of: stretch, in: probe)
+        var crossovers = stationCrossovers(of: stretch, in: probe)
+        if let beside, beside.levelling == nil,
+           let tapped = probe.network.platforms(on: stretch.edge).first(where: { $0.start < stretch.end && stretch.start < $0.end }),
+           let other = probe.network.platforms(on: beside.edge).first(where: { $0.station == tapped.station && $0.start < beside.end && beside.start < $0.end }),
+           let near = nearTurnoutDistance(from: other, station: tapped.station, in: probe),
+           near < nearTurnoutDistance(from: tapped, station: tapped.station, in: probe) ?? .max {
+            let flipped = stationCrossovers(of: (other.edge, other.start, other.end), in: probe, lookingIn: probe)
+            if flipped.count >= crossovers.count { crossovers = flipped }
+        }
         stationCrossoverMemo = (key, crossovers)
         return crossovers
     }
@@ -639,7 +657,7 @@ extension GameSession {
             // the world with both platforms built (not for an island
             // layout, which lays its own track). Want of cash refuses them
             // all with the platforms, as the double track's.
-            if beside != nil, !networkStationLayout.isLaidByLayout { crossovers = networkStationCrossovers(of: stretch, on: probe) }
+            if beside != nil, !networkStationLayout.isLaidByLayout { crossovers = networkStationCrossovers(of: stretch, beside: beside, on: probe) }
         }
         let addition = PlayerCommand.PlatformAddition(
             edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: beside,

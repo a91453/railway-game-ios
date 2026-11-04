@@ -839,6 +839,26 @@ struct StationPanel: View {
                     session.removeNetworkPlatform(platform)
                 }
             }
+            // Decision 572: a station on both tracks of a double track
+            // with no crossover between them (built before decision 571).
+            if let offer = session.stationCrossoverOffer(for: station.id) {
+                Button {
+                    session.addStationCrossovers(station.id)
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: session.stationCrossoverButtonText(offer))
+                            Text(verbatim: offer.problem ?? session.stationCrossoverHelp)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    } icon: {
+                        Image(systemName: "arrow.triangle.swap")
+                    }
+                }
+                .disabled(offer.problem != nil)
+                .accessibilityIdentifier("station.crossovers")
+            }
         } header: {
             Text(verbatim: language.text("Platforms", "月台"))
         } footer: {

@@ -69,12 +69,26 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case taipeiMain
     case taipei101
 
+    /// Decision 564: an empty real-world map round the Wenhu Line, for the
+    /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
+    /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/runForScreenshot(until:)``):
+    /// its trains each on the track to their right, as the real ones run.
+    /// For the screenshot review of the pull request that put them there.
+    case wenhu
+
     /// Decision 565: a new real-world game round Taipei Main Station, a
     /// line of two stations 800 m apart whose platforms are four 20 m cars
     /// long, as the platform tool builds them, and its train of four
     /// standing at the far one: for the screenshots of a train stopped
     /// with every car inside its platform, on the 2D map and the 3D one.
     case platformStop
+
+    /// Decision 573: the demo map, where ``prepare(_:)`` lays a depot with
+    /// the depot tool off Line 2's north end (on its viaduct, so the
+    /// sidings pass over the ring): Line 2 and the Ring Line both end or
+    /// call near it, so the banner offers each. For the screenshot review
+    /// of the pull request that added the offer.
+    case depotOffer
 
     /// Decision 574: a new real-world game round Muzha with the Maokong
     /// Gondola built as the cable car mode lays it
@@ -90,6 +104,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        case .wenhu: (25.0600, 121.5600)
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
@@ -113,9 +128,50 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .wenhu: Self.wenhuWorld(in: language)
         case .platformStop: Self.platformStopWorld(in: language)
+        case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
         }
+    }
+
+    /// What the scene does once its game is open, with the player's own
+    /// tools: ``depotOffer`` lays its depot. Nothing for the others.
+    @MainActor public func prepare(_ session: GameSession) {
+        guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
+        session.selectTool(.network)
+        session.setNetworkMode(.depot)
+        session.tapNetwork(at: north.plan, reach: 64)
+        session.addDepotYard()
+    }
+
+    /// Line 2's north end: the demo's highest track end furthest north.
+    static func depotOfferEnd(in world: GameWorld) -> WorldCoordinate? {
+        world.network.nodes.filter { $0.ends.count == 1 && $0.position.z > 0 }.min { $0.position.y < $1.position.y }?.position
+    }
+
+    private static func pausedDemo(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Wenhu
+
+    /// Decision 564: a new game's map, twice the usual a side as the
+    /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
+    /// with money enough for it; bought once the app's real data is read.
+    private static func wenhuWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let place = ScreenshotScene.wenhu.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
+              let bounds = try? WorldBounds(width: 1 << 21, height: 1 << 21) else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
+        try? world.mapGround()
+        // On to 05:30 while the map is empty, ten minutes a tick: the Debug
+        // app then runs only the morning itself after it buys the line.
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 33)
+        world.setSpeed(.paused)
+        return world
     }
 
     /// Decision 574: the Maokong Gondola on a new game of Muzha, at 10:00
@@ -478,5 +534,53 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         try world.setTrainContinuation(train, along: [], stoppingAt: berth)
         try world.setTrainMovementRate(train, to: 512)
         try world.assignTrain(train, to: line)
+    }
+}
+
+extension GameSession {
+    /// Decision 564: real line `id` bought (``ScreenshotScene/wenhu``),
+    /// the game paused; `false` when it is not on sale (the real data not
+    /// read yet) or not bought.
+    public func buyForScreenshot(_ id: String) -> Bool {
+        guard let line = buyableRealLines.first(where: { $0.id == id }), acquireRealLine(realLineOffer(for: line)) else { return false }
+        return perform { (world: inout GameWorld) throws(GameError) in
+            world.setSpeed(.paused)
+            return ""
+        }
+    }
+
+    /// Decision 564: the game run on to `seconds` into the day, then
+    /// paused, on a copy of the world off the main thread, put back as
+    /// one edit: the app's main thread stays free (the 06:00 passenger
+    /// plan of a city map takes minutes in a Debug build, and a UI test's
+    /// queries time out).
+    public func runForScreenshot(until seconds: Int64) async {
+        let start = world
+        let ran = await Task.detached(priority: .userInitiated) { () -> GameWorld in
+            var world = start
+            world.setSpeed(.normal)
+            while world.clock.now.seconds % GameTime.secondsPerDay < seconds {
+                do throws(GameError) { try world.advance(ticks: 1) } catch { break }
+            }
+            world.setSpeed(.paused)
+            return world
+        }.value
+        _ = perform { (world: inout GameWorld) throws(GameError) in
+            world = ran
+            return ""
+        }
+    }
+
+    /// Decision 564: the train of real line `id` bought nearest its middle
+    /// station, for the screenshot to follow along its double track.
+    public func screenshotTrainMidway(on id: String) -> TrainID? {
+        guard let line = world.acquisition(of: id)?.line.flatMap({ world.line(id: $0) }), !line.stops.isEmpty,
+              let middle = world.station(id: line.stops[line.stops.count / 2])?.location else { return nil }
+        let placed = line.assignedTrains.compactMap { id in
+            world.train(id: id).flatMap(\.position).flatMap { world.location(of: $0) }.map { (id, $0.position.plan) }
+        }
+        return placed.min { a, b in
+            (WorldVector(a.1) - WorldVector(middle)).length < (WorldVector(b.1) - WorldVector(middle)).length
+        }?.0
     }
 }

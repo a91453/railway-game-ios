@@ -392,10 +392,10 @@ public enum HelpGuide {
             "reportProblem", .running,
             question: ("Where do I send a problem or an idea?", "問題或意見要送到哪裡？"),
             answer: (
-                "Open the game menu (the three lines at the top) and choose Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button.",
-                "打開遊戲選單（頂端的三條線），選「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。"
+                "Open the game menu (the three lines at the top) and choose Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button. Testing in TestFlight? Take a screenshot and send it as feedback from TestFlight; to attach the save, choose Mail in the share menu and send it to the feedback address on this app's page in the TestFlight app.",
+                "打開遊戲選單（頂端的三條線），選「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。用 TestFlight 測試的話，截圖後在 TestFlight 送出回饋即可；要附上存檔時，在分享選單選「郵件」，寄到 TestFlight App 裡這個 App 頁面上的回饋信箱。"
             ),
-            keywords: "report bug problem feedback idea suggestion send 回報 問題 意見 建議 錯誤 送"
+            keywords: "report bug problem feedback idea suggestion send email mail testflight 回報 問題 意見 建議 錯誤 送 寄 信箱 郵件"
         ),
     ]
 }
