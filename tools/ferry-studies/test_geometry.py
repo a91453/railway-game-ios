@@ -34,4 +34,8 @@ class FerryGeometryTests(unittest.TestCase):
  def test_lod_reduces_geometry(self):
   for kind in ('tamsui','cijin'):
    a,b=Mesh(),Mesh();a.ferry(kind,False);b.ferry(kind,True);self.assertLess(len(b.t),len(a.t)*.7)
+ def test_assembly_range_starts_at_actual_moving_solid(self):
+  m=Mesh();meta=m.dock(False);j=meta['joints'][0]
+  first=next(s for s in m.solids if s['name']=='ramp-deck')
+  self.assertEqual(j['movingTriangleStart'],first['start'])
 if __name__=='__main__':unittest.main()

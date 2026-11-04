@@ -186,7 +186,7 @@ class Mesh:
   for part,offset in placements:
    start=len(self.t);meta=self.dockpart(part,lod);self.transform(start,lambda p:add(p,offset))
    if 'joint' in meta:
-    j=meta['joint'];j['pivot']=list(offset);j['movingTriangleStart']+=start;joints.append(j)
+    j=meta['joint'];j['pivot']=list(offset);joints.append(j)
   # Shore landings under shelter and kiosk, with vertical closed edges.
   self.box('shore-landing',-13,1.8,.90,6.4,9.0,.75,'deck')
   return {'placements':[{'part':p,'translation':o} for p,o in placements],'joints':joints,'waterline':[0,0,0]}
