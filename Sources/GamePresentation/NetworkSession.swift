@@ -28,6 +28,7 @@ extension GameSession {
         networkDepotEnd = nil
         cablewayDraft = []
         cablewayDraftLegs = nil
+        cablewayDraftMeets = nil
         message = nil
     }
 

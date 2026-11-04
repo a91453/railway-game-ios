@@ -283,6 +283,46 @@ final class CablewayTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "it still loads")
     }
 
+    // MARK: - The station a real one meets (decision 586)
+
+    /// A stop seven cells from A, 400 to 500 m off: on its own it meets
+    /// nothing; given A's place it meets A, keeps that through a save, and
+    /// meets it again once A is rebuilt there.
+    func testAGivenStationIsMetUpToFiveHundredMetres() throws {
+        var world = try world()
+        let near = CablewayStop(cell: CellPosition(row: 8, column: 12)), far = CablewayStop(cell: CellPosition(row: 8, column: 26))
+        let place = try XCTUnwrap(world.station(id: a)).location
+        let squared = GameWorld.squaredDistance(GameWorld.middle(of: near.cell), place)
+        XCTAssertGreaterThan(squared, BusRoute.stopReach * BusRoute.stopReach, "beyond the 400 m a cableway finds a station in")
+        XCTAssertLessThanOrEqual(squared, Cableway.namedTransferReach * Cableway.namedTransferReach, "within 500 m")
+        var unnamed = world
+        let plain = try unnamed.createCableway(stops: [near, far])
+        XCTAssertNil(unnamed.cableway(id: plain.id)?.transfer)
+        XCTAssertNil(unnamed.cableway(id: plain.id)?.meetsNear)
+        let built = try world.createCableway(stops: [near, far], meetsNear: place)
+        let cableway = try XCTUnwrap(world.cableway(id: built.id))
+        XCTAssertEqual(cableway.meetsNear, place)
+        XCTAssertEqual(cableway.transfer, BusTransfer(station: a, stop: 0))
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "it loads with its station")
+        try world.removeStation(a)
+        XCTAssertNil(world.cableway(id: built.id)?.transfer)
+        XCTAssertEqual(world.cableway(id: built.id)?.meetsNear, place, "it still knows where its station stood")
+    }
+
+    /// A place more than 500 m from every boarding stop is refused, and
+    /// the world is unchanged; the angle station does not count.
+    func testAGivenStationTooFarIsRefused() throws {
+        var world = try world()
+        let before = world
+        let place = try XCTUnwrap(world.station(id: a)).location
+        for (stops, why) in [([CablewayStop(cell: CellPosition(row: 8, column: 14)), CablewayStop(cell: CellPosition(row: 8, column: 26))], "nine cells off"),
+                             ([CablewayStop(cell: CellPosition(row: 8, column: 26)), CablewayStop(cell: CellPosition(row: 8, column: 12), boards: false),
+                               CablewayStop(cell: CellPosition(row: 8, column: 40))], "only an angle station near")] {
+            XCTAssertThrowsError(try world.createCableway(stops: stops, meetsNear: place), why) { XCTAssertEqual($0 as? GameError, .invalidCableway, why) }
+            XCTAssertEqual(world, before, why)
+        }
+    }
+
     // MARK: - The save
 
     /// Version 83 (decision 574): the cableway and its two days, saved byte
