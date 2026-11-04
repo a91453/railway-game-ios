@@ -473,6 +473,32 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 44 任交第 45 任（2026-11-03 20:50 UTC，session_01YGNNukw5koUxDsjkSBmJJy，壓縮 2 次、快到第 3 次）**：作者去睡了，早上自己按 111.1（作者：「綠了就合吧 紅了就修復 我早上才要發111.1」）。第 45 任照這段接手；和下面不同時以這段為準。
+
+- **111.1 發版準備（第一件事）**：
+  1. #1750（`claude/whatsnew-card-111`，head `8e8e463`，App 內這版新增＋`.github/testflight-whats-new.md`＋`PLAYER_FEEDBACK.md`）：20:45 UTC 時 Linux 全綠、Xcode build 在跑。gate 與 iOS 綠就合（`expectedHeadSha` 用完整 SHA）。
+  2. 等 main 的 push `ci.yml` 綠，再對 main HEAD 手動跑完整 `ci.yml` 與 `ios-build.yml` full lane（都是 workflow_dispatch）。
+  3. 兩個都綠，在 #1579 寫「111.1 可以發（commit X）」，並在對話告訴作者。紅就查、修。**不要自己按 `testflight.yml`**，作者早上按。
+  4. full lane 跑完前不合其他 PR（合了會自動起 full lane 搶 macOS）。
+  5. 作者發完後，`PLAYER_FEEDBACK.md` 記 0.5.0 (111.1) 的 run 與 commit。
+  - 111.1 包含：#1747、#1757、#1758 DAYPASS、#1759 L6FIX、#1761 HEALTH-110、#1762 NEWCAR（決策 566）、#1763 DIESEL（567）、#1765 REVIEW-L8、#1768 AUTOXO（571）、#1750。
+- **111.1 之後依序審、合**（每批 3–5 個，等 main `ci.yml` 綠）：
+  - #1766 STNAME（決策 569，ready、綠，自審截圖過）先合。
+  - #1764 PLATSTOP（565，draft，等截圖）。
+  - #1760 ROUTEUI（568，draft，第三級，規劃要看前後截圖含 iPad）。
+  - #1769 STUCKFIX（570，GameCore，draft，文湖 6 格量測中）。
+  - #1767 WENHUSIDE（564，存檔 82，GameCore）：WENHUSIDE-2（session_01YGNNuovdoMPJsiiJsYuTw1）接手修三鶯簡單規則死結、campaigns-6／9、高鐵示範 139 筆靠左；交接在該 branch 的 HANDOFF §4.44。
+  - TYMCLIST3（session_01YGNNup5FDQbQYoyKCqHySs）：A 決策 562，B 接手 #1743（決策 556），B 等 WENHUSIDE 的 `setLineKeepsRight`。
+  - AUTOXO-2（session_01YGNNumKeZDNGQvPYj7uCfW，`claude/terminus-simple-rules`，決策 571 續）：簡單規則終點站死結，疑在 `Terminus.swift` 的 `guard blockSections` 與 `alternativeRoute` 的反方向限制。
+  - GameCore 名額順序：WENHUSIDE-2 ＞ TYMCLIST3 ＞ STUCKFIX ＞ AUTOXO-2（同時最多 2 個跑完整 tier）。
+- **沒派的**：
+  - REVIEW-L8 的 L8-1（P3）：一日券的 `countedAt(day:line:serviceDay:)` 逐線選時間，但路網要逐班次的間隔，只在尖峰開的主班次會數到 0；改法在 `docs/archive/PR1752_1759_REVIEW_HANDOFF.md`。下一輪審查從 #1760 起。
+  - HEALTH-110 第 1 項：文湖擬實 281/532 班誤點超過 5 分，等 WENHUSIDE-2 合了重量。
+  - 玩家回報複線＋號誌站、月台最大仍死結：已請玩家用「回報問題」附存檔，收到就派除錯（可能和 AUTOXO-2 同源）。
+- **111.1 之後的新功能順序**（作者同意）：台灣節慶（§22 第 20 項）→ 纜車 → 渡輪 → 飛機（機場樞紐、自動航班，不是玩家經營航空公司）。一次一種，都動 GameCore、升存檔。之後還有 7b 馬達聲。作者不要把介面摺疊起來。
+- **號碼**：556、562、564、565、566、567、568、569、570、571 已用或保留；**下一個 572**。存檔 82 保留給 #1767；golden schema 78 需要時。
+- **固定三件事這一輪**：審查 REVIEW-L8（到 #1759）、除錯 HEALTH-110；CI 優化上一輪 CIOPT-6。發 111.1 之後照 §1.1 再派。
+
 **第 44 任接回（2026-11-03 14:10 UTC，session_01YGNNukw5koUxDsjkSBmJJy，作者在 claude.ai 開的，第 0 層）**：照下面「pro 交回第 44 任」接手；兩段不同時以這段為準。
 
 - **110.1 已發**（作者 13:29 UTC，`2494e5a`，run 110）：完整 `ci.yml` 與 full lane 都綠，記在 `PLAYER_FEEDBACK.md`。下一版 111.1（作者：「明天111.1在一起更新吧」）：合 #1750（App 內這版新增，補 108.1–110.1），再加 111.1 自己的，並改 `.github/testflight-whats-new.md`。
