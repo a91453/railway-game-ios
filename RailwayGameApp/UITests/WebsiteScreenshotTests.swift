@@ -191,6 +191,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             let app = launch(extra: ["-screenshot-scene", "tamsuiFerry"], english: english)
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
             settle(seconds: 5)
+            // The scene opens close on the river: one step out shows both piers.
+            let zoomOut = app.buttons[english ? "Zoom out" : "縮小"]
+            if zoomOut.appears(within: 5), zoomOut.isEnabled { zoomOut.tap() }
+            settle()
             if !english { keep("ferry-map", app) }
             let build = app.buttons["dock.build"]
             if build.appears(within: 10) { build.tap() }
@@ -200,7 +204,13 @@ final class WebsiteScreenshotTests: XCTestCase {
             if !transit.isSelected { transit.tap() }
             let mode = app.segmentedControls.buttons[english ? "Ferries" : "渡輪"].firstMatch
             XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
-            mode.tap()
+            // The panel may still be settling after the tool opens: tap
+            // until the segment reads selected.
+            for _ in 0..<3 where !mode.isSelected {
+                mode.tap()
+                settle(seconds: 1)
+            }
+            XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
             let card = app.descendants(matching: .any)["ferry.card"].firstMatch
             XCTAssertTrue(card.appears(within: 10), "The ferry's card")
             // The card is below the mode's options: drag them up.
