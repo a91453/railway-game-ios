@@ -57,8 +57,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Decision 561: the Taoyuan Airport MRT's 1000 and 2000 as #1700's
         // units, near and far, after them (35 models more with the
         // windows' models, 487,980 vertices more, 19.5 MB a copy).
-        XCTAssertEqual(pack.models.count, 827)
-        XCTAssertEqual(vertices, 6_234_246)
+        // Decision 575 續 (CABLEMAP): the cable car's cabins, tower and
+        // halls, near and far, and a rope's metre, last (13 models, 53,148
+        // vertices more, 2.1 MB a copy).
+        XCTAssertEqual(pack.models.count, 840)
+        XCTAssertEqual(vertices, 6_287_394)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

@@ -29,7 +29,8 @@ final class Map3DModelTests: XCTestCase {
         let emu500Models = Map3DEMU500.Unit.allCases.count + 1
         let taipei610Models = Map3DTaipei610.Role.allCases.count * 3 // near, far, light
         // Decision 449: and after them, the running cars' windows.
-        XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest)
+        XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest
+                       + Map3DCableCar.drawn.count)
         // One term per line, typed: as a single sum of 30 terms the type
         // checker took 213 s on it (decision 563).
         let studyModels: [Int] = [
@@ -55,7 +56,7 @@ final class Map3DModelTests: XCTestCase {
             Map3DTaoyuanAirport.Role.allCases.count * 2,
             Map3DEMU700.Role.allCases.count * 2,
             8,
-            Map3DCableCar.models.count,
+            Map3DCableCar.studyModels.count,
         ]
         XCTAssertEqual(Map3DModelPack.studies.models.count, studyModels.reduce(0, +))
 

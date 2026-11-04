@@ -29,3 +29,11 @@
 ## UNVERIFIED（設計值，不是實測）
 
 吊架長度與門框、座椅、玻璃面積（照片比例推估，見 Codex 的 SOURCE）、鋼索間距 5.2 m、塔高 14 m、塔頂橫臂與滑輪組尺寸、站房尺寸（22 × 11 m、牆高 6.6 m）與屋頂形狀、轉角 24°、全部顏色（白身、藍綠線、水晶黃線、深灰屋頂）。動物園站、貓空站的實際外型特徵沒有查到可引用的照片或圖面，三款站房是簡化的通用型；動物園南站、指南宮站是轉角站的說法也 UNVERIFIED。吊廂玻璃在 Metal 裡仍是不透明；閘門的旋轉、站內動線與吊廂進站間隙沒有驗；站房裡面的月台與欄杆只有測試，沒有截圖。真機 Metal 畫面、效能、營運接入都 UNVERIFIED；Linux 預覽不是 Metal。
+
+## 3D 地圖上（決策 575 續，CABLEMAP）
+
+website-screenshots run 41791066211（iPhone 模擬器，`WebsiteScreenshotTests.testCablewayIn3D`，縮成一半）：
+
+- `map3d-near.png`：近景，塔柱、兩條索、吊廂。
+- `map3d-below.png`：貼地仰看，吊廂底部與水晶吊廂（紅邊）。
+- `map3d-far.png`：遠景，整條線的塔、站房、遠景吊廂。
