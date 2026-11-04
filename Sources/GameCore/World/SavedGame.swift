@@ -422,9 +422,16 @@
 ///     `"way"` round (`"inner"` or `"outer"`). A build that reads only an
 ///     earlier version would read such a run as one from end to end and
 ///     refuse the whole line, so it says the save is newer than it instead.
+/// 84. Taiwan's named festivals (decision 576): the demand events can have
+///     `"sites"`, the places festivals are held at, an event can name its
+///     `"festival"`, and a scenario's festival can `"follows"` a named
+///     festival's date through the lunar calendar. A build that reads only
+///     an earlier version would drop them and fix the festival to one day
+///     of the year, so it says the save is newer than it instead. Versions
+///     81 to 83 are other changes' (their steps are theirs).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 80
+    public static let currentVersion = 84
 
     public let world: GameWorld
 

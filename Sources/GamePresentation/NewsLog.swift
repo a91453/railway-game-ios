@@ -251,6 +251,7 @@ extension StationMasterAdvice {
         case .scenarioWelcome: (.scenario, "welcome", nil)
         case .shortSteamTrains(let line, _): (.advice, "steam:\(line.rawValue)", .line(line.rawValue))
         case .festivalComing: (.holiday, "festival", nil)
+        case .namedFestivalComing(let festival, _, _, _): (.holiday, "festival:\(festival.rawValue)", nil)
         // Decision 174: the sights.
         case .sightUnreachable(let id, _, _, _, _): (.advice, "sight:\(id.rawValue)", nil)
         case .touristsComing(let kind, _, _): (.holiday, "tourists:\(kind.rawValue)", nil)

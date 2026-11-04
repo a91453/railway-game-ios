@@ -230,3 +230,11 @@ hand could hold, is refused with that reason
 | `v78-station-expansion.json` | 78 | Station expansion (decision 506): `StationExpansionTests`' corridor of four stations and a line A–B–C with no train, managed, A and B each releasing 1,000,000 trips a day; at 08:00 of day 1 A is expanded twice (`"expansion": 2`, two `stationExpansion` asset records) and an hour later 16,000 wait there, more than a version 77 build lets a station hold. Written by the version 78 build (`StationExpansionTests.testVersionSeventyEightKeepsTheExpansion`, `STATION_EXPANSION_SAVE_NEW=1`). Version 77 is decision 515's (#1593). |
 | `v79-track-left.json` | 79 | Buying a removed line again (decision 528): `LineAcquisitionTests`' Alpha, Beta and Gamma with the line Main, bought as `tra:PINGXI` at 05:00 of day 0 with the six edges it laid (`"track"`), then removed, which leaves those edges as the world's `"leftTrack"`; an hour later. Written by the version 79 build (`LineAcquisitionTests.testVersionSeventyNineKeepsTheTrackLeft`, `TRACK_LEFT_SAVE_NEW=1`). |
 | `v80-ring-runs.json` | 80 | Runs of a ring (decision 535): `RingRunsTests`' double ring (an inner and an outer loop never joined) in a world 10,240 × 8,192 units, six stations A–F with a platform on each loop and the depot G on a siding beside the inner loop between A and B; the ring line A–F with `"depots": [7]` and six runs, each with its `"way"`: a lap each way from A (06:00 inner, 06:10 outer), A to D each way, and D back to A each way (the inner one across the seam); its trains Clockwise (inner loop) and Anticlockwise (outer loop) at 06:10, each on its lap. A version 79 build cannot read a run with a way, or runs on a ring. Written by the version 80 build (`RingRunsTests.testVersionEightyKeepsTheRingRuns`, `RING_RUNS_SAVE_NEW=1`). |
+
+Since version 84 (decision 576) the demand events can hold `"sites"`, the
+places Taiwan's named festivals are held at, an event can name its
+`"festival"`, and a scenario's festival can `"follows"` a named festival's
+date through the lunar calendar. Earlier saves have none and read as before
+(their scenario festivals keep their day of the year); a build before
+version 84 refuses a version 84 save rather than dropping them.
+`v84-festivals.json` has four places and the Lantern Festival announced.

@@ -101,6 +101,9 @@ final class RealWorldMapTests: XCTestCase {
         blank.setAreaBuyOut(false)
         // A real-world map has Taiwan's sights, a blank one its drawn ones (decision 174).
         blank.setTourism(nil)
+        // And the festivals held at Taiwan's places (decision 576).
+        XCTAssertTrue(real.demandEvents?.sites.contains { $0.kind == .newYearsEve } ?? false, "Taipei 101 is on a map round Taipei")
+        blank.setFestivalSites([])
         var plain = GameWorld.newGame()
         plain.setTourism(nil)
         // A blank map's towns have roads, a real-world map none yet (decision 400).
