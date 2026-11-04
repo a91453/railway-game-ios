@@ -1,7 +1,7 @@
-> 跟車「車窗」視角與「從車站看」修正（派工單 FOLLOWVIEW，[決策 578](decisions/578.md)，`claude/follow-window-station`，2026-11-04）：3D 跟車多「車窗」（中段車廂左窗、眼高 2 m，不畫窗框與車廂內部）；「從車站看」離站即提前蓋下一站周圍、沒蓋好前維持上後方、下一站超過 12 km 時選項灰掉。**留下的**（決策 578「下一步」）：窗框、車窗選左右、公車車窗（FOLLOWBUS 後合者接上，用 Head 轉接）、放空模式加車窗、彎道上車窗朝向用中段切線；12 km 門檻與串流蓋一站的時間是估計，實機 UNVERIFIED。
+> 跟車「車窗」視角與「從車站看」修正（派工單 FOLLOWVIEW，[決策 578](decisions/578.md)，`claude/follow-window-station`，2026-11-04）：3D 跟車多「車窗」（中段車廂左窗、眼高 2 m，不畫窗框與車廂內部）；「從車站看」離站即提前蓋下一站周圍、沒蓋好前維持上後方、下一站超過 12 km 時選項灰掉。**留下的**（決策 578「下一步」）：窗框、車窗選左右、公車車窗（FOLLOWBUS 後合者接上，用 Head 轉接）、放空模式加車窗、彎道上車窗朝向用中段切線；12 km 門檻與串流蓋一站的時間是估計，實機 UNVERIFIED。截圖上點「車窗」沒切換只在 main 的第一次 run 出現、之後兩次有紀錄的 run 都正常，原因未查明（FOLLOWVIEW-2，決策 578「下一步」最後一項）；按鈕已會寫 UI 測試紀錄、截圖測試會確認選中才拍。
 
 > 纜車（派工單 CABLE，session_01YGNNumrJnt5AkQzWrdhAms，`claude/cable-maokong`，[決策 574](decisions/574.md)，存檔 83，2026-11-04）：PR-1 只做 GameCore（`Cableway`：站與轉角站、直線纜線、土地分配與轉乘、NT$180 單一票價、週一／雷雨／颱風停駛、日結）與存檔 83。**留下的**：PR-2 的建造工具、2D 圖示、站卡與纜車卡、吊廂位置 `CablewayCabins`（給 CABLE3D，決策 575）、貓空示範與站點座標（OSM 下載不到，UNVERIFIED），逐項見決策 574「下一步」。
-> 纜車 PR-2（CABLE-2，session_01YGNNunZBgaB8JeDKJxh4xV，`claude/cable-2`，存檔不動，2026-11-04）：路網工具的纜車模式、預覽與指令、2D 纜線與站圖示、纜車卡與車站面板列、吊廂位置 `CablewayCabins`（給 CABLE3D）、貓空真實路線與截圖場景 `maokong`。**留下的**：模式列圖示、新功能提示、點地圖選纜車、2D 吊廂、六個模式在 iPhone 橫拿大字放不放得下，見[決策 574](decisions/574.md)「下一步」第 1 項。
+> 纜車 PR-2（CABLE-2，session_01YGNNunZBgaB8JeDKJxh4xV，`claude/cable-2`，存檔不動，2026-11-04）：路網工具的纜車模式、預覽與指令、2D 纜線與站圖示、纜車卡與車站面板列、吊廂位置 `CablewayCabins`（給 CABLE3D）、貓空真實路線與截圖場景 `maokong`。**留下的**：模式列圖示、新功能提示、點地圖選纜車、2D 吊廂、六個模式在 iPhone 小螢幕與大字放不放得下、纜車卡要捲動才看得全、貓空示範的動物園站被 HUD 蓋住、吊廂跟隨（決策 580 的 `Pose`），見[決策 574](decisions/574.md)「下一步」第 1 項。CABLE-2 壓縮第 2 次後停手，這些沒人接。
 
 > 新車站用地標、路名與路口命名（派工單 STNAME，[決策 569](decisions/569.md)，`claude/station-name-landmarks`）：實景地圖預設名多一步「300 m 內地標」，取名欄下最多 4 個候選（地名、地標、公車站牌、路口、公園、路名）。**留下的**（決策 569「下一步」）：網站致謝頁 `Website/site/credits.html` 跟著 `DataSourceCredits` 加「地標與道路」；iPad、iPhone SE 的候選列沒截圖；只畫成點的學校、醫院沒收。
 
@@ -203,7 +203,22 @@
 - **壓縮前就換、壓縮幾次一定換**（2026-10-22，作者：「壓縮到一定次數後幫我更換新session 指派的也一樣」→「我是設定400k壓縮耶 你再評估一次」；由遊戲規劃五方決定）：
   - 壓縮點：`CLAUDE_CODE_AUTO_COMPACT_WINDOW=400000` 乘上 `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=80`，約 **32 萬 token** 時壓縮（不是 40 萬）。壓縮後剩一段摘要，原話與量到的數字會丟。
   - 看自己用了多少：`get_session`（不帶 session_id）的 `external_metadata.context_usage.used_tokens`。量得到，所以主要看 token，壓縮次數只當最後一道。
-  - **遊戲規劃：第 3 次壓縮快到時換**（2026-10-25 改，原本是「壓縮 2 次就換」；比較在下面「回頭看（2026-10-25）」）。第 2 次壓縮後，`used_tokens` 到約 **30 萬**（壓縮點約 32 萬）就寫交接 PR（§2.0），照 §1.1 換手，不等第 3 次真的壓縮。條件：(1) 作者每句會影響工作的話，當下寫進 #1041 或該 PR，不等交接；(2) 平常每個規劃的文件 PR 都順手更新 §2.0，交接時只補最後一段；(3) 第 3 圈對作者說過什麼、某個 PR 該不該合不確定時，先查 #1041 與文件，查不到就問作者，不靠印象；(4) 壓縮後發現記錯事、重做已做的事，就提早換。新任只讀第 1 節、§2.0 與第 3 節最上面幾列，其他要用時再讀。
+  - **遊戲規劃：第 3 次壓縮後立刻交接**（2026-11-04 改，作者：「然後你覺得接手需不需要改成壓縮第2次後直接接手或是壓縮第三次後直接接手／不然壓縮第2次接近第三次其實範圍很難抓」→ 第 47 任五方建議 C → 作者：「你決定壓縮了 3 次才交接 那要寫進md嗎」。原本是「第 3 次壓縮快到時換」，2026-10-25 起，下面的「回頭看」留作紀錄）。在 #1579 留了「壓縮第 3 次」之後，下一件事就是寫交接 PR（§2.0）並照 §1.1 換手，手上的事交給下一任，不再接新的。不用再估 `used_tokens` 到 30 萬了沒：壓縮是看得到的事件，估 token 要一直查、忙起來會忘（第 46 任實際也是壓縮 3 次才交）。條件：
+    - (1) 作者每句會影響工作的話，當下寫進 #1579 或該 PR，不等交接。
+    - (2) 平常每個規劃的文件 PR 都順手更新 §2.0，交接時只補最後一段。
+    - (3) **交接照 GitHub 重建，不靠摘要**：寫交接前重讀 #1579 上一任接手之後的留言、開著的 PR、自己開的 session 清單（`list_sessions`），從這些寫「派出去的」「還開著的」「號碼」。第 3 圈的摘要已疊三代，原話與細節最容易掉。
+    - (4) 壓縮後發現記錯事、重做已做的事，就提早換。
+    - (5) **代開下一任的固定檢查**：`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`、`model: "claude-opus-5-5"`；新任開工先在 #1579 留言，確認寫得進 GitHub。第 46 任代開第 47 任時漏了 `source_url`，新任開工寫不進 GitHub，要作者再說一次才放行（§1.1「代開時一定指定 repo」）。
+    - 五方（權重照 NEXT_PRIORITIES §19；選項：A 維持「第 2 次後約 30 萬」、B 第 2 次壓縮後立刻、C 第 3 次壓縮後立刻＋條件）：
+      | 選項 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |
+      | --- | --: | --: | --: | --: | --: | --: |
+      | A 維持 | 3 | 3 | 1 | 1 | 1 | 2.10 |
+      | B 第 2 次後立刻 | 3 | 2 | 1 | 1 | 1 | 1.85 |
+      | **C 第 3 次後立刻＋條件** | **4** | **4** | 1 | 1 | 1 | **2.65** |
+      - 玩家：C 一任做的量和 A 差不多，換手的空檔（沒人合併、派工）不變；B 每任少一圈，空檔變多。
+      - 開發：C 的時機是看得到的事件，不靠估；缺點是交接寫在第三代摘要之後，由條件 (3)(5) 擋。
+      - 美術、鐵道迷、音樂：無。
+    - 新任只讀第 1 節、§2.0 與第 3 節最上面幾列，其他要用時再讀。
   - **回頭看（2026-10-25，作者：「怎麼感覺每次接手好像都實際壓縮一次後過沒多久就交接好／還是要等到第二次鄰近壓縮才交接」→「那如果鄰近第三次再交接可以嗎」→「五方評分決定」）：改成第 3 次快到時換，加上面四個條件。**
     - 量的：session_01B2kaku5NRz2J2CMzc8z3cZ 10-24 23:13 開工，第 2 次壓縮約 10-25 03:25，一圈約 2 小時；剛壓縮完已用約 13 萬（摘要、CLAUDE.md、重讀的文件），所以第 2 圈比第 1 圈短，作者才覺得「沒多久就交接」。照第 2 次壓縮後才寫交接，#1219、#1220 的審查結果是摘要之後才補進 §2.0。
     - 和 10-22「B 規劃 3 次」（1.55，上面）不同的地方：那時 session 不知道自己壓縮過幾次（摘要不說），規劃的狀態也多半只在對話裡；現在次數記在 #1041、狀態在 PR、CI、#1041 與 §2.0，第 3 圈會走樣的只剩對話裡的原話，條件 (1)(3) 擋這一塊。
@@ -235,7 +250,7 @@
     - 遊戲規劃 8 個：10-22 照規則的 4 任每任 2–7 小時、$15–22、約 2 次；沒照做的 3 任：10-21 的 01NiR5 12 小時 $81 約 8 次、014rYH 17 小時 $90 約 11 次，10-23 的 01H5RH 24.5 小時 $120 約 16 次（逐筆數紀錄是 12 次，推估偏高約三成，線照樣有效）。
     - 實作 94 個：沒壓縮 33、約 1 次 31、約 2 次 18、3 次以上 12（13%，多在 $30–60，決策 313 的 session_01Y25x9NJSKmAuP1M1K3Sf3C 15 小時 $120 約 16 次）；中位數約 2.2 小時、$11。
     - 原因：照做時成本與換手都合理；出事的都是 session 不知道自己壓縮過（摘要不說次數），#1041 也沒有人留過「壓縮第 N 次」。
-    - **線**：`cache_write_tokens − used_tokens` 超過約 **48 萬**，就當作壓縮 2 次（約 72 萬是 3 次）。遊戲規劃每次巡查用 `get_session`（不帶 id）看自己，過了 48 萬、`used_tokens` 又到約 30 萬就照 §1.1 換手（2026-10-25 起）；也看做中的實作 session，過了 48 萬就請它照下一條收尾。實作 session 推 PR 前看自己一次。「壓縮第 N 次」的留言照舊，這條是保底。
+    - **線**：`cache_write_tokens − used_tokens` 超過約 **48 萬**，就當作壓縮 2 次（約 72 萬是 3 次）。遊戲規劃每次巡查用 `get_session`（不帶 id）看自己，到了上面的換手點就照 §1.1 換手（2026-11-04 起：第 3 次壓縮後立刻）；也看做中的實作 session，過了 48 萬就請它照下一條收尾。實作 session 推 PR 前看自己一次。「壓縮第 N 次」的留言照舊，這條是保底。
     - 五方（選項：A 不改；B 窗口改 300k；C 次數改 1 次；D 不改窗口與次數、加量得到的線）：
       | 選項 | 玩家 | 開發 | 美術 | 鐵道迷 | 音樂 | 加權 |
       | --- | --: | --: | --: | --: | --: | --: |
@@ -382,8 +397,8 @@
 - 兩個 PR 撞同一個決策號（329 起是兩個 `docs/decisions/<N>.md` 同名），照 #231 登記的先後，後登記的改號；ARCHITECTURE、OVERVIEW 衝突（改 1–328 的「後來」時還會有）：請該 session 自己 merge main 解。
 - 存檔版本與決策號以 main 加上 #231 還沒釋出的登記為準，取最大值加一。
 
-**full lane**（`ios-build.yml` 把 iPhone UI 測試全部跑一次：兩個 iPhone job 加 iPad 教學，約 42–45 分鐘，佔 3 台 macOS）：
-- 合併後不用手動跑（決策 265）：`ios-full-lane.yml` 在合了會影響 App 的 PR 之後自己啟動，最多每三小時一次。10-14 到 10-16 的 67 小時裡 full lane 跑了 42 次，只有 7 次是它啟動的，佔全部 macOS 用量的 34%。
+**full lane**（`ios-build.yml` 把 UI 測試全部跑一次：build job、兩個 iPhone UI job，iPad 教學等兩個 iPhone job 跑完才開始；2026-11 約 1.5–2 小時，最多同時佔 3 台 macOS，PR 永遠留 2 台，決策 582）：
+- 合併後**不會**自動跑（決策 582，修正決策 265）：`ios-full-lane.yml` 只在每晚台灣 02:17 起一次（main 最新 commit 已經跑過或還有一輪在跑就不起，夜間那輪附「少一顆按鈕」的證明）。2026-11-04 前每次合併後最多每三小時自動起一次、佔 4 台 macOS 約 1.5–2.5 小時，PR 的 Xcode build 與截圖排隊一小時以上。
 - 只在兩種情況用 `actions_run_trigger` 手動跑（run_workflow，workflow `ios-build.yml`，ref main）：
   - 發版前要用的 HEAD；
   - full lane 紅了，要二分的 commit。
@@ -463,6 +478,7 @@
 - 決策號：派工單寫好號碼（#231 的登記就是預約），PR 只加 `docs/decisions/<N>.md` 一個檔，不改 ARCHITECTURE 的最後、OVERVIEW 的決策列與 §9（決策 329，2026-10-21 晚）。不用再先在 main 放「### N. （預約）」一節，合併後也不用補 §9 的索引。以前每個 PR 都接在 ARCHITECTURE 最後、改 OVERVIEW 同一行；10-21 改成預約一節也擋不住，相鄰的預約節還是同一處（#934 三次衝突；三天 49 個 merge main 的 run，41 個是這兩份，佔 PR 的 Linux 用量四成，`docs/research/CI_MEASURE_2026-10-21.md`）；
 - 壓縮：被壓縮後在 #231 留「壓縮第 N 次」；第 1 次後不接新的，第 2 次就做到能停的地方交接（§1 的「壓縮前就換、壓縮幾次一定換」）；
 - 收尾：draft → 綠 → ready → 在 #231 留「可合併」→ 用 send_message 告訴遊戲規劃；
+- **CI 由負責的 session 自己盯**（作者 2026-11-04：「盯著 ci 要不要改負責的盯就好了」）：實作 session 推了之後自己看到 head 的 check runs 全部跑完；紅了自己查、自己修，修不了才找遊戲規劃。全綠（含 `Swift CI (gate)`、Xcode build；動 GameCore 的含 Wasm Probe）、第三級截圖也出來了，才用 send_message 傳「#N 綠、head <完整 SHA>」（第三級附截圖）。遊戲規劃不開背景監看，收到這句只用 §1.2 的檢查確認一次那個 SHA 就合（動 GameCore 的另確認 main 的 `ci.yml` 綠）。原因：遊戲規劃的對話最長，每被監看叫醒一次（包括已知的紅）都要重讀整段，多出來的是它的上下文與交接次數；實作 session 本來就要看自己的 CI；
 - **封存**（作者 2026-10-23：「只要完成開完 PR、檢測、有記錄 231 與交接手冊、還有後續檢查都通過就能進入封存，防止之後太多 session」）：實作 session 做完、PR 開了、CI 綠、登記處（現在是 #1041）留了「可合併」、還有後續的寫進本檔、遊戲規劃要它查的也查完，遊戲規劃就把它封存，不用等合併。合併後才出的問題（衝突、main 變紅）由遊戲規劃另派。換手後停下來的 session，接手的確定在動就封存。
 - **舊遊戲規劃的標題**（作者 2026-10-23：「不然每次都點錯」）：遊戲規劃換手時，新的一任把自己的標題開頭寫「★ 現任：」，把上一任改成「【舊・已換手】…→ 改用 session_…」，指向現任。
 - 禁止：合併、auto-merge、推 main、`testflight.yml`、`@claude`、在 repo 裡寫模型名稱。
@@ -490,6 +506,27 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 46 任交第 47 任（2026-11-04 約 11:10 UTC，session_01YGNNup5rvKQE2WYa4BP1cK，第 2 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。
+
+- **112.1 發版（作者自己按）**：作者說「好 那我發了」，`testflight.yml` 由作者按，**規劃不按**。main HEAD `bef26cae`（#1796）。作者把 full lane 交給規劃看（「那full lane給你跑」）：
+  - 同 commit 手動跑的完整 `ci.yml` **41817277687**、full lane（`ios-build.yml`）**41817301541**，11:00 UTC 時都還在跑。跑完告訴作者結果；紅的先分偶發（Simulator「Failed to launch」之類，重跑）還是真的，真的就派人修進下一版。
+  - 作者的 `testflight.yml` run 出現後：記 run 編號與 commit，版號 0.5.0（run 編號.1）；用小 PR 在 `docs/research/PLAYER_FEEDBACK.md` 照 111.1 那段記；提醒作者看 App Store Connect 的出口合規。
+  - 然後派 WEB session 拍網站新功能截圖（纜車 2D／3D、跟隨公車、車窗視角），在 private repo 開 draft PR，作者部署（作者：「好 發完再派人拍」）。
+  - 112.1 的內容見 `.github/testflight-whats-new.md`（#1796）。
+- **第 46 任已合**（這次壓縮前後）：#1788（`4fc02514`）、#1798（`ce3011f3`）、#1802（`8d3bde20`）、#1796（`bef26cae`）；更早的見 #1579 合併留言。
+- **還開著的 PR**：只有 #1743 桃園機場捷運上架（決策 556，draft）。**main 沒有機場捷運可收購**，要等 #1743。
+- **派出去的**（全部第 46 任開的，第 3 層；回報「#N 綠、SHA」就照規則審、合）：
+  - NEWBIE-PLACE session_01YGNNum7ixL7wyxjx8KhJ39（`claude/newbie-place`，決策 **584**）：作者 112 回報「放不了車」：沒選車站、80 m 車只放得進主線月台、T 字岔沒接上（端點差 5–20 m）、閒置車佔月台。三個 PR：1 放車被拒的原因、2 選月台、3 沒接上的軌道提示。畫面改動，第二級自審截圖。
+  - DIAG-HANG session_01YGNNuo5stTYGLYek8Cee2w：作者回報的卡頓（77 次約 750 ms、暫停時存檔匯出 6.2 s、一次 16.65 s、一次 4.15 s）。作者說自己沒覺得卡，**只做便宜的修正**，不大改。
+  - MODEROW session_01YGNNunsMaSiBF6XKNNqkrD：路網模式列自動捲到選中模式＋右緣漸層；中英截圖給規劃看。
+  - TYMCLIST6 session_01YGNNumU74Mpe1hmNiRC6Bu：接手 #1743；簡單規則＋行車控制仍死結；**下一版**再進。
+  - CABLEFOLLOW session_01YGNNukzpEsUEN6Z7h1i227（決策 **583**）：跟隨纜車吊廂（窗外、上後方、旁邊）；三張截圖給規劃看（第三級）。
+  - **113.1 先開的**：FERRY session_01YGNNuq9mMU5enSXVHDB56q（`claude/ferry`，決策 **585**、存檔 **85**；NEXT_PRIORITIES §24.5 第 1 項：「公車」鈕改「接駁」分公車／渡輪、接決策 579 的渡輪與碼頭 studies、車庫改「圖鑑」分頁；PR-1 動 GameCore）；REVIEW-L9 session_01YGNNundD2a5m59NVZtGmcG（審 #1760–#1802，報告 `docs/archive/PR1760_1802_REVIEW_HANDOFF.md`）；HEALTH-112 session_01YGNNumT2ZTmGxCGuTCkBSH（`bef26cae` 發版後健檢，13 條可收購線與示範，逐分與最高速各兩天，對照 #1761）。CIOPT 這輪不開（CIOPT-7 #1794 今天剛做）。
+  - 已封存：CABLE-2、MACSETUP、CABLEMAP、WHATSNEW-112、FOLLOWVIEW-2 等。做完的 session 就封存。
+- **作者要刪的 branch**：`claude/follow-window-diag`（session 刪不了）。
+- **沒派的**：決策 574 纜車卡片捲動、貓空「動物園」站被上方列蓋住；575 下一步（地形、車站近景、實機 fps）；578 車窗左右選擇與閃爍；577 下一步；FLANE8 留下的偶發（教學現金重疊、Finance 甜甜圈逾時、效能選單）；渡輪之後依序：國道客運 → 飛機（§24.5）。
+- **號碼**：583 CABLEFOLLOW、584 NEWBIE-PLACE、585 FERRY 保留；**下一個 586**。存檔 85 保留給 FERRY，**下一個 86**（main 是 84）。
 
 **第 45 任交第 46 任（2026-11-04 UTC，session_01YGNNuknU5VzGGHzf2twGfS，壓縮 2 次）**：照這段接手；和下面不同時以這段為準。
 
@@ -522,7 +559,7 @@
   1. #1750（`claude/whatsnew-card-111`，head `8e8e463`，App 內這版新增＋`.github/testflight-whats-new.md`＋`PLAYER_FEEDBACK.md`）：20:45 UTC 時 Linux 全綠、Xcode build 在跑。gate 與 iOS 綠就合（`expectedHeadSha` 用完整 SHA）。
   2. 等 main 的 push `ci.yml` 綠，再對 main HEAD 手動跑完整 `ci.yml` 與 `ios-build.yml` full lane（都是 workflow_dispatch）。
   3. 兩個都綠，在 #1579 寫「111.1 可以發（commit X）」，並在對話告訴作者。紅就查、修。**不要自己按 `testflight.yml`**，作者早上按。
-  4. full lane 跑完前不合其他 PR（合了會自動起 full lane 搶 macOS）。
+  4. full lane 跑完前不合其他 PR（決策 582 前合了會自動起 full lane 搶 macOS；之後合併不再起 full lane，但發版要的是 HEAD 那一輪）。
   5. 作者發完後，`PLAYER_FEEDBACK.md` 記 0.5.0 (111.1) 的 run 與 commit。
   - 111.1 包含：#1747、#1757、#1758 DAYPASS、#1759 L6FIX、#1761 HEALTH-110、#1762 NEWCAR（決策 566）、#1763 DIESEL（567）、#1765 REVIEW-L8、#1768 AUTOXO（571）、#1750。
 - **111.1 之後依序審、合**（每批 3–5 個，等 main `ci.yml` 綠）：
@@ -2000,7 +2037,7 @@
 | 加依賴：`tools/` 用 glTF-Transform 與 meshoptimizer（npm），讓 3D 的 GLB 在電腦上轉檔 | **遊戲規劃 2026-10-16 決定：同意，只在 `tools/` 用**（作者 2026-10-16：「尚未決定的都四方考慮後做決定」；加依賴是作者保留的決定，合併協調 session 再問作者本人，作者回「四方 思考 最後做決定」，#729 才合併）。條件：兩個都是 MIT；寫進 `tools/` 底下一個工具自己的 `package.json`，版本釘死，加上 lockfile；App 與 Swift 套件不讀它們，也不打包進 App；授權寫進該工具的 README。轉出來的模型照 art-style §7 拆零件、重組、換成調色盤顏色；原始 GLB 與對照留在 scratchpad 或私有參考庫。玩家：3D 的人、車、地標可以更快做到目標畫面；開發：Linux 沒有能讀 GLB 的 Swift 套件（第 4.1 節），用現成工具比自己寫解碼器小；美術：只是取零件的手段，成品還是遊戲自己的風格；音樂：無 | 已決定，3D 生活感 session 可以用 |
 | CI 優化（決策 265，session_01LQE9Rif1ggbZsT3iYQiN7G） | 作者 2026-10-16：「我要做pr review 跟ci優化」。四項由遊戲規劃以四方決定：把 iOS 列為必要檢查、關掉 auto-merge 都先不改，#756 跑一陣子再評估；PR gate 的 UI 測試名單不動（`docs/research/CI_MEASURE_2026-10-16.md` 第 3 節 E）；分片逾時上限 20 分不改，下次重新分配分片時再看。之後若 macOS 又常排隊，先看研究文件的方案 | 已決定 |
 | CI 流程優化（決策 329，session_01E8oiGWPQZ2a8wAE8tNvFKk） | 作者 2026-10-21：「還需要一個session優化ci流程」。三個 PR：新決策一個檔一個（`docs/decisions/`）；被取代的 PR run 不判紅、swift-build 崩潰重試一次；main 的 full lane 紅了在 #231 自動留言。量測在 `docs/research/CI_MEASURE_2026-10-21.md`。**之後可以做的**（量過，沒做）：`ios-build.yml` 的 Simulator 開機（約 2.0 分）和建置（約 2.6 分）並行，以及翻譯匯出（約 2.9 分）不排在 UI 測試後面——這兩項只能在 macOS 上驗；HANDOFF 這份本身三天衝突 8 次，可以照同樣做法把 §2 的各列拆成檔；`superseded` 讓 gate 變灰，要等某個 PR 真的有一輪被新 push 取消，才看得到效果 | 做完；之後的兩項沒人接 |
-| CI 4C：自架 runner、Xcode Cloud、第三方 macOS runner | **遊戲規劃 2026-10-16 決定：現在不做**（作者 2026-10-16：「尚未決定的都四方考慮後做決定」）。開發：#693 把 full lane 拆成兩個 job 之後，5 台 macOS runner 夠用；這個 repo 是公開的，自架 runner 會讓 PR 的程式跑在作者的機器上，有安全風險；Xcode Cloud 要作者做 Apple 帳號的設定（`docs/XCODE_CLOUD_ONBOARDING.md`）；第三方 runner 要另外付費。玩家：無；美術：無；音樂：無。macOS 的工作經常排隊超過 30 分鐘時再評估 | 已決定 |
+| CI 4C：自架 runner、Xcode Cloud、第三方 macOS runner | **遊戲規劃 2026-10-16 決定：現在不做**（作者 2026-10-16：「尚未決定的都四方考慮後做決定」）。開發：#693 把 full lane 拆成兩個 job 之後，5 台 macOS runner 夠用；這個 repo 是公開的，自架 runner 會讓 PR 的程式跑在作者的機器上，有安全風險；Xcode Cloud 要作者做 Apple 帳號的設定（`docs/XCODE_CLOUD_ONBOARDING.md`）；第三方 runner 要另外付費。玩家：無；美術：無；音樂：無。macOS 的工作經常排隊超過 30 分鐘時再評估。**補（2026-11-04）**：作者 2026-11-06 起有 Mac，雲端 session 可用 Remote Control 借用（每次由作者核准，步驟在 [`MAC_LOCAL_SETUP.md`](MAC_LOCAL_SETUP.md)），不掛成 self-hosted runner；Xcode Cloud 仍暫緩（要把 Team ID 寫進 `project.yml`，與 CLAUDE.md 衝突；每月 25 小時對 full lane 不夠，見 `docs/XCODE_CLOUD_ONBOARDING.md`） | 已決定 |
 | 複線的最短相隔距離要不要再縮 | 作者 2026-10-14 在手機上問，那個 session 停在權限確認，沒有回答。**遊戲規劃 2026-10-16 回答：不縮**。遊戲的軌道中心間距是 `RailwayNetwork.trackSpacing` 256 單位＝4 m，台鐵一般路段的線間距就是 4 m 左右（高鐵更寬）。畫面上看起來太寬或太窄，是 2D 線的畫法（決策 249），不是間距 | session_01Mtv1QDk434KcMtFHWw67SM |
 
 ## 4. 3D 地圖
@@ -2930,6 +2967,9 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 ### 4.48 舊複線站補渡線、升級複線加站旁渡線（決策 572，派工單 OLDXO，session_01YGNNum5m8pAyi87KoX3iP7，`claude/old-station-crossovers`，2026-11-04）
 
 做了的在 [決策 572](decisions/572.md)：車站面板「加渡線」（舊存檔、111.1 之前的複線站）、「升級為複線」也加站旁渡線、渡線方向讓兩站近端在同一條、「＋」在起終點都滿時放到旁邊月台。留下的（決策 572「下一步」）：兩站不到 1 km 時第二站不加；三站以上的線沒量；實機 UNVERIFIED。
+### 4.49 死結時被跟車中列車「等著的軌道」擋住的出發照樣開出（決策 577，派工單 TYMCLIST5，session_01YGNNuqBp8VuzjSqeJ4EYGw，`claude/tymc-pit-deadlock`，2026-11-04）
+
+做了的在 [決策 577](decisions/577.md)：機場捷運簡單＋行車控制 11:16 起坑口卡死，修在 `resolveDeadlock` 的最後一步。留下的（決策 577「下一步」）：#1743 合併後重量機場捷運、文湖線兩天簡單＋行車控制；行車控制時的慢（`trafficPlan` 每次重算都重找每列車的越車路），建議跨計畫快取 `trafficTrack`，另派 GameCore PR。
 
 ## 5. 已知、還沒派的待辦
 

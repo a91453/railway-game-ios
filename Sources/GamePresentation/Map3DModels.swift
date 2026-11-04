@@ -102,12 +102,12 @@ public struct Map3DModelPack: Sendable {
         groups.append { Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) } + [Map3DSevenCarBlue.formation()] }
         groups += Map3DTrainShapeRefresh.ids.map { id in { [Map3DTrainShapeRefresh.model(id)] } }
         groups.append { Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) } + [Map3DSteamTender.formation()] }
+        // Decision 575 續 (CABLEMAP): the cable car's cabins, tower, halls
+        // and rope, just before the route bus, which stays last.
+        groups.append { Map3DCableCar.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
-        // Decision 575 續 (CABLEMAP): the cable car's cabins, tower, halls
-        // and rope, after them, so no model before them moves.
-        groups.append { Map3DCableCar.drawn }
         let made = groups
         let models = Map3DParallel.map(made.count) { made[$0]() }.flatMap { $0 }
         self.init(recipes: models, baked: baked)

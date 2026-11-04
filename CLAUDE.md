@@ -224,15 +224,14 @@ needs OSM data reads the same extract.
   (`FULL_LANE_SECOND_JOB` names the second's classes and
   `FULL_LANE_LESSONS_JOB` the third's; the build job runs the rest), and the iPad
   tutorial tests (the
-  missing-button proof nightly and on request) on `main` after a merge, at
-  most every three hours (`ios-full-lane.yml` starts it unless `main`'s
-  newest commit already had one or one ran in the last three hours; its
-  schedule is only a fallback, GitHub runs it hours late or not at all),
-  nightly and by hand (by hand only for the commit a release will use and
-  to bisect a red full lane, not after every merge: decision 265), and its
-  red result does not block a pull request. The full lane holds four of the
-  account's five macOS runners at once, leaving only one for pull requests'
-  iOS checks),
+  missing-button proof nightly and on request) on `main` once a night
+  (`ios-full-lane.yml`, 02:17 Taiwan time, unless `main`'s newest commit
+  already had one or one is still going) and by hand (only for the
+  commit a release will use and to bisect a red full lane); a merge does
+  not start it (decision 582, amending 265), and its red result does not
+  block a pull request. The iPad job waits for the two iPhone UI jobs, so
+  the full lane holds at most three of the account's five macOS runners,
+  leaving two for pull requests' iOS checks),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,
   and on PRs that change project settings, the app's entry point, the asset
   catalog, the String Catalog or the localized Info.plist strings), `testflight.yml`
@@ -439,8 +438,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   time a session sees that its conversation was summarized, its first act
   is a comment in #1579, 「<session> 壓縮第 N 次」, N being one more than
   its own such comments there (and in #1041). The game-planning session
-  hands over when its third compaction nears (after the second, at about
-  300k tokens used), writing the handoff before finishing what it holds; an
+  hands over right after its third compaction (owner, 2026-11-04), writing
+  the handoff from GitHub (#1579, open pull requests, its sessions) rather
+  than from the summary, before finishing what it holds; an
   implementation session takes no new work after 1 and stops at 2
   (`docs/HANDOFF.md` §1). The game-planning session may open the next
   one itself with `create_session`, model `claude-opus-5-5` (owner,

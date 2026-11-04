@@ -60,8 +60,8 @@ final class Map3DModelPackLockTests: XCTestCase {
     /// (`hashes.lock.json`).
     func testTheOrderAndTheLampsAreAsBefore() {
         let pack = Map3DModelPack.standard
-        // Decision 575 續 (CABLEMAP): the cable car's 13 models after the
-        // route bus, before the windows' models (which each move 13 on);
+        // Decision 575 續 (CABLEMAP): the cable car's 13 models just
+        // before the route bus, and the windows' models after (which each move 13 on);
         // with them left out and the windows moved back, all as before.
         let cable = Set(Map3DCableCar.drawn.map(\.name))
         let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
@@ -69,8 +69,8 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Self.digest(before.map(\.name)), "27484d82f073fb79")
         XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "25d1ff1a4a7bd8cd")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "77335e9dffb1b9a1")
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "ecb430ba00d6283")
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "e67370430c843cc1")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "1ef3cde10ea4209")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!

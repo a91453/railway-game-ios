@@ -34,23 +34,6 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertTrue(world.lines.filter { !$0.isFreight }.allSatisfy { !$0.assignedTrains.isEmpty }, "the demo's lines still run")
     }
 
-    /// Decision 580 (FOLLOWBUS): the follow-a-bus scene has a feeder route
-    /// with buses out at half past nine, and following its route follows one.
-    func testTheFollowBusSceneHasABusOutToFollow() async throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
-        await launcher.openScreenshotScene(.followBus).value
-        let session = try XCTUnwrap(launcher.session, "the launcher plays the scene")
-        XCTAssertEqual(session.world.clock.now.seconds, ScreenshotScene.followBusRunSeconds)
-        XCTAssertEqual(session.world.clock.speed, .paused)
-        let route = try XCTUnwrap(session.world.busRoutes.last, "the scene's route")
-        XCTAssertGreaterThan(route.buses, 0)
-        XCTAssertTrue(session.hasBusToFollow(onRoute: route.id))
-        session.followBus(onRoute: route.id)
-        XCTAssertNotNil(session.followedBus)
-    }
-
     /// Decision 574: the Maokong scene, at 10:00 of its second day: the
     /// gondola built with its real 4,033 m, its first day settled.
     func testTheMaokongSceneHasTheGondolaRunning() throws {
@@ -69,6 +52,23 @@ final class ScreenshotSceneTests: XCTestCase {
             XCTAssertTrue(opening.contains(WorldCoordinate(x: stop.cell.middle.x, y: stop.cell.middle.y)))
         }
         XCTAssertLessThan(opening.width, Double(Land.cellLength) * 40, "only the gondola, not the whole map")
+    }
+
+    /// Decision 580 (FOLLOWBUS): the follow-a-bus scene has a feeder route
+    /// with buses out at half past nine, and following its route follows one.
+    func testTheFollowBusSceneHasABusOutToFollow() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        await launcher.openScreenshotScene(.followBus).value
+        let session = try XCTUnwrap(launcher.session, "the launcher plays the scene")
+        XCTAssertEqual(session.world.clock.now.seconds, ScreenshotScene.followBusRunSeconds)
+        XCTAssertEqual(session.world.clock.speed, .paused)
+        let route = try XCTUnwrap(session.world.busRoutes.last, "the scene's route")
+        XCTAssertGreaterThan(route.buses, 0)
+        XCTAssertTrue(session.hasBusToFollow(onRoute: route.id))
+        session.followBus(onRoute: route.id)
+        XCTAssertNotNil(session.followedBus)
     }
 
     /// Decision 506 續二: the expansion scene, on its fourth morning: West

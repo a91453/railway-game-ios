@@ -138,45 +138,6 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
-    /// Decision 578: the 3D follow views: the window of a car, the platform
-    /// of the next stop (a short gap), and the station view greyed out
-    /// while the next stop is a high-speed gap away.
-    func testFollowWindowAndStation() {
-        func open3DFollowing(_ scene: String) -> XCUIApplication {
-            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-train", "-map3D.quality", "high"])
-            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
-            settle(seconds: 5)
-            let open3D = app.buttons["map.open3D"]
-            XCTAssertTrue(open3D.appears(within: 10))
-            XCTAssertTrue(open3D.becomesHittable(within: 10))
-            open3D.tap()
-            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
-            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
-            return app
-        }
-        do {
-            let app = open3DFollowing("platformStop")
-            defer { app.terminate() }
-            let window = app.buttons["map3D.follow.window"]
-            XCTAssertTrue(window.becomesHittable(within: 10))
-            window.tap()
-            settle(seconds: 8)
-            keep("follow-window", app)
-            let station = app.buttons["map3D.follow.station"]
-            XCTAssertTrue(station.becomesHittable(within: 10))
-            station.tap()
-            settle(seconds: 12)
-            keep("follow-station-near", app)
-        }
-        do {
-            let app = open3DFollowing("farStops")
-            defer { app.terminate() }
-            XCTAssertTrue(app.buttons["map3D.follow.station"].appears(within: 10))
-            settle(seconds: 3)
-            keep("follow-station-too-far", app)
-        }
-    }
-
     /// Decision 574: the Maokong Gondola on a real map of Muzha, its rope
     /// and stations on the 2D map, then the network tool's cable car mode
     /// with the gondola's card, in Chinese and in English (six modes in
@@ -197,7 +158,15 @@ final class WebsiteScreenshotTests: XCTestCase {
             let mode = app.segmentedControls.buttons[english ? "Cable car" : "纜車"].firstMatch
             XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
             // In English the row slides sideways: the last mode is past its end.
-            if !mode.becomesHittable(within: 3) { app.segmentedControls.firstMatch.swipeLeft() }
+            // Drag the row that holds the mode, from inside its visible
+            // part: the row is wider than the panel, so its frame's middle
+            // (where a swipe starts) is at the panel's clipped edge.
+            let row = app.segmentedControls.containing(NSPredicate(format: "label == %@", english ? "Cable car" : "纜車")).firstMatch
+            for _ in 0..<3 where !mode.becomesHittable(within: 2) {
+                let left = row.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+                left.withOffset(CGVector(dx: 180, dy: 0))
+                    .press(forDuration: 0.05, thenDragTo: left.withOffset(CGVector(dx: 10, dy: 0)), withVelocity: .fast, thenHoldForDuration: 0.1)
+            }
             XCTAssertTrue(mode.becomesHittable(within: 10))
             mode.tap()
             let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
@@ -233,6 +202,54 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle(seconds: 12)
             keep(name, app)
             app.terminate()
+        }
+    }
+
+    /// Decision 578: the 3D follow views: the window of a car, the platform
+    /// of the next stop (a short gap), and the station view greyed out
+    /// while the next stop is a high-speed gap away.
+    func testFollowWindowAndStation() {
+        func open3DFollowing(_ scene: String) -> XCUIApplication {
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-train", "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            return app
+        }
+        do {
+            let app = open3DFollowing("platformStop")
+            defer { app.terminate() }
+            let window = app.buttons["map3D.follow.window"]
+            XCTAssertTrue(window.becomesHittable(within: 10))
+            window.tap()
+            // Decision 578 (FOLLOWVIEW-2): one run of three shot the view
+            // from behind, 後方 still chosen after this tap (run
+            // 41800375321); the shot is taken only of the window view.
+            if !window.isSelectedWithin(5) {
+                XCTContext.runActivity(named: "車窗 not chosen after the tap; tapping it again") { _ in }
+                XCTAssertTrue(window.becomesHittable(within: 10))
+                window.tap()
+            }
+            XCTAssertTrue(window.isSelectedWithin(5), "The window view is chosen")
+            settle(seconds: 8)
+            keep("follow-window", app)
+            let station = app.buttons["map3D.follow.station"]
+            XCTAssertTrue(station.becomesHittable(within: 10))
+            station.tap()
+            settle(seconds: 12)
+            keep("follow-station-near", app)
+        }
+        do {
+            let app = open3DFollowing("farStops")
+            defer { app.terminate() }
+            XCTAssertTrue(app.buttons["map3D.follow.station"].appears(within: 10))
+            settle(seconds: 3)
+            keep("follow-station-too-far", app)
         }
     }
 
@@ -2664,5 +2681,18 @@ final class WebsiteScreenshotTests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
         XCTFail("Button cannot be tapped: \(identifier)")
+    }
+}
+
+private extension XCUIElement {
+    /// Whether the element is selected within `timeout` seconds, at once
+    /// when it already is.
+    func isSelectedWithin(_ timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !(exists && isSelected) {
+            guard Date() < deadline else { return false }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        return true
     }
 }

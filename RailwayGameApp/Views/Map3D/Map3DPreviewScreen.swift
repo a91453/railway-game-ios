@@ -805,12 +805,12 @@ final class Map3DTrainFeed {
     private var busClock: RealTrainClock?
     private var busGlides = true
     private let buses = Map3DBuses.Layer()
-    /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
-    var followedBus: BusID?
     /// Decision 575 續 (CABLEMAP): the player's cable cars laid in the
     /// scene, laid again when the cable cars or the scene change.
     private var cableways: Map3DCableways?
     private var cablewaysScene: (x: Double, y: Double)?
+    /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
+    var followedBus: BusID?
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
     /// drawn whole, its way the cable cars' ahead.
     var followedCabin: CabinID?
@@ -1725,6 +1725,10 @@ private struct Map3DFollowChoice: View {
     var body: some View {
         let blocked = unavailable != nil && selection != option
         Button {
+            // Decision 578 (FOLLOWVIEW-2): a screenshot run once kept 後方
+            // after its tap on 車窗; the UI test trace says whether the
+            // action ran, if it happens again.
+            UITestTrace.action("map3D.follow.\(option.rawValue) (was \(selection.rawValue))")
             selection = option
         } label: {
             Text(verbatim: option.text(in: language))

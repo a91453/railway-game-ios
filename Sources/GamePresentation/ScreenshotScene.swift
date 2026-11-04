@@ -96,18 +96,19 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// of the pull request that added the offer.
     case depotOffer
 
-    /// Decision 580 (FOLLOWBUS): the demo map with a road along its first
-    /// station's row and a feeder bus route of two stops on it, a bus every
-    /// ten minutes, run on to half past nine in the morning, when buses are
-    /// out: for the screenshots of the 3D map following a bus
-    /// (`-screenshot-follow-bus`).
-    case followBus
     /// Decision 574: a new real-world game round Muzha with the Maokong
     /// Gondola built as the cable car mode lays it
     /// (``RealCableway/maokong``), run on to 10:00 of the second day, so
     /// its card has a day's account: the rope and its stations on the 2D
     /// map, and the mode's card.
     case maokong
+
+    /// Decision 580 (FOLLOWBUS): the demo map with a road along its first
+    /// station's row and a feeder bus route of two stops on it, a bus every
+    /// ten minutes, run on to half past nine in the morning, when buses are
+    /// out: for the screenshots of the 3D map following a bus
+    /// (`-screenshot-follow-bus`).
+    case followBus
 
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
@@ -120,10 +121,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
-        // Decision 578: its first station, 7 km west and 300 m north of it.
-        case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
+        // Decision 578: its first station, 7 km west and 300 m north of it.
+        case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
         }
     }
@@ -147,8 +148,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .farStops: Self.farStopsWorld(in: language)
 
         case .depotOffer: Self.pausedDemo(in: language)
-        case .followBus: Self.followBusWorld(in: language)
         case .maokong: Self.maokongWorld(in: language)
+        case .followBus: Self.followBusWorld(in: language)
         }
     }
 
