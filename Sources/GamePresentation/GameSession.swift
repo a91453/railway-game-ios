@@ -399,6 +399,19 @@ public final class GameSession {
     /// ``followBar`` is, changing only when what it shows does).
     public internal(set) var busFollowBar: BusFollowFacts?
 
+    /// Decision 583 (CABLEFOLLOW): the cable car cabin the camera follows,
+    /// in place of a train or a bus (never two at once). An ID only; see
+    /// `FollowCabin.swift`.
+    public internal(set) var followedCabinID: CabinID? {
+        didSet {
+            if followedCabinID != oldValue { updateMap3DSpeedCapForBus() }
+            refreshCabinFollow()
+        }
+    }
+
+    /// What the follow bar shows of the cabin followed.
+    public internal(set) var cabinFollowBar: CabinFollowFacts?
+
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
@@ -1281,6 +1294,7 @@ public final class GameSession {
     public func followTrain(_ id: TrainID) {
         guard let train = world.train(id: id), train.position != nil else { return }
         followedBusID = nil
+        followedCabinID = nil
         followedTrainID = id
         updateFollowSounds()
     }
@@ -1289,6 +1303,7 @@ public final class GameSession {
     public func stopFollowingTrain() {
         followedTrainID = nil
         followedBusID = nil
+        followedCabinID = nil
         updateFollowSounds()
     }
 
@@ -1346,6 +1361,7 @@ public final class GameSession {
             followedTrainID = nil
         }
         keepFollowingBus()
+        keepFollowingCabin()
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
@@ -1451,6 +1467,8 @@ public final class GameSession {
         // Decision 400 (FOLLOWBUS): the flat map draws no buses, so a bus
         // followed in 3D is let go when 3D closes.
         if !open, followedBusID != nil { followedBusID = nil }
+        // Decision 583: nor cable car cabins.
+        if !open, followedCabinID != nil { followedCabinID = nil }
         updateMap3DSpeedCap()
     }
 
@@ -1499,7 +1517,7 @@ public final class GameSession {
     func updateMap3DSpeedCapForBus() { updateMap3DSpeedCap() }
 
     private func updateMap3DSpeedCap() {
-        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil)
+        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil || followedCabinID != nil)
         guard capped != isSpeedCappedIn3D else { return }
         applyHeldSpeed()
         isSpeedCappedIn3D = capped

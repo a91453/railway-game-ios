@@ -93,6 +93,62 @@ public enum CablewayCabins {
         }
     }
 
+    /// Decision 583 (CABLEFOLLOW): where a cabin is between whole seconds,
+    /// for the one the 3D map follows: ``place(at:on:)`` with the fraction
+    /// of a second, and through a stop the way it came in and the way it
+    /// goes on, so the followed cabin moves on without a jump.
+    public enum Glide: Equatable, Sendable {
+        /// On span `leg`, `share` (0–1) of the way from stop `leg`.
+        case span(leg: Int, share: Double, outbound: Bool)
+        /// In stop `stop`, `share` (0–1) of the way through it, come in
+        /// `arrivedOutbound` and going on `leavesOutbound` (they differ
+        /// where it turns round).
+        case station(stop: Int, share: Double, arrivedOutbound: Bool, leavesOutbound: Bool)
+    }
+
+    /// Cabin `number` of `cableway` at second `second` (any count of
+    /// seconds, with its fraction), running.
+    public static func glide(of number: Int, on cableway: Cableway, atSecond second: Double) -> Glide {
+        let loop = Double(loopSeconds(of: cableway))
+        let behind = Double(number) * Double(Cableway.cabinIntervalSeconds)
+        var at = (second - behind).truncatingRemainder(dividingBy: loop)
+        if at < 0 { at += loop }
+        return glide(at: at, on: cableway)
+    }
+
+    /// The same `at` seconds into the loop.
+    static func glide(at: Double, on cableway: Cableway) -> Glide {
+        var left = at
+        let legs = cableway.legMetres.map { Double(spanSeconds($0)) }
+        let pass = Double(Cableway.stopPassSeconds)
+        for (leg, seconds) in legs.enumerated() {
+            if left < seconds { return .span(leg: leg, share: left / seconds, outbound: true) }
+            left -= seconds
+            if left < pass { return .station(stop: leg + 1, share: left / pass, arrivedOutbound: true, leavesOutbound: leg + 1 < legs.count) }
+            left -= pass
+        }
+        for leg in legs.indices.reversed() {
+            let seconds = legs[leg]
+            if left < seconds { return .span(leg: leg, share: 1 - left / seconds, outbound: false) }
+            left -= seconds
+            if left < pass || leg == 0 { return .station(stop: leg, share: min(left / pass, 1), arrivedOutbound: false, leavesOutbound: leg == 0) }
+            left -= pass
+        }
+        return .station(stop: 0, share: 1, arrivedOutbound: false, leavesOutbound: true)
+    }
+
+    /// The stop a cabin at `glide` comes to next (in a stop, the one after
+    /// it the way it goes on), and the stop it stands in, if any.
+    public static func stops(of glide: Glide, on cableway: Cableway) -> (at: Int?, next: Int) {
+        let last = cableway.stops.count - 1
+        switch glide {
+        case .span(let leg, _, let outbound):
+            return (nil, outbound ? leg + 1 : leg)
+        case .station(let stop, _, _, let leaves):
+            return (stop, leaves ? min(stop + 1, last) : max(stop - 1, 0))
+        }
+    }
+
     // MARK: - Internals
 
     static func spanSeconds(_ metres: Int64) -> Int64 {

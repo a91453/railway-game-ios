@@ -27,6 +27,9 @@ struct NetworkControls: View {
     /// Decision 574: the cable car the player asked to take down, for
     /// the confirmation.
     @State private var removingCableway: CablewayID?
+    /// Decision 583 (CABLEFOLLOW): the card's follow button opens the 3D map.
+    @Environment(GameScreenState.self) private var screen: GameScreenState?
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -438,6 +441,21 @@ struct NetworkControls: View {
                         Text(verbatim: card.title)
                             .font(.subheadline.weight(.semibold))
                         Spacer()
+                        // Decision 583 (CABLEFOLLOW): ride a cabin on the 3D map.
+                        if let screen, session.tutorial == nil, map3DQuality.shows3D {
+                            Button {
+                                session.followCabin(on: card.id)
+                                screen.map3DHandoff = nil
+                                screen.showsMap3D = true
+                            } label: {
+                                Text(verbatim: language.text("Follow", "跟隨"))
+                            }
+                            .buttonStyle(.borderless)
+                            .font(.footnote)
+                            .accessibilityHint(Text(verbatim: language.text("Rides along in a cabin on the 3D map.", "在 3D 地圖上跟著一台吊廂。")))
+                            .accessibilityIdentifier("network.cablewayFollow")
+                            .disabled(!session.hasCabinToFollow(on: card.id))
+                        }
                         Button(role: .destructive) {
                             removingCableway = card.id
                         } label: {
