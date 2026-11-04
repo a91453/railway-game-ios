@@ -29,5 +29,10 @@ for case let file as URL in files where file.pathExtension=="m3dmodel" {
     rows.append(["id":file.lastPathComponent,"family":file.path.contains("sunmoon") ? "sunmoon" : "maokong","glass_triangles":panes/3,"horizontal_glass_triangles":horizontal/3,"world_triangles_two_instances":world.count/3,"opaque_attributes_unchanged":true,"normals_unit_and_global_depth_sorted":true])
 }
 precondition(rows.count==8)
-try JSONSerialization.data(withJSONObject:["status":"VERIFIED","platform":"Linux Swift6.4 CPU / not Metal","vertex_stride":MemoryLayout<Map3DVertex>.stride,"models":rows],options:[.sortedKeys,.prettyPrinted]).write(to:output)
+#if os(macOS)
+let checkPlatform = "macOS Swift6.4 CPU / not Metal"
+#else
+let checkPlatform = "Linux Swift6.4 CPU / not Metal"
+#endif
+try JSONSerialization.data(withJSONObject:["status":"VERIFIED","platform":checkPlatform,"vertex_stride":MemoryLayout<Map3DVertex>.stride,"models":rows],options:[.sortedKeys,.prettyPrinted]).write(to:output)
 print("VERIFIED 8 real near/LOD cabin models: glass/floor style, opaque byte attributes, world normals and global sort")
