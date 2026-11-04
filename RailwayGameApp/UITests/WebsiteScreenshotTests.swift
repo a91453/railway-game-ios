@@ -1367,6 +1367,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let shown = scroll(second, into: middle, of: app)
         settle()
         keep("platform-choice", app)
+        if !shown { print("platform-choice card:\n\(card.debugDescription)") }
         XCTAssertTrue(shown, "Platform 2 shows")
         let picksFirst = second.isSelected
         let other = picksFirst ? first : second
@@ -1387,6 +1388,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         for _ in 0..<12 {
             let band = list.frame.insetBy(dx: 0, dy: 6)
             let place = row.frame
+            print("platform-choice scroll: row \(row.identifier) \(place) hittable \(row.isHittable), band \(band)")
             if row.exists, place.minY >= band.minY, place.maxY <= band.maxY, row.isHittable { return true }
             let up = !row.exists || place.maxY > band.maxY
             let gap = row.exists ? (up ? place.maxY - band.maxY : band.minY - place.minY) : band.height
