@@ -377,8 +377,8 @@
 - 兩個 PR 撞同一個決策號（329 起是兩個 `docs/decisions/<N>.md` 同名），照 #231 登記的先後，後登記的改號；ARCHITECTURE、OVERVIEW 衝突（改 1–328 的「後來」時還會有）：請該 session 自己 merge main 解。
 - 存檔版本與決策號以 main 加上 #231 還沒釋出的登記為準，取最大值加一。
 
-**full lane**（`ios-build.yml` 把 iPhone UI 測試全部跑一次：兩個 iPhone job 加 iPad 教學，約 42–45 分鐘，佔 3 台 macOS）：
-- 合併後不用手動跑（決策 265）：`ios-full-lane.yml` 在合了會影響 App 的 PR 之後自己啟動，最多每三小時一次。10-14 到 10-16 的 67 小時裡 full lane 跑了 42 次，只有 7 次是它啟動的，佔全部 macOS 用量的 34%。
+**full lane**（`ios-build.yml` 把 UI 測試全部跑一次：build job、兩個 iPhone UI job，iPad 教學等兩個 iPhone job 跑完才開始；2026-11 約 1.5–2 小時，最多同時佔 3 台 macOS，PR 永遠留 2 台，決策 582）：
+- 合併後**不會**自動跑（決策 582，修正決策 265）：`ios-full-lane.yml` 只在每晚台灣 02:17 起一次（main 最新 commit 已經跑過或還有一輪在跑就不起，夜間那輪附「少一顆按鈕」的證明）。2026-11-04 前每次合併後最多每三小時自動起一次、佔 4 台 macOS 約 1.5–2.5 小時，PR 的 Xcode build 與截圖排隊一小時以上。
 - 只在兩種情況用 `actions_run_trigger` 手動跑（run_workflow，workflow `ios-build.yml`，ref main）：
   - 發版前要用的 HEAD；
   - full lane 紅了，要二分的 commit。
@@ -518,7 +518,7 @@
   1. #1750（`claude/whatsnew-card-111`，head `8e8e463`，App 內這版新增＋`.github/testflight-whats-new.md`＋`PLAYER_FEEDBACK.md`）：20:45 UTC 時 Linux 全綠、Xcode build 在跑。gate 與 iOS 綠就合（`expectedHeadSha` 用完整 SHA）。
   2. 等 main 的 push `ci.yml` 綠，再對 main HEAD 手動跑完整 `ci.yml` 與 `ios-build.yml` full lane（都是 workflow_dispatch）。
   3. 兩個都綠，在 #1579 寫「111.1 可以發（commit X）」，並在對話告訴作者。紅就查、修。**不要自己按 `testflight.yml`**，作者早上按。
-  4. full lane 跑完前不合其他 PR（合了會自動起 full lane 搶 macOS）。
+  4. full lane 跑完前不合其他 PR（決策 582 前合了會自動起 full lane 搶 macOS；之後合併不再起 full lane，但發版要的是 HEAD 那一輪）。
   5. 作者發完後，`PLAYER_FEEDBACK.md` 記 0.5.0 (111.1) 的 run 與 commit。
   - 111.1 包含：#1747、#1757、#1758 DAYPASS、#1759 L6FIX、#1761 HEALTH-110、#1762 NEWCAR（決策 566）、#1763 DIESEL（567）、#1765 REVIEW-L8、#1768 AUTOXO（571）、#1750。
 - **111.1 之後依序審、合**（每批 3–5 個，等 main `ci.yml` 綠）：
