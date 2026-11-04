@@ -43,7 +43,7 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
         case .network: language.text("Network", "路網")
         case .train: language.text("Train", "列車")
         case .building: language.text("Buildings", "建物")
-        case .bus: language.text("Buses", "公車")
+        case .bus: language.text("Transit", "接駁")
         }
     }
 }
