@@ -1,5 +1,5 @@
 import Foundation
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// Decision 418: what the system recorded about freezes and exits, read
@@ -149,7 +149,7 @@ final class DeviceDiagnosticsTests: XCTestCase {
         let text = try XCTUnwrap(diagnostics.reportText(in: .english))
         XCTAssertTrue(text.contains("Closed unexpectedly at 2026-10-24 08:10:00 UTC: EXC_BAD_ACCESS (1)"), text)
         XCTAssertTrue(text.hasSuffix("""
-            Exits 2026-10-24 21:00:00 UTC – 2026-10-25 20:59:00 UTC: on screen: normal 3, over the memory limit 1, stuck too long (watchdog) 2; in the background: reclaimed for memory 5.
+            Exits 2026-10-24 21:00:00 UTC – 2026-10-25 20:59:00 UTC (0.5.0): on screen: normal 3, over the memory limit 1, stuck too long (watchdog) 2; in the background: reclaimed for memory 5.
             Freezes that day by length: 250 ms–500 ms ×4, 500 ms–1000 ms ×1.
             """), text)
         let chinese = try XCTUnwrap(diagnostics.reportText(in: .traditionalChinese))
@@ -221,5 +221,42 @@ final class DeviceDiagnosticsTests: XCTestCase {
         XCTAssertEqual(diagnostics.events.map(\.duration), [1.25, 120, nil])
         XCTAssertEqual(diagnostics.events.last?.detail, "forever", "a length it cannot read is kept as written")
         XCTAssertEqual(diagnostics.events.first?.time, nil)
+    }
+    /// DIAG-HANG (111.1): the report read "?" for every event's time and
+    /// for the day of the freezes, so 77 freezes of some 760 ms could not
+    /// be put on a day or a build. A time in another written form is read;
+    /// one with no zone is shown as MetricKit wrote it; and the day says
+    /// the build it was recorded in.
+    func testTimesInOtherFormsAndTheDaysBuild() throws {
+        XCTAssertEqual(DeviceDiagnostics.time("2026-11-03 08:00:00 +08:00"), DeviceDiagnostics.time("2026-11-03 00:00:00 +0000"))
+        XCTAssertEqual(DeviceDiagnostics.time("2026-11-03T00:00:00Z"), DeviceDiagnostics.time("2026-11-03 00:00:00 +0000"))
+        XCTAssertNil(DeviceDiagnostics.time("2026-11-03 00:00:00"), "no zone: not guessed at")
+
+        var diagnostics = DeviceDiagnostics()
+        diagnostics.record(diagnostics: data("""
+            {"timeStampBegin": "2026-11-03 23:00:00", "timeStampEnd": "2026-11-03 23:59:00",
+             "cpuExceptionDiagnostics": [{"diagnosticMetaData": {"totalCPUTime": "90 sec", "appVersion": "0.5.0", "appBuildVersion": "111.1"}}]}
+            """))
+        diagnostics.record(metrics: data("""
+            {"timeStampBegin": "2026-11-03 00:00:00", "timeStampEnd": "2026-11-03 23:59:00",
+             "metaData": {"appBuildVersion": "111.1", "osVersion": "iPhone OS 27.2"},
+             "applicationResponsivenessMetrics": {"histogrammedAppHangTime": {"histogramValue": {
+               "0": {"bucketStart": "750 ms", "bucketEnd": "759 ms", "bucketCount": 44}}}}}
+            """))
+        XCTAssertEqual(diagnostics.events.first?.stamp, "2026-11-03 23:59:00")
+        XCTAssertEqual(diagnostics.days.first?.app, "111.1")
+        let text = try XCTUnwrap(diagnostics.reportText(in: .english))
+        XCTAssertTrue(text.contains("Used the processor heavily at 2026-11-03 23:59:00: CPU 90 sec (0.5.0 (111.1))"), text)
+        XCTAssertTrue(text.contains("Exits 2026-11-03 00:00:00 – 2026-11-03 23:59:00 (111.1):"), text)
+
+        // A day read as before keeps no stamp, and a file from before
+        // these were kept still reads.
+        var known = DeviceDiagnostics()
+        known.record(metrics: data(Self.metricPayload))
+        XCTAssertNil(known.days.first?.beginStamp)
+        XCTAssertEqual(known.days.first?.app, "0.5.0")
+        let old = Data(#"{"days":[{"begin":1,"end":2,"foreground":{},"background":{},"hangs":[]}],"events":[]}"#.utf8)
+        XCTAssertEqual(DeviceDiagnostics.decoded(old).days.count, 1)
+        XCTAssertTrue(try XCTUnwrap(DeviceDiagnostics.decoded(old).reportText(in: .english)).contains("Exits 1970-01-01 00:00:01 UTC – 1970-01-01 00:00:02 UTC:"))
     }
 }
