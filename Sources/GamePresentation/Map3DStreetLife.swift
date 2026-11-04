@@ -517,11 +517,13 @@ public struct Map3DStreetLife: Sendable {
     public func frame(target: Map3DPoint, distance: Float, time: Double, still: Bool = false, lights: Float = 0, detail: Map3DStreetDetail,
                       activity: Activity, buses: Map3DBuses.Frame = .init(), limits: Map3DStreetLimits? = nil) -> Frame {
         var frame = Frame()
-        guard detail != .off, Self.models.count == Map3DStreetModel.allCases.count else { return frame }
-        let most = limits ?? Map3DStreetLimits(detail)
         frame.instances = buses.instances
         frame.vehicles = buses.instances.count
         frame.buses = buses.instances.count
+        // Decision 580 (續): the player's buses given are drawn even with
+        // the streets off (then only the bus the camera follows).
+        guard detail != .off, Self.models.count == Map3DStreetModel.allCases.count else { return frame }
+        let most = limits ?? Map3DStreetLimits(detail)
         let clock = still ? 0 : time
         if distance <= Self.peopleFrom {
             let reach = Self.peopleReach(distance)
