@@ -161,8 +161,10 @@ final class WebsiteScreenshotTests: XCTestCase {
             mode.tap()
             let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
             XCTAssertTrue(card.appears(within: 10), "The gondola's card")
-            // The card is below the mode's options: up into view, rows and all.
-            card.swipeUp()
+            // The card is below the mode's options, under the panel's edge:
+            // the options (in view) drag it up, rows and all.
+            let angle = app.descendants(matching: .any)["network.cablewayAngle"].firstMatch
+            if angle.appears(within: 5) { angle.swipeUp() }
             settle()
             keep(english ? "cableway-mode-english" : "cableway-mode", app)
             app.terminate()
