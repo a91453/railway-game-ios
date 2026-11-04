@@ -485,6 +485,31 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 45 任交第 46 任（2026-11-04 UTC，session_01YGNNuknU5VzGGHzf2twGfS，壓縮 2 次）**：照這段接手；和下面不同時以這段為準。
+
+- **111.1 已發**（作者 00:02 UTC，`273dab2`，run 111；`PLAYER_FEEDBACK.md` 已記）。下一版還沒定。
+- **第 45 任已合**：#1760 ROUTEUI、#1764 PLATSTOP、#1766 STNAME、#1769 STUCKFIX、#1772、#1774、#1775 AUTOXO-2、#1777（Views 審查技能）、#1771 TYMCLIST3（決策 562）。
+- **作者這一輪定的**（五方在 #1579）：
+  - 纜車示範用**貓空纜車**；纜車是「路網」工具的一個模式（`NetworkToolMode.cableway`），不加第六顆建造鈕。
+  - 做渡輪時，「公車」鈕改名**「接駁」**，裡面分「公車」「渡輪」兩個模式（不叫「路線」或「轉乘」）。
+  - 機場捷運（#1743）的死結修正**優先佔 GameCore CI 名額**。
+  - 先不做第一人稱走路視角；做「窗外」視角（像駕駛艙，只換鏡頭，不做車內模型）；「從車站看」修成提早建下一站、太遠就變灰。
+  - 跟隨公車和列車一樣，先畫前方與附近（決策 358 的 `ahead`）。
+  - 等 full lane 跑完再合下一批（作者：「等 full lane 跑完再合」）。
+- **合併順序**（每批 3–5 個，用完整 SHA，等 main `ci.yml` 綠；merge 前確認 iOS App Build 綠）：
+  1. #1767 WENHUSIDE（決策 564，存檔 82）→ #1776 DEPOTLINK（573）、#1778 OLDXO（572）、#1779 VIEWFIX PR-A。
+  2. TYMCLIST4 的 GameCore PR（決策 577，`claude/tymc-berth-sw…`，機場捷運死結，優先）、#1780 FESTIVAL（576，存檔 84）。
+  3. #1781 CABLE PR-1（574，存檔 83；FESTIVAL 先合就改 85）、CABLE PR-2、#1782 CABLE3D（575，第三級，規劃看截圖）、VIEWFIX PR-B（`claude/viewfix-concentric`，ConcentricRectangle，第二級）、FOLLOWBUS（不佔號）、FOLLOWVIEW（578）。
+  4. 最後 #1743 機場捷運上架（556）。
+  - TYMCLIST4 推 GameCore PR 時 Linux 塞，就取消 #1781 的 PR run 讓它先。
+- **派出去的**（session、模型、branch、決策）：
+  - WENHUSIDE-2 session_01YGNNuovdoMPJsiiJsYuTw1（壓縮 2 次，只收尾 #1767）。
+  - TYMCLIST4 session_01YGNNuoGwQ9ntd6Att99u7c（Opus）：#1767 合後做 #1743 剩的：19:31 兩航廈三列換月台死結（`berthChange`）、號誌＋行車控制（新局預設）第 2 天 333 班 320 班沒發、行車控制每遊戲分鐘約 2.5 秒、回本。
+  - CABLE session_01YGNNumrJnt5AkQzWrdhAms（壓縮 1 次，只收尾 #1781）、CABLE-2 session_01YGNNunZBgaB8JeDKJxh4xV（Opus，`claude/cable-2`，PR-2）、CABLE3D session_01YGNNuoMbCbtbGZqCQtvZPT（#1782）、FESTIVAL session_01YGNNup5hkNxUynJYvy9zLD（#1780）、VIEWFIX session_01YGNNunwjkHJ2a9XYEkHiSD（Sonnet，#1779＋PR-B）、DEPOTLINK session_01YGNNuoWbBvCiDrgKwADV7x（壓縮 1 次）、OLDXO session_01YGNNum5m8pAyi87KoX3iP7（壓縮 1 次）、FOLLOWBUS session_01YGNNumWYtfHA3GoZVamQAd（Sonnet，`claude/follow-bus`，不佔號）、FLANE8 session_01YGNNuotMdcm499iKgZ7gLG（Sonnet，`claude/flane8`，full lane 偶發 UI 測試）、FOLLOWVIEW session_01YGNNukiQGJ1RXBDHyFPJkh（Sonnet，`claude/follow-window-station`，578）。FOLLOWBUS 與 FOLLOWVIEW 同改 `Map3DFollow`，後合的合 main。
+  - 做完的 session 就封存。
+- **沒派的**：纜車吊廂跟隨與窗外（CABLE PR-2 與 #1782 之後）；公車窗外（FOLLOWBUS／FOLLOWVIEW 後合的那個之後）；渡輪（連同「接駁」改名）→ 飛機；節慶之後的新景點（廟、夜市、博物館）；REVIEW-L（下一輪從 #1760 起）、CIOPT、DEBUG 固定三件；L8-1。
+- **號碼**：572–578 已保留（572 OLDXO、573 DEPOTLINK、574 CABLE、575 CABLE3D、576 FESTIVAL、577 TYMCLIST4、578 FOLLOWVIEW、579 Codex 渡輪與碼頭 studies，指令在 #1579）；**下一個 580**。存檔 82（#1767）、83（CABLE）、84（FESTIVAL）保留，**下一個 85**。
+
 **第 44 任交第 45 任（2026-11-03 20:50 UTC，session_01YGNNukw5koUxDsjkSBmJJy，壓縮 2 次、快到第 3 次）**：作者去睡了，早上自己按 111.1（作者：「綠了就合吧 紅了就修復 我早上才要發111.1」）。第 45 任照這段接手；和下面不同時以這段為準。
 
 - **111.1 發版準備（第一件事）**：
