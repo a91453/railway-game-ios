@@ -378,4 +378,14 @@ public enum GameError: Error, Hashable, Sendable {
     /// row on one cell, a stop off the world, or a span not 1 to
     /// ``Cableway/maximumLegMetres`` m (decision 574).
     case invalidCableway
+    /// No ferry route has this number (decision 585).
+    case unknownFerryRoute(FerryRouteID)
+    /// A ferry route with fewer than 2 piers or more than
+    /// ``FerryRoute/maximumPiers``, a pier off the world, two piers in a
+    /// row on one cell, a crossing not 1 to ``FerryRoute/maximumLegMetres``
+    /// m, a headway or runs out of range, or too many boats (decision 585).
+    case invalidFerryRoute
+    /// A pier on water, or with no water on any of its four sides
+    /// (decision 585).
+    case pierNotBesideWater(row: Int, column: Int)
 }

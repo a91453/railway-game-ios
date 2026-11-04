@@ -630,6 +630,15 @@ extension GameError {
                 "A cableway needs 2 to 8 stops with stations at both ends, each span at most 5 km.",
                 "纜車要有 2 到 8 站，兩端都是車站，每段最長 5 公里。"
             )
+        case .unknownFerryRoute:
+            language.text("That ferry route no longer exists.", "這條渡輪航線已經不在了。")
+        case .invalidFerryRoute:
+            language.text(
+                "A ferry route needs 2 to 8 piers, each crossing at most 30 km, and up to 20 boats.",
+                "渡輪航線要有 2 到 8 個碼頭，每段航程最長 30 公里，船最多 20 艘。"
+            )
+        case .pierNotBesideWater:
+            language.text("A pier goes on the shore, right beside the water.", "碼頭要蓋在岸邊，緊鄰水面。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:
