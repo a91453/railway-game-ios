@@ -2896,6 +2896,9 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 ### 4.48 舊複線站補渡線、升級複線加站旁渡線（決策 572，派工單 OLDXO，session_01YGNNum5m8pAyi87KoX3iP7，`claude/old-station-crossovers`，2026-11-04）
 
 做了的在 [決策 572](decisions/572.md)：車站面板「加渡線」（舊存檔、111.1 之前的複線站）、「升級為複線」也加站旁渡線、渡線方向讓兩站近端在同一條、「＋」在起終點都滿時放到旁邊月台。留下的（決策 572「下一步」）：兩站不到 1 km 時第二站不加；三站以上的線沒量；實機 UNVERIFIED。
+### 4.49 死結時被跟車中列車「等著的軌道」擋住的出發照樣開出（決策 577，派工單 TYMCLIST5，session_01YGNNuqBp8VuzjSqeJ4EYGw，`claude/tymc-pit-deadlock`，2026-11-04）
+
+做了的在 [決策 577](decisions/577.md)：機場捷運簡單＋行車控制 11:16 起坑口卡死，修在 `resolveDeadlock` 的最後一步。留下的（決策 577「下一步」）：#1743 合併後重量機場捷運、文湖線兩天簡單＋行車控制；行車控制時的慢（`trafficPlan` 每次重算都重找每列車的越車路），建議跨計畫快取 `trafficTrack`，另派 GameCore PR。
 
 ## 5. 已知、還沒派的待辦
 
