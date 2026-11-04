@@ -55,6 +55,7 @@ final class Map3DModelTests: XCTestCase {
             Map3DTaoyuanAirport.Role.allCases.count * 2,
             Map3DEMU700.Role.allCases.count * 2,
             8,
+            Map3DCableCar.models.count,
         ]
         XCTAssertEqual(Map3DModelPack.studies.models.count, studyModels.reduce(0, +))
 
