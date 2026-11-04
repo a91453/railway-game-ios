@@ -2873,6 +2873,23 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 ### 4.43 打開 3D 不等列車模型包（決策 546，派工單 OPEN3D，session_01YGNNunVxxTjzneuBjw86MX，`claude/open3d-model-pack`，2026-11-02）
 
 做了的在 [決策 546](decisions/546.md)：模型包分核心做（Linux release 4 核 3.95 → 0.72 s，模型位元相同，`Map3DModelPackLockTests`）、遊戲開了 8 秒後先在背景做、3D 場景先顯示（列車先是方塊）。留下的（決策 546「下一步」）：實機量開 3D 要等多久與記憶體提早多 192 MB 的影響（UNVERIFIED）；`useModels` 在主執行緒複製 192 MB 到 GPU 緩衝，可移到背景；FLANE5 的 `-ui-test-3d-models-first`（#1693）仍有用（UI 測試不先做模型包），沒有刪，改成走同一個 `Map3DTrainModels`（`.background`）；做模型包一律 `.utility` 以下、不會被提高。
+### 4.44 買下的捷運、輕軌靠右行駛（決策 564，派工單 WENHUSIDE → WENHUSIDE-2，`claude/wenhu-side`，PR #1767，2026-11-03）
+
+作者 110.1 的優先 bug：買下文湖線後列車走對向的軌。改法與理由在 [決策 564](decisions/564.md)。第一棒 session_01YGNNunZGPiV2XFNuJMZEsQ 壓縮 2 次後交給 WENHUSIDE-2（session_01YGNNuovdoMPJsiiJsYuTw1）。號碼：決策 564、存檔版本 82（`SaveFixtures/v82-keeps-right.json`），golden、`ReplayFixtures/` 的值都沒動。
+
+WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build）：
+
+- 三鶯簡單規則死結、淡海兩線一日測試最晚 14,317 秒：同一個原因，S 形渡線的起點切線和本線只差捨入，被排成「最右邊」。`KeepLeft.sameWaySlope`（1／256）以內當同方向、用弦排序（決策 564「兩條出口幾乎同方向時」）。
+- 高鐵示範開局 139 個靠左取樣：示範世界的 `keepLeft` 是關的，鏡像跟著關掉。改成靠哪邊看線，不看世界（`ServicePath.swift`）；示範 3,617 右／0 左。
+- 截圖場景在背景推進一份世界的複本，主執行緒不卡（`runForScreenshot(until:)`）；在主執行緒推進時，Debug App 在 06:00 的乘客計畫要好幾分鐘，UI 測試的查詢會逾時。
+
+還沒做的（若這個 session 沒做完，下一棒照這裡）：
+
+1. 機廠量測已做（決策 564「量到的」）：都沒有死結；文湖線簡單＋行車控制漏 7/532（main 4/532），時間和 main 一樣在尖峰結束時，是決策 552／HEALTH-110 那一項，修它時一起看靠右的線。
+2. 截圖 `website-screenshots.yml` 的 `testWenhuRunsOnTheRight`（存 wenhu-right-2d、wenhu-right-3d）：第 2 級，自己審、附進 PR。
+3. 收尾：CI 綠 → ready → #1579 留「可合併」→ send_message 給遊戲規劃。
+4. 留著不做的：`RealLineRunningSideTests` 的新北投、小碧潭支線太短量不到雙線，六家、沙崙只印不判；有靠左與靠右的線共用車站（直通運轉）時要改成照列車選邊（決策 564 下一步）。
+
 ### 4.47 列車停站時車頭對齊月台端（決策 565，派工單 PLATSTOP，session_01YGNNumEchJbYiHsw9hKbcu，`claude/platstop`，2026-11-03）
 
 做了的在 [決策 565](decisions/565.md)：有真實車長的世界（實景地圖的新遊戲），畫的車鼻在 GameCore 的車頭、每節照節距，停站時整列在月台內（以前每列車頭伸出 10 m）；比月台長的列車指派時說哪一站、加長到幾公尺或減到幾節。留下的（決策 565「下一步」）：示範與挑戰（16 m 節距、每節畫 20 m）停站時仍超出月台，要讓畫的車與節距一致（模型壓扁，屬美術）或示範改開真實車長，另派；`LineBuilder.line`（腳本與測試用）在實景世界仍蓋 16 m 一節的月台；比較用分支 `claude/platstop-before` 請作者刪（這裡的環境刪遠端分支會 403）；實機 3D 高架站近景 UNVERIFIED。
