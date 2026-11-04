@@ -617,6 +617,18 @@ public final class GameSession {
 
     /// What a tap does with the network tool.
     public internal(set) var networkMode: NetworkToolMode = .build
+    /// Decision 574: the stops the cable car mode has picked, in order,
+    /// and the real spans' metres when they came from a real cable car
+    /// (``traceRealCableway()``); nothing is built until
+    /// ``buildCableway()``.
+    public internal(set) var cablewayDraft: [CablewayStop] = []
+    public internal(set) var cablewayDraftLegs: [Int64]?
+    /// Whether the next tap puts down an angle station, where the rope
+    /// turns and no one boards, rather than a station.
+    public var cablewayPlacesAngle = false
+    /// ``cablewayPreview``, kept for the stops and the money it was
+    /// worked out for: the map reads it many times a frame.
+    @ObservationIgnored var cablewayPreviewMemo: (key: CablewayPreviewKey, preview: CablewayPreview)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.

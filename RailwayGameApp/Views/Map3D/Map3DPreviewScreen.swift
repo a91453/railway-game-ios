@@ -788,6 +788,10 @@ final class Map3DTrainFeed {
     private var busClock: RealTrainClock?
     private var busGlides = true
     private let buses = Map3DBuses.Layer()
+    /// Decision 575 續 (CABLEMAP): the player's cable cars laid in the
+    /// scene, laid again when the cable cars or the scene change.
+    private var cableways: Map3DCableways?
+    private var cablewaysScene: (x: Double, y: Double)?
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 437: told the evening garbage truck's tune as heard from
@@ -877,7 +881,8 @@ final class Map3DTrainFeed {
 
     /// The trains seen from `eye`, `ringed` with its ring (decision 334),
     /// their far models and boxes from `reach` (decision 417).
-    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, ringed: TrainID?, reach: Map3DModelReach) -> Map3DTrains.Frame {
+    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint, target: Map3DPoint? = nil, ringed: TrainID?,
+               reach: Map3DModelReach) -> Map3DTrains.Frame {
         let now = Date().timeIntervalSinceReferenceDate
         let progress = motion.isMoving ? motion.progress(at: now) : 1
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
@@ -889,6 +894,16 @@ final class Map3DTrainFeed {
         }
         // Decision 436: the cab cars' lit destination signs, close up.
         Map3DHeadSign.add(to: &frame, signs: models?.headSigns ?? [:], eye: eye)
+        // Decision 575 續 (CABLEMAP): and the cable cars' halls, towers,
+        // ropes and cabins, on the buses' clock.
+        if let world = busWorld, !world.cableways.isEmpty, let models, let clock = busClock {
+            if cableways?.cableways != world.cableways || cablewaysScene?.x != scene.originX || cablewaysScene?.y != scene.originY {
+                cableways = Map3DCableways(world: world, scene: scene)
+                cablewaysScene = (scene.originX, scene.originY)
+            }
+            let second = Double(clock.day * GameTime.secondsPerDay) + clock.second(at: now, glides: busGlides)
+            frame.instances += cableways?.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel).instances ?? []
+        }
         return frame
     }
 }
@@ -1086,8 +1101,10 @@ private struct Map3DView: UIViewRepresentable {
             guard let index = arguments.firstIndex(of: name), arguments.indices.contains(index + 1) else { return nil }
             return arguments[index + 1]
         }
-        guard let asked = value("-screenshot-3d-view").flatMap(Map3DScreenshotView.init),
-              let place = value("-screenshot-scene").flatMap(ScreenshotScene.init(rawValue:))?.place else { return nil }
+        guard let asked = value("-screenshot-3d-view").flatMap(Map3DScreenshotView.init) else { return nil }
+        // Decision 575 續 (CABLEMAP): over a span of the cable car.
+        if let span = value("-screenshot-3d-cableway") { return asked.camera(cableway: span, in: scene, of: world, viewport: viewport) }
+        guard let place = value("-screenshot-scene").flatMap(ScreenshotScene.init(rawValue:))?.place else { return nil }
         return asked.camera(at: place, in: scene, of: world, viewport: viewport)
     }
     #endif
@@ -1106,7 +1123,8 @@ private struct Map3DView: UIViewRepresentable {
             pack.locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: pushPullE1000)
             return pack
         } : nil
-        view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, ringed: view?.ringed, reach: reach) }
+        view.trains = { [weak view] eye, reach in feed.frame(in: scene, models: models, eye: eye, target: view?.camera.target, ringed: view?.ringed,
+                                                                 reach: reach) }
     }
 
     @MainActor
@@ -1641,6 +1659,10 @@ private struct Map3DFollowChoice: View {
     var body: some View {
         let blocked = unavailable != nil && selection != option
         Button {
+            // Decision 578 (FOLLOWVIEW-2): a screenshot run once kept 後方
+            // after its tap on 車窗; the UI test trace says whether the
+            // action ran, if it happens again.
+            UITestTrace.action("map3D.follow.\(option.rawValue) (was \(selection.rawValue))")
             selection = option
         } label: {
             Text(verbatim: option.text(in: language))

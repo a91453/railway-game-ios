@@ -438,8 +438,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   time a session sees that its conversation was summarized, its first act
   is a comment in #1579, 「<session> 壓縮第 N 次」, N being one more than
   its own such comments there (and in #1041). The game-planning session
-  hands over when its third compaction nears (after the second, at about
-  300k tokens used), writing the handoff before finishing what it holds; an
+  hands over right after its third compaction (owner, 2026-11-04), writing
+  the handoff from GitHub (#1579, open pull requests, its sessions) rather
+  than from the summary, before finishing what it holds; an
   implementation session takes no new work after 1 and stops at 2
   (`docs/HANDOFF.md` §1). The game-planning session may open the next
   one itself with `create_session`, model `claude-opus-5-5` (owner,

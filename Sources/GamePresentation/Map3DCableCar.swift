@@ -49,17 +49,41 @@ public enum Map3DCableCar {
     public static let cabinLength: Float = 1.98
     public static let cabinWidth: Float = 1.873
 
-    /// All the studies, in the order the models pack takes them.
-    public static var models: [Map3DModelPack.Model] {
+    /// Every model: the ones the 3D map draws, then the studies.
+    public static var models: [Map3DModelPack.Model] { drawn + studyModels }
+
+    /// Decision 575 續 (CABLEMAP): what the 3D map draws, in
+    /// ``Map3DModelPack/standard`` (last, so no model before them moves):
+    /// the two cabins, the tower and the three halls, near and far, and a
+    /// rope's metre (``rope``).
+    public static var drawn: [Map3DModelPack.Model] {
         var made: [Map3DModelPack.Model] = []
         for far in [false, true] {
             for cabin in Cabin.allCases { made.append(model(cabin, far: far)) }
             made.append(tower(far: far))
             for station in Station.allCases { made.append(model(station, far: far)) }
+        }
+        made.append(rope())
+        return made
+    }
+
+    /// The studies the game does not draw (``Map3DModelPack/studies``): the
+    /// furnishings that stand alone and a span.
+    public static var studyModels: [Map3DModelPack.Model] {
+        var made: [Map3DModelPack.Model] = []
+        for far in [false, true] {
             for support in Support.allCases { made.append(model(support, far: far)) }
         }
         made.append(span())
         return made
+    }
+
+    /// One metre of rope along +x from the origin, the 3D map stretching
+    /// it from one point to the next (``Map3DCableways``).
+    public static func rope() -> Map3DModelPack.Model {
+        var m = CableMesh()
+        m.kit.beam(Map3DPoint(0, 0, 0), Map3DPoint(1, 0, 0), CableColor.ropeThickness, CableColor.rope)
+        return .flat(named: "cablecar-rope", from: m.kit.mesh)
     }
 
     public static func model(_ cabin: Cabin, far: Bool = false) -> Map3DModelPack.Model {

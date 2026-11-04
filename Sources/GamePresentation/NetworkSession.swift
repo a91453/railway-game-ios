@@ -26,6 +26,8 @@ extension GameSession {
         networkEnd = nil
         networkEdgePoint = nil
         networkDepotEnd = nil
+        cablewayDraft = []
+        cablewayDraftLegs = nil
         message = nil
     }
 
@@ -71,6 +73,8 @@ extension GameSession {
             if networkDepotEnd == nil {
                 message = StatusMessage(kind: .failure, text: DepotYardProblem.notAnEnd.text(in: language))
             }
+        case .cableway:
+            tapCableway(at: point)
         }
     }
 
@@ -1178,6 +1182,8 @@ extension GameSession {
                 "A passing loop and a signal station here. Lines that stop there can pass each other.",
                 "在這裡加待避線與號誌站。停靠這裡的路線，列車可以在這裡交會。"
             )
+        case .cableway:
+            return cablewayDraftText()
         }
     }
 }
@@ -1408,6 +1414,10 @@ extension GameSession {
                 overlay.crossovers = Array(yard.tracks.dropFirst())
                 overlay.previewIsBuildable = yard.problem == nil
             }
+        case .cableway:
+            // Decision 574: the draft is drawn with the cable cars
+            // (``cablewayMapOverlay``).
+            break
         }
         return overlay
     }

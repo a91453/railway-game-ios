@@ -102,6 +102,9 @@ public struct Map3DModelPack: Sendable {
         groups.append { Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) } + [Map3DSevenCarBlue.formation()] }
         groups += Map3DTrainShapeRefresh.ids.map { id in { [Map3DTrainShapeRefresh.model(id)] } }
         groups.append { Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) } + [Map3DSteamTender.formation()] }
+        // Decision 575 續 (CABLEMAP): the cable car's cabins, tower, halls
+        // and rope, just before the route bus, which stays last.
+        groups.append { Map3DCableCar.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
@@ -198,7 +201,7 @@ public struct Map3DModelPack: Sendable {
             models += Map3DWenhuAPM256.Role.allCases.map { Map3DWenhuAPM256.model($0, far: far) }
         }
         // Decision 575: the Maokong Gondola's cabins, tower, rope and halls.
-        models += Map3DCableCar.models
+        models += Map3DCableCar.studyModels
         self.init(recipes: models, baked: baked)
     }
 
