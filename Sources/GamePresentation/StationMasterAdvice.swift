@@ -78,6 +78,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// Decision 153: a scenario's festival (decision 90) starts in `days`
     /// days at `stations`, raising their demand by `percent`.
     case festivalComing(days: Int64, stations: [String], percent: Int64)
+    /// Decision 576: a named festival at a place on the map.
+    case namedFestivalComing(festival: FestivalKind, days: Int64, stations: [String], percent: Int64)
     /// Decision 162: a typhoon comes in `days` days (0 while it blows),
     /// over `stations` of the network's stations, taking `percent` off their
     /// demand.
@@ -388,6 +390,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
         guard let first = coming.min(by: { $0.start < $1.start }) else { return nil }
         let same = coming.filter { $0.start == first.start }
         let names = same.compactMap { world.station(id: $0.station)?.name }
+        if let named = first.festival {
+            return .namedFestivalComing(festival: named, days: first.start - today, stations: names, percent: first.boost / 10)
+        }
         return .festivalComing(days: first.start - today, stations: names, percent: first.boost / 10)
     }
 
@@ -657,6 +662,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "The Sky Lantern Festival starts in \(days) day\(days == 1 ? "" : "s"): \(percent)% more passengers at \(stations.joined(separator: " and ")). Add trains before it.",
                 "\(days) 天後是天燈節，\(stations.joined(separator: "、"))的旅客會多 \(percent)%。先加開列車吧。"
             )
+        case .namedFestivalComing(let festival, let days, let stations, let percent):
+            language.text(
+                "\(festival.title(in: language)) starts in \(days) day\(days == 1 ? "" : "s"): \(percent)% more passengers at \(stations.joined(separator: " and ")).\(festival.hoursText(in: language)) Add trains before it.",
+                "\(days) 天後是\(festival.title(in: language))，\(stations.joined(separator: "、"))的旅客會多 \(percent)%。\(festival.hoursText(in: language))先加開列車吧。"
+            )
         case .holidayOver(let kind, let riders, let percent):
             percent >= 0
                 ? language.text(
@@ -727,7 +737,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .noPlaceToPass, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .zoneNearStation, .holidayComing, .holidayOver, .scenarioWelcome,
-             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
+             .goalMet, .scenarioCompleted, .festivalComing, .namedFestivalComing, .fuelSpell, .touristsComing, .newCityRequests, .modeShift: false
         }
     }
 
