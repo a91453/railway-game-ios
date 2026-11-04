@@ -84,6 +84,9 @@ final class Map3DTunnelTests: XCTestCase {
                     XCTAssertGreaterThan(camera.eye.y, ground + 0.5, "beside at \(scale): the eye in the ground")
                     let look = (camera.target - camera.eye).normalized!
                     XCTAssertLessThan(look.y, 0, "beside at \(scale): looking down at it")
+                } else if view == .window {
+                    // Decision 578: in the bore, at a passenger's eye.
+                    XCTAssertEqual(camera.eye.y, (head.middle ?? head.rail).y + Map3DFollow.windowEyeHeight, accuracy: 0.05, "at \(scale): the window's eye in the tunnel")
                 } else if view == .cab {
                     XCTAssertEqual(camera.eye.y, head.nose.y + Map3DFollow.cabEyeHeight, accuracy: 0.05, "at \(scale): the cab's eye in the tunnel")
                 } else {

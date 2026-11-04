@@ -638,6 +638,9 @@ struct Map3DChunkSource: Sendable {
 final class Map3DChunkStreamer {
     weak var view: Map3DMetalView?
     private var window: Map3DStreaming.Window?
+    /// Decision 578: the platform of the stop the followed train runs to,
+    /// whose surroundings are built before it gets there.
+    var stops: [Map3DPoint] = []
     private var source: Map3DChunkSource?
     private var trackCover = Map3DTrackCover()
     private var generation = 0
@@ -662,10 +665,16 @@ final class Map3DChunkStreamer {
         trackCover = built.scene.trackCover
     }
 
+    /// Decision 578: whether the chunks round `point` are all built (with
+    /// no window, the scene is whole).
+    func isBuilt(round point: Map3DPoint) -> Bool {
+        window?.isBuilt(round: point) ?? true
+    }
+
     /// The camera this frame, at `time`.
     func step(_ camera: Map3DCamera, at time: CFTimeInterval) {
         guard var window, let source else { return }
-        let (drop, build) = window.step(target: camera.target, at: time)
+        let (drop, build) = window.step(target: camera.target, at: time, stops: stops)
         self.window = window
         if !drop.isEmpty { view?.remove(drop) }
         guard !build.isEmpty else { return }
@@ -918,6 +927,7 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 358: the chunks ahead of the camera, built as it moves.
         context.coordinator.streamer.view = view
         view.onCamera = { [weak coordinator = context.coordinator] camera, time in coordinator?.streamer.step(camera, at: time) }
+        view.lookoutBuilt = { [weak coordinator = context.coordinator] eye in coordinator?.streamer.isBuilt(round: eye) ?? true }
         view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1
@@ -955,6 +965,10 @@ private struct Map3DView: UIViewRepresentable {
             if let id = follow?.train, follow?.view == .station, let scene {
                 follow?.lookout = Map3DFollow.lookout(of: id, in: world, scene: scene)
             }
+            // Decision 578: from the moment it leaves a stop, the next
+            // stop's surroundings are built, unless it is too far to be
+            // offered.
+            context.coordinator.streamer.stops = context.coordinator.stopsAhead(of: follow?.train, in: world, scene: scene)
             if context.coordinator.shownVersion != nil,
                view.following?.train != follow?.train || view.following?.view != follow?.view || view.following?.lookout != follow?.lookout {
                 view.follow(follow, reduceMotion: context.environment.accessibilityReduceMotion)
@@ -1062,6 +1076,24 @@ private struct Map3DView: UIViewRepresentable {
         var hasModels = false
         /// Decision 358.
         let streamer = Map3DChunkStreamer()
+        /// Decision 578: the stop ahead's platform eye, worked out again
+        /// only when the train, its stop or the scene changes.
+        private var stopAhead: (train: TrainID, station: StationID, originX: Double, originY: Double, eye: Map3DPoint?)?
+
+        func stopsAhead(of train: TrainID?, in world: GameWorld, scene: Map3DScene?) -> [Map3DPoint] {
+            guard let train, let scene, let station = world.map3DStopAhead(of: train),
+                  Map3DFollow.stationViewIsOffered(remainingMetres: world.map3DMetresToStopAhead(of: train)) else {
+                stopAhead = nil
+                return []
+            }
+            if let known = stopAhead, known.train == train, known.station == station,
+               known.originX == scene.originX, known.originY == scene.originY {
+                return known.eye.map { [$0] } ?? []
+            }
+            let eye = Map3DFollow.lookout(of: train, at: station, in: world, scene: scene)?.eye
+            stopAhead = (train, station, scene.originX, scene.originY, eye)
+            return eye.map { [$0] } ?? []
+        }
         /// Decision 334: the departure last flown to.
         var flownTo: Map3DNextDeparture?
         var farOut: ((Map3DCamera) -> Void)?
@@ -1562,8 +1594,11 @@ private struct Map3DFollowChoice: View {
     let option: Map3DFollow.View
     @Binding var selection: Map3DFollow.View
     let language: DisplayLanguage
+    /// Decision 578: why it cannot be chosen now, if it cannot.
+    var unavailable: String?
 
     var body: some View {
+        let blocked = unavailable != nil && selection != option
         Button {
             selection = option
         } label: {
@@ -1578,7 +1613,9 @@ private struct Map3DFollowChoice: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint(Text(verbatim: option.hint(in: language)))
+        .disabled(blocked)
+        .opacity(blocked ? 0.4 : 1)
+        .accessibilityHint(Text(verbatim: unavailable ?? option.hint(in: language)))
         .accessibilityAddTraits(selection == option ? .isSelected : [])
         .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
     }
@@ -1642,11 +1679,15 @@ private struct Map3DFollowBar: View {
     private var choices: some View {
         let selection = $view
         let language = session.language
+        // Decision 578: the station view waits while the next stop is too far.
+        let stationOffered = Map3DFollow.stationViewIsOffered(remainingMetres: session.world.map3DMetresToStopAhead(of: train.id))
+        let tooFar = Map3DFollow.stationTooFarText(in: language)
         // A sendable closure, not main-actor code (CRASHSWEEP): the bar's
         // two layouts stand in a ViewThatFits, which SwiftUI's asynchronous
         // renderer may measure, and build, off the main thread (CRASH101).
         return ForEach(Map3DFollow.View.allCases, id: \.self) { @Sendable option in
-            Map3DFollowChoice(option: option, selection: selection, language: language)
+            Map3DFollowChoice(option: option, selection: selection, language: language,
+                              unavailable: option == .station && !stationOffered ? tooFar : nil)
         }
     }
 

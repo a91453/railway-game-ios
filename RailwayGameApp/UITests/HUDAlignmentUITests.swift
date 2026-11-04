@@ -173,8 +173,8 @@ final class HUDAlignmentUITests: XCTestCase {
             check3D("\(way) 3D following", lines)
             followBar3D("\(way) 3D following", lines)
             // Decision 403 (續): beside the train and from the station too;
-            // five buttons, in one row or two, all reachable.
-            for view in ["cab", "side", "station"] {
+            // six buttons, in one row or two, all reachable.
+            for view in ["cab", "window", "side", "station"] {
                 let button = app.buttons["map3D.follow.\(view)"]
                 if button.becomesHittable(within: 5) {
                     button.tap()
