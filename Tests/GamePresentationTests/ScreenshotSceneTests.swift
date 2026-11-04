@@ -1,6 +1,6 @@
 import Foundation
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// The website's screenshot scenes (decision 165) are worlds the game's own
@@ -73,6 +73,34 @@ final class ScreenshotSceneTests: XCTestCase {
             XCTAssertTrue(opening.contains(WorldCoordinate(x: pier.middle.x, y: pier.middle.y)))
         }
         XCTAssertLessThan(opening.width, Double(Land.cellLength) * 40, "only the ferry, not the whole map")
+    }
+
+    /// Decision 585 PR-3 (FERRY3): the Gushan–Cijin scenes open the real
+    /// ferry with the double-ended boat, at 10:00 and 18:30 of the second
+    /// day, each pier facing the water, a boat to point the camera at;
+    /// and the Tamsui–Bali scene draws the passenger boat.
+    func testTheFerryScenesLayBoatsAndPiersIn3D() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let water = try WaterGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_water.json")))
+        for (scene, hours, boat) in [(ScreenshotScene.gushanFerry, 34.0, Map3DFerry.Boat.cijin), (.gushanFerryEvening, 42.5, .cijin),
+                                     (.tamsuiFerry, 34.0, .tamsui)] {
+            XCTAssertTrue(scene.needsWater)
+            let world = scene.make(in: .traditionalChinese, water: water)
+            XCTAssertEqual(Double(world.clock.now.seconds) / 3_600, hours, "\(scene)")
+            let ferry = try XCTUnwrap(world.ferryRoutes.first, "\(scene)")
+            XCTAssertEqual(ferry.boats, 2)
+            let laid = Map3DFerries(world: world, scene: Map3DScene(world: world))
+            let line = try XCTUnwrap(laid.lines.first)
+            XCTAssertEqual(line.boat, boat, "\(scene)")
+            for (cell, other) in zip(ferry.piers, ferry.piers.reversed()) {
+                let side = Map3DFerries.waterSide(of: cell, toward: other, in: world)
+                XCTAssertTrue(world.terrain.isWater(row: cell.row + side.row, column: cell.column + side.column), "\(scene) \(cell)")
+            }
+            XCTAssertNotNil(laid.firstBoat(second: Double(world.clock.now.seconds)))
+            if scene == .gushanFerryEvening {
+                XCTAssertFalse(Map3DFerries.sailings(of: ferry, atSecond: Double(world.clock.now.seconds)) { _ in true }.isEmpty)
+            }
+        }
     }
 
     /// Decision 580 (FOLLOWBUS): the follow-a-bus scene has a feeder route

@@ -271,6 +271,36 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 585 PR-3 (FERRY3): the ferries on the 3D map: Tamsui–Bali's
+    /// passenger boat and Gushan–Cijin's double-ended ferry close up at
+    /// their piers (near models), each crossing from far (far models), and
+    /// Gushan–Cijin at dusk with its lamps lit. For the screenshot review
+    /// of the pull request that drew them.
+    func testFerriesIn3D() {
+        let shots: [(name: String, scene: String, view: String, onBoat: Bool)] = [
+            ("ferry-3d-tamsui-near", "tamsuiFerry", "75,35,62", true),
+            ("ferry-3d-tamsui-far", "tamsuiFerry", "1100,20,50", false),
+            ("ferry-3d-gushan-near", "gushanFerry", "85,35,62", true),
+            ("ferry-3d-gushan-far", "gushanFerry", "800,20,50", false),
+            ("ferry-3d-gushan-evening", "gushanFerryEvening", "110,215,64", true),
+        ]
+        for shot in shots {
+            let app = launch(extra: ["-screenshot-scene", shot.scene, "-screenshot-3d-view", shot.view, "-map3D.quality", "high"]
+                + (shot.onBoat ? ["-screenshot-3d-ferry"] : []))
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+            settle(seconds: 3)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep(shot.name, app)
+            app.terminate()
+        }
+    }
+
     /// Decision 578: the 3D follow views: the window of a car, the platform
     /// of the next stop (a short gap), and the station view greyed out
     /// while the next stop is a high-speed gap away.

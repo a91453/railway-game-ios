@@ -4300,6 +4300,30 @@
     "cablecar-tower-far": {
       "hash": "fa1f70997b35c80d",
       "triangles": 92
+    },
+    "ferry-cijin-single": {
+      "hash": "ef7721b6b66dc4e5",
+      "triangles": 6304
+    },
+    "ferry-cijin-single-far": {
+      "hash": "e8563ce642e969de",
+      "triangles": 2344
+    },
+    "ferry-pier-single": {
+      "hash": "b412772a6bce0e33",
+      "triangles": 1284
+    },
+    "ferry-pier-single-far": {
+      "hash": "8423447cf0516a54",
+      "triangles": 684
+    },
+    "ferry-tamsui-single": {
+      "hash": "501527aac580aab1",
+      "triangles": 2368
+    },
+    "ferry-tamsui-single-far": {
+      "hash": "a282d34f8472c388",
+      "triangles": 1504
     }
   }
 }
