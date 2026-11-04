@@ -864,7 +864,7 @@ struct MapView: View {
                             // Not while it has nothing to draw or the view
                             // shows all of it (``MiniMap/isShown(beside:)``).
                             MiniMapView(map: miniMap, visible: projection.visibleRegion, language: session.language) { point in
-                                if session.followedTrain != nil { session.stopFollowingTrain() }
+                                if session.isFollowingVehicle { session.stopFollowingTrain() }
                                 camera = projection.centered(atX: point.x, y: point.y)
                                 session.mapDidMove()
                             }
@@ -1237,7 +1237,7 @@ struct MapView: View {
             .onChange(of: screen.map2DReturn) { _, plan in
                 guard let plan else { return }
                 screen.map2DReturn = nil
-                if session.followedTrain != nil { session.stopFollowingTrain() }
+                if session.isFollowingVehicle { session.stopFollowingTrain() }
                 let centred = projection.centered(atX: plan.x, y: plan.y)
                 camera = centred.zoomed(by: plan.referenceSize / centred.referenceSize,
                                         around: ScreenPoint(x: centred.viewport.width / 2, y: centred.viewport.height / 2))
@@ -1828,7 +1828,7 @@ struct MapView: View {
             }
             session.startChoosingMapTile()
             if let region = session.mapExpansionOverlay?.region {
-                if session.followedTrain != nil { session.stopFollowingTrain() }
+                if session.isFollowingVehicle { session.stopFollowingTrain() }
                 // Clear of the screen's controls and above the pill, which
                 // grows along the bottom (the PR #627–#646 review).
                 camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region,

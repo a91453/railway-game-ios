@@ -257,6 +257,16 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 580: the scene's feeder bus route's newest bus
+            // followed, for the 3D map's follow views.
+            if DebugLaunch.isSet("-screenshot-follow-bus") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let route = session.world.busRoutes.last {
+                        session.followBus(onRoute: route.id)
+                    }
+                }
+            }
             // Decision 539: the first freight train on the track picked and
             // followed, for the 3D map's R200 and container wagons.
             if DebugLaunch.isSet("-screenshot-follow-freight") {
