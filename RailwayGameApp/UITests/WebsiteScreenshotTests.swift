@@ -1394,7 +1394,11 @@ final class WebsiteScreenshotTests: XCTestCase {
             let gap = row.exists ? (up ? place.maxY - band.maxY : band.minY - place.minY) : band.height
             let distance = min(max(gap + 16, 24), band.height)
             let startY = up ? band.maxY - 2 : band.minY + 2
-            let start = origin.withOffset(CGVector(dx: band.midX - app.frame.minX, dy: startY - app.frame.minY))
+            // In the margin right of the rows: a drag that starts on the
+            // performance menu opens it rather than scrolling (run
+            // 41890979496 stopped at 26% there).
+            let x = (row.exists ? place.maxX : band.midX) + 6
+            let start = origin.withOffset(CGVector(dx: x - app.frame.minX, dy: startY - app.frame.minY))
             let end = start.withOffset(CGVector(dx: 0, dy: up ? -distance : distance))
             start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
