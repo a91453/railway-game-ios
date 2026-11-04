@@ -170,6 +170,80 @@ final class CablewayTests: XCTestCase {
         XCTAssertFalse(world.cablewayIsOpen(CablewayID(rawValue: 9), onDay: 1), "no such cableway")
     }
 
+    // MARK: - Tourists (decision 586)
+
+    /// ``world()`` with 1,000 residents beside B too, so tourists set out
+    /// from there, and a three-star mountain at `cell`'s middle.
+    private func touring(sightAt cell: CellPosition) throws -> GameWorld {
+        var world = try world()
+        try world.setLand([LandCell(row: 8, column: 5, use: .residential, residents: 1_000, jobs: 0)]
+            + (24...28).map { LandCell(row: 8, column: $0, use: .residential, residents: 200, jobs: 0) }
+            + [LandCell(row: 8, column: 59, use: .residential, residents: 1_000, jobs: 0),
+               LandCell(row: 8, column: 60, use: .office, residents: 0, jobs: 1_000)])
+        world.setTourism([Attraction(id: AttractionID(rawValue: 1), name: "山", englishName: "Hill",
+                                     point: GameWorld.middle(of: cell), kind: .mountain, baseStars: 300)])
+        return world
+    }
+
+    private func flows(_ world: GameWorld, onDay day: Int64) -> (flows: TouristFlows, arrivals: [AttractionID: Int64]) {
+        let counted = world.touristFlows(onDay: day) { world.reaches(from: $0, to: $1, graph: nil) }
+        return (counted.flows, counted.arrivals)
+    }
+
+    /// A sight by the far stop, 1.3 km from A and 2.2 km from B: no station
+    /// serves it on foot, so its tourists ride from B to A, the station the
+    /// cableway meets, and on up the rope, there and back. Not on Monday
+    /// (day 0), when the rope stands still; and without the cableway none
+    /// come at all.
+    func testASightByAStopSendsItsTouristsUpTheRope() throws {
+        var world = try touring(sightAt: CellPosition(row: 8, column: 26))
+        let sight = AttractionID(rawValue: 1)
+        XCTAssertNil(world.attractionStation(of: sight))
+        XCTAssertTrue(flows(world, onDay: 1).flows.isEmpty, "no station serves it")
+        let built = try world.createCableway(stops: line)
+        XCTAssertEqual(world.attractionStation(of: sight), a)
+        let tuesday = flows(world, onDay: 1)
+        let tourists = try XCTUnwrap(tuesday.arrivals[sight])
+        XCTAssertGreaterThan(tourists, 0)
+        XCTAssertEqual(tuesday.flows.pairs[b]?[a]?.outbound, tourists)
+        XCTAssertEqual(tuesday.flows.pairs[a]?[b]?.back, tourists)
+        XCTAssertEqual(tuesday.flows.feederRides, [.cableway(built.id): 2 * tourists], "up and down")
+        let monday = flows(world, onDay: 0)
+        XCTAssertNil(monday.arrivals[sight])
+        XCTAssertTrue(monday.flows.feederRides.isEmpty)
+        XCTAssertEqual(world.attractionStation(of: sight), a, "served on a Monday too")
+    }
+
+    /// A sight by the stop that meets A is A's on foot: the railway keeps
+    /// it, and the rope carries none of its tourists.
+    func testASightAStationReachesStaysTheStations() throws {
+        var world = try touring(sightAt: CellPosition(row: 8, column: 6))
+        let before = flows(world, onDay: 1)
+        try world.createCableway(stops: line)
+        let after = flows(world, onDay: 1)
+        XCTAssertEqual(world.attractionStation(of: AttractionID(rawValue: 1)), a)
+        XCTAssertTrue(after.flows.feederRides.isEmpty)
+        XCTAssertEqual(after.arrivals, before.arrivals)
+        XCTAssertEqual(after.flows.pairs[b]?[a]?.outbound, before.flows.pairs[b]?[a]?.outbound)
+    }
+
+    /// The tourists' rides join the riders of the day they rode: Tuesday's
+    /// riders are those the trains brought and the tourists, up and down.
+    func testTheTouristsRidesAreBookedWithTheDay() throws {
+        var touring = try touring(sightAt: CellPosition(row: 8, column: 26))
+        let built = try touring.createCableway(stops: line)
+        let rides = try XCTUnwrap(flows(touring, onDay: 1).flows.feederRides[.cableway(built.id)])
+        var plain = touring
+        plain.setTourism(nil)
+        try touring.advance(ticks: 2 * 1_440 + 30)
+        try plain.advance(ticks: 2 * 1_440 + 30)
+        let toured = try XCTUnwrap(touring.cableway(id: built.id)).days
+        let days = try XCTUnwrap(plain.cableway(id: built.id)).days
+        XCTAssertEqual(toured[0].riders, 0, "Monday")
+        XCTAssertGreaterThanOrEqual(toured[1].riders, days[1].riders + rides)
+        XCTAssertEqual(toured[1].fares, Money(toured[1].riders * 18_000))
+    }
+
     // MARK: - Refused
 
     func testABadCablewayIsRefusedAndChangesNothing() throws {
@@ -207,6 +281,46 @@ final class CablewayTests: XCTestCase {
         XCTAssertNil(cableway.transfer)
         XCTAssertEqual(cableway.feederTrips, 0)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "it still loads")
+    }
+
+    // MARK: - The station a real one meets (decision 586)
+
+    /// A stop seven cells from A, 400 to 500 m off: on its own it meets
+    /// nothing; given A's place it meets A, keeps that through a save, and
+    /// meets it again once A is rebuilt there.
+    func testAGivenStationIsMetUpToFiveHundredMetres() throws {
+        var world = try world()
+        let near = CablewayStop(cell: CellPosition(row: 8, column: 12)), far = CablewayStop(cell: CellPosition(row: 8, column: 26))
+        let place = try XCTUnwrap(world.station(id: a)).location
+        let squared = GameWorld.squaredDistance(GameWorld.middle(of: near.cell), place)
+        XCTAssertGreaterThan(squared, BusRoute.stopReach * BusRoute.stopReach, "beyond the 400 m a cableway finds a station in")
+        XCTAssertLessThanOrEqual(squared, Cableway.namedTransferReach * Cableway.namedTransferReach, "within 500 m")
+        var unnamed = world
+        let plain = try unnamed.createCableway(stops: [near, far])
+        XCTAssertNil(unnamed.cableway(id: plain.id)?.transfer)
+        XCTAssertNil(unnamed.cableway(id: plain.id)?.meetsNear)
+        let built = try world.createCableway(stops: [near, far], meetsNear: place)
+        let cableway = try XCTUnwrap(world.cableway(id: built.id))
+        XCTAssertEqual(cableway.meetsNear, place)
+        XCTAssertEqual(cableway.transfer, BusTransfer(station: a, stop: 0))
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "it loads with its station")
+        try world.removeStation(a)
+        XCTAssertNil(world.cableway(id: built.id)?.transfer)
+        XCTAssertEqual(world.cableway(id: built.id)?.meetsNear, place, "it still knows where its station stood")
+    }
+
+    /// A place more than 500 m from every boarding stop is refused, and
+    /// the world is unchanged; the angle station does not count.
+    func testAGivenStationTooFarIsRefused() throws {
+        var world = try world()
+        let before = world
+        let place = try XCTUnwrap(world.station(id: a)).location
+        for (stops, why) in [([CablewayStop(cell: CellPosition(row: 8, column: 14)), CablewayStop(cell: CellPosition(row: 8, column: 26))], "nine cells off"),
+                             ([CablewayStop(cell: CellPosition(row: 8, column: 26)), CablewayStop(cell: CellPosition(row: 8, column: 12), boards: false),
+                               CablewayStop(cell: CellPosition(row: 8, column: 40))], "only an angle station near")] {
+            XCTAssertThrowsError(try world.createCableway(stops: stops, meetsNear: place), why) { XCTAssertEqual($0 as? GameError, .invalidCableway, why) }
+            XCTAssertEqual(world, before, why)
+        }
     }
 
     // MARK: - The save

@@ -79,7 +79,7 @@ final class LocalizationTests: XCTestCase {
         try world.buildStation(named: "Central", at: PlanPoint(x: 2_560, y: 512))
         let zh = DisplayLanguage.traditionalChinese
         XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 0 段軌道")
-        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車", "建物", "公車"])
+        XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車", "建物", "接駁"])
 
         XCTAssertEqual(TrainPosition.onEdge(TrackTraversal(edge: .edge(2), direction: .backward), offset: 256).displayText(in: zh), "軌段 #2 反向，距起點 4 公尺")
         XCTAssertEqual(TrackNodeID.node(1).displayText(in: zh), "節點 #1")
@@ -152,7 +152,7 @@ final class LocalizationTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "已購買 列車 1。請選擇要放置它的車站。"))
             session.tapMap(at: PlanPoint(x: 1_536, y: 512), reach: 0)
             session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "請選擇要放置 列車 1 的車站。"))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "先點地圖上的車站，再把 列車 1 放在那裡。"))
 
             session.selectTool(.network)
             session.setNetworkMode(.platform)

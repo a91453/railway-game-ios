@@ -342,27 +342,188 @@ private struct ToolOptions: View {
         case .building:
             BuildingControls(session: session)
         case .bus:
-            // Decision 428: a game without roads offers to turn them on.
-            if let offer = session.roadsOffer {
-                RoadsOfferControls(session: session, offer: offer)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    // Decision 438: routes, or the player's own roads.
+            VStack(alignment: .leading, spacing: 8) {
+                // Decision 438: routes, or the player's own roads;
+                // decision 585: or ferries, which need no roads.
+                if session.allowsFerryMode {
                     Picker(selection: Binding(get: { session.busMode }, set: { session.setBusMode($0) })) {
-                        Text(verbatim: session.language.text("Routes", "路線")).tag(BusToolMode.routes)
-                        Text(verbatim: session.language.text("Roads", "道路")).tag(BusToolMode.roads)
+                        ForEach([BusToolMode.routes, .roads, .ferries], id: \.self) { mode in
+                            Text(verbatim: mode.title(in: session.language)).tag(mode)
+                        }
                     } label: {
                         Text(verbatim: session.language.text("Draw", "畫"))
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("bus.mode")
+                }
+                if session.busMode == .ferries, session.allowsFerryMode {
+                    FerryControls(session: session)
+                } else if let offer = session.roadsOffer {
+                    // Decision 428: a game without roads offers to turn them on.
+                    RoadsOfferControls(session: session, offer: offer)
+                } else {
                     switch session.busMode {
-                    case .routes: BusControls(session: session)
+                    case .routes, .ferries: BusControls(session: session)
                     case .roads: RoadControls(session: session)
                     }
                 }
             }
         }
+    }
+}
+
+/// The transit tool's ferry mode (decision 585): taps put down the piers
+/// in turn, by the water; here the boats and how often they sail, the last
+/// pier taken back, a real ferry on this map laid as it is, and the
+/// company's ferry routes, each on a card that sets its boats and headway
+/// or takes it away.
+private struct FerryControls: View {
+    @Bindable var session: GameSession
+    /// The ferry route the player asked to take away, for the confirmation.
+    @State private var removing: FerryRouteID?
+
+    /// The headways offered: the real Tamsui–Bali boats sail every 15 to 30 minutes.
+    private static let headways: [Int64] = [10, 15, 20, 30]
+
+    var body: some View {
+        let language = session.language
+        VStack(alignment: .leading, spacing: 8) {
+            // The routes already sailing come first, whole, so the panel
+            // opens on them; the new route's options follow. The mode's
+            // instruction is the card at the top (InspectorView).
+            let cards = session.world.ferryRoutes.compactMap { session.ferryCard($0.id) }
+            ForEach(cards) { card in
+                routeCard(card)
+            }
+            if !cards.isEmpty { Divider() }
+            Picker(selection: Binding(get: { session.ferryDraftMinutesApart }, set: { session.setFerryDraftMinutesApart($0) })) {
+                ForEach(choices(including: session.ferryDraftMinutesApart), id: \.self) { minutes in
+                    Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
+                }
+            } label: {
+                Text(verbatim: language.text("A boat every", "班距"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("ferry.headway")
+            Stepper(value: Binding(get: { session.ferryDraftBoats }, set: { session.setFerryDraftBoats($0) }), in: 1...FerryRoute.maximumBoats) {
+                Text(verbatim: language.text("Boats: \(session.ferryDraftBoats)", "船：\(session.ferryDraftBoats) 艘"))
+                    .font(.subheadline)
+                    .monospacedDigit()
+            }
+            .accessibilityIdentifier("ferry.boats")
+            if let preview = session.ferryPreview, preview.problem == nil {
+                Group {
+                    if let headway = preview.headway {
+                        Text(verbatim: language.text(
+                            "A boat every \(headway) min · \(preview.dailyCapacity.groupedText) seats a weekday",
+                            "每 \(headway) 分一班 · 平日 \(preview.dailyCapacity.groupedText) 個座位"
+                        ))
+                    }
+                    if let station = preview.station {
+                        Text(verbatim: language.text("Meets \(station) station", "接 \(station)站"))
+                    }
+                }
+                .font(.footnote)
+                .monospacedDigit()
+                .foregroundStyle(Theme.textSecondary)
+            }
+            ChipFlow(spacing: 8) {
+                Button {
+                    session.undoFerryPier()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Last Pier", "上一個碼頭"))
+                    } icon: {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                }
+                .disabled(session.ferryDraft.isEmpty)
+                .accessibilityIdentifier("ferry.undo")
+                if let real = session.realFerryOffer {
+                    Button {
+                        session.traceRealFerry(real)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Lay the \(real.englishName) ferry", "照真實航線拉\(real.name)"))
+                        } icon: {
+                            Image(systemName: "ferry")
+                        }
+                    }
+                    .accessibilityIdentifier("ferry.real")
+                }
+            }
+            .buttonStyle(.bordered)
+            .font(.footnote)
+            Text(verbatim: language.text(
+                "Boats sail 7:00 to 19:00 on weekdays and to 20:00 at weekends, and stay in port when a typhoon reaches a pier.",
+                "平日 7:00 到 19:00、假日到 20:00 開船；颱風到碼頭時停航。"
+            ))
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .confirmationDialog(
+            Text(verbatim: language.text("Close this ferry route?", "要撤掉這條渡輪航線嗎？")),
+            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+            titleVisibility: .visible,
+            presenting: removing
+        ) { id in
+            Button(role: .destructive) {
+                session.removeFerryRoute(id)
+            } label: {
+                Text(verbatim: language.text("Close Route", "撤掉航線"))
+            }
+        } message: { _ in
+            Text(verbatim: language.text("Its piers and boats go. Nothing is refunded.", "碼頭與船都會撤掉。不退還費用。"))
+        }
+    }
+
+    /// A ferry route's card: its rows, its boats and headway, and a way to close it.
+    private func routeCard(_ card: FerryCard) -> some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(verbatim: card.title)
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Button(role: .destructive) {
+                    removing = card.id
+                } label: {
+                    Text(verbatim: language.text("Close", "撤掉"))
+                }
+                .buttonStyle(.borderless)
+                .font(.footnote)
+                .accessibilityIdentifier("ferry.remove")
+            }
+            ForEach(Array(card.rows.enumerated()), id: \.element) { index, row in
+                Text(verbatim: row)
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(index == 2 && !card.sails ? Theme.warning : Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Stepper(value: Binding(get: { card.boats }, set: { session.setFerryBoats(card.id, to: $0) }), in: 1...FerryRoute.maximumBoats) {
+                Text(verbatim: language.text("Boats: \(card.boats)", "船：\(card.boats) 艘"))
+                    .font(.footnote)
+                    .monospacedDigit()
+            }
+            .accessibilityIdentifier("ferry.cardBoats")
+            Picker(selection: Binding(get: { card.minutesApart }, set: { session.setFerryMinutesApart(card.id, to: $0) })) {
+                ForEach(choices(including: card.minutesApart), id: \.self) { minutes in
+                    Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
+                }
+            } label: {
+                Text(verbatim: language.text("A boat every", "班距"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("ferry.cardHeadway")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ferry.card")
+    }
+
+    /// The headways offered, with `own` when it is none of them.
+    private func choices(including own: Int64) -> [Int64] {
+        Self.headways.contains(own) ? Self.headways : (Self.headways + [own]).sorted()
     }
 }
 
@@ -1013,7 +1174,7 @@ private struct ActionButton: View {
                 act()
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: session.tool.systemImage)
+                    Image(systemName: session.tool == .bus && session.busMode == .ferries ? "ferry.fill" : session.tool.systemImage)
                         .font(.body.weight(.bold))
                     Text(title)
                         .font(.headline.weight(.bold))
@@ -1036,6 +1197,7 @@ private struct ActionButton: View {
 
     private var isReady: Bool {
         if session.tool == .bus {
+            if session.busMode == .ferries { return session.ferryPreview.map { $0.problem == nil } ?? false }
             guard session.busMode == .roads else { return session.busPreview?.canOpen ?? false }
             return session.roadRemoval?.canRemove ?? session.roadPreview?.canBuild ?? false
         }
@@ -1043,6 +1205,8 @@ private struct ActionButton: View {
             if session.buildingMode == .sell { return session.salePreview != nil }
             return session.buildingPreview.map { $0.problem == nil } ?? false
         }
+        // Decision 584: the train tool acts on a picked station only.
+        if session.tool == .train { return session.trainActionIsReady }
         guard session.tool == .network else { return session.selectedPoint != nil }
         switch session.networkMode {
         case .build: return session.networkPreview != nil
@@ -1055,7 +1219,9 @@ private struct ActionButton: View {
 
     private func act() {
         if session.tool == .bus {
-            if session.busMode == .roads {
+            if session.busMode == .ferries {
+                _ = session.buildFerryRoute()
+            } else if session.busMode == .roads {
                 session.confirmRoad()
             } else {
                 session.confirmBusRoute()
@@ -1092,6 +1258,9 @@ private struct ActionButton: View {
             if session.buildingMode == .sell { return session.language.text("Tap one of your buildings first.", "請先點選自己的建物。") }
             return String(localized: "Tap the map where it goes first.")
         case .bus:
+            if session.busMode == .ferries {
+                return session.language.text("Tap the shore for two piers or more.", "先在岸邊點兩個以上的碼頭。")
+            }
             if session.busMode == .roads {
                 return session.language.text("Drag across the map for a road, or tap one of yours.", "先在地圖上拖出路，或點自己鋪的路。")
             }
@@ -1138,10 +1307,16 @@ private struct ActionButton: View {
                 return session.language.text("Build Cable Car · \(price.moneyText)", "蓋纜車 · \(price.moneyText)")
             }
         case .bus:
+            let language = session.language
+            // Decision 585: the piers, the boats, for what; roads or not.
+            if session.busMode == .ferries {
+                guard session.allowsFerryMode else { return nil }
+                guard let price = session.ferryPreview?.price else { return language.text("Open Ferry Route", "開渡輪航線") }
+                return language.text("Open Ferry Route · \(price.moneyText)", "開渡輪航線 · \(price.moneyText)")
+            }
             // Decision 428: none until the game has roads.
             guard session.world.roads != nil else { return nil }
             // Decision 400, 10i-5: the route drawn, or the edited one's stops.
-            let language = session.language
             if session.busMode == .roads {
                 if session.roadRemoval != nil { return language.text("Take Up Road", "拆掉這段路") }
                 guard let price = session.roadPreview?.price, price > .zero else { return language.text("Build Road", "鋪路") }
@@ -1153,6 +1328,8 @@ private struct ActionButton: View {
         case .train:
             // Placing and sending both act on the selected train.
             guard let train = session.selectedTrain else { return nil }
+            // Decision 584: with no station picked, the button asks for one.
+            guard session.trainActionIsReady else { return session.trainActionTitle }
             return train.position == nil ? String(localized: "Place \(train.name) Here") : String(localized: "Send \(train.name) Here")
         }
     }
@@ -1291,6 +1468,23 @@ struct StatusBanner: View {
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityLabel("Dismiss message")
             }
+            // Decision 584: the train in the way, to go and see it, in the
+            // row under the message (as decision 573's depot chips): beside
+            // it the long message was squeezed to a narrow column.
+            if let id = message.goToTrain, session.world.train(id: id)?.position != nil {
+                Button {
+                    session.goToTrain(id)
+                } label: {
+                    Text(verbatim: session.goToTrainTitle(id))
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Theme.chip, in: Capsule())
+                }
+                .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
+                .foregroundStyle(Theme.textPrimary)
+                .accessibilityIdentifier("banner.goToTrain")
+            }
             if let offer = message.depotOffer {
                 HStack(spacing: 8) { depotChips(offer, reach: 4) }
             }
@@ -1348,7 +1542,7 @@ extension ConstructionTool {
         case .network: String(localized: "Track network tool")
         case .train: String(localized: "Train tool")
         case .building: String(localized: "Building tool")
-        case .bus: String(localized: "Bus tool")
+        case .bus: String(localized: "Transit tool")
         }
     }
 }

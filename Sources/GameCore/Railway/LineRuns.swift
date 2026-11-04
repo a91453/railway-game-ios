@@ -478,11 +478,18 @@ extension GameWorld {
     /// that it stands at the first stop of and can drive, as it would
     /// leave. `nil` when there is none.
     func dueRunDeparture(of train: Train, on line: ServiceLine) -> Train? {
+        dueRun(of: train, on: line).flatMap { sentOut(train, on: $0.timetable) }
+    }
+
+    /// The run ``dueRunDeparture(of:on:)`` sends `train` out on (its index
+    /// in `line`'s runs), the day, and the timetable it gives the train;
+    /// `nil` when there is none.
+    func dueRun(of train: Train, on line: ServiceLine) -> (run: Int, day: Int64, timetable: [ScheduledStop])? {
         guard train.execution == nil, train.placement != nil, train.movement.rate > 0 else { return nil }
         for (index, day) in line.dueRuns(at: clock.now) {
             let run = line.runs[index]
             guard isStopped(train, at: line.stops[run.from]), let trip = runTrip(of: line, run, for: train) else { continue }
-            return sentOut(train, on: trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now))
+            return (index, day, trip.timetable(run, calling: line.stops, day: day, sentOutAt: clock.now))
         }
         return nil
     }
@@ -518,6 +525,30 @@ extension GameWorld {
             return preferred
         }
         return nil
+    }
+
+    /// Decision 556, continued (TYMCLIST7): under traffic control, the
+    /// soonest start after now of a run of `line` due now that a train of
+    /// the line without a service stands at the first stop of, or `nil`.
+    /// Such a train, not sent out while its route is held, joins a
+    /// deadlock only once the run starts (decision 570), so an idle step
+    /// wakes then, as a step every minute would find it.
+    func heldRunStart(of line: ServiceLine) -> GameTime? {
+        guard isTrafficControlEnabled else { return nil }
+        var soonest: Int64?
+        for (index, day) in line.dueRuns(at: clock.now) {
+            let run = line.runs[index]
+            let start = run.start(onDay: day)
+            guard start > clock.now.seconds, start < soonest ?? .max else { continue }
+            let first = line.stops[run.from]
+            if line.trains.contains(where: { id in
+                guard let train = train(id: id) else { return false }
+                return train.execution == nil && train.placement != nil && train.movement.rate > 0 && isStopped(train, at: first)
+            }) {
+                soonest = start
+            }
+        }
+        return soonest.map { GameTime(seconds: $0) }
     }
 
     /// Whether some run of `line` is due now with a train ready (see

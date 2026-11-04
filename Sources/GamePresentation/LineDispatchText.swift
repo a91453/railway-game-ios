@@ -147,6 +147,10 @@ public struct ShortPlatformCall: Hashable, Sendable {
 }
 
 extension GameWorld {
+    /// A car's pitch over this is how far a train may stand past its
+    /// platform's end without being told (decision 565, L9-2).
+    static var overhangSlackDivisor: Int64 { 16 }
+
     /// The first call of the service train `id` runs for that the train is
     /// longer than every platform of (``ShortPlatformCall``); failing that
     /// (decision 565), the first it stops at with its last car past every
@@ -167,7 +171,12 @@ extension GameWorld {
             return ShortPlatformCall(station: stops[index], needed: whole, cars: fit)
         }
         // A single car has nothing to shorten: not told.
-        guard train.cars > 1, let index = longest.firstIndex(where: { $0.map { $0 < whole } ?? false }) else { return nil }
+        // L9-2: the platform tool and the trains a line buys count cars of
+        // 20 m, so a 20.3 m car (EMU3000) on four of them stands about a
+        // metre past the end: told only when it is more than a sixteenth of
+        // a car.
+        let slack = train.carPitch / Self.overhangSlackDivisor
+        guard train.cars > 1, let index = longest.firstIndex(where: { $0.map { $0 + slack < whole } ?? false }) else { return nil }
         return ShortPlatformCall(station: stops[index], needed: whole, cars: fit, overhangs: true)
     }
 

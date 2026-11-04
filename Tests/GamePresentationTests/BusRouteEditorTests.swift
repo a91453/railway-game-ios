@@ -264,7 +264,7 @@ final class BusRouteEditorTests: XCTestCase {
         XCTAssertTrue(session.allows(ConstructionTool.bus))
         XCTAssertTrue(ConstructionTool.bus.pausesGame)
         XCTAssertEqual(TutorialTarget(tool: .bus), .busTool)
-        XCTAssertEqual(ConstructionTool.bus.title(in: .traditionalChinese), "公車")
+        XCTAssertEqual(ConstructionTool.bus.title(in: .traditionalChinese), "接駁")
         // Leaving the tool lets go of the route drawn.
         session.tapBusTool(at: CellPosition(row: 8, column: 5).middle, reach: reach)
         session.selectTool(.select)

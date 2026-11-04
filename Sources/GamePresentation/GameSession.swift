@@ -417,6 +417,11 @@ public final class GameSession {
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
     public private(set) var placementHeading: CompassHeading = .east
 
+    /// The platform the player picked for the selected train in the train
+    /// tool (decision 584), used only at its own station; see
+    /// ``placementPlatform``.
+    var pickedPlacementPlatform: TrackPlatform?
+
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another point or tool.
     public internal(set) var message: StatusMessage? {
@@ -636,12 +641,27 @@ public final class GameSession {
     /// ``buildCableway()``.
     public internal(set) var cablewayDraft: [CablewayStop] = []
     public internal(set) var cablewayDraftLegs: [Int64]?
+    /// Decision 586: where the station the real cable car drawn meets
+    /// stands (``RealCableway/meetsNear(in:)``); `nil` for one drawn stop
+    /// by stop.
+    public internal(set) var cablewayDraftMeets: PlanPoint?
     /// Whether the next tap puts down an angle station, where the rope
     /// turns and no one boards, rather than a station.
     public var cablewayPlacesAngle = false
     /// ``cablewayPreview``, kept for the stops and the money it was
     /// worked out for: the map reads it many times a frame.
     @ObservationIgnored var cablewayPreviewMemo: (key: CablewayPreviewKey, preview: CablewayPreview)?
+    /// Decision 585 (PR-2): the piers the transit tool's ferry mode has
+    /// picked, in order, the real crossings' metres when they came from a
+    /// real ferry (``traceRealFerry(_:)``), and the boats and headway the
+    /// route opens with; nothing is built until ``buildFerryRoute()``.
+    public internal(set) var ferryDraft: [CellPosition] = []
+    public internal(set) var ferryDraftLegs: [Int64]?
+    public internal(set) var ferryDraftBoats = 2
+    public internal(set) var ferryDraftMinutesApart: Int64 = 15
+    /// ``ferryPreview``, kept for the piers and the money it was worked
+    /// out for.
+    @ObservationIgnored var ferryPreviewMemo: (key: FerryPreviewKey, preview: FerryPreview)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
@@ -2444,19 +2464,29 @@ public final class GameSession {
 
     /// Puts the selected train on a platform of the selected station on
     /// the track network (Stage C1; see ``place(_:atPlatformOf:)``).
+    ///
+    /// Decision 584: a placement that would be refused says why, tried
+    /// first on a copy: no station picked, no platform, whose train holds
+    /// the platform (with "Go" to it), or how short the platform is.
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        guard let station = selectedStation else {
-            message = StatusMessage(kind: .failure, text: language.text("Select a station to place \(train.name) at.", "請選擇要放置 \(train.name) 的車站。"))
-            return
+        if train.position == nil,
+           let problem = world.trainPlacementProblem(
+               train.id, at: selectedStation?.id, heading: placementHeading,
+               platform: selectedStation.flatMap { placementPlatformToUse(for: train, at: $0) }
+           ) {
+            if case .refused = problem {
+                // GameCore's own refusal, as the command reports it.
+            } else {
+                var holder: TrainID?
+                if case .held(_, let by) = problem { holder = by }
+                message = StatusMessage(
+                    kind: .failure, text: world.trainPlacementProblemText(problem, train: train.id, in: language), goToTrain: holder
+                )
+                return
+            }
         }
-        guard !world.trackPlatforms(of: station.id).isEmpty else {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "\(station.name) has no platform yet. Add one with the network tool.",
-                "\(station.name) 還沒有月台。請用路網工具加上月台。"
-            ))
-            return
-        }
+        guard let station = selectedStation else { return }
         place(train, atPlatformOf: station)
     }
 
@@ -3811,11 +3841,13 @@ public final class GameSession {
         }
         offer(naming.placeStationName(at: location, here, language: language, placeNames: placeNames), .place)
         let landmarks = naming.landmarks(near: here, placeNames: placeNames, within: landmarkChoiceDistanceMetres)
-            .filter { naming.isFree($0.name, in: language) }
+            .filter { naming.isFree($0.name, in: language) && $0.name.isShown(in: language) }
         if let landmark = landmarks.first(where: { $0.kind != .landmark(.park) }) {
             offer(landmark.name.name(in: language), landmark.kind)
         }
-        if let realBuses {
+        // A bus stop's name has no English: in English the choice is not
+        // listed, rather than naming the station in Chinese.
+        if let realBuses, language != .english {
             let stops = realBuses.stops(around: location, frame: naming.frame, within: busStopChoiceDistanceMetres).stops
             func distance(_ stop: RealBusStops.Stop) -> Int64 {
                 let dx = stop.point.x - location.x, dy = stop.point.y - location.y
@@ -3831,13 +3863,13 @@ public final class GameSession {
         }
         let streets = placeNames.landmarks
         if let crossing = streets?.crossings(near: here, within: crossingChoiceDistanceMetres)
-            .first(where: { naming.isFree($0.thing, in: language) })?.thing {
+            .first(where: { naming.isFree($0.thing, in: language) && $0.thing.isShown(in: language) })?.thing {
             offer(crossing.name(in: language), .crossing)
         }
         if let park = landmarks.first(where: { $0.kind == .landmark(.park) }) {
             offer(park.name.name(in: language), park.kind)
         }
-        if let road = streets?.road(near: here, within: roadChoiceDistanceMetres)?.thing, naming.isFree(road, in: language) {
+        if let road = streets?.road(near: here, within: roadChoiceDistanceMetres)?.thing, naming.isFree(road, in: language), road.isShown(in: language) {
             offer(road.name(in: language), .road)
         }
         // The suggestion first, whatever it is.
@@ -4031,12 +4063,20 @@ public struct StatusMessage: Hashable, Sendable {
     /// banner offers to make it each one's depot (decision 573).
     public let depotOffer: DepotLinkOffer?
 
-    public init(kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil, depotOffer: DepotLinkOffer? = nil) {
+    /// Decision 584: a train the message names as being in the way: the
+    /// banner offers to go to it.
+    public let goToTrain: TrainID?
+
+    public init(
+        kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil, depotOffer: DepotLinkOffer? = nil,
+        goToTrain: TrainID? = nil
+    ) {
         self.kind = kind
         self.text = text
         self.fundsNeeded = fundsNeeded
         self.sellableTrain = sellableTrain
         self.depotOffer = depotOffer
+        self.goToTrain = goToTrain
     }
 
     /// How long the banner shows the message before clearing it: a success

@@ -115,6 +115,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// screenshots of the followed bus seen through them.
     case followBusCity
 
+    /// Decision 585: a new real-world game round the mouth of the Tamsui
+    /// River with the Tamsui–Bali ferry opened as the transit tool's ferry
+    /// mode lays it (``RealFerry/tamsuiBali``), run on to 10:00 of the
+    /// second day, so its card has a day's account: the crossing and its
+    /// piers on the 2D map, and the mode's card.
+    case tamsuiFerry
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -128,6 +135,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
+        // Between the Tamsui and Bali piers.
+        case .tamsuiFerry: (25.1640, 121.4376)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
@@ -137,8 +146,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// The real lines ``acquired`` records its first two lines as, in order.
     public static let acquiredLines = ["tra:NEIWAN", "ntdlrt:V"]
 
-    /// The scene's world, its clock paused at the moment to show.
-    public func make(in language: DisplayLanguage) -> GameWorld {
+    /// The scene's world, its clock paused at the moment to show. `water`
+    /// is the app's map of Taiwan's water, for a scene by the water
+    /// (``tamsuiFerry``); the others do without it.
+    public func make(in language: DisplayLanguage, water: WaterGrid? = nil) -> GameWorld {
         switch self {
         case .freight: Self.freightWorld(in: language)
         case .depots: Self.depotsWorld(in: language)
@@ -156,6 +167,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .maokong: Self.maokongWorld(in: language)
         case .followBus: Self.followBusWorld(in: language)
         case .followBusCity: Self.followBusCityWorld(in: language)
+        case .tamsuiFerry: Self.tamsuiFerryWorld(in: language, water: water)
         }
     }
 
@@ -244,7 +256,27 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         else { return DemoWorld.make(in: language) }
         var world = GameWorld.newGame(anchor: anchor)
         if let stops = RealCableway.maokong.stops(in: world) {
-            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres, meetsNear: RealCableway.maokong.meetsNear(in: world))
+        }
+        // On to 10:00 of day 1 (.fast is ten minutes a tick).
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 34 * 6)
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Decision 585: the Tamsui–Bali ferry, two boats every 15 minutes,
+    /// on a new game of Tamsui, at 10:00 of the second day.
+    private static func tamsuiFerryWorld(in language: DisplayLanguage, water grid: WaterGrid?) -> GameWorld {
+        guard let place = Self.tamsuiFerry.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
+        let water = grid?.cells(frame: frame, bounds: GameWorld.newGameBounds) ?? []
+        let steep = grid?.steepCells(frame: frame, bounds: GameWorld.newGameBounds) ?? []
+        var world = GameWorld.newGame(anchor: anchor, water: water, steep: steep)
+        if let piers = RealFerry.tamsuiBali.piers(in: world) {
+            _ = try? world.createFerryRoute(piers: piers, legMetres: RealFerry.tamsuiBali.legMetres, service: .every(minutes: 15), boats: 2)
         }
         // On to 10:00 of day 1 (.fast is ten minutes a tick).
         world.setSpeed(.fast)

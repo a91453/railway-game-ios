@@ -430,6 +430,7 @@ extension GameSession {
             Self.autoServiceText(plan, outcome: outcome, line: line.id, cost: Money(balance.amount - world.economy.balance.amount), in: world, language: language)
         }
         if built != nil { playSound?(.track) }
+        pointToLineStartBlocker(line.id, after: built)
     }
 
     /// The selected line's shortfall of places to pass on single track it
@@ -537,7 +538,10 @@ extension GameSession {
             )
         }
         text += liftedText(outcome, in: language)
-        if outcome.held + outcome.unfit > 0 {
+        if outcome.held > 0, let blocked = world.lineStartBlockedText(id, in: language) {
+            // Decision 584: whose train holds the line's first stop.
+            text += language.text(" The new train waits off the track: ", "新的列車還沒放上軌道：") + blocked.text
+        } else if outcome.held + outcome.unfit > 0 {
             text += language.text(
                 " The new train waits off the track: there is no room at the line's ends. Try again when a train has left.",
                 "新的列車還沒放上軌道：路線兩端都沒有空位。等列車開出後再試一次。"

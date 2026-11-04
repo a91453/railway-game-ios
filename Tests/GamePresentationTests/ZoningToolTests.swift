@@ -21,7 +21,7 @@ final class ZoningToolTests: XCTestCase {
     func testZoningStandsAfterBuildingsAndBeforeBuses() throws {
         let session = GameSession(world: try world(), language: .traditionalChinese)
         XCTAssertEqual(session.buildToolbarButtons, [.network, .train, .building, .zoning, .bus])
-        XCTAssertEqual(session.buildToolbarButtons.map { $0.title(in: .traditionalChinese) }, ["路網", "列車", "建物", "分區", "公車"])
+        XCTAssertEqual(session.buildToolbarButtons.map { $0.title(in: .traditionalChinese) }, ["路網", "列車", "建物", "分區", "接駁"])
         XCTAssertEqual(session.buildToolbarButtons.map(\.identifier), ["tool.network", "tool.train", "tool.building", "tool.zoning", "tool.bus"])
         XCTAssertEqual(BuildingToolMode.buildingModes, [.build, .demolish, .sell], "the building tool no longer offers zoning")
     }

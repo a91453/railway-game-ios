@@ -69,6 +69,7 @@ final class CablewayToolTests: XCTestCase {
         let edits: [PlayerCommand.Edit] = [
             .createCableway(stops: [CablewayStop(cell: CellPosition(row: 1, column: 2)), CablewayStop(cell: CellPosition(row: 3, column: 4), boards: false)]),
             .createCableway(stops: [CablewayStop(cell: CellPosition(row: 1, column: 2))], legMetres: [827]),
+            .createCableway(stops: [CablewayStop(cell: CellPosition(row: 1, column: 2))], legMetres: [827], meetsNear: PlanPoint(x: 5, y: 7)),
             .removeCableway(CablewayID(rawValue: 3)),
         ]
         for edit in edits {
@@ -213,6 +214,27 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertGreaterThan(stops[4].cell.column, stops[0].cell.column)
         XCTAssertTrue(session.buildCableway())
         XCTAssertNil(session.realCablewayOffer, "not once it is built")
+    }
+
+    /// Decision 586: with the Wenhu Line bought, the Maokong Gondola laid
+    /// as it is meets MRT Taipei Zoo, where riders change, not Muzha, the
+    /// nearer; both are beyond the 400 m a cable car finds a station in.
+    func testTheMaokongGondolaMeetsTaipeiZoo() throws {
+        let session = try RealLineAcquisitionTests.game(round: "trtc:BR", side: 1 << 21)
+        let wenhu = try XCTUnwrap(session.buyableRealLines.first { $0.id == "trtc:BR" }, "on sale")
+        let offer = session.realLineOffer(for: wenhu)
+        XCTAssertTrue(session.acquireRealLine(offer), offer.problem ?? session.message?.text ?? "")
+        let stops = try XCTUnwrap(RealCableway.maokong.stops(in: session.world))
+        var plain = session.world
+        let nearest = try plain.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+        XCTAssertNil(plain.cableway(id: nearest.id)?.transfer, "no station within 400 m")
+        session.selectTool(.network)
+        session.setNetworkMode(.cableway)
+        session.traceRealCableway(try XCTUnwrap(session.realCablewayOffer))
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        let transfer = try XCTUnwrap(session.world.cableways.last?.transfer)
+        XCTAssertEqual(session.world.station(id: transfer.station)?.name, "動物園")
+        XCTAssertEqual(transfer.stop, 0, "at the gondola's Taipei Zoo stop")
     }
 
     /// Off the Earth, or with Maokong off the map, nothing is offered.

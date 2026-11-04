@@ -1093,6 +1093,10 @@ public struct GameWorld: Equatable, Sendable {
             stations[index].transferPoints = 0
             passengerPlan = PassengerPlanCache()
             refreshLandDemand()
+        } else if !busRoutes.isEmpty {
+            // Decision 587, continued: no city bus route meets a depot.
+            passengerPlan = PassengerPlanCache()
+            refreshLandDemand()
         }
     }
 
@@ -3455,6 +3459,11 @@ public struct GameWorld: Equatable, Sendable {
                 guard !line.trains.isEmpty else { continue }
                 let wake = hasReadyRun(line) ? now : line.nextRunChange(after: now)
                 if let wake { soonest = min(soonest ?? .max, Self.minutes(from: now, until: wake)) }
+                // Decision 556, continued (TYMCLIST7): a train held from a
+                // due run joins a deadlock once the run starts (decision
+                // 570), which the dispatcher may then put it on its run to
+                // clear (see ``runTrainPutOnItsRun(in:memo:)``).
+                if let start = heldRunStart(of: line) { soonest = min(soonest ?? .max, Self.minutes(from: now, until: start)) }
                 // Decision 221: a train into or out of a depot.
                 if let minutes = minutesUntilRunDepotMove(of: line, memo: &memo) {
                     soonest = min(soonest ?? .max, minutes)
@@ -3784,7 +3793,50 @@ public struct GameWorld: Equatable, Sendable {
         // whose route only the track trains following others wait for
         // (decision 56, point 6) keeps it from, those trains waiting in
         // the deadlock too, takes its route whole all the same.
-        return departureIgnoringFollowerClaims(in: stuck, memo: &memo)
+        // Decision 556, continued (TYMCLIST7): failing that, a line's
+        // train between runs is put on its run where decision 571's way
+        // out would take it to a free berth.
+        return departureIgnoringFollowerClaims(in: stuck, memo: &memo) ?? runTrainPutOnItsRun(in: stuck, memo: &memo)
+    }
+
+    /// Decision 556, continued (TYMCLIST7): the last resort of
+    /// ``resolveDeadlock(memo:)``. In the deadlock `stuck`, the first
+    /// train in ID order of a line with runs (decision 133) that has no
+    /// service, whose due run's first leg could take a free berth of its
+    /// call against the planned way now (see
+    /// ``counterflowRoute(of:to:avoiding:)``), is put on that run, as
+    /// ``dispatchRuns(ofLine:)`` puts a ready train: its doors open where
+    /// it stands. Once due to leave it is a service of the deadlock, which
+    /// decision 571's way out sends to that berth. On the Taoyuan Airport
+    /// MRT, trains that had ended their runs at one airport terminal were
+    /// each bound for the berth at the other where another such train
+    /// stood, with free berths beside, and waited for good: that way out
+    /// was only for a service already waiting at a stop. Returns the
+    /// train's ID, or `nil`. Never inlined, as
+    /// ``departureIgnoringFollowerClaims(in:memo:)``.
+    @inline(never)
+    private mutating func runTrainPutOnItsRun(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
+        for id in stuck.keys.sorted() {
+            guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
+                  trains[index].execution == nil,
+                  let line = lines.firstIndex(where: { assignedLine(of: id) == $0.id }), lines[line].hasRuns,
+                  let due = dueRun(of: trains[index], on: lines[line]),
+                  case .travellingToStop(let stop, let cycle)? = request.candidate.execution,
+                  let way = counterflowRoute(of: request.candidate, to: request.candidate.timetable[stop].station,
+                                             avoiding: blockedTrack(except: id, holders: trackHolders(memo: &memo.directions))),
+                  case .granted = reserving(rerouted(request.candidate, along: way, stop: stop, cycle: cycle), memo: &memo.directions)
+            else { continue }
+            trains[index].trafficVisits = []
+            trains[index].timetable = due.timetable
+            trains[index].timetablePeriod = nil
+            trains[index].execution = .waitingAtStop(0)
+            trains[index].isStandingAside = false
+            trains[index].times = ServiceTimes(arrival: clock.now)
+            logArrival(of: index)
+            lines[line].runDays[due.run] = due.day
+            return id
+        }
+        return nil
     }
 
     /// Decision 577: the last resort of ``resolveDeadlock(memo:)``. In the

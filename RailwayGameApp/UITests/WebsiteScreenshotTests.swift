@@ -185,6 +185,68 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 585: the Tamsui–Bali ferry on a real map of the river
+    /// mouth, its crossing and piers on the 2D map, then the transit
+    /// tool's ferry mode with the route's card, in Chinese and in English;
+    /// and the collection's ferry page in Settings. For the screenshot
+    /// review of the pull request that added the mode.
+    func testFerryMode() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "tamsuiFerry"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+            settle(seconds: 5)
+            // The scene opens close on the river: one step out shows both piers.
+            let zoomOut = app.buttons[english ? "Zoom out" : "縮小"]
+            if zoomOut.appears(within: 5), zoomOut.isEnabled { zoomOut.tap() }
+            settle()
+            if !english { keep("ferry-map", app) }
+            let build = app.buttons["dock.build"]
+            if build.appears(within: 10) { build.tap() }
+            let transit = app.buttons["tool.bus"]
+            XCTAssertTrue(transit.appears(within: 10))
+            transit.waitUntilSettled()
+            if !transit.isSelected { transit.tap() }
+            let mode = app.segmentedControls.buttons[english ? "Ferries" : "渡輪"].firstMatch
+            XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
+            // The panel may still be settling after the tool opens: tap
+            // until the segment reads selected.
+            for _ in 0..<3 where !mode.isSelected {
+                mode.tap()
+                settle(seconds: 1)
+            }
+            XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
+            let card = app.descendants(matching: .any)["ferry.card"].firstMatch
+            XCTAssertTrue(card.appears(within: 10), "The ferry's card")
+            // The mode's instruction is the card at the top, and the
+            // route's card comes first under the modes, so the panel opens
+            // on it without scrolling.
+            XCTAssertTrue(app.descendants(matching: .any)["ferry.hint"].firstMatch.appears(within: 5), "The ferry mode's instruction")
+            settle()
+            keep(english ? "ferry-mode-english" : "ferry-mode", app)
+            app.terminate()
+        }
+        let app = launch()
+        defer { app.terminate() }
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        // Neither the picker's identifier nor its segment under
+        // `segmentedControls` reached the drag inside the settings list
+        // (runs 41849781799 and 41856636503). Bring the garage row up as
+        // the train garage tests do; the picker is the row above it, and
+        // its ferry segment is found by its label whatever its type.
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+        let ferries = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "渡輪")).firstMatch
+        XCTAssertTrue(ferries.becomesHittable(within: 10), "Missing the collection's ferry page")
+        ferries.tap()
+        let boat = app.descendants(matching: .any)["settings.ferry.shunfeng166"].firstMatch
+        XCTAssertTrue(boat.appears(within: 10), "The ferry page")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.ferry.gushanCijin"].firstMatch, clearOf: .slider))
+        settle()
+        keep("collection-ferries", app)
+    }
+
     /// Decision 575 續 (CABLEMAP): the Maokong Gondola on the 3D map: its
     /// cabins, towers and ropes close up over a span, from just over the
     /// ground up at the cabins' floors (the crystal cabins' glass), and
@@ -1308,6 +1370,118 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(button.disappears(within: 10), "Laid, it goes")
         settle()
         keep("station-crossovers-laid", app)
+    }
+
+    /// Decision 584: a line with no trains, and 列車 4 standing with no
+    /// line where its trips start: the line page offers it to the line,
+    /// and buying trains instead says it is in the way, with "Go" to it.
+    func testIdleTrainAtALinesFirstStop() {
+        let app = launch(extra: ["-ui-test-world", "idle-blocker"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let page = app.openLinePage()
+        let idle = app.buttons["line.staff.idleTrain"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(idle, in: page), "The idle train's row shows")
+        idle.waitUntilSettled()
+        settle()
+        keep("idle-train-row", app)
+        let start = app.buttons["line.staff.start"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page), "The buy button shows")
+        start.tap()
+        XCTAssertTrue(app.buttons["banner.goToTrain"].firstMatch.appears(within: 10), "The banner names the train in the way")
+        settle()
+        keep("idle-train-banner", app)
+    }
+
+    /// Decision 584, PR-2: the train tool at 海岸, a station of two
+    /// platforms on two tracks that do not meet, with 列車 3 off the track
+    /// and given 海岸線: the platforms listed, the one on 海岸線's track
+    /// picked, then the other picked by hand.
+    func testPlacementPlatformChoice() {
+        shootPlacementPlatformChoice(english: false, name: "platform-choice")
+    }
+
+    /// The same in English, the first only.
+    func testPlacementPlatformChoiceEnglish() {
+        shootPlacementPlatformChoice(english: true, name: "platform-choice-en")
+    }
+
+    private func shootPlacementPlatformChoice(english: Bool, name: String) {
+        let app = launch(extra: ["-ui-test-world", "platform-choice"], english: english)
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 5), build.becomesHittable(within: 5) { build.tap() }
+        let trainTool = app.buttons["tool.train"]
+        XCTAssertTrue(trainTool.appears(within: 10), "The train tool shows")
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).tap()
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 10), "The train tool's card shows")
+        let first = app.buttons["train.platform.1"].firstMatch
+        let second = app.buttons["train.platform.2"].firstMatch
+        XCTAssertTrue(first.appears(within: 10), "The station's platforms are listed")
+        // In the card's scrolling middle, some 70 pt between its head and
+        // its Place button on a phone (runs 41872784387 and 41880284408
+        // dragged beside it and nothing moved); the phone runs on its side
+        // only.
+        let pinned = app.descendants(matching: .any)["details.scroll.middle"].firstMatch
+        let middle = pinned.appears(within: 5) ? pinned : app.descendants(matching: .any)["details.scroll.whole"].firstMatch
+        // One row of buttons, its label beside them: bringing platform 2
+        // into the card's middle shows them all.
+        let shown = scroll(second, into: middle, at: card.frame.maxX - 8, of: app)
+        settle()
+        if !shown { print("platform-choice card:\n\(card.debugDescription)") }
+        keep(name, app)
+        XCTAssertTrue(shown, "The platforms show")
+        XCTAssertTrue(first.isHittable, "Both platforms show at once")
+        guard !english else { return }
+        let other = second.isSelected ? first : second
+        other.tap()
+        settle()
+        XCTAssertTrue(other.isSelected, "The tapped platform is picked")
+        keep("platform-choice-picked", app)
+    }
+
+    /// Drags `list`, a short scrolling band, by as far as `row` still lies
+    /// outside it, until the row shows whole: the band's fixed short drags
+    /// moved some 8 pt a time past the touch's slop (run 41885513636).
+    /// `x` is clear of every control: a drag that starts on the
+    /// performance menu opens it rather than scrolling (run 41890979496
+    /// stopped at 26% there).
+    private func scroll(_ row: XCUIElement, into list: XCUIElement, at x: CGFloat, of app: XCUIApplication) -> Bool {
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<12 {
+            let band = list.frame.insetBy(dx: 0, dy: 6)
+            let place = row.frame
+            print("platform-choice scroll: row \(row.identifier) \(place) hittable \(row.isHittable), band \(band)")
+            if row.exists, place.minY >= band.minY, place.maxY <= band.maxY, row.isHittable { return true }
+            let up = !row.exists || place.maxY > band.maxY
+            let gap = row.exists ? (up ? place.maxY - band.maxY : band.minY - place.minY) : band.height
+            let distance = min(max(gap + 16, 24), band.height)
+            let startY = up ? band.maxY - 2 : band.minY + 2
+            let start = origin.withOffset(CGVector(dx: x - app.frame.minX, dy: startY - app.frame.minY))
+            let end = start.withOffset(CGVector(dx: 0, dy: up ? -distance : distance))
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        let band = list.frame.insetBy(dx: 0, dy: 6)
+        return row.exists && row.frame.minY >= band.minY && row.frame.maxY <= band.maxY && row.isHittable
     }
 
     /// Decision 507: the platform mode's layout menu on a double track,

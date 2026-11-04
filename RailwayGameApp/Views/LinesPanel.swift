@@ -2356,6 +2356,28 @@ struct LinesPanel: View {
         let language = session.language
         let plan = memo.staffingPlan(line.id, headway: staffHeadway, type: staffType, cars: staffCars, of: session)
         return Section {
+            // Decision 584: a train standing at one of its stops with no
+            // line runs for it without buying another.
+            ForEach(session.world.idleTrainsAtStops(of: line.id), id: \.self) { idle in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(verbatim: session.world.idleTrainAtStopText(idle.train, at: idle.station, line: line.id, in: language))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        session.assignTrain(idle.train, toLine: line.id)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Give It This Line", "配屬給這條線"))
+                        } icon: {
+                            Image(systemName: "arrow.turn.down.right")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("line.staff.idleTrain")
+                }
+            }
             headwayPicker
             // Decision 180: the type and the cars of the trains it buys.
             // Decision 184, later: a menu the ticks leave alone.

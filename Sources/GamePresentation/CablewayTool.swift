@@ -62,6 +62,9 @@ public struct RealCableway: Hashable, Sendable {
     public let englishName: String
     public let stops: [Stop]
     public let legMetres: [Int64]
+    /// Decision 586: the station it meets, by name and place (its first
+    /// stop's real transfer), or `nil` to meet the nearest.
+    public var meets: Stop?
 
     /// The Maokong Gondola: four stations and two angle stations, 4,033 m
     /// (gondola.taipei). Where the stops are: along the line of
@@ -81,7 +84,12 @@ public struct RealCableway: Hashable, Sendable {
             Stop(name: "指南宮", englishName: "Zhinan Temple", latitude: 24.978591, longitude: 121.589612, boards: true),
             Stop(name: "貓空", englishName: "Maokong", latitude: 24.968944, longitude: 121.588142, boards: true)
         ],
-        legMetres: [827, 440, 568, 1_111, 1_087]
+        legMetres: [827, 440, 568, 1_111, 1_087],
+        // Decision 586: MRT Taipei Zoo, whose exit 2 is by the gondola
+        // (the app's `track_stations.geojson`): 413 m from the gondola's
+        // Taipei Zoo stop, Muzha 404 m, so the nearest is not the one
+        // riders change at.
+        meets: Stop(name: "動物園", englishName: "Taipei Zoo", latitude: 24.998333, longitude: 121.579402, boards: true)
     )
 
     /// Its stops on `world`'s map, or `nil` on a map not on the Earth or
@@ -98,6 +106,15 @@ public struct RealCableway: Hashable, Sendable {
             placed.append(CablewayStop(cell: cell, boards: stop.boards))
         }
         return placed
+    }
+
+    /// Where ``meets`` stands on `world`'s map, or `nil` without one or on
+    /// a map not on the Earth.
+    public func meetsNear(in world: GameWorld) -> PlanPoint? {
+        guard let meets, let frame = RealWorldFrame(world: world) else { return nil }
+        let (x, y) = frame.worldPosition(latitude: meets.latitude, longitude: meets.longitude)
+        guard x.isFinite, y.isFinite else { return nil }
+        return PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded()))
     }
 
     /// The real cable cars the mode lays.
@@ -121,6 +138,7 @@ extension GameSession {
     func tapCableway(at point: PlanPoint) {
         let cell = CellPosition(containing: point)
         cablewayDraftLegs = nil
+        cablewayDraftMeets = nil
         if cablewayDraft.last?.cell == cell {
             cablewayDraft.removeLast()
             return
@@ -139,6 +157,7 @@ extension GameSession {
         guard !cablewayDraft.isEmpty else { return }
         cablewayDraft.removeLast()
         cablewayDraftLegs = nil
+        cablewayDraftMeets = nil
     }
 
     /// The real cable car on this map the mode offers to lay as it is
@@ -156,6 +175,7 @@ extension GameSession {
         guard let stops = real.stops(in: world) else { return }
         cablewayDraft = stops
         cablewayDraftLegs = real.legMetres
+        cablewayDraftMeets = real.meetsNear(in: world)
         lookAt(stops[stops.count / 2].cell.middle)
     }
 
@@ -164,12 +184,12 @@ extension GameSession {
     /// What the stops picked would build; `nil` until there are two.
     public var cablewayPreview: CablewayPreview? {
         guard cablewayDraft.count >= 2 else { return nil }
-        let key = CablewayPreviewKey(stops: cablewayDraft, legs: cablewayDraftLegs, balance: world.economy.balance, cableways: world.cableways.count)
+        let key = CablewayPreviewKey(stops: cablewayDraft, legs: cablewayDraftLegs, meets: cablewayDraftMeets, balance: world.economy.balance, cableways: world.cableways.count)
         if let memo = cablewayPreviewMemo, memo.key == key { return memo.preview }
         var copy = world
         let preview: CablewayPreview
         do throws(GameError) {
-            let built = try copy.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs)
+            let built = try copy.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs, meetsNear: cablewayDraftMeets)
             preview = CablewayPreview(
                 stations: built.stops.filter(\.boards).count, metres: built.metres, price: world.economy.balance - copy.economy.balance,
                 rideMinutes: (built.rideSeconds(from: 0, to: built.stops.count - 1) + 30) / 60, problem: nil
@@ -194,7 +214,7 @@ extension GameSession {
     @discardableResult
     public func buildCableway() -> Bool {
         guard cablewayPreview?.problem == nil, cablewayDraft.count >= 2 else { return false }
-        let done = perform(.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs)) { _, before, after in
+        let done = perform(.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs, meetsNear: cablewayDraftMeets)) { _, before, after in
             let price = before.economy.balance - after.economy.balance
             let name = after.cableways.last.map { CablewayText.name($0.id, in: language) } ?? ""
             return language.text("\(name) now runs, for \(price.moneyText).", "\(name)開通了，花費 \(price.moneyText)。")
@@ -202,6 +222,7 @@ extension GameSession {
         guard done != nil else { return false }
         cablewayDraft = []
         cablewayDraftLegs = nil
+        cablewayDraftMeets = nil
         return true
     }
 
@@ -327,6 +348,7 @@ extension GameSession {
 struct CablewayPreviewKey: Hashable {
     let stops: [CablewayStop]
     let legs: [Int64]?
+    let meets: PlanPoint?
     let balance: Money
     let cableways: Int
 }

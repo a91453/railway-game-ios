@@ -909,8 +909,12 @@ public final class GameLauncher {
     @discardableResult
     public func openScreenshotScene(_ scene: ScreenshotScene) -> Task<Void, Never> {
         let language = language
+        // Decision 585: a scene by the water waits for the map of Taiwan's water.
+        let load = scene == .tamsuiFerry ? realWorldLoad : nil
         return Task {
-            let world = await Task.detached(priority: .userInitiated) { scene.make(in: language) }.value
+            await load?.value
+            let water = self.water
+            let world = await Task.detached(priority: .userInitiated) { scene.make(in: language, water: water) }.value
             self.begin(world, keepingAutosave: true, isDemo: true)
             if let session = self.session { scene.prepare(session) }
         }

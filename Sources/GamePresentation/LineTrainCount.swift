@@ -226,7 +226,7 @@ extension GameSession {
     private func addTrains(
         _ count: Int, to line: ServiceLine, cost: Money, type: TrainType?, cars: Int, targets: TargetHeadways, done: () -> String
     ) {
-        perform(.addLineTrains(line.id, count: count, type: type, cars: cars, targets: targets, language: language)) { outcome, _, _ in
+        let outcome = perform(.addLineTrains(line.id, count: count, type: type, cars: cars, targets: targets, language: language)) { outcome, _, world in
             var text = done()
             if count > 0 {
                 text = language.text(
@@ -236,7 +236,13 @@ extension GameSession {
             }
             if outcome.highSpeed { text += language.nowHighSpeedText(line.name) }
             let left = outcome.held + outcome.unfit
-            if left > 0 {
+            if left > 0, outcome.held > 0, let blocked = world.lineStartBlockedText(line.id, in: language) {
+                // Decision 584: whose train holds the first stop.
+                text += language.text(
+                    " \(left) of them \(left == 1 ? "stays" : "stay") off the track, not assigned: ",
+                    "其中 \(left) 列沒有放上軌道，也沒有配屬："
+                ) + blocked.text
+            } else if left > 0 {
                 text += language.text(
                     " \(left) of them \(left == 1 ? "stays" : "stay") off the track, not assigned: there is no room at the line's first stop.",
                     "其中 \(left) 列沒有放上軌道，也沒有配屬：路線第一站停不下。"
@@ -244,6 +250,7 @@ extension GameSession {
             }
             return text
         }
+        pointToLineStartBlocker(line.id, after: outcome)
     }
 
     /// Takes `count` of line `id`'s own trains off it in `world`, those

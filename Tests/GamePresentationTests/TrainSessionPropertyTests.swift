@@ -137,14 +137,32 @@ final class TrainSessionPropertyTests: XCTestCase {
         let station = session.selectedStation
         // NetworkSession's placing: the first platform the train fits, or
         // else the longest; facing the way along it nearer the heading,
-        // its head at the far end, standing there.
+        // its head at the far end, standing there. Decision 584: at a
+        // station of two or more platforms, those on its line's track
+        // first, then of them one no train stands on and as long as the
+        // train, then one no train stands on, each tried until one takes it.
         func place() {
             guard let id, let station, let train = shadow.train(id: id) else { return }
             let platforms = shadow.trackPlatforms(of: station.id)
-            guard let platform = platforms.first(where: { $0.length >= train.length }) ?? platforms.max(by: { $0.length < $1.length }),
-                  let edge = shadow.network.edge(platform.edge),
+            guard platforms.count > 1 else {
+                if let platform = platforms.first { try? placeOn(platform, train: train) }
+                return
+            }
+            let line = shadow.assignedLine(of: id) ?? session.selectedLine.flatMap { $0.stops.contains(station.id) ? $0.id : nil }
+            let choices = Dictionary(uniqueKeysWithValues: shadow.placementPlatformChoices(for: id, at: station.id, line: line).map { ($0.platform, $0) })
+            let tried = platforms.filter { $0.length >= train.length } + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
+            let ordered = tried.filter { choices[$0]?.isOnLine == true } + tried.filter { choices[$0]?.isOnLine != true }
+            let free = ordered.filter { choices[$0]?.holder == nil }
+            var seen = Set<TrackPlatform>()
+            for platform in (free.filter { choices[$0]?.isShort == false } + free + ordered) where seen.insert(platform).inserted {
+                if (try? placeOn(platform, train: train)) != nil { return }
+            }
+        }
+        func placeOn(_ platform: TrackPlatform, train: Train) throws {
+            let id = train.id
+            guard let edge = shadow.network.edge(platform.edge),
                   let geometry = shadow.trackGeometry(of: platform.edge)
-            else { return }
+            else { throw GameError.unknownStation(platform.station) }
             let way = geometry.location(at: (platform.start + platform.end) / 2).direction
             let forward = switch session.placementHeading {
             case .north: way.dy <= 0
@@ -154,14 +172,12 @@ final class TrainSessionPropertyTests: XCTestCase {
             }
             let offset = forward ? platform.end : edge.length - platform.start
             var draft = shadow
-            do {
-                try draft.placeTrain(id, at: .onEdge(TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward), offset: offset))
-                if offset < edge.length {
-                    try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
-                }
-                try draft.useTrainPerformanceForMovement(id)
-                shadow = draft
-            } catch {}
+            try draft.placeTrain(id, at: .onEdge(TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward), offset: offset))
+            if offset < edge.length {
+                try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
+            }
+            try draft.useTrainPerformanceForMovement(id)
+            shadow = draft
         }
         func send() {
             guard let id, let station, let train = shadow.train(id: id), let position = train.position,

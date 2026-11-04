@@ -93,7 +93,7 @@ final class PlatformStopTests: XCTestCase {
     /// platform `platformCars` standard cars long (the platform tool's
     /// length, ``GameWorld/platformCarLength``), and a train of `cars`
     /// running it, placed at the first stop.
-    static func line(cars: Int, platformCars: Int) throws -> (GameSession, TrainID, assigned: String) {
+    static func line(cars: Int, platformCars: Int, type: TrainType? = nil) throws -> (GameSession, TrainID, assigned: String) {
         var world = try makeWorld(width: 204_800, height: 20_480, balance: 100_000_000, speed: .normal)
         world.setRealCarLengths(true)
         let builder = GameSession(world: world)
@@ -111,6 +111,7 @@ final class PlatformStopTests: XCTestCase {
         let line = try w.createLine(named: "L", stops: [west, east]).id
         try w.setLineServiceWindow(line, to: .allDay)
         let train = try w.purchaseTrain(named: "T").id
+        if let type { try w.setTrainType(train, to: type) }
         try w.setTrainCars(train, to: cars)
         let session = GameSession(world: w, language: .traditionalChinese)
         session.assignTrain(train, toLine: line)
@@ -163,6 +164,17 @@ final class PlatformStopTests: XCTestCase {
         )
         XCTAssertNil(world.lineDispatchHold(of: train), "it runs")
         XCTAssertTrue(assigned.hasSuffix("停站時最後一節會在月台外：把月台加長到 100 公尺，或把列車移出軌道、減到 4 節。"), assigned)
+    }
+
+    /// L9-2: four EMU3000 cars (20.3 m each, 81.2 m) on a four-car platform
+    /// (80 m) are not told to drop to three; five cars still are.
+    func testAFlagshipTrainOnAFourCarPlatformIsNotToldToShorten() throws {
+        let (session, train, assigned) = try Self.line(cars: 4, platformCars: 4, type: .emu3000)
+        XCTAssertGreaterThan(session.world.train(id: train)?.carPitch ?? 0, Train.realStandardCarLength)
+        XCTAssertNil(session.world.shortPlatformCall(ofTrain: train))
+        XCTAssertFalse(assigned.contains("月台"), assigned)
+        let (longer, five, _) = try Self.line(cars: 5, platformCars: 4, type: .emu3000)
+        XCTAssertNotNil(longer.world.shortPlatformCall(ofTrain: five))
     }
 
     /// Decision 565's screenshot scene: its train stands at the far
