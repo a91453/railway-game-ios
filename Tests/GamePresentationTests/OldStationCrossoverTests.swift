@@ -130,7 +130,7 @@ final class OldStationCrossoverTests: XCTestCase {
     /// double with "Make double track": the run's crossovers go in near
     /// its ends, outside the platforms, so the stations get their own
     /// inside them in the same command.
-    func upgradedStations(rules: NewGameRules, language: DisplayLanguage = .english) throws -> GameSession {
+    func upgradedStations(rules: NewGameRules, language: DisplayLanguage = .english, trains: Int = 0) throws -> GameSession {
         let session = newGame(rules: rules, language: language)
         let east = Base.west + 4_000 * 64
         session.selectTool(.network)
@@ -145,8 +145,16 @@ final class OldStationCrossoverTests: XCTestCase {
             session.addNetworkPlatform()
             XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         }
+        if trains > 0 {
+            let id = try line(session)
+            let said = plus(session, id, to: trains)
+            XCTAssertEqual(session.world.line(id: id)?.trains.count, trains, said)
+        }
         session.selectTool(.select)
-        session.tapMap(at: PlanPoint(x: (Base.west + east) / 2, y: Base.y), reach: 16)
+        // The middle, or beside it: a line's depot can stand there.
+        for offset: Int64 in [0, 500 * 64, -500 * 64, 1_000 * 64] where !session.canDoubleSelectedTrack {
+            session.tapMap(at: PlanPoint(x: (Base.west + east) / 2 + offset, y: Base.y), reach: 16)
+        }
         XCTAssertTrue(session.canDoubleSelectedTrack)
         session.beginTrackUpgrade(.doubleTrack)
         return session
@@ -178,6 +186,41 @@ final class OldStationCrossoverTests: XCTestCase {
             let day = try Base.runDay(session.world)
             XCTAssertEqual(day.deadlockMinutes, 0, "\(rules)")
             XCTAssertEqual(day.legs.filter { $0 > 100 }.count, 3, "\(rules): \(day.legs)")
+        }
+    }
+
+    /// REVIEW-L9 (decision 572, continued): with a train on the line, the
+    /// preview said the upgrade could go ahead, but the stations'
+    /// crossovers, planned with the trains taken off, were laid with them
+    /// still on and GameCore refused ("A train's route runs over that
+    /// track"); the train never leaves its platform, so the player could
+    /// never make it double. They are laid as the station panel lays
+    /// them: a train in the way goes back to the start of its line.
+    func testMakingTrackDoubleUnderARunningLine() throws {
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            for rules in [NewGameRules.simple, .realistic] {
+                let session = try upgradedStations(rules: rules, language: language, trains: 1)
+                let preview = try XCTUnwrap(session.trackUpgradePreview)
+                XCTAssertNil(preview.problem, "\(rules): \(preview.problem ?? "")")
+                XCTAssertNotNil(preview.cost, "\(rules): the preview says it can be built")
+                XCTAssertTrue(
+                    preview.note?.contains(language.text("beside", "車站旁加")) ?? false, "\(rules): \(preview.note ?? "")"
+                )
+                let before = session.world.economy.balance
+                session.buildTrackUpgrade()
+                XCTAssertEqual(session.message?.kind, .success, "\(rules): \(session.message?.text ?? "")")
+                if rules == .realistic {
+                    let text = session.message?.text ?? ""
+                    XCTAssertTrue(text.contains(language.text("1 train was in the way", "有 1 列車擋在那段軌道上")), text)
+                }
+                XCTAssertEqual(session.world.economy.balance, before - (preview.cost ?? .zero), "\(rules): what the preview said")
+                for station in session.world.stations.map(\.id) {
+                    XCTAssertNil(session.stationCrossoverOffer(for: station), "\(rules): laid with the second track")
+                }
+                let id = try XCTUnwrap(session.world.lines.first).id
+                XCTAssertEqual(session.world.line(id: id)?.trains.count, 1, "\(rules): the train is still on its line")
+                XCTAssertTrue(session.world.trains.allSatisfy { $0.position != nil }, "\(rules): and on the track")
+            }
         }
     }
 
