@@ -103,6 +103,30 @@ final class ScreenshotSceneTests: XCTestCase {
         }
     }
 
+    /// Decision 585 PR-3: on the real map, each pier of the two real
+    /// ferries stands at the shore as drawn: its shelter on the land, its
+    /// boats' berth on the water (run 41906144682 drew Gushan's boat on
+    /// land; the base map's water areas alone put its shelter on the water).
+    func testTheRealFerryPiersStandAtTheDrawnShore() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let water = try WaterGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_water.json")))
+        let tiles = try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan.pmtiles"),
+                                                options: .alwaysMapped))
+        for shot in [ScreenshotScene.gushanFerry, .tamsuiFerry] {
+            let world = shot.make(in: .traditionalChinese, water: water)
+            let route = try XCTUnwrap(world.ferryRoutes.first)
+            for (index, cell) in route.piers.enumerated() {
+                let scene = Map3DScene(world: world, focus: (Double(cell.middle.x), Double(cell.middle.y)), baseMap: tiles)
+                let pier = try XCTUnwrap(Map3DFerries(world: world, scene: scene).lines.first).piers[index]
+                let drawn = scene.drawnWater(round: pier.origin, radius: 80)
+                let shelter = pier.origin - pier.out * 13
+                XCTAssertFalse(drawn.isWater(x: shelter.x, z: shelter.z), "\(shot) pier \(index): the shelter on the land")
+                XCTAssertTrue(drawn.isWater(x: pier.origin.x, z: pier.origin.z), "\(shot) pier \(index): the pontoon on the water")
+                XCTAssertTrue(drawn.isWater(x: pier.berth.x, z: pier.berth.z), "\(shot) pier \(index): the berth on the water")
+            }
+        }
+    }
+
     /// Decision 580 (FOLLOWBUS): the follow-a-bus scene has a feeder route
     /// with buses out at half past nine, and following its route follows one.
     func testTheFollowBusSceneHasABusOutToFollow() async throws {

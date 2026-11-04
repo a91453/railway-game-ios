@@ -108,18 +108,22 @@ final class Map3DFerriesTests: XCTestCase {
         let line = try XCTUnwrap(laid.lines.first)
         XCTAssertEqual(line.boat, .tamsui)
         XCTAssertEqual(line.piers.count, 2)
-        // Row 3 looks south over rows 4 and 5, row 6 north: the plan's
-        // rows run with the scene's z.
-        XCTAssertGreaterThan(line.piers[0].out.z, 0.99)
-        XCTAssertLessThan(line.piers[1].out.z, -0.99)
+        // Row 3 looks south over rows 4 and 5, row 6 north (the plan's
+        // rows run with the scene's z), each turned a step of 22.5° toward
+        // the other pier, 20 columns along the river.
+        XCTAssertEqual(line.piers[0].out.z, cos(Float.pi / 8), accuracy: 1e-4)
+        XCTAssertGreaterThan(line.piers[0].out.x, 0)
+        XCTAssertEqual(line.piers[1].out.z, -cos(Float.pi / 8), accuracy: 1e-4)
+        XCTAssertLessThan(line.piers[1].out.x, 0)
         let scene = Map3DScene(world: world)
         for pier in line.piers {
+            let drawn = scene.drawnWater(round: pier.origin, radius: 40)
             // At the drawn shore: water where it stands out from, land a
             // step behind (decision 585 PR-3).
             let edge = pier.origin - pier.out * Map3DFerry.pierOffshore
-            XCTAssertTrue(scene.isDrawnWater(x: edge.x, z: edge.z, world: world))
+            XCTAssertTrue(drawn.isWater(x: edge.x, z: edge.z))
             let behind = edge - pier.out * Map3DFerries.shoreStep
-            XCTAssertFalse(scene.isDrawnWater(x: behind.x, z: behind.z, world: world))
+            XCTAssertFalse(drawn.isWater(x: behind.x, z: behind.z))
             let gap = (pier.berth - pier.origin).length
             XCTAssertEqual(gap, Map3DFerry.pontoonReach + Map3DFerries.berthGap + Map3DFerry.Boat.tamsui.length / 2, accuracy: 0.01)
         }

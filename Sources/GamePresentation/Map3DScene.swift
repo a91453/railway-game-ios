@@ -128,35 +128,69 @@ public struct Map3DScene: Sendable {
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
     /// (``Map3DPick/ground(of:world:)``).
     public let drawnGround: Map3DGroundGrid
-    /// Decision 585 PR-3: on a real-world map, the base map's water areas
-    /// by the 64 m cell (``Builder/waterCells``), for the ferry piers to
-    /// stand at its shore; `nil` on a map without, whose water is the
-    /// ground's own cells.
-    let baseWater: [ChunkKey: [[[Map3DBaseMap.Point]]]]?
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
-    /// Decision 585 PR-3: whether scene point (`x`, `z`) is drawn as
-    /// water: the base map's areas on a real-world map (where the scene
-    /// has them), else the ground's cell.
-    func isDrawnWater(x: Float, z: Float, world: GameWorld) -> Bool {
-        let cellLength = Double(Land.cellLength)
-        let column = Int(((originX + Double(x) * Builder.metre) / cellLength).rounded(.down))
-        let row = Int(((originY + Double(z) * Builder.metre) / cellLength).rounded(.down))
-        guard let baseWater else { return world.isWater(row: row, column: column) }
-        guard let areas = baseWater[ChunkKey(column: column, row: row)] else { return false }
-        let px = Double(x), pz = Double(z)
-        return areas.contains { rings in
-            var inside = false
-            for ring in rings {
-                var j = ring.count - 1
-                for i in ring.indices {
-                    let a = ring[i], b = ring[j]
-                    if (a.z > pz) != (b.z > pz), px < (b.x - a.x) * (pz - a.z) / (b.z - a.z) + a.x { inside.toggle() }
-                    j = i
+    /// Decision 585 PR-3: the water as drawn within `radius` metres of
+    /// `centre`, for the ferry piers to stand at its shore. The ground's
+    /// faces (the first ``Chunk/baseIndexCount`` indices) no more than 4 m
+    /// over `centre`'s, the top one at a point deciding: the base map's
+    /// water areas, waterways and cover over them, or the ground's own
+    /// water cells, as the player sees them (the base map's water areas
+    /// alone missed a Gushan basin's further 70 m).
+    func drawnWater(round centre: Map3DPoint, radius: Float) -> DrawnWater {
+        var water = DrawnWater()
+        let top = centre.y + 4
+        for chunk in chunks {
+            let vertices = chunk.mesh.vertices, indices = chunk.mesh.indices
+            var k = 0
+            while k + 2 < chunk.baseIndexCount {
+                let a = vertices[Int(indices[k])], b = vertices[Int(indices[k + 1])], c = vertices[Int(indices[k + 2])]
+                k += 3
+                guard max(a.y, b.y, c.y) <= top else { continue }
+                let low = (x: min(a.x, b.x, c.x), z: min(a.z, b.z, c.z)), high = (x: max(a.x, b.x, c.x), z: max(a.z, b.z, c.z))
+                guard high.x >= centre.x - radius, low.x <= centre.x + radius, high.z >= centre.z - radius, low.z <= centre.z + radius
+                else { continue }
+                water.add(DrawnWater.Face(a: a, b: b, c: c), low: low, high: high)
+            }
+        }
+        return water
+    }
+
+    /// Decision 585 PR-3: ground faces by the 8 m square, to ask of a point
+    /// whether its top face is water (``drawnWater(round:radius:)``).
+    struct DrawnWater {
+        struct Face {
+            let a: Map3DVertex, b: Map3DVertex, c: Map3DVertex
+        }
+
+        static let square: Float = 8
+        private var squares: [Int64: [Face]] = [:]
+
+        private static func key(_ column: Int, _ row: Int) -> Int64 { Int64(column) << 32 | Int64(UInt32(bitPattern: Int32(row))) }
+
+        mutating func add(_ face: Face, low: (x: Float, z: Float), high: (x: Float, z: Float)) {
+            let s = Self.square
+            for column in Int((low.x / s).rounded(.down))...Int((high.x / s).rounded(.down)) {
+                for row in Int((low.z / s).rounded(.down))...Int((high.z / s).rounded(.down)) {
+                    squares[Self.key(column, row), default: []].append(face)
                 }
             }
-            return inside
+        }
+
+        /// Whether the top face over (`x`, `z`) is water; `false` with none.
+        func isWater(x: Float, z: Float) -> Bool {
+            let s = Self.square
+            guard let faces = squares[Self.key(Int((x / s).rounded(.down)), Int((z / s).rounded(.down)))] else { return false }
+            var best: (y: Float, water: Bool)?
+            for face in faces {
+                func side(_ p: Map3DVertex, _ q: Map3DVertex) -> Float { (q.x - p.x) * (z - p.z) - (q.z - p.z) * (x - p.x) }
+                let d1 = side(face.a, face.b), d2 = side(face.b, face.c), d3 = side(face.c, face.a)
+                if (d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0) { continue }
+                let y = (face.a.y + face.b.y + face.c.y) / 3
+                if best.map({ y > $0.y + 0.001 }) ?? true { best = (y, abs(face.a.layer - Map3DVertex.water) < 0.01) }
+            }
+            return best?.water ?? false
         }
     }
 
@@ -353,7 +387,6 @@ public struct Map3DScene: Sendable {
         builder.addGround(water: real == nil)
         drawnGround = builder.groundGrid()
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
-        baseWater = real == nil ? nil : builder.waterCells
         // Decision 438: the player's own roads, which the base map has not.
         if real != nil { builder.addOwnRoads() }
         let cleared = builder.addTrack(snapshot)
