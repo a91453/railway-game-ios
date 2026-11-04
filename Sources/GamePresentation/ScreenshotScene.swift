@@ -90,6 +90,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// of the pull request that added the offer.
     case depotOffer
 
+    /// Decision 580 (FOLLOWBUS): the demo map with a road along its first
+    /// station's row and a feeder bus route of two stops on it, a bus every
+    /// ten minutes, run on to half past nine in the morning, when buses are
+    /// out: for the screenshots of the 3D map following a bus
+    /// (`-screenshot-follow-bus`).
+    case followBus
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -122,6 +129,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .wenhu: Self.wenhuWorld(in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .depotOffer: Self.pausedDemo(in: language)
+        case .followBus: Self.followBusWorld(in: language)
         }
     }
 
@@ -142,6 +150,31 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     private static func pausedDemo(in language: DisplayLanguage) -> GameWorld {
         var world = DemoWorld.make(in: language)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Follow a bus
+
+    /// Half past nine on the first morning.
+    public static let followBusRunSeconds: Int64 = 9 * 3_600 + 1_800
+
+    private static func followBusWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            guard let station = world.stations.first else { throw .unknownStation(StationID(rawValue: 1)) }
+            let home = CellPosition(containing: station.location)
+            let cells = (0...24).map { CellPosition(row: home.row, column: home.column + $0) }
+            try world.borrow(CompanyAccounts.maximumLoan)
+            try world.setRoads(cells, in: Array(Set(cells.map { LandBlock(cellRow: $0.row, column: $0.column) })))
+            _ = try world.createBusRoute(to: station.id, stops: [cells[24], cells[14]], service: .every(minutes: 10), buses: 3)
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int((followBusRunSeconds - world.clock.now.seconds) / 600))
+        } catch {
+            preconditionFailure("The follow-a-bus screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
     }
