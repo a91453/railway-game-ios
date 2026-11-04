@@ -1044,7 +1044,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(build.appears(within: 5))
         build.tap()
 
-        let platform = app.segmentedControls.buttons["Station"].firstMatch
+        let platform = app.networkMode("Station")
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             XCTAssertTrue(controls.appears(within: 5))
@@ -1424,13 +1424,55 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(network.appears(within: 10))
         network.waitUntilSettled()
         network.tap()
-        let depot = app.buttons["Depot"]
+        let depot = app.networkMode("Depot")
         XCTAssertTrue(depot.appears(within: 10))
         XCTAssertTrue(depot.becomesHittable(within: 10))
         depot.tap()
         let sidings = app.descendants(matching: .any)["network.depotSidings"].firstMatch
         XCTAssertTrue(sidings.appears(within: 10), "The number of sidings")
         XCTAssertTrue(sidings.becomesHittable(within: 10))
+    }
+
+    /// Decision 574's next step (the owner on 112.1: the mode row slid
+    /// only now and then, and once the panel had been closed it stood at
+    /// its start, the chosen Cable car half cut off): Cable car can be
+    /// reached, and with the panel closed and opened again it is still
+    /// chosen and in view, without sliding the row.
+    func testTheChosenModeIsInViewWhenTheToolOpensAgain() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        app.chooseBlankMap()
+        func openNetwork() {
+            let buildEntry = app.buttons["dock.build"]
+            XCTAssertTrue(buildEntry.appears(within: 10))
+            buildEntry.tap()
+            let network = app.buttons["tool.network"]
+            XCTAssertTrue(network.appears(within: 10))
+            network.waitUntilSettled()
+            if !network.isSelected { network.tap() }
+        }
+        openNetwork()
+        let cable = app.networkMode("Cable car")
+        XCTAssertTrue(cable.becomesHittable(within: 10), "Cable car can be reached")
+        cable.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["network.cablewayAngle"].firstMatch.appears(within: 10), "The cable car's options")
+        let done = app.buttons["tool.select"]
+        XCTAssertTrue(done.becomesHittable(within: 10))
+        done.tap()
+        XCTAssertTrue(cable.disappears(within: 10), "The panel closes")
+        openNetwork()
+        // Not slid: the row itself brings the chosen mode into view.
+        let chosen = app.networkModeElement("Cable car")
+        XCTAssertTrue(chosen.appears(within: 10))
+        XCTAssertTrue(chosen.becomesHittable(within: 10), "The chosen mode is in view when the panel opens again")
+        XCTAssertTrue(chosen.isSelected, "Cable car is still chosen")
     }
 
     /// Decision 250 (a player's report): a sight tapped on the map opens the

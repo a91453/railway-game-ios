@@ -328,9 +328,11 @@ extension GameSession {
             }
         case .buildDoubleTrackChain(let main, let parallel, let platforms, let crossovers):
             outcome.track = try buildDoubleChain(main: main, parallel: parallel, platforms: platforms, in: &world).last
-            for crossover in crossovers {
-                _ = try crossover.build(in: &world, heights: heights)
-            }
+            // Decision 572, continued: its stations' crossovers were planned
+            // with the trains taken off (``missingStationCrossovers(of:in:)``),
+            // so a train standing at a platform goes back to its line's
+            // start, as the station panel's button does (REVIEW-L9).
+            outcome.left = try layLiftingTrains(crossovers, in: &world)
         case .autoService(let plan):
             return try apply(plan, to: &world)
         case .acquireRealLine(let acquisition):

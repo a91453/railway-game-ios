@@ -469,7 +469,7 @@ final class RealWorldMapUITests: XCTestCase {
         }
 
         // The platform mode, from the details card (opened if folded).
-        let platform = app.segmentedControls.buttons["Station"].firstMatch
+        let platform = app.networkMode("Station")
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }

@@ -47,7 +47,7 @@ public enum WhatsNew {
                     chinese: "鋪好的機廠會自動接上相連的路線；附近有好幾條線時，會給按鈕讓你選。"
                 ),
                 Line(
-                    english: "Station pages can add a crossover between the two tracks of an old double-track station, and Upgrade to Double Track adds crossovers beside the stations. A third train now fits.",
+                    english: "Station pages can add a crossover between the two tracks of an old double-track station, and Make double track adds crossovers beside the stations. A third train now fits.",
                     chinese: "舊的複線車站，車站面板可以加渡線；「升級為複線」也會在車站旁加渡線，第三列車放得進去。"
                 ),
                 Line(
@@ -59,7 +59,7 @@ public enum WhatsNew {
                     chinese: "實景地圖有了台灣節慶：大甲媽祖、平溪天燈、101 跨年、中秋讓附近車站多出乘客；媽祖、天燈、中秋依農曆。"
                 ),
                 Line(
-                    english: "On the 3D map you can follow a bus: tap a bus, or use Follow Bus on a line card or a stop. Buses are drawn even with street scenes off.",
+                    english: "On the 3D map you can follow a bus: tap a bus, or use Follow a Bus on a line card or a stop. Buses are drawn even with street scenes off.",
                     chinese: "3D 地圖可以跟隨公車：點公車，或用路線卡、站牌的「跟隨公車」；街景關著也看得到公車。"
                 ),
                 Line(

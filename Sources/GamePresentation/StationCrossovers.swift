@@ -183,7 +183,11 @@ extension GameSession {
     /// platform on both tracks, or its crossovers there already. Worked
     /// out once for each station and command.
     public func stationCrossoverOffer(for id: StationID) -> StationCrossoverOffer? {
-        stationCrossoverDraft(for: id).offer
+        let draft = stationCrossoverDraft(for: id)
+        guard let offer = draft.offer else { return nil }
+        // L9-3: the cash in hand now, not when it was worked out: time and
+        // fares change it without a command.
+        return StationCrossoverOffer(count: offer.count, cost: offer.cost, problem: shortfallText(offer.cost, doing: draft.command))
     }
 
     func stationCrossoverDraft(for id: StationID) -> StationCrossoverOfferMemo {
@@ -196,7 +200,7 @@ extension GameSession {
                 let cost = Money(GameWorld.pricingBalance.amount - found.built.economy.balance.amount)
                 memo = StationCrossoverOfferMemo(
                     station: id, commandRevision: commandRevision,
-                    offer: StationCrossoverOffer(count: found.stretches.count, cost: cost, problem: shortfallText(cost, doing: command)),
+                    offer: StationCrossoverOffer(count: found.stretches.count, cost: cost, problem: nil),
                     command: command
                 )
             }

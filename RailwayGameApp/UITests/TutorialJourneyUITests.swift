@@ -140,7 +140,7 @@ private final class TutorialJourney {
 
         // Stations
         arrive(at: 5)
-        let platform = app.segmentedControls.buttons["Station"].firstMatch
+        let platform = app.networkMode("Station")
         check(platform, "the Platform mode")
         platform.tap()
 
