@@ -10,6 +10,7 @@ trap 'rm -rf "$work"' EXIT
 bin="$(swift build --show-bin-path)"
 shopt -s nullglob
 source "$root/tools/native-glass/build-inputs.sh"
+native_glass_sdk_flags
 native_glass_build_inputs "$root" "$bin"
-swiftc -swift-version 6 -warnings-as-errors "${includes[@]}" tools/native-glass/check-cabins.swift "${objects[@]}" -o "$work/check"
+swiftc -swift-version 6 -warnings-as-errors "${sdk_flags[@]}" "${includes[@]}" tools/native-glass/check-cabins.swift "${objects[@]}" -o "$work/check"
 "$work/check" "${1:?fixtures}" "${2:?report JSON}"

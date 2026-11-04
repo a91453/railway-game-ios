@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Sourced by both standalone checkers. SwiftBuild can emit a .swiftmodule
 # directory and does not promise a particular package's intermediate name.
+native_glass_sdk_flags() {
+ sdk_flags=()
+ if [[ "$(uname -s)" == Darwin ]]; then
+  sdk_flags=(-sdk "$(xcrun --sdk macosx --show-sdk-path)" -target "$(uname -m)-apple-macosx14.0")
+ fi
+}
+
 native_glass_build_inputs() {
  local build_root="$1" bin_path="$2" component module module_dir target found
  includes=(); objects=()
