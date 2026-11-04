@@ -826,8 +826,6 @@ private struct NetworkModeScrollRow<Row: View>: View {
     @State private var rowWidth = 0.0
     @State private var viewWidth = 0.0
 
-    private static var space: String { "network.modeRow" }
-
     var body: some View {
         let fade = ScrollEdgeFade(offset: offset, contentWidth: rowWidth, viewportWidth: viewWidth)
         ScrollViewReader { proxy in
@@ -847,12 +845,15 @@ private struct NetworkModeScrollRow<Row: View>: View {
                         }
                         .accessibilityHidden(true)
                     }
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frame in
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("network.modeRow")) } action: { frame in
                         offset = -Double(frame.minX)
                         rowWidth = Double(frame.width)
                     }
             }
-            .coordinateSpace(.named(Self.space))
+            // Where the scroll position is read. The name is written out at
+            // both ends: the geometry closure is sendable, so it reads no
+            // property of this generic, main-actor view.
+            .coordinateSpace(.named("network.modeRow"))
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = Double($0) }
             .mask { EdgeFadeMask(fade: fade) }
             .onAppear { proxy.scrollTo(selection, anchor: .center) }
