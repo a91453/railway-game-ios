@@ -79,6 +79,9 @@ public struct PlaceNames: Sendable {
     let settlements: [Place]
     let wards: [Place]
     let townships: [Township]
+    /// The landmarks, roads and crossings a station can also be named after
+    /// (decision 569), from their own file; `nil` without it.
+    public var landmarks: StationLandmarks?
 
     /// Reads the app's place names file (`build_place_names.py`). Throws for
     /// a file out of shape.

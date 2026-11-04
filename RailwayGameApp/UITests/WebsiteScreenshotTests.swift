@@ -126,6 +126,38 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 565: a train of four 20 m cars standing at a platform four
+    /// cars long on a real map, close up on the 2D map and on the 3D one:
+    /// every car inside the platform, its nose at the platform's end. For
+    /// the screenshot review of the pull request that stopped it so.
+    func testPlatformStop() {
+        let app = launch(extra: ["-screenshot-scene", "platformStop", "-screenshot-follow-train",
+                                 "-screenshot-3d-view", "160,0,55", "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The train's card has no stock row (no real line's stock): let the
+        // follow settle instead.
+        settle(seconds: 5)
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<6 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("platform-stop-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        settle(seconds: 12)
+        keep("platform-stop-3d", app)
+    }
+
     /// Decision 539: a freight line's train, followed on the 3D map, is
     /// the R200 hauling container wagons (not grey boxes). For the
     /// screenshot review of the pull request that drew it so.
@@ -937,15 +969,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
-    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
-    /// on the real-world demo where the track climbs, with where people
-    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
-    /// in a place of its own, the key folded while the pill shows. The
-    /// longest platform, so its stretch is the likeliest not to level; a
-    /// stretch that levels still shows the pill, banner and key together.
-    func testPlatformLevellingWithTheLayer() {
-        let app = launch(extra: ["-show-building-layer"])
-        defer { app.terminate() }
+    /// The real-world demo with a stretch of track built across the
+    /// middle of the map and a platform's site picked on it (the platform
+    /// mode open, at its longest), for a test to shoot; its ✓.
+    private func pickPlatformSiteOnTheRealWorldDemo(_ app: XCUIApplication) -> XCUIElement {
         app.openDemo("demo.realWorld", timeout: 60)
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 60), "The demo starts")
@@ -1003,6 +1030,53 @@ final class WebsiteScreenshotTests: XCTestCase {
             siteX = covering.minX - 40
         }
         origin.withOffset(CGVector(dx: siteX, dy: middle)).tap()
+        return confirm
+    }
+
+    /// Decision 569: the names offered under a new station's name on a
+    /// real-world map, then one of them picked.
+    func testStationNameChoices() {
+        let app = launch()
+        defer { app.terminate() }
+        _ = pickPlatformSiteOnTheRealWorldDemo(app)
+        let first = app.buttons["network.stationNameChoice.0"]
+        XCTAssertTrue(first.appears(within: 10), "The names show under the name")
+        // The name sits below the card's short middle (on an iPhone held
+        // sideways it shows some 70 points): drag inside it, slowly, until
+        // the whole first name shows, not only its top edge.
+        let middle = app.scrollViews["details.scroll.middle"]
+        func shown() -> Bool {
+            first.isHittable && (!middle.exists || first.frame.maxY <= middle.frame.maxY + 1)
+        }
+        for _ in 0..<12 where !shown() && middle.exists {
+            let box = middle.frame
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let from = origin.withOffset(CGVector(dx: box.midX, dy: box.maxY - 6))
+            let to = origin.withOffset(CGVector(dx: box.midX, dy: box.minY + 6))
+            from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 0.5)
+        }
+        XCTAssertTrue(shown(), "The names can be reached")
+        settle()
+        keep("station-name-choices", app)
+        let second = app.buttons["network.stationNameChoice.1"]
+        if second.exists, second.isHittable {
+            second.tap()
+            settle()
+            keep("station-name-choice-picked", app)
+        }
+    }
+
+    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
+    /// on the real-world demo where the track climbs, with where people
+    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
+    /// in a place of its own, the key folded while the pill shows. The
+    /// longest platform, so its stretch is the likeliest not to level; a
+    /// stretch that levels still shows the pill, banner and key together.
+    func testPlatformLevellingWithTheLayer() {
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        let confirm = pickPlatformSiteOnTheRealWorldDemo(app)
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         settle()
         keep("platform-levelling-pill", app)
