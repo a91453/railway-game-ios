@@ -1395,7 +1395,16 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// and given 海岸線: the platforms listed, the one on 海岸線's track
     /// picked, then the other picked by hand.
     func testPlacementPlatformChoice() {
-        let app = launch(extra: ["-ui-test-world", "platform-choice"])
+        shootPlacementPlatformChoice(english: false, name: "platform-choice")
+    }
+
+    /// The same in English, the first only.
+    func testPlacementPlatformChoiceEnglish() {
+        shootPlacementPlatformChoice(english: true, name: "platform-choice-en")
+    }
+
+    private func shootPlacementPlatformChoice(english: Bool, name: String) {
+        let app = launch(extra: ["-ui-test-world", "platform-choice"], english: english)
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 30), "The world opens")
@@ -1426,16 +1435,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         // only.
         let pinned = app.descendants(matching: .any)["details.scroll.middle"].firstMatch
         let middle = pinned.appears(within: 5) ? pinned : app.descendants(matching: .any)["details.scroll.whole"].firstMatch
-        let shown = scroll(second, into: middle, of: app)
+        // One row of buttons, its label beside them: bringing platform 2
+        // into the card's middle shows them all.
+        let shown = scroll(second, into: middle, at: card.frame.maxX - 8, of: app)
         settle()
-        keep("platform-choice", app)
         if !shown { print("platform-choice card:\n\(card.debugDescription)") }
-        XCTAssertTrue(shown, "Platform 2 shows")
-        let picksFirst = second.isSelected
-        let other = picksFirst ? first : second
-        if picksFirst {
-            XCTAssertTrue(scroll(first, into: middle, of: app), "Platform 1 shows")
-        }
+        keep(name, app)
+        XCTAssertTrue(shown, "The platforms show")
+        XCTAssertTrue(first.isHittable, "Both platforms show at once")
+        guard !english else { return }
+        let other = second.isSelected ? first : second
         other.tap()
         settle()
         XCTAssertTrue(other.isSelected, "The tapped platform is picked")
@@ -1445,7 +1454,10 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Drags `list`, a short scrolling band, by as far as `row` still lies
     /// outside it, until the row shows whole: the band's fixed short drags
     /// moved some 8 pt a time past the touch's slop (run 41885513636).
-    private func scroll(_ row: XCUIElement, into list: XCUIElement, of app: XCUIApplication) -> Bool {
+    /// `x` is clear of every control: a drag that starts on the
+    /// performance menu opens it rather than scrolling (run 41890979496
+    /// stopped at 26% there).
+    private func scroll(_ row: XCUIElement, into list: XCUIElement, at x: CGFloat, of app: XCUIApplication) -> Bool {
         let origin = app.coordinate(withNormalizedOffset: .zero)
         for _ in 0..<12 {
             let band = list.frame.insetBy(dx: 0, dy: 6)
@@ -1456,10 +1468,6 @@ final class WebsiteScreenshotTests: XCTestCase {
             let gap = row.exists ? (up ? place.maxY - band.maxY : band.minY - place.minY) : band.height
             let distance = min(max(gap + 16, 24), band.height)
             let startY = up ? band.maxY - 2 : band.minY + 2
-            // In the margin right of the rows: a drag that starts on the
-            // performance menu opens it rather than scrolling (run
-            // 41890979496 stopped at 26% there).
-            let x = (row.exists ? place.maxX : band.midX) + 6
             let start = origin.withOffset(CGVector(dx: x - app.frame.minX, dy: startY - app.frame.minY))
             let end = start.withOffset(CGVector(dx: 0, dy: up ? -distance : distance))
             start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)

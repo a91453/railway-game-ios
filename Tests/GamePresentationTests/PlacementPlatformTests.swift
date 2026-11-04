@@ -60,6 +60,10 @@ final class PlacementPlatformTests: XCTestCase {
         XCTAssertEqual(session.placementPlatform, onLine.platform)
         XCTAssertEqual(session.placementPlatformNote(onLine), "海岸線的軌道")
         XCTAssertEqual(onLine.title(in: .traditionalChinese), "第 \(onLine.number) 月台 · \(NetworkBuilding.lengthText(onLine.platform.length, in: .traditionalChinese))")
+        XCTAssertEqual(onLine.name(in: .english), "Platform \(onLine.number)")
+        XCTAssertEqual(onLine.name(in: .traditionalChinese), "第 \(onLine.number) 月台")
+        XCTAssertEqual(onLine.lengthText(in: .traditionalChinese), NetworkBuilding.lengthText(onLine.platform.length, in: .traditionalChinese))
+        XCTAssertFalse(onLine.warns)
 
         session.placeSelectedTrain()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
@@ -104,6 +108,7 @@ final class PlacementPlatformTests: XCTestCase {
         let choices = world.placementPlatformChoices(for: train, at: coast)
         let held = try XCTUnwrap(choices.first(where: { $0.platform == onLine }))
         XCTAssertEqual(held.holder, idle)
+        XCTAssertTrue(held.warns)
         XCTAssertEqual(held.note(train: train, line: nil, in: world, language: .english), "列車 4 stands here")
         XCTAssertNotEqual(world.defaultPlacementPlatform(for: train, at: coast), onLine)
 

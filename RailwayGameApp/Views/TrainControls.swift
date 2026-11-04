@@ -598,8 +598,10 @@ private struct TrainTypeMenu: View, Equatable {
 }
 
 /// Decision 584: the platforms of the selected station the selected train
-/// can be placed on, when it has two or more; the one it will go on is
-/// highlighted. Nothing at a station of one platform.
+/// can be placed on, when it has two or more, as one row of small buttons
+/// beside their label: the one it will go on filled, the others outlined,
+/// so a phone's short card shows at once that there is a choice. More
+/// than fit scroll sideways. Nothing at a station of one platform.
 private struct PlacementPlatformPicker: View {
     let session: GameSession
 
@@ -607,44 +609,70 @@ private struct PlacementPlatformPicker: View {
         let choices = session.placementPlatformChoices
         if !choices.isEmpty {
             let picked = session.placementPlatform
+            let language = session.language
             VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: session.language.text("Platform", "月台"))
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
-                ForEach(choices) { choice in
-                    let isActive = choice.platform == picked
-                    let note = session.placementPlatformNote(choice)
-                    Button {
-                        session.pickPlacementPlatform(choice.platform)
-                    } label: {
+                HStack(spacing: 8) {
+                    Text(verbatim: language.text("Platform", "月台"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize()
+                    // Plain buttons, not a segmented control: a drag that
+                    // starts on one does not scroll the card (#1809).
+                    ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
-                            // Whole: the note gives way, not the title
-                            // (run 41894932019 broke "64 公尺" in two).
-                            Text(verbatim: choice.title(in: session.language))
-                                .font(.subheadline.weight(.semibold))
-                                .monospacedDigit()
-                                .layoutPriority(1)
-                            Spacer(minLength: 4)
-                            if let note {
-                                Label {
-                                    Text(verbatim: note)
-                                } icon: {
-                                    Image(systemName: choice.holder != nil || choice.isShort ? "exclamationmark.triangle" : "point.3.connected.trianglepath.dotted")
-                                }
-                                .font(.caption)
-                                .lineLimit(2)
-                                .foregroundStyle(isActive ? Theme.onPrimary : (choice.holder != nil || choice.isShort ? Theme.warning : Theme.textSecondary))
+                            ForEach(choices) { choice in
+                                chip(choice, isActive: choice.platform == picked, language: language)
                             }
                         }
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                        .padding(.vertical, 1)
                     }
-                    .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAddTraits(isActive ? .isSelected : [])
-                    .accessibilityIdentifier("train.platform.\(choice.number)")
+                    .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                }
+                // What a warning is about, for the platform picked: who
+                // stands on it, or that it is shorter than the train.
+                if let choice = choices.first(where: { $0.platform == picked }), choice.warns,
+                   let note = session.placementPlatformNote(choice) {
+                    Label {
+                        Text(verbatim: note)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Theme.warning)
+                    .accessibilityIdentifier("train.platform.note")
                 }
             }
         }
+    }
+
+    private func chip(_ choice: PlacementPlatformChoice, isActive: Bool, language: DisplayLanguage) -> some View {
+        let note = session.placementPlatformNote(choice)
+        let marked = choice.warns || choice.isOnLine
+        return Button {
+            session.pickPlacementPlatform(choice.platform)
+        } label: {
+            VStack(spacing: 1) {
+                Text(verbatim: choice.name(in: language))
+                    .font(.footnote.weight(.semibold))
+                HStack(spacing: 3) {
+                    if marked {
+                        Image(systemName: choice.warns ? "exclamationmark.triangle" : "point.3.connected.trianglepath.dotted")
+                    }
+                    Text(verbatim: choice.lengthText(in: language))
+                }
+                .font(.caption2)
+                .foregroundStyle(isActive ? Theme.onPrimary : (choice.warns ? Theme.warning : Theme.textSecondary))
+            }
+            .monospacedDigit()
+            .lineLimit(1)
+            .padding(.horizontal, 10)
+            .frame(minWidth: 64, minHeight: 36)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(choice.name(in: language)), \(choice.lengthText(in: language))"))
+        .accessibilityValue(Text(verbatim: note ?? ""))
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+        .accessibilityIdentifier("train.platform.\(choice.number)")
     }
 }

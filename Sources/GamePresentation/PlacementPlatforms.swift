@@ -116,6 +116,20 @@ extension PlacementPlatformChoice {
         return language.text("Platform \(number) · \(length)", "第 \(number) 月台 · \(length)")
     }
 
+    /// "Platform 2", the first line of its button in the train tool's row.
+    public func name(in language: DisplayLanguage) -> String {
+        language.text("Platform \(number)", "第 \(number) 月台")
+    }
+
+    /// "80 m", the second line of its button.
+    public func lengthText(in language: DisplayLanguage) -> String {
+        NetworkBuilding.lengthText(platform.length, in: language)
+    }
+
+    /// Whether its note warns: a train stands on it, or it is shorter
+    /// than the train.
+    public var warns: Bool { holder != nil || isShort }
+
     /// What the player should know of it before placing the train there:
     /// who stands on it, that it is shorter than the train, or that the
     /// train's line runs on its track. `nil` when none is.
