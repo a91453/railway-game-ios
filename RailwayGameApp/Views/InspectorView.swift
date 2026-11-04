@@ -16,13 +16,18 @@ struct InspectorView: View {
     /// on a narrow card (``SelectionHeadLayout``).
     @State private var headWidth: CGFloat = 0
     /// Decision 512: the train whose row of the train roster is open.
-    @State private var rosterTrain: TrainID?
+    @State private var rosterTrain: RosterFocus?
+
+    /// The train the roster opens on.
+    private struct RosterFocus: Identifiable {
+        let id: TrainID
+    }
 
     var body: some View {
         inspector
             .themeCard(padding: 10, cornerRadius: 12)
-            .fullScreenCover(isPresented: Binding(get: { rosterTrain != nil }, set: { if !$0 { rosterTrain = nil } })) {
-                TrainRosterView(session: session, focus: rosterTrain)
+            .fullScreenCover(item: $rosterTrain) { focus in
+                TrainRosterView(session: session, focus: focus.id)
             }
     }
 
@@ -102,7 +107,7 @@ struct InspectorView: View {
                     // Decision 512: this train's row of the roster, in one tap,
                     // last, so the chips before it keep their places.
                     chip("chart.bar.doc.horizontal", session.language.text("Roster", "運用表"), id: "inspector.train.roster") {
-                        rosterTrain = train
+                        rosterTrain = RosterFocus(id: train)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

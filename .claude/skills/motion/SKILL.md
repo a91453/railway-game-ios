@@ -65,6 +65,14 @@ App 的介面動畫照一套規則走（ARCHITECTURE 決策 253）：每一種�
   - 自訂的 `Layout` 只放 `subviews.first`，轉場時的第二個 View 不會被放好。所以外面包一個 `ZStack`，讓 Layout 永遠只有一個子 View。
 - **`.transition(x.animation(a))` 帶自己的動畫**：外面的 `.animation(_:value:)` 是 `nil`（減少動態）時，轉場照樣用 `a` 淡入。
 - **`phaseAnimator`、`keyframeAnimator` 的 trigger 每次都會跑**：要依情況不同（好消息跳、拒絕搖、減少動態都不動），就在內容裡判斷，不要換 trigger 的值。換值本身也算一次觸發。
+- **`withAnimation` 是全域的**：它開的 transaction 會帶著每個因此重算的 view 一起動，旁邊的列、格子被拉進動畫。只想動一個 view 時，在那個 view 上用 `.animation(_:value:)`，不要包整個狀態變更（出自 daneden `swiftui-gotchas` A1，MIT）。用 `MotionRule` 的 `withAnimation` 是為了整塊版面一起讓位，這是對的。
+- **不要用 `.animation(_:)` 沒有 `value:`**，一律帶要看的值（出自 SwiftUI Pro `references/views.md`，MIT）。轉場自己帶的 `.animation(a)`（`AnyTransition.animation`）是另一個 API，不在此限。
+- **兩段動畫接著跑，用 `withAnimation(_:completion:)`**（iOS 17 以上），不要用兩個 `withAnimation` 加 `DispatchQueue` 或 `Task.sleep` 延遲（出自 SwiftUI Pro `views.md`，MIT）。
+- **動畫中的樣式不要用三元運算子換 `AnyShapeStyle`**：每次算出新實例，SwiftUI 比不出相同，彈簧會在兩個樣式之間插值，過頭時閃出奇怪的顏色。留一個固定樣式，動畫只動 `.opacity`（出自 daneden A2，MIT）。
+- **`TimelineView(.animation)` 每個螢幕更新都重發 body，裡面的 `.transition`、`.id()` 子 view 的進出會不穩**。把 `TimelineView` 放進真的需要的最底層 view，讓 parent 保持穩定（出自 daneden A4，MIT）。`MapView` 的幾個 `TimelineView` 已放在各疊層裡面；新增時照這條。
+- **週期性的效果用 `phaseAnimator`**，不用 `TimelineView` 加三角函數；`TimelineView` 留給要看時鐘或每幀算位置的東西（地圖上的車、天氣）（出自 daneden A5，MIT；它寫 iOS 17.2 以上，我們的 iOS 17.0 目標用在 `#available` 後面）。
+- **`matchedGeometryEffect` 飛進 `ToolbarItem`（UIKit 導覽列託管）不會動**，`@Namespace` 傳不過去：要飛就在最上層 `ZStack` 自己畫一份，用一個 `progress` 驅動（出自 daneden A3，MIT）。
+- **動畫的重點在「減少動態」的對應**（第 3 節），`withAnimation` 完成後才改的狀態也要接。
 - **UI 測試**：會滑進來、縮放進來的東西，出現之後要等 `becomesHittable(within:)`，不要直接問 `isHittable`（CLAUDE.md）。
 
 ## 5. 不採用的部分（和畫風衝突）
@@ -74,6 +82,9 @@ LottieFiles 原文要求每個動畫都有三層：主要、次要、背景（�
 - 畫風是扁平、實心色塊、不用漸層與陰影（art-style skill、決策 84、121）。背景層只留遊戲本身的時間流動（列車、天氣、時段）。
 - 不用陰影跟著移動、模糊、光暈、彩帶。
 - 不加 Lottie 的播放套件：這份只拿原則，動畫用 SwiftUI 自己做。
+- daneden A6「預設用 `.default`，不要自己挑曲線」：我們每種動作都有 `MotionRule` 規定的時間與曲線，View 裡不寫新的秒數或彈簧；「不要為了好玩選 `.bouncy`」與我們「重的不回彈」相容。
+- SwiftUI Pro 的 `@Animatable` 巨集（iOS 26 以上、Xcode 26）：自訂動畫屬性時才用，目前沒有這種 view，需要時再寫在 `#available` 後面；`AnimatableModifier` 已棄用，新的不用。
+- `Text(date, style: .relative)` 倒數：遊戲時間不是系統時間，不適用。
 - 「深色模式降低 10–20% 的動態強度」先不做：規則的數字已經小，等實機看過再說。
 
 ## 6. 怎麼檢查
@@ -83,3 +94,10 @@ LottieFiles 原文要求每個動畫都有三層：主要、次要、背景（�
    - 「設定 › 輔助使用 › 動作 › 減少動態效果」開與關各看一次。
    - 看的三處：建造（✓ ✕ 的泡泡、蓋好的環、被拒絕的訊息）；點車站與列車、開關面板；教學卡片的打開與收合。
 3. **PR 的寫法**：寫出每個動畫用哪一條規則，改了哪個秒數，以及減少動態時變成什麼。
+
+## 外部參考
+
+第 4 節與第 5 節補入的條目另改寫自（授權全文在 `.claude/skills/ui-review/licenses/`）：
+
+- [twostraws/swiftui-agent-skill](https://github.com/twostraws/swiftui-agent-skill)（SwiftUI Pro）：© 2026 Paul Hudson，MIT，commit `f2920b63995263f57b3e198674e89a602efba6d2`，`swiftui-pro/references/views.md`、`api.md`。
+- [daneden/agent-skills](https://github.com/daneden/agent-skills)：© 2026 Daniel Eden，MIT，commit `d6e5665c96781e4938b666464bc96a377cc226b4`，`skills/swiftui-gotchas/SKILL.md`（A1–A6）。`skills/iterative-design/SKILL.md` 是「先出幾個粗稿讓人反應」的方法，我們的 CLAUDE.md「決策」一節已有（保留其他選項的預覽、五方各一行），不補。
