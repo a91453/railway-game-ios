@@ -1010,7 +1010,8 @@ final class Map3DMetalView: MTKView {
         trainHeads?(frame?.heads ?? [], camera)
         // Decision 342: the cars the city in front of is seen through.
         // Supplement: and the bus or cabin followed, as one point.
-        let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix, followed: followedSeeThrough)
+        let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix,
+                                         followed: ProcessInfo.processInfo.arguments.contains("-map3D.noFollowXray") ? nil : followedSeeThrough)
         var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
             trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)
