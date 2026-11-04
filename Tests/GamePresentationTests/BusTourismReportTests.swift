@@ -149,6 +149,7 @@ final class BusTourismReportTests: XCTestCase {
         route: \(brown.stops.count) stops, \(route.metres) m, every \(route.headway ?? 0) min with \(buses) buses, \(route.dailyDepartures) departures, \
         holds \(route.dailyCapacity) a day, costs \(dollars(route.dailyCost.amount)) a day; meets \(meets) at stop \(route.transfer.map { "\($0.stop)" } ?? "-"); \
         feeder trips \(route.feederTrips), local trips \(route.localTrips)
+        stations near its stops: \(world.stations.filter { ["動物園", "木柵", "木柵機廠"].contains($0.name) }.map { "\($0.name) \(world.stationDemand(of: $0.id)?.dailyTrips ?? 0) trips\($0.isDepot ? " (depot)" : "")" }.joined(separator: ", "))
         sight: \(sight.stars) hundredths of a star, \(sight.kind); its station \(world.attractionStation(of: sight.id).flatMap { world.station(id: $0)?.name } ?? "-")
         """)
         table(world, sight: sight, days: days, title: "Brown 15 alone")
