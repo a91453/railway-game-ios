@@ -55,8 +55,8 @@ public enum WhatsNew {
                     chinese: "買下文湖線等捷運、輕軌後，列車改走自己方向那條軌道，靠右行駛。"
                 ),
                 Line(
-                    english: "Taiwan's named festivals are on the real maps: Dajia Mazu, the Pingxi lanterns, New Year's Eve at Taipei 101 and the Mid-Autumn Festival bring extra riders to nearby stations on their real dates.",
-                    chinese: "實景地圖有了台灣節慶：大甲媽祖、平溪天燈、101 跨年、中秋，依農曆日期讓附近車站多出乘客。"
+                    english: "Taiwan's named festivals are on the real maps: Dajia Mazu, the Pingxi lanterns, New Year's Eve at Taipei 101 and the Mid-Autumn Festival bring extra riders to nearby stations. Mazu, the lanterns and Mid-Autumn follow the lunar calendar.",
+                    chinese: "實景地圖有了台灣節慶：大甲媽祖、平溪天燈、101 跨年、中秋讓附近車站多出乘客；媽祖、天燈、中秋依農曆。"
                 ),
                 Line(
                     english: "On the 3D map you can follow a bus, from a bus, the line card or a stop.",
@@ -65,6 +65,10 @@ public enum WhatsNew {
                 Line(
                     english: "The 3D map has the Changhua Roundhouse beside its turntable.",
                     chinese: "3D 地圖的彰化扇形車庫上線了，連著轉車台。"
+                ),
+                Line(
+                    english: "The Network tool has a cable car mode: lay a cable, set its stops and read each cable car's card. The real Taipei map has a Maokong Gondola demo.",
+                    chinese: "「路網」工具多了纜車模式：拉纜線、設站，每條纜車有自己的卡片；真實台北有貓空纜車示範。"
                 ),
                 Line(
                     english: "The Report a Problem page says where to send your report.",
@@ -83,10 +87,6 @@ public enum WhatsNew {
                 Line(
                     english: "Trains stuck facing each other at the end of a double track now get through, instead of waiting all day.",
                     chinese: "複線終點兩列車互相卡住時會自己解開，不再整天不動。"
-                ),
-                Line(
-                    english: "Airport MRT trains no longer cut ahead of a following train and jam the line in the evening.",
-                    chinese: "機場捷運傍晚不再因為列車搶先插進去而整條線卡住。"
                 ),
                 Line(
                     english: "With Reduce Motion on, panels fold and scroll without animation, and VoiceOver can pick a train in the fleet list.",
