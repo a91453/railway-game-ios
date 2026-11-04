@@ -110,12 +110,17 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// (`-screenshot-follow-bus`).
     case followBus
 
+    /// Decision 342 (FOLLOWXRAY): the same feeder bus route on Taipei Main
+    /// Station's real city, with its real buildings along the road, for the
+    /// screenshots of the followed bus seen through them.
+    case followBusCity
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
     public var place: (latitude: Double, longitude: Double)? {
         switch self {
-        case .taipeiMain: (25.0478, 121.5170)
+        case .taipeiMain, .followBusCity: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
         case .wenhu: (25.0600, 121.5600)
         // Its far station, 400 m east and 300 m north of Taipei Main
@@ -150,6 +155,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
         case .followBus: Self.followBusWorld(in: language)
+        case .followBusCity: Self.followBusCityWorld(in: language)
         }
     }
 
@@ -180,7 +186,20 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     public static let followBusRunSeconds: Int64 = 9 * 3_600 + 1_800
 
     private static func followBusWorld(in language: DisplayLanguage) -> GameWorld {
-        var world = DemoWorld.make(in: language)
+        followBus(on: DemoWorld.make(in: language))
+    }
+
+    private static func followBusCityWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = taipeiWorld(at: ScreenshotScene.followBusCity.place ?? (25.0478, 121.5170), in: language)
+        // A new game has no roads until they are turned on.
+        if world.roads == nil { world.enableRoads() }
+        return followBus(on: world)
+    }
+
+    /// `start`'s first station with a road along its row and the feeder
+    /// bus route on it, run on to ``followBusRunSeconds``.
+    private static func followBus(on start: GameWorld) -> GameWorld {
+        var world = start
         do throws(GameError) {
             guard let station = world.stations.first else { throw .unknownStation(StationID(rawValue: 1)) }
             let home = CellPosition(containing: station.location)
@@ -190,7 +209,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             _ = try world.createBusRoute(to: station.id, stops: [cells[24], cells[14]], service: .every(minutes: 10), buses: 3)
             // .fast is ten minutes a tick.
             world.setSpeed(.fast)
-            try world.advance(ticks: Int((followBusRunSeconds - world.clock.now.seconds) / 600))
+            // The city's world is on to ten already: no further.
+            try world.advance(ticks: max(0, Int((followBusRunSeconds - world.clock.now.seconds) / 600)))
         } catch {
             preconditionFailure("The follow-a-bus screenshot scene no longer builds: \(error)")
         }

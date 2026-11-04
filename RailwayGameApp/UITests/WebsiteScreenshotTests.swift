@@ -321,8 +321,14 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testFollowBusBack() { shootFollowBus("back", "follow-bus-back") }
     func testFollowBusWindow() { shootFollowBus("window", "follow-bus-window") }
 
-    private func shootFollowBus(_ view: String, _ name: String) {
-        let app = launch(extra: ["-screenshot-scene", "followBus", "-screenshot-follow-bus", "-map3DFollowView", view,
+    /// Decision 342 (FOLLOWXRAY): the same on Taipei's real city, buildings
+    /// beside and behind the bus, seen through.
+    func testFollowBusCityBack() { shootFollowBus("back", "follow-bus-city-back", scene: "followBusCity") }
+    func testFollowBusCitySide() { shootFollowBus("side", "follow-bus-city-side", scene: "followBusCity") }
+    func testFollowBusCityWindow() { shootFollowBus("window", "follow-bus-city-window", scene: "followBusCity") }
+
+    private func shootFollowBus(_ view: String, _ name: String, scene: String = "followBus") {
+        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-bus", "-map3DFollowView", view,
                                  "-map3D.quality", "high"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
