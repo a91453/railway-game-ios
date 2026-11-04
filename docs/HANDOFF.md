@@ -1,3 +1,5 @@
+> 纜車（派工單 CABLE，session_01YGNNumrJnt5AkQzWrdhAms，`claude/cable-maokong`，[決策 574](decisions/574.md)，存檔 83，2026-11-04）：PR-1 只做 GameCore（`Cableway`：站與轉角站、直線纜線、土地分配與轉乘、NT$180 單一票價、週一／雷雨／颱風停駛、日結）與存檔 83。**留下的**：PR-2 的建造工具、2D 圖示、站卡與纜車卡、吊廂位置 `CablewayCabins`（給 CABLE3D，決策 575）、貓空示範與站點座標（OSM 下載不到，UNVERIFIED），逐項見決策 574「下一步」。
+
 > 新車站用地標、路名與路口命名（派工單 STNAME，[決策 569](decisions/569.md)，`claude/station-name-landmarks`）：實景地圖預設名多一步「300 m 內地標」，取名欄下最多 4 個候選（地名、地標、公車站牌、路口、公園、路名）。**留下的**（決策 569「下一步」）：網站致謝頁 `Website/site/credits.html` 跟著 `DataSourceCredits` 加「地標與道路」；iPad、iPhone SE 的候選列沒截圖；只畫成點的學校、醫院沒收。
 
 > 柴油車的行駛聲（派工單 DIESEL，session_01YGNNumDcBCK97mmQUfHHjy，`claude/diesel-sound`，決策 567，2026-11-03）：NEXT_PRIORITIES §22.2 第 7a 項做完（怠轉、起步加速、惰行三個循環，照月本國キハ40 系錄音的頻譜與引擎基頻合成，錄音不提交）。實機聽感 UNVERIFIED，請作者實機聽。7b（電車加減速的馬達聲）沒做，做法建議寫在 `docs/decisions/567.md`「下一步」。
@@ -2893,6 +2895,10 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 ### 4.47 列車停站時車頭對齊月台端（決策 565，派工單 PLATSTOP，session_01YGNNumEchJbYiHsw9hKbcu，`claude/platstop`，2026-11-03）
 
 做了的在 [決策 565](decisions/565.md)：有真實車長的世界（實景地圖的新遊戲），畫的車鼻在 GameCore 的車頭、每節照節距，停站時整列在月台內（以前每列車頭伸出 10 m）；比月台長的列車指派時說哪一站、加長到幾公尺或減到幾節。留下的（決策 565「下一步」）：示範與挑戰（16 m 節距、每節畫 20 m）停站時仍超出月台，要讓畫的車與節距一致（模型壓扁，屬美術）或示範改開真實車長，另派；`LineBuilder.line`（腳本與測試用）在實景世界仍蓋 16 m 一節的月台；比較用分支 `claude/platstop-before` 請作者刪（這裡的環境刪遠端分支會 403）；實機 3D 高架站近景 UNVERIFIED。
+### 4.48 舊複線站補渡線、升級複線加站旁渡線（決策 572，派工單 OLDXO，session_01YGNNum5m8pAyi87KoX3iP7，`claude/old-station-crossovers`，2026-11-04）
+
+做了的在 [決策 572](decisions/572.md)：車站面板「加渡線」（舊存檔、111.1 之前的複線站）、「升級為複線」也加站旁渡線、渡線方向讓兩站近端在同一條、「＋」在起終點都滿時放到旁邊月台。留下的（決策 572「下一步」）：兩站不到 1 km 時第二站不加；三站以上的線沒量；實機 UNVERIFIED。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

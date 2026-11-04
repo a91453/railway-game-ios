@@ -371,4 +371,11 @@ public enum GameError: Error, Hashable, Sendable {
     /// ``TrackEdge/mountain``) the line or the train's way runs on: only a
     /// mountain train (``TrainType/climbsMountains``) may.
     case trainCannotClimb(TrainID)
+    /// No cableway has this number (decision 574).
+    case unknownCableway(CablewayID)
+    /// A cableway with fewer than 2 stops or more than
+    /// ``Cableway/maximumStops``, an end that boards no one, two stops in a
+    /// row on one cell, a stop off the world, or a span not 1 to
+    /// ``Cableway/maximumLegMetres`` m (decision 574).
+    case invalidCableway
 }
