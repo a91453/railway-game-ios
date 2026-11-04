@@ -495,7 +495,8 @@ extension GameWorld {
     /// that a passenger line calls at and that takes passengers, or `nil`.
     /// Since decision 586, when none does, the station a cableway with a
     /// stop near it meets (``feederAccess(to:onDay:)``), whether or not
-    /// it runs today.
+    /// it runs today; since decision 587, when no cableway does, the one
+    /// a bus route with a stop near it brings riders to.
     public func attractionStation(of id: AttractionID) -> StationID? {
         guard let attraction = attraction(id: id) else { return nil }
         return servingStation(at: attraction.point) ?? feederAccess(to: attraction.point, onDay: nil)?.station
@@ -531,14 +532,22 @@ extension GameWorld {
     /// Decision 586: how tourists reach `point` on game day `day` when no
     /// station serves it on foot: by train to the station a feeder meets,
     /// then on by the feeder to its stop within ``Tourism/reach`` of the
-    /// point. The feeders are the cableways that meet a station taking
-    /// tourists (``takesTourists(_:)``) and run that day
-    /// (``cablewayIsOpen(_:onDay:)``; any day for `nil`); the stop is a boarding stop other
-    /// than the one that meets the station (from there they would walk),
-    /// the nearest, then the lower cableway, then the earlier stop. `nil`
-    /// for none. Called only after ``servingStation(at:)`` found none: a
-    /// station within reach keeps its sights.
+    /// point. A cableway first (``cablewayAccess(to:onDay:)``); since
+    /// decision 587, when none reaches it, a bus route
+    /// (``busAccess(to:)``). `nil` for neither. Called only after
+    /// ``servingStation(at:)`` found none: a station within reach keeps its
+    /// sights.
     func feederAccess(to point: PlanPoint, onDay day: Int64?) -> FeederAccess? {
+        cablewayAccess(to: point, onDay: day) ?? busAccess(to: point)
+    }
+
+    /// Decision 586: the cableways that meet a station taking tourists
+    /// (``takesTourists(_:)``) and run that day
+    /// (``cablewayIsOpen(_:onDay:)``; any day for `nil`); the stop is a
+    /// boarding stop other than the one that meets the station (from
+    /// there they would walk), the nearest, then the lower cableway, then
+    /// the earlier stop. `nil` for none.
+    func cablewayAccess(to point: PlanPoint, onDay day: Int64?) -> FeederAccess? {
         guard !cableways.isEmpty else { return nil }
         let limit = Tourism.reach * Tourism.reach
         var best: (squared: Int64, cableway: Int, stop: Int, station: StationID)?
@@ -553,6 +562,59 @@ extension GameWorld {
             }
         }
         return best.map { FeederAccess(station: $0.station, feeder: .cableway(CablewayID(rawValue: $0.cableway))) }
+    }
+
+    /// Decision 587: the bus routes that run (a departure a day at least)
+    /// and bring riders to a station taking tourists: a feeder's own
+    /// station, or for a city route ``busTouristTransfer(of:)``. The stop
+    /// is one of the route's within ``Tourism/reach`` of `point` other than
+    /// the one a city route meets the station at (from there they would
+    /// walk), the nearest, then the lower route, then the earlier stop.
+    /// Buses run every day. `nil` for none.
+    func busAccess(to point: PlanPoint) -> FeederAccess? {
+        guard !busRoutes.isEmpty else { return nil }
+        let limit = Tourism.reach * Tourism.reach
+        var best: (squared: Int64, route: Int, stop: Int, station: StationID)?
+        for route in busRoutes where route.dailyDepartures > 0 {
+            let near = route.stops.indices.compactMap { index -> (squared: Int64, stop: Int)? in
+                let squared = Self.squaredDistance(Self.middle(of: route.stops[index]), point)
+                return squared <= limit ? (squared, index) : nil
+            }
+            guard !near.isEmpty else { continue }
+            let meets: BusTransfer
+            if let station = route.station {
+                guard takesTourists(station) else { continue }
+                meets = BusTransfer(station: station, stop: route.stops.count)
+            } else {
+                guard let transfer = busTouristTransfer(of: route) else { continue }
+                meets = transfer
+            }
+            for (squared, stop) in near where stop != meets.stop {
+                let candidate = (squared, route.id.rawValue, stop, meets.station)
+                if best.map({ (candidate.0, candidate.1, candidate.2) < ($0.squared, $0.route, $0.stop) }) ?? true { best = candidate }
+            }
+        }
+        return best.map { FeederAccess(station: $0.station, feeder: .bus(BusRouteID(rawValue: $0.route))) }
+    }
+
+    /// Decision 587: the station a city route brings tourists to, as its
+    /// ``BusRoute/transfer`` is found but among the stations that take
+    /// them (``takesTourists(_:)``; a depot on a bought line does not):
+    /// the nearest within ``BusRoute/stopReach`` of a stop's middle, then
+    /// the lower station, then the earlier stop. `nil` for none.
+    func busTouristTransfer(of route: BusRoute) -> BusTransfer? {
+        let reach = BusRoute.stopReach * BusRoute.stopReach
+        var best: (squared: Int64, station: Int, stop: Int)?
+        for (stop, cell) in route.stops.enumerated() {
+            let middle = Self.middle(of: cell)
+            for station in landStations {
+                let squared = Self.squaredDistance(middle, station.location)
+                guard squared <= reach else { continue }
+                let candidate = (squared, station.id.rawValue, stop)
+                if best.map({ candidate < $0 }) ?? true, takesTourists(station.id) { best = candidate }
+            }
+        }
+        return best.map { BusTransfer(station: StationID(rawValue: $0.station), stop: $0.stop) }
     }
 
     /// The company's hotels within ``SubsidiaryRules/reach`` of
@@ -884,7 +946,8 @@ extension GameWorld {
         let counted = world.touristFlows(onDay: day) { world.reaches(from: $0, to: $1, graph: graph) }
         let arrived = counted.arrivals
         // Decision 586: the cableways' riders of the day that ended, before
-        // it is settled, take on those of the sights they reach.
+        // it is settled, take on those of the sights they reach; decision
+        // 587: the bus routes' too.
         countFeederRides(counted.flows.feederRides)
         let year = day / FinancePeriod.year.days
         if year != tourism.year {
