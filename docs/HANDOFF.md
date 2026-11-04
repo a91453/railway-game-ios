@@ -2849,7 +2849,7 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 
 還沒做的（若這個 session 沒做完，下一棒照這裡）：
 
-1. 機廠量測：四條線（wenhu、danhai、ankeng、sanying）× 三種規則，main `1d30618` 對分支 `768e4f5`（release，`DepotReturnReportTests`，`DEPOT_RETURN_REPORT=1`、`DEPOT_RETURN_ONLY`、`DEPOT_RETURN_SIMPLE`、`DEPOT_RETURN_CONTROLLED`）。填進決策 564「量到的」。
+1. 機廠量測已做（決策 564「量到的」）：都沒有死結；文湖線簡單＋行車控制漏 7/532（main 4/532），時間和 main 一樣在尖峰結束時，是決策 552／HEALTH-110 那一項，修它時一起看靠右的線。
 2. 截圖 `website-screenshots.yml` 的 `testWenhuRunsOnTheRight`（存 wenhu-right-2d、wenhu-right-3d）：第 2 級，自己審、附進 PR。
 3. 收尾：CI 綠 → ready → #1579 留「可合併」→ send_message 給遊戲規劃。
 4. 留著不做的：`RealLineRunningSideTests` 的新北投、小碧潭支線太短量不到雙線，六家、沙崙只印不判；有靠左與靠右的線共用車站（直通運轉）時要改成照列車選邊（決策 564 下一步）。
