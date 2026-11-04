@@ -1334,7 +1334,13 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// picked, then the other picked by hand.
     func testPlacementPlatformChoice() {
         let app = launch(extra: ["-ui-test-world", "platform-choice"])
-        defer { app.terminate() }
+        // Upright: on its side the card's scrolling band is some 24 pt,
+        // shorter than a platform's row (run 41880284408's shot).
+        XCUIDevice.shared.orientation = .portrait
+        defer {
+            app.terminate()
+            XCUIDevice.shared.orientation = .landscapeLeft
+        }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 30), "The world opens")
         map.waitUntilSettled()
@@ -1360,7 +1366,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(first.appears(within: 10), "The station's platforms are listed")
         // Down the card's middle: its left edge is not its scrolling list
         // (run 41872784387's drags there moved nothing).
-        let shown = app.dragUntilWhollyOnScreen(second, in: card, drags: 12, at: card.frame.midX)
+        let shown = app.dragUntilWhollyOnScreen(second, in: card, drags: 16, at: card.frame.midX)
         settle()
         keep("platform-choice", app)
         XCTAssertTrue(shown, "Both platforms show")
