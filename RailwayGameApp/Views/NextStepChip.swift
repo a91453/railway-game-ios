@@ -21,7 +21,7 @@ struct NextStepChip: View {
                 }
                 .padding(.horizontal, 10)
                 .frame(minHeight: 44)
-                .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .glassBackground(cornerRadius: 14)
             }
             .buttonStyle(.plain)
             // One button to VoiceOver and to a finger's test, as the quick

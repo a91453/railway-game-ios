@@ -289,7 +289,7 @@ struct RealWorldPicker: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .glassBackground(cornerRadius: 14)
     }
 
     /// Asks for one fix and moves the square there, kept on the map, or

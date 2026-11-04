@@ -42,7 +42,7 @@ struct MapQuickLayerStrip: View {
         // Glass, as the status pill above it and the tools (decision 226,
         // 2026-10-15): solid with a navy edge it was the one heavy piece
         // left on the map.
-        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .glassBackground(cornerRadius: 14)
         .hudFrameMark("map.quickLayer.strip")
     }
 

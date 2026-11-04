@@ -255,6 +255,24 @@ extension View {
         }
     }
 
+    /// ``glassBackground(in:interactive:)`` in a rounded rectangle of
+    /// `radius` that, on iOS 26 and later, follows the shape round it (the
+    /// screen's corners, a card it sits in) with `radius` as its smallest
+    /// corner, so a card near a screen corner curves with the display.
+    /// Earlier versions, and a view with no shape round it, keep the plain
+    /// corner of `radius`.
+    @ViewBuilder
+    func glassBackground(cornerRadius radius: CGFloat, interactive: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            glassBackground(
+                in: ConcentricRectangle(corners: .concentric(minimum: radius), isUniform: true),
+                interactive: interactive
+            )
+        } else {
+            glassBackground(in: RoundedRectangle(cornerRadius: radius, style: .continuous), interactive: interactive)
+        }
+    }
+
     /// Decision 388: under `-ui-testing`, in a Debug build, an element
     /// `identifier` as big as this view, its glass and padding and all, for
     /// the alignment UI test (a container's own element reports only its
