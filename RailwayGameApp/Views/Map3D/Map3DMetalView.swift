@@ -158,6 +158,11 @@ final class Map3DMetalView: MTKView {
     var onStats: (@MainActor (Stats) -> Void)?
     /// Decision 358: the camera each frame, once it has moved, and when.
     var onCamera: (@MainActor (Map3DCamera, CFTimeInterval) -> Void)?
+    /// Decision 578: whether the chunks round the platform the station view
+    /// stands on are built; until they are, the camera stays above and
+    /// behind the train, and flies to the platform once they are.
+    var lookoutBuilt: (@MainActor (Map3DPoint) -> Bool)?
+    private var lookoutWasBuilt = true
 
     private struct Chunk {
         let vertices: MTLBuffer
@@ -812,7 +817,7 @@ final class Map3DMetalView: MTKView {
             }
             return
         }
-        guard let following else { return }
+        guard var following else { return }
         let pose: Map3DFollow.Pose
         if let bus = following.bus {
             guard let found = busPose?(bus) else { return }
@@ -820,6 +825,17 @@ final class Map3DMetalView: MTKView {
         } else {
             guard let head = heads.first(where: { $0.train == following.train }) else { return }
             pose = head.pose
+        }
+        // Decision 578: no jump to a platform with nothing built round it.
+        if following.view == .station, let lookout = following.lookout {
+            let built = lookoutBuilt?(lookout.eye) ?? true
+            if built != lookoutWasBuilt {
+                lookoutWasBuilt = built
+                flying = (Map3DFlight(from: camera, began: now, rule: MotionRule.cameraFlight.running(reduceMotion: reduceMotion)), nil)
+            }
+            if !built { following.lookout = nil }
+        } else {
+            lookoutWasBuilt = true
         }
         let elapsed = lastFollowStep.map { now - $0 } ?? 0
         lastFollowStep = now
