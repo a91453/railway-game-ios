@@ -59,8 +59,16 @@ public enum WhatsNew {
                     chinese: "實景地圖有了台灣節慶：大甲媽祖、平溪天燈、101 跨年、中秋讓附近車站多出乘客；媽祖、天燈、中秋依農曆。"
                 ),
                 Line(
-                    english: "On the 3D map you can follow a bus, from a bus, the line card or a stop.",
-                    chinese: "3D 地圖可以跟隨公車：點公車、路線卡或站牌的「跟隨公車」。"
+                    english: "On the 3D map you can follow a bus: tap a bus, or use Follow Bus on a line card or a stop. Buses are drawn even with street scenes off.",
+                    chinese: "3D 地圖可以跟隨公車：點公車，或用路線卡、站牌的「跟隨公車」；街景關著也看得到公車。"
+                ),
+                Line(
+                    english: "Following a train has a window view: look out of a side window from the middle of the train.",
+                    chinese: "跟隨列車多了「車窗」視角：坐在車廂中段，從側邊車窗往外看。"
+                ),
+                Line(
+                    english: "Cable cars and their stations are on the 3D map, with cabins riding the ropes.",
+                    chinese: "3D 地圖有纜車、塔柱和站房，吊廂沿著纜線行駛。"
                 ),
                 Line(
                     english: "The 3D map has the Changhua Roundhouse beside its turntable.",
