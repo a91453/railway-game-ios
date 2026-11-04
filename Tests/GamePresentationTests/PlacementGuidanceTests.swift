@@ -158,6 +158,7 @@ final class PlacementGuidanceTests: XCTestCase {
         session.staffSelectedLine(headway: 60)
         let text = session.message?.text ?? ""
         XCTAssertTrue(text.contains("A's platform is taken by Train 1, which has no line"), text)
+        XCTAssertFalse(text.contains("now runs 0"), text)
         XCTAssertEqual(session.message?.goToTrain, idle)
 
         session.undo()

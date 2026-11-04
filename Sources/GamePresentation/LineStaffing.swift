@@ -120,7 +120,13 @@ extension GameSession {
                         + "\(line.name) now runs \(running) \(running == 1 ? "train" : "trains") from \(first).",
                     "買了 \(plan.trains) 列車，花費 \(plan.cost.moneyText)；\(line.name) 現在有 \(running) 列車從\(first)出發。"
                 )
-                if held > 0, let blocked = world.lineStartBlockedText(line.id, in: language) {
+                if running == 0, unfit == 0, let blocked = world.lineStartBlockedText(line.id, in: language) {
+                    // Decision 584: none runs, so no "now runs 0 trains".
+                    text = language.text(
+                        "Bought \(plan.trains) \(plan.trains == 1 ? "train" : "trains") for \(plan.cost.moneyText), not on the track yet: ",
+                        "買了 \(plan.trains) 列車，花費 \(plan.cost.moneyText)，還沒放上軌道："
+                    ) + blocked.text
+                } else if held > 0, let blocked = world.lineStartBlockedText(line.id, in: language) {
                     // Decision 584: whose train holds the first stop.
                     text += language.text(
                         " \(held) more \(held == 1 ? "stays" : "stay") off the track, not assigned to the line: ",
