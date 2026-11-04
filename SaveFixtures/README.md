@@ -237,4 +237,4 @@ places Taiwan's named festivals are held at, an event can name its
 date through the lunar calendar. Earlier saves have none and read as before
 (their scenario festivals keep their day of the year); a build before
 version 84 refuses a version 84 save rather than dropping them.
-`v84-festivals.json` has four places and the Lantern Festival announced.
+There is no migration step: a save of version 82 (or any earlier one, with 83 absent or not) reads as it is. `v84-festivals.json` has four places and the Lantern Festival announced.

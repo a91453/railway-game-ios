@@ -427,7 +427,9 @@
 ///     `"festival"`, and a scenario's festival can `"follows"` a named
 ///     festival's date through the lunar calendar. A build that reads only
 ///     an earlier version would drop them and fix the festival to one day
-///     of the year, so it says the save is newer than it instead. Versions
+///     of the year, so it says the save is newer than it instead. The step
+///     from any earlier version (82 when it is the one before, 83 absent or
+///     not) is none: the new fields are optional and read as before. Versions
 ///     81 to 83 are other changes' (their steps are theirs).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
