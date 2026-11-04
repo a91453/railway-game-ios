@@ -15,12 +15,13 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 
 ## 出處
 
-規則改寫自下面五個專案，都是 MIT，授權全文在本資料夾的 `licenses/`。只拿相容的想法並改寫成我們的版本，不整段搬；和我們規則衝突的部分在第 8 節。
+規則改寫自下面六個專案，都是 MIT，授權全文在本資料夾的 `licenses/`。只拿相容的想法並改寫成我們的版本，不整段搬；和我們規則衝突的部分在第 8 節。
 
 | 專案 | commit | 讀的檔 | 授權全文 |
 | --- | --- | --- | --- |
 | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | `12af471` | `skills/taste-skill/references/app-screens.md`、`critique.md` | `licenses/taste-skill.txt` |
-| [twostraws/swiftui-agent-skill](https://github.com/twostraws/swiftui-agent-skill)（SwiftUI Pro） | `f2920b6` | `swiftui-pro/references/accessibility.md`、`resizability.md`、`performance.md` | `licenses/swiftui-agent-skill.txt` |
+| [twostraws/swiftui-agent-skill](https://github.com/twostraws/swiftui-agent-skill)（SwiftUI Pro） | `f2920b6` | `swiftui-pro/references/` 全部十二份（第 7a 節補讀 `api`、`views`、`data`、`navigation`、`design`、`hygiene`、`localization`、`swift`、`performance-plus`） | `licenses/swiftui-agent-skill.txt` |
+| [daneden/agent-skills](https://github.com/daneden/agent-skills) | `d6e5665` | `skills/swiftui-gotchas/SKILL.md`、`skills/iterative-design/SKILL.md` | `licenses/daneden-agent-skills.txt` |
 | [rshankras/claude-code-apple-skills](https://github.com/rshankras/claude-code-apple-skills) | `9ffb831` | `skills/ios/ui-review/hig-checklist.md`、`design/typography/SKILL.md`、`design/game-feel/feedback-audit.md`、`design/liquid-glass/SKILL.md` | `licenses/claude-code-apple-skills.txt` |
 | [ibelick/ui-skills](https://github.com/ibelick/ui-skills) | `59193a7` | `skills/improve-ui/SKILL.md` | `licenses/ui-skills.txt` |
 | [jakubkrehel/skills](https://github.com/jakubkrehel/skills) | `592aedc` | `skills/interface-review/SKILL.md` | `licenses/jakubkrehel-skills.txt` |
@@ -156,6 +157,57 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 - **變化快的值不放進 environment**（拖曳座標、捲動位置、動畫進度、tick）：每次寫入都會讓底下整棵樹被檢查。放進 `@Observable` 物件，給 view 讀變化少的結果。
 - **非同步工作用 `.task`**，不用 `onAppear` 開 `Task`：view 消失時會自己取消。
 
+## 7a. SwiftUI 陷阱與用法（補自 SwiftUI Pro 與 daneden，第二輪）
+
+最低版本 iOS 17（`project.yml`）。需要更新版本的 API 寫明「iOS X 以上」，要用就放 `#available` 後面。動畫的陷阱在 motion skill 第 4 節。
+
+**資料與狀態**（`GameSession` 是 `@MainActor @Observable`，沒有 `ObservableObject`）
+
+- **`@State` 只在第一次建立時初始化**：同一個 view 換了資料（身分沒變），舊的 `@State` 還在。要重置就用 `.id(穩定的值)`，或 `.onChange(of:)`（出自 daneden `swiftui-gotchas` G2，MIT）。
+- **view 自己擁有的 `@State` 一律 `private`，初始值只在一處給**：宣告給一次、`init` 又給一次，宣告的會贏（出自 SwiftUI Pro `references/data.md`，MIT）。
+- **重的東西不要在 `@State` 的初始值裡建**（會在預覽重載或 parent 重建時再跑）：改成 optional，在 `.task` 裡建（出自 daneden G1，MIT）。
+- **不要在 `@Observable` 類別裡放 `@AppStorage`**，即使加 `@ObservationIgnored`，值變了畫面也不更新；`@AppStorage` 放在 view（出自 SwiftUI Pro `data.md`，MIT）。我們的 `MapQuickLayerStrip`、`SettingsView` 已經放在 view。
+- **不要把 `@AppStorage`、`scenePhase` 這種自己獨立發佈的來源放進一個 parent 正在做動畫的子 view**：兩邊更新撞在同一幀，parent 的動畫會被合併掉（「動畫莫名停了」）。在 parent 讀一次，用參數傳給子 view（出自 daneden G3，MIT）。
+- **`Binding(get:set:)`**：外部規則說改用 key path 綁定。**我們不採用在 `GameSession` 上的那種**：`Binding(get: { session.x }, set: { session.setX($0) })` 的 setter 就是送 `GameWorld` 指令，這是 CLAUDE.md 要的路徑；改成 `onChange` 會在值相同時不送、並讓畫面先於指令改變。只有純 UI 狀態（`@State`）才用 `$state` 直接綁。
+- **ID**（補第 7 節）：`ForEach(Array(x.enumerated()), id: \.offset)` 與 `indices` 是位置不是身分，增刪就重設列的狀態；用 `id: \.element.id`（`enumerated()` 不轉陣列是 iOS 26 以上）。不要用整個 struct 當 `id: \.self`，也不要從會被編輯的欄位算 `id`。ID 在存進模型時產生，不在 body 裡 `UUID()`（出自 SwiftUI Pro `data.md`，MIT）。
+- **自訂 `@Entry` 環境值的預設值要固定**：不要用 `.now`、新建的物件、`UUID()`；環境值不放閉包（讀的人每次都更新），放 struct 或 `@Observable`，用方法或 `callAsFunction()`（出自 SwiftUI Pro `api.md`，MIT）。
+- 深度效能（出自 SwiftUI Pro `performance-plus.md`，MIT）：只有有量到問題才做。view 只要 struct 的三個欄位以下時傳欄位本身；`@Observable` 裡存的 struct 是一個整體的依賴（讀 `a.title` 也會因 `a.count` 重畫），常變的欄位拆成獨立屬性。
+
+**手勢與點擊**
+
+- **`Button` 上不要同時掛點擊和長按**：iOS 上兩個手勢搶，放開時順序不定、重複計算或漏掉點擊。自己做一個 view，用 `onTapGesture` 加 `onLongPressGesture`，或用 `DragGesture(minimumDistance: 0)` 搭 `@GestureState` 自己管按下與放開（出自 daneden G5，MIT）。列車運用表的長按拖曳（決策 512）照這條。
+- **`minimumDistance: 0` 的拖曳會擋住上層 `ScrollView` 的捲動**：讓 parent 處理，或在手勢裡等約 0.3 秒不動才當成拖曳（出自 daneden G6，MIT）。
+- **一定要用 `onTapGesture` 時**（要點的位置或次數）：補 `.accessibilityAddTraits(.isButton)`，再給 `.accessibilityAction`（第 1 節的 `Button` 規則的例外；出自 SwiftUI Pro `accessibility.md`，MIT）。
+- **不用 `UIImpactFeedbackGenerator`**：用 `.sensoryFeedback(_:trigger:)`（iOS 17 以上；出自 SwiftUI Pro `api.md`、daneden M1，MIT）。
+
+**版面與樣式**
+
+- **兩個以上的圖示加文字並排用 `Label`，不用 `HStack`**；標題加數值用 `LabeledContent`（出自 SwiftUI Pro `design.md`，MIT）。
+- **空的清單與搜尋無結果用 `ContentUnavailableView`**（iOS 17 以上；`.search` 會自己帶搜尋字）。第 2 節說的「空的狀態告訴玩家下一步」就是用它。
+- **多行輸入用 `TextField(axis: .vertical)` 加 `lineLimit(5...)`**，不用 `TextEditor`（可以放提示字）。
+- **粗體用 `.bold()`**，不要散落 `fontWeight(.medium)`、`.semibold`（出自 SwiftUI Pro `design.md`，MIT）。新程式照這條；舊的 `.caption.weight(.bold)` 不為此改。
+- **填滿與空心的切換用 `.symbolVariant(.fill)`**，不用字串接 `"name.fill"`：符號身分不變，`contentTransition(.symbolEffect(.replace))` 才會動（出自 daneden S2，MIT）。
+- **不要用 `UIScreen.main`**（iOS 26 起廢棄，多螢幕的裝置沒有「主螢幕」）：可用空間用 `containerRelativeFrame`、`GeometryReader`，縮放比用 `@Environment(\.displayScale)`（出自 SwiftUI Pro `design.md`，MIT）。
+- **所有視窗大小都要有同一組功能**：不要讓功能只在 `regular` 才有、`compact` 就消失（第 1 節的分版面只改排法，不減功能）。
+- **`Text` 不用 `+` 接**：接出來的 `Text` 不會本地化前面的字串。用插值 `Text("\(a)\(b)")`（`a`、`b` 是 `Text`，iOS 17 以上）。
+- **導覽**：每種資料型別在一個 `NavigationStack` 裡只註冊一次 `navigationDestination(for:)`，放在擁有 stack 的 view 上，不放在會再推自己的子 view；不要在同一層混用 `navigationDestination(for:)` 與 `NavigationLink(destination:)`；`sheet(item:)` 優於 `sheet(isPresented:)`（出自 SwiftUI Pro `navigation.md`、daneden G4，MIT）。
+- **`Group` 只包一個 view 就拿掉**，修飾子直接掛上去（出自 SwiftUI Pro `views.md`，MIT）。
+- **body 拆成獨立的 `View` struct**，少用回傳 `some View` 的計算屬性或方法（獨立 struct 才有自己的更新範圍）。幾個小的、同一件事的 private helper 可以留（出自 SwiftUI Pro `views.md`，MIT）。
+
+**文字與格式**
+
+- 用 `Text(value, format:)`、`formatted()` 取代 `String(format:)`；清單用 `.formatted()` 取代手接逗號；時間讀 `@Environment(\.locale)`、`\.calendar`、`\.timeZone`，不讀 `.current`（出自 SwiftUI Pro `swift.md`、`localization.md`，MIT）。除錯畫面（幀數、跑分）的 `Text(verbatim: String(format:))` 不算。
+- 使用者輸入的搜尋篩選用 `localizedStandardContains()`。
+- 使用者動作失敗的錯誤不要只 `print`，要給訊息（本專案走 `StatusMessage`）。
+
+**並行**（Views 裡的 `Task`）
+
+- 不用 GCD（`DispatchQueue`）、不用 `Task.sleep(nanoseconds:)`，用 `Task.sleep(for:)`（出自 SwiftUI Pro `swift.md`，MIT）。
+- 會碰 `@MainActor` 狀態的 `Task { }` 從不繼承隔離的地方開時（`init`、系統回呼），寫 `Task { @MainActor in … }`；在 `init` 裡開的 `Task` 無法被 owner 取消，改用第一個 view 的 `.task { }`（出自 daneden C2、C7，MIT）。
+- `Task.detached` 要確認是最好的做法：用來把重的計算移出主執行緒是對的（`LoadChartViews`、`StationStampPassportView`），不是為了避開隔離。
+
+**不補**（沒有對應的東西或只是風格）：SwiftData、CloudKit、Widget、App Intents（daneden W1–W12、D1、C6、C8；本 App 沒有）；`ToolbarOverflowMenu`、`topBarPinnedTrailing`、`reorderable()`、`swipeActionsContainer`（iOS 27 以上）；`@Animatable` 巨集、`ConcentricRectangle`、`WebView`、`safeAreaBar`（iOS 26 以上，本 App 的玻璃控制自己退回舊材質）；`@ContentBuilder`（Xcode 27，`@ViewBuilder` 同一個東西）；一檔一型別、`#Preview`（已全用）、Swift 風格條（`if let value {`、`count(where:)`、省略 `return`）；SwiftUI Pro 的「`bottomBar` 優先於 `safeAreaBar`」（daneden G7）：我們的 HUD 是自己的浮動玻璃，不放在系統工具列。
+
 ## 8. 不採用的部分
 
 和本專案規則衝突，以我們的為準（研究的 §1.3）：
@@ -167,6 +219,9 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 | 顏色只從 `Theme`／`Palette` 取，View 裡不寫色碼（UI_THEME） | rshankras、ebuntario「用系統顏色、不寫色碼」「先用 SF Symbols 不畫自己的圖示」 | 色票本身算過對比（`ThemeContrastTests`）；地圖圖示是決策 121 畫的 |
 | Liquid Glass 用在浮在地圖上的控制 | taste-skill 禁止玻璃與模糊 | 只採 rshankras 的用法（第 5 節） |
 | 最低版本 iOS 17（`project.yml`） | SwiftUI Pro 假設 iOS 27／Xcode 27（`@ContentBuilder`、`AsyncImage` 快取） | 新 API 放在 `#available` 後面；`@ViewBuilder` 照舊 |
+| 動作的資料流都經 `GameWorld` 指令（CLAUDE.md） | SwiftUI Pro「避免 `Binding(get:set:)`、改用 `onChange`」 | `GameSession` 上的綁定 setter 就是送指令；只有純 UI 狀態才綁 `$state`（第 7a 節） |
+| 字串走 `language.text("…","…")` 與 String Catalog | SwiftUI Pro 的 `LocalizedStringResource`、產生符號鍵 | 兩套本地化並存，換法是整個專案的決定，不在畫面技能裡改 |
+| 顏色與停用狀態從 `Theme`／`Palette` 取 | SwiftUI Pro「用階層樣式取代手動 opacity」、daneden S5 `hierarchical` | 玩家看到的色票算過對比；只有 SF Symbols 圖示可以用 |
 | 網頁的工具 | taste-skill 的 Node／Chrome 腳本、CSS、Tailwind、React | 用不上 |
 
 ## 9. 怎麼檢查
@@ -187,3 +242,10 @@ description: 畫面怎麼做、怎麼審：觸控範圍與字級（Dynamic Type�
 - **範例：2D 地圖現在的遠近分級**（`MapArt.swift` 的列車繪製）：`projection.detail == .full`（拉近）時用 `TrainCars.cars` 畫一節一節、照車款上色、車鼻形狀分高鐵；拉遠時只畫車頭一個點（高鐵是箭頭）。新的畫面照同一條線分：看得到一節車有幾點寬，才畫車型；否則用記號。
 - **圖表的鐵道味**：資料本身照 dataviz 維持素的長條與線，不把長條畫成列車。鐵道感放在標題前的小列車記號、圖例、空的狀態（例如空的車廂），以及「最滿的一班」這種本來就在講一列車的地方（例如畫成一節車廂的填滿度）。
 - **審查時找兩種不一致**：該用圖標卻畫了車（小、多、遠的地方畫了整列車型，擠成一團）；該看到車型卻只有點（近看、單一、要欣賞的地方只有圓點或字）。照第 6 節附截圖與一個改法。
+
+## 外部參考
+
+第 7a 節與第 1、2、7 節補入的條目改寫自下面兩個專案，授權全文在 `licenses/`；各條後面標了出處：
+
+- [twostraws/swiftui-agent-skill](https://github.com/twostraws/swiftui-agent-skill)（SwiftUI Pro）：© 2026 Paul Hudson，MIT，取用 commit `f2920b63995263f57b3e198674e89a602efba6d2`。
+- [daneden/agent-skills](https://github.com/daneden/agent-skills)：© 2026 Daniel Eden，MIT，取用 commit `d6e5665c96781e4938b666464bc96a377cc226b4`。
