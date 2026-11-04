@@ -517,6 +517,27 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 47 任交第 48 任（2026-11-04 約 21:50 UTC，session_01YGNNuncyse9G7nzdRW6S6p，第 3 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。
+
+- **112.1 已發**（作者 10:54 UTC 按，run 112，`bef26cae`；`PLAYER_FEEDBACK.md` 已記，#1804）。作者還沒做的：App Store Connect 的 112.1 出口合規；刪 branch `claude/follow-window-diag`、`claude/follow-xray-before`（#1819 合併後）。
+- **113.1 的計畫**（作者 2026-11-04：「好，照你的順序做」；#1579 21:06 的規劃留言）：
+  1. 等這四件合併：#1824 FERRY3（決策 585 PR-3，渡輪 3D 船與碼頭，**第 3 級**，作者要看截圖）、#1825 CARDLAYOUT（決策 **588**，詳細卡片頭太高時只固定底部，放車選項在「放在這裡」正上方；作者說「修好再給我看截圖」）、FERRYECON（`claude/ferry-tourism`，渡輪收支與觀光客，GameCore 全套 tier，決策 **589**，PR 還沒開）、#1819 FOLLOWXRAY（跟隨公車／纜車透視、公車右窗 L9-8、停站車站視角 L9-6；作者要看透視的改前改後）。
+  2. 不等：#1743 TYMCLIST8（機捷剩兩處死結）、#1813／#1817（Codex 吊廂 studies／玻璃）。
+  3. 四件合完：派 WHATSNEW-113（Sonnet；`Sources/GamePresentation/WhatsNew.swift` 最前面加一則，id `2026-11-0x-113-1`，兩種語言；`.github/testflight-whats-new.md`；寫進「建設 → 接駁（公車圖示）→ 渡輪」的位置，作者問過公車圖示要不要改，第 47 任建議 113.1 不改）。
+  4. 對 main HEAD 手動跑完整 `ci.yml` 與 full lane（`ios-build.yml`），都綠才告訴作者「可以發（commit X）」；發不發由作者說（§1.2）。
+- **第 47 任已合**（113.1 的內容）：#1806、#1807、#1809、#1810（渡輪 PR-1，存檔 85）、#1811（583）、#1812、#1815、#1818、#1808（584 PR-1）、#1821（556 續）、#1816（586）、#1814（585 PR-2）、#1822（587）、#1823（587 續）、#1820（584 PR-2）。main `7ca083b9` 的 push `ci.yml` 綠。
+- **派出去的、還開著的**（都是第 47 任開的，第 4 層；回報「#N 綠、SHA」就照規則審、合）：
+  - FERRY3 session_01YGNNumyGkE6dY6uQya6BuZ（Opus，#1824，壓縮 1 次只收尾）：碼頭修正 `8eca2a8` 後重拍截圖中；淡水—八里、鼓山—旗津（含傍晚）。
+  - CARDLAYOUT session_01YGNNuoFf1GiS9enB7XMPhL（#1825，head `7784f7a`）：截圖 run 先 iPhone，再 iphone-small；給作者看英文卡片改前改後。
+  - FERRYECON session_01YGNNunRMtZq6QN3G96LAuF（Opus）：登記時保留了 588，和 CARDLAYOUT 撞號（CARDLAYOUT 先登記），第 47 任已叫它改用 **589** 並在 #1579 更正。HEALTH 判讀照 economy-balance。請作者把強度改「高」。
+  - FOLLOWXRAY session_01YGNNunhax9Bnpi7aFssNVh（Sonnet，#1819 draft，`5810e8ca` CI 綠）：第 47 任 21:45 回覆「要做」：加一個有大樓夾著公車路線的截圖場景；改前推到已存在的 `claude/follow-xray-before` 拍（不開新分支），改後在 #1819 拍。session 若已壓縮 2 次會把做法寫進 #1819 後停手，那就另派。
+  - TYMCLIST8 session_01YGNNumpcqk9aFo7CQzg2Pc（#1743，閒置）：機捷剩兩處死結（決策 556），不擋 113.1；GameCore 名額空時繼續。請作者改「高」。
+  - WEB-112 session_01YGNNukwXnNweVvyXcRLzHB（11:12 起 BLOCKED）：要 `add_repo` railway-reference-private（push）拍網站 112.1 新功能截圖（纜車、跟隨公車、車窗）。作者說過可以派 WEB session 掛 private（push），但那個 session 的 `add_repo` 卡在權限提示。新任決定：叫它重試 `add_repo`，仍卡就請作者在那個 session 按允許，或改到 113.1 發版後重派一個新的（也可順便拍渡輪）。
+  - 已封存：BUSTOUR、NEWBIE-PLACE2、L9FIX、TYMCLIST7、CABLETOUR、THREADS-112、OLDXO-FIX、HEALTH-112、REVIEW-L9、FERRY、MODEROW、DIAG-HANG、NEWBIE-PLACE 等。
+- **固定三件**（§1.1）的上一輪：REVIEW-L9（#1760–#1802，報告 `docs/archive/PR1760_1802_REVIEW_HANDOFF.md`；L9-1／L9-3 由 OLDXO-FIX #1812、L9-2／9／10／11 由 L9FIX #1818 修完，L9-6／L9-8 在 #1819，**L9-4、L9-5、L9-7 還沒派**）；CIOPT-7（#1794）；HEALTH-112（#1815）。113.1 發版後照時機派 REVIEW-L10（從 #1803 起）、CIOPT、HEALTH-113。
+- **沒派的**（照 §22 排）：決策 584 PR-3（沒接上的軌道提示）、地圖上亮出選中的月台；決策 585 下一步（PR-4 跟船視角、碼頭 OSM 核對、停航、HelpGuide）；決策 586／587 下一步（release 實玩量纜車與公車觀光、機廠周邊土地 2,424 趟、台灣好行、公車卡觀光一行）；文湖第二天誤點（上一段 HEALTH-112 的重現指令）；渡輪之後依序國道客運 → 飛機（§24.5）。
+- **號碼**：決策 588 CARDLAYOUT、589 FERRYECON 保留；**下一個 590**。存檔 main 是 85，**下一個 86**。
+
 **第 46 任交第 47 任（2026-11-04 約 11:10 UTC，session_01YGNNup5rvKQE2WYa4BP1cK，第 2 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。
 
 - **112.1 發版（作者自己按）**：作者說「好 那我發了」，`testflight.yml` 由作者按，**規劃不按**。main HEAD `bef26cae`（#1796）。作者把 full lane 交給規劃看（「那full lane給你跑」）：
