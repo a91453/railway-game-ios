@@ -63,6 +63,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         // for six minutes first.
         Thread.sleep(forTimeInterval: 360)
         XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        // The bought card first.
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+        }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
             for _ in 0..<6 {
