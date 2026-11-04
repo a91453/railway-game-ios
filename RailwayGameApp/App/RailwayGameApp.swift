@@ -254,6 +254,23 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 568: a new line being picked on the map, five
+            // stations of the longest line, its ✓ pill beside the last.
+            if DebugLaunch.isSet("-screenshot-line-draft") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session,
+                       let stops = session.world.lines.max(by: { $0.stops.count < $1.stops.count })?.stops.prefix(5),
+                       let first = stops.first {
+                        session.selectStation(first)
+                        session.startLineFromSelectedStation()
+                        for station in stops.dropFirst() {
+                            session.selectStation(station)
+                            session.addSelectedStationToLineDraft()
+                        }
+                    }
+                }
+            }
             // Decision 566: new-train cards, for their screenshot review.
             if let keys = DebugLaunch.value(of: "-screenshot-new-train") {
                 Task {
