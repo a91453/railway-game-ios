@@ -160,6 +160,15 @@ final class WebsiteScreenshotTests: XCTestCase {
             let window = app.buttons["map3D.follow.window"]
             XCTAssertTrue(window.becomesHittable(within: 10))
             window.tap()
+            // Decision 578 (FOLLOWVIEW-2): one run of three shot the view
+            // from behind, 後方 still chosen after this tap (run
+            // 41800375321); the shot is taken only of the window view.
+            if !window.isSelectedWithin(5) {
+                XCTContext.runActivity(named: "車窗 not chosen after the tap; tapping it again") { _ in }
+                XCTAssertTrue(window.becomesHittable(within: 10))
+                window.tap()
+            }
+            XCTAssertTrue(window.isSelectedWithin(5), "The window view is chosen")
             settle(seconds: 8)
             keep("follow-window", app)
             let station = app.buttons["map3D.follow.station"]
@@ -2581,5 +2590,18 @@ final class WebsiteScreenshotTests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
         XCTFail("Button cannot be tapped: \(identifier)")
+    }
+}
+
+private extension XCUIElement {
+    /// Whether the element is selected within `timeout` seconds, at once
+    /// when it already is.
+    func isSelectedWithin(_ timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !(exists && isSelected) {
+            guard Date() < deadline else { return false }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        return true
     }
 }

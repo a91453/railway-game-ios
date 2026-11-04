@@ -1641,6 +1641,10 @@ private struct Map3DFollowChoice: View {
     var body: some View {
         let blocked = unavailable != nil && selection != option
         Button {
+            // Decision 578 (FOLLOWVIEW-2): a screenshot run once kept 後方
+            // after its tap on 車窗; the UI test trace says whether the
+            // action ran, if it happens again.
+            UITestTrace.action("map3D.follow.\(option.rawValue) (was \(selection.rawValue))")
             selection = option
         } label: {
             Text(verbatim: option.text(in: language))
