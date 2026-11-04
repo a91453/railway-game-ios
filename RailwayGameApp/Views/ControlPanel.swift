@@ -1177,10 +1177,34 @@ struct StatusBanner: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(tintColor)
                 .accessibilityLabel(kindName)
-            Text(message.text)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Theme.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(message.text)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                // Decision 573: a new depot near several lines with none
+                // offers each, one under another so long names fit, 18
+                // points apart so each is touched over 44.
+                if let offer = message.depotOffer {
+                    VStack(alignment: .leading, spacing: 18) {
+                        ForEach(offer.lines, id: \.self) { line in
+                            Button {
+                                session.linkDepot(offer.depot, to: line)
+                            } label: {
+                                Text(verbatim: session.depotOfferTitle(line: line))
+                                    .font(.caption.weight(.bold))
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Theme.chip, in: Capsule())
+                            }
+                            .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size, reach: 9))
+                            .foregroundStyle(Theme.textPrimary)
+                            .accessibilityIdentifier("banner.depotLine")
+                        }
+                    }
+                }
+            }
             Spacer(minLength: 0)
             // Decision 327: a train standing on no line that is in the way
             // is sold from here (Undo brings it back).
