@@ -307,11 +307,15 @@ extension GameWorld {
     /// ``detourAllowance`` of the default route, and where its standing
     /// lets another train of the deadlock go; the shortest whole way, the
     /// first station on a tie. `nil` if there is none.
-    func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64, reverses: Bool)? {
+    ///
+    /// TYMCLIST8: `anyWay` drops both limits, the planned directions and
+    /// ``detourAllowance``, for ``GameWorld``'s last way out of a deadlock:
+    /// a whole way taken against the planned direction meets no train.
+    func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], anyWay: Bool = false, memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64, reverses: Bool)? {
         // Preserve V2's ordinary passing-place selection before considering
         // a backing move. A reversal is possible only from a full berth.
-        let forbidden = opposingServiceTraversals(for: candidate, memo: &memo)
-        let length = routeLength(of: candidate)
+        let forbidden = anyWay ? [] : opposingServiceTraversals(for: candidate, memo: &memo)
+        let length = anyWay ? Int64.max : routeLength(of: candidate)
         if let way = passingPlace(for: candidate, in: stuck, forbidden: forbidden, defaultLength: length, memo: &memo) {
             return (way.path, way.distance, false)
         }

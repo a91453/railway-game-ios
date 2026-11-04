@@ -3795,7 +3795,47 @@ public struct GameWorld: Equatable, Sendable {
         // Decision 556, continued (TYMCLIST8): failing that too, such a
         // train runs empty into a depot of its line.
         return departureIgnoringFollowerClaims(in: stuck, memo: &memo) ?? runTrainPutOnItsRun(in: stuck, memo: &memo)
-            ?? runTrainEmptyToDepot(in: stuck, memo: &memo)
+            ?? runTrainEmptyToDepot(in: stuck, memo: &memo) ?? serviceStandingAsideAnyWay(in: stuck, memo: &memo)
+    }
+
+    /// Decision 556, continued (TYMCLIST8): the very last resort of
+    /// ``resolveDeadlock(memo:)``. As its first way out, the first service
+    /// in ID order of deadlock `stuck`, of a line with runs (decision
+    /// 133), due to leave or at a passing place sets off for a passing place where its standing lets another of
+    /// them go, but one found against the planned directions and however
+    /// far round (``passingPlace(for:in:anyWay:memo:)``), its way there
+    /// taken whole. On the Taoyuan Airport MRT under the simple rules with
+    /// traffic control, Kengkou's two berths held trains bound for the
+    /// first airport terminal, and two of the terminal's three held trains
+    /// bound for Kengkou, its third behind a train in the way: one of
+    /// those at the terminal backs out to a free berth of the second,
+    /// and comes back. Returns the train's ID, or `nil`. Never inlined, as
+    /// ``departureIgnoringFollowerClaims(in:memo:)``.
+    @inline(never)
+    private mutating func serviceStandingAsideAnyWay(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
+        for id in stuck.keys.sorted() {
+            guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
+                  trains[index].execution != nil, lines.first(where: { assignedLine(of: id) == $0.id })?.hasRuns == true,
+                  let passing = passingPlace(for: request.candidate, in: stuck, anyWay: true, memo: &memo.directions)
+            else { continue }
+            var aside = request.candidate
+            if passing.reverses, let place = aside.placement {
+                let reverse = turnedRound(place)
+                aside.position = reverse.position
+                aside.trailEdges = reverse.trailEdges
+            }
+            follow(passing.path, &aside)
+            let fastest = run(of: aside, length: passing.path.distance)
+            aside.times?.run = fastest
+            guard case .granted(let granted) = reserving(aside, memo: &memo.directions) else { continue }
+            let left: Int? = if case .waitingAtStop(let stop, _)? = trains[index].execution { stop } else { nil }
+            setOff(index, as: granted)
+            if let left {
+                serve(departureOf: id, from: left, distance: passing.distance)
+            }
+            return id
+        }
+        return nil
     }
 
     /// Decision 556, continued (TYMCLIST8): the last resort of
@@ -3853,21 +3893,38 @@ public struct GameWorld: Equatable, Sendable {
     /// MRT, trains that had ended their runs at one airport terminal were
     /// each bound for the berth at the other where another such train
     /// stood, with free berths beside, and waited for good: that way out
-    /// was only for a service already waiting at a stop. Returns the
-    /// train's ID, or `nil`. Never inlined, as
+    /// was only for a service already waiting at a stop.
+    ///
+    /// TYMCLIST8: so too a train whose due run's first leg could take its
+    /// own route now but for the track the trains following others in
+    /// the deadlock wait for (decision 56, point 6): once due to leave,
+    /// decision 577's way out sends it. Under the simple rules with
+    /// traffic control, a train between runs at the airport's first
+    /// terminal waited for an empty train following others towards it,
+    /// which waited, through the others, for the berth the first stood
+    /// on. Returns the train's ID, or `nil`. Never inlined, as
     /// ``departureIgnoringFollowerClaims(in:memo:)``.
     @inline(never)
     private mutating func runTrainPutOnItsRun(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DispatchMemo) -> TrainID? {
+        let followers = Set(stuck.filter { !$0.value.departs }.keys)
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
                   trains[index].execution == nil,
                   let line = lines.firstIndex(where: { assignedLine(of: id) == $0.id }), lines[line].hasRuns,
                   let due = dueRun(of: trains[index], on: lines[line]),
-                  case .travellingToStop(let stop, let cycle)? = request.candidate.execution,
-                  let way = counterflowRoute(of: request.candidate, to: request.candidate.timetable[stop].station,
-                                             avoiding: blockedTrack(except: id, holders: trackHolders(memo: &memo.directions))),
-                  case .granted = reserving(rerouted(request.candidate, along: way, stop: stop, cycle: cycle), memo: &memo.directions)
+                  case .travellingToStop(let stop, let cycle)? = request.candidate.execution
             else { continue }
+            // TYMCLIST8: or, once on its run, decision 577's way out would
+            // send it along its own route.
+            var goes = false
+            if let way = counterflowRoute(of: request.candidate, to: request.candidate.timetable[stop].station,
+                                          avoiding: blockedTrack(except: id, holders: trackHolders(memo: &memo.directions))),
+               case .granted = reserving(rerouted(request.candidate, along: way, stop: stop, cycle: cycle), memo: &memo.directions) {
+                goes = true
+            } else if !followers.isEmpty, case .granted? = reserving(request.candidate, ignoringClaimsOf: followers, memo: &memo.directions) {
+                goes = true
+            }
+            guard goes else { continue }
             trains[index].trafficVisits = []
             trains[index].timetable = due.timetable
             trains[index].timetablePeriod = nil
