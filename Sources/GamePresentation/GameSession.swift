@@ -173,6 +173,9 @@ public final class GameSession {
     /// Decision 571: the crossovers the platform picked would get, kept
     /// for the pick and command as ``platformBesideMemo`` is.
     @ObservationIgnored var stationCrossoverMemo: (key: PlatformBesideMemo.Key, crossovers: [PlayerCommand.TrackStretch])?
+    /// Decision 572: the crossovers the station panel offers, kept for the
+    /// station and command (``stationCrossoverOffer(for:)``).
+    @ObservationIgnored var stationCrossoverOfferMemo: StationCrossoverOfferMemo?
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
@@ -377,12 +380,24 @@ public final class GameSession {
     /// a drag, pinch or zoom of the map through ``mapDidMove()``, closing the
     /// train with ``clearSelection()``), or when the train leaves the track,
     /// stops existing or its line is removed.
-    public private(set) var followedTrainID: TrainID? {
+    public internal(set) var followedTrainID: TrainID? {
         didSet {
             if followedTrainID != oldValue { updateMap3DSpeedCap() }
             refreshFollowBar()
         }
     }
+
+    /// Decision 400 (FOLLOWBUS): the bus the camera follows, in place of a
+    /// train (the two never at once). An ID only; read the bus through
+    /// ``followedBus``, which is `nil` once the route is gone or the bus
+    /// is no longer out. See `FollowBus.swift`.
+    public internal(set) var followedBusID: BusID? {
+        didSet { refreshBusFollow() }
+    }
+
+    /// What the follow bar shows of the bus followed (kept as
+    /// ``followBar`` is, changing only when what it shows does).
+    public internal(set) var busFollowBar: BusFollowFacts?
 
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
@@ -881,6 +896,9 @@ public final class GameSession {
     @ObservationIgnored private var isEditGestureOpen = false
     /// Whether the open gesture has already kept its snapshot.
     @ObservationIgnored private var editGestureHasSnapshot = false
+    /// Whether ``beginEditGesture()`` is open (decision 573's
+    /// ``asOneEdit(_:)`` joins it rather than closing it).
+    var isEditGestureInProgress: Bool { isEditGestureOpen }
 
     /// Plays the sounds the session's changes call for (``SoundCue``): a
     /// train in service arriving at a station, track built, another tool.
@@ -1250,6 +1268,7 @@ public final class GameSession {
     /// the selection.
     public func followTrain(_ id: TrainID) {
         guard let train = world.train(id: id), train.position != nil else { return }
+        followedBusID = nil
         followedTrainID = id
         updateFollowSounds()
     }
@@ -1257,6 +1276,7 @@ public final class GameSession {
     /// Stops following (the follow bar's unfollow button).
     public func stopFollowingTrain() {
         followedTrainID = nil
+        followedBusID = nil
         updateFollowSounds()
     }
 
@@ -1313,6 +1333,7 @@ public final class GameSession {
         if followedTrainID != nil, followedTrain == nil {
             followedTrainID = nil
         }
+        keepFollowingBus()
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
@@ -1415,6 +1436,9 @@ public final class GameSession {
     public func setMap3DOpen(_ open: Bool) {
         guard open != isMap3DOpen else { return }
         isMap3DOpen = open
+        // Decision 400 (FOLLOWBUS): the flat map draws no buses, so a bus
+        // followed in 3D is let go when 3D closes.
+        if !open, followedBusID != nil { followedBusID = nil }
         updateMap3DSpeedCap()
     }
 
@@ -1460,8 +1484,10 @@ public final class GameSession {
     /// lowered.
     @ObservationIgnored private var speedBefore3D: GameSpeed?
 
+    func updateMap3DSpeedCapForBus() { updateMap3DSpeedCap() }
+
     private func updateMap3DSpeedCap() {
-        let capped = isMap3DOpen && followedTrainID != nil
+        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil)
         guard capped != isSpeedCappedIn3D else { return }
         applyHeldSpeed()
         isSpeedCappedIn3D = capped
@@ -3971,12 +3997,16 @@ public struct StatusMessage: Hashable, Sendable {
     /// For a refusal by a train standing on no line, that train: the
     /// banner offers to sell it (decision 327).
     public let sellableTrain: TrainID?
+    /// For a new depot near several lines with none, those lines: the
+    /// banner offers to make it each one's depot (decision 573).
+    public let depotOffer: DepotLinkOffer?
 
-    public init(kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil) {
+    public init(kind: Kind, text: String, fundsNeeded: Money? = nil, sellableTrain: TrainID? = nil, depotOffer: DepotLinkOffer? = nil) {
         self.kind = kind
         self.text = text
         self.fundsNeeded = fundsNeeded
         self.sellableTrain = sellableTrain
+        self.depotOffer = depotOffer
     }
 
     /// How long the banner shows the message before clearing it: a success
@@ -3987,7 +4017,10 @@ public struct StatusMessage: Hashable, Sendable {
     /// `notify()`, `min(9, 3.2 + length × 0.09)` s). The banner keeps a
     /// problem until dismissed while VoiceOver runs.
     public var autoDismissDelay: Duration {
-        switch kind {
+        // Decision 573: an offer stays as long as a problem would, so a
+        // finger has time to reach its buttons.
+        if depotOffer != nil { return .seconds(10) }
+        return switch kind {
         case .success: .seconds(4)
         case .failure: .milliseconds(min(10_000, max(6_000, 4_000 + 100 * text.count)))
         }

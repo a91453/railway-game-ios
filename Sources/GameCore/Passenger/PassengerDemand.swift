@@ -697,6 +697,7 @@ extension GameWorld {
             tourismStars: tourismStars, realisticOperation: realisticOperation,
             curveSpeedLimits: curveSpeedLimits,
             busFeeders: busRoutes.flatMap { [Int64($0.feeds?.rawValue ?? 0), $0.feederTrips, $0.feederMinutes] }
+                + cableways.flatMap { [Int64($0.transfer?.station.rawValue ?? 0), $0.feederTrips, $0.feederMinutes] }
         )
     }
 

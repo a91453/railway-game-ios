@@ -1,4 +1,4 @@
-/// Decision 394: whether the cab view is deep in a tunnel, where nothing
+/// Decision 394 (the window view too, decision 578): whether the cab view is deep in a tunnel, where nothing
 /// on the ground can be seen, so the 3D map draws only what is under it:
 /// each chunk's ground, track and roads (``Map3DScene/Chunk/baseIndexCount``,
 /// where the tunnels' bores and portals are), the trains and their
@@ -37,7 +37,7 @@ public struct Map3DUnderground: Equatable, Sendable {
     /// open (``Map3DTrackCover/openings``).
     public mutating func update(view: Map3DFollow.View?, head: Map3DTrains.Head?, flying: Bool,
                                 camera: Map3DCamera, openings: [Map3DPoint]) {
-        guard view == .cab, !flying, let head, head.inTunnel else {
+        guard view == .cab || view == .window, !flying, let head, head.inTunnel else {
             isUnderground = false
             return
         }

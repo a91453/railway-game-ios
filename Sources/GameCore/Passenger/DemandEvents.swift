@@ -47,8 +47,14 @@ public struct DemandEvent: Hashable, Codable, Sendable {
     public let end: Int64
     /// How much it adds to the station's demand, in thousandths.
     public let boost: Int64
+    /// The named festival it is, for a festival held at a place on the map
+    /// (decision 576): `nil` for the others.
+    public let festival: FestivalKind?
 
-    public init(kind: DemandEventKind, station: StationID, announced: Int64, start: Int64, end: Int64, boost: Int64) {
+    public init(
+        kind: DemandEventKind, station: StationID, announced: Int64, start: Int64, end: Int64, boost: Int64, festival: FestivalKind? = nil
+    ) {
+        self.festival = festival
         self.kind = kind
         self.station = station
         self.announced = announced
@@ -72,7 +78,7 @@ public struct DemandEvent: Hashable, Codable, Sendable {
 
 /// The events of a world that has them: the seed they are drawn from, the
 /// events announced and not yet over, and when the next is drawn.
-public struct DemandEventSchedule: Hashable, Codable, Sendable {
+public struct DemandEventSchedule: Hashable, Sendable {
     public let seed: UInt32
     /// Announced and not yet over, in the order they were drawn.
     public internal(set) var events: [DemandEvent]
@@ -81,11 +87,17 @@ public struct DemandEventSchedule: Hashable, Codable, Sendable {
     /// How many draws there have been: each draw's keys are its number.
     public internal(set) var draws: Int64
 
+    /// The places the named festivals are held at (decision 576).
+    public internal(set) var sites: [FestivalSite] = []
+
     /// The most draws a save counts: more than one a day could make in any
     /// game, so counting them never overflows.
     static let maximumDraws: Int64 = 1 << 40
     /// The most events a save holds at once.
     static let maximumEvents = 64
+
+    /// The most places a save holds: one for each festival.
+    static let maximumSites = FestivalKind.allCases.count
 
     init(seed: UInt32, from day: Int64) {
         self.seed = seed
@@ -103,6 +115,33 @@ public struct DemandEventSchedule: Hashable, Codable, Sendable {
     /// A whole number in `range`, from the hash of `key`.
     func roll(_ key: String, in range: ClosedRange<Int64>) -> Int64 {
         SeedDraw(seed: seed).roll(key, in: range)
+    }
+}
+
+extension DemandEventSchedule: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case seed, events, nextDraw, draws, sites
+    }
+
+    /// A save before version 84 has no `"sites"`.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        seed = try container.decode(UInt32.self, forKey: .seed)
+        events = try container.decode([DemandEvent].self, forKey: .events)
+        nextDraw = try container.decode(Int64.self, forKey: .nextDraw)
+        draws = try container.decode(Int64.self, forKey: .draws)
+        sites = try container.decodeIfPresent([FestivalSite].self, forKey: .sites) ?? []
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(seed, forKey: .seed)
+        try container.encode(events, forKey: .events)
+        try container.encode(nextDraw, forKey: .nextDraw)
+        try container.encode(draws, forKey: .draws)
+        if !sites.isEmpty {
+            try container.encode(sites, forKey: .sites)
+        }
     }
 }
 
@@ -141,7 +180,9 @@ extension GameWorld {
             return
         }
         guard demandEvents?.seed != seed else { return }
+        let sites = demandEvents?.sites ?? []
         demandEvents = DemandEventSchedule(seed: seed, from: dayIndex(of: clock.now))
+        demandEvents?.sites = sites
         passengerPlan = PassengerPlanCache()
     }
 
@@ -179,13 +220,21 @@ extension GameWorld {
         if let state = scenario {
             for festival in state.scenario.events where station(id: festival.station) != nil {
                 let start = day + festival.notice
-                guard start > state.startDay, CompanyAccounts.floorDivide(start - festival.dayOfYear, FinancePeriod.year.days) * FinancePeriod.year.days
-                        == start - festival.dayOfYear,
+                // Decision 576: one that follows a named festival starts
+                // when that festival's year-by-year date says.
+                let isStart = festival.follows?.starts(onDay: start)
+                    ?? (CompanyAccounts.floorDivide(start - festival.dayOfYear, FinancePeriod.year.days) * FinancePeriod.year.days
+                        == start - festival.dayOfYear)
+                guard start > state.startDay, isStart,
                       schedule.events.count < DemandEventSchedule.maximumEvents else { continue }
                 schedule.events.append(DemandEvent(
                     kind: .festival, station: festival.station, announced: day, start: start, end: start + festival.days, boost: festival.boost
                 ))
             }
+        }
+        // Decision 576: the named festivals at their places.
+        for event in namedFestivalEvents(on: day, sites: schedule.sites) where schedule.events.count < DemandEventSchedule.maximumEvents {
+            schedule.events.append(event)
         }
         // A save counts at most 2^40 draws (``demandEventProblem()``): the
         // last it may count is the last.
@@ -243,6 +292,9 @@ extension GameWorld {
         guard let schedule = demandEvents else { return nil }
         let day = dayIndex(of: clock.now)
         guard (0...DemandEventSchedule.maximumDraws).contains(schedule.draws), schedule.events.count <= DemandEventSchedule.maximumEvents else { return "The demand events are out of range." }
+        guard schedule.sites.count <= DemandEventSchedule.maximumSites, Set(schedule.sites.map(\.kind)).count == schedule.sites.count,
+              schedule.sites.allSatisfy({ (0..<bounds.width).contains($0.point.x) && (0..<bounds.height).contains($0.point.y) })
+        else { return "A festival place is out of range." }
         for event in schedule.events {
             guard event.isValid, station(id: event.station) != nil, event.announced <= day, day <= event.end else {
                 return "A demand event is not one the game could have drawn."

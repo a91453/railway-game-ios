@@ -153,6 +153,8 @@ extension GameWorld {
             // blank one once its towns are founded.
             if let anchor {
                 world.setTourism(AttractionCatalog.attractions(in: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds))
+                // Decision 576: and the festivals held at Taiwan's places.
+                world.setFestivalSites(FestivalCatalog.sites(in: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds))
             } else {
                 world.foundAttractions(seed: eventSeed)
             }

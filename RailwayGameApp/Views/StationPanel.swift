@@ -615,7 +615,7 @@ struct StationPanel: View {
     private func showInThreeD(_ train: TrainID, at station: StationID) {
         let departure = Map3DNextDeparture(train: train, station: station, in: session.world)
         guard let opening = departure.opening(in: session.world) else { return }
-        if session.followedTrain != nil { session.stopFollowingTrain() }
+        if session.isFollowingVehicle { session.stopFollowingTrain() }
         screen.map3DHandoff = nil
         screen.map3DOpenedAt = opening
         screen.map3DDeparture = departure
@@ -839,6 +839,26 @@ struct StationPanel: View {
                     session.removeNetworkPlatform(platform)
                 }
             }
+            // Decision 572: a station on both tracks of a double track
+            // with no crossover between them (built before decision 571).
+            if let offer = session.stationCrossoverOffer(for: station.id) {
+                Button {
+                    session.addStationCrossovers(station.id)
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: session.stationCrossoverButtonText(offer))
+                            Text(verbatim: offer.problem ?? session.stationCrossoverHelp)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    } icon: {
+                        Image(systemName: "arrow.triangle.swap")
+                    }
+                }
+                .disabled(offer.problem != nil)
+                .accessibilityIdentifier("station.crossovers")
+            }
         } header: {
             Text(verbatim: language.text("Platforms", "月台"))
         } footer: {
@@ -1054,6 +1074,22 @@ struct StationPanel: View {
                 .accessibilityIdentifier("station.bus.edit")
                 .disabled(!session.allowsBusTool)
                 Spacer()
+                // Decision 400 (FOLLOWBUS): watch a bus of this route from
+                // the 3D map.
+                if session.tutorial == nil, map3DQuality.shows3D {
+                    Button {
+                        screen.panel = nil
+                        session.followBus(onRoute: card.id)
+                        screen.map3DHandoff = nil
+                        screen.showsMap3D = true
+                    } label: {
+                        Text(verbatim: language.text("Follow a Bus", "跟隨公車"))
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityIdentifier("station.bus.follow")
+                    .disabled(!session.hasBusToFollow(onRoute: card.id))
+                    Spacer()
+                }
                 Button(role: .destructive) {
                     closingBusRoute = card.id
                 } label: {

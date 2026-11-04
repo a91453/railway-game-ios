@@ -568,8 +568,9 @@ extension GameWorld {
     /// stop nearest the station and the walk on from there; and carries
     /// the trips between its stops (``refreshCityBusTrips(_:)``).
     /// Returns each station's added share. Without land demand every
-    /// route's figures are 0. Called by ``refreshLandDemand()``.
-    mutating func refreshBusFeeders() -> [StationID: LandDemand.Share] {
+    /// route's figures are 0. Called by ``refreshLandDemand()``; the
+    /// cells in `excluded` (a cableway's, decision 574) no stop draws.
+    mutating func refreshBusFeeders(excluding excluded: Set<Int> = []) -> [StationID: LandDemand.Share] {
         guard !busRoutes.isEmpty else { return [:] }
         let fed = landStations
         refreshBusTransfers(among: fed)
@@ -586,7 +587,7 @@ extension GameWorld {
             for (position, route) in busRoutes.enumerated() where route.buses > 0 && route.station.map(ids.contains) ?? true {
                 for (stop, cell) in route.stops.enumerated() {
                     land.forEachCell(within: BusRoute.stopReach, of: Self.middle(of: cell)) { index, squared in
-                        guard !walkable.contains(index) else { return }
+                        guard !walkable.contains(index), !excluded.contains(index) else { return }
                         let candidate = (squared, position, stop)
                         if nearest[index].map({ candidate < $0 }) ?? true { nearest[index] = candidate }
                     }
@@ -742,8 +743,10 @@ extension GameWorld {
 
     /// The feeders of `origin`'s trips: each running route's trips and
     /// door-to-door minutes, by route.
+    /// Decision 574: the cableways meeting it follow, as feeders do.
     func busFeeders(of origin: StationID) -> [(trips: Int64, minutes: Int64)] {
         busRoutes.compactMap { $0.feeds == origin && $0.feederTrips > 0 ? ($0.feederTrips, $0.feederMinutes) : nil }
+            + cablewayFeeders(of: origin)
     }
 
     /// `boarded` riders set out from `station` by train, or arrived there

@@ -138,6 +138,45 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 578: the 3D follow views: the window of a car, the platform
+    /// of the next stop (a short gap), and the station view greyed out
+    /// while the next stop is a high-speed gap away.
+    func testFollowWindowAndStation() {
+        func open3DFollowing(_ scene: String) -> XCUIApplication {
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-train", "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            return app
+        }
+        do {
+            let app = open3DFollowing("platformStop")
+            defer { app.terminate() }
+            let window = app.buttons["map3D.follow.window"]
+            XCTAssertTrue(window.becomesHittable(within: 10))
+            window.tap()
+            settle(seconds: 8)
+            keep("follow-window", app)
+            let station = app.buttons["map3D.follow.station"]
+            XCTAssertTrue(station.becomesHittable(within: 10))
+            station.tap()
+            settle(seconds: 12)
+            keep("follow-station-near", app)
+        }
+        do {
+            let app = open3DFollowing("farStops")
+            defer { app.terminate() }
+            XCTAssertTrue(app.buttons["map3D.follow.station"].appears(within: 10))
+            settle(seconds: 3)
+            keep("follow-station-too-far", app)
+        }
+    }
+
     /// Decision 565: a train of four 20 m cars standing at a platform four
     /// cars long on a real map, close up on the 2D map and on the 3D one:
     /// every car inside the platform, its nose at the platform's end. For
@@ -190,6 +229,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map3D.trainsLoading"].firstMatch.disappears(within: 240), "The trains are drawn")
         settle(seconds: 8)
         keep("freight-3d", app)
+    }
+
+    /// Decision 580 (FOLLOWBUS): a feeder bus followed on the 3D map, from
+    /// above and behind and from the driver's seat, with the follow bar.
+    /// For the screenshot review of the pull request that let the camera
+    /// follow a bus. One shot a test, as the leaned views.
+    func testFollowBusAboveBehind() { shootFollowBus("aboveBack", "follow-bus-above") }
+    func testFollowBusCab() { shootFollowBus("cab", "follow-bus-cab") }
+    func testFollowBusSide() { shootFollowBus("side", "follow-bus-side") }
+
+    private func shootFollowBus(_ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", "followBus", "-screenshot-follow-bus", "-map3DFollowView", view,
+                                 "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The bus is followed")
+        settle(seconds: 12)
+        keep(name, app)
     }
 
     /// Decision 555: the 3D map at its own tilt and leaned by two fingers
@@ -1096,6 +1159,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         confirm.tap()
         settle()
         keep("platform-levelling-layer", app)
+    }
+
+    /// Decision 572: a station on both tracks of a double track with no
+    /// crossover between them (built before decision 571): the station
+    /// panel's button that lays one, then what it says once laid.
+    func testOldStationCrossovers() {
+        let app = launch(extra: ["-ui-test-world", "old-crossovers"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let select = app.buttons["tool.select"]
+        if select.appears(within: 5), select.becomesHittable(within: 5) { select.tap() }
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).press(forDuration: 1)
+        XCTAssertTrue(app.descendants(matching: .any)["station.operations"].firstMatch.appears(within: 10), "The station panel opens")
+        let button = app.buttons["station.crossovers"].firstMatch
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.appears(within: 10))
+        list.waitUntilStill()
+        // Clear of the bar's scroll edge too, which hides a row's top
+        // line just under the bar (the first round's shot).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(button, in: list, below: app.navigationBars.firstMatch.frame.maxY + 32), "The button shows")
+        button.waitUntilSettled()
+        settle()
+        keep("station-crossovers-button", app)
+        button.tap()
+        XCTAssertTrue(button.disappears(within: 10), "Laid, it goes")
+        settle()
+        keep("station-crossovers-laid", app)
     }
 
     /// Decision 507: the platform mode's layout menu on a double track,
@@ -2263,6 +2363,37 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(scrollScreen(to: rules, in: app), "The Rules row shows")
         settle(seconds: 1)
         keep("settings-rules", app)
+    }
+
+    /// Decision 573: a depot laid near two lines with none offers each on
+    /// the banner, and the game menu's Report a Problem says where to
+    /// send it. For the screenshot review of the pull request that added
+    /// them, not the website.
+    func testDepotOfferAndWhereToReport() {
+        let app = launch(extra: ["-screenshot-scene", "depotOffer"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The offer stays 10 s: shot as soon as it shows.
+        let offer = app.buttons["banner.depotLine"].firstMatch
+        XCTAssertTrue(offer.appears(within: 10), "The banner offers the lines")
+        settle(seconds: 1)
+        keep("depot-offer", app)
+
+        app.buttons["banner.depotLine"].firstMatch.tap()
+        settle(seconds: 1)
+        keep("depot-offer-chosen", app)
+
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let report = app.buttons["menu.report"]
+        XCTAssertTrue(report.appears(within: 30), "The menu opens")
+        report.waitUntilSettled()
+        let frame = report.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["report.whereToSend"].firstMatch.appears(within: 10), "The report says where to send it")
+        settle(seconds: 1)
+        keep("report-where-to-send", app)
     }
 
     /// Decision 568: a new line picked on the map (five stations, the

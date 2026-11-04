@@ -73,6 +73,15 @@ public struct Map3DStreaming: Sendable {
     /// scene holds.
     public static func streams(_ world: GameWorld) -> Bool { world.geoAnchor != nil }
 
+    /// Decision 578: how far round a stop ahead the followed train's chunks
+    /// are built before it gets there, in metres: the platform view's
+    /// sight over the platform (a block of five by five chunks).
+    public static let stationRadius: Float = 1_024
+    /// Decision 578: how far round a stop the chunks must stand for the
+    /// camera to go to its platform, in metres: the neighbours it sees
+    /// first from the platform, one chunk's side.
+    public static let stationReady: Float = 512
+
     /// The scene's origin, world units.
     public let originX: Double
     public let originY: Double
@@ -140,6 +149,22 @@ public struct Map3DStreaming: Sendable {
         return simd_length(simd_clamp(at, low, low + side) - at)
     }
 
+    /// Decision 578: the chunks on the map within `radius` metres of scene
+    /// point `point`, seen from above, the nearest first.
+    public func area(round point: Map3DPoint, radius: Float) -> [Key] {
+        let centre = key(of: point)
+        let span = Int((radius / Map3DScene.chunkSize).rounded(.up)) + 1
+        var keys: [(key: Key, distance: Float)] = []
+        for row in (centre.row - span)...(centre.row + span) {
+            for column in (centre.column - span)...(centre.column + span) {
+                let key = Key(column: column, row: row)
+                let distance = Self.distance(of: key, to: point)
+                if distance <= radius, isOnMap(key) { keys.append((key, distance)) }
+            }
+        }
+        return keys.sorted { ($0.distance, $0.key) < ($1.distance, $1.key) }.map(\.key)
+    }
+
     /// Whether any of `key`'s square is on the map.
     func isOnMap(_ key: Key) -> Bool {
         let square = region(of: key)
@@ -204,9 +229,12 @@ public struct Map3DStreaming: Sendable {
     /// What to do with the target at `target` moving at `velocity`: the
     /// wanted chunks neither `built` nor `building`, the soonest first;
     /// and those `built` no longer wanted even ``slack`` further out.
-    public func plan(target: Map3DPoint, velocity: SIMD2<Float>, built: Set<Key>, building: Set<Key> = []) -> Plan {
+    public func plan(target: Map3DPoint, velocity: SIMD2<Float>, built: Set<Key>, building: Set<Key> = [],
+                     keeping stops: [Map3DPoint] = []) -> Plan {
         let build = wanted(target: target, velocity: velocity).filter { !built.contains($0) && !building.contains($0) }
-        let kept = Set(wantedWithin(slack: Self.slack, target: target, velocity: velocity).map(\.key))
+        var kept = Set(wantedWithin(slack: Self.slack, target: target, velocity: velocity).map(\.key))
+        // Decision 578: the chunks round the stops ahead are kept too.
+        for stop in stops { kept.formUnion(area(round: stop, radius: Self.stationRadius + Self.slack)) }
         return Plan(build: build, drop: built.subtracting(kept).sorted())
     }
 
@@ -285,13 +313,19 @@ public struct Map3DStreaming: Sendable {
         /// building, if none is being built and one is wanted. Plans every ``interval`` (at once after
         /// a block is built); nothing while the target runs faster than
         /// ``fastest``.
-        public mutating func step(target: Map3DPoint, at seconds: Double) -> (drop: [Key], build: [Key]) {
+        ///
+        /// Decision 578: `stops` are the scene points the followed train
+        /// runs to (the stop ahead's platform): once nothing the target's
+        /// own plan wants is missing, the chunks round them
+        /// (``Map3DStreaming/stationRadius``) are built, in full, and kept
+        /// while they are `stops`; the target's order is not changed.
+        public mutating func step(target: Map3DPoint, at seconds: Double, stops: [Map3DPoint] = []) -> (drop: [Key], build: [Key]) {
             motion.update(target: target, at: seconds)
             if let planned, seconds - planned < Map3DStreaming.interval { return ([], []) }
             planned = seconds
             let velocity = motion.velocity
             guard (velocity.x * velocity.x + velocity.y * velocity.y).squareRoot() <= Map3DStreaming.fastest else { return ([], []) }
-            let plan = grid.plan(target: target, velocity: velocity, built: built, building: Set(building))
+            let plan = grid.plan(target: target, velocity: velocity, built: built, building: Set(building), keeping: stops)
             let drop = plan.drop.filter { !scene.contains($0) }
             built.subtract(drop)
             stale.subtract(drop)
@@ -300,6 +334,15 @@ public struct Map3DStreaming: Sendable {
             var block = Map3DStreaming.block(of: plan.build)
             func nearest(_ keys: some Sequence<Key>) -> [Key] {
                 keys.map { (key: $0, distance: Map3DStreaming.distance(of: $0, to: target)) }.sorted { ($0.distance, $0.key) < ($1.distance, $1.key) }.map(\.key)
+            }
+            var around = target
+            let stopKeys = stops.flatMap { stop in grid.area(round: stop, radius: Map3DStreaming.stationRadius).map { (key: $0, stop: stop) } }
+            if block.isEmpty {
+                // Decision 578: the chunks round the stops ahead, missing or
+                // simplified, the nearest to a stop first.
+                let missing = stopKeys.filter { !building.contains($0.key) && (!built.contains($0.key) || coarse.contains($0.key)) }
+                block = Map3DStreaming.block(of: missing.map(\.key))
+                if let first = block.first, let stop = missing.first(where: { $0.key == first })?.stop { around = stop }
             }
             if block.isEmpty {
                 // Decision 368: nothing missing: the coarse chunks near the
@@ -315,13 +358,20 @@ public struct Map3DStreaming: Sendable {
                 // scene's are never let go, the others only beyond the
                 // plan's reach) simplified again, so the city in full stays
                 // round the target only.
-                let far = built.subtracting(coarse).subtracting(stale)
+                let far = built.subtracting(coarse).subtracting(stale).subtracting(stopKeys.map(\.key))
                     .filter { Map3DStreaming.distance(of: $0, to: target) > Map3DScene.detailRadius + Map3DStreaming.slack }
                 block = Map3DStreaming.block(of: nearest(far))
             }
             building = block
-            if !block.isEmpty { buildingAround = target }
+            if !block.isEmpty { buildingAround = around }
             return (drop, block)
+        }
+
+        /// Decision 578: whether the chunks round scene point `point` (the
+        /// platform's eye) are all built, as far as
+        /// ``Map3DStreaming/stationReady``.
+        public func isBuilt(round point: Map3DPoint) -> Bool {
+            grid.area(round: point, radius: Map3DStreaming.stationReady).allSatisfy(built.contains)
         }
 
         /// The block `keys` built for the `generation`th scene is done:

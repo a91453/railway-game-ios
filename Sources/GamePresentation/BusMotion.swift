@@ -12,10 +12,28 @@ import GameCore
 // of a trip (`FADE_SECONDS`). Its times come from the game's timetable
 // instead of the reference's GPS trails.
 
+/// One bus of a route through the day, for the camera that follows it:
+/// the route and which of its runs (the index in ``BusMotion/departures``).
+/// The same bus keeps its ID from one tick to the next; a route edited
+/// changes the runs and so the IDs.
+public struct BusID: Hashable, Sendable {
+    public let route: BusRouteID
+    public let run: Int
+
+    public init(route: BusRouteID, run: Int) {
+        self.route = route
+        self.run = run
+    }
+}
+
 /// The buses of one bus route through the day.
 public struct BusMotion: Hashable, Sendable {
     /// One bus at a moment.
     public struct Bus: Hashable, Sendable {
+        /// Which run of the day it is (the index in ``departures``).
+        public let run: Int
+        /// The seconds since it came to its first stop.
+        public let elapsed: Double
         /// The leg it is on (from stop `leg` to the next stop, the last leg
         /// to the station) and how far along it, 0–1, counted from the
         /// first stop's end whichever way the bus goes.
@@ -104,33 +122,48 @@ public struct BusMotion: Hashable, Sendable {
         var buses: [Bus] = []
         let day = Double(GameTime.secondsPerDay)
         for offset in [-day, 0, day] {
-            for departure in departures {
+            for (run, departure) in departures.enumerated() {
                 let t = second - (departure + offset) + Self.layover
                 guard t >= 0, t < cycle else { continue }
-                buses.append(bus(at: t))
+                buses.append(bus(at: t, run: run))
             }
         }
         return buses
     }
 
+    /// The bus of `run` at `second` of the day, `nil` when it is not out.
+    public func bus(run: Int, at second: Double) -> Bus? {
+        buses(at: second).first { $0.run == run }
+    }
+
+    /// Decision 400 (FOLLOWBUS): the bus a camera that followed `run` to
+    /// the end of its trip goes on with: of the route's other buses out at
+    /// `second` and drawn in full, the one that came to its first stop last
+    /// (the next run); `nil` when none is out.
+    public func successor(of run: Int, at second: Double) -> Bus? {
+        buses(at: second)
+            .filter { $0.run != run && $0.scale >= 1 }
+            .min { ($0.elapsed, $0.run) < ($1.elapsed, $1.run) }
+    }
+
     /// The bus `t` seconds after it came to the first stop.
-    func bus(at t: Double) -> Bus {
+    func bus(at t: Double, run: Int = 0) -> Bus {
         let scale = min(1, t / Self.fadeSeconds, (cycle - t) / Self.fadeSeconds)
         let out = t - Self.layover
-        if out < 0 { return Bus(leg: 0, share: 0, outbound: true, stopped: true, scale: scale) }
-        if out < oneWay { return place(after: out, outbound: true, scale: scale) }
+        if out < 0 { return Bus(run: run, elapsed: t, leg: 0, share: 0, outbound: true, stopped: true, scale: scale) }
+        if out < oneWay { return place(after: out, outbound: true, scale: scale, run: run, elapsed: t) }
         let back = out - oneWay - Self.layover
-        if back < 0 { return Bus(leg: max(legs.count - 1, 0), share: 1, outbound: true, stopped: true, scale: scale) }
-        return place(after: back, outbound: false, scale: scale)
+        if back < 0 { return Bus(run: run, elapsed: t, leg: max(legs.count - 1, 0), share: 1, outbound: true, stopped: true, scale: scale) }
+        return place(after: back, outbound: false, scale: scale, run: run, elapsed: t)
     }
 
     /// Where a bus is `seconds` into a trip: on a leg at ``speed``, or
     /// standing ``dwell`` at each stop between.
-    func place(after seconds: Double, outbound: Bool, scale: Double) -> Bus {
+    func place(after seconds: Double, outbound: Bool, scale: Double, run: Int = 0, elapsed: Double = 0) -> Bus {
         func bus(_ step: Int, _ share: Double, stopped: Bool) -> Bus {
             // Back, the legs are taken from the last, each from its far end.
-            outbound ? Bus(leg: step, share: share, outbound: true, stopped: stopped, scale: scale)
-                : Bus(leg: legs.count - 1 - step, share: 1 - share, outbound: false, stopped: stopped, scale: scale)
+            outbound ? Bus(run: run, elapsed: elapsed, leg: step, share: share, outbound: true, stopped: stopped, scale: scale)
+                : Bus(run: run, elapsed: elapsed, leg: legs.count - 1 - step, share: 1 - share, outbound: false, stopped: stopped, scale: scale)
         }
         guard speed > 0 else { return bus(0, 0, stopped: true) }
         var left = seconds

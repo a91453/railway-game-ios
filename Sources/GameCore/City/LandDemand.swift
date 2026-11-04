@@ -276,7 +276,13 @@ extension GameWorld {
     mutating func refreshLandDemand() {
         // Decision 400, 10i-2: the land the buses bring in, 0 without land
         // demand.
-        let fed = refreshBusFeeders()
+        // Decision 574: the cableways' land first; the buses draw none of
+        // the cells they take.
+        let cabled = refreshCablewayFeeders()
+        var fed = refreshBusFeeders(excluding: cabled.cells)
+        for (station, share) in cabled.shares {
+            fed[station, default: LandDemand.Share()].add(share)
+        }
         guard drawsDemandFromLand else { return }
         // Decision 94: the people in the player's buildings ride too.
         var shares = LandDemand.shares(of: land, among: landStations, placed: placedBuildings)
