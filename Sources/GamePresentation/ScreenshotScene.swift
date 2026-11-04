@@ -76,6 +76,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// with every car inside its platform, on the 2D map and the 3D one.
     case platformStop
 
+    /// Decision 578: a new real-world game round Taipei Main Station, a
+    /// line of two stations 30 km apart (a high-speed gap) with its train
+    /// running to the far one: for the screenshot of the 3D follow bar's
+    /// station view greyed out while the next stop is too far.
+    case farStops
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -86,6 +92,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
+        // Decision 578: its first station, 15 km west and 300 m north of it.
+        case .farStops: (25.0478 + 0.0026949, 121.5170 - 15_000 * 0.00000991)
         default: nil
         }
     }
@@ -105,6 +113,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .platformStop: Self.platformStopWorld(in: language)
+        case .farStops: Self.farStopsWorld(in: language)
         }
     }
 
@@ -203,6 +212,27 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
+    }
+
+    // MARK: - Far stops
+
+    /// Decision 578: ``farStops``'s world, paused with its train running,
+    /// well short of the far station.
+    private static func farStopsWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let anchor = GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170) else { return DemoWorld.make(in: language) }
+        let world = GameWorld.newGame(anchor: anchor)
+        guard let frame = RealWorldFrame(world: world) else { return world }
+        let middle = frame.worldPosition(latitude: 25.0478, longitude: 121.5170)
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 15_000 * metre
+        let y = Int64(middle.y - 300 * metre)
+        guard var opened = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
+                                                           PlanPoint(x: Int64(middle.x + half), y: y)], in: world) else { return world }
+        for _ in 0..<7_200 {
+            if opened.trains.first(where: { $0.position != nil }) != nil, case .travellingToStop? = opened.trains.first?.execution { break }
+            try? opened.advance(ticks: 1)
+        }
+        opened.setSpeed(.paused)
+        return opened
     }
 
     // MARK: - Platform stop

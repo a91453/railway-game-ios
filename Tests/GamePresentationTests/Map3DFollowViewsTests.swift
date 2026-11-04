@@ -293,6 +293,17 @@ final class Map3DWindowAndStationAheadTests: XCTestCase {
         XCTAssertLessThan(start, 11_000)
     }
 
+    /// Decision 578's screenshot scene: a running train whose next stop is
+    /// a high-speed gap away, so the station view is not offered.
+    func testTheFarStopsSceneIsTooFarForTheStationView() throws {
+        let world = ScreenshotScene.farStops.make(in: .traditionalChinese)
+        let train = try XCTUnwrap(world.trains.first { $0.position != nil })
+        let metres = try XCTUnwrap(world.map3DMetresToStopAhead(of: train.id))
+        XCTAssertGreaterThan(metres, Map3DFollow.stationReach)
+        XCTAssertFalse(Map3DFollow.stationViewIsOffered(remainingMetres: metres))
+        XCTAssertNotNil(ScreenshotScene.farStops.place)
+    }
+
     static func world(between: Int64) throws -> (GameWorld, TrainID, StationID, StationID) {
         var world = try GameWorld(
             bounds: WorldBounds(width: 1_000_000, height: 262_144),
