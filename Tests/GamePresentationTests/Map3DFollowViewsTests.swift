@@ -309,6 +309,7 @@ final class Map3DWindowAndStationAheadTests: XCTestCase {
     /// one (a there-and-back timetable standing at its last row).
     func testStandingAtAStopTheStationViewIsOfferedAndTheNextStopIsAnother() throws {
         var world = ScreenshotScene.farStops.make(in: .traditionalChinese)
+        world.setSpeed(.x1)
         let id = try XCTUnwrap(world.trains.first { $0.position != nil }).id
         var seen = Set<Int>()
         for _ in 0..<40_000 {
