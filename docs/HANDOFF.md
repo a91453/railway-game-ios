@@ -1,3 +1,5 @@
+> 柴油車的行駛聲（派工單 DIESEL，session_01YGNNumDcBCK97mmQUfHHjy，`claude/diesel-sound`，決策 567，2026-11-03）：NEXT_PRIORITIES §22.2 第 7a 項做完（怠轉、起步加速、惰行三個循環，照月本國キハ40 系錄音的頻譜與引擎基頻合成，錄音不提交）。實機聽感 UNVERIFIED，請作者實機聽。7b（電車加減速的馬達聲）沒做，做法建議寫在 `docs/decisions/567.md`「下一步」。
+
 > 桃園機場捷運上架（派工單 TYMCLIST、TYMCLIST2，決策 556（檔案在 #1743 分支 `7fabe2b`，合併後才在 main），`claude/tymclist-airport-line` #1743，draft；TYMCLIST2 session_01JMHz9aCrGxwKjwmKNpAC9t 於 2026-11-03 停）：線上架、真實桃園開局買得到，蘆竹、青埔兩座線中間的真實機廠，中途折返站兩側渡線，3.8 % 坡。三種規則兩天已量；價格已量，其他線一元不變。號誌關早上在長庚醫院卡死，已由[決策 559](decisions/559.md)（#1747，已合併）修好：315/333 → 0/333。**剩下**（逐項見決策 556「下一步」）：1 傍晚機場第二航廈 17:16–17:31 直達車折返卡死，要改 GameCore（跟車授權讓車跟進要折返的車停著的月台，不走空的第三股；重現指令在 `7fabe2b` 的 docs/decisions/556.md「下一步」1）；2 簡單＋行車控制 320/333 沒發；3 行車控制時模擬很慢（GameCore `trafficPlan` 越車規劃）；4 直達車跳站、長庚待避線不做；5 回本沒量完。
 
 > Codex 文湖線兩款 studies（2026-11-03，[公開draft #1742](https://github.com/a91453/railway-game-ios/pull/1742) ↔ [素材draft #47](https://github.com/a91453/railway-assets-private/pull/47)）：producer `538a985c795ef57dd034fa57a226270354a8ae8e`，各A/B近遠及完整四車近遠、原生／GLB／通用assembly與自含viewer；11測試、13類真幾何故障／2類端部故障／5類assembly故障、獨立Swift與Blender及39份獨立重建bytes均通過，950舊模型保持，standard新增0。私庫8PNG＋公開1PNG。[來源／驗證與未完成項](art/wenhu/README.md)：官方A-B-A-B與A-B-B-A衝突，正式角色方向、帶日期完整四車實號、隱藏安全輪／集電器與設備分配仍缺；四態UNVERIFIED，file://政策阻擋，未獲使用者外觀接受。合併後僅studies，不改營運wenhu；不動EMU700 #1730／素材#45及其他成果。未推main／merge／auto-merge／TestFlight。 續核2005第33期細設專文與工程原圖，APM修正軸距10m／輪心橫距1.98m，新增承樑支承與空氣彈簧／導引架；設計值不等於竣工營運確認。
@@ -470,6 +472,32 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 44 任交第 45 任（2026-11-03 20:50 UTC，session_01YGNNukw5koUxDsjkSBmJJy，壓縮 2 次、快到第 3 次）**：作者去睡了，早上自己按 111.1（作者：「綠了就合吧 紅了就修復 我早上才要發111.1」）。第 45 任照這段接手；和下面不同時以這段為準。
+
+- **111.1 發版準備（第一件事）**：
+  1. #1750（`claude/whatsnew-card-111`，head `8e8e463`，App 內這版新增＋`.github/testflight-whats-new.md`＋`PLAYER_FEEDBACK.md`）：20:45 UTC 時 Linux 全綠、Xcode build 在跑。gate 與 iOS 綠就合（`expectedHeadSha` 用完整 SHA）。
+  2. 等 main 的 push `ci.yml` 綠，再對 main HEAD 手動跑完整 `ci.yml` 與 `ios-build.yml` full lane（都是 workflow_dispatch）。
+  3. 兩個都綠，在 #1579 寫「111.1 可以發（commit X）」，並在對話告訴作者。紅就查、修。**不要自己按 `testflight.yml`**，作者早上按。
+  4. full lane 跑完前不合其他 PR（合了會自動起 full lane 搶 macOS）。
+  5. 作者發完後，`PLAYER_FEEDBACK.md` 記 0.5.0 (111.1) 的 run 與 commit。
+  - 111.1 包含：#1747、#1757、#1758 DAYPASS、#1759 L6FIX、#1761 HEALTH-110、#1762 NEWCAR（決策 566）、#1763 DIESEL（567）、#1765 REVIEW-L8、#1768 AUTOXO（571）、#1750。
+- **111.1 之後依序審、合**（每批 3–5 個，等 main `ci.yml` 綠）：
+  - #1766 STNAME（決策 569，ready、綠，自審截圖過）先合。
+  - #1764 PLATSTOP（565，draft，等截圖）。
+  - #1760 ROUTEUI（568，draft，第三級，規劃要看前後截圖含 iPad）。
+  - #1769 STUCKFIX（570，GameCore，draft，文湖 6 格量測中）。
+  - #1767 WENHUSIDE（564，存檔 82，GameCore）：WENHUSIDE-2（session_01YGNNuovdoMPJsiiJsYuTw1）接手修三鶯簡單規則死結、campaigns-6／9、高鐵示範 139 筆靠左；交接在該 branch 的 HANDOFF §4.44。
+  - TYMCLIST3（session_01YGNNup5FDQbQYoyKCqHySs）：A 決策 562，B 接手 #1743（決策 556），B 等 WENHUSIDE 的 `setLineKeepsRight`。
+  - AUTOXO-2（session_01YGNNumKeZDNGQvPYj7uCfW，`claude/terminus-simple-rules`，決策 571 續）：簡單規則終點站死結，疑在 `Terminus.swift` 的 `guard blockSections` 與 `alternativeRoute` 的反方向限制。
+  - GameCore 名額順序：WENHUSIDE-2 ＞ TYMCLIST3 ＞ STUCKFIX ＞ AUTOXO-2（同時最多 2 個跑完整 tier）。
+- **沒派的**：
+  - REVIEW-L8 的 L8-1（P3）：一日券的 `countedAt(day:line:serviceDay:)` 逐線選時間，但路網要逐班次的間隔，只在尖峰開的主班次會數到 0；改法在 `docs/archive/PR1752_1759_REVIEW_HANDOFF.md`。下一輪審查從 #1760 起。
+  - HEALTH-110 第 1 項：文湖擬實 281/532 班誤點超過 5 分，等 WENHUSIDE-2 合了重量。
+  - 玩家回報複線＋號誌站、月台最大仍死結：已請玩家用「回報問題」附存檔，收到就派除錯（可能和 AUTOXO-2 同源）。
+- **111.1 之後的新功能順序**（作者同意）：台灣節慶（§22 第 20 項）→ 纜車 → 渡輪 → 飛機（機場樞紐、自動航班，不是玩家經營航空公司）。一次一種，都動 GameCore、升存檔。之後還有 7b 馬達聲。作者不要把介面摺疊起來。
+- **號碼**：556、562、564、565、566、567、568、569、570、571 已用或保留；**下一個 572**。存檔 82 保留給 #1767；golden schema 78 需要時。
+- **固定三件事這一輪**：審查 REVIEW-L8（到 #1759）、除錯 HEALTH-110；CI 優化上一輪 CIOPT-6。發 111.1 之後照 §1.1 再派。
 
 **第 44 任接回（2026-11-03 14:10 UTC，session_01YGNNukw5koUxDsjkSBmJJy，作者在 claude.ai 開的，第 0 層）**：照下面「pro 交回第 44 任」接手；兩段不同時以這段為準。
 
@@ -2869,6 +2897,8 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 | 3D：擋住列車的建物變透明、深度閃爍、道具穿模、真的台灣車與站房 | F 台灣版＋「定案前要補」 | 3D 生活感那條線之後 |
 | 參考庫 2026-10-18 新增的兩個資料夾，不是新工作，是讓排好的項目省工的素材（照 NEXT_PRIORITIES §16 的順序用，不插隊）。`Railway/taiwan-rail-reference-clean/` 是 `site_archive_clean` 的新版：(1) 高鐵票價表 `source/data/thsr_fare.json`（TDX ODFare，全部站對、票種與車廂；補上 ARCHITECTURE「沒有真實高鐵的票價表」的缺口），給高鐵示範（§16 第 4 項）或「新台幣」那輪（§16 第 5.7 項）；(2) 台鐵時刻表 10-16 版、`thsr_schedule_dense.json`、國土測繪中心的橋隧改判 `rail_structures_official.json` 與較新的 `rail-3d/physical/`（`network.json`、`level-profiles.json` 都和 `site_archive_clean` 不同），給決策 279 的後續與重跑 `tools/real-railways/`、`tools/real-timetables/`；(3) 62 款車型、附出處的編組 `rail-3d/integration/formations.js`、12 個站區模型 `rail-3d/assets/stations/`，給上一行「真的台灣車與站房」。`Railway/world-rail-reference-clean/`：12 個海外城市的路網與班表、120 款車型，可補上上面「台灣以外的實景地圖沒有真實鐵路」那一行；單城班表 26–55 MB，要像平溪線一樣只抽需要的部分，署名照各檔 `source_notes`；`nyc_schedule_dense.lite.json` 的 `source_notes` 寫成 Entur（挪威），用之前先核對 | 參考庫 `058f833`；session_01B2b7QLdd5dVnXNZLmQbcQX 盤點 | (1) 的高鐵票價表已用在高鐵示範：決策 325（session_01YEY1CSzE5zYPKVPqDAMBAy，`claude/hsr-real-fares`，存檔 69），剩下的寫在決策 325「之後」（商務車廂、新台幣那輪換掉 NT$10＝$1）。其他沒有人接；各自跟著它服務的項目做 |
 | 從空地畫的複線兩條之間沒有渡線：玩家在兩站點了不同的一條就不相連（70.1 的回報）。決策 284 只讓開新路線的字說出原因與接法；根本的做法是畫複線時兩端自動加渡線，或「月台」工具在複線上一次設兩條的月台，兩個都改建造規則，預覽寫在決策 284「沒選的」 | 決策 284、285、PLAYER_FEEDBACK 70.1 | **做了**（`claude/double-track-platforms`，決策 285）：選了第二種。「月台」工具點在複線的一條上、而旁邊那條和它不相連時，同一個動作兩條都設月台（同一站），兩站點了不同的一條也相連。兩條已經相連（有渡線）時照舊只設點的那條。剩下：從空地畫複線時兩端自動加渡線（第一種）沒有做，預覽在決策 285「沒選的」；待實機確認 |
+| 一般規則、行車控制開：手動買車放在兩頭再設列數時，線只排 1 列（往返 10 分＝目標班距），多的車是備用車（決策 58）停在月台上，跑的那列要進的月台被占著就整天「互相卡住」。換月台的路在（只長 5 個單位），但 `alternativeRoute` 給 nil，`spareStandingAside` 也找不到；修前就有，用線上的「＋」加車不會遇到 | [決策 571](decisions/571.md)「還沒解決的」，110.1 回報 | AUTOXO（session_01YGNNuptW6LsEWEMiD7BFEf，`claude/double-track-crossovers`）做了月台內側自動渡線，這一項要改 GameCore（`RouteReservation.alternativeRoute`、`Deadlock.spareStandingAside`），沒動；等遊戲規劃排 |
+| 決策 571 之後仍會卡的複線（玩家補充：「複線軌道加號誌站，月台全部使用最大的」）：一般＋行車控制下，兩站點在**不同的一條**（混點），或兩站設好後再「升級為複線」並在站旁加渡線時，兩列在兩頭的月台互等對方占著的月台，一天 1,065 分死結（寫實規則不會：227／170 段）。每頭各一組渡線、或改成每頭一組反向雙渡線都一樣。推測根源在 GameCore：`Terminus.swift:34` 的 `guard blockSections else { return [] }` 讓一般規則沒有終點站豁免，`alternativeRoute` 的對向方向限制把換到空月台的路擋掉（和上一列的備用車是同一個根）。所以 #1768 只在「月台」工具兩條都設月台時加渡線，升級為複線與雙渡線沒放進去（試過的改法：`stationCrossovers(of:in:)` 傳入草稿世界、每頭兩組反向渡線，`doubleTrackUpgrade` 對每站第一個月台呼叫它並併入 `.buildDoubleTrackChain` 的 `crossovers`；混點與升級在一般＋行車控制仍 1,065 分，純複線反而變差 205／153 段，所以沒提交）。量到的（最長月台 16 節）：main 上複線＋號誌站一般＋行車控制死結 171 分，#1768 上 0；純複線與升級在 main 只排 1 列；混點在這個分支是 1,065 分，main 沒量（main 上它沒有渡線，應是只排 1 列，所以不會比 main 更差這點沒驗證） | [決策 571](decisions/571.md)「還沒解決的」，110.1 回報 | AUTOXO 第 2 次壓縮停手，沒動 GameCore；要先改 `Terminus.terminusTraversals`（一般規則也給終點豁免）或 `alternativeRoute` 的方向限制，再把混點與升級的情況加進 `DoubleTrackDeadlockTests`。玩家的存檔還沒拿到，拿到後先重播確認是哪一種配置 |
 | 73.1 的「終點無法折返」只從截圖推斷是列車比月台長（決策 284 改了字）。玩家的實際配置沒有存檔：下一版請測試者用「回報問題」附存檔，確認不是別的原因（例如終點的盡頭線放不下整列車） | 決策 284、PLAYER_FEEDBACK 73.1 | 待實機確認 |
 | 提早折返（決策 255）後，列車卡的「本趟」仍從沒去的那一站算（74.1 截圖的「扒子岡 13:52 發」）。決策 288 已讓它照一般停站開走、時刻往前移，但卡片與跟隨列還沒說「在龜山提早折返」（決策 255 的「下一步」）。74.1 的玩家配置沒有存檔，下一版請測試者確認不再卡在那一站 | 決策 255、288，PLAYER_FEEDBACK 74.1 | **做了**（`claude/short-turn-card`，決策 255 的第二則「後來」）：卡片與跟隨列的本趟從折返站算，多一行「在龜山提早折返」。剩下：重複的時刻表認不出折返；74.1 待實機確認 |
 | NEXT_PRIORITIES §17 的乙線「現實路網」：~~真實車站當建議站點~~（決策 295，`claude/real-station-suggestions`）→ ~~R1 轉乘站~~（決策 298，`claude/r1-transfer-stations`，存檔 64）→ ~~R2 電腦的車照已打包的時刻表在 2D 地圖上跑（只畫）~~（決策 304，`claude/r2-real-trains`）。甲線（M0 之後的 M1–M3、確認路線卡、空窗快轉）由做 M0 的 session 接著做 | 75.1 玩家建議（PLAYER_FEEDBACK 75.1 #1）、競品研究 #832；排序 2026-10-20 | 建議站點：決策 295 已合併（圖釘的大小與好不好點待實機）。R1：決策 298 做完（session_01TePLuBqSCAQxMhhJBTJ8Cq）；待實機：車站卡那一行、新遊戲的開關；決策 298「下一步」列了 R2 要接的地方。R2：決策 304 做完（session_0193ujbBhjzFo37QWceGdzcX）：捷運與輕軌逐班、高鐵一天的班次、台鐵照班距；車站卡列下一班；設定「真實列車」可關。待實機：膠囊的大小與淡度（`RealTrainTraffic.look`）、畫 157 列的時間、iPad 整張地圖。加減速：決策 304 的「後來」（2026-10-22，`claude/real-train-accel`）站間照網站的 `buildProfile` 加速出站、減速進站，高鐵有惰行，解不出時用 Mini Tokyo 3D 的退路；待實機看樣子。剩下的在決策 304「下一步」：3D 的真實列車、台鐵逐班時刻表（要打包參考庫的 2026-10-16 時刻表）、路線名與站名的英文；R3 照 §19 的順序 |

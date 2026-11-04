@@ -37,6 +37,8 @@ public final class GameSession {
             // Decision 305: a paused game has no tick to look again after
             // a command (decision 330, later: off the main actor).
             if !isApplyingTick, world.clock.isPaused { lookAgainForNightSkip() }
+            // Decision 566: a model new to the fleet, its arrival card.
+            if !isApplyingTick { noteTrainArrivals() }
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
             refreshScreenFacts()
@@ -168,6 +170,9 @@ public final class GameSession {
     /// The stretch beside the platform's, kept for the stretch and command
     /// it was looked for at (L3-11, ``networkPlatformBeside``).
     @ObservationIgnored var platformBesideMemo: PlatformBesideMemo?
+    /// Decision 571: the crossovers the platform picked would get, kept
+    /// for the pick and command as ``platformBesideMemo`` is.
+    @ObservationIgnored var stationCrossoverMemo: (key: PlatformBesideMemo.Key, crossovers: [PlayerCommand.TrackStretch])?
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
@@ -483,6 +488,14 @@ public final class GameSession {
     /// The real line just bought (decision 315), for the card that says
     /// so; the card clears it when closed.
     public var lastLineAcquired: RealLineAcquired?
+    /// Decision 566: the new-train cards waiting, the first one shown
+    /// (``noteTrainArrivals()``).
+    public internal(set) var trainArrivals: [NewTrainArrival] = []
+    /// Decision 566: the models the fleet had after the last command.
+    @ObservationIgnored var fleetModels: Set<String> = []
+    /// Decision 566: the models whose card this session has shown, so one
+    /// sold and bought again, or undone and done again, has none.
+    @ObservationIgnored var trainArrivalsShown: Set<String> = []
 
     /// The real line offered on the purchase card (decision 315), while
     /// the card is open.
@@ -1077,6 +1090,8 @@ public final class GameSession {
         self.selectedTrainID = world.trains.first?.id
         self.selectedLineID = world.lines.first?.id
         self.newsWatch = NewsWatch(world: world)
+        // Decision 566: the trains it starts with have no card.
+        self.fleetModels = NewTrainArrivals.models(in: world)
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
         // Decision 497 (P2-4): the run ahead off the main actor; the offer
