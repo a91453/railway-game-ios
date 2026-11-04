@@ -211,6 +211,34 @@ final class TaoyuanAirportLineTests: XCTestCase {
                     }
                 }
             }
+            if environment["TYMC_DIAG_BERTHS"] != nil {
+                // Decision 556 (TYMCLIST7): who stands on each platform of
+                // the stations named, and the deadlock with what each waits
+                // for.
+                let wanted = Set((environment["TYMC_DIAG_BERTHS"] ?? "").split(separator: ",").map(String.init))
+                for platform in world.network.platforms where wanted.contains(where: { name(platform.station).hasPrefix($0) }) {
+                    let on = world.trains.filter { train in
+                        guard case .onEdge(let t, _)? = train.position else { return false }
+                        return t.edge == platform.edge
+                    }.map(\.name)
+                    out += "BERTH \(clock(world.clock.now)) \(name(platform.station)) edge \(platform.edge) \(on)\n"
+                }
+                var memo = GameWorld.DirectionMemo()
+                let stuck = world.deadlock(memo: &memo)
+                for id in stuck.keys.sorted() {
+                    guard let request = stuck[id], let train = world.train(id: id) else { continue }
+                    let to: String = if case .travellingToStop(let s, _)? = request.candidate.execution { name(request.candidate.timetable[s].station) } else { "-" }
+                    out += "STUCK \(clock(world.clock.now)) \(train.name) exec \(String(describing: train.execution).prefix(40)) departs \(request.departs) to \(to) last \(request.candidate.movement.edges.last.map { "\($0)" } ?? "-")\n"
+                    if case .travellingToStop(let s, _)? = request.candidate.execution {
+                        let station = request.candidate.timetable[s].station
+                        let blocked = world.blockedTrack(except: id, holders: world.trackHolders(memo: &memo))
+                        let free = request.candidate.position.flatMap { world.path(from: $0, toStation: station, length: request.candidate.length, avoiding: blocked) }
+                        let counter = world.counterflowRoute(of: request.candidate, to: station, avoiding: blocked)
+                        let alternative = world.alternativeRoute(of: request.candidate, to: station, avoiding: blocked, memo: &memo)
+                        out += "  ROUTES own \(world.routeLength(of: request.candidate)) free \(free.map { "\($0.distance)->\($0.traversals.last.map { "\($0.edge)" } ?? "-")" } ?? "nil") counter \(counter.map { "\($0.distance)" } ?? "nil") alt \(alternative.map { "\($0.distance)" } ?? "nil") placement \(String(describing: request.candidate.position))\n"
+                    }
+                }
+            }
             if environment["TYMC_DIAG_SUMMARY"] != nil {
                 for train in world.trains {
                     let place = String(describing: train.position)
