@@ -30,7 +30,7 @@ on:
         options: [website, promo]
         default: website
       device:
-        description: "iphone (a Pro), ipad (promo only) or iphone-small (the smallest iPhone, to check the tools fit)"
+        description: "iphone (a Pro), ipad (an iPad Pro) or iphone-small (the smallest iPhone, to check the tools fit)"
         type: choice
         options: [iphone, ipad, iphone-small]
         default: iphone
@@ -65,10 +65,11 @@ jobs:
       # merge condition) takes the narrowest iPhone in points instead, a
       # mini before an SE of the same width (less room on its side), to see
       # that the tools column fits there; the log lists every iPhone with
-      # its size.
+      # its size. `device` = ipad takes the largest iPad Pro (decision 568:
+      # a screen's change seen on an iPad too).
       - name: Select a Simulator
         env:
-          PROMO_DEVICE: ${{ (inputs.kind == 'promo' || inputs.device == 'iphone-small') && inputs.device || 'iphone' }}
+          PROMO_DEVICE: ${{ (inputs.kind == 'promo' || inputs.device != 'iphone') && inputs.device || 'iphone' }}
         run: |
           xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
           xcrun simctl list devicetypes --json > "$RUNNER_TEMP/devicetypes.json"
@@ -137,7 +138,7 @@ jobs:
       - name: Take the screenshots
         id: screenshots
         if: inputs.kind != 'promo'
-        timeout-minutes: 30
+        timeout-minutes: 45
         env:
           WEBSITE_TESTS: ${{ inputs.tests }}
         run: |
@@ -159,7 +160,7 @@ jobs:
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
-            -maximum-test-execution-time-allowance 600 \
+            -maximum-test-execution-time-allowance 1800 \
             CODE_SIGN_IDENTITY=-
 
       # Each kept attachment as <name>.png, whether or not every test passed.
@@ -192,8 +193,11 @@ jobs:
           # The screen's screenshot is the display as it is built, upright:
           # a phone on its side comes out turned a quarter. Turn it back, a
           # quarter anticlockwise (sips turns clockwise).
+          # A shot the test saw upright (an iPad's, its name ending in
+          # -portrait, decision 568) stays as it is.
           for shot in "$RUNNER_TEMP"/website-screenshots/*.png; do
             [[ -e "$shot" ]] || continue
+            [[ "$shot" == *-portrait.png ]] && continue
             width=$(sips -g pixelWidth "$shot" | awk '/pixelWidth/ { print $2 }')
             height=$(sips -g pixelHeight "$shot" | awk '/pixelHeight/ { print $2 }')
             if (( width < height )); then

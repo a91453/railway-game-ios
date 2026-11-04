@@ -1,0 +1,57 @@
+{
+  "format": 1,
+  "role": "chime",
+  "title": "New train",
+  "source": "Decision 566: a train lifted ashore, a fanfare climbing the station chime's pentatonic scale (G5 C6 E6 G6) onto a high C over a C major chord, drum taps (clack) under the climb; hand written, kept to the chime rules",
+  "tempo": 150,
+  "beatsPerBar": 4,
+  "length": 5760,
+  "motif": 2,
+  "fadeOut": 960,
+  "tracks": [
+    {
+      "voice": "bell",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 79, "start": 0, "length": 240, "velocity": 90},
+        {"pitch": 84, "start": 240, "length": 240, "velocity": 95},
+        {"pitch": 88, "start": 480, "length": 240, "velocity": 100},
+        {"pitch": 91, "start": 720, "length": 720, "velocity": 105},
+        {"pitch": 96, "start": 1440, "length": 2880, "velocity": 115}
+      ]
+    },
+    {
+      "voice": "pluck",
+      "gain": 75,
+      "pan": 0,
+      "notes": [
+        {"pitch": 60, "start": 1440, "length": 1440, "velocity": 110},
+        {"pitch": 72, "start": 1440, "length": 1440, "velocity": 100},
+        {"pitch": 76, "start": 1440, "length": 1440, "velocity": 100},
+        {"pitch": 79, "start": 1440, "length": 1440, "velocity": 100}
+      ]
+    },
+    {
+      "voice": "clack",
+      "gain": 70,
+      "pan": 0,
+      "notes": [
+        {"pitch": 60, "start": 0, "length": 120, "velocity": 70},
+        {"pitch": 60, "start": 240, "length": 120, "velocity": 80},
+        {"pitch": 60, "start": 480, "length": 120, "velocity": 90},
+        {"pitch": 60, "start": 720, "length": 120, "velocity": 100},
+        {"pitch": 60, "start": 1440, "length": 240, "velocity": 127}
+      ]
+    },
+    {
+      "voice": "pad",
+      "gain": 35,
+      "pan": 0,
+      "notes": [
+        {"pitch": 55, "start": 1440, "length": 3360, "velocity": 90},
+        {"pitch": 60, "start": 1440, "length": 3360, "velocity": 90}
+      ]
+    }
+  ]
+}

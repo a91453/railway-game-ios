@@ -35,6 +35,9 @@ struct ControlPanel: View {
 
     let session: GameSession
     let arrangement: Arrangement
+    /// Whether the lines panel is open (decision 568's Undo); absent where
+    /// the screen is not.
+    @Environment(GameScreenState.self) private var screen: GameScreenState?
 
     /// Whether the details card has an inspector to show: the building
     /// tool's taps pick a site, not a station, so the selection row only
@@ -54,8 +57,12 @@ struct ControlPanel: View {
     /// never in the tutorial, as the details toggle is not, so its steps'
     /// spotlights stay where they were (the session refuses Undo then too,
     /// ``GameSession/canUndo``).
-    static func showsEdits(_ session: GameSession) -> Bool {
+    /// Decision 568: not while a new line is picked on the map, whose
+    /// pill's ↶ takes back its last stop: two kinds of taking back side by
+    /// side, the player could not tell apart.
+    static func showsEdits(_ session: GameSession, linesPanelOpen: Bool) -> Bool {
         session.tutorial == nil && (session.canUndo || session.canRedo)
+            && session.lineDrawingChrome(linesPanelOpen: linesPanelOpen).showsWorldEdits
     }
 
     var body: some View {
@@ -69,7 +76,7 @@ struct ControlPanel: View {
                 // Decision 104: the lines and the company's figures, named,
                 // beside the tools.
                 QuickEntries(session: session, vertical: false)
-                if Self.showsEdits(session) {
+                if Self.showsEdits(session, linesPanelOpen: screen?.panel == .lines) {
                     UndoButton(session: session)
                     RedoButton(session: session)
                 }
@@ -84,7 +91,7 @@ struct ControlPanel: View {
             BuildEntry(session: session)
                 .controlTile()
         case .editsRow:
-            if Self.showsEdits(session) {
+            if Self.showsEdits(session, linesPanelOpen: screen?.panel == .lines) {
                 HStack(spacing: 4) {
                     UndoButton(session: session)
                     RedoButton(session: session)
@@ -446,8 +453,8 @@ private struct BusControls: View {
                 .accessibilityIdentifier("bus.count")
             }
             if let preview = session.busPreview {
-                ForEach(Array(preview.lines(for: draft, in: language).enumerated()), id: \.offset) { _, line in
-                    Text(verbatim: line)
+                ForEach(KeyedLine.make(preview.lines(for: draft, in: language))) { keyed in
+                    Text(verbatim: keyed.text)
                         .font(.footnote)
                         .monospacedDigit()
                 }
@@ -793,7 +800,8 @@ extension BuildingControls {
         if let sale = session.salePreview {
             let lines = session.salePreviewLines
             VStack(alignment: .leading, spacing: 2) {
-                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                ForEach(KeyedLine.make(lines)) { keyed in
+                    let index = keyed.index, line = keyed.text
                     let isLoss = index == lines.count - 1 && sale.quote.gain < .zero && session.world.accounts.mode == .management
                     Text(verbatim: line)
                         .font(index == 0 || index == lines.count - 1 ? .footnote.weight(.semibold) : .footnote)
@@ -833,7 +841,7 @@ extension BuildingControls {
         let session = session
         // A sendable closure, as the building kinds' (CRASHSWEEP-2).
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(Array(choices.enumerated()), id: \.offset) { @Sendable _, zone in
+            ForEach(choices, id: \.self) { @Sendable zone in
                 ZoneChoiceButton(session: session, zone: zone)
             }
         }
@@ -1287,6 +1295,24 @@ extension ConstructionTool {
         case .train: String(localized: "Train tool")
         case .building: String(localized: "Building tool")
         case .bus: String(localized: "Bus tool")
+        }
+    }
+}
+
+
+/// A line of text with an identity that follows its words, not its place
+/// in the list (a repeat of the same words gets the next number).
+private struct KeyedLine: Identifiable {
+    let id: String
+    let index: Int
+    let text: String
+
+    static func make(_ lines: [String]) -> [KeyedLine] {
+        var seen: [String: Int] = [:]
+        return lines.enumerated().map { index, text in
+            let count = seen[text, default: 0]
+            seen[text] = count + 1
+            return KeyedLine(id: "\(count)#\(text)", index: index, text: text)
         }
     }
 }

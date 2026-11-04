@@ -131,7 +131,7 @@ extension LiujiaLineTrainsTests {
         let models = Map3DModelPack.standard
         var motion = TrainMotion(world: world, time: 0)
         var strays: [String] = []
-        var seen = 0, seenOnTheMap = 0
+        var seen = 0, seenOnTheMap = 0, stoppedPast = 0
         // 06:00 to 09:00, a game minute at a time.
         while world.clock.now.seconds < 6 * 3600 { try world.advance(ticks: 1) }
         while world.clock.now.seconds < 9 * 3600, strays.count < 20 {
@@ -139,9 +139,17 @@ extension LiujiaLineTrainsTests {
             motion = TrainMotion(world: world, previous: motion, time: Double(world.clock.now.seconds))
             strays += Self.strays(in: world, near: centre, radius: 600, motion: motion, models: models, checked: &seen)
             strays += Self.mapStrays(in: world, near: centre, radius: 600, motion: motion, checked: &seenOnTheMap)
+            // Decision 565 (PLATSTOP, 110.1): a bought line's train at a
+            // platform stands inside it, its nose not half a car past.
+            for stop in PlatformStopTests.overruns(in: world, motion: motion, models: models)
+            where max(stop.drawn3D, stop.drawn2D) > Self.curveTolerance {
+                strays.append("past its platform: \(stop)")
+                stoppedPast += 1
+            }
         }
         XCTAssertGreaterThan(seen, 200, "too few cars near Zhuzhong")
         XCTAssertGreaterThan(seenOnTheMap, 200, "too few cars near Zhuzhong on the 2D map")
+        XCTAssertEqual(stoppedPast, 0)
         XCTAssertEqual(strays, [], "cars off the curve:\n" + strays.prefix(20).joined(separator: "\n"))
     }
 }

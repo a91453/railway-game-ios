@@ -188,6 +188,18 @@ extension GameWorld {
         }
     }
 
+    /// Decision 547 (L6-4): a way to station `id` forbidden `forbidden`
+    /// (decision 527), keeping off the edges of `avoiding` where another
+    /// way serves, as ``path(from:toStation:length:eligible:keepingLeft:avoiding:)``
+    /// does.
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, forbidden: Set<TrackTraversal>, avoiding edges: Set<TrackEdgeID>) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, forbidden: forbidden,
+                        edgePenalty: Dictionary(uniqueKeysWithValues: edges.map { ($0, Self.standingPenalty) }))
+        }
+    }
+
     /// How much longer an edge where a train stands counts for a way that
     /// keeps off it (decision 228): a thousand kilometres.
     static let standingPenalty: Int64 = 1_000_000 * WorldCoordinate.unitsPerMetre
@@ -210,6 +222,10 @@ extension GameWorld {
     private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, clear: ((TrackStretch) -> Bool)? = nil, forbidden: Set<TrackTraversal> = [], forbids: ((TrackTraversal) -> Bool)? = nil, berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil, keepingLeft: Bool = true) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         let keepsLeft = keepLeft && keepingLeft
+        // Decision 564: to a station of lines keeping right, keeping right,
+        // whether or not the world's trains keep left (the high-speed demo's
+        // do not): the side is the line's.
+        let mirrored = keepingLeft && keepsRight(toward: id)
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
         for berth in berths(of: id, length: length) where (only == nil || berth == only) && eligible?.contains(berth) != false {
@@ -240,8 +256,9 @@ extension GameWorld {
                 .map { (BerthSearch.berth(traversal, $0), $0 - from + (berthPenalty[Berth(traversal: traversal, offset: $0)] ?? 0) + (edgePenalty[traversal.edge] ?? 0)) }
             guard allowed(to: edgeLength) else { return stops }
             let exits = transitions(after: traversal)
-            // Decision 202: a way on right of the leftmost counts longer.
-            let right = keepsLeft ? rightOfLeftmost(after: traversal, among: exits) : []
+            // Decision 202: a way on right of the leftmost counts longer;
+            // decision 564, left of the rightmost to a station keeping right.
+            let right = keepsLeft || mirrored ? rightOfLeftmost(after: traversal, among: exits, mirrored: mirrored) : []
             return stops + exits.map { (.entered($0), edgeLength - from + (edgePenalty[traversal.edge] ?? 0) + (right.contains($0) ? Self.keepLeftMargin : 0)) }
         }
         guard let route, case .berth(let last, let end)? = route.last else { return nil }

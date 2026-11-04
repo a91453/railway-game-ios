@@ -83,7 +83,7 @@ extension GameWorld {
         case .noRoundTrip(let first):
             // Decision 284 (TestFlight 73.1): a train longer than every
             // platform of a call can stop there on no platform.
-            if let short = shortPlatformCall(ofTrain: id) {
+            if let short = shortPlatformCall(ofTrain: id), !short.overhangs {
                 return shortPlatformText(short, in: language)
             }
             let name = stationName(first)
@@ -124,30 +124,51 @@ extension GameWorld {
 /// platform of the station is shorter than the train, so it can stop there
 /// on none (`GameWorld.path(from:toStation:length:)` ends only at a platform
 /// the train fits).
+///
+/// Decision 565 (PLATSTOP, 110.1): or, with ``overhangs``, one it stops at
+/// with its last car past the platform's end: GameCore fits a train to a
+/// platform by its first car's centre to its last's (``Train/length``), so
+/// a train a car longer than the platform stops there, half of its first
+/// and last cars beyond the platform's ends, drawn past it.
 public struct ShortPlatformCall: Hashable, Sendable {
     /// The first such call, in the order the service calls.
     public let station: StationID
-    /// The length, in world units, its longest platform must have.
+    /// The length, in world units, its longest platform must have: the
+    /// whole train, its cars' length each (decision 565; before, from its
+    /// first car's centre to its last's, which still left a car past the
+    /// end).
     public let needed: Int64
-    /// The most cars, at the train's car length, that fit at every call of
-    /// the service.
+    /// The most cars, at the train's car length, that stand inside a
+    /// platform at every call of the service.
     public let cars: Int
+    /// Whether the train stops there all the same, a car past the end
+    /// (decision 565), rather than on no platform at all (decision 284).
+    public var overhangs: Bool = false
 }
 
 extension GameWorld {
     /// The first call of the service train `id` runs for that the train is
-    /// longer than every platform of (``ShortPlatformCall``), or `nil` when
-    /// it fits at every call, or runs for no line.
+    /// longer than every platform of (``ShortPlatformCall``); failing that
+    /// (decision 565), the first it stops at with its last car past every
+    /// platform's end (``ShortPlatformCall/overhangs``); `nil` when it
+    /// stands inside a platform at every call, or runs for no line.
     public func shortPlatformCall(ofTrain id: TrainID) -> ShortPlatformCall? {
         guard let train = train(id: id), let lineID = assignedLine(of: id), let line = line(id: lineID) else { return nil }
         let stops = assignedPattern(of: id).map { line.patterns[$0].calls.map { line.stops[$0] } } ?? line.stops
         // A station with no platform at all is another problem: no train
         // stops there, however short.
         let longest = stops.map { stop in network.platforms(of: stop).map(\.length).max() }
-        guard let index = longest.firstIndex(where: { $0.map { $0 < train.length } ?? false }),
-              let shortest = longest.compactMap(\.self).min()
-        else { return nil }
-        return ShortPlatformCall(station: stops[index], needed: train.length, cars: Int(shortest / train.carPitch) + 1)
+        guard let shortest = longest.compactMap(\.self).min(), train.carPitch > 0 else { return nil }
+        // Decision 565: the whole train, half its first car before its head
+        // and half its last behind its tail.
+        let whole = Int64(train.cars) * train.carPitch
+        let fit = max(Int(shortest / train.carPitch), Train.minimumCars)
+        if let index = longest.firstIndex(where: { $0.map { $0 < train.length } ?? false }) {
+            return ShortPlatformCall(station: stops[index], needed: whole, cars: fit)
+        }
+        // A single car has nothing to shorten: not told.
+        guard train.cars > 1, let index = longest.firstIndex(where: { $0.map { $0 < whole } ?? false }) else { return nil }
+        return ShortPlatformCall(station: stops[index], needed: whole, cars: fit, overhangs: true)
     }
 
     /// What a train too long for a call of its line is told: the station,
@@ -156,6 +177,12 @@ extension GameWorld {
         let name = stationName(short.station)
         let unitsPerMetre = WorldCoordinate.unitsPerMetre
         let metres = (short.needed + unitsPerMetre - 1) / unitsPerMetre
+        if short.overhangs {
+            return language.text(
+                "Longer than the platforms at \(name), so its last car stops past the end: lengthen one to \(metres) m, or take the train off the track and shorten it to \(short.cars) \(short.cars == 1 ? "car" : "cars")",
+                "列車比 \(name) 的月台長，停站時最後一節會在月台外：把月台加長到 \(metres) 公尺，或把列車移出軌道、減到 \(short.cars) 節"
+            )
+        }
         return language.text(
             "Too long for the platforms at \(name): lengthen one to \(metres) m, or take the train off the track and shorten it to \(short.cars) \(short.cars == 1 ? "car" : "cars")",
             "列車比 \(name) 的月台長：把月台加長到 \(metres) 公尺，或把列車移出軌道、減到 \(short.cars) 節"

@@ -37,6 +37,8 @@ public final class GameSession {
             // Decision 305: a paused game has no tick to look again after
             // a command (decision 330, later: off the main actor).
             if !isApplyingTick, world.clock.isPaused { lookAgainForNightSkip() }
+            // Decision 566: a model new to the fleet, its arrival card.
+            if !isApplyingTick { noteTrainArrivals() }
             // Decision 193: a change no recorded path made is logged as one.
             if !isLogging { log(.unrecorded("world")) }
             refreshScreenFacts()
@@ -168,6 +170,9 @@ public final class GameSession {
     /// The stretch beside the platform's, kept for the stretch and command
     /// it was looked for at (L3-11, ``networkPlatformBeside``).
     @ObservationIgnored var platformBesideMemo: PlatformBesideMemo?
+    /// Decision 571: the crossovers the platform picked would get, kept
+    /// for the pick and command as ``platformBesideMemo`` is.
+    @ObservationIgnored var stationCrossoverMemo: (key: PlatformBesideMemo.Key, crossovers: [PlayerCommand.TrackStretch])?
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
@@ -308,6 +313,10 @@ public final class GameSession {
     /// suggestion replaces ``stationName`` only while it is still this one:
     /// a name the player typed is never overwritten.
     @ObservationIgnored var automaticStationName: String
+
+    /// Other names for the next station, under its name on a real-world map
+    /// (decision 569; ``stationNameChoices(for:at:in:railways:placeNames:)``).
+    public internal(set) var stationNameChoices: [StationNameChoice] = []
 
     /// The car count the session last suggested for ``platformCars``
     /// (from a real TRA station's grade); replaced, like the name, only
@@ -483,6 +492,14 @@ public final class GameSession {
     /// The real line just bought (decision 315), for the card that says
     /// so; the card clears it when closed.
     public var lastLineAcquired: RealLineAcquired?
+    /// Decision 566: the new-train cards waiting, the first one shown
+    /// (``noteTrainArrivals()``).
+    public internal(set) var trainArrivals: [NewTrainArrival] = []
+    /// Decision 566: the models the fleet had after the last command.
+    @ObservationIgnored var fleetModels: Set<String> = []
+    /// Decision 566: the models whose card this session has shown, so one
+    /// sold and bought again, or undone and done again, has none.
+    @ObservationIgnored var trainArrivalsShown: Set<String> = []
 
     /// The real line offered on the purchase card (decision 315), while
     /// the card is open.
@@ -1077,6 +1094,8 @@ public final class GameSession {
         self.selectedTrainID = world.trains.first?.id
         self.selectedLineID = world.lines.first?.id
         self.newsWatch = NewsWatch(world: world)
+        // Decision 566: the trains it starts with have no card.
+        self.fleetModels = NewTrainArrivals.models(in: world)
         // What the first monthly report compares with.
         self.news.baseline = MonthlyBaseline(world: world)
         // Decision 497 (P2-4): the run ahead off the main actor; the offer
@@ -2394,8 +2413,13 @@ public final class GameSession {
             let count = Train.carsText(cars, in: language)
             // Added cars are paid for (decision 46).
             let paid = balance - world.economy.balance
-            guard paid > .zero else { return language.text("\(train.name) now has \(count).", "\(train.name) 現在有 \(count)。") }
-            return language.text("\(train.name) now has \(count), for \(paid.moneyText).", "\(train.name) 現在有 \(count)，花費 \(paid.moneyText)。")
+            // Decision 565: and when it is now longer than a platform of
+            // its line, which and what to do.
+            let short = world.shortPlatformCall(ofTrain: train.id).map { short in
+                language.text(" ", "") + world.shortPlatformText(short, in: language) + language.text(".", "。")
+            } ?? ""
+            guard paid > .zero else { return language.text("\(train.name) now has \(count).", "\(train.name) 現在有 \(count)。") + short }
+            return language.text("\(train.name) now has \(count), for \(paid.moneyText).", "\(train.name) 現在有 \(count)，花費 \(paid.moneyText)。") + short
         }
     }
 
@@ -3610,30 +3634,71 @@ public final class GameSession {
     /// it is in.
     nonisolated public static let realStationNamingDistanceMetres = 800.0
 
+    /// How close a landmark must be for a new station to be named after it
+    /// by default (decision 569): across the road from its gate.
+    nonisolated public static let landmarkNamingDistanceMetres = 300.0
+    /// How close a landmark, park, road or crossing must be to be offered
+    /// as a choice under the name (decision 569).
+    nonisolated static let landmarkChoiceDistanceMetres = 600.0
+    nonisolated static let roadChoiceDistanceMetres = 150.0
+    nonisolated static let crossingChoiceDistanceMetres = 400.0
+    nonisolated static let busStopChoiceDistanceMetres = 150.0
+    /// How many names show under the name: one row, so the panel grows by
+    /// no more than a line.
+    nonisolated public static let stationNameChoiceLimit = 4
+
+    /// A real bus stop's name as a station's (decision 569), or `nil`:
+    /// without what is in brackets (前鎮高中(中山四路) → 前鎮高中, 「(往XX)」),
+    /// and none that names a station itself (捷運三多商圈站, 臺北車站,
+    /// 高鐵左營站) or is less than two characters.
+    nonisolated public static func busStopStationName(_ stop: String) -> String? {
+        var name = ""
+        var depth = 0
+        for character in stop {
+            switch character {
+            case "(", "（", "[", "［", "【": depth += 1
+            case ")", "）", "]", "］", "】": depth = max(0, depth - 1)
+            default: if depth == 0 { name.append(character) }
+            }
+        }
+        name = name.trimmingCharacters(in: .whitespaces)
+        let station = ["捷運", "車站", "火車站", "高鐵", "輕軌", "轉運站", "總站"]
+        guard name.count >= 2, !station.contains(where: name.contains), !name.hasSuffix("站") else { return nil }
+        return name
+    }
+    /// The longest landmark name taken by default (臺北榮民總醫院 is seven);
+    /// a longer one is only offered as a choice.
+    nonisolated static let landmarkDefaultNameLength = 8
+
     /// A name for a new station at `location`:
     ///
     /// 1. On a real-world map, the nearest real railway station's name, if
     ///    within `maximumDistanceMetres` and not yet taken.
-    /// 2. Then (decision 159, MapBuilder's naming after the place) the
+    /// 2. Then (decision 569) the nearest landmark within
+    ///    ``landmarkNamingDistanceMetres``: a university, senior high
+    ///    school, hospital, large park, night market or shopping district,
+    ///    mall or department store (``StationLandmarks``), or a sight of
+    ///    ``AttractionCatalog``.
+    /// 3. Then (decision 159, MapBuilder's naming after the place) the
     ///    nearest settlement's, village's or ward's name not yet taken
     ///    (``PlaceNames/nearby(_:)``), then the township's or district's
-    ///    it is in (``PlaceNames/township(containing:)``). A name a real
-    ///    station elsewhere has is never offered: that station may yet be
-    ///    built.
-    /// 3. Where they are all taken, the nearest of them with the side of
+    ///    it is in (``PlaceNames/township(containing:)``).
+    /// 4. Where they are all taken, the nearest of them with the side of
     ///    the station already so named that `location` is on, as Taiwan's
     ///    railways name a second station of a place: 北新竹, "North
     ///    Hsinchu".
-    /// 4. "Station N" (or "車站 N") with the lowest N from the next station
+    /// 5. "Station N" (or "車站 N") with the lowest N from the next station
     ///    number upward that no existing station uses; the only name on a
     ///    blank map.
     ///
-    /// A real station is taken when a station of the world already is it,
-    /// whatever language or system's spelling it was named in: 台北, 臺北,
-    /// 台北車站, "Taipei" and "Taipei Main Station" near Taipei Main
-    /// Station are one place (``RealRailways/stationKey(_:)``), so none of
-    /// them is offered again once one is used. A place is taken when a
-    /// station has its Chinese or English name, in the same sense.
+    /// A name a real station elsewhere has is never offered after step 1:
+    /// that station may yet be built. A real station is taken when a
+    /// station of the world already is it, whatever language or system's
+    /// spelling it was named in: 台北, 臺北, 台北車站, "Taipei" and "Taipei
+    /// Main Station" near Taipei Main Station are one place
+    /// (``RealRailways/stationKey(_:)``), so none of them is offered again
+    /// once one is used. A place is taken when a station has its Chinese or
+    /// English name, in the same sense.
     nonisolated public static func suggestedStationName(
         for world: GameWorld,
         at location: PlanPoint? = nil,
@@ -3642,100 +3707,229 @@ public final class GameSession {
         placeNames: PlaceNames? = nil,
         maximumDistanceMetres: Double = realStationNamingDistanceMetres
     ) -> String {
-        let taken = Set(world.stations.map(\.name))
-        if let location, let frame = RealWorldFrame(world: world) {
-            func coordinate(_ point: PlanPoint) -> RealRailways.Coordinate {
-                let coord = frame.coordinate(worldX: Double(point.x), worldY: Double(point.y))
-                return RealRailways.Coordinate(latitude: coord.latitude, longitude: coord.longitude)
-            }
-            // Every name key of the stations of the world, and of the real
-            // stations they are.
-            var takenKeys = Set(taken.map(RealRailways.stationKey))
-            if let railways {
-                for station in world.stations {
-                    for real in railways.stations(named: station.name, near: coordinate(station.location)) {
-                        takenKeys.insert(RealRailways.stationKey(real.chinese))
-                        if let english = real.english { takenKeys.insert(RealRailways.stationKey(english)) }
-                    }
-                }
-                let candidates = railways.nearbyStations(to: coordinate(location), maximumDistanceMetres: maximumDistanceMetres)
-                for candidate in candidates {
-                    let name = candidate.station.name(in: language)
-                    let keys = [candidate.station.chinese, candidate.station.english, name].compactMap { $0 }.map(RealRailways.stationKey)
-                    if !taken.contains(name), keys.allSatisfy({ !takenKeys.contains($0) }) {
-                        return name
-                    }
-                }
-            }
-            if let placeNames,
-               let name = placeStationName(
-                   at: location, coordinate(location), in: world, language: language, placeNames: placeNames, railways: railways,
-                   taken: taken, takenKeys: takenKeys
-               ) {
+        if let location, let naming = StationNaming(world: world, railways: railways) {
+            let here = naming.coordinate(location)
+            if let name = naming.realStation(near: here, in: language, within: maximumDistanceMetres) {
                 return name
             }
+            if let placeNames {
+                if let name = naming.landmarks(near: here, placeNames: placeNames, within: landmarkNamingDistanceMetres)
+                    .first(where: { $0.name.chinese.count <= landmarkDefaultNameLength && naming.isFree($0.name, in: language) })?
+                    .name.name(in: language) {
+                    return name
+                }
+                if let name = naming.placeStationName(at: location, here, language: language, placeNames: placeNames) {
+                    return name
+                }
+            }
         }
-        return suggestedName(language.text("Station", "車站"), from: world.stations.count + 1, taken: taken)
+        return suggestedName(language.text("Station", "車站"), from: world.stations.count + 1, taken: Set(world.stations.map(\.name)))
     }
 
-    /// Steps 2 and 3 of
-    /// ``suggestedStationName(for:at:in:railways:placeNames:maximumDistanceMetres:)``.
-    nonisolated private static func placeStationName(
-        at location: PlanPoint, _ here: RealRailways.Coordinate, in world: GameWorld, language: DisplayLanguage,
-        placeNames: PlaceNames, railways: RealRailways?, taken: Set<String>, takenKeys: Set<String>
-    ) -> String? {
-        var places = placeNames.nearby(here)
-        if let township = placeNames.township(containing: here) {
-            places.append(township)
+    /// The names offered under a new station's name on a real-world map
+    /// (decision 569), each a tap away, at most ``stationNameChoiceLimit``
+    /// in this order: the suggested one
+    /// (``suggestedStationName(for:at:in:railways:placeNames:maximumDistanceMetres:)``),
+    /// the place's, the nearest landmark's, the nearest real bus stop's
+    /// (``busStopStationName(_:)``), the crossing's, the nearest park's and
+    /// the road's; each not yet taken and not a real station's elsewhere,
+    /// each name once. None on other maps.
+    nonisolated public static func stationNameChoices(
+        for world: GameWorld,
+        at location: PlanPoint?,
+        in language: DisplayLanguage,
+        railways: RealRailways? = nil,
+        placeNames: PlaceNames? = nil,
+        realBuses: RealBusLibrary? = nil
+    ) -> [StationNameChoice] {
+        guard let location, let placeNames, let naming = StationNaming(world: world, railways: railways) else { return [] }
+        let here = naming.coordinate(location)
+        var choices: [StationNameChoice] = []
+        func offer(_ name: String?, _ kind: StationNameChoice.Kind) {
+            guard let name, !choices.contains(where: { $0.name == name }) else { return }
+            choices.append(StationNameChoice(name: name, kind: kind))
         }
-        // A real station's name is that station's, wherever it is. Only
-        // the Chinese names tell: 中山 and 忠山 are both "Zhongshan".
-        places.removeAll { railways?.stations(named: $0.chinese, near: nil).isEmpty == false }
+        let suggestion = suggestedStationName(for: world, at: location, in: language, railways: railways, placeNames: placeNames)
+        if naming.realStation(near: here, in: language, within: realStationNamingDistanceMetres) == suggestion {
+            offer(suggestion, .realStation)
+        }
+        offer(naming.placeStationName(at: location, here, language: language, placeNames: placeNames), .place)
+        let landmarks = naming.landmarks(near: here, placeNames: placeNames, within: landmarkChoiceDistanceMetres)
+            .filter { naming.isFree($0.name, in: language) }
+        if let landmark = landmarks.first(where: { $0.kind != .landmark(.park) }) {
+            offer(landmark.name.name(in: language), landmark.kind)
+        }
+        if let realBuses {
+            let stops = realBuses.stops(around: location, frame: naming.frame, within: busStopChoiceDistanceMetres).stops
+            func distance(_ stop: RealBusStops.Stop) -> Int64 {
+                let dx = stop.point.x - location.x, dy = stop.point.y - location.y
+                return dx * dx + dy * dy
+            }
+            let reach = Int64(busStopChoiceDistanceMetres * Double(WorldCoordinate.unitsPerMetre))
+            let name = stops.filter { distance($0) <= reach * reach }
+                .sorted { distance($0) != distance($1) ? distance($0) < distance($1) : $0.name < $1.name }
+                .lazy
+                .compactMap { busStopStationName($0.name) }
+                .first { naming.isFree(PlaceNames.Name(chinese: $0, english: nil), in: language) }
+            offer(name, .busStop)
+        }
+        let streets = placeNames.landmarks
+        if let crossing = streets?.crossings(near: here, within: crossingChoiceDistanceMetres)
+            .first(where: { naming.isFree($0.thing, in: language) })?.thing {
+            offer(crossing.name(in: language), .crossing)
+        }
+        if let park = landmarks.first(where: { $0.kind == .landmark(.park) }) {
+            offer(park.name.name(in: language), park.kind)
+        }
+        if let road = streets?.road(near: here, within: roadChoiceDistanceMetres)?.thing, naming.isFree(road, in: language) {
+            offer(road.name(in: language), .road)
+        }
+        // The suggestion first, whatever it is.
+        if let index = choices.firstIndex(where: { $0.name == suggestion }), index > 0 {
+            choices.insert(choices.remove(at: index), at: 0)
+        }
+        return Array(choices.prefix(stationNameChoiceLimit))
+    }
+
+    /// The names the world's stations take, and what step 1 to 4 of
+    /// ``suggestedStationName(for:at:in:railways:placeNames:maximumDistanceMetres:)``
+    /// look up.
+    struct StationNaming {
+        let world: GameWorld
+        let frame: RealWorldFrame
+        let railways: RealRailways?
+        let taken: Set<String>
+        /// Every name key of the stations of the world, and of the real
+        /// stations they are.
+        let takenKeys: Set<String>
+
+        init?(world: GameWorld, railways: RealRailways?) {
+            guard let frame = RealWorldFrame(world: world) else { return nil }
+            self.world = world
+            self.frame = frame
+            self.railways = railways
+            taken = Set(world.stations.map(\.name))
+            var keys = Set(taken.map(RealRailways.stationKey))
+            if let railways {
+                for station in world.stations {
+                    let at = Self.coordinate(station.location, in: frame)
+                    for real in railways.stations(named: station.name, near: at) {
+                        keys.insert(RealRailways.stationKey(real.chinese))
+                        if let english = real.english { keys.insert(RealRailways.stationKey(english)) }
+                    }
+                }
+            }
+            takenKeys = keys
+        }
+
+        static func coordinate(_ point: PlanPoint, in frame: RealWorldFrame) -> RealRailways.Coordinate {
+            let coord = frame.coordinate(worldX: Double(point.x), worldY: Double(point.y))
+            return RealRailways.Coordinate(latitude: coord.latitude, longitude: coord.longitude)
+        }
+
+        func coordinate(_ point: PlanPoint) -> RealRailways.Coordinate { Self.coordinate(point, in: frame) }
+
         func isFree(_ name: String, keys: [String]) -> Bool {
             !taken.contains(name) && keys.allSatisfy { !takenKeys.contains(RealRailways.stationKey($0)) }
         }
-        for place in places {
-            let name = place.name(in: language)
-            if isFree(name, keys: [place.chinese, place.english, name].compactMap { $0 }) {
-                return name
+
+        /// Whether `name` is not taken and is no real station's name: that
+        /// station may yet be built. Only the Chinese names tell: 中山 and
+        /// 忠山 are both "Zhongshan".
+        func isFree(_ name: PlaceNames.Name, in language: DisplayLanguage) -> Bool {
+            let shown = name.name(in: language)
+            return isFree(shown, keys: [name.chinese, name.english, shown].compactMap { $0 })
+                && railways?.stations(named: name.chinese, near: nil).isEmpty != false
+        }
+
+        /// Step 1: the nearest real station within `metres` not yet taken.
+        func realStation(near here: RealRailways.Coordinate, in language: DisplayLanguage, within metres: Double) -> String? {
+            guard let railways else { return nil }
+            for candidate in railways.nearbyStations(to: here, maximumDistanceMetres: metres) {
+                let name = candidate.station.name(in: language)
+                let keys = [candidate.station.chinese, candidate.station.english, name].compactMap { $0 }.map(RealRailways.stationKey)
+                if !taken.contains(name), keys.allSatisfy({ !takenKeys.contains($0) }) {
+                    return name
+                }
             }
+            return nil
         }
-        func distance(to point: PlanPoint) -> Double {
-            let dx = Double(point.x - location.x), dy = Double(point.y - location.y)
-            return dx * dx + dy * dy
-        }
-        for place in places {
-            let keys = Set([place.chinese, place.english].compactMap { $0 }.map(RealRailways.stationKey))
-            let namesake = world.stations
-                .filter { keys.contains(RealRailways.stationKey($0.name)) }
-                .min { distance(to: $0.location) < distance(to: $1.location) }
-            guard let namesake else { continue }
-            let dx = location.x - namesake.location.x, dy = location.y - namesake.location.y
-            guard dx != 0 || dy != 0 else { continue }
-            // The world's y runs south.
-            let side: (english: String, chinese: String) = abs(dx) > abs(dy)
-                ? (dx > 0 ? ("East", "東") : ("West", "西"))
-                : (dy > 0 ? ("South", "南") : ("North", "北"))
-            let chinese = side.chinese + place.chinese
-            let english = place.english.map { "\(side.english) \($0)" }
-            let name = language.text(english ?? chinese, chinese)
-            if isFree(name, keys: [chinese, english, name].compactMap { $0 }),
-               railways?.stations(named: chinese, near: nil).isEmpty != false {
-                return name
+
+        /// The landmarks (``StationLandmarks``) and sights
+        /// (``AttractionCatalog``) within `metres`, nearest first.
+        func landmarks(
+            near here: RealRailways.Coordinate, placeNames: PlaceNames, within metres: Double
+        ) -> [(name: PlaceNames.Name, kind: StationNameChoice.Kind, metres: Double)] {
+            var found = (placeNames.landmarks?.landmarks(near: here, within: metres) ?? []).map {
+                (name: $0.thing.name, kind: StationNameChoice.Kind.landmark($0.thing.kind), metres: $0.metres)
             }
+            for spot in AttractionCatalog.spots {
+                let distance = RealStationTransfers.distanceMetres(here, RealRailways.Coordinate(latitude: spot.latitude, longitude: spot.longitude))
+                if distance <= metres {
+                    found.append((PlaceNames.Name(chinese: spot.name, english: spot.englishName), .attraction, distance))
+                }
+            }
+            return found.sorted { $0.metres < $1.metres }
         }
-        return nil
+
+        /// Steps 3 and 4.
+        func placeStationName(
+            at location: PlanPoint, _ here: RealRailways.Coordinate, language: DisplayLanguage, placeNames: PlaceNames
+        ) -> String? {
+            var places = placeNames.nearby(here)
+            if let township = placeNames.township(containing: here) {
+                places.append(township)
+            }
+            // A real station's name is that station's, wherever it is. Only
+            // the Chinese names tell: 中山 and 忠山 are both "Zhongshan".
+            places.removeAll { railways?.stations(named: $0.chinese, near: nil).isEmpty == false }
+            for place in places {
+                let name = place.name(in: language)
+                if isFree(name, keys: [place.chinese, place.english, name].compactMap { $0 }) {
+                    return name
+                }
+            }
+            func distance(to point: PlanPoint) -> Double {
+                let dx = Double(point.x - location.x), dy = Double(point.y - location.y)
+                return dx * dx + dy * dy
+            }
+            for place in places {
+                let keys = Set([place.chinese, place.english].compactMap { $0 }.map(RealRailways.stationKey))
+                let namesake = world.stations
+                    .filter { keys.contains(RealRailways.stationKey($0.name)) }
+                    .min { distance(to: $0.location) < distance(to: $1.location) }
+                guard let namesake else { continue }
+                let dx = location.x - namesake.location.x, dy = location.y - namesake.location.y
+                guard dx != 0 || dy != 0 else { continue }
+                // The world's y runs south.
+                let side: (english: String, chinese: String) = abs(dx) > abs(dy)
+                    ? (dx > 0 ? ("East", "東") : ("West", "西"))
+                    : (dy > 0 ? ("South", "南") : ("North", "北"))
+                let chinese = side.chinese + place.chinese
+                let english = place.english.map { "\(side.english) \($0)" }
+                let name = language.text(english ?? chinese, chinese)
+                if isFree(name, keys: [chinese, english, name].compactMap { $0 }),
+                   railways?.stations(named: chinese, near: nil).isEmpty != false {
+                    return name
+                }
+            }
+            return nil
+        }
     }
 
     /// Suggests a new ``stationName`` for a station at `location` (see
     /// ``suggestedStationName(for:at:in:railways:placeNames:maximumDistanceMetres:)``),
-    /// replacing the current one only while it is still the last suggestion.
+    /// replacing the current one only while it is still the last suggestion,
+    /// and the choices under it (``stationNameChoices``).
     func suggestStationName(at location: PlanPoint?) {
         let suggestion = Self.suggestedStationName(for: world, at: location, in: language, railways: railways, placeNames: placeNames)
         if stationName == automaticStationName {
             stationName = suggestion
         }
         automaticStationName = suggestion
+        stationNameChoices = Self.stationNameChoices(
+            for: world, at: location, in: language, railways: railways, placeNames: placeNames, realBuses: realBuses
+        )
     }
 
     /// "Line N" (or "路線 N") with the lowest N from the next line number

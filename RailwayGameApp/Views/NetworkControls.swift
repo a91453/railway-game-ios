@@ -439,8 +439,38 @@ struct NetworkControls: View {
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
                     .submitLabel(.done)
+                stationNameChoices
             }
             platformRemovals(showsPlace: true)
+        }
+    }
+
+    /// Decision 569: the names nearby (the place, a landmark, a bus stop,
+    /// the crossing, a park, the road), a tap from the name field, in one
+    /// row that scrolls sideways rather than adding lines to the panel; the
+    /// one the field holds shows chosen.
+    @ViewBuilder private var stationNameChoices: some View {
+        let choices = session.stationNameChoices
+        if !choices.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(Array(choices.enumerated()), id: \.element.id) { index, choice in
+                        Button {
+                            session.stationName = choice.name
+                        } label: {
+                            Text(verbatim: choice.name)
+                                .font(.footnote)
+                                .lineLimit(1)
+                                .padding(.horizontal, 10)
+                                .frame(minHeight: 36)
+                        }
+                        .buttonStyle(ThemeSelectableButtonStyle(isActive: choice.name == session.stationName))
+                        .accessibilityLabel(Text(verbatim: "\(choice.name), \(choice.kindText(in: session.language))"))
+                        .accessibilityAddTraits(choice.name == session.stationName ? .isSelected : [])
+                        .accessibilityIdentifier("network.stationNameChoice.\(index)")
+                    }
+                }
+            }
         }
     }
 

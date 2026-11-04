@@ -30,6 +30,115 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 111.1, with what 108.1, 109.1 and 110.1 brought: none had an entry
+        // here when it was released.
+        Entry(
+            id: "2026-11-04-111-1",
+            items: [
+                Line(
+                    english: "The first time you buy a model of train, a card shows its first set coming ashore in Taiwan.",
+                    chinese: "第一次買到某一款車時，會跳出一張卡片，看它的第一批車在港口上岸。"
+                ),
+                Line(
+                    english: "Following a diesel train, you hear its engine idle at stations, roar as it pulls away and settle as it coasts.",
+                    chinese: "跟隨柴油車時聽得到引擎聲：停站時怠轉，起步時加速變大聲，滑行時回到怠轉。"
+                ),
+                Line(
+                    english: "The Wenhu Line can be bought on the real maps of Taipei, New Taipei and Taoyuan, with the Muzha depot by the zoo.",
+                    chinese: "台北、新北、桃園的真實地圖可以收購捷運文湖線，連同動物園旁的木柵機廠。"
+                ),
+                Line(
+                    english: "On the 3D map, Wenhu Line trains are the real VAL256 and Type 370 cars.",
+                    chinese: "3D 地圖的文湖線換成真車的樣子：VAL256 和 370 型兩款都會跑。"
+                ),
+                Line(
+                    english: "On the 3D map, Taoyuan Airport MRT commuter trains are the blue Type 1000 and express trains the purple Type 2000.",
+                    chinese: "3D 地圖的機場捷運：普通車是藍色 1000 型，直達車是紫色 2000 型。"
+                ),
+                Line(
+                    english: "TRA local trains now include the eight-car EMU700.",
+                    chinese: "台鐵區間車多了八節的 EMU700。"
+                ),
+                Line(
+                    english: "The Sea Breeze and Mountain Mist trains have their own rebuilt look on the 3D map.",
+                    chinese: "3D 地圖的海風號、山嵐號換成專屬的改造車外觀。"
+                ),
+                Line(
+                    english: "Drag up with two fingers on the 3D map to tilt the camera further, up to 60 degrees.",
+                    chinese: "3D 地圖兩指往上拖，鏡頭可以再斜下去看街景，最多到 60 度。"
+                ),
+                Line(
+                    english: "The 3D map has the Shin Kong Life Tower in Taipei and the 85 Sky Tower in Kaohsiung.",
+                    chinese: "3D 地圖放上台北新光摩天大樓和高雄 85 大樓。"
+                ),
+                Line(
+                    english: "Shadows on the 3D map have softer, finer edges.",
+                    chinese: "3D 地圖的影子邊緣更柔、更細。"
+                ),
+                Line(
+                    english: "A line bought before its depot came with it can add the real depot under Depot on the Lines page.",
+                    chinese: "舊存檔裡早就買下、沒有機廠的路線，可以在路線頁的「所屬機廠」加建真實機廠。"
+                ),
+                Line(
+                    english: "A slow train waits in a passing loop to let a faster one overtake it.",
+                    chinese: "快車追上慢車時，慢車會開進待避線讓快車先走。"
+                ),
+                Line(
+                    english: "Sights count their visitors for yesterday, this year and last year, including riders of lines that run only mornings or evenings.",
+                    chinese: "觀光景點的昨天、今年、去年人次有數字了，只開早晚的線載的人也算進去。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "The Wenhu Line can be bought in the high-speed rail demo.",
+                    chinese: "高鐵示範開局可以收購文湖線了。"
+                ),
+                Line(
+                    english: "On lines run to a real timetable, trains leaving the depot go round parked ones and no trips are missed.",
+                    chinese: "照真實時刻表開的線，從機廠出來的列車會繞開停著的車，不再漏掉班次。"
+                ),
+                Line(
+                    english: "Zoomed in, bubbles, fare labels and station cards no longer cover station names.",
+                    chinese: "放大地圖時，對話泡泡、票價標籤和站牌卡片不再蓋住站名。"
+                ),
+                Line(
+                    english: "On the 3D map, train labels follow their trains.",
+                    chinese: "3D 地圖的列車標籤會跟著列車，不再停在畫面左上角。"
+                ),
+                Line(
+                    english: "Coming back from another app no longer pauses the game for a moment.",
+                    chinese: "從別的 App 切回遊戲時，不再停頓一下。"
+                ),
+                Line(
+                    english: "More places where the game could close during an animation are fixed.",
+                    chinese: "修掉更多畫面在動畫進行中可能讓遊戲閃退的地方。"
+                ),
+                Line(
+                    english: "Day passes are paid in every midnight, and amusement parks and the other businesses get their pass holders too.",
+                    chinese: "一日券每天午夜都會入帳了，遊樂園等子公司也有一日券客人。"
+                ),
+                Line(
+                    english: "Trains leaving a depot no longer run through parked trains, and a slow train on a timetable also lets a faster one overtake it.",
+                    chinese: "出機廠的列車不再穿過停著的車；照班次開的慢車也會讓快車越行。"
+                ),
+                Line(
+                    english: "The Lines page says when a depot's sidings are all too short for the line's trains.",
+                    chinese: "機廠的停車線都比列車短時，路線頁會提醒。"
+                ),
+                Line(
+                    english: "With traffic control off, a train no longer waits for a platform held for a train that cannot reach it.",
+                    chinese: "行車控制關閉時，列車不再為了一列過不來的車空等月台。"
+                ),
+                Line(
+                    english: "Adding a depot charges the price shown when you add it.",
+                    chinese: "加建機廠照按下那一刻的價格收費。"
+                ),
+                Line(
+                    english: "Platforms set on both tracks of a double track get crossovers beside them, so trains in each direction can pass instead of meeting head-on.",
+                    chinese: "在複線兩條都設月台時，旁邊會自動加渡線，兩個方向的車能錯開，不再頂住。"
+                ),
+            ]
+        ),
         Entry(
             id: "2026-11-02-105-1",
             items: [

@@ -89,6 +89,9 @@ struct MapView: View {
     /// card (``LegendFold/isFolded(stored:compactHeight:besideCard:openedBesideCard:)``);
     /// forgotten when the card goes.
     @State private var legendOpenedBesideCard = false
+    /// Decision 568: the legend folded while a new line is picked on the
+    /// map, until the player opens it; set as drawing starts and ends.
+    @State private var legendFoldsWhileDrawing = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     /// Decision 182: whether the map shows the time of day and the
     /// weather (the settings' switches, on the device).
@@ -144,6 +147,9 @@ struct MapView: View {
     @State private var landTilesVersion = 0
     /// The population tooltip of the last tapped cell, and where it was
     /// tapped (`pop-grid-tooltip`).
+    /// Counts the holds that opened a station or a line; the medium tap
+    /// the finger feels follows it.
+    @State private var holdFeedback = 0
     @State private var cellTooltip: (info: PopulationHeatmap.CellInfo, at: ScreenPoint)?
     /// The city layers' map (Phase 6d, ``CityMap``): made only while one is
     /// shown, and again only when the land, its buildings, the stations or
@@ -687,7 +693,7 @@ struct MapView: View {
                             cityTooltip = nil
                             terrainTooltip = nil
                             sectionFlowTooltip = nil
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            holdFeedback += 1
                             screen.panel = held != nil ? .station : .lines
                         }
                     }, onPinchCloser: { pinched in
@@ -803,17 +809,25 @@ struct MapView: View {
                                 tracksLevel: terrainMap?.tracksLevel ?? false,
                                 isFolded: Binding(
                                     get: {
-                                        LegendFold.isFolded(stored: legendFold, compactHeight: verticalSizeClass == .compact,
-                                                            besideCard: legendBesideCard, openedBesideCard: legendOpenedBesideCard)
+                                        // Decision 568: folded to its title row while a
+                                        // new line is picked, so the pill has room.
+                                        legendFoldsWhileDrawing || LegendFold.isFolded(
+                                            stored: legendFold, compactHeight: verticalSizeClass == .compact,
+                                            besideCard: legendBesideCard, openedBesideCard: legendOpenedBesideCard
+                                        )
                                     },
                                     set: { folded in
-                                        if legendBesideCard {
+                                        // Opened while drawing: for now, not stored.
+                                        if legendFoldsWhileDrawing {
+                                            legendFoldsWhileDrawing = folded
+                                        } else if legendBesideCard {
                                             legendOpenedBesideCard = !folded
                                         } else {
                                             legendFold = LegendFold.stored(folded: folded)
                                         }
                                     }
                                 ),
+                                titleOnly: legendFoldsWhileDrawing,
                                 coverage: mode == .coverage ? cityMap?.coverage : nil,
                                 building: buildingLayer.isOn ? buildingLegend : nil,
                                 onShowRanking: mode == .sectionFlow && session.showsNetworkFlowReport
@@ -838,7 +852,10 @@ struct MapView: View {
                                 }
                             }
                             .transition(.scale.combined(with: .opacity))
-                        } else if insets.trailing == 0, miniMap?.isShown(beside: projection.visibleRegion) ?? false {
+                        } else if insets.trailing == 0, session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsMapExtras,
+                                  miniMap?.isShown(beside: projection.visibleRegion) ?? false {
+                            // Decision 568: not while a new line is picked,
+                            // where the pill went over it.
                             // Decision 116: the whole map, small; it gives
                             // way to a layer's legend, which needs the height,
                             // and to the details card or a panel at the
@@ -896,6 +913,9 @@ struct MapView: View {
                 .onChange(of: buttonsUnderPanel && rowInBand, initial: true) { _, inBand in
                     screen.mapRowInBand = inBand
                 }
+                .onChange(of: session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).foldsLegend, initial: true) { _, folds in
+                    legendFoldsWhileDrawing = folds
+                }
                 .overlay(alignment: .bottomLeading) {
                     // On a phone's bottom row, one above the other beside the
                     // station master (decision 226, 2026-10-15, the owner).
@@ -905,15 +925,18 @@ struct MapView: View {
                     // Decision 226, step 3: the map style is chosen in the
                     // layer list; here the expansion, and the layer list's
                     // own button while the strip does not show.
+                    // Decision 568: put away while a new line is picked on
+                    // the map; back after its ✓ or ✕.
+                    let drawing = session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines)
                     rowLayout {
-                        if !showsLayerStrip {
+                        if !showsLayerStrip, drawing.showsLayers {
                             mapLayersButton
                         }
                         // Not while building: beside the tools' Done
                         // button it was tapped by mistake (TestFlight 56.1).
                         // Not among the building tools either: a phone held
                         // sideways has no height for a fifth (decision 226).
-                        if session.showsMapExpansionButton {
+                        if session.showsMapExpansionButton, drawing.showsMapExpansion {
                             mapExpansionButton(viewport: viewport, cover: cover)
                         }
                         // Decision 351: the demo mode's real lines, in view.
@@ -979,14 +1002,20 @@ struct MapView: View {
                                        clearTop: max(clear.top, topColumnDepth))
                 }
                 // Decision 109: what needs the player, over its stations.
+                // Decision 568: not while a new line is picked on the map,
+                // where they stood over its pill.
                 .overlay(alignment: .topLeading) {
-                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
-                                    clearTop: max(clear.top, topColumnDepth))
-                        .ambientHidden(screen.ambient != nil)
+                    if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                        MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
+                                        clearTop: max(clear.top, topColumnDepth))
+                            .ambientHidden(screen.ambient != nil)
+                    }
                 }
                 // Decision 246: where the city's requests point.
                 .overlay(alignment: .topLeading) {
-                    MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                    if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                        MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                    }
                 }
                 // Decision 119: the station selected, looked at.
                 .overlay(alignment: .topLeading) {
@@ -1110,6 +1139,7 @@ struct MapView: View {
                 stationReadout(projection)
                 expansionTileReadout(projection)
             }
+            .sensoryFeedback(.impact(weight: .medium), trigger: holdFeedback)
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
                 if zoning {

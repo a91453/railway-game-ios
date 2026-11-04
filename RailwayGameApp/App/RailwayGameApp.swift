@@ -224,8 +224,34 @@ struct RailwayGameApp: App {
             if let real = DebugLaunch.value(of: "-screenshot-follow-bought") {
                 Task {
                     await opening.value
+                    // Decision 564: the real line bought first, once the
+                    // app's real data is read, and run on to 07:40; its
+                    // train nearest the middle followed.
+                    if DebugLaunch.value(of: "-screenshot-buy-real") == real, let session = launcher.session {
+                        for _ in 0..<240 {
+                            if session.buyForScreenshot(real) { break }
+                            try? await Task.sleep(for: .milliseconds(500))
+                        }
+                        await session.runForScreenshot(until: 7 * 3_600 + 40 * 60)
+                        if let train = session.screenshotTrainMidway(on: real) {
+                            session.selectTrain(train)
+                            session.toggleFollowTrain(train)
+                        }
+                        return
+                    }
                     if let session = launcher.session, let line = session.world.acquisition(of: real)?.line,
                        let train = session.world.line(id: line)?.assignedTrains.first(where: { session.world.train(id: $0)?.position != nil }) {
+                        session.selectTrain(train)
+                        session.toggleFollowTrain(train)
+                    }
+                }
+            }
+            // Decision 565: the first train on the track picked and
+            // followed, standing at its platform.
+            if DebugLaunch.isSet("-screenshot-follow-train") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let train = session.world.trains.first(where: { $0.position != nil })?.id {
                         session.selectTrain(train)
                         session.toggleFollowTrain(train)
                     }
@@ -241,6 +267,30 @@ struct RailwayGameApp: App {
                         session.selectTrain(train)
                         session.toggleFollowTrain(train)
                     }
+                }
+            }
+            // Decision 568: a new line being picked on the map, five
+            // stations of the longest line, its ✓ pill beside the last.
+            if DebugLaunch.isSet("-screenshot-line-draft") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session,
+                       let stops = session.world.lines.max(by: { $0.stops.count < $1.stops.count })?.stops.prefix(5),
+                       let first = stops.first {
+                        session.selectStation(first)
+                        session.startLineFromSelectedStation()
+                        for station in stops.dropFirst() {
+                            session.selectStation(station)
+                            session.addSelectedStationToLineDraft()
+                        }
+                    }
+                }
+            }
+            // Decision 566: new-train cards, for their screenshot review.
+            if let keys = DebugLaunch.value(of: "-screenshot-new-train") {
+                Task {
+                    await opening.value
+                    launcher.session?.showTrainArrivals(keys.split(separator: ",").map(String.init))
                 }
             }
             // Decision 517 續: a station picked, for the 3D map's tag.

@@ -364,6 +364,14 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// facility, and no passenger rides it. Set by
     /// ``GameWorld/setLineFreight(_:to:)`` only.
     public internal(set) var isFreight: Bool = false
+    /// Whether the line's trains keep to the right on double track, as a
+    /// metro or light rail does, rather than to the left (decision 564):
+    /// whether or not the world's ``GameWorld/keepLeft`` is on, a way to
+    /// one of its stops or depots takes the rightmost way on at each switch unless
+    /// another is ``GameWorld/keepLeftMargin`` shorter
+    /// (``GameWorld/keepsRight(toward:)``). Set by
+    /// ``GameWorld/setLineKeepsRight(_:to:)`` only.
+    public internal(set) var keepsRight: Bool = false
     /// How far, in all, the line's trains have driven empty to one of its
     /// ends (decision 172), in world units (``WorldCoordinate/unitsPerMetre``
     /// to the metre). Counted when such a train sets off; a run to the
@@ -643,6 +651,18 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         case .outer: outerLastDispatch = time
         case nil: recordDispatch(ofService: stream.service, at: time)
         }
+    }
+
+    /// Whether any service of the line is set to run a train at `level`
+    /// (decision 551, continued, review L7-2): a line with runs when it has
+    /// a train, otherwise a count or a target headway at that level (a
+    /// ring's count runs half each way, so it needs two). Whether a train
+    /// is assigned, or the line can be driven, is not asked.
+    func setsTrains(at level: ServiceLevel) -> Bool {
+        if hasRuns { return !trains.isEmpty }
+        let least = isRing ? 2 : 1
+        if targetHeadways[level] != nil || trainsInService[level] >= least { return true }
+        return patterns.contains { $0.targetHeadways[level] != nil || $0.trainsInService[level] >= least }
     }
 
     /// How many trains the line's own service runs at `level`, and the
@@ -1025,7 +1045,7 @@ extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
         case runs, runDays, freight, deadheadDistance, dwellSeconds, depot, depots, code
-        case dispatchPattern, endLastDispatch, opensPair
+        case dispatchPattern, endLastDispatch, opensPair, keepsRight
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -1071,6 +1091,12 @@ extension ServiceLine: Codable {
         runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)
         // Decision 155 (save version 38): a freight line has `"freight": true`.
         isFreight = try container.decodeIfPresent(Bool.self, forKey: .freight) ?? false
+        // Decision 564 (save version 82): a line keeping right has
+        // `"keepsRight": true`.
+        keepsRight = try container.decodeIfPresent(Bool.self, forKey: .keepsRight) ?? false
+        guard !container.contains(.keepsRight) || keepsRight else {
+            throw DecodingError.dataCorruptedError(forKey: .keepsRight, in: container, debugDescription: "Line \(id.rawValue): \"keepsRight\" is written only as true.")
+        }
         // Decision 172 (save version 45): the world units driven empty.
         deadheadDistance = try container.decodeIfPresent(Int64.self, forKey: .deadheadDistance) ?? 0
         guard deadheadDistance >= 0, !container.contains(.deadheadDistance) || deadheadDistance > 0 else {
@@ -1208,6 +1234,9 @@ extension ServiceLine: Codable {
         try container.encodeIfPresent(code, forKey: .code)
         if isFreight {
             try container.encode(true, forKey: .freight)
+        }
+        if keepsRight {
+            try container.encode(true, forKey: .keepsRight)
         }
         if deadheadDistance > 0 {
             try container.encode(deadheadDistance, forKey: .deadheadDistance)

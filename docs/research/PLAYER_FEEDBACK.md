@@ -163,6 +163,55 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (111.1)，2026-11-04
+
+從 `main` `273dab2`（#1750 的合併）建置。TestFlight `testflight.yml` run 41743760420（run 111），作者 00:02 UTC 自己按，等 macOS 空位約 20 分（取消了 #1767 的 Website screenshots 與 iOS App Build 讓位），00:44 成功。What to Test 與 App 內「這版新增」是 0.5.0 (111.1)（#1750）。
+
+**這個 commit 的檢查**（作者先發、遊戲規劃後報，HANDOFF §1.2）：
+- 完整 `ci.yml` run 41739320014（workflow_dispatch，273dab2）：綠，23:49 UTC。
+- full lane run 41739324188（`ios-build.yml` 手動，273dab2）：第一次 Xcode build job 紅 1 支（`FinanceCompositionUITests.testTheIncomeAndCostDonutsShowAndTheirRowsAnswerATap`，「The economy panel opens」逾時：那時模擬器慢，地圖 31 秒才出現、點完等閒置 17 秒；和 b43e814、5464210 兩次 full lane 一樣是逾時，沒有斷言結果不對）。重跑失敗的 job 一次：**綠**，01:55 UTC。second、lessons、iPad 三個 job 第一次就綠。
+- 110.1 之後進來的：#1747、#1757、#1758 DAYPASS、#1759 L6FIX、#1761 HEALTH-110、#1762 NEWCAR（決策 566）、#1763 DIESEL（567）、#1765 REVIEW-L8、#1768 AUTOXO（571）、#1750 說明。
+
+**這版請測試者看**：新車抵台卡；跟隨柴油車的引擎聲；在複線上用「月台」工具設站，兩頭會自動加渡線，多放幾列車不再兩頭卡死；一日券午夜結算。
+
+**回報**：
+- 玩家：「按回報問題沒有自動帶入email，不知道要回報去哪？」程式沒有收件人，只開分享選單。五方決定：程式裡不放 email（repo 公開），在回報畫面寫清楚 TestFlight 測試者怎麼送。派 DEPOTLINK（決策 573，session_01YGNNuoWbBvCiDrgKwADV7x）。
+- 同一位玩家：「渡線的問題，不知道能不能夠在蓋車站時，在車站前後的軌道自動帶入？因為我現在有兩列車了，但第三列車還是加不進來」。111.1 起新設的複線月台會加渡線（決策 571），但已經蓋好的站與「升級為複線」不會。派 OLDXO（決策 572，session_01YGNNum5m8pAyi87KoX3iP7）。手動放車兩頭互卡的另一半由 AUTOXO-2（決策 571 續）處理。
+- 玩家：「車站後面放機庫，但是停運的時候列車會停在車站，不會停去後面的機庫，導致其他列車會一直顯示等候」。鋪好機廠後沒有替路線選所屬機廠（完成字只寫「到路線面板替路線選這個機廠」）。回覆玩家到「路線 → 所屬機廠」勾選；並派 DEPOTLINK 讓鋪機廠時自動選上。
+
+### 0.5.0 (110.1)，2026-11-03
+
+從 `main` `2494e5a`（#1749 的合併）建置。TestFlight `testflight.yml` run 41644800997（run 110），作者 13:29 UTC 自己按，14:01 成功。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (110.1)（#1749）。App 內「這版新增」卡片 108.1、109.1、110.1 都沒加，補在 111.1 那一則（#1750）。
+
+**這個 commit 的檢查**（作者先發、遊戲規劃後報，HANDOFF §1.2）：
+- 完整 `ci.yml` run 41646134590（workflow_dispatch，2494e5a）：綠，14:00 UTC。
+- full lane run 41646171004（`ios-build.yml` 手動，2494e5a）：**綠**，15:16 UTC（build、second、lessons、iPad 四個 job 都過）。
+- 109.1 之後進來的：#1736 ImmersiveMap 研究、#1734 新光摩天大樓（決策 550）、#1730 Codex 的 EMU700 模型、#1738 TILT60（決策 555）、#1739 FLANE7、#1737 SUNPCF（決策 357 續）、#1740 WENHUFIX（決策 552 續）、#1741 DEPOTADD（決策 557）、#1742 Codex 的文湖線兩款車模型、#1745 WENHUTRN（決策 558）、#1746 EMU700 進營運（決策 560）、#1748 機場捷運 1000／2000 型（決策 561）、#1749 說明。
+
+**這版請測試者看**：3D 的文湖線、機場捷運、EMU700 像不像、車多時卡不卡；兩指上推斜到 60° 的手勢與影子；舊存檔加建機廠後列車晚上回廠、早上照班表出來。
+
+**回報**：
+- 作者（110.1 實機）：「收購文湖線後列車跑錯方向」，追問後是走在對向的軌道。派 WENHUSIDE（決策 564，session_01YGNNunZGPiV2XFNuJMZEsQ）。
+- 審查 L7（#1754）查到的舊 bug，不是這版造成的：新局的一日券在午夜結算成 0（L7-1），派 DAYPASS；加建機廠的確認框用舊報價（L7-3），派 DEPOTADD-2。三個都要進 111.1。
+- 玩家（TestFlight）：「列車進站會超越月台約1節車廂」，派 PLATSTOP（決策 565，#1764，趕不上 111.1）。
+- 另一位玩家：「功能介面可以稍微簡化一點，比如說可以用折疊的方式」，沒說是哪個畫面；作者認為目前的優化已經夠，不排。作者自己另提「畫新路線時版面有點雜」，派 ROUTEUI（決策 568，#1760）。
+- 玩家：「完成教學關卡，可是一般遊玩時，為什麼有複線軌道加號誌站，月台全部使用最大的，但車子永遠是死結無法避讓？」派 AUTOXO（決策 571，#1768）與 AUTOXO-2（一般規則終點站，GameCore）。
+- 玩家問會卡卡是否正常：作者回 2D 比較順，3D 較挑裝置，可在設定調 3D 畫質。
+
+### 0.5.0 (109.1)，2026-11-03
+
+從 `main` `efb9652`（#1735 的合併）建置。TestFlight `testflight.yml` run 41561636787（run 109），作者 01:43 UTC 自己按，02:05 成功（上傳、處理、What to Test 都過）。full lane 還沒跑完就先發（作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (109.1)（#1735）。
+
+**這個 commit 的檢查**：
+- 完整 `ci.yml` run 41556623087（workflow_dispatch，efb9652）：綠，01:19 UTC。
+- full lane run 41556631784（`ios-build.yml` 手動，efb9652）：**紅**，02:17 UTC 跑完（發版之後）。second、lessons、iPad 都綠；build job 的 UI smoke 紅一支：`StartSaveFlowSmokeTests.testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（第 706 行，「Local EMU」按鈕 Activation point invalid）。前一次 `1b3712f` 的 full lane 41530938433 也紅，是另兩支同類（Activation point invalid／鍵盤沒到）：`MapMarkTapUITests.testAnAlertsBubbleTakesATapOnItsMiddle`、`MapInteractionTests.testTheStationTagsPencilRenamesAtOnce`；這次那兩支過了。查原因的派工在 HANDOFF。
+- 108.1 之後進來的：#1723 WENHUCAP（決策 549）、#1725／#1727／#1728 CRASHSWEEP-3、#1731 TOURFIX2（決策 551 續）、#1732 TOURMODEL（決策 554）、#1733 WENHULIST（決策 552）、#1735 說明；文件 #1724、#1726、#1729。
+
+**這版請測試者看**：文湖線收購與木柵機廠；只開早晚的線景點人次；3D 海風號、山嵐號外觀。
+
+**回報**：
+- 作者（iPad，高鐵示範開局，有收購線）：文湖線收購頁顯示「這段軌道會與另一段軌道交叉，但兩者的高度差不到 8 公尺」，買不到。修理派給 WENHUFIX（決策 552 續，110）。
+
 ### 0.5.0 (108.1)，2026-11-02
 
 從 `main` `ef92919`（#1722 的合併）建置。TestFlight `testflight.yml` run 41468139355（run 108），作者 15:05 UTC 自己按，15:34 成功（上傳、App Store Connect 處理、自動填 What to Test 都過；作者先發、遊戲規劃後報，HANDOFF §1.2）。What to Test 是 `.github/testflight-whats-new.md` 0.5.0 (108.1)（#1722）。出口合規：#1721（Info.plist `ITSAppUsesNonExemptEncryption = NO`）起的第一版，App Store Connect 還要作者看一次是不是不再顯示 Missing Compliance。

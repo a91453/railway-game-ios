@@ -110,6 +110,10 @@ public struct LineDepotRow: Hashable, Sendable {
     public let problem: String?
     /// The line's trains standing in its depot now.
     public let inDepot: Int
+    /// Decision 547 (L6-3): that the line's longest train fits no siding
+    /// of a depot it keeps, so it stays at the line's ends at night;
+    /// `nil` when every depot it keeps has one it fits.
+    public var tooShort: String? = nil
 }
 
 extension GameSession {
@@ -251,7 +255,21 @@ extension GameWorld {
         return LineDepotRow(
             chosen: line.depots,
             choices: depots.map { LineDepotChoice(station: $0.station.id, name: $0.station.name, isChosen: line.depots.contains($0.station.id)) },
-            problem: nil, inDepot: inDepot
+            problem: nil, inDepot: inDepot, tooShort: tooShortDepots(of: line, in: language)
+        )
+    }
+
+    /// Decision 547 (L6-3): what ``LineDepotRow/tooShort`` says of `line`:
+    /// the depots it keeps whose every siding is shorter than its longest
+    /// train, by name.
+    func tooShortDepots(of line: ServiceLine, in language: DisplayLanguage) -> String? {
+        guard let longest = line.assignedTrains.compactMap({ train(id: $0)?.length }).max(), longest > 0 else { return nil }
+        let short = line.depots.compactMap { id in station(id: id) }.filter { !depotFits($0.id, length: longest) }.map(\.name)
+        guard !short.isEmpty else { return nil }
+        let names = short.joined(separator: language.text(", ", "、"))
+        return language.text(
+            "\(names): every siding is shorter than this line's longest train. Trains that do not fit stay at the line's ends at night; lengthen the sidings.",
+            "「\(names)」的停車線都比這條線最長的列車短，放不下的列車晚上會留在路線兩端。請把停車線加長。"
         )
     }
 }

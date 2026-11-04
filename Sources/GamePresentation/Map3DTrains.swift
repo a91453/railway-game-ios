@@ -218,8 +218,10 @@ public enum Map3DTrains {
                     // facing the way it does.
                     var forward = Map3DPoint(a.x - b.x, 0, a.z - b.z).normalized ?? Map3DPoint(0, 0, -1), nose = a
                     if let steady {
-                        let half = TrainCars.drawnCarLength / 2
-                        let front = TrainMotion.Point(x: steady.point.x + steady.heading.x * half, y: steady.point.y + steady.heading.y * half)
+                        // Decision 565: as far ahead of the head as its cars
+                        // are laid.
+                        let lead = TrainCars.noseLead(pitch: run.carPitch)
+                        let front = TrainMotion.Point(x: steady.point.x + steady.heading.x * lead, y: steady.point.y + steady.heading.y * lead)
                         forward = Map3DPoint(Float(steady.heading.x), 0, Float(steady.heading.y))
                         nose = scene.point(worldX: front.x, worldY: front.y, height: 0) + Map3DPoint(0, a.y, 0)
                     }
@@ -290,10 +292,13 @@ public enum Map3DTrains {
         let units = Double(WorldCoordinate.unitsPerMetre)
         // Decision 538: past the body's ends along the track.
         let track = run.track(at: progress)
+        // Decision 565: no longer than its cars' real lengths make it.
+        let real = TrainCars.realLength(count: count, pitch: run.carPitch), lead = TrainCars.noseLead(pitch: run.carPitch)
         let cars = layout.map {
             TrainCars.cars(body: body, heading: heading, lengths: $0.map { Double($0.length) * units }, gaps: $0.map { Double($0.gap) * units },
-                           track: track)
-        } ?? TrainCars.cars(body: body, heading: heading, count: count, gap: gap, track: track)
+                           real: real, lead: lead, track: track)
+        } ?? TrainCars.cars(body: body, heading: heading, count: count, gap: gap, length: TrainCars.carLength(pitch: run.carPitch), lead: lead,
+                            track: track)
         return (trainType, hasModels, layout, cars)
     }
 

@@ -99,6 +99,9 @@ public enum DataSourceCredits {
     static let banqiaoRecordingURL = "https://archive.org/details/aporee_34085_39187"
     static let guishanRecordingURL = "https://archive.org/details/aporee_17319_20158"
     static let ktxRecordingURL = "https://archive.org/details/aporee_65051_75140"
+    /// Decision 567: the site whose KiHa 40 recordings the diesel loops are
+    /// made to (its terms want the address in lower case).
+    static let gepponkokuURL = "https://gepponkoku.nation.jp"
     /// Decision 346: the recordings the rain, the typhoon and the thunder
     /// are made to, by Wu, Tsan-Cheng, on radio aporee ::: maps.
     static let weatherRecordings: [(title: String, place: (english: String, chinese: String), id: String)] = [
@@ -391,8 +394,8 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "Railways: the track, where stations and platforms stand, single or double track, bridges and tunnels. Real-world maps: the settlements, villages and townships new stations are named after, industrial land, parks, farmland, rivers, lakes and the coast, tourist sights, and the shops, schools and other places round new stations. Demos: the High-Speed Rail Demo’s depots and end-station tracks, and the TRA Demo’s Yilan and Su'aoxin sidings. The 3D city preview’s roads, parks and shop names.",
-                            "鐵道：軌道走向、車站與月台的位置、單線或雙線、橋與隧道。實景地圖：新車站取名用的聚落、村里與鄉鎮，工業區、公園、農地、河川、湖泊與海岸線，觀光景點，以及新車站附近的商店、學校等地點。示範地圖：高鐵示範的機廠與端點站股道、台鐵示範的宜蘭、蘇澳新側線。3D 城市預覽的道路、公園與店名。"
+                            "Railways: the track, where stations and platforms stand, single or double track, bridges and tunnels. Real-world maps: the settlements, villages, townships, landmarks and roads new stations are named after, industrial land, parks, farmland, rivers, lakes and the coast, tourist sights, and the shops, schools and other places round new stations. Demos: the High-Speed Rail Demo’s depots and end-station tracks, and the TRA Demo’s Yilan and Su'aoxin sidings. The 3D city preview’s roads, parks and shop names.",
+                            "鐵道：軌道走向、車站與月台的位置、單線或雙線、橋與隧道。實景地圖：新車站取名用的聚落、村里、鄉鎮、地標與道路，工業區、公園、農地、河川、湖泊與海岸線，觀光景點，以及新車站附近的商店、學校等地點。示範地圖：高鐵示範的機廠與端點站股道、台鐵示範的宜蘭、蘇澳新側線。3D 城市預覽的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: they ship in the app and
@@ -876,6 +879,25 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Guishan recording", "龜山錄音"), url: guishanRecordingURL),
                             DataSourceCredit.Link(title: language.text("KTX recording", "KTX 錄音"), url: ktxRecordingURL),
                             DataSourceCredit.Link(title: "CC BY 3.0", url: ccBy3URL),
+                        ]
+                    ),
+                    // Decision 567: the diesel railcar's running sounds, made
+                    // the same way. The site's terms ask for its name, as
+                    // written here, and its address wherever its sounds are
+                    // used, changed or not.
+                    DataSourceCredit(
+                        id: "dieselSound",
+                        title: language.text("Diesel railcar recordings", "柴油客車錄音"),
+                        detail: language.text(
+                            "The engine of a diesel train you follow, idling, pulling away and coasting, which the game makes to sound like these recordings of a KiHa 40 series railcar in Japan.",
+                            "跟隨柴油車時的引擎聲：怠轉、起步加速與惰行，遊戲照這些日本キハ40 系柴油客車的錄音自己合成。"
+                        ),
+                        notice: language.text(
+                            "Railway sound materials (てつおん素材), KiHa 40 series (renewed), from Simulation Country GAPAN 月本國, https://gepponkoku.nation.jp. The game plays none of the recordings themselves: its sounds are made after them.",
+                            "てつおん素材「キハ40系旧国鉄一般形気動車(更新車)」，出自 Simulation Country GAPAN 月本國，https://gepponkoku.nation.jp。遊戲不播放錄音本身，聲音是照它們合成的。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Simulation Country GAPAN 月本國", url: gepponkokuURL),
                         ]
                     ),
                     // Decision 346: the weather's sounds, made the same way.

@@ -51,6 +51,14 @@ extension GameWorld {
         return free.isEmpty ? nil : Set(free)
     }
 
+    /// Decision 547 (L6-3): whether depot `station` has a siding at all a
+    /// train `length` long fits on. A train fits none is never sent in
+    /// (``depotHasRoom(_:for:)``) and stays at its line's ends overnight;
+    /// the line panel says so.
+    public func depotFits(_ station: StationID, length: Int64) -> Bool {
+        !berths(of: station, length: length).isEmpty
+    }
+
     /// Decision 280: whether depot `station` has a siding for `train`
     /// beyond those the trains already on their way in will take: more of
     /// the sidings it fits have no train's head on them than trains bound
@@ -151,8 +159,9 @@ extension GameWorld {
     /// one with no end there. A train is due on a platform while it stands
     /// there until it leaves (see ``platformTimes(of:stop:cycle:)`` and
     /// ``runLeaving(of:at:readyAt:)``), or runs there for its own time
-    /// there; each is kept ``platformClearance`` apart from `train`'s.
-    /// `nil` when traffic control is on (it keeps trains apart itself), for
+    /// there; each is kept ``platformClearance`` apart from `train`'s. One
+    /// on its way there only past `train` is not due first (decision 559,
+    /// ``comesPast(_:_:)``). `nil` when traffic control is on (it keeps trains apart itself), for
     /// a train of a line without real runs (``followsRealTimetable(_:)``:
     /// it goes where it always did), when the station is a depot (see
     /// ``freeDepotBerths(_:for:)``), or the train fits fewer than two of
@@ -183,6 +192,8 @@ extension GameWorld {
                 let until = platformTimes(of: other, stop: at, cycle: cycle).until
                 for stretch in bodyStretches(of: other) { due(stretch.traversal.edge, (clock.now.seconds, until), standing: true) }
             case .travellingToStop(let next, let cycle)? where other.timetable[next].station == station:
+                // Decision 559: not one that comes there only past `train`.
+                if comesPast(train, other) { break }
                 if let last = other.movement.edges.last { due(last, platformTimes(of: other, stop: next, cycle: cycle)) }
                 else if case .onEdge(let traversal, _)? = other.position { due(traversal.edge, platformTimes(of: other, stop: next, cycle: cycle)) }
             case nil:
@@ -195,6 +206,21 @@ extension GameWorld {
             }
         }
         return waits
+    }
+
+    /// Decision 559: whether `other`, on its way, can come to its call only
+    /// past `train`: its way ahead runs over track `train` stands on, or it
+    /// is behind `train` on the edge `train`'s body is on, the same way
+    /// round. It cannot be at the call before `train` has gone on, so a
+    /// platform there it is due on is no reason for `train` to wait (see
+    /// ``platformWaits(_:for:over:)``): `train` waiting for it would keep
+    /// it where it is, and each would wait for the other.
+    func comesPast(_ train: Train, _ other: Train) -> Bool {
+        let body = bodyStretches(of: train)
+        guard !body.isEmpty, case .onEdge(let traversal, let offset)? = other.position else { return false }
+        if body.contains(where: { $0.traversal == traversal && offset <= $0.from }) { return true }
+        let edges = Set(body.map(\.traversal.edge))
+        return other.movement.remainingEdges.contains { edges.contains($0) }
     }
 
     /// The way from `start` into one of depot `station`'s free sidings for
@@ -220,8 +246,8 @@ extension GameWorld {
     /// another way serves. A depot beyond a station's platforms is left
     /// through one of them, and a train standing there for a run later
     /// kept the empty run behind it until it left. `nil` when the way may
-    /// stay as it is.
-    func pathOutOfDepot(_ depot: StationID, to call: StationID, from start: TrainPosition, for train: Train, nearest: TrainPath) -> TrainPath? {
+    /// stay as it is; with the way, the edges it keeps off.
+    func pathOutOfDepot(_ depot: StationID, to call: StationID, from start: TrainPosition, for train: Train, nearest: TrainPath) -> (path: TrainPath, standing: Set<TrackEdgeID>)? {
         guard !isTrafficControlEnabled, station(id: depot)?.isDepot == true, followsRealTimetable(train) else { return nil }
         let standing = Set(trains.filter { $0.id != train.id && !isMoving($0) }.flatMap { bodyStretches(of: $0).map(\.traversal.edge) })
         guard nearest.traversals.contains(where: { standing.contains($0.edge) }) else { return nil }
@@ -229,7 +255,7 @@ extension GameWorld {
         // Only a way that does keep off them: through a standing train is
         // no better than the shortest.
         guard let kept, !kept.traversals.contains(where: { standing.contains($0.edge) }) else { return nil }
-        return kept
+        return (kept, standing)
     }
 
     /// Whether `train` is on its way: travelling to a stop of its service.

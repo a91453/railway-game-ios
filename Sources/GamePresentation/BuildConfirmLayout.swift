@@ -32,31 +32,55 @@ public enum BuildConfirmLayout {
 
 extension BuildConfirmLayout {
     /// The pill at `x`, `y`, `width` by `height`, moved off what it covers
-    /// of `obstacles`: up over the one it covers where there is room (no
-    /// higher than `highest`), else beside it, within `minX`…`maxX`; left
-    /// where it is when neither has room. Decision 384: the new line's
-    /// station pair drawer is one of them, which covered its ✓
-    /// (TestFlight 85.1).
+    /// of `obstacles`: to the nearest place that covers none of them, above
+    /// or below one, or beside it, within `minX`…`maxX` across and
+    /// `highest`…`lowest` down; where no place is clear, the one that
+    /// covers least. Decision 384: the new line's station pair drawer is
+    /// one of them, which covered its ✓ (TestFlight 85.1). Decision 568:
+    /// moved off one, it may land on another (a phone held sideways: up off
+    /// the layer's legend, onto the buttons above it), so every place is
+    /// checked against them all, not one obstacle after another.
     public static func keepingOff(
         _ obstacles: [ScreenFrame], x: Double, y: Double, width: Double, height: Double,
-        minX: Double, maxX: Double, highest: Double
+        minX: Double, maxX: Double, highest: Double, lowest: Double = .infinity
     ) -> (x: Double, y: Double) {
-        var x = x, y = y
-        for obstacle in obstacles where obstacle.width > 0 && obstacle.height > 0 {
-            guard overlaps(x: x, y: y, width: width, height: height, obstacle, by: margin / 2) else { continue }
-            let above = obstacle.y - margin - height
-            if above >= highest {
-                y = above
-                continue
-            }
-            let after = obstacle.x + obstacle.width + margin, before = obstacle.x - margin - width
-            if after <= maxX, after >= minX {
-                x = after
-            } else if before >= minX, before <= maxX {
-                x = before
+        let solid = obstacles.filter { $0.width > 0 && $0.height > 0 }
+        func covered(_ place: (x: Double, y: Double)) -> Double {
+            solid.reduce(0) { total, frame in
+                guard overlaps(x: place.x, y: place.y, width: width, height: height, frame, by: margin / 2) else { return total }
+                let across = min(place.x + width, frame.x + frame.width) - max(place.x, frame.x)
+                let down = min(place.y + height, frame.y + frame.height) - max(place.y, frame.y)
+                // Within the gap but not over it still counts, a little.
+                return total + max(1, max(0, across) * max(0, down))
             }
         }
-        return (x, y)
+        func fits(_ place: (x: Double, y: Double)) -> Bool {
+            place.x >= minX - 0.5 && place.x <= maxX + 0.5 && place.y >= highest - 0.5 && place.y <= lowest + 0.5
+        }
+        let start = (x: x, y: y)
+        guard covered(start) > 0 else { return start }
+        // The places beside each obstacle, then beside each again from
+        // there (above one and beside the next, say).
+        func moves(from place: (x: Double, y: Double)) -> [(x: Double, y: Double)] {
+            solid.flatMap { frame -> [(x: Double, y: Double)] in
+                [
+                    (place.x, frame.y - margin - height),
+                    (place.x, frame.y + frame.height + margin),
+                    (frame.x + frame.width + margin, place.y),
+                    (frame.x - margin - width, place.y),
+                ]
+            }
+        }
+        let first = moves(from: start)
+        let candidates = first + first.flatMap { moves(from: $0) }
+        let distance: ((x: Double, y: Double)) -> Double = { place in
+            (place.x - x) * (place.x - x) + (place.y - y) * (place.y - y)
+        }
+        let inside = candidates.filter(fits)
+        if let clear = inside.filter({ covered($0) == 0 }).min(by: { distance($0) < distance($1) }) {
+            return clear
+        }
+        return ([start] + inside).min { covered($0) < covered($1) || (covered($0) == covered($1) && distance($0) < distance($1)) } ?? start
     }
 
     /// Whether the pill at `x`, `y` comes within `gap` of `frame`.

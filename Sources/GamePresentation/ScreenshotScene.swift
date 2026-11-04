@@ -63,11 +63,25 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     /// Decision 555: a real-world map of Taipei round Taipei Main Station
     /// (``taipeiMain``) or Taipei 101 (``taipei101``), a short line laid
-    /// through it so the map opens there: for the screenshots of the 3D
+    /// 300 m north of it so the map opens there: for the screenshots of the 3D
     /// map leaned to 60° beside its own tilt (`-screenshot-3d-view`,
     /// ``Map3DScreenshotView``), at 10:00, so the sun's shadows show.
     case taipeiMain
     case taipei101
+
+    /// Decision 564: an empty real-world map round the Wenhu Line, for the
+    /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
+    /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/runForScreenshot(until:)``):
+    /// its trains each on the track to their right, as the real ones run.
+    /// For the screenshot review of the pull request that put them there.
+    case wenhu
+
+    /// Decision 565: a new real-world game round Taipei Main Station, a
+    /// line of two stations 800 m apart whose platforms are four 20 m cars
+    /// long, as the platform tool builds them, and its train of four
+    /// standing at the far one: for the screenshots of a train stopped
+    /// with every car inside its platform, on the 2D map and the 3D one.
+    case platformStop
 
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
@@ -76,6 +90,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        case .wenhu: (25.0600, 121.5600)
+        // Its far station, 400 m east and 300 m north of Taipei Main
+        // Station (a metre at the anchor's latitude, as RealWorldFrame).
+        case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         default: nil
         }
     }
@@ -94,7 +112,27 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .wenhu: Self.wenhuWorld(in: language)
+        case .platformStop: Self.platformStopWorld(in: language)
         }
+    }
+
+    // MARK: - Wenhu
+
+    /// Decision 564: a new game's map, twice the usual a side as the
+    /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
+    /// with money enough for it; bought once the app's real data is read.
+    private static func wenhuWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let place = ScreenshotScene.wenhu.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
+              let bounds = try? WorldBounds(width: 1 << 21, height: 1 << 21) else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
+        try? world.mapGround()
+        // On to 05:30 while the map is empty, ten minutes a tick: the Debug
+        // app then runs only the morning itself after it buys the line.
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 33)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Expansion
@@ -149,9 +187,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let world = GameWorld.newGame(anchor: anchor)
         guard let frame = RealWorldFrame(world: world) else { return world }
         let middle = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
-        let half = 800 * Double(WorldCoordinate.unitsPerMetre)
-        let line = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: Int64(middle.y)),
-                                                   PlanPoint(x: Int64(middle.x + half), y: Int64(middle.y))], in: world)
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 800 * metre
+        // Decision 555 續 (LANDMARK101): 300 m north of the place, clear of
+        // its landmark (101's ground is 82 m from its middle), which gives
+        // way to track on the ground through it (decision 370); y is south.
+        let y = Int64(middle.y - 300 * metre)
+        let line = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
+                                                   PlanPoint(x: Int64(middle.x + half), y: y)], in: world)
         var opened = line ?? world
         // On to 10:00, the sun high in the south-east (.fast is ten minutes a tick).
         opened.setSpeed(.fast)
@@ -188,6 +230,32 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
+    }
+
+    // MARK: - Platform stop
+
+    /// Decision 565: ``platformStop``'s world, paused while its train stands
+    /// at the far platform (its head at the platform's end), at most two
+    /// game hours on.
+    private static func platformStopWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let anchor = GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170) else { return DemoWorld.make(in: language) }
+        let world = GameWorld.newGame(anchor: anchor)
+        guard let frame = RealWorldFrame(world: world) else { return world }
+        let middle = frame.worldPosition(latitude: 25.0478, longitude: 121.5170)
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 400 * metre
+        let y = Int64(middle.y - 300 * metre)
+        guard var opened = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
+                                                           PlanPoint(x: Int64(middle.x + half), y: y)],
+                                                 in: world, carLength: world.platformCarLength),
+              let edge = opened.network.edges.first else { return world }
+        let berth = edge.length - 2 * opened.platformCarLength
+        for _ in 0..<7_200 {
+            if let train = opened.trains.first, case .onEdge(let traversal, let offset)? = train.position,
+               traversal.direction == .forward, offset == berth { break }
+            try? opened.advance(ticks: 1)
+        }
+        opened.setSpeed(.paused)
+        return opened
     }
 
     // MARK: - Commute
@@ -410,5 +478,53 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         try world.setTrainContinuation(train, along: [], stoppingAt: berth)
         try world.setTrainMovementRate(train, to: 512)
         try world.assignTrain(train, to: line)
+    }
+}
+
+extension GameSession {
+    /// Decision 564: real line `id` bought (``ScreenshotScene/wenhu``),
+    /// the game paused; `false` when it is not on sale (the real data not
+    /// read yet) or not bought.
+    public func buyForScreenshot(_ id: String) -> Bool {
+        guard let line = buyableRealLines.first(where: { $0.id == id }), acquireRealLine(realLineOffer(for: line)) else { return false }
+        return perform { (world: inout GameWorld) throws(GameError) in
+            world.setSpeed(.paused)
+            return ""
+        }
+    }
+
+    /// Decision 564: the game run on to `seconds` into the day, then
+    /// paused, on a copy of the world off the main thread, put back as
+    /// one edit: the app's main thread stays free (the 06:00 passenger
+    /// plan of a city map takes minutes in a Debug build, and a UI test's
+    /// queries time out).
+    public func runForScreenshot(until seconds: Int64) async {
+        let start = world
+        let ran = await Task.detached(priority: .userInitiated) { () -> GameWorld in
+            var world = start
+            world.setSpeed(.normal)
+            while world.clock.now.seconds % GameTime.secondsPerDay < seconds {
+                do throws(GameError) { try world.advance(ticks: 1) } catch { break }
+            }
+            world.setSpeed(.paused)
+            return world
+        }.value
+        _ = perform { (world: inout GameWorld) throws(GameError) in
+            world = ran
+            return ""
+        }
+    }
+
+    /// Decision 564: the train of real line `id` bought nearest its middle
+    /// station, for the screenshot to follow along its double track.
+    public func screenshotTrainMidway(on id: String) -> TrainID? {
+        guard let line = world.acquisition(of: id)?.line.flatMap({ world.line(id: $0) }), !line.stops.isEmpty,
+              let middle = world.station(id: line.stops[line.stops.count / 2])?.location else { return nil }
+        let placed = line.assignedTrains.compactMap { id in
+            world.train(id: id).flatMap(\.position).flatMap { world.location(of: $0) }.map { (id, $0.position.plan) }
+        }
+        return placed.min { a, b in
+            (WorldVector(a.1) - WorldVector(middle)).length < (WorldVector(b.1) - WorldVector(middle)).length
+        }?.0
     }
 }

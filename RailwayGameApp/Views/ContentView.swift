@@ -98,6 +98,31 @@ struct ContentView: View {
             // screen with the controls it must not cover.
             .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets, mapSites: screen.tutorialMapSites,
                              firstLineGuide: launcher.preferences.firstLineGuide)
+            // Decision 566: a model new to the fleet, its card; under any
+            // sheet, so it shows once the sheet it was bought in closes.
+            .overlay {
+                ZStack {
+                    if let arrival = session.trainArrivals.first {
+                        // The icon's navy in both appearances, so the
+                        // game dims behind the card in dark mode too.
+                        Theme.onAccent.opacity(0.45)
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture { session.dismissTrainArrival(all: true) }
+                            .accessibilityHidden(true)
+                            .transition(.opacity)
+                        NewTrainArrivalCard(
+                            arrival: arrival, waiting: session.trainArrivals.count - 1, language: session.language,
+                            next: { session.dismissTrainArrival() },
+                            skip: { session.dismissTrainArrival(all: true) },
+                            playSound: { session.playSound?(.newTrain) }
+                        )
+                        .id(arrival.id)
+                        .transition(.pop(from: 0.9, reduceMotion: reduceMotion))
+                    }
+                }
+                .animation(MotionRule.cardIn.running(reduceMotion: reduceMotion)?.animation, value: session.trainArrivals.first?.id)
+            }
             // L1-3 (#1549's review): while Back to Start writes the
             // autosave, nothing takes a touch, so nothing done then is left
             // out of it.
@@ -241,25 +266,23 @@ struct ContentView: View {
                     screen.panel = .goals
                 }
             }
-            .sheet(isPresented: Binding(get: { lessonResult != nil }, set: { if !$0 { lessonResult = nil } })) {
-                if let result = lessonResult {
-                    LessonResultCard(
-                        result: result, language: session.language,
-                        next: {
-                            lessonResult = nil
-                            if let next = result.next { launcher.startLesson(next) }
-                        },
-                        again: {
-                            lessonResult = nil
-                            launcher.startLesson(Lesson.all[result.lesson - 1])
-                        },
-                        keepPlaying: {
-                            lessonResult = nil
-                            session.keepPlaying()
-                        }
-                    )
-                    .presentationDetents([.medium, .large])
-                }
+            .sheet(item: $lessonResult) { result in
+                LessonResultCard(
+                    result: result, language: session.language,
+                    next: {
+                        lessonResult = nil
+                        if let next = result.next { launcher.startLesson(next) }
+                    },
+                    again: {
+                        lessonResult = nil
+                        launcher.startLesson(Lesson.all[result.lesson - 1])
+                    },
+                    keepPlaying: {
+                        lessonResult = nil
+                        session.keepPlaying()
+                    }
+                )
+                .presentationDetents([.medium, .large])
             }
             // Decision 315: a real branch line offered, and in the same
             // sheet the card its purchase ends on. Decision 497: open while
@@ -519,7 +542,7 @@ struct ContentView: View {
             // Decision 509: Done stands beside Build while building.
             let doneBesideFoot = toolsColumn && showsRail
             let toggleBesideFoot = doneBesideFoot && session.tutorial?.step.usesDetailsCard != true
-            let showsFootRow = doneBesideFoot || ControlPanel.showsEdits(session)
+            let showsFootRow = doneBesideFoot || ControlPanel.showsEdits(session, linesPanelOpen: screen.panel == .lines)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             // Decision 224 (5B): the layer strip under the pill, while not
             // building and not in the tutorial; on a phone the building
@@ -527,7 +550,10 @@ struct ContentView: View {
             // its fold with it, PR #644's gate). The map's round layers
             // button, which opens the same list, shows only while the strip
             // does not (decision 226, 2026-10-15).
-            let showsLayerStrip = !showsRail && session.tutorial == nil
+            // Decision 568: while a new line is picked on the map, the
+            // layers, the next step and Undo put away; back after ✓ or ✕.
+            let drawing = session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines)
+            let showsLayerStrip = !showsRail && session.tutorial == nil && drawing.showsLayers
             // Decision 226 (2026-10-15, the owner): the follow bar beside
             // the strip, in the row under the pill, rather than squeezed
             // between the tools and the card lower down.
@@ -742,6 +768,11 @@ struct ContentView: View {
                         )
                         .padding(.leading, beside + margin)
                         .padding(.bottom, strip + margin)
+                        // Decision 568: out of sight while a new line is
+                        // picked (its bubble stood over the pill), kept so
+                        // it remembers what it has said.
+                        .opacity(drawing.showsMapExtras ? 1 : 0)
+                        .allowsHitTesting(drawing.showsMapExtras)
                     }
                 }
                 // Decision 224 (3B): the last two stations picked for a new
@@ -841,6 +872,7 @@ struct ContentView: View {
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: toolsColumn)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: sidePanel)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.lineDraft.count >= 2)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: drawing)
                 .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followBar?.train)
         }
     }

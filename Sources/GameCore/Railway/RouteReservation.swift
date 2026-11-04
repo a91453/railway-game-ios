@@ -187,6 +187,12 @@ extension GameWorld {
         // Its route envelope (see ``routeEnvelope(of:)``), asked a resource
         // at a time, and gathered only to be taken.
         let route = routeStretches(of: candidate)
+        // Decision 562: with block sections, never onto a following train's
+        // route ahead of it as a train it could never follow, whole or
+        // following the trains ahead.
+        if route.moves, blockSections, let follower = followerCutOff(by: candidate, memo: &memo) {
+            return .held(by: follower)
+        }
         // Decision 294: a long leg of a line with runs, only part of the way.
         if route.moves, blockSections, case .travellingToStop? = candidate.execution, followsRealTimetable(candidate) {
             let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
@@ -204,6 +210,81 @@ extension GameWorld {
         var train = candidate
         train.reservation = route.moves ? Set(envelope.resources).sorted() : []
         return .granted(train)
+    }
+
+    /// Decision 562: with block sections a train following others holds
+    /// only the track it has taken (decision 212), so a train could take
+    /// the rest of its route ahead of it, standing where the follower must
+    /// pass, and then never move again:
+    ///
+    /// - one that ends its service or turns round at the call it travels
+    ///   to: a train turning back leaves the way it came, perhaps over the
+    ///   track the follower stands on, and one whose service ends stands
+    ///   (Taoyuan Airport MRT 18 and 29 at Airport Terminal 2, decision
+    ///   556); the follower never follows either (see
+    ///   ``isLeading(_:onto:for:)``);
+    /// - one that comes along the follower's route the other way and goes
+    ///   on along it, back past where the follower will wait short of it
+    ///   (see ``followerWaitsInTheWay(_:of:going:memo:)``): each waits for
+    ///   the other (the same line's 1, westbound into Kengkou, and 26, an
+    ///   empty train out of Luzhu depot eastbound on that track).
+    ///
+    /// The lowest numbered such follower `candidate`, about to take its
+    /// route, whole or following the trains ahead, would cut off, so it
+    /// waits for it; `nil` when there is none. A train that stands on the
+    /// follower's route already, or whose route passes over the follower,
+    /// is not held: the follower waits for the one, and the other is behind
+    /// it and can only follow it.
+    func followerCutOff(by candidate: Train, memo: inout DirectionMemo) -> TrainID? {
+        guard case .travellingToStop(let stop, let cycle)? = candidate.execution else { return nil }
+        let next = candidate.timetable[stop].reverses ? nil : candidate.call(after: stop, cycle: cycle)
+        let standing = occupied(candidate)
+        let path = cover(of: routeStretches(of: candidate).stretches)
+        var arrived: Train?
+        for other in trains where other.id != candidate.id && other.position != nil {
+            guard let (_, envelopes) = authority(of: other, memo: &memo) else { continue }
+            let route = followingCover(of: other, envelopes, memo: &memo)
+            guard !standing.contains(where: route.contains), !occupied(other).contains(where: path.contains),
+                  stopsOn(route, candidate) else { continue }
+            guard let next else { return other.id }
+            if arrived == nil {
+                var train = candidate
+                train.reservation = []
+                let end = travelling(train, distance: routeLength(of: candidate), memo: &memo)
+                train.position = end.position
+                train.movement.cursor = end.cursor
+                arrived = train
+            }
+            if followerWaitsInTheWay(other, of: arrived!, going: candidate.timetable[next.stop].station, envelopes) { return other.id }
+        }
+        return nil
+    }
+
+    /// Whether `train`, standing on `follower`'s route facing against it,
+    /// goes on toward `station` back along that route over where the
+    /// follower will wait short of it: the last block boundary at least
+    /// ``followingGap`` before its head (see ``blockBoundary(_:atOrBefore:)``),
+    /// or the follower itself.
+    func followerWaitsInTheWay(_ follower: Train, of train: Train, going station: StationID, _ envelopes: AuthorityEnvelopes) -> Bool {
+        guard case .onEdge(let traversal, let offset)? = train.position,
+              let length = network.edge(traversal.edge)?.length else { return false }
+        // The follower's offset of the train's head, which faces it.
+        let along = length - offset
+        guard let index = envelopes.stretches.firstIndex(where: {
+            $0.traversal == traversal.reversed && $0.from <= along && along <= $0.to
+        }) else { return false }
+        let start = { (index: Int) in index == 0 ? 0 : envelopes.ends[index - 1] }
+        let head = start(index) + along - envelopes.stretches[index].from
+        // Back along the follower's route as far as its way goes with it.
+        var shared = index
+        if let onward = path(from: .onEdge(traversal, offset: offset), toStation: station, length: train.length) {
+            for step in onward.traversals {
+                guard shared > 0, envelopes.stretches[shared - 1].traversal == step.reversed else { break }
+                shared -= 1
+            }
+        }
+        if shared == 0 { return true }
+        return blockBoundary(envelopes, atOrBefore: head - Self.followingGap) > start(shared)
     }
 
     /// Decision 57: a service's departure takes its default route whole,
@@ -310,6 +391,23 @@ extension GameWorld {
         guard runsAlongAny(free, from: position, forbids) else { return free }
         guard let path = path(from: position, toStation: station, length: candidate.length, avoiding: blocked, forbids: forbids) else { return nil }
         return overflow || path.distance <= limit ? path : nil
+    }
+
+    /// Decision 571, continued: ``alternativeRoute(of:to:avoiding:memo:)``
+    /// without decision 57's direction protection, for a service the
+    /// dispatcher finds in a deadlock (see `resolveDeadlock(memo:)`): the
+    /// shortest route to any berth of `station` that avoids `blocked`, at
+    /// most ``detourAllowance`` longer than its default route; or `nil`.
+    /// Run against the planned way only to clear a deadlock nothing else
+    /// clears, and only taken whole, so no train meets it head on: a
+    /// controller's wrong-line move into the free berth beside.
+    func counterflowRoute(of candidate: Train, to station: StationID, avoiding blocked: BlockedTrack) -> TrainPath? {
+        guard let position = candidate.position else { return nil }
+        let (limit, overflow) = routeLength(of: candidate).addingReportingOverflow(Self.detourAllowance)
+        guard let free = path(from: position, toStation: station, length: candidate.length, avoiding: blocked),
+              overflow || free.distance <= limit
+        else { return nil }
+        return free
     }
 
     /// The lowest numbered train other than `id` that holds any of

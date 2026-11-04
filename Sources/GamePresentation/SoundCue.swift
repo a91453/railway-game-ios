@@ -42,6 +42,9 @@ public enum SoundCue: Hashable, Sendable {
     /// bar's button, or a Taiwan Railway train nearing a stop or running
     /// into a tunnel (``TrainHorn``).
     case horn(TrainHorn)
+    /// A model new to the fleet came ashore (decision 566): a short
+    /// fanfare on the station chime's pentatonic scale, drum taps under it.
+    case newTrain
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -172,6 +175,7 @@ public enum SoundCue: Hashable, Sendable {
         case .lineAcquired: ("line-acquired", "wav")
         case .ticketIssued: ("ticket-issued", "wav")
         case .horn(let horn): horn.resource
+        case .newTrain: ("new-train", "wav")
         }
     }
 }

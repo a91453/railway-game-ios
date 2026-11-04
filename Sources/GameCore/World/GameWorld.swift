@@ -2177,6 +2177,8 @@ public struct GameWorld: Equatable, Sendable {
         copy.color = original.color
         // Decision 155: a freight line's copy carries freight too.
         copy.isFreight = original.isFreight
+        // Decision 564: and keeps to the same side.
+        copy.keepsRight = original.keepsRight
         copy.runs = original.runs
         copy.runDays = Array(repeating: nil, count: original.runs.count)
         nextLineID = nextID
@@ -2491,6 +2493,16 @@ public struct GameWorld: Equatable, Sendable {
                 lines[index].patterns[pattern].trains.removeAll { !climbers.contains($0) }
             }
         }
+    }
+
+    /// Makes line `id` keep to the right on double track, or to the left
+    /// again (decision 564; ``ServiceLine/keepsRight``). Free. A train
+    /// already on its way keeps the route it was given.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func setLineKeepsRight(_ id: LineID, to keepsRight: Bool) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        lines[index].keepsRight = keepsRight
     }
 
     /// Makes line `id` a freight line, or a passenger line again. Free.
@@ -3722,6 +3734,25 @@ public struct GameWorld: Equatable, Sendable {
             retimeRunningTrip(of: index)
             return id
         }
+        // Decision 571, continued: with nothing else to do, a service due
+        // to leave takes a free berth of its next call against the planned
+        // way (see ``counterflowRoute(of:to:avoiding:)``), taken whole. On a
+        // double track whose crossovers let each way into one berth at
+        // each end, two trains each standing on the berth the other is
+        // bound for waited for each other all day.
+        for id in stuck.keys.sorted() {
+            guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
+                  case .waitingAtStop(let left, _)? = trains[index].execution,
+                  let due = departureDue(of: trains[index]), due <= clock.now,
+                  case .travellingToStop(let stop, let cycle)? = request.candidate.execution,
+                  let way = counterflowRoute(of: request.candidate, to: request.candidate.timetable[stop].station,
+                                             avoiding: blockedTrack(except: id, holders: trackHolders(memo: &memo.directions))),
+                  case .granted(let granted) = reserving(rerouted(request.candidate, along: way, stop: stop, cycle: cycle), memo: &memo.directions)
+            else { continue }
+            setOff(index, as: granted)
+            serve(departureOf: id, from: left, distance: way.distance)
+            return id
+        }
         return nil
     }
 
@@ -4081,11 +4112,13 @@ public struct GameWorld: Equatable, Sendable {
             guard var nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
             // Decision 547: out of a depot with traffic control off, off the
             // track where other trains stand, as decision 228 has it in.
-            if let kept = pathOutOfDepot(train.timetable[stop].station, to: call, from: start, for: train, nearest: nearest) { nearest = kept }
+            var standing: Set<TrackEdgeID> = []
+            if let kept = pathOutOfDepot(train.timetable[stop].station, to: call, from: start, for: train, nearest: nearest) { (nearest, standing) = kept }
             // Decision 527: an empty run keeps off track its line takes
-            // only the other way.
+            // only the other way; decision 547 (L6-4): and, out of a
+            // depot, still off the track where other trains stand.
             let against = lineAgainst(for: train, memo: &memo)
-            if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against) { nearest = kept }
+            if let against, let kept = lineDirectionPath(nearest, from: start, toStation: call, for: train, against: against, avoiding: standing) { nearest = kept }
             // Decision 228: with traffic control off, a free platform first;
             // decision 527: not one only that track reaches.
             if let next = train.call(after: stop, cycle: cycle),

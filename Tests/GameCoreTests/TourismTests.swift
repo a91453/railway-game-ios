@@ -361,6 +361,40 @@ final class TourismTests: XCTestCase {
         }
     }
 
+    /// Decision 551, continued (review L7-1): the day pass is settled at
+    /// midnight, when a line of the standard hours (06:00 to midnight) has
+    /// closed, on the network of the day it was sold, as the tourists are.
+    func testTheDayPassSettlesWhenTheLinesCloseAtMidnight() throws {
+        for window in [ServiceWindow.allDay, .standard] {
+            var world = try touristLineWorld(window: window)
+            let third = try XCTUnwrap(world.station(id: StationID(rawValue: 3)))
+            world.setTourism((world.tourism?.attractions ?? []) + [
+                Attraction(id: AttractionID(rawValue: 2), name: "y", englishName: "y",
+                           point: PlanPoint(x: third.point.x, y: third.point.y + 1_000), kind: .town, baseStars: 300),
+            ])
+            world.setEconomyMode(.management)
+            try world.setDayPass(Money(4_500))
+            try world.advance(ticks: 12 * 60)
+            let noon = world.dayPassToday()
+            XCTAssertEqual(noon.sold, 120, "\(window)")
+            try world.advance(ticks: 12 * 60 + 2)
+            let row = try XCTUnwrap(world.accounts.entries.last { $0.kind == .dailyDayPass }, "\(window)")
+            XCTAssertEqual(row.breakdown.first { $0.item == .dayPassSales }?.amount, noon.sales, "\(window)")
+            // Yesterday's passes read the same after midnight as at noon.
+            XCTAssertEqual(world.dayPassDay(onDay: 0), noon, "\(window)")
+        }
+    }
+
+    /// Decision 551, continued (review L7-2): a line that runs no train at
+    /// noon (off-peak) but does at the peak is counted when it runs.
+    func testALineWithNoTrainAtNoonCountsItsTourists() throws {
+        var world = try touristLineWorld(window: .standard)
+        try world.setLineTrainsInService(LineID(rawValue: 1), to: TrainsInService(peak: 1, offPeak: 0, low: 0))
+        try world.advance(ticks: 1_442)
+        XCTAssertEqual(world.attraction(id: AttractionID(rawValue: 1))?.yesterday, 240)
+        XCTAssertEqual(world.attractionStatus(of: AttractionID(rawValue: 1)), .ok)
+    }
+
     /// The four-station line of ``testMidnightCountsTheDayWhileTheNetworkIsClosed()``
     /// with hours `window`, network routing and a sight by its last station.
     private func touristLineWorld(window: ServiceWindow) throws -> GameWorld {

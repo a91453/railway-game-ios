@@ -165,6 +165,45 @@ final class LiveOvertakeTests: XCTestCase {
         XCTAssertLessThanOrEqual(try XCTUnwrap(arrived.values.min(), "the first run reached East"), 1_560, "within a minute of its time")
     }
 
+    /// L6-5: the same with the train ahead on a line at a headway and the
+    /// one behind on a line of runs (the player's line beside one bought
+    /// with its timetable). The headway train is put on its line at 10:00
+    /// at West's north platform and leaves at 10:43; the run's train has
+    /// stood at the south one since 9:00 and leaves at 13:20, after it.
+    /// Before the rule read the train behind too, the plan had the headway
+    /// train stand aside at Middle for a train that never gets by.
+    func testARunBehindATrainOfAHeadwayLineAtTheTerminusIsNoOvertake() throws {
+        var (world, line, ids) = try LocalPassTests.world()
+        func at(_ seconds: Int64, _ dwell: Int64 = 0) -> LineRunTime { LineRunTime(arrival: seconds, departure: seconds + dwell) }
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let runLine = try world.createLine(named: "Runs", stops: ids).id
+        try world.setLineRuns(runLine, to: [LineRun(from: 0, to: 4, times: [at(540, 260), at(980, 60), at(1_220, 60), at(1_460, 60), at(1_700)])])
+        var trains: [TrainID] = []
+        for position in [TrainPosition.onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 14_336),
+                         .onEdge(TrackTraversal(edge: .edge(6), direction: .forward), offset: 14_336)] {
+            let id = try world.purchaseTrain(named: "T\(trains.count + 1)").id
+            try world.setTrainCars(id, to: 2)
+            try world.placeTrain(id, at: position)
+            if case .onEdge(_, let offset) = position { try world.setTrainContinuation(id, along: [], stoppingAt: offset) }
+            try world.setTrainMovementRate(id, to: 1_024)
+            trains.append(id)
+        }
+        try world.assignTrain(trains[1], to: runLine)
+        try world.setTrafficControl(true)
+        world.setSpeed(.x1)
+        var bothWaited = false
+        var waits: [ScheduledTrafficWait] = []
+        for second in 1...1_800 {
+            if second == 600 { try world.assignTrain(trains[0], to: line) }
+            try world.advance(ticks: 10)
+            if trains.allSatisfy({ if case .waitingAtStop(0, _)? = world.train(id: $0)!.execution { true } else { false } }) { bothWaited = true }
+            for wait in world.scheduledTrafficWaits() where !waits.contains(wait) { waits.append(wait) }
+        }
+        XCTAssertTrue(bothWaited, "both stood at West at once")
+        XCTAssertEqual(waits, [], "no wait planned")
+    }
+
     /// Advancing at once ends where advancing second by second does, with
     /// trains turning aside on their way (the commands given at the same
     /// seconds).

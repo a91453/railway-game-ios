@@ -2,7 +2,8 @@ import XCTest
 
 /// The new line's draft in one line (City Transport Manager study 4.2,
 /// step M0), on a blank map and on a real map of Taiwan: once two stations
-/// are picked, the line shows at the top of the lines panel's draft. Full
+/// are picked, the line shows in the map's ✓ pill beside the last one, and
+/// not again in the lines panel (decision 568). Full
 /// lane only (decision 199): what it says is `LineDraftSummaryTests` on
 /// Linux; this checks that it shows. Run by hand with
 /// only_testing=RailwayGameUITests/LineDraftSummaryUITests.
@@ -54,9 +55,11 @@ final class LineDraftSummaryUITests: XCTestCase {
         }
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
-        let summary = element("line.draft.summary")
-        reveal(summary, above: true)
-        XCTAssertTrue(summary.label.hasPrefix("1 stop"), summary.label)
+        // Decision 568: the map's pill says it; the panel keeps the stations.
+        let summary = element("map.build.catchment")
+        XCTAssertTrue(summary.appears(within: 10), "The map's pill says the draft")
+        XCTAssertTrue(summary.label.hasPrefix("Tap the line's next station"), summary.label)
+        XCTAssertFalse(element("line.draft.summary").exists, "Said once, in the pill")
         tap(app.navigationBars["Lines"].buttons["Done"])
 
         // Looked for now, not at the start: the line's readout stands by
@@ -70,10 +73,15 @@ final class LineDraftSummaryUITests: XCTestCase {
         tap(app.buttons["entry.lines"])
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
-        reveal(summary, above: true)
+        XCTAssertTrue(summary.appears(within: 10), "The map's pill says the draft")
         XCTAssertFalse(summary.label.isEmpty)
-        XCTAssertFalse(summary.label.hasPrefix("1 stop"), "The line moves on with the second station: \(summary.label)")
-        XCTAssertTrue(list.frame.contains(CGPoint(x: summary.frame.midX, y: summary.frame.midY)), "The line is on the panel's list")
+        XCTAssertFalse(summary.label.hasPrefix("Tap the line's next station"), "The line moves on with the second station: \(summary.label)")
+        XCTAssertFalse(element("line.draft.summary").exists, "Said once, in the pill")
+        // The pill keeps off the panel, beside the map.
+        let panel = element("hud.panel")
+        if panel.exists {
+            XCTAssertFalse(panel.frame.intersects(summary.frame), "The pill \(summary.frame) under the panel \(panel.frame)")
+        }
     }
 
     // MARK: - Helpers

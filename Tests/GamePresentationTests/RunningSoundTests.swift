@@ -111,6 +111,98 @@ final class RunningSoundTests: XCTestCase {
         }
     }
 
+    /// Decision 567: a diesel's engine idles at a stand (never silent),
+    /// notched up rises louder and higher with speed, and coasting or
+    /// braking falls back to idle under the wheels.
+    func testADieselEngineIdlesPullsAwayAndCoasts() throws {
+        for kmh in [0.0, 4.9] {
+            for powering in [true, false] {
+                let idle = RunningSound.ofDiesel(atKMH: kmh, powering: powering)
+                XCTAssertEqual(idle.loop, .dieselIdle, "\(kmh) km/h")
+                XCTAssertEqual(idle.volume, pow(10, -8.0 / 20), accuracy: 1e-9)
+                XCTAssertEqual(idle.rate, 1)
+            }
+        }
+        let away = RunningSound.ofDiesel(atKMH: 5, powering: true)
+        XCTAssertEqual(away.loop, .diesel)
+        XCTAssertEqual(away.volume, pow(10, -6.0 / 20), accuracy: 0.03)
+        XCTAssertEqual(away.rate, 0.9, accuracy: 0.021)
+        XCTAssertGreaterThan(away.volume, RunningSound.ofDiesel(atKMH: 0, powering: true).volume, "pulling away is louder than idling")
+        for kmh in [110.0, 130] {
+            let full = RunningSound.ofDiesel(atKMH: kmh, powering: true)
+            XCTAssertEqual(full.volume, 1)
+            XCTAssertEqual(full.rate, 1.2, accuracy: 1e-9)
+            let coasting = RunningSound.ofDiesel(atKMH: kmh, powering: false)
+            XCTAssertEqual(coasting.loop, .dieselCoast)
+            XCTAssertEqual(coasting.rate, 1.1, accuracy: 1e-9)
+        }
+        var last = 0.0, lastRate = 0.0
+        var levels = Set<RunningSound>()
+        for kmh in stride(from: 5.0, through: 120, by: 0.5) {
+            let sound = RunningSound.ofDiesel(atKMH: kmh, powering: true)
+            XCTAssertGreaterThanOrEqual(sound.volume, last, "\(kmh) km/h")
+            XCTAssertGreaterThanOrEqual(sound.rate, lastRate, "\(kmh) km/h")
+            last = sound.volume
+            lastRate = sound.rate
+            levels.insert(sound)
+        }
+        XCTAssertLessThanOrEqual(levels.count, 40)
+    }
+
+    /// Decision 567: which trains sound as a diesel: by what draws them,
+    /// as their horn.
+    func testDieselTrainsAreKnownByTheirTypeOrTheirPerformance() throws {
+        func isDiesel(type code: String?, performance: TrainPerformance? = nil) throws -> Bool {
+            var world = try GameWorld(bounds: WorldBounds(width: 4_096, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts))
+            let id = try world.purchaseTrain(named: "T").id
+            if let code { try world.setTrainType(id, to: try XCTUnwrap(TrainType(rawValue: code))) }
+            if let performance { try world.setTrainPerformance(id, to: performance) }
+            return RunningSound.isDiesel(try XCTUnwrap(world.train(id: id)), in: world)
+        }
+        for code in ["R100CK", "R200CK", "BLUE", "ALISHAN"] {
+            XCTAssertTrue(try isDiesel(type: code), code)
+        }
+        for code in ["EMU3000", "EMU100", "E200CK", "E500CK", "HAIFENG", "MINGRI", "STAR", "STEAM", "SUMMER", "HSR", "B", "MAGLEV"] {
+            XCTAssertFalse(try isDiesel(type: code), code)
+        }
+        XCTAssertFalse(try isDiesel(type: nil), "the standard car")
+        XCTAssertTrue(try isDiesel(type: nil, performance: .dieselRailcar))
+        XCTAssertTrue(try isDiesel(type: nil, performance: .dieselExpress))
+        XCTAssertTrue(try isDiesel(type: nil, performance: TrainPerformance.dieselRailcar.withTopSpeed(80)), "whatever its top speed")
+        XCTAssertFalse(try isDiesel(type: nil, performance: .emu800))
+        XCTAssertFalse(try isDiesel(type: nil, performance: .highSpeed))
+        // A type says what the train is, whatever its performance.
+        XCTAssertFalse(try isDiesel(type: "EMU3000", performance: .dieselRailcar))
+    }
+
+    /// Decision 567: followed at 60×, a diesel railcar idles at West, pulls
+    /// away notched up, coasts and brakes into East and idles there; it is
+    /// told only when the sound changes.
+    func testAFollowedDieselRailcarIdlesPullsAwayCoastsAndIdlesAgain() async throws {
+        let world = try makeServiceWorld(performance: .dieselRailcar)
+        await MainActor.run {
+            let session = GameSession(world: world)
+            var told: [RunningSound?] = []
+            session.runningSound = { told.append($0) }
+            session.followTrain(Self.tram)
+            for _ in 0..<75 {
+                session.advance(realElapsed: GameSession.tickInterval)
+            }
+            let loops = told.compactMap { $0?.loop }
+            XCTAssertEqual(told.compactMap { $0 }.count, told.count, "never silent while followed")
+            XCTAssertEqual(loops.first, .dieselIdle, "idling at West")
+            XCTAssertEqual(loops.last, .dieselIdle, "idling at East")
+            let away = loops.firstIndex(of: .diesel)
+            let coast = loops.lastIndex(of: .dieselCoast)
+            XCTAssertNotNil(away, "pulled away")
+            XCTAssertNotNil(coast, "braked into East")
+            if let away, let coast { XCTAssertLessThan(away, coast) }
+            for (earlier, later) in zip(told, told.dropFirst()) {
+                XCTAssertNotEqual(earlier, later, "told only on a change")
+            }
+        }
+    }
+
     /// Pausing, going faster than 60× or no longer following silences it
     /// at once, not at the next step; resuming brings it back.
     func testPausingSpeedingUpOrLettingGoSilencesItAtOnce() async throws {
@@ -141,7 +233,7 @@ final class RunningSoundTests: XCTestCase {
         }
     }
 
-    /// Both loops are made by the audio tool, listed in its manifest as
+    /// Every loop is made by the audio tool, listed in its manifest as
     /// running loops and bundled with the app.
     func testEveryLoopIsABundledFileInTheManifest() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

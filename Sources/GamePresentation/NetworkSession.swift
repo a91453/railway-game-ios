@@ -91,6 +91,10 @@ extension GameSession {
             if let name {
                 stationName = name
                 automaticStationName = name
+                stationNameChoices = Self.stationNameChoices(
+                    for: world, at: geometry.location(at: (stretch.start + stretch.end) / 2).position.plan, in: language,
+                    railways: railways, placeNames: placeNames, realBuses: realBuses
+                )
             } else {
                 suggestStationName(at: geometry.location(at: (stretch.start + stretch.end) / 2).position.plan)
             }
@@ -450,6 +454,33 @@ extension GameSession {
         networkPlatformStretch.flatMap(platformGrade(of:))
     }
 
+    /// The crossovers ``addNetworkPlatform()`` would lay past the ends of
+    /// the platform picked (decision 571), planned on `probe`, the world
+    /// with its platforms built; kept for the pick and command, as the
+    /// preview asks every frame.
+    func networkStationCrossovers(of stretch: (edge: TrackEdgeID, start: Int64, end: Int64), on probe: GameWorld) -> [PlayerCommand.TrackStretch] {
+        let key = PlatformBesideMemo.Key(edge: stretch.edge, start: stretch.start, end: stretch.end, commandRevision: commandRevision)
+        if let memo = stationCrossoverMemo, memo.key == key { return memo.crossovers }
+        let crossovers = stationCrossovers(of: stretch, in: probe)
+        stationCrossoverMemo = (key, crossovers)
+        return crossovers
+    }
+
+    /// The crossovers the platform picked would get (decision 571), for
+    /// the preview: none with an island layout, which lays its own track.
+    /// Planned once for the pick and command.
+    var networkPlatformCrossovers: [PlayerCommand.TrackStretch] {
+        guard !networkStationLayout.isLaidByLayout, let stretch = networkPlatformStretch, networkPlatformBeside != nil else { return [] }
+        let key = PlatformBesideMemo.Key(edge: stretch.edge, start: stretch.start, end: stretch.end, commandRevision: commandRevision)
+        if let memo = stationCrossoverMemo, memo.key == key { return memo.crossovers }
+        let crossovers = (try? networkPlatformDraft().get().addition.crossovers) ?? []
+        stationCrossoverMemo = (key, crossovers)
+        return crossovers
+    }
+
+    /// How many crossovers the platform picked would get (decision 571).
+    public var networkPlatformCrossoverCount: Int { networkPlatformCrossovers.count }
+
     /// The stretch of the track beside ``networkPlatformStretch`` that gets
     /// a platform with it (decision 285, ``besidePlatformStretch(of:)``).
     /// The map's body asks it several times a frame (the layout menu, the
@@ -593,15 +624,22 @@ extension GameSession {
         // refuse it (a platform there already, a train on it), so the one
         // tapped is built as before. Want of cash refuses both.
         var beside = wantsBeside ? besidePlatform(of: stretch) : nil
+        var crossovers: [PlayerCommand.TrackStretch] = []
         if let found = beside {
             var probe = world.pricingCopy()
             let both = PlayerCommand.PlatformAddition(
                 edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: found
             )
             do throws(GameError) { _ = try apply(.addPlatform(both), to: &probe) } catch { beside = nil }
+            // Decision 571: and the crossovers past its ends, planned on
+            // the world with both platforms built (not for an island
+            // layout, which lays its own track). Want of cash refuses them
+            // all with the platforms, as the double track's.
+            if beside != nil, !networkStationLayout.isLaidByLayout { crossovers = networkStationCrossovers(of: stretch, on: probe) }
         }
         let addition = PlayerCommand.PlatformAddition(
-            edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: beside
+            edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: beside,
+            crossovers: crossovers
         )
         return .success((addition, middle, chosen, grade))
     }
@@ -620,7 +658,8 @@ extension GameSession {
         guard let stretch = networkPlatformStretch else { return }
         let (addition, middle, chosen, grade) = draft
         var built: StationID?
-        let alsoBeside = addition.beside == nil || layout.isLaidByLayout ? "" : besidePlatformText()
+        let alsoBeside = addition.beside == nil || layout.isLaidByLayout
+            ? "" : besidePlatformText() + stationCrossoverText(addition.crossovers.count, built: true)
         /// What the tool says it did.
         func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), levelled: String, in world: GameWorld) -> String {
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
@@ -685,9 +724,8 @@ extension GameSession {
         }
         if let built {
             // The typed name went to the new station: suggest the next.
-            let suggestion = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways, placeNames: placeNames)
-            stationName = suggestion
-            automaticStationName = suggestion
+            stationName = automaticStationName
+            suggestStationName(at: middle)
             platformStationID = built
         }
     }
@@ -1087,6 +1125,7 @@ extension GameSession {
             let place = networkPlatformBeside == nil
                 ? language.text("\(length) platform here", "在這裡設 \(length) 的月台")
                 : language.text("\(length) platform here, on both tracks", "在這裡設 \(length) 的月台（兩條軌道）")
+                    + stationCrossoverText(networkPlatformCrossoverCount, built: false)
             // Decision 164: a grade says so before the tap on ✓; decision
             // 190: and that ✓ levels it, for what.
             guard let levelling = networkPlatformLevelling else { return place }
@@ -1328,6 +1367,9 @@ extension GameSession {
                 overlay.highlightKind = .platform
                 if let beside = networkPlatformBeside, let other = world.trackGeometry(of: beside.edge) {
                     overlay.besideHighlight = other.points(from: beside.start, to: beside.end)
+                    // Decision 571: and the crossovers past its ends.
+                    overlay.crossovers = networkPlatformCrossovers.map(\.geometryPoints)
+                    overlay.previewIsBuildable = !overlay.crossovers.isEmpty
                 }
             }
         case .remove:

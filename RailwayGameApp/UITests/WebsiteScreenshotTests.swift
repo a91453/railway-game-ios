@@ -44,6 +44,78 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("bought-lines-list", app)
     }
 
+    /// Decision 564: the Wenhu Line bought on a real map of Taipei and run
+    /// on to 07:40, a train near its middle followed: on the 2D map and in
+    /// 3D, each way's trains on the track to their right, as the real
+    /// Taipei Metro's run. For the screenshot review of the pull request
+    /// that put them there.
+    func testWenhuRunsOnTheRight() {
+        // The buying and the morning take most of it (the workflow allows
+        // up to 30 minutes a test).
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-follow-bought", "trtc:BR",
+                                 "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The Debug app on a Simulator buys the line and runs the morning
+        // on to 07:40 for minutes, its main thread busy for a minute at a
+        // time, longer than a UI query waits: the test asks nothing of it
+        // for six minutes first.
+        Thread.sleep(forTimeInterval: 360)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        // The bought card first.
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+        }
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<6 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("wenhu-right-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("wenhu-right-3d", app)
+    }
+
+    /// Decision 566: the new-train card, the Puyuma's with another
+    /// waiting ("Skip all"), then the EMU3000's, and in English the 700T's.
+    /// For the screenshot review of the pull request that added it.
+    func testNewTrainArrivalCard() {
+        let app = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-new-train", "puyuma,emu3000"])
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let welcome = app.buttons["newTrain.welcome"]
+        XCTAssertTrue(welcome.appears(within: 30), "The card shows")
+        XCTAssertTrue(welcome.becomesHittable(within: 10))
+        settle()
+        keep("new-train-puyuma", app)
+        welcome.tap()
+        XCTAssertTrue(app.staticTexts["newTrain.title"].firstMatch.appears(within: 10))
+        settle()
+        keep("new-train-emu3000", app)
+        app.buttons["newTrain.skip"].tap()
+        XCTAssertTrue(app.buttons["newTrain.welcome"].disappears(within: 10), "Skip closes it")
+        app.terminate()
+
+        let english = launch(extra: ["-screenshot-scene", "acquired", "-screenshot-new-train", "highSpeed"], english: true)
+        defer { english.terminate() }
+        XCTAssertTrue(english.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(english.buttons["newTrain.welcome"].appears(within: 30), "The card shows")
+        settle()
+        keep("new-train-700t-english", english)
+    }
+
     /// Decision 538 (continued): a train of a bought real line followed on
     /// the 2D map, close up: its cars along the curves of the Danhai light
     /// rail and the Neiwan Line, not swung straight off them. For the
@@ -64,6 +136,38 @@ final class WebsiteScreenshotTests: XCTestCase {
             keep("curve2d-\(name)", app)
             app.terminate()
         }
+    }
+
+    /// Decision 565: a train of four 20 m cars standing at a platform four
+    /// cars long on a real map, close up on the 2D map and on the 3D one:
+    /// every car inside the platform, its nose at the platform's end. For
+    /// the screenshot review of the pull request that stopped it so.
+    func testPlatformStop() {
+        let app = launch(extra: ["-screenshot-scene", "platformStop", "-screenshot-follow-train",
+                                 "-screenshot-3d-view", "160,0,55", "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The train's card has no stock row (no real line's stock): let the
+        // follow settle instead.
+        settle(seconds: 5)
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<6 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("platform-stop-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        settle(seconds: 12)
+        keep("platform-stop-3d", app)
     }
 
     /// Decision 539: a freight line's train, followed on the 3D map, is
@@ -877,15 +981,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
-    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
-    /// on the real-world demo where the track climbs, with where people
-    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
-    /// in a place of its own, the key folded while the pill shows. The
-    /// longest platform, so its stretch is the likeliest not to level; a
-    /// stretch that levels still shows the pill, banner and key together.
-    func testPlatformLevellingWithTheLayer() {
-        let app = launch(extra: ["-show-building-layer"])
-        defer { app.terminate() }
+    /// The real-world demo with a stretch of track built across the
+    /// middle of the map and a platform's site picked on it (the platform
+    /// mode open, at its longest), for a test to shoot; its ✓.
+    private func pickPlatformSiteOnTheRealWorldDemo(_ app: XCUIApplication) -> XCUIElement {
         app.openDemo("demo.realWorld", timeout: 60)
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 60), "The demo starts")
@@ -943,6 +1042,53 @@ final class WebsiteScreenshotTests: XCTestCase {
             siteX = covering.minX - 40
         }
         origin.withOffset(CGVector(dx: siteX, dy: middle)).tap()
+        return confirm
+    }
+
+    /// Decision 569: the names offered under a new station's name on a
+    /// real-world map, then one of them picked.
+    func testStationNameChoices() {
+        let app = launch()
+        defer { app.terminate() }
+        _ = pickPlatformSiteOnTheRealWorldDemo(app)
+        let first = app.buttons["network.stationNameChoice.0"]
+        XCTAssertTrue(first.appears(within: 10), "The names show under the name")
+        // The name sits below the card's short middle (on an iPhone held
+        // sideways it shows some 70 points): drag inside it, slowly, until
+        // the whole first name shows, not only its top edge.
+        let middle = app.scrollViews["details.scroll.middle"]
+        func shown() -> Bool {
+            first.isHittable && (!middle.exists || first.frame.maxY <= middle.frame.maxY + 1)
+        }
+        for _ in 0..<12 where !shown() && middle.exists {
+            let box = middle.frame
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let from = origin.withOffset(CGVector(dx: box.midX, dy: box.maxY - 6))
+            let to = origin.withOffset(CGVector(dx: box.midX, dy: box.minY + 6))
+            from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 0.5)
+        }
+        XCTAssertTrue(shown(), "The names can be reached")
+        settle()
+        keep("station-name-choices", app)
+        let second = app.buttons["network.stationNameChoice.1"]
+        if second.exists, second.isHittable {
+            second.tap()
+            settle()
+            keep("station-name-choice-picked", app)
+        }
+    }
+
+    /// Decision 510 (the author's iPhone held sideways, 99.1): a platform
+    /// on the real-world demo where the track climbs, with where people
+    /// are shown: the ✓ pill, the banner after ✓ and the layer's key each
+    /// in a place of its own, the key folded while the pill shows. The
+    /// longest platform, so its stretch is the likeliest not to level; a
+    /// stretch that levels still shows the pill, banner and key together.
+    func testPlatformLevellingWithTheLayer() {
+        let app = launch(extra: ["-show-building-layer"])
+        defer { app.terminate() }
+        let confirm = pickPlatformSiteOnTheRealWorldDemo(app)
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         settle()
         keep("platform-levelling-pill", app)
@@ -2117,6 +2263,54 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(scrollScreen(to: rules, in: app), "The Rules row shows")
         settle(seconds: 1)
         keep("settings-rules", app)
+    }
+
+    /// Decision 568: a new line picked on the map (five stations, the
+    /// potential layer on, as in the owner's report), on the map alone and
+    /// beside the lines panel; on an iPad upright too. The shots upright
+    /// end in `-portrait` and are not turned (website-screenshots.yml).
+    func testRouteDrawing() {
+        shootRouteDrawing(extra: [], name: "route-draw")
+    }
+
+    /// Decision 568: the same at the largest accessibility text size.
+    func testRouteDrawingLargeText() {
+        shootRouteDrawing(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL"], name: "route-draw-large-text")
+    }
+
+    private func shootRouteDrawing(extra: [String], name: String) {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-screenshot-line-draft"] + extra)
+        defer {
+            app.terminate()
+            XCUIDevice.shared.orientation = .landscapeLeft
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        XCTAssertTrue(app.buttons["map.build.confirm"].appears(within: 30), "The new line's pill shows")
+        // Where people are (decision 311), its legend over the map, as the
+        // owner had it.
+        let coverage = app.buttons["map.coverageShortcut"]
+        if coverage.appears(within: 10) {
+            coverage.waitUntilSettled()
+            coverage.tap()
+        }
+        settle(seconds: 3)
+        keep(name + upright(app), app)
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        settle(seconds: 3)
+        keep("\(name)-panel" + upright(app), app)
+    }
+
+    /// "-portrait" when the app shows upright: an iPhone is held on its
+    /// side only (project.yml), but the runner's iPad Simulator turns or
+    /// not whatever the test asks, and the workflow turns every other
+    /// shot a quarter back (decision 568).
+    private func upright(_ app: XCUIApplication) -> String {
+        let frame = app.windows.firstMatch.frame
+        return frame.width < frame.height ? "-portrait" : ""
     }
 
     /// Decision 497 (P2-6): Back to Start when the autosave cannot be
