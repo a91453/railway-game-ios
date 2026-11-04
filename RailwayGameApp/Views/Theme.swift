@@ -265,7 +265,7 @@ extension View {
     func glassBackground(cornerRadius radius: CGFloat, interactive: Bool = false) -> some View {
         if #available(iOS 26.0, *) {
             glassBackground(
-                in: ConcentricRectangle(corners: .concentric(minimum: radius), isUniform: true),
+                in: ConcentricRectangle(corners: .concentric(minimum: .fixed(radius)), isUniform: true),
                 interactive: interactive
             )
         } else {
