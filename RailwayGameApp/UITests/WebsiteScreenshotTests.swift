@@ -2302,6 +2302,37 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("settings-rules", app)
     }
 
+    /// Decision 573: a depot laid near two lines with none offers each on
+    /// the banner, and the game menu's Report a Problem says where to
+    /// send it. For the screenshot review of the pull request that added
+    /// them, not the website.
+    func testDepotOfferAndWhereToReport() {
+        let app = launch(extra: ["-screenshot-scene", "depotOffer"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The offer stays 10 s: shot as soon as it shows.
+        let offer = app.buttons["banner.depotLine"].firstMatch
+        XCTAssertTrue(offer.appears(within: 10), "The banner offers the lines")
+        settle(seconds: 1)
+        keep("depot-offer", app)
+
+        app.buttons["banner.depotLine"].firstMatch.tap()
+        settle(seconds: 1)
+        keep("depot-offer-chosen", app)
+
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let report = app.buttons["menu.report"]
+        XCTAssertTrue(report.appears(within: 30), "The menu opens")
+        report.waitUntilSettled()
+        let frame = report.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["report.whereToSend"].firstMatch.appears(within: 10), "The report says where to send it")
+        settle(seconds: 1)
+        keep("report-where-to-send", app)
+    }
+
     /// Decision 568: a new line picked on the map (five stations, the
     /// potential layer on, as in the owner's report), on the map alone and
     /// beside the lines panel; on an iPad upright too. The shots upright

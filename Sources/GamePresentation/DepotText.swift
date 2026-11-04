@@ -135,13 +135,16 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: problem)
             return
         }
-        let done = perform(.setStationDepot(station.id, isDepot)) { _, _, _ in
-            isDepot
-                ? language.text(
-                    "\(station.name) is now a depot. Choose it as a line's depot on the line panel.",
-                    "「\(station.name)」現在是機廠。到路線面板替路線選這個機廠。"
-                )
-                : language.text("\(station.name) is an ordinary station again.", "「\(station.name)」不再是機廠。")
+        // Decision 573: a new depot is the depot of the line it serves in
+        // the same edit.
+        let done = asOneEdit { () -> PlayerCommand.Outcome? in
+            let done = perform(.setStationDepot(station.id, isDepot)) { _, _, _ in
+                isDepot
+                    ? language.text("\(station.name) is now a depot.", "「\(station.name)」現在是機廠。")
+                    : language.text("\(station.name) is an ordinary station again.", "「\(station.name)」不再是機廠。")
+            }
+            if isDepot, done != nil, let text = message?.text { linkNewDepot(station.id, done: text) }
+            return done
         }
         // Decision 209's own message names no line: say which.
         if done == nil, let line = world.lineBlockedByDepot(station.id) {

@@ -27,6 +27,17 @@ public struct ProblemReport: Hashable, Sendable {
     /// device (``Map3DLoadGovernor/report(_:)``), or `nil`.
     public let map3D: String?
 
+    /// Decision 573 (player report 111.1, "it put no address in: where do
+    /// I send it?"): where a note goes, for a TestFlight tester. The app
+    /// names no address of its own (the code is public); the feedback
+    /// address is on the app's page in TestFlight.
+    public static func whereToSend(in language: DisplayLanguage) -> String {
+        language.text(
+            "Where to send it: testing in TestFlight? Take a screenshot and send it as feedback from TestFlight. To attach the save, choose Mail in the share menu and send it to the feedback address on this app's page in the TestFlight app.",
+            "寄到哪裡：用 TestFlight 測試的話，截圖後在 TestFlight 送出回饋即可。要附上存檔時，在分享選單選「郵件」，寄到 TestFlight App 裡這個 App 頁面上的回饋信箱。"
+        )
+    }
+
     public init(
         version: String, build: String, system: String, device: String, game: String? = nil, lessons: String? = nil, map3D: String? = nil
     ) {

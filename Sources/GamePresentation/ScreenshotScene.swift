@@ -83,6 +83,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// with every car inside its platform, on the 2D map and the 3D one.
     case platformStop
 
+    /// Decision 573: the demo map, where ``prepare(_:)`` lays a depot with
+    /// the depot tool off Line 2's north end (on its viaduct, so the
+    /// sidings pass over the ring): Line 2 and the Ring Line both end or
+    /// call near it, so the banner offers each. For the screenshot review
+    /// of the pull request that added the offer.
+    case depotOffer
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -114,7 +121,29 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .wenhu: Self.wenhuWorld(in: language)
         case .platformStop: Self.platformStopWorld(in: language)
+        case .depotOffer: Self.pausedDemo(in: language)
         }
+    }
+
+    /// What the scene does once its game is open, with the player's own
+    /// tools: ``depotOffer`` lays its depot. Nothing for the others.
+    @MainActor public func prepare(_ session: GameSession) {
+        guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
+        session.selectTool(.network)
+        session.setNetworkMode(.depot)
+        session.tapNetwork(at: north.plan, reach: 64)
+        session.addDepotYard()
+    }
+
+    /// Line 2's north end: the demo's highest track end furthest north.
+    static func depotOfferEnd(in world: GameWorld) -> WorldCoordinate? {
+        world.network.nodes.filter { $0.ends.count == 1 && $0.position.z > 0 }.min { $0.position.y < $1.position.y }?.position
+    }
+
+    private static func pausedDemo(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Wenhu
