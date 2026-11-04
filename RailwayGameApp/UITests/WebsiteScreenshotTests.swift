@@ -155,18 +155,9 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(network.appears(within: 10))
             network.waitUntilSettled()
             if !network.isSelected { network.tap() }
-            let mode = app.segmentedControls.buttons[english ? "Cable car" : "纜車"].firstMatch
-            XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
-            // In English the row slides sideways: the last mode is past its end.
-            // Drag the row that holds the mode, from inside its visible
-            // part: the row is wider than the panel, so its frame's middle
-            // (where a swipe starts) is at the panel's clipped edge.
-            let row = app.segmentedControls.containing(NSPredicate(format: "label == %@", english ? "Cable car" : "纜車")).firstMatch
-            for _ in 0..<3 where !mode.becomesHittable(within: 2) {
-                let left = row.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
-                left.withOffset(CGVector(dx: 180, dy: 0))
-                    .press(forDuration: 0.05, thenDragTo: left.withOffset(CGVector(dx: 10, dy: 0)), withVelocity: .fast, thenHoldForDuration: 0.1)
-            }
+            // The row slides sideways when the modes do not fit.
+            let mode = app.networkMode(english ? "Cable car" : "纜車")
+            XCTAssertTrue(mode.exists, "The mode is in the row, not under More")
             XCTAssertTrue(mode.becomesHittable(within: 10))
             mode.tap()
             let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch

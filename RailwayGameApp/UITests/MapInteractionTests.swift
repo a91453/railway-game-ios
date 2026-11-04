@@ -1424,7 +1424,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(network.appears(within: 10))
         network.waitUntilSettled()
         network.tap()
-        let depot = app.buttons["Depot"]
+        let depot = app.networkMode("Depot")
         XCTAssertTrue(depot.appears(within: 10))
         XCTAssertTrue(depot.becomesHittable(within: 10))
         depot.tap()

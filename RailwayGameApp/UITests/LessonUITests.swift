@@ -150,7 +150,7 @@ final class LessonUITests: XCTestCase {
             tap(app.buttons["dock.build"])
             XCTAssertTrue(mode("Lay").appears(within: 5))
             if number == 7 {
-                tap(mode("Depot"))
+                tap(app.networkMode("Depot"))
                 XCTAssertTrue(element("network.depotSidings").appears(within: 5))
                 XCTAssertTrue(element("network.depotSidings").becomesHittable(within: 5))
             } else {

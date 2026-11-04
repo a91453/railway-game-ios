@@ -485,6 +485,26 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
+    /// The network tool's mode `name` (a segment's label), slid into view.
+    /// Decision 574: when the six modes do not fit the panel, the row
+    /// scrolls sideways, and the modes past its edge cannot be touched (the
+    /// 112.1 full lane, run 41817301541: "Depot" in two tests). So, as a
+    /// player would, it drags the row by a mode that is in view, toward
+    /// the one wanted, until that one can be touched.
+    func networkMode(_ name: String) -> XCUIElement {
+        let mode = segmentedControls.buttons[name].firstMatch
+        guard mode.appears(within: 10) else { return mode }
+        let row = segmentedControls.containing(NSPredicate(format: "label == %@", name)).firstMatch
+        for _ in 0..<8 where !mode.becomesHittable(within: 1) {
+            guard let grip = row.buttons.allElementsBoundByIndex.first(where: { $0.isHittable }) else { break }
+            let towardStart = mode.frame.midX < grip.frame.midX
+            let start = grip.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: towardStart ? 120 : -120, dy: 0)),
+                        withVelocity: .fast, thenHoldForDuration: 0.1)
+        }
+        return mode
+    }
+
     /// Chooses the speed `name` (a row's label, as `GameSpeed.accessibilityName`
     /// spells it: "6000 times real time, fast forward") in the status bar's
     /// speed menu, and fails with what it saw when it cannot.
