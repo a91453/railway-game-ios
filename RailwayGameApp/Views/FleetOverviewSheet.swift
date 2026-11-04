@@ -362,5 +362,14 @@ struct FleetOverviewSheet: View {
             session.selectTrain(train.id)
             dismiss()
         }
+        // The row holds its own buttons (follow, sell), so it cannot be
+        // a Button itself; VoiceOver gets the row as a button that
+        // contains them.
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            session.selectTrain(train.id)
+            dismiss()
+        }
     }
 }

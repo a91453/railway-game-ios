@@ -44,6 +44,51 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("bought-lines-list", app)
     }
 
+    /// Decision 564: the Wenhu Line bought on a real map of Taipei and run
+    /// on to 07:40, a train near its middle followed: on the 2D map and in
+    /// 3D, each way's trains on the track to their right, as the real
+    /// Taipei Metro's run. For the screenshot review of the pull request
+    /// that put them there.
+    func testWenhuRunsOnTheRight() {
+        // The buying and the morning take most of it (the workflow allows
+        // up to 30 minutes a test).
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-follow-bought", "trtc:BR",
+                                 "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // The Debug app on a Simulator buys the line and runs the morning
+        // on to 07:40 for minutes, its main thread busy for a minute at a
+        // time, longer than a UI query waits: the test asks nothing of it
+        // for six minutes first.
+        Thread.sleep(forTimeInterval: 360)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        // The bought card first.
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+        }
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<6 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("wenhu-right-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("wenhu-right-3d", app)
+    }
+
     /// Decision 566: the new-train card, the Puyuma's with another
     /// waiting ("Skip all"), then the EMU3000's, and in English the 700T's.
     /// For the screenshot review of the pull request that added it.

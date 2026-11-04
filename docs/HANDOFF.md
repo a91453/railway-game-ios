@@ -2,7 +2,7 @@
 
 > 柴油車的行駛聲（派工單 DIESEL，session_01YGNNumDcBCK97mmQUfHHjy，`claude/diesel-sound`，決策 567，2026-11-03）：NEXT_PRIORITIES §22.2 第 7a 項做完（怠轉、起步加速、惰行三個循環，照月本國キハ40 系錄音的頻譜與引擎基頻合成，錄音不提交）。實機聽感 UNVERIFIED，請作者實機聽。7b（電車加減速的馬達聲）沒做，做法建議寫在 `docs/decisions/567.md`「下一步」。
 
-> 桃園機場捷運上架（派工單 TYMCLIST、TYMCLIST2，決策 556（檔案在 #1743 分支 `7fabe2b`，合併後才在 main），`claude/tymclist-airport-line` #1743，draft；TYMCLIST2 session_01JMHz9aCrGxwKjwmKNpAC9t 於 2026-11-03 停）：線上架、真實桃園開局買得到，蘆竹、青埔兩座線中間的真實機廠，中途折返站兩側渡線，3.8 % 坡。三種規則兩天已量；價格已量，其他線一元不變。號誌關早上在長庚醫院卡死，已由[決策 559](decisions/559.md)（#1747，已合併）修好：315/333 → 0/333。**剩下**（逐項見決策 556「下一步」）：1 傍晚機場第二航廈 17:16–17:31 直達車折返卡死，要改 GameCore（跟車授權讓車跟進要折返的車停著的月台，不走空的第三股；重現指令在 `7fabe2b` 的 docs/decisions/556.md「下一步」1）；2 簡單＋行車控制 320/333 沒發；3 行車控制時模擬很慢（GameCore `trafficPlan` 越車規劃）；4 直達車跳站、長庚待避線不做；5 回本沒量完。
+> 桃園機場捷運上架（派工單 TYMCLIST、TYMCLIST2，決策 556（檔案在 #1743 分支 `7fabe2b`，合併後才在 main），`claude/tymclist-airport-line` #1743，draft；TYMCLIST2 session_01JMHz9aCrGxwKjwmKNpAC9t 於 2026-11-03 停）：線上架、真實桃園開局買得到，蘆竹、青埔兩座線中間的真實機廠，中途折返站兩側渡線，3.8 % 坡。三種規則兩天已量；價格已量，其他線一元不變。號誌關早上在長庚醫院卡死，已由[決策 559](decisions/559.md)（#1747，已合併）修好：315/333 → 0/333。**剩下**（逐項見決策 556「下一步」）：1 傍晚機場第二航廈 17:16–17:31 的卡死與之後坑口 17:42 的卡死，已由[決策 562](decisions/562.md)（TYMCLIST3，`claude/tymc-follow-turnback`）修好（閉塞開著時不插到跟車中的列車前面、站在它永遠過不去的地方）；擬實改在 19:31 起兩航廈之間互換月台卡死（16、3、20，沒有跟車中的列車），見決策 562「下一步」1，等 WENHUSIDE（決策 564，靠右）合併後重量再查；2 簡單＋行車控制 320/333 沒發；3 行車控制時模擬很慢（GameCore `trafficPlan` 越車規劃）；4 直達車跳站、長庚待避線不做；5 回本沒量完。
 
 > Codex 文湖線兩款 studies（2026-11-03，[公開draft #1742](https://github.com/a91453/railway-game-ios/pull/1742) ↔ [素材draft #47](https://github.com/a91453/railway-assets-private/pull/47)）：producer `538a985c795ef57dd034fa57a226270354a8ae8e`，各A/B近遠及完整四車近遠、原生／GLB／通用assembly與自含viewer；11測試、13類真幾何故障／2類端部故障／5類assembly故障、獨立Swift與Blender及39份獨立重建bytes均通過，950舊模型保持，standard新增0。私庫8PNG＋公開1PNG。[來源／驗證與未完成項](art/wenhu/README.md)：官方A-B-A-B與A-B-B-A衝突，正式角色方向、帶日期完整四車實號、隱藏安全輪／集電器與設備分配仍缺；四態UNVERIFIED，file://政策阻擋，未獲使用者外觀接受。合併後僅studies，不改營運wenhu；不動EMU700 #1730／素材#45及其他成果。未推main／merge／auto-merge／TestFlight。 續核2005第33期細設專文與工程原圖，APM修正軸距10m／輪心橫距1.98m，新增承樑支承與空氣彈簧／導引架；設計值不等於竣工營運確認。
 
@@ -2873,6 +2873,23 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 ### 4.43 打開 3D 不等列車模型包（決策 546，派工單 OPEN3D，session_01YGNNunVxxTjzneuBjw86MX，`claude/open3d-model-pack`，2026-11-02）
 
 做了的在 [決策 546](decisions/546.md)：模型包分核心做（Linux release 4 核 3.95 → 0.72 s，模型位元相同，`Map3DModelPackLockTests`）、遊戲開了 8 秒後先在背景做、3D 場景先顯示（列車先是方塊）。留下的（決策 546「下一步」）：實機量開 3D 要等多久與記憶體提早多 192 MB 的影響（UNVERIFIED）；`useModels` 在主執行緒複製 192 MB 到 GPU 緩衝，可移到背景；FLANE5 的 `-ui-test-3d-models-first`（#1693）仍有用（UI 測試不先做模型包），沒有刪，改成走同一個 `Map3DTrainModels`（`.background`）；做模型包一律 `.utility` 以下、不會被提高。
+### 4.44 買下的捷運、輕軌靠右行駛（決策 564，派工單 WENHUSIDE → WENHUSIDE-2，`claude/wenhu-side`，PR #1767，2026-11-03）
+
+作者 110.1 的優先 bug：買下文湖線後列車走對向的軌。改法與理由在 [決策 564](decisions/564.md)。第一棒 session_01YGNNunZGPiV2XFNuJMZEsQ 壓縮 2 次後交給 WENHUSIDE-2（session_01YGNNuovdoMPJsiiJsYuTw1）。號碼：決策 564、存檔版本 82（`SaveFixtures/v82-keeps-right.json`），golden、`ReplayFixtures/` 的值都沒動。
+
+WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build）：
+
+- 三鶯簡單規則死結、淡海兩線一日測試最晚 14,317 秒：同一個原因，S 形渡線的起點切線和本線只差捨入，被排成「最右邊」。`KeepLeft.sameWaySlope`（1／256）以內當同方向、用弦排序（決策 564「兩條出口幾乎同方向時」）。
+- 高鐵示範開局 139 個靠左取樣：示範世界的 `keepLeft` 是關的，鏡像跟著關掉。改成靠哪邊看線，不看世界（`ServicePath.swift`）；示範 3,617 右／0 左。
+- 截圖場景在背景推進一份世界的複本，主執行緒不卡（`runForScreenshot(until:)`）；在主執行緒推進時，Debug App 在 06:00 的乘客計畫要好幾分鐘，UI 測試的查詢會逾時。
+
+還沒做的（若這個 session 沒做完，下一棒照這裡）：
+
+1. 機廠量測已做（決策 564「量到的」）：都沒有死結；文湖線簡單＋行車控制漏 7/532（main 4/532），時間和 main 一樣在尖峰結束時，是決策 552／HEALTH-110 那一項，修它時一起看靠右的線。
+2. 截圖 `website-screenshots.yml` 的 `testWenhuRunsOnTheRight`（存 wenhu-right-2d、wenhu-right-3d）：第 2 級，自己審、附進 PR。
+3. 收尾：CI 綠 → ready → #1579 留「可合併」→ send_message 給遊戲規劃。
+4. 留著不做的：`RealLineRunningSideTests` 的新北投、小碧潭支線太短量不到雙線，六家、沙崙只印不判；有靠左與靠右的線共用車站（直通運轉）時要改成照列車選邊（決策 564 下一步）。
+
 ### 4.47 列車停站時車頭對齊月台端（決策 565，派工單 PLATSTOP，session_01YGNNumEchJbYiHsw9hKbcu，`claude/platstop`，2026-11-03）
 
 做了的在 [決策 565](decisions/565.md)：有真實車長的世界（實景地圖的新遊戲），畫的車鼻在 GameCore 的車頭、每節照節距，停站時整列在月台內（以前每列車頭伸出 10 m）；比月台長的列車指派時說哪一站、加長到幾公尺或減到幾節。留下的（決策 565「下一步」）：示範與挑戰（16 m 節距、每節畫 20 m）停站時仍超出月台，要讓畫的車與節距一致（模型壓扁，屬美術）或示範改開真實車長，另派；`LineBuilder.line`（腳本與測試用）在實景世界仍蓋 16 m 一節的月台；比較用分支 `claude/platstop-before` 請作者刪（這裡的環境刪遠端分支會 403）；實機 3D 高架站近景 UNVERIFIED。

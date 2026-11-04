@@ -2177,6 +2177,8 @@ public struct GameWorld: Equatable, Sendable {
         copy.color = original.color
         // Decision 155: a freight line's copy carries freight too.
         copy.isFreight = original.isFreight
+        // Decision 564: and keeps to the same side.
+        copy.keepsRight = original.keepsRight
         copy.runs = original.runs
         copy.runDays = Array(repeating: nil, count: original.runs.count)
         nextLineID = nextID
@@ -2491,6 +2493,16 @@ public struct GameWorld: Equatable, Sendable {
                 lines[index].patterns[pattern].trains.removeAll { !climbers.contains($0) }
             }
         }
+    }
+
+    /// Makes line `id` keep to the right on double track, or to the left
+    /// again (decision 564; ``ServiceLine/keepsRight``). Free. A train
+    /// already on its way keeps the route it was given.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func setLineKeepsRight(_ id: LineID, to keepsRight: Bool) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        lines[index].keepsRight = keepsRight
     }
 
     /// Makes line `id` a freight line, or a passenger line again. Free.

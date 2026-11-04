@@ -453,8 +453,8 @@ private struct BusControls: View {
                 .accessibilityIdentifier("bus.count")
             }
             if let preview = session.busPreview {
-                ForEach(Array(preview.lines(for: draft, in: language).enumerated()), id: \.offset) { _, line in
-                    Text(verbatim: line)
+                ForEach(KeyedLine.make(preview.lines(for: draft, in: language))) { keyed in
+                    Text(verbatim: keyed.text)
                         .font(.footnote)
                         .monospacedDigit()
                 }
@@ -800,7 +800,8 @@ extension BuildingControls {
         if let sale = session.salePreview {
             let lines = session.salePreviewLines
             VStack(alignment: .leading, spacing: 2) {
-                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                ForEach(KeyedLine.make(lines)) { keyed in
+                    let index = keyed.index, line = keyed.text
                     let isLoss = index == lines.count - 1 && sale.quote.gain < .zero && session.world.accounts.mode == .management
                     Text(verbatim: line)
                         .font(index == 0 || index == lines.count - 1 ? .footnote.weight(.semibold) : .footnote)
@@ -840,7 +841,7 @@ extension BuildingControls {
         let session = session
         // A sendable closure, as the building kinds' (CRASHSWEEP-2).
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(Array(choices.enumerated()), id: \.offset) { @Sendable _, zone in
+            ForEach(choices, id: \.self) { @Sendable zone in
                 ZoneChoiceButton(session: session, zone: zone)
             }
         }
@@ -1325,6 +1326,24 @@ extension ConstructionTool {
         case .train: String(localized: "Train tool")
         case .building: String(localized: "Building tool")
         case .bus: String(localized: "Bus tool")
+        }
+    }
+}
+
+
+/// A line of text with an identity that follows its words, not its place
+/// in the list (a repeat of the same words gets the next number).
+private struct KeyedLine: Identifiable {
+    let id: String
+    let index: Int
+    let text: String
+
+    static func make(_ lines: [String]) -> [KeyedLine] {
+        var seen: [String: Int] = [:]
+        return lines.enumerated().map { index, text in
+            let count = seen[text, default: 0]
+            seen[text] = count + 1
+            return KeyedLine(id: "\(count)#\(text)", index: index, text: text)
         }
     }
 }
