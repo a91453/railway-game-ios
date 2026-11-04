@@ -181,6 +181,50 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 585: the Tamsui–Bali ferry on a real map of the river
+    /// mouth, its crossing and piers on the 2D map, then the transit
+    /// tool's ferry mode with the route's card, in Chinese and in English;
+    /// and the collection's ferry page in Settings. For the screenshot
+    /// review of the pull request that added the mode.
+    func testFerryMode() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "tamsuiFerry"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+            settle(seconds: 5)
+            if !english { keep("ferry-map", app) }
+            let build = app.buttons["dock.build"]
+            if build.appears(within: 10) { build.tap() }
+            let transit = app.buttons["tool.bus"]
+            XCTAssertTrue(transit.appears(within: 10))
+            transit.waitUntilSettled()
+            if !transit.isSelected { transit.tap() }
+            let mode = app.segmentedControls.buttons[english ? "Ferries" : "渡輪"].firstMatch
+            XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
+            mode.tap()
+            let card = app.descendants(matching: .any)["ferry.card"].firstMatch
+            XCTAssertTrue(card.appears(within: 10), "The ferry's card")
+            // The card is below the mode's options: drag them up.
+            let boats = app.descendants(matching: .any)["ferry.boats"].firstMatch
+            if boats.appears(within: 5) { boats.swipeUp() }
+            settle()
+            keep(english ? "ferry-mode-english" : "ferry-mode", app)
+            app.terminate()
+        }
+        let app = launch()
+        defer { app.terminate() }
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        let page = app.segmentedControls["settings.collectionPage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(page, clearOf: .slider), "Missing the collection's pages")
+        page.buttons.element(boundBy: 1).tap()
+        let boat = app.descendants(matching: .any)["settings.ferry.shunfeng166"].firstMatch
+        XCTAssertTrue(boat.appears(within: 10), "The ferry page")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.ferry.gushanCijin"].firstMatch, clearOf: .slider))
+        settle()
+        keep("collection-ferries", app)
+    }
+
     /// Decision 575 續 (CABLEMAP): the Maokong Gondola on the 3D map: its
     /// cabins, towers and ropes close up over a span, from just over the
     /// ground up at the cabins' floors (the crystal cabins' glass), and

@@ -157,6 +157,10 @@ enum Palette {
     /// on Taipei Metro's maps (#06B8E6, the geo-scene reference's `MK`),
     /// a little deeper on the light map so it reads over water and parks.
     static let cableway = dynamic(light: (0.00, 0.60, 0.80), dark: (0.02, 0.72, 0.90))
+    /// Decision 585: a ferry's crossing, a deep harbour blue that reads
+    /// over the map's water (#1A519E on #7FB8E0 about 3.6:1; #99D6FF on
+    /// #3E6E99 about 3.4:1).
+    static let ferry = dynamic(light: (0.10, 0.32, 0.62), dark: (0.60, 0.84, 1.00))
 
     /// The casing under a train's movement authority (Stage V4e): the
     /// `Railway/` site's `followCase` (#fffdf6 light, #10141c dark), which
