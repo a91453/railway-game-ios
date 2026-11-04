@@ -2,8 +2,9 @@
 """Tells the work registry (#1579) when main's full lane turns red, fails in
 other jobs or tests than last time, or turns green again (decision 329).
 
-The full lane is ios-build.yml run on main by ios-full-lane.yml or by hand
-(workflow_dispatch) or by its schedule, without `only_testing` (those runs
+The full lane is ios-build.yml run on main by ios-full-lane.yml's nightly
+run or by hand (both workflow_dispatch; before decision 582 also by
+ios-build.yml's own schedule), without `only_testing` (those runs
 are named "UI tests by hand: ..."). On 2026-10-20 and 10-21 it was red ten
 times in a row and nobody was told: its result shows only on the Actions
 page. full-lane-watch.yml runs this when an iOS App Build run of main
