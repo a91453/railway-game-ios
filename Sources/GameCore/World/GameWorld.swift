@@ -3842,7 +3842,8 @@ public struct GameWorld: Equatable, Sendable {
     /// ``resolveDeadlock(memo:)``, after ``runTrainPutOnItsRun(in:memo:)``.
     /// In the deadlock `stuck`, the first train in ID order of a line with
     /// runs and depots (decision 221) that has no service, stands outside
-    /// them and waits for its due run, runs empty into the first of its
+    /// them and waits for its due run at a stop another of them is bound
+    /// for (alone, it would only come out again), runs empty into the first of its
     /// line's depots, in the order the line lists them, that has a siding
     /// for it (decision 280) and whose way it can take now, as
     /// ``runTrainEnteringDepot(of:memo:)`` sends a train in: the berth it
@@ -3861,6 +3862,10 @@ public struct GameWorld: Equatable, Sendable {
                   let line = lines.first(where: { assignedLine(of: id) == $0.id }), line.hasRuns, !line.depots.isEmpty,
                   !isInDepot(trains[index], of: line)
             else { continue }
+            let standing = Set(stationsStoppedAt(by: id))
+            guard stuck.contains(where: { other in
+                other.key != id && other.value.candidate.timetable.dropFirst().contains { standing.contains($0.station) }
+            }) else { continue }
             for depot in line.depots {
                 guard let trip = emptyRun(of: line, for: trains[index], to: [depot]), depotHasRoom(depot, for: trains[index]),
                       let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
