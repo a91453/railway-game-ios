@@ -164,6 +164,16 @@ final class DepotLinkTests: XCTestCase {
         session.undo()
         XCTAssertEqual(session.world, world)
     }
+
+    /// The screenshot scene: the depot tool off Line 2's north end of the
+    /// demo offers Line 2 and the Ring Line.
+    func testTheScreenshotSceneOffersTwoLines() throws {
+        let session = GameSession(world: ScreenshotScene.depotOffer.make(in: .traditionalChinese), language: .traditionalChinese)
+        ScreenshotScene.depotOffer.prepare(session)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let offer = try XCTUnwrap(session.message?.depotOffer, session.message?.text ?? "")
+        XCTAssertEqual(offer.lines.compactMap { session.world.line(id: $0)?.name }, ["2 號線", "環狀線"])
+    }
 }
 
 private extension TrackNodeID {
