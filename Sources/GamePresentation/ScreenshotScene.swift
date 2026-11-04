@@ -69,6 +69,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case taipeiMain
     case taipei101
 
+    /// Decision 565: a new real-world game round Taipei Main Station, a
+    /// line of two stations 800 m apart whose platforms are four 20 m cars
+    /// long, as the platform tool builds them, and its train of four
+    /// standing at the far one: for the screenshots of a train stopped
+    /// with every car inside its platform, on the 2D map and the 3D one.
+    case platformStop
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -76,6 +83,9 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        // Its far station, 400 m east and 300 m north of Taipei Main
+        // Station (a metre at the anchor's latitude, as RealWorldFrame).
+        case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         default: nil
         }
     }
@@ -94,6 +104,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .platformStop: Self.platformStopWorld(in: language)
         }
     }
 
@@ -192,6 +203,32 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
+    }
+
+    // MARK: - Platform stop
+
+    /// Decision 565: ``platformStop``'s world, paused while its train stands
+    /// at the far platform (its head at the platform's end), at most two
+    /// game hours on.
+    private static func platformStopWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let anchor = GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170) else { return DemoWorld.make(in: language) }
+        let world = GameWorld.newGame(anchor: anchor)
+        guard let frame = RealWorldFrame(world: world) else { return world }
+        let middle = frame.worldPosition(latitude: 25.0478, longitude: 121.5170)
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 400 * metre
+        let y = Int64(middle.y - 300 * metre)
+        guard var opened = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
+                                                           PlanPoint(x: Int64(middle.x + half), y: y)],
+                                                 in: world, carLength: world.platformCarLength),
+              let edge = opened.network.edges.first else { return world }
+        let berth = edge.length - 2 * opened.platformCarLength
+        for _ in 0..<7_200 {
+            if let train = opened.trains.first, case .onEdge(let traversal, let offset)? = train.position,
+               traversal.direction == .forward, offset == berth { break }
+            try? opened.advance(ticks: 1)
+        }
+        opened.setSpeed(.paused)
+        return opened
     }
 
     // MARK: - Commute

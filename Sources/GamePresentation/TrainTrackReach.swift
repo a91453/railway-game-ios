@@ -16,7 +16,8 @@ import GameCore
 enum TrainTrackReach {
     /// How much track past its tail a train's cars are laid along, in
     /// world units: more than ``TrainCars/cars(body:heading:lengths:gaps:)``
-    /// lays past it (a car and a half).
+    /// lays past it (a car and a half), and than a train with real car
+    /// lengths lays past it (one car, decision 565: its nose at its head).
     static let behind = Int64(2 * TrainCars.drawnCarLength)
     /// How much track ahead of its head: more than its first car's front
     /// half, and the little more a set drawn at its own lengths lays.

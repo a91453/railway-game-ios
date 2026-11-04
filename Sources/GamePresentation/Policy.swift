@@ -24,10 +24,13 @@ public enum LineBuilder {
     /// platform beyond the first to a platform beyond the last through the
     /// points between, a station at each point, one train of four cars
     /// running all day from the first. The tests' `newGameLine(through:)`.
-    public static func line(through points: [PlanPoint], in start: GameWorld) throws -> GameWorld {
+    /// Each platform is four `carLength` long (16 m cars unless given;
+    /// the platform tool's ``GameWorld/platformCarLength`` on a real map,
+    /// decision 565's screenshot scene).
+    public static func line(through points: [PlanPoint], in start: GameWorld, carLength: Int64 = Train.carLength) throws -> GameWorld {
         var world = start
         let cars = 4
-        let platform = Int64(cars) * Train.carLength
+        let platform = Int64(cars) * carLength
         func beyond(_ from: PlanPoint, _ to: PlanPoint) -> WorldCoordinate {
             let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
             let span = (dx * dx + dy * dy).squareRoot()

@@ -231,6 +231,17 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 565: the first train on the track picked and
+            // followed, standing at its platform.
+            if DebugLaunch.isSet("-screenshot-follow-train") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let train = session.world.trains.first(where: { $0.position != nil })?.id {
+                        session.selectTrain(train)
+                        session.toggleFollowTrain(train)
+                    }
+                }
+            }
             // Decision 539: the first freight train on the track picked and
             // followed, for the 3D map's R200 and container wagons.
             if DebugLaunch.isSet("-screenshot-follow-freight") {
