@@ -157,6 +157,8 @@ final class WebsiteScreenshotTests: XCTestCase {
             if !network.isSelected { network.tap() }
             let mode = app.segmentedControls.buttons[english ? "Cable car" : "纜車"].firstMatch
             XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
+            // In English the row slides sideways: the last mode is past its end.
+            if !mode.becomesHittable(within: 3) { app.segmentedControls.firstMatch.swipeLeft() }
             XCTAssertTrue(mode.becomesHittable(within: 10))
             mode.tap()
             let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch

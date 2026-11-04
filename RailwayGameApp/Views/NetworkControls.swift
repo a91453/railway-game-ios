@@ -30,13 +30,15 @@ struct NetworkControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
-                // Decision 266: in a lesson, only the modes it has unlocked.
-                ForEach(NetworkToolMode.allCases.filter { session.allows($0) }, id: \.self) { mode in
-                    Text(mode.title(in: session.language)).tag(mode)
+            // Decision 574: six modes do not fit a phone's panel in
+            // English; then the row keeps its words whole and slides
+            // sideways instead of cutting them short.
+            ViewThatFits(in: .horizontal) {
+                modePicker
+                ScrollView(.horizontal, showsIndicators: false) {
+                    modePicker.fixedSize()
                 }
             }
-            .pickerStyle(.segmented)
             .tutorialTarget(.networkModes)
             switch session.networkMode {
             case .build:
@@ -357,6 +359,17 @@ struct NetworkControls: View {
                 .accessibilityIdentifier("network.depotSide")
             }
         }
+    }
+
+    /// The network tool's modes, one segment each.
+    private var modePicker: some View {
+        Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
+            // Decision 266: in a lesson, only the modes it has unlocked.
+            ForEach(NetworkToolMode.allCases.filter { session.allows($0) }, id: \.self) { mode in
+                Text(mode.title(in: session.language)).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     // MARK: - Cable car
