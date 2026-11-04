@@ -491,6 +491,27 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 46 任交第 47 任（2026-11-04 約 11:10 UTC，session_01YGNNup5rvKQE2WYa4BP1cK，第 2 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。
+
+- **112.1 發版（作者自己按）**：作者說「好 那我發了」，`testflight.yml` 由作者按，**規劃不按**。main HEAD `bef26cae`（#1796）。作者把 full lane 交給規劃看（「那full lane給你跑」）：
+  - 同 commit 手動跑的完整 `ci.yml` **41817277687**、full lane（`ios-build.yml`）**41817301541**，11:00 UTC 時都還在跑。跑完告訴作者結果；紅的先分偶發（Simulator「Failed to launch」之類，重跑）還是真的，真的就派人修進下一版。
+  - 作者的 `testflight.yml` run 出現後：記 run 編號與 commit，版號 0.5.0（run 編號.1）；用小 PR 在 `docs/research/PLAYER_FEEDBACK.md` 照 111.1 那段記；提醒作者看 App Store Connect 的出口合規。
+  - 然後派 WEB session 拍網站新功能截圖（纜車 2D／3D、跟隨公車、車窗視角），在 private repo 開 draft PR，作者部署（作者：「好 發完再派人拍」）。
+  - 112.1 的內容見 `.github/testflight-whats-new.md`（#1796）。
+- **第 46 任已合**（這次壓縮前後）：#1788（`4fc02514`）、#1798（`ce3011f3`）、#1802（`8d3bde20`）、#1796（`bef26cae`）；更早的見 #1579 合併留言。
+- **還開著的 PR**：只有 #1743 桃園機場捷運上架（決策 556，draft）。**main 沒有機場捷運可收購**，要等 #1743。
+- **派出去的**（全部第 46 任開的，第 3 層；回報「#N 綠、SHA」就照規則審、合）：
+  - NEWBIE-PLACE session_01YGNNum7ixL7wyxjx8KhJ39（`claude/newbie-place`，決策 **584**）：作者 112 回報「放不了車」：沒選車站、80 m 車只放得進主線月台、T 字岔沒接上（端點差 5–20 m）、閒置車佔月台。三個 PR：1 放車被拒的原因、2 選月台、3 沒接上的軌道提示。畫面改動，第二級自審截圖。
+  - DIAG-HANG session_01YGNNuo5stTYGLYek8Cee2w：作者回報的卡頓（77 次約 750 ms、暫停時存檔匯出 6.2 s、一次 16.65 s、一次 4.15 s）。作者說自己沒覺得卡，**只做便宜的修正**，不大改。
+  - MODEROW session_01YGNNunsMaSiBF6XKNNqkrD：路網模式列自動捲到選中模式＋右緣漸層；中英截圖給規劃看。
+  - TYMCLIST6 session_01YGNNumU74Mpe1hmNiRC6Bu：接手 #1743；簡單規則＋行車控制仍死結；**下一版**再進。
+  - CABLEFOLLOW session_01YGNNukzpEsUEN6Z7h1i227（決策 **583**）：跟隨纜車吊廂（窗外、上後方、旁邊）；三張截圖給規劃看（第三級）。
+  - **113.1 先開的**：FERRY session_01YGNNuq9mMU5enSXVHDB56q（`claude/ferry`，決策 **585**、存檔 **85**；NEXT_PRIORITIES §24.5 第 1 項：「公車」鈕改「接駁」分公車／渡輪、接決策 579 的渡輪與碼頭 studies、車庫改「圖鑑」分頁；PR-1 動 GameCore）；REVIEW-L9 session_01YGNNundD2a5m59NVZtGmcG（審 #1760–#1802，報告 `docs/archive/PR1760_1802_REVIEW_HANDOFF.md`）；HEALTH-112 session_01YGNNumT2ZTmGxCGuTCkBSH（`bef26cae` 發版後健檢，13 條可收購線與示範，逐分與最高速各兩天，對照 #1761）。CIOPT 這輪不開（CIOPT-7 #1794 今天剛做）。
+  - 已封存：CABLE-2、MACSETUP、CABLEMAP、WHATSNEW-112、FOLLOWVIEW-2 等。做完的 session 就封存。
+- **作者要刪的 branch**：`claude/follow-window-diag`（session 刪不了）。
+- **沒派的**：決策 574 纜車卡片捲動、貓空「動物園」站被上方列蓋住；575 下一步（地形、車站近景、實機 fps）；578 車窗左右選擇與閃爍；577 下一步；FLANE8 留下的偶發（教學現金重疊、Finance 甜甜圈逾時、效能選單）；渡輪之後依序：國道客運 → 飛機（§24.5）。
+- **號碼**：583 CABLEFOLLOW、584 NEWBIE-PLACE、585 FERRY 保留；**下一個 586**。存檔 85 保留給 FERRY，**下一個 86**（main 是 84）。
+
 **第 45 任交第 46 任（2026-11-04 UTC，session_01YGNNuknU5VzGGHzf2twGfS，壓縮 2 次）**：照這段接手；和下面不同時以這段為準。
 
 - **111.1 已發**（作者 00:02 UTC，`273dab2`，run 111；`PLAYER_FEEDBACK.md` 已記）。下一版還沒定。
