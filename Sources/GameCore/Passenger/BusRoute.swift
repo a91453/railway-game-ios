@@ -743,10 +743,11 @@ extension GameWorld {
 
     /// The feeders of `origin`'s trips: each running route's trips and
     /// door-to-door minutes, by route.
-    /// Decision 574: the cableways meeting it follow, as feeders do.
+    /// Decision 574: the cableways meeting it follow, as feeders do;
+    /// decision 585: then the ferries.
     func busFeeders(of origin: StationID) -> [(trips: Int64, minutes: Int64)] {
         busRoutes.compactMap { $0.feeds == origin && $0.feederTrips > 0 ? ($0.feederTrips, $0.feederMinutes) : nil }
-            + cablewayFeeders(of: origin)
+            + cablewayFeeders(of: origin) + ferryFeeders(of: origin)
     }
 
     /// `boarded` riders set out from `station` by train, or arrived there

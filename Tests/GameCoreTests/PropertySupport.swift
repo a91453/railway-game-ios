@@ -492,11 +492,12 @@ enum WorldInvariants {
             case .dailyDayPass: [.dayPassSales, .dayPassFares]
             case .dailyBuses: [.busFares, .busRunning]
             case .dailyCableways: [.cablewayFares, .cablewayRunning]
+            case .dailyFerries: [.ferryFares, .ferryRunning]
             }
             var sum: Int64 = 0
             for line in entry.breakdown {
                 sum += line.amount.amount
-                if (line.item == .fareRevenue || line.item == .propertyRent || line.item == .freightRevenue || line.item == .subsidiarySales || line.item == .tourismRevenue || line.item == .stationCommerceRevenue || line.item == .subsidy || line.item == .dayPassSales || line.item == .busFares || line.item == .cablewayFares) != (line.amount.amount >= 0) && line.amount.amount != 0 {
+                if (line.item == .fareRevenue || line.item == .propertyRent || line.item == .freightRevenue || line.item == .subsidiarySales || line.item == .tourismRevenue || line.item == .stationCommerceRevenue || line.item == .subsidy || line.item == .dayPassSales || line.item == .busFares || line.item == .cablewayFares || line.item == .ferryFares) != (line.amount.amount >= 0) && line.amount.amount != 0 {
                     problems.append("ledger row \(entry.kind) has \(line.item) of \(line.amount.amount)")
                 }
             }
