@@ -1734,7 +1734,10 @@ struct MapView: View {
     private func openingCamera(viewport: ScreenSize, clearOf framing: ScreenInsets) -> PlanCamera {
         PlanCamera.opening(
             bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world),
-            keeping: session.world.stations.map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }, clearOf: framing
+            keeping: session.world.stations.map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
+                // Decision 574: and the cable cars' stops.
+                + session.world.cableways.flatMap { $0.stops.map { WorldCoordinate(x: $0.cell.middle.x, y: $0.cell.middle.y) } },
+            clearOf: framing
         )
     }
 
