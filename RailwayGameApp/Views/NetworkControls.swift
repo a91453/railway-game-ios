@@ -32,12 +32,12 @@ struct NetworkControls: View {
         VStack(alignment: .leading, spacing: 8) {
             // Decision 574: six modes do not fit a phone's panel in
             // English; then the row keeps its words whole and slides
-            // sideways instead of cutting them short.
+            // sideways instead of cutting them short. Its next step: the
+            // chosen mode is scrolled into view, and an end with more past
+            // it fades out.
             ViewThatFits(in: .horizontal) {
                 modePicker
-                ScrollView(.horizontal, showsIndicators: false) {
-                    modePicker.fixedSize()
-                }
+                NetworkModeScrollRow(modes: modes, selection: session.networkMode, picker: modePicker)
             }
             .tutorialTarget(.networkModes)
             switch session.networkMode {
@@ -361,13 +361,19 @@ struct NetworkControls: View {
         }
     }
 
+    /// The modes the row shows. Decision 266: in a lesson, only the modes
+    /// it has unlocked.
+    private var modes: [NetworkToolMode] {
+        let session = session
+        return NetworkToolMode.allCases.filter { session.allows($0) }
+    }
+
     /// The network tool's modes, one segment each. It stands in a
     /// ViewThatFits, so its row closure is sendable and makes a view of
     /// its own (CRASH101).
     private var modePicker: some View {
         let session = session
-        // Decision 266: in a lesson, only the modes it has unlocked.
-        let modes = NetworkToolMode.allCases.filter { session.allows($0) }
+        let modes = self.modes
         let language = session.language
         return Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
             ForEach(modes, id: \.self) { @Sendable mode in
@@ -800,6 +806,79 @@ private struct TracedSaleRow: View {
             .accessibilityIdentifier("network.forSale.buy")
         }
         .padding(.top, 2)
+    }
+}
+
+/// The mode row when it does not fit (decision 574's next step): it
+/// scrolls sideways, keeps the chosen mode in view (when it first shows,
+/// and whenever the choice changes, by a tap, a lesson or another way into
+/// a mode), and fades out at an end with more past it (``ScrollEdgeFade``).
+/// With Reduce Motion the row jumps to the mode instead of sliding; the
+/// fades follow the scroll position and are never animated.
+private struct NetworkModeScrollRow<Row: View>: View {
+    let modes: [NetworkToolMode]
+    let selection: NetworkToolMode
+    let picker: Row
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// How far the row is scrolled, how wide it is and how wide the room
+    /// it shows through: transient view state, for the fades.
+    @State private var offset = 0.0
+    @State private var rowWidth = 0.0
+    @State private var viewWidth = 0.0
+
+    private static let space = "network.modeRow"
+
+    var body: some View {
+        let fade = ScrollEdgeFade(offset: offset, contentWidth: rowWidth, viewportWidth: viewWidth)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                picker
+                    .fixedSize()
+                    // A segmented picker's segments are one width each: a
+                    // clear stand-in over each is what the row scrolls to.
+                    .background {
+                        HStack(spacing: 0) {
+                            ForEach(modes, id: \.self) { mode in
+                                Color.clear
+                                    .frame(maxWidth: .infinity)
+                                    .id(mode)
+                            }
+                        }
+                        .accessibilityHidden(true)
+                    }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frame in
+                        offset = -Double(frame.minX)
+                        rowWidth = Double(frame.width)
+                    }
+            }
+            .coordinateSpace(.named(Self.space))
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = Double($0) }
+            .mask { EdgeFadeMask(fade: fade) }
+            .onAppear { proxy.scrollTo(selection, anchor: .center) }
+            .onChange(of: selection) { _, mode in
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    proxy.scrollTo(mode, anchor: .center)
+                }
+            }
+            .onChange(of: modes) { _, _ in proxy.scrollTo(selection, anchor: .center) }
+        }
+    }
+}
+
+/// The mask that fades a sideways row out at its ends, as strongly as
+/// ``ScrollEdgeFade`` says: the row itself turns see-through toward the
+/// edge, so no colour is laid over the panel.
+private struct EdgeFadeMask: View {
+    let fade: ScrollEdgeFade
+
+    var body: some View {
+        HStack(spacing: 0) {
+            LinearGradient(colors: [.black.opacity(1 - fade.leading), .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: ScrollEdgeFade.width)
+            Rectangle()
+            LinearGradient(colors: [.black, .black.opacity(1 - fade.trailing)], startPoint: .leading, endPoint: .trailing)
+                .frame(width: ScrollEdgeFade.width)
+        }
     }
 }
 
