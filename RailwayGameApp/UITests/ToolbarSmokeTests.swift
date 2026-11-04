@@ -497,9 +497,16 @@ extension XCUIApplication {
         let mode = segmentedControls.buttons[name].firstMatch
         guard mode.appears(within: 10) else { return mode }
         let row = segmentedControls.containing(NSPredicate(format: "label == %@", name)).firstMatch
-        for _ in 0..<8 where !mode.becomesHittable(within: 1) {
+        let scroller = scrollViews["network.modeRow"].firstMatch
+        for attempt in 0..<8 where !mode.becomesHittable(within: 1) {
             let inView = row.buttons.allElementsBoundByIndex.filter { $0.isHittable && !$0.isSelected }
             let towardStart = inView.first.map { mode.frame.midX < $0.frame.midX } ?? false
+            print("networkMode \(name) attempt \(attempt): mode \(mode.frame) row \(row.frame) scroller \(scroller.exists ? "\(scroller.frame)" : "none") in view \(inView.map(\.label))")
+            if attempt % 2 == 1, scroller.exists {
+                // The row's own scroll view, from the middle of what shows.
+                if towardStart { scroller.swipeRight(velocity: .slow) } else { scroller.swipeLeft(velocity: .slow) }
+                continue
+            }
             // The mode in view nearest the wanted one: the drag runs away
             // from it, across the modes in view.
             guard let grip = towardStart ? inView.first : inView.last else { break }

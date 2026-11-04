@@ -855,6 +855,7 @@ private struct NetworkModeScrollRow<Row: View>: View {
             // property of this generic, main-actor view.
             .coordinateSpace(.named("network.modeRow"))
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = Double($0) }
+            .accessibilityIdentifier("network.modeRow")
             .mask { EdgeFadeMask(fade: fade) }
             .onAppear { proxy.scrollTo(selection, anchor: .center) }
             .onChange(of: selection) { _, mode in
