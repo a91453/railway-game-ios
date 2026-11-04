@@ -66,6 +66,8 @@ final class Map3DMetalView: MTKView {
     private var flying: (flight: Map3DFlight, to: Map3DCamera?)?
     /// When the follow camera last moved, for how far it turns.
     private var lastFollowStep: CFTimeInterval?
+    /// Where the bus or cabin followed is seen through (decision 342's supplement); set with the camera each frame.
+    private var followedSeeThrough: Map3DPoint?
     /// Decision 334: a flight asked for, its goal worked out at the next
     /// frame from the camera as laid out (``fly(reduceMotion:to:)``).
     private var flightAsked: (reduceMotion: Bool, goal: (Map3DCamera) -> Map3DCamera?)?
@@ -821,12 +823,15 @@ final class Map3DMetalView: MTKView {
         }
         guard var following else { return }
         let pose: Map3DFollow.Pose
+        followedSeeThrough = nil
         if let bus = following.bus {
             guard let found = busPose?(bus) else { return }
             pose = found
+            followedSeeThrough = Map3DSeeThrough.point(of: found)
         } else if let cabin = following.cabin {
             guard let found = cabinPose?(cabin) else { return }
             pose = found
+            followedSeeThrough = Map3DSeeThrough.point(of: found)
         } else {
             guard let head = heads.first(where: { $0.train == following.train }) else { return }
             pose = head.pose
@@ -1004,7 +1009,8 @@ final class Map3DMetalView: MTKView {
         }
         trainHeads?(frame?.heads ?? [], camera)
         // Decision 342: the cars the city in front of is seen through.
-        let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix)
+        // Supplement: and the bus or cabin followed, as one point.
+        let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix, followed: followedSeeThrough)
         var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
             trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)

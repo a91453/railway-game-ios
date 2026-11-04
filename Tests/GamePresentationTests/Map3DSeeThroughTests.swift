@@ -71,6 +71,47 @@ final class Map3DSeeThroughTests: XCTestCase {
         XCTAssertEqual(seeThrough(cars: many).floats.count, Map3DSeeThrough.most * 4 + 8)
     }
 
+    /// Decision 342's supplement: the bus or cabin followed is seen through.
+    func testTheFollowedBusIsTakenFirstAndAloneOfTheStreet() {
+        let camera = Map3DCamera(target: car, distance: 134, viewport: (402, 874))
+        let bus = Map3DFollow.Pose(forward: Map3DPoint(0, 0, -1), nose: car, rail: car, middle: car, length: Map3DLowFloorBus.length,
+                                   bodyHeight: Map3DLowFloorBus.height)
+        let point = Map3DSeeThrough.point(of: bus)
+        XCTAssertEqual(point?.y ?? 0, car.y + Map3DLowFloorBus.height / 2 - Map3DSeeThrough.bodyMiddle, accuracy: 0.0001)
+        // Sixteen train cars nearer the middle of the view do not push it out.
+        let cars = (0..<20).map { car + Map3DPoint(Float($0) * 0.1, 0, 0) }
+        let aside = car + Map3DPoint(12, 0, 0)
+        let see = Map3DSeeThrough(eye: camera.eye, cars: cars, matrix: camera.viewProjection, followed: aside)
+        XCTAssertEqual(see.cars.count, Map3DSeeThrough.most)
+        XCTAssertEqual(see.cars.first, aside)
+        // With no followed vehicle nothing changes.
+        XCTAssertEqual(Map3DSeeThrough(eye: camera.eye, cars: cars, matrix: camera.viewProjection).cars,
+                       Map3DSeeThrough(eye: camera.eye, cars: cars, matrix: camera.viewProjection, followed: nil).cars)
+        // A bus in a tunnel is not seen through.
+        var tunnel = bus
+        tunnel.inTunnel = true
+        XCTAssertNil(Map3DSeeThrough.point(of: tunnel))
+    }
+
+    func testACabinInTheAirLeavesTheStreetUnderItWhole() throws {
+        let floor = Map3DPoint(0, 60, 0)
+        let cabin = Map3DFollow.Pose(forward: Map3DPoint(0, 0, -1), nose: floor, rail: floor + Map3DPoint(0, 3, 0), middle: floor,
+                                     length: Map3DCableCar.cabinLength, bodyHeight: Map3DCableways.cabinHeight)
+        let point = try XCTUnwrap(Map3DSeeThrough.point(of: cabin))
+        XCTAssertEqual(point.y + Map3DSeeThrough.bodyMiddle, floor.y + Map3DCableways.cabinHeight / 2, accuracy: 0.0001, "axis at the cabin's middle")
+        let camera = Map3DCamera(target: floor, distance: 134, viewport: (402, 874))
+        let see = Map3DSeeThrough(eye: camera.eye, cars: [], matrix: camera.viewProjection, followed: point)
+        XCTAssertEqual(see.cars, [point])
+        let eye = see.eye, middle = point + Map3DPoint(0, Map3DSeeThrough.bodyMiddle, 0)
+        // A roof between the eye and the cabin, over its floor: seen through.
+        XCTAssertEqual(see.opacity(at: eye + (middle - eye) * 0.5), Map3DSeeThrough.opacity)
+        // The ground and buildings far under the cabin: as they are.
+        XCTAssertEqual(see.opacity(at: Map3DPoint(0, 0, 0)), 1)
+        XCTAssertEqual(see.opacity(at: Map3DPoint(0, 30, 2)), 1)
+        // And no chunk with only low city under the cabin is drawn see-through.
+        XCTAssertFalse(see.cuts(column: 0, row: 0, tops: [Float](repeating: 30, count: Map3DSeeThrough.cells * Map3DSeeThrough.cells)))
+    }
+
     // MARK: - The measurement in the decision
 
     /// How often a building hides the player's train on the real-world

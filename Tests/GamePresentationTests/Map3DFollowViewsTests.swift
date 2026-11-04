@@ -304,6 +304,39 @@ final class Map3DWindowAndStationAheadTests: XCTestCase {
         XCTAssertNotNil(ScreenshotScene.farStops.place)
     }
 
+    /// Review L9-6: standing at a stop, the station view watches this one,
+    /// so it is offered whatever the next is; the next stop is never this
+    /// one (a there-and-back timetable standing at its last row).
+    func testStandingAtAStopTheStationViewIsOfferedAndTheNextStopIsAnother() throws {
+        var world = ScreenshotScene.farStops.make(in: .traditionalChinese)
+        let id = try XCTUnwrap(world.trains.first { $0.position != nil }).id
+        var seen = Set<Int>()
+        for _ in 0..<40_000 {
+            try world.advance(ticks: 1)
+            guard let train = world.train(id: id), case .waitingAtStop(let stop, _)? = train.execution,
+                  seen.insert(stop).inserted else { continue }
+            let here = train.timetable[stop].station
+            XCTAssertNotEqual(world.map3DStopAhead(of: id), here, "stop \(stop)")
+            XCTAssertTrue(Map3DFollow.stationViewIsOffered(remainingMetres: world.map3DMetresToLookoutStop(of: id)), "stop \(stop)")
+            XCTAssertNotEqual(world.map3DMetresToStopAhead(of: id), 0, "stop \(stop)")
+            if seen.count == train.timetable.count { break }
+        }
+        XCTAssertGreaterThan(seen.count, 1)
+    }
+
+    /// Review L9-8: a bus keeps right, so its window looks out of the
+    /// right side; a train's, a cabin's stay on the left.
+    func testABusWindowLooksRightAndATrainsLeft() {
+        let pose = Map3DFollow.Pose(forward: Map3DPoint(0, 0, -1), nose: .zero, rail: .zero, middle: .zero)  // north
+        let bus = Map3DFollow(bus: BusID(route: BusRouteID(rawValue: 1), run: 0), view: .window)
+        let train = Map3DFollow(train: self.train, view: .window)
+        let camera = Map3DCamera(viewport: (800, 800))
+        let toBus = bus.camera(following: pose, from: camera, elapsed: 0, turnsAtOnce: true)
+        let toTrain = train.camera(following: pose, from: camera, elapsed: 0, turnsAtOnce: true)
+        XCTAssertEqual(Map3DCamera.turnFromNorth(toTrain.heading + .pi / 2), 0, accuracy: 0.001, "west")
+        XCTAssertEqual(Map3DCamera.turnFromNorth(toBus.heading - .pi / 2), 0, accuracy: 0.001, "east")
+    }
+
     static func world(between: Int64) throws -> (GameWorld, TrainID, StationID, StationID) {
         var world = try GameWorld(
             bounds: WorldBounds(width: 1_000_000, height: 262_144),

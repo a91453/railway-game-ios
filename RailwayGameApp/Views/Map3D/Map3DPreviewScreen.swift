@@ -1809,7 +1809,7 @@ private struct Map3DFollowBar: View {
         let selection = $view
         let language = session.language
         // Decision 578: the station view waits while the next stop is too far.
-        let stationOffered = Map3DFollow.stationViewIsOffered(remainingMetres: session.world.map3DMetresToStopAhead(of: train.id))
+        let stationOffered = Map3DFollow.stationViewIsOffered(remainingMetres: session.world.map3DMetresToLookoutStop(of: train.id))
         let tooFar = Map3DFollow.stationTooFarText(in: language)
         // A sendable closure, not main-actor code (CRASHSWEEP): the bar's
         // two layouts stand in a ViewThatFits, which SwiftUI's asynchronous
