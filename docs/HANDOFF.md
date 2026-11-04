@@ -307,6 +307,7 @@
   - 發版前要收工時，叫 session「做完再停」，不要叫它把做一半的東西留給之後（作者 2026-10-16：「記得不要暫停讓他們做完」「不要限制 可以任意開 pr 但就是收工」）。
   - session 停下來，不一定是因為發版。重開之前先讀那個 session 自己的紀錄與 #231。例：語言選單是作者說「先不要動」才停的，不是發版；後來作者本人在那個 session 回「四方決定要不要繼續」，才重開成 #727。
   - **改前截圖不開另一個分支**（作者 2026-11-04：「好 寫進HANDOFF」）：session 和規劃都刪不掉分支（session 的 git 被擋 403，規劃的 `gh api` 刪 ref 被自動模式當成破壞性操作擋下，允許規則也解不開），每個 `*-before` 分支都要作者自己刪（例：`claude/platstop-before`、`claude/route-draw-clutter-before`、`sunpcf-before`、`claude/curve2d-screenshot-before`）。所以派工單寫明：要改前改後對照時，**先在 PR 自己的分支只推截圖場景與 `WebsiteScreenshotTests` 那一個 commit**（這時分支＝main＋截圖場景），在那個分支跑 `website-screenshots.yml` 拍改前，再推真正的改動、拍改後。不另開 `-before`、`-at-<sha>` 之類的分支或 tag。已經開了的，在交接寫上請作者刪。
+  - **已合併的分支**（作者 2026-11-04）：repo 設定已打開「Automatically delete head branches」，PR 一合併分支就自動刪。以前留下的約 1,600 個，由作者在 Actions 頁面手動按 `prune-merged-branches.yml`（#1774；預設 dry run 只列出）。session 用的是作者的帳號，GitHub 分不出誰按的，所以**session 和規劃都不按這個 workflow**。
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
   - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256；2026-10-17：#774 與 #776 都用 271，照登記先後 #776 改成 272）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
 
