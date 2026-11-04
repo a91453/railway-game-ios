@@ -389,7 +389,7 @@ final class TrainControlTests: XCTestCase {
 
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.selectedTrain?.position, position)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Placed Train 1 at Mid, on track #3 going backward."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Placed Train 1 at Mid, platform 1, on track #3 going backward."))
         }
     }
 

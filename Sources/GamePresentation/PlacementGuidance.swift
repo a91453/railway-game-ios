@@ -24,6 +24,10 @@ public enum TrainPlacementProblem: Hashable, Sendable {
     /// Every platform is shorter than the train and the track behind none
     /// takes the rest: `longest` world units, `cars` cars would fit.
     case tooShort(StationID, longest: Int64, cars: Int)
+    /// The platform picked, number `platform` (from 1), is shorter than
+    /// the train, `length` world units, and the track behind it does not
+    /// take the rest; a longer one stands at the station (decision 584).
+    case pickedTooShort(StationID, platform: Int, length: Int64, cars: Int)
     /// Refused for another reason, as GameCore says it.
     case refused(GameError)
 }
@@ -40,20 +44,33 @@ extension GameWorld {
     /// `heading`, or `nil` when it can (tried on a copy, as
     /// ``GameSession/placeSelectedTrain()`` would place it). `nil` for a
     /// train that does not exist or is already placed.
-    public func trainPlacementProblem(_ id: TrainID, at station: StationID?, heading: CompassHeading) -> TrainPlacementProblem? {
+    ///
+    /// Decision 584: with `platform`, on that platform alone (the one the
+    /// player picked at a station of two or more).
+    public func trainPlacementProblem(
+        _ id: TrainID, at station: StationID?, heading: CompassHeading, platform: TrackPlatform? = nil
+    ) -> TrainPlacementProblem? {
         guard let train = train(id: id), train.position == nil else { return nil }
         guard let station, self.station(id: station) != nil else { return .noStation }
         let platforms = trackPlatforms(of: station)
         guard let longest = platforms.map(\.length).max() else { return .noPlatform(station) }
         var draft = self
         do throws(GameError) {
-            _ = try GameSession.place(id, atPlatformOf: station, heading: heading, in: &draft)
+            if let platform {
+                _ = try GameSession.place(id, on: platform, heading: heading, in: &draft)
+            } else {
+                _ = try GameSession.place(id, atPlatformOf: station, heading: heading, in: &draft)
+            }
             return nil
         } catch {
             if case .trackReserved(let holder) = error { return .held(station, by: holder) }
+            let pitch = max(train.carPitch, 1)
             if case .invalidTrainPosition = error, longest < train.length {
-                let pitch = max(train.carPitch, 1)
                 return .tooShort(station, longest: longest, cars: max(Int(longest / pitch), Train.minimumCars))
+            }
+            if case .invalidTrainPosition = error, let platform, platform.length < train.length {
+                let number = (platforms.firstIndex(of: platform) ?? 0) + 1
+                return .pickedTooShort(station, platform: number, length: platform.length, cars: max(Int(platform.length / pitch), Train.minimumCars))
             }
             return .refused(error)
         }
@@ -83,6 +100,14 @@ extension GameWorld {
             return language.text(
                 "\(name) is too long for \(stationName(station)): its longest platform is \(NetworkBuilding.lengthText(longest, in: language)), the train \(count) \(count == 1 ? "car" : "cars"), \(NetworkBuilding.lengthText(whole, in: language)). Shorten it to \(cars) \(cars == 1 ? "car" : "cars"), or lengthen a platform.",
                 "\(name) 太長，\(stationName(station)) 放不下：最長的月台 \(NetworkBuilding.lengthText(longest, in: language))，列車 \(count) 節共 \(NetworkBuilding.lengthText(whole, in: language))。減到 \(cars) 節，或把月台加長。"
+            )
+        case .pickedTooShort(let station, let number, let length, let cars):
+            let train = train(id: id)
+            let whole = Int64(train?.cars ?? 1) * (train?.carPitch ?? 0)
+            let count = train?.cars ?? 1
+            return language.text(
+                "\(stationName(station))'s platform \(number) is \(NetworkBuilding.lengthText(length, in: language)), too short for \(name), \(count) \(count == 1 ? "car" : "cars"), \(NetworkBuilding.lengthText(whole, in: language)). Pick a longer platform, or shorten it to \(cars) \(cars == 1 ? "car" : "cars").",
+                "\(stationName(station))第 \(number) 月台 \(NetworkBuilding.lengthText(length, in: language))，放不下 \(name)（\(count) 節共 \(NetworkBuilding.lengthText(whole, in: language))）。選較長的月台，或減到 \(cars) 節。"
             )
         case .refused(let error):
             return error.playerMessage(in: language)

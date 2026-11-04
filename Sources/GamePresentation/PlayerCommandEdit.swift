@@ -61,6 +61,9 @@ extension PlayerCommand {
         /// On a platform of a station, the way nearer `heading`
         /// (``GameSession/placeSelectedTrain()``).
         case placeTrain(TrainID, at: StationID, heading: CompassHeading)
+        /// On the platform the player picked, alone, the way nearer
+        /// `heading` (decision 584: a station of two or more platforms).
+        case placeTrainOnPlatform(TrainID, TrackPlatform, heading: CompassHeading)
         /// Trains bought, placed and assigned to run a line every `headway`
         /// minutes (decision 101), named in `language`.
         case staffLine(LineID, headway: Int64, type: TrainType?, cars: Int, language: DisplayLanguage)
@@ -332,6 +335,8 @@ extension GameSession {
             }
         case .placeTrain(let id, let station, let heading):
             outcome.placed = try Self.place(id, atPlatformOf: station, heading: heading, in: &world)
+        case .placeTrainOnPlatform(let id, let platform, let heading):
+            outcome.placed = try Self.place(id, on: platform, heading: heading, in: &world)
         case .staffLine(let id, let headway, let type, let cars, let language):
             let standard = world.line(id: id)?.performance == .standard
             (outcome.held, outcome.unfit) = try Self.staff(id, headway: headway, type: type, cars: cars, in: &world, language: language)

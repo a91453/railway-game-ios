@@ -1390,6 +1390,92 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("idle-train-banner", app)
     }
 
+    /// Decision 584, PR-2: the train tool at 海岸, a station of two
+    /// platforms on two tracks that do not meet, with 列車 3 off the track
+    /// and given 海岸線: the platforms listed, the one on 海岸線's track
+    /// picked, then the other picked by hand.
+    func testPlacementPlatformChoice() {
+        shootPlacementPlatformChoice(english: false, name: "platform-choice")
+    }
+
+    /// The same in English, the first only.
+    func testPlacementPlatformChoiceEnglish() {
+        shootPlacementPlatformChoice(english: true, name: "platform-choice-en")
+    }
+
+    private func shootPlacementPlatformChoice(english: Bool, name: String) {
+        let app = launch(extra: ["-ui-test-world", "platform-choice"], english: english)
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 5), build.becomesHittable(within: 5) { build.tap() }
+        let trainTool = app.buttons["tool.train"]
+        XCTAssertTrue(trainTool.appears(within: 10), "The train tool shows")
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).tap()
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 10), "The train tool's card shows")
+        let first = app.buttons["train.platform.1"].firstMatch
+        let second = app.buttons["train.platform.2"].firstMatch
+        XCTAssertTrue(first.appears(within: 10), "The station's platforms are listed")
+        // In the card's scrolling middle, some 70 pt between its head and
+        // its Place button on a phone (runs 41872784387 and 41880284408
+        // dragged beside it and nothing moved); the phone runs on its side
+        // only.
+        let pinned = app.descendants(matching: .any)["details.scroll.middle"].firstMatch
+        let middle = pinned.appears(within: 5) ? pinned : app.descendants(matching: .any)["details.scroll.whole"].firstMatch
+        // One row of buttons, its label beside them: bringing platform 2
+        // into the card's middle shows them all.
+        let shown = scroll(second, into: middle, at: card.frame.maxX - 8, of: app)
+        settle()
+        if !shown { print("platform-choice card:\n\(card.debugDescription)") }
+        keep(name, app)
+        XCTAssertTrue(shown, "The platforms show")
+        XCTAssertTrue(first.isHittable, "Both platforms show at once")
+        guard !english else { return }
+        let other = second.isSelected ? first : second
+        other.tap()
+        settle()
+        XCTAssertTrue(other.isSelected, "The tapped platform is picked")
+        keep("platform-choice-picked", app)
+    }
+
+    /// Drags `list`, a short scrolling band, by as far as `row` still lies
+    /// outside it, until the row shows whole: the band's fixed short drags
+    /// moved some 8 pt a time past the touch's slop (run 41885513636).
+    /// `x` is clear of every control: a drag that starts on the
+    /// performance menu opens it rather than scrolling (run 41890979496
+    /// stopped at 26% there).
+    private func scroll(_ row: XCUIElement, into list: XCUIElement, at x: CGFloat, of app: XCUIApplication) -> Bool {
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<12 {
+            let band = list.frame.insetBy(dx: 0, dy: 6)
+            let place = row.frame
+            print("platform-choice scroll: row \(row.identifier) \(place) hittable \(row.isHittable), band \(band)")
+            if row.exists, place.minY >= band.minY, place.maxY <= band.maxY, row.isHittable { return true }
+            let up = !row.exists || place.maxY > band.maxY
+            let gap = row.exists ? (up ? place.maxY - band.maxY : band.minY - place.minY) : band.height
+            let distance = min(max(gap + 16, 24), band.height)
+            let startY = up ? band.maxY - 2 : band.minY + 2
+            let start = origin.withOffset(CGVector(dx: x - app.frame.minX, dy: startY - app.frame.minY))
+            let end = start.withOffset(CGVector(dx: 0, dy: up ? -distance : distance))
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        let band = list.frame.insetBy(dx: 0, dy: 6)
+        return row.exists && row.frame.minY >= band.minY && row.frame.maxY <= band.maxY && row.isHittable
+    }
+
     /// Decision 507: the platform mode's layout menu on a double track,
     /// with a place picked, then the menu open (the single-track layouts
     /// greyed with why).

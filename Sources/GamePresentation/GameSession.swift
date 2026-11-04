@@ -417,6 +417,11 @@ public final class GameSession {
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
     public private(set) var placementHeading: CompassHeading = .east
 
+    /// The platform the player picked for the selected train in the train
+    /// tool (decision 584), used only at its own station; see
+    /// ``placementPlatform``.
+    var pickedPlacementPlatform: TrackPlatform?
+
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another point or tool.
     public internal(set) var message: StatusMessage? {
@@ -2466,7 +2471,10 @@ public final class GameSession {
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         if train.position == nil,
-           let problem = world.trainPlacementProblem(train.id, at: selectedStation?.id, heading: placementHeading) {
+           let problem = world.trainPlacementProblem(
+               train.id, at: selectedStation?.id, heading: placementHeading,
+               platform: selectedStation.flatMap { placementPlatformToUse(for: train, at: $0) }
+           ) {
             if case .refused = problem {
                 // GameCore's own refusal, as the command reports it.
             } else {
