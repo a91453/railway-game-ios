@@ -657,7 +657,9 @@ extension GameWorld {
     /// Each city route's station (decision 438): of `stations` (those the
     /// land is shared among), the nearest a stop's middle within
     /// ``BusRoute/stopReach``, then the lower station ID, then the earlier
-    /// stop; `nil` when none is. A feeder has none.
+    /// stop; `nil` when none is. A feeder has none. Decision 587,
+    /// continued: never a depot (``Station/isDepot``), where no line
+    /// calls (a bought line's, as the Muzha depot by MRT Taipei Zoo).
     mutating func refreshBusTransfers(among stations: [Station]) {
         let reach = BusRoute.stopReach * BusRoute.stopReach
         for position in busRoutes.indices {
@@ -665,7 +667,7 @@ extension GameWorld {
             if busRoutes[position].station == nil {
                 for (stop, cell) in busRoutes[position].stops.enumerated() {
                     let middle = Self.middle(of: cell)
-                    for station in stations {
+                    for station in stations where !station.isDepot {
                         let squared = Self.squaredDistance(middle, station.location)
                         guard squared <= reach else { continue }
                         let candidate = (squared, station.id.rawValue, stop)

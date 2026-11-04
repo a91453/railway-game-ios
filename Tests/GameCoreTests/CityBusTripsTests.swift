@@ -170,6 +170,24 @@ final class CityBusTripsTests: XCTestCase {
         XCTAssertEqual(cut.feederTrips, 0)
     }
 
+    /// Decision 587, continued: a depot is no transfer. C, a station of
+    /// no line on the first stop, is nearer it than A is (256 m): the
+    /// route meets C; once C is a depot (as a bought
+    /// line's, the Muzha depot by MRT Taipei Zoo), it meets A instead, and
+    /// C again when it is a station again.
+    func testACityRouteMeetsNoDepot() throws {
+        var world = try world([homes(30, 400)])
+        let c = try world.buildStation(named: "C", at: GameWorld.middle(of: at(9))).id
+        let route = try world.createBusRoute(to: nil, stops: [at(9), at(30)], service: .every(minutes: 10), buses: 4)
+        XCTAssertEqual(world.busRoute(id: route.id)?.transfer?.station, c)
+        try world.setStationDepot(c, to: true)
+        let met = try XCTUnwrap(world.busRoute(id: route.id))
+        XCTAssertEqual(met.transfer, BusTransfer(station: a, stop: 0))
+        XCTAssertGreaterThan(met.feederTrips, 0, "the homes by the second stop ride to A")
+        try world.setStationDepot(c, to: false)
+        XCTAssertEqual(world.busRoute(id: route.id)?.transfer?.station, c)
+    }
+
     // MARK: - Refused
 
     func testACityRouteHasTwoStopsAtLeast() throws {
