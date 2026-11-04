@@ -167,13 +167,12 @@ final class WebsiteScreenshotTests: XCTestCase {
             let angle = app.descendants(matching: .any)["network.cablewayAngle"].firstMatch
             // Decision 588: on a phone the instruction at the head scrolls
             // away with the options (a drag on the options' last row began
-            // on the pinned button under it, run 41915148091); with the
-            // head pinned, the drag on it does nothing and the one on the
-            // options moves them.
+            // on the pinned button under it, run 41915148091); the drag
+            // on the head moves both (a second one on the options took
+            // them past the card's top, run 41921574255).
             let head = app.descendants(matching: .any)["inspector.status"].firstMatch
+            XCTAssertTrue(angle.appears(within: 5), "The cable car's options")
             if head.appears(within: 5) { head.swipeUp() }
-            settle()
-            if angle.appears(within: 5), !angle.isHittable { angle.swipeUp() }
             settle()
             keep(english ? "cableway-mode-english" : "cableway-mode", app)
             // Decision 574's next step: the panel closed and opened again

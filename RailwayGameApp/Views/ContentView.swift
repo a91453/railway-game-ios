@@ -1335,7 +1335,10 @@ private struct DetailsCard: View {
                     .scrollBounceBehavior(.basedOnSize)
                     .scrollIndicatorsFlash(onAppear: true)
                     .scrollIndicatorsFlash(trigger: session.tool)
-                    .mask { fades(top: false, bottom: hasFoot) }
+                    // Faded at the card's top too: what scrolled past it
+                    // was cut at a hard edge (run 41921574255). At rest the
+                    // fade lies over the head's margin.
+                    .mask { fades(top: true, bottom: hasFoot) }
                     .tutorialClip()
                     .accessibilityIdentifier("details.scroll.foot")
                     if hasFoot { foot }
