@@ -1,3 +1,5 @@
+> 新車站用地標、路名與路口命名（派工單 STNAME，[決策 569](decisions/569.md)，`claude/station-name-landmarks`）：實景地圖預設名多一步「300 m 內地標」，取名欄下最多 4 個候選（地名、地標、公車站牌、路口、公園、路名）。**留下的**（決策 569「下一步」）：網站致謝頁 `Website/site/credits.html` 跟著 `DataSourceCredits` 加「地標與道路」；iPad、iPhone SE 的候選列沒截圖；只畫成點的學校、醫院沒收。
+
 > 柴油車的行駛聲（派工單 DIESEL，session_01YGNNumDcBCK97mmQUfHHjy，`claude/diesel-sound`，決策 567，2026-11-03）：NEXT_PRIORITIES §22.2 第 7a 項做完（怠轉、起步加速、惰行三個循環，照月本國キハ40 系錄音的頻譜與引擎基頻合成，錄音不提交）。實機聽感 UNVERIFIED，請作者實機聽。7b（電車加減速的馬達聲）沒做，做法建議寫在 `docs/decisions/567.md`「下一步」。
 
 > 桃園機場捷運上架（派工單 TYMCLIST、TYMCLIST2，決策 556（檔案在 #1743 分支 `7fabe2b`，合併後才在 main），`claude/tymclist-airport-line` #1743，draft；TYMCLIST2 session_01JMHz9aCrGxwKjwmKNpAC9t 於 2026-11-03 停）：線上架、真實桃園開局買得到，蘆竹、青埔兩座線中間的真實機廠，中途折返站兩側渡線，3.8 % 坡。三種規則兩天已量；價格已量，其他線一元不變。號誌關早上在長庚醫院卡死，已由[決策 559](decisions/559.md)（#1747，已合併）修好：315/333 → 0/333。**剩下**（逐項見決策 556「下一步」）：1 傍晚機場第二航廈 17:16–17:31 直達車折返卡死，要改 GameCore（跟車授權讓車跟進要折返的車停著的月台，不走空的第三股；重現指令在 `7fabe2b` 的 docs/decisions/556.md「下一步」1）；2 簡單＋行車控制 320/333 沒發；3 行車控制時模擬很慢（GameCore `trafficPlan` 越車規劃）；4 直達車跳站、長庚待避線不做；5 回本沒量完。
