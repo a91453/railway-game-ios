@@ -226,9 +226,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         let settings = app.buttons["start.settings"]
         XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
         settings.tap()
-        let page = app.segmentedControls["settings.collectionPage"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(page, clearOf: .slider), "Missing the collection's pages")
-        page.buttons.element(boundBy: 1).tap()
+        // The picker's own identifier does not always reach the
+        // accessibility tree inside the settings list: find its page by name.
+        let ferries = app.segmentedControls.buttons["渡輪"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(ferries, clearOf: .slider), "Missing the collection's pages")
+        ferries.tap()
         let boat = app.descendants(matching: .any)["settings.ferry.shunfeng166"].firstMatch
         XCTAssertTrue(boat.appears(within: 10), "The ferry page")
         XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.ferry.gushanCijin"].firstMatch, clearOf: .slider))
