@@ -181,6 +181,45 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 578: the 3D follow views: the window of a car, the platform
+    /// of the next stop (a short gap), and the station view greyed out
+    /// while the next stop is a high-speed gap away.
+    func testFollowWindowAndStation() {
+        func open3DFollowing(_ scene: String) -> XCUIApplication {
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-train", "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            return app
+        }
+        do {
+            let app = open3DFollowing("platformStop")
+            defer { app.terminate() }
+            let window = app.buttons["map3D.follow.window"]
+            XCTAssertTrue(window.becomesHittable(within: 10))
+            window.tap()
+            settle(seconds: 8)
+            keep("follow-window", app)
+            let station = app.buttons["map3D.follow.station"]
+            XCTAssertTrue(station.becomesHittable(within: 10))
+            station.tap()
+            settle(seconds: 12)
+            keep("follow-station-near", app)
+        }
+        do {
+            let app = open3DFollowing("farStops")
+            defer { app.terminate() }
+            XCTAssertTrue(app.buttons["map3D.follow.station"].appears(within: 10))
+            settle(seconds: 3)
+            keep("follow-station-too-far", app)
+        }
+    }
+
     /// Decision 565: a train of four 20 m cars standing at a platform four
     /// cars long on a real map, close up on the 2D map and on the 3D one:
     /// every car inside the platform, its nose at the platform's end. For

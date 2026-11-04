@@ -594,7 +594,18 @@ public struct Map3DBuses: Sendable {
     public func frame(second: Double, target: Map3DPoint, distance: Float, detail: Map3DStreetDetail, most: Int? = nil,
                       followed: BusID? = nil) -> Frame {
         var frame = Frame()
-        guard detail != .off, distance <= Map3DStreetLife.vehiclesFrom, let model = Self.model else { return frame }
+        guard let model = Self.model else { return frame }
+        // Decision 580 (續): with nothing moving on the streets (no tier,
+        // as the Simulator's GPU, or too far), the followed bus alone, as a
+        // followed train is drawn whatever the streets draw.
+        guard detail != .off, distance <= Map3DStreetLife.vehiclesFrom else {
+            if let followed, let route = routes.first(where: { $0.motion.route == followed.route }),
+               let bus = route.motion.bus(run: followed.run, at: second), let place = Self.place(of: bus, on: route) {
+                frame.instances.append(.prop(model, at: place.point, forward: place.along, scale: Float(bus.scale), tint: route.tint))
+                frame.clear.append((place.point, place.along))
+            }
+            return frame
+        }
         let reach = Map3DStreetLife.vehiclesReach(distance)
         var seen: [(away: Float, instance: Map3DInstance, clear: (point: Map3DPoint, along: Map3DPoint))] = []
         // Decision 400 (FOLLOWBUS): the bus the camera follows is always

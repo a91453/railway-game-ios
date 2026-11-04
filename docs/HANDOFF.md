@@ -1,3 +1,5 @@
+> 跟車「車窗」視角與「從車站看」修正（派工單 FOLLOWVIEW，[決策 578](decisions/578.md)，`claude/follow-window-station`，2026-11-04）：3D 跟車多「車窗」（中段車廂左窗、眼高 2 m，不畫窗框與車廂內部）；「從車站看」離站即提前蓋下一站周圍、沒蓋好前維持上後方、下一站超過 12 km 時選項灰掉。**留下的**（決策 578「下一步」）：窗框、車窗選左右、公車車窗（FOLLOWBUS 後合者接上，用 Head 轉接）、放空模式加車窗、彎道上車窗朝向用中段切線；12 km 門檻與串流蓋一站的時間是估計，實機 UNVERIFIED。
+
 > 纜車（派工單 CABLE，session_01YGNNumrJnt5AkQzWrdhAms，`claude/cable-maokong`，[決策 574](decisions/574.md)，存檔 83，2026-11-04）：PR-1 只做 GameCore（`Cableway`：站與轉角站、直線纜線、土地分配與轉乘、NT$180 單一票價、週一／雷雨／颱風停駛、日結）與存檔 83。**留下的**：PR-2 的建造工具、2D 圖示、站卡與纜車卡、吊廂位置 `CablewayCabins`（給 CABLE3D，決策 575）、貓空示範與站點座標（OSM 下載不到，UNVERIFIED），逐項見決策 574「下一步」。
 > 纜車 PR-2（CABLE-2，session_01YGNNunZBgaB8JeDKJxh4xV，`claude/cable-2`，存檔不動，2026-11-04）：路網工具的纜車模式、預覽與指令、2D 纜線與站圖示、纜車卡與車站面板列、吊廂位置 `CablewayCabins`（給 CABLE3D）、貓空真實路線與截圖場景 `maokong`。**留下的**：模式列圖示、新功能提示、點地圖選纜車、2D 吊廂、六個模式在 iPhone 小螢幕與大字放不放得下、纜車卡要捲動才看得全、貓空示範的動物園站被 HUD 蓋住、吊廂跟隨（決策 580 的 `Pose`），見[決策 574](decisions/574.md)「下一步」第 1 項。CABLE-2 壓縮第 2 次後停手，這些沒人接。
 
@@ -378,8 +380,8 @@
 - 兩個 PR 撞同一個決策號（329 起是兩個 `docs/decisions/<N>.md` 同名），照 #231 登記的先後，後登記的改號；ARCHITECTURE、OVERVIEW 衝突（改 1–328 的「後來」時還會有）：請該 session 自己 merge main 解。
 - 存檔版本與決策號以 main 加上 #231 還沒釋出的登記為準，取最大值加一。
 
-**full lane**（`ios-build.yml` 把 iPhone UI 測試全部跑一次：兩個 iPhone job 加 iPad 教學，約 42–45 分鐘，佔 3 台 macOS）：
-- 合併後不用手動跑（決策 265）：`ios-full-lane.yml` 在合了會影響 App 的 PR 之後自己啟動，最多每三小時一次。10-14 到 10-16 的 67 小時裡 full lane 跑了 42 次，只有 7 次是它啟動的，佔全部 macOS 用量的 34%。
+**full lane**（`ios-build.yml` 把 UI 測試全部跑一次：build job、兩個 iPhone UI job，iPad 教學等兩個 iPhone job 跑完才開始；2026-11 約 1.5–2 小時，最多同時佔 3 台 macOS，PR 永遠留 2 台，決策 582）：
+- 合併後**不會**自動跑（決策 582，修正決策 265）：`ios-full-lane.yml` 只在每晚台灣 02:17 起一次（main 最新 commit 已經跑過或還有一輪在跑就不起，夜間那輪附「少一顆按鈕」的證明）。2026-11-04 前每次合併後最多每三小時自動起一次、佔 4 台 macOS 約 1.5–2.5 小時，PR 的 Xcode build 與截圖排隊一小時以上。
 - 只在兩種情況用 `actions_run_trigger` 手動跑（run_workflow，workflow `ios-build.yml`，ref main）：
   - 發版前要用的 HEAD；
   - full lane 紅了，要二分的 commit。
@@ -519,7 +521,7 @@
   1. #1750（`claude/whatsnew-card-111`，head `8e8e463`，App 內這版新增＋`.github/testflight-whats-new.md`＋`PLAYER_FEEDBACK.md`）：20:45 UTC 時 Linux 全綠、Xcode build 在跑。gate 與 iOS 綠就合（`expectedHeadSha` 用完整 SHA）。
   2. 等 main 的 push `ci.yml` 綠，再對 main HEAD 手動跑完整 `ci.yml` 與 `ios-build.yml` full lane（都是 workflow_dispatch）。
   3. 兩個都綠，在 #1579 寫「111.1 可以發（commit X）」，並在對話告訴作者。紅就查、修。**不要自己按 `testflight.yml`**，作者早上按。
-  4. full lane 跑完前不合其他 PR（合了會自動起 full lane 搶 macOS）。
+  4. full lane 跑完前不合其他 PR（決策 582 前合了會自動起 full lane 搶 macOS；之後合併不再起 full lane，但發版要的是 HEAD 那一輪）。
   5. 作者發完後，`PLAYER_FEEDBACK.md` 記 0.5.0 (111.1) 的 run 與 commit。
   - 111.1 包含：#1747、#1757、#1758 DAYPASS、#1759 L6FIX、#1761 HEALTH-110、#1762 NEWCAR（決策 566）、#1763 DIESEL（567）、#1765 REVIEW-L8、#1768 AUTOXO（571）、#1750。
 - **111.1 之後依序審、合**（每批 3–5 個，等 main `ci.yml` 綠）：
@@ -1076,7 +1078,7 @@
 - **跟隨公車視角**（作者 2026-10-28 問「要加跟隨公車視角嗎 把列車那套移過來就好」，規劃答 10/31 後、排第 7）：
   - 怎麼做：`Map3DFollow` 從 `Map3DTrains.Head` 算鏡頭（後方、後上方、駕駛座、側面、車站五種），公車沒有 Head。`BusMotion`（決策 400 10i-6）在 GamePresentation 已有確定的公車位置與方向，補一個公車的 Head 轉接，`GameSession` 加跟隨公車（照 `followTrain`、`stopFollowingTrain`），`FollowBar` 顯示路線與下一站；公車在班次頭尾會淡出，跟到淡出時換同路線的下一班或回到一般視角。只動 GamePresentation 與 App，不動 GameCore、存檔。約一個 PR。
   - 五方：玩家（多一個看城市的角度，但 10/31 前修好卡頓與畫面更多人受益）；鐵道迷（公車不是主角，加分少）；開發（列車那套可以重用，公車淡出與駕駛座視角要另外處理）；美術（近看公車要模型夠細，公車套件已有）；音樂（無）。
-  - **做完了（FOLLOWBUS，決策 580，`claude/follow-bus`）**：鏡頭改讀 `Map3DFollow.Pose`（列車的 `Head.pose` 與公車的 `Map3DBuses.pose(of:second:)`），`GameSession.followBus`／`followedBusID`／`busFollowBar`，3D 跟隨列 `Map3DBusFollowBar`，3D 點公車與路線卡「跟隨公車」開始跟隨，一班結束換同路線下一班、沒有就回一般視角。未做、留給後面的人：公車的「從車站看」（`Lookout` 要能指站牌）、2D 地圖畫公車與點公車（2D 目前不畫公車）、纜車吊廂的跟隨（做一個吊廂的 `Pose` 與 `Subject.cabin`，等 CABLE PR-2 與 CABLE3D 合進來）、FOLLOWVIEW 的「窗外」視角對公車要不要出現（後合的那個接上）。**待查**：Simulator 截圖的上後方與旁邊視角看不到公車本體（鏡頭位置對），見決策 580 的未做第 5 項。詳見 `docs/decisions/580.md`。
+  - **做完了（FOLLOWBUS，決策 580，`claude/follow-bus`）**：鏡頭改讀 `Map3DFollow.Pose`（列車的 `Head.pose` 與公車的 `Map3DBuses.pose(of:second:)`），`GameSession.followBus`／`followedBusID`／`busFollowBar`，3D 跟隨列 `Map3DBusFollowBar`，3D 點公車與路線卡「跟隨公車」開始跟隨，一班結束換同路線下一班、沒有就回一般視角。未做、留給後面的人：公車的「從車站看」（`Lookout` 要能指站牌）、2D 地圖畫公車與點公車（2D 目前不畫公車）、纜車吊廂的跟隨（做一個吊廂的 `Pose` 與 `Subject.cabin`，等 CABLE PR-2 與 CABLE3D 合進來）、FOLLOWVIEW 的「窗外」視角對公車要不要出現（後合的那個接上）。Simulator 截圖的上後方與旁邊視角看不到公車本體：已修（FOLLOWBUS-FIX，`claude/follow-bus-visible`；Simulator 的 GPU 沒有分級，街景全關，被跟的公車也一起被丟掉；改成被跟的公車像被跟的列車一樣照畫），見決策 580 的未做第 5 項。詳見 `docs/decisions/580.md`。
 
 **第二十七次換手（2026-10-28 約 15:30 UTC，session_01YGNNuknN8czzHmJ7zU9h3R 壓縮第 3 次 → 本任用 `create_session` 開的新規劃，第 3 層）**：下一段（第二十六次換手之後）就是交接內容，新規劃照它接。
 - 新規劃先讀 #1041 最後 30 則與本段、下一段，然後在 #1041 留言接手。
@@ -1997,7 +1999,7 @@
 | 加依賴：`tools/` 用 glTF-Transform 與 meshoptimizer（npm），讓 3D 的 GLB 在電腦上轉檔 | **遊戲規劃 2026-10-16 決定：同意，只在 `tools/` 用**（作者 2026-10-16：「尚未決定的都四方考慮後做決定」；加依賴是作者保留的決定，合併協調 session 再問作者本人，作者回「四方 思考 最後做決定」，#729 才合併）。條件：兩個都是 MIT；寫進 `tools/` 底下一個工具自己的 `package.json`，版本釘死，加上 lockfile；App 與 Swift 套件不讀它們，也不打包進 App；授權寫進該工具的 README。轉出來的模型照 art-style §7 拆零件、重組、換成調色盤顏色；原始 GLB 與對照留在 scratchpad 或私有參考庫。玩家：3D 的人、車、地標可以更快做到目標畫面；開發：Linux 沒有能讀 GLB 的 Swift 套件（第 4.1 節），用現成工具比自己寫解碼器小；美術：只是取零件的手段，成品還是遊戲自己的風格；音樂：無 | 已決定，3D 生活感 session 可以用 |
 | CI 優化（決策 265，session_01LQE9Rif1ggbZsT3iYQiN7G） | 作者 2026-10-16：「我要做pr review 跟ci優化」。四項由遊戲規劃以四方決定：把 iOS 列為必要檢查、關掉 auto-merge 都先不改，#756 跑一陣子再評估；PR gate 的 UI 測試名單不動（`docs/research/CI_MEASURE_2026-10-16.md` 第 3 節 E）；分片逾時上限 20 分不改，下次重新分配分片時再看。之後若 macOS 又常排隊，先看研究文件的方案 | 已決定 |
 | CI 流程優化（決策 329，session_01E8oiGWPQZ2a8wAE8tNvFKk） | 作者 2026-10-21：「還需要一個session優化ci流程」。三個 PR：新決策一個檔一個（`docs/decisions/`）；被取代的 PR run 不判紅、swift-build 崩潰重試一次；main 的 full lane 紅了在 #231 自動留言。量測在 `docs/research/CI_MEASURE_2026-10-21.md`。**之後可以做的**（量過，沒做）：`ios-build.yml` 的 Simulator 開機（約 2.0 分）和建置（約 2.6 分）並行，以及翻譯匯出（約 2.9 分）不排在 UI 測試後面——這兩項只能在 macOS 上驗；HANDOFF 這份本身三天衝突 8 次，可以照同樣做法把 §2 的各列拆成檔；`superseded` 讓 gate 變灰，要等某個 PR 真的有一輪被新 push 取消，才看得到效果 | 做完；之後的兩項沒人接 |
-| CI 4C：自架 runner、Xcode Cloud、第三方 macOS runner | **遊戲規劃 2026-10-16 決定：現在不做**（作者 2026-10-16：「尚未決定的都四方考慮後做決定」）。開發：#693 把 full lane 拆成兩個 job 之後，5 台 macOS runner 夠用；這個 repo 是公開的，自架 runner 會讓 PR 的程式跑在作者的機器上，有安全風險；Xcode Cloud 要作者做 Apple 帳號的設定（`docs/XCODE_CLOUD_ONBOARDING.md`）；第三方 runner 要另外付費。玩家：無；美術：無；音樂：無。macOS 的工作經常排隊超過 30 分鐘時再評估 | 已決定 |
+| CI 4C：自架 runner、Xcode Cloud、第三方 macOS runner | **遊戲規劃 2026-10-16 決定：現在不做**（作者 2026-10-16：「尚未決定的都四方考慮後做決定」）。開發：#693 把 full lane 拆成兩個 job 之後，5 台 macOS runner 夠用；這個 repo 是公開的，自架 runner 會讓 PR 的程式跑在作者的機器上，有安全風險；Xcode Cloud 要作者做 Apple 帳號的設定（`docs/XCODE_CLOUD_ONBOARDING.md`）；第三方 runner 要另外付費。玩家：無；美術：無；音樂：無。macOS 的工作經常排隊超過 30 分鐘時再評估。**補（2026-11-04）**：作者 2026-11-06 起有 Mac，雲端 session 可用 Remote Control 借用（每次由作者核准，步驟在 [`MAC_LOCAL_SETUP.md`](MAC_LOCAL_SETUP.md)），不掛成 self-hosted runner；Xcode Cloud 仍暫緩（要把 Team ID 寫進 `project.yml`，與 CLAUDE.md 衝突；每月 25 小時對 full lane 不夠，見 `docs/XCODE_CLOUD_ONBOARDING.md`） | 已決定 |
 | 複線的最短相隔距離要不要再縮 | 作者 2026-10-14 在手機上問，那個 session 停在權限確認，沒有回答。**遊戲規劃 2026-10-16 回答：不縮**。遊戲的軌道中心間距是 `RailwayNetwork.trackSpacing` 256 單位＝4 m，台鐵一般路段的線間距就是 4 m 左右（高鐵更寬）。畫面上看起來太寬或太窄，是 2D 線的畫法（決策 249），不是間距 | session_01Mtv1QDk434KcMtFHWw67SM |
 
 ## 4. 3D 地圖
@@ -2927,6 +2929,9 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 ### 4.48 舊複線站補渡線、升級複線加站旁渡線（決策 572，派工單 OLDXO，session_01YGNNum5m8pAyi87KoX3iP7，`claude/old-station-crossovers`，2026-11-04）
 
 做了的在 [決策 572](decisions/572.md)：車站面板「加渡線」（舊存檔、111.1 之前的複線站）、「升級為複線」也加站旁渡線、渡線方向讓兩站近端在同一條、「＋」在起終點都滿時放到旁邊月台。留下的（決策 572「下一步」）：兩站不到 1 km 時第二站不加；三站以上的線沒量；實機 UNVERIFIED。
+### 4.49 死結時被跟車中列車「等著的軌道」擋住的出發照樣開出（決策 577，派工單 TYMCLIST5，session_01YGNNuqBp8VuzjSqeJ4EYGw，`claude/tymc-pit-deadlock`，2026-11-04）
+
+做了的在 [決策 577](decisions/577.md)：機場捷運簡單＋行車控制 11:16 起坑口卡死，修在 `resolveDeadlock` 的最後一步。留下的（決策 577「下一步」）：#1743 合併後重量機場捷運、文湖線兩天簡單＋行車控制；行車控制時的慢（`trafficPlan` 每次重算都重找每列車的越車路），建議跨計畫快取 `trafficTrack`，另派 GameCore PR。
 
 ## 5. 已知、還沒派的待辦
 

@@ -83,6 +83,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// with every car inside its platform, on the 2D map and the 3D one.
     case platformStop
 
+    /// Decision 578: a new real-world game round Taipei Main Station, a
+    /// line of two stations 14 km apart (a new map is 16 km wide; the longest gap it holds, over the station view's reach) with its train
+    /// running to the far one: for the screenshot of the 3D follow bar's
+    /// station view greyed out while the next stop is too far.
+    case farStops
+
     /// Decision 573: the demo map, where ``prepare(_:)`` lays a depot with
     /// the depot tool off Line 2's north end (on its viaduct, so the
     /// sidings pass over the ring): Line 2 and the Ring Line both end or
@@ -117,6 +123,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
+        // Decision 578: its first station, 7 km west and 300 m north of it.
+        case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
         }
     }
@@ -137,6 +145,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .wenhu: Self.wenhuWorld(in: language)
         case .platformStop: Self.platformStopWorld(in: language)
+        case .farStops: Self.farStopsWorld(in: language)
+
         case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
         case .followBus: Self.followBusWorld(in: language)
@@ -319,6 +329,27 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
+    }
+
+    // MARK: - Far stops
+
+    /// Decision 578: ``farStops``'s world, paused with its train running,
+    /// well short of the far station.
+    private static func farStopsWorld(in language: DisplayLanguage) -> GameWorld {
+        guard let anchor = GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170) else { return DemoWorld.make(in: language) }
+        let world = GameWorld.newGame(anchor: anchor)
+        guard let frame = RealWorldFrame(world: world) else { return world }
+        let middle = frame.worldPosition(latitude: 25.0478, longitude: 121.5170)
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 7_000 * metre
+        let y = Int64(middle.y - 300 * metre)
+        guard var opened = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
+                                                           PlanPoint(x: Int64(middle.x + half), y: y)], in: world) else { return world }
+        for _ in 0..<7_200 {
+            if opened.trains.first(where: { $0.position != nil }) != nil, case .travellingToStop? = opened.trains.first?.execution { break }
+            try? opened.advance(ticks: 1)
+        }
+        opened.setSpeed(.paused)
+        return opened
     }
 
     // MARK: - Platform stop
