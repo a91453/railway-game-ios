@@ -1252,12 +1252,22 @@ extension RealLineLaying {
             }
         }
         // Decision 556: the turn-back crossovers, each from the first track
-        // nearer the junction to the second further from it.
+        // nearer the junction to the second further from it. Decision 564:
+        // where the trains keep right, the two tracks' ways are the other
+        // way round, and so is each crossover: from the second track nearer
+        // the junction to the first further from it, still trailing for
+        // the trains running through and still taking a train turned back
+        // onto the other way's track over to its own.
         for (low, high) in turnbacks {
-            guard let a = mainNode(low), let b = mainNode(high), let onSecond = besideNodes.firstIndex(of: b), besideNodes.contains(a) else { continue }
-            plans.append((
+            guard let a = mainNode(low), let b = mainNode(high), let secondA = besideNodes.firstIndex(of: a),
+                  let secondB = besideNodes.firstIndex(of: b)
+            else { continue }
+            plans.append(line.keepsRight ? (
+                RealWorldDemo.TrackPlan(beside: main, at: [a, b], offsets: [-HighSpeedDemo.trackOffset, 0]),
+                RealLineAcquisition.NodeAt(piece: 1, node: secondA), RealLineAcquisition.NodeAt(piece: 0, node: b), true
+            ) : (
                 RealWorldDemo.TrackPlan(beside: main, at: [a, b], offsets: [0, -HighSpeedDemo.trackOffset]),
-                RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 1, node: onSecond), true
+                RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 1, node: secondB), true
             ))
         }
         var pieces = plans.map { entry in

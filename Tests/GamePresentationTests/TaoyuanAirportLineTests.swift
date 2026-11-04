@@ -40,6 +40,46 @@ final class TaoyuanAirportLineTests: XCTestCase {
         XCTAssertEqual(inDepots, between)
     }
 
+    /// Decision 564: its trains keep right, so its turn-back crossovers lie
+    /// the other way round from a line keeping left. A train turned back at
+    /// a station a run starts or ends at, on either of its tracks, reaches
+    /// the platform its line names at the next station each way. Laid as
+    /// for a line keeping left, a train run empty from the depot to Sanchong
+    /// for its first run out had no way back onto its own track and met the
+    /// first train in from Taishan head on at 06:04.
+    func testATrainTurnedBackReachesItsOwnTrack() throws {
+        let session = try RealLineAcquisitionTests.game(round: Self.id, side: 1 << 22, heights: true)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == Self.id }, "on sale")
+        XCTAssertTrue(line.keepsRight)
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let world = session.world
+        let bought = try XCTUnwrap(world.lines.first)
+        let length = try XCTUnwrap(world.trains.first).length
+        let last = bought.stops.count - 1
+        let turning = Set(bought.runs.flatMap { [$0.from, $0.to] }).filter { $0 > 0 && $0 < last }
+        XCTAssertFalse(turning.isEmpty)
+        var checked = 0
+        for stop in turning.sorted() {
+            let here = bought.stops[stop]
+            for preference in bought.routePreferences where preference.from == stop {
+                let there = bought.stops[preference.to]
+                let into = Set(world.berths(of: there, length: length).filter { $0.traversal.edge == preference.platform.edge })
+                for berth in world.berths(of: here, length: length) {
+                    var memo = GameWorld.PathMemo()
+                    // Only a berth facing the next station: a train turned
+                    // back there faces it.
+                    guard world.path(from: .onEdge(berth.traversal, offset: berth.offset), toStation: there, length: length, memo: &memo) != nil else { continue }
+                    XCTAssertNotNil(
+                        world.path(from: .onEdge(berth.traversal, offset: berth.offset), toStation: there, length: length, eligible: into, memo: &memo),
+                        "\(world.station(id: here)?.name ?? "?") \(berth.traversal) to \(world.station(id: there)?.name ?? "?")'s \(preference.platform.edge)"
+                    )
+                    checked += 1
+                }
+            }
+        }
+        XCTAssertGreaterThan(checked, 0)
+    }
+
     /// The real Taoyuan opening, its water read in: the line is offered.
     func testItIsOfferedOnTheTaoyuanOpening() throws {
         let session = try Self.opening("Taoyuan")
@@ -126,6 +166,20 @@ final class TaoyuanAirportLineTests: XCTestCase {
         defer {
             if let path = environment["TYMC_DIAG_OUT"] { try? Data(out.utf8).write(to: URL(fileURLWithPath: path)) }
         }
+        if environment["TYMC_DIAG_PREFS"] != nil {
+            for line in world.lines {
+                for p in line.routePreferences {
+                    out += "PREF \(line.name) \(name(line.stops[p.from]))->\(name(line.stops[p.to])) edge \(p.platform.edge)\n"
+                }
+            }
+            for platform in world.network.platforms { out += "PLATFORM \(name(platform.station)) edge \(platform.edge)\n" }
+            if let track = environment["TYMC_DIAG_TRACK"] {
+                let names = Set(track.split(separator: ",").map { "桃園機場捷運列車 \($0)" })
+                for train in world.trains where names.contains(train.name) {
+                    out += "TIMETABLE \(train.name) " + train.timetable.map { "\(name($0.station))\($0.reverses ? "R" : "")@\(clock($0.departure))" }.joined(separator: " ") + "\n"
+                }
+            }
+        }
         for minute in start..<until {
             if let save = environment["TYMC_DIAG_SAVE"], minute == Int(environment["TYMC_DIAG_SAVE_AT"] ?? "") ?? 360 {
                 try JSONEncoder().encode(world).write(to: URL(fileURLWithPath: save))
@@ -137,6 +191,24 @@ final class TaoyuanAirportLineTests: XCTestCase {
                     var memo = GameWorld.DirectionMemo()
                     let holder = world.holder(of: world.envelopeCover(of: train), except: train.id, holders: world.trackHolders(memo: &memo))
                     out += "TRACK \(clock(world.clock.now)) \(train.name) \(String(describing: train.position)) rate \(train.movement.rate) following \(world.isFollowing(train)) exec \(String(describing: train.execution).prefix(70)) envelope held by \(holder.flatMap { world.train(id: $0)?.name } ?? "-") reservation \(train.reservation.count)\n"
+                    if environment["TYMC_DIAG_WHY"] != nil {
+                        var why = GameWorld.DirectionMemo()
+                        let request = world.departureRequest(of: train, memo: &why)
+                        var verdict = "no request"
+                        if let request {
+                            switch world.reserving(request, following: true, memo: &why) {
+                            case .granted: verdict = "granted"
+                            case .held(let by): verdict = "held by \(world.train(id: by)?.name ?? "?")"
+                            }
+                        }
+                        let stops = world.stationsStoppedAt(by: train.id).map(name)
+                        let next: String = switch train.execution {
+                        case .waitingAtStop(let stop, _)?: stop + 1 < train.timetable.count ? name(train.timetable[stop + 1].station) : "end"
+                        case .travellingToStop(let stop, _)?: name(train.timetable[stop].station)
+                        default: "-"
+                        }
+                        out += "  WHY at \(stops) next \(next) holder \(world.trainHoldingRoute(of: train.id).flatMap { world.train(id: $0)?.name } ?? "-") request edges \(request?.movement.edges.map { "\($0)" }.joined(separator: ",") ?? "-") \(verdict) timetable \(train.timetable.map { "\(name($0.station))\($0.reverses ? "R" : "")@\(clock($0.departure))" }.joined(separator: " "))\n"
+                    }
                 }
             }
             if environment["TYMC_DIAG_SUMMARY"] != nil {
