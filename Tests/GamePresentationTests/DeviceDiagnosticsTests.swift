@@ -149,7 +149,7 @@ final class DeviceDiagnosticsTests: XCTestCase {
         let text = try XCTUnwrap(diagnostics.reportText(in: .english))
         XCTAssertTrue(text.contains("Closed unexpectedly at 2026-10-24 08:10:00 UTC: EXC_BAD_ACCESS (1)"), text)
         XCTAssertTrue(text.hasSuffix("""
-            Exits 2026-10-24 21:00:00 UTC – 2026-10-25 20:59:00 UTC: on screen: normal 3, over the memory limit 1, stuck too long (watchdog) 2; in the background: reclaimed for memory 5.
+            Exits 2026-10-24 21:00:00 UTC – 2026-10-25 20:59:00 UTC (0.5.0): on screen: normal 3, over the memory limit 1, stuck too long (watchdog) 2; in the background: reclaimed for memory 5.
             Freezes that day by length: 250 ms–500 ms ×4, 500 ms–1000 ms ×1.
             """), text)
         let chinese = try XCTUnwrap(diagnostics.reportText(in: .traditionalChinese))
