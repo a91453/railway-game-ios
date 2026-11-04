@@ -1098,6 +1098,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("platform-levelling-layer", app)
     }
 
+    /// Decision 572: a station on both tracks of a double track with no
+    /// crossover between them (built before decision 571): the station
+    /// panel's button that lays one, then what it says once laid.
+    func testOldStationCrossovers() {
+        let app = launch(extra: ["-ui-test-world", "old-crossovers"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let select = app.buttons["tool.select"]
+        if select.appears(within: 5), select.becomesHittable(within: 5) { select.tap() }
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).press(forDuration: 1)
+        XCTAssertTrue(app.descendants(matching: .any)["station.operations"].firstMatch.appears(within: 10), "The station panel opens")
+        let button = app.buttons["station.crossovers"].firstMatch
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(list.appears(within: 10))
+        list.waitUntilStill()
+        // Clear of the bar's scroll edge too, which hides a row's top
+        // line just under the bar (the first round's shot).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(button, in: list, below: app.navigationBars.firstMatch.frame.maxY + 32), "The button shows")
+        button.waitUntilSettled()
+        settle()
+        keep("station-crossovers-button", app)
+        button.tap()
+        XCTAssertTrue(button.disappears(within: 10), "Laid, it goes")
+        settle()
+        keep("station-crossovers-laid", app)
+    }
+
     /// Decision 507: the platform mode's layout menu on a double track,
     /// with a place picked, then the menu open (the single-track layouts
     /// greyed with why).

@@ -173,6 +173,9 @@ public final class GameSession {
     /// Decision 571: the crossovers the platform picked would get, kept
     /// for the pick and command as ``platformBesideMemo`` is.
     @ObservationIgnored var stationCrossoverMemo: (key: PlatformBesideMemo.Key, crossovers: [PlayerCommand.TrackStretch])?
+    /// Decision 572: the crossovers the station panel offers, kept for the
+    /// station and command (``stationCrossoverOffer(for:)``).
+    @ObservationIgnored var stationCrossoverOfferMemo: StationCrossoverOfferMemo?
     /// Which sights lie on track within a tap's reach, kept for the reach
     /// and command they were looked at for (L3-11, ``sightIsOnTrack(_:within:)``).
     @ObservationIgnored var sightsOnTrackMemo: SightsOnTrackMemo?
