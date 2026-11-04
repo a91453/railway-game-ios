@@ -490,14 +490,19 @@ extension XCUIApplication {
     /// scrolls sideways, and the modes past its edge cannot be touched (the
     /// 112.1 full lane, run 41817301541: "Depot" in two tests). So, as a
     /// player would, it drags the row by a mode that is in view, toward
-    /// the one wanted, until that one can be touched.
+    /// the one wanted, until that one can be touched. Never by the chosen
+    /// mode: a drag that starts there slides the choice to another mode
+    /// instead of scrolling the row (run 41830206452).
     func networkMode(_ name: String) -> XCUIElement {
         let mode = segmentedControls.buttons[name].firstMatch
         guard mode.appears(within: 10) else { return mode }
         let row = segmentedControls.containing(NSPredicate(format: "label == %@", name)).firstMatch
         for _ in 0..<8 where !mode.becomesHittable(within: 1) {
-            guard let grip = row.buttons.allElementsBoundByIndex.first(where: { $0.isHittable }) else { break }
-            let towardStart = mode.frame.midX < grip.frame.midX
+            let inView = row.buttons.allElementsBoundByIndex.filter { $0.isHittable && !$0.isSelected }
+            let towardStart = inView.first.map { mode.frame.midX < $0.frame.midX } ?? false
+            // The mode in view nearest the wanted one: the drag runs away
+            // from it, across the modes in view.
+            guard let grip = towardStart ? inView.first : inView.last else { break }
             let start = grip.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
             start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: towardStart ? 120 : -120, dy: 0)),
                         withVelocity: .fast, thenHoldForDuration: 0.1)
