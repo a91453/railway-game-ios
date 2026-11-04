@@ -230,10 +230,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         let settings = app.buttons["start.settings"]
         XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
         settings.tap()
-        // The picker's own identifier does not always reach the
-        // accessibility tree inside the settings list: find its page by name.
-        let ferries = app.segmentedControls.buttons["渡輪"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(ferries, clearOf: .slider), "Missing the collection's pages")
+        // Neither the picker's identifier nor its segment under
+        // `segmentedControls` reached the drag inside the settings list
+        // (runs 41849781799 and 41856636503). Bring the garage row up as
+        // the train garage tests do; the picker is the row above it, and
+        // its ferry segment is found by its label whatever its type.
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+        let ferries = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "渡輪")).firstMatch
+        XCTAssertTrue(ferries.becomesHittable(within: 10), "Missing the collection's ferry page")
         ferries.tap()
         let boat = app.descendants(matching: .any)["settings.ferry.shunfeng166"].firstMatch
         XCTAssertTrue(boat.appears(within: 10), "The ferry page")
