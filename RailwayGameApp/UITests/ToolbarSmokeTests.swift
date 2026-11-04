@@ -639,8 +639,13 @@ extension XCUIApplication {
     private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat, clearOf controls: XCUIElement.ElementType? = nil) {
         var (from, to) = (from, to)
         if let controls, let tree = try? snapshot() {
+            // A drag that starts on a segmented control never scrolls the
+            // list (the settings' collection picker held the ferry
+            // screenshot's 24 drags in place, run 41867792873), so it is
+            // kept clear of as well as the controls asked for.
             func controlFrames(in element: any XCUIElementSnapshot) -> [CGRect] {
-                (element.elementType == controls ? [element.frame] : []) + element.children.flatMap(controlFrames(in:))
+                ([controls, .segmentedControl].contains(element.elementType) ? [element.frame] : [])
+                    + element.children.flatMap(controlFrames(in:))
             }
             let frames = controlFrames(in: tree)
             let shifts: [CGFloat] = [0, 0.1, -0.1, 0.2, -0.2]
