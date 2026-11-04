@@ -623,7 +623,6 @@ private struct PlacementPlatformPicker: View {
                             Text(verbatim: choice.title(in: session.language))
                                 .font(.subheadline.weight(.semibold))
                                 .monospacedDigit()
-                                .lineLimit(1)
                                 .layoutPriority(1)
                             Spacer(minLength: 4)
                             if let note {
