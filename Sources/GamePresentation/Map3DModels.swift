@@ -105,6 +105,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
+        // Decision 575 續 (CABLEMAP): the cable car's cabins, tower, halls
+        // and rope, after them, so no model before them moves.
+        groups.append { Map3DCableCar.drawn }
         let made = groups
         let models = Map3DParallel.map(made.count) { made[$0]() }.flatMap { $0 }
         self.init(recipes: models, baked: baked)
@@ -198,7 +201,7 @@ public struct Map3DModelPack: Sendable {
             models += Map3DWenhuAPM256.Role.allCases.map { Map3DWenhuAPM256.model($0, far: far) }
         }
         // Decision 575: the Maokong Gondola's cabins, tower, rope and halls.
-        models += Map3DCableCar.models
+        models += Map3DCableCar.studyModels
         self.init(recipes: models, baked: baked)
     }
 

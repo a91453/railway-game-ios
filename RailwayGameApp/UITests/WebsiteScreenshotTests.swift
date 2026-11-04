@@ -171,6 +171,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 575 續 (CABLEMAP): the Maokong Gondola on the 3D map: its
+    /// cabins, towers and ropes close up over a span, from just over the
+    /// ground up at the cabins' floors (the crystal cabins' glass), and
+    /// from far, the near cabins whole and the rest far. For the
+    /// screenshot review of the pull request that drew them.
+    func testCablewayIn3D() {
+        for (name, view, span) in [("cableway-3d-near", "110,40,55", "1,500"), ("cableway-3d-below", "60,70,88", "1,450"),
+                                   ("cableway-3d-far", "1400,20,45", "1,500")] {
+            let app = launch(extra: ["-screenshot-scene", "maokong", "-screenshot-3d-view", view, "-screenshot-3d-cableway", span,
+                                     "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 3)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep(name, app)
+            app.terminate()
+        }
+    }
+
     /// Decision 565: a train of four 20 m cars standing at a platform four
     /// cars long on a real map, close up on the 2D map and on the 3D one:
     /// every car inside the platform, its nose at the platform's end. For
