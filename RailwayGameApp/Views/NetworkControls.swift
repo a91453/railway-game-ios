@@ -838,10 +838,11 @@ private struct NetworkModeScrollRow<Row: View>: View {
                     // clear stand-in over each is what the row scrolls to.
                     .background {
                         HStack(spacing: 0) {
-                            ForEach(modes, id: \.self) { mode in
-                                Color.clear
-                                    .frame(maxWidth: .infinity)
-                                    .id(mode)
+                            // It stands in a ViewThatFits: the row closure
+                            // is sendable and makes a view of its own
+                            // (CRASH101).
+                            ForEach(modes, id: \.self) { @Sendable mode in
+                                NetworkModeAnchor(mode: mode)
                             }
                         }
                         .accessibilityHidden(true)
@@ -862,6 +863,17 @@ private struct NetworkModeScrollRow<Row: View>: View {
             }
             .onChange(of: modes) { _, _ in proxy.scrollTo(selection, anchor: .center) }
         }
+    }
+}
+
+/// A clear stand-in over one mode's segment, for the row to scroll to.
+private struct NetworkModeAnchor: View {
+    let mode: NetworkToolMode
+
+    var body: some View {
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .id(mode)
     }
 }
 
