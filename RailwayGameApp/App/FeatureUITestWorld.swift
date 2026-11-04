@@ -11,7 +11,7 @@ enum FeatureUITestWorld {
     static func make(_ name: String) throws -> GameWorld {
         if name == "big-grid" || name == "big-grid-night" { return try bigGrid(night: name == "big-grid-night") }
         if name == "story" { return try story() }
-        guard ["separate-tracks", "missing-platform", "double-platform", "old-crossovers", "catalog", "sightseeing", "quiet-night"].contains(name) else {
+        guard ["separate-tracks", "missing-platform", "double-platform", "old-crossovers", "catalog", "sightseeing", "quiet-night", "idle-blocker"].contains(name) else {
             preconditionFailure("Unknown -ui-test-world: \(name)")
         }
         let bounds = try WorldBounds(width: 40_960, height: 20_480)
@@ -61,6 +61,22 @@ enum FeatureUITestWorld {
             try world.setTrainContinuation(train, along: [], stoppingAt: site.distance)
             try world.setTrainMovementRate(train, to: 512)
             try world.assignTrain(train, to: line)
+        }
+        if name == "idle-blocker" {
+            // Decision 584: a line with no trains yet, and 列車 4 bought
+            // and left where its trips start, with no line (the author's
+            // Gangho in 111.1), traffic control on.
+            try world.setTrafficControl(true)
+            let line = try world.createLine(named: "海岸線", stops: [west, east]).id
+            guard let start = world.lineJourney(line)?.start, case .onEdge(let traversal, let offset) = start else {
+                preconditionFailure("No journey for the UI test line")
+            }
+            let train = try world.purchaseTrain(named: "列車 4").id
+            try world.placeTrain(train, at: start)
+            if let edge = world.network.edge(traversal.edge), offset < edge.length {
+                try world.setTrainContinuation(train, along: [], stoppingAt: offset)
+            }
+            return world
         }
         if name == "catalog" || name == "sightseeing" {
             world.setTourism([

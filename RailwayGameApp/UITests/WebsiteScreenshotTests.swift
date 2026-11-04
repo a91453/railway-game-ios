@@ -1302,6 +1302,32 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-crossovers-laid", app)
     }
 
+    /// Decision 584: a line with no trains, and 列車 4 standing with no
+    /// line where its trips start: the line page offers it to the line,
+    /// and buying trains instead says it is in the way, with "Go" to it.
+    func testIdleTrainAtALinesFirstStop() {
+        let app = launch(extra: ["-ui-test-world", "idle-blocker"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let page = app.openLinePage()
+        let idle = app.buttons["line.staff.idleTrain"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(idle, in: page), "The idle train's row shows")
+        idle.waitUntilSettled()
+        settle()
+        keep("idle-train-row", app)
+        let start = app.buttons["line.staff.start"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page), "The buy button shows")
+        start.tap()
+        XCTAssertTrue(app.buttons["banner.goToTrain"].firstMatch.appears(within: 10), "The banner names the train in the way")
+        settle()
+        keep("idle-train-banner", app)
+    }
+
     /// Decision 507: the platform mode's layout menu on a double track,
     /// with a place picked, then the menu open (the single-track layouts
     /// greyed with why).
