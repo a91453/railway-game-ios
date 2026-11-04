@@ -826,7 +826,7 @@ private struct NetworkModeScrollRow<Row: View>: View {
     @State private var rowWidth = 0.0
     @State private var viewWidth = 0.0
 
-    private static let space = "network.modeRow"
+    private static var space: String { "network.modeRow" }
 
     var body: some View {
         let fade = ScrollEdgeFade(offset: offset, contentWidth: rowWidth, viewportWidth: viewWidth)
