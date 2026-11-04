@@ -4220,6 +4220,58 @@
     "light-set-taoyuanAirport2000Far-fourth": {
       "hash": "9a3934ff452f1949",
       "triangles": 504
+    },
+    "cablecar-cabin-crystal": {
+      "hash": "a12b8c89a4a7967e",
+      "triangles": 1012
+    },
+    "cablecar-cabin-crystal-far": {
+      "hash": "c2f6a7616a1f5efa",
+      "triangles": 460
+    },
+    "cablecar-cabin-standard": {
+      "hash": "dcfbfa604a4affc1",
+      "triangles": 1004
+    },
+    "cablecar-cabin-standard-far": {
+      "hash": "d637f8da7a7ed5e",
+      "triangles": 444
+    },
+    "cablecar-span": {
+      "hash": "3ff7a3d1e0a7d221",
+      "triangles": 576
+    },
+    "cablecar-station-corner": {
+      "hash": "8784ae6767062533",
+      "triangles": 956
+    },
+    "cablecar-station-corner-far": {
+      "hash": "c1b12be314870f71",
+      "triangles": 536
+    },
+    "cablecar-station-terminal": {
+      "hash": "fe2e5639b6b7b239",
+      "triangles": 576
+    },
+    "cablecar-station-terminal-far": {
+      "hash": "a47105902a6f8ff4",
+      "triangles": 272
+    },
+    "cablecar-station-through": {
+      "hash": "930b9755bb656bfb",
+      "triangles": 496
+    },
+    "cablecar-station-through-far": {
+      "hash": "1c8f7e0daf773646",
+      "triangles": 256
+    },
+    "cablecar-tower": {
+      "hash": "8922e5412f7e1ec4",
+      "triangles": 988
+    },
+    "cablecar-tower-far": {
+      "hash": "fa1f70997b35c80d",
+      "triangles": 92
     }
   }
 }
