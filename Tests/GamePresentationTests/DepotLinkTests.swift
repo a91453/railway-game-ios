@@ -102,6 +102,8 @@ final class DepotLinkTests: XCTestCase {
         XCTAssertEqual(session.message?.depotOffer, DepotLinkOffer(depot: depot, lines: [main, back]))
         XCTAssertEqual(session.message?.autoDismissDelay, .seconds(10))
         XCTAssertEqual(session.depotOfferTitle(line: back), "Make it Back's depot")
+        XCTAssertEqual(session.depotOfferChip(line: back), "Back")
+        XCTAssertEqual(session.message?.text.hasSuffix("Several lines end near Depot 1: tap one to make this its depot."), true, session.message?.text ?? "")
 
         session.linkDepot(depot, to: back)
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")

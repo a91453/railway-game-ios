@@ -91,8 +91,8 @@ extension GameSession {
         message = StatusMessage(
             kind: .success,
             text: done + gap + language.text(
-                "Several lines end near \(name): choose which keep their trains here.",
-                "「\(name)」附近有好幾條路線，選要把列車停在這裡的路線。"
+                "Several lines end near \(name): tap one to make this its depot.",
+                "「\(name)」附近有好幾條路線：點路線名稱，設為它的機廠。"
             ),
             depotOffer: DepotLinkOffer(depot: depot, lines: Array(lines.prefix(DepotLink.offered)))
         )
@@ -102,8 +102,14 @@ extension GameSession {
         language.text("Choose it as a line's depot on the line panel.", "到路線面板替路線選這個機廠。")
     }
 
-    /// The banner button's title for making `offer`'s depot line `id`'s:
-    /// "Make it Main's depot", 「設為 Main 的機廠」.
+    /// The banner button's title: the line's name, so several fit side by
+    /// side (the message above says what a tap does).
+    public func depotOfferChip(line id: LineID) -> String {
+        world.line(id: id)?.name ?? ""
+    }
+
+    /// What the banner button does, for VoiceOver: "Make it Main's
+    /// depot", 「設為「Main」的機廠」.
     public func depotOfferTitle(line id: LineID) -> String {
         let name = world.line(id: id)?.name ?? ""
         return language.text("Make it \(name)'s depot", "設為「\(name)」的機廠")

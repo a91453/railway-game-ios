@@ -1173,6 +1173,26 @@ struct StatusBanner: View {
         }
     }
 
+    /// Decision 573: a button for each line `offer` names.
+    private func depotChips(_ offer: DepotLinkOffer, reach: CGFloat) -> some View {
+        ForEach(offer.lines, id: \.self) { line in
+            Button {
+                session.linkDepot(offer.depot, to: line)
+            } label: {
+                Text(verbatim: session.depotOfferChip(line: line))
+                    .font(.caption.weight(.bold))
+                    .lineLimit(1)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Theme.chip, in: Capsule())
+            }
+            .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size, reach: reach))
+            .foregroundStyle(Theme.textPrimary)
+            .accessibilityLabel(Text(verbatim: session.depotOfferTitle(line: line)))
+            .accessibilityIdentifier("banner.depotLine")
+        }
+    }
+
     private func banner(for message: StatusMessage) -> some View {
         let isSuccess = message.kind == .success
         let kindName = isSuccess ? String(localized: "Done") : String(localized: "Problem")
@@ -1190,25 +1210,13 @@ struct StatusBanner: View {
                     .foregroundStyle(Theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 // Decision 573: a new depot near several lines with none
-                // offers each, one under another so long names fit, 18
-                // points apart so each is touched over 44.
+                // offers each by name, side by side, 8 points apart, or
+                // one under another, 18 apart, when they do not fit; so
+                // each is touched over 44 and no two touch areas meet.
                 if let offer = message.depotOffer {
-                    VStack(alignment: .leading, spacing: 18) {
-                        ForEach(offer.lines, id: \.self) { line in
-                            Button {
-                                session.linkDepot(offer.depot, to: line)
-                            } label: {
-                                Text(verbatim: session.depotOfferTitle(line: line))
-                                    .font(.caption.weight(.bold))
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(Theme.chip, in: Capsule())
-                            }
-                            .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size, reach: 9))
-                            .foregroundStyle(Theme.textPrimary)
-                            .accessibilityIdentifier("banner.depotLine")
-                        }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { depotChips(offer, reach: 4) }
+                        VStack(alignment: .leading, spacing: 18) { depotChips(offer, reach: 9) }
                     }
                 }
             }
