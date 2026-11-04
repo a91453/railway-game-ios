@@ -134,17 +134,18 @@ final class PlacementGuidanceTests: XCTestCase {
     /// line panel offers it to the line instead of buying another.
     func testALinesFirstStopHeldByAnIdleTrainIsNamed() throws {
         let (world, a, b) = try twoStations()
-        let session = GameSession(world: world)
-        session.purchaseTrain()
-        let idle = try XCTUnwrap(session.selectedTrainID)
-        session.selectStation(a)
-        session.placeSelectedTrain()
+        let setup = GameSession(world: world)
         for stop in [a, b] {
-            session.selectStation(stop)
-            session.addSelectedStationToLineDraft()
+            setup.selectStation(stop)
+            setup.addSelectedStationToLineDraft()
         }
-        session.createLineFromDraft()
-        let line = try XCTUnwrap(session.world.lines.first?.id)
+        setup.createLineFromDraft()
+        let line = try XCTUnwrap(setup.world.lines.first?.id)
+        // Train 1 bought and left where the line's trips start, with no line.
+        var standing = setup.world
+        let idle = try standing.purchaseTrain(named: "Train 1").id
+        try GameSession.placeAtStart(idle, of: try XCTUnwrap(standing.lineJourney(line)), in: &standing)
+        let session = GameSession(world: standing)
         session.selectLine(line)
         XCTAssertEqual(session.world.trainsStanding(at: a), [idle])
         XCTAssertEqual(session.world.lineStartBlocker(line), idle)
