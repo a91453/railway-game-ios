@@ -174,6 +174,7 @@ final class BusTourismReportTests: XCTestCase {
             let (by, fare): (String, Money) = switch access?.feeder {
             case .bus?: ("bus", BusRoute.fare)
             case .cableway?: ("cableway", Cableway.fare)
+            case .ferry?: ("ferry", FerryRoute.fare)
             case nil: ("-", .zero)
             }
             totals[by, default: 0] += 2 * tourists

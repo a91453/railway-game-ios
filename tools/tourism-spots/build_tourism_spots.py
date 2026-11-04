@@ -282,6 +282,10 @@ MORE_SPOTS = [
     ("t187", "苑裡藺草文化館", "Yuanli Rush Weaving Museum", "town", 200, ["藺草", "Rush"], (24.4140, 120.6510)),
     ("t188", "初鹿牧場", "Chulu Ranch", "mountain", 250, ["初鹿牧場", "Chulu"], (22.8020, 121.0740)),
     ("t189", "雲中街生活聚落", "Yunzhong Street Settlement", "town", 200, ["雲中街", "Yunzhong"], (23.7050, 120.5450)),
+    # Decision 589: the Bali end of the Tamsui–Bali ferry, the old street
+    # round the Bali ferry pier on the Left Bank; no station within 800 m
+    # (MRT Tamsui is across the river), so its visitors come by ferry.
+    ("t190", "八里渡船頭老街", "Bali Old Street", "town", 250, ["渡船頭街", "渡船頭公園"], (25.1590, 121.4350)),
 ]
 
 
