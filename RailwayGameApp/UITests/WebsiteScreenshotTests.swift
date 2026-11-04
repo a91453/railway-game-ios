@@ -314,6 +314,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep(name, app)
     }
 
+    /// Decision 583 (CABLEFOLLOW): a Maokong Gondola cabin followed on the
+    /// 3D map, from its window, from above and behind, and from beside it,
+    /// with the follow bar. For the screenshot review of the pull request
+    /// that let the camera follow a cabin. One shot a test.
+    func testFollowCabinWindow() { shootFollowCabin("window", "follow-cabin-window") }
+    func testFollowCabinAboveBehind() { shootFollowCabin("aboveBack", "follow-cabin-above") }
+    func testFollowCabinSide() { shootFollowCabin("side", "follow-cabin-side") }
+
+    private func shootFollowCabin(_ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", "maokong", "-screenshot-follow-cabin", "-map3DFollowView", view,
+                                 "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The cabin is followed")
+        settle(seconds: 12)
+        keep(name, app)
+    }
+
     /// Decision 555: the 3D map at its own tilt and leaned by two fingers
     /// to 60°, round Taipei Main Station (the Shin Kong Life Tower to the
     /// south-west) and round Taipei 101. For the screenshot review of the

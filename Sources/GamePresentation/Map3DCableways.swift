@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 // Decision 575 續 (CABLEMAP): the player's cable cars in the 3D map. Each
@@ -14,6 +15,18 @@ import GameCore
 // Laid once for a world's cable cars and a scene (``init(world:scene:)``),
 // then asked each frame (``instances(second:eye:target:reach:)``): no
 // state kept between frames.
+
+/// Decision 583 (CABLEFOLLOW): one cabin of a player's cable car: the
+/// same cabin from one moment to the next (``CablewayCabins/Cabin/number``).
+public struct CabinID: Hashable, Sendable {
+    public let cableway: CablewayID
+    public let number: Int
+
+    public init(cableway: CablewayID, number: Int) {
+        self.cableway = cableway
+        self.number = number
+    }
+}
 
 /// The player's cable cars laid in a 3D scene.
 public struct Map3DCableways: Sendable {
@@ -179,11 +192,26 @@ public struct Map3DCableways: Sendable {
     /// Everything seen from `eye` looking at `target` at game second
     /// `second` (since the game began), with `pack`'s models; `reach`
     /// brings the near models nearer (``Map3DModelReach/farModel``).
-    public func frame(second: Double, eye: Map3DPoint, target: Map3DPoint, pack: Map3DModelPack, reach: Float = 1) -> Frame {
+    ///
+    /// Decision 583 (CABLEFOLLOW): the cabin `following` is drawn whole
+    /// wherever it is, first, at its ``pose(of:second:)``; and with
+    /// `ahead` (the way the followed cabin runs, level), what counts as
+    /// behind is behind it on its way, not behind the camera, so the
+    /// cabins it runs towards come first even while the window view looks
+    /// out at the side.
+    public func frame(second: Double, eye: Map3DPoint, target: Map3DPoint, pack: Map3DModelPack, reach: Float = 1,
+                      following: CabinID? = nil, ahead: Map3DPoint? = nil) -> Frame {
         var frame = Frame()
         guard !lines.isEmpty, let models = Models(pack) else { return frame }
         let near = Self.nearReach * reach, far = Self.farReach
-        let look = Map3DPoint(target.x - eye.x, 0, target.z - eye.z).normalized
+        let look = ahead.flatMap { Map3DPoint($0.x, 0, $0.z).normalized } ?? Map3DPoint(target.x - eye.x, 0, target.z - eye.z).normalized
+        var followed: CabinID?
+        if let following, let pose = pose(of: following, second: second),
+           let pair = models.cabin[Self.isCrystal(following.number) ? .crystal : .standard] {
+            frame.instances.append(Self.placed(pair.near, at: pose.rail, along: pose.forward))
+            frame.nearCabins += 1
+            followed = following
+        }
         /// How far `p` counts as: its distance, three times it behind the
         /// camera.
         func weight(_ p: Map3DPoint) -> Float {
@@ -223,7 +251,8 @@ public struct Map3DCableways: Sendable {
             }
             let open = CablewayCabins.runs(line.id, in: world, at: GameTime(seconds: whole))
             var inHall: [Int: Int] = [:]
-            for cabin in CablewayCabins.cabins(of: line.cableway, atSecond: whole, open: open) {
+            for cabin in CablewayCabins.cabins(of: line.cableway, atSecond: whole, open: open)
+                where followed != CabinID(cableway: line.id, number: cabin.number) {
                 let point: Map3DPoint, along: Map3DPoint
                 switch cabin.place {
                 case .span(let leg, let permille, let outbound):
@@ -267,5 +296,106 @@ public struct Map3DCableways: Sendable {
             }
         }
         return frame
+    }
+
+    // MARK: - Following a cabin (decision 583)
+
+    static func isCrystal(_ number: Int) -> Bool { CablewayCabins.isCrystal(number) }
+
+    /// Decision 583: a cabin body's height over its floor, for the view
+    /// beside it (the cabin of #1791, about 2 m).
+    public static let cabinHeight: Float = 2
+    /// Decision 583: the window view's seat in a cabin: a seated eye
+    /// 1.15 m over the floor, 0.45 m in from the middle towards the left
+    /// side, so the walls, the floor and the hanger by it stand within the
+    /// near plane (1.2 m, ``Map3DCamera/depthRange``) and are not drawn
+    /// over the view. Looking a little down from the rope's height; from a
+    /// crystal cabin, down through its glass floor.
+    public static let cabinSeatHeight: Float = 1.15
+    public static let cabinSeatAcross: Float = 0.45
+    public static let cabinLookDown: Float = 10 * .pi / 180
+    public static let crystalLookDown: Float = 38 * .pi / 180
+
+    /// The cabins' rope point and level way on `line` at `glide`.
+    func place(_ glide: CablewayCabins.Glide, on line: Line) -> (point: Map3DPoint, along: Map3DPoint) {
+        func onRope(leg: Int, share: Float, outbound: Bool) -> (point: Map3DPoint, along: Map3DPoint) {
+            let span = line.spans[leg]
+            let point = Self.ropePoint(span, share: share) + span.left * ((outbound ? -1 : 1) * Map3DCableCar.ropeSpacing / 2)
+            return (point, outbound ? span.along : -span.along)
+        }
+        switch glide {
+        case .span(let leg, let share, let outbound):
+            return onRope(leg: leg, share: Float(share), outbound: outbound)
+        case .station(let stop, let share, let arrived, let leaves):
+            // Where it came in and where it goes on: the ends of the two
+            // ropes in this hall.
+            let a = arrived ? onRope(leg: stop - 1, share: 1, outbound: true) : onRope(leg: stop, share: 0, outbound: false)
+            let b = leaves ? onRope(leg: stop, share: 0, outbound: true) : onRope(leg: stop - 1, share: 1, outbound: false)
+            let s = Float(min(max(share, 0), 1))
+            guard arrived != leaves else {
+                // Through the hall from one rope's end to the next.
+                let along = (a.along * (1 - s) + b.along * s).normalized ?? b.along
+                return (a.point + (b.point - a.point) * s, along)
+            }
+            // Turning round at an end: half a circle round the wheel, from
+            // the one rope to the other.
+            let middle = (a.point + b.point) * 0.5
+            let out = a.point - middle
+            let angle = Float.pi * s
+            let radius = out.length
+            let point = middle + out * cosf(angle) + a.along * (radius * sinf(angle))
+            let along = (a.along * cosf(angle) - (out.normalized ?? .zero) * sinf(angle)).normalized ?? a.along
+            return (point, along)
+        }
+    }
+
+    /// Decision 583: what the follow camera needs of cabin `id` at game
+    /// second `second` (with its fraction): its grip on the rope
+    /// (``Map3DFollow/Pose/rail``), its floor's middle, the way it runs,
+    /// and its seat for the window view. `nil` when its cable car is gone
+    /// or stands still then (``CablewayCabins/runs(_:in:at:)``), or there
+    /// is no such cabin. Its place moves on without a jump, through the
+    /// stops too (``CablewayCabins/glide(of:on:atSecond:)``).
+    public func pose(of id: CabinID, second: Double) -> Map3DFollow.Pose? {
+        guard let line = lines.first(where: { $0.id == id.cableway }), id.number >= 0,
+              id.number < CablewayCabins.count(of: line.cableway),
+              CablewayCabins.runs(id.cableway, in: world, at: GameTime(seconds: Int64(second.rounded(.down)))) else { return nil }
+        let at = place(CablewayCabins.glide(of: id.number, on: line.cableway, atSecond: second), on: line)
+        let floor = at.point - Map3DPoint(0, Map3DCableCar.cabinDrop, 0)
+        let crystal = Self.isCrystal(id.number)
+        return Map3DFollow.Pose(forward: at.along, nose: floor + at.along * (Map3DCableCar.cabinLength / 2), rail: at.point, middle: floor,
+                                length: Map3DCableCar.cabinLength, ground: nil, inTunnel: false, eyeHeight: Self.cabinSeatHeight,
+                                bodyHeight: Self.cabinHeight,
+                                window: .init(across: Self.cabinSeatAcross, height: Self.cabinSeatHeight,
+                                              lookDown: crystal ? Self.crystalLookDown : Self.cabinLookDown))
+    }
+
+    /// Decision 583: the hall's foot of the stop cabin `id` comes to next
+    /// at `second`, for the 3D map to build round before it is there
+    /// (decision 578's stops ahead); `nil` as ``pose(of:second:)``.
+    public func stopAhead(of id: CabinID, second: Double) -> Map3DPoint? {
+        guard pose(of: id, second: second) != nil, let line = lines.first(where: { $0.id == id.cableway }) else { return nil }
+        let next = CablewayCabins.stops(of: CablewayCabins.glide(of: id.number, on: line.cableway, atSecond: second), on: line.cableway).next
+        return line.halls[next].foot
+    }
+
+    /// Decision 583: the running cabin drawn nearest the finger at (`x`,
+    /// `y`) in `camera`'s view, within `reach` points, at `second`, for a
+    /// tap on the 3D map; only those within ``nearReach`` of the eye,
+    /// drawn whole.
+    public func cabin(atX x: Float, y: Float, camera: Map3DCamera, second: Double, within reach: Float) -> CabinID? {
+        var best: (away: Float, id: CabinID)?
+        let eye = camera.eye
+        for line in lines {
+            guard CablewayCabins.runs(line.id, in: world, at: GameTime(seconds: Int64(second.rounded(.down)))) else { continue }
+            for number in 0..<CablewayCabins.count(of: line.cableway) {
+                let at = place(CablewayCabins.glide(of: number, on: line.cableway, atSecond: second), on: line)
+                let body = at.point - Map3DPoint(0, Map3DCableCar.cabinDrop - Self.cabinHeight / 2, 0)
+                guard (body - eye).length < Self.nearReach, let screen = camera.screenPoint(of: body) else { continue }
+                let away = ((screen.x - x) * (screen.x - x) + (screen.y - y) * (screen.y - y)).squareRoot()
+                if away <= reach, best.map({ away < $0.away }) ?? true { best = (away, CabinID(cableway: line.id, number: number)) }
+            }
+        }
+        return best?.id
     }
 }

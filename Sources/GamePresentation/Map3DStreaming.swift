@@ -319,11 +319,18 @@ public struct Map3DStreaming: Sendable {
         /// own plan wants is missing, the chunks round them
         /// (``Map3DStreaming/stationRadius``) are built, in full, and kept
         /// while they are `stops`; the target's order is not changed.
-        public mutating func step(target: Map3DPoint, at seconds: Double, stops: [Map3DPoint] = []) -> (drop: [Key], build: [Key]) {
+        ///
+        /// Decision 583 (CABLEFOLLOW): with `ahead` (scene x and z), the
+        /// way the followed vehicle runs, the strip ahead lies that way,
+        /// not the way the target moved: a cabin's rope ahead is built
+        /// while the window view looks out at the side, while it crawls
+        /// through a station and while the game stands still.
+        public mutating func step(target: Map3DPoint, at seconds: Double, stops: [Map3DPoint] = [],
+                                  ahead: SIMD2<Float>? = nil) -> (drop: [Key], build: [Key]) {
             motion.update(target: target, at: seconds)
             if let planned, seconds - planned < Map3DStreaming.interval { return ([], []) }
             planned = seconds
-            let velocity = motion.velocity
+            let velocity = Self.velocity(motion: motion.velocity, ahead: ahead)
             guard (velocity.x * velocity.x + velocity.y * velocity.y).squareRoot() <= Map3DStreaming.fastest else { return ([], []) }
             let plan = grid.plan(target: target, velocity: velocity, built: built, building: Set(building), keeping: stops)
             let drop = plan.drop.filter { !scene.contains($0) }
@@ -365,6 +372,15 @@ public struct Map3DStreaming: Sendable {
             building = block
             if !block.isEmpty { buildingAround = around }
             return (drop, block)
+        }
+
+        /// Decision 583: the velocity the plan reads: `ahead`'s way, as fast
+        /// as the target moves but at least twice ``Map3DStreaming/still``
+        /// so the strip ahead is there; the target's own motion without it.
+        public static func velocity(motion: SIMD2<Float>, ahead: SIMD2<Float>?) -> SIMD2<Float> {
+            guard let ahead, simd_length(ahead) > 0 else { return motion }
+            let way = ahead / simd_length(ahead)
+            return way * max(simd_length(motion), 2 * Map3DStreaming.still)
         }
 
         /// Decision 578: whether the chunks round scene point `point` (the

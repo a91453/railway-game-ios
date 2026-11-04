@@ -267,6 +267,16 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 583 (CABLEFOLLOW): a cabin of the scene's cable car
+            // followed, for the 3D map's cabin views.
+            if DebugLaunch.isSet("-screenshot-follow-cabin") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let cableway = session.world.cableways.first {
+                        session.followCabin(on: cableway.id)
+                    }
+                }
+            }
             // Decision 539: the first freight train on the track picked and
             // followed, for the 3D map's R200 and container wagons.
             if DebugLaunch.isSet("-screenshot-follow-freight") {
