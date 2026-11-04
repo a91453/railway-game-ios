@@ -112,7 +112,14 @@ final class Map3DFerriesTests: XCTestCase {
         // rows run with the scene's z.
         XCTAssertGreaterThan(line.piers[0].out.z, 0.99)
         XCTAssertLessThan(line.piers[1].out.z, -0.99)
+        let scene = Map3DScene(world: world)
         for pier in line.piers {
+            // At the drawn shore: water where it stands out from, land a
+            // step behind (decision 585 PR-3).
+            let edge = pier.origin - pier.out * Map3DFerry.pierOffshore
+            XCTAssertTrue(scene.isDrawnWater(x: edge.x, z: edge.z, world: world))
+            let behind = edge - pier.out * Map3DFerries.shoreStep
+            XCTAssertFalse(scene.isDrawnWater(x: behind.x, z: behind.z, world: world))
             let gap = (pier.berth - pier.origin).length
             XCTAssertEqual(gap, Map3DFerry.pontoonReach + Map3DFerries.berthGap + Map3DFerry.Boat.tamsui.length / 2, accuracy: 0.01)
         }

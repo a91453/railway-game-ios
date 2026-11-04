@@ -81,11 +81,16 @@ public struct Map3DFerries: Sendable {
             let piers = route.piers.indices.map { index -> Pier in
                 let cell = route.piers[index]
                 let other = route.piers[index == route.piers.count - 1 ? index - 1 : index + 1]
-                let side = Self.waterSide(of: cell, toward: other, in: world)
-                let half = Land.cellLength / 2
                 let middle = flat(cell.middle)
-                let edge = flat(PlanPoint(x: cell.middle.x + Int64(side.column) * half, y: cell.middle.y + Int64(side.row) * half))
-                let out = Map3DPoint(edge.x - middle.x, 0, edge.z - middle.z).normalized ?? Map3DPoint(1, 0, 0)
+                let edge: Map3DPoint, out: Map3DPoint
+                if let shore = Self.shore(from: middle, toward: flat(other.middle), in: scene, world: world) {
+                    (edge, out) = shore
+                } else {
+                    let side = Self.waterSide(of: cell, toward: other, in: world)
+                    let half = Land.cellLength / 2
+                    edge = flat(PlanPoint(x: cell.middle.x + Int64(side.column) * half, y: cell.middle.y + Int64(side.row) * half))
+                    out = Map3DPoint(edge.x - middle.x, 0, edge.z - middle.z).normalized ?? Map3DPoint(1, 0, 0)
+                }
                 var origin = edge + out * Map3DFerry.pierOffshore
                 origin.y = scene.drawnGround.height(x: origin.x, z: origin.z, world: world) + Self.waterLift
                 var berth = origin + out * (Map3DFerry.pontoonReach + Self.berthGap + boat.length / 2)
@@ -98,6 +103,49 @@ public struct Map3DFerries: Sendable {
 
     /// Whether there is anything to draw.
     public var isEmpty: Bool { lines.isEmpty }
+
+    /// How far from a pier's cell its shore is looked for, metres, and
+    /// in what steps.
+    static let shoreReach: Float = 320
+    static let shoreStep: Float = 2
+
+    /// The shore the pier at `middle` (its cell's middle) stands out
+    /// from, `toward` being the next pier's: of 16 ways round, those not
+    /// turned from `toward`, the one whose drawn water begins nearest (the
+    /// more toward `toward` on a tie), and where. The game's 64 m cells
+    /// and the base map's shores differ (a pier cell beside a water cell
+    /// can lie 100 m and more inland of the real harbour's quay), so the
+    /// water drawn decides. From a middle drawn as water, the shore behind
+    /// it on the way from `toward`. `nil` with no shore within
+    /// ``shoreReach``.
+    static func shore(from middle: Map3DPoint, toward: Map3DPoint, in scene: Map3DScene,
+                      world: GameWorld) -> (edge: Map3DPoint, out: Map3DPoint)? {
+        guard let ahead = Map3DPoint(toward.x - middle.x, 0, toward.z - middle.z).normalized else { return nil }
+        func water(_ way: Map3DPoint, _ s: Float) -> Bool {
+            let p = middle + way * s
+            return scene.isDrawnWater(x: p.x, z: p.z, world: world)
+        }
+        let steps = Int(shoreReach / shoreStep)
+        if water(ahead, 0) {
+            // Back to the land, the edge the last water before it.
+            for step in 1...steps where !water(ahead, -Float(step) * shoreStep) {
+                return (middle + ahead * (-Float(step - 1) * shoreStep), ahead)
+            }
+            return nil
+        }
+        var best: (step: Int, lean: Float, way: Map3DPoint)?
+        for turn in 0..<16 {
+            let angle = Float(turn) * .pi / 8
+            let way = Map3DPoint(cos(angle), 0, sin(angle))
+            let lean = way.x * ahead.x + way.z * ahead.z
+            guard lean > -1e-4 else { continue }
+            let limit = best?.step ?? steps
+            guard let step = (1...limit).first(where: { water(way, Float($0) * shoreStep) }) else { continue }
+            if best.map({ step < $0.step || (step == $0.step && lean > $0.lean) }) ?? true { best = (step, lean, way) }
+        }
+        guard let best else { return nil }
+        return (middle + best.way * (Float(best.step) * shoreStep), best.way)
+    }
 
     /// The side (row and column steps) of `cell` whose neighbour is water
     /// and lies most the way to `other`'s; the way to `other` itself when

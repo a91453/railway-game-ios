@@ -128,8 +128,37 @@ public struct Map3DScene: Sendable {
     /// Decision 517 續 (BUILD3D-3): the ground as drawn, for taps
     /// (``Map3DPick/ground(of:world:)``).
     public let drawnGround: Map3DGroundGrid
+    /// Decision 585 PR-3: on a real-world map, the base map's water areas
+    /// by the 64 m cell (``Builder/waterCells``), for the ferry piers to
+    /// stand at its shore; `nil` on a map without, whose water is the
+    /// ground's own cells.
+    let baseWater: [ChunkKey: [[[Map3DBaseMap.Point]]]]?
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
+
+    /// Decision 585 PR-3: whether scene point (`x`, `z`) is drawn as
+    /// water: the base map's areas on a real-world map (where the scene
+    /// has them), else the ground's cell.
+    func isDrawnWater(x: Float, z: Float, world: GameWorld) -> Bool {
+        let cellLength = Double(Land.cellLength)
+        let column = Int(((originX + Double(x) * Builder.metre) / cellLength).rounded(.down))
+        let row = Int(((originY + Double(z) * Builder.metre) / cellLength).rounded(.down))
+        guard let baseWater else { return world.isWater(row: row, column: column) }
+        guard let areas = baseWater[ChunkKey(column: column, row: row)] else { return false }
+        let px = Double(x), pz = Double(z)
+        return areas.contains { rings in
+            var inside = false
+            for ring in rings {
+                var j = ring.count - 1
+                for i in ring.indices {
+                    let a = ring[i], b = ring[j]
+                    if (a.z > pz) != (b.z > pz), px < (b.x - a.x) * (pz - a.z) / (b.z - a.z) + a.x { inside.toggle() }
+                    j = i
+                }
+            }
+            return inside
+        }
+    }
 
     // MARK: - Space
 
@@ -324,6 +353,7 @@ public struct Map3DScene: Sendable {
         builder.addGround(water: real == nil)
         drawnGround = builder.groundGrid()
         let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
+        baseWater = real == nil ? nil : builder.waterCells
         // Decision 438: the player's own roads, which the base map has not.
         if real != nil { builder.addOwnRoads() }
         let cleared = builder.addTrack(snapshot)
