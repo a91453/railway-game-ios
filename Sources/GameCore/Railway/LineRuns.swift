@@ -528,18 +528,23 @@ extension GameWorld {
     }
 
     /// Decision 556, continued (TYMCLIST7): under traffic control, the
-    /// soonest start after now of a run of `line` due now that a train of
+    /// soonest start, now or after, of a run of `line` due now that a train of
     /// the line without a service stands at the first stop of, or `nil`.
     /// Such a train, not sent out while its route is held, joins a
     /// deadlock only once the run starts (decision 570), so an idle step
     /// wakes then, as a step every minute would find it.
+    ///
+    /// TYMCLIST8: a run starting now counts too. An idle step is asked
+    /// with the clock at the start of the step it would skip, so a run
+    /// starting then was skipped over, and the deadlock it brought found a
+    /// minute later than a step every minute found it.
     func heldRunStart(of line: ServiceLine) -> GameTime? {
         guard isTrafficControlEnabled else { return nil }
         var soonest: Int64?
         for (index, day) in line.dueRuns(at: clock.now) {
             let run = line.runs[index]
             let start = run.start(onDay: day)
-            guard start > clock.now.seconds, start < soonest ?? .max else { continue }
+            guard start >= clock.now.seconds, start < soonest ?? .max else { continue }
             let first = line.stops[run.from]
             if line.trains.contains(where: { id in
                 guard let train = train(id: id) else { return false }

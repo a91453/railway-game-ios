@@ -141,7 +141,11 @@ final class TaoyuanAirportLineTests: XCTestCase {
     /// prints those trains every minute with who holds their way;
     /// `TYMC_DIAG_SUMMARY=1` prints every 15 minutes how many trains the
     /// deadlock search finds and which have stood 20 minutes or more;
-    /// `TYMC_DIAG_OUT=<file>` writes it all there. A train the search
+    /// `TYMC_DIAG_OUT=<file>` writes it all there;
+    /// `TYMC_DIAG_BERTHS=<station>,<station>` prints who stands on each of
+    /// their platforms and the deadlock's trains every minute, and with
+    /// `TYMC_DIAG_PROBE=1` each berth of each one's call, open or which
+    /// train keeps it (TYMCLIST8). A train the search
     /// finds for a minute is not one that stands: under the realistic
     /// rules it flags one now and then that is on its way again the next.
     func testWhereADeadlockForms() throws {
@@ -236,6 +240,24 @@ final class TaoyuanAirportLineTests: XCTestCase {
                         let counter = world.counterflowRoute(of: request.candidate, to: station, avoiding: blocked)
                         let alternative = world.alternativeRoute(of: request.candidate, to: station, avoiding: blocked, memo: &memo)
                         out += "  ROUTES own \(world.routeLength(of: request.candidate)) free \(free.map { "\($0.distance)->\($0.traversals.last.map { "\($0.edge)" } ?? "-")" } ?? "nil") counter \(counter.map { "\($0.distance)" } ?? "nil") alt \(alternative.map { "\($0.distance)" } ?? "nil") placement \(String(describing: request.candidate.position))\n"
+                        if environment["TYMC_DIAG_PROBE"] != nil, let position = request.candidate.position {
+                            // TYMCLIST8: each berth of the call, with no
+                            // train in the way, and else who keeps it.
+                            let holders = world.trackHolders(memo: &memo)
+                            for berth in world.berths(of: station, length: request.candidate.length) {
+                                let open = world.path(from: position, toStation: station, length: request.candidate.length, avoiding: Set<TrackResource>(), only: berth)
+                                var by: [String] = []
+                                if open != nil, world.path(from: position, toStation: station, length: request.candidate.length, avoiding: blocked, only: berth) == nil {
+                                    for other in world.trains where other.id != id {
+                                        let one = world.blockedTrack(except: id, among: [other.id], holders: holders)
+                                        if world.path(from: position, toStation: station, length: request.candidate.length, avoiding: one, only: berth) == nil {
+                                            by.append(other.name.replacingOccurrences(of: "桃園機場捷運列車 ", with: ""))
+                                        }
+                                    }
+                                }
+                                out += "    BERTH \(berth.traversal.edge) \(berth.traversal.direction) open \(open.map { "\($0.distance)" } ?? "nil") kept by \(by)\n"
+                            }
+                        }
                     }
                 }
             }
