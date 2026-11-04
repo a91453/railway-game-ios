@@ -16,7 +16,8 @@ import XCTest
 /// deadlock and the most trains that stood at an end station at once. The
 /// numbers are in the decision. HEALTH-110 added every line on sale and
 /// the other demos (`danhai-blue`, `xinbeitou`, `xiaobitan`, `pingxi`,
-/// `jiji`, `neiwan`, `shenao`, `liujia`, `shalun`, `demo`, `realworld`),
+/// `jiji`, `neiwan`, `shenao`, `liujia`, `shalun`, `demo`, `realworld`;
+/// HEALTH-112 `maokong`),
 /// the second day's late trips, and where and when the most trains stood
 /// deadlocked; a line without runs or depots reports only those.
 @MainActor
@@ -115,6 +116,25 @@ final class DepotReturnReportTests: XCTestCase {
         ))
     }
 
+    /// HEALTH-112: the Maokong Gondola demo (decision 574) as the
+    /// screenshot scene makes it, a new game of Muzha with the gondola
+    /// laid; it has no trains, so besides the usual report each day's
+    /// riders and whether it stood still.
+    func testTheMaokongDemo() throws {
+        try wanted("maokong")
+        let place = try XCTUnwrap(ScreenshotScene.maokong.place)
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude))
+        var world = GameWorld.newGame(anchor: anchor)
+        let stops = try XCTUnwrap(RealCableway.maokong.stops(in: world))
+        _ = try world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+        let played = try report("maokong", world)
+        for cableway in played.cableways {
+            let days = cableway.days.map { "day \($0.day) \($0.riders) riders\($0.closed ? " closed" : "")" }
+            FileHandle.standardError.write(Data("DEPOT_RETURN maokong cableway \(cableway.id.rawValue): \(days.joined(separator: ", "))\n".utf8))
+        }
+        XCTAssertEqual(played.cableways.count, 1)
+    }
+
     func testTheTRADemo() throws {
         try wanted("tra")
         try report("tra", TRADemoTests.opened.get())
@@ -140,7 +160,8 @@ final class DepotReturnReportTests: XCTestCase {
         return session.world
     }
 
-    private func report(_ name: String, _ opened: GameWorld) throws {
+    @discardableResult
+    private func report(_ name: String, _ opened: GameWorld) throws -> GameWorld {
         var world = opened
         // The demos open under traffic control; with DEPOT_RETURN_SIMPLE
         // they play without, as the bought lines then do.
@@ -264,5 +285,6 @@ final class DepotReturnReportTests: XCTestCase {
             XCTAssertEqual(late, 0, "\(label): trips more than five minutes late")
             XCTAssertEqual(deadlocked, 0, "\(label): trains deadlocked, first \(deadlockedWhere)")
         }
+        return world
     }
 }

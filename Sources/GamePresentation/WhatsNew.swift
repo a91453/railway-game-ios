@@ -30,6 +30,82 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 112.1.
+        Entry(
+            id: "2026-11-04-112-1",
+            items: [
+                Line(
+                    english: "New stations are named after nearby schools, hospitals, parks and shopping areas. Under the name box, tap a suggestion such as a bus stop, a junction or a road to use it.",
+                    chinese: "新車站會用附近的學校、醫院、公園、商圈取名；取名欄下還有公車站牌、路口、路名可以一點就換。"
+                ),
+                Line(
+                    english: "Drawing a new line on the map is less cluttered: the buttons and reminders that were in the way fold away, and the line summary shows once.",
+                    chinese: "在地圖上畫新路線時畫面清爽了：礙事的按鈕和提醒會收起，路線摘要只出現一次。"
+                ),
+                Line(
+                    english: "A depot you build joins the line it connects to; with several lines nearby, buttons let you choose.",
+                    chinese: "鋪好的機廠會自動接上相連的路線；附近有好幾條線時，會給按鈕讓你選。"
+                ),
+                Line(
+                    english: "Station pages can add a crossover between the two tracks of an old double-track station, and Make double track adds crossovers beside the stations. A third train now fits.",
+                    chinese: "舊的複線車站，車站面板可以加渡線；「升級為複線」也會在車站旁加渡線，第三列車放得進去。"
+                ),
+                Line(
+                    english: "Bought metro and light rail lines, such as the Wenhu Line, now run on the right, on the track of their own direction.",
+                    chinese: "買下文湖線等捷運、輕軌後，列車改走自己方向那條軌道，靠右行駛。"
+                ),
+                Line(
+                    english: "Taiwan's named festivals are on the real maps: Dajia Mazu, the Pingxi lanterns, New Year's Eve at Taipei 101 and the Mid-Autumn Festival bring extra riders to nearby stations. Mazu, the lanterns and Mid-Autumn follow the lunar calendar.",
+                    chinese: "實景地圖有了台灣節慶：大甲媽祖、平溪天燈、101 跨年、中秋讓附近車站多出乘客；媽祖、天燈、中秋依農曆。"
+                ),
+                Line(
+                    english: "On the 3D map you can follow a bus: tap a bus, or use Follow a Bus on a line card or a stop. Buses are drawn even with street scenes off.",
+                    chinese: "3D 地圖可以跟隨公車：點公車，或用路線卡、站牌的「跟隨公車」；街景關著也看得到公車。"
+                ),
+                Line(
+                    english: "Following a train has a window view: look out of a side window from the middle of the train.",
+                    chinese: "跟隨列車多了「車窗」視角：坐在車廂中段，從側邊車窗往外看。"
+                ),
+                Line(
+                    english: "Cable cars and their stations are on the 3D map, with cabins riding the ropes.",
+                    chinese: "3D 地圖有纜車、塔柱和站房，吊廂沿著纜線行駛。"
+                ),
+                Line(
+                    english: "The 3D map has the Changhua Roundhouse beside its turntable.",
+                    chinese: "3D 地圖的彰化扇形車庫上線了，連著轉車台。"
+                ),
+                Line(
+                    english: "The Network tool has a cable car mode: lay a cable, set its stops and read each cable car's card. The real Taipei map has a Maokong Gondola demo.",
+                    chinese: "「路網」工具多了纜車模式：拉纜線、設站，每條纜車有自己的卡片；真實台北有貓空纜車示範。"
+                ),
+                Line(
+                    english: "The Report a Problem page says where to send your report.",
+                    chinese: "「回報問題」頁寫清楚了要寄到哪裡。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Trains stop inside the platform instead of poking half a car past its end. If a train is longer than a platform, you are told which station and how to fix it.",
+                    chinese: "列車停站時整列停在月台內，不再伸出半節；列車比月台長時會告訴你是哪一站。"
+                ),
+                Line(
+                    english: "The \"train stuck\" warning no longer flashes on the Xinbeitou and Liujia lines when nothing is stuck.",
+                    chinese: "新北投、六家線不再無端閃出「列車卡住」。"
+                ),
+                Line(
+                    english: "Trains stuck facing each other at the end of a double track now get through, instead of waiting all day.",
+                    chinese: "複線終點兩列車互相卡住時會自己解開，不再整天不動。"
+                ),
+                Line(
+                    english: "With Reduce Motion on, panels fold and scroll without animation, and VoiceOver can pick a train in the fleet list.",
+                    chinese: "開「減少動態效果」時，面板收合與捲動不再有動畫；VoiceOver 可以選到車隊裡的列車。"
+                ),
+                Line(
+                    english: "On iOS 26, floating panels over the map follow the screen's rounded corners.",
+                    chinese: "iOS 26 上，浮在地圖上的面板角落更貼合螢幕圓角。"
+                ),
+            ]
+        ),
         // 111.1, with what 108.1, 109.1 and 110.1 brought: none had an entry
         // here when it was released.
         Entry(

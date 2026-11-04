@@ -328,9 +328,11 @@ extension GameSession {
             }
         case .buildDoubleTrackChain(let main, let parallel, let platforms, let crossovers):
             outcome.track = try buildDoubleChain(main: main, parallel: parallel, platforms: platforms, in: &world).last
-            for crossover in crossovers {
-                _ = try crossover.build(in: &world, heights: heights)
-            }
+            // Decision 572, continued: its stations' crossovers were planned
+            // with the trains taken off (``missingStationCrossovers(of:in:)``),
+            // so a train standing at a platform goes back to its line's
+            // start, as the station panel's button does (REVIEW-L9).
+            outcome.left = try layLiftingTrains(crossovers, in: &world)
         case .autoService(let plan):
             return try apply(plan, to: &world)
         case .acquireRealLine(let acquisition):
@@ -794,6 +796,7 @@ extension PlayerCommand {
             case .buildStationRoad: language.text("build the station road", "鋪站前路")
             case .createBusRoute, .createCityBusRoute: language.text("open this bus route", "開這條公車路線")
             case .buildRoad: language.text("build this road", "鋪這段路")
+            case .createCableway: language.text("build this cable car", "蓋這條纜車")
             case .reviseBusRoute: language.text("change this bus route", "改這條公車路線")
             case .setBusCount: language.text("add buses", "加公車")
             case .investInSouvenirShop: language.text("invest in the souvenir shop", "投資紀念品店")

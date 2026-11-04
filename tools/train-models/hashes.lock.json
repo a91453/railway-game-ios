@@ -4261,6 +4261,10 @@
       "hash": "b0ab0d3f31a423a6",
       "triangles": 132
     },
+    "cablecar-rope": {
+      "hash": "9e3f07105cfd9d1",
+      "triangles": 12
+    },
     "cablecar-span": {
       "hash": "3ff7a3d1e0a7d221",
       "triangles": 576

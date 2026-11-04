@@ -163,6 +163,25 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (112.1)，2026-11-04
+
+從 `main` `bef26ca`（#1796 的合併）建置。TestFlight `testflight.yml` run 41817355386（run 112），作者 10:54 UTC 自己按。What to Test 與 App 內「這版新增」是 0.5.0 (112.1)（#1796）。
+
+**這個 commit 的檢查**（作者先發、遊戲規劃後報，HANDOFF §1.2）：
+- 完整 `ci.yml` run 41817277687（workflow_dispatch，bef26ca）：綠。
+- full lane run 41817301541（`ios-build.yml` 手動，bef26ca）：**紅**，13:00 UTC 前跑完。build、iPad 兩個 job 綠；lessons、second 紅 3 支：
+  - `LessonUITests.testDepotModeStartsInTheSeventhLesson`（第 403 行「Covered "Depot" Button」）與 `MapInteractionTests.testTheDepotModeOffersItsSidings`（第 1429 行，「Depot」點不到）：**真的**。#1788 加了第六個模式「纜車」，iPhone 上模式列放不下改成橫向捲動，「機廠」那段在畫面外，測試點不到，玩家剛打開工具時也看不到它。交 MODEROW（#1809，模式列：選中的模式捲進畫面、兩端淡出）一起修，進 113.1。
+  - `HUDAlignmentUITests.testTheStationMastersBubbleKeepsTheLines`（`ToolbarSmokeTests.swift:460`，找不到站長泡泡）：疑似偶發（這支以前也不穩，見 88.1），由 MODEROW 用 `only_testing` 和上面兩支一起重跑確認。
+- 作者要做的：App Store Connect 回答出口合規，測試者才拿得到這版。
+
+**111.1 之後進來的（玩家感受得到的）**：#1760 畫線版面減雜（決策 568）、#1764 列車停站不伸出月台（565）、#1766 車站用地標與路口命名（569）、#1769 死結偵測誤報（570）、#1771 機場捷運閉塞插隊卡死（562，機場捷運未上架，不寫進說明）、#1775 複線終點死結（571 續）、#1767 買下的捷運靠右（564，存檔 82）、#1778 舊複線站補渡線（572）、#1776 新機廠自動接線、回報頁寫收件處（573）、#1779／#1790 畫面小修、#1792 彰化扇形車庫（581）。#1780 台灣節慶（576，存檔 84）、#1784 跟隨公車（580）、纜車（#1781、#1788、#1782、#1798，路網工具纜車模式、貓空示範與 3D 吊廂）、#1783／#1802 車窗視角（578）、#1797 跟隨公車時街景關著也畫公車。不寫：純工具與文件。
+
+**這版請測試者看**：新站候選名；畫線版面；舊複線站「加渡線」後第三列車；買文湖線後走哪條軌；跟隨公車。
+
+**回報**：
+- 111.1 的三則（回報問題沒有收件處、渡線加不進第三列、機廠沒接上路線）已在 #1776、#1778 處理；玩家的回覆見下面 111.1。
+- 作者的步驟：App Store Connect → TestFlight →「測試資訊」填「意見回饋電子郵件」，回報頁說的信箱才會出現在 TestFlight App（#1776）。
+
 ### 0.5.0 (111.1)，2026-11-04
 
 從 `main` `273dab2`（#1750 的合併）建置。TestFlight `testflight.yml` run 41743760420（run 111），作者 00:02 UTC 自己按，等 macOS 空位約 20 分（取消了 #1767 的 Website screenshots 與 iOS App Build 讓位），00:44 成功。What to Test 與 App 內「這版新增」是 0.5.0 (111.1)（#1750）。

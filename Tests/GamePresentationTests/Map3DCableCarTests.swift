@@ -8,14 +8,20 @@ final class Map3DCableCarTests: XCTestCase {
         stride(from: 0, to: model.vertices.count, by: 3).map { Array(model.vertices[$0..<$0 + 3]) }
     }
 
-    func testTheStudiesAreNineteenNamedModelsInThePack() {
+    /// Decision 575 續 (CABLEMAP): the 13 the 3D map draws (with the
+    /// rope's metre) in the game's pack, the other 7 in the studies.
+    func testTheModelsAreTwentyNamedModelsInThePacks() {
         let models = Map3DCableCar.models
-        XCTAssertEqual(models.count, 19)
-        XCTAssertEqual(Set(models.map(\.name)).count, 19)
+        XCTAssertEqual(models.count, 20)
+        XCTAssertEqual(Map3DCableCar.drawn.count, 13)
+        XCTAssertEqual(Set(models.map(\.name)).count, 20)
+        let drawn = Set(Map3DCableCar.drawn.map(\.name))
         for model in models {
             XCTAssertTrue(model.name.hasPrefix("cablecar-"), model.name)
-            XCTAssertNotNil(Map3DModelPack.studies.index(of: model.name), model.name)
-            XCTAssertNil(Map3DModelPack.standard.index(of: model.name), "studies only: \(model.name)")
+            let pack = drawn.contains(model.name) ? Map3DModelPack.standard : Map3DModelPack.studies
+            let other = drawn.contains(model.name) ? Map3DModelPack.studies : Map3DModelPack.standard
+            XCTAssertNotNil(pack.index(of: model.name), model.name)
+            XCTAssertNil(other.index(of: model.name), "one pack only: \(model.name)")
             XCTAssertEqual(model.vertices.count % 3, 0)
             XCTAssertTrue(model.vertices.allSatisfy { v in
                 [v.x, v.y, v.z, v.nx, v.ny, v.nz].allSatisfy { $0.isFinite } && abs(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz - 1) < 0.01

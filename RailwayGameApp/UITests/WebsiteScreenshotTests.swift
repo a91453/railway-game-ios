@@ -138,6 +138,77 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 574: the Maokong Gondola on a real map of Muzha, its rope
+    /// and stations on the 2D map, then the network tool's cable car mode
+    /// with the gondola's card, in Chinese and in English (six modes in
+    /// the row). For the screenshot review of the pull request that added
+    /// the mode.
+    func testCablewayMode() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "maokong"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            if !english { keep("cableway-map", app) }
+            let build = app.buttons["dock.build"]
+            if build.appears(within: 10) { build.tap() }
+            let network = app.buttons["tool.network"]
+            XCTAssertTrue(network.appears(within: 10))
+            network.waitUntilSettled()
+            if !network.isSelected { network.tap() }
+            // The row slides sideways when the modes do not fit.
+            let mode = app.networkMode(english ? "Cable car" : "纜車")
+            XCTAssertTrue(mode.exists, "The mode is in the row, not under More")
+            XCTAssertTrue(mode.becomesHittable(within: 10))
+            mode.tap()
+            let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
+            XCTAssertTrue(card.appears(within: 10), "The gondola's card")
+            // The card is below the mode's options, under the panel's edge:
+            // the options (in view) drag it up, rows and all.
+            let angle = app.descendants(matching: .any)["network.cablewayAngle"].firstMatch
+            if angle.appears(within: 5) { angle.swipeUp() }
+            settle()
+            keep(english ? "cableway-mode-english" : "cableway-mode", app)
+            // Decision 574's next step: the panel closed and opened again
+            // shows the chosen mode in view, the row not slid by hand.
+            let done = app.buttons["tool.select"]
+            if done.becomesHittable(within: 10) {
+                done.tap()
+                if build.appears(within: 10) { build.tap() }
+                XCTAssertTrue(network.appears(within: 10))
+                network.waitUntilSettled()
+                if !network.isSelected { network.tap() }
+                XCTAssertTrue(app.networkModeElement(english ? "Cable car" : "纜車").appears(within: 10))
+                settle()
+                keep(english ? "cableway-mode-reopened-english" : "cableway-mode-reopened", app)
+            }
+            app.terminate()
+        }
+    }
+
+    /// Decision 575 續 (CABLEMAP): the Maokong Gondola on the 3D map: its
+    /// cabins, towers and ropes close up over a span, from just over the
+    /// ground up at the cabins' floors (the crystal cabins' glass), and
+    /// from far, the near cabins whole and the rest far. For the
+    /// screenshot review of the pull request that drew them.
+    func testCablewayIn3D() {
+        for (name, view, span) in [("cableway-3d-near", "110,40,55", "1,500"), ("cableway-3d-below", "60,70,88", "1,450"),
+                                   ("cableway-3d-far", "1400,20,45", "1,500")] {
+            let app = launch(extra: ["-screenshot-scene", "maokong", "-screenshot-3d-view", view, "-screenshot-3d-cableway", span,
+                                     "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 3)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep(name, app)
+            app.terminate()
+        }
+    }
+
     /// Decision 578: the 3D follow views: the window of a car, the platform
     /// of the next stop (a short gap), and the station view greyed out
     /// while the next stop is a high-speed gap away.
@@ -160,6 +231,15 @@ final class WebsiteScreenshotTests: XCTestCase {
             let window = app.buttons["map3D.follow.window"]
             XCTAssertTrue(window.becomesHittable(within: 10))
             window.tap()
+            // Decision 578 (FOLLOWVIEW-2): one run of three shot the view
+            // from behind, 後方 still chosen after this tap (run
+            // 41800375321); the shot is taken only of the window view.
+            if !window.isSelectedWithin(5) {
+                XCTContext.runActivity(named: "車窗 not chosen after the tap; tapping it again") { _ in }
+                XCTAssertTrue(window.becomesHittable(within: 10))
+                window.tap()
+            }
+            XCTAssertTrue(window.isSelectedWithin(5), "The window view is chosen")
             settle(seconds: 8)
             keep("follow-window", app)
             let station = app.buttons["map3D.follow.station"]
@@ -251,6 +331,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
         XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
         XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The bus is followed")
+        settle(seconds: 12)
+        keep(name, app)
+    }
+
+    /// Decision 583 (CABLEFOLLOW): a Maokong Gondola cabin followed on the
+    /// 3D map, from its window, from above and behind, and from beside it,
+    /// with the follow bar. For the screenshot review of the pull request
+    /// that let the camera follow a cabin. One shot a test.
+    func testFollowCabinWindow() { shootFollowCabin("window", "follow-cabin-window") }
+    func testFollowCabinAboveBehind() { shootFollowCabin("aboveBack", "follow-cabin-above") }
+    func testFollowCabinSide() { shootFollowCabin("side", "follow-cabin-side") }
+
+    private func shootFollowCabin(_ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", "maokong", "-screenshot-follow-cabin", "-map3DFollowView", view,
+                                 "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The cabin is followed")
         settle(seconds: 12)
         keep(name, app)
     }
@@ -1082,7 +1186,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped")
         builder.tap()
         settle()
-        let platform = app.segmentedControls.buttons["車站"].firstMatch
+        let platform = app.networkMode("車站")
         if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }
@@ -1198,6 +1302,32 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("station-crossovers-laid", app)
     }
 
+    /// Decision 584: a line with no trains, and 列車 4 standing with no
+    /// line where its trips start: the line page offers it to the line,
+    /// and buying trains instead says it is in the way, with "Go" to it.
+    func testIdleTrainAtALinesFirstStop() {
+        let app = launch(extra: ["-ui-test-world", "idle-blocker"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let page = app.openLinePage()
+        let idle = app.buttons["line.staff.idleTrain"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(idle, in: page), "The idle train's row shows")
+        idle.waitUntilSettled()
+        settle()
+        keep("idle-train-row", app)
+        let start = app.buttons["line.staff.start"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(start, in: page), "The buy button shows")
+        start.tap()
+        XCTAssertTrue(app.buttons["banner.goToTrain"].firstMatch.appears(within: 10), "The banner names the train in the way")
+        settle()
+        keep("idle-train-banner", app)
+    }
+
     /// Decision 507: the platform mode's layout menu on a double track,
     /// with a place picked, then the menu open (the single-track layouts
     /// greyed with why).
@@ -1210,7 +1340,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let build = app.buttons["dock.build"]
         XCTAssertTrue(build.appears(within: 10))
         build.tap()
-        let platformMode = app.segmentedControls.buttons["車站"].firstMatch
+        let platformMode = app.networkMode("車站")
         if !platformMode.appears(within: 10) {
             let controls = app.buttons["controls.toggle"]
             if controls.appears(within: 5), controls.label == "展開控制項" { controls.tap() }
@@ -1248,7 +1378,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         if !card.appears(within: 60), folded.exists { folded.tap() }
         XCTAssertTrue(card.appears(within: 10), "The tutorial's card shows")
-        let mode = app.segmentedControls.buttons["車站"].firstMatch
+        let mode = app.networkMode("車站")
         if !mode.appears(within: 10), app.buttons["dock.build"].exists { app.buttons["dock.build"].tap() }
         XCTAssertTrue(mode.appears(within: 10), "The Station mode shows")
         settle(seconds: 3)
@@ -2581,5 +2711,18 @@ final class WebsiteScreenshotTests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < deadline
         XCTFail("Button cannot be tapped: \(identifier)")
+    }
+}
+
+private extension XCUIElement {
+    /// Whether the element is selected within `timeout` seconds, at once
+    /// when it already is.
+    func isSelectedWithin(_ timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !(exists && isSelected) {
+            guard Date() < deadline else { return false }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        return true
     }
 }

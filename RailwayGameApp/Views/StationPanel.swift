@@ -991,10 +991,29 @@ struct StationPanel: View {
     private func busSection(_ station: Station) -> some View {
         let language = session.language
         let cards = session.world.busRouteCards(feeding: station.id, in: language)
-        if !cards.isEmpty || session.allowsBusTool {
+        // Decision 574: the cable cars that meet this station.
+        let cableCards = session.world.cableways.filter { $0.transfer?.station == station.id }.compactMap { session.cablewayCard($0.id) }
+        if !cards.isEmpty || session.allowsBusTool || !cableCards.isEmpty {
             Section {
                 ForEach(cards) { card in
                     busRouteRow(card, language: language)
+                }
+                ForEach(cableCards) { card in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label {
+                            Text(verbatim: card.title)
+                        } icon: {
+                            Image(systemName: "cablecar")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        ForEach(card.rows.dropFirst(2), id: \.self) { row in
+                            Text(verbatim: row)
+                                .font(.footnote.monospacedDigit())
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("station.cableway")
                 }
                 if session.allowsBusTool {
                     Button {

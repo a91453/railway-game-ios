@@ -485,6 +485,36 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
+    /// The network tool's mode `name` as it shows: a segment where the six
+    /// modes fit, else a chip in the row that scrolls sideways
+    /// (`network.modeRow`, decision 574). Not slid into view: for asking
+    /// whether a mode is there.
+    func networkModeElement(_ name: String) -> XCUIElement {
+        let chip = scrollViews["network.modeRow"].firstMatch.buttons[name].firstMatch
+        return chip.exists ? chip : segmentedControls.buttons[name].firstMatch
+    }
+
+    /// The network tool's mode `name`, slid into view to be touched. Where
+    /// the modes do not fit, the row scrolls sideways and the modes past
+    /// its edge cannot be touched (the 112.1 full lane, run 41817301541:
+    /// "Depot" in two tests); so, as a player would, it swipes the row
+    /// toward the one wanted until that one can be touched.
+    func networkMode(_ name: String) -> XCUIElement {
+        let row = scrollViews["network.modeRow"].firstMatch
+        let chip = row.buttons[name].firstMatch
+        let segment = segmentedControls.buttons[name].firstMatch
+        let deadline = Date().addingTimeInterval(10)
+        while Date() < deadline, !chip.exists, !segment.exists {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        guard chip.exists else { return segment }
+        for attempt in 0..<8 where !chip.becomesHittable(within: 1) {
+            print("networkMode \(name) attempt \(attempt): chip \(chip.frame) row \(row.frame)")
+            if chip.frame.midX < row.frame.midX { row.swipeRight() } else { row.swipeLeft() }
+        }
+        return chip
+    }
+
     /// Chooses the speed `name` (a row's label, as `GameSpeed.accessibilityName`
     /// spells it: "6000 times real time, fast forward") in the status bar's
     /// speed menu, and fails with what it saw when it cannot.

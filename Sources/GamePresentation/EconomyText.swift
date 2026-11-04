@@ -222,6 +222,7 @@ extension LedgerEntry.Kind {
         case .dailyDayPass: language.text("Day passes (daily)", "一日週遊券（日結）")
         case .dailyBuses: language.text("Buses (daily)", "公車（日結）")
         case .dailyCableways: language.text("Cableways (daily)", "纜車（日結）")
+        case .dailyFerries: language.text("Ferries (daily)", "渡輪（日結）")
         }
     }
 }
@@ -259,6 +260,8 @@ extension LedgerItem {
         case .busRunning: language.text("Bus running costs", "公車營運成本")
         case .cablewayFares: language.text("Cableway fares", "纜車票收")
         case .cablewayRunning: language.text("Cableway running costs", "纜車營運成本")
+        case .ferryFares: language.text("Ferry fares", "渡輪票收")
+        case .ferryRunning: language.text("Ferry running costs", "渡輪營運成本")
         }
     }
 }

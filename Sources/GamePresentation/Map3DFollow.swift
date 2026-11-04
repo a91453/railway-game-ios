@@ -120,6 +120,8 @@ public struct Map3DFollow: Hashable, Sendable {
     public enum Subject: Hashable, Sendable {
         case train(TrainID)
         case bus(BusID)
+        /// Decision 583 (CABLEFOLLOW): a cabin of a player's cable car.
+        case cabin(CabinID)
     }
 
     /// Where a followed vehicle is and which way it faces, in the scene's
@@ -148,11 +150,32 @@ public struct Map3DFollow: Hashable, Sendable {
         /// How tall the body stands over the way, which the side view
         /// looks at the middle of.
         public var bodyHeight: Float
+        /// Decision 583: the window view's eye, when it is not a train's
+        /// (``Map3DFollow/windowEyeAcross``, ``Map3DFollow/windowEyeHeight``
+        /// over ``middle``, ``Map3DFollow/windowLookDown``): a cabin's seat.
+        public var window: Window?
+
+        /// Decision 583: where the window view sits in a vehicle.
+        public struct Window: Equatable, Sendable {
+            /// Out from the middle line, to the left.
+            public var across: Float
+            /// Over ``Pose/middle``.
+            public var height: Float
+            /// Under level, in radians.
+            public var lookDown: Float
+
+            public init(across: Float, height: Float, lookDown: Float) {
+                self.across = across
+                self.height = height
+                self.lookDown = lookDown
+            }
+        }
 
         public init(forward: Map3DPoint, nose: Map3DPoint, rail: Map3DPoint, middle: Map3DPoint? = nil, length: Float = 0,
                     ground: Float? = nil, inTunnel: Bool = false, eyeHeight: Float? = nil,
-                    bodyHeight: Float = Map3DTrains.carHeight) {
+                    bodyHeight: Float = Map3DTrains.carHeight, window: Window? = nil) {
             self.bodyHeight = bodyHeight
+            self.window = window
             self.forward = forward
             self.nose = nose
             self.rail = rail
@@ -173,6 +196,10 @@ public struct Map3DFollow: Hashable, Sendable {
     public var bus: BusID? {
         if case .bus(let id) = subject { id } else { nil }
     }
+    /// Decision 583: the cabin followed; `nil` for a train or a bus.
+    public var cabin: CabinID? {
+        if case .cabin(let id) = subject { id } else { nil }
+    }
     public var view: View
     /// Decision 403 (續): where the station view stands; `nil` follows
     /// from behind instead.
@@ -192,6 +219,37 @@ public struct Map3DFollow: Hashable, Sendable {
         subject = .bus(bus)
         self.view = view
     }
+
+    /// Decision 583 (CABLEFOLLOW): following a cabin of a cable car, from
+    /// one of ``cabinViews`` (another view is taken as the nearest of
+    /// them, ``cabinView(_:)``). A cabin is two metres long against a
+    /// train's hundred, so the camera starts at ``cabinScale`` of the
+    /// train's distance.
+    public init(cabin: CabinID, view: View = .aboveBack) {
+        subject = .cabin(cabin)
+        self.view = Self.cabinView(view)
+        scale = Self.cabinScale
+    }
+
+    /// Decision 583: the views of a cabin: from its window, from above
+    /// behind it, from beside it. A cabin has no driver, and the station
+    /// view's platform is a train's.
+    public static let cabinViews: [View] = [.window, .aboveBack, .side]
+
+    /// The cabin view nearest `view`: the window for the cab, from above
+    /// behind for behind and the station.
+    public static func cabinView(_ view: View) -> View {
+        switch view {
+        case .window, .cab: .window
+        case .side: .side
+        case .back, .aboveBack, .station: .aboveBack
+        }
+    }
+
+    /// Decision 583: how close the camera starts to a cabin, of the
+    /// train's distance: 0.5, so a cabin some 2 m tall shows as large as
+    /// the rope round it lets.
+    public static let cabinScale: Float = 0.5
 
     /// The nearest and farthest a pinch takes ``scale``.
     public static let scales: ClosedRange<Float> = 0.4...4
@@ -389,15 +447,18 @@ public struct Map3DFollow: Hashable, Sendable {
         if view == .window {
             // Fixed to the car like the cab: turned with the train at once.
             // Out of the left side of the train, where trains keep left.
+            // Decision 583: a cabin's seat is its own (``Pose/window``).
             let forward = head.forward
             let left = Map3DPoint(forward.z, 0, -forward.x)
+            let seat = head.window ?? Pose.Window(across: Self.windowEyeAcross, height: Self.windowEyeHeight, lookDown: Self.windowLookDown)
+            let tilt = .pi / 2 - seat.lookDown
             next.heading = Self.heading(of: left)
-            next.pitch = view.tilt
+            next.pitch = tilt
             next.lens = Self.cabLens
             next.distance = Map3DCamera.nearest
-            var eye = (head.middle ?? head.rail) + left * Self.windowEyeAcross + Map3DPoint(0, Self.windowEyeHeight, 0)
-            if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + Self.windowEyeHeight) }
-            next.target = eye + next.forward * (next.distance * sinf(view.tilt)) - Map3DPoint(0, next.distance * cosf(view.tilt), 0)
+            var eye = (head.middle ?? head.rail) + left * seat.across + Map3DPoint(0, seat.height, 0)
+            if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + seat.height) }
+            next.target = eye + next.forward * (next.distance * sinf(tilt)) - Map3DPoint(0, next.distance * cosf(tilt), 0)
             return next
         }
         if view == .cab {

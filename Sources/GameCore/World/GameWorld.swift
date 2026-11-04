@@ -218,6 +218,14 @@ public struct GameWorld: Equatable, Sendable {
     public internal(set) var cableways: [Cableway] = []
     /// The next cableway's number.
     public internal(set) var nextCablewayID = 1
+    /// The company's ferry routes (decision 585), by ascending number; none
+    /// in a new world and in saves from before them (save version 85). Set
+    /// by ``createFerryRoute(piers:legMetres:service:boats:)``,
+    /// ``setFerryBoats(_:to:)``, ``setFerryRuns(_:to:)`` and
+    /// ``removeFerryRoute(_:)`` only.
+    public internal(set) var ferryRoutes: [FerryRoute] = []
+    /// The next ferry route's number.
+    public internal(set) var nextFerryRouteID = 1
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
@@ -1290,6 +1298,12 @@ public struct GameWorld: Equatable, Sendable {
             cableways[index].transfer = nil
             cableways[index].feederTrips = 0
             cableways[index].feederMinutes = 0
+        }
+        // Decision 585: and so does a ferry route.
+        for index in ferryRoutes.indices where ferryRoutes[index].transfer?.station == id {
+            ferryRoutes[index].transfer = nil
+            ferryRoutes[index].feederTrips = 0
+            ferryRoutes[index].feederMinutes = 0
         }
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
@@ -5069,7 +5083,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, cableways, nextCablewayID
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -5243,6 +5257,8 @@ extension GameWorld: Codable {
         nextBusRouteID = try container.decodeIfPresent(Int.self, forKey: .nextBusRouteID) ?? 1
         cableways = try container.decodeIfPresent([Cableway].self, forKey: .cableways) ?? []
         nextCablewayID = try container.decodeIfPresent(Int.self, forKey: .nextCablewayID) ?? 1
+        ferryRoutes = try container.decodeIfPresent([FerryRoute].self, forKey: .ferryRoutes) ?? []
+        nextFerryRouteID = try container.decodeIfPresent(Int.self, forKey: .nextFerryRouteID) ?? 1
         // Decision 528: a purchase whose line or bus route was removed
         // before it went with it is dropped, so the real line is on sale
         // again; nothing is paid back or booked again. One naming a number
@@ -5422,6 +5438,12 @@ extension GameWorld: Codable {
         }
         if nextCablewayID != 1 {
             try container.encode(nextCablewayID, forKey: .nextCablewayID)
+        }
+        if !ferryRoutes.isEmpty {
+            try container.encode(ferryRoutes, forKey: .ferryRoutes)
+        }
+        if nextFerryRouteID != 1 {
+            try container.encode(nextFerryRouteID, forKey: .nextFerryRouteID)
         }
         if cityFootprints {
             try container.encode(true, forKey: .cityFootprints)
@@ -5696,9 +5718,11 @@ extension GameWorld: Codable {
             ?? townGrowthProblem() {
             return problem
         }
-        return land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
-            ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds)
-            ?? busRoutesProblem() ?? cablewaysProblem()
+        if let problem = land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
+            ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds) {
+            return problem
+        }
+        return busRoutesProblem() ?? cablewaysProblem() ?? ferryRoutesProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

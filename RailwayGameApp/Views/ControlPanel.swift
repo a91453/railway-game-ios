@@ -1043,12 +1043,15 @@ private struct ActionButton: View {
             if session.buildingMode == .sell { return session.salePreview != nil }
             return session.buildingPreview.map { $0.problem == nil } ?? false
         }
+        // Decision 584: the train tool acts on a picked station only.
+        if session.tool == .train { return session.trainActionIsReady }
         guard session.tool == .network else { return session.selectedPoint != nil }
         switch session.networkMode {
         case .build: return session.networkPreview != nil
         case .platform, .remove: return session.networkEdgePoint != nil
         case .passingLoop: return session.networkLoopPreview.map { $0.problem == nil } ?? false
         case .depot: return session.networkDepotPreview.map { $0.problem == nil } ?? false
+        case .cableway: return session.cablewayPreview.map { $0.problem == nil } ?? false
         }
     }
 
@@ -1079,6 +1082,7 @@ private struct ActionButton: View {
         case .remove: session.removeNetworkEdge()
         case .passingLoop: session.addPassingLoop()
         case .depot: session.addDepotYard()
+        case .cableway: session.buildCableway()
         }
     }
 
@@ -1130,6 +1134,10 @@ private struct ActionButton: View {
                 // Decision 214: the sidings and the depot, for what.
                 guard let cost = session.networkDepotPreview?.cost else { return session.language.text("Lay Depot Sidings", "鋪機廠停車線") }
                 return session.language.text("Lay Depot Sidings · \(cost.moneyText)", "鋪機廠停車線 · \(cost.moneyText)")
+            case .cableway:
+                // Decision 574: the stations, the rope and its cabins, for what.
+                guard let price = session.cablewayPreview?.price else { return session.language.text("Build Cable Car", "蓋纜車") }
+                return session.language.text("Build Cable Car · \(price.moneyText)", "蓋纜車 · \(price.moneyText)")
             }
         case .bus:
             // Decision 428: none until the game has roads.
@@ -1147,6 +1155,8 @@ private struct ActionButton: View {
         case .train:
             // Placing and sending both act on the selected train.
             guard let train = session.selectedTrain else { return nil }
+            // Decision 584: with no station picked, the button asks for one.
+            guard session.trainActionIsReady else { return session.trainActionTitle }
             return train.position == nil ? String(localized: "Place \(train.name) Here") : String(localized: "Send \(train.name) Here")
         }
     }
@@ -1284,6 +1294,23 @@ struct StatusBanner: View {
                 .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 26, height: 26)))
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityLabel("Dismiss message")
+            }
+            // Decision 584: the train in the way, to go and see it, in the
+            // row under the message (as decision 573's depot chips): beside
+            // it the long message was squeezed to a narrow column.
+            if let id = message.goToTrain, session.world.train(id: id)?.position != nil {
+                Button {
+                    session.goToTrain(id)
+                } label: {
+                    Text(verbatim: session.goToTrainTitle(id))
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Theme.chip, in: Capsule())
+                }
+                .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
+                .foregroundStyle(Theme.textPrimary)
+                .accessibilityIdentifier("banner.goToTrain")
             }
             if let offer = message.depotOffer {
                 HStack(spacing: 8) { depotChips(offer, reach: 4) }

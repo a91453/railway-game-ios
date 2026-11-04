@@ -407,7 +407,7 @@ final class TrainControlTests: XCTestCase {
             session.tapMap(at: Self.emptyPoint, reach: 0)
             session.placeSelectedTrain()
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Select a station to place Train 1 at."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tap a station on the map first, then place Train 1 there."))
 
             let other = GameSession(world: placed)
             other.selectStation(Self.mid)

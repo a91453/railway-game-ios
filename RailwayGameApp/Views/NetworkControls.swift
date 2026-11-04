@@ -24,16 +24,24 @@ struct NetworkControls: View {
     /// The map's population and travel layer (``MapView``'s preference of
     /// the same key), which the platform mode can turn to population.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    /// Decision 574: the cable car the player asked to take down, for
+    /// the confirmation.
+    @State private var removingCableway: CablewayID?
+    /// Decision 583 (CABLEFOLLOW): the card's follow button opens the 3D map.
+    @Environment(GameScreenState.self) private var screen: GameScreenState?
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
-                // Decision 266: in a lesson, only the modes it has unlocked.
-                ForEach(NetworkToolMode.allCases.filter { session.allows($0) }, id: \.self) { mode in
-                    Text(mode.title(in: session.language)).tag(mode)
-                }
+            // Decision 574: six modes do not fit a phone's panel in
+            // English; then the row keeps its words whole and slides
+            // sideways instead of cutting them short. Its next step: the
+            // chosen mode is scrolled into view, and an end with more past
+            // it fades out.
+            ViewThatFits(in: .horizontal) {
+                modePicker
+                NetworkModeScrollRow(session: session, modes: modes)
             }
-            .pickerStyle(.segmented)
             .tutorialTarget(.networkModes)
             switch session.networkMode {
             case .build:
@@ -46,6 +54,8 @@ struct NetworkControls: View {
                 passingLoopOptions
             case .depot:
                 depotOptions
+            case .cableway:
+                cablewayOptions
             }
         }
     }
@@ -351,6 +361,134 @@ struct NetworkControls: View {
                 .font(.footnote)
                 .accessibilityIdentifier("network.depotSide")
             }
+        }
+    }
+
+    /// The modes the row shows. Decision 266: in a lesson, only the modes
+    /// it has unlocked.
+    private var modes: [NetworkToolMode] {
+        let session = session
+        return NetworkToolMode.allCases.filter { session.allows($0) }
+    }
+
+    /// The network tool's modes, one segment each. It stands in a
+    /// ViewThatFits, so its row closure is sendable and makes a view of
+    /// its own (CRASH101).
+    private var modePicker: some View {
+        let session = session
+        let modes = self.modes
+        let language = session.language
+        return Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
+            ForEach(modes, id: \.self) { @Sendable mode in
+                NetworkModeSegment(mode: mode, language: language)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    // MARK: - Cable car
+
+    /// Decision 574: the cable car mode. Taps put down the stops in turn;
+    /// here whether the next is an angle station, the last taken back, the
+    /// real cable car on this map laid as it is, and the company's cable
+    /// cars, each on a card that can take it down.
+    private var cablewayOptions: some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 8) {
+            ChipFlow(spacing: 8) {
+                Toggle(isOn: $session.cablewayPlacesAngle) {
+                    Text(verbatim: language.text("Angle station", "轉角站"))
+                }
+                .toggleStyle(.button)
+                .accessibilityIdentifier("network.cablewayAngle")
+                Button {
+                    session.undoCablewayStop()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Last Stop", "上一站"))
+                    } icon: {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                }
+                .disabled(session.cablewayDraft.isEmpty)
+                .accessibilityIdentifier("network.cablewayUndo")
+                if let real = session.realCablewayOffer {
+                    Button {
+                        session.traceRealCableway(real)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Lay the \(real.englishName)", "照真實路線拉\(real.name)"))
+                        } icon: {
+                            Image(systemName: "cablecar")
+                        }
+                    }
+                    .accessibilityIdentifier("network.cablewayReal")
+                }
+            }
+            .buttonStyle(.bordered)
+            .font(.footnote)
+            Text(verbatim: language.text(
+                "Cabins come with the line: no trains to buy and no timetable. It stands still on Mondays and in thunderstorms.",
+                "吊廂跟著纜線一起來，不用買車、不用排班。週一保養與雷雨時停駛。"
+            ))
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            let cards = session.world.cableways.compactMap { session.cablewayCard($0.id) }
+            ForEach(cards) { card in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(verbatim: card.title)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        // Decision 583 (CABLEFOLLOW): ride a cabin on the 3D map.
+                        if let screen, session.tutorial == nil, map3DQuality.shows3D {
+                            Button {
+                                session.followCabin(on: card.id)
+                                screen.map3DHandoff = nil
+                                screen.showsMap3D = true
+                            } label: {
+                                Text(verbatim: language.text("Follow", "跟隨"))
+                            }
+                            .buttonStyle(.borderless)
+                            .font(.footnote)
+                            .accessibilityHint(Text(verbatim: language.text("Rides along in a cabin on the 3D map.", "在 3D 地圖上跟著一台吊廂。")))
+                            .accessibilityIdentifier("network.cablewayFollow")
+                            .disabled(!session.hasCabinToFollow(on: card.id))
+                        }
+                        Button(role: .destructive) {
+                            removingCableway = card.id
+                        } label: {
+                            Text(verbatim: language.text("Take Down", "拆除"))
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.footnote)
+                        .accessibilityIdentifier("network.cablewayRemove")
+                    }
+                    ForEach(Array(card.rows.enumerated()), id: \.element) { index, row in
+                        Text(verbatim: row)
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(index == 2 && !card.runs ? Theme.warning : Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("network.cablewayCard")
+            }
+        }
+        .confirmationDialog(
+            Text(verbatim: language.text("Take this cable car down?", "要拆掉這條纜車嗎？")),
+            isPresented: Binding(get: { removingCableway != nil }, set: { if !$0 { removingCableway = nil } }),
+            titleVisibility: .visible,
+            presenting: removingCableway
+        ) { id in
+            Button(role: .destructive) {
+                session.removeCableway(id)
+            } label: {
+                Text(verbatim: language.text("Take Down", "拆除"))
+            }
+        } message: { _ in
+            Text(verbatim: language.text("Its stations, rope and cabins go. Nothing is refunded.", "車站、纜線與吊廂都會拆掉。不退還費用。"))
         }
     }
 
@@ -686,5 +824,113 @@ private struct TracedSaleRow: View {
             .accessibilityIdentifier("network.forSale.buy")
         }
         .padding(.top, 2)
+    }
+}
+
+/// The mode row when it does not fit (decision 574's next step): a row of
+/// chips that scrolls sideways, keeps the chosen mode in view (each time
+/// it shows, as when the panel opens again, and whenever the choice
+/// changes, by a tap, a lesson or another way into a mode), and fades out
+/// at an end with more past it (``ScrollEdgeFade``). Chips, not the
+/// segmented control: a scroll view does not take a drag that starts on a
+/// control, and the segments filled the row, so it slid only now and then
+/// (the owner on 112.1; runs 41830206452 and 41833421660). With Reduce
+/// Motion the row jumps to the mode instead of sliding; the fades follow
+/// the scroll position and are never animated.
+private struct NetworkModeScrollRow: View {
+    let session: GameSession
+    let modes: [NetworkToolMode]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// How far the row is scrolled, how wide it is and how wide the room
+    /// it shows through: transient view state, for the fades.
+    @State private var offset = 0.0
+    @State private var rowWidth = 0.0
+    @State private var viewWidth = 0.0
+
+    var body: some View {
+        let session = session
+        let selection = session.networkMode
+        let fade = ScrollEdgeFade(offset: offset, contentWidth: rowWidth, viewportWidth: viewWidth)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    // It stands in a ViewThatFits: the row closure is
+                    // sendable and makes a view of its own (CRASH101).
+                    ForEach(modes, id: \.self) { @Sendable mode in
+                        NetworkModeChip(session: session, mode: mode)
+                    }
+                }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("network.modeRow")) } action: { frame in
+                    offset = -Double(frame.minX)
+                    rowWidth = Double(frame.width)
+                }
+            }
+            // Where the scroll position is read. The name is written out at
+            // both ends: the geometry closure is sendable, so it reads no
+            // property of this main-actor view.
+            .coordinateSpace(.named("network.modeRow"))
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = Double($0) }
+            .accessibilityIdentifier("network.modeRow")
+            .mask { EdgeFadeMask(fade: fade) }
+            .onAppear { proxy.scrollTo(selection, anchor: .center) }
+            .onChange(of: selection) { _, mode in
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) {
+                    proxy.scrollTo(mode, anchor: .center)
+                }
+            }
+            .onChange(of: modes) { _, _ in proxy.scrollTo(selection, anchor: .center) }
+        }
+    }
+}
+
+/// One mode in the scrolling row: its name, filled when chosen, 44 points
+/// high to touch.
+private struct NetworkModeChip: View {
+    let session: GameSession
+    let mode: NetworkToolMode
+
+    var body: some View {
+        let chosen = session.networkMode == mode
+        Button {
+            session.setNetworkMode(mode)
+        } label: {
+            Text(mode.title(in: session.language))
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 12)
+                .frame(minHeight: 36)
+        }
+        // The style's 4 points above and below make it 44 high.
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: chosen))
+        .accessibilityAddTraits(chosen ? .isSelected : [])
+        .id(mode)
+    }
+}
+
+/// The mask that fades a sideways row out at its ends, as strongly as
+/// ``ScrollEdgeFade`` says: the row itself turns see-through toward the
+/// edge, so no colour is laid over the panel.
+private struct EdgeFadeMask: View {
+    let fade: ScrollEdgeFade
+
+    var body: some View {
+        HStack(spacing: 0) {
+            LinearGradient(colors: [.black.opacity(1 - fade.leading), .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: ScrollEdgeFade.width)
+            Rectangle()
+            LinearGradient(colors: [.black, .black.opacity(1 - fade.trailing)], startPoint: .leading, endPoint: .trailing)
+                .frame(width: ScrollEdgeFade.width)
+        }
+    }
+}
+
+/// One segment of the network tool's mode row, tagged with its mode.
+private struct NetworkModeSegment: View {
+    let mode: NetworkToolMode
+    let language: DisplayLanguage
+
+    var body: some View {
+        Text(mode.title(in: language)).tag(mode)
     }
 }

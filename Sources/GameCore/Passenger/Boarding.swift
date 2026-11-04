@@ -205,6 +205,7 @@ extension GameWorld {
         countAlighting(alighted, at: entry.station)
         countBusRiders(arrived, at: entry.station)
         countCablewayRiders(arrived, at: entry.station)
+        countFerryRiders(arrived, at: entry.station)
         countTransfer(changing, at: entry.station)
         let boarded = isLast || !isOpen ? 0 : boardPassengers(train, at: stop)
         return max(alighted, boarded)
@@ -363,6 +364,8 @@ extension GameWorld {
         countBusRiders(paying.values.reduce(0, +), at: passengers[record].station)
         // Decision 574: and the cableways' share.
         countCablewayRiders(paying.values.reduce(0, +), at: passengers[record].station)
+        // Decision 585: and the ferries'.
+        countFerryRiders(paying.values.reduce(0, +), at: passengers[record].station)
         passengers[record].board(taken)
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
             riders[slot] = boarding

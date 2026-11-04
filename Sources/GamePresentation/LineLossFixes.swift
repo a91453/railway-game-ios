@@ -231,7 +231,7 @@ extension GameSession {
         case .takeOffTrain(let train, _):
             unassignTrain(train)
         case let .runMoreTrains(headway, targets, buying, cost, type, cars):
-            perform(.addLineTrains(id, count: buying, type: type, cars: cars, targets: targets, language: language)) { outcome, _, _ in
+            let outcome = perform(.addLineTrains(id, count: buying, type: type, cars: cars, targets: targets, language: language)) { outcome, _, world in
                 let running = buying - outcome.held - outcome.unfit
                 var text = buying == 0
                     ? language.text("\(name) now runs a train every \(headway) min.", "「\(name)」現在每 \(headway) 分一班。")
@@ -239,7 +239,14 @@ extension GameSession {
                         "Bought \(buying) \(buying == 1 ? "train" : "trains") for \(cost.moneyText): \(name) now runs a train every \(headway) min.",
                         "花 \(cost.moneyText) 買了 \(buying) 列車：「\(name)」現在每 \(headway) 分一班。"
                     )
-                if running < buying {
+                if running < buying, outcome.held > 0, let blocked = world.lineStartBlockedText(id, in: language) {
+                    // Decision 584: whose train holds the first stop.
+                    let left = buying - running
+                    text += language.text(
+                        " \(left) of them \(left == 1 ? "stays" : "stay") off the track, not assigned: ",
+                        "其中 \(left) 列沒有放上軌道，也沒有配屬："
+                    ) + blocked.text
+                } else if running < buying {
                     let left = buying - running
                     text += language.text(
                         " \(left) of them \(left == 1 ? "stays" : "stay") off the track, not assigned: there is no room at the line's first stop.",
@@ -248,6 +255,7 @@ extension GameSession {
                 }
                 return text
             }
+            pointToLineStartBlocker(id, after: outcome)
         case let .runLessOften(headway, targets):
             perform(.setLineTargets(id, targets, pattern: nil)) { _, _, _ in
                 language.text("\(name) now runs a train only every \(headway) min.", "「\(name)」現在每 \(headway) 分才一班。")

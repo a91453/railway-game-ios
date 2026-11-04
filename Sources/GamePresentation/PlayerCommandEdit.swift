@@ -170,6 +170,13 @@ extension PlayerCommand {
         case buildRoad(along: [BusStop])
         case removeRoads([BusStop])
 
+        // MARK: Cable cars (decision 574)
+        /// A cable car through its stops in order; `legMetres`, one fewer
+        /// than the stops, are a real one's spans, or none for the
+        /// straight lines between the cells' middles.
+        case createCableway(stops: [CablewayStop], legMetres: [Int64]? = nil)
+        case removeCableway(CablewayID)
+
         /// A bus stop's land cell; a road's too (decision 438).
         public struct BusStop: Hashable, Sendable, Codable {
             public let row: Int
@@ -356,6 +363,8 @@ extension GameSession {
             try world.createBusRoute(to: nil, stops: stops.map(\.cell), legMetres: legMetres, service: service, buses: buses)
         case .buildRoad(let cells): try world.buildRoad(along: cells.map(\.cell))
         case .removeRoads(let cells): try world.removeRoads(cells.map(\.cell))
+        case .createCableway(let stops, let legMetres): try world.createCableway(stops: stops, legMetres: legMetres)
+        case .removeCableway(let id): try world.removeCableway(id)
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
         case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
 
