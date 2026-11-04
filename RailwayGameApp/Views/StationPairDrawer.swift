@@ -16,6 +16,7 @@ struct StationPairDrawer: View {
     let to: StationID
     @State private var comparison: StationPairComparison?
     @State private var isFolded: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var barsHeight: CGFloat = 0
     private let startsFolded: Bool
     private let maxHeight: CGFloat?
@@ -116,7 +117,7 @@ struct StationPairDrawer: View {
                 .minimumScaleFactor(0.7)
             swatch(Theme.primary)
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) { isFolded.toggle() }
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { isFolded.toggle() }
             } label: {
                 Image(systemName: isFolded ? "chevron.up" : "chevron.down")
                     .font(.caption.weight(.bold))

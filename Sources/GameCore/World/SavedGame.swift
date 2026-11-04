@@ -422,6 +422,11 @@
 ///     `"way"` round (`"inner"` or `"outer"`). A build that reads only an
 ///     earlier version would read such a run as one from end to end and
 ///     refuse the whole line, so it says the save is newer than it instead.
+/// 82. Lines keeping right (decision 564): a line can have
+///     `"keepsRight": true`, a metro or light rail bought with its trains
+///     on the right. A build that reads only an earlier version would drop
+///     it and search its trains' ways keeping left, against the platforms
+///     the line names, so it says the save is newer than it instead.
 /// 84. Taiwan's named festivals (decision 576): the demand events can have
 ///     `"sites"`, the places festivals are held at, an event can name its
 ///     `"festival"`, and a scenario's festival can `"follows"` a named
@@ -642,6 +647,8 @@ extension SavedGame: Codable {
         // (decision 528): nothing to turn.
         // Version 79 to 80: no ring of a world before version 80 has runs,
         // and no run a way (decision 535): nothing to turn.
+        // Version 80 or 81 to 82: a line without `"keepsRight"` keeps left,
+        // as every line did (decision 564): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

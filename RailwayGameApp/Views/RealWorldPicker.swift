@@ -29,6 +29,7 @@ import SwiftUI
 struct RealWorldPicker: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.calendar) private var calendar
     @State private var position: MapCameraPosition
     /// The middle of the map in view: where the game's map would start.
     @State private var middle: CLLocationCoordinate2D
@@ -299,7 +300,7 @@ struct RealWorldPicker: View {
         locationMessage = nil
         locationResult = nil
         if TestBuild.isTest {
-            let now = Calendar.current.dateComponents([.hour, .minute, .second], from: Date())
+            let now = calendar.dateComponents([.hour, .minute, .second], from: Date())
             locationTrace = MyLocationTrace(hour: now.hour ?? 0, minute: now.minute ?? 0, second: now.second ?? 0)
         }
         let locator = locator ?? OneShotLocation()
