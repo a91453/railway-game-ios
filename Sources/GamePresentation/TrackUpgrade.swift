@@ -181,13 +181,13 @@ extension GameSession {
             return
         }
         let note = draft.preview.note
-        let done = perform(command) { _, before, world in
+        let done = perform(command) { outcome, before, world in
             let cost = Money(before.economy.balance.amount - world.economy.balance.amount)
             let what = switch command {
             case .buildCrossover: language.text("Built an X crossover", "已建造 X 型交叉渡線")
             default: language.text("Made the track double", "已升級為複線")
             }
-            return language.text("\(what) for \(cost.moneyText).", "\(what)，花費 \(cost.moneyText)。") + (note.map { " " + $0 } ?? "")
+            return language.text("\(what) for \(cost.moneyText).", "\(what)，花費 \(cost.moneyText)。") + (note.map { " " + $0 } ?? "") + Self.liftedText(outcome, in: language)
         }
         if done != nil {
             trackUpgrade = nil

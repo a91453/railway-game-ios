@@ -440,9 +440,13 @@
 ///     of the year, so it says the save is newer than it instead. A save of
 ///     any earlier version needs no step: the new fields are optional and
 ///     read as before.
+/// 85. Ferries (decision 585): a world can have its `"ferryRoutes"` and
+///     `"nextFerryRouteID"`. A build that reads only an earlier version
+///     would drop them, and the routes and boats bought would be lost, so
+///     it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 84
+    public static let currentVersion = 85
 
     public let world: GameWorld
 
@@ -658,6 +662,8 @@ extension SavedGame: Codable {
         // Version 83 or earlier to 84: a world without festival `"sites"`, an
         // event's `"festival"` or a scenario event's `"follows"` has none
         // (decision 576): nothing to turn.
+        // Version 84 or earlier to 85: a world without `"ferryRoutes"` has
+        // none (decision 585): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {
