@@ -288,12 +288,40 @@ final class MapInteractionTests: XCTestCase {
         // one look; where the test passed, the first look already found the
         // keyboard. So the wait starts again, each time with a new look,
         // for up to 90 s.
-        let focusDeadline = Date().addingTimeInterval(90)
+        //
+        // FLANE8: main 5dfb97a's full lane (run 41761810864) left the field
+        // without the keyboard for all of 160 s while the alert, the field
+        // and the app (10–20 frames per 2 s) were plainly there, and the
+        // app's log showed the keyboard's own window loaded; two earlier
+        // runs did the same. It is all or nothing per presentation: a
+        // presentation that has the keyboard has it at the first look. So
+        // a presentation without it after 25 s is put away with Cancel and
+        // the pencil is pressed again, at most twice; still no keyboard on
+        // the third presentation, and the field never taking it by itself
+        // is the regression, found as before. Still no tap on the field.
         var hasKeyboard = false
-        repeat {
-            let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
-            hasKeyboard = XCTWaiter.wait(for: [focused], timeout: 15) == .completed
-        } while !hasKeyboard && Date() < focusDeadline
+        var presentation = 1
+        func waitForKeyboard(upTo seconds: TimeInterval) -> Bool {
+            let deadline = Date().addingTimeInterval(seconds)
+            repeat {
+                let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
+                if XCTWaiter.wait(for: [focused], timeout: 15) == .completed { return true }
+            } while Date() < deadline
+            return false
+        }
+        while !hasKeyboard {
+            hasKeyboard = waitForKeyboard(upTo: presentation < 3 ? 25 : 90)
+            if hasKeyboard || presentation >= 3 { break }
+            presentation += 1
+            let cancel = alert.buttons["Cancel"]
+            XCTAssertTrue(cancel.appears(within: 10), "The rename alert has its Cancel button")
+            cancel.tap()
+            XCTAssertTrue(alert.disappears(within: 10), "Cancel puts the rename alert away")
+            XCTAssertTrue(pencil.becomesHittable(), "The tag's pencil can be pressed again")
+            pencil.tap()
+            XCTAssertTrue(alert.appears(within: 10), "The pencil puts up the rename alert again")
+            XCTAssertTrue(field.appears(within: 10))
+        }
         XCTAssertTrue(hasKeyboard, "The rename field takes the keyboard by itself")
         // A letter at a time, each waited for in the field. Typed at once
         // into an app drawing some 5 frames a second, the last letters
