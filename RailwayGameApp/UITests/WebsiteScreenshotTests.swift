@@ -1078,7 +1078,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         let list = app.collectionViews.firstMatch
         XCTAssertTrue(list.appears(within: 10))
         list.waitUntilStill()
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(button, in: list, below: app.navigationBars.firstMatch.frame.maxY), "The button shows")
+        // Clear of the bar's scroll edge too, which hides a row's top
+        // line just under the bar (the first round's shot).
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(button, in: list, below: app.navigationBars.firstMatch.frame.maxY + 32), "The button shows")
         button.waitUntilSettled()
         settle()
         keep("station-crossovers-button", app)
