@@ -33,6 +33,12 @@ def review(m,kind):
   a,b=bounds(glass);assert abs(b[2]-a[2]-.048)<1e-6 and abs(b[2]+4.38)<1e-6
   assert not named(m,'solid-floor')
  else:assert not glass and named(m,'solid-floor')
+ glazing=Mesh();glazing.t=[t for item in m.solids if item['name']=='glazing' for t in m.t[item['start']:item['start']+item['count']]]
+ for item in m.solids:
+  if item['name']=='handle-mount':
+   lo,hi=bounds([v for v,c,g in m.t[item['start']:item['start']+item['count']]])
+   hits=ray(glazing,((lo[0]+hi[0])/2,-2,(lo[2]+hi[2])/2),(0,1,0));surfaces=sorted(set(round(-2+d,6) for d,g in hits))
+   assert surfaces[0]<hi[1]<surfaces[1],'handle bracket misses glazing'
  h0,h1=bounds(named(m,'curved-hanger'));assert h1[1]-h0[1]>.4,'straight mast substituted'
  # Centre of large end pane: glazing must be first hit, not a solid dummy wall.
  h=ray(m,(3,0,-3),( -1,0,0));assert h[0][1]==2,'end window buried'
@@ -58,6 +64,9 @@ class Geometry(unittest.TestCase):
   with self.assertRaises(AssertionError):review(m,'standard')
  def test_straight_hanger_counterexample(self):
   m=Mesh();m.cabin('standard');s=next(s for s in m.solids if s['name']=='curved-hanger');a=s['start'];b=a+s['count'];m.t[a:b]=[([(x,y*.15,z) for x,y,z in v],c,g) for v,c,g in m.t[a:b]]
+  with self.assertRaises(AssertionError):review(m,'standard')
+ def test_handle_mount_gap_counterexample(self):
+  m=Mesh();m.cabin('standard');s=next(s for s in m.solids if s['name']=='handle-mount');a=s['start'];b=a+s['count'];m.t[a:b]=[([(x,y-.01,z) for x,y,z in v],c,g) for v,c,g in m.t[a:b]]
   with self.assertRaises(AssertionError):review(m,'standard')
  def test_open_surface_counterexample(self):
   m=Mesh();m.cabin('standard');m.t[0]=m.t[1]

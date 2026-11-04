@@ -126,7 +126,7 @@ class Mesh:
   if not lod:
    for x in (-.15,.15):
     self.beam('door-handle',(x,-.921,-2.70),(x,-.921,-2.46),.026,'dark')
-    for z,y in [(-2.70,-.895),(-2.46,-.889)]:self.beam('handle-mount',(x,y,z),(x,-.921,z),.026,'dark')
+    for z,y in [(-2.70,-.888),(-2.46,-.881)]:self.beam('handle-mount',(x,y,z),(x,-.921,z),.026,'dark')
   self.box('boarding-threshold',0,-.795,-3.63,1.34,.10,.03,'steel')
   # Fine horizontal lower-shell ribs on ends, seated on each real sloping face.
   if not lod:
