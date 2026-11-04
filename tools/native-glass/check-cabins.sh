@@ -2,7 +2,9 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
-swift --version | head -1 | grep -q 'Swift version 6.4'
+swift_version="$(swift --version 2>&1)"
+printf '%s\n' "$swift_version"
+[[ "$swift_version" =~ Swift\ version\ 6\.4([.[:space:]]|$) ]] || { echo 'Swift 6.4 required' >&2; exit 1; }
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 bin="$(swift build --show-bin-path)"

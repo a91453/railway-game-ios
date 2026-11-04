@@ -19,6 +19,18 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
+      # Xcode 26.6 currently ships Apple Swift 6.3.3. Keep this standalone
+      # SwiftPM/probe lane on the required official Swift 6.4.0 toolchain.
+      - name: Install official Swift 6.4.0 for the standalone probe
+        run: |
+          package="$RUNNER_TEMP/swift-6.4.0.pkg"
+          curl -fsSL --retry 3 -o "$package" https://download.swift.org/swift-6.4.0-release/xcode/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE-osx.pkg
+          pkgutil --check-signature "$package"
+          sudo installer -pkg "$package" -target /
+          toolchains=(/Library/Developer/Toolchains/swift-6.4*-RELEASE.xctoolchain)
+          test "${#toolchains[@]}" -eq 1
+          test -x "${toolchains[0]}/usr/bin/swift"
+          echo "${toolchains[0]}/usr/bin" >> "$GITHUB_PATH"
       - name: Pinned cabin recipes (temporary, no private assets or credentials)
         run: |
           git fetch --no-tags origin 5cfec2954bde648ad3a40f43f8ec18ff89d11bdf

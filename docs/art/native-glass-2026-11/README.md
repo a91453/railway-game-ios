@@ -26,3 +26,7 @@ macOS：`tools/native-glass/run-metal.sh OUTPUT FIXTURES`。腳本抽出Map3DMet
 [Native glass Metal probe workflow](../../../.github/workflows/native-glass-metal.yml) 只用read權限與暫存輸出；從本repo固定producer恢復公開配方產生M3DM，不存取私庫／密鑰。貓空producer5cfec2954、日月潭074b085c；來源與尺寸限制承接各study SOURCE。原模型無改，不重新分發原照片／品牌／人物。
 
 iOS SDK／Metal真實渲染以本PR CI實際結果為準；真機效能、作者外觀接受、平台間隙、載重與營運接入仍UNVERIFIED。macOS offscreen不是iOS裝置。未合併、不auto-merge、不TestFlight。下一步：作者看原生證據後，再另派是否接入特定studies；沒有自動變更已上線吊廂。
+
+### CI 核對補記
+
+`a6a9587` 的 [Swift CI](https://github.com/a91453/railway-game-ios/actions/runs/41844401938) 與 [iOS build／Simulator smoke](https://github.com/a91453/railway-game-ios/actions/runs/41844401425) 已成功（VERIFIED；iOS 使用 runner 的 Apple SDK，不等於真機或透明玻璃出圖）。獨立 [Metal probe 41844401509](https://github.com/a91453/railway-game-ios/actions/runs/41844401509) 在版本檢查停止：Xcode 26.6 隨附 Apple Swift 6.3.3，未符合 SwiftPM 檢查限定的 6.4。沒有執行 GPU，也沒有圖像。workflow 現明確下載／檢查簽章／安裝 swift.org 官方 6.4.0 pkg，僅替此獨立 job 選用 toolchain；版本檢查保留，完整顯示版本訊息。修後 Metal 編譯與出圖仍以新 run 實際結果為準（未跑前 UNVERIFIED），不放寬版本要求來消除紅燈。

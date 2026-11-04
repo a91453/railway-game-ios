@@ -4,7 +4,9 @@ root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
 output="${1:?output directory}"
 fixtures="${2:?fixture directory (produce from the pinned cabin recipes)}"
-swift --version | head -1 | grep -q 'Swift version 6.4'
+swift_version="$(swift --version 2>&1)"
+printf '%s\n' "$swift_version"
+[[ "$swift_version" =~ Swift\ version\ 6\.4([.[:space:]]|$) ]] || { echo 'Swift 6.4 required' >&2; exit 1; }
 mkdir -p "$output"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
