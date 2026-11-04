@@ -122,7 +122,7 @@ extension View {
     func controlTile(vertical: CGFloat = ToolColumnStyle.tilePadding) -> some View {
         padding(.horizontal, ToolColumnStyle.tilePadding)
             .padding(.vertical, vertical)
-            .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassBackground(cornerRadius: 16)
     }
 
     /// The thin frame round Build, and round the lines and the figures, in
@@ -453,8 +453,8 @@ private struct BusControls: View {
                 .accessibilityIdentifier("bus.count")
             }
             if let preview = session.busPreview {
-                ForEach(Array(preview.lines(for: draft, in: language).enumerated()), id: \.offset) { _, line in
-                    Text(verbatim: line)
+                ForEach(KeyedLine.make(preview.lines(for: draft, in: language))) { keyed in
+                    Text(verbatim: keyed.text)
                         .font(.footnote)
                         .monospacedDigit()
                 }
@@ -800,7 +800,8 @@ extension BuildingControls {
         if let sale = session.salePreview {
             let lines = session.salePreviewLines
             VStack(alignment: .leading, spacing: 2) {
-                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                ForEach(KeyedLine.make(lines)) { keyed in
+                    let index = keyed.index, line = keyed.text
                     let isLoss = index == lines.count - 1 && sale.quote.gain < .zero && session.world.accounts.mode == .management
                     Text(verbatim: line)
                         .font(index == 0 || index == lines.count - 1 ? .footnote.weight(.semibold) : .footnote)
@@ -840,7 +841,7 @@ extension BuildingControls {
         let session = session
         // A sendable closure, as the building kinds' (CRASHSWEEP-2).
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(Array(choices.enumerated()), id: \.offset) { @Sendable _, zone in
+            ForEach(choices, id: \.self) { @Sendable zone in
                 ZoneChoiceButton(session: session, zone: zone)
             }
         }
@@ -1173,72 +1174,103 @@ struct StatusBanner: View {
         }
     }
 
+    /// Decision 573: a button for each line `offer` names.
+    private func depotChips(_ offer: DepotLinkOffer, reach: CGFloat) -> some View {
+        ForEach(offer.lines, id: \.self) { line in
+            Button {
+                session.linkDepot(offer.depot, to: line)
+            } label: {
+                Text(verbatim: session.depotOfferChip(line: line))
+                    .font(.caption.weight(.bold))
+                    .lineLimit(1)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Theme.chip, in: Capsule())
+            }
+            .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size, reach: reach))
+            .foregroundStyle(Theme.textPrimary)
+            .accessibilityLabel(Text(verbatim: session.depotOfferTitle(line: line)))
+            .accessibilityIdentifier("banner.depotLine")
+        }
+    }
+
     private func banner(for message: StatusMessage) -> some View {
         let isSuccess = message.kind == .success
         let kindName = isSuccess ? String(localized: "Done") : String(localized: "Problem")
         let tintColor = isSuccess ? Theme.success : Theme.warning
         // Read here: the animators' closures run off the main actor.
         let reduceMotion = self.reduceMotion
-        return HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(tintColor)
-                .accessibilityLabel(kindName)
-            Text(message.text)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Theme.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-            // Decision 327: a train standing on no line that is in the way
-            // is sold from here (Undo brings it back).
-            if let id = message.sellableTrain, let train = session.world.train(id: id) {
-                Button {
-                    session.sellTrain(id)
-                } label: {
-                    Text(verbatim: session.language.text(
-                        "Sell \(train.name) \(session.world.trainSaleQuote(id).moneyText)",
-                        "出售 \(train.name) \(session.world.trainSaleQuote(id).moneyText)"
-                    ))
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Theme.chip, in: Capsule())
-                }
-                // About 26 points high, touched over 44: the message may
-                // go away before a finger finds a smaller one.
-                .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
-                .foregroundStyle(Theme.textPrimary)
-                .accessibilityIdentifier("banner.sellTrain")
-            }
-            // Decision 336: land not bought yet; this ends building and
-            // starts choosing a tile.
-            if session.offersMapExpansion(for: message.text) {
-                Button {
-                    session.startChoosingMapTile()
-                } label: {
-                    Text(verbatim: session.language.text("Expand Map", "擴建地圖"))
+        // Decision 573: a new depot near several lines with none offers
+        // each by name, in a row under the whole banner (the banner is
+        // narrow between the tools and the side panel), 8 points apart,
+        // so each is touched over 44 and no two touch areas meet. One
+        // row, not a ViewThatFits (CRASH101: its rows would be built off
+        // the main thread); a long name is cut short.
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(tintColor)
+                    .accessibilityLabel(kindName)
+                Text(message.text)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                // Decision 327: a train standing on no line that is in the way
+                // is sold from here (Undo brings it back).
+                if let id = message.sellableTrain, let train = session.world.train(id: id) {
+                    Button {
+                        session.sellTrain(id)
+                    } label: {
+                        Text(verbatim: session.language.text(
+                            "Sell \(train.name) \(session.world.trainSaleQuote(id).moneyText)",
+                            "出售 \(train.name) \(session.world.trainSaleQuote(id).moneyText)"
+                        ))
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(Theme.chip, in: Capsule())
+                    }
+                    // About 26 points high, touched over 44: the message may
+                    // go away before a finger finds a smaller one.
+                    .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
+                    .foregroundStyle(Theme.textPrimary)
+                    .accessibilityIdentifier("banner.sellTrain")
                 }
-                .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
-                .foregroundStyle(Theme.textPrimary)
-                .accessibilityIdentifier("banner.expandMap")
+                // Decision 336: land not bought yet; this ends building and
+                // starts choosing a tile.
+                if session.offersMapExpansion(for: message.text) {
+                    Button {
+                        session.startChoosingMapTile()
+                    } label: {
+                        Text(verbatim: session.language.text("Expand Map", "擴建地圖"))
+                            .font(.caption.weight(.bold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Theme.chip, in: Capsule())
+                    }
+                    .buttonStyle(TouchTargetButtonStyle(size: BannerChip.size))
+                    .foregroundStyle(Theme.textPrimary)
+                    .accessibilityIdentifier("banner.expandMap")
+                }
+                Button {
+                    session.dismissMessage()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.bold))
+                        .frame(width: 26, height: 26)
+                        .background(Theme.panelBorder, in: Circle())
+                }
+                // 9 points round it, within the 10 before it and the
+                // message's 14 after.
+                .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 26, height: 26)))
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityLabel("Dismiss message")
             }
-            Button {
-                session.dismissMessage()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.bold))
-                    .frame(width: 26, height: 26)
-                    .background(Theme.panelBorder, in: Circle())
+            if let offer = message.depotOffer {
+                HStack(spacing: 8) { depotChips(offer, reach: 4) }
             }
-            // 9 points round it, within the 10 before it and the
-            // message's 14 after.
-            .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 26, height: 26)))
-            .foregroundStyle(Theme.textSecondary)
-            .accessibilityLabel("Dismiss message")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -1294,6 +1326,24 @@ extension ConstructionTool {
         case .train: String(localized: "Train tool")
         case .building: String(localized: "Building tool")
         case .bus: String(localized: "Bus tool")
+        }
+    }
+}
+
+
+/// A line of text with an identity that follows its words, not its place
+/// in the list (a repeat of the same words gets the next number).
+private struct KeyedLine: Identifiable {
+    let id: String
+    let index: Int
+    let text: String
+
+    static func make(_ lines: [String]) -> [KeyedLine] {
+        var seen: [String: Int] = [:]
+        return lines.enumerated().map { index, text in
+            let count = seen[text, default: 0]
+            seen[text] = count + 1
+            return KeyedLine(id: "\(count)#\(text)", index: index, text: text)
         }
     }
 }

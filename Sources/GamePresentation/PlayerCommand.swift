@@ -78,6 +78,10 @@ public enum PlayerCommand: Hashable, Sendable {
     /// one (decision 507, ``GameSession/stationLayoutPlan(_:platform:)``):
     /// the platform, each platform track, then the track taken up.
     case buildStationLayout(StationLayoutPlan)
+    /// Decision 572: the crossovers a station on both tracks of a double
+    /// track lacks (``GameSession/missingStationCrossovers(of:in:)``), laid
+    /// in turn from its panel.
+    case buildStationCrossovers(StationID, [TrackStretch])
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -237,6 +241,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .addRealLineDepot: "addRealLineDepot"
         case .buyRealStation: "buyRealStation"
         case .buildStationLayout: "buildStationLayout"
+        case .buildStationCrossovers: "buildStationCrossovers"
         }
     }
 }
@@ -344,6 +349,11 @@ extension GameSession {
             for edge in plan.removed {
                 _ = try apply(.removeTrack(edge), to: &world)
             }
+        case .buildStationCrossovers(let station, let crossovers):
+            guard world.station(id: station) != nil else { throw .unknownStation(station) }
+            guard !crossovers.isEmpty else { throw .invalidTrackGeometry }
+            outcome.left = try layLiftingTrains(crossovers, in: &world)
+            outcome.number = crossovers.count
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -580,6 +590,13 @@ extension PlayerCommand: Codable {
                 }
             }
             self = .buildStationLayout(StationLayoutPlan(layout: layout, platform: platform, tracks: tracks, removed: removed))
+        case "buildStationCrossovers":
+            let crossovers = try (record.crossovers ?? []).map { command in
+                guard case .buildTrack(let crossover) = command else { throw invalid("a crossover is a stretch") }
+                return crossover
+            }
+            guard let station = record.station, !crossovers.isEmpty else { throw invalid("a station's crossovers need the station and the crossovers") }
+            self = .buildStationCrossovers(StationID(rawValue: station), crossovers)
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -695,6 +712,9 @@ extension PlayerCommand: Codable {
         case .buildStationLayout(let plan):
             record.layout = plan.layout.rawValue
             record.steps = [.addPlatform(plan.platform)] + plan.tracks.map(PlayerCommand.addPlatformTrack) + plan.removed.map(PlayerCommand.removeTrack)
+        case .buildStationCrossovers(let station, let crossovers):
+            record.station = station.rawValue
+            record.crossovers = crossovers.map(PlayerCommand.buildTrack)
         }
         try record.encode(to: encoder)
     }
@@ -729,6 +749,8 @@ extension PlayerCommand {
             main.isEmpty ? language.text("make this track double", "把這段改成複線") : language.text("lay this track", "鋪這段軌道")
         case .buildCrossover:
             language.text("build this crossover", "建這組渡線")
+        case .buildStationCrossovers:
+            language.text("add the station's crossovers", "加車站的渡線")
         case .addPlatformTrack:
             language.text("add this platform track", "加這條月台線")
         case .buildStationLayout(let plan):

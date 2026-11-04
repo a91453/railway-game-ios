@@ -57,7 +57,7 @@ final class DoubleTrackDeadlockTests: XCTestCase {
     /// `start` run a day a minute at a time: the legs each train ran (a
     /// leg ends where it sets off for its next stop) and the minutes some
     /// train was in a deadlock.
-    func runDay(_ start: GameWorld) throws -> (legs: [Int], deadlockMinutes: Int) {
+    static func runDay(_ start: GameWorld) throws -> (legs: [Int], deadlockMinutes: Int) {
         var world = start
         world.setSpeed(.normal)
         var legs: [TrainID: Int] = [:]
@@ -88,7 +88,7 @@ final class DoubleTrackDeadlockTests: XCTestCase {
             session.selectLine(line)
             for _ in 0..<2 where (session.world.line(id: line)?.trains.count ?? 0) < 2 { session.addTrainToSelectedLine() }
             XCTAssertEqual(session.world.line(id: line)?.trains.count, 2, "\(rules): \(session.message?.text ?? "")")
-            let day = try runDay(session.world)
+            let day = try Self.runDay(session.world)
             XCTAssertEqual(day.deadlockMinutes, 0, "\(rules)")
             // A leg takes a few minutes: each train runs all day.
             XCTAssertEqual(day.legs.filter { $0 > 100 }.count, 2, "\(rules): \(day.legs)")
@@ -112,7 +112,7 @@ final class DoubleTrackDeadlockTests: XCTestCase {
             }
             session.selectLine(line)
             for level in ServiceLevel.allCases { session.setSelectedLineTrains(count, at: level) }
-            let day = try runDay(session.world)
+            let day = try Self.runDay(session.world)
             XCTAssertEqual(day.deadlockMinutes, 0, "\(count) trains")
             for legs in day.legs { XCTAssertGreaterThan(legs, 100, "\(count) trains: \(day.legs)") }
         }

@@ -912,6 +912,7 @@ public final class GameLauncher {
         return Task {
             let world = await Task.detached(priority: .userInitiated) { scene.make(in: language) }.value
             self.begin(world, keepingAutosave: true, isDemo: true)
+            if let session = self.session { scene.prepare(session) }
         }
     }
 

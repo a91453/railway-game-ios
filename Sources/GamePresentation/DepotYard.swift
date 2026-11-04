@@ -230,12 +230,18 @@ extension GameSession {
         }
         let balance = world.economy.balance
         let count = plan.platforms.count
-        let built = perform(.buildDepotYard(plan)) { _, _, world in
-            let cost = Money(balance.amount - world.economy.balance.amount)
-            return language.text(
-                "\(plan.name): \(count) \(count == 1 ? "siding" : "sidings"), for \(cost.moneyText). Choose it as a line's depot on the line panel.",
-                "\(plan.name)：鋪好 \(count) 股停車線，花費 \(cost.moneyText)。到路線面板替路線選這個機廠。"
-            )
+        // Decision 573: the depot, and the line it serves as that line's
+        // depot, one edit to Undo.
+        let built = asOneEdit { () -> PlayerCommand.Outcome? in
+            let built = perform(.buildDepotYard(plan)) { _, _, world in
+                let cost = Money(balance.amount - world.economy.balance.amount)
+                return language.text(
+                    "\(plan.name): \(count) \(count == 1 ? "siding" : "sidings"), for \(cost.moneyText).",
+                    "\(plan.name)：鋪好 \(count) 股停車線，花費 \(cost.moneyText)。"
+                )
+            }
+            if let depot = built?.station, let done = message?.text { linkNewDepot(depot.id, done: done) }
+            return built
         }
         if built != nil {
             networkDepotEnd = nil

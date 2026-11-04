@@ -1,5 +1,7 @@
 > 跟車「車窗」視角與「從車站看」修正（派工單 FOLLOWVIEW，[決策 578](decisions/578.md)，`claude/follow-window-station`，2026-11-04）：3D 跟車多「車窗」（中段車廂左窗、眼高 2 m，不畫窗框與車廂內部）；「從車站看」離站即提前蓋下一站周圍、沒蓋好前維持上後方、下一站超過 12 km 時選項灰掉。**留下的**（決策 578「下一步」）：窗框、車窗選左右、公車車窗（FOLLOWBUS 後合者接上，用 Head 轉接）、放空模式加車窗、彎道上車窗朝向用中段切線；12 km 門檻與串流蓋一站的時間是估計，實機 UNVERIFIED。
 
+> 纜車（派工單 CABLE，session_01YGNNumrJnt5AkQzWrdhAms，`claude/cable-maokong`，[決策 574](decisions/574.md)，存檔 83，2026-11-04）：PR-1 只做 GameCore（`Cableway`：站與轉角站、直線纜線、土地分配與轉乘、NT$180 單一票價、週一／雷雨／颱風停駛、日結）與存檔 83。**留下的**：PR-2 的建造工具、2D 圖示、站卡與纜車卡、吊廂位置 `CablewayCabins`（給 CABLE3D，決策 575）、貓空示範與站點座標（OSM 下載不到，UNVERIFIED），逐項見決策 574「下一步」。
+
 > 新車站用地標、路名與路口命名（派工單 STNAME，[決策 569](decisions/569.md)，`claude/station-name-landmarks`）：實景地圖預設名多一步「300 m 內地標」，取名欄下最多 4 個候選（地名、地標、公車站牌、路口、公園、路名）。**留下的**（決策 569「下一步」）：網站致謝頁 `Website/site/credits.html` 跟著 `DataSourceCredits` 加「地標與道路」；iPad、iPhone SE 的候選列沒截圖；只畫成點的學校、醫院沒收。
 
 > 柴油車的行駛聲（派工單 DIESEL，session_01YGNNumDcBCK97mmQUfHHjy，`claude/diesel-sound`，決策 567，2026-11-03）：NEXT_PRIORITIES §22.2 第 7a 項做完（怠轉、起步加速、惰行三個循環，照月本國キハ40 系錄音的頻譜與引擎基頻合成，錄音不提交）。實機聽感 UNVERIFIED，請作者實機聽。7b（電車加減速的馬達聲）沒做，做法建議寫在 `docs/decisions/567.md`「下一步」。
@@ -484,6 +486,31 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 45 任交第 46 任（2026-11-04 UTC，session_01YGNNuknU5VzGGHzf2twGfS，壓縮 2 次）**：照這段接手；和下面不同時以這段為準。
+
+- **111.1 已發**（作者 00:02 UTC，`273dab2`，run 111；`PLAYER_FEEDBACK.md` 已記）。下一版還沒定。
+- **第 45 任已合**：#1760 ROUTEUI、#1764 PLATSTOP、#1766 STNAME、#1769 STUCKFIX、#1772、#1774、#1775 AUTOXO-2、#1777（Views 審查技能）、#1771 TYMCLIST3（決策 562）。
+- **作者這一輪定的**（五方在 #1579）：
+  - 纜車示範用**貓空纜車**；纜車是「路網」工具的一個模式（`NetworkToolMode.cableway`），不加第六顆建造鈕。
+  - 做渡輪時，「公車」鈕改名**「接駁」**，裡面分「公車」「渡輪」兩個模式（不叫「路線」或「轉乘」）。
+  - 機場捷運（#1743）的死結修正**優先佔 GameCore CI 名額**。
+  - 先不做第一人稱走路視角；做「窗外」視角（像駕駛艙，只換鏡頭，不做車內模型）；「從車站看」修成提早建下一站、太遠就變灰。
+  - 跟隨公車和列車一樣，先畫前方與附近（決策 358 的 `ahead`）。
+  - 等 full lane 跑完再合下一批（作者：「等 full lane 跑完再合」）。
+- **合併順序**（每批 3–5 個，用完整 SHA，等 main `ci.yml` 綠；merge 前確認 iOS App Build 綠）：
+  1. #1767 WENHUSIDE（決策 564，存檔 82）→ #1776 DEPOTLINK（573）、#1778 OLDXO（572）、#1779 VIEWFIX PR-A。
+  2. TYMCLIST4 的 GameCore PR（決策 577，`claude/tymc-berth-sw…`，機場捷運死結，優先）、#1780 FESTIVAL（576，存檔 84）。
+  3. #1781 CABLE PR-1（574，存檔 83；FESTIVAL 先合就改 85）、CABLE PR-2、#1782 CABLE3D（575，第三級，規劃看截圖）、VIEWFIX PR-B（`claude/viewfix-concentric`，ConcentricRectangle，第二級）、FOLLOWBUS（不佔號）、FOLLOWVIEW（578）。
+  4. 最後 #1743 機場捷運上架（556）。
+  - TYMCLIST4 推 GameCore PR 時 Linux 塞，就取消 #1781 的 PR run 讓它先。
+- **派出去的**（session、模型、branch、決策）：
+  - WENHUSIDE-2 session_01YGNNuovdoMPJsiiJsYuTw1（壓縮 2 次，只收尾 #1767）。
+  - TYMCLIST4 session_01YGNNuoGwQ9ntd6Att99u7c（Opus）：#1767 合後做 #1743 剩的：19:31 兩航廈三列換月台死結（`berthChange`）、號誌＋行車控制（新局預設）第 2 天 333 班 320 班沒發、行車控制每遊戲分鐘約 2.5 秒、回本。
+  - CABLE session_01YGNNumrJnt5AkQzWrdhAms（壓縮 1 次，只收尾 #1781）、CABLE-2 session_01YGNNunZBgaB8JeDKJxh4xV（Opus，`claude/cable-2`，PR-2）、CABLE3D session_01YGNNuoMbCbtbGZqCQtvZPT（#1782）、FESTIVAL session_01YGNNup5hkNxUynJYvy9zLD（#1780）、VIEWFIX session_01YGNNunwjkHJ2a9XYEkHiSD（Sonnet，#1779＋PR-B）、DEPOTLINK session_01YGNNuoWbBvCiDrgKwADV7x（壓縮 1 次）、OLDXO session_01YGNNum5m8pAyi87KoX3iP7（壓縮 1 次）、FOLLOWBUS session_01YGNNumWYtfHA3GoZVamQAd（Sonnet，`claude/follow-bus`，不佔號）、FLANE8 session_01YGNNuotMdcm499iKgZ7gLG（Sonnet，`claude/flane8`，full lane 偶發 UI 測試）、FOLLOWVIEW session_01YGNNukiQGJ1RXBDHyFPJkh（Sonnet，`claude/follow-window-station`，578）。FOLLOWBUS 與 FOLLOWVIEW 同改 `Map3DFollow`，後合的合 main。
+  - 做完的 session 就封存。
+- **沒派的**：纜車吊廂跟隨與窗外（CABLE PR-2 與 #1782 之後）；公車窗外（FOLLOWBUS／FOLLOWVIEW 後合的那個之後）；渡輪（連同「接駁」改名）→ 飛機；節慶之後的新景點（廟、夜市、博物館）；REVIEW-L（下一輪從 #1760 起）、CIOPT、DEBUG 固定三件；L8-1。
+- **號碼**：572–578 已保留（572 OLDXO、573 DEPOTLINK、574 CABLE、575 CABLE3D、576 FESTIVAL、577 TYMCLIST4、578 FOLLOWVIEW、579 Codex 渡輪與碼頭 studies，指令在 #1579）；**下一個 580**。存檔 82（#1767）、83（CABLE）、84（FESTIVAL）保留，**下一個 85**。
 
 **第 44 任交第 45 任（2026-11-03 20:50 UTC，session_01YGNNukw5koUxDsjkSBmJJy，壓縮 2 次、快到第 3 次）**：作者去睡了，早上自己按 111.1（作者：「綠了就合吧 紅了就修復 我早上才要發111.1」）。第 45 任照這段接手；和下面不同時以這段為準。
 
@@ -2875,9 +2902,30 @@ ROADFIX 修了 [BUGHUNT_BUILD](research/BUGHUNT_BUILD_2026-10-30.md) 的 P2-1（
 ### 4.43 打開 3D 不等列車模型包（決策 546，派工單 OPEN3D，session_01YGNNunVxxTjzneuBjw86MX，`claude/open3d-model-pack`，2026-11-02）
 
 做了的在 [決策 546](decisions/546.md)：模型包分核心做（Linux release 4 核 3.95 → 0.72 s，模型位元相同，`Map3DModelPackLockTests`）、遊戲開了 8 秒後先在背景做、3D 場景先顯示（列車先是方塊）。留下的（決策 546「下一步」）：實機量開 3D 要等多久與記憶體提早多 192 MB 的影響（UNVERIFIED）；`useModels` 在主執行緒複製 192 MB 到 GPU 緩衝，可移到背景；FLANE5 的 `-ui-test-3d-models-first`（#1693）仍有用（UI 測試不先做模型包），沒有刪，改成走同一個 `Map3DTrainModels`（`.background`）；做模型包一律 `.utility` 以下、不會被提高。
+### 4.44 買下的捷運、輕軌靠右行駛（決策 564，派工單 WENHUSIDE → WENHUSIDE-2，`claude/wenhu-side`，PR #1767，2026-11-03）
+
+作者 110.1 的優先 bug：買下文湖線後列車走對向的軌。改法與理由在 [決策 564](decisions/564.md)。第一棒 session_01YGNNunZGPiV2XFNuJMZEsQ 壓縮 2 次後交給 WENHUSIDE-2（session_01YGNNuovdoMPJsiiJsYuTw1）。號碼：決策 564、存檔版本 82（`SaveFixtures/v82-keeps-right.json`），golden、`ReplayFixtures/` 的值都沒動。
+
+WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build）：
+
+- 三鶯簡單規則死結、淡海兩線一日測試最晚 14,317 秒：同一個原因，S 形渡線的起點切線和本線只差捨入，被排成「最右邊」。`KeepLeft.sameWaySlope`（1／256）以內當同方向、用弦排序（決策 564「兩條出口幾乎同方向時」）。
+- 高鐵示範開局 139 個靠左取樣：示範世界的 `keepLeft` 是關的，鏡像跟著關掉。改成靠哪邊看線，不看世界（`ServicePath.swift`）；示範 3,617 右／0 左。
+- 截圖場景在背景推進一份世界的複本，主執行緒不卡（`runForScreenshot(until:)`）；在主執行緒推進時，Debug App 在 06:00 的乘客計畫要好幾分鐘，UI 測試的查詢會逾時。
+
+還沒做的（若這個 session 沒做完，下一棒照這裡）：
+
+1. 機廠量測已做（決策 564「量到的」）：都沒有死結；文湖線簡單＋行車控制漏 7/532（main 4/532），時間和 main 一樣在尖峰結束時，是決策 552／HEALTH-110 那一項，修它時一起看靠右的線。
+2. 截圖 `website-screenshots.yml` 的 `testWenhuRunsOnTheRight`（存 wenhu-right-2d、wenhu-right-3d）：第 2 級，自己審、附進 PR。
+3. 收尾：CI 綠 → ready → #1579 留「可合併」→ send_message 給遊戲規劃。
+4. 留著不做的：`RealLineRunningSideTests` 的新北投、小碧潭支線太短量不到雙線，六家、沙崙只印不判；有靠左與靠右的線共用車站（直通運轉）時要改成照列車選邊（決策 564 下一步）。
+
 ### 4.47 列車停站時車頭對齊月台端（決策 565，派工單 PLATSTOP，session_01YGNNumEchJbYiHsw9hKbcu，`claude/platstop`，2026-11-03）
 
 做了的在 [決策 565](decisions/565.md)：有真實車長的世界（實景地圖的新遊戲），畫的車鼻在 GameCore 的車頭、每節照節距，停站時整列在月台內（以前每列車頭伸出 10 m）；比月台長的列車指派時說哪一站、加長到幾公尺或減到幾節。留下的（決策 565「下一步」）：示範與挑戰（16 m 節距、每節畫 20 m）停站時仍超出月台，要讓畫的車與節距一致（模型壓扁，屬美術）或示範改開真實車長，另派；`LineBuilder.line`（腳本與測試用）在實景世界仍蓋 16 m 一節的月台；比較用分支 `claude/platstop-before` 請作者刪（這裡的環境刪遠端分支會 403）；實機 3D 高架站近景 UNVERIFIED。
+### 4.48 舊複線站補渡線、升級複線加站旁渡線（決策 572，派工單 OLDXO，session_01YGNNum5m8pAyi87KoX3iP7，`claude/old-station-crossovers`，2026-11-04）
+
+做了的在 [決策 572](decisions/572.md)：車站面板「加渡線」（舊存檔、111.1 之前的複線站）、「升級為複線」也加站旁渡線、渡線方向讓兩站近端在同一條、「＋」在起終點都滿時放到旁邊月台。留下的（決策 572「下一步」）：兩站不到 1 km 時第二站不加；三站以上的線沒量；實機 UNVERIFIED。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

@@ -109,7 +109,7 @@ struct MapBuildConfirm: View {
                 words(build)
             }
             .padding(CGFloat(StationPairDrawerLayout.pillPadding))
-            .glassBackground(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .glassBackground(cornerRadius: 26)
         }
     }
 
