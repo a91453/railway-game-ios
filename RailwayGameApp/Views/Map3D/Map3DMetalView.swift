@@ -102,6 +102,10 @@ final class Map3DMetalView: MTKView {
     /// Decision 314: this frame's trains' fronts, as the camera sees them,
     /// for their labels.
     var trainHeads: (@MainActor ([Map3DTrains.Head], Map3DCamera) -> Void)?
+    /// Decision 400 (FOLLOWBUS): where the bus followed is this frame, as
+    /// the follow camera reads a vehicle (``Map3DFollow/Pose``); `nil` when
+    /// it is not out.
+    var busPose: (@MainActor (BusID) -> Map3DFollow.Pose?)?
     /// Decision 259: the people and vehicles for this frame, seen with the
     /// camera given, with the city's lights on so far; decision 417: within
     /// the budget given (the trains' triangles this frame among it).
@@ -739,7 +743,7 @@ final class Map3DMetalView: MTKView {
             flying = (Map3DFlight(from: camera, began: CACurrentMediaTime(), rule: rule), free)
             return
         }
-        guard let current = following, current.train == follow.train else {
+        guard let current = following, current.subject == follow.subject else {
             following = follow
             ringed = nil
             flightAsked = nil
@@ -808,15 +812,23 @@ final class Map3DMetalView: MTKView {
             }
             return
         }
-        guard let following, let head = heads.first(where: { $0.train == following.train }) else { return }
+        guard let following else { return }
+        let pose: Map3DFollow.Pose
+        if let bus = following.bus {
+            guard let found = busPose?(bus) else { return }
+            pose = found
+        } else {
+            guard let head = heads.first(where: { $0.train == following.train }) else { return }
+            pose = head.pose
+        }
         let elapsed = lastFollowStep.map { now - $0 } ?? 0
         lastFollowStep = now
         if let flight = flying?.flight {
-            let goal = following.camera(following: head, from: camera, elapsed: 0, turnsAtOnce: true)
+            let goal = following.camera(following: pose, from: camera, elapsed: 0, turnsAtOnce: true)
             camera = flight.camera(toward: goal, at: now)
             if flight.isOver(at: now) { flying = nil }
         } else {
-            camera = following.camera(following: head, from: camera, elapsed: elapsed)
+            camera = following.camera(following: pose, from: camera, elapsed: elapsed)
         }
     }
 

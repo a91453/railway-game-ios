@@ -594,6 +594,8 @@ private struct RoadControls: View {
 private struct CityBusRouteList: View {
     let session: GameSession
     @State private var closing: BusRouteID?
+    @Environment(GameScreenState.self) private var screen: GameScreenState?
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
 
     var body: some View {
         let language = session.language
@@ -621,6 +623,21 @@ private struct CityBusRouteList: View {
                             .buttonStyle(.borderless)
                             .accessibilityIdentifier("bus.city.edit")
                             Spacer()
+                            // Decision 400 (FOLLOWBUS): watch a bus of this
+                            // route from the 3D map.
+                            if let screen, session.tutorial == nil, map3DQuality.shows3D {
+                                Button {
+                                    session.followBus(onRoute: card.id)
+                                    screen.map3DHandoff = nil
+                                    screen.showsMap3D = true
+                                } label: {
+                                    Text(verbatim: language.text("Follow a Bus", "跟隨公車"))
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityIdentifier("bus.city.follow")
+                                .disabled(!session.hasBusToFollow(onRoute: card.id))
+                                Spacer()
+                            }
                             Button(role: .destructive) {
                                 closing = card.id
                             } label: {
