@@ -212,6 +212,25 @@ extension GameWorld {
         return .granted(train)
     }
 
+    /// Decision 577: `candidate`, a departure, with its route taken whole
+    /// as ``reserving(_:following:memo:)`` takes it, but where the track
+    /// trains `followers` wait for (decision 56, point 6) does not keep it
+    /// from that track: only what trains hold, foul, or other followers
+    /// wait for does. For a deadlock only (see
+    /// ``GameWorld/resolveDeadlock(memo:)``); never with block sections,
+    /// where a following train waits for nothing it has not taken.
+    func reserving(_ candidate: Train, ignoringClaimsOf followers: Set<TrainID>, memo: inout DirectionMemo) -> Reserving? {
+        guard isTrafficControlEnabled, !blockSections else { return nil }
+        let route = routeStretches(of: candidate)
+        guard route.moves else { return nil }
+        let envelope = cover(of: bodyStretches(of: candidate) + route.stretches)
+        let holders = trackHolders(memo: &memo).ignoringClaims(of: followers)
+        if let holder = holder(of: envelope, except: candidate.id, holders: holders) { return .held(by: holder) }
+        var train = candidate
+        train.reservation = Set(envelope.resources).sorted()
+        return .granted(train)
+    }
+
     /// Decision 562: with block sections a train following others holds
     /// only the track it has taken (decision 212), so a train could take
     /// the rest of its route ahead of it, standing where the follower must
@@ -882,6 +901,18 @@ extension GameWorld {
         /// ahead waits for `id`, so `id` must go on first.
         func binds(_ claim: Claim, _ id: TrainID) -> Bool {
             !holdsAny(of: claim, id) && !(claims[id] != nil && id < claim.train) && released[claim.train]?.contains(id) != true
+        }
+
+        /// These holders but for the claims of `followers` (decision 577):
+        /// the track those trains wait for no longer keeps any train from
+        /// it. What every train holds stays as it was.
+        func ignoringClaims(of followers: Set<TrainID>) -> TrackHolders {
+            var holders = TrackHolders(
+                ids: ids, held: held, claims: claims.filter { !followers.contains($0.key) }, tracks: tracks, fouling: fouling, owners: owners,
+                runs: runs, foulingByEdge: foulingByEdge, bodies: bodies, unordered: unordered
+            )
+            holders.released = released
+            return holders
         }
 
         /// Whether `claim`'s train waits for `resource`: it is on its route

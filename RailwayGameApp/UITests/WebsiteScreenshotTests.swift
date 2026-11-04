@@ -158,7 +158,15 @@ final class WebsiteScreenshotTests: XCTestCase {
             let mode = app.segmentedControls.buttons[english ? "Cable car" : "纜車"].firstMatch
             XCTAssertTrue(mode.appears(within: 10), "The mode is in the row, not under More")
             // In English the row slides sideways: the last mode is past its end.
-            if !mode.becomesHittable(within: 3) { app.segmentedControls.firstMatch.swipeLeft() }
+            // Drag the row that holds the mode, from inside its visible
+            // part: the row is wider than the panel, so its frame's middle
+            // (where a swipe starts) is at the panel's clipped edge.
+            let row = app.segmentedControls.containing(NSPredicate(format: "label == %@", english ? "Cable car" : "纜車")).firstMatch
+            for _ in 0..<3 where !mode.becomesHittable(within: 2) {
+                let left = row.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+                left.withOffset(CGVector(dx: 180, dy: 0))
+                    .press(forDuration: 0.05, thenDragTo: left.withOffset(CGVector(dx: 10, dy: 0)), withVelocity: .fast, thenHoldForDuration: 0.1)
+            }
             XCTAssertTrue(mode.becomesHittable(within: 10))
             mode.tap()
             let card = app.descendants(matching: .any)["network.cablewayCard"].firstMatch
@@ -194,6 +202,45 @@ final class WebsiteScreenshotTests: XCTestCase {
             settle(seconds: 12)
             keep(name, app)
             app.terminate()
+        }
+    }
+
+    /// Decision 578: the 3D follow views: the window of a car, the platform
+    /// of the next stop (a short gap), and the station view greyed out
+    /// while the next stop is a high-speed gap away.
+    func testFollowWindowAndStation() {
+        func open3DFollowing(_ scene: String) -> XCUIApplication {
+            let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-train", "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 5)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            return app
+        }
+        do {
+            let app = open3DFollowing("platformStop")
+            defer { app.terminate() }
+            let window = app.buttons["map3D.follow.window"]
+            XCTAssertTrue(window.becomesHittable(within: 10))
+            window.tap()
+            settle(seconds: 8)
+            keep("follow-window", app)
+            let station = app.buttons["map3D.follow.station"]
+            XCTAssertTrue(station.becomesHittable(within: 10))
+            station.tap()
+            settle(seconds: 12)
+            keep("follow-station-near", app)
+        }
+        do {
+            let app = open3DFollowing("farStops")
+            defer { app.terminate() }
+            XCTAssertTrue(app.buttons["map3D.follow.station"].appears(within: 10))
+            settle(seconds: 3)
+            keep("follow-station-too-far", app)
         }
     }
 
@@ -249,6 +296,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map3D.trainsLoading"].firstMatch.disappears(within: 240), "The trains are drawn")
         settle(seconds: 8)
         keep("freight-3d", app)
+    }
+
+    /// Decision 580 (FOLLOWBUS): a feeder bus followed on the 3D map, from
+    /// above and behind and from the driver's seat, with the follow bar.
+    /// For the screenshot review of the pull request that let the camera
+    /// follow a bus. One shot a test, as the leaned views.
+    func testFollowBusAboveBehind() { shootFollowBus("aboveBack", "follow-bus-above") }
+    func testFollowBusCab() { shootFollowBus("cab", "follow-bus-cab") }
+    func testFollowBusSide() { shootFollowBus("side", "follow-bus-side") }
+
+    private func shootFollowBus(_ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", "followBus", "-screenshot-follow-bus", "-map3DFollowView", view,
+                                 "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The bus is followed")
+        settle(seconds: 12)
+        keep(name, app)
     }
 
     /// Decision 555: the 3D map at its own tilt and leaned by two fingers

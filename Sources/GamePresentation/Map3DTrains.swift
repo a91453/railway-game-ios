@@ -144,6 +144,11 @@ public enum Map3DTrains {
 
         /// The rail under ``point``, where the follow camera looks.
         public var rail: Map3DPoint { point - Map3DPoint(0, Map3DTrains.carHeight + Map3DTrains.headClearance, 0) }
+
+        /// What the follow camera reads of it (``Map3DFollow/Pose``).
+        public var pose: Map3DFollow.Pose {
+            Map3DFollow.Pose(forward: forward, nose: nose, rail: rail, middle: middle, length: length, ground: ground, inTunnel: inTunnel)
+        }
     }
 
     /// Decision 380: how much track behind a train's head says the way it

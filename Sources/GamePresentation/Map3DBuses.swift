@@ -591,33 +591,112 @@ public struct Map3DBuses: Sendable {
     /// (the bus model's budget, which the street's own buses then share)
     /// and at most `detail`'s vehicles. Decision 417: at most `most` of
     /// them when given (the device's tier's buses, ``Map3DStreetLimits``).
-    public func frame(second: Double, target: Map3DPoint, distance: Float, detail: Map3DStreetDetail, most: Int? = nil) -> Frame {
+    public func frame(second: Double, target: Map3DPoint, distance: Float, detail: Map3DStreetDetail, most: Int? = nil,
+                      followed: BusID? = nil) -> Frame {
         var frame = Frame()
-        guard detail != .off, distance <= Map3DStreetLife.vehiclesFrom, let model = Self.model else { return frame }
+        guard let model = Self.model else { return frame }
+        // Decision 580 (續): with nothing moving on the streets (no tier,
+        // as the Simulator's GPU, or too far), the followed bus alone, as a
+        // followed train is drawn whatever the streets draw.
+        guard detail != .off, distance <= Map3DStreetLife.vehiclesFrom else {
+            if let followed, let route = routes.first(where: { $0.motion.route == followed.route }),
+               let bus = route.motion.bus(run: followed.run, at: second), let place = Self.place(of: bus, on: route) {
+                frame.instances.append(.prop(model, at: place.point, forward: place.along, scale: Float(bus.scale), tint: route.tint))
+                frame.clear.append((place.point, place.along))
+            }
+            return frame
+        }
         let reach = Map3DStreetLife.vehiclesReach(distance)
         var seen: [(away: Float, instance: Map3DInstance, clear: (point: Map3DPoint, along: Map3DPoint))] = []
-        for route in routes where route.out.boxDistance(to: target) < reach {
+        // Decision 400 (FOLLOWBUS): the bus the camera follows is always
+        // drawn, in full, whatever the budget keeps.
+        var chosen: (instance: Map3DInstance, clear: (point: Map3DPoint, along: Map3DPoint))?
+        for route in routes where route.out.boxDistance(to: target) < reach || route.motion.route == followed?.route {
             for bus in route.motion.buses(at: second) {
-                // Decision 474: each way's own distances, and none in a tunnel.
-                let along = bus.outbound ? Float(bus.distance(along: route.stops)) / route.length
-                    : Float(bus.distance(along: route.backStops)) / route.backLength
-                guard !(bus.outbound ? route.outHidden : route.backHidden).contains(where: { $0.contains(along) }) else { continue }
-                let path = bus.outbound ? route.out : route.back
-                let place = path.at(along * path.length)
+                guard let place = Self.place(of: bus, on: route) else { continue }
+                if bus.run == followed?.run, route.motion.route == followed?.route {
+                    chosen = (.prop(model, at: place.point, forward: place.along, scale: Float(bus.scale), tint: route.tint), (place.point, place.along))
+                    continue
+                }
                 let away = Map3DPoint(place.point.x - target.x, 0, place.point.z - target.z).length
+                guard away < reach else { continue }
                 let size = Map3DStreetLife.fade(away, reach: reach) * Float(bus.scale)
                 guard size > 0 else { continue }
                 seen.append((away, .prop(model, at: place.point, forward: place.along, scale: size, tint: route.tint), (place.point, place.along)))
             }
         }
+        if let chosen {
+            frame.instances.append(chosen.instance)
+            frame.clear.append(chosen.clear)
+        }
         // The nearest first; of two as near, the one found first.
-        let kept = seen.indices.sorted { (seen[$0].away, $0) < (seen[$1].away, $1) }.prefix(min(most ?? Map3DStreetLife.mostBuses, detail.vehicles))
+        let room = max(min(most ?? Map3DStreetLife.mostBuses, detail.vehicles) - (chosen == nil ? 0 : 1), 0)
+        let kept = seen.indices.sorted { (seen[$0].away, $0) < (seen[$1].away, $1) }.prefix(room)
         for index in kept {
             frame.instances.append(seen[index].instance)
             frame.clear.append(seen[index].clear)
         }
         return frame
     }
+
+    /// Where `bus` of `route` stands: on its way out or back, or `nil` in a
+    /// tunnel (decision 474), where no bus is drawn.
+    private static func place(of bus: BusMotion.Bus, on route: Route) -> (point: Map3DPoint, along: Map3DPoint)? {
+        // Decision 474: each way's own distances, and none in a tunnel.
+        let along = bus.outbound ? Float(bus.distance(along: route.stops)) / route.length
+            : Float(bus.distance(along: route.backStops)) / route.backLength
+        guard !(bus.outbound ? route.outHidden : route.backHidden).contains(where: { $0.contains(along) }) else { return nil }
+        let path = bus.outbound ? route.out : route.back
+        let place = path.at(along * path.length)
+        return (place.point, place.along)
+    }
+
+    /// How near a finger must land to a bus to take it, in points.
+    public static let tapReach: Float = 30
+
+    /// How high a bus driver's eye is over the road.
+    static let driverEyeHeight: Float = 2.0
+
+    /// Decision 400 (FOLLOWBUS): what the follow camera needs of bus `id`
+    /// at `second` of the day (``Map3DFollow/Pose``), whether or not it is
+    /// near the camera or drawn; `nil` when the bus is not out or its route
+    /// is not laid. In a tunnel (no bus drawn) the camera goes on along the
+    /// way, over the ground.
+    public func pose(of id: BusID, second: Double) -> Map3DFollow.Pose? {
+        guard let route = routes.first(where: { $0.motion.route == id.route }),
+              let bus = route.motion.bus(run: id.run, at: second) else { return nil }
+        let along = bus.outbound ? Float(bus.distance(along: route.stops)) / route.length
+            : Float(bus.distance(along: route.backStops)) / route.backLength
+        let path = bus.outbound ? route.out : route.back
+        let place = path.at(along * path.length)
+        let hidden = (bus.outbound ? route.outHidden : route.backHidden).contains { $0.contains(along) }
+        let half = Map3DLowFloorBus.length / 2
+        return Map3DFollow.Pose(forward: place.along, nose: place.point + place.along * half, rail: place.point, middle: place.point,
+                                length: Map3DLowFloorBus.length, ground: nil, inTunnel: hidden, eyeHeight: Self.driverEyeHeight,
+                                bodyHeight: Map3DLowFloorBus.height)
+    }
+
+    /// The bus of the routes laid that is drawn nearest the finger at
+    /// (`x`, `y`) in `camera`'s view, within `reach` points, at `second`;
+    /// for a tap on the 3D map. A bus in a tunnel, or not yet grown, is
+    /// not tapped; a bus far from the camera (not drawn,
+    /// ``Map3DStreetLife/vehiclesFrom``) is not either.
+    public func bus(atX x: Float, y: Float, camera: Map3DCamera, second: Double, within reach: Float) -> BusID? {
+        guard camera.distance <= Map3DStreetLife.vehiclesFrom else { return nil }
+        var best: (away: Float, id: BusID)?
+        for route in routes where route.out.boxDistance(to: camera.target) < Map3DStreetLife.vehiclesReach(camera.distance) {
+            for bus in route.motion.buses(at: second) where bus.scale >= 0.5 {
+                guard let place = Self.place(of: bus, on: route),
+                      let screen = camera.screenPoint(of: place.point + Map3DPoint(0, Map3DLowFloorBus.height / 2, 0)) else { continue }
+                let away = ((screen.x - x) * (screen.x - x) + (screen.y - y) * (screen.y - y)).squareRoot()
+                if away <= reach, best.map({ away < $0.away }) ?? true { best = (away, BusID(route: route.motion.route, run: bus.run)) }
+            }
+        }
+        return best?.id
+    }
+
+    /// The route ids laid, for a test.
+    var routeIDs: [BusRouteID] { routes.map(\.motion.route) }
 }
 
 extension BusRoute {
