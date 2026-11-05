@@ -51,4 +51,16 @@ public struct Map3DScreenshotView: Equatable, Sendable {
         guard tilt > camera.tilt else { return camera }
         return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
     }
+
+    /// Decision 585 PR-3 (FERRY3): the camera over the first ferry
+    /// route's first boat at the world's moment (the app's
+    /// `-screenshot-3d-ferry`), so a screenshot looks at a boat and its
+    /// pier; over the scene's place when there is none.
+    public func camera(ferryIn scene: Map3DScene, of world: GameWorld, viewport: (width: Float, height: Float)) -> Map3DCamera? {
+        let laid = Map3DFerries(world: world, scene: scene)
+        guard let boat = laid.firstBoat(second: Double(world.clock.now.seconds)) else { return nil }
+        let camera = Map3DCamera(target: boat, distance: distance, heading: heading, viewport: viewport)
+        guard tilt > camera.tilt else { return camera }
+        return camera.leaned(dy: -(tilt - camera.tilt) / Map3DCamera.leanPerPoint)
+    }
 }

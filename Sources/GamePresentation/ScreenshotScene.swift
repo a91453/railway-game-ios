@@ -117,6 +117,17 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// piers on the 2D map, and the mode's card.
     case tamsuiFerry
 
+    /// Decision 585 PR-3 (FERRY3): a new real-world game round Kaohsiung's
+    /// harbour mouth with the Gushan–Cijin ferry opened as the ferry mode
+    /// lays it (``RealFerry/gushanCijin``), two boats every 10 minutes,
+    /// run on to 10:00 of the second day: the double-ended ferry and its
+    /// piers on the 3D map.
+    case gushanFerry
+
+    /// Decision 585 PR-3: ``gushanFerry`` at 18:30 of the second day, its
+    /// lamps lit at dusk.
+    case gushanFerryEvening
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -132,6 +143,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .maokong: (24.9825, 121.584)
         // Between the Tamsui and Bali piers.
         case .tamsuiFerry: (25.1640, 121.4376)
+        // Between the Gushan and Cijin piers.
+        case .gushanFerry, .gushanFerryEvening: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
@@ -161,7 +174,9 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
         case .followBus: Self.followBusWorld(in: language)
-        case .tamsuiFerry: Self.tamsuiFerryWorld(in: language, water: water)
+        case .tamsuiFerry: Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, in: language, water: water)
+        case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
+        case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         }
     }
 
@@ -246,21 +261,30 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         return world
     }
 
-    /// Decision 585: the Tamsui–Bali ferry, two boats every 15 minutes,
-    /// on a new game of Tamsui, at 10:00 of the second day.
-    private static func tamsuiFerryWorld(in language: DisplayLanguage, water grid: WaterGrid?) -> GameWorld {
-        guard let place = Self.tamsuiFerry.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+    /// Whether the scene is by the water and waits for the app's map of
+    /// Taiwan's water (decision 585).
+    public var needsWater: Bool {
+        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening
+    }
+
+    /// Decision 585: a real ferry, two boats every `every` minutes, on a
+    /// new game round `scene`'s place, run on to `until` minutes from the
+    /// start (in whole ten minutes): Tamsui–Bali at 10:00 of the second
+    /// day; Gushan–Cijin then and at 18:30 (decision 585 PR-3).
+    private static func ferryWorld(_ ferry: RealFerry, at scene: ScreenshotScene, every minutes: Int64, until: Int,
+                                   in language: DisplayLanguage, water grid: WaterGrid?) -> GameWorld {
+        guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
         else { return DemoWorld.make(in: language) }
         let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
         let water = grid?.cells(frame: frame, bounds: GameWorld.newGameBounds) ?? []
         let steep = grid?.steepCells(frame: frame, bounds: GameWorld.newGameBounds) ?? []
         var world = GameWorld.newGame(anchor: anchor, water: water, steep: steep)
-        if let piers = RealFerry.tamsuiBali.piers(in: world) {
-            _ = try? world.createFerryRoute(piers: piers, legMetres: RealFerry.tamsuiBali.legMetres, service: .every(minutes: 15), boats: 2)
+        if let piers = ferry.piers(in: world) {
+            _ = try? world.createFerryRoute(piers: piers, legMetres: ferry.legMetres, service: .every(minutes: minutes), boats: 2)
         }
-        // On to 10:00 of day 1 (.fast is ten minutes a tick).
+        // .fast is ten minutes a tick.
         world.setSpeed(.fast)
-        try? world.advance(ticks: 34 * 6)
+        try? world.advance(ticks: until / 10)
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world

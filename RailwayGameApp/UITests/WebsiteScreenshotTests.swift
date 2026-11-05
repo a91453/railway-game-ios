@@ -278,6 +278,44 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 585 PR-3 (FERRY3): the ferries on the 3D map: Tamsui–Bali's
+    /// passenger boat and Gushan–Cijin's double-ended ferry close up at
+    /// their piers (near models), each from 600 m (far models, past the
+    /// near models' 350 m; from 1,100 m over Tamsui the app's main thread
+    /// was busy past the UI query's limit, run 41900993132), and
+    /// Gushan–Cijin at dusk with its lamps lit; every shot looks at the
+    /// first boat. Two tests, each within the 8 minutes a test may take
+    /// (run 41906144682 took five shots past it). For the screenshot
+    /// review of the pull request that drew them.
+    func testFerriesIn3DTamsui() {
+        shootFerries([("ferry-3d-tamsui-near", "tamsuiFerry", "75,35,62"),
+                      ("ferry-3d-tamsui-far", "tamsuiFerry", "600,20,50")])
+    }
+
+    func testFerriesIn3DGushan() {
+        shootFerries([("ferry-3d-gushan-near", "gushanFerry", "85,35,62"),
+                      ("ferry-3d-gushan-far", "gushanFerry", "600,20,50"),
+                      ("ferry-3d-gushan-evening", "gushanFerryEvening", "110,215,64")])
+    }
+
+    private func shootFerries(_ shots: [(name: String, scene: String, view: String)]) {
+        for shot in shots {
+            let app = launch(extra: ["-screenshot-scene", shot.scene, "-screenshot-3d-view", shot.view, "-map3D.quality", "high",
+                                     "-screenshot-3d-ferry"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+            settle(seconds: 3)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep(shot.name, app)
+            app.terminate()
+        }
+    }
+
     /// Decision 578: the 3D follow views: the window of a car, the platform
     /// of the next stop (a short gap), and the station view greyed out
     /// while the next stop is a high-speed gap away.
