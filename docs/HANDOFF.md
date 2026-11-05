@@ -541,6 +541,7 @@
 - **114.1 發版檢查（`26d5fca1`）**：完整 `ci.yml` run 42010031491 **綠**。full lane run 42010048718 第 1 次：「Xcode UI tests, second」紅，原因是模擬器啟動逾時（`StartSaveFlowSmokeTests`），不是 App；build 與 lessons 兩個 job 交接時還在跑。整個 run 跑完後，對它 `rerun-failed-jobs` **一次**（第 49 任的監看程式會在換手前做；換手後由第 50 任檢查 `run_attempt`，還是 1 才做）。全綠就告訴作者「可以發（26d5fca1）」，附健康表：兩個 run、#1854 的 3D 地圖當機修正、#1838 的教學測試在 main 補跑綠（run 42014874034）。同一處再紅就是真的啟動問題，派人查，不要再重跑。作者說「發」才按 `testflight.yml`（§1.2）。
 - **Threads**（作者 2026-11-05：「今天threads怎麼發文」）：THREADS-114（session_01YGNNupkxupiZdffEiGcnhh，Sonnet）寫 113.1＋114.1 合一篇（main `bef26ca..26d5fca1`），用 SendUserFile 直接交檔給作者，在 #1579 留「Threads 草稿交付」，不 commit。照往例主文不放連結，TestFlight 連結放第一則自己的留言；建議 114.1 上 TestFlight 後再發。
 - **FERRYPIER**（作者 2026-11-05 回報：「旗津整個沒辦法按」）：session_01YGNNun2KoCWaFSFc4R9zoi，`claude/ferry-pier-snap`，排 115.1。原因：`GameWorld.isPierCell` 要點到的那一格本身是陸地、四鄰有水；`GameSession.tapFerry` 只看點到的那一格，示範航線卻吸附 4 格。要做的：點擊吸附、渡輪模式標出能蓋碼頭的岸邊、錯誤訊息。截圖第 2 級。要改 GameCore 規則先問遊戲規劃，要號碼時從 599 起查 #1579。
+- **TRACKCOUNT-STUDY**（session_01YGNNupRpibmgLDxF9Uxs5E，`claude/trackcount-study`，docs only，2026-11-05）：8 條可收購城市線每站股道「遊戲 vs 真實（OSM＋桃捷官方班表）」與照真實改建的建議，見 [URBAN_TRACK_LAYOUT_2026-11-05](research/URBAN_TRACK_LAYOUT_2026-11-05.md)。機捷第一：真實直達車每天約 144 次全在 A8 長庚醫院（4 股）越車，遊戲長庚 2 股、直達車每站停；之後的 TYMC-EXPRESS 照那份的第 1 節做。
 - **TOURSRC-STUDY**：見下面「觀光客源」，docs-only，綠了就合。
 - **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
 
