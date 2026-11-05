@@ -159,7 +159,8 @@ final class RealLineRunningSideTests: XCTestCase {
         XCTAssertEqual(due.filter { _, sent in (sent ?? -1) < day }.count, 0, "runs not sent out by seven")
     }
 
-    /// The other lines on sale with double track, three hours each, and the
+    /// The other lines on sale with double track (not the Xiaobitan
+    /// Branch Line, single track since decision 603), three hours each, and the
     /// Wenhu Line bought on the real Taipei opening and on the high-speed
     /// demo; only when asked (`RUNNING_SIDE_REPORT=1`, some minutes each;
     /// `RUNNING_SIDE_ONLY=<id>` or `openings` for one).
@@ -168,7 +169,7 @@ final class RealLineRunningSideTests: XCTestCase {
             throw XCTSkip("Set RUNNING_SIDE_REPORT=1 to play every line on sale (decision 564).")
         }
         for (id, right, seen) in [("ntdlrt:V", true, true), ("ntdlrt:VB", true, true), ("ntalrt:K", true, true),
-                                  ("sanying:LB", true, true), ("trtc:R_XBT", true, false), ("trtc:G_XBT", true, false),
+                                  ("sanying:LB", true, true), ("trtc:R_XBT", true, false),
                                   ("LIUJIA", false, false), ("SHALUN", false, false)]
             where ProcessInfo.processInfo.environment["RUNNING_SIDE_ONLY"].map({ $0 == id }) ?? true {
             let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true)
