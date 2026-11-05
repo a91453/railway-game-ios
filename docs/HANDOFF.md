@@ -525,6 +525,21 @@
 
 **第 48 任的現況（2026-11-05 約 03:40 UTC，session_01YGNNun9jnHVasAKCcWJtLD，第 4 層，壓縮 1 次）**：比下面「第 47 任交第 48 任」新，兩段不同時以這段為準。
 
+**第 48 任 03:55 UTC 的更新（壓縮 2 次；作者：「先寫一下就好」，還沒換手）**：下一任接手時先讀這段，再讀下面。
+
+- **113.1 驗證**：完整 `ci.yml` run 41959675139 **綠**（03:32 UTC）；full lane run 41959689553 03:08 開始，03:55 還在跑。綠了告訴作者、記在 #1579；紅了修，下一版再發。
+- **114.1 今晚 22:00（台灣）發的提案，作者還沒回**：20:00 前合進 main 的才帶；20:00 對 main HEAD 跑完整 `ci.yml` 與 full lane（約 1–1.5 小時），都綠才說「可以發」。CRASHROOT-CORE 與 CRASHROOT-VIEW 的 B 不趕今晚，趕不上進 115.1。作者沒同意前照原計畫，不設截止。
+- **各 session 03:55 的狀態**（都在第 5 層，向第 48 任回報；換手後要通知它們改向下一任）：
+  - TYMCLIST9 session_01YGNNumzTgdn7KUo2DfZ2yn：還在本地查機捷夜裡的循環互等（陸竹機廠滿了、閒置車不去青埔；在改 `runTrainEnteringDepot`，試「最近的機廠沒空股就去同線別的機廠」與「站旁讓車的班次可走逆向出口」）。還沒推。
+  - CRASHROOT-CORE session_01YGNNukm1XUMRsaSUhV9p9X：本地 117d7fa0，**已准推**（03:50，開 draft PR，`claude/gameworld-cow`）。GameWorld 2,032 → 72 bytes（`network` 留在 struct 裡，其餘進堆上 COW box）、StackProbe 260 → 83 KB、HSR tick 59–60 ms 不變、golden／存檔／replay 不動。**合併前另開獨立審查 session**（只給 PR 號碼與 CLAUDE.md），審過才合。
+  - CRASHROOT-VIEW session_01YGNNuptxN9XbCga5mi9Tqq：A `claude/crashroot-view`（8127caf2，590 下一步 3、4）等 full lane 跑完才推；推了、A 的 PR iOS gate 跑完後再手動跑一次 `ios-build.yml` `only_testing`（`MapInteractionTests TutorialUITests TutorialJourneyUITests LessonUITests LineDraftSummaryUITests Feature284To286UITests`）。B `claude/frame-size-check`（8dcda169，590 下一步 5，改 `ci.yml`，完整 tier）排在 TYMCLIST9、CRASHROOT-CORE 之後，等通知有空位再推。
+  - FERRYFOLLOW session_01YGNNup3Z2AaFgczhVaJ5Bq：#1835 draft，full lane 跑完後通知它可以跑 `website-screenshots.yml`；第 3 級，截圖給作者看過才合。
+  - TAKEOVERVIS session_01YGNNuoD3WCSZqt9yNpBJej（決策 595）：查完只改 GamePresentation（`RealTransfers.swift`：收購的線上，該線自己的真實旅客 1:1 算沿線常客，自己蓋的站照舊十分之一；`RealLineAcquisition.swift`、`AcquisitionReportTests`），不動 GameCore。**沒有 GitHub 權限**：`add_repo` 被 auto mode 擋，用 git proxy 匿名 clone。#1579 的認領是遊戲規劃代留的。推之前要作者在它的 session 允許 `add_repo`。
+  - STREETSTOP session_01YGNNuqVW1Gne2Ce1dnNeQ4（決策 596）：剛開工，可能有同樣的權限問題。
+  - 這兩個 session 是用 `create_session` 開的，沒帶 `source_url`，所以沒有 repo。下次開 session 要給 `source_url`（`https://github.com/a91453/railway-game-ios`）。
+- **開著的 PR**：#1836（本交接，docs，CI 綠，等作者合）、#1835（FERRYFOLLOW）、#1834（Codex 客運塗裝 593，第 3 級）、#1833（Gemini 高雄流行音樂中心，592 續，draft，第 48 任沒看過）、#1743（TYMCLIST9）。
+- **排程**：遊戲規劃的 check-in trig_01CZumvcuZjwZhwf3RMbSePh（04:22 UTC）。
+
 - **113.1 已發**：作者要先自己測，在完整驗證跑完前自己按了 `testflight.yml`（run 113，main `240daaf8`）。遊戲規劃沒按。同一個 commit 的完整 `ci.yml`（run 41959675139）與 full lane（iOS App Build run 41959689553）是手動開的，跑完的結果記在 #1579；紅了就修，下一版再發。113.1 的內容：#1824（585 PR-3）、#1825（588）、#1827（589）、#1831（590，CRASH112，112.1 新增路線選第二站閃退）、#1819（FOLLOWXRAY）、#1829（WHATSNEW）、作者合的 #1813、#1817、#1830（591）、#1832（592）。
 - **113.1 實機要確認的**：新增路線、點第二站不再閃退（決策 590 下一步 1）。
 - **114.1（作者 2026-11-05 同意，派出去的都等 113.1 驗證跑完才推）**：
