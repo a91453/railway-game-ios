@@ -19,3 +19,9 @@ tools/coach-bus/rebuild.sh /private/output/coach-bus-2026-10-21
 1新車＋3既有對照，4native／4GLB／28七向RGBA。額外前後底、四底色／小尺寸／模糊灰階、四車對照、同尺度車隊圖與viewer。對照車不算新增。管線驗證所有native頂點position/color/glow、normal容差1e-5、全量GLB重編／SHA、PNG雙解碼alpha／像素數／SHA／不裁邊、viewer操作和七組指定XCTest。造型改後一起重建，人工看七向／底部／車隊比較；不得只看雜湊宣稱美術已驗證。
 
 公開配方／工具／測試／skill／README／一張總覽與驗證；完整成品／來源對照／ZIP放私有Railway/game-art-previews/docs/art/coach-bus-2026-10-21/。兩庫draft PR互鏈，PR一律以main為base；依賴的PR還沒合併就等它合併，或把需要的部分一起帶進來（#942、#949、#957曾合進過時分支）；不推main、不自行合併。標VERIFIED／UNVERIFIED；真機Metal／效能、車門輪子動畫留裝置驗證。
+
+## 塗裝變體（決策 593）
+
+`Map3DCoachLivery` 的固定 id、中英文名稱給日後國道路線對色用；`Map3DCoachBus.model(livery:far:)` 只重著色既有三角形。`model()` 仍是原暖白／暖紅，街景標準模型及種子不動。色帶使用既有面片，不跨輪拱補新三角；行李門同色；變體僅將既有玻璃面設夜間發光，原車燈旗標維持。無參數街景模型的玻璃與燈旗標完全不變。每組近遠景對同一個原生幾何 LOD，塗裝不得改幾何、法線、發光旗標。
+
+`tools/coach-bus/rebuild.sh <原車私庫輸出> <塗裝私庫輸出>` 會在原車驗證後額外產 16 個塗裝模型、224 張日夜透明圖、自含 viewer 與同尺度車隊圖。兩批輸出都在私庫；只保留最新一輪。自看日夜、七方向與縮小遠景，作者外觀接受及 Metal 真機另驗。

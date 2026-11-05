@@ -1,3 +1,5 @@
+> 國道客運車塗裝 studies（Codex，決策 593，`codex/coach-liveries`，2026-11-05）：三軸 coach 加八組中性塗裝（含原暖白／暖紅與觀光接駁），按需近遠景，不接營運。預設 `Map3DCoachBus.model()` 頂點與雜湊鎖住，街景選型／種子、GameCore、存檔、golden、fixtures 不動。私庫存完整模型、日夜七向 PNG、viewer 與 SOURCE.md；公開庫存配方、測試、一張總覽。外觀待作者看，Metal 實機與路線對色留後續。
+
 > 跟車透視補充（派工單 FOLLOWXRAY，`claude/follow-xray`，#1819，不佔新號，存檔、golden 不動，2026-11-05）：纜車吊廂交給透視；公車車窗改右窗；停站時「從車站看」直接可選。**公車的透視拿掉了**：城市場景的側視裡，被跟隨的公車交給透視後整台消失（同鏡頭，關掉就回來，後視、車窗不受影響）。已排除鏡頭位置；「只切分區塊、不送錐」的實驗 UI 查詢逾時，沒有結論。**下一步**：要再接公車先查這個消失（`Map3DSeeThrough.init(followed:)` 保留），疑點在被跟隨車輛與透視錐的深度／覆蓋率互動。說明見 decisions/342.md、578.md 的「續（FOLLOWXRAY）」。
 
 > 國道客運站 3D studies（Codex，決策 591，`codex/bus-terminal-studies`，2026-11-05）：大型 8 格、中型 5 格、國道招呼站、11 零件與三車組景，近遠景按需模型；公開庫只存配方、測試及一張總覽，私庫存 M3DM／GLB／日夜七向 PNG／離線 viewer／SOURCE.md。只自檢，外觀待作者看；不接營運，GameCore、存檔、golden、fixtures 不動。後續需真機 Metal 與客運轉彎路徑驗證。
