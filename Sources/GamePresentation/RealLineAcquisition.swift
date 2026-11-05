@@ -1128,13 +1128,17 @@ extension RealLineLaying {
             second = (a, b)
         }
         // Decision 602: a fanned yard's second lead, beside the first from
-        // past the end station's loops to where the real two join, on the
-        // side the real second lies.
+        // the end station's outermost switch to where the real two join, on
+        // the side the real second lies: from the switch itself, so that a
+        // train out of the yard and one into it share no single track
+        // there (laid a short edge further on, a train out on one lead and
+        // one in from a loop met head on on that edge, the Neihu deadlock
+        // of decision 602).
         var secondLeads: [(a: Double, b: Double, offset: Double)] = []
         for (stop, site, _) in depotEnds where stop == 0 || stop == runs.stops.count - 1 {
             guard let real = site.fan?.second, let first = spans.first, let last = spans.last else { continue }
             let joins = path.nearest(onMap(real.joins)).along
-            let (a, b) = stop == 0 ? (joins, first.lowerBound - gap) : (last.upperBound + gap, joins)
+            let (a, b) = stop == 0 ? (joins, first.lowerBound) : (last.upperBound, joins)
             guard b - a > 2 * ramp + gap else { continue }
             let on = onMap(real.on), at = path.nearest(on).along
             let side: Double = (on - path.point(at: at)).dot(path.tangent(at: at).normal) >= 0 ? 1 : -1
