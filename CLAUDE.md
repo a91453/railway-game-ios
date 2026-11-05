@@ -220,16 +220,17 @@ needs OSM data reads the same extract.
   workflows' files.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's own files;
-  the full lane runs every UI test, its iPhone tests split over three jobs
-  (`FULL_LANE_SECOND_JOB` names the second's classes and
-  `FULL_LANE_LESSONS_JOB` the third's; the build job runs the rest), and the iPad
+  the full lane runs every UI test, its iPhone tests split over four jobs
+  (`FULL_LANE_SECOND_JOB`, `FULL_LANE_LESSONS_JOB` and `FULL_LANE_MAP_JOB`
+  name three jobs' classes, run two at a time, decision 604; the build job
+  runs the rest), and the iPad
   tutorial tests (the
   missing-button proof nightly and on request) on `main` once a night
   (`ios-full-lane.yml`, 02:17 Taiwan time, unless `main`'s newest commit
   already had one or one is still going) and by hand (only for the
   commit a release will use and to bisect a red full lane); a merge does
   not start it (decision 582, amending 265), and its red result does not
-  block a pull request. The iPad job waits for the two iPhone UI jobs, so
+  block a pull request. The iPad job waits for the other iPhone UI jobs, so
   the full lane holds at most three of the account's five macOS runners,
   leaving two for pull requests' iOS checks),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,

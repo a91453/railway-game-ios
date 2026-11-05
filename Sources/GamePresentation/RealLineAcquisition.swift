@@ -81,7 +81,9 @@ public struct RealBranchLine: Hashable, Sendable {
     }
 
     /// Whether it is laid with a second track beside the first.
-    var isDoubleTrack: Bool { isUrban || Self.doubleTrack.contains(network) }
+    /// Decision 603: every light rail and metro but those in
+    /// ``singleTrackUrban``, laid on one track as the real ones are.
+    var isDoubleTrack: Bool { isUrban ? !Self.singleTrackUrban.contains(id) : Self.doubleTrack.contains(network) }
 
     /// Cars of its trains: the DR1000's three on the branch lines
     /// (decision 315's reference row), as the demo's on the light rails
@@ -205,6 +207,13 @@ public struct RealBranchLine: Hashable, Sendable {
     /// beside the first (decision 315's later note); the others run on a
     /// single track with passing loops.
     static let doubleTrack: Set<String> = ["LIUJIA", "SHALUN"]
+
+    /// Decision 603: the light rails and metros on sale (by ``id``) laid
+    /// on a single track, as the real ones are: the Xiaobitan Branch Line
+    /// (OSM: one track from Qizhang to Xiaobitan, one platform track at
+    /// Xiaobitan), its one train shuttling it. `metro_runs.json` gives
+    /// each end one track (`extract_metro_runs.py`'s `SINGLE_TRACK`).
+    static let singleTrackUrban: Set<String> = ["trtc:G_XBT"]
 }
 
 /// How a line's stations are laid (decision 315; decision 400 for the

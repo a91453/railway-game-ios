@@ -264,6 +264,28 @@ extension Map3DScene.Builder {
                 mesh.addRibbon(along: line, width: look.girderWidth, lift: -Self.bedDrop - look.slabDepth, depth: look.girderDepth - look.slabDepth,
                                top: concrete, side: concrete, sidePaint: Self.concrete)
                 if truss { Self.addTrussChords(&mesh, line: line, across: across, beside: beside) }
+                // Decision 600: a railway's or the High Speed Rail's pair one
+                // deck (a metro's twin girders stay apart): where the track
+                // beside lies farther than the deck is wide, each fills its
+                // half of the slot between.
+                if !truss, piece.viaduct != .metro {
+                    for (slot, sign) in [Float(-1), 1].enumerated() {
+                        // Each segment's half of the slot.
+                        let gaps = beside[slot].map { $0.map { ($0 - look.deckWidth) / 2 } ?? 0 }
+                        var start = 0
+                        while start < gaps.count {
+                            guard gaps[start] > 0.05 else { start += 1; continue }
+                            var end = start
+                            while end + 1 < gaps.count, gaps[end + 1] > 0.05 { end += 1 }
+                            defer { start = end + 1 }
+                            let width = gaps[start...end].reduce(0, +) / Float(end - start + 1) + 0.1
+                            mesh.addRibbon(along: Array(line[start...end + 1]), width: width,
+                                           offset: sign * (look.deckWidth + width) / 2 - sign * 0.05, lift: -Self.bedDrop, depth: look.slabDepth,
+                                           top: look.ballasted ? Map3DPalette.ballast : concrete, side: concrete,
+                                           topPaint: look.ballasted ? Self.ballast : Self.concrete, sidePaint: Self.concrete)
+                        }
+                    }
+                }
             }
             let saved = target
             // The slab track's concrete bed on the deck, near (decision 238).

@@ -202,7 +202,10 @@ final class HUDAlignmentUITests: XCTestCase {
     func testTheStationMastersBubbleKeepsTheLines() {
         defer { finish() }
         for way in ways {
-            let lines = openDemo(way)
+            // The bubble stays a minute, not 7 s: on a runner whose main
+            // thread stood still 2 to 8 s at a time it had gone before it
+            // was read (decision 604; 3 of the 4 full lanes from bef26ca).
+            let lines = openDemo(way, ["-speaking-ms", "60000"])
             tap("stationMaster")
             let bubble = element("stationMaster.bubble")
             XCTAssertTrue(bubble.appears(within: 10), "\(way): the bubble shows")
@@ -253,9 +256,17 @@ final class HUDAlignmentUITests: XCTestCase {
             close(["news.done", "Done"])
 
             for (item, done) in [("menu.settings", "settings.done"), ("menu.help", "help.done"), ("menu.achievements", "achievements.done")] {
-                tap("hud.menu")
+                // Touched again when the menu does not open: a touch on it
+                // was cancelled while the app's main thread stood still
+                // ("touch cancelled at (741, 35)", 26d5fca's full lane, run
+                // 42010048718; decision 604).
+                let menu = app.buttons["hud.menu"]
+                XCTAssertTrue(menu.appears(within: 15), "Missing hud.menu")
+                menu.waitUntilSettled()
                 // Help stands on the menu's first row (decision 383), not
                 // under More.
+                XCTAssertTrue(menu.openMenu(showing: app.buttons.matching(identifier: item).firstMatch),
+                              "\(way): the menu opens with \(item)")
                 tapHittable(item)
                 XCTAssertTrue(app.buttons[done].appears(within: 15), "\(way): \(item) opens")
                 checkPanel("\(way) \(item)", lines)
@@ -466,8 +477,8 @@ final class HUDAlignmentUITests: XCTestCase {
     }
 
     /// The demo map, paused, its lines read off it.
-    private func openDemo(_ way: Way) -> Lines {
-        launch(way, ["-demo-layout", "-ui-testing-paused"])
+    private func openDemo(_ way: Way, _ extra: [String] = []) -> Lines {
+        launch(way, ["-demo-layout", "-ui-testing-paused"] + extra)
         XCTAssertTrue(element("map").appears(within: 30), "\(way): the demo map opens")
         let tools = element("hud.tools")
         XCTAssertTrue(tools.appears(within: 10), "\(way): the tools show")

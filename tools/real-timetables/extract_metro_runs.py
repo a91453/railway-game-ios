@@ -111,6 +111,16 @@ MID_DEPOTS = {"tymc:A"}
 # the stations it passes (`passes`). Any other line's skipped stations
 # (four of Danhai's holiday trips) are calls at the time between, as before.
 PASSING_LINES = {"tymc:A"}
+# Decision 603: the lines the game lays as a single track, as the real
+# ones are, with one track at each end, by their game id: the Xiaobitan
+# Branch Line (OSM: one track the whole way, one platform track at
+# Xiaobitan). One train shuttles it, turned round at each end in as little
+# as the timetable gives (97 s at Xiaobitan in the weekday peaks), so it
+# is played with `SINGLE_TURNAROUND`, the timetable's one minute, rather
+# than the branch lines' three; a line that would then still need more
+# than one train, or more than one track at a station, is not laid single.
+SINGLE_TRACK = {"trtc:G_XBT"}
+SINGLE_TURNAROUND = 60
 BETWEEN_TRACKS = 3
 # The tracks such a line's end station may have: its own and loops three
 # deep either side.
@@ -293,9 +303,17 @@ def main(folder, out):
         stops = names[names.index(after_station):] if after_station else names
         game_id = f"{system}:{line_id}"
         label = game_id + (f" after {system}:{after}" if after else "")
+        single = game_id in SINGLE_TRACK
+        turnaround = tool.TURNAROUND
+        if single:
+            tool.TURNAROUND = SINGLE_TURNAROUND
         line, problem = tool.line_runs({"trains": found}, days, stops)
+        tool.TURNAROUND = turnaround
         depots = DEPOT_ENDS.get(game_id)
-        if depots and not problem:
+        if single and not problem:
+            if sum(line["overnight"].values()) != 1 or any(n != 1 for n in line["tracks"].values()):
+                problem = f"a single track needs one train and one track a station: {line['overnight']}, {line['tracks']}"
+        elif depots and not problem:
             line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, depots)
             ends = (stops[0], stops[-1])
             # Decision 535 (PR W): an end with a depot beyond it is laid
