@@ -134,8 +134,16 @@ extension GameSession {
     /// The stretch of track the picked ends would make, and whether
     /// GameCore would build it and for how much; `nil` until both ends are
     /// picked (or in another mode).
+    /// In the app, `nil` until the main actor's next turn has worked it
+    /// out (decision 590, ``networkDraftPreview(now:)``).
     public var networkPreview: NetworkPreview? {
         networkDraftPreview?.preview
+    }
+
+    /// ``networkPreview``; `now` works it out at once, even in the app
+    /// (for an action, which runs from a shallow stack).
+    func networkPreview(now: Bool) -> NetworkPreview? {
+        networkDraftPreview(now: now)?.preview
     }
 
     /// ``networkPreview``, with the middle of an X crossover (empty for one
@@ -146,7 +154,17 @@ extension GameSession {
     /// Not for each tick: a player who presses play with a draft open had
     /// it worked out again at every one (PLAYER_FEEDBACK 80.1 #1); ✓ plans
     /// the build again on the world it builds in.
+    ///
+    /// Decision 590: building it on copies of the world takes some 200 KB
+    /// of stack, so in the app a view's body that asks for it before it
+    /// is worked out gets `nil`, and it is worked out on the main actor's
+    /// next turn (``waits(for:workOut:)``).
     var networkDraftPreview: (preview: NetworkPreview, crossing: [WorldCoordinate])? {
+        networkDraftPreview(now: false)
+    }
+
+    /// ``networkDraftPreview``; `now` works it out at once, even in the app.
+    func networkDraftPreview(now: Bool) -> (preview: NetworkPreview, crossing: [WorldCoordinate])? {
         guard networkMode == .build, let start = networkStart, let end = networkEnd else { return nil }
         // Read so that what shows the preview is redrawn when the world
         // changes; the revision below says whether it did.
@@ -157,6 +175,16 @@ extension GameSession {
             buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide, traces: tracesRealRailway, commandRevision: commandRevision
         )
         if let memo = networkPreviewMemo, memo.key == key, memo.affordable == affords(memo.preview?.preview.cost) { return memo.preview }
+        if !now, waits(for: .networkDraft, workOut: { _ = $0.networkDraftPreview(now: true) }) { return nil }
+        return workOutNetworkDraftPreview(from: start, to: end, key: key)
+    }
+
+    /// ``networkDraftPreview`` worked out and kept. Never inlined
+    /// (decision 590): only working it out takes its stack.
+    @inline(never)
+    private func workOutNetworkDraftPreview(
+        from start: NetworkAnchor, to end: NetworkAnchor, key: NetworkPreviewMemo.Key
+    ) -> (preview: NetworkPreview, crossing: [WorldCoordinate])? {
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
         } else if let traced = tracePreview(from: start, to: end) {
@@ -492,10 +520,26 @@ extension GameSession {
     /// The crossovers the platform picked would get (decision 571), for
     /// the preview: none with an island layout, which lays its own track.
     /// Planned once for the pick and command.
+    /// In the app, none until the main actor's next turn has planned them
+    /// (decision 590: planning them tries the platform on a copy of the
+    /// world).
     var networkPlatformCrossovers: [PlayerCommand.TrackStretch] {
+        networkPlatformCrossovers(now: false)
+    }
+
+    /// ``networkPlatformCrossovers``; `now` plans them at once, even in the app.
+    func networkPlatformCrossovers(now: Bool) -> [PlayerCommand.TrackStretch] {
         guard !networkStationLayout.isLaidByLayout, let stretch = networkPlatformStretch, networkPlatformBeside != nil else { return [] }
         let key = PlatformBesideMemo.Key(edge: stretch.edge, start: stretch.start, end: stretch.end, commandRevision: commandRevision)
         if let memo = stationCrossoverMemo, memo.key == key { return memo.crossovers }
+        if !now, waits(for: .platformCrossovers, workOut: { _ = $0.networkPlatformCrossovers(now: true) }) { return [] }
+        return workOutNetworkPlatformCrossovers(key: key)
+    }
+
+    /// ``networkPlatformCrossovers`` planned and kept. Never inlined
+    /// (decision 590).
+    @inline(never)
+    private func workOutNetworkPlatformCrossovers(key: PlatformBesideMemo.Key) -> [PlayerCommand.TrackStretch] {
         let crossovers = (try? networkPlatformDraft().get().addition.crossovers) ?? []
         stationCrossoverMemo = (key, crossovers)
         return crossovers

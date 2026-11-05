@@ -15,6 +15,14 @@
 enum WaitingPreview: Hashable {
     case lineOpening
     case lineConfirmation
+    /// The network tool's stretch drawn (``GameSession/networkDraftPreview``).
+    case networkDraft
+    /// The platform tool's station layout (``GameSession/networkStationLayoutPreview``).
+    case stationLayout
+    /// The crossovers of a platform on both tracks (``GameSession/networkPlatformCrossovers``).
+    case platformCrossovers
+    /// The track card's upgrade (``GameSession/trackUpgradeDraft``).
+    case trackUpgrade
 }
 
 extension GameSession {

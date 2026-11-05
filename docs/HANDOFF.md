@@ -3013,6 +3013,8 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 
 做了的在 [決策 590](decisions/590.md)：112.1 選新路線第二站時主執行緒堆疊用盡，新路線的價格與開線卡片的預覽在 app 裡改成等主執行緒下一輪算。留下的（決策 590「下一步」）：113.1 實機確認；**114.1 的根本修法**（作者 2026-11-05 同意）：GameWorld 改成堆上的 COW box（GameCore，存檔與 golden 不動，要量 tick 成本）、畫軌道預覽等其他在 body 裡模擬的 getter 也等一輪、拆小 `MapView.timedBody`、CI 列出超過 32 KB 的堆疊框；之後：兩個 `Menu` 裡的 `ForEach`。
 
+114.1 的 3、4（CRASHROOT-VIEW，`claude/crashroot-view`）：畫軌道、站型、月台渡線、軌道卡的預覽在 app 裡也等一輪，教學的畫軌道步驟等的那一輪保留上一次的答案；`MapView.timedBody` 拆出兩組疊層。沒做完的：右下角、左下角那一列、手勢層還在 `timedBody` 裡（決策 590「後來：114.1 的畫面部分」），要不要再拆看 `ios-build.yml` 列出的 App 堆疊框（第 5 項，`claude/frame-size-check`）。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

@@ -751,36 +751,13 @@ struct MapView: View {
                 .accessibilityValue(selectionDescription)
                 .background(realWorld == nil ? Color(uiColor: .secondarySystemBackground) : Color.clear)
                 .clipped()
-                .overlay(alignment: .top) {
-                    // One column down the top of the map, so none covers
-                    // another: the status banner (the follow bar stands in
-                    // the row above, ``ContentView``, decision 226), then
-                    // the construction HUD while a stretch is previewed,
-                    // or else the traffic key at the leading edge.
-                    VStack(spacing: 0) {
-                        StatusBanner(session: session)
-                        if showsConstructionHUD, let preview = session.networkPreview {
-                            MapConstructionHUD(preview: preview, language: session.language)
-                                .padding(.top, 12)
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                        } else {
-                            TrafficLegend(traffic: traffic, language: session.language)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        if showsFrameRate {
-                            MapFrameReadout(language: session.language)
-                                .padding(.horizontal, 12)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                    .padding(.top, clear.top)
-                    .padding(.leading, clear.leading)
-                    .padding(.trailing, clear.trailing)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
-                    // Decision 414: put away in the idle mode, as the
-                    // screen's own controls are.
-                    .ambientHidden(screen.ambient != nil)
-                }
+                // Decision 590, 114.1: the overlays in view modifiers of
+                // their own, so that what they hold is not part of this
+                // closure's own value and stack.
+                .modifier(MapTopColumnOverlay(
+                    session: session, traffic: traffic, showsFrameRate: showsFrameRate, clear: clear,
+                    topColumnDepth: $topColumnDepth
+                ))
                 .overlay(alignment: .bottomTrailing) {
                     // TestFlight 98.1: under a phone's panel the legend
                     // goes down to the credits, clear of what stands at
@@ -958,107 +935,19 @@ struct MapView: View {
                     .padding(.leading, clear.leading)
                     .ambientHidden(screen.ambient != nil)
                 }
-                // Decision 174, later: the sights while building, faint
-                // and under the flags below.
-                .overlay(alignment: .topLeading) {
-                    MapAttractionMarks(
-                        session: session, camera: projection, viewport: viewport, insets: clear, isPassive: true,
-                        clearTop: max(clear.top, topColumnDepth)
-                    )
-                }
-                // Decision 295: the real stations, choosing where a
-                // platform goes on a real-world map; under the flags.
-                .overlay(alignment: .topLeading) {
-                    if session.offersRealStations {
-                        MapRealStationPins(session: session, camera: projection, viewport: viewport, insets: clear)
-                    }
-                }
-                // Decision 107: flags at the ends of the track previewed,
-                // and beside it, or the building shown, cancel and build.
-                .overlay(alignment: .topLeading) {
-                    // Under the construction HUD, which shows how long the
-                    // track is and what it costs.
-                    MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
-                        top: max(clear.top, topColumnDepth), leading: clear.leading,
-                        bottom: clear.bottom, trailing: clear.trailing
-                    ), mapTop: clear.top, avoiding: [
+                .modifier(MapMarkOverlays(
+                    session: session, projection: projection, viewport: viewport, clear: clear,
+                    topColumnDepth: topColumnDepth, attribution: attribution,
+                    confirmAvoiding: [
                         bottomLeadingFrame, bottomTrailingFrame, buttonsUnderPanel ? cornerRowFrame : .zero,
                         // Decision 384: the new line's station pair drawer,
                         // measured on the screen, in the map's points.
                         screen.stationPairFrame.isEmpty ? .zero : screen.stationPairFrame.offsetBy(
                             dx: -proxy.frame(in: .global).minX, dy: -proxy.frame(in: .global).minY
                         )
-                    ])
-                    // Its flags and ring are where the track and the site
-                    // are, which may be by the attribution.
-                    .mask { attribution.fill() }
-                }
-                // Decision 167, later: the locks on the tiles not bought.
-                .overlay(alignment: .topLeading) {
-                    MapLockMarks(session: session, camera: projection, viewport: viewport, insets: clear)
-                }
-                // Decision 174: the sights, with their stars. Decision 510:
-                // under the bubbles, so a bubble over a sight takes the tap.
-                .overlay(alignment: .topLeading) {
-                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear,
-                                       clearTop: max(clear.top, topColumnDepth))
-                }
-                // Decision 109: what needs the player, over its stations.
-                // Decision 568: not while a new line is picked on the map,
-                // where they stood over its pill.
-                .overlay(alignment: .topLeading) {
-                    if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
-                        MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
-                                        clearTop: max(clear.top, topColumnDepth))
-                            .ambientHidden(screen.ambient != nil)
-                    }
-                }
-                // Decision 246: where the city's requests point.
-                .overlay(alignment: .topLeading) {
-                    if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
-                        MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
-                    }
-                }
-                // Decision 119: the station selected, looked at.
-                .overlay(alignment: .topLeading) {
-                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear,
-                                      clearTop: max(clear.top, topColumnDepth))
-                }
-                // Decision 117: something just put up.
-                .overlay(alignment: .topLeading) {
-                    BuildPulseMark(pulse: session.buildPulse, camera: projection)
-                        .mask { attribution.fill() }
-                }
-                // Decision 256: towns grown a step, fares over the stations,
-                // a goal met.
-                .overlay(alignment: .topLeading) {
-                    TownGrowthRings(pulse: session.townPulse, camera: projection)
-                        .mask { attribution.fill() }
-                }
-                // The fares, and decision 276's trips stamped full where
-                // they ended; both off with the quick strip's Fares
-                // (decision 310).
-                .overlay(alignment: .topLeading) {
-                    if mapLayers.showsFaresAndStamps {
-                        FareFloatMarks(session: session, camera: projection)
-                            .mask { attribution.fill() }
-                    }
-                }
-                .overlay(alignment: .topLeading) {
-                    if mapLayers.showsFaresAndStamps {
-                        TripStampMarks(session: session, camera: projection)
-                            .mask { attribution.fill() }
-                    }
-                }
-                // Decision 353: a station stamp collected lands over its
-                // station, whatever the quick strip shows.
-                .overlay(alignment: .topLeading) {
-                    StationStampMarks(session: session, camera: projection)
-                        .mask { attribution.fill() }
-                }
-                .overlay {
-                    GoalMetCheck(pulse: session.goalPulse, language: session.language)
-                }
+                    ],
+                    showsFaresAndStamps: mapLayers.showsFaresAndStamps
+                ))
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.
                 // And after the other overlays, so the legend and the zoom
@@ -1756,12 +1645,6 @@ struct MapView: View {
     /// measured and frame it again: their first layout, not a legend opened
     /// later by the player.
     private static let openingSettles: TimeInterval = 2
-
-    /// Whether the network tool previews a stretch, shown in the
-    /// construction HUD at the top of the map.
-    private var showsConstructionHUD: Bool {
-        session.tool == .network && session.networkPreview != nil
-    }
 
     private var selectionDescription: String {
         let selection = session.selectionText() ?? String(localized: "Nothing selected")
@@ -3122,6 +3005,168 @@ enum MapPaintPhase {
 /// The map's whole rectangle but for a hole round each of `holes`: where
 /// the game draws nothing, so a real-world map's attribution shows
 /// (decision 120).
+/// The column down the top of the map (``MapView``): the status banner,
+/// then the construction HUD or the traffic key. Decision 590, 114.1: a
+/// modifier of its own, so that what it holds is not part of the map
+/// body's value and stack.
+private struct MapTopColumnOverlay: ViewModifier {
+    let session: GameSession
+    let traffic: TrafficOverlay
+    let showsFrameRate: Bool
+    let clear: EdgeInsets
+    @Binding var topColumnDepth: CGFloat
+    @Environment(GameScreenState.self) private var screen
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .top) {
+                // One column down the top of the map, so none covers
+                // another: the status banner (the follow bar stands in
+                // the row above, ``ContentView``, decision 226), then
+                // the construction HUD while a stretch is previewed,
+                // or else the traffic key at the leading edge.
+                VStack(spacing: 0) {
+                    StatusBanner(session: session)
+                    // While the network tool previews a stretch.
+                if session.tool == .network, let preview = session.networkPreview {
+                        MapConstructionHUD(preview: preview, language: session.language)
+                            .padding(.top, 12)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    } else {
+                        TrafficLegend(traffic: traffic, language: session.language)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    if showsFrameRate {
+                        MapFrameReadout(language: session.language)
+                            .padding(.horizontal, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.top, clear.top)
+                .padding(.leading, clear.leading)
+                .padding(.trailing, clear.trailing)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topColumnDepth = $0 }
+                // Decision 414: put away in the idle mode, as the
+                // screen's own controls are.
+                .ambientHidden(screen.ambient != nil)
+            }
+    }
+}
+
+/// The marks, pins, flags, bubbles and pulses over the map (``MapView``),
+/// in the order they stack. Decision 590, 114.1: a modifier of its own, so
+/// that what they hold is not part of the map body's value and stack.
+private struct MapMarkOverlays: ViewModifier {
+    let session: GameSession
+    let projection: PlanCamera
+    let viewport: ScreenSize
+    let clear: EdgeInsets
+    let topColumnDepth: CGFloat
+    let attribution: AttributionCutout
+    /// What the build's pill keeps off (``MapBuildConfirm/avoiding``).
+    let confirmAvoiding: [CGRect]
+    let showsFaresAndStamps: Bool
+    @Environment(GameScreenState.self) private var screen
+
+    func body(content: Content) -> some View {
+        content
+            // Decision 174, later: the sights while building, faint
+            // and under the flags below.
+            .overlay(alignment: .topLeading) {
+                MapAttractionMarks(
+                    session: session, camera: projection, viewport: viewport, insets: clear, isPassive: true,
+                    clearTop: max(clear.top, topColumnDepth)
+                )
+            }
+            // Decision 295: the real stations, choosing where a
+            // platform goes on a real-world map; under the flags.
+            .overlay(alignment: .topLeading) {
+                if session.offersRealStations {
+                    MapRealStationPins(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
+            }
+            // Decision 107: flags at the ends of the track previewed,
+            // and beside it, or the building shown, cancel and build.
+            .overlay(alignment: .topLeading) {
+                // Under the construction HUD, which shows how long the
+                // track is and what it costs.
+                MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
+                    top: max(clear.top, topColumnDepth), leading: clear.leading,
+                    bottom: clear.bottom, trailing: clear.trailing
+                ), mapTop: clear.top, avoiding: confirmAvoiding)
+                // Its flags and ring are where the track and the site
+                // are, which may be by the attribution.
+                .mask { attribution.fill() }
+            }
+            // Decision 167, later: the locks on the tiles not bought.
+            .overlay(alignment: .topLeading) {
+                MapLockMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+            }
+            // Decision 174: the sights, with their stars. Decision 510:
+            // under the bubbles, so a bubble over a sight takes the tap.
+            .overlay(alignment: .topLeading) {
+                MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear,
+                                   clearTop: max(clear.top, topColumnDepth))
+            }
+            // Decision 109: what needs the player, over its stations.
+            // Decision 568: not while a new line is picked on the map,
+            // where they stood over its pill.
+            .overlay(alignment: .topLeading) {
+                if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                    MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear,
+                                    clearTop: max(clear.top, topColumnDepth))
+                        .ambientHidden(screen.ambient != nil)
+                }
+            }
+            // Decision 246: where the city's requests point.
+            .overlay(alignment: .topLeading) {
+                if session.lineDrawingChrome(linesPanelOpen: screen.panel == .lines).showsAlerts {
+                    MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
+            }
+            // Decision 119: the station selected, looked at.
+            .overlay(alignment: .topLeading) {
+                MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear,
+                                  clearTop: max(clear.top, topColumnDepth))
+            }
+            // Decision 117: something just put up.
+            .overlay(alignment: .topLeading) {
+                BuildPulseMark(pulse: session.buildPulse, camera: projection)
+                    .mask { attribution.fill() }
+            }
+            // Decision 256: towns grown a step, fares over the stations,
+            // a goal met.
+            .overlay(alignment: .topLeading) {
+                TownGrowthRings(pulse: session.townPulse, camera: projection)
+                    .mask { attribution.fill() }
+            }
+            // The fares, and decision 276's trips stamped full where
+            // they ended; both off with the quick strip's Fares
+            // (decision 310).
+            .overlay(alignment: .topLeading) {
+                if showsFaresAndStamps {
+                    FareFloatMarks(session: session, camera: projection)
+                        .mask { attribution.fill() }
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                if showsFaresAndStamps {
+                    TripStampMarks(session: session, camera: projection)
+                        .mask { attribution.fill() }
+                }
+            }
+            // Decision 353: a station stamp collected lands over its
+            // station, whatever the quick strip shows.
+            .overlay(alignment: .topLeading) {
+                StationStampMarks(session: session, camera: projection)
+                    .mask { attribution.fill() }
+            }
+            .overlay {
+                GoalMetCheck(pulse: session.goalPulse, language: session.language)
+            }
+    }
+}
+
 private struct AttributionCutout: Shape {
     let holes: [CGRect]
 
