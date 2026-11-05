@@ -127,12 +127,57 @@ struct RealLineDepotSite: Sendable {
         sidings: 7, beyond: "雙城", compact: true
     )
 
+    /// Decision 556: the Luzhu depot (蘆竹機廠) of the Taoyuan Airport
+    /// MRT, beside the line between Shanbi and Kengkou, south of it. Its
+    /// real yard (the yard tracks round 25.083, 121.270, ways 497336750 to
+    /// 497400702, 499772313 to 499814055, 603083920 and 603083921;
+    /// `tools/rail-depots`) lies some 100 to 350 m off the line, its leads
+    /// leaving it toward Kengkou; the game's leave at a point on the line
+    /// east of the yard (way 111203717), so the wye stands clear of
+    /// Shanbi's and Kengkou's platforms, its yard laid westward through
+    /// the real one. Its sidings hold the trains the real timetable leaves
+    /// overnight at the stations from Sanchong to the airport, one each,
+    /// as far as they go; the rest stand in the Qingpu depot.
+    static let luzhu = RealLineDepotSite(
+        line: "tymc:A", english: "Luzhu Depot", chinese: "蘆竹機廠",
+        junction: (25.081437, 121.278549),
+        yard: ((25.082700, 121.272200), (25.082200, 121.268600)),
+        sidings: 16, beyond: nil, compact: false
+    )
+
+    /// Decision 556: the Qingpu depot (青埔機廠, landuse way 461638223),
+    /// the Taoyuan Airport MRT's main depot, beside the line east of it
+    /// between Hengshan and Linghang. Its stabling tracks (ways 499824857
+    /// to 499824866 and 499831993 to 499832001) run south-east beside the
+    /// line from round 25.0263, 121.2200 to 25.0243, 121.2215, its leads
+    /// leaving the line where it runs past (ways 497402819, 497405855,
+    /// 497405856, 542844200); the game's leave it further north (way
+    /// 479042997, 25.0278, 121.2171), clear of Linghang's platforms,
+    /// the yard laid from the stabling tracks' north-west ends to their
+    /// south-east ends. Its sidings either side of the lead on short
+    /// turnouts (``compact``), as its real ladders are short: on the
+    /// depot tool's one-sided ladder the yard ran some 900 m on and
+    /// crossed the line where it bends toward it past Linghang.
+    static let qingpu = RealLineDepotSite(
+        line: "tymc:A", english: "Qingpu Depot", chinese: "青埔機廠",
+        junction: (25.027806, 121.217032),
+        yard: ((25.026300, 121.220050), (25.024350, 121.221500)),
+        sidings: 12, beyond: nil, compact: true
+    )
+
     /// The real depots line `line` is bought with (decision 535: the
     /// Wenhu Line has one past each end; its continuation, the Ankeng LRT
-    /// one past Shuangcheng).
+    /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
+    /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu].filter { $0.line == line }
     }
+
+    /// Decision 556: whether its sidings fan out away from the line, not
+    /// toward its junction: the Taoyuan Airport MRT's yards run almost
+    /// alongside it, and fanned toward the junction the Qingpu yard's
+    /// crossed the line's own track.
+    var fansAwayFromLine: Bool { line == "tymc:A" }
 
     func name(in language: DisplayLanguage) -> String {
         language.text(english, chinese)
@@ -256,7 +301,8 @@ extension RealLineDepotLayout {
             ),
         ]
         guard let laid = yard(
-            site, points: points, foot: foot, height: footHeight, at: footNode, leaving: lead, toward: path.tangent(at: j),
+            site, points: points, foot: foot, height: footHeight, at: footNode, leaving: lead,
+            toward: site.fansAwayFromLine ? path.point(at: path.nearest(points[1]).along) - points[1] : path.tangent(at: j),
             first: first + pieces.count, length: length, ground: ground, water: water, in: language
         ) else { return nil }
         return (pieces + laid.pieces, laid.depot)
@@ -279,7 +325,14 @@ extension RealLineDepotLayout {
     /// offer reads it in before it lays the yard, which otherwise reads
     /// no ground (and no height over the water) past the real yard.
     static func groundSamples(beyond points: [WorldVector], site: RealLineDepotSite, length: Int64, back: Double, step: Double) -> [PlanPoint] {
-        guard points.count == 3, site.beyond != nil else { return [] }
+        guard site.beyond != nil else { return [] }
+        return groundSamples(of: points, site: site, length: length, back: back, step: step)
+    }
+
+    /// Decision 556: ``groundSamples(beyond:site:length:back:step:)`` of
+    /// a yard beside the line too, its ladder fanning either way.
+    static func groundSamples(of points: [WorldVector], site: RealLineDepotSite, length: Int64, back: Double, step: Double) -> [PlanPoint] {
+        guard points.count == 3 else { return [] }
         let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
         let way = (points[2] - points[1]).unit, origin = points[1] - way * back
         let along = back + ladder.straight + furthestYardShift + extent(of: site, length: length).far

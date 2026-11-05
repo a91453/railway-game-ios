@@ -93,6 +93,18 @@ END_TRACKS = 5
 # Exhibition Center. Decision 535 (continued, ANKENGDEPOT): the Ankeng LRT
 # runs on into the Ankeng depot past Shuangcheng.
 DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館"), "ntalrt:K": ("雙城",)}
+# Decision 556: the lines bought with real depots beside the line between
+# its ends (`RealLineDepotSite` with no `beyond`), by their game id: the
+# Taoyuan Airport MRT's Luzhu depot between Shanbi and Kengkou and its
+# Qingpu depot between Hengshan and Linghang. The trains its timetable
+# leaves overnight at stations between its ends stand in them; each
+# station is counted, as a line's with a depot past its end, only from
+# `LOOKAHEAD` before a train's next run there, and is laid with no more
+# tracks than the game lays (`END_TRACKS` at an end, `BETWEEN_TRACKS`
+# between): what the timetable would stand there beyond that waits or
+# is not run in the game (the decision measures how many).
+MID_DEPOTS = {"tymc:A"}
+BETWEEN_TRACKS = 3
 # The tracks such a line's end station may have: its own and loops three
 # deep either side.
 DEPOT_END_TRACKS = 7
@@ -283,6 +295,21 @@ def main(folder, out):
             worst = {s: n for s, n in line["tracks"].items() if n > (most if s in ends else 3)}
             if worst:
                 problem = f"stations need more tracks than the game lays, with the depot: {worst}"
+        elif game_id in MID_DEPOTS and not problem:
+            ends = (stops[0], stops[-1])
+            between = tuple(s for s in line["overnight"] if s not in ends)
+            line["tracks"] = depot_tracks(tool, line["runs"], line["overnight"], stops, between)
+            capped = {}
+            for station, count in line["tracks"].items():
+                most = END_TRACKS if station in ends else BETWEEN_TRACKS
+                if count > most:
+                    capped[station] = count
+                    line["tracks"][station] = most
+            too_many = {s: n for s in ends for n in [line["overnight"].get(s, 0)] if n > END_TRACKS}
+            if too_many:
+                problem = f"an end stands more trains overnight than its tracks: {too_many}"
+            elif capped:
+                print(f"{label}: laid with fewer tracks than the timetable would stand at once: {capped}")
         elif not problem:
             line, problem = parked(tool, found, days, stops, line, "spare" if metro else True)
         if problem:

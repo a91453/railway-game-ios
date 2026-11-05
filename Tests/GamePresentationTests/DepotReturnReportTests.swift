@@ -5,7 +5,7 @@ import XCTest
 
 /// Decision 535 (PR W): how the lines with runs and depots fare, run only
 /// when asked (`DEPOT_RETURN_REPORT=1`, some minutes in a release build;
-/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, danhai, ankeng, ankeng-added, sanying,
+/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, tymc, danhai, ankeng, ankeng-added, sanying,
 /// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off,
 /// and `DEPOT_RETURN_CONTROLLED=1` as well to keep it on). Each is played from where it opens or is bought
 /// for 51 hours, minute by minute (HEALTH-110: `DEPOT_RETURN_FAST=1` at the
@@ -34,6 +34,12 @@ final class DepotReturnReportTests: XCTestCase {
     func testTheWenhuLine() throws {
         try wanted("wenhu")
         try report("wenhu", Self.bought("trtc:BR"))
+    }
+
+    /// Decision 556: the Taoyuan Airport MRT, on a map wide enough for it.
+    func testTheTaoyuanAirportLine() throws {
+        try wanted("tymc")
+        try report("tymc", Self.bought("tymc:A", side: 1 << 22))
     }
 
     func testTheGreenMountainLine() throws {
@@ -141,11 +147,11 @@ final class DepotReturnReportTests: XCTestCase {
 
     /// A game round real line `id` with it bought, under realistic rules
     /// (simple with `DEPOT_RETURN_SIMPLE`), or under `rules`.
-    static func bought(_ id: String, rules: NewGameRules? = nil) throws -> GameWorld {
+    static func bought(_ id: String, rules: NewGameRules? = nil, side: Int64 = 1 << 21) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         // The Taiwan Railway branch lines are found by their network alone.
         let round = id.hasPrefix("tra:") ? String(id.dropFirst(4)) : id
-        let session = try RealLineAcquisitionTests.game(round: round, side: 1 << 21, heights: true, rules: rules ?? (simple ? .simple : .realistic))
+        let session = try RealLineAcquisitionTests.game(round: round, side: side, heights: true, rules: rules ?? (simple ? .simple : .realistic))
         guard let line = session.buyableRealLines.first(where: { $0.id == id }) else {
             throw XCTSkip("\(id) is not on sale")
         }

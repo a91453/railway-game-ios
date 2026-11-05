@@ -46,7 +46,7 @@ extension GameWorld {
         var dispatch = DispatchMemo()
         for line in lines where !line.depots.isEmpty {
             for index in depotCandidates(of: line, memo: &dispatch) where held[trains[index].id] == nil {
-                if let depot = fullDepot(for: trains[index], of: line) { held[trains[index].id] = .depotFull(depot) }
+                if let depot = fullDepot(for: trains[index], of: line, memo: &dispatch) { held[trains[index].id] = .depotFull(depot) }
             }
         }
         return held
@@ -68,7 +68,7 @@ extension GameWorld {
               let line = line(id: lineID), !line.depots.isEmpty,
               let index = trains.firstIndex(where: { $0.id == train.id }),
               depotCandidates(of: line, memo: &memo).contains(index) else { return nil }
-        return fullDepot(for: train, of: line)
+        return fullDepot(for: train, of: line, memo: &memo)
     }
 
     /// The trains of `line` it would send into a depot now, by index (see
@@ -81,9 +81,13 @@ extension GameWorld {
 
     /// The depot of `line` that `train`'s empty run would go to, when it
     /// has no siding left for it (see ``depotHasRoom(_:for:)``).
-    private func fullDepot(for train: Train, of line: ServiceLine) -> StationID? {
+    private func fullDepot(for train: Train, of line: ServiceLine, memo: inout DispatchMemo) -> StationID? {
         guard let depot = emptyRun(of: line, for: train, to: line.depots)?.deadhead?.to,
               !depotHasRoom(depot, for: train) else { return nil }
+        // Decision 556, continued (TYMCLIST9): a line with runs sends a
+        // train in a waiting service's way into another depot with room
+        // instead, when it can reach one (``otherDepotRun(of:for:besides:memo:)``).
+        if otherDepotRun(of: line, for: train, besides: depot, memo: &memo.directions) != nil { return nil }
         return depot
     }
 }

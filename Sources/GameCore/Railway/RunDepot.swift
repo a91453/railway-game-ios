@@ -125,12 +125,26 @@ extension GameWorld {
     /// however soon its next run there (decision 297).
     func runTrainEnteringDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for index in runDepotEntryCandidates(of: line, memo: &memo) {
-            guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
+            guard var trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
             // Decision 280: only with a siding for it; without one it
             // stays where it waits. Decision 547: with traffic control off
             // too, where it ran onto a siding a train stood on and stood
             // behind it for good.
-            if let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
+            // Decision 556, continued (TYMCLIST9): a train in the way of a
+            // service waiting for its route (decision 297), when the depot
+            // it reaches soonest has none, goes to the one it reaches
+            // soonest of those that do. On the Taoyuan Airport MRT,
+            // Luzhu's sidings were full each night and Qingpu's half
+            // empty, and trains that had ended their runs at the airport
+            // terminals stood on the berths the last services were bound
+            // for. Only such a train: one merely one too many still waits
+            // for the depot it reaches soonest, as long empty runs across
+            // the line to the other one jammed the evening under the
+            // realistic rules.
+            if let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) {
+                guard let other = otherDepotRun(of: line, for: trains[index], besides: depot, memo: &memo.directions) else { continue }
+                trip = other
+            }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
@@ -325,6 +339,18 @@ extension GameWorld {
             let own = self.held(train)
             return ways.contains { self.network.fouls(own, $0) }
         }.map(\.id))
+    }
+
+    /// Decision 556, continued (TYMCLIST9): the empty run of `train`
+    /// into the depot of `line` it reaches soonest of those other than
+    /// `full` with a siding for it, when, under traffic control, it is in
+    /// the way of a service waiting for its route (see
+    /// ``trainsInTheWay(memo:)``); `nil` otherwise.
+    func otherDepotRun(of line: ServiceLine, for train: Train, besides full: StationID, memo: inout DirectionMemo) -> LineTrip? {
+        guard isTrafficControlEnabled, line.hasRuns else { return nil }
+        let others = line.depots.filter { $0 != full && depotHasRoom($0, for: train) }
+        guard !others.isEmpty, trainsInTheWay(memo: &memo).contains(train.id) else { return nil }
+        return emptyRun(of: line, for: train, to: others)
     }
 
     /// Decision 296: whether `train`, standing without a service at

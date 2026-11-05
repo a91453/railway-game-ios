@@ -23,11 +23,13 @@ final class AnkengLineTests: XCTestCase {
     /// ends at a station between (the Sanying Line's now; the Ankeng LRT's
     /// trains stand in its depot) comes in from beyond it: from the end
     /// further from it, so it stands facing the nearer end, where its
-    /// first run of the morning leaves for.
+    /// first run of the morning leaves for. The Taoyuan Airport MRT's
+    /// positioning runs are its real ones in the timetable (decision 556),
+    /// not ones made up for a train standing overnight, so it is not asked.
     func testATrainStandingAtAStationBetweenComesInFromBeyondIt() throws {
         let railways = try BundledRealData.railways()
         XCTAssertNotNil(railways.metroRuns["ntalrt:K"], "the Ankeng LRT's runs")
-        for (id, line) in railways.metroRuns {
+        for (id, line) in railways.metroRuns where id != "tymc:A" {
             let stops = line.stops
             for run in line.runs where run.positioning {
                 guard let last = run.calls.last?.station, let first = run.calls.first?.station,
