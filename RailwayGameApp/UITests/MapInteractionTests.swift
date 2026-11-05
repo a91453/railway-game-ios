@@ -1811,6 +1811,14 @@ final class MapInteractionTests: XCTestCase {
         let end = start.withOffset(CGVector(dx: 0, dy: -160))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         Thread.sleep(forTimeInterval: 0.5)
+        // The app's main thread can stall for seconds on the Simulator and
+        // the drag is cancelled: the list does not move a point (run
+        // 42044357168). Drag once more then; a drag that reaches the sheet
+        // instead still fails below.
+        if first.exists, first.frame.minY == before.minY {
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+            Thread.sleep(forTimeInterval: 0.5)
+        }
         let after = first.exists ? first.frame.minY : -.infinity
         XCTAssertLessThan(after, before.minY - 60, "A drag up on a card moves the list up (from \(before.minY) to \(after))")
     }
