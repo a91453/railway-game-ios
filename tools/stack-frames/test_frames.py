@@ -84,6 +84,22 @@ class FramesTests(unittest.TestCase):
         self.assertNotIn("`small`", largest, "only the top 2")
         self.assertIn("No new frame", frames.report(found, "Frames", {"big", "known"}, 32 * 1024, 2))
 
+    def test_the_files_may_follow_the_options(self):
+        # As the workflows call it: on Python 3.12 plain parse_args took
+        # no file after an option (PR #1840's first run, exit 2).
+        import contextlib
+        import io
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as handle:
+            handle.write(X86)
+        try:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(frames.main(["report", "--title", "T", "--top", "1", "--disassembly", handle.name, "a.o", "b.o"]), 0)
+            self.assertIn("### T", out.getvalue())
+        finally:
+            os.unlink(handle.name)
+
 
 if __name__ == "__main__":
     unittest.main()

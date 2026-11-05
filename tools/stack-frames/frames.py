@@ -176,7 +176,8 @@ def cell(text, limit=160):
 
 def report(frames, title, baseline, minimum, top):
     largest = sorted(frames.items(), key=lambda item: (-item[1], item[0]))[:top]
-    new = sorted(((s, n) for s, n in frames.items() if n > minimum and s not in baseline), key=lambda item: (-item[1], item[0]))
+    # No baseline (the app's list in ios-build.yml): nothing is "new".
+    new = [] if baseline is None else sorted(((s, n) for s, n in frames.items() if n > minimum and s not in baseline), key=lambda item: (-item[1], item[0]))
     names = demangled({s for s, _ in largest} | {s for s, _ in new})
     lines = [f"### {title}", ""]
     if baseline is not None:
@@ -202,7 +203,10 @@ def main(argv):
     parser.add_argument("--baseline")
     parser.add_argument("--min", type=int, default=32 * 1024)
     parser.add_argument("--top", type=int, default=20)
-    args = parser.parse_args(argv)
+    # Intermixed: the files may follow the options (the workflows give
+    # them last), and plain parse_args stops at the first option after
+    # the command on Python 3.12, CI's (exit 2, "unrecognized arguments").
+    args = parser.parse_intermixed_args(argv)
     frames = read_frames(args.files, args.disassembly)
     if args.command == "list":
         for symbol, size in sorted(frames.items(), key=lambda item: (-item[1], item[0])):
