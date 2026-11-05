@@ -3150,7 +3150,7 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 
 ### 4.52 真實列車走派軌、並排高架一座、真實鋼軌只放近景（決策 600，派工單 RAILTRACK402，session_01YGNNumTKgURfmZQFxRAkPX，`claude/railtrack-402`，2026-11-05）
 
-做了的在 [決策 600](decisions/600.md)：決策 402 下一步 1–3。留下的（決策 600「下一步」）：台鐵執行時的待避（`overtake-sidings.js`）、高鐵與林鐵計畫的 `holds`、林鐵的真實列車、決策 402 下一步第 4 項、實機量每幀時間。
+做了的在 [決策 600](decisions/600.md)：決策 402 下一步 1–3。留下的（決策 600「下一步」）：台鐵執行時的待避（`overtake-sidings.js`）、高鐵與林鐵計畫的 `holds`、林鐵的真實列車、決策 402 下一步第 4 項、實機量每幀時間。#1861 的第 2 級截圖還沒拍：website-screenshots run #294（本分支）與 #295（main）都因 main 的 GameCore 閃退（`GameWorld.advance(ticks:)` 第 3080 行，決策 590 的堆上 storage）四支全紅，要等 GameCore 那條線修好再重跑 `testLeanedStation140At60 testLeanedStation200At60 testHighSpeedDemo testRealWorldDemoBaseMap`，看過才轉 ready。
 
 ## 5. 已知、還沒派的待辦
 
