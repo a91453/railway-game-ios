@@ -1083,10 +1083,7 @@ final class Map3DMetalView: MTKView {
             encoder.setFragmentBytes(base, length: bytes.count, index: 1)
         }
         if !seeThrough.cars.isEmpty {
-            // TEMPORARY experiment: the chunks split, the shader with no cones.
-            let sent = ProcessInfo.processInfo.arguments.contains("-map3D.xraySplitOnly")
-                ? Map3DSeeThrough(eye: camera.eye, cars: [], matrix: matrix).floats : seeThrough.floats
-            sent.withUnsafeBytes { bytes in
+            seeThrough.floats.withUnsafeBytes { bytes in
                 guard let base = bytes.baseAddress else { return }
                 encoder.setFragmentBytes(base, length: bytes.count, index: 2)
             }

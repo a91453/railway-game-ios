@@ -388,7 +388,6 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testFollowBusCityBack() { shootFollowBus("back", "follow-bus-city-back", scene: "followBusCity") }
     func testFollowBusCitySide() { shootFollowBus("side", "follow-bus-city-side", scene: "followBusCity") }
     func testFollowBusCitySideNoXray() { shootFollowBus("side", "follow-bus-city-side-noxray", scene: "followBusCity", extra: ["-map3D.noFollowXray"]) }
-    func testFollowBusCitySideSplitOnly() { shootFollowBus("side", "follow-bus-city-side-splitonly", scene: "followBusCity", extra: ["-map3D.xraySplitOnly"]) }
     func testFollowBusCityWindow() { shootFollowBus("window", "follow-bus-city-window", scene: "followBusCity") }
 
     private func shootFollowBus(_ view: String, _ name: String, scene: String = "followBus", extra: [String] = []) {
