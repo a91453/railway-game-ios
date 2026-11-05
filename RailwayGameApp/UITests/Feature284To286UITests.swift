@@ -58,15 +58,13 @@ final class Feature284To286UITests: XCTestCase {
         // Decision 481: the line's trains are on its own page.
         app.openLinePage()
         let catalog = app.buttons["line.staff.catalog"]
-        reveal(catalog)
-        tap(catalog)
+        openCatalog(catalog)
         tap(app.segmentedControls.buttons["鐵路"].firstMatch)
         showCatalogType("藍皮解憂號")
         checkCatalogType("藍皮解憂號")
 
         // Choose this closes the showroom and retains the selected type.
-        reveal(catalog)
-        tap(catalog)
+        openCatalog(catalog)
         showCatalogType("海風號")
         checkCatalogType("海風號")
     }
@@ -179,6 +177,22 @@ final class Feature284To286UITests: XCTestCase {
         XCTAssertTrue(control.becomesHittable(within: 10), "Covered \(control)")
         control.waitUntilSettled()
         control.tap()
+    }
+
+    /// Opens the train types from the line's page. On a slow runner the
+    /// touch on the button went by without the showroom opening (run
+    /// 41975633745: 9 s to check what lay over the button, then no
+    /// "鐵路" for 20 s; the same test passed in the full lane, run
+    /// 41959689553), so a showroom that has not opened is asked for again,
+    /// once, from the button brought back into reach.
+    private func openCatalog(_ catalog: XCUIElement) {
+        let opened = app.buttons["catalog.cancel"]
+        for _ in 0..<2 {
+            reveal(catalog)
+            tap(catalog)
+            if opened.appears(within: 15) { return }
+        }
+        XCTFail("The train types did not open")
     }
 
     private func reveal(_ control: XCUIElement) {

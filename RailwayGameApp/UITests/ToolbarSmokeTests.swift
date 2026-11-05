@@ -508,11 +508,43 @@ extension XCUIApplication {
             Thread.sleep(forTimeInterval: 0.2)
         }
         guard chip.exists else { return segment }
+        bringModeRowIntoTheCard(row)
         for attempt in 0..<8 where !chip.becomesHittable(within: 1) {
             print("networkMode \(name) attempt \(attempt): chip \(chip.frame) row \(row.frame)")
             if chip.frame.midX < row.frame.midX { row.swipeRight() } else { row.swipeLeft() }
         }
         return chip
+    }
+
+    /// Drags the details card's scrolling part until the mode row lies in
+    /// it. Decision 588 pins only the card's foot on a phone, and the head
+    /// and the options above it scroll; after a stretch was built under a
+    /// tall banner the row lay below what the card shows (y 310 to 354),
+    /// and every sideways swipe on it failed with "visible frame is empty"
+    /// (`testThePlatformConfirmStaysAboveTheDockUnderATallBanner`, run
+    /// 41975633745). Where the card does not scroll there is nothing to do.
+    private func bringModeRowIntoTheCard(_ row: XCUIElement) {
+        let holder = ["details.scroll.foot", "details.scroll.middle", "details.card"].lazy
+            .map { self.descendants(matching: .any).matching(identifier: $0)
+                .containing(.scrollView, identifier: "network.modeRow").firstMatch }
+            .first { $0.exists }
+        guard let holder else { return }
+        holder.waitUntilStill()
+        for _ in 0..<10 {
+            let shown = holder.frame.intersection(frame)
+            guard !shown.isEmpty, row.exists else { return }
+            let middle = row.frame.midY
+            if shown.minY + 4 <= row.frame.minY, row.frame.maxY <= shown.maxY - 4 { return }
+            print("mode row \(row.frame) outside the card's scrolling part \(shown)")
+            // The row below what shows: the content goes up; above: down.
+            if middle > shown.midY {
+                drag(in: shown, at: shown.minX + 12, from: 0.75, to: 0.25, clearOf: .button)
+            } else {
+                drag(in: shown, at: shown.minX + 12, from: 0.25, to: 0.75, clearOf: .button)
+            }
+            // The content, not the holder, moves on after the drag.
+            row.waitUntilStill()
+        }
     }
 
     /// ``networkMode(_:)`` in the details card, which is opened first when
