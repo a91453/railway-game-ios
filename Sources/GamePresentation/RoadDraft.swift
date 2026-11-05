@@ -20,6 +20,17 @@ public enum BusToolMode: Hashable, Sendable, CaseIterable {
     case routes
     /// The player's own roads.
     case roads
+    /// Decision 585: ferry routes between piers by the water.
+    case ferries
+
+    /// The mode picker's name: 公車, 道路, 渡輪.
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .routes: language.text("Buses", "公車")
+        case .roads: language.text("Roads", "道路")
+        case .ferries: language.text("Ferries", "渡輪")
+        }
+    }
 }
 
 /// The road the bus tool's roads mode draws (presentation state only): the

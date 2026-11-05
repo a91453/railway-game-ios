@@ -11,7 +11,7 @@ enum FeatureUITestWorld {
     static func make(_ name: String) throws -> GameWorld {
         if name == "big-grid" || name == "big-grid-night" { return try bigGrid(night: name == "big-grid-night") }
         if name == "story" { return try story() }
-        guard ["separate-tracks", "missing-platform", "double-platform", "old-crossovers", "catalog", "sightseeing", "quiet-night", "idle-blocker"].contains(name) else {
+        guard ["separate-tracks", "missing-platform", "double-platform", "old-crossovers", "catalog", "sightseeing", "quiet-night", "idle-blocker", "platform-choice"].contains(name) else {
             preconditionFailure("Unknown -ui-test-world: \(name)")
         }
         let bounds = try WorldBounds(width: 40_960, height: 20_480)
@@ -32,9 +32,21 @@ enum FeatureUITestWorld {
         // built through GameWorld commands, not the tool decision 285 fixes.
         let west = try world.buildStation(named: "海岸", at: PlanPoint(x: 6_144, y: 10_240)).id
         if name == "double-platform" { return world }
-        let eastY: Int64 = name == "separate-tracks" ? 9_920 : 10_240
+        let eastY: Int64 = name == "separate-tracks" || name == "platform-choice" ? 9_920 : 10_240
         let east = try world.buildStation(named: "山邊", at: PlanPoint(x: 30_720, y: eastY)).id
         try addPlatform(to: west, at: PlanPoint(x: 6_144, y: 10_240), in: &world)
+        if name == "platform-choice" {
+            // Decision 584, PR-2: 海岸 on both tracks of a double track
+            // with no crossover, 山邊 on the other one only, 海岸線
+            // between them, and 列車 3 off the track, given 海岸線
+            // (PlacementPlatformTests builds the same world).
+            try addPlatform(to: west, at: PlanPoint(x: 6_144, y: 9_920), in: &world)
+            try addPlatform(to: east, at: PlanPoint(x: 30_720, y: 9_920), in: &world)
+            let line = try world.createLine(named: "海岸線", stops: [west, east]).id
+            let train = try world.purchaseTrain(named: "列車 3").id
+            try world.assignTrain(train, to: line)
+            return world
+        }
         if name == "old-crossovers" {
             // Decision 572: both stations on both tracks with no crossover
             // between them, as the platform tool left them before decision

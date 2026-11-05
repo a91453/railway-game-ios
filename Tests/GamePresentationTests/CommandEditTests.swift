@@ -81,7 +81,7 @@ final class CommandEditTests: XCTestCase {
             if case .command(.edit(let edit)) = entry.action { return edit.name }
             return nil
         }
-        for name in ["createLine", "renameLine", "staffLine", "addLinePattern", "purchaseTrain", "placeTrain", "assignTrain", "reformLine", "renameStation", "borrow", "setFareRules", "setTrainTimetable"] {
+        for name in ["createLine", "renameLine", "staffLine", "addLinePattern", "purchaseTrain", "placeTrainOnPlatform", "assignTrain", "reformLine", "renameStation", "borrow", "setFareRules", "setTrainTimetable"] {
             XCTAssertTrue(edits.contains(name), "\(name) in \(edits)")
         }
         XCTAssertTrue(entries.contains { $0.refused }, "a refused edit is logged too")

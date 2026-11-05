@@ -8,304 +8,546 @@
 /// Presentation and rendering layers read from a world and send it commands;
 /// they must not keep a separate copy of game state as the source of truth.
 public struct GameWorld: Equatable, Sendable {
+    /// The world's state, on the heap and shared by copies until one of
+    /// them changes (decision 590, step 2; see ``GameWorldStorage``): the
+    /// fields below read it and change it through `uniqueState`.
+    private var storage = GameWorldStorage()
+
+    /// The state to change: the world's own, copied first if another world
+    /// shares it.
+    private var uniqueState: UnsafeMutablePointer<GameWorldState> {
+        mutating get {
+            if !isKnownUniquelyReferenced(&storage) {
+                storage = GameWorldStorage(storage.state.pointee)
+            }
+            return storage.state
+        }
+    }
+
+    /// Two worlds are equal when their states are, field by field, as
+    /// they were when the fields were the struct's own. Two worlds sharing
+    /// one storage are compared field by field too, not taken as equal at
+    /// once: a field holding a `Double` NaN is not equal to itself, and the
+    /// comparison stays what the synthesized one was.
+    public static func == (lhs: GameWorld, rhs: GameWorld) -> Bool {
+        lhs.network == rhs.network && lhs.storage.state.pointee == rhs.storage.state.pointee
+    }
+
     /// How far the world reaches (Stage F3d): every track node and station
     /// stands in it. The railway is the ``network``, and stations stand at
     /// points (Stage F1); the world has no cells.
-    public private(set) var bounds: WorldBounds
+    public private(set) var bounds: WorldBounds {
+        _read { yield storage.state.pointee.bounds }
+        _modify { yield &uniqueState.pointee.bounds }
+    }
     /// All stations, ordered by ascending ``StationID``.
-    public private(set) var stations: [Station]
+    public private(set) var stations: [Station] {
+        _read { yield storage.state.pointee.stations }
+        _modify { yield &uniqueState.pointee.stations }
+    }
     /// All trains, ordered by ascending ``TrainID``.
-    public private(set) var trains: [Train]
+    public private(set) var trains: [Train] {
+        _read { yield storage.state.pointee.trains }
+        _modify { yield &uniqueState.pointee.trains }
+    }
     /// All service lines, ordered by ascending ``LineID``.
-    public private(set) var lines: [ServiceLine]
+    public private(set) var lines: [ServiceLine] {
+        _read { yield storage.state.pointee.lines }
+        _modify { yield &uniqueState.pointee.lines }
+    }
     /// Which service level each minute of the day has, for every line.
-    public private(set) var serviceDay: ServiceDay
-    public private(set) var clock: GameClock
-    public internal(set) var economy: GameEconomy
+    public private(set) var serviceDay: ServiceDay {
+        _read { yield storage.state.pointee.serviceDay }
+        _modify { yield &uniqueState.pointee.serviceDay }
+    }
+    public private(set) var clock: GameClock {
+        _read { yield storage.state.pointee.clock }
+        _modify { yield &uniqueState.pointee.clock }
+    }
+    public internal(set) var economy: GameEconomy {
+        _read { yield storage.state.pointee.economy }
+        _modify { yield &uniqueState.pointee.economy }
+    }
     /// The railway (Phase 4.5 Stage S3): the one record of all track, the
     /// network's nodes and edges. Empty in a new world.
-    public private(set) var network: RailwayNetwork
+    ///
+    /// Kept in the world itself rather than in its storage (decision 590,
+    /// step 2): the rules call its methods at every step of every train,
+    /// and a call on a field read through the storage from another file
+    /// copies the field first, here eight arrays and dictionaries retained
+    /// and released each time, which made a tick of the High Speed Rail
+    /// demo a third slower. It is 64 bytes.
+    public private(set) var network = RailwayNetwork()
     /// Whether traffic control is on (Phase 4.6 Stage T, ARCHITECTURE
     /// decision 32): every train takes the whole of a route before it starts
     /// along it, no two trains hold the same track, and a service or a line
     /// whose route is held waits for it (see ``setTrafficControl(_:)`` and
     /// ``reservedResources(of:)``). Off in a new world, so every rule of the
     /// stages before it holds unchanged; a new game in the app turns it on.
-    public private(set) var isTrafficControlEnabled: Bool
+    public private(set) var isTrafficControlEnabled: Bool {
+        _read { yield storage.state.pointee.isTrafficControlEnabled }
+        _modify { yield &uniqueState.pointee.isTrafficControlEnabled }
+    }
     /// The passengers of every station that has any (G1a, ARCHITECTURE
     /// decision 34): its demand, the groups waiting there and the
     /// conservation audit, by ascending ``StationID``. Empty in a new world,
     /// where no station has demand. Set by the passenger rules
     /// (`PassengerDemand.swift`) only.
-    public internal(set) var passengers: [StationPassengers]
+    public internal(set) var passengers: [StationPassengers] {
+        _read { yield storage.state.pointee.passengers }
+        _modify { yield &uniqueState.pointee.passengers }
+    }
     /// The passengers riding each train that carries any (G1b, ARCHITECTURE
     /// decision 35), by ascending ``TrainID``. Set by the passenger rules
     /// (`Boarding.swift`) only.
-    public internal(set) var riders: [TrainRiders]
+    public internal(set) var riders: [TrainRiders] {
+        _read { yield storage.state.pointee.riders }
+        _modify { yield &uniqueState.pointee.riders }
+    }
     /// Legacy saves keep direct-trip demand; network games select a complete
     /// journey at release. A change affects future releases only.
-    public internal(set) var passengerRoutingMode: PassengerRoutingMode
+    public internal(set) var passengerRoutingMode: PassengerRoutingMode {
+        _read { yield storage.state.pointee.passengerRoutingMode }
+        _modify { yield &uniqueState.pointee.passengerRoutingMode }
+    }
     /// Whether each day's demand follows the reference's weekday factors
     /// and weekends its weekend hours (item 4 of the author's order). Off in
     /// a new world and in saves from before it; the app's new games turn it
     /// on. Set by ``setWeeklyDemand(_:)`` only.
-    public internal(set) var weeklyDemand: Bool = false
+    public internal(set) var weeklyDemand: Bool {
+        _read { yield storage.state.pointee.weeklyDemand }
+        _modify { yield &uniqueState.pointee.weeklyDemand }
+    }
     /// Whether demand keeps the tide (decision 319): homes' trips leave in
     /// the morning and come back in the evening, workplaces' the other way
     /// round, and the night is all but empty. Off in a new world and in
     /// saves from before it; the app's new games turn it on. Set by
     /// ``setTidalDemand(_:)`` only.
-    public internal(set) var tidalDemand: Bool = false
+    public internal(set) var tidalDemand: Bool {
+        _read { yield storage.state.pointee.tidalDemand }
+        _modify { yield &uniqueState.pointee.tidalDemand }
+    }
     /// Whether and how riders take a scooter or a car instead when the
     /// train is slower door to door (decision 332), or `nil` for none. Off
     /// in a new world and in saves from before it; the player's new games
     /// turn it on. Set by ``setModeShift(_:)`` only.
-    public internal(set) var modeShift: ModeShift?
+    public internal(set) var modeShift: ModeShift? {
+        _read { yield storage.state.pointee.modeShift }
+        _modify { yield &uniqueState.pointee.modeShift }
+    }
     /// The demand events and the seed they are drawn from, or `nil` for a
     /// world without them (item 4; see ``DemandEventSchedule``). Off in a
     /// new world and in saves from before them; the app's new games turn
     /// them on. Set by ``setDemandEvents(seed:)`` and every midnight only.
-    public internal(set) var demandEvents: DemandEventSchedule?
+    public internal(set) var demandEvents: DemandEventSchedule? {
+        _read { yield storage.state.pointee.demandEvents }
+        _modify { yield &uniqueState.pointee.demandEvents }
+    }
     /// The world's disruptions (decision 154): the country whose public
     /// holidays it keeps and how strongly they bite, or `nil` for a world
     /// without them. Off in a new world and in saves from before them; the
     /// app's new games turn them on. Set by ``setDisruptions(_:)`` only.
-    public internal(set) var disruptions: Disruptions?
+    public internal(set) var disruptions: Disruptions? {
+        _read { yield storage.state.pointee.disruptions }
+        _modify { yield &uniqueState.pointee.disruptions }
+    }
     /// How the towns round the stations grow, or `nil` for a world whose
     /// ridership stays as set (item 5; see ``TownGrowth``). Off in a new
     /// world and in saves from before it; the app's new games turn it on.
     /// Set by ``setTownGrowth(_:)`` and every midnight only.
-    public internal(set) var townGrowth: TownGrowth?
+    public internal(set) var townGrowth: TownGrowth? {
+        _read { yield storage.state.pointee.townGrowth }
+        _modify { yield &uniqueState.pointee.townGrowth }
+    }
     /// Fractions left after deterministic OD route choice, by origin and
     /// destination. They are saved so advancing in batches changes nothing.
-    var passengerRouteBalances: [PassengerRouteBalance]
+    var passengerRouteBalances: [PassengerRouteBalance] {
+        _read { yield storage.state.pointee.passengerRouteBalances }
+        _modify { yield &uniqueState.pointee.passengerRouteBalances }
+    }
     /// The company's accounts (G1c, ARCHITECTURE decision 36): its economy
     /// mode and fare rules, the hour being accrued and the ledger. Free and
     /// empty in a new world. Set by the economy rules (`Economy/`) only.
-    public internal(set) var accounts: CompanyAccounts
+    public internal(set) var accounts: CompanyAccounts {
+        _read { yield storage.state.pointee.accounts }
+        _modify { yield &uniqueState.pointee.accounts }
+    }
     /// Where the map lies on the Earth, for a real-world game (Stage E2,
     /// ARCHITECTURE decision 50); `nil`, a blank map, in a new world. No
     /// rule reads it. Set by ``setGeoAnchor(_:)`` only.
-    public internal(set) var geoAnchor: GeoAnchor?
+    public internal(set) var geoAnchor: GeoAnchor? {
+        _read { yield storage.state.pointee.geoAnchor }
+        _modify { yield &uniqueState.pointee.geoAnchor }
+    }
     /// The land round the railway (Phase 6a, ARCHITECTURE decision 72): who
     /// lives and works in each 64 m cell. Empty in a new world and in saves
     /// from before it; the app's new games start with towns or a real-world
     /// map's people. No rule reads it yet. Set by ``setLand(_:)`` and
     /// ``foundTowns(seed:)`` only.
-    public internal(set) var land: Land
+    public internal(set) var land: Land {
+        _read { yield storage.state.pointee.land }
+        _modify { yield &uniqueState.pointee.land }
+    }
     /// The blocks of land read in so far, by row and then column, when the
     /// land is read in as it is needed (decision 88: a map of the whole of
     /// Taiwan); `nil`, the land is whole, in a new world and in saves from
     /// before it. Set by ``setLandOnDemand()``, ``expandLand(_:cells:)``,
     /// ``setLand(_:)`` and ``foundTowns(seed:)`` only.
-    public internal(set) var landBlocks: [LandBlock]?
+    public internal(set) var landBlocks: [LandBlock]? {
+        _read { yield storage.state.pointee.landBlocks }
+        _modify { yield &uniqueState.pointee.landBlocks }
+    }
     /// Whether a managed company's stations take their ridership from the
     /// land (Phase 6b, ARCHITECTURE decision 73). Off in a new world and in
     /// saves from before it; the app's new games turn it on. Set by
     /// ``setLandDemand(_:)`` only.
-    public internal(set) var landDemand: Bool = false
+    public internal(set) var landDemand: Bool {
+        _read { yield storage.state.pointee.landDemand }
+        _modify { yield &uniqueState.pointee.landDemand }
+    }
     /// Whether each pair's trips keep a share by their distance (decision
     /// 137). Off in a new world and in saves from before it; the app's new
     /// games turn it on. Set by ``setDistanceDemand(_:)`` only.
-    public internal(set) var distanceDemand: Bool = false
+    public internal(set) var distanceDemand: Bool {
+        _read { yield storage.state.pointee.distanceDemand }
+        _modify { yield &uniqueState.pointee.distanceDemand }
+    }
     /// Whether the crowd at a train's doors slows the passengers going
     /// through them (decision 169). Off in a new world and in saves from
     /// before it; the app's new games turn it on. Set by
     /// ``setDoorCrowding(_:)`` only.
-    public internal(set) var doorCrowding: Bool = false
+    public internal(set) var doorCrowding: Bool {
+        _read { yield storage.state.pointee.doorCrowding }
+        _modify { yield &uniqueState.pointee.doorCrowding }
+    }
     /// Whether trains keep left on double track (decision 202): the route
     /// a train finds to a station takes the leftmost way on at each switch
     /// unless another is more than ``keepLeftMargin`` shorter. Off in a new
     /// world and in saves from before it; the app's new games turn it on.
     /// Set by ``setKeepLeft(_:)`` only.
-    public internal(set) var keepLeft: Bool = false
+    public internal(set) var keepLeft: Bool {
+        _read { yield storage.state.pointee.keepLeft }
+        _modify { yield &uniqueState.pointee.keepLeft }
+    }
     /// Whether the lines plan their timetables realistically (decision
     /// 207): each leg at the performance's usual rates with a recovery
     /// margin a late train can make up, a line's dwell by its kind, and
     /// each line's punctuality counted. Off in a new world and in saves from
     /// before it; the app's new games turn it on. Set by
     /// ``setRealisticOperation(_:)`` only.
-    public internal(set) var realisticOperation: Bool = false
+    public internal(set) var realisticOperation: Bool {
+        _read { yield storage.state.pointee.realisticOperation }
+        _modify { yield &uniqueState.pointee.realisticOperation }
+    }
     /// Whether long legs are cut into block sections under traffic control
     /// (decision 212): a following train's authority ends at a block's
     /// boundary, a train following others may lead another, and a service
     /// may follow on its scheduled or preferred path. Off in a new world and
     /// in saves from before it; the app's new games turn it on. Set by
     /// ``setBlockSections(_:)`` only.
-    public internal(set) var blockSections: Bool = false
+    public internal(set) var blockSections: Bool {
+        _read { yield storage.state.pointee.blockSections }
+        _modify { yield &uniqueState.pointee.blockSections }
+    }
     /// Whether trains keep to the curve speed limits (decision 217): a
     /// run brakes ahead of each curve's limit and accelerates once its tail
     /// is out, and the lines plan their legs so. Off in a new world and in
     /// saves from before it; the app's new games turn it on. Set by
     /// ``setCurveSpeedLimits(_:)`` only.
-    public internal(set) var curveSpeedLimits: Bool = false
+    public internal(set) var curveSpeedLimits: Bool {
+        _read { yield storage.state.pointee.curveSpeedLimits }
+        _modify { yield &uniqueState.pointee.curveSpeedLimits }
+    }
     /// Whether a train bought or changed to a type takes the type's real
     /// car length (decision 227, ``Train/carPitch``) rather than 16 m. Off
     /// in a new world and in saves from before it; the app's new games turn
     /// it on. It changes no train already bought. Set by
     /// ``setRealCarLengths(_:)`` only.
-    public internal(set) var realCarLengths: Bool = false
+    public internal(set) var realCarLengths: Bool {
+        _read { yield storage.state.pointee.realCarLengths }
+        _modify { yield &uniqueState.pointee.realCarLengths }
+    }
     /// Decision 248: how far each train of a line with real runs may still
     /// go on before the minute ends, with traffic control off
     /// (``assessSpacing(from:memo:)``). Given as a minute begins, and to a
     /// train setting off within one; empty again as it ends, so empty at
     /// every whole minute.
-    public internal(set) var spacingAllowances: [TrainID: SpacingAllowance] = [:]
+    public internal(set) var spacingAllowances: [TrainID: SpacingAllowance] {
+        _read { yield storage.state.pointee.spacingAllowances }
+        _modify { yield &uniqueState.pointee.spacingAllowances }
+    }
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
-    public internal(set) var flexDispatch: Bool = false
+    public internal(set) var flexDispatch: Bool {
+        _read { yield storage.state.pointee.flexDispatch }
+        _modify { yield &uniqueState.pointee.flexDispatch }
+    }
     /// Whether a train costs what its type and cars cost, is sold back at
     /// 70 % of its book value, and runs at a cost that weighs its cars and
     /// its type (decision 180); off, one price and one weight for every
     /// train. Off in a new world and in saves from before it; a new game
     /// turns it on. Set by ``setRollingStockEconomics(_:)`` only.
-    public internal(set) var rollingStockEconomics: Bool = false
+    public internal(set) var rollingStockEconomics: Bool {
+        _read { yield storage.state.pointee.rollingStockEconomics }
+        _modify { yield &uniqueState.pointee.rollingStockEconomics }
+    }
     /// Each line's records of its last 30 days, and each station's flow of
     /// yesterday (decision 179); `nil`, off, in a world from before them. A
     /// new game turns it on. Set by ``setLineAccounts(_:)`` only.
-    public internal(set) var lineAccounts: LineAccounts?
+    public internal(set) var lineAccounts: LineAccounts? {
+        _read { yield storage.state.pointee.lineAccounts }
+        _modify { yield &uniqueState.pointee.lineAccounts }
+    }
     /// Each train's trips of today and yesterday (decision 223, point 5),
     /// ordered by train and then by when they were sent out; kept with the
     /// line accounts, empty without them and in saves from before it. A
     /// record only: no rule reads it. Changed only as trains run.
-    public internal(set) var tripLog: [TrainTrip] = []
+    public internal(set) var tripLog: [TrainTrip] {
+        _read { yield storage.state.pointee.tripLog }
+        _modify { yield &uniqueState.pointee.tripLog }
+    }
     /// The sights and the tourists they draw (decision 174), or `nil`: off
     /// in a new world and in saves from before it; the app's new games turn
     /// it on. Set by ``setTourism(_:)`` and every midnight only.
-    public internal(set) var tourism: Tourism?
+    public internal(set) var tourism: Tourism? {
+        _read { yield storage.state.pointee.tourism }
+        _modify { yield &uniqueState.pointee.tourism }
+    }
     /// The city's requests of the company and its trust (decision 183), or
     /// `nil`: off in a new world and in saves from before them; the app's
     /// new free games turn them on. Set by ``setCityRequests(seed:)``, the
     /// request commands, the counts and every managed midnight only.
-    public internal(set) var cityRequests: CityRequests?
+    public internal(set) var cityRequests: CityRequests? {
+        _read { yield storage.state.pointee.cityRequests }
+        _modify { yield &uniqueState.pointee.cityRequests }
+    }
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
     /// ``setOutsideConnections(_:)`` only.
-    public internal(set) var outsideConnections: Bool = false
+    public internal(set) var outsideConnections: Bool {
+        _read { yield storage.state.pointee.outsideConnections }
+        _modify { yield &uniqueState.pointee.outsideConnections }
+    }
     /// Whether the stations by real stations bring the real network's
     /// transfers (decision 298, ``Station/transferPoints``). Off in a new
     /// world and in saves from before it; the app's new games on a
     /// real-world map turn it on. Set by ``setRealTransfers(_:)`` only.
-    public internal(set) var realTransfers: Bool = false
+    public internal(set) var realTransfers: Bool {
+        _read { yield storage.state.pointee.realTransfers }
+        _modify { yield &uniqueState.pointee.realTransfers }
+    }
     /// The real lines the company bought (decision 315), in the order it
     /// bought them. None in a new world and in saves from before it. Set by
     /// ``recordLineAcquisition(line:realLine:dailyRiders:tier:)`` only.
-    public internal(set) var acquisitions: [LineAcquisition] = []
+    public internal(set) var acquisitions: [LineAcquisition] {
+        _read { yield storage.state.pointee.acquisitions }
+        _modify { yield &uniqueState.pointee.acquisitions }
+    }
     /// Decision 528: the track real lines bought and removed left, what
     /// buying them again takes up. None in a new world and in saves from
     /// before version 79. Set by ``recordLineAcquisition(line:realLine:dailyRiders:tier:track:)``
     /// and removing a line bought only.
-    public internal(set) var leftTrack: [LeftTrack] = []
+    public internal(set) var leftTrack: [LeftTrack] {
+        _read { yield storage.state.pointee.leftTrack }
+        _modify { yield &uniqueState.pointee.leftTrack }
+    }
     /// The roads on the land's grid (decision 400), or `nil` for a world
     /// without them. Off in a new world and in saves from before it; the
     /// player's new games turn them on. Set by ``enableRoads(towns:)``,
     /// ``setRoads(_:in:)``, ``buildStationRoad(at:)`` and their growth once
     /// a month only.
-    public internal(set) var roads: RoadGrid?
+    public internal(set) var roads: RoadGrid? {
+        _read { yield storage.state.pointee.roads }
+        _modify { yield &uniqueState.pointee.roads }
+    }
     /// The company's bus routes feeding its stations (decision 400,
     /// 10i-2), by ascending number; none in a new world and in saves from
     /// before them (save version 73). Set by
     /// ``createBusRoute(to:stops:legMetres:service:buses:)`` and the other
     /// bus commands only.
-    public internal(set) var busRoutes: [BusRoute] = []
+    public internal(set) var busRoutes: [BusRoute] {
+        _read { yield storage.state.pointee.busRoutes }
+        _modify { yield &uniqueState.pointee.busRoutes }
+    }
     /// The next bus route's number.
-    public internal(set) var nextBusRouteID = 1
+    public internal(set) var nextBusRouteID: Int {
+        _read { yield storage.state.pointee.nextBusRouteID }
+        _modify { yield &uniqueState.pointee.nextBusRouteID }
+    }
     /// The company's cableways (decision 574), by ascending number; none in
     /// a new world and in saves from before them (save version 83). Set by
     /// ``createCableway(stops:legMetres:)`` and ``removeCableway(_:)`` only.
-    public internal(set) var cableways: [Cableway] = []
+    public internal(set) var cableways: [Cableway] {
+        _read { yield storage.state.pointee.cableways }
+        _modify { yield &uniqueState.pointee.cableways }
+    }
     /// The next cableway's number.
-    public internal(set) var nextCablewayID = 1
+    public internal(set) var nextCablewayID: Int {
+        _read { yield storage.state.pointee.nextCablewayID }
+        _modify { yield &uniqueState.pointee.nextCablewayID }
+    }
     /// The company's ferry routes (decision 585), by ascending number; none
     /// in a new world and in saves from before them (save version 85). Set
     /// by ``createFerryRoute(piers:legMetres:service:boats:)``,
     /// ``setFerryBoats(_:to:)``, ``setFerryRuns(_:to:)`` and
     /// ``removeFerryRoute(_:)`` only.
-    public internal(set) var ferryRoutes: [FerryRoute] = []
+    public internal(set) var ferryRoutes: [FerryRoute] {
+        _read { yield storage.state.pointee.ferryRoutes }
+        _modify { yield &uniqueState.pointee.ferryRoutes }
+    }
     /// The next ferry route's number.
-    public internal(set) var nextFerryRouteID = 1
+    public internal(set) var nextFerryRouteID: Int {
+        _read { yield storage.state.pointee.nextFerryRouteID }
+        _modify { yield &uniqueState.pointee.nextFerryRouteID }
+    }
     /// The city's demand for homes, shops and work (decision 139), or `nil`
     /// for a city that grows as before. Off in a new world and in saves
     /// from before it; the app's new games turn it on. Set by
     /// ``setCityDemand(_:)``, the land's replacement and its growth only.
-    public internal(set) var cityDemand: CityDemand?
+    public internal(set) var cityDemand: CityDemand? {
+        _read { yield storage.state.pointee.cityDemand }
+        _modify { yield &uniqueState.pointee.cityDemand }
+    }
     /// The world's freight (decision 155), or `nil` for a world without it.
     /// Off in a new world and in saves from before it. Set by
     /// ``enableFreight()`` and the freight commands only.
-    public internal(set) var freight: FreightState?
+    public internal(set) var freight: FreightState? {
+        _read { yield storage.state.pointee.freight }
+        _modify { yield &uniqueState.pointee.freight }
+    }
     /// Whether a city building's square is its density's, 20 to 40 m
     /// across, rather than 40 m whatever its height (decision 142). Off in
     /// a new world and in saves from before it; the app's new games turn it
     /// on. Set by ``setCityFootprints(_:)`` only.
-    public internal(set) var cityFootprints: Bool = false
+    public internal(set) var cityFootprints: Bool {
+        _read { yield storage.state.pointee.cityFootprints }
+        _modify { yield &uniqueState.pointee.cityFootprints }
+    }
     /// Whether the company's buildings buy out the city's by area rather
     /// than by squares (decision 146): a real-world map's own buildings are
     /// the base map's, so the game's squares do not stand in the way. Off
     /// in a new world and in saves from before it; the app's real-world new
     /// games turn it on. Set by ``setAreaBuyOut(_:)`` only.
-    public internal(set) var areaBuyOut: Bool = false
+    public internal(set) var areaBuyOut: Bool {
+        _read { yield storage.state.pointee.areaBuyOut }
+        _modify { yield &uniqueState.pointee.areaBuyOut }
+    }
     /// Whether the city's buildings stand on the land (Phase 6c-1,
     /// ARCHITECTURE decision 74). Off in a new world and in saves from
     /// before it; the app's new games turn it on. Set by
     /// ``setCityBuildings(_:)`` only.
-    public internal(set) var cityBuildings: Bool = false
+    public internal(set) var cityBuildings: Bool {
+        _read { yield storage.state.pointee.cityBuildings }
+        _modify { yield &uniqueState.pointee.cityBuildings }
+    }
     /// The city's buildings (Phase 6c-1): one on each cell of land while
     /// ``cityBuildings`` is on, none while it is off. Set with the land
     /// (``setCityBuildings(_:)``, ``setLand(_:)``, ``foundTowns(seed:)`` and
     /// the land's growth) only.
-    public internal(set) var buildings = CityBuildings()
+    public internal(set) var buildings: CityBuildings {
+        _read { yield storage.state.pointee.buildings }
+        _modify { yield &uniqueState.pointee.buildings }
+    }
     /// The stations linked for transfers however far apart (decision 81),
     /// in ascending ID order. A new world has none.
-    public internal(set) var transferGroups: [TransferGroup] = []
+    public internal(set) var transferGroups: [TransferGroup] {
+        _read { yield storage.state.pointee.transferGroups }
+        _modify { yield &uniqueState.pointee.transferGroups }
+    }
     /// The buildings the player placed (decision 92), in ascending ID
     /// order. A new world has none.
-    public internal(set) var placedBuildings: [PlacedBuilding] = []
+    public internal(set) var placedBuildings: [PlacedBuilding] {
+        _read { yield storage.state.pointee.placedBuildings }
+        _modify { yield &uniqueState.pointee.placedBuildings }
+    }
     /// The cells the player zoned (decision 98), by row and then column. A
     /// new world has none.
-    public internal(set) var zones = Zoning()
+    public internal(set) var zones: Zoning {
+        _read { yield storage.state.pointee.zones }
+        _modify { yield &uniqueState.pointee.zones }
+    }
     /// The ground under the land (decision 105): which cells are water. A
     /// new world, and every blank map, has none.
-    public internal(set) var terrain = Terrain()
+    public internal(set) var terrain: Terrain {
+        _read { yield storage.state.pointee.terrain }
+        _modify { yield &uniqueState.pointee.terrain }
+    }
     /// The ground's height where it has been read (decision 124). A new
     /// world, and every blank map, has none, and is flat at 0 m; a new
     /// real-world game has ground (``mapGround()``).
-    public internal(set) var ground = Ground()
+    public internal(set) var ground: Ground {
+        _read { yield storage.state.pointee.ground }
+        _modify { yield &uniqueState.pointee.ground }
+    }
     /// The scenario being played, its goals and how far they are met
     /// (decision 86), or `nil`: a game without goals.
-    public internal(set) var scenario: ScenarioState?
+    public internal(set) var scenario: ScenarioState? {
+        _read { yield storage.state.pointee.scenario }
+        _modify { yield &uniqueState.pointee.scenario }
+    }
     /// The tiles of the map the company owns, when it buys its map as it
     /// grows (decision 160), or `nil`: it may build anywhere in the world.
     /// Off in a new world and in saves from before it; the app's new blank
     /// games turn it on. Set by ``enableMapExpansion(owning:townSeed:ridersStep:)``,
     /// ``buyMapTile(_:)`` and every midnight only.
-    public internal(set) var mapExpansion: MapExpansion?
+    public internal(set) var mapExpansion: MapExpansion? {
+        _read { yield storage.state.pointee.mapExpansion }
+        _modify { yield &uniqueState.pointee.mapExpansion }
+    }
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
-    var passengerPlan = PassengerPlanCache()
+    var passengerPlan: PassengerPlanCache {
+        _read { yield storage.state.pointee.passengerPlan }
+        _modify { yield &uniqueState.pointee.passengerPlan }
+    }
     /// The network route choices the last plan used, kept while the derived
     /// route graph stays the same; not game state (see
     /// ``PassengerRouteMemo``).
-    var passengerRouteMemo = PassengerRouteMemo()
+    var passengerRouteMemo: PassengerRouteMemo {
+        _read { yield storage.state.pointee.passengerRouteMemo }
+        _modify { yield &uniqueState.pointee.passengerRouteMemo }
+    }
     /// What traffic control works out from the network, the lines and the
     /// stations alone, kept between calls of ``advance(ticks:)`` while they
     /// stay the same; not game state (see ``RouteMemo``).
-    var routeMemo = RouteMemo()
+    var routeMemo: RouteMemo {
+        _read { yield storage.state.pointee.routeMemo }
+        _modify { yield &uniqueState.pointee.routeMemo }
+    }
     /// How many edits made as one (``editTrackAsOne(_:)``, decision 275)
     /// are running: 0 between commands; not game state.
-    var trackEditDepth = 0
+    var trackEditDepth: Int {
+        _read { yield storage.state.pointee.trackEditDepth }
+        _modify { yield &uniqueState.pointee.trackEditDepth }
+    }
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
-    private var nextStationID: Int
-    private var nextTrainID: Int
-    private var nextLineID: Int
+    private var nextStationID: Int {
+        _read { yield storage.state.pointee.nextStationID }
+        _modify { yield &uniqueState.pointee.nextStationID }
+    }
+    private var nextTrainID: Int {
+        _read { yield storage.state.pointee.nextTrainID }
+        _modify { yield &uniqueState.pointee.nextTrainID }
+    }
+    private var nextLineID: Int {
+        _read { yield storage.state.pointee.nextLineID }
+        _modify { yield &uniqueState.pointee.nextLineID }
+    }
     /// The next transfer group ID to hand out (decision 81).
-    var nextTransferGroupID = 1
+    var nextTransferGroupID: Int {
+        _read { yield storage.state.pointee.nextTransferGroupID }
+        _modify { yield &uniqueState.pointee.nextTransferGroupID }
+    }
     /// The next placed building ID to hand out (decision 92).
-    var nextPlacedBuildingID = 1
+    var nextPlacedBuildingID: Int {
+        _read { yield storage.state.pointee.nextPlacedBuildingID }
+        _modify { yield &uniqueState.pointee.nextPlacedBuildingID }
+    }
 
     /// Creates an empty world reaching as far as `bounds`.
     public init(
@@ -1091,6 +1333,10 @@ public struct GameWorld: Equatable, Sendable {
         // Decision 298: a depot brings no transfers.
         if isDepot, stations[index].transferPoints > 0 {
             stations[index].transferPoints = 0
+            passengerPlan = PassengerPlanCache()
+            refreshLandDemand()
+        } else if !busRoutes.isEmpty {
+            // Decision 587, continued: no city bus route meets a depot.
             passengerPlan = PassengerPlanCache()
             refreshLandDemand()
         }

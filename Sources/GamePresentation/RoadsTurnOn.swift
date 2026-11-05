@@ -26,8 +26,8 @@ public enum RoadsOffer: Hashable, Sendable {
             )
         case .ownRoadsOnly:
             language.text(
-                "This map has no roads of its own. Turn roads on, then lay your own in the Buses tool and run buses on them.",
-                "這張地圖沒有現成的道路。打開後，可以在「公車」工具自己鋪路，再開公車。"
+                "This map has no roads of its own. Turn roads on, then lay your own in the Transit tool and run buses on them.",
+                "這張地圖沒有現成的道路。打開後，可以在「接駁」工具自己鋪路，再開公車。"
             )
         }
     }
@@ -114,8 +114,8 @@ extension GameSession {
         perform(.turnOnRoads(towns: world.geoAnchor == nil ? world.startingTowns() : [])) { _, _, _ in
             ownOnly
                 ? language.text(
-                    "Roads and buses are on. Switch the Buses tool to Roads to lay your own.",
-                    "道路與公車打開了。把「公車」工具切到「道路」就能自己鋪路。"
+                    "Roads and buses are on. Switch the Transit tool to Roads to lay your own.",
+                    "道路與公車打開了。把「接駁」工具切到「道路」就能自己鋪路。"
                 )
                 : language.text(
                     "Roads and buses are on. The roads grow toward your stations each month.",

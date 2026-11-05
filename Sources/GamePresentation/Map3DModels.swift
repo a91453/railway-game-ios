@@ -105,6 +105,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 575 續 (CABLEMAP): the cable car's cabins, tower, halls
         // and rope, just before the route bus, which stays last.
         groups.append { Map3DCableCar.drawn }
+        // Decision 585 PR-3 (FERRY3): the two ferries and the pier, near
+        // and far, after the cable car and before the route bus.
+        groups.append { Map3DFerry.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

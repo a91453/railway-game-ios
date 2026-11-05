@@ -85,17 +85,9 @@ struct TrainControls: View {
                     }
                 }
                 if train.position == nil {
-                    Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
-                        Text(train.carsText(in: session.language))
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                    }
-                    .accessibilityHint("Each car is 16 m long. A train of several cars needs track behind it, and platforms as long as it.")
-                    if let price = session.world.carPriceText(for: train.type, in: session.language) {
-                        Text(price)
-                            .font(.caption)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
+                    // Decision 588: the cars and the platform stand over
+                    // the Place button, in the card's foot, which stays in
+                    // view (``TrainPlacementChoices``).
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
                     TrainTypeMenu(
@@ -590,5 +582,121 @@ private struct TrainTypeMenu: View, Equatable {
             Text(verbatim: title)
             Text(verbatim: detail)
         }
+    }
+}
+
+/// Decision 588: what is chosen for a train being placed, its cars (with
+/// their price) and, at a station of two or more platforms, its platform
+/// (decision 584), in the details card's foot over the Place button: the
+/// middle of the card on a phone held on its side shows some 70 pt, and
+/// they needed scrolling there (``DetailsCardLayout/placesTrain``).
+struct TrainPlacementChoices: View {
+    let session: GameSession
+
+    static func shows(_ session: GameSession) -> Bool {
+        DetailsCardLayout.placesTrain(tool: session.tool, trainIsSelected: session.selectedTrain != nil,
+                                      trainIsOnTrack: session.selectedTrain?.position != nil)
+    }
+
+    var body: some View {
+        if let train = session.selectedTrain, train.position == nil {
+            VStack(alignment: .leading, spacing: 8) {
+                Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(train.carsText(in: session.language))
+                            .font(.subheadline.weight(.semibold))
+                            .monospacedDigit()
+                        if let price = session.world.carPriceText(for: train.type, in: session.language) {
+                            Text(price)
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+                .accessibilityHint("Each car is 16 m long. A train of several cars needs track behind it, and platforms as long as it.")
+                .accessibilityIdentifier("train.cars")
+                PlacementPlatformPicker(session: session)
+            }
+        }
+    }
+}
+
+/// Decision 584: the platforms of the selected station the selected train
+/// can be placed on, when it has two or more, as one row of small buttons
+/// beside their label: the one it will go on filled, the others outlined,
+/// so a phone's short card shows at once that there is a choice. More
+/// than fit scroll sideways. Nothing at a station of one platform.
+private struct PlacementPlatformPicker: View {
+    let session: GameSession
+
+    var body: some View {
+        let choices = session.placementPlatformChoices
+        if !choices.isEmpty {
+            let picked = session.placementPlatform
+            let language = session.language
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(verbatim: language.text("Platform", "月台"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize()
+                    // Plain buttons, not a segmented control: a drag that
+                    // starts on one does not scroll the card (#1809).
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(choices) { choice in
+                                chip(choice, isActive: choice.platform == picked, language: language)
+                            }
+                        }
+                        .padding(.vertical, 1)
+                    }
+                    .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                }
+                // What a warning is about, for the platform picked: who
+                // stands on it, or that it is shorter than the train.
+                if let choice = choices.first(where: { $0.platform == picked }), choice.warns,
+                   let note = session.placementPlatformNote(choice) {
+                    Label {
+                        Text(verbatim: note)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Theme.warning)
+                    .accessibilityIdentifier("train.platform.note")
+                }
+            }
+        }
+    }
+
+    private func chip(_ choice: PlacementPlatformChoice, isActive: Bool, language: DisplayLanguage) -> some View {
+        let note = session.placementPlatformNote(choice)
+        let marked = choice.warns || choice.isOnLine
+        return Button {
+            session.pickPlacementPlatform(choice.platform)
+        } label: {
+            VStack(spacing: 1) {
+                Text(verbatim: choice.name(in: language))
+                    .font(.footnote.weight(.semibold))
+                HStack(spacing: 3) {
+                    if marked {
+                        Image(systemName: choice.warns ? "exclamationmark.triangle" : "point.3.connected.trianglepath.dotted")
+                    }
+                    Text(verbatim: choice.lengthText(in: language))
+                }
+                .font(.caption2)
+                .foregroundStyle(isActive ? Theme.onPrimary : (choice.warns ? Theme.warning : Theme.textSecondary))
+            }
+            .monospacedDigit()
+            .lineLimit(1)
+            .padding(.horizontal, 10)
+            .frame(minWidth: 64, minHeight: 36)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(choice.name(in: language)), \(choice.lengthText(in: language))"))
+        .accessibilityValue(Text(verbatim: note ?? ""))
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+        .accessibilityIdentifier("train.platform.\(choice.number)")
     }
 }

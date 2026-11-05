@@ -98,7 +98,10 @@ extension GameSession {
         )
         if let memo = lineDraftSummaryMemo, memo.key == key { return memo.summary }
         let summary = workOutLineDraftSummary(stops: stops)
-        lineDraftSummaryMemo = LineDraftSummaryMemo(key: key, summary: summary)
+        // Decision 590: kept only once its price is in.
+        if !isWaiting(for: .lineOpening) {
+            lineDraftSummaryMemo = LineDraftSummaryMemo(key: key, summary: summary)
+        }
         return summary
     }
 

@@ -126,7 +126,7 @@ final class DepotReturnReportTests: XCTestCase {
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude))
         var world = GameWorld.newGame(anchor: anchor)
         let stops = try XCTUnwrap(RealCableway.maokong.stops(in: world))
-        _ = try world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+        _ = try world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres, meetsNear: RealCableway.maokong.meetsNear(in: world))
         let played = try report("maokong", world)
         for cableway in played.cableways {
             let days = cableway.days.map { "day \($0.day) \($0.riders) riders\($0.closed ? " closed" : "")" }

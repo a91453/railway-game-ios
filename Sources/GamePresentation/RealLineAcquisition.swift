@@ -441,7 +441,12 @@ public struct RealLineOffer: Sendable {
         return land + [
             (language.text("Track, stations and platforms", "軌道、車站與月台"), price.building),
             (language.text("\(acquisition.trains.count) trains", "\(acquisition.trains.count) 列車"), price.trains),
-            (language.text("Its regulars along the line", "沿線的常客"), price.riders),
+            // Decision 595: a branch line's set out from its stations each
+            // day once it is bought.
+            (line.isUrban ? language.text("Its regulars along the line", "沿線的常客") : language.text(
+                "Its regulars along the line, about \(acquisition.dailyRiders.formatted()) a day",
+                "沿線的常客：每天約 \(acquisition.dailyRiders.formatted()) 人"
+            ), price.riders),
             (language.text("Total", "合計"), price.total),
         ]
     }

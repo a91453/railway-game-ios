@@ -69,6 +69,9 @@ struct SettingsView: View {
     /// Decision 434: whether the train showcase (decision 492: the
     /// garage, for every player) is open.
     @State private var showsTrainShowcase = false
+    /// Decision 585: the collection's page shown (the garage became its
+    /// trains page).
+    @State private var collectionPage = FerryCollection.Page.trains
 
     var body: some View {
         NavigationStack {
@@ -448,25 +451,61 @@ struct SettingsView: View {
     }
 
     /// Decision 492: the garage, decision 434's train showcase open to
-    /// every player, from the start screen and from a game alike.
+    /// every player, from the start screen and from a game alike; decision
+    /// 585 makes it the collection, with a page for the ferries.
     private var garageSection: some View {
         let language = DisplayLanguage.app
         return Section {
-            Button {
-                showsTrainShowcase = true
+            Picker(selection: $collectionPage) {
+                ForEach(FerryCollection.Page.allCases, id: \.self) { page in
+                    Text(verbatim: page.title(in: language)).tag(page)
+                }
             } label: {
-                Label {
-                    Text(verbatim: language.text("Train Garage", "車庫"))
-                } icon: {
-                    Image(systemName: "tram.fill")
+                Text(verbatim: FerryCollection.name(in: language))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("settings.collectionPage")
+            switch collectionPage {
+            case .trains:
+                Button {
+                    showsTrainShowcase = true
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Trains up close", "近看列車"))
+                    } icon: {
+                        Image(systemName: "tram.fill")
+                    }
+                }
+                .accessibilityIdentifier("settings.trainGarage")
+            case .ferries:
+                ForEach(FerryCollection.boats(in: language) + FerryCollection.routes(in: language)) { entry in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: entry.title)
+                            .font(.subheadline.weight(.semibold))
+                        ForEach(entry.lines, id: \.self) { line in
+                            Text(verbatim: line)
+                                .font(.footnote)
+                                .monospacedDigit()
+                                .foregroundStyle(Theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("settings.ferry.\(entry.id)")
                 }
             }
-            .accessibilityIdentifier("settings.trainGarage")
+        } header: {
+            Text(verbatim: FerryCollection.name(in: language))
         } footer: {
-            Text(verbatim: language.text(
-                "See the game's trains up close: turn them round, change the time of day and take photos.",
-                "近看遊戲裡的列車：轉著看、換時段、拍照。"
-            ))
+            switch collectionPage {
+            case .trains:
+                Text(verbatim: language.text(
+                    "See the game's trains up close: turn them round, change the time of day and take photos.",
+                    "近看遊戲裡的列車：轉著看、換時段、拍照。"
+                ))
+            case .ferries:
+                Text(verbatim: FerryCollection.note(in: language))
+            }
         }
     }
 

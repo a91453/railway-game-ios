@@ -149,9 +149,33 @@ struct Map3DRoadMarkings {
     static let arrowWidth = 1.7
     static let arrowGap = 3.0
 
+    /// Decision 596: where an approach's traffic stops for its signal: the
+    /// stop line's point on the road's middle line, the way the traffic
+    /// goes (toward the junction), its road and its junction's group.
+    struct Stop {
+        let point: Map3DBaseMap.Point
+        let along: Map3DBaseMap.Point
+        let road: Map3DSignalTiming.Road
+        let group: Int
+    }
+
+    /// Decision 596: a zebra crossing with signals: its middle on the
+    /// crossed road's middle line, the way out of the junction along that
+    /// road, the road's half width, the road whose traffic the people
+    /// crossing walk alongside (as ``Walk/road``) and the junction's group.
+    struct Crossing {
+        let centre: Map3DBaseMap.Point
+        let out: Map3DBaseMap.Point
+        let half: Double
+        let road: Map3DSignalTiming.Road
+        let group: Int
+    }
+
     var marks: [Mark] = []
     var signals: [Signal] = []
     var walks: [Walk] = []
+    var stops: [Stop] = []
+    var crossings: [Crossing] = []
     /// Decision 445: how far past the crossing's outer edge the pedestrian
     /// signals stand, along the road.
     static let walkGap = 0.4
@@ -482,6 +506,10 @@ struct Map3DRoadMarkings {
             let kerb = half + max(0.5, min(1, Double(Map3DScene.Builder.sidewalk(of: arm.kind)) * 0.3))
             let road: Map3DSignalTiming.Road = abs(Self.dot(outs[number], outs[main])) >= 0.7 ? .main : .cross
             signals.append(Signal(foot: moved(line.point, right(way), kerb), along: way, road: road, group: group))
+            // Decision 596: the traffic coming in waits at the stop line; who
+            // crosses here waits at the crossing's ends.
+            stops.append(Stop(point: line.point, along: way, road: road, group: group))
+            crossings.append(Crossing(centre: zebra.point, out: zebra.out, half: half, road: road == .main ? .cross : .main, group: group))
             // Decision 445: a pedestrian signal at each end of the
             // crossing, on the pavement just past its outer edge, looking
             // across at the other end; who crosses this road walks with

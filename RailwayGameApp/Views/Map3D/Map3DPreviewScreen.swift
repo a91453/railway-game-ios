@@ -809,6 +809,10 @@ final class Map3DTrainFeed {
     /// scene, laid again when the cable cars or the scene change.
     private var cableways: Map3DCableways?
     private var cablewaysScene: (x: Double, y: Double)?
+    /// Decision 585 PR-3 (FERRY3): the player's ferries laid in the
+    /// scene, laid again when the routes or the scene change.
+    private var ferries: Map3DFerries?
+    private var ferriesScene: (x: Double, y: Double)?
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
@@ -894,9 +898,15 @@ final class Map3DTrainFeed {
                                              still: UIAccessibility.isReduceMotionEnabled, budget: budget)
         garbageTruckSound?(Map3DGarbageTruck.sound(of: trucks, camera: camera))
         let buses = busFrame(in: scene, camera: camera, detail: detail, most: budget.tier?.streetLimits.buses, now: now).adding(trucks)
+        // Decision 596: while the signals change, the traffic and the
+        // walkers go by the game's clock (the buses'), waiting at them.
+        var signals: Double?
+        if let world = busWorld, let clock = busClock, Map3DSignalTiming.changes(at: world.clock.runningSpeed) {
+            signals = Double(clock.day * GameTime.secondsPerDay) + clock.second(at: now, glides: busGlides)
+        }
         return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity,
-                                      buses: buses, limits: budget.limits(routeBuses: buses.instances.count))
+                                      buses: buses, limits: budget.limits(routeBuses: buses.instances.count), signals: signals)
     }
 
     /// The trains seen from `eye`, `ringed` with its ring (decision 334),
@@ -922,7 +932,23 @@ final class Map3DTrainFeed {
             frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel,
                                           following: followedCabin, ahead: ahead).instances
         }
+        // Decision 585 PR-3 (FERRY3): and the ferries' piers and boats, on
+        // the same clock.
+        if let models, let laid = laidFerries(in: scene), let second = cableSecond(at: now) {
+            frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel).instances
+        }
         return frame
+    }
+
+    /// Decision 585 PR-3: the ferries laid in `scene`, laid again when
+    /// they or the scene change; `nil` with none.
+    private func laidFerries(in scene: Map3DScene) -> Map3DFerries? {
+        guard let world = busWorld, !world.ferryRoutes.isEmpty else { return nil }
+        if ferries?.routes != world.ferryRoutes || ferriesScene?.x != scene.originX || ferriesScene?.y != scene.originY {
+            ferries = Map3DFerries(world: world, scene: scene)
+            ferriesScene = (scene.originX, scene.originY)
+        }
+        return ferries
     }
 
     /// Decision 575 續: the cable cars laid in `scene`, laid again when
@@ -1170,6 +1196,8 @@ private struct Map3DView: UIViewRepresentable {
         guard let asked = value("-screenshot-3d-view").flatMap(Map3DScreenshotView.init) else { return nil }
         // Decision 575 續 (CABLEMAP): over a span of the cable car.
         if let span = value("-screenshot-3d-cableway") { return asked.camera(cableway: span, in: scene, of: world, viewport: viewport) }
+        // Decision 585 PR-3 (FERRY3): over the first ferry's first boat.
+        if arguments.contains("-screenshot-3d-ferry") { return asked.camera(ferryIn: scene, of: world, viewport: viewport) }
         guard let place = value("-screenshot-scene").flatMap(ScreenshotScene.init(rawValue:))?.place else { return nil }
         return asked.camera(at: place, in: scene, of: world, viewport: viewport)
     }
@@ -1809,7 +1837,7 @@ private struct Map3DFollowBar: View {
         let selection = $view
         let language = session.language
         // Decision 578: the station view waits while the next stop is too far.
-        let stationOffered = Map3DFollow.stationViewIsOffered(remainingMetres: session.world.map3DMetresToStopAhead(of: train.id))
+        let stationOffered = Map3DFollow.stationViewIsOffered(remainingMetres: session.world.map3DMetresToLookoutStop(of: train.id))
         let tooFar = Map3DFollow.stationTooFarText(in: language)
         // A sendable closure, not main-actor code (CRASHSWEEP): the bar's
         // two layouts stand in a ViewThatFits, which SwiftUI's asynchronous

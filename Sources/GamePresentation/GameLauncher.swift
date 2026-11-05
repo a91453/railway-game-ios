@@ -86,6 +86,12 @@ public final class GameLauncher {
     /// (``RealWorldData/issues``); empty until they have been read.
     public private(set) var realWorldIssues: [RealDataLoadIssue] = []
 
+    /// Decision 590: handed to every game it starts
+    /// (``GameSession/worksOutPreviewsOnTheNextTurn``); the app sets it.
+    @ObservationIgnored public var worksOutPreviewsOnTheNextTurn = false {
+        didSet { session?.worksOutPreviewsOnTheNextTurn = worksOutPreviewsOnTheNextTurn }
+    }
+
     /// The app's sound player, handed to every game it starts
     /// (``GameSession/playSound``); `nil` plays nothing. Going into or out
     /// of a game whooshes (``SoundCue/transition``).
@@ -909,8 +915,12 @@ public final class GameLauncher {
     @discardableResult
     public func openScreenshotScene(_ scene: ScreenshotScene) -> Task<Void, Never> {
         let language = language
+        // Decision 585: a scene by the water waits for the map of Taiwan's water.
+        let load = scene.needsWater ? realWorldLoad : nil
         return Task {
-            let world = await Task.detached(priority: .userInitiated) { scene.make(in: language) }.value
+            await load?.value
+            let water = self.water
+            let world = await Task.detached(priority: .userInitiated) { scene.make(in: language, water: water) }.value
             self.begin(world, keepingAutosave: true, isDemo: true)
             if let session = self.session { scene.prepare(session) }
         }
@@ -1720,6 +1730,7 @@ public final class GameLauncher {
         // 419).
         started.readLandRoundStations(roads: roads)
         started.playSound = playSound
+        started.worksOutPreviewsOnTheNextTurn = worksOutPreviewsOnTheNextTurn
         started.duckMusic = duckMusic
         duckMusic?(1)
         started.runningSound = runningSound

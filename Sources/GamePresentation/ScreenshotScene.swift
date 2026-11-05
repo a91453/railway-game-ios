@@ -69,6 +69,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case taipeiMain
     case taipei101
 
+    /// Decision 596: the same map round the big junction 380 m east of
+    /// Taipei Main Station (23 stop lines) at 10:00 and at 20:00, for the
+    /// screenshots of the traffic waiting at its stop lines and the people
+    /// at its crossings (`-screenshot-3d-view`), paused to go on at 10×.
+    case streetStop
+    case streetStopNight
+
     /// Decision 564: an empty real-world map round the Wenhu Line, for the
     /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
     /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/runForScreenshot(until:)``):
@@ -110,19 +117,47 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// (`-screenshot-follow-bus`).
     case followBus
 
+    /// Decision 342 (FOLLOWXRAY): the same feeder bus route on Taipei Main
+    /// Station's real city, with its real buildings along the road, for the
+    /// screenshots of the followed bus seen through them.
+    case followBusCity
+
+    /// Decision 585: a new real-world game round the mouth of the Tamsui
+    /// River with the Tamsui–Bali ferry opened as the transit tool's ferry
+    /// mode lays it (``RealFerry/tamsuiBali``), run on to 10:00 of the
+    /// second day, so its card has a day's account: the crossing and its
+    /// piers on the 2D map, and the mode's card.
+    case tamsuiFerry
+
+    /// Decision 585 PR-3 (FERRY3): a new real-world game round Kaohsiung's
+    /// harbour mouth with the Gushan–Cijin ferry opened as the ferry mode
+    /// lays it (``RealFerry/gushanCijin``), two boats every 10 minutes,
+    /// run on to 10:00 of the second day: the double-ended ferry and its
+    /// piers on the 3D map.
+    case gushanFerry
+
+    /// Decision 585 PR-3: ``gushanFerry`` at 18:30 of the second day, its
+    /// lamps lit at dusk.
+    case gushanFerryEvening
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
     public var place: (latitude: Double, longitude: Double)? {
         switch self {
-        case .taipeiMain: (25.0478, 121.5170)
+        case .taipeiMain, .followBusCity: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .wenhu: (25.0600, 121.5600)
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
+        // Between the Tamsui and Bali piers.
+        case .tamsuiFerry: (25.1640, 121.4376)
+        // Between the Gushan and Cijin piers.
+        case .gushanFerry, .gushanFerryEvening: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
@@ -132,8 +167,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// The real lines ``acquired`` records its first two lines as, in order.
     public static let acquiredLines = ["tra:NEIWAN", "ntdlrt:V"]
 
-    /// The scene's world, its clock paused at the moment to show.
-    public func make(in language: DisplayLanguage) -> GameWorld {
+    /// The scene's world, its clock paused at the moment to show. `water`
+    /// is the app's map of Taiwan's water, for a scene by the water
+    /// (``tamsuiFerry``); the others do without it.
+    public func make(in language: DisplayLanguage, water: WaterGrid? = nil) -> GameWorld {
         switch self {
         case .freight: Self.freightWorld(in: language)
         case .depots: Self.depotsWorld(in: language)
@@ -143,6 +180,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
+        case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .wenhu: Self.wenhuWorld(in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
@@ -150,6 +189,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
         case .followBus: Self.followBusWorld(in: language)
+        case .followBusCity: Self.followBusCityWorld(in: language)
+        case .tamsuiFerry: Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, in: language, water: water)
+        case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
+        case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         }
     }
 
@@ -180,7 +223,20 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     public static let followBusRunSeconds: Int64 = 9 * 3_600 + 1_800
 
     private static func followBusWorld(in language: DisplayLanguage) -> GameWorld {
-        var world = DemoWorld.make(in: language)
+        followBus(on: DemoWorld.make(in: language))
+    }
+
+    private static func followBusCityWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = taipeiWorld(at: ScreenshotScene.followBusCity.place ?? (25.0478, 121.5170), in: language)
+        // A new game has no roads until they are turned on.
+        if world.roads == nil { world.enableRoads() }
+        return followBus(on: world)
+    }
+
+    /// `start`'s first station with a road along its row and the feeder
+    /// bus route on it, run on to ``followBusRunSeconds``.
+    private static func followBus(on start: GameWorld) -> GameWorld {
+        var world = start
         do throws(GameError) {
             guard let station = world.stations.first else { throw .unknownStation(StationID(rawValue: 1)) }
             let home = CellPosition(containing: station.location)
@@ -190,7 +246,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             _ = try world.createBusRoute(to: station.id, stops: [cells[24], cells[14]], service: .every(minutes: 10), buses: 3)
             // .fast is ten minutes a tick.
             world.setSpeed(.fast)
-            try world.advance(ticks: Int((followBusRunSeconds - world.clock.now.seconds) / 600))
+            // The city's world is on to ten already: no further.
+            try world.advance(ticks: max(0, Int((followBusRunSeconds - world.clock.now.seconds) / 600)))
         } catch {
             preconditionFailure("The follow-a-bus screenshot scene no longer builds: \(error)")
         }
@@ -224,11 +281,40 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         else { return DemoWorld.make(in: language) }
         var world = GameWorld.newGame(anchor: anchor)
         if let stops = RealCableway.maokong.stops(in: world) {
-            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres)
+            _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres, meetsNear: RealCableway.maokong.meetsNear(in: world))
         }
         // On to 10:00 of day 1 (.fast is ten minutes a tick).
         world.setSpeed(.fast)
         try? world.advance(ticks: 34 * 6)
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Whether the scene is by the water and waits for the app's map of
+    /// Taiwan's water (decision 585).
+    public var needsWater: Bool {
+        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening
+    }
+
+    /// Decision 585: a real ferry, two boats every `every` minutes, on a
+    /// new game round `scene`'s place, run on to `until` minutes from the
+    /// start (in whole ten minutes): Tamsui–Bali at 10:00 of the second
+    /// day; Gushan–Cijin then and at 18:30 (decision 585 PR-3).
+    private static func ferryWorld(_ ferry: RealFerry, at scene: ScreenshotScene, every minutes: Int64, until: Int,
+                                   in language: DisplayLanguage, water grid: WaterGrid?) -> GameWorld {
+        guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
+        let water = grid?.cells(frame: frame, bounds: GameWorld.newGameBounds) ?? []
+        let steep = grid?.steepCells(frame: frame, bounds: GameWorld.newGameBounds) ?? []
+        var world = GameWorld.newGame(anchor: anchor, water: water, steep: steep)
+        if let piers = ferry.piers(in: world) {
+            _ = try? world.createFerryRoute(piers: piers, legMetres: ferry.legMetres, service: .every(minutes: minutes), boats: 2)
+        }
+        // .fast is ten minutes a tick.
+        world.setSpeed(.fast)
+        try? world.advance(ticks: until / 10)
         world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
@@ -281,7 +367,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     /// Decision 555: a new real-world game at `place`, a line 1.6 km long
     /// laid west to east through it, at 10:00 of the first day.
-    private static func taipeiWorld(at place: (latitude: Double, longitude: Double), in language: DisplayLanguage) -> GameWorld {
+    private static func taipeiWorld(at place: (latitude: Double, longitude: Double), until ticks: Int = 60,
+                                    resume: GameSpeed = .normal, in language: DisplayLanguage) -> GameWorld {
         guard let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude) else { return DemoWorld.make(in: language) }
         let world = GameWorld.newGame(anchor: anchor)
         guard let frame = RealWorldFrame(world: world) else { return world }
@@ -294,10 +381,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let line = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
                                                    PlanPoint(x: Int64(middle.x + half), y: y)], in: world)
         var opened = line ?? world
-        // On to 10:00, the sun high in the south-east (.fast is ten minutes a tick).
+        // On to 10:00, the sun high in the south-east (.fast is ten minutes
+        // a tick), or as many ticks on as asked (120: 20:00).
         opened.setSpeed(.fast)
-        try? opened.advance(ticks: 60)
-        opened.setSpeed(.normal)
+        try? opened.advance(ticks: ticks)
+        // To go on at `resume` (decision 596's junction: 10×, where the
+        // signals change and the traffic waits at them).
+        opened.setSpeed(resume)
         opened.setSpeed(.paused)
         return opened
     }

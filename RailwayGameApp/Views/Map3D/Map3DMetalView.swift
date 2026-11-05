@@ -66,6 +66,8 @@ final class Map3DMetalView: MTKView {
     private var flying: (flight: Map3DFlight, to: Map3DCamera?)?
     /// When the follow camera last moved, for how far it turns.
     private var lastFollowStep: CFTimeInterval?
+    /// Where the cabin followed is seen through (decision 342's supplement); set with the camera each frame.
+    private var followedSeeThrough: Map3DPoint?
     /// Decision 334: a flight asked for, its goal worked out at the next
     /// frame from the camera as laid out (``fly(reduceMotion:to:)``).
     private var flightAsked: (reduceMotion: Bool, goal: (Map3DCamera) -> Map3DCamera?)?
@@ -146,6 +148,8 @@ final class Map3DMetalView: MTKView {
     var reduceMotion = false
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
+    private var transparentGlass = Map3DTransparentGlass.Cache(models: [])
+    private var glassDrawing: Map3DGlassPipeline?
     /// Decision 429: the signals' three models in `models`, and the game
     /// clock their lights follow (`nil`: as they stand, the main road
     /// green).
@@ -369,6 +373,8 @@ final class Map3DMetalView: MTKView {
                                   boxIndices: boxIndices, shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState,
                                   depthState: depthState, skyPipeline: skyPipeline, skyDepthState: skyDepthState, surfaces: surfaces,
                                   samples: samples)
+        guard let glassDrawing = Map3DGlassPipeline.make(device: device, library: library, vertexDescriptor: vertexDescriptor, samples: samples) else { return nil }
+        view.glassDrawing = glassDrawing
         // Decision 352: the signs, four corners an instance, solid, tested
         // and written into the depth as the city is.
         if let signVertex = library.makeFunction(name: "map3dSignVertex"), let signFragment = library.makeFunction(name: "map3dSignFragment"),
@@ -431,6 +437,16 @@ final class Map3DMetalView: MTKView {
         clearDepth = 0
         preferredFramesPerSecond = 60
         deviceTier = Map3DDeviceTier.forGPU(family: Self.appleFamily(of: device), name: device.name)
+        #if DEBUG
+        // Decision 596: the Simulator's GPU (Apple2, decision 580) has no
+        // tier, so its streets draw nothing; a screenshot of the street's
+        // traffic asks for one (`-screenshot-device-tier 0…2`).
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-screenshot-device-tier"), arguments.indices.contains(index + 1),
+           let asked = Int(arguments[index + 1]).flatMap(Map3DDeviceTier.init(rawValue:)) {
+            deviceTier = asked
+        }
+        #endif
         // Decision 417: memory running short steps down on any look.
         NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil)
@@ -821,12 +837,14 @@ final class Map3DMetalView: MTKView {
         }
         guard var following else { return }
         let pose: Map3DFollow.Pose
+        followedSeeThrough = nil
         if let bus = following.bus {
             guard let found = busPose?(bus) else { return }
             pose = found
         } else if let cabin = following.cabin {
             guard let found = cabinPose?(cabin) else { return }
             pose = found
+            followedSeeThrough = Map3DSeeThrough.point(of: found)
         } else {
             guard let head = heads.first(where: { $0.train == following.train }) else { return }
             pose = head.pose
@@ -858,6 +876,7 @@ final class Map3DMetalView: MTKView {
         let buffers = pack.models.compactMap { makeBuffer($0.vertices) }
         guard buffers.count == pack.models.count else { return }
         models = (pack, buffers)
+        transparentGlass = Map3DTransparentGlass.Cache(models: pack.models)
         signalModels = Map3DSignalTiming.Models(pack: pack)
         walkModels = Map3DPedestrianSignal.Models(pack: pack)
     }
@@ -1004,7 +1023,8 @@ final class Map3DMetalView: MTKView {
         }
         trainHeads?(frame?.heads ?? [], camera)
         // Decision 342: the cars the city in front of is seen through.
-        let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix)
+        // Supplement: and the cabin followed, as one point.
+        let seeThrough = Map3DSeeThrough(eye: camera.eye, cars: frame?.cars ?? [], matrix: matrix, followed: followedSeeThrough)
         var trainBoxes: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int, triangles: Int)?
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
             trainBoxes = (vertices, indices, mesh.indices.count, mesh.triangleCount)
@@ -1045,6 +1065,14 @@ final class Map3DMetalView: MTKView {
                 }
                 lifeDraw = (sorted, buffer)
             }
+        }
+        // Build one globally sorted scene-space glass batch for the selected
+        // native model instances. Ordinary model packs allocate no batch.
+        var glassBuffer: (buffer: MTLBuffer, vertices: Int)?
+        if !transparentGlass.isEmpty, glassDrawing != nil {
+            let vertices = transparentGlass.vertices(instances: (cars?.sorted ?? []) + (lifeDraw?.sorted ?? []),
+                                                     eye: camera.eye, toward: camera.target)
+            if !vertices.isEmpty, let buffer = makeBuffer(vertices) { glassBuffer = (buffer, vertices.count) }
         }
         let waiting = CACurrentMediaTime()
         guard let pass = currentRenderPassDescriptor, let drawable = currentDrawable, let commands = queue.makeCommandBuffer()
@@ -1265,6 +1293,20 @@ final class Map3DMetalView: MTKView {
                                           indexBuffer: shadows.indices, indexBufferOffset: 0)
             drawCalls += 1
             triangles += shadows.triangles
+        }
+        // After opaque geometry, sky and ground shadows: none can paint
+        // over a window afterwards. Reversed-Z tests opaque depth; glass
+        // never writes it, and closed panes are drawn from either side.
+        if let glassDrawing, let glassBuffer {
+            encoder.setRenderPipelineState(glassDrawing.pipeline)
+            encoder.setDepthStencilState(glassDrawing.depth)
+            encoder.setCullMode(.none)
+            encoder.setFragmentTexture(surfaces, index: 0)
+            encoder.setFragmentTexture(sunRegion.drawn == nil ? noSunMap : sunMap, index: 1)
+            encoder.setVertexBuffer(glassBuffer.buffer, offset: 0, index: 0)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: glassBuffer.vertices)
+            drawCalls += 1
+            triangles += glassBuffer.vertices / 3
         }
         encoder.endEncoding()
         if !captures.isEmpty, !drawable.texture.isFramebufferOnly {
@@ -1501,3 +1543,37 @@ private final class Map3DCapturedFrame: @unchecked Sendable {
         return UIImage(cgImage: image, scale: scale, orientation: .up)
     }
 }
+
+// BEGIN NATIVE GLASS PIPELINE — the macOS Metal test compiles this exact block.
+private struct Map3DGlassPipeline {
+    let pipeline: MTLRenderPipelineState
+    let depth: MTLDepthStencilState
+
+    static func make(device: MTLDevice, library: MTLLibrary, vertexDescriptor: MTLVertexDescriptor, samples: Int) -> Map3DGlassPipeline? {
+        guard let vertex = library.makeFunction(name: "map3dVertex"),
+              let fragment = library.makeFunction(name: "map3dTransparentGlassFragment") else { return nil }
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction = vertex
+        descriptor.fragmentFunction = fragment
+        descriptor.vertexDescriptor = vertexDescriptor
+        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+        descriptor.depthAttachmentPixelFormat = .depth32Float
+        descriptor.rasterSampleCount = samples
+        descriptor.isAlphaToCoverageEnabled = false
+        let colour = descriptor.colorAttachments[0]!
+        colour.isBlendingEnabled = true
+        colour.rgbBlendOperation = .add
+        colour.alphaBlendOperation = .add
+        colour.sourceRGBBlendFactor = .sourceAlpha
+        colour.destinationRGBBlendFactor = .oneMinusSourceAlpha
+        colour.sourceAlphaBlendFactor = .one
+        colour.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        let depth = MTLDepthStencilDescriptor()
+        depth.depthCompareFunction = .greater
+        depth.isDepthWriteEnabled = false
+        guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
+              let state = device.makeDepthStencilState(descriptor: depth) else { return nil }
+        return Map3DGlassPipeline(pipeline: pipeline, depth: state)
+    }
+}
+// END NATIVE GLASS PIPELINE

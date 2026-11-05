@@ -28,6 +28,7 @@ extension GameSession {
         networkDepotEnd = nil
         cablewayDraft = []
         cablewayDraftLegs = nil
+        cablewayDraftMeets = nil
         message = nil
     }
 
@@ -133,8 +134,16 @@ extension GameSession {
     /// The stretch of track the picked ends would make, and whether
     /// GameCore would build it and for how much; `nil` until both ends are
     /// picked (or in another mode).
+    /// In the app, `nil` until the main actor's next turn has worked it
+    /// out (decision 590, ``networkDraftPreview(now:)``).
     public var networkPreview: NetworkPreview? {
         networkDraftPreview?.preview
+    }
+
+    /// ``networkPreview``; `now` works it out at once, even in the app
+    /// (for an action, which runs from a shallow stack).
+    func networkPreview(now: Bool) -> NetworkPreview? {
+        networkDraftPreview(now: now)?.preview
     }
 
     /// ``networkPreview``, with the middle of an X crossover (empty for one
@@ -145,7 +154,17 @@ extension GameSession {
     /// Not for each tick: a player who presses play with a draft open had
     /// it worked out again at every one (PLAYER_FEEDBACK 80.1 #1); ✓ plans
     /// the build again on the world it builds in.
+    ///
+    /// Decision 590: building it on copies of the world takes some 200 KB
+    /// of stack, so in the app a view's body that asks for it before it
+    /// is worked out gets `nil`, and it is worked out on the main actor's
+    /// next turn (``waits(for:workOut:)``).
     var networkDraftPreview: (preview: NetworkPreview, crossing: [WorldCoordinate])? {
+        networkDraftPreview(now: false)
+    }
+
+    /// ``networkDraftPreview``; `now` works it out at once, even in the app.
+    func networkDraftPreview(now: Bool) -> (preview: NetworkPreview, crossing: [WorldCoordinate])? {
         guard networkMode == .build, let start = networkStart, let end = networkEnd else { return nil }
         // Read so that what shows the preview is redrawn when the world
         // changes; the revision below says whether it did.
@@ -156,6 +175,16 @@ extension GameSession {
             buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide, traces: tracesRealRailway, commandRevision: commandRevision
         )
         if let memo = networkPreviewMemo, memo.key == key, memo.affordable == affords(memo.preview?.preview.cost) { return memo.preview }
+        if !now, waits(for: .networkDraft, workOut: { _ = $0.networkDraftPreview(now: true) }) { return nil }
+        return workOutNetworkDraftPreview(from: start, to: end, key: key)
+    }
+
+    /// ``networkDraftPreview`` worked out and kept. Never inlined
+    /// (decision 590): only working it out takes its stack.
+    @inline(never)
+    private func workOutNetworkDraftPreview(
+        from start: NetworkAnchor, to end: NetworkAnchor, key: NetworkPreviewMemo.Key
+    ) -> (preview: NetworkPreview, crossing: [WorldCoordinate])? {
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
         } else if let traced = tracePreview(from: start, to: end) {
@@ -491,10 +520,26 @@ extension GameSession {
     /// The crossovers the platform picked would get (decision 571), for
     /// the preview: none with an island layout, which lays its own track.
     /// Planned once for the pick and command.
+    /// In the app, none until the main actor's next turn has planned them
+    /// (decision 590: planning them tries the platform on a copy of the
+    /// world).
     var networkPlatformCrossovers: [PlayerCommand.TrackStretch] {
+        networkPlatformCrossovers(now: false)
+    }
+
+    /// ``networkPlatformCrossovers``; `now` plans them at once, even in the app.
+    func networkPlatformCrossovers(now: Bool) -> [PlayerCommand.TrackStretch] {
         guard !networkStationLayout.isLaidByLayout, let stretch = networkPlatformStretch, networkPlatformBeside != nil else { return [] }
         let key = PlatformBesideMemo.Key(edge: stretch.edge, start: stretch.start, end: stretch.end, commandRevision: commandRevision)
         if let memo = stationCrossoverMemo, memo.key == key { return memo.crossovers }
+        if !now, waits(for: .platformCrossovers, workOut: { _ = $0.networkPlatformCrossovers(now: true) }) { return [] }
+        return workOutNetworkPlatformCrossovers(key: key)
+    }
+
+    /// ``networkPlatformCrossovers`` planned and kept. Never inlined
+    /// (decision 590).
+    @inline(never)
+    private func workOutNetworkPlatformCrossovers(key: PlatformBesideMemo.Key) -> [PlayerCommand.TrackStretch] {
         let crossovers = (try? networkPlatformDraft().get().addition.crossovers) ?? []
         stationCrossoverMemo = (key, crossovers)
         return crossovers
@@ -870,8 +915,23 @@ extension GameSession {
     /// to the end of the edge, `GameWorld.setTrainContinuation(_:along:stoppingAt:)`
     /// with no traversals. All or nothing; GameCore decides whether the
     /// track behind the platform takes the rest of the train.
+    ///
+    /// Decision 584: at a station of two or more platforms, on the one the
+    /// player picked, or else the first of those picked for them GameCore
+    /// takes (``placementPlatformToUse(for:at:)``), and the message names it.
     func place(_ train: Train, atPlatformOf station: Station) {
         guard !Self.platforms(for: train, at: station.id, in: world).isEmpty else { return }
+        if let platform = placementPlatformToUse(for: train, at: station) {
+            let number = (world.trackPlatforms(of: station.id).firstIndex(of: platform) ?? 0) + 1
+            perform(.placeTrainOnPlatform(train.id, platform, heading: placementHeading)) { outcome, _, _ in
+                guard let placed = outcome.placed else { return "" }
+                return language.text(
+                    "Placed \(train.name) at \(station.name), platform \(number), on \(placed.edge.displayText(in: language).lowercased()) going \(placed.forward ? "forward" : "backward").",
+                    "已將 \(train.name) 放在 \(station.name) 第 \(number) 月台，位於\(placed.edge.displayText(in: language))\(placed.forward ? "正向" : "反向")。"
+                )
+            }
+            return
+        }
         perform(.placeTrain(train.id, at: station.id, heading: placementHeading)) { outcome, _, _ in
             guard let placed = outcome.placed else { return "" }
             return language.text(
@@ -898,35 +958,49 @@ extension GameSession {
     ) throws(GameError) -> (edge: TrackEdgeID, forward: Bool) {
         guard let train = world.train(id: id) else { throw .unknownTrain(id) }
         var refusal: GameError?
-        for platform in platforms(for: train, at: station, in: world) {
-            guard let edge = world.network.edge(platform.edge),
-                  let geometry = world.trackGeometry(of: platform.edge) else { continue }
-            let way = geometry.location(at: (platform.start + platform.end) / 2).direction
-            let forward: Bool
-            switch heading {
-            case .north: forward = way.dy <= 0
-            case .east: forward = way.dx >= 0
-            case .south: forward = way.dy >= 0
-            case .west: forward = way.dx <= 0
-            }
-            let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
-            // The offset is measured the way the train faces.
-            let offset = forward ? platform.end : edge.length - platform.start
-            var draft = world
+        for platform in platforms(for: train, at: station, in: world)
+        where world.network.edge(platform.edge) != nil && world.trackGeometry(of: platform.edge) != nil {
             do throws(GameError) {
-                try draft.placeTrain(id, at: .onEdge(traversal, offset: offset))
-                if offset < edge.length {
-                    try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
-                }
-                try draft.useTrainPerformanceForMovement(id)
+                return try place(id, on: platform, heading: heading, in: &world)
             } catch {
                 refusal = refusal ?? error
-                continue
             }
-            world = draft
-            return (platform.edge, forward)
         }
         throw refusal ?? .unknownStation(station)
+    }
+
+    /// Places train `id` on `platform` alone, facing the way along it
+    /// nearer `heading`, with its head at the platform's far end (decision
+    /// 584: the platform the player picked, the command
+    /// ``PlayerCommand/Edit/placeTrainOnPlatform(_:_:heading:)``). All or
+    /// nothing; throws GameCore's refusal, or `unknownStation` for a
+    /// platform the track no longer has.
+    nonisolated static func place(
+        _ id: TrainID, on platform: TrackPlatform, heading: CompassHeading, in world: inout GameWorld
+    ) throws(GameError) -> (edge: TrackEdgeID, forward: Bool) {
+        guard world.train(id: id) != nil else { throw .unknownTrain(id) }
+        guard world.trackPlatforms(of: platform.station).contains(platform),
+              let edge = world.network.edge(platform.edge),
+              let geometry = world.trackGeometry(of: platform.edge) else { throw .unknownStation(platform.station) }
+        let way = geometry.location(at: (platform.start + platform.end) / 2).direction
+        let forward: Bool
+        switch heading {
+        case .north: forward = way.dy <= 0
+        case .east: forward = way.dx >= 0
+        case .south: forward = way.dy >= 0
+        case .west: forward = way.dx <= 0
+        }
+        let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
+        // The offset is measured the way the train faces.
+        let offset = forward ? platform.end : edge.length - platform.start
+        var draft = world
+        try draft.placeTrain(id, at: .onEdge(traversal, offset: offset))
+        if offset < edge.length {
+            try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
+        }
+        try draft.useTrainPerformanceForMovement(id)
+        world = draft
+        return (platform.edge, forward)
     }
 
     // MARK: - Removing

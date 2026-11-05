@@ -1,0 +1,56 @@
+name: Native glass Metal probe
+on:
+  pull_request:
+    paths:
+      - 'Sources/GamePresentation/Map3DTransparentGlass.swift'
+      - 'Tests/GamePresentationTests/Map3DTransparentGlassTests.swift'
+      - 'RailwayGameApp/Views/Map3D/Map3DShaders.metal'
+      - 'RailwayGameApp/Views/Map3D/Map3DMetalView.swift'
+      - 'tools/native-glass/**'
+      - '.github/workflows/native-glass-metal.yml'
+permissions:
+  contents: read
+concurrency:
+  group: native-glass-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  metal:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check native build input discovery
+        run: bash tools/native-glass/test-build-inputs.sh
+      # Xcode 26.6 currently ships Apple Swift 6.3.3. Keep this standalone
+      # SwiftPM/probe lane on the required official Swift 6.4.0 toolchain.
+      - name: Install official Swift 6.4.0 for the standalone probe
+        run: |
+          package="$RUNNER_TEMP/swift-6.4.0.pkg"
+          curl -fsSL --retry 3 -o "$package" https://download.swift.org/swift-6.4.0-release/xcode/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE-osx.pkg
+          pkgutil --check-signature "$package"
+          sudo installer -pkg "$package" -target /
+          toolchains=(/Library/Developer/Toolchains/swift-6.4*-RELEASE.xctoolchain)
+          test "${#toolchains[@]}" -eq 1
+          test -x "${toolchains[0]}/usr/bin/swift"
+          echo "${toolchains[0]}/usr/bin" >> "$GITHUB_PATH"
+      - name: Pinned cabin recipes (temporary, no private assets or credentials)
+        run: |
+          git fetch --depth=1 --no-tags origin 5cfec2954bde648ad3a40f43f8ec18ff89d11bdf
+          git worktree add --detach "$RUNNER_TEMP/maokong-recipe" 5cfec2954bde648ad3a40f43f8ec18ff89d11bdf
+          git fetch --depth=1 --no-tags origin 074b085c03329edcda9f212927783b5787857adc
+          git worktree add --detach "$RUNNER_TEMP/sunmoon-recipe" 074b085c03329edcda9f212927783b5787857adc
+          python3 "$RUNNER_TEMP/maokong-recipe/tools/maokong-cabin-refine/produce.py" "$RUNNER_TEMP/glass-fixtures/maokong"
+          python3 "$RUNNER_TEMP/sunmoon-recipe/tools/sunmoon-cabin-studies/produce.py" "$RUNNER_TEMP/glass-fixtures/sunmoon" --kind red
+          python3 "$RUNNER_TEMP/sunmoon-recipe/tools/sunmoon-cabin-studies/produce.py" "$RUNNER_TEMP/glass-fixtures/sunmoon" --kind crystal
+      - name: Compile real shaders and Swift, then probe Metal if available
+        run: |
+          tools/native-glass/run-metal.sh "$RUNNER_TEMP/native-glass" "$RUNNER_TEMP/glass-fixtures"
+          tools/native-glass/check-cabins.sh "$RUNNER_TEMP/glass-fixtures" "$RUNNER_TEMP/native-glass/native-cabin-cpu-verification.json"
+      - name: Retain actual compilation / GPU status and native images
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-glass-metal
+          path: ${{ runner.temp }}/native-glass
+          if-no-files-found: warn
+          retention-days: 14

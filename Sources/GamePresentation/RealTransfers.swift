@@ -22,6 +22,8 @@ import GameCore
 struct TransferMemo: Equatable {
     var stations: [StationID: PlanPoint]
     var hasRailways: Bool
+    /// Decision 595: the lines bought, whose stations have their regulars.
+    var bought: [LineAcquisition]
     var points: [StationID: Int64]
 }
 
@@ -71,12 +73,52 @@ extension GameSession {
     /// the points of each of its systems, the highest where a system has
     /// several stations there, added up, at most
     /// ``TransferDemand/maximumPoints``.
-    static func transferPoints(of place: RealStationSuggestion, data: RealStationData?, ridership: RealRidership? = nil) -> Int64 {
+    ///
+    /// Decision 595: a real station in `regulars`, one whose riders the
+    /// price of a line bought paid for, gives a station of that line its
+    /// riders at ``regularRidersPerPoint`` rather than
+    /// ``transferRidersPerPoint``, so every rider paid for sets out from it.
+    static func transferPoints(
+        of place: RealStationSuggestion, data: RealStationData?, ridership: RealRidership? = nil, regulars: Set<String> = []
+    ) -> Int64 {
         var bySystem: [String: Int64] = [:]
         for station in place.stations {
-            bySystem[station.system.id] = max(bySystem[station.system.id] ?? 0, transferPoints(of: station, data: data, ridership: ridership))
+            var points = transferPoints(of: station, data: data, ridership: ridership)
+            if regulars.contains(station.id), let riders = ridership?.riders(of: station, data: data) {
+                points = max(points, Int64((Double(riders) / Double(regularRidersPerPoint)).rounded()))
+            }
+            bySystem[station.system.id] = max(bySystem[station.system.id] ?? 0, points)
         }
         return min(bySystem.values.reduce(0, +), TransferDemand.maximumPoints)
+    }
+
+    /// The real riders a day one transfer point stands for at a station of
+    /// a branch line the company bought, for its own riders (decision 595):
+    /// 100, so each brings one trip a day (``TransferDemand/tripsPerPoint``
+    /// trips a point), as many as its price paid for. A station the
+    /// company built by the same real one has a tenth of them
+    /// (``transferRidersPerPoint``): those changing from the real trains.
+    static let regularRidersPerPoint = Int(TransferDemand.tripsPerPoint)
+
+    /// The real stations whose riders the price of a branch line bought
+    /// paid for (decision 595), by the site's id (`tra_sched|十分`), each
+    /// with the lines they run as: its stations past the junction, as
+    /// ``GameSession/realLineOffer(for:)`` priced them. A light rail's or a
+    /// metro's are not: their riders cost a hundredth of a branch line's
+    /// (``LineAcquisition/Tier/valuePerDailyRider``), and each brings a
+    /// rider's fares in a fortnight or so, so with them a line bought soon
+    /// earns more than the same line built.
+    func regularStations() -> [String: Set<LineID>] {
+        guard let railways else { return [:] }
+        var paid: [String: Set<LineID>] = [:]
+        for bought in world.acquisitions {
+            guard bought.kind == .railway, let line = bought.line, bought.realLine.hasPrefix("tra:"),
+                  let runs = railways.branchRuns[String(bought.realLine.dropFirst("tra:".count))] else { continue }
+            for name in runs.stops.dropFirst() {
+                paid["\(RealBranchLine.tra)|\(name)", default: []].insert(line)
+            }
+        }
+        return paid
     }
 
     /// The real place station `id` changes with: the nearest within the
@@ -92,9 +134,15 @@ extension GameSession {
     func wantedTransfers() -> [StationID: Int64] {
         var points: [StationID: Int64] = [:]
         let data = railways?.stationData
+        let paid = regularStations()
         for station in world.stations {
             guard let place = transferPlace(of: station.id) else { continue }
-            let value = Self.transferPoints(of: place, data: data, ridership: railways?.ridership)
+            // Decision 595: the riders paid for, at a station of the line
+            // bought by the real station.
+            let regulars = paid.isEmpty ? [] : Set(place.stations.map(\.id).filter { id in
+                paid[id]?.contains { world.line(id: $0)?.stops.contains(station.id) ?? false } ?? false
+            })
+            let value = Self.transferPoints(of: place, data: data, ridership: railways?.ridership, regulars: regulars)
             if value > 0 { points[station.id] = value }
         }
         return points
@@ -109,11 +157,11 @@ extension GameSession {
         guard world.realTransfers, railways != nil, RealWorldFrame(world: world) != nil else { return }
         let stations = Dictionary(uniqueKeysWithValues: world.stations.filter { !$0.isDepot }.map { ($0.id, $0.point) })
         let points: [StationID: Int64]
-        if let memo = transferMemo, memo.stations == stations, memo.hasRailways {
+        if let memo = transferMemo, memo.stations == stations, memo.hasRailways, memo.bought == world.acquisitions {
             points = memo.points
         } else {
             points = wantedTransfers()
-            transferMemo = TransferMemo(stations: stations, hasRailways: true, points: points)
+            transferMemo = TransferMemo(stations: stations, hasRailways: true, bought: world.acquisitions, points: points)
         }
         let current = Dictionary(uniqueKeysWithValues: world.stations.filter { $0.transferPoints > 0 }.map { ($0.id, $0.transferPoints) })
         guard points != current else { return }

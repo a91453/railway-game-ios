@@ -223,8 +223,16 @@ extension GameSession {
     /// it cannot be laid; `nil` for the two side layouts, which are the
     /// platform tool's own (``networkPlatformCost``). The map's pill reads
     /// it every frame, so it is kept for the stretch and command it was
-    /// worked out for, as ``networkPlatformLevelling`` is.
+    /// worked out for, as ``networkPlatformLevelling`` is. In the app,
+    /// `nil` until the main actor's next turn has worked it out (decision
+    /// 590: it lays the station out on a copy of the world).
     public var networkStationLayoutPreview: StationLayoutPreview? {
+        networkStationLayoutPreview(now: false)
+    }
+
+    /// ``networkStationLayoutPreview``; `now` works it out at once, even
+    /// in the app.
+    func networkStationLayoutPreview(now: Bool) -> StationLayoutPreview? {
         let layout = networkStationLayout
         guard layout.isLaidByLayout, let stretch = networkPlatformStretch else { return nil }
         _ = world
@@ -233,6 +241,14 @@ extension GameSession {
             language: language, commandRevision: commandRevision
         )
         if let memo = stationLayoutMemo, memo.key == key { return memo.preview }
+        if !now, waits(for: .stationLayout, workOut: { _ = $0.networkStationLayoutPreview(now: true) }) { return nil }
+        return workOutStationLayoutPreview(layout, key: key)
+    }
+
+    /// ``networkStationLayoutPreview`` worked out and kept. Never inlined
+    /// (decision 590).
+    @inline(never)
+    private func workOutStationLayoutPreview(_ layout: StationLayout, key: StationLayoutMemo.Key) -> StationLayoutPreview {
         let preview: StationLayoutPreview
         switch networkPlatformDraft(beside: layout != .doubleIsland) {
         case .failure(let refusal):

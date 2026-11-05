@@ -535,6 +535,46 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertTrue(junction.hasPrefix("從台鐵轉乘"), junction)
     }
 
+    /// Decision 595: the riders a line's price paid for set out from its
+    /// stations past the junction from the day it is bought, one trip a
+    /// day each; the same stations built by the company itself have a
+    /// tenth of them, changing from the real trains; the junction has
+    /// the main line's either way.
+    func testALineBoughtBringsTheRegularsItsPricePaidFor() throws {
+        let session = try Self.game(round: "PINGXI", transfers: true)
+        let offer = session.realLineOffer(for: try line("PINGXI", in: session))
+        let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+        var own = session.world
+        _ = try session.build(acquisition, in: &own, recording: false)
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+
+        func trips(_ world: GameWorld) throws -> (past: Int64, junction: Int64) {
+            let built = GameSession(world: world, language: .traditionalChinese)
+            built.railways = session.railways
+            built.refreshTransfers()
+            let line = try XCTUnwrap(built.world.lines.first { $0.stops.count == acquisition.stops.count })
+            return (line.stops.dropLast().reduce(0) { $0 + built.world.transferTrips(of: $1) }, built.world.transferTrips(of: line.stops.last!))
+        }
+        let bought = try trips(session.world), built = try trips(own)
+        let stops = Int64(acquisition.stops.count - 1)
+        XCTAssertLessThanOrEqual(abs(bought.past - acquisition.dailyRiders), 100 * stops, "\(bought.past) for \(acquisition.dailyRiders) paid for")
+        XCTAssertLessThanOrEqual(built.past, acquisition.dailyRiders / 10 + 100 * stops, "\(built.past)")
+        XCTAssertGreaterThan(bought.past, 2 * built.past)
+        XCTAssertEqual(bought.junction, built.junction)
+        XCTAssertGreaterThan(bought.junction, 0)
+    }
+
+    /// Decision 595: a light rail's riders cost a hundredth of a branch
+    /// line's, so buying one brings no regulars beyond those changing from
+    /// the real trains, and its card does not count them.
+    func testALightRailBoughtBringsNoMoreRegulars() throws {
+        let session = try Self.game(round: "ntdlrt:VB", transfers: true)
+        let offer = session.realLineOffer(for: try line("VB", in: session))
+        XCTAssertEqual(offer.priceRows(in: .traditionalChinese).map(\.label).dropLast().last, "沿線的常客")
+        XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+        XCTAssertEqual(session.regularStations(), [:])
+    }
+
     /// A station of the player's beside a real one past the junction
     /// offers the line; the card lists the price, and closes once bought for
     /// the card that says so.
@@ -552,7 +592,8 @@ final class RealLineAcquisitionTests: XCTestCase {
         await session.realLineOfferPrepared()
         let offer = try XCTUnwrap(session.shownRealLineOffer)
         let rows = offer.priceRows(in: .traditionalChinese)
-        XCTAssertEqual(rows.map(\.label), ["軌道、車站與月台", "3 列車", "沿線的常客", "合計"])
+        let riders = try XCTUnwrap(offer.acquisition?.dailyRiders)
+        XCTAssertEqual(rows.map(\.label), ["軌道、車站與月台", "3 列車", "沿線的常客：每天約 \(riders.formatted()) 人", "合計"])
         XCTAssertEqual(rows.dropLast().map(\.amount).reduce(.zero, +), rows.last?.amount)
         XCTAssertEqual(offer.summaryText(in: .traditionalChinese), "三貂嶺—菁桐：7 站、3 列車與真實班次")
         XCTAssertNil(offer.problem, offer.problem ?? "")

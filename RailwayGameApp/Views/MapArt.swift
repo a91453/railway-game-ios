@@ -64,6 +64,7 @@ enum MapArt {
         buses: BusMapOverlay? = nil,
         roads: RoadMapOverlay? = nil,
         cableways: CablewayMapOverlay? = nil,
+        ferries: FerryMapOverlay? = nil,
         drawsLabels: Bool = true,
         part: MapPart = .all,
         in context: GraphicsContext
@@ -71,7 +72,7 @@ enum MapArt {
         if part != .trafficAndStations {
             drawRailway(world, network: overlay, expansion: expansion, expansionClear: expansionClear, projection: projection, edges: edges, layers: layers, lines: lines,
                         routePreview: routePreview, flowStrokes: flowStrokes, lineCodes: lineCodes, journey: journey,
-                        journeyProgress: journeyProgress, buses: buses, roads: roads, cableways: cableways, latitude: latitude, in: context)
+                        journeyProgress: journeyProgress, buses: buses, roads: roads, cableways: cableways, ferries: ferries, latitude: latitude, in: context)
         }
         if part != .railway {
             drawTrafficAndStations(
@@ -114,6 +115,7 @@ enum MapArt {
         buses: BusMapOverlay?,
         roads: RoadMapOverlay?,
         cableways: CablewayMapOverlay?,
+        ferries: FerryMapOverlay?,
         latitude: Double,
         in context: GraphicsContext
     ) {
@@ -170,6 +172,11 @@ enum MapArt {
         // (docs/MAP_LAYERS.md, 24.9).
         if let cableways {
             drawCableways(cableways, projection: projection, in: context)
+        }
+        // Decision 585: the ferries, over the water and the lines and under
+        // the transfers (docs/MAP_LAYERS.md, 24.10).
+        if let ferries {
+            drawFerries(ferries, projection: projection, in: context)
         }
         drawTransfers(lines, projection: projection, in: context)
         // Decision 220: the held station's busiest trips (docs/MAP_LAYERS.md, 25.5).
@@ -1134,6 +1141,51 @@ enum MapArt {
         }
         for rope in cableways.ropes { draw(rope, opacity: rope.runs ? 1 : 0.45, dashed: false) }
         if let draft = cableways.draft { draw(draft, opacity: cableways.draftIsBuildable ? 1 : 0.7, dashed: !cableways.draftIsBuildable) }
+    }
+
+    /// Decision 585: each ferry route as a dashed line in the ferry's blue
+    /// over a pale casing, straight from pier to pier (boats cross the
+    /// water, they lay no track); a pier as a white rounded square ringed
+    /// in that blue with a boat's hull in it. A route not sailing today is
+    /// faint; the one being drawn is fainter until it can be opened.
+    private static func drawFerries(_ ferries: FerryMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        let view = context.clipBoundingRect
+        let width = max(1.5, lineWidth(projection) * 0.5)
+        let radius = max(5, width * 2.6)
+        func draw(_ route: FerryMapOverlay.Route, opacity: Double) {
+            var way = Path()
+            if let first = route.piers.first {
+                way.move(to: cgPoint(projection.screenPoint(of: first)))
+                for point in route.piers.dropFirst() { way.addLine(to: cgPoint(projection.screenPoint(of: point))) }
+            }
+            if way.boundingRect.insetBy(dx: -radius - 2, dy: -radius - 2).intersects(view) {
+                context.stroke(way, with: .color(Palette.followCase.opacity(0.9 * opacity)),
+                               style: StrokeStyle(lineWidth: width + 3, lineCap: .round, lineJoin: .round))
+                context.stroke(way, with: .color(Palette.ferry.opacity(opacity)), style: StrokeStyle(
+                    lineWidth: width, lineCap: .round, lineJoin: .round, dash: [max(4, width * 3), max(3, width * 2)]
+                ))
+            }
+            for point in route.piers {
+                let centre = cgPoint(projection.screenPoint(of: point))
+                let rect = CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2)
+                guard rect.intersects(view) else { continue }
+                let pier = Path(roundedRect: rect, cornerRadius: radius * 0.35)
+                context.fill(pier, with: .color(Palette.markerFill.opacity(opacity)))
+                context.stroke(pier, with: .color(Palette.ferry.opacity(opacity)), lineWidth: max(1.5, width))
+                // The boat: a hull wider at the deck, a cabin on it.
+                var hull = Path()
+                hull.move(to: CGPoint(x: centre.x - radius * 0.62, y: centre.y + radius * 0.02))
+                hull.addLine(to: CGPoint(x: centre.x + radius * 0.62, y: centre.y + radius * 0.02))
+                hull.addLine(to: CGPoint(x: centre.x + radius * 0.4, y: centre.y + radius * 0.42))
+                hull.addLine(to: CGPoint(x: centre.x - radius * 0.4, y: centre.y + radius * 0.42))
+                hull.closeSubpath()
+                context.fill(hull, with: .color(Palette.ink.opacity(opacity)))
+                let cabin = CGRect(x: centre.x - radius * 0.3, y: centre.y - radius * 0.36, width: radius * 0.6, height: radius * 0.3)
+                context.fill(Path(roundedRect: cabin, cornerRadius: radius * 0.08), with: .color(Palette.ink.opacity(opacity)))
+            }
+        }
+        for route in ferries.routes { draw(route, opacity: route.sails ? 1 : 0.45) }
+        if let draft = ferries.draft { draw(draft, opacity: ferries.draftIsBuildable ? 1 : 0.7) }
     }
 
     /// Each transfer group as a white link with a navy edge through its

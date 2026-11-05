@@ -31,6 +31,16 @@ final class FollowBusVisibleTests: XCTestCase {
         }
     }
 
+    /// Decision 342 (FOLLOWXRAY): the city scene has the feeder route and a
+    /// bus out on it at half past nine, at Taipei Main Station.
+    func testTheCitySceneHasTheBusOutOnItsRoute() throws {
+        let world = ScreenshotScene.followBusCity.make(in: .english)
+        let route = try XCTUnwrap(world.busRoutes.last)
+        let motion = try XCTUnwrap(BusMotion(route))
+        XCTAssertNotNil(motion.successor(of: -1, at: world.busSecondOfDay))
+        XCTAssertNotNil(ScreenshotScene.followBusCity.place)
+    }
+
     /// The Simulator's GPU has no tier (Apple family 2), so the streets
     /// draw nothing that moves (``Map3DStreetDetail/off``); the bus the
     /// camera follows is drawn all the same, as a followed train is, and

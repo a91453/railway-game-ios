@@ -22,6 +22,7 @@ extension GameSession {
         clearSelection()
         tutorial = Tutorial(steps: Tutorial.steps(over: world), over: world)
         skippedTutorial = nil
+        forgetKeptTutorialAnswers()
         setUpTutorialStep()
     }
 
@@ -36,15 +37,24 @@ extension GameSession {
         }
         tutorial = shown
         skippedTutorial = nil
+        forgetKeptTutorialAnswers()
         setUpTutorialStep()
     }
 
     /// Whether the player has done what the step on screen asks (the
     /// reference's `_tutorialStepActionDone`), read from the world and the
     /// session; `false` without a tutorial. Next waits for it.
+    ///
+    /// Decision 590: in the app, a preview the step reads (the stretch
+    /// drawn) may wait for the main actor's next turn; meanwhile the step
+    /// keeps the answer it last had (``keptTutorialAnswer(_:done:hint:)``),
+    /// so that it does not come undone for a turn, and Next, the step
+    /// moving on by itself and the steps passed over work the preview out
+    /// at once.
     public var isTutorialStepDone: Bool {
         guard let tutorial else { return false }
-        return isTutorialStepDone(tutorial.index, in: tutorial)
+        let done = isTutorialStepDone(tutorial.index, in: tutorial, now: false)
+        return keptTutorialAnswer(tutorial.index, done: done)
     }
 
     /// Whether the step on screen moves on by itself
@@ -57,6 +67,42 @@ extension GameSession {
     public var tutorialAdvancesByItself: Bool {
         guard let tutorial else { return false }
         return tutorial.step.goal != .read && !tutorial.isLastStep && !tutorial.reachedByBack && isTutorialStepDone
+    }
+
+    /// ``tutorialAdvancesByItself`` with what the step reads worked out at
+    /// once (decision 590), for an action.
+    private var tutorialAdvancesByItselfNow: Bool {
+        guard let tutorial else { return false }
+        return tutorial.step.goal != .read && !tutorial.isLastStep && !tutorial.reachedByBack
+            && isTutorialStepDone(tutorial.index, in: tutorial, now: true)
+    }
+
+    /// Whether a preview the tutorial's steps and hints read is waiting
+    /// for the main actor's next turn (decision 590).
+    private var tutorialPreviewWaits: Bool {
+        isWaiting(for: .networkDraft) || isWaiting(for: .trackUpgrade)
+    }
+
+    /// `done`, as the step on screen (`index`) answers while no preview it
+    /// reads waits; while one waits and `done` is `false`, the answer it
+    /// last had instead (`false` if none): `done` was read without the
+    /// preview, and a preview only ever adds to what is done. `true` is
+    /// kept as it is.
+    func keptTutorialAnswer(_ index: Int, done: Bool) -> Bool {
+        if !done, tutorialPreviewWaits {
+            return tutorialDoneKept.map { $0.index == index && $0.done } ?? false
+        }
+        tutorialDoneKept = (index, done)
+        return done
+    }
+
+    /// `hint`, as the step on screen (`index`) gives it while no preview
+    /// it reads waits; while one waits, the hint it last gave, if any
+    /// (decision 590).
+    func keptTutorialHint(_ index: Int, hint: TutorialHint?) -> TutorialHint? {
+        if tutorialPreviewWaits, let kept = tutorialHintKept, kept.index == index { return kept.hint }
+        tutorialHintKept = (index, hint)
+        return hint
     }
 
     /// The places on the map the step on screen has the player tap
@@ -141,7 +187,7 @@ extension GameSession {
     /// the tutorial. Does nothing until the step on screen is done. Steps
     /// already done on the way are passed over.
     public func showNextTutorialStep() {
-        guard let shown = tutorial, isTutorialStepDone else { return }
+        guard let shown = tutorial, isTutorialStepDone(shown.index, in: shown, now: true) else { return }
         if shown.isLastStep {
             tutorial = nil
             onTutorialCompleted?()
@@ -154,7 +200,7 @@ extension GameSession {
     /// is still on screen and moves on by itself, so a late call (the
     /// player tapped Next, or went Back) does nothing.
     public func showNextTutorialStep(from index: Int) {
-        guard tutorial?.index == index, tutorialAdvancesByItself else { return }
+        guard tutorial?.index == index, tutorialAdvancesByItselfNow else { return }
         showNextTutorialStep()
     }
 
@@ -194,6 +240,7 @@ extension GameSession {
         guard let skipped = skippedTutorial else { return }
         tutorial = skipped
         skippedTutorial = nil
+        forgetKeptTutorialAnswers()
         setUpTutorialStep()
     }
 
@@ -264,11 +311,18 @@ extension GameSession {
             tutorial = shown
             if isFirst { setUpTutorialStep() }
             guard let current = tutorial, current.step.goal != .read, !current.isLastStep,
-                  isTutorialStepDone(next, in: current)
+                  isTutorialStepDone(next, in: current, now: true)
             else { return }
             shown = current
             next += 1
         }
+    }
+
+    /// Forgets the answers kept while a preview waits (decision 590), for
+    /// a tutorial started or taken up again.
+    private func forgetKeptTutorialAnswers() {
+        tutorialDoneKept = nil
+        tutorialHintKept = nil
     }
 
     /// Does what the step on screen needs set up (``TutorialSetup``).
@@ -318,7 +372,11 @@ extension GameSession {
 
     /// Whether step `index` of `tutorial` is done in the world and the
     /// session as they are now.
-    private func isTutorialStepDone(_ index: Int, in tutorial: Tutorial) -> Bool {
+    ///
+    /// `now`: the stretch drawn is worked out at once, even in the app
+    /// (decision 590); otherwise it may wait, and the step is answered
+    /// without it meanwhile.
+    private func isTutorialStepDone(_ index: Int, in tutorial: Tutorial, now: Bool) -> Bool {
         let before = tutorial.snapshot(forChapterOf: index) ?? Tutorial.Snapshot(of: world)
         switch tutorial.steps[index].goal {
         case .read:
@@ -332,15 +390,16 @@ extension GameSession {
             // with it. Decision 390: extending a railway, it reaches the
             // place the lesson's goal is waiting for.
             let built = newTrackLength(since: before)
-            let reaches = !holdsForPlaces(before) || newTrackReachesEveryPlace(since: before)
+            let drawn = tool == .network ? networkPreview(now: now) : nil
+            let reaches = !holdsForPlaces(before) || newTrackReachesEveryPlace(since: before, drawing: drawn)
             if built >= Tutorial.minimumTrackLength, reaches { return true }
-            guard tool == .network, let preview = networkPreview else { return false }
+            guard let preview = drawn else { return false }
             return preview.problem == nil && preview.cost != nil && built + preview.length >= Tutorial.minimumTrackLength && reaches
         case .buildTrack:
             // Review H: the stretch built, not one still drawn, reaches the
             // place.
             return newTrackLength(since: before) >= Tutorial.minimumTrackLength
-                && (!holdsForPlaces(before) || newTrackReachesEveryPlace(since: before, drawn: false))
+                && (!holdsForPlaces(before) || newTrackReachesEveryPlace(since: before, drawing: nil))
         case .chooseNetworkMode(let mode):
             if tool == .network, networkMode == mode { return true }
             return mode == .platform && newStationCount(since: before) >= 1
@@ -466,12 +525,12 @@ extension GameSession {
         before.hadStations && tutorialPlacesToReach?.places.isEmpty == false
     }
 
-    /// Whether the track built since `before`, with the stretch picked
-    /// when `drawn`, passes near every place to reach.
-    private func newTrackReachesEveryPlace(since before: Tutorial.Snapshot, drawn: Bool = true) -> Bool {
+    /// Whether the track built since `before`, with the stretch `drawing`
+    /// picked (where it can be built), passes near every place to reach.
+    private func newTrackReachesEveryPlace(since before: Tutorial.Snapshot, drawing: NetworkPreview?) -> Bool {
         guard let reach = tutorialPlacesToReach else { return true }
         var lines = world.network.edges.filter { !before.edges.contains($0.id) }.compactMap { world.trackGeometry(of: $0.id)?.points }
-        if drawn, tool == .network, let preview = networkPreview, preview.problem == nil { lines.append(preview.points) }
+        if let preview = drawing, preview.problem == nil { lines.append(preview.points) }
         return reach.places.allSatisfy { place in lines.contains { Self.passes($0, within: reach.radius, of: place) } }
     }
 
@@ -565,8 +624,16 @@ extension GameSession {
     /// What the card says under the step on screen while it is not done
     /// (decision 188): what is wrong, or what to do next; `nil` when the
     /// step is done, or there is nothing to add to its title.
+    ///
+    /// Decision 590: while a preview it reads waits for the main actor's
+    /// next turn, the hint it last gave.
     public var tutorialHint: TutorialHint? {
         guard let tutorial, !isTutorialStepDone else { return nil }
+        return keptTutorialHint(tutorial.index, hint: workOutTutorialHint(tutorial))
+    }
+
+    /// ``tutorialHint`` for the step on screen, not done.
+    private func workOutTutorialHint(_ tutorial: Tutorial) -> TutorialHint? {
         let before = tutorial.snapshot(forChapterOf: tutorial.index) ?? Tutorial.Snapshot(of: world)
         let goal = tutorial.step.goal
         // Decision 226, later: Done stands beside the network tool, as in
@@ -596,7 +663,8 @@ extension GameSession {
                 ))
             }
             // Decision 390: short of the places the lesson's goal links.
-            if built > 0 || networkPreview != nil, !newTrackReachesEveryPlace(since: before), let text = placesToReachText {
+            let drawn = tool == .network ? networkPreview : nil
+            if built > 0 || networkPreview != nil, !newTrackReachesEveryPlace(since: before, drawing: drawn), let text = placesToReachText {
                 return TutorialHint(text.track)
             }
             if networkStart != nil, networkEnd == nil {

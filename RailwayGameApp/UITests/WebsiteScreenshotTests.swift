@@ -165,7 +165,14 @@ final class WebsiteScreenshotTests: XCTestCase {
             // The card is below the mode's options, under the panel's edge:
             // the options (in view) drag it up, rows and all.
             let angle = app.descendants(matching: .any)["network.cablewayAngle"].firstMatch
-            if angle.appears(within: 5) { angle.swipeUp() }
+            // Decision 588: on a phone the instruction at the head scrolls
+            // away with the options (a drag on the options' last row began
+            // on the pinned button under it, run 41915148091); the drag
+            // on the head moves both (a second one on the options took
+            // them past the card's top, run 41921574255).
+            let head = app.descendants(matching: .any)["inspector.status"].firstMatch
+            XCTAssertTrue(angle.appears(within: 5), "The cable car's options")
+            if head.appears(within: 5) { head.swipeUp() }
             settle()
             keep(english ? "cableway-mode-english" : "cableway-mode", app)
             // Decision 574's next step: the panel closed and opened again
@@ -183,6 +190,68 @@ final class WebsiteScreenshotTests: XCTestCase {
             }
             app.terminate()
         }
+    }
+
+    /// Decision 585: the Tamsui–Bali ferry on a real map of the river
+    /// mouth, its crossing and piers on the 2D map, then the transit
+    /// tool's ferry mode with the route's card, in Chinese and in English;
+    /// and the collection's ferry page in Settings. For the screenshot
+    /// review of the pull request that added the mode.
+    func testFerryMode() {
+        for english in [false, true] {
+            let app = launch(extra: ["-screenshot-scene", "tamsuiFerry"], english: english)
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+            settle(seconds: 5)
+            // The scene opens close on the river: one step out shows both piers.
+            let zoomOut = app.buttons[english ? "Zoom out" : "縮小"]
+            if zoomOut.appears(within: 5), zoomOut.isEnabled { zoomOut.tap() }
+            settle()
+            if !english { keep("ferry-map", app) }
+            let build = app.buttons["dock.build"]
+            if build.appears(within: 10) { build.tap() }
+            let transit = app.buttons["tool.bus"]
+            XCTAssertTrue(transit.appears(within: 10))
+            transit.waitUntilSettled()
+            if !transit.isSelected { transit.tap() }
+            let mode = app.segmentedControls.buttons[english ? "Ferries" : "渡輪"].firstMatch
+            XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
+            // The panel may still be settling after the tool opens: tap
+            // until the segment reads selected.
+            for _ in 0..<3 where !mode.isSelected {
+                mode.tap()
+                settle(seconds: 1)
+            }
+            XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
+            let card = app.descendants(matching: .any)["ferry.card"].firstMatch
+            XCTAssertTrue(card.appears(within: 10), "The ferry's card")
+            // The mode's instruction is the card at the top, and the
+            // route's card comes first under the modes, so the panel opens
+            // on it without scrolling.
+            XCTAssertTrue(app.descendants(matching: .any)["ferry.hint"].firstMatch.appears(within: 5), "The ferry mode's instruction")
+            settle()
+            keep(english ? "ferry-mode-english" : "ferry-mode", app)
+            app.terminate()
+        }
+        let app = launch()
+        defer { app.terminate() }
+        let settings = app.buttons["start.settings"]
+        XCTAssertTrue(settings.appears(within: 60), "Missing start.settings")
+        settings.tap()
+        // Neither the picker's identifier nor its segment under
+        // `segmentedControls` reached the drag inside the settings list
+        // (runs 41849781799 and 41856636503). Bring the garage row up as
+        // the train garage tests do; the picker is the row above it, and
+        // its ferry segment is found by its label whatever its type.
+        let garage = app.buttons["settings.trainGarage"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(garage, clearOf: .slider), "Missing the collection's train page")
+        let ferries = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "渡輪")).firstMatch
+        XCTAssertTrue(ferries.becomesHittable(within: 10), "Missing the collection's ferry page")
+        ferries.tap()
+        let boat = app.descendants(matching: .any)["settings.ferry.shunfeng166"].firstMatch
+        XCTAssertTrue(boat.appears(within: 10), "The ferry page")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(app.descendants(matching: .any)["settings.ferry.gushanCijin"].firstMatch, clearOf: .slider))
+        settle()
+        keep("collection-ferries", app)
     }
 
     /// Decision 575 續 (CABLEMAP): the Maokong Gondola on the 3D map: its
@@ -205,6 +274,44 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
             settle(seconds: 12)
             keep(name, app)
+            app.terminate()
+        }
+    }
+
+    /// Decision 585 PR-3 (FERRY3): the ferries on the 3D map: Tamsui–Bali's
+    /// passenger boat and Gushan–Cijin's double-ended ferry close up at
+    /// their piers (near models), each from 600 m (far models, past the
+    /// near models' 350 m; from 1,100 m over Tamsui the app's main thread
+    /// was busy past the UI query's limit, run 41900993132), and
+    /// Gushan–Cijin at dusk with its lamps lit; every shot looks at the
+    /// first boat. Two tests, each within the 8 minutes a test may take
+    /// (run 41906144682 took five shots past it). For the screenshot
+    /// review of the pull request that drew them.
+    func testFerriesIn3DTamsui() {
+        shootFerries([("ferry-3d-tamsui-near", "tamsuiFerry", "75,35,62"),
+                      ("ferry-3d-tamsui-far", "tamsuiFerry", "600,20,50")])
+    }
+
+    func testFerriesIn3DGushan() {
+        shootFerries([("ferry-3d-gushan-near", "gushanFerry", "85,35,62"),
+                      ("ferry-3d-gushan-far", "gushanFerry", "600,20,50"),
+                      ("ferry-3d-gushan-evening", "gushanFerryEvening", "110,215,64")])
+    }
+
+    private func shootFerries(_ shots: [(name: String, scene: String, view: String)]) {
+        for shot in shots {
+            let app = launch(extra: ["-screenshot-scene", shot.scene, "-screenshot-3d-view", shot.view, "-map3D.quality", "high",
+                                     "-screenshot-3d-ferry"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+            settle(seconds: 3)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep(shot.name, app)
             app.terminate()
         }
     }
@@ -318,9 +425,17 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testFollowBusAboveBehind() { shootFollowBus("aboveBack", "follow-bus-above") }
     func testFollowBusCab() { shootFollowBus("cab", "follow-bus-cab") }
     func testFollowBusSide() { shootFollowBus("side", "follow-bus-side") }
+    func testFollowBusBack() { shootFollowBus("back", "follow-bus-back") }
+    func testFollowBusWindow() { shootFollowBus("window", "follow-bus-window") }
 
-    private func shootFollowBus(_ view: String, _ name: String) {
-        let app = launch(extra: ["-screenshot-scene", "followBus", "-screenshot-follow-bus", "-map3DFollowView", view,
+    /// Decision 342 (FOLLOWXRAY): the same on Taipei's real city, buildings
+    /// beside and behind the bus, seen through.
+    func testFollowBusCityBack() { shootFollowBus("back", "follow-bus-city-back", scene: "followBusCity") }
+    func testFollowBusCitySide() { shootFollowBus("side", "follow-bus-city-side", scene: "followBusCity") }
+    func testFollowBusCityWindow() { shootFollowBus("window", "follow-bus-city-window", scene: "followBusCity") }
+
+    private func shootFollowBus(_ view: String, _ name: String, scene: String = "followBus") {
+        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-bus", "-map3DFollowView", view,
                                  "-map3D.quality", "high"])
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
@@ -371,8 +486,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 
-    private func shootLean(_ scene: String, _ view: String, _ name: String) {
-        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"])
+    private func shootLean(_ scene: String, _ view: String, _ name: String, extra: [String] = []) {
+        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"] + extra)
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         let open3D = app.buttons["map.open3D"]
@@ -384,6 +499,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 12)
         keep(name, app)
     }
+
+    /// Decision 596: the big junction east of Taipei Main Station from
+    /// above, by day and by night: the traffic waiting at the stop lines
+    /// of the roads its signals show red, the people at the crossings. The
+    /// Simulator's GPU has no tier and draws nothing on the streets, so
+    /// the standard tier is asked for.
+    func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day", extra: ["-screenshot-device-tier", "1"]) }
+    func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night", extra: ["-screenshot-device-tier", "1"]) }
 
     /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
     /// (quality High), for the before/after of the tent filter.
@@ -1223,7 +1346,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The name sits below the card's short middle (on an iPhone held
         // sideways it shows some 70 points): drag inside it, slowly, until
         // the whole first name shows, not only its top edge.
-        let middle = app.scrollViews["details.scroll.middle"]
+        // Decision 588: or the head scrolling with the options over the
+        // pinned foot.
+        let pinnedMiddle = app.scrollViews["details.scroll.middle"]
+        let middle = pinnedMiddle.exists ? pinnedMiddle : app.scrollViews["details.scroll.foot"]
         func shown() -> Bool {
             first.isHittable && (!middle.exists || first.frame.maxY <= middle.frame.maxY + 1)
         }
@@ -1326,6 +1452,67 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["banner.goToTrain"].firstMatch.appears(within: 10), "The banner names the train in the way")
         settle()
         keep("idle-train-banner", app)
+    }
+
+    /// Decision 584, PR-2: the train tool at 海岸, a station of two
+    /// platforms on two tracks that do not meet, with 列車 3 off the track
+    /// and given 海岸線: the platforms listed, the one on 海岸線's track
+    /// picked, then the other picked by hand.
+    func testPlacementPlatformChoice() {
+        shootPlacementPlatformChoice(english: false, name: "platform-choice")
+    }
+
+    /// The same in English, the first only.
+    func testPlacementPlatformChoiceEnglish() {
+        shootPlacementPlatformChoice(english: true, name: "platform-choice-en")
+    }
+
+    private func shootPlacementPlatformChoice(english: Bool, name: String) {
+        let app = launch(extra: ["-ui-test-world", "platform-choice"], english: english)
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 30), "The world opens")
+        map.waitUntilSettled()
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 5), build.becomesHittable(within: 5) { build.tap() }
+        let trainTool = app.buttons["tool.train"]
+        XCTAssertTrue(trainTool.appears(within: 10), "The train tool shows")
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let readout = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(readout.appears(within: 10))
+        settle(seconds: 3)
+        let xy = (readout.value as? String ?? "").split(separator: ";").first?.split(separator: ",").compactMap { Double($0) } ?? []
+        XCTAssertEqual(xy.count, 2)
+        guard xy.count == 2 else { return }
+        let frame = map.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.minX + xy[0] - app.frame.minX, dy: frame.minY + xy[1] - app.frame.minY)).tap()
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 10), "The train tool's card shows")
+        let first = app.buttons["train.platform.1"].firstMatch
+        let second = app.buttons["train.platform.2"].firstMatch
+        XCTAssertTrue(first.appears(within: 10), "The station's platforms are listed")
+        // Decision 588: the cars and the platforms stand over the Place
+        // button, in the card's foot, which stays in view: nothing to
+        // scroll, in either language or on the smallest iPhone.
+        let place = app.descendants(matching: .any)["panel.action"].firstMatch
+        XCTAssertTrue(place.appears(within: 10), "The Place button shows")
+        settle()
+        keep(name, app)
+        let cars = app.descendants(matching: .any)["train.cars"].firstMatch
+        for (element, what) in [(first, "Platform 1"), (second, "Platform 2"), (place, "The Place button"), (cars, "The cars")] {
+            XCTAssertTrue(element.exists && card.frame.insetBy(dx: -0.5, dy: -0.5).contains(element.frame),
+                          "\(what) shows whole in the card without scrolling: \(element.frame) in \(card.frame)")
+            XCTAssertTrue(app.frame.contains(element.frame), "\(what) is on the screen: \(element.frame)")
+        }
+        XCTAssertTrue(first.isHittable && second.isHittable && place.isHittable, "Both platforms and the button show at once")
+        guard !english else { return }
+        let other = second.isSelected ? first : second
+        other.tap()
+        settle()
+        XCTAssertTrue(other.isSelected, "The tapped platform is picked")
+        keep("platform-choice-picked", app)
     }
 
     /// Decision 507: the platform mode's layout menu on a double track,

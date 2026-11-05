@@ -144,6 +144,23 @@ public final class GameSession {
     /// Decision 264: what opening the drafted line costs, worked out once
     /// for each draft and world.
     @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
+    /// Decision 590: whether a preview that runs a command on a copy of
+    /// the world (``lineOpeningPreview``, ``lineConfirmationPreview``) is
+    /// worked out on the main actor's next turn when the screen asks for
+    /// it, rather than inside the view update that asked: those copies
+    /// took the main thread's stack past its end under SwiftUI's deep view
+    /// updates (112.1). The app's sessions only (``GameLauncher``); tests
+    /// and the headless game read them at once.
+    @ObservationIgnored public var worksOutPreviewsOnTheNextTurn = false
+    /// Decision 590: the previews waiting for the next turn.
+    @ObservationIgnored var previewsWaiting: Set<WaitingPreview> = []
+    /// Decision 590: counts the previews worked out on a later turn; read
+    /// by a view that asked for one, so it looks again once it is in.
+    var previewsWorkedOutLater = 0
+    /// Decision 590: the tutorial step's answer and hint as they last were
+    /// while no preview they read waited, kept for a turn that one waits.
+    @ObservationIgnored var tutorialDoneKept: (index: Int, done: Bool)?
+    @ObservationIgnored var tutorialHintKept: (index: Int, hint: TutorialHint?)?
     /// The draft's one line (``lineDraftSummary``), kept likewise.
     @ObservationIgnored var lineDraftSummaryMemo: LineDraftSummaryMemo?
     /// Decision 303: what the new line's confirmation card shows, kept
@@ -417,6 +434,11 @@ public final class GameSession {
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
     public private(set) var placementHeading: CompassHeading = .east
 
+    /// The platform the player picked for the selected train in the train
+    /// tool (decision 584), used only at its own station; see
+    /// ``placementPlatform``.
+    var pickedPlacementPlatform: TrackPlatform?
+
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another point or tool.
     public internal(set) var message: StatusMessage? {
@@ -636,12 +658,27 @@ public final class GameSession {
     /// ``buildCableway()``.
     public internal(set) var cablewayDraft: [CablewayStop] = []
     public internal(set) var cablewayDraftLegs: [Int64]?
+    /// Decision 586: where the station the real cable car drawn meets
+    /// stands (``RealCableway/meetsNear(in:)``); `nil` for one drawn stop
+    /// by stop.
+    public internal(set) var cablewayDraftMeets: PlanPoint?
     /// Whether the next tap puts down an angle station, where the rope
     /// turns and no one boards, rather than a station.
     public var cablewayPlacesAngle = false
     /// ``cablewayPreview``, kept for the stops and the money it was
     /// worked out for: the map reads it many times a frame.
     @ObservationIgnored var cablewayPreviewMemo: (key: CablewayPreviewKey, preview: CablewayPreview)?
+    /// Decision 585 (PR-2): the piers the transit tool's ferry mode has
+    /// picked, in order, the real crossings' metres when they came from a
+    /// real ferry (``traceRealFerry(_:)``), and the boats and headway the
+    /// route opens with; nothing is built until ``buildFerryRoute()``.
+    public internal(set) var ferryDraft: [CellPosition] = []
+    public internal(set) var ferryDraftLegs: [Int64]?
+    public internal(set) var ferryDraftBoats = 2
+    public internal(set) var ferryDraftMinutesApart: Int64 = 15
+    /// ``ferryPreview``, kept for the piers and the money it was worked
+    /// out for.
+    @ObservationIgnored var ferryPreviewMemo: (key: FerryPreviewKey, preview: FerryPreview)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
@@ -2451,7 +2488,10 @@ public final class GameSession {
     public func placeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
         if train.position == nil,
-           let problem = world.trainPlacementProblem(train.id, at: selectedStation?.id, heading: placementHeading) {
+           let problem = world.trainPlacementProblem(
+               train.id, at: selectedStation?.id, heading: placementHeading,
+               platform: selectedStation.flatMap { placementPlatformToUse(for: train, at: $0) }
+           ) {
             if case .refused = problem {
                 // GameCore's own refusal, as the command reports it.
             } else {

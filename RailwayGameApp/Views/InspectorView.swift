@@ -35,6 +35,10 @@ struct InspectorView: View {
     private var inspector: some View {
         if session.tool == .network {
             networkInspector
+        } else if session.tool == .bus, session.busMode == .ferries, session.allowsFerryMode {
+            // Decision 585: the ferry mode's instruction takes the card's
+            // top, as the cable car mode's does under the network tool.
+            ferryInspector
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 selectionInspector
@@ -257,6 +261,32 @@ struct InspectorView: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("inspector.status")
         }
+    }
+
+    /// The ferry mode's instruction, or the drawn route's summary or
+    /// problem (decision 585).
+    private var ferryInspector: some View {
+        HStack(alignment: .center, spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Theme.primary.opacity(0.14))
+                    .frame(width: 30, height: 30)
+                Image(systemName: "ferry.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+            }
+            .accessibilityHidden(true)
+
+            Text(verbatim: session.ferryDraftText())
+                .font(.subheadline)
+                .foregroundStyle(session.ferryPreview?.problem == nil ? Theme.textSecondary : Theme.error)
+                .lineLimit(8)
+                .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("ferry.hint")
     }
 
     /// The selection's mark: track, or a station, train or building.

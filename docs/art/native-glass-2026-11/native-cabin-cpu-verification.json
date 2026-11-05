@@ -1,0 +1,79 @@
+{
+  "models" : [
+    {
+      "family" : "maokong",
+      "glass_triangles" : 384,
+      "horizontal_glass_triangles" : 96,
+      "id" : "standard-near.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 768
+    },
+    {
+      "family" : "maokong",
+      "glass_triangles" : 192,
+      "horizontal_glass_triangles" : 48,
+      "id" : "standard-lod.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 384
+    },
+    {
+      "family" : "maokong",
+      "glass_triangles" : 396,
+      "horizontal_glass_triangles" : 100,
+      "id" : "crystal-near.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 792
+    },
+    {
+      "family" : "maokong",
+      "glass_triangles" : 204,
+      "horizontal_glass_triangles" : 52,
+      "id" : "crystal-lod.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 408
+    },
+    {
+      "family" : "sunmoon",
+      "glass_triangles" : 336,
+      "horizontal_glass_triangles" : 48,
+      "id" : "red-lod.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 672
+    },
+    {
+      "family" : "sunmoon",
+      "glass_triangles" : 784,
+      "horizontal_glass_triangles" : 112,
+      "id" : "red-near.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 1568
+    },
+    {
+      "family" : "sunmoon",
+      "glass_triangles" : 796,
+      "horizontal_glass_triangles" : 116,
+      "id" : "crystal-near.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 1592
+    },
+    {
+      "family" : "sunmoon",
+      "glass_triangles" : 348,
+      "horizontal_glass_triangles" : 52,
+      "id" : "crystal-lod.m3dmodel",
+      "normals_unit_and_global_depth_sorted" : true,
+      "opaque_attributes_unchanged" : true,
+      "world_triangles_two_instances" : 696
+    }
+  ],
+  "platform" : "Linux Swift6.4 CPU \/ not Metal",
+  "status" : "VERIFIED",
+  "vertex_stride" : 40
+}
