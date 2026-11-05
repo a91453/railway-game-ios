@@ -57,16 +57,16 @@ public enum Map3DAircraftStudies {
         var b=StationKitBuilder()
         b.aircraftHull(d.length,r,belly,far,white)
         for side:Float in [-1,1] {
-            b.box(d.length*0.405,belly+r*0.18,side*r*0.61,d.length*0.075,r*0.48,0.055,dark)
+            b.box(d.length*0.405,belly+r*0.18,side*r*0.61,d.length*0.075,0.055,r*0.48,dark)
         }
         if !far {
-            for side:Float in [-1,1] { b.box(d.length*0.02,belly-r*0.12,side*r*1.008,d.length*0.55,0.16,0.045,paint) }
+            for side:Float in [-1,1] { b.box(d.length*0.02,belly-r*0.12,side*r*1.008,d.length*0.55,0.045,r*0.16,paint) }
             let windows=max(4,Int(d.length/2.2))
             for i in 0..<windows {
                 let x = -d.length*0.27+(Float(i)+0.5)*d.length*0.66/Float(windows)
-                for side:Float in [-1,1] { b.box(x,belly+r*0.23,side*r*0.995,0.35,0.30,0.035,glass) }
+                for side:Float in [-1,1] { b.box(x,belly+r*0.23,side*r*0.995,0.35,0.035,0.30,glass) }
             }
-            b.box(d.length*0.35,metadata(kind).door.z-0.65,r+0.02,0.8,1.3,0.04,steel)
+            b.box(d.length*0.35,metadata(kind).door.z-0.65,r+0.02,0.8,0.04,1.3,steel)
         }
         for side:Float in [-1,1] {
             let root:Float = high ? d.length*0.14 : d.length*0.105
@@ -86,8 +86,8 @@ public enum Map3DAircraftStudies {
             if high {
                 b.aircraftNacelle(ex-0.95,ex+1.15,ey,wingHeight-0.05,r*0.28,far,steel)
                 b.box(ex+1.18,wingHeight-0.05,ey,0.16,0.20,0.20,dark)
-                b.box(ex+1.23,wingHeight-1.0,ey,0.06,2.0,0.13,dark)
-                if !far { b.box(ex+1.24,wingHeight-0.05,ey,0.06,0.13,1.64,dark) }
+                b.box(ex+1.23,wingHeight-1.0,ey,0.06,0.13,2.0,dark)
+                if !far { b.box(ex+1.24,wingHeight-0.05,ey,0.06,1.64,0.13,dark) }
             } else {
                 let er=max(0.75,r*0.5),length:Float=kind == .narrowJet ? 3.4 : 4.5
                 b.aircraftNacelle(ex-length*0.5,ex+length*0.5,ey,max(wingHeight-er*0.70,0.42+er),er,far,steel)
