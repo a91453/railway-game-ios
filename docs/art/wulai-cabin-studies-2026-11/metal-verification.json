@@ -1,0 +1,37 @@
+{
+  "blend" : [
+    134,
+    78,
+    76
+  ],
+  "depth_unchanged" : 0.20000000298023224,
+  "depth_write_mutation_rejected" : true,
+  "device" : "Apple Paravirtual device",
+  "expected" : [
+    134,
+    79,
+    76
+  ],
+  "floor_opacity" : true,
+  "foreground_occlusion" : true,
+  "global_sort" : true,
+  "gpu_render" : "VERIFIED",
+  "limits" : "Offscreen macOS Metal, not an iOS device, performance test or author visual acceptance.",
+  "missing_blend_mutation_rejected" : true,
+  "real_cabin_images" : [
+    "wulai-lod\/isometric-day",
+    "wulai-lod\/bottom-day",
+    "wulai-lod\/isometric-night",
+    "wulai-lod\/bottom-night",
+    "wulai-near\/isometric-day",
+    "wulai-near\/bottom-day",
+    "wulai-near\/isometric-night",
+    "wulai-near\/bottom-night"
+  ],
+  "sample_counts" : [
+    1,
+    4
+  ],
+  "shader_and_swift_compilation" : "VERIFIED",
+  "wrong_order_mutation_rejected" : true
+}

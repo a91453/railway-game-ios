@@ -1,0 +1,41 @@
+name: Wulai cabin native Metal study
+on:
+  pull_request:
+    paths:
+      - 'tools/wulai-cabin-studies/**'
+      - '.github/workflows/wulai-cabin-metal.yml'
+permissions:
+  contents: read
+concurrency:
+  group: wulai-cabin-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  metal:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install official Swift 6.4.0
+        run: |
+          package="$RUNNER_TEMP/swift-6.4.0.pkg"
+          curl -fsSL --retry 3 -o "$package" https://download.swift.org/swift-6.4.0-release/xcode/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE-osx.pkg
+          pkgutil --check-signature "$package"
+          sudo installer -pkg "$package" -target /
+          toolchains=(/Library/Developer/Toolchains/swift-6.4*-RELEASE.xctoolchain)
+          test "${#toolchains[@]}" -eq 1
+          echo "${toolchains[0]}/usr/bin" >> "$GITHUB_PATH"
+      - name: Produce closed Wulai native models and verify geometry
+        run: |
+          python3 -m unittest discover -s tools/wulai-cabin-studies -p test_geometry.py -v
+          python3 tools/wulai-cabin-studies/produce.py "$RUNNER_TEMP/wulai-fixtures"
+      - name: Compile actual App shaders and pipeline, then probe Metal
+        run: |
+          bash tools/wulai-cabin-studies/run-metal.sh "$RUNNER_TEMP/wulai-metal" "$RUNNER_TEMP/wulai-fixtures"
+          bash tools/wulai-cabin-studies/check-native.sh "$RUNNER_TEMP/wulai-fixtures"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: wulai-native-metal
+          path: ${{ runner.temp }}/wulai-metal
+          if-no-files-found: warn
+          retention-days: 14
