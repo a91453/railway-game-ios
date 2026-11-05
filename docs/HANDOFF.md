@@ -527,6 +527,30 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 48 任交第 49 任（2026-11-05 約 05:45 UTC，session_01YGNNun9jnHVasAKCcWJtLD，第 4 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。第 49 任是 session_01YGNNupMtajwSvF2wPZDUjt（第 5 層）。
+
+- **113.1 驗證**：完整 `ci.yml` run 41959675139 **綠**；full lane run 41959689553 **紅**，原因不是 App：#1809（模式列改成可捲的按鈕）與 #1825（決策 588，只固定卡片底部）之後，UI 測試沒跟著改。紅的五支：build job `RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner`；second job `MapInteractionTests` 的 testPlatformModeKeepsItsStatusAndActionInTheCard、testTheStationTagsPencilRenamesAtOnce、testTheTrackOptionsShowWhetherTheyAreOn、testTrainToolCardKeepsItsHead。修正是 **#1838**（CRASHROOT-VIEW，只改 `RailwayGameApp/UITests/` 與決策 588 一段；第 3 項「貼上軌道」在 `details.scroll.foot` 裡拖是推測，第 4 項鉛筆等待 2 → 10 秒）。#1838 的 iOS gate 跑完後，在 `claude/full-lane-113` 跑一次 `ios-build.yml` `only_testing`：那 5 支＋`TutorialUITests TutorialJourneyUITests LessonUITests LineDraftSummaryUITests`；綠了告訴作者「full lane 修好了」（作者問過兩次）。不要為這個再跑 full lane。
+- **112.1 另一位玩家回報剛開始玩就閃退**：和 CRASH112 同一條路（新增路線點第二站），113.1 已修（#1831，決策 590）；已請作者叫玩家更新。
+- **114.1 合併計畫**（作者 2026-11-05：「合併計畫照你的 綠了就合我懶得顧」「能少跑full lane就少跑」「盡量一大批合完再跑」；遊戲規劃照規則合，時間都是台灣）：
+  - 15:00、17:30 **不合併**，只看進度、催。
+  - 17:30 派 WHATSNEW-114（Sonnet，`create_session` 帶 `source_url`），照 18:30 要合的清單寫 `WhatsNew.swift` 最前面一則（id `2026-11-05-114-1`，兩種語言）與 `.github/testflight-whats-new.md`，19:00 前推、綠。
+  - **18:30 一大批**：把所有綠了的 114.1 PR 一次合完（逐一看 check-runs、用完整 SHA 合；draft 先轉 ready），等 main 的 push `ci.yml` 綠。
+  - 19:00–19:30 合 WHATSNEW-114，最後一個。
+  - **19:35 截止**：對 main HEAD 手動跑**一次**完整 `ci.yml` 與**一次** full lane（`ios-build.yml` workflow_dispatch，約 1 小時 50 分）；都綠才說「可以發（commit X）」，目標 22:00，作者說「發」才按 `testflight.yml`（§1.2）。中間要確認的一律用 `only_testing`。最後的 full lane 若只因測試寫法紅，用 `only_testing` 驗修正，再問作者要不要重跑 full lane。
+  - 候選：#1837 CRASHROOT-CORE（GameWorld 堆上 COW，CI 全綠、ready；**合前要另開審查 session 已審過**：審過、沒有 P1，修正在 be8e6861）、#1838、#1839 A（軌道預覽等一輪、拆 `MapView` 疊層）、#1840 B（CI 列 >32 KB 堆疊框，改 `ci.yml`，完整 tier）、#1835 FERRYFOLLOW（第 3 級，遊戲規劃看過截圖才合）、#1841 STREETSTOP（第 2–3 級，遊戲規劃看截圖）、#1743 TYMCLIST9（大概 115.1）、TAKEOVERVIS（平衡 HEALTHY 才進）、PERF114 的小修正。
+  - **不進 114.1**：#1834（Codex 客運塗裝 593）、#1833（Gemini 高雄流行音樂中心，592 續，還沒人看過）。19:30 前沒綠的進 115.1。
+- **各 session**（05:40 UTC；全部改向第 49 任回報；都是第 5 層）：
+  - CRASHROOT-CORE session_01YGNNukm1XUMRsaSUhV9p9X：#1837，head be8e6861，等合。
+  - CRASHROOT-VIEW session_01YGNNuptxN9XbCga5mi9Tqq：#1838／#1839／#1840；壓縮 1 次，不接新工作；它自己排了 06:10 UTC 的 check-in（trig_01VJnVdHdMpTH3V35zaHVByk）會開 #1838 的 `only_testing`。
+  - FERRYFOLLOW session_01YGNNup3Z2AaFgczhVaJ5Bq：#1835，`website-screenshots.yml` 在跑（run 41974427740）；壓縮 1 次。截圖由遊戲規劃看。
+  - STREETSTOP session_01YGNNuqVW1Gne2Ce1dnNeQ4：#1841（head 787ea1e），CI 在跑；CI 綠後跑 `website-screenshots.yml`（kind website、device iphone、tests `testStreetStopDay testStreetStopNight`），要遊戲規劃說「跑截圖」才開。量測（Linux debug、台北、200 幀平均，每幀不停 → 停）：120 m 4.54 → 5.98 ms、280 m 4.30 → 5.81、500 m 4.34 → 5.88、900 m 2.39 → 2.61；建景 +0.16 s，記憶體約 +2.9 MB。
+  - TAKEOVERVIS session_01YGNNuoD3WCSZqt9yNpBJej（決策 595）：量測中，只改 GamePresentation；HEALTHY 才進 114.1。
+  - PERF114 session_01YGNNum7V51BDFPhwxKwEgB（決策 597）：作者的存檔已給它，量測中；只有小修正進 114.1；動 `MapView` 前先和 CRASHROOT-VIEW 對好（#1839 拆了它的疊層）。
+  - TYMCLIST9 session_01YGNNumzTgdn7KUo2DfZ2yn：#1743，真實規則下有退步，大概 115.1。
+- **排程**：第 48 任的四個 check-in（07:00、09:30、10:30、11:35 UTC）已停用，由第 49 任在自己的 session 重設。
+- **114.1 之後**：照上一段「延宕很久的功能，排序」派 402 真實股道 → 觀光列車與到站鈴 → 高鐵四項（收購與號誌停走已派）；鼓山碼頭重疊截圖；REVIEW-L10、CIOPT、HEALTH-113；WEB 截圖重派；#1834 合了再給 Codex 飛機 prompt（594）。
+- **號碼**：決策 597 給 PERF114；**下一個 598**。存檔 main 85，86 由 595 預留，**下一個 87**。
+
 **第 48 任的現況（2026-11-05 約 03:40 UTC，session_01YGNNun9jnHVasAKCcWJtLD，第 4 層，壓縮 1 次）**：比下面「第 47 任交第 48 任」新，兩段不同時以這段為準。
 
 **第 48 任 03:55 UTC 的更新（壓縮 2 次；作者：「先寫一下就好」，還沒換手）**：下一任接手時先讀這段，再讀下面。
