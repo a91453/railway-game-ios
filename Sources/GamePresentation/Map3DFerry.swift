@@ -51,14 +51,11 @@ public enum Map3DFerry {
         /// saloon's floor (the open lower deck at 0.77 m; the upper saloon
         /// at 3.40 m), as far out to the side as the walls and posts
         /// stand within the near plane (1.2 m) and are not drawn over the
-        /// view (posts at 1.98 m; the saloon's wall at 3.25 m).
-        public var seatAcross: Float { self == .tamsui ? 1.3 : 2.6 }
+        /// view (the saloon's wall at 3.25 m). The open lower deck's seat
+        /// is near its middle: by its posts and life rings (1.98 m and
+        /// 2.25 m out) they filled the window; from 1.6 m they frame it.
+        public var seatAcross: Float { self == .tamsui ? 0.4 : 2.6 }
         public var seatHeight: Float { self == .tamsui ? 1.92 : 4.55 }
-        /// How far behind the middle the seat is, half way between two
-        /// posts, so neither they nor the life rings hung by them fill the
-        /// window (posts at x −2.3 and 0, rings at −5 and 1; the saloon's
-        /// posts at −2.1 and 0.1, rings at ±8).
-        public var seatAlong: Float { self == .tamsui ? -1.15 : -1.0 }
         /// How tall it stands over the water, for the view beside it (to
         /// the wheelhouse's roof).
         public var height: Float { self == .tamsui ? 4.6 : 7.8 }
