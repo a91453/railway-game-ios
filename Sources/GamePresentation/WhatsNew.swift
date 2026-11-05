@@ -30,6 +30,46 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 114.1.
+        Entry(
+            id: "2026-11-05-114-1",
+            items: [
+                Line(
+                    english: "The Taoyuan Airport MRT joins the real maps: you can buy it and run its timetable.",
+                    chinese: "實景地圖有了桃園機場捷運，可以買下來、照時刻表營運。"
+                ),
+                Line(
+                    english: "On the 3D map you can follow a ferry: from the bridge, from a cabin window, from behind and above, or from the side.",
+                    chinese: "3D 地圖可以跟隨渡輪：駕駛台、船艙窗、上後方、旁邊四種視角。"
+                ),
+                Line(
+                    english: "At 600× speed the game runs more smoothly, and the pause on the hour is gone.",
+                    chinese: "600 倍速下跑得更順，整點不再頓一下。"
+                ),
+                Line(
+                    english: "On the 3D street scene, cars stop at the stop line for a red light and pedestrians wait for the green walking figure.",
+                    chinese: "3D 街景裡，車會在停止線前等紅燈，行人會等小綠人亮了才走。"
+                ),
+                Line(
+                    english: "A branch line you buy now brings regular riders you can see: the buying card shows about how many a day.",
+                    chinese: "收購的支線會帶來看得見的常客；收購卡上寫著沿線的常客每天約多少人。"
+                ),
+                Line(
+                    english: "The 3D map of Kaohsiung harbour now has the Kaohsiung Music Center.",
+                    chinese: "3D 地圖的高雄港多了高雄流行音樂中心。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Fixed crashes when adding a line or a station, and when drawing track.",
+                    chinese: "修正新增路線、車站與畫軌道時可能閃退的問題。"
+                ),
+                Line(
+                    english: "Fixed a crash that could happen while moving around the 3D map.",
+                    chinese: "修正在 3D 地圖移動時可能閃退的問題。"
+                ),
+            ]
+        ),
         // 113.1.
         Entry(
             id: "2026-11-05-113-1",
