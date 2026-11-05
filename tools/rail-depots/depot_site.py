@@ -92,6 +92,7 @@ MUZHA_LEAD_WAYS = [307449196, 194633991]
 NEIHU_SHED = list(range(1316259201, 1316259217))
 NEIHU_LEAD_WAYS = [127958010, 198181448]
 WENHU_LAND = [71266521, 499801370]
+FANNED = [("muzha", MUZHA_SHED, MUZHA_LEAD_WAYS), ("neihu", NEIHU_SHED, NEIHU_LEAD_WAYS)]
 
 
 class Ways(osmium.SimpleHandler):
@@ -168,8 +169,10 @@ def main():
     print("ankeng yard tracks", len(yard), "longest", round(max(metres(a, b) for a, b in yard), 1), "m")
 
 
-    # Decision 602: the sheds, near ends being those nearer the leads.
-    for name, shed_ids, lead_ids in (("muzha", MUZHA_SHED, MUZHA_LEAD_WAYS), ("neihu", NEIHU_SHED, NEIHU_LEAD_WAYS)):
+    # Decision 602: the sheds, near ends being those nearer the leads. Any
+    # depot laid as its real yard (a `RealLineDepotSite.fan`) adds a row
+    # here: its shed's stabling tracks and the leads its lead follows.
+    for name, shed_ids, lead_ids in FANNED:
         leads = [p for i in lead_ids for p in ways.ways[i]]
         shed = [ways.ways[i] for i in shed_ids]
         near = [min((w[0], w[-1]), key=lambda p: min(metres(p, q) for q in leads)) for w in shed]
