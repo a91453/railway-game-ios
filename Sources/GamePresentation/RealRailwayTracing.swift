@@ -1118,7 +1118,7 @@ extension GameSession {
             minX: Double(min(a.x, b.x)), minY: Double(min(a.y, b.y)),
             maxX: Double(max(a.x, b.x)), maxY: Double(max(a.y, b.y))
         ))
-        return networkPreview?.traced == 0
+        return networkPreview(now: true)?.traced == 0
     }
 }
 
@@ -1156,6 +1156,6 @@ extension GameSession {
         let centre = way.point(at: way.length / 3), half = (joining ? 500 : 250) * metre
         let region = WorldRegion(minX: centre.x - half, minY: centre.y - half, maxX: centre.x + half, maxY: centre.y + half)
         lookOver(region)
-        return networkPreview?.problem == nil ? region : nil
+        return networkPreview(now: true)?.problem == nil ? region : nil
     }
 }

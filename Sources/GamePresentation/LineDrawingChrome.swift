@@ -43,13 +43,14 @@ extension GameSession {
     /// Whether the map's ✓ pill is the new line's: a new line is being
     /// picked (``mapLineDraft``) and a tap on the map picks its stations,
     /// beside the lines panel or with Select while no tile of the map is
-    /// being chosen; no network preview has the pill.
+    /// being chosen; no network preview has the pill (nor one still to be
+    /// worked out, decision 590).
     public func drawsLineOnMap(linesPanelOpen: Bool) -> Bool {
         // As ``mapLineDraft``, without working out its words: a station
         // picked is still on the map.
         lineDraft.contains { world.station(id: $0) != nil }
             && (linesPanelOpen || (tool == .select && !isChoosingMapTile))
-            && networkPreview == nil
+            && networkPreview == nil && !isWaiting(for: .networkDraft)
     }
 
     /// What the screen shows around a new line picked on the map

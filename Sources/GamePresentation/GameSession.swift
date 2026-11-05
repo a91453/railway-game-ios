@@ -157,6 +157,10 @@ public final class GameSession {
     /// Decision 590: counts the previews worked out on a later turn; read
     /// by a view that asked for one, so it looks again once it is in.
     var previewsWorkedOutLater = 0
+    /// Decision 590: the tutorial step's answer and hint as they last were
+    /// while no preview they read waited, kept for a turn that one waits.
+    @ObservationIgnored var tutorialDoneKept: (index: Int, done: Bool)?
+    @ObservationIgnored var tutorialHintKept: (index: Int, hint: TutorialHint?)?
     /// The draft's one line (``lineDraftSummary``), kept likewise.
     @ObservationIgnored var lineDraftSummaryMemo: LineDraftSummaryMemo?
     /// Decision 303: what the new line's confirmation card shows, kept

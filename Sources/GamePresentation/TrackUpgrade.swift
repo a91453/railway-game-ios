@@ -139,12 +139,19 @@ extension GameSession {
     }
 
     /// The drafted upgrade on the picked track, worked out once for each
-    /// draft and world; `nil` when none is drafted.
+    /// draft and world; `nil` when none is drafted. In the app, `nil`
+    /// until the main actor's next turn has worked it out (decision 590:
+    /// it tries the upgrade on copies of the world).
     public var trackUpgradePreview: TrackUpgradePreview? {
         trackUpgradeDraft?.preview
     }
 
     var trackUpgradeDraft: TrackUpgradeMemo? {
+        trackUpgradeDraft(now: false)
+    }
+
+    /// ``trackUpgradeDraft``; `now` works it out at once, even in the app.
+    func trackUpgradeDraft(now: Bool) -> TrackUpgradeMemo? {
         guard tool == .select, let kind = trackUpgrade, let edge = selectedTrackEdge else { return nil }
         _ = world
         let key = TrackUpgradeMemo.Key(
@@ -152,6 +159,14 @@ extension GameSession {
             wholeRun: trackUpgradeWholeRun, commandRevision: commandRevision
         )
         if let memo = trackUpgradeMemo, memo.key == key { return memo }
+        if !now, waits(for: .trackUpgrade, workOut: { _ = $0.trackUpgradeDraft(now: true) }) { return nil }
+        return workOutTrackUpgradeDraft(kind, on: edge, key: key)
+    }
+
+    /// ``trackUpgradeDraft`` worked out and kept. Never inlined (decision
+    /// 590).
+    @inline(never)
+    private func workOutTrackUpgradeDraft(_ kind: TrackUpgradeKind, on edge: TrackEdgeID, key: TrackUpgradeMemo.Key) -> TrackUpgradeMemo {
         var found = switch kind {
         case .doubleTrack: doubleTrackUpgrade(of: edge, key: key)
         case .scissors: scissorsUpgrade(on: edge, key: key)
@@ -174,7 +189,7 @@ extension GameSession {
     public func buildTrackUpgrade() {
         // Trains moved since it was worked out: plan it on the world now.
         if trackUpgradeMemo?.worldRevision != worldRevision { trackUpgradeMemo = nil }
-        guard let draft = trackUpgradeDraft else { return }
+        guard let draft = trackUpgradeDraft(now: true) else { return }
         // Short of cash, GameCore refuses it and says so (decision 245).
         guard let command = draft.command else {
             message = StatusMessage(kind: .failure, text: draft.preview.problem ?? "")

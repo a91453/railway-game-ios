@@ -201,7 +201,7 @@ extension GameSession {
                 // out again while the trace still runs along the line, or
                 // a paused game's hint would stay without a price, as
                 // nothing it shows changed.
-                if networkPreview?.forSale == line { quoteTracedSale(line) }
+                if networkPreview(now: true)?.forSale == line { quoteTracedSale(line) }
                 return
             }
             tracedSaleQuote = TracedSaleQuote(offer: offer, revision: revision, railways: railways)
@@ -221,7 +221,7 @@ extension GameSession {
     /// (``offerRealLine(_:)``), at once with the offer the hint priced
     /// where it is still the world's. The trace stays drawn.
     public func offerTracedSaleLine() {
-        guard let line = networkPreview?.forSale else { return }
+        guard let line = networkPreview(now: true)?.forSale else { return }
         if let quote = currentTracedSaleQuote(of: line) {
             closeRealLineOffer()
             shownRealLineOffer = quote.offer
@@ -254,6 +254,6 @@ extension GameSession {
             minX: Double(min(points[0].x, points[1].x)), minY: Double(min(points[0].y, points[1].y)),
             maxX: Double(max(points[0].x, points[1].x)), maxY: Double(max(points[0].y, points[1].y))
         ))
-        return networkPreview?.forSale != nil
+        return networkPreview(now: true)?.forSale != nil
     }
 }
