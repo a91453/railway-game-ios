@@ -295,6 +295,10 @@ struct Map3DPreviewScreen: View {
             stationTag.show(id, at: Map3DTap.anchor(of: id, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)),
                             seenBy: camera)
         }
+        // Decision 606 (IDLEREAL): a real train the idle mode follows that
+        // this map cannot find (in a tunnel, past the scene) for a while
+        // is passed over.
+        .task(id: ambientScreen?.ambient?.realTrain) { await watchRealTrain() }
         .onChange(of: showsRealTrains) { _, shown in
             feed.updateRealClock(world: session.world, shown: shown, glides: !session.world.clock.isPaused && !reduceMotion)
         }
@@ -368,6 +372,8 @@ struct Map3DPreviewScreen: View {
     /// behind.
     private func followed(ambient: AmbientScreen?) -> Map3DFollow? {
         let view = ambient?.view3D ?? followView
+        // Decision 606 (IDLEREAL): the idle mode's real train.
+        if let real = ambient?.realTrain { return Map3DFollow(realTrain: real, view: view) }
         if let train = session.followedTrain { return Map3DFollow(train: train.id, view: view) }
         if let bus = session.followedBusID, session.busFollowBar != nil { return Map3DFollow(bus: bus, view: view == .station ? .back : view) }
         // Decision 583 (CABLEFOLLOW): a cabin, from its window, above or beside.
@@ -406,6 +412,28 @@ struct Map3DPreviewScreen: View {
         let space = Map3DPick.Space(scene: scene)
         let anchor = id.flatMap { Map3DTap.anchor(of: $0, in: session.world, space: space, ground: Map3DPick.ground(of: scene, world: session.world)) }
         stationTag.show(id, at: anchor, seenBy: camera)
+    }
+
+    /// Decision 606: tells the idle mode when the built map first shows
+    /// its real train, and when it has not been found on it for ``AmbientDirector/realTrainLostChecks``
+    /// checks in a row, a second apart.
+    private func watchRealTrain() async {
+        guard let id = ambientScreen?.ambient?.realTrain else { return }
+        var misses = 0
+        while !Task.isCancelled, ambientScreen?.ambient?.realTrain == id {
+            try? await Task.sleep(for: .seconds(1))
+            guard let scene else { continue }
+            let found = feed.realTrainPose(id, in: scene) != nil
+            misses = found ? 0 : misses + 1
+            if found, ambientScreen?.ambient?.realTrainSeen == false {
+                // The corner line naming it fades in as it shows.
+                withAnimation(reduceMotion ? nil : MotionRule.ambientCut.animation) { ambientScreen?.ambient?.realTrainSeen = true }
+            }
+            if misses >= AmbientDirector.realTrainLostChecks {
+                ambientScreen?.ambient?.lostRealTrain = id
+                return
+            }
+        }
     }
 
     /// Decision 403: the driving display of the train followed.
@@ -960,6 +988,15 @@ final class Map3DTrainFeed {
         return frame
     }
 
+    /// Decision 606 (IDLEREAL): where real train `id` is now, as the
+    /// follow camera reads it, at the clock the real trains are drawn at;
+    /// `nil` while they are hidden or it is not drawn.
+    func realTrainPose(_ id: RealTrainID, in scene: Map3DScene) -> Map3DFollow.Pose? {
+        guard let real = scene.realTrains, let clock = realClock else { return nil }
+        return real.pose(of: id, second: clock.second(at: Date().timeIntervalSinceReferenceDate, glides: realGlides),
+                         day: clock.today, dayBefore: clock.dayBefore)
+    }
+
     /// Decision 585 PR-4 (FERRYFOLLOW): where boat `id` is now, as the
     /// follow camera reads it.
     func ferryPose(_ id: FerryBoatID, in scene: Map3DScene) -> Map3DFollow.Pose? {
@@ -1199,12 +1236,15 @@ private struct Map3DView: UIViewRepresentable {
         view.busPose = { id in feed.busPose(id, in: scene) }
         view.cabinPose = { id in feed.cabinPose(id, in: scene) }
         view.ferryPose = { id in feed.ferryPose(id, in: scene) }
+        view.realTrainPose = { id in feed.realTrainPose(id, in: scene) }
         // Decision 583: the strip built ahead lies the way the followed
         // cabin runs; decision 585 PR-4: or boat.
         context.coordinator.streamer.ahead = { [weak view] in
             let following = view?.following
             guard let pose = following?.cabin.flatMap({ feed.cabinPose($0, in: scene) })
-                ?? following?.ferry.flatMap({ feed.ferryPose($0, in: scene) }) else { return nil }
+                ?? following?.ferry.flatMap({ feed.ferryPose($0, in: scene) })
+                // Decision 606: or real train.
+                ?? following?.realTrain.flatMap({ feed.realTrainPose($0, in: scene) }) else { return nil }
             return SIMD2(pose.forward.x, pose.forward.z)
         }
         if first, let start {

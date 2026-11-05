@@ -15,6 +15,19 @@ struct AmbientScreen: Equatable {
     var veiled = false
     /// Whether the line saying how to come back shows: the first seconds.
     var showsHint = true
+    /// Decision 606: the real timetable's train the 3D map follows; `nil`
+    /// for any other shot.
+    var realTrain: RealTrainID?
+    /// Decision 606: what that train is and where it goes, faint in the
+    /// corner for its first seconds (``AmbientDirector/realCaptionSeconds``).
+    var cornerCaption: String?
+    var showsCornerCaption = false
+    /// Decision 606: whether the 3D map has found the real train to
+    /// follow, from when the corner line shows.
+    var realTrainSeen = false
+    /// Decision 606: a real train the 3D map could not find to follow
+    /// (in a tunnel, past the scene), which the director passes over.
+    var lostRealTrain: RealTrainID?
     /// Whether the game was paused when the mode started: it runs while
     /// the player watches, and is paused again when they come back.
     let resumedFromPause: Bool
@@ -61,6 +74,9 @@ struct AmbientOverlay: View {
     let shows3D: Bool
     /// Opens the 3D map over `point` (world units), following the train.
     let open3D: (_ point: WorldCoordinate) -> Void
+    /// Decision 339: the real timetables' trains shown; decision 606: the
+    /// idle mode follows them only then.
+    @AppStorage(MapAmbienceSettings.realTrainsKey) private var showsRealTrains = true
 
     var body: some View {
         AmbientCurtain(screen: screen, language: session.language) {
@@ -79,21 +95,43 @@ struct AmbientOverlay: View {
     private func direct() async {
         var director = AmbientDirector(seed: UInt64(truncatingIfNeeded: Int64(Date().timeIntervalSince1970 * 1_000)))
         var first = true
+        // Decision 606: the real trains on the map, worked out once.
+        let realTrains = await workOutRealTrains()
         while !Task.isCancelled, screen.ambient != nil {
             // Read each time: Reduce Motion may be turned on meanwhile.
             let allows3D = shows3D && !UIAccessibility.isReduceMotionEnabled
-            let cast = AmbientDirector.Cast(world: session.world)
+            var cast = AmbientDirector.Cast(world: session.world)
+            if let realTrains, showsRealTrains {
+                let clock = RealTrainClock(world: session.world, time: Date.timeIntervalSinceReferenceDate)
+                let lost = screen.ambient?.lostRealTrain
+                cast.realTrains = realTrains.candidates(at: clock.second(at: 0, glides: false), on: clock.today, dayBefore: clock.dayBefore)
+                    .filter { $0.id != lost }
+            }
             if let shot = director.update(cast: cast, now: Date.timeIntervalSinceReferenceDate, allows3D: allows3D) {
-                await cut(to: shot, veiled: !first)
+                await cut(to: shot, veiled: !first, realTrains: realTrains)
                 first = false
             }
             try? await Task.sleep(for: .seconds(1))
         }
     }
 
+    /// Decision 606: the real lines on a real-world map and their trains,
+    /// as the 3D map draws them (but the lines the player bought), off the
+    /// main actor; `nil` on a map of no real place or with them hidden.
+    private func workOutRealTrains() async -> AmbientRealTrains? {
+        guard showsRealTrains, let railways = session.railways, let operations = railways.operations,
+              let frame = RealWorldFrame(world: session.world) else { return nil }
+        let bounds = session.world.bounds
+        let bought = Set(session.world.acquisitions.map(\.realLine))
+        return await Task.detached(priority: .utility) { () -> AmbientRealTrains? in
+            let traffic = RealTrainTraffic(operations: operations, frame: frame, bounds: bounds, bought: bought)
+            return traffic.lines.isEmpty ? nil : AmbientRealTrains(traffic: traffic, operations: operations, frame: frame, railways: railways)
+        }.value
+    }
+
     /// The site's `fadeSwitch`: the veil comes down, the shot changes
     /// behind it, the veil lifts; the first shot without it (`_ambientFresh`).
-    private func cut(to shot: AmbientDirector.Shot, veiled: Bool) async {
+    private func cut(to shot: AmbientDirector.Shot, veiled: Bool, realTrains: AmbientRealTrains?) async {
         let rule = MotionRule.ambientCut.running(reduceMotion: UIAccessibility.isReduceMotionEnabled) ?? .ambientCut
         if veiled {
             withAnimation(rule.animation) { screen.ambient?.veiled = true }
@@ -102,18 +140,47 @@ struct AmbientOverlay: View {
             try? await Task.sleep(for: .seconds(rule.seconds + 0.1))
         }
         guard screen.ambient != nil else { return }
-        show(shot)
+        await show(shot, realTrains: realTrains)
         withAnimation(rule.animation) { screen.ambient?.veiled = false }
     }
 
-    private func show(_ shot: AmbientDirector.Shot) {
+    private func show(_ shot: AmbientDirector.Shot, realTrains: AmbientRealTrains?) async {
         let world = session.world
         screen.ambient?.caption = AmbientDirector.caption(of: shot.subject, in: world, language: session.language)
+        // Decision 606: the 3D map round a real train is built there, not
+        // round the player's train next.
+        let afterRealTrain = screen.ambient?.realTrain != nil
+        screen.ambient?.realTrain = nil
+        screen.ambient?.realTrainSeen = false
+        screen.ambient?.cornerCaption = nil
+        screen.ambient?.showsCornerCaption = false
         switch shot.subject {
+        case .realTrain(let id):
+            // Decision 606: the 3D map opened afresh over the real train,
+            // its scene built round it, following it.
+            session.stopFollowingTrain()
+            let clock = RealTrainClock(world: world, time: Date.timeIntervalSinceReferenceDate)
+            let second = clock.second(at: 0, glides: false)
+            guard let realTrains, let location = realTrains.location(of: id, at: second, on: clock.today, dayBefore: clock.dayBefore)
+            else { return }
+            close3D()
+            // A moment for the closed map (a full-screen cover) to go before
+            // it opens again: one presented while it goes would not show.
+            try? await Task.sleep(for: .milliseconds(500))
+            guard screen.ambient != nil else { return }
+            if case .map3D(let view) = shot.stage { screen.ambient?.view3D = view }
+            screen.ambient?.realTrain = id
+            open3D(location)
+            showCornerCaption(realTrains.caption(of: id, at: second, on: clock.today, dayBefore: clock.dayBefore, language: session.language))
         case .train(let id):
             session.followTrain(id)
             if case .map3D(let view) = shot.stage {
                 screen.ambient?.view3D = view
+                if afterRealTrain {
+                    close3D()
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard screen.ambient != nil else { return }
+                }
                 if !screen.showsMap3D, let position = world.train(id: id)?.position,
                    let location = world.location(of: position)?.position {
                     open3D(location)
@@ -129,6 +196,24 @@ struct AmbientOverlay: View {
             if let region = AmbientDirector.region(of: shot.subject, in: world) {
                 session.lookOver(region)
             }
+        }
+    }
+
+    /// Decision 606: `caption` faint in the corner from when the 3D map
+    /// shows the train, gone again ``AmbientDirector/realCaptionSeconds``
+    /// later; with Reduce Motion it comes and goes at once.
+    private func showCornerCaption(_ caption: String?) {
+        guard let caption else { return }
+        screen.ambient?.cornerCaption = caption
+        screen.ambient?.showsCornerCaption = true
+        Task { @MainActor in
+            while screen.ambient?.cornerCaption == caption, screen.ambient?.realTrainSeen == false {
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+            try? await Task.sleep(for: .seconds(AmbientDirector.realCaptionSeconds))
+            guard screen.ambient?.cornerCaption == caption else { return }
+            let reduce = UIAccessibility.isReduceMotionEnabled
+            withAnimation(reduce ? nil : MotionRule.ambientCut.animation) { screen.ambient?.showsCornerCaption = false }
         }
     }
 
@@ -186,6 +271,24 @@ struct AmbientCurtain: View {
         .accessibilityHint(Text(verbatim: language.text("Tap to come back to the game.", "點兩下回到遊戲。")))
         .accessibilityAction { end() }
         .accessibilityIdentifier("ambient.curtain")
+        // Decision 606: what the real train followed is and where it goes,
+        // faint in the top corner for its first seconds; read on its own,
+        // and a tap on it ends the mode as anywhere else.
+        .overlay(alignment: .topLeading) {
+            if let corner = ambient?.cornerCaption, ambient?.showsCornerCaption == true, ambient?.realTrainSeen == true,
+               ambient?.veiled == false {
+                Text(verbatim: corner)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .shadow(color: .black.opacity(0.6), radius: 2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(CGFloat(HUDMargins.edge))
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+                    .accessibilityIdentifier("ambient.realTrain")
+            }
+        }
     }
 }
 
