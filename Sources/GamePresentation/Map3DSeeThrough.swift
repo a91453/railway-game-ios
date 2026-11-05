@@ -42,16 +42,34 @@ public struct Map3DSeeThrough: Equatable, Sendable {
     /// ``Map3DCamera/viewProjection``) from `eye`: none farther than
     /// ``Map3DTrains/modelReach`` or out of view, at most ``most``, nearest
     /// the middle of the view first.
-    public init(eye: Map3DPoint, cars: [Map3DPoint], matrix: Map3DMatrix) {
+    ///
+    /// `followed` (decision 342's supplement): the one vehicle the camera
+    /// follows when it is not a train (a bus, a cabin; ``point(of:)``),
+    /// taken first whatever the rest, so the street's other vehicles never
+    /// push it out of the ``most`` places.
+    public init(eye: Map3DPoint, cars: [Map3DPoint], matrix: Map3DMatrix, followed: Map3DPoint? = nil) {
         self.eye = eye
         var seen: [(car: Map3DPoint, off: Float)] = []
-        for car in cars where (car - eye).length <= Map3DTrains.modelReach {
+        for (car, first) in (cars.map { ($0, false) } + (followed.map { [($0, true)] } ?? [])) where (car - eye).length <= Map3DTrains.modelReach {
             guard let clip = matrix.project(car + Map3DPoint(0, Self.bodyMiddle, 0)), clip.z >= 0, clip.z <= 1,
                   abs(clip.x) <= 1.2, abs(clip.y) <= 1.2 else { continue }
-            seen.append((car, clip.x * clip.x + clip.y * clip.y))
+            seen.append((car, first ? -1 : clip.x * clip.x + clip.y * clip.y))
         }
         seen.sort { $0.off < $1.off }
         self.cars = seen.prefix(Self.most).map(\.car)
+    }
+
+    /// The point a followed vehicle of `pose` is seen through at (a car's
+    /// middle on its rails, whose cone's axis is ``bodyMiddle`` over it):
+    /// the middle of its own body, so a bus (3.4 m) and a cabin (2 m,
+    /// hung in the air; its floor is ``Map3DFollow/Pose/middle``) are cut
+    /// at their own height, and the street under a cabin stays whole,
+    /// since only what stands over this point's ``clearance`` is cut.
+    /// `nil` in a tunnel.
+    public static func point(of pose: Map3DFollow.Pose) -> Map3DPoint? {
+        guard !pose.inTunnel else { return nil }
+        let floor = pose.middle ?? pose.rail
+        return floor + Map3DPoint(0, pose.bodyHeight / 2 - bodyMiddle, 0)
     }
 
     /// How much of a building's point `p` shows: ``opacity`` well inside a

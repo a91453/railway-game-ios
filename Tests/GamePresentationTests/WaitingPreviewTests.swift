@@ -251,14 +251,18 @@ final class WaitingPreviewTests: XCTestCase {
     /// it: the line's price tried at once took about 140 KB of an
     /// optimised build's stack, on top of SwiftUI's view update; here,
     /// unoptimised, about 270 KB at once and 32 KB waiting (16 KB of it
-    /// the probe's own margin).
+    /// the probe's own margin). Since the world keeps its state on the
+    /// heap (decision 590, step 2) a copy of it takes one reference of
+    /// stack, and the price tried at once takes about 77 KB here: it must
+    /// stay under 128 KB, half of what it was.
     func testTheMapCheckTakesLittleStackWhileTheScreenAsks() throws {
         let now = try session(waits: false)
         let atOnce = StackProbe.deepest { _ = now.mapLineDraft }
         let app = try session(waits: true)
         let waiting = StackProbe.deepest { _ = app.mapLineDraft }
         print("[WaitingPreviewTests] map check stack: at once \(atOnce / 1_024) KB, waiting \(waiting / 1_024) KB")
-        XCTAssertGreaterThan(atOnce, 128 * 1_024, "the probe sees the work tried at once")
+        XCTAssertGreaterThan(atOnce, waiting + 32 * 1_024, "the probe sees the work tried at once")
+        XCTAssertLessThan(atOnce, 128 * 1_024, "a copy of the world takes one reference of stack")
         XCTAssertLessThan(waiting, 48 * 1_024)
     }
 

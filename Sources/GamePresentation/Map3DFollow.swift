@@ -448,8 +448,9 @@ public struct Map3DFollow: Hashable, Sendable {
             // Fixed to the car like the cab: turned with the train at once.
             // Out of the left side of the train, where trains keep left.
             // Decision 583: a cabin's seat is its own (``Pose/window``).
+            // Review L9-8: a bus keeps right, so its window is the right one.
             let forward = head.forward
-            let left = Map3DPoint(forward.z, 0, -forward.x)
+            let left = Map3DPoint(forward.z, 0, -forward.x) * (bus == nil ? 1 : -1)
             let seat = head.window ?? Pose.Window(across: Self.windowEyeAcross, height: Self.windowEyeHeight, lookDown: Self.windowLookDown)
             let tilt = .pi / 2 - seat.lookDown
             next.heading = Self.heading(of: left)
@@ -633,9 +634,24 @@ extension GameWorld {
         case .travellingToStop(let stop, _):
             return train.timetable[stop].station
         case .waitingAtStop(let stop, _):
-            guard train.timetable.count > 1 else { return nil }
-            return train.timetable[(stop + 1) % train.timetable.count].station
+            // Review L9-6: the next stop of another station; a there-and-back
+            // timetable standing at its last row wraps round to the same one.
+            let count = train.timetable.count
+            for step in 1..<max(count, 1) {
+                let next = train.timetable[(stop + step) % count].station
+                if next != train.timetable[stop].station { return next }
+            }
+            return nil
         }
+    }
+
+    /// Review L9-6: how many metres off the stop the station view watches
+    /// train `id` from is, for whether the view is offered: 0 while it
+    /// stands at one (it watches this stop, here), else as
+    /// ``map3DMetresToStopAhead(of:)``.
+    public func map3DMetresToLookoutStop(of id: TrainID) -> Double? {
+        if case .waitingAtStop? = train(id: id)?.execution { return 0 }
+        return map3DMetresToStopAhead(of: id)
     }
 
     /// Decision 578: how many metres train `id` has to go to the stop
