@@ -827,6 +827,10 @@ final class Map3DTrainFeed {
     /// scene, laid again when the routes or the scene change.
     private var ferries: Map3DFerries?
     private var ferriesScene: (x: Double, y: Double)?
+    /// Decision 585 PR-4: the game second the boats were last drawn at,
+    /// which the follow camera reads too, so it sits where its boat is
+    /// drawn (read a few milliseconds later, a fast boat has gone on).
+    private var ferriesDrawnSecond: Double?
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
@@ -945,8 +949,10 @@ final class Map3DTrainFeed {
         }
         // Decision 585 PR-3 (FERRY3): and the ferries' piers and boats, on
         // the same clock.
+        ferriesDrawnSecond = nil
         if let models, let laid = laidFerries(in: scene), let second = cableSecond(at: now) {
             // Decision 585 PR-4: the followed boat's way is ahead.
+            ferriesDrawnSecond = second
             let ahead = followedFerry.flatMap { laid.pose(of: $0, second: second)?.forward }
             frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel,
                                           following: followedFerry, ahead: ahead).instances
@@ -957,7 +963,8 @@ final class Map3DTrainFeed {
     /// Decision 585 PR-4 (FERRYFOLLOW): where boat `id` is now, as the
     /// follow camera reads it.
     func ferryPose(_ id: FerryBoatID, in scene: Map3DScene) -> Map3DFollow.Pose? {
-        guard let laid = laidFerries(in: scene), let second = cableSecond(at: Date().timeIntervalSinceReferenceDate) else { return nil }
+        guard let laid = laidFerries(in: scene),
+              let second = ferriesDrawnSecond ?? cableSecond(at: Date().timeIntervalSinceReferenceDate) else { return nil }
         return laid.pose(of: id, second: second)
     }
 
