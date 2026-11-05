@@ -119,6 +119,9 @@ public enum Map3DAirportStudies {
             case .boardingStairs:
                 b.box(-1.65,0.73,0,0.95,w*0.8,1.05,white)
                 let steps=far ? 4 : 8
+                for side:Float in [-1,1] {
+                    b.beam(Map3DPoint(-1.1,0.67,side*w*0.33),Map3DPoint(2,3.10,side*w*0.33),0.14,steel)
+                }
                 for i in 0..<steps { b.box(-0.9+Float(i)*2.9/Float(steps),0.75+Float(i+1)*2.3/Float(steps),0,2.9/Float(steps)+0.02,w*0.66,0.12,steel) }
                 b.box(2,3.05,0,0.75,w*0.72,0.15,blue)
             case .fuelTruck:

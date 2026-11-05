@@ -159,6 +159,8 @@ def part(mesh, kind, far):
         elif kind=='stairs':
             mesh.box('driver-cab',-1.65,0,.73,.95,W*.8,1.05,'white')
             steps=4 if far else 8
+            for y in (-W*.33,W*.33):
+                mesh.beam('stair-stringer',(-1.1,y,.67),(2.0,y,3.10),.14,'steel')
             for i in range(steps):
                 mesh.box('stair-tread',-.9+i*2.9/steps,0,.75+(i+1)*2.30/steps,2.9/steps+.02,W*.66,.12,'steel')
             mesh.box('upper-landing',2.0,0,3.05,.75,W*.72,.15,'blue')

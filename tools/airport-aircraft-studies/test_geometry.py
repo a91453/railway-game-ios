@@ -40,6 +40,7 @@ class GeometryTests(unittest.TestCase):
                 m=mod.mod.Mesh();meta=mod.part(m,kind,far);m.validate()
                 if kind=='runway':self.assertEqual(len(meta['thresholds']),2)
                 if kind=='apron':self.assertEqual(len(meta['stands']),3)
+                if kind=='stairs':self.assertEqual(sum(s['name']=='stair-stringer' for s in m.solids),2)
                 if kind in ('runway','taxiway','apron'):
                     paint=[s for s in m.solids if s['name'] not in ('sealed-pavement','sealed-apron') and 'light' not in s['name']]
                     for s in paint:
