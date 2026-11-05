@@ -348,11 +348,24 @@ public struct RealLineRuns: Sendable, Equatable {
         /// reverse of `stops` when `reversed`: from its first call to its
         /// last, the stations it ``passes`` passed (decision 605) and
         /// timed only where it stops.
+        ///
+        /// A run leaving from a station between the line's ends (the
+        /// Taoyuan Airport MRT's expresses from Huanbei and Chang Gung)
+        /// calls at the station after it, which it would pass: its train
+        /// turns back there, and under traffic control a train whose own
+        /// way out is held leaves by the route the line names for its first
+        /// leg (decisions 323, 570), which the line names only between
+        /// stations next to each other. Passing it, the run was never sent
+        /// (decision 605, TYMC-EXPRESS-B).
         public func lineRun(stops: [String], reversed: Bool = false) -> LineRun {
             let last = stops.count - 1
             func index(_ station: String) -> Int {
                 let found = stops.firstIndex(of: station) ?? 0
                 return reversed ? last - found : found
+            }
+            var passes = passes
+            if calls.count > 1, calls[0].station != stops.first, calls[0].station != stops.last {
+                passes.removeAll { $0 == calls[1].station }
             }
             let stopping = passes.isEmpty ? calls : calls.filter { !passes.contains($0.station) }
             return LineRun(

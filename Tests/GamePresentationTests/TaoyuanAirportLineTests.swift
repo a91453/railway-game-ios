@@ -55,7 +55,9 @@ final class TaoyuanAirportLineTests: XCTestCase {
         func named(_ stop: Int) -> String { world.station(id: bought.stops[stop])?.name ?? "?" }
         let expresses = bought.runs.filter { !$0.passes.isEmpty }
         XCTAssertGreaterThan(expresses.count, 100)
-        let stopping = Set(expresses.flatMap { run in bought.calls(of: run).map(named) })
+        // TYMC-EXPRESS-B: those leaving from Chang Gung or Huanbei call at
+        // the station after it too (`RealLineRuns.Run.lineRun`).
+        let stopping = Set(expresses.filter { ["台北車站", "機場第二航廈站"].contains(named($0.from)) }.flatMap { run in bought.calls(of: run).map(named) })
         XCTAssertTrue(stopping.isSuperset(of: ["台北車站", "新北產業園區站", "長庚醫院站", "機場第一航廈站", "機場第二航廈站"]), "\(stopping)")
         XCTAssertEqual(stopping.subtracting(["高鐵桃園站", "環北站"]).count, 5, "a few on to Taoyuan HSR and Huanbei: \(stopping)")
 
@@ -78,6 +80,113 @@ final class TaoyuanAirportLineTests: XCTestCase {
             }
         }
         XCTAssertEqual(Set(platforms.map(\.edge)), Set(reached.keys), "every platform leads on")
+    }
+
+    /// Decision 605 (TYMC-EXPRESS-B): every run leaving from a station
+    /// between the ends (the expresses from Huanbei and Chang Gung among
+    /// them) has a route the line names for its first leg, to the next
+    /// station, so under traffic control a train whose own way out is
+    /// held leaves by it (decisions 323, 570). Passing that station, the
+    /// four expresses a day from Huanbei were never sent and the train
+    /// that brought one there stood at its platform for good.
+    func testARunLeavingBetweenTheEndsHasANamedFirstLeg() throws {
+        let session = try RealLineAcquisitionTests.game(round: Self.id, side: 1 << 22, heights: true, rules: .simple)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == Self.id }, "on sale")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let world = session.world
+        let bought = try XCTUnwrap(world.lines.first)
+        func named(_ stop: Int) -> String { world.station(id: bought.stops[stop])?.name ?? "?" }
+        let ends = [0, bought.stops.count - 1]
+        var between = 0, expresses = 0
+        var unnamed: Set<String> = []
+        for run in bought.runs where !ends.contains(run.from) {
+            between += 1
+            if !run.passes.isEmpty { expresses += 1 }
+            let calls = bought.calls(of: run)
+            if !bought.routePreferences.contains(where: { $0.from == calls[0] && $0.to == calls[1] }) {
+                unnamed.insert("\(named(calls[0]))→\(named(calls[1]))")
+            }
+        }
+        XCTAssertGreaterThan(between, 0)
+        XCTAssertGreaterThanOrEqual(expresses, 7, "the expresses from Huanbei and Chang Gung")
+        XCTAssertEqual(unnamed, [])
+    }
+
+    /// Decision 605 (TYMC-EXPRESS-B): under a new game's rules (simple,
+    /// traffic control on) the first morning's runs go out as they did
+    /// before the expresses passed stations; printed: those that do not,
+    /// and the trains standing half an hour at a station between the ends.
+    /// With the expresses from Huanbei passing the next station, none of
+    /// them were sent, none south of the airport after 07:20 (37 by noon),
+    /// and 114 of the second day's 333 runs were lost.
+    /// `TYMC_MORNING=1`, in release; `TYMC_MORNING_UNTIL=<minutes>` plays on.
+    func testTheFirstMorningUnderANewGamesRules() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["TYMC_MORNING"] != nil else { throw XCTSkip("Set TYMC_MORNING=1 (release, a few minutes).") }
+        let session = try RealLineAcquisitionTests.game(round: Self.id, side: 1 << 22, heights: true, rules: .simple)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == Self.id }, "on sale")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        var world = session.world
+        XCTAssertTrue(world.isTrafficControlEnabled)
+        world.setSpeed(.fast)
+        let until = Int64(environment["TYMC_MORNING_UNTIL"] ?? "") ?? 12 * 60
+        let day = world.clock.now.seconds / GameTime.secondsPerDay
+        var standing: [TrainID: (station: StationID, since: Int64)] = [:]
+        var longest: [String] = []
+        func clock(_ seconds: Int64) -> String { String(format: "%02d:%02d", seconds % 86_400 / 3_600, seconds % 3_600 / 60) }
+        var dumped = false
+        while world.clock.now.seconds < day * GameTime.secondsPerDay + until * 60 {
+            try world.advance(ticks: 1)
+            let now = world.clock.now.seconds
+            // With TYMC_STUCK_MIN=n, the trains of the first deadlock of n
+            // or more (each one with TYMC_STUCK_ALL): where each stands,
+            // where it is bound and its timetable.
+            if let least = Int(environment["TYMC_STUCK_MIN"] ?? ""), !dumped || environment["TYMC_STUCK_ALL"] != nil {
+                var memo = GameWorld.DirectionMemo()
+                let stuck = world.deadlock(memo: &memo)
+                if stuck.count >= least {
+                    dumped = true
+                    func name(_ id: StationID) -> String { world.station(id: id)?.name ?? "?" }
+                    var text = "TYMC_STUCK \(clock(now)) \(stuck.count)\n"
+                    for id in stuck.keys.sorted() {
+                        guard let request = stuck[id], let train = world.train(id: id) else { continue }
+                        let to: String = if case .travellingToStop(let s, _)? = request.candidate.execution { name(request.candidate.timetable[s].station) } else { "-" }
+                        let edge: String = if case .onEdge(let t, _)? = train.position { "\(t.edge)" } else { "-" }
+                        let platform = world.network.platforms.first { "\($0.edge)" == edge }.map { name($0.station) } ?? "line"
+                        text += "  \(train.name) on \(edge) (\(platform)) exec \(String(describing: train.execution).prefix(40)) to \(to) via \(request.candidate.movement.edges.map { "\($0)" }.joined(separator: ",").suffix(160)) timetable \(train.timetable.map { "\(name($0.station))@\(clock($0.departure.seconds))" }.joined(separator: " ").prefix(200))\n"
+                    }
+                    print(text)
+                }
+            }
+            for train in world.trains {
+                guard let line = world.lines.first(where: { $0.trains.contains(train.id) }),
+                      let at = world.stationsStoppedAt(by: train.id).first,
+                      at != line.stops.first, at != line.stops.last, !line.depots.contains(at) else {
+                    standing[train.id] = nil
+                    continue
+                }
+                if standing[train.id]?.station != at { standing[train.id] = (at, now) }
+                if let since = standing[train.id]?.since, now - since >= 30 * 60, now - since < 40 * 60 {
+                    longest.append("\(train.name) at \(world.station(id: at)?.name ?? "?") since \(clock(since))")
+                }
+            }
+        }
+        let bought = try XCTUnwrap(world.lines.first)
+        var missed: [Int] = []
+        var names: [String] = []
+        for played in day...(world.clock.now.seconds / GameTime.secondsPerDay) {
+            let notSent = RunsNotSent.on(played, of: bought, at: world.clock.now)
+            missed += notSent
+            names += notSent.map { index in
+                let run = bought.runs[index]
+                let leaves = run.start(onDay: played) % GameTime.secondsPerDay
+                return "\(played - day)d \(world.station(id: bought.stops[run.from])?.name ?? "?")→\(world.station(id: bought.stops[run.to])?.name ?? "?") \(clock(leaves))"
+            }
+        }
+        print("TYMC_MORNING until \(until / 1_440)d \(clock(until * 60)): deadlocked now \(world.deadlockedTrains().count); \(missed.count) runs not sent \(names.prefix(12)); standing 30 min: \(Array(Set(longest)).sorted().prefix(12))")
+        // Without the expresses passing (as on main) five of the morning's
+        // runs went unsent, among them the first from Chang Gung.
+        XCTAssertLessThanOrEqual(missed.count, 5, "runs not sent: \(names.prefix(12))")
     }
 
     /// Decision 564: its trains keep right, so its turn-back crossovers lie
