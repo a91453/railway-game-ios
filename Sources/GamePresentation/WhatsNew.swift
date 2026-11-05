@@ -30,6 +30,58 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 113.1.
+        // TODO(113.1): not merged yet, add when they are in: the 3D ferry
+        // boat and pier (#1824); follow-a-bus perspective, the bus's right
+        // window and the next-station view (#1819); the crash when a new
+        // line adds a station (CRASH112).
+        Entry(
+            id: "2026-11-05-113-1",
+            items: [
+                Line(
+                    english: "The Bus button is now Shuttle, with Bus and Ferry inside. Lay a ferry route between two piers; the demo has Tamsui to Bali and Gushan to Cijin.",
+                    chinese: "「公車」鈕改叫「接駁」，裡面分公車、渡輪；可以開渡輪航線，示範有淡水—八里、鼓山—旗津。"
+                ),
+                Line(
+                    english: "Settings' Garage is now the Collection, with a page for trains and a page for ferries.",
+                    chinese: "設定的「車庫」改叫「圖鑑」，分列車、渡輪兩頁。"
+                ),
+                Line(
+                    english: "Tourists ride ferries, buses and cable cars to sights no station reaches. Bali has a new sight, the Bali Ferry Pier old street, and the Maokong Gondola meets MRT Taipei Zoo.",
+                    chinese: "觀光客會搭渡輪、公車、纜車去車站走不到的景點；八里多了「八里渡船頭老街」，貓空纜車接捷運動物園。"
+                ),
+                Line(
+                    english: "On the 3D map you can follow a cable car cabin: out of its window, from behind and above, or from the side.",
+                    chinese: "3D 地圖可以跟隨纜車吊廂：窗外、上後方、旁邊三種視角。"
+                ),
+                Line(
+                    english: "Placing a train, you choose its platform; if it does not fit, you are told why and what to change. With no station chosen, the button asks you to tap one first.",
+                    chinese: "放車時可以選月台；放不下會說出原因和怎麼改；還沒選車站時，按鈕會請你先點地圖上的車站。"
+                ),
+                Line(
+                    english: "A train waiting at a station with no line can be assigned to the line from its page.",
+                    chinese: "停在站上、沒有路線的車，可以從路線頁配屬給這條線。"
+                ),
+                Line(
+                    english: "On an iPhone held sideways, a details card keeps its main button in view, and the car count and platform sit just above Place Here.",
+                    chinese: "iPhone 橫放時，詳細卡片的主要按鈕一直看得到；放車的車廂數和月台就在「放在這裡」上面。"
+                ),
+                Line(
+                    english: "The Network tool's mode row scrolls sideways and keeps the chosen mode in view.",
+                    chinese: "「路網」工具的模式列可以左右滑，選中的模式會留在畫面內。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "City bus routes no longer link to a depot, so riders do not pile up at the Muzha depot.",
+                    chinese: "市區公車的轉乘不再接到機廠，木柵機廠不會多出一堆乘客。"
+                ),
+                Line(
+                    english: "A train between runs can take a free berth, so trains no longer wait on each other at a terminal.",
+                    chinese: "兩趟之間的列車可以先進空著的股道，終點站不再互相等。"
+                ),
+            ]
+        ),
         // 112.1.
         Entry(
             id: "2026-11-04-112-1",
