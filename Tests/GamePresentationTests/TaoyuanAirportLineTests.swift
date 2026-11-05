@@ -261,6 +261,44 @@ final class TaoyuanAirportLineTests: XCTestCase {
                     }
                 }
             }
+            if let idle = environment["TYMC_DIAG_IDLE"] {
+                // TYMCLIST9: why trains without a service stay where they
+                // stand: a spare, a depot candidate, its empty run, room,
+                // its route.
+                let names = Set(idle.split(separator: ",").map { "桃園機場捷運列車 \($0)" })
+                var dispatch = GameWorld.DispatchMemo()
+                for train in world.trains where names.contains(train.name) {
+                    guard let line = world.lines.first(where: { world.assignedLine(of: train.id) == $0.id }),
+                          let index = world.trains.firstIndex(where: { $0.id == train.id }) else { continue }
+                    let candidate = world.runDepotEntryCandidates(of: line, memo: &dispatch).contains(index)
+                    var text = "IDLE \(clock(world.clock.now)) \(train.name) at \(world.stationsStoppedAt(by: train.id).map(name)) exec \(train.execution == nil ? "nil" : "service") spare \(world.isSpare(train, memo: &dispatch)) candidate \(candidate)"
+                    for depot in line.depots {
+                        let trip = world.emptyRun(of: line, for: train, to: [depot])
+                        let room = world.depotHasRoom(depot, for: train)
+                        var route = "-"
+                        if let trip, let leaving = world.firstDeparture(of: train, on: trip, calling: line.stops) {
+                            switch world.reservingDeparture(leaving, memo: &dispatch.directions) {
+                            case .granted: route = "granted"
+                            case .held(let by): route = "held by \(world.train(id: by)?.name ?? "?")"
+                            }
+                        }
+                        text += " | depot \(name(depot)) trip \(trip != nil) room \(room) route \(route)"
+                    }
+                    if let place = train.placement, environment["TYMC_DIAG_IDLE_BERTHS"] != nil {
+                        let blocked = world.blockedTrack(except: train.id, holders: world.trackHolders(memo: &dispatch.directions))
+                        for station in world.stationsStoppedAt(by: train.id) {
+                            for berth in world.berths(of: station, length: train.length) {
+                                for (label, start) in [("ahead", place), ("turned", world.turnedRound(place))] {
+                                    let open = world.path(from: start.position, toStation: station, length: train.length, avoiding: Set<TrackResource>(), only: berth)
+                                    let free = world.path(from: start.position, toStation: station, length: train.length, avoiding: blocked, only: berth)
+                                    text += "\n    BERTH \(berth.traversal.edge) \(label) open \(open.map { "\($0.distance)" } ?? "nil") free \(free.map { "\($0.distance)" } ?? "nil")"
+                                }
+                            }
+                        }
+                    }
+                    out += text + "\n"
+                }
+            }
             if environment["TYMC_DIAG_SUMMARY"] != nil {
                 for train in world.trains {
                     let place = String(describing: train.position)

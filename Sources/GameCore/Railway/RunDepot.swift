@@ -125,12 +125,22 @@ extension GameWorld {
     /// however soon its next run there (decision 297).
     func runTrainEnteringDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for index in runDepotEntryCandidates(of: line, memo: &memo) {
-            guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
+            guard var trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
             // Decision 280: only with a siding for it; without one it
             // stays where it waits. Decision 547: with traffic control off
             // too, where it ran onto a siding a train stood on and stood
             // behind it for good.
-            if let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) { continue }
+            // Decision 556, continued (TYMCLIST9): when the depot it
+            // reaches soonest has none, the one it reaches soonest of
+            // those that do. On the Taoyuan Airport MRT, Luzhu's sidings
+            // were full each night and Qingpu's half empty, and trains
+            // that had ended their runs at the airport terminals stood on
+            // the berths the last services were bound for.
+            if let depot = trip.deadhead?.to, !depotHasRoom(depot, for: trains[index]) {
+                let others = line.depots.filter { $0 != depot && depotHasRoom($0, for: trains[index]) }
+                guard !others.isEmpty, let other = emptyRun(of: line, for: trains[index], to: others) else { continue }
+                trip = other
+            }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
