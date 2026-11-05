@@ -54,6 +54,7 @@ enum AmbientMode {
         guard let ambient = screen.ambient else { return }
         screen.ambient = nil
         session.stopFollowingTrain()
+        session.setFollowingRealTrain(false)
         if screen.showsMap3D {
             var cut = Transaction()
             cut.disablesAnimations = true
@@ -162,7 +163,13 @@ struct AmbientOverlay: View {
             let clock = RealTrainClock(world: world, time: Date.timeIntervalSinceReferenceDate)
             let second = clock.second(at: 0, glides: false)
             guard let realTrains, let location = realTrains.location(of: id, at: second, on: clock.today, dayBefore: clock.dayBefore)
-            else { return }
+            else {
+                session.setFollowingRealTrain(false)
+                return
+            }
+            // Held to 10× from here, as a train of the player's on the 3D
+            // map (decision 360): at 600× it would be gone in a second.
+            session.setFollowingRealTrain(true)
             close3D()
             // A moment for the closed map (a full-screen cover) to go before
             // it opens again: one presented while it goes would not show.
@@ -174,6 +181,7 @@ struct AmbientOverlay: View {
             showCornerCaption(realTrains.caption(of: id, at: second, on: clock.today, dayBefore: clock.dayBefore, language: session.language))
         case .train(let id):
             session.followTrain(id)
+            session.setFollowingRealTrain(false)
             if case .map3D(let view) = shot.stage {
                 screen.ambient?.view3D = view
                 if afterRealTrain {
@@ -191,6 +199,7 @@ struct AmbientOverlay: View {
             }
         case .station, .line:
             session.stopFollowingTrain()
+            session.setFollowingRealTrain(false)
             screen.ambient?.view3D = nil
             close3D()
             if let region = AmbientDirector.region(of: shot.subject, in: world) {
