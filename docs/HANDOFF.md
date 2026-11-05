@@ -538,6 +538,7 @@
 
 **第 50 任的現況（2026-11-05 約 13:20 UTC，session_01YGNNumyd5kmn2HrCenU1qN，第 6 層）**：比下面「第 49 任交第 50 任」新，兩段不同時以這段為準。
 
+- **CRASH114（2026-11-05）**：114.1 的真實世界場景與高鐵 demo 在背景 tick／NightSkip 閃退，原因在 #1837（決策 590 下一步 2，GameWorld 堆上 COW）；`claude/crash114` 把它退回（決策 590「續：114.1 下一步 2 退回」）。根因沒在 Linux 重現，要重做下一步 2 先看那段。
 - **114.1 已發**：`testflight.yml` run 42012538541（run 114，`c1be6078`），作者說已給玩家，Threads 也發了（THREADS-114 交稿，沒去浮水印）。full lane 42010048718 第 2 次（rerun-failed-jobs）當發後檢查；同一處再紅就派人查，不再重跑。紀錄在 `research/PLAYER_FEEDBACK.md`（113.1、114.1 補上）。
 - **已合**：#1856（交接）、#1857（觀光客源研究）、#1858（FERRYPIER 旗津碼頭點擊吸附，115.1）、#1859（城市線股道研究，[URBAN_TRACK_LAYOUT](research/URBAN_TRACK_LAYOUT_2026-11-05.md)）、#1860（REVIEW-L10，下一輪 L11 從 #1858 起）。
 - **在做的 session**（都向第 50 任回報）：RAILTRACK402 session_01YGNNumTKgURfmZQFxRAkPX（決策 600，3D 真實股道）、TOURSRC-1 session_01YGNNuotFRgjkoUXkSty1Nv（決策 601，客源規則 (d)，GameCore）、HEALTH-114 session_01YGNNupSpkPtU1khcsbCqsS、L10FIX session_01YGNNupTyCtVprS24yZGDyK（L10-1／2／3，L10-2 動 GameCore）、REALYARD session_01YGNNum5jtnCLRcfQAB8QLc（決策 602）、HEIGHT-STUDY session_01YGNNunpUBi1ssJLXrehmNH、XBTSINGLE session_01YGNNupSfpJdxMoYjRq12Qm（決策 603，小碧潭支線單線）。封存被自動模式擋下（`archive_session`），做完的 session 由作者在 claude.ai 封存或加允許規則。
