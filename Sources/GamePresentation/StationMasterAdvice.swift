@@ -702,8 +702,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                     "\(chinese) \(Self.starsText(stars)) 沒有車站可到。在 800 公尺內蓋車站，再開一條線過去吧。"
                 )
                 : language.text(
-                    "\(english) \(Self.starsText(stars)) has no route from where tourists come. Join its station to a busy town or the map's edge.",
-                    "\(chinese) \(Self.starsText(stars)) 沒有客源路線。把它的車站接到大城鎮或地圖邊緣吧。"
+                    "\(english) \(Self.starsText(stars)) has no route from where tourists come. Join its station to one where people live, or to the map's edge.",
+                    "\(chinese) \(Self.starsText(stars)) 沒有客源路線。把它的車站接到有人住的車站，或地圖邊緣吧。"
                 )
         case .touristsComing(let kind, let days, let times):
             days > 0

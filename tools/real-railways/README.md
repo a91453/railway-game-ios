@@ -105,3 +105,22 @@ python3 -I tools/real-railways/measure_osm_offset.py RailwayGameApp/Resources/Re
 ```
 
 「高速鐵路」（73221）放在 tgos.tw，台灣以外連不上（403）；在台灣下載 `HSRAIL_*.zip` 後，把 `HSRAIL_*.shp` 加在後面就會一起量。官方的檔與 `report.json` 不進 repository。結果與建議在 `docs/research/OSM_OFFSET_2026-10-21.md`（2026-10-21：`RAIL_1150409`、`MRT_1150409`，1,319 km，中位數 2.2 m，95% 在 8.9 m 內，超過 10 m 的 3.8%）。
+
+## 城市線每站股道斷面（TRACKCOUNT-STUDY，2026-11-05）
+
+`urban_tracks_extract.py` 從同一份整包檔取台北、新北、桃園一帶的軌道（含側線、渡線、站場）、月台與道岔節點，`urban_track_sections.py` 在 8 條可收購城市線的每一站（先移到 600 m 內同名的 OSM 車站點）沿線前後 ±150 m 每 10 m 切一刀 120 m 寬的橫斷面，數這條線自己的股道與月台，並把附近的側線、渡線、道岔歸到最近的站。結果寫在 `docs/research/URBAN_TRACK_LAYOUT_2026-11-05.md`。只給研究用，App 不讀。
+
+```sh
+python3 -I tools/real-railways/urban_tracks_extract.py taiwan.pbf north.pkl
+python3 -I tools/real-railways/urban_track_sections.py north.pkl [tymc:A]
+```
+
+## 可收購路線的高度（HEIGHT-STUDY，2026-11-05）
+
+`line_heights_osm.py` 從同一份整包檔取全台正線 way（不含 `service=siding|yard|spur|crossover`）的 `bridge`／`tunnel`／`layer`／`level` 與車站點；`line_heights_summary.py` 讀 `LineHeightReportTests`（`LINE_HEIGHT_REPORT=1`）印出的 `HEIGHT_*` 行，逐條線列出遊戲的型式與離地高度對 `rail_tracks.json`、`rail_structures.json`、OSM 標籤的差異。結果寫在 `docs/research/LINE_HEIGHTS_2026-11-05.md`。只給研究用，App 不讀。
+
+```sh
+LINE_HEIGHT_REPORT=1 swift test --skip-build --filter LineHeightReportTests > report.log 2>&1
+python3 -I tools/real-railways/line_heights_osm.py taiwan.pbf osm_heights.pkl
+python3 -I tools/real-railways/line_heights_summary.py report.log osm_heights.pkl
+```

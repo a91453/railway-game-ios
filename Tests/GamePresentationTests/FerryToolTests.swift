@@ -81,7 +81,10 @@ final class FerryToolTests: XCTestCase {
         XCTAssertEqual(try replayed(session).ferryRoutes, session.world.ferryRoutes)
         session.removeFerryRoute(id)
         XCTAssertTrue(session.world.ferryRoutes.isEmpty)
-        XCTAssertNil(session.ferryMapOverlay)
+        XCTAssertEqual(session.ferryMapOverlay?.routes, [], "the mode still marks the shore")
+        XCTAssertEqual(session.ferryMapOverlay?.shore, [.init(row: 3, columns: 0..<64), .init(row: 6, columns: 0..<64)])
+        session.setBusMode(.routes)
+        XCTAssertNil(session.ferryMapOverlay, "nothing outside the mode")
     }
 
     func testTheEditsAreWrittenAndReadBack() throws {
@@ -98,20 +101,23 @@ final class FerryToolTests: XCTestCase {
         }
     }
 
-    /// A tap away from the shore or on the water puts no pier; a tap on the
-    /// last pier takes it back.
-    func testPiersStandOnlyOnTheShore() throws {
+    /// Decision 585 續 (FERRYPIER): a tap within ``RealFerry/snapCells`` of
+    /// the shore, on the land or the water, puts the pier on the nearest
+    /// cell of it; one further away puts none and says which way and how
+    /// far the shore is; a tap whose nearest is the last pier takes it back.
+    func testPiersSnapToTheNearestShore() throws {
         let session = try makeSession()
-        session.tapBusTool(at: middle(row: 10, column: 6), reach: 0)
-        XCTAssertTrue(session.ferryDraft.isEmpty)
+        session.tapBusTool(at: middle(row: 11, column: 6), reach: 0)
+        XCTAssertTrue(session.ferryDraft.isEmpty, "five cells from the shore")
         XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.message?.text, "A pier stands on the shore, marked pale blue: the nearest is about 300 m north.")
         session.tapBusTool(at: middle(row: 4, column: 6), reach: 0)
-        XCTAssertTrue(session.ferryDraft.isEmpty, "not on the water")
-        session.tapBusTool(at: middle(row: 3, column: 6), reach: 0)
-        session.tapBusTool(at: middle(row: 6, column: 6), reach: 0)
+        XCTAssertEqual(session.ferryDraft, [CellPosition(row: 3, column: 6)], "the water's nearer shore")
+        session.tapBusTool(at: middle(row: 10, column: 7), reach: 0)
+        XCTAssertEqual(session.ferryDraft.last, CellPosition(row: 6, column: 7), "four cells inland")
         XCTAssertEqual(session.ferryDraft.count, 2)
-        session.tapBusTool(at: middle(row: 6, column: 6), reach: 0)
-        XCTAssertEqual(session.ferryDraft, [CellPosition(row: 3, column: 6)])
+        session.tapBusTool(at: middle(row: 8, column: 7), reach: 0)
+        XCTAssertEqual(session.ferryDraft, [CellPosition(row: 3, column: 6)], "near the last pier: taken back")
         session.undoFerryPier()
         XCTAssertTrue(session.ferryDraft.isEmpty)
         session.setBusMode(.routes)

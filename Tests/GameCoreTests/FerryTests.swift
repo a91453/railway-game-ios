@@ -137,6 +137,28 @@ final class FerryTests: XCTestCase {
         XCTAssertEqual(trips(world, a), 400)
     }
 
+    /// REVIEW-L10, L10-2 (decision 587, continued, as a city bus
+    /// route's): a depot is no transfer. C, a station of no line on the
+    /// first pier, is nearer it than A is: the route meets C; once C is a
+    /// depot it meets A, its riders with it, and C again when it is a
+    /// station again.
+    func testAFerryMeetsNoDepot() throws {
+        var world = try world()
+        let c = try world.buildStation(named: "C", at: GameWorld.middle(of: piers[0])).id
+        let built = try world.createFerryRoute(piers: piers, service: .every(minutes: 15), boats: 2)
+        XCTAssertEqual(world.ferryRoute(id: built.id)?.transfer, BusTransfer(station: c, stop: 0))
+        try world.setStationDepot(c, to: true)
+        let met = try XCTUnwrap(world.ferryRoute(id: built.id))
+        XCTAssertEqual(met.transfer, BusTransfer(station: a, stop: 0))
+        XCTAssertEqual(met.feederTrips, 200)
+        var alone = try self.world()
+        _ = try alone.buildStation(named: "C", at: try XCTUnwrap(world.station(id: c)).location)
+        try alone.setStationDepot(c, to: true)
+        XCTAssertEqual(trips(world, a), try XCTUnwrap(trips(alone, a)) + 200, "the riders go to A")
+        try world.setStationDepot(c, to: false)
+        XCTAssertEqual(world.ferryRoute(id: built.id)?.transfer, BusTransfer(station: c, stop: 0))
+    }
+
     /// A cableway takes its land first, and a ferry's land is no bus's.
     func testACablewayThenAFerryThenABusShareTheLand() throws {
         var world = try world()

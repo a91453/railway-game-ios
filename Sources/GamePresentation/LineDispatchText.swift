@@ -166,7 +166,9 @@ extension GameWorld {
         // Decision 565: the whole train, half its first car before its head
         // and half its last behind its tail.
         let whole = Int64(train.cars) * train.carPitch
-        let fit = max(Int(shortest / train.carPitch), Train.minimumCars)
+        // L10-3: as many cars as stand there untold, within the slack below.
+        let slack = train.carPitch / Self.overhangSlackDivisor
+        let fit = max(Int((shortest + slack) / train.carPitch), Train.minimumCars)
         if let index = longest.firstIndex(where: { $0.map { $0 < train.length } ?? false }) {
             return ShortPlatformCall(station: stops[index], needed: whole, cars: fit)
         }
@@ -175,7 +177,6 @@ extension GameWorld {
         // 20 m, so a 20.3 m car (EMU3000) on four of them stands about a
         // metre past the end: told only when it is more than a sixteenth of
         // a car.
-        let slack = train.carPitch / Self.overhangSlackDivisor
         guard train.cars > 1, let index = longest.firstIndex(where: { $0.map { $0 + slack < whole } ?? false }) else { return nil }
         return ShortPlatformCall(station: stops[index], needed: whole, cars: fit, overhangs: true)
     }

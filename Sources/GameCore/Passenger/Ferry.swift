@@ -496,14 +496,16 @@ extension GameWorld {
 
     /// Each route's station: of `stations`, the nearest a pier's middle
     /// within ``BusRoute/stopReach``, then the lower station ID, then the
-    /// earlier pier; `nil` when none is.
+    /// earlier pier; `nil` when none is. Never a depot (``Station/isDepot``),
+    /// where no line calls (REVIEW-L10, L10-2, as a city bus route's,
+    /// decision 587 continued).
     mutating func refreshFerryTransfers(among stations: [Station]) {
         let reach = BusRoute.stopReach * BusRoute.stopReach
         for position in ferryRoutes.indices {
             var best: (squared: Int64, station: Int, pier: Int)?
             for (pier, cell) in ferryRoutes[position].piers.enumerated() {
                 let middle = Self.middle(of: cell)
-                for station in stations {
+                for station in stations where !station.isDepot {
                     let squared = Self.squaredDistance(middle, station.location)
                     guard squared <= reach else { continue }
                     let candidate = (squared, station.id.rawValue, pier)
