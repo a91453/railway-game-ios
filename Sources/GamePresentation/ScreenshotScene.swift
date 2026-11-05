@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 /// Worlds set up for the game website's screenshots (decision 165), opened
@@ -726,17 +727,27 @@ extension GameSession {
     /// one edit: the app's main thread stays free (the 06:00 passenger
     /// plan of a city map takes minutes in a Debug build, and a UI test's
     /// queries time out).
+    /// Decision 603: on a thread of its own with a 16 MB stack, not a
+    /// task's: the Debug app's ``GameWorld/advance(ticks:)`` holds copies
+    /// of the world in frames too deep for a task thread's 512 KB on iOS
+    /// (the Xiaobitan Branch Line's scene crashed there twice with a bad
+    /// access inside it; decision 590 measured such frames).
     public func runForScreenshot(until seconds: Int64) async {
         let start = world
-        let ran = await Task.detached(priority: .userInitiated) { () -> GameWorld in
-            var world = start
-            world.setSpeed(.normal)
-            while world.clock.now.seconds % GameTime.secondsPerDay < seconds {
-                do throws(GameError) { try world.advance(ticks: 1) } catch { break }
+        let ran = await withCheckedContinuation { (done: CheckedContinuation<GameWorld, Never>) in
+            let thread = Thread {
+                var world = start
+                world.setSpeed(.normal)
+                while world.clock.now.seconds % GameTime.secondsPerDay < seconds {
+                    do throws(GameError) { try world.advance(ticks: 1) } catch { break }
+                }
+                world.setSpeed(.paused)
+                done.resume(returning: world)
             }
-            world.setSpeed(.paused)
-            return world
-        }.value
+            thread.stackSize = 16 << 20
+            thread.qualityOfService = .userInitiated
+            thread.start()
+        }
         _ = perform { (world: inout GameWorld) throws(GameError) in
             world = ran
             return ""

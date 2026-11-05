@@ -187,18 +187,21 @@ final class RealLineRunningSideTests: XCTestCase {
         }
         if let only = ProcessInfo.processInfo.environment["RUNNING_SIDE_ONLY"], only != "openings" { return }
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
-        // The screenshot scene buys it and follows a train near its middle.
-        let scene = GameSession(world: ScreenshotScene.wenhu.make(in: .english), language: .english)
-        scene.population = data.population
-        scene.places = data.places
-        scene.water = data.water
-        scene.heights = data.heights
-        scene.coverage = data.coverage
-        scene.railways = data.railways
-        XCTAssertTrue(scene.buyForScreenshot("trtc:BR"), scene.message?.text ?? "")
-        await scene.runForScreenshot(until: 7 * 3_600 + 40 * 60)
-        XCTAssertEqual(scene.world.clock.now.seconds % GameTime.secondsPerDay, 7 * 3_600 + 40 * 60)
-        XCTAssertNotNil(scene.screenshotTrainMidway(on: "trtc:BR"))
+        // The screenshot scene buys it and follows a train near its middle;
+        // decision 603: the Xiaobitan Branch Line's scene, its one train.
+        for (shown, real) in [(ScreenshotScene.wenhu, "trtc:BR"), (.xiaobitan, "trtc:G_XBT")] {
+            let scene = GameSession(world: shown.make(in: .english), language: .english)
+            scene.population = data.population
+            scene.places = data.places
+            scene.water = data.water
+            scene.heights = data.heights
+            scene.coverage = data.coverage
+            scene.railways = data.railways
+            XCTAssertTrue(scene.buyForScreenshot(real), scene.message?.text ?? "")
+            await scene.runForScreenshot(until: 7 * 3_600 + 40 * 60)
+            XCTAssertEqual(scene.world.clock.now.seconds % GameTime.secondsPerDay, 7 * 3_600 + 40 * 60, real)
+            XCTAssertNotNil(scene.screenshotTrainMidway(on: real), real)
+        }
         let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == "Taipei" })
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
         let openings = [
