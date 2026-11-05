@@ -20,10 +20,11 @@ class GeometryTests(unittest.TestCase):
                 self.assertEqual(meta['height_m'],dimensions[2])
                 self.assertAlmostEqual(min(p[2] for tri,_,_ in mesh.t for p in tri),0)
                 self.assertLessEqual(len(mesh.t),15000)
-                if not far:
-                    names={s['name'] for s in mesh.solids}
-                    self.assertTrue({'door','nav-red','nav-green','tail-white','anti-collision','wingtip-strobe','cabin-window'}<=names)
-                    self.assertTrue(all(math.isfinite(v) for j in meta['joints'] for v in j['axis']))
+                names={s['name'] for s in mesh.solids}
+                self.assertTrue({'nav-red','nav-green','tail-white','anti-collision','wingtip-strobe','cabin-window'}<=names)
+                if not far:self.assertIn('door',names)
+                self.assertTrue(all(math.isfinite(v) for j in meta['joints'] for v in j['axis']))
+                self.assertTrue(all('pivot' in j for j in meta['joints']))
             self.assertLess(counts[1],counts[0]*.7)
 
     def test_airports_parts_and_scenes(self):

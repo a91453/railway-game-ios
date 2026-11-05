@@ -19,7 +19,7 @@ final class Map3DAirportAircraftStudiesTests: XCTestCase {
             let metadata=Map3DAircraftStudies.metadata(kind)
             XCTAssertGreaterThan(metadata.dimensions.length,16)
             XCTAssertGreaterThan(metadata.dimensions.wingspan,16)
-            XCTAssertEqual(metadata.joints.count,3)
+            XCTAssertEqual(metadata.joints.count,kind == .commuter19 || kind == .regional70 ? 4 : 2)
             XCTAssertEqual(metadata.glowParts.count,6)
         }
     }
@@ -52,7 +52,7 @@ final class Map3DAirportAircraftStudiesTests: XCTestCase {
         }
         let bridges=Map3DAirportStudies.connections(.cityTerminal).jetbridges
         XCTAssertEqual(bridges.count,4)
-        for bridge in bridges { XCTAssertGreaterThan(bridge.exit.x,bridge.pivot.x);XCTAssertEqual(bridge.extensionRange.upperBound,7) }
+        for bridge in bridges { XCTAssertGreaterThan(bridge.exit.x,bridge.pivot.x);XCTAssertEqual(bridge.translationAxis.x,1);XCTAssertEqual(bridge.extensionRange.upperBound,7) }
         XCTAssertTrue(Map3DAirportStudies.connections(.islandTerminal).jetbridges.isEmpty)
     }
 }

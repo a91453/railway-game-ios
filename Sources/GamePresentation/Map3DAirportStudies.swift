@@ -22,6 +22,7 @@ public enum Map3DAirportStudies {
         public let id: String
         public let pivot: Map3DPoint
         public let exit: Map3DPoint
+        public let translationAxis: Map3DPoint
         public let extensionRange: ClosedRange<Float>
     }
     public struct Connections: Sendable {
@@ -38,7 +39,7 @@ public enum Map3DAirportStudies {
         let taxi: [Link] = kind == .runway ? [Link(position:Map3DPoint(0,15,0),heading:Map3DPoint(0,1,0),length:30)] :
             (kind == .taxiway ? [-15,15].map { Link(position:Map3DPoint(Float($0),0,0),heading:Map3DPoint(1,0,0),length:30) } : [])
         let bridges: [Jetbridge] = kind == .cityTerminal ? [-17,-5,5,20].enumerated().map { i,y in
-            Jetbridge(id:"J\(i+1)",pivot:Map3DPoint(45,Float(y),y < 0 ? 3.25 : 4.35),exit:Map3DPoint(63,Float(y),y < 0 ? 3.25 : 4.35),extensionRange:0...7)
+            Jetbridge(id:"J\(i+1)",pivot:Map3DPoint(45,Float(y),y < 0 ? 3.25 : 4.35),exit:Map3DPoint(63,Float(y),y < 0 ? 3.25 : 4.35),translationAxis:Map3DPoint(1,0,0),extensionRange:0...7)
         } : []
         return Connections(stands:stands,runwayEnds:ends,taxiwayLinks:taxi,jetbridges:bridges)
     }

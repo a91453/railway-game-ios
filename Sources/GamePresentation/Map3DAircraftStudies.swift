@@ -26,11 +26,15 @@ public enum Map3DAircraftStudies {
     }
     public static func metadata(_ kind: Kind) -> Metadata {
         let d=dimensions(kind)
-        let doorHeight: Float = switch kind { case .commuter19: 1.7; case .regional70: 2.9; case .narrowJet: 4.3; case .wideJet: 5.9 }
-        return Metadata(dimensions:d,door:Map3DPoint(d.length * 0.35,0,doorHeight),
-            joints:[Joint(part:"propeller",pivot:Map3DPoint(0,0,0),axis:Map3DPoint(1,0,0),lower:0,upper:2 * .pi),
-                    Joint(part:"landing-gear",pivot:Map3DPoint(0,0,1),axis:Map3DPoint(0,1,0),lower:0,upper:kind == .commuter19 ? 0 : 1.2),
-                    Joint(part:"door",pivot:Map3DPoint(d.length * 0.35,0,doorHeight),axis:Map3DPoint(0,0,1),lower:0,upper:1.57)],
+        let radius:Float = switch kind { case .commuter19: 2.15; case .regional70: 2.8; case .narrowJet: 3.95; case .wideJet: 5.95 }
+        let wingHeight:Float = switch kind { case .commuter19: 4.578; case .regional70: 5.866; case .narrowJet: 3.7885; case .wideJet: 5.3985 }
+        let doorHeight: Float = switch kind { case .commuter19: 2.514; case .regional70: 3.178; case .narrowJet: 4.302; case .wideJet: 6.172 }
+        let props: [Joint] = (kind == .commuter19 || kind == .regional70) ? [-1,1].map { side in
+            Joint(part:"propeller-\(side)",pivot:Map3DPoint(0,Float(side) * (radius+d.wingspan*.12),wingHeight),axis:Map3DPoint(1,0,0),lower:0,upper:2 * .pi)
+        } : []
+        return Metadata(dimensions:d,door:Map3DPoint(d.length * 0.35,radius,doorHeight),
+            joints:props + [Joint(part:"landing-gear",pivot:Map3DPoint(0,0,1),axis:Map3DPoint(0,1,0),lower:0,upper:kind == .commuter19 ? 0 : 1.2),
+                            Joint(part:"door",pivot:Map3DPoint(d.length * 0.35,radius,doorHeight),axis:Map3DPoint(0,0,1),lower:0,upper:1.57)],
             glowParts:["left-red","right-green","tail-white","anti-collision-red","strobe-white","cabin-windows"])
     }
     public static func dimensions(_ kind: Kind) -> Dimensions {

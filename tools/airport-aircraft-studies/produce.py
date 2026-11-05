@@ -58,9 +58,8 @@ def aircraft(mesh, kind, far, paint=0):
               (wing_x-1.0,side*(W/2)),(wing_x-3.0,side*(W/2))]
         if side<0:poly.reverse()
         prism(mesh,'left-wing' if side>0 else 'right-wing',poly,wz,wz+.20,belt)
-        if not far:
-            mesh.box('wingtip-strobe',wing_x-2.1,side*(W/2-.13),wz+.08,.20,.22,.10,'white',1)
-            mesh.box('nav-red' if side>0 else 'nav-green',wing_x-2.4,side*(W/2-.16),wz+.12,.20,.22,.10,'red' if side>0 else 'green',1)
+        mesh.box('wingtip-strobe',wing_x-2.1,side*(W/2-.13),wz+.08,.20,.22,.10,'white',1)
+        mesh.box('nav-red' if side>0 else 'nav-green',wing_x-2.4,side*(W/2-.16),wz+.12,.20,.22,.10,'red' if side>0 else 'green',1)
     # Tailplane remains elevated on the T-tail variant at both LODs.
     tailz=H-.28 if wing=='high-t' else belly+r*.65
     prism(mesh,'vertical-tail',[(-L*.48,-.13),(-L*.27,-.13),(-L*.36,.13),(-L*.48,.13)],belly, H-.08,belt)
@@ -68,15 +67,15 @@ def aircraft(mesh, kind, far, paint=0):
         poly=[(-L*.44,0),(-L*.34,0),(-L*.40,side*W*.17),(-L*.47,side*W*.17)]
         if side<0:poly.reverse()
         prism(mesh,'tailplane',poly,tailz,tailz+.13,belt)
+    mesh.box('tail-white',-L*.46,0,H-.1,.18,.18,.14,'white',1)
+    mesh.box('anti-collision',0,0,belly+r+.02,.24,.24,.15,'red',1)
+    mesh.box('beacon-belly',0,0,belly-r-.04,.22,.22,.13,'red',1)
+    count=max(4,int(L/2.2)) if not far else 2
+    for side in (-1,1):
+        for i in range(count):
+            x=-L*.27+(i+.5)*(L*.66/count)
+            mesh.box('cabin-window',x,side*(r*.995),belly+.23*r,.36,.035,.30,'glass',1)
     if not far:
-        mesh.box('tail-white',-L*.46,0,H-.1,.18,.18,.14,'white',1)
-        mesh.box('anti-collision',0,0,belly+r+.02,.24,.24,.15,'red',1)
-        mesh.box('beacon-belly',0,0,belly-r-.04,.22,.22,.13,'red',1)
-        count=max(4,int(L/2.2))
-        for side in (-1,1):
-            for i in range(count):
-                x=-L*.27+i*(L*.66/count)
-                mesh.box('cabin-window',x,side*(r*.995),belly+.23*r,.36,.035,.30,'glass',1)
         mesh.box('door',L*.35,r+.02,belly-r*.24,.78,.05,r*.95,'steel')
     # Fixed gear for the short field aircraft; metadata describes retraction for others.
     for x,y in [(L*.18,0),(-L*.10,W*.11),(-L*.10,-W*.11)]:
@@ -93,10 +92,11 @@ def aircraft(mesh, kind, far, paint=0):
             tube(mesh,'underwing-engine',ex-1.6,ex+1.5,ey,r*.31,max(wz-r*.75,.55+r*.31),'steel',8 if far else 12)
     return {'length_m':L,'wingspan_m':W,'height_m':H,
             'door':{'position':[L*.35,r,belly-r*.24],'heading':[0,1,0]},
-            'joints':[{'part':'propellers','kind':'rotation','axis':[1,0,0],'unit':'radians'},
-                      {'part':'landing-gear','kind':'rotation','axis':[0,1,0],'limit':[0,1.2],
+            'joints':([{'part':f'propeller-{side}','kind':'rotation','pivot':[wing_x-1.2+1.23,side*(r+W*.12),wz-.05],
+                         'axis':[1,0,0],'unit':'radians','limit':[0,2*math.pi]} for side in (-1,1)] if engine=='prop' else [])+
+                     [{'part':'landing-gear','kind':'rotation','pivot':[-L*.10,0,floor], 'axis':[0,1,0],'limit':[0,1.2],
                        'fixed':kind=='commuter19'},
-                      {'part':'door','kind':'rotation','axis':[0,0,1],'limit':[0,1.57]}],
+                      {'part':'door','kind':'rotation','pivot':[L*.35,r,belly-r*.24], 'axis':[0,0,1],'limit':[0,1.57]}],
             'night_flags':['nav-red','nav-green','tail-white','anti-collision',
                            'wingtip-strobe','cabin-window']}
 
@@ -164,7 +164,7 @@ def airport(mesh,kind,far):
             mesh.box('jetbridge',L*.5+9,y,base,18,2.4,2.5,'white')
             mesh.box('bridge-legs',L*.5+16,y,0,.3,.3,base,'steel')
     return {'jetbridges':[{'id':f'J{i+1}','pivot':[L*.5,y,3.25 if y<0 else 4.35],
-                           'axis':[0,0,1],'extension_m':[0,7],
+                           'joint':{'kind':'translation','axis':[1,0,0],'limit_m':[0,7]},
                            'end':[L*.5+18,y,3.25 if y<0 else 4.35]} for i,y in enumerate((-17,-5,5,20))] if city else [],
             'boarding':'jetbridge' if city else 'walk'}
 
