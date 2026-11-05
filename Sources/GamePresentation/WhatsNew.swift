@@ -31,10 +31,8 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         // 113.1.
-        // TODO(113.1): not merged yet, add when they are in: the 3D ferry
-        // boat and pier (#1824); follow-a-bus perspective, the bus's right
-        // window and the next-station view (#1819); the crash when a new
-        // line adds a station (CRASH112).
+        // TODO(113.1): not merged yet, add when it is in: the crash when a
+        // new line adds its second station (CRASH112).
         Entry(
             id: "2026-11-05-113-1",
             items: [
@@ -53,6 +51,18 @@ public enum WhatsNew {
                 Line(
                     english: "On the 3D map you can follow a cable car cabin: out of its window, from behind and above, or from the side.",
                     chinese: "3D 地圖可以跟隨纜車吊廂：窗外、上後方、旁邊三種視角。"
+                ),
+                Line(
+                    english: "On the 3D map, ferries sail between Tamsui and Bali and between Gushan and Cijin on their timetable, and the piers have a waiting shelter and a gangway.",
+                    chinese: "3D 地圖上，淡水—八里、鼓山—旗津的渡輪依班次往返；碼頭有候船棚與跳板。"
+                ),
+                Line(
+                    english: "Following a bus, its window view looks out the right side. Following a train or bus at a stop, you can switch to the view from the station.",
+                    chinese: "跟隨公車的「車窗」視角改看右側；跟隨列車或公車停站時，可以直接切到「從車站看」。"
+                ),
+                Line(
+                    english: "Following a cable car cabin, buildings in the way of the camera turn see-through.",
+                    chinese: "跟隨纜車吊廂時，擋住鏡頭的建築會變半透明。"
                 ),
                 Line(
                     english: "Placing a train, you choose its platform; if it does not fit, you are told why and what to change. With no station chosen, the button asks you to tap one first.",
