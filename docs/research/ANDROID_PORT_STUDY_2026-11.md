@@ -8,7 +8,7 @@
 
 ## 0. 結論
 
-**一句話**：走 (A)。GameCore 與 GamePresentation 原封不動，用 Swift 官方的 Android SDK 共用。這已實測過：三套 fixture 在 Android ARM64 上全過。3D 繼續自製，只為安卓另寫一個 Vulkan 的最底層，Swift 直接呼叫 NDK，不加依賴。地圖用 MapLibre Native Android。畫面層先用 Jetpack Compose 重寫；Skip 授權是 MPL／AGPL，要作者決定才能用。不換 Unity 或 Godot。
+**一句話**：走 (A)。GameCore 與 GamePresentation 原封不動，用 Swift 官方的 Android SDK 共用。這已實測過：三套 fixture 在 Android ARM64 上全過；3D 網格只有 EMU3000 因安卓的 `atan2f`／`asinf` 差最後一位而和雜湊鎖不同（§4.2）。3D 繼續自製，只為安卓另寫一個 Vulkan 的最底層，Swift 直接呼叫 NDK，不加依賴。地圖用 MapLibre Native Android。畫面層先用 Jetpack Compose 重寫；Skip 授權是 MPL／AGPL，要作者決定才能用。不換 Unity 或 Godot。
 
 | 問題 | 建議 | 一句話的理由 |
 | --- | --- | --- |
@@ -35,7 +35,8 @@
 | `GoldenScenarioTests` | **24/24 過**（qemu 上 896 秒；CI 原生約 280–330 秒） | VERIFIED（qemu） |
 | `SavedGameTests` | **38/38 過**（32 秒） | VERIFIED（qemu） |
 | `ReplayFixtureTests` | **2 過、1 略過**；略過的是錄製用的測試，Linux 上也一樣略過 | VERIFIED（qemu） |
-| GamePresentation 的 3D 模型雜湊鎖（`Map3DModelPackLockTests`，每個頂點逐位元比對 `tools/train-models/hashes.lock.json`）與 `Map3DTests` 等 | 見 §4.2 | 見 §4.2 |
+| GamePresentation 的 3D 測試：`Map3DTests` 18/18、`Map3DTEMU2000Tests` 9/9、`Map3DFarSets422Tests` 3/3 | **全過**（qemu 上 1,291／653／484 秒），含「同一場景每次都一樣」 | VERIFIED（qemu） |
+| 3D 模型雜湊鎖（`Map3DModelPackLockTests`，每個頂點的 `Float` 逐位元比對 `tools/train-models/hashes.lock.json`） | **2 個失敗、1 略過**：鎖住的 1,081 個模型裡，只有 EMU3000 的 18 個（近景 8、遠景 8、車燈 2）雜湊不同，連帶整包的兩個摘要不同。原因是 bionic 的 `atan2f`、`asinf` 和 glibc 最後一位不同（§4.2） | VERIFIED（qemu）；同一份 EMU3000 原始碼與鎖在 Linux 上過（`main` 7ca083b9 的夜間完整 CI 綠） |
 | Swift 呼叫 NDK 的 Vulkan、GLES3、EGL（`<vulkan/vulkan.h>` 經 module map） | 安卓 aarch64 編譯、連結都過（`NEEDED libvulkan.so`）。qemu 裡沒有 GPU，沒跑 | 編譯 VERIFIED；執行 UNVERIFIED |
 | 同一份 Swift 的 Vulkan 程式在 Linux 主機跑，用 Mesa 的 lavapipe（軟體 Vulkan） | `vkCreateInstance` 成功，列出 `llvmpipe … api 1.4` | VERIFIED：Linux CI 可以無頭測 Vulkan 後端 |
 | 把 `Map3DShaders.metal` 的天空 shader（`map3dSkyVertex`／`map3dSkyFragment`，加上 `map3dHaze`、`map3dFinish`）手翻成 GLSL，用 NDK 自帶的 `glslc` 編成 SPIR-V，再用 `spirv-val --target-env vulkan1.1` 檢查 | 都過（vert 852 bytes、frag 7,144 bytes；GLSL 66 行，對應 MSL 約 75 行） | 編譯 VERIFIED；畫出來的圖沒比對 |
@@ -137,12 +138,22 @@ Metal 這一層有 12 條 pipeline（`makeRenderPipelineState` 12 次）、16 �
 - Foundation：安卓用的是和 Linux 同一份 swift-foundation（`FoundationEssentials` 等），JSON 的編解碼與 Linux 相同；`testFixturesUsePortableJSON` 也過了。
 - 要守的：qemu 不是實機。12 月的 spike 要在實機（或 Firebase Test Lab 這類實機雲）再跑一次這三套（§8 驗收 1）。
 
-### 4.2 GamePresentation 的 3D 網格：要另外驗
+### 4.2 GamePresentation 的 3D 網格：大多同值，EMU3000 不同
 
 `Map3DModelPackLockTests` 把每個車型的每個頂點（`Float` 的 bitPattern）做雜湊，鎖在 `tools/train-models/hashes.lock.json`。網格用 `sin`／`cos`（`Float`），算這兩個函式的是各平台自己的 libm：Linux 是 glibc，安卓是 bionic，iOS 是 Apple 的 libm。三者不保證最後一位相同。
 
-- 結果：`Map3DFarSets422Tests` 3/3 過（qemu 上 484 秒）；`Map3DModelPackLockTests`、`Map3DTests`、`Map3DTEMU2000Tests` 在 qemu 上還在跑（GamePresentation 的測試是 -Onone，模擬很慢），結果補在本 PR 的下一個 commit。
-- 影響：這不是存檔或遊戲規則的問題，GamePresentation 的網格不進存檔。最多是某個頂點差在最後一位，畫面看不出來；但若雜湊不同，安卓上要用「容許誤差」比對，不能沿用逐位元的鎖。iOS 本身就已經是這種情況：雜湊是在 Linux 上產生的，沒有任何測試在 iOS 上比對它。
+- 結果（qemu＋Android 14 bionic，GamePresentation 測試是 -Onone）：
+  - `Map3DTests` 18/18、`Map3DTEMU2000Tests` 9/9、`Map3DFarSets422Tests` 3/3 全過。
+  - `Map3DModelPackLockTests`：`testEveryModelIsAsLocked` 失敗，鎖住的 1,081 個模型只有 18 個不同，全是 EMU3000（`set-emu3000-*` 8 節、`set-emu3000Far-*` 8 節、`light-set-emu3000-head`／`-tail`）；`testTheOrderAndTheLampsAreAsBefore` 因為同一批模型，兩個整包摘要不同（`25d1ff1a4a7bd8cd`→`2e3aeff57d7ffe1`、`9ba8a2941836bb89`→`7b54f64b5f5f6f9b`）。
+  - 對照：同一份 EMU3000 原始碼與同樣的 EMU3000 鎖值，在 `main` 7ca083b9 的夜間完整 CI（Linux，glibc）是綠的。
+- 原因（已實測）：寫一個 C 小程式，`-fno-builtin` 各呼叫 20 萬次，比較 glibc（本機）與 bionic（qemu）的結果雜湊：`sinf`、`cosf`、`powf` 完全相同；**`atan2f`、`asinf` 不同**。EMU3000 是唯一用 `atan2f`／`asinf` 算頂點位置的鎖住車型（`Map3DEMU3000.swift` 第 254、260、286、372 行：車頭的圓角與車身斷面）；E500 的 `atan2f` 只拿來排序，結果沒變。
+- 影響：
+  - 不是存檔或遊戲規則的問題：GamePresentation 的網格不進存檔，GameCore 不用這些函式（§4.1）。差在最後一位，畫面看不出來。
+  - 但逐位元的鎖不能直接搬到安卓。iOS 其實也一樣：雜湊在 Linux 上產生，沒有測試在 iOS 上比對；Apple 的 libm 很可能也有同樣的差異。
+- 怎麼處理（Spike 1 的一部分，選一個）：
+  1. 在 GamePresentation 自己寫 `atan2f`／`asinf`（只用加減乘除與 `sqrt`，IEEE 754 保證三個平台相同），讓三個平台逐位元一致。要改 EMU3000 的兩個呼叫點，Linux 上的雜湊會變一次，那張 PR 要逐值說明（照 CLAUDE.md 對鎖的規則）。
+  2. 安卓上這個測試改用容許誤差比對，鎖照舊只在 Linux 逐位元。
+  - 建議 1：之後新的車型配方也不會再踩到，且 iOS、安卓、Linux 三邊的網格真的相同。
 
 ## 5. 2D 地圖效能與安卓
 
@@ -313,8 +324,9 @@ PERF114 量到 App 的 2D Canvas 全台縮圖約 8 fps：地面每秒約 442 ms�
   - 一個 `android-probe.yml`：Linux 容器裡裝 Swift 6.4 的 Android SDK 與 NDK 30，`swift build --swift-sdk aarch64-unknown-linux-android28 --build-tests`，再用 qemu＋bionic 跑 Golden、SavedGame、Replay。照 Wasm Probe 的觸發條件：只在 GameCore、GoldenScenarios 等改到時跑。
 - 驗收：
   1. 三套 fixture 在 aarch64-android 全過。另外，作者有實機時，用 `adb push` 在一台實機跑一次。
-  2. `swift build -Xswiftc -warnings-as-errors` 在 Linux 照樣乾淨。
-  3. 本機與 CI 都不加任何 Package 依賴。
+  2. 3D 模型雜湊鎖在安卓上的處理定案並落地（§4.2：自寫 `atan2f`／`asinf`，或安卓用容許誤差）。
+  3. `swift build -Xswiftc -warnings-as-errors` 在 Linux 照樣乾淨。
+  4. 本機與 CI 都不加任何 Package 依賴。
 
 **Spike 2：一個 Android App 殼**
 
