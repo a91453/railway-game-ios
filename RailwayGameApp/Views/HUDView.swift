@@ -637,8 +637,8 @@ private struct GameMenu: View, Equatable {
                 }
             }
             .accessibilityHint(Text(verbatim: language.text(
-                "Puts the controls away and lets the camera move between your trains, stations and lines. Tap the screen to come back.",
-                "收起按鈕，鏡頭自己在你的列車、車站和路線之間切換。碰一下螢幕就回來。"
+                "Puts the controls away and lets the camera move between your trains, stations and lines, and the real trains running on the map. Tap the screen to come back.",
+                "收起按鈕，鏡頭自己在你的列車、車站、路線和地圖上跑的真實列車之間切換。碰一下螢幕就回來。"
             )))
             .accessibilityIdentifier("menu.ambient")
         case .settings:

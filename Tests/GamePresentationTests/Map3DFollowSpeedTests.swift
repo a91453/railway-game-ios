@@ -107,4 +107,27 @@ final class Map3DFollowSpeedTests: XCTestCase {
             XCTAssertEqual(session.world.clock.runningSpeed, .normal)
         }
     }
+
+    /// Decision 606: the idle mode following a real train runs at 10× at
+    /// most, through the moment the 3D map is closed and opened again
+    /// round it, and gives the speed back when it stops.
+    func testFollowingARealTrainRunsAtTenAtMost() async throws {
+        let world = try makeFollowWorld(speed: .normal)
+        await MainActor.run {
+            let session = GameSession(world: world)
+            session.setFollowingRealTrain(true)
+            XCTAssertTrue(session.isSpeedCappedIn3D)
+            XCTAssertEqual(session.world.clock.speed, .x10)
+            session.setMap3DOpen(true)
+            session.setMap3DOpen(false)
+            XCTAssertEqual(session.world.clock.speed, .x10, "still held while its 3D map opens again")
+            // On to a train of the player's on the 3D map: held still.
+            session.setMap3DOpen(true)
+            session.followTrain(Self.train)
+            session.setFollowingRealTrain(false)
+            XCTAssertEqual(session.world.clock.speed, .x10)
+            session.stopFollowingTrain()
+            XCTAssertEqual(session.world.clock.speed, .normal, "the speed given back")
+        }
+    }
 }

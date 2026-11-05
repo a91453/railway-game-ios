@@ -514,6 +514,21 @@ public struct Map3DRealTrains: Sendable {
 
     // MARK: - Each frame
 
+    /// Where the rails of line `index` a train going `way` (1 up the
+    /// line's km, -1 down) runs on are `km` along it, on the path its
+    /// assignment binds it to there (`bound`, decision 600); `ring`: the
+    /// ring's length, round which `km` is taken. `nil` where no car
+    /// shows (a tunnel, past the scene, beside the player's track).
+    func railPoint(line index: Int, atKm km: Double, way: Double, ring: Double?, bound: [Leg]?) -> Map3DPoint? {
+        var km = km
+        if let ring, ring > 0 { km = (km.truncatingRemainder(dividingBy: ring) + ring).truncatingRemainder(dividingBy: ring) }
+        let route = bound?.first { $0.km.contains(km) }?.path
+        for track in tracks[index] {
+            if let point = track.point(atKm: km, way: way, route: route) { return point }
+        }
+        return nil
+    }
+
     /// The real trains at second `second` of the game day `day` seen from
     /// `eye`, added to `frame`: the models of `models` within reach, the
     /// rest boxes; at most ``RealTrainTraffic/mostDrawn`` trains. Decision
@@ -551,13 +566,7 @@ public struct Map3DRealTrains: Sendable {
                 let bound = legs[index][place.key.hasPrefix("-") ? String(place.key.dropFirst()) : place.key]
                 for car in 0..<formation.cars {
                     func at(_ km: Double) -> Map3DPoint? {
-                        var km = km
-                        if isRing, ring > 0 { km = (km.truncatingRemainder(dividingBy: ring) + ring).truncatingRemainder(dividingBy: ring) }
-                        let route = bound?.first { $0.km.contains(km) }?.path
-                        for track in tracks[index] {
-                            if let point = track.point(atKm: km, way: way, route: route) { return point }
-                        }
-                        return nil
+                        railPoint(line: index, atKm: km, way: way, ring: isRing ? ring : nil, bound: bound)
                     }
                     let start = front - way * Double(car) * Self.carPitch
                     guard let a = at(start), let b = at(start - way * Self.carLength) else { continue }

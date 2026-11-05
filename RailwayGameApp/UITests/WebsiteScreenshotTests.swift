@@ -129,6 +129,38 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("xiaobitan-single-3d", app)
     }
 
+    /// Decision 606 (IDLEREAL): the idle mode on a real map with nothing
+    /// of the player's follows a real timetable's train on the 3D map, its
+    /// name and where it goes faint in the top corner, gone a few seconds
+    /// later. For the screenshot review of the pull request that added it,
+    /// not the website. The train is the director's random pick: one in a
+    /// tunnel is passed over, so it may take a few tries.
+    func testIdleModeFollowsARealTrain() {
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "xiaobitan", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let ambient = app.buttons["menu.ambient"]
+        XCTAssertTrue(ambient.appears(within: 30), "The menu opens")
+        ambient.waitUntilSettled()
+        settle(seconds: 1)
+        // Touched at its frame's middle, as testGameMenuAndRules does.
+        let frame = ambient.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ambient.curtain"].firstMatch.appears(within: 10), "The idle mode starts")
+        let corner = app.staticTexts["ambient.realTrain"]
+        XCTAssertTrue(corner.appears(within: 1_200), "A real train is followed and named")
+        settle(seconds: 1)
+        keep("idle-real-train", app)
+        XCTAssertTrue(corner.disappears(within: 30), "Its name fades")
+        settle(seconds: 2)
+        keep("idle-real-train-later", app)
+    }
+
     /// Decision 566: the new-train card, the Puyuma's with another
     /// waiting ("Skip all"), then the EMU3000's, and in English the 700T's.
     /// For the screenshot review of the pull request that added it.
