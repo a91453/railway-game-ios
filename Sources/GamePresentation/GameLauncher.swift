@@ -910,7 +910,7 @@ public final class GameLauncher {
     public func openScreenshotScene(_ scene: ScreenshotScene) -> Task<Void, Never> {
         let language = language
         // Decision 585: a scene by the water waits for the map of Taiwan's water.
-        let load = scene == .tamsuiFerry ? realWorldLoad : nil
+        let load = scene.needsWater ? realWorldLoad : nil
         return Task {
             await load?.value
             let water = self.water

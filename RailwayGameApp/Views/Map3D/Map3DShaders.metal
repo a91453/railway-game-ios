@@ -56,6 +56,9 @@ struct Map3DVertexOut {
     float plane [[flat]];
 };
 
+// Opt-in native glass only. Existing trainGlass/steel retain their old pass.
+static bool map3dIsTransparentGlass(float layer) { return layer < -15.5 && layer > -17.5; }
+
 vertex Map3DVertexOut map3dVertex(Map3DVertexIn in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]]) {
     Map3DVertexOut out;
     out.position = uniforms.viewProjection * float4(in.position, 1.0);
@@ -93,8 +96,9 @@ vertex Map3DVertexOut map3dInstancedVertex(Map3DVertexIn in [[stage_in]], consta
     float layer = in.texture.z;
     bool glowing = layer < -1.5 && layer > -2.5;
     bool material = layer < -12.5 && layer > -15.5;
-    out.surfaceAt = material ? float2(in.texture.x, 0.0) : float2(0.0);
-    out.layer = (glowing || material) ? layer : -1.0;
+    bool transparent = map3dIsTransparentGlass(layer);
+    out.surfaceAt = transparent ? in.texture.xy : material ? float2(in.texture.x, 0.0) : float2(0.0);
+    out.layer = (glowing || material || transparent) ? layer : -1.0;
     out.plane = 0.0;
     return out;
 }
@@ -459,7 +463,22 @@ float4 map3dShade(Map3DVertexOut in, constant Map3DUniforms &uniforms, texture2d
 
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
                               texture2d_array<float> surfaces [[texture(0)]], depth2d<float> sunShadow [[texture(1)]]) {
+    // Glass must not write opaque colour or depth before its sorted pass.
+    if (map3dIsTransparentGlass(in.layer)) { discard_fragment(); }
     return map3dShade(in, uniforms, surfaces, sunShadow);
+}
+
+fragment float4 map3dTransparentGlassFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                                             texture2d_array<float> surfaces [[texture(0)]], depth2d<float> sunShadow [[texture(1)]]) {
+    if (!map3dIsTransparentGlass(in.layer)) { discard_fragment(); }
+    Map3DVertexOut pane = in;
+    pane.layer = in.layer < -16.5 ? -15.0 : -13.0;
+    pane.surfaceAt = float2(in.surfaceAt.y, 0.0); // original baked reflection shade
+    // Both sides of a closed pane: useful outside, inside and below a floor.
+    if (dot(pane.normal, uniforms.eye.xyz - pane.world) < 0.0) { pane.normal = -pane.normal; }
+    float4 colour = map3dShade(pane, uniforms, surfaces, sunShadow);
+    colour.a = clamp(in.surfaceAt.x, 0.0, 1.0);
+    return colour;
 }
 
 // Decision 342: the cars the buildings in front of are seen through, as
@@ -507,11 +526,13 @@ fragment float4 map3dSeeThroughFragment(Map3DVertexOut in [[stage_in]], constant
 // (Map3DSunShadow.Region.matrix), no colour: the chunks' meshes, and the
 // street furniture through its instances.
 vertex float4 map3dSunDepthVertex(Map3DVertexIn in [[stage_in]], constant float4x4 &sun [[buffer(1)]]) {
+    if (map3dIsTransparentGlass(in.texture.z)) { return float4(2.0, 2.0, 2.0, 1.0); }
     return sun * float4(in.position, 1.0);
 }
 
 vertex float4 map3dSunDepthInstancedVertex(Map3DVertexIn in [[stage_in]], constant float4x4 &sun [[buffer(1)]],
                                            const device Map3DInstance *instances [[buffer(2)]], uint instance [[instance_id]]) {
+    if (map3dIsTransparentGlass(in.texture.z)) { return float4(2.0, 2.0, 2.0, 1.0); }
     return sun * (instances[instance].transform * float4(in.position, 1.0));
 }
 

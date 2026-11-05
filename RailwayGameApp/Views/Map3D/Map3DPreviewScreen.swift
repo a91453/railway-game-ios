@@ -809,6 +809,10 @@ final class Map3DTrainFeed {
     /// scene, laid again when the cable cars or the scene change.
     private var cableways: Map3DCableways?
     private var cablewaysScene: (x: Double, y: Double)?
+    /// Decision 585 PR-3 (FERRY3): the player's ferries laid in the
+    /// scene, laid again when the routes or the scene change.
+    private var ferries: Map3DFerries?
+    private var ferriesScene: (x: Double, y: Double)?
     /// Decision 400 (FOLLOWBUS): the bus the camera follows, always drawn.
     var followedBus: BusID?
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
@@ -922,7 +926,23 @@ final class Map3DTrainFeed {
             frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel,
                                           following: followedCabin, ahead: ahead).instances
         }
+        // Decision 585 PR-3 (FERRY3): and the ferries' piers and boats, on
+        // the same clock.
+        if let models, let laid = laidFerries(in: scene), let second = cableSecond(at: now) {
+            frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel).instances
+        }
         return frame
+    }
+
+    /// Decision 585 PR-3: the ferries laid in `scene`, laid again when
+    /// they or the scene change; `nil` with none.
+    private func laidFerries(in scene: Map3DScene) -> Map3DFerries? {
+        guard let world = busWorld, !world.ferryRoutes.isEmpty else { return nil }
+        if ferries?.routes != world.ferryRoutes || ferriesScene?.x != scene.originX || ferriesScene?.y != scene.originY {
+            ferries = Map3DFerries(world: world, scene: scene)
+            ferriesScene = (scene.originX, scene.originY)
+        }
+        return ferries
     }
 
     /// Decision 575 續: the cable cars laid in `scene`, laid again when
@@ -1170,6 +1190,8 @@ private struct Map3DView: UIViewRepresentable {
         guard let asked = value("-screenshot-3d-view").flatMap(Map3DScreenshotView.init) else { return nil }
         // Decision 575 續 (CABLEMAP): over a span of the cable car.
         if let span = value("-screenshot-3d-cableway") { return asked.camera(cableway: span, in: scene, of: world, viewport: viewport) }
+        // Decision 585 PR-3 (FERRY3): over the first ferry's first boat.
+        if arguments.contains("-screenshot-3d-ferry") { return asked.camera(ferryIn: scene, of: world, viewport: viewport) }
         guard let place = value("-screenshot-scene").flatMap(ScreenshotScene.init(rawValue:))?.place else { return nil }
         return asked.camera(at: place, in: scene, of: world, viewport: viewport)
     }
