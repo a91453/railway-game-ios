@@ -178,28 +178,128 @@ extension GameWorld {
     /// station's platforms, as the demos' ends do (``HighSpeedDemo``), has
     /// one track between the stations (``GameWorld/lineTrackCounts(_:)``)
     /// but only the turnout's edge single: trains pass on the rest of it.
-    private func singleTrackLength(of edges: [TrackEdgeID], from a: StationID, to b: StationID) -> Int64 {
+    ///
+    /// Decision 597: an edge counts when every way from a platform of `a`
+    /// to one of `b` runs over it: when it dominates the platforms of `b`
+    /// in the graph of edges a train may run on from one to the next
+    /// (``edgesEveryWayRunsOver(from:to:)``), worked out once for the leg,
+    /// not with a search of the whole network for each of its edges (on a
+    /// real map, hundreds of short edges a leg: some 0.8 s an hour for the
+    /// station master's look).
+    func singleTrackLength(of edges: [TrackEdgeID], from a: StationID, to b: StationID) -> Int64 {
         let starts = Set(network.platforms.filter { $0.station == a }.map(\.edge))
         let goals = Set(network.platforms.filter { $0.station == b }.map(\.edge))
-        // Whether a platform of `b` is reached from one of `a` without `cut`.
-        func joined(without cut: TrackEdgeID) -> Bool {
-            var seen = starts.subtracting([cut])
-            var queue = Array(seen)
-            while let edge = queue.popLast() {
-                if edge != cut, goals.contains(edge) { return true }
-                guard let track = network.edge(edge) else { continue }
-                for node in [track.from, track.to] {
-                    for next in network.node(node)?.end(of: edge)?.exits ?? [] where next != cut && seen.insert(next).inserted {
-                        queue.append(next)
-                    }
-                }
-            }
-            return false
-        }
+        let every = edgesEveryWayRunsOver(from: starts, to: goals)
         return Set(edges).reduce(0) { length, edge in
-            guard let track = network.edge(edge), !joined(without: edge) else { return length }
+            guard let track = network.edge(edge), every.map({ $0.contains(edge) }) ?? true else { return length }
             return length + track.length
         }
+    }
+
+    /// Decision 597: the edges every way from an edge of `starts` to one of
+    /// `goals` runs over, ends included: a train arriving at a node along
+    /// an edge goes on by its exits there (``TrackNodeEnd/exits``). `nil`
+    /// when no way reaches a goal at all (every edge then stands between).
+    /// The dominators of a sink after the goals, from a root before the
+    /// starts (Cooper, Harvey and Kennedy, "A Simple, Fast Dominance
+    /// Algorithm", 2001).
+    func edgesEveryWayRunsOver(from starts: Set<TrackEdgeID>, to goals: Set<TrackEdgeID>) -> Set<TrackEdgeID>? {
+        // Vertex 0 is the root, then the edges reached, then the sink.
+        var index: [TrackEdgeID: Int] = [:]
+        var vertices: [TrackEdgeID?] = [nil]
+        var successors: [[Int]] = [[]]
+        func vertex(_ edge: TrackEdgeID) -> Int {
+            if let known = index[edge] { return known }
+            index[edge] = vertices.count
+            vertices.append(edge)
+            successors.append([])
+            return vertices.count - 1
+        }
+        var queue: [TrackEdgeID] = []
+        for start in starts.sorted() {
+            if index[start] == nil { queue.append(start) }
+            successors[0].append(vertex(start))
+        }
+        var reachesGoal = false
+        var goalVertices: [Int] = []
+        while let edge = queue.popLast() {
+            let from = index[edge]!
+            if goals.contains(edge) {
+                reachesGoal = true
+                goalVertices.append(from)
+            }
+            guard let track = network.edge(edge) else { continue }
+            for node in [track.from, track.to] {
+                for next in network.node(node)?.end(of: edge)?.exits ?? [] {
+                    let isNew = index[next] == nil
+                    let to = vertex(next)
+                    successors[from].append(to)
+                    if isNew { queue.append(next) }
+                }
+            }
+        }
+        guard reachesGoal else { return nil }
+        let sink = vertices.count
+        vertices.append(nil)
+        successors.append([])
+        for goal in goalVertices { successors[goal].append(sink) }
+        // Postorder from the root, without recursion.
+        let count = vertices.count
+        var order = [Int](repeating: -1, count: count)
+        var postorder: [Int] = []
+        var visited = [Bool](repeating: false, count: count)
+        var stack: [(vertex: Int, next: Int)] = [(0, 0)]
+        visited[0] = true
+        while let top = stack.last {
+            let list = successors[top.vertex]
+            if top.next < list.count {
+                stack[stack.count - 1].next += 1
+                let next = list[top.next]
+                if !visited[next] {
+                    visited[next] = true
+                    stack.append((next, 0))
+                }
+            } else {
+                stack.removeLast()
+                order[top.vertex] = postorder.count
+                postorder.append(top.vertex)
+            }
+        }
+        var predecessors = [[Int]](repeating: [], count: count)
+        for (from, list) in successors.enumerated() {
+            for to in list { predecessors[to].append(from) }
+        }
+        var dominator = [Int](repeating: -1, count: count)
+        dominator[0] = 0
+        func intersect(_ a: Int, _ b: Int) -> Int {
+            var (a, b) = (a, b)
+            while a != b {
+                while order[a] < order[b] { a = dominator[a] }
+                while order[b] < order[a] { b = dominator[b] }
+            }
+            return a
+        }
+        var changed = true
+        while changed {
+            changed = false
+            for vertex in postorder.reversed() where vertex != 0 {
+                var found = -1
+                for predecessor in predecessors[vertex] where dominator[predecessor] != -1 {
+                    found = found == -1 ? predecessor : intersect(predecessor, found)
+                }
+                if found != dominator[vertex] {
+                    dominator[vertex] = found
+                    changed = true
+                }
+            }
+        }
+        var every = Set<TrackEdgeID>()
+        var vertex = dominator[sink]
+        while vertex != 0 {
+            if let edge = vertices[vertex] { every.insert(edge) }
+            vertex = dominator[vertex]
+        }
+        return every
     }
 
     /// Line `id`'s shortfall with the trains it has, when another line's

@@ -175,6 +175,14 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// first: the session passes what it keeps between commands and days
     /// (``GameSession/worstLosingLine``).
     public init?(world: GameWorld, worstLosingLine: () -> LineLossLeader?) {
+        self.init(world: world, worstLosingLine: worstLosingLine, withoutPlaceToPass: { world.firstLineWithoutPlaceToPass() })
+    }
+
+    /// Decision 597: and asking `withoutPlaceToPass` for the first line
+    /// without a place to pass (``GameWorld/firstLineWithoutPlaceToPass()``),
+    /// which the session keeps between commands: some 0.8 s on a real map
+    /// of 16 lines, the same answer every hour.
+    init?(world: GameWorld, worstLosingLine: () -> LineLossLeader?, withoutPlaceToPass: () -> ServiceLine?) {
         // Decision 153: a steam era's short trains lose money; say why
         // before the debt they lead to.
         if let short = Self.shortSteamTrains(in: world) {
@@ -208,7 +216,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
             }
         }
         // Decision 264: trains that cannot pass on shared single track.
-        if let line = world.firstLineWithoutPlaceToPass() {
+        if let line = withoutPlaceToPass() {
             self = .noPlaceToPass(line: line.id, name: line.name)
             return
         }

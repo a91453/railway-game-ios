@@ -84,4 +84,37 @@ final class SaveTickCostReportTests: XCTestCase {
         }
         print("PERF114 ended at \(session.world.clock.now.clockText)")
     }
+
+    /// The station master's hourly advice in the save, taken apart.
+    func testWhatTheAdviceCosts() throws {
+        guard let path = ProcessInfo.processInfo.environment["PERF_ADVICE"] else { throw XCTSkip("set PERF_ADVICE=<save> to time the advice") }
+        let world = try SaveLibrary.decode(Data(contentsOf: URL(fileURLWithPath: path)))
+        let clock = ContinuousClock()
+        let parts: [(String, () -> Void)] = [
+            ("whole advice", { _ = StationMasterAdvice(world: world) }),
+            ("shortSteamTrains", { _ = StationMasterAdvice.shortSteamTrains(in: world) }),
+            ("debt", { _ = StationMasterAdvice.debt(in: world) }),
+            ("mapAlerts", { _ = world.mapAlerts() }),
+            ("firstLineWithoutPlaceToPass", { _ = world.firstLineWithoutPlaceToPass() }),
+            ("worstLosingLine", { _ = world.worstLosingLine() }),
+            ("festival", { _ = StationMasterAdvice.festival(in: world) }),
+        ]
+        // Decision 597: the dominators agree with decision 264's search on
+        // every leg of the save's lines.
+        var legs = 0
+        for line in world.lines {
+            guard let journey = world.lineJourney(line.id) else { continue }
+            for (leg, edges) in GameWorld.legEdges(of: journey) where leg.to > leg.from && leg.to < line.stops.count {
+                let (a, b) = (line.stops[leg.from], line.stops[leg.to])
+                XCTAssertEqual(world.singleTrackLength(of: edges, from: a, to: b), SingleTrackLengthTests.searched(world, of: edges, from: a, to: b))
+                legs += 1
+            }
+        }
+        print("PERF114 advice legs compared: \(legs)")
+        let repeats = Int(ProcessInfo.processInfo.environment["PERF_REPEATS"] ?? "") ?? 3
+        for (name, part) in parts {
+            let spent = clock.measure { for _ in 0..<repeats { part() } }
+            print(String(format: "PERF114 advice %@: %.1f ms", name, Self.ms(spent) / Double(repeats)))
+        }
+    }
 }

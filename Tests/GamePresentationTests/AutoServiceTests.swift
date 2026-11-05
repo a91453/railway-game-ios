@@ -397,6 +397,44 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertEqual(session.world.trains, before.trains)
     }
 
+    /// Decision 597: the game loop works the line without a place to pass
+    /// out once while no command is given, not again every hour, and again
+    /// after one; the advice is the one worked out afresh each time.
+    func testTheLoopKeepsTheLineWithoutAPlaceToPassBetweenCommands() async throws {
+        let (world, a, b, c) = try stations(rules: .realistic)
+        let session = GameSession(world: world)
+        draftLine([a, b], in: session)
+        session.staffSelectedLine(headway: 60)
+        draftLine([c, a, b], in: session)
+        session.staffSelectedLine(headway: 60)
+        let lines = session.world.lines.map(\.id)
+        session.setSpeed(.fast)
+        func play(_ ticks: Int) async throws -> Int {
+            var hours = 0
+            for _ in 0..<ticks {
+                let tick = try XCTUnwrap(session.beginLoopTick())
+                let outcome = await tick.work()
+                if case .success(let step) = outcome, let advice = step.advice {
+                    hours += 1
+                    XCTAssertEqual(advice.advice, StationMasterAdvice(world: step.world))
+                }
+                XCTAssertTrue(session.finish(tick, with: outcome))
+            }
+            return hours
+        }
+        let hours = try await play(30)
+        XCTAssertGreaterThan(hours, 3)
+        XCTAssertEqual(session.stationMasterAdvice, .noPlaceToPass(line: lines[0], name: session.world.lines[0].name))
+        XCTAssertEqual(session.placeToPassMemo.workedOut, 1, "\(hours) hours, one command revision")
+        session.selectLine(lines[1])
+        session.addPassingLoopToSelectedLine()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        _ = try await play(12)
+        XCTAssertEqual(session.placeToPassMemo.workedOut, 2)
+        XCTAssertNil(session.world.firstLineWithoutPlaceToPass())
+        XCTAssertNotEqual(session.stationMasterAdvice, .noPlaceToPass(line: lines[0], name: session.world.lines[0].name))
+    }
+
     /// A passing loop the player cannot afford is refused as the loop it
     /// is, not as "add a train": its plan buys no train.
     func testAPassingLoopRefusedForCashIsNamedAsTheLoop() throws {

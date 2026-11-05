@@ -84,6 +84,9 @@ public final class GameSession {
     /// The losing line the station master names, kept between commands and
     /// days (decision 194, later; ``worstLosingLine``).
     @ObservationIgnored let lineLossLeaderMemo = LineLossLeaderMemo()
+    /// Decision 597: the first line without a place to pass, kept between
+    /// commands for the station master.
+    @ObservationIgnored let placeToPassMemo = PlaceToPassMemo()
     /// Decision 330: the station master's advice the game loop's tick
     /// worked out, for the world at ``worldRevision`` `revision`.
     @ObservationIgnored var workedAdvice: (revision: Int, advice: WorkedAdvice)?
@@ -2213,7 +2216,10 @@ public final class GameSession {
         return LoopTick(
             world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
             previousTraffic: trafficMemo?.reading,
-            advice: AdviceProbe(hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision)),
+            advice: AdviceProbe(
+                hour: newsWatch.hour, leader: lineLossLeaderMemo.kept(atRevision: commandRevision),
+                placeToPass: placeToPassMemo.kept(atRevision: commandRevision)
+            ),
             glide: world.clock.speed == .x1 ? nil : glideToGoOnFrom,
             alertsPeriod: situationAlertsMemo.flatMap { $0.revision == commandRevision ? $0.period : nil },
             trainHeights: isMap3DOpen
