@@ -429,6 +429,19 @@ public final class GameSession {
     /// What the follow bar shows of the cabin followed.
     public internal(set) var cabinFollowBar: CabinFollowFacts?
 
+    /// Decision 585 PR-4 (FERRYFOLLOW): the ferry boat the camera follows,
+    /// in place of a train, a bus or a cabin (never two at once). An ID
+    /// only; see `FollowFerry.swift`.
+    public internal(set) var followedFerryBoatID: FerryBoatID? {
+        didSet {
+            if followedFerryBoatID != oldValue { updateMap3DSpeedCapForBus() }
+            refreshFerryFollow()
+        }
+    }
+
+    /// What the follow bar shows of the boat followed.
+    public internal(set) var ferryFollowBar: FerryFollowFacts?
+
     /// The way the selected train faces when it is placed: along its
     /// platform, the way nearer this compass point. Only used by
     /// ``placeSelectedTrain()``; it never turns a train that is on the track.
@@ -1332,6 +1345,7 @@ public final class GameSession {
         guard let train = world.train(id: id), train.position != nil else { return }
         followedBusID = nil
         followedCabinID = nil
+        followedFerryBoatID = nil
         followedTrainID = id
         updateFollowSounds()
     }
@@ -1341,6 +1355,7 @@ public final class GameSession {
         followedTrainID = nil
         followedBusID = nil
         followedCabinID = nil
+        followedFerryBoatID = nil
         updateFollowSounds()
     }
 
@@ -1399,6 +1414,7 @@ public final class GameSession {
         }
         keepFollowingBus()
         keepFollowingCabin()
+        keepFollowingFerry()
         // Every edit ends here: one that stops the followed train's service
         // or ends following brings the music back now, not at the next step.
         updateFollowSounds()
@@ -1506,6 +1522,8 @@ public final class GameSession {
         if !open, followedBusID != nil { followedBusID = nil }
         // Decision 583: nor cable car cabins.
         if !open, followedCabinID != nil { followedCabinID = nil }
+        // Decision 585 PR-4: nor ferry boats.
+        if !open, followedFerryBoatID != nil { followedFerryBoatID = nil }
         updateMap3DSpeedCap()
     }
 
@@ -1554,7 +1572,7 @@ public final class GameSession {
     func updateMap3DSpeedCapForBus() { updateMap3DSpeedCap() }
 
     private func updateMap3DSpeedCap() {
-        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil || followedCabinID != nil)
+        let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil || followedCabinID != nil || followedFerryBoatID != nil)
         guard capped != isSpeedCappedIn3D else { return }
         applyHeldSpeed()
         isSpeedCappedIn3D = capped

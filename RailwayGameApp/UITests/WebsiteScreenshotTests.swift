@@ -474,6 +474,33 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep(name, app)
     }
 
+    /// Decision 585 PR-4 (FERRYFOLLOW): a ferry boat followed on the 3D
+    /// map: Tamsui–Bali's from its bridge and its cabin's window,
+    /// Gushan–Cijin's from above and behind and, at 18:30, from beside it,
+    /// with the follow bar. For the screenshot review of the pull request
+    /// that let the camera follow a boat. One shot a test.
+    func testFollowFerryTamsuiBridge() { shootFollowFerry("tamsuiFerryCrossing", "cab", "follow-ferry-tamsui-bridge") }
+    func testFollowFerryTamsuiWindow() { shootFollowFerry("tamsuiFerryCrossing", "window", "follow-ferry-tamsui-window") }
+    func testFollowFerryGushanAbove() { shootFollowFerry("gushanFerry", "aboveBack", "follow-ferry-gushan-above") }
+    func testFollowFerryGushanWindow() { shootFollowFerry("gushanFerry", "window", "follow-ferry-gushan-window") }
+    func testFollowFerryGushanEveningSide() { shootFollowFerry("gushanFerryEvening", "side", "follow-ferry-gushan-evening-side") }
+
+    private func shootFollowFerry(_ scene: String, _ view: String, _ name: String) {
+        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-follow-ferry", "-map3DFollowView", view,
+                                 "-map3D.quality", "high"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+        XCTAssertTrue(app.buttons["map3D.follow.stop"].appears(within: 30), "The boat is followed")
+        settle(seconds: 12)
+        keep(name, app)
+    }
+
     /// Decision 555: the 3D map at its own tilt and leaned by two fingers
     /// to 60°, round Taipei Main Station (the Shin Kong Life Tower to the
     /// south-west) and round Taipei 101. For the screenshot review of the

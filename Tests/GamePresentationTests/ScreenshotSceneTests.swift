@@ -83,10 +83,10 @@ final class ScreenshotSceneTests: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let water = try WaterGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_water.json")))
         for (scene, hours, boat) in [(ScreenshotScene.gushanFerry, 34.0, Map3DFerry.Boat.cijin), (.gushanFerryEvening, 42.5, .cijin),
-                                     (.tamsuiFerry, 34.0, .tamsui)] {
+                                     (.tamsuiFerry, 34.0, .tamsui), (.tamsuiFerryCrossing, 34.05, .tamsui)] {
             XCTAssertTrue(scene.needsWater)
             let world = scene.make(in: .traditionalChinese, water: water)
-            XCTAssertEqual(Double(world.clock.now.seconds) / 3_600, hours, "\(scene)")
+            XCTAssertEqual(Double(world.clock.now.seconds) / 3_600, hours, accuracy: 0.001, "\(scene)")
             let ferry = try XCTUnwrap(world.ferryRoutes.first, "\(scene)")
             XCTAssertEqual(ferry.boats, 2)
             let laid = Map3DFerries(world: world, scene: Map3DScene(world: world))
@@ -97,6 +97,15 @@ final class ScreenshotSceneTests: XCTestCase {
                 XCTAssertTrue(world.terrain.isWater(row: cell.row + side.row, column: cell.column + side.column), "\(scene) \(cell)")
             }
             XCTAssertNotNil(laid.firstBoat(second: Double(world.clock.now.seconds)))
+            if scene == .tamsuiFerryCrossing {
+                // The boat followed is out on the river, the other far off.
+                let followed = try XCTUnwrap(world.ferryBoatMidCrossing(on: ferry.id))
+                let boats = laid.laid(line, second: Double(world.clock.now.seconds), following: followed.number)
+                let mine = try XCTUnwrap(boats.first { $0.number == followed.number })
+                guard case .sailing(_, let share, _)? = mine.sailing?.stage else { return XCTFail("not sailing") }
+                XCTAssertEqual(share, 0.5, accuracy: 0.1)
+                for other in boats where other.number != followed.number { XCTAssertGreaterThan((other.point - mine.point).length, 200) }
+            }
             if scene == .gushanFerryEvening {
                 XCTAssertFalse(Map3DFerries.sailings(of: ferry, atSecond: Double(world.clock.now.seconds)) { _ in true }.isEmpty)
             }

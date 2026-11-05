@@ -94,6 +94,26 @@ public struct Map3DFollow: Hashable, Sendable {
             case .station: language.text("Watches the train arrive from the platform of its next stop.", "站在下一站的月台，看列車進站。")
             }
         }
+
+        /// Decision 585 PR-4 (FERRYFOLLOW): the button's name on a boat's
+        /// follow bar (``Map3DFollow/ferryViews``).
+        public func ferryText(in language: DisplayLanguage) -> String {
+            switch self {
+            case .cab: language.text("Bridge", "駕駛台")
+            case .window: language.text("Window", "船艙窗")
+            default: text(in: language)
+            }
+        }
+
+        /// What a boat's button does, for VoiceOver.
+        public func ferryHint(in language: DisplayLanguage) -> String {
+            switch self {
+            case .cab: language.text("Looks ahead from the bridge.", "從駕駛台看前方。")
+            case .window: language.text("Sits in the cabin and looks out of the window.", "坐在船艙裡看窗外。")
+            case .side: language.text("Moves alongside the boat, showing all of it.", "在船旁邊一起移動，看得到整艘船。")
+            default: language.text("Follows the boat from above and behind.", "從船的後上方跟著看。")
+            }
+        }
     }
 
     /// Decision 403 (續): where the station view stands: on a platform of
@@ -122,6 +142,8 @@ public struct Map3DFollow: Hashable, Sendable {
         case bus(BusID)
         /// Decision 583 (CABLEFOLLOW): a cabin of a player's cable car.
         case cabin(CabinID)
+        /// Decision 585 PR-4 (FERRYFOLLOW): a boat of a player's ferry.
+        case ferry(FerryBoatID)
     }
 
     /// Where a followed vehicle is and which way it faces, in the scene's
@@ -147,6 +169,9 @@ public struct Map3DFollow: Hashable, Sendable {
         /// How high the driver's eye is over ``nose``'s way; `nil` for the
         /// train's (``Map3DFollow/cabEyeHeight``).
         public var eyeHeight: Float?
+        /// Decision 585 PR-4: how far under level the cab view looks, in
+        /// radians; `nil` for the train's (``Map3DFollow/cabLookDown``).
+        public var cabLookDown: Float?
         /// How tall the body stands over the way, which the side view
         /// looks at the middle of.
         public var bodyHeight: Float
@@ -173,7 +198,8 @@ public struct Map3DFollow: Hashable, Sendable {
 
         public init(forward: Map3DPoint, nose: Map3DPoint, rail: Map3DPoint, middle: Map3DPoint? = nil, length: Float = 0,
                     ground: Float? = nil, inTunnel: Bool = false, eyeHeight: Float? = nil,
-                    bodyHeight: Float = Map3DTrains.carHeight, window: Window? = nil) {
+                    bodyHeight: Float = Map3DTrains.carHeight, window: Window? = nil, cabLookDown: Float? = nil) {
+            self.cabLookDown = cabLookDown
             self.bodyHeight = bodyHeight
             self.window = window
             self.forward = forward
@@ -199,6 +225,10 @@ public struct Map3DFollow: Hashable, Sendable {
     /// Decision 583: the cabin followed; `nil` for a train or a bus.
     public var cabin: CabinID? {
         if case .cabin(let id) = subject { id } else { nil }
+    }
+    /// Decision 585 PR-4: the ferry boat followed; `nil` for the others.
+    public var ferry: FerryBoatID? {
+        if case .ferry(let id) = subject { id } else { nil }
     }
     public var view: View
     /// Decision 403 (續): where the station view stands; `nil` follows
@@ -250,6 +280,37 @@ public struct Map3DFollow: Hashable, Sendable {
     /// train's distance: 0.5, so a cabin some 2 m tall shows as large as
     /// the rope round it lets.
     public static let cabinScale: Float = 0.5
+
+    /// Decision 585 PR-4 (FERRYFOLLOW): following a boat of a ferry route,
+    /// from one of ``ferryViews`` (another view is taken as the nearest of
+    /// them, ``ferryView(_:)``). A boat is 18 to 25 m long, so the camera
+    /// starts at ``ferryScale`` of the train's distance.
+    public init(ferry: FerryBoatID, view: View = .aboveBack) {
+        subject = .ferry(ferry)
+        self.view = Self.ferryView(view)
+        scale = Self.ferryScale
+    }
+
+    /// Decision 585 PR-4: the views of a boat: from its bridge, from its
+    /// cabin's window, from above behind it, from beside it. A boat has
+    /// no platform for the station view, and from behind low it is all
+    /// stern.
+    public static let ferryViews: [View] = [.cab, .window, .aboveBack, .side]
+
+    /// The boat view nearest `view`: from above behind for behind and the
+    /// station.
+    public static func ferryView(_ view: View) -> View {
+        switch view {
+        case .cab: .cab
+        case .window: .window
+        case .side: .side
+        case .back, .aboveBack, .station: .aboveBack
+        }
+    }
+
+    /// Decision 585 PR-4: how close the camera starts to a boat, of the
+    /// train's distance (no nearer than ``Map3DCamera/nearest``).
+    public static let ferryScale: Float = 0.5
 
     /// The nearest and farthest a pinch takes ``scale``.
     public static let scales: ClosedRange<Float> = 0.4...4
@@ -467,7 +528,8 @@ public struct Map3DFollow: Hashable, Sendable {
             // look; the eye stays where it is at any distance, so a pinch
             // does nothing.
             next.heading = Self.heading(of: head.forward)
-            next.pitch = view.tilt
+            let tilt = head.cabLookDown.map { .pi / 2 - $0 } ?? view.tilt
+            next.pitch = tilt
             next.lens = Self.cabLens
             next.distance = Map3DCamera.nearest
             let height = head.eyeHeight ?? Self.cabEyeHeight
@@ -476,7 +538,7 @@ public struct Map3DFollow: Hashable, Sendable {
             // deep cutting), not in it; decision 359 (續): in a tunnel, in
             // its bore.
             if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + height) }
-            next.target = eye + next.forward * (next.distance * sinf(view.tilt)) - Map3DPoint(0, next.distance * cosf(view.tilt), 0)
+            next.target = eye + next.forward * (next.distance * sinf(tilt)) - Map3DPoint(0, next.distance * cosf(tilt), 0)
             return next
         }
         next.lens = nil

@@ -15,6 +15,19 @@ import GameCore
 // then asked each frame (``frame(second:eye:target:pack:reach:)``): no
 // state kept between frames. GameCore is only read.
 
+/// Decision 585 PR-4 (FERRYFOLLOW): one boat of a player's ferry route:
+/// the same boat from one moment to the next. A day's departures go to
+/// the boats in turn (``Map3DFerries/Sailing/number``).
+public struct FerryBoatID: Hashable, Sendable {
+    public let route: FerryRouteID
+    public let number: Int
+
+    public init(route: FerryRouteID, number: Int) {
+        self.route = route
+        self.number = number
+    }
+}
+
 /// The player's ferries laid in a 3D scene.
 public struct Map3DFerries: Sendable {
     /// Where a boat is in one sailing (``stage(atMinute:legMetres:)``).
@@ -263,16 +276,58 @@ public struct Map3DFerries: Sendable {
     /// the game began), oldest first, no more than its boats; none on a
     /// day `open` says it does not sail (``GameWorld/ferryRouteIsOpen(_:onDay:)``).
     public static func sailings(of route: FerryRoute, atSecond second: Double, open: (Int64) -> Bool) -> [Stage] {
+        numberedSailings(of: route, atSecond: second, open: open).map(\.stage)
+    }
+
+    /// Decision 585 PR-4 (FERRYFOLLOW): one sailing under way, and the
+    /// boat that sails it (``FerryBoatID/number``).
+    public struct Sailing: Equatable, Sendable {
+        /// The boat: a day's departures go to the boats in turn, the
+        /// first to boat 0 (departure `i` to boat `i` mod the boats).
+        public let number: Int
+        /// When it left the first pier, in game seconds since the game
+        /// began.
+        public let start: Double
+        public let stage: Stage
+    }
+
+    /// ``sailings(of:atSecond:open:)`` with each sailing's boat and
+    /// departure.
+    public static func numberedSailings(of route: FerryRoute, atSecond second: Double, open: (Int64) -> Bool) -> [Sailing] {
+        guard route.boats > 0 else { return [] }
         let perDay = Double(GameTime.secondsPerDay)
         let day = Int64((second / perDay).rounded(.down))
-        let minute = (second - Double(day) * perDay) / 60
-        var stages: [Stage] = []
-        for (d, offset) in [(day - 1, -Double(GameTime.minutesPerDay)), (day, 0)] where d >= 0 && open(d) {
-            for start in departures(of: route, onDay: d) {
-                if let stage = stage(atMinute: minute - (Double(start) + offset), legMetres: route.legMetres) { stages.append(stage) }
+        var sailings: [Sailing] = []
+        for d in [day - 1, day] where d >= 0 && open(d) {
+            for (index, start) in departures(of: route, onDay: d).enumerated() {
+                let at = Double(d) * perDay + Double(start) * 60
+                if let stage = stage(atMinute: (second - at) / 60, legMetres: route.legMetres) {
+                    sailings.append(Sailing(number: index % route.boats, start: at, stage: stage))
+                }
             }
         }
-        return Array(stages.prefix(route.boats))
+        return Array(sailings.prefix(route.boats))
+    }
+
+    /// Decision 585 PR-4: boat `number` of `route` while it lies by the
+    /// first pier at game second `second`: when its last sailing came
+    /// back (`nil` with none since yesterday) and when its next one
+    /// leaves (`nil` with none today or tomorrow), in game seconds.
+    public static func lying(_ number: Int, of route: FerryRoute, atSecond second: Double,
+                             open: (Int64) -> Bool) -> (since: Double?, until: Double?) {
+        guard route.boats > 0 else { return (nil, nil) }
+        let perDay = Double(GameTime.secondsPerDay)
+        let day = Int64((second / perDay).rounded(.down))
+        let length = sailingMinutes(legMetres: route.legMetres) * 60
+        var since: Double?, until: Double?
+        for d in [day - 1, day, day + 1] where d >= 0 && open(d) {
+            for (index, start) in departures(of: route, onDay: d).enumerated() where index % route.boats == number {
+                let at = Double(d) * perDay + Double(start) * 60
+                if at + length <= second { since = at + length }
+                if at > second, until == nil { until = at }
+            }
+        }
+        return (since, until)
     }
 
     // MARK: - Where a boat is
@@ -338,10 +393,55 @@ public struct Map3DFerries: Sendable {
     /// Every boat of the route laid as `id` at game second `second`: the
     /// ones sailing, then the idle ones (at most ``mostIdle``).
     func boats(of line: Line, second: Double) -> [(point: Map3DPoint, forward: Map3DPoint)] {
-        let sailing = Self.sailings(of: line.route, atSecond: second) { world.ferryRouteIsOpen(line.id, onDay: $0) }
-        var boats = sailing.map { Self.place($0, on: line) }
-        let idle = min(max(0, line.route.boats - sailing.count), Self.mostIdle)
-        if idle > 0 { boats += (1...idle).map { Self.idle($0, on: line) } }
+        laid(line, second: second).map { ($0.point, $0.forward) }
+    }
+
+    /// Decision 585 PR-4: how long a boat followed takes to move between
+    /// the berth and its place beside it, game seconds.
+    static let lyingShift: Double = 60
+
+    /// One boat laid: which it is, where, the way its bow points, and
+    /// how it sails (`nil` lying by the first pier).
+    struct Laid {
+        let number: Int
+        let point: Map3DPoint
+        let forward: Map3DPoint
+        let sailing: Sailing?
+    }
+
+    /// Every boat of `line` at game second `second`, numbered: the ones
+    /// sailing, then the idle ones (at most ``mostIdle``) side by side
+    /// beside the first pier, in their numbers' order. Decision 585 PR-4:
+    /// boat `following`, when idle, lies first (slot 1) and moves there
+    /// from the berth over ``lyingShift`` after its sailing comes back,
+    /// and back to the berth before its next leaves, so a camera on it
+    /// never jumps.
+    func laid(_ line: Line, second: Double, following: Int? = nil) -> [Laid] {
+        let open: (Int64) -> Bool = { world.ferryRouteIsOpen(line.id, onDay: $0) }
+        let sailing = Self.numberedSailings(of: line.route, atSecond: second, open: open)
+        var boats = sailing.map { s -> Laid in
+            let at = Self.place(s.stage, on: line)
+            return Laid(number: s.number, point: at.point, forward: at.forward, sailing: s)
+        }
+        let out = Set(sailing.map(\.number))
+        var idle = (0..<line.route.boats).filter { !out.contains($0) }
+        if let following, let at = idle.firstIndex(of: following) {
+            idle.remove(at: at)
+            idle.insert(following, at: 0)
+        }
+        idle = Array(idle.prefix(max(0, line.route.boats - sailing.count)))
+        for (slot, number) in idle.prefix(Self.mostIdle).enumerated() {
+            let rest = Self.idle(slot + 1, on: line)
+            guard number == following else {
+                boats.append(Laid(number: number, point: rest.point, forward: rest.forward, sailing: nil))
+                continue
+            }
+            let (since, until) = Self.lying(number, of: line.route, atSecond: second, open: open)
+            let away = min(since.map { (second - $0) / Self.lyingShift } ?? 1, until.map { ($0 - second) / Self.lyingShift } ?? 1)
+            let s = Self.eased(away)
+            let berth = line.piers[0].berth
+            boats.append(Laid(number: number, point: berth + (rest.point - berth) * s, forward: rest.forward, sailing: nil))
+        }
         return boats
     }
 
@@ -375,11 +475,16 @@ public struct Map3DFerries: Sendable {
     /// Everything seen from `eye` looking at `target` at game second
     /// `second` (since the game began), with `pack`'s models; `reach`
     /// brings the near models nearer (``Map3DModelReach/farModel``).
-    public func frame(second: Double, eye: Map3DPoint, target: Map3DPoint, pack: Map3DModelPack, reach: Float = 1) -> Frame {
+    ///
+    /// Decision 585 PR-4 (FERRYFOLLOW): boat `following` is drawn whole
+    /// wherever it is, first; with `ahead` (the way it sails, level), what
+    /// counts as behind is behind it on its way, not behind the camera.
+    public func frame(second: Double, eye: Map3DPoint, target: Map3DPoint, pack: Map3DModelPack, reach: Float = 1,
+                      following: FerryBoatID? = nil, ahead: Map3DPoint? = nil) -> Frame {
         var frame = Frame()
         guard !lines.isEmpty, let models = Models(pack) else { return frame }
         let near = Self.nearReach * reach, far = Self.farReach
-        let look = Map3DPoint(target.x - eye.x, 0, target.z - eye.z).normalized
+        let look = ahead.flatMap { Map3DPoint($0.x, 0, $0.z).normalized } ?? Map3DPoint(target.x - eye.x, 0, target.z - eye.z).normalized
         func weight(_ p: Map3DPoint) -> Float {
             let d = (p - eye).length
             guard let look, Map3DPoint(p.x - eye.x, 0, p.z - eye.z).dot(look) < 0 else { return d }
@@ -393,7 +498,13 @@ public struct Map3DFerries: Sendable {
                 frame.instances.append(.prop(d < near ? models.pier.near : models.pier.far, at: pier.origin, forward: pier.out, scale: 1,
                                              tint: 0xFFFFFF))
             }
-            for boat in self.boats(of: line, second: second) {
+            let followed = following?.route == line.id ? following?.number : nil
+            for boat in laid(line, second: second, following: followed) {
+                if boat.number == followed, let pair = models.boat[line.boat] {
+                    frame.instances.append(.prop(pair.near, at: boat.point, forward: boat.forward, scale: 1, tint: 0xFFFFFF))
+                    frame.nearBoats += 1
+                    continue
+                }
                 let d = (boat.point - eye).length
                 guard d < far else { continue }
                 boats.append((weight(boat.point), d, boat.point, boat.forward, line.boat))
@@ -411,6 +522,78 @@ public struct Map3DFerries: Sendable {
             }
         }
         return frame
+    }
+
+    // MARK: - Following a boat (decision 585 PR-4)
+
+    /// The way boat `laid` on `line` runs, level: its bow's, but a
+    /// double-ended ferry sailing back runs stern first; lying at a pier,
+    /// the way it came for the first half of its time there and the way
+    /// it leaves for the second (the bridge view turns round at once, as
+    /// its master walks to the other end).
+    static func travel(_ laid: Laid, on line: Line) -> Map3DPoint {
+        guard line.boat.isDoubleEnded, let stage = laid.sailing?.stage else { return laid.forward }
+        let last = line.piers.count - 1
+        let back: Bool
+        switch stage {
+        case .sailing(_, _, let outbound): back = !outbound
+        case .docked(let pier, let share, let outbound):
+            if share < 0.5 { back = !outbound } else { back = outbound ? pier == last : pier != 0 }
+        }
+        return back ? -laid.forward : laid.forward
+    }
+
+    /// Decision 585 PR-4: what the follow camera needs of boat `id` at
+    /// game second `second` (with its fraction): its waterline's middle,
+    /// the way it runs, its bridge's eye and its cabin's seat; `nil` when
+    /// its route is gone or it has no such boat, or (beyond
+    /// ``mostIdle``) it is not drawn. It moves on without a jump: in a
+    /// sailing, lying at a pier, and to and from its place beside the
+    /// first pier (``laid(_:second:following:)``).
+    public func pose(of id: FerryBoatID, second: Double) -> Map3DFollow.Pose? {
+        guard let line = lines.first(where: { $0.id == id.route }), id.number >= 0, id.number < line.route.boats,
+              let laid = laid(line, second: second, following: id.number).first(where: { $0.number == id.number }) else { return nil }
+        let boat = line.boat
+        let forward = Self.travel(laid, on: line)
+        return Map3DFollow.Pose(forward: forward, nose: laid.point + forward * boat.bridgeFront, rail: laid.point, middle: laid.point,
+                                length: boat.length, ground: nil, inTunnel: false, eyeHeight: boat.bridgeEye, bodyHeight: boat.height,
+                                window: .init(across: boat.seatAcross, height: boat.seatHeight, lookDown: Self.seatLookDown),
+                                cabLookDown: Self.bridgeLookDown)
+    }
+
+    /// Decision 585 PR-4: the cabin window view looks a little down, at
+    /// the water going by.
+    public static let seatLookDown: Float = 4 * .pi / 180
+
+    /// Decision 585 PR-4: the bridge view looks down enough to see the
+    /// boat's own foredeck and bow under the far shore (level, it saw
+    /// only sky and water, as if the camera had come loose).
+    public static let bridgeLookDown: Float = 16 * .pi / 180
+
+    /// Decision 585 PR-4: the pier boat `id` comes to next at `second`
+    /// (the second pier while it lies by the first), for the 3D map to
+    /// build round before it is there; `nil` as ``pose(of:second:)``.
+    public func pierAhead(of id: FerryBoatID, second: Double) -> Map3DPoint? {
+        guard let line = lines.first(where: { $0.id == id.route }), id.number >= 0, id.number < line.route.boats,
+              let laid = laid(line, second: second, following: id.number).first(where: { $0.number == id.number }) else { return nil }
+        return line.piers[FerryBoats.piers(of: laid.sailing?.stage, piers: line.piers.count).next].origin
+    }
+
+    /// Decision 585 PR-4: the boat drawn nearest the finger at (`x`, `y`)
+    /// in `camera`'s view, within `reach` points, at `second`, for a tap
+    /// on the 3D map; only those within ``nearReach`` of the eye.
+    public func boat(atX x: Float, y: Float, camera: Map3DCamera, second: Double, within reach: Float) -> FerryBoatID? {
+        var best: (away: Float, id: FerryBoatID)?
+        let eye = camera.eye
+        for line in lines {
+            for laid in laid(line, second: second) {
+                let body = laid.point + Map3DPoint(0, line.boat.height / 2, 0)
+                guard (body - eye).length < Self.nearReach, let screen = camera.screenPoint(of: body) else { continue }
+                let away = ((screen.x - x) * (screen.x - x) + (screen.y - y) * (screen.y - y)).squareRoot()
+                if away <= reach, best.map({ away < $0.away }) ?? true { best = (away, FerryBoatID(route: line.id, number: laid.number)) }
+            }
+        }
+        return best?.id
     }
 
     /// The first route's first boat at `second`: a sailing one, or the
