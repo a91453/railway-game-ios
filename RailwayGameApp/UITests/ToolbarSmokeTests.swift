@@ -511,7 +511,19 @@ extension XCUIApplication {
         bringModeRowIntoTheCard(row)
         for attempt in 0..<8 where !chip.becomesHittable(within: 1) {
             print("networkMode \(name) attempt \(attempt): chip \(chip.frame) row \(row.frame)")
-            if chip.frame.midX < row.frame.midX { row.swipeRight() } else { row.swipeLeft() }
+            // Dragged by its place on the screen, not swiped as an
+            // element: in the card that scrolls, XCTest found the row's
+            // "visible frame is empty" with the row wholly in the card
+            // (y 146 in a card from 70 to 266, LessonUITests
+            // `testDepotModeStartsInTheSeventhLesson`, run 41986973589).
+            let place = row.frame
+            let origin = coordinate(withNormalizedOffset: .zero)
+            func at(_ fraction: CGFloat) -> XCUICoordinate {
+                origin.withOffset(CGVector(dx: place.minX + place.width * fraction - frame.minX, dy: place.midY - frame.minY))
+            }
+            let (from, to): (CGFloat, CGFloat) = chip.frame.midX < place.midX ? (0.2, 0.85) : (0.8, 0.15)
+            at(from).press(forDuration: 0.1, thenDragTo: at(to))
+            chip.waitUntilStill()
         }
         return chip
     }
