@@ -500,6 +500,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep(name, app)
     }
 
+    /// Decision 596: the big junction east of Taipei Main Station from
+    /// above, by day and by night: the traffic waiting at the stop lines
+    /// of the roads its signals show red, the people at the crossings.
+    func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day") }
+    func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night") }
+
     /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
     /// (quality High), for the before/after of the tent filter.
     func testSunShadowsIn3D() {

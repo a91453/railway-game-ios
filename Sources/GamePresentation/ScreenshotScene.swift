@@ -69,6 +69,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     case taipeiMain
     case taipei101
 
+    /// Decision 596: the same map round the big junction 380 m east of
+    /// Taipei Main Station (23 stop lines) at 10:00 and at 20:00, for the
+    /// screenshots of the traffic waiting at its stop lines and the people
+    /// at its crossings (`-screenshot-3d-view`), paused to go on at 10×.
+    case streetStop
+    case streetStopNight
+
     /// Decision 564: an empty real-world map round the Wenhu Line, for the
     /// Debug app's `-screenshot-buy-real trtc:BR` to buy the line on and
     /// run on to the morning (``GameSession/buyForScreenshot(_:)``, ``GameSession/runForScreenshot(until:)``):
@@ -140,6 +147,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain, .followBusCity: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .wenhu: (25.0600, 121.5600)
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
@@ -172,6 +180,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
         case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
+        case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .wenhu: Self.wenhuWorld(in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
@@ -357,7 +367,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
     /// Decision 555: a new real-world game at `place`, a line 1.6 km long
     /// laid west to east through it, at 10:00 of the first day.
-    private static func taipeiWorld(at place: (latitude: Double, longitude: Double), in language: DisplayLanguage) -> GameWorld {
+    private static func taipeiWorld(at place: (latitude: Double, longitude: Double), until ticks: Int = 60,
+                                    resume: GameSpeed = .normal, in language: DisplayLanguage) -> GameWorld {
         guard let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude) else { return DemoWorld.make(in: language) }
         let world = GameWorld.newGame(anchor: anchor)
         guard let frame = RealWorldFrame(world: world) else { return world }
@@ -370,10 +381,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         let line = try? LineBuilder.line(through: [PlanPoint(x: Int64(middle.x - half), y: y),
                                                    PlanPoint(x: Int64(middle.x + half), y: y)], in: world)
         var opened = line ?? world
-        // On to 10:00, the sun high in the south-east (.fast is ten minutes a tick).
+        // On to 10:00, the sun high in the south-east (.fast is ten minutes
+        // a tick), or as many ticks on as asked (120: 20:00).
         opened.setSpeed(.fast)
-        try? opened.advance(ticks: 60)
-        opened.setSpeed(.normal)
+        try? opened.advance(ticks: ticks)
+        // To go on at `resume` (decision 596's junction: 10×, where the
+        // signals change and the traffic waits at them).
+        opened.setSpeed(resume)
         opened.setSpeed(.paused)
         return opened
     }

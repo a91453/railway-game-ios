@@ -250,4 +250,15 @@ final class Map3DStreetStopTests: XCTestCase {
         let before = life.frame(target: target, distance: 150, time: 0, still: true, detail: .full, activity: .init())
         XCTAssertEqual(still.instances.map(\.transform), before.instances.map(\.transform))
     }
+
+    /// The screenshots' junction stands paused at 10:00 and at 20:00, at a
+    /// speed whose signals change, so its traffic waits at the lights.
+    func testTheScreenshotScenesStandAtTheirHourWithTheLightsChanging() {
+        for (scene, hour) in [(ScreenshotScene.streetStop, 10), (.streetStopNight, 20)] {
+            let world = scene.make(in: .english)
+            XCTAssertTrue(world.clock.isPaused, "\(scene)")
+            XCTAssertEqual(world.clock.now.seconds % GameTime.secondsPerDay, Int64(hour * 3_600), "\(scene)")
+            XCTAssertTrue(Map3DSignalTiming.changes(at: world.clock.runningSpeed), "\(scene)")
+        }
+    }
 }
