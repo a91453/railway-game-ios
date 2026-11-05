@@ -42,6 +42,21 @@ final class SaveTickCostReportTests: XCTestCase {
         var hours: [Int64: [Double]] = [:]
         for _ in 0..<ticks {
             guard let tick = session.beginLoopTick() else { break }
+            // The tick before each hour, taken apart: the routes worked out
+            // ahead, GameCore's advance, the station master's advice.
+            if environment["PERF_PARTS"] != nil, tick.world.clock.now.seconds % GameTime.secondsPerHour >= GameTime.secondsPerHour - 60 {
+                var ahead = tick.world
+                let routes = await clock.measure { ahead = await PassengerRoutesAhead.given(to: tick.world) }
+                var after = ahead
+                let core = try clock.measure { after = try GameSession.advanced(ahead, by: 1, listening: false).world }
+                let advice = clock.measure { _ = tick.advice?.advice(of: after) }
+                let traffic = clock.measure { _ = TrafficReading(world: after, train: nil, in: .traditionalChinese, previous: nil) }
+                let alerts = clock.measure { _ = after.situationAlerts() }
+                print(String(
+                    format: "PERF114   parts %@: routes ahead %.1f, advance %.1f, advice %.1f, traffic %.1f, alerts %.1f ms",
+                    tick.world.clock.now.clockText, Self.ms(routes), Self.ms(core), Self.ms(advice), Self.ms(traffic), Self.ms(alerts)
+                ))
+            }
             var outcome: Result<GameSession.TickStep, GameError>!
             let step = await clock.measure { outcome = await tick.work() }
             let finish = clock.measure { session.finish(tick, with: outcome) }

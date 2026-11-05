@@ -146,6 +146,9 @@ extension GameWorld {
             let line: LineID
             let length: Int64
         }
+        /// Decision 597: by edge, the track a platform on it lies on
+        /// (``GameWorld/platformTrack(of:)``), which reads only the network.
+        var platformTracks: [TrackEdgeID: Set<TrackEdgeID>] = [:]
     }
 
     /// ``path(from:toStation:length:)``, kept in `memo`.

@@ -377,7 +377,7 @@ extension GameWorld {
     /// there the shortest way to a free platform; when none is reached
     /// that way, to the one that is free soonest, if sooner than its own.
     /// Decision 283: its own is taken, too, while another train comes out
-    /// along its track towards `train` (``trainLeavingTowards(_:along:)``),
+    /// along its track towards `train` (``trainLeavingTowards(_:along:memo:)``),
     /// and no platform is gone to that one is coming out of. `nil` when
     /// `path` may stay as it is, or no better platform is reached that way.
     func freePlatformPath(_ path: TrainPath, from start: TrainPosition, toStation id: StationID, for train: Train, next: (stop: Int, cycle: Int64), memo: inout PathMemo) -> TrainPath? {
@@ -387,7 +387,7 @@ extension GameWorld {
         // Decision 283: taken while another train comes out along its track
         // towards this one, until a while after now: it is late, so when it
         // will have gone is not known.
-        if trainLeavingTowards(train, along: [first] + path.traversals) != nil {
+        if trainLeavingTowards(train, along: [first] + path.traversals, memo: &memo) != nil {
             let (until, overflow) = clock.now.seconds.addingReportingOverflow(Self.platformClearance)
             waits[target] = max(waits[target] ?? 0, overflow ? .max : until)
         }
@@ -470,7 +470,7 @@ extension GameWorld {
                     guard let way = onwardWay(after: found, from: first, to: rejoining.next, length: train.length, memo: &memo) else { return true }
                     return !way.contains { $0.start <= Self.platformApproach && rejoining.way.contains($0.traversal) }
                 } ?? false
-                guard crosses || strays || trainLeavingTowards(train, along: [first] + found.traversals) != nil else { return found }
+                guard crosses || strays || trainLeavingTowards(train, along: [first] + found.traversals, memo: &memo) != nil else { return found }
                 eligible = eligible.filter { $0.traversal.edge != reached }
             }
         }
@@ -542,7 +542,7 @@ extension GameWorld {
     /// and a better one is free (see ``freePlatformPath(_:from:toStation:for:next:memo:)``):
     /// a train that was due to leave it in time may not have. Decision 283:
     /// or when another train, late out of it, is coming along its track
-    /// towards this one (see ``trainLeavingTowards(_:along:)``). `standing`
+    /// towards this one (see ``trainLeavingTowards(_:along:memo:)``). `standing`
     /// and `moving` are where trains stand and travel as the services'
     /// phase begins (``standingEdges()``, ``movingEdges()``). `nil` when it
     /// keeps its way.
@@ -556,11 +556,11 @@ extension GameWorld {
             if case .travellingToStop? = other.execution { return false }
             return bodyStretches(of: other).contains { $0.traversal.edge == target }
         })
-        guard standsThere || !moving.isDisjoint(with: platformTrack(of: target)) else { return nil }
+        guard standsThere || !moving.isDisjoint(with: platformTrack(of: target, memo: &memo)) else { return nil }
         // Its way as it stands.
         let ahead = pathAhead(of: train)
         guard ahead.count == train.movement.remainingEdges.count else { return nil }
-        if !standsThere, trainLeavingTowards(train, along: [traversal] + ahead) == nil { return nil }
+        if !standsThere, trainLeavingTowards(train, along: [traversal] + ahead, memo: &memo) == nil { return nil }
         var distance: Int64
         if let last = ahead.last, let lastLength = network.edge(last.edge)?.length {
             distance = length - offset
@@ -638,6 +638,16 @@ extension GameWorld {
         return track
     }
 
+    /// ``platformTrack(of:)``, kept in `memo` (decision 597: on a real map
+    /// a platform's track runs on over hundreds of short edges to the next
+    /// turnout, and every travelling train asked for it at every step).
+    func platformTrack(of edge: TrackEdgeID, memo: inout PathMemo) -> Set<TrackEdgeID> {
+        if let known = memo.platformTracks[edge] { return known }
+        let track = platformTrack(of: edge)
+        memo.platformTracks[edge] = track
+        return track
+    }
+
     /// Decision 283: another train, travelling to a call, whose body is on
     /// the track of the platform `way` ends at (``platformTrack(of:)``),
     /// running along it the other way round to `way`: coming out of that
@@ -649,9 +659,9 @@ extension GameWorld {
     /// its track, waiting for the throat; the one bound for that track
     /// would stop short of it in the throat, and each would wait for the
     /// other.
-    func trainLeavingTowards(_ train: Train, along way: [TrackTraversal]) -> TrainID? {
+    func trainLeavingTowards(_ train: Train, along way: [TrackTraversal], memo: inout PathMemo) -> TrainID? {
         guard let last = way.last else { return nil }
-        let track = platformTrack(of: last.edge)
+        let track = platformTrack(of: last.edge, memo: &memo)
         let into = Set(way.filter { track.contains($0.edge) })
         for other in trains where other.id != train.id {
             guard case .travellingToStop? = other.execution else { continue }
