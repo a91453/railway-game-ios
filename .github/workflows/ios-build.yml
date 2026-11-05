@@ -453,6 +453,23 @@ jobs:
             -disableAutomaticPackageResolution \
             CODE_SIGN_IDENTITY=-
 
+      # Decision 590: the stack frames of the app's own code, as the build
+      # job's summary lists them (MapView's body was on 112.1's crash
+      # stack; its frame is measured only here). The Debug build for the
+      # Simulator (unoptimised, so larger than a Release device build's);
+      # only a reading, never a failure.
+      - name: List the app's largest stack frames
+        continue-on-error: true
+        run: |
+          app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
+          binaries=()
+          for file in "$app/RailwayGame" "$app/RailwayGame.debug.dylib"; do
+            [ -f "$file" ] && binaries+=("$file")
+          done
+          python3 -I tools/stack-frames/frames.py report \
+            --title "The app's 20 largest stack frames (Debug, iOS Simulator, arm64)" "${binaries[@]}" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
       # release-archive.yml proves no Debug-only launch argument code is in
       # the Release binary by not finding this marker there. Prove it finds
       # the marker where the code is, or that check would pass vacuously.
