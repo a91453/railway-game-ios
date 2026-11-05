@@ -103,8 +103,20 @@ struct StationMasterCorner: View {
     /// Decision 194, later: a losing line's bubble opens the line panel.
     @Environment(GameScreenState.self) private var screen
 
-    /// How long the bubble stays.
-    private static let speakingTime = Duration.seconds(7)
+    /// How long the bubble stays. A UI test can make it longer
+    /// (`-speaking-ms`, Debug builds only), as `storyTime`: the
+    /// Simulator's main thread stood still 2 to 8 s at a time, and the
+    /// bubble had gone before the test read it (decision 604).
+    private static let speakingTime: Duration = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-speaking-ms"), arguments.indices.contains(index + 1),
+           let milliseconds = Int(arguments[index + 1]) {
+            return .milliseconds(milliseconds)
+        }
+        #endif
+        return .seconds(7)
+    }()
     /// How long a story card stays: a longer line than the advice's. A UI
     /// test can make it longer (`-story-card-ms`, Debug builds only): the
     /// Simulator's main thread can stand still 6 to 11 s of the 14 in the

@@ -1537,8 +1537,8 @@ final class MapInteractionTests: XCTestCase {
 
     /// Decision 269: the map tilts as it comes closer. Decision 313: a
     /// pinch on past the 2D map's closest zoom, let go, hands it over to
-    /// the 3D map; a pinch out, let go, hands it back. In the full lane's second job (the class is in
-    /// `FULL_LANE_SECOND_JOB`), not the pull request gate.
+    /// the 3D map; a pinch out, let go, hands it back. In the full lane's map job (the class is in
+    /// `FULL_LANE_MAP_JOB`), not the pull request gate.
     func testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -1592,6 +1592,11 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(open3D.appears(within: 10))
         XCTAssertTrue(open3D.becomesHittable(within: 10))
         open3D.tap()
+        // Touched again when the 3D map has not opened: the touch was
+        // cancelled while the app's main thread stood still ("touch
+        // cancelled at (679, 350)", 26d5fca's full lane, run 42010048718;
+        // decision 604).
+        if !app.buttons["map3D.close"].appears(within: 10), open3D.isHittable { open3D.tap() }
         XCTAssertTrue(app.buttons["map3D.close"].appears(within: 20), "The 3D map opens")
 
         let speed = app.descendants(matching: .any)["map3D.speed"].firstMatch
@@ -1806,6 +1811,14 @@ final class MapInteractionTests: XCTestCase {
         let end = start.withOffset(CGVector(dx: 0, dy: -160))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         Thread.sleep(forTimeInterval: 0.5)
+        // The app's main thread can stall for seconds on the Simulator and
+        // the drag is cancelled: the list does not move a point (run
+        // 42044357168). Drag once more then; a drag that reaches the sheet
+        // instead still fails below.
+        if first.exists, first.frame.minY == before.minY {
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+            Thread.sleep(forTimeInterval: 0.5)
+        }
         let after = first.exists ? first.frame.minY : -.infinity
         XCTAssertLessThan(after, before.minY - 60, "A drag up on a card moves the list up (from \(before.minY) to \(after))")
     }
