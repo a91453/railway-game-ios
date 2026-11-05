@@ -539,7 +539,7 @@
 **第 50 任交第 51 任（2026-11-05 約 23:15 UTC＝台灣 11-06 07:15，session_01YGNNumyd5kmn2HrCenU1qN，第 6 層，壓縮 3 次）**：照這段接手；下面「第 50 任的現況」仍有效，兩段不同時以這段為準。第 51 任要由**作者在 claude.ai 開**（第 50 任開的會是第 7 層，見 §1.1）；開工先在 #1579 登記，§1 表格的遊戲規劃改成新 session。
 
 - **今天中午發下一版**（作者 2026-11-05 台灣 06:35：「我是沒有還是等這批完成中午再發」＝114.1 在作者手上沒閃退，這批完成後中午發）。版本號照 run 號（下一個多半是 115.1，不是「114.2」；查 `testflight.yml` 的 run 再說）。步驟：
-  1. **台灣 10:00 截止**（#1579 已公告，請各 session 09:30 前回報）：綠了、截圖也看過的才合，其餘留下一版。現況：**#1876 MAP3D-MEM-1**（決策 608，draft）CI 只剩一項在跑，最可能趕上；**#1870 REALYARD-B**（決策 602）內湖在號誌控制下第 1 天 18:01 死結（南港展覽館的 5 號車與 33 號車）還在查，**趕不上**；**#1874／#1875 TYMC-EXPRESS-B**（決策 605、609）**趕不上**：簡單＋行車控制第 2 天仍有 64/333 班沒發（main 5），集中在 18:38–20:25 台北、環北、A13 出發，GameCore PR（`claude/tymc-surplus-depot`）還沒開；ROADIX（607）、KLRT（535 續）、FACADE-REAL（610）都是下一版。
+  1. **台灣 10:00 截止**（#1579 已公告，請各 session 09:30 前回報）：綠了、截圖也看過的才合，其餘留下一版。現況（23:50 UTC 更新）：**#1876 MAP3D-MEM-1**（決策 608，draft）**也趕不上**：Swift 與 Xcode build 綠，但手動跑的 3D UI 測試 run 42125321805 裡 `MapInteractionTests.testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 連兩次紅（捏合沒交給 3D 地圖），查清前留 draft，拿 main 的 full lane 的 map job 對照；所以這版**沒有新 PR 要合**，只差 WHATSNEW。main `4e244db0` 的夜間完整 `ci.yml` 已綠（schedule run），夜間 full lane run 42130736583 在跑；WHATSNEW 會動 `WhatsNew.swift`，合併後仍要在新 HEAD 重跑兩個；**#1870 REALYARD-B**（決策 602）內湖在號誌控制下第 1 天 18:01 死結（南港展覽館的 5 號車與 33 號車）還在查，**趕不上**；**#1874／#1875 TYMC-EXPRESS-B**（決策 605、609）**趕不上**：簡單＋行車控制第 2 天仍有 64/333 班沒發（main 5），集中在 18:38–20:25 台北、環北、A13 出發，GameCore PR（`claude/tymc-surplus-depot`）還沒開；ROADIX（607）、KLRT（535 續）、FACADE-REAL（610）都是下一版。
   2. 截止後派 WHATSNEW（Sonnet）改 `.github/testflight-whats-new.md` 與 `WhatsNew.swift` 的最前一則（114.1 之後合的：#1866–#1869、#1871 CRASH114 修正、#1861、#1872、#1873，加上截止前合的；結尾照固定規則只寫「謝謝！」）。
   3. WHATSNEW 合併後，在 main HEAD 手動跑完整 `ci.yml` 與 `ios-full-lane.yml`。**兩個都綠才跑一次 `testflight.yml`**（`workflow_dispatch`，main）；任一個紅就告訴作者哪裡紅、不發。發後記進 `research/PLAYER_FEEDBACK.md`。
   - 提醒：第 50 任排了 `send_later`（trig_013UTobzYmc4yCWn61WPLUgp，台灣 09:00）叫自己做截止；第 50 任交接後若沒在做，由第 51 任照上面三步做（不必等那個提醒）。
@@ -547,7 +547,7 @@
 - **在做的 session**（都向遊戲規劃回報；派工單與範圍見 #1579 2026-11-05 21:58–22:40 的留言）：
   - REALYARD-B session_01YGNNumiit3QNFdxjzTiXqM（#1870，決策 602）：上面的內湖死結；第二條入出庫線已排除是原因，最後一次診斷跑到 18:05。合了才派 HEIGHTFIX 與 KLRT。
   - TYMC-EXPRESS-B session_01YGNNupwCoioP9xE3UpvXyG（#1874、#1875，決策 605、609）：609＝有機廠的非環線，在行車控制下，下一小時的班不缺它時，把號碼最大的等車送回最近機廠（機捷是蘆竹），通用規則，不特判線。不降標準：簡單＋行車控制要回到 main 的水準才開 GameCore PR。佔 1 個 GameCore 名額。
-  - MAP3D-MEM-1 session_01YGNNupPFCZfR6rbV8asP6U（#1876，決策 608）：合併後同一個 session 做 **MEM-2**（緩衝三份輪替，`claude/map3d-mem-2`，608 續，不佔號）。#1876 合併後再派 **NIGHT-GLOW**（§24.6 13a）。**MEM-3**（窄頂點，13b）等作者實機的記憶體數字。
+  - MAP3D-MEM-1 session_01YGNNupPFCZfR6rbV8asP6U（#1876，決策 608）：它已壓縮 1 次，只收尾 #1876；**MEM-2**（緩衝三份輪替，608 續，不佔號）要**另派新 session**，在 #1876 合併後。#1876 合併後再派 **NIGHT-GLOW**（§24.6 13a）。**MEM-3**（窄頂點，13b）等作者實機的記憶體數字。
   - ROADIX session_01YGNNuktx1X8x2NovPb9iNq（`claude/road-interchange-607`，決策 607，壓縮 1 次，只做完這件）：合併時把本檔「交流道高架破碎」那段指到 607。第 3 級截圖。
   - KLRT session_01YGNNukynxw72AiouCCicmK（`claude/klrt-acquire`，535 續，壓縮 1 次）：作者 2026-11-05「請高雄輕軌依真實的就跟前面一樣不要有偏移或是高度不同」：路線位置與高度照真實，用 `LINE_HEIGHT_REPORT` 量、附疊圖截圖；在 #1870、#1874 之後合。第 3 級截圖。
   - FACADE-REAL session_01YGNNumNpoVRp8aubiDyfHE（`claude/facade-real`，決策 610）：實景建物沿街立面近景層。第 3 級截圖。
