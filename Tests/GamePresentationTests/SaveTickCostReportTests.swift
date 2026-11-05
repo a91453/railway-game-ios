@@ -38,13 +38,16 @@ final class SaveTickCostReportTests: XCTestCase {
         }
         session.setSpeed(speed)
         let clock = ContinuousClock()
-        var steps: [Double] = [], finishes: [Double] = []
+        var steps: [Double] = [], finishes: [Double] = [], clocks: [String] = []
+        var hours: [Int64: [Double]] = [:]
         for _ in 0..<ticks {
             guard let tick = session.beginLoopTick() else { break }
             var outcome: Result<GameSession.TickStep, GameError>!
             let step = await clock.measure { outcome = await tick.work() }
             let finish = clock.measure { session.finish(tick, with: outcome) }
             steps.append(Self.ms(step))
+            clocks.append(tick.world.clock.now.clockText)
+            hours[tick.world.clock.now.seconds % GameTime.secondsPerDay / 3_600, default: []].append(Self.ms(step))
             finishes.append(Self.ms(finish))
             if case .failure(let error) = outcome { XCTFail("\(error)"); break }
         }
@@ -58,6 +61,12 @@ final class SaveTickCostReportTests: XCTestCase {
         }
         print(line("step (off the main actor)", steps))
         print(line("finish (main actor)", finishes))
+        for hour in hours.keys.sorted() {
+            print(line(String(format: "  hour %02lld", hour), hours[hour]!))
+        }
+        for index in steps.indices.sorted(by: { steps[$0] > steps[$1] }).prefix(10) {
+            print(String(format: "PERF114   costliest: %@ %.1f ms", clocks[index], steps[index]))
+        }
         print("PERF114 ended at \(session.world.clock.now.clockText)")
     }
 }
