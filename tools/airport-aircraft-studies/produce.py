@@ -135,17 +135,36 @@ def part(mesh, kind, far):
         mesh.box('mast',0,0,0,.10,.10,5,'steel');mesh.box('sock',.8,0,4.6,1.6,.42,.42,'red')
     elif kind=='fence':
         for x in (-4,0,4):mesh.box('post',x,0,0,.10,.10,2.5,'steel')
-        mesh.box('mesh-panel',0,0,.3,8,.06,2.1,'steel')
+        for z in (.55,1.30,2.05):mesh.box('horizontal-rail',0,0,z,8,.055,.055,'steel')
+        if not far:
+            for x in range(-7,8):mesh.box('vertical-wire',x*.5,0,.3,.035,.04,2.1,'steel')
     else:
-        dims={'tug':(2.7,1.5,1.4),'baggage':(4.5,1.5,1.6),
-              'stairs':(5,2,3.2),'fuel':(6.8,2.3,2.8)}
-        L,W,H=dims[kind]
-        mesh.box('body',0,0,.45,L,W,H-.45,'white')
+        dims={'tug':(2.7,1.5),'baggage':(4.5,1.5),
+              'stairs':(5,2),'fuel':(6.8,2.3)}
+        L,W=dims[kind]
+        mesh.box('chassis',0,0,.38,L,W,.35,'steel')
         for x in (-L*.33,L*.33):
             for y in (-W*.4,W*.4):mesh.box('wheel',x,y,0,.38,.20,.45,'dark')
-        if kind=='stairs':
-            for i in range(6):mesh.box('step',-L*.4+i*.6,0,.45+i*.42,.65,1.3,.12,'steel')
-        if kind=='fuel':mesh.box('tank',0,0,1.2,L*.72,W*.8,1.1,'steel')
+        if kind=='tug':
+            mesh.box('low-cab',-.65,0,.73,1.05,W*.9,.75,'white')
+            mesh.box('windshield',-.11,0,1.02,.04,W*.72,.32,'glass',1)
+            mesh.box('drawbar',L*.55,0,.45,.62,.15,.13,'dark')
+        elif kind=='baggage':
+            mesh.box('tractor-cab',-1.55,0,.73,.95,W*.8,.85,'white')
+            for x in (-.3,1.25):
+                mesh.box('open-cart',x,0,.73,1.30,W*.84,.22,'blue')
+                if not far:
+                    for y in (-.42,.42):mesh.box('bag',x,y,.95,.65,.38,.40,'red')
+        elif kind=='stairs':
+            mesh.box('driver-cab',-1.65,0,.73,.95,W*.8,1.05,'white')
+            steps=4 if far else 8
+            for i in range(steps):
+                mesh.box('stair-tread',-.9+i*2.9/steps,0,.75+(i+1)*2.30/steps,2.9/steps+.02,W*.66,.12,'steel')
+            mesh.box('upper-landing',2.0,0,3.05,.75,W*.72,.15,'blue')
+        else:
+            mesh.box('fuel-cab',2.35,0,.73,1.25,W*.85,1.28,'white')
+            tube(mesh,'sealed-fuel-tank',-3.1,1.35,0,.84,1.68,'white',8 if far else 12)
+            if not far:mesh.box('hose-box',-.3,W*.48,.88,1.05,.18,.62,'blue')
     return {'mount':'ground-z0'}
 
 def airport(mesh,kind,far):
@@ -154,11 +173,21 @@ def airport(mesh,kind,far):
     H=11 if city else 4.5
     mesh.box('main-building',0,0,0,L,W,H,'white')
     mesh.box('roof',0,0,H,L+2,W+2,.25,'blue')
-    mesh.box('glazed-front',L*.5+.04,0,.4,.08,W*.8,H*.7,'glass',1)
+    mesh.box('glazed-front',L*.5+.04,0,.55,.08,W*.84,H*.55,'glass',1)
+    mesh.box('entrance-canopy',L*.5+2.3,0,H*.60,5.0,W*.68,.19,'blue')
+    for y in (-W*.31,0,W*.31):
+        mesh.box('front-mullion',L*.5+.11,y,.55,.08,.15,H*.55,'white')
+    if not city:
+        mesh.box('walk-boarding-door',L*.5+.14,-W*.26,.55,.10,1.55,2.25,'dark')
+        mesh.box('island-platform',L*.5+4,0,0,8,W*.86,.08,'deck')
     if city:
+        mesh.box('upper-glazing',L*.5+.08,0,H*.66,.09,W*.78,H*.18,'glass',1)
+        mesh.box('roof-plant',-L*.21,-W*.17,H+.25,9,5,1.55,'steel')
         mesh.box('tower-base',-L*.6,-W*.65,0,7,7,26,'steel')
         mesh.box('tower-cab',-L*.6,-W*.65,26,10,10,3,'glass',1)
+        mesh.box('tower-roof',-L*.6,-W*.65,29,10.5,10.5,.22,'blue')
         mesh.box('hangar',-L*.8,W*1.5,0,36,30,12,'steel')
+        mesh.box('hangar-doors',-L*.8,W*1.5-15.05,0,30,.09,9,'blue')
         for y in (-17,-5,5,20):
             base=2.0 if y<0 else 3.1
             mesh.box('jetbridge',L*.5+9,y,base,18,2.4,2.5,'white')

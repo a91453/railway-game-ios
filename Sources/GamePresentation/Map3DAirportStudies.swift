@@ -55,15 +55,23 @@ public enum Map3DAirportStudies {
             b.box(0,0,0,l,w,h,white)
             b.box(0,h,0,l+2,w+2,.25,blue)
             b.box(l*.5,0,0,.08,w*.8,h*.7,glass)
+            b.box(l*.5+2.3,h*.60,0,5,w*.68,.19,blue)
+            for z in [-w*.31,Float(0),w*.31] { b.box(l*.5+.11,.55,z,.08,.15,h*.55,white) }
             if city {
+                b.box(-l*.21,h+.25,-w*.17,9,5,1.55,steel)
                 b.box(-54,0,-27,7,7,26,steel)
                 b.box(-54,26,-27,10,10,3,glass)
+                b.box(-54,29,-27,10.5,10.5,.22,blue)
                 b.box(-72,0,63,36,30,12,steel)
+                b.box(-72,0,47.95,30,.09,9,blue)
                 for y:Float in [-17,-5,5,20] {
                     let base:Float=y<0 ? 2 : 3.1
                     b.box(54,base,y,18,2.4,2.5,white)
                     b.box(61,0,y,.3,.3,base,steel)
                 }
+            } else {
+                b.box(l*.5+.14,.55,-w*.26,.10,1.55,2.25,dark)
+                b.box(l*.5+4,0,0,8,w*.86,.08,deck)
             }
         case .runway:
             b.box(0,0,0,60,30,.08,dark)
@@ -90,15 +98,35 @@ public enum Map3DAirportStudies {
             b.box(0,0,0,.10,.10,5,steel);b.box(.8,4.6,0,1.6,.42,.42,yellow)
         case .fence:
             for x:Float in [-4,0,4] { b.box(x,0,0,.1,.1,2.5,steel) }
-            b.box(0,.3,0,8,.06,2.1,steel)
+            for z:Float in [.55,1.30,2.05] { b.box(0,z,0,8,.055,.055,steel) }
+            if !far { for i in -7...7 { b.box(Float(i)*.5,.3,0,.035,.04,2.1,steel) } }
         case .tug, .baggageCart, .boardingStairs, .fuelTruck:
             let l:Float = switch kind { case .tug:2.7; case .baggageCart:4.5; case .boardingStairs:5; default:6.8 }
             let w:Float = kind == .fuelTruck ? 2.3 : 1.5
-            let h:Float = kind == .boardingStairs ? 3.2 : (kind == .fuelTruck ? 2.8 : 1.5)
-            b.box(0,.45,0,l,w,h-.45,white)
+            b.box(0,.38,0,l,w,.35,steel)
             for x in [-l*.33,l*.33] { for y in [-w*.4,w*.4] { b.box(x,0,y,.38,.2,.45,dark) } }
-            if kind == .boardingStairs && !far { for i in 0..<6 { b.box(-l*.4+Float(i)*.6,.45+Float(i)*.42,0,.65,1.3,.12,steel) } }
-            if kind == .fuelTruck { b.box(0,1.2,0,l*.72,w*.8,1.1,steel) }
+            switch kind {
+            case .tug:
+                b.box(-.65,.73,0,1.05,w*.9,.75,white)
+                b.box(-.11,1.02,0,.04,w*.72,.32,glass)
+                b.box(l*.55,.45,0,.62,.15,.13,dark)
+            case .baggageCart:
+                b.box(-1.55,.73,0,.95,w*.8,.85,white)
+                for x:Float in [-.3,1.25] {
+                    b.box(x,.73,0,1.3,w*.84,.22,blue)
+                    if !far { for z:Float in [-.42,.42] { b.box(x,.95,z,.65,.38,.4,yellow) } }
+                }
+            case .boardingStairs:
+                b.box(-1.65,.73,0,.95,w*.8,1.05,white)
+                let steps=far ? 4 : 8
+                for i in 0..<steps { b.box(-.9+Float(i)*2.9/Float(steps),.75+Float(i+1)*2.3/Float(steps),0,2.9/Float(steps)+.02,w*.66,.12,steel) }
+                b.box(2,3.05,0,.75,w*.72,.15,blue)
+            case .fuelTruck:
+                b.box(2.35,.73,0,1.25,w*.85,1.28,white)
+                b.box(-.9,.84,0,4.45,w*.7,1.68,white)
+                if !far { b.box(-.3,.88,w*.48,1.05,.18,.62,blue) }
+            default: break
+            }
         }
         return .flat(named:"airport-\(kind.rawValue)-\(far ? "far" : "near")",from:b.mesh)
     }
