@@ -40,6 +40,46 @@ final class TaoyuanAirportLineTests: XCTestCase {
         XCTAssertEqual(inDepots, between)
     }
 
+    /// Decision 605: its express runs pass the stations the real expresses
+    /// do not stop at, and Chang Gung Memorial Hospital (A8), where every
+    /// real overtake is, has a passing loop outside each track: four
+    /// platforms, a train standing in either loop able to go on to the
+    /// next station its way and none of the other stations between the
+    /// ends laid otherwise than before.
+    func testExpressesPassAndOvertakeAtChangGung() throws {
+        let session = try RealLineAcquisitionTests.game(round: Self.id, side: 1 << 22, heights: true)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == Self.id }, "on sale")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let world = session.world
+        let bought = try XCTUnwrap(world.lines.first)
+        func named(_ stop: Int) -> String { world.station(id: bought.stops[stop])?.name ?? "?" }
+        let expresses = bought.runs.filter { !$0.passes.isEmpty }
+        XCTAssertGreaterThan(expresses.count, 100)
+        let stopping = Set(expresses.flatMap { run in bought.calls(of: run).map(named) })
+        XCTAssertTrue(stopping.isSuperset(of: ["台北車站", "新北產業園區站", "長庚醫院站", "機場第一航廈站", "機場第二航廈站"]), "\(stopping)")
+        XCTAssertEqual(stopping.subtracting(["高鐵桃園站", "環北站"]).count, 5, "a few on to Taoyuan HSR and Huanbei: \(stopping)")
+
+        let changGung = try XCTUnwrap(bought.stops.firstIndex { world.station(id: $0)?.name == "長庚醫院站" })
+        let platforms = world.network.platforms(of: bought.stops[changGung])
+        XCTAssertEqual(platforms.count, 4)
+        for stop in bought.stops.indices.dropFirst().dropLast() where stop != changGung {
+            XCTAssertLessThanOrEqual(world.network.platforms(of: bought.stops[stop]).count, 3, named(stop))
+        }
+        // Each platform at Chang Gung leads on to a neighbour: the two
+        // loops each to the station their track runs to.
+        let length = try XCTUnwrap(world.trains.first).length
+        var reached: [TrackEdgeID: Set<Int>] = [:]
+        for berth in world.berths(of: bought.stops[changGung], length: length) {
+            for next in [changGung - 1, changGung + 1] {
+                var memo = GameWorld.PathMemo()
+                if world.path(from: .onEdge(berth.traversal, offset: berth.offset), toStation: bought.stops[next], length: length, memo: &memo) != nil {
+                    reached[berth.traversal.edge, default: []].insert(next)
+                }
+            }
+        }
+        XCTAssertEqual(Set(platforms.map(\.edge)), Set(reached.keys), "every platform leads on")
+    }
+
     /// Decision 564: its trains keep right, so its turn-back crossovers lie
     /// the other way round from a line keeping left. A train turned back at
     /// a station a run starts or ends at, on either of its tracks, reaches
