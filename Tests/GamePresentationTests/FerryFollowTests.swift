@@ -137,6 +137,7 @@ final class FerryFollowTests: XCTestCase {
         let bridge = cab.eye - pose.rail
         XCTAssertEqual(bridge.y, Map3DFerry.Boat.tamsui.bridgeEye, accuracy: 0.05)
         XCTAssertEqual(bridge.dot(pose.forward), Map3DFerry.Boat.tamsui.bridgeFront + Map3DFollow.cabLead, accuracy: 0.05)
+        XCTAssertEqual(cab.pitch ?? 0, .pi / 2 - Map3DFerries.bridgeLookDown, accuracy: 0.001)
         let window = Map3DFollow(ferry: boat, view: .window).camera(following: pose, from: start, elapsed: 0, turnsAtOnce: true)
         let seat = window.eye - pose.rail
         let left = Map3DPoint(pose.forward.z, 0, -pose.forward.x)

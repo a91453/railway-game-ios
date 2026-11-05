@@ -169,6 +169,9 @@ public struct Map3DFollow: Hashable, Sendable {
         /// How high the driver's eye is over ``nose``'s way; `nil` for the
         /// train's (``Map3DFollow/cabEyeHeight``).
         public var eyeHeight: Float?
+        /// Decision 585 PR-4: how far under level the cab view looks, in
+        /// radians; `nil` for the train's (``Map3DFollow/cabLookDown``).
+        public var cabLookDown: Float?
         /// How tall the body stands over the way, which the side view
         /// looks at the middle of.
         public var bodyHeight: Float
@@ -195,7 +198,8 @@ public struct Map3DFollow: Hashable, Sendable {
 
         public init(forward: Map3DPoint, nose: Map3DPoint, rail: Map3DPoint, middle: Map3DPoint? = nil, length: Float = 0,
                     ground: Float? = nil, inTunnel: Bool = false, eyeHeight: Float? = nil,
-                    bodyHeight: Float = Map3DTrains.carHeight, window: Window? = nil) {
+                    bodyHeight: Float = Map3DTrains.carHeight, window: Window? = nil, cabLookDown: Float? = nil) {
+            self.cabLookDown = cabLookDown
             self.bodyHeight = bodyHeight
             self.window = window
             self.forward = forward
@@ -524,7 +528,8 @@ public struct Map3DFollow: Hashable, Sendable {
             // look; the eye stays where it is at any distance, so a pinch
             // does nothing.
             next.heading = Self.heading(of: head.forward)
-            next.pitch = view.tilt
+            let tilt = head.cabLookDown.map { .pi / 2 - $0 } ?? view.tilt
+            next.pitch = tilt
             next.lens = Self.cabLens
             next.distance = Map3DCamera.nearest
             let height = head.eyeHeight ?? Self.cabEyeHeight
@@ -533,7 +538,7 @@ public struct Map3DFollow: Hashable, Sendable {
             // deep cutting), not in it; decision 359 (續): in a tunnel, in
             // its bore.
             if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + height) }
-            next.target = eye + next.forward * (next.distance * sinf(view.tilt)) - Map3DPoint(0, next.distance * cosf(view.tilt), 0)
+            next.target = eye + next.forward * (next.distance * sinf(tilt)) - Map3DPoint(0, next.distance * cosf(tilt), 0)
             return next
         }
         next.lens = nil

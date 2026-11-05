@@ -557,12 +557,18 @@ public struct Map3DFerries: Sendable {
         let forward = Self.travel(laid, on: line)
         return Map3DFollow.Pose(forward: forward, nose: laid.point + forward * boat.bridgeFront, rail: laid.point, middle: laid.point,
                                 length: boat.length, ground: nil, inTunnel: false, eyeHeight: boat.bridgeEye, bodyHeight: boat.height,
-                                window: .init(across: boat.seatAcross, height: boat.seatHeight, lookDown: Self.seatLookDown))
+                                window: .init(across: boat.seatAcross, height: boat.seatHeight, lookDown: Self.seatLookDown),
+                                cabLookDown: Self.bridgeLookDown)
     }
 
     /// Decision 585 PR-4: the cabin window view looks a little down, at
     /// the water going by.
     public static let seatLookDown: Float = 4 * .pi / 180
+
+    /// Decision 585 PR-4: the bridge view looks down enough to see the
+    /// boat's own foredeck and bow under the far shore (level, it saw
+    /// only sky and water, as if the camera had come loose).
+    public static let bridgeLookDown: Float = 16 * .pi / 180
 
     /// Decision 585 PR-4: the pier boat `id` comes to next at `second`
     /// (the second pier while it lies by the first), for the 3D map to

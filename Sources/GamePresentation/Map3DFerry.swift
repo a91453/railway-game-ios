@@ -39,14 +39,15 @@ public enum Map3DFerry {
 
         /// Decision 585 PR-4 (FERRYFOLLOW): where the follow camera sits
         /// in the boat, read off the model below. The bridge view's eye:
-        /// how far ahead of the middle the wheelhouse's front window
-        /// stands (the passenger boat's wheelhouse is forward, x 4.8,
-        /// 2.6 m long; the double-ended ferry's in the middle, 11.8 m long,
-        /// the same either way) and how high over the water (the
-        /// wheelhouse's windows' middle: floor 2.95 m, 1.55 m tall; floor
-        /// 5.73 m, 1.9 m tall).
-        public var bridgeFront: Float { self == .tamsui ? 6.1 : 5.9 }
-        public var bridgeEye: Float { self == .tamsui ? 3.95 : 6.9 }
+        /// how far ahead of the middle (with ``Map3DFollow/cabLead``) and
+        /// how high over the water, just before the wheelhouse's front
+        /// window (the passenger boat's wheelhouse is forward, x 4.8,
+        /// 2.6 m long, floor 2.95 m; the double-ended ferry's in the
+        /// middle, 11.8 m long, floor 5.73 m, the same either way), low
+        /// enough that the bow shows under the look
+        /// (``Map3DFerries/bridgeLookDown``).
+        public var bridgeFront: Float { self == .tamsui ? 5.7 : 5.9 }
+        public var bridgeEye: Float { self == .tamsui ? 3.6 : 6.9 }
         /// The cabin window view's seat: a seated eye 1.15 m over the
         /// saloon's floor (the open lower deck at 0.77 m; the upper saloon
         /// at 3.40 m), as far out to the side as the walls and posts
