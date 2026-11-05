@@ -502,9 +502,11 @@ final class WebsiteScreenshotTests: XCTestCase {
 
     /// Decision 596: the big junction east of Taipei Main Station from
     /// above, by day and by night: the traffic waiting at the stop lines
-    /// of the roads its signals show red, the people at the crossings.
-    func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day") }
-    func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night") }
+    /// of the roads its signals show red, the people at the crossings. The
+    /// Simulator's GPU has no tier and draws nothing on the streets, so
+    /// the standard tier is asked for.
+    func testStreetStopDay() { shootLean("streetStop", "150,200,40", "street-stop-day", extra: ["-screenshot-device-tier", "1"]) }
+    func testStreetStopNight() { shootLean("streetStopNight", "150,200,40", "street-stop-night", extra: ["-screenshot-device-tier", "1"]) }
 
     /// Decision 357 續 (SUNPCF): the 3D map with the sun's shadows drawn
     /// (quality High), for the before/after of the tent filter.
