@@ -102,10 +102,21 @@ final class TouristSourcesReportTests: XCTestCase {
         built.refreshTransfers()
         world = built.world
         if towns {
+            var built: [StationID] = []
             for name in Self.towns[network] ?? [] {
                 let point = try BundledRealData.point(BundledRealData.station(name, in: RealBranchLine.tra).coordinate, in: world)
-                _ = try? world.buildStation(named: name, at: point)
+                if let station = try? world.buildStation(named: name, at: point) { built.append(station.id) }
             }
+            // The towns' own line with a train, as a player's network
+            // elsewhere runs, joined to nothing on the branch.
+            if built.count >= 2 {
+                let line = try world.createLine(named: "Towns", stops: built).id
+                let train = try world.purchaseTrain(named: "Towns").id
+                try world.assignTrain(train, to: line)
+            }
+            let towns = built.map { "\(world.station(id: $0)?.name ?? "?") \(world.landCatchment(of: $0)?.residents ?? -1)\(world.stationDemand(of: $0) == nil ? " no demand" : "")" }
+            let branch = world.stations.filter { !built.contains($0.id) }.map { "\($0.name) \(world.landCatchment(of: $0.id)?.residents ?? -1)" }
+            FileHandle.standardError.write(Data("\(network) towns: \(towns.joined(separator: ", ")); branch: \(branch.joined(separator: ", "))\n".utf8))
         }
         // Each sight near the line: its status once the first day has run.
         let near = (world.tourism?.attractions ?? []).filter { sight in
