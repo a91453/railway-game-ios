@@ -1577,8 +1577,25 @@ public final class GameSession {
 
     func updateMap3DSpeedCapForBus() { updateMap3DSpeedCap() }
 
+    /// Whether the idle mode follows a real train on the 3D map (decision
+    /// 606): held to 10× at most as a train of the player's is (decision
+    /// 360), or a train of the real timetable is gone in a second at
+    /// 600× and no shot of it lasts.
+    public private(set) var isFollowingRealTrain = false
+
+    /// Tells the session the idle mode starts or stops following a real
+    /// train (decision 606); stopping gives back the speed it lowered.
+    public func setFollowingRealTrain(_ following: Bool) {
+        guard following != isFollowingRealTrain else { return }
+        isFollowingRealTrain = following
+        updateMap3DSpeedCap()
+    }
+
     private func updateMap3DSpeedCap() {
+        // Decision 606: a real train the idle mode follows too, also in
+        // the moment its 3D map is opened again round the next one.
         let capped = isMap3DOpen && (followedTrainID != nil || followedBusID != nil || followedCabinID != nil || followedFerryBoatID != nil)
+            || isFollowingRealTrain
         guard capped != isSpeedCappedIn3D else { return }
         applyHeldSpeed()
         isSpeedCappedIn3D = capped

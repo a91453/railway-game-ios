@@ -15,6 +15,10 @@ import GameCore
 /// has no stations or lines of a player's to show; the shots of those are
 /// this game's own.
 ///
+/// Decision 606 (IDLEREAL): and the real timetables' trains on the 3D map,
+/// the site's own: picked as its `pickTourTrain` picks (``realTrainShot``),
+/// in turn with the player's own trains when there are any.
+///
 /// Only view state, never part of the world: the app asks ``update(cast:now:allows3D:)``
 /// about once a second with the wall clock (seconds), and cuts to the shot
 /// it returns. It draws its choices from its own seeded generator, so a
@@ -25,6 +29,8 @@ public struct AmbientDirector: Equatable, Sendable {
         case train(TrainID)
         case station(StationID)
         case line(LineID)
+        /// Decision 606: a real timetable's train, followed on the 3D map.
+        case realTrain(RealTrainID)
     }
 
     /// Where a shot is seen: the 2D map, or the 3D map following a train
@@ -82,14 +88,29 @@ public struct AmbientDirector: Equatable, Sendable {
             }
         }
 
+        /// Decision 606: a real timetable's train running now, and how
+        /// much it is worth a look (``AmbientRealTrains/tourWeight(kind:rare:)``).
+        public struct RealTrain: Equatable, Sendable {
+            public let id: RealTrainID
+            public let weight: Double
+            public init(id: RealTrainID, weight: Double) {
+                self.id = id
+                self.weight = weight
+            }
+        }
+
         public let trains: [Train]
         public let stations: [Station]
         public let lines: [Line]
+        /// Decision 606: the real trains running on the map; none when the
+        /// player hides them, or on a map of no real place.
+        public var realTrains: [RealTrain] = []
 
-        public init(trains: [Train], stations: [Station], lines: [Line]) {
+        public init(trains: [Train], stations: [Station], lines: [Line], realTrains: [RealTrain] = []) {
             self.trains = trains
             self.stations = stations
             self.lines = lines
+            self.realTrains = realTrains
         }
 
         /// The world's trains on the track (the ones a follow can hold:
@@ -107,14 +128,16 @@ public struct AmbientDirector: Equatable, Sendable {
             }
         }
 
-        /// Whether there is anything to show: a station at least.
-        public var isEmpty: Bool { stations.isEmpty }
+        /// Whether there is anything to show: a station at least, or
+        /// (decision 606) a real train.
+        public var isEmpty: Bool { stations.isEmpty && realTrains.isEmpty }
 
         func holds(_ subject: Subject) -> Bool {
             switch subject {
             case .train(let id): trains.contains { $0.id == id }
             case .station(let id): stations.contains { $0.id == id }
             case .line(let id): lines.contains { $0.id == id }
+            case .realTrain(let id): realTrains.contains { $0.id == id }
             }
         }
     }
@@ -147,6 +170,61 @@ public struct AmbientDirector: Equatable, Sendable {
         case train, station, line
     }
 
+    /// Decision 606: how long the line naming a real train and where it
+    /// goes stays in the corner before it fades (seconds).
+    public static let realCaptionSeconds = 6.0
+    /// Decision 606: how many checks a second apart the 3D map, once
+    /// built, may not find the real train it follows before the director
+    /// passes on to the next (in a tunnel, or gone past the scene).
+    public static let realTrainLostChecks = 8
+    /// Decision 606 (續): how many checks a second apart the real train
+    /// followed may be found with the ground round it not built (run out
+    /// of the scene, or ahead of what is built) before the director passes
+    /// on to the next.
+    public static let realTrainBareChecks = 3
+
+    /// Decision 606 (續): the 3D map's checks, a second apart, on the real
+    /// train it follows: whether its name may show, and when to pass on.
+    public struct RealTrainWatch: Equatable, Sendable {
+        /// What a check finds.
+        public enum Outcome: Equatable, Sendable {
+            /// Not yet shown on built ground: wait.
+            case waiting
+            /// Shown on built ground: its name may show.
+            case seen
+            /// Lost (``AmbientDirector/realTrainLostChecks`` checks not
+            /// found) or on bare ground (``AmbientDirector/realTrainBareChecks``):
+            /// pass on to the next.
+            case lost
+        }
+
+        /// Checks in a row it was not found, and found on ground not built.
+        public private(set) var misses = 0
+        public private(set) var bare = 0
+
+        public init() {}
+
+        /// One check: whether the 3D map found the train, and whether the
+        /// ground round it is built.
+        public mutating func check(found: Bool, built: Bool) -> Outcome {
+            guard found else {
+                misses += 1
+                bare = 0
+                return misses >= AmbientDirector.realTrainLostChecks ? .lost : .waiting
+            }
+            misses = 0
+            guard built else {
+                bare += 1
+                return bare >= AmbientDirector.realTrainBareChecks ? .lost : .waiting
+            }
+            bare = 0
+            return .seen
+        }
+    }
+    /// Decision 606: the 3D views a real train is followed from, in turn
+    /// (``Map3DFollow/realTrainViews``).
+    public static let realViews3D = Map3DFollow.realTrainViews
+
     // MARK: - State
 
     /// The shot on screen; `nil` before the first.
@@ -158,6 +236,12 @@ public struct AmbientDirector: Equatable, Sendable {
     private var recentTrains: [TrainID] = []
     private var recentStations: [StationID] = []
     private var recentLines: [LineID] = []
+    /// Decision 606: the real trains shown last (the site's `_tourRecent`),
+    /// how many real trains' shots there have been, and whether the next
+    /// train shot is a real train's.
+    private var recentReal: [RealTrainID] = []
+    private var realShots = 0
+    private var realTurn = false
     private var random: SplitMix
 
     public init(seed: UInt64) {
@@ -205,6 +289,14 @@ public struct AmbientDirector: Equatable, Sendable {
     private mutating func pick(_ kind: Kind, cast: Cast, allows3D: Bool) -> Shot? {
         switch kind {
         case .train:
+            // Decision 606: a real train in turn with the player's own, or
+            // every time when the player runs none; only on the 3D map.
+            let realReady = allows3D && !cast.realTrains.isEmpty
+            if realReady, realTurn || cast.trains.isEmpty, let shot = realTrainShot(cast: cast) {
+                realTurn = false
+                return shot
+            }
+            realTurn = realReady
             // Each line as often as another, whatever trains it runs, as the
             // site weights its rarer kinds of train up; a train on no line
             // counts as a line of its own.
@@ -228,6 +320,38 @@ public struct AmbientDirector: Equatable, Sendable {
             remember(line.id, in: &recentLines)
             return Shot(subject: .line(line.id), stage: .map2D, seconds: seconds(in: Self.stillSeconds))
         }
+    }
+
+    /// Decision 606: the site's `pickTourTrain`: a running real train, not
+    /// one of the last ``recent`` while there are others, by its weight
+    /// (``AmbientRealTrains/tourWeight(kind:rare:)``) held to
+    /// ``AmbientRealTrains/tourCap`` of all the candidates' together;
+    /// followed for ``trainSeconds`` from the next of ``realViews3D``.
+    private mutating func realTrainShot(cast: Cast) -> Shot? {
+        let fresh = cast.realTrains.filter { !recentReal.contains($0.id) }
+        let candidates = fresh.isEmpty ? cast.realTrains : fresh
+        guard let index = Self.tourPick(weights: candidates.map(\.weight), unit: random.unit()) else { return nil }
+        let train = candidates[index]
+        remember(train.id, in: &recentReal)
+        let view = Self.realViews3D[realShots % Self.realViews3D.count]
+        realShots += 1
+        return Shot(subject: .realTrain(train.id), stage: .map3D(view), seconds: seconds(in: Self.trainSeconds))
+    }
+
+    /// Decision 606: which of the candidates of `weights` the site's
+    /// `pickTourTrain` takes for a draw `unit` (0..<1): each weight held to
+    /// ``AmbientRealTrains/tourCap`` of their sum, then the first whose
+    /// running total reaches `unit` of the held total; `nil` for none.
+    public static func tourPick(weights: [Double], unit: Double) -> Int? {
+        guard !weights.isEmpty else { return nil }
+        let cap = weights.reduce(0, +) * AmbientRealTrains.tourCap
+        let held = weights.map { min($0, cap) }
+        var left = unit * held.reduce(0, +)
+        for (index, weight) in held.enumerated() {
+            left -= weight
+            if left <= 0 { return index }
+        }
+        return weights.count - 1
     }
 
     /// One of `items`, by `weight`, not one of the `recent` while there are
@@ -264,7 +388,7 @@ public struct AmbientDirector: Equatable, Sendable {
     public static func region(of subject: Subject, in world: GameWorld) -> WorldRegion? {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         switch subject {
-        case .train:
+        case .train, .realTrain:
             return nil
         case .station(let id):
             guard let station = world.station(id: id) else { return nil }
@@ -290,6 +414,9 @@ public struct AmbientDirector: Equatable, Sendable {
             return world.station(id: id)?.name
         case .line(let id):
             return world.lines.first { $0.id == id }?.name
+        case .realTrain:
+            // Decision 606: ``AmbientRealTrains/caption(of:at:on:dayBefore:language:)``.
+            return nil
         }
     }
 }

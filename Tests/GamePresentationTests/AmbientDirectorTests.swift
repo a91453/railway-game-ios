@@ -33,6 +33,7 @@ final class AmbientDirectorTests: XCTestCase {
         case .train: .train
         case .station: .station
         case .line: .line
+        case .realTrain: .train
         }
     }
 
