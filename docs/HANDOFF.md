@@ -826,7 +826,7 @@
   - Antigravity：**SKLTOWER 新光摩天大樓（決策 550）**，單一 3D 模型，照 #1711 85 大樓的做法；第三級，**遊戲規劃看過截圖才合**。
 - **沒派的（建議順序）**：
   1. **PR 的 CI 也編 Release**：至少改到 `RailwayGameApp/` 的 PR 編一次 Release 設定，106 這種錯才擋得住（macOS runner 只有 5 台）。
-  2. #1702 的後續：`useModels` 那 192 MB 的 `makeBuffer` 移出主執行緒；TrainShowcase 第二份模型；實機量時間。
+  2. #1702 的後續：→ MAP3D-MEM-1 做了，見[決策 608](decisions/608.md)（模型包背景上傳一次、App 期間共用，CPU 不留頂點，列車展示用同一份）。實機記憶體與時間等作者 TestFlight 量（UNVERIFIED）。研究 §12 的 B（MAP3D-MEM-3，窄頂點）與 C（MAP3D-MEM-2，每幀緩衝輪替）等決策 608 合了再派（B 還要有作者的實機記憶體數字）。
   3. REV1698 的 P3-1：`followsRealTimetable(l.train) || followsRealTimetable(x.train)` 那一處。
   4. 其他 UI 測試也設 `OS_ACTIVITY_DT_MODE=NO`（#1717 只改了兩支）。MENUSTALL（#1712）查到：選單打開後的長停頓是 XCTest 自己的查詢把 log 同步寫到 stderr，實機不會；剩下 1.8–3.0 s 是系統第一次做的事（無障礙 bundle、聽寫設定、Simulator 的 Metal 編 pipeline），不是 App 的程式。查別的停頓加 Debug 啟動參數 `-ui-test-stall-stacks` 看 trace；不要在 dyld 的載入回呼（`_dyld_register_func_for_add_image`）裡做事，試過 App 啟動就卡住。
   5. 海風號、山嵐號接上專用模型（`Map3DTourismEMU500` 已在模型包，沒接進 `Map3DTrainSet`）；Opus、rolling-stock skill、第三級截圖。

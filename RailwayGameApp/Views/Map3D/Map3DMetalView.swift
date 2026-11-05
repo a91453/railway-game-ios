@@ -151,7 +151,9 @@ final class Map3DMetalView: MTKView {
     /// Decision 352: with Reduce Motion the screens hold one picture;
     /// decision 356: and the water's ripples stand still.
     var reduceMotion = false
-    /// Decision 230: the train models, and a buffer of each one's vertices.
+    /// Decision 230: the train models, and a buffer of each one's vertices;
+    /// decision 608: the pack without its vertices, which are only in the
+    /// buffers (``Map3DUploadedModels``, shared by every 3D view).
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     private var transparentGlass = Map3DTransparentGlass.Cache(models: [])
     private var glassDrawing: Map3DGlassPipeline?
@@ -594,7 +596,7 @@ final class Map3DMetalView: MTKView {
                 for run in props.shapes where run.model < models.buffers.count && !leftOut.contains(run.model) && walkModels?.places(run.model) != true {
                     encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
-                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertexCount,
                                            instanceCount: run.count)
                     drawCalls += 1
                     triangles += models.pack.models[run.model].triangleCount * run.count
@@ -885,12 +887,14 @@ final class Map3DMetalView: MTKView {
         }
     }
 
-    /// Decision 230: draws the trains near the eye with `pack`'s models.
-    func useModels(_ pack: Map3DModelPack) {
-        let buffers = pack.models.compactMap { makeBuffer($0.vertices) }
-        guard buffers.count == pack.models.count else { return }
-        models = (pack, buffers)
-        transparentGlass = Map3DTransparentGlass.Cache(models: pack.models)
+    /// Decision 230: draws the trains near the eye with `uploaded`'s
+    /// models; decision 608: their buffers made once, off the main thread,
+    /// and shared, so this only takes them.
+    func useModels(_ uploaded: Map3DUploadedModels) {
+        guard let device, uploaded.buffers.allSatisfy({ $0.device === device }) else { return }
+        let pack = uploaded.pack
+        models = (pack, uploaded.buffers)
+        transparentGlass = uploaded.glass
         signalModels = Map3DSignalTiming.Models(pack: pack)
         walkModels = Map3DPedestrianSignal.Models(pack: pack)
     }
@@ -1213,7 +1217,7 @@ final class Map3DMetalView: MTKView {
                     if model < models.buffers.count {
                         encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
                         encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
-                        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertices.count,
+                        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertexCount,
                                                instanceCount: count)
                         drawCalls += 1
                         triangles += models.pack.models[model].triangleCount * count
@@ -1252,7 +1256,7 @@ final class Map3DMetalView: MTKView {
                     }
                     encoder.setVertexBuffer(models.buffers[drawn], offset: 0, index: 0)
                     encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
-                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertices.count,
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[drawn].vertexCount,
                                            instanceCount: run.count)
                     drawCalls += 1
                     triangles += models.pack.models[drawn].triangleCount * run.count

@@ -22,16 +22,41 @@ public struct Map3DModelPack: Sendable {
     public struct Model: Sendable {
         public let name: String
         /// Three to a triangle, each with the triangle's own normal (flat,
-        /// the miniature look).
+        /// the miniature look). Empty once let go of (``withoutVertices``,
+        /// decision 608): the app keeps them only on the GPU.
         public let vertices: [Map3DVertex]
+        /// Decision 608: how many vertices it has, kept when they are let go.
+        public let vertexCount: Int
         public let minimum: Map3DPoint
         public let maximum: Map3DPoint
 
         public var length: Float { maximum.x - minimum.x }
-        public var triangleCount: Int { vertices.count / 3 }
+        public var triangleCount: Int { vertexCount / 3 }
+
+        init(name: String, vertices: [Map3DVertex], minimum: Map3DPoint, maximum: Map3DPoint) {
+            self.name = name
+            self.vertices = vertices
+            vertexCount = vertices.count
+            self.minimum = minimum
+            self.maximum = maximum
+        }
+
+        /// Decision 608: the model with its name, vertex count and bounds
+        /// but no vertices, once they are on the GPU.
+        public var withoutVertices: Model {
+            Model(name: name, vertexCount: vertexCount, minimum: minimum, maximum: maximum)
+        }
+
+        private init(name: String, vertexCount: Int, minimum: Map3DPoint, maximum: Map3DPoint) {
+            self.name = name
+            vertices = []
+            self.vertexCount = vertexCount
+            self.minimum = minimum
+            self.maximum = maximum
+        }
     }
 
-    public let models: [Model]
+    public internal(set) var models: [Model]
     /// Decision 338: the sets drawn as they were before them (``TrainPack``).
     public var locked: Set<String> = []
     /// Decision 436: the destination signs of the cab cars that carry one,
@@ -41,8 +66,52 @@ public struct Map3DModelPack: Sendable {
     /// index (``Map3DTrainLights/add(to:pack:lights:)``).
     public private(set) var lights: [Int: Map3DTrainLights.Car] = [:]
 
-    /// Every style's cab car and middle car, made once.
-    public static let standard = Map3DModelPack(styles: Map3DTrainStyle.all)
+    /// Every style's cab car and middle car, made once (on first use).
+    /// Decision 608: the app lets go of their vertices once they are on
+    /// the GPU (``letGoOfStandardVertices()``); after that this is the
+    /// same pack, its names, vertex counts, bounds, lamps and signs intact,
+    /// with no vertices. Tests and tools never let go.
+    public static var standard: Map3DModelPack { StandardPack.shared.pack }
+
+    /// Decision 608: from now on ``standard`` keeps no vertices (made
+    /// first if it is not yet). Only the app calls it, once the models it
+    /// draws are on the GPU; a copy taken before keeps its own.
+    public static func letGoOfStandardVertices() {
+        StandardPack.shared.letGoOfVertices()
+    }
+
+    /// Decision 608: the pack with every model's name, vertex count and
+    /// bounds, its locked sets, lamps and destination signs, but no
+    /// vertices.
+    public func withoutVertices() -> Map3DModelPack {
+        var pack = self
+        pack.models = models.map(\.withoutVertices)
+        return pack
+    }
+
+    /// ``standard``, made once the first time it is asked for (as the
+    /// `static let` it was), which the app can let go of the vertices of.
+    private final class StandardPack: @unchecked Sendable {
+        static let shared = StandardPack()
+        private let lock = NSLock()
+        private var made: Map3DModelPack?
+
+        var pack: Map3DModelPack {
+            lock.lock()
+            defer { lock.unlock() }
+            if let made { return made }
+            let pack = Map3DModelPack(styles: Map3DTrainStyle.all)
+            made = pack
+            return pack
+        }
+
+        func letGoOfVertices() {
+            let slim = pack.withoutVertices()
+            lock.lock()
+            made = slim
+            lock.unlock()
+        }
+    }
     /// The same pack before the shade is baked (decision 439): the recipes as
     /// they are made, for the tests that check which recipe goes where.
     static let unbaked = Map3DModelPack(styles: Map3DTrainStyle.all, baked: false)

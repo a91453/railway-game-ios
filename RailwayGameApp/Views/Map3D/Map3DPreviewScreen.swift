@@ -1,6 +1,7 @@
 import Foundation
 import GameCore
 import GamePresentation
+import Metal
 import SwiftUI
 import UIKit
 
@@ -53,7 +54,7 @@ struct Map3DPreviewScreen: View {
     @State private var built: Map3DBuiltScene?
     private var scene: Map3DScene? { built?.scene }
     @State private var sceneVersion = 0
-    /// K1-1, K2-4: whether ``Map3DView/models`` is made, off the main
+    /// K1-1, K2-4: whether ``Map3DTrainModels`` has made them, off the main
     /// thread; decision 546: the scene is shown before they are.
     @State private var modelsReady = false
     @State private var stats: Map3DMetalView.Stats?
@@ -500,7 +501,7 @@ struct Map3DPreviewScreen: View {
     }
 }
 
-/// Decision 546: the 3D map's train models (``Map3DView/models``), made
+/// Decision 546: the 3D map's train models (``Map3DView/makeModels()``), made
 /// once, off the main thread: ahead, a while after a game opens (when 3D
 /// is on and the device keeps a scene built, decision 460) or when a pinch
 /// rests near the 3D map, or when the 3D map opens, which shows its scene
@@ -510,20 +511,29 @@ struct Map3DPreviewScreen: View {
 /// priority the Simulator's main thread stood still for 61 s (#1693). So
 /// whoever waits for them waits on a continuation, which raises nothing,
 /// not on the task's value, which would raise it to the waiter's priority.
+///
+/// Decision 608: made with their GPU buffers, on the same task: the
+/// vertices go to the GPU once, off the main thread, and the CPU keeps
+/// only their names, vertex counts, bounds, lamps, signs and glass
+/// (``Map3DUploadedModels``), held for the app's life and shared by the
+/// 3D map and the train showcase.
 @MainActor
 final class Map3DTrainModels {
     static let shared = Map3DTrainModels()
     private var started = false
     private var made = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
+    /// Decision 608: the models on the GPU, once made (`nil` before, or
+    /// where the device has no Metal or no memory for them).
+    private(set) var uploaded: Map3DUploadedModels?
 
     /// Starts making them, unless made or under way.
     func start(priority: TaskPriority = .utility) {
         guard !started else { return }
         started = true
         Task.detached(priority: priority) {
-            _ = Map3DView.models?.models.count
-            await Map3DTrainModels.shared.finished()
+            let uploaded = Map3DUploadedModels.make()
+            await Map3DTrainModels.shared.finished(uploaded)
         }
     }
 
@@ -534,7 +544,8 @@ final class Map3DTrainModels {
         await withCheckedContinuation { waiting.append($0) }
     }
 
-    private func finished() {
+    private func finished(_ uploaded: Map3DUploadedModels?) {
+        self.uploaded = uploaded
         made = true
         let woken = waiting
         waiting = []
@@ -544,6 +555,43 @@ final class Map3DTrainModels {
     /// How long after a game opens they are made ahead: past its first
     /// moves, which the cores are left to.
     static let aheadAfter: Duration = .seconds(8)
+}
+
+/// Decision 608: the 3D map's train and street models on the GPU, one
+/// buffer each, made once off the main thread and never changed, so any
+/// thread may read them; the CPU keeps the pack without its vertices
+/// (names, vertex counts, bounds, lamps, destination signs) and the glass
+/// the transparent-glass pass sorts each frame, taken before the
+/// vertices are let go of.
+final class Map3DUploadedModels: @unchecked Sendable {
+    let pack: Map3DModelPack
+    let buffers: [MTLBuffer]
+    let glass: Map3DTransparentGlass.Cache
+
+    private init(pack: Map3DModelPack, buffers: [MTLBuffer], glass: Map3DTransparentGlass.Cache) {
+        self.pack = pack
+        self.buffers = buffers
+        self.glass = glass
+    }
+
+    /// Makes the models (``Map3DView/makeModels()``), puts their vertices
+    /// in buffers on the system's Metal device (the one every 3D view
+    /// draws with), then lets go of them on the CPU: this pack's, and
+    /// ``Map3DModelPack/standard``'s, which it was made from. Slow: never
+    /// on the main thread.
+    static func make() -> Map3DUploadedModels? {
+        guard let full = Map3DView.makeModels(), let device = MTLCreateSystemDefaultDevice() else { return nil }
+        let buffers = full.models.compactMap { model in
+            model.vertices.withUnsafeBytes { bytes in
+                bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
+            }
+        }
+        guard buffers.count == full.models.count else { return nil }
+        let glass = Map3DTransparentGlass.Cache(models: full.models)
+        let uploaded = Map3DUploadedModels(pack: full.withoutVertices(), buffers: buffers, glass: glass)
+        Map3DModelPack.letGoOfStandardVertices()
+        return uploaded
+    }
 }
 
 /// Decision 269: the last scene built, kept while the world it shows
@@ -1114,7 +1162,8 @@ private struct Map3DView: UIViewRepresentable {
     /// flown to at its platform, in `world`.
     let departure: Map3DNextDeparture?
     let world: GameWorld
-    /// Whether ``models`` is made; the first scene waits for it.
+    /// Whether ``Map3DTrainModels`` has made them (decision 546: the scene
+    /// is shown before).
     let modelsReady: Bool
     /// Decision 517 續: placed under its station each frame.
     let stationTag: Map3DStationTagState
@@ -1132,12 +1181,16 @@ private struct Map3DView: UIViewRepresentable {
     // bushes and tanks (decision 458) from their files, or the code-made
     // ones. K1-1, K2-4: made off the main thread (the screen's
     // `modelsReady`), never first read in `makeUIView`.
-    nonisolated static let models: Map3DModelPack? = Map3DSceneryProp.pack(Map3DGarbageTruck.pack(
+    // Decision 608: made once, by ``Map3DTrainModels``, which keeps
+    // them on the GPU (``Map3DUploadedModels``), not held here.
+    nonisolated static func makeModels() -> Map3DModelPack? {
+        Map3DSceneryProp.pack(Map3DGarbageTruck.pack(
         Map3DCityBus.pack(file: Bundle.main.url(forResource: Map3DCityBus.fileName, withExtension: Map3DCityBus.fileExtension)),
         files: Map3DGarbageTruck.fileNames.compactMapValues { Bundle.main.url(forResource: $0, withExtension: Map3DGarbageTruck.fileExtension) }),
         files: Dictionary(uniqueKeysWithValues: Map3DSceneryProp.allCases.compactMap { prop in
             Bundle.main.url(forResource: prop.fileName, withExtension: Map3DSceneryProp.fileExtension).map { (prop, $0) }
         }))
+    }
 
     func makeUIView(context: Context) -> UIView {
         guard let view = Map3DMetalView.make(samples: quality.samplesPerPixel) else {
@@ -1219,7 +1272,7 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 546: the scene shown as soon as it is built, its trains
         // as boxes and its street furniture left out until the models are
         // made (``Map3DTrainModels``), then drawn with them.
-        if modelsReady, !context.coordinator.hasModels, let models = Self.models {
+        if modelsReady, !context.coordinator.hasModels, let models = Map3DTrainModels.shared.uploaded {
             context.coordinator.hasModels = true
             view.useModels(models)
             if let scene, context.coordinator.shownVersion != nil { showTrains(in: scene, on: view, context: context) }
@@ -1310,8 +1363,8 @@ private struct Map3DView: UIViewRepresentable {
                                             switchOn: UserDefaults.standard.bool(forKey: TrainPack.testUnlockKey))
         let pushPullE1000 = UserDefaults.standard.bool(forKey: TrainPack.pushPullE1000Key)
         // Never read before they are made: the main thread would wait for them.
-        let feed = feed, models = context.coordinator.hasModels ? Map3DView.models.map { pack in
-            var pack = pack
+        let feed = feed, models = context.coordinator.hasModels ? Map3DTrainModels.shared.uploaded.map { uploaded in
+            var pack = uploaded.pack
             pack.locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: pushPullE1000)
             return pack
         } : nil
@@ -2479,7 +2532,7 @@ struct Map3DSnapshotSheet: View {
 #if DEBUG
 /// A UI test's train models made before it opens the 3D map
 /// (`-ui-test-3d-models-first`, Debug builds only). Made where the 3D map
-/// makes them (``Map3DView/models``), at launch: on the Simulator they take
+/// makes them (``Map3DTrainModels``), at launch: on the Simulator they take
 /// some 30 s of CPU, and while they were made over an open 3D map the app
 /// answered no UI query for 50 to 90 s, past XCTest's 100 s (main
 /// 6ebf8c7's full lane, run 41354792858). Their marker,
