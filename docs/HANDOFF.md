@@ -1,3 +1,10 @@
+> Codex 吊廂、玻璃與機場 studies 的交接（遊戲規劃第 49 任 2026-11-05 補寫；Codex 合併時沒寫進這裡）。都只是 studies，遊戲沒有引用，GameCore、存檔、golden、fixtures 不動；模型、GLB、日夜七向與離線 viewer 在私庫 `game-art-previews/docs/art/` 同名資料夾，外觀都還沒經作者接受。
+> - **日月潭吊廂**（#1813，[README](art/sunmoon-cabin-2026-11/README.md)）：紅黃藍一般廂與綠色水晶廂，各近景與 LOD 共 8 款。外廓、吊架、玻璃厚度是比例推估；櫻花彩繪與商標省略。**下一步**：作者看外觀；要上地圖時，比照決策 575 貓空的接法派工（`Map3DCableCar`、日月潭纜車的路線資料），並改用下面的透明玻璃。
+> - **原生透明玻璃**（#1817，[README](art/native-glass-2026-11/README.md)，`Map3DTransparentGlass`）：只有明確呼叫 `studyPack` 的模型才換成透明玻璃（材質 layer −16／−17），既有 `trainGlass` 不變；macOS 離線 Metal 已驗混色、遮擋、排序。**下一步**：貓空現行配方有些玻璃是用一般色塊畫的，要先在配方裡標成玻璃，才能套用透明；之後另派接入貓空、日月潭、烏來，並在 iPhone 實機量幀數。透明 pass 不支援城市 chunk 與靜態 prop。
+> - **烏來第六代吊廂**（#1845，[README](art/wulai-cabin-studies-2026-11/README.md)）：白色 71 人往復式大型吊廂，近景 8,992、LOD 3,744 三角，窗與天窗透明、地板不透明。尺寸與輪系是推估；沒有旅客、開門、擺動動畫。加了 `wulai-cabin-metal.yml`（macOS，只在 PR 改到 `tools/wulai-cabin-studies/` 時跑）。**下一步**：作者看外觀；遊戲還沒有烏來纜車的路線，要先派 GameCore 的纜車路線（決策 574 的運具）才接得上。
+> - **貓空吊廂修真**（[README](art/maokong-cabin-refine-2026-11/README.md)）：重做比例、吊架、對開門、長椅與水晶地板，一般與水晶各近景與 LOD。登車高度改了，站台間隙沒有校驗。**下一步**：作者接受後，替換決策 575 現行的 `Map3DCableCar` 配方，並校驗站台間隙。
+> - **機場與飛機**（#1844，決策 [594](decisions/594.md)，[README](art/airport-aircraft-2026-11/README.md)）：遊戲規劃第 49 任看總覽後，下一輪要改的：跑道是深藍色，應該是深灰柏油；十九座與七十座兩款螺旋槳機看不到螺旋槳；地勤車（tug、baggage、stairs、fuel）的輪子是方塊；城市航廈組景的塔台、機庫、航廈分開浮著，沒有地面把它們連起來；夜間版只是整體變暗，沒有跑道邊燈與機坪燈。接進遊戲前，要先另派一個決策，定出飛機在地圖上怎麼動、停在哪個機場（決策 594 沒有寫）。
+
 > 國道客運車塗裝 studies（Codex，決策 593，`codex/coach-liveries`，2026-11-05）：三軸 coach 加八組中性塗裝（含原暖白／暖紅與觀光接駁），按需近遠景，不接營運。預設 `Map3DCoachBus.model()` 頂點與雜湊鎖住，街景選型／種子、GameCore、存檔、golden、fixtures 不動。私庫存完整模型、日夜七向 PNG、viewer 與 SOURCE.md；公開庫存配方、測試、一張總覽。外觀待作者看，Metal 實機與路線對色留後續。
 
 > 跟車透視補充（派工單 FOLLOWXRAY，`claude/follow-xray`，#1819，不佔新號，存檔、golden 不動，2026-11-05）：纜車吊廂交給透視；公車車窗改右窗；停站時「從車站看」直接可選。**公車的透視拿掉了**：城市場景的側視裡，被跟隨的公車交給透視後整台消失（同鏡頭，關掉就回來，後視、車窗不受影響）。已排除鏡頭位置；「只切分區塊、不送錐」的實驗 UI 查詢逾時，沒有結論。**下一步**：要再接公車先查這個消失（`Map3DSeeThrough.init(followed:)` 保留），疑點在被跟隨車輛與透視錐的深度／覆蓋率互動。說明見 decisions/342.md、578.md 的「續（FOLLOWXRAY）」。
