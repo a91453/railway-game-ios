@@ -118,6 +118,10 @@ struct RailwayGameApp: App {
 
     private static func makeLauncher() -> GameLauncher {
         let launcher = GameLauncher(library: makeSaveLibrary(), language: .app)
+        // Decision 590: previews that try a command on copies of the world
+        // are worked out after the view update that asks for them, off its
+        // deep stack.
+        launcher.worksOutPreviewsOnTheNextTurn = true
         // Decision 397: the saves kept in the player's iCloud too, when
         // there is one; asked off the main thread before every round.
         launcher.cloudSaveFolder = { ICloudSaveFolder.current() }

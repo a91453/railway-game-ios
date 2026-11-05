@@ -86,6 +86,12 @@ public final class GameLauncher {
     /// (``RealWorldData/issues``); empty until they have been read.
     public private(set) var realWorldIssues: [RealDataLoadIssue] = []
 
+    /// Decision 590: handed to every game it starts
+    /// (``GameSession/worksOutPreviewsOnTheNextTurn``); the app sets it.
+    @ObservationIgnored public var worksOutPreviewsOnTheNextTurn = false {
+        didSet { session?.worksOutPreviewsOnTheNextTurn = worksOutPreviewsOnTheNextTurn }
+    }
+
     /// The app's sound player, handed to every game it starts
     /// (``GameSession/playSound``); `nil` plays nothing. Going into or out
     /// of a game whooshes (``SoundCue/transition``).
@@ -1724,6 +1730,7 @@ public final class GameLauncher {
         // 419).
         started.readLandRoundStations(roads: roads)
         started.playSound = playSound
+        started.worksOutPreviewsOnTheNextTurn = worksOutPreviewsOnTheNextTurn
         started.duckMusic = duckMusic
         duckMusic?(1)
         started.runningSound = runningSound
