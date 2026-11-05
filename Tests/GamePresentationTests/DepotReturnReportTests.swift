@@ -17,7 +17,7 @@ import XCTest
 /// numbers are in the decision. HEALTH-110 added every line on sale and
 /// the other demos (`danhai-blue`, `xinbeitou`, `xiaobitan`, `pingxi`,
 /// `jiji`, `neiwan`, `shenao`, `liujia`, `shalun`, `demo`, `realworld`;
-/// HEALTH-112 `maokong`),
+/// HEALTH-112 `maokong`; HEALTH-114 `ferry-tamsui`, `ferry-gushan`),
 /// the second day's late trips, and where and when the most trains stood
 /// deadlocked; a line without runs or depots reports only those.
 @MainActor
@@ -133,6 +133,32 @@ final class DepotReturnReportTests: XCTestCase {
             FileHandle.standardError.write(Data("DEPOT_RETURN maokong cableway \(cableway.id.rawValue): \(days.joined(separator: ", "))\n".utf8))
         }
         XCTAssertEqual(played.cableways.count, 1)
+    }
+
+    /// HEALTH-114: the two real ferries (decision 585) as the ferry mode
+    /// lays them with its defaults (a boat every 15 minutes, two boats) on
+    /// a new game where the screenshot scene stands, with the app's water;
+    /// each day's riders and whether no boat sailed.
+    func testTheFerries() throws {
+        let resources = BundledRealData.directory.deletingLastPathComponent()
+        let grid = try WaterGrid(data: Data(contentsOf: resources.appendingPathComponent("RealWorld/taiwan_water.json")))
+        for (name, ferry, scene) in [("ferry-tamsui", RealFerry.tamsuiBali, ScreenshotScene.tamsuiFerry),
+                                     ("ferry-gushan", RealFerry.gushanCijin, ScreenshotScene.gushanFerry)] {
+            guard (try? wanted(name)) != nil else { continue }
+            let place = try XCTUnwrap(scene.place)
+            let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude))
+            let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
+            var world = GameWorld.newGame(anchor: anchor, water: grid.cells(frame: frame, bounds: GameWorld.newGameBounds),
+                                          steep: grid.steepCells(frame: frame, bounds: GameWorld.newGameBounds))
+            let piers = try XCTUnwrap(ferry.piers(in: world), "\(name): no shore by a pier")
+            _ = try world.createFerryRoute(piers: piers, legMetres: ferry.legMetres, service: .every(minutes: 15), boats: 2)
+            let played = try report(name, world)
+            for route in played.ferryRoutes {
+                let days = route.days.map { "day \($0.day) \($0.riders) riders\($0.closed ? " closed" : "")" }
+                FileHandle.standardError.write(Data("DEPOT_RETURN \(name) ferry \(route.id.rawValue): \(days.joined(separator: ", "))\n".utf8))
+            }
+            XCTAssertEqual(played.ferryRoutes.count, 1)
+        }
     }
 
     func testTheTRADemo() throws {
