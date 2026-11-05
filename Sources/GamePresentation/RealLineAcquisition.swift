@@ -899,8 +899,19 @@ extension RealLineLaying {
         let depotEnds: [(stop: Int, site: RealLineDepotSite, points: [WorldVector])] = depot ? depotSites.compactMap { site in
             site.beyond.flatMap { runs.stops.firstIndex(of: $0) }.map { ($0, site, worldPoints(site)) }
         } : []
+        func onMap(_ point: (latitude: Double, longitude: Double)) -> WorldVector {
+            WorldVector(frame.worldPosition(latitude: point.latitude, longitude: point.longitude))
+        }
         func runOn(from end: WorldVector, leaving way: WorldVector, at stop: Int) -> [WorldVector] {
-            guard let points = depotEnds.first(where: { $0.stop == stop })?.points else { return [end + way * RealLineAcquisition.runOn] }
+            guard let (_, site, points) = depotEnds.first(where: { $0.stop == stop }) else { return [end + way * RealLineAcquisition.runOn] }
+            // Decision 602: a fanned yard's lead along the real leads to
+            // its throat, from where the line's track runs on past the end.
+            if let fan = site.fan {
+                let junction = end + way * max(0, (points[0] - end).dot(way))
+                return RealLineDepotLayout.Fan.lead(
+                    from: junction, leaving: way, through: fan.leads.map(onMap), to: onMap(fan.throat), yardWay: (points[2] - points[1]).unit
+                )
+            }
             // In the yard's way 50 m short of its sidings' near ends, so
             // the game's ladder, longer than the real one, stays within
             // the real depot.
@@ -987,7 +998,8 @@ extension RealLineLaying {
         // real yard, over the Jingmei River), read but not bought.
         let yardSamples = depotEnds.flatMap { _, site, points in
             RealLineDepotLayout.groundSamples(
-                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step
+                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step,
+                throat: site.fan.map { onMap($0.throat) }
             )
         } + (depot && line.readsGroundBesideYards ? midDepotSites : []).flatMap { site in
             RealLineDepotLayout.groundSamples(
@@ -1301,12 +1313,12 @@ extension RealLineLaying {
         }
         // Decision 489: a depot past an end, its lead on from the main
         // track's end there; decision 535, one past each end.
-        for (end, site, _) in depotEnds where end == 0 || end == runs.stops.count - 1 {
+        for (end, site, points) in depotEnds where end == 0 || end == runs.stops.count - 1 {
             let last = end == 0 ? 0 : main.nodes.count - 1
             let way = end == 0 ? path.tangent(at: 0).reversed : path.tangent(at: path.length)
             guard let laid = RealLineDepotLayout.lay(
                 site, beyond: (RealLineAcquisition.NodeAt(piece: 0, node: last), WorldVector(main.nodes[last].point), main.heights[last], way),
-                first: pieces.count, length: platformLength, ground: ground, water: water, in: language
+                shed: (points[1] + points[2]) * 0.5, first: pieces.count, length: platformLength, ground: ground, water: water, in: language
             ) else {
                 return refused("The line's depot does not fit here.", "這條線的機廠放不下。")
             }

@@ -1,3 +1,5 @@
+> 文湖線機廠照真實車場鋪（派工單 REALYARD，session_01YGNNum5jtnCLRcfQAB8QLc，`claude/real-yard-wenhu`，[決策 602](decisions/602.md)，存檔、golden、GameCore 不動，2026-11-05）：木柵、內湖機廠的入出庫線照 OSM 的真實入出庫線走，22 股在真實車庫的地上扇形展開（改前木柵往東 600 m 過景美溪、內湖往西北拉 1 km 以上）；已買下的存檔不改。**留下的**：一股停兩列（要動 GameCore 的出車）、淡海／安坑／蘆竹／青埔機廠照同樣畫法比真實，見決策 602「下一步」。
+
 > Codex 吊廂、玻璃與機場 studies 的交接（遊戲規劃第 49 任 2026-11-05 補寫；Codex 合併時沒寫進這裡）。都只是 studies，遊戲沒有引用，GameCore、存檔、golden、fixtures 不動；模型、GLB、日夜七向與離線 viewer 在私庫 `game-art-previews/docs/art/` 同名資料夾，外觀都還沒經作者接受。
 > - **日月潭吊廂**（#1813，[README](art/sunmoon-cabin-2026-11/README.md)）：紅黃藍一般廂與綠色水晶廂，各近景與 LOD 共 8 款。外廓、吊架、玻璃厚度是比例推估；櫻花彩繪與商標省略。**下一步**：作者看外觀；要上地圖時，比照決策 575 貓空的接法派工（`Map3DCableCar`、日月潭纜車的路線資料），並改用下面的透明玻璃。
 > - **原生透明玻璃**（#1817，[README](art/native-glass-2026-11/README.md)，`Map3DTransparentGlass`）：只有明確呼叫 `studyPack` 的模型才換成透明玻璃（材質 layer −16／−17），既有 `trainGlass` 不變；macOS 離線 Metal 已驗混色、遮擋、排序。**下一步**：貓空現行配方有些玻璃是用一般色塊畫的，要先在配方裡標成玻璃，才能套用透明；之後另派，接進貓空（遊戲裡已有）、日月潭、烏來，並在 iPhone 實機量幀數。透明 pass 不支援城市 chunk 與靜態 prop。

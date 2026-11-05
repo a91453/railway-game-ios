@@ -40,6 +40,27 @@ final class WenhuLineTests: XCTestCase {
         XCTAssertEqual(RealLineStock.setKey(ofRealLine: "trtc:BR"), "wenhu370")
     }
 
+    /// Decision 602: each depot is laid on its real yard, its station
+    /// (the middle of its sidings) within 100 m of the middle of the real
+    /// shed's stabling tracks. Before it, Muzha's sidings ran some 450 m
+    /// east of the shed, over the Jingmei River, and Neihu's over 1 km
+    /// north-west of it.
+    func testTheDepotsLieOnTheRealYards() throws {
+        let session = try RealLineAcquisitionTests.game(round: "trtc:BR", side: 1 << 21, heights: true)
+        let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == "trtc:BR" }, "on sale")
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        let world = session.world
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        for site in [RealLineDepotSite.muzha, .neihu] {
+            let station = try XCTUnwrap(world.stations.first { $0.isDepot && $0.name == site.chinese })
+            let near = frame.worldPosition(latitude: site.yard.start.latitude, longitude: site.yard.start.longitude)
+            let far = frame.worldPosition(latitude: site.yard.end.latitude, longitude: site.yard.end.longitude)
+            let (dx, dy) = (Double(station.location.x) - (near.x + far.x) / 2, Double(station.location.y) - (near.y + far.y) / 2)
+            let metres = (dx * dx + dy * dy).squareRoot() / Double(WorldCoordinate.unitsPerMetre)
+            XCTAssertLessThan(metres, 100, "\(site.english): \(Int(metres)) m from the real shed")
+        }
+    }
+
     /// Where the second track's ramp leaves the first (two ways on from a
     /// switch along the same way, to within 1 in 1,000, with tangents
     /// within 1% of the same length, as the two edges' handles are), a
