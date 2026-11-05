@@ -3009,6 +3009,10 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 
 做了的在 [決策 577](decisions/577.md)：機場捷運簡單＋行車控制 11:16 起坑口卡死，修在 `resolveDeadlock` 的最後一步。留下的（決策 577「下一步」）：#1743 合併後重量機場捷運、文湖線兩天簡單＋行車控制；行車控制時的慢（`trafficPlan` 每次重算都重找每列車的越車路），建議跨計畫快取 `trafficTrack`，另派 GameCore PR。
 
+### 4.50 試算指令的預覽不在畫面更新裡算（決策 590，派工單 CRASH112，session_01YGNNuoNBB6PagaAcLNEY8h，`claude/crash112-stack`，2026-11-05）
+
+做了的在 [決策 590](decisions/590.md)：112.1 選新路線第二站時主執行緒堆疊用盡，新路線的價格與開線卡片的預覽在 app 裡改成等主執行緒下一輪算。留下的（決策 590「下一步」）：113.1 實機確認；**114.1 的根本修法**（作者 2026-11-05 同意）：GameWorld 改成堆上的 COW box（GameCore，存檔與 golden 不動，要量 tick 成本）、畫軌道預覽等其他在 body 裡模擬的 getter 也等一輪、拆小 `MapView.timedBody`、CI 列出超過 32 KB 的堆疊框；之後：兩個 `Menu` 裡的 `ForEach`。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |

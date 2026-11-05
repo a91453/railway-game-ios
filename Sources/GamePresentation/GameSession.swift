@@ -144,6 +144,19 @@ public final class GameSession {
     /// Decision 264: what opening the drafted line costs, worked out once
     /// for each draft and world.
     @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
+    /// Decision 590: whether a preview that runs a command on a copy of
+    /// the world (``lineOpeningPreview``, ``lineConfirmationPreview``) is
+    /// worked out on the main actor's next turn when the screen asks for
+    /// it, rather than inside the view update that asked: those copies
+    /// took the main thread's stack past its end under SwiftUI's deep view
+    /// updates (112.1). The app's sessions only (``GameLauncher``); tests
+    /// and the headless game read them at once.
+    @ObservationIgnored public var worksOutPreviewsOnTheNextTurn = false
+    /// Decision 590: the previews waiting for the next turn.
+    @ObservationIgnored var previewsWaiting: Set<WaitingPreview> = []
+    /// Decision 590: counts the previews worked out on a later turn; read
+    /// by a view that asked for one, so it looks again once it is in.
+    var previewsWorkedOutLater = 0
     /// The draft's one line (``lineDraftSummary``), kept likewise.
     @ObservationIgnored var lineDraftSummaryMemo: LineDraftSummaryMemo?
     /// Decision 303: what the new line's confirmation card shows, kept

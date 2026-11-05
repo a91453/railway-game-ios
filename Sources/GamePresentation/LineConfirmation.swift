@@ -287,7 +287,7 @@ extension GameSession {
         guard let card = lineConfirmation else { return }
         // A card that cannot be paid for or run keeps the card up and says
         // why, instead of opening a bare line in its place.
-        guard let preview = lineConfirmationPreview else {
+        guard let preview = lineConfirmationPreview(now: true) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "This line can't run as set. Change the stops or the track.",
                 "這條路線照這樣開不了，請改停靠站或軌道。"))
@@ -306,12 +306,21 @@ extension GameSession {
     /// joins its stops any more). Worked out once for each setting, draft
     /// and command (not at every tick).
     public var lineConfirmationPreview: LineConfirmationPreview? {
+        lineConfirmationPreview(now: false)
+    }
+
+    /// ``lineConfirmationPreview``, `nil` in the app until the main actor's
+    /// next turn has worked it out (decision 590); `now` works it out at
+    /// once.
+    func lineConfirmationPreview(now: Bool) -> LineConfirmationPreview? {
         guard let card = lineConfirmation else { return nil }
         let stops = lineDraftStops
         let key = LineConfirmationMemo.Key(confirmation: card, stops: stops, revision: commandRevision, language: language)
         let memo: LineConfirmationMemo
         if let kept = lineConfirmationMemo, kept.key == key {
             memo = kept
+        } else if !now, waits(for: .lineConfirmation, workOut: { _ = $0.lineConfirmationPreview(now: true) }) {
+            return nil
         } else {
             let worked = workOutLineConfirmationPreview(card, stops: stops)
             memo = LineConfirmationMemo(key: key, preview: worked?.preview, plan: worked?.plan)
@@ -359,6 +368,8 @@ extension GameSession {
         return found
     }
 
+    /// Never inlined (decision 590), as ``workOutLineOpeningPreview(stops:)``.
+    @inline(never)
     private func workOutLineConfirmationPreview(_ card: LineConfirmation, stops: [StationID]) -> (preview: LineConfirmationPreview, plan: AutoService)? {
         guard stops.count >= 2, let found = lineConfirmationPlan(card, stops: stops, targets: nil),
               let priced = try? priced({ world throws(GameError) in try apply(found.plan, to: &world) }),
