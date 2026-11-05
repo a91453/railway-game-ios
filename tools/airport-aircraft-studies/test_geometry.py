@@ -36,6 +36,11 @@ class GeometryTests(unittest.TestCase):
                 m=mod.mod.Mesh();meta=mod.part(m,kind,far);m.validate()
                 if kind=='runway':self.assertEqual(len(meta['thresholds']),2)
                 if kind=='apron':self.assertEqual(len(meta['stands']),3)
+                if kind in ('runway','taxiway','apron'):
+                    paint=[s for s in m.solids if s['name'] not in ('sealed-pavement','sealed-apron') and 'light' not in s['name']]
+                    for s in paint:
+                        bottom=min(p[2] for tri,_,_ in m.t[s['start']:s['start']+s['count']] for p in tri)
+                        self.assertGreaterEqual(bottom,.085)
             for kind in ('city-scene','island-scene'):
                 m=mod.mod.Mesh();meta=mod.assembly(m,kind,far);m.validate()
                 self.assertEqual(len(meta['stands']),2 if kind=='city-scene' else 1)

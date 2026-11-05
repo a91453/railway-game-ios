@@ -2,6 +2,22 @@ import XCTest
 @testable import GamePresentation
 
 final class Map3DAirportAircraftStudiesTests: XCTestCase {
+    private struct Edge: Hashable {
+        let a: Map3DPoint
+        let b: Map3DPoint
+    }
+    private func assertClosed(_ model: Map3DModelPack.Model, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(model.vertices.count % 3,0,file:file,line:line)
+        var edges: [Edge:Int] = [:]
+        for i in stride(from:0,to:model.vertices.count,by:3) {
+            let points=(i..<(i+3)).map { n in
+                let v=model.vertices[n]
+                return Map3DPoint(v.x,v.y,v.z)
+            }
+            for j in 0..<3 { edges[Edge(a:points[j],b:points[(j+1)%3]),default:0]+=1 }
+        }
+        for (edge,count) in edges { XCTAssertEqual(edges[Edge(a:edge.b,b:edge.a),default:0],count,file:file,line:line) }
+    }
     func testAircraftDimensionsBudgetsGroundAndDeterminism() {
         for kind in Map3DAircraftStudies.Kind.allCases {
             let near=Map3DAircraftStudies.model(kind)
@@ -10,6 +26,7 @@ final class Map3DAirportAircraftStudiesTests: XCTestCase {
             XCTAssertLessThanOrEqual(near.triangleCount,15_000)
             XCTAssertLessThan(far.triangleCount,near.triangleCount)
             XCTAssertEqual(near.minimum.z,0,accuracy:0.001)
+            assertClosed(near);assertClosed(far)
             let again=Map3DAircraftStudies.model(kind)
             XCTAssertEqual(near.vertices.count,again.vertices.count)
             for (a,b) in zip(near.vertices,again.vertices) {
@@ -31,6 +48,7 @@ final class Map3DAirportAircraftStudiesTests: XCTestCase {
             XCTAssertLessThanOrEqual(near.triangleCount,15_000)
             XCTAssertLessThanOrEqual(far.triangleCount,near.triangleCount)
             XCTAssertEqual(near.minimum.z,0,accuracy:0.001)
+            assertClosed(near);assertClosed(far)
             for vertex in near.vertices { XCTAssertTrue(vertex.x.isFinite && vertex.y.isFinite && vertex.z.isFinite) }
         }
         let runway=Map3DAirportStudies.connections(.runway)
