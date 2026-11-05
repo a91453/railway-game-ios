@@ -29,3 +29,11 @@ python3 -I tools/rail-depots/depot_site.py taiwan.pbf
 - 內湖機廠（用地 way 499801370）：車庫裡 16 股約 148 m（way 1316259201 到 1316259216，間距 3.6 到 5.3 m），近端（東南）中點 (25.059395, 121.620393)、遠端（西北）中點 (25.060406, 121.619446)；另有 8 股約 70 m（1054511212 到 19）。遊戲的入出庫線經過真實入出庫線（way 127958010、198181448）的 6 個點（第 3 點是 127958010 一段的中點），在 (25.058581, 121.621212) 進咽喉，22 股裡 13 股排在車庫那一側。
 
 遊戲一股停一列（真實時刻表晚上兩端各留 22 列），所以股比真實多、比真實短；取捨見決策 602。
+
+俯視圖（決策 602）：把買下文湖線後兩座機廠附近的遊戲軌道傾印成 JSON，疊在 OSM 的車場上畫（`docs/art/real-yard-wenhu-2026-11-05/depots-before-after.png` 就是這樣畫的；`PLOT_WINDOW` 可以放大一塊看）：
+
+```sh
+pip install osmium matplotlib
+WENHU_DEPOT_DUMP=$PWD/after.json swift test --skip-build --filter WenhuLineTests/testDumpTheDepotTrack
+python3 -I tools/rail-depots/plot_depots.py taiwan.pbf after.png after.json
+```

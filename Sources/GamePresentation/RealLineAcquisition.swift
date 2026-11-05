@@ -1467,7 +1467,7 @@ extension RealLineLaying {
                     continue
                 }
                 let crosses = if case .trackConflict = error { true } else { false }
-return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)
+                return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)
             }
         }
     }
