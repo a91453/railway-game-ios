@@ -840,8 +840,8 @@ extension GameWorld {
         // so a sight does not read "nobody can ride there" at night; each
         // line within its hours (decision 551, continued).
         let graph = passengerRoutingMode == .network ? Tourism.countingGraph(of: self, day: day) : nil
-        let sources = touristSources(excluding: station, among: touristCandidates())
-        return sources.contains { reaches(from: $0.station, to: station, graph: graph) } ? .ok : .noSource
+        let sources = touristSources(to: station, among: touristCandidates()) { reaches(from: $0, to: station, graph: graph) }
+        return sources.isEmpty ? .noSource : .ok
     }
 
     /// Whether anyone at `origin` can ride to `destination`.
@@ -861,20 +861,37 @@ extension GameWorld {
     }
 
     /// The stations tourists set out from for the attraction served by
-    /// `station`, with their weight: each outside connection at
-    /// ``Tourism/outsideWeight``, and the busiest ``Tourism/busiestSources``
-    /// stations by residents at their residents (the two add up for a station
-    /// that is both); by ascending station, never `station` itself.
-    func touristSources(excluding station: StationID,
-                        among candidates: [(station: StationID, outside: Bool, residents: Int64)]) -> [(station: StationID, weight: Int64)] {
+    /// `station`, with their weight, among those `reaches` says can ride
+    /// there: each outside connection at ``Tourism/outsideWeight``, and the
+    /// busiest ``Tourism/busiestSources`` of them by residents at their
+    /// residents (the two add up for a station that is both); by ascending
+    /// station, never `station` itself. Decision 601: the busiest are picked
+    /// among those that can ride there, not on the whole map and then
+    /// dropped when they cannot (a branch line's sights had no tourists
+    /// once five bigger stations stood anywhere else); `reaches` is asked
+    /// in order of residents and no more once five have answered.
+    func touristSources(to station: StationID,
+                        among candidates: [(station: StationID, outside: Bool, residents: Int64)],
+                        reaches: (StationID) -> Bool) -> [(station: StationID, weight: Int64)] {
         var weights: [StationID: Int64] = [:]
+        var answered: [StationID: Bool] = [:]
+        func rides(_ source: StationID) -> Bool {
+            if let known = answered[source] { return known }
+            let found = reaches(source)
+            answered[source] = found
+            return found
+        }
         var residential: [(StationID, Int64)] = []
         for candidate in candidates where candidate.station != station {
-            if candidate.outside { weights[candidate.station, default: 0] += Tourism.outsideWeight }
+            if candidate.outside, rides(candidate.station) { weights[candidate.station, default: 0] += Tourism.outsideWeight }
             if candidate.residents > 0 { residential.append((candidate.station, candidate.residents)) }
         }
         residential.sort { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
-        for (id, residents) in residential.prefix(Tourism.busiestSources) { weights[id, default: 0] += residents }
+        var picked = 0
+        for (id, residents) in residential where picked < Tourism.busiestSources && rides(id) {
+            weights[id, default: 0] += residents
+            picked += 1
+        }
         return weights.keys.sorted().map { ($0, weights[$0]!) }
     }
 
@@ -891,6 +908,8 @@ extension GameWorld {
         var passes = DayPassDay()
         guard let tourism else { return (flows, arrivals, passes) }
         let candidates = touristCandidates()
+        // Several sights a station serves share its sources (decision 601).
+        var sourcesOf: [StationID: [(station: StationID, weight: Int64)]] = [:]
         var visited: [(station: StationID, tourists: [(source: StationID, count: Int64, back: Bool)])] = []
         // Decision 361: the company's temples (and since its sequel night
         // markets), after the sights; those of a kind near one another
@@ -904,7 +923,13 @@ extension GameWorld {
             let served = servingStation(at: attraction.point)
             let feeder = served == nil ? feederAccess(to: attraction.point, onDay: day) : nil
             guard let station = served ?? feeder?.station else { continue }
-            let sources = touristSources(excluding: station, among: candidates).filter { reaches($0.station, station) }
+            let sources: [(station: StationID, weight: Int64)]
+            if let known = sourcesOf[station] {
+                sources = known
+            } else {
+                sources = touristSources(to: station, among: candidates) { reaches($0, station) }
+                sourcesOf[station] = sources
+            }
             guard !sources.isEmpty else { continue }
             let shares = Self.apportion(expected, by: sources.map(\.weight))
             var tourists: [(source: StationID, count: Int64, back: Bool)] = []
