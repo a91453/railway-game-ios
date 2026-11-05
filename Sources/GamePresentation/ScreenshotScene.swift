@@ -133,6 +133,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// lamps lit at dusk.
     case gushanFerryEvening
 
+    /// Decision 585 PR-4 (FERRYFOLLOW): ``tamsuiFerry`` three minutes on
+    /// (10:03), the 10:00 boat half way over to Bali: followed at 10:00 it
+    /// had only just left, the other boat lying at the same berth.
+    case tamsuiFerryCrossing
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -147,7 +152,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
         // Between the Tamsui and Bali piers.
-        case .tamsuiFerry: (25.1640, 121.4376)
+        case .tamsuiFerry, .tamsuiFerryCrossing: (25.1640, 121.4376)
         // Between the Gushan and Cijin piers.
         case .gushanFerry, .gushanFerryEvening: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
@@ -181,6 +186,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .followBus: Self.followBusWorld(in: language)
         case .followBusCity: Self.followBusCityWorld(in: language)
         case .tamsuiFerry: Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, in: language, water: water)
+        case .tamsuiFerryCrossing:
+            Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, then: 3, in: language, water: water)
         case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
         }
@@ -284,14 +291,14 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Whether the scene is by the water and waits for the app's map of
     /// Taiwan's water (decision 585).
     public var needsWater: Bool {
-        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening
+        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing
     }
 
     /// Decision 585: a real ferry, two boats every `every` minutes, on a
     /// new game round `scene`'s place, run on to `until` minutes from the
     /// start (in whole ten minutes): Tamsui–Bali at 10:00 of the second
     /// day; Gushan–Cijin then and at 18:30 (decision 585 PR-3).
-    private static func ferryWorld(_ ferry: RealFerry, at scene: ScreenshotScene, every minutes: Int64, until: Int,
+    private static func ferryWorld(_ ferry: RealFerry, at scene: ScreenshotScene, every minutes: Int64, until: Int, then: Int = 0,
                                    in language: DisplayLanguage, water grid: WaterGrid?) -> GameWorld {
         guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
         else { return DemoWorld.make(in: language) }
@@ -306,6 +313,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         world.setSpeed(.fast)
         try? world.advance(ticks: until / 10)
         world.setSpeed(.normal)
+        // A minute a tick.
+        try? world.advance(ticks: then)
         world.setSpeed(.paused)
         return world
     }

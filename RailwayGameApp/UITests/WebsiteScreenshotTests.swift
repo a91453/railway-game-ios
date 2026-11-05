@@ -479,8 +479,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Gushan–Cijin's from above and behind and, at 18:30, from beside it,
     /// with the follow bar. For the screenshot review of the pull request
     /// that let the camera follow a boat. One shot a test.
-    func testFollowFerryTamsuiBridge() { shootFollowFerry("tamsuiFerry", "cab", "follow-ferry-tamsui-bridge") }
-    func testFollowFerryTamsuiWindow() { shootFollowFerry("tamsuiFerry", "window", "follow-ferry-tamsui-window") }
+    func testFollowFerryTamsuiBridge() { shootFollowFerry("tamsuiFerryCrossing", "cab", "follow-ferry-tamsui-bridge") }
+    func testFollowFerryTamsuiWindow() { shootFollowFerry("tamsuiFerryCrossing", "window", "follow-ferry-tamsui-window") }
     func testFollowFerryGushanAbove() { shootFollowFerry("gushanFerry", "aboveBack", "follow-ferry-gushan-above") }
     func testFollowFerryGushanWindow() { shootFollowFerry("gushanFerry", "window", "follow-ferry-gushan-window") }
     func testFollowFerryGushanEveningSide() { shootFollowFerry("gushanFerryEvening", "side", "follow-ferry-gushan-evening-side") }
