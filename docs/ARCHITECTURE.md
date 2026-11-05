@@ -15516,4 +15516,4 @@ Linux（release，`-enable-testing`）上，改之前量到的（毫秒）：
 
 **後來**（2026-10-22，審查延後項目，session_01QiPq4nZdq5bVS9MZ4rkr4L，`docs/archive/PR911_944_REVIEW_HANDOFF.md` B3）：`GameWorld` 的驗證（`invariantViolation`）也檢查票價表：每一組的站 ID 都在 1 到 `nextStationID` 之前。`setHighSpeedFares` 本來就只收存在的車站，所以只有被改過的存檔會被擋；車站 ID 只增不回收，沒擋的話，之後新建的車站會繼承那組票價。拆掉的車站留在表裡的那一組照舊讀得回（它的 ID 小於 `nextStationID`）。存檔版本、golden、replay 不動。回歸在 `HighSpeedTests.testVersionSixtyNineKeepsTheFareTable` 的拒絕清單（舊程式上紅）。
 
-**決策 342、578 的補充（FOLLOWXRAY，不佔新號）**：跟隨公車或纜車吊廂時，被跟隨的那一台也交給透視（`Map3DSeeThrough.init(followed:)`，排在最前，不佔列車的名額；錐軸在自己車身的中段，吊廂以車廂地板為基準，下面的街景不挖空）。公車的「車窗」改右窗（台灣道路靠右；列車、吊廂仍是左窗）。「從車站看」停站時直接可選（`map3DMetresToLookoutStop`），下一站（`map3DStopAhead`）跳過同一站。
+**決策 342、578 的補充（FOLLOWXRAY，不佔新號）**：跟隨纜車吊廂時，被跟隨的那一台也交給透視（`Map3DSeeThrough.init(followed:)`，排在最前，不佔列車的名額；錐軸在自己車身的中段，吊廂以車廂地板為基準，下面的街景不挖空）。公車的「車窗」改右窗（台灣道路靠右；列車、吊廂仍是左窗）。「從車站看」停站時直接可選（`map3DMetresToLookoutStop`），下一站（`map3DStopAhead`）跳過同一站。**公車不交給透視**：試過，城市場景的側視裡被跟隨的公車整台消失（鏡頭相同；關掉就回來；原因未查出，換過一個只切分區塊、不送錐的實驗，UI 查詢逾時沒有結論）。`Map3DSeeThrough.init(followed:)` 與 `point(of:)` 保留，公車若要再接，先查這個消失。

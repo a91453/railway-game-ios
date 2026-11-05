@@ -827,7 +827,6 @@ final class Map3DMetalView: MTKView {
         if let bus = following.bus {
             guard let found = busPose?(bus) else { return }
             pose = found
-            followedSeeThrough = Map3DSeeThrough.point(of: found)
         } else if let cabin = following.cabin {
             guard let found = cabinPose?(cabin) else { return }
             pose = found
