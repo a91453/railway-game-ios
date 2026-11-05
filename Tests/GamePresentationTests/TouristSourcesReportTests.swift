@@ -18,7 +18,7 @@ import XCTest
 /// heights, land read round each station, real transfers on, $200 million
 /// in the bank) with every catalogue sight on the map and no outside
 /// connections, as on the whole-Taiwan map. "Towns" adds stations at the
-/// main line's real towns nearby, none of them joined to the branch, as a
+/// main line's real towns nearby (on a map 2²² wide, about 65.5 km, so that they are on it), none of them joined to the branch, as a
 /// player's network elsewhere (docs/research/TOURIST_SOURCES_2026-11-05.md §3).
 @MainActor
 final class TouristSourcesReportTests: XCTestCase {
@@ -76,7 +76,7 @@ final class TouristSourcesReportTests: XCTestCase {
         let latitude = stations.map(\.coordinate.latitude).reduce(0, +) / Double(stations.count)
         let longitude = stations.map(\.coordinate.longitude).reduce(0, +) / Double(stations.count)
         let anchor = try XCTUnwrap(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded())))
-        let side: Int64 = 1 << 21
+        let side: Int64 = 1 << 22
         var world = GameWorld.newGame(
             anchor: anchor, bounds: try WorldBounds(width: side, height: side), balance: Money(20_000_000_000), land: [], rules: .simple
         )
@@ -107,6 +107,15 @@ final class TouristSourcesReportTests: XCTestCase {
                 let point = try BundledRealData.point(BundledRealData.station(name, in: RealBranchLine.tra).coordinate, in: world)
                 if let station = try? world.buildStation(named: name, at: point) { built.append(station.id) }
             }
+            // Their land, as an edit in the app reads it round a new station.
+            let reading = GameSession(world: world, language: .english)
+            reading.railways = railways
+            reading.population = data.population
+            reading.places = data.places
+            reading.water = data.water
+            reading.heights = data.heights
+            reading.readLandRoundStations()
+            world = reading.world
             // The towns' own line with a train, as a player's network
             // elsewhere runs, joined to nothing on the branch.
             if built.count >= 2 {
