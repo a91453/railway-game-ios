@@ -1,0 +1,585 @@
+{
+  "saveVersion" : 86,
+  "world" : {
+    "bounds" : {
+      "height" : 16384,
+      "width" : 870400
+    },
+    "clock" : {
+      "now" : 900,
+      "resumeSpeed" : "x1",
+      "speed" : "x1"
+    },
+    "economy" : {
+      "balance" : 100000000,
+      "costs" : {
+        "station" : 0,
+        "track" : 0,
+        "train" : 0
+      }
+    },
+    "flexDispatch" : true,
+    "keepLeft" : true,
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Main",
+        "runDays" : [
+          0,
+          0,
+          null
+        ],
+        "runs" : [
+          {
+            "from" : 0,
+            "times" : [
+              [
+                600,
+                600
+              ],
+              [
+                780,
+                840
+              ],
+              [
+                1020,
+                1080
+              ],
+              [
+                1260,
+                1320
+              ],
+              [
+                1500,
+                1500
+              ]
+            ],
+            "to" : 4
+          },
+          {
+            "from" : 0,
+            "passes" : [
+              1,
+              2,
+              3
+            ],
+            "times" : [
+              [
+                780,
+                780
+              ],
+              [
+                1440,
+                1440
+              ]
+            ],
+            "to" : 4
+          },
+          {
+            "from" : 4,
+            "passes" : [
+              3,
+              2,
+              1
+            ],
+            "times" : [
+              [
+                1560,
+                1560
+              ],
+              [
+                2220,
+                2220
+              ]
+            ],
+            "to" : 0
+          }
+        ],
+        "stops" : [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "trains" : [
+          1,
+          2
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : {
+          "close" : 1440,
+          "open" : 360
+        }
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 7,
+          "id" : 6,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 8,
+          "id" : 7,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 9,
+          "id" : 8,
+          "to" : 10
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 28672,
+                "y" : 12288
+              },
+              "control2" : {
+                "x" : 28672,
+                "y" : 8192
+              }
+            }
+          },
+          "from" : 8,
+          "id" : 9,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 808960,
+                "y" : 8192
+              },
+              "control2" : {
+                "x" : 808960,
+                "y" : 12288
+              }
+            }
+          },
+          "from" : 5,
+          "id" : 10,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 404480,
+                "y" : 8192
+              },
+              "control2" : {
+                "x" : 404480,
+                "y" : 4096
+              }
+            }
+          },
+          "from" : 3,
+          "id" : 11,
+          "to" : 11
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 11,
+          "id" : 12,
+          "to" : 12
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 436224,
+                "y" : 4096
+              },
+              "control2" : {
+                "x" : 436224,
+                "y" : 8192
+              }
+            }
+          },
+          "from" : 12,
+          "id" : 13,
+          "to" : 4
+        }
+      ],
+      "nextEdgeID" : 14,
+      "nextNodeID" : 13,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 1024,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 30720,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 400384,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 440320,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 811008,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 860160,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 1024,
+          "y" : 12288,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 26624,
+          "y" : 12288,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 806912,
+          "y" : 12288,
+          "z" : 0
+        },
+        {
+          "id" : 10,
+          "x" : 860160,
+          "y" : 12288,
+          "z" : 0
+        },
+        {
+          "id" : 11,
+          "x" : 408576,
+          "y" : 4096,
+          "z" : 0
+        },
+        {
+          "id" : 12,
+          "x" : 432128,
+          "y" : 4096,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 14336,
+          "start" : 2048,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 195584,
+          "start" : 183296,
+          "station" : 2
+        },
+        {
+          "edge" : 3,
+          "end" : 26112,
+          "start" : 13824,
+          "station" : 3
+        },
+        {
+          "edge" : 4,
+          "end" : 186368,
+          "start" : 174080,
+          "station" : 4
+        },
+        {
+          "edge" : 5,
+          "end" : 43008,
+          "start" : 30720,
+          "station" : 5
+        },
+        {
+          "edge" : 6,
+          "end" : 14336,
+          "start" : 2048,
+          "station" : 1
+        },
+        {
+          "edge" : 7,
+          "end" : 199680,
+          "start" : 187392,
+          "station" : 2
+        },
+        {
+          "edge" : 7,
+          "end" : 399872,
+          "start" : 387584,
+          "station" : 3
+        },
+        {
+          "edge" : 7,
+          "end" : 600064,
+          "start" : 587776,
+          "station" : 4
+        },
+        {
+          "edge" : 8,
+          "end" : 47104,
+          "start" : 34816,
+          "station" : 5
+        },
+        {
+          "edge" : 12,
+          "end" : 17920,
+          "start" : 5632,
+          "station" : 3
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 6,
+    "nextTrainID" : 3,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 10240,
+          "y" : 14336
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "A",
+        "point" : {
+          "x" : 220160,
+          "y" : 14336
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "Middle",
+        "point" : {
+          "x" : 420352,
+          "y" : 14336
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "B",
+        "point" : {
+          "x" : 620544,
+          "y" : 14336
+        }
+      },
+      {
+        "id" : 5,
+        "name" : "East",
+        "point" : {
+          "x" : 835584,
+          "y" : 14336
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "cars" : 2,
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 2
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "edges" : [
+            3
+          ],
+          "end" : 26112,
+          "rate" : 1024
+        },
+        "name" : "T1",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 2,
+            "offset" : 243289
+          }
+        },
+        "times" : {
+          "arrival" : 780,
+          "departure" : 840,
+          "run" : {
+            "length" : 200192,
+            "seconds" : 180,
+            "start" : 840
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 300,
+            "departure" : 600,
+            "station" : 1
+          },
+          {
+            "arrival" : 780,
+            "departure" : 840,
+            "station" : 2
+          },
+          {
+            "arrival" : 1020,
+            "departure" : 1080,
+            "station" : 3
+          },
+          {
+            "arrival" : 1260,
+            "departure" : 1320,
+            "station" : 4
+          },
+          {
+            "arrival" : 1500,
+            "departure" : 1500,
+            "station" : 5
+          }
+        ]
+      },
+      {
+        "cars" : 2,
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 1
+        },
+        "id" : 2,
+        "movement" : {
+          "cursor" : 2,
+          "edges" : [
+            9,
+            2,
+            11,
+            12,
+            13,
+            4,
+            5
+          ],
+          "end" : 43008,
+          "rate" : 1024
+        },
+        "name" : "T2",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 2,
+            "offset" : 111256
+          }
+        },
+        "times" : {
+          "arrival" : 480,
+          "departure" : 780,
+          "run" : {
+            "length" : 843220,
+            "seconds" : 660,
+            "start" : 780
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 480,
+            "departure" : 780,
+            "station" : 1
+          },
+          {
+            "arrival" : 1440,
+            "departure" : 1440,
+            "station" : 5
+          }
+        ]
+      }
+    ]
+  }
+}
