@@ -177,6 +177,27 @@ final class Map3DRoadBridgeTests: XCTestCase {
         }
     }
 
+    /// TestFlight 113.1's crash (EXC_BREAKPOINT in `addJoins`): a road
+    /// crossing a cutting's piece whose bed stands far over the drawn
+    /// ground there (the ground under it lower than when the cutting was
+    /// found) took a negative reach across the cutting, and the cells it
+    /// walked ran backwards. It builds now, and the road gets no join over
+    /// a cutting that is not one.
+    func testACuttingsBedOverTheGroundBuildsWithoutAJoinOverIt() throws {
+        let world = try flatWorld(track: true, trackHeight: 18)
+        let snapshot = world.railwaySnapshot()
+        var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
+        builder.trackCover = Map3DTrackCover(snapshot, builder: &builder)
+        XCTAssertNotNil(builder.trackCover.trenches.piece(at: Map3DBaseMap.Point(x: 500, z: 512)), "a cutting under the road")
+        builder.addGround()
+        // The drawn ground far under the bed from here on.
+        for key in Array(builder.corners.keys) { builder.corners[key] = -200 }
+        _ = builder.addBaseMap(Map3DBaseMap(roads: [road([(500, 300), (480, 724)])]))
+        XCTAssertNil(builder.roadBridges.crossings[.overCutting])
+        XCTAssertEqual(builder.roadBridges.crossings.values.reduce(0, +), 1)
+        XCTAssertTrue(builder.roadBridges.joins.allSatisfy { $0.plateau > 0 && $0.plateau.isFinite })
+    }
+
     /// The concrete of the bridges (girders, parapets, walls, piers).
     private static let concrete = Set([0.92, 0.80, 0.70, 0.86, 1].map { Map3DColor.shaded(Map3DPalette.concrete, Float($0)) })
 

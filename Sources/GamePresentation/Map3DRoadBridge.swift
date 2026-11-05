@@ -530,7 +530,7 @@ extension Map3DScene.Builder {
                             // Not where the road ends: it meets the track there.
                             func far(_ q: Point) -> Bool { (at.x - q.x) * (at.x - q.x) + (at.z - q.z) * (at.z - q.z) > 4 }
                             guard far(line[0]), far(line[line.count - 1]) else { continue }
-                            let crossing: Map3DRoadBridges.Crossing
+                            var crossing: Map3DRoadBridges.Crossing
                             defer { result.crossings[crossing, default: 0] += 1 }
                             let trackLength = (piece.b - piece.a).length
                             guard trackLength > 0 else { crossing = .alongside; continue }
@@ -543,13 +543,21 @@ extension Map3DScene.Builder {
                             // How far across the track's ground it takes,
                             // metres, either side of its middle.
                             let across: Float
+                            // TestFlight 113.1's crash: a height that is
+                            // no number crosses nothing.
+                            guard bed.isFinite, surface.isFinite else { crossing = .level; continue }
+                            // The trench's rim: its floor's reach, then 1 : 1 up.
+                            let rim = Map3DTrenches.floorReach + surface - bed + Map3DTrenches.floorDrop
                             if bed <= surface - Map3DRoadBridges.overTrack {
                                 crossing = .overDeepCutting
                                 continue
-                            } else if trackCover.trenches.piece(at: at) != nil {
+                            } else if rim > 0, trackCover.trenches.piece(at: at) != nil {
+                                // A cutting's piece whose bed stands over
+                                // the ground (no rim to reach) is taken as
+                                // on the ground below, as an embankment or
+                                // on the level (TestFlight 113.1's crash).
                                 crossing = .overCutting
-                                // The trench's rim: its floor's reach, then 1 : 1 up.
-                                across = Map3DTrenches.floorReach + surface - bed + Map3DTrenches.floorDrop
+                                across = rim
                             } else if bed - surface >= Map3DRoadBridges.embankment {
                                 let bank = Self.bedBottom / 2 + min(bed - surface, 4.7)
                                 if bed - surface >= Map3DRoadBridges.underViaduct + Self.lift(of: road.kind) {
@@ -572,6 +580,9 @@ extension Map3DScene.Builder {
                             // Its deck clear of the track's ground, its own
                             // width's slant included.
                             let plateau = (across + 2) / sine + half * (1 - sine * sine).squareRoot() / sine
+                            // Never a reach backwards (the cells below would
+                            // run from high to low and trap).
+                            guard plateau.isFinite, plateau > 0 else { crossing = .level; continue }
                             // Clear of the rails all under it: the line's
                             // highest within the plateau, as it climbs.
                             var highest = bed
