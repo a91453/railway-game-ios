@@ -42,9 +42,20 @@ public struct FerryMapOverlay: Hashable, Sendable {
         public let sails: Bool
     }
 
+    /// Decision 585 續 (FERRYPIER): a row's cells from `columns`.
+    public struct ShoreRun: Hashable, Sendable {
+        public let row: Int
+        public let columns: Range<Int>
+    }
+
     public var routes: [Route] = []
     public var draft: Route?
     public var draftIsBuildable = false
+    /// Decision 585 續 (FERRYPIER): while the ferry mode is open, the
+    /// cells a pier can stand on (``GameCore/GameWorld/isPierCell(row:column:)``),
+    /// by row and then column: the map marks them faintly so the player
+    /// sees where to tap. Empty outside the mode.
+    public var shore: [ShoreRun] = []
 }
 
 /// A real ferry the mode can lay as it is (decision 585's demo): its piers
@@ -107,38 +118,95 @@ public struct RealFerry: Hashable, Sendable {
             guard x.isFinite, y.isFinite, x >= 0, y >= 0 else { return nil }
             let at = CellPosition(containing: PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded())))
             guard (0..<rows).contains(at.row), (0..<columns).contains(at.column) else { return nil }
-            var best: (distance: Int, cell: CellPosition)?
-            for row in (at.row - Self.snapCells)...(at.row + Self.snapCells) {
-                for column in (at.column - Self.snapCells)...(at.column + Self.snapCells) where world.isPierCell(row: row, column: column) {
-                    let distance = (row - at.row) * (row - at.row) + (column - at.column) * (column - at.column)
-                    if best.map({ distance < $0.distance }) ?? true { best = (distance, CellPosition(row: row, column: column)) }
-                }
-            }
-            guard let cell = best?.cell, placed.last != cell else { return nil }
+            let best = world.nearestPierCell(to: at, within: Self.snapCells)
+            guard let cell = best, placed.last != cell else { return nil }
             placed.append(cell)
         }
         return placed
     }
 }
 
+extension GameWorld {
+    /// Decision 585 續 (FERRYPIER): the cell a pier can stand on
+    /// (``isPierCell(row:column:)``) nearest `cell`, no more than `reach`
+    /// rows and columns from it, or `nil`; of two as near, the first by
+    /// row and then column. The real ferries' piers (``RealFerry/piers(in:)``)
+    /// and a tap in the ferry mode both find their cell this way.
+    public func nearestPierCell(to cell: CellPosition, within reach: Int) -> CellPosition? {
+        var best: (distance: Int, cell: CellPosition)?
+        for row in (cell.row - reach)...(cell.row + reach) {
+            for column in (cell.column - reach)...(cell.column + reach) where isPierCell(row: row, column: column) {
+                let distance = (row - cell.row) * (row - cell.row) + (column - cell.column) * (column - cell.column)
+                if best.map({ distance < $0.distance }) ?? true { best = (distance, CellPosition(row: row, column: column)) }
+            }
+        }
+        return best?.cell
+    }
+
+    /// Decision 585 續 (FERRYPIER): every cell a pier can stand on, as
+    /// runs along its rows, by row and then column: the land cells of the
+    /// world with water on one of their four sides, worked out from the
+    /// water's runs (so a whole island's sea costs its runs, not its
+    /// cells).
+    public func pierShore() -> [FerryMapOverlay.ShoreRun] {
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
+        var water: [Int: [Range<Int>]] = [:]
+        for run in terrain.water { water[run.row, default: []].append(run.column..<run.column + run.count) }
+        var candidates: [Int: [Range<Int>]] = [:]
+        for (row, runs) in water {
+            for run in runs {
+                candidates[row, default: []].append(run.lowerBound - 1..<run.lowerBound)
+                candidates[row, default: []].append(run.upperBound..<run.upperBound + 1)
+                candidates[row - 1, default: []].append(run)
+                candidates[row + 1, default: []].append(run)
+            }
+        }
+        var shore: [FerryMapOverlay.ShoreRun] = []
+        for row in candidates.keys.sorted() where (0..<rows).contains(row) {
+            // The candidates merged, clipped to the world, less the row's
+            // own water (sorted runs, apart).
+            let merged = candidates[row]!.map { max(0, $0.lowerBound)..<min(columns, $0.upperBound) }
+                .filter { !$0.isEmpty }.sorted { $0.lowerBound < $1.lowerBound }
+            var joined: [Range<Int>] = []
+            for range in merged {
+                if let last = joined.last, range.lowerBound <= last.upperBound {
+                    joined[joined.count - 1] = last.lowerBound..<max(last.upperBound, range.upperBound)
+                } else {
+                    joined.append(range)
+                }
+            }
+            let wet = water[row] ?? []
+            for range in joined {
+                var start = range.lowerBound
+                for run in wet where run.upperBound > start && run.lowerBound < range.upperBound {
+                    if run.lowerBound > start { shore.append(.init(row: row, columns: start..<run.lowerBound)) }
+                    start = run.upperBound
+                }
+                if start < range.upperBound { shore.append(.init(row: row, columns: start..<range.upperBound)) }
+            }
+        }
+        return shore
+    }
+}
+
 extension GameSession {
     // MARK: - Taps
 
-    /// A tap at `point` in the ferry mode: the next pier on the cell under
-    /// it, which must be land beside the water; a tap on the last pier
-    /// takes it back. A real ferry's crossings are forgotten once a pier
-    /// changes. Never changes the world.
+    /// A tap at `point` in the ferry mode: the next pier on the cell a
+    /// pier can stand on nearest it, within ``RealFerry/snapCells`` (as the
+    /// real ferries find theirs; decision 585 續, FERRYPIER: the shore is
+    /// one 64 m cell wide, too thin for a finger); a tap whose nearest is
+    /// the last pier takes it back. A real ferry's crossings are forgotten
+    /// once a pier changes. Never changes the world.
     func tapFerry(at point: PlanPoint) {
-        let cell = CellPosition(containing: point)
+        let tapped = CellPosition(containing: point)
         ferryDraftLegs = nil
-        if ferryDraft.last == cell {
-            ferryDraft.removeLast()
+        guard let cell = world.nearestPierCell(to: tapped, within: RealFerry.snapCells) else {
+            message = StatusMessage(kind: .failure, text: Self.noShoreText(from: tapped, in: world, language: language))
             return
         }
-        guard world.isPierCell(row: cell.row, column: cell.column) else {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "A pier stands on the shore: tap land beside the water.", "碼頭要蓋在岸邊：請點水邊的陸地。"
-            ))
+        if ferryDraft.last == cell {
+            ferryDraft.removeLast()
             return
         }
         guard ferryDraft.count < FerryRoute.maximumPiers else {
@@ -148,6 +216,30 @@ extension GameSession {
             return
         }
         ferryDraft.append(cell)
+    }
+
+    /// How far round a tap with no shore near it the mode looks for the
+    /// nearest, to say where it is: 40 cells, some 2.5 km.
+    static let shoreSearchCells = 40
+
+    /// What a tap with no shore within ``RealFerry/snapCells`` of `cell`
+    /// says: which way and how far the nearest is, to the 100 m, or that
+    /// there is none near.
+    static func noShoreText(from cell: CellPosition, in world: GameWorld, language: DisplayLanguage) -> String {
+        guard let shore = world.nearestPierCell(to: cell, within: shoreSearchCells) else {
+            return language.text(
+                "No shore near here: a pier stands on the land beside the water, marked pale blue.",
+                "這附近沒有岸邊：碼頭要蓋在水邊的陸地，就是地圖上淡藍色的格子。"
+            )
+        }
+        let dx = Int64(shore.column - cell.column), dy = Int64(cell.row - shore.row)
+        let metres = UnservedCluster.squareRoot(dx * dx + dy * dy) * Land.cellLength / WorldCoordinate.unitsPerMetre
+        let hundreds = max(1, (metres + 50) / 100) * 100
+        let way = UnservedCluster.Compass(dx: dx, dy: dy).title(in: language)
+        return language.text(
+            "A pier stands on the shore, marked pale blue: the nearest is about \(hundreds.groupedText) m \(way).",
+            "碼頭要蓋在岸邊，就是淡藍色的格子：最近的在\(way)方約 \(hundreds.groupedText) 公尺。"
+        )
     }
 
     /// Takes the last pier picked back.
@@ -273,8 +365,8 @@ extension GameSession {
     public func ferryDraftText() -> String {
         guard !ferryDraft.isEmpty else {
             return language.text(
-                "Tap the shore where the ferry starts, then each pier in turn. Boats cross straight between them.",
-                "請點渡輪起點的岸邊，再依序點各碼頭。船在碼頭之間直線往返。"
+                "Tap the shore where the ferry starts (pale blue along the water), then each pier in turn. Boats cross straight between them.",
+                "請點渡輪起點的岸邊（水邊淡藍色的格子），再依序點各碼頭。船在碼頭之間直線往返。"
             )
         }
         guard let preview = ferryPreview else {
@@ -307,9 +399,12 @@ extension GameSession {
     /// The company's ferry routes and the one drawn, or `nil` when there
     /// is nothing to draw.
     public var ferryMapOverlay: FerryMapOverlay? {
-        let drawing = tool == .bus && busMode == .ferries && !ferryDraft.isEmpty
-        guard !world.ferryRoutes.isEmpty || drawing else { return nil }
+        let mode = tool == .bus && busMode == .ferries
+        let drawing = mode && !ferryDraft.isEmpty
+        let shore = mode ? ferryShore : []
+        guard !world.ferryRoutes.isEmpty || drawing || !shore.isEmpty else { return nil }
         var overlay = FerryMapOverlay()
+        overlay.shore = shore
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         overlay.routes = world.ferryRoutes.map { route in
             FerryMapOverlay.Route(
@@ -322,6 +417,16 @@ extension GameSession {
             overlay.draftIsBuildable = ferryPreview?.problem == nil && ferryDraft.count >= 2
         }
         return overlay
+    }
+
+    /// Decision 585 續 (FERRYPIER): the world's ``GameCore/GameWorld/pierShore()``,
+    /// kept for the terrain and bounds it was worked out for: the map
+    /// reads it every frame of the ferry mode.
+    var ferryShore: [FerryMapOverlay.ShoreRun] {
+        if let memo = ferryShoreMemo, memo.bounds == world.bounds, memo.terrain == world.terrain { return memo.shore }
+        let shore = world.pierShore()
+        ferryShoreMemo = (world.terrain, world.bounds, shore)
+        return shore
     }
 
     // MARK: - The card
