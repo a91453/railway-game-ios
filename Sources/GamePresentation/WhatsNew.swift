@@ -39,7 +39,7 @@ public enum WhatsNew {
             id: "2026-11-05-113-1",
             items: [
                 Line(
-                    english: "The Bus button is now Shuttle, with Bus and Ferry inside. Lay a ferry route between two piers; the demo has Tamsui to Bali and Gushan to Cijin.",
+                    english: "The Bus button is now Transit, with Bus and Ferry inside. Lay a ferry route between two piers; the demo has Tamsui to Bali and Gushan to Cijin.",
                     chinese: "「公車」鈕改叫「接駁」，裡面分公車、渡輪；可以開渡輪航線，示範有淡水—八里、鼓山—旗津。"
                 ),
                 Line(
