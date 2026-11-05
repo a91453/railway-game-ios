@@ -1,4 +1,6 @@
 > 跟車透視補充（派工單 FOLLOWXRAY，`claude/follow-xray`，#1819，不佔新號，存檔、golden 不動，2026-11-05）：纜車吊廂交給透視；公車車窗改右窗；停站時「從車站看」直接可選。**公車的透視拿掉了**：城市場景的側視裡，被跟隨的公車交給透視後整台消失（同鏡頭，關掉就回來，後視、車窗不受影響）。已排除鏡頭位置；「只切分區塊、不送錐」的實驗 UI 查詢逾時，沒有結論。**下一步**：要再接公車先查這個消失（`Map3DSeeThrough.init(followed:)` 保留），疑點在被跟隨車輛與透視錐的深度／覆蓋率互動。說明見 ARCHITECTURE「決策 342、578 的補充」。
+> 渡輪也載觀光客（派工單 FERRYECON，session_01YGNNunRMtZq6QN3G96LAuF，`claude/ferry-tourism`，[決策 589](decisions/589.md)，存檔不動，2026-11-04）：沒有車站走得到、碼頭 800 m 內的景點，觀光客坐火車到航線另一頭碼頭 800 m 內的車站再坐船（纜車 → 渡輪 → 公車）；八里加景點「八里渡船頭老街」（`t190`）。真實淡水 HEALTHY、鼓山—旗津 CONCERNS（旗津觀光客少於真實），示範（沒有鐵路）NOT ASSESSED。決策 585 下一步第 (3) 項做完。**留下的**：碼頭座標改 OSM（旗津差約 350 m）、逐航線真實運量、收購淡水線／橘線後重量、觀光航線、旗津的觀光客，見決策 589「下一步」。
+
 > 公車也載觀光客（派工單 BUSTOUR，session_01YGNNupD13CZ2CjYdy22WWD，`claude/bus-tourism`，[決策 587](decisions/587.md)，存檔不動，2026-11-04）：沒有車站走得到、也沒有纜車接得到的景點，800 m 內有公車站牌就經公車接到鐵路車站（纜車先、公車後；市區路線接收得了觀光客的最近車站）。「587 續」（`claude/bus-transfer-depot`）讓市區公車的通勤轉乘站不接機廠（棕 15 改接動物園）。**留下的**：機廠也分到土地的旅次（木柵機廠 2,424）、release 實際玩過的乘客、台灣好行、公車卡的觀光一行，見決策 587「下一步」。
 
 > 纜車也載觀光客（派工單 CABLETOUR，session_01YGNNuokXLdoBCXuh53KDwX，`claude/cable-tourism`，[決策 586](decisions/586.md)，存檔不動，2026-11-04）：沒有車站走得到、纜車載客站 800 m 內的景點，觀光客坐火車到纜車接的車站再上山。真實纜車可指定轉乘站（貓空纜車接捷運動物園，500 m 內；玩家蓋的照舊 400 m 最近站）。**留下的**：release 實際玩過的乘客（現在是推導值，約每天 1,632 乘次）、纜車卡的觀光一行、指南宮、公車分觀光客，見決策 586「下一步」。
@@ -517,6 +519,28 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 47 任交第 48 任（2026-11-04 約 21:50 UTC，session_01YGNNuncyse9G7nzdRW6S6p，第 3 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。
+
+- **112.1 已發**（作者 10:54 UTC 按，run 112，`bef26cae`；`PLAYER_FEEDBACK.md` 已記，#1804）。作者還沒做的：App Store Connect 的 112.1 出口合規；刪 branch `claude/follow-window-diag`、`claude/follow-xray-before`（#1819 合併後）。
+- **113.1 的計畫**（作者 2026-11-04：「好，照你的順序做」；#1579 21:06 的規劃留言）：
+  1. 等這四件合併：#1824 FERRY3（決策 585 PR-3，渡輪 3D 船與碼頭，**第 3 級**，作者要看截圖）、#1825 CARDLAYOUT（決策 **588**，詳細卡片頭太高時只固定底部，放車選項在「放在這裡」正上方；作者說「修好再給我看截圖」）、FERRYECON（`claude/ferry-tourism`，渡輪收支與觀光客，GameCore 全套 tier，決策 **589**，PR 還沒開）、#1819 FOLLOWXRAY（跟隨公車／纜車透視、公車右窗 L9-8、停站車站視角 L9-6；作者要看透視的改前改後）。
+  2. 不等：#1743 TYMCLIST8（機捷剩兩處死結）、#1813／#1817（Codex 吊廂 studies／玻璃）。
+  3. 四件合完：派 WHATSNEW-113（Sonnet；`Sources/GamePresentation/WhatsNew.swift` 最前面加一則，id `2026-11-0x-113-1`，兩種語言；`.github/testflight-whats-new.md`；寫進「建設 → 接駁（公車圖示）→ 渡輪」的位置，作者問過公車圖示要不要改，第 47 任建議 113.1 不改）。
+  4. 對 main HEAD 手動跑完整 `ci.yml` 與 full lane（`ios-build.yml`），都綠才告訴作者「可以發（commit X）」；發不發由作者說（§1.2）。
+- **第 47 任已合**（113.1 的內容）：#1806、#1807、#1809、#1810（渡輪 PR-1，存檔 85）、#1811（583）、#1812、#1815、#1818、#1808（584 PR-1）、#1821（556 續）、#1816（586）、#1814（585 PR-2）、#1822（587）、#1823（587 續）、#1820（584 PR-2）。main `7ca083b9` 的 push `ci.yml` 綠。
+- **派出去的、還開著的**（都是第 47 任開的，第 4 層；回報「#N 綠、SHA」就照規則審、合）：
+  - FERRY3 session_01YGNNumyGkE6dY6uQya6BuZ（Opus，#1824，壓縮 1 次只收尾）：碼頭修正 `8eca2a8` 後重拍截圖中；淡水—八里、鼓山—旗津（含傍晚）。
+  - CARDLAYOUT session_01YGNNuoFf1GiS9enB7XMPhL（#1825，head `7784f7a`）：截圖 run 先 iPhone，再 iphone-small；給作者看英文卡片改前改後。
+  - FERRYECON session_01YGNNunRMtZq6QN3G96LAuF（Opus）：登記時保留了 588，和 CARDLAYOUT 撞號（CARDLAYOUT 先登記），第 47 任已叫它改用 **589** 並在 #1579 更正。HEALTH 判讀照 economy-balance。請作者把強度改「高」。
+  - FOLLOWXRAY session_01YGNNunhax9Bnpi7aFssNVh（Sonnet，#1819 draft，`5810e8ca` CI 綠）：第 47 任 21:45 回覆「要做」：加一個有大樓夾著公車路線的截圖場景；改前推到已存在的 `claude/follow-xray-before` 拍（不開新分支），改後在 #1819 拍。session 若已壓縮 2 次會把做法寫進 #1819 後停手，那就另派。
+  - TYMCLIST8 session_01YGNNumpcqk9aFo7CQzg2Pc（#1743，閒置）：機捷剩兩處死結（決策 556），不擋 113.1；GameCore 名額空時繼續。請作者改「高」。
+  - WEB-112 session_01YGNNukwXnNweVvyXcRLzHB（11:12 起 BLOCKED）：要 `add_repo` railway-reference-private（push）拍網站 112.1 新功能截圖（纜車、跟隨公車、車窗）。作者說過可以派 WEB session 掛 private（push），但那個 session 的 `add_repo` 卡在權限提示。新任決定：叫它重試 `add_repo`，仍卡就請作者在那個 session 按允許，或改到 113.1 發版後重派一個新的（也可順便拍渡輪）。
+  - 已封存：BUSTOUR、NEWBIE-PLACE2、L9FIX、TYMCLIST7、CABLETOUR、THREADS-112、OLDXO-FIX、HEALTH-112、REVIEW-L9、FERRY、MODEROW、DIAG-HANG、NEWBIE-PLACE 等。
+- **固定三件**（§1.1）的上一輪：REVIEW-L9（#1760–#1802，報告 `docs/archive/PR1760_1802_REVIEW_HANDOFF.md`；L9-1／L9-3 由 OLDXO-FIX #1812、L9-2／9／10／11 由 L9FIX #1818 修完，L9-6／L9-8 在 #1819，**L9-4、L9-5、L9-7 還沒派**）；CIOPT-7（#1794）；HEALTH-112（#1815）。113.1 發版後照時機派 REVIEW-L10（從 #1803 起）、CIOPT、HEALTH-113。
+- **沒派的**（照 §22 排）：決策 584 PR-3（沒接上的軌道提示）、地圖上亮出選中的月台；決策 585 下一步（PR-4 跟船視角、碼頭 OSM 核對、停航、HelpGuide）；決策 586／587 下一步（release 實玩量纜車與公車觀光、機廠周邊土地 2,424 趟、台灣好行、公車卡觀光一行）；文湖第二天誤點（上一段 HEALTH-112 的重現指令）；渡輪之後依序國道客運 → 飛機（§24.5）。
+- **介面欄「接駁」鈕的圖示**（作者 2026-11-04：「好 113.1 不換，之後再畫 寫進md」）：113.1 照舊用 `bus.fill`（`ConstructionTool.systemImage`，`RailwayGameApp/Views/ControlPanel.swift`）。113.1 之後派人照 `.claude/skills/art-style/SKILL.md` 畫公車＋渡輪合一的圖示（一大一小或並排），原尺寸、深淺色截圖給作者挑（第 3 級）再換。不採「圖示跟著上次的模式變」（同一顆鈕樣子會變）。
+- **號碼**：決策 588 CARDLAYOUT、589 FERRYECON 保留；**下一個 590**。存檔 main 是 85，**下一個 86**。
 
 **第 46 任交第 47 任（2026-11-04 約 11:10 UTC，session_01YGNNup5rvKQE2WYa4BP1cK，第 2 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。
 
@@ -2026,6 +2050,7 @@
 
 | 事項 | 狀態 | 在哪裡 |
 | --- | --- | --- |
+| 介面欄「接駁」鈕的圖示 | 作者 2026-11-04：「好 113.1 不換，之後再畫 寫進md」。113.1 照舊 `bus.fill`；之後畫公車＋渡輪合一的圖示，給作者挑再換 | §2.0「第 47 任交第 48 任」 |
 | 只收購的玩法（10j）不另開模式 | 作者 2026-10-24：「有個小問題 其實我已經有示範地圖了 讓不想蓋鐵軌的直接觀看 那只收購路線的玩法還有必要存在嗎」→ 規劃三個選項的五方比較（A 新遊戲多一個只收購模式 2.75、B 不做 2.60、C 可收購的線擴大＋開局提示 3.25）→「五方決定ok就選那條」。**選了 C**：可收購的線擴到輕軌與捷運，放進一般新遊戲；實景開局提示「可以先買一條線」；不加新遊戲選項、不分新存檔種類；10i 的公車收購沿用決策 315、336，不等 10j。同日作者再加「如果直接收購那一個車站 然後玩家不就能省去蓋站 直接從那一站延伸嗎 感覺也不錯」→「五方決定ok就執行」：**收購單一真實車站**（一小段軌道加月台，價格和自己蓋一樣，不升存檔），排在 10j 的第一個 PR。還在等作者：TDX 的帳號與 API 金鑰（公車班次要用；金鑰不進 repository） | [決策 400](decisions/400.md)、NEXT_PRIORITIES §22.2 第 10i、10j 名 |
 | Game Center（每週排行榜與成就，決策 396） | 作者 2026-10-24：「那先合併 然後做 Game Center」。**第一個 PR**（#1156，已合併，session_01V99archiZKLqZkwqTnsajc）：GamePresentation 的對照（成就 ID、點數、百分比、本週的分數與哪一週的榜）與 App 的 GameKit 呼叫、成就畫面的入口。作者已做完 `docs/GAME_CENTER_SETUP.md` 第 1、2 步（App ID 與 App Store Connect 都開了 Game Center，2026-10-24 截圖）。**設定工具**（#1162，已合併，決策 396 續篇，session_01UNbe）：`docs/game-center/game-center.json` 是排行榜與成就的唯一資料來源，`game-center-setup.yml` 在 GitHub 按一次就建好。**第二個 PR**（#1158，`claude/game-center-art-396`）放三樣東西：(1) Game Center 的 entitlement：`project.yml` 的 `entitlements` 產生 `RailwayGameApp/App/RailwayGame.entitlements`（`com.apple.developer.game-center` = true）；(2) 38 張 1024×1024 成就圖，在 `docs/game-center/achievements/<ID>.png`，已照三輪美術審查改過（第一輪 session_01T1XU，第三輪的 9 張由 session_01EL7e 重畫；各輪改了什麼在 `docs/game-center/README.md`），作者看過 2efc2d9 的總覽說「可以了」，設定工具上傳到 App Store Connect 用，App 不讀；(3) 這一列。**已做**：(a) 第 3、4 步：第 5 次 apply 成功（run 40070031235，2026-10-24 06:30 UTC），1 個排行榜、38 個成就與圖都建好，`PT168H` 與 `FREQ=DAILY;INTERVAL=7` Apple 收了（VERIFIED）。(c) 官網隱私權政策 `Website/site/privacy.html`（參考庫）加了 Game Center 一節，和 iCloud entitlement 同一輪改（決策 397 續，參考庫 PR #68 已合併；要按 Deploy website 才上線）。**還沒做**：(b) 第 5 步，送審的版本勾 Game Center；(d) 排行榜與成就建好之後才發下一版（獨立審查的建議，免得玩家看到空的排行榜）；那一版若匯出或上傳失敗（profile 沒有 Game Center），revert #1158 的 entitlement commit `431a69f` 就回到第一個 PR 的狀態，發版後在實機看一眼 Game Center。iCloud 的 entitlement 不跟 Game Center 一起，等 #1160（決策 397）合併後另外加，同樣可 revert。成就清單或挑戰目標（`ChallengeRecords.rulesVersion`）改了，`GameCenterMapping` 與 `docs/game-center/game-center.json` 一起改（再用 `tools/game-center-setup/game_center_setup.py --write-doc` 更新設定文件），`GameCenterMappingTests` 與 `game-center-setup-checks.yml` 會擋，作者再按一次 Game Center setup | `docs/decisions/396.md`；`docs/GAME_CENTER_SETUP.md` |
 | 10/31 正式對外：公開 TestFlight，App Store 之後 | 作者 2026-10-23（內測 47 人）：「我10/31想要正式上testflight 還是直接上app store」。**規劃的建議：10/31 開公開 TestFlight 連結**（外部測試最多 10,000 人，不必過 App Store 審查的上架項目），App Store 等公開測試約兩週、一週內沒有新的閃退與卡死再送審。時程：10/24 發 85.1（2D 6000×、3D 地面、課程引導），作者實機量過再開第二批內測；10/27 前後 86.1（第二批回報、3D 畫風 (e)）；10/29–30 只修 bug、不加新東西；10/31 用最後一個 `ci.yml` 與 full lane 都綠的版本開公開連結。**可以提早**（作者 2026-10-23：「好 照這三個條件」）：三條都達到，就在 86.1 那天（約 10/28）開，10/31 是最晚：(1) 85.1 作者實機量過，高鐵 6000× 不卡、3D 跟車不閃退；(2) 第二批內測進來後連續兩天沒有新的閃退或卡死回報（PLAYER_FEEDBACK）；(3) 那一版的 `ci.yml` 與 full lane 都綠。每一版發出後，遊戲規劃照這三條檢查，達到就告訴作者「可以開公開連結」；開連結是作者在 App Store Connect 的步驟。App Store 之前還要（作者的 Apple 帳號步驟加程式）：列車包的 StoreKit 2 與拿掉測試開關（決策 338，或第一版先不賣列車包）、隱私標籤、年齡分級、商店截圖與說明、送審說明（決策 335 的定位）。五方：玩家 30（公開測試讓更多人玩到，壞了還能每天修，不會留下一星評價）；鐵道迷 15（無）；開發 25（App Store 的審查與付費項目來不及在 8 天內做好又驗證）；美術 15（商店截圖與圖示可以趁公開測試期間準備）；音樂 15（無） | 這一列；#1041。公開頁介紹、What to Test、回報方式與 Threads 貼文的中英文定稿：`docs/research/PUBLIC_BETA_TEXT_2026-10-31.md` |

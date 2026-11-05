@@ -29,7 +29,8 @@ struct ControlPanel: View {
         case inspector
         /// The tool's options: the details card's middle, which scrolls.
         case options
-        /// The action button: the details card's foot, which stays put.
+        /// The action button, and what is chosen for a train being placed
+        /// (decision 588): the details card's foot, which stays put.
         case action
     }
 
@@ -106,7 +107,14 @@ struct ControlPanel: View {
             ToolOptions(session: session)
                 .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
         case .action:
-            ActionButton(session: session)
+            // Decision 588: a train being placed has its cars and platform
+            // chosen over the button that places it.
+            VStack(alignment: .leading, spacing: 12) {
+                if TrainPlacementChoices.shows(session) {
+                    TrainPlacementChoices(session: session)
+                }
+                ActionButton(session: session)
+            }
         }
     }
 

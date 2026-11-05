@@ -495,8 +495,10 @@ extension GameWorld {
     /// that a passenger line calls at and that takes passengers, or `nil`.
     /// Since decision 586, when none does, the station a cableway with a
     /// stop near it meets (``feederAccess(to:onDay:)``), whether or not
-    /// it runs today; since decision 587, when no cableway does, the one
-    /// a bus route with a stop near it brings riders to.
+    /// it runs today; since decision 589, when no cableway does, the one a
+    /// ferry route with a pier near it sails from; since decision 587,
+    /// when neither does, the one a bus route with a stop near it brings
+    /// riders to.
     public func attractionStation(of id: AttractionID) -> StationID? {
         guard let attraction = attraction(id: id) else { return nil }
         return servingStation(at: attraction.point) ?? feederAccess(to: attraction.point, onDay: nil)?.station
@@ -533,12 +535,55 @@ extension GameWorld {
     /// station serves it on foot: by train to the station a feeder meets,
     /// then on by the feeder to its stop within ``Tourism/reach`` of the
     /// point. A cableway first (``cablewayAccess(to:onDay:)``); since
-    /// decision 587, when none reaches it, a bus route
-    /// (``busAccess(to:)``). `nil` for neither. Called only after
+    /// decision 589, when none reaches it, a ferry route
+    /// (``ferryAccess(to:onDay:)``); since decision 587, when neither
+    /// does, a bus route (``busAccess(to:)``), the order the land near
+    /// them is shared in (decision 585). `nil` for none. Called only after
     /// ``servingStation(at:)`` found none: a station within reach keeps its
     /// sights.
     func feederAccess(to point: PlanPoint, onDay day: Int64?) -> FeederAccess? {
-        cablewayAccess(to: point, onDay: day) ?? busAccess(to: point)
+        cablewayAccess(to: point, onDay: day) ?? ferryAccess(to: point, onDay: day) ?? busAccess(to: point)
+    }
+
+    /// Decision 589: the ferry routes with a boat that sail that day
+    /// (``ferryRouteIsOpen(_:onDay:)``; any day for `nil`) and have a
+    /// station taking tourists (``takesTourists(_:)``) within
+    /// ``Tourism/reach`` of a pier, the nearest (then the lower station,
+    /// then the earlier pier): tourists walk to and from the boats as they
+    /// walk to a sight, farther than a commuter's ``BusRoute/stopReach``
+    /// (MRT Tamsui is some 700 m from its ferry pier). The sight's pier is
+    /// one of the route's within ``Tourism/reach`` of `point` other than
+    /// the one by that station (from there they would walk), the nearest,
+    /// then the lower route, then the earlier pier. `nil` for none.
+    func ferryAccess(to point: PlanPoint, onDay day: Int64?) -> FeederAccess? {
+        guard !ferryRoutes.isEmpty else { return nil }
+        let limit = Tourism.reach * Tourism.reach
+        var best: (squared: Int64, route: Int, pier: Int, station: StationID)?
+        for route in ferryRoutes where route.headway != nil {
+            guard day.map({ ferryRouteIsOpen(route.id, onDay: $0) && route.dailyDepartures(onDay: $0) > 0 }) ?? true else { continue }
+            let near = route.piers.indices.compactMap { index -> (squared: Int64, pier: Int)? in
+                let squared = Self.squaredDistance(Self.middle(of: route.piers[index]), point)
+                return squared <= limit ? (squared, index) : nil
+            }
+            guard !near.isEmpty else { continue }
+            var meets: (squared: Int64, station: StationID, pier: Int)?
+            for (index, cell) in route.piers.enumerated() {
+                let middle = Self.middle(of: cell)
+                for station in stations {
+                    let squared = Self.squaredDistance(middle, station.point)
+                    guard squared <= limit, takesTourists(station.id) else { continue }
+                    if meets.map({ (squared, station.id.rawValue, index) < ($0.squared, $0.station.rawValue, $0.pier) }) ?? true {
+                        meets = (squared, station.id, index)
+                    }
+                }
+            }
+            guard let meets else { continue }
+            for (squared, pier) in near where pier != meets.pier {
+                let candidate = (squared, route.id.rawValue, pier, meets.station)
+                if best.map({ (candidate.0, candidate.1, candidate.2) < ($0.squared, $0.route, $0.pier) }) ?? true { best = candidate }
+            }
+        }
+        return best.map { FeederAccess(station: $0.station, feeder: .ferry(FerryRouteID(rawValue: $0.route))) }
     }
 
     /// Decision 586: the cableways that meet a station taking tourists
@@ -947,7 +992,7 @@ extension GameWorld {
         let arrived = counted.arrivals
         // Decision 586: the cableways' riders of the day that ended, before
         // it is settled, take on those of the sights they reach; decision
-        // 587: the bus routes' too.
+        // 587: the bus routes' too; decision 589: the ferry routes'.
         countFeederRides(counted.flows.feederRides)
         let year = day / FinancePeriod.year.days
         if year != tourism.year {

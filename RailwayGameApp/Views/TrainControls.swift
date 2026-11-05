@@ -85,21 +85,9 @@ struct TrainControls: View {
                     }
                 }
                 if train.position == nil {
-                    Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
-                        Text(train.carsText(in: session.language))
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                    }
-                    .accessibilityHint("Each car is 16 m long. A train of several cars needs track behind it, and platforms as long as it.")
-                    if let price = session.world.carPriceText(for: train.type, in: session.language) {
-                        Text(price)
-                            .font(.caption)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    // Decision 584: at a station of two or more platforms,
-                    // which one it goes on; first, as the middle of the
-                    // card on a phone shows some 70 pt at once.
-                    PlacementPlatformPicker(session: session)
+                    // Decision 588: the cars and the platform stand over
+                    // the Place button, in the card's foot, which stays in
+                    // view (``TrainPlacementChoices``).
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
                     TrainTypeMenu(
@@ -593,6 +581,42 @@ private struct TrainTypeMenu: View, Equatable {
         } else {
             Text(verbatim: title)
             Text(verbatim: detail)
+        }
+    }
+}
+
+/// Decision 588: what is chosen for a train being placed, its cars (with
+/// their price) and, at a station of two or more platforms, its platform
+/// (decision 584), in the details card's foot over the Place button: the
+/// middle of the card on a phone held on its side shows some 70 pt, and
+/// they needed scrolling there (``DetailsCardLayout/placesTrain``).
+struct TrainPlacementChoices: View {
+    let session: GameSession
+
+    static func shows(_ session: GameSession) -> Bool {
+        DetailsCardLayout.placesTrain(tool: session.tool, trainIsSelected: session.selectedTrain != nil,
+                                      trainIsOnTrack: session.selectedTrain?.position != nil)
+    }
+
+    var body: some View {
+        if let train = session.selectedTrain, train.position == nil {
+            VStack(alignment: .leading, spacing: 8) {
+                Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(train.carsText(in: session.language))
+                            .font(.subheadline.weight(.semibold))
+                            .monospacedDigit()
+                        if let price = session.world.carPriceText(for: train.type, in: session.language) {
+                            Text(price)
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+                .accessibilityHint("Each car is 16 m long. A train of several cars needs track behind it, and platforms as long as it.")
+                .accessibilityIdentifier("train.cars")
+                PlacementPlatformPicker(session: session)
+            }
         }
     }
 }
