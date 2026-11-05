@@ -339,6 +339,7 @@ extension GameSession {
         let said: StationMasterAdvice?
         if let worked {
             if let leader = worked.leader { lineLossLeaderMemo.keep(leader, atRevision: commandRevision) }
+            if let placeToPass = worked.placeToPass { placeToPassMemo.keep(placeToPass, atRevision: commandRevision) }
             said = worked.advice
             hourAdvice = HourAdvice(hour: world.clock.now.seconds / GameTime.secondsPerHour, revision: commandRevision, advice: said)
         } else {
@@ -364,7 +365,7 @@ extension GameSession {
     public var stationMasterAdvice: StationMasterAdvice? {
         let hour = world.clock.now.seconds / GameTime.secondsPerHour
         if let kept = hourAdvice, kept.hour == hour, kept.revision == commandRevision { return kept.advice }
-        let advice = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine })
+        let advice = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine }, withoutPlaceToPass: { placeToPassMemo.line(of: self) })
         stationMasterAdviceWorkedOut += 1
         hourAdvice = HourAdvice(hour: hour, revision: commandRevision, advice: advice)
         return advice
@@ -392,7 +393,9 @@ extension GameSession {
         let hour = world.clock.now.seconds / GameTime.secondsPerHour
         let kept = hourAdvice.flatMap { $0.hour == hour && $0.revision == revision ? $0 : nil }
         // An hour of `nil` is never the world's: the probe always works it out.
-        let probe = kept == nil ? AdviceProbe(hour: nil, leader: lineLossLeaderMemo.kept(atRevision: revision)) : nil
+        let probe = kept == nil
+            ? AdviceProbe(hour: nil, leader: lineLossLeaderMemo.kept(atRevision: revision), placeToPass: placeToPassMemo.kept(atRevision: revision))
+            : nil
         let (worked, title) = await Task.detached(priority: .userInitiated) {
             let title = StationMasterTitle.isShown(in: world) ? StationMasterTitle(rank: CompanyRank(world: world)) : nil
             return (probe?.advice(of: world), title)
@@ -401,6 +404,7 @@ extension GameSession {
         guard let worked else { return StationMasterLook(advice: kept?.advice, title: title) }
         if commandRevision == revision {
             if let leader = worked.leader { lineLossLeaderMemo.keep(leader, atRevision: revision) }
+            if let placeToPass = worked.placeToPass { placeToPassMemo.keep(placeToPass, atRevision: revision) }
             if hourAdvice?.hour != hour || hourAdvice?.revision != revision {
                 hourAdvice = HourAdvice(hour: hour, revision: revision, advice: worked.advice)
             }
@@ -429,6 +433,9 @@ struct AdviceProbe: Sendable {
     /// What the session's ``LineLossLeaderMemo`` keeps at the tick's
     /// command revision, if anything.
     let leader: KeptLineLossLeader?
+    /// Decision 597: what the session's ``PlaceToPassMemo`` keeps at the
+    /// tick's command revision, if anything.
+    var placeToPass: KeptPlaceToPass? = nil
 
     /// The advice for `world`, when the hour it is in is not the one last
     /// read; `nil` when it is.
@@ -436,13 +443,19 @@ struct AdviceProbe: Sendable {
         guard world.clock.now.seconds / GameTime.secondsPerHour != hour else { return nil }
         let day = world.lineLossSettledDay
         var worked: KeptLineLossLeader?
-        let advice = StationMasterAdvice(world: world) {
+        var workedPlaceToPass: KeptPlaceToPass?
+        let advice = StationMasterAdvice(world: world, worstLosingLine: {
             if let leader, leader.day == day { return leader.leader }
             let losing = world.worstLosingLine()
             worked = KeptLineLossLeader(day: day, leader: losing)
             return losing
-        }
-        return WorkedAdvice(advice: advice, leader: worked)
+        }, withoutPlaceToPass: {
+            if let kept = placeToPass?.line(for: world) { return kept }
+            let line = world.firstLineWithoutPlaceToPass()
+            workedPlaceToPass = KeptPlaceToPass(running: KeptPlaceToPass.running(in: world), line: line)
+            return line
+        })
+        return WorkedAdvice(advice: advice, leader: worked, placeToPass: workedPlaceToPass)
     }
 }
 
@@ -451,4 +464,7 @@ struct AdviceProbe: Sendable {
 struct WorkedAdvice: Equatable, Sendable {
     let advice: StationMasterAdvice?
     let leader: KeptLineLossLeader?
+    /// Decision 597: the first line without a place to pass, when it
+    /// worked that out too.
+    var placeToPass: KeptPlaceToPass? = nil
 }

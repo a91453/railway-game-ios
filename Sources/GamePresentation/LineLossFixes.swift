@@ -317,6 +317,61 @@ final class LineLossLeaderMemo {
     }
 }
 
+/// Decision 597: keeps ``GameWorld/firstLineWithoutPlaceToPass()`` for the
+/// station master, which asks once an hour of game time: worked out again
+/// only for a new ``GameSession/commandRevision``, or when the lines' trains
+/// are not the ones it was worked out for. It reads the track, the lines
+/// and their trains, which only commands change. Not game state.
+@MainActor
+final class PlaceToPassMemo {
+    private var revision: Int?
+    private var kept: KeptPlaceToPass?
+    /// How many times it has worked the line out (for the tests).
+    private(set) var workedOut = 0
+
+    func line(of session: GameSession) -> ServiceLine? {
+        let world = session.world
+        let running = KeptPlaceToPass.running(in: world)
+        if revision == session.commandRevision, let kept, kept.running == running { return kept.line }
+        let line = world.firstLineWithoutPlaceToPass()
+        keep(KeptPlaceToPass(running: running, line: line), atRevision: session.commandRevision)
+        return line
+    }
+
+    /// What it keeps while the commands stand at `revision`, for a tick
+    /// worked out off the main actor to ask instead of it.
+    func kept(atRevision revision: Int) -> KeptPlaceToPass? {
+        self.revision == revision ? kept : nil
+    }
+
+    /// Keeps `worked`, worked out off the main actor for the world at
+    /// command revision `revision`.
+    func keep(_ worked: KeptPlaceToPass, atRevision revision: Int) {
+        self.revision = revision
+        kept = worked
+        workedOut += 1
+    }
+}
+
+/// Decision 597: the first line without a place to pass
+/// (``GameWorld/firstLineWithoutPlaceToPass()``), and each line's trains
+/// when it was worked out.
+struct KeptPlaceToPass: Equatable, Sendable {
+    let running: [[TrainID]]
+    let line: ServiceLine?
+
+    /// Each line's trains, in the lines' order.
+    static func running(in world: GameWorld) -> [[TrainID]] {
+        world.lines.map(\.assignedTrains)
+    }
+
+    /// The line for `world` when it has the trains this was worked out
+    /// for, else `nil`.
+    func line(for world: GameWorld) -> ServiceLine?? {
+        running == Self.running(in: world) ? .some(line) : nil
+    }
+}
+
 /// The line that loses most (``GameWorld/worstLosingLine()``) for a world
 /// whose days settled through `day` (``GameWorld/lineLossSettledDay``).
 struct KeptLineLossLeader: Equatable, Sendable {
