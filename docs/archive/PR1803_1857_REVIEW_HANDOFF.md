@@ -266,5 +266,5 @@
 ## 四、下一輪
 
 - REVIEW-L11 從 **#1858** 起（`main` 85973647 之後）。
-- L10-1 的修正 PR 合併後，下一輪要審它的修法與回歸測試。
-- 還沒派的：L9-4、L9-5、L9-7，與 L10-2 到 L10-13。
+- L10-1、L10-2、L10-3 由 L10FIX（`claude/l10-fix`，2026-11-05）修好，各附修前紅、修後綠的回歸測試：`RealLineAcquisitionTests.testAStopTakenOffALineBoughtLosesItsRegulars`、`CablewayTests.testACablewayMeetsNoDepot`／`testAGivenStationIsNeverADepot`、`FerryTests.testAFerryMeetsNoDepot`、`PlatformStopTests.testAFlagshipTrainOnAFourCarPlatformIsNotToldToShorten`。下一輪要審它的修法與回歸測試。
+- 還沒派的：L9-4、L9-5、L9-7，與 L10-4 到 L10-13。

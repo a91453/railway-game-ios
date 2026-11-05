@@ -167,14 +167,16 @@ final class PlatformStopTests: XCTestCase {
     }
 
     /// L9-2: four EMU3000 cars (20.3 m each, 81.2 m) on a four-car platform
-    /// (80 m) are not told to drop to three; five cars still are.
+    /// (80 m) are not told to drop to three; five cars still are, and told
+    /// to drop to the four that stop there untold (REVIEW-L10, L10-3).
     func testAFlagshipTrainOnAFourCarPlatformIsNotToldToShorten() throws {
         let (session, train, assigned) = try Self.line(cars: 4, platformCars: 4, type: .emu3000)
         XCTAssertGreaterThan(session.world.train(id: train)?.carPitch ?? 0, Train.realStandardCarLength)
         XCTAssertNil(session.world.shortPlatformCall(ofTrain: train))
         XCTAssertFalse(assigned.contains("月台"), assigned)
         let (longer, five, _) = try Self.line(cars: 5, platformCars: 4, type: .emu3000)
-        XCTAssertNotNil(longer.world.shortPlatformCall(ofTrain: five))
+        let short = try XCTUnwrap(longer.world.shortPlatformCall(ofTrain: five))
+        XCTAssertEqual(short.cars, 4)
     }
 
     /// Decision 565's screenshot scene: its train stands at the far
