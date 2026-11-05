@@ -536,6 +536,38 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
+
+- **114.1**：19:35 前合完，main `26d5fca1`（最後一個是 #1852 這版新增）。113.1（`240daaf8`）之後合的：#1743、#1833–#1854（其中 studies 與文件不影響 App：#1834、#1836、#1842、#1844–#1848、#1850、#1853）；要點是 #1837、#1839、#1840（CRASHROOT）、#1841、#1843、#1835、#1849、#1851、#1743（桃園機場捷運上架，決策 556）、#1854（TestFlight 113.1 回報的 3D 地圖 `addJoins` 當機）、#1838（UI 測試跟上模式列與決策 588；作者要先合，手動 `only_testing` 第三輪 run 42000073471 還在跑，紅了由 FULLLANE114 session_01YGNNun64GrtVfGD8Z9Yp4n 從 main 另開 PR）、#1852。發版檢查：完整 `ci.yml` run 42010031491、full lane（iOS App Build）run 42010048718，都在 `26d5fca1`；兩個都綠才說「可以發（26d5fca1）」，作者說「發」才按 `testflight.yml`。
+- **115.1 先做鐵路**（作者 2026-11-05：「我是不是有點偏離鐵道主題了」；遊戲規劃定的順序）：新的交通模式（渡輪、纜車、國道客運玩法）先凍結，Codex 的美術也轉回鐵路。順序：
+  1. 402 的真實軌道（決策 402 的下一步）。
+  2. 觀光列車與到站音樂。
+  3. 高鐵四項。
+  4. 桃園機場捷運收尾：回本量測與決策 556「續：夜裡兩航廈與機廠滿」的下一步。回本量測的做法：`ACQUIRE_REPORT=2 ACQUIRE_ONLY=tymc:A`，三種規則各一次，和決策 556 表上第二天沒發的班數一起看。桃園開局三個價格都超過現金加貸款，回本決定值不值得買；從來沒量成過（TYMCLIST2 時線會卡，決策 559 那次容器重開）。作者：「先記著，115.1 的時候再弄」。
+- **鐵路貨運加深**（作者 2026-11-05：「那要新增港口或是貨車來載貨運嗎」「好 先派研究」）：不加港口或卡車的運輸模式，港口只當貨物節點，卡車只當街景。研究已合，見 [FREIGHT_DEEPENING_2026-11-05.md](research/FREIGHT_DEEPENING_2026-11-05.md)（#1853），分 F1–F6，排在上面鐵路四項之後；F1（貨車外觀、貨場 3D、街景卡車，不動 GameCore）與 F4（真實港口與臨港線資料）可以和 F2（貨物節點與收貨規則，動 GameCore、存檔 +1）並行。
+- **觀光客源**（作者 2026-11-05 回報：收購集集線，車埕景點卻顯示「沒有客源路線」）：`Tourism.touristSources` 只把地圖邊緣的站和居民最多的 5 站當客源，不看真實路網轉乘。所以只收購一條支線、沒接到大城鎮或邊緣時，支線上的景點沒有觀光客。研究派給 TOURSRC-STUDY（session_01YGNNukwfien2afcTd77Z1P，`claude/tourist-sources-study`，docs-only draft PR），候選做法：
+  - 收購支線的分歧站算客源；
+  - 有 transferPoints 的站算客源；
+  - 真實車站旁的景點直接有轉乘來的觀光客。
+  
+  要用 economy-balance 量平溪、集集、內灣的收購與自己蓋，決策 595 說收購不能一面倒。實作排 115.1，動 GameCore。
+- **其他留給 115.1 的**：
+  - 渡輪跟隨的船橋視角，眼睛降到約 2.6 m，在棚下（FERRYFOLLOW 的 #1835 已合）。
+  - WEB-112 卡住，沒有派。
+  - Codex 機場 #1844 的五項修正與飛機怎麼動的新決策，見本檔最上面「Codex 吊廂、玻璃與機場 studies」。
+  - 2D 地圖效能（靜態圖層快取）。
+  - 圖鑑的 3D（渡輪、纜車頁，貓空玻璃）。
+  - REVIEW-L10、CIOPT、HEALTH-113。
+  - 網站截圖。
+  - 鼓山碼頭疊不疊的截圖檢查。
+  - Wasm 的註解清理（決策 598 下一步）。
+  - Android Spike 1 排在 12 月（#1847）。
+- **號碼**：下一個決策 599、存檔 87（用前查 #1579）。
+- **session**（都向第 49 任回報）：
+  - FULLLANE114（#1838 的驗證，見上）。
+  - TOURSRC-STUDY（研究）。
+  - 已封存：TYMCLIST9、CRASH3D、WHATSNEW-114、FREIGHT-STUDY。
+
 **第 48 任交第 49 任（2026-11-05 約 05:45 UTC，session_01YGNNun9jnHVasAKCcWJtLD，第 4 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。第 49 任是 session_01YGNNupMtajwSvF2wPZDUjt（第 5 層）。
 
 - **113.1 驗證**：完整 `ci.yml` run 41959675139 **綠**；full lane run 41959689553 **紅**，原因不是 App：#1809（模式列改成可捲的按鈕）與 #1825（決策 588，只固定卡片底部）之後，UI 測試沒跟著改。紅的五支：build job `RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner`；second job `MapInteractionTests` 的 testPlatformModeKeepsItsStatusAndActionInTheCard、testTheStationTagsPencilRenamesAtOnce、testTheTrackOptionsShowWhetherTheyAreOn、testTrainToolCardKeepsItsHead。修正是 **#1838**（CRASHROOT-VIEW，只改 `RailwayGameApp/UITests/` 與決策 588 一段；第 3 項「貼上軌道」在 `details.scroll.foot` 裡拖是推測，第 4 項鉛筆等待 2 → 10 秒）。#1838 的 iOS gate 跑完後，在 `claude/full-lane-113` 跑一次 `ios-build.yml` `only_testing`：那 5 支＋`TutorialUITests TutorialJourneyUITests LessonUITests LineDraftSummaryUITests`；綠了告訴作者「full lane 修好了」（作者問過兩次）。不要為這個再跑 full lane。
