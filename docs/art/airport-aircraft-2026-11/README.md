@@ -6,7 +6,7 @@
 
 ## 驗證
 
-- VERIFIED（本環境 Python）：每個幾何 solid 封底、正體積、非退化／有限、輪子最低點 z=0、LOD 三角減量、兩個城市機位的空橋端距艙門 <0.15 m 且機翼起點在空橋端後方 >0.5 m；全 36 單元最高近景 2,888 三角，低於 15,000。
+- VERIFIED（本環境 Python）：每個幾何 solid 封底、正體積、非退化／有限；四型近遠景的實際頂點包絡長、翼展、高距公開規格均 <0.05 m，輪子最低點 z=0；LOD 三角減量、兩個城市機位的空橋端距艙門 <0.15 m 且機翼起點在空橋端後方 >0.5 m。全 36 單元最高近景 2,888 三角，低於 15,000。
 - VERIFIED（本環境 Node/WebGL）：GLB 編碼契約四項測試過，36 個模型渲染日夜七方向共 504 張透明 RGBA PNG，離線 viewer 已產生；同一份自含 HTML 在封鎖網路的頁面中載入 36 型、900 × 600 canvas 並切換夜間。已人工看總覽與組景；仍需在作者看過後才判定外觀。
 - UNVERIFIED：本環境政策封鎖 `file://` 導航，未直接用該 URL 開 viewer；本機缺 Swift 工具鏈，`swift build --build-tests -Xswiftc -warnings-as-errors` 和指定 `swift test --skip-build --filter Map3DAirportAircraftStudiesTests` 無法執行。Metal 實機、實景地圖、動畫、跑道工程及營運全未驗。
 

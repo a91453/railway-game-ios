@@ -19,6 +19,10 @@ class GeometryTests(unittest.TestCase):
                 self.assertEqual(meta['wingspan_m'],dimensions[1])
                 self.assertEqual(meta['height_m'],dimensions[2])
                 self.assertAlmostEqual(min(p[2] for tri,_,_ in mesh.t for p in tri),0)
+                points=[p for tri,_,_ in mesh.t for p in tri]
+                self.assertAlmostEqual(max(p[0] for p in points)-min(p[0] for p in points),dimensions[0],delta=.05)
+                self.assertAlmostEqual(max(p[1] for p in points)-min(p[1] for p in points),dimensions[1],delta=.05)
+                self.assertAlmostEqual(max(p[2] for p in points),dimensions[2],delta=.05)
                 self.assertLessEqual(len(mesh.t),15000)
                 names={s['name'] for s in mesh.solids}
                 self.assertTrue({'nav-red','nav-green','tail-white','anti-collision','wingtip-strobe','cabin-window'}<=names)
@@ -47,7 +51,7 @@ class GeometryTests(unittest.TestCase):
 
     def test_city_bridge_meets_doors_before_wings(self):
         for i,kind in enumerate(('regional70','narrowjet')):
-            origin=(72.5 if i==0 else 78.6,-14.2 if i==0 else 24)
+            origin=(72.5 if i==0 else 78.6,-15.55 if i==0 else 21.98)
             a=mod.mod.Mesh();meta=mod.aircraft(a,kind,False)
             door=(origin[0]-meta['door']['position'][0],origin[1]-meta['door']['position'][1],meta['door']['position'][2])
             bridge=(63,-17 if i==0 else 20,3.25 if i==0 else 4.35)

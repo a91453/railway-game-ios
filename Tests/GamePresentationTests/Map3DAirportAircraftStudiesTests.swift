@@ -36,6 +36,9 @@ final class Map3DAirportAircraftStudiesTests: XCTestCase {
             let metadata=Map3DAircraftStudies.metadata(kind)
             XCTAssertGreaterThan(metadata.dimensions.length,16)
             XCTAssertGreaterThan(metadata.dimensions.wingspan,16)
+            XCTAssertEqual(near.length,metadata.dimensions.length,accuracy:0.05)
+            XCTAssertEqual(near.maximum.y-near.minimum.y,metadata.dimensions.wingspan,accuracy:0.05)
+            XCTAssertEqual(near.maximum.z,metadata.dimensions.height,accuracy:0.05)
             XCTAssertEqual(metadata.joints.count,kind == .commuter19 || kind == .regional70 ? 4 : 2)
             XCTAssertEqual(metadata.glowParts.count,6)
         }

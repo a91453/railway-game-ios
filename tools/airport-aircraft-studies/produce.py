@@ -13,10 +13,10 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 SPECS = {
-    'commuter19': (16.56, 16.97, 4.86, 2.15, 4.2, 'high', 'prop'),
-    'regional70': (27.17, 27.05, 7.65, 2.80, 5.0, 'high-t', 'prop'),
-    'narrowjet': (44.51, 35.80, 11.76, 3.95, 7.4, 'low', 'jet'),
-    'widejet': (66.80, 64.75, 17.05, 5.95, 10.0, 'low', 'jet'),
+    'commuter19': (16.56, 16.97, 4.86, 1.20, 4.2, 'high', 'prop'),
+    'regional70': (27.17, 27.05, 7.65, 1.45, 5.0, 'high-t', 'prop'),
+    'narrowjet': (44.51, 35.80, 11.76, 1.98, 7.4, 'low', 'jet'),
+    'widejet': (66.80, 64.75, 17.05, 2.98, 10.0, 'low', 'jet'),
 }
 PALETTES = [('white', 'blue'), ('white', 'green'), ('white', 'red')]
 PARTS = ('runway', 'taxiway', 'apron', 'papi', 'windsock', 'fence',
@@ -49,6 +49,7 @@ def aircraft(mesh, kind, far, paint=0):
     white,belt=PALETTES[paint]
     floor=.88 if kind=='commuter19' else (1.05 if kind=='regional70' else (1.30 if kind=='narrowjet' else 1.65))
     belly=floor+r
+    door_z={'commuter19':1.8,'regional70':3.2,'narrowjet':4.3,'widejet':5.9}[kind]
     tube(mesh,'closed-fuselage',-L*.49,L*.51,0,r,belly,white,10 if far else 18)
     # Swept, tapered wings: one closed slab each side, visible in silhouette at far LOD.
     high=wing.startswith('high')
@@ -67,7 +68,7 @@ def aircraft(mesh, kind, far, paint=0):
         poly=[(-L*.44,0),(-L*.34,0),(-L*.40,side*W*.17),(-L*.47,side*W*.17)]
         if side<0:poly.reverse()
         prism(mesh,'tailplane',poly,tailz,tailz+.13,belt)
-    mesh.box('tail-white',-L*.46,0,H-.1,.18,.18,.14,'white',1)
+    mesh.box('tail-white',-L*.46,0,H-.1,.18,.18,.08,'white',1)
     mesh.box('anti-collision',0,0,belly+r+.02,.24,.24,.15,'red',1)
     mesh.box('beacon-belly',0,0,belly-r-.04,.22,.22,.13,'red',1)
     count=max(4,int(L/2.2)) if not far else 2
@@ -76,7 +77,7 @@ def aircraft(mesh, kind, far, paint=0):
             x=-L*.27+(i+.5)*(L*.66/count)
             mesh.box('cabin-window',x,side*(r*.995),belly+.23*r,.36,.035,.30,'glass',1)
     if not far:
-        mesh.box('door',L*.35,r+.02,belly-r*.24,.78,.05,r*.95,'steel')
+        mesh.box('door',L*.35,r+.02,door_z-.65,.78,.05,1.3,'steel')
     # Fixed gear for the short field aircraft; metadata describes retraction for others.
     for x,y in [(L*.18,0),(-L*.10,W*.11),(-L*.10,-W*.11)]:
         mesh.box('gear-strut',x,y,0,.14,.13,floor,'steel')
@@ -91,12 +92,12 @@ def aircraft(mesh, kind, far, paint=0):
         else:
             tube(mesh,'underwing-engine',ex-1.6,ex+1.5,ey,r*.31,max(wz-r*.75,.55+r*.31),'steel',8 if far else 12)
     return {'length_m':L,'wingspan_m':W,'height_m':H,
-            'door':{'position':[L*.35,r,belly-r*.24],'heading':[0,1,0]},
+            'door':{'position':[L*.35,r,door_z],'heading':[0,1,0]},
             'joints':([{'part':f'propeller-{side}','kind':'rotation','pivot':[wing_x-1.2+1.23,side*(r+W*.12),wz-.05],
                          'axis':[1,0,0],'unit':'radians','limit':[0,2*math.pi]} for side in (-1,1)] if engine=='prop' else [])+
                      [{'part':'landing-gear','kind':'rotation','pivot':[-L*.10,0,floor], 'axis':[0,1,0],'limit':[0,1.2],
                        'fixed':kind=='commuter19'},
-                      {'part':'door','kind':'rotation','pivot':[L*.35,r,belly-r*.24], 'axis':[0,0,1],'limit':[0,1.57]}],
+                      {'part':'door','kind':'rotation','pivot':[L*.35,r,door_z], 'axis':[0,0,1],'limit':[0,1.57]}],
             'night_flags':['nav-red','nav-green','tail-white','anti-collision',
                            'wingtip-strobe','cabin-window']}
 
@@ -210,7 +211,7 @@ def assembly(mesh,kind,far):
     for i,plane in enumerate(kinds):
         a=mod.Mesh();aircraft(a,plane,far,i)
         offset=((72.5 if i==0 else 78.6) if city else 35,
-                (-14.2 if i==0 else 24) if city else 0,0)
+                (-15.55 if i==0 else 21.98) if city else 0,0)
         mesh.t += [([(offset[0]-v[0],offset[1]-v[1],v[2]) for v in tri],c,g) for tri,c,g in a.t]
         mesh.solids += [dict(s,name='plane-'+s['name'],start=s['start']+len(mesh.t)-len(a.t)) for s in a.solids]
         parking.append({'id':f'A{i+1}','nose_stop':[offset[0]-SPECS[plane][0]*.51,offset[1],0],
