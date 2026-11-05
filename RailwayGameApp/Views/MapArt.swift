@@ -1148,8 +1148,21 @@ enum MapArt {
     /// water, they lay no track); a pier as a white rounded square ringed
     /// in that blue with a boat's hull in it. A route not sailing today is
     /// faint; the one being drawn is fainter until it can be opened.
+    /// Decision 585 續 (FERRYPIER): in the ferry mode, the cells a pier can
+    /// stand on filled faintly in the ferry's blue first, under the routes.
     private static func drawFerries(_ ferries: FerryMapOverlay, projection: some MapProjection, in context: GraphicsContext) {
         let view = context.clipBoundingRect
+        if !ferries.shore.isEmpty {
+            let region = drawingRegion(projection), length = Double(Land.cellLength)
+            var shore = Path()
+            for run in ferries.shore {
+                let minY = Double(run.row) * length, minX = Double(run.columns.lowerBound) * length
+                let maxY = minY + length, maxX = Double(run.columns.upperBound) * length
+                guard maxY >= region.minY, minY <= region.maxY, maxX >= region.minX, minX <= region.maxX else { continue }
+                shore.addRect(screenRect(minX: minX, minY: minY, maxX: maxX, maxY: maxY, projection))
+            }
+            context.fill(shore, with: .color(Palette.ferry.opacity(0.3)))
+        }
         let width = max(1.5, lineWidth(projection) * 0.5)
         let radius = max(5, width * 2.6)
         func draw(_ route: FerryMapOverlay.Route, opacity: Double) {
