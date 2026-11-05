@@ -31,8 +31,6 @@ public enum WhatsNew {
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
         // 113.1.
-        // TODO(113.1): not merged yet, add when it is in: the crash when a
-        // new line adds its second station (CRASH112).
         Entry(
             id: "2026-11-05-113-1",
             items: [
@@ -85,6 +83,10 @@ public enum WhatsNew {
                 Line(
                     english: "City bus routes no longer link to a depot, so riders do not pile up at the Muzha depot.",
                     chinese: "市區公車的轉乘不再接到機廠，木柵機廠不會多出一堆乘客。"
+                ),
+                Line(
+                    english: "Fixed a crash when picking a new line's second station.",
+                    chinese: "修正新增路線時選第二個車站就閃退的問題。"
                 ),
                 Line(
                     english: "A train between runs can take a free berth, so trains no longer wait on each other at a terminal.",
