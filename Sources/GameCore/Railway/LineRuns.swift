@@ -37,12 +37,16 @@ public struct LineRunTime: Hashable, Sendable {
 /// the last stop to the first (or the first to the last), `times.count - 1`
 /// legs, ending at `to`; `from == to` is a whole lap. A run of any other
 /// line has no way.
+///
+/// Decision 605: a run can pass stops without calling there (``passes``),
+/// as an express does; its times are those of its calls only.
 public struct LineRun: Hashable, Sendable {
     /// The index, in the line's stops, of the stop it leaves first.
     public let from: Int
     /// The index of the stop it ends at.
     public let to: Int
-    /// Each call's times, from `from` to `to`.
+    /// Each call's times, from `from` to `to`, leaving out the stops it
+    /// passes (decision 605).
     public let times: [LineRunTime]
     /// The days of the week it runs: bit `w` for weekday `w`, 0 Sunday to 6
     /// Saturday (see ``StationDemand/weekday(ofDay:)``; a game starts on a
@@ -51,6 +55,11 @@ public struct LineRun: Hashable, Sendable {
     /// Decision 535: on a ring, the way round it goes; `nil` on any other
     /// line.
     public let way: RingDirection?
+    /// Decision 605: the stops (indices into the line's stops) between
+    /// `from` and `to` it runs through without calling, in the order it
+    /// passes them; empty for a run that calls at every stop, as every run
+    /// did before.
+    public let passes: [Int]
 
     /// Every day of the week.
     public static let everyDay = 0b111_1111
@@ -63,25 +72,38 @@ public struct LineRun: Hashable, Sendable {
     /// A run's times end before the second midnight after its day began.
     public static let latestSecond: Int64 = 2 * GameTime.secondsPerDay
 
-    public init(from: Int, to: Int, times: [LineRunTime], days: Int = everyDay, way: RingDirection? = nil) {
+    public init(from: Int, to: Int, times: [LineRunTime], days: Int = everyDay, way: RingDirection? = nil, passes: [Int] = []) {
         self.from = from
         self.to = to
         self.times = times
         self.days = days
         self.way = way
+        self.passes = passes
     }
 
     /// The stops it calls at, as indices into the line's stops, in order,
-    /// for a run of a line that is not a ring (see ``calls(stopCount:)``).
+    /// for a run of a line that is not a ring (see ``calls(stopCount:)``):
+    /// every stop from `from` to `to` but those it ``passes``.
     public var calls: [Int] {
-        from < to ? Array(from...to) : Array((to...from).reversed())
+        let along = from < to ? Array(from...to) : Array((to...from).reversed())
+        return passes.isEmpty ? along : along.filter { !passes.contains($0) }
     }
 
     /// The stops it calls at on a line with `stopCount` stops, in order:
     /// on a ring (decision 535) `from`, then the next stop ``way`` each
-    /// time, round past the line's ends, to `to`; otherwise ``calls``.
+    /// time, round past the line's ends, to `to`, but those it ``passes``
+    /// (decision 605); otherwise ``calls``.
     public func calls(stopCount: Int) -> [Int] {
-        guard let way, stopCount > 0 else { return calls }
+        guard way != nil, stopCount > 0 else { return calls }
+        let along = stopsAlong(stopCount: stopCount)
+        return passes.isEmpty ? along : along.filter { !passes.contains($0) }
+    }
+
+    /// Every stop it runs through on a line with `stopCount` stops, in
+    /// order, calling or passing: from `from` to `to`, on a ring
+    /// (decision 535) round ``way``.
+    func stopsAlong(stopCount: Int) -> [Int] {
+        guard let way, stopCount > 0 else { return from < to ? Array(from...to) : Array((to...from).reversed()) }
         let step = way == .inner ? 1 : stopCount - 1
         return (0...Self.ringLegs(from: from, to: to, way: way, stopCount: stopCount)).map { (from + $0 * step) % stopCount }
     }
@@ -103,17 +125,26 @@ public struct LineRun: Hashable, Sendable {
 
     /// Whether it is a run of a line with `stopCount` stops, a ring when
     /// `ring`: two different stops of it, or on a ring (decision 535) with
-    /// a way and up to a whole lap round (the same stop); a time for each
+    /// a way and up to a whole lap round (the same stop); the stops it
+    /// passes (decision 605) each one it runs through between its first
+    /// and last call, once, in the order it passes them; a time for each
     /// call, times that never go back (a call arrives no earlier than the
     /// one before leaves) and end before ``latestSecond``, and some day of
     /// the week.
     func isValid(stopCount: Int, ring: Bool = false) -> Bool {
         guard (0..<stopCount).contains(from), (0..<stopCount).contains(to), (1...Self.everyDay).contains(days) else { return false }
         if ring {
-            guard let way, times.count == Self.ringLegs(from: from, to: to, way: way, stopCount: stopCount) + 1 else { return false }
+            guard way != nil else { return false }
         } else {
-            guard way == nil, from != to, times.count == abs(to - from) + 1 else { return false }
+            guard way == nil, from != to else { return false }
         }
+        let along = stopsAlong(stopCount: stopCount)
+        if !passes.isEmpty {
+            let between = along.dropFirst().dropLast()
+            guard Set(between).count == between.count, Set(passes).count == passes.count,
+                  passes == between.filter({ passes.contains($0) }) else { return false }
+        }
+        guard times.count == along.count - passes.count else { return false }
         guard times.allSatisfy({ 0 <= $0.arrival && $0.arrival <= $0.departure && $0.departure < Self.latestSecond }) else { return false }
         return zip(times, times.dropFirst()).allSatisfy { $0.departure <= $1.arrival }
     }
@@ -163,7 +194,8 @@ extension ServiceLine {
 
     /// Whether riders can go from stop `from` to stop `to` (indices into
     /// the line's stops) on one train (decision 149): on a line with runs,
-    /// some run goes that way and calls at both; on any other line, yes.
+    /// some run goes that way and calls at both (decision 605: a run that
+    /// passes either does not take them); on any other line, yes.
     /// A way or a stretch no run goes has no train, so no one sets out on
     /// it and no route plans it. On a ring with runs (decision 535) either
     /// way round, see ``runsServe(from:to:way:)``.
@@ -172,6 +204,7 @@ extension ServiceLine {
         if isRing { return RingDirection.allCases.contains { runsServe(from: from, to: to, way: $0) } }
         return runs.contains { run in
             run.isOutbound == (from < to) && min(run.from, run.to) <= min(from, to) && max(from, to) <= max(run.from, run.to)
+                && !run.passes.contains(from) && !run.passes.contains(to)
         }
     }
 
@@ -205,7 +238,7 @@ extension ServiceLine {
         let start = ringPlace(of: from, way: way)
         let legs = LineRun.ringLegs(from: from, to: to, way: way, stopCount: stops.count)
         return runs.contains { run in
-            guard run.way == way, let arc = ringArc(of: run) else { return false }
+            guard run.way == way, let arc = ringArc(of: run), !run.passes.contains(from), !run.passes.contains(to) else { return false }
             return Self.arc(start, legs, liesWithin: arc.start, arc.legs, count: stops.count)
         }
     }
@@ -577,13 +610,14 @@ extension GameWorld {
 
 extension LineRun: Codable {
     private enum CodingKeys: String, CodingKey {
-        case from, to, times, days, way
+        case from, to, times, days, way, passes
     }
 
     /// Decodes `{"from", "to", "times": [[arrival, departure], …], "days",
-    /// "way"}`, `"days"` left out for every day, `"way"` (decision 535,
-    /// `"inner"` or `"outer"`) for a run of a ring only. Whether the run
-    /// fits its line is the line's to check.
+    /// "way", "passes"}`, `"days"` left out for every day, `"way"`
+    /// (decision 535, `"inner"` or `"outer"`) for a run of a ring only,
+    /// `"passes"` (decision 605) left out for a run calling at every stop.
+    /// Whether the run fits its line is the line's to check.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let pairs = try container.decode([[Int64]].self, forKey: .times)
@@ -594,8 +628,12 @@ extension LineRun: Codable {
             from: try container.decode(Int.self, forKey: .from), to: try container.decode(Int.self, forKey: .to),
             times: pairs.map { LineRunTime(arrival: $0[0], departure: $0[1]) },
             days: container.contains(.days) ? try container.decode(Int.self, forKey: .days) : Self.everyDay,
-            way: try container.decodeIfPresent(RingDirection.self, forKey: .way)
+            way: try container.decodeIfPresent(RingDirection.self, forKey: .way),
+            passes: try container.decodeIfPresent([Int].self, forKey: .passes) ?? []
         )
+        if container.contains(.passes), passes.isEmpty {
+            throw DecodingError.dataCorruptedError(forKey: .passes, in: container, debugDescription: "A run that calls at every stop leaves out \"passes\".")
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -607,5 +645,8 @@ extension LineRun: Codable {
             try container.encode(days, forKey: .days)
         }
         try container.encodeIfPresent(way, forKey: .way)
+        if !passes.isEmpty {
+            try container.encode(passes, forKey: .passes)
+        }
     }
 }

@@ -2112,7 +2112,8 @@ public struct GameWorld: Equatable, Sendable {
         // along the reversed stops.
         // Decision 535: on a ring, the other way round too.
         line.runs = line.runs.map {
-            LineRun(from: last - $0.from, to: last - $0.to, times: $0.times, days: $0.days, way: $0.way.map { $0 == .inner ? .outer : .inner })
+            LineRun(from: last - $0.from, to: last - $0.to, times: $0.times, days: $0.days, way: $0.way.map { $0 == .inner ? .outer : .inner },
+                    passes: $0.passes.map { last - $0 })
         }
         lines[index] = line
         // Its passengers still take it between the same stations, now the
