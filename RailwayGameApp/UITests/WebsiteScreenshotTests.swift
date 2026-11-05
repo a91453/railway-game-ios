@@ -482,7 +482,6 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testFollowFerryTamsuiBridge() { shootFollowFerry("tamsuiFerry", "cab", "follow-ferry-tamsui-bridge") }
     func testFollowFerryTamsuiWindow() { shootFollowFerry("tamsuiFerry", "window", "follow-ferry-tamsui-window") }
     func testFollowFerryGushanAbove() { shootFollowFerry("gushanFerry", "aboveBack", "follow-ferry-gushan-above") }
-    func testFollowFerryGushanWindow() { shootFollowFerry("gushanFerry", "window", "follow-ferry-gushan-window") }
     func testFollowFerryGushanEveningSide() { shootFollowFerry("gushanFerryEvening", "side", "follow-ferry-gushan-evening-side") }
 
     private func shootFollowFerry(_ scene: String, _ view: String, _ name: String) {
