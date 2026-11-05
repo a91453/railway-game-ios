@@ -154,14 +154,14 @@ final class PassingRunTests: XCTestCase {
 
     // MARK: - The save
 
-    /// Version 87 (decision 605): the line with its express runs, after
+    /// Version 86 (decision 605): the line with its express runs, after
     /// fifteen minutes, the express on its way through A; saved byte for byte,
     /// it is the world this build makes.
-    func testVersionEightySevenKeepsThePasses() throws {
+    func testVersionEightySixKeepsThePasses() throws {
         var (made, _, express, ids, line) = try line()
         try made.advance(ticks: 9_000)
         XCTAssertEqual(made.train(id: express)?.timetable.map(\.station), [ids[0], ids[4]])
-        let url = SavedGameTests.fixtures.appendingPathComponent("v87-passing-runs.json")
+        let url = SavedGameTests.fixtures.appendingPathComponent("v86-passing-runs.json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         if ProcessInfo.processInfo.environment["PASSING_RUN_SAVE_NEW"] != nil {
@@ -169,12 +169,12 @@ final class PassingRunTests: XCTestCase {
         }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 87)
+        XCTAssertEqual(object["saveVersion"] as? Int, 86)
         var world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, made)
         XCTAssertEqual(world.line(id: line)?.runs.map(\.passes), [[], [1, 2, 3], [3, 2, 1]])
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 87,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+            .replacingOccurrences(of: #""saveVersion" : 86,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
         try world.advance(ticks: 9_000)
         try made.advance(ticks: 9_000)
         XCTAssertEqual(world, made, "and runs on the same")
