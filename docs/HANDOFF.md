@@ -1,3 +1,5 @@
+> 國道客運站 3D studies（Codex，決策 591，`codex/bus-terminal-studies`，2026-11-05）：大型 8 格、中型 5 格、國道招呼站、11 零件與三車組景，近遠景按需模型；公開庫只存配方、測試及一張總覽，私庫存 M3DM／GLB／日夜七向 PNG／離線 viewer／SOURCE.md。只自檢，外觀待作者看；不接營運，GameCore、存檔、golden、fixtures 不動。後續需真機 Metal 與客運轉彎路徑驗證。
+
 > 渡輪也載觀光客（派工單 FERRYECON，session_01YGNNunRMtZq6QN3G96LAuF，`claude/ferry-tourism`，[決策 589](decisions/589.md)，存檔不動，2026-11-04）：沒有車站走得到、碼頭 800 m 內的景點，觀光客坐火車到航線另一頭碼頭 800 m 內的車站再坐船（纜車 → 渡輪 → 公車）；八里加景點「八里渡船頭老街」（`t190`）。真實淡水 HEALTHY、鼓山—旗津 CONCERNS（旗津觀光客少於真實），示範（沒有鐵路）NOT ASSESSED。決策 585 下一步第 (3) 項做完。**留下的**：碼頭座標改 OSM（旗津差約 350 m）、逐航線真實運量、收購淡水線／橘線後重量、觀光航線、旗津的觀光客，見決策 589「下一步」。
 
 > 公車也載觀光客（派工單 BUSTOUR，session_01YGNNupD13CZ2CjYdy22WWD，`claude/bus-tourism`，[決策 587](decisions/587.md)，存檔不動，2026-11-04）：沒有車站走得到、也沒有纜車接得到的景點，800 m 內有公車站牌就經公車接到鐵路車站（纜車先、公車後；市區路線接收得了觀光客的最近車站）。「587 續」（`claude/bus-transfer-depot`）讓市區公車的通勤轉乘站不接機廠（棕 15 改接動物園）。**留下的**：機廠也分到土地的旅次（木柵機廠 2,424）、release 實際玩過的乘客、台灣好行、公車卡的觀光一行，見決策 587「下一步」。
