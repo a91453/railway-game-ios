@@ -536,6 +536,14 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 49 任交第 50 任（2026-11-05 約 11:35 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 3 次）**：照這段接手；下面「第 49 任的現況」仍有效，兩段不同時以這段為準。第 50 任是第 6 層，還能再開一層（第 7 層起由作者在 claude.ai 開）。
+
+- **114.1 發版檢查（`26d5fca1`）**：完整 `ci.yml` run 42010031491 **綠**。full lane run 42010048718 第 1 次：「Xcode UI tests, second」紅，原因是模擬器啟動逾時（`StartSaveFlowSmokeTests`），不是 App；build 與 lessons 兩個 job 交接時還在跑。整個 run 跑完後，對它 `rerun-failed-jobs` **一次**（第 49 任的監看程式會在換手前做；換手後由第 50 任檢查 `run_attempt`，還是 1 才做）。全綠就告訴作者「可以發（26d5fca1）」，附健康表：兩個 run、#1854 的 3D 地圖當機修正、#1838 的教學測試在 main 補跑綠（run 42014874034）。同一處再紅就是真的啟動問題，派人查，不要再重跑。作者說「發」才按 `testflight.yml`（§1.2）。
+- **Threads**（作者 2026-11-05：「今天threads怎麼發文」）：THREADS-114（session_01YGNNupkxupiZdffEiGcnhh，Sonnet）寫 113.1＋114.1 合一篇（main `bef26ca..26d5fca1`），用 SendUserFile 直接交檔給作者，在 #1579 留「Threads 草稿交付」，不 commit。照往例主文不放連結，TestFlight 連結放第一則自己的留言；建議 114.1 上 TestFlight 後再發。
+- **FERRYPIER**（作者 2026-11-05 回報：「旗津整個沒辦法按」）：session_01YGNNun2KoCWaFSFc4R9zoi，`claude/ferry-pier-snap`，排 115.1。原因：`GameWorld.isPierCell` 要點到的那一格本身是陸地、四鄰有水；`GameSession.tapFerry` 只看點到的那一格，示範航線卻吸附 4 格。要做的：點擊吸附、渡輪模式標出能蓋碼頭的岸邊、錯誤訊息。截圖第 2 級。要改 GameCore 規則先問遊戲規劃，要號碼時從 599 起查 #1579。
+- **TOURSRC-STUDY**：見下面「觀光客源」，docs-only，綠了就合。
+- **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
+
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
 
 - **114.1**：19:35 前合完，main `26d5fca1`（最後一個是 #1852 這版新增）。113.1（`240daaf8`）之後合的：#1743、#1833–#1854（其中 studies 與文件不影響 App：#1834、#1836、#1842、#1844–#1848、#1850、#1853）；要點是 #1837、#1839、#1840（CRASHROOT）、#1841、#1843、#1835、#1849、#1851、#1743（桃園機場捷運上架，決策 556）、#1854（TestFlight 113.1 回報的 3D 地圖 `addJoins` 當機）、#1838（UI 測試跟上模式列與決策 588；作者要先合，手動 `only_testing` 第三輪 run 42000073471 還在跑，紅了由 FULLLANE114 session_01YGNNun64GrtVfGD8Z9Yp4n 從 main 另開 PR）、#1852。發版檢查：完整 `ci.yml` run 42010031491、full lane（iOS App Build）run 42010048718，都在 `26d5fca1`；兩個都綠才說「可以發（26d5fca1）」，作者說「發」才按 `testflight.yml`。
