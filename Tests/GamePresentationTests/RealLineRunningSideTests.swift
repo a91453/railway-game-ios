@@ -159,7 +159,8 @@ final class RealLineRunningSideTests: XCTestCase {
         XCTAssertEqual(due.filter { _, sent in (sent ?? -1) < day }.count, 0, "runs not sent out by seven")
     }
 
-    /// The other lines on sale with double track, three hours each, and the
+    /// The other lines on sale with double track (not the Xiaobitan
+    /// Branch Line, single track since decision 603), three hours each, and the
     /// Wenhu Line bought on the real Taipei opening and on the high-speed
     /// demo; only when asked (`RUNNING_SIDE_REPORT=1`, some minutes each;
     /// `RUNNING_SIDE_ONLY=<id>` or `openings` for one).
@@ -168,7 +169,7 @@ final class RealLineRunningSideTests: XCTestCase {
             throw XCTSkip("Set RUNNING_SIDE_REPORT=1 to play every line on sale (decision 564).")
         }
         for (id, right, seen) in [("ntdlrt:V", true, true), ("ntdlrt:VB", true, true), ("ntalrt:K", true, true),
-                                  ("sanying:LB", true, true), ("trtc:R_XBT", true, false), ("trtc:G_XBT", true, false),
+                                  ("sanying:LB", true, true), ("trtc:R_XBT", true, false),
                                   ("LIUJIA", false, false), ("SHALUN", false, false)]
             where ProcessInfo.processInfo.environment["RUNNING_SIDE_ONLY"].map({ $0 == id }) ?? true {
             let session = try RealLineAcquisitionTests.game(round: id, side: 1 << 21, heights: true)
@@ -186,18 +187,21 @@ final class RealLineRunningSideTests: XCTestCase {
         }
         if let only = ProcessInfo.processInfo.environment["RUNNING_SIDE_ONLY"], only != "openings" { return }
         let data = RealWorldData.load(file: RealWorldDataLoadTests.file)
-        // The screenshot scene buys it and follows a train near its middle.
-        let scene = GameSession(world: ScreenshotScene.wenhu.make(in: .english), language: .english)
-        scene.population = data.population
-        scene.places = data.places
-        scene.water = data.water
-        scene.heights = data.heights
-        scene.coverage = data.coverage
-        scene.railways = data.railways
-        XCTAssertTrue(scene.buyForScreenshot("trtc:BR"), scene.message?.text ?? "")
-        await scene.runForScreenshot(until: 7 * 3_600 + 40 * 60)
-        XCTAssertEqual(scene.world.clock.now.seconds % GameTime.secondsPerDay, 7 * 3_600 + 40 * 60)
-        XCTAssertNotNil(scene.screenshotTrainMidway(on: "trtc:BR"))
+        // The screenshot scene buys it and follows a train near its middle;
+        // decision 603: the Xiaobitan Branch Line's scene, its one train.
+        for (shown, real) in [(ScreenshotScene.wenhu, "trtc:BR"), (.xiaobitan, "trtc:G_XBT")] {
+            let scene = GameSession(world: shown.make(in: .english), language: .english)
+            scene.population = data.population
+            scene.places = data.places
+            scene.water = data.water
+            scene.heights = data.heights
+            scene.coverage = data.coverage
+            scene.railways = data.railways
+            XCTAssertTrue(scene.buyForScreenshot(real), scene.message?.text ?? "")
+            await scene.runForScreenshot(until: 7 * 3_600 + 40 * 60)
+            XCTAssertEqual(scene.world.clock.now.seconds % GameTime.secondsPerDay, 7 * 3_600 + 40 * 60, real)
+            XCTAssertNotNil(scene.screenshotTrainMidway(on: real), real)
+        }
         let city = try XCTUnwrap(AcquisitionReportTests.cities.first { $0.name == "Taipei" })
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: city.latitude, longitudeDegrees: city.longitude))
         let openings = [
