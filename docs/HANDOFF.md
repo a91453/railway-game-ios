@@ -3009,7 +3009,7 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 
 ### 4.50 試算指令的預覽不在畫面更新裡算（決策 590，派工單 CRASH112，session_01YGNNuoNBB6PagaAcLNEY8h，`claude/crash112-stack`，2026-11-05）
 
-做了的在 [決策 590](decisions/590.md)：112.1 選新路線第二站時主執行緒堆疊用盡，新路線的價格與開線卡片的預覽在 app 裡改成等主執行緒下一輪算。留下的（決策 590「下一步」）：113.1 實機確認；畫軌道預覽等其他在 body 裡模擬的 getter（決策裡有量到的清單）；拆小 `MapView.timedBody`；CI 加大框提醒；兩個 `Menu` 裡的 `ForEach`。
+做了的在 [決策 590](decisions/590.md)：112.1 選新路線第二站時主執行緒堆疊用盡，新路線的價格與開線卡片的預覽在 app 裡改成等主執行緒下一輪算。留下的（決策 590「下一步」）：113.1 實機確認；**114.1 的根本修法**（作者 2026-11-05 同意）：GameWorld 改成堆上的 COW box（GameCore，存檔與 golden 不動，要量 tick 成本）、畫軌道預覽等其他在 body 裡模擬的 getter 也等一輪、拆小 `MapView.timedBody`、CI 列出超過 32 KB 的堆疊框；之後：兩個 `Menu` 裡的 `ForEach`。
 
 ## 5. 已知、還沒派的待辦
 
