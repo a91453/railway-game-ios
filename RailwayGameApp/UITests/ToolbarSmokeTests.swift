@@ -508,11 +508,82 @@ extension XCUIApplication {
             Thread.sleep(forTimeInterval: 0.2)
         }
         guard chip.exists else { return segment }
+        bringModeRowIntoTheCard(row)
         for attempt in 0..<8 where !chip.becomesHittable(within: 1) {
             print("networkMode \(name) attempt \(attempt): chip \(chip.frame) row \(row.frame)")
-            if chip.frame.midX < row.frame.midX { row.swipeRight() } else { row.swipeLeft() }
+            // Dragged by its place on the screen, not swiped as an
+            // element: in the card that scrolls, XCTest found the row's
+            // "visible frame is empty" with the row wholly in the card
+            // (y 146 in a card from 70 to 266, LessonUITests
+            // `testDepotModeStartsInTheSeventhLesson`, run 41986973589).
+            let place = row.frame
+            let origin = coordinate(withNormalizedOffset: .zero)
+            func at(_ fraction: CGFloat) -> XCUICoordinate {
+                origin.withOffset(CGVector(dx: place.minX + place.width * fraction - frame.minX, dy: place.midY - frame.minY))
+            }
+            let (from, to): (CGFloat, CGFloat) = chip.frame.midX < place.midX ? (0.2, 0.85) : (0.8, 0.15)
+            at(from).press(forDuration: 0.1, thenDragTo: at(to))
+            chip.waitUntilStill()
         }
         return chip
+    }
+
+    /// Drags the details card's scrolling part until the mode row lies in
+    /// it. Decision 588 pins only the card's foot on a phone, and the head
+    /// and the options above it scroll; after a stretch was built under a
+    /// tall banner the row lay below what the card shows (y 310 to 354),
+    /// and every sideways swipe on it failed with "visible frame is empty"
+    /// (`testThePlatformConfirmStaysAboveTheDockUnderATallBanner`, run
+    /// 41975633745). Where the card does not scroll there is nothing to do.
+    private func bringModeRowIntoTheCard(_ row: XCUIElement) {
+        let holder = ["details.scroll.foot", "details.scroll.middle", "details.card"].lazy
+            .map { self.descendants(matching: .any).matching(identifier: $0)
+                .containing(.scrollView, identifier: "network.modeRow").firstMatch }
+            .first { $0.exists }
+        guard let holder else { return }
+        holder.waitUntilStill()
+        for _ in 0..<10 {
+            let shown = holder.frame.intersection(frame)
+            guard !shown.isEmpty, row.exists else { return }
+            let middle = row.frame.midY
+            if shown.minY + 4 <= row.frame.minY, row.frame.maxY <= shown.maxY - 4 { return }
+            print("mode row \(row.frame) outside the card's scrolling part \(shown)")
+            // The row below what shows: the content goes up; above: down.
+            if middle > shown.midY {
+                drag(in: shown, at: shown.minX + 12, from: 0.75, to: 0.25, clearOf: .button)
+            } else {
+                drag(in: shown, at: shown.minX + 12, from: 0.25, to: 0.75, clearOf: .button)
+            }
+            // The content, not the holder, moves on after the drag.
+            row.waitUntilStill()
+        }
+    }
+
+    /// ``networkMode(_:)`` in the details card, which is opened first when
+    /// it is folded (a phone folds it while track is drawn, decision 136).
+    /// The mode is looked up only once the card is open: looked up while
+    /// it was folded, neither the chip nor the segment was there, so
+    /// ``networkMode(_:)`` gave the segment, and the card that then opened
+    /// showed chips ("Missing "Station" Button" and "No Station mode", main
+    /// 72f8b469's and 240daaf8's full lanes, runs 41935318468 and
+    /// 41959689553, since the chips of decision 574's next step). `folded`
+    /// is the toggle's label while the card is folded; `seconds` how long
+    /// the card is given to open by itself first.
+    func networkModeInTheCard(_ name: String, folded: String = "Show Controls", within seconds: TimeInterval = 5) -> XCUIElement {
+        let chip = scrollViews["network.modeRow"].firstMatch.buttons[name].firstMatch
+        let segment = segmentedControls.buttons[name].firstMatch
+        let deadline = Date().addingTimeInterval(seconds)
+        while Date() < deadline, !chip.exists, !segment.exists {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        if !chip.exists, !segment.exists {
+            // Only a folded card is opened: a toggle read while the app
+            // still drew another tool's card would fold the open one (main
+            // 30e3492's full lane, run 40076217572).
+            let controls = buttons["controls.toggle"]
+            if controls.appears(within: 5), controls.label == folded { controls.tap() }
+        }
+        return networkMode(name)
     }
 
     /// Chooses the speed `name` (a row's label, as `GameSpeed.accessibilityName`
