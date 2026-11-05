@@ -317,7 +317,11 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(cancel.appears(within: 10), "The rename alert has its Cancel button")
             cancel.tap()
             XCTAssertTrue(alert.disappears(within: 10), "Cancel puts the rename alert away")
-            XCTAssertTrue(pencil.becomesHittable(), "The tag's pencil can be pressed again")
+            // The map under the alert is drawn again before the pencil
+            // can be touched; on a runner that took 14 s for one look at
+            // the alert, the default 2 s ended first (main 72f8b469's and
+            // 240daaf8's full lanes, runs 41935318468 and 41959689553).
+            XCTAssertTrue(pencil.becomesHittable(within: 10), "The tag's pencil can be pressed again")
             pencil.tap()
             XCTAssertTrue(alert.appears(within: 10), "The pencil puts up the rename alert again")
             XCTAssertTrue(field.appears(within: 10))
@@ -939,7 +943,14 @@ final class MapInteractionTests: XCTestCase {
         // found nothing in PR #686's run 38820870840), the card is.
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         XCTAssertTrue(card.appears(within: 5), "No details card")
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(snap, in: card), "Snap to track never came into reach")
+        // Decision 588: where only the card's foot stays put, the drags go
+        // in what scrolls above it (`details.scroll.foot`, found as a
+        // scroll view in those runs' snapshots): a drag that begins on the
+        // foot moves nothing (main 72f8b469's and 240daaf8's full lanes).
+        // Before, the whole card scrolled there, and a drag anywhere on it
+        // moved it.
+        let scrolled = app.scrollViews["details.scroll.foot"].firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(snap, in: scrolled.exists ? scrolled : card), "Snap to track never came into reach")
         func isOn() -> Bool { snap.isSelected || (snap.value as? String) == "1" }
         XCTAssertTrue(isOn(), "Snapping starts on, and says so; value: \(String(describing: snap.value))")
         snap.tap()
@@ -1044,12 +1055,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(build.appears(within: 5))
         build.tap()
 
-        let platform = app.networkMode("Station")
-        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
-            let controls = app.buttons["controls.toggle"]
-            XCTAssertTrue(controls.appears(within: 5))
-            controls.tap()
-        }
+        let platform = app.networkModeInTheCard("Station")
         platform.waitUntilSettled()
         platform.tap()
 
@@ -1082,10 +1088,11 @@ final class MapInteractionTests: XCTestCase {
         assertWhollyInside(status, card, "before scrolling")
         assertWhollyInside(action, card, "before scrolling")
 
-        // Scrolling the options leaves the status and the button in place.
+        // Scrolling the options leaves the status and the button in place;
+        // the status only where the card pins its head (decision 588).
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
             .press(forDuration: 0.1, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)))
-        assertWhollyInside(status, card, "after scrolling the options")
+        if pinsItsHead(app) { assertWhollyInside(status, card, "after scrolling the options") }
         XCTAssertTrue(action.becomesHittable(), "Add Platform must stay in reach after scrolling the options")
     }
 
@@ -1114,7 +1121,7 @@ final class MapInteractionTests: XCTestCase {
         assertWhollyInside(status, card, "when the train tool opens")
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
             .press(forDuration: 0.1, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)))
-        assertWhollyInside(status, card, "after scrolling the options")
+        if pinsItsHead(app) { assertWhollyInside(status, card, "after scrolling the options") }
     }
 
     /// The status pill's pause button, news bell and game menu are drawn
@@ -1351,6 +1358,17 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(summaries.contains { $0.contains("Stopped at") } && summaries.contains { !$0.contains("Stopped at") },
                       "The train must both stop and run while watched: \(summaries)")
         XCTAssertEqual(layouts.count, 1, "The card switched layouts while its train stopped and started: \(layouts); summaries: \(summaries); samples: \(samples)")
+    }
+
+    /// Whether the details card keeps its head put while the options
+    /// scroll. Decision 588: where the head leaves the options too little
+    /// room (a phone on its side), only the foot stays put
+    /// (`details.scroll.foot`) and the head scrolls away with the options,
+    /// as it should: the status 287 pt above the card after a drag (main
+    /// 72f8b469's and 240daaf8's full lanes, runs 41935318468 and
+    /// 41959689553) is that layout, not TestFlight 54.1's half-cut head.
+    private func pinsItsHead(_ app: XCUIApplication) -> Bool {
+        !app.scrollViews["details.scroll.foot"].firstMatch.exists
     }
 
     /// Waits until `element` is in the same place twice in a row, a

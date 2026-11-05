@@ -469,11 +469,7 @@ final class RealWorldMapUITests: XCTestCase {
         }
 
         // The platform mode, from the details card (opened if folded).
-        let platform = app.networkMode("Station")
-        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
-            let controls = app.buttons["controls.toggle"]
-            if controls.exists { controls.tap() }
-        }
+        let platform = app.networkModeInTheCard("Station")
         XCTAssertTrue(platform.appears(within: 10), "No Station mode")
         platform.waitUntilSettled()
         platform.tap()

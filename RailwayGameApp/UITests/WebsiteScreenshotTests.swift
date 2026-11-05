@@ -1301,11 +1301,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped")
         builder.tap()
         settle()
-        let platform = app.networkMode("車站")
-        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
-            let controls = app.buttons["controls.toggle"]
-            if controls.exists { controls.tap() }
-        }
+        let platform = app.networkModeInTheCard("車站", folded: "展開控制項")
         XCTAssertTrue(platform.appears(within: 10), "No Station mode")
         platform.waitUntilSettled()
         platform.tap()
@@ -1519,11 +1515,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let build = app.buttons["dock.build"]
         XCTAssertTrue(build.appears(within: 10))
         build.tap()
-        let platformMode = app.networkMode("車站")
-        if !platformMode.appears(within: 10) {
-            let controls = app.buttons["controls.toggle"]
-            if controls.appears(within: 5), controls.label == "展開控制項" { controls.tap() }
-        }
+        let platformMode = app.networkModeInTheCard("車站", folded: "展開控制項", within: 10)
         XCTAssertTrue(platformMode.becomesHittable(within: 10))
         settle()
         keep("station-mode-bar", app)

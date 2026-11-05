@@ -515,6 +515,33 @@ extension XCUIApplication {
         return chip
     }
 
+    /// ``networkMode(_:)`` in the details card, which is opened first when
+    /// it is folded (a phone folds it while track is drawn, decision 136).
+    /// The mode is looked up only once the card is open: looked up while
+    /// it was folded, neither the chip nor the segment was there, so
+    /// ``networkMode(_:)`` gave the segment, and the card that then opened
+    /// showed chips ("Missing "Station" Button" and "No Station mode", main
+    /// 72f8b469's and 240daaf8's full lanes, runs 41935318468 and
+    /// 41959689553, since the chips of decision 574's next step). `folded`
+    /// is the toggle's label while the card is folded; `seconds` how long
+    /// the card is given to open by itself first.
+    func networkModeInTheCard(_ name: String, folded: String = "Show Controls", within seconds: TimeInterval = 5) -> XCUIElement {
+        let chip = scrollViews["network.modeRow"].firstMatch.buttons[name].firstMatch
+        let segment = segmentedControls.buttons[name].firstMatch
+        let deadline = Date().addingTimeInterval(seconds)
+        while Date() < deadline, !chip.exists, !segment.exists {
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        if !chip.exists, !segment.exists {
+            // Only a folded card is opened: a toggle read while the app
+            // still drew another tool's card would fold the open one (main
+            // 30e3492's full lane, run 40076217572).
+            let controls = buttons["controls.toggle"]
+            if controls.appears(within: 5), controls.label == folded { controls.tap() }
+        }
+        return networkMode(name)
+    }
+
     /// Chooses the speed `name` (a row's label, as `GameSpeed.accessibilityName`
     /// spells it: "6000 times real time, fast forward") in the status bar's
     /// speed menu, and fails with what it saw when it cannot.
