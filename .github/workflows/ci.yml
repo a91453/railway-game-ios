@@ -393,6 +393,68 @@ jobs:
           # swift-shards-selftest.sh fails when the two differ.
           SHARD_LIMIT_MINUTES: 30
 
+  # Decision 590: a function takes its whole stack frame as it is entered,
+  # and 112.1 ran out of the main thread's stack on a chain of frames of
+  # tens of kilobytes. A pull request that changes GameCore or
+  # GamePresentation builds the two optimised (as the app is) and lists in
+  # its summary the frames over 32 KB that the baseline
+  # (tools/stack-frames/baseline-linux-x86_64.txt) does not have, and the 20
+  # largest. Only a reminder: the gate does not wait for it, and a failure
+  # here leaves the run green. About 10 to 20 minutes, beside the shards.
+  stack-frames:
+    name: Stack frames over 32 KB (reminder)
+    needs: changes
+    if: needs.changes.outputs.swift == 'true' && github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    continue-on-error: true
+    container: swift:6.4-noble
+    steps:
+      # Depth 2: the pull request merged into its base, and the base.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Does it change GameCore or GamePresentation?
+        id: sources
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if git diff --quiet HEAD^1 HEAD -- Sources/GameCore Sources/GamePresentation tools/stack-frames Package.swift; then
+            echo "No change to GameCore or GamePresentation: no frames to list." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Tools
+        if: steps.sources.outputs.changed == 'true'
+        run: |
+          if ! command -v objdump >/dev/null || ! command -v python3 >/dev/null; then
+            apt-get update -qq && apt-get install -y -qq binutils python3-minimal >/dev/null
+          fi
+          python3 -I -m unittest discover -s tools/stack-frames -p 'test_*.py'
+
+      - name: Build GamePresentation and GameCore optimised
+        if: steps.sources.outputs.changed == 'true'
+        run: swift build -c release --target GamePresentation
+
+      - name: List the frames
+        if: steps.sources.outputs.changed == 'true'
+        run: |
+          objects="$(find .build -path '*Release*' \( -path '*/GameCore-t.build/*' -o -path '*/GamePresentation-t.build/*' \) -name '*.o' | sort)"
+          if [ -z "$objects" ]; then
+            echo "::warning::No optimised objects of GameCore or GamePresentation found under .build."
+            exit 1
+          fi
+          # shellcheck disable=SC2086
+          python3 -I tools/stack-frames/frames.py report \
+            --title "Stack frames of GameCore and GamePresentation (-O, x86_64)" \
+            --baseline tools/stack-frames/baseline-linux-x86_64.txt $objects >"$RUNNER_TEMP/frames.md"
+          cat "$RUNNER_TEMP/frames.md" | tee -a "$GITHUB_STEP_SUMMARY"
+          if grep -q "not in the baseline" "$RUNNER_TEMP/frames.md"; then
+            echo "::warning::A stack frame over 32 KB is new (decision 590): see the job summary."
+          fi
+
   # A cancelled pull request run: was it replaced by a newer push? Then the
   # newer run gives the verdict and the gate is skipped here, not red on a
   # commit no test failed on (decision 329). A run cancelled by hand on the

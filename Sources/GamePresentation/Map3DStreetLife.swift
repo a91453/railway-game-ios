@@ -341,6 +341,11 @@ public struct Map3DStreetLife: Sendable {
         /// Whether the evening garbage truck collects along it (a town
         /// street's, decision 437).
         public var collects = false
+        /// Decision 596: where its traffic stops for the signals.
+        public var stops: [Stop] = []
+        /// Decision 596: its vehicles' trips each way it has stops,
+        /// worked out with the scene (``Map3DStreetLife/schedules(of:)``).
+        var schedules: [Map3DStreetStops.Schedule] = []
     }
 
     /// Where people gather or walk.
@@ -388,6 +393,13 @@ public struct Map3DStreetLife: Sendable {
         public let people: Int
         public let station: StationID?
         let seed: (Int32, Int32)
+        /// Decision 596: where a pavement's walkers cross roads at signals.
+        public var crossings: [Crossing] = []
+        /// Decision 596: where its walkers wait for them, there and back.
+        var route: Map3DStreetStops.Route?
+        /// Decision 596: each walker's trip on `route`, by its number
+        /// (``Map3DStreetLife/walks(on:)``).
+        var walks: [Map3DStreetStops.Walk] = []
     }
 
     public internal(set) var lanes: [Lane] = []
@@ -514,8 +526,13 @@ public struct Map3DStreetLife: Sendable {
     /// way where one stands. Decision 417: at most `limits` (what the
     /// budget leaves, ``Map3DMotionBudget/limits(routeBuses:)``) when given,
     /// else `detail`'s with ``mostBuses``.
+    /// Decision 596: with `signals` (the game second, while the signals
+    /// change: ``Map3DSignalTiming/Clock/changes``) the vehicles and the
+    /// pavements' walkers go by it, the vehicles waiting at red and amber
+    /// and the walkers while the little green man is red or flashing;
+    /// without it (or `still`) as before, by `time`.
     public func frame(target: Map3DPoint, distance: Float, time: Double, still: Bool = false, lights: Float = 0, detail: Map3DStreetDetail,
-                      activity: Activity, buses: Map3DBuses.Frame = .init(), limits: Map3DStreetLimits? = nil) -> Frame {
+                      activity: Activity, buses: Map3DBuses.Frame = .init(), limits: Map3DStreetLimits? = nil, signals: Double? = nil) -> Frame {
         var frame = Frame()
         frame.instances = buses.instances
         frame.vehicles = buses.instances.count
@@ -525,6 +542,7 @@ public struct Map3DStreetLife: Sendable {
         guard detail != .off, Self.models.count == Map3DStreetModel.allCases.count else { return frame }
         let most = limits ?? Map3DStreetLimits(detail)
         let clock = still ? 0 : time
+        let signals = still ? nil : signals
         if distance <= Self.peopleFrom {
             let reach = Self.peopleReach(distance)
             let near = spots.indices.compactMap { index -> (Int, Float)? in
@@ -533,7 +551,7 @@ public struct Map3DStreetLife: Sendable {
             }.sorted { $0.1 < $1.1 }
             for (index, _) in near where frame.people < most.people {
                 addPeople(of: spots[index], to: &frame, target: target, reach: reach, time: clock, still: still, lights: lights,
-                          budget: most.people, activity: activity)
+                          budget: most.people, activity: activity, signals: signals)
             }
         }
         if distance <= Self.vehiclesFrom {
@@ -544,7 +562,7 @@ public struct Map3DStreetLife: Sendable {
             }.sorted { $0.1 < $1.1 }
             for (index, _) in near where frame.vehicles < most.vehicles {
                 addVehicles(of: lanes[index], to: &frame, target: target, reach: reach, time: clock, budget: most.vehicles,
-                            mostBuses: most.buses, clearOf: buses.clear, eye: distance)
+                            mostBuses: most.buses, clearOf: buses.clear, eye: distance, signals: signals)
             }
         }
         return frame
@@ -558,7 +576,7 @@ public struct Map3DStreetLife: Sendable {
     }
 
     private func addPeople(of spot: Spot, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, still: Bool, lights: Float,
-                           budget: Int, activity: Activity) {
+                           budget: Int, activity: Activity, signals: Double? = nil) {
         var count: Int
         switch spot.kind {
         case .platform: count = spot.station.flatMap { activity.platform[$0] } ?? 0
@@ -582,16 +600,31 @@ public struct Map3DStreetLife: Sendable {
                 let base = r(7) < 0.5 ? place.right : -place.right
                 facing = base * cosf(turn) + place.along * sinf(turn)
                 model = .standing
+            } else if let second = signals, index < spot.walks.count {
+                // Decision 596: waiting at the crossings while the little
+                // green man is not lit (the trip worked out with the scene).
+                let walk = spot.walks[index], phase = walk.phase
+                let into = Map3DStreetStops.Lane.wrapped(second - phase, walk.lap)
+                let place = walk.place(at: into, phase: phase)
+                let outward = place.at < Double(length)
+                at = Float(outward ? place.at : 2 * Double(length) - place.at)
+                let along = spot.path.at(at).along
+                facing = outward ? along : -along
+                // The legs by the real clock, so that they do not flicker
+                // when the game runs fast.
+                let step = Int((time * walk.pace / (0.72 * Double(scale))).rounded(.down))
+                model = place.walking && !step.isMultiple(of: 2) ? .walking : .standing
             } else {
                 // Up and down the line at its own pace.
                 let pace = Double(0.98 + 0.52 * r(6))
-                let travelled = Double(r(5)) * 2 * Double(length) + pace * time
+                let travelled = Double(r(5)) * 2 * Double(length) + pace * (signals ?? time)
                 let lap = travelled.truncatingRemainder(dividingBy: 2 * Double(length))
                 let outward = lap < Double(length)
                 at = Float(outward ? lap : 2 * Double(length) - lap)
                 let along = spot.path.at(at).along
                 facing = outward ? along : -along
-                let step = Int((travelled / (0.72 * Double(scale))).rounded(.down))
+                // Decision 596: by the game's clock, the legs by the real one.
+                let step = Int(((signals == nil ? travelled : pace * time) / (0.72 * Double(scale))).rounded(.down))
                 model = still || step.isMultiple(of: 2) ? .standing : .walking
             }
             let place = spot.path.at(at)
@@ -605,64 +638,160 @@ public struct Map3DStreetLife: Sendable {
     }
 
     private func addVehicles(of lane: Lane, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, budget: Int,
-                             mostBuses: Int = Self.mostBuses, clearOf buses: [(point: Map3DPoint, along: Map3DPoint)] = [], eye: Float = 0) {
+                             mostBuses: Int = Self.mostBuses, clearOf buses: [(point: Map3DPoint, along: Map3DPoint)] = [], eye: Float = 0,
+                             signals: Double? = nil) {
         // Decision 400, 10i-6: only the player's buses near this road.
         let buses = buses.filter { lane.path.boxDistance(to: $0.point) < Self.busClearance.along + lane.half }
         let length = lane.path.length
-        // At least 9 m from one to the next: a car and its gap.
-        let count = min(Int((length / 100 * lane.perHundred).rounded()), Int(length / 9))
-        guard count > 0 else { return }
-        let spacing = length / Float(count)
+        guard let (count, spacing, besides) = Self.places(on: lane) else { return }
         // Kept to the right (Taiwan): a car in the middle of its half, a
         // scooter nearer the kerb where there is room.
         let carSide: Float = lane.twoWay ? max(lane.half * 0.5, 1.2) : 0
         let scooterSide = carSide + max(min(1.1, lane.half - carSide - 0.5), 0)
-        // Decision 446: a second scooter riding beside and behind a lone
-        // one, nearer the middle, where the places are far enough apart
-        // that it never reaches the vehicle behind.
         let besideSide = scooterSide - Self.beside.across
-        let besides = spacing >= Self.beside.spacing && (!lane.twoWay || besideSide >= 0.45)
+        /// The vehicle `along` the lane's path going `direction`, and the
+        /// one beside it.
+        func draw(_ vehicle: Vehicle, along: Float, direction: Float) {
+            let place = lane.path.at(along)
+            let side = vehicle.model.isScooter ? scooterSide : carSide
+            let foot = place.point + place.right * (side * direction)
+            // Coming out of and going into the road's ends.
+            // Use the chosen bus body length, rather than the car fade distance.
+            let ends = min(max(min(along, length - along) / (vehicle.model.isBus ? 2 * vehicle.model.half : 4), 0), 1)
+            add(vehicle.model, at: foot, forward: place.along * direction, tint: vehicle.tint, ends: ends, to: &frame, target: target, reach: reach,
+                eye: eye, clearOf: buses)
+            // Decision 446: the one beside it.
+            guard let beside = vehicle.beside, frame.vehicles < budget else { return }
+            let behind = along - Self.beside.behind * direction
+            guard behind > 0, behind < length else { return }
+            let next = lane.path.at(behind)
+            add(beside.model, at: next.point + next.right * (besideSide * direction), forward: next.along * direction,
+                tint: beside.tint, ends: min(max(min(behind, length - behind) / 4, 0), 1), to: &frame, target: target, reach: reach, eye: eye,
+                clearOf: buses)
+        }
         for direction: Float in lane.twoWay ? [1, -1] : [1] {
-            for index in 0..<count where frame.vehicles < budget {
-                let draw = { (index: Int, salt: Int32) in map3DRandom(lane.seed.0 &+ Int32(index), lane.seed.1 &+ Int32(direction), salt: salt) }
-                let r = { (salt: Int32) in draw(index, salt) }
-                let start = (Float(index) + 0.4 * r(1)) * spacing
-                let travelled = (Double(start) + Double(lane.speed) * time).truncatingRemainder(dividingBy: Double(length))
-                let along = direction > 0 ? Float(travelled) : length - Float(travelled)
-                let kind = r(2)
-                var model: Map3DStreetModel
-                if lane.buses, spacing >= Self.busSpacing, frame.buses < mostBuses, r(5) < Self.busShare,
-                   count == 1 || draw((index + count - 1) % count, 5) >= Self.busShare {
-                    let variant = r(6)
-                    model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
-                } else if lane.scooters {
-                    model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : kind < 0.9 ? .car : .van
-                } else {
-                    model = kind < 0.75 ? .car : .van
+            // Decision 596: by the game's clock, waiting at the signals.
+            if let second = signals, let schedule = lane.schedules.first(where: { $0.direction == direction }) {
+                var shownBuses = frame.buses
+                for slot in 0..<schedule.count where frame.vehicles < budget {
+                    guard let travelled = schedule.position(slot, at: second) else { continue }
+                    var vehicle = Self.vehicle(slot, of: schedule.count, lane: lane, direction: direction, spacing: spacing, buses: true, besides: besides)
+                    if vehicle.model.isBus {
+                        // Past the budget's buses, a car in its place.
+                        if shownBuses >= mostBuses { vehicle = Vehicle(model: .car, tint: vehicle.tint, beside: nil, jitter: vehicle.jitter) }
+                        shownBuses += 1
+                    }
+                    draw(vehicle, along: direction > 0 ? Float(travelled) : length - Float(travelled), direction: direction)
                 }
-                let place = lane.path.at(along)
-                let side = model.isScooter ? scooterSide : carSide
-                let foot = place.point + place.right * (side * direction)
-                // Coming out of and going into the road's ends.
-                // Use the chosen bus body length, rather than the car fade distance.
-                let ends = min(max(min(along, length - along) / (model == .shuttleBus ? Map3DShuttleBus.length : model == .lowFloorBus ? Map3DLowFloorBus.length : model == .coachBus ? Map3DCoachBus.length : model == .midiBus ? Map3DMidiBus.length : model == .bus ? 12 : 4), 0), 1)
-                let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Self.carPaints
-                let tint = paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)]
-                let lone = model == .scooter
-                if model.isScooter { model = Self.scooter(model, pick: r(7)) }
-                add(model, at: foot, forward: place.along * direction, tint: tint, ends: ends, to: &frame, target: target, reach: reach, eye: eye,
-                    clearOf: buses)
-                // Decision 446: the one beside it.
-                guard lone, besides, r(8) < Self.beside.share, frame.vehicles < budget else { continue }
-                let behind = along - Self.beside.behind * direction
-                guard behind > 0, behind < length else { continue }
-                let next = lane.path.at(behind)
-                let paint = Self.scooterPaints[min(Int(r(9) * Float(Self.scooterPaints.count)), Self.scooterPaints.count - 1)]
-                add(Self.scooter(.scooter, pick: r(10)), at: next.point + next.right * (besideSide * direction), forward: next.along * direction,
-                    tint: paint, ends: min(max(min(behind, length - behind) / 4, 0), 1), to: &frame, target: target, reach: reach, eye: eye,
-                    clearOf: buses)
+                continue
+            }
+            for index in 0..<count where frame.vehicles < budget {
+                let vehicle = Self.vehicle(index, of: count, lane: lane, direction: direction, spacing: spacing, buses: frame.buses < mostBuses, besides: besides)
+                let start = (Float(index) + 0.4 * vehicle.jitter) * spacing
+                let travelled = (Double(start) + Double(lane.speed) * (signals ?? time)).truncatingRemainder(dividingBy: Double(length))
+                draw(vehicle, along: direction > 0 ? Float(travelled) : length - Float(travelled), direction: direction)
             }
         }
+    }
+
+    /// How many vehicles `lane` has each way, how far apart, and whether
+    /// a scooter may ride beside a lone one (decision 446: a second one
+    /// beside and behind it, nearer the middle, where the places are far
+    /// enough apart that it never reaches the vehicle behind); `nil` for
+    /// none.
+    static func places(on lane: Lane) -> (count: Int, spacing: Float, besides: Bool)? {
+        let length = lane.path.length
+        // At least 9 m from one to the next: a car and its gap.
+        let count = min(Int((length / 100 * lane.perHundred).rounded()), Int(length / 9))
+        guard count > 0 else { return nil }
+        let spacing = length / Float(count)
+        let carSide: Float = lane.twoWay ? max(lane.half * 0.5, 1.2) : 0
+        let scooterSide = carSide + max(min(1.1, lane.half - carSide - 0.5), 0)
+        let besideSide = scooterSide - Self.beside.across
+        return (count, spacing, spacing >= Self.beside.spacing && (!lane.twoWay || besideSide >= 0.45))
+    }
+
+    /// Decision 596: `lane`'s vehicles' trips each way it has stop lines:
+    /// as many as come by in a trip (no closer than
+    /// ``Map3DStreetStops/headway(speed:)``), each queueing behind the one
+    /// ahead.
+    /// Decision 596: the trips of `spot`'s walkers on its route, by their
+    /// number: a whole number of the signals' cycles, waiting at the
+    /// crossings while the little green man is not lit, each setting out
+    /// short of any crossing. The walkers' own draws (`frame`'s).
+    static func walks(on spot: Spot) -> [Map3DStreetStops.Walk] {
+        guard let route = spot.route else { return [] }
+        let length = Double(spot.path.length), cycle = Double(Map3DSignalTiming.cycle), gap = Double(Map3DStreetStops.kerbGap)
+        return (0..<spot.people).map { index in
+            let r = { (salt: Int32) in Double(map3DRandom(spot.seed.0 &+ Int32(index), spot.seed.1, salt: salt)) }
+            let pace = 0.98 + 0.52 * r(6)
+            var start = r(5) * 2 * length
+            for crossing in spot.crossings {
+                let from = Double(crossing.from), to = Double(crossing.to)
+                if start > from - gap && start < to { start = max(from - gap, 0) }
+                if start > 2 * length - to - gap && start < 2 * length - from { start = max(2 * length - to - gap, 0) }
+            }
+            let stepOff = Map3DStreetStops.stepOff.least + r(10) * (Map3DStreetStops.stepOff.most - Map3DStreetStops.stepOff.least)
+            return Map3DStreetStops.Walk(route: route, start: start, pace: pace, phase: r(9) * cycle, stepOff: stepOff)
+        }
+    }
+
+    static func schedules(of lane: Lane) -> [Map3DStreetStops.Schedule] {
+        guard let (_, spacing, besides) = places(on: lane) else { return [] }
+        let length = lane.path.length
+        var schedules: [Map3DStreetStops.Schedule] = []
+        for direction: Float in lane.twoWay ? [1, -1] : [1] {
+            let stops = lane.stops.filter { $0.direction == direction }.map { stop in
+                (at: Double(direction > 0 ? stop.at : length - stop.at), window: Map3DStreetStops.Window.driving(stop.road, group: stop.group))
+            }.sorted { $0.at < $1.at }
+            guard !stops.isEmpty else { continue }
+            let way = Map3DStreetStops.Lane(stops: stops, speed: lane.speed, length: length)
+            let headway = max(Double(spacing / lane.speed), Map3DStreetStops.headway(speed: lane.speed))
+            let slots = max(1, Int((way.lap / headway).rounded()))
+            let vehicles = (0..<slots).map { vehicle($0, of: slots, lane: lane, direction: direction, spacing: spacing, buses: true, besides: besides) }
+            let entries = vehicles.indices.map { -(Double($0) + 0.4 * Double(vehicles[$0].jitter)) * way.lap / Double(slots) }
+            let halves = vehicles.map { ($0.model.half, $0.model.half + ($0.beside == nil ? 0 : Self.beside.behind)) }
+            schedules.append(Map3DStreetStops.Schedule(direction: direction, way: way, entries: entries, halves: halves))
+        }
+        return schedules
+    }
+
+    /// A lane's vehicle: what it is, its paint and the scooter beside it.
+    struct Vehicle {
+        let model: Map3DStreetModel
+        let tint: UInt32
+        let beside: (model: Map3DStreetModel, tint: UInt32)?
+        /// How far after its place it starts, as a share of the spacing.
+        let jitter: Float
+    }
+
+    /// Place `index` of `count` on `lane` going `direction`, its places
+    /// `spacing` apart: a bus where `buses` allow one, a scooter beside a
+    /// lone one where `besides` allow it.
+    static func vehicle(_ index: Int, of count: Int, lane: Lane, direction: Float, spacing: Float, buses: Bool, besides: Bool) -> Vehicle {
+        let draw = { (index: Int, salt: Int32) in map3DRandom(lane.seed.0 &+ Int32(index), lane.seed.1 &+ Int32(direction), salt: salt) }
+        let r = { (salt: Int32) in draw(index, salt) }
+        let kind = r(2)
+        var model: Map3DStreetModel
+        if lane.buses, spacing >= Self.busSpacing, buses, r(5) < Self.busShare,
+           count == 1 || draw((index + count - 1) % count, 5) >= Self.busShare {
+            let variant = r(6)
+            model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
+        } else if lane.scooters {
+            model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : kind < 0.9 ? .car : .van
+        } else {
+            model = kind < 0.75 ? .car : .van
+        }
+        let paints = model.isBus ? Self.busPaints : model.isScooter ? Self.scooterPaints : Self.carPaints
+        let tint = paints[min(Int(r(3) * Float(paints.count)), paints.count - 1)]
+        let lone = model == .scooter
+        if model.isScooter { model = Self.scooter(model, pick: r(7)) }
+        var beside: (model: Map3DStreetModel, tint: UInt32)?
+        if lone, besides, r(8) < Self.beside.share {
+            let paint = Self.scooterPaints[min(Int(r(9) * Float(Self.scooterPaints.count)), Self.scooterPaints.count - 1)]
+            beside = (Self.scooter(.scooter, pick: r(10)), paint)
+        }
+        return Vehicle(model: model, tint: tint, beside: beside, jitter: r(1))
     }
 
     /// One vehicle of `model` at `foot`: shrinking away at the edge of
@@ -726,6 +855,22 @@ extension Map3DStreetModel {
         }
     }
 
+    /// Half its length, metres (a scooter's, a car's, a van's, each bus's).
+    var half: Float {
+        switch self {
+        case .shuttleBus: Map3DShuttleBus.length / 2
+        case .lowFloorBus: Map3DLowFloorBus.length / 2
+        case .coachBus: Map3DCoachBus.length / 2
+        case .midiBus: Map3DMidiBus.length / 2
+        case .bus: 6
+        case .car: 2.2
+        case .van: 2.3
+        case .garbageTruck, .recyclingTruck: Map3DGarbageTruck.size.length / 2
+        case .walking, .standing: 0.2
+        default: 0.9
+        }
+    }
+
     /// Decision 446: what is drawn of it far from the eye: a close-up
     /// scooter's block (decision 259's), any other itself.
     var far: Map3DStreetModel {
@@ -762,7 +907,9 @@ extension Map3DScene.Builder {
 
     /// Decision 259: a road of the base map as lanes and, where it has
     /// them, pavements: each kept to its tile, at the road's height.
-    mutating func addStreetLife(_ road: Map3DBaseMap.Road) {
+    /// Decision 596: with `markings`' stop lines and crossings on its lanes
+    /// and pavements.
+    mutating func addStreetLife(_ road: Map3DBaseMap.Road, markings: Map3DRoadMarkings? = nil) {
         let lift = Self.lift(of: road.kind) + 0.02
         // The road's runs inside its tile.
         var runs: [[Map3DBaseMap.Point]] = []
@@ -823,6 +970,10 @@ extension Map3DScene.Builder {
                     perHundred: traffic.perHundred * (0.25 + 0.75 * level), scooters: kind != .motorway && kind != .trunk || level > 0.5,
                     seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind))
                 lane.collects = !road.isRamp && Self.collectionRounds.contains(kind)
+                if let markings {
+                    lane.stops = Self.laneStops(path, stops: markings.stops)
+                    lane.schedules = Map3DStreetLife.schedules(of: lane)
+                }
                 streetLife.lanes.append(lane)
             }
             let sidewalk = Self.sidewalk(of: kind)
@@ -834,8 +985,16 @@ extension Map3DScene.Builder {
                 // On the pavement, which lies lower than the road.
                 let lowered = walk.points.map { Map3DPoint($0.x, $0.y - lift + Self.sidewalkLift + 0.02, $0.z) }
                 guard let pavement = Map3DStreetLife.Path(lowered) else { continue }
-                streetLife.spots.append(Map3DStreetLife.Spot(kind: .sidewalk, path: pavement, width: sidewalk * 0.3, people: people, station: nil,
-                                                             seed: lifeSeed(pavement.points[0], salt: side > 0 ? 257 : 258)))
+                var spot = Map3DStreetLife.Spot(kind: .sidewalk, path: pavement, width: sidewalk * 0.3, people: people, station: nil,
+                                                seed: lifeSeed(pavement.points[0], salt: side > 0 ? 257 : 258))
+                if let markings {
+                    spot.crossings = Self.pavementCrossings(pavement, crossings: markings.crossings)
+                    if !spot.crossings.isEmpty {
+                        spot.route = Map3DStreetStops.Route(length: pavement.length, crossings: spot.crossings)
+                        spot.walks = Map3DStreetLife.walks(on: spot)
+                    }
+                }
+                streetLife.spots.append(spot)
             }
         }
     }

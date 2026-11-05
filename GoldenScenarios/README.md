@@ -706,7 +706,7 @@ ARCHITECTURE 決策 51：GameCore 要拿掉方格，所以 fixture 先改用路�
 - **Golden 執行器**（`Tests/GameCoreTests/GoldenScenario.swift`）的方格指令、觀察與最終狀態的寫法（`tracks`、車站的 `x`／`y`／`annexes`、`node`／`link` 位置）還在。→ F3c（schema 28）。
 - **單元測試、property／差分／mutation campaign 與獨立參考模型**（`ReferenceWorld` 等）的方格部分還在方格上，campaign 的 digest 不變。→ F3b。
 - **GamePresentation 與 App** 的方格相容層；`TrackInfoText` 用的 `parallelTracks`、`lineTrackCounts` 只算方格月台，路網上的車站一律是 0。→ F3c 照參考的做法改成路網版（單線／雙線照 `tra_track_sections.json` 的規則，區段照 `topology.js` 的 `trackGroups`；見 [RAILWAY_REFERENCE_MAPPING](../docs/RAILWAY_REFERENCE_MAPPING.md) 的 Stage F3）。
-- **`Web/WasmProbe`**：跑的是同一批 fixture，照決策 51 在 F3c 一起處理。
+- **`Web/WasmProbe`**：跑的是同一批 fixture；決策 598 已連同 Wasm 探針刪除。
 - **`SaveFixtures/` 沒改**：四份存檔都只有路網與點車站（v1 還帶著空地的 `map.tiles`），F3c 之後也必須照常載入。
 - **刻意保留、F3 之後也不改的**（決策 51）：一格 1024 單位、`GridMap`／`GridPosition`（地圖的大小、邊界與 `outOfBounds`）、票價照舊從點車站所在的那一格算、存檔裡 `"continuation": []` 這個 key。（F3d，決策 54，把這些都拿掉了：見上面「F3d」。）
 
