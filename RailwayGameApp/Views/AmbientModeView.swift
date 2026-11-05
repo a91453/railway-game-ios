@@ -289,7 +289,7 @@ struct AmbientCurtain: View {
                 Text(verbatim: corner)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.85))
-                    .shadow(color: .black.opacity(0.6), radius: 2)
+                    .shadow(color: .black.opacity(0.6), radius: 3)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .padding(CGFloat(HUDMargins.edge))
