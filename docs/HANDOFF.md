@@ -542,6 +542,7 @@
 - **Threads**（作者 2026-11-05：「今天threads怎麼發文」）：THREADS-114（session_01YGNNupkxupiZdffEiGcnhh，Sonnet）寫 113.1＋114.1 合一篇（main `bef26ca..26d5fca1`），用 SendUserFile 直接交檔給作者，在 #1579 留「Threads 草稿交付」，不 commit。照往例主文不放連結，TestFlight 連結放第一則自己的留言；建議 114.1 上 TestFlight 後再發。
 - **FERRYPIER**（作者 2026-11-05 回報：「旗津整個沒辦法按」）：session_01YGNNun2KoCWaFSFc4R9zoi，`claude/ferry-pier-snap`，排 115.1。原因：`GameWorld.isPierCell` 要點到的那一格本身是陸地、四鄰有水；`GameSession.tapFerry` 只看點到的那一格，示範航線卻吸附 4 格。要做的：點擊吸附、渡輪模式標出能蓋碼頭的岸邊、錯誤訊息。截圖第 2 級。要改 GameCore 規則先問遊戲規劃，要號碼時從 599 起查 #1579。
 - **TOURSRC-STUDY**：見下面「觀光客源」，docs-only，綠了就合。
+- **HEALTH-114**（114.1 發版後健檢，session_01YGNNupSpkPtU1khcsbCqsS，固定三件之「除錯」的這一輪）：[報告](research/HEALTH_114_2026-11-05.md)。CONCERNS，沒有退步：原有 18 個名字每一格同 HEALTH-112；新量的桃園機場捷運同決策 556 最後的表（新局預設第二天 5/333 沒發、擬實 141/333 誤點，死結都會清掉）；兩條渡輪、貓空纜車兩天沒停。還開著的四件與重現指令在報告 §4。
 - **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
 
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
