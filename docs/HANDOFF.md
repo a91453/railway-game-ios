@@ -362,7 +362,11 @@
     - `create_session` 沒有設 effort 的參數：作者從 app 開的 session 是 `effort_level: "high"`，session 開的看不到這一欄。所以「高」只有作者開的才確定。
     - **2026-11-03 試過（第 44 任，EFFORTTEST session_01YGNNunHQuVStVkHyPcTGEc）**：作者在 `railway-game-ios` 環境加了 `CLAUDE_CODE_EFFORT_LEVEL=high` 之後，`create_session` 開的 session 裡這個變數仍是空的，`CLAUDE_EFFORT=medium`（作者從 app 開的是 `CLAUDE_EFFORT=high`）。所以 session 代開的一律是「中」，環境變數也改不了；要「高」只能作者在 app 手動改（作者：「沒辦法 所以只能手動設定」）。派工時在對話裡列出建議改高的 session（動 GameCore、難查的 bug、審查），請作者改。
     - **預設「中」**（作者 2026-11-03：「好 預設中 需要高的你跟我說」）：實作 session 一律維持中，只有上面三種在派工當下跟作者說「這個請改高」並寫上 session 標題；量測、抓資料、改 CI、照現成寫法的小畫面、只寫文件都用中。
-    - **代開時一定指定 repo**（作者 2026-11-04：「規劃代開下一任時，一定要指定 repo」）：
+    - **代開時一定指定 repo**（作者 2026-11-04：「規劃代開下一任時，一定要指定 repo」）。**這條也適用每一個實作 session，不只下一任**（作者 2026-11-05 要記住）：
+      - 第 48 任開 TAKEOVERVIS 和 STREETSTOP 時又漏了 `source_url`，兩個都拿不到 GitHub。作者只好到兩個 session 各打一句「我同意你用 add_repo 加 a91453/railway-game-ios（push 權限）」。
+      - 規劃用 `send_message` 傳同意沒有用：對方只當成另一個 session 的資料，不算作者同意，所以加不了 repo、也推不了。
+      - 同一天的 PERF114 和 REVIEW1837 有帶 `source_url`，一開工就能推、能留言。
+      - 每次 `create_session` 都要帶 `source_url: "https://github.com/a91453/railway-game-ios"`（只要 GitHub 不用寫 code 的也帶）。
       - 起因：第 44 任用 `create_session` 開第 45 任時沒帶 `source_url`，新 session 沒掛任何 repo。`add_repo`、`gh api` 的留言、合併、取消 run 都被自動模式擋下，111.1 的收尾只好交回第 44 任。直到作者在新 session 說「把 railway-game-ios 加進來（push）」與「在 GitHub 留言、合併 PR、啟動 CI 都可以做」才放行；取消 run 那時沒說，仍被擋。
       - 做法（作者 2026-11-04：「直接接手的時候就有完整權限」）：作者在 `main` 的 `.claude/settings.json` 加了 `permissions.allow`：`Bash(gh api:*)`、`mcp__claude-code-remote__add_repo`、`mcp__claude-code-remote__subscribe_pr_activity`（#1773）。`create_session` 帶 `source_url: "https://github.com/a91453/railway-game-ios"`，新 session 就會載入這份設定，留言、合併、起 workflow、取消 run 都不用作者再說話。session 自己改不了這個檔（自動模式擋「修改自己的權限」），要改只能作者改。允許規則能不能讓自動模式不擋，下一個新 session 才驗證得到（第 45 任開工時這份設定還沒有）。
       - 這份設定對所有 session 都有效，實作 session 也拿得到 `gh api`；它們不合併、不取消別人的 run，靠的是 CLAUDE.md 的規則。
