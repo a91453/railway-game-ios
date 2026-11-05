@@ -108,7 +108,12 @@ public struct RealBranchLine: Hashable, Sendable {
     /// overtake the stopping ones: the Taoyuan Airport MRT's Chang Gung
     /// Memorial Hospital (A8), where every one of the real timetable's
     /// overtakes is.
-    var overtakeStations: [String] { isTaoyuanAirport ? ["長庚醫院站"] : [] }
+    var overtakeStations: [String] { Self.overtakeStations(system: system, network: network) }
+
+    /// ``overtakeStations`` of the line `network` of `system`.
+    static func overtakeStations(system: String, network: String) -> [String] {
+        system == "tymc" && network == "A" ? ["長庚醫院站"] : []
+    }
 
     /// Decision 556: whether the ground under its depots beside the line
     /// is read in as far as their ladders may reach, as under a yard past
@@ -1064,8 +1069,9 @@ extension RealLineLaying {
             zones.append(zone)
             let between = double && index > 0 && index < runs.stops.count - 1
             // Decision 605: a station where the expresses overtake has a
-            // loop outside each track, whatever its timetable stands there.
-            let overtakes = between && line.overtakeStations.contains(name)
+            // loop outside each track, whatever its timetable stands there;
+            // a timetable with no expresses (as it was before) none.
+            let overtakes = between && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
             let loops = overtakes ? 2 : (runs.tracks[name] ?? 1) - (between ? 2 : 1)
             // A positive offset is on the right going up the line; on a
             // double track the second track is on the left, so a loop
