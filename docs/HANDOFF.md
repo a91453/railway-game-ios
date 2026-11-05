@@ -3091,7 +3091,7 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 
 ### 4.51 推進的熱點記住（決策 597，派工單 PERF114，session_01YGNNum7V51BDFPhwxKwEgB，`claude/perf-114`，2026-11-05）
 
-做了的在 [決策 597](decisions/597.md)：113.1 實機「超卡」是 600× 下每個 tick 推進超過 100 ms 預算（作者存檔平均 214 ms），月台所在的軌道記進 `PathMemo` 後 165 ms。量法：`SaveTickCostReportTests`（`PERF_SAVE` 指向存檔才跑；存檔不進 repo）。留下的（決策 597「下一步」）：站長整點約 0.8 s（`claude/perf-114-advice`）、推進仍超過預算（`freePlatformOnTheWay`、`trainLeavingTowards`、`assessSpacing`）、整點的 `PassengerRoutesAhead`、全島縮放的 2D 繪圖（先跟 CRASHROOT-VIEW 協調 `MapView`）、#1837 合併後同一份存檔再量；114.1 實機確認。
+做了的在 [決策 597](decisions/597.md)：113.1 實機「超卡」是 600× 下每個 tick 推進超過 100 ms 預算（作者存檔平均 214 ms），月台所在的軌道記進 `PathMemo` 後 165 ms。量法：`SaveTickCostReportTests`（`PERF_SAVE` 指向存檔才跑；存檔不進 repo）。站長整點約 0.8 s 記到下一個指令後約 2 ms（第二個 PR，`claude/perf-114`）。留下的（決策 597「下一步」）：推進仍超過預算（`freePlatformOnTheWay`、`trainLeavingTowards`、`assessSpacing`）、整點的 `PassengerRoutesAhead`、全島縮放的 2D 繪圖（先跟 CRASHROOT-VIEW 協調 `MapView`）、#1837 合併後同一份存檔再量；114.1 實機確認。
 
 ## 5. 已知、還沒派的待辦
 
