@@ -16,8 +16,8 @@ import GameCore
 /// y back, z up, its middle at the origin), then stood where it is.
 enum Map3DTaipeiLandmark: CaseIterable, Sendable {
     case taipei101, taipeiMainStation, kaohsiungMainStation, kaohsiung85SkyTower, shinKongLifeTower, changhuaRoundhouse
-    // Decision 592: Kaohsiung Harbor's swing bridge and ferry terminals.
-    case greatHarborBridge, gushanFerryTerminal, cijinFerryTerminal
+    // Decision 592: Kaohsiung Harbor's swing bridge, music center and ferry terminals.
+    case greatHarborBridge, kaohsiungMusicCenter, gushanFerryTerminal, cijinFerryTerminal
     // Decision 457: central Taipei's palace-style landmarks and old gates.
     case chiangKaiShekMemorialHall, libertySquareGate, nationalTheater, nationalConcertHall, presidentialOffice, ximenRedHouse
     case sunYatSenMemorialHall, grandHotel, northGate, eastGate, southGate, smallSouthGate
@@ -34,6 +34,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .shinKongLifeTower: 25.04598631427511
         case .changhuaRoundhouse: 24.0858608
         case .greatHarborBridge: 22.6178422
+        case .kaohsiungMusicCenter: 22.6180431
         case .gushanFerryTerminal: 22.6198008
         case .cijinFerryTerminal: 22.6139938
         case .chiangKaiShekMemorialHall: 25.0346856
@@ -59,6 +60,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .shinKongLifeTower: 121.51531117744537
         case .changhuaRoundhouse: 120.5401168
         case .greatHarborBridge: 120.2838734
+        case .kaohsiungMusicCenter: 120.2888741
         case .gushanFerryTerminal: 120.2700518
         case .cijinFerryTerminal: 120.2697235
         case .chiangKaiShekMemorialHall: 121.5217163
@@ -84,6 +86,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .shinKongLifeTower: 90.5
         case .changhuaRoundhouse: 0
         case .greatHarborBridge: 63.0
+        case .kaohsiungMusicCenter: 51.1
         case .gushanFerryTerminal: 2.5
         case .cijinFerryTerminal: 303.7
         case .chiangKaiShekMemorialHall: 242
@@ -113,6 +116,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .shinKongLifeTower: (48, 25)
         case .changhuaRoundhouse: (48, 30)
         case .greatHarborBridge: (68, 12)
+        case .kaohsiungMusicCenter: (98, 55)
         case .gushanFerryTerminal: (22, 33)
         case .cijinFerryTerminal: (42, 22)
         case .chiangKaiShekMemorialHall: (66, 76)
@@ -138,6 +142,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .shinKongLifeTower: (42.5, 20.2)
         case .changhuaRoundhouse: (43, 25.5)
         case .greatHarborBridge: (64.5, 8.8)
+        case .kaohsiungMusicCenter: (93.5, 51.0)
         case .gushanFerryTerminal: (19.0, 29.8)
         case .cijinFerryTerminal: (38.0, 18.5)
         case .chiangKaiShekMemorialHall: (62.2, 73.8)
@@ -188,6 +193,7 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .shinKongLifeTower: mesh.shinKongLifeTower()
         case .changhuaRoundhouse: mesh.changhuaRoundhouse()
         case .greatHarborBridge: mesh.greatHarborBridge()
+        case .kaohsiungMusicCenter: mesh.kaohsiungMusicCenter()
         case .gushanFerryTerminal: mesh.gushanFerryTerminal()
         case .cijinFerryTerminal: mesh.cijinFerryTerminal()
         case .chiangKaiShekMemorialHall: mesh.chiangKaiShekMemorialHall()
@@ -2522,6 +2528,291 @@ struct LandmarkMesh {
                 box(px1 - 0.20, 3.50, 0.85, px1, pyMax, 1.80, ornament, floodlit)
             }
         }
+    }
+
+    // MARK: - Kaohsiung Music Center (Decision 592)
+
+    /// Builds a 3D bevelled hexagonal funnel oculus on a vertical wall with outward normal `(nx, ny, 0)`.
+    private mutating func hexOculus3D(_ cx: Float, _ cy: Float, _ cz: Float, rOuter: Float, rInner: Float, depth: Float, nx: Float, ny: Float) {
+        let hallWhite = colour("hallWhite"), soffit = colour("soffit"), podiumGlass = colour("podiumGlass"), frame = colour("frame")
+        let floodlit = Map3DVertex.floodlit, glowing = Map3DVertex.glowing
+        let tx = -ny, ty = nx
+        var outerPts: [P3] = [], midPts: [P3] = [], innerPts: [P3] = []
+        for k in 0..<6 {
+            let ang = Float(k) * 60.0 * .pi / 180.0
+            let ca = cos(ang), sa = sin(ang)
+            outerPts.append((cx + tx * (rOuter * ca) + nx * 0.05, cy + ty * (rOuter * ca) + ny * 0.05, min(67.95, cz + rOuter * sa)))
+            midPts.append((cx + tx * (rOuter * 0.88 * ca) + nx * depth, cy + ty * (rOuter * 0.88 * ca) + ny * depth, min(67.95, cz + rOuter * 0.88 * sa)))
+            innerPts.append((cx + tx * (rInner * ca) + nx * (depth * 0.30), cy + ty * (rInner * ca) + ny * (depth * 0.30), min(67.95, cz + rInner * sa)))
+        }
+        for k in 0..<6 {
+            let j = (k + 1) % 6
+            quad(outerPts[k], outerPts[j], midPts[j], midPts[k], hallWhite, floodlit)
+            quad(midPts[k], midPts[j], innerPts[j], innerPts[k], soffit, floodlit)
+        }
+        let centerPt: P3 = (cx + nx * (depth * 0.30), cy + ny * (depth * 0.30), cz)
+        for k in 0..<6 {
+            let j = (k + 1) % 6
+            tri(centerPt, innerPts[k], innerPts[j], podiumGlass, glowing)
+        }
+        for k in [0, 2, 4] {
+            tube3D(centerPt, midPts[k], radius: 0.16, sides: 4, frame, floodlit)
+        }
+    }
+
+    /// Decision 592: Kaohsiung Music Center (高雄流行音樂中心, OSM relation 6459914,
+    /// Wave Tower & Hi-Ing Auditorium Hall way 913343429, nodes 11082673815,
+    /// 12287197434 & 13354524802: 184.57 m × 99.39 m × 68.0 m).
+    ///
+    /// Local coordinates at origin `(22.6180431, 120.2888741)`, rotated `51.1°`:
+    /// - `+X` points NE (`51.1°` N of E) toward the Hi-Ing Auditorium Hall (`海音館`)
+    ///   and LRT Love Pier Bridge; `-X` points SW toward the Low Wave Tower (`低音塔`)
+    ///   and Sea Breeze Plaza (`海風廣場`).
+    /// - `-Y` faces SE across Love River Bay (`愛河灣`); `+Y` faces NW toward Zhen'ai Rd (`真愛路`).
+    mutating func kaohsiungMusicCenter() {
+        let hallWhite = colour("hallWhite"), trim = colour("trim"), frame = colour("frame")
+        let glass = colour("glass"), groundGlass = colour("groundGlass"), podiumGlass = colour("podiumGlass")
+        let skylight = colour("skylight"), crownRoof = colour("crownRoof"), podiumRoof = colour("podiumRoof")
+        let podium = colour("podium"), gateStone = colour("gateStone"), soffit = colour("soffit")
+        let spire = colour("spire"), ornament = colour("ornament")
+        let towerGlass = Map3DVertex.towerGlass, floodlit = Map3DVertex.floodlit, glowing = Map3DVertex.glowing
+
+        // 52-vertex OSM Way 913343429 polygon in local metres (184.57 m × 99.39 m)
+        let osmCW: [P2] = [
+            ( 48.77,  49.70), ( 55.11,  47.90), ( 56.34,  43.67), ( 63.97,  42.75),
+            ( 66.97,  39.46), ( 73.10,  38.33), ( 76.09,  34.00), ( 82.87,  32.07),
+            ( 84.90,  27.47), ( 90.91,  24.40), ( 92.28,  18.10), ( 87.36,  14.80),
+            ( 87.69,   6.47), ( 84.12,   2.75), ( 82.47,  -7.51), ( 85.20, -10.70),
+            ( 84.00, -17.56), ( 79.84, -20.75), ( 77.08, -30.90), ( 78.18, -31.86),
+            ( 77.09, -34.26), ( 72.86, -35.48), ( 70.46, -39.61), ( 65.59, -41.51),
+            ( 60.95, -38.69), ( 56.93, -39.75), ( 55.97, -46.91), ( 48.78, -49.70),
+            ( 42.15, -46.28), ( 32.50, -47.74), ( 26.25, -44.01), ( 11.89, -47.61),
+            (  8.85, -44.68), (  8.14, -39.19), (-35.16, -38.79), (-35.35, -30.80),
+            (-92.18, -31.74), (-92.28,  23.25), (-34.65,  23.23), (-35.47,  27.01),
+            (  2.67,  29.62), (  4.09,  33.29), ( 10.63,  35.20), ( 16.29,  34.04),
+            ( 19.42,  35.39), ( 20.28,  38.27), ( 24.70,  39.48), ( 23.85,  44.50),
+            ( 26.87,  45.92), ( 33.99,  44.29), ( 39.11,  46.72), ( 44.29,  46.10),
+        ]
+        let plinthRing: [P2] = Array(osmCW.reversed())
+        wallBand(plinthRing, 0.00, plinthRing, 1.20, gateStone, Self.plain)
+        polyCap(plinthRing, 1.20, podium, Self.plain)
+
+        // 1. Hi-Ing Auditorium Hall (海音館大型室內展演廳, NE sawtooth honeycomb polygon, x = +2..+92.28 m)
+        let hallCW: [P2] = Array(osmCW[0..<34]) + [(-2.00, -24.00), (-2.00, 14.00)] + Array(osmCW[40..<52])
+        let hallRawRing: [P2] = Array(hallCW.reversed())
+        let hcx: Float = 46.0, hcy: Float = 0.0
+        func scaleHall(_ s: Float) -> [P2] {
+            hallRawRing.map { (hcx + ($0.x - hcx) * s, hcy + ($0.y - hcy) * s) }
+        }
+
+        let hallBaseRing  = scaleHall(0.92)
+        let hallLobbyRing = scaleHall(0.935)
+        let hallMidRing   = scaleHall(0.96)
+        let hallEaveRing  = scaleHall(0.99)
+        let hallStrutBase = scaleHall(0.955)
+        let hallStrutEave = scaleHall(0.998)
+        let hallRoofMid   = scaleHall(0.84)
+        let hallRoofCrown = scaleHall(0.48)
+
+        wallBand(hallBaseRing,  1.20, hallLobbyRing,  6.20, groundGlass, glowing)
+        wallBand(hallLobbyRing, 6.20, hallMidRing,   16.80, glass, Self.curtain)
+        wallBand(hallMidRing,  16.80, hallEaveRing,  22.80, crownRoof, floodlit)
+        wallBand(hallEaveRing, 22.80, hallEaveRing,  24.00, hallWhite, floodlit)
+        wallBand(hallEaveRing, 24.00, hallRoofMid,   26.00, podiumRoof, floodlit)
+        wallBand(hallRoofMid,  26.00, hallRoofCrown, 26.80, hallWhite, floodlit)
+        polyCap(hallRoofCrown, 26.80, hallWhite, Self.plain)
+
+        if full {
+            let nH = hallEaveRing.count
+            for k in stride(from: 0, to: nH, by: 2) {
+                let j = (k + 1) % nH
+                let b0 = hallStrutBase[k], e0 = hallStrutEave[k], e1 = hallStrutEave[j]
+                tube3D((b0.x, b0.y, 1.25), (e0.x, e0.y, 23.60), radius: 0.28, sides: 4, frame, floodlit)
+                tube3D((b0.x, b0.y, 1.25), (e1.x, e1.y, 23.60), radius: 0.24, sides: 4, spire, floodlit)
+            }
+        }
+
+        // Hexagonal honeycomb light rings on Auditorium Hall roof (crest z = 27.60 m)
+        let honeycombCenters: [P3] = [
+            (46.0,   0.0, 26.80),
+            (60.0,   0.0, 26.55), (32.0,   0.0, 26.55),
+            (53.0,  12.2, 26.55), (39.0,  12.2, 26.55),
+            (53.0, -12.2, 26.55), (39.0, -12.2, 26.55),
+            (67.0,  12.2, 26.25), (67.0, -12.2, 26.25),
+            (46.0,  24.4, 26.25), (46.0, -24.4, 26.25),
+            (25.0, -12.2, 26.25),
+        ]
+        for hc in honeycombCenters {
+            let outerHex = polyRing(hc.x, hc.y, 6.2, sides: 6, rotDeg: 0.0)
+            if full {
+                let innerHex = polyRing(hc.x, hc.y, 4.9, sides: 6, rotDeg: 0.0)
+                wallBand(outerHex, hc.z - 0.35, outerHex, 27.60, hallWhite, floodlit)
+                wallBand(innerHex, 27.60, innerHex, 27.15, soffit, floodlit)
+                ringCap(innerHex, outerHex, 27.60, ornament, glowing)
+                cap(innerHex, 27.15, skylight, Self.plain)
+            } else {
+                wallBand(outerHex, hc.z - 0.35, outerHex, 27.60, hallWhite, floodlit)
+                cap(outerHex, 27.60, ornament, glowing)
+            }
+        }
+
+        // 2. Central A-Frame Glazed Atrium Canyon (中央透明玻璃帷幕峽谷, x = -44..-27 m)
+        let canyonBot: [P2] = [(-44.0, -28.5), (-27.0, -28.5), (-27.0, 20.5), (-44.0, 20.5)]
+        let canyonTop: [P2] = [(-39.0, -22.0), (-31.0, -22.0), (-31.0, 15.0), (-39.0, 15.0)]
+        wallBand(canyonBot, 1.20, canyonTop, 33.50, podiumGlass, Self.curtain)
+        polyCap(canyonTop, 33.50, skylight, Self.plain)
+        for (bz, bw): (Float, Float) in [(10.5, 0.72), (19.5, 0.45), (28.5, 0.18)] {
+            box(-39.0 - 5.0 * bw, -22.0 - 6.5 * bw, bz, -31.0 + 4.0 * bw, 15.0 + 5.5 * bw, bz + 0.85, hallWhite, floodlit)
+        }
+
+        // 3. High Wave Tower (音浪塔高音塔, central crystalline hexagonal wave modules rising to z = 68.00 m)
+        func hexChamferRing(_ x0: Float, _ x1: Float, _ y0: Float, _ y1: Float, _ ch: Float) -> [P2] {
+            [
+                (x0 + ch, y0), (x1 - ch, y0), (x1, y0 + ch), (x1, y1 - ch),
+                (x1 - ch, y1), (x0 + ch, y1), (x0, y1 - ch), (x0, y0 + ch),
+            ]
+        }
+
+        let highWaveModules: [(x0: Float, x1: Float, y0: Float, y1: Float, ch: Float, wOut: Float, z0: Float, z1: Float)] = [
+            (-33.5,  10.5, -37.0, 27.5, 9.2, 2.2,  1.20, 18.00),
+            (-31.0,   7.0, -32.0, 22.0, 8.2, 2.0, 18.00, 34.00),
+            (-28.0,   3.0, -26.0, 16.5, 7.0, 1.8, 34.00, 48.00),
+            (-24.8,  -0.5, -20.5, 11.5, 5.8, 1.5, 48.00, 60.00),
+            (-21.2,  -4.2, -15.0,  7.0, 4.4, 1.2, 60.00, 68.00),
+        ]
+        for (idx, mod) in highWaveModules.enumerated() {
+            let zm = 0.5 * (mod.z0 + mod.z1)
+            let botCore  = hexChamferRing(mod.x0 + 0.45, mod.x1 - 0.45, mod.y0 + 0.45, mod.y1 - 0.45, mod.ch * 0.92)
+            let midCore  = hexChamferRing(mod.x0 - mod.wOut + 0.45, mod.x1 + mod.wOut - 0.45, mod.y0 - mod.wOut * 0.6 + 0.45, mod.y1 + mod.wOut * 0.6 - 0.45, (mod.ch + mod.wOut * 0.4) * 0.92)
+            let topCore  = hexChamferRing(mod.x0 + 1.0 + 0.45, mod.x1 - 1.0 - 0.45, mod.y0 + 0.8 + 0.45, mod.y1 - 0.8 - 0.45, mod.ch * 0.88)
+
+            let botFrame = hexChamferRing(mod.x0, mod.x1, mod.y0, mod.y1, mod.ch)
+            let midFrame = hexChamferRing(mod.x0 - mod.wOut, mod.x1 + mod.wOut, mod.y0 - mod.wOut * 0.6, mod.y1 + mod.wOut * 0.6, mod.ch + mod.wOut * 0.4)
+            let topFrame = hexChamferRing(mod.x0 + 1.0, mod.x1 - 1.0, mod.y0 + 0.8, mod.y1 - 0.8, mod.ch * 0.94)
+
+            wallBand(botCore, mod.z0, midCore, zm, glass, towerGlass)
+            wallBand(midCore, zm, topCore, mod.z1, glass, towerGlass)
+            wallBand(midFrame, zm - 0.45, midFrame, zm + 0.45, hallWhite, floodlit)
+            ringCap(midCore, midFrame, zm + 0.45, trim, Self.plain)
+            wallBand(topFrame, mod.z1 - 0.70, topFrame, mod.z1, hallWhite, floodlit)
+            polyCap(topFrame, mod.z1, idx == highWaveModules.count - 1 ? hallWhite : podiumRoof, Self.plain)
+
+            if full {
+                let rF1: [P2] = (0..<8).map { (botFrame[$0].x * 0.5 + midFrame[$0].x * 0.5, botFrame[$0].y * 0.5 + midFrame[$0].y * 0.5) }
+                let rC1: [P2] = (0..<8).map { (botCore[$0].x * 0.5 + midCore[$0].x * 0.5, botCore[$0].y * 0.5 + midCore[$0].y * 0.5) }
+                let rF2: [P2] = (0..<8).map { (midFrame[$0].x * 0.5 + topFrame[$0].x * 0.5, midFrame[$0].y * 0.5 + topFrame[$0].y * 0.5) }
+                let rC2: [P2] = (0..<8).map { (midCore[$0].x * 0.5 + topCore[$0].x * 0.5, midCore[$0].y * 0.5 + topCore[$0].y * 0.5) }
+                for (qt, rF, rC): (Float, [P2], [P2]) in [(0.25, rF1, rC1), (0.75, rF2, rC2)] {
+                    let zq = mod.z0 + (mod.z1 - mod.z0) * qt
+                    wallBand(rF, zq - 0.30, rF, zq + 0.30, frame, floodlit)
+                    ringCap(rC, rF, zq + 0.30, trim, Self.plain)
+                }
+                let zTopSafe = min(mod.z1 - 0.35, 67.65)
+                for k in 0..<8 {
+                    let j = (k + 1) % 8
+                    let b0 = botFrame[k], w0 = midFrame[k], w1 = midFrame[j], t0 = topFrame[k], t1 = topFrame[j]
+                    tube3D((b0.x, b0.y, mod.z0 + 0.25), (w0.x, w0.y, zm), radius: 0.30, sides: 4, frame, floodlit)
+                    tube3D((w0.x, w0.y, zm), (t0.x, t0.y, zTopSafe), radius: 0.30, sides: 4, frame, floodlit)
+                    if k % 2 == 0 {
+                        tube3D((b0.x, b0.y, mod.z0 + 0.25), (w1.x, w1.y, zm), radius: 0.22, sides: 4, frame, floodlit)
+                        tube3D((w0.x, w0.y, zm), (t1.x, t1.y, zTopSafe), radius: 0.22, sides: 4, frame, floodlit)
+                    }
+                }
+            }
+        }
+
+        // Sweeping crystalline shoulder bridging High Tower to Auditorium Hall roof
+        let shBot = hexChamferRing(-4.0, 20.0, -25.0, 15.0, 6.0)
+        let shTop = hexChamferRing(-6.0,  5.0, -18.0, 10.0, 4.5)
+        wallBand(shBot, 23.50, shTop, 37.50, hallWhite, floodlit)
+        polyCap(shTop, 37.50, podiumRoof, Self.plain)
+
+        // 4. Low Wave Tower (音浪塔低音塔, SW stepped hexagonal wave modules rising to z = 42.50 m)
+        let lowWaveModules: [(x0: Float, x1: Float, y0: Float, y1: Float, ch: Float, wOut: Float, z0: Float, z1: Float)] = [
+            (-76.5, -39.5, -29.8, 22.0, 7.8, 2.0,  1.20, 16.00),
+            (-72.8, -41.5, -25.2, 17.8, 6.8, 1.8, 16.00, 30.00),
+            (-68.5, -43.8, -20.2, 13.0, 5.5, 1.5, 30.00, 42.50),
+        ]
+        for (idx, mod) in lowWaveModules.enumerated() {
+            let zm = 0.5 * (mod.z0 + mod.z1)
+            let botCore  = hexChamferRing(mod.x0 + 0.45, mod.x1 - 0.45, mod.y0 + 0.45, mod.y1 - 0.45, mod.ch * 0.92)
+            let midCore  = hexChamferRing(mod.x0 - mod.wOut + 0.45, mod.x1 + mod.wOut - 0.45, mod.y0 - mod.wOut * 0.6 + 0.45, mod.y1 + mod.wOut * 0.6 - 0.45, (mod.ch + mod.wOut * 0.4) * 0.92)
+            let topCore  = hexChamferRing(mod.x0 + 0.8 + 0.45, mod.x1 - 0.8 - 0.45, mod.y0 + 0.6 + 0.45, mod.y1 - 0.6 - 0.45, mod.ch * 0.88)
+
+            let botFrame = hexChamferRing(mod.x0, mod.x1, mod.y0, mod.y1, mod.ch)
+            let midFrame = hexChamferRing(mod.x0 - mod.wOut, mod.x1 + mod.wOut, mod.y0 - mod.wOut * 0.6, mod.y1 + mod.wOut * 0.6, mod.ch + mod.wOut * 0.4)
+            let topFrame = hexChamferRing(mod.x0 + 0.8, mod.x1 - 0.8, mod.y0 + 0.6, mod.y1 - 0.6, mod.ch * 0.94)
+
+            wallBand(botCore, mod.z0, midCore, zm, glass, towerGlass)
+            wallBand(midCore, zm, topCore, mod.z1, glass, towerGlass)
+            wallBand(midFrame, zm - 0.40, midFrame, zm + 0.40, hallWhite, floodlit)
+            ringCap(midCore, midFrame, zm + 0.40, trim, Self.plain)
+            wallBand(topFrame, mod.z1 - 0.65, topFrame, mod.z1, hallWhite, floodlit)
+            polyCap(topFrame, mod.z1, idx == lowWaveModules.count - 1 ? hallWhite : podiumRoof, Self.plain)
+
+            if full {
+                let rF1: [P2] = (0..<8).map { (botFrame[$0].x * 0.5 + midFrame[$0].x * 0.5, botFrame[$0].y * 0.5 + midFrame[$0].y * 0.5) }
+                let rC1: [P2] = (0..<8).map { (botCore[$0].x * 0.5 + midCore[$0].x * 0.5, botCore[$0].y * 0.5 + midCore[$0].y * 0.5) }
+                let rF2: [P2] = (0..<8).map { (midFrame[$0].x * 0.5 + topFrame[$0].x * 0.5, midFrame[$0].y * 0.5 + topFrame[$0].y * 0.5) }
+                let rC2: [P2] = (0..<8).map { (midCore[$0].x * 0.5 + topCore[$0].x * 0.5, midCore[$0].y * 0.5 + topCore[$0].y * 0.5) }
+                for (qt, rF, rC): (Float, [P2], [P2]) in [(0.25, rF1, rC1), (0.75, rF2, rC2)] {
+                    let zq = mod.z0 + (mod.z1 - mod.z0) * qt
+                    wallBand(rF, zq - 0.28, rF, zq + 0.28, frame, floodlit)
+                    ringCap(rC, rF, zq + 0.28, trim, Self.plain)
+                }
+                let zTopSafe = mod.z1 - 0.30
+                for k in 0..<8 {
+                    let j = (k + 1) % 8
+                    let b0 = botFrame[k], w0 = midFrame[k], w1 = midFrame[j], t0 = topFrame[k], t1 = topFrame[j]
+                    tube3D((b0.x, b0.y, mod.z0 + 0.25), (w0.x, w0.y, zm), radius: 0.28, sides: 4, frame, floodlit)
+                    tube3D((w0.x, w0.y, zm), (t0.x, t0.y, zTopSafe), radius: 0.28, sides: 4, frame, floodlit)
+                    if k % 2 == 0 {
+                        tube3D((b0.x, b0.y, mod.z0 + 0.25), (w1.x, w1.y, zm), radius: 0.20, sides: 4, frame, floodlit)
+                        tube3D((w0.x, w0.y, zm), (t1.x, t1.y, zTopSafe), radius: 0.20, sides: 4, frame, floodlit)
+                    }
+                }
+            }
+        }
+
+        // 5. Signature 3D Hexagonal Honeycomb Cliff & Funnel Oculi (立體六角形蜂巢浮雕與漏斗窗)
+        if full {
+            for (wx, cy, cz, ro, ri): (Float, Float, Float, Float, Float) in [
+                ( 8.5,  -4.0, 26.0, 5.8, 2.4), ( 8.5, -15.5, 26.0, 4.8, 2.0), ( 8.5,  7.5, 26.0, 4.8, 2.0),
+                ( 4.5,  -4.0, 41.0, 6.2, 2.6), ( 4.5, -14.8, 41.0, 4.8, 2.0), ( 4.5,  6.8, 41.0, 4.8, 2.0),
+                ( 0.8,  -4.5, 54.0, 5.4, 2.2), ( 0.8, -13.5, 54.0, 4.2, 1.7), ( 0.8,  4.5, 54.0, 4.2, 1.7),
+                (-3.2,  -4.0, 64.0, 3.8, 1.6),
+            ] {
+                hexOculus3D(wx, cy, cz, rOuter: ro, rInner: ri, depth: 1.8, nx: 1.0, ny: 0.0)
+            }
+            for (cx, wy, cz, ro, ri): (Float, Float, Float, Float, Float) in [
+                (-11.0, -33.2, 26.0, 5.4, 2.3), (-22.0, -33.2, 26.0, 4.6, 2.0),
+                (-12.5, -27.0, 41.0, 5.0, 2.1), (-22.0, -27.0, 41.0, 4.2, 1.8),
+                (-13.0, -21.2, 54.0, 4.5, 1.9),
+            ] {
+                hexOculus3D(cx, wy, cz, rOuter: ro, rInner: ri, depth: 1.5, nx: 0.0, ny: -1.0)
+            }
+            for (cx, wy, cz, ro, ri): (Float, Float, Float, Float, Float) in [
+                (-56.0, -26.2, 23.0, 5.0, 2.1), (-65.0, -26.2, 23.0, 4.2, 1.8),
+                (-56.5, -21.0, 36.2, 4.6, 1.9),
+            ] {
+                hexOculus3D(cx, wy, cz, rOuter: ro, rInner: ri, depth: 1.4, nx: 0.0, ny: -1.0)
+            }
+            for (wx, cy, cz, ro, ri): (Float, Float, Float, Float, Float) in [
+                (-74.5, -4.0, 23.0, 4.8, 2.0), (-70.0, -4.0, 36.2, 4.2, 1.8),
+            ] {
+                hexOculus3D(wx, cy, cz, rOuter: ro, rInner: ri, depth: 1.4, nx: -1.0, ny: 0.0)
+            }
+        }
+
+        // 6. Southwest Sea Breeze Plaza Wing & Entrance Canopy (海風廣場與西南延伸翼, x = -92.28..-75 m)
+        let swBase: [P2] = [(-91.8, -31.2), (-75.5, -30.5), (-75.5, 22.5), (-91.8, 22.8)]
+        let swRoof: [P2] = [(-90.5, -29.5), (-75.5, -29.0), (-75.5, 21.0), (-90.5, 21.2)]
+        wallBand(swBase, 1.20, swBase, 8.80, groundGlass, Self.curtain)
+        wallBand(swBase, 8.80, swRoof, 10.40, hallWhite, floodlit)
+        polyCap(swRoof, 10.40, podiumRoof, Self.plain)
+        let swPav = polyRing(-84.0, -4.0, 6.5, sides: 6, rotDeg: 0.0)
+        wallBand(swPav, 10.40, swPav, 14.80, hallWhite, floodlit)
+        cap(swPav, 14.80, ornament, glowing)
     }
 
     /// The model stood in the scene (x east, y up, z south) with its

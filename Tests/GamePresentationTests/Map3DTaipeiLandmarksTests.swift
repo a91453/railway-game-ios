@@ -78,6 +78,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
     /// bridge outline way 1137765107: 126.44 m × 15.38 m with 110 m swing
     /// span way 840552016; elevated observation deck 6.95 m, asymmetric
     /// shell arch canopy 11.20 m, inclined central mast spire 36.0 m),
+    /// Kaohsiung Music Center (OSM relation 6459914, Wave Tower & Hi-Ing
+    /// Auditorium Hall way 913343429, nodes 11082673815, 12287197434 &
+    /// 13354524802: 184.57 m × 99.39 m; Hi-Ing Auditorium Hall honeycomb
+    /// roof 27.60 m, Low Wave Tower 42.50 m, High Wave Tower 68.0 m),
     /// Gushan Ferry Terminal (OSM node 3921289758, waiting gallery way
     /// 205060865, floating pier way 388956314 & main entrance building way
     /// 588103933: combined 35.02 m × 56.60 m; wave-arched gallery roof
@@ -91,6 +95,11 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
     private static let greatHarborBridgeHeight: Float = 36.0
     private static let greatHarborBridgeShellHeight: Float = 11.20
     private static let greatHarborBridgeObservationHeight: Float = 6.95
+    private static let kaohsiungMusicCenterLength: Float = 184.57
+    private static let kaohsiungMusicCenterWidth: Float = 99.39
+    private static let kaohsiungMusicCenterHeight: Float = 68.0
+    private static let kaohsiungMusicCenterLowTowerHeight: Float = 42.50
+    private static let kaohsiungMusicCenterAuditoriumHeight: Float = 27.60
     private static let gushanFerryWidth: Float = 35.02
     private static let gushanFerryLength: Float = 56.60
     private static let gushanFerryHeight: Float = 12.0
@@ -128,6 +137,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             case .shinKongLifeTower: Self.shinKongHeight
             case .changhuaRoundhouse: Self.changhuaRoundhouseHeight
             case .greatHarborBridge: Self.greatHarborBridgeHeight
+            case .kaohsiungMusicCenter: Self.kaohsiungMusicCenterHeight
             case .gushanFerryTerminal: Self.gushanFerryHeight
             case .cijinFerryTerminal: Self.cijinFerryHeight
             case .chiangKaiShekMemorialHall: 70
@@ -158,7 +168,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             }
             let used = Set(full.vertices.map(\.layer))
             let expectedLayers: Set<Float> = switch landmark {
-            case .taipei101, .kaohsiung85SkyTower, .shinKongLifeTower:
+            case .taipei101, .kaohsiung85SkyTower, .shinKongLifeTower, .kaohsiungMusicCenter:
                 [Map3DVertex.curtainGlass, Map3DVertex.towerGlass, Map3DVertex.floodlit, Map3DVertex.glowing]
             case .taipeiMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles]
             case .kaohsiungMainStation: [Map3DVertex.curtainGlass, Map3DVertex.roofTiles, Map3DVertex.floorLines]
@@ -184,7 +194,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: true).indices.count / 3, 4_194)
         XCTAssertEqual(Map3DTaipeiLandmark.taipeiMainStation.model(full: false).indices.count / 3, 902)
         for landmark in [Map3DTaipeiLandmark.kaohsiungMainStation, .kaohsiung85SkyTower, .shinKongLifeTower,
-                         .changhuaRoundhouse, .greatHarborBridge, .gushanFerryTerminal, .cijinFerryTerminal] {
+                         .changhuaRoundhouse, .greatHarborBridge, .kaohsiungMusicCenter, .gushanFerryTerminal, .cijinFerryTerminal] {
             let full = landmark.model(full: true), far = landmark.model(full: false)
             XCTAssertLessThanOrEqual(full.indices.count / 3, 6_000, "\(landmark)")
             XCTAssertLessThanOrEqual(far.indices.count / 3, 2_500, "\(landmark)")
@@ -278,7 +288,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertLessThanOrEqual(landmark.model(full: true).indices.count / 3, 6_000, "\(landmark)")
             XCTAssertLessThanOrEqual(landmark.model(full: false).indices.count / 3, 2_500, "\(landmark)")
         }
-        XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 9)
+        XCTAssertEqual(Set(plans.keys).count, Map3DTaipeiLandmark.allCases.count - 10)
         // Each stands within 2 m of its way's minimum box's middle.
         let middles: [Map3DTaipeiLandmark: (Double, Double)] = [
             .chiangKaiShekMemorialHall: (25.03468, 121.52172), .libertySquareGate: (25.03665, 121.51772),
@@ -395,18 +405,19 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         var builder = builder(world)
         let built = builder.addTaipeiLandmarks(frame: frame)
-        XCTAssertEqual(Set(built.keys), [tower])
-        XCTAssertEqual(triangles(builder.nearMeshes), tower.model(full: true).indices.count / 3)
-        XCTAssertEqual(triangles(builder.farMeshes), tower.model(full: false).indices.count / 3)
+        let baySet: Set<Map3DTaipeiLandmark> = [tower, .kaohsiungMusicCenter]
+        XCTAssertEqual(Set(built.keys), baySet)
+        XCTAssertEqual(triangles(builder.nearMeshes), baySet.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
+        XCTAssertEqual(triangles(builder.farMeshes), baySet.reduce(0) { $0 + $1.model(full: false).indices.count / 3 })
         XCTAssertTrue(builder.keptColours.contains(greenRidge))
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 10) }
         var blocked = self.builder(world)
         blocked.trackLines = [(line, .surface)]
-        XCTAssertTrue(blocked.addTaipeiLandmarks(frame: frame).isEmpty)
+        XCTAssertEqual(Set(blocked.addTaipeiLandmarks(frame: frame).keys), [.kaohsiungMusicCenter])
         var tunnel = self.builder(world)
         tunnel.trackLines = [(line, .tunnel)]
-        XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), [tower])
+        XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), baySet)
     }
 
     /// Decision 550: Taipei Shin Kong Life Tower's outer footprint and
@@ -519,19 +530,22 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
 
     /// Decision 592: Kaohsiung Great Harbor Bridge (OSM relation 15430334,
     /// bridge outline way 1137765107 & swing span way 840552016: 126.44 m ×
-    /// 15.38 m × 36.0 m), Gushan Ferry Terminal (OSM node 3921289758, ways
-    /// 205060865, 388956314 & 588103933: 35.02 m × 56.60 m × 12.0 m), and
-    /// Cijin Ferry Terminal (OSM node 3921289548, ways 255744758, 388956315
-    /// & 388956316: 72.83 m × 34.26 m × 23.0 m) match OpenStreetMap's
-    /// dimensions within 2 m, and stand clear of surface track while
-    /// allowing underground track.
+    /// 15.38 m × 36.0 m), Kaohsiung Music Center (OSM relation 6459914 &
+    /// Wave Tower / Hi-Ing Auditorium Hall way 913343429: 184.57 m × 99.39 m
+    /// × 68.0 m), Gushan Ferry Terminal (OSM node 3921289758, ways 205060865,
+    /// 388956314 & 588103933: 35.02 m × 56.60 m × 12.0 m), and Cijin Ferry
+    /// Terminal (OSM node 3921289548, ways 255744758, 388956315 & 388956316:
+    /// 72.83 m × 34.26 m × 23.0 m) match OpenStreetMap's dimensions within
+    /// 2 m, and stand clear of surface track while allowing underground track.
     func testKaohsiungHarborLandmarks() throws {
         let bridge = Map3DTaipeiLandmark.greatHarborBridge
+        let musicCenter = Map3DTaipeiLandmark.kaohsiungMusicCenter
         let gushan = Map3DTaipeiLandmark.gushanFerryTerminal
         let cijin = Map3DTaipeiLandmark.cijinFerryTerminal
         let vermilion = Map3DColor.rgb(0xDC968A)
         let hallWhite = Map3DColor.rgb(0xF8F7F3)
         let brick = Map3DColor.rgb(0xDDA996)
+        let ornament = Map3DColor.rgb(0xE9D6A6)
 
         for model in [bridge.model(full: true), bridge.model(full: false)] {
             let xs = model.vertices.map(\.x), ys = model.vertices.map(\.y), zs = model.vertices.map(\.z)
@@ -548,6 +562,25 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
             XCTAssertTrue(model.vertices.contains { $0.color == brick && abs($0.z - Self.greatHarborBridgeObservationHeight) < 0.1 })
             let shell = model.vertices.filter { $0.color == hallWhite && $0.z > 9.0 && $0.z < 12.0 }
             XCTAssertEqual(shell.map(\.z).max() ?? 0, Self.greatHarborBridgeShellHeight, accuracy: 0.2)
+            XCTAssertFalse(model.vertices.contains { $0.color == Self.wall })
+        }
+
+        for model in [musicCenter.model(full: true), musicCenter.model(full: false)] {
+            let xs = model.vertices.map(\.x), ys = model.vertices.map(\.y), zs = model.vertices.map(\.z)
+            XCTAssertEqual((xs.max() ?? 0) - (xs.min() ?? 0), Self.kaohsiungMusicCenterLength, accuracy: 2.0)
+            XCTAssertEqual((ys.max() ?? 0) - (ys.min() ?? 0), Self.kaohsiungMusicCenterWidth, accuracy: 2.0)
+            XCTAssertEqual((zs.max() ?? 0) - (zs.min() ?? 0), Self.kaohsiungMusicCenterHeight, accuracy: 0.01)
+            let ground = model.vertices.filter { $0.z < 0.01 }
+            let gxs = ground.map(\.x), gys = ground.map(\.y)
+            XCTAssertEqual((gxs.max() ?? 0) - (gxs.min() ?? 0), Self.kaohsiungMusicCenterLength, accuracy: 2.0)
+            XCTAssertEqual((gys.max() ?? 0) - (gys.min() ?? 0), Self.kaohsiungMusicCenterWidth, accuracy: 2.0)
+            XCTAssertEqual(((gxs.max() ?? 0) + (gxs.min() ?? 0)) / 2, 0, accuracy: 2.0)
+            XCTAssertEqual(((gys.max() ?? 0) + (gys.min() ?? 0)) / 2, 0, accuracy: 2.0)
+            // Hi-Ing Auditorium Hall hexagonal honeycomb roof (27.60 m) & Low Wave Tower peak (42.50 m).
+            let honeycombRoof = model.vertices.filter { $0.color == ornament && $0.x > 15.0 }
+            XCTAssertEqual(honeycombRoof.map(\.z).max() ?? 0, Self.kaohsiungMusicCenterAuditoriumHeight, accuracy: 0.1)
+            let lowTowerPeak = model.vertices.filter { $0.color == hallWhite && $0.x < -42.0 && $0.z > 40.0 }
+            XCTAssertEqual(lowTowerPeak.map(\.z).max() ?? 0, Self.kaohsiungMusicCenterLowTowerHeight, accuracy: 0.1)
             XCTAssertFalse(model.vertices.contains { $0.color == Self.wall })
         }
 
@@ -593,7 +626,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         var builder = builder(world)
         let built = builder.addTaipeiLandmarks(frame: frame)
-        let harborSet: Set<Map3DTaipeiLandmark> = [bridge, gushan, cijin]
+        let harborSet: Set<Map3DTaipeiLandmark> = [bridge, musicCenter, gushan, cijin]
         XCTAssertEqual(Set(built.keys), harborSet)
         XCTAssertEqual(triangles(builder.nearMeshes), harborSet.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
         XCTAssertEqual(triangles(builder.farMeshes), harborSet.reduce(0) { $0 + $1.model(full: false).indices.count / 3 })
@@ -601,7 +634,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 5) }
         var blocked = self.builder(world)
         blocked.trackLines = [(line, .surface)]
-        XCTAssertEqual(Set(blocked.addTaipeiLandmarks(frame: frame).keys), [gushan, cijin])
+        XCTAssertEqual(Set(blocked.addTaipeiLandmarks(frame: frame).keys), [musicCenter, gushan, cijin])
         var tunnel = self.builder(world)
         tunnel.trackLines = [(line, .tunnel)]
         XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), harborSet)
@@ -621,7 +654,7 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertTrue(Set(built.keys).isSuperset(of: [station, .shinKongLifeTower, .northGate, .presidentialOffice, .chiangKaiShekMemorialHall]))
         XCTAssertTrue(built.keys.allSatisfy {
             ![.taipei101, .sunYatSenMemorialHall, .grandHotel, .kaohsiungMainStation, .kaohsiung85SkyTower,
-              .changhuaRoundhouse, .greatHarborBridge, .gushanFerryTerminal, .cijinFerryTerminal].contains($0)
+              .changhuaRoundhouse, .greatHarborBridge, .kaohsiungMusicCenter, .gushanFerryTerminal, .cijinFerryTerminal].contains($0)
         })
         let taken = try XCTUnwrap(built[station])
         XCTAssertEqual(triangles(builder.nearMeshes), built.keys.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
