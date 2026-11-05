@@ -2182,6 +2182,8 @@
 
 ### 4.1 架構、預算、坑、素材（3D 任務素材庫 session_01DDMNH81xijBkgM2wVnHEyR）
 
+**機場與飛機原生 3D studies（Codex，決策 594，`codex/airport-aircraft-studies`）**：四型飛機、城市／離島航廈、跑道等十種零件及兩組景，近遠景各一；公開配方、接點、producer、測試、總覽，重素材與 SOURCE.md 在私庫 `game-art-previews/docs/art/airport-aircraft-2026-11/`。只做素材，不接營運，GameCore、存檔、golden、SaveFixtures、ReplayFixtures 不動。主線客運塗裝已占 593，因此沿用機場預留 594；使用者訊息中的 593 已提出釐清。Linux/WebGL 幾何與總覽自檢不代表作者看過或 Metal 實機驗證；兩庫維持 draft，不合併。後續要接自動航班時，需另處理真實機場幾何、跑道與機位規則。
+
 **讀 GameWorld**
 - `Map3DScene(world:snapshot:skyline:focus:baseMap:cityTiles:heights:)`（`Sources/GamePresentation/Map3DScene.swift`）是唯讀的衍生資料，不存世界的第二份。
 - 由 `RailwayGameApp/Views/Map3D/Map3DPreviewScreen.swift` 在 `Task.detached` 裡整個重蓋。路網或城市一變就全部重蓋，沒有增量更新。

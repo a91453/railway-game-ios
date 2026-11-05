@@ -1,0 +1,42 @@
+import {readFileSync as read,writeFileSync as write,mkdirSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';
+import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
+import {readNative,glbFromNative} from '../station-kit/package.mjs';
+const {chromium}=createRequire(import.meta.url)('playwright');
+const root=resolve(process.argv[2]),group=process.argv[3],hash=b=>createHash('sha256').update(b).digest('hex');
+const manifest=JSON.parse(read(root+'/manifest.json'));
+let renderer=read(new URL('../station-kit/renderer.js',import.meta.url),'utf8');
+// Keep existing native loader/camera. Only expose illumination for day/night.
+renderer=renderer.replace('uniform float radius,aspect,depth;','uniform float radius,aspect,depth;').replace('precision highp float;in vec3 n,c;in float g;','precision highp float;uniform float night;in vec3 n,c;in float g;').replace('c*(0.8+0.2*sun)+vec3(g*0.025)','c*mix(0.8+0.2*sun,0.13+0.08*sun,night)+c*g*night*0.95').replace("'radius','aspect','depth'","'radius','aspect','depth','night'").replace('zoom=1,vector','zoom=1,vector,night=0').replace('Object.entries({radius,aspect,depth})','Object.entries({radius,aspect,depth,night})');
+write(root+'/renderer.js',renderer);
+const script=renderer.replaceAll('export ','');
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+try{
+ const page=await browser.newPage();await page.setContent('<canvas id="canvas"></canvas>');await page.addScriptTag({content:script+';window.renderer=new NativeRenderer(document.querySelector("canvas"));'});
+ for(const m of manifest.models.filter(m=>!group||m.id.startsWith(group))){
+  const bytes=read(root+'/'+m.native),native=readNative(bytes);if(native.vertices.length/3!==m.triangles)throw Error('count');
+  const folder=dirname(m.native);m.glb=folder+'/'+m.id+'.glb';write(root+'/'+m.glb,glbFromNative(native));m.native_sha256=hash(bytes);m.glb_sha256=hash(read(root+'/'+m.glb));m.views={};m.image_metrics={};
+  for(const state of ['day','night'])for(const direction of manifest.directions){
+   const png=await page.evaluate(({b,d,n})=>{renderer.load(Uint8Array.from(atob(b),c=>c.charCodeAt(0)).buffer);renderer.render(d,{width:512,height:512,night:n});return renderer.png()}, {b:bytes.toString('base64'),d:direction,n:state==='night'?1:0});
+   const file=folder+'/'+state+'-'+direction+'.png',data=Buffer.from(png.split(',')[1],'base64');write(root+'/'+file,data);m.views[state+'-'+direction]=file;m.image_metrics[state+'-'+direction]={sha256:hash(data)};
+  }
+ }
+ write(root+'/manifest.json',JSON.stringify(manifest,null,2)+'\n');
+ // File:// offline viewer: embed every native model, renderer and manifest; no fetch.
+ const models=manifest.models.map(m=>({...m,bytes:read(root+'/'+m.native).toString('base64')}));
+ const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>台灣機場與飛機 studies</title><style>body{margin:16px;background:#eceef6;color:#26385c;font:16px system-ui}canvas{width:100%;max-height:70vh;touch-action:none;background:#fff}select,button,input{font:inherit;margin:4px;max-width:96%}pre{white-space:pre-wrap}</style><h1>台灣機場與飛機 · studies</h1><p>拖曳旋轉、滾輪縮放。外觀待作者看過。</p><select id="model"></select><select id="view">${manifest.directions.map(v=>'<option>'+v+'</option>').join('')}</select><button id="night">日／夜</button><button id="bg">換底色</button><button id="download">下載 native</button><button id="png">下載 PNG</button><label>關節角度 <input id="pose" type="range" min="-.25" max=".25" step=".005" value="-.165"></label><canvas id="canvas"></canvas><pre id="info"></pre><script>${script}
+const models=${JSON.stringify(models)},model=document.querySelector('#model'),view=document.querySelector('#view'),canvas=document.querySelector('#canvas'),r=new NativeRenderer(canvas);let night=0,zoom=1,angle=0,elevation=.6,vector;
+models.forEach((m,i)=>model.add(new Option(m.name,i)));view.value='isometric';function bytes(m){return Uint8Array.from(atob(m.bytes),c=>c.charCodeAt(0)).buffer}function posed(m){const b=bytes(m),candidate=m.connectors.joint||m.connectors.joints?.[0],j=candidate?.movingTriangleStart!==undefined?candidate:null;const control=document.querySelector('#pose');control.disabled=!j;if(!j)return b;const d=new DataView(b),start=16+Math.ceil(d.getUint32(12,true)/4)*4;const theta=Math.max(j.limit[0],Math.min(j.limit[1],Number(control.value))),a=theta-j.rest,c=Math.cos(a),s=Math.sin(a),p=j.pivot;for(let i=j.movingTriangleStart;i<j.movingTriangleStart+j.movingTriangleCount;i++)for(let v=0;v<3;v++){const at=start+i*52+4+v*16,x=d.getFloat32(at,true)-p[0],z=d.getFloat32(at+8,true)-p[2];d.setFloat32(at,p[0]+c*x-s*z,true);d.setFloat32(at+8,p[2]+s*x+c*z,true)}return b}function draw(){const m=models[model.value||0];r.load(posed(m));r.render(view.value,{width:900,height:600,night,zoom,vector});document.querySelector('#info').textContent=m.triangles+' triangles · metres / x前 y左 z上\\n'+JSON.stringify(m.connectors,null,2)}
+document.querySelector('#pose').oninput=draw;model.onchange=()=>{zoom=1;document.querySelector('#pose').value=(models[model.value].connectors.joint||models[model.value].connectors.joints?.[0])?.rest||0;draw()};view.onchange=()=>{vector=undefined;draw()};document.querySelector('#night').onclick=()=>{night=1-night;draw()};let bg=0;document.querySelector('#bg').onclick=()=>{canvas.style.background=['#fff','#26385c','#dce9da','#263c40'][++bg%4]};function save(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click()}document.querySelector('#download').onclick=()=>save('data:application/octet-stream;base64,'+models[model.value||0].bytes,models[model.value||0].id+'.m3dmodel');document.querySelector('#png').onclick=()=>save(r.png(),'preview.png');canvas.onwheel=e=>{e.preventDefault();zoom=Math.max(.3,Math.min(2,zoom*Math.exp(-e.deltaY*.001)));draw()};let drag;canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)};canvas.onpointerup=()=>drag=null;canvas.onpointermove=e=>{if(!drag)return;angle+=(e.clientX-drag[0])*.01;elevation=Math.max(-1.4,Math.min(1.4,elevation+(e.clientY-drag[1])*.01));drag=[e.clientX,e.clientY];vector=[Math.cos(angle),Math.sin(angle),elevation];draw()};draw();window.airportViewer={models,r,draw,posed};</script>`;
+ write(root+'/index.html',html);
+ // Actual rendered geometry sheets; data URLs keep sheet independent of HTTP.
+ const near=manifest.models.filter(m=>m.id.endsWith('-near'));
+ const img=(m,v)=>'data:image/png;base64,'+read(root+'/'+m.views[v]).toString('base64');
+ async function sheet(file,title,content){await page.setContent('<meta charset="utf-8"><style>body{font:18px system-ui;background:#eceef6;color:#26385c;margin:20px}main{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}article{background:white;padding:10px;border-radius:12px}img{width:100%}.row{display:grid;grid-template-columns:repeat(7,1fr)}h2{font-size:18px}</style><h1>'+title+'</h1>'+content);await page.evaluate(()=>Promise.all([...document.images].map(i=>i.decode())));await page.screenshot({path:root+'/'+file,fullPage:true});}
+ await page.setViewportSize({width:1200,height:600});
+ await sheet('overview.png','台灣機場與飛機 · 原生 3D studies / 自檢', '<main>'+near.map(m=>'<article><img src="'+img(m,'day-isometric')+'"><h2>'+m.name+'</h2><p>'+m.triangles+' triangles</p><img src="'+img(m,'night-isometric')+'"></article>').join('')+'</main>');
+ await sheet('directions.png','七向與船底 · 自檢',near.map(m=>'<h2>'+m.name+'</h2><div class="row">'+manifest.directions.map(v=>'<div><img src="'+img(m,'day-'+v)+'">'+v+'</div>').join('')+'</div>').join(''));
+ await sheet('style-checks.png','四底色 / 120・64・44・28 px / 模糊與灰階 · 自檢',near.filter(m=>['commuter19-near','regional70-near','narrowjet-near','widejet-near','city-scene-near','island-scene-near'].includes(m.id)).map(m=>'<h2>'+m.name+'</h2><div style="display:flex">'+['#fff','#26385c','#dce9da','#263c40'].map(c=>'<img style="width:24%;background:'+c+'" src="'+img(m,'day-isometric')+'">').join('')+'</div>'+[120,64,44,28].map(n=>'<img style="width:'+n+'px" src="'+img(m,'day-isometric')+'">').join('')+'<img style="width:120px;filter:blur(3px)" src="'+img(m,'day-isometric')+'"><img style="width:120px;filter:grayscale(1)" src="'+img(m,'day-isometric')+'">').join(''));
+ console.log('Rendered',manifest.models.length,'models; viewer fully embedded.');
+}finally{await browser.close()}
