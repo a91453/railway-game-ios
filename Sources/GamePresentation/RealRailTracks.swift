@@ -33,9 +33,18 @@ public struct RealRailTracks: Sendable, Equatable {
         /// How far over the ground each point is, metres; under it in a
         /// tunnel.
         public let heights: [Double]
+        /// Decision 600: its OpenStreetMap way, when the file names it.
+        public var way: String? = nil
+        /// Decision 600: a siding, crossover or yard track a dispatched
+        /// train runs on (``RealRailDispatch``), which a train with no
+        /// assignment of its own keeps off.
+        public var isService = false
     }
 
     public let tracks: [Track]
+    /// Decision 600: the trains' track assignment, `rail_dispatch.json`;
+    /// `nil` without it, and the trains keep to their side.
+    public var dispatch: RealRailDispatch?
 
     init(tracks: [Track]) {
         self.tracks = tracks
@@ -47,9 +56,11 @@ public struct RealRailTracks: Sendable, Equatable {
     public init(data: Data) throws {
         struct File: Decodable {
             struct Way: Decodable {
+                let way: String?
                 let system: Int
                 let kind: Kind
                 let points: [Int]
+                let v: Int?
             }
 
             let systems: [String]
@@ -72,7 +83,7 @@ public struct RealRailTracks: Sendable, Equatable {
                 points.append(RealRailways.Coordinate(latitude: Double(latitude) / 1e6, longitude: Double(longitude) / 1e6))
                 heights.append(Double(height) / 10)
             }
-            return Track(system: file.systems[way.system], kind: way.kind, points: points, heights: heights)
+            return Track(system: file.systems[way.system], kind: way.kind, points: points, heights: heights, way: way.way, isService: way.v == 1)
         }
     }
 

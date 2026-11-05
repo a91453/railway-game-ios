@@ -68,6 +68,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// ``Map3DScreenshotView``), at 10:00, so the sun's shadows show.
     case taipeiMain
     case taipei101
+    /// Decision 600: the same map on the Taiwan Railway's viaduct south of
+    /// Taichung Station, for the screenshots of the real trains on the
+    /// tracks they are assigned and the double track's one deck.
+    case taichungViaduct
 
     /// Decision 596: the same map round the big junction 380 m east of
     /// Taipei Main Station (23 stop lines) at 10:00 and at 20:00, for the
@@ -158,6 +162,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain, .followBusCity: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        case .taichungViaduct: (24.1369, 120.6850)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
@@ -192,7 +197,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
-        case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .taipeiMain, .taipei101, .taichungViaduct: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .wenhu, .xiaobitan: Self.realLineWorld(at: self, in: language)

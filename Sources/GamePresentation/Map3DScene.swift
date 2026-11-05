@@ -442,7 +442,8 @@ public struct Map3DScene: Sendable {
                 guard acquisition.kind == .railway, parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
                 return (parts[0], line.shape)
             }
-            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks, bought: bought,
+            realTrains = Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks,
+                                         operations: operations, bought: bought,
                                          frame: frame, snapshot: snapshot, builder: &builder)
         } else {
             realTrains = nil
@@ -1204,7 +1205,11 @@ extension Map3DScene {
             return pieces
         }
 
-        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway) {
+        /// Decision 600: with `railsNear`, its rails only in the near
+        /// detail (``Target/near``), its bed, banks and viaducts at every
+        /// distance: the real lines' tracks, which far out are most of what
+        /// a scene draws.
+        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false) {
             let middle = line[line.count / 2]
             switch kind {
             case .tunnel:
@@ -1251,6 +1256,9 @@ extension Map3DScene {
             }
             // The rails, their middles half a rail outside the gauge.
             let offset = (Self.gauge + Self.railWidth) / 2
+            let target = self.target
+            if railsNear { self.target = .near }
+            defer { self.target = target }
             mesh(at: middle) { mesh in
                 for side: Float in [-1, 1] {
                     mesh.addRibbon(along: line, width: Self.railWidth, offset: side * offset, lift: 0, depth: Self.railHeight,

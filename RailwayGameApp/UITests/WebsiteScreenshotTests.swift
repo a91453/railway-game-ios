@@ -550,6 +550,10 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLeanedStation140At60() { shootLean("taipeiMain", "140,225,60", "lean-station-60") }
     func testLeanedStation200() { shootLean("taipeiMain", "200,225,0", "lean-station-200-own") }
     func testLeanedStation200At60() { shootLean("taipeiMain", "200,225,60", "lean-station-200-60") }
+    /// Decision 600: the real trains on Taichung's viaduct on the tracks
+    /// they are assigned, the double track on one deck, close and leaned.
+    func testTaichungViaduct() { shootLean("taichungViaduct", "200,225,45", "taichung-viaduct") }
+    func testTaichungViaductClose() { shootLean("taichungViaduct", "120,135,30", "taichung-viaduct-close") }
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 

@@ -49,11 +49,14 @@ final class Map3DRealTracksTests: XCTestCase {
     /// systems, read by the loader.
     func testTheFileReads() throws {
         let tracks = try XCTUnwrap(Self.tracks)
-        XCTAssertEqual(tracks.tracks.count, 4_229)
+        // Decision 600: and the 441 sidings, crossovers and yard tracks
+        // the dispatched trains run on.
+        XCTAssertEqual(tracks.tracks.count, 4_670)
+        XCTAssertEqual(tracks.tracks.filter(\.isService).count, 441)
         XCTAssertEqual(tracks.systems, ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt"])
         XCTAssertTrue(tracks.tracks.allSatisfy { $0.points.count >= 2 && $0.points.count == $0.heights.count })
         XCTAssertTrue(tracks.tracks.allSatisfy { track in track.points.allSatisfy { (21.8...25.4).contains($0.latitude) && (119.8...122.1).contains($0.longitude) } })
-        XCTAssertEqual(Map3DRealTrainsTests.railways?.tracks, tracks)
+        XCTAssertEqual(Map3DRealTrainsTests.railways?.tracks?.tracks, tracks.tracks)
         // Out of shape: points not in threes, a system it does not list.
         XCTAssertThrowsError(try RealRailTracks(data: Data(#"{"systems":["tra_sched"],"ways":[{"system":0,"kind":"s","points":[1,2,3,4]}]}"#.utf8)))
         XCTAssertThrowsError(try RealRailTracks(data: Data(#"{"systems":["tra_sched"],"ways":[{"system":1,"kind":"s","points":[1,2,3,4,5,6]}]}"#.utf8)))
