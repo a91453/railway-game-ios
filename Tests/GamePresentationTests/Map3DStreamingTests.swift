@@ -59,7 +59,7 @@ final class Map3DStreamingTests: XCTestCase {
         }
         let wholeChunks = Dictionary(uniqueKeysWithValues: scene.chunks.map { (Key(column: $0.column, row: $0.row), $0) })
         XCTAssertEqual(Set(apart.map { Key(column: $0.column, row: $0.row) }), Set(inner).intersection(wholeChunks.keys))
-        var triangles = 0
+        var triangles = 0, fronts = 0
         for chunk in apart {
             let key = Key(column: chunk.column, row: chunk.row)
             let same = try XCTUnwrap(wholeChunks[key])
@@ -74,9 +74,14 @@ final class Map3DStreamingTests: XCTestCase {
             XCTAssertEqual(chunk.props.map(\.floats), same.props.map(\.floats), "\(key)")
             XCTAssertEqual(chunk.signs, same.signs, "\(key)")
             XCTAssertEqual(chunk.cityTops, same.cityTops, "\(key)")
+            // Decision 610: and the real buildings' street fronts.
+            XCTAssertEqual(chunk.facade.vertices, same.facade.vertices, "\(key)")
+            XCTAssertEqual(chunk.facade.indices, same.facade.indices, "\(key)")
+            fronts += chunk.facade.triangleCount
         }
         // A busy place: the city, the station and the track are there.
         XCTAssertGreaterThan(triangles, 20_000)
+        XCTAssertGreaterThan(fronts, 1_000, "Taichung's real buildings' street fronts")
     }
 
     /// Only a real-world map's 3D map builds ahead.

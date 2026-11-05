@@ -140,6 +140,9 @@ final class Map3DMetalView: MTKView {
     private var memoryWatch = Map3DMemoryWatch()
     private var level: Map3DLoadLevel? { quality.tier(device: deviceTier) == nil ? nil : load.level }
     private var drawsFewerPixels = false
+    /// Decision 610: whether the real buildings' street fronts are drawn
+    /// (``Map3DRealFacade/draws(quality:lowPower:heat:tier:)``).
+    private var drawsFacades = false
     /// Decision 238's later note: the 3D look chosen in Settings.
     var quality = Map3DQuality.automatic {
         didSet {
@@ -220,6 +223,13 @@ final class Map3DMetalView: MTKView {
         /// Decision 368: built without its city in full, so drawn
         /// simplified until built again.
         let coarse: Bool
+        /// Decision 610: the real buildings' street fronts, made into
+        /// buffers only once the chunk is drawn close up with them on
+        /// (``drawsFacades``), and let go when they go off; whether they
+        /// were drawn last frame.
+        let facadeMesh: Map3DMesh
+        var facade: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        var frontsUp = false
     }
 
     private let queue: MTLCommandQueue
@@ -611,6 +621,17 @@ final class Map3DMetalView: MTKView {
         load.relieve()
         rememberRung()
         applyQuality()
+        // Decision 610: the street fronts' buffers let go, made again only
+        // where they are still drawn.
+        releaseFacades()
+    }
+
+    /// Decision 610: lets go of every chunk's street fronts' buffers.
+    private func releaseFacades() {
+        for index in chunks.indices where chunks[index].facade != nil {
+            chunks[index].facade = nil
+            chunks[index].frontsUp = false
+        }
     }
 
     private func applyQuality() {
@@ -624,6 +645,11 @@ final class Map3DMetalView: MTKView {
         sunPlan = Map3DSunShadow.plan(quality, lowPower: process.isLowPowerModeEnabled, heat: heat, overBudget: load.level.drawing.fewerPixels)
         trainMaterials = Map3DReflection.trainStrength(quality, lowPower: process.isLowPowerModeEnabled, heat: heat)
         let fewer = plan.fewerPixels || load.level.drawing.fewerPixels
+        let facades = Map3DRealFacade.draws(quality: quality, lowPower: process.isLowPowerModeEnabled, heat: heat, tier: level?.tier)
+        if facades != drawsFacades {
+            drawsFacades = facades
+            if !facades { releaseFacades() }
+        }
         if fewer != drawsFewerPixels {
             drawsFewerPixels = fewer
             setNeedsLayout()
@@ -953,7 +979,7 @@ final class Map3DMetalView: MTKView {
         let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
                      far: far, farBoxes: farBoxes, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
-                     column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse)
+                     column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse, facadeMesh: chunk.facade)
     }
 
     /// Decision 259: the most figures and vehicles a frame draws (the
@@ -1031,6 +1057,15 @@ final class Map3DMetalView: MTKView {
                                      coarse: chunks[index].coarse, wasClose: chunks[index].closeUp)
             chunks[index].walksClose = camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum,
                                                          detailed: chunks[index].detailed, coarse: false, wasClose: chunks[index].walksClose)
+            // Decision 610: and the real buildings' street fronts, made into
+            // buffers the first time.
+            chunks[index].frontsUp = drawsFacades && !chunks[index].facadeMesh.isEmpty
+                && camera.drawsClose(minimum: chunks[index].minimum, maximum: chunks[index].maximum, detailed: chunks[index].detailed,
+                                     coarse: chunks[index].coarse, wasClose: chunks[index].frontsUp)
+            if chunks[index].frontsUp, chunks[index].facade == nil,
+               let vertices = makeBuffer(chunks[index].facadeMesh.vertices), let indices = makeBuffer(chunks[index].facadeMesh.indices) {
+                chunks[index].facade = (vertices, indices, chunks[index].facadeMesh.indices.count)
+            }
             if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
                 visible.append(chunks[index])
             }
@@ -1150,6 +1185,13 @@ final class Map3DMetalView: MTKView {
                                               indexBuffer: close.indices, indexBufferOffset: 0)
                 drawCalls += 1
                 triangles += close.indexCount / 3
+            }
+            if chunk.frontsUp, let facade = chunk.facade {
+                encoder.setVertexBuffer(facade.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: facade.indexCount, indexType: .uint32,
+                                              indexBuffer: facade.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += facade.indexCount / 3
             }
             if seen { encoder.setRenderPipelineState(seeThroughPipeline) }
             if detailed, seen, chunk.indexCount > chunk.baseIndexCount {
