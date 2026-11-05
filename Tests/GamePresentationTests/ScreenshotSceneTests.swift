@@ -107,22 +107,38 @@ final class ScreenshotSceneTests: XCTestCase {
     /// ferries stands at the shore as drawn: its shelter on the land, its
     /// boats' berth on the water (run 41906144682 drew Gushan's boat on
     /// land; the base map's water areas alone put its shelter on the water).
+    /// With the real buildings the app draws, no building stands over the
+    /// berth, the boat's turning circle or the landing (run 41927167376:
+    /// Gushan's boat cut through the ferry terminal, which stands on the
+    /// water drawn), and the crossing between the berths is open water.
     func testTheRealFerryPiersStandAtTheDrawnShore() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let water = try WaterGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_water.json")))
         let tiles = try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan.pmtiles"),
                                                 options: .alwaysMapped))
+        let footprints = try FootprintTiles(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan_buildings.pmtiles"),
+                                                       options: .alwaysMapped))
+        let city = CityTileArea.areas(in: root.appendingPathComponent("RailwayGameApp/Resources/BaseMap/city"))
         for shot in [ScreenshotScene.gushanFerry, .tamsuiFerry] {
             let world = shot.make(in: .traditionalChinese, water: water)
             let route = try XCTUnwrap(world.ferryRoutes.first)
             for (index, cell) in route.piers.enumerated() {
-                let scene = Map3DScene(world: world, focus: (Double(cell.middle.x), Double(cell.middle.y)), baseMap: tiles)
-                let pier = try XCTUnwrap(Map3DFerries(world: world, scene: scene).lines.first).piers[index]
+                let scene = Map3DScene(world: world, focus: (Double(cell.middle.x), Double(cell.middle.y)), baseMap: tiles, cityTiles: city,
+                                       footprints: footprints)
+                let line = try XCTUnwrap(Map3DFerries(world: world, scene: scene).lines.first)
+                let pier = line.piers[index]
                 let drawn = scene.drawnWater(round: pier.origin, radius: 160)
                 let shelter = pier.origin - pier.out * 13
                 XCTAssertFalse(drawn.isWater(x: shelter.x, z: shelter.z), "\(shot) pier \(index): the shelter on the land")
-                XCTAssertTrue(drawn.isWater(x: pier.origin.x, z: pier.origin.z), "\(shot) pier \(index): the pontoon on the water")
-                XCTAssertTrue(drawn.isWater(x: pier.berth.x, z: pier.berth.z), "\(shot) pier \(index): the berth on the water")
+                XCTAssertFalse(drawn.isBuilt(x: shelter.x, z: shelter.z), "\(shot) pier \(index): the shelter clear of the buildings")
+                XCTAssertTrue(drawn.isOpenWater(x: pier.origin.x, z: pier.origin.z), "\(shot) pier \(index): the pontoon on the water")
+                XCTAssertTrue(drawn.isOpenWater(x: pier.berth.x, z: pier.berth.z), "\(shot) pier \(index): the berth on the water")
+                let swing = (line.boat.length * line.boat.length + line.boat.beam * line.boat.beam).squareRoot() / 2
+                for turn in 0..<16 {
+                    let angle = Float(turn) * .pi / 8
+                    let p = pier.berth + Map3DPoint(cos(angle), 0, sin(angle)) * swing
+                    XCTAssertTrue(drawn.isOpenWater(x: p.x, z: p.z), "\(shot) pier \(index): the boat clear of the buildings, \(turn)")
+                }
                 // And its boats leave toward the other pier over water,
                 // not over a quay (run 41919543916).
                 let other = route.piers[index == 0 ? 1 : 0].middle
@@ -130,8 +146,18 @@ final class ScreenshotSceneTests: XCTestCase {
                 let leave = try XCTUnwrap(Map3DPoint(to.x - pier.berth.x, 0, to.z - pier.berth.z).normalized)
                 for s in stride(from: Float(0), through: Map3DFerries.clearWay, by: 4) {
                     let p = pier.berth + leave * s
-                    XCTAssertTrue(drawn.isWater(x: p.x, z: p.z), "\(shot) pier \(index): water \(s) m out")
+                    XCTAssertTrue(drawn.isOpenWater(x: p.x, z: p.z), "\(shot) pier \(index): water \(s) m out")
                 }
+            }
+            // The straight crossing between the berths over open water.
+            let scene = Map3DScene(world: world, focus: (Double(route.piers[0].middle.x), Double(route.piers[0].middle.y)), baseMap: tiles,
+                                   cityTiles: city, footprints: footprints)
+            let piers = try XCTUnwrap(Map3DFerries(world: world, scene: scene).lines.first).piers
+            let (a, b) = (piers[0].berth, piers[1].berth)
+            let drawn = scene.drawnWater(round: a, radius: (b - a).length + 20)
+            for s in stride(from: Float(0), through: 1, by: 4 / (b - a).length) {
+                let p = a + (b - a) * s
+                XCTAssertTrue(drawn.isOpenWater(x: p.x, z: p.z), "\(shot): the crossing over water \(s)")
             }
         }
     }

@@ -83,7 +83,7 @@ public struct Map3DFerries: Sendable {
                 let other = route.piers[index == route.piers.count - 1 ? index - 1 : index + 1]
                 let middle = flat(cell.middle)
                 let edge: Map3DPoint, out: Map3DPoint
-                if let shore = Self.shore(from: middle, toward: flat(other.middle), boat: boat.length,
+                if let shore = Self.shore(from: middle, toward: flat(other.middle), boat: boat,
                                           in: scene.drawnWater(round: middle, radius: Self.shoreReach + Self.clearWay + 60)) {
                     (edge, out) = shore
                 } else {
@@ -116,8 +116,8 @@ public struct Map3DFerries: Sendable {
     static let clearWay: Float = 60
 
     /// The shore the pier at `middle` (its cell's middle) stands out
-    /// from, `toward` being the next pier's, for boats `boat` metres
-    /// long: of 16 ways round, those not turned from `toward`, each place
+    /// from, `toward` being the next pier's, for boats of kind `boat`:
+    /// of 16 ways round, those not turned from `toward`, each place
     /// along it where the land drawn gives way to water, the nearest
     /// whose pontoon lies on the water and whose boats leave the berth
     /// toward `toward` over ``clearWay`` of water, a way more toward
@@ -128,10 +128,18 @@ public struct Map3DFerries: Sendable {
     /// drawn decides. From a middle drawn as water, the shore behind it
     /// on the way from `toward`. `nil` with no shore within
     /// ``shoreReach``.
-    static func shore(from middle: Map3DPoint, toward: Map3DPoint, boat: Float,
+    ///
+    /// Water with a building of the city over it counts as land: the
+    /// city's real buildings stand on the water drawn where a terminal
+    /// or a shed stands on a quay or over the water (Gushan, screenshot
+    /// run 41927167376), and a boat lying there would cut through one. A
+    /// berth is taken only with the boat's turning circle (half its
+    /// diagonal round the berth) all open water.
+    static func shore(from middle: Map3DPoint, toward: Map3DPoint, boat kind: Map3DFerry.Boat,
                       in drawn: Map3DScene.DrawnWater) -> (edge: Map3DPoint, out: Map3DPoint)? {
         guard let ahead = Map3DPoint(toward.x - middle.x, 0, toward.z - middle.z).normalized else { return nil }
-        func water(_ p: Map3DPoint) -> Bool { drawn.isWater(x: p.x, z: p.z) }
+        let boat = kind.length, swing = (kind.length * kind.length + kind.beam * kind.beam).squareRoot() / 2
+        func water(_ p: Map3DPoint) -> Bool { drawn.isOpenWater(x: p.x, z: p.z) }
         let steps = Int(shoreReach / shoreStep)
         if water(middle) {
             // Back to the land, the edge the last water before it.
@@ -141,9 +149,22 @@ public struct Map3DFerries: Sendable {
             return nil
         }
         func clear(_ edge: Map3DPoint, _ way: Map3DPoint) -> Bool {
+            // The landing, shelter and kiosk behind the shore (6.6 m back,
+            // 6.3 m to a side) clear of the city's buildings.
+            let side = Map3DPoint(way.z, 0, -way.x)
+            for back: Float in [1, 3.4, 6.6] {
+                for aside: Float in [-6.3, -3, 0, 3, 6.3] {
+                    let p = edge - way * back + side * aside
+                    if drawn.isBuilt(x: p.x, z: p.z) { return false }
+                }
+            }
             let pontoon = Map3DFerry.pierOffshore + Map3DFerry.pontoonReach
             for s in stride(from: shoreStep, through: pontoon, by: shoreStep) where !water(edge + way * s) { return false }
             let berth = edge + way * (pontoon + berthGap + boat / 2)
+            for turn in 0..<16 {
+                let angle = Float(turn) * .pi / 8, round = Map3DPoint(cos(angle), 0, sin(angle))
+                for r in [swing / 2, swing] where !water(berth + round * r) { return false }
+            }
             guard let leave = Map3DPoint(toward.x - berth.x, 0, toward.z - berth.z).normalized else { return true }
             let reach = min(clearWay, Map3DPoint(toward.x - berth.x, 0, toward.z - berth.z).length)
             for s in stride(from: 0, through: reach, by: 4) where !water(berth + leave * s) { return false }
@@ -159,7 +180,8 @@ public struct Map3DFerries: Sendable {
             for step in 1...steps {
                 let edge = middle + way * (Float(step) * shoreStep)
                 let now = water(edge)
-                defer { wet = now }
+                defer { wet = drawn.isWater(x: edge.x, z: edge.z) }
+                // Out from the land drawn, not from a building on the water.
                 guard now, !wet else { continue }
                 let isClear = clear(edge, way), cost = Float(step) * (1.25 - 0.5 * lean)
                 let better = best.map { isClear != $0.clear ? isClear : cost < $0.cost } ?? true

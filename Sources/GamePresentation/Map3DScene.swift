@@ -137,21 +137,32 @@ public struct Map3DScene: Sendable {
     /// over `centre`'s, the top one at a point deciding: the base map's
     /// water areas, waterways and cover over them, or the ground's own
     /// water cells, as the player sees them (the base map's water areas
-    /// alone missed a Gushan basin's further 70 m).
+    /// alone missed a Gushan basin's further 70 m). And the city's
+    /// buildings over it (the faces after them more than
+    /// ``DrawnWater/buildingRise`` over `centre` and not upright: roofs
+    /// and floors), which stand on the water drawn where the real ones
+    /// stand on a quay or over the water (Gushan's ferry terminal,
+    /// screenshot run 41927167376).
     func drawnWater(round centre: Map3DPoint, radius: Float) -> DrawnWater {
         var water = DrawnWater()
-        let top = centre.y + 4
+        let top = centre.y + 4, rise = centre.y + DrawnWater.buildingRise
         for chunk in chunks {
             let vertices = chunk.mesh.vertices, indices = chunk.mesh.indices
             var k = 0
-            while k + 2 < chunk.baseIndexCount {
+            while k + 2 < indices.count {
                 let a = vertices[Int(indices[k])], b = vertices[Int(indices[k + 1])], c = vertices[Int(indices[k + 2])]
+                let ground = k < chunk.baseIndexCount
                 k += 3
-                guard max(a.y, b.y, c.y) <= top else { continue }
+                if ground {
+                    guard max(a.y, b.y, c.y) <= top else { continue }
+                } else {
+                    let area = abs((b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x)) / 2
+                    guard max(a.y, b.y, c.y) > rise, area > 0.5 else { continue }
+                }
                 let low = (x: min(a.x, b.x, c.x), z: min(a.z, b.z, c.z)), high = (x: max(a.x, b.x, c.x), z: max(a.z, b.z, c.z))
                 guard high.x >= centre.x - radius, low.x <= centre.x + radius, high.z >= centre.z - radius, low.z <= centre.z + radius
                 else { continue }
-                water.add(DrawnWater.Face(a: a, b: b, c: c), low: low, high: high)
+                water.add(DrawnWater.Face(a: a, b: b, c: c), low: low, high: high, building: !ground)
             }
         }
         return water
@@ -165,32 +176,53 @@ public struct Map3DScene: Sendable {
         }
 
         static let square: Float = 8
+        /// A face of the city this far over the centre's height, metres,
+        /// is a building's (a quay's paving and the street's small things
+        /// lie lower).
+        static let buildingRise: Float = 2
         private var squares: [Int64: [Face]] = [:]
+        private var buildings: [Int64: [Face]] = [:]
 
         private static func key(_ column: Int, _ row: Int) -> Int64 { Int64(column) << 32 | Int64(UInt32(bitPattern: Int32(row))) }
 
-        mutating func add(_ face: Face, low: (x: Float, z: Float), high: (x: Float, z: Float)) {
+        private static func key(x: Float, z: Float) -> Int64 {
+            key(Int((x / square).rounded(.down)), Int((z / square).rounded(.down)))
+        }
+
+        mutating func add(_ face: Face, low: (x: Float, z: Float), high: (x: Float, z: Float), building: Bool = false) {
             let s = Self.square
             for column in Int((low.x / s).rounded(.down))...Int((high.x / s).rounded(.down)) {
                 for row in Int((low.z / s).rounded(.down))...Int((high.z / s).rounded(.down)) {
-                    squares[Self.key(column, row), default: []].append(face)
+                    if building { buildings[Self.key(column, row), default: []].append(face) } else { squares[Self.key(column, row), default: []].append(face) }
                 }
             }
         }
 
+        private static func covers(_ face: Face, x: Float, z: Float) -> Bool {
+            func side(_ p: Map3DVertex, _ q: Map3DVertex) -> Float { (q.x - p.x) * (z - p.z) - (q.z - p.z) * (x - p.x) }
+            let d1 = side(face.a, face.b), d2 = side(face.b, face.c), d3 = side(face.c, face.a)
+            return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0))
+        }
+
         /// Whether the top face over (`x`, `z`) is water; `false` with none.
         func isWater(x: Float, z: Float) -> Bool {
-            let s = Self.square
-            guard let faces = squares[Self.key(Int((x / s).rounded(.down)), Int((z / s).rounded(.down)))] else { return false }
+            guard let faces = squares[Self.key(x: x, z: z)] else { return false }
             var best: (y: Float, water: Bool)?
-            for face in faces {
-                func side(_ p: Map3DVertex, _ q: Map3DVertex) -> Float { (q.x - p.x) * (z - p.z) - (q.z - p.z) * (x - p.x) }
-                let d1 = side(face.a, face.b), d2 = side(face.b, face.c), d3 = side(face.c, face.a)
-                if (d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0) { continue }
+            for face in faces where Self.covers(face, x: x, z: z) {
                 let y = (face.a.y + face.b.y + face.c.y) / 3
                 if best.map({ y > $0.y + 0.001 }) ?? true { best = (y, abs(face.a.layer - Map3DVertex.water) < 0.01) }
             }
             return best?.water ?? false
+        }
+
+        /// Whether a building of the city stands over (`x`, `z`).
+        func isBuilt(x: Float, z: Float) -> Bool {
+            buildings[Self.key(x: x, z: z)]?.contains { Self.covers($0, x: x, z: z) } ?? false
+        }
+
+        /// Water a boat can take: drawn as water, no building over it.
+        func isOpenWater(x: Float, z: Float) -> Bool {
+            isWater(x: x, z: z) && !isBuilt(x: x, z: z)
         }
     }
 
