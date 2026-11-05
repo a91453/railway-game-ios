@@ -1244,6 +1244,10 @@ private struct Map3DView: UIViewRepresentable {
         if let span = value("-screenshot-3d-cableway") { return asked.camera(cableway: span, in: scene, of: world, viewport: viewport) }
         // Decision 585 PR-3 (FERRY3): over the first ferry's first boat.
         if arguments.contains("-screenshot-3d-ferry") { return asked.camera(ferryIn: scene, of: world, viewport: viewport) }
+        // Decision 602: over a place of the scene's map ("latitude,longitude").
+        if let at = value("-screenshot-3d-at")?.split(separator: ",").compactMap({ Double($0) }), at.count == 2 {
+            return asked.camera(at: (latitude: at[0], longitude: at[1]), in: scene, of: world, viewport: viewport)
+        }
         guard let place = value("-screenshot-scene").flatMap(ScreenshotScene.init(rawValue:))?.place else { return nil }
         return asked.camera(at: place, in: scene, of: world, viewport: viewport)
     }
