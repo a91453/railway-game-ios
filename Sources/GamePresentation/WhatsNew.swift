@@ -64,6 +64,10 @@ public enum WhatsNew {
                     english: "Fixed crashes when adding a line or a station, and when drawing track.",
                     chinese: "修正新增路線、車站與畫軌道時可能閃退的問題。"
                 ),
+                Line(
+                    english: "Fixed a crash that could happen while moving around the 3D map.",
+                    chinese: "修正在 3D 地圖移動時可能閃退的問題。"
+                ),
             ]
         ),
         // 113.1.
