@@ -1127,6 +1127,22 @@ extension RealLineLaying {
             forced += [a, a + ramp, b - ramp, b]
             second = (a, b)
         }
+        // Decision 602: a fanned yard's second lead, beside the first from
+        // past the end station's loops to where the real two join, on the
+        // side the real second lies.
+        var secondLeads: [(a: Double, b: Double, offset: Double)] = []
+        for (stop, site, _) in depotEnds where stop == 0 || stop == runs.stops.count - 1 {
+            guard let real = site.fan?.second, let first = spans.first, let last = spans.last else { continue }
+            let joins = path.nearest(onMap(real.joins)).along
+            let (a, b) = stop == 0 ? (joins, first.lowerBound - gap) : (last.upperBound + gap, joins)
+            guard b - a > 2 * ramp + gap else { continue }
+            let on = onMap(real.on), at = path.nearest(on).along
+            let side: Double = (on - path.point(at: at)).dot(path.tangent(at: at).normal) >= 0 ? 1 : -1
+            // Nodes every 30 m between its ramps, so that it follows the
+            // first lead's bends (one edge across them cut over it).
+            forced += [a, a + ramp, b - ramp, b] + Array(stride(from: a + ramp + 30 * RealLineAcquisition.metre, to: b - ramp, by: 30 * RealLineAcquisition.metre))
+            secondLeads.append((a, b, side * HighSpeedDemo.trackOffset))
+        }
         // Decision 479: the depot's wye and crossovers, on the second
         // track's side of the line, clear of the stations and the second
         // track's ramps.
@@ -1287,6 +1303,26 @@ extension RealLineLaying {
                 RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 1, node: secondB), true
             ))
         }
+        // Decision 602: the second leads, after the pieces others name by
+        // their index.
+        // Beside every node of the first between its switches, the offset
+        // eased in and out over a ramp: the first lead bends there, and
+        // one edge across a bend cut over it. Each switch's two edges span
+        // the same stretch, so they leave along tangents of the same length
+        // (decision 543).
+        for lead in secondLeads {
+            guard let a = mainNode(lead.a), let b = mainNode(lead.b), b > a + 1 else { continue }
+            let beside = Array(a...b)
+            let offsets = beside.map { index -> Double in
+                let distance = main.distances[index]
+                let t = min(1, max(0, min(distance - lead.a, lead.b - distance) / ramp))
+                return lead.offset * t * t * (3 - 2 * t)
+            }
+            plans.append((
+                RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: offsets, following: true),
+                RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
+            ))
+        }
         var pieces = plans.map { entry in
             let plan = entry.plan
             let nodes = plan.nodes.indices.map { WorldCoordinate(x: plan.nodes[$0].point.x, y: plan.nodes[$0].point.y, z: plan.heights[$0]) }
@@ -1431,7 +1467,7 @@ extension RealLineLaying {
                     continue
                 }
                 let crosses = if case .trackConflict = error { true } else { false }
-                return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)
+return (RealLineOffer(line: line, acquisition: nil, price: nil, problem: error.playerMessage(in: language)), crosses, bought)
             }
         }
     }

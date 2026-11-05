@@ -59,10 +59,20 @@ struct RealLineDepotSite: Sendable {
     /// sidings fan out from there, `towardShed` of them to the side the
     /// real stabling tracks lie (from the throat) and the rest, but the
     /// one straight on, to the other.
+    ///
+    /// `second`: the real second lead, as each of the line's two tracks
+    /// runs on past the end station into a lead of its own (the author:
+    /// "why is there only one way out?"): a point on it, which tells the
+    /// side it lies, and where it joins the first (or, where it reaches
+    /// the yard by another way, the point the game's joins the first
+    /// short of the throat). It is laid beside the first lead from past
+    /// the end station's loops to there, as the line's second track is
+    /// (``RealWorldDemo/TrackPlan/init(beside:at:offsets:following:)``).
     struct Fan: Sendable {
         let leads: [(latitude: Double, longitude: Double)]
         let throat: (latitude: Double, longitude: Double)
         let towardShed: Int
+        var second: (on: (latitude: Double, longitude: Double), joins: (latitude: Double, longitude: Double))? = nil
     }
 
     /// The Sanxia depot (三峽機廠, way 619043484): the crossover of its
@@ -115,7 +125,11 @@ struct RealLineDepotSite: Sendable {
         sidings: 22, beyond: "動物園", compact: true,
         fan: Fan(
             leads: [(24.998946, 121.580409), (25.000240, 121.582551), (25.000499, 121.583398), (25.000805, 121.583812)],
-            throat: (25.001270, 121.585081), towardShed: 12
+            throat: (25.001270, 121.585081), towardShed: 12,
+            // The real south lead (way 307449195) reaches the shed's south
+            // side on its own; the game's joins the first 85 m short of
+            // the throat (on way 194633991).
+            second: (on: (24.999391, 121.581198), joins: (25.001141, 121.584254))
         )
     )
 
@@ -139,7 +153,10 @@ struct RealLineDepotSite: Sendable {
         sidings: 22, beyond: "南港展覽館", compact: false,
         fan: Fan(
             leads: [(25.055384, 121.619030), (25.056119, 121.619469), (25.056682, 121.620048), (25.057162, 121.620983), (25.057809, 121.621873), (25.058070, 121.621785)],
-            throat: (25.058581, 121.621212), towardShed: 13
+            throat: (25.058581, 121.621212), towardShed: 13,
+            // The real second lead (way 499750991) joins the first where
+            // way 198181448 begins toward the shed.
+            second: (on: (25.056145, 121.619426), joins: (25.057583, 121.621691))
         )
     )
 
