@@ -114,3 +114,13 @@ python3 -I tools/real-railways/measure_osm_offset.py RailwayGameApp/Resources/Re
 python3 -I tools/real-railways/urban_tracks_extract.py taiwan.pbf north.pkl
 python3 -I tools/real-railways/urban_track_sections.py north.pkl [tymc:A]
 ```
+
+## 可收購路線的高度（HEIGHT-STUDY，2026-11-05）
+
+`line_heights_osm.py` 從同一份整包檔取全台正線 way（不含 `service=siding|yard|spur|crossover`）的 `bridge`／`tunnel`／`layer`／`level` 與車站點；`line_heights_summary.py` 讀 `LineHeightReportTests`（`LINE_HEIGHT_REPORT=1`）印出的 `HEIGHT_*` 行，逐條線列出遊戲的型式與離地高度對 `rail_tracks.json`、`rail_structures.json`、OSM 標籤的差異。結果寫在 `docs/research/LINE_HEIGHTS_2026-11-05.md`。只給研究用，App 不讀。
+
+```sh
+LINE_HEIGHT_REPORT=1 swift test --skip-build --filter LineHeightReportTests > report.log 2>&1
+python3 -I tools/real-railways/line_heights_osm.py taiwan.pbf osm_heights.pkl
+python3 -I tools/real-railways/line_heights_summary.py report.log osm_heights.pkl
+```
