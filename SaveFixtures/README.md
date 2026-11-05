@@ -253,18 +253,17 @@ ferry route from the pier (6, 6) by A to the pier (6, 26), one crossing of
 with its days 0 and 1. Written by the version 85 build
 (`FerryTests.testVersionEightyFiveKeepsTheFerry`, `FERRY_SAVE_NEW=1`).
 
-Since version 87 (decision 605) a run of a line can hold its `"passes"`,
+Since version 86 (decision 605) a run of a line can hold its `"passes"`,
 the stops it runs through without calling, as an express does; its times
 are its calls' only. Earlier saves have none and every run calls at every
-stop, as before; a build before version 87 refuses a version 87 save rather
+stop, as before; a build before version 86 refuses a version 86 save rather
 than refusing such a run's times as too few and the whole line with them.
-There is no migration step. Version 86 is reserved by another task in the
-work registry. `v87-passing-runs.json` is `PassingRunTests`' world
+There is no migration step. `v86-passing-runs.json` is `PassingRunTests`' world
 (`LocalPassTests`' double track: West, A, Middle with a loop beside the
 eastbound track, B and East) with one line of three runs: a stopping run
 West–East at 10:00, an express West–East at 13:00 passing A, Middle and B,
 and the express back at 26:00 passing them too; its two trains placed at
 West, saved at 00:15 of day 0 with the express sent out on a timetable of
-West and East only. Written by the version 87 build
-(`PassingRunTests.testVersionEightySevenKeepsThePasses`,
+West and East only. Written by the version 86 build
+(`PassingRunTests.testVersionEightySixKeepsThePasses`,
 `PASSING_RUN_SAVE_NEW=1`).
