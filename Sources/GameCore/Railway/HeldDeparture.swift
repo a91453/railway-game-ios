@@ -84,6 +84,13 @@ extension GameWorld {
     private func fullDepot(for train: Train, of line: ServiceLine) -> StationID? {
         guard let depot = emptyRun(of: line, for: train, to: line.depots)?.deadhead?.to,
               !depotHasRoom(depot, for: train) else { return nil }
+        // Decision 556, continued (TYMCLIST9): a line with runs sends it
+        // into another depot with room instead, when it can reach one
+        // (``runTrainEnteringDepot(of:memo:)``).
+        if line.hasRuns {
+            let others = line.depots.filter { $0 != depot && depotHasRoom($0, for: train) }
+            if !others.isEmpty, emptyRun(of: line, for: train, to: others) != nil { return nil }
+        }
         return depot
     }
 }
