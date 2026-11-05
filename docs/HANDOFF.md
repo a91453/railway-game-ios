@@ -1,5 +1,9 @@
 > 國道客運車塗裝 studies（Codex，決策 593，`codex/coach-liveries`，2026-11-05）：三軸 coach 加八組中性塗裝（含原暖白／暖紅與觀光接駁），按需近遠景，不接營運。預設 `Map3DCoachBus.model()` 頂點與雜湊鎖住，街景選型／種子、GameCore、存檔、golden、fixtures 不動。私庫存完整模型、日夜七向 PNG、viewer 與 SOURCE.md；公開庫存配方、測試、一張總覽。外觀待作者看，Metal 實機與路線對色留後續。
 
+> 跟車透視補充（派工單 FOLLOWXRAY，`claude/follow-xray`，#1819，不佔新號，存檔、golden 不動，2026-11-05）：纜車吊廂交給透視；公車車窗改右窗；停站時「從車站看」直接可選。**公車的透視拿掉了**：城市場景的側視裡，被跟隨的公車交給透視後整台消失（同鏡頭，關掉就回來，後視、車窗不受影響）。已排除鏡頭位置；「只切分區塊、不送錐」的實驗 UI 查詢逾時，沒有結論。**下一步**：要再接公車先查這個消失（`Map3DSeeThrough.init(followed:)` 保留），疑點在被跟隨車輛與透視錐的深度／覆蓋率互動。說明見 decisions/342.md、578.md 的「續（FOLLOWXRAY）」。
+
+> 國道客運站 3D studies（Codex，決策 591，`codex/bus-terminal-studies`，2026-11-05）：大型 8 格、中型 5 格、國道招呼站、11 零件與三車組景，近遠景按需模型；公開庫只存配方、測試及一張總覽，私庫存 M3DM／GLB／日夜七向 PNG／離線 viewer／SOURCE.md。只自檢，外觀待作者看；不接營運，GameCore、存檔、golden、fixtures 不動。後續需真機 Metal 與客運轉彎路徑驗證。
+
 > 渡輪也載觀光客（派工單 FERRYECON，session_01YGNNunRMtZq6QN3G96LAuF，`claude/ferry-tourism`，[決策 589](decisions/589.md)，存檔不動，2026-11-04）：沒有車站走得到、碼頭 800 m 內的景點，觀光客坐火車到航線另一頭碼頭 800 m 內的車站再坐船（纜車 → 渡輪 → 公車）；八里加景點「八里渡船頭老街」（`t190`）。真實淡水 HEALTHY、鼓山—旗津 CONCERNS（旗津觀光客少於真實），示範（沒有鐵路）NOT ASSESSED。決策 585 下一步第 (3) 項做完。**留下的**：碼頭座標改 OSM（旗津差約 350 m）、逐航線真實運量、收購淡水線／橘線後重量、觀光航線、旗津的觀光客，見決策 589「下一步」。
 
 > 公車也載觀光客（派工單 BUSTOUR，session_01YGNNupD13CZ2CjYdy22WWD，`claude/bus-tourism`，[決策 587](decisions/587.md)，存檔不動，2026-11-04）：沒有車站走得到、也沒有纜車接得到的景點，800 m 內有公車站牌就經公車接到鐵路車站（纜車先、公車後；市區路線接收得了觀光客的最近車站）。「587 續」（`claude/bus-transfer-depot`）讓市區公車的通勤轉乘站不接機廠（棕 15 改接動物園）。**留下的**：機廠也分到土地的旅次（木柵機廠 2,424）、release 實際玩過的乘客、台灣好行、公車卡的觀光一行，見決策 587「下一步」。
@@ -3008,6 +3012,10 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 ### 4.49 死結時被跟車中列車「等著的軌道」擋住的出發照樣開出（決策 577，派工單 TYMCLIST5，session_01YGNNuqBp8VuzjSqeJ4EYGw，`claude/tymc-pit-deadlock`，2026-11-04）
 
 做了的在 [決策 577](decisions/577.md)：機場捷運簡單＋行車控制 11:16 起坑口卡死，修在 `resolveDeadlock` 的最後一步。留下的（決策 577「下一步」）：#1743 合併後重量機場捷運、文湖線兩天簡單＋行車控制；行車控制時的慢（`trafficPlan` 每次重算都重找每列車的越車路），建議跨計畫快取 `trafficTrack`，另派 GameCore PR。
+
+### 4.50 試算指令的預覽不在畫面更新裡算（決策 590，派工單 CRASH112，session_01YGNNuoNBB6PagaAcLNEY8h，`claude/crash112-stack`，2026-11-05）
+
+做了的在 [決策 590](decisions/590.md)：112.1 選新路線第二站時主執行緒堆疊用盡，新路線的價格與開線卡片的預覽在 app 裡改成等主執行緒下一輪算。留下的（決策 590「下一步」）：113.1 實機確認；**114.1 的根本修法**（作者 2026-11-05 同意）：GameWorld 改成堆上的 COW box（GameCore，存檔與 golden 不動，要量 tick 成本）、畫軌道預覽等其他在 body 裡模擬的 getter 也等一輪、拆小 `MapView.timedBody`、CI 列出超過 32 KB 的堆疊框；之後：兩個 `Menu` 裡的 `ForEach`。
 
 ## 5. 已知、還沒派的待辦
 

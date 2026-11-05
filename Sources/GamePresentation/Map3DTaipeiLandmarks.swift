@@ -12,10 +12,12 @@ import GameCore
 // (`PALETTES[1.0]`), in the reference repository's
 // `Railway/game-art-previews/docs/art/map3d-mapbox-look-2026-10-23/scripts/`.
 
-/// Decision 370, 431, 457, 548, 550, 581: the landmarks, each built in its own metres (x right,
+/// Decision 370, 431, 457, 548, 550, 581, 592: the landmarks, each built in its own metres (x right,
 /// y back, z up, its middle at the origin), then stood where it is.
 enum Map3DTaipeiLandmark: CaseIterable, Sendable {
     case taipei101, taipeiMainStation, kaohsiungMainStation, kaohsiung85SkyTower, shinKongLifeTower, changhuaRoundhouse
+    // Decision 592: Kaohsiung Harbor's swing bridge and ferry terminals.
+    case greatHarborBridge, gushanFerryTerminal, cijinFerryTerminal
     // Decision 457: central Taipei's palace-style landmarks and old gates.
     case chiangKaiShekMemorialHall, libertySquareGate, nationalTheater, nationalConcertHall, presidentialOffice, ximenRedHouse
     case sunYatSenMemorialHall, grandHotel, northGate, eastGate, southGate, smallSouthGate
@@ -31,6 +33,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiung85SkyTower: 22.611616109117193
         case .shinKongLifeTower: 25.04598631427511
         case .changhuaRoundhouse: 24.0858608
+        case .greatHarborBridge: 22.6178422
+        case .gushanFerryTerminal: 22.6198008
+        case .cijinFerryTerminal: 22.6139938
         case .chiangKaiShekMemorialHall: 25.0346856
         case .libertySquareGate: 25.0366529
         case .nationalTheater: 25.0353161
@@ -53,6 +58,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiung85SkyTower: 120.3001601108381
         case .shinKongLifeTower: 121.51531117744537
         case .changhuaRoundhouse: 120.5401168
+        case .greatHarborBridge: 120.2838734
+        case .gushanFerryTerminal: 120.2700518
+        case .cijinFerryTerminal: 120.2697235
         case .chiangKaiShekMemorialHall: 121.5217163
         case .libertySquareGate: 121.5177174
         case .nationalTheater: 121.5182223
@@ -75,6 +83,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiung85SkyTower: 108.5
         case .shinKongLifeTower: 90.5
         case .changhuaRoundhouse: 0
+        case .greatHarborBridge: 63.0
+        case .gushanFerryTerminal: 2.5
+        case .cijinFerryTerminal: 303.7
         case .chiangKaiShekMemorialHall: 242
         case .libertySquareGate: 242
         case .nationalTheater: 152
@@ -101,6 +112,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiung85SkyTower: (78, 40)
         case .shinKongLifeTower: (48, 25)
         case .changhuaRoundhouse: (48, 30)
+        case .greatHarborBridge: (68, 12)
+        case .gushanFerryTerminal: (22, 33)
+        case .cijinFerryTerminal: (42, 22)
         case .chiangKaiShekMemorialHall: (66, 76)
         case .libertySquareGate: (39.5, 10.5)
         case .nationalTheater: (55, 52.5)
@@ -123,6 +137,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiung85SkyTower: (71.5, 34.1)
         case .shinKongLifeTower: (42.5, 20.2)
         case .changhuaRoundhouse: (43, 25.5)
+        case .greatHarborBridge: (64.5, 8.8)
+        case .gushanFerryTerminal: (19.0, 29.8)
+        case .cijinFerryTerminal: (38.0, 18.5)
         case .chiangKaiShekMemorialHall: (62.2, 73.8)
         case .libertySquareGate: (37.4, 8.5)
         case .nationalTheater: (54, 51.7)
@@ -170,6 +187,9 @@ enum Map3DTaipeiLandmark: CaseIterable, Sendable {
         case .kaohsiung85SkyTower: mesh.kaohsiung85SkyTower()
         case .shinKongLifeTower: mesh.shinKongLifeTower()
         case .changhuaRoundhouse: mesh.changhuaRoundhouse()
+        case .greatHarborBridge: mesh.greatHarborBridge()
+        case .gushanFerryTerminal: mesh.gushanFerryTerminal()
+        case .cijinFerryTerminal: mesh.cijinFerryTerminal()
         case .chiangKaiShekMemorialHall: mesh.chiangKaiShekMemorialHall()
         case .libertySquareGate: mesh.libertySquareGate()
         case .nationalTheater: mesh.performingArtsHall(53.95, 48.65, kind: .hipped)
@@ -1966,6 +1986,540 @@ struct LandmarkMesh {
                 ]
                 wallBand(curbRing, 0.00, curbRing, 0.18, ornament, floodlit)
                 cap(curbRing, 0.18, ornament, floodlit)
+            }
+        }
+    }
+
+    // MARK: - Decision 592: Kaohsiung Great Harbor Bridge & Gushan / Cijin Ferry Terminals
+
+    private func polyRing(_ cx: Float, _ cy: Float, _ r: Float, sides: Int = 8, rotDeg: Float = 0) -> [P2] {
+        let base = rotDeg * .pi / 180
+        return (0..<sides).map { k in
+            let a = base + Float(k) * 2 * .pi / Float(sides)
+            return (cx + r * cos(a), cy + r * sin(a))
+        }
+    }
+
+    private mutating func polyCap(_ ring: [P2], _ z: Float, _ color: UInt32, _ layer: Float = Self.plain, up: Bool = true) {
+        func cross2(_ o: P2, _ a: P2, _ b: P2) -> Float { (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x) }
+        func inTri(_ p: P2, _ a: P2, _ b: P2, _ c: P2) -> Bool {
+            cross2(a, b, p) >= -1e-5 && cross2(b, c, p) >= -1e-5 && cross2(c, a, p) >= -1e-5
+        }
+        var pts = ring
+        var guardSteps = pts.count * 3
+        while pts.count >= 3 && guardSteps > 0 {
+            guardSteps -= 1
+            let n = pts.count
+            var clipped = false
+            for i in 0..<n {
+                let prev = (i + n - 1) % n, next = (i + 1) % n
+                let a = pts[prev], b = pts[i], c = pts[next]
+                if cross2(a, b, c) > 1e-4 {
+                    let clear = (0..<n).allSatisfy { j in j == prev || j == i || j == next || !inTri(pts[j], a, b, c) }
+                    if clear {
+                        if up {
+                            tri((a.x, a.y, z), (b.x, b.y, z), (c.x, c.y, z), color, layer, [a, b, c])
+                        } else {
+                            tri((a.x, a.y, z), (c.x, c.y, z), (b.x, b.y, z), color, layer, [a, c, b])
+                        }
+                        pts.remove(at: i)
+                        clipped = true
+                        break
+                    }
+                }
+            }
+            if !clipped { break }
+        }
+    }
+
+    private mutating func ringCap(_ inner: [P2], _ outer: [P2], _ z: Float, _ color: UInt32, _ layer: Float = Self.plain) {
+        for k in outer.indices {
+            let j = (k + 1) % outer.count
+            quad((inner[k].x, inner[k].y, z), (outer[k].x, outer[k].y, z), (outer[j].x, outer[j].y, z), (inner[j].x, inner[j].y, z), color, layer)
+        }
+    }
+
+    private mutating func tube3D(_ a: P3, _ b: P3, radius: Float, sides: Int, _ color: UInt32, _ layer: Float) {
+        let dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z
+        let len = max(0.001, (dx * dx + dy * dy + dz * dz).squareRoot())
+        let ux = dx / len, uy = dy / len, uz = dz / len
+        let (hx, hy, hz): P3 = abs(uz) < 0.9 ? (-uy, ux, 0) : (0, -uz, uy)
+        let hlen = max(0.001, (hx * hx + hy * hy + hz * hz).squareRoot())
+        let vx = hx / hlen, vy = hy / hlen, vz = hz / hlen
+        let wx = uy * vz - uz * vy, wy = uz * vx - ux * vz, wz = ux * vy - uy * vx
+        var ringA: [P3] = [], ringB: [P3] = []
+        for k in 0..<sides {
+            let ang = Float(k) * 2 * .pi / Float(sides)
+            let ca = cos(ang) * radius, sa = sin(ang) * radius
+            let ox = vx * ca + wx * sa, oy = vy * ca + wy * sa, oz = vz * ca + wz * sa
+            ringA.append((a.x + ox, a.y + oy, a.z + oz))
+            ringB.append((b.x + ox, b.y + oy, b.z + oz))
+        }
+        for k in 0..<sides {
+            let j = (k + 1) % sides
+            quad(ringA[k], ringA[j], ringB[j], ringB[k], color, layer)
+        }
+    }
+
+    /// Decision 592: Kaohsiung Great Harbor Bridge (大港橋, OSM relation
+    /// 15430334, bridge outline way 1137765107: 126.44 m × 15.38 m with
+    /// 110.0 m horizontal swing span way 840552016 across Pier-2 Basin No. 3;
+    /// elevated whale-back observation deck at 6.95 m, sweeping asymmetric
+    /// white shell arch canopy at 11.20 m, and inclined central steel mast
+    /// with fan-arranged stay cables reaching 36.00 m).
+    mutating func greatHarborBridge() {
+        let hallWhite = colour("hallWhite")
+        let trim = colour("trim")
+        let frame = colour("frame")
+        let stone = colour("stone")
+        let podium = colour("podium")
+        let podiumRoof = colour("podiumRoof")
+        let gateStone = colour("gateStone")
+        let soffit = colour("soffit")
+        let brick = colour("brick")
+        let glass = colour("glass")
+        let spire = colour("spire")
+        let ornament = colour("ornament")
+        let vermilion = colour("vermilion")
+        let floodlit = Map3DVertex.floodlit
+        let glowing = Map3DVertex.glowing
+
+        // 1. Exact OSM way 1137765107 bridge deck outline (18 vertices, CCW)
+        let osmCW: [P2] = [
+            ( 63.22,  7.47), ( 62.38,  2.78), ( 62.93, -4.03), ( 53.06, -1.60),
+            ( 46.19, -1.96), ( 24.12, -3.61), (  6.85, -7.69), ( -7.79, -6.88),
+            (-25.67, -3.72), (-40.32, -2.60), (-63.22, -3.84), (-63.19,  4.54),
+            (-22.90,  5.99), ( -7.51,  7.69), ( 17.32,  7.24), ( 24.23,  6.02),
+            ( 46.48,  4.56), ( 53.82,  3.97),
+        ]
+        let deckRing: [P2] = Array(osmCW.reversed())
+        let hullRing: [P2] = deckRing.map { ($0.x * 0.97, $0.y * 0.82) }
+
+        // Shore abutments (Dayi NW at x = -63.22..-53.50, Penglai SE at x = 53.06..63.22)
+        let nwAbut: [P2] = [(-63.22, -3.84), (-53.50, -3.10), (-53.50, 4.54), (-63.19, 4.54)]
+        wallBand(nwAbut, 0.00, nwAbut, 3.40, gateStone, Self.plain)
+        cap(nwAbut, 3.40, podium, Self.plain)
+
+        let seAbut: [P2] = [(53.06, -1.60), (62.93, -4.03), (63.22, 7.47), (53.82, 3.97)]
+        wallBand(seAbut, 0.00, seAbut, 3.40, gateStone, Self.plain)
+        cap(seAbut, 3.40, podium, Self.plain)
+
+        // Central circular pivot caisson & turntable pier in Basin No. 3 (reaching y = ±7.69 m at ground)
+        let fenderSides = full ? 16 : 8
+        let fenderRing = polyRing(0, 0, 7.69, sides: fenderSides)
+        let pierRing = polyRing(0, 0, 5.60, sides: fenderSides)
+        let collarRing = polyRing(0, 0, 4.80, sides: fenderSides)
+        wallBand(fenderRing, 0.00, fenderRing, 1.20, gateStone, Self.plain)
+        cap(fenderRing, 1.20, podium, Self.plain)
+        wallBand(pierRing, 1.20, pierRing, 2.20, stone, floodlit)
+        cap(pierRing, 2.20, stone, floodlit)
+        wallBand(collarRing, 2.20, collarRing, 3.40, hallWhite, floodlit)
+
+        // Streamlined white steel bridge hull underside (z = 2.50..3.55 m) & main deck fascia (z = 3.55..4.30 m)
+        // Warm wooden pedestrian promenade strip occupies the inner deck (walkRing), surrounded by white deck (podiumRoof)
+        let walkRing: [P2] = deckRing.map { ($0.x * 0.985, $0.y * 0.65) }
+        polyCap(hullRing, 2.50, soffit, Self.plain, up: false)
+        wallBand(hullRing, 2.50, deckRing, 3.55, hallWhite, floodlit)
+        wallBand(deckRing, 3.55, deckRing, 4.30, trim, floodlit)
+        ringCap(walkRing, deckRing, 4.30, podiumRoof, Self.plain)
+        wallBand(walkRing, 4.30, walkRing, 4.38, brick, Self.plain)
+        polyCap(walkRing, 4.38, brick, Self.plain)
+
+        if full {
+            // Glass balustrades & stainless top rail along both edges of the deck
+            let railIn: [P2] = deckRing.map { ($0.x * 0.99, $0.y * 0.90) }
+            wallBand(deckRing, 4.30, deckRing, 5.35, glass, Self.curtain)
+            wallBand(Array(railIn.reversed()), 4.30, Array(railIn.reversed()), 5.45, glass, Self.curtain)
+            wallBand(deckRing, 5.35, deckRing, 5.45, spire, floodlit)
+            ringCap(railIn, deckRing, 5.45, spire, floodlit)
+            // Swing-span entry safety gates at both shore approaches
+            for gx: Float in [-54.5, 54.5] {
+                box(gx - 0.35, -2.6, 4.30, gx + 0.35, -1.8, 5.80, ornament, floodlit, top: vermilion)
+                box(gx - 0.35,  2.2, 4.30, gx + 0.35,  3.0, 5.80, ornament, floodlit, top: vermilion)
+            }
+        }
+
+        // 2. Elevated Whale-Back Observation Deck (z = 6.20..6.95 m) & Curved Spiral Ramp
+        let obsRing: [P2] = [
+            (-16.5, -3.2), (-6.0, -5.2), (6.5, -5.2), (16.5, -2.6),
+            (18.0,   1.2), (14.0,  5.0), (0.0,  6.2), (-13.5, 4.8), (-17.5, 0.8),
+        ]
+        let obsUnder: [P2] = obsRing.map { ($0.x * 0.92, $0.y * 0.86) }
+        polyCap(obsUnder, 6.20, soffit, Self.plain, up: false)
+        wallBand(obsUnder, 6.20, obsRing, 6.65, hallWhite, floodlit)
+        wallBand(obsRing, 6.65, obsRing, 6.95, trim, floodlit)
+        polyCap(obsRing, 6.95, brick, Self.plain)
+
+        if full {
+            wallBand(obsRing, 6.95, obsRing, 7.95, glass, Self.curtain)
+            let rampSteps = 8
+            for s in 0..<rampSteps {
+                let t0 = Float(s) / Float(rampSteps), t1 = Float(s + 1) / Float(rampSteps)
+                let a0 = -0.75 * Float.pi + t0 * 0.95 * Float.pi
+                let a1 = -0.75 * Float.pi + t1 * 0.95 * Float.pi
+                let p0: P2 = (11.5 * cos(a0), 5.0 * sin(a0))
+                let p1: P2 = (11.5 * cos(a1), 5.0 * sin(a1))
+                let dx = p1.x - p0.x, dy = p1.y - p0.y
+                let l = max(0.001, (dx * dx + dy * dy).squareRoot())
+                let nx = -dy / l * 1.15, ny = dx / l * 1.15
+                let rRing: [P2] = [(p0.x - nx, p0.y - ny), (p1.x - nx, p1.y - ny), (p1.x + nx, p1.y + ny), (p0.x + nx, p0.y + ny)]
+                let z0 = 4.35 + t0 * 2.45, z1 = 4.35 + t1 * 2.45
+                band(rRing, [z0, z1, z1, z0], rRing, [z0 + 0.35, z1 + 0.35, z1 + 0.35, z0 + 0.35], hallWhite, floodlit)
+                quad((rRing[0].x, rRing[0].y, z0 + 0.35), (rRing[1].x, rRing[1].y, z1 + 0.35),
+                     (rRing[2].x, rRing[2].y, z1 + 0.35), (rRing[3].x, rRing[3].y, z0 + 0.35), brick, Self.plain)
+            }
+        }
+
+        // 3. Sweeping Asymmetric White Shell / Sail Arch Canopy (peaking at z = 11.20 m)
+        let shellSlices = full ? 12 : 6
+        for s in 0..<shellSlices {
+            let t0 = Float(s) / Float(shellSlices), t1 = Float(s + 1) / Float(shellSlices)
+            let x0 = -25.0 + t0 * 50.0, x1 = -25.0 + t1 * 50.0
+            let c0 = max(0, cos((t0 - 0.5) * Float.pi)), c1 = max(0, cos((t1 - 0.5) * Float.pi))
+            let zTop0 = 4.80 + 6.40 * pow(c0, 1.3), zTop1 = 4.80 + 6.40 * pow(c1, 1.3)
+            let w0 = 1.60 + 4.80 * c0, w1 = 1.60 + 4.80 * c1
+            let pA: P3 = (x0, -w0, zTop0 - 1.4 * c0)
+            let pB: P3 = (x1, -w1, zTop1 - 1.4 * c1)
+            let pC: P3 = (x1,  0.4, zTop1)
+            let pD: P3 = (x0,  0.4, zTop0)
+            let pE: P3 = (x1,  w1, zTop1 - 0.9 * c1)
+            let pF: P3 = (x0,  w0, zTop0 - 0.9 * c0)
+            quad(pA, pB, pC, pD, hallWhite, floodlit)
+            quad(pD, pC, pE, pF, trim, floodlit)
+            let th: Float = 0.42
+            quad((pD.x, pD.y, pD.z - th), (pC.x, pC.y, pC.z - th), (pB.x, pB.y, pB.z - th), (pA.x, pA.y, pA.z - th), soffit, Self.plain)
+            quad((pF.x, pF.y, pF.z - th), (pE.x, pE.y, pE.z - th), (pC.x, pC.y, pC.z - th), (pD.x, pD.y, pD.z - th), soffit, Self.plain)
+            quad((pA.x, pA.y, pA.z - th), (pB.x, pB.y, pB.z - th), pB, pA, hallWhite, floodlit)
+            quad(pF, pE, (pE.x, pE.y, pE.z - th), (pF.x, pF.y, pF.z - th), hallWhite, floodlit)
+            if full {
+                let ribRing: [P2] = [(x0, 0.15), (x1, 0.15), (x1, 0.65), (x0, 0.65)]
+                band(ribRing, [zTop0 - 0.1, zTop1 - 0.1, zTop1 - 0.1, zTop0 - 0.1],
+                     ribRing, [zTop0 + 0.22, zTop1 + 0.22, zTop1 + 0.22, zTop0 + 0.22], frame, floodlit)
+                quad((x0, 0.15, zTop0 + 0.22), (x1, 0.15, zTop1 + 0.22), (x1, 0.65, zTop1 + 0.22), (x0, 0.65, zTop0 + 0.22), frame, floodlit)
+            }
+        }
+
+        if full {
+            for sx: Float in [-18.0, -10.0, -3.0, 4.0, 11.0, 18.0] {
+                let ct = max(0, cos((sx / 50.0) * Float.pi))
+                let zt = 4.60 + 6.40 * pow(ct, 1.3)
+                let wy = 1.60 + 4.80 * ct
+                tube3D((sx, -wy * 0.85, 4.30), (sx, -0.2, zt - 0.3), radius: 0.18, sides: 4, spire, floodlit)
+                tube3D((sx,  wy * 0.85, 4.30), (sx,  0.6, zt - 0.3), radius: 0.18, sides: 4, spire, floodlit)
+            }
+        }
+
+        // 4. Central Inclined White Steel Mast & Spire (z = 4.30..36.00 m)
+        let mastTiers: [(z: Float, cx: Float, cy: Float, rx: Float, ry: Float)] = [
+            ( 4.30,  0.0, 1.20, 1.45, 1.10),
+            (11.20, -0.4, 0.85, 1.20, 0.95),
+            (19.50, -0.9, 0.45, 0.90, 0.72),
+            (27.50, -1.3, 0.15, 0.62, 0.50),
+            (32.80, -1.5, 0.00, 0.34, 0.30),
+        ]
+        for k in 0..<(mastTiers.count - 1) {
+            let t0 = mastTiers[k], t1 = mastTiers[k + 1]
+            let r0: [P2] = [(t0.cx - t0.rx, t0.cy), (t0.cx, t0.cy - t0.ry), (t0.cx + t0.rx, t0.cy), (t0.cx, t0.cy + t0.ry)]
+            let r1: [P2] = [(t1.cx - t1.rx, t1.cy), (t1.cx, t1.cy - t1.ry), (t1.cx + t1.rx, t1.cy), (t1.cx, t1.cy + t1.ry)]
+            wallBand(r0, t0.z, r1, t1.z, hallWhite, floodlit)
+        }
+        let topM = mastTiers.last!
+        let topRing: [P2] = [(topM.cx - topM.rx, topM.cy), (topM.cx, topM.cy - topM.ry), (topM.cx + topM.rx, topM.cy), (topM.cx, topM.cy + topM.ry)]
+        cap(topRing, topM.z, frame, floodlit)
+
+        let spireSides = full ? 6 : 4
+        let spireRing = polyRing(-1.5, 0.0, 0.14, sides: spireSides)
+        let beaconRing = polyRing(-1.5, 0.0, 0.22, sides: spireSides)
+        wallBand(spireRing, 32.80, spireRing, 35.65, spire, floodlit)
+        wallBand(beaconRing, 35.65, beaconRing, 36.00, vermilion, glowing)
+        cap(beaconRing, 36.00, vermilion, glowing)
+
+        // 5. Fan-Arranged Stay Cables radiating from the mast to both bridge spans
+        let cableAnchors: [Float] = full ? [-50.0, -41.0, -32.0, -23.0, 23.0, 32.0, 41.0, 50.0] : [-46.0, -28.0, 28.0, 46.0]
+        for (idx, ax) in cableAnchors.enumerated() {
+            let mz: Float = 24.5 + Float(idx % 4) * 2.1
+            let mcx: Float = -1.1 - (mz - 20.0) * 0.03
+            let mcy: Float = 0.35 * (1.0 - (mz - 20.0) / 14.0)
+            let ay: Float = ax < 0 ? -1.8 : -1.5
+            tube3D((mcx, mcy, mz), (ax, ay, 4.45), radius: 0.075, sides: 3, spire, floodlit)
+            if full {
+                tube3D((mcx, mcy, mz), (ax, 2.8, 4.45), radius: 0.065, sides: 3, spire, floodlit)
+            }
+        }
+    }
+
+    /// Decision 592: Gushan Ferry Terminal (鼓山輪渡站, OSM node 3921289758,
+    /// waterfront waiting gallery way 205060865, floating boarding pier way
+    /// 388956314, and main entrance building way 588103933 on Binhai 1st Rd:
+    /// combined 35.02 m × 56.60 m; wave-arched waiting gallery roof at
+    /// 6.20 m, 2-storey silver-louvered main facade parapet at 10.50 m, and
+    /// rooftop navigation mast at 12.00 m).
+    mutating func gushanFerryTerminal() {
+        let hallWhite = colour("hallWhite")
+        let trim = colour("trim")
+        let podium = colour("podium")
+        let podiumRoof = colour("podiumRoof")
+        let flatRoof = colour("flatRoof")
+        let gateStone = colour("gateStone")
+        let brick = colour("brick")
+        let brickTrim = colour("brickTrim")
+        let slate = colour("slate")
+        let column = colour("column")
+        let glass = colour("glass")
+        let groundGlass = colour("groundGlass")
+        let spire = colour("spire")
+        let ornament = colour("ornament")
+        let vermilion = colour("vermilion")
+        let greenRidge = colour("greenRidge")
+        let blueTile = colour("blueTile")
+        let blueRidge = colour("blueRidge")
+        let doorway = colour("doorway")
+        let floodlit = Map3DVertex.floodlit
+        let glowing = Map3DVertex.glowing
+
+        // 1. Exact OSM Way 588103933: South 2-Storey Main Terminal Entrance Building (x = -2.59..17.51, y = -28.30..-19.10)
+        let mainRing: [P2] = [(-2.58, -28.30), (17.51, -28.28), (17.50, -19.10), (-2.59, -19.12)]
+        wallBand(mainRing, 0.00, mainRing, 0.45, gateStone, Self.plain)
+        let glassHallRing: [P2] = [(-0.65, -28.22), (14.80, -28.22), (14.80, -19.18), (-0.65, -19.18)]
+        wallBand(glassHallRing, 0.45, glassHallRing, 4.20, groundGlass, Self.curtain)
+
+        let canopyRing: [P2] = [(-2.95, -28.30), (17.51, -28.28), (17.50, -18.75), (-2.95, -18.75)]
+        wallBand(canopyRing, 4.20, canopyRing, 4.75, podium, floodlit)
+        wallBand(canopyRing, 4.75, canopyRing, 5.10, greenRidge, floodlit)
+        cap(canopyRing, 5.10, flatRoof, Self.plain)
+
+        let upperRing: [P2] = [(-0.65, -28.18), (14.80, -28.18), (14.80, -19.22), (-0.65, -19.22)]
+        wallBand(upperRing, 5.10, upperRing, 9.60, slate, Self.floors)
+        wallBand(mainRing, 9.60, mainRing, 10.50, hallWhite, floodlit)
+        cap(mainRing, 10.50, flatRoof, Self.plain)
+
+        if full {
+            let louverRing: [P2] = [(-0.60, -28.28), (14.75, -28.28), (14.75, -19.12), (-0.60, -19.12)]
+            for lz: Float in [5.55, 6.25, 6.95, 7.65, 8.35, 9.05] {
+                wallBand(louverRing, lz, louverRing, lz + 0.22, spire, floodlit)
+                cap(louverRing, lz + 0.22, trim, floodlit)
+            }
+            for px: Float in [0.4, 4.0, 7.5, 11.0, 14.0] {
+                for py: Float in [-27.9, -19.4] {
+                    let cRing = polyRing(px, py, 0.38, sides: 6)
+                    wallBand(cRing, 0.00, cRing, 4.20, column, floodlit)
+                }
+            }
+        }
+
+        for (fx0, fx1): (Float, Float) in [(-2.58, -0.65), (14.80, 17.50)] {
+            let finRing: [P2] = [(fx0, -28.29), (fx1, -28.29), (fx1, -19.11), (fx0, -19.11)]
+            wallBand(finRing, 0.45, finRing, 10.85, brick, Self.floors)
+            cap(finRing, 10.85, brickTrim, floodlit)
+        }
+        box(15.60, -28.25, 4.80, 17.40, -26.80, 11.20, ornament, floodlit, top: vermilion)
+        let mastRing = polyRing(16.50, -27.50, 0.18, sides: full ? 6 : 4)
+        wallBand(mastRing, 10.85, mastRing, 12.00, spire, floodlit)
+        cap(mastRing, 12.00, vermilion, glowing)
+
+        // Concourse link between main entrance building and north waiting gallery (y = -19.12..-11.55)
+        let linkRing: [P2] = [(-6.41, -19.12), (4.50, -19.12), (4.50, -11.55), (-6.41, -11.55)]
+        wallBand(linkRing, 0.00, linkRing, 0.40, gateStone, Self.plain)
+        wallBand(linkRing, 0.40, linkRing, 4.50, glass, Self.curtain)
+        wallBand(linkRing, 4.50, linkRing, 5.10, hallWhite, floodlit)
+        cap(linkRing, 5.10, podiumRoof, Self.plain)
+
+        // 2. Exact OSM Way 205060865: North 40 m Waterfront Passenger Waiting Gallery (x = -6.41..-0.79, y = -11.55..28.30)
+        let galRing: [P2] = [
+            (-0.87, -11.55), (-0.95, -7.15), (-0.79, 28.29),
+            (-3.63,  28.29), (-6.34, 28.30), (-6.41, -11.54),
+        ]
+        wallBand(galRing, 0.00, galRing, 0.45, gateStone, Self.plain)
+        wallBand(galRing, 0.45, galRing, 4.40, glass, Self.curtain)
+        wallBand(galRing, 4.40, galRing, 5.10, hallWhite, floodlit)
+        cap(galRing, 5.10, podiumRoof, Self.plain)
+
+        // Wave-arched white roof canopy over the 40 m waiting gallery (peaking at z = 6.20 m)
+        let waveBays = full ? 8 : 4
+        let yMinG: Float = -11.55, yMaxG: Float = 28.30
+        for b in 0..<waveBays {
+            let ya = yMinG + (yMaxG - yMinG) * (Float(b) / Float(waveBays))
+            let yb = yMinG + (yMaxG - yMinG) * (Float(b + 1) / Float(waveBays))
+            let ym = 0.5 * (ya + yb)
+            let xL: Float = -6.55, xR: Float = -0.65, xM: Float = -3.60
+            let zEave: Float = 5.10, zPeak: Float = 6.20
+            quad((xL, ya, zEave), (xM, ya, zEave), (xM, ym, zPeak), (xL, ym, zPeak), hallWhite, Self.tiles)
+            quad((xM, ya, zEave), (xR, ya, zEave), (xR, ym, zPeak), (xM, ym, zPeak), trim, Self.tiles)
+            quad((xL, ym, zPeak), (xM, ym, zPeak), (xM, yb, zEave), (xL, yb, zEave), trim, Self.tiles)
+            quad((xM, ym, zPeak), (xR, ym, zPeak), (xR, yb, zEave), (xM, yb, zEave), hallWhite, Self.tiles)
+            tri((xL, ya, zEave), (xL, ym, zPeak), (xL, yb, zEave), hallWhite, floodlit)
+            tri((xR, ya, zEave), (xR, yb, zEave), (xR, ym, zPeak), hallWhite, floodlit)
+            if full {
+                let pRing: [P2] = [(xL + 0.15, ya - 0.22), (xL + 0.55, ya - 0.22), (xL + 0.55, ya + 0.22), (xL + 0.15, ya + 0.22)]
+                wallBand(pRing, 0.45, pRing, 5.10, column, floodlit)
+            }
+        }
+
+        // 3. Exact OSM Way 388956314: Floating West Boarding Pontoon Pier (x = -17.51..-10.42, y = -17.74..5.26)
+        let pierRing: [P2] = [
+            (-10.42,   4.98), (-17.26,   5.26), (-17.30, -5.70),
+            (-17.51, -17.61), (-10.52, -17.74), (-10.46, -5.87),
+        ]
+        wallBand(pierRing, 0.00, pierRing, 0.85, gateStone, Self.plain)
+        cap(pierRing, 0.85, podium, Self.plain)
+
+        let shelterRing: [P2] = [(-16.20, -14.50), (-11.40, -14.50), (-11.40, 2.20), (-16.20, 2.20)]
+        wallBand(shelterRing, 3.20, shelterRing, 3.60, blueTile, Self.tiles)
+        cap(shelterRing, 3.60, blueRidge, Self.tiles)
+        if full {
+            for py: Float in [-13.5, -8.0, -2.5, 1.5] {
+                for px: Float in [-15.8, -11.8] {
+                    box(px - 0.15, py - 0.15, 0.85, px + 0.15, py + 0.15, 3.20, column, Self.plain)
+                }
+            }
+            for by: Float in [-16.0, -10.5, -5.0, 0.5, 4.2] {
+                box(-17.35, by - 0.20, 0.85, -16.95, by + 0.20, 1.35, doorway, Self.plain)
+            }
+        }
+
+        for gy: Float in [-14.2, -3.5] {
+            box(-10.48, gy - 1.40, 0.45, -6.40, gy + 1.40, 0.90, podium, Self.plain)
+            if full {
+                box(-10.48, gy - 1.40, 0.90, -6.40, gy - 1.22, 1.95, ornament, floodlit)
+                box(-10.48, gy + 1.22, 0.90, -6.40, gy + 1.40, 1.95, ornament, floodlit)
+            }
+        }
+    }
+
+    /// Decision 592: Cijin Ferry Terminal (旗津輪渡站, OSM node 3921289548,
+    /// historic-style red-brick terminal building way 255744758 & harbor
+    /// piers ways 388956315, 388956316: combined 72.83 m × 34.26 m; main
+    /// Dutch-tile roof ridge at 10.20 m, flanking 3-storey red-brick
+    /// pavilion turrets at 14.80 m, central octagonal clock/observation
+    /// tower roof peak at 21.50 m and lightning finial at 23.00 m).
+    mutating func cijinFerryTerminal() {
+        let trim = colour("trim")
+        let stone = colour("stone")
+        let podium = colour("podium")
+        let gateStone = colour("gateStone")
+        let brick = colour("brick")
+        let brickTrim = colour("brickTrim")
+        let column = colour("column")
+        let glass = colour("glass")
+        let spire = colour("spire")
+        let ornament = colour("ornament")
+        let vermilion = colour("vermilion")
+        let stationRoof = colour("stationRoof")
+        let blueTile = colour("blueTile")
+        let blueRidge = colour("blueRidge")
+        let floodlit = Map3DVertex.floodlit
+        let glowing = Map3DVertex.glowing
+
+        // 1. Exact OSM Way 255744758: Historic-Style Red-Brick Main Terminal Building (72.83 m × 19.52 m)
+        let bldgCW: [P2] = [
+            (-36.41,  -7.87), (-22.48,   2.38), ( -8.67,   2.39),
+            ( 35.96,   2.39), ( 36.41,  -6.29), ( 21.91,  -6.58),
+            ( -8.85,  -7.20), (-19.46,  -7.41), (-32.21, -17.13),
+        ]
+        let bldgRing: [P2] = Array(bldgCW.reversed())
+
+        wallBand(bldgRing, 0.00, bldgRing, 0.60, gateStone, Self.plain)
+        wallBand(bldgRing, 0.60, bldgRing, 4.20, brick, Self.floors)
+        wallBand(bldgRing, 4.20, bldgRing, 4.65, brickTrim, floodlit)
+        wallBand(bldgRing, 4.65, bldgRing, 5.20, brick, Self.floors)
+        wallBand(bldgRing, 5.20, bldgRing, 7.35, glass, Self.curtain)
+        wallBand(bldgRing, 7.35, bldgRing, 8.00, brick, Self.floors)
+        wallBand(bldgRing, 8.00, bldgRing, 8.50, stone, floodlit)
+
+        let roofRidgeRing: [P2] = bldgRing.map { ($0.x * 0.92, $0.y * 0.60 - 1.2) }
+        wallBand(bldgRing, 8.50, roofRidgeRing, 10.20, stationRoof, Self.tiles)
+        polyCap(roofRidgeRing, 10.20, vermilion, Self.tiles)
+
+        if full {
+            box(-14.0, -8.80, 3.20, 14.0, -6.90, 3.70, blueTile, Self.tiles, top: blueRidge)
+            box(-20.0,  2.35, 4.20, 28.0,  3.55, 4.60, podium, floodlit)
+            box(-20.0,  3.35, 4.60, 28.0,  3.55, 5.50, brickTrim, floodlit)
+            for wx in stride(from: Float(-21.0), through: 33.0, by: 6.0) {
+                box(wx - 0.85, 2.15, 5.15, wx + 0.85, 2.58, 7.45, brick, Self.floors, top: brickTrim)
+                let sy: Float = -6.85 + (wx / 36.0) * 0.45
+                box(wx - 0.85, sy - 0.25, 5.15, wx + 0.85, sy + 0.15, 7.45, brick, Self.floors, top: brickTrim)
+            }
+        }
+
+        // 2. Flanking NW and SE 3-Storey Red-Brick Pavilion Turrets (peaking at z = 14.80 m)
+        for tx: Float in [-17.5, 19.5] {
+            let tRing: [P2] = [(tx - 4.5, -6.8), (tx + 4.5, -6.8), (tx + 4.5, 2.35), (tx - 4.5, 2.35)]
+            let tCap: [P2]  = [(tx - 1.2, -3.2), (tx + 1.2, -3.2), (tx + 1.2, -1.2), (tx - 1.2, -1.2)]
+            wallBand(tRing, 8.50, tRing, 12.20, brick, Self.floors)
+            wallBand(tRing, 12.20, tRing, 12.65, brickTrim, floodlit)
+            wallBand(tRing, 12.65, tCap, 14.80, vermilion, Self.tiles)
+            cap(tCap, 14.80, vermilion, Self.tiles)
+            if full {
+                let wRing: [P2] = [(tx - 2.2, -6.95), (tx + 2.2, -6.95), (tx + 2.2, 2.50), (tx - 2.2, 2.50)]
+                wallBand(wRing, 9.10, wRing, 11.60, glass, Self.curtain)
+            }
+        }
+
+        // 3. Signature Central Octagonal Red-Brick Clock / Observation Tower (peaking at z = 23.00 m)
+        let tcx: Float = 0.0, tcy: Float = -2.20
+        let octBase = polyRing(tcx, tcy, 4.80, sides: 8, rotDeg: 22.5)
+        let octMid  = polyRing(tcx, tcy, 4.20, sides: 8, rotDeg: 22.5)
+        let octEave = polyRing(tcx, tcy, 4.75, sides: 8, rotDeg: 22.5)
+        let octTip  = polyRing(tcx, tcy, 0.35, sides: 8, rotDeg: 22.5)
+
+        wallBand(octBase, 8.50, octBase, 13.00, brick, Self.floors)
+        wallBand(octBase, 13.00, octBase, 13.45, brickTrim, floodlit)
+        wallBand(octMid,  13.45, octMid,  17.80, glass, Self.curtain)
+        wallBand(octMid,  17.80, octEave, 18.35, stone, floodlit)
+        wallBand(octEave, 18.35, octTip,  21.50, vermilion, Self.tiles)
+        cap(octTip, 21.50, vermilion, Self.tiles)
+
+        if full {
+            // Outer 4 square red-brick framing columns & open horizontal white tie-beams
+            for sx: Float in [-4.6, 4.6] {
+                for sy: Float in [tcy - 4.6, tcy + 4.6] {
+                    box(sx - 0.65, sy - 0.65, 8.50, sx + 0.65, sy + 0.65, 17.80, brick, Self.floors, top: stone)
+                }
+            }
+            for bz: Float in [12.80, 16.80] {
+                box(-5.25, tcy - 5.25, bz,  5.25, tcy - 3.95, bz + 0.55, stone, floodlit)
+                box(-5.25, tcy + 3.95, bz,  5.25, tcy + 5.25, bz + 0.55, stone, floodlit)
+                box(-5.25, tcy - 3.95, bz, -3.95, tcy + 3.95, bz + 0.55, stone, floodlit)
+                box( 3.95, tcy - 3.95, bz,  5.25, tcy + 3.95, bz + 0.55, stone, floodlit)
+            }
+        }
+
+        let finialRing = polyRing(tcx, tcy, 0.16, sides: full ? 6 : 4)
+        wallBand(finialRing, 21.50, finialRing, 23.00, spire, floodlit)
+        cap(finialRing, 23.00, ornament, glowing)
+
+        // 4. Exact OSM Ways 388956315 & 388956316: Two Harbor Ferry Boarding Piers (+y side)
+        let pier1CW: [P2] = [
+            (-12.71,  3.29), (-12.82,  9.15), (-21.87,  8.92), (-22.00, 16.03),
+            ( -8.84, 16.36), (  2.43, 16.63), (  2.68,  3.66), ( -8.73,  3.30),
+        ]
+        let pier1Ring: [P2] = Array(pier1CW.reversed())
+        wallBand(pier1Ring, 0.00, pier1Ring, 0.85, gateStone, Self.plain)
+        polyCap(pier1Ring, 0.85, podium, Self.plain)
+
+        let pier2CW: [P2] = [
+            (14.89,  3.32), (14.86,  8.44), (10.87,  8.40), (10.81, 16.86),
+            (20.48, 16.99), (33.71, 17.13), (33.80,  3.55), (21.30,  3.37),
+        ]
+        let pier2Ring: [P2] = Array(pier2CW.reversed())
+        wallBand(pier2Ring, 0.00, pier2Ring, 0.85, gateStone, Self.plain)
+        polyCap(pier2Ring, 0.85, podium, Self.plain)
+
+        for (px0, px1, pyMax): (Float, Float, Float) in [(-12.2, 2.0, 15.8), (14.5, 33.0, 16.2)] {
+            box(px0, 2.35, 0.35, px1, 3.40, 0.85, podium, Self.plain)
+            let canEave: [P2] = [(px0, 3.60), (px1, 3.60), (px1, pyMax), (px0, pyMax)]
+            let canRidge: [P2] = [(px0 + 1.5, 7.50), (px1 - 1.5, 7.50), (px1 - 1.5, pyMax - 2.5), (px0 + 1.5, pyMax - 2.5)]
+            wallBand(canEave, 3.80, canEave, 4.25, trim, floodlit)
+            wallBand(canEave, 4.25, canRidge, 5.40, stationRoof, Self.tiles)
+            cap(canRidge, 5.40, vermilion, Self.tiles)
+            if full {
+                for cx: Float in [px0 + 0.6, 0.5 * (px0 + px1), px1 - 0.6] {
+                    for cy: Float in [4.2, 9.5, pyMax - 0.8] {
+                        box(cx - 0.22, cy - 0.22, 0.85, cx + 0.22, cy + 0.22, 3.80, column, Self.plain)
+                    }
+                }
+                box(px0, 3.50, 0.85, px0 + 0.20, pyMax, 1.80, ornament, floodlit)
+                box(px1 - 0.20, 3.50, 0.85, px1, pyMax, 1.80, ornament, floodlit)
             }
         }
     }

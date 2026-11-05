@@ -334,22 +334,35 @@ extension GameSession {
     /// bring under simple rules, as ``createLineFromDraft()`` would open it;
     /// `nil` unless the game runs its lines for the player and the draft
     /// has two stops. Worked out once for each draft and command (not at
-    /// every tick).
+    /// every tick). In the app, `nil` until the main actor's next turn has
+    /// worked it out (decision 590).
     public var lineOpeningPreview: LineOpeningPreview? {
+        lineOpeningPreview(now: false)
+    }
+
+    /// ``lineOpeningPreview``; `now` works it out at once, even in the app.
+    func lineOpeningPreview(now: Bool) -> LineOpeningPreview? {
         guard runsLinesForThePlayer else { return nil }
         let stops = lineDraftStops
         guard stops.count >= 2 else { return nil }
         _ = world
         let key = LineOpeningMemo.Key(stops: stops, worldRevision: commandRevision)
         if let memo = lineOpeningMemo, memo.key == key { return memo.preview }
-        var preview: LineOpeningPreview?
-        if let plan = autoServicePlan(creating: Self.suggestedLineName(for: world, in: language), stops: stops, targets: nil).flatMap({ feasible($0) })?.plan,
-           let priced = try? priced({ world throws(GameError) in try apply(plan, to: &world) }) {
-            let trains = priced.result.line.map(\.trains.count) ?? 0
-            preview = LineOpeningPreview(cost: priced.cost, train: trains > 0, loop: priced.result.number > 0)
-        }
+        if !now, waits(for: .lineOpening, workOut: { _ = $0.lineOpeningPreview(now: true) }) { return nil }
+        let preview = workOutLineOpeningPreview(stops: stops)
         lineOpeningMemo = LineOpeningMemo(key: key, preview: preview)
         return preview
+    }
+
+    /// ``lineOpeningPreview`` worked out. A function of its own, never
+    /// inlined (decision 590): the stack its copies of the world take is
+    /// taken only when it runs, not by every look at the preview.
+    @inline(never)
+    private func workOutLineOpeningPreview(stops: [StationID]) -> LineOpeningPreview? {
+        guard let plan = autoServicePlan(creating: Self.suggestedLineName(for: world, in: language), stops: stops, targets: nil).flatMap({ feasible($0) })?.plan,
+              let priced = try? priced({ world throws(GameError) in try apply(plan, to: &world) }) else { return nil }
+        let trains = priced.result.line.map(\.trains.count) ?? 0
+        return LineOpeningPreview(cost: priced.cost, train: trains > 0, loop: priced.result.number > 0)
     }
 
     /// `plan` as it can run now: whole, or without its loops when they
