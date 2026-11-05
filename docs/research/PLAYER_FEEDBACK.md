@@ -163,6 +163,16 @@ What to Test 是當時自動列出的 PR 清單（#592 之前的做法）。
 4. **城市預覽**：載入中按 × 每次都關得掉嗎？
 5. **教學卡片**：手機橫拿時，卡片有沒有擋到要點的按鈕？
 
+### 0.5.0 (114.1)，2026-11-05
+
+從 `main` `c1be6078`（#1855 的合併；App 內容與 `26d5fca1` #1852 相同，只多交接文件）建置。TestFlight `testflight.yml` run 42012538541（run 114），10:39 UTC 開始、11:06 成功。What to Test 與 App 內「這版新增」是 0.5.0 (114.1)（#1852）。
+
+**這個 commit 的檢查**：`26d5fca1` 的完整 `ci.yml`（run 42010031491）綠；full lane（run 42010048718）第 1 次 build（`MapMarkTapUITests.testAnAlertsBubbleTakesATapOnItsMiddle`）與 second（模擬器啟動逾時）紅，發版時第 2 次（rerun-failed-jobs）還在跑，當發後的檢查；#1838 的教學測試在 main 補跑綠（run 42014874034）。
+
+### 0.5.0 (113.1)，2026-11-05
+
+從 `main` `240daaf8` 建置。TestFlight `testflight.yml` run 41959986443（run 113），03:11 UTC 開始、03:42 成功。完整 `ci.yml` run 41959675139 綠；full lane run 41959689553 紅（UI 測試沒跟上模式列與決策 588，#1838 修，不是 App）。
+
 ### 0.5.0 (112.1)，2026-11-04
 
 從 `main` `bef26ca`（#1796 的合併）建置。TestFlight `testflight.yml` run 41817355386（run 112），作者 10:54 UTC 自己按。What to Test 與 App 內「這版新增」是 0.5.0 (112.1)（#1796）。

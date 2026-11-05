@@ -24,6 +24,9 @@ struct TransferMemo: Equatable {
     var hasRailways: Bool
     /// Decision 595: the lines bought, whose stations have their regulars.
     var bought: [LineAcquisition]
+    /// The stops of those lines (REVIEW-L10, L10-1): a stop taken off a
+    /// line bought loses its regulars, a stop put back gets them again.
+    var boughtStops: [[StationID]]
     var points: [StationID: Int64]
 }
 
@@ -156,12 +159,13 @@ extension GameSession {
     func refreshTransfers() {
         guard world.realTransfers, railways != nil, RealWorldFrame(world: world) != nil else { return }
         let stations = Dictionary(uniqueKeysWithValues: world.stations.filter { !$0.isDepot }.map { ($0.id, $0.point) })
+        let boughtStops = world.acquisitions.map { $0.line.flatMap { world.line(id: $0)?.stops } ?? [] }
         let points: [StationID: Int64]
-        if let memo = transferMemo, memo.stations == stations, memo.hasRailways, memo.bought == world.acquisitions {
+        if let memo = transferMemo, memo.stations == stations, memo.hasRailways, memo.bought == world.acquisitions, memo.boughtStops == boughtStops {
             points = memo.points
         } else {
             points = wantedTransfers()
-            transferMemo = TransferMemo(stations: stations, hasRailways: true, bought: world.acquisitions, points: points)
+            transferMemo = TransferMemo(stations: stations, hasRailways: true, bought: world.acquisitions, boughtStops: boughtStops, points: points)
         }
         let current = Dictionary(uniqueKeysWithValues: world.stations.filter { $0.transferPoints > 0 }.map { ($0.id, $0.transferPoints) })
         guard points != current else { return }

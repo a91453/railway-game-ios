@@ -485,7 +485,9 @@ extension GameWorld {
 
     /// Each cableway's station: of `stations`, the nearest a boarding
     /// stop's middle within ``BusRoute/stopReach``, then the lower station
-    /// ID, then the earlier stop; `nil` when none is.
+    /// ID, then the earlier stop; `nil` when none is. Never a depot
+    /// (``Station/isDepot``), where no line calls (REVIEW-L10, L10-2, as a
+    /// city bus route's, decision 587 continued).
     mutating func refreshCablewayTransfers(among stations: [Station]) {
         let reach = BusRoute.stopReach * BusRoute.stopReach
         for position in cableways.indices {
@@ -496,7 +498,7 @@ extension GameWorld {
             var best: (squared: Int64, station: Int, stop: Int)?
             for (stop, point) in cableways[position].stops.enumerated() where point.boards {
                 let middle = Self.middle(of: point.cell)
-                for station in stations {
+                for station in stations where !station.isDepot {
                     let squared = Self.squaredDistance(middle, station.location)
                     guard squared <= reach else { continue }
                     let candidate = (squared, station.id.rawValue, stop)
@@ -511,11 +513,12 @@ extension GameWorld {
     /// near `near`: of `stations` within ``Cableway/namedTransferReach`` of
     /// a boarding stop, the nearest `near` (then the lower station ID),
     /// with its nearest boarding stop (then the earlier); `nil` when none is.
+    /// Never a depot (REVIEW-L10, L10-2).
     static func namedTransfer(of cableway: Cableway, near: PlanPoint, among stations: [Station]) -> BusTransfer? {
         let reach = Cableway.namedTransferReach * Cableway.namedTransferReach
         let boarding = cableway.stops.indices.filter { cableway.stops[$0].boards }
         var best: (squared: Int64, station: Int, stop: Int)?
-        for station in stations {
+        for station in stations where !station.isDepot {
             let stops = boarding.map { (squaredDistance(middle(of: cableway.stops[$0].cell), station.location), $0) }.filter { $0.0 <= reach }
             guard let stop = stops.min(by: { $0 < $1 }) else { continue }
             let candidate = (squaredDistance(near, station.location), station.id.rawValue, stop.1)
