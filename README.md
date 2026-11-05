@@ -58,7 +58,7 @@ RailwayGameApp/
   project.yml               XcodeGen spec（專案設定的唯一來源）
   RailwayGame.xcodeproj     由 project.yml 產生並提交，不要手改
   App/、Views/、UITests/、Resources/（圖示、字串、音效、底圖、真實鐵路與實景資料）
-Web/                        CityView（官網的 3D 城市）、WasmProbe（GameCore 編成 Wasm 的探針）
+Web/                        CityView（官網的 3D 城市）
 tools/                      產生資料的腳本（人口、底圖、真實鐵路與班次、地名、觀光、音效、golden 檢查）
 docs/                       總覽、架構與決策、研究、手冊；封存在 docs/archive/
 ```
