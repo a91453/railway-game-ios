@@ -543,6 +543,7 @@
 - **FERRYPIER**（作者 2026-11-05 回報：「旗津整個沒辦法按」）：session_01YGNNun2KoCWaFSFc4R9zoi，`claude/ferry-pier-snap`，排 115.1。原因：`GameWorld.isPierCell` 要點到的那一格本身是陸地、四鄰有水；`GameSession.tapFerry` 只看點到的那一格，示範航線卻吸附 4 格。要做的：點擊吸附、渡輪模式標出能蓋碼頭的岸邊、錯誤訊息。截圖第 2 級。要改 GameCore 規則先問遊戲規劃，要號碼時從 599 起查 #1579。
 - **TOURSRC-STUDY**：見下面「觀光客源」，docs-only，綠了就合。
 - **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
+- **REVIEW-L10**（session_01YGNNuoB7f2rfxdhAmyP2L8，第 50 任派）：審 #1803–#1857，報告 `docs/archive/PR1803_1857_REVIEW_HANDOFF.md`。P1 0、P2 1（**L10-1**：#1843 買來的線拿掉一站後，那站留著常客人數，`RealTransfers.swift` 的 `TransferMemo` 鍵少了停靠站）、P3 12，都**還沒派**。下一輪 REVIEW-L11 從 #1858 起。
 
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
 
