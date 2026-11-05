@@ -12,6 +12,12 @@
 
 VERIFIED（Linux Swift6.4）：WAE build、30項相關XCTest、10項實際幾何與故障反例、8項GLB封裝測試；真Swift loader全頂點／色值／glow／glass讀回與opt-in保護、完整GLB重建及SHA、42張512² RGBA透明PNG解碼與留白；Blender4.3.2獨立匯入的三角、材質、頂點色、world bounds／轉軸。Chromium自含HTML在關網context載入、28個日夜方向組合、燈旗標／透明／剖視改像素、拖曳縮放、下載SHA、390px均檢查。
 
-UNVERIFIED：此環境封鎖file://直接開啟（已驗同份HTML關網可用，無外部請求）；本輪Metal結果以CI實跑為準；完整遊戲夜景、iOS真機效能、作者外觀接受、載重／碰撞／站台間隙與營運接入。Linux的WebGL出圖不算原生Metal。
+UNVERIFIED：此環境封鎖file://直接開啟（已驗同份HTML關網可用，無外部請求）；完整遊戲夜景、iOS真機效能、作者外觀接受、載重／碰撞／站台間隙與營運接入。Linux的WebGL出圖不算原生Metal。
 
 只做素材，沒有改renderer、standard、營運模型映射、GameCore、存檔、golden／fixtures或決策號。維持雙庫draft，不合併、不auto-merge、不TestFlight；作者看過這輪後再決定是否續修。
+
+## 實際原生 Metal 結果
+
+VERIFIED：公開producer `95a61a120ae128122cd4157cecae427529f2540a` 的 [Mac run41980821475](https://github.com/a91453/railway-game-ios/actions/runs/41980821475)，官方Swift6.4，裝置回報Apple Paravirtual device。真正App shader／pipeline的混色、遮擋、不寫depth、排序、1x／4x MSAA與三個故障反例通過；本款近／LOD各斜視／底視、day／night旗標共8個視角組合及opaque基準，共16張原生PNG，實際Swift loader亦讀回兩件。原始 [GPU報告](metal-verification.json) 隨包保存。
+
+自檢已看原生斜視、底視及日／夜旗標，透明窗可看到內部，地板保持不透明。這是固定ambient／背景的材質診斷，不是完整遊戲夜景；macOS offscreen不代表iOS真機效能或作者外觀接受。完整原生PNG保存在該run的wulai-native-metal artifact（14日保留），可由本輪producer及run-metal.sh重現。
