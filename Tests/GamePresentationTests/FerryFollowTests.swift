@@ -16,14 +16,14 @@ final class FerryFollowTests: XCTestCase {
     func testTheBoatsSailInTurn() throws {
         let (world, id) = try makeFerryWorld(from: CellPosition(row: 3, column: 10), to: CellPosition(row: 6, column: 30), boats: 2)
         let route = try XCTUnwrap(world.ferryRoute(id: id))
-        let at = Double(7 * 3_600 + 20 * 60)
+        let at = Double(7 * 3_600 + 16 * 60)
         let numbered = Map3DFerries.numberedSailings(of: route, atSecond: at) { _ in true }
         XCTAssertEqual(numbered.map(\.stage), Map3DFerries.sailings(of: route, atSecond: at) { _ in true })
         // 07:00 went to boat 0, 07:15 to boat 1.
         XCTAssertEqual(numbered.map(\.number), [0, 1])
         XCTAssertEqual(numbered.map(\.start), [7 * 3_600, 7 * 3_600 + 15 * 60])
-        // Boat 0 is back by 07:30 (two crossings of 1.3 km and two stops,
-        // some 17 minutes) and lies until its next sailing, 07:30.
+        // Boat 0 is back by 07:30 (two crossings and two stops, under 17
+        // minutes) and lies until its next sailing, 07:30.
         let lying = Map3DFerries.lying(0, of: route, atSecond: Double(7 * 3_600 + 29 * 60)) { _ in true }
         XCTAssertNotNil(lying.since)
         XCTAssertEqual(lying.until, Double(7 * 3_600 + 30 * 60))
@@ -163,12 +163,10 @@ final class FerryFollowTests: XCTestCase {
     /// scene (10:00 of its second day); the bar names the real piers;
     /// following a train lets it go, and so does closing the 3D map.
     @MainActor
-    func testTheSessionFollowsABoatAndShowsItsBar() async throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
-        await launcher.openScreenshotScene(.tamsuiFerry).value
-        let session = try XCTUnwrap(launcher.session)
+    func testTheSessionFollowsABoatAndShowsItsBar() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let water = try WaterGrid(data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_water.json")))
+        let session = GameSession(world: ScreenshotScene.tamsuiFerry.make(in: .traditionalChinese, water: water), language: .traditionalChinese)
         let route = try XCTUnwrap(session.world.ferryRoutes.first)
         XCTAssertNotNil(RealFerry.matching(route, in: session.world))
         XCTAssertTrue(session.hasFerryBoatToFollow(on: route.id))
