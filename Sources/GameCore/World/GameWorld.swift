@@ -25,7 +25,10 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// Two worlds are equal when their states are, field by field, as
-    /// they were when the fields were the struct's own.
+    /// they were when the fields were the struct's own. Two worlds sharing
+    /// one storage are compared field by field too, not taken as equal at
+    /// once: a field holding a `Double` NaN is not equal to itself, and the
+    /// comparison stays what the synthesized one was.
     public static func == (lhs: GameWorld, rhs: GameWorld) -> Bool {
         lhs.network == rhs.network && lhs.storage.state.pointee == rhs.storage.state.pointee
     }

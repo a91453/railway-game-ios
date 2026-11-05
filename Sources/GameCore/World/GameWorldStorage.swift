@@ -17,14 +17,14 @@ final class GameWorldStorage: @unchecked Sendable {
     // the one reference to it (`GameWorld.uniqueState`); a shared storage
     // is only read.
 
-    /// The state, in memory of its own so the world's fields can hand out
-    /// its address. A field is read and changed in place through that
-    /// address (an addressor): reading one through a `_read` coroutine
-    /// instead made the caller copy it, every array and dictionary in it
-    /// retained and released, and `network` is read at every step of every
-    /// train. Its accesses are checked statically, by the world's own
-    /// exclusivity: a world's field is read or changed only while the
-    /// world itself is.
+    /// The state, in memory of its own rather than a stored property of
+    /// the class, so reading and changing a field takes no dynamic
+    /// exclusivity check (a class's stored properties take one at every
+    /// access). Its accesses are checked statically instead, by the
+    /// world's own exclusivity: a world's fields are read (`_read`) or
+    /// changed (`_modify`) only while the world itself is, the world
+    /// changes it only after `uniqueState` has made this storage its own,
+    /// and a storage shared by several worlds is only read.
     let state: UnsafeMutablePointer<GameWorldState>
 
     init(_ state: GameWorldState = GameWorldState()) {
@@ -41,8 +41,16 @@ final class GameWorldStorage: @unchecked Sendable {
 /// The stored state of a ``GameWorld`` (decision 590, step 2): every
 /// field the world keeps, held on the heap by ``GameWorldStorage`` so a
 /// world is one reference and copying it costs nothing until one of the
-/// copies is changed. The defaults only stand until an initializer of
-/// ``GameWorld`` sets them.
+/// copies is changed.
+///
+/// Every field has a default, so ``GameWorld`` can make its storage before
+/// its initializers set the fields. The compiler therefore no longer checks
+/// that an initializer sets each of them, as it did while they were the
+/// struct's own (`bounds`, `stations`, `clock`, `economy`, `accounts`,
+/// `land`, the next IDs and the rest had no default): a new initializer
+/// that forgets one gets the default here (`.standard`, empty, 1) without
+/// a word. `init(bounds:economy:clock:)` and `init(from:madeBeforeSpacing:)`
+/// set every field that had none.
 struct GameWorldState: Equatable, Sendable {
     var bounds: WorldBounds = .standard
     var stations: [Station] = []
