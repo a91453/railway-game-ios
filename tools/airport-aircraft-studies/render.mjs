@@ -8,7 +8,7 @@ const root=resolve(process.argv[2]),group=process.argv[3],hash=b=>createHash('sh
 const manifest=JSON.parse(read(root+'/manifest.json'));
 let renderer=read(new URL('../station-kit/renderer.js',import.meta.url),'utf8');
 // Keep existing native loader/camera. Only expose illumination for day/night.
-renderer=renderer.replace('uniform float radius,aspect,depth;','uniform float radius,aspect,depth;').replace('precision highp float;in vec3 n,c;in float g;','precision highp float;uniform float night;in vec3 n,c;in float g;').replace('c*(0.8+0.2*sun)+vec3(g*0.025)','c*mix(0.8+0.2*sun,0.13+0.08*sun,night)+c*g*night*0.95').replace("'radius','aspect','depth'","'radius','aspect','depth','night'").replace('zoom=1,vector','zoom=1,vector,night=0').replace('Object.entries({radius,aspect,depth})','Object.entries({radius,aspect,depth,night})');
+renderer=renderer.replace('uniform float radius,aspect,depth;','uniform float radius,aspect,depth;').replace('precision highp float;in vec3 n,c;in float g;','precision highp float;uniform float night;in vec3 n,c;in float g;').replace('c*(0.8+0.2*sun)+vec3(g*0.025)','c*mix(0.8+0.2*sun,0.28+0.10*sun,night)+c*g*night*0.88').replace("'radius','aspect','depth'","'radius','aspect','depth','night'").replace('zoom=1,vector','zoom=1,vector,night=0').replace('Object.entries({radius,aspect,depth})','Object.entries({radius,aspect,depth,night})');
 write(root+'/renderer.js',renderer);
 const script=renderer.replaceAll('export ','');
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});

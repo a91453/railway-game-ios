@@ -46,32 +46,62 @@ public enum Map3DAirportStudies {
     public static func model(_ kind: Kind, far: Bool = false) -> Map3DModelPack.Model {
         var b=StationKitBuilder()
         let white=Map3DPalette.tileWhite, blue=Map3DPalette.counters[1], steel=Map3DPalette.tankStand
-        let dark=Map3DPalette.playerRim, glass=Map3DPalette.glazing, deck=Map3DPalette.plaza
-        let yellow=Map3DPalette.shopAwnings[1]
+        let dark=Map3DPalette.playerRim, glass=Map3DPalette.glazing, deck=Map3DColor.rgb(0xBCC4C8)
+        let yellow=Map3DColor.rgb(0xE3B349)
         switch kind {
         case .cityTerminal, .islandTerminal:
             let city=kind == .cityTerminal
             let l:Float=city ? 90 : 25, w:Float=city ? 42 : 13, h:Float=city ? 11 : 4.5
-            b.box(0,0,0,l,w,h,white)
-            b.box(0,h,0,l+2,w+2,0.25,blue)
-            b.box(l*0.5,0,0,0.08,w*0.8,h*0.7,glass)
-            b.box(l*0.5+2.3,h*0.60,0,5,w*0.68,0.19,blue)
-            for z in [-w*0.31,Float(0),w*0.31] { b.box(l*0.5+0.11,0.55,z,0.08,0.15,h*0.55,white) }
+            let wall:Float=city ? h : 3.55
+            b.box(0,0,0,l,w,wall,white)
+            if city {
+                b.box(0,wall,0,l+2,w+2,0.35,steel)
+                b.box(-l*0.11,wall+0.35,0,l*0.64,w*0.74,0.55,white)
+                for x:Float in [-22,0,22] { b.box(x,wall+0.90,0,10,3,0.10,glass) }
+            } else {
+                b.airportGabledRoof(0,l+1,w+1,wall,h,blue)
+                b.box(0,wall-0.16,-w*0.51,l+1,0.18,0.21,white)
+            }
+            for side:Float in [-1,1] {
+                let bays=city ? 16 : 6
+                for i in 0..<bays {
+                    let x = -l*0.5+(Float(i)+0.5)*l/Float(bays),z=side*(w*0.5+0.045)
+                    if !city && i==bays-2 && side<0 {
+                        b.box(x,0.12,z,l/Float(bays)*0.54,0.08,2.35,dark)
+                    } else {
+                        b.box(x,city ? 2.2 : 1.35,z,l/Float(bays)*0.74,0.08,city ? 3.5 : 1.65,glass)
+                        if city && !far { b.box(x,4.9,z+side*0.05,l/Float(bays)*0.74,0.07,0.12,white) }
+                    }
+                    b.box(-l*0.5+Float(i)*l/Float(bays),0.10,z,0.26,0.18,city ? 6.2 : 2.75,white)
+                }
+                b.box(0,city ? 1.85 : 1.05,side*(w*0.5+0.045),l,0.15,0.17,blue)
+            }
+            b.box(l*0.5+0.04,1.1,0,0.08,w*0.76,city ? 6.5 : 2.2,glass)
+            b.box(l*0.5+2.3,city ? 5.0 : 2.75,0,5,w*0.68,0.19,blue)
+            for z in [-w*0.31,Float(0),w*0.31] { b.box(l*0.5+0.11,1.1,z,0.08,0.17,city ? 6.5 : 2.2,white) }
             if city {
                 b.box(-l*0.21,h+0.25,-w*0.17,9,5,1.55,steel)
-                b.box(-54,0,-27,7,7,26,steel)
-                b.box(-54,26,-27,10,10,3,glass)
-                b.box(-54,29,-27,10.5,10.5,0.22,blue)
+                b.box(-54,0,-27,4.5,4.5,26,white)
+                b.box(-54,25.7,-27,6,6,0.4,steel)
+                b.box(-54,26,-27,8,8,3,glass)
+                b.box(-54,29,-27,8.7,8.7,0.22,blue)
                 b.box(-72,0,63,36,30,12,steel)
-                b.box(-72,0,47.95,30,0.09,9,blue)
+                b.airportGabledRoof(-72,36.5,30.5,12,14,white)
+                for x:Float in [-82,-72,-62] {
+                    b.box(x,0,47.95,9.7,0.09,9,glass)
+                    b.box(x+4.9,0,47.87,0.11,0.12,9,white)
+                }
                 for y:Float in [-17,-5,5,20] {
                     let base:Float=y<0 ? 2 : 3.1
                     b.box(54,base,y,18,2.4,2.5,white)
+                    b.box(54,base+0.68,y-1.25,16.2,0.06,1.05,glass)
+                    b.box(54,base+2.5,y,18.3,2.65,0.15,blue)
                     b.box(61,0,y,0.3,0.3,base,steel)
                 }
             } else {
-                b.box(l*0.5+0.14,0.55,-w*0.26,0.10,1.55,2.25,dark)
                 b.box(l*0.5+4,0,0,8,w*0.86,0.08,deck)
+                for z:Float in [-w*0.31,w*0.31] { b.box(l*0.5+4,0,z,0.14,0.14,2.75,white) }
+                b.box(l*0.5+7.2,0.08,-w*0.25,6.5,1.8,0.02,yellow)
             }
         case .runway:
             b.box(0,0,0,60,30,0.08,dark)
@@ -132,5 +162,19 @@ public enum Map3DAirportStudies {
             }
         }
         return .flat(named:"airport-\(kind.rawValue)-\(far ? "far" : "near")",from:b.mesh)
+    }
+}
+
+private extension StationKitBuilder {
+    mutating func airportGabledRoof(_ x:Float,_ length:Float,_ width:Float,_ eave:Float,_ ridge:Float,_ color:UInt32) {
+        for side:Float in [-1,1] {
+            let profile:[(Float,Float)]=[(ridge,0),(eave,side*width*0.5),
+                                         (eave-0.18,side*width*0.5),(ridge-0.18,0)]
+            let a=profile.map { Map3DPoint(x-length*0.5,$0.0,$0.1) }
+            let b=profile.map { Map3DPoint(x+length*0.5,$0.0,$0.1) }
+            let inside=(a+b).reduce(Map3DPoint.zero,+)*(1/Float(a.count+b.count))
+            face(a,inside:inside,color:color);face(b,inside:inside,color:color)
+            for i in a.indices { let j=(i+1)%a.count;face([a[i],a[j],b[j],b[i]],inside:inside,color:color) }
+        }
     }
 }
