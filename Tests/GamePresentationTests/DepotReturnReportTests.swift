@@ -31,6 +31,11 @@ final class DepotReturnReportTests: XCTestCase {
         }
     }
 
+    /// Skips unless asked for one of `names`.
+    private func wanted(_ name: String, or other: String) throws {
+        if (try? wanted(name)) == nil { try wanted(other) }
+    }
+
     func testTheWenhuLine() throws {
         try wanted("wenhu")
         try report("wenhu", Self.bought("trtc:BR"))
@@ -140,6 +145,7 @@ final class DepotReturnReportTests: XCTestCase {
     /// a new game where the screenshot scene stands, with the app's water;
     /// each day's riders and whether no boat sailed.
     func testTheFerries() throws {
+        try wanted("ferry-tamsui", or: "ferry-gushan")
         let resources = BundledRealData.directory.deletingLastPathComponent()
         let grid = try WaterGrid(data: Data(contentsOf: resources.appendingPathComponent("RealWorld/taiwan_water.json")))
         for (name, ferry, scene) in [("ferry-tamsui", RealFerry.tamsuiBali, ScreenshotScene.tamsuiFerry),
