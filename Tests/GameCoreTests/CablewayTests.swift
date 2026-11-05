@@ -283,6 +283,28 @@ final class CablewayTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "it still loads")
     }
 
+    /// REVIEW-L10, L10-2 (decision 587, continued, as a city bus
+    /// route's): a depot is no transfer. C, a station of no line on the
+    /// first stop's cell, is nearer it than A is: the cableway meets C;
+    /// once C is a depot it meets A, its riders with it, and C again when
+    /// it is a station again.
+    func testACablewayMeetsNoDepot() throws {
+        var world = try world()
+        let c = try world.buildStation(named: "C", at: GameWorld.middle(of: line[0].cell)).id
+        let built = try world.createCableway(stops: line)
+        XCTAssertEqual(world.cableway(id: built.id)?.transfer, BusTransfer(station: c, stop: 0))
+        try world.setStationDepot(c, to: true)
+        let met = try XCTUnwrap(world.cableway(id: built.id))
+        XCTAssertEqual(met.transfer, BusTransfer(station: a, stop: 0))
+        XCTAssertEqual(met.feederTrips, 200)
+        var alone = try self.world()
+        _ = try alone.buildStation(named: "C", at: try XCTUnwrap(world.station(id: c)).location)
+        try alone.setStationDepot(c, to: true)
+        XCTAssertEqual(trips(world, a), try XCTUnwrap(trips(alone, a)) + 200, "the riders go to A")
+        try world.setStationDepot(c, to: false)
+        XCTAssertEqual(world.cableway(id: built.id)?.transfer, BusTransfer(station: c, stop: 0))
+    }
+
     // MARK: - The station a real one meets (decision 586)
 
     /// A stop seven cells from A, 400 to 500 m off: on its own it meets
@@ -307,6 +329,20 @@ final class CablewayTests: XCTestCase {
         try world.removeStation(a)
         XCTAssertNil(world.cableway(id: built.id)?.transfer)
         XCTAssertEqual(world.cableway(id: built.id)?.meetsNear, place, "it still knows where its station stood")
+    }
+
+    /// REVIEW-L10, L10-2: a cableway given a station's place (decision
+    /// 586) meets no depot there either: C stands on the place, so the
+    /// cableway meets C; once C is a depot it meets A, the next nearest.
+    func testAGivenStationIsNeverADepot() throws {
+        var world = try world()
+        let near = CablewayStop(cell: CellPosition(row: 8, column: 12)), far = CablewayStop(cell: CellPosition(row: 8, column: 26))
+        let place = GameWorld.middle(of: CellPosition(row: 8, column: 9))
+        let c = try world.buildStation(named: "C", at: place).id
+        let built = try world.createCableway(stops: [near, far], meetsNear: place)
+        XCTAssertEqual(world.cableway(id: built.id)?.transfer, BusTransfer(station: c, stop: 0))
+        try world.setStationDepot(c, to: true)
+        XCTAssertEqual(world.cableway(id: built.id)?.transfer, BusTransfer(station: a, stop: 0))
     }
 
     /// A place more than 500 m from every boarding stop is refused, and

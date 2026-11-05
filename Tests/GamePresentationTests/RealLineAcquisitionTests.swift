@@ -564,6 +564,41 @@ final class RealLineAcquisitionTests: XCTestCase {
         XCTAssertGreaterThan(bought.junction, 0)
     }
 
+    /// Decision 595 (REVIEW-L10, L10-1): a stop taken off the line bought
+    /// takes its regulars with it at once, the same as a session opened
+    /// on that world afresh; put back, they come back.
+    func testAStopTakenOffALineBoughtLosesItsRegulars() throws {
+        let session = try Self.game(round: "PINGXI", transfers: true)
+        XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: try line("PINGXI", in: session))), session.message?.text ?? "")
+        let id = try XCTUnwrap(session.world.acquisition(of: "tra:PINGXI")?.line)
+        session.refreshTransfers()
+        let stops = try XCTUnwrap(session.world.line(id: id)?.stops)
+        let index = try XCTUnwrap(stops.firstIndex { session.world.station(id: $0)?.name == "十分" })
+        let shifen = stops[index]
+        let regular = session.world.transferTrips(of: shifen)
+
+        func afresh() -> Int64 {
+            let fresh = GameSession(world: session.world, language: .traditionalChinese)
+            fresh.railways = session.railways
+            fresh.refreshTransfers()
+            return fresh.world.transferTrips(of: shifen)
+        }
+        session.selectLine(id)
+        session.removeStopFromSelectedLine(at: index)
+        XCTAssertNotNil(session.world.station(id: shifen))
+        XCTAssertFalse(session.world.line(id: id)?.stops.contains(shifen) ?? true)
+        session.refreshTransfers()
+        let off = session.world.transferTrips(of: shifen)
+        XCTAssertEqual(off, afresh())
+        XCTAssertLessThan(off, regular, "\(off) after the stop is taken off, \(regular) before")
+
+        session.addStationToSelectedLine(shifen)
+        XCTAssertTrue(session.world.line(id: id)?.stops.contains(shifen) ?? false)
+        session.refreshTransfers()
+        XCTAssertEqual(session.world.transferTrips(of: shifen), afresh())
+        XCTAssertEqual(session.world.transferTrips(of: shifen), regular)
+    }
+
     /// Decision 595: a light rail's riders cost a hundredth of a branch
     /// line's, so buying one brings no regulars beyond those changing from
     /// the real trains, and its card does not count them.

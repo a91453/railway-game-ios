@@ -1335,8 +1335,9 @@ public struct GameWorld: Equatable, Sendable {
             stations[index].transferPoints = 0
             passengerPlan = PassengerPlanCache()
             refreshLandDemand()
-        } else if !busRoutes.isEmpty {
-            // Decision 587, continued: no city bus route meets a depot.
+        } else if !busRoutes.isEmpty || !cableways.isEmpty || !ferryRoutes.isEmpty {
+            // Decision 587, continued: no city bus route, cableway or
+            // sailing route meets a depot (REVIEW-L10, L10-2).
             passengerPlan = PassengerPlanCache()
             refreshLandDemand()
         }
