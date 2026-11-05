@@ -281,7 +281,11 @@ final class WaitingPreviewTests: XCTestCase {
         let app = try drawn(waits: true)
         let waiting = StackProbe.deepest { _ = app.networkOverlay }
         print("[WaitingPreviewTests] network overlay stack: at once \(atOnce / 1_024) KB, waiting \(waiting / 1_024) KB")
-        XCTAssertGreaterThan(atOnce, 128 * 1_024, "the probe sees the work tried at once")
+        // Since the world keeps its state on the heap (decision 590,
+        // step 2) the overlay tried at once takes about 86 KB here, no
+        // longer over 128 KB: the probe is checked against the waiting
+        // call, as the map's check is.
+        XCTAssertGreaterThan(atOnce, waiting + 32 * 1_024, "the probe sees the work tried at once")
         XCTAssertLessThan(waiting, 48 * 1_024)
     }
     #endif
