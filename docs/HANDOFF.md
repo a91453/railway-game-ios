@@ -523,6 +523,24 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 48 任的現況（2026-11-05 約 03:40 UTC，session_01YGNNun9jnHVasAKCcWJtLD，第 4 層，壓縮 1 次）**：比下面「第 47 任交第 48 任」新，兩段不同時以這段為準。
+
+- **113.1 已發**：作者要先自己測，在完整驗證跑完前自己按了 `testflight.yml`（run 113，main `240daaf8`）。遊戲規劃沒按。同一個 commit 的完整 `ci.yml`（run 41959675139）與 full lane（iOS App Build run 41959689553）是手動開的，跑完的結果記在 #1579；紅了就修，下一版再發。113.1 的內容：#1824（585 PR-3）、#1825（588）、#1827（589）、#1831（590，CRASH112，112.1 新增路線選第二站閃退）、#1819（FOLLOWXRAY）、#1829（WHATSNEW）、作者合的 #1813、#1817、#1830（591）、#1832（592）。
+- **113.1 實機要確認的**：新增路線、點第二站不再閃退（決策 590 下一步 1）。
+- **114.1（作者 2026-11-05 同意，派出去的都等 113.1 驗證跑完才推）**：
+  - TYMCLIST9 session_01YGNNumzTgdn7KUo2DfZ2yn（Opus，作者已設「高」）：接 #1743 機捷，第二天沒發的班降到 0、補兩個出口的回歸測試（決策 556）。
+  - FERRYFOLLOW session_01YGNNup3Z2AaFgczhVaJ5Bq：#1835 跟隨渡輪四個視角（585 PR-4），第 3 級，截圖要作者看；開截圖前問遊戲規劃。
+  - CRASHROOT-CORE session_01YGNNukm1XUMRsaSUhV9p9X（Opus，請作者設「高」）：GameWorld 改堆上 COW（決策 590 下一步 2），存檔、golden 不動。
+  - CRASHROOT-VIEW session_01YGNNuptxN9XbCga5mi9Tqq：畫軌道預覽也等一輪、拆 `MapView.timedBody`、框大小提醒（590 下一步 3–5）。
+  - 不進 114.1：國道客運玩法（GameCore、存檔、經濟平衡，排 115.1）；「接駁」鈕新圖示（作者挑）。
+- **Codex 素材**：#1834 客運塗裝（決策 **593**，第 3 級，draft；遊戲規劃 2026-11-05 幫它 merge main 解 HANDOFF 衝突，`50b6487`）；飛機與機場 studies 預留決策 **594**，客運塗裝交出後才給 Codex prompt（照決策 579／591 的交付格式；重點：19 人座通勤機、七十人座螺旋槳機、窄體、廣體四型，尺寸照製造商規格；城市航廈加空橋、離島小航廈；跑道、滑行道、地勤車零件；停機位與跑道兩端的接點；只用通用配色，不畫航空公司名稱與商標；參考庫先看 `geo-scene-reference-clean` 的 `geo/airports.geojson` 與 `FlightScene.ts`）。
+- **要看的**：作者合的 #1832（決策 592）把鼓山輪渡站放在 `22.6198008, 120.2700518`，渡輪 3D 的鼓山碼頭往東移約 75 m 後可能和它疊在一起（粗估相距二、三十公尺）。作者：「應該沒什麼差 113.1 先出」。之後拍 `ScreenshotScene.gushanFerry` 看；疊到就讓碼頭讓開站房，或用站房的浮動碼頭當泊位。
+- **114.1 之後**：
+  - **路口號誌輪替**（作者 2026-11-05：「號誌輪替排進114.1之後 寫進md」）：3D 街景的號誌照週期輪替，車流與路人照燈號停走；做法與其他可學的在 [docs/research/BUMPINTO_WORLD_2026-11-05.md](research/BUMPINTO_WORLD_2026-11-05.md)（只讀做法，不抄程式：它的授權禁止商用）。
+  - 同一份裡的樹高資料（Meta／WRI，CC BY 4.0，台灣有）、新加坡開放資料（做海外城市時）。
+  - 固定三件：REVIEW-L10（從 #1803 起）、CIOPT、HEALTH-113；WEB 截圖重派（112.1、113.1 新功能，含渡輪）；「接駁」鈕圖示；作者可刪 branch `claude/follow-xray-before`、`claude/follow-window-diag`。
+- **號碼**：決策 590–594 已用或保留（593 客運塗裝、594 飛機機場）；**下一個 595**。存檔 main 是 85，**下一個 86**。
+
 **第 47 任交第 48 任（2026-11-04 約 21:50 UTC，session_01YGNNuncyse9G7nzdRW6S6p，第 3 層，壓縮 3 次）**：照這段接手；和下面不同時以這段為準。
 
 - **112.1 已發**（作者 10:54 UTC 按，run 112，`bef26cae`；`PLAYER_FEEDBACK.md` 已記，#1804）。作者還沒做的：App Store Connect 的 112.1 出口合規；刪 branch `claude/follow-window-diag`、`claude/follow-xray-before`（#1819 合併後）。
@@ -2054,6 +2072,8 @@
 | 事項 | 狀態 | 在哪裡 |
 | --- | --- | --- |
 | TestFlight 說明與這版新增的結尾 | **固定規則**（作者 2026-11-05：「每一則我都會看不要再寫了」「寫謝謝就好」）。`.github/testflight-whats-new.md` 與 App 內「這版新增」的結尾只寫「謝謝！」（英文 "Thank you!"），不寫「每一則我都會看」，也不寫回報問題與附上畫面的說明 | `.github/testflight-whats-new.md`、`Sources/GamePresentation/WhatsNew.swift` |
+| 路口號誌輪替 | 作者 2026-11-05：「號誌輪替排進114.1之後 寫進md」。做法參考 bumpinto-world，只讀不抄 | §2.0「第 48 任的現況」、[BUMPINTO_WORLD_2026-11-05.md](research/BUMPINTO_WORLD_2026-11-05.md) |
+| 鼓山碼頭與輪渡站地標可能重疊 | 作者 2026-11-05：「應該沒什麼差113.1先出」。之後拍截圖看，疊到再修 | §2.0「第 48 任的現況」 |
 | 介面欄「接駁」鈕的圖示 | 作者 2026-11-04：「好 113.1 不換，之後再畫 寫進md」。113.1 照舊 `bus.fill`；之後畫公車＋渡輪合一的圖示，給作者挑再換 | §2.0「第 47 任交第 48 任」 |
 | 只收購的玩法（10j）不另開模式 | 作者 2026-10-24：「有個小問題 其實我已經有示範地圖了 讓不想蓋鐵軌的直接觀看 那只收購路線的玩法還有必要存在嗎」→ 規劃三個選項的五方比較（A 新遊戲多一個只收購模式 2.75、B 不做 2.60、C 可收購的線擴大＋開局提示 3.25）→「五方決定ok就選那條」。**選了 C**：可收購的線擴到輕軌與捷運，放進一般新遊戲；實景開局提示「可以先買一條線」；不加新遊戲選項、不分新存檔種類；10i 的公車收購沿用決策 315、336，不等 10j。同日作者再加「如果直接收購那一個車站 然後玩家不就能省去蓋站 直接從那一站延伸嗎 感覺也不錯」→「五方決定ok就執行」：**收購單一真實車站**（一小段軌道加月台，價格和自己蓋一樣，不升存檔），排在 10j 的第一個 PR。還在等作者：TDX 的帳號與 API 金鑰（公車班次要用；金鑰不進 repository） | [決策 400](decisions/400.md)、NEXT_PRIORITIES §22.2 第 10i、10j 名 |
 | Game Center（每週排行榜與成就，決策 396） | 作者 2026-10-24：「那先合併 然後做 Game Center」。**第一個 PR**（#1156，已合併，session_01V99archiZKLqZkwqTnsajc）：GamePresentation 的對照（成就 ID、點數、百分比、本週的分數與哪一週的榜）與 App 的 GameKit 呼叫、成就畫面的入口。作者已做完 `docs/GAME_CENTER_SETUP.md` 第 1、2 步（App ID 與 App Store Connect 都開了 Game Center，2026-10-24 截圖）。**設定工具**（#1162，已合併，決策 396 續篇，session_01UNbe）：`docs/game-center/game-center.json` 是排行榜與成就的唯一資料來源，`game-center-setup.yml` 在 GitHub 按一次就建好。**第二個 PR**（#1158，`claude/game-center-art-396`）放三樣東西：(1) Game Center 的 entitlement：`project.yml` 的 `entitlements` 產生 `RailwayGameApp/App/RailwayGame.entitlements`（`com.apple.developer.game-center` = true）；(2) 38 張 1024×1024 成就圖，在 `docs/game-center/achievements/<ID>.png`，已照三輪美術審查改過（第一輪 session_01T1XU，第三輪的 9 張由 session_01EL7e 重畫；各輪改了什麼在 `docs/game-center/README.md`），作者看過 2efc2d9 的總覽說「可以了」，設定工具上傳到 App Store Connect 用，App 不讀；(3) 這一列。**已做**：(a) 第 3、4 步：第 5 次 apply 成功（run 40070031235，2026-10-24 06:30 UTC），1 個排行榜、38 個成就與圖都建好，`PT168H` 與 `FREQ=DAILY;INTERVAL=7` Apple 收了（VERIFIED）。(c) 官網隱私權政策 `Website/site/privacy.html`（參考庫）加了 Game Center 一節，和 iCloud entitlement 同一輪改（決策 397 續，參考庫 PR #68 已合併；要按 Deploy website 才上線）。**還沒做**：(b) 第 5 步，送審的版本勾 Game Center；(d) 排行榜與成就建好之後才發下一版（獨立審查的建議，免得玩家看到空的排行榜）；那一版若匯出或上傳失敗（profile 沒有 Game Center），revert #1158 的 entitlement commit `431a69f` 就回到第一個 PR 的狀態，發版後在實機看一眼 Game Center。iCloud 的 entitlement 不跟 Game Center 一起，等 #1160（決策 397）合併後另外加，同樣可 revert。成就清單或挑戰目標（`ChallengeRecords.rulesVersion`）改了，`GameCenterMapping` 與 `docs/game-center/game-center.json` 一起改（再用 `tools/game-center-setup/game_center_setup.py --write-doc` 更新設定文件），`GameCenterMappingTests` 與 `game-center-setup-checks.yml` 會擋，作者再按一次 Game Center setup | `docs/decisions/396.md`；`docs/GAME_CENTER_SETUP.md` |
