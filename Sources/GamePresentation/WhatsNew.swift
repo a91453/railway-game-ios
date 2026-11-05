@@ -55,6 +55,10 @@ public enum WhatsNew {
                     chinese: "3D 地圖上，淡水—八里、鼓山—旗津的渡輪依班次往返；碼頭有候船棚與跳板。"
                 ),
                 Line(
+                    english: "The 3D map of Kaohsiung harbour now has the Great Harbor Bridge and the Gushan and Cijin ferry terminals.",
+                    chinese: "3D 地圖的高雄港多了大港橋與鼓山、旗津輪渡站。"
+                ),
+                Line(
                     english: "Following a bus, its window view looks out the right side. Following a train or bus at a stop, you can switch to the view from the station.",
                     chinese: "跟隨公車的「車窗」視角改看右側；跟隨列車或公車停站時，可以直接切到「從車站看」。"
                 ),
