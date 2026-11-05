@@ -94,6 +94,26 @@ public struct Map3DFollow: Hashable, Sendable {
             case .station: language.text("Watches the train arrive from the platform of its next stop.", "站在下一站的月台，看列車進站。")
             }
         }
+
+        /// Decision 585 PR-4 (FERRYFOLLOW): the button's name on a boat's
+        /// follow bar (``Map3DFollow/ferryViews``).
+        public func ferryText(in language: DisplayLanguage) -> String {
+            switch self {
+            case .cab: language.text("Bridge", "駕駛台")
+            case .window: language.text("Window", "船艙窗")
+            default: text(in: language)
+            }
+        }
+
+        /// What a boat's button does, for VoiceOver.
+        public func ferryHint(in language: DisplayLanguage) -> String {
+            switch self {
+            case .cab: language.text("Looks ahead from the bridge.", "從駕駛台看前方。")
+            case .window: language.text("Sits in the cabin and looks out of the window.", "坐在船艙裡看窗外。")
+            case .side: language.text("Moves alongside the boat, showing all of it.", "在船旁邊一起移動，看得到整艘船。")
+            default: language.text("Follows the boat from above and behind.", "從船的後上方跟著看。")
+            }
+        }
     }
 
     /// Decision 403 (續): where the station view stands: on a platform of
@@ -122,6 +142,8 @@ public struct Map3DFollow: Hashable, Sendable {
         case bus(BusID)
         /// Decision 583 (CABLEFOLLOW): a cabin of a player's cable car.
         case cabin(CabinID)
+        /// Decision 585 PR-4 (FERRYFOLLOW): a boat of a player's ferry.
+        case ferry(FerryBoatID)
     }
 
     /// Where a followed vehicle is and which way it faces, in the scene's
@@ -200,6 +222,10 @@ public struct Map3DFollow: Hashable, Sendable {
     public var cabin: CabinID? {
         if case .cabin(let id) = subject { id } else { nil }
     }
+    /// Decision 585 PR-4: the ferry boat followed; `nil` for the others.
+    public var ferry: FerryBoatID? {
+        if case .ferry(let id) = subject { id } else { nil }
+    }
     public var view: View
     /// Decision 403 (續): where the station view stands; `nil` follows
     /// from behind instead.
@@ -250,6 +276,37 @@ public struct Map3DFollow: Hashable, Sendable {
     /// train's distance: 0.5, so a cabin some 2 m tall shows as large as
     /// the rope round it lets.
     public static let cabinScale: Float = 0.5
+
+    /// Decision 585 PR-4 (FERRYFOLLOW): following a boat of a ferry route,
+    /// from one of ``ferryViews`` (another view is taken as the nearest of
+    /// them, ``ferryView(_:)``). A boat is 18 to 25 m long, so the camera
+    /// starts at ``ferryScale`` of the train's distance.
+    public init(ferry: FerryBoatID, view: View = .aboveBack) {
+        subject = .ferry(ferry)
+        self.view = Self.ferryView(view)
+        scale = Self.ferryScale
+    }
+
+    /// Decision 585 PR-4: the views of a boat: from its bridge, from its
+    /// cabin's window, from above behind it, from beside it. A boat has
+    /// no platform for the station view, and from behind low it is all
+    /// stern.
+    public static let ferryViews: [View] = [.cab, .window, .aboveBack, .side]
+
+    /// The boat view nearest `view`: from above behind for behind and the
+    /// station.
+    public static func ferryView(_ view: View) -> View {
+        switch view {
+        case .cab: .cab
+        case .window: .window
+        case .side: .side
+        case .back, .aboveBack, .station: .aboveBack
+        }
+    }
+
+    /// Decision 585 PR-4: how close the camera starts to a boat, of the
+    /// train's distance (no nearer than ``Map3DCamera/nearest``).
+    public static let ferryScale: Float = 0.5
 
     /// The nearest and farthest a pinch takes ``scale``.
     public static let scales: ClosedRange<Float> = 0.4...4

@@ -389,6 +389,9 @@ private struct FerryControls: View {
     @Bindable var session: GameSession
     /// The ferry route the player asked to take away, for the confirmation.
     @State private var removing: FerryRouteID?
+    /// Decision 585 PR-4 (FERRYFOLLOW): the card's follow button opens the 3D map.
+    @Environment(GameScreenState.self) private var screen: GameScreenState?
+    @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
 
     /// The headways offered: the real Tamsui–Bali boats sail every 15 to 30 minutes.
     private static let headways: [Int64] = [10, 15, 20, 30]
@@ -494,6 +497,21 @@ private struct FerryControls: View {
                 Text(verbatim: card.title)
                     .font(.subheadline.weight(.semibold))
                 Spacer()
+                // Decision 585 PR-4 (FERRYFOLLOW): ride a boat on the 3D map.
+                if let screen, session.tutorial == nil, map3DQuality.shows3D {
+                    Button {
+                        session.followFerry(on: card.id)
+                        screen.map3DHandoff = nil
+                        screen.showsMap3D = true
+                    } label: {
+                        Text(verbatim: language.text("Follow", "跟隨"))
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.footnote)
+                    .accessibilityHint(Text(verbatim: language.text("Rides along on a boat on the 3D map.", "在 3D 地圖上跟著一艘船。")))
+                    .accessibilityIdentifier("ferry.follow")
+                    .disabled(!session.hasFerryBoatToFollow(on: card.id))
+                }
                 Button(role: .destructive) {
                     removing = card.id
                 } label: {

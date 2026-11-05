@@ -117,6 +117,7 @@ extension GameSession {
         guard world.cabinRuns(id) else { return }
         followedTrainID = nil
         followedBusID = nil
+        followedFerryBoatID = nil
         followedCabinID = id
         updateFollowSounds()
     }

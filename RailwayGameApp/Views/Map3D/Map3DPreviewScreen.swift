@@ -231,6 +231,10 @@ struct Map3DPreviewScreen: View {
                     // Decision 583 (CABLEFOLLOW).
                     Map3DCabinFollowBar(facts: cabin, session: session, view: $followView, takePhoto: takePhoto)
                         .transition(.card(from: .bottom, reduceMotion: reduceMotion))
+                } else if let ferry = session.ferryFollowBar {
+                    // Decision 585 PR-4 (FERRYFOLLOW).
+                    Map3DFerryFollowBar(facts: ferry, session: session, view: $followView, takePhoto: takePhoto)
+                        .transition(.card(from: .bottom, reduceMotion: reduceMotion))
                 } else {
                     Text(verbatim: handedOver == nil
                          ? language.text("Pinch closer to tilt the map, and push two fingers up to tilt it more. Drag to move, two fingers to turn.",
@@ -249,6 +253,7 @@ struct Map3DPreviewScreen: View {
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.busFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.cabinFollowBar != nil)
+            .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.ferryFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
             .ambientHidden(ambient != nil)
             // Decision 414: the idle mode's veil and caption, and its tap.
@@ -320,6 +325,7 @@ struct Map3DPreviewScreen: View {
     private func takePhoto() {
         guard let view = cameraLink.view else { return }
         let title = session.followedTrain.map(\.name) ?? session.busFollowBar?.routeName ?? session.cabinFollowBar?.name
+            ?? session.ferryFollowBar?.name
             ?? DisplayLanguage.app.text("3D Map", "3D 地圖")
         let photo = photo
         // A real-world map's data, written on the photo as the postcard
@@ -366,6 +372,8 @@ struct Map3DPreviewScreen: View {
         if let bus = session.followedBusID, session.busFollowBar != nil { return Map3DFollow(bus: bus, view: view == .station ? .back : view) }
         // Decision 583 (CABLEFOLLOW): a cabin, from its window, above or beside.
         if let cabin = session.followedCabinID, session.cabinFollowBar != nil { return Map3DFollow(cabin: cabin, view: view) }
+        // Decision 585 PR-4 (FERRYFOLLOW): a boat, from its bridge, its window, above or beside.
+        if let boat = session.followedFerryBoatID, session.ferryFollowBar != nil { return Map3DFollow(ferry: boat, view: view) }
         return nil
     }
 
@@ -384,6 +392,12 @@ struct Map3DPreviewScreen: View {
         if session.tool == .select, session.tutorial == nil,
            let cabin = feed.cabin(atX: Float(point.x), y: Float(point.y), camera: camera, in: scene) {
             session.followCabin(cabin)
+            return
+        }
+        // Decision 585 PR-4 (FERRYFOLLOW): and a ferry boat.
+        if session.tool == .select, session.tutorial == nil,
+           let boat = feed.ferryBoat(atX: Float(point.x), y: Float(point.y), camera: camera, in: scene) {
+            session.followFerryBoat(boat)
             return
         }
         guard let hit = Map3DPick.pick(atX: Float(point.x), y: Float(point.y), camera: camera, scene: scene, world: session.world)
@@ -818,6 +832,9 @@ final class Map3DTrainFeed {
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
     /// drawn whole, its way the cable cars' ahead.
     var followedCabin: CabinID?
+    /// Decision 585 PR-4 (FERRYFOLLOW): the boat the camera follows, always
+    /// drawn whole, its way the ferries' ahead.
+    var followedFerry: FerryBoatID?
     /// Decision 437: told the evening garbage truck's tune as heard from
     /// the camera each frame (``GameAudio/setGarbageTruck(_:)``, which
     /// acts only on a change), `nil` when there is none near.
@@ -929,9 +946,34 @@ final class Map3DTrainFeed {
         // Decision 585 PR-3 (FERRY3): and the ferries' piers and boats, on
         // the same clock.
         if let models, let laid = laidFerries(in: scene), let second = cableSecond(at: now) {
-            frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel).instances
+            // Decision 585 PR-4: the followed boat's way is ahead.
+            let ahead = followedFerry.flatMap { laid.pose(of: $0, second: second)?.forward }
+            frame.instances += laid.frame(second: second, eye: eye, target: target ?? eye, pack: models, reach: reach.farModel,
+                                          following: followedFerry, ahead: ahead).instances
         }
         return frame
+    }
+
+    /// Decision 585 PR-4 (FERRYFOLLOW): where boat `id` is now, as the
+    /// follow camera reads it.
+    func ferryPose(_ id: FerryBoatID, in scene: Map3DScene) -> Map3DFollow.Pose? {
+        guard let laid = laidFerries(in: scene), let second = cableSecond(at: Date().timeIntervalSinceReferenceDate) else { return nil }
+        return laid.pose(of: id, second: second)
+    }
+
+    /// Decision 585 PR-4: the pier the followed boat comes to next, built
+    /// round before it is there; none when no boat is followed.
+    func ferryStopsAhead(in scene: Map3DScene?) -> [Map3DPoint] {
+        guard let followedFerry, let scene, let laid = laidFerries(in: scene),
+              let second = cableSecond(at: Date().timeIntervalSinceReferenceDate),
+              let pier = laid.pierAhead(of: followedFerry, second: second) else { return [] }
+        return [pier]
+    }
+
+    /// Decision 585 PR-4: the boat drawn under the finger at (`x`, `y`), if any.
+    func ferryBoat(atX x: Float, y: Float, camera: Map3DCamera, in scene: Map3DScene) -> FerryBoatID? {
+        guard let laid = laidFerries(in: scene), let second = cableSecond(at: Date().timeIntervalSinceReferenceDate) else { return nil }
+        return laid.boat(atX: x, y: y, camera: camera, second: second, within: Map3DBuses.tapReach)
     }
 
     /// Decision 585 PR-3: the ferries laid in `scene`, laid again when
@@ -1095,6 +1137,7 @@ private struct Map3DView: UIViewRepresentable {
             var follow = follow
             feed.followedBus = follow?.bus
             feed.followedCabin = follow?.cabin
+            feed.followedFerry = follow?.ferry
             if let id = follow?.train, follow?.view == .station, let scene {
                 follow?.lookout = Map3DFollow.lookout(of: id, in: world, scene: scene)
             }
@@ -1102,7 +1145,7 @@ private struct Map3DView: UIViewRepresentable {
             // stop's surroundings are built, unless it is too far to be
             // offered.
             context.coordinator.streamer.stops = context.coordinator.stopsAhead(of: follow?.train, in: world, scene: scene)
-                + feed.cabinStopsAhead(in: scene)
+                + feed.cabinStopsAhead(in: scene) + feed.ferryStopsAhead(in: scene)
             if context.coordinator.shownVersion != nil,
                view.following?.subject != follow?.subject || view.following?.view != follow?.view || view.following?.lookout != follow?.lookout {
                 view.follow(follow, reduceMotion: context.environment.accessibilityReduceMotion)
@@ -1149,10 +1192,13 @@ private struct Map3DView: UIViewRepresentable {
         view.streetLife = { camera, lights, budget in feed.streetLife(in: scene, camera: camera, lights: lights, budget: budget) }
         view.busPose = { id in feed.busPose(id, in: scene) }
         view.cabinPose = { id in feed.cabinPose(id, in: scene) }
+        view.ferryPose = { id in feed.ferryPose(id, in: scene) }
         // Decision 583: the strip built ahead lies the way the followed
-        // cabin runs.
+        // cabin runs; decision 585 PR-4: or boat.
         context.coordinator.streamer.ahead = { [weak view] in
-            guard let id = view?.following?.cabin, let pose = feed.cabinPose(id, in: scene) else { return nil }
+            let following = view?.following
+            guard let pose = following?.cabin.flatMap({ feed.cabinPose($0, in: scene) })
+                ?? following?.ferry.flatMap({ feed.ferryPose($0, in: scene) }) else { return nil }
             return SIMD2(pose.forward.x, pose.forward.z)
         }
         if first, let start {
@@ -1743,6 +1789,8 @@ private struct Map3DFollowChoice: View {
     let language: DisplayLanguage
     /// Decision 578: why it cannot be chosen now, if it cannot.
     var unavailable: String?
+    /// Decision 585 PR-4 (FERRYFOLLOW): a boat's names (駕駛台, 船艙窗).
+    var ferry = false
 
     var body: some View {
         let blocked = unavailable != nil && selection != option
@@ -1753,7 +1801,7 @@ private struct Map3DFollowChoice: View {
             UITestTrace.action("map3D.follow.\(option.rawValue) (was \(selection.rawValue))")
             selection = option
         } label: {
-            Text(verbatim: option.text(in: language))
+            Text(verbatim: ferry ? option.ferryText(in: language) : option.text(in: language))
                 .font(.caption.weight(.bold))
                 .fixedSize()
                 .padding(.horizontal, 8)
@@ -1766,7 +1814,7 @@ private struct Map3DFollowChoice: View {
         .buttonStyle(.plain)
         .disabled(blocked)
         .opacity(blocked ? 0.4 : 1)
-        .accessibilityHint(Text(verbatim: unavailable ?? option.hint(in: language)))
+        .accessibilityHint(Text(verbatim: unavailable ?? (ferry ? option.ferryHint(in: language) : option.hint(in: language))))
         .accessibilityAddTraits(selection == option ? .isSelected : [])
         .accessibilityIdentifier("map3D.follow.\(option.rawValue)")
     }
@@ -2045,6 +2093,97 @@ private struct Map3DCabinFollowBar: View {
         let language = session.language
         return ForEach(Map3DFollow.cabinViews, id: \.self) { @Sendable option in
             Map3DFollowChoice(option: option, selection: selection, language: language)
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button(action: takePhoto) {
+            round("camera.fill")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Take Photo", "拍照")))
+        .accessibilityHint(Text(verbatim: session.language.text("Saves the 3D view as a picture to share.", "把現在的 3D 畫面存成照片，可以分享。")))
+        .accessibilityIdentifier("map3D.follow.photo")
+        Button {
+            session.stopFollowingTrain()
+        } label: {
+            round("xmark").foregroundStyle(Theme.onError).background(Theme.error, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: session.language.text("Stop following", "取消跟隨")))
+        .accessibilityIdentifier("map3D.follow.stop")
+    }
+
+    private func round(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.caption.weight(.heavy))
+            .frame(width: 26, height: 26)
+            .background(Theme.chip, in: Circle())
+            .foregroundStyle(Theme.textPrimary)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+    }
+}
+
+/// Decision 585 PR-4 (FERRYFOLLOW): the bar while the 3D map follows a
+/// ferry boat, as the cabin's: the route, the pier it sails to, when it
+/// comes in or leaves, and its four views (bridge, window, above, beside).
+private struct Map3DFerryFollowBar: View {
+    let facts: FerryFollowFacts
+    let session: GameSession
+    @Binding var view: Map3DFollow.View
+    let takePhoto: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 9) {
+                title
+                choices
+                actions
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 9) {
+                    title
+                    Spacer(minLength: 0)
+                    actions
+                }
+                HStack(spacing: 9) { choices }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 2)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .hudFrameMark("map3D.ferryFollowBar")
+        .accessibilityHint(Text(verbatim: session.language.text("Pinch to move closer or farther.", "兩指縮放，拉近或拉遠。")))
+    }
+
+    private var title: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(Palette.ferry)
+                .frame(width: 9, height: 9)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: [facts.name, facts.directionText].joined(separator: " · "))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Text(verbatim: facts.stopText)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var choices: some View {
+        let shown = $view
+        let selection = Binding(get: { Map3DFollow.ferryView(shown.wrappedValue) }, set: { shown.wrappedValue = $0 })
+        let language = session.language
+        return ForEach(Map3DFollow.ferryViews, id: \.self) { @Sendable option in
+            Map3DFollowChoice(option: option, selection: selection, language: language, ferry: true)
         }
     }
 

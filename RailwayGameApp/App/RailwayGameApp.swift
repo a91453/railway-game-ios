@@ -283,6 +283,18 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 585 PR-4 (FERRYFOLLOW): a boat of the scene's first
+            // ferry followed, for the 3D map's boat views: one out on the
+            // crossing, so the water is round it.
+            if DebugLaunch.isSet("-screenshot-follow-ferry") {
+                Task {
+                    await opening.value
+                    if let session = launcher.session, let route = session.world.ferryRoutes.first,
+                       let boat = session.world.ferryBoatMidCrossing(on: route.id) {
+                        session.followFerryBoat(boat)
+                    }
+                }
+            }
             // Decision 539: the first freight train on the track picked and
             // followed, for the 3D map's R200 and container wagons.
             if DebugLaunch.isSet("-screenshot-follow-freight") {

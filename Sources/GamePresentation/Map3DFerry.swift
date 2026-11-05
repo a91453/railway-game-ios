@@ -37,6 +37,27 @@ public enum Map3DFerry {
         /// Whether it sails either end first instead of turning round.
         public var isDoubleEnded: Bool { self == .cijin }
 
+        /// Decision 585 PR-4 (FERRYFOLLOW): where the follow camera sits
+        /// in the boat, read off the model below. The bridge view's eye:
+        /// how far ahead of the middle the wheelhouse's front window
+        /// stands (the passenger boat's wheelhouse is forward, x 4.8,
+        /// 2.6 m long; the double-ended ferry's in the middle, 11.8 m long,
+        /// the same either way) and how high over the water (the
+        /// wheelhouse's windows' middle: floor 2.95 m, 1.55 m tall; floor
+        /// 5.73 m, 1.9 m tall).
+        public var bridgeFront: Float { self == .tamsui ? 6.1 : 5.9 }
+        public var bridgeEye: Float { self == .tamsui ? 3.95 : 6.9 }
+        /// The cabin window view's seat: a seated eye 1.15 m over the
+        /// saloon's floor (the open lower deck at 0.77 m; the upper saloon
+        /// at 3.40 m), as far out to the side as the walls and posts
+        /// stand within the near plane (1.2 m) and are not drawn over the
+        /// view (posts at 1.98 m; the saloon's wall at 3.25 m).
+        public var seatAcross: Float { self == .tamsui ? 1.3 : 2.6 }
+        public var seatHeight: Float { self == .tamsui ? 1.92 : 4.55 }
+        /// How tall it stands over the water, for the view beside it (to
+        /// the wheelhouse's roof).
+        public var height: Float { self == .tamsui ? 4.6 : 7.8 }
+
         /// The boat a route's crossing draws: the double-ended ferry on a
         /// short harbour crossing (under a kilometre, as Gushan–Cijin's
         /// 715 m), the passenger boat on a longer one (as Tamsui–Bali's
