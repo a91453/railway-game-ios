@@ -185,11 +185,15 @@ public struct Map3DFollow: Hashable, Sendable {
             public var height: Float
             /// Under level, in radians.
             public var lookDown: Float
+            /// Decision 585 PR-4: ahead of ``Pose/middle`` (behind it when
+            /// less than 0), to sit between the posts.
+            public var along: Float
 
-            public init(across: Float, height: Float, lookDown: Float) {
+            public init(across: Float, height: Float, lookDown: Float, along: Float = 0) {
                 self.across = across
                 self.height = height
                 self.lookDown = lookDown
+                self.along = along
             }
         }
 
@@ -514,7 +518,7 @@ public struct Map3DFollow: Hashable, Sendable {
             next.pitch = tilt
             next.lens = Self.cabLens
             next.distance = Map3DCamera.nearest
-            var eye = (head.middle ?? head.rail) + left * seat.across + Map3DPoint(0, seat.height, 0)
+            var eye = (head.middle ?? head.rail) + left * seat.across + forward * seat.along + Map3DPoint(0, seat.height, 0)
             if let ground = head.ground, !head.inTunnel { eye.y = max(eye.y, ground + seat.height) }
             next.target = eye + next.forward * (next.distance * sinf(tilt)) - Map3DPoint(0, next.distance * cosf(tilt), 0)
             return next

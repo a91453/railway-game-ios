@@ -557,7 +557,8 @@ public struct Map3DFerries: Sendable {
         let forward = Self.travel(laid, on: line)
         return Map3DFollow.Pose(forward: forward, nose: laid.point + forward * boat.bridgeFront, rail: laid.point, middle: laid.point,
                                 length: boat.length, ground: nil, inTunnel: false, eyeHeight: boat.bridgeEye, bodyHeight: boat.height,
-                                window: .init(across: boat.seatAcross, height: boat.seatHeight, lookDown: Self.seatLookDown))
+                                window: .init(across: boat.seatAcross, height: boat.seatHeight, lookDown: Self.seatLookDown,
+                                             along: boat.seatAlong))
     }
 
     /// Decision 585 PR-4: the cabin window view looks a little down, at

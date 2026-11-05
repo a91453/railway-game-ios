@@ -142,6 +142,7 @@ final class FerryFollowTests: XCTestCase {
         let left = Map3DPoint(pose.forward.z, 0, -pose.forward.x)
         XCTAssertEqual(seat.dot(left), Map3DFerry.Boat.tamsui.seatAcross, accuracy: 0.05)
         XCTAssertEqual(seat.y, Map3DFerry.Boat.tamsui.seatHeight, accuracy: 0.05)
+        XCTAssertEqual(seat.dot(pose.forward), Map3DFerry.Boat.tamsui.seatAlong, accuracy: 0.05)
         XCTAssertGreaterThan(window.forward.dot(left), 0.9)
     }
 
