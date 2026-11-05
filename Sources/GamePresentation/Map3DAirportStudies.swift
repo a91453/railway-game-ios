@@ -53,78 +53,78 @@ public enum Map3DAirportStudies {
             let city=kind == .cityTerminal
             let l:Float=city ? 90 : 25, w:Float=city ? 42 : 13, h:Float=city ? 11 : 4.5
             b.box(0,0,0,l,w,h,white)
-            b.box(0,h,0,l+2,w+2,.25,blue)
-            b.box(l*.5,0,0,.08,w*.8,h*.7,glass)
-            b.box(l*.5+2.3,h*.60,0,5,w*.68,.19,blue)
-            for z in [-w*.31,Float(0),w*.31] { b.box(l*.5+.11,.55,z,.08,.15,h*.55,white) }
+            b.box(0,h,0,l+2,w+2,0.25,blue)
+            b.box(l*0.5,0,0,0.08,w*0.8,h*0.7,glass)
+            b.box(l*0.5+2.3,h*0.60,0,5,w*0.68,0.19,blue)
+            for z in [-w*0.31,Float(0),w*0.31] { b.box(l*0.5+0.11,0.55,z,0.08,0.15,h*0.55,white) }
             if city {
-                b.box(-l*.21,h+.25,-w*.17,9,5,1.55,steel)
+                b.box(-l*0.21,h+0.25,-w*0.17,9,5,1.55,steel)
                 b.box(-54,0,-27,7,7,26,steel)
                 b.box(-54,26,-27,10,10,3,glass)
-                b.box(-54,29,-27,10.5,10.5,.22,blue)
+                b.box(-54,29,-27,10.5,10.5,0.22,blue)
                 b.box(-72,0,63,36,30,12,steel)
-                b.box(-72,0,47.95,30,.09,9,blue)
+                b.box(-72,0,47.95,30,0.09,9,blue)
                 for y:Float in [-17,-5,5,20] {
                     let base:Float=y<0 ? 2 : 3.1
                     b.box(54,base,y,18,2.4,2.5,white)
-                    b.box(61,0,y,.3,.3,base,steel)
+                    b.box(61,0,y,0.3,0.3,base,steel)
                 }
             } else {
-                b.box(l*.5+.14,.55,-w*.26,.10,1.55,2.25,dark)
-                b.box(l*.5+4,0,0,8,w*.86,.08,deck)
+                b.box(l*0.5+0.14,0.55,-w*0.26,0.10,1.55,2.25,dark)
+                b.box(l*0.5+4,0,0,8,w*0.86,0.08,deck)
             }
         case .runway:
-            b.box(0,0,0,60,30,.08,dark)
+            b.box(0,0,0,60,30,0.08,dark)
             for x:Float in [-28,28] {
-                for y:Float in [-9,-3,3,9] { b.box(x,.085,y,2.4,1.3,.018,white) }
+                for y:Float in [-9,-3,3,9] { b.box(x,0.085,y,2.4,1.3,0.018,white) }
             }
-            for x in stride(from:-24,through:24,by:8) { b.box(Float(x),.09,0,3,.28,.015,white) }
+            for x in stride(from:-24,through:24,by:8) { b.box(Float(x),0.09,0,3,0.28,0.015,white) }
             if !far {
-                for y:Float in [-13,13] { for x:Float in [-16,16] { b.box(x,.09,y,7,.36,.015,white) } }
-                for x in stride(from:-28,through:28,by:7) { for y:Float in [-14.7,14.7] { b.box(Float(x),.09,y,.18,.18,.16,white) } }
+                for y:Float in [-13,13] { for x:Float in [-16,16] { b.box(x,0.09,y,7,0.36,0.015,white) } }
+                for x in stride(from:-28,through:28,by:7) { for y:Float in [-14.7,14.7] { b.box(Float(x),0.09,y,0.18,0.18,0.16,white) } }
             }
         case .taxiway:
-            b.box(0,0,0,30,12,.08,steel);b.box(0,.09,0,30,.18,.015,yellow)
-            if !far { for x:Float in [-13,0,13] { for y:Float in [-5.9,5.9] { b.box(x,.09,y,.17,.17,.15,blue) } } }
+            b.box(0,0,0,30,12,0.08,steel);b.box(0,0.09,0,30,0.18,0.015,yellow)
+            if !far { for x:Float in [-13,0,13] { for y:Float in [-5.9,5.9] { b.box(x,0.09,y,0.17,0.17,0.15,blue) } } }
         case .apron:
-            b.box(0,0,0,80,80,.08,deck)
+            b.box(0,0,0,80,80,0.08,deck)
             for y:Float in [-24,0,24] {
-                b.box(0,.09,y,24,.18,.015,yellow)
-                b.box(9,.09,y,.24,3,.015,yellow)
+                b.box(0,0.09,y,24,0.18,0.015,yellow)
+                b.box(9,0.09,y,0.24,3,0.015,yellow)
             }
         case .papi:
-            for i in 0..<4 { b.box(0,0,Float(i)*0.7,.26,.26,.34,i<2 ? Map3DPalette.shopAwnings[1] : white) }
+            for i in 0..<4 { b.box(0,0,Float(i)*0.7,0.26,0.26,0.34,i<2 ? Map3DPalette.shopAwnings[1] : white) }
         case .windsock:
-            b.box(0,0,0,.10,.10,5,steel);b.box(.8,4.6,0,1.6,.42,.42,yellow)
+            b.box(0,0,0,0.10,0.10,5,steel);b.box(0.8,4.6,0,1.6,0.42,0.42,yellow)
         case .fence:
-            for x:Float in [-4,0,4] { b.box(x,0,0,.1,.1,2.5,steel) }
-            for z:Float in [.55,1.30,2.05] { b.box(0,z,0,8,.055,.055,steel) }
-            if !far { for i in -7...7 { b.box(Float(i)*.5,.3,0,.035,.04,2.1,steel) } }
+            for x:Float in [-4,0,4] { b.box(x,0,0,0.1,0.1,2.5,steel) }
+            for z:Float in [0.55,1.30,2.05] { b.box(0,z,0,8,0.055,0.055,steel) }
+            if !far { for i in -7...7 { b.box(Float(i)*0.5,0.3,0,0.035,0.04,2.1,steel) } }
         case .tug, .baggageCart, .boardingStairs, .fuelTruck:
             let l:Float = switch kind { case .tug:2.7; case .baggageCart:4.5; case .boardingStairs:5; default:6.8 }
             let w:Float = kind == .fuelTruck ? 2.3 : 1.5
-            b.box(0,.38,0,l,w,.35,steel)
-            for x in [-l*.33,l*.33] { for y in [-w*.4,w*.4] { b.box(x,0,y,.38,.2,.45,dark) } }
+            b.box(0,0.38,0,l,w,0.35,steel)
+            for x in [-l*0.33,l*0.33] { for y in [-w*0.4,w*0.4] { b.box(x,0,y,0.38,0.2,0.45,dark) } }
             switch kind {
             case .tug:
-                b.box(-.65,.73,0,1.05,w*.9,.75,white)
-                b.box(-.11,1.02,0,.04,w*.72,.32,glass)
-                b.box(l*.55,.45,0,.62,.15,.13,dark)
+                b.box(-0.65,0.73,0,1.05,w*0.9,0.75,white)
+                b.box(-0.11,1.02,0,0.04,w*0.72,0.32,glass)
+                b.box(l*0.55,0.45,0,0.62,0.15,0.13,dark)
             case .baggageCart:
-                b.box(-1.55,.73,0,.95,w*.8,.85,white)
-                for x:Float in [-.3,1.25] {
-                    b.box(x,.73,0,1.3,w*.84,.22,blue)
-                    if !far { for z:Float in [-.42,.42] { b.box(x,.95,z,.65,.38,.4,yellow) } }
+                b.box(-1.55,0.73,0,0.95,w*0.8,0.85,white)
+                for x:Float in [-0.3,1.25] {
+                    b.box(x,0.73,0,1.3,w*0.84,0.22,blue)
+                    if !far { for z:Float in [-0.42,0.42] { b.box(x,0.95,z,0.65,0.38,0.4,yellow) } }
                 }
             case .boardingStairs:
-                b.box(-1.65,.73,0,.95,w*.8,1.05,white)
+                b.box(-1.65,0.73,0,0.95,w*0.8,1.05,white)
                 let steps=far ? 4 : 8
-                for i in 0..<steps { b.box(-.9+Float(i)*2.9/Float(steps),.75+Float(i+1)*2.3/Float(steps),0,2.9/Float(steps)+.02,w*.66,.12,steel) }
-                b.box(2,3.05,0,.75,w*.72,.15,blue)
+                for i in 0..<steps { b.box(-0.9+Float(i)*2.9/Float(steps),0.75+Float(i+1)*2.3/Float(steps),0,2.9/Float(steps)+0.02,w*0.66,0.12,steel) }
+                b.box(2,3.05,0,0.75,w*0.72,0.15,blue)
             case .fuelTruck:
-                b.box(2.35,.73,0,1.25,w*.85,1.28,white)
-                b.box(-.9,.84,0,4.45,w*.7,1.68,white)
-                if !far { b.box(-.3,.88,w*.48,1.05,.18,.62,blue) }
+                b.box(2.35,0.73,0,1.25,w*0.85,1.28,white)
+                b.box(-0.9,0.84,0,4.45,w*0.7,1.68,white)
+                if !far { b.box(-0.3,0.88,w*0.48,1.05,0.18,0.62,blue) }
             default: break
             }
         }
