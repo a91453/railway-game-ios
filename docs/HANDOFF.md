@@ -544,6 +544,7 @@
 - **TRACKCOUNT-STUDY**（session_01YGNNupRpibmgLDxF9Uxs5E，`claude/trackcount-study`，docs only，2026-11-05）：8 條可收購城市線每站股道「遊戲 vs 真實（OSM＋桃捷官方班表）」與照真實改建的建議，見 [URBAN_TRACK_LAYOUT_2026-11-05](research/URBAN_TRACK_LAYOUT_2026-11-05.md)。機捷第一：真實直達車每天約 144 次全在 A8 長庚醫院（4 股）越車，遊戲長庚 2 股、直達車每站停；之後的 TYMC-EXPRESS 照那份的第 1 節做。
 - **TOURSRC-STUDY**：見下面「觀光客源」，docs-only，綠了就合。
 - **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
+- **REVIEW-L10**（session_01YGNNuoB7f2rfxdhAmyP2L8，第 50 任派）：審 #1803–#1857，報告 `docs/archive/PR1803_1857_REVIEW_HANDOFF.md`。P1 0、P2 1（**L10-1**：#1843 買來的線拿掉一站後，那站留著常客人數，`RealTransfers.swift` 的 `TransferMemo` 鍵少了停靠站）、P3 12，都**還沒派**。下一輪 REVIEW-L11 從 #1858 起。
 
 **第 49 任的現況（2026-11-05 約 10:40 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 2 次，還沒換手）**：比下面「第 48 任交第 49 任」新，兩段不同時以這段為準。
 
