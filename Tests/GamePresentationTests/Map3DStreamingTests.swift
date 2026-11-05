@@ -390,4 +390,21 @@ final class Map3DStreamingTests: XCTestCase {
         let window = window()
         XCTAssertTrue(window.isBuilt(round: Map3DPoint(900_000, 0, 0)))
     }
+
+    // MARK: - Decision 606 (續): a followed real train's ground
+
+    /// Built in full round the scene's middle; a coarse chunk there, or
+    /// a place past the scene, is not.
+    func testARealTrainsGroundIsBuiltInFullOnlyWhereNoChunkIsCoarse() {
+        let grid = streaming()
+        let region = WorldRegion(minX: grid.originX - 2_000 * metre, minY: grid.originY - 2_000 * metre,
+                                 maxX: grid.originX + 2_000 * metre, maxY: grid.originY + 2_000 * metre)
+        let whole = Map3DStreaming.Window(grid: grid, region: region)
+        XCTAssertTrue(whole.isBuilt(round: .zero))
+        XCTAssertTrue(whole.isBuiltInFull(round: .zero))
+        XCTAssertFalse(whole.isBuiltInFull(round: Map3DPoint(5_000, 0, 0)), "past the scene")
+        let coarse = Map3DStreaming.Window(grid: grid, region: region, coarse: [grid.key(of: .zero)])
+        XCTAssertTrue(coarse.isBuilt(round: .zero))
+        XCTAssertFalse(coarse.isBuiltInFull(round: .zero), "the city not in full there")
+    }
 }

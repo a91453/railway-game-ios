@@ -415,21 +415,27 @@ struct Map3DPreviewScreen: View {
     }
 
     /// Decision 606: tells the idle mode when the built map first shows
-    /// its real train, and when it has not been found on it for ``AmbientDirector/realTrainLostChecks``
-    /// checks in a row, a second apart.
+    /// its real train on built ground, and passes it on when it has not
+    /// been found for ``AmbientDirector/realTrainLostChecks`` checks in a
+    /// row, a second apart, or found where the ground round it is not
+    /// built for ``AmbientDirector/realTrainBareChecks`` (``AmbientDirector/RealTrainWatch``).
     private func watchRealTrain() async {
         guard let id = ambientScreen?.ambient?.realTrain else { return }
-        var misses = 0
+        var watch = AmbientDirector.RealTrainWatch()
         while !Task.isCancelled, ambientScreen?.ambient?.realTrain == id {
             try? await Task.sleep(for: .seconds(1))
             guard let scene else { continue }
-            let found = feed.realTrainPose(id, in: scene) != nil
-            misses = found ? 0 : misses + 1
-            if found, ambientScreen?.ambient?.realTrainSeen == false {
-                // The corner line naming it fades in as it shows.
-                withAnimation(reduceMotion ? nil : MotionRule.ambientCut.animation) { ambientScreen?.ambient?.realTrainSeen = true }
-            }
-            if misses >= AmbientDirector.realTrainLostChecks {
+            let pose = feed.realTrainPose(id, in: scene)
+            let built = pose.map { cameraLink.view?.trainGroundBuilt?($0.rail) ?? true } ?? false
+            switch watch.check(found: pose != nil, built: built) {
+            case .waiting:
+                break
+            case .seen:
+                if ambientScreen?.ambient?.realTrainSeen == false {
+                    // The corner line naming it fades in as it shows.
+                    withAnimation(reduceMotion ? nil : MotionRule.ambientCut.animation) { ambientScreen?.ambient?.realTrainSeen = true }
+                }
+            case .lost:
                 ambientScreen?.ambient?.lostRealTrain = id
                 return
             }
@@ -748,6 +754,11 @@ final class Map3DChunkStreamer {
     /// no window, the scene is whole).
     func isBuilt(round point: Map3DPoint) -> Bool {
         window?.isBuilt(round: point) ?? true
+    }
+
+    /// Decision 606 (續): the same, with the city in full there.
+    func isBuiltInFull(round point: Map3DPoint) -> Bool {
+        window?.isBuiltInFull(round: point) ?? true
     }
 
     /// The camera this frame, at `time`.
@@ -1144,6 +1155,7 @@ private struct Map3DView: UIViewRepresentable {
         context.coordinator.streamer.view = view
         view.onCamera = { [weak coordinator = context.coordinator] camera, time in coordinator?.streamer.step(camera, at: time) }
         view.lookoutBuilt = { [weak coordinator = context.coordinator] eye in coordinator?.streamer.isBuilt(round: eye) ?? true }
+        view.trainGroundBuilt = { [weak coordinator = context.coordinator] rail in coordinator?.streamer.isBuiltInFull(round: rail) ?? true }
         view.landed = { [weak coordinator = context.coordinator] in coordinator?.showHeading() }
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1

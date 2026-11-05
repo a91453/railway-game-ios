@@ -116,6 +116,44 @@ final class AmbientRealTrainsTests: XCTestCase {
         XCTAssertNotEqual(next.subject, first.subject)
     }
 
+    // MARK: - Decision 606 (續): watching the train followed
+
+    /// Its name shows only once it is found on built ground; found where
+    /// the ground is not built three checks in a row, the director passes
+    /// on, sooner than the eight a train in a tunnel is given.
+    func testATrainOnBareGroundIsPassedOnAfterThreeChecks() {
+        typealias Watch = AmbientDirector.RealTrainWatch
+        var watch = Watch()
+        XCTAssertEqual(watch.check(found: true, built: false), .waiting, "no name before the ground shows")
+        XCTAssertEqual(watch.check(found: true, built: true), .seen)
+        XCTAssertEqual(watch.check(found: true, built: false), .waiting)
+        XCTAssertEqual(watch.check(found: true, built: false), .waiting)
+        XCTAssertEqual(watch.check(found: true, built: false), .lost)
+        XCTAssertEqual(AmbientDirector.realTrainBareChecks, 3)
+
+        // Built again in between: counted afresh.
+        var back = Watch()
+        for _ in 0..<5 {
+            XCTAssertEqual(back.check(found: true, built: false), .waiting)
+            XCTAssertEqual(back.check(found: true, built: true), .seen)
+        }
+
+        // Not found (a tunnel): eight checks, whatever the ground.
+        var tunnel = Watch()
+        for _ in 1..<AmbientDirector.realTrainLostChecks {
+            XCTAssertEqual(tunnel.check(found: false, built: false), .waiting)
+        }
+        XCTAssertEqual(tunnel.check(found: false, built: false), .lost)
+        // Out of the tunnel on bare ground: three more, not one.
+        var out = Watch()
+        _ = out.check(found: true, built: false)
+        _ = out.check(found: true, built: false)
+        XCTAssertEqual(out.check(found: false, built: false), .waiting)
+        XCTAssertEqual(out.check(found: true, built: false), .waiting)
+        XCTAssertEqual(out.misses, 0)
+        XCTAssertEqual(out.bare, 1)
+    }
+
     // MARK: - With the real timetables
 
     private let weekday = RealServiceDay(weekday: 3)

@@ -173,6 +173,9 @@ final class Map3DMetalView: MTKView {
     /// stands on are built; until they are, the camera stays above and
     /// behind the train, and flies to the platform once they are.
     var lookoutBuilt: (@MainActor (Map3DPoint) -> Bool)?
+    /// Decision 606 (續): whether the ground round a followed real train
+    /// is built, with the city in full.
+    var trainGroundBuilt: (@MainActor (Map3DPoint) -> Bool)?
     private var lookoutWasBuilt = true
 
     private struct Chunk {

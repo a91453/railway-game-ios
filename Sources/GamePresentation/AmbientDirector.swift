@@ -177,6 +177,50 @@ public struct AmbientDirector: Equatable, Sendable {
     /// built, may not find the real train it follows before the director
     /// passes on to the next (in a tunnel, or gone past the scene).
     public static let realTrainLostChecks = 8
+    /// Decision 606 (續): how many checks a second apart the real train
+    /// followed may be found with the ground round it not built (run out
+    /// of the scene, or ahead of what is built) before the director passes
+    /// on to the next.
+    public static let realTrainBareChecks = 3
+
+    /// Decision 606 (續): the 3D map's checks, a second apart, on the real
+    /// train it follows: whether its name may show, and when to pass on.
+    public struct RealTrainWatch: Equatable, Sendable {
+        /// What a check finds.
+        public enum Outcome: Equatable, Sendable {
+            /// Not yet shown on built ground: wait.
+            case waiting
+            /// Shown on built ground: its name may show.
+            case seen
+            /// Lost (``AmbientDirector/realTrainLostChecks`` checks not
+            /// found) or on bare ground (``AmbientDirector/realTrainBareChecks``):
+            /// pass on to the next.
+            case lost
+        }
+
+        /// Checks in a row it was not found, and found on ground not built.
+        public private(set) var misses = 0
+        public private(set) var bare = 0
+
+        public init() {}
+
+        /// One check: whether the 3D map found the train, and whether the
+        /// ground round it is built.
+        public mutating func check(found: Bool, built: Bool) -> Outcome {
+            guard found else {
+                misses += 1
+                bare = 0
+                return misses >= AmbientDirector.realTrainLostChecks ? .lost : .waiting
+            }
+            misses = 0
+            guard built else {
+                bare += 1
+                return bare >= AmbientDirector.realTrainBareChecks ? .lost : .waiting
+            }
+            bare = 0
+            return .seen
+        }
+    }
     /// Decision 606: the 3D views a real train is followed from, in turn
     /// (``Map3DFollow/realTrainViews``).
     public static let realViews3D = Map3DFollow.realTrainViews
