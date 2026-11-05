@@ -67,8 +67,15 @@ public struct Map3DVertex: Hashable, Sendable {
     /// night (``glowing`` and ``trainGlass`` at once).
     public static let trainGlassLit: Float = -15
 
+    /// Opt-in translucent native glass, drawn after opaque geometry. `u`
+    /// is per-surface opacity and `v` the baked reflection shade. Colour
+    /// alpha retains its stripe meaning. Existing train glass is unchanged.
+    public static let transparentGlass: Float = -16
+    public static let transparentGlassLit: Float = -17
+    public var isTransparentGlass: Bool { layer == Self.transparentGlass || layer == Self.transparentGlassLit }
+
     /// Whether the vertex is lit from within at night.
-    public var glows: Bool { (layer < -1.5 && layer > -2.5) || (layer < -14.5 && layer > -15.5) }
+    public var glows: Bool { (layer < -1.5 && layer > -2.5) || (layer < -14.5 && layer > -15.5) || layer == Self.transparentGlassLit }
     /// Decision 450: whether the vertex is a train's glass or stainless body.
     public var isTrainMaterial: Bool { layer < -12.5 && layer > -15.5 }
     /// Decision 356: whether the vertex is water.
