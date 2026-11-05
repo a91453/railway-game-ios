@@ -15,6 +15,15 @@ final class TourismSessionTests: XCTestCase {
     // MARK: - The catalog
 
     /// The Swift table is the tool's output, row for row.
+    /// Decision 601: a sight with no tourists' route says how to give it
+    /// one, and names the map's edge only where the edge sends tourists.
+    func testNoSourceSaysWhatToJoin() {
+        XCTAssertEqual(AttractionStatus.noSource.title(in: .traditionalChinese), "沒有客源路線。把它的車站接到有人住的車站吧。")
+        XCTAssertEqual(AttractionStatus.noSource.title(in: .traditionalChinese, edge: true), "沒有客源路線。把它的車站接到有人住的車站，或地圖邊緣吧。")
+        XCTAssertEqual(AttractionStatus.noSource.title(in: .english), "No route from where tourists come. Join its station to one where people live.")
+        XCTAssertEqual(AttractionStatus.ok.title(in: .english, edge: true), "Tourists are coming")
+    }
+
     func testTheCatalogIsTheToolsFile() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("tools/tourism-spots/taiwan_attractions.json")

@@ -49,11 +49,19 @@ extension AttractionKind {
 }
 
 extension AttractionStatus {
-    public func title(in language: DisplayLanguage) -> String {
+    /// What the tourism panel says; `edge` when the map's edge sends
+    /// tourists too (outside connections on), so joining to it helps
+    /// (decision 601: the whole-Taiwan map has no such edge).
+    public func title(in language: DisplayLanguage, edge: Bool = false) -> String {
         switch self {
         case .ok: language.text("Tourists are coming", "觀光客會來")
         case .noStation: language.text("No station within 800 m with a train", "800 公尺內沒有車站（或沒有列車停靠）")
-        case .noSource: language.text("No route from where tourists come", "沒有客源路線")
+        case .noSource:
+            edge
+                ? language.text("No route from where tourists come. Join its station to one where people live, or to the map's edge.",
+                                "沒有客源路線。把它的車站接到有人住的車站，或地圖邊緣吧。")
+                : language.text("No route from where tourists come. Join its station to one where people live.",
+                                "沒有客源路線。把它的車站接到有人住的車站吧。")
         case .typhoon: language.text("A typhoon blows over it today", "今天颱風影響這裡")
         }
     }
@@ -127,7 +135,7 @@ extension GameWorld {
                 id: sight.id, name: sight.name(in: language), kind: sight.kind.title(in: language), stars: stars(of: sight),
                 starsText: starsText(of: sight), souvenir: sight.souvenir, hotels: hotelsNear(sight),
                 sightseeingTrainText: Self.sightseeingTrainText(stars: sightseeingTrainStars(near: sight), in: language),
-                status: status, statusText: status.title(in: language),
+                status: status, statusText: status.title(in: language, edge: outsideConnections),
                 stationName: attractionStation(of: sight.id).flatMap { station(id: $0)?.name }, today: today,
                 yesterday: sight.yesterday, thisYear: sight.thisYear, lastYear: sight.lastYear, nextShop: offer, point: sight.point
             )
