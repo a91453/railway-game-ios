@@ -183,8 +183,13 @@ final class Map3DRealTrainsTests: XCTestCase {
             let time = Date().timeIntervalSince(built)
             let real = try XCTUnwrap(scene.realTrains)
             let samples = real.tracks.flatMap { $0 }.flatMap { $0.shown[0] }
+            // Decision 600: and those drawn at every distance (a chunk not
+            // in detail draws its first ``Map3DScene/Chunk/baseIndexCount``).
+            func base(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.baseIndexCount / 3 } }
             print("\(name): \(real.traffic.lines.count) lines; scene built in \(String(format: "%.2f", time)) s (\(String(format: "%.2f", plainTime)) s without);"
-                  + " real track \(scene.triangleCount - plain.triangleCount) triangles; \(samples.filter { $0 }.count) of \(samples.count) samples shown")
+                  + " real track \(scene.triangleCount - plain.triangleCount) triangles, \(base(scene) - base(plain)) at every distance"
+                  + " (of the scene's \(base(scene)) at every distance, \(scene.triangleCount) in all);"
+                  + " \(samples.filter { $0 }.count) of \(samples.count) samples shown")
             for (view, eye) in [("close", Map3DPoint(0, 200, 0)), ("far", Map3DPoint(0, 8_000, 0))] {
                 var worst = (second: 0, instances: 0, triangles: 0, boxes: 0, cost: 0.0)
                 var total = 0.0, frames = 0

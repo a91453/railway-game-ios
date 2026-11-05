@@ -154,7 +154,12 @@ final class Feature284To286UITests: XCTestCase {
         let choose = app.buttons["catalog.choose"]
         XCTAssertTrue(app.scrollUntilShown(choose, in: scroll))
         tap(choose)
-        XCTAssertTrue(app.buttons["catalog.cancel"].disappears(within: 10))
+        // Touched again when the showroom stays: the touch was lost while
+        // the app's main thread stood still (the full lane of decision 604's
+        // branch, run 42044357168: catalog.cancel still there 10 s later).
+        let cancel = app.buttons["catalog.cancel"]
+        if !cancel.disappears(within: 10), choose.exists, choose.isHittable { choose.tap() }
+        XCTAssertTrue(cancel.disappears(within: 10))
     }
 
     private func launch(_ world: String) {

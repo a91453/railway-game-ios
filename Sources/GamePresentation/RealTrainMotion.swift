@@ -410,9 +410,21 @@ public struct RealTrainTraffic: Sendable {
         /// Each run's key (decision 532: its model and number), when the
         /// runs have their own; otherwise a run is keyed by its index.
         let keys: [String]?
+        /// Decision 600: each run's train number, when given.
+        var numbers: [String]? = nil
 
         init(_ runs: [RealTrainRun]) {
             self.runs = runs.sorted { $0.start < $1.start }
+            longest = runs.map { $0.end - $0.start }.max() ?? 0
+            keys = nil
+        }
+
+        /// Decision 600: runs each of the train `numbers` gives, keyed by
+        /// index as ``init(_:)`` keys them.
+        init(_ runs: [RealTrainRun], numbers: [String]) {
+            let order = runs.indices.sorted { runs[$0].start < runs[$1].start }
+            self.runs = order.map { runs[$0] }
+            self.numbers = order.map { numbers[$0] }
             longest = runs.map { $0.end - $0.start }.max() ?? 0
             keys = nil
         }
@@ -557,11 +569,13 @@ public struct RealTrainTraffic: Sendable {
             // The High Speed Rail: each stop by its station's name.
             var kmByName: [String: Double] = [:]
             for (station, km) in zip(line.stations, stationKm) where kmByName[station.name] == nil { kmByName[station.name] = km }
-            schedule = .daily(Runs(day.trains.compactMap { train in
+            // Decision 600: each with its number, for its track assignment.
+            let made = day.trains.compactMap { train in
                 RealTrainRun(stops: train.stops.compactMap { stop in
                     kmByName[stop.name].map { RealTrainRun.Stop(km: $0, arrival: stop.arrivalSecond, departure: stop.departureSecond) }
-                }, performance: .of(system: system))
-            }))
+                }, performance: .of(system: system)).map { (run: $0, number: train.number) }
+            }
+            schedule = .daily(Runs(made.map(\.run), numbers: made.map(\.number)))
         } else if let round = headwayRun(line, of: system, stationKm: stationKm, ringKm: ringKm),
                   line.peakHeadwaySec ?? line.offpeakHeadwaySec != nil {
             schedule = .headway(round, period: round.end)
