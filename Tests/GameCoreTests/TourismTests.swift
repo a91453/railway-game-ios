@@ -257,6 +257,42 @@ final class TourismTests: XCTestCase {
         XCTAssertEqual(elsewhere.attractionStatus(of: AttractionID(rawValue: 1)), .noSource)
     }
 
+    /// Decision 601: the busiest stations tourists come from are picked
+    /// among those that can ride to the sight. Six stations elsewhere with
+    /// more residents, joined to nothing, used to fill the five places, and
+    /// the branch line's sight drew no one (TestFlight 114.1: Checheng on a
+    /// bought Jiji Line).
+    func testBiggerStationsElsewhereDoNotTakeTheSightsTourists() throws {
+        var world = try GameWorld(bounds: WorldBounds(width: 1_048_576, height: 65_536), economy: fixtureEconomy(balance: 300_000_000, costs: testCosts))
+        let home = try world.buildStation(named: "Home", at: PlanPoint(x: 20_480, y: 32_768)).id
+        let foot = try world.buildStation(named: "Foot", at: PlanPoint(x: 122_880, y: 32_768)).id
+        let line = try world.createLine(named: "Branch", stops: [home, foot]).id
+        let train = try world.purchaseTrain(named: "T").id
+        try world.assignTrain(train, to: line)
+        var elsewhere: [StationID] = []
+        for index in 0 ..< 6 {
+            elsewhere.append(try world.buildStation(named: "Town \(index)", at: PlanPoint(x: 327_680 + Int64(index) * 122_880, y: 32_768)).id)
+        }
+        // Home's 100 residents and 5,000 at each town, one cell under each station.
+        try world.setLand([LandCell(row: 8, column: 5, use: .residential, residents: 100, jobs: 0)]
+            + (0 ..< 6).map { LandCell(row: 8, column: 80 + $0 * 30, use: .residential, residents: 5_000, jobs: 0) })
+        try world.setStationDemand(home, to: StationDemand(kind: .residential, dailyTrips: 1_000))
+        try world.setStationDemand(foot, to: StationDemand(kind: .scenic, dailyTrips: 0))
+        for town in elsewhere { try world.setStationDemand(town, to: StationDemand(kind: .residential, dailyTrips: 1_000)) }
+        world.setOutsideConnections(false)
+        world.setTourism([Attraction(id: AttractionID(rawValue: 9), name: "車埕", englishName: "Checheng",
+                                     point: PlanPoint(x: 123_880, y: 32_768), kind: .town, baseStars: 300)])
+        XCTAssertEqual(world.landCatchment(of: home)?.residents, 100)
+        XCTAssertEqual(world.landCatchment(of: elsewhere[0])?.residents, 5_000)
+        let id = AttractionID(rawValue: 1)
+        XCTAssertEqual(world.attractionStation(of: id), foot)
+        XCTAssertEqual(world.attractionStatus(of: id), .ok)
+        // As many as with no towns at all (testTouristsRideToTheStationAndBack): 240.
+        XCTAssertEqual(world.dailyDemand(from: home, to: foot), 240)
+        XCTAssertEqual(world.dailyDemand(from: foot, to: home), 240)
+        XCTAssertEqual(world.dailyDemand(from: elsewhere[0], to: foot), 0)
+    }
+
     func testAWeekendHolidayAndRainChangeTheCrowd() throws {
         var world = try world()
         let id = AttractionID(rawValue: 1)

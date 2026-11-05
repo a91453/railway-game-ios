@@ -536,13 +536,32 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 50 任的現況（2026-11-05 約 13:20 UTC，session_01YGNNumyd5kmn2HrCenU1qN，第 6 層）**：比下面「第 49 任交第 50 任」新，兩段不同時以這段為準。
+
+- **CRASH114（2026-11-05）**：114.1 的真實世界場景與高鐵 demo 在背景 tick／NightSkip 閃退，原因在 #1837（決策 590 下一步 2，GameWorld 堆上 COW）；`claude/crash114` 把它退回（決策 590「續：114.1 下一步 2 退回」）。根因沒在 Linux 重現，要重做下一步 2 先看那段。
+- **114.1 已發**：`testflight.yml` run 42012538541（run 114，`c1be6078`），作者說已給玩家，Threads 也發了（THREADS-114 交稿，沒去浮水印）。full lane 42010048718 第 2 次（rerun-failed-jobs）當發後檢查；同一處再紅就派人查，不再重跑。紀錄在 `research/PLAYER_FEEDBACK.md`（113.1、114.1 補上）。
+- **已合**：#1856（交接）、#1857（觀光客源研究）、#1858（FERRYPIER 旗津碼頭點擊吸附，115.1）、#1859（城市線股道研究，[URBAN_TRACK_LAYOUT](research/URBAN_TRACK_LAYOUT_2026-11-05.md)）、#1860（REVIEW-L10，下一輪 L11 從 #1858 起）。
+- **在做的 session**（都向第 50 任回報）：RAILTRACK402 session_01YGNNumTKgURfmZQFxRAkPX（決策 600，3D 真實股道）、TOURSRC-1 session_01YGNNuotFRgjkoUXkSty1Nv（決策 601，客源規則 (d)，GameCore）、HEALTH-114 session_01YGNNupSpkPtU1khcsbCqsS、L10FIX session_01YGNNupTyCtVprS24yZGDyK（L10-1／2／3，L10-2 動 GameCore）、REALYARD session_01YGNNum5jtnCLRcfQAB8QLc（決策 602）、HEIGHT-STUDY session_01YGNNunpUBi1ssJLXrehmNH、XBTSINGLE session_01YGNNupSfpJdxMoYjRq12Qm（決策 603，小碧潭支線單線）。封存被自動模式擋下（`archive_session`），做完的 session 由作者在 claude.ai 封存或加允許規則。
+- **機廠照 OSM**（作者 2026-11-05：「機廠那邊超怪」「感覺不符合osm」）：REALYARD 把「照 OSM 站場鋪機廠」寫成通用的。PR-1 文湖線木柵、內湖；PR-2 淡海、安坑、三峽（三峽真實可停 33 列、遊戲 4 股，價格要量）；蘆竹、青埔等 TYMC-EXPRESS 之後。每座量兩天不卡與價格，第 3 級截圖。最小股道間距（GameCore `trackSpacing` 4 m）**不改**，已合真實；道岔區 16 m（`junctionZone`）若擋到扇形咽喉，REALYARD 會回報再議。
+- **之後要派，排在 REALYARD 之後**（作者 2026-11-05：「好 記進去」）：
+  1. **玩家機廠的「車場型式」**：先寫研究，從七座真實車場統計咽喉扇形、道岔間距、股道長短、單／雙咽喉，定出範本（小型輕軌、中型捷運、大型雙咽喉）；再讓玩家蓋機廠時可選範本與股數，工具照範本排（畫面層，沿用現有鋪軌與道岔指令；新畫面，第 3 級截圖）。
+  2. **3D 機廠建物**：檢修庫、洗車線，給 Codex 做通用模型，REALYARD 合了再給 prompt。
+- **放空模式也看真實列車**（作者 2026-11-05：「放空模式……可以不要局限自己的車，在路上跑的尚未收購也能跟隨」「放空模式原本就不需要那麼多頭腦」「要顯示車名」）：**#1861（RAILTRACK402）合了再派**，只動畫面層，第 3 級截圖。範圍刻意小：不做點真實列車跟車、資訊列、視角選單；`AmbientDirector` 的候選加上 3D 正在跑的真實列車（`Map3DRealTrains`），鏡頭跟一段再淡出換下一班，挑法照參考網站 `pickTourTrain`（稀有車種權重高、最近五班不重複、60–120 秒），有自己的車時輪流；角落淡淡顯示一行車名與往哪（例「普悠瑪號 往樹林」），幾秒後淡掉（ui-review、motion skill）。
+- **TYMC-EXPRESS**（作者 2026-11-05：「為什麼桃園捷運沒有做待避線」，同意排法）：GameCore 班次跳站（存檔 +1，舊存檔預設每站停）、直達車照真實站停、長庚醫院（A8）兩側各一條待避線（研究：直達車平日 144 次越車全在 A8）、已收購線的「照真實改建」按鈕（玩家選、付工程費、地被佔就說哪裡擋；舊存檔不自動改），併機捷回本量測。等 TOURSRC-1 或 L10FIX 空出 GameCore 名額再派（同時最多 2 個）。A3／A11／A17 第三、四股排後。
+- **交流道高架破碎**（作者 2026-11-05 截圖，28 fps，高架下有鐵路、右邊是河）：匝道與主線交會處橋面交疊（V 形缺口、淺灰破片）、坡道落地壓在地面路上、零碎護欄。建議：交會處統一高度並合成一片橋面（參考 osm2streets，Apache-2.0）、護欄只畫外輪廓、坡道與地面路接順；只動畫面層，第 3 級截圖。**等作者說地點**再派（決策 391 的續）。
+- **固定三件**：REVIEW-L10 已做（#1860）；HEALTH-114 在做；CIOPT 還沒看（看完整 `ci.yml` 與 PR run 的牆鐘時間，比 CIOPT-7 慢 20% 以上才派）。
+- **號碼**：決策 599 空著（FERRYPIER 釋出）、600–603 已派；下一個 **604**；存檔 **87**（預計給 TYMC-EXPRESS）。
+
 **第 49 任交第 50 任（2026-11-05 約 11:35 UTC，session_01YGNNupMtajwSvF2wPZDUjt，第 5 層，壓縮 3 次）**：照這段接手；下面「第 49 任的現況」仍有效，兩段不同時以這段為準。第 50 任是第 6 層，還能再開一層（第 7 層起由作者在 claude.ai 開）。
 
 - **114.1 發版檢查（`26d5fca1`）**：完整 `ci.yml` run 42010031491 **綠**。full lane run 42010048718 第 1 次：「Xcode UI tests, second」紅，原因是模擬器啟動逾時（`StartSaveFlowSmokeTests`），不是 App；build 與 lessons 兩個 job 交接時還在跑。整個 run 跑完後，對它 `rerun-failed-jobs` **一次**（第 49 任的監看程式會在換手前做；換手後由第 50 任檢查 `run_attempt`，還是 1 才做）。全綠就告訴作者「可以發（26d5fca1）」，附健康表：兩個 run、#1854 的 3D 地圖當機修正、#1838 的教學測試在 main 補跑綠（run 42014874034）。同一處再紅就是真的啟動問題，派人查，不要再重跑。作者說「發」才按 `testflight.yml`（§1.2）。
 - **Threads**（作者 2026-11-05：「今天threads怎麼發文」）：THREADS-114（session_01YGNNupkxupiZdffEiGcnhh，Sonnet）寫 113.1＋114.1 合一篇（main `bef26ca..26d5fca1`），用 SendUserFile 直接交檔給作者，在 #1579 留「Threads 草稿交付」，不 commit。照往例主文不放連結，TestFlight 連結放第一則自己的留言；建議 114.1 上 TestFlight 後再發。
 - **FERRYPIER**（作者 2026-11-05 回報：「旗津整個沒辦法按」）：session_01YGNNun2KoCWaFSFc4R9zoi，`claude/ferry-pier-snap`，排 115.1。原因：`GameWorld.isPierCell` 要點到的那一格本身是陸地、四鄰有水；`GameSession.tapFerry` 只看點到的那一格，示範航線卻吸附 4 格。要做的：點擊吸附、渡輪模式標出能蓋碼頭的岸邊、錯誤訊息。截圖第 2 級。要改 GameCore 規則先問遊戲規劃，要號碼時從 599 起查 #1579。
 - **TRACKCOUNT-STUDY**（session_01YGNNupRpibmgLDxF9Uxs5E，`claude/trackcount-study`，docs only，2026-11-05）：8 條可收購城市線每站股道「遊戲 vs 真實（OSM＋桃捷官方班表）」與照真實改建的建議，見 [URBAN_TRACK_LAYOUT_2026-11-05](research/URBAN_TRACK_LAYOUT_2026-11-05.md)。機捷第一：真實直達車每天約 144 次全在 A8 長庚醫院（4 股）越車，遊戲長庚 2 股、直達車每站停；之後的 TYMC-EXPRESS 照那份的第 1 節做。
+- **HEIGHT-STUDY**（session_01YGNNunpUBi1ssJLXrehmNH，`claude/height-study`，研究＋`LINE_HEIGHT_REPORT=1` 才跑的報告測試，不佔號，2026-11-05）：14 條可收購路線的型式與高度「遊戲 vs 真實」，見 [LINE_HEIGHTS_2026-11-05](research/LINE_HEIGHTS_2026-11-05.md)。最大的錯是**真實地下站被放在地面**（文湖線松山機場、大直、南港展覽館，小碧潭支線七張，機捷環北；收購鋪法只有決策 462 的「高架站跟著架高」，沒有地下站往下）與**河底隧道做成離水 5 m 的橋**（機捷淡水河 0.9 km、文湖線基隆河）。之後照報告「建議修法」的 A（地下站往下放）→ B（真實隧道裡的水走水下）→ C（寬限只放寬需要的那一站）派，都只動 GamePresentation；D 的 4 % 以上坡度要 GameCore。已收購的存檔不自動改。
 - **TOURSRC-STUDY**：見下面「觀光客源」，docs-only，綠了就合。
+- **HEALTH-114**（114.1 發版後健檢，session_01YGNNupSpkPtU1khcsbCqsS，固定三件之「除錯」的這一輪）：[報告](research/HEALTH_114_2026-11-05.md)。CONCERNS，沒有退步：原有 18 個名字每一格同 HEALTH-112；新量的桃園機場捷運同決策 556 最後的表（新局預設第二天 5/333 沒發、擬實 141/333 誤點，死結都會清掉）；兩條渡輪、貓空纜車兩天沒停。還開著的四件與重現指令在報告 §4。
+  - **待派：文湖＋機捷擬實誤點合成一件**（遊戲規劃第 50 任 2026-11-05 定；Opus、GameCore）：文湖擬實第二天 281/532、機捷擬實 141/333 班晚超過 5 分，一起查。先讓 `DepotReturnReportTests` 在號誌關也記誤點，比較擬實與號誌關兩種規則，判斷是時刻表在閉塞間隔下本來就跑不出來，還是死結拖的；再決定修法。**等 REALYARD-B（文湖機廠，決策 602）與 TYMC-EXPRESS 都合併後才開**：兩者都會動這兩條線的入出庫與待避，先開會量到舊的行為。重現指令在 [HEALTH-114 報告](research/HEALTH_114_2026-11-05.md) §4 第 1、4 件。
 - **session**（都改向第 50 任回報）：THREADS-114、FERRYPIER、TOURSRC-STUDY。已封存：FULLLANE114、CRASH3D、WHATSNEW-114、FREIGHT-STUDY、TYMCLIST9。沒有排程中的提醒。
 - **REVIEW-L10**（session_01YGNNuoB7f2rfxdhAmyP2L8，第 50 任派）：審 #1803–#1857，報告 `docs/archive/PR1803_1857_REVIEW_HANDOFF.md`。P1 0、P2 1（**L10-1**：#1843 買來的線拿掉一站後，那站留著常客人數，`RealTransfers.swift` 的 `TransferMemo` 鍵少了停靠站）、P3 12，都**還沒派**。下一輪 REVIEW-L11 從 #1858 起。
 
