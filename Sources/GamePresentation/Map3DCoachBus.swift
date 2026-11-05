@@ -13,6 +13,49 @@ public enum Map3DCoachBus {
         var b=StationKitBuilder();b.coachBus()
         return .flat(named:modelName,from:b.mesh)
     }
+    /// A colour-only study of the existing mesh. The no-argument model and
+    /// standard street traffic continue to use their byte-identical recipe.
+    public static func model(livery: Map3DCoachLivery, far: Bool = false) -> Map3DModelPack.Model {
+        let original = far ? farStudyBase : model()
+        let paint = livery.paint
+        var vertices = original.vertices
+        let oldBody=bodyColor,oldBelt=accentColor
+        for start in stride(from:0,to:vertices.count,by:3) {
+            let triangle=original.vertices[start..<start+3]
+            let first=triangle.first!
+            if first.glows { continue }
+            if first.color == Map3DPalette.glazing {
+                // Livery studies light the existing windows at night. The
+                // no-argument street model remains byte-identical.
+                for index in start..<start+3 { vertices[index].layer=Map3DVertex.glowing }
+                continue
+            }
+            let x=triangle.map(\.x).reduce(0,+)/3
+            let z=triangle.map(\.z).reduce(0,+)/3
+            // Preserve glass, wheels, frames, steps and light housings.
+            // The roof and nose are existing paint faces, with no new mesh.
+            let bodyTarget = z>3.3 && abs(x)<5.6 ? paint.roof : paint.body
+            let accentTarget = x>4.7 && z<2.0 ? paint.nose : paint.belt
+            let c=first.color
+            var replacement: UInt32?
+            for factor: Float in [1,0.7,0.8,0.87] {
+                if c == Map3DColor.shaded(oldBody,factor) {
+                    replacement=Map3DColor.shaded(bodyTarget,factor);break
+                }
+                if c == Map3DColor.shaded(oldBelt,factor) {
+                    replacement=Map3DColor.shaded(accentTarget,factor);break
+                }
+            }
+            if let replacement {
+                for index in start..<start+3 { vertices[index].color=replacement }
+            }
+        }
+        return .init(name:"life-coachBus-"+livery.rawValue+(far ? "-far" : "-near"),vertices:vertices,minimum:original.minimum,maximum:original.maximum)
+    }
+
+    /// One shared far silhouette keeps every colour study at the same LOD.
+    private static let farStudyBase = model().simplified(to:0.55,maxError:0.02)
+
 }
 
 extension StationKitBuilder {
