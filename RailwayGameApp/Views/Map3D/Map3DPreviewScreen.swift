@@ -898,9 +898,15 @@ final class Map3DTrainFeed {
                                              still: UIAccessibility.isReduceMotionEnabled, budget: budget)
         garbageTruckSound?(Map3DGarbageTruck.sound(of: trucks, camera: camera))
         let buses = busFrame(in: scene, camera: camera, detail: detail, most: budget.tier?.streetLimits.buses, now: now).adding(trucks)
+        // Decision 596: while the signals change, the traffic and the
+        // walkers go by the game's clock (the buses'), waiting at them.
+        var signals: Double?
+        if let world = busWorld, let clock = busClock, Map3DSignalTiming.changes(at: world.clock.runningSpeed) {
+            signals = Double(clock.day * GameTime.secondsPerDay) + clock.second(at: now, glides: busGlides)
+        }
         return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
                                       still: UIAccessibility.isReduceMotionEnabled, lights: lights, detail: detail, activity: activity,
-                                      buses: buses, limits: budget.limits(routeBuses: buses.instances.count))
+                                      buses: buses, limits: budget.limits(routeBuses: buses.instances.count), signals: signals)
     }
 
     /// The trains seen from `eye`, `ringed` with its ring (decision 334),

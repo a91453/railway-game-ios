@@ -219,7 +219,8 @@ extension Map3DScene.Builder {
         addStreetProps(roads)
         addStreetStops(roads, markings: markings)
         // Decision 259: their traffic and their pavements' people.
-        for road in roads where road.points.count >= 2 { addStreetLife(road) }
+        // Decision 596: waiting at their signals.
+        for road in roads where road.points.count >= 2 { addStreetLife(road, markings: markings) }
     }
 
     // MARK: Cover
