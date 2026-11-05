@@ -486,8 +486,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 
-    private func shootLean(_ scene: String, _ view: String, _ name: String) {
-        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"])
+    private func shootLean(_ scene: String, _ view: String, _ name: String, extra: [String] = []) {
+        let app = launch(extra: ["-screenshot-scene", scene, "-screenshot-3d-view", view, "-map3D.quality", "high"] + extra)
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         let open3D = app.buttons["map.open3D"]

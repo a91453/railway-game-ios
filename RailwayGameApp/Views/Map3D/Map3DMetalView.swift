@@ -437,6 +437,16 @@ final class Map3DMetalView: MTKView {
         clearDepth = 0
         preferredFramesPerSecond = 60
         deviceTier = Map3DDeviceTier.forGPU(family: Self.appleFamily(of: device), name: device.name)
+        #if DEBUG
+        // Decision 596: the Simulator's GPU (Apple2, decision 580) has no
+        // tier, so its streets draw nothing; a screenshot of the street's
+        // traffic asks for one (`-screenshot-device-tier 0…2`).
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-screenshot-device-tier"), arguments.indices.contains(index + 1),
+           let asked = Int(arguments[index + 1]).flatMap(Map3DDeviceTier.init(rawValue:)) {
+            deviceTier = asked
+        }
+        #endif
         // Decision 417: memory running short steps down on any look.
         NotificationCenter.default.addObserver(self, selector: #selector(memoryRunsShort), name: UIApplication.didReceiveMemoryWarningNotification,
                                                object: nil)
