@@ -131,6 +131,7 @@
 		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		7D3131E179FBE863523685B0 /* run-diesel-coast.caf in Resources */ = {isa = PBXBuildFile; fileRef = F390F949C4A3FC86EC095654 /* run-diesel-coast.caf */; };
 		7E6BC92CBBB09DA09DE9F8EB /* krtc_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = A0EC41B721D0D2D757CD6EF0 /* krtc_ridership.json */; };
+		7ED85DF9A5EB5C57A8441F33 /* rail_dispatch.json in Resources */ = {isa = PBXBuildFile; fileRef = 545BF3B8583FFA46FF41A442 /* rail_dispatch.json */; };
 		806D73969CCF23668A25B510 /* ntdlrt.json in Resources */ = {isa = PBXBuildFile; fileRef = E2038D64EB91D02F90FE6716 /* ntdlrt.json */; };
 		81123B585970D45CCAB1E455 /* tymc_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = B904E02415BA067EB6C3DCBF /* tymc_ridership.json */; };
 		8163932343EEB39A635118DD /* taiwan_places.json in Resources */ = {isa = PBXBuildFile; fileRef = 894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */; };
@@ -360,6 +361,7 @@
 		52815B08C6FE03A12ABC22D5 /* afr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = afr.json; sourceTree = "<group>"; };
 		536AA1661B8D1E023E8B015C /* horn-diesel.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "horn-diesel.wav"; sourceTree = "<group>"; };
 		5417A59A2D7B4DC4A5CEEF0C /* horn-highSpeed.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "horn-highSpeed.wav"; sourceTree = "<group>"; };
+		545BF3B8583FFA46FF41A442 /* rail_dispatch.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = rail_dispatch.json; sourceTree = "<group>"; };
 		55F952CE174D1B497CCB8868 /* kenney-tank.m3dmodel */ = {isa = PBXFileReference; path = "kenney-tank.m3dmodel"; sourceTree = "<group>"; };
 		56ABC6AFF31D91F9079F6044 /* trtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc.json; sourceTree = "<group>"; };
 		56F262A277C901B58885215F /* thsr_ridership.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = thsr_ridership.json; sourceTree = "<group>"; };
@@ -623,6 +625,7 @@
 				B00B0A86FFD245909EF3231A /* ntdlrt_times.json */,
 				E2038D64EB91D02F90FE6716 /* ntdlrt.json */,
 				60AD430078BC348CA2F99EFB /* ntmc_circular_ridership.json */,
+				545BF3B8583FFA46FF41A442 /* rail_dispatch.json */,
 				4C1017DDE782DF1CF07D561E /* rail_structures.json */,
 				7E7435AD3984A55E9A5FF4F7 /* rail_tracks.json */,
 				B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */,
@@ -1072,6 +1075,7 @@
 				196DB07B71A523EE4DCE91DE /* ntdlrt_times.json in Resources */,
 				FC936165E05580706AC8015F /* ntmc_circular_ridership.json in Resources */,
 				D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */,
+				7ED85DF9A5EB5C57A8441F33 /* rail_dispatch.json in Resources */,
 				D6C8E62EEC74F3D1A20A0B5B /* rail_structures.json in Resources */,
 				0A5ADA4A4A122D62A792377E /* rail_tracks.json in Resources */,
 				F07F758009A9A5A53D4F075F /* rain-steady.caf in Resources */,
