@@ -3015,6 +3015,8 @@ WENHUSIDE-2 做完的（Linux VERIFIED，CI 在 `fd8569e` 全綠，含 iOS build
 
 114.1 的 3、4（CRASHROOT-VIEW，`claude/crashroot-view`）：畫軌道、站型、月台渡線、軌道卡的預覽在 app 裡也等一輪，教學的畫軌道步驟等的那一輪保留上一次的答案；`MapView.timedBody` 拆出兩組疊層。沒做完的：右下角、左下角那一列、手勢層還在 `timedBody` 裡（決策 590「後來：114.1 的畫面部分」），要不要再拆看 `ios-build.yml` 列出的 App 堆疊框（第 5 項，`claude/frame-size-check`）。
 
+CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#1839（本段的 3、4）、#1840（第 5 項，CI 全綠、已轉 ready；Linux 的框沒有新的超過 32 KB，最大是 `GameWorld.advance(ticks:)` 67.2 KB；`ios-build.yml` 那步讀 `otool` 的結果在 Linux 沒驗過，看該 PR iOS job 的 summary）、#1838（113.1 full lane 的五支紅測試，修在測試）。#1838 的 only_testing run 41975633745（head 2ffba4d3，五支紅的、Feature284To286、教學、課程、LineDraftSummary）停手時還在跑，它也涵蓋 #1839 的 UI 測試；綠了 #1838 轉 ready，紅了照原樣看（snap 那支的修法是假說）。接手的人：看那個 run 的結果，以及 #1839 的 gate。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
