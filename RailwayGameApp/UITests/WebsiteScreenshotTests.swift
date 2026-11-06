@@ -623,6 +623,11 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// they are assigned, the double track on one deck, close and leaned.
     func testTaichungViaduct() { shootLean("taichungViaduct", "200,225,45", "taichung-viaduct") }
     func testTaichungViaductClose() { shootLean("taichungViaduct", "120,135,30", "taichung-viaduct-close") }
+    /// Decision 607: the interchange west of Taichung over the high-speed
+    /// line, beside the Fazi River: its link roads meeting the decks at
+    /// one height, from above and leaned low.
+    func testInterchange() { shootLean("interchange", "320,200,40", "interchange") }
+    func testInterchangeClose() { shootLean("interchange", "160,240,25", "interchange-close") }
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 
