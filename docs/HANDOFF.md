@@ -3200,6 +3200,25 @@ CRASHROOT-VIEW 在第 2 次壓縮停手（2026-11-05），留下的三個 PR：#
 
 做了的在 [決策 600](decisions/600.md)：決策 402 下一步 1–3。留下的（決策 600「下一步」）：台鐵執行時的待避（`overtake-sidings.js`）、高鐵與林鐵計畫的 `holds`、林鐵的真實列車、決策 402 下一步第 4 項、實機量每幀時間。#1861 的第 2 級截圖還沒拍：website-screenshots run #294（本分支）與 #295（main）都因 main 的 GameCore 閃退（`GameWorld.advance(ticks:)` 第 3080 行，決策 590 的堆上 storage）四支全紅，要等 GameCore 那條線修好再重跑 `testLeanedStation140At60 testLeanedStation200At60 testHighSpeedDemo testRealWorldDemoBaseMap`，看過才轉 ready。
 
+### 4.53 按下建設的那一下（決策 614，派工單 PERF-115，session_01YGNNupXrcs7dyKyFmQvkAE，`claude/perf-115`，2026-11-06）
+
+做了的在 [決策 614](decisions/614.md)：台北 20 線 77 站的大存檔上，主執行緒的時間：
+
+- 開路線：94 → 15 ms。
+- 蓋車站：255–343 → 101–120 ms。
+- 蓋軌道：23 → 15 ms。
+
+量法：`BuildCommandCostReportTests`（`PERF_MAKE_SAVE` 做存檔，`PERF_SAVE`／`PERF_COMMAND` 量；存檔不進 repo）。
+
+留下的（決策 614「下一步」）：
+
+- 開路線後第一個 tick 的 `PassengerRoutesAhead`，約 130 ms。
+- 3D 場景整個重蓋（Linux release 約 12 s），也就是決策 517 的 PR 3b，建議排在 PR 4 前。
+- 站長的 `firstLineWithoutPlaceToPass`，指令後第一次算 0.3–0.4 s。
+- 蓋車站剩下的 `abandonUnservedPassengers` 找路。
+- 簡易規則下開路線的試算沿用。
+- iPhone 實機數字。
+
 ## 5. 已知、還沒派的待辦
 
 | 事項 | 來源 | 狀態 |
