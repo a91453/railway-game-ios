@@ -178,7 +178,12 @@ final class WebsiteScreenshotTests: XCTestCase {
             let app = launch(extra: ["-screenshot-scene", "klrt", "-screenshot-offer-real", "krtc:C"])
             defer { app.terminate() }
             XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
-            XCTAssertTrue(app.buttons["acquire.buy"].appears(within: 300), "The purchase card opens")
+            let buy = app.buttons["acquire.buy"]
+            XCTAssertTrue(buy.appears(within: 300), "The purchase card opens")
+            // The card shows the price only once the ring is laid out and
+            // priced, when its buy button is enabled.
+            let priced = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: buy)
+            XCTAssertEqual(XCTWaiter().wait(for: [priced], timeout: 300), .completed, "The ring is priced")
             settle(seconds: 3)
             keep("klrt-offer", app)
         }
