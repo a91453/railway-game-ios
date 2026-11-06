@@ -1633,7 +1633,7 @@ struct LandmarkMesh {
         // Focal center of the 12 radiating stalls (OSM turntable way 220285048
         // relative to way 220285047's bounding-box midpoint) and Decision 441's
         // turntable center in the courtyard (`Map3DDepotFacilities.turntablePlace`).
-        let fx: Float = 6.64, fy: Float = -32.91
+        let fx = Self.roundhouseFocus.x, fy = Self.roundhouseFocus.y
         let ttx: Float = 3.47, tty: Float = -19.53
 
         func polar(_ r: Float, _ deg: Float) -> P2 {
@@ -1662,27 +1662,9 @@ struct LandmarkMesh {
 
         // 13 pier angles (degrees around (fx, fy)) bounding Stalls 1..12 (East to West),
         // aligned with the stepped outer rear wall of OSM way 220285047:
-        let stallBounds: [Float] = [
-            55.65, 64.10, 72.55, 81.00, 91.72,
-            98.42, 105.12, 111.82, 118.52,
-            123.72, 134.98, 146.24, 157.50,
-        ]
-        let stallRIn: [Float] = [
-            28.60, 28.65, 28.85, 28.95,
-            29.10, 29.20, 29.40, 29.55,
-            29.50, 29.65, 29.95, 30.35,
-        ]
-        // Stepped outer rear wall radii from OSM way 220285047:
-        //   Stalls 1–4 (v12..v16): ~52.4 m
-        //   Stalls 5–8 (v07..v11): ~58.4 m (reaching y = +24.895 m)
-        //   Stall 9 (v05..v06):    ~55.9 m
-        //   Stalls 10–12 (v00..v04): ~52.9 m (reaching x = -42.515 m)
-        let stallROut: [Float] = [
-            52.20, 52.35, 52.48, 52.60,
-            57.76, 58.44, 58.65, 58.40,
-            55.90,
-            52.72, 52.90, 53.20,
-        ]
+        let stallBounds = Self.roundhouseStallBounds
+        let stallRIn = Self.roundhouseStallRIn
+        let stallROut = Self.roundhouseStallROut
 
         // 1. 12 Radiating Fan Stalls (Stalls 1..12)
         let rMid: Float = 39.50
@@ -2861,6 +2843,12 @@ extension Map3DScene.Builder {
                 let mesh = landmark.model(full: full).placed(origin: centre, ground: ground, rotation: landmark.rotation)
                 keptColours.formUnion(mesh.vertices.map(\.color))
                 self.mesh(at: centre) { $0.append(mesh) }
+                // Decision 581, later: the roundhouse's parked locomotives.
+                if landmark == .changhuaRoundhouse {
+                    let stock = Map3DRoundhouseStock.model(full: full).placed(origin: centre, ground: ground, rotation: landmark.rotation)
+                    keptColours.formUnion(stock.vertices.map(\.color))
+                    self.mesh(at: centre) { $0.append(stock) }
+                }
             }
             target = saved
             built[landmark] = cells(under: clearing)

@@ -683,6 +683,17 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// they are assigned, the double track on one deck, close and leaned.
     func testTaichungViaduct() { shootLean("taichungViaduct", "200,225,45", "taichung-viaduct") }
     func testTaichungViaductClose() { shootLean("taichungViaduct", "120,135,30", "taichung-viaduct-close") }
+
+    /// Decision 581, later (ROUNDHOUSE-STOCK): the Changhua Roundhouse's
+    /// parked locomotives, their noses out of the doorways towards the
+    /// turntable, from the turntable's side close by and higher up. For the
+    /// pull request's screenshot review.
+    func testChanghuaRoundhouseStock() {
+        for (view, name) in [("90,0,60", "roundhouse-stock-close"), ("80,320,55", "roundhouse-stock-west"),
+                             ("220,10,40", "roundhouse-stock-high")] {
+            shootLean("changhuaRoundhouse", view, name)
+        }
+    }
     /// Decision 607: the interchange west of Taichung over the high-speed
     /// line, beside the Fazi River: its link roads meeting the decks at
     /// one height, from above and leaned low.

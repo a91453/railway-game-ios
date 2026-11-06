@@ -43,4 +43,21 @@ final class ScreenshotLandmarkTests: XCTestCase {
         XCTAssertNotNil(built[.taipeiMainStation])
         XCTAssertNotNil(built[.shinKongLifeTower])
     }
+
+    /// Decision 581, later: the Changhua Roundhouse's scene with the real
+    /// railways, as the app builds it: the roundhouse stands, its parked
+    /// locomotives, every colour of theirs, at its doorways.
+    func testChanghuaRoundhouseAndItsLocomotives() throws {
+        let world = ScreenshotScene.changhuaRoundhouse.make(in: .english)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let place = try XCTUnwrap(ScreenshotScene.changhuaRoundhouse.place)
+        let at = frame.worldPosition(latitude: place.latitude, longitude: place.longitude)
+        let scene = Map3DScene(world: world, focus: (at.x, at.y), railways: try XCTUnwrap(Map3DRealTrainsTests.railways))
+        XCTAssertGreaterThan(try tallest(near: place, radius: 60, in: scene, of: world), 10)
+        let middle = scene.point(worldX: at.x, worldY: at.y, height: 0)
+        let near = scene.chunks.flatMap(\.mesh.vertices).filter { ($0.x - middle.x) * ($0.x - middle.x) + ($0.z - middle.z) * ($0.z - middle.z) < 60 * 60 }
+        let colours = Set(near.map(\.color))
+        XCTAssertTrue(colours.contains(Map3DR200.navy))
+        XCTAssertTrue(colours.isSuperset(of: Set(Map3DRoundhouseStock.model(full: true).vertices.map(\.color))))
+    }
 }
