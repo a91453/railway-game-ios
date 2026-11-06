@@ -220,7 +220,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | 第 52 任 session_01YGNNun5Pr4b6AHKwn6MneD（2026-11-06 08:10 UTC 起，第 51 任開，第 1 層；交接在 §2.0「第 51 任交第 52 任」）；再之前第 51 任 session_01YGNNuqBHdTZ3Bkm15qu36v（11-06，作者在 claude.ai 開，第 0 層，壓縮 3 次）；再之前第 50 任 session_01YGNNumyd5kmn2HrCenU1qN（11-05，第 6 層，壓縮 3 次）、第 49 任 session_01YGNNupMtajwSvF2wPZDUjt（11-05，第 5 層）；第 37–48 任見 §2.0 各段；第 36 任（2026-10-30 16:50 UTC 起，第 5 層；交接在 §2.0「第三十六次換手」）；再之前第 35 任 session_01YGNNukwV4BudeNCor4i52r（10-30 13:20–16:50，壓縮 3 次）；再之前 作者 10-28 在 claude.ai 手動開的新規劃（三個 repository；現況在 §2.0「第二十四次換手」）；再之前 session_01YGNNupfaTiuQSAJ5tsf5a4（10-28 00:20–05:15，第 3 層，壓縮 3 次後換手）；再之前 session_01YGNNunBu1rxrPwN6bsA7g2（10-27 16:45–10-28 00:20，第 2 層，壓縮 2 次後換手）；再之前 session_01YGNNunheBBBwyekk4Pq7b4（10-27 14:3x–16:45，第 1 層，壓縮 3 次後換手）；再之前 session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | 第 53 任 session_01YGNNunyQhaha49M1KRzGVB（2026-11-06 18:00 UTC 起，第 52 任開，第 2 層；交接在 §2.0「第 52 任交第 53 任」）；再之前第 52 任 session_01YGNNun5Pr4b6AHKwn6MneD（11-06 08:10–18:00 UTC，第 1 層，壓縮 2 次，作者要它換手）；再之前第 51 任 session_01YGNNuqBHdTZ3Bkm15qu36v（11-06，作者在 claude.ai 開，第 0 層，壓縮 3 次）；再之前第 50 任 session_01YGNNumyd5kmn2HrCenU1qN（11-05，第 6 層，壓縮 3 次）、第 49 任 session_01YGNNupMtajwSvF2wPZDUjt（11-05，第 5 層）；第 37–48 任見 §2.0 各段；第 36 任（2026-10-30 16:50 UTC 起，第 5 層；交接在 §2.0「第三十六次換手」）；再之前第 35 任 session_01YGNNukwV4BudeNCor4i52r（10-30 13:20–16:50，壓縮 3 次）；再之前 作者 10-28 在 claude.ai 手動開的新規劃（三個 repository；現況在 §2.0「第二十四次換手」）；再之前 session_01YGNNupfaTiuQSAJ5tsf5a4（10-28 00:20–05:15，第 3 層，壓縮 3 次後換手）；再之前 session_01YGNNunBu1rxrPwN6bsA7g2（10-27 16:45–10-28 00:20，第 2 層，壓縮 2 次後換手）；再之前 session_01YGNNunheBBBwyekk4Pq7b4（10-27 14:3x–16:45，第 1 層，壓縮 3 次後換手）；再之前 session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | Threads 開發日誌（看進度） | 排程「Threads 開發日誌（看進度）」（台灣時間每晚 21:43 檢查，2026-10-27 規劃五方決定恢復，作者：「我不知道 你自己決定」「排程要看每日進度我也不確定有固定時間發文」）。它只檢查，不一定寫：#1041 最後一則「Threads 草稿交付：涵蓋到 main <sha>」之後，合進 main、玩家看得到的 PR 滿 3 個，或發了新的 TestFlight，才由規劃開寫作 session（Sonnet）；不夠就什麼都不做。現在綁 session_01YGNNunBu1rxrPwN6bsA7g2 的是 `trig_01KEzqJPTdvXeUFCNUy8go3Z`；第二十三次換手時前任代建綁新任的，新 id 在 #1041；綁前任的 `trig_019CQWcaMbiqRpfDwdNvV2qR` 已刪。排程的綁定改不了：換手時現任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉舊的。更早留下、停用但刪不掉的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`、`trig_01ABYQAarHbVxBbEShiVWDr3` 不會觸發，作者要清可以在排程列表刪 | 寫這段期間的串文草稿，用 SendUserFile 交給作者；草稿不寫日期與時間點；交完在 #1041 留「Threads 草稿交付：涵蓋到 main <sha>」，再封存自己；不 commit、不發布 | `docs/research/THREADS_WRITING.md`（寫法、規則、發到哪一版；新的寫作 session 先讀它）；最早的派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -353,6 +353,7 @@
   - 發版前：改 `.github/testflight-whats-new.md`（它只在上一版之後有改動時才會被用，沒改就是自動列出的 PR 清單）。
   - 發版前，同時改 App 裡的「這版新增」卡：`Sources/GamePresentation/WhatsNew.swift` 的 `WhatsNew.entries`（兩種語言、只寫玩家能做什麼；上一則已發出去就在最前面加新的一則、id 用當天日期，還沒發就改最前面那則；步驟在決策 415）。
   - 發版後：看 `testflight.yml` 的 run 號與 commit，記進 `docs/research/PLAYER_FEEDBACK.md`。版本號是 0.5.0 (run 號.1)。
+  - 發版準備時（派 WHATSNEW 的同時）：檢查下面的「固定要派的三件事」。數上一輪審查終點之後合併的程式 PR 點數，看 HEALTH、CIOPT 的上一輪，到時機就派，結果寫進交接。作者 2026-11-07 問：「之前不是說30點就要做pr review為何現在都都要我提醒才做」。
 - **固定要派的三件事**（作者 2026-11-01：「好像很久沒有 pr review 跟 ci 優化還有 debug」「那為什麼每次都忘記做」）。遊戲規劃平常是被通知推著走（合併、CI、session 回報），這三件沒有通知會提醒，換手和壓縮的摘要也常漏掉，所以照下面的時機派，不等作者提：
   - **PR 審查**：每發一版之後，或上一輪之後合併了約 30 個改程式的 PR（以先到者為準），派下一輪 REVIEW-L（獨立審查已合併的程式 PR，GameCore 優先，只寫文件；範圍接上一輪的終點）。發現 P1 當天派修。
   - **CI 優化**：每發一版之後看一次 main 最近的完整 `ci.yml` 與 pull request run 的牆鐘時間；比上一輪 CIOPT 記下的慢 20% 以上，或 pull request tier 超過 30 分鐘，就派 CIOPT（讓測試本身變快，不跳過、不放寬）。
@@ -552,6 +553,61 @@
 - `HUDAlignmentUITests.testALessonsCardKeepsTheLines` 的 `kAXErrorIPCTimeout`（run 42130736583）：跟 App 無關。斷言全部通過；逾時發生在 App 關掉之後，`finish()` 把方向轉回直的時候。沒有改。
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 52 任交第 53 任（2026-11-06 約 18:00 UTC＝台灣 11-07 02:00，session_01YGNNun5Pr4b6AHKwn6MneD，第 1 層，壓縮 2 次）**
+- 換手原因：作者問「你是不是壓縮兩次了 要不要順便幫你換手了」。趁作者睡著、發版前比較空的時候換。
+- 照這段接手。下面「第 52 任的現況」仍有效，兩段不同時以這段為準。
+- 第 53 任 session_01YGNNunyQhaha49M1KRzGVB，由第 52 任用 `create_session` 開（第 2 層）。開工先在 #1579 登記，§1 表格的遊戲規劃改成新 session。
+
+- **119 今天早上發，第 53 任負責**：
+  - 排程「119 截止與發版準備」改打進第 53 任，23:30 UTC＝台灣 07:30。步驟寫在排程裡，依序是：
+    1. 合 #1905，08:00 停止合併。
+    2. 先看 HEALTH-119 有沒有回報退步。
+    3. 派 WHATSNEW-119（Sonnet，id `2026-11-07-119-1`）。
+    4. 在 HEAD 跑完整的 `ci.yml`、`ios-full-lane.yml`、`release-archive.yml`。
+    5. 三個都綠就告訴作者可以發，作者自己按。
+  - 已合、會進 119 的：#1898 CABLE-SUNMOON、#1899 BUILD3D-3B、#1883 KLRT-B（決策 612）、#1902 CABVIEW-STUTTER（決策 379 續；實機手感 UNVERIFIED，請作者在 119 重錄）、#1901、#1906（測試在 macOS 14 也能編譯）、#1907（截圖改 M6 的交接）。
+  - #1905 ROUNDHOUSE-STOCK：M6 截圖已審過、通過，會進 119。
+- **作者睡前**：「由你接手 看需不需要pr view /ci優化或是debug」。
+- **在做的 session**（都改向第 53 任回報）：
+  - ROUNDHOUSE-STOCK session_01YGNNup8NFAueHSSFxKrwUw（#1905，決策 581 續）：
+    - M6 的三張截圖（`70b3c6c1`）第 3 級已過。
+    - 上一輪閘門 UI 有兩支測試紅：App 啟動逾時、拿不到 background assertion，都從台北開局，跟本 PR 無關。
+    - `70b3c6c1` 的 iOS run 42260265465 在重跑第 2 次。綠了它會補跑 gate、轉 ready、通知規劃；規劃合併。
+  - FACADE-B session_01YGNNuor6x7d79RdjNBkAm9（#1879，決策 610 續）：
+    - M6 拍的改前改後（`eff11a6b`）看不到任何立面零件。近景鏡頭貼在高樓牆上，改前改後逐像素相同；俯視只差車流。
+    - 接手先找根因（截圖場景沒對準，或立面層在 App 沒畫），修好後寄截圖單，M6 重拍。
+    - 這個分支的 App 在 Mac 上編得過。
+  - MEM-1B session_01YGNNumA4bde2aK4WRUFt14（#1876，決策 608 續）：查 `MapInteractionTests.testPinchingCloseOpensTheThreeDMapAndPinchingOutComesBack` 連紅的根因，先和 main 的 full lane map job 對照。
+  - TYMC-REBUILD session_01YGNNumziZiL2wg5iCpJkMA（#1875，決策 605 §3 續）：
+    - 把 A8 一段重鋪成平的，`isAtRest` 改看班次時段。
+    - 兩天的量測要不比 main 差。
+    - 第 3 級截圖由 M6 拍。要動 GameCore 時會先回報。
+  - REVIEW-L11 session_01YGNNumFayrcJEfodjKj3Px：審 #1858–#1907。超過約 30 點就分 L11a／L11b。報告在 `archive/PR1858_1907_REVIEW_HANDOFF.md`。
+  - HEALTH-119 session_01YGNNun6TLuYjVPgudJWRuN：在 main HEAD 量 HEALTH-114 的名單，加上高雄環狀輕軌。報告在 `research/HEALTH_119_2026-11-07.md`；明顯退步會在 07:30 前回報。
+  - 上面每一個都交代了：台灣 07:30–10:00 不開新的 macOS run（119 的完整檢查）；截圖或 UI 測試要 M6 跑時，寄單給規劃。
+  - 已收工、可以封存的：BUILD3D-3B、KLRT-B、CABVIEW-STUTTER。
+- **固定三件**（§1.1）這一輪：
+  - REVIEW-L11、HEALTH-119 已派。
+  - CIOPT 不派：118 的完整 `ci.yml`（run 42211389525）27 分，GamePresentation tier 的 PR run 約 21 分，都低於 30 分的線。
+  - 作者問「之前不是說30點就要做pr review為何現在都都要我提醒才做」。原因是 L10 之後沒人數點數，又合了約 50 個 PR。改成 §1.1「每次發版」多一步：發版準備時一併檢查這三件。
+- **等人看的**：
+  - Codex #1904（站房外觀，Codex 還在一站一站加）、#1903（高鐵六家基地）：等作者看樣品。
+  - #1885 公路隧道口第二版：等遊戲規劃審圖。總覽圖在 PR 說明，連到私庫 #60。審過就派 ROADTUNNEL（決策 611）。
+- **作者的 Mac（M6）**：
+  - 第一次跑通是 #1905 的三張截圖。
+  - 作者把 Xcode 27 的 Intelligence 設好了：
+    - Claude Agent、Codex、Antigravity 都已登入。
+    - 「Allow External Agents to Use Xcode Tools」設成 Always。
+    - 給了作者 `claude mcp add --transport stdio xcode -- xcrun mcpbridge`，讓 M6 的 Claude Code 接上 Xcode，作者還沒回報有沒有接上。
+  - Claude 要叫 Codex 做事，用終端機的 `codex exec`；Antigravity 的 `agy` 沒人時的模式不可靠。
+  - Remote Control 兩次都是 `not_available`（17:2x UTC）。作者照做了更新與設定還是一樣，建議作者用 `/feedback` 問帳號有沒有開。
+  - 作者問有了 M6 能不能放寬 CI。答：不放寬，因為作者不在時 CI 是唯一的把關。M6 省的是截圖、推前先試 UI 測試、補 Mac 才有的編譯問題。跑順一兩週後再評估縮 PR 的 UI gate 清單，改之前先告訴作者。
+- **作者要自己做的**：
+  - 刪 branch `claude/ferry-qijin-before`、`claude/copyright-name`。
+  - FACADE-B 用完後，刪 `claude/facade-real-before`。
+  - 合私庫 assets #61。
+- **號碼**：下一個決策 **616**（CABVIEW-STUTTER 用的是 379 續，沒用 616）；存檔 **87**。
 
 **第 52 任的現況（2026-11-06 約 14:35 UTC＝台灣 22:35，session_01YGNNun5Pr4b6AHKwn6MneD，第 1 層，壓縮 0 次）**：比下面兩段新，不同時以這段為準。
 
