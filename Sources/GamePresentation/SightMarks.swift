@@ -75,6 +75,9 @@ struct SightRowsMemo {
     let day: Int64
     let commandRevision: Int
     let language: DisplayLanguage
+    /// Whether the balance covers a shop's price: it moves at every tick,
+    /// and the rows' buy buttons say it (L11-2).
+    let canAffordShop: Bool
     let rows: [AttractionRow]
 }
 
@@ -89,14 +92,16 @@ extension GameSession {
     /// longer than a tick, so the game froze until the system closed it.
     /// What a row says changes with the day (its status, today's,
     /// yesterday's and this year's tourists, the day's typhoon) or a
-    /// command (its shop, its station, the lines).
+    /// command (its shop, its station, the lines); the shop's price being
+    /// affordable changes with the cash, so it is part of the key.
     public var sightsPanelRows: [AttractionRow] {
         let day = world.clock.now.seconds / GameTime.secondsPerDay
-        if let memo = sightRowsMemo, memo.day == day, memo.commandRevision == commandRevision, memo.language == language {
+        let canAffordShop = world.economy.canAfford(Money(Tourism.souvenirCost))
+        if let memo = sightRowsMemo, memo.day == day, memo.commandRevision == commandRevision, memo.language == language, memo.canAffordShop == canAffordShop {
             return memo.rows
         }
         let rows = world.attractionRows(in: language)
-        sightRowsMemo = SightRowsMemo(day: day, commandRevision: commandRevision, language: language, rows: rows)
+        sightRowsMemo = SightRowsMemo(day: day, commandRevision: commandRevision, language: language, canAffordShop: canAffordShop, rows: rows)
         sightRowsWorkedOut += 1
         return rows
     }

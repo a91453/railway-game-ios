@@ -15,8 +15,8 @@ final class SightsPanelCostTests: XCTestCase {
     /// Home and Foot with a train, the panel's sight by Foot, one by Home,
     /// and one some 6 km away that no station serves; on the network router, as a real map
     /// plays.
-    private func world() throws -> GameWorld {
-        var world = GameWorld.newGame(eventSeed: 7)
+    private func world(balance: Money = GameWorld.startingBalance) throws -> GameWorld {
+        var world = GameWorld.newGame(balance: balance, eventSeed: 7)
         world.setTourism(nil)
         world.setCityRequests(seed: nil)
         world.setLandDemand(false)
@@ -87,6 +87,29 @@ final class SightsPanelCostTests: XCTestCase {
         session.investInSouvenirShop(of: AttractionID(rawValue: 1))
         XCTAssertEqual(session.sightsPanelRows.first { $0.id == AttractionID(rawValue: 1) }?.souvenir, 1)
         XCTAssertEqual(session.sightRowsWorkedOut, 3)
+    }
+
+    /// L11-2: the buy button of a shop follows the cash within the day.
+    func testTheShopsAffordabilityFollowsTheCashThroughTheDay() throws {
+        let price = Money(Tourism.souvenirCost)
+        // The same setup with the cash left just above a shop's price: the
+        // running costs of a few ticks take it below.
+        let rich = Money(10_000_000_000)
+        let left = try world(balance: rich).economy.balance
+        let world = try world(balance: Money(rich.amount - left.amount + price.amount + 5_000))
+        XCTAssertTrue(world.economy.canAfford(price))
+        let session = GameSession(world: world, language: .english)
+        session.setSpeed(.fast)
+        var seen = Set<Bool>()
+        for _ in 0..<144 {
+            let afford = session.world.economy.canAfford(price)
+            seen.insert(afford)
+            let shown = session.sightsPanelRows.compactMap { $0.nextShop?.canAfford }
+            XCTAssertFalse(shown.isEmpty)
+            XCTAssertTrue(shown.allSatisfy { $0 == afford }, "shown \(shown), cash says \(afford)")
+            session.advance(ticks: 1)
+        }
+        XCTAssertEqual(seen, [true, false], "the cash crossed a shop's price")
     }
 
     /// What the panel's rows cost on Taipei with the Wenhu Line bought,

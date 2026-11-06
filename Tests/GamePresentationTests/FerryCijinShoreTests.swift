@@ -162,4 +162,21 @@ final class FerryCijinShoreTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(session.ferryMapOverlay).shore.isEmpty)
         XCTAssertNotNil(session.ferryShoreMemo)
     }
+
+    /// L11-4: the shore memo is keyed by whether the land is read in as it
+    /// is needed too, so a shore worked out before the water was set is
+    /// not kept after.
+    func testTheShoreMemoFollowsWhetherTheLandIsRead() throws {
+        let map = try map()
+        let session = map.session
+        session.water = nil
+        XCTAssertFalse(session.readsLandForFerries)
+        _ = session.ferryMapOverlay
+        let without = try XCTUnwrap(session.ferryShoreMemo).shore
+        session.water = map.water
+        XCTAssertTrue(session.readsLandForFerries)
+        let with = try XCTUnwrap(session.ferryMapOverlay).shore
+        XCTAssertNotEqual(with, without, "the shore is worked out again with the water")
+        XCTAssertFalse(with.isEmpty)
+    }
 }

@@ -35,15 +35,15 @@ public enum WhatsNew {
             id: "2026-11-06-118-1",
             items: [
                 Line(
-                    english: "On the Wenhu line you buy, the Muzha and Neihu depots are laid out like the real yards, with an extra track in and out of the depot, and buying costs a little less.",
+                    english: "On the Wenhu Line you buy, the Muzha and Neihu depots are laid out like the real yards, with an extra track in and out of the depot, and buying costs a little less.",
                     chinese: "收購的文湖線，木柵、內湖機廠照真實車場鋪，多一條進出機廠的線，收購也便宜一點。"
                 ),
                 Line(
-                    english: "On the Airport MRT you buy, express trains stop only at the real express stations, and Chang Gung Memorial Hospital has passing tracks on both sides.",
-                    chinese: "收購的機場捷運，直達車照真實的站停車，長庚醫院兩側有待避線。"
+                    english: "On the Taoyuan Airport MRT you buy, express trains stop only at the real express stations, and Chang Gung Memorial Hospital has passing tracks on both sides.",
+                    chinese: "收購的桃園機場捷運，直達車照真實的站停車，長庚醫院兩側有待避線。"
                 ),
                 Line(
-                    english: "With train control on, spare trains that cannot depart and block the way go back to the depot first.",
+                    english: "With traffic control on, spare trains that cannot depart and block the way go back to the depot first.",
                     chinese: "行車控制下多出來、發不出去又擋路的空車會先回機廠。"
                 ),
             ],
@@ -83,7 +83,7 @@ public enum WhatsNew {
                     chinese: "放空模式也會跟著地圖上跑的真實列車，角落淡淡寫出車名與往哪裡。"
                 ),
                 Line(
-                    english: "A Xiaobitan branch you buy is now a single track with one train shuttling back and forth, and costs less.",
+                    english: "The Xiaobitan Branch Line you buy is now a single track with one train shuttling back and forth, and costs less.",
                     chinese: "新買的小碧潭支線照真實鋪成單線，一列車來回，收購價也便宜了。"
                 ),
                 Line(
