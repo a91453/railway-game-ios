@@ -113,9 +113,9 @@ final class KaohsiungLightRailOffsetTests: XCTestCase {
     }
 }
 
-/// Decision 535 (continued, KLRT): two real days under each rule (traffic
-/// control off is still open, below): no deadlock, every run of the second day
-/// sent out. A class of its own so CI can shard it.
+/// Decision 535 (continued, KLRT): two real days under each rule, and
+/// with traffic control off (decision 612): no deadlock, every run of the
+/// second day sent out. A class of its own so CI can shard it.
 @MainActor
 final class KaohsiungLightRailDayTests: XCTestCase {
     func testTheRingRunsTwoRealDays() throws {
@@ -124,12 +124,11 @@ final class KaohsiungLightRailDayTests: XCTestCase {
         }
     }
 
-    /// Known open (docs/HANDOFF.md): without traffic control GameCore's
-    /// `runLeaving` hands ring runs out across both ways, and 85 runs of
-    /// the second day are missed. Run only with `KLRT_OFF` set until the
-    /// GameCore fix lands; then drop the guard.
+    /// Decision 612: without traffic control too. A train arriving where
+    /// its own platform was due to be taken was put on the other way's
+    /// track, facing the wrong way for its next run, and went round the
+    /// whole ring for it: 85 runs of the second day were missed.
     func testTheRingRunsTwoRealDaysWithoutTrafficControl() throws {
-        guard ProcessInfo.processInfo.environment["KLRT_OFF"] != nil else { throw XCTSkip("KLRT_OFF: known open, docs/HANDOFF.md") }
         try DanhaiDepotTests.buyAndRun([KaohsiungLightRailTests.id], round: KaohsiungLightRailTests.id, rules: .simple, trafficControl: false)
     }
 }
