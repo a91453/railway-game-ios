@@ -45,7 +45,8 @@ final class BuildCommandCostReportTests: XCTestCase {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
         await launcher.loadRealWorldData { Map3DOpenEveryStartTests.data }.value
         let own = Int(ProcessInfo.processInfo.environment["PERF_OWN_LINES"] ?? "") ?? 20
-        let session = try XCTUnwrap(await launcher.openFrameTimeBench(lines: own), "the frame time test's game")
+        let opened = await launcher.openFrameTimeBench(lines: own)
+        let session = try XCTUnwrap(opened, "the frame time test's game")
         print("PERF115 laid: stations \(session.world.stations.count), lines \(session.world.lines.count), trains \(session.world.trains.count)")
         let lines = Int(ProcessInfo.processInfo.environment["PERF_LINES"] ?? "") ?? 40
         print("PERF115 on sale: \(session.buyableRealLines.map(\.id).joined(separator: " "))")
@@ -88,6 +89,14 @@ final class BuildCommandCostReportTests: XCTestCase {
             time("advice") { _ = session.stationMasterAdvice }
             time("alerts") { _ = session.situationAlerts }
             time("sale") { _ = session.buyableRealLines }
+            let world = session.world
+            time("marks") { _ = MapMarks(world: world, situationAlerts: []) }
+            time("mapAlerts") { _ = world.mapAlerts() }
+            time("nextSteps") { _ = NextSteps(world: world) }
+            time("transfers") { _ = session.wantedTransfers() }
+            time("lineMap") { _ = LineMap(world: world) }
+            time("equal") { _ = world == session.world }
+            time("placeToPass") { _ = world.firstLineWithoutPlaceToPass() }
             print("PERF115   \(label) screen ms: \(parts.joined(separator: ", "))")
         }
         func tick(_ label: String) async throws -> Double {
@@ -121,6 +130,7 @@ final class BuildCommandCostReportTests: XCTestCase {
         let kind = environment["PERF_COMMAND"] ?? "track"
         let metre = WorldCoordinate.unitsPerMetre
         var built = false
+        func pressing() throws -> Duration {
         let press: Duration
         switch kind {
         case "station":
@@ -168,7 +178,15 @@ final class BuildCommandCostReportTests: XCTestCase {
             }
             press = try XCTUnwrap(found, "no dead end to build from")
         }
+        return press
+        }
+        let press = try pressing()
         XCTAssertTrue(built, "\(kind): \(session.message?.text ?? "")")
+        // For a profiler: the command taken back and made again.
+        for _ in 0..<(Int(environment["PERF_REPEAT"] ?? "") ?? 0) {
+            session.undo()
+            print(String(format: "PERF115   again ms: %.1f", Self.ms(try pressing())))
+        }
         print(String(format: "PERF115 %@ command on the main actor: %.1f ms (%@)", kind, Self.ms(press), session.message?.text ?? ""))
         screen("after")
         screen("again")
