@@ -62,8 +62,9 @@ final class DiscoverableEntriesTests: XCTestCase {
     }
 
     func testAMapWithNoBranchLineSaysSo() throws {
-        // Kaohsiung's harbour, far from every branch line.
-        let session = try game(latitude: 22.62, longitude: 120.28, side: 1 << 17)
+        // Hengchun, far from every branch line (Kaohsiung's harbour, used
+        // before, now holds part of the circular light rail, decision 535).
+        let session = try game(latitude: 22.0, longitude: 120.75, side: 1 << 17)
         XCTAssertEqual(session.realLinesForSaleNote, "No real branch line runs through this map.")
     }
 
