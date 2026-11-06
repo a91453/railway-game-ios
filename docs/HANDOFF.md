@@ -551,6 +551,15 @@
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
 
+**第 52 任的現況（2026-11-06 約 14:35 UTC＝台灣 22:35，session_01YGNNun5Pr4b6AHKwn6MneD，第 1 層，壓縮 0 次）**：比下面兩段新，不同時以這段為準。
+
+- **118 已發**（作者自己按，run 118，`690b669d`）：完整 ci、release-archive、full lane 都綠；紀錄在 `research/PLAYER_FEEDBACK.md` 118.1 段。
+- **119 明天早上發**（作者睡前：「如果我睡著記得幫我繼續做」）：排程 trig_01BN7mj851uLUgEjcM1xQ8HN（23:30 UTC＝台灣 07:30）：08:00 停止合併 → WHATSNEW-119（Sonnet，id `2026-11-07-119-1`）→ HEAD 跑完整 ci、full lane、release-archive → 跟作者說可以發（作者自己按）。已合進 119：#1898 CABLE-SUNMOON（決策 615，日月潭吊廂，第 3 級截圖看過）。
+- **在做**：BUILD3D-3B session_01YGNNumihdrfsp4MkjR1tAo（決策 517 PR 3b，鋪完只重蓋經過的區塊）、KLRT-B session_01YGNNupz9ffMTKvvD1d8zbs（#1883，決策 612；遊戲規劃同意動 GameCore：只限環線、golden／replay／存檔不動、三種規則兩天死結 0）、CABVIEW-STUTTER session_01YGNNupagX8CDNTkxPxLsDw（作者回報車窗視角走走停停，作者 bug 優先，決策若要新號 616）。
+- **作者定的（2026-11-06）**：未來不優化手機版：iPhone 能跑就好，iPhone 專屬版面與手感不排；效能照做。截止可以延（118 從 19:00 延到 20:00，作者「我沒差」）。
+- **作者要自己做的**：刪 branch `claude/ferry-qijin-before`、`claude/copyright-name`（session 推刪除會 403）；私庫 assets #61。
+- **號碼**：下一個決策 **616**（615 CABLE-SUNMOON 已用；616 先給 CABVIEW-STUTTER）；存檔 **87**。
+
 **第 51 任交第 52 任（2026-11-06 約 08:10 UTC＝台灣 16:10，session_01YGNNuqBHdTZ3Bkm15qu36v，第 0 層，壓縮 3 次）**：照這段接手；下面「第 51 任的現況」仍有效，兩段不同時以這段為準。第 52 任由第 51 任用 `create_session` 開（第 1 層）；開工先在 #1579 登記，§1 表格的遊戲規劃改成新 session。
 
 - **118 今晚發，第 52 任負責**：台灣 19:00（11:00 UTC）停止合併 → 派 WHATSNEW-118（Sonnet，ID `2026-11-06-118-1`）→ 合後在 main HEAD 手動跑完整 `ci.yml`、`ios-full-lane.yml`、`release-archive.yml` → 三個都綠，22:00 前後問作者要自己按還是遊戲規劃按，只按一次（§1.2）；有紅就告訴作者哪裡紅，不按。排程 trig_011qrrd5qZUAdi6sxMKbcKLz（11:00 UTC）打進第 52 任（第 51 任的 trig_01EDKtaGjDa4x8X37Fu6ZKe6 已刪）。第 52 任是 session_01YGNNun5Pr4b6AHKwn6MneD。
