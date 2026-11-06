@@ -94,12 +94,12 @@ final class Map3DSceneRebuildTests: XCTestCase {
                 != triangles(same.mesh, same.baseIndexCount..<same.mesh.indices.count) { fields.append("mesh") }
         }
         if differ(chunk.far, same.far) { fields.append("far") }
-        if chunk.farBoxes.map { "\($0)" }.sorted() != same.farBoxes.map { "\($0)" }.sorted() { fields.append("farBoxes") }
+        if chunk.farBoxes.map({ "\($0)" }).sorted() != same.farBoxes.map({ "\($0)" }).sorted() { fields.append("farBoxes") }
         if differ(chunk.close, same.close) { fields.append("close") }
         if differ(chunk.standIn, same.standIn) { fields.append("standIn") }
         if differ(chunk.shadows, same.shadows) { fields.append("shadows") }
-        if chunk.props.map { "\($0.floats)" }.sorted() != same.props.map { "\($0.floats)" }.sorted() { fields.append("props") }
-        if chunk.signs.map { "\($0)" }.sorted() != same.signs.map { "\($0)" }.sorted() { fields.append("signs") }
+        if chunk.props.map({ "\($0.floats)" }).sorted() != same.props.map({ "\($0.floats)" }).sorted() { fields.append("props") }
+        if chunk.signs.map({ "\($0)" }).sorted() != same.signs.map({ "\($0)" }).sorted() { fields.append("signs") }
         if chunk.cityTops != same.cityTops { fields.append("cityTops") }
         if chunk.coarse != same.coarse { fields.append("coarse") }
         return fields
