@@ -117,8 +117,24 @@ public struct RealCableway: Hashable, Sendable {
         return PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded()))
     }
 
-    /// The real cable cars the mode lays.
-    public static let all: [RealCableway] = [.maokong]
+    /// Decision 615: the Sun Moon Lake Ropeway, Sun Moon Lake to the
+    /// Formosan Aboriginal Culture Village: its two stations, OpenStreetMap
+    /// nodes 800331755 (日月潭端車站) and 800332213 (九族端車站), its span
+    /// the length of OpenStreetMap way 65630200 (`aerialway=gondola`,
+    /// osmtoday.com's Taiwan extract of 2026-11-06, ODbL), 1,860 m. Used to
+    /// tell which cable cars run its cabins (``Map3DCableways/look(of:in:)``)
+    /// and to name its stops; the mode offers only Maokong to lay as it is.
+    public static let sunMoonLake = RealCableway(
+        name: "日月潭纜車", englishName: "Sun Moon Lake Ropeway",
+        stops: [
+            Stop(name: "日月潭", englishName: "Sun Moon Lake", latitude: 23.852257, longitude: 120.9348179, boards: true),
+            Stop(name: "九族文化村", englishName: "Formosan Aboriginal Culture Village", latitude: 23.8601457, longitude: 120.950941, boards: true)
+        ],
+        legMetres: [1_860]
+    )
+
+    /// The real cable cars the mode knows by their stops.
+    public static let all: [RealCableway] = [.maokong, .sunMoonLake]
 
     /// The real cable car `cableway` was laid as (decision 583: its stops'
     /// names for the follow bar): the same stops on the same cells, the

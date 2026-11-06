@@ -387,6 +387,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 615 (CABLE-SUNMOON): the Sun Moon Lake Ropeway on the 3D
+    /// map running Sun Moon Lake's cabins (red, yellow, blue and the green
+    /// crystal one), close up over its span and from below, the glass
+    /// see-through. For the pull request's screenshot review, beside
+    /// ``testCablewayIn3D()``'s Maokong cabins.
+    func testSunMoonLakeCablewayIn3D() {
+        for (name, view, span) in [("cableway-sunmoon-3d-near", "110,40,55", "0,500"), ("cableway-sunmoon-3d-below", "60,70,88", "0,450"),
+                                   ("cableway-sunmoon-3d-close", "40,25,30", "0,520")] {
+            let app = launch(extra: ["-screenshot-scene", "sunMoonLake", "-screenshot-3d-view", view, "-screenshot-3d-cableway", span,
+                                     "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            settle(seconds: 3)
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep(name, app)
+            app.terminate()
+        }
+    }
+
     /// Decision 585 續 (FERRY-QIJIN): the ferry mode's pale blue shore
     /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
     /// not read in yet (the author's, on 115.1). For the pull request's
