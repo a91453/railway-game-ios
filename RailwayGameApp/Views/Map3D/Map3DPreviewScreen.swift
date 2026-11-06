@@ -512,18 +512,29 @@ struct Map3DPreviewScreen: View {
 /// whoever waits for them waits on a continuation, which raises nothing,
 /// not on the task's value, which would raise it to the waiter's priority.
 ///
-/// Decision 608: made with their GPU buffers, on the same task: the
-/// vertices go to the GPU once, off the main thread, and the CPU keeps
-/// only their names, vertex counts, bounds, lamps, signs and glass
-/// (``Map3DUploadedModels``), held for the app's life and shared by the
-/// 3D map and the train showcase.
+/// Decision 608: then put on the GPU, on another task of the same low
+/// priority, the first time a 3D map or the train showcase asks for them
+/// (``make(priority:)``): the vertices go to the GPU once, off the main
+/// thread, and the CPU keeps only their names, vertex counts, bounds,
+/// lamps, signs and glass (``Map3DUploadedModels``), held for the app's
+/// life and shared by the 3D map and the train showcase. Not when they
+/// are made ahead (``start(priority:)``, ``makePack(priority:)``): made
+/// over the 2D map with their buffers, the Simulator dropped a UI test's
+/// pinch on the 2D map that came two seconds later (#1876's runs
+/// 42125321805 and 42140345310, main's 42140330949 green), so over the 2D
+/// map they stay what they were before decision 608.
 @MainActor
 final class Map3DTrainModels {
     static let shared = Map3DTrainModels()
     private var started = false
     private var made = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
-    /// Decision 608: the models on the GPU, once made (`nil` before, or
+    /// The models made, with their vertices, until they are on the GPU.
+    private var pack: Map3DModelPack?
+    private var uploading = false
+    private var uploadedOrFailed = false
+    private var waitingForUpload: [CheckedContinuation<Void, Never>] = []
+    /// Decision 608: the models on the GPU, once uploaded (`nil` before, or
     /// where the device has no Metal or no memory for them).
     private(set) var uploaded: Map3DUploadedModels?
 
@@ -532,24 +543,50 @@ final class Map3DTrainModels {
         guard !started else { return }
         started = true
         Task.detached(priority: priority) {
-            let uploaded = Map3DUploadedModels.make()
-            await Map3DTrainModels.shared.finished(uploaded)
+            let pack = Map3DView.makeModels()
+            await Map3DTrainModels.shared.finished(pack)
         }
     }
 
-    /// Once they are made, starting them if nothing has.
-    func make(priority: TaskPriority = .utility) async {
+    /// Once they are made, starting them if nothing has; not yet on the GPU.
+    func makePack(priority: TaskPriority = .utility) async {
         start(priority: priority)
         guard !made else { return }
         await withCheckedContinuation { waiting.append($0) }
     }
 
-    private func finished(_ uploaded: Map3DUploadedModels?) {
-        UITestTrace.action("map3D.models made: \(uploaded.map { "\($0.buffers.count) buffers" } ?? "none")")
-        self.uploaded = uploaded
+    /// Once they are made and on the GPU (``uploaded``).
+    func make(priority: TaskPriority = .utility) async {
+        await makePack(priority: priority)
+        guard !uploadedOrFailed else { return }
+        if !uploading {
+            uploading = true
+            // The task holds the vertices' last reference, so they are
+            // let go of there, not on the main thread.
+            let pack = self.pack
+            self.pack = nil
+            Task.detached(priority: priority) {
+                let uploaded = pack.flatMap(Map3DUploadedModels.make(from:))
+                await Map3DTrainModels.shared.finishedUpload(uploaded)
+            }
+        }
+        await withCheckedContinuation { waitingForUpload.append($0) }
+    }
+
+    private func finished(_ pack: Map3DModelPack?) {
+        self.pack = pack
         made = true
         let woken = waiting
         waiting = []
+        for continuation in woken { continuation.resume() }
+    }
+
+    private func finishedUpload(_ uploaded: Map3DUploadedModels?) {
+        UITestTrace.action("map3D.models uploaded: \(uploaded.map { "\($0.buffers.count) buffers" } ?? "none")")
+        self.uploaded = uploaded
+        uploadedOrFailed = true
+        let woken = waitingForUpload
+        waitingForUpload = []
         for continuation in woken { continuation.resume() }
     }
 
@@ -575,13 +612,13 @@ final class Map3DUploadedModels: @unchecked Sendable {
         self.glass = glass
     }
 
-    /// Makes the models (``Map3DView/makeModels()``), puts their vertices
-    /// in buffers on the system's Metal device (the one every 3D view
-    /// draws with), then lets go of them on the CPU: this pack's, and
-    /// ``Map3DModelPack/standard``'s, which it was made from. Slow: never
-    /// on the main thread.
-    static func make() -> Map3DUploadedModels? {
-        guard let full = Map3DView.makeModels(), let device = MTLCreateSystemDefaultDevice() else { return nil }
+    /// Puts the vertices of `full` (``Map3DView/makeModels()``) in
+    /// buffers on the system's Metal device (the one every 3D view draws
+    /// with), then lets go of them on the CPU: this pack's, once its
+    /// caller lets go of it, and ``Map3DModelPack/standard``'s, which it
+    /// was made from. Slow: never on the main thread.
+    static func make(from full: Map3DModelPack) -> Map3DUploadedModels? {
+        guard let device = MTLCreateSystemDefaultDevice() else { return nil }
         let buffers = full.models.compactMap { model in
             model.vertices.withUnsafeBytes { bytes in
                 bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
@@ -2558,7 +2595,9 @@ final class Map3DModelsWarmUp {
             // (main a48121b's full lane, run 41406244046, and its rerun
             // 41416405737); `.utility` is still below the 3D map's priority,
             // which stood the main thread still for 61 s (#1693).
-            await Map3DTrainModels.shared.make(priority: .utility)
+            // Made, not yet on the GPU: the 3D map that opens puts them
+            // there (decision 608), as it does for a player.
+            await Map3DTrainModels.shared.makePack(priority: .utility)
             isReady = true
         }
     }
