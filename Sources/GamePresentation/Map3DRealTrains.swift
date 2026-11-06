@@ -998,7 +998,8 @@ extension Map3DScene.Builder {
                     laid.add(.init(a: a, b: b, shown: shown[index - 1] && shown[index], track: number, from: at[index - 1], to: at[index],
                                    isService: track.isService), system: track.system)
                 }
-                layRealRun(range, points: points, kinds: kinds, shown: shown, cells: samples.map { ($0.x, $0.y) }, viaduct: viaduct)
+                layRealRun(range, points: points, kinds: kinds, shown: shown, cells: samples.map { ($0.x, $0.y) },
+                           along: samples.map(\.along), viaduct: viaduct)
             }
         }
         return laid
@@ -1007,18 +1008,27 @@ extension Map3DScene.Builder {
     /// Decision 402: the samples `range` of a real track laid as track in
     /// runs of one kind, every other sample, where a car shows; the city
     /// grid's cells it crosses kept clear of the seeded city.
+    ///
+    /// Review L11-1 (decision 517 續): which samples are kept and where the
+    /// pieces are cut go by the sample's place on the whole track (`along`,
+    /// metres), not by where its run starts, so a stretch hidden under the
+    /// player's track (or brought back) changes only the pieces either side
+    /// of it, which stand within ``Map3DSceneRebuild/reach`` of the change:
+    /// the rest of the track, kilometres on, is laid as before.
     private mutating func layRealRun(_ range: ClosedRange<Int>, points: [Map3DPoint?], kinds: [TrackSectionKind], shown: [Bool],
-                                     cells: [(x: Double, y: Double)], viaduct: Map3DViaduct) {
+                                     cells: [(x: Double, y: Double)], along: [Double], viaduct: Map3DViaduct) {
         var run: [Int] = []
         func lay() {
             defer { run = [] }
-            guard run.count > 1, let first = run.first else { return }
+            guard run.count > 1, let first = run.first, let last = run.last else { return }
             let kind = kinds[first]
             guard kind != .tunnel else { return }
-            var kept = stride(from: 0, to: run.count, by: 2).compactMap { points[run[$0]] }
-            if run.count % 2 == 0, let last = run.last, let point = points[last] { kept.append(point) }
+            // Its ends, and every even sample of the track between.
+            let kept = run.filter { $0 == first || $0 == last || $0 % 2 == 0 }.filter { points[$0] != nil }
             // Decision 600: the rails near only.
-            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct, railsNear: true) }
+            for piece in Self.pieces(of: kept, along: along) {
+                addTrackPiece(piece.compactMap { points[$0] }, kind: kind, viaduct: viaduct, railsNear: true, from: Float(along[piece[0]]))
+            }
             let cell = Double(Land.cellLength)
             for index in run {
                 realTrackCells.insert(Map3DScene.ChunkKey(column: Int((cells[index].x / cell).rounded(.down)),
@@ -1033,5 +1043,25 @@ extension Map3DScene.Builder {
             if shown[index] { run.append(index) }
         }
         lay()
+    }
+
+    /// Review L11-1: the samples `kept` (indices, along the track) in
+    /// pieces cut at the first kept sample at or past each 256 m of the
+    /// whole track (`along`, metres), each sharing its first sample with
+    /// the last's end: cut where the whole track is, wherever the run
+    /// starts.
+    static func pieces(of kept: [Int], along: [Double]) -> [[Int]] {
+        func stretch(_ index: Int) -> Int { Int((along[index] / 256).rounded(.down)) }
+        var pieces: [[Int]] = []
+        var current: [Int] = []
+        for index in kept {
+            current.append(index)
+            if current.count > 1, stretch(index) > stretch(current[0]) {
+                pieces.append(current)
+                current = [index]
+            }
+        }
+        if current.count > 1 { pieces.append(current) }
+        return pieces
     }
 }

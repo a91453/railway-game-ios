@@ -34,7 +34,12 @@ final class TrainMotionTests: XCTestCase {
         XCTAssertEqual(first.duration, 0.1, "the game's tick when the one before is not known")
         XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 100.12).duration, 0.12, accuracy: 1e-9)
         XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 103.5).duration, 3.5, accuracy: 1e-9, "a slow tick's whole wait")
-        XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 160).duration, 5, "never longer than the longest glide, after a pause")
+        XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 105).duration, 5, accuracy: 1e-9, "the longest glide")
+        // Review L11-3: after a pause (or the background), the tick before
+        // is not the one just gone: the game's tick, so the glide is done
+        // before the next tick comes and the train does not jump.
+        XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 160).duration, TrainMotion.tickSeconds, "after a pause")
+        XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 105.01).duration, TrainMotion.tickSeconds)
         XCTAssertEqual(TrainMotion(world: empty, previous: first, time: 100.001).duration, 0.05)
         XCTAssertEqual(first.progress(at: 99), 0)
         XCTAssertEqual(first.progress(at: 100.05), 0.5, accuracy: 1e-9)
