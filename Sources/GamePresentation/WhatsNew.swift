@@ -35,6 +35,10 @@ public enum WhatsNew {
             id: "2026-11-06-118-1",
             items: [
                 Line(
+                    english: "On the Wenhu line you buy, the Muzha and Neihu depots are laid out like the real yards, with an extra track in and out of the depot, and buying costs a little less.",
+                    chinese: "收購的文湖線，木柵、內湖機廠照真實車場鋪，多一條進出機廠的線，收購也便宜一點。"
+                ),
+                Line(
                     english: "On the Airport MRT you buy, express trains stop only at the real express stations, and Chang Gung Memorial Hospital has passing tracks on both sides.",
                     chinese: "收購的機場捷運，直達車照真實的站停車，長庚醫院兩側有待避線。"
                 ),
