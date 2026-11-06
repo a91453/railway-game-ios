@@ -1,9 +1,10 @@
-"""Blender 4.x: rebuild decision 611 road portal GLBs and transparent views.
+"""Blender 4.x producer for decision 611/359 revision-2 tunnel portal studies.
 
-Usage: blender -b --python tools/road_tunnel_portals.py -- --output /path/to/revision-1
-The geometry matches Map3DRoadTunnelPortals.swift's metre dimensions.
+blender -b --python tools/road_tunnel_portals.py -- --output REVISION_DIR
+Dimensions are duplicated in Map3DRoadTunnelPortals.swift for native meshes.
 """
 import argparse
+import json
 import math
 import sys
 from pathlib import Path
@@ -11,181 +12,344 @@ from pathlib import Path
 import bpy
 from mathutils import Vector
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", required=True)
+parser.add_argument("--composition-only", action="store_true")
+parser.add_argument("--validate-only", action="store_true")
+parser.add_argument("--views-only", action="store_true")
+parser.add_argument("--fronts-only", action="store_true")
+parser.add_argument("--only", default=None)
+parser.add_argument("--engine", choices=("cycles","eevee"), default="cycles")
 args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
 out = Path(args.output)
 out.mkdir(parents=True, exist_ok=True)
 
 
-def material(name, color):
-    mat = bpy.data.materials.new(name)
-    mat.diffuse_color = (*color, 1)
-    mat.use_nodes = True
-    mat.node_tree.nodes.get("Principled BSDF").inputs["Base Color"].default_value = (*color, 1)
-    mat.node_tree.nodes.get("Principled BSDF").inputs["Roughness"].default_value = 1
-    return mat
+def mat(name, rgb):
+    m = bpy.data.materials.new(name)
+    m.diffuse_color = (*rgb, 1)
+    m.use_nodes = True
+    m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*rgb, 1)
+    m.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 1
+    m.use_backface_culling = False
+    return m
 
 
-concrete = material("concrete_CFCBC2", (0.62, 0.60, 0.56))
-trim = material("coping_8B9096", (0.34, 0.37, 0.40))
-lining = material("reveal_A9AFBE", (0.31, 0.33, 0.40))
-asphalt = material("asphalt", (0.18, 0.21, 0.25))
-grass = material("slope_9DB07E", (0.42, 0.54, 0.33))
-line = material("road_edge", (0.93, 0.90, 0.76))
+concrete = mat('concrete_CFCBC2', (.62,.60,.56))
+trim = mat('coping_8B9096', (.34,.37,.40))
+lining = [mat('lining_near_A9AFBE', (.42,.45,.53)),
+          mat('lining_mid_6E7487', (.26,.28,.34)),
+          mat('lining_deep_4B5162', (.15,.17,.21)),
+          mat('lining_far_353948', (.08,.09,.12))]
+capmat = mat('opaque_end_222630', (.025,.03,.045))
+asphalt = mat('asphalt', (.18,.21,.25))
+ballast = mat('ballast_7E786D', (.35,.33,.30))
+railmat = mat('rail_6E7379', (.35,.37,.39))
+roadline = mat('road_edge', (.93,.90,.76))
+ground = mat('ground_ECEEF6', (.83,.86,.94))
+mountain = mat('embankment_9DB07E', (.40,.51,.32))
+mountain2 = mat('embankment_light', (.48,.58,.38))
 
 
-def box(name, center, scale, mat):
-    bpy.ops.mesh.primitive_cube_add(size=1, location=center)
-    obj = bpy.context.object
-    obj.name = name
-    obj.dimensions = scale
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    obj.data.materials.append(mat)
-    return obj
+def p(x,y,z): return (x,y,z)  # x into mountain, y right, z up
 
 
-def polygon(name, coords, mat):
+def poly(name, coords, material, toward=None):
+    if toward is not None and len(coords) >= 3:
+        a,b,c = (Vector(v) for v in coords[:3])
+        if (b-a).cross(c-a).dot(Vector(toward)) < 0:
+            coords = list(reversed(coords))
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata(coords, [], [tuple(range(len(coords)))])
     mesh.update()
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
-    mesh.materials.append(mat)
+    mesh.materials.append(material)
     return obj
 
 
-def p(x, y, z):
-    return (x, y, z)
+def box(name, center, dims, material):
+    bpy.ops.mesh.primitive_cube_add(size=1, location=center)
+    obj = bpy.context.object
+    obj.name = name
+    obj.dimensions = dims
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    obj.data.materials.append(material)
+    return obj
 
 
-def build(style, width):
-    half = {
-        "divided-expressway": (3.75, 5.25),
-        "mountain-arch": (3.1, 4.6),
-        "nameplate": (4.0, 5.5),
-        "narrow-lane": (2.5, 3.5),
-    }[style][width == "two-way"]
-    clear = 4.7 if style == "narrow-lane" else 5.2
-    spring = 3.7 if style == "mountain-arch" else (4.35 if style == "narrow-lane" else clear)
-    centres = [-(half + 0.7), half + 0.7] if style == "divided-expressway" else [0]
-    outer = centres[-1] + half + (1.2 if style == "narrow-lane" else 2)
-    top = clear + 1.3 + (1.1 if style == "nameplate" else 0)
+def spec(kind, width=None):
+    if kind.startswith('rail-'):
+        tracks = 'double' if 'double' in kind else 'single'
+        return dict(kind=kind, half=6.3 if tracks == 'double' else 3.2,
+                    clear=6.0, spring=2.8, centres=[0], shoulder=2.0,
+                    shape='rail', gallery='daylight' in kind, floor=-1.2,
+                    nameplate=False, track=True)
+    halves = {
+        'divided-expressway': (3.75,5.25), 'mountain-arch': (3.1,4.6),
+        'nameplate': (4.0,5.5), 'narrow-lane': (2.5,3.5),
+        'daylight-gallery': (3.75,5.25),
+    }
+    half = halves[kind][width == 'two-way']
+    clear = 4.7 if kind == 'narrow-lane' else 5.2
+    return dict(kind=kind, half=half, clear=clear,
+                spring=3.7 if kind == 'mountain-arch' else (4.35 if kind == 'narrow-lane' else clear),
+                centres=[-(half+.7), half+.7] if kind == 'divided-expressway' else [0],
+                shoulder=1.2 if kind == 'narrow-lane' else 2.0,
+                shape='road-arch' if kind == 'mountain-arch' else ('narrow' if kind == 'narrow-lane' else 'box'),
+                gallery=kind == 'daylight-gallery', floor=-.8,
+                nameplate=kind == 'nameplate', track=False)
 
-    def roof(c):
-        if style == "mountain-arch":
-            return [(c - half, spring), (c - .76 * half, 4.5), (c - .4 * half, clear),
-                    (c + .4 * half, clear), (c + .76 * half, 4.5), (c + half, spring)]
-        if style == "narrow-lane":
-            return [(c - half, spring), (c - .74 * half, clear),
-                    (c + .74 * half, clear), (c + half, spring)]
-        return [(c - half, clear), (c + half, clear)]
 
-    # x points into the hill. The near facade lies at x=0.
-    for x in (0, 1.2):
-        for i, c in enumerate(centres):
-            left, right = c - half, c + half
-            left_end = -outer if i == 0 else centres[i-1] + half
-            right_end = outer if i == len(centres)-1 else right
-            for a, b in ((left_end, left), (right, right_end)):
-                if b > a + .001:
-                    polygon("headwall", [p(x,a,-.8), p(x,b,-.8), p(x,b,top), p(x,a,top)], concrete)
-            prof = roof(c)
-            for (a, za), (b, zb) in zip(prof, prof[1:]):
-                polygon("roof_face", [p(x,a,za), p(x,b,zb), p(x,b,top), p(x,a,top)], concrete)
+def roof(s,c):
+    h,k,v = s['half'],s['clear'],s['spring']
+    if s['shape'] == 'road-arch':
+        return [(c-h,v),(c-.76*h,4.5),(c-.4*h,k),(c+.4*h,k),(c+.76*h,4.5),(c+h,v)]
+    if s['shape'] == 'narrow':
+        return [(c-h,v),(c-.74*h,k),(c+.74*h,k),(c+h,v)]
+    if s['shape'] == 'rail':
+        return [(c-h,v),(c-h+1.4,k),(c+h-1.4,k),(c+h,v)]
+    return [(c-h,k),(c+h,k)]
+
+
+def build(kind, width=None, offset=(0,0,0)):
+    s=spec(kind,width)
+    half,clear,centres=s['half'],s['clear'],s['centres']
+    outer=centres[-1]+half+s['shoulder']
+    top=clear+1.3+(1.1 if s['nameplate'] else 0)
+    front=-12 if s['gallery'] else 0
+    start=1.2 if s['gallery'] else front+1.2
+    end=start+8
+    floor=s['floor']
+    ox,oy,oz=offset
+    def q(x,y,z): return p(x+ox,y+oy,z+oz)
+    def face(name,coords,material,toward): return poly(name,[q(*a) for a in coords],material,toward)
+    def panel(a,b,low,high,x):
+        if b>a:
+            face('headwall', [p(x,a,low),p(x,b,low),p(x,b,high),p(x,a,high)],concrete,(-1 if x==front else 1,0,0))
+    for x in (front,0 if s['gallery'] else 1.2):
+        for i,c in enumerate(centres):
+            left,right=c-half,c+half
+            panel(-outer if i==0 else centres[i-1]+half,left,floor,top,x)
+            if i==len(centres)-1: panel(right,outer,floor,top,x)
+            prof=roof(s,c)
+            for (a,za),(b,zb) in zip(prof,prof[1:]):
+                face('facade_spandrel',[p(x,a,za),p(x,b,zb),p(x,b,top),p(x,a,top)],concrete,(-1 if x==front else 1,0,0))
     for c in centres:
-        for side in (-1, 1):
-            y = c + side*half
-            polygon("opening_reveal", [p(0,y,-.8), p(0,y,spring), p(1.2,y,spring), p(1.2,y,-.8)], lining)
-            box("jamb_band", (-.13,y, spring/2), (.27,.42,spring+.8), trim)
-        prof = roof(c)
-        for (a, za), (b, zb) in zip(prof, prof[1:]):
-            polygon("roof_reveal", [p(0,a,za), p(0,b,zb), p(1.2,b,zb), p(1.2,a,za)], lining)
-            polygon("portal_band", [p(-.21,a,za), p(-.21,b,zb), p(-.21,b,zb+.45), p(-.21,a,za+.45)], trim)
+        prof=roof(s,c)
+        if s['gallery']:
+            for side in (-1,1):
+                y=c+half*side
+                face('gallery_inner_retaining_wall',[p(front,y,floor),p(front,y,s['spring']),p(0,y,s['spring']),p(0,y,floor)],lining[0],(0,-side,0))
+                y+=side*s['shoulder']
+                face('gallery_outer_retaining_wall',[p(front,y,floor),p(front,y,top),p(0,y,top),p(0,y,floor)],concrete,(0,side,0))
+            for (a,za),(b,zb) in zip(prof,prof[1:]):
+                face('gallery_roof_underside',[p(front,a,za),p(front,b,zb),p(0,b,zb),p(0,a,za)],lining[0],(0,0,-1))
+            face('gallery_outer_roof',[p(front,-outer,top),p(front,outer,top),p(0,outer,top),p(0,-outer,top)],trim,(0,0,1))
+        for band,m in enumerate(lining):
+            x0=start+2*band
+            x1=x0+2
+            for side in (-1,1):
+                y=c+half*side
+                face('darkening_side_wall',[p(x0,y,floor),p(x0,y,s['spring']),p(x1,y,s['spring']),p(x1,y,floor)],m,(0,-side,0))
+            for (a,za),(b,zb) in zip(prof,prof[1:]):
+                face('darkening_roof',[p(x0,a,za),p(x0,b,zb),p(x1,b,zb),p(x1,a,za)],m,(0,0,-1))
+            face('darkening_floor',[p(x0,c-half,floor),p(x0,c+half,floor),p(x1,c+half,floor),p(x1,c-half,floor)],m,(0,0,1))
+        # Solid, double-sided end wall: no aperture can show the far background.
+        outline=[p(end,c-half,floor)]+[p(end,y,z) for y,z in prof]+[p(end,c+half,floor)]
+        face('opaque_depth_cap',outline,capmat,(-1,0,0))
+        face('opaque_depth_cap_reverse',list(reversed(outline)),capmat,(1,0,0))
+        for (a,za),(b,zb) in zip(prof,prof[1:]):
+            face('entrance_band',[p(front-.2,a,za),p(front-.2,b,zb),
+                                 p(front-.2,b,zb+.45),p(front-.2,a,za+.45)],trim,(-1,0,0))
+        for side in (-1,1):
+            y=c+half*side
+            box('entrance_jamb',q(front-.13,y,(s['spring']+floor)/2),(.27,.42,s['spring']-floor),trim)
+    # Outer shell stops side-on views seeing through the lining from outside.
     for side in (-1,1):
-        y0 = side*outer
-        y1 = side*(outer+2)
-        polygon("wing_inner", [p(0,y0,-.8), p(0,y0,top-.2), p(-8,y1,.6), p(-8,y1,-.8)], concrete)
-        polygon("wing_outer", [p(0,y0+side*.45,-.8), p(0,y0+side*.45,top-.2),
-                                p(-8,y1+side*.45,.6), p(-8,y1+side*.45,-.8)], concrete)
-        polygon("wing_coping", [p(0,y0,top-.2), p(0,y0+side*.45,top-.2),
-                                 p(-8,y1+side*.45,.6), p(-8,y1,.6)], trim)
-    if style == "nameplate":
-        box("blank_nameplate", (-.24,0, (clear+.65+top-.28)/2), (.15,half*1.6,top-.28-clear-.65), trim)
-    return outer, clear
+        y=outer*side
+        face('outer_bore_shell',[p(0,y,floor),p(0,y,top),p(end,y,top),p(end,y,floor)],concrete,(0,side,0))
+    face('outer_bore_roof',[p(0,-outer,top),p(0,outer,top),p(end,outer,top),p(end,-outer,top)],concrete,(0,0,1))
+    for side in (-1,1):
+        y0=side*outer
+        y1=side*(outer+2)
+        face('wing_inner',[p(front,y0,floor),p(front,y0,top-.2),p(front-8,y1,.6),p(front-8,y1,floor)],concrete,(0,-side,0))
+        face('wing_outer',[p(front,y0+side*.45,floor),p(front,y0+side*.45,top-.2),
+                           p(front-8,y1+side*.45,.6),p(front-8,y1+side*.45,floor)],concrete,(0,side,0))
+        face('wing_coping',[p(front,y0,top-.2),p(front,y0+side*.45,top-.2),
+                            p(front-8,y1+side*.45,.6),p(front-8,y1,.6)],trim,(0,0,1))
+    if s['nameplate']:
+        box('blank_nameplate',q(front-.24,0,(clear+.65+top-.28)/2),
+            (.15,half*1.6,top-.28-clear-.65),trim)
+    return dict(**s,outer=outer,top=top,front=front,inner_end=end,offset=offset)
 
 
-def camera(azimuth, outer):
-    bpy.ops.object.camera_add(location=(-25*math.cos(azimuth), 25*math.sin(azimuth), 14))
-    cam = bpy.context.object
-    target = Vector((-1.4, 0, 2.5))
-    cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
-    cam.data.type = 'ORTHO'
-    cam.data.ortho_scale = max(outer*2.5, 21)
-    bpy.context.scene.camera = cam
+def clear_except_lights():
+    for obj in list(bpy.context.scene.objects):
+        if obj.type!='LIGHT': bpy.data.objects.remove(obj,do_unlink=True)
+
+
+def camera(angle, aim, scale, height=14):
+    bpy.ops.object.camera_add(location=(-26*math.cos(angle)+aim[0],26*math.sin(angle)+aim[1],height+aim[2]))
+    cam=bpy.context.object
+    cam.rotation_euler=(Vector(aim)-cam.location).to_track_quat('-Z','Y').to_euler()
+    cam.data.type='ORTHO'
+    cam.data.ortho_scale=scale
+    bpy.context.scene.camera=cam
     return cam
 
 
-scene = bpy.context.scene
-scene.render.engine = 'CYCLES'
-scene.cycles.samples = 16
-scene.cycles.use_denoising = False
-for layer in scene.view_layers:
-    layer.cycles.use_denoising = False
-scene.render.resolution_x = 480
-scene.render.resolution_y = 480
-scene.render.resolution_percentage = 100
-scene.render.image_settings.file_format = 'PNG'
-scene.render.film_transparent = True
-scene.world.color = (.8,.8,.8)
-bpy.ops.object.light_add(type='AREA', location=(-10,-8,20))
-bpy.context.object.data.energy = 2500
-bpy.context.object.data.shape = 'DISK'
-bpy.context.object.data.size = 15
+def validate_occlusion(s):
+    """Entrance rays at several lateral and oblique angles must hit geometry."""
+    bpy.context.view_layer.update()
+    depsgraph=bpy.context.evaluated_depsgraph_get()
+    front,end=s['front'],s['inner_end']
+    for centre in s['centres']:
+        for across in (-.45,0,.45):
+            for target_across in (-.35,0,.35):
+                origin=Vector((front-.8,centre+across*s['half'],1.8))
+                target=Vector((end+2,centre+target_across*s['half'],1.8))
+                vector=target-origin
+                hit,point,normal,index,obj,matrix=scene.ray_cast(depsgraph,origin,vector.normalized(),distance=vector.length)
+                assert hit and point.x <= end+.05, (s['kind'],across,target_across,'see-through')
 
-styles = ("divided-expressway", "mountain-arch", "nameplate", "narrow-lane")
-for style in styles:
-    for width in ("one-way", "two-way"):
-        bpy.ops.object.select_all(action='DESELECT')
-        keep = [o for o in scene.objects if o.type == 'LIGHT']
-        for obj in list(scene.objects):
-            if obj not in keep:
-                bpy.data.objects.remove(obj, do_unlink=True)
-        outer, clear = build(style, width)
-        stem = f"{style}-{width}"
-        # Only the authored portal parts are exported. Road and hill are scene props.
-        bpy.ops.object.select_all(action='SELECT')
-        for obj in scene.objects:
-            if obj.type == 'LIGHT': obj.select_set(False)
-        bpy.context.view_layer.objects.active = next(o for o in scene.objects if o.type == 'MESH')
-        bpy.ops.export_scene.gltf(filepath=str(out / f"{stem}.glb"), export_format='GLB', use_selection=True)
-        for view, degrees in enumerate((-75,-50,-25,0,25,50,75), 1):
-            cam = camera(math.radians(degrees), outer)
-            scene.render.filepath = str(out / f"{stem}-view-{view}.png")
-            bpy.ops.render.render(write_still=True)
-            bpy.data.objects.remove(cam, do_unlink=True)
-        print("BUILT", stem, "clear width", half if False else (outer), "clear height", clear, flush=True)
 
-# Composition: a portal embedded in a faceted slope with a road entering it.
-for obj in list(scene.objects):
-    if obj.type != 'LIGHT': bpy.data.objects.remove(obj, do_unlink=True)
-outer, _ = build("mountain-arch", "two-way")
-box("road_surface", (-9,0,-.07), (18,8.6,.14), asphalt)
-for y in (-3.8,3.8):
-    box("edge_line", (-10,y,.02), (14,.13,.03), line)
-for side in (-1,1):
-    # Terrain starts at the wing's outer crest, then climbs outward and back.
-    a = p(0,side*(outer+.45),6.3)
-    b = p(-8,side*(outer+2+.45),.6)
-    c = p(-8,side*(outer+9),2.7)
-    d = p(2,side*(outer+12),9.8)
-    e = p(2,side*(outer+.45),7.7)
-    polygon("slope_lower_facet", [a,b,c], grass)
-    polygon("slope_upper_facet", [a,c,d], grass)
-    polygon("slope_back_facet", [a,d,e], grass)
-cam = camera(math.radians(-30), outer+7)
-scene.render.resolution_x = 960
-scene.render.resolution_y = 600
-scene.render.filepath = str(out / "hillside-road-composition.png")
+scene=bpy.context.scene
+scene.render.engine='BLENDER_EEVEE_NEXT' if args.engine=='eevee' else 'CYCLES'
+scene.cycles.samples=32
+scene.cycles.use_denoising=False
+for layer in scene.view_layers: layer.cycles.use_denoising=False
+scene.render.resolution_x=480
+scene.render.resolution_y=480
+scene.render.resolution_percentage=100
+scene.render.image_settings.file_format='PNG'
+scene.render.film_transparent=True
+scene.world.color=(.83,.86,.94)
+scene.world.use_nodes=True
+scene.world.node_tree.nodes['Background'].inputs['Color'].default_value=(.83,.86,.94,1)
+scene.world.node_tree.nodes['Background'].inputs['Strength'].default_value=.8
+scene.view_settings.view_transform='Standard'
+bpy.ops.object.light_add(type='AREA',location=(-12,-9,22))
+bpy.context.object.data.energy=3000
+bpy.context.object.data.shape='DISK'
+bpy.context.object.data.size=16
+
+models=[(kind,width) for kind in ('divided-expressway','mountain-arch','nameplate','narrow-lane','daylight-gallery')
+        for width in ('one-way','two-way')]
+models += [(kind,None) for kind in ('rail-single','rail-double','rail-daylight-single','rail-daylight-double')]
+if args.composition_only: models = []
+if args.only: models=[entry for entry in models if entry[0]==args.only]
+connectors={}
+for kind,width in models:
+    clear_except_lights()
+    s=build(kind,width)
+    validate_occlusion(s)
+    stem=kind if width is None else f'{kind}-{width}'
+    connectors[stem]={
+        'surface_center_m':[s['front'],0,0], 'into_tunnel':[1,0,0],
+        'clear_width_m':2*s['half'], 'clear_height_m':s['clear'],
+        'lining_depth_m':8, 'daylight_cover_length_m':12 if s['gallery'] else 0,
+    }
+    if args.validate_only: continue
+    for obj in scene.objects: obj.select_set(obj.type=='MESH')
+    bpy.context.view_layer.objects.active=next(o for o in scene.objects if o.type=='MESH')
+    bpy.ops.export_scene.gltf(filepath=str(out/f'{stem}.glb'),export_format='GLB',use_selection=True)
+    # View 1 is head-on. The rest cover both oblique sides and the rear.
+    for view,angle in enumerate((0,-30,30,-60,60,-120,120),1):
+        if args.fronts_only and view != 1: continue
+        aim_x=s['front']+(4 if s['gallery'] else 1.5)
+        cam=camera(math.radians(angle),(aim_x,0,2.5),
+                   max(s['outer']*2.7,36 if s['gallery'] else 26),
+                   height=5 if view==1 else 14)
+        scene.render.filepath=str(out/f'{stem}-view-{view}.png')
+        bpy.ops.render.render(write_still=True)
+        bpy.data.objects.remove(cam,do_unlink=True)
+    print('BUILT',stem,'depth',s['inner_end']-(1.2 if s['gallery'] else 1.2),'clear',s['clear'],flush=True)
+if not args.only and not args.composition_only:
+    (out/'connectors.json').write_text(json.dumps({
+        'coordinates':'Blender metres: x into tunnel, y right, z up',
+        'models':connectors},indent=2,sort_keys=True)+'\n')
+
+# One review scene: five routes entering one continuous mountain face.
+if args.validate_only:
+    print('VALIDATED',len(models),'portal variants with frontal and oblique rays',flush=True)
+    sys.exit(0)
+if args.views_only or args.fronts_only: sys.exit(0)
+clear_except_lights()
+scene.render.film_transparent=False
+scene.world.color=(.83,.86,.94)
+scene.render.resolution_x=1600
+scene.render.resolution_y=900
+placements=[('mountain-arch','two-way',-57),('daylight-gallery','one-way',-29),
+            ('rail-single',None,0),('rail-double',None,29),
+            ('rail-daylight-double',None,58)]
+scene_specs=[]
+for kind,width,y in placements:
+    s=build(kind,width,offset=(0,y,0))
+    scene_specs.append(s)
+    front=s['front']
+    if s['track']:
+        box('rail_bed',((front-10)/2,y,-.12),((0-(front-10))+1,2*s['half']-.7,.23),ballast)
+        for side in (-1,1):
+            ry=y+side*.75
+            box('rail',((front-10)/2,ry,.08),(0-(front-10)+1,.12,.12),railmat)
+    else:
+        box('road_surface',((front-12)/2,y,-.10),(0-(front-12)+1,2*s['half']-.35,.18),asphalt)
+        for side in (-1,1):
+            ly=y+side*(s['half']-.45)
+            box('road_edge_line',((front-12)/2,ly,.012),(0-(front-12)+1,.11,.025),roadline)
+    # Continuous slope contacts the wing's outer crest at both ends.
+    for side in (-1,1):
+        f=s['front']; o=s['outer']; t=s['top']
+        a=p(f,y+side*(o+.45),t-.2)
+        b=p(f-8,y+side*(o+2+.45),.6)
+        c=p(f-8,y+side*(o+13),3.6)
+        d=p(f+3,y+side*(o+15),t+4)
+        e=p(f+3,y+side*(o+.45),t+1.2)
+        poly('wing_embedded_slope_lower',[a,b,c],mountain,(0,0,1))
+        poly('wing_embedded_slope_mid',[a,c,d],mountain2,(0,0,1))
+        poly('wing_embedded_slope_upper',[a,d,e],mountain,(0,0,1))
+    # Faceted local earth cap seats on the portal coping and joins the ridge.
+    f=s['front']; o=s['outer']; t=s['top']
+    ridge=max(f+12,12)
+    poly('earth_over_portal',[p(f,y-o,t+.02),p(f,y+o,t+.02),
+                              p(ridge,y+o,11),p(ridge,y-o,11)],mountain,(0,0,1))
+# Fill the spaces between portal shoulders with a continuous bank down to
+# ground level. Its boundary heights match each adjacent cap at x=0.
+edges=[]
+for s in scene_specs:
+    y=s['offset'][1]; o=s['outer']; f=s['front']; t=s['top']
+    at_zero=t+.02+(11-t-.02)*((0-f)/(12-f))
+    edges.append((y-o,at_zero,y+o,at_zero))
+gaps=[(-82,7.5,edges[0][0],edges[0][1])]
+gaps += [(a[2],a[3],b[0],b[1]) for a,b in zip(edges,edges[1:])]
+gaps.append((edges[-1][2],edges[-1][3],82,7.5))
+for left,hleft,right,hright in gaps:
+    a=p(0,left,hleft); b=p(0,right,hright)
+    c=p(12,right,11); d=p(12,left,11)
+    e=p(-10,right,0); f=p(-10,left,0)
+    poly('joined_bank_upper_a',[a,b,c],mountain,(0,0,1))
+    poly('joined_bank_upper_b',[a,c,d],mountain2,(0,0,1))
+    poly('joined_bank_foot_a',[a,b,e],mountain2,(0,0,1))
+    poly('joined_bank_foot_b',[a,e,f],mountain,(0,0,1))
+# A continuous faceted mountain with a varied ridge, then a back slope.
+ridge_y=(-82,-43,-14,14,43,82)
+ridge_h=(17,22,19,23,18,21)
+for i,(y0,y1) in enumerate(zip(ridge_y,ridge_y[1:])):
+    h0,h1=ridge_h[i:i+2]
+    tint=mountain if i%2==0 else mountain2
+    a=p(12,y0,11); b=p(12,y1,11); c=p(32,y1,h1); d=p(32,y0,h0)
+    poly('mountain_rise_a',[a,b,c],tint,(0,0,1))
+    poly('mountain_rise_b',[a,c,d],mountain2 if i%2==0 else mountain,(0,0,1))
+    poly('mountain_back_slope',[d,c,p(53,y1,h1-3),p(53,y0,h0-3)],mountain,(0,0,1))
+# Pale game ground visible beyond the four paved approaches.
+box('map_ground',(-18,0,-.52),(100,190,.22),ground)
+bpy.ops.object.camera_add(location=(-95,-19,28))
+cam=bpy.context.object
+cam.rotation_euler=(Vector((-6,0,4))-cam.location).to_track_quat('-Z','Y').to_euler()
+cam.data.type='ORTHO'
+cam.data.ortho_scale=176
+scene.camera=cam
+scene.cycles.samples=48
+scene.render.filepath=str(out/'mountain-road-rail-composition.png')
 bpy.ops.render.render(write_still=True)

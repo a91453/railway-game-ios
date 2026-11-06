@@ -1,28 +1,25 @@
-/// Decision 611 art study. Local coordinates are metres: +x is into the
-/// tunnel, +y is up, +z is the road's right. The road surface is y = 0.
-/// ROADTUNNEL will choose placements; this file does not alter map drawing.
+/// Decision 611 art studies. Metres: +x into the tunnel, +y up, +z right.
+/// No scene registration: ROADTUNNEL owns placement and terrain integration.
 public enum Map3DRoadTunnelPortals {
     public enum Style: String, CaseIterable, Sendable {
-        case dividedExpressway, mountainArch, nameplate, narrowLane
+        case dividedExpressway, mountainArch, nameplate, narrowLane, daylightGallery
     }
-
-    public enum Width: String, CaseIterable, Sendable {
-        case oneWay, twoWay
-    }
+    public enum Width: String, CaseIterable, Sendable { case oneWay, twoWay }
+    public enum RailTracks: String, CaseIterable, Sendable { case single, double }
 
     public struct Connector: Sendable {
-        /// Road centre on the surface, in the mesh's local metres.
+        /// Surface centre at the outer entrance. Rail studies use the same origin.
         public let roadCenter: Map3DPoint
         public let roadElevation: Float
         public let intoTunnel: Map3DPoint
     }
-
     public struct Part: Sendable {
         public let mesh: Map3DMesh
         public let connector: Connector
-        /// Clear span of each opening, in metres.
         public let clearWidth: Float
         public let clearHeight: Float
+        /// The cap at the deep end prevents a see-through preview.
+        public let liningDepth: Float
     }
 
     public static let wallThickness: Float = 1.2
@@ -30,11 +27,10 @@ public enum Map3DRoadTunnelPortals {
     public static let embed: Float = 0.8
     public static let wingLength: Float = 8
     public static let wingSplay: Float = 2
+    public static let liningDepth: Float = 8
+    public static let galleryLength: Float = 12
 
-    /// Build one portal with its pair of 8 m wing walls. A divided portal
-    /// has two openings and a solid centre pier in both width variants.
     public static func make(_ style: Style, width: Width) -> Part {
-        let divided = style == .dividedExpressway
         let half: Float
         switch (style, width) {
         case (.dividedExpressway, .oneWay): half = 3.75
@@ -45,94 +41,168 @@ public enum Map3DRoadTunnelPortals {
         case (.nameplate, .twoWay): half = 5.5
         case (.narrowLane, .oneWay): half = 2.5
         case (.narrowLane, .twoWay): half = 3.5
+        case (.daylightGallery, .oneWay): half = 3.75
+        case (.daylightGallery, .twoWay): half = 5.25
         }
         let clear: Float = style == .narrowLane ? 4.7 : 5.2
-        let spring: Float = style == .mountainArch ? 3.7 : clear
-        let pier: Float = 1.4
-        let centres: [Float] = divided ? [-(half + pier / 2), half + pier / 2] : [0]
-        let outer = (centres.last ?? 0) + half + (style == .narrowLane ? 1.2 : 2)
-        let top = clear + overRoof + (style == .nameplate ? 1.1 : 0)
-        let concrete = Map3DPalette.concrete
-        let trim = Map3DPalette.portal
-        let lining = Map3DPalette.tunnelWall
+        let spring: Float = style == .mountainArch ? 3.7 : (style == .narrowLane ? 4.35 : clear)
+        let divided = style == .dividedExpressway
+        let centres: [Float] = divided ? [-(half + 0.7), half + 0.7] : [0]
+        return build(half: half, clear: clear, spring: spring, centres: centres,
+                     shoulder: style == .narrowLane ? 1.2 : 2,
+                     nameplate: style == .nameplate, gallery: style == .daylightGallery,
+                     shape: style == .mountainArch ? .roadArch : (style == .narrowLane ? .narrow : .box),
+                     floor: -embed)
+    }
+
+    /// Decision 359's 3.2 m half bore, 2.8 m spring and 6 m crown. The
+    /// double-track study is a widened shared bore; both have a daylight form.
+    public static func makeRail(_ tracks: RailTracks, daylight: Bool) -> Part {
+        let half: Float = tracks == .single ? 3.2 : 6.3
+        return build(half: half, clear: 6, spring: 2.8, centres: [0],
+                     shoulder: 2, nameplate: false, gallery: daylight,
+                     shape: .railArch, floor: -1.2)
+    }
+
+    private enum Shape { case box, roadArch, narrow, railArch }
+
+    private static func build(half: Float, clear: Float, spring: Float, centres: [Float],
+                              shoulder: Float, nameplate: Bool, gallery: Bool,
+                              shape: Shape, floor: Float) -> Part {
+        let outer = (centres.last ?? 0) + half + shoulder
+        let top = clear + overRoof + (nameplate ? 1.1 : 0)
+        let front: Float = gallery ? -galleryLength : 0
+        let innerStart: Float = gallery ? wallThickness : front + wallThickness
+        let innerEnd = innerStart + liningDepth
+        let wall = Map3DPalette.concrete, trim = Map3DPalette.portal
+        let shades: [UInt32] = [Map3DPalette.tunnelWall, Map3DPalette.tunnelLining,
+                                 Map3DColor.rgb(0x4B5162), Map3DColor.rgb(0x353948)]
+        let cap = Map3DColor.rgb(0x222630)
         var mesh = Map3DMesh()
-        func point(_ z: Float, _ y: Float, _ x: Float = 0) -> Map3DPoint { Map3DPoint(x, y, z) }
+        func p(_ z: Float, _ y: Float, _ x: Float) -> Map3DPoint { Map3DPoint(x, y, z) }
         func face(_ corners: [Map3DPoint], toward: Map3DPoint, color: UInt32) {
-            guard corners.count > 2, let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { return }
-            let ordered = normal.dot(toward) < 0 ? Array(corners.reversed()) : corners
-            if ordered.count == 4 { mesh.addQuad(ordered[0], ordered[1], ordered[2], ordered[3], color: color) }
-            else { mesh.addFacet(ordered, color: color) }
+            guard corners.count >= 3,
+                  let n = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { return }
+            let c = n.dot(toward) < 0 ? Array(corners.reversed()) : corners
+            if c.count == 4 { mesh.addQuad(c[0], c[1], c[2], c[3], color: color) }
+            else { mesh.addFacet(c, color: color) }
         }
-        func panel(_ left: Float, _ right: Float, _ bottom: Float, _ roof: Float, _ x: Float, _ color: UInt32) {
-            face([point(left, bottom, x), point(right, bottom, x), point(right, roof, x), point(left, roof, x)],
-                 toward: Map3DPoint(x == 0 ? -1 : 1, 0, 0), color: color)
+        func panel(_ a: Float, _ b: Float, _ low: Float, _ high: Float, _ x: Float, _ color: UInt32) {
+            guard b > a else { return }
+            face([p(a, low, x), p(b, low, x), p(b, high, x), p(a, high, x)],
+                 toward: Map3DPoint(x == front ? -1 : 1, 0, 0), color: color)
         }
-        // Aperture roof is a sequence of straight facets, never a smooth arch.
-        func roof(_ centre: Float) -> [(Float, Float)] {
-            if style == .mountainArch {
-                return [(-half, spring), (-half * 0.76, 4.5), (-half * 0.4, clear),
-                        (half * 0.4, clear), (half * 0.76, 4.5), (half, spring)]
-                    .map { (centre + $0.0, $0.1) }
+        func roof(_ c: Float) -> [(Float, Float)] {
+            switch shape {
+            case .box: return [(c - half, clear), (c + half, clear)]
+            case .narrow: return [(c - half, spring), (c - half * 0.74, clear),
+                                  (c + half * 0.74, clear), (c + half, spring)]
+            case .roadArch: return [(c - half, spring), (c - half * 0.76, 4.5),
+                                    (c - half * 0.4, clear), (c + half * 0.4, clear),
+                                    (c + half * 0.76, 4.5), (c + half, spring)]
+            case .railArch: return [(c - half, spring), (c - half + 1.4, clear),
+                                    (c + half - 1.4, clear), (c + half, spring)]
             }
-            if style == .narrowLane {
-                return [(centre - half, 4.35), (centre - half * 0.74, clear),
-                        (centre + half * 0.74, clear), (centre + half, 4.35)]
-            }
-            return [(centre - half, clear), (centre + half, clear)]
         }
-        for x: Float in [0, wallThickness] {
-            for (index, centre) in centres.enumerated() {
-                let left = centre - half, right = centre + half
+        // The facade's two faces, with solid jambs and faceted spandrels.
+        for x: Float in [front, gallery ? 0 : wallThickness] {
+            for (index, c) in centres.enumerated() {
+                let left = c - half, right = c + half
                 let leftEnd = index == 0 ? -outer : centres[index - 1] + half
-                let rightEnd = index == centres.count - 1 ? outer : right
-                panel(leftEnd, left, -embed, top, x, concrete)
-                if index == centres.count - 1 { panel(right, rightEnd, -embed, top, x, concrete) }
-                let profile = roof(centre)
-                for segment in 1..<profile.count {
-                    let a = profile[segment - 1], b = profile[segment]
-                    face([point(a.0, a.1, x), point(b.0, b.1, x), point(b.0, top, x), point(a.0, top, x)],
-                         toward: Map3DPoint(x == 0 ? -1 : 1, 0, 0), color: concrete)
+                panel(leftEnd, left, floor, top, x, wall)
+                if index == centres.count - 1 { panel(right, outer, floor, top, x, wall) }
+                let profile = roof(c)
+                for i in 1..<profile.count {
+                    let a = profile[i - 1], b = profile[i]
+                    face([p(a.0, a.1, x), p(b.0, b.1, x), p(b.0, top, x), p(a.0, top, x)],
+                         toward: Map3DPoint(x == front ? -1 : 1, 0, 0), color: wall)
                 }
             }
         }
-        // Opening reveals and dark inner lining make the road visibly enter.
-        for centre in centres {
-            let profile = roof(centre)
-            for side: Float in [-1, 1] {
-                let z = centre + side * half
-                face([point(z, -embed), point(z, spring), point(z, spring, wallThickness), point(z, -embed, wallThickness)],
-                     toward: Map3DPoint(0, 0, -side), color: lining)
+        for c in centres {
+            let profile = roof(c)
+            // Gallery is an open-air retaining shell: 12 m concrete cover and
+            // sidewalls between the outer entrance and the mountain face.
+            if gallery {
+                for side: Float in [-1, 1] {
+                    let z = c + half * side
+                    face([p(z, floor, front), p(z, spring, front), p(z, spring, 0), p(z, floor, 0)],
+                         toward: Map3DPoint(0, 0, -side), color: Map3DPalette.tunnelWall)
+                    face([p(z + side * shoulder, floor, front), p(z + side * shoulder, top, front),
+                          p(z + side * shoulder, top, 0), p(z + side * shoulder, floor, 0)],
+                         toward: Map3DPoint(0, 0, side), color: wall)
+                }
+                for i in 1..<profile.count {
+                    let a = profile[i - 1], b = profile[i]
+                    face([p(a.0, a.1, front), p(b.0, b.1, front), p(b.0, b.1, 0), p(a.0, a.1, 0)],
+                         toward: Map3DPoint(0, -1, 0), color: Map3DPalette.tunnelWall)
+                }
+                face([p(-outer, top, front), p(outer, top, front), p(outer, top, 0), p(-outer, top, 0)],
+                     toward: .up, color: trim)
             }
-            for segment in 1..<profile.count {
-                let a = profile[segment - 1], b = profile[segment]
-                face([point(a.0, a.1), point(b.0, b.1), point(b.0, b.1, wallThickness), point(a.0, a.1, wallThickness)],
-                     toward: Map3DPoint(0, -1, 0), color: lining)
-                // Proud, planar concrete band around the opening.
-                let rise: Float = 0.45
-                face([point(a.0, a.1, -0.2), point(b.0, b.1, -0.2),
-                      point(b.0, b.1 + rise, -0.2), point(a.0, a.1 + rise, -0.2)],
+            // Four full-depth 2 m bands: the deep wall becomes darker.
+            for band in 0..<shades.count {
+                let x0 = innerStart + Float(band) * 2
+                let x1 = x0 + 2
+                for side: Float in [-1, 1] {
+                    let z = c + half * side
+                    face([p(z, floor, x0), p(z, spring, x0), p(z, spring, x1), p(z, floor, x1)],
+                         toward: Map3DPoint(0, 0, -side), color: shades[band])
+                }
+                for i in 1..<profile.count {
+                    let a = profile[i - 1], b = profile[i]
+                    face([p(a.0, a.1, x0), p(b.0, b.1, x0), p(b.0, b.1, x1), p(a.0, a.1, x1)],
+                         toward: Map3DPoint(0, -1, 0), color: shades[band])
+                }
+                face([p(c - half, floor, x0), p(c + half, floor, x0),
+                      p(c + half, floor, x1), p(c - half, floor, x1)], toward: .up, color: shades[band])
+            }
+            // A solid polygon at 8 m makes every oblique preview opaque.
+            var end = [p(c - half, floor, innerEnd)]
+            end += profile.map { p($0.0, $0.1, innerEnd) }
+            end.append(p(c + half, floor, innerEnd))
+            face(end, toward: Map3DPoint(-1, 0, 0), color: cap)
+            face(Array(end.reversed()), toward: Map3DPoint(1, 0, 0), color: cap)
+            for i in 1..<profile.count {
+                let a = profile[i - 1], b = profile[i]
+                face([p(a.0, a.1, front - 0.2), p(b.0, b.1, front - 0.2),
+                      p(b.0, b.1 + 0.45, front - 0.2), p(a.0, a.1 + 0.45, front - 0.2)],
                      toward: Map3DPoint(-1, 0, 0), color: trim)
             }
         }
+        // An outside shell closes the lining when seen from above or beside.
+        for side: Float in [-1, 1] {
+            let z = outer * side
+            face([p(z, floor, 0), p(z, top, 0), p(z, top, innerEnd), p(z, floor, innerEnd)],
+                 toward: Map3DPoint(0, 0, side), color: wall)
+        }
+        face([p(-outer, top, 0), p(outer, top, 0),
+              p(outer, top, innerEnd), p(-outer, top, innerEnd)],
+             toward: .up, color: wall)
+        // The same 8 m / 2 m splay as decision 359, attached at the entrance.
         for side: Float in [-1, 1] {
             let z = outer * side, tip = (outer + wingSplay) * side
-            face([point(z, -embed), point(z, top - 0.2), point(tip, 0.6, -wingLength), point(tip, -embed, -wingLength)],
-                 toward: Map3DPoint(0, 0, -side), color: concrete)
-            let offset: Float = 0.45 * side
-            face([point(z + offset, -embed), point(z + offset, top - 0.2),
-                  point(tip + offset, 0.6, -wingLength), point(tip + offset, -embed, -wingLength)],
-                 toward: Map3DPoint(0, 0, side), color: concrete)
-            face([point(z, top - 0.2), point(z + offset, top - 0.2),
-                  point(tip + offset, 0.6, -wingLength), point(tip, 0.6, -wingLength)],
+            let edge = 0.45 * side
+            face([p(z, floor, front), p(z, top - 0.2, front),
+                  p(tip, 0.6, front - wingLength), p(tip, floor, front - wingLength)],
+                 toward: Map3DPoint(0, 0, -side), color: wall)
+            face([p(z + edge, floor, front), p(z + edge, top - 0.2, front),
+                  p(tip + edge, 0.6, front - wingLength), p(tip + edge, floor, front - wingLength)],
+                 toward: Map3DPoint(0, 0, side), color: wall)
+            face([p(z, top - 0.2, front), p(z + edge, top - 0.2, front),
+                  p(tip + edge, 0.6, front - wingLength), p(tip, 0.6, front - wingLength)],
                  toward: .up, color: trim)
         }
-        // The large portal has a blank, flat fascia for a later name plate.
-        if style == .nameplate {
-            face([point(-half * 0.8, clear + 0.65, -0.24), point(half * 0.8, clear + 0.65, -0.24),
-                  point(half * 0.8, top - 0.28, -0.24), point(-half * 0.8, top - 0.28, -0.24)],
+        if nameplate {
+            face([p(-half * 0.8, clear + 0.65, front - 0.24),
+                  p(half * 0.8, clear + 0.65, front - 0.24),
+                  p(half * 0.8, top - 0.28, front - 0.24),
+                  p(-half * 0.8, top - 0.28, front - 0.24)],
                  toward: Map3DPoint(-1, 0, 0), color: trim)
         }
-        let connector = Connector(roadCenter: point(0, 0), roadElevation: 0, intoTunnel: Map3DPoint(1, 0, 0))
-        return Part(mesh: mesh, connector: connector, clearWidth: 2 * half, clearHeight: clear)
+        return Part(mesh: mesh,
+                    connector: Connector(roadCenter: p(0, 0, front), roadElevation: 0,
+                                         intoTunnel: Map3DPoint(1, 0, 0)),
+                    clearWidth: 2 * half, clearHeight: clear, liningDepth: liningDepth)
     }
 }
