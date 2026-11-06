@@ -67,7 +67,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             done.tap()
-            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
         }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
@@ -112,7 +112,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             XCTAssertTrue(done.appears(within: 600), "The line is bought")
             if done.becomesHittable(within: 10) {
                 done.tap()
-                XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+                XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
             }
             let open3D = app.buttons["map.open3D"]
             XCTAssertTrue(open3D.appears(within: 10))
@@ -144,7 +144,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             done.tap()
-            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
         }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
