@@ -229,7 +229,15 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         if self == .cijinShore, let frame = RealWorldFrame(world: session.world) {
             let (west, north) = frame.worldPosition(latitude: 22.632, longitude: 120.252)
             let (east, south) = frame.worldPosition(latitude: 22.598, longitude: 120.288)
-            session.lookOver(WorldRegion(minX: west, minY: north, maxX: east, maxY: south))
+            let region = WorldRegion(minX: west, minY: north, maxX: east, maxY: south)
+            // The map follows a camera request made after it is up, and it
+            // opens on the whole island: asked again as it comes up.
+            Task { @MainActor in
+                for seconds in [1, 3, 6] {
+                    try? await Task.sleep(for: .seconds(seconds))
+                    session.lookOver(region)
+                }
+            }
             return
         }
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
