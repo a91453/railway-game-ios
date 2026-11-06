@@ -155,6 +155,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// had only just left, the other boat lying at the same berth.
     case tamsuiFerryCrossing
 
+    /// Decision 585 續 (FERRY-QIJIN): the whole of Taiwan with the land
+    /// (no people, its water) read in round a point on Kaohsiung
+    /// harbour's north side and not round Cijin, as on the author's map,
+    /// looking over the harbour mouth: the ferry mode's pale blue shore.
+    case cijinShore
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -175,7 +181,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Between the Tamsui and Bali piers.
         case .tamsuiFerry, .tamsuiFerryCrossing: (25.1640, 121.4376)
         // Between the Gushan and Cijin piers.
-        case .gushanFerry, .gushanFerryEvening: (22.6165, 120.26775)
+        case .gushanFerry, .gushanFerryEvening, .cijinShore: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
@@ -213,12 +219,19 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, then: 3, in: language, water: water)
         case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
+        case .cijinShore: Self.cijinShoreWorld(water: water)
         }
     }
 
     /// What the scene does once its game is open, with the player's own
     /// tools: ``depotOffer`` lays its depot. Nothing for the others.
     @MainActor public func prepare(_ session: GameSession) {
+        if self == .cijinShore, let frame = RealWorldFrame(world: session.world) {
+            let (west, north) = frame.worldPosition(latitude: 22.632, longitude: 120.252)
+            let (east, south) = frame.worldPosition(latitude: 22.598, longitude: 120.288)
+            session.lookOver(WorldRegion(minX: west, minY: north, maxX: east, maxY: south))
+            return
+        }
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
@@ -315,7 +328,24 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Whether the scene is by the water and waits for the app's map of
     /// Taiwan's water (decision 585).
     public var needsWater: Bool {
-        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing
+        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing || self == .cijinShore
+    }
+
+    /// The point on Kaohsiung harbour's north side ``cijinShore`` reads
+    /// the land round: 2.5 km north of Cijin's ferry station.
+    static let cijinShoreRead = (latitude: 22.635, longitude: 120.280)
+
+    /// ``cijinShore``'s world: the whole of Taiwan, the blocks within
+    /// ``WholeTaiwan/landReach`` of ``cijinShoreRead`` read in with their
+    /// water and no people.
+    private static func cijinShoreWorld(water grid: WaterGrid?) -> GameWorld {
+        var world = GameWorld.newWholeTaiwanGame()
+        guard let grid, let frame = RealWorldFrame(world: world) else { return world }
+        let (x, y) = frame.worldPosition(latitude: cijinShoreRead.latitude, longitude: cijinShoreRead.longitude)
+        let blocks = Set(Land.blocks(within: WholeTaiwan.landReach, of: PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded())), in: world.bounds))
+        try? world.expandLand(blocks.sorted(), cells: [], water: grid.cells(frame: frame, bounds: world.bounds, in: blocks))
+        world.setSpeed(.paused)
+        return world
     }
 
     /// Decision 585: a real ferry, two boats every `every` minutes, on a

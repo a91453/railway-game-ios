@@ -350,6 +350,32 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 585 續 (FERRY-QIJIN): the ferry mode's pale blue shore
+    /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
+    /// not read in yet (the author's, on 115.1). For the pull request's
+    /// screenshot review.
+    func testFerryShoreCijin() {
+        let app = launch(extra: ["-screenshot-scene", "cijinShore"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 180), "The scene opens")
+        settle(seconds: 5)
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 10) { build.tap() }
+        let transit = app.buttons["tool.bus"]
+        XCTAssertTrue(transit.appears(within: 10))
+        transit.waitUntilSettled()
+        if !transit.isSelected { transit.tap() }
+        let mode = app.segmentedControls.buttons["渡輪"].firstMatch
+        XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
+        for _ in 0..<3 where !mode.isSelected {
+            mode.tap()
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
+        settle(seconds: 3)
+        keep("ferry-shore-cijin", app)
+    }
+
     /// Decision 585 PR-3 (FERRY3): the ferries on the 3D map: Tamsui–Bali's
     /// passenger boat and Gushan–Cijin's double-ended ferry close up at
     /// their piers (near models), each from 600 m (far models, past the
