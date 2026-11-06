@@ -47,6 +47,12 @@ final class DepotReturnReportTests: XCTestCase {
         try report("tymc", Self.bought("tymc:A", side: 1 << 22))
     }
 
+    /// HEALTH-119: the Kaohsiung Circular Light Rail (decision 612), a ring.
+    func testTheKaohsiungLightRail() throws {
+        try wanted("klrt")
+        try report("klrt", Self.bought("krtc:C"))
+    }
+
     func testTheGreenMountainLine() throws {
         try wanted("danhai")
         try report("danhai", Self.bought("ntdlrt:V"))
