@@ -124,6 +124,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// map, and the mode's card.
     case maokong
 
+    /// Decision 615: the same on a new game round Sun Moon Lake with the
+    /// Sun Moon Lake Ropeway (``RealCableway/sunMoonLake``) laid, whose
+    /// cabins are Sun Moon Lake's.
+    case sunMoonLake
+
     /// Decision 580 (FOLLOWBUS): the demo map with a road along its first
     /// station's row and a feeder bus route of two stops on it, a bus every
     /// ten minutes, run on to half past nine in the morning, when buses are
@@ -183,6 +188,8 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
         // Between Taipei Zoo South and Zhinan Temple stations.
         case .maokong: (24.9825, 121.584)
+        // Between the ropeway's two stations.
+        case .sunMoonLake: (23.8562, 120.9429)
         // Between the Tamsui and Bali piers.
         case .tamsuiFerry, .tamsuiFerryCrossing: (25.1640, 121.4376)
         // Between the Gushan and Cijin piers.
@@ -217,6 +224,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
 
         case .depotOffer: Self.pausedDemo(in: language)
         case .maokong: Self.maokongWorld(in: language)
+        case .sunMoonLake: Self.cablewayWorld(.sunMoonLake, at: self, in: language)
         case .followBus: Self.followBusWorld(in: language)
         case .followBusCity: Self.followBusCityWorld(in: language)
         case .tamsuiFerry: Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, in: language, water: water)
@@ -334,6 +342,22 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             _ = try? world.createCableway(stops: stops, legMetres: RealCableway.maokong.legMetres, meetsNear: RealCableway.maokong.meetsNear(in: world))
         }
         // On to 10:00 of day 1 (.fast is ten minutes a tick).
+        world.setSpeed(.fast)
+        try? world.advance(ticks: 34 * 6)
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    /// Decision 615: `real` on a new game round `scene`'s place, at 10:00
+    /// of the second day as ``maokongWorld(in:)``.
+    private static func cablewayWorld(_ real: RealCableway, at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+        guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude)
+        else { return DemoWorld.make(in: language) }
+        var world = GameWorld.newGame(anchor: anchor)
+        if let stops = real.stops(in: world) {
+            _ = try? world.createCableway(stops: stops, legMetres: real.legMetres, meetsNear: real.meetsNear(in: world))
+        }
         world.setSpeed(.fast)
         try? world.advance(ticks: 34 * 6)
         world.setSpeed(.normal)
