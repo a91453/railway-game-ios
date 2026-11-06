@@ -559,6 +559,16 @@
 - **119 明天早上發**（作者睡前：「如果我睡著記得幫我繼續做」）：排程 trig_01BN7mj851uLUgEjcM1xQ8HN（23:30 UTC＝台灣 07:30）：08:00 停止合併 → WHATSNEW-119（Sonnet，id `2026-11-07-119-1`）→ HEAD 跑完整 ci、full lane、release-archive → 跟作者說可以發（作者自己按）。已合進 119：#1898 CABLE-SUNMOON（決策 615，日月潭吊廂，第 3 級截圖看過）。
 - **在做**：BUILD3D-3B session_01YGNNumihdrfsp4MkjR1tAo（決策 517 PR 3b，鋪完只重蓋經過的區塊）、KLRT-B session_01YGNNupz9ffMTKvvD1d8zbs（#1883，決策 612；遊戲規劃同意動 GameCore：只限環線、golden／replay／存檔不動、三種規則兩天死結 0）、CABVIEW-STUTTER session_01YGNNupagX8CDNTkxPxLsDw（作者回報車窗視角走走停停，作者 bug 優先，決策若要新號 616）。
 - **作者定的（2026-11-06）**：未來不優化手機版：iPhone 能跑就好，iPhone 專屬版面與手感不排；效能照做。截止可以延（118 從 19:00 延到 20:00，作者「我沒差」）。
+- **截圖改在作者的 Mac（M6）跑**（作者 2026-11-07 00:5x 台灣：「好 那截圖之後都給m6跑」）：
+  - 雲端 session 不再自己跑 `website-screenshots.yml`。截圖驗收（ui-review、決策 482 的第 2、3 級）改由作者 Mac 上的 Claude Code 跑。
+  - 雲端從 Remote Control 用不到那台 Mac：`list_computer_folders` 有列出資料夾，但 `not_available`，帳號還沒開放。所以流程如下：
+    1. 雲端 session 寫好「截圖單」（分支、`WebsiteScreenshotTests` 的方法名、iphone／ipad、要看什麼），交給遊戲規劃。
+    2. 遊戲規劃轉給作者，作者貼到 Mac 上的 Claude。
+    3. Mac 那邊照 `website-screenshots.yml` 的 xcodebuild 指令（build-for-testing → 深色模式模擬器、9:41 狀態列 → test-without-building `-only-testing` → `xcresulttool export attachments`）拍圖，把 PNG 提交到那個 PR 分支的 `docs/art/<主題>-screenshots-<日期>/` 再推。
+    4. 雲端 session 之後要推之前先 `git pull`。
+  - 為什麼：macOS runner 只有 5 台，截圖常「兩次沒結果」；Mac 的模擬器不用排隊，也不受 18:30 規則限制。
+  - 以後若 Remote Control 開放給雲端，改成遊戲規劃直接叫那台 Mac 跑。
+  - 同一天作者的 Mac（Xcode 27.2、Apple Swift 6.4.2）抓到兩個 Linux CI 看不到的測試編譯問題（macOS 14 沒有 `UInt128`／`Int128`、typed throws 的函式型別），#1901、#1906 修。之後偶爾請作者在 Mac 跑 `swift build --build-tests`。
 - **作者要自己做的**：刪 branch `claude/ferry-qijin-before`、`claude/copyright-name`（session 推刪除會 403）；私庫 assets #61。
 - **號碼**：下一個決策 **616**（615 CABLE-SUNMOON 已用；616 先給 CABVIEW-STUTTER）；存檔 **87**。
 
