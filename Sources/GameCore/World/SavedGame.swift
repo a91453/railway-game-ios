@@ -444,9 +444,16 @@
 ///     `"nextFerryRouteID"`. A build that reads only an earlier version
 ///     would drop them, and the routes and boats bought would be lost, so
 ///     it says the save is newer than it instead.
+/// 86. Runs that pass stops (decision 605): a run of a line can have its
+///     `"passes"`, the stops it runs through without calling, as an
+///     express does. A build that reads only an earlier version would
+///     refuse such a run's times as too few for its stops and the whole
+///     line with it, so it says the save is newer than it instead. A save
+///     of any earlier version needs no step: a run without `"passes"`
+///     calls at every stop, as every run did.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 85
+    public static let currentVersion = 86
 
     public let world: GameWorld
 
@@ -664,6 +671,8 @@ extension SavedGame: Codable {
         // (decision 576): nothing to turn.
         // Version 84 or earlier to 85: a world without `"ferryRoutes"` has
         // none (decision 585): nothing to turn.
+        // Version 85 or earlier to 86: a run without `"passes"` calls at
+        // every stop (decision 605): nothing to turn.
         // Later versions add their steps here.
         let worldDecoder = try container.superDecoder(forKey: .world)
         var world = try Money.$decodingScale.withValue(version < 76 ? 3 : 1) {

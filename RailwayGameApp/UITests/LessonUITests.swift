@@ -421,15 +421,32 @@ final class LessonUITests: XCTestCase {
     private func dismissGuide() {
         showGuide()
         let skip = app.buttons["tutorial.skip"]
-        tap(skip)
+        XCTAssertTrue(skip.appears(within: 10), "Missing \(skip)")
+        XCTAssertTrue(skip.becomesHittable(within: 10), "Covered \(skip)")
+        skip.waitUntilSettled()
+        // Touched where it stands rather than as an element: the card was
+        // drawn again between XCTest finding Skip and touching it, and the
+        // touch failed the test ("Targeted element ... is no longer valid",
+        // the full lane of decision 604's branch, run 42044357168).
+        touch(skip)
         // A touch on the card while it still slides in can be lost: main
         // 584bddd's full lane (run 40051175469) found no hit point for Skip
         // at its first try, and XCTest's own retry touched nothing, so the
         // card stayed. Touch it once more, only while it is still there.
         if !skip.disappears(within: 5), skip.exists {
-            tap(skip)
+            touch(skip)
         }
         XCTAssertTrue(skip.disappears(within: 5))
+    }
+
+    /// Touches the middle of where `control` stands now, through the app's
+    /// own coordinates, so a control drawn again just before the touch
+    /// does not fail the test.
+    private func touch(_ control: XCUIElement) {
+        let frame = control.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX, dy: frame.midY))
+            .tap()
     }
 
     private func pause() {

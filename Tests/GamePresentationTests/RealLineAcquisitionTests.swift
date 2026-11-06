@@ -295,8 +295,8 @@ final class RealLineAcquisitionTests: XCTestCase {
 
     /// Decision 400 (10j-2, 10j-3): Danhai's Blue Coast Line, the Xinbeitou
     /// and Xiaobitan Branch Lines are on sale beside
-    /// the branch lines, each bought as one command, its two tracks laid
-    /// along the real line, and a day of its real timetable run, every run
+    /// the branch lines, each bought as one command, its tracks laid
+    /// along the real line (the Xiaobitan Branch Line's one, decision 603), and a day of its real timetable run, every run
     /// sent out, under simple and realistic rules (decision 258); the
     /// Sanying Line too, in classes of its own (`SanyingLineSimpleDayTests`,
     /// `SanyingLineRealisticDayTests`), its two days the longest; the Green
@@ -314,6 +314,30 @@ final class RealLineAcquisitionTests: XCTestCase {
         for (id, type, tier) in lines {
             for rules in [NewGameRules.simple, .realistic] {
                 try Self.buyAndRunRealDay(id, type: type, tier: tier, rules: rules)
+            }
+        }
+    }
+
+    /// Decision 603: the Xiaobitan Branch Line is bought as the real one
+    /// is laid, a single track with one platform track at each station
+    /// and no turnout, its one train shuttling it; the Xinbeitou Branch
+    /// Line stays double track.
+    func testTheXiaobitanBranchIsSingleTrack() throws {
+        for (id, single) in [("trtc:G_XBT", true), ("trtc:R_XBT", false)] {
+            let session = try Self.game(round: id, side: 1 << 21, heights: true)
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, "\(id) on sale")
+            XCTAssertEqual(line.isDoubleTrack, !single, id)
+            XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), "\(id): \(session.message?.text ?? "")")
+            let world = session.world
+            let platforms = world.stations.filter { !$0.isDepot }.map { world.network.platforms(of: $0.id).count }
+            let turnouts = world.network.nodes.filter { $0.ends.count >= 3 }.count
+            if single {
+                XCTAssertEqual(platforms, [1, 1], id)
+                XCTAssertEqual(turnouts, 0, id)
+                XCTAssertEqual(world.trains.count, 1, id)
+            } else {
+                XCTAssertEqual(platforms, [2, 2], id)
+                XCTAssertGreaterThan(turnouts, 0, id)
             }
         }
     }

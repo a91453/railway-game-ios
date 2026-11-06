@@ -751,8 +751,13 @@ extension RealRailways {
         let structures = read("rail_structures", "json").flatMap { data in
             parse("rail_structures.json") { try RealRailStructures(data: data) }
         }
-        let tracks = read("rail_tracks", "json").flatMap { data in
+        var tracks = read("rail_tracks", "json").flatMap { data in
             parse("rail_tracks.json") { try RealRailTracks(data: data) }
+        }
+        // Decision 600: the trains' track assignment; one that cannot be
+        // read leaves the tracks, the trains keeping to their side.
+        if let laid = tracks, let data = read("rail_dispatch", "json") {
+            tracks?.dispatch = parse("rail_dispatch.json") { try RealRailDispatch(data: data, tracks: laid) }
         }
         // Decision 298: each system's ridership on its own; one that cannot
         // be read leaves the others.

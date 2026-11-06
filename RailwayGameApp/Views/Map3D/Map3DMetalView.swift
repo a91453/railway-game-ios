@@ -113,6 +113,8 @@ final class Map3DMetalView: MTKView {
     /// Decision 585 PR-4 (FERRYFOLLOW): the same for the ferry boat
     /// followed. Not seen through: it sails on open water.
     var ferryPose: (@MainActor (FerryBoatID) -> Map3DFollow.Pose?)?
+    /// Decision 606 (IDLEREAL): where a real timetable's train is.
+    var realTrainPose: (@MainActor (RealTrainID) -> Map3DFollow.Pose?)?
     /// Decision 259: the people and vehicles for this frame, seen with the
     /// camera given, with the city's lights on so far; decision 417: within
     /// the budget given (the trains' triangles this frame among it).
@@ -171,6 +173,9 @@ final class Map3DMetalView: MTKView {
     /// stands on are built; until they are, the camera stays above and
     /// behind the train, and flies to the platform once they are.
     var lookoutBuilt: (@MainActor (Map3DPoint) -> Bool)?
+    /// Decision 606 (續): whether the ground round a followed real train
+    /// is built, with the city in full.
+    var trainGroundBuilt: (@MainActor (Map3DPoint) -> Bool)?
     private var lookoutWasBuilt = true
 
     private struct Chunk {
@@ -850,6 +855,9 @@ final class Map3DMetalView: MTKView {
             followedSeeThrough = Map3DSeeThrough.point(of: found)
         } else if let ferry = following.ferry {
             guard let found = ferryPose?(ferry) else { return }
+            pose = found
+        } else if let real = following.realTrain {
+            guard let found = realTrainPose?(real) else { return }
             pose = found
         } else {
             guard let head = heads.first(where: { $0.train == following.train }) else { return }

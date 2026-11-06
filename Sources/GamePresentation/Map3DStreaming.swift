@@ -390,6 +390,13 @@ public struct Map3DStreaming: Sendable {
             grid.area(round: point, radius: Map3DStreaming.stationReady).allSatisfy(built.contains)
         }
 
+        /// Decision 606 (續): the same, with none of those chunks built
+        /// without the city in full (``coarse``): a followed real train's
+        /// surroundings as the camera shows them.
+        public func isBuiltInFull(round point: Map3DPoint) -> Bool {
+            grid.area(round: point, radius: Map3DStreaming.stationReady).allSatisfy { built.contains($0) && !coarse.contains($0) }
+        }
+
         /// The block `keys` built for the `generation`th scene is done:
         /// whether to place it. A block for a scene since built anew is not
         /// placed.

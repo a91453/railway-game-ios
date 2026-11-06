@@ -108,6 +108,20 @@ final class Map3DViaductTests: XCTestCase {
         }
     }
 
+    /// Decision 600: a railway's two tracks 6 m apart on one deck, the
+    /// slot between their girders filled; a metro's twin girders as far
+    /// apart keep theirs.
+    func testTheRailwaysWiderPairIsOneDeckAndAMetrosKeepsItsSlot() throws {
+        func slab(_ mesh: Map3DMesh, rail: Float, middle: Float) -> Bool {
+            mesh.vertices.contains { abs($0.z - middle) < 0.3 && $0.y > rail - Map3DScene.Builder.bedDrop - 0.05 && $0.y < rail + 1 && abs($0.x) < 150 }
+        }
+        let (railway, rail, middle) = try pair("tra_sched", apart: 54)
+        XCTAssertEqual(deck(railway, rail: rail), 11, accuracy: 0.6)
+        XCTAssertTrue(slab(railway, rail: rail, middle: middle), "one deck across the middle")
+        let (metro, metroRail, metroMiddle) = try pair("mrt", apart: 54)
+        XCTAssertFalse(slab(metro, rail: metroRail, middle: metroMiddle), "a metro's slot stays open")
+    }
+
     /// Over a river the Taiwan Railway's tracks cross on a steel truss
     /// standing 6 m over the rails, its sides outside both tracks, none
     /// between them.

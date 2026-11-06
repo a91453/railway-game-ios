@@ -178,9 +178,24 @@ permissions:
 # type menus test and two short ones to second (+3.1), and the other five
 # stay in the build job (-9.3: at most 53.5, mean 45.2). Expected worst
 # cases (UI step, of 75): build about 56, second about 60, lessons about 62.
+#
+# 2026-11-05 (LANE2, decision 604): the four full lanes from bef26ca to
+# 26d5fca (41817301541, 41935318468, 41959689553, 42010048718) were all red
+# in second, twice cut at its 75 minutes. Its tests summed 56.8-74.0
+# minutes (65.0 on 2494e5a's green 41646171004), MapInteractionTests alone
+# 29.3-46.1; the build job's 60.6-61.1 and lessons' 52.2-62.7 (240daaf8,
+# 26d5fca1): about 195 minutes of tests in three jobs of 75, none with a
+# class to spare. So a fourth iPhone job, map (MapInteractionTests), and
+# the matrix runs two at a time, so the full lane still holds three macOS
+# runners (decision 582): the build job and two of second, lessons and
+# map, the third starting as the first ends. RealWorldMapUITests (15.8-18.1)
+# moves from the build job to second, and the four StartSaveFlowSmokeTests
+# lessons had (5.9-8.7) go back to the build job. Expected sums, at most:
+# build about 52, second 51, lessons 54, map 46 of 75.
 env:
-  FULL_LANE_SECOND_JOB: "MapInteractionTests SettingsUITests HUDAlignmentUITests LineDraftSummaryUITests StartSaveFlowSmokeTests/testTheTrainAndTypeMenusStayStillAndChooseWhileTheClockRuns StartSaveFlowSmokeTests/testAnUnreadableSaveCanBeDeleted StartSaveFlowSmokeTests/testLanguageOpensTheGamesLanguageMenu"
-  FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests LineRoutePreferenceUITests StartSaveFlowSmokeTests/testEnglishStartSaveFlow StartSaveFlowSmokeTests/testTraditionalChineseStartSaveFlow StartSaveFlowSmokeTests/testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing StartSaveFlowSmokeTests/testCellsZonedByADragAreKeptBySavingAndContinuing"
+  FULL_LANE_SECOND_JOB: "SettingsUITests HUDAlignmentUITests LineDraftSummaryUITests RealWorldMapUITests StartSaveFlowSmokeTests/testTheTrainAndTypeMenusStayStillAndChooseWhileTheClockRuns StartSaveFlowSmokeTests/testAnUnreadableSaveCanBeDeleted StartSaveFlowSmokeTests/testLanguageOpensTheGamesLanguageMenu"
+  FULL_LANE_LESSONS_JOB: "LessonUITests Feature284To286UITests LineRoutePreferenceUITests"
+  FULL_LANE_MAP_JOB: "MapInteractionTests"
 
 # A newer push to a pull request cancels its older run. Every other run (the
 # full lane: nightly or by hand) has its own group
@@ -590,7 +605,7 @@ jobs:
               -only-testing:RailwayGameUITests/TutorialUITests/testTheLineStepLeavesTheLinesPanelUsable
             )
           else
-            lane="full ($GITHUB_EVENT_NAME): all the UI tests but the other iPhone jobs' ($FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB)"
+            lane="full ($GITHUB_EVENT_NAME): all the UI tests but the other iPhone jobs' ($FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB $FULL_LANE_MAP_JOB)"
             # Decision 165: the website's screenshots are taken by
             # website-screenshots.yml alone; they test nothing.
             only=(-skip-testing:RailwayGameUITests/WebsiteScreenshotTests)
@@ -603,7 +618,7 @@ jobs:
             # by hand (only_testing) to compare two commits.
             only+=(-skip-testing:RailwayGameUITests/MapFrameCostUITests)
             # These classes run in the other iPhone jobs.
-            for class in $FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB; do
+            for class in $FULL_LANE_SECOND_JOB $FULL_LANE_LESSONS_JOB $FULL_LANE_MAP_JOB; do
               only+=("-skip-testing:RailwayGameUITests/$class")
             done
           fi
@@ -762,17 +777,20 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # The full lane's other iPhone jobs: one for the map/real-world/settings
-  # classes and one for lessons. The build job runs the remaining classes.
-  # Neither runs for a pull request or only_testing by hand.
+  # The full lane's other iPhone jobs: second (settings, HUD, the real
+  # world), lessons, and map (MapInteractionTests). The build job runs the
+  # remaining classes. None runs for a pull request or only_testing by hand.
+  # Two at a time (decision 604): with the build job, three macOS runners,
+  # as decision 582 keeps the full lane to.
   ui-full-lane:
     name: Xcode UI tests, ${{ matrix.partition }} (iOS Simulator)
     needs: changes
     if: ${{ !cancelled() && github.event_name != 'pull_request' && !inputs.only_testing }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        partition: [second, lessons]
+        partition: [second, lessons, map]
     runs-on: macos-26
     env:
       PARTITION: ${{ matrix.partition }}
@@ -882,6 +900,7 @@ jobs:
           case "$PARTITION" in
             second) classes="$FULL_LANE_SECOND_JOB" ;;
             lessons) classes="$FULL_LANE_LESSONS_JOB" ;;
+            map) classes="$FULL_LANE_MAP_JOB" ;;
             *) echo "::error::Unknown UI test partition: $PARTITION"; exit 1 ;;
           esac
           only=()
@@ -937,8 +956,9 @@ jobs:
     name: iPad tutorial tests (iOS Simulator)
     # A skipped job passes a required check, so a pull request that leaves the
     # tutorial's own files alone is not held up by it.
-    # In the full lane it waits for the two iPhone UI jobs, so the full lane
-    # holds three macOS runners, not four (decision 582); red or green, they
+    # In the full lane it waits for the three iPhone UI jobs (two at a time,
+    # decision 604), so the full lane holds three macOS runners, not four or
+    # five (decision 582); red or green, they
     # do not hold it back. A pull request and a run of only some tests skip
     # those jobs, and the iPad job starts as soon as changes is done.
     needs: [changes, ui-full-lane]

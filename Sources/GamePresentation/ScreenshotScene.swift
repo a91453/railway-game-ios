@@ -68,6 +68,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// ``Map3DScreenshotView``), at 10:00, so the sun's shadows show.
     case taipeiMain
     case taipei101
+    /// Decision 600: the same map on the Taiwan Railway's viaduct south of
+    /// Taichung Station, for the screenshots of the real trains on the
+    /// tracks they are assigned and the double track's one deck.
+    case taichungViaduct
 
     /// Decision 596: the same map round the big junction 380 m east of
     /// Taipei Main Station (23 stop lines) at 10:00 and at 20:00, for the
@@ -82,6 +86,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// its trains each on the track to their right, as the real ones run.
     /// For the screenshot review of the pull request that put them there.
     case wenhu
+
+    /// Decision 603: the same empty map round the Xiaobitan Branch Line,
+    /// for `-screenshot-buy-real trtc:G_XBT`: its single track and its
+    /// one train, as the real line's. For the screenshot review of the
+    /// pull request that laid it so.
+    case xiaobitan
 
     /// Decision 565: a new real-world game round Taipei Main Station, a
     /// line of two stations 800 m apart whose platforms are four 20 m cars
@@ -152,8 +162,11 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         switch self {
         case .taipeiMain, .followBusCity: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
+        case .taichungViaduct: (24.1369, 120.6850)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .wenhu: (25.0600, 121.5600)
+        // Between Qizhang and Xiaobitan stations.
+        case .xiaobitan: (24.9734, 121.5368)
         // Its far station, 400 m east and 300 m north of Taipei Main
         // Station (a metre at the anchor's latitude, as RealWorldFrame).
         case .platformStop: (25.0478 + 0.0026949, 121.5170 + 0.0039662)
@@ -184,10 +197,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
-        case .taipeiMain, .taipei101: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .taipeiMain, .taipei101, .taichungViaduct: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
-        case .wenhu: Self.wenhuWorld(in: language)
+        case .wenhu, .xiaobitan: Self.realLineWorld(at: self, in: language)
         case .platformStop: Self.platformStopWorld(in: language)
         case .farStops: Self.farStopsWorld(in: language)
 
@@ -263,13 +276,14 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         return world
     }
 
-    // MARK: - Wenhu
+    // MARK: - Wenhu and Xiaobitan
 
-    /// Decision 564: a new game's map, twice the usual a side as the
+    /// Decision 564: a new game's map round `scene`'s place (decision 603:
+    /// the Xiaobitan Branch Line's too), twice the usual a side as the
     /// tests buy the line on (`RealLineAcquisitionTests.game(round:)`),
     /// with money enough for it; bought once the app's real data is read.
-    private static func wenhuWorld(in language: DisplayLanguage) -> GameWorld {
-        guard let place = ScreenshotScene.wenhu.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
+    private static func realLineWorld(at scene: ScreenshotScene, in language: DisplayLanguage) -> GameWorld {
+        guard let place = scene.place, let anchor = GeoAnchor(latitudeDegrees: place.latitude, longitudeDegrees: place.longitude),
               let bounds = try? WorldBounds(width: 1 << 21, height: 1 << 21) else { return DemoWorld.make(in: language) }
         var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: Money(100_000_000_000))
         try? world.mapGround()

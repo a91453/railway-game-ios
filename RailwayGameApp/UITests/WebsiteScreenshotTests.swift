@@ -126,6 +126,78 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 603: the Xiaobitan Branch Line bought on a real map of
+    /// New Taipei and run on to 07:40, its one train followed: on the 2D
+    /// map and in 3D, a single track with one platform track at each
+    /// station, as the real line's. For the screenshot review of the pull
+    /// request that laid it so.
+    func testXiaobitanSingleTrack() {
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "xiaobitan", "-screenshot-buy-real", "trtc:G_XBT", "-screenshot-follow-bought", "trtc:G_XBT",
+                                 "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        // As the Wenhu Line's: the Debug app buys the line and runs the
+        // morning with its main thread busy for a minute at a time.
+        Thread.sleep(forTimeInterval: 240)
+        XCTAssertTrue(app.descendants(matching: .any)["train.stock"].firstMatch.appears(within: 900), "The line is bought and its train followed")
+        let done = app.buttons["acquired.done"]
+        if done.appears(within: 10), done.becomesHittable(within: 10) {
+            done.tap()
+            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+        }
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
+            for _ in 0..<5 {
+                zoomIn.tap()
+                settle(seconds: 1)
+            }
+        }
+        settle(seconds: 3)
+        keep("xiaobitan-single-2d", app)
+
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        settle(seconds: 5)
+        keep("xiaobitan-single-3d", app)
+    }
+
+    /// Decision 606 (IDLEREAL): the idle mode on a real map with nothing
+    /// of the player's follows a real timetable's train on the 3D map, its
+    /// name and where it goes faint in the top corner, gone a few seconds
+    /// later. For the screenshot review of the pull request that added it,
+    /// not the website. The train is the director's random pick: one in a
+    /// tunnel is passed over, so it may take a few tries.
+    func testIdleModeFollowsARealTrain() {
+        executionTimeAllowance = 1_500
+        let app = launch(extra: ["-screenshot-scene", "xiaobitan", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        settle()
+        let menu = app.buttons["hud.menu"]
+        menu.waitUntilSettled()
+        menu.tap()
+        let ambient = app.buttons["menu.ambient"]
+        XCTAssertTrue(ambient.appears(within: 30), "The menu opens")
+        ambient.waitUntilSettled()
+        settle(seconds: 1)
+        // Touched at its frame's middle, as testGameMenuAndRules does.
+        let frame = ambient.frame
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ambient.curtain"].firstMatch.appears(within: 10), "The idle mode starts")
+        let corner = app.staticTexts["ambient.realTrain"]
+        XCTAssertTrue(corner.appears(within: 1_200), "A real train is followed and named")
+        settle(seconds: 1)
+        keep("idle-real-train", app)
+        XCTAssertTrue(corner.disappears(within: 30), "Its name fades")
+        settle(seconds: 2)
+        keep("idle-real-train-later", app)
+    }
+
     /// Decision 566: the new-train card, the Puyuma's with another
     /// waiting ("Skip all"), then the EMU3000's, and in English the 700T's.
     /// For the screenshot review of the pull request that added it.
@@ -547,6 +619,10 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLeanedStation140At60() { shootLean("taipeiMain", "140,225,60", "lean-station-60") }
     func testLeanedStation200() { shootLean("taipeiMain", "200,225,0", "lean-station-200-own") }
     func testLeanedStation200At60() { shootLean("taipeiMain", "200,225,60", "lean-station-200-60") }
+    /// Decision 600: the real trains on Taichung's viaduct on the tracks
+    /// they are assigned, the double track on one deck, close and leaned.
+    func testTaichungViaduct() { shootLean("taichungViaduct", "200,225,45", "taichung-viaduct") }
+    func testTaichungViaductClose() { shootLean("taichungViaduct", "120,135,30", "taichung-viaduct-close") }
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 

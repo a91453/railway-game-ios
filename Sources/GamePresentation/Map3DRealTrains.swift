@@ -40,14 +40,33 @@ public struct Map3DRealTrains: Sendable {
         let km: [Double]
         let lanes: [[Map3DPoint]]
         let shown: [[Bool]]
+        /// Decision 600: where each path of the trains' assignment
+        /// (``RealRailDispatch/paths``) the line's trains take within the
+        /// stretch runs, at the samples it spans.
+        let routes: [Int: Route]
         /// From the first sample a car shows at to the last, if any.
         let shownKm: ClosedRange<Double>?
 
-        init(km: [Double], lanes: [[Map3DPoint]], shown: [[Bool]]) {
+        /// Decision 600: a path at samples `start` on: its rails at each,
+        /// and whether a car there shows; `nil` where it is not laid.
+        struct Route: Sendable {
+            let start: Int
+            let points: [Map3DPoint?]
+            let shown: [Bool]
+
+            func at(_ sample: Int) -> (point: Map3DPoint, shown: Bool)? {
+                let index = sample - start
+                guard points.indices.contains(index), let point = points[index] else { return nil }
+                return (point, shown[index])
+            }
+        }
+
+        init(km: [Double], lanes: [[Map3DPoint]], shown: [[Bool]], routes: [Int: Route] = [:]) {
             self.km = km
             self.lanes = lanes
             self.shown = shown
-            let any = km.indices.map { index in shown.contains { $0[index] } }
+            self.routes = routes
+            let any = km.indices.map { index in shown.contains { $0[index] } || routes.values.contains { $0.at(index)?.shown ?? false } }
             shownKm = any.firstIndex(of: true).flatMap { first in any.lastIndex(of: true).map { km[first]...km[$0] } }
         }
 
@@ -58,19 +77,24 @@ public struct Map3DRealTrains: Sendable {
 
         /// The rails `km` along the line a train going `way` (up the km
         /// at 0 or more) runs on, if this stretch has it and a car there
-        /// shows.
-        func point(atKm km: Double, way: Double = 1) -> Map3DPoint? {
+        /// shows. Decision 600: on `route`, the path the train is assigned
+        /// there, where the stretch has it; elsewhere on its side's.
+        func point(atKm km: Double, way: Double = 1, route: Int? = nil) -> Map3DPoint? {
             guard let first = self.km.first, let last = self.km.last, km >= first, km <= last else { return nil }
             var lo = 0, hi = self.km.count - 1
             while hi - lo > 1 {
                 let mid = (lo + hi) / 2
                 if self.km[mid] <= km { lo = mid } else { hi = mid }
             }
+            let span = self.km[hi] - self.km[lo]
+            let share = Float(span > 0 ? (km - self.km[lo]) / span : 0)
+            if let route, let path = routes[route], let a = path.at(lo), let b = path.at(hi) {
+                guard a.shown, b.shown else { return nil }
+                return a.point + (b.point - a.point) * share
+            }
             let lane = way >= 0 ? 0 : 1
             let points = lanes[lane], shown = self.shown[lane]
             guard shown[lo], shown[hi] else { return nil }
-            let span = self.km[hi] - self.km[lo]
-            let share = Float(span > 0 ? (km - self.km[lo]) / span : 0)
             return points[lo] + (points[hi] - points[lo]) * share
         }
     }
@@ -78,6 +102,17 @@ public struct Map3DRealTrains: Sendable {
     let traffic: RealTrainTraffic
     /// By line, as ``RealTrainTraffic/lines``.
     let tracks: [[Track]]
+    /// Decision 600: by line, each train's legs on it the trains'
+    /// assignment gives (``RealRailDispatch``), by its place's key
+    /// (without the day before's `-`).
+    let legs: [[String: [Leg]]]
+
+    /// Decision 600: a stretch of a line, `km`, a train takes path `path`
+    /// (``RealRailDispatch/paths``) over.
+    struct Leg: Sendable, Equatable {
+        let km: ClosedRange<Double>
+        let path: Int
+    }
     let formations: [Formation]
     let stripes: [UInt32]
 
@@ -282,7 +317,11 @@ public struct Map3DRealTrains: Sendable {
     /// the player's track or ``playerClearance`` of a line in `bought`
     /// (its system, as `traffic`'s lines name it, and shape); without,
     /// one track along each line's shape (decision 339).
+    /// Decision 600: with `railTracks`' assignment (``RealRailTracks/dispatch``)
+    /// and `operations`' timetables, each bound train on the path it is
+    /// assigned from station to station.
     init(traffic: RealTrainTraffic, structures: RealRailStructures?, railTracks: RealRailTracks? = nil,
+         operations: RealRailwayOperations? = nil,
          bought: [(system: String, shape: [RealRailways.Coordinate])] = [], frame: RealWorldFrame, snapshot: RailwaySnapshot,
          builder: inout Map3DScene.Builder) {
         self.traffic = traffic
@@ -291,6 +330,7 @@ public struct Map3DRealTrains: Sendable {
         let player = PlayerTrack(snapshot.edges.map { $0.geometry.points.map(builder.point) })
         func site(_ system: String) -> String { RealRailwayOperations.siteSystems[system] ?? system }
         guard let railTracks else {
+            legs = traffic.lines.map { _ in [:] }
             tracks = traffic.lines.map { line in
                 Self.stretches(of: line, frame: frame, region: builder.region).compactMap { stretch in
                     builder.realTrack(stretch, system: site(line.system), structures: structures, frame: frame, clearOf: player)
@@ -308,12 +348,77 @@ public struct Map3DRealTrains: Sendable {
         }
         let laid = builder.realTracks(railTracks, systems: Set(traffic.lines.map { site($0.system) }), frame: frame, clearOf: player,
                                       bought: boughtTrack)
-        tracks = traffic.lines.map { line in
+        let dispatch = railTracks.dispatch
+        let legs = traffic.lines.map { line in
+            dispatch.flatMap { dispatch in operations.map { Self.legs(of: line, traffic: traffic, dispatch: dispatch, operations: $0) } } ?? [:]
+        }
+        self.legs = legs
+        tracks = traffic.lines.enumerated().map { index, line in
             let system = site(line.system)
+            // Each path the line's trains take, over the stretch of the
+            // line they take it.
+            var spans: [Int: ClosedRange<Double>] = [:]
+            for leg in legs[index].values.joined() {
+                spans[leg.path] = spans[leg.path].map { min($0.lowerBound, leg.km.lowerBound)...max($0.upperBound, leg.km.upperBound) } ?? leg.km
+            }
+            let routes = dispatch.map { dispatch in
+                spans.sorted { $0.key < $1.key }.map { path, km in
+                    (path: path, km: km, runs: Dictionary(grouping: dispatch.paths[path], by: \.track).mapValues { runs in
+                        runs.map { Float(min($0.from, $0.to))...Float(max($0.from, $0.to)) }
+                    })
+                }
+            } ?? []
             return Self.stretches(of: line, frame: frame, region: builder.region).compactMap { stretch in
-                laid.track(along: stretch, system: system, builder: builder)
+                laid.track(along: stretch, system: system, routes: routes, builder: builder)
             }
         }
+    }
+
+    /// Decision 600: the legs of each train of `line` the assignment binds
+    /// (``RealRailDispatch/legs(system:number:stops:first:last:)``) on the
+    /// line: from one of its stations to the next, both the line's.
+    /// Taiwan Railway's trains by their model and number, the High Speed
+    /// Rail's by their run.
+    static func legs(of line: RealTrainTraffic.Line, traffic: RealTrainTraffic, dispatch: RealRailDispatch,
+                     operations: RealRailwayOperations) -> [String: [Leg]] {
+        let system = RealRailwayOperations.siteSystems[line.system] ?? line.system
+        var kmByName: [String: Double] = [:]
+        for (station, km) in zip(line.line.stations, line.stationKm) where kmByName[RealRailDispatch.key(station.name)] == nil {
+            kmByName[RealRailDispatch.key(station.name)] = km
+        }
+        func onLine(_ legs: [RealRailDispatch.Leg]?) -> [Leg]? {
+            let found = (legs ?? []).compactMap { leg -> Leg? in
+                guard let a = kmByName[leg.from], let b = kmByName[leg.to], a != b else { return nil }
+                return Leg(km: min(a, b)...max(a, b), path: leg.path)
+            }
+            return found.isEmpty ? nil : found
+        }
+        var found: [String: [Leg]] = [:]
+        switch line.schedule {
+        case .week:
+            guard let week = operations.weekSchedule(forSystem: RealTrainTraffic.traSchedule) else { break }
+            var lineKm: [String: Double] = [:]
+            for (station, km) in zip(line.line.stations, line.stationKm) where lineKm[station.name] == nil { lineKm[station.name] = km }
+            for train in week.trains {
+                let key = RealTrainTraffic.traKey(model: train.model, number: train.number)
+                guard found[key] == nil, RealTrainTraffic.traRun(train, kmByName: lineKm) != nil, let first = train.stops.first,
+                      let last = train.stops.last else { continue }
+                found[key] = onLine(dispatch.legs(system: system, number: train.number, stops: train.stops.map { ($0.name, $0.stops) },
+                                                  first: first.departure, last: last.arrival))
+            }
+        case .daily(let runs):
+            guard let numbers = runs.numbers, let day = operations.schedule(forSystem: line.system) else { break }
+            var trains: [String: RealDailySchedule.Train] = [:]
+            for train in day.trains where trains[train.number] == nil { trains[train.number] = train }
+            for (index, number) in numbers.enumerated() {
+                guard let train = trains[number], let first = train.stops.first, let last = train.stops.last else { continue }
+                found[runs.key(index)] = onLine(dispatch.legs(system: system, number: number, stops: train.stops.map { ($0.name, $0.stops) },
+                                                              first: first.departureSecond, last: last.arrivalSecond))
+            }
+        default:
+            break
+        }
+        return found
     }
 
     /// Decision 358: a real line is laid in windows of this many
@@ -409,6 +514,21 @@ public struct Map3DRealTrains: Sendable {
 
     // MARK: - Each frame
 
+    /// Where the rails of line `index` a train going `way` (1 up the
+    /// line's km, -1 down) runs on are `km` along it, on the path its
+    /// assignment binds it to there (`bound`, decision 600); `ring`: the
+    /// ring's length, round which `km` is taken. `nil` where no car
+    /// shows (a tunnel, past the scene, beside the player's track).
+    func railPoint(line index: Int, atKm km: Double, way: Double, ring: Double?, bound: [Leg]?) -> Map3DPoint? {
+        var km = km
+        if let ring, ring > 0 { km = (km.truncatingRemainder(dividingBy: ring) + ring).truncatingRemainder(dividingBy: ring) }
+        let route = bound?.first { $0.km.contains(km) }?.path
+        for track in tracks[index] {
+            if let point = track.point(atKm: km, way: way, route: route) { return point }
+        }
+        return nil
+    }
+
     /// The real trains at second `second` of the game day `day` seen from
     /// `eye`, added to `frame`: the models of `models` within reach, the
     /// rest boxes; at most ``RealTrainTraffic/mostDrawn`` trains. Decision
@@ -442,14 +562,11 @@ public struct Map3DRealTrains: Sendable {
                 let span = min(front, front - way * length)...max(front, front - way * length)
                 guard isRing || tracks[index].contains(where: { $0.shownKm?.overlaps(span) ?? false }) else { continue }
                 var shown = false
+                // Decision 600: its legs, where the assignment binds it.
+                let bound = legs[index][place.key.hasPrefix("-") ? String(place.key.dropFirst()) : place.key]
                 for car in 0..<formation.cars {
                     func at(_ km: Double) -> Map3DPoint? {
-                        var km = km
-                        if isRing, ring > 0 { km = (km.truncatingRemainder(dividingBy: ring) + ring).truncatingRemainder(dividingBy: ring) }
-                        for track in tracks[index] {
-                            if let point = track.point(atKm: km, way: way) { return point }
-                        }
-                        return nil
+                        railPoint(line: index, atKm: km, way: way, ring: isRing ? ring : nil, bound: bound)
                     }
                     let start = front - way * Double(car) * Self.carPitch
                     guard let a = at(start), let b = at(start - way * Self.carLength) else { continue }
@@ -586,6 +703,14 @@ extension Map3DRealTrains {
             let shown: Bool
             /// Which track it is of (``RealRailTracks/tracks``).
             let track: Int
+            /// Decision 600: where along the track its ends are, as the
+            /// track's points (2.5 halfway from its third to its fourth).
+            var from: Float = 0
+            var to: Float = 0
+            /// Decision 600: of a siding, crossover or yard track
+            /// (``RealRailTracks/Track/isService``), which only a train
+            /// assigned it runs on.
+            var isService = false
         }
 
         var segments: [String: [Int64: [Segment]]] = [:]
@@ -623,7 +748,7 @@ extension Map3DRealTrains {
             let column = Self.index(p.x), row = Self.index(p.z)
             for c in column - 1...column + 1 {
                 for r in row - 1...row + 1 {
-                    for segment in cells[PlayerTrack.key(c, r)] ?? [] {
+                    for segment in cells[PlayerTrack.key(c, r)] ?? [] where !segment.isService {
                         let dx = segment.b.x - segment.a.x, dz = segment.b.z - segment.a.z
                         let squared = dx * dx + dz * dz
                         guard squared > 0, abs(dx * tx + dz * tz) >= Map3DRealTrains.laneAlong * squared.squareRoot() else { continue }
@@ -668,6 +793,34 @@ extension Map3DRealTrains {
             return [lane(leftward: !keepsRight, after: previous[0]), lane(leftward: keepsRight, after: previous[1])]
         }
 
+        /// Decision 600: the rails nearest scene point `p` (on the ground)
+        /// within ``Map3DRealTrains/laneReach`` of a path of `system`'s
+        /// assignment, `runs` (its stretches, by track, as the track's
+        /// points), and whether a car there shows; `nil` with none there.
+        func routePoint(at p: Map3DPoint, system: String, runs: [Int: [ClosedRange<Float>]]) -> (point: Map3DPoint, shown: Bool)? {
+            guard let cells = segments[system] else { return nil }
+            var best: (off: Float, point: Map3DPoint, shown: Bool)?
+            let column = Self.index(p.x), row = Self.index(p.z)
+            for c in column - 1...column + 1 {
+                for r in row - 1...row + 1 {
+                    for segment in cells[PlayerTrack.key(c, r)] ?? [] {
+                        guard let stretches = runs[segment.track] else { continue }
+                        let low = min(segment.from, segment.to), high = max(segment.from, segment.to)
+                        guard stretches.contains(where: { high > $0.lowerBound + 0.001 && low < $0.upperBound - 0.001 }) else { continue }
+                        let dx = segment.b.x - segment.a.x, dz = segment.b.z - segment.a.z
+                        let squared = dx * dx + dz * dz
+                        guard squared > 0 else { continue }
+                        let t = max(0, min(1, ((p.x - segment.a.x) * dx + (p.z - segment.a.z) * dz) / squared))
+                        let q = segment.a + (segment.b - segment.a) * t
+                        let off = Self.across(q, p)
+                        guard off <= Map3DRealTrains.laneReach, best.map({ off < $0.off }) ?? true else { continue }
+                        best = (off, q, segment.shown)
+                    }
+                }
+            }
+            return best.map { ($0.point, $0.shown) }
+        }
+
         /// How far apart `a` and `b` are, seen from above.
         static func across(_ a: Map3DPoint, _ b: Map3DPoint) -> Float {
             ((a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z)).squareRoot()
@@ -676,8 +829,13 @@ extension Map3DRealTrains {
         /// `window` of a line of `system` (``Map3DRealTrains/stretches``),
         /// every ``Map3DRealTrains/spacing`` metres of its core, on the
         /// tracks its trains run on each way (``lanes``); `nil` for a
-        /// window too short, or with none of `system`'s tracks.
-        func track(along window: Map3DRealTrains.Stretch, system: String, builder: Map3DScene.Builder) -> Map3DRealTrains.Track? {
+        /// window too short, or with none of `system`'s tracks. Decision
+        /// 600: and on each of `routes` (a path of the trains'
+        /// assignment, the stretch of the line it is taken over, and its
+        /// stretches by track) at the samples within that stretch.
+        func track(along window: Map3DRealTrains.Stretch, system: String,
+                   routes: [(path: Int, km: ClosedRange<Double>, runs: [Int: [ClosedRange<Float>]])] = [],
+                   builder: Map3DScene.Builder) -> Map3DRealTrains.Track? {
             guard segments[system] != nil else { return nil }
             let stretch = window.points
             let path = WorldPath(stretch.map(\.point))
@@ -697,20 +855,39 @@ extension Map3DRealTrains {
             guard first < last else { return nil }
             var km: [Double] = [], lanes: [[Map3DPoint]] = [[], []], shown: [[Bool]] = [[], []]
             var previous: [Map3DPoint?] = [nil, nil]
+            let windowKm = min(along[first], along[last])...max(along[first], along[last])
+            let wanted = routes.filter { $0.km.overlaps(windowKm) }
+            var found: [Int: (start: Int, points: [Map3DPoint?], shown: [Bool])] = [:]
             for index in first...last {
                 let at = path.point(at: sampled[index])
                 let ahead = path.point(at: min(sampled[index] + metre, path.length)), behind = path.point(at: max(sampled[index] - metre, 0))
                 let p = builder.point(x: at.x, y: at.y, height: 0)
                 let direction = builder.point(x: ahead.x, y: ahead.y, height: 0) - builder.point(x: behind.x, y: behind.y, height: 0)
                 km.append(along[index])
-                let found = self.lanes(at: p, along: direction, system: system, after: previous)
+                let side = self.lanes(at: p, along: direction, system: system, after: previous)
                 for lane in 0..<2 {
-                    lanes[lane].append(found?[lane].point ?? p)
-                    shown[lane].append(found?[lane].shown ?? false)
-                    previous[lane] = found?[lane].point
+                    lanes[lane].append(side?[lane].point ?? p)
+                    shown[lane].append(side?[lane].shown ?? false)
+                    previous[lane] = side?[lane].point
+                }
+                // A sample a path is wanted at: within its stretch, and a
+                // sample beyond, so a car between two samples finds it.
+                let sample = index - first
+                for route in wanted where route.km.lowerBound - Map3DRealTrains.spacing / 1_000 <= along[index]
+                    && along[index] <= route.km.upperBound + Map3DRealTrains.spacing / 1_000 {
+                    let point = routePoint(at: p, system: system, runs: route.runs)
+                    var entry = found[route.path] ?? (sample, [], [])
+                    while entry.start + entry.points.count < sample {
+                        entry.points.append(nil)
+                        entry.shown.append(false)
+                    }
+                    entry.points.append(point?.point)
+                    entry.shown.append(point?.shown ?? false)
+                    found[route.path] = entry
                 }
             }
-            return Map3DRealTrains.Track(km: km, lanes: lanes, shown: shown)
+            let routes = found.mapValues { Map3DRealTrains.Track.Route(start: $0.start, points: $0.points, shown: $0.shown) }
+            return Map3DRealTrains.Track(km: km, lanes: lanes, shown: shown, routes: routes.filter { $0.value.points.contains { $0 != nil } })
         }
     }
 }
@@ -741,10 +918,14 @@ extension Map3DScene.Builder {
             // Its samples: each point, and every 8 m between; how far
             // along it each is, metres.
             var samples: [(x: Double, y: Double, height: Double, along: Double)] = []
+            // Decision 600: where along the track each sample is, as its
+            // points.
+            var at: [Float] = []
             var travelled = 0.0
             for index in world.indices {
                 guard index > 0 else {
                     samples.append((world[0].x, world[0].y, track.heights[0], 0))
+                    at.append(0)
                     continue
                 }
                 let a = world[index - 1], b = world[index]
@@ -754,6 +935,7 @@ extension Map3DScene.Builder {
                     let share = Double(step) / Double(steps)
                     samples.append((a.x + (b.x - a.x) * share, a.y + (b.y - a.y) * share,
                                     track.heights[index - 1] + (track.heights[index] - track.heights[index - 1]) * share, travelled + length * share))
+                    at.append(Float(index - 1) + Float(share))
                 }
                 travelled += length
             }
@@ -813,7 +995,8 @@ extension Map3DScene.Builder {
                 }
                 for index in range.dropFirst() {
                     guard let a = points[index - 1], let b = points[index] else { continue }
-                    laid.add(.init(a: a, b: b, shown: shown[index - 1] && shown[index], track: number), system: track.system)
+                    laid.add(.init(a: a, b: b, shown: shown[index - 1] && shown[index], track: number, from: at[index - 1], to: at[index],
+                                   isService: track.isService), system: track.system)
                 }
                 layRealRun(range, points: points, kinds: kinds, shown: shown, cells: samples.map { ($0.x, $0.y) }, viaduct: viaduct)
             }
@@ -834,7 +1017,8 @@ extension Map3DScene.Builder {
             guard kind != .tunnel else { return }
             var kept = stride(from: 0, to: run.count, by: 2).compactMap { points[run[$0]] }
             if run.count % 2 == 0, let last = run.last, let point = points[last] { kept.append(point) }
-            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct) }
+            // Decision 600: the rails near only.
+            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct, railsNear: true) }
             let cell = Double(Land.cellLength)
             for index in run {
                 realTrackCells.insert(Map3DScene.ChunkKey(column: Int((cells[index].x / cell).rounded(.down)),
