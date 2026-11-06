@@ -846,21 +846,27 @@ final class Map3DMetalView: MTKView {
         guard var following else { return }
         let pose: Map3DFollow.Pose
         followedSeeThrough = nil
-        if let bus = following.bus {
+        // One switch over a local copy of the subject, and no closure that
+        // captures `following`: chained `if let following.bus/.cabin/...`
+        // here crashed Xcode 26.6's Release optimizer (CopyPropagation,
+        // "Found outside of lifetime use?!"). Do not change it back.
+        let subject = following.subject
+        switch subject {
+        case .bus(let bus):
             guard let found = busPose?(bus) else { return }
             pose = found
-        } else if let cabin = following.cabin {
+        case .cabin(let cabin):
             guard let found = cabinPose?(cabin) else { return }
             pose = found
             followedSeeThrough = Map3DSeeThrough.point(of: found)
-        } else if let ferry = following.ferry {
+        case .ferry(let ferry):
             guard let found = ferryPose?(ferry) else { return }
             pose = found
-        } else if let real = following.realTrain {
+        case .realTrain(let real):
             guard let found = realTrainPose?(real) else { return }
             pose = found
-        } else {
-            guard let head = heads.first(where: { $0.train == following.train }) else { return }
+        case .train(let train):
+            guard let head = heads.first(where: { $0.train == train }) else { return }
             pose = head.pose
         }
         // Decision 578: no jump to a platform with nothing built round it.
