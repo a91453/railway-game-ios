@@ -911,6 +911,15 @@ final class Map3DMetalView: MTKView {
         chunks = scene.chunks.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }.compactMap(makeChunk) + old
     }
 
+    /// Decision 517 續 (PR 3b): draws `scene`'s chunks at `keys` in place
+    /// of what was there, and its tunnels' openings; the other chunks
+    /// drawn stay (`scene` was built again from the scene drawn, only at
+    /// `keys`).
+    func replace(_ keys: Set<Map3DStreaming.Key>, from scene: Map3DScene) {
+        openings = scene.trackCover.openings
+        place(scene.chunks.filter { keys.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }, at: keys.sorted())
+    }
+
     /// Decision 358: draws `built` at `keys` (in place of what was there;
     /// a key with no chunk is empty ground).
     func place(_ built: [Map3DScene.Chunk], at keys: [Map3DStreaming.Key]) {
