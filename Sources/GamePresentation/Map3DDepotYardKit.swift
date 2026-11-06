@@ -79,7 +79,11 @@ public enum Map3DDepotYardKit {
 
     public static func model(for part: Part, far: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
-        let w = part.width, h = max(6.4, part.system.clearHeight + 0.5)
+        let w = part.width
+        let isShed = [.shedHead, .shedMiddle, .shedTail].contains(part.kind)
+        // The head's lintel hangs 0.625 m below the eaves. Its underside
+        // (rather than the eaves) is the specified rail-to-opening clearance.
+        let h = part.system.clearHeight + 0.45 + (isShed ? 0.625 : 0)
         if far {
             let height: Float = switch part.kind {
             case .shedHead, .shedMiddle, .shedTail: h + 1.5
