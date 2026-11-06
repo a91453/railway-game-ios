@@ -711,6 +711,7 @@ struct MapView: View {
                         // hands it over to the 3D map, where the 2D map
                         // was and as close (not with a building tool out,
                         // in the tutorial, or with the setting off).
+                        UITestTrace.action("map.pinch let go: tool \(session.tool == .select ? "select" : "building") tutorial \(session.tutorial != nil) setting \(pinchOpens3D) shows3D \(map3DQuality.shows3D) open \(screen.showsMap3D) size \(String(format: "%.1f", pinched.referenceSize)) of \(String(format: "%.1f", MapScale.largestSize)) asked \(String(format: "%.1f", asked)) opens \(Map3DHandoff.opensOnRelease(referenceSize: pinched.referenceSize, asked: asked))")
                         guard Map3DHandoff.hands(building: session.tool != .select, tutorialRuns: session.tutorial != nil,
                                                  pinchOpens: pinchOpens3D && map3DQuality.shows3D),
                               !screen.showsMap3D,
@@ -3390,6 +3391,18 @@ private struct MapGestures: UIViewRepresentable {
             }
         }
 
+        private static func name(of state: UIGestureRecognizer.State) -> String {
+            switch state {
+            case .possible: "possible"
+            case .began: "began"
+            case .changed: "changed"
+            case .ended: "ended"
+            case .cancelled: "cancelled"
+            case .failed: "failed"
+            @unknown default: "unknown"
+            }
+        }
+
         @objc func pinch(_ gesture: UIPinchGestureRecognizer) {
             if gesture.state == .began {
                 stopGliding()
@@ -3418,6 +3431,11 @@ private struct MapGestures: UIViewRepresentable {
             }
             if gesture.state == .ended, pinchStart != nil, let camera = latest {
                 parent.onPinchEnded(camera, pinchAsked)
+            }
+            // #1876's pinch test: how each pinch began and ended, for the
+            // trace a failed UI test saves (Debug, under -ui-testing).
+            if gesture.state != .changed {
+                UITestTrace.action("map.pinch \(Self.name(of: gesture.state)) touches \(gesture.numberOfTouches) scale \(String(format: "%.2f", gesture.scale)) size \(latest.map { String(format: "%.1f", $0.referenceSize) } ?? "-") asked \(String(format: "%.1f", pinchAsked)) started \(pinchStart != nil)")
             }
             if gesture.state == .ended || gesture.state == .cancelled || gesture.state == .failed {
                 pinchStart = nil

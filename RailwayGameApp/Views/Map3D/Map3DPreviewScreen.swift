@@ -545,6 +545,7 @@ final class Map3DTrainModels {
     }
 
     private func finished(_ uploaded: Map3DUploadedModels?) {
+        UITestTrace.action("map3D.models made: \(uploaded.map { "\($0.buffers.count) buffers" } ?? "none")")
         self.uploaded = uploaded
         made = true
         let woken = waiting
