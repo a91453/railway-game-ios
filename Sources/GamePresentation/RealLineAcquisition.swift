@@ -875,7 +875,7 @@ extension RealLineLaying {
         guard world.acquisition(of: line.id) == nil else {
             return refused("This line is already yours.", "這條線已經是你的了。")
         }
-        let points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
+        var points = runs.stops.compactMap { realPoint(of: $0, system: line.system, railways: railways, frame: frame) }
         guard points.count == runs.stops.count, points.allSatisfy({ world.bounds.contains($0.plan) }) else {
             return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
         }
@@ -916,8 +916,34 @@ extension RealLineLaying {
         let depotEnds: [(stop: Int, site: RealLineDepotSite, points: [WorldVector])] = depot ? depotSites.compactMap { site in
             site.beyond.flatMap { runs.stops.firstIndex(of: $0) }.map { ($0, site, worldPoints(site)) }
         } : []
+        func onMap(_ point: (latitude: Double, longitude: Double)) -> WorldVector {
+            WorldVector(frame.worldPosition(latitude: point.latitude, longitude: point.longitude))
+        }
+        // Decision 602 (continued): an end station whose real platform the
+        // drawn line stops short of (the Wenhu Line's at Nangang Exhibition
+        // Center, 86 m on, its point the Bannan Line's) stands on its own
+        // platform, which the run-on below goes through.
+        for (stop, site, _) in depotEnds {
+            if let platform = site.fan?.platform { points[stop] = onMap(platform) }
+        }
         func runOn(from end: WorldVector, leaving way: WorldVector, at stop: Int) -> [WorldVector] {
-            guard let points = depotEnds.first(where: { $0.stop == stop })?.points else { return [end + way * RealLineAcquisition.runOn] }
+            guard let (_, site, points) = depotEnds.first(where: { $0.stop == stop }) else { return [end + way * RealLineAcquisition.runOn] }
+            // Decision 602: a fanned yard's lead along the real leads to
+            // its throat, from where the line's track runs on past the end.
+            if let fan = site.fan {
+                // Decision 602 (continued): on from where the drawn line
+                // stops, through the real platform and the real junction.
+                if let platform = fan.platform {
+                    return Array(RealLineDepotLayout.Fan.lead(
+                        from: end, leaving: way, through: [onMap(platform), points[0]] + fan.leads.map(onMap), to: onMap(fan.throat),
+                        yardWay: (points[2] - points[1]).unit
+                    ).dropFirst())
+                }
+                let junction = end + way * max(0, (points[0] - end).dot(way))
+                return RealLineDepotLayout.Fan.lead(
+                    from: junction, leaving: way, through: fan.leads.map(onMap), to: onMap(fan.throat), yardWay: (points[2] - points[1]).unit
+                )
+            }
             // In the yard's way 50 m short of its sidings' near ends, so
             // the game's ladder, longer than the real one, stays within
             // the real depot.
@@ -1004,7 +1030,8 @@ extension RealLineLaying {
         // real yard, over the Jingmei River), read but not bought.
         let yardSamples = depotEnds.flatMap { _, site, points in
             RealLineDepotLayout.groundSamples(
-                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step
+                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step,
+                throat: site.fan.map { onMap($0.throat) }
             )
         } + (depot && line.readsGroundBesideYards ? midDepotSites : []).flatMap { site in
             RealLineDepotLayout.groundSamples(
@@ -1138,6 +1165,26 @@ extension RealLineLaying {
             }
             forced += [a, a + ramp, b - ramp, b]
             second = (a, b)
+        }
+        // Decision 602: a fanned yard's second lead, beside the first from
+        // the end station's outermost switch to where the real two join, on
+        // the side the real second lies: from the switch itself, so that a
+        // train out of the yard and one into it share no single track
+        // there (laid a short edge further on, a train out on one lead and
+        // one in from a loop met head on on that edge, the Neihu deadlock
+        // of decision 602).
+        var secondLeads: [(a: Double, b: Double, offset: Double)] = []
+        for (stop, site, _) in depotEnds where stop == 0 || stop == runs.stops.count - 1 {
+            guard let real = site.fan?.second, let first = spans.first, let last = spans.last else { continue }
+            let joins = path.nearest(onMap(real.joins)).along
+            let (a, b) = stop == 0 ? (joins, first.lowerBound) : (last.upperBound, joins)
+            guard b - a > 2 * ramp + gap else { continue }
+            let on = onMap(real.on), at = path.nearest(on).along
+            let side: Double = (on - path.point(at: at)).dot(path.tangent(at: at).normal) >= 0 ? 1 : -1
+            // Nodes every 30 m between its ramps, so that it follows the
+            // first lead's bends (one edge across them cut over it).
+            forced += [a, a + ramp, b - ramp, b] + Array(stride(from: a + ramp + 30 * RealLineAcquisition.metre, to: b - ramp, by: 30 * RealLineAcquisition.metre))
+            secondLeads.append((a, b, side * HighSpeedDemo.trackOffset))
         }
         // Decision 479: the depot's wye and crossovers, on the second
         // track's side of the line, clear of the stations and the second
@@ -1307,6 +1354,26 @@ extension RealLineLaying {
                 RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 1, node: secondB), true
             ))
         }
+        // Decision 602: the second leads, after the pieces others name by
+        // their index.
+        // Beside every node of the first between its switches, the offset
+        // eased in and out over a ramp: the first lead bends there, and
+        // one edge across a bend cut over it. Each switch's two edges span
+        // the same stretch, so they leave along tangents of the same length
+        // (decision 543).
+        for lead in secondLeads {
+            guard let a = mainNode(lead.a), let b = mainNode(lead.b), b > a + 1 else { continue }
+            let beside = Array(a...b)
+            let offsets = beside.map { index -> Double in
+                let distance = main.distances[index]
+                let t = min(1, max(0, min(distance - lead.a, lead.b - distance) / ramp))
+                return lead.offset * t * t * (3 - 2 * t)
+            }
+            plans.append((
+                RealWorldDemo.TrackPlan(beside: main, at: beside, offsets: offsets, following: true),
+                RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
+            ))
+        }
         var pieces = plans.map { entry in
             let plan = entry.plan
             let nodes = plan.nodes.indices.map { WorldCoordinate(x: plan.nodes[$0].point.x, y: plan.nodes[$0].point.y, z: plan.heights[$0]) }
@@ -1333,12 +1400,12 @@ extension RealLineLaying {
         }
         // Decision 489: a depot past an end, its lead on from the main
         // track's end there; decision 535, one past each end.
-        for (end, site, _) in depotEnds where end == 0 || end == runs.stops.count - 1 {
+        for (end, site, points) in depotEnds where end == 0 || end == runs.stops.count - 1 {
             let last = end == 0 ? 0 : main.nodes.count - 1
             let way = end == 0 ? path.tangent(at: 0).reversed : path.tangent(at: path.length)
             guard let laid = RealLineDepotLayout.lay(
                 site, beyond: (RealLineAcquisition.NodeAt(piece: 0, node: last), WorldVector(main.nodes[last].point), main.heights[last], way),
-                first: pieces.count, length: platformLength, ground: ground, water: water, in: language
+                shed: (points[1] + points[2]) * 0.5, first: pieces.count, length: platformLength, ground: ground, water: water, in: language
             ) else {
                 return refused("The line's depot does not fit here.", "這條線的機廠放不下。")
             }

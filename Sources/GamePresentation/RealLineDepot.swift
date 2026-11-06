@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 // Decision 479: a real line bought with its real depot. The Sanying
@@ -45,6 +46,38 @@ struct RealLineDepotSite: Sendable {
     /// lead on short turnouts (``RealLineDepotLayout/Ladder/lightRail``),
     /// as tight as its real one; otherwise the depot tool's ladder.
     let compact: Bool
+    /// Decision 602: a yard laid as its real one fans out
+    /// (``RealLineDepotLayout/Fan``): its lead along the real leads, its
+    /// sidings along the real stabling tracks; `nil` for a ladder.
+    var fan: Fan? = nil
+
+    /// Decision 602: where a fanned yard's lead runs and how its sidings
+    /// split. The lead goes on from the line's end through `leads` (the
+    /// real leads' way, in order) to `throat`, where it runs the way the
+    /// real stabling tracks do (``yard``'s start to its end, which here
+    /// are the middle of their near ends and of their far ends); the
+    /// sidings fan out from there, `towardShed` of them to the side the
+    /// real stabling tracks lie (from the throat) and the rest, but the
+    /// one straight on, to the other.
+    ///
+    /// `second`: the real second lead, as each of the line's two tracks
+    /// runs on past the end station into a lead of its own (the author:
+    /// "why is there only one way out?"): a point on it, which tells the
+    /// side it lies, and where it joins the first (or, where it reaches
+    /// the yard by another way, the point the game's joins the first
+    /// short of the throat). It is laid beside the first lead from past
+    /// the end station's loops to there, as the line's second track is
+    /// (``RealWorldDemo/TrackPlan/init(beside:at:offsets:following:)``).
+    struct Fan: Sendable {
+        let leads: [(latitude: Double, longitude: Double)]
+        let throat: (latitude: Double, longitude: Double)
+        let towardShed: Int
+        var second: (on: (latitude: Double, longitude: Double), joins: (latitude: Double, longitude: Double))? = nil
+        /// Decision 602 (continued): the real platform of the end station
+        /// the depot stands beyond, where the line as drawn stops short of
+        /// it and the station's point is another line's.
+        var platform: (latitude: Double, longitude: Double)? = nil
+    }
 
     /// The Sanxia depot (三峽機廠, way 619043484): the crossover of its
     /// leads (way 1156270818), its sidings' near ends (ways 1136774767 and
@@ -73,35 +106,67 @@ struct RealLineDepotSite: Sendable {
         sidings: 9, beyond: "崁頂", compact: true
     )
 
-    /// Decision 535 (PR W): the Muzha depot (木柵機廠, way 71266521) of
-    /// the Wenhu Line, past Taipei Zoo: where the line's two tracks end and
-    /// its leads begin (ways 194634022 and 194633990, the leads 307449195
-    /// and 307449196), and the middle of its stabling tracks' near ends and
-    /// of their far ends (ways 71380030, 71380035 and 71380037;
-    /// `tools/rail-depots`). Its sidings hold the trains the real timetable
-    /// leaves at Taipei Zoo overnight, one each. Decision 549 (continued):
-    /// its sidings either side in turn, as a light rail's (`compact`): the
-    /// one-sided ladder ran some 1.5 km past the zoo, over the Jingmei
-    /// River at less than a bridge's height and on into the hill.
+    /// Decision 535 (PR W): the Muzha depot (木柵機廠, landuse way
+    /// 71266521) of the Wenhu Line, past Taipei Zoo: where the line's two
+    /// tracks end and its leads begin (ways 194634022 and 194633990).
+    /// Decision 602: laid as the real yard lies (`tools/rail-depots`): the
+    /// lead along the real north lead (ways 307449196 and 194633991)
+    /// north-east by the Jingmei River and round into the way of the real
+    /// stabling tracks
+    /// (the twelve through the shed, ways 1342641748 to 1342641759, some
+    /// 195 m long, 4 m apart, running south-east; ``yard`` is the middle
+    /// of their north-west ends and of their south-east ends), the
+    /// sidings fanning out from where that lead turns, most of them
+    /// toward the shed. Its sidings hold the 22 trains the real timetable
+    /// leaves at Taipei Zoo overnight, one each, so the yard is wider than
+    /// the real shed and its tracks shorter; it stays within the depot's
+    /// ground, clear of the river (decisions 549 continued and 552 had laid
+    /// a ladder some 380 m east, over the river).
     static let muzha = RealLineDepotSite(
         line: "trtc:BR", english: "Muzha Depot", chinese: "木柵機廠",
         junction: (24.998574, 121.579812),
-        yard: ((25.001219, 121.584390), (25.001219, 121.585408)),
-        sidings: 22, beyond: "動物園", compact: true
+        yard: ((25.001307, 121.585648), (25.000244, 121.587180)),
+        sidings: 22, beyond: "動物園", compact: true,
+        fan: Fan(
+            leads: [(24.998946, 121.580409), (25.000240, 121.582551), (25.000499, 121.583398), (25.000805, 121.583812)],
+            throat: (25.001270, 121.585081), towardShed: 12,
+            // The real south lead (way 307449195) reaches the shed's south
+            // side on its own; the game's joins the first 85 m short of
+            // the throat (on way 194633991).
+            second: (on: (24.999391, 121.581198), joins: (25.001141, 121.584254))
+        )
     )
 
-    /// Decision 535 (PR W): the Neihu depot (內湖機廠, way 499801370) of
-    /// the Wenhu Line, past Taipei Nangang Exhibition Center: where the
-    /// line's two tracks end past its platform and its leads begin (ways
-    /// 310746644 and 310746645, the leads 499750991 and 127958010), and the
-    /// middle of its stabling tracks' near ends and of their far ends (ways
-    /// 499756245 to 499756259). Its sidings hold the trains the real
-    /// timetable leaves at Nangang Exhibition Center overnight, one each.
+    /// Decision 535 (PR W): the Neihu depot (內湖機廠, landuse way
+    /// 499801370) of the Wenhu Line, past Taipei Nangang Exhibition
+    /// Center: where the line's two tracks end past its platform and its
+    /// leads begin (ways 310746644 and 310746645). Decision 602: laid as
+    /// the real yard lies (`tools/rail-depots`): the lead along the real
+    /// leads (ways 127958010 and 198181448) east, north-east and round
+    /// north-west into the way of the real stabling tracks (the sixteen
+    /// through the shed, ways 1316259201 to 1316259216, some 148 m long,
+    /// 4 m apart; ``yard`` is the middle of their south-east ends and of
+    /// their north-west ends), the sidings fanning out where the real ones
+    /// do. Its sidings hold the 22 trains the real timetable leaves at
+    /// Nangang Exhibition Center overnight, one each (the depot tool's
+    /// ladder had run on north-west for over a kilometre).
     static let neihu = RealLineDepotSite(
         line: "trtc:BR", english: "Neihu Depot", chinese: "內湖機廠",
         junction: (25.055245, 121.618427),
-        yard: ((25.058961, 121.620931), (25.059392, 121.620496)),
-        sidings: 22, beyond: "南港展覽館", compact: false
+        yard: ((25.059395, 121.620393), (25.060406, 121.619446)),
+        sidings: 22, beyond: "南港展覽館", compact: false,
+        fan: Fan(
+            leads: [(25.055384, 121.619030), (25.056119, 121.619469), (25.056682, 121.620048), (25.057162, 121.620983), (25.057809, 121.621873), (25.058070, 121.621785)],
+            throat: (25.058581, 121.621212), towardShed: 13,
+            // The real second lead (way 499750991) joins the first where
+            // way 198181448 begins toward the shed.
+            second: (on: (25.056145, 121.619426), joins: (25.057583, 121.621691)),
+            // The Wenhu Line's own platform (OSM node 3501186380, between
+            // its stop positions 7093644633 and 7093644634), some 90 m
+            // east of the point `trtc.json` shares with the Bannan Line;
+            // the drawn line (`track_lines.geojson`) ends 86 m short of it.
+            platform: (25.055316, 121.617896)
+        )
     )
 
     /// Decision 535 (continued, ANKENGDEPOT): the Ankeng depot (安坑機廠,
@@ -324,8 +389,21 @@ extension RealLineDepotLayout {
     /// short of its near end, as far as it may be moved along it: the
     /// offer reads it in before it lays the yard, which otherwise reads
     /// no ground (and no height over the water) past the real yard.
-    static func groundSamples(beyond points: [WorldVector], site: RealLineDepotSite, length: Int64, back: Double, step: Double) -> [PlanPoint] {
+    /// Decision 602: a fanned yard's, from `throat`, the real stabling
+    /// tracks' way, either side as wide as its wider side.
+    static func groundSamples(beyond points: [WorldVector], site: RealLineDepotSite, length: Int64, back: Double, step: Double, throat: WorldVector? = nil) -> [PlanPoint] {
         guard site.beyond != nil else { return [] }
+        if site.fan != nil, let throat, points.count == 3 {
+            let way = (points[2] - points[1]).unit, origin = throat - way * back
+            let along = back + Fan.ramp + Fan.extent(of: site, length: length).far
+            let sides = Fan.sides(of: site)
+            let across = Double(max(sides.toward, sides.away) + 1) * Fan.spacing
+            return (0...Int(along / step)).flatMap { a in
+                (-Int(across / step) - 1...Int(across / step) + 1).map { c in
+                    (origin + way * (Double(a) * step) + way.normal * (Double(c) * step)).plan
+                }
+            }
+        }
         return groundSamples(of: points, site: site, length: length, back: back, step: step)
     }
 
@@ -349,11 +427,17 @@ extension RealLineDepotLayout {
     /// depot, its yard straight on from the line's end node `end` (its
     /// point, height and the line's way there, out past the end, which
     /// the line has turned into the real yard's).
+    /// Decision 602: a site with a ``RealLineDepotSite/fan`` is fanned
+    /// out from the end, most of its sidings toward `shed`.
     static func lay(
         _ site: RealLineDepotSite, beyond end: (at: RealLineAcquisition.NodeAt, point: WorldVector, height: Int64, way: WorldVector),
-        first: Int, length: Int64, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool = { _ in false }, in language: DisplayLanguage
+        shed: WorldVector? = nil, first: Int, length: Int64, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool = { _ in false },
+        in language: DisplayLanguage
     ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
         guard site.sidings > 0 else { return nil }
+        if site.fan != nil, let shed {
+            return fanned(site, from: end, shed: shed, first: first, length: length, ground: ground, water: water, in: language)
+        }
         let ladder = site.compact ? Ladder.lightRail : Ladder.depotTool
         let yard = end.point + end.way * ladder.straight
         return self.yard(
@@ -452,6 +536,186 @@ extension RealLineDepotLayout {
         let offsets = (0..<count).map(ladder.offset)
         let station = at((start + far) / 2, 0) + fan * (Double(offsets.max()! + offsets.min()!) * spacing / 2)
         return (pieces, RealLineAcquisition.Depot(name: site.name(in: language), at: station.plan, platforms: sidingStarts, length: length))
+    }
+
+    /// Decision 602: a fanned yard's shape. The lead runs on `ramp` from
+    /// the line's end (its grade takes the yard toward the ground), then
+    /// sidings leave it: on each side the first by an S-curve `firstReach`
+    /// long, `firstAfter` along, and the rest off a ladder track that turns
+    /// out `angle` on curves of `radius`, each siding curving back off it
+    /// into the yard's way; the second side's turnouts `sideGap` after the
+    /// first's. All the sidings' platforms stand side by side past the
+    /// last curve, as the real stabling tracks do.
+    enum Fan {
+        static let ramp = 30 * metre
+        static let radius = 30 * metre
+        static let angle = Double.pi / 6
+        static let firstAfter = 8 * metre
+        static let firstReach = 30 * metre
+        static let sideGap = 16 * metre
+        static let spacing = Double(DepotYard.spacing)
+
+        /// How far a curve off the ladder (or onto it) runs along the
+        /// yard, and how far it moves across it.
+        static var arcAlong: Double { radius * sin(angle) }
+        static var arcAcross: Double { radius * (1 - cos(angle)) }
+
+        /// How many sidings each side, the one straight on not counted:
+        /// toward the real stabling tracks and away.
+        static func sides(of site: RealLineDepotSite) -> (toward: Int, away: Int) {
+            let toward = min(max(site.fan?.towardShed ?? 0, 0), max(site.sidings - 1, 0))
+            return (toward, max(site.sidings - 1 - toward, 0))
+        }
+
+        /// Where along the yard, from the ramp's end, siding `k` (from 1)
+        /// of a side whose turnouts start `g` along leaves its ladder.
+        static func ladderTurnout(_ k: Int, from g: Double) -> Double {
+            g + arcAlong + (spacing * Double(k) - 2 * arcAcross) / tan(angle)
+        }
+
+        /// Where along the yard, from the ramp's end, the curves of a side
+        /// with `count` sidings starting `g` along end.
+        static func lastCurve(_ count: Int, from g: Double) -> Double {
+            switch count {
+            case 0: g
+            case 1: g + firstAfter + firstReach
+            default: ladderTurnout(count, from: g) + arcAlong
+            }
+        }
+
+        /// The platforms' start and the sidings' far end, along the yard
+        /// from the ramp's end.
+        static func extent(of site: RealLineDepotSite, length: Int64) -> (start: Double, far: Double) {
+            let (toward, away) = sides(of: site)
+            let (first, second) = toward >= away ? (toward, away) : (away, toward)
+            let start = max(lastCurve(first, from: 0), lastCurve(second, from: sideGap), sideGap + firstAfter) + RealWorldDemo.platformMargin
+            return (start, start + Double(length) + RealWorldDemo.platformMargin)
+        }
+
+        /// The lead from the line's end at `junction`, leaving it along
+        /// `way`, through the real leads (`leads`) to `throat`, arriving
+        /// there along the yard's way `yardWay`: a smooth curve through
+        /// them, every 4 m or so.
+        static func lead(from junction: WorldVector, leaving way: WorldVector, through leads: [WorldVector], to throat: WorldVector, yardWay: WorldVector) -> [WorldVector] {
+            let approach = throat - yardWay * (20 * metre)
+            let points = [junction] + leads + [approach, throat]
+            let tangents = points.indices.map { index -> WorldVector in
+                if index == 0 { return way.unit }
+                if index >= points.count - 2 { return yardWay.unit }
+                return (points[index + 1] - points[index - 1]).unit
+            }
+            var curve: [WorldVector] = []
+            for index in points.indices.dropLast() {
+                let a = points[index], b = points[index + 1], chord = (b - a).length
+                let steps = max(2, Int((chord / (4 * metre)).rounded(.up)))
+                let ta = tangents[index] * chord, tb = tangents[index + 1] * chord
+                for step in 1...steps {
+                    let t = Double(step) / Double(steps), t2 = t * t, t3 = t2 * t
+                    let h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2
+                    curve.append(a * h00 + ta * h10 + b * h01 + tb * h11)
+                }
+            }
+            return [junction] + curve
+        }
+    }
+
+    /// Decision 602: the depot's pieces, from piece `first` on, and the
+    /// depot, its yard fanned out (``Fan``) from the line's end node `end`
+    /// along its way there, most of its sidings toward `shed` (the middle
+    /// of the real stabling tracks).
+    private static func fanned(
+        _ site: RealLineDepotSite, from end: (at: RealLineAcquisition.NodeAt, point: WorldVector, height: Int64, way: WorldVector),
+        shed: WorldVector, first: Int, length: Int64, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, in language: DisplayLanguage
+    ) -> (pieces: [RealLineAcquisition.Piece], depot: RealLineAcquisition.Depot)? {
+        let way = end.way.unit, start = end.point + way * Fan.ramp
+        let toward: Double = (shed - end.point).dot(way.normal) >= 0 ? 1 : -1
+        let (towardCount, awayCount) = Fan.sides(of: site)
+        let (platformStart, far) = Fan.extent(of: site, length: length)
+        let spacing = Fan.spacing, arcAlong = Fan.arcAlong, arcAcross = Fan.arcAcross
+        func at(_ along: Double, _ across: Double) -> WorldVector { start + way * along + way.normal * across }
+
+        // The yard level, within the ramp's grade of the line's end, as
+        // near the ground as that lets it, and clear over any water under
+        // it as the line's own track is (``TrackRise/waterClearance``).
+        let widest = Double(max(towardCount, awayCount) + 1) * spacing
+        let wet = stride(from: 0, through: far, by: TrackRise.spacing).flatMap { along in
+            stride(from: -widest, through: widest, by: TrackRise.spacing).map { at(along, $0) }
+        }.filter(water)
+        let needed = wet.map { ground($0) + TrackRise.waterClearance }.max() ?? -.infinity
+        let climb = RealLineDepotLayout.grade * Fan.ramp
+        let height = Int64(max(Double(end.height) - climb, min(Double(end.height) + climb, max(ground(start), needed))).rounded())
+
+        // Each side: its sign across the yard, its sidings, where its
+        // turnouts start along the ramp's end; the side with more first.
+        let sides: [(sign: Double, count: Int, from: Double)] = {
+            let a = (sign: toward, count: towardCount), b = (sign: -toward, count: awayCount)
+            let (one, two) = a.count >= b.count ? (a, b) : (b, a)
+            return [(one.sign, one.count, 0), (two.sign, two.count, Fan.sideGap)]
+        }()
+        let handle = 4.0 / 3 * tan(Fan.angle / 4) * Fan.radius
+
+        // The lead and the siding straight on: the ramp, then the
+        // turnouts of the sidings off it, then on to the far end.
+        var turnouts: [Double] = [0]
+        for side in sides where side.count >= 1 {
+            turnouts.append(side.from + Fan.firstAfter)
+            if side.count >= 2 { turnouts.append(side.from) }
+        }
+        turnouts = Array(Set(turnouts)).sorted()
+        var straightPoints = [coordinate(end.point, end.height)] + turnouts.map { coordinate(at($0, 0), height) }
+        straightPoints.append(coordinate(at(far, 0), height))
+        var pieces = [piece(straightPoints, Array(repeating: TrackCurve.straight, count: straightPoints.count - 1), start: end.at)]
+        var platforms = [RealLineAcquisition.PieceAt(piece: first, distance: Fan.ramp + platformStart)]
+        var offsets = [0.0]
+        func onStraight(_ along: Double) -> RealLineAcquisition.NodeAt {
+            RealLineAcquisition.NodeAt(piece: first, node: 1 + turnouts.firstIndex(of: along)!)
+        }
+        // A siding from `points` (its last on its curve's end, `along`
+        // the yard) on to the far end, its platform with the others.
+        func siding(_ points: [WorldVector], _ curves: [TrackCurve], along: Double, across: Double, start: RealLineAcquisition.NodeAt) {
+            let all = points + [at(far, across)]
+            let laid = piece(all.map { coordinate($0, height) }, curves + [.straight], start: start)
+            let before = laid.distances[points.count - 1]
+            platforms.append(RealLineAcquisition.PieceAt(piece: first + pieces.count, distance: before + platformStart - along))
+            offsets.append(across)
+            pieces.append(laid)
+        }
+        for side in sides {
+            let sign = side.sign, g = side.from
+            if side.count >= 1 {
+                let a = g + Fan.firstAfter, b = a + Fan.firstReach
+                siding(
+                    [at(a, 0), at(b, sign * spacing)], [cubic(at(a, 0), leaving: way, at(b, sign * spacing), arriving: way, handle: Fan.firstReach / 2)],
+                    along: b, across: sign * spacing, start: onStraight(a)
+                )
+            }
+            guard side.count >= 2 else { continue }
+            // The ladder: out along `angle`, past each siding's turnout,
+            // and back into the yard's way as the outermost siding.
+            let out = (way * cos(Fan.angle) + way.normal * (sign * sin(Fan.angle))).unit
+            let corner = at(g + arcAlong, sign * arcAcross)
+            let ladderPiece = first + pieces.count
+            var ladder = [at(g, 0), corner]
+            var curves = [cubic(at(g, 0), leaving: way, corner, arriving: out, handle: handle)]
+            for k in 2...side.count {
+                ladder.append(at(Fan.ladderTurnout(k, from: g), sign * (spacing * Double(k) - arcAcross)))
+                curves.append(.straight)
+            }
+            let outer = Fan.ladderTurnout(side.count, from: g) + arcAlong, outerAcross = sign * spacing * Double(side.count)
+            curves.append(cubic(ladder[ladder.count - 1], leaving: out, at(outer, outerAcross), arriving: way, handle: handle))
+            ladder.append(at(outer, outerAcross))
+            siding(ladder, curves, along: outer, across: outerAcross, start: onStraight(g))
+            // The sidings between, each off its turnout on the ladder.
+            for k in (2..<side.count).reversed() {
+                let turnout = ladder[k], along = Fan.ladderTurnout(k, from: g) + arcAlong, across = sign * spacing * Double(k)
+                siding(
+                    [turnout, at(along, across)], [cubic(turnout, leaving: out, at(along, across), arriving: way, handle: handle)],
+                    along: along, across: across, start: RealLineAcquisition.NodeAt(piece: ladderPiece, node: k)
+                )
+            }
+        }
+        let station = at((platformStart + far) / 2, (offsets.max()! + offsets.min()!) / 2)
+        return (pieces, RealLineAcquisition.Depot(name: site.name(in: language), at: station.plan, platforms: platforms, length: length))
     }
 
     private static func coordinate(_ point: WorldVector, _ height: Int64) -> WorldCoordinate {
