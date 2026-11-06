@@ -1015,7 +1015,11 @@ final class Map3DMetalView: MTKView {
         // Decision 394: deep in a tunnel, the cab sees nothing on the
         // ground, so none of it is drawn (nor let go: it is all there the
         // frame it is seen again).
-        underground.update(view: following?.view, head: frame?.heads.first(where: { $0.train == following?.train }), flying: flying != nil,
+        // A local copy of the subject, not `following?.train` in the
+        // closure (Xcode 26.6 Release optimizer crash, see moveCamera).
+        let followedSubject = following?.subject
+        let followedTrain: TrainID? = if case .train(let id)? = followedSubject { id } else { nil }
+        underground.update(view: following?.view, head: frame?.heads.first(where: { $0.train == followedTrain }), flying: flying != nil,
                            camera: camera, openings: openings)
         let below = underground.isUnderground
         let camera = camera
