@@ -1218,7 +1218,12 @@ extension Map3DScene {
         /// detail (``Target/near``), its bed, banks and viaducts at every
         /// distance: the real lines' tracks, which far out are most of what
         /// a scene draws.
-        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false) {
+        ///
+        /// `from`: how far along its whole track `line` starts, metres
+        /// (a real track's, review L11-1), so a viaduct's piers stand where
+        /// the whole track puts them, wherever the piece starts.
+        mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false,
+                                    from along: Float? = nil) {
             let middle = line[line.count / 2]
             switch kind {
             case .tunnel:
@@ -1234,7 +1239,7 @@ extension Map3DScene {
                 // Decision 407: drawn with the rest (addViaducts()).
                 let grounds = line.map { ground(at: $0) }
                 addDeckShadow(line, grounds: grounds, width: viaduct.look(over: kind).deckWidth)
-                viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct)
+                viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct, from: along)
             case .surface, .embankment, .cutting:
                 let lifts = line.map { $0.y - ground(at: $0) }
                 let depth = max(0.45, (lifts.reduce(0, +) / Float(lifts.count)) - Self.bedDrop)

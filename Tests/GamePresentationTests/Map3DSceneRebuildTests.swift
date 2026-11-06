@@ -212,6 +212,57 @@ final class Map3DSceneRebuildTests: XCTestCase {
         assertCaught(back, of: before, for: place.world, in: place, allowing: apart)
     }
 
+    /// Review L11-1: track laid on a real line (here a straight stretch
+    /// of the Taiwan Railway's viaduct through Taichung) hides that
+    /// stretch of the real track, and the rest of the real track, on to
+    /// the end of its window kilometres away, is still laid as the whole
+    /// scene lays it: the chunks round the change built again are the
+    /// scene built whole, on a map of eight chunks by eight.
+    func testTrackLaidOnARealLineBuildsOnlyItsChunksAgain() throws {
+        let place = try place()
+        let origin = (x: place.frame.originX, y: place.frame.originY)
+        let grid = Map3DStreaming(originX: origin.x, originY: origin.y, map: WorldRegion(bounds: place.world.bounds))
+        let region = try XCTUnwrap(grid.region(of: [Key(column: -4, row: -4), Key(column: 3, row: 3)]))
+        let wide = Place(world: place.world, at: place.at, tiles: place.tiles, city: place.city, temples: place.temples,
+                         railways: place.railways, frame: (region, origin.x, origin.y))
+        // A straight of the Taiwan Railway's on a bridge, 150–400 m, the
+        // nearest the middle the player's line lets track be laid on.
+        let frame = try XCTUnwrap(RealWorldFrame(world: place.world))
+        let inner = 1_500 * Double(metre)
+        var straights: [(a: WorldCoordinate, b: WorldCoordinate, off: Double)] = []
+        for track in try XCTUnwrap(place.railways.tracks).tracks where track.system == "tra_sched" && track.kind == .bridge && !track.isService {
+            let world = track.points.map { frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude) }
+            for index in world.indices.dropFirst() {
+                let a = world[index - 1], b = world[index]
+                guard [a, b].allSatisfy({ abs($0.x - place.at.x) < inner && abs($0.y - place.at.y) < inner }) else { continue }
+                let length = ((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)).squareRoot() / Double(metre)
+                guard length >= 150, length <= 400 else { continue }
+                straights.append((WorldCoordinate(x: Int64(a.x.rounded()), y: Int64(a.y.rounded())),
+                                  WorldCoordinate(x: Int64(b.x.rounded()), y: Int64(b.y.rounded())),
+                                  abs(a.x + b.x - 2 * place.at.x) + abs(a.y + b.y - 2 * place.at.y)))
+            }
+        }
+        var laid: GameWorld?
+        for straight in straights.sorted(by: { $0.off < $1.off }) {
+            var world = place.world
+            guard let a = try? world.buildTrackNode(at: straight.a), let b = try? world.buildTrackNode(at: straight.b),
+                  (try? world.buildTrackEdge(from: a, to: b)) != nil else { continue }
+            laid = world
+            break
+        }
+        let laidWorld = try XCTUnwrap(laid, "no straight of the real viaduct near Taichung to lay track on")
+        let old = wide.scene(of: place.world)
+        let keys = Map3DSceneRebuild.keys(round: Map3DSceneRebuild.changes(from: place.world.railwaySnapshot(), place.world,
+                                                                            to: laidWorld.railwaySnapshot(), laidWorld),
+                                          in: old, map: WorldRegion(bounds: laidWorld.bounds))
+        XCTAssertFalse(keys.isEmpty)
+        XCTAssertLessThan(keys.count, 64 / 2, "\(keys.sorted())")
+        // The real track there is hidden under the player's.
+        let whole = wide.scene(of: laidWorld)
+        XCTAssertNotEqual(whole.realTrains?.tracks.map { $0.map(\.shown) }, old.realTrains?.tracks.map { $0.map(\.shown) })
+        assertCaught(keys, of: old, for: laidWorld, in: wide, allowing: ["close"])
+    }
+
     /// Nothing changed, nothing to build; an edge changed counts where it
     /// was and where it is.
     func testChangesAreWhereTheTrackWasAndIs() throws {

@@ -439,6 +439,13 @@ final class RealTrainMotionTests: XCTestCase {
         XCTAssertEqual(midnight.second(at: 30), 30)
         XCTAssertEqual(midnight.today, RealServiceDay(weekday: StationDemand.weekday(ofDay: 3)))
         XCTAssertEqual(midnight.dayBefore, late.today)
+        // Review L11-3: back from a minute's pause, a game minute on, the
+        // glide is the game's tick, done before the next tick 1 s later
+        // (one of 5 s would have been a fifth of the way, and jumped).
+        let resumed = RealTrainClock(world: world(day + 86_490), previous: midnight, time: 80.1)
+        XCTAssertEqual(resumed.duration, TrainMotion.tickSeconds, accuracy: 1e-9)
+        XCTAssertEqual(resumed.second(at: 80.15), 60, accuracy: 1e-6)
+        XCTAssertEqual(resumed.second(at: 81.1), 90)
         // A jump of days (another game loaded) does not glide.
         let jumped = RealTrainClock(world: world(day + 10 * 86_400 + 600), previous: midnight, time: 21)
         XCTAssertEqual(jumped.second(at: 21), 600)
