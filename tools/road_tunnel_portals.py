@@ -46,7 +46,13 @@ asphalt = mat('asphalt', (.18,.21,.25))
 ballast = mat('ballast_7E786D', (.35,.33,.30))
 railmat = mat('rail_6E7379', (.35,.37,.39))
 roadline = mat('road_edge', (.93,.90,.76))
-ground = mat('ground_ECEEF6', (.83,.86,.94))
+ground = mat('ground_ECEEF6', (236/255,238/255,246/255))
+ground.node_tree.nodes.clear()
+ground_out=ground.node_tree.nodes.new('ShaderNodeOutputMaterial')
+ground_emit=ground.node_tree.nodes.new('ShaderNodeEmission')
+def to_linear(c): return ((c/255+0.055)/1.055)**2.4
+ground_emit.inputs['Color'].default_value=(*(to_linear(c) for c in (236,238,246)),1)
+ground.node_tree.links.new(ground_emit.outputs[0],ground_out.inputs['Surface'])
 mountain = mat('embankment_9DB07E', (.40,.51,.32))
 mountain2 = mat('embankment_light', (.48,.58,.38))
 
@@ -277,7 +283,8 @@ if args.validate_only:
 if args.views_only or args.fronts_only: sys.exit(0)
 clear_except_lights()
 scene.render.film_transparent=False
-scene.world.color=(.83,.86,.94)
+scene.world.color=(236/255,238/255,246/255)
+scene.world.node_tree.nodes['Background'].inputs['Color'].default_value=(236/255,238/255,246/255,1)
 scene.render.resolution_x=1600
 scene.render.resolution_y=900
 placements=[('mountain-arch','two-way',-57),('daylight-gallery','one-way',-29),
@@ -343,7 +350,7 @@ for i,(y0,y1) in enumerate(zip(ridge_y,ridge_y[1:])):
     poly('mountain_rise_b',[a,c,d],mountain2 if i%2==0 else mountain,(0,0,1))
     poly('mountain_back_slope',[d,c,p(53,y1,h1-3),p(53,y0,h0-3)],mountain,(0,0,1))
 # Pale game ground visible beyond the four paved approaches.
-box('map_ground',(-18,0,-.52),(100,190,.22),ground)
+box('map_ground',(0,0,-.52),(2000,1000,.22),ground)
 bpy.ops.object.camera_add(location=(-95,-19,28))
 cam=bpy.context.object
 cam.rotation_euler=(Vector((-6,0,4))-cam.location).to_track_quat('-Z','Y').to_euler()
