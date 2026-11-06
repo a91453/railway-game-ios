@@ -19,10 +19,11 @@ import GameCore
 // ``Map3DRoadBridges/join``), and the ramps here climb from the ground to
 // the deck (a bridge keeps its clearance over the track) rather than fall
 // from the deck to the ground, so the same idea runs the other way: from
-// every raised road (a deck, a ramp, a road lifted over the track) the
-// height spreads to the roads on the ground meeting it, each falling at its
-// own grade from the junction, and from them on to the next, until it is
-// down. The road meeting it keeps the raised one's height while it still
+// each deck the height spreads to the roads on the ground leaving it at
+// one of its points (its link roads), each falling at its own grade from
+// the junction until it is down. The streets meeting a ramp on the ground
+// stay on the ground, as they are in the real world (game planning,
+// 2026-11-06: their bus stops stay). The road meeting it keeps the raised one's height while it still
 // lies on its surface (a link road's taper along a deck's side), so the two
 // surfaces are one there.
 
@@ -160,8 +161,10 @@ extension Map3DScene.Builder {
             }
             return found.values.sorted { ($0.road, $0.at) < ($1.road, $1.at) }
         }
-        var queue: [Map3DRaisedRoad] = result.ends.indices.map { .end($0) } + result.joins.indices.map { .join($0) }
-            + result.pieces.indices.map { .piece($0) }
+        // Only a deck's own junctions: the link road leaving it is raised
+        // down to the ground, the streets meeting that link or a ramp on
+        // the ground stay on the ground, as they are.
+        let queue: [Map3DRaisedRoad] = result.pieces.indices.map { .piece($0) }
         var best: [String: Float] = [:]
         var next = 0
         // Bounded: each new end is lower than the road it meets.
@@ -249,7 +252,6 @@ extension Map3DScene.Builder {
                     for row in low.row...high.row {
                         for column in low.column...high.column { result.endCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(result.ends.count) }
                     }
-                    queue.append(.end(result.ends.count))
                     result.ends.append(end)
                 }
             }

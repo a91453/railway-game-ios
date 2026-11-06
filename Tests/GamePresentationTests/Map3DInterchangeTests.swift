@@ -162,13 +162,14 @@ extension Map3DSceneMemoryTests {
         for clash in nearRailAndRiver.sorted(by: { $0.gap > $1.gap }).prefix(8) {
             print(String(format: "  %.2f m apart, %@, scene %.0f, %.0f", clash.gap, clash.kind.rawValue, clash.x, clash.z), Self.place(clash.x, clash.z, frame: frame))
         }
-        // main before decision 607: 236 sites (49 under 2 m apart, 95 at
-        // 2–3.5 m, 92 farther); after it, 126 (36, 56, 34). Those left are
-        // in docs/decisions/607.md: decks held under the high-speed
-        // viaduct over minor roads, roads lifted over the track under a
-        // second-storey deck, and junctions of raised roads not at one
-        // road's point. Lower it as they are mended.
-        XCTAssertLessThanOrEqual(all.count, 130, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
+        // main before decision 607: 236 sites, 104 of them a deck and a
+        // road on the ground (a link road leaving a deck at the ground);
+        // after it, 213, 76 of them. The rest are the side streets a ramp
+        // run on along the ground crosses, kept on the ground (they are
+        // there in the real world): in docs/decisions/607.md. Lower these
+        // as they are mended.
+        XCTAssertLessThanOrEqual(kinds[.deckAndGround] ?? 0, 80, "\(kinds[.deckAndGround] ?? 0) sites where a deck and a road on the ground meet 0.5–4.5 m apart")
+        XCTAssertLessThanOrEqual(all.count, 215, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
     }
 }
 
