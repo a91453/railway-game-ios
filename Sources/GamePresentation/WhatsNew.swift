@@ -30,6 +30,42 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 118.1.
+        Entry(
+            id: "2026-11-06-118-1",
+            items: [
+                Line(
+                    english: "On the Wenhu line you buy, the Muzha and Neihu depots are laid out like the real yards, with an extra track in and out of the depot, and buying costs a little less.",
+                    chinese: "收購的文湖線，木柵、內湖機廠照真實車場鋪，多一條進出機廠的線，收購也便宜一點。"
+                ),
+                Line(
+                    english: "On the Airport MRT you buy, express trains stop only at the real express stations, and Chang Gung Memorial Hospital has passing tracks on both sides.",
+                    chinese: "收購的機場捷運，直達車照真實的站停車，長庚醫院兩側有待避線。"
+                ),
+                Line(
+                    english: "With train control on, spare trains that cannot depart and block the way go back to the depot first.",
+                    chinese: "行車控制下多出來、發不出去又擋路的空車會先回機廠。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Ferry mode now tints shores far from any station, such as Cijin and Bali, light blue, so you can build a pier there.",
+                    chinese: "旗津、八里這些離車站遠的岸邊，渡輪模式也會標出淺藍色，可以直接蓋碼頭。"
+                ),
+                Line(
+                    english: "Fixed the game freezing or crashing while the sights panel was open.",
+                    chinese: "觀光景點面板開著時遊戲會卡住、當掉，修好了。"
+                ),
+                Line(
+                    english: "Where a highway ramp meets the bridge deck, the road surface now lines up instead of overlapping.",
+                    chinese: "高速公路匝道接上橋面的地方，路面高度對齊，不再互相交疊。"
+                ),
+                Line(
+                    english: "On a large network, starting a line or building a station or track no longer stalls for a moment.",
+                    chinese: "路網大了以後，開路線、蓋車站、蓋軌道不再卡一下。"
+                ),
+            ]
+        ),
         // 115.1.
         Entry(
             id: "2026-11-06-115-1",
