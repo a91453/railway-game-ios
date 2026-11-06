@@ -250,6 +250,18 @@ struct RailwayGameApp: App {
                     }
                 }
             }
+            // Decision 602: the real line bought and left at the scene's
+            // hour, its trains in their depots, for the 3D map over them.
+            if let real = DebugLaunch.value(of: "-screenshot-buy-real"), DebugLaunch.value(of: "-screenshot-follow-bought") == nil {
+                Task {
+                    await opening.value
+                    guard let session = launcher.session else { return }
+                    for _ in 0..<240 {
+                        if session.buyForScreenshot(real) { break }
+                        try? await Task.sleep(for: .milliseconds(500))
+                    }
+                }
+            }
             // Decision 565: the first train on the track picked and
             // followed, standing at its platform.
             if DebugLaunch.isSet("-screenshot-follow-train") {

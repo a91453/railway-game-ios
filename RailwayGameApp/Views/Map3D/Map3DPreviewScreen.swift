@@ -1190,27 +1190,16 @@ private struct Map3DView: UIViewRepresentable {
             // flight starts from it.
             // Decision 403 (續): from the station, where it stands now.
             var follow = follow
-            // One switch over a local copy of the subject rather than
-            // `follow?.bus`, `.cabin`, ...: those crashed Xcode 26.6's
-            // Release optimizer (CopyPropagation). Do not change it back.
-            var followedTrain: TrainID?, followedBus: BusID?, followedCabin: CabinID?, followedFerry: FerryBoatID?
-            switch follow?.subject {
-            case .train(let id)?: followedTrain = id
-            case .bus(let id)?: followedBus = id
-            case .cabin(let id)?: followedCabin = id
-            case .ferry(let id)?: followedFerry = id
-            case .realTrain?, nil: break
-            }
-            feed.followedBus = followedBus
-            feed.followedCabin = followedCabin
-            feed.followedFerry = followedFerry
-            if let id = followedTrain, follow?.view == .station, let scene {
+            feed.followedBus = follow?.bus
+            feed.followedCabin = follow?.cabin
+            feed.followedFerry = follow?.ferry
+            if let id = follow?.train, follow?.view == .station, let scene {
                 follow?.lookout = Map3DFollow.lookout(of: id, in: world, scene: scene)
             }
             // Decision 578: from the moment it leaves a stop, the next
             // stop's surroundings are built, unless it is too far to be
             // offered.
-            context.coordinator.streamer.stops = context.coordinator.stopsAhead(of: followedTrain, in: world, scene: scene)
+            context.coordinator.streamer.stops = context.coordinator.stopsAhead(of: follow?.train, in: world, scene: scene)
                 + feed.cabinStopsAhead(in: scene) + feed.ferryStopsAhead(in: scene)
             if context.coordinator.shownVersion != nil,
                view.following?.subject != follow?.subject || view.following?.view != follow?.view || view.following?.lookout != follow?.lookout {
@@ -1263,19 +1252,11 @@ private struct Map3DView: UIViewRepresentable {
         // Decision 583: the strip built ahead lies the way the followed
         // cabin runs; decision 585 PR-4: or boat.
         context.coordinator.streamer.ahead = { [weak view] in
-            // One switch over a local copy of the subject: the chained
-            // `following?.cabin ?? .ferry ?? .realTrain` crashed Xcode
-            // 26.6's Release optimizer (CopyPropagation). Do not change it back.
-            let subject = view?.following?.subject
-            let found: Map3DFollow.Pose?
-            switch subject {
-            case .cabin(let id)?: found = feed.cabinPose(id, in: scene)
-            case .ferry(let id)?: found = feed.ferryPose(id, in: scene)
-            // Decision 606: or real train.
-            case .realTrain(let id)?: found = feed.realTrainPose(id, in: scene)
-            case .train?, .bus?, nil: found = nil
-            }
-            guard let pose = found else { return nil }
+            let following = view?.following
+            guard let pose = following?.cabin.flatMap({ feed.cabinPose($0, in: scene) })
+                ?? following?.ferry.flatMap({ feed.ferryPose($0, in: scene) })
+                // Decision 606: or real train.
+                ?? following?.realTrain.flatMap({ feed.realTrainPose($0, in: scene) }) else { return nil }
             return SIMD2(pose.forward.x, pose.forward.z)
         }
         if first, let start {
@@ -1315,6 +1296,10 @@ private struct Map3DView: UIViewRepresentable {
         if let span = value("-screenshot-3d-cableway") { return asked.camera(cableway: span, in: scene, of: world, viewport: viewport) }
         // Decision 585 PR-3 (FERRY3): over the first ferry's first boat.
         if arguments.contains("-screenshot-3d-ferry") { return asked.camera(ferryIn: scene, of: world, viewport: viewport) }
+        // Decision 602: over a place of the scene's map ("latitude,longitude").
+        if let at = value("-screenshot-3d-at")?.split(separator: ",").compactMap({ Double($0) }), at.count == 2 {
+            return asked.camera(at: (latitude: at[0], longitude: at[1]), in: scene, of: world, viewport: viewport)
+        }
         guard let place = value("-screenshot-scene").flatMap(ScreenshotScene.init(rawValue:))?.place else { return nil }
         return asked.camera(at: place, in: scene, of: world, viewport: viewport)
     }
