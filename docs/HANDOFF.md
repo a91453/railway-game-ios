@@ -214,7 +214,7 @@
 
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
-| 遊戲規劃（兼派工） | 第 36 任（2026-10-30 16:50 UTC 起，第 5 層；交接在 §2.0「第三十六次換手」）；再之前第 35 任 session_01YGNNukwV4BudeNCor4i52r（10-30 13:20–16:50，壓縮 3 次）；再之前 作者 10-28 在 claude.ai 手動開的新規劃（三個 repository；現況在 §2.0「第二十四次換手」）；再之前 session_01YGNNupfaTiuQSAJ5tsf5a4（10-28 00:20–05:15，第 3 層，壓縮 3 次後換手）；再之前 session_01YGNNunBu1rxrPwN6bsA7g2（10-27 16:45–10-28 00:20，第 2 層，壓縮 2 次後換手）；再之前 session_01YGNNunheBBBwyekk4Pq7b4（10-27 14:3x–16:45，第 1 層，壓縮 3 次後換手）；再之前 session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
+| 遊戲規劃（兼派工） | 第 51 任 session_01YGNNuqBHdTZ3Bkm15qu36v（2026-11-06 起，作者在 claude.ai 開，第 0 層；現況在 §2.0「第 51 任的現況」）；再之前第 50 任 session_01YGNNumyd5kmn2HrCenU1qN（11-05，第 6 層，壓縮 3 次）、第 49 任 session_01YGNNupMtajwSvF2wPZDUjt（11-05，第 5 層）；第 37–48 任見 §2.0 各段；第 36 任（2026-10-30 16:50 UTC 起，第 5 層；交接在 §2.0「第三十六次換手」）；再之前第 35 任 session_01YGNNukwV4BudeNCor4i52r（10-30 13:20–16:50，壓縮 3 次）；再之前 作者 10-28 在 claude.ai 手動開的新規劃（三個 repository；現況在 §2.0「第二十四次換手」）；再之前 session_01YGNNupfaTiuQSAJ5tsf5a4（10-28 00:20–05:15，第 3 層，壓縮 3 次後換手）；再之前 session_01YGNNunBu1rxrPwN6bsA7g2（10-27 16:45–10-28 00:20，第 2 層，壓縮 2 次後換手）；再之前 session_01YGNNunheBBBwyekk4Pq7b4（10-27 14:3x–16:45，第 1 層，壓縮 3 次後換手）；再之前 session_01YGNNuovwuBJPdZWXamkhEp（10-27 05:45 起；壓縮 3 次後寫了第二十次換手，作者 13:5x UTC 說「你可以先全面接管了」，續任到第 4 次壓縮前；之後作者從 claude.ai 開新規劃，現況在 §2.0 最前面）；再之前 session_01YGNNuoQekRm2qcVxoPT8ME（10-27 02:16–05:40，壓縮 2 次照 §1.1 換手）；再之前 session_01CWaJGHR4DnSwosLCzJ2Tts（10-26 10:30–10-27 02:10，壓縮 3 次）；再之前 session_01TH2DNkW2meh3EZJ1vxBczC（10-26 03:45–10:30，壓縮 3 次，第 3 次後換手）；再之前 session_01TS89hbaHPJiFJycqrKiK5z（10-25 21:40–10-26 04:00，壓縮 2 次照 §1.1 換手）；再之前 session_01KvN8GrLosqRswrXMQgVQir（10-25 15:35–19:55，壓縮 2 次照 §1.1 換手）；再之前 session_0164nEyu2aMPVTpvQww43kj1（10-25 12:56–15:30，壓縮 2 次照 §1.1 換手）；再之前 session_0138XhXTjToUd3fpKV7kebeH（10-25 05:05–12:40，壓縮 5 次，作者說「交接」）；再之前 session_01B2kaku5NRz2J2CMzc8z3cZ（10-24 23:13–10-25 05:05，壓縮 2 次照 §1.1 換手）；再之前 session_019yHzrc1rgGJgdXSSwRNqgM（10-24 15:07–22:50，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_013dJ7tvDYJnhe7XjXCE5cNi（10-24 08:17–14:00，壓縮 2 次照 §1.1 換手，已封存）；再之前 session_017HD7Krh51WqqzXjy6949Pq（10-24 06:32–08:00，壓縮 2 次照 §1.1 換手）；再之前 session_01AxcyajwHdF6j4ryDMghASM（10-24 05:00–06:30，「第八次換手」，已封存）；再之前 session_01XsVqbA1A5wGtJbuAa881oT（10-24 01:30–05:00，「第七次換手」）；再之前接暫代的 session_01PGibJmGNcvu2d7dJWWhWVb（10-24 00:35–01:30，已封存），再之前 session_01H5RHAwnA69n8EfAUSUrH52（10-23 00:10–10-24 00:35），再之前 session_014nUBHbE9mSK4qXHHgm8xCQ（10-22 22:30–10-23 00:10），再之前 session_01UsF4QYCGrzSeNSFq11i8Wu（18:15–22:30），再之前 session_01Ddr2wiXx1Xhn2m9qNBDnDh、session_01CHQg7B6JqzbScGSjyDwHos（2026-10-22 起，照 §1.1 換手，作者：「要不要全部所有換個session了 都一直在壓縮了」→「好，照表換」；換手時的現況在第 2 節最前面；前任 session_014rYHMtmqA5bEMkBBuKu6PV（10-21 至 10-22，作者：「那你需要先接手嗎太長了」）、session_01NiR5WLMFjMJBktQAMkfmkm（10-21）、session_01WW7o3decEv5LY59nYVqnDN（10-20 至 10-21，作者：「接手 角色表中遊戲規劃的工作」）、session_01V1xd3H9vNkuZoSA3czNfGm（10-16 至 10-18）、session_018D6gYU1yiZMtxSmNNU1K17） | 從玩家、鐵道迷、開發、美術、音樂五個角度決定優先順序與設計，開實作 session 並派工，綠了的 PR 照 §1.2 合併（2026-10-21 起），收作者轉來的玩家回報與 bug（§1.3），寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1、1.3 節 |
 | Threads 開發日誌（看進度） | 排程「Threads 開發日誌（看進度）」（台灣時間每晚 21:43 檢查，2026-10-27 規劃五方決定恢復，作者：「我不知道 你自己決定」「排程要看每日進度我也不確定有固定時間發文」）。它只檢查，不一定寫：#1041 最後一則「Threads 草稿交付：涵蓋到 main <sha>」之後，合進 main、玩家看得到的 PR 滿 3 個，或發了新的 TestFlight，才由規劃開寫作 session（Sonnet）；不夠就什麼都不做。現在綁 session_01YGNNunBu1rxrPwN6bsA7g2 的是 `trig_01KEzqJPTdvXeUFCNUy8go3Z`；第二十三次換手時前任代建綁新任的，新 id 在 #1041；綁前任的 `trig_019CQWcaMbiqRpfDwdNvV2qR` 已刪。排程的綁定改不了：換手時現任用同一份 prompt（`get_trigger` 讀得到）建一個綁自己的，再刪掉舊的。更早留下、停用但刪不掉的 `trig_01M2rwYPRRjTwQTC5g6QaW9v`、`trig_01ABYQAarHbVxBbEShiVWDr3` 不會觸發，作者要清可以在排程列表刪 | 寫這段期間的串文草稿，用 SendUserFile 交給作者；草稿不寫日期與時間點；交完在 #1041 留「Threads 草稿交付：涵蓋到 main <sha>」，再封存自己；不 commit、不發布 | `docs/research/THREADS_WRITING.md`（寫法、規則、發到哪一版；新的寫作 session 先讀它）；最早的派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 不再常駐（2026-10-20 停用）：合併協調 session_01QoA24EvFCFbmbcM1EwaZT7（前任 session_016sNs4eeZwga9hz1CCHkpmX）、派工 session_01MJ7sdeid5DAFjSVbTkmdi3（前任 session_01AaAj4wvJMxJQuLWAoYu6S8）。兩個都從 2026-10-17 起沒有動作。
@@ -535,6 +535,37 @@
 ### 2.0 2026-10-22 遊戲規劃換手時的現況
 
 **TestFlight 第 83 版**（遊戲規劃 2026-10-22 22:45 UTC 決定，作者：「你覺得做到哪部分完工要先發83 由你決定」）：82 是 e6e8f5a9（#1029）。等 #1048（358）、#1052（359 第一步）、決策 360 的第一個 PR（3D 駕駛艙最高 10×）都合併就發；10d（存檔 71）、360 第二步、隧道內部與地下月台、10g、10h 留到 84；仲夏寶島號那時已合併就一起。選定的 commit 在 main 上 `ci.yml` 與 full lane 都綠、寫好 What to Test，才告訴作者「可以發（commit X）」。五方在 #1041 的規劃留言。
+
+**第 51 任的現況（2026-11-06 約 07:30 UTC＝台灣 15:30，session_01YGNNuqBHdTZ3Bkm15qu36v，第 0 層，壓縮 2 次）**：比下面「第 50 任交第 51 任」新，兩段不同時以這段為準。
+
+- **115.1 已發**（作者自己按，run 115，`a3745e09`）；紀錄在 `research/PLAYER_FEEDBACK.md` 的 115.1 段。發後 full lane 42160202925 紅在已知不穩的測試，已 `rerun-failed-jobs` 一次。
+- **118 今晚發**（作者 2026-11-06：「我118大概2200或2300才要發」；版本號照 run 號，口頭叫 118）：**台灣 19:00（11:00 UTC）停止合併**，派 WHATSNEW-118（Sonnet，ID `2026-11-06-118-1`），合後在 main HEAD 手動跑完整 `ci.yml`、`ios-full-lane.yml`、`release-archive.yml`，三個都綠，22:00 前後問作者要自己按還是遊戲規劃按，只按一次（§1.2）。趕 118 的：#1889 CRASH-SIGHTS、#1888 FERRY-QIJIN、#1881 TYMC-EXPRESS-C（決策 609，遊戲規劃已判「回到 main 水準」：簡單＋行車控制 9/333 對 main 5，死結 11 對 13、空車 432 km 對 504；條件是文湖擬實誤點 ≤ 290）、#1870 REALYARD-C（趕得上才合）。
+- **今天合的**：#1887（FLAKY-1106，筆的重試先關車站面板）、#1880（ROADIX，決策 607，第 3 級截圖遊戲規劃看過：改前改後只有匝道邊緣幾條線，街具都在）、#1886（Codex 機廠車場零件組 revision-2，`Map3DDepotYardKit.swift`，四系統各一張組景、停一列車、台鐵有電車線桿、文湖膠輪車；私庫 #61 等作者合，AGENTS.md 規則 8 不准 session 合）。
+- **作者定的（2026-11-06）**：
+  - **版本號**：維持 0.5.0，作者休息前最後一版再換 0.6.0（「好 有空再換」；Apple 審核超過一天，不趕）。
+  - **渡輪船型**照航線長度自動選（`Map3DFerry.Boat.drawn(forMetres:)`，1 km 以下旗津型），不給玩家選。
+  - **纜車吊廂照地點自動換**（「好 照地點自動換 排進去」）：日月潭附近畫 Codex 的日月潭吊廂，其他地方貓空，見下面 CABLE-SUNMOON。
+  - **TREES**（作者想到的）：Meta／WRI 樹高圖（CC BY 4.0；DataSourceCredits 寫「High Resolution Canopy Height Maps by WRI and Meta」與「© 2016 Maxar（Vantor）」）＋台北樹籍樹種（NEXT_PRIORITIES §22.12 第 10 項）＋四季顏色（`research/BUMPINTO_WORLD_2026-11-05.md` 第 3 列）。
+  - **先做台灣**：海外（香港、日本）地圖維持現狀；效能、收購線高度、機廠修好後再提日本 N02（NEXT_PRIORITIES 第 24 名）。
+  - **repo 維持公開**：改私人要付 Actions 費用，用 10/30–11/06 實際 105,869 Linux 分＋34,029 macOS 分換算約 US$11,800／月（約 NT$37 萬，Linux US$0.006、macOS US$0.062 每分）；現在全用標準 runner（`ubuntu-24.04`、`ubuntu-latest`、`macos-26`，群組「GitHub Actions」），公開 repo 不收費。`.m3dmodel` 不是防盜（讀檔程式與配方都在公開 repo），保護靠 LICENSE.md 的著作權與私庫。
+  - **玩家回報不迎合**（「我爽就好 我都沒要求付費了」）：不跟玩家要存檔；效能照做，因為作者自己的大存檔也受益。
+- **補位順序（五方評分，權重 玩家 30、開發 25、美術 15、鐵道迷 15、音樂 15；前置沒到就跳下一件；GameCore 同時跑 CI 最多 2 件；同時最多 3 件，玩家 bug 例外）**：
+  | 順位 | 件 | 分（玩／開／美／鐵／音） | 前置 |
+  | --- | --- | --- | --- |
+  | 1 | PERF-115（已開，session_01YGNNupXrcs7dyKyFmQvkAE） | 3.10（5/4/1/2/1） | 先本地量，等一個 GameCore 名額再推 |
+  | 2 | CABLE-SUNMOON：日月潭附近畫 Codex 日月潭吊廂（#1813，私庫 `sunmoon-cabin-2026-11`），貓纜原生玻璃（Codex 研究）併進來 | 2.80（2/4/4/3/1） | FERRY-QIJIN 合後；第 3 級截圖 |
+  | 3 | KLRT-B（#1883 接手） | 2.60（3/2/2/5/1） | #1870、#1874 合後 |
+  | 4 | HSINCHU-ZHUZHONG（決策 613） | 2.45（3/2/1/5/1） | #1870、#1874、#1883 合後 |
+  | 5 | ROADTUNNEL（決策 611） | 2.40（2/3/4/2/1） | Codex #1885 第 2 輪交圖、遊戲規劃看過 |
+  | 6 | TREES | 2.40（2/3/5/1/1） | 無 |
+  | 7 | FACADE-B（決策 610，#1879 接手） | 2.15（2/2/5/1/1） | PERF-115 之後 |
+  | 8 | MEM-1B（決策 608，#1876 接手） | 2.10（3/3/1/1/1） | 無 |
+- **有研究沒排序的**（背景盤點，2026-11-06 給作者看過，同樣五方評分）：車站外觀第一批 3.60（效能後、TREES 後；Codex 研究 prompt 已寫好，作者說「3先等一下」）、練習駕駛 3.35、新景點種類 3.15、馬達聲 3.15、街景加料 3.15、渡輪收尾 3.10、阿里山 Z 字 2.95、高鐵北部機廠 2.95、貨運加深 F1–F6 2.90、支線情境包 2.85、閒置降幀 2.80（併進效能）、都會軌道錯誤 2.80（REALYARD-C 後）、沙盒事件 2.70、開放資料真實度 2.70、公車透視 bug 2.65（小修）、乘車紀錄 2.55、烏來纜車 2.45（沒路線）、路網分析 2.40、觀光客來源 (b) 2.25、客運與飛機 2.05（凍結）、EMU3000 位元一致 1.50（Android 才要）。
+- **另外排**：運河上約 140 m 的塔（新局城市把樓蓋在水面，決策 607「還沒做的」）是 bug，小修；旗津碼頭偏 330 m 和 3D 水路一起修。
+- **Codex**：#1885 道路隧道第 2 輪（洞內變暗、明洞、山體無縫、第 1 向正面、加鐵路隧道單雙線）作者已發，Codex 額度用完晚點跑；交圖後遊戲規劃看，再派 ROADTUNNEL。
+- **在做的 session**（向第 51 任回報）：TYMC-EXPRESS-C session_01YGNNuoUxxbNRzxWcV7kDoF（#1881／#1874，壓縮 1 次）、REALYARD-C session_01YGNNupzv42xmKss77XvBoS（#1870）、FERRY-QIJIN session_01YGNNukubT3VRKTKzbMs9a6（#1888）、CRASH-SIGHTS session_01YGNNuouz6tciRDRFbHhTWc（#1889）、PERF-115 session_01YGNNupXrcs7dyKyFmQvkAE、FLAKY-1106 session_01YGNNungyjShoiFjNiD1Mhu（捏合對照實驗，台灣 18:30 後不開新 macOS run）。ROADIX-2 已收工。
+- **排程**：trig_01EDKtaGjDa4x8X37Fu6ZKe6（11:00 UTC，118 截止與發版檢查）。
+- **號碼**：下一個決策 **614**（611 ROADTUNNEL、612 KLRT-B、613 HSINCHU-ZHUZHONG 已留；599 空著）；存檔 **87**。用前查 #1579。
 
 **第 50 任交第 51 任（2026-11-05 約 23:15 UTC＝台灣 11-06 07:15，session_01YGNNumyd5kmn2HrCenU1qN，第 6 層，壓縮 3 次）**：照這段接手；下面「第 50 任的現況」仍有效，兩段不同時以這段為準。第 51 任要由**作者在 claude.ai 開**（第 50 任開的會是第 7 層，見 §1.1）；開工先在 #1579 登記，§1 表格的遊戲規劃改成新 session。
 
@@ -3547,6 +3578,12 @@ PR #755–#784 那一輪（72.1 那一天）的審查：修了 6 項（路線卡
 ### 7.5 只等實機確認的
 
 這些不擋任何工作，在 TestFlight 的「請測試者看」裡輪流問：
+- **一直跳景點、一直當機**（玩家回報 115.1，CRASH-SIGHTS #1889，118 起）：原因是觀光景點面板開著時，每個 tick 每個景點都重建一次路網。台北文湖線、16 個景點有車站服務時，每次重畫要 1.6 秒，遊戲卡住，最後被系統關掉。現在一天只算一次，所有景點一起算（0.1 秒）。這個在實機沒有重現，也沒有當機紀錄。118 請玩家在路線多的局打開觀光景點面板，或點地圖上的景點星號，看還會不會卡、會不會跳出。還會的話，請作者從 TestFlight 拿當機紀錄，看三件事：
+  - 例外類型：`0x8badf00d`（watchdog，卡太久被殺）或 `EXC_BREAKPOINT`；
+  - 主執行緒的堆疊有沒有 `attractionRows`、`attractionStatus`、`PassengerRouteGraph`；
+  - 當時是哪一張地圖、幾條線、幾倍速。
+
+  量法：`SIGHTS_COST_REPORT=1 swift test --skip-build --filter SightsPanelCostTests/testWhatTheRowsCostOnTaipei`。
 - 時間軸卡住（玩家回報 91.1，決策 143「後來（2026-10-27）」）：高雄實景、很多列車，第 2 天 06:00 前後換速度，時鐘應在幾秒內走過 06:00，速度選單按下就顯示新速度。還卡就在那一局用「問題回報」送出存檔與卡頓紀錄（決策 418）。
 - 高鐵的遠景車（決策 422）：高鐵示範或實景地圖開一列 700T、一列 N700S-G（單號），跟車後把鏡頭往後拉，過 500 m（弱裝置或負荷重時 250 m）換遠景時：顏色與車頭會不會跳（以前 700T 會從綠松帶變橘帶，現在應該看不出來）；N700S-G 在 250–500 m 的風擋是不是太大太黑、車門邊有沒有白點。明顯就照決策 422「下一步」調 `tools/hsr-far-422/n700sg_far.swift`。
 - 會動的東西的預算（決策 417）：各機型在 `Map3DPreviewScreen` 除錯數字列（或問題回報的「3D 地圖」那行）爬到哪一格、幾條線開始少街景；跟車時會不會忽多忽少；iPhone 17 是不是還頻繁當機。數字回來調 `Map3DDeviceTier.triangles`。

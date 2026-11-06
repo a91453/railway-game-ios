@@ -202,6 +202,11 @@ public final class GameSession {
     /// How many times the track was searched for the two above (for the
     /// tests).
     @ObservationIgnored var trackSearchesWorkedOut = 0
+    /// The sights panel's rows, kept for the day, command and language
+    /// they were worked out for (CRASH-SIGHTS, ``sightsPanelRows``), and
+    /// how many times they were (for the tests).
+    @ObservationIgnored var sightRowsMemo: SightRowsMemo?
+    @ObservationIgnored var sightRowsWorkedOut = 0
     /// How many times the network tool's previews (the track, a passing
     /// loop, a depot, a platform's levelling) were worked out (for the tests).
     @ObservationIgnored var buildPreviewsWorkedOut = 0
@@ -697,7 +702,7 @@ public final class GameSession {
     @ObservationIgnored var ferryPreviewMemo: (key: FerryPreviewKey, preview: FerryPreview)?
     /// Decision 585 續 (FERRYPIER): ``ferryShore``, kept for the terrain
     /// and bounds it was worked out for.
-    @ObservationIgnored var ferryShoreMemo: (terrain: Terrain, bounds: WorldBounds, shore: [FerryMapOverlay.ShoreRun])?
+    @ObservationIgnored var ferryShoreMemo: (terrain: Terrain, bounds: WorldBounds, blocks: [LandBlock]?, shore: [FerryMapOverlay.ShoreRun], cells: Set<CellPosition>)?
     /// The ends picked for the next stretch of track: an existing node, or
     /// a point for a new one. Nothing is built until
     /// ``buildNetworkTrack()``.
