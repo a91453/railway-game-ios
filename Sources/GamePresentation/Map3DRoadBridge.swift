@@ -64,6 +64,10 @@ struct Map3DRoadBridges: Sendable {
         /// How far it stands over the ground there, and the grade it falls at.
         let rise: Float
         let grade: Float
+        /// Decision 607: how far out it keeps `rise` before it falls,
+        /// metres: a road leaving another raised one at a junction stays at
+        /// its height while it lies on the other's surface.
+        var plateau: Float = 0
         /// Review H4: the segments (road, first point) of the roads on the
         /// ground running on from it (``runOn(from:axis:reach:first:)``):
         /// only they ramp down, not a road beside them.
@@ -436,11 +440,54 @@ extension Map3DScene.Builder {
                         for (line, at) in lines {
                             guard let share = Map3DRoadBridges.crossing(a, b, line[at - 1], line[at]) else { continue }
                             let p = Point(x: a.x + (b.x - a.x) * share, z: a.z + (b.z - a.z) * share)
-                            if apart(p, from: line), apart(p, from: bridge.points, ends: ends) { cross(deck, at: p) }
+                            // Decision 607: a road ending under it, not at
+                            // one of its points (a junction of the roads
+                            // under it), is crossed over all the same.
+                            let joined = bridge.points.contains { ($0.x - p.x) * ($0.x - p.x) + ($0.z - p.z) * ($0.z - p.z) <= 4 }
+                            if apart(p, from: line) || !joined, apart(p, from: bridge.points, ends: ends) { cross(deck, at: p) }
                         }
                     }
                 }
             }
+        }
+        // Decision 607: over a road running under it, along it (a viaduct
+        // over the street it follows), for 30 m or more: lifted all along
+        // it, not dipping onto it between its crossings.
+        for (number, bridge) in bridges.enumerated() {
+            let deck = deckOf[root(number)]!
+            let half = Double(bridge.kind.width(ramp: false)) / 2
+            var run: [Point] = []
+            var travelled = 0.0
+            for (a, b) in zip(bridge.points, bridge.points.dropFirst()) {
+                let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+                guard length > 0.01 else { continue }
+                var along = (10 - travelled.truncatingRemainder(dividingBy: 10)).truncatingRemainder(dividingBy: 10)
+                while along <= length {
+                    let p = Point(x: a.x + dx * along / length, z: a.z + dz * along / length)
+                    let key = Map3DRoadBridges.key(p.x, p.z)
+                    var lines: [(points: [Point], index: Int, half: Double)] = (ground[key] ?? []).map {
+                        (map.groundRoads[$0.road].points, $0.index, Double(map.groundRoads[$0.road].kind.width(ramp: false)) / 2)
+                    }
+                    lines += (cells[key] ?? []).filter { bridges[$0.piece].level < bridge.level }.map {
+                        (bridges[$0.piece].points, $0.index, Double(bridges[$0.piece].kind.width(ramp: false)) / 2)
+                    }
+                    let under = lines.contains { line, index, other in
+                        let c = line[index - 1], d = line[index]
+                        let ex = d.x - c.x, ez = d.z - c.z, span = (ex * ex + ez * ez).squareRoot()
+                        return span > 0.01 && abs(ex * dx + ez * dz) / (span * length) >= 0.9
+                            && Map3DRoadBridges.nearest(p, c, d).distance <= max(half, other)
+                    }
+                    if under {
+                        run.append(p)
+                    } else {
+                        if run.count >= 4 { run.forEach { cross(deck, at: $0) } }
+                        run = []
+                    }
+                    along += 10
+                }
+                travelled += length
+            }
+            if run.count >= 4 { run.forEach { cross(deck, at: $0) } }
         }
         addJoins(of: map, into: &result)
         if let frame {
@@ -495,6 +542,7 @@ extension Map3DScene.Builder {
             result.ends.append(.init(point: end, outward: outward, half: Map3DRoadBridges.half(kind), rise: rise,
                                      grade: Map3DRoadBridges.grade(kind), roads: result.runOn(from: end, axis: outward, reach: reach)))
         }
+        spreadRamps(into: &result)
         return result
     }
 
@@ -679,10 +727,11 @@ extension Map3DScene.Builder {
             let lateral = abs(vx * end.outward.z - vz * end.outward.x)
             guard lateral <= Double(end.half) + 0.15 * max(out, 0) else { continue }
             if let along, abs(along.x * end.outward.x + along.z * end.outward.z) < 0.9 { continue }
-            let rise = end.rise - end.grade * Float(max(out, 0))
+            let fall = Float(max(out, 0)) - end.plateau
+            let rise = end.rise - end.grade * max(fall, 0)
             // A ramp longer than the longest stands as the deck's end.
             // Review H4: only on a road running on from it.
-            guard Float(max(out, 0)) <= Map3DRoadBridges.longestRamp, bridges.isOn(p, end.roads) else { continue }
+            guard fall <= Map3DRoadBridges.longestRamp, rise > 0, bridges.isOn(p, end.roads) else { continue }
             best.rise = max(best.rise, rise)
         }
         // Decision 391 (續篇二): a road on the ground lifted over the

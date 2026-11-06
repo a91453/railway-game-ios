@@ -693,7 +693,12 @@ extension GameSession {
         var beside = wantsBeside ? besidePlatform(of: stretch) : nil
         var crossovers: [PlayerCommand.TrackStretch] = []
         if let found = beside {
-            var probe = world.pricingCopy()
+            // Decision 614: a preview copy, which leaves the passengers
+            // alone (decision 521): whether GameCore refuses the pair and
+            // the track the crossovers are planned on never depend on
+            // them, and going through every waiting group was most of what
+            // pressing the button cost on a big network.
+            var probe = world.trackPreviewCopy()
             let both = PlayerCommand.PlatformAddition(
                 edge: stretch.edge, start: stretch.start, end: stretch.end, station: station, levelling: levelling, beside: found
             )

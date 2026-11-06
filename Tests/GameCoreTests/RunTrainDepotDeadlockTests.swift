@@ -106,8 +106,10 @@ final class RunTrainDepotDeadlockTests: XCTestCase {
     }
 
     /// Before, the four stood waiting for their runs all day: no free
-    /// berth for any way out. Now, once the deadlock is found, a train at
-    /// E runs empty into the depot, and a run from W reaches E.
+    /// berth for any way out. Then, once the deadlock was found, a train
+    /// at E ran empty into the depot, and a run from W reached E. Since
+    /// decision 609's continuation a train at E, its own run held and in
+    /// the way of a run from W, runs in before the four make a deadlock.
     func testATrainBetweenRunsRunsIntoTheDepotWhenNoBerthIsFree() throws {
         var scene = try makeScene()
         var reachedE: Set<TrainID> = []
@@ -120,7 +122,7 @@ final class RunTrainDepotDeadlockTests: XCTestCase {
             for id in scene.ys where scene.world.stationsStoppedAt(by: id) == [scene.depot] { inDepot.insert(id) }
             XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
         }
-        XCTAssertEqual(deadlocked, Set(scene.xs + scene.ys), "the scene deadlocks first")
+        XCTAssertEqual(deadlocked, [], "a train at E went in before the four made a deadlock")
         XCTAssertFalse(inDepot.isEmpty)
         XCTAssertFalse(reachedE.isEmpty)
         XCTAssertEqual(scene.world.deadlockedTrains(), [])

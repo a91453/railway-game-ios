@@ -67,7 +67,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             done.tap()
-            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
         }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
@@ -89,6 +89,43 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("wenhu-right-3d", app)
     }
 
+    /// Decision 602: the Wenhu Line bought on a real map of Taipei at
+    /// 05:30, its trains in its two depots, on the 3D map over Muzha
+    /// Depot past Taipei Zoo and over Neihu Depot past Nangang Exhibition
+    /// Center, from the side and from higher up. For the screenshot review
+    /// of the pull request that laid the depots as the real yards.
+    func testWenhuDepotMuzha() { shootWenhuDepot("muzha", at: "25.000776,121.586414") }
+    func testWenhuDepotNeihu() { shootWenhuDepot("neihu", at: "25.059900,121.619920") }
+
+    private func shootWenhuDepot(_ name: String, at place: String) {
+        // The buying takes minutes in the Debug app (the workflow allows up
+        // to 30 minutes a test).
+        executionTimeAllowance = 1_500
+        for (shot, view) in [("side", "450,200,55"), ("high", "900,200,20")] {
+            let app = launch(extra: ["-screenshot-scene", "wenhu", "-screenshot-buy-real", "trtc:BR", "-screenshot-3d-view", view,
+                                     "-screenshot-3d-at", place, "-map3D.quality", "high"])
+            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+            // The Debug app's main thread is busy buying for a minute at a
+            // time, longer than a UI query waits.
+            Thread.sleep(forTimeInterval: 180)
+            let done = app.buttons["acquired.done"]
+            XCTAssertTrue(done.appears(within: 600), "The line is bought")
+            if done.becomesHittable(within: 10) {
+                done.tap()
+                XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
+            }
+            let open3D = app.buttons["map.open3D"]
+            XCTAssertTrue(open3D.appears(within: 10))
+            XCTAssertTrue(open3D.becomesHittable(within: 10))
+            open3D.tap()
+            XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+            XCTAssertTrue(app.descendants(matching: .any)["map3D.loading"].firstMatch.disappears(within: 300), "The 3D map is drawn")
+            settle(seconds: 12)
+            keep("wenhu-depot-\(name)-\(shot)", app)
+            app.terminate()
+        }
+    }
+
     /// Decision 603: the Xiaobitan Branch Line bought on a real map of
     /// New Taipei and run on to 07:40, its one train followed: on the 2D
     /// map and in 3D, a single track with one platform track at each
@@ -107,7 +144,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let done = app.buttons["acquired.done"]
         if done.appears(within: 10), done.becomesHittable(within: 10) {
             done.tap()
-            XCTAssertTrue(done.disappears(within: 10), "The bought card closes")
+            XCTAssertTrue(done.disappears(within: 60), "The bought card closes")
         }
         let zoomIn = app.buttons["放大"]
         if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 5) {
@@ -400,6 +437,42 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// Decision 585 續 (FERRY-QIJIN): the ferry mode's pale blue shore
+    /// round Kaohsiung harbour's mouth on a map whose land round Cijin is
+    /// not read in yet (the author's, on 115.1). For the pull request's
+    /// screenshot review.
+    func testFerryShoreCijin() {
+        let app = launch(extra: ["-screenshot-scene", "cijinShore"])
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 180), "The scene opens")
+        settle(seconds: 5)
+        // The whole island opens in view, and a camera request only zooms
+        // out to its region: pinched in towards Cijin (the scene centres
+        // the map on it each second), some 125 times, short of the closest
+        // zoom that hands over to the 3D map; its next request zooms out
+        // to the harbour.
+        for _ in 0..<3 {
+            map.pinch(withScale: 5, velocity: 3)
+            settle(seconds: 2)
+        }
+        let build = app.buttons["dock.build"]
+        if build.appears(within: 10) { build.tap() }
+        let transit = app.buttons["tool.bus"]
+        XCTAssertTrue(transit.appears(within: 10))
+        transit.waitUntilSettled()
+        if !transit.isSelected { transit.tap() }
+        let mode = app.segmentedControls.buttons["渡輪"].firstMatch
+        XCTAssertTrue(mode.becomesHittable(within: 10), "The ferry mode is in the transit tool's row")
+        for _ in 0..<3 where !mode.isSelected {
+            mode.tap()
+            settle(seconds: 1)
+        }
+        XCTAssertTrue(mode.isSelected, "The ferry mode is chosen")
+        settle(seconds: 3)
+        keep("ferry-shore-cijin", app)
+    }
+
     /// Decision 585 PR-3 (FERRY3): the ferries on the 3D map: Tamsui–Bali's
     /// passenger boat and Gushan–Cijin's double-ended ferry close up at
     /// their piers (near models), each from 600 m (far models, past the
@@ -636,6 +709,11 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// they are assigned, the double track on one deck, close and leaned.
     func testTaichungViaduct() { shootLean("taichungViaduct", "200,225,45", "taichung-viaduct") }
     func testTaichungViaductClose() { shootLean("taichungViaduct", "120,135,30", "taichung-viaduct-close") }
+    /// Decision 607: the interchange west of Taichung over the high-speed
+    /// line, beside the Fazi River: its link roads meeting the decks at
+    /// one height, from above and leaned low.
+    func testInterchange() { shootLean("interchange", "320,200,40", "interchange") }
+    func testInterchangeClose() { shootLean("interchange", "160,240,25", "interchange-close") }
     func testLeaned101() { shootLean("taipei101", "260,20,0", "lean-101-own") }
     func testLeaned101At60() { shootLean("taipei101", "260,20,60", "lean-101-60") }
 

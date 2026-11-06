@@ -72,6 +72,10 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Taichung Station, for the screenshots of the real trains on the
     /// tracks they are assigned and the double track's one deck.
     case taichungViaduct
+    /// Decision 607: the same map at the expressway interchange west of
+    /// Taichung over the high-speed line, the Fazi River beside it, for
+    /// the screenshots of its link roads meeting the decks at one height.
+    case interchange
 
     /// Decision 596: the same map round the big junction 380 m east of
     /// Taipei Main Station (23 stop lines) at 10:00 and at 20:00, for the
@@ -162,6 +166,12 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// had only just left, the other boat lying at the same berth.
     case tamsuiFerryCrossing
 
+    /// Decision 585 續 (FERRY-QIJIN): the whole of Taiwan with the land
+    /// (no people, its water) read in round a point on Kaohsiung
+    /// harbour's north side and not round Cijin, as on the author's map,
+    /// looking over the harbour mouth: the ferry mode's pale blue shore.
+    case cijinShore
+
     /// Decision 555: where ``taipeiMain`` and ``taipei101`` are, in degrees
     /// (the station's, as `Map3DFrameCostReportTests`; 101's, as
     /// ``Map3DTaipeiLandmark/taipei101``).
@@ -170,6 +180,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .taipeiMain, .followBusCity: (25.0478, 121.5170)
         case .taipei101: (25.033946307135494, 121.56455513294843)
         case .taichungViaduct: (24.1369, 120.6850)
+        case .interchange: (24.1489, 120.6233)
         case .streetStop, .streetStopNight: (25.048099, 121.520745)
         case .wenhu: (25.0600, 121.5600)
         // Between Qizhang and Xiaobitan stations.
@@ -184,7 +195,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         // Between the Tamsui and Bali piers.
         case .tamsuiFerry, .tamsuiFerryCrossing: (25.1640, 121.4376)
         // Between the Gushan and Cijin piers.
-        case .gushanFerry, .gushanFerryEvening: (22.6165, 120.26775)
+        case .gushanFerry, .gushanFerryEvening, .cijinShore: (22.6165, 120.26775)
         // Decision 578: its first station, 7 km west and 300 m north of it.
         case .farStops: (25.0478 + 0.0026949, 121.5170 - 7_000 * 0.00000991)
         default: nil
@@ -206,7 +217,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .commute: Self.commuteWorld(in: language)
         case .expansion: Self.expansionWorld(in: language)
         case .acquired: Self.acquiredWorld(in: language)
-        case .taipeiMain, .taipei101, .taichungViaduct: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
+        case .taipeiMain, .taipei101, .taichungViaduct, .interchange: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
         case .streetStopNight: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), until: 120, resume: .x10, in: language)
         case .wenhu, .xiaobitan, .klrt: Self.realLineWorld(at: self, in: language)
@@ -222,12 +233,30 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             Self.ferryWorld(.tamsuiBali, at: self, every: 15, until: 34 * 60, then: 3, in: language, water: water)
         case .gushanFerry: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 34 * 60, in: language, water: water)
         case .gushanFerryEvening: Self.ferryWorld(.gushanCijin, at: self, every: 10, until: 42 * 60 + 30, in: language, water: water)
+        case .cijinShore: Self.cijinShoreWorld(water: water)
         }
     }
 
     /// What the scene does once its game is open, with the player's own
     /// tools: ``depotOffer`` lays its depot. Nothing for the others.
     @MainActor public func prepare(_ session: GameSession) {
+        if self == .cijinShore, let frame = RealWorldFrame(world: session.world) {
+            let (west, north) = frame.worldPosition(latitude: 22.632, longitude: 120.252)
+            let (east, south) = frame.worldPosition(latitude: 22.598, longitude: 120.288)
+            let region = WorldRegion(minX: west, minY: north, maxX: east, maxY: south)
+            // The map follows a camera request made after it is up, and it
+            // opens on the whole island (some seconds after the game, its
+            // real-world data read), where a request only zooms out and
+            // cannot move (the world is all in view): asked again each
+            // second for 3 minutes, as the UI test pinches in.
+            Task { @MainActor in
+                for _ in 0..<180 {
+                    try? await Task.sleep(for: .seconds(1))
+                    session.lookOver(region)
+                }
+            }
+            return
+        }
         guard self == .depotOffer, let north = Self.depotOfferEnd(in: session.world) else { return }
         session.selectTool(.network)
         session.setNetworkMode(.depot)
@@ -324,7 +353,24 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// Whether the scene is by the water and waits for the app's map of
     /// Taiwan's water (decision 585).
     public var needsWater: Bool {
-        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing
+        self == .tamsuiFerry || self == .gushanFerry || self == .gushanFerryEvening || self == .tamsuiFerryCrossing || self == .cijinShore
+    }
+
+    /// The point on Kaohsiung harbour's north side ``cijinShore`` reads
+    /// the land round: 2.5 km north of Cijin's ferry station.
+    static let cijinShoreRead = (latitude: 22.635, longitude: 120.280)
+
+    /// ``cijinShore``'s world: the whole of Taiwan, the blocks within
+    /// ``WholeTaiwan/landReach`` of ``cijinShoreRead`` read in with their
+    /// water and no people.
+    private static func cijinShoreWorld(water grid: WaterGrid?) -> GameWorld {
+        var world = GameWorld.newWholeTaiwanGame()
+        guard let grid, let frame = RealWorldFrame(world: world) else { return world }
+        let (x, y) = frame.worldPosition(latitude: cijinShoreRead.latitude, longitude: cijinShoreRead.longitude)
+        let blocks = Set(Land.blocks(within: WholeTaiwan.landReach, of: PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded())), in: world.bounds))
+        try? world.expandLand(blocks.sorted(), cells: [], water: grid.cells(frame: frame, bounds: world.bounds, in: blocks))
+        world.setSpeed(.paused)
+        return world
     }
 
     /// Decision 585: a real ferry, two boats every `every` minutes, on a

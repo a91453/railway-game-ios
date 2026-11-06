@@ -114,8 +114,10 @@ extension GameWorld {
     public func attractionRows(in language: DisplayLanguage) -> [AttractionRow] {
         guard let tourism else { return [] }
         let day = clock.now.seconds / GameTime.secondsPerDay
+        // One network for every sight, not one each (CRASH-SIGHTS).
+        let statuses = attractionStatuses()
         let rows: [AttractionRow] = tourism.attractions.map { sight in
-            let status = attractionStatus(of: sight.id)
+            let status = statuses[sight.id] ?? .noStation
             let today = status == .ok ? touristsExpected(for: sight, onDay: day) : 0
             var offer: ShopOffer?
             if sight.souvenir < Tourism.maximumSouvenirLevel {

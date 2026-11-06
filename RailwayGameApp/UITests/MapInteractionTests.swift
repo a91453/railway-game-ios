@@ -317,10 +317,17 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(cancel.appears(within: 10), "The rename alert has its Cancel button")
             cancel.tap()
             XCTAssertTrue(alert.disappears(within: 10), "Cancel puts the rename alert away")
-            // The map under the alert is drawn again before the pencil
-            // can be touched; on a runner that took 14 s for one look at
-            // the alert, the default 2 s ended first (main 72f8b469's and
-            // 240daaf8's full lanes, runs 41935318468 and 41959689553).
+            // The pencil opened Central's panel under the alert, and Cancel
+            // leaves the panel open; the tag stands over the map only while
+            // no panel is (`MapStationTagView.tag`), so the pencil was not
+            // there at all, however long it was waited for (FLAKY-1106:
+            // main 4e244db0's full lane, run 42130736583, ten looks in 10 s
+            // and no pencil; runs 41935318468 and 41959689553 the same).
+            // So the panel is closed with Done first, as a player would.
+            let done = app.buttons["station.done"]
+            XCTAssertTrue(done.becomesHittable(within: 10), "Central's panel is open under the alert, with its Done button")
+            done.tap()
+            XCTAssertTrue(app.navigationBars["Central"].disappears(within: 10), "Done closes Central's panel")
             XCTAssertTrue(pencil.becomesHittable(within: 10), "The tag's pencil can be pressed again")
             pencil.tap()
             XCTAssertTrue(alert.appears(within: 10), "The pencil puts up the rename alert again")
@@ -1548,10 +1555,15 @@ final class MapInteractionTests: XCTestCase {
         // they kept each look 7 to 15 s and the scene unbuilt, so both
         // pinches out came before there was a scene to hand back from
         // (main 68a4cfc's full lane, run 41432636112; a48121b's, run
-        // 41406244046). XCTest's log is not copied to standard error
-        // (MENUSTALL, #1712).
+        // 41406244046).
+        //
+        // Launched as the other two 3D tests are, without
+        // OS_ACTIVITY_DT_MODE=NO (FLAKY-1106): with it, the models took
+        // 66 to 268 s in each of 13 full lanes on main (one past the 240 s
+        // wait), the other two tests' 23 to 54 s; without it, 58 s and 48 s
+        // (runs 42171303204 and 42173934715). Why is not known; the app
+        // does not read the variable.
         app.launchArguments = ["-ui-testing", "-ui-test-3d-models-first", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
         defer { app.terminate() }
         app.openDemo("demo.simple")

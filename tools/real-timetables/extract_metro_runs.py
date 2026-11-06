@@ -118,6 +118,13 @@ DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館
 # between): what the timetable would stand there beyond that waits or
 # is not run in the game (the decision measures how many).
 MID_DEPOTS = {"tymc:A"}
+# Decision 605: the lines whose trips pass the stations they skip, as the
+# Taoyuan Airport MRT's express trains pass every station but Taipei Main,
+# New Taipei Industrial Park, Chang Gung Memorial Hospital and the two
+# airport terminals (a few on to Linghang or Huanbei). Each such run lists
+# the stations it passes (`passes`). Any other line's skipped stations
+# (four of Danhai's holiday trips) are calls at the time between, as before.
+PASSING_LINES = {"tymc:A"}
 # Decision 603: the lines the game lays as a single track, as the real
 # ones are, with one track at each end, by their game id: the Xiaobitan
 # Branch Line (OSM: one track the whole way, one platform track at
@@ -187,13 +194,19 @@ def branch_tool():
     return module
 
 
-def trains(timetable, names, kind="輕軌"):
+def trains(timetable, names, kind="輕軌", passing=False):
     """The trips of every weekday's set as the branch tool reads TRA's
-    trains: each call's arrival and departure, and the weekdays it runs."""
+    trains: each call's arrival and departure, and the weekdays it runs.
+    With `passing` (decision 605, `PASSING_LINES`) a station an express
+    trip skips (kind `2` in the set's `kinds`, 直達車) is one it passes
+    (`"stop": False`, arriving and leaving at the second it passes), not a
+    call; a stopping trip's gap (two of the weekday's) is still called at."""
     by_calls = collections.OrderedDict()
     for set_name in dict.fromkeys(timetable["days"]):
         days = {day for day, name in enumerate(timetable["days"]) if name == set_name}
-        for trip in timetable["sets"][set_name]:
+        kinds = timetable.get("kinds", {}).get(set_name, "") if passing else ""
+        for number, trip in enumerate(timetable["sets"][set_name]):
+            express = kinds[number:number + 1] == "2"
             calls = [(trip[i], trip[i + 1]) for i in range(0, len(trip), 2)]
             step = 1 if calls[-1][0] > calls[0][0] else -1
             filled = []
@@ -201,8 +214,9 @@ def trains(timetable, names, kind="輕軌"):
                 filled.append((a, at))
                 gap = list(range(a + step, b, step))
                 for k, index in enumerate(gap, 1):
-                    filled.append((index, at + (bt - at) * k // (len(gap) + 1)))
+                    filled.append((index, at + (bt - at) * k // (len(gap) + 1), express))
             filled.append(calls[-1])
+            filled = [c if len(c) == 3 else (c[0], c[1], False) for c in filled]
             key = tuple(filled)
             if key in by_calls:
                 by_calls[key] |= days
@@ -211,11 +225,11 @@ def trains(timetable, names, kind="輕軌"):
     out, days = [], {}
     for number, (calls, running) in enumerate(by_calls.items()):
         stops = []
-        for position, (index, second) in enumerate(calls):
+        for position, (index, second, passes) in enumerate(calls):
             last = position == len(calls) - 1
             first = position == 0
-            arrives = second if last or first else second - DWELL
-            stops.append({"name": names[index], "arrSec": arrives, "depSec": second, "stop": True})
+            arrives = second if last or first or passes else second - DWELL
+            stops.append({"name": names[index], "arrSec": arrives, "depSec": second, "stop": not passes})
         out.append({"train": str(number + 1), "typeName": kind, "stops": stops})
         days[number] = running
     return out, days
@@ -422,7 +436,8 @@ def main(folder, out):
                   f"({ways['inner']} inner, {ways['outer']} outer), {line['overnight'][names[0]]} trainsets, all in the depot overnight")
             result["lines"].append({"id": game_id, "network": line_id, **line})
             continue
-        found, days = trains(timetable, names, "捷運" if metro else "輕軌")
+        found, days = trains(timetable, names, "捷運" if metro else "輕軌", passing=f"{system}:{line_id}" in PASSING_LINES)
+        passed = {t["train"]: [s["name"] for s in t["stops"] if not s["stop"]] for t in found}
         stops = names[names.index(after_station):] if after_station else names
         label = game_id + (f" after {system}:{after}" if after else "")
         single = game_id in SINGLE_TRACK
@@ -470,6 +485,11 @@ def main(folder, out):
         if problem:
             print(f"{label}: left out: {problem}")
             continue
+        # Decision 605: the stations each run passes, by its train.
+        for run in line["runs"]:
+            names_passed = [c[0] for c in run["calls"] if c[0] in passed.get(run["train"], ())] if not run.get("positioning") else []
+            if names_passed:
+                run["passes"] = names_passed
         real = sum(1 for r in line["runs"] if not r.get("positioning"))
         print(f"{label}: {stops[0]}–{stops[-1]}, {real} real trips, {len(line['runs']) - real} positioning runs, "
               f"{sum(line['overnight'].values())} trainsets, overnight {line['overnight']}, "
