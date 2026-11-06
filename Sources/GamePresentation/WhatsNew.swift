@@ -30,6 +30,50 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 115.1.
+        Entry(
+            id: "2026-11-06-115-1",
+            items: [
+                Line(
+                    english: "In ferry mode the shore squares where a pier can go are tinted light blue, and a tap near the shore lands on the nearest one. Tap too far away and you are told which way the shore is.",
+                    chinese: "渡輪模式把能蓋碼頭的岸邊格子塗成淡藍；點在岸邊附近就會落在最近的一格，點太遠會告訴你岸在哪個方向。"
+                ),
+                Line(
+                    english: "Real trains on the 3D map now use the platform tracks they are scheduled for, and side-by-side viaducts no longer leave a gap between them.",
+                    chinese: "3D 地圖的真實列車會進被排定的月台股道，並排的高架橋面中間也不再漏縫。"
+                ),
+                Line(
+                    english: "Idle mode now also follows the real trains running on the map, with the train's name and destination shown faintly in the corner.",
+                    chinese: "放空模式也會跟著地圖上跑的真實列車，角落淡淡寫出車名與往哪裡。"
+                ),
+                Line(
+                    english: "A Xiaobitan branch you buy is now a single track with one train shuttling back and forth, and costs less.",
+                    chinese: "新買的小碧潭支線照真實鋪成單線，一列車來回，收購價也便宜了。"
+                ),
+                Line(
+                    english: "Building a bigger station elsewhere no longer leaves sights such as Jiji and Pingxi with no tourists.",
+                    chinese: "別處蓋了大站，集集、平溪這類景點也不會再沒有觀光客。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Fixed a crash that could happen when opening the real-world map or the high-speed demo.",
+                    chinese: "修正開啟真實世界地圖或高鐵示範時可能閃退的問題。"
+                ),
+                Line(
+                    english: "Taking a stop off a line you bought now also takes away that stop's regular riders.",
+                    chinese: "從買下的支線拿掉一站後，那一站的常客也跟著不見。"
+                ),
+                Line(
+                    english: "Cable cars and ferries no longer connect to a depot.",
+                    chinese: "纜車與渡輪不再接到機廠。"
+                ),
+                Line(
+                    english: "The advice to shorten a train to fewer cars now gives a number that fits the platform.",
+                    chinese: "列車太長時「減到幾節」的提示，節數現在停得進月台。"
+                ),
+            ]
+        ),
         // 114.1.
         Entry(
             id: "2026-11-05-114-1",
