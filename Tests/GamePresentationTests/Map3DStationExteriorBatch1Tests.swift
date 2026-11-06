@@ -19,5 +19,16 @@ final class Map3DStationExteriorBatch1Tests: XCTestCase {
         XCTAssertTrue(colours.contains(Map3DColor.rgb(0xE5E7E2)))
         XCTAssertTrue(colours.contains(Map3DColor.rgb(0xC79C89)))
         XCTAssertTrue(colours.contains(Map3DColor.rgb(0x90979E)))
+        func brightness(_ color: UInt32) -> Float {
+            Float(color & 255) * 0.2126 + Float((color >> 8) & 255) * 0.7152
+                + Float((color >> 16) & 255) * 0.0722
+        }
+        let ordered = [StationKitBuilder.white, Map3DColor.rgb(0xEEE7DA),
+                       Map3DColor.rgb(0xE5E7E2), Map3DColor.rgb(0xC79C89),
+                       Map3DColor.rgb(0x90979E)]
+        for (lighter, darker) in zip(ordered, ordered.dropFirst()) {
+            XCTAssertTrue(colours.contains(lighter))
+            XCTAssertGreaterThan(brightness(lighter), brightness(darker))
+        }
     }
 }
