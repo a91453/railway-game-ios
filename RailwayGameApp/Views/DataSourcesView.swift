@@ -66,8 +66,8 @@ struct DataSourcesView: View {
                 }
                 Section {
                     Text(verbatim: language.text(
-                        "© 2026 a91453. All rights reserved.",
-                        "© 2026 a91453 著作權所有"))
+                        "© 2026 CHIENLIN YEH. All rights reserved.",
+                        "© 2026 CHIENLIN YEH 著作權所有"))
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 }

@@ -1,6 +1,6 @@
 著作權聲明 / Copyright Notice
 
-Copyright (c) 2026 a91453. 著作權所有。All rights reserved.
+Copyright (c) 2026 CHIENLIN YEH (a91453). 著作權所有。All rights reserved.
 
 本儲存庫公開供閱覽。除下列例外，其中的程式碼、美術、模型、音效、音樂、文字與
 文件，著作權均屬著作權人所有。未經著作權人書面授權，不得重製、改作、散布或公開
